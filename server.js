@@ -716,7 +716,7 @@ app.post('/api/chat', async (req, res) => {
 
     try {
       const controller = new AbortController();
-      req.on('close', () => controller.abort());
+      res.on('close', () => controller.abort());
 
       const headers = {
         'Content-Type': 'application/json',
