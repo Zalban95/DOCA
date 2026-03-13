@@ -682,10 +682,19 @@ function loadGatewayChatConfig() {
 }
 
 app.get('/api/chat/status', (req, res) => {
+  let parseError = null, gatewayCfg = null;
+  try {
+    const cfg = parseOpenclawConfig();
+    gatewayCfg = cfg?.gateway || null;
+  } catch (e) { parseError = e.message; }
+
   const cfg = loadGatewayChatConfig();
   res.json({
     gateway: !!cfg,
     chatEnabled: !!cfg,
+    parseError,
+    gatewayCfg,
+    configPath: CONFIG_PATH,
     hint: cfg ? 'Using OpenClaw Gateway' : 'Enable gateway.http.endpoints.chatCompletions in openclaw.json'
   });
 });
