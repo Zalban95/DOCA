@@ -649,10 +649,10 @@ function resolveEnvVars(str) {
 /** Parse openclaw.json tolerantly (JSON5-ish: strip comments, trailing commas, bad control chars) */
 function parseOpenclawConfig() {
   const raw = fs.readFileSync(CONFIG_PATH, 'utf8')
-    .replace(/[\x00-\x09\x0B\x0C\x0E-\x1F\x7F]/g, ' ')  // strip bad control chars (keep \n \r only)
-    .replace(/\/\/[^\n]*/g, '')                        // strip // comments
-    .replace(/\/\*[\s\S]*?\*\//g, '')                  // strip /* */ comments
-    .replace(/,(\s*[}\]])/g, '$1');                    // strip trailing commas
+    .replace(/\/\/[^\n]*/g, '')           // strip // comments first (needs newlines intact)
+    .replace(/\/\*[\s\S]*?\*\//g, '')     // strip /* */ comments
+    .replace(/,(\s*[}\]])/g, '$1')        // strip trailing commas
+    .replace(/[\x00-\x1F\x7F]/g, ' ');   // strip ALL control chars (incl \n \r \t — JSON is whitespace-agnostic)
   return JSON.parse(raw);
 }
 
