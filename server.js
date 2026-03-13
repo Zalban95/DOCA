@@ -646,13 +646,11 @@ function resolveEnvVars(str) {
   return str.replace(/\$\{([^}]+)\}/g, (_, name) => process.env[name] ?? '');
 }
 
-/** Parse openclaw.json tolerantly (JSON5-ish: strip comments, trailing commas, bad control chars) */
+/** Parse openclaw.json tolerantly (strip control chars and trailing commas) */
 function parseOpenclawConfig() {
   const raw = fs.readFileSync(CONFIG_PATH, 'utf8')
-    .replace(/\/\/[^\n]*/g, '')           // strip // comments first (needs newlines intact)
-    .replace(/\/\*[\s\S]*?\*\//g, '')     // strip /* */ comments
-    .replace(/,(\s*[}\]])/g, '$1')        // strip trailing commas
-    .replace(/[\x00-\x1F\x7F]/g, ' ');   // strip ALL control chars (incl \n \r \t — JSON is whitespace-agnostic)
+    .replace(/[\x00-\x1F\x7F]/g, ' ')    // strip ALL control chars
+    .replace(/,(\s*[}\]])/g, '$1');       // strip trailing commas
   return JSON.parse(raw);
 }
 
