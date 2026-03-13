@@ -13,7 +13,7 @@ Web-based control panel for managing the **OpenClaw** AI agent stack.
 - **Config Editor** — Multi-file editor with favorites, per-type validation
 - **File Manager** — Browse, edit, copy/cut/paste, rename, upload/download files with drag & drop
 - **Claude Code** — Manage and interact with Claude Code CLI sessions
-- **Agent Chat** — Floating chat panel to talk with the OpenClaw agent
+- **Agent Chat** — Floating chat panel to talk with the OpenClaw agent (uses Gateway API when enabled, falls back to `claude` CLI)
 
 ## Quick Start
 
@@ -23,6 +23,24 @@ npm start
 ```
 
 The panel runs on **http://localhost:4242** by default.
+
+## Linking the Chat to OpenClaw Agent
+
+To have the floating chat panel use the OpenClaw Gateway API instead of the `claude` CLI, add this to `~/.openclaw/openclaw.json`:
+
+```json
+{
+  "gateway": {
+    "http": {
+      "endpoints": {
+        "chatCompletions": { "enabled": true }
+      }
+    }
+  }
+}
+```
+
+If you use auth, ensure `gateway.auth.token` (or `gateway.auth.password`) is set. The dashboard reads the config and uses the Gateway’s `/v1/chat/completions` endpoint. If the Gateway is unavailable, it falls back to the `claude` CLI.
 
 ## Environment Variables
 

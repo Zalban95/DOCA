@@ -640,15 +640,121 @@ app.post('/api/claude/stop', (req, res) => {
 
 const chatHistory = [];
 
+/** Resolve ${VAR} in string from process.env */
+function resolveEnvVars(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/\$\{([^}]+)\}/g, (_, name) => process.env[name] ?? '');
+}
+
+/** Load gateway URL + auth from openclaw.json for chat completions */
+function loadGatewayChatConfig() {
+  try {
+    const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
+    const cfg = JSON.parse(raw.replace(/\/\/.*$/gm, '').replace(/,(\s*[}\]])/g, '$1'));
+    const gw = cfg?.gateway || {};
+    const http = gw?.http || {};
+    const endpoints = http?.endpoints || {};
+    const chatEp = endpoints?.chatCompletions || {};
+    if (!chatEp.enabled) return null;
+
+    const port = process.env.OPENCLAW_GATEWAY_PORT || gw?.port || 18789;
+    const host = '127.0.0.1';
+    const url = `http://${host}:${port}/v1/chat/completions`;
+
+    const token = resolveEnvVars(gw?.auth?.token || gw?.auth?.password || '');
+    return { url, token: token || null };
+  } catch { return null; }
+}
+
+app.get('/api/chat/status', (req, res) => {
+  const cfg = loadGatewayChatConfig();
+  res.json({
+    gateway: !!cfg,
+    chatEnabled: !!cfg,
+    hint: cfg ? 'Using OpenClaw Gateway' : 'Enable gateway.http.endpoints.chatCompletions in openclaw.json'
+  });
+});
+
 app.get('/api/chat/history', (req, res) => { res.json({ messages: chatHistory }); });
 
 app.post('/api/chat/clear', (req, res) => { chatHistory.length = 0; res.json({ ok: true }); });
 
-app.post('/api/chat', (req, res) => {
+app.post('/api/chat', async (req, res) => {
   const { message } = req.body;
   if (!message) return res.status(400).json({ error: 'No message' });
   chatHistory.push({ role: 'user', content: message, time: new Date().toISOString() });
+
+  const gw = loadGatewayChatConfig();
   sseHeaders(res);
+
+  if (gw?.url) {
+    const messages = chatHistory
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({ role: m.role, content: m.content }));
+
+    try {
+      const controller = new AbortController();
+      req.on('close', () => controller.abort());
+
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-openclaw-agent-id': 'main'
+      };
+      if (gw.token) headers['Authorization'] = `Bearer ${gw.token}`;
+
+      const resp = await fetch(gw.url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: 'openclaw',
+          stream: true,
+          messages
+        }),
+        signal: controller.signal
+      });
+
+      if (!resp.ok) {
+        const err = await resp.text();
+        throw new Error(`Gateway ${resp.status}: ${err.slice(0, 200)}`);
+      }
+
+      let response = '';
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            try {
+              const obj = JSON.parse(data);
+              const content = obj?.choices?.[0]?.delta?.content;
+              if (content) {
+                response += content;
+                res.write(`data: ${JSON.stringify({ type: 'text', text: content })}\n\n`);
+              }
+            } catch {}
+          }
+        }
+      }
+
+      if (response) chatHistory.push({ role: 'assistant', content: response, time: new Date().toISOString() });
+      res.write(`data: ${JSON.stringify({ type: 'done', code: 0 })}\n\n`);
+      res.end();
+      return;
+    } catch (e) {
+      res.write(`data: ${JSON.stringify({ type: 'stderr', text: `Gateway error: ${e.message}\nFalling back to claude CLI…\n` })}\n\n`);
+    }
+  }
+
+  /* Fallback: claude CLI */
   const child = spawn('claude', ['-p', message], {
     cwd: WORKSPACE_DIR,
     env: { ...process.env, TERM: 'dumb' }
