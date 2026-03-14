@@ -158,14 +158,29 @@
         </div>
       </div>
 
-      <!-- Tool APIs section -->
-      <div class="card" id="tool-apis-section">
-        <div class="card-title">Tool APIs</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Local API endpoints for non-LLM tools (image generation, speech, etc.)</p>
-        <div id="tool-apis-list"><div class="placeholder pulse">Loading…</div></div>
-        <div class="toolbar" style="margin-top:10px">
-          <button class="btn btn-sm btn-blue" onclick="keysSaveToolApis()">Save</button>
-          <span class="status-line" id="tool-apis-status"></span>
+      <!-- Tool Providers section (same card pattern as Providers above) -->
+      <div class="toolbar" style="margin-top:4px">
+        <div class="card-title" style="margin-bottom:0">Tool APIs</div>
+        <button class="btn btn-sm btn-blue" onclick="showAddToolProvider()">+ Add Tool Provider</button>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin:0 0 6px">
+        API endpoints for local non-LLM tools (Stable Diffusion, ComfyUI, Kokoro, Whisper, etc.)
+      </p>
+      <div id="tool-providers-list" class="scroll-y" style="flex:1"><div class="placeholder">Loading…</div></div>
+
+      <div id="add-tool-provider-form" style="display:none">
+        <div class="card mt8">
+          <div class="card-title">New Tool Provider</div>
+          <div class="row">
+            <div class="field flex1"><div class="input-label">Name (e.g. comfyui)</div><input id="tp-name" class="input" placeholder="comfyui"></div>
+            <div class="field flex1"><div class="input-label">Base URL</div><input id="tp-url" class="input" placeholder="http://127.0.0.1:8188"></div>
+          </div>
+          <div class="field"><div class="input-label">API Key (optional)</div><input id="tp-key" class="input" type="password" placeholder="leave blank if not required"></div>
+          <div class="toolbar-right">
+            <button class="btn btn-sm" onclick="hideAddToolProvider()">Cancel</button>
+            <button class="btn btn-sm btn-blue" onclick="addToolProvider()">Add</button>
+          </div>
+          <div class="status-line mt8" id="tp-status"></div>
         </div>
       </div>
     </div>
@@ -501,10 +516,63 @@
         </div>
       </div>
 
-      <!-- Tool APIs link -->
-      <div class="card" style="padding:10px 16px">
-        <span style="font-size:11px;color:var(--muted)">Non-LLM tool API endpoints (Stable Diffusion, ComfyUI, Kokoro, Whisper…) are configured in </span>
-        <a onclick="nav('keys');setTimeout(keysShowToolApis,200)" style="cursor:pointer;font-size:11px">API Keys → Tool APIs</a>
+      <!-- Local Non-LLM Models -->
+      <div class="card">
+        <div class="card-title">Local Non-LLM Models</div>
+        <!-- Settings row -->
+        <div class="models-settings-grid" id="nlm-settings-grid">
+          <span class="models-settings-label">Tool</span>
+          <select id="nlm-tool" class="input" title="Select tool" aria-label="Tool" onchange="nlmLoadSettings(); nlmLoadList()">
+            <option value="whisper">Whisper (STT)</option>
+            <option value="kokoro">Kokoro TTS</option>
+            <option value="stable-diffusion">Stable Diffusion</option>
+            <option value="comfyui">ComfyUI</option>
+          </select>
+          <span class="models-settings-label">Models path</span>
+          <input id="nlm-path" class="input" placeholder="/path/to/models (optional)">
+          <span class="models-settings-label">API URL</span>
+          <input id="nlm-apiurl" class="input" placeholder="http://127.0.0.1:7860 (optional)">
+        </div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+          <button class="btn btn-sm btn-blue" onclick="nlmSaveSettings()">Save</button>
+          <button class="btn btn-sm" onclick="nlmLoadList()">↺ Refresh</button>
+          <span id="nlm-settings-status" class="status-line"></span>
+        </div>
+        <!-- Search online -->
+        <div class="models-search-row" style="margin-top:14px">
+          <input id="nlm-search-input" class="input" placeholder="Search available models…"
+                 style="flex:1" onkeydown="if(event.key==='Enter') nlmSearch()">
+          <button class="btn btn-sm" onclick="nlmSearch()">🔍 Search</button>
+        </div>
+        <div id="nlm-search-results" style="display:none;margin-bottom:8px"></div>
+        <!-- Install row -->
+        <div class="models-pull-row">
+          <input id="nlm-install-input" class="input" placeholder="model name / variant"
+                 style="max-width:300px"
+                 onkeydown="if(event.key==='Enter') nlmInstall()">
+          <button class="btn btn-sm btn-teal" onclick="nlmInstall()">⬇ Install</button>
+          <div class="models-pull-progress" id="nlm-pull-bar" style="display:none">
+            <div class="models-pull-progress-bar" id="nlm-pull-bar-fill"></div>
+          </div>
+          <span class="models-pull-pct" id="nlm-pull-pct"></span>
+        </div>
+        <div id="nlm-install-out" class="terminal" style="display:none;max-height:140px;margin-top:6px"></div>
+        <!-- Table -->
+        <div style="overflow-x:auto;margin-top:10px">
+          <table class="models-table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="nlm-table-body">
+              <tr><td colspan="4" class="placeholder" style="padding:12px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
     </div>

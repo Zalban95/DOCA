@@ -277,18 +277,56 @@ app.delete('/api/keys/:name', (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Tool APIs (stored in openclaw.json under toolApis key)
-app.get('/api/keys/tool-apis', (req, res) => {
+// Tool Providers — same structure as regular providers, stored under cfg.toolProviders
+app.get('/api/keys/tool-providers', (req, res) => {
   try {
     const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-    res.json({ toolApis: cfg.toolApis || {} });
-  } catch (e) { res.json({ toolApis: {} }); }
+    const providers = cfg.toolProviders || {};
+    const result = {};
+    for (const [name, p] of Object.entries(providers)) {
+      const key = p.apiKey || '';
+      result[name] = {
+        baseUrl:      p.baseUrl || '',
+        apiKeyMasked: key ? key.slice(0, 4) + '••••••••' + key.slice(-4) : '',
+        hasKey:       !!key,
+      };
+    }
+    res.json({ providers: result });
+  } catch (e) { res.json({ providers: {} }); }
 });
 
-app.post('/api/keys/tool-apis', (req, res) => {
+app.post('/api/keys/tool-providers', (req, res) => {
+  const { provider, apiKey, baseUrl } = req.body;
+  if (!provider) return res.status(400).json({ error: 'provider required' });
   try {
     const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-    cfg.toolApis = req.body.toolApis || {};
+    if (!cfg.toolProviders) cfg.toolProviders = {};
+    if (!cfg.toolProviders[provider]) cfg.toolProviders[provider] = { baseUrl: '' };
+    if (apiKey  !== undefined) cfg.toolProviders[provider].apiKey  = apiKey;
+    if (baseUrl !== undefined) cfg.toolProviders[provider].baseUrl = baseUrl;
+    fs.copyFileSync(CONFIG_PATH, CONFIG_PATH + '.bak');
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/keys/tool-providers/add', (req, res) => {
+  const { name, baseUrl, apiKey } = req.body;
+  if (!name || !baseUrl) return res.status(400).json({ error: 'name and baseUrl required' });
+  try {
+    const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    if (!cfg.toolProviders) cfg.toolProviders = {};
+    cfg.toolProviders[name] = { baseUrl, apiKey: apiKey || '' };
+    fs.copyFileSync(CONFIG_PATH, CONFIG_PATH + '.bak');
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/keys/tool-providers/:name', (req, res) => {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    if (cfg?.toolProviders?.[req.params.name]) delete cfg.toolProviders[req.params.name];
     fs.copyFileSync(CONFIG_PATH, CONFIG_PATH + '.bak');
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
     res.json({ ok: true });
@@ -786,17 +824,11 @@ const CODE_TOOLS = [
 ];
 
 app.get('/api/code/tools', async (req, res) => {
-  const prefs = loadPrefs();
+  const prefs    = loadPrefs();
   const expanded = prefs.codeExpanded || [];
-  // #region agent log
-  const _execPath = process.env.PATH || '(empty)';
-  const _logFile = require('path').join(__dirname, 'debug-e82941.log');
-  require('fs').appendFileSync(_logFile, JSON.stringify({sessionId:'e82941',location:'server.js:code-tools',message:'PATH env for exec',data:{PATH:_execPath},timestamp:Date.now(),runId:'post-fix2',hypothesisId:'H4'})+'\n');
-  // #endregion
+  const cfgMap   = prefs.codeConfig   || {};
 
   const results = await Promise.all(CODE_TOOLS.map(t => new Promise(resolve => {
-    // Use test -f for static paths so each step exits 1 (not found) keeping the || chain alive.
-    // find...| head -1 exits 0 even when empty, which would wrongly stop the chain.
     const detectCmd = [
       `bash -lc "which ${t.cmd} 2>/dev/null"`,
       `{ test -f "$HOME/.npm-global/bin/${t.cmd}" && echo "$HOME/.npm-global/bin/${t.cmd}"; }`,
@@ -804,20 +836,26 @@ app.get('/api/code/tools', async (req, res) => {
       `{ test -f "/usr/local/bin/${t.cmd}"        && echo "/usr/local/bin/${t.cmd}"; }`,
       `find "$HOME/.nvm/versions" -name "${t.cmd}" -type f 2>/dev/null | grep -m1 .`,
     ].join(' || ');
-    exec(detectCmd, { env: { ...process.env, HOME: process.env.HOME || require('os').homedir() } }, (err, stdout, stderr) => {
+    exec(detectCmd, { env: { ...process.env, HOME: process.env.HOME || require('os').homedir() } }, (err, stdout) => {
       const detected = !!stdout.trim();
-      // #region agent log
-      require('fs').appendFileSync(_logFile, JSON.stringify({sessionId:'e82941',location:'server.js:code-tools-exec',message:'tool detection result',data:{cmd:t.cmd,err:err?.message,stdout:stdout?.trim(),stderr:stderr?.trim(),detected},timestamp:Date.now(),runId:'post-fix2',hypothesisId:'H4-H5'})+'\n');
-      // #endregion
       let version = null;
       if (detected) {
         const bin = stdout.trim().split('\n')[0];
         try {
-          const vOut = require('child_process').execSync(`bash -lc "'${bin}' --version 2>/dev/null || '${bin}' version 2>/dev/null"`, { timeout: 3000 }).toString().trim();
+          const vOut = require('child_process').execSync(
+            `bash -lc "'${bin}' --version 2>/dev/null || '${bin}' version 2>/dev/null"`,
+            { timeout: 3000 }
+          ).toString().trim();
           version = vOut.split('\n')[0].slice(0, 60);
         } catch {}
       }
-      resolve({ ...t, detected, version, pinned: expanded.includes(t.id) });
+      resolve({
+        ...t,
+        detected,
+        version,
+        pinned:     expanded.includes(t.id),
+        configPath: cfgMap[t.id]?.configPath || '',
+      });
     });
   })));
 
@@ -830,6 +868,18 @@ app.post('/api/code/tools/pin', (req, res) => {
   const prefs = loadPrefs();
   prefs.codeExpanded = expanded;
   try {
+    fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/code/tools/:id/config', (req, res) => {
+  const { id } = req.params;
+  const { configPath } = req.body;
+  try {
+    const prefs = loadPrefs();
+    if (!prefs.codeConfig) prefs.codeConfig = {};
+    prefs.codeConfig[id] = { configPath: configPath || '' };
     fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1369,6 +1419,145 @@ app.post('/api/models/tools/:id/config', (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── Local Non-LLM Models ─────────────────────────────────────────────────────
+
+const LOCAL_NLM_TOOLS = {
+  whisper: {
+    label: 'Whisper (STT)',
+    models: [
+      { name: 'tiny',    description: 'Tiny — fastest, lowest accuracy (~39 MB)' },
+      { name: 'base',    description: 'Base — good balance of speed/accuracy (~74 MB)' },
+      { name: 'small',   description: 'Small — better accuracy (~244 MB)' },
+      { name: 'medium',  description: 'Medium — high accuracy (~769 MB)' },
+      { name: 'large',   description: 'Large v2/v3 — best accuracy (~1.5 GB)' },
+      { name: 'large-v3',description: 'Large v3 — latest, best accuracy (~1.5 GB)' },
+    ],
+    installCmd: (model) => `pip install openai-whisper && python -c "import whisper; whisper.load_model('${model}')"`,
+    detectFile: (dir, model) => path.join(dir || os.homedir(), '.cache', 'whisper', `${model}.pt`),
+  },
+  kokoro: {
+    label: 'Kokoro TTS',
+    models: [
+      { name: 'kokoro-v0_19', description: 'Kokoro v0.19 — main model (~326 MB)' },
+      { name: 'voices',       description: 'Voice pack (~100 MB)' },
+    ],
+    installCmd: (model) => `pip install kokoro-onnx`,
+    detectFile: (dir) => path.join(dir || os.homedir(), 'kokoro'),
+  },
+  'stable-diffusion': {
+    label: 'Stable Diffusion',
+    models: [
+      { name: 'stable-diffusion-v1-5',    description: 'SD 1.5 — classic, widely compatible (~4 GB)' },
+      { name: 'stable-diffusion-xl-base', description: 'SDXL Base — higher quality (~6.7 GB)' },
+      { name: 'stable-diffusion-3',       description: 'SD 3 — latest architecture (~5 GB)' },
+    ],
+    installCmd: (model) => `pip install diffusers transformers accelerate && huggingface-cli download runwayml/${model}`,
+    detectFile: (dir) => dir || '',
+  },
+  comfyui: {
+    label: 'ComfyUI Models',
+    models: [
+      { name: 'v1-5-pruned-emaonly', description: 'SD 1.5 pruned checkpoint (~4 GB)' },
+      { name: 'sdxl_base_1.0',       description: 'SDXL base checkpoint (~6.5 GB)' },
+    ],
+    installCmd: (model) => `wget -c https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/${model}.safetensors`,
+    detectFile: (dir) => dir || '',
+  },
+};
+
+app.get('/api/models/local/settings', (req, res) => {
+  const mp = loadModelsPrefs();
+  res.json(mp.local || {});
+});
+
+app.post('/api/models/local/settings', (req, res) => {
+  try {
+    const mp = loadModelsPrefs();
+    if (!mp.local) mp.local = {};
+    const { tool, modelsPath, apiUrl } = req.body;
+    if (!tool) return res.status(400).json({ error: 'tool required' });
+    if (!mp.local[tool]) mp.local[tool] = {};
+    if (modelsPath !== undefined) mp.local[tool].modelsPath = modelsPath;
+    if (apiUrl     !== undefined) mp.local[tool].apiUrl     = apiUrl;
+    saveModelsPrefs(mp);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/models/local/search', (req, res) => {
+  const tool = req.query.tool || 'whisper';
+  const q    = (req.query.q || '').toLowerCase().trim();
+  const def  = LOCAL_NLM_TOOLS[tool];
+  if (!def) return res.json({ results: [] });
+  const list = def.models;
+  const results = q
+    ? list.filter(m => m.name.includes(q) || m.description.toLowerCase().includes(q))
+    : list;
+  res.json({ results });
+});
+
+app.get('/api/models/local/list', (req, res) => {
+  const tool = req.query.tool || 'whisper';
+  const mp   = loadModelsPrefs();
+  const dir  = mp.local?.[tool]?.modelsPath || '';
+  const def  = LOCAL_NLM_TOOLS[tool];
+  if (!def) return res.json({ models: [] });
+
+  const models = def.models.map(m => {
+    const filePath = def.detectFile(dir, m.name);
+    const detected = filePath ? fs.existsSync(filePath) : false;
+    return { name: m.name, description: m.description, detected, path: filePath || '' };
+  });
+  res.json({ models });
+});
+
+app.post('/api/models/local/install', (req, res) => {
+  const { tool, model } = req.body;
+  if (!tool || !model) return res.status(400).json({ error: 'tool and model required' });
+  const def = LOCAL_NLM_TOOLS[tool];
+  if (!def) return res.status(400).json({ error: 'unknown tool' });
+
+  sseHeaders(res);
+  const sseWrite = d => res.write(`data: ${JSON.stringify(d)}\n\n`);
+
+  const cmd   = def.installCmd(model);
+  const child = spawn('bash', ['-lc', cmd], {
+    cwd: process.env.HOME || WORKSPACE_DIR,
+    env: process.env,
+  });
+
+  sseWrite({ status: `Running: ${cmd}` });
+  child.stdout.on('data', d => sseWrite({ status: d.toString() }));
+  child.stderr.on('data', d => sseWrite({ status: d.toString() }));
+  child.on('close', code => {
+    sseWrite({ done: true, error: code !== 0, status: code === 0 ? '✓ Done' : `✗ Exit ${code}` });
+    res.end();
+  });
+  child.on('error', e => {
+    sseWrite({ done: true, error: true, status: `Error: ${e.message}` });
+    res.end();
+  });
+  req.on('close', () => child.kill());
+});
+
+app.post('/api/models/local/delete', (req, res) => {
+  const { tool, model } = req.body;
+  if (!tool || !model) return res.status(400).json({ error: 'tool and model required' });
+  const mp  = loadModelsPrefs();
+  const dir = mp.local?.[tool]?.modelsPath || '';
+  const def = LOCAL_NLM_TOOLS[tool];
+  if (!def) return res.status(400).json({ error: 'unknown tool' });
+
+  const filePath = def.detectFile(dir, model);
+  if (!filePath || !fs.existsSync(filePath))
+    return res.status(404).json({ error: 'File not found' });
+
+  try {
+    fs.rmSync(filePath, { recursive: true, force: true });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── WebSocket Terminal ───────────────────────────────────────────────────────
 
 const httpServer = http.createServer(app);
@@ -1387,6 +1576,55 @@ termWss.on('connection', (ws) => {
     ptyProc = pty.spawn(shell, [], {
       name: 'xterm-256color',
       cols: 80, rows: 24,
+      cwd: process.env.HOME || WORKSPACE_DIR,
+      env: process.env
+    });
+  } catch (e) {
+    ws.send(JSON.stringify({ type: 'output', data: `\r\nFailed to spawn shell: ${e.message}\r\n` }));
+    ws.close();
+    return;
+  }
+
+  ptyProc.onData(data => {
+    if (ws.readyState === ws.OPEN)
+      ws.send(JSON.stringify({ type: 'output', data }));
+  });
+
+  ptyProc.onExit(({ exitCode }) => {
+    if (ws.readyState === ws.OPEN) {
+      ws.send(JSON.stringify({ type: 'exit', code: exitCode }));
+      ws.close();
+    }
+  });
+
+  ws.on('message', raw => {
+    try {
+      const { type, data, cols, rows } = JSON.parse(raw.toString());
+      if (type === 'input')  ptyProc.write(data);
+      if (type === 'resize') ptyProc.resize(Math.max(2, cols), Math.max(2, rows));
+    } catch {}
+  });
+
+  ws.on('close', () => { try { ptyProc.kill(); } catch {} });
+});
+
+// ─── WebSocket Code Terminals (one per tool, bare shell + launch button) ──────
+
+const codeWss = new WebSocketServer({ server: httpServer, path: '/ws/code' });
+
+codeWss.on('connection', (ws, req) => {
+  if (!pty) {
+    ws.send(JSON.stringify({ type: 'output', data: '\r\nnode-pty not installed. Run: npm install node-pty\r\n' }));
+    ws.close();
+    return;
+  }
+
+  const shell = process.env.SHELL || '/bin/bash';
+  let ptyProc;
+  try {
+    ptyProc = pty.spawn(shell, [], {
+      name: 'xterm-256color',
+      cols: 80, rows: 20,
       cwd: process.env.HOME || WORKSPACE_DIR,
       env: process.env
     });

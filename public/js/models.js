@@ -8,6 +8,7 @@ async function modelsInit() {
   await modelsLoadSettings();
   modelsCheckOllama();
   modelsLoadList();
+  nlmInit();
 }
 
 /* ── Settings ─────────────────────────────────────────── */
@@ -186,57 +187,160 @@ function modelsDelete(name) {
   });
 }
 
-/* ── Non-LLM tools ────────────────────────────────────── */
-async function modelsLoadTools() {
-  const container = document.getElementById('models-tools-list');
-  container.innerHTML = '<div class="placeholder pulse" style="padding:12px">Detecting tools…</div>';
+/* ── Local Non-LLM Models ─────────────────────────────── */
+
+function nlmInit() {
+  nlmLoadSettings();
+  nlmLoadList();
+}
+
+async function nlmLoadSettings() {
+  const tool = document.getElementById('nlm-tool')?.value || 'whisper';
   try {
-    const data  = await apiFetch('/api/models/tools');
-    const tools = data.tools || [];
-    if (!tools.length) {
-      container.innerHTML = '<div class="placeholder">No tools configured</div>';
-      return;
-    }
-    container.innerHTML = tools.map(t => `
-      <div class="models-tool-row" id="tool-row-${t.id}">
-        <div class="models-tool-info">
-          <span class="models-tool-name">${t.label}</span>
-          <span class="badge ${t.detected ? 'badge-green' : 'badge-red'}" style="font-size:9px">
-            ${t.detected ? '● Detected' : '○ Not found'}
-          </span>
-          <span class="badge models-type-badge">${t.type.toUpperCase()}</span>
-        </div>
-        <div class="models-tool-config">
-          <input class="input" placeholder="Custom path (leave blank to auto-detect)"
-                 id="tool-path-${t.id}" value="${t.path || ''}" style="width:200px">
-          <label class="skill-toggle" title="Available to OpenClaw" style="display:inline-flex;align-items:center;gap:6px;width:auto">
-            <input type="checkbox" id="tool-avail-${t.id}" ${t.availableForOpenclaw ? 'checked' : ''}>
-            <span class="skill-toggle-track"></span>
-            <span style="font-size:10px;color:var(--muted)">OpenClaw</span>
-          </label>
-          <button class="btn btn-xs" onclick="modelsToolSave('${t.id}')">Save</button>
-          <a class="btn btn-xs" onclick="nav('keys');setTimeout(keysShowToolApis,200)" style="cursor:pointer;font-size:9px">API →</a>
-        </div>
-      </div>
-    `).join('');
+    const s = await apiFetch('/api/models/local/settings');
+    const t = s[tool] || {};
+    const pathEl   = document.getElementById('nlm-path');
+    const apiUrlEl = document.getElementById('nlm-apiurl');
+    if (pathEl)   pathEl.value   = t.modelsPath || '';
+    if (apiUrlEl) apiUrlEl.value = t.apiUrl     || '';
+  } catch {}
+}
+
+async function nlmSaveSettings() {
+  const tool   = document.getElementById('nlm-tool')?.value || 'whisper';
+  const status = document.getElementById('nlm-settings-status');
+  try {
+    await apiFetch('/api/models/local/settings', {
+      method: 'POST',
+      body: {
+        tool,
+        modelsPath: document.getElementById('nlm-path')?.value.trim()   || '',
+        apiUrl:     document.getElementById('nlm-apiurl')?.value.trim() || '',
+      }
+    });
+    setStatus(status, '✓ Saved', 'ok');
+    setTimeout(() => setStatus(status, ''), 3000);
+    nlmLoadList();
   } catch (e) {
-    container.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    setStatus(status, `✗ ${e.message}`, 'err');
   }
 }
 
-async function modelsToolSave(id) {
-  const pathEl   = document.getElementById(`tool-path-${id}`);
-  const apiUrlEl = document.getElementById(`tool-apiurl-${id}`);
-  const availEl  = document.getElementById(`tool-avail-${id}`);
+async function nlmSearch() {
+  const tool    = document.getElementById('nlm-tool')?.value || 'whisper';
+  const q       = (document.getElementById('nlm-search-input')?.value || '').trim();
+  const results = document.getElementById('nlm-search-results');
+  if (!results) return;
+
+  results.style.display = 'block';
+  results.innerHTML = '<div class="placeholder pulse" style="padding:6px">Searching…</div>';
+
   try {
-    await apiFetch(`/api/models/tools/${id}/config`, {
-      method: 'POST',
-      body: {
-        path:      pathEl   ? pathEl.value.trim()   : '',
-        apiUrl:    apiUrlEl ? apiUrlEl.value.trim() : '',
-        available: availEl  ? availEl.checked       : false,
-      }
-    });
-    modelsLoadTools();
-  } catch (e) { alert(`Save error: ${e.message}`); }
+    const data = await apiFetch(`/api/models/local/search?tool=${tool}&q=${encodeURIComponent(q)}`);
+    const list = data.results || [];
+    if (!list.length) { results.innerHTML = '<div class="placeholder" style="padding:6px">No results</div>'; return; }
+    results.innerHTML = '<div class="models-search-list">' + list.map(m => `
+      <div class="models-search-item" onclick="nlmSearchSelect('${m.name.replace(/'/g,"\\'")}')">
+        <span class="models-search-name">${m.name}</span>
+        <span class="models-search-desc">${m.description || ''}</span>
+      </div>
+    `).join('') + '</div>';
+  } catch (e) {
+    results.innerHTML = `<div class="placeholder" style="color:var(--red);padding:6px">${e.message}</div>`;
+  }
+}
+
+function nlmSearchSelect(name) {
+  const input = document.getElementById('nlm-install-input');
+  if (input) input.value = name;
+  const results = document.getElementById('nlm-search-results');
+  if (results) results.style.display = 'none';
+}
+
+async function nlmLoadList() {
+  const tool  = document.getElementById('nlm-tool')?.value || 'whisper';
+  const tbody = document.getElementById('nlm-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" class="placeholder pulse" style="padding:12px">Loading…</td></tr>';
+  try {
+    const data   = await apiFetch(`/api/models/local/list?tool=${tool}`);
+    const models = data.models || [];
+    if (!models.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="placeholder" style="padding:12px">No models found for this tool</td></tr>';
+      return;
+    }
+    tbody.innerHTML = models.map(m => `
+      <tr class="models-row">
+        <td class="models-name">${m.name}</td>
+        <td style="font-size:10px;color:var(--muted);max-width:240px">${m.description || '—'}</td>
+        <td>
+          <span class="badge ${m.detected ? 'badge-green' : 'badge-red'}" style="font-size:9px">
+            ${m.detected ? '● Installed' : '○ Not installed'}
+          </span>
+        </td>
+        <td class="models-acts">
+          ${m.detected
+            ? `<button class="btn btn-xs btn-red" onclick="nlmDelete('${tool}','${m.name}')">✕ Remove</button>`
+            : `<button class="btn btn-xs btn-teal" onclick="document.getElementById('nlm-install-input').value='${m.name}';nlmInstall()">⬇ Install</button>`
+          }
+        </td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="4" style="padding:12px;color:var(--red)">${e.message}</td></tr>`;
+  }
+}
+
+function nlmInstall() {
+  const tool  = document.getElementById('nlm-tool')?.value || 'whisper';
+  const model = document.getElementById('nlm-install-input')?.value.trim();
+  if (!model) return;
+
+  const out     = document.getElementById('nlm-install-out');
+  const bar     = document.getElementById('nlm-pull-bar');
+  const barFill = document.getElementById('nlm-pull-bar-fill');
+  const pct     = document.getElementById('nlm-pull-pct');
+
+  if (out) { out.style.display = 'block'; out.textContent = `Installing ${model}…\n`; }
+  if (bar) { bar.style.display = 'block'; }
+  if (barFill) barFill.style.width = '0%';
+  if (pct) pct.textContent = '';
+
+  fetch('/api/models/local/install', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tool, model })
+  }).then(res => {
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    function read() {
+      reader.read().then(({ done, value }) => {
+        if (done) { nlmLoadList(); return; }
+        decoder.decode(value).split('\n').forEach(line => {
+          if (!line.startsWith('data: ')) return;
+          try {
+            const obj = JSON.parse(line.slice(6));
+            if (obj.status && out) out.textContent += obj.status + '\n';
+            if (obj.done) {
+              if (bar) bar.style.display = 'none';
+              if (pct) pct.textContent = '';
+              nlmLoadList();
+            }
+          } catch {}
+        });
+        if (out) out.scrollTop = out.scrollHeight;
+        read();
+      });
+    }
+    read();
+  }).catch(e => { if (out) out.textContent += `Error: ${e.message}\n`; });
+}
+
+function nlmDelete(tool, model) {
+  appConfirm(`Remove ${model} from ${tool}?`, async () => {
+    try {
+      await apiFetch('/api/models/local/delete', { method: 'POST', body: { tool, model } });
+      nlmLoadList();
+    } catch (e) { alert(`Delete error: ${e.message}`); }
+  });
 }

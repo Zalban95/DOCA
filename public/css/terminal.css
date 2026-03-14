@@ -51,3 +51,52 @@
 #term-container .xterm-screen {
   height: 100%;
 }
+
+/* ── Embedded terminals in Code tab accordions ────────── */
+
+.code-tool-term-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #0d1117;
+}
+
+.code-tool-term-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.code-tool-term-status {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.code-tool-term {
+  height: 220px;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.code-tool-term .xterm {
+  height: 100%;
+}
+
+.code-tool-term .xterm-viewport {
+  height: 100% !important;
+  overflow-y: auto !important;
+}
+
+.code-tool-term .xterm-screen {
+  height: 100%;
+}

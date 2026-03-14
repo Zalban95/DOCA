@@ -1,15 +1,23 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — API KEYS + TOOL APIS
+   OPENCLAW PANEL — API KEYS + TOOL PROVIDERS
    ═══════════════════════════════════════════════════════ */
 
 async function loadKeys() {
-  keysLoadToolApis();
+  keysLoadProviders();
+  keysLoadToolProviders();
+}
+
+/* ── LLM Providers ────────────────────────────────────── */
+
+async function keysLoadProviders() {
   const list = document.getElementById('providers-list');
+  if (!list) return;
   try {
-    const data = await apiFetch('/api/keys');
+    const data      = await apiFetch('/api/keys');
     const providers = data.providers || {};
     if (!Object.keys(providers).length) {
-      list.innerHTML = '<div class="placeholder">No providers configured</div>'; return;
+      list.innerHTML = '<div class="placeholder">No providers configured</div>';
+      return;
     }
     list.innerHTML = Object.entries(providers).map(([name, p]) => `
       <div class="provider-card ${p.hasKey ? 'has-key' : 'no-key'}">
@@ -40,7 +48,7 @@ async function saveKey(provider) {
     await apiFetch('/api/keys', { method: 'POST', body: { provider, apiKey } });
     setStatus(status, '✓ Saved — restart OpenClaw to apply', 'ok');
     input.value = '';
-    setTimeout(loadKeys, 1500);
+    setTimeout(keysLoadProviders, 1500);
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
   }
@@ -50,7 +58,7 @@ function deleteProvider(name) {
   appConfirm(`Remove provider "${name}"?`, async () => {
     try {
       await apiFetch(`/api/keys/${name}`, { method: 'DELETE' });
-      loadKeys();
+      keysLoadProviders();
     } catch (e) { alert(`Error: ${e.message}`); }
   });
 }
@@ -68,66 +76,83 @@ async function addProvider() {
     await apiFetch('/api/keys/add-provider', { method: 'POST', body: { name, baseUrl, apiKey } });
     setStatus(status, `✓ Added ${name}`, 'ok');
     hideAddProvider();
-    setTimeout(loadKeys, 500);
+    setTimeout(keysLoadProviders, 500);
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
   }
 }
 
-/* ── Tool APIs ────────────────────────────────────────── */
+/* ── Tool Providers (non-LLM) ─────────────────────────── */
 
-const TOOL_API_DEFS = [
-  { key: 'stableDiffusion', label: 'Stable Diffusion WebUI', placeholder: 'http://127.0.0.1:7860' },
-  { key: 'comfyui',         label: 'ComfyUI',                placeholder: 'http://127.0.0.1:8188' },
-  { key: 'openwebui',       label: 'Open WebUI',             placeholder: 'http://127.0.0.1:3000' },
-  { key: 'kokoro',          label: 'Kokoro TTS',             placeholder: 'http://127.0.0.1:8880' },
-  { key: 'whisper',         label: 'Whisper API',            placeholder: 'http://127.0.0.1:9000' },
-];
-
-let _toolApis = {};
-
-async function keysLoadToolApis() {
-  const el = document.getElementById('tool-apis-list');
-  if (!el) return;
+async function keysLoadToolProviders() {
+  const list = document.getElementById('tool-providers-list');
+  if (!list) return;
   try {
-    const data = await apiFetch('/api/keys/tool-apis');
-    _toolApis = data.toolApis || {};
-    _keysRenderToolApis(el);
-  } catch (e) {
-    el.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
-  }
-}
-
-function _keysRenderToolApis(el) {
-  el.innerHTML = TOOL_API_DEFS.map(t => {
-    const val = _toolApis[t.key]?.url || '';
-    return `
-      <div class="tool-api-row">
-        <span class="tool-api-label">${t.label}</span>
-        <input class="input" id="tool-api-${t.key}" placeholder="${t.placeholder}" value="${val}">
-        <span class="status-line" id="tool-api-status-${t.key}"></span>
+    const data      = await apiFetch('/api/keys/tool-providers');
+    const providers = data.providers || {};
+    if (!Object.keys(providers).length) {
+      list.innerHTML = '<div class="placeholder">No tool providers configured</div>';
+      return;
+    }
+    list.innerHTML = Object.entries(providers).map(([name, p]) => `
+      <div class="provider-card ${p.hasKey ? 'has-key' : 'no-key'}">
+        <div class="provider-header">
+          <span class="provider-name">${name}</span>
+          <span class="provider-badge ${p.hasKey ? 'ok' : 'no'}">${p.hasKey ? 'KEY SET' : 'NO KEY'}</span>
+        </div>
+        ${p.baseUrl ? `<div class="provider-models" style="font-size:10px">${p.baseUrl}</div>` : ''}
+        <div class="provider-key-row">
+          <input class="input" type="password" id="tkey-${name}" placeholder="${p.apiKeyMasked || 'Enter API key (optional)…'}">
+          <button class="btn btn-sm btn-green" onclick="saveToolProviderKey('${name}')">Save Key</button>
+          <button class="btn btn-sm btn-red"   onclick="deleteToolProvider('${name}')">✕</button>
+        </div>
+        <div class="status-line mt4" id="tkey-status-${name}"></div>
       </div>
-    `;
-  }).join('');
+    `).join('');
+  } catch (e) {
+    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+  }
 }
 
-async function keysSaveToolApis() {
-  const status = document.getElementById('tool-apis-status');
-  const toolApis = {};
-  TOOL_API_DEFS.forEach(t => {
-    const val = document.getElementById(`tool-api-${t.key}`)?.value.trim();
-    if (val) toolApis[t.key] = { url: val };
-  });
+async function saveToolProviderKey(name) {
+  const input  = document.getElementById(`tkey-${name}`);
+  const status = document.getElementById(`tkey-status-${name}`);
+  const apiKey = input.value.trim();
+  if (!apiKey) { setStatus(status, 'Enter a key first', 'err'); return; }
   try {
-    await apiFetch('/api/keys/tool-apis', { method: 'POST', body: { toolApis } });
+    await apiFetch('/api/keys/tool-providers', { method: 'POST', body: { provider: name, apiKey } });
     setStatus(status, '✓ Saved', 'ok');
-    _toolApis = toolApis;
+    input.value = '';
+    setTimeout(keysLoadToolProviders, 1500);
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
   }
 }
 
-function keysShowToolApis() {
-  const section = document.getElementById('tool-apis-section');
-  if (section) section.scrollIntoView({ behavior: 'smooth' });
+function deleteToolProvider(name) {
+  appConfirm(`Remove tool provider "${name}"?`, async () => {
+    try {
+      await apiFetch(`/api/keys/tool-providers/${name}`, { method: 'DELETE' });
+      keysLoadToolProviders();
+    } catch (e) { alert(`Error: ${e.message}`); }
+  });
+}
+
+function showAddToolProvider() { document.getElementById('add-tool-provider-form').style.display = 'block'; }
+function hideAddToolProvider() { document.getElementById('add-tool-provider-form').style.display = 'none'; }
+
+async function addToolProvider() {
+  const name    = document.getElementById('tp-name').value.trim();
+  const baseUrl = document.getElementById('tp-url').value.trim();
+  const apiKey  = document.getElementById('tp-key').value.trim();
+  const status  = document.getElementById('tp-status');
+  if (!name || !baseUrl) { setStatus(status, 'Name and URL required', 'err'); return; }
+  try {
+    await apiFetch('/api/keys/tool-providers/add', { method: 'POST', body: { name, baseUrl, apiKey } });
+    setStatus(status, `✓ Added ${name}`, 'ok');
+    hideAddToolProvider();
+    setTimeout(keysLoadToolProviders, 500);
+  } catch (e) {
+    setStatus(status, `✗ ${e.message}`, 'err');
+  }
 }

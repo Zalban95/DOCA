@@ -8,11 +8,7 @@ let termFit     = null;
 let termResObs  = null;
 
 function termInit() {
-  // #region agent log
-  fetch('http://127.0.0.1:7404/ingest/a169e71a-1553-42cd-9c71-de52063f68ac',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e82941'},body:JSON.stringify({sessionId:'e82941',location:'terminal.js:termInit',message:'termInit called',data:{termExists:!!term},timestamp:Date.now(),runId:'post-fix2',hypothesisId:'H2'})}).catch(()=>{});
-  // #endregion
   if (!term) _termCreate();
-  // Trigger fit on every visit with double rAF to ensure layout is settled
   requestAnimationFrame(() => requestAnimationFrame(() => _termFit()));
 }
 
@@ -57,21 +53,15 @@ function _termCreate() {
   term.open(container);
   termConnect();
 
-  // Initial fit for the first visit — layout is already settled one rAF after open()
   requestAnimationFrame(() => _termFit());
 
-  // Fit whenever the terminal container is resized (window resize, panel resize)
   termResObs = new ResizeObserver(() => _termFit());
   termResObs.observe(container);
 
-  // Fit every time the terminal tab becomes active using a MutationObserver
-  // This ensures fit() runs after the CSS display:flex layout has settled
   const tabEl = document.getElementById('tab-terminal');
   if (tabEl) {
     new MutationObserver(() => {
-      if (tabEl.classList.contains('active')) {
-        requestAnimationFrame(() => _termFit());
-      }
+      if (tabEl.classList.contains('active')) requestAnimationFrame(() => _termFit());
     }).observe(tabEl, { attributes: true, attributeFilter: ['class'] });
   }
 }
@@ -99,9 +89,7 @@ function termConnect() {
     } catch {}
   };
 
-  termWs.onclose = () => {
-    _termSetStatus('○ disconnected', 'var(--red)');
-  };
+  termWs.onclose = () => { _termSetStatus('○ disconnected', 'var(--red)'); };
 
   termWs.onerror = () => {
     term.writeln('\r\n\x1b[31m[connection error — is node-pty installed?]\x1b[0m\r\n');
@@ -115,24 +103,14 @@ function termConnect() {
 }
 
 function termNewSession() {
-  if (termWs) {
-    termWs.onclose = null;
-    termWs.close();
-    termWs = null;
-  }
-  if (term) {
-    term.clear();
-    termConnect();
-  } else {
-    _termCreate();
-  }
+  if (termWs) { termWs.onclose = null; termWs.close(); termWs = null; }
+  if (term) { term.clear(); termConnect(); }
+  else { _termCreate(); }
 }
 
-/** Navigate to the terminal tab and optionally run a command */
 function termLaunchCommand(cmd) {
   nav('terminal');
   if (!term) {
-    // termInit() will be called by nav(); wait for connect then send
     const waitAndSend = setInterval(() => {
       if (termWs?.readyState === WebSocket.OPEN) {
         clearInterval(waitAndSend);
@@ -147,24 +125,11 @@ function termLaunchCommand(cmd) {
 
 function _termFit() {
   if (!termFit) return;
-  // #region agent log
-  const _c = document.getElementById('term-container');
-  const _cs = _c ? window.getComputedStyle(_c) : null;
-  const _proposed = termFit.proposeDimensions ? termFit.proposeDimensions() : null;
-  fetch('http://127.0.0.1:7404/ingest/a169e71a-1553-42cd-9c71-de52063f68ac',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e82941'},body:JSON.stringify({sessionId:'e82941',location:'terminal.js:_termFit',message:'_termFit called',data:{clientH:_c?.clientHeight,clientW:_c?.clientWidth,computedH:_cs?.height,computedDisplay:_cs?.display,proposed:_proposed,termCols:term?.cols,termRows:term?.rows},timestamp:Date.now(),runId:'post-fix2',hypothesisId:'H2-H3'})}).catch(()=>{});
-  // #endregion
   try {
     termFit.fit();
-    // #region agent log
-    fetch('http://127.0.0.1:7404/ingest/a169e71a-1553-42cd-9c71-de52063f68ac',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e82941'},body:JSON.stringify({sessionId:'e82941',location:'terminal.js:_termFit-after',message:'fit() done',data:{cols:term?.cols,rows:term?.rows},timestamp:Date.now(),runId:'post-fix2',hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
     if (termWs?.readyState === WebSocket.OPEN)
       termWs.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
-  } catch(e) {
-    // #region agent log
-    fetch('http://127.0.0.1:7404/ingest/a169e71a-1553-42cd-9c71-de52063f68ac',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e82941'},body:JSON.stringify({sessionId:'e82941',location:'terminal.js:_termFit-catch',message:'fit() threw',data:{err:e?.message},timestamp:Date.now(),runId:'post-fix2',hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
-  }
+  } catch {}
 }
 
 function _termSetStatus(text, color) {
