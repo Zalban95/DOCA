@@ -531,6 +531,67 @@
         </div>
       </div>
 
+      <!-- HuggingFace Settings -->
+      <div class="card">
+        <div class="card-title">HuggingFace Settings</div>
+        <div class="models-settings-grid">
+          <span class="models-settings-label">Cache directory</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="hf-cache-dir" class="input" style="flex:1;min-width:0" placeholder="~/.cache/huggingface/hub (default)">
+            <button class="btn btn-xs" title="Browse" onclick="fpOpen('hf-cache-dir','dir')">📁</button>
+          </div>
+          <span class="models-settings-label">HF Token</span>
+          <input id="hf-token" class="input" type="password" placeholder="hf_… (optional, for gated models)">
+        </div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+          <button class="btn btn-sm btn-blue" onclick="hfSaveSettings()">Save</button>
+          <button class="btn btn-sm" onclick="hfCheckStatus()">↺ Check</button>
+          <span id="hf-status-badge" class="badge badge-blue">…</span>
+          <span id="hf-settings-status" class="status-line"></span>
+        </div>
+      </div>
+
+      <!-- HuggingFace Models -->
+      <div class="card">
+        <div class="card-title">HuggingFace Models</div>
+        <!-- Search online -->
+        <div class="models-search-row">
+          <input id="hf-search-input" class="input" placeholder="Search HuggingFace Hub (e.g. llama, whisper, stable-diffusion)…"
+                 style="flex:1" onkeydown="if(event.key==='Enter') hfSearch()">
+          <button class="btn btn-sm" onclick="hfSearch()">🔍 Search</button>
+        </div>
+        <div id="hf-search-results" style="display:none;margin-bottom:8px"></div>
+        <!-- Download row -->
+        <div class="models-pull-row">
+          <input id="hf-dl-input" class="input" placeholder="repo id (e.g. meta-llama/Llama-3.2-1B)"
+                 style="max-width:340px"
+                 onkeydown="if(event.key==='Enter') hfDownload()">
+          <button class="btn btn-sm btn-teal" onclick="hfDownload()">⬇ Download</button>
+          <div class="models-pull-progress" id="hf-pull-bar" style="display:none">
+            <div class="models-pull-progress-bar" id="hf-pull-bar-fill"></div>
+          </div>
+          <span class="models-pull-pct" id="hf-pull-pct"></span>
+        </div>
+        <div id="hf-dl-out" class="terminal" style="display:none;max-height:140px;margin-top:6px"></div>
+        <!-- Table -->
+        <div style="overflow-x:auto;margin-top:10px">
+          <table class="models-table">
+            <thead>
+              <tr>
+                <th>Repo</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Modified</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="hf-table-body">
+              <tr><td colspan="5" class="placeholder" style="padding:12px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Local Non-LLM Models -->
       <div class="card">
         <div class="card-title">Local Non-LLM Models</div>

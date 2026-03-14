@@ -9,6 +9,7 @@ async function modelsInit() {
   modelsCheckOllama();
   modelsLoadList();
   nlmInit();
+  hfInit();
 }
 
 /* ── Settings ─────────────────────────────────────────── */
@@ -341,6 +342,169 @@ function nlmDelete(tool, model) {
     try {
       await apiFetch('/api/models/local/delete', { method: 'POST', body: { tool, model } });
       nlmLoadList();
+    } catch (e) { alert(`Delete error: ${e.message}`); }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   HuggingFace Models
+   ══════════════════════════════════════════════════════════ */
+
+function hfInit() {
+  hfLoadSettings();
+  hfCheckStatus();
+  hfLoadList();
+}
+
+async function hfLoadSettings() {
+  try {
+    const s = await apiFetch('/api/models/hf/settings');
+    const cacheEl = document.getElementById('hf-cache-dir');
+    const tokenEl = document.getElementById('hf-token');
+    if (cacheEl) cacheEl.value = s.cacheDir || '';
+    if (tokenEl) tokenEl.value = s.token    || '';
+  } catch {}
+}
+
+async function hfSaveSettings() {
+  const status   = document.getElementById('hf-settings-status');
+  const cacheDir = document.getElementById('hf-cache-dir')?.value.trim() || '';
+  const token    = document.getElementById('hf-token')?.value.trim()    || '';
+  try {
+    await apiFetch('/api/models/hf/settings', { method: 'POST', body: { cacheDir, token } });
+    setStatus(status, '✓ Saved', 'ok');
+    setTimeout(() => setStatus(status, ''), 3000);
+    hfCheckStatus();
+    hfLoadList();
+  } catch (e) {
+    setStatus(status, `✗ ${e.message}`, 'err');
+  }
+}
+
+async function hfCheckStatus() {
+  const badge = document.getElementById('hf-status-badge');
+  if (!badge) return;
+  badge.textContent = '…'; badge.className = 'badge badge-blue';
+  try {
+    const s = await apiFetch('/api/models/hf/status');
+    if (s.detected) {
+      const label = s.user ? `● ${s.user}  v${s.version}` : `● CLI v${s.version}`;
+      badge.textContent = label;
+      badge.className   = 'badge badge-green';
+    } else {
+      badge.textContent = '○ huggingface-cli not found';
+      badge.className   = 'badge badge-red';
+    }
+  } catch {
+    badge.textContent = '○ Error'; badge.className = 'badge badge-red';
+  }
+}
+
+async function hfSearch() {
+  const q = document.getElementById('hf-search-input')?.value.trim();
+  if (!q) return;
+  const box = document.getElementById('hf-search-results');
+  if (box) { box.style.display = 'block'; box.innerHTML = '<div class="placeholder pulse" style="padding:8px">Searching…</div>'; }
+  try {
+    const data    = await apiFetch(`/api/models/hf/search?q=${encodeURIComponent(q)}`);
+    const results = data.results || [];
+    if (!results.length) {
+      if (box) box.innerHTML = '<div class="placeholder" style="padding:8px">No results</div>';
+      return;
+    }
+    if (box) box.innerHTML = results.map(m => `
+      <div class="models-search-item" onclick="hfSearchSelect('${m.id.replace(/'/g,"\\'")}')">
+        <strong>${m.id}</strong>
+        <span class="models-search-meta">${m.pipeline_tag || ''}  ⬇ ${fmtNumber(m.downloads)}  ♥ ${fmtNumber(m.likes)}</span>
+      </div>`).join('');
+  } catch (e) {
+    if (box) box.innerHTML = `<div class="placeholder" style="color:var(--red);padding:8px">${e.message}</div>`;
+  }
+}
+
+function hfSearchSelect(repoId) {
+  const inp = document.getElementById('hf-dl-input');
+  if (inp) inp.value = repoId;
+  const box = document.getElementById('hf-search-results');
+  if (box) box.style.display = 'none';
+}
+
+async function hfLoadList() {
+  const tbody = document.getElementById('hf-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" class="placeholder pulse" style="padding:12px">Loading…</td></tr>';
+  try {
+    const data  = await apiFetch('/api/models/hf/list');
+    const repos = data.repos || [];
+    if (!repos.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="placeholder" style="padding:12px">No cached models found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = repos.map(r => {
+      const size = r.size_on_disk ? fmtBytes(r.size_on_disk) : '—';
+      const date = r.last_modified ? fmtDate(r.last_modified) : '—';
+      const safe = r.repo_id.replace(/'/g, "\\'");
+      return `<tr class="models-row">
+        <td class="models-name">${r.repo_id}</td>
+        <td class="models-size">${r.repo_type || 'model'}</td>
+        <td class="models-size">${size}</td>
+        <td class="models-date">${date}</td>
+        <td class="models-acts">
+          <button class="btn btn-xs btn-red" onclick="hfDelete('${safe}')">✕ Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:12px;color:var(--red)">${e.message}</td></tr>`;
+  }
+}
+
+function hfDownload() {
+  const repoId = document.getElementById('hf-dl-input')?.value.trim();
+  if (!repoId) return;
+
+  const out    = document.getElementById('hf-dl-out');
+  const bar    = document.getElementById('hf-pull-bar');
+  const barFil = document.getElementById('hf-pull-bar-fill');
+  const pct    = document.getElementById('hf-pull-pct');
+
+  if (out)    { out.style.display = 'block'; out.textContent = ''; }
+  if (bar)    bar.style.display = 'block';
+  if (barFil) barFil.style.width = '0%';
+  if (pct)    pct.textContent = '';
+
+  fetch('/api/models/hf/download', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repoId }),
+  }).then(res => {
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    const read = () => reader.read().then(({ done, value }) => {
+      if (done) { if (bar) bar.style.display = 'none'; return; }
+      decoder.decode(value).split('\n').forEach(line => {
+        if (!line.startsWith('data: ')) return;
+        try {
+          const obj = JSON.parse(line.slice(6));
+          if (obj.status && out) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
+          if (obj.done) {
+            if (bar)  bar.style.display = 'none';
+            if (pct)  pct.textContent = '';
+            setTimeout(hfLoadList, 1000);
+          }
+        } catch {}
+      });
+      read();
+    });
+    read();
+  }).catch(e => { if (out) out.textContent += `Error: ${e.message}\n`; });
+}
+
+function hfDelete(repoId) {
+  appConfirm(`Delete cached model: ${repoId}?`, async () => {
+    try {
+      await apiFetch('/api/models/hf/delete', { method: 'POST', body: { repoId } });
+      hfLoadList();
     } catch (e) { alert(`Delete error: ${e.message}`); }
   });
 }

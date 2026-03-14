@@ -1619,7 +1619,7 @@ const SYSTEM_TOOLS = [
     note: 'HuggingFace Hub CLI — for downloading local models',
     repo: 'https://pypi.org/project/huggingface-hub/',
     repoLabel: 'pip: huggingface-hub',
-    installCmd: 'sudo pip install --break-system-packages huggingface-hub',
+    installCmd: 'sudo pip install --break-system-packages --ignore-installed huggingface-hub',
   },
 ];
 
@@ -1833,6 +1833,159 @@ app.post('/api/models/local/delete', (req, res) => {
 
   try {
     fs.rmSync(filePath, { recursive: true, force: true });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── HuggingFace Models ───────────────────────────────────────────────────────
+
+app.get('/api/models/hf/settings', (req, res) => {
+  const mp = loadModelsPrefs();
+  res.json(mp.hf || { cacheDir: '', token: '' });
+});
+
+app.post('/api/models/hf/settings', (req, res) => {
+  try {
+    const mp = loadModelsPrefs();
+    const { cacheDir, token } = req.body;
+    mp.hf = { cacheDir: cacheDir || '', token: token || '' };
+    saveModelsPrefs(mp);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/models/hf/status', (req, res) => {
+  const mp       = loadModelsPrefs();
+  const home     = process.env.HOME || os.homedir();
+  const hfBin    = `PATH="${home}/.local/bin:${process.env.PATH}" huggingface-cli`;
+  const env      = { ...process.env, HOME: home,
+                     ...(mp.hf?.token ? { HF_TOKEN: mp.hf.token } : {}) };
+  exec(`bash -lc "${hfBin} version 2>/dev/null"`, { env, timeout: 5000 }, (err, stdout) => {
+    const version = stdout.trim().split('\n')[0] || null;
+    if (err || !version) return res.json({ detected: false, version: null, user: null });
+    exec(`bash -lc "${hfBin} whoami 2>/dev/null"`, { env, timeout: 5000 }, (e2, out2) => {
+      const user = e2 ? null : (out2.trim().split('\n')[0] || null);
+      res.json({ detected: true, version, user });
+    });
+  });
+});
+
+app.get('/api/models/hf/list', (req, res) => {
+  const mp    = loadModelsPrefs();
+  const home  = process.env.HOME || os.homedir();
+  const hfBin = `PATH="${home}/.local/bin:${process.env.PATH}" huggingface-cli`;
+  const env   = { ...process.env, HOME: home,
+                  ...(mp.hf?.token ? { HF_TOKEN: mp.hf.token } : {}) };
+
+  exec(`bash -lc "${hfBin} scan-cache --json 2>/dev/null"`, { env, timeout: 10000, maxBuffer: 5 * 1024 * 1024 }, (err, stdout) => {
+    if (!err && stdout.trim()) {
+      try {
+        const data  = JSON.parse(stdout.trim());
+        const repos = (data.repos || []).map(r => ({
+          repo_id:       r.repo_id,
+          repo_type:     r.repo_type || 'model',
+          size_on_disk:  r.size_on_disk || 0,
+          nb_files:      r.nb_files    || 0,
+          last_modified: r.last_modified || null,
+        }));
+        return res.json({ repos });
+      } catch {}
+    }
+    // Fallback: scan cache directory directly
+    const cacheDir = mp.hf?.cacheDir || path.join(home, '.cache', 'huggingface', 'hub');
+    try {
+      if (!fs.existsSync(cacheDir)) return res.json({ repos: [] });
+      const entries = fs.readdirSync(cacheDir);
+      const repos   = entries
+        .filter(e => e.startsWith('models--') || e.startsWith('datasets--'))
+        .map(e => {
+          const full    = path.join(cacheDir, e);
+          const stat    = fs.statSync(full);
+          const parts   = e.split('--');
+          const repo_id = parts.length >= 3 ? `${parts[1]}/${parts.slice(2).join('/')}` : e;
+          return { repo_id, repo_type: e.startsWith('datasets--') ? 'dataset' : 'model',
+                   size_on_disk: stat.size, nb_files: null, last_modified: stat.mtime.toISOString() };
+        });
+      res.json({ repos });
+    } catch (e2) { res.status(500).json({ error: e2.message }); }
+  });
+});
+
+app.get('/api/models/hf/search', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json({ results: [] });
+  try {
+    const url = `https://huggingface.co/api/models?search=${encodeURIComponent(q)}&limit=20&sort=downloads&direction=-1`;
+    const r   = await fetch(url, { headers: { 'User-Agent': 'doca-panel/1.0' }, signal: AbortSignal.timeout(6000) });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    const results = data.map(m => ({
+      id:           m.id,
+      downloads:    m.downloads   || 0,
+      likes:        m.likes       || 0,
+      pipeline_tag: m.pipeline_tag || '',
+    }));
+    res.json({ results });
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
+app.post('/api/models/hf/download', (req, res) => {
+  const { repoId } = req.body;
+  if (!repoId) return res.status(400).json({ error: 'repoId required' });
+
+  const mp    = loadModelsPrefs();
+  const home  = process.env.HOME || os.homedir();
+  const token = mp.hf?.token || '';
+  const cache = mp.hf?.cacheDir || '';
+
+  sseHeaders(res);
+  const sseWrite = d => { try { res.write(`data: ${JSON.stringify(d)}\n\n`); } catch {} };
+
+  const args = ['download', repoId];
+  if (token)  args.push('--token', token);
+  if (cache)  args.push('--cache-dir', cache);
+
+  const cmdStr = `huggingface-cli ${args.join(' ')}`;
+  sseWrite({ status: `Downloading ${repoId}…\n$ ${cmdStr}\n` });
+
+  const child = spawn('bash', ['-lc', `PATH="${home}/.local/bin:$PATH" ${cmdStr}`], {
+    cwd: home,
+    env: { ...process.env, HOME: home, ...(token ? { HF_TOKEN: token } : {}) },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  child.stdout.on('data', d => sseWrite({ status: d.toString() }));
+  child.stderr.on('data', d => sseWrite({ status: d.toString() }));
+  child.on('close', (code, signal) => {
+    const ok  = code === 0;
+    const msg = ok ? '✓ Done'
+      : code !== null ? `✗ Exit ${code}`
+      : `✗ Killed by signal (${signal || 'unknown'})`;
+    sseWrite({ done: true, ok, status: msg });
+    res.end();
+  });
+  child.on('error', e => {
+    sseWrite({ done: true, ok: false, status: `Error: ${e.message}` });
+    res.end();
+  });
+  res.on('close', () => { if (!child.killed) child.kill(); });
+});
+
+app.post('/api/models/hf/delete', (req, res) => {
+  const { repoId } = req.body;
+  if (!repoId) return res.status(400).json({ error: 'repoId required' });
+
+  const mp    = loadModelsPrefs();
+  const home  = process.env.HOME || os.homedir();
+  const cache = mp.hf?.cacheDir || path.join(home, '.cache', 'huggingface', 'hub');
+
+  // HF cache dir name format: models--<org>--<repo>  (slashes become --)
+  const dirName = `models--${repoId.replace(/\//g, '--')}`;
+  const full    = path.join(cache, dirName);
+
+  if (!fs.existsSync(full)) return res.status(404).json({ error: 'Cache entry not found' });
+  try {
+    fs.rmSync(full, { recursive: true, force: true });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
