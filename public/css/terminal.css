@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — TERMINAL TAB
+   OPENCLAW PANEL — TERMINAL TAB (multi-session)
    ═══════════════════════════════════════════════════════ */
 
 #tab-terminal {
@@ -18,37 +18,67 @@
   flex-shrink: 0;
 }
 
-.term-status {
-  font-size: 11px;
-  font-family: var(--font-mono);
-  margin-left: auto;
-  color: var(--text-muted);
-}
-
-#term-container {
-  flex: 1;
-  min-height: 0;
-  background: #0d1117;
-  padding: 4px 6px;
-  overflow: hidden;
-  /* ensure proper height for xterm */
+/* Sessions list — scrollable column of stacked terminal panels */
+.term-sessions-list {
   display: flex;
   flex-direction: column;
-}
-
-/* xterm fills its container */
-#term-container .xterm {
+  gap: 8px;
+  padding: 8px;
+  overflow-y: auto;
   flex: 1;
   min-height: 0;
+}
+
+/* Each session panel */
+.term-session-wrap {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #0d1117;
+}
+
+.term-session-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.term-session-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.term-session-status {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  margin-left: auto;
+  color: var(--muted);
+}
+
+/* Fixed-height terminal container per session */
+.term-session-container {
+  height: 280px;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.term-session-container .xterm {
   height: 100%;
 }
 
-#term-container .xterm-viewport {
+.term-session-container .xterm-viewport {
   height: 100% !important;
   overflow-y: auto !important;
 }
 
-#term-container .xterm-screen {
+.term-session-container .xterm-screen {
   height: 100%;
 }
 

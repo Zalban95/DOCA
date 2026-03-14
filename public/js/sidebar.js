@@ -10,7 +10,7 @@ async function pollStatus() {
     renderContainers(data.containers || []);
     renderGPU(data.gpu || []);
     renderSystem(data.system || null);
-    renderModels(data.models || []);
+    renderModels(data.models || [], data.loadedModels || []);
 
   } catch {
     document.getElementById('dot').className = 'dot';
@@ -22,15 +22,28 @@ function renderContainers(containers) {
   if (!containers.length) {
     el.innerHTML = '<div class="placeholder">None running</div>'; return;
   }
-  el.innerHTML = containers.map(c => {
-    const st  = (c.State || c.Status || '').toLowerCase();
-    const up  = st.includes('running') || st.includes('up');
-    const label = (c.Service || c.Name || '').replace('openclaw-openclaw-','').replace(/-1$/, '');
+  // Show running containers first, then others; limit to 12 for sidebar compactness
+  const sorted = [...containers].sort((a, b) => {
+    const aUp = (a.State || a.Status || '').toLowerCase().includes('running') ? 0 : 1;
+    const bUp = (b.State || b.Status || '').toLowerCase().includes('running') ? 0 : 1;
+    return aUp - bUp;
+  });
+  const shown = sorted.slice(0, 12);
+  const runningCount = sorted.filter(c => (c.State || c.Status || '').toLowerCase().includes('running')).length;
+  const countEl = document.getElementById('s-containers-count');
+  if (countEl) countEl.textContent = `${runningCount}/${sorted.length} running`;
+
+  el.innerHTML = shown.map(c => {
+    const st    = (c.State || c.Status || '').toLowerCase();
+    const up    = st.includes('running') || st.includes('up');
+    const rawName = c.Names || c.Name || c.Service || '';
+    const label   = rawName.replace(/^\//, '').split(',')[0]
+      .replace('openclaw-openclaw-', '').replace(/-1$/, '');
     return `<div class="c-item ${up ? 'running' : 'exited'}">
-      <span class="c-name">${label}</span>
-      <span class="c-state">${st.split(' ')[0]}</span>
+      <span class="c-name" title="${label}">${label}</span>
+      <span class="c-state">${st.split(' ')[0].split('(')[0]}</span>
     </div>`;
-  }).join('');
+  }).join('') + (sorted.length > 12 ? `<div class="placeholder" style="font-size:10px">+${sorted.length - 12} more</div>` : '');
 }
 
 function renderGPU(gpus) {
@@ -91,19 +104,46 @@ function renderSystem(sys) {
   </div>`;
 }
 
-function renderModels(models) {
+function renderModels(models, loadedModels) {
   const el = document.getElementById('s-models');
-  if (!models.length) {
-    el.innerHTML = '<div class="placeholder">No models loaded</div>'; return;
+  if (!models.length && !loadedModels.length) {
+    el.innerHTML = '<div class="placeholder">No models installed</div>'; return;
   }
-  el.innerHTML = models.map(m => {
-    const name = m.name.replace(/:latest$/, '');
-    const size = m.size ? fmtBytes(m.size) : '?';
-    return `<div class="model-item">
-      <span class="model-name">${name}</span>
-      <span class="model-sz">${size}</span>
-    </div>`;
-  }).join('');
+
+  const loadedNames = new Set(loadedModels.map(m => m.name));
+
+  // Loaded models section (if any)
+  let html = '';
+  if (loadedModels.length) {
+    const totalVram = loadedModels.reduce((s, m) => s + (m.sizeVram || 0), 0);
+    html += `<div class="models-loaded-header">● In memory (${loadedModels.length})</div>`;
+    html += loadedModels.map(m => {
+      const name    = m.name.replace(/:latest$/, '');
+      const vram    = m.sizeVram || 0;
+      const pct     = totalVram > 0 ? Math.round(vram / totalVram * 100) : 0;
+      const vramStr = vram > 0 ? fmtBytes(vram) : '';
+      return `<div class="model-item loaded">
+        <span class="model-name loaded-name" title="${m.name}">${name}</span>
+        ${vram > 0 ? `<span class="model-vram">${vramStr} (${pct}%)</span>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  // Installed models (excluding already-loaded ones)
+  const others = models.filter(m => !loadedNames.has(m.name));
+  if (others.length) {
+    if (loadedModels.length) html += `<div class="models-loaded-header" style="margin-top:6px;opacity:.5">Installed</div>`;
+    html += others.map(m => {
+      const name = m.name.replace(/:latest$/, '');
+      const size = m.size ? fmtBytes(m.size) : '?';
+      return `<div class="model-item">
+        <span class="model-name">${name}</span>
+        <span class="model-sz">${size}</span>
+      </div>`;
+    }).join('');
+  }
+
+  el.innerHTML = html;
 }
 
 // Clock

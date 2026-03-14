@@ -20,22 +20,13 @@ const SETTINGS_TABS = [
 let _settingsHidden = [];
 
 async function settingsInit() {
-  // #region agent log
-  fetch('http://127.0.0.1:7404/ingest/a169e71a-1553-42cd-9c71-de52063f68ac',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e82941'},body:JSON.stringify({sessionId:'e82941',location:'settings.js:settingsInit',message:'settingsInit called',data:{listEl:!!document.getElementById('settings-tabs-list')},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H1'})}).catch(()=>{});
-  // #endregion
   try {
     const prefs = await apiFetch('/api/prefs');
     _settingsHidden = prefs.hiddenTabs || [];
-    // #region agent log
-    fetch('http://127.0.0.1:7404/ingest/a169e71a-1553-42cd-9c71-de52063f68ac',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e82941'},body:JSON.stringify({sessionId:'e82941',location:'settings.js:settingsInit-prefsFetched',message:'prefs fetched OK',data:{hiddenTabs:prefs.hiddenTabs},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
     _settingsRender();
   } catch (e) {
-    // #region agent log
-    fetch('http://127.0.0.1:7404/ingest/a169e71a-1553-42cd-9c71-de52063f68ac',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e82941'},body:JSON.stringify({sessionId:'e82941',location:'settings.js:settingsInit-error',message:'settingsInit error',data:{err:e.message},timestamp:Date.now(),runId:'post-fix',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
-    document.getElementById('settings-tabs-list').innerHTML =
-      `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    const el = document.getElementById('settings-tabs-list');
+    if (el) el.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
   }
 }
 
@@ -65,6 +56,8 @@ async function settingsSave() {
     setStatus(status, '✓ Saved — reload to apply', 'ok');
     _settingsHidden = hiddenTabs;
     _applyHiddenTabs(hiddenTabs);
+    // Sync the quick menu panel
+    _sidebarTabTogglesRender();
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
   }
@@ -73,7 +66,7 @@ async function settingsSave() {
 function _applyHiddenTabs(hiddenTabs) {
   document.querySelectorAll('.nav-tab[data-tab]').forEach(btn => {
     const tab = btn.dataset.tab;
-    if (tab === 'settings') return; // never hide the Settings tab itself
+    if (tab === 'settings') return;
     btn.style.display = hiddenTabs.includes(tab) ? 'none' : '';
   });
 }
@@ -82,6 +75,50 @@ function _applyHiddenTabs(hiddenTabs) {
 async function settingsApplyOnLoad() {
   try {
     const prefs = await apiFetch('/api/prefs');
-    _applyHiddenTabs(prefs.hiddenTabs || []);
+    _settingsHidden = prefs.hiddenTabs || [];
+    _applyHiddenTabs(_settingsHidden);
   } catch {}
+}
+
+/* ── Sidebar quick tab-toggle panel ──────────────────── */
+
+let _sidebarTabPanelOpen = false;
+
+function sidebarTabTogglesOpen() {
+  _sidebarTabPanelOpen = !_sidebarTabPanelOpen;
+  const panel = document.getElementById('sidebar-tab-panel');
+  if (!panel) return;
+  panel.style.display = _sidebarTabPanelOpen ? 'block' : 'none';
+  if (_sidebarTabPanelOpen) _sidebarTabTogglesRender();
+}
+
+function _sidebarTabTogglesRender() {
+  const list = document.getElementById('sidebar-tab-toggles');
+  if (!list) return;
+  list.innerHTML = SETTINGS_TABS.map(t => `
+    <div class="sidebar-tab-toggle-row">
+      <label class="skill-toggle" style="transform:scale(0.8);transform-origin:left center">
+        <input type="checkbox" id="stb-${t.id}"
+               ${!_settingsHidden.includes(t.id) ? 'checked' : ''}
+               onchange="sidebarTabToggleChange('${t.id}', this.checked)">
+        <span class="skill-toggle-track"></span>
+      </label>
+      <span style="font-size:11px">${t.label}</span>
+    </div>
+  `).join('');
+}
+
+async function sidebarTabToggleChange(tabId, visible) {
+  if (visible) {
+    _settingsHidden = _settingsHidden.filter(id => id !== tabId);
+  } else {
+    if (!_settingsHidden.includes(tabId)) _settingsHidden.push(tabId);
+  }
+  _applyHiddenTabs(_settingsHidden);
+  try {
+    await apiFetch('/api/prefs', { method: 'POST', body: { hiddenTabs: _settingsHidden } });
+  } catch {}
+  // Sync settings tab if open
+  const el = document.getElementById(`settings-show-${tabId}`);
+  if (el) el.checked = visible;
 }

@@ -34,12 +34,11 @@ async function loadSnapshots() {
 async function snapLoadSettings() {
   try {
     const s = await apiFetch('/api/snapshots/settings');
-    document.getElementById('snap-dir').value            = s.snapshotDir    || '';
-    document.getElementById('snap-script-create').value = s.snapshotScript || '';
-    document.getElementById('snap-script-restore').value= s.restoreScript  || '';
+    document.getElementById('snap-dir').value             = s.snapshotDir    || '';
+    document.getElementById('snap-script-create').value  = s.snapshotScript || '';
+    document.getElementById('snap-script-restore').value = s.restoreScript  || '';
     _snapRenderPaths(s.includePaths || []);
 
-    // Show info if using tar fallback
     const hasScript = !!(s.snapshotScript);
     const hasPaths  = (s.includePaths || []).length > 0;
     if (!hasScript && hasPaths) {
@@ -61,6 +60,7 @@ function _snapRenderPaths(paths) {
   list.innerHTML = paths.map((p, i) => `
     <div class="snap-path-row" id="snap-path-row-${i}">
       <input class="input snap-path-input" id="snap-path-${i}" value="${p.replace(/"/g,'&quot;')}" placeholder="/path/to/include">
+      <button class="btn btn-xs" title="Browse" onclick="snapBrowsePath(${i})">📁</button>
       <button class="btn btn-xs btn-red" onclick="snapRemovePath(${i})">✕</button>
     </div>
   `).join('');
@@ -75,6 +75,7 @@ function snapAddPath() {
   row.id = `snap-path-row-${idx}`;
   row.innerHTML = `
     <input class="input snap-path-input" id="snap-path-${idx}" placeholder="/path/to/include">
+    <button class="btn btn-xs" title="Browse" onclick="snapBrowsePath(${idx})">📁</button>
     <button class="btn btn-xs btn-red" onclick="snapRemovePath(${idx})">✕</button>
   `;
   list.appendChild(row);
@@ -84,15 +85,16 @@ function snapAddPath() {
 function snapRemovePath(idx) {
   const row = document.getElementById(`snap-path-row-${idx}`);
   if (row) row.remove();
-  // Re-index remaining rows
   const list = document.getElementById('snap-paths-list');
   if (!list) return;
   list.querySelectorAll('.snap-path-row').forEach((r, i) => {
     r.id = `snap-path-row-${i}`;
     const inp = r.querySelector('.snap-path-input');
     if (inp) inp.id = `snap-path-${i}`;
-    const btn = r.querySelector('button');
-    if (btn) btn.setAttribute('onclick', `snapRemovePath(${i})`);
+    const browseBtn = r.querySelectorAll('button')[0];
+    if (browseBtn) browseBtn.setAttribute('onclick', `snapBrowsePath(${i})`);
+    const delBtn = r.querySelectorAll('button')[1];
+    if (delBtn) delBtn.setAttribute('onclick', `snapRemovePath(${i})`);
   });
 }
 
@@ -132,9 +134,25 @@ function snapToggleSettings() {
 
 function snapShowWarning(msg, level) {
   const el = document.getElementById('snap-warning');
-  el.textContent  = msg;
-  el.className    = `snap-warning snap-warning-${level}`;
+  el.textContent   = msg;
+  el.className     = `snap-warning snap-warning-${level}`;
   el.style.display = 'block';
+}
+
+/* ── File picker + edit for path inputs ──────────────── */
+
+function snapBrowsePath(idx) {
+  fpOpen(`snap-path-${idx}`, 'dir');
+}
+
+function snapEditScript(inputId) {
+  const path = document.getElementById(inputId)?.value?.trim();
+  if (!path) { alert('Enter a script path first'); return; }
+  nav('files');
+  setTimeout(() => {
+    fmNavigate(path.substring(0, path.lastIndexOf('/')) || '/');
+    setTimeout(() => fmOpenEditor(path), 400);
+  }, 200);
 }
 
 /* ── Create / Restore ─────────────────────────────────── */

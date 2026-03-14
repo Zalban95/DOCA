@@ -83,16 +83,20 @@ function fmSafe(p) {
 
 // ─── STATUS ──────────────────────────────────────────────────────────────────
 app.get('/api/status', async (req, res) => {
-  const [composeResult, gpuResult, ollamaResult] = await Promise.allSettled([
-    run('docker compose ps --format json'),
+  const mp = loadModelsPrefs ? loadModelsPrefs() : {};
+  const ollamaUrl = (mp.ollamaUrl || 'http://127.0.0.1:11434').replace(/\/$/, '');
+
+  const [dockerResult, gpuResult, ollamaTagsResult, ollamaPsResult] = await Promise.allSettled([
+    run(`docker ps --format '{{json .}}'`),
     run('nvidia-smi --query-gpu=name,temperature.gpu,utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits'),
-    run('curl -s http://localhost:11434/api/tags'),
+    run(`curl -s ${ollamaUrl}/api/tags`),
+    run(`curl -s ${ollamaUrl}/api/ps`),
   ]);
 
-  // Containers
+  // All running Docker containers (not just compose)
   let containers = [];
-  if (composeResult.status === 'fulfilled') {
-    containers = composeResult.value.stdout.trim().split('\n')
+  if (dockerResult.status === 'fulfilled') {
+    containers = dockerResult.value.stdout.trim().split('\n')
       .filter(Boolean)
       .map(l => { try { return JSON.parse(l); } catch { return null; } })
       .filter(Boolean);
@@ -108,16 +112,15 @@ app.get('/api/status', async (req, res) => {
   }
 
   // CPU + RAM via os module (always available, no extra binary)
-  const cpus   = os.cpus();
+  const cpus    = os.cpus();
   const loadAvg = os.loadavg();
-  // Simple busy% from CPU info
   let totalIdle = 0, totalTick = 0;
   cpus.forEach(cpu => {
     for (const type in cpu.times) totalTick += cpu.times[type];
     totalIdle += cpu.times.idle;
   });
-  const cpuPct = Math.round((1 - totalIdle / totalTick) * 100);
-  const ramTotal = Math.round(os.totalmem() / 1e6);  // MB
+  const cpuPct   = Math.round((1 - totalIdle / totalTick) * 100);
+  const ramTotal = Math.round(os.totalmem() / 1e6);
   const ramUsed  = Math.round((os.totalmem() - os.freemem()) / 1e6);
 
   const system = {
@@ -128,16 +131,30 @@ app.get('/api/status', async (req, res) => {
     ramTotal,
   };
 
-  // Ollama models
+  // Installed Ollama models
   let models = [];
-  if (ollamaResult.status === 'fulfilled') {
+  if (ollamaTagsResult.status === 'fulfilled') {
     try {
-      const data = JSON.parse(ollamaResult.value.stdout);
+      const data = JSON.parse(ollamaTagsResult.value.stdout);
       models = (data.models || []).map(m => ({ name: m.name, size: m.size }));
     } catch {}
   }
 
-  res.json({ containers, gpu, system, models, time: new Date().toISOString() });
+  // Currently loaded (in-memory) Ollama models
+  let loadedModels = [];
+  if (ollamaPsResult.status === 'fulfilled') {
+    try {
+      const data = JSON.parse(ollamaPsResult.value.stdout);
+      loadedModels = (data.models || []).map(m => ({
+        name:      m.name,
+        size:      m.size,
+        sizeVram:  m.size_vram || 0,
+        expiresAt: m.expires_at || null,
+      }));
+    } catch {}
+  }
+
+  res.json({ containers, gpu, system, models, loadedModels, time: new Date().toISOString() });
 });
 
 // ─── ACTIONS ─────────────────────────────────────────────────────────────────
@@ -1169,6 +1186,23 @@ app.post('/api/config-favorites', (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// File manager favorites (starred paths)
+app.get('/api/fm-favorites', (req, res) => {
+  const prefs = loadPrefs();
+  res.json({ favorites: prefs.fmFavorites || [] });
+});
+
+app.post('/api/fm-favorites', (req, res) => {
+  const { favorites } = req.body;
+  if (!Array.isArray(favorites)) return res.status(400).json({ error: 'favorites must be array' });
+  const prefs = loadPrefs();
+  prefs.fmFavorites = favorites;
+  try {
+    fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── MODELS ───────────────────────────────────────────────────────────────────
 
 /** Known non-LLM tools with detection commands */
@@ -1265,6 +1299,25 @@ app.get('/api/models/ollama/status', async (req, res) => {
     res.json({ connected: true, version: data.version || 'unknown', url: base });
   } catch (e) {
     res.json({ connected: false, error: e.message, url: base });
+  }
+});
+
+// Ollama: currently loaded (in-memory) models via /api/ps
+app.get('/api/models/ollama/running', async (req, res) => {
+  const mp   = loadModelsPrefs();
+  const base = (mp.ollamaUrl || 'http://127.0.0.1:11434').replace(/\/$/, '');
+  try {
+    const r    = await fetch(`${base}/api/ps`, { signal: AbortSignal.timeout(3000) });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    const models = (data.models || []).map(m => ({
+      name:     m.name,
+      size:     m.size     || 0,
+      sizeVram: m.size_vram || 0,
+    }));
+    res.json({ models });
+  } catch (e) {
+    res.json({ models: [], error: e.message });
   }
 });
 

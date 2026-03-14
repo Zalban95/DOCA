@@ -499,3 +499,90 @@
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .claude-hist-time { font-size: 10px; color: var(--muted); flex-shrink: 0; }
+
+/* ── File Picker Modal ────────────────────────────────── */
+.fp-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2000;
+}
+.fp-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: min(560px, 96vw);
+  max-height: 80vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.fp-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.fp-title { font-size: 13px; font-weight: 600; flex: 1; }
+.fp-breadcrumb {
+  display: flex; flex-wrap: wrap; gap: 2px;
+  padding: 6px 10px; border-bottom: 1px solid var(--border2);
+  flex-shrink: 0; background: var(--dim);
+}
+.fp-list {
+  flex: 1; overflow-y: auto; min-height: 0;
+}
+.fp-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 14px; cursor: pointer;
+  border-bottom: 1px solid var(--border2);
+  font-size: 12px;
+  transition: background var(--t-fast);
+}
+.fp-item:hover { background: rgba(255,255,255,.04); }
+.fp-item-icon  { flex-shrink: 0; font-size: 14px; }
+.fp-item-name  { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fp-item-size  { font-size: 10px; color: var(--muted); flex-shrink: 0; }
+.fp-footer {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+
+/* ── Sidebar loaded models ────────────────────────────── */
+.models-loaded-header {
+  font-size: 9px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--green); padding: 2px 0;
+}
+.model-item.loaded {
+  border-left: 2px solid var(--green);
+  padding-left: 4px;
+}
+.loaded-name { font-weight: 500; }
+.model-vram  { font-size: 9px; color: var(--green); flex-shrink: 0; margin-left: auto; }
+
+/* ── Sidebar tab toggle panel ─────────────────────────── */
+.btn-icon {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 12px; padding: 0 2px;
+  line-height: 1; transition: color var(--t-fast);
+}
+.btn-icon:hover { color: var(--text); }
+.sidebar-tab-toggle-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 2px 0; font-size: 11px;
+}
+
+/* ── File manager favorites ───────────────────────────── */
+.fm-fav-item {
+  display: flex; align-items: center; gap: 2px;
+  margin-bottom: 2px;
+}
+.fm-star-btn {
+  opacity: .45; transition: opacity var(--t-fast);
+  font-size: 11px; padding: 0 2px;
+}
+.fm-star-btn:hover, .fm-star-btn.starred { opacity: 1; }
+
+/* ── Snapshot path-with-browse row ───────────────────── */
+.snap-path-with-btn {
+  display: flex; align-items: center; gap: 4px;
+  width: 100%;
+}
+.snap-path-with-btn .input { min-width: 0; }

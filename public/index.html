@@ -66,7 +66,7 @@
 
     <!-- Containers -->
     <div class="sidebar-section">
-      <div class="sec-label">Containers</div>
+      <div class="sec-label">Containers <span id="s-containers-count" style="font-size:9px;opacity:.6"></span></div>
       <div id="s-containers"><div class="placeholder">Loading…</div></div>
     </div>
 
@@ -90,7 +90,15 @@
 
     <!-- Quick nav -->
     <div class="sidebar-section">
-      <div class="sec-label">Quick Nav</div>
+      <div class="sec-label" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Quick Nav</span>
+        <button class="btn-icon" title="Show/hide tabs" onclick="sidebarTabTogglesOpen()">⚙</button>
+      </div>
+      <!-- Inline tab visibility panel -->
+      <div id="sidebar-tab-panel" style="display:none;padding:6px 0 4px">
+        <div id="sidebar-tab-toggles" style="display:grid;grid-template-columns:1fr 1fr;gap:2px 8px"></div>
+        <div style="font-size:9px;color:var(--muted);margin-top:4px">Changes apply immediately</div>
+      </div>
       <div class="quicklinks">
         <button class="quicklink" onclick="nav('controls')"><span class="quicklink-icon">▶</span><span class="quicklink-label">Controls</span></button>
         <button class="quicklink" onclick="nav('config');  setTimeout(()=>cfgOpenFile('openclaw'),100)"><span class="quicklink-icon">⚙</span><span class="quicklink-label">openclaw.json</span></button>
@@ -246,11 +254,22 @@
         <div id="snap-settings-body" style="display:none;padding-top:10px">
           <div class="snap-settings-grid">
             <label class="snap-label-text">Snapshot dir</label>
-            <input id="snap-dir"             class="input" placeholder="/path/to/snapshots">
+            <div class="snap-path-with-btn">
+              <input id="snap-dir" class="input flex1" placeholder="/path/to/snapshots">
+              <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-dir','dir')">📁</button>
+            </div>
             <label class="snap-label-text">Snapshot script</label>
-            <input id="snap-script-create"   class="input" placeholder="/path/to/snapshot.sh">
+            <div class="snap-path-with-btn">
+              <input id="snap-script-create" class="input flex1" placeholder="/path/to/snapshot.sh">
+              <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-script-create','file')">📁</button>
+              <button class="btn btn-xs btn-blue" title="Edit script" onclick="snapEditScript('snap-script-create')">✏</button>
+            </div>
             <label class="snap-label-text">Restore script</label>
-            <input id="snap-script-restore"  class="input" placeholder="/path/to/restore.sh">
+            <div class="snap-path-with-btn">
+              <input id="snap-script-restore" class="input flex1" placeholder="/path/to/restore.sh">
+              <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-script-restore','file')">📁</button>
+              <button class="btn btn-xs btn-blue" title="Edit script" onclick="snapEditScript('snap-script-restore')">✏</button>
+            </div>
             <label class="snap-label-text">Paths to include<br><small style="font-weight:400;opacity:.7">used by tar fallback &amp; passed to scripts</small></label>
             <div>
               <div id="snap-paths-list" class="snap-paths-list"></div>
@@ -338,6 +357,10 @@
 
         <!-- Bookmarks sidebar -->
         <div class="fm-sidebar">
+          <div class="fm-sidebar-group">
+            <div class="fm-sidebar-label">⭐ Favorites</div>
+            <div id="fm-favorites-list"><div class="placeholder" style="font-size:10px;padding:4px">None starred</div></div>
+          </div>
           <div class="fm-sidebar-group">
             <div class="fm-sidebar-label">Bookmarks</div>
             <div id="fm-bookmarks-list"></div>
@@ -654,14 +677,31 @@
     <!-- ─── TERMINAL ────────────────────────────────────── -->
     <div id="tab-terminal" class="tab-page">
       <div class="term-toolbar">
-        <button class="btn btn-sm btn-green" onclick="termNewSession()">↺ New Session</button>
-        <span id="term-status" class="term-status">○ not connected</span>
+        <button class="btn btn-sm btn-green" onclick="termAddSession()">+ New Session</button>
+        <span style="font-size:10px;color:var(--muted);margin-left:8px" id="term-session-count"></span>
       </div>
-      <div id="term-container"></div>
+      <div id="term-sessions" class="term-sessions-list"></div>
     </div>
 
   </main>
 </div><!-- /app-body -->
+
+<!-- ═══ FILE PICKER MODAL ════════════════════════════ -->
+<div id="fp-modal" class="fp-overlay" style="display:none" onclick="fpClose()">
+  <div class="fp-panel" onclick="event.stopPropagation()">
+    <div class="fp-header">
+      <span class="fp-title" id="fp-title">Select Path</span>
+      <button class="btn btn-xs" onclick="fpClose()">✕</button>
+    </div>
+    <div class="fp-breadcrumb" id="fp-breadcrumb"></div>
+    <div class="fp-list" id="fp-list"><div class="placeholder pulse" style="padding:12px">Loading…</div></div>
+    <div class="fp-footer">
+      <input class="input" id="fp-selected" placeholder="selected path…" style="flex:1">
+      <button class="btn btn-sm" onclick="fpClose()">Cancel</button>
+      <button class="btn btn-sm btn-blue" onclick="fpConfirm()">Select</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ FILE PREVIEW MODAL ════════════════════════════ -->
 <div id="fm-preview-modal" class="fm-preview-overlay" style="display:none"
@@ -718,6 +758,7 @@
 <!-- ═══════════════════════════════════════════════════ JS MODULES -->
 <script src="js/state.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/fp.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/sidebar.js"></script>
 <script src="js/controls.js"></script>

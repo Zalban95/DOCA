@@ -12,6 +12,7 @@ const fm = {
   sortAsc:   true,
   editFile:  null,
   renaming:  null,
+  favorites: [],
 };
 
 /* ── Bookmarks ───────────────────────────────────────── */
@@ -29,13 +30,68 @@ const FM_BOOKMARKS = [
 ];
 
 /* ── Init ────────────────────────────────────────────── */
-function fmInit() {
+async function fmInit() {
   if (document.getElementById('fm-bookmarks-list').children.length > 0) {
     fmRefresh(); return;
   }
   fmBuildBookmarks();
   fmSetupDragDrop();
+  await fmLoadFavorites();
   fmNavigate(fm.cwd);
+}
+
+/* ── Favorites ────────────────────────────────────────── */
+async function fmLoadFavorites() {
+  try {
+    const data = await apiFetch('/api/fm-favorites');
+    fm.favorites = data.favorites || [];
+    fmRenderFavorites();
+  } catch {}
+}
+
+function fmRenderFavorites() {
+  const el = document.getElementById('fm-favorites-list');
+  if (!el) return;
+  if (!fm.favorites.length) {
+    el.innerHTML = '<div class="placeholder" style="font-size:10px;padding:4px">None starred</div>';
+    return;
+  }
+  el.innerHTML = fm.favorites.map(p => {
+    const name = p.split('/').pop() || p;
+    const safe = p.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return `<div class="fm-fav-item" title="${p}">
+      <button class="fm-bookmark" onclick="fmNavigate('${safe.substring(0, safe.lastIndexOf('/')) || '/'}')"
+              style="flex:1;justify-content:flex-start;text-overflow:ellipsis;overflow:hidden">
+        <span class="fm-bookmark-icon">⭐</span>
+        <span class="fm-bookmark-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+      </button>
+      <button class="btn-icon" title="Remove" onclick="fmUnstar('${safe}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function fmStarToggle(path, event) {
+  if (event) event.stopPropagation();
+  const idx = fm.favorites.indexOf(path);
+  if (idx >= 0) {
+    fm.favorites.splice(idx, 1);
+  } else {
+    fm.favorites.push(path);
+  }
+  try {
+    await apiFetch('/api/fm-favorites', { method: 'POST', body: { favorites: fm.favorites } });
+  } catch {}
+  fmRenderFavorites();
+  fmRenderList(); // refresh stars in file list
+}
+
+async function fmUnstar(path) {
+  fm.favorites = fm.favorites.filter(p => p !== path);
+  try {
+    await apiFetch('/api/fm-favorites', { method: 'POST', body: { favorites: fm.favorites } });
+  } catch {}
+  fmRenderFavorites();
+  fmRenderList();
 }
 
 function fmBuildBookmarks() {
@@ -137,6 +193,8 @@ function fmRowHTML(e) {
   const size     = e.isDir ? '—' : fmFmtSize(e.size);
   const date     = e.mtime ? fmShortDate(e.mtime) : '—';
 
+  const starred = fm.favorites.includes(fpath);
+
   return `<div class="fm-row ${e.isDir ? 'dir' : ''} ${selected ? 'selected' : ''} ${isCut ? 'cut' : ''}"
                data-path="${fpath}" data-name="${e.name}" data-isdir="${e.isDir}"
                onclick="fmClickRow(event, '${fpath}', ${e.isDir})"
@@ -147,6 +205,8 @@ function fmRowHTML(e) {
     <span class="fm-size">${size}</span>
     <span class="fm-date">${date}</span>
     <span class="fm-acts">
+      <button class="btn btn-xs fm-star-btn ${starred ? 'starred' : ''}" title="${starred ? 'Unstar' : 'Star'}"
+              onclick="fmStarToggle('${fpath}', event)">${starred ? '⭐' : '☆'}</button>
       ${!e.isDir && fmMediaType(e.name) ? `<button class="btn btn-xs btn-teal" title="Preview" onclick="fmPreviewFile('${fpath}','${fmMediaType(e.name)}',event)">👁</button>` : ''}
       ${!e.isDir ? `<button class="btn btn-xs" title="Download" onclick="fmDownloadFile('${fpath}', event)">⬇</button>` : ''}
       ${!e.isDir ? `<button class="btn btn-xs" title="Edit" onclick="fmOpenEditor('${fpath}', event)">✏</button>` : ''}
