@@ -8,7 +8,6 @@ async function modelsInit() {
   await modelsLoadSettings();
   modelsCheckOllama();
   modelsLoadList();
-  modelsLoadTools();
 }
 
 /* ── Settings ─────────────────────────────────────────── */

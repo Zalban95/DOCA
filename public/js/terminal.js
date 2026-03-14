@@ -9,7 +9,11 @@ let termResObs  = null;
 
 function termInit() {
   if (term) {
-    _termFit();
+    // Double rAF ensures post-transition layout is settled before fitting
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      _termFit();
+      setTimeout(_termFit, 100);
+    }));
     return;
   }
   _termCreate();
@@ -54,8 +58,11 @@ function _termCreate() {
   termFit = new FitAddon.FitAddon();
   term.loadAddon(termFit);
   term.open(container);
-  // Defer first fit until the layout has fully settled
-  requestAnimationFrame(() => { _termFit(); });
+  // Double rAF + timeout ensures layout is settled after tab transition
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    _termFit();
+    setTimeout(_termFit, 100);
+  }));
 
   termConnect();
 

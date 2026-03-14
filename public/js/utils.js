@@ -13,7 +13,12 @@ async function apiFetch(url, opts = {}) {
     headers: opts.body ? { 'Content-Type': 'application/json' } : {},
     body: opts.body ? JSON.stringify(opts.body) : undefined
   });
-  const data = await res.json();
+  const text = await res.text();
+  if (text.trimStart().startsWith('<'))
+    throw new Error('Server returned HTML — run: git pull && sudo systemctl restart openclaw-panel');
+  let data;
+  try { data = JSON.parse(text); }
+  catch (e) { throw new Error(`Bad JSON from ${url}: ${e.message}`); }
   if (!res.ok) throw new Error(data.error || res.statusText);
   return data;
 }

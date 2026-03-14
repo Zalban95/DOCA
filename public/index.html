@@ -236,9 +236,11 @@
             <input id="snap-script-create"   class="input" placeholder="/path/to/snapshot.sh">
             <label class="snap-label-text">Restore script</label>
             <input id="snap-script-restore"  class="input" placeholder="/path/to/restore.sh">
-            <label class="snap-label-text">Paths to include<br><small style="font-weight:400;opacity:.7">(passed as extra args to the script, one per line)</small></label>
-            <textarea id="snap-include-paths" class="input" rows="4"
-                      placeholder="/home/al/.openclaw&#10;/home/al/openclaw&#10;/home/al/.config/ollama"></textarea>
+            <label class="snap-label-text">Paths to include<br><small style="font-weight:400;opacity:.7">used by tar fallback &amp; passed to scripts</small></label>
+            <div>
+              <div id="snap-paths-list" class="snap-paths-list"></div>
+              <button class="btn btn-xs" style="margin-top:6px" onclick="snapAddPath()">+ Add Path</button>
+            </div>
           </div>
           <div style="margin-top:10px">
             <button class="btn btn-sm btn-blue" onclick="snapSaveSettings()">Save Settings</button>
@@ -410,13 +412,12 @@
     <div id="tab-code" class="tab-page">
       <div class="card">
         <div class="card-title">Code Agent Tools</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Detect and launch AI coding tools. Pin a default tool to launch it instantly in the Terminal.</p>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Click a tool to expand it. Press 📌 to keep it open across sessions.</p>
         <div id="code-tools-list">
           <div class="placeholder pulse">Detecting tools…</div>
         </div>
         <div class="toolbar" style="margin-top:12px">
           <button class="btn btn-sm" onclick="codeRefresh()">↺ Refresh</button>
-          <button class="btn btn-sm btn-green" onclick="codeLaunch()" id="code-launch-btn">▶ Launch in Terminal</button>
         </div>
       </div>
 
@@ -500,16 +501,10 @@
         </div>
       </div>
 
-      <!-- Tools (non-LLM) -->
-      <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
-        <div class="toolbar">
-          <div class="card-title" style="margin-bottom:0">Tools (TTS / Image / Speech)</div>
-          <button class="btn btn-sm" onclick="modelsLoadTools()">↺ Refresh</button>
-          <a class="btn btn-xs" onclick="nav('keys');setTimeout(keysShowToolApis,200)" style="cursor:pointer">Configure APIs →</a>
-        </div>
-        <div id="models-tools-list" class="scroll-y" style="flex:1;padding-top:8px">
-          <div class="placeholder pulse">Detecting…</div>
-        </div>
+      <!-- Tool APIs link -->
+      <div class="card" style="padding:10px 16px">
+        <span style="font-size:11px;color:var(--muted)">Non-LLM tool API endpoints (Stable Diffusion, ComfyUI, Kokoro, Whisper…) are configured in </span>
+        <a onclick="nav('keys');setTimeout(keysShowToolApis,200)" style="cursor:pointer;font-size:11px">API Keys → Tool APIs</a>
       </div>
 
     </div>

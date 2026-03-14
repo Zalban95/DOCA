@@ -6,8 +6,8 @@ let claudeRunning  = false;
 let claudeHistory  = [];
 let claudeInteractive = false;
 
-let _codeTools = [];
-let _codePinned = null;
+let _codeTools    = [];
+let _codeExpanded = new Set(); // IDs of rows pinned open
 
 /* ── Code tools picker ────────────────────────────────── */
 function codeInit() {
@@ -21,8 +21,8 @@ async function codeRefresh() {
   list.innerHTML = '<div class="placeholder pulse">Detecting…</div>';
   try {
     const data = await apiFetch('/api/code/tools');
-    _codeTools  = data.tools || [];
-    _codePinned = data.pinned;
+    _codeTools    = data.tools || [];
+    _codeExpanded = new Set(data.expanded || []);
     _codeRender();
   } catch (e) {
     list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
@@ -34,37 +34,64 @@ function _codeRender() {
   if (!list) return;
   if (!_codeTools.length) { list.innerHTML = '<div class="placeholder">No tools found</div>'; return; }
 
-  list.innerHTML = _codeTools.map(t => `
-    <div class="code-tool-row ${t.detected ? '' : 'code-tool-missing'}">
-      <label class="code-tool-pin" title="Set as default">
-        <input type="radio" name="code-pin" value="${t.id}" ${t.pinned ? 'checked' : ''} onchange="codePinSet('${t.id}')">
-      </label>
-      <div class="code-tool-info">
-        <span class="code-tool-name">${t.label}</span>
-        ${t.detected
-          ? `<span class="badge badge-green" style="font-size:9px">${t.version || 'installed'}</span>`
-          : `<span class="badge badge-red"   style="font-size:9px">Not found</span>`
-        }
+  list.innerHTML = _codeTools.map(t => {
+    const expanded = _codeExpanded.has(t.id);
+    const pinned   = t.pinned; // comes from server (same as expanded)
+    return `
+      <div class="code-tool-accordion ${expanded ? 'expanded' : ''}" id="code-acc-${t.id}">
+        <div class="code-tool-header" onclick="codeToggle('${t.id}')">
+          <span class="code-acc-chevron">${expanded ? '▼' : '▶'}</span>
+          <span class="code-tool-name">${t.label}</span>
+          <span class="badge ${t.detected ? 'badge-green' : 'badge-red'}" style="font-size:9px;margin-left:6px">
+            ${t.detected ? (t.version || 'installed') : 'not found'}
+          </span>
+          <button class="code-tool-pin-btn ${expanded ? 'pinned' : ''}"
+                  title="${expanded ? 'Unpin (will collapse on reload)' : 'Pin open (stays expanded)'}"
+                  onclick="event.stopPropagation(); codePinToggle('${t.id}')">📌</button>
+        </div>
+        <div class="code-tool-body" style="display:${expanded ? 'flex' : 'none'}">
+          ${t.detected
+            ? `<button class="btn btn-sm btn-green" onclick="termLaunchCommand('${t.cmd}')">▶ Launch in Terminal</button>
+               <span style="font-size:10px;color:var(--muted);margin-left:8px">${t.cmd}</span>`
+            : `<span style="font-size:11px;color:var(--muted)">Not installed.&nbsp;</span>
+               <a href="${t.url}" target="_blank" class="btn btn-xs">Install…</a>
+               <span style="font-size:10px;color:var(--muted);margin-left:8px">${t.installHint}</span>`
+          }
+        </div>
       </div>
-      <div class="code-tool-actions">
-        ${t.detected
-          ? `<button class="btn btn-xs btn-green" onclick="termLaunchCommand('${t.cmd}')">▶ Launch</button>`
-          : `<a class="btn btn-xs" href="${t.url}" target="_blank" title="${t.installHint}">Install…</a>`
-        }
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
-async function codePinSet(id) {
-  _codePinned = id;
-  try { await apiFetch('/api/code/tools/pin', { method: 'POST', body: { id } }); } catch {}
+function codeToggle(id) {
+  const acc  = document.getElementById(`code-acc-${id}`);
+  const body = acc?.querySelector('.code-tool-body');
+  const chev = acc?.querySelector('.code-acc-chevron');
+  if (!acc) return;
+  const open = acc.classList.toggle('expanded');
+  if (body) body.style.display = open ? 'flex' : 'none';
+  if (chev) chev.textContent   = open ? '▼' : '▶';
+  // Update pin button state
+  const pinBtn = acc.querySelector('.code-tool-pin-btn');
+  if (pinBtn) pinBtn.classList.toggle('pinned', _codeExpanded.has(id));
 }
 
-function codeLaunch() {
-  const tool = _codeTools.find(t => t.id === _codePinned) || _codeTools.find(t => t.detected);
-  if (!tool) { alert('No code tool detected. Please install one first.'); return; }
-  termLaunchCommand(tool.cmd);
+async function codePinToggle(id) {
+  if (_codeExpanded.has(id)) {
+    _codeExpanded.delete(id);
+  } else {
+    _codeExpanded.add(id);
+    // Ensure the row is expanded when pinned
+    const acc  = document.getElementById(`code-acc-${id}`);
+    if (acc && !acc.classList.contains('expanded')) codeToggle(id);
+  }
+  // Update visual
+  const pinBtn = document.querySelector(`#code-acc-${id} .code-tool-pin-btn`);
+  if (pinBtn) {
+    pinBtn.classList.toggle('pinned', _codeExpanded.has(id));
+    pinBtn.title = _codeExpanded.has(id) ? 'Unpin (will collapse on reload)' : 'Pin open (stays expanded)';
+  }
+  try { await apiFetch('/api/code/tools/pin', { method: 'POST', body: { expanded: [..._codeExpanded] } }); } catch {}
 }
 
 function claudeInit() {

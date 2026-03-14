@@ -787,7 +787,7 @@ const CODE_TOOLS = [
 
 app.get('/api/code/tools', async (req, res) => {
   const prefs = loadPrefs();
-  const pinned = prefs.codeTool || null;
+  const expanded = prefs.codeExpanded || [];
 
   const results = await Promise.all(CODE_TOOLS.map(t => new Promise(resolve => {
     exec(`which ${t.cmd} 2>/dev/null || where ${t.cmd} 2>/dev/null`, (err, stdout) => {
@@ -799,18 +799,18 @@ app.get('/api/code/tools', async (req, res) => {
           version = vOut.split('\n')[0].slice(0, 60);
         } catch {}
       }
-      resolve({ ...t, detected, version, pinned: pinned === t.id });
+      resolve({ ...t, detected, version, pinned: expanded.includes(t.id) });
     });
   })));
 
-  res.json({ tools: results, pinned });
+  res.json({ tools: results, expanded });
 });
 
 app.post('/api/code/tools/pin', (req, res) => {
-  const { id } = req.body;
-  if (!id) return res.status(400).json({ error: 'No id' });
+  const { expanded } = req.body;
+  if (!Array.isArray(expanded)) return res.status(400).json({ error: 'expanded must be array' });
   const prefs = loadPrefs();
-  prefs.codeTool = id;
+  prefs.codeExpanded = expanded;
   try {
     fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
     res.json({ ok: true });

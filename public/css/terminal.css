@@ -44,6 +44,7 @@
 }
 
 #term-container .xterm-viewport {
+  height: 100% !important;
   overflow-y: auto !important;
 }
 

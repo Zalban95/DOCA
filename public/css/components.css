@@ -400,6 +400,9 @@
   gap: 8px 12px; align-items: start; padding: 0 14px;
 }
 .snap-label-text { font-size: 11px; color: var(--muted); padding-top: 6px; line-height:1.4; }
+.snap-paths-list { display: flex; flex-direction: column; gap: 4px; }
+.snap-path-row { display: flex; align-items: center; gap: 6px; }
+.snap-path-input { flex: 1; }
 
 /* ── Settings tab ────────────────────────────────────── */
 .settings-tab-row {
@@ -445,17 +448,34 @@
   display: flex; justify-content: flex-end; gap: 8px;
 }
 
-/* ── Code tool picker ────────────────────────────────── */
-.code-tool-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px; background: var(--dim); border: 1px solid var(--border2);
+/* ── Code tool accordion ─────────────────────────────── */
+.code-tool-accordion {
+  border: 1px solid var(--border2);
+  background: var(--dim);
   margin-bottom: 4px;
 }
-.code-tool-missing { opacity: 0.6; }
-.code-tool-pin { flex-shrink: 0; cursor: pointer; }
-.code-tool-info { flex: 1; display: flex; align-items: center; gap: 8px; }
+.code-tool-accordion.expanded {
+  border-color: var(--accent);
+}
+.code-tool-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; cursor: pointer; user-select: none;
+}
+.code-tool-header:hover { background: rgba(255,255,255,0.03); }
+.code-acc-chevron { font-size: 9px; color: var(--muted); flex-shrink: 0; width: 10px; }
 .code-tool-name { font-size: 12px; font-weight: 500; }
-.code-tool-actions { flex-shrink: 0; }
+.code-tool-pin-btn {
+  margin-left: auto; background: none; border: none; cursor: pointer;
+  font-size: 14px; opacity: 0.3; padding: 0 2px;
+  transition: opacity var(--t-fast);
+}
+.code-tool-pin-btn:hover { opacity: 0.7; }
+.code-tool-pin-btn.pinned { opacity: 1; }
+.code-tool-body {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 12px 10px 28px;
+  border-top: 1px solid var(--border);
+}
 
 /* Claude history */
 .claude-hist-item {
