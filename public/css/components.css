@@ -528,10 +528,13 @@
   padding: 12px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
 .fp-title { font-size: 13px; font-weight: 600; flex: 1; }
-.fp-breadcrumb {
-  display: flex; flex-wrap: wrap; gap: 2px;
-  padding: 6px 10px; border-bottom: 1px solid var(--border2);
+.fp-nav-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-bottom: 1px solid var(--border2);
   flex-shrink: 0; background: var(--dim);
+}
+.fp-breadcrumb {
+  display: flex; flex-wrap: wrap; gap: 2px; flex: 1;
 }
 .fp-list {
   flex: 1; overflow-y: auto; min-height: 0;

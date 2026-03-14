@@ -478,7 +478,10 @@
           <span class="models-settings-label">API URL</span>
           <input id="models-ollama-url" class="input" value="http://127.0.0.1:11434">
           <span class="models-settings-label">Models directory</span>
-          <input id="models-ollama-path" class="input" placeholder="/path/to/ollama/models (optional)">
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="models-ollama-path" class="input" style="flex:1;min-width:0" placeholder="/path/to/ollama/models (optional)">
+            <button class="btn btn-xs" title="Browse" onclick="fpOpen('models-ollama-path','dir')">📁</button>
+          </div>
         </div>
         <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
           <button class="btn btn-sm btn-blue" onclick="modelsSaveSettings()">Save</button>
@@ -541,7 +544,10 @@
             <option value="comfyui">ComfyUI</option>
           </select>
           <span class="models-settings-label">Models path</span>
-          <input id="nlm-path" class="input" placeholder="/path/to/models (optional)">
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="nlm-path" class="input" style="flex:1;min-width:0" placeholder="/path/to/models (optional)">
+            <button class="btn btn-xs" title="Browse" onclick="fpOpen('nlm-path','dir')">📁</button>
+          </div>
           <span class="models-settings-label">API URL</span>
           <input id="nlm-apiurl" class="input" placeholder="http://127.0.0.1:7860 (optional)">
         </div>
@@ -695,7 +701,10 @@
       <span class="fp-title" id="fp-title">Select Path</span>
       <button class="btn btn-xs" onclick="fpClose()">✕</button>
     </div>
-    <div class="fp-breadcrumb" id="fp-breadcrumb"></div>
+    <div class="fp-nav-bar">
+      <button class="btn btn-xs" title="Drives" onclick="_fpLoadRoots()">💾 Drives</button>
+      <div class="fp-breadcrumb" id="fp-breadcrumb"></div>
+    </div>
     <div class="fp-list" id="fp-list"><div class="placeholder pulse" style="padding:12px">Loading…</div></div>
     <div class="fp-footer">
       <input class="input" id="fp-selected" placeholder="selected path…" style="flex:1">

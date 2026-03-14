@@ -54,7 +54,8 @@ const CONFIG_REGISTRY = {
 // ─── File manager allowed roots ───────────────────────────────────────────────
 const FM_ALLOWED_ROOTS = [
   '/home/al',
-  '/media/al',
+  '/media',
+  '/mnt',
   '/tmp',
 ];
 
@@ -662,6 +663,11 @@ app.post('/api/snapshots/restore', (req, res) => {
 });
 
 // ─── FILE MANAGER ─────────────────────────────────────────────────────────────
+
+// GET /api/files/roots — returns all accessible root paths that exist on disk
+app.get('/api/files/roots', (req, res) => {
+  res.json({ roots: FM_ALLOWED_ROOTS.filter(r => fs.existsSync(r)) });
+});
 
 // GET /api/files/list?path=...
 app.get('/api/files/list', (req, res) => {

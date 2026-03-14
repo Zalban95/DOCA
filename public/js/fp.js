@@ -15,21 +15,48 @@ function fpOpen(targetInputId, mode) {
   const input   = document.getElementById(targetInputId);
   const current = input?.value?.trim() || '';
 
-  // Start from the directory of the current value, or the value itself if it's a dir
-  if (current && current.includes('/')) {
-    _fpCwd = mode === 'dir' ? current : current.substring(0, current.lastIndexOf('/')) || '/';
-  } else {
-    _fpCwd = '/home/al';
-  }
-
   const modal = document.getElementById('fp-modal');
   if (!modal) return;
 
   document.getElementById('fp-title').textContent = mode === 'file' ? 'Select File' : 'Select Directory';
-  document.getElementById('fp-selected').value = current || _fpCwd;
+  document.getElementById('fp-selected').value = current || '';
   modal.style.display = 'flex';
 
-  _fpLoadDir(_fpCwd);
+  // Start from the directory of the current value, or show drives list if empty
+  if (current && current.includes('/')) {
+    _fpCwd = mode === 'dir' ? current : current.substring(0, current.lastIndexOf('/')) || '/';
+    _fpLoadDir(_fpCwd);
+  } else {
+    _fpLoadRoots();
+  }
+}
+
+async function _fpLoadRoots() {
+  _fpCwd = '/';
+  _fpRenderBreadcrumb('/');
+
+  const list = document.getElementById('fp-list');
+  if (!list) return;
+  list.innerHTML = '<div class="placeholder pulse" style="padding:12px">Loading drives…</div>';
+
+  try {
+    const data  = await apiFetch('/api/files/roots');
+    const roots = data.roots || [];
+    if (!roots.length) {
+      list.innerHTML = '<div class="placeholder" style="padding:12px">No drives found</div>';
+      return;
+    }
+    list.innerHTML = roots.map(r => {
+      const safe = r.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      return `<div class="fp-item fp-dir" onclick="_fpLoadDir('${safe}')"
+                   ondblclick="_fpLoadDir('${safe}')">
+        <span class="fp-item-icon">💾</span>
+        <span class="fp-item-name">${r}</span>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = `<div class="placeholder" style="color:var(--red);padding:12px">${e.message}</div>`;
+  }
 }
 
 function fpClose() {
@@ -119,7 +146,8 @@ function _fpRenderBreadcrumb(path) {
     const btn = document.createElement('button');
     btn.className   = 'fm-bc-part';
     btn.textContent = part === '' ? '/' : part;
-    btn.onclick     = () => _fpLoadDir(seg);
+    // Root segment shows drives list; all others navigate normally
+    btn.onclick = seg === '/' ? () => _fpLoadRoots() : () => _fpLoadDir(seg);
     bc.appendChild(btn);
   });
 }
