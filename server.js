@@ -1257,14 +1257,15 @@ function loadPrefs() {
 
 app.get('/api/config-favorites', (req, res) => {
   const prefs = loadPrefs();
-  res.json({ favorites: prefs.favorites || [] });
+  res.json({ favorites: prefs.favorites || [], hiddenBuiltins: prefs.hiddenBuiltins || [] });
 });
 
 app.post('/api/config-favorites', (req, res) => {
-  const { favorites } = req.body;
+  const { favorites, hiddenBuiltins } = req.body;
   if (!Array.isArray(favorites)) return res.status(400).json({ error: 'favorites must be array' });
   const prefs = loadPrefs();
   prefs.favorites = favorites;
+  if (Array.isArray(hiddenBuiltins)) prefs.hiddenBuiltins = hiddenBuiltins;
   try {
     fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
     res.json({ ok: true });

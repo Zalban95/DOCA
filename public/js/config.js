@@ -28,6 +28,7 @@ const GROUP_LABELS = {
 
 let cfgActive = null;
 let customFavorites = [];
+let hiddenFavorites = new Set(); // IDs of built-in favorites the user has hidden
 let favEditMode = false;
 
 function guessFileType(p) {
@@ -47,7 +48,9 @@ function getAllConfigFiles() {
     description: f.description || f.path,
     custom: true
   }));
-  return [...CONFIG_FILES, ...custom];
+  // Filter out built-in favorites the user has hidden
+  const builtins = CONFIG_FILES.filter(f => !hiddenFavorites.has(f.id));
+  return [...builtins, ...custom];
 }
 
 /* ── Init ────────────────────────────────────────────── */
@@ -61,8 +64,9 @@ async function initConfig() {
 async function loadCustomFavorites() {
   try {
     const data = await apiFetch('/api/config-favorites');
-    customFavorites = data.favorites || [];
-  } catch { customFavorites = []; }
+    customFavorites  = data.favorites || [];
+    hiddenFavorites  = new Set(data.hiddenBuiltins || []);
+  } catch { customFavorites = []; hiddenFavorites = new Set(); }
 }
 
 function buildConfigSidebar() {
@@ -114,14 +118,14 @@ function buildConfigSidebar() {
 
       row.appendChild(btn);
 
-      if (favEditMode && grp === 'favorites' && f.custom) {
+      if (favEditMode && grp === 'favorites') {
         const del = document.createElement('button');
         del.className = 'btn btn-xs btn-red';
         del.textContent = '✕';
         del.title = 'Remove from favorites';
         del.style.flexShrink = '0';
         del.style.margin = '0 4px';
-        del.onclick = () => removeFavorite(f.path);
+        del.onclick = () => f.custom ? removeFavorite(f.path) : hideBuiltinFavorite(f.id);
         row.appendChild(del);
       }
 
@@ -165,8 +169,17 @@ async function removeFavorite(p) {
 
 async function saveCustomFavorites() {
   try {
-    await apiFetch('/api/config-favorites', { method: 'POST', body: { favorites: customFavorites } });
+    await apiFetch('/api/config-favorites', {
+      method: 'POST',
+      body: { favorites: customFavorites, hiddenBuiltins: [...hiddenFavorites] }
+    });
   } catch (e) { console.error('Failed to save favorites:', e); }
+}
+
+async function hideBuiltinFavorite(id) {
+  hiddenFavorites.add(id);
+  await saveCustomFavorites();
+  buildConfigSidebar();
 }
 
 /* ── Open a file ─────────────────────────────────────── */
