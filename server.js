@@ -1650,7 +1650,7 @@ const SYSTEM_TOOLS = [
     note: 'HuggingFace Hub CLI — for downloading local models',
     repo: 'https://pypi.org/project/huggingface-hub/',
     repoLabel: 'pip: huggingface-hub',
-    installCmd: 'sudo pip install --break-system-packages --ignore-installed huggingface-hub',
+    installCmd: 'pip install --user --break-system-packages "huggingface_hub[cli]"',
   },
 ];
 
@@ -1744,7 +1744,7 @@ const LOCAL_NLM_TOOLS = {
       { name: 'large',   description: 'Large v2/v3 — best accuracy (~1.5 GB)' },
       { name: 'large-v3',description: 'Large v3 — latest, best accuracy (~1.5 GB)' },
     ],
-    installCmd: (model) => `pip install openai-whisper && python -c "import whisper; whisper.load_model('${model}')"`,
+    installCmd: (model) => `pip install --user --break-system-packages openai-whisper && python3 -c "import whisper; whisper.load_model('${model}')"`,
     detectFile: (dir, model) => path.join(dir || os.homedir(), '.cache', 'whisper', `${model}.pt`),
   },
   kokoro: {
@@ -1753,7 +1753,7 @@ const LOCAL_NLM_TOOLS = {
       { name: 'kokoro-v0_19', description: 'Kokoro v0.19 — main model (~326 MB)' },
       { name: 'voices',       description: 'Voice pack (~100 MB)' },
     ],
-    installCmd: (model) => `pip install kokoro-onnx`,
+    installCmd: (model) => `pip install --user --break-system-packages kokoro-onnx`,
     detectFile: (dir) => path.join(dir || os.homedir(), 'kokoro'),
   },
   'stable-diffusion': {
@@ -1763,7 +1763,7 @@ const LOCAL_NLM_TOOLS = {
       { name: 'stable-diffusion-xl-base', description: 'SDXL Base — higher quality (~6.7 GB)' },
       { name: 'stable-diffusion-3',       description: 'SD 3 — latest architecture (~5 GB)' },
     ],
-    installCmd: (model) => `pip install diffusers transformers accelerate && huggingface-cli download runwayml/${model}`,
+    installCmd: (model) => `pip install --user --break-system-packages diffusers transformers accelerate && python3 -c "import sys; sys.argv=['hf','download','runwayml/${model}']; from huggingface_hub.commands.huggingface_cli import main; main()"`,
     detectFile: (dir) => dir || '',
   },
   comfyui: {
