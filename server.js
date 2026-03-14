@@ -1763,7 +1763,7 @@ const LOCAL_NLM_TOOLS = {
       { name: 'stable-diffusion-xl-base', description: 'SDXL Base — higher quality (~6.7 GB)' },
       { name: 'stable-diffusion-3',       description: 'SD 3 — latest architecture (~5 GB)' },
     ],
-    installCmd: (model) => `pip install --user --break-system-packages diffusers transformers accelerate && python3 -c "import sys; sys.argv=['hf','download','runwayml/${model}']; from huggingface_hub.commands.huggingface_cli import main; main()"`,
+    installCmd: (model) => `pip install --user --break-system-packages diffusers transformers accelerate && python3 -c "from huggingface_hub import snapshot_download; snapshot_download('runwayml/${model}')"`,
     detectFile: (dir) => dir || '',
   },
   comfyui: {
@@ -1924,8 +1924,8 @@ app.get('/api/models/hf/status', (req, res) => {
   exec(`bash -lc "${detectCmd.replace(/"/g, '\\"')}"`, { env, timeout: 5000 }, (err, stdout) => {
     const version = stdout.trim().split('\n')[0] || null;
     if (err || !version) return res.json({ detected: false, version: null, user: null });
-    // whoami via Python as well (huggingface-cli whoami fails when binary not in PATH)
-    const whoamiCmd = `python3 -c "import sys; sys.argv=['hf','whoami']; from huggingface_hub.commands.huggingface_cli import main; main()" 2>/dev/null || huggingface-cli whoami 2>/dev/null`;
+    // whoami via public API (no CLI binary or commands submodule required)
+    const whoamiCmd = `python3 -c "from huggingface_hub import whoami; u=whoami(); print(u.get('name',''))" 2>/dev/null || huggingface-cli whoami 2>/dev/null`;
     exec(`bash -lc "${whoamiCmd.replace(/"/g, '\\"')}"`, { env, timeout: 5000 }, (e2, out2) => {
       const user = e2 ? null : (out2.trim().split('\n')[0] || null);
       res.json({ detected: true, version, user });
@@ -2004,17 +2004,21 @@ app.post('/api/models/hf/download', (req, res) => {
   sseHeaders(res);
   const sseWrite = d => { try { res.write(`data: ${JSON.stringify(d)}\n\n`); } catch {} };
 
-  // Build Python invocation — avoids relying on huggingface-cli binary being in PATH.
-  // The huggingface_hub *package* is always reachable via python3 even when the CLI
-  // entry-point script is missing from $PATH.
-  const dlArgs = ['download', repoId];
-  if (token) dlArgs.push('--token', token);
-  if (cache) dlArgs.push('--cache-dir', cache);
-  const argList = dlArgs.map(a => JSON.stringify(a)).join(', ');
-  const pyScript = `import sys; sys.argv = ['hf', ${argList}]; from huggingface_hub.commands.huggingface_cli import main; main()`;
-  const cmdStr   = `python3 -c "${pyScript.replace(/"/g, '\\"')}"`;
+  // Use huggingface_hub public API (snapshot_download) — works with both the full
+  // pip package and the stripped apt package (python3-huggingface-hub).
+  const cleanCache = cache ? cache.replace(/\/+/g, '/') : '';  // normalise double-slashes
+  const pyParts = [
+    'from huggingface_hub import snapshot_download',
+    `result = snapshot_download(repo_id=${JSON.stringify(repoId)}` +
+      (token      ? `, token=${JSON.stringify(token)}`         : '') +
+      (cleanCache ? `, cache_dir=${JSON.stringify(cleanCache)}`: '') +
+    ')',
+    'print("Downloaded to:", result)',
+  ];
+  const pyScript = pyParts.join('; ');
+  const cmdStr   = `python3 -c "${pyScript.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
-  sseWrite({ status: `Downloading ${repoId}…\n$ huggingface-cli ${dlArgs.join(' ')}\n` });
+  sseWrite({ status: `Downloading ${repoId}…\n$ huggingface-cli download ${repoId}${cleanCache ? ' --cache-dir ' + cleanCache : ''}\n` });
 
   const hfPath = `/usr/bin:/usr/local/bin:${home}/.local/bin:/bin`;
   const child  = spawn('bash', ['-c', cmdStr], {
