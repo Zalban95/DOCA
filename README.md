@@ -42,6 +42,84 @@ To have the floating chat panel use the OpenClaw Gateway API instead of the `cla
 
 If you use auth, ensure `gateway.auth.token` (or `gateway.auth.password`) is set. The dashboard reads the config and uses the Gateway’s `/v1/chat/completions` endpoint. If the Gateway is unavailable, it falls back to the `claude` CLI.
 
+## Deployment Setups
+
+### 1. Dashboard on host, OpenClaw in Docker (most common)
+
+The dashboard runs as a Node.js service on the host. OpenClaw runs in Docker with its gateway port published (e.g. `18789:18789`).
+
+```bash
+# .env or systemd override
+PORT=4242
+COMPOSE_DIR=/home/youruser/openclaw
+CONFIG_PATH=/home/youruser/.openclaw/openclaw.json
+SKILLS_DIR=/home/youruser/.openclaw/workspace/skills
+WORKSPACE_DIR=/home/youruser/.openclaw/workspace
+SETUP_DIR=/home/youruser
+SNAPSHOT_DIR=/path/to/snapshots
+# No OPENCLAW_GATEWAY_URL needed — 127.0.0.1:18789 is used by default
+```
+
+The chat panel will reach the gateway at `http://127.0.0.1:<port>/v1/chat/completions` using whatever port is declared in `openclaw.json` (default `18789`).
+
+---
+
+### 2. Both dashboard and OpenClaw in Docker (same Compose network)
+
+Add the dashboard as a service alongside OpenClaw. The gateway is reachable by its service name — override the URL with `OPENCLAW_GATEWAY_URL`.
+
+```yaml
+# docker-compose.yml (excerpt)
+services:
+  dashboard:
+    build: ./openclaw-dashboard
+    ports:
+      - "4242:4242"
+    environment:
+      COMPOSE_DIR: /app/openclaw            # mount your openclaw dir here
+      CONFIG_PATH: /app/.openclaw/openclaw.json
+      SKILLS_DIR: /app/.openclaw/workspace/skills
+      WORKSPACE_DIR: /app/.openclaw/workspace
+      OPENCLAW_GATEWAY_URL: http://openclaw-gateway:18789
+    volumes:
+      - /home/youruser/openclaw:/app/openclaw
+      - /home/youruser/.openclaw:/app/.openclaw
+```
+
+---
+
+### 3. Running as a systemd service (host install)
+
+```ini
+# /etc/systemd/system/openclaw-panel.service
+[Unit]
+Description=OpenClaw Dashboard
+After=network.target
+
+[Service]
+WorkingDirectory=/home/youruser/openclaw-dashboard
+ExecStart=/usr/bin/node server.js
+Restart=always
+User=youruser
+Environment=PORT=4242
+Environment=COMPOSE_DIR=/home/youruser/openclaw
+Environment=CONFIG_PATH=/home/youruser/.openclaw/openclaw.json
+Environment=SKILLS_DIR=/home/youruser/.openclaw/workspace/skills
+Environment=WORKSPACE_DIR=/home/youruser/.openclaw/workspace
+Environment=SETUP_DIR=/home/youruser
+Environment=SNAPSHOT_DIR=/path/to/snapshots
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now openclaw-panel
+```
+
+---
+
 ## Environment Variables
 
 | Variable | Default | Description |
