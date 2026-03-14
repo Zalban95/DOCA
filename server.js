@@ -1779,7 +1779,7 @@ app.post('/api/models/local/delete', (req, res) => {
 // ─── WebSocket Terminal ───────────────────────────────────────────────────────
 
 const httpServer = http.createServer(app);
-const termWss    = new WebSocketServer({ server: httpServer, path: '/ws/terminal' });
+const termWss    = new WebSocketServer({ server: httpServer, path: '/ws/terminal', perMessageDeflate: false });
 
 termWss.on('connection', (ws) => {
   if (!pty) {
@@ -1828,7 +1828,7 @@ termWss.on('connection', (ws) => {
 
 // ─── WebSocket Code Terminals (one per tool, bare shell + launch button) ──────
 
-const codeWss = new WebSocketServer({ server: httpServer, path: '/ws/code' });
+const codeWss = new WebSocketServer({ server: httpServer, path: '/ws/code', perMessageDeflate: false });
 
 codeWss.on('connection', (ws, req) => {
   if (!pty) {
