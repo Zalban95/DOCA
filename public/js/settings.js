@@ -28,6 +28,7 @@ async function settingsInit() {
     const el = document.getElementById('settings-tabs-list');
     if (el) el.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
   }
+  sysdepsLoad();
 }
 
 function _settingsRender() {
@@ -107,6 +108,121 @@ function _sidebarTabTogglesRender() {
     </div>
   `).join('');
 }
+
+/* ── System Tools (sysdeps) ──────────────────────────── */
+
+const SYSDEP_CATEGORY_LABEL = { required: 'Required', recommended: 'Recommended', optional: 'Optional' };
+const SYSDEP_CATEGORY_COLOR = { required: 'var(--red)', recommended: 'var(--amber)', optional: 'var(--muted)' };
+
+let _sysdepsInstalling = null; // tool id currently installing
+
+async function sysdepsLoad() {
+  const list   = document.getElementById('sysdeps-list');
+  const btn    = document.getElementById('sysdeps-refresh-btn');
+  if (!list) return;
+  list.innerHTML = '<div class="placeholder pulse">Checking…</div>';
+  if (btn) btn.disabled = true;
+  try {
+    const data  = await apiFetch('/api/system/tools');
+    _sysdepsRender(data.tools || []);
+  } catch (e) {
+    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function sysdepsRefresh() { sysdepsLoad(); }
+
+function _sysdepsRender(tools) {
+  const list = document.getElementById('sysdeps-list');
+  if (!list) return;
+
+  // Group by category
+  const cats = ['required', 'recommended', 'optional'];
+  let html = '';
+
+  cats.forEach(cat => {
+    const group = tools.filter(t => t.category === cat);
+    if (!group.length) return;
+
+    html += `<div class="sysdep-group-label" style="color:${SYSDEP_CATEGORY_COLOR[cat]}">${SYSDEP_CATEGORY_LABEL[cat]}</div>`;
+    html += group.map(t => {
+      const statusIcon  = t.detected ? '✓' : '✗';
+      const statusClass = t.detected ? 'sysdep-ok' : 'sysdep-missing';
+      const versionStr  = t.detected && t.version ? `<span class="sysdep-version">${_escHtml(t.version)}</span>` : '';
+      const installBtn  = !t.detected && t.canInstall
+        ? `<button class="btn btn-xs btn-teal" onclick="sysdepsInstall('${t.id}')" ${_sysdepsInstalling === t.id ? 'disabled' : ''}>
+             ${_sysdepsInstalling === t.id ? '⏳ Installing…' : '⬇ Install'}
+           </button>`
+        : '';
+      const repoLink = !t.detected
+        ? `<a class="sysdep-repo" href="${t.repo}" target="_blank" title="${t.repo}">${_escHtml(t.repoLabel || t.repo)}</a>`
+        : '';
+      const manualNote = !t.detected && !t.canInstall
+        ? `<span class="sysdep-manual">manual install required</span>`
+        : '';
+
+      return `<div class="sysdep-row ${statusClass}">
+        <span class="sysdep-status">${statusIcon}</span>
+        <span class="sysdep-label">${_escHtml(t.label)}</span>
+        ${versionStr}
+        <span class="sysdep-note">${_escHtml(t.note || '')}</span>
+        <span class="sysdep-actions">${installBtn}${repoLink}${manualNote}</span>
+      </div>`;
+    }).join('');
+  });
+
+  list.innerHTML = html;
+}
+
+async function sysdepsInstall(id) {
+  _sysdepsInstalling = id;
+  _sysdepsRender([]); // will reload below — optimistically mark as installing via a targeted update
+  // Re-fetch to get full list then re-render with installing flag
+  try { const d = await apiFetch('/api/system/tools'); _sysdepsRender(d.tools || []); } catch {}
+
+  const out = document.getElementById('sysdeps-out');
+  if (out) { out.style.display = 'block'; out.textContent = `Installing ${id}…\n`; }
+
+  try {
+    const res = await fetch('/api/system/tools/install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    const read    = async () => {
+      const { done, value } = await reader.read();
+      if (done) return;
+      decoder.decode(value).split('\n').forEach(line => {
+        if (!line.startsWith('data: ')) return;
+        try {
+          const obj = JSON.parse(line.slice(6));
+          if (obj.status && out) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
+          if (obj.done) {
+            _sysdepsInstalling = null;
+            // Re-check all tools after install
+            setTimeout(sysdepsLoad, 800);
+          }
+        } catch {}
+      });
+      await read();
+    };
+    await read();
+  } catch (e) {
+    if (out) out.textContent += `\nError: ${e.message}`;
+    _sysdepsInstalling = null;
+    setTimeout(sysdepsLoad, 500);
+  }
+}
+
+function _escHtml(str) {
+  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* ── Sidebar quick tab-toggle panel ──────────────────── */
 
 async function sidebarTabToggleChange(tabId, visible) {
   if (visible) {

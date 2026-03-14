@@ -661,6 +661,8 @@
 
     <!-- ─── SETTINGS ─────────────────────────────────────── -->
     <div id="tab-settings" class="tab-page">
+
+      <!-- Navigation Visibility -->
       <div class="card">
         <div class="card-title">Navigation Visibility</div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Show or hide tabs in the navigation bar. Changes take effect after saving.</p>
@@ -672,6 +674,19 @@
           <span class="status-line" id="settings-status"></span>
         </div>
       </div>
+
+      <!-- System Tools -->
+      <div class="card">
+        <div class="card-title" style="display:flex;align-items:center;gap:8px">
+          System Tools
+          <button class="btn btn-xs" onclick="sysdepsRefresh()" id="sysdeps-refresh-btn" title="Re-check">↺ Check</button>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Dependencies required or recommended by this dashboard.</p>
+        <div id="sysdeps-list"><div class="placeholder pulse">Checking…</div></div>
+        <!-- Install output -->
+        <pre id="sysdeps-out" class="terminal" style="display:none;margin-top:8px;max-height:200px"></pre>
+      </div>
+
     </div>
 
     <!-- ─── TERMINAL ────────────────────────────────────── -->

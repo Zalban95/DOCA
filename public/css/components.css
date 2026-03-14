@@ -586,3 +586,42 @@
   width: 100%;
 }
 .snap-path-with-btn .input { min-width: 0; }
+
+/* ── System Tools (sysdeps) ──────────────────────────── */
+.sysdep-group-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; padding: 8px 0 4px; opacity: .85;
+}
+.sysdep-row {
+  display: grid;
+  grid-template-columns: 14px 90px auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin-bottom: 3px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--dim);
+  font-size: 11px;
+}
+.sysdep-row.sysdep-ok     { border-left: 3px solid var(--green); }
+.sysdep-row.sysdep-missing { border-left: 3px solid var(--red); }
+.sysdep-status {
+  font-size: 11px; font-weight: 700; text-align: center;
+}
+.sysdep-ok .sysdep-status     { color: var(--green); }
+.sysdep-missing .sysdep-status { color: var(--red); }
+.sysdep-label   { font-weight: 600; white-space: nowrap; }
+.sysdep-version {
+  font-size: 10px; color: var(--green);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.sysdep-note   { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sysdep-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end; flex-shrink: 0; }
+.sysdep-repo {
+  font-size: 10px; color: var(--accent);
+  text-decoration: none; white-space: nowrap;
+}
+.sysdep-repo:hover { text-decoration: underline; }
+.sysdep-manual { font-size: 10px; color: var(--muted); font-style: italic; }
