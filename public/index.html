@@ -623,6 +623,12 @@
           </div>
           <span class="models-settings-label">API URL</span>
           <input id="nlm-apiurl" class="input" placeholder="http://127.0.0.1:7860 (optional)">
+          <span class="models-settings-label">Config file</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="nlm-config-path" class="input" style="flex:1;min-width:0" placeholder="/path/to/config (optional)">
+            <button class="btn btn-xs" title="Browse" onclick="fpOpen('nlm-config-path','file')">📁</button>
+            <button class="btn btn-xs" title="Edit" onclick="nlmConfigEdit()">✎</button>
+          </div>
         </div>
         <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
           <button class="btn btn-sm btn-blue" onclick="nlmSaveSettings()">Save</button>

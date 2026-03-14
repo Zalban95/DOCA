@@ -170,18 +170,20 @@ app.get('/api/status', async (req, res) => {
     }
   } catch {}
 
-  // NLM (Non-LLM) detected models — fast fs.existsSync scan
+  // NLM (Non-LLM) detected models — scan each tool's modelsPath for model files
+  const NLM_MODEL_EXTS = new Set(['.pt', '.safetensors', '.ckpt', '.bin', '.gguf', '.onnx', '.pth']);
   let nlmModels = [];
   try {
     const localPrefs = mp.local || {};
     for (const [toolId, def] of Object.entries(LOCAL_NLM_TOOLS)) {
       const dir = localPrefs[toolId]?.modelsPath || '';
-      for (const m of (def.models || [])) {
-        const filePath = def.detectFile ? def.detectFile(dir, m.name) : null;
-        if (filePath && fs.existsSync(filePath)) {
-          nlmModels.push({ tool: def.label || toolId, name: m.name });
-        }
-      }
+      if (!dir || !fs.existsSync(dir)) continue;
+      try {
+        fs.readdirSync(dir).forEach(f => {
+          if (NLM_MODEL_EXTS.has(path.extname(f).toLowerCase()))
+            nlmModels.push({ tool: def.label || toolId, name: f });
+        });
+      } catch {}
     }
   } catch {}
 
@@ -1783,11 +1785,12 @@ app.post('/api/models/local/settings', (req, res) => {
   try {
     const mp = loadModelsPrefs();
     if (!mp.local) mp.local = {};
-    const { tool, modelsPath, apiUrl } = req.body;
+    const { tool, modelsPath, apiUrl, configPath } = req.body;
     if (!tool) return res.status(400).json({ error: 'tool required' });
     if (!mp.local[tool]) mp.local[tool] = {};
-    if (modelsPath !== undefined) mp.local[tool].modelsPath = modelsPath;
-    if (apiUrl     !== undefined) mp.local[tool].apiUrl     = apiUrl;
+    if (modelsPath  !== undefined) mp.local[tool].modelsPath  = modelsPath;
+    if (apiUrl      !== undefined) mp.local[tool].apiUrl      = apiUrl;
+    if (configPath  !== undefined) mp.local[tool].configPath  = configPath;
     saveModelsPrefs(mp);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1829,24 +1832,30 @@ app.post('/api/models/local/install', (req, res) => {
   sseHeaders(res);
   const sseWrite = d => res.write(`data: ${JSON.stringify(d)}\n\n`);
 
-  const cmd   = def.installCmd(model);
-  const child = spawn('bash', ['-lc', cmd], {
-    cwd: process.env.HOME || WORKSPACE_DIR,
-    env: process.env,
+  const cmd     = def.installCmd(model);
+  const home    = process.env.HOME || os.homedir();
+  const nlmPath = `${home}/.local/bin:/usr/local/bin:/usr/bin:/bin`;
+  const child   = spawn('bash', ['-c', `PATH="${nlmPath}:$PATH" ${cmd}`], {
+    cwd: home,
+    env: { ...process.env, HOME: home, PATH: `${nlmPath}:${process.env.PATH || ''}` },
   });
 
   sseWrite({ status: `Running: ${cmd}` });
   child.stdout.on('data', d => sseWrite({ status: d.toString() }));
   child.stderr.on('data', d => sseWrite({ status: d.toString() }));
-  child.on('close', code => {
-    sseWrite({ done: true, error: code !== 0, status: code === 0 ? '✓ Done' : `✗ Exit ${code}` });
+  child.on('close', (code, signal) => {
+    const ok  = code === 0;
+    const msg = ok ? '✓ Done'
+      : code !== null ? `✗ Exit ${code}`
+      : `✗ Killed by signal (${signal || 'unknown'})`;
+    sseWrite({ done: true, error: !ok, status: msg });
     res.end();
   });
   child.on('error', e => {
     sseWrite({ done: true, error: true, status: `Error: ${e.message}` });
     res.end();
   });
-  req.on('close', () => child.kill());
+  res.on('close', () => { if (!child.killed) child.kill(); });
 });
 
 app.post('/api/models/local/delete', (req, res) => {

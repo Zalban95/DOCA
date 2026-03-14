@@ -200,10 +200,12 @@ async function nlmLoadSettings() {
   try {
     const s = await apiFetch('/api/models/local/settings');
     const t = s[tool] || {};
-    const pathEl   = document.getElementById('nlm-path');
-    const apiUrlEl = document.getElementById('nlm-apiurl');
-    if (pathEl)   pathEl.value   = t.modelsPath || '';
-    if (apiUrlEl) apiUrlEl.value = t.apiUrl     || '';
+    const pathEl    = document.getElementById('nlm-path');
+    const apiUrlEl  = document.getElementById('nlm-apiurl');
+    const cfgPathEl = document.getElementById('nlm-config-path');
+    if (pathEl)    pathEl.value    = t.modelsPath  || '';
+    if (apiUrlEl)  apiUrlEl.value  = t.apiUrl      || '';
+    if (cfgPathEl) cfgPathEl.value = t.configPath  || '';
   } catch {}
 }
 
@@ -215,8 +217,9 @@ async function nlmSaveSettings() {
       method: 'POST',
       body: {
         tool,
-        modelsPath: document.getElementById('nlm-path')?.value.trim()   || '',
-        apiUrl:     document.getElementById('nlm-apiurl')?.value.trim() || '',
+        modelsPath:  document.getElementById('nlm-path')?.value.trim()        || '',
+        apiUrl:      document.getElementById('nlm-apiurl')?.value.trim()      || '',
+        configPath:  document.getElementById('nlm-config-path')?.value.trim() || '',
       }
     });
     setStatus(status, '✓ Saved', 'ok');
@@ -225,6 +228,18 @@ async function nlmSaveSettings() {
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
   }
+}
+
+function nlmConfigEdit() {
+  const cfgPath = document.getElementById('nlm-config-path')?.value.trim();
+  if (!cfgPath) return alert('No config file path set. Save a path first.');
+  // Navigate to Files tab and open the file in the inline editor
+  const dir = cfgPath.substring(0, cfgPath.lastIndexOf('/')) || '/';
+  document.querySelector('[data-tab="files"]')?.click();
+  setTimeout(() => {
+    if (typeof _fpNav === 'function') _fpNav(dir);
+    if (typeof fmOpenEditor === 'function') fmOpenEditor(cfgPath);
+  }, 200);
 }
 
 async function nlmSearch() {
