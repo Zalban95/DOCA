@@ -103,7 +103,10 @@ function _termSessionConnect(id) {
 
   setSt('○ connecting…', 'var(--muted)');
 
+  let _didOpen = false;
+
   ws.onopen = () => {
+    _didOpen = true;
     setSt('● connected', 'var(--green)');
     _termSessionFit(id);
   };
@@ -123,7 +126,12 @@ function _termSessionConnect(id) {
   ws.onclose = () => { setSt('○ disconnected', 'var(--red)'); session.ws = null; };
 
   ws.onerror = () => {
-    session.term?.writeln('\r\n\x1b[31m[connection error — is node-pty installed?]\x1b[0m\r\n');
+    if (!_didOpen) {
+      setSt('✗ node-pty missing', 'var(--red)');
+      ptyErrorBanner(document.getElementById(`term-cont-${id}`));
+    } else {
+      session.term?.writeln('\r\n\x1b[31m[connection error]\x1b[0m\r\n');
+    }
   };
 
   session.term?.onData(data => {

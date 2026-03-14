@@ -130,3 +130,48 @@
 .code-tool-term .xterm-screen {
   height: 100%;
 }
+
+/* ── node-pty missing error banner ───────────────────── */
+.term-pty-error {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  background: rgba(13, 17, 23, 0.96);
+  border: 1px solid var(--red);
+  border-radius: var(--radius);
+  backdrop-filter: blur(4px);
+}
+
+.term-pty-error-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  color: var(--amber);
+  line-height: 1;
+}
+
+.term-pty-error-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.term-pty-error-body strong {
+  color: var(--red);
+  font-size: 13px;
+}
+
+.term-pty-error-body span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.term-pty-error-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}

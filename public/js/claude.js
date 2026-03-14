@@ -182,7 +182,10 @@ function _codeTermOpen(id) {
 
   setStatus('○ connecting…', 'var(--muted)');
 
+  let _didOpen = false;
+
   ws.onopen = () => {
+    _didOpen = true;
     setStatus('● connected', 'var(--green)');
     try { fit.fit(); } catch {}
     if (ws.readyState === WebSocket.OPEN)
@@ -206,7 +209,14 @@ function _codeTermOpen(id) {
     if (_codeTerms[id]) _codeTerms[id].ws = null;
   };
 
-  ws.onerror = () => { term.writeln('\r\n\x1b[31m[connection error]\x1b[0m\r\n'); };
+  ws.onerror = () => {
+    if (!_didOpen) {
+      setStatus('✗ node-pty missing', 'var(--red)');
+      ptyErrorBanner(container);
+    } else {
+      term.writeln('\r\n\x1b[31m[connection error]\x1b[0m\r\n');
+    }
+  };
 
   term.onData(data => {
     if (ws.readyState === WebSocket.OPEN)
