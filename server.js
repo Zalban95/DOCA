@@ -636,6 +636,45 @@ app.post('/api/claude/stop', (req, res) => {
   res.json({ ok: true });
 });
 
+// Start claude interactively (no -p flag) and stream output via SSE
+app.post('/api/claude/start', (req, res) => {
+  if (claudeProc) return res.status(409).json({ error: 'A Claude process is already running' });
+  sseHeaders(res);
+  const cwd = req.body?.workdir || WORKSPACE_DIR;
+  const child = spawn('claude', [], {
+    cwd,
+    env: { ...process.env, TERM: 'dumb' },
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+  claudeProc = child;
+  child.stdout.on('data', d => res.write(`data: ${JSON.stringify({ type: 'stdout', text: d.toString() })}\n\n`));
+  child.stderr.on('data', d => res.write(`data: ${JSON.stringify({ type: 'stderr', text: d.toString() })}\n\n`));
+  child.on('close', code => {
+    res.write(`data: ${JSON.stringify({ type: 'done', code })}\n\n`);
+    res.end();
+    if (claudeProc === child) claudeProc = null;
+  });
+  child.on('error', err => {
+    res.write(`data: ${JSON.stringify({ type: 'stderr', text: `Failed to start claude: ${err.message}` })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'done', code: 1 })}\n\n`);
+    res.end();
+    if (claudeProc === child) claudeProc = null;
+  });
+  res.on('close', () => { child.kill(); if (claudeProc === child) claudeProc = null; });
+});
+
+// Send a line of text to the running claude process stdin
+app.post('/api/claude/stdin', (req, res) => {
+  const { text } = req.body;
+  if (!claudeProc) return res.status(404).json({ error: 'No running process' });
+  try {
+    claudeProc.stdin.write((text ?? '') + '\n');
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── CHAT (OpenClaw Agent) ────────────────────────────────────────────────────
 
 const chatHistory = [];

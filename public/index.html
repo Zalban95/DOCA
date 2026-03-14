@@ -343,6 +343,7 @@
             <span class="status-line" id="claude-version"></span>
           </div>
           <div class="toolbar-right">
+            <button class="btn btn-sm btn-green" onclick="claudeStart()" id="claude-start-btn">▶ Start Claude</button>
             <button class="btn btn-sm btn-red" onclick="claudeStop()" id="claude-stop-btn" style="display:none">■ Stop</button>
             <button class="btn btn-sm" onclick="claudeCheckStatus()">↺ Refresh</button>
           </div>
@@ -353,9 +354,9 @@
         <div class="card-title">Terminal</div>
         <div class="claude-prompt-row">
           <span class="claude-prompt-caret">❯</span>
-          <input id="claude-input" class="input flex1" placeholder="Enter a prompt for Claude Code…"
+          <input id="claude-input" class="input flex1" placeholder="Enter a one-shot prompt for Claude Code…"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();claudeRun();}">
-          <button class="btn btn-sm btn-blue" onclick="claudeRun()">Run</button>
+          <button class="btn btn-sm btn-blue" onclick="claudeRun()" id="claude-run-btn">▶ Run</button>
         </div>
         <pre class="claude-output scroll-y" id="claude-output"><span class="text-muted">Ready. Enter a prompt above to run Claude Code.</span></pre>
       </div>
