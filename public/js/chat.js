@@ -86,11 +86,12 @@ function chatSend() {
   });
 }
 
-async function chatClear() {
-  if (!confirm('Clear chat history?')) return;
-  try {
-    await apiFetch('/api/chat/clear', { method: 'POST' });
-    const container = document.getElementById('chat-messages');
-    container.innerHTML = '<div class="chat-msg system">Chat cleared. Send a message to start a new conversation.</div>';
-  } catch (e) { alert(`Error: ${e.message}`); }
+function chatClear() {
+  appConfirm('Clear chat history?', async () => {
+    try {
+      await apiFetch('/api/chat/clear', { method: 'POST' });
+      const container = document.getElementById('chat-messages');
+      container.innerHTML = '<div class="chat-msg system">Chat cleared. Send a message to start a new conversation.</div>';
+    } catch (e) { alert(`Error: ${e.message}`); }
+  });
 }

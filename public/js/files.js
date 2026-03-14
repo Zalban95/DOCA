@@ -264,15 +264,16 @@ async function fmPaste() {
 }
 
 /* ── Delete ──────────────────────────────────────────── */
-async function fmDelete(path, isDir, evt) {
+function fmDelete(path, isDir, evt) {
   if (evt) evt.stopPropagation();
   const targets = fm.selected.size > 1 ? [...fm.selected] : [path];
-  if (!confirm(`Delete ${targets.length} item(s)?`)) return;
-  try {
-    await apiFetch('/api/files/delete', { method: 'POST', body: { paths: targets } });
-    fm.selected = new Set();
-    fmRefresh();
-  } catch (e) { alert(`Delete error: ${e.message}`); }
+  appConfirm(`Delete ${targets.length} item(s)?`, async () => {
+    try {
+      await apiFetch('/api/files/delete', { method: 'POST', body: { paths: targets } });
+      fm.selected = new Set();
+      fmRefresh();
+    } catch (e) { alert(`Delete error: ${e.message}`); }
+  });
 }
 
 /* ── Rename (inline) ─────────────────────────────────── */

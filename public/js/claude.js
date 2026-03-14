@@ -1,10 +1,71 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — CLAUDE CODE MANAGEMENT
+   OPENCLAW PANEL — CODE TOOLS + CLAUDE CODE MANAGEMENT
    ═══════════════════════════════════════════════════════ */
 
 let claudeRunning  = false;
 let claudeHistory  = [];
-let claudeInteractive = false; // true when started via "Start Claude" (interactive mode)
+let claudeInteractive = false;
+
+let _codeTools = [];
+let _codePinned = null;
+
+/* ── Code tools picker ────────────────────────────────── */
+function codeInit() {
+  claudeCheckStatus();
+  codeRefresh();
+}
+
+async function codeRefresh() {
+  const list = document.getElementById('code-tools-list');
+  if (!list) return;
+  list.innerHTML = '<div class="placeholder pulse">Detecting…</div>';
+  try {
+    const data = await apiFetch('/api/code/tools');
+    _codeTools  = data.tools || [];
+    _codePinned = data.pinned;
+    _codeRender();
+  } catch (e) {
+    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+  }
+}
+
+function _codeRender() {
+  const list = document.getElementById('code-tools-list');
+  if (!list) return;
+  if (!_codeTools.length) { list.innerHTML = '<div class="placeholder">No tools found</div>'; return; }
+
+  list.innerHTML = _codeTools.map(t => `
+    <div class="code-tool-row ${t.detected ? '' : 'code-tool-missing'}">
+      <label class="code-tool-pin" title="Set as default">
+        <input type="radio" name="code-pin" value="${t.id}" ${t.pinned ? 'checked' : ''} onchange="codePinSet('${t.id}')">
+      </label>
+      <div class="code-tool-info">
+        <span class="code-tool-name">${t.label}</span>
+        ${t.detected
+          ? `<span class="badge badge-green" style="font-size:9px">${t.version || 'installed'}</span>`
+          : `<span class="badge badge-red"   style="font-size:9px">Not found</span>`
+        }
+      </div>
+      <div class="code-tool-actions">
+        ${t.detected
+          ? `<button class="btn btn-xs btn-green" onclick="termLaunchCommand('${t.cmd}')">▶ Launch</button>`
+          : `<a class="btn btn-xs" href="${t.url}" target="_blank" title="${t.installHint}">Install…</a>`
+        }
+      </div>
+    </div>
+  `).join('');
+}
+
+async function codePinSet(id) {
+  _codePinned = id;
+  try { await apiFetch('/api/code/tools/pin', { method: 'POST', body: { id } }); } catch {}
+}
+
+function codeLaunch() {
+  const tool = _codeTools.find(t => t.id === _codePinned) || _codeTools.find(t => t.detected);
+  if (!tool) { alert('No code tool detected. Please install one first.'); return; }
+  termLaunchCommand(tool.cmd);
+}
 
 function claudeInit() {
   claudeCheckStatus();

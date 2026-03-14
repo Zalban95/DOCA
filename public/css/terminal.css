@@ -31,13 +31,22 @@
   background: #0d1117;
   padding: 4px 6px;
   overflow: hidden;
+  /* ensure proper height for xterm */
+  display: flex;
+  flex-direction: column;
 }
 
 /* xterm fills its container */
 #term-container .xterm {
+  flex: 1;
+  min-height: 0;
   height: 100%;
 }
 
 #term-container .xterm-viewport {
   overflow-y: auto !important;
+}
+
+#term-container .xterm-screen {
+  height: 100%;
 }

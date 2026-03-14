@@ -1,8 +1,9 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — API KEYS
+   OPENCLAW PANEL — API KEYS + TOOL APIS
    ═══════════════════════════════════════════════════════ */
 
 async function loadKeys() {
+  keysLoadToolApis();
   const list = document.getElementById('providers-list');
   try {
     const data = await apiFetch('/api/keys');
@@ -45,12 +46,13 @@ async function saveKey(provider) {
   }
 }
 
-async function deleteProvider(name) {
-  if (!confirm(`Remove provider "${name}"?`)) return;
-  try {
-    await apiFetch(`/api/keys/${name}`, { method: 'DELETE' });
-    loadKeys();
-  } catch (e) { alert(`Error: ${e.message}`); }
+function deleteProvider(name) {
+  appConfirm(`Remove provider "${name}"?`, async () => {
+    try {
+      await apiFetch(`/api/keys/${name}`, { method: 'DELETE' });
+      loadKeys();
+    } catch (e) { alert(`Error: ${e.message}`); }
+  });
 }
 
 function showAddProvider() { document.getElementById('add-provider-form').style.display = 'block'; }
@@ -70,4 +72,62 @@ async function addProvider() {
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
   }
+}
+
+/* ── Tool APIs ────────────────────────────────────────── */
+
+const TOOL_API_DEFS = [
+  { key: 'stableDiffusion', label: 'Stable Diffusion WebUI', placeholder: 'http://127.0.0.1:7860' },
+  { key: 'comfyui',         label: 'ComfyUI',                placeholder: 'http://127.0.0.1:8188' },
+  { key: 'openwebui',       label: 'Open WebUI',             placeholder: 'http://127.0.0.1:3000' },
+  { key: 'kokoro',          label: 'Kokoro TTS',             placeholder: 'http://127.0.0.1:8880' },
+  { key: 'whisper',         label: 'Whisper API',            placeholder: 'http://127.0.0.1:9000' },
+];
+
+let _toolApis = {};
+
+async function keysLoadToolApis() {
+  const el = document.getElementById('tool-apis-list');
+  if (!el) return;
+  try {
+    const data = await apiFetch('/api/keys/tool-apis');
+    _toolApis = data.toolApis || {};
+    _keysRenderToolApis(el);
+  } catch (e) {
+    el.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+  }
+}
+
+function _keysRenderToolApis(el) {
+  el.innerHTML = TOOL_API_DEFS.map(t => {
+    const val = _toolApis[t.key]?.url || '';
+    return `
+      <div class="tool-api-row">
+        <span class="tool-api-label">${t.label}</span>
+        <input class="input" id="tool-api-${t.key}" placeholder="${t.placeholder}" value="${val}">
+        <span class="status-line" id="tool-api-status-${t.key}"></span>
+      </div>
+    `;
+  }).join('');
+}
+
+async function keysSaveToolApis() {
+  const status = document.getElementById('tool-apis-status');
+  const toolApis = {};
+  TOOL_API_DEFS.forEach(t => {
+    const val = document.getElementById(`tool-api-${t.key}`)?.value.trim();
+    if (val) toolApis[t.key] = { url: val };
+  });
+  try {
+    await apiFetch('/api/keys/tool-apis', { method: 'POST', body: { toolApis } });
+    setStatus(status, '✓ Saved', 'ok');
+    _toolApis = toolApis;
+  } catch (e) {
+    setStatus(status, `✗ ${e.message}`, 'err');
+  }
+}
+
+function keysShowToolApis() {
+  const section = document.getElementById('tool-apis-section');
+  if (section) section.scrollIntoView({ behavior: 'smooth' });
 }

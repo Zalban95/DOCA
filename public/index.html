@@ -41,9 +41,11 @@
     <button class="nav-tab"        data-tab="setup"    onclick="nav('setup')">Setup</button>
     <button class="nav-tab"        data-tab="config"   onclick="nav('config')">Config</button>
     <button class="nav-tab"        data-tab="files"    onclick="nav('files')">Files</button>
-    <button class="nav-tab"        data-tab="claude"    onclick="nav('claude')">Claude</button>
+    <button class="nav-tab"        data-tab="code"      onclick="nav('code')">Code</button>
     <button class="nav-tab"        data-tab="terminal"  onclick="nav('terminal')">Terminal</button>
     <button class="nav-tab"        data-tab="models"    onclick="nav('models')">Models</button>
+    <button class="nav-tab"        data-tab="docker"    onclick="nav('docker')">Docker</button>
+    <button class="nav-tab"        data-tab="settings"  onclick="nav('settings')">Settings</button>
   </nav>
 
   <div class="header-right">
@@ -98,7 +100,7 @@
         <button class="quicklink" onclick="nav('logs')"><span class="quicklink-icon">📋</span><span class="quicklink-label">Logs</span></button>
         <button class="quicklink" onclick="nav('keys')"><span class="quicklink-icon">🔑</span><span class="quicklink-label">API Keys</span></button>
         <button class="quicklink" onclick="nav('snapshots')"><span class="quicklink-icon">📷</span><span class="quicklink-label">Snapshots</span></button>
-        <button class="quicklink" onclick="nav('claude')"><span class="quicklink-icon">⬡</span><span class="quicklink-label">Claude Code</span></button>
+        <button class="quicklink" onclick="nav('code')"><span class="quicklink-icon">⬡</span><span class="quicklink-label">Code Tools</span></button>
       </div>
     </div>
 
@@ -153,6 +155,17 @@
             <button class="btn btn-sm btn-blue" onclick="addProvider()">Add</button>
           </div>
           <div class="status-line mt8" id="np-status"></div>
+        </div>
+      </div>
+
+      <!-- Tool APIs section -->
+      <div class="card" id="tool-apis-section">
+        <div class="card-title">Tool APIs</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Local API endpoints for non-LLM tools (image generation, speech, etc.)</p>
+        <div id="tool-apis-list"><div class="placeholder pulse">Loading…</div></div>
+        <div class="toolbar" style="margin-top:10px">
+          <button class="btn btn-sm btn-blue" onclick="keysSaveToolApis()">Save</button>
+          <span class="status-line" id="tool-apis-status"></span>
         </div>
       </div>
     </div>
@@ -393,32 +406,30 @@
       </div>
     </div>
 
-    <!-- ─── CLAUDE CODE ───────────────────────────────── -->
-    <div id="tab-claude" class="tab-page">
+    <!-- ─── CODE TOOLS ──────────────────────────────────── -->
+    <div id="tab-code" class="tab-page">
       <div class="card">
-        <div class="card-title">Claude Code</div>
-        <div class="toolbar">
-          <div class="toolbar-left">
-            <span class="badge" id="claude-status-badge">Checking…</span>
-            <span class="status-line" id="claude-version"></span>
-          </div>
-          <div class="toolbar-right">
-            <button class="btn btn-sm btn-green" onclick="claudeStart()" id="claude-start-btn">▶ Start Claude</button>
-            <button class="btn btn-sm btn-red" onclick="claudeStop()" id="claude-stop-btn" style="display:none">■ Stop</button>
-            <button class="btn btn-sm" onclick="claudeCheckStatus()">↺ Refresh</button>
-          </div>
+        <div class="card-title">Code Agent Tools</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Detect and launch AI coding tools. Pin a default tool to launch it instantly in the Terminal.</p>
+        <div id="code-tools-list">
+          <div class="placeholder pulse">Detecting tools…</div>
+        </div>
+        <div class="toolbar" style="margin-top:12px">
+          <button class="btn btn-sm" onclick="codeRefresh()">↺ Refresh</button>
+          <button class="btn btn-sm btn-green" onclick="codeLaunch()" id="code-launch-btn">▶ Launch in Terminal</button>
         </div>
       </div>
 
       <div class="card" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-        <div class="card-title">Terminal</div>
+        <div class="card-title">One-shot Run (claude -p)</div>
         <div class="claude-prompt-row">
           <span class="claude-prompt-caret">❯</span>
           <input id="claude-input" class="input flex1" placeholder="Enter a one-shot prompt for Claude Code…"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();claudeRun();}">
           <button class="btn btn-sm btn-blue" onclick="claudeRun()" id="claude-run-btn">▶ Run</button>
+          <button class="btn btn-sm btn-red" onclick="claudeStop()" id="claude-stop-btn" style="display:none">■ Stop</button>
         </div>
-        <pre class="claude-output scroll-y" id="claude-output"><span class="text-muted">Ready. Enter a prompt above to run Claude Code.</span></pre>
+        <pre class="claude-output scroll-y" id="claude-output"><span class="text-muted">Ready. Enter a prompt above to run Claude Code in one-shot mode.</span></pre>
       </div>
 
       <div class="card">
@@ -449,9 +460,16 @@
         </div>
       </div>
 
-      <!-- Installed Models -->
+      <!-- LLM Models (Ollama) -->
       <div class="card">
-        <div class="card-title">Installed Models</div>
+        <div class="card-title">LLM Models — Ollama</div>
+        <!-- Search online -->
+        <div class="models-search-row">
+          <input id="models-search-input" class="input" placeholder="Search Ollama library (e.g. llama, mistral)…"
+                 style="flex:1" onkeydown="if(event.key==='Enter') modelsSearchOnline()">
+          <button class="btn btn-sm" onclick="modelsSearchOnline()">🔍 Search</button>
+        </div>
+        <div id="models-search-results" style="display:none;margin-bottom:8px"></div>
         <!-- Pull row -->
         <div class="models-pull-row">
           <input id="models-pull-input" class="input" placeholder="model name (e.g. llama3.2, qwen2.5:7b)"
@@ -482,17 +500,92 @@
         </div>
       </div>
 
-      <!-- Non-LLM Tools -->
+      <!-- Tools (non-LLM) -->
       <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
         <div class="toolbar">
-          <div class="card-title" style="margin-bottom:0">Non-LLM Tools</div>
+          <div class="card-title" style="margin-bottom:0">Tools (TTS / Image / Speech)</div>
           <button class="btn btn-sm" onclick="modelsLoadTools()">↺ Refresh</button>
+          <a class="btn btn-xs" onclick="nav('keys');setTimeout(keysShowToolApis,200)" style="cursor:pointer">Configure APIs →</a>
         </div>
         <div id="models-tools-list" class="scroll-y" style="flex:1;padding-top:8px">
           <div class="placeholder pulse">Detecting…</div>
         </div>
       </div>
 
+    </div>
+
+    <!-- ─── DOCKER ──────────────────────────────────────── -->
+    <div id="tab-docker" class="tab-page">
+      <!-- Containers card -->
+      <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+        <div class="toolbar">
+          <div class="card-title" style="margin-bottom:0">Containers</div>
+          <button class="btn btn-sm" onclick="dockerLoadContainers()">↺ Refresh</button>
+        </div>
+        <div style="overflow-x:auto;flex:1;overflow-y:auto">
+          <table class="models-table" style="min-width:600px">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Image</th>
+                <th>Status</th>
+                <th>Ports</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="docker-containers-body">
+              <tr><td colspan="5" class="placeholder" style="padding:12px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Log drawer -->
+        <div id="docker-log-drawer" style="display:none;flex:0 0 200px;overflow:hidden;border-top:1px solid var(--border)">
+          <div class="toolbar" style="padding:4px 8px">
+            <span id="docker-log-label" style="font-size:11px;flex:1"></span>
+            <button class="btn btn-xs" onclick="dockerCloseLog()">✕ Close</button>
+          </div>
+          <pre id="docker-log-out" class="terminal" style="height:calc(100% - 30px);margin:0;border:none;border-radius:0"></pre>
+        </div>
+      </div>
+
+      <!-- Images card -->
+      <div class="card">
+        <div class="toolbar">
+          <div class="card-title" style="margin-bottom:0">Images</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="docker-pull-input" class="input" placeholder="image:tag" style="width:200px"
+                   onkeydown="if(event.key==='Enter') dockerPullImage()">
+            <button class="btn btn-sm btn-teal" onclick="dockerPullImage()">⬇ Pull</button>
+            <button class="btn btn-sm" onclick="dockerLoadImages()">↺ Refresh</button>
+          </div>
+        </div>
+        <div id="docker-pull-out" class="terminal" style="display:none;max-height:100px;margin-top:6px"></div>
+        <div style="overflow-x:auto;margin-top:8px">
+          <table class="models-table">
+            <thead>
+              <tr><th>Repository</th><th>Tag</th><th>Size</th><th>Created</th><th></th></tr>
+            </thead>
+            <tbody id="docker-images-body">
+              <tr><td colspan="5" class="placeholder" style="padding:12px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SETTINGS ─────────────────────────────────────── -->
+    <div id="tab-settings" class="tab-page">
+      <div class="card">
+        <div class="card-title">Navigation Visibility</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Show or hide tabs in the navigation bar. Changes take effect after saving.</p>
+        <div id="settings-tabs-list">
+          <div class="placeholder pulse">Loading…</div>
+        </div>
+        <div class="toolbar" style="margin-top:14px">
+          <button class="btn btn-sm btn-blue" onclick="settingsSave()">Save</button>
+          <span class="status-line" id="settings-status"></span>
+        </div>
+      </div>
     </div>
 
     <!-- ─── TERMINAL ────────────────────────────────────── -->
@@ -543,6 +636,18 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════ SHARED MODALS -->
+<!-- Custom confirm modal (replaces browser confirm()) -->
+<div id="app-confirm-modal" class="app-confirm-backdrop">
+  <div class="app-confirm-box">
+    <p id="app-confirm-message" class="app-confirm-msg"></p>
+    <div class="app-confirm-actions">
+      <button id="app-confirm-cancel" class="btn btn-sm">Cancel</button>
+      <button id="app-confirm-ok" class="btn btn-sm btn-red">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <!-- xterm.js runtime -->
 <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
@@ -564,5 +669,11 @@
 <script src="js/chat.js"></script>
 <script src="js/terminal.js"></script>
 <script src="js/models.js"></script>
+<script src="js/docker.js"></script>
+<script src="js/settings.js"></script>
+<script>
+  // Apply persisted hidden tabs immediately on load
+  document.addEventListener('DOMContentLoaded', settingsApplyOnLoad);
+</script>
 </body>
 </html>

@@ -88,6 +88,45 @@ async function modelsLoadList() {
   }
 }
 
+/* ── Online search ────────────────────────────────────── */
+async function modelsSearchOnline() {
+  const q       = (document.getElementById('models-search-input')?.value || '').trim();
+  const results = document.getElementById('models-search-results');
+  if (!results) return;
+
+  results.style.display = 'block';
+  results.innerHTML = '<div class="placeholder pulse" style="padding:6px">Searching…</div>';
+
+  try {
+    const data = await apiFetch(`/api/models/ollama/search?q=${encodeURIComponent(q)}`);
+    const list = data.results || [];
+    if (!list.length) { results.innerHTML = '<div class="placeholder" style="padding:6px">No results</div>'; return; }
+    results.innerHTML = '<div class="models-search-list">' + list.map(m => `
+      <div class="models-search-item" onclick="modelsSearchSelect('${m.name.replace(/'/g,"\\'")}')">
+        <span class="models-search-name">${m.name}</span>
+        <span class="models-search-desc">${m.description || ''}</span>
+        ${m.pulls ? `<span class="models-search-pulls" style="font-size:9px;color:var(--muted)">${fmtNumber(m.pulls)} pulls</span>` : ''}
+      </div>
+    `).join('') + '</div>';
+  } catch (e) {
+    results.innerHTML = `<div class="placeholder" style="color:var(--red);padding:6px">${e.message}</div>`;
+  }
+}
+
+function modelsSearchSelect(name) {
+  const input = document.getElementById('models-pull-input');
+  if (input) input.value = name;
+  const results = document.getElementById('models-search-results');
+  if (results) results.style.display = 'none';
+}
+
+function fmtNumber(n) {
+  if (!n) return '0';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return String(n);
+}
+
 /* ── Pull model ───────────────────────────────────────── */
 function modelsPull() {
   const name = document.getElementById('models-pull-input').value.trim();
@@ -139,12 +178,13 @@ function modelsPull() {
 }
 
 /* ── Delete model ─────────────────────────────────────── */
-async function modelsDelete(name) {
-  if (!confirm(`Delete model: ${name}?`)) return;
-  try {
-    await apiFetch('/api/models/ollama/delete', { method: 'POST', body: { name } });
-    modelsLoadList();
-  } catch (e) { alert(`Delete error: ${e.message}`); }
+function modelsDelete(name) {
+  appConfirm(`Delete model: ${name}?`, async () => {
+    try {
+      await apiFetch('/api/models/ollama/delete', { method: 'POST', body: { name } });
+      modelsLoadList();
+    } catch (e) { alert(`Delete error: ${e.message}`); }
+  });
 }
 
 /* ── Non-LLM tools ────────────────────────────────────── */
@@ -168,18 +208,15 @@ async function modelsLoadTools() {
           <span class="badge models-type-badge">${t.type.toUpperCase()}</span>
         </div>
         <div class="models-tool-config">
-          ${t.type === 'image'
-            ? `<input class="input" placeholder="API URL (e.g. http://localhost:7860)"
-                      id="tool-apiurl-${t.id}" value="${t.apiUrl || ''}" style="width:240px">`
-            : `<input class="input" placeholder="Custom path (leave blank to auto-detect)"
-                      id="tool-path-${t.id}" value="${t.path || ''}" style="width:240px">`
-          }
+          <input class="input" placeholder="Custom path (leave blank to auto-detect)"
+                 id="tool-path-${t.id}" value="${t.path || ''}" style="width:200px">
           <label class="skill-toggle" title="Available to OpenClaw" style="display:inline-flex;align-items:center;gap:6px;width:auto">
             <input type="checkbox" id="tool-avail-${t.id}" ${t.availableForOpenclaw ? 'checked' : ''}>
             <span class="skill-toggle-track"></span>
             <span style="font-size:10px;color:var(--muted)">OpenClaw</span>
           </label>
           <button class="btn btn-xs" onclick="modelsToolSave('${t.id}')">Save</button>
+          <a class="btn btn-xs" onclick="nav('keys');setTimeout(keysShowToolApis,200)" style="cursor:pointer;font-size:9px">API →</a>
         </div>
       </div>
     `).join('');

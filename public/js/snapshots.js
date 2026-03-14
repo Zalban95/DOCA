@@ -105,16 +105,17 @@ function createSnapshot() {
 }
 
 function restoreSnapshot(name) {
-  if (!confirm(`Restore snapshot: ${name}?\nThis will overwrite current config.`)) return;
-  const out = document.getElementById('snap-out');
-  out.textContent   = `Restoring ${name}…\n`;
-  out.style.display = 'block';
+  appConfirm(`Restore snapshot: ${name}?\nThis will overwrite current config.`, () => {
+    const out = document.getElementById('snap-out');
+    out.textContent   = `Restoring ${name}…\n`;
+    out.style.display = 'block';
 
-  fetch('/api/snapshots/restore', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name })
-  })
-    .then(res => streamToEl(res, out, null))
-    .catch(e  => { out.textContent += `\nError: ${e.message}`; });
+    fetch('/api/snapshots/restore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    })
+      .then(res => streamToEl(res, out, null))
+      .catch(e  => { out.textContent += `\nError: ${e.message}`; });
+  });
 }

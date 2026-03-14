@@ -277,6 +277,36 @@ app.delete('/api/keys/:name', (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Tool APIs (stored in openclaw.json under toolApis key)
+app.get('/api/keys/tool-apis', (req, res) => {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    res.json({ toolApis: cfg.toolApis || {} });
+  } catch (e) { res.json({ toolApis: {} }); }
+});
+
+app.post('/api/keys/tool-apis', (req, res) => {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    cfg.toolApis = req.body.toolApis || {};
+    fs.copyFileSync(CONFIG_PATH, CONFIG_PATH + '.bak');
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// General prefs API
+app.get('/api/prefs', (req, res) => res.json(loadPrefs()));
+
+app.post('/api/prefs', (req, res) => {
+  try {
+    const prefs = loadPrefs();
+    const updated = { ...prefs, ...req.body };
+    fs.writeFileSync(PREFS_FILE, JSON.stringify(updated, null, 2), 'utf8');
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── SKILLS ───────────────────────────────────────────────────────────────────
 
 function readSkillMeta(sp) {
@@ -376,15 +406,41 @@ app.delete('/api/skills/:name', (req, res) => {
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Search skills online via clawhub
+// Search skills online via clawhub, fallback to GitHub search API
 app.get('/api/skills/search', (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q) return res.json({ results: [] });
-  exec(`npx clawhub search ${JSON.stringify(q)} --json 2>/dev/null`, { timeout: 15000 }, (err, stdout, stderr) => {
-    if (err) {
-      // clawhub not available or returned error — return structured error
-      return res.json({ error: 'clawhub search unavailable', results: [] });
-    }
+
+  const githubFallback = () => {
+    const url = `https://api.github.com/search/repositories?q=topic:clawhub-skill+${encodeURIComponent(q)}&sort=stars&per_page=30`;
+    const https = require('https');
+    https.get(url, { headers: { 'User-Agent': 'openclaw-dashboard/1.0' } }, ghRes => {
+      let body = '';
+      ghRes.on('data', d => body += d);
+      ghRes.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          const items = data.items || [];
+          const results = items.map(r => ({
+            name:        r.full_name,
+            description: r.description || '',
+            version:     '',
+            official:    r.owner?.login === 'clawhub',
+            community:   r.owner?.login !== 'clawhub',
+            source:      'github',
+            stars:       r.stargazers_count,
+            url:         r.html_url,
+          }));
+          res.json({ results, via: 'github' });
+        } catch (e) {
+          res.json({ results: [], error: `GitHub search failed: ${e.message}` });
+        }
+      });
+    }).on('error', e => res.json({ results: [], error: `GitHub search error: ${e.message}` }));
+  };
+
+  exec(`npx clawhub search ${JSON.stringify(q)} --json 2>/dev/null`, { timeout: 15000 }, (err, stdout) => {
+    if (err || !stdout.trim()) return githubFallback();
     try {
       const parsed = JSON.parse(stdout);
       const results = (Array.isArray(parsed) ? parsed : parsed.results || []).map(s => ({
@@ -393,17 +449,11 @@ app.get('/api/skills/search', (req, res) => {
         version:     s.version     || '',
         official:    !!(s.official || s.verified),
         community:   !!(s.community),
-        source:      s.source      || s.registry || 'unknown',
+        source:      s.source      || s.registry || 'clawhub',
       }));
-      res.json({ results });
+      res.json({ results, via: 'clawhub' });
     } catch {
-      // clawhub returned non-JSON — parse text lines as skill names
-      const lines = stdout.trim().split('\n').filter(Boolean);
-      const results = lines.map(l => {
-        const parts = l.trim().split(/\s{2,}/);
-        return { name: parts[0] || l, description: parts[1] || '', official: false, community: true, source: 'clawhub' };
-      });
-      res.json({ results });
+      githubFallback();
     }
   });
 });
@@ -498,11 +548,25 @@ app.post('/api/snapshots/create', (req, res) => {
     res.end();
   };
 
-  if (!fs.existsSync(cfg.snapshotScript)) {
-    return sseErr(`Snapshot script not found: ${cfg.snapshotScript}\nConfigure it in Snapshot Settings or create the script.`);
+  const scriptExists = cfg.snapshotScript && fs.existsSync(cfg.snapshotScript);
+
+  let child;
+  if (scriptExists) {
+    const extraArgs = cfg.includePaths.length ? cfg.includePaths : [];
+    child = spawn('bash', [cfg.snapshotScript, ...(label ? [label] : []), ...extraArgs]);
+  } else if (cfg.includePaths && cfg.includePaths.length > 0) {
+    // Built-in tar fallback when no script is configured
+    if (!fs.existsSync(cfg.snapshotDir)) {
+      try { fs.mkdirSync(cfg.snapshotDir, { recursive: true }); } catch (e) { return sseErr(`Cannot create snapshot dir: ${e.message}`); }
+    }
+    const ts = (label || new Date().toISOString()).replace(/[:.]/g, '-');
+    const dest = path.join(cfg.snapshotDir, ts + '.tar.gz');
+    res.write(`data: ${JSON.stringify(`[tar fallback] Creating ${dest}\n`)}\n\n`);
+    child = spawn('tar', ['czf', dest, ...cfg.includePaths]);
+  } else {
+    return sseErr(`Snapshot script not found: ${cfg.snapshotScript || '(none)'}\nConfigure a script path or set include paths in Snapshot Settings for the built-in tar fallback.`);
   }
-  const extraArgs = cfg.includePaths.length ? cfg.includePaths : [];
-  const child = spawn('bash', [cfg.snapshotScript, ...(label ? [label] : []), ...extraArgs]);
+
   child.stdout.on('data', d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`));
   child.stderr.on('data', d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`));
   child.on('error', err => sseErr(err.message));
@@ -522,15 +586,24 @@ app.post('/api/snapshots/restore', (req, res) => {
     res.end();
   };
 
-  if (!fs.existsSync(cfg.restoreScript)) {
-    return sseErr(`Restore script not found: ${cfg.restoreScript}\nConfigure it in Snapshot Settings or create the script.`);
+  const restoreScriptExists = cfg.restoreScript && fs.existsSync(cfg.restoreScript);
+
+  let restoreChild;
+  if (restoreScriptExists) {
+    restoreChild = spawn('bash', [cfg.restoreScript, name]);
+  } else {
+    // Built-in tar restore fallback
+    const archivePath = path.join(cfg.snapshotDir, name);
+    if (!fs.existsSync(archivePath)) return sseErr(`Snapshot file not found: ${archivePath}`);
+    res.write(`data: ${JSON.stringify(`[tar fallback] Restoring ${archivePath} to /\n`)}\n\n`);
+    restoreChild = spawn('tar', ['xzf', archivePath, '-C', '/']);
   }
-  const child = spawn('bash', [cfg.restoreScript, name]);
-  child.stdout.on('data', d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`));
-  child.stderr.on('data', d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`));
-  child.on('error', err => sseErr(err.message));
-  child.on('close', code => { res.write(`data: ${JSON.stringify(`[exit ${code}]`)}\n\n`); res.end(); });
-  req.on('close', () => child.kill());
+
+  restoreChild.stdout.on('data', d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`));
+  restoreChild.stderr.on('data', d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`));
+  restoreChild.on('error', err => sseErr(err.message));
+  restoreChild.on('close', code => { res.write(`data: ${JSON.stringify(`[exit ${code}]`)}\n\n`); res.end(); });
+  req.on('close', () => restoreChild.kill());
 });
 
 // ─── FILE MANAGER ─────────────────────────────────────────────────────────────
@@ -700,6 +773,47 @@ app.get('/api/files/raw', (req, res) => {
     const s = fs.statSync(filePath);
     if (s.isDirectory()) return res.status(400).json({ error: 'Cannot serve directory' });
     res.sendFile(path.resolve(filePath));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── CODE TOOLS ───────────────────────────────────────────────────────────────
+
+const CODE_TOOLS = [
+  { id: 'claude', label: 'Claude Code', cmd: 'claude', installHint: 'npm install -g @anthropic-ai/claude-code', url: 'https://github.com/anthropics/claude-code' },
+  { id: 'aider',  label: 'Aider',       cmd: 'aider',  installHint: 'pip install aider-install && aider-install', url: 'https://aider.chat' },
+  { id: 'codex',  label: 'OpenAI Codex CLI', cmd: 'codex', installHint: 'npm install -g @openai/codex', url: 'https://github.com/openai/codex' },
+  { id: 'goose',  label: 'Goose',       cmd: 'goose',  installHint: 'pip install goose-ai', url: 'https://github.com/block/goose' },
+];
+
+app.get('/api/code/tools', async (req, res) => {
+  const prefs = loadPrefs();
+  const pinned = prefs.codeTool || null;
+
+  const results = await Promise.all(CODE_TOOLS.map(t => new Promise(resolve => {
+    exec(`which ${t.cmd} 2>/dev/null || where ${t.cmd} 2>/dev/null`, (err, stdout) => {
+      const detected = !err && !!stdout.trim();
+      let version = null;
+      if (detected) {
+        try {
+          const vOut = require('child_process').execSync(`${t.cmd} --version 2>/dev/null`, { timeout: 3000 }).toString().trim();
+          version = vOut.split('\n')[0].slice(0, 60);
+        } catch {}
+      }
+      resolve({ ...t, detected, version, pinned: pinned === t.id });
+    });
+  })));
+
+  res.json({ tools: results, pinned });
+});
+
+app.post('/api/code/tools/pin', (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: 'No id' });
+  const prefs = loadPrefs();
+  prefs.codeTool = id;
+  try {
+    fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
+    res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1010,6 +1124,68 @@ function saveModelsPrefs(models) {
   fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
 }
 
+// Ollama: search models online (curated + Ollama registry)
+const OLLAMA_POPULAR = [
+  { name: 'llama3.2',       description: 'Meta Llama 3.2 — best general-purpose 3B/1B model' },
+  { name: 'llama3.1',       description: 'Meta Llama 3.1 — 8B/70B/405B multilingual model' },
+  { name: 'mistral',        description: 'Mistral 7B — fast efficient language model' },
+  { name: 'qwen2.5',        description: 'Alibaba Qwen2.5 — strong coding & reasoning model' },
+  { name: 'qwen2.5-coder',  description: 'Qwen2.5 Coder — specialised code model' },
+  { name: 'gemma3',         description: "Google Gemma 3 — lightweight model" },
+  { name: 'phi4',           description: 'Microsoft Phi-4 — small but capable model' },
+  { name: 'phi4-mini',      description: 'Microsoft Phi-4 Mini — ultra-compact model' },
+  { name: 'deepseek-r1',    description: 'DeepSeek R1 — reasoning-focused model' },
+  { name: 'deepseek-coder-v2', description: 'DeepSeek Coder V2 — powerful code model' },
+  { name: 'nomic-embed-text', description: 'Nomic Embed Text — embedding model' },
+  { name: 'mxbai-embed-large', description: 'MixedBread large embedding model' },
+  { name: 'codellama',      description: 'Meta CodeLlama — code generation model' },
+  { name: 'dolphin-mistral',description: 'Dolphin Mistral — uncensored fine-tune' },
+  { name: 'vicuna',         description: 'Vicuna — LLaMA fine-tune for chat' },
+  { name: 'wizardlm2',      description: 'WizardLM2 — instruction following' },
+  { name: 'solar',          description: 'SOLAR 10.7B — high performance Korean/English' },
+  { name: 'neural-chat',    description: 'Intel Neural Chat — optimised for Intel hardware' },
+  { name: 'starling-lm',    description: 'Starling — RLHF fine-tuned chat model' },
+  { name: 'openchat',       description: 'OpenChat 3.5 — fine-tuned on C-RLFT data' },
+  { name: 'orca-mini',      description: 'Orca Mini — small reasoning model' },
+  { name: 'zephyr',         description: 'Zephyr 7B — HuggingFace RLHF model' },
+  { name: 'llava',          description: 'LLaVA — vision + language model' },
+  { name: 'moondream',      description: 'Moondream 2 — tiny vision model' },
+  { name: 'bakllava',       description: 'BakLLaVA — Mistral+LLaVA multimodal' },
+  { name: 'whisper',        description: 'Whisper — speech recognition model' },
+  { name: 'all-minilm',     description: 'all-MiniLM — small fast embedding model' },
+];
+
+app.get('/api/models/ollama/search', async (req, res) => {
+  const q = (req.query.q || '').toLowerCase().trim();
+  if (!q) return res.json({ results: OLLAMA_POPULAR.slice(0, 12) });
+
+  // Filter curated list first
+  const curated = OLLAMA_POPULAR.filter(m =>
+    m.name.includes(q) || m.description.toLowerCase().includes(q)
+  );
+
+  // Also try Ollama search API (best-effort)
+  try {
+    const r = await fetch(`https://ollama.com/api/search?q=${encodeURIComponent(q)}&limit=20`, {
+      headers: { 'User-Agent': 'openclaw-dashboard/1.0' },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (r.ok) {
+      const data = await r.json();
+      const apiResults = (data.models || []).map(m => ({
+        name: m.name, description: m.description || '', pulls: m.pulls
+      }));
+      // Merge: dedupe by name, curated first
+      const names = new Set(curated.map(m => m.name));
+      const merged = [...curated, ...apiResults.filter(m => !names.has(m.name))];
+      return res.json({ results: merged });
+    }
+  } catch {}
+
+  // Fallback: curated only
+  res.json({ results: curated.length ? curated : OLLAMA_POPULAR.filter(m => m.name.startsWith(q[0])).slice(0, 8) });
+});
+
 // Ollama: get status + version
 app.get('/api/models/ollama/status', async (req, res) => {
   const mp = loadModelsPrefs();
@@ -1223,6 +1399,74 @@ termWss.on('connection', (ws) => {
   });
 
   ws.on('close', () => { try { ptyProc.kill(); } catch {} });
+});
+
+// ─── DOCKER ───────────────────────────────────────────────────────────────────
+
+app.get('/api/docker/containers', (req, res) => {
+  exec(`docker ps -a --format '{{json .}}'`, (err, stdout) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const containers = stdout.trim().split('\n').filter(Boolean).map(line => {
+      try { return JSON.parse(line); } catch { return null; }
+    }).filter(Boolean);
+    res.json({ containers });
+  });
+});
+
+app.post('/api/docker/containers/:id/action', (req, res) => {
+  const { action } = req.body;
+  const id = req.params.id;
+  const allowed = ['start', 'stop', 'restart', 'remove', 'rm'];
+  if (!allowed.includes(action)) return res.status(400).json({ error: 'Invalid action' });
+  const cmd = action === 'remove' ? `docker rm -f ${id}` : `docker ${action} ${id}`;
+  exec(cmd, (err, stdout, stderr) => {
+    if (err) return res.status(500).json({ error: stderr || err.message });
+    res.json({ ok: true, output: stdout.trim() });
+  });
+});
+
+app.get('/api/docker/containers/:id/logs', (req, res) => {
+  sseHeaders(res);
+  const id    = req.params.id;
+  const tail  = req.query.tail || '200';
+  const child = spawn('docker', ['logs', '-f', '--tail', tail, id]);
+
+  const send = d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`);
+  child.stdout.on('data', send);
+  child.stderr.on('data', send);
+  child.on('close', () => res.end());
+  child.on('error', err => { res.write(`data: ${JSON.stringify(`[error: ${err.message}]`)}\n\n`); res.end(); });
+  req.on('close', () => child.kill());
+});
+
+app.get('/api/docker/images', (req, res) => {
+  exec(`docker images --format '{{json .}}'`, (err, stdout) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const images = stdout.trim().split('\n').filter(Boolean).map(line => {
+      try { return JSON.parse(line); } catch { return null; }
+    }).filter(Boolean);
+    res.json({ images });
+  });
+});
+
+app.post('/api/docker/images/pull', (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'No image name' });
+  sseHeaders(res);
+  const child = spawn('docker', ['pull', name]);
+  child.stdout.on('data', d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`));
+  child.stderr.on('data', d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`));
+  child.on('error', err => { res.write(`data: ${JSON.stringify(`[error: ${err.message}]`)}\n\n`); res.end(); });
+  child.on('close', code => { res.write(`data: ${JSON.stringify(`[exit ${code}]`)}\n\n`); res.end(); });
+  req.on('close', () => child.kill());
+});
+
+app.delete('/api/docker/images/:id', (req, res) => {
+  const id = decodeURIComponent(req.params.id);
+  exec(`docker rmi ${id}`, (err, stdout, stderr) => {
+    if (err) return res.status(500).json({ error: stderr || err.message });
+    res.json({ ok: true });
+  });
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────

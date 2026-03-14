@@ -231,7 +231,7 @@ function cfgValidate() {
 }
 
 /* ── Save ────────────────────────────────────────────── */
-async function saveConfig() {
+function saveConfig() {
   const allFiles = getAllConfigFiles();
   const entry  = allFiles.find(f => f.id === cfgActive);
   const editor = document.getElementById('config-editor');
@@ -248,23 +248,24 @@ async function saveConfig() {
   const msg = needsRestart
     ? `Save ${entry.label} and restart OpenClaw?`
     : `Save ${entry.label}?`;
-  if (!confirm(msg)) return;
 
-  try {
-    if (entry.custom) {
-      await apiFetch('/api/files/write', { method: 'POST', body: { path: entry.path, content: editor.value } });
-    } else {
-      await apiFetch(`/api/configs/${encodeURIComponent(entry.id)}`, {
-        method: 'POST',
-        body: { content: editor.value }
-      });
+  appConfirm(msg, async () => {
+    try {
+      if (entry.custom) {
+        await apiFetch('/api/files/write', { method: 'POST', body: { path: entry.path, content: editor.value } });
+      } else {
+        await apiFetch(`/api/configs/${encodeURIComponent(entry.id)}`, {
+          method: 'POST',
+          body: { content: editor.value }
+        });
+      }
+      setStatus(status, '✓ Saved', 'ok');
+      if (needsRestart) await action('restart');
+      setTimeout(() => cfgValidate(), 4000);
+    } catch (e) {
+      setStatus(status, `✗ ${e.message}`, 'err');
     }
-    setStatus(status, '✓ Saved', 'ok');
-    if (needsRestart) await action('restart');
-    setTimeout(() => cfgValidate(), 4000);
-  } catch (e) {
-    setStatus(status, `✗ ${e.message}`, 'err');
-  }
+  });
 }
 
 function reloadConfig() {

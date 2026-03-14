@@ -43,6 +43,25 @@
 .models-date { color: var(--muted); width: 120px; }
 .models-acts { width: 90px; text-align: right; }
 
+/* Online search */
+.models-search-row {
+  display: flex; gap: 8px; margin-bottom: 8px;
+}
+.models-search-list {
+  display: flex; flex-direction: column; gap: 2px;
+  max-height: 180px; overflow-y: auto;
+  border: 1px solid var(--border2); background: var(--bg);
+  padding: 4px;
+}
+.models-search-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px; cursor: pointer;
+  border-radius: 2px;
+}
+.models-search-item:hover { background: var(--dim); }
+.models-search-name { font-family: var(--font-mono); font-size: 12px; flex-shrink: 0; min-width: 120px; }
+.models-search-desc { font-size: 10px; color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* Pull progress */
 .models-pull-row {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;

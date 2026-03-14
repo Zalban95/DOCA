@@ -21,6 +21,7 @@ function _termCreate() {
 
   term = new Terminal({
     cursorBlink: true,
+    scrollOnUserInput: true,
     fontSize: 13,
     fontFamily: '"IBM Plex Mono", "Cascadia Code", "Fira Code", monospace',
     scrollback: 5000,
@@ -53,7 +54,8 @@ function _termCreate() {
   termFit = new FitAddon.FitAddon();
   term.loadAddon(termFit);
   term.open(container);
-  _termFit();
+  // Defer first fit until the layout has fully settled
+  requestAnimationFrame(() => { _termFit(); });
 
   termConnect();
 
@@ -75,7 +77,7 @@ function termConnect() {
   termWs.onmessage = e => {
     try {
       const msg = JSON.parse(e.data);
-      if (msg.type === 'output') term.write(msg.data);
+      if (msg.type === 'output') { term.write(msg.data); term.scrollToBottom(); }
       if (msg.type === 'exit') {
         term.writeln('\r\n\x1b[33m[session ended]\x1b[0m');
         termWs = null;
@@ -95,6 +97,7 @@ function termConnect() {
   term.onData(data => {
     if (termWs?.readyState === WebSocket.OPEN)
       termWs.send(JSON.stringify({ type: 'input', data }));
+    term.scrollToBottom();
   });
 }
 

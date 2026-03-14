@@ -90,3 +90,29 @@ function debounce(fn, ms) {
   let t;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
+
+/**
+ * Show a styled in-app confirmation modal.
+ * @param {string} message
+ * @param {Function} onConfirm
+ * @param {Function} [onCancel]
+ */
+function appConfirm(message, onConfirm, onCancel) {
+  const modal   = document.getElementById('app-confirm-modal');
+  const msgEl   = document.getElementById('app-confirm-message');
+  const btnOk   = document.getElementById('app-confirm-ok');
+  const btnCan  = document.getElementById('app-confirm-cancel');
+  if (!modal) { if (confirm(message)) onConfirm(); else if (onCancel) onCancel(); return; }
+
+  msgEl.textContent = message;
+  modal.classList.add('open');
+
+  const cleanup = () => {
+    modal.classList.remove('open');
+    btnOk.onclick   = null;
+    btnCan.onclick  = null;
+  };
+
+  btnOk.onclick  = () => { cleanup(); onConfirm(); };
+  btnCan.onclick = () => { cleanup(); if (onCancel) onCancel(); };
+}

@@ -97,29 +97,39 @@ async function searchSkillsOnline() {
       });
     }
 
+    const viaNote = data.via === 'github'
+      ? '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">Results via GitHub search (clawhub CLI not available)</div>'
+      : '';
+
     if (data.error || !results.length) {
-      grid.innerHTML = `<div class="placeholder">${data.error || 'No results found'}</div>`;
+      grid.innerHTML = viaNote + `<div class="placeholder">${data.error || 'No results found'}</div>`;
       return;
     }
 
     const installed = new Set(allSkills.map(s => s.name));
-    grid.innerHTML = results.map(s => `
-      <div class="skill-card fade-in">
-        <div class="skill-card-header">
-          <div class="skill-card-name" title="${s.name}">${s.name}</div>
-          <div class="skill-trust-badges">${_skillTrustBadge(s)}</div>
+    const cards = results.map(s => {
+      const nameEsc = s.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const urlLink = s.url ? `<a href="${s.url}" target="_blank" style="font-size:9px;color:var(--blue)">${s.stars ? '★ ' + s.stars : 'View'}</a>` : '';
+      return `
+        <div class="skill-card fade-in">
+          <div class="skill-card-header">
+            <div class="skill-card-name" title="${nameEsc}">${s.name}</div>
+            <div class="skill-trust-badges">${_skillTrustBadge(s)}</div>
+          </div>
+          ${s.version ? `<div class="skill-card-ver">v${s.version}</div>` : ''}
+          <div class="skill-card-desc">${s.description || '—'}</div>
+          <div class="skill-card-footer">
+            ${installed.has(s.name)
+              ? `<span class="badge badge-green" style="font-size:9px">Installed</span>`
+              : `<button class="skill-card-action" onclick="skillsInstallFromSearch('${nameEsc}', ${!s.official && !s.community})">Install</button>`
+            }
+            ${urlLink}
+            <span style="font-size:9px;color:var(--muted)">${s.source || ''}</span>
+          </div>
         </div>
-        ${s.version ? `<div class="skill-card-ver">v${s.version}</div>` : ''}
-        <div class="skill-card-desc">${s.description || '—'}</div>
-        <div class="skill-card-footer">
-          ${installed.has(s.name)
-            ? `<span class="badge badge-green" style="font-size:9px">Installed</span>`
-            : `<button class="skill-card-action" onclick="skillsInstallFromSearch('${s.name}', ${!s.official && !s.community})">Install</button>`
-          }
-          <span style="font-size:9px;color:var(--muted)">${s.source || ''}</span>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
+    grid.innerHTML = viaNote + cards;
   } catch (e) {
     grid.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
   }
@@ -132,10 +142,16 @@ function _skillTrustBadge(s) {
 }
 
 function skillsInstallFromSearch(name, isUnknown) {
-  if (isUnknown && !confirm(`"${name}" is from an unknown/unverified source.\nInstall anyway?`)) return;
-  skillsSetMode('installed');
-  document.getElementById('skill-input').value = name;
-  installSkill(false);
+  const doInstall = () => {
+    skillsSetMode('installed');
+    document.getElementById('skill-input').value = name;
+    installSkill(false);
+  };
+  if (isUnknown) {
+    appConfirm(`"${name}" is from an unknown/unverified source.\nInstall anyway?`, doInstall);
+  } else {
+    doInstall();
+  }
 }
 
 /* ── Install / Toggle / Detail / Remove ─────────────── */
@@ -230,10 +246,11 @@ function installSkill(force) {
   }).catch(e => { out.textContent += `\nError: ${e.message}`; });
 }
 
-async function removeSkill(name) {
-  if (!confirm(`Remove skill: ${name}?`)) return;
-  try {
-    await apiFetch(`/api/skills/${name}`, { method: 'DELETE' });
-    loadSkills();
-  } catch (e) { alert(`Error: ${e.message}`); }
+function removeSkill(name) {
+  appConfirm(`Remove skill: ${name}?`, async () => {
+    try {
+      await apiFetch(`/api/skills/${name}`, { method: 'DELETE' });
+      loadSkills();
+    } catch (e) { alert(`Error: ${e.message}`); }
+  });
 }
