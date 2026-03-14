@@ -1618,16 +1618,22 @@ app.post('/api/system/tools/install', (req, res) => {
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 
-  // Feed password to sudo via stdin then close it
+  // For sudo commands, feed the password then close stdin.
+  // For all other commands, leave stdin open — closing it immediately can
+  // send SIGHUP to bash -lc on some Linux setups, killing the process.
   if (needsSudo) {
     child.stdin.write(password + '\n');
+    child.stdin.end();
   }
-  child.stdin.end();
 
   child.stdout.on('data', d => sseWrite({ status: d.toString() }));
   child.stderr.on('data', d => sseWrite({ status: d.toString() }));
-  child.on('close', code => {
-    sseWrite({ done: true, ok: code === 0, status: code === 0 ? '✓ Done' : `✗ Exit ${code}` });
+  child.on('close', (code, signal) => {
+    const ok  = code === 0;
+    const msg = ok ? '✓ Done'
+      : code !== null ? `✗ Exit ${code}`
+      : `✗ Killed by signal (${signal || 'unknown'})`;
+    sseWrite({ done: true, ok, status: msg });
     res.end();
   });
   child.on('error', e => {
@@ -1788,7 +1794,7 @@ httpServer.on('upgrade', (req, socket, head) => {
   delete req.headers['sec-websocket-extensions'];
   if (req.url === '/ws/terminal') {
     termWss.handleUpgrade(req, socket, head, ws => termWss.emit('connection', ws, req));
-  } else if (req.url === '/ws/code') {
+  } else if (req.url.startsWith('/ws/code')) {
     codeWss.handleUpgrade(req, socket, head, ws => codeWss.emit('connection', ws, req));
   } else {
     socket.destroy();
