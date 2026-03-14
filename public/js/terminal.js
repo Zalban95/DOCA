@@ -141,11 +141,22 @@ function termLaunchCommand(cmd) {
 
 function _termFit() {
   if (!termFit) return;
+  // #region agent log
+  const _c = document.getElementById('term-container');
+  fetch('http://127.0.0.1:7404/ingest/a169e71a-1553-42cd-9c71-de52063f68ac',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e82941'},body:JSON.stringify({sessionId:'e82941',location:'terminal.js:_termFit',message:'_termFit called',data:{containerH:_c?.clientHeight,containerW:_c?.clientWidth,termCols:term?.cols,termRows:term?.rows},timestamp:Date.now(),runId:'run1',hypothesisId:'H2-H3'})}).catch(()=>{});
+  // #endregion
   try {
     termFit.fit();
+    // #region agent log
+    fetch('http://127.0.0.1:7404/ingest/a169e71a-1553-42cd-9c71-de52063f68ac',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e82941'},body:JSON.stringify({sessionId:'e82941',location:'terminal.js:_termFit-after',message:'fit() done',data:{cols:term?.cols,rows:term?.rows},timestamp:Date.now(),runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
     if (termWs?.readyState === WebSocket.OPEN)
       termWs.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
-  } catch {}
+  } catch(e) {
+    // #region agent log
+    fetch('http://127.0.0.1:7404/ingest/a169e71a-1553-42cd-9c71-de52063f68ac',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e82941'},body:JSON.stringify({sessionId:'e82941',location:'terminal.js:_termFit-catch',message:'fit() threw',data:{err:e?.message},timestamp:Date.now(),runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
+  }
 }
 
 function _termSetStatus(text, color) {

@@ -788,10 +788,18 @@ const CODE_TOOLS = [
 app.get('/api/code/tools', async (req, res) => {
   const prefs = loadPrefs();
   const expanded = prefs.codeExpanded || [];
+  // #region agent log
+  const _execPath = process.env.PATH || '(empty)';
+  const _logFile = require('path').join(__dirname, 'debug-e82941.log');
+  require('fs').appendFileSync(_logFile, JSON.stringify({sessionId:'e82941',location:'server.js:code-tools',message:'PATH env for exec',data:{PATH:_execPath},timestamp:Date.now(),runId:'run1',hypothesisId:'H4'})+'\n');
+  // #endregion
 
   const results = await Promise.all(CODE_TOOLS.map(t => new Promise(resolve => {
-    exec(`which ${t.cmd} 2>/dev/null || where ${t.cmd} 2>/dev/null`, (err, stdout) => {
+    exec(`which ${t.cmd} 2>/dev/null || where ${t.cmd} 2>/dev/null`, (err, stdout, stderr) => {
       const detected = !err && !!stdout.trim();
+      // #region agent log
+      require('fs').appendFileSync(_logFile, JSON.stringify({sessionId:'e82941',location:'server.js:code-tools-exec',message:'tool detection result',data:{cmd:t.cmd,err:err?.message,stdout:stdout?.trim(),stderr:stderr?.trim(),detected},timestamp:Date.now(),runId:'run1',hypothesisId:'H4-H5'})+'\n');
+      // #endregion
       let version = null;
       if (detected) {
         try {
