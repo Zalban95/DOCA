@@ -61,11 +61,15 @@ header {
 /* Nav tabs */
 .nav-tabs {
   display: flex;
+  flex: 1;
+  min-width: 0;
   gap: 2px;
   align-items: stretch;
   height: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 .nav-tabs::-webkit-scrollbar { display: none; }
 
