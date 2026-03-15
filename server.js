@@ -2300,6 +2300,10 @@ app.post('/api/services/start', (req, res) => {
   sseHeaders(res);
   const sseWrite = d => { try { res.write(`data: ${JSON.stringify(d)}\n\n`); } catch {} };
 
+  // Remove any existing container with this name (from a previous failed/stopped run)
+  const containerName = `doca-${id}`;
+  try { require('child_process').execSync(`docker rm -f ${containerName} 2>/dev/null`); } catch {}
+
   const mp   = loadModelsPrefs();
   const home = process.env.HOME || os.homedir();
   const hfCache = mp.hf?.cacheDir || path.join(home, '.cache', 'huggingface', 'hub');
