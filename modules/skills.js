@@ -95,6 +95,7 @@ function handleInstall(req, res) {
   const child = spawn('bash', ['-c', cmd], { cwd: WORKSPACE_DIR });
   child.stdout.on('data', d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`));
   child.stderr.on('data', d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`));
+  child.on('error', err => { res.write(`data: ${JSON.stringify(`[error] ${err.message}`)}\n\n`); res.end(); });
   child.on('close', code => { res.write(`data: ${JSON.stringify(`[exit ${code}]`)}\n\n`); res.end(); });
   req.on('close', () => child.kill());
 }

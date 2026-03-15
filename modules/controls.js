@@ -118,6 +118,7 @@ function handleLogs(req, res) {
   const emit  = line => line && res.write(`data: ${JSON.stringify(line)}\n\n`);
   child.stdout.on('data', d => d.toString().split('\n').forEach(emit));
   child.stderr.on('data', d => d.toString().split('\n').forEach(l => emit(l && '[stderr] ' + l)));
+  child.on('error', err => { emit(`[error] ${err.message}`); res.end(); });
   req.on('close', () => child.kill());
 }
 
