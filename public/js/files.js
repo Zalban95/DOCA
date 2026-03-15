@@ -388,25 +388,25 @@ function fmRenameInline(path, name, evt) {
 }
 
 /* ── Create new folder ───────────────────────────────── */
-async function fmNewFolder() {
-  const name = prompt('New folder name:');
-  if (!name) return;
-  try {
-    await apiFetch('/api/files/mkdir', { method: 'POST', body: { path: `${fm.cwd}/${name}` } });
-    fmRefresh();
-  } catch (e) { alert(`Error: ${e.message}`); }
+function fmNewFolder() {
+  appPrompt('New folder name:', async (name) => {
+    try {
+      await apiFetch('/api/files/mkdir', { method: 'POST', body: { path: `${fm.cwd}/${name}` } });
+      fmRefresh();
+    } catch (e) { alert(`Error: ${e.message}`); }
+  });
 }
 
 /* ── Create new file ─────────────────────────────────── */
-async function fmNewFile() {
-  const name = prompt('New file name:');
-  if (!name) return;
-  const fpath = `${fm.cwd}/${name}`;
-  try {
-    await apiFetch('/api/files/write', { method: 'POST', body: { path: fpath, content: '' } });
-    fmRefresh();
-    fmOpenEditor(fpath);
-  } catch (e) { alert(`Error: ${e.message}`); }
+function fmNewFile() {
+  appPrompt('New file name:', async (name) => {
+    const fpath = `${fm.cwd}/${name}`;
+    try {
+      await apiFetch('/api/files/write', { method: 'POST', body: { path: fpath, content: '' } });
+      fmRefresh();
+      fmOpenEditor(fpath);
+    } catch (e) { alert(`Error: ${e.message}`); }
+  });
 }
 
 /* ── Inline text editor ──────────────────────────────── */

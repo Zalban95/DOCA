@@ -127,6 +127,47 @@ function ptyErrorBanner(container) {
   container.appendChild(el);
 }
 
+/**
+ * Show a styled in-app prompt modal (replaces browser prompt()).
+ * @param {string} message
+ * @param {Function} onSubmit - called with the entered string
+ * @param {string} [defaultValue]
+ */
+function appPrompt(message, onSubmit, defaultValue) {
+  const modal = document.getElementById('app-prompt-modal');
+  const msgEl = document.getElementById('app-prompt-message');
+  const input = document.getElementById('app-prompt-input');
+  const btnOk = document.getElementById('app-prompt-ok');
+  const btnCan = document.getElementById('app-prompt-cancel');
+  if (!modal) { const v = prompt(message, defaultValue || ''); if (v !== null) onSubmit(v); return; }
+
+  msgEl.textContent = message;
+  input.value = defaultValue || '';
+  modal.classList.add('open');
+  setTimeout(() => { input.focus(); input.select(); }, 50);
+
+  const cleanup = () => {
+    modal.classList.remove('open');
+    btnOk.onclick = null;
+    btnCan.onclick = null;
+    input.onkeydown = null;
+  };
+
+  const submit = () => {
+    const val = input.value.trim();
+    if (!val) return;
+    cleanup();
+    onSubmit(val);
+  };
+
+  btnOk.onclick = submit;
+  btnCan.onclick = cleanup;
+  input.onkeydown = e => {
+    if (e.key === 'Enter') { e.preventDefault(); submit(); }
+    if (e.key === 'Escape') cleanup();
+  };
+}
+
 function appConfirm(message, onConfirm, onCancel) {
   const modal   = document.getElementById('app-confirm-modal');
   const msgEl   = document.getElementById('app-confirm-message');

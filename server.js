@@ -30,6 +30,7 @@ const modelsLocal  = require('./modules/models-local');
 const systemTools  = require('./modules/system-tools');
 const docker       = require('./modules/docker');
 const services     = require('./modules/services');
+const update       = require('./modules/update');
 const terminal     = require('./modules/terminal');
 
 // ─── Express + Middleware ─────────────────────────────────────────────────────
@@ -154,6 +155,9 @@ app.post('/api/models/hf/delete',   modelsHf.handleDelete);
 // ─── Routes: System Tools ─────────────────────────────────────────────────────
 app.get ('/api/system/tools',         systemTools.handleList);
 app.post('/api/system/tools/install', systemTools.handleInstall);
+
+// ─── Routes: Update Check ─────────────────────────────────────────────────
+app.get ('/api/update-check', update.handleUpdateCheck);
 
 // ─── Routes: Docker ───────────────────────────────────────────────────────────
 app.get   ('/api/docker/containers',            docker.handleContainers);

@@ -29,6 +29,7 @@ async function settingsInit() {
     if (el) el.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
   }
   sysdepsLoad();
+  updateCheck();
 }
 
 function _settingsRender() {
@@ -76,6 +77,18 @@ async function settingsApplyOnLoad() {
     const prefs = await apiFetch('/api/prefs');
     _settingsHidden = prefs.hiddenTabs || [];
     _applyHiddenTabs(_settingsHidden);
+  } catch {}
+  _silentUpdateBadgeCheck();
+}
+
+async function _silentUpdateBadgeCheck() {
+  try {
+    const data = await apiFetch('/api/update-check');
+    const badge = document.getElementById('update-badge');
+    if (badge && data.updateAvailable) {
+      badge.style.display = 'inline-block';
+      badge.title = `Update: v${data.latest} available`;
+    }
   } catch {}
 }
 
@@ -207,6 +220,40 @@ async function _sysdepsRunInstall(id, password) {
 
 function _escHtml(str) {
   return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* ── Update Checker ──────────────────────────────────── */
+
+async function updateCheck() {
+  const el = document.getElementById('update-status');
+  const badge = document.getElementById('update-badge');
+  const btn = document.getElementById('update-check-btn');
+  if (btn) btn.disabled = true;
+  if (el) el.innerHTML = '<span class="placeholder pulse" style="font-size:12px">Checking for updates…</span>';
+
+  try {
+    const data = await apiFetch('/api/update-check');
+    if (data.updateAvailable) {
+      if (el) el.innerHTML = `<div class="update-info">
+        <strong style="color:var(--amber)">Update available!</strong><br>
+        Current: <code>${_escHtml(data.current)}</code> → Latest: <code>${_escHtml(data.latest)}</code><br>
+        <a href="${_escHtml(data.repo)}/releases" target="_blank" rel="noopener">View release notes ↗</a><br>
+        <span style="font-size:11px;color:var(--muted)">Run <code>git pull</code> in the DOCA directory, then restart the server.</span>
+      </div>`;
+      if (badge) { badge.style.display = 'inline-block'; badge.title = `Update: v${data.latest} available`; }
+    } else {
+      if (el) el.innerHTML = `<div class="update-info" style="color:var(--green)">
+        ✓ Up to date — <code>${_escHtml(data.current)}</code>
+      </div>`;
+      if (badge) badge.style.display = 'none';
+    }
+  } catch (e) {
+    if (el) el.innerHTML = `<div class="update-info" style="color:var(--red)">
+      ✗ Could not check: ${_escHtml(e.message)}
+    </div>`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 /* ── Sidebar quick tab-toggle panel ──────────────────── */

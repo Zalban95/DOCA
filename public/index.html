@@ -28,7 +28,7 @@
     <div class="logo-hex"></div>
     <div>
       <div class="logo-name">DOCA <span class="logo-beta">beta</span></div>
-      <div class="logo-ver">PANEL v2.1</div>
+      <div class="logo-ver">PANEL v2.1 <span id="update-badge" class="update-badge" style="display:none" onclick="nav('settings')" title="Update available">⬆</span></div>
     </div>
   </a>
 
@@ -701,6 +701,17 @@
         <pre id="sysdeps-out" class="terminal" style="display:none;margin-top:8px;max-height:200px"></pre>
       </div>
 
+      <!-- Updates -->
+      <div class="card">
+        <div class="card-title" style="display:flex;align-items:center;gap:8px">
+          Updates
+          <button class="btn btn-xs" onclick="updateCheck()" id="update-check-btn" title="Check for updates">↺ Check</button>
+        </div>
+        <div id="update-status">
+          <span class="placeholder pulse" style="font-size:12px">Checking for updates…</span>
+        </div>
+      </div>
+
     </div>
 
     <!-- ─── TERMINAL ────────────────────────────────────── -->
@@ -779,6 +790,19 @@
     <div class="app-confirm-actions">
       <button id="app-confirm-cancel" class="btn btn-sm">Cancel</button>
       <button id="app-confirm-ok" class="btn btn-sm btn-red">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Custom prompt modal (replaces browser prompt()) -->
+<div id="app-prompt-modal" class="app-confirm-backdrop">
+  <div class="app-confirm-box">
+    <p id="app-prompt-message" class="app-confirm-msg"></p>
+    <input id="app-prompt-input" class="input" style="width:100%;box-sizing:border-box"
+           autocomplete="off" spellcheck="false">
+    <div class="app-confirm-actions">
+      <button id="app-prompt-cancel" class="btn btn-sm">Cancel</button>
+      <button id="app-prompt-ok" class="btn btn-sm btn-blue">OK</button>
     </div>
   </div>
 </div>
