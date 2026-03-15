@@ -2333,8 +2333,12 @@ app.post('/api/services/start', (req, res) => {
     dockerArgs.push('--listen', '--api');
   } else if (id === 'comfyui') {
     // mmartial/comfyui-nvidia-docker expects /comfy/mnt as writable workspace
+    // Match container UID/GID to the host user so mounted dirs are writable
     const comfyDir = path.join(home, 'comfyui-data');
     try { if (!fs.existsSync(comfyDir)) fs.mkdirSync(comfyDir, { recursive: true }); } catch {}
+    const uid = process.getuid ? process.getuid() : 1000;
+    const gid = process.getgid ? process.getgid() : 1000;
+    dockerArgs.push('-e', `WANTED_UID=${uid}`, '-e', `WANTED_GID=${gid}`);
     dockerArgs.push('-v', `${comfyDir}:/comfy/mnt`);
     dockerArgs.push('-v', `${hfCache}:/root/.cache/huggingface`);
     dockerArgs.push(svc.image);
