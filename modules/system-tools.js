@@ -40,8 +40,8 @@ const SYSTEM_TOOLS = [
     id: 'openclaw', label: 'OpenClaw', category: 'recommended',
     detectCmd: 'test -f "$HOME/openclaw/docker-compose.yml" && cd "$HOME/openclaw" && git log -1 --format="rev %h (%cr)" 2>/dev/null',
     note: 'OpenClaw AI stack — clone repo and start Docker Compose services',
-    repo: 'https://github.com/open-claw/openclaw', repoLabel: 'open-claw/openclaw',
-    installCmd: 'if [ -d "$HOME/openclaw" ]; then cd "$HOME/openclaw" && git pull; else git clone https://github.com/open-claw/openclaw.git "$HOME/openclaw"; fi && cd "$HOME/openclaw" && docker compose up -d',
+    repo: 'https://github.com/openclaw/openclaw', repoLabel: 'openclaw/openclaw',
+    installCmd: 'if [ -d "$HOME/openclaw" ]; then cd "$HOME/openclaw" && git pull; else git clone https://github.com/openclaw/openclaw.git "$HOME/openclaw"; fi && cd "$HOME/openclaw" && docker compose up -d',
   },
   {
     id: 'git', label: 'Git', category: 'recommended',
