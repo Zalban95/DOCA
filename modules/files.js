@@ -3,7 +3,7 @@
 const fs   = require('fs');
 const path = require('path');
 
-const { FM_ALLOWED_ROOTS } = require('./paths');
+const { FM_ALLOWED_ROOTS, HOME } = require('./paths');
 const { fmSafe } = require('./utils');
 
 // ─── Directory / File Operations ──────────────────────────────────────────────
@@ -11,6 +11,37 @@ const { fmSafe } = require('./utils');
 /** GET /api/files/roots */
 function handleRoots(req, res) {
   res.json({ roots: FM_ALLOWED_ROOTS.filter(r => fs.existsSync(r)) });
+}
+
+/** GET /api/files/mounts — real mounted filesystems accessible by the file manager */
+const SKIP_FS_TYPES = new Set([
+  'proc', 'sysfs', 'devtmpfs', 'devpts', 'cgroup', 'cgroup2',
+  'securityfs', 'pstore', 'efivarfs', 'bpf', 'tracefs', 'debugfs',
+  'hugetlbfs', 'mqueue', 'configfs', 'fusectl', 'autofs',
+  'rpc_pipefs', 'binfmt_misc', 'nsfs', 'ramfs',
+]);
+
+function handleMounts(req, res) {
+  const procMounts = '/proc/mounts';
+  try {
+    if (!fs.existsSync(procMounts)) {
+      return res.json({ mounts: [] });
+    }
+    const raw = fs.readFileSync(procMounts, 'utf8');
+    const mounts = [];
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue;
+      const [device, mountpoint, fstype] = line.split(/\s+/);
+      if (SKIP_FS_TYPES.has(fstype)) continue;
+      if (fstype === 'tmpfs' && mountpoint !== '/tmp') continue;
+      if (!mountpoint.startsWith('/')) continue;
+      if (!fmSafe(mountpoint)) continue;
+      if (!fs.existsSync(mountpoint)) continue;
+      mounts.push({ device, path: mountpoint, type: fstype });
+    }
+    mounts.sort((a, b) => a.path.localeCompare(b.path));
+    res.json({ mounts });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
 /** GET /api/files/list?path=... */
@@ -181,8 +212,52 @@ function handleRaw(req, res) {
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
+// ─── File Search ──────────────────────────────────────────────────────────────
+
+const SEARCH_SKIP_DIRS = new Set([
+  'node_modules', '.git', '__pycache__', '.cache', '.npm', '.local',
+  'venv', '.venv', 'dist', 'build',
+]);
+
+/** GET /api/files/search?root=...&q=...&maxDepth=...&limit=... */
+function handleSearch(req, res) {
+  const root     = req.query.root || HOME;
+  const q        = (req.query.q || '').toLowerCase().trim();
+  const maxDepth = Math.min(parseInt(req.query.maxDepth) || 5, 8);
+  const limit    = Math.min(parseInt(req.query.limit) || 50, 200);
+
+  if (!q) return res.json({ results: [] });
+  if (!fmSafe(root)) return res.status(403).json({ error: 'Root path not allowed' });
+
+  const results = [];
+
+  function walk(dir, depth) {
+    if (depth > maxDepth || results.length >= limit) return;
+    let names;
+    try { names = fs.readdirSync(dir); } catch { return; }
+    for (const name of names) {
+      if (results.length >= limit) return;
+      if (SEARCH_SKIP_DIRS.has(name)) continue;
+      const full = path.join(dir, name);
+      let isDir = false;
+      try { isDir = fs.statSync(full).isDirectory(); } catch { continue; }
+      if (name.toLowerCase().includes(q)) {
+        results.push({ name, path: full, isDir });
+      }
+      if (isDir) walk(full, depth + 1);
+    }
+  }
+
+  try {
+    walk(root, 0);
+    res.json({ results });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+}
+
 module.exports = {
   handleRoots,
+  handleMounts,
+  handleSearch,
   handleList,
   handleRead,
   handleWrite,

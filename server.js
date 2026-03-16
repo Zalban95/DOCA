@@ -92,6 +92,8 @@ app.post('/api/snapshots/restore',   snapshots.handleRestore);
 
 // ─── Routes: File Manager ─────────────────────────────────────────────────────
 app.get ('/api/files/roots',    files.handleRoots);
+app.get ('/api/files/mounts',  files.handleMounts);
+app.get ('/api/files/search',  files.handleSearch);
 app.get ('/api/files/list',     files.handleList);
 app.get ('/api/files/read',     files.handleRead);
 app.post('/api/files/write',    files.handleWrite);

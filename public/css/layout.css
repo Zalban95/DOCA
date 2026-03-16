@@ -88,6 +88,82 @@ header {
 .nav-tab:hover  { color: var(--text); }
 .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
+/* Header search */
+.header-search {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.header-search-input {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  padding: 4px 10px 4px 24px;
+  width: 180px;
+  outline: none;
+  transition: border-color var(--t-fast), width var(--t-fast);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 7px center;
+  background-size: 11px;
+}
+.header-search-input::placeholder { color: var(--muted); }
+.header-search-input:focus {
+  border-color: var(--accent);
+  width: 260px;
+}
+.header-search-results {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  min-width: 320px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--raised);
+  border: 1px solid var(--border2);
+  border-top: none;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  z-index: 500;
+  scrollbar-width: thin;
+}
+.header-search-results.open { display: block; }
+.header-search-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  transition: background var(--t-fast);
+}
+.header-search-item:hover,
+.header-search-item.active { background: var(--dim); }
+.header-search-item-icon { font-size: 12px; flex-shrink: 0; width: 16px; text-align: center; }
+.header-search-item-name { font-weight: 500; white-space: nowrap; }
+.header-search-item-path {
+  font-size: 9px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: auto;
+  max-width: 160px;
+}
+.header-search-empty {
+  padding: 12px 10px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+}
+
 /* Header right */
 .header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 #clock { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; }

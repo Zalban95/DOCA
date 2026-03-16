@@ -48,6 +48,14 @@
     <button class="nav-tab"        data-tab="settings"  onclick="nav('settings')">Settings</button>
   </nav>
 
+  <div class="header-search" id="header-search">
+    <input class="header-search-input" id="global-search" type="text"
+           placeholder="Search files…" autocomplete="off"
+           oninput="globalSearchDebounced()" onkeydown="globalSearchKey(event)"
+           onfocus="globalSearchShow()" >
+    <div class="header-search-results" id="global-search-results"></div>
+  </div>
+
   <div class="header-right">
     <span id="clock"></span>
     <div class="dot" id="dot"></div>
@@ -358,6 +366,10 @@
           <div class="fm-sidebar-group">
             <div class="fm-sidebar-label">⭐ Favorites</div>
             <div id="fm-favorites-list"><div class="placeholder" style="font-size:10px;padding:4px">None starred</div></div>
+          </div>
+          <div class="fm-sidebar-group">
+            <div class="fm-sidebar-label">💾 Mounts</div>
+            <div id="fm-mounts-list"><div class="placeholder" style="font-size:10px;padding:4px">Detecting…</div></div>
           </div>
           <div class="fm-sidebar-group">
             <div class="fm-sidebar-label">Bookmarks</div>

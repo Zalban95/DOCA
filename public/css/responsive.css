@@ -22,6 +22,11 @@
   /* Hide clock on small screens */
   #clock { display: none; }
 
+  /* Collapse search bar */
+  .header-search-input { width: 100px; }
+  .header-search-input:focus { width: 160px; }
+  .header-search-results { min-width: 240px; }
+
   /* Sidebar becomes overlay */
   .sidebar {
     position: fixed;
@@ -114,6 +119,10 @@
   .logo-ver { display: none; }
   .logo-name { font-size: 12px; }
   .logo-hex { width: 20px; height: 20px; }
+
+  .header-search-input { width: 80px; font-size: 9px; padding: 3px 8px 3px 22px; }
+  .header-search-input:focus { width: 130px; }
+  .header-search-results { min-width: 200px; right: 0; left: auto; }
 
   .tab-page { padding: 8px; gap: 8px; }
 
