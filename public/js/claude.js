@@ -221,10 +221,8 @@ function _codeTermOpen(id) {
     fontSize: 12,
     fontFamily: '"IBM Plex Mono", "Cascadia Code", "Fira Code", monospace',
     scrollback: 2000,
-    theme: {
+    theme: typeof getTerminalTheme === 'function' ? getTerminalTheme() : {
       background: '#0d1117', foreground: '#c9d1d9', cursor: '#58a6ff',
-      black: '#484f58', red: '#ff7b72', green: '#3fb950', yellow: '#d29922',
-      blue: '#58a6ff', magenta: '#bc8cff', cyan: '#39c5cf', white: '#b1bac4',
     },
   });
 

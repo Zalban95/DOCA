@@ -10,6 +10,7 @@ const path    = require('path');
 const multer  = require('multer');
 
 // ─── Foundation ───────────────────────────────────────────────────────────────
+const pkg               = require('./package.json');
 const { PORT }          = require('./modules/paths');
 
 // ─── Feature modules ──────────────────────────────────────────────────────────
@@ -179,5 +180,5 @@ const httpServer = http.createServer(app);
 terminal.setup(httpServer);
 
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`OpenClaw Panel v2.1 → http://0.0.0.0:${PORT}`);
+  console.log(`OpenClaw Panel v${pkg.version} → http://0.0.0.0:${PORT}`);
 });

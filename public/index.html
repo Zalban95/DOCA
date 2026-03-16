@@ -28,7 +28,7 @@
     <div class="logo-hex"></div>
     <div>
       <div class="logo-name">DOCA <span class="logo-beta">beta</span></div>
-      <div class="logo-ver">PANEL v2.1 <span id="update-badge" class="update-badge" style="display:none" onclick="nav('settings')" title="Update available">⬆</span></div>
+      <div class="logo-ver">PANEL <span id="app-version"></span> <span id="update-badge" class="update-badge" style="display:none" onclick="nav('settings')" title="Update available">⬆</span></div>
     </div>
   </a>
 
@@ -678,6 +678,15 @@
     <!-- ─── SETTINGS ─────────────────────────────────────── -->
     <div id="tab-settings" class="tab-page">
 
+      <!-- Color Theme -->
+      <div class="card">
+        <div class="card-title">Color Theme</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Choose a color theme for the dashboard. Changes apply immediately.</p>
+        <div id="theme-picker-grid" class="theme-grid"></div>
+        <div id="theme-custom-editor" class="theme-custom-editor" style="display:none"></div>
+        <span class="status-line" id="theme-status" style="margin-top:10px"></span>
+      </div>
+
       <!-- Navigation Visibility -->
       <div class="card">
         <div class="card-title">Navigation Visibility</div>
@@ -845,12 +854,17 @@
 <script src="js/services.js"></script>
 <script src="js/docker.js"></script>
 <script src="js/sudo.js"></script>
+<script src="js/themes.js"></script>
 <script src="js/settings.js"></script>
 <script>
-  // Apply persisted hidden tabs immediately on load
   document.addEventListener('DOMContentLoaded', () => {
+    themeApplyOnLoad();
     settingsApplyOnLoad();
     controlsInit();
+    apiFetch('/api/update-check').then(d => {
+      const el = document.getElementById('app-version');
+      if (el && d.current) el.textContent = 'v' + d.current;
+    }).catch(() => {});
   });
 </script>
 </body>

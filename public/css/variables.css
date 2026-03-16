@@ -20,6 +20,7 @@
 
   /* Accent palette */
   --accent:  #e8a020;
+  --amber:   #e8a020;
   --green:   #3ecf74;
   --red:     #e85050;
   --blue:    #4a9de8;
@@ -32,6 +33,12 @@
   --bg-red:    #200e0e;
   --bg-blue:   #0c1a28;
   --bg-amber:  #201408;
+  --bg2:       #0c0e10;
+  --bg3:       #181c20;
+
+  /* Aliases */
+  --text-muted: #505c68;
+  --font-mono:  'IBM Plex Mono', 'Cascadia Code', 'Fira Code', monospace;
 
   /* Layout */
   --sidebar-w: 264px;
