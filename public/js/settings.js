@@ -25,6 +25,7 @@ async function settingsInit() {
     _settingsHidden = prefs.hiddenTabs || [];
     _settingsRender();
     _themePickerRender(prefs);
+    _voiceSettingsLoad(prefs);
   } catch (e) {
     const el = document.getElementById('settings-tabs-list');
     if (el) el.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
@@ -386,6 +387,35 @@ async function _themeCustomSave(colors) {
   try {
     await apiFetch('/api/prefs', { method: 'POST', body: { theme: 'custom', customTheme: colors } });
     setStatus(status, '✓ Custom theme saved', 'ok');
+  } catch (e) {
+    setStatus(status, `✗ ${e.message}`, 'err');
+  }
+}
+
+/* ── Voice Services settings ─────────────────────────── */
+
+function _voiceSettingsLoad(prefs) {
+  const vs = prefs?.voiceServices || {};
+  const set = (id, val, def) => { const el = document.getElementById(id); if (el) el.value = val || def; };
+  set('voice-stt-url',   vs.sttUrl,   'http://localhost:8000');
+  set('voice-stt-model', vs.sttModel, 'whisper-1');
+  set('voice-tts-url',   vs.ttsUrl,   'http://localhost:8880');
+  set('voice-tts-model', vs.ttsModel, 'kokoro');
+  set('voice-tts-voice', vs.ttsVoice, 'af_heart');
+}
+
+async function voiceSettingsSave() {
+  const status = document.getElementById('voice-settings-status');
+  const voiceServices = {
+    sttUrl:   document.getElementById('voice-stt-url')?.value.trim()   || 'http://localhost:8000',
+    sttModel: document.getElementById('voice-stt-model')?.value.trim() || 'whisper-1',
+    ttsUrl:   document.getElementById('voice-tts-url')?.value.trim()   || 'http://localhost:8880',
+    ttsModel: document.getElementById('voice-tts-model')?.value.trim() || 'kokoro',
+    ttsVoice: document.getElementById('voice-tts-voice')?.value.trim() || 'af_heart',
+  };
+  try {
+    await apiFetch('/api/prefs', { method: 'POST', body: { voiceServices } });
+    setStatus(status, '✓ Saved', 'ok');
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
   }

@@ -76,6 +76,44 @@ function handleImageDelete(req, res) {
   });
 }
 
+/** POST /api/docker/run — create & start a container from an image (SSE progress) */
+function handleRun(req, res) {
+  const { image, name, ports, gpu, restart, envVars, volumes } = req.body;
+  if (!image) return res.status(400).json({ error: 'No image specified' });
+
+  sseHeaders(res);
+  const sseWrite = d => { try { res.write(`data: ${JSON.stringify(d)}\n\n`); } catch {} };
+
+  const args = ['run', '-d'];
+
+  if (name) args.push('--name', name);
+  if (restart && restart !== 'no') args.push('--restart', restart);
+
+  if      (gpu === 'all') args.push('--gpus', 'all');
+  else if (gpu === '0')   args.push('--gpus', 'device=0');
+  else if (gpu === '1')   args.push('--gpus', 'device=1');
+
+  (ports || []).forEach(p => { if (p.trim()) args.push('-p', p.trim()); });
+  (envVars || []).forEach(e => { if (e.trim()) args.push('-e', e.trim()); });
+  (volumes || []).forEach(v => { if (v.trim()) args.push('-v', v.trim()); });
+
+  args.push(image);
+
+  const cmdDisplay = `docker ${args.join(' ')}`;
+  sseWrite({ status: `$ ${cmdDisplay}\n` });
+
+  const child = spawn('docker', args);
+  child.stdout.on('data', d => sseWrite({ status: d.toString() }));
+  child.stderr.on('data', d => sseWrite({ status: d.toString() }));
+  child.on('close', (code) => {
+    const ok = code === 0;
+    sseWrite({ done: true, ok, status: ok ? '\n✓ Container started' : `\n✗ Exit ${code}` });
+    res.end();
+  });
+  child.on('error', e => { sseWrite({ done: true, ok: false, status: `Error: ${e.message}` }); res.end(); });
+  req.on('close', () => { if (!child.killed) child.kill(); });
+}
+
 module.exports = {
   handleContainers,
   handleContainerAction,
@@ -83,4 +121,5 @@ module.exports = {
   handleImages,
   handleImagePull,
   handleImageDelete,
+  handleRun,
 };

@@ -119,10 +119,13 @@ app.post('/api/claude/start',  claude.handleStart);
 app.post('/api/claude/stdin',  claude.handleStdin);
 
 // ─── Routes: Chat ─────────────────────────────────────────────────────────────
-app.get ('/api/chat/status',  chat.handleStatus);
-app.get ('/api/chat/history', chat.handleHistory);
-app.post('/api/chat/clear',   chat.handleClear);
-app.post('/api/chat',         chat.handleChat);
+app.get ('/api/chat/status',      chat.handleStatus);
+app.get ('/api/chat/history',     chat.handleHistory);
+app.post('/api/chat/clear',       chat.handleClear);
+app.get ('/api/chat/call-status', chat.handleCallStatus);
+app.post('/api/chat/transcribe',  uploadMw.single('audio'), chat.handleTranscribe);
+app.post('/api/chat/synthesize',  chat.handleSynthesize);
+app.post('/api/chat',             chat.handleChat);
 
 // ─── Routes: Models & Tools ───────────────────────────────────────────────────
 app.get ('/api/models/settings',          models.handleGetSettings);
@@ -169,6 +172,7 @@ app.get   ('/api/docker/containers/:id/logs',   docker.handleContainerLogs);
 app.get   ('/api/docker/images',                docker.handleImages);
 app.post  ('/api/docker/images/pull',           docker.handleImagePull);
 app.delete('/api/docker/images/:id',            docker.handleImageDelete);
+app.post  ('/api/docker/run',                   docker.handleRun);
 
 // ─── Routes: Inference Services ───────────────────────────────────────────────
 app.get ('/api/services',          services.handleList);

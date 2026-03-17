@@ -127,7 +127,8 @@ async function dockerLoadImages() {
         <td style="font-size:10px">${tag}</td>
         <td style="font-size:10px;color:var(--muted)">${size}</td>
         <td style="font-size:10px;color:var(--muted)">${created}</td>
-        <td style="text-align:right">
+        <td style="text-align:right;white-space:nowrap">
+          <button class="btn btn-xs btn-green" onclick="dockerRunImage('${repo}','${tag}')">▶ Run</button>
           <button class="btn btn-xs btn-red" onclick="dockerRemoveImage('${fullId}','${repo}:${tag}')">✕ Remove</button>
         </td>
       </tr>`;
@@ -163,4 +164,85 @@ function dockerPullImage() {
       setTimeout(dockerLoadImages, 500);
     });
   }).catch(e => { out.textContent += `\nError: ${e.message}`; });
+}
+
+/* ── Run container from image ─────────────────────────── */
+
+let _dockerRunImageRef = '';
+
+function dockerRunImage(repo, tag) {
+  const image = (repo === '<none>') ? tag : `${repo}:${tag}`;
+  _dockerRunImageRef = image;
+
+  document.getElementById('docker-run-image-label').textContent = image;
+  document.getElementById('docker-run-name').value = repo.replace(/[^a-zA-Z0-9_.-]/g, '-').replace(/^-+|-+$/g, '');
+  document.getElementById('docker-run-ports').value = '';
+  document.getElementById('docker-run-gpu').value = '';
+  document.getElementById('docker-run-restart').value = 'unless-stopped';
+  document.getElementById('docker-run-env').value = '';
+  document.getElementById('docker-run-volumes').value = '';
+  document.getElementById('docker-run-out').style.display = 'none';
+  document.getElementById('docker-run-out').textContent = '';
+  document.getElementById('docker-run-ok').disabled = false;
+
+  document.getElementById('docker-run-modal').classList.add('open');
+}
+
+function dockerRunClose() {
+  document.getElementById('docker-run-modal').classList.remove('open');
+}
+
+function dockerRunSubmit() {
+  const image   = _dockerRunImageRef;
+  const name    = document.getElementById('docker-run-name').value.trim();
+  const portsRaw = document.getElementById('docker-run-ports').value.trim();
+  const gpu     = document.getElementById('docker-run-gpu').value;
+  const restart = document.getElementById('docker-run-restart').value;
+  const envRaw  = document.getElementById('docker-run-env').value.trim();
+  const volRaw  = document.getElementById('docker-run-volumes').value.trim();
+
+  const ports   = portsRaw ? portsRaw.split(/[,\n]/).map(s => s.trim()).filter(Boolean) : [];
+  const envVars = envRaw   ? envRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
+  const volumes = volRaw   ? volRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
+
+  const out = document.getElementById('docker-run-out');
+  const okBtn = document.getElementById('docker-run-ok');
+  out.style.display = 'block';
+  out.textContent = `Starting ${image}…\n`;
+  okBtn.disabled = true;
+
+  fetch('/api/docker/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image, name, ports, gpu, restart, envVars, volumes })
+  }).then(res => {
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    const read = () => {
+      reader.read().then(({ done, value }) => {
+        if (done) { okBtn.disabled = false; return; }
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split('\n\n');
+        buf = parts.pop();
+        parts.forEach(part => {
+          const line = part.trim().replace(/^data:\s*/, '');
+          if (!line) return;
+          try {
+            const obj = JSON.parse(line);
+            if (obj.status) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
+            if (obj.done) {
+              okBtn.disabled = false;
+              if (obj.ok) setTimeout(() => { dockerRunClose(); dockerLoadContainers(); }, 800);
+            }
+          } catch {}
+        });
+        read();
+      });
+    };
+    read();
+  }).catch(e => {
+    out.textContent += `\nError: ${e.message}`;
+    okBtn.disabled = false;
+  });
 }

@@ -4,7 +4,7 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 
 const { CONFIG_PATH, WORKSPACE_DIR } = require('./paths');
-const { sseHeaders } = require('./utils');
+const { sseHeaders, loadPrefs } = require('./utils');
 
 // Module-scoped state
 const chatHistory = [];
@@ -196,4 +196,95 @@ async function handleChat(req, res) {
   req.on('close', () => child.kill());
 }
 
-module.exports = { handleStatus, handleHistory, handleClear, handleChat };
+/* ── Voice call helpers ───────────────────────────────── */
+
+function loadVoiceServices() {
+  const prefs = loadPrefs();
+  const vs = prefs.voiceServices || {};
+  return {
+    sttUrl:   (vs.sttUrl   || 'http://localhost:8000').replace(/\/+$/, ''),
+    sttModel: vs.sttModel  || 'whisper-1',
+    ttsUrl:   (vs.ttsUrl   || 'http://localhost:8880').replace(/\/+$/, ''),
+    ttsModel: vs.ttsModel  || 'kokoro',
+    ttsVoice: vs.ttsVoice  || 'af_heart',
+  };
+}
+
+/** GET /api/chat/call-status — check if STT + TTS services are reachable */
+async function handleCallStatus(req, res) {
+  const vs = loadVoiceServices();
+  const check = async (url) => {
+    try {
+      const r = await fetch(`${url}/v1/models`, { signal: AbortSignal.timeout(3000) });
+      return r.ok;
+    } catch { return false; }
+  };
+  const [stt, tts] = await Promise.all([check(vs.sttUrl), check(vs.ttsUrl)]);
+  res.json({ stt, tts, sttUrl: vs.sttUrl, ttsUrl: vs.ttsUrl });
+}
+
+/** POST /api/chat/transcribe — proxy audio to configured STT service */
+async function handleTranscribe(req, res) {
+  if (!req.file) return res.status(400).json({ error: 'No audio file' });
+  const vs = loadVoiceServices();
+
+  try {
+    const formData = new FormData();
+    formData.append('file', new Blob([req.file.buffer], { type: req.file.mimetype }), req.file.originalname || 'audio.webm');
+    formData.append('model', vs.sttModel);
+
+    const resp = await fetch(`${vs.sttUrl}/v1/audio/transcriptions`, {
+      method: 'POST',
+      body: formData,
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      return res.status(resp.status).json({ error: `STT error ${resp.status}: ${err.slice(0, 300)}` });
+    }
+
+    const data = await resp.json();
+    res.json({ text: data.text || '' });
+  } catch (e) {
+    res.status(500).json({ error: `STT request failed: ${e.message}` });
+  }
+}
+
+/** POST /api/chat/synthesize — proxy text to configured TTS service, return audio */
+async function handleSynthesize(req, res) {
+  const { text, voice } = req.body;
+  if (!text) return res.status(400).json({ error: 'No text' });
+  const vs = loadVoiceServices();
+
+  try {
+    const resp = await fetch(`${vs.ttsUrl}/v1/audio/speech`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: vs.ttsModel,
+        input: text,
+        voice: voice || vs.ttsVoice,
+        response_format: 'mp3',
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      return res.status(resp.status).json({ error: `TTS error ${resp.status}: ${err.slice(0, 300)}` });
+    }
+
+    const contentType = resp.headers.get('content-type') || 'audio/mpeg';
+    res.setHeader('Content-Type', contentType);
+    const arrayBuf = await resp.arrayBuffer();
+    res.send(Buffer.from(arrayBuf));
+  } catch (e) {
+    res.status(500).json({ error: `TTS request failed: ${e.message}` });
+  }
+}
+
+module.exports = {
+  handleStatus, handleHistory, handleClear, handleChat,
+  handleCallStatus, handleTranscribe, handleSynthesize,
+};

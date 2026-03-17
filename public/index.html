@@ -710,6 +710,41 @@
         </div>
       </div>
 
+      <!-- Voice Services -->
+      <div class="card">
+        <div class="card-title">Voice Services</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
+          Configure STT and TTS endpoints for voice call mode. Any OpenAI-compatible audio API works
+          (local Whisper/Kokoro, OpenAI, etc.).
+        </p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">STT URL</label>
+            <input class="input" id="voice-stt-url" style="flex:1" placeholder="http://localhost:8000">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">STT Model</label>
+            <input class="input" id="voice-stt-model" style="flex:1" placeholder="whisper-1">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS URL</label>
+            <input class="input" id="voice-tts-url" style="flex:1" placeholder="http://localhost:8880">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Model</label>
+            <input class="input" id="voice-tts-model" style="flex:1" placeholder="kokoro">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Voice</label>
+            <input class="input" id="voice-tts-voice" style="flex:1" placeholder="af_heart">
+          </div>
+        </div>
+        <div class="toolbar" style="margin-top:14px">
+          <button class="btn btn-sm btn-blue" onclick="voiceSettingsSave()">Save</button>
+          <span class="status-line" id="voice-settings-status"></span>
+        </div>
+      </div>
+
       <!-- System Tools -->
       <div class="card">
         <div class="card-title" style="display:flex;align-items:center;gap:8px">
@@ -789,6 +824,7 @@
   <div class="chat-header">
     <span class="chat-title">OpenClaw Agent</span>
     <div class="toolbar-right">
+      <button class="btn btn-xs" id="chat-call-toggle" onclick="chatToggleCall()" title="Voice call mode">🎙 Live</button>
       <button class="btn btn-xs" onclick="chatClear()" title="Clear history">Clear</button>
       <button class="btn btn-xs" onclick="toggleChat()" title="Close">✕</button>
     </div>
@@ -796,10 +832,17 @@
   <div class="chat-messages" id="chat-messages">
     <div class="chat-msg system">Send a message to chat with the OpenClaw agent.</div>
   </div>
-  <div class="chat-input-row">
+  <div class="chat-input-row" id="chat-input-row">
     <textarea class="chat-input" id="chat-input" placeholder="Message…" rows="1"
               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend();}"></textarea>
     <button class="btn btn-sm btn-amber" onclick="chatSend()">Send</button>
+  </div>
+  <div class="chat-call-bar" id="chat-call-bar" style="display:none">
+    <div class="chat-call-indicator" id="chat-call-indicator">
+      <span class="chat-call-mic-icon" id="chat-call-mic-icon"></span>
+      <span class="chat-call-status" id="chat-call-status">Connecting…</span>
+    </div>
+    <button class="btn btn-xs btn-red" onclick="chatToggleCall()" title="End call">End</button>
   </div>
 </div>
 
@@ -837,6 +880,57 @@
     <div class="app-confirm-actions">
       <button id="sudo-modal-cancel" class="btn btn-sm">Cancel</button>
       <button id="sudo-modal-ok" class="btn btn-sm btn-blue">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Docker Run modal -->
+<div id="docker-run-modal" class="app-confirm-backdrop">
+  <div class="app-confirm-box" style="min-width:380px;max-width:460px">
+    <p class="app-confirm-msg" style="margin:0 0 4px">
+      Run container from <strong id="docker-run-image-label"></strong>
+    </p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">Name</label>
+        <input class="input" id="docker-run-name" style="flex:1" placeholder="my-container">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">Ports</label>
+        <input class="input" id="docker-run-ports" style="flex:1" placeholder="8080:80, 443:443">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">GPU</label>
+        <select class="input" id="docker-run-gpu" style="width:140px">
+          <option value="">None (CPU)</option>
+          <option value="0">GPU 0</option>
+          <option value="1">GPU 1</option>
+          <option value="all">All GPUs</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">Restart</label>
+        <select class="input" id="docker-run-restart" style="width:140px">
+          <option value="no">no</option>
+          <option value="unless-stopped" selected>unless-stopped</option>
+          <option value="always">always</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0;padding-top:6px">Env vars</label>
+        <textarea class="input" id="docker-run-env" rows="2" style="flex:1;font-size:11px;resize:vertical"
+                  placeholder="KEY=VALUE (one per line)"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0;padding-top:6px">Volumes</label>
+        <textarea class="input" id="docker-run-volumes" rows="2" style="flex:1;font-size:11px;resize:vertical"
+                  placeholder="/host/path:/container/path (one per line)"></textarea>
+      </div>
+    </div>
+    <pre id="docker-run-out" class="terminal" style="display:none;max-height:120px;margin:0"></pre>
+    <div class="app-confirm-actions">
+      <button class="btn btn-sm" id="docker-run-cancel" onclick="dockerRunClose()">Cancel</button>
+      <button class="btn btn-sm btn-green" id="docker-run-ok" onclick="dockerRunSubmit()">▶ Run</button>
     </div>
   </div>
 </div>
