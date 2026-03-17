@@ -12,7 +12,7 @@ const multer  = require('multer');
 
 // ─── Foundation ───────────────────────────────────────────────────────────────
 const pkg                      = require('./package.json');
-const { PORT, HTTPS_PORT }     = require('./modules/paths');
+const { PORT }                 = require('./modules/paths');
 const { ensureCerts }          = require('./modules/https-cert');
 
 // ─── Feature modules ──────────────────────────────────────────────────────────
@@ -183,20 +183,18 @@ app.get ('/api/services/status',   services.handleStatus);
 app.post('/api/services/start',    services.handleStart);
 app.post('/api/services/stop',     services.handleStop);
 
-// ─── HTTP + HTTPS Servers + WebSocket Terminals ──────────────────────────────
-const httpServer = http.createServer(app);
-terminal.setup(httpServer);
-
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`OpenClaw Panel v${pkg.version} → http://0.0.0.0:${PORT}`);
-});
-
+// ─── Server (HTTPS with HTTP fallback) + WebSocket Terminals ─────────────────
 ensureCerts().then(certs => {
-  const httpsServer = https.createServer(certs, app);
-  terminal.setup(httpsServer);
-  httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
-    console.log(`OpenClaw Panel v${pkg.version} → https://0.0.0.0:${HTTPS_PORT}  (self-signed)`);
+  const server = https.createServer(certs, app);
+  terminal.setup(server);
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`OpenClaw Panel v${pkg.version} → https://0.0.0.0:${PORT}  (self-signed)`);
   });
 }).catch(e => {
-  console.warn(`[HTTPS] Could not start HTTPS server: ${e.message}`);
+  console.warn(`[HTTPS] Falling back to HTTP: ${e.message}`);
+  const server = http.createServer(app);
+  terminal.setup(server);
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`OpenClaw Panel v${pkg.version} → http://0.0.0.0:${PORT}`);
+  });
 });
