@@ -175,6 +175,11 @@ app.get   ('/api/docker/images',                docker.handleImages);
 app.post  ('/api/docker/images/pull',           docker.handleImagePull);
 app.delete('/api/docker/images/:id',            docker.handleImageDelete);
 app.post  ('/api/docker/run',                   docker.handleRun);
+app.post  ('/api/docker/register-tool-provider',  docker.handleRegisterToolProvider);
+app.delete('/api/docker/tool-provider/:name',     docker.handleUnregisterToolProvider);
+app.get   ('/api/docker/presets',               docker.handleGetPresets);
+app.post  ('/api/docker/presets',               docker.handleSavePreset);
+app.delete('/api/docker/presets/:name',         docker.handleDeletePreset);
 
 // ─── Routes: Inference Services ───────────────────────────────────────────────
 app.get ('/api/services',          services.handleList);
@@ -188,7 +193,10 @@ ensureCerts().then(certs => {
   const server = https.createServer(certs, app);
   terminal.setup(server);
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`OpenClaw Panel v${pkg.version} → https://0.0.0.0:${PORT}  (self-signed)`);
+    const label = certs.tailscale
+      ? `https://${certs.tailscale}:${PORT}  (Tailscale — trusted)`
+      : `https://0.0.0.0:${PORT}  (self-signed)`;
+    console.log(`OpenClaw Panel v${pkg.version} → ${label}`);
   });
 }).catch(e => {
   console.warn(`[HTTPS] Falling back to HTTP: ${e.message}`);

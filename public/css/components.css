@@ -529,6 +529,38 @@
 .tool-api-row:last-child { border-bottom: none; }
 .tool-api-label { font-size: 11px; color: var(--muted); }
 
+/* ── Docker presets & agent badge ────────────────────── */
+.docker-presets-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px; margin-bottom: 4px;
+}
+.docker-preset-card {
+  background: var(--raised); border: 1px solid var(--border); padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 6px; transition: border-color var(--t-fast);
+}
+.docker-preset-card:hover { border-color: var(--border2); }
+.docker-preset-card-header {
+  display: flex; align-items: center; gap: 8px;
+}
+.docker-preset-card-name {
+  font-size: 12px; font-weight: 600; color: var(--text); flex: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.docker-preset-card-image {
+  font-size: 10px; color: var(--muted); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.docker-preset-card-meta {
+  display: flex; gap: 6px; flex-wrap: wrap; font-size: 9px;
+}
+.docker-preset-card-actions {
+  display: flex; gap: 4px; margin-top: 2px;
+}
+.badge-agent {
+  background: var(--teal); color: var(--bg); font-size: 9px;
+  padding: 1px 6px; font-weight: 600; letter-spacing: 0.03em;
+}
+
 /* ── App confirm modal ───────────────────────────────── */
 .app-confirm-backdrop {
   display: none;

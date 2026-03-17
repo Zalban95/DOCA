@@ -4,32 +4,185 @@
 
 let _dockerLogSrc = null;
 let _dockerLogContainerId = null;
+let _dockerPresets = {};
+let _dockerContainers = [];
 
 function dockerInit() {
+  dockerLoadPresets();
   dockerLoadContainers();
   dockerLoadImages();
+}
+
+/* ── Presets (saved configurations) ──────────────────── */
+async function dockerLoadPresets() {
+  try {
+    const data = await apiFetch('/api/docker/presets');
+    _dockerPresets = data.presets || {};
+  } catch { _dockerPresets = {}; }
+  _dockerRenderPresets();
+}
+
+function _dockerRenderPresets() {
+  const section = document.getElementById('docker-presets-section');
+  const grid    = document.getElementById('docker-presets-grid');
+  const entries = Object.values(_dockerPresets);
+  if (!entries.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  grid.innerHTML = entries.map(p => {
+    const running = _dockerContainers.some(c =>
+      (c.State || '').toLowerCase() === 'running' && c.Image === p.image
+    );
+    const statusBadge = running
+      ? '<span class="badge badge-green" style="font-size:8px">RUNNING</span>'
+      : '<span class="badge" style="font-size:8px;background:var(--dim)">STOPPED</span>';
+    const gpuTag = p.gpu ? `<span class="badge" style="font-size:8px;background:var(--purple)">GPU ${p.gpu}</span>` : '';
+    const portsTag = (p.ports || []).length
+      ? `<span style="color:var(--muted)">${p.ports.join(', ')}</span>` : '';
+    const tpTag = p.toolProvider
+      ? `<span class="badge badge-agent">${p.toolProvider}</span>` : '';
+    const eName = encodeURIComponent(p.name);
+
+    return `<div class="docker-preset-card">
+      <div class="docker-preset-card-header">
+        <span class="docker-preset-card-name">${_dockerEsc(p.name)}</span>
+        ${statusBadge} ${tpTag}
+      </div>
+      <div class="docker-preset-card-image">${_dockerEsc(p.image)}</div>
+      <div class="docker-preset-card-meta">${gpuTag} ${portsTag}</div>
+      <div class="docker-preset-card-actions">
+        <button class="btn btn-xs btn-green" onclick="dockerPresetRun('${eName}')">▶ Run</button>
+        <button class="btn btn-xs btn-blue" onclick="dockerPresetCreate('${eName}')">+ Create</button>
+        <button class="btn btn-xs" onclick="dockerPresetEdit('${eName}')">✏ Edit</button>
+        <button class="btn btn-xs btn-red" onclick="dockerPresetDelete('${eName}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function dockerPresetRun(encodedName) {
+  const p = _dockerPresets[decodeURIComponent(encodedName)];
+  if (!p) return;
+  _dockerRunFromPreset(p, false);
+}
+
+function dockerPresetCreate(encodedName) {
+  const p = _dockerPresets[decodeURIComponent(encodedName)];
+  if (!p) return;
+  _dockerRunFromPreset(p, true);
+}
+
+function _dockerRunFromPreset(p, createOnly) {
+  const out = document.getElementById('docker-run-out');
+  out.style.display = 'block';
+  out.textContent = `${createOnly ? 'Creating' : 'Starting'} ${p.image}…\n`;
+
+  fetch('/api/docker/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      image: p.image, name: p.name, ports: p.ports || [], gpu: p.gpu || '',
+      restart: p.restart || 'no', envVars: p.envVars || [], volumes: p.volumes || [],
+      createOnly
+    })
+  }).then(res => {
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    const read = () => {
+      reader.read().then(({ done, value }) => {
+        if (done) return;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split('\n\n');
+        buf = parts.pop();
+        parts.forEach(part => {
+          const line = part.trim().replace(/^data:\s*/, '');
+          if (!line) return;
+          try {
+            const obj = JSON.parse(line);
+            if (obj.status) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
+            if (obj.done && obj.ok) {
+              if (p.toolProvider) {
+                const port = (p.ports || [])[0]?.split(':')[0] || '8000';
+                apiFetch('/api/docker/register-tool-provider', {
+                  method: 'POST',
+                  body: { name: p.toolProvider, baseUrl: `http://localhost:${port}` }
+                }).catch(() => {});
+              }
+              setTimeout(() => { dockerLoadContainers(); dockerLoadPresets(); }, 800);
+            }
+          } catch {}
+        });
+        read();
+      });
+    };
+    read();
+  }).catch(e => { out.textContent += `\nError: ${e.message}`; });
+
+  document.getElementById('docker-run-modal').classList.add('open');
+  document.getElementById('docker-run-image-label').textContent = p.image;
+  document.getElementById('docker-run-ok').disabled = true;
+}
+
+function dockerPresetEdit(encodedName) {
+  const p = _dockerPresets[decodeURIComponent(encodedName)];
+  if (!p) return;
+  _dockerRunImageRef = p.image;
+  document.getElementById('docker-run-image-label').textContent = p.image;
+  document.getElementById('docker-run-name').value = p.name || '';
+  document.getElementById('docker-run-ports').value = (p.ports || []).join(', ');
+  document.getElementById('docker-run-gpu').value = p.gpu || '';
+  document.getElementById('docker-run-restart').value = p.restart || 'unless-stopped';
+  document.getElementById('docker-run-env').value = (p.envVars || []).join('\n');
+  document.getElementById('docker-run-volumes').value = (p.volumes || []).join('\n');
+  document.getElementById('docker-run-register-tp').checked = !!p.toolProvider;
+  document.getElementById('docker-run-tp-name').value = p.toolProvider || '';
+  document.getElementById('docker-run-out').style.display = 'none';
+  document.getElementById('docker-run-out').textContent = '';
+  document.getElementById('docker-run-ok').disabled = false;
+  document.getElementById('docker-run-modal').classList.add('open');
+}
+
+async function dockerPresetDelete(encodedName) {
+  const name = decodeURIComponent(encodedName);
+  appConfirm(`Delete saved configuration "${name}"?`, async () => {
+    try {
+      await apiFetch(`/api/docker/presets/${encodedName}`, { method: 'DELETE' });
+      dockerLoadPresets();
+    } catch (e) { alert(`Error: ${e.message}`); }
+  });
 }
 
 /* ── Containers ────────────────────────────────────────── */
 async function dockerLoadContainers() {
   const tbody = document.getElementById('docker-containers-body');
-  tbody.innerHTML = '<tr><td colspan="5" class="placeholder pulse" style="padding:12px">Loading…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="6" class="placeholder pulse" style="padding:12px">Loading…</td></tr>';
   try {
     const data = await apiFetch('/api/docker/containers');
-    const containers = data.containers || [];
-    if (!containers.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="placeholder" style="padding:12px">No containers found</td></tr>';
+    _dockerContainers = data.containers || [];
+    if (!_dockerContainers.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="placeholder" style="padding:12px">No containers found</td></tr>';
+      _dockerRenderPresets();
       return;
     }
-    tbody.innerHTML = containers.map(c => {
+    tbody.innerHTML = _dockerContainers.map(c => {
       const isRunning = (c.State || '').toLowerCase() === 'running';
       const statusClass = isRunning ? 'badge-green' : 'badge-red';
       const ports = c.Ports || '';
+      const tp = c.toolProvider;
+
+      const agentCell = tp
+        ? `<span class="badge badge-agent">${_dockerEsc(tp.name)}</span>`
+        : (isRunning && ports
+          ? `<button class="btn btn-xs" style="font-size:9px" onclick="dockerRegisterTP('${(c.Names||c.ID).replace(/'/g,"\\'")}','${ports.replace(/'/g,"\\'")}')">+ Agent</button>`
+          : '<span style="font-size:10px;color:var(--dim)">—</span>');
+
       return `<tr class="models-row" id="docker-container-${c.ID}">
         <td class="models-name" style="font-size:11px">${c.Names || c.ID.slice(0,12)}</td>
         <td style="font-size:10px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis">${c.Image || '—'}</td>
         <td><span class="badge ${statusClass}" style="font-size:9px">${c.Status || c.State || '—'}</span></td>
         <td style="font-size:10px;color:var(--muted)">${ports.slice(0,40) || '—'}</td>
+        <td style="text-align:center">${agentCell}</td>
         <td style="white-space:nowrap;text-align:right">
           <div style="display:flex;gap:4px;justify-content:flex-end">
             ${isRunning
@@ -43,9 +196,23 @@ async function dockerLoadContainers() {
         </td>
       </tr>`;
     }).join('');
+    _dockerRenderPresets();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:12px;color:var(--red)">${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:12px;color:var(--red)">${e.message}</td></tr>`;
   }
+}
+
+function dockerRegisterTP(containerName, portsStr) {
+  const match = portsStr.match(/(?:\d+\.\d+\.\d+\.\d+|::):(\d+)->/);
+  const port = match ? match[1] : '8000';
+  const suggestedName = containerName.replace(/^\//, '').replace(/[^a-zA-Z0-9_-]/g, '-');
+  const name = prompt('Tool provider name for the agent:', suggestedName);
+  if (!name) return;
+  apiFetch('/api/docker/register-tool-provider', {
+    method: 'POST',
+    body: { name, baseUrl: `http://localhost:${port}` }
+  }).then(() => dockerLoadContainers())
+    .catch(e => alert(`Error: ${e.message}`));
 }
 
 async function dockerAction(id, action) {
@@ -181,6 +348,8 @@ function dockerRunImage(repo, tag) {
   document.getElementById('docker-run-restart').value = 'unless-stopped';
   document.getElementById('docker-run-env').value = '';
   document.getElementById('docker-run-volumes').value = '';
+  document.getElementById('docker-run-register-tp').checked = false;
+  document.getElementById('docker-run-tp-name').value = '';
   document.getElementById('docker-run-out').style.display = 'none';
   document.getElementById('docker-run-out').textContent = '';
   document.getElementById('docker-run-ok').disabled = false;
@@ -192,7 +361,7 @@ function dockerRunClose() {
   document.getElementById('docker-run-modal').classList.remove('open');
 }
 
-function dockerRunSubmit() {
+function _dockerCollectForm() {
   const image   = _dockerRunImageRef;
   const name    = document.getElementById('docker-run-name').value.trim();
   const portsRaw = document.getElementById('docker-run-ports').value.trim();
@@ -200,21 +369,64 @@ function dockerRunSubmit() {
   const restart = document.getElementById('docker-run-restart').value;
   const envRaw  = document.getElementById('docker-run-env').value.trim();
   const volRaw  = document.getElementById('docker-run-volumes').value.trim();
+  const registerTp = document.getElementById('docker-run-register-tp').checked;
+  const tpName  = document.getElementById('docker-run-tp-name').value.trim();
 
   const ports   = portsRaw ? portsRaw.split(/[,\n]/).map(s => s.trim()).filter(Boolean) : [];
   const envVars = envRaw   ? envRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
   const volumes = volRaw   ? volRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
 
+  return { image, name, ports, gpu, restart, envVars, volumes, registerTp, tpName: registerTp ? tpName : '' };
+}
+
+async function _dockerSavePreset(form) {
+  const preset = {
+    image: form.image,
+    name: form.name,
+    ports: form.ports,
+    gpu: form.gpu,
+    restart: form.restart,
+    envVars: form.envVars,
+    volumes: form.volumes,
+    toolProvider: form.tpName || null,
+  };
+  await apiFetch('/api/docker/presets', { method: 'POST', body: preset });
+}
+
+function dockerRunSaveOnly() {
+  const form = _dockerCollectForm();
+  if (!form.name) { alert('Container name is required to save.'); return; }
+  _dockerSavePreset(form)
+    .then(() => { dockerRunClose(); dockerLoadPresets(); })
+    .catch(e => alert(`Save error: ${e.message}`));
+}
+
+function dockerRunSaveAndRun() {
+  const form = _dockerCollectForm();
+  if (!form.name) { alert('Container name is required to save.'); return; }
+  _dockerSavePreset(form).catch(() => {});
+  _dockerExecuteRun(form, false);
+}
+
+function dockerRunSubmit() {
+  const form = _dockerCollectForm();
+  _dockerExecuteRun(form, false);
+}
+
+function _dockerExecuteRun(form, createOnly) {
   const out = document.getElementById('docker-run-out');
   const okBtn = document.getElementById('docker-run-ok');
   out.style.display = 'block';
-  out.textContent = `Starting ${image}…\n`;
+  out.textContent = `${createOnly ? 'Creating' : 'Starting'} ${form.image}…\n`;
   okBtn.disabled = true;
 
   fetch('/api/docker/run', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image, name, ports, gpu, restart, envVars, volumes })
+    body: JSON.stringify({
+      image: form.image, name: form.name, ports: form.ports, gpu: form.gpu,
+      restart: form.restart, envVars: form.envVars, volumes: form.volumes, createOnly
+    })
   }).then(res => {
     const reader  = res.body.getReader();
     const decoder = new TextDecoder();
@@ -233,7 +445,16 @@ function dockerRunSubmit() {
             if (obj.status) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
             if (obj.done) {
               okBtn.disabled = false;
-              if (obj.ok) setTimeout(() => { dockerRunClose(); dockerLoadContainers(); }, 800);
+              if (obj.ok) {
+                if (form.tpName) {
+                  const port = (form.ports[0] || '8000:8000').split(':')[0];
+                  apiFetch('/api/docker/register-tool-provider', {
+                    method: 'POST',
+                    body: { name: form.tpName, baseUrl: `http://localhost:${port}` }
+                  }).catch(() => {});
+                }
+                setTimeout(() => { dockerRunClose(); dockerLoadContainers(); dockerLoadPresets(); }, 800);
+              }
             }
           } catch {}
         });
@@ -245,4 +466,8 @@ function dockerRunSubmit() {
     out.textContent += `\nError: ${e.message}`;
     okBtn.disabled = false;
   });
+}
+
+function _dockerEsc(s) {
+  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
