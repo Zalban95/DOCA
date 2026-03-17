@@ -493,6 +493,26 @@
 .theme-color-hex { font-size: 10px; color: var(--muted); font-family: var(--font-mono); }
 
 /* ── Settings tab ────────────────────────────────────── */
+.settings-subnav {
+  display: flex; gap: 4px; padding: 0 0 12px;
+  overflow-x: auto; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.settings-subnav-btn {
+  padding: 5px 14px; font-size: 11px; font-family: var(--font-mono);
+  background: transparent; color: var(--muted); border: 1px solid var(--border);
+  cursor: pointer; white-space: nowrap; transition: all var(--t-fast);
+  letter-spacing: 0.03em;
+}
+.settings-subnav-btn:hover { color: var(--text); border-color: var(--border2); }
+.settings-subnav-btn.active {
+  background: var(--accent); color: var(--bg); border-color: var(--accent);
+  font-weight: 500;
+}
+.settings-panel { display: none; flex-direction: column; flex: 1; min-height: 0; }
+.settings-panel.active { display: flex; }
+
 .settings-tab-row {
   display: flex; align-items: center; gap: 10px;
   padding: 7px 0; border-bottom: 1px solid var(--border);

@@ -5,11 +5,6 @@
 const SETTINGS_TABS = [
   { id: 'controls',  label: 'Controls' },
   { id: 'logs',      label: 'Logs' },
-  { id: 'keys',      label: 'API Keys' },
-  { id: 'skills',    label: 'Skills' },
-  { id: 'snapshots', label: 'Snapshots' },
-  { id: 'setup',     label: 'Setup' },
-  { id: 'config',    label: 'Config' },
   { id: 'files',     label: 'Files' },
   { id: 'code',      label: 'Code' },
   { id: 'terminal',  label: 'Terminal' },
@@ -17,21 +12,62 @@ const SETTINGS_TABS = [
   { id: 'docker',    label: 'Docker' },
 ];
 
+const _SETTINGS_SUBTABS = [
+  { id: 'general',   label: 'General',   init: '_subtabGeneralInit' },
+  { id: 'keys',      label: 'API Keys',  init: 'loadKeys' },
+  { id: 'skills',    label: 'Skills',    init: 'loadSkills' },
+  { id: 'snapshots', label: 'Snapshots', init: 'loadSnapshots' },
+  { id: 'setup',     label: 'Setup',     init: 'loadScripts' },
+  { id: 'config',    label: 'Config',    init: 'initConfig' },
+  { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit' },
+  { id: 'system',    label: 'System',    init: 'sysdepsLoad' },
+];
+
 let _settingsHidden = [];
+let _settingsActiveSubtab = 'general';
+let _subtabInited = {};
 
 async function settingsInit() {
+  settingsSubNav(_settingsActiveSubtab);
+}
+
+function settingsSubNav(panelId) {
+  _settingsActiveSubtab = panelId;
+
+  document.querySelectorAll('#settings-subnav .settings-subnav-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', _SETTINGS_SUBTABS[i]?.id === panelId);
+  });
+
+  document.querySelectorAll('#tab-settings .settings-panel').forEach(p => {
+    p.classList.toggle('active', p.id === `sp-${panelId}`);
+  });
+
+  const entry = _SETTINGS_SUBTABS.find(t => t.id === panelId);
+  if (entry && !_subtabInited[panelId]) {
+    _subtabInited[panelId] = true;
+    const fn = window[entry.init] || this[entry.init];
+    if (typeof fn === 'function') fn();
+  }
+}
+
+async function _subtabGeneralInit() {
   try {
     const prefs = await apiFetch('/api/prefs');
     _settingsHidden = prefs.hiddenTabs || [];
     _settingsRender();
     _themePickerRender(prefs);
-    _voiceSettingsLoad(prefs);
   } catch (e) {
     const el = document.getElementById('settings-tabs-list');
     if (el) el.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
   }
-  sysdepsLoad();
   updateCheck();
+}
+
+async function _subtabVoiceInit() {
+  try {
+    const prefs = await apiFetch('/api/prefs');
+    _voiceSettingsLoad(prefs);
+  } catch {}
 }
 
 function _settingsRender() {

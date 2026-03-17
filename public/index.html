@@ -35,11 +35,6 @@
   <nav class="nav-tabs">
     <button class="nav-tab active" data-tab="controls" onclick="nav('controls')">Controls</button>
     <button class="nav-tab"        data-tab="logs"     onclick="nav('logs')">Logs</button>
-    <button class="nav-tab"        data-tab="keys"     onclick="nav('keys')">API Keys</button>
-    <button class="nav-tab"        data-tab="skills"   onclick="nav('skills')">Skills</button>
-    <button class="nav-tab"        data-tab="snapshots" onclick="nav('snapshots')">Snapshots</button>
-    <button class="nav-tab"        data-tab="setup"    onclick="nav('setup')">Setup</button>
-    <button class="nav-tab"        data-tab="config"   onclick="nav('config')">Config</button>
     <button class="nav-tab"        data-tab="files"    onclick="nav('files')">Files</button>
     <button class="nav-tab"        data-tab="code"      onclick="nav('code')">Code</button>
     <button class="nav-tab"        data-tab="terminal"  onclick="nav('terminal')">Terminal</button>
@@ -146,215 +141,6 @@
         <div class="status-line" id="log-status"></div>
       </div>
       <pre class="log-out" id="log-out"></pre>
-    </div>
-
-    <!-- ─── API KEYS ──────────────────────────────────── -->
-    <div id="tab-keys" class="tab-page">
-      <div class="toolbar">
-        <div class="card-title" style="margin-bottom:0">Providers</div>
-        <button class="btn btn-sm btn-blue" onclick="showAddProvider()">+ Add Provider</button>
-      </div>
-      <div id="providers-list" class="scroll-y" style="flex:1"><div class="placeholder">Loading…</div></div>
-
-      <div id="add-provider-form" style="display:none">
-        <div class="card mt8">
-          <div class="card-title">New Provider</div>
-          <div class="row">
-            <div class="field flex1"><div class="input-label">Name (e.g. groq)</div><input id="np-name" class="input" placeholder="groq"></div>
-            <div class="field flex1"><div class="input-label">Base URL</div><input id="np-url" class="input" placeholder="https://api.groq.com/openai/v1"></div>
-          </div>
-          <div class="field"><div class="input-label">API Key</div><input id="np-key" class="input" type="password" placeholder="sk-…"></div>
-          <div class="toolbar-right">
-            <button class="btn btn-sm" onclick="hideAddProvider()">Cancel</button>
-            <button class="btn btn-sm btn-blue" onclick="addProvider()">Add</button>
-          </div>
-          <div class="status-line mt8" id="np-status"></div>
-        </div>
-      </div>
-
-      <!-- Tool Providers section (same card pattern as Providers above) -->
-      <div class="toolbar" style="margin-top:4px">
-        <div class="card-title" style="margin-bottom:0">Tool APIs</div>
-        <button class="btn btn-sm btn-blue" onclick="showAddToolProvider()">+ Add Tool Provider</button>
-      </div>
-      <p style="font-size:11px;color:var(--muted);margin:0 0 6px">
-        API endpoints for local non-LLM tools (Stable Diffusion, ComfyUI, Kokoro, Whisper, etc.)
-      </p>
-      <div id="tool-providers-list" class="scroll-y" style="flex:1"><div class="placeholder">Loading…</div></div>
-
-      <div id="add-tool-provider-form" style="display:none">
-        <div class="card mt8">
-          <div class="card-title">New Tool Provider</div>
-          <div class="row">
-            <div class="field flex1"><div class="input-label">Name (e.g. comfyui)</div><input id="tp-name" class="input" placeholder="comfyui"></div>
-            <div class="field flex1"><div class="input-label">Base URL</div><input id="tp-url" class="input" placeholder="http://127.0.0.1:8188"></div>
-          </div>
-          <div class="field"><div class="input-label">API Key (optional)</div><input id="tp-key" class="input" type="password" placeholder="leave blank if not required"></div>
-          <div class="toolbar-right">
-            <button class="btn btn-sm" onclick="hideAddToolProvider()">Cancel</button>
-            <button class="btn btn-sm btn-blue" onclick="addToolProvider()">Add</button>
-          </div>
-          <div class="status-line mt8" id="tp-status"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ─── SKILLS ────────────────────────────────────── -->
-    <div id="tab-skills" class="tab-page">
-
-      <!-- Mode tabs + install row -->
-      <div class="skills-header">
-        <div class="skills-mode-tabs">
-          <button class="skills-mode-btn active" id="skills-mode-installed" onclick="skillsSetMode('installed')">Installed</button>
-          <button class="skills-mode-btn" id="skills-mode-search" onclick="skillsSetMode('search')">Search Online</button>
-        </div>
-        <!-- Installed mode controls -->
-        <div id="skills-installed-bar" class="skills-bar">
-          <input id="skill-input" class="input flex1" placeholder="skill name or repo (e.g. openai-whisper)" style="max-width:260px">
-          <button class="btn btn-sm btn-blue" onclick="installSkill(false)">Install</button>
-          <button class="btn btn-sm btn-amber" onclick="installSkill(true)">Force</button>
-          <div style="flex:1"></div>
-          <input id="skill-filter" class="input" placeholder="Filter installed…" style="width:150px" oninput="filterSkills()">
-          <button class="btn btn-sm" onclick="loadSkills()">↺</button>
-        </div>
-        <!-- Search mode controls -->
-        <div id="skills-search-bar" class="skills-bar" style="display:none">
-          <input id="skill-search-input" class="input flex1" placeholder="Search skills registry…" style="max-width:320px"
-                 onkeydown="if(event.key==='Enter') searchSkillsOnline()">
-          <button class="btn btn-sm btn-blue" onclick="searchSkillsOnline()">Search</button>
-          <div class="skills-flag-group">
-            <label class="skills-flag"><input type="checkbox" id="flag-official"> <span class="badge badge-green" style="font-size:9px">Official</span></label>
-            <label class="skills-flag"><input type="checkbox" id="flag-community"> <span class="badge badge-blue" style="font-size:9px">Community</span></label>
-            <label class="skills-flag"><input type="checkbox" id="flag-unknown"> <span class="badge" style="font-size:9px;background:var(--dim)">Unknown</span></label>
-          </div>
-        </div>
-      </div>
-
-      <div id="install-out" class="terminal" style="display:none"></div>
-      <div id="skills-grid" class="skills-grid" style="flex:1"><div class="placeholder">Loading…</div></div>
-
-      <!-- Skill detail modal -->
-      <div id="skill-detail-overlay" class="modal-overlay" style="display:none" onclick="closeSkillDetail(event)">
-        <div class="modal" style="max-width:640px" onclick="event.stopPropagation()">
-          <div class="modal-title" id="skill-detail-title"></div>
-          <div id="skill-detail-body" style="max-height:60vh;overflow-y:auto"></div>
-          <div class="modal-actions">
-            <button class="btn btn-sm" onclick="closeSkillDetail()">Close</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ─── SNAPSHOTS ─────────────────────────────────── -->
-    <div id="tab-snapshots" class="tab-page">
-
-      <!-- Warning banner if scripts missing -->
-      <div id="snap-warning" class="snap-warning" style="display:none"></div>
-
-      <!-- Settings (collapsible) -->
-      <div class="card snap-settings-card">
-        <div class="snap-settings-toggle" onclick="snapToggleSettings()">
-          <span>⚙ Snapshot Settings</span>
-          <span id="snap-settings-arrow" class="snap-arrow">▼</span>
-        </div>
-        <div id="snap-settings-body" style="display:none;padding-top:10px">
-          <div class="snap-settings-grid">
-            <label class="snap-label-text">Snapshot dir</label>
-            <div class="snap-path-with-btn">
-              <input id="snap-dir" class="input flex1" placeholder="/path/to/snapshots">
-              <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-dir','dir')">📁</button>
-            </div>
-            <label class="snap-label-text">Snapshot script</label>
-            <div class="snap-path-with-btn">
-              <input id="snap-script-create" class="input flex1" placeholder="/path/to/snapshot.sh">
-              <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-script-create','file')">📁</button>
-              <button class="btn btn-xs btn-blue" title="Edit script" onclick="snapEditScript('snap-script-create')">✏</button>
-            </div>
-            <label class="snap-label-text">Restore script</label>
-            <div class="snap-path-with-btn">
-              <input id="snap-script-restore" class="input flex1" placeholder="/path/to/restore.sh">
-              <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-script-restore','file')">📁</button>
-              <button class="btn btn-xs btn-blue" title="Edit script" onclick="snapEditScript('snap-script-restore')">✏</button>
-            </div>
-            <label class="snap-label-text">Paths to include<br><small style="font-weight:400;opacity:.7">used by tar fallback &amp; passed to scripts</small></label>
-            <div>
-              <div id="snap-paths-list" class="snap-paths-list"></div>
-              <button class="btn btn-xs" style="margin-top:6px" onclick="snapAddPath()">+ Add Path</button>
-            </div>
-          </div>
-          <div style="margin-top:10px">
-            <button class="btn btn-sm btn-blue" onclick="snapSaveSettings()">Save Settings</button>
-            <span id="snap-settings-status" class="status-line" style="margin-left:10px"></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Create -->
-      <div class="card">
-        <div class="card-title">Create Snapshot</div>
-        <div class="row">
-          <input id="snap-label" class="input flex1" placeholder="label (optional, e.g. before-groq-test)" style="max-width:300px">
-          <button class="btn btn-amber" onclick="createSnapshot()">📷 Snapshot Now</button>
-        </div>
-      </div>
-      <div id="snap-out" class="terminal" style="display:none"></div>
-
-      <!-- List -->
-      <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
-        <div class="toolbar">
-          <div class="card-title" style="margin-bottom:0">Saved Snapshots</div>
-          <button class="btn btn-sm" onclick="loadSnapshots()">↺ Refresh</button>
-        </div>
-        <div id="snap-list" class="scroll-y mt8" style="flex:1"><div class="placeholder">Loading…</div></div>
-      </div>
-    </div>
-
-    <!-- ─── SETUP ─────────────────────────────────────── -->
-    <div id="tab-setup" class="tab-page">
-      <div class="card">
-        <div class="card-title">Setup Scripts</div>
-        <div id="scripts-list"><div class="placeholder">Loading…</div></div>
-      </div>
-      <div id="script-editor-area" style="display:none;flex:1;flex-direction:column;gap:8px">
-        <div class="toolbar">
-          <span id="editing-script-name" style="color:#fff;font-weight:500"></span>
-          <div class="toolbar-right">
-            <button class="btn btn-sm" onclick="closeScriptEditor()">✕ Close</button>
-            <button class="btn btn-sm btn-blue" onclick="saveScript()">Save</button>
-          </div>
-        </div>
-        <textarea id="script-editor" class="editor" style="flex:1;min-height:200px;resize:vertical"></textarea>
-        <div class="status-line" id="script-status"></div>
-      </div>
-    </div>
-
-    <!-- ─── CONFIG ────────────────────────────────────── -->
-    <div id="tab-config" class="tab-page" style="padding:0">
-      <div class="config-layout">
-
-        <!-- File list sidebar -->
-        <div class="config-files">
-          <div id="config-file-list"></div>
-        </div>
-
-        <!-- Editor pane -->
-        <div class="config-editor-pane">
-          <div class="config-editor-header">
-            <span class="config-editor-filename" id="config-editor-filename">Select a file →</span>
-            <div class="config-editor-actions">
-              <button class="btn btn-sm" onclick="reloadConfig()">↺ Reload</button>
-              <button class="btn btn-sm btn-blue" onclick="saveConfig()">Save</button>
-            </div>
-          </div>
-          <textarea id="config-editor" class="editor"
-                    oninput="cfgValidate()" spellcheck="false"
-                    placeholder="Select a file from the list to begin editing…"></textarea>
-          <div class="config-editor-footer">
-            <span id="json-status" class="status-line"></span>
-          </div>
-        </div>
-
-      </div>
     </div>
 
     <!-- ─── FILES ─────────────────────────────────────── -->
@@ -690,81 +476,279 @@
     <!-- ─── SETTINGS ─────────────────────────────────────── -->
     <div id="tab-settings" class="tab-page">
 
-      <!-- Color Theme -->
-      <div class="card">
-        <div class="card-title">Color Theme</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Choose a color theme for the dashboard. Changes apply immediately.</p>
-        <div id="theme-picker-grid" class="theme-grid"></div>
-        <div id="theme-custom-editor" class="theme-custom-editor" style="display:none"></div>
-        <span class="status-line" id="theme-status" style="margin-top:10px"></span>
+      <!-- Sub-navigation pills -->
+      <div class="settings-subnav" id="settings-subnav">
+        <button class="settings-subnav-btn active" onclick="settingsSubNav('general')">General</button>
+        <button class="settings-subnav-btn" onclick="settingsSubNav('keys')">API Keys</button>
+        <button class="settings-subnav-btn" onclick="settingsSubNav('skills')">Skills</button>
+        <button class="settings-subnav-btn" onclick="settingsSubNav('snapshots')">Snapshots</button>
+        <button class="settings-subnav-btn" onclick="settingsSubNav('setup')">Setup</button>
+        <button class="settings-subnav-btn" onclick="settingsSubNav('config')">Config</button>
+        <button class="settings-subnav-btn" onclick="settingsSubNav('voice')">Voice</button>
+        <button class="settings-subnav-btn" onclick="settingsSubNav('system')">System</button>
       </div>
 
-      <!-- Navigation Visibility -->
-      <div class="card">
-        <div class="card-title">Navigation Visibility</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Show or hide tabs in the navigation bar. Changes take effect after saving.</p>
-        <div id="settings-tabs-list"><div class="placeholder pulse">Loading…</div></div>
-        <div class="toolbar" style="margin-top:14px">
-          <button class="btn btn-sm btn-blue" onclick="settingsSave()">Save</button>
-          <span class="status-line" id="settings-status"></span>
+      <!-- ── General ──────────────────────────────────── -->
+      <div class="settings-panel active" id="sp-general">
+        <div class="card">
+          <div class="card-title">Color Theme</div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Choose a color theme for the dashboard. Changes apply immediately.</p>
+          <div id="theme-picker-grid" class="theme-grid"></div>
+          <div id="theme-custom-editor" class="theme-custom-editor" style="display:none"></div>
+          <span class="status-line" id="theme-status" style="margin-top:10px"></span>
+        </div>
+        <div class="card">
+          <div class="card-title">Navigation Visibility</div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Show or hide tabs in the navigation bar. Changes take effect after saving.</p>
+          <div id="settings-tabs-list"><div class="placeholder pulse">Loading…</div></div>
+          <div class="toolbar" style="margin-top:14px">
+            <button class="btn btn-sm btn-blue" onclick="settingsSave()">Save</button>
+            <span class="status-line" id="settings-status"></span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="display:flex;align-items:center;gap:8px">
+            Updates
+            <button class="btn btn-xs" onclick="updateCheck()" id="update-check-btn" title="Check for updates">↺ Check</button>
+          </div>
+          <div id="update-status">
+            <span class="placeholder pulse" style="font-size:12px">Checking for updates…</span>
+          </div>
         </div>
       </div>
 
-      <!-- Voice Services -->
-      <div class="card">
-        <div class="card-title">Voice Services</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
-          Configure STT and TTS endpoints for voice call mode. Any OpenAI-compatible audio API works
-          (local Whisper/Kokoro, OpenAI, etc.).
+      <!-- ── API Keys ─────────────────────────────────── -->
+      <div class="settings-panel" id="sp-keys">
+        <div class="toolbar">
+          <div class="card-title" style="margin-bottom:0">Providers</div>
+          <button class="btn btn-sm btn-blue" onclick="showAddProvider()">+ Add Provider</button>
+        </div>
+        <div id="providers-list" class="scroll-y" style="flex:1"><div class="placeholder">Loading…</div></div>
+        <div id="add-provider-form" style="display:none">
+          <div class="card mt8">
+            <div class="card-title">New Provider</div>
+            <div class="row">
+              <div class="field flex1"><div class="input-label">Name (e.g. groq)</div><input id="np-name" class="input" placeholder="groq"></div>
+              <div class="field flex1"><div class="input-label">Base URL</div><input id="np-url" class="input" placeholder="https://api.groq.com/openai/v1"></div>
+            </div>
+            <div class="field"><div class="input-label">API Key</div><input id="np-key" class="input" type="password" placeholder="sk-…"></div>
+            <div class="toolbar-right">
+              <button class="btn btn-sm" onclick="hideAddProvider()">Cancel</button>
+              <button class="btn btn-sm btn-blue" onclick="addProvider()">Add</button>
+            </div>
+            <div class="status-line mt8" id="np-status"></div>
+          </div>
+        </div>
+        <div class="toolbar" style="margin-top:4px">
+          <div class="card-title" style="margin-bottom:0">Tool APIs</div>
+          <button class="btn btn-sm btn-blue" onclick="showAddToolProvider()">+ Add Tool Provider</button>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin:0 0 6px">
+          API endpoints for local non-LLM tools (Stable Diffusion, ComfyUI, Kokoro, Whisper, etc.)
         </p>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <div style="display:flex;gap:8px;align-items:center">
-            <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">STT URL</label>
-            <input class="input" id="voice-stt-url" style="flex:1" placeholder="http://localhost:8000">
+        <div id="tool-providers-list" class="scroll-y" style="flex:1"><div class="placeholder">Loading…</div></div>
+        <div id="add-tool-provider-form" style="display:none">
+          <div class="card mt8">
+            <div class="card-title">New Tool Provider</div>
+            <div class="row">
+              <div class="field flex1"><div class="input-label">Name (e.g. comfyui)</div><input id="tp-name" class="input" placeholder="comfyui"></div>
+              <div class="field flex1"><div class="input-label">Base URL</div><input id="tp-url" class="input" placeholder="http://127.0.0.1:8188"></div>
+            </div>
+            <div class="field"><div class="input-label">API Key (optional)</div><input id="tp-key" class="input" type="password" placeholder="leave blank if not required"></div>
+            <div class="toolbar-right">
+              <button class="btn btn-sm" onclick="hideAddToolProvider()">Cancel</button>
+              <button class="btn btn-sm btn-blue" onclick="addToolProvider()">Add</button>
+            </div>
+            <div class="status-line mt8" id="tp-status"></div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">STT Model</label>
-            <input class="input" id="voice-stt-model" style="flex:1" placeholder="whisper-1">
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS URL</label>
-            <input class="input" id="voice-tts-url" style="flex:1" placeholder="http://localhost:8880">
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Model</label>
-            <input class="input" id="voice-tts-model" style="flex:1" placeholder="kokoro">
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Voice</label>
-            <input class="input" id="voice-tts-voice" style="flex:1" placeholder="af_heart">
-          </div>
-        </div>
-        <div class="toolbar" style="margin-top:14px">
-          <button class="btn btn-sm btn-blue" onclick="voiceSettingsSave()">Save</button>
-          <span class="status-line" id="voice-settings-status"></span>
         </div>
       </div>
 
-      <!-- System Tools -->
-      <div class="card">
-        <div class="card-title" style="display:flex;align-items:center;gap:8px">
-          System Tools
-          <button class="btn btn-xs" onclick="sysdepsRefresh()" id="sysdeps-refresh-btn" title="Re-check">↺ Check</button>
+      <!-- ── Skills ───────────────────────────────────── -->
+      <div class="settings-panel" id="sp-skills">
+        <div class="skills-header">
+          <div class="skills-mode-tabs">
+            <button class="skills-mode-btn active" id="skills-mode-installed" onclick="skillsSetMode('installed')">Installed</button>
+            <button class="skills-mode-btn" id="skills-mode-search" onclick="skillsSetMode('search')">Search Online</button>
+          </div>
+          <div id="skills-installed-bar" class="skills-bar">
+            <input id="skill-input" class="input flex1" placeholder="skill name or repo (e.g. openai-whisper)" style="max-width:260px">
+            <button class="btn btn-sm btn-blue" onclick="installSkill(false)">Install</button>
+            <button class="btn btn-sm btn-amber" onclick="installSkill(true)">Force</button>
+            <div style="flex:1"></div>
+            <input id="skill-filter" class="input" placeholder="Filter installed…" style="width:150px" oninput="filterSkills()">
+            <button class="btn btn-sm" onclick="loadSkills()">↺</button>
+          </div>
+          <div id="skills-search-bar" class="skills-bar" style="display:none">
+            <input id="skill-search-input" class="input flex1" placeholder="Search skills registry…" style="max-width:320px"
+                   onkeydown="if(event.key==='Enter') searchSkillsOnline()">
+            <button class="btn btn-sm btn-blue" onclick="searchSkillsOnline()">Search</button>
+            <div class="skills-flag-group">
+              <label class="skills-flag"><input type="checkbox" id="flag-official"> <span class="badge badge-green" style="font-size:9px">Official</span></label>
+              <label class="skills-flag"><input type="checkbox" id="flag-community"> <span class="badge badge-blue" style="font-size:9px">Community</span></label>
+              <label class="skills-flag"><input type="checkbox" id="flag-unknown"> <span class="badge" style="font-size:9px;background:var(--dim)">Unknown</span></label>
+            </div>
+          </div>
         </div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Dependencies required or recommended by this dashboard.</p>
-        <div id="sysdeps-list"><div class="placeholder pulse">Checking…</div></div>
-        <!-- Install output -->
-        <pre id="sysdeps-out" class="terminal" style="display:none;margin-top:8px;max-height:200px"></pre>
+        <div id="install-out" class="terminal" style="display:none"></div>
+        <div id="skills-grid" class="skills-grid" style="flex:1"><div class="placeholder">Loading…</div></div>
+        <div id="skill-detail-overlay" class="modal-overlay" style="display:none" onclick="closeSkillDetail(event)">
+          <div class="modal" style="max-width:640px" onclick="event.stopPropagation()">
+            <div class="modal-title" id="skill-detail-title"></div>
+            <div id="skill-detail-body" style="max-height:60vh;overflow-y:auto"></div>
+            <div class="modal-actions">
+              <button class="btn btn-sm" onclick="closeSkillDetail()">Close</button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Updates -->
-      <div class="card">
-        <div class="card-title" style="display:flex;align-items:center;gap:8px">
-          Updates
-          <button class="btn btn-xs" onclick="updateCheck()" id="update-check-btn" title="Check for updates">↺ Check</button>
+      <!-- ── Snapshots ────────────────────────────────── -->
+      <div class="settings-panel" id="sp-snapshots">
+        <div id="snap-warning" class="snap-warning" style="display:none"></div>
+        <div class="card snap-settings-card">
+          <div class="snap-settings-toggle" onclick="snapToggleSettings()">
+            <span>⚙ Snapshot Settings</span>
+            <span id="snap-settings-arrow" class="snap-arrow">▼</span>
+          </div>
+          <div id="snap-settings-body" style="display:none;padding-top:10px">
+            <div class="snap-settings-grid">
+              <label class="snap-label-text">Snapshot dir</label>
+              <div class="snap-path-with-btn">
+                <input id="snap-dir" class="input flex1" placeholder="/path/to/snapshots">
+                <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-dir','dir')">📁</button>
+              </div>
+              <label class="snap-label-text">Snapshot script</label>
+              <div class="snap-path-with-btn">
+                <input id="snap-script-create" class="input flex1" placeholder="/path/to/snapshot.sh">
+                <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-script-create','file')">📁</button>
+                <button class="btn btn-xs btn-blue" title="Edit script" onclick="snapEditScript('snap-script-create')">✏</button>
+              </div>
+              <label class="snap-label-text">Restore script</label>
+              <div class="snap-path-with-btn">
+                <input id="snap-script-restore" class="input flex1" placeholder="/path/to/restore.sh">
+                <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-script-restore','file')">📁</button>
+                <button class="btn btn-xs btn-blue" title="Edit script" onclick="snapEditScript('snap-script-restore')">✏</button>
+              </div>
+              <label class="snap-label-text">Paths to include<br><small style="font-weight:400;opacity:.7">used by tar fallback &amp; passed to scripts</small></label>
+              <div>
+                <div id="snap-paths-list" class="snap-paths-list"></div>
+                <button class="btn btn-xs" style="margin-top:6px" onclick="snapAddPath()">+ Add Path</button>
+              </div>
+            </div>
+            <div style="margin-top:10px">
+              <button class="btn btn-sm btn-blue" onclick="snapSaveSettings()">Save Settings</button>
+              <span id="snap-settings-status" class="status-line" style="margin-left:10px"></span>
+            </div>
+          </div>
         </div>
-        <div id="update-status">
-          <span class="placeholder pulse" style="font-size:12px">Checking for updates…</span>
+        <div class="card">
+          <div class="card-title">Create Snapshot</div>
+          <div class="row">
+            <input id="snap-label" class="input flex1" placeholder="label (optional, e.g. before-groq-test)" style="max-width:300px">
+            <button class="btn btn-amber" onclick="createSnapshot()">📷 Snapshot Now</button>
+          </div>
+        </div>
+        <div id="snap-out" class="terminal" style="display:none"></div>
+        <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+          <div class="toolbar">
+            <div class="card-title" style="margin-bottom:0">Saved Snapshots</div>
+            <button class="btn btn-sm" onclick="loadSnapshots()">↺ Refresh</button>
+          </div>
+          <div id="snap-list" class="scroll-y mt8" style="flex:1"><div class="placeholder">Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- ── Setup ────────────────────────────────────── -->
+      <div class="settings-panel" id="sp-setup">
+        <div class="card">
+          <div class="card-title">Setup Scripts</div>
+          <div id="scripts-list"><div class="placeholder">Loading…</div></div>
+        </div>
+        <div id="script-editor-area" style="display:none;flex:1;flex-direction:column;gap:8px">
+          <div class="toolbar">
+            <span id="editing-script-name" style="color:#fff;font-weight:500"></span>
+            <div class="toolbar-right">
+              <button class="btn btn-sm" onclick="closeScriptEditor()">✕ Close</button>
+              <button class="btn btn-sm btn-blue" onclick="saveScript()">Save</button>
+            </div>
+          </div>
+          <textarea id="script-editor" class="editor" style="flex:1;min-height:200px;resize:vertical"></textarea>
+          <div class="status-line" id="script-status"></div>
+        </div>
+      </div>
+
+      <!-- ── Config ───────────────────────────────────── -->
+      <div class="settings-panel" id="sp-config" style="padding:0;min-height:400px">
+        <div class="config-layout" style="flex:1">
+          <div class="config-files">
+            <div id="config-file-list"></div>
+          </div>
+          <div class="config-editor-pane">
+            <div class="config-editor-header">
+              <span class="config-editor-filename" id="config-editor-filename">Select a file →</span>
+              <div class="config-editor-actions">
+                <button class="btn btn-sm" onclick="reloadConfig()">↺ Reload</button>
+                <button class="btn btn-sm btn-blue" onclick="saveConfig()">Save</button>
+              </div>
+            </div>
+            <textarea id="config-editor" class="editor"
+                      oninput="cfgValidate()" spellcheck="false"
+                      placeholder="Select a file from the list to begin editing…"></textarea>
+            <div class="config-editor-footer">
+              <span id="json-status" class="status-line"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Voice ────────────────────────────────────── -->
+      <div class="settings-panel" id="sp-voice">
+        <div class="card">
+          <div class="card-title">Voice Services</div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
+            Configure STT and TTS endpoints for voice call mode. Any OpenAI-compatible audio API works
+            (local Whisper/Kokoro, OpenAI, etc.).
+          </p>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">STT URL</label>
+              <input class="input" id="voice-stt-url" style="flex:1" placeholder="http://localhost:8000">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">STT Model</label>
+              <input class="input" id="voice-stt-model" style="flex:1" placeholder="whisper-1">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS URL</label>
+              <input class="input" id="voice-tts-url" style="flex:1" placeholder="http://localhost:8880">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Model</label>
+              <input class="input" id="voice-tts-model" style="flex:1" placeholder="kokoro">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Voice</label>
+              <input class="input" id="voice-tts-voice" style="flex:1" placeholder="af_heart">
+            </div>
+          </div>
+          <div class="toolbar" style="margin-top:14px">
+            <button class="btn btn-sm btn-blue" onclick="voiceSettingsSave()">Save</button>
+            <span class="status-line" id="voice-settings-status"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── System ───────────────────────────────────── -->
+      <div class="settings-panel" id="sp-system">
+        <div class="card">
+          <div class="card-title" style="display:flex;align-items:center;gap:8px">
+            System Tools
+            <button class="btn btn-xs" onclick="sysdepsRefresh()" id="sysdeps-refresh-btn" title="Re-check">↺ Check</button>
+          </div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Dependencies required or recommended by this dashboard.</p>
+          <div id="sysdeps-list"><div class="placeholder pulse">Checking…</div></div>
+          <pre id="sysdeps-out" class="terminal" style="display:none;margin-top:8px;max-height:200px"></pre>
         </div>
       </div>
 
