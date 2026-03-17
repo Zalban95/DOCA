@@ -15,9 +15,13 @@ const SNAPSHOT_SCRIPT = process.env.SNAPSHOT_SCRIPT || path.join(HOME, 'snapshot
 const RESTORE_SCRIPT  = process.env.RESTORE_SCRIPT  || path.join(HOME, 'restore-agent.sh');
 const SNAPSHOT_DIR    = process.env.SNAPSHOT_DIR    || path.join(HOME, 'openclaw-snapshots');
 const PORT            = process.env.PORT            || 4242;
+const HTTPS_PORT      = process.env.HTTPS_PORT      || 4243;
 
 // Prefs stored next to the server entry point
 const PREFS_FILE = path.join(__dirname, '..', '.dashboard-prefs.json');
+
+// Self-signed certificate directory
+const CERTS_DIR = path.join(__dirname, '..', '.certs');
 
 // Multi-file config registry — editable config files surfaced in the UI
 const CONFIG_REGISTRY = {
@@ -55,7 +59,9 @@ module.exports = {
   RESTORE_SCRIPT,
   SNAPSHOT_DIR,
   PORT,
+  HTTPS_PORT,
   PREFS_FILE,
+  CERTS_DIR,
   CONFIG_REGISTRY,
   FM_ALLOWED_ROOTS,
   ALLOWED_SCRIPTS,
