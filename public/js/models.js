@@ -10,6 +10,7 @@ async function modelsInit() {
   modelsLoadList();
   nlmInit();
   hfInit();
+  if (typeof llamaInit === 'function') llamaInit();
   if (typeof servicesInit === 'function') servicesInit();
 }
 

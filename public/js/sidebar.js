@@ -12,10 +12,35 @@ async function pollStatus() {
     renderSystem(data.system || null);
     renderModels(data.models || [], data.loadedModels || []);
     renderHfModels(data.hfModels || []);
+    pollLlamaCppStatus();
     pollServicesStatus();
 
   } catch {
     document.getElementById('dot').className = 'dot';
+  }
+}
+
+async function pollLlamaCppStatus() {
+  const el = document.getElementById('s-llamacpp');
+  if (!el) return;
+  try {
+    const data = await apiFetch('/api/models/llamacpp/list');
+    const instances = data.instances || [];
+    const running = instances.filter(i => i.running);
+    if (!running.length) {
+      el.innerHTML = '<div class="placeholder">None running</div>';
+      return;
+    }
+    el.innerHTML = running.map(i =>
+      `<div class="model-item">
+        <span class="dot on" style="width:7px;height:7px;flex-shrink:0"></span>
+        <span class="model-name" title="${i.endpoint}">${i.name}</span>
+        <span class="model-sz">:${i.port}</span>
+       </div>`
+    ).join('');
+    if (typeof llamaLoadStatus === 'function') llamaLoadStatus();
+  } catch {
+    el.innerHTML = '<div class="placeholder">—</div>';
   }
 }
 

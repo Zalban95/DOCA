@@ -7,6 +7,7 @@ const { spawn } = require('child_process');
 
 const { COMPOSE_DIR } = require('./paths');
 const { run, sseHeaders, loadModelsPrefs } = require('./utils');
+const { getRunningInstances: getLlamaCppRunning } = require('./models-llamacpp');
 
 /** GET /api/status — system overview: Docker, GPU, CPU/RAM, Ollama, HuggingFace */
 async function handleStatus(req, res) {
@@ -90,7 +91,9 @@ async function handleStatus(req, res) {
     }
   } catch {}
 
-  res.json({ containers, gpu, system, models, loadedModels, hfModels, time: new Date().toISOString() });
+  const llamacppRunning = getLlamaCppRunning();
+
+  res.json({ containers, gpu, system, models, loadedModels, hfModels, llamacppRunning, time: new Date().toISOString() });
 }
 
 /** POST /api/action — start / stop / restart Docker Compose */

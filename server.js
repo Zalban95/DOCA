@@ -27,9 +27,10 @@ const codeTools    = require('./modules/code-tools');
 const claude       = require('./modules/claude');
 const chat         = require('./modules/chat');
 const models       = require('./modules/models');
-const modelsOllama = require('./modules/models-ollama');
-const modelsHf     = require('./modules/models-hf');
-const modelsLocal  = require('./modules/models-local');
+const modelsOllama   = require('./modules/models-ollama');
+const modelsLlamaCpp = require('./modules/models-llamacpp');
+const modelsHf       = require('./modules/models-hf');
+const modelsLocal    = require('./modules/models-local');
 const systemTools  = require('./modules/system-tools');
 const docker       = require('./modules/docker');
 const services     = require('./modules/services');
@@ -142,6 +143,16 @@ app.get ('/api/models/ollama/running', modelsOllama.handleRunning);
 app.get ('/api/models/ollama/list',    modelsOllama.handleList);
 app.post('/api/models/ollama/pull',    modelsOllama.handlePull);
 app.post('/api/models/ollama/delete',  modelsOllama.handleDelete);
+
+// ─── Routes: llama.cpp Servers ────────────────────────────────────────────────
+app.get   ('/api/models/llamacpp/list',    modelsLlamaCpp.handleList);
+app.get   ('/api/models/llamacpp/status',  modelsLlamaCpp.handleStatus);
+app.post  ('/api/models/llamacpp/config',  modelsLlamaCpp.handleConfig);
+app.post  ('/api/models/llamacpp/start',   modelsLlamaCpp.handleStart);
+app.post  ('/api/models/llamacpp/stop',    modelsLlamaCpp.handleStop);
+app.post  ('/api/models/llamacpp/restart', modelsLlamaCpp.handleRestart);
+app.post  ('/api/models/llamacpp/health',  modelsLlamaCpp.handleHealth);
+app.delete('/api/models/llamacpp/:id',     modelsLlamaCpp.handleDelete);
 
 // ─── Routes: Local Non-LLM Models ────────────────────────────────────────────
 app.get ('/api/models/local/settings', modelsLocal.handleGetSettings);

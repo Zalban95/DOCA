@@ -97,6 +97,12 @@
       <div id="s-hf-models"><div class="placeholder">Loading…</div></div>
     </div>
 
+    <!-- llama.cpp servers -->
+    <div class="sidebar-section">
+      <div class="sec-label">llama.cpp Servers</div>
+      <div id="s-llamacpp"><div class="placeholder">Loading…</div></div>
+    </div>
+
     <!-- Running inference services -->
     <div class="sidebar-section grow">
       <div class="sec-label">Inference Services</div>
@@ -401,6 +407,19 @@
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- llama.cpp Servers -->
+      <div class="card">
+        <div class="card-title" style="display:flex;align-items:center;gap:10px">
+          llama.cpp Servers
+          <button class="btn btn-xs btn-blue" onclick="llamaAddInstance()">+ Add Instance</button>
+          <button class="btn btn-xs" onclick="llamaLoadList()" title="Refresh">↺</button>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin:0 0 8px">
+          Managed <code>llama-server</code> processes. Each instance exposes an OpenAI-compatible API at <code>/v1</code> on the internal network.
+        </p>
+        <div id="llamacpp-grid"><div class="placeholder pulse" style="padding:12px">Loading…</div></div>
       </div>
 
       <!-- Inference Services -->
@@ -960,6 +979,7 @@
 <script src="js/chat.js"></script>
 <script src="js/terminal.js"></script>
 <script src="js/models.js"></script>
+<script src="js/llamacpp.js"></script>
 <script src="js/services.js"></script>
 <script src="js/docker.js"></script>
 <script src="js/sudo.js"></script>

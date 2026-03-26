@@ -109,3 +109,29 @@
 .models-tool-config {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
+
+/* ── llama.cpp Servers ─────────────────────────────── */
+.llamacpp-row {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg2);
+  border-left: 3px solid var(--border);
+  transition: border-left-color var(--t-fast);
+}
+.llamacpp-row:hover { border-left-color: var(--teal); }
+.llamacpp-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.llamacpp-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
