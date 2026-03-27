@@ -495,6 +495,8 @@ function hfDownload() {
   if (barFil) barFil.style.width = '0%';
   if (pct)    pct.textContent = '';
 
+  let _hfLines = [];
+
   fetch('/api/models/hf/download', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -508,9 +510,27 @@ function hfDownload() {
         if (!line.startsWith('data: ')) return;
         try {
           const obj = JSON.parse(line.slice(6));
-          if (obj.status) {
-            if (out) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
-            // Parse tqdm percentage from CLI output (e.g. "  5%|▌| 248M/4.67G")
+          if (obj.status && out) {
+            const chunks = obj.status.split('\r');
+            chunks.forEach((chunk, i) => {
+              if (i > 0) {
+                _hfLines[_hfLines.length - 1] = chunk;
+              } else {
+                const newlines = chunk.split('\n');
+                if (_hfLines.length)
+                  _hfLines[_hfLines.length - 1] += newlines[0];
+                else
+                  _hfLines.push(newlines[0]);
+                for (let j = 1; j < newlines.length; j++)
+                  _hfLines.push(newlines[j]);
+              }
+            });
+            const maxVisible = 200;
+            const visible = _hfLines.length > maxVisible
+              ? _hfLines.slice(-maxVisible) : _hfLines;
+            out.textContent = visible.join('\n');
+            out.scrollTop = out.scrollHeight;
+
             const pctMatches = obj.status.match(/(\d+)%/g);
             if (pctMatches) {
               const p = parseInt(pctMatches[pctMatches.length - 1]);

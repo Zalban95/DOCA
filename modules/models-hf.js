@@ -125,25 +125,25 @@ function handleDownload(req, res) {
   const sseWrite = d => { try { res.write(`data: ${JSON.stringify(d)}\n\n`); } catch {} };
 
   const cleanCache = cache ? cache.replace(/\/+/g, '/') : '';
-  const pyParts = [
-    'from huggingface_hub import snapshot_download',
-    `result = snapshot_download(repo_id=${JSON.stringify(repoId)}` +
-      (token      ? `, token=${JSON.stringify(token)}`         : '') +
-      (cleanCache ? `, cache_dir=${JSON.stringify(cleanCache)}`: '') +
-    ')',
-    'print("Downloaded to:", result)',
-  ];
-  const pyScript = pyParts.join('; ');
-  const cmdStr   = `python3 -c "${pyScript.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
-  sseWrite({ status: `Downloading ${repoId}…\n$ huggingface-cli download ${repoId}${cleanCache ? ' --cache-dir ' + cleanCache : ''}\n` });
+  const args = ['download', repoId];
+  if (cleanCache) args.push('--cache-dir', cleanCache);
+
+  sseWrite({ status: `Downloading ${repoId}…\n$ huggingface-cli ${args.join(' ')}\n\n` });
 
   const hfPath = `/usr/bin:/usr/local/bin:${home}/.local/bin:/bin`;
-  const child  = spawn('bash', ['-c', cmdStr], {
+  const child  = spawn('huggingface-cli', args, {
     cwd: home,
-    env: { ...process.env, HOME: home,
-           PATH: `${hfPath}:${process.env.PATH || ''}`,
-           ...(token ? { HF_TOKEN: token } : {}) },
+    env: {
+      ...process.env,
+      HOME: home,
+      PATH: `${hfPath}:${process.env.PATH || ''}`,
+      PYTHONUNBUFFERED: '1',
+      HF_HUB_DISABLE_PROGRESS_BARS: '0',
+      TQDM_NCOLS: '80',
+      TQDM_MININTERVAL: '0.5',
+      ...(token ? { HF_TOKEN: token } : {}),
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -151,14 +151,14 @@ function handleDownload(req, res) {
   child.stderr.on('data', d => sseWrite({ status: d.toString() }));
   child.on('close', (code, signal) => {
     const ok  = code === 0;
-    const msg = ok ? '✓ Done'
-      : code !== null ? `✗ Exit ${code}`
-      : `✗ Killed by signal (${signal || 'unknown'})`;
+    const msg = ok ? '\n✓ Done'
+      : code !== null ? `\n✗ Exit ${code}`
+      : `\n✗ Killed by signal (${signal || 'unknown'})`;
     sseWrite({ done: true, ok, status: msg });
     res.end();
   });
   child.on('error', e => {
-    sseWrite({ done: true, ok: false, status: `Error: ${e.message}` });
+    sseWrite({ done: true, ok: false, status: `Error: ${e.message}. Is huggingface-cli installed?` });
     res.end();
   });
   res.on('close', () => { if (!child.killed) child.kill(); });
