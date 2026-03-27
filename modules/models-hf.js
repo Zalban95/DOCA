@@ -59,7 +59,8 @@ function handleStatus(req, res) {
 function handleList(req, res) {
   const { env, home, mp } = hfEnv();
 
-  exec(`python3 -m huggingface_hub.commands.huggingface_cli scan-cache --json 2>/dev/null`, { env, timeout: 10000, maxBuffer: 5 * 1024 * 1024 }, (err, stdout) => {
+  const scanPy = `import json; from huggingface_hub import scan_cache_dir; info = scan_cache_dir(); print(json.dumps({"repos": [{"repo_id": r.repo_id, "repo_type": r.repo_type, "size_on_disk": r.size_on_disk, "nb_files": r.nb_files, "last_modified": r.last_accessed} for r in info.repos]}))`;
+  exec(`python3 -u -c '${scanPy}' 2>/dev/null`, { env, timeout: 10000, maxBuffer: 5 * 1024 * 1024 }, (err, stdout) => {
     if (!err && stdout.trim()) {
       try {
         const data  = JSON.parse(stdout.trim());
@@ -126,15 +127,19 @@ function handleDownload(req, res) {
 
   const cleanCache = cache ? cache.replace(/\/+/g, '/') : '';
 
-  // Use python3 -m to bypass potentially stale /usr/bin/huggingface-cli wrapper
-  const dlArgs = ['-u', '-m', 'huggingface_hub.commands.huggingface_cli', 'download', repoId];
-  if (cleanCache) dlArgs.push('--cache-dir', cleanCache);
+  const pyScript = [
+    'from huggingface_hub import snapshot_download',
+    `snapshot_download(${JSON.stringify(repoId)}` +
+      (token      ? `, token=${JSON.stringify(token)}`          : '') +
+      (cleanCache ? `, cache_dir=${JSON.stringify(cleanCache)}` : '') +
+    ')',
+  ].join('\n');
 
   const displayCmd = `huggingface-cli download ${repoId}${cleanCache ? ' --cache-dir ' + cleanCache : ''}`;
   sseWrite({ status: `Downloading ${repoId}…\n$ ${displayCmd}\n\n` });
 
   const hfPath = `/usr/bin:/usr/local/bin:${home}/.local/bin:/bin`;
-  const child  = spawn('python3', dlArgs, {
+  const child  = spawn('python3', ['-u', '-c', pyScript], {
     cwd: home,
     env: {
       ...process.env,
