@@ -58,9 +58,11 @@ function handleStatus(req, res) {
 /** GET /api/models/hf/list */
 function handleList(req, res) {
   const { env, home, mp } = hfEnv();
+  const cacheDir = mp.hf?.cacheDir || path.join(home, '.cache', 'huggingface', 'hub');
 
-  const scanPy = `import json; from huggingface_hub import scan_cache_dir; info = scan_cache_dir(); print(json.dumps({"repos": [{"repo_id": r.repo_id, "repo_type": r.repo_type, "size_on_disk": r.size_on_disk, "nb_files": r.nb_files, "last_modified": r.last_accessed} for r in info.repos]}))`;
-  exec(`python3 -u -c '${scanPy}' 2>/dev/null`, { env, timeout: 10000, maxBuffer: 5 * 1024 * 1024 }, (err, stdout) => {
+  // Try Python API with the correct cache dir, then fall back to filesystem scan
+  const scanPy = `import json,sys; from huggingface_hub import scan_cache_dir; info = scan_cache_dir(${JSON.stringify(cacheDir)}); print(json.dumps({"repos": [{"repo_id": r.repo_id, "repo_type": r.repo_type, "size_on_disk": r.size_on_disk, "nb_files": r.nb_files, "last_modified": str(r.last_accessed)} for r in info.repos]}))`;
+  exec(`python3 -u -c ${JSON.stringify(scanPy)} 2>/dev/null`, { env, timeout: 10000, maxBuffer: 5 * 1024 * 1024 }, (err, stdout) => {
     if (!err && stdout.trim()) {
       try {
         const data  = JSON.parse(stdout.trim());
@@ -74,8 +76,7 @@ function handleList(req, res) {
         return res.json({ repos });
       } catch {}
     }
-    // Fallback: scan cache directory
-    const cacheDir = mp.hf?.cacheDir || path.join(home, '.cache', 'huggingface', 'hub');
+    // Fallback: scan cache directory on filesystem
     try {
       if (!fs.existsSync(cacheDir)) return res.json({ repos: [] });
       const entries = fs.readdirSync(cacheDir);
@@ -127,13 +128,60 @@ function handleDownload(req, res) {
 
   const cleanCache = cache ? cache.replace(/\/+/g, '/') : '';
 
-  const pyScript = [
-    'from huggingface_hub import snapshot_download',
-    `snapshot_download(${JSON.stringify(repoId)}` +
-      (token      ? `, token=${JSON.stringify(token)}`          : '') +
-      (cleanCache ? `, cache_dir=${JSON.stringify(cleanCache)}` : '') +
-    ')',
-  ].join('\n');
+  // Python wrapper that reports per-file progress explicitly to stdout
+  const pyScript = `
+import sys, os, threading, time
+os.environ['HF_HUB_DISABLE_PROGRESS_BARS'] = '1'
+from huggingface_hub import snapshot_download, list_repo_files
+
+repo_id = ${JSON.stringify(repoId)}
+token = ${JSON.stringify(token)} or None
+cache_dir = ${JSON.stringify(cleanCache)} or None
+
+try:
+    files = list_repo_files(repo_id, token=token)
+    total = len(files)
+    print(f"Repository has {total} files", flush=True)
+except Exception:
+    total = None
+    print("Fetching file list...", flush=True)
+
+done_flag = threading.Event()
+start = time.time()
+
+def monitor():
+    if not cache_dir:
+        return
+    target = os.path.join(cache_dir, "models--" + repo_id.replace("/", "--"))
+    last_msg = ""
+    while not done_flag.is_set():
+        done_flag.wait(3)
+        try:
+            sz = sum(
+                os.path.getsize(os.path.join(dp, f))
+                for dp, _, fns in os.walk(target)
+                for f in fns
+            )
+            elapsed = time.time() - start
+            msg = f"Cache size: {sz / 1e9:.2f} GB  ({elapsed:.0f}s elapsed)"
+            if msg != last_msg:
+                print(msg, flush=True)
+                last_msg = msg
+        except Exception:
+            pass
+
+t = threading.Thread(target=monitor, daemon=True)
+t.start()
+
+try:
+    result = snapshot_download(repo_id, token=token, cache_dir=cache_dir)
+    done_flag.set()
+    print(f"\\nDownloaded to: {result}", flush=True)
+except Exception as e:
+    done_flag.set()
+    print(f"\\nError: {e}", file=sys.stderr, flush=True)
+    sys.exit(1)
+`.trim();
 
   const displayCmd = `huggingface-cli download ${repoId}${cleanCache ? ' --cache-dir ' + cleanCache : ''}`;
   sseWrite({ status: `Downloading ${repoId}…\n$ ${displayCmd}\n\n` });
@@ -146,9 +194,6 @@ function handleDownload(req, res) {
       HOME: home,
       PATH: `${hfPath}:${process.env.PATH || ''}`,
       PYTHONUNBUFFERED: '1',
-      HF_HUB_DISABLE_PROGRESS_BARS: '0',
-      TQDM_NCOLS: '80',
-      TQDM_MININTERVAL: '0.5',
       ...(token ? { HF_TOKEN: token } : {}),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
