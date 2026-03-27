@@ -78,7 +78,8 @@ function handleRead(req, res) {
   try {
     const s = fs.statSync(filePath);
     if (s.isDirectory()) return res.status(400).json({ error: 'Is a directory' });
-    if (s.size > 2 * 1024 * 1024) return res.status(413).json({ error: 'File too large (>2MB)' });
+    const MAX_READ = 100 * 1024 * 1024; // 100 MB
+    if (s.size > MAX_READ) return res.status(413).json({ error: `File too large (${(s.size / 1e6).toFixed(1)} MB — limit is 100 MB)` });
     const content = fs.readFileSync(filePath, 'utf8');
     res.json({ content, size: s.size, mtime: s.mtime.toISOString() });
   } catch (e) { res.status(500).json({ error: e.message }); }

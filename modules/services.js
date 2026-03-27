@@ -5,7 +5,7 @@ const os   = require('os');
 const path = require('path');
 const { exec, execSync, spawn } = require('child_process');
 
-const { CONFIG_PATH, PREFS_FILE } = require('./paths');
+const { PREFS_FILE } = require('./paths');
 const { sseHeaders, loadPrefs, loadModelsPrefs } = require('./utils');
 
 const INFERENCE_SERVICES = [
@@ -128,14 +128,6 @@ function handleStart(req, res) {
     const msg = ok ? `✓ ${svc.label} started on http://localhost:${svc.port}`
       : code !== null ? `✗ Exit ${code}` : `✗ Killed (${signal || 'unknown'})`;
     sseWrite({ done: true, ok, status: msg });
-    if (ok) {
-      try {
-        const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-        if (!cfg.toolProviders) cfg.toolProviders = {};
-        cfg.toolProviders[id] = { baseUrl: `http://localhost:${svc.port}`, apiKey: '' };
-        fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
-      } catch {}
-    }
     res.end();
   });
   child.on('error', e => { sseWrite({ done: true, ok: false, status: `Error: ${e.message}` }); res.end(); });

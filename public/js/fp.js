@@ -98,15 +98,12 @@ async function _fpLoadDir(path) {
       return a.name.localeCompare(b.name);
     });
 
-    // Filter: if mode === 'dir', only show directories
-    const shown = _fpMode === 'dir' ? entries.filter(e => e.isDir) : entries;
-
-    if (!shown.length) {
+    if (!entries.length) {
       list.innerHTML = '<div class="placeholder" style="padding:12px">Empty directory</div>';
       return;
     }
 
-    list.innerHTML = shown.map(e => {
+    list.innerHTML = entries.map(e => {
       const full = `${path}/${e.name}`.replace('//', '/');
       const safe = full.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
@@ -117,7 +114,9 @@ async function _fpLoadDir(path) {
           <span class="fp-item-name">${e.name}</span>
         </div>`;
       } else {
-        return `<div class="fp-item fp-file" onclick="document.getElementById('fp-selected').value='${safe}'">
+        const selectable = _fpMode === 'file';
+        return `<div class="fp-item fp-file ${selectable ? '' : 'fp-file-hint'}"
+                     ${selectable ? `onclick="document.getElementById('fp-selected').value='${safe}'"` : ''}>
           <span class="fp-item-icon">${_fpFileIcon(e.name)}</span>
           <span class="fp-item-name">${e.name}</span>
           <span class="fp-item-size">${e.size ? _fpFmtSize(e.size) : ''}</span>
@@ -154,7 +153,24 @@ function _fpRenderBreadcrumb(path) {
 
 function _fpFileIcon(name) {
   const ext = name.split('.').pop().toLowerCase();
-  const map  = { sh: '⚡', yml: '⚙', yaml: '⚙', json: '{}', md: '📝', txt: '📄', py: '🐍', js: '🟨', ts: '🔷', log: '📋' };
+  const map = {
+    sh: '⚡', yml: '⚙', yaml: '⚙', json: '{}', md: '📝', txt: '📄',
+    py: '🐍', js: '📜', ts: '📜', log: '📋', conf: '⚙', cfg: '⚙', env: '🔑',
+    html: '🌐', css: '🎨', xml: '🌐', toml: '⚙', ini: '⚙',
+    gz: '📦', tar: '📦', zip: '📦', '7z': '📦', rar: '📦', xz: '📦', bz2: '📦', zst: '📦',
+    deb: '📦', rpm: '📦', pkg: '📦', appimage: '📦',
+    jpg: '🖼', jpeg: '🖼', png: '🖼', gif: '🖼', svg: '🖼', webp: '🖼', avif: '🖼', bmp: '🖼', ico: '🖼', tiff: '🖼',
+    mp4: '🎬', webm: '🎬', mkv: '🎬', mov: '🎬', avi: '🎬', m4v: '🎬',
+    mp3: '🎵', wav: '🎵', flac: '🎵', aac: '🎵', ogg: '🎵', opus: '🎵', m4a: '🎵',
+    pdf: '📕', doc: '📘', docx: '📘', xls: '📗', xlsx: '📗', ppt: '📙', pptx: '📙', csv: '📊',
+    gguf: '🧠', bin: '⬛', safetensors: '🧠', onnx: '🧠', pt: '🧠', pth: '🧠',
+    stl: '🧊', obj: '🧊', step: '🧊', stp: '🧊', gcode: '🧊',
+    iso: '💿', img: '💿', dmg: '💿',
+    db: '🗄', sqlite: '🗄', sql: '🗄',
+    bak: '♻', tmp: '♻', swp: '♻',
+    so: '⬛', dll: '⬛', exe: '⬛', o: '⬛', a: '⬛',
+    c: '📜', cpp: '📜', h: '📜', hpp: '📜', rs: '📜', go: '📜', java: '📜', rb: '📜', lua: '📜',
+  };
   return map[ext] || '📄';
 }
 

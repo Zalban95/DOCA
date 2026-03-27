@@ -1,10 +1,9 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — API KEYS + TOOL PROVIDERS
+   OPENCLAW PANEL — API KEYS
    ═══════════════════════════════════════════════════════ */
 
 async function loadKeys() {
   keysLoadProviders();
-  keysLoadToolProviders();
 }
 
 /* ── LLM Providers ────────────────────────────────────── */
@@ -77,81 +76,6 @@ async function addProvider() {
     setStatus(status, `✓ Added ${name}`, 'ok');
     hideAddProvider();
     setTimeout(keysLoadProviders, 500);
-  } catch (e) {
-    setStatus(status, `✗ ${e.message}`, 'err');
-  }
-}
-
-/* ── Tool Providers (non-LLM) ─────────────────────────── */
-
-async function keysLoadToolProviders() {
-  const list = document.getElementById('tool-providers-list');
-  if (!list) return;
-  try {
-    const data      = await apiFetch('/api/keys/tool-providers');
-    const providers = data.providers || {};
-    if (!Object.keys(providers).length) {
-      list.innerHTML = '<div class="placeholder">No tool providers configured</div>';
-      return;
-    }
-    list.innerHTML = Object.entries(providers).map(([name, p]) => `
-      <div class="provider-card ${p.hasKey ? 'has-key' : 'no-key'}">
-        <div class="provider-header">
-          <span class="provider-name">${name}</span>
-          <span class="provider-badge ${p.hasKey ? 'ok' : 'no'}">${p.hasKey ? 'KEY SET' : 'NO KEY'}</span>
-        </div>
-        ${p.baseUrl ? `<div class="provider-models" style="font-size:10px">${p.baseUrl}</div>` : ''}
-        <div class="provider-key-row">
-          <input class="input" type="password" id="tkey-${name}" placeholder="${p.apiKeyMasked || 'Enter API key (optional)…'}">
-          <button class="btn btn-sm btn-green" onclick="saveToolProviderKey('${name}')">Save Key</button>
-          <button class="btn btn-sm btn-red"   onclick="deleteToolProvider('${name}')">✕</button>
-        </div>
-        <div class="status-line mt4" id="tkey-status-${name}"></div>
-      </div>
-    `).join('');
-  } catch (e) {
-    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
-  }
-}
-
-async function saveToolProviderKey(name) {
-  const input  = document.getElementById(`tkey-${name}`);
-  const status = document.getElementById(`tkey-status-${name}`);
-  const apiKey = input.value.trim();
-  if (!apiKey) { setStatus(status, 'Enter a key first', 'err'); return; }
-  try {
-    await apiFetch('/api/keys/tool-providers', { method: 'POST', body: { provider: name, apiKey } });
-    setStatus(status, '✓ Saved', 'ok');
-    input.value = '';
-    setTimeout(keysLoadToolProviders, 1500);
-  } catch (e) {
-    setStatus(status, `✗ ${e.message}`, 'err');
-  }
-}
-
-function deleteToolProvider(name) {
-  appConfirm(`Remove tool provider "${name}"?`, async () => {
-    try {
-      await apiFetch(`/api/keys/tool-providers/${name}`, { method: 'DELETE' });
-      keysLoadToolProviders();
-    } catch (e) { alert(`Error: ${e.message}`); }
-  });
-}
-
-function showAddToolProvider() { document.getElementById('add-tool-provider-form').style.display = 'block'; }
-function hideAddToolProvider() { document.getElementById('add-tool-provider-form').style.display = 'none'; }
-
-async function addToolProvider() {
-  const name    = document.getElementById('tp-name').value.trim();
-  const baseUrl = document.getElementById('tp-url').value.trim();
-  const apiKey  = document.getElementById('tp-key').value.trim();
-  const status  = document.getElementById('tp-status');
-  if (!name || !baseUrl) { setStatus(status, 'Name and URL required', 'err'); return; }
-  try {
-    await apiFetch('/api/keys/tool-providers/add', { method: 'POST', body: { name, baseUrl, apiKey } });
-    setStatus(status, `✓ Added ${name}`, 'ok');
-    hideAddToolProvider();
-    setTimeout(keysLoadToolProviders, 500);
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
   }

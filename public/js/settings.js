@@ -263,27 +263,29 @@ function _escHtml(str) {
 /* ── Update Checker ──────────────────────────────────── */
 
 async function updateCheck() {
-  const el = document.getElementById('update-status');
-  const badge = document.getElementById('update-badge');
-  const btn = document.getElementById('update-check-btn');
+  const el      = document.getElementById('update-status');
+  const badge   = document.getElementById('update-badge');
+  const btn     = document.getElementById('update-check-btn');
+  const pullBtn = document.getElementById('update-pull-btn');
   if (btn) btn.disabled = true;
   if (el) el.innerHTML = '<span class="placeholder pulse" style="font-size:12px">Checking for updates…</span>';
 
   try {
-    const data = await apiFetch('/api/update-check');
+    const data = await apiFetch('/api/update-check?force=1');
     if (data.updateAvailable) {
       if (el) el.innerHTML = `<div class="update-info">
         <strong style="color:var(--amber)">Update available!</strong><br>
         Current: <code>${_escHtml(data.current)}</code> → Latest: <code>${_escHtml(data.latest)}</code><br>
-        <a href="${_escHtml(data.repo)}/releases" target="_blank" rel="noopener">View release notes ↗</a><br>
-        <span style="font-size:11px;color:var(--muted)">Run <code>git pull</code> in the DOCA directory, then restart the server.</span>
+        <a href="${_escHtml(data.repo)}/releases" target="_blank" rel="noopener">View release notes ↗</a>
       </div>`;
       if (badge) { badge.style.display = 'inline-block'; badge.title = `Update: v${data.latest} available`; }
+      if (pullBtn) pullBtn.style.display = '';
     } else {
       if (el) el.innerHTML = `<div class="update-info" style="color:var(--green)">
         ✓ Up to date — <code>${_escHtml(data.current)}</code>
       </div>`;
       if (badge) badge.style.display = 'none';
+      if (pullBtn) pullBtn.style.display = 'none';
     }
   } catch (e) {
     if (el) el.innerHTML = `<div class="update-info" style="color:var(--red)">
@@ -292,6 +294,67 @@ async function updateCheck() {
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+
+async function updatePull() {
+  const btn = document.getElementById('update-pull-btn');
+  const log = document.getElementById('update-log');
+  const el  = document.getElementById('update-status');
+  if (btn) btn.disabled = true;
+  if (log) { log.style.display = 'block'; log.textContent = ''; }
+
+  try {
+    const res = await fetch('/api/update', { method: 'POST' });
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    const read = async () => {
+      const { done, value } = await reader.read();
+      if (done) return;
+      decoder.decode(value).split('\n').forEach(line => {
+        if (!line.startsWith('data: ')) return;
+        try {
+          const obj = JSON.parse(line.slice(6));
+          if (obj.status && log) { log.textContent += obj.status; log.scrollTop = log.scrollHeight; }
+          if (obj.done) {
+            if (obj.ok) {
+              if (el) el.innerHTML = `<div class="update-info" style="color:var(--green)">
+                ✓ Update pulled successfully. <strong>Restart the server</strong> to apply.
+              </div>`;
+            }
+            if (btn) btn.disabled = false;
+          }
+        } catch {}
+      });
+      await read();
+    };
+    await read();
+  } catch (e) {
+    if (log) log.textContent += `\nError: ${e.message}`;
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function restartDoca() {
+  const btn = document.getElementById('restart-btn');
+  if (!confirm('Restart the DOCA server? The page will reload once it comes back.')) return;
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ Restarting…'; }
+
+  try {
+    await fetch('/api/restart', { method: 'POST' });
+  } catch {}
+
+  const poll = () => {
+    setTimeout(async () => {
+      try {
+        await fetch('/api/status');
+        location.reload();
+      } catch {
+        poll();
+      }
+    }, 1500);
+  };
+  poll();
 }
 
 /* ── Theme Picker ────────────────────────────────────── */

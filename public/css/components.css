@@ -690,6 +690,7 @@
 .fp-item-icon  { flex-shrink: 0; font-size: 14px; }
 .fp-item-name  { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fp-item-size  { font-size: 10px; color: var(--muted); flex-shrink: 0; }
+.fp-file-hint  { opacity: 0.35; cursor: default; pointer-events: none; }
 .fp-footer {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 14px; border-top: 1px solid var(--border); flex-shrink: 0;

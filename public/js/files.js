@@ -296,10 +296,21 @@ function fmClickRow(event, path, isDir) {
 function fmDblClick(path, isDir) {
   if (isDir) {
     fmNavigate(path);
+    return;
+  }
+  const name = path.split('/').pop();
+  const mt   = fmMediaType(name);
+  if (mt) { fmPreviewFile(path, mt); return; }
+
+  const entry = fm.entries.find(e => `${fm.cwd}/${e.name}`.replace('//', '/') === path);
+  const size  = entry?.size || 0;
+  const SIZE_WARN = 10 * 1024 * 1024; // 10 MB
+
+  if (size > SIZE_WARN) {
+    const sizeMB = (size / 1e6).toFixed(1);
+    appConfirm(`This file is ${sizeMB} MB. Open as text anyway?`, () => fmOpenEditor(path));
   } else {
-    const mt = fmMediaType(path.split('/').pop());
-    if (mt) fmPreviewFile(path, mt);
-    else fmOpenEditor(path);
+    fmOpenEditor(path);
   }
 }
 
@@ -710,12 +721,21 @@ function fmFileIcon(name) {
     json: '{}', yml: '⚙', yaml: '⚙', sh: '⚡', md: '📝',
     txt: '📄', log: '📋', py: '🐍', js: '📜', ts: '📜',
     html: '🌐', css: '🎨', env: '🔑', conf: '⚙', cfg: '⚙',
-    gz: '📦', tar: '📦', zip: '📦', bak: '♻',
+    xml: '🌐', toml: '⚙', ini: '⚙',
+    gz: '📦', tar: '📦', zip: '📦', '7z': '📦', rar: '📦', xz: '📦', bz2: '📦', zst: '📦',
+    deb: '📦', rpm: '📦', pkg: '📦', appimage: '📦',
+    bak: '♻', tmp: '♻', swp: '♻',
     jpg: '🖼', jpeg: '🖼', png: '🖼', gif: '🖼', svg: '🖼',
-    webp: '🖼', avif: '🖼', bmp: '🖼',
-    mp4: '🎬', webm: '🎬', mkv: '🎬', mov: '🎬', avi: '🎬',
-    mp3: '🎵', wav: '🎵', flac: '🎵', aac: '🎵',
-    stl: '🧊', obj: '🧊', step: '🧊', stp: '🧊',
+    webp: '🖼', avif: '🖼', bmp: '🖼', ico: '🖼', tiff: '🖼',
+    mp4: '🎬', webm: '🎬', mkv: '🎬', mov: '🎬', avi: '🎬', m4v: '🎬',
+    mp3: '🎵', wav: '🎵', flac: '🎵', aac: '🎵', ogg: '🎵', opus: '🎵', m4a: '🎵',
+    pdf: '📕', doc: '📘', docx: '📘', xls: '📗', xlsx: '📗', ppt: '📙', pptx: '📙', csv: '📊',
+    gguf: '🧠', bin: '⬛', safetensors: '🧠', onnx: '🧠', pt: '🧠', pth: '🧠',
+    stl: '🧊', obj: '🧊', step: '🧊', stp: '🧊', gcode: '🧊',
+    iso: '💿', img: '💿', dmg: '💿',
+    db: '🗄', sqlite: '🗄', sql: '🗄',
+    so: '⬛', dll: '⬛', exe: '⬛', o: '⬛', a: '⬛',
+    c: '📜', cpp: '📜', h: '📜', hpp: '📜', rs: '📜', go: '📜', java: '📜', rb: '📜', lua: '📜',
   };
   return map[ext] || '📄';
 }

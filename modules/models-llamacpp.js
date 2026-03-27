@@ -287,11 +287,15 @@ async function handleHealth(req, res) {
 function registerEndpoint(inst) {
   try {
     const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-    if (!cfg.toolProviders) cfg.toolProviders = {};
-    cfg.toolProviders[`llamacpp-${inst.id}`] = {
-      baseUrl: `http://${INTERNAL_HOST}:${inst.port}`,
+    if (!cfg.models) cfg.models = {};
+    if (!cfg.models.providers) cfg.models.providers = {};
+    cfg.models.providers[`llamacpp-${inst.id}`] = {
+      baseUrl: `http://${INTERNAL_HOST}:${inst.port}/v1`,
       apiKey:  '',
+      api:     'openai-chat-completions',
+      models:  [],
     };
+    fs.copyFileSync(CONFIG_PATH, CONFIG_PATH + '.bak');
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
   } catch {}
 }

@@ -67,10 +67,6 @@ app.get   ('/api/keys',                      keys.handleGetKeys);
 app.post  ('/api/keys',                      keys.handlePostKeys);
 app.post  ('/api/keys/add-provider',         keys.handleAddProvider);
 app.delete('/api/keys/:name',                keys.handleDeleteProvider);
-app.get   ('/api/keys/tool-providers',       keys.handleGetToolProviders);
-app.post  ('/api/keys/tool-providers',       keys.handlePostToolProviders);
-app.post  ('/api/keys/tool-providers/add',   keys.handleAddToolProvider);
-app.delete('/api/keys/tool-providers/:name', keys.handleDeleteToolProvider);
 
 // ─── Routes: Skills ───────────────────────────────────────────────────────────
 // /search must come before /:name to avoid matching "search" as a skill name
@@ -175,8 +171,10 @@ app.post('/api/models/hf/delete',   modelsHf.handleDelete);
 app.get ('/api/system/tools',         systemTools.handleList);
 app.post('/api/system/tools/install', systemTools.handleInstall);
 
-// ─── Routes: Update Check ─────────────────────────────────────────────────
+// ─── Routes: Update ──────────────────────────────────────────────────────────
 app.get ('/api/update-check', update.handleUpdateCheck);
+app.post('/api/update',       update.handleUpdate);
+app.post('/api/restart',      update.handleRestart);
 
 // ─── Routes: Docker ───────────────────────────────────────────────────────────
 app.get   ('/api/docker/containers',            docker.handleContainers);
@@ -186,8 +184,6 @@ app.get   ('/api/docker/images',                docker.handleImages);
 app.post  ('/api/docker/images/pull',           docker.handleImagePull);
 app.delete('/api/docker/images/:id',            docker.handleImageDelete);
 app.post  ('/api/docker/run',                   docker.handleRun);
-app.post  ('/api/docker/register-tool-provider',  docker.handleRegisterToolProvider);
-app.delete('/api/docker/tool-provider/:name',     docker.handleUnregisterToolProvider);
 app.get   ('/api/docker/presets',               docker.handleGetPresets);
 app.post  ('/api/docker/presets',               docker.handleSavePreset);
 app.delete('/api/docker/presets/:name',         docker.handleDeletePreset);

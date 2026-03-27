@@ -1,29 +1,8 @@
 'use strict';
 
-const fs = require('fs');
 const { exec, spawn } = require('child_process');
 
-const { CONFIG_PATH } = require('./paths');
 const { sseHeaders, loadPrefs, savePrefs } = require('./utils');
-
-function _readConfig() {
-  try { return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); }
-  catch { return {}; }
-}
-
-function _writeConfig(cfg) {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
-}
-
-/** Extract host ports from a docker ps Ports string like "0.0.0.0:8880->8880/tcp" */
-function _extractHostPorts(portsStr) {
-  if (!portsStr) return [];
-  const ports = [];
-  for (const m of portsStr.matchAll(/(?:\d+\.\d+\.\d+\.\d+|::):(\d+)->/g)) {
-    ports.push(parseInt(m[1], 10));
-  }
-  return ports;
-}
 
 /** GET /api/docker/containers */
 function handleContainers(req, res) {
@@ -32,23 +11,6 @@ function handleContainers(req, res) {
     const containers = stdout.trim().split('\n').filter(Boolean).map(line => {
       try { return JSON.parse(line); } catch { return null; }
     }).filter(Boolean);
-
-    const cfg = _readConfig();
-    const tp  = cfg.toolProviders || {};
-
-    containers.forEach(c => {
-      const hostPorts = _extractHostPorts(c.Ports || '');
-      c.toolProvider = null;
-      for (const [name, prov] of Object.entries(tp)) {
-        try {
-          const provPort = parseInt(new URL(prov.baseUrl).port, 10);
-          if (hostPorts.includes(provPort)) {
-            c.toolProvider = { name, baseUrl: prov.baseUrl };
-            break;
-          }
-        } catch {}
-      }
-    });
 
     res.json({ containers });
   });
@@ -157,38 +119,6 @@ function handleRun(req, res) {
   req.on('close', () => { if (!child.killed) child.kill(); });
 }
 
-/* ── Tool Provider registration from Docker tab ───────────────── */
-
-/** POST /api/docker/register-tool-provider */
-function handleRegisterToolProvider(req, res) {
-  const { name, baseUrl } = req.body;
-  if (!name || !baseUrl) return res.status(400).json({ error: 'name and baseUrl required' });
-  try {
-    const cfg = _readConfig();
-    if (!cfg.toolProviders) cfg.toolProviders = {};
-    cfg.toolProviders[name] = { baseUrl, apiKey: '' };
-    _writeConfig(cfg);
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-}
-
-/** DELETE /api/docker/tool-provider/:name */
-function handleUnregisterToolProvider(req, res) {
-  const name = decodeURIComponent(req.params.name);
-  try {
-    const cfg = _readConfig();
-    if (cfg.toolProviders) {
-      delete cfg.toolProviders[name];
-      _writeConfig(cfg);
-    }
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-}
-
 /* ── Docker presets (saved configurations) ────────────────────── */
 
 /** GET /api/docker/presets */
@@ -235,8 +165,6 @@ module.exports = {
   handleImagePull,
   handleImageDelete,
   handleRun,
-  handleRegisterToolProvider,
-  handleUnregisterToolProvider,
   handleGetPresets,
   handleSavePreset,
   handleDeletePreset,

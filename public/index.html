@@ -457,12 +457,11 @@
                 <th>Image</th>
                 <th>Status</th>
                 <th>Ports</th>
-                <th>Agent</th>
                 <th></th>
               </tr>
             </thead>
             <tbody id="docker-containers-body">
-              <tr><td colspan="6" class="placeholder" style="padding:12px">Loading…</td></tr>
+              <tr><td colspan="5" class="placeholder" style="padding:12px">Loading…</td></tr>
             </tbody>
           </table>
         </div>
@@ -538,10 +537,13 @@
           <div class="card-title" style="display:flex;align-items:center;gap:8px">
             Updates
             <button class="btn btn-xs" onclick="updateCheck()" id="update-check-btn" title="Check for updates">↺ Check</button>
+            <button class="btn btn-xs btn-teal" onclick="updatePull()" id="update-pull-btn" style="display:none" title="Pull latest version">⬇ Update</button>
+            <button class="btn btn-xs" onclick="restartDoca()" id="restart-btn" title="Restart DOCA server">⟳ Restart</button>
           </div>
           <div id="update-status">
             <span class="placeholder pulse" style="font-size:12px">Checking for updates…</span>
           </div>
+          <pre id="update-log" class="code-out" style="display:none;max-height:200px;overflow:auto;font-size:11px;margin-top:8px"></pre>
         </div>
       </div>
 
@@ -565,29 +567,6 @@
               <button class="btn btn-sm btn-blue" onclick="addProvider()">Add</button>
             </div>
             <div class="status-line mt8" id="np-status"></div>
-          </div>
-        </div>
-        <div class="toolbar" style="margin-top:4px">
-          <div class="card-title" style="margin-bottom:0">Tool APIs</div>
-          <button class="btn btn-sm btn-blue" onclick="showAddToolProvider()">+ Add Tool Provider</button>
-        </div>
-        <p style="font-size:11px;color:var(--muted);margin:0 0 6px">
-          API endpoints for local non-LLM tools (Stable Diffusion, ComfyUI, Kokoro, Whisper, etc.)
-        </p>
-        <div id="tool-providers-list" class="scroll-y" style="flex:1"><div class="placeholder">Loading…</div></div>
-        <div id="add-tool-provider-form" style="display:none">
-          <div class="card mt8">
-            <div class="card-title">New Tool Provider</div>
-            <div class="row">
-              <div class="field flex1"><div class="input-label">Name (e.g. comfyui)</div><input id="tp-name" class="input" placeholder="comfyui"></div>
-              <div class="field flex1"><div class="input-label">Base URL</div><input id="tp-url" class="input" placeholder="http://127.0.0.1:8188"></div>
-            </div>
-            <div class="field"><div class="input-label">API Key (optional)</div><input id="tp-key" class="input" type="password" placeholder="leave blank if not required"></div>
-            <div class="toolbar-right">
-              <button class="btn btn-sm" onclick="hideAddToolProvider()">Cancel</button>
-              <button class="btn btn-sm btn-blue" onclick="addToolProvider()">Add</button>
-            </div>
-            <div class="status-line mt8" id="tp-status"></div>
           </div>
         </div>
       </div>
@@ -938,14 +917,6 @@
         <textarea class="input" id="docker-run-volumes" rows="2" style="flex:1;font-size:11px;resize:vertical"
                   placeholder="/host/path:/container/path (one per line)"></textarea>
       </div>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center;margin-top:2px">
-      <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">Agent</label>
-      <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer">
-        <input type="checkbox" id="docker-run-register-tp">
-        Register as tool provider
-      </label>
-      <input class="input" id="docker-run-tp-name" style="width:100px;font-size:10px" placeholder="provider name">
     </div>
     <pre id="docker-run-out" class="terminal" style="display:none;max-height:120px;margin:0"></pre>
     <div class="app-confirm-actions">

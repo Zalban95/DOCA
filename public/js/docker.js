@@ -39,14 +39,12 @@ function _dockerRenderPresets() {
     const gpuTag = p.gpu ? `<span class="badge" style="font-size:8px;background:var(--purple)">GPU ${p.gpu}</span>` : '';
     const portsTag = (p.ports || []).length
       ? `<span style="color:var(--muted)">${p.ports.join(', ')}</span>` : '';
-    const tpTag = p.toolProvider
-      ? `<span class="badge badge-agent">${p.toolProvider}</span>` : '';
     const eName = encodeURIComponent(p.name);
 
     return `<div class="docker-preset-card">
       <div class="docker-preset-card-header">
         <span class="docker-preset-card-name">${_dockerEsc(p.name)}</span>
-        ${statusBadge} ${tpTag}
+        ${statusBadge}
       </div>
       <div class="docker-preset-card-image">${_dockerEsc(p.image)}</div>
       <div class="docker-preset-card-meta">${gpuTag} ${portsTag}</div>
@@ -102,13 +100,6 @@ function _dockerRunFromPreset(p, createOnly) {
             const obj = JSON.parse(line);
             if (obj.status) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
             if (obj.done && obj.ok) {
-              if (p.toolProvider) {
-                const port = (p.ports || [])[0]?.split(':')[0] || '8000';
-                apiFetch('/api/docker/register-tool-provider', {
-                  method: 'POST',
-                  body: { name: p.toolProvider, baseUrl: `http://localhost:${port}` }
-                }).catch(() => {});
-              }
               setTimeout(() => { dockerLoadContainers(); dockerLoadPresets(); }, 800);
             }
           } catch {}
@@ -135,8 +126,6 @@ function dockerPresetEdit(encodedName) {
   document.getElementById('docker-run-restart').value = p.restart || 'unless-stopped';
   document.getElementById('docker-run-env').value = (p.envVars || []).join('\n');
   document.getElementById('docker-run-volumes').value = (p.volumes || []).join('\n');
-  document.getElementById('docker-run-register-tp').checked = !!p.toolProvider;
-  document.getElementById('docker-run-tp-name').value = p.toolProvider || '';
   document.getElementById('docker-run-out').style.display = 'none';
   document.getElementById('docker-run-out').textContent = '';
   document.getElementById('docker-run-ok').disabled = false;
@@ -156,12 +145,12 @@ async function dockerPresetDelete(encodedName) {
 /* ── Containers ────────────────────────────────────────── */
 async function dockerLoadContainers() {
   const tbody = document.getElementById('docker-containers-body');
-  tbody.innerHTML = '<tr><td colspan="6" class="placeholder pulse" style="padding:12px">Loading…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5" class="placeholder pulse" style="padding:12px">Loading…</td></tr>';
   try {
     const data = await apiFetch('/api/docker/containers');
     _dockerContainers = data.containers || [];
     if (!_dockerContainers.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="placeholder" style="padding:12px">No containers found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="placeholder" style="padding:12px">No containers found</td></tr>';
       _dockerRenderPresets();
       return;
     }
@@ -169,20 +158,12 @@ async function dockerLoadContainers() {
       const isRunning = (c.State || '').toLowerCase() === 'running';
       const statusClass = isRunning ? 'badge-green' : 'badge-red';
       const ports = c.Ports || '';
-      const tp = c.toolProvider;
-
-      const agentCell = tp
-        ? `<span class="badge badge-agent">${_dockerEsc(tp.name)}</span>`
-        : (isRunning && ports
-          ? `<button class="btn btn-xs" style="font-size:9px" onclick="dockerRegisterTP('${(c.Names||c.ID).replace(/'/g,"\\'")}','${ports.replace(/'/g,"\\'")}')">+ Agent</button>`
-          : '<span style="font-size:10px;color:var(--dim)">—</span>');
 
       return `<tr class="models-row" id="docker-container-${c.ID}">
         <td class="models-name" style="font-size:11px">${c.Names || c.ID.slice(0,12)}</td>
         <td style="font-size:10px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis">${c.Image || '—'}</td>
         <td><span class="badge ${statusClass}" style="font-size:9px">${c.Status || c.State || '—'}</span></td>
         <td style="font-size:10px;color:var(--muted)">${ports.slice(0,40) || '—'}</td>
-        <td style="text-align:center">${agentCell}</td>
         <td style="white-space:nowrap;text-align:right">
           <div style="display:flex;gap:4px;justify-content:flex-end">
             ${isRunning
@@ -198,21 +179,8 @@ async function dockerLoadContainers() {
     }).join('');
     _dockerRenderPresets();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="6" style="padding:12px;color:var(--red)">${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:12px;color:var(--red)">${e.message}</td></tr>`;
   }
-}
-
-function dockerRegisterTP(containerName, portsStr) {
-  const match = portsStr.match(/(?:\d+\.\d+\.\d+\.\d+|::):(\d+)->/);
-  const port = match ? match[1] : '8000';
-  const suggestedName = containerName.replace(/^\//, '').replace(/[^a-zA-Z0-9_-]/g, '-');
-  const name = prompt('Tool provider name for the agent:', suggestedName);
-  if (!name) return;
-  apiFetch('/api/docker/register-tool-provider', {
-    method: 'POST',
-    body: { name, baseUrl: `http://localhost:${port}` }
-  }).then(() => dockerLoadContainers())
-    .catch(e => alert(`Error: ${e.message}`));
 }
 
 async function dockerAction(id, action) {
@@ -348,8 +316,6 @@ function dockerRunImage(repo, tag) {
   document.getElementById('docker-run-restart').value = 'unless-stopped';
   document.getElementById('docker-run-env').value = '';
   document.getElementById('docker-run-volumes').value = '';
-  document.getElementById('docker-run-register-tp').checked = false;
-  document.getElementById('docker-run-tp-name').value = '';
   document.getElementById('docker-run-out').style.display = 'none';
   document.getElementById('docker-run-out').textContent = '';
   document.getElementById('docker-run-ok').disabled = false;
@@ -369,14 +335,12 @@ function _dockerCollectForm() {
   const restart = document.getElementById('docker-run-restart').value;
   const envRaw  = document.getElementById('docker-run-env').value.trim();
   const volRaw  = document.getElementById('docker-run-volumes').value.trim();
-  const registerTp = document.getElementById('docker-run-register-tp').checked;
-  const tpName  = document.getElementById('docker-run-tp-name').value.trim();
 
   const ports   = portsRaw ? portsRaw.split(/[,\n]/).map(s => s.trim()).filter(Boolean) : [];
   const envVars = envRaw   ? envRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
   const volumes = volRaw   ? volRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
 
-  return { image, name, ports, gpu, restart, envVars, volumes, registerTp, tpName: registerTp ? tpName : '' };
+  return { image, name, ports, gpu, restart, envVars, volumes };
 }
 
 async function _dockerSavePreset(form) {
@@ -388,7 +352,6 @@ async function _dockerSavePreset(form) {
     restart: form.restart,
     envVars: form.envVars,
     volumes: form.volumes,
-    toolProvider: form.tpName || null,
   };
   await apiFetch('/api/docker/presets', { method: 'POST', body: preset });
 }
@@ -446,13 +409,6 @@ function _dockerExecuteRun(form, createOnly) {
             if (obj.done) {
               okBtn.disabled = false;
               if (obj.ok) {
-                if (form.tpName) {
-                  const port = (form.ports[0] || '8000:8000').split(':')[0];
-                  apiFetch('/api/docker/register-tool-provider', {
-                    method: 'POST',
-                    body: { name: form.tpName, baseUrl: `http://localhost:${port}` }
-                  }).catch(() => {});
-                }
                 setTimeout(() => { dockerRunClose(); dockerLoadContainers(); dockerLoadPresets(); }, 800);
               }
             }
