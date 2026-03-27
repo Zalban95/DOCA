@@ -59,7 +59,7 @@ function handleStatus(req, res) {
 function handleList(req, res) {
   const { env, home, mp } = hfEnv();
 
-  exec(`bash -lc "huggingface-cli scan-cache --json 2>/dev/null"`, { env, timeout: 10000, maxBuffer: 5 * 1024 * 1024 }, (err, stdout) => {
+  exec(`python3 -m huggingface_hub.commands.huggingface_cli scan-cache --json 2>/dev/null`, { env, timeout: 10000, maxBuffer: 5 * 1024 * 1024 }, (err, stdout) => {
     if (!err && stdout.trim()) {
       try {
         const data  = JSON.parse(stdout.trim());
@@ -126,13 +126,15 @@ function handleDownload(req, res) {
 
   const cleanCache = cache ? cache.replace(/\/+/g, '/') : '';
 
-  const args = ['download', repoId];
-  if (cleanCache) args.push('--cache-dir', cleanCache);
+  // Use python3 -m to bypass potentially stale /usr/bin/huggingface-cli wrapper
+  const dlArgs = ['-u', '-m', 'huggingface_hub.commands.huggingface_cli', 'download', repoId];
+  if (cleanCache) dlArgs.push('--cache-dir', cleanCache);
 
-  sseWrite({ status: `Downloading ${repoId}…\n$ huggingface-cli ${args.join(' ')}\n\n` });
+  const displayCmd = `huggingface-cli download ${repoId}${cleanCache ? ' --cache-dir ' + cleanCache : ''}`;
+  sseWrite({ status: `Downloading ${repoId}…\n$ ${displayCmd}\n\n` });
 
   const hfPath = `/usr/bin:/usr/local/bin:${home}/.local/bin:/bin`;
-  const child  = spawn('huggingface-cli', args, {
+  const child  = spawn('python3', dlArgs, {
     cwd: home,
     env: {
       ...process.env,
@@ -158,7 +160,7 @@ function handleDownload(req, res) {
     res.end();
   });
   child.on('error', e => {
-    sseWrite({ done: true, ok: false, status: `Error: ${e.message}. Is huggingface-cli installed?` });
+    sseWrite({ done: true, ok: false, status: `Error: ${e.message}. Is python3 + huggingface_hub installed?` });
     res.end();
   });
   res.on('close', () => { if (!child.killed) child.kill(); });
