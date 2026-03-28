@@ -501,6 +501,10 @@ function _voiceSettingsLoad(prefs) {
   set('voice-tts-url',   vs.ttsUrl,   'http://localhost:8880');
   set('voice-tts-model', vs.ttsModel, 'kokoro');
   set('voice-tts-voice', vs.ttsVoice, 'af_heart');
+  const speed = vs.ttsSpeed ?? 1.0;
+  set('voice-tts-speed', speed, '1.0');
+  const lbl = document.getElementById('voice-tts-speed-val');
+  if (lbl) lbl.textContent = speed;
 }
 
 async function voiceSettingsSave() {
@@ -511,6 +515,7 @@ async function voiceSettingsSave() {
     ttsUrl:   document.getElementById('voice-tts-url')?.value.trim()   || 'http://localhost:8880',
     ttsModel: document.getElementById('voice-tts-model')?.value.trim() || 'kokoro',
     ttsVoice: document.getElementById('voice-tts-voice')?.value.trim() || 'af_heart',
+    ttsSpeed: parseFloat(document.getElementById('voice-tts-speed')?.value) || 1.0,
   };
   try {
     await apiFetch('/api/prefs', { method: 'POST', body: { voiceServices } });

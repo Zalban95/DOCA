@@ -271,6 +271,12 @@ function fmRowHTML(e) {
 }
 
 /* ── Row interactions ────────────────────────────────── */
+function fmSyncSelectionUI() {
+  document.querySelectorAll('.fm-row').forEach(r => {
+    r.classList.toggle('selected', fm.selected.has(r.dataset.path));
+  });
+}
+
 function fmClickRow(event, path, isDir) {
   if (event.ctrlKey || event.metaKey) {
     fm.selected.has(path) ? fm.selected.delete(path) : fm.selected.add(path);
@@ -289,7 +295,7 @@ function fmClickRow(event, path, isDir) {
   } else {
     fm.selected = new Set([path]);
   }
-  fmRenderList();
+  fmSyncSelectionUI();
   fmUpdateStatus();
 }
 

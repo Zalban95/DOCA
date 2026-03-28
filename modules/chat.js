@@ -207,6 +207,7 @@ function loadVoiceServices() {
     ttsUrl:   (vs.ttsUrl   || 'http://localhost:8880').replace(/\/+$/, ''),
     ttsModel: vs.ttsModel  || 'kokoro',
     ttsVoice: vs.ttsVoice  || 'af_heart',
+    ttsSpeed: parseFloat(vs.ttsSpeed) || 1.0,
   };
 }
 
@@ -266,6 +267,7 @@ async function handleSynthesize(req, res) {
         input: text,
         voice: voice || vs.ttsVoice,
         response_format: 'mp3',
+        speed: vs.ttsSpeed,
       }),
       signal: AbortSignal.timeout(30000),
     });
