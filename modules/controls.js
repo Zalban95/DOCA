@@ -45,8 +45,22 @@ async function handleStatus(req, res) {
     totalIdle += cpu.times.idle;
   });
   const cpuPct   = Math.round((1 - totalIdle / totalTick) * 100);
-  const ramTotal = Math.round(os.totalmem() / 1e6);
-  const ramUsed  = Math.round((os.totalmem() - os.freemem()) / 1e6);
+
+  let ramTotal, ramUsed;
+  try {
+    const meminfo = fs.readFileSync('/proc/meminfo', 'utf8');
+    const val = key => {
+      const m = meminfo.match(new RegExp(`^${key}:\\s+(\\d+)`, 'm'));
+      return m ? parseInt(m[1], 10) : NaN;
+    };
+    const totalKB = val('MemTotal');
+    const availKB = val('MemAvailable');
+    ramTotal = Math.round(totalKB / 1e3);
+    ramUsed  = Math.round((totalKB - availKB) / 1e3);
+  } catch {
+    ramTotal = Math.round(os.totalmem() / 1e6);
+    ramUsed  = Math.round((os.totalmem() - os.freemem()) / 1e6);
+  }
 
   const system = {
     cpuPct,
