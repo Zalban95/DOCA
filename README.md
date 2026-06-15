@@ -122,21 +122,45 @@ sudo systemctl enable --now openclaw-panel
 
 ## Environment Variables
 
+Defaults are derived from the current user's home directory (`os.homedir()`, shown below as `~`) so the dashboard is portable across machines. Override any of them via the environment.
+
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `4242` | Server port |
-| `COMPOSE_DIR` | `/home/al/openclaw` | Docker Compose directory |
-| `CONFIG_PATH` | `/home/al/.openclaw/openclaw.json` | Main config file |
-| `SKILLS_DIR` | `/home/al/.openclaw/workspace/skills` | Skills directory |
-| `WORKSPACE_DIR` | `/home/al/.openclaw/workspace` | Workspace root |
-| `SETUP_DIR` | `/home/al` | Setup scripts directory |
-| `SNAPSHOT_DIR` | `/media/al/NewVolume/openclaw-snapshots` | Snapshot storage |
+| `COMPOSE_DIR` | `~/openclaw` | Docker Compose directory |
+| `CONFIG_PATH` | `~/.openclaw/openclaw.json` | Main config file |
+| `SKILLS_DIR` | `~/.openclaw/workspace/skills` | Skills directory |
+| `WORKSPACE_DIR` | `~/.openclaw/workspace` | Workspace root |
+| `SETUP_DIR` | `~` | Setup scripts directory |
+| `SNAPSHOT_SCRIPT` | `~/snapshot-agent.sh` | Snapshot script path |
+| `RESTORE_SCRIPT` | `~/restore-agent.sh` | Restore script path |
+| `SNAPSHOT_DIR` | `~/openclaw-snapshots` | Snapshot storage |
 | `OPENCLAW_GATEWAY_URL` | — | Override gateway base URL (e.g. `http://openclaw-gateway:18789` when dashboard runs in Docker) |
 
 ## Project Structure
 
 ```
-server.js                   Backend (Express)
+server.js                   Express orchestrator: wires middleware + routes, starts server
+modules/                    Backend feature modules (one per concern)
+  paths.js                  Env-overridable paths + config registry
+  utils.js                  run(), SSE helpers, prefs loaders
+  https-cert.js             Self-signed / Tailscale cert handling
+  controls.js               /api/status (Docker, GPU, CPU/RAM), start/stop/restart, logs
+  config.js                 Multi-file config + prefs + favorites
+  keys.js                   API key / provider management
+  skills.js                 Skill install / remove / toggle / detail / search
+  setup.js                  Setup script read / write
+  snapshots.js              Snapshot create / restore / settings
+  files.js                  File manager (list, read, write, upload, paste…)
+  code-tools.js             Code tool detection / install
+  claude.js                 Claude Code CLI session management
+  chat.js                   Agent chat (Gateway API / claude CLI fallback)
+  models*.js                Ollama / llama.cpp / HuggingFace / local model managers
+  system-tools.js           System dependency detection / install
+  docker.js                 Docker containers / images / presets
+  services.js               Inference service management
+  update.js                 Self-update / restart
+  terminal.js               WebSocket PTY terminals
 public/
   index.html                Clean HTML shell
   css/
@@ -144,15 +168,17 @@ public/
     base.css                Reset, utilities, animations
     layout.css              Header, nav, sidebar, content
     components.css          Buttons, cards, inputs, modals, chat
-    sidebar.css             GPU, CPU/RAM, containers, models
+    sidebar.css             GPU, CPU/RAM (+ logical cores), containers, models
     config.css              Multi-file editor layout
     files.css               File manager + drag-drop upload
+    models.css              Model manager views
+    terminal.css            Embedded terminal styling
     responsive.css          Breakpoints 1024 / 768 / 480 px
   js/
     state.js                Global vars
     utils.js                apiFetch, setStatus, streamToEl, helpers
     nav.js                  Tab routing + mobile drawer
-    sidebar.js              Status polling (GPU, CPU/RAM, containers)
+    sidebar.js              Status polling (GPU, CPU/RAM, containers, models)
     controls.js             Start / stop / restart actions
     logs.js                 SSE log streaming
     keys.js                 API key management
@@ -163,4 +189,12 @@ public/
     files.js                File manager + upload / download / drag-drop
     claude.js               Claude Code management
     chat.js                 Floating agent chat panel
+    models.js / llamacpp.js Model + llama.cpp manager UIs
+    docker.js               Docker manager UI
+    services.js             Inference services UI
+    terminal.js             Embedded terminal UI
+    settings.js             Settings + system tools UI
+    themes.js               Theme switching
+    sudo.js                 Sudo password prompt helper
+    fp.js                   Misc front-panel helpers
 ```
