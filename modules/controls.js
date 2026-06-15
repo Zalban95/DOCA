@@ -9,17 +9,77 @@ const { COMPOSE_DIR } = require('./paths');
 const { run, sseHeaders, loadModelsPrefs } = require('./utils');
 const { getRunningInstances: getLlamaCppRunning } = require('./models-llamacpp');
 
+/** Snapshot cumulative CPU tick counters per logical core. */
+function cpuSnapshot() {
+  return os.cpus().map(c => {
+    const t = c.times;
+    const total = t.user + t.nice + t.sys + t.idle + t.irq;
+    return { idle: t.idle, total };
+  });
+}
+
+/** Sample CPU usage over a short window so the % reflects *current* load
+ *  rather than the cumulative since-boot average. Returns per-core + overall %. */
+async function sampleCpu(windowMs = 200) {
+  const a = cpuSnapshot();
+  await new Promise(r => setTimeout(r, windowMs));
+  const b = cpuSnapshot();
+  const cores = a.map((s1, i) => {
+    const s2     = b[i] || s1;
+    const idle   = s2.idle  - s1.idle;
+    const total  = s2.total - s1.total;
+    return total > 0 ? Math.max(0, Math.min(100, Math.round((1 - idle / total) * 100))) : 0;
+  });
+  const cpuPct = cores.length
+    ? Math.round(cores.reduce((sum, p) => sum + p, 0) / cores.length)
+    : 0;
+  return { cpuPct, cores };
+}
+
+/** Best-effort CPU package temperature (°C) from the Linux thermal subsystem. */
+function readCpuTemp() {
+  const base = '/sys/class/thermal';
+  try {
+    const zones = fs.readdirSync(base).filter(z => z.startsWith('thermal_zone'));
+    // Prefer a zone whose type looks like a CPU/package sensor.
+    const preferred = zones.find(z => {
+      try {
+        const type = fs.readFileSync(path.join(base, z, 'type'), 'utf8').trim();
+        return /x86_pkg_temp|coretemp|cpu|k10temp|zenpower|soc/i.test(type);
+      } catch { return false; }
+    });
+    const zone = preferred || zones[0];
+    if (zone) {
+      const milli = parseInt(fs.readFileSync(path.join(base, zone, 'temp'), 'utf8').trim(), 10);
+      if (Number.isFinite(milli)) return Math.round(milli / 1000);
+    }
+  } catch {}
+  return null;
+}
+
+/** Parse one numeric nvidia-smi field; returns null for blank / "[N/A]". */
+function smiNum(v) {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s || /n\/?a|not supported|unknown/i.test(s)) return null;
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : null;
+}
+
 /** GET /api/status — system overview: Docker, GPU, CPU/RAM, Ollama, HuggingFace */
 async function handleStatus(req, res) {
   const mp = loadModelsPrefs();
   const ollamaUrl = (mp.ollamaUrl || 'http://127.0.0.1:11434').replace(/\/$/, '');
 
-  const [dockerResult, gpuResult, ollamaTagsResult, ollamaPsResult] = await Promise.allSettled([
-    run(`docker ps --format '{{json .}}'`),
-    run('nvidia-smi --query-gpu=name,temperature.gpu,utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits'),
-    run(`curl -s ${ollamaUrl}/api/tags`),
-    run(`curl -s ${ollamaUrl}/api/ps`),
-  ]);
+  const [dockerResult, gpuResult, ollamaTagsResult, ollamaPsResult, cpuSample] = await Promise.all([
+    Promise.allSettled([
+      run(`docker ps --format '{{json .}}'`),
+      run('nvidia-smi --query-gpu=name,temperature.gpu,utilization.gpu,memory.used,memory.total,power.draw,power.limit,fan.speed,clocks.sm --format=csv,noheader,nounits'),
+      run(`curl -s ${ollamaUrl}/api/tags`),
+      run(`curl -s ${ollamaUrl}/api/ps`),
+    ]),
+    sampleCpu(),
+  ]).then(([settled, sample]) => [...settled, sample]);
 
   let containers = [];
   if (dockerResult.status === 'fulfilled') {
@@ -31,20 +91,25 @@ async function handleStatus(req, res) {
 
   let gpu = null;
   if (gpuResult.status === 'fulfilled') {
-    gpu = gpuResult.value.stdout.trim().split('\n').map(l => {
-      const p = l.split(', ').map(s => s.trim());
-      return { name: p[0], temp: p[1], util: p[2], memUsed: p[3], memTotal: p[4] };
+    gpu = gpuResult.value.stdout.trim().split('\n').filter(Boolean).map(l => {
+      const p = l.split(',').map(s => s.trim());
+      return {
+        name:       p[0],
+        temp:       p[1],
+        util:       p[2],
+        memUsed:    p[3],
+        memTotal:   p[4],
+        powerDraw:  smiNum(p[5]),
+        powerLimit: smiNum(p[6]),
+        fan:        smiNum(p[7]),
+        clockSm:    smiNum(p[8]),
+      };
     });
   }
 
-  const cpus    = os.cpus();
   const loadAvg = os.loadavg();
-  let totalIdle = 0, totalTick = 0;
-  cpus.forEach(cpu => {
-    for (const type in cpu.times) totalTick += cpu.times[type];
-    totalIdle += cpu.times.idle;
-  });
-  const cpuPct   = Math.round((1 - totalIdle / totalTick) * 100);
+  const { cpuPct, cores } = cpuSample;
+  const cpuTemp = readCpuTemp();
 
   let ramTotal, ramUsed;
   try {
@@ -64,6 +129,9 @@ async function handleStatus(req, res) {
 
   const system = {
     cpuPct,
+    cores,
+    coreCount: cores.length || os.cpus().length,
+    cpuTemp,
     load1:  Math.round(loadAvg[0] * 100) / 100,
     load5:  Math.round(loadAvg[1] * 100) / 100,
     ramUsed,
