@@ -63,6 +63,28 @@
 .sys-value.cpu { color: var(--teal); }
 .sys-value.ram { color: var(--blue); }
 
+/* ── Logical-core dropdown ───────────────────────────── */
+.sys-cores { margin-top: 8px; border-top: 1px solid var(--border2); padding-top: 6px; }
+.sys-cores > summary {
+  list-style: none; cursor: pointer;
+  font-size: 9px; color: var(--muted);
+  letter-spacing: 0.12em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 6px;
+  user-select: none;
+}
+.sys-cores > summary::-webkit-details-marker { display: none; }
+.sys-cores > summary::before {
+  content: '▸'; font-size: 9px; color: var(--muted);
+  transition: transform var(--t-fast);
+}
+.sys-cores[open] > summary::before { transform: rotate(90deg); }
+.sys-cores > summary:hover { color: var(--text); }
+.cores-list { margin-top: 6px; display: grid; gap: 4px; }
+.core-row { display: grid; grid-template-columns: 28px 1fr 34px; align-items: center; gap: 6px; }
+.core-id  { font-size: 10px; color: var(--muted); }
+.core-bar { margin-top: 0; grid-column: auto; }
+.core-pct { font-size: 10px; color: var(--text); text-align: right; }
+
 /* ── Model list ──────────────────────────────────────── */
 .model-item {
   display: flex; justify-content: space-between; align-items: center;

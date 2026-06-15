@@ -106,15 +106,33 @@ function renderGPU(gpus) {
     const usedMB  = parseInt(g.memUsed)  || 0;
     const totalMB = parseInt(g.memTotal) || 1;
     const pct = Math.round((usedMB / totalMB) * 100);
-    const barColor = pct > 90 ? 'red' : pct > 70 ? 'amber' : 'green';
+    const memBar = pct > 90 ? 'red' : pct > 70 ? 'amber' : 'green';
+
+    const util     = parseInt(g.util) || 0;
+    const utilBar  = util > 90 ? 'red' : util > 70 ? 'amber' : 'green';
+
+    // Optional extended metrics — only rendered when nvidia-smi reported them.
+    const extra = [];
+    if (g.powerDraw != null) {
+      const pwr = g.powerLimit != null
+        ? `${Math.round(g.powerDraw)}/${Math.round(g.powerLimit)} W`
+        : `${Math.round(g.powerDraw)} W`;
+      extra.push(`<div class="gm"><span class="gm-l">Power</span><span class="gm-v">${pwr}</span></div>`);
+    }
+    if (g.fan != null)     extra.push(`<div class="gm"><span class="gm-l">Fan</span><span class="gm-v">${Math.round(g.fan)}%</span></div>`);
+    if (g.clockSm != null) extra.push(`<div class="gm"><span class="gm-l">Clock</span><span class="gm-v">${Math.round(g.clockSm)} MHz</span></div>`);
+
     return `<div class="gpu-card">
       <div class="gpu-name">GPU ${i} — ${g.name}</div>
       <div class="gpu-grid">
         <div class="gm"><span class="gm-l">Temp</span><span class="gm-v">${g.temp}°C</span></div>
         <div class="gm"><span class="gm-l">Util</span><span class="gm-v">${g.util}%</span></div>
+        <div class="res-bar"><div class="res-bar-fill ${utilBar}" style="width:${util}%"></div></div>
+
         <div class="gm"><span class="gm-l">VRAM</span><span class="gm-v">${g.memUsed}/${g.memTotal} MB</span></div>
-        <div class="gm"><span class="gm-l">Used</span><span class="gm-v">${pct}%</span></div>
-        <div class="res-bar"><div class="res-bar-fill ${barColor}" style="width:${pct}%"></div></div>
+        <div class="gm"><span class="gm-l">VRAM Used</span><span class="gm-v">${pct}%</span></div>
+        <div class="res-bar"><div class="res-bar-fill ${memBar}" style="width:${pct}%"></div></div>
+        ${extra.join('')}
       </div>
     </div>`;
   }).join('');
@@ -126,9 +144,22 @@ function renderSystem(sys) {
     el.innerHTML = '<div class="placeholder">No system data</div>'; return;
   }
   const cpuPct  = Math.round(sys.cpuPct || 0);
-  const ramPct  = Math.round((sys.ramUsed / sys.ramTotal) * 100) || 0;
+  const ramPct  = sys.ramTotal > 0 ? Math.round((sys.ramUsed / sys.ramTotal) * 100) : 0;
   const cpuColor = cpuPct > 90 ? 'red' : cpuPct > 70 ? 'amber' : 'green';
   const ramColor = ramPct > 90 ? 'red' : ramPct > 70 ? 'amber' : 'blue';
+
+  const cores = Array.isArray(sys.cores) ? sys.cores : [];
+  const cpuTemp = (sys.cpuTemp != null) ? `${sys.cpuTemp}°C` : '—';
+
+  // Per-logical-core breakdown, shown inside a collapsible dropdown.
+  const coresHtml = cores.map((p, i) => {
+    const c = p > 90 ? 'red' : p > 70 ? 'amber' : 'green';
+    return `<div class="core-row">
+      <span class="core-id">#${i}</span>
+      <div class="res-bar core-bar"><div class="res-bar-fill ${c}" style="width:${p}%"></div></div>
+      <span class="core-pct">${p}%</span>
+    </div>`;
+  }).join('');
 
   el.innerHTML = `<div class="sys-card">
     <div class="sys-grid">
@@ -137,21 +168,35 @@ function renderSystem(sys) {
         <span class="sys-value cpu">${cpuPct}%</span>
       </div>
       <div class="sys-metric">
-        <span class="sys-label">Load</span>
-        <span class="sys-value cpu">${(sys.load1 || 0).toFixed(2)}</span>
+        <span class="sys-label">Temp</span>
+        <span class="sys-value cpu">${cpuTemp}</span>
       </div>
       <div class="res-bar"><div class="res-bar-fill ${cpuColor}" style="width:${cpuPct}%"></div></div>
 
       <div class="sys-metric">
-        <span class="sys-label">RAM</span>
-        <span class="sys-value ram">${fmtBytes(sys.ramUsed * 1e6)}</span>
+        <span class="sys-label">Load</span>
+        <span class="sys-value cpu">${(sys.load1 || 0).toFixed(2)}</span>
       </div>
       <div class="sys-metric">
-        <span class="sys-label">Total</span>
-        <span class="sys-value ram">${fmtBytes(sys.ramTotal * 1e6)}</span>
+        <span class="sys-label">Cores</span>
+        <span class="sys-value cpu">${cores.length || sys.coreCount || '—'}</span>
+      </div>
+
+      <div class="sys-metric">
+        <span class="sys-label">RAM</span>
+        <span class="sys-value ram">${ramPct}%</span>
+      </div>
+      <div class="sys-metric">
+        <span class="sys-label">Used</span>
+        <span class="sys-value ram">${fmtBytes(sys.ramUsed * 1e6)} / ${fmtBytes(sys.ramTotal * 1e6)}</span>
       </div>
       <div class="res-bar"><div class="res-bar-fill ${ramColor}" style="width:${ramPct}%"></div></div>
     </div>
+    ${cores.length ? `
+    <details class="sys-cores" ${coresOpen ? 'open' : ''} ontoggle="coresOpen = this.open">
+      <summary>Logical cores (${cores.length})</summary>
+      <div class="cores-list">${coresHtml}</div>
+    </details>` : ''}
   </div>`;
 }
 
