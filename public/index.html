@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>DOCA Panel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -245,7 +245,7 @@
             <span id="fm-statusbar-text"></span>
             <span id="fm-statusbar-clip"></span>
             <span style="flex:1"></span>
-            <span class="text-muted">Ctrl+C copy · Ctrl+X cut · Ctrl+V paste · Del delete · F2 rename</span>
+            <span class="text-muted fm-kbd-hints">Ctrl+C copy · Ctrl+X cut · Ctrl+V paste · Del delete · F2 rename</span>
           </div>
 
         </div>
@@ -300,7 +300,7 @@
             <button class="btn btn-xs" title="Browse" onclick="fpOpen('models-ollama-path','dir')">📁</button>
           </div>
         </div>
-        <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+        <div class="models-actions-row" style="margin-top:10px;display:flex;align-items:center;gap:10px">
           <button class="btn btn-sm btn-blue" onclick="modelsSaveSettings()">Save</button>
           <button class="btn btn-sm" onclick="modelsCheckOllama(); modelsLoadList()">↺ Refresh</button>
           <span id="models-ollama-badge" class="badge badge-blue">…</span>
@@ -363,7 +363,7 @@
           <span class="models-settings-label">HF Token</span>
           <input id="hf-token" class="input" type="password" placeholder="hf_… (optional, for gated models)">
         </div>
-        <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+        <div class="models-actions-row" style="margin-top:10px;display:flex;align-items:center;gap:10px">
           <button class="btn btn-sm btn-blue" onclick="hfSaveSettings()">Save</button>
           <button class="btn btn-sm" onclick="hfCheckStatus()">↺ Check</button>
           <span id="hf-status-badge" class="badge badge-blue">…</span>
@@ -454,7 +454,7 @@
                 <button class="btn btn-xs btn-blue" title="Edit config" onclick="nlmConfigEdit()">✏</button>
               </div>
             </div>
-            <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
+            <div class="models-actions-row" style="margin-top:8px;display:flex;align-items:center;gap:10px">
               <button class="btn btn-sm btn-blue" onclick="nlmSaveSettings()">Save</button>
               <button class="btn btn-sm" onclick="nlmLoadList()">↺ Refresh</button>
               <span id="nlm-settings-status" class="status-line"></span>
@@ -871,6 +871,9 @@
   </main>
 </div><!-- /app-body -->
 
+<!-- ═══ MOBILE BOTTOM TAB BAR (≤768px) ═══════════════ -->
+<nav class="mobile-nav" id="mobile-nav" aria-label="Primary"></nav>
+
 <!-- ═══ FILE PICKER MODAL ════════════════════════════ -->
 <div id="fp-modal" class="fp-overlay" style="display:none" onclick="fpClose()">
   <div class="fp-panel" onclick="event.stopPropagation()">
@@ -1058,6 +1061,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     themeApplyOnLoad();
+    mobileNavRender();
     settingsApplyOnLoad();
     controlsInit();
     apiFetch('/api/update-check').then(d => {

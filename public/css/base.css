@@ -5,6 +5,12 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
 
+/* Dynamic viewport height where supported — avoids the mobile URL-bar
+   clipping the bottom of the fixed app shell. */
+@supports (height: 100dvh) {
+  html, body { height: 100dvh; }
+}
+
 body {
   background: var(--bg);
   color: var(--text);

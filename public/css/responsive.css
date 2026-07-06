@@ -14,7 +14,15 @@
 
 /* ── Small screens (≤ 768px) ─────────────────────────── */
 @media (max-width: 768px) {
-  :root { --sidebar-w: 240px; }
+  /* Wider drawer so the stats card breathes */
+  :root { --sidebar-w: min(85vw, 320px); --mobile-nav-h: calc(54px + env(safe-area-inset-bottom, 0px)); }
+
+  /* Bottom tab bar replaces the header tabs */
+  .mobile-nav { display: flex; }
+  header .nav-tabs { display: none; }
+
+  /* Reserve space above the bottom bar */
+  .app-body { padding-bottom: var(--mobile-nav-h); }
 
   /* Show sidebar toggle button */
   .sidebar-toggle { display: flex; align-items: center; justify-content: center; }
@@ -22,17 +30,18 @@
   /* Hide clock on small screens */
   #clock { display: none; }
 
-  /* Collapse search bar */
-  .header-search-input { width: 100px; }
-  .header-search-input:focus { width: 160px; }
+  /* Search gets the freed header space */
+  .header-search { flex: 1; min-width: 0; }
+  .header-search-input { width: 100%; }
+  .header-search-input:focus { width: 100%; }
   .header-search-results { min-width: 240px; }
 
-  /* Sidebar becomes overlay */
+  /* Sidebar becomes overlay (stops above the bottom bar) */
   .sidebar {
     position: fixed;
     top: var(--header-h);
     left: 0;
-    bottom: 0;
+    bottom: var(--mobile-nav-h);
     z-index: 200;
     transform: translateX(-100%);
     box-shadow: 4px 0 24px rgba(0,0,0,0.6);
@@ -45,6 +54,7 @@
     position: fixed;
     inset: 0;
     top: var(--header-h);
+    bottom: var(--mobile-nav-h);
     background: rgba(0,0,0,0.5);
     z-index: 190;
   }
@@ -52,6 +62,10 @@
 
   /* Tab pages full width, scrollable on mobile */
   .tab-page { padding: 12px; overflow-y: auto; }
+
+  /* Chat FAB + panel float above the bottom bar */
+  .chat-fab { bottom: calc(var(--mobile-nav-h) + 12px); }
+  .chat-panel { bottom: calc(var(--mobile-nav-h) + 66px); }
 
   /* Config layout stacks */
   .config-layout { flex-direction: column; }
@@ -99,10 +113,6 @@
   /* Hide date column on mobile */
   .fm-date { display: none; }
 
-  /* Nav tabs scroll */
-  .nav-tabs { gap: 0; }
-  .nav-tab   { padding: 0 12px; font-size: 9px; }
-
   /* Provider cards */
   .provider-key-row { flex-wrap: wrap; }
 
@@ -111,6 +121,57 @@
 
   /* Chat panel */
   .chat-panel { width: calc(100vw - 32px); right: 16px; height: 55vh; }
+
+  /* ── Tool rows reflow to two lines (status+label+actions / note) ── */
+  .tool-row {
+    grid-template-columns: 14px minmax(0, 1fr) auto;
+    row-gap: 3px;
+  }
+  .tool-status  { grid-column: 1; grid-row: 1; }
+  .tool-label   { grid-column: 2; grid-row: 1; white-space: normal; overflow-wrap: anywhere; }
+  .tool-actions { grid-column: 3; grid-row: 1 / span 2; flex-wrap: wrap; max-width: 52vw; row-gap: 4px; }
+  .tool-version { grid-column: 2; grid-row: 2; white-space: normal; overflow-wrap: anywhere; }
+  .tool-note    { grid-column: 1 / 3; grid-row: 3; white-space: normal; }
+  .tool-row .tool-version:empty { display: none; }
+
+  /* ── Settings grids stack (label above field) ── */
+  .models-settings-grid { grid-template-columns: 1fr; gap: 4px 0; }
+  .models-settings-grid .models-settings-label { margin-top: 6px; }
+  .models-actions-row { flex-wrap: wrap; row-gap: 6px; }
+
+  /* ── Settings sub-nav pills scroll horizontally ── */
+  .settings-subnav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+  .settings-subnav::-webkit-scrollbar { display: none; }
+  .settings-subnav-btn { flex-shrink: 0; scroll-snap-align: center; }
+
+  /* ── llama.cpp instance fields: label | field pairs ── */
+  .llamacpp-controls {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    align-items: center;
+    gap: 6px 8px;
+  }
+  .llamacpp-controls .input { width: 100% !important; }
+
+  /* ── Services / card-title rows wrap ── */
+  .services-header, .services-controls, .card-title { flex-wrap: wrap; row-gap: 4px; }
+
+  /* ── Controls container rows: image column shrinks gracefully ── */
+  .ctrl-container-row { grid-template-columns: 14px minmax(0, 1fr) minmax(0, auto) auto; }
+
+  /* ── File manager: hide desktop-only header cells + kbd hints ── */
+  .fm-col-h[data-sort="mtime"] { display: none; }
+  .fm-kbd-hints { display: none; }
+
+  /* ── Horizontal-scroll tables: momentum scrolling ── */
+  .scroll-x, [style*="overflow-x:auto"] { -webkit-overflow-scrolling: touch; }
 }
 
 /* ── Extra small (≤ 480px) ───────────────────────────── */
@@ -147,10 +208,55 @@
   .config-file-item { padding: 0 12px; height: 42px; flex-direction: row; align-items: center; white-space: nowrap; }
   .config-file-path { display: none; }
 
-  /* Modals full screen */
+  /* Modals near-full-screen */
   .modal { width: 100%; max-width: none; min-width: 0; }
+  .fp-panel,
+  .fm-preview-panel {
+    width: calc(100vw - 16px);
+    max-width: none;
+    min-width: 0;
+    max-height: 88dvh;
+  }
+  .app-confirm-box { width: calc(100vw - 24px); min-width: 0 !important; max-width: none !important; }
 
-  /* Chat panel responsive */
-  .chat-panel { width: calc(100vw - 16px); right: 8px; bottom: 78px; height: 60vh; }
-  .chat-fab { width: 44px; height: 44px; font-size: 18px; bottom: 16px; right: 16px; }
+  /* Chat becomes a full-screen sheet under the header */
+  .chat-panel {
+    top: var(--header-h); left: 0; right: 0;
+    bottom: var(--mobile-nav-h);
+    width: auto; height: auto;
+    border-left: none; border-right: none; border-bottom: none;
+    animation: none;
+  }
+  .chat-fab {
+    width: 44px; height: 44px; font-size: 18px;
+    right: 12px; bottom: calc(var(--mobile-nav-h) + 12px);
+  }
+
+  /* File manager: hide Size header to match the hidden column */
+  .fm-col-h[data-sort="size"] { display: none; }
+
+  /* Controls container rows: drop the image column entirely */
+  .ctrl-container-row { grid-template-columns: 14px minmax(0, 1fr) auto; }
+  .ctrl-cont-image { display: none; }
+
+  /* Tool rows: note line hides on the smallest screens */
+  .tool-note { display: none; }
+
+  /* Sidebar drawer takes (almost) the full width */
+  :root { --sidebar-w: min(92vw, 340px); }
+}
+
+/* ── Touch ergonomics (any coarse-pointer device) ─────── */
+@media (pointer: coarse) {
+  .btn     { min-height: 36px; }
+  .btn-sm  { min-height: 32px; }
+  .btn-xs  { min-height: 28px; padding-left: 8px; padding-right: 8px; }
+  .mobile-nav-item { min-height: 44px; }
+  .nav-tab { min-width: 44px; }
+  .fm-row  { min-height: 40px; }
+  .fm-acts { opacity: 1; }
+  .settings-subnav-btn { min-height: 34px; }
+  .code-tool-header { padding-top: 12px; padding-bottom: 12px; }
+  .skill-toggle { transform: scale(1.12); transform-origin: left center; }
+  input[type="checkbox"] { min-width: 16px; min-height: 16px; }
 }
