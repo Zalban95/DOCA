@@ -51,6 +51,35 @@ const SYSTEM_TOOLS = [
     installCmd: 'sudo apt-get update && sudo apt-get install -y git',
   },
   {
+    id: 'ollama', label: 'Ollama', category: 'recommended',
+    detectCmd: 'ollama --version 2>/dev/null',
+    note: 'Local LLM runtime — powers the Ollama model manager',
+    repo: 'https://ollama.com', repoLabel: 'ollama.com',
+    installCmd: 'curl -fsSL https://ollama.com/install.sh | sh',
+    needsSudo: true, // install script escalates internally
+  },
+  {
+    id: 'docker-compose', label: 'Docker Compose', category: 'recommended',
+    detectCmd: 'docker compose version 2>/dev/null',
+    note: 'Compose v2 plugin — required for stack start/stop/restart',
+    repo: 'https://docs.docker.com/compose/', repoLabel: 'apt: docker-compose-plugin',
+    installCmd: 'sudo apt-get update && sudo apt-get install -y docker-compose-plugin',
+  },
+  {
+    id: 'ffmpeg', label: 'ffmpeg', category: 'recommended',
+    detectCmd: 'ffmpeg -version 2>/dev/null | head -1',
+    note: 'Audio/video toolkit — used by voice (STT/TTS) features',
+    repo: 'https://ffmpeg.org', repoLabel: 'apt: ffmpeg',
+    installCmd: 'sudo apt-get update && sudo apt-get install -y ffmpeg',
+  },
+  {
+    id: 'curl', label: 'curl', category: 'recommended',
+    detectCmd: 'curl --version 2>/dev/null | head -1',
+    note: 'HTTP client — used for service health checks and installers',
+    repo: 'https://curl.se', repoLabel: 'apt: curl',
+    installCmd: 'sudo apt-get update && sudo apt-get install -y curl',
+  },
+  {
     id: 'python3', label: 'Python 3', category: 'recommended',
     detectCmd: 'python3 --version 2>/dev/null || python --version 2>/dev/null',
     note: 'Required for Python-based AI tools (Aider, Whisper, Kokoro)',
@@ -78,6 +107,13 @@ const SYSTEM_TOOLS = [
     repo: 'https://pypi.org/project/huggingface-hub/', repoLabel: 'pip: huggingface-hub',
     installCmd: 'pip install --user --break-system-packages "huggingface_hub[cli]"',
   },
+  {
+    id: 'llama-server', label: 'llama-server', category: 'optional',
+    detectCmd: 'llama-server --version 2>&1 | head -1 | grep -i version',
+    note: 'llama.cpp server binary — required by the llama.cpp Servers manager',
+    repo: 'https://github.com/ggml-org/llama.cpp/releases', repoLabel: 'llama.cpp releases (manual)',
+    installCmd: null,
+  },
 ];
 
 /** GET /api/system/tools */
@@ -98,6 +134,7 @@ async function handleList(req, res) {
           repoLabel:    t.repoLabel,
           canInstall:   !!t.installCmd,
           installCmd:   t.installCmd || null,
+          needsSudo:    !!t.needsSudo || !!(t.installCmd && t.installCmd.includes('sudo ')),
           detected,
           version,
         });

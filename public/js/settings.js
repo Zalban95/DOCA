@@ -290,7 +290,7 @@ function _sysdepsRender(tools) {
 
 function sysdepsInstall(id) {
   const tool = _sysdepsTools.find(t => t.id === id);
-  const needsSudo = tool && typeof tool.installCmd === 'string' && tool.installCmd.includes('sudo ');
+  const needsSudo = tool && (tool.needsSudo || (typeof tool.installCmd === 'string' && tool.installCmd.includes('sudo ')));
 
   if (needsSudo) {
     sudoAsk(`Installing "${tool.label}" requires elevated privileges.`, pw => {

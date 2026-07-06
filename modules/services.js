@@ -11,6 +11,9 @@ const { sseHeaders, loadPrefs, loadModelsPrefs } = require('./utils');
 const INFERENCE_SERVICES = [
   { id: 'whisper',  label: 'Whisper STT',     image: 'fedirz/faster-whisper-server:latest-cuda', port: 8000, internalPort: 8000, apiPath: '/v1', multiGpu: false,
     description: 'OpenAI-compatible speech-to-text API (faster-whisper, CUDA)' },
+  { id: 'kokoro',   label: 'Kokoro TTS',      image: 'ghcr.io/remsky/kokoro-fastapi-gpu:latest', cpuImage: 'ghcr.io/remsky/kokoro-fastapi-cpu:latest',
+    port: 8880, internalPort: 8880, apiPath: '/v1', multiGpu: false,
+    description: 'OpenAI-compatible text-to-speech API (Kokoro-82M) — matches the Voice tab default port' },
   { id: 'vllm',     label: 'vLLM (LLM)',      image: 'vllm/vllm-openai:latest',      port: 8001, internalPort: 8000, apiPath: '/v1', multiGpu: true,
     description: 'OpenAI-compatible LLM inference for HuggingFace models, multi-GPU' },
   { id: 'sdwebui',  label: 'Stable Diffusion',image: 'ghcr.io/ai-dock/stable-diffusion-webui:latest-cuda', port: 7860, internalPort: 7860, apiPath: '/sdapi/v1', multiGpu: false,
@@ -19,12 +22,17 @@ const INFERENCE_SERVICES = [
     description: 'Node-based Stable Diffusion workflow runner with ComfyUI-Manager' },
 ];
 
+/** Pick the image for a service given the GPU selection (CPU fallback image). */
+function serviceImage(svc, gpu) {
+  return gpu === '' && svc.cpuImage ? svc.cpuImage : svc.image;
+}
+
 /** GET /api/services */
 function handleList(req, res) {
   const prefs = loadPrefs();
   const saved = prefs.serviceSettings || {};
   res.json({ services: INFERENCE_SERVICES.map(s => ({
-    id: s.id, label: s.label, image: s.image, port: s.port,
+    id: s.id, label: s.label, image: s.image, cpuImage: s.cpuImage || null, port: s.port,
     apiPath: s.apiPath, description: s.description, multiGpu: s.multiGpu,
     savedGpu: saved[s.id]?.gpu || 'all',
     savedModelId: saved[s.id]?.modelId || '',
@@ -44,7 +52,7 @@ function handleSettings(req, res) {
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
-/** GET /api/services/status */
+/** GET /api/services/status — running containers + local image presence */
 function handleStatus(req, res) {
   exec(`docker ps -a --filter "name=doca-" --format '{{json .}}'`, (err, stdout) => {
     const running = {};
@@ -55,7 +63,18 @@ function handleStatus(req, res) {
         if (svc) running[svc.id] = { state: c.State, status: c.Status, id: c.ID };
       } catch {}
     });
-    res.json({ running });
+
+    exec(`docker images --format '{{.Repository}}:{{.Tag}}'`, { timeout: 5000 }, (imgErr, imgOut) => {
+      const local  = new Set((imgOut || '').trim().split('\n').filter(Boolean));
+      const images = {};
+      INFERENCE_SERVICES.forEach(s => {
+        images[s.id] = {
+          image:   s.image,
+          present: local.has(s.image) || (s.cpuImage ? local.has(s.cpuImage) : false),
+        };
+      });
+      res.json({ running, images });
+    });
   });
 }
 
@@ -83,6 +102,7 @@ function handleStart(req, res) {
   const home = process.env.HOME || os.homedir();
   const hfCache = mp.hf?.cacheDir || path.join(home, '.cache', 'huggingface', 'hub');
   const hfToken = mp.hf?.token || '';
+  const image   = serviceImage(svc, gpu); // CPU-only fallback image when no GPU selected
 
   const dockerArgs = [
     'run', '-d',
@@ -97,12 +117,12 @@ function handleStart(req, res) {
   if (id === 'vllm') {
     dockerArgs.push('-v', `${hfCache}:/root/.cache/huggingface`);
     if (hfToken) dockerArgs.push('-e', `HUGGING_FACE_HUB_TOKEN=${hfToken}`);
-    dockerArgs.push(svc.image);
+    dockerArgs.push(image);
     if (modelId) dockerArgs.push('--model', modelId);
     if (gpu === 'all' && svc.multiGpu) dockerArgs.push('--tensor-parallel-size', '2');
   } else if (id === 'sdwebui') {
     dockerArgs.push('-v', `${hfCache}:/root/.cache/huggingface`);
-    dockerArgs.push(svc.image);
+    dockerArgs.push(image);
     dockerArgs.push('--listen', '--api');
   } else if (id === 'comfyui') {
     const comfyDir = path.join(home, 'comfyui-data');
@@ -112,9 +132,9 @@ function handleStart(req, res) {
     dockerArgs.push('-e', `WANTED_UID=${uid}`, '-e', `WANTED_GID=${gid}`);
     dockerArgs.push('-v', `${comfyDir}:/comfy/mnt`);
     dockerArgs.push('-v', `${hfCache}:/root/.cache/huggingface`);
-    dockerArgs.push(svc.image);
+    dockerArgs.push(image);
   } else {
-    dockerArgs.push(svc.image);
+    dockerArgs.push(image);
   }
 
   const cmdDisplay = `docker ${dockerArgs.join(' ')}`;

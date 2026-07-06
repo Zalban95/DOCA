@@ -9,6 +9,11 @@ const CODE_TOOLS = [
   { id: 'claude', label: 'Claude Code', cmd: 'claude', installHint: 'npm install -g @anthropic-ai/claude-code', url: 'https://github.com/anthropics/claude-code' },
   { id: 'aider',  label: 'Aider',       cmd: 'aider',  installHint: 'sudo pip install --break-system-packages aider-install && aider-install', url: 'https://aider.chat' },
   { id: 'codex',  label: 'OpenAI Codex CLI', cmd: 'codex', installHint: 'npm install -g @openai/codex', url: 'https://github.com/openai/codex' },
+  { id: 'gemini', label: 'Gemini CLI',  cmd: 'gemini', installHint: 'npm install -g @google/gemini-cli', url: 'https://github.com/google-gemini/gemini-cli' },
+  { id: 'qwen',   label: 'Qwen Code',   cmd: 'qwen',   installHint: 'npm install -g @qwen-code/qwen-code', url: 'https://github.com/QwenLM/qwen-code' },
+  { id: 'opencode', label: 'OpenCode',  cmd: 'opencode', installHint: 'curl -fsSL https://opencode.ai/install | bash', url: 'https://github.com/sst/opencode' },
+  { id: 'crush',  label: 'Crush',       cmd: 'crush',  installHint: 'npm install -g @charmland/crush', url: 'https://github.com/charmbracelet/crush' },
+  { id: 'cursor-agent', label: 'Cursor CLI', cmd: 'cursor-agent', installHint: 'curl https://cursor.com/install -fsS | bash', url: 'https://cursor.com/cli' },
   { id: 'goose',  label: 'Goose',       cmd: 'goose',  installHint: 'curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash', url: 'https://block.github.io/goose/docs/getting-started/installation/' },
 ];
 
