@@ -9,6 +9,27 @@ let _llamaStatus    = {};
 
 async function llamaInit() {
   await llamaLoadList();
+  _llamaServerBadge();
+}
+
+/** Detect the llama-server binary (shared system-tools check) and badge it. */
+async function _llamaServerBadge() {
+  const badge = document.getElementById('llama-server-badge');
+  if (!badge) return;
+  try {
+    const tools = await getSystemTools();
+    const t = tools.find(x => x.id === 'llama-server');
+    if (!t) return;
+    badge.style.display = '';
+    if (t.detected) {
+      badge.textContent = '✓ llama-server';
+      badge.className   = 'badge badge-green';
+    } else {
+      badge.innerHTML   = `✗ llama-server missing — <a href="${t.repo}" target="_blank" style="color:inherit;text-decoration:underline">get binary</a>`;
+      badge.className   = 'badge badge-red';
+    }
+    badge.style.fontSize = '9px';
+  } catch {}
 }
 
 async function llamaLoadList() {
@@ -179,42 +200,18 @@ async function llamaStart(id) {
   if (out)      { out.style.display = 'block'; out.textContent = 'Starting llama-server…\n'; }
   if (startBtn) startBtn.disabled = true;
 
-  try {
-    const res = await fetch('/api/models/llamacpp/start', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ id }),
-    });
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-
-    const read = async () => {
-      const { done, value } = await reader.read();
-      if (done) { llamaLoadStatus(); if (startBtn) startBtn.disabled = false; return; }
-      buf += decoder.decode(value, { stream: true });
-      const parts = buf.split('\n\n');
-      buf = parts.pop();
-      parts.forEach(part => {
-        const line = part.trim().replace(/^data:\s*/, '');
-        if (!line) return;
-        try {
-          const obj = JSON.parse(line);
-          if (obj.status && out) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
-          if (obj.done) {
-            llamaLoadStatus();
-            if (startBtn) startBtn.disabled = false;
-          }
-        } catch {}
-      });
-      read();
-    };
-    read();
-  } catch (e) {
-    if (out) out.textContent += `\nError: ${e.message}`;
-    if (startBtn) startBtn.disabled = false;
-    llamaLoadStatus();
-  }
+  await sseStream('/api/models/llamacpp/start', { id }, {
+    onStatus: text => appendStream(out, text),
+    onDone: () => {
+      llamaLoadStatus();
+      if (startBtn) startBtn.disabled = false;
+    },
+    onError: e => {
+      if (out) out.textContent += `\nError: ${e.message}`;
+    },
+  });
+  llamaLoadStatus();
+  if (startBtn) startBtn.disabled = false;
 }
 
 async function llamaStop(id) {
@@ -237,42 +234,18 @@ async function llamaRestart(id) {
   if (out) { out.style.display = 'block'; out.textContent = 'Restarting llama-server…\n'; }
   if (restartBtn) restartBtn.disabled = true;
 
-  try {
-    const res = await fetch('/api/models/llamacpp/restart', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ id }),
-    });
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-
-    const read = async () => {
-      const { done, value } = await reader.read();
-      if (done) { llamaLoadStatus(); if (restartBtn) restartBtn.disabled = false; return; }
-      buf += decoder.decode(value, { stream: true });
-      const parts = buf.split('\n\n');
-      buf = parts.pop();
-      parts.forEach(part => {
-        const line = part.trim().replace(/^data:\s*/, '');
-        if (!line) return;
-        try {
-          const obj = JSON.parse(line);
-          if (obj.status && out) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
-          if (obj.done) {
-            llamaLoadStatus();
-            if (restartBtn) restartBtn.disabled = false;
-          }
-        } catch {}
-      });
-      read();
-    };
-    read();
-  } catch (e) {
-    if (out) out.textContent += `\nError: ${e.message}`;
-    if (restartBtn) restartBtn.disabled = false;
-    llamaLoadStatus();
-  }
+  await sseStream('/api/models/llamacpp/restart', { id }, {
+    onStatus: text => appendStream(out, text),
+    onDone: () => {
+      llamaLoadStatus();
+      if (restartBtn) restartBtn.disabled = false;
+    },
+    onError: e => {
+      if (out) out.textContent += `\nError: ${e.message}`;
+    },
+  });
+  llamaLoadStatus();
+  if (restartBtn) restartBtn.disabled = false;
 }
 
 async function llamaHealth(id) {

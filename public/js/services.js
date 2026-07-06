@@ -5,7 +5,8 @@
    ═══════════════════════════════════════════════════════ */
 
 let _servicesDefs   = [];  // loaded from GET /api/services
-let _servicesStatus = {};  // loaded from GET /api/services/status
+let _servicesStatus = {};  // running map from GET /api/services/status
+let _servicesImages = {};  // image presence map from GET /api/services/status
 
 async function servicesInit() {
   try {
@@ -20,7 +21,8 @@ async function servicesLoadStatus() {
   try {
     const data = await apiFetch('/api/services/status');
     _servicesStatus = data.running || {};
-  } catch { _servicesStatus = {}; }
+    _servicesImages = data.images  || {};
+  } catch { _servicesStatus = {}; _servicesImages = {}; }
   _updateServicesBadges();
 }
 
@@ -42,14 +44,17 @@ function _renderServicesGrid() {
         <span class="badge badge-grey" id="svc-badge-${svc.id}">○ stopped</span>
         <span class="services-label">${svc.label}</span>
         <span class="services-image">${svc.image}</span>
+        <span class="badge" id="svc-img-badge-${svc.id}" style="display:none;font-size:9px"></span>
         <span style="flex:1"></span>
         <a id="svc-url-${svc.id}" class="services-url" style="display:none"
            href="http://localhost:${svc.port}" target="_blank">
           http://localhost:${svc.port}
         </a>
+        <button class="btn btn-xs tool-gear" title="Service settings"
+                onclick="svcToggleConfig('${svc.id}')">⚙</button>
       </div>
       <div style="font-size:10px;color:var(--muted);margin:2px 0 6px">${svc.description}</div>
-      <div class="services-controls">
+      <div class="services-controls" id="svc-config-${svc.id}" style="display:none">
         <label class="services-ctrl-label">GPU</label>
         <select class="input services-select" id="svc-gpu-${svc.id}" style="width:130px"
                 onchange="_svcSaveSettings('${svc.id}')">${gpuOpts}</select>
@@ -61,8 +66,12 @@ function _renderServicesGrid() {
                style="flex:1;min-width:180px"
                onchange="_svcSaveSettings('${svc.id}')">
         ` : ''}
-        <button class="btn btn-sm btn-teal"  id="svc-start-${svc.id}" onclick="serviceStart('${svc.id}')">▶ Start</button>
-        <button class="btn btn-sm btn-red"   id="svc-stop-${svc.id}"  onclick="serviceStop('${svc.id}')"  style="display:none">■ Stop</button>
+        ${svc.cpuImage ? `<span style="font-size:10px;color:var(--muted)">CPU image: <code>${svc.cpuImage}</code></span>` : ''}
+      </div>
+      <div class="services-controls">
+        <button class="btn btn-sm btn-teal"   id="svc-start-${svc.id}" onclick="serviceStart('${svc.id}')">▶ Start</button>
+        <button class="btn btn-sm btn-red"    id="svc-stop-${svc.id}"  onclick="serviceStop('${svc.id}')"  style="display:none">■ Stop</button>
+        <button class="btn btn-sm btn-purple" id="svc-pull-${svc.id}"  onclick="servicePullImage('${svc.id}')" style="display:none">⬇ Pull image</button>
       </div>
       <pre class="install-out" id="svc-out-${svc.id}" style="display:none;max-height:160px;margin-top:6px"></pre>
       <div id="svc-api-note-${svc.id}" style="display:none;font-size:10px;color:var(--green);margin-top:4px">
@@ -74,6 +83,11 @@ function _renderServicesGrid() {
   _updateServicesBadges();
 }
 
+function svcToggleConfig(id) {
+  const row = document.getElementById(`svc-config-${id}`);
+  if (row) row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+}
+
 function _updateServicesBadges() {
   _servicesDefs.forEach(svc => {
     const info     = _servicesStatus[svc.id];
@@ -82,6 +96,8 @@ function _updateServicesBadges() {
     const urlEl    = document.getElementById(`svc-url-${svc.id}`);
     const startBtn = document.getElementById(`svc-start-${svc.id}`);
     const stopBtn  = document.getElementById(`svc-stop-${svc.id}`);
+    const imgBadge = document.getElementById(`svc-img-badge-${svc.id}`);
+    const pullBtn  = document.getElementById(`svc-pull-${svc.id}`);
 
     if (!badge) return;
 
@@ -98,7 +114,45 @@ function _updateServicesBadges() {
       if (startBtn) startBtn.style.display = '';
       if (stopBtn)  stopBtn.style.display  = 'none';
     }
+
+    // Image presence (auto-checked): show a pull button when the image is missing
+    const img = _servicesImages[svc.id];
+    if (imgBadge && img) {
+      imgBadge.style.display = '';
+      if (img.present) {
+        imgBadge.textContent = '✓ image';
+        imgBadge.className   = 'badge badge-green';
+        imgBadge.style.fontSize = '9px';
+        if (pullBtn) pullBtn.style.display = 'none';
+      } else {
+        imgBadge.textContent = '⬇ image not pulled';
+        imgBadge.className   = 'badge badge-red';
+        imgBadge.style.fontSize = '9px';
+        if (pullBtn && !running) pullBtn.style.display = '';
+      }
+    }
   });
+}
+
+/** Pull the Docker image for a service (streams progress into the row output). */
+async function servicePullImage(id) {
+  const svc = _servicesDefs.find(s => s.id === id);
+  if (!svc) return;
+  const gpu   = document.getElementById(`svc-gpu-${id}`)?.value ?? (svc.savedGpu || 'all');
+  const image = gpu === '' && svc.cpuImage ? svc.cpuImage : svc.image;
+  const out     = document.getElementById(`svc-out-${id}`);
+  const pullBtn = document.getElementById(`svc-pull-${id}`);
+
+  if (out)     { out.style.display = 'block'; out.textContent = `Pulling ${image}…\n`; }
+  if (pullBtn) pullBtn.disabled = true;
+
+  await sseStream('/api/docker/images/pull', { name: image }, {
+    onStatus: text => appendStream(out, text),
+    onError:  e => { if (out) out.textContent += `\nError: ${e.message}`; },
+  });
+  if (pullBtn) pullBtn.disabled = false;
+  appendStream(out, '\n✓ Pull finished\n');
+  servicesLoadStatus();
 }
 
 async function _svcSaveSettings(id) {
@@ -122,43 +176,17 @@ async function serviceStart(id) {
   if (startBtn)  startBtn.disabled = true;
   if (apiNote)   apiNote.style.display = 'none';
 
-  try {
-    const res = await fetch('/api/services/start', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ id, gpu, modelId }),
-    });
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-
-    const read = async () => {
-      const { done, value } = await reader.read();
-      if (done) { servicesLoadStatus(); if (startBtn) startBtn.disabled = false; return; }
-      buf += decoder.decode(value, { stream: true });
-      const parts = buf.split('\n\n');
-      buf = parts.pop();
-      parts.forEach(part => {
-        const line = part.trim().replace(/^data:\s*/, '');
-        if (!line) return;
-        try {
-          const obj = JSON.parse(line);
-          if (obj.status && out) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
-          if (obj.done) {
-            if (obj.ok && apiNote) apiNote.style.display = '';
-            servicesLoadStatus();
-            if (startBtn) startBtn.disabled = false;
-          }
-        } catch {}
-      });
-      read();
-    };
-    read();
-  } catch (e) {
-    if (out) out.textContent += `\nError: ${e.message}`;
-    if (startBtn) startBtn.disabled = false;
-    servicesLoadStatus();
-  }
+  await sseStream('/api/services/start', { id, gpu, modelId }, {
+    onStatus: text => appendStream(out, text),
+    onDone: obj => {
+      if (obj.ok && apiNote) apiNote.style.display = '';
+    },
+    onError: e => {
+      if (out) out.textContent += `\nError: ${e.message}`;
+    },
+  });
+  servicesLoadStatus();
+  if (startBtn) startBtn.disabled = false;
 }
 
 async function serviceStop(id) {

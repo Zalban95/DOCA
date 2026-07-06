@@ -1,19 +1,35 @@
 'use strict';
 
 const fs   = require('fs');
-const os   = require('os');
-const { exec } = require('child_process');
 
-const { loadPrefs, loadModelsPrefs, saveModelsPrefs } = require('./utils');
+const { loadModelsPrefs, saveModelsPrefs, detectBinary, streamCmd } = require('./utils');
 
-/** Known non-LLM tools with detection commands */
+/**
+ * Known non-LLM AI tools.
+ * - cmd tools are detected as binaries (custom path override via prefs);
+ *   `installCmd` makes them installable from the UI.
+ * - API tools (cmd:null) are detected by probing `apiUrl` (pref or default);
+ *   `serviceId` links them to the matching Inference Service for startup.
+ */
 const KNOWN_TOOLS = [
-  { id: 'whisper',        label: 'Whisper (STT)',          cmd: 'whisper',        type: 'stt'   },
-  { id: 'faster-whisper', label: 'Faster-Whisper (STT)',   cmd: 'faster-whisper', type: 'stt'   },
-  { id: 'kokoro',         label: 'Kokoro TTS',             cmd: 'kokoro',         type: 'tts'   },
-  { id: 'piper',          label: 'Piper TTS',              cmd: 'piper',          type: 'tts'   },
-  { id: 'stable-diffusion', label: 'Stable Diffusion (API)', cmd: null,           type: 'image' },
-  { id: 'comfyui',        label: 'ComfyUI (API)',           cmd: null,            type: 'image' },
+  { id: 'whisper',        label: 'Whisper (STT)',          cmd: 'whisper',        type: 'stt',
+    note: 'OpenAI Whisper CLI — local speech-to-text',
+    installCmd: 'pip install --user --break-system-packages openai-whisper' },
+  { id: 'faster-whisper', label: 'Faster-Whisper (STT)',   cmd: 'faster-whisper', type: 'stt',
+    note: 'CTranslate2 Whisper — use the Whisper STT inference service',
+    serviceId: 'whisper' },
+  { id: 'kokoro',         label: 'Kokoro TTS (API)',       cmd: null,             type: 'tts',
+    note: 'OpenAI-compatible TTS — run via the Kokoro inference service',
+    defaultApiUrl: 'http://localhost:8880', serviceId: 'kokoro' },
+  { id: 'piper',          label: 'Piper TTS',              cmd: 'piper',          type: 'tts',
+    note: 'Fast local neural text-to-speech CLI',
+    installCmd: 'pip install --user --break-system-packages piper-tts' },
+  { id: 'stable-diffusion', label: 'Stable Diffusion (API)', cmd: null,           type: 'image',
+    note: 'A1111 WebUI REST API — run via the Stable Diffusion service',
+    defaultApiUrl: 'http://localhost:7860', serviceId: 'sdwebui' },
+  { id: 'comfyui',        label: 'ComfyUI (API)',           cmd: null,            type: 'image',
+    note: 'Node-based SD workflows — run via the ComfyUI service',
+    defaultApiUrl: 'http://localhost:8188', serviceId: 'comfyui' },
 ];
 
 /** Curated popular Ollama model list — used as fallback / suggestions */
@@ -75,15 +91,11 @@ async function handleGetTools(req, res) {
       if (customPath && fs.existsSync(customPath)) {
         detected = true; detectedPath = customPath;
       } else {
-        try {
-          const { stdout } = await new Promise((resolve, reject) =>
-            exec(`which ${t.cmd}`, (e, o) => e ? reject(e) : resolve({ stdout: o.trim() }))
-          );
-          if (stdout) { detected = true; detectedPath = stdout; }
-        } catch {}
+        const found = await detectBinary(t.cmd);
+        if (found.detected) { detected = true; detectedPath = found.path; }
       }
     } else {
-      const apiUrl = pref.apiUrl || '';
+      const apiUrl = pref.apiUrl || t.defaultApiUrl || '';
       if (apiUrl) {
         try {
           await fetch(apiUrl, { signal: AbortSignal.timeout(2000) });
@@ -96,14 +108,25 @@ async function handleGetTools(req, res) {
       id:                   t.id,
       label:                t.label,
       type:                 t.type,
+      note:                 t.note || '',
+      isApi:                !t.cmd,
+      canInstall:           !!t.installCmd,
+      serviceId:            t.serviceId || null,
       detected,
       path:                 pref.path    || detectedPath,
-      apiUrl:               pref.apiUrl  || '',
+      apiUrl:               pref.apiUrl  || (!t.cmd ? t.defaultApiUrl || '' : ''),
       availableForOpenclaw: pref.available !== false && detected,
     };
   }));
 
   res.json({ tools: results });
+}
+
+/** POST /api/models/tools/:id/install — SSE progress */
+function handleToolInstall(req, res) {
+  const tool = KNOWN_TOOLS.find(t => t.id === req.params.id);
+  if (!tool || !tool.installCmd) return res.status(400).json({ error: 'No install command for this tool' });
+  streamCmd(res, tool.installCmd, { label: tool.label });
 }
 
 /** POST /api/models/tools/:id/config */
@@ -126,4 +149,5 @@ module.exports = {
   handlePostSettings,
   handleGetTools,
   handleToolConfig,
+  handleToolInstall,
 };

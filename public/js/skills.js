@@ -186,7 +186,7 @@ async function showSkillDetail(name) {
 
     if (data.readme) {
       html += `<div class="skill-detail-section">README</div>`;
-      html += `<pre class="skill-detail-readme">${escapeHtml(data.readme)}</pre>`;
+      html += `<pre class="skill-detail-readme">${escHtml(data.readme)}</pre>`;
     }
 
     if (data.files && data.files.length) {
@@ -212,10 +212,6 @@ function closeSkillDetail(e) {
   document.getElementById('skill-detail-overlay').style.display = 'none';
 }
 
-function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
 function installSkill(force) {
   const name = document.getElementById('skill-input').value.trim();
   if (!name) return;
@@ -223,27 +219,10 @@ function installSkill(force) {
   out.textContent = '';
   out.style.display = 'block';
 
-  fetch('/api/skills/install', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ skill: name, force })
-  }).then(res => {
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    function read() {
-      reader.read().then(({ done, value }) => {
-        if (done) { loadSkills(); return; }
-        decoder.decode(value).split('\n').forEach(line => {
-          if (line.startsWith('data: ')) {
-            try { out.textContent += JSON.parse(line.slice(6)); } catch {}
-          }
-        });
-        out.scrollTop = out.scrollHeight;
-        read();
-      });
-    }
-    read();
-  }).catch(e => { out.textContent += `\nError: ${e.message}`; });
+  sseStream('/api/skills/install', { skill: name, force }, {
+    onStatus: text => appendStream(out, text),
+    onError:  e => { out.textContent += `\nError: ${e.message}`; },
+  }).then(loadSkills);
 }
 
 function removeSkill(name) {

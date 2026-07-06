@@ -43,10 +43,10 @@ function _dockerRenderPresets() {
 
     return `<div class="docker-preset-card">
       <div class="docker-preset-card-header">
-        <span class="docker-preset-card-name">${_dockerEsc(p.name)}</span>
+        <span class="docker-preset-card-name">${escHtml(p.name)}</span>
         ${statusBadge}
       </div>
-      <div class="docker-preset-card-image">${_dockerEsc(p.image)}</div>
+      <div class="docker-preset-card-image">${escHtml(p.image)}</div>
       <div class="docker-preset-card-meta">${gpuTag} ${portsTag}</div>
       <div class="docker-preset-card-actions">
         <button class="btn btn-xs btn-green" onclick="dockerPresetRun('${eName}')">▶ Run</button>
@@ -75,40 +75,17 @@ function _dockerRunFromPreset(p, createOnly) {
   out.style.display = 'block';
   out.textContent = `${createOnly ? 'Creating' : 'Starting'} ${p.image}…\n`;
 
-  fetch('/api/docker/run', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      image: p.image, name: p.name, ports: p.ports || [], gpu: p.gpu || '',
-      restart: p.restart || 'no', envVars: p.envVars || [], volumes: p.volumes || [],
-      createOnly
-    })
-  }).then(res => {
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-    const read = () => {
-      reader.read().then(({ done, value }) => {
-        if (done) return;
-        buf += decoder.decode(value, { stream: true });
-        const parts = buf.split('\n\n');
-        buf = parts.pop();
-        parts.forEach(part => {
-          const line = part.trim().replace(/^data:\s*/, '');
-          if (!line) return;
-          try {
-            const obj = JSON.parse(line);
-            if (obj.status) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
-            if (obj.done && obj.ok) {
-              setTimeout(() => { dockerLoadContainers(); dockerLoadPresets(); }, 800);
-            }
-          } catch {}
-        });
-        read();
-      });
-    };
-    read();
-  }).catch(e => { out.textContent += `\nError: ${e.message}`; });
+  sseStream('/api/docker/run', {
+    image: p.image, name: p.name, ports: p.ports || [], gpu: p.gpu || '',
+    restart: p.restart || 'no', envVars: p.envVars || [], volumes: p.volumes || [],
+    createOnly
+  }, {
+    onStatus: text => appendStream(out, text),
+    onDone: obj => {
+      if (obj.ok) setTimeout(() => { dockerLoadContainers(); dockerLoadPresets(); }, 800);
+    },
+    onError: e => { out.textContent += `\nError: ${e.message}`; },
+  });
 
   document.getElementById('docker-run-modal').classList.add('open');
   document.getElementById('docker-run-image-label').textContent = p.image;
@@ -383,47 +360,17 @@ function _dockerExecuteRun(form, createOnly) {
   out.textContent = `${createOnly ? 'Creating' : 'Starting'} ${form.image}…\n`;
   okBtn.disabled = true;
 
-  fetch('/api/docker/run', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      image: form.image, name: form.name, ports: form.ports, gpu: form.gpu,
-      restart: form.restart, envVars: form.envVars, volumes: form.volumes, createOnly
-    })
-  }).then(res => {
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-    const read = () => {
-      reader.read().then(({ done, value }) => {
-        if (done) { okBtn.disabled = false; return; }
-        buf += decoder.decode(value, { stream: true });
-        const parts = buf.split('\n\n');
-        buf = parts.pop();
-        parts.forEach(part => {
-          const line = part.trim().replace(/^data:\s*/, '');
-          if (!line) return;
-          try {
-            const obj = JSON.parse(line);
-            if (obj.status) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
-            if (obj.done) {
-              okBtn.disabled = false;
-              if (obj.ok) {
-                setTimeout(() => { dockerRunClose(); dockerLoadContainers(); dockerLoadPresets(); }, 800);
-              }
-            }
-          } catch {}
-        });
-        read();
-      });
-    };
-    read();
-  }).catch(e => {
-    out.textContent += `\nError: ${e.message}`;
-    okBtn.disabled = false;
-  });
-}
-
-function _dockerEsc(s) {
-  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  sseStream('/api/docker/run', {
+    image: form.image, name: form.name, ports: form.ports, gpu: form.gpu,
+    restart: form.restart, envVars: form.envVars, volumes: form.volumes, createOnly
+  }, {
+    onStatus: text => appendStream(out, text),
+    onDone: obj => {
+      okBtn.disabled = false;
+      if (obj.ok) {
+        setTimeout(() => { dockerRunClose(); dockerLoadContainers(); dockerLoadPresets(); }, 800);
+      }
+    },
+    onError: e => { out.textContent += `\nError: ${e.message}`; },
+  }).then(() => { okBtn.disabled = false; });
 }

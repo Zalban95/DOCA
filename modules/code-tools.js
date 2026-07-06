@@ -1,16 +1,19 @@
 'use strict';
 
 const fs   = require('fs');
-const os   = require('os');
-const { exec, spawn } = require('child_process');
 
 const { PREFS_FILE } = require('./paths');
-const { sseHeaders, loadPrefs } = require('./utils');
+const { loadPrefs, streamCmd, detectBinary } = require('./utils');
 
 const CODE_TOOLS = [
   { id: 'claude', label: 'Claude Code', cmd: 'claude', installHint: 'npm install -g @anthropic-ai/claude-code', url: 'https://github.com/anthropics/claude-code' },
   { id: 'aider',  label: 'Aider',       cmd: 'aider',  installHint: 'sudo pip install --break-system-packages aider-install && aider-install', url: 'https://aider.chat' },
   { id: 'codex',  label: 'OpenAI Codex CLI', cmd: 'codex', installHint: 'npm install -g @openai/codex', url: 'https://github.com/openai/codex' },
+  { id: 'gemini', label: 'Gemini CLI',  cmd: 'gemini', installHint: 'npm install -g @google/gemini-cli', url: 'https://github.com/google-gemini/gemini-cli' },
+  { id: 'qwen',   label: 'Qwen Code',   cmd: 'qwen',   installHint: 'npm install -g @qwen-code/qwen-code', url: 'https://github.com/QwenLM/qwen-code' },
+  { id: 'opencode', label: 'OpenCode',  cmd: 'opencode', installHint: 'curl -fsSL https://opencode.ai/install | bash', url: 'https://github.com/sst/opencode' },
+  { id: 'crush',  label: 'Crush',       cmd: 'crush',  installHint: 'npm install -g @charmland/crush', url: 'https://github.com/charmbracelet/crush' },
+  { id: 'cursor-agent', label: 'Cursor CLI', cmd: 'cursor-agent', installHint: 'curl https://cursor.com/install -fsS | bash', url: 'https://cursor.com/cli' },
   { id: 'goose',  label: 'Goose',       cmd: 'goose',  installHint: 'curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash', url: 'https://block.github.io/goose/docs/getting-started/installation/' },
 ];
 
@@ -20,36 +23,16 @@ async function handleList(req, res) {
   const expanded = prefs.codeExpanded || [];
   const cfgMap   = prefs.codeConfig   || {};
 
-  const results = await Promise.all(CODE_TOOLS.map(t => new Promise(resolve => {
-    const detectCmd = [
-      `bash -lc "which ${t.cmd} 2>/dev/null"`,
-      `{ test -f "$HOME/.npm-global/bin/${t.cmd}" && echo "$HOME/.npm-global/bin/${t.cmd}"; }`,
-      `{ test -f "$HOME/.local/bin/${t.cmd}"      && echo "$HOME/.local/bin/${t.cmd}"; }`,
-      `{ test -f "/usr/local/bin/${t.cmd}"        && echo "/usr/local/bin/${t.cmd}"; }`,
-      `find "$HOME/.nvm/versions" -name "${t.cmd}" -type f 2>/dev/null | grep -m1 .`,
-    ].join(' || ');
-    exec(detectCmd, { env: { ...process.env, HOME: process.env.HOME || os.homedir() } }, (err, stdout) => {
-      const detected = !!stdout.trim();
-      let version = null;
-      if (detected) {
-        const bin = stdout.trim().split('\n')[0];
-        try {
-          const vOut = require('child_process').execSync(
-            `bash -lc "'${bin}' --version 2>/dev/null || '${bin}' version 2>/dev/null"`,
-            { timeout: 3000 }
-          ).toString().trim();
-          version = vOut.split('\n')[0].slice(0, 60);
-        } catch {}
-      }
-      resolve({
-        ...t,
-        detected,
-        version,
-        pinned:     expanded.includes(t.id),
-        configPath: cfgMap[t.id]?.configPath || '',
-      });
-    });
-  })));
+  const results = await Promise.all(CODE_TOOLS.map(async t => {
+    const { detected, version } = await detectBinary(t.cmd);
+    return {
+      ...t,
+      detected,
+      version,
+      pinned:     expanded.includes(t.id),
+      configPath: cfgMap[t.id]?.configPath || '',
+    };
+  }));
 
   res.json({ tools: results, expanded });
 }
@@ -85,47 +68,10 @@ function handleInstall(req, res) {
   if (!tool) return res.status(404).json({ error: 'Unknown tool' });
 
   const { password } = req.body || {};
-
-  sseHeaders(res);
-  const sseWrite = d => { try { res.write(`data: ${JSON.stringify(d)}\n\n`); } catch {} };
-
-  let cmd = tool.installHint;
-  const needsSudo = cmd.includes('sudo ') && typeof password === 'string' && password.length > 0;
-  if (needsSudo) cmd = cmd.replace(/\bsudo\b/g, 'sudo -S');
-
-  sseWrite({ status: `Installing ${tool.label}…\n$ ${tool.installHint}\n` });
-
-  const child = spawn('bash', ['-lc', cmd], {
-    cwd: process.env.HOME || os.homedir(),
-    env: {
-      ...process.env,
-      HOME: process.env.HOME || os.homedir(),
-      DEBIAN_FRONTEND: 'noninteractive',
-      PATH: `${process.env.HOME || os.homedir()}/.local/bin:${process.env.PATH || '/usr/local/bin:/usr/bin:/bin'}`,
-    },
-    stdio: ['pipe', 'pipe', 'pipe'],
+  streamCmd(res, tool.installHint, {
+    label:    tool.label,
+    password: typeof password === 'string' && password.length > 0 ? password : undefined,
   });
-
-  if (needsSudo) {
-    child.stdin.write(password + '\n');
-    child.stdin.end();
-  }
-
-  child.stdout.on('data', d => sseWrite({ status: d.toString() }));
-  child.stderr.on('data', d => sseWrite({ status: d.toString() }));
-  child.on('close', (code, signal) => {
-    const ok  = code === 0;
-    const msg = ok            ? '✓ Done'
-      : code !== null         ? `✗ Exit ${code}`
-      : `✗ Killed by signal (${signal || 'unknown'})`;
-    sseWrite({ done: true, ok, status: msg });
-    res.end();
-  });
-  child.on('error', e => {
-    sseWrite({ done: true, ok: false, status: `Error: ${e.message}` });
-    res.end();
-  });
-  res.on('close', () => { if (!child.killed) child.kill(); });
 }
 
-module.exports = { handleList, handlePin, handleConfig, handleInstall };
+module.exports = { CODE_TOOLS, handleList, handlePin, handleConfig, handleInstall };

@@ -45,7 +45,7 @@ function settingsSubNav(panelId) {
   const entry = _SETTINGS_SUBTABS.find(t => t.id === panelId);
   if (entry && !_subtabInited[panelId]) {
     _subtabInited[panelId] = true;
-    const fn = window[entry.init] || this[entry.init];
+    const fn = window[entry.init];
     if (typeof fn === 'function') fn();
   }
 }
@@ -56,6 +56,7 @@ async function _subtabGeneralInit() {
     _settingsHidden = prefs.hiddenTabs || [];
     _settingsRender();
     _themePickerRender(prefs);
+    _statsSettingsRender(prefs);
   } catch (e) {
     const el = document.getElementById('settings-tabs-list');
     if (el) el.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
@@ -109,14 +110,102 @@ function _applyHiddenTabs(hiddenTabs) {
   });
 }
 
-/* Called on app startup to apply persisted hidden tabs */
+/* Called on app startup to apply persisted hidden tabs + sidebar sections */
 async function settingsApplyOnLoad() {
   try {
     const prefs = await apiFetch('/api/prefs');
     _settingsHidden = prefs.hiddenTabs || [];
     _applyHiddenTabs(_settingsHidden);
+    _sidebarSections = prefs.sidebarSections || {};
+    applySidebarSections(_sidebarSections);
   } catch {}
   _silentUpdateBadgeCheck();
+}
+
+/* ── Sidebar sections + system stats toggles ─────────── */
+
+const SIDEBAR_SECTIONS = [
+  { id: 'containers', label: 'Containers' },
+  { id: 'gpu',        label: 'GPU' },
+  { id: 'system',     label: 'System' },
+  { id: 'models',     label: 'Ollama Models' },
+  { id: 'hfModels',   label: 'HuggingFace Models' },
+  { id: 'llamacpp',   label: 'llama.cpp Servers' },
+  { id: 'services',   label: 'Inference Services' },
+];
+
+/** Show/hide sidebar sections per the visibility map ({} = all visible). */
+function applySidebarSections(map) {
+  document.querySelectorAll('.sidebar-section[data-section]').forEach(el => {
+    const id = el.dataset.section;
+    el.style.display = map[id] === false ? 'none' : '';
+  });
+}
+
+let _statsDefs = []; // cached defs from /api/stats/defs
+
+async function _statsSettingsRender(prefs) {
+  const list = document.getElementById('settings-stats-list');
+  if (!list) return;
+  try {
+    const data = await apiFetch('/api/stats/defs');
+    _statsDefs = data.defs || [];
+    const enabled = data.enabled || {};
+    const sections = prefs?.sidebarSections || _sidebarSections || {};
+
+    const toggleRow = (idAttr, checked, label, onchange) => `
+      <div class="settings-tab-row">
+        <label class="skill-toggle">
+          <input type="checkbox" id="${idAttr}" ${checked ? 'checked' : ''} onchange="${onchange}">
+          <span class="skill-toggle-track"></span>
+        </label>
+        <span class="settings-tab-label">${label}</span>
+      </div>`;
+
+    let html = '<div class="tool-group-label">System stats</div>';
+    html += _statsDefs.filter(d => d.group === 'system').map(d =>
+      toggleRow(`stat-toggle-${d.id}`, enabled[d.id], escHtml(d.label),
+        `statsToggleChange('${d.id}', this.checked)`)).join('');
+
+    html += '<div class="tool-group-label" style="margin-top:12px">GPU stats</div>';
+    html += _statsDefs.filter(d => d.group === 'gpu').map(d =>
+      toggleRow(`stat-toggle-${d.id}`, enabled[d.id], escHtml(d.label),
+        `statsToggleChange('${d.id}', this.checked)`)).join('');
+
+    html += '<div class="tool-group-label" style="margin-top:12px">Sidebar sections</div>';
+    html += SIDEBAR_SECTIONS.map(s =>
+      toggleRow(`section-toggle-${s.id}`, sections[s.id] !== false, escHtml(s.label),
+        `sectionToggleChange('${s.id}', this.checked)`)).join('');
+
+    list.innerHTML = html;
+  } catch (e) {
+    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+  }
+}
+
+async function statsToggleChange(id, enabled) {
+  const status = document.getElementById('stats-settings-status');
+  try {
+    const prefs = await apiFetch('/api/prefs');
+    const sidebarStats = { ...(prefs.sidebarStats || {}), [id]: enabled };
+    await apiFetch('/api/prefs', { method: 'POST', body: { sidebarStats } });
+    setStatus(status, '✓ Saved', 'ok');
+    pollStatus(); // re-render sidebar with new config immediately
+  } catch (e) {
+    setStatus(status, `✗ ${e.message}`, 'err');
+  }
+}
+
+async function sectionToggleChange(id, visible) {
+  const status = document.getElementById('stats-settings-status');
+  _sidebarSections = { ..._sidebarSections, [id]: visible };
+  applySidebarSections(_sidebarSections);
+  try {
+    await apiFetch('/api/prefs', { method: 'POST', body: { sidebarSections: _sidebarSections } });
+    setStatus(status, '✓ Saved', 'ok');
+  } catch (e) {
+    setStatus(status, `✗ ${e.message}`, 'err');
+  }
 }
 
 async function _silentUpdateBadgeCheck() {
@@ -169,31 +258,19 @@ function _sysdepsRender(tools) {
     const group = tools.filter(t => t.category === cat);
     if (!group.length) return;
 
-    html += `<div class="sysdep-group-label" style="color:${SYSDEP_CATEGORY_COLOR[cat]}">${SYSDEP_CATEGORY_LABEL[cat]}</div>`;
-    html += group.map(t => {
-      const statusIcon  = t.detected ? '✓' : '✗';
-      const statusClass = t.detected ? 'sysdep-ok' : 'sysdep-missing';
-      const versionStr  = t.detected && t.version ? `<span class="sysdep-version">${_escHtml(t.version)}</span>` : '';
-      const installBtn  = !t.detected && t.canInstall
-        ? `<button class="btn btn-xs btn-teal" onclick="sysdepsInstall('${t.id}')" ${_sysdepsInstalling === t.id ? 'disabled' : ''}>
-             ${_sysdepsInstalling === t.id ? '⏳ Installing…' : '⬇ Install'}
-           </button>`
-        : '';
-      const repoLink = !t.detected
-        ? `<a class="sysdep-repo" href="${t.repo}" target="_blank" title="${t.repo}">${_escHtml(t.repoLabel || t.repo)}</a>`
-        : '';
-      const manualNote = !t.detected && !t.canInstall
-        ? `<span class="sysdep-manual">manual install required</span>`
-        : '';
-
-      return `<div class="sysdep-row ${statusClass}">
-        <span class="sysdep-status">${statusIcon}</span>
-        <span class="sysdep-label">${_escHtml(t.label)}</span>
-        ${versionStr}
-        <span class="sysdep-note">${_escHtml(t.note || '')}</span>
-        <span class="sysdep-actions">${installBtn}${repoLink}${manualNote}</span>
-      </div>`;
-    }).join('');
+    html += `<div class="tool-group-label" style="color:${SYSDEP_CATEGORY_COLOR[cat]}">${SYSDEP_CATEGORY_LABEL[cat]}</div>`;
+    html += group.map(t => toolRowHtml({
+      id:             `sysdep-${t.id}`,
+      label:          t.label,
+      note:           t.note,
+      detected:       t.detected,
+      version:        t.version,
+      canInstall:     t.canInstall,
+      installing:     _sysdepsInstalling === t.id,
+      installOnclick: `sysdepsInstall('${t.id}')`,
+      repo:           t.repo,
+      repoLabel:      t.repoLabel,
+    })).join('');
   });
 
   list.innerHTML = html;
@@ -201,7 +278,7 @@ function _sysdepsRender(tools) {
 
 function sysdepsInstall(id) {
   const tool = _sysdepsTools.find(t => t.id === id);
-  const needsSudo = tool && typeof tool.installCmd === 'string' && tool.installCmd.includes('sudo ');
+  const needsSudo = tool && (tool.needsSudo || (typeof tool.installCmd === 'string' && tool.installCmd.includes('sudo ')));
 
   if (needsSudo) {
     sudoAsk(`Installing "${tool.label}" requires elevated privileges.`, pw => {
@@ -221,43 +298,21 @@ async function _sysdepsRunInstall(id, password) {
   const out = document.getElementById('sysdeps-out');
   if (out) { out.style.display = 'block'; out.textContent = `Installing ${id}…\n`; }
 
-  try {
-    const body = { id };
-    if (password !== null && password !== undefined) body.password = password;
+  const body = { id };
+  if (password !== null && password !== undefined) body.password = password;
 
-    const res = await fetch('/api/system/tools/install', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    const read    = async () => {
-      const { done, value } = await reader.read();
-      if (done) return;
-      decoder.decode(value).split('\n').forEach(line => {
-        if (!line.startsWith('data: ')) return;
-        try {
-          const obj = JSON.parse(line.slice(6));
-          if (obj.status && out) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
-          if (obj.done) {
-            _sysdepsInstalling = null;
-            setTimeout(sysdepsLoad, 800);
-          }
-        } catch {}
-      });
-      await read();
-    };
-    await read();
-  } catch (e) {
-    if (out) out.textContent += `\nError: ${e.message}`;
-    _sysdepsInstalling = null;
-    setTimeout(sysdepsLoad, 500);
-  }
-}
-
-function _escHtml(str) {
-  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  await sseStream('/api/system/tools/install', body, {
+    onStatus: text => appendStream(out, text),
+    onDone: () => {
+      _sysdepsInstalling = null;
+      setTimeout(sysdepsLoad, 800);
+    },
+    onError: e => {
+      if (out) out.textContent += `\nError: ${e.message}`;
+      _sysdepsInstalling = null;
+      setTimeout(sysdepsLoad, 500);
+    },
+  });
 }
 
 /* ── Update Checker ──────────────────────────────────── */
@@ -275,21 +330,21 @@ async function updateCheck() {
     if (data.updateAvailable) {
       if (el) el.innerHTML = `<div class="update-info">
         <strong style="color:var(--amber)">Update available!</strong><br>
-        Current: <code>${_escHtml(data.current)}</code> → Latest: <code>${_escHtml(data.latest)}</code><br>
-        <a href="${_escHtml(data.repo)}/releases" target="_blank" rel="noopener">View release notes ↗</a>
+        Current: <code>${escHtml(data.current)}</code> → Latest: <code>${escHtml(data.latest)}</code><br>
+        <a href="${escHtml(data.repo)}/releases" target="_blank" rel="noopener">View release notes ↗</a>
       </div>`;
       if (badge) { badge.style.display = 'inline-block'; badge.title = `Update: v${data.latest} available`; }
       if (pullBtn) pullBtn.style.display = '';
     } else {
       if (el) el.innerHTML = `<div class="update-info" style="color:var(--green)">
-        ✓ Up to date — <code>${_escHtml(data.current)}</code>
+        ✓ Up to date — <code>${escHtml(data.current)}</code>
       </div>`;
       if (badge) badge.style.display = 'none';
       if (pullBtn) pullBtn.style.display = 'none';
     }
   } catch (e) {
     if (el) el.innerHTML = `<div class="update-info" style="color:var(--red)">
-      ✗ Could not check: ${_escHtml(e.message)}
+      ✗ Could not check: ${escHtml(e.message)}
     </div>`;
   } finally {
     if (btn) btn.disabled = false;
@@ -303,36 +358,21 @@ async function updatePull() {
   if (btn) btn.disabled = true;
   if (log) { log.style.display = 'block'; log.textContent = ''; }
 
-  try {
-    const res = await fetch('/api/update', { method: 'POST' });
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-
-    const read = async () => {
-      const { done, value } = await reader.read();
-      if (done) return;
-      decoder.decode(value).split('\n').forEach(line => {
-        if (!line.startsWith('data: ')) return;
-        try {
-          const obj = JSON.parse(line.slice(6));
-          if (obj.status && log) { log.textContent += obj.status; log.scrollTop = log.scrollHeight; }
-          if (obj.done) {
-            if (obj.ok) {
-              if (el) el.innerHTML = `<div class="update-info" style="color:var(--green)">
-                ✓ Update pulled successfully. <strong>Restart the server</strong> to apply.
-              </div>`;
-            }
-            if (btn) btn.disabled = false;
-          }
-        } catch {}
-      });
-      await read();
-    };
-    await read();
-  } catch (e) {
-    if (log) log.textContent += `\nError: ${e.message}`;
-    if (btn) btn.disabled = false;
-  }
+  await sseStream('/api/update', {}, {
+    onStatus: text => appendStream(log, text),
+    onDone: obj => {
+      if (obj.ok && el) {
+        el.innerHTML = `<div class="update-info" style="color:var(--green)">
+          ✓ Update pulled successfully. <strong>Restart the server</strong> to apply.
+        </div>`;
+      }
+      if (btn) btn.disabled = false;
+    },
+    onError: e => {
+      if (log) log.textContent += `\nError: ${e.message}`;
+      if (btn) btn.disabled = false;
+    },
+  });
 }
 
 async function restartDoca() {

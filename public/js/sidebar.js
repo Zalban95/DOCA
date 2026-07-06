@@ -7,9 +7,12 @@ async function pollStatus() {
     const data = await apiFetch('/api/status');
     document.getElementById('dot').className = 'dot on';
 
+    _statsEnabled = data.statsEnabled || _statsEnabled;
+    const en = _statsEnabled || {};
+
     renderContainers(data.containers || []);
-    renderGPU(data.gpu || []);
-    renderSystem(data.system || null);
+    renderGPU(data.gpu || [], en);
+    renderSystem(data.system || null, en);
     renderModels(data.models || [], data.loadedModels || []);
     renderHfModels(data.hfModels || []);
     pollLlamaCppStatus();
@@ -97,8 +100,11 @@ function renderContainers(containers) {
   }).join('') + (sorted.length > 12 ? `<div class="placeholder" style="font-size:10px">+${sorted.length - 12} more</div>` : '');
 }
 
-function renderGPU(gpus) {
+function renderGPU(gpus, en = {}) {
   const el = document.getElementById('s-gpu');
+  if (en.gpu === false) {
+    el.innerHTML = '<div class="placeholder">Disabled in Settings</div>'; return;
+  }
   if (!gpus.length) {
     el.innerHTML = '<div class="placeholder">No GPU data</div>'; return;
   }
@@ -111,16 +117,21 @@ function renderGPU(gpus) {
     const util     = parseInt(g.util) || 0;
     const utilBar  = util > 90 ? 'red' : util > 70 ? 'amber' : 'green';
 
-    // Optional extended metrics — only rendered when nvidia-smi reported them.
+    // Extended metrics — rendered when enabled in Settings and reported by nvidia-smi.
     const extra = [];
-    if (g.powerDraw != null) {
-      const pwr = g.powerLimit != null
-        ? `${Math.round(g.powerDraw)}/${Math.round(g.powerLimit)} W`
-        : `${Math.round(g.powerDraw)} W`;
-      extra.push(`<div class="gm"><span class="gm-l">Power</span><span class="gm-v">${pwr}</span></div>`);
+    if (en.gpuExtra) {
+      if (g.powerDraw != null) {
+        const pwr = g.powerLimit != null
+          ? `${Math.round(g.powerDraw)}/${Math.round(g.powerLimit)} W`
+          : `${Math.round(g.powerDraw)} W`;
+        extra.push(`<div class="gm"><span class="gm-l">Power</span><span class="gm-v">${pwr}</span></div>`);
+      }
+      if (g.fan != null)      extra.push(`<div class="gm"><span class="gm-l">Fan</span><span class="gm-v">${Math.round(g.fan)}%</span></div>`);
+      if (g.clockSm != null)  extra.push(`<div class="gm"><span class="gm-l">Clock</span><span class="gm-v">${Math.round(g.clockSm)} MHz</span></div>`);
+      if (g.clockMem != null) extra.push(`<div class="gm"><span class="gm-l">Mem Clock</span><span class="gm-v">${Math.round(g.clockMem)} MHz</span></div>`);
+      if (g.memUtil != null)  extra.push(`<div class="gm"><span class="gm-l">Mem Util</span><span class="gm-v">${Math.round(g.memUtil)}%</span></div>`);
+      if (g.pstate)           extra.push(`<div class="gm"><span class="gm-l">P-state</span><span class="gm-v">${escHtml(g.pstate)}</span></div>`);
     }
-    if (g.fan != null)     extra.push(`<div class="gm"><span class="gm-l">Fan</span><span class="gm-v">${Math.round(g.fan)}%</span></div>`);
-    if (g.clockSm != null) extra.push(`<div class="gm"><span class="gm-l">Clock</span><span class="gm-v">${Math.round(g.clockSm)} MHz</span></div>`);
 
     return `<div class="gpu-card">
       <div class="gpu-name">GPU ${i} — ${g.name}</div>
@@ -138,65 +149,134 @@ function renderGPU(gpus) {
   }).join('');
 }
 
-function renderSystem(sys) {
+function renderSystem(sys, en = {}) {
   const el = document.getElementById('s-system');
   if (!sys) {
     el.innerHTML = '<div class="placeholder">No system data</div>'; return;
   }
-  const cpuPct  = Math.round(sys.cpuPct || 0);
-  const ramPct  = sys.ramTotal > 0 ? Math.round((sys.ramUsed / sys.ramTotal) * 100) : 0;
-  const cpuColor = cpuPct > 90 ? 'red' : cpuPct > 70 ? 'amber' : 'green';
-  const ramColor = ramPct > 90 ? 'red' : ramPct > 70 ? 'amber' : 'blue';
+
+  const barColor = (pct, warm = 'amber', cold = 'green') =>
+    pct > 90 ? 'red' : pct > 70 ? warm : cold;
+
+  const metric = (label, value, cls = 'cpu') =>
+    `<div class="sys-metric"><span class="sys-label">${label}</span><span class="sys-value ${cls}">${value}</span></div>`;
 
   const cores = Array.isArray(sys.cores) ? sys.cores : [];
-  const cpuTemp = (sys.cpuTemp != null) ? `${sys.cpuTemp}°C` : '—';
+  let grid = '';
 
-  // Per-logical-core breakdown, shown inside a collapsible dropdown.
-  const coresHtml = cores.map((p, i) => {
-    const c = p > 90 ? 'red' : p > 70 ? 'amber' : 'green';
-    return `<div class="core-row">
-      <span class="core-id">#${i}</span>
-      <div class="res-bar core-bar"><div class="res-bar-fill ${c}" style="width:${p}%"></div></div>
-      <span class="core-pct">${p}%</span>
-    </div>`;
-  }).join('');
+  // ── CPU usage / temp / freq ──
+  if (en.cpu) {
+    const cpuPct = Math.round(sys.cpuPct || 0);
+    grid += metric('CPU', `${cpuPct}%`);
+    if (en.cpuTemp) grid += metric('Temp', sys.cpuTemp != null ? `${sys.cpuTemp}°C` : '—');
+    grid += `<div class="res-bar"><div class="res-bar-fill ${barColor(cpuPct)}" style="width:${cpuPct}%"></div></div>`;
+  }
+
+  // ── Load / cores / freq ──
+  if (en.load) {
+    const l = v => (v || 0).toFixed(2);
+    grid += metric('Load 1/5/15', `${l(sys.load1)} · ${l(sys.load5)} · ${l(sys.load15)}`);
+  }
+  if (en.cpuFreq && sys.cpuFreqMHz != null) {
+    grid += metric('Freq', sys.cpuFreqMHz >= 1000 ? `${(sys.cpuFreqMHz / 1000).toFixed(2)} GHz` : `${sys.cpuFreqMHz} MHz`);
+  } else if (en.load || en.cpu) {
+    grid += metric('Cores', cores.length || sys.coreCount || '—');
+  }
+
+  // ── RAM ──
+  if (en.ram) {
+    const ramPct = sys.ramTotal > 0 ? Math.round((sys.ramUsed / sys.ramTotal) * 100) : 0;
+    grid += metric('RAM', `${ramPct}%`, 'ram');
+    grid += metric('Used', `${fmtBytes(sys.ramUsed * 1e6)} / ${fmtBytes(sys.ramTotal * 1e6)}`, 'ram');
+    grid += `<div class="res-bar"><div class="res-bar-fill ${barColor(ramPct, 'amber', 'blue')}" style="width:${ramPct}%"></div></div>`;
+  }
+
+  // ── Swap ──
+  if (en.swap) {
+    if (sys.swapTotal > 0) {
+      const swapPct = Math.round((sys.swapUsed / sys.swapTotal) * 100);
+      grid += metric('Swap', `${swapPct}%`, 'ram');
+      grid += metric('Used', `${fmtBytes(sys.swapUsed * 1e6)} / ${fmtBytes(sys.swapTotal * 1e6)}`, 'ram');
+      grid += `<div class="res-bar"><div class="res-bar-fill ${barColor(swapPct, 'amber', 'blue')}" style="width:${swapPct}%"></div></div>`;
+    } else {
+      grid += metric('Swap', 'none', 'ram');
+    }
+  }
+
+  // ── Uptime / process count ──
+  if (en.uptime) grid += metric('Uptime', fmtDuration(sys.uptimeSec));
+  if (en.procs && sys.procCount != null) grid += metric('Procs', sys.procCount);
+
+  // ── Disk I/O rate ──
+  if (en.diskIO) {
+    const io = sys.diskIO;
+    grid += metric('Disk R', io ? `${fmtBytes(io.readBps)}/s` : '—');
+    grid += metric('Disk W', io ? `${fmtBytes(io.writeBps)}/s` : '—');
+  }
+
+  // ── Network rates (full-width rows) ──
+  let netHtml = '';
+  if (en.net && Array.isArray(sys.net) && sys.net.length) {
+    netHtml = `<div class="sys-rows">` + sys.net.map(n =>
+      `<div class="sys-row">
+        <span class="sys-row-label" title="${escHtml(n.iface)}">${escHtml(n.iface)}</span>
+        <span class="sys-row-val">↓ ${fmtBytes(n.rxBps)}/s</span>
+        <span class="sys-row-val">↑ ${fmtBytes(n.txBps)}/s</span>
+      </div>`).join('') + `</div>`;
+  }
+
+  // ── Disk usage per mount (full-width rows with bars) ──
+  let diskHtml = '';
+  if (en.disk && Array.isArray(sys.disks) && sys.disks.length) {
+    diskHtml = `<div class="sys-rows">` + sys.disks.map(d => {
+      return `<div class="sys-row disk">
+        <span class="sys-row-label" title="${escHtml(d.mount)} (${escHtml(d.fs)})">${escHtml(d.mount)}</span>
+        <div class="res-bar core-bar"><div class="res-bar-fill ${barColor(d.pct, 'amber', 'blue')}" style="width:${d.pct}%"></div></div>
+        <span class="sys-row-val">${fmtBytes(d.usedKB * 1024)} / ${fmtBytes(d.totalKB * 1024)}</span>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+
+  // ── Per-logical-core dropdown ──
+  let coresHtml = '';
+  if (en.cpuCores && cores.length) {
+    const rows = cores.map((p, i) => {
+      const c = barColor(p);
+      return `<div class="core-row">
+        <span class="core-id">#${i}</span>
+        <div class="res-bar core-bar"><div class="res-bar-fill ${c}" style="width:${p}%"></div></div>
+        <span class="core-pct">${p}%</span>
+      </div>`;
+    }).join('');
+    coresHtml = `<details class="sys-cores" ${coresOpen ? 'open' : ''} ontoggle="coresOpen = this.open">
+      <summary>Logical cores (${cores.length})</summary>
+      <div class="cores-list">${rows}</div>
+    </details>`;
+  }
+
+  // ── Top processes dropdown ──
+  let procsHtml = '';
+  if (en.procs && Array.isArray(sys.topProcs) && sys.topProcs.length) {
+    const rows = sys.topProcs.map(p =>
+      `<div class="core-row proc-row">
+        <span class="core-id" title="pid ${p.pid}">${escHtml(p.name)}</span>
+        <span class="core-pct">${p.cpu.toFixed(1)}%</span>
+        <span class="core-pct" style="color:var(--blue)">${p.mem.toFixed(1)}%</span>
+      </div>`).join('');
+    procsHtml = `<details class="sys-cores" ${procsOpen ? 'open' : ''} ontoggle="procsOpen = this.open">
+      <summary>Top processes (CPU · MEM)</summary>
+      <div class="cores-list">${rows}</div>
+    </details>`;
+  }
+
+  if (!grid && !netHtml && !diskHtml && !coresHtml && !procsHtml) {
+    el.innerHTML = '<div class="placeholder">All stats disabled in Settings</div>';
+    return;
+  }
 
   el.innerHTML = `<div class="sys-card">
-    <div class="sys-grid">
-      <div class="sys-metric">
-        <span class="sys-label">CPU</span>
-        <span class="sys-value cpu">${cpuPct}%</span>
-      </div>
-      <div class="sys-metric">
-        <span class="sys-label">Temp</span>
-        <span class="sys-value cpu">${cpuTemp}</span>
-      </div>
-      <div class="res-bar"><div class="res-bar-fill ${cpuColor}" style="width:${cpuPct}%"></div></div>
-
-      <div class="sys-metric">
-        <span class="sys-label">Load</span>
-        <span class="sys-value cpu">${(sys.load1 || 0).toFixed(2)}</span>
-      </div>
-      <div class="sys-metric">
-        <span class="sys-label">Cores</span>
-        <span class="sys-value cpu">${cores.length || sys.coreCount || '—'}</span>
-      </div>
-
-      <div class="sys-metric">
-        <span class="sys-label">RAM</span>
-        <span class="sys-value ram">${ramPct}%</span>
-      </div>
-      <div class="sys-metric">
-        <span class="sys-label">Used</span>
-        <span class="sys-value ram">${fmtBytes(sys.ramUsed * 1e6)} / ${fmtBytes(sys.ramTotal * 1e6)}</span>
-      </div>
-      <div class="res-bar"><div class="res-bar-fill ${ramColor}" style="width:${ramPct}%"></div></div>
-    </div>
-    ${cores.length ? `
-    <details class="sys-cores" ${coresOpen ? 'open' : ''} ontoggle="coresOpen = this.open">
-      <summary>Logical cores (${cores.length})</summary>
-      <div class="cores-list">${coresHtml}</div>
-    </details>` : ''}
+    <div class="sys-grid">${grid}</div>
+    ${netHtml}${diskHtml}${coresHtml}${procsHtml}
   </div>`;
 }
 

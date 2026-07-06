@@ -8,7 +8,7 @@ async function modelsInit() {
   await modelsLoadSettings();
   modelsCheckOllama();
   modelsLoadList();
-  nlmInit();
+  aiToolsLoad();
   hfInit();
   if (typeof llamaInit === 'function') llamaInit();
   if (typeof servicesInit === 'function') servicesInit();
@@ -59,8 +59,27 @@ async function modelsCheckOllama() {
       badge.className   = 'badge badge-red';
     }
   } catch {
+    modelsOllamaConnected = false;
     badge.textContent = '○ Error'; badge.className = 'badge badge-red';
   }
+  _modelsOllamaInstallBtn();
+}
+
+/** Show an install button when Ollama is unreachable and the binary is missing. */
+async function _modelsOllamaInstallBtn() {
+  const btn = document.getElementById('models-ollama-install-btn');
+  if (!btn) return;
+  if (modelsOllamaConnected) { btn.style.display = 'none'; return; }
+  try {
+    const tools = await getSystemTools();
+    const t = tools.find(x => x.id === 'ollama');
+    btn.style.display = t && !t.detected && t.canInstall ? '' : 'none';
+  } catch { btn.style.display = 'none'; }
+}
+
+function modelsInstallOllama() {
+  const out = document.getElementById('models-ollama-out');
+  systemToolInstall('ollama', out, () => setTimeout(() => { modelsCheckOllama(); modelsLoadList(); }, 1000));
 }
 
 /* ── Installed models list ────────────────────────────── */
@@ -123,13 +142,6 @@ function modelsSearchSelect(name) {
   if (results) results.style.display = 'none';
 }
 
-function fmtNumber(n) {
-  if (!n) return '0';
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-  return String(n);
-}
-
 /* ── Pull model ───────────────────────────────────────── */
 function modelsPull() {
   const name = document.getElementById('models-pull-input').value.trim();
@@ -145,39 +157,22 @@ function modelsPull() {
   barFill.style.width = '0%';
   pct.textContent     = '';
 
-  fetch('/api/models/ollama/pull', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name })
-  }).then(res => {
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    function read() {
-      reader.read().then(({ done, value }) => {
-        if (done) { modelsLoadList(); return; }
-        decoder.decode(value).split('\n').forEach(line => {
-          if (!line.startsWith('data: ')) return;
-          try {
-            const obj = JSON.parse(line.slice(6));
-            if (obj.status)   out.textContent += obj.status + '\n';
-            if (obj.total && obj.completed) {
-              const p = Math.round(obj.completed / obj.total * 100);
-              barFill.style.width = p + '%';
-              pct.textContent     = p + '%';
-            }
-            if (obj.done) {
-              bar.style.display = 'none';
-              pct.textContent   = '';
-              if (!obj.error) out.textContent += '✓ Done\n';
-            }
-          } catch {}
-        });
-        out.scrollTop = out.scrollHeight;
-        read();
-      });
-    }
-    read();
-  }).catch(e => { out.textContent += `Error: ${e.message}\n`; });
+  sseStream('/api/models/ollama/pull', { name }, {
+    onEvent: obj => {
+      if (obj.status) appendStream(out, obj.status + '\n');
+      if (obj.total && obj.completed) {
+        const p = Math.round(obj.completed / obj.total * 100);
+        barFill.style.width = p + '%';
+        pct.textContent     = p + '%';
+      }
+      if (obj.done) {
+        bar.style.display = 'none';
+        pct.textContent   = '';
+        if (!obj.error) appendStream(out, '✓ Done\n');
+      }
+    },
+    onError: e => { out.textContent += `Error: ${e.message}\n`; },
+  }).then(modelsLoadList);
 }
 
 /* ── Delete model ─────────────────────────────────────── */
@@ -188,6 +183,113 @@ function modelsDelete(name) {
       modelsLoadList();
     } catch (e) { alert(`Delete error: ${e.message}`); }
   });
+}
+
+/* ── AI Tools (STT · TTS · Image) ─────────────────────── */
+
+let _aiTools = [];
+
+async function aiToolsLoad() {
+  const list = document.getElementById('ai-tools-list');
+  const btn  = document.getElementById('ai-tools-refresh-btn');
+  if (!list) return;
+  list.innerHTML = '<div class="placeholder pulse">Checking…</div>';
+  if (btn) btn.disabled = true;
+  try {
+    const data = await apiFetch('/api/models/tools');
+    _aiTools = data.tools || [];
+    _aiToolsRender();
+  } catch (e) {
+    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function _aiToolsRender() {
+  const list = document.getElementById('ai-tools-list');
+  if (!list) return;
+  if (!_aiTools.length) { list.innerHTML = '<div class="placeholder">No tools defined</div>'; return; }
+
+  const typeLabel = { stt: 'STT', tts: 'TTS', image: 'IMAGE' };
+
+  list.innerHTML = _aiTools.map(t => {
+    // API tools that map to an inference service get a "Start via Services" action
+    const serviceBtn = !t.detected && t.serviceId
+      ? `<button class="btn btn-xs btn-purple" title="Run via Inference Services"
+                 onclick="aiToolGoService()">▶ via Services</button>`
+      : '';
+    const availBadge = t.detected && t.availableForOpenclaw
+      ? `<span class="badge badge-green" style="font-size:9px">agent ✓</span>` : '';
+
+    const row = toolRowHtml({
+      id:             `ai-${t.id}`,
+      label:          `${t.label}`,
+      note:           `${typeLabel[t.type] || ''} — ${t.note || ''}`,
+      detected:       t.detected,
+      version:        t.detected ? (t.isApi ? t.apiUrl : t.path) : null,
+      canInstall:     t.canInstall,
+      installOnclick: `aiToolInstall('${t.id}')`,
+      gearOnclick:    `aiToolGearToggle('${t.id}')`,
+      extraActions:   `${availBadge}${serviceBtn}`,
+    });
+
+    // Inline config strip (hidden until the gear is clicked)
+    const strip = `
+      <div class="tool-config-strip" id="ai-tool-cfg-${t.id}" style="display:none">
+        ${t.isApi ? `
+          <span class="input-label">API URL</span>
+          <input class="input flex1" id="ai-tool-apiurl-${t.id}" value="${escHtml(t.apiUrl || '')}"
+                 placeholder="http://localhost:8880">
+        ` : `
+          <span class="input-label">Binary path</span>
+          <input class="input flex1" id="ai-tool-path-${t.id}" value="${escHtml(t.path || '')}"
+                 placeholder="auto-detected if empty">
+          <button class="btn btn-xs" title="Browse" onclick="fpOpen('ai-tool-path-${t.id}','file')">📁</button>
+        `}
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
+          <input type="checkbox" id="ai-tool-avail-${t.id}" ${t.availableForOpenclaw ? 'checked' : ''}>
+          Available to agent
+        </label>
+        <button class="btn btn-xs btn-blue" onclick="aiToolConfigSave('${t.id}')">Save</button>
+      </div>`;
+
+    return row + strip;
+  }).join('');
+}
+
+function aiToolGearToggle(id) {
+  const strip = document.getElementById(`ai-tool-cfg-${id}`);
+  if (strip) strip.style.display = strip.style.display === 'none' ? 'flex' : 'none';
+}
+
+async function aiToolConfigSave(id) {
+  const tool = _aiTools.find(t => t.id === id);
+  if (!tool) return;
+  const body = {
+    path:      document.getElementById(`ai-tool-path-${id}`)?.value.trim()   || '',
+    apiUrl:    document.getElementById(`ai-tool-apiurl-${id}`)?.value.trim() || '',
+    available: document.getElementById(`ai-tool-avail-${id}`)?.checked ?? true,
+  };
+  try {
+    await apiFetch(`/api/models/tools/${id}/config`, { method: 'POST', body });
+    aiToolsLoad(); // re-detect with the new config
+  } catch (e) { appAlert(`Save error: ${e.message}`); }
+}
+
+async function aiToolInstall(id) {
+  const out = document.getElementById('ai-tools-out');
+  if (out) { out.style.display = 'block'; out.textContent = `Installing ${id}…\n`; }
+  await sseStream(`/api/models/tools/${id}/install`, { id }, {
+    onStatus: text => appendStream(out, text),
+    onDone:   () => setTimeout(aiToolsLoad, 800),
+    onError:  e => { if (out) out.textContent += `\nError: ${e.message}`; },
+  });
+}
+
+/** Scroll to the Inference Services card (services start the API tools). */
+function aiToolGoService() {
+  document.getElementById('services-grid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 /* ── Local Non-LLM Models ─────────────────────────────── */
@@ -234,13 +336,13 @@ async function nlmSaveSettings() {
 
 function nlmConfigEdit() {
   const cfgPath = document.getElementById('nlm-config-path')?.value.trim();
-  if (!cfgPath) return alert('No config file path set. Save a path first.');
+  if (!cfgPath) return appAlert('No config file path set. Save a path first.');
   // Navigate to Files tab and open the file in the inline editor
   const dir = cfgPath.substring(0, cfgPath.lastIndexOf('/')) || '/';
-  document.querySelector('[data-tab="files"]')?.click();
+  nav('files');
   setTimeout(() => {
-    if (typeof _fpNav === 'function') _fpNav(dir);
-    if (typeof fmOpenEditor === 'function') fmOpenEditor(cfgPath);
+    if (typeof fmNavigate === 'function') fmNavigate(dir);
+    setTimeout(() => { if (typeof fmOpenEditor === 'function') fmOpenEditor(cfgPath); }, 400);
   }, 200);
 }
 
@@ -324,34 +426,15 @@ function nlmInstall() {
   if (barFill) barFill.style.width = '0%';
   if (pct) pct.textContent = '';
 
-  fetch('/api/models/local/install', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tool, model })
-  }).then(res => {
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    function read() {
-      reader.read().then(({ done, value }) => {
-        if (done) { nlmLoadList(); return; }
-        decoder.decode(value).split('\n').forEach(line => {
-          if (!line.startsWith('data: ')) return;
-          try {
-            const obj = JSON.parse(line.slice(6));
-            if (obj.status && out) out.textContent += obj.status + '\n';
-            if (obj.done) {
-              if (bar) bar.style.display = 'none';
-              if (pct) pct.textContent = '';
-              nlmLoadList();
-            }
-          } catch {}
-        });
-        if (out) out.scrollTop = out.scrollHeight;
-        read();
-      });
-    }
-    read();
-  }).catch(e => { if (out) out.textContent += `Error: ${e.message}\n`; });
+  sseStream('/api/models/local/install', { tool, model }, {
+    onStatus: text => appendStream(out, text + '\n'),
+    onDone: () => {
+      if (bar) bar.style.display = 'none';
+      if (pct) pct.textContent = '';
+      nlmLoadList();
+    },
+    onError: e => { if (out) out.textContent += `Error: ${e.message}\n`; },
+  }).then(nlmLoadList);
 }
 
 function nlmDelete(tool, model) {
@@ -400,10 +483,13 @@ async function hfSaveSettings() {
 
 async function hfCheckStatus() {
   const badge = document.getElementById('hf-status-badge');
+  const installBtn = document.getElementById('hf-install-btn');
   if (!badge) return;
   badge.textContent = '…'; badge.className = 'badge badge-blue';
+  let detected = false;
   try {
     const s = await apiFetch('/api/models/hf/status');
+    detected = !!s.detected;
     if (s.detected) {
       const label = s.user ? `● ${s.user}  v${s.version}` : `● CLI v${s.version}`;
       badge.textContent = label;
@@ -415,6 +501,12 @@ async function hfCheckStatus() {
   } catch {
     badge.textContent = '○ Error'; badge.className = 'badge badge-red';
   }
+  if (installBtn) installBtn.style.display = detected ? 'none' : '';
+}
+
+function hfInstallCli() {
+  const out = document.getElementById('hf-install-out');
+  systemToolInstall('huggingface-cli', out, () => setTimeout(() => { hfCheckStatus(); hfLoadList(); }, 1000));
 }
 
 async function hfSearch() {
@@ -497,58 +589,44 @@ function hfDownload() {
 
   let _hfLines = [];
 
-  fetch('/api/models/hf/download', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ repoId }),
-  }).then(res => {
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    const read = () => reader.read().then(({ done, value }) => {
-      if (done) { if (bar) bar.style.display = 'none'; return; }
-      decoder.decode(value).split('\n').forEach(line => {
-        if (!line.startsWith('data: ')) return;
-        try {
-          const obj = JSON.parse(line.slice(6));
-          if (obj.status && out) {
-            const chunks = obj.status.split('\r');
-            chunks.forEach((chunk, i) => {
-              if (i > 0) {
-                _hfLines[_hfLines.length - 1] = chunk;
-              } else {
-                const newlines = chunk.split('\n');
-                if (_hfLines.length)
-                  _hfLines[_hfLines.length - 1] += newlines[0];
-                else
-                  _hfLines.push(newlines[0]);
-                for (let j = 1; j < newlines.length; j++)
-                  _hfLines.push(newlines[j]);
-              }
-            });
-            const maxVisible = 200;
-            const visible = _hfLines.length > maxVisible
-              ? _hfLines.slice(-maxVisible) : _hfLines;
-            out.textContent = visible.join('\n');
-            out.scrollTop = out.scrollHeight;
-
-            const pctMatches = obj.status.match(/(\d+)%/g);
-            if (pctMatches) {
-              const p = parseInt(pctMatches[pctMatches.length - 1]);
-              if (barFil) barFil.style.width = `${p}%`;
-              if (pct)    pct.textContent    = `${p}%`;
-            }
-          }
-          if (obj.done) {
-            if (bar)  bar.style.display = 'none';
-            if (pct)  pct.textContent = '';
-            setTimeout(hfLoadList, 1000);
-          }
-        } catch {}
+  sseStream('/api/models/hf/download', { repoId }, {
+    onStatus: status => {
+      if (!out) return;
+      // \r-aware line rewriting so progress bars redraw in place
+      const chunks = status.split('\r');
+      chunks.forEach((chunk, i) => {
+        if (i > 0) {
+          _hfLines[_hfLines.length - 1] = chunk;
+        } else {
+          const newlines = chunk.split('\n');
+          if (_hfLines.length)
+            _hfLines[_hfLines.length - 1] += newlines[0];
+          else
+            _hfLines.push(newlines[0]);
+          for (let j = 1; j < newlines.length; j++)
+            _hfLines.push(newlines[j]);
+        }
       });
-      read();
-    });
-    read();
-  }).catch(e => { if (out) out.textContent += `Error: ${e.message}\n`; });
+      const maxVisible = 200;
+      const visible = _hfLines.length > maxVisible
+        ? _hfLines.slice(-maxVisible) : _hfLines;
+      out.textContent = visible.join('\n');
+      out.scrollTop = out.scrollHeight;
+
+      const pctMatches = status.match(/(\d+)%/g);
+      if (pctMatches) {
+        const p = parseInt(pctMatches[pctMatches.length - 1]);
+        if (barFil) barFil.style.width = `${p}%`;
+        if (pct)    pct.textContent    = `${p}%`;
+      }
+    },
+    onDone: () => {
+      if (bar)  bar.style.display = 'none';
+      if (pct)  pct.textContent = '';
+      setTimeout(hfLoadList, 1000);
+    },
+    onError: e => { if (out) out.textContent += `Error: ${e.message}\n`; },
+  }).then(() => { if (bar) bar.style.display = 'none'; });
 }
 
 function hfDelete(repoId) {

@@ -1,9 +1,9 @@
 'use strict';
 
 const os = require('os');
-const { exec, spawn } = require('child_process');
+const { exec } = require('child_process');
 
-const { sseHeaders } = require('./utils');
+const { streamCmd } = require('./utils');
 
 const SYSTEM_TOOLS = [
   {
@@ -51,6 +51,35 @@ const SYSTEM_TOOLS = [
     installCmd: 'sudo apt-get update && sudo apt-get install -y git',
   },
   {
+    id: 'ollama', label: 'Ollama', category: 'recommended',
+    detectCmd: 'ollama --version 2>/dev/null',
+    note: 'Local LLM runtime — powers the Ollama model manager',
+    repo: 'https://ollama.com', repoLabel: 'ollama.com',
+    installCmd: 'curl -fsSL https://ollama.com/install.sh | sh',
+    needsSudo: true, // install script escalates internally
+  },
+  {
+    id: 'docker-compose', label: 'Docker Compose', category: 'recommended',
+    detectCmd: 'docker compose version 2>/dev/null',
+    note: 'Compose v2 plugin — required for stack start/stop/restart',
+    repo: 'https://docs.docker.com/compose/', repoLabel: 'apt: docker-compose-plugin',
+    installCmd: 'sudo apt-get update && sudo apt-get install -y docker-compose-plugin',
+  },
+  {
+    id: 'ffmpeg', label: 'ffmpeg', category: 'recommended',
+    detectCmd: 'ffmpeg -version 2>/dev/null | head -1',
+    note: 'Audio/video toolkit — used by voice (STT/TTS) features',
+    repo: 'https://ffmpeg.org', repoLabel: 'apt: ffmpeg',
+    installCmd: 'sudo apt-get update && sudo apt-get install -y ffmpeg',
+  },
+  {
+    id: 'curl', label: 'curl', category: 'recommended',
+    detectCmd: 'curl --version 2>/dev/null | head -1',
+    note: 'HTTP client — used for service health checks and installers',
+    repo: 'https://curl.se', repoLabel: 'apt: curl',
+    installCmd: 'sudo apt-get update && sudo apt-get install -y curl',
+  },
+  {
     id: 'python3', label: 'Python 3', category: 'recommended',
     detectCmd: 'python3 --version 2>/dev/null || python --version 2>/dev/null',
     note: 'Required for Python-based AI tools (Aider, Whisper, Kokoro)',
@@ -78,6 +107,13 @@ const SYSTEM_TOOLS = [
     repo: 'https://pypi.org/project/huggingface-hub/', repoLabel: 'pip: huggingface-hub',
     installCmd: 'pip install --user --break-system-packages "huggingface_hub[cli]"',
   },
+  {
+    id: 'llama-server', label: 'llama-server', category: 'optional',
+    detectCmd: 'llama-server --version 2>&1 | head -1 | grep -i version',
+    note: 'llama.cpp server binary — required by the llama.cpp Servers manager',
+    repo: 'https://github.com/ggml-org/llama.cpp/releases', repoLabel: 'llama.cpp releases (manual)',
+    installCmd: null,
+  },
 ];
 
 /** GET /api/system/tools */
@@ -98,6 +134,7 @@ async function handleList(req, res) {
           repoLabel:    t.repoLabel,
           canInstall:   !!t.installCmd,
           installCmd:   t.installCmd || null,
+          needsSudo:    !!t.needsSudo || !!(t.installCmd && t.installCmd.includes('sudo ')),
           detected,
           version,
         });
@@ -114,42 +151,11 @@ function handleInstall(req, res) {
   const tool = SYSTEM_TOOLS.find(t => t.id === id);
   if (!tool || !tool.installCmd) return res.status(400).json({ error: 'No install command for this tool' });
 
-  sseHeaders(res);
-  const sseWrite = d => res.write(`data: ${JSON.stringify(d)}\n\n`);
-
-  let cmd = tool.installCmd;
-  const needsSudo = cmd.includes('sudo ') && typeof password === 'string' && password.length > 0;
-  if (needsSudo) cmd = cmd.replace(/\bsudo\b/g, 'sudo -S');
-
-  sseWrite({ status: `Installing ${tool.label}…\n$ ${tool.installCmd}` });
-
-  const home = process.env.HOME || os.homedir();
-  const child = spawn('bash', ['-lc', cmd], {
-    cwd:   tool.installCwd || home,
-    env:   { ...process.env, HOME: home, DEBIAN_FRONTEND: 'noninteractive' },
-    stdio: ['pipe', 'pipe', 'pipe'],
+  streamCmd(res, tool.installCmd, {
+    label:    tool.label,
+    cwd:      tool.installCwd,
+    password: typeof password === 'string' && password.length > 0 ? password : undefined,
   });
-
-  if (needsSudo) {
-    child.stdin.write(password + '\n');
-    child.stdin.end();
-  }
-
-  child.stdout.on('data', d => sseWrite({ status: d.toString() }));
-  child.stderr.on('data', d => sseWrite({ status: d.toString() }));
-  child.on('close', (code, signal) => {
-    const ok  = code === 0;
-    const msg = ok ? '✓ Done'
-      : code !== null ? `✗ Exit ${code}`
-      : `✗ Killed by signal (${signal || 'unknown'})`;
-    sseWrite({ done: true, ok, status: msg });
-    res.end();
-  });
-  child.on('error', e => {
-    sseWrite({ done: true, ok: false, status: `Error: ${e.message}` });
-    res.end();
-  });
-  res.on('close', () => { if (!child.killed) child.kill(); });
 }
 
-module.exports = { handleList, handleInstall };
+module.exports = { SYSTEM_TOOLS, handleList, handleInstall };
