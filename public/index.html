@@ -68,43 +68,43 @@
   <aside class="sidebar">
 
     <!-- Containers -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" data-section="containers">
       <div class="sec-label">Containers <span id="s-containers-count" style="font-size:9px;opacity:.6"></span></div>
       <div id="s-containers"><div class="placeholder">Loading…</div></div>
     </div>
 
     <!-- GPU -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" data-section="gpu">
       <div class="sec-label">GPU</div>
       <div id="s-gpu"><div class="placeholder">Loading…</div></div>
     </div>
 
     <!-- CPU / RAM -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" data-section="system">
       <div class="sec-label">System</div>
       <div id="s-system"><div class="placeholder">Loading…</div></div>
     </div>
 
     <!-- Ollama models -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" data-section="models">
       <div class="sec-label">Ollama Models</div>
       <div id="s-models"><div class="placeholder">Loading…</div></div>
     </div>
 
     <!-- HuggingFace cached models -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" data-section="hfModels">
       <div class="sec-label">HuggingFace Models</div>
       <div id="s-hf-models"><div class="placeholder">Loading…</div></div>
     </div>
 
     <!-- llama.cpp servers -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" data-section="llamacpp">
       <div class="sec-label">llama.cpp Servers</div>
       <div id="s-llamacpp"><div class="placeholder">Loading…</div></div>
     </div>
 
     <!-- Running inference services -->
-    <div class="sidebar-section grow">
+    <div class="sidebar-section grow" data-section="services">
       <div class="sec-label">Inference Services</div>
       <div id="s-services"><div class="placeholder">Loading…</div></div>
     </div>
@@ -532,6 +532,15 @@
             <button class="btn btn-sm btn-blue" onclick="settingsSave()">Save</button>
             <span class="status-line" id="settings-status"></span>
           </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Sidebar &amp; System Stats</div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
+            Choose which system stats appear in the sidebar and which sidebar sections are visible.
+            Changes are saved instantly and apply on the next status refresh.
+          </p>
+          <div id="settings-stats-list"><div class="placeholder pulse">Loading…</div></div>
+          <span class="status-line" id="stats-settings-status" style="margin-top:10px"></span>
         </div>
         <div class="card">
           <div class="card-title" style="display:flex;align-items:center;gap:8px">

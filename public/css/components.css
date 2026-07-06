@@ -519,6 +519,11 @@
 }
 .settings-tab-row:last-child { border-bottom: none; }
 .settings-tab-label { font-size: 13px; cursor: default; }
+.settings-stats-group-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; padding: 8px 0 4px; opacity: .85;
+  color: var(--accent);
+}
 
 /* ── Tool API rows ───────────────────────────────────── */
 .tool-api-row {

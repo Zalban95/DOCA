@@ -63,6 +63,21 @@
 .sys-value.cpu { color: var(--teal); }
 .sys-value.ram { color: var(--blue); }
 
+/* ── Full-width stat rows (network / disks) ──────────── */
+.sys-rows { margin-top: 8px; border-top: 1px solid var(--border2); padding-top: 6px; display: grid; gap: 4px; }
+.sys-row {
+  display: grid; grid-template-columns: minmax(40px, 1fr) auto auto;
+  align-items: center; gap: 6px; font-size: 10px;
+}
+.sys-row.disk { grid-template-columns: minmax(40px, 0.8fr) 1fr auto; }
+.sys-row-label {
+  color: var(--muted); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.sys-row-val { color: var(--text); text-align: right; white-space: nowrap; }
+.core-row.proc-row { grid-template-columns: 1fr 40px 40px; }
+.core-row.proc-row .core-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ── Logical-core dropdown ───────────────────────────── */
 .sys-cores { margin-top: 8px; border-top: 1px solid var(--border2); padding-top: 6px; }
 .sys-cores > summary {

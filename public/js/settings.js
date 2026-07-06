@@ -56,6 +56,7 @@ async function _subtabGeneralInit() {
     _settingsHidden = prefs.hiddenTabs || [];
     _settingsRender();
     _themePickerRender(prefs);
+    _statsSettingsRender(prefs);
   } catch (e) {
     const el = document.getElementById('settings-tabs-list');
     if (el) el.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
@@ -109,14 +110,102 @@ function _applyHiddenTabs(hiddenTabs) {
   });
 }
 
-/* Called on app startup to apply persisted hidden tabs */
+/* Called on app startup to apply persisted hidden tabs + sidebar sections */
 async function settingsApplyOnLoad() {
   try {
     const prefs = await apiFetch('/api/prefs');
     _settingsHidden = prefs.hiddenTabs || [];
     _applyHiddenTabs(_settingsHidden);
+    _sidebarSections = prefs.sidebarSections || {};
+    applySidebarSections(_sidebarSections);
   } catch {}
   _silentUpdateBadgeCheck();
+}
+
+/* ── Sidebar sections + system stats toggles ─────────── */
+
+const SIDEBAR_SECTIONS = [
+  { id: 'containers', label: 'Containers' },
+  { id: 'gpu',        label: 'GPU' },
+  { id: 'system',     label: 'System' },
+  { id: 'models',     label: 'Ollama Models' },
+  { id: 'hfModels',   label: 'HuggingFace Models' },
+  { id: 'llamacpp',   label: 'llama.cpp Servers' },
+  { id: 'services',   label: 'Inference Services' },
+];
+
+/** Show/hide sidebar sections per the visibility map ({} = all visible). */
+function applySidebarSections(map) {
+  document.querySelectorAll('.sidebar-section[data-section]').forEach(el => {
+    const id = el.dataset.section;
+    el.style.display = map[id] === false ? 'none' : '';
+  });
+}
+
+let _statsDefs = []; // cached defs from /api/stats/defs
+
+async function _statsSettingsRender(prefs) {
+  const list = document.getElementById('settings-stats-list');
+  if (!list) return;
+  try {
+    const data = await apiFetch('/api/stats/defs');
+    _statsDefs = data.defs || [];
+    const enabled = data.enabled || {};
+    const sections = prefs?.sidebarSections || _sidebarSections || {};
+
+    const toggleRow = (idAttr, checked, label, onchange) => `
+      <div class="settings-tab-row">
+        <label class="skill-toggle">
+          <input type="checkbox" id="${idAttr}" ${checked ? 'checked' : ''} onchange="${onchange}">
+          <span class="skill-toggle-track"></span>
+        </label>
+        <span class="settings-tab-label">${label}</span>
+      </div>`;
+
+    let html = '<div class="settings-stats-group-label">System stats</div>';
+    html += _statsDefs.filter(d => d.group === 'system').map(d =>
+      toggleRow(`stat-toggle-${d.id}`, enabled[d.id], escHtml(d.label),
+        `statsToggleChange('${d.id}', this.checked)`)).join('');
+
+    html += '<div class="settings-stats-group-label" style="margin-top:12px">GPU stats</div>';
+    html += _statsDefs.filter(d => d.group === 'gpu').map(d =>
+      toggleRow(`stat-toggle-${d.id}`, enabled[d.id], escHtml(d.label),
+        `statsToggleChange('${d.id}', this.checked)`)).join('');
+
+    html += '<div class="settings-stats-group-label" style="margin-top:12px">Sidebar sections</div>';
+    html += SIDEBAR_SECTIONS.map(s =>
+      toggleRow(`section-toggle-${s.id}`, sections[s.id] !== false, escHtml(s.label),
+        `sectionToggleChange('${s.id}', this.checked)`)).join('');
+
+    list.innerHTML = html;
+  } catch (e) {
+    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+  }
+}
+
+async function statsToggleChange(id, enabled) {
+  const status = document.getElementById('stats-settings-status');
+  try {
+    const prefs = await apiFetch('/api/prefs');
+    const sidebarStats = { ...(prefs.sidebarStats || {}), [id]: enabled };
+    await apiFetch('/api/prefs', { method: 'POST', body: { sidebarStats } });
+    setStatus(status, '✓ Saved', 'ok');
+    pollStatus(); // re-render sidebar with new config immediately
+  } catch (e) {
+    setStatus(status, `✗ ${e.message}`, 'err');
+  }
+}
+
+async function sectionToggleChange(id, visible) {
+  const status = document.getElementById('stats-settings-status');
+  _sidebarSections = { ..._sidebarSections, [id]: visible };
+  applySidebarSections(_sidebarSections);
+  try {
+    await apiFetch('/api/prefs', { method: 'POST', body: { sidebarSections: _sidebarSections } });
+    setStatus(status, '✓ Saved', 'ok');
+  } catch (e) {
+    setStatus(status, `✗ ${e.message}`, 'err');
+  }
 }
 
 async function _silentUpdateBadgeCheck() {
