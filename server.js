@@ -133,6 +133,7 @@ app.get ('/api/models/settings',          models.handleGetSettings);
 app.post('/api/models/settings',          models.handlePostSettings);
 app.get ('/api/models/tools',             models.handleGetTools);
 app.post('/api/models/tools/:id/config',  models.handleToolConfig);
+app.post('/api/models/tools/:id/install', models.handleToolInstall);
 
 // ─── Routes: Ollama Models ────────────────────────────────────────────────────
 app.get ('/api/models/ollama/search',  modelsOllama.handleSearch);

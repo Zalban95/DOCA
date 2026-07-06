@@ -48,12 +48,18 @@ function _codeRender() {
           <span class="badge ${t.detected ? 'badge-green' : 'badge-red'}" style="font-size:9px;margin-left:6px">
             ${t.detected ? (t.version || 'installed') : 'not found'}
           </span>
+          ${!t.detected
+            ? `<button class="btn btn-xs btn-teal" style="margin-left:6px"
+                       onclick="event.stopPropagation(); codeHeaderInstall('${t.id}')">⬇ Install</button>`
+            : ''}
+          <button class="btn btn-xs tool-gear" style="margin-left:auto" title="Tool settings (config file)"
+                  onclick="event.stopPropagation(); codeGearToggle('${t.id}')">⚙</button>
           <button class="code-tool-pin-btn ${_codeExpanded.has(t.id) ? 'pinned' : ''}"
                   title="${_codeExpanded.has(t.id) ? 'Unpin (will collapse on reload)' : 'Pin open (stays expanded)'}"
                   onclick="event.stopPropagation(); codePinToggle('${t.id}')">📌</button>
         </div>
         <div class="code-tool-body" style="display:${expanded ? 'flex' : 'none'}">
-          <div class="code-tool-config-row">
+          <div class="code-tool-config-row" id="code-cfg-row-${t.id}" style="display:none">
             <span class="input-label" style="flex-shrink:0">Config file</span>
             <input class="input flex1" id="code-cfg-${t.id}"
                    value="${(t.configPath || '').replace(/"/g, '&quot;')}"
@@ -90,6 +96,25 @@ function _codeRender() {
   _codeTools
     .filter(t => _codeExpanded.has(t.id) && t.detected)
     .forEach(t => requestAnimationFrame(() => _codeTermOpen(t.id)));
+}
+
+/** Header ⬇ Install: expand the accordion (so output is visible) and start the install. */
+function codeHeaderInstall(id) {
+  const acc = document.getElementById(`code-acc-${id}`);
+  if (acc && !acc.classList.contains('expanded')) codeToggle(id);
+  codeToolInstall(id);
+}
+
+/** Header ⚙ gear: expand the accordion and toggle the config-file row. */
+function codeGearToggle(id) {
+  const acc = document.getElementById(`code-acc-${id}`);
+  if (acc && !acc.classList.contains('expanded')) codeToggle(id);
+  const row = document.getElementById(`code-cfg-row-${id}`);
+  if (row) {
+    const show = row.style.display === 'none';
+    row.style.display = show ? 'flex' : 'none';
+    if (show) document.getElementById(`code-cfg-${id}`)?.focus();
+  }
 }
 
 function codeToggle(id) {

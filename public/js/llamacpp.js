@@ -9,6 +9,27 @@ let _llamaStatus    = {};
 
 async function llamaInit() {
   await llamaLoadList();
+  _llamaServerBadge();
+}
+
+/** Detect the llama-server binary (shared system-tools check) and badge it. */
+async function _llamaServerBadge() {
+  const badge = document.getElementById('llama-server-badge');
+  if (!badge) return;
+  try {
+    const tools = await getSystemTools();
+    const t = tools.find(x => x.id === 'llama-server');
+    if (!t) return;
+    badge.style.display = '';
+    if (t.detected) {
+      badge.textContent = '✓ llama-server';
+      badge.className   = 'badge badge-green';
+    } else {
+      badge.innerHTML   = `✗ llama-server missing — <a href="${t.repo}" target="_blank" style="color:inherit;text-decoration:underline">get binary</a>`;
+      badge.className   = 'badge badge-red';
+    }
+    badge.style.fontSize = '9px';
+  } catch {}
 }
 
 async function llamaLoadList() {

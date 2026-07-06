@@ -162,17 +162,17 @@ async function _statsSettingsRender(prefs) {
         <span class="settings-tab-label">${label}</span>
       </div>`;
 
-    let html = '<div class="settings-stats-group-label">System stats</div>';
+    let html = '<div class="tool-group-label">System stats</div>';
     html += _statsDefs.filter(d => d.group === 'system').map(d =>
       toggleRow(`stat-toggle-${d.id}`, enabled[d.id], escHtml(d.label),
         `statsToggleChange('${d.id}', this.checked)`)).join('');
 
-    html += '<div class="settings-stats-group-label" style="margin-top:12px">GPU stats</div>';
+    html += '<div class="tool-group-label" style="margin-top:12px">GPU stats</div>';
     html += _statsDefs.filter(d => d.group === 'gpu').map(d =>
       toggleRow(`stat-toggle-${d.id}`, enabled[d.id], escHtml(d.label),
         `statsToggleChange('${d.id}', this.checked)`)).join('');
 
-    html += '<div class="settings-stats-group-label" style="margin-top:12px">Sidebar sections</div>';
+    html += '<div class="tool-group-label" style="margin-top:12px">Sidebar sections</div>';
     html += SIDEBAR_SECTIONS.map(s =>
       toggleRow(`section-toggle-${s.id}`, sections[s.id] !== false, escHtml(s.label),
         `sectionToggleChange('${s.id}', this.checked)`)).join('');
@@ -258,31 +258,19 @@ function _sysdepsRender(tools) {
     const group = tools.filter(t => t.category === cat);
     if (!group.length) return;
 
-    html += `<div class="sysdep-group-label" style="color:${SYSDEP_CATEGORY_COLOR[cat]}">${SYSDEP_CATEGORY_LABEL[cat]}</div>`;
-    html += group.map(t => {
-      const statusIcon  = t.detected ? '✓' : '✗';
-      const statusClass = t.detected ? 'sysdep-ok' : 'sysdep-missing';
-      const versionStr  = t.detected && t.version ? `<span class="sysdep-version">${escHtml(t.version)}</span>` : '';
-      const installBtn  = !t.detected && t.canInstall
-        ? `<button class="btn btn-xs btn-teal" onclick="sysdepsInstall('${t.id}')" ${_sysdepsInstalling === t.id ? 'disabled' : ''}>
-             ${_sysdepsInstalling === t.id ? '⏳ Installing…' : '⬇ Install'}
-           </button>`
-        : '';
-      const repoLink = !t.detected
-        ? `<a class="sysdep-repo" href="${t.repo}" target="_blank" title="${t.repo}">${escHtml(t.repoLabel || t.repo)}</a>`
-        : '';
-      const manualNote = !t.detected && !t.canInstall
-        ? `<span class="sysdep-manual">manual install required</span>`
-        : '';
-
-      return `<div class="sysdep-row ${statusClass}">
-        <span class="sysdep-status">${statusIcon}</span>
-        <span class="sysdep-label">${escHtml(t.label)}</span>
-        ${versionStr}
-        <span class="sysdep-note">${escHtml(t.note || '')}</span>
-        <span class="sysdep-actions">${installBtn}${repoLink}${manualNote}</span>
-      </div>`;
-    }).join('');
+    html += `<div class="tool-group-label" style="color:${SYSDEP_CATEGORY_COLOR[cat]}">${SYSDEP_CATEGORY_LABEL[cat]}</div>`;
+    html += group.map(t => toolRowHtml({
+      id:             `sysdep-${t.id}`,
+      label:          t.label,
+      note:           t.note,
+      detected:       t.detected,
+      version:        t.version,
+      canInstall:     t.canInstall,
+      installing:     _sysdepsInstalling === t.id,
+      installOnclick: `sysdepsInstall('${t.id}')`,
+      repo:           t.repo,
+      repoLabel:      t.repoLabel,
+    })).join('');
   });
 
   list.innerHTML = html;
