@@ -8,6 +8,7 @@ const { spawn } = require('child_process');
 const { COMPOSE_DIR } = require('./paths');
 const { run, sseHeaders, loadModelsPrefs } = require('./utils');
 const { getRunningInstances: getLlamaCppRunning } = require('./models-llamacpp');
+const { getStatsConfig, collectExtendedStats } = require('./stats');
 
 /** Snapshot cumulative CPU tick counters per logical core. */
 function cpuSnapshot() {
@@ -70,16 +71,18 @@ function smiNum(v) {
 async function handleStatus(req, res) {
   const mp = loadModelsPrefs();
   const ollamaUrl = (mp.ollamaUrl || 'http://127.0.0.1:11434').replace(/\/$/, '');
+  const statsCfg  = getStatsConfig();
 
-  const [dockerResult, gpuResult, ollamaTagsResult, ollamaPsResult, cpuSample] = await Promise.all([
+  const [dockerResult, gpuResult, ollamaTagsResult, ollamaPsResult, cpuSample, extStats] = await Promise.all([
     Promise.allSettled([
       run(`docker ps --format '{{json .}}'`),
-      run('nvidia-smi --query-gpu=name,temperature.gpu,utilization.gpu,memory.used,memory.total,power.draw,power.limit,fan.speed,clocks.sm --format=csv,noheader,nounits'),
+      run('nvidia-smi --query-gpu=name,temperature.gpu,utilization.gpu,memory.used,memory.total,power.draw,power.limit,fan.speed,clocks.sm,utilization.memory,clocks.mem,pstate --format=csv,noheader,nounits'),
       run(`curl -s ${ollamaUrl}/api/tags`),
       run(`curl -s ${ollamaUrl}/api/ps`),
     ]),
     sampleCpu(),
-  ]).then(([settled, sample]) => [...settled, sample]);
+    collectExtendedStats(statsCfg),
+  ]).then(([settled, sample, ext]) => [...settled, sample, ext]);
 
   let containers = [];
   if (dockerResult.status === 'fulfilled') {
@@ -103,6 +106,9 @@ async function handleStatus(req, res) {
         powerLimit: smiNum(p[6]),
         fan:        smiNum(p[7]),
         clockSm:    smiNum(p[8]),
+        memUtil:    smiNum(p[9]),
+        clockMem:   smiNum(p[10]),
+        pstate:     p[11] && !/n\/?a/i.test(p[11]) ? p[11] : null,
       };
     });
   }
@@ -136,6 +142,7 @@ async function handleStatus(req, res) {
     load5:  Math.round(loadAvg[1] * 100) / 100,
     ramUsed,
     ramTotal,
+    ...extStats, // load15, uptimeSec, cpuFreqMHz, swap*, disks, diskIO, net, procCount, topProcs
   };
 
   let models = [];
@@ -175,7 +182,11 @@ async function handleStatus(req, res) {
 
   const llamacppRunning = getLlamaCppRunning();
 
-  res.json({ containers, gpu, system, models, loadedModels, hfModels, llamacppRunning, time: new Date().toISOString() });
+  res.json({
+    containers, gpu, system, models, loadedModels, hfModels, llamacppRunning,
+    statsEnabled: statsCfg,
+    time: new Date().toISOString(),
+  });
 }
 
 /** POST /api/action — start / stop / restart Docker Compose */

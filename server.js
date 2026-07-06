@@ -32,6 +32,7 @@ const modelsLlamaCpp = require('./modules/models-llamacpp');
 const modelsHf       = require('./modules/models-hf');
 const modelsLocal    = require('./modules/models-local');
 const systemTools  = require('./modules/system-tools');
+const stats        = require('./modules/stats');
 const docker       = require('./modules/docker');
 const services     = require('./modules/services');
 const update       = require('./modules/update');
@@ -45,9 +46,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 const uploadMw = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 // ─── Routes: Controls ─────────────────────────────────────────────────────────
-app.get ('/api/status',  controls.handleStatus);
-app.post('/api/action',  controls.handleAction);
-app.get ('/api/logs',    controls.handleLogs);
+app.get ('/api/status',     controls.handleStatus);
+app.post('/api/action',     controls.handleAction);
+app.get ('/api/logs',       controls.handleLogs);
+app.get ('/api/stats/defs', stats.handleDefs);
 
 // ─── Routes: Config & Prefs ──────────────────────────────────────────────────
 app.get ('/api/configs/:id',       config.handleGetConfig);
