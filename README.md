@@ -6,13 +6,17 @@ Web-based control panel for managing the **OpenClaw** AI agent stack.
 
 - **Service Control** — Start / Stop / Restart the Docker Compose stack
 - **Live Logs** — SSE-streamed container logs with auto-scroll
+- **System Stats** — 14 toggleable sidebar stats (CPU %, per-core, temp, freq, load 1/5/15, RAM, swap, per-mount disk usage, disk I/O rate, network rate, uptime, processes, GPU core + extended metrics). Main stats enabled by default; everything else can be switched on in Settings → General
 - **API Keys** — Manage provider keys (OpenAI, Groq, Anthropic, Ollama…)
 - **Skills** — Install, remove, enable/disable workspace skills with detail view
 - **Snapshots** — Create and restore full agent snapshots
 - **Setup Scripts** — View and edit setup/restore shell scripts
 - **Config Editor** — Multi-file editor with favorites, per-type validation
 - **File Manager** — Browse, edit, copy/cut/paste, rename, upload/download files with drag & drop
-- **Claude Code** — Manage and interact with Claude Code CLI sessions
+- **Code Agents** — Detect, install and run Claude Code, Aider, Codex CLI, Gemini CLI, Qwen Code, OpenCode, Crush, Cursor CLI and Goose in embedded terminals
+- **AI Tools** — Whisper / Faster-Whisper (STT), Kokoro / Piper (TTS), Stable Diffusion / ComfyUI (image) with auto-detection, one-click install (⬇) and per-tool config (⚙)
+- **Inference Services** — Docker-based Whisper STT, Kokoro TTS, vLLM, Stable Diffusion and ComfyUI backends with GPU assignment, image-presence check and one-click pull
+- **System Tools** — Auto-checks 15 dependencies (Node, Docker, Compose, Git, Python, pip, Ollama, ffmpeg, curl, nvidia-smi, huggingface-cli, llama-server…) with install buttons for anything missing
 - **Agent Chat** — Floating chat panel to talk with the OpenClaw agent (uses Gateway API when enabled, falls back to `claude` CLI)
 
 ## Quick Start
@@ -143,22 +147,23 @@ Defaults are derived from the current user's home directory (`os.homedir()`, sho
 server.js                   Express orchestrator: wires middleware + routes, starts server
 modules/                    Backend feature modules (one per concern)
   paths.js                  Env-overridable paths + config registry
-  utils.js                  run(), SSE helpers, prefs loaders
+  utils.js                  run(), SSE helpers, prefs loaders, streamCmd(), detectBinary()
   https-cert.js             Self-signed / Tailscale cert handling
-  controls.js               /api/status (Docker, GPU, CPU/RAM), start/stop/restart, logs
+  controls.js               /api/status (Docker, GPU, CPU/RAM + extended stats), start/stop/restart, logs
+  stats.js                  Stats registry (STATS_DEFS) + collectors (disk, net, procs, swap, freq…)
   config.js                 Multi-file config + prefs + favorites
   keys.js                   API key / provider management
   skills.js                 Skill install / remove / toggle / detail / search
   setup.js                  Setup script read / write
   snapshots.js              Snapshot create / restore / settings
   files.js                  File manager (list, read, write, upload, paste…)
-  code-tools.js             Code tool detection / install
+  code-tools.js             Code agent detection / install (9 tools)
   claude.js                 Claude Code CLI session management
   chat.js                   Agent chat (Gateway API / claude CLI fallback)
-  models*.js                Ollama / llama.cpp / HuggingFace / local model managers
-  system-tools.js           System dependency detection / install
+  models*.js                Ollama / llama.cpp / HuggingFace / local model managers + AI tools
+  system-tools.js           System dependency detection / install (15 tools)
   docker.js                 Docker containers / images / presets
-  services.js               Inference service management
+  services.js               Inference service management (incl. image-presence check)
   update.js                 Self-update / restart
   terminal.js               WebSocket PTY terminals
 public/
@@ -175,10 +180,10 @@ public/
     terminal.css            Embedded terminal styling
     responsive.css          Breakpoints 1024 / 768 / 480 px
   js/
-    state.js                Global vars
-    utils.js                apiFetch, setStatus, streamToEl, helpers
+    state.js                Global vars (incl. stats/sections state)
+    utils.js                apiFetch, sseStream, escHtml, toolRowHtml, system-tools cache, helpers
     nav.js                  Tab routing + mobile drawer
-    sidebar.js              Status polling (GPU, CPU/RAM, containers, models)
+    sidebar.js              Status polling (GPU, CPU/RAM + toggleable stats, containers, models)
     controls.js             Start / stop / restart actions
     logs.js                 SSE log streaming
     keys.js                 API key management
@@ -187,13 +192,13 @@ public/
     setup.js                Setup script editor
     config.js               Multi-file config editor + editable favorites
     files.js                File manager + upload / download / drag-drop
-    claude.js               Claude Code management
+    claude.js               Code agent tools (install/gear/terminals) + Claude one-shot
     chat.js                 Floating agent chat panel
-    models.js / llamacpp.js Model + llama.cpp manager UIs
+    models.js / llamacpp.js Model managers + AI tools card + local model files
     docker.js               Docker manager UI
-    services.js             Inference services UI
+    services.js             Inference services UI (gear config, image pull)
     terminal.js             Embedded terminal UI
-    settings.js             Settings + system tools UI
+    settings.js             Settings (tabs, theme, stats/sections toggles) + system tools UI
     themes.js               Theme switching
     sudo.js                 Sudo password prompt helper
     fp.js                   Misc front-panel helpers
