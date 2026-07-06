@@ -560,10 +560,10 @@
 
       <!-- Images card -->
       <div class="card">
-        <div class="toolbar">
+        <div class="toolbar" style="flex-wrap:wrap;row-gap:6px">
           <div class="card-title" style="margin-bottom:0">Images</div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input id="docker-pull-input" class="input" placeholder="image:tag" style="width:200px"
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;row-gap:6px">
+            <input id="docker-pull-input" class="input" placeholder="image:tag" style="width:min(200px,42vw)"
                    onkeydown="if(event.key==='Enter') dockerPullImage()">
             <button class="btn btn-sm btn-teal" onclick="dockerPullImage()">⬇ Pull</button>
             <button class="btn btn-sm" onclick="dockerLoadImages()">↺ Refresh</button>
