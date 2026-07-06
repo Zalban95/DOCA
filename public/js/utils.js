@@ -24,6 +24,79 @@ async function apiFetch(url, opts = {}) {
 }
 
 /**
+ * Escape HTML special characters (single shared implementation).
+ * @param {string} str
+ */
+function escHtml(str) {
+  return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * POST JSON to an SSE endpoint and dispatch parsed `data: {...}` events.
+ * Uses buffered decoding so events split across chunks are handled correctly.
+ *
+ * @param {string} url
+ * @param {object|null} body - JSON body (null/undefined for empty POST)
+ * @param {{
+ *   method?:  string,                    - HTTP method (default POST)
+ *   onEvent?: (obj: object) => void,     - every parsed event object
+ *   onStatus?:(text: string) => void,    - convenience: obj.status chunks
+ *   onDone?:  (obj: object) => void,     - event with truthy obj.done
+ *   onError?: (err: Error) => void,      - network/stream failure
+ * }} handlers
+ * @returns {Promise<void>} resolves when the stream ends
+ */
+async function sseStream(url, body, handlers = {}) {
+  const { method, onEvent, onStatus, onDone, onError } = handlers;
+  try {
+    const res = await fetch(url, {
+      method:  method || 'POST',
+      headers: body != null ? { 'Content-Type': 'application/json' } : {},
+      body:    body != null ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok && !res.body) throw new Error(res.statusText);
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();                       // keep partial line for next chunk
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        let obj;
+        try { obj = JSON.parse(line.slice(6)); } catch { continue; }
+        if (onEvent) onEvent(obj);
+        if (typeof obj === 'string') {           // plain-string payloads (e.g. log lines)
+          if (onStatus) onStatus(obj);
+          continue;
+        }
+        if (onStatus && obj.status !== undefined) onStatus(obj.status);
+        if (onDone && obj.done) onDone(obj);
+      }
+    }
+  } catch (e) {
+    if (onError) onError(e); else throw e;
+  }
+}
+
+/**
+ * Append streamed text to a <pre>/output element and keep it scrolled.
+ * Common companion to sseStream's onStatus.
+ * @param {HTMLElement} el
+ * @param {string} text
+ */
+function appendStream(el, text) {
+  if (!el) return;
+  el.textContent += text;
+  el.scrollTop = el.scrollHeight;
+}
+
+/**
  * Set text + class on a status element.
  * @param {HTMLElement} el
  * @param {string} msg
@@ -72,6 +145,31 @@ function fmtBytes(bytes, dp = 1) {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dp)) + ' ' + sizes[i];
+}
+
+/**
+ * Format a large count to compact form (1.2K, 3.4M).
+ * @param {number} n
+ */
+function fmtNumber(n) {
+  if (!n) return '0';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return String(n);
+}
+
+/**
+ * Format a duration in seconds as "3d 4h 12m" (short, human-readable).
+ * @param {number} sec
+ */
+function fmtDuration(sec) {
+  if (!Number.isFinite(sec) || sec < 0) return '—';
+  const d = Math.floor(sec / 86400);
+  const h = Math.floor((sec % 86400) / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
 }
 
 /**
@@ -186,4 +284,34 @@ function appConfirm(message, onConfirm, onCancel) {
 
   btnOk.onclick  = () => { cleanup(); onConfirm(); };
   btnCan.onclick = () => { cleanup(); if (onCancel) onCancel(); };
+}
+
+/**
+ * Show a one-button in-app notice (replaces browser alert()).
+ * Reuses the confirm modal with the Cancel button hidden.
+ * @param {string} message
+ * @param {Function} [onClose]
+ */
+function appAlert(message, onClose) {
+  const modal  = document.getElementById('app-confirm-modal');
+  const msgEl  = document.getElementById('app-confirm-message');
+  const btnOk  = document.getElementById('app-confirm-ok');
+  const btnCan = document.getElementById('app-confirm-cancel');
+  if (!modal) { alert(message); if (onClose) onClose(); return; }
+
+  msgEl.textContent = message;
+  btnCan.style.display = 'none';
+  const prevOkClass = btnOk.className;
+  btnOk.className = 'btn btn-sm btn-blue';
+  btnOk.textContent = 'OK';
+  modal.classList.add('open');
+
+  btnOk.onclick = () => {
+    modal.classList.remove('open');
+    btnCan.style.display = '';
+    btnOk.className = prevOkClass;
+    btnOk.textContent = 'Confirm';
+    btnOk.onclick = null;
+    if (onClose) onClose();
+  };
 }

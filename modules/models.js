@@ -1,10 +1,8 @@
 'use strict';
 
 const fs   = require('fs');
-const os   = require('os');
-const { exec } = require('child_process');
 
-const { loadPrefs, loadModelsPrefs, saveModelsPrefs } = require('./utils');
+const { loadModelsPrefs, saveModelsPrefs, detectBinary } = require('./utils');
 
 /** Known non-LLM tools with detection commands */
 const KNOWN_TOOLS = [
@@ -75,12 +73,8 @@ async function handleGetTools(req, res) {
       if (customPath && fs.existsSync(customPath)) {
         detected = true; detectedPath = customPath;
       } else {
-        try {
-          const { stdout } = await new Promise((resolve, reject) =>
-            exec(`which ${t.cmd}`, (e, o) => e ? reject(e) : resolve({ stdout: o.trim() }))
-          );
-          if (stdout) { detected = true; detectedPath = stdout; }
-        } catch {}
+        const found = await detectBinary(t.cmd);
+        if (found.detected) { detected = true; detectedPath = found.path; }
       }
     } else {
       const apiUrl = pref.apiUrl || '';

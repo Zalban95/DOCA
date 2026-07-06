@@ -143,7 +143,7 @@ async function codeConfigSave(id) {
 function codeConfigEdit(id) {
   const input = document.getElementById(`code-cfg-${id}`);
   const p = input?.value?.trim();
-  if (!p) { showModal('Enter a config file path first.'); return; }
+  if (!p) { appAlert('Enter a config file path first.'); return; }
   nav('files');
   setTimeout(() => {
     const dir = p.lastIndexOf('/') > 0 ? p.substring(0, p.lastIndexOf('/')) : '/';
@@ -170,34 +170,14 @@ async function _codeToolRunInstall(id, password) {
   const out = document.getElementById(`code-install-out-${id}`);
   if (out) { out.style.display = 'block'; out.textContent = ''; }
 
-  try {
-    const body = { id };
-    if (password !== null && password !== undefined) body.password = password;
+  const body = { id };
+  if (password !== null && password !== undefined) body.password = password;
 
-    const res = await fetch(`/api/code/tools/${id}/install`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    const read = async () => {
-      const { done, value } = await reader.read();
-      if (done) return;
-      decoder.decode(value).split('\n').forEach(line => {
-        if (!line.startsWith('data: ')) return;
-        try {
-          const obj = JSON.parse(line.slice(6));
-          if (obj.status && out) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
-          if (obj.done && obj.ok) setTimeout(codeRefresh, 1200);
-        } catch {}
-      });
-      await read();
-    };
-    await read();
-  } catch (e) {
-    if (out) out.textContent += `\nError: ${e.message}`;
-  }
+  await sseStream(`/api/code/tools/${id}/install`, body, {
+    onStatus: text => appendStream(out, text),
+    onDone: obj => { if (obj.ok) setTimeout(codeRefresh, 1200); },
+    onError: e => { if (out) out.textContent += `\nError: ${e.message}`; },
+  });
 }
 
 /* ── Per-tool embedded terminal ──────────────────────── */
@@ -334,28 +314,25 @@ async function claudeCheckStatus() {
   const version = document.getElementById('claude-version');
   const stopBtn = document.getElementById('claude-stop-btn');
 
-  if (!badge) return;
-
-  badge.textContent = 'Checking…';
-  badge.className   = 'badge badge-blue';
+  if (badge) {
+    badge.textContent = 'Checking…';
+    badge.className   = 'badge badge-blue';
+  }
 
   try {
     const data = await apiFetch('/api/claude/status');
     if (data.available) {
-      badge.textContent = 'Available';
-      badge.className   = 'badge badge-green';
+      if (badge)   { badge.textContent = 'Available'; badge.className = 'badge badge-green'; }
       if (version) version.textContent = data.version || '';
     } else {
-      badge.textContent = 'Not found';
-      badge.className   = 'badge badge-red';
+      if (badge)   { badge.textContent = 'Not found'; badge.className = 'badge badge-red'; }
       if (version) version.textContent = 'claude CLI not in PATH';
     }
     claudeRunning = data.running;
     if (stopBtn) stopBtn.style.display = data.running ? 'inline-flex' : 'none';
     _claudeUpdateInputMode();
   } catch (e) {
-    badge.textContent = 'Error';
-    badge.className   = 'badge badge-red';
+    if (badge)   { badge.textContent = 'Error'; badge.className = 'badge badge-red'; }
     if (version) version.textContent = e.message;
   }
 }
@@ -376,7 +353,7 @@ function claudeStart() {
 
 async function claudeSendStdin(text) {
   try {
-    await apiFetch('/api/claude/stdin', { method: 'POST', body: JSON.stringify({ text }) });
+    await apiFetch('/api/claude/stdin', { method: 'POST', body: { text } });
     const output = document.getElementById('claude-output');
     const echoEl = document.createElement('div');
     echoEl.className = 'claude-prompt-echo';
@@ -424,43 +401,34 @@ function claudeRun() {
   document.getElementById('claude-stop-btn').style.display = 'inline-flex';
   _claudeUpdateInputMode();
 
-  fetch('/api/claude/run', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt })
-  }).then(res => {
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    function read() {
-      reader.read().then(({ done, value }) => {
-        if (done) { _claudeSessionEnded(responseEl, output, null); return; }
-        decoder.decode(value).split('\n').forEach(line => {
-          if (!line.startsWith('data: ')) return;
-          try {
-            const evt = JSON.parse(line.slice(6));
-            if (evt.type === 'stdout') {
-              responseEl.textContent += evt.text;
-            } else if (evt.type === 'stderr') {
-              const err = document.createElement('span');
-              err.className = 'claude-stderr';
-              err.textContent = evt.text;
-              responseEl.appendChild(err);
-            } else if (evt.type === 'done') {
-              claudeHistory[claudeHistory.length - 1].exitCode = evt.code;
-              renderClaudeHistory();
-              _claudeSessionEnded(responseEl, output, evt.code);
-            }
-          } catch {}
-        });
-        output.scrollTop = output.scrollHeight;
-        read();
-      });
-    }
-    read();
-  }).catch(e => {
-    responseEl.textContent = `Error: ${e.message}`;
-    _claudeSessionEnded(responseEl, output, 1);
-  });
+  let ended = false;
+  const end = code => {
+    if (ended) return;
+    ended = true;
+    _claudeSessionEnded(responseEl, output, code);
+  };
+
+  sseStream('/api/claude/run', { prompt }, {
+    onEvent: evt => {
+      if (evt.type === 'stdout') {
+        responseEl.textContent += evt.text;
+      } else if (evt.type === 'stderr') {
+        const err = document.createElement('span');
+        err.className = 'claude-stderr';
+        err.textContent = evt.text;
+        responseEl.appendChild(err);
+      } else if (evt.type === 'done') {
+        claudeHistory[claudeHistory.length - 1].exitCode = evt.code;
+        renderClaudeHistory();
+        end(evt.code);
+      }
+      output.scrollTop = output.scrollHeight;
+    },
+    onError: e => {
+      responseEl.textContent = `Error: ${e.message}`;
+      end(1);
+    },
+  }).then(() => end(null));
 }
 
 function _claudeSessionEnded(responseEl, output, code) {
@@ -514,13 +482,9 @@ function renderClaudeHistory() {
   }
   el.innerHTML = claudeHistory.slice().reverse().map(h => `
     <div class="claude-hist-item fade-in">
-      <span class="claude-hist-prompt">${escapeHtmlClaude(h.prompt)}</span>
+      <span class="claude-hist-prompt">${escHtml(h.prompt)}</span>
       <span class="claude-hist-time">${new Date(h.time).toLocaleTimeString('en-GB', { hour12: false })}</span>
       ${h.exitCode !== undefined ? `<span class="badge ${h.exitCode === 0 ? 'badge-green' : 'badge-red'}">${h.exitCode}</span>` : ''}
     </div>
   `).join('');
-}
-
-function escapeHtmlClaude(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

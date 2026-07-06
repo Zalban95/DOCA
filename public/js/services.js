@@ -122,43 +122,17 @@ async function serviceStart(id) {
   if (startBtn)  startBtn.disabled = true;
   if (apiNote)   apiNote.style.display = 'none';
 
-  try {
-    const res = await fetch('/api/services/start', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ id, gpu, modelId }),
-    });
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-
-    const read = async () => {
-      const { done, value } = await reader.read();
-      if (done) { servicesLoadStatus(); if (startBtn) startBtn.disabled = false; return; }
-      buf += decoder.decode(value, { stream: true });
-      const parts = buf.split('\n\n');
-      buf = parts.pop();
-      parts.forEach(part => {
-        const line = part.trim().replace(/^data:\s*/, '');
-        if (!line) return;
-        try {
-          const obj = JSON.parse(line);
-          if (obj.status && out) { out.textContent += obj.status; out.scrollTop = out.scrollHeight; }
-          if (obj.done) {
-            if (obj.ok && apiNote) apiNote.style.display = '';
-            servicesLoadStatus();
-            if (startBtn) startBtn.disabled = false;
-          }
-        } catch {}
-      });
-      read();
-    };
-    read();
-  } catch (e) {
-    if (out) out.textContent += `\nError: ${e.message}`;
-    if (startBtn) startBtn.disabled = false;
-    servicesLoadStatus();
-  }
+  await sseStream('/api/services/start', { id, gpu, modelId }, {
+    onStatus: text => appendStream(out, text),
+    onDone: obj => {
+      if (obj.ok && apiNote) apiNote.style.display = '';
+    },
+    onError: e => {
+      if (out) out.textContent += `\nError: ${e.message}`;
+    },
+  });
+  servicesLoadStatus();
+  if (startBtn) startBtn.disabled = false;
 }
 
 async function serviceStop(id) {

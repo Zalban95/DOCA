@@ -123,13 +123,6 @@ function modelsSearchSelect(name) {
   if (results) results.style.display = 'none';
 }
 
-function fmtNumber(n) {
-  if (!n) return '0';
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-  return String(n);
-}
-
 /* ── Pull model ───────────────────────────────────────── */
 function modelsPull() {
   const name = document.getElementById('models-pull-input').value.trim();
@@ -145,39 +138,22 @@ function modelsPull() {
   barFill.style.width = '0%';
   pct.textContent     = '';
 
-  fetch('/api/models/ollama/pull', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name })
-  }).then(res => {
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    function read() {
-      reader.read().then(({ done, value }) => {
-        if (done) { modelsLoadList(); return; }
-        decoder.decode(value).split('\n').forEach(line => {
-          if (!line.startsWith('data: ')) return;
-          try {
-            const obj = JSON.parse(line.slice(6));
-            if (obj.status)   out.textContent += obj.status + '\n';
-            if (obj.total && obj.completed) {
-              const p = Math.round(obj.completed / obj.total * 100);
-              barFill.style.width = p + '%';
-              pct.textContent     = p + '%';
-            }
-            if (obj.done) {
-              bar.style.display = 'none';
-              pct.textContent   = '';
-              if (!obj.error) out.textContent += '✓ Done\n';
-            }
-          } catch {}
-        });
-        out.scrollTop = out.scrollHeight;
-        read();
-      });
-    }
-    read();
-  }).catch(e => { out.textContent += `Error: ${e.message}\n`; });
+  sseStream('/api/models/ollama/pull', { name }, {
+    onEvent: obj => {
+      if (obj.status) appendStream(out, obj.status + '\n');
+      if (obj.total && obj.completed) {
+        const p = Math.round(obj.completed / obj.total * 100);
+        barFill.style.width = p + '%';
+        pct.textContent     = p + '%';
+      }
+      if (obj.done) {
+        bar.style.display = 'none';
+        pct.textContent   = '';
+        if (!obj.error) appendStream(out, '✓ Done\n');
+      }
+    },
+    onError: e => { out.textContent += `Error: ${e.message}\n`; },
+  }).then(modelsLoadList);
 }
 
 /* ── Delete model ─────────────────────────────────────── */
@@ -324,34 +300,15 @@ function nlmInstall() {
   if (barFill) barFill.style.width = '0%';
   if (pct) pct.textContent = '';
 
-  fetch('/api/models/local/install', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tool, model })
-  }).then(res => {
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    function read() {
-      reader.read().then(({ done, value }) => {
-        if (done) { nlmLoadList(); return; }
-        decoder.decode(value).split('\n').forEach(line => {
-          if (!line.startsWith('data: ')) return;
-          try {
-            const obj = JSON.parse(line.slice(6));
-            if (obj.status && out) out.textContent += obj.status + '\n';
-            if (obj.done) {
-              if (bar) bar.style.display = 'none';
-              if (pct) pct.textContent = '';
-              nlmLoadList();
-            }
-          } catch {}
-        });
-        if (out) out.scrollTop = out.scrollHeight;
-        read();
-      });
-    }
-    read();
-  }).catch(e => { if (out) out.textContent += `Error: ${e.message}\n`; });
+  sseStream('/api/models/local/install', { tool, model }, {
+    onStatus: text => appendStream(out, text + '\n'),
+    onDone: () => {
+      if (bar) bar.style.display = 'none';
+      if (pct) pct.textContent = '';
+      nlmLoadList();
+    },
+    onError: e => { if (out) out.textContent += `Error: ${e.message}\n`; },
+  }).then(nlmLoadList);
 }
 
 function nlmDelete(tool, model) {
@@ -497,58 +454,44 @@ function hfDownload() {
 
   let _hfLines = [];
 
-  fetch('/api/models/hf/download', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ repoId }),
-  }).then(res => {
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    const read = () => reader.read().then(({ done, value }) => {
-      if (done) { if (bar) bar.style.display = 'none'; return; }
-      decoder.decode(value).split('\n').forEach(line => {
-        if (!line.startsWith('data: ')) return;
-        try {
-          const obj = JSON.parse(line.slice(6));
-          if (obj.status && out) {
-            const chunks = obj.status.split('\r');
-            chunks.forEach((chunk, i) => {
-              if (i > 0) {
-                _hfLines[_hfLines.length - 1] = chunk;
-              } else {
-                const newlines = chunk.split('\n');
-                if (_hfLines.length)
-                  _hfLines[_hfLines.length - 1] += newlines[0];
-                else
-                  _hfLines.push(newlines[0]);
-                for (let j = 1; j < newlines.length; j++)
-                  _hfLines.push(newlines[j]);
-              }
-            });
-            const maxVisible = 200;
-            const visible = _hfLines.length > maxVisible
-              ? _hfLines.slice(-maxVisible) : _hfLines;
-            out.textContent = visible.join('\n');
-            out.scrollTop = out.scrollHeight;
-
-            const pctMatches = obj.status.match(/(\d+)%/g);
-            if (pctMatches) {
-              const p = parseInt(pctMatches[pctMatches.length - 1]);
-              if (barFil) barFil.style.width = `${p}%`;
-              if (pct)    pct.textContent    = `${p}%`;
-            }
-          }
-          if (obj.done) {
-            if (bar)  bar.style.display = 'none';
-            if (pct)  pct.textContent = '';
-            setTimeout(hfLoadList, 1000);
-          }
-        } catch {}
+  sseStream('/api/models/hf/download', { repoId }, {
+    onStatus: status => {
+      if (!out) return;
+      // \r-aware line rewriting so progress bars redraw in place
+      const chunks = status.split('\r');
+      chunks.forEach((chunk, i) => {
+        if (i > 0) {
+          _hfLines[_hfLines.length - 1] = chunk;
+        } else {
+          const newlines = chunk.split('\n');
+          if (_hfLines.length)
+            _hfLines[_hfLines.length - 1] += newlines[0];
+          else
+            _hfLines.push(newlines[0]);
+          for (let j = 1; j < newlines.length; j++)
+            _hfLines.push(newlines[j]);
+        }
       });
-      read();
-    });
-    read();
-  }).catch(e => { if (out) out.textContent += `Error: ${e.message}\n`; });
+      const maxVisible = 200;
+      const visible = _hfLines.length > maxVisible
+        ? _hfLines.slice(-maxVisible) : _hfLines;
+      out.textContent = visible.join('\n');
+      out.scrollTop = out.scrollHeight;
+
+      const pctMatches = status.match(/(\d+)%/g);
+      if (pctMatches) {
+        const p = parseInt(pctMatches[pctMatches.length - 1]);
+        if (barFil) barFil.style.width = `${p}%`;
+        if (pct)    pct.textContent    = `${p}%`;
+      }
+    },
+    onDone: () => {
+      if (bar)  bar.style.display = 'none';
+      if (pct)  pct.textContent = '';
+      setTimeout(hfLoadList, 1000);
+    },
+    onError: e => { if (out) out.textContent += `Error: ${e.message}\n`; },
+  }).then(() => { if (bar) bar.style.display = 'none'; });
 }
 
 function hfDelete(repoId) {

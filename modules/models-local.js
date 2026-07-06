@@ -3,9 +3,8 @@
 const fs   = require('fs');
 const os   = require('os');
 const path = require('path');
-const { spawn } = require('child_process');
 
-const { loadModelsPrefs, saveModelsPrefs, sseHeaders } = require('./utils');
+const { loadModelsPrefs, saveModelsPrefs, streamCmd } = require('./utils');
 
 const NLM_MODEL_EXTS = new Set(['.pt', '.safetensors', '.ckpt', '.bin', '.gguf', '.onnx', '.pth']);
 
@@ -124,33 +123,7 @@ function handleInstall(req, res) {
   const def = LOCAL_NLM_TOOLS[tool];
   if (!def) return res.status(400).json({ error: 'unknown tool' });
 
-  sseHeaders(res);
-  const sseWrite = d => res.write(`data: ${JSON.stringify(d)}\n\n`);
-
-  const cmd     = def.installCmd(model);
-  const home    = process.env.HOME || os.homedir();
-  const nlmPath = `${home}/.local/bin:/usr/local/bin:/usr/bin:/bin`;
-  const child   = spawn('bash', ['-c', `PATH="${nlmPath}:$PATH" ${cmd}`], {
-    cwd: home,
-    env: { ...process.env, HOME: home, PATH: `${nlmPath}:${process.env.PATH || ''}` },
-  });
-
-  sseWrite({ status: `Running: ${cmd}` });
-  child.stdout.on('data', d => sseWrite({ status: d.toString() }));
-  child.stderr.on('data', d => sseWrite({ status: d.toString() }));
-  child.on('close', (code, signal) => {
-    const ok  = code === 0;
-    const msg = ok ? '✓ Done'
-      : code !== null ? `✗ Exit ${code}`
-      : `✗ Killed by signal (${signal || 'unknown'})`;
-    sseWrite({ done: true, error: !ok, status: msg });
-    res.end();
-  });
-  child.on('error', e => {
-    sseWrite({ done: true, error: true, status: `Error: ${e.message}` });
-    res.end();
-  });
-  res.on('close', () => { if (!child.killed) child.kill(); });
+  streamCmd(res, def.installCmd(model), { label: `${def.label} — ${model}` });
 }
 
 /** POST /api/models/local/delete */

@@ -1,9 +1,9 @@
 'use strict';
 
 const os = require('os');
-const { exec, spawn } = require('child_process');
+const { exec } = require('child_process');
 
-const { sseHeaders } = require('./utils');
+const { streamCmd } = require('./utils');
 
 const SYSTEM_TOOLS = [
   {
@@ -114,42 +114,11 @@ function handleInstall(req, res) {
   const tool = SYSTEM_TOOLS.find(t => t.id === id);
   if (!tool || !tool.installCmd) return res.status(400).json({ error: 'No install command for this tool' });
 
-  sseHeaders(res);
-  const sseWrite = d => res.write(`data: ${JSON.stringify(d)}\n\n`);
-
-  let cmd = tool.installCmd;
-  const needsSudo = cmd.includes('sudo ') && typeof password === 'string' && password.length > 0;
-  if (needsSudo) cmd = cmd.replace(/\bsudo\b/g, 'sudo -S');
-
-  sseWrite({ status: `Installing ${tool.label}…\n$ ${tool.installCmd}` });
-
-  const home = process.env.HOME || os.homedir();
-  const child = spawn('bash', ['-lc', cmd], {
-    cwd:   tool.installCwd || home,
-    env:   { ...process.env, HOME: home, DEBIAN_FRONTEND: 'noninteractive' },
-    stdio: ['pipe', 'pipe', 'pipe'],
+  streamCmd(res, tool.installCmd, {
+    label:    tool.label,
+    cwd:      tool.installCwd,
+    password: typeof password === 'string' && password.length > 0 ? password : undefined,
   });
-
-  if (needsSudo) {
-    child.stdin.write(password + '\n');
-    child.stdin.end();
-  }
-
-  child.stdout.on('data', d => sseWrite({ status: d.toString() }));
-  child.stderr.on('data', d => sseWrite({ status: d.toString() }));
-  child.on('close', (code, signal) => {
-    const ok  = code === 0;
-    const msg = ok ? '✓ Done'
-      : code !== null ? `✗ Exit ${code}`
-      : `✗ Killed by signal (${signal || 'unknown'})`;
-    sseWrite({ done: true, ok, status: msg });
-    res.end();
-  });
-  child.on('error', e => {
-    sseWrite({ done: true, ok: false, status: `Error: ${e.message}` });
-    res.end();
-  });
-  res.on('close', () => { if (!child.killed) child.kill(); });
 }
 
-module.exports = { handleList, handleInstall };
+module.exports = { SYSTEM_TOOLS, handleList, handleInstall };
