@@ -35,7 +35,7 @@ async function editScript(name) {
     nameEl.textContent = name;
     area.style.display = 'flex';
     editor.focus();
-  } catch (e) { alert(`Error: ${e.message}`); }
+  } catch (e) { appAlert(`Error: ${e.message}`); }
 }
 
 function closeScriptEditor() {

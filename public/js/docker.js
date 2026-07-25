@@ -115,7 +115,7 @@ async function dockerPresetDelete(encodedName) {
     try {
       await apiFetch(`/api/docker/presets/${encodedName}`, { method: 'DELETE' });
       dockerLoadPresets();
-    } catch (e) { alert(`Error: ${e.message}`); }
+    } catch (e) { appAlert(`Error: ${e.message}`); }
   });
 }
 
@@ -164,7 +164,7 @@ async function dockerAction(id, action) {
   try {
     await apiFetch(`/api/docker/containers/${id}/action`, { method: 'POST', body: { action } });
     setTimeout(dockerLoadContainers, 800);
-  } catch (e) { alert(`Error: ${e.message}`); }
+  } catch (e) { appAlert(`Error: ${e.message}`); }
 }
 
 function dockerRemoveContainer(id, name) {
@@ -172,7 +172,7 @@ function dockerRemoveContainer(id, name) {
     try {
       await apiFetch(`/api/docker/containers/${id}/action`, { method: 'POST', body: { action: 'remove' } });
       setTimeout(dockerLoadContainers, 800);
-    } catch (e) { alert(`Error: ${e.message}`); }
+    } catch (e) { appAlert(`Error: ${e.message}`); }
   });
 }
 
@@ -255,7 +255,7 @@ function dockerRemoveImage(id, name) {
     try {
       await apiFetch(`/api/docker/images/${encodeURIComponent(id)}`, { method: 'DELETE' });
       dockerLoadImages();
-    } catch (e) { alert(`Error: ${e.message}`); }
+    } catch (e) { appAlert(`Error: ${e.message}`); }
   });
 }
 
@@ -335,15 +335,15 @@ async function _dockerSavePreset(form) {
 
 function dockerRunSaveOnly() {
   const form = _dockerCollectForm();
-  if (!form.name) { alert('Container name is required to save.'); return; }
+  if (!form.name) { appAlert('Container name is required to save.'); return; }
   _dockerSavePreset(form)
     .then(() => { dockerRunClose(); dockerLoadPresets(); })
-    .catch(e => alert(`Save error: ${e.message}`));
+    .catch(e => appAlert(`Save error: ${e.message}`));
 }
 
 function dockerRunSaveAndRun() {
   const form = _dockerCollectForm();
-  if (!form.name) { alert('Container name is required to save.'); return; }
+  if (!form.name) { appAlert('Container name is required to save.'); return; }
   _dockerSavePreset(form).catch(() => {});
   _dockerExecuteRun(form, false);
 }

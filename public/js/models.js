@@ -181,7 +181,7 @@ function modelsDelete(name) {
     try {
       await apiFetch('/api/models/ollama/delete', { method: 'POST', body: { name } });
       modelsLoadList();
-    } catch (e) { alert(`Delete error: ${e.message}`); }
+    } catch (e) { appAlert(`Delete error: ${e.message}`); }
   });
 }
 
@@ -442,7 +442,7 @@ function nlmDelete(tool, model) {
     try {
       await apiFetch('/api/models/local/delete', { method: 'POST', body: { tool, model } });
       nlmLoadList();
-    } catch (e) { alert(`Delete error: ${e.message}`); }
+    } catch (e) { appAlert(`Delete error: ${e.message}`); }
   });
 }
 
@@ -634,6 +634,6 @@ function hfDelete(repoId) {
     try {
       await apiFetch('/api/models/hf/delete', { method: 'POST', body: { repoId } });
       hfLoadList();
-    } catch (e) { alert(`Delete error: ${e.message}`); }
+    } catch (e) { appAlert(`Delete error: ${e.message}`); }
   });
 }

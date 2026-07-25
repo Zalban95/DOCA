@@ -162,7 +162,7 @@ async function codeConfigSave(id) {
     await apiFetch(`/api/code/tools/${id}/config`, { method: 'POST', body: { configPath: input.value.trim() } });
     input.style.borderColor = 'var(--green)';
     setTimeout(() => { input.style.borderColor = ''; }, 1500);
-  } catch (e) { alert(`Save error: ${e.message}`); }
+  } catch (e) { appAlert(`Save error: ${e.message}`); }
 }
 
 function codeConfigEdit(id) {
@@ -495,7 +495,7 @@ async function claudeStop() {
     claudeInteractive = false;
     document.getElementById('claude-stop-btn').style.display = 'none';
     _claudeUpdateInputMode();
-  } catch (e) { alert(`Stop error: ${e.message}`); }
+  } catch (e) { appAlert(`Stop error: ${e.message}`); }
 }
 
 function renderClaudeHistory() {

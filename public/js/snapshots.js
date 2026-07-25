@@ -147,7 +147,7 @@ function snapBrowsePath(idx) {
 
 function snapEditScript(inputId) {
   const path = document.getElementById(inputId)?.value?.trim();
-  if (!path) { alert('Enter a script path first'); return; }
+  if (!path) { appAlert('Enter a script path first'); return; }
   nav('files');
   setTimeout(() => {
     fmNavigate(path.substring(0, path.lastIndexOf('/')) || '/');
