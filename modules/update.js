@@ -68,79 +68,125 @@ async function handleUpdateCheck(req, res) {
   res.json(result);
 }
 
-/** POST /api/update — run git pull in the dashboard directory, stream output */
-function handleUpdate(req, res) {
+/** Promisified exec in the dashboard dir (never rejects). */
+function gitRun(cmd) {
+  return new Promise(resolve => {
+    exec(cmd, { cwd: DASHBOARD_DIR, timeout: 60000 }, (err, stdout, stderr) =>
+      resolve({ err, stdout: stdout || '', stderr: stderr || '' }));
+  });
+}
+
+const AUTOSTASH_PREFIX = 'DOCA auto-stash before update';
+
+/** POST /api/update — auto-stash local changes, git pull, restore, stream output.
+ *  Local modifications are NEVER deleted: they are stashed with a labeled
+ *  message and restored after the pull; if restoring conflicts, the stash is
+ *  kept intact for manual recovery. */
+async function handleUpdate(req, res) {
   const { sseHeaders } = require('./utils');
   sseHeaders(res);
   const sseWrite = d => { try { res.write(`data: ${JSON.stringify(d)}\n\n`); } catch {} };
 
-  sseWrite({ status: `Updating dashboard from ${REPO}…\n` });
-  sseWrite({ status: `$ cd ${DASHBOARD_DIR}\n$ git pull\n\n` });
+  sseWrite({ status: `Updating dashboard from ${REPO}…\n$ cd ${DASHBOARD_DIR}\n` });
 
-  // Remember where we were so we can diff exactly what the pull brought in
-  // (HEAD~1 would be wrong for multi-commit pulls and false-positives on
-  // "Already up to date").
-  exec('git rev-parse HEAD', { cwd: DASHBOARD_DIR }, (revErr, revOut) => {
-    const beforeHead = (revOut || '').trim();
+  // Remember where we were so we can diff exactly what the pull brought in.
+  const beforeHead = (await gitRun('git rev-parse HEAD')).stdout.trim();
 
-    const child = spawn('git', ['pull'], { cwd: DASHBOARD_DIR });
+  // ── 1. Preserve local changes (git pull refuses a dirty tree) ──────────────
+  // -uno: tracked files only for the dirty check; the stash still includes
+  // untracked files so a pull can never clobber them either.
+  const dirty = (await gitRun('git status --porcelain -uno')).stdout.trim() !== '';
+  let stashed = false;
+  if (dirty) {
+    sseWrite({ status: `\nLocal changes detected — stashing them safely (nothing is deleted):\n$ git stash push --include-untracked\n` });
+    const st = await gitRun(`git stash push --include-untracked -m "${AUTOSTASH_PREFIX} ${new Date().toISOString()}"`);
+    if (st.err) {
+      sseWrite({ done: true, ok: false, status: `✗ Could not stash local changes: ${st.stderr || st.err.message}\nUpdate aborted — your files are untouched.\n` });
+      return res.end();
+    }
+    stashed = !/No local changes/i.test(st.stdout + st.stderr);
+    sseWrite({ status: (st.stdout || '') + '\n' });
+  }
 
-    child.stdout.on('data', chunk => sseWrite({ status: chunk.toString() }));
-    child.stderr.on('data', chunk => sseWrite({ status: chunk.toString() }));
+  /** Put the user's stashed changes back. Keeps the stash on any conflict. */
+  const restoreStash = async () => {
+    if (!stashed) return;
+    sseWrite({ status: `\nRestoring your local changes:\n$ git stash pop\n` });
+    const pop = await gitRun('git stash pop');
+    if (!pop.err) {
+      sseWrite({ status: (pop.stdout || '') + '✓ Local changes restored.\n' });
+      return;
+    }
+    // Pop conflicted: get back to a clean updated tree; the stash entry is
+    // KEPT by git on failed pop, so the user's work is safe.
+    await gitRun('git reset --hard HEAD');
+    sseWrite({ status:
+      `⚠ Your local changes conflict with the update and were NOT applied automatically.\n` +
+      `They are preserved in git stash — recover them with:\n` +
+      `  git stash list      (look for "${AUTOSTASH_PREFIX}")\n` +
+      `  git stash pop       (then resolve the conflicts)\n` });
+  };
 
-    child.on('close', (code) => {
-      if (code !== 0) {
-        sseWrite({ done: true, ok: false, status: `\n✗ git pull exited with code ${code}\n` });
-        return res.end();
-      }
-      sseWrite({ status: '\n✓ Pull complete.\n' });
+  // ── 2. Pull (streamed) ──────────────────────────────────────────────────────
+  sseWrite({ status: `$ git pull\n\n` });
+  const child = spawn('git', ['pull'], { cwd: DASHBOARD_DIR });
 
-      exec('git rev-parse HEAD', { cwd: DASHBOARD_DIR }, (afterErr, afterOut) => {
-        const afterHead = (afterOut || '').trim();
+  child.stdout.on('data', chunk => sseWrite({ status: chunk.toString() }));
+  child.stderr.on('data', chunk => sseWrite({ status: chunk.toString() }));
 
-        if (!beforeHead || beforeHead === afterHead) {
-          sseWrite({ done: true, ok: true, status: '\n✓ Already up to date — nothing to apply.\n' });
-          cached = null;
-          return res.end();
+  child.on('close', async (code) => {
+    if (code !== 0) {
+      await restoreStash(); // put things back even when the pull failed
+      sseWrite({ done: true, ok: false, status: `\n✗ git pull exited with code ${code}\n` });
+      return res.end();
+    }
+    sseWrite({ status: '\n✓ Pull complete.\n' });
+
+    const afterHead = (await gitRun('git rev-parse HEAD')).stdout.trim();
+
+    // ── 3. Restore the user's changes on top of the updated code ─────────────
+    await restoreStash();
+
+    if (!beforeHead || beforeHead === afterHead) {
+      sseWrite({ done: true, ok: true, status: '\n✓ Already up to date — nothing to apply.\n' });
+      cached = null;
+      return res.end();
+    }
+
+    // ── 4. Refresh dependencies when the pulled range touched package.json ───
+    const diff = await gitRun(`git diff ${beforeHead} ${afterHead} --name-only`);
+    const changed = diff.stdout.trim().split('\n');
+    if (changed.includes('package.json')) {
+      sseWrite({ status: '\npackage.json changed — running npm install…\n' });
+      const npm = spawn('npm', ['install', '--omit=dev'], { cwd: DASHBOARD_DIR });
+      npm.stdout.on('data', chunk => sseWrite({ status: chunk.toString() }));
+      npm.stderr.on('data', chunk => sseWrite({ status: chunk.toString() }));
+      npm.on('close', (npmCode) => {
+        if (npmCode === 0) {
+          sseWrite({ done: true, ok: true, status: '\n✓ Dependencies updated. Restart the server to apply.\n' });
+        } else {
+          sseWrite({ done: true, ok: false, status: `\n✗ npm install exited with code ${npmCode}\n` });
         }
-
-        // Did the pulled range touch package.json? Then refresh dependencies.
-        exec(`git diff ${beforeHead} ${afterHead} --name-only`, { cwd: DASHBOARD_DIR }, (err, stdout) => {
-          const changed = (stdout || '').trim().split('\n');
-          if (changed.includes('package.json')) {
-            sseWrite({ status: '\npackage.json changed — running npm install…\n' });
-            const npm = spawn('npm', ['install', '--omit=dev'], { cwd: DASHBOARD_DIR });
-            npm.stdout.on('data', chunk => sseWrite({ status: chunk.toString() }));
-            npm.stderr.on('data', chunk => sseWrite({ status: chunk.toString() }));
-            npm.on('close', (npmCode) => {
-              if (npmCode === 0) {
-                sseWrite({ done: true, ok: true, status: '\n✓ Dependencies updated. Restart the server to apply.\n' });
-              } else {
-                sseWrite({ done: true, ok: false, status: `\n✗ npm install exited with code ${npmCode}\n` });
-              }
-              cached = null;
-              res.end();
-            });
-            npm.on('error', e => {
-              sseWrite({ done: true, ok: false, status: `\nnpm error: ${e.message}\n` });
-              res.end();
-            });
-          } else {
-            sseWrite({ done: true, ok: true, status: '\n✓ Restart the server to apply the update.\n' });
-            cached = null;
-            res.end();
-          }
-        });
+        cached = null;
+        res.end();
       });
-    });
-
-    child.on('error', e => {
-      sseWrite({ done: true, ok: false, status: `Error: ${e.message}. Is git installed?` });
+      npm.on('error', e => {
+        sseWrite({ done: true, ok: false, status: `\nnpm error: ${e.message}\n` });
+        res.end();
+      });
+    } else {
+      sseWrite({ done: true, ok: true, status: '\n✓ Restart the server to apply the update.\n' });
+      cached = null;
       res.end();
-    });
-
-    res.on('close', () => { if (!child.killed) child.kill(); });
+    }
   });
+
+  child.on('error', e => {
+    sseWrite({ done: true, ok: false, status: `Error: ${e.message}. Is git installed?` });
+    res.end();
+  });
+
+  res.on('close', () => { if (!child.killed) child.kill(); });
 }
 
 /** POST /api/restart — graceful server restart */
