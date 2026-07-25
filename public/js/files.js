@@ -391,7 +391,7 @@ async function fmPaste() {
     });
     if (op === 'cut') fm.clipboard = null;
     fmRefresh();
-  } catch (e) { alert(`Paste error: ${e.message}`); }
+  } catch (e) { appAlert(`Paste error: ${e.message}`); }
 }
 
 /* ── Delete ──────────────────────────────────────────── */
@@ -403,7 +403,7 @@ function fmDelete(path, isDir, evt) {
       await apiFetch('/api/files/delete', { method: 'POST', body: { paths: targets } });
       fm.selected = new Set();
       fmRefresh();
-    } catch (e) { alert(`Delete error: ${e.message}`); }
+    } catch (e) { appAlert(`Delete error: ${e.message}`); }
   });
 }
 
@@ -433,7 +433,7 @@ function fmRenameInline(path, name, evt) {
     try {
       await apiFetch('/api/files/rename', { method: 'POST', body: { from: path, to: newPath } });
       fmRefresh();
-    } catch (e) { alert(`Rename error: ${e.message}`); fmRenderList(); }
+    } catch (e) { appAlert(`Rename error: ${e.message}`); fmRenderList(); }
   };
 
   input.addEventListener('keydown', e => {
@@ -449,7 +449,7 @@ function fmNewFolder() {
     try {
       await apiFetch('/api/files/mkdir', { method: 'POST', body: { path: `${fm.cwd}/${name}` } });
       fmRefresh();
-    } catch (e) { alert(`Error: ${e.message}`); }
+    } catch (e) { appAlert(`Error: ${e.message}`); }
   });
 }
 
@@ -461,7 +461,7 @@ function fmNewFile() {
       await apiFetch('/api/files/write', { method: 'POST', body: { path: fpath, content: '' } });
       fmRefresh();
       fmOpenEditor(fpath);
-    } catch (e) { alert(`Error: ${e.message}`); }
+    } catch (e) { appAlert(`Error: ${e.message}`); }
   });
 }
 

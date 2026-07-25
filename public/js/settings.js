@@ -378,26 +378,27 @@ async function updatePull() {
   });
 }
 
-async function restartDoca() {
-  const btn = document.getElementById('restart-btn');
-  if (!confirm('Restart the DOCA server? The page will reload once it comes back.')) return;
-  if (btn) { btn.disabled = true; btn.textContent = '⟳ Restarting…'; }
+function restartDoca() {
+  appConfirm('Restart the DOCA server? The page will reload once it comes back.', async () => {
+    const btn = document.getElementById('restart-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⟳ Restarting…'; }
 
-  try {
-    await fetch('/api/restart', { method: 'POST' });
-  } catch {}
+    try {
+      await fetch('/api/restart', { method: 'POST' });
+    } catch {}
 
-  const poll = () => {
-    setTimeout(async () => {
-      try {
-        await fetch('/api/status');
-        location.reload();
-      } catch {
-        poll();
-      }
-    }, 1500);
-  };
-  poll();
+    const poll = () => {
+      setTimeout(async () => {
+        try {
+          await fetch('/api/status');
+          location.reload();
+        } catch {
+          poll();
+        }
+      }, 1500);
+    };
+    poll();
+  });
 }
 
 /* ── Theme Picker ────────────────────────────────────── */

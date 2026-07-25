@@ -178,7 +178,7 @@ function llamaAddInstance() {
         body: { id, name: id, modelPath: '', port: 11436, nGpuLayers: 999, ctxSize: 8192 },
       });
       llamaLoadList();
-    } catch (e) { alert(`Error: ${e.message}`); }
+    } catch (e) { appAlert(`Error: ${e.message}`); }
   });
 }
 
@@ -187,7 +187,7 @@ function llamaDelete(id) {
     try {
       await apiFetch(`/api/models/llamacpp/${id}`, { method: 'DELETE' });
       llamaLoadList();
-    } catch (e) { alert(`Delete error: ${e.message}`); }
+    } catch (e) { appAlert(`Delete error: ${e.message}`); }
   });
 }
 

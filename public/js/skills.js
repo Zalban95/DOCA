@@ -159,7 +159,7 @@ async function toggleSkill(name, enable) {
   try {
     await apiFetch(`/api/skills/${name}/toggle`, { method: 'POST' });
     loadSkills();
-  } catch (e) { alert(`Toggle error: ${e.message}`); loadSkills(); }
+  } catch (e) { appAlert(`Toggle error: ${e.message}`); loadSkills(); }
 }
 
 async function showSkillDetail(name) {
@@ -230,6 +230,6 @@ function removeSkill(name) {
     try {
       await apiFetch(`/api/skills/${name}`, { method: 'DELETE' });
       loadSkills();
-    } catch (e) { alert(`Error: ${e.message}`); }
+    } catch (e) { appAlert(`Error: ${e.message}`); }
   });
 }

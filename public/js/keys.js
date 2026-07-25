@@ -58,7 +58,7 @@ function deleteProvider(name) {
     try {
       await apiFetch(`/api/keys/${name}`, { method: 'DELETE' });
       keysLoadProviders();
-    } catch (e) { alert(`Error: ${e.message}`); }
+    } catch (e) { appAlert(`Error: ${e.message}`); }
   });
 }
 

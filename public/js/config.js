@@ -267,7 +267,7 @@ function saveConfig() {
 
   if (entry.type === 'json') {
     try { JSON.parse(editor.value); }
-    catch { alert('Fix JSON errors before saving'); return; }
+    catch { appAlert('Fix JSON errors before saving'); return; }
   }
 
   const needsRestart = entry.id === 'openclaw';
