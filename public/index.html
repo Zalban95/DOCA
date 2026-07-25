@@ -280,7 +280,7 @@
 
       <div class="card">
         <div class="card-title">History</div>
-        <div id="claude-history" class="scroll-y" style="max-height:160px">
+        <div id="claude-history" class="scroll-y" style="max-height:min(45vh,360px)">
           <div class="placeholder">No commands run yet</div>
         </div>
       </div>
@@ -288,6 +288,18 @@
 
     <!-- ─── MODELS ──────────────────────────────────────── -->
     <div id="tab-models" class="tab-page">
+
+      <!-- Storage overview -->
+      <div class="card">
+        <div class="card-title" style="display:flex;align-items:center;gap:8px">
+          Storage
+          <button class="btn btn-xs" onclick="modelsLoadDisk(true)" title="Refresh">↺</button>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:8px">
+          Model directories, their size on disk and the free space left on each drive.
+        </p>
+        <div id="models-disk-strip"><div class="placeholder pulse">Checking disk space…</div></div>
+      </div>
 
       <!-- Ollama Settings -->
       <div class="card">
@@ -309,12 +321,12 @@
                   onclick="modelsInstallOllama()">⬇ Install Ollama</button>
           <span id="models-settings-status" class="status-line"></span>
         </div>
-        <pre id="models-ollama-out" class="terminal" style="display:none;max-height:160px;margin-top:6px"></pre>
+        <pre id="models-ollama-out" class="terminal" style="display:none;max-height:min(45vh,360px);margin-top:6px"></pre>
       </div>
 
       <!-- LLM Models (Ollama) -->
       <div class="card">
-        <div class="card-title">LLM Models — Ollama</div>
+        <div class="card-title">LLM Models — Ollama <span id="models-ollama-total" style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
         <!-- Search online -->
         <div class="models-search-row">
           <input id="models-search-input" class="input" placeholder="Search Ollama library (e.g. llama, mistral)…"
@@ -333,7 +345,7 @@
           </div>
           <span class="models-pull-pct" id="models-pull-pct"></span>
         </div>
-        <div id="models-pull-out" class="terminal" style="display:none;max-height:140px;margin-top:6px"></div>
+        <div id="models-pull-out" class="terminal" style="display:none;max-height:min(45vh,360px);margin-top:6px"></div>
         <!-- Table -->
         <div style="overflow-x:auto;margin-top:10px">
           <table class="models-table">
@@ -372,12 +384,12 @@
                   onclick="hfInstallCli()">⬇ Install huggingface-cli</button>
           <span id="hf-settings-status" class="status-line"></span>
         </div>
-        <pre id="hf-install-out" class="terminal" style="display:none;max-height:160px;margin-top:6px"></pre>
+        <pre id="hf-install-out" class="terminal" style="display:none;max-height:min(45vh,360px);margin-top:6px"></pre>
       </div>
 
       <!-- HuggingFace Models -->
       <div class="card">
-        <div class="card-title">HuggingFace Models</div>
+        <div class="card-title">HuggingFace Models <span id="hf-total" style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
         <!-- Search online -->
         <div class="models-search-row">
           <input id="hf-search-input" class="input" placeholder="Search HuggingFace Hub (e.g. llama, whisper, stable-diffusion)…"
@@ -396,7 +408,7 @@
           </div>
           <span class="models-pull-pct" id="hf-pull-pct"></span>
         </div>
-        <div id="hf-dl-out" class="terminal" style="display:none;max-height:140px;margin-top:6px"></div>
+        <div id="hf-dl-out" class="terminal" style="display:none;max-height:min(45vh,360px);margin-top:6px"></div>
         <!-- Table -->
         <div style="overflow-x:auto;margin-top:10px">
           <table class="models-table">
@@ -427,7 +439,7 @@
           Use ⚙ to set a custom binary path / API URL and toggle agent availability.
         </p>
         <div id="ai-tools-list"><div class="placeholder pulse">Checking…</div></div>
-        <pre id="ai-tools-out" class="terminal" style="display:none;margin-top:8px;max-height:200px"></pre>
+        <pre id="ai-tools-out" class="terminal" style="display:none;margin-top:8px;max-height:min(45vh,360px)"></pre>
 
         <!-- Local model files per tool (Whisper, Kokoro, SD, ComfyUI) -->
         <details style="margin-top:12px" ontoggle="if(this.open) nlmInit()">
@@ -476,7 +488,7 @@
               </div>
               <span class="models-pull-pct" id="nlm-pull-pct"></span>
             </div>
-            <div id="nlm-install-out" class="terminal" style="display:none;max-height:140px;margin-top:6px"></div>
+            <div id="nlm-install-out" class="terminal" style="display:none;max-height:min(45vh,360px);margin-top:6px"></div>
             <!-- Table -->
             <div style="overflow-x:auto;margin-top:10px">
               <table class="models-table">
@@ -570,7 +582,7 @@
             <button class="btn btn-sm" onclick="dockerLoadImages()">↺ Refresh</button>
           </div>
         </div>
-        <div id="docker-pull-out" class="terminal" style="display:none;max-height:100px;margin-top:6px"></div>
+        <div id="docker-pull-out" class="terminal" style="display:none;max-height:min(45vh,360px);margin-top:6px"></div>
         <div style="overflow-x:auto;margin-top:8px">
           <table class="models-table">
             <thead>
@@ -636,7 +648,7 @@
           <div id="update-status">
             <span class="placeholder pulse" style="font-size:12px">Checking for updates…</span>
           </div>
-          <pre id="update-log" class="code-out" style="display:none;max-height:200px;overflow:auto;font-size:11px;margin-top:8px"></pre>
+          <pre id="update-log" class="code-out" style="display:none;max-height:min(45vh,360px);overflow:auto;font-size:11px;margin-top:8px"></pre>
         </div>
       </div>
 
@@ -854,7 +866,7 @@
           </div>
           <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Dependencies required or recommended by this dashboard.</p>
           <div id="sysdeps-list"><div class="placeholder pulse">Checking…</div></div>
-          <pre id="sysdeps-out" class="terminal" style="display:none;margin-top:8px;max-height:200px"></pre>
+          <pre id="sysdeps-out" class="terminal" style="display:none;margin-top:8px;max-height:min(45vh,360px)"></pre>
         </div>
       </div>
 

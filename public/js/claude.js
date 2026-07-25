@@ -193,7 +193,7 @@ function codeToolInstall(id) {
 
 async function _codeToolRunInstall(id, password) {
   const out = document.getElementById(`code-install-out-${id}`);
-  if (out) { out.style.display = 'block'; out.textContent = ''; }
+  showStream(out);
 
   const body = { id };
   if (password !== null && password !== undefined) body.password = password;

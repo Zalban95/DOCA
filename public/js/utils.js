@@ -97,6 +97,19 @@ function appendStream(el, text) {
 }
 
 /**
+ * Reveal a streaming output box and bring it into view so the process
+ * lines are visible from the first chunk.
+ * @param {HTMLElement} el
+ * @param {string} [initialText]
+ */
+function showStream(el, initialText = '') {
+  if (!el) return;
+  el.style.display = 'block';
+  el.textContent = initialText;
+  requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+}
+
+/**
  * Standard tool row: status icon, label, version, note and actions
  * (⬇ Install when missing & installable, doc link, ⚙ gear when settable).
  * Used by Settings → System, the Models tab AI Tools card, and any other
@@ -278,7 +291,7 @@ async function systemToolInstall(id, outEl, onDone) {
   try { tool = (await getSystemTools()).find(t => t.id === id); } catch {}
 
   const run = async password => {
-    if (outEl) { outEl.style.display = 'block'; outEl.textContent = `Installing ${id}…\n`; }
+    showStream(outEl, `Installing ${id}…\n`);
     const body = { id };
     if (password) body.password = password;
     await sseStream('/api/system/tools/install', body, {

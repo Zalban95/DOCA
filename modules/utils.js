@@ -60,10 +60,15 @@ function saveModelsPrefs(models) {
  * models-local and models tool installs.
  *
  * Emits `{status}` chunks and a final `{done, ok, status}` event.
- * Supports sudo password piping: when `password` is provided and the
- * command uses sudo, it is rewritten to `sudo -S` and the password is
- * written to stdin (credentials are primed first with `sudo -S -v` so
- * scripts that call sudo internally also work).
+ *
+ * Sudo handling: when `password` is provided, a short-lived 0700 askpass
+ * helper is created and every `sudo` in the command is rewritten to
+ * `sudo -A`. Unlike piping the password to stdin (which only feeds the
+ * FIRST sudo — Ubuntu's default `timestamp_type=tty` cannot cache
+ * credentials in TTY-less sessions, so chained `sudo x && sudo y`
+ * commands failed with "Authentication required but not attempted"),
+ * askpass supplies the password to EVERY sudo invocation, including ones
+ * inside install scripts. The helper file is removed when the command ends.
  *
  * @param {import('express').Response} res
  * @param {string} cmd - bash command line
@@ -77,12 +82,24 @@ function streamCmd(res, cmd, opts = {}) {
 
   const home = process.env.HOME || os.homedir();
   let runCmd = cmd;
+  const extraEnv = {};
+  let askpassFile = null;
+
   const needsSudo = typeof password === 'string' && password.length > 0;
   if (needsSudo) {
-    // Prime sudo credentials so both explicit `sudo` in the command and
-    // sudo calls inside install scripts reuse the cached credential.
-    runCmd = `sudo -S -v && ${cmd.replace(/\bsudo\b(?! -S)/g, 'sudo -S')}`;
+    // POSIX-safe single-quote escaping for the password embedded in the helper.
+    const quoted = `'${password.replace(/'/g, `'\\''`)}'`;
+    askpassFile = path.join(os.tmpdir(),
+      `.doca-askpass-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.sh`);
+    fs.writeFileSync(askpassFile, `#!/bin/sh\nprintf '%s\\n' ${quoted}\n`, { mode: 0o700 });
+    extraEnv.SUDO_ASKPASS = askpassFile;
+    runCmd = cmd.replace(/\bsudo\b(?!\s+-A)/g, 'sudo -A');
   }
+  const cleanupAskpass = () => {
+    if (!askpassFile) return;
+    try { fs.rmSync(askpassFile, { force: true }); } catch {}
+    askpassFile = null;
+  };
 
   sseWrite({ status: `${label ? `Installing ${label}…\n` : ''}$ ${cmd}\n` });
 
@@ -91,21 +108,18 @@ function streamCmd(res, cmd, opts = {}) {
     env:   {
       ...process.env,
       ...env,
+      ...extraEnv,
       HOME: home,
       DEBIAN_FRONTEND: 'noninteractive',
       PATH: `${home}/.local/bin:${home}/.npm-global/bin:${process.env.PATH || '/usr/local/bin:/usr/bin:/bin'}`,
     },
-    stdio: ['pipe', 'pipe', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
-
-  if (needsSudo) {
-    child.stdin.write(password + '\n');
-    child.stdin.end();
-  }
 
   child.stdout.on('data', d => sseWrite({ status: d.toString() }));
   child.stderr.on('data', d => sseWrite({ status: d.toString() }));
   child.on('close', (code, signal) => {
+    cleanupAskpass();
     const ok  = code === 0;
     const msg = ok ? '✓ Done'
       : code !== null ? `✗ Exit ${code}`
@@ -114,10 +128,11 @@ function streamCmd(res, cmd, opts = {}) {
     res.end();
   });
   child.on('error', e => {
+    cleanupAskpass();
     sseWrite({ done: true, ok: false, error: true, status: `Error: ${e.message}` });
     res.end();
   });
-  res.on('close', () => { if (!child.killed) child.kill(); });
+  res.on('close', () => { cleanupAskpass(); if (!child.killed) child.kill(); });
 }
 
 /**

@@ -134,6 +134,14 @@
   .tool-note    { grid-column: 1 / 3; grid-row: 3; white-space: normal; }
   .tool-row .tool-version:empty { display: none; }
 
+  /* ── Storage rows stack ── */
+  .disk-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 3px; }
+  .disk-label { grid-column: 1; }
+  .disk-size  { grid-column: 2; grid-row: 1; text-align: right; }
+  .disk-path  { grid-column: 1 / -1; }
+  .disk-bar   { grid-column: 1; }
+  .disk-free  { grid-column: 2; }
+
   /* ── Settings grids stack (label above field) ── */
   .models-settings-grid { grid-template-columns: 1fr; gap: 4px 0; }
   .models-settings-grid .models-settings-label { margin-top: 6px; }

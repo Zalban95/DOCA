@@ -114,7 +114,7 @@
 .terminal {
   background: #060708; border: 1px solid var(--border2);
   padding: 10px 12px; font-size: 11px; line-height: 1.7;
-  color: #7090a0; overflow-y: auto; max-height: 220px;
+  color: #7090a0; overflow-y: auto; max-height: min(45vh, 360px);
   white-space: pre-wrap; word-break: break-all;
 }
 .terminal .ok   { color: var(--green); }
@@ -631,7 +631,7 @@
   width: 100%; margin: 6px 0 0; padding: 8px;
   background: var(--bg); border: 1px solid var(--border2);
   border-radius: 4px; font-size: 10px; font-family: monospace;
-  color: var(--text); white-space: pre-wrap; max-height: 160px;
+  color: var(--text); white-space: pre-wrap; max-height: min(45vh, 360px);
   overflow-y: auto;
 }
 
@@ -755,6 +755,25 @@
 .ctrl-cont-name   { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ctrl-cont-image  { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ctrl-cont-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* ── Storage overview rows (Models tab) ──────────────── */
+.disk-row {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) minmax(0, 1fr) auto minmax(80px, 140px) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  margin-bottom: 3px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--dim);
+  font-size: 11px;
+}
+.disk-label { font-weight: 600; white-space: nowrap; }
+.disk-path  { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.disk-size  { font-size: 10px; color: var(--teal); white-space: nowrap; }
+.disk-bar   { grid-column: auto; margin-top: 0; }
+.disk-free  { font-size: 10px; color: var(--text); white-space: nowrap; text-align: right; }
 
 /* ── Tool rows (shared: System Tools, AI Tools, …) ───── */
 .tool-group-label {

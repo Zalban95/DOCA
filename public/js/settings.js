@@ -299,7 +299,7 @@ async function _sysdepsRunInstall(id, password) {
   if (_sysdepsTools.length) _sysdepsRender(_sysdepsTools);
 
   const out = document.getElementById('sysdeps-out');
-  if (out) { out.style.display = 'block'; out.textContent = `Installing ${id}…\n`; }
+  showStream(out, `Installing ${id}…\n`);
 
   const body = { id };
   if (password !== null && password !== undefined) body.password = password;
