@@ -23,11 +23,23 @@ const SYSTEM_TOOLS = [
   {
     id: 'node-pty', label: 'node-pty', category: 'recommended',
     detectCmd: `node -e "require('node-pty');console.log('ok')" 2>/dev/null`,
-    note: 'Only for embedded terminals (Terminal tab, Code launchers) — everything else works without it; active right after install',
+    note: 'Only for embedded terminals (Terminal tab, Code launchers) — everything else works without it; active right after install. No password needed: installs user-level via npm',
     repo: 'https://www.npmjs.com/package/node-pty', repoLabel: 'npm: node-pty',
-    // Native addon: fail fast with a clear message when the C++ toolchain is
-    // missing instead of drowning the user in node-gyp output.
-    installCmd: 'if ! command -v g++ >/dev/null 2>&1 || ! command -v make >/dev/null 2>&1; then echo "✗ C++ build toolchain missing — install \\"Build tools\\" from this list first, then retry."; exit 1; fi; npm install node-pty',
+    // Native addon. Self-healing install:
+    //  1. fail fast with a clear message when the C++ toolchain is missing;
+    //  2. short-circuit when the module already loads;
+    //  3. `npm install` reports "up to date" without rebuilding when the
+    //     package folder exists but was compiled against another Node ABI
+    //     (require() fails after a Node upgrade) → force `npm rebuild`,
+    //     falling back to a forced reinstall;
+    //  4. only report success when require() actually works.
+    installCmd: [
+      'if ! command -v g++ >/dev/null 2>&1 || ! command -v make >/dev/null 2>&1; then echo "✗ C++ build toolchain missing — install \\"Build tools\\" from this list first, then retry."; exit 1; fi',
+      `if node -e "require('node-pty')" 2>/dev/null; then echo "✓ node-pty already builds & loads — nothing to do."; exit 0; fi`,
+      'if [ -d node_modules/node-pty ]; then echo "node-pty present but not loadable (Node version changed?) — rebuilding…"; npm rebuild node-pty 2>&1 || npm install node-pty --force 2>&1; else echo "Installing node-pty…"; npm install node-pty 2>&1; fi',
+      `node -e "require('node-pty')" 2>/dev/null || { echo "✗ node-pty still fails to load after (re)build — check the log above."; exit 1; }`,
+      'echo "✓ node-pty built and verified."',
+    ].join('; '),
     installCwd: __dirname + '/..',
     detectCwd:  __dirname + '/..',
   },
