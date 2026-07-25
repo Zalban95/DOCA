@@ -35,7 +35,10 @@ function settingsSubNav(panelId) {
   _settingsActiveSubtab = panelId;
 
   document.querySelectorAll('#settings-subnav .settings-subnav-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', _SETTINGS_SUBTABS[i]?.id === panelId);
+    const active = _SETTINGS_SUBTABS[i]?.id === panelId;
+    btn.classList.toggle('active', active);
+    // Keep the active pill visible when the sub-nav scrolls horizontally (mobile)
+    if (active && btn.scrollIntoView) btn.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
   });
 
   document.querySelectorAll('#tab-settings .settings-panel').forEach(p => {
@@ -103,7 +106,7 @@ async function settingsSave() {
 }
 
 function _applyHiddenTabs(hiddenTabs) {
-  document.querySelectorAll('.nav-tab[data-tab]').forEach(btn => {
+  document.querySelectorAll('.nav-tab[data-tab], .mobile-nav-item[data-tab]').forEach(btn => {
     const tab = btn.dataset.tab;
     if (tab === 'settings') return;
     btn.style.display = hiddenTabs.includes(tab) ? 'none' : '';

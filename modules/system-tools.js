@@ -23,9 +23,11 @@ const SYSTEM_TOOLS = [
   {
     id: 'node-pty', label: 'node-pty', category: 'required',
     detectCmd: `node -e "require('node-pty');console.log('ok')" 2>/dev/null`,
-    note: 'Native PTY addon — required for embedded terminals',
+    note: 'Native PTY addon — terminals work right after install (no restart)',
     repo: 'https://www.npmjs.com/package/node-pty', repoLabel: 'npm: node-pty',
-    installCmd: 'npm install node-pty',
+    // Native addon: fail fast with a clear message when the C++ toolchain is
+    // missing instead of drowning the user in node-gyp output.
+    installCmd: 'if ! command -v g++ >/dev/null 2>&1 || ! command -v make >/dev/null 2>&1; then echo "✗ C++ build toolchain missing — install \\"Build tools\\" from this list first, then retry."; exit 1; fi; npm install node-pty',
     installCwd: __dirname + '/..',
     detectCwd:  __dirname + '/..',
   },
@@ -49,6 +51,13 @@ const SYSTEM_TOOLS = [
     note: 'Version control — required for skills management',
     repo: 'https://git-scm.com', repoLabel: 'apt: git',
     installCmd: 'sudo apt-get update && sudo apt-get install -y git',
+  },
+  {
+    id: 'build-tools', label: 'Build tools', category: 'recommended',
+    detectCmd: 'g++ --version 2>/dev/null | head -1',
+    note: 'C/C++ toolchain — needed to compile native addons (node-pty)',
+    repo: 'https://packages.ubuntu.com/build-essential', repoLabel: 'apt: build-essential',
+    installCmd: 'sudo apt-get update && sudo apt-get install -y build-essential python3',
   },
   {
     id: 'ollama', label: 'Ollama', category: 'recommended',

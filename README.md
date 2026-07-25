@@ -17,7 +17,8 @@ Web-based control panel for managing the **OpenClaw** AI agent stack.
 - **AI Tools** — Whisper / Faster-Whisper (STT), Kokoro / Piper (TTS), Stable Diffusion / ComfyUI (image) with auto-detection, one-click install (⬇) and per-tool config (⚙)
 - **Inference Services** — Docker-based Whisper STT, Kokoro TTS, vLLM, Stable Diffusion and ComfyUI backends with GPU assignment, image-presence check and one-click pull
 - **System Tools** — Auto-checks 15 dependencies (Node, Docker, Compose, Git, Python, pip, Ollama, ffmpeg, curl, nvidia-smi, huggingface-cli, llama-server…) with install buttons for anything missing
-- **Agent Chat** — Floating chat panel to talk with the OpenClaw agent (uses Gateway API when enabled, falls back to `claude` CLI)
+- **Agent Chat** — Floating chat panel to talk with the OpenClaw agent (uses Gateway API when enabled, falls back to `claude` CLI); full-screen sheet on phones
+- **Mobile** — Fully responsive: bottom tab bar on phones (respects tab visibility settings), safe-area/notch support, reflowed tool rows and settings grids, full-screen chat and modals, coarse-pointer touch targets
 
 ## Quick Start
 

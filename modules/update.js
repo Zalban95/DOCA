@@ -77,53 +77,70 @@ function handleUpdate(req, res) {
   sseWrite({ status: `Updating dashboard from ${REPO}…\n` });
   sseWrite({ status: `$ cd ${DASHBOARD_DIR}\n$ git pull\n\n` });
 
-  const child = spawn('git', ['pull'], { cwd: DASHBOARD_DIR });
+  // Remember where we were so we can diff exactly what the pull brought in
+  // (HEAD~1 would be wrong for multi-commit pulls and false-positives on
+  // "Already up to date").
+  exec('git rev-parse HEAD', { cwd: DASHBOARD_DIR }, (revErr, revOut) => {
+    const beforeHead = (revOut || '').trim();
 
-  child.stdout.on('data', chunk => sseWrite({ status: chunk.toString() }));
-  child.stderr.on('data', chunk => sseWrite({ status: chunk.toString() }));
+    const child = spawn('git', ['pull'], { cwd: DASHBOARD_DIR });
 
-  child.on('close', (code) => {
-    if (code === 0) {
+    child.stdout.on('data', chunk => sseWrite({ status: chunk.toString() }));
+    child.stderr.on('data', chunk => sseWrite({ status: chunk.toString() }));
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        sseWrite({ done: true, ok: false, status: `\n✗ git pull exited with code ${code}\n` });
+        return res.end();
+      }
       sseWrite({ status: '\n✓ Pull complete.\n' });
-      // Check if package.json changed (dependencies might need updating)
-      exec('git diff HEAD~1 --name-only', { cwd: DASHBOARD_DIR }, (err, stdout) => {
-        const changed = (stdout || '').trim().split('\n');
-        if (changed.includes('package.json')) {
-          sseWrite({ status: '\npackage.json changed — running npm install…\n' });
-          const npm = spawn('npm', ['install', '--omit=dev'], { cwd: DASHBOARD_DIR });
-          npm.stdout.on('data', chunk => sseWrite({ status: chunk.toString() }));
-          npm.stderr.on('data', chunk => sseWrite({ status: chunk.toString() }));
-          npm.on('close', (npmCode) => {
-            if (npmCode === 0) {
-              sseWrite({ done: true, ok: true, status: '\n✓ Dependencies updated. Restart the server to apply.\n' });
-            } else {
-              sseWrite({ done: true, ok: false, status: `\n✗ npm install exited with code ${npmCode}\n` });
-            }
+
+      exec('git rev-parse HEAD', { cwd: DASHBOARD_DIR }, (afterErr, afterOut) => {
+        const afterHead = (afterOut || '').trim();
+
+        if (!beforeHead || beforeHead === afterHead) {
+          sseWrite({ done: true, ok: true, status: '\n✓ Already up to date — nothing to apply.\n' });
+          cached = null;
+          return res.end();
+        }
+
+        // Did the pulled range touch package.json? Then refresh dependencies.
+        exec(`git diff ${beforeHead} ${afterHead} --name-only`, { cwd: DASHBOARD_DIR }, (err, stdout) => {
+          const changed = (stdout || '').trim().split('\n');
+          if (changed.includes('package.json')) {
+            sseWrite({ status: '\npackage.json changed — running npm install…\n' });
+            const npm = spawn('npm', ['install', '--omit=dev'], { cwd: DASHBOARD_DIR });
+            npm.stdout.on('data', chunk => sseWrite({ status: chunk.toString() }));
+            npm.stderr.on('data', chunk => sseWrite({ status: chunk.toString() }));
+            npm.on('close', (npmCode) => {
+              if (npmCode === 0) {
+                sseWrite({ done: true, ok: true, status: '\n✓ Dependencies updated. Restart the server to apply.\n' });
+              } else {
+                sseWrite({ done: true, ok: false, status: `\n✗ npm install exited with code ${npmCode}\n` });
+              }
+              cached = null;
+              res.end();
+            });
+            npm.on('error', e => {
+              sseWrite({ done: true, ok: false, status: `\nnpm error: ${e.message}\n` });
+              res.end();
+            });
+          } else {
+            sseWrite({ done: true, ok: true, status: '\n✓ Restart the server to apply the update.\n' });
             cached = null;
             res.end();
-          });
-          npm.on('error', e => {
-            sseWrite({ done: true, ok: false, status: `\nnpm error: ${e.message}\n` });
-            res.end();
-          });
-        } else {
-          sseWrite({ done: true, ok: true, status: '\n✓ Restart the server to apply the update.\n' });
-          cached = null;
-          res.end();
-        }
+          }
+        });
       });
-    } else {
-      sseWrite({ done: true, ok: false, status: `\n✗ git pull exited with code ${code}\n` });
+    });
+
+    child.on('error', e => {
+      sseWrite({ done: true, ok: false, status: `Error: ${e.message}. Is git installed?` });
       res.end();
-    }
-  });
+    });
 
-  child.on('error', e => {
-    sseWrite({ done: true, ok: false, status: `Error: ${e.message}. Is git installed?` });
-    res.end();
+    res.on('close', () => { if (!child.killed) child.kill(); });
   });
-
-  res.on('close', () => { if (!child.killed) child.kill(); });
 }
 
 /** POST /api/restart — graceful server restart */
