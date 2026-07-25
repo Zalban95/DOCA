@@ -5,8 +5,22 @@ const { WebSocketServer } = require('ws');
 const { WORKSPACE_DIR } = require('./paths');
 
 let pty = null;
-try { pty = require('node-pty'); } catch (e) {
-  console.warn('[terminal] node-pty not available — run: npm install node-pty');
+
+/**
+ * Lazy-load node-pty on demand. Retrying on every connection (instead of a
+ * single require at startup) means installing node-pty from the dashboard
+ * makes terminals work immediately — no server restart needed.
+ * (Failed requires are not cached by Node, so retrying is safe/cheap.)
+ */
+function getPty() {
+  if (pty) return pty;
+  try { pty = require('node-pty'); }
+  catch { /* still missing — handlers surface the install hint */ }
+  return pty;
+}
+
+if (!getPty()) {
+  console.warn('[terminal] node-pty not available — install it from Settings → System (works without restart)');
 }
 
 /**
@@ -31,8 +45,9 @@ function setup(httpServer) {
 
   // ─── Main terminal ──────────────────────────────────────────────────────────
   termWss.on('connection', (ws) => {
-    if (!pty) {
-      ws.send(JSON.stringify({ type: 'output', data: '\r\nnode-pty is not installed.\r\nRun: npm install node-pty\r\nthen restart the panel.\r\n' }));
+    const ptyMod = getPty();
+    if (!ptyMod) {
+      ws.send(JSON.stringify({ type: 'output', data: '\r\nnode-pty is not installed.\r\nInstall it from Settings → System Tools, then reopen this terminal.\r\n' }));
       ws.close();
       return;
     }
@@ -40,7 +55,7 @@ function setup(httpServer) {
     const shell = process.env.SHELL || '/bin/bash';
     let ptyProc;
     try {
-      ptyProc = pty.spawn(shell, [], {
+      ptyProc = ptyMod.spawn(shell, [], {
         name: 'xterm-256color',
         cols: 80, rows: 24,
         cwd: process.env.HOME || WORKSPACE_DIR,
@@ -77,8 +92,9 @@ function setup(httpServer) {
 
   // ─── Code tool terminals ────────────────────────────────────────────────────
   codeWss.on('connection', (ws) => {
-    if (!pty) {
-      ws.send(JSON.stringify({ type: 'output', data: '\r\nnode-pty not installed. Run: npm install node-pty\r\n' }));
+    const ptyMod = getPty();
+    if (!ptyMod) {
+      ws.send(JSON.stringify({ type: 'output', data: '\r\nnode-pty not installed. Install it from Settings → System Tools, then reopen.\r\n' }));
       ws.close();
       return;
     }
@@ -86,7 +102,7 @@ function setup(httpServer) {
     const shell = process.env.SHELL || '/bin/bash';
     let ptyProc;
     try {
-      ptyProc = pty.spawn(shell, [], {
+      ptyProc = ptyMod.spawn(shell, [], {
         name: 'xterm-256color',
         cols: 80, rows: 20,
         cwd: process.env.HOME || WORKSPACE_DIR,
