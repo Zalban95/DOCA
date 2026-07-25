@@ -21,9 +21,9 @@ const SYSTEM_TOOLS = [
     installCmd: `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm install --lts`,
   },
   {
-    id: 'node-pty', label: 'node-pty', category: 'required',
+    id: 'node-pty', label: 'node-pty', category: 'recommended',
     detectCmd: `node -e "require('node-pty');console.log('ok')" 2>/dev/null`,
-    note: 'Native PTY addon — terminals work right after install (no restart)',
+    note: 'Only for embedded terminals (Terminal tab, Code launchers) — everything else works without it; active right after install',
     repo: 'https://www.npmjs.com/package/node-pty', repoLabel: 'npm: node-pty',
     // Native addon: fail fast with a clear message when the C++ toolchain is
     // missing instead of drowning the user in node-gyp output.

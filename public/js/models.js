@@ -6,12 +6,49 @@ let modelsOllamaConnected = false;
 
 async function modelsInit() {
   await modelsLoadSettings();
+  modelsLoadDisk();
   modelsCheckOllama();
   modelsLoadList();
   aiToolsLoad();
   hfInit();
   if (typeof llamaInit === 'function') llamaInit();
   if (typeof servicesInit === 'function') servicesInit();
+}
+
+/* ── Storage overview ─────────────────────────────────── */
+
+async function modelsLoadDisk(force = false) {
+  const strip = document.getElementById('models-disk-strip');
+  if (!strip) return;
+  try {
+    const data  = await apiFetch(`/api/models/disk${force ? '?force=1' : ''}`);
+    const disks = data.disks || [];
+    if (!disks.length) { strip.innerHTML = '<div class="placeholder">No model directories found</div>'; return; }
+
+    strip.innerHTML = disks.map(d => {
+      if (!d.exists) {
+        return `<div class="disk-row">
+          <span class="disk-label">${escHtml(d.label)}</span>
+          <span class="disk-path" title="${escHtml(d.path)}">${escHtml(d.path)}</span>
+          <span class="disk-free placeholder">not present yet</span>
+        </div>`;
+      }
+      const pct   = d.pct ?? 0;
+      const color = pct > 90 ? 'red' : pct > 70 ? 'amber' : 'green';
+      const size  = d.dirSizeKB != null ? fmtBytes(d.dirSizeKB * 1024) : '—';
+      const free  = d.availKB  != null ? fmtBytes(d.availKB * 1024)  : '—';
+      const total = d.totalKB  != null ? fmtBytes(d.totalKB * 1024)  : '—';
+      return `<div class="disk-row">
+        <span class="disk-label">${escHtml(d.label)}</span>
+        <span class="disk-path" title="${escHtml(d.path)}${d.mount ? ` (mount ${escHtml(d.mount)})` : ''}">${escHtml(d.path)}</span>
+        <span class="disk-size" title="Size of this directory">◆ ${size}</span>
+        <div class="res-bar disk-bar" title="Drive usage ${pct}%"><div class="res-bar-fill ${color}" style="width:${pct}%"></div></div>
+        <span class="disk-free" title="Free space on this drive">${free} free of ${total}</span>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    strip.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+  }
 }
 
 /* ── Settings ─────────────────────────────────────────── */
@@ -89,6 +126,11 @@ async function modelsLoadList() {
   try {
     const data = await apiFetch('/api/models/ollama/list');
     const models = data.models || [];
+    const totalEl = document.getElementById('models-ollama-total');
+    if (totalEl) {
+      const totalBytes = models.reduce((s, m) => s + (m.size || 0), 0);
+      totalEl.textContent = models.length ? `· ${models.length} model${models.length > 1 ? 's' : ''} · ${fmtBytes(totalBytes)} on disk` : '';
+    }
     if (!models.length) {
       tbody.innerHTML = '<tr><td colspan="4" class="placeholder" style="padding:12px">No models installed</td></tr>';
       return;
@@ -163,7 +205,8 @@ function modelsPull() {
       if (obj.total && obj.completed) {
         const p = Math.round(obj.completed / obj.total * 100);
         barFill.style.width = p + '%';
-        pct.textContent     = p + '%';
+        // Track the actual bytes downloaded, not just the percentage
+        pct.textContent = `${p}% · ${fmtBytes(obj.completed)} / ${fmtBytes(obj.total)}`;
       }
       if (obj.done) {
         bar.style.display = 'none';
@@ -172,7 +215,7 @@ function modelsPull() {
       }
     },
     onError: e => { out.textContent += `Error: ${e.message}\n`; },
-  }).then(modelsLoadList);
+  }).then(() => { modelsLoadList(); modelsLoadDisk(true); });
 }
 
 /* ── Delete model ─────────────────────────────────────── */
@@ -181,6 +224,7 @@ function modelsDelete(name) {
     try {
       await apiFetch('/api/models/ollama/delete', { method: 'POST', body: { name } });
       modelsLoadList();
+      modelsLoadDisk(true);
     } catch (e) { appAlert(`Delete error: ${e.message}`); }
   });
 }
@@ -279,7 +323,7 @@ async function aiToolConfigSave(id) {
 
 async function aiToolInstall(id) {
   const out = document.getElementById('ai-tools-out');
-  if (out) { out.style.display = 'block'; out.textContent = `Installing ${id}…\n`; }
+  showStream(out, `Installing ${id}…\n`);
   await sseStream(`/api/models/tools/${id}/install`, { id }, {
     onStatus: text => appendStream(out, text),
     onDone:   () => setTimeout(aiToolsLoad, 800),
@@ -432,6 +476,7 @@ function nlmInstall() {
       if (bar) bar.style.display = 'none';
       if (pct) pct.textContent = '';
       nlmLoadList();
+      modelsLoadDisk(true);
     },
     onError: e => { if (out) out.textContent += `Error: ${e.message}\n`; },
   }).then(nlmLoadList);
@@ -442,6 +487,7 @@ function nlmDelete(tool, model) {
     try {
       await apiFetch('/api/models/local/delete', { method: 'POST', body: { tool, model } });
       nlmLoadList();
+      modelsLoadDisk(true);
     } catch (e) { appAlert(`Delete error: ${e.message}`); }
   });
 }
@@ -545,6 +591,11 @@ async function hfLoadList() {
   try {
     const data  = await apiFetch('/api/models/hf/list');
     const repos = data.repos || [];
+    const totalEl = document.getElementById('hf-total');
+    if (totalEl) {
+      const totalBytes = repos.reduce((s, r) => s + (r.size_on_disk || 0), 0);
+      totalEl.textContent = repos.length ? `· ${repos.length} repo${repos.length > 1 ? 's' : ''} · ${fmtBytes(totalBytes)} on disk` : '';
+    }
     if (!repos.length) {
       tbody.innerHTML = '<tr><td colspan="5" class="placeholder" style="padding:12px">No cached models found</td></tr>';
       return;
@@ -623,7 +674,7 @@ function hfDownload() {
     onDone: () => {
       if (bar)  bar.style.display = 'none';
       if (pct)  pct.textContent = '';
-      setTimeout(hfLoadList, 1000);
+      setTimeout(() => { hfLoadList(); modelsLoadDisk(true); }, 1000);
     },
     onError: e => { if (out) out.textContent += `Error: ${e.message}\n`; },
   }).then(() => { if (bar) bar.style.display = 'none'; });
@@ -634,6 +685,7 @@ function hfDelete(repoId) {
     try {
       await apiFetch('/api/models/hf/delete', { method: 'POST', body: { repoId } });
       hfLoadList();
+      modelsLoadDisk(true);
     } catch (e) { appAlert(`Delete error: ${e.message}`); }
   });
 }

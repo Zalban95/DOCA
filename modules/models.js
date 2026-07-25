@@ -1,8 +1,11 @@
 'use strict';
 
 const fs   = require('fs');
+const os   = require('os');
+const path = require('path');
+const { exec } = require('child_process');
 
-const { loadModelsPrefs, saveModelsPrefs, detectBinary, streamCmd } = require('./utils');
+const { loadModelsPrefs, saveModelsPrefs, loadPrefs, detectBinary, streamCmd } = require('./utils');
 
 /**
  * Known non-LLM AI tools.
@@ -129,6 +132,70 @@ function handleToolInstall(req, res) {
   streamCmd(res, tool.installCmd, { label: tool.label });
 }
 
+// ─── Storage tracking (model directories + free disk space) ──────────────────
+
+const _diskCache = new Map(); // path -> { at, data }
+const DISK_CACHE_TTL = 60 * 1000;
+
+function _execOut(cmd, timeout) {
+  return new Promise(resolve =>
+    exec(cmd, { timeout }, (err, stdout) => resolve(err ? null : (stdout || '').trim())));
+}
+
+/** df + du for one path (cached 60 s — du can be slow on huge model dirs). */
+async function _diskInfo(id, label, p) {
+  const hit = _diskCache.get(p);
+  if (hit && Date.now() - hit.at < DISK_CACHE_TTL) return { id, label, path: p, ...hit.data };
+
+  if (!fs.existsSync(p)) return { id, label, path: p, exists: false };
+
+  const data = { exists: true, mount: null, totalKB: null, usedKB: null, availKB: null, pct: null, dirSizeKB: null };
+
+  const df = await _execOut(`df -kP "${p}"`, 5000);
+  if (df) {
+    const parts = df.split('\n').slice(1).join(' ').trim().split(/\s+/);
+    if (parts.length >= 6) {
+      data.totalKB = parseInt(parts[1], 10) || null;
+      data.usedKB  = parseInt(parts[2], 10) || null;
+      data.availKB = parseInt(parts[3], 10) || null;
+      data.pct     = parseInt(parts[4], 10) || null;
+      data.mount   = parts.slice(5).join(' ');
+    }
+  }
+
+  const du = await _execOut(`du -sk "${p}"`, 15000);
+  if (du) data.dirSizeKB = parseInt(du.split(/\s+/)[0], 10) || null;
+
+  _diskCache.set(p, { at: Date.now(), data });
+  return { id, label, path: p, ...data };
+}
+
+/** GET /api/models/disk — storage overview for every model location */
+async function handleGetDisk(req, res) {
+  if (req.query && req.query.force === '1') _diskCache.clear();
+  const mp   = loadModelsPrefs();
+  const home = process.env.HOME || os.homedir();
+
+  const targets = [
+    { id: 'ollama', label: 'Ollama models',     path: mp.ollamaPath || path.join(home, '.ollama') },
+    { id: 'hf',     label: 'HuggingFace cache', path: mp.hf?.cacheDir || path.join(home, '.cache', 'huggingface', 'hub') },
+  ];
+
+  // Unique llama.cpp model directories (may live on separate drives)
+  const instances = (loadPrefs().llamacpp || {}).instances || [];
+  const seen = new Set(targets.map(t => t.path));
+  instances.forEach(inst => {
+    if (!inst.modelPath) return;
+    const dir = path.dirname(inst.modelPath);
+    if (seen.has(dir)) return;
+    seen.add(dir);
+    targets.push({ id: `llamacpp-${inst.id}`, label: `llama.cpp — ${inst.name || inst.id}`, path: dir });
+  });
+
+  const disks = await Promise.all(targets.map(t => _diskInfo(t.id, t.label, t.path)));
+  res.json({ disks });
+}
+
 /** POST /api/models/tools/:id/config */
 function handleToolConfig(req, res) {
   const { id } = req.params;
@@ -150,4 +217,5 @@ module.exports = {
   handleGetTools,
   handleToolConfig,
   handleToolInstall,
+  handleGetDisk,
 };

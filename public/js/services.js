@@ -143,7 +143,7 @@ async function servicePullImage(id) {
   const out     = document.getElementById(`svc-out-${id}`);
   const pullBtn = document.getElementById(`svc-pull-${id}`);
 
-  if (out)     { out.style.display = 'block'; out.textContent = `Pulling ${image}…\n`; }
+  showStream(out, `Pulling ${image}…\n`);
   if (pullBtn) pullBtn.disabled = true;
 
   await sseStream('/api/docker/images/pull', { name: image }, {
@@ -172,7 +172,7 @@ async function serviceStart(id) {
   const startBtn = document.getElementById(`svc-start-${id}`);
   const apiNote  = document.getElementById(`svc-api-note-${id}`);
 
-  if (out)     { out.style.display = 'block'; out.textContent = `Starting ${svc.label}…\n`; }
+  showStream(out, `Starting ${svc.label}…\n`);
   if (startBtn)  startBtn.disabled = true;
   if (apiNote)   apiNote.style.display = 'none';
 
