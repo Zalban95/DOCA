@@ -3,7 +3,8 @@
    ═══════════════════════════════════════════════════════ */
 
 async function loadKeys() {
-  keysLoadProviders();
+  devicesLoad();        // this server's /api/v1 device tokens
+  keysLoadProviders();  // third-party LLM providers
 }
 
 /* ── LLM Providers ────────────────────────────────────── */

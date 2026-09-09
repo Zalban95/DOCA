@@ -19,6 +19,7 @@ const { ensureCerts }          = require('./modules/https-cert');
 const controls     = require('./modules/controls');
 const config       = require('./modules/config');
 const keys         = require('./modules/keys');
+const devicesPanel = require('./modules/devices-panel');
 const skills       = require('./modules/skills');
 const setup        = require('./modules/setup');
 const snapshots    = require('./modules/snapshots');
@@ -79,6 +80,13 @@ app.get   ('/api/keys',                      keys.handleGetKeys);
 app.post  ('/api/keys',                      keys.handlePostKeys);
 app.post  ('/api/keys/add-provider',         keys.handleAddProvider);
 app.delete('/api/keys/:name',                keys.handleDeleteProvider);
+
+// ─── Routes: Doca device tokens (the /api/v1 registry, managed from the panel) ─
+app.get   ('/api/devices',             devicesPanel.handleList);
+app.post  ('/api/devices',             devicesPanel.handleIssue);
+app.post  ('/api/devices/pair',        devicesPanel.handlePairStart);
+app.post  ('/api/devices/:id/rotate',  devicesPanel.handleRotate);
+app.delete('/api/devices/:id',         devicesPanel.handleRevoke);
 
 // ─── Routes: Skills ───────────────────────────────────────────────────────────
 // /search must come before /:name to avoid matching "search" as a skill name

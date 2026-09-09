@@ -652,27 +652,94 @@
         </div>
       </div>
 
-      <!-- ── API Keys ─────────────────────────────────── -->
+      <!-- ── API Keys & Device Tokens ─────────────────── -->
       <div class="settings-panel" id="sp-keys">
-        <div class="toolbar">
-          <div class="card-title" style="margin-bottom:0">Providers</div>
-          <button class="btn btn-sm btn-blue" onclick="showAddProvider()">+ Add Provider</button>
-        </div>
-        <div id="providers-list" class="scroll-y" style="flex:1"><div class="placeholder">Loading…</div></div>
-        <div id="add-provider-form" style="display:none">
-          <div class="card mt8">
-            <div class="card-title">New Provider</div>
-            <div class="row">
-              <div class="field flex1"><div class="input-label">Name (e.g. groq)</div><input id="np-name" class="input" placeholder="groq"></div>
-              <div class="field flex1"><div class="input-label">Base URL</div><input id="np-url" class="input" placeholder="https://api.groq.com/openai/v1"></div>
+        <div class="scroll-y" style="flex:1">
+
+          <!-- ── This server: Doca device tokens ── -->
+          <div class="card">
+            <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              This server — devices
+              <button class="btn btn-xs btn-teal" id="dev-pair-btn"  onclick="devShowForm('pair')"  title="Show a pairing code a phone or watch can scan">⧉ Pair a device</button>
+              <button class="btn btn-xs"          id="dev-issue-btn" onclick="devShowForm('issue')" title="Mint a token directly (advanced)">+ Issue token</button>
+              <button class="btn btn-xs"          onclick="devicesLoad()" title="Refresh">↺</button>
             </div>
-            <div class="field"><div class="input-label">API Key</div><input id="np-key" class="input" type="password" placeholder="sk-…"></div>
-            <div class="toolbar-right">
-              <button class="btn btn-sm" onclick="hideAddProvider()">Cancel</button>
-              <button class="btn btn-sm btn-blue" onclick="addProvider()">Add</button>
+            <div class="input-label" style="margin-bottom:8px">
+              Tokens for phones, watches and agents that talk to this server's <code>/api/v1</code>.
+              Each device gets its own scopes and can be revoked on its own.
             </div>
-            <div class="status-line mt8" id="np-status"></div>
+
+            <!-- Pair: preferred. The code is single-use and short-lived. -->
+            <div id="dev-pair-form" style="display:none">
+              <div class="card mt8">
+                <div class="card-title">Pair a device</div>
+                <div class="row">
+                  <div class="field flex1"><div class="input-label">Device name</div><input id="dev-pair-name" class="input" placeholder="Al's watch"></div>
+                  <div class="field flex1"><div class="input-label">Role</div><select id="dev-pair-preset" class="input"></select></div>
+                </div>
+                <div class="input-label" id="dev-pair-scopes" style="margin-bottom:8px"></div>
+                <div class="toolbar-right">
+                  <button class="btn btn-sm" onclick="devHideForms()">Cancel</button>
+                  <button class="btn btn-sm btn-teal" onclick="devPairStart()">Show pairing code</button>
+                </div>
+                <div class="status-line mt8" id="dev-pair-status"></div>
+              </div>
+            </div>
+
+            <!-- Issue: advanced. Produces a long-lived token in the page. -->
+            <div id="dev-issue-form" style="display:none">
+              <div class="card mt8">
+                <div class="card-title">Issue a token directly</div>
+                <div class="input-label" style="margin-bottom:8px">
+                  Prefer pairing where possible — a pairing code expires, a token does not.
+                  Use this for agents and headless clients that cannot scan anything.
+                </div>
+                <div class="row">
+                  <div class="field flex1"><div class="input-label">Device name</div><input id="dev-issue-name" class="input" placeholder="openclaw-agent"></div>
+                  <div class="field flex1"><div class="input-label">Role</div><select id="dev-issue-preset" class="input"></select></div>
+                </div>
+                <div class="input-label" id="dev-issue-scopes" style="margin-bottom:8px"></div>
+                <div class="toolbar-right">
+                  <button class="btn btn-sm" onclick="devHideForms()">Cancel</button>
+                  <button class="btn btn-sm btn-green" onclick="devIssue()">Issue token</button>
+                </div>
+                <div class="status-line mt8" id="dev-issue-status"></div>
+              </div>
+            </div>
+
+            <!-- Pairing code / freshly minted token lands here. -->
+            <div id="dev-result"></div>
+
+            <div id="doca-devices-list"><div class="placeholder">Loading…</div></div>
           </div>
+
+          <!-- ── External services: third-party API keys ── -->
+          <div class="card mt8">
+            <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              External providers
+              <button class="btn btn-xs btn-blue" onclick="showAddProvider()">+ Add provider</button>
+            </div>
+            <div class="input-label" style="margin-bottom:8px">
+              API keys for third-party LLM services. Nothing to do with the device tokens above.
+            </div>
+            <div id="providers-list"><div class="placeholder">Loading…</div></div>
+            <div id="add-provider-form" style="display:none">
+              <div class="card mt8">
+                <div class="card-title">New Provider</div>
+                <div class="row">
+                  <div class="field flex1"><div class="input-label">Name (e.g. groq)</div><input id="np-name" class="input" placeholder="groq"></div>
+                  <div class="field flex1"><div class="input-label">Base URL</div><input id="np-url" class="input" placeholder="https://api.groq.com/openai/v1"></div>
+                </div>
+                <div class="field"><div class="input-label">API Key</div><input id="np-key" class="input" type="password" placeholder="sk-…"></div>
+                <div class="toolbar-right">
+                  <button class="btn btn-sm" onclick="hideAddProvider()">Cancel</button>
+                  <button class="btn btn-sm btn-blue" onclick="addProvider()">Add</button>
+                </div>
+                <div class="status-line mt8" id="np-status"></div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -1056,6 +1123,7 @@
 <script src="js/controls.js"></script>
 <script src="js/logs.js"></script>
 <script src="js/keys.js"></script>
+<script src="js/devices.js"></script>
 <script src="js/skills.js"></script>
 <script src="js/snapshots.js"></script>
 <script src="js/setup.js"></script>

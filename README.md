@@ -152,6 +152,7 @@ Defaults are derived from the current user's home directory (`os.homedir()`, sho
 | `SNAPSHOT_DIR` | `~/openclaw-snapshots` | Snapshot storage |
 | `OPENCLAW_GATEWAY_URL` | — | Override gateway base URL (e.g. `http://openclaw-gateway:18789` when dashboard runs in Docker) |
 | `DOCA_DATA_DIR` | `<repo>/.doca` | Durable state for the `/api/v1` client layer (devices, outboxes, profiles, media) |
+| `DOCA_LEGACY_TRUST` | `1` | Allow device pairing and token issuance from the dashboard (Settings → API Keys). Set to `0` to make `npm run token` the only way to mint tokens; the device list stays visible either way |
 | `DOCA_STT_URL` / `DOCA_TTS_URL` | — | Override the voice service URLs saved in the dashboard settings |
 | `DOCA_FONT` | auto-detect | TTF used for text in server-rendered charts/figures |
 
@@ -167,8 +168,16 @@ graphics for devices without an SVG engine.
 - **Developer docs:** [docs/api/](docs/api/README.md) — [getting started](docs/api/getting-started.md), [device app guide](docs/api/device-app-guide.md), [agent guide](docs/api/agent-guide.md), [cookbook](docs/api/cookbook.md) (JS / Kotlin / Swift / Python).
 - **Specification:** [PROTOCOL.md](PROTOCOL.md) (normative) and the OpenAPI 3.1 document at [docs/api/openapi.json](docs/api/openapi.json), also served live at `GET /api/v1/openapi.json`.
 
+**Enrolling devices from the dashboard.** Settings → **API Keys** → *This server — devices*
+lists every enrolled device with its scopes, and can pair a new one. **Pair a device** shows a
+QR and a six-digit code that the device scans or types; the code is single use, expires in five
+minutes, and the device mints its own token, so no long-lived secret is ever displayed in the
+browser. **Issue token** is the direct route for agents and headless clients that cannot scan
+anything. Tokens can be rotated and revoked from the same panel. Set `DOCA_LEGACY_TRUST=0` to
+turn issuing off and use only the CLI below.
+
 ```bash
-npm run token -- issue --name phone --preset phone      # mint the first token (shown once)
+npm run token -- issue --name phone --preset phone      # mint a token from the host (shown once)
 curl -k -H "Authorization: Bearer doca_…" https://<host>:4242/api/v1/capabilities
 npm test                                                 # protocol tests (node --test)
 DOCA_ADMIN_TOKEN=doca_… npm run client:demo              # end-to-end walkthrough with the reference clients
