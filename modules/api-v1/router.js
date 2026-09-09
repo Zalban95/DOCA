@@ -43,8 +43,12 @@ setInterval(() => { media.purgeExpired(); prompts.prune(); }, 15 * 60 * 1000).un
 
 router.get('/', (_req, res) => res.json({
   name: 'doca', protocol: { version: L.PROTOCOL_VERSION, minClient: L.PROTOCOL_MIN_CLIENT },
-  auth: 'Authorization: Bearer doca_<device>.<secret>', pairUrl: '/api/v1/devices/pair/complete', capabilitiesUrl: '/api/v1/capabilities', docs: 'PROTOCOL.md',
+  auth: 'Authorization: Bearer doca_<device>.<secret>', pairUrl: '/api/v1/devices/pair/complete', capabilitiesUrl: '/api/v1/capabilities',
+  openapiUrl: '/api/v1/openapi.json', docs: 'PROTOCOL.md', guides: 'docs/api/README.md',
 }));
+
+// Machine-readable description of this API; public so generators and API tools can fetch it before pairing.
+router.get('/openapi.json', (_req, res) => { res.setHeader('Cache-Control', 'public, max-age=300'); res.json(require('./openapi').document()); });
 
 router.post('/devices/pair/complete', wrap(async (req, res) => {
   const { code, caps, name } = req.body || {};
