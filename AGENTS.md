@@ -11,7 +11,13 @@ OpenClaw Dashboard — a single Node.js/Express web app (`server.js` + `modules/
 - The server serves **HTTPS with a self-signed cert** (auto-generated into `.certs/`), falling back to HTTP only if cert generation fails. Use `curl -k` and, in a browser, click through the "Your connection is not private" warning (Advanced → Proceed).
 
 ### Lint / test / build
-- There is **no build step** (plain JS, static assets) and **no lint or test scripts** — `package.json` only defines `start` and `dev`. Do not expect `npm test`/`npm run lint` to exist.
+- There is **no build step** (plain JS, static assets) and **no lint script**.
+- `npm test` runs the `/api/v1` client-protocol suites with `node --test` (no external services; each file boots the app on an ephemeral HTTP port with a temp `DOCA_DATA_DIR`). `npm run client:demo` (needs a running server and `DOCA_ADMIN_TOKEN`) exercises the reference clients end to end.
+
+### `/api/v1` client layer
+- Spec: `PROTOCOL.md`. Code: `modules/api-v1/`. Mint tokens with `npm run token -- issue --name x --preset admin|agent|phone|watch|viewer`.
+- Durable state goes to `DOCA_DATA_DIR` (default `.doca/`, gitignored); set it to a temp dir when experimenting.
+- `server.js` exports `createApp()`; it only listens when run directly.
 
 ### Environment gotchas (not bugs)
 - The dashboard manages an *external* Docker Compose stack and various AI CLIs. Those tools (Docker, Ollama, nvidia-smi, huggingface-cli, etc.) are **not installed by default**. Panels that shell out to them (e.g. "All Containers" showing `docker: not found`, GPU stats, model managers) will show errors/empty state. This is expected and does not indicate the app is broken — installing Docker/etc. is optional and only needed to exercise those specific panels.

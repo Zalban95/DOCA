@@ -141,6 +141,28 @@ Defaults are derived from the current user's home directory (`os.homedir()`, sho
 | `RESTORE_SCRIPT` | `~/restore-agent.sh` | Restore script path |
 | `SNAPSHOT_DIR` | `~/openclaw-snapshots` | Snapshot storage |
 | `OPENCLAW_GATEWAY_URL` | — | Override gateway base URL (e.g. `http://openclaw-gateway:18789` when dashboard runs in Docker) |
+| `DOCA_DATA_DIR` | `<repo>/.doca` | Durable state for the `/api/v1` client layer (devices, outboxes, profiles, media) |
+| `DOCA_STT_URL` / `DOCA_TTS_URL` | — | Override the voice service URLs saved in the dashboard settings |
+| `DOCA_FONT` | auto-detect | TTF used for text in server-rendered charts/figures |
+
+## Client API for watches, phones and other thin devices (`/api/v1`)
+
+A device-agnostic, token-scoped API sits next to the dashboard routes and exposes
+everything the platform can do to thin clients over the tailnet: capability
+discovery, typed metric surfaces, commands, a durable push channel (SSE / poll),
+the agent ↔ user prompt cycle (tap / voice / text / image), device profiles,
+on-demand sensors, media uploads, agent-shipped artifacts, and server-rendered
+graphics for devices without an SVG engine. **[PROTOCOL.md](PROTOCOL.md)** is the
+full specification.
+
+```bash
+npm run token -- issue --name phone --preset phone      # mint the first token (shown once)
+curl -k -H "Authorization: Bearer doca_…" https://<host>:4242/api/v1/capabilities
+npm test                                                 # 42 protocol tests (node --test)
+DOCA_ADMIN_TOKEN=doca_… npm run client:demo              # end-to-end walkthrough with the reference clients
+```
+
+Reference clients live in `clients/reference/` (`watch.sh`, `agent-sim.js`).
 
 ## Project Structure
 
@@ -167,6 +189,17 @@ modules/                    Backend feature modules (one per concern)
   services.js               Inference service management (incl. image-presence check)
   update.js                 Self-update / restart
   terminal.js               WebSocket PTY terminals
+  api-v1/                   Device-agnostic client API (see PROTOCOL.md)
+    router.js               All /api/v1 routes (device + agent side)
+    devices.js / auth.js / scopes.js   Tokens, pairing, caps, scope matching
+    bus.js                  Per-device durable outbox + live SSE fan-out
+    sampler.js / surfaces.js / live.js Shared status sampler, typed surfaces, profile-driven pushes
+    commands.js / jobs.js   Command registry over existing handlers, long-running jobs
+    prompts.js / agent-bridge.js       Interaction state machine, server-side resolver (gateway)
+    profiles.js / sensors.js / media.js / artifacts.js / motion.js / render.js
+bin/doca-token.js           Token CLI (npm run token)
+clients/reference/          Reference watch client (bash) + agent simulator (Node) + demo
+test/                       node --test suites for the protocol
 public/
   index.html                Clean HTML shell
   css/

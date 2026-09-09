@@ -418,3 +418,19 @@ Recommend **A with C's vocabulary as the primary authoring target**: agents desc
 | D6 | Command authority on confirm | confirming device must hold `command:<id>`; agent-side effects need only `interact` (§7.4) |
 | D7 | Multi-device prompts | first confirmation wins, others get `prompt.closed` (§7.1) |
 | D8 | Payload ceilings | 16 KB snapshot / 32 KB prompt & event / 200 KB image / 1 MB · 30 s audio (§1) |
+
+---
+
+## 13. Addendum — approved with additions (implemented in Phase 2)
+
+The proposal was approved with the following additions, all of which are now in `PROTOCOL.md` and the implementation:
+
+| Addition | How it landed |
+|---|---|
+| Device-agnostic until the device declares a form factor; glasses with camera/mic and no display must coexist with a watch | `caps.formFactor` is self-declared and every `caps` section is optional (`screen` may be absent). Choice types, representations and defaults derive from abilities, never from the form factor. |
+| Input images | Third free-form choice type `image` (multipart upload or `mediaId`), generic `POST /media`, images forwarded to the gateway as vision content parts by the server resolver, or to the agent as `mediaUrl`. |
+| A field for general variables / unforeseen data the agent can parse directly | Opaque `ext` object accepted and forwarded on every message type (≤ 8 KB) and a per-device `vars` document (`PATCH /devices/me/vars`, `device.vars` events to agents). |
+| All sensor data the device can offer, collected only when relevant | Open sensor vocabulary declared in `caps.sensors`; agent-initiated, time-bounded `sensor.request` with rate/duration; profile `sensors.allow` as the consent list; `autoReport` for cheap always-on values; batched `POST /sensors/samples`. Nothing is collected without a request. |
+| Any access from the device must be possible; e.g. collect sensor data, compute on a server the agent just made, hand back "a small js or anything" | `artifacts`: agent uploads a runtime-tagged payload (js, wasm, lua, …) and delivers it only to devices declaring that runtime in `caps.exec`; `agent.message` / `device.message` free-form channels for anything else. |
+
+All eight D-decisions were taken as recommended.
