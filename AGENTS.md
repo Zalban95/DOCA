@@ -15,7 +15,8 @@ OpenClaw Dashboard — a single Node.js/Express web app (`server.js` + `modules/
 - `npm test` runs the `/api/v1` client-protocol suites with `node --test` (no external services; each file boots the app on an ephemeral HTTP port with a temp `DOCA_DATA_DIR`). `npm run client:demo` (needs a running server and `DOCA_ADMIN_TOKEN`) exercises the reference clients end to end.
 
 ### `/api/v1` client layer
-- Spec: `PROTOCOL.md`. Code: `modules/api-v1/`. Mint tokens with `npm run token -- issue --name x --preset admin|agent|phone|watch|viewer`.
+- Spec: `PROTOCOL.md`. Developer guides: `docs/api/` (getting started, device app guide, agent guide, cookbook). Code: `modules/api-v1/`. Mint tokens with `npm run token -- issue --name x --preset admin|agent|phone|watch|viewer`.
+- OpenAPI: `modules/api-v1/openapi.js` is the source; `docs/api/openapi.json` is generated from it (`npm run openapi > docs/api/openapi.json`) and `test/openapi.test.js` fails if it is stale or if any Express route is missing from it. When adding or changing a route, update `openapi.js` and regenerate.
 - Durable state goes to `DOCA_DATA_DIR` (default `.doca/`, gitignored); set it to a temp dir when experimenting.
 - `server.js` exports `createApp()`; it only listens when run directly.
 

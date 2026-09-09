@@ -152,14 +152,17 @@ everything the platform can do to thin clients over the tailnet: capability
 discovery, typed metric surfaces, commands, a durable push channel (SSE / poll),
 the agent ↔ user prompt cycle (tap / voice / text / image), device profiles,
 on-demand sensors, media uploads, agent-shipped artifacts, and server-rendered
-graphics for devices without an SVG engine. **[PROTOCOL.md](PROTOCOL.md)** is the
-full specification.
+graphics for devices without an SVG engine.
+
+- **Developer docs:** [docs/api/](docs/api/README.md) — [getting started](docs/api/getting-started.md), [device app guide](docs/api/device-app-guide.md), [agent guide](docs/api/agent-guide.md), [cookbook](docs/api/cookbook.md) (JS / Kotlin / Swift / Python).
+- **Specification:** [PROTOCOL.md](PROTOCOL.md) (normative) and the OpenAPI 3.1 document at [docs/api/openapi.json](docs/api/openapi.json), also served live at `GET /api/v1/openapi.json`.
 
 ```bash
 npm run token -- issue --name phone --preset phone      # mint the first token (shown once)
 curl -k -H "Authorization: Bearer doca_…" https://<host>:4242/api/v1/capabilities
-npm test                                                 # 42 protocol tests (node --test)
+npm test                                                 # protocol tests (node --test)
 DOCA_ADMIN_TOKEN=doca_… npm run client:demo              # end-to-end walkthrough with the reference clients
+npm run openapi > docs/api/openapi.json                  # regenerate the OpenAPI document
 ```
 
 Reference clients live in `clients/reference/` (`watch.sh`, `agent-sim.js`).
@@ -197,6 +200,7 @@ modules/                    Backend feature modules (one per concern)
     commands.js / jobs.js   Command registry over existing handlers, long-running jobs
     prompts.js / agent-bridge.js       Interaction state machine, server-side resolver (gateway)
     profiles.js / sensors.js / media.js / artifacts.js / motion.js / render.js
+    openapi.js              OpenAPI 3.1 document built from the registries (served at /api/v1/openapi.json)
 bin/doca-token.js           Token CLI (npm run token)
 clients/reference/          Reference watch client (bash) + agent simulator (Node) + demo
 test/                       node --test suites for the protocol

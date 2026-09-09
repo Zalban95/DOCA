@@ -66,7 +66,8 @@ function schemas() {
     }, { required: ['error'] }),
 
     Discovery: obj({
-      name: str({ const: 'doca' }), protocol: obj({ version: str(), minClient: str() }), auth: str(), pairUrl: str(), capabilitiesUrl: str(), openapiUrl: str(), docs: str(),
+      name: str({ const: 'doca' }), protocol: obj({ version: str(), minClient: str() }), auth: str(), pairUrl: str(), capabilitiesUrl: str(), openapiUrl: str(),
+      docs: str({ description: 'Path of the normative specification in the repository.' }), guides: str({ description: 'Path of the developer guides in the repository.' }),
     }),
 
     Scope: str({ description: '`family:target`; `target` may be `*` or a dotted prefix ending in `.*`. Families: ' + Object.keys(FAMILIES).join(', ') + '.', examples: ['read:*', 'read:system.*', 'command:services.stop', 'interact', 'profile:self', 'agent'] }),

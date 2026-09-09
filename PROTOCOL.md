@@ -5,9 +5,11 @@ and any thin client: a smartwatch, a phone companion app, smart glasses, a car
 display, a kiosk, a headless script, or the agent itself. It is complete: a
 developer who has never seen the codebase can implement a client from this file.
 
-Related: `docs/proposals/client-api-phase1.md` (design rationale),
-`clients/reference/` (working bash + Node clients), `test/*.test.js`
-(executable specification, 42 tests).
+Related: `docs/api/README.md` (developer guides: getting started, device app
+guide, agent guide, cookbook), `docs/api/openapi.json` (OpenAPI 3.1, also served
+at `GET /api/v1/openapi.json`), `docs/proposals/client-api-phase1.md` (design
+rationale), `clients/reference/` (working bash + Node clients), `test/*.test.js`
+(executable specification).
 
 ---
 
@@ -42,8 +44,9 @@ https://<host>:4242/api/v1
 - TLS: the server presents a Tailscale-issued certificate when
   `tailscale cert` succeeds, otherwise a self-signed one (pin it, or accept it
   on first pairing). Plain HTTP is only used when certificate generation fails.
-- `GET /api/v1/` is the only unauthenticated read; it returns the protocol
-  version and the pairing/capabilities URLs.
+- `GET /api/v1/` and `GET /api/v1/openapi.json` are the only unauthenticated
+  reads; the first returns the protocol version and the pairing/capabilities
+  URLs, the second the machine-readable description of this document.
 - Requests and responses are JSON (`Content-Type: application/json`) unless a
   section says multipart (uploads) or binary (images, media, artifacts).
 - Send `X-Doca-Client: <name>/<version>` on every request. It is logged
@@ -939,6 +942,7 @@ phone to relay. Use `If-None-Match` on snapshots/profiles; they are cheap 304s.
 | Method | Path | Scope | Purpose |
 |---|---|---|---|
 | GET | `/` | — | discovery |
+| GET | `/openapi.json` | — | OpenAPI 3.1 description of this API |
 | POST | `/devices/pair/complete` | — | finish pairing → token |
 | GET | `/capabilities` | any | §6 |
 | GET | `/devices` | `devices:admin` \| `agent` | list devices (+ presets) |

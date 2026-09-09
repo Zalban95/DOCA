@@ -4460,7 +4460,12 @@
             "type": "string"
           },
           "docs": {
-            "type": "string"
+            "type": "string",
+            "description": "Path of the normative specification in the repository."
+          },
+          "guides": {
+            "type": "string",
+            "description": "Path of the developer guides in the repository."
           }
         }
       },
