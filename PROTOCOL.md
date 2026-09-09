@@ -192,7 +192,7 @@ from it and never hard-codes an id.
     "easings": ["linear","ease-in","ease-out","ease-in-out","spring"],
     "colorRoles": ["ok","warn","crit","accent","muted"]
   },
-  "server": { "name": "doca", "version": "2.5.0", "time": "2026-09-09T07:33:07.552Z" },
+  "server": { "name": "doca", "version": "2.6.0", "time": "2026-09-09T07:33:07.552Z" },
   "device": { "id": "dev_9f4bf9ba62b1", "name": "my-watch", "kind": "device", "scopes": [...], "caps": { … }, "vars": {}, "varsVersion": 0, "createdAt": "…", "lastSeenAt": "…", "expiresAt": null, "revokedAt": null },
   "scopes": { "granted": ["read:*","interact",…], "families": { "read": "Read snapshots…", … } },
   "surfaces": [ { "id": "system.cpu", "title": "CPU", "kind": "metrics", "group": "system", "refreshHintSec": 5,
