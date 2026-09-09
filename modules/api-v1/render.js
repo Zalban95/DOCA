@@ -17,6 +17,32 @@ const L = require('./limits');
 
 let _ready = null;
 let _Resvg = null;
+let _font = null;   // { buffer, family, file } or null when no TTF was found
+
+/**
+ * The wasm build cannot enumerate system fonts, so one TTF is loaded
+ * explicitly and mapped to the generic `sans-serif` family. Override with
+ * DOCA_FONT=/path/to/font.ttf (family name is read from the file name).
+ */
+const FONT_CANDIDATES = [
+  ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 'DejaVu Sans'],
+  ['/usr/share/fonts/dejavu/DejaVuSans.ttf', 'DejaVu Sans'],
+  ['/usr/share/fonts/TTF/DejaVuSans.ttf', 'DejaVu Sans'],
+  ['/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf', 'Liberation Sans'],
+  ['/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf', 'Noto Sans'],
+  ['/usr/share/fonts/truetype/freefont/FreeSans.ttf', 'FreeSans'],
+  ['/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf', 'Liberation Sans'],
+  ['/System/Library/Fonts/Supplemental/Arial.ttf', 'Arial'],
+];
+
+function loadFont() {
+  const custom = process.env.DOCA_FONT;
+  const list = custom ? [[custom, path.basename(custom).replace(/[-_.]?(Regular)?\.[ot]tf$/i, '').replace(/([a-z])([A-Z])/g, '$1 $2')], ...FONT_CANDIDATES] : FONT_CANDIDATES;
+  for (const [file, family] of list) {
+    try { return { buffer: fs.readFileSync(file), family, file }; } catch {}
+  }
+  return null;
+}
 
 function init() {
   if (_ready) return _ready;
@@ -25,9 +51,19 @@ function init() {
     const wasmPath = path.join(path.dirname(require.resolve('@resvg/resvg-wasm')), 'index_bg.wasm');
     await mod.initWasm(fs.readFileSync(wasmPath));
     _Resvg = mod.Resvg;
+    _font = loadFont();
+    if (!_font) console.warn('[api-v1/render] no TTF font found; text in server-rendered images will be dropped (set DOCA_FONT)');
   })();
   return _ready;
 }
+
+function fontOptions() {
+  if (!_font) return { loadSystemFonts: false, defaultFontFamily: 'sans-serif' };
+  return { loadSystemFonts: false, fontBuffers: [_font.buffer], defaultFontFamily: _font.family, sansSerifFamily: _font.family, serifFamily: _font.family, monospaceFamily: _font.family };
+}
+
+/** Whether text will appear in rendered images (for capabilities). */
+function textSupported() { return !!_font; }
 
 const THEMES = {
   dark:  { bg: '#0b0f14', fg: '#e6edf3', muted: '#7d8590', grid: '#1f2731', ok: '#3fb950', warn: '#d29922', crit: '#f85149', accent: '#58a6ff' },
@@ -39,7 +75,7 @@ function theme(name) { return THEMES[name] || THEMES.dark; }
 async function svgToPng(svg, { w, h } = {}) {
   await init();
   const fitTo = w ? { mode: 'width', value: Math.round(w) } : h ? { mode: 'height', value: Math.round(h) } : { mode: 'original' };
-  const r = new _Resvg(svg, { fitTo, font: { loadSystemFonts: false, defaultFontFamily: 'sans-serif' } });
+  const r = new _Resvg(svg, { fitTo, font: fontOptions() });
   const png = Buffer.from(r.render().asPng());
   if (png.length > L.IMAGE_BYTES) throw Object.assign(new Error(`rendered image is ${png.length} bytes (limit ${L.IMAGE_BYTES})`), { code: 'image_too_large', status: 413 });
   return png;
@@ -69,7 +105,10 @@ function chartSvg(o) {
   if (o.min != null) min = Math.min(min, o.min);
   if (o.max != null) max = Math.max(max, o.max);
   if (max === min) max = min + 1;
-  const t0 = Math.min(since, ...series.flatMap(s => s.points.map(p => p.t)));
+  // Fit the x axis to the data actually held (a fresh server has seconds of history, not an hour).
+  const times = series.flatMap(s => s.points.map(p => p.t));
+  let t0 = times.length ? Math.min(...times) : since;
+  if (now - t0 < 30000) t0 = now - 30000;
   const x = ts => pad.l + (ts - t0) / Math.max(1, now - t0) * (w - pad.l - pad.r);
   const y = v  => pad.t + (1 - (v - min) / (max - min)) * (h - pad.t - pad.b);
 
@@ -229,4 +268,4 @@ function posterSvg(svg, { w = 200, h = 200 }) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${root.viewBox}" preserveAspectRatio="xMidYMid meet">${root.inner}</svg>`;
 }
 
-module.exports = { init, svgToPng, chartSvg, spriteSvg, posterSvg, scanAnimations, frameAt, THEMES };
+module.exports = { init, svgToPng, chartSvg, spriteSvg, posterSvg, scanAnimations, frameAt, textSupported, THEMES };

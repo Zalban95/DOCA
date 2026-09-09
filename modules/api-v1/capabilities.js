@@ -21,6 +21,7 @@ const { hasScope } = require('./scopes');
 const L = require('./limits');
 
 async function build(device) {
+  await render.init().catch(() => {});
   const defs = surfaces.definitions((await require('./sampler').latest(30)).status);
   const readable = Object.values(defs).filter(d => hasScope(device.scopes, `read:${d.id}`)).map(surfaces.describe);
   const runnable = commands.ids().filter(id => hasScope(device.scopes, `command:${id}`)).map(commands.describe);
@@ -49,7 +50,7 @@ async function build(device) {
       backoff: { initialMs: 1000, maxMs: 60000, factor: 2, jitter: 0.2 },
     },
     render: {
-      formats: ['png'], maxImageBytes: L.IMAGE_BYTES, themes: Object.keys(render.THEMES),
+      formats: ['png'], maxImageBytes: L.IMAGE_BYTES, themes: Object.keys(render.THEMES), text: render.textSupported(),
       chartUrl: '/api/v1/render/chart', figureUrl: '/api/v1/render/figure/{figureId}',
       defaults: device.caps?.screen ? { w: Math.min(device.caps.screen.w, 480), h: Math.min(device.caps.screen.h, 480), round: device.caps.screen.shape === 'round' } : { w: 320, h: 160, round: false },
     },
