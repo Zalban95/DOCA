@@ -247,6 +247,23 @@ test('dismiss and agent cancel close the cycle', async () => {
   w.close(); a.close();
 });
 
+test('oversized inline SVG falls back to an image reference so prompt.new fits the event budget', async () => {
+  const p = H.sse(phone.token); await p.ready;
+  // ~40 KB of SVG: within the 64 KB figure cap but over the 32 KB event budget when inlined.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="${'M0 0 L1 1 '.repeat(4500)}"/></svg>`;
+  const big = { ...PROMPT([phone.device.id]), body: [{ type: 'figure', alt: 'thermal map', svg }] };
+  const { status, body: { prompt } } = await H.api(agent.token, 'POST', '/api/v1/agent/prompts', big);
+  assert.equal(status, 201);
+  const ev = await p.waitFor(e => e.type === 'prompt.new' && e.payload.prompt.id === prompt.id);
+  const fig = ev.payload.prompt.body.find(b => b.type === 'figure');
+  assert.equal(fig.representation.kind, 'image');
+  assert.match(fig.representation.url, /^\/api\/v1\/render\/figure\//);
+  // The pull view is not budget-constrained, so the phone still gets the full SVG when it asks.
+  const full = await H.api(phone.token, 'GET', `/api/v1/prompts/${prompt.id}`);
+  assert.equal(full.body.prompt.body[0].representation.kind, 'svg');
+  p.close();
+});
+
 test('prompt validation: choice ids unique, options need outcomes, size limit', async () => {
   let r = await H.api(agent.token, 'POST', '/api/v1/agent/prompts', { title: 'x', choices: [{ id: 'a', type: 'option', label: 'A' }] });
   assert.equal(r.status, 400); assert.equal(r.body.error.code, 'invalid_outcome');

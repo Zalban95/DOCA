@@ -142,27 +142,36 @@ function perDevice(p, deviceId) {
   return p.perDevice[deviceId];
 }
 
-/** Device-tailored view of a prompt. */
-function viewFor(p, device) {
+/** Device-tailored view of a prompt. `opts.compact` avoids inline SVG (event budget). */
+function viewFor(p, device, opts = {}) {
   const profile = profiles.get(device.id);
   const pd = perDevice(p, device.id);
   const choices = p.choices.filter(c => choiceAllowedFor(c, device, profile)).map(c => {
     const { outcome, ...rest } = c;
-    return c.type === 'option' ? { ...rest, outcome: tailorOutcome(outcome, device) } : rest;
+    return c.type === 'option' ? { ...rest, outcome: tailorOutcome(outcome, device, opts) } : rest;
   });
   return {
     id: p.id, createdAt: p.createdAt, expiresAt: p.expiresAt, priority: p.priority,
-    title: p.title, body: motion.tailorBlocks(p.body, device.caps), choices, resolver: p.resolver, ext: p.ext,
+    title: p.title, body: motion.tailorBlocks(p.body, device.caps, opts), choices, resolver: p.resolver, ext: p.ext,
     state: p.state === 'open' ? pd.state : (pd.state === 'confirmed' ? 'confirmed' : 'closed'),
     selectionId: pd.selectionId, choiceId: pd.choiceId, stage: pd.stage,
-    outcome: pd.outcome ? tailorOutcome(pd.outcome, device) : null, error: pd.error,
+    outcome: pd.outcome ? tailorOutcome(pd.outcome, device, opts) : null, error: pd.error,
     haptic: !!(profile.prompts?.haptic) && (p.priority === 'high' || p.priority === 'urgent'),
   };
 }
 
-function tailorOutcome(o, device) {
+function tailorOutcome(o, device, opts = {}) {
   if (!o) return null;
-  return { ...o, blocks: motion.tailorBlocks(o.blocks, device.caps), actionAllowed: o.action ? hasScope(device.scopes, `command:${o.action.commandId}`) : undefined };
+  return { ...o, blocks: motion.tailorBlocks(o.blocks, device.caps, opts), actionAllowed: o.action ? hasScope(device.scopes, `command:${o.action.commandId}`) : undefined };
+}
+
+/** Publish a prompt-shaped event, falling back to the compact view if the full one exceeds the event budget. */
+function publishView(deviceId, device, type, build, opts) {
+  try { return bus.publish(deviceId, type, build({}), opts); }
+  catch (e) {
+    if (e.code !== 'event_too_large') throw e;
+    return bus.publish(deviceId, type, build({ compact: true }), opts);
+  }
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
@@ -196,7 +205,7 @@ function create(body, agent) {
   scheduleExpiry(p);
   const delivered = [];
   for (const d of targetDevices(p)) {
-    const env = bus.publish(d.id, 'prompt.new', { prompt: viewFor(p, d) }, { priority: p.priority === 'urgent' ? 'urgent' : 'high', ttlSec: Math.ceil((Date.parse(p.expiresAt) - Date.now()) / 1000) });
+    const env = publishView(d.id, d, 'prompt.new', o => ({ prompt: viewFor(p, d, o) }), { priority: p.priority === 'urgent' ? 'urgent' : 'high', ttlSec: Math.ceil((Date.parse(p.expiresAt) - Date.now()) / 1000) });
     delivered.push({ deviceId: d.id, seq: env.seq });
   }
   p.delivered = delivered;
@@ -378,7 +387,7 @@ function deliverOutcome(p, deviceId, selectionId, candidate, source) {
   if (pd.selectionId !== selectionId || pd.state !== 'pending') throw new ApiError(409, 'stale_selection', 'Selection is no longer pending', { state: pd.state, selectionId: pd.selectionId });
   const outcome = normalizeOutcome(candidate, p.allowedCommands);
   pd.state = 'outcome_ready'; pd.stage = null; pd.outcome = outcome; pd.outcomeSource = source; pd.updatedAt = new Date().toISOString();
-  bus.publish(deviceId, 'prompt.outcome', { promptId: p.id, selectionId, status: 'outcome_ready', outcome: tailorOutcome(outcome, device) });
+  publishView(deviceId, device, 'prompt.outcome', o => ({ promptId: p.id, selectionId, status: 'outcome_ready', outcome: tailorOutcome(outcome, device, o) }));
   persist();
   return outcome;
 }

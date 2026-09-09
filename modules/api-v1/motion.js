@@ -118,7 +118,8 @@ function normalizeBlocks(blocks) {
  * motion → sprite (animated svg only) → image → text.
  */
 function pickRepresentation(fig, caps, opts = {}) {
-  const render = caps?.render || ['text'];
+  // `compact` (event budget exceeded): never inline SVG, let the client fetch an image instead.
+  const render = (caps?.render || ['text']).filter(r => !opts.compact || (r !== 'svg' && r !== 'svg.smil'));
   const motion = caps?.motion || [];
   const screen = caps?.screen;
   const w = opts.w || fig.sizeHint?.w || (screen ? Math.min(screen.w, 480) : 240);
