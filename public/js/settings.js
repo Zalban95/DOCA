@@ -271,6 +271,7 @@ function _sysdepsRender(tools) {
       canInstall:     t.canInstall,
       installing:     _sysdepsInstalling === t.id,
       installOnclick: `sysdepsInstall('${t.id}')`,
+      updateOnclick:  t.canInstall ? `sysdepsUpdate('${t.id}')` : '',
       repo:           t.repo,
       repoLabel:      t.repoLabel,
     })).join('');
@@ -279,27 +280,42 @@ function _sysdepsRender(tools) {
   list.innerHTML = html;
 }
 
-function sysdepsInstall(id) {
+function sysdepsInstall(id) { _sysdepsStart(id, 'Installing'); }
+
+/** Updating is re-running the installer: apt reinstalls the current release,
+ *  vendor scripts fetch the latest, git-backed stacks pull. Confirmed first —
+ *  on a tool that already works this can swap a live binary or restart
+ *  services, which is not what "↻" suggests on its own. */
+function sysdepsUpdate(id) {
+  const tool = _sysdepsTools.find(t => t.id === id);
+  appConfirm(
+    `Update "${tool ? tool.label : id}" by re-running its installer? ` +
+    `If it is already up to date this changes nothing; otherwise it upgrades in place.`,
+    () => _sysdepsStart(id, 'Updating'),
+  );
+}
+
+function _sysdepsStart(id, verb) {
   const tool = _sysdepsTools.find(t => t.id === id);
   const needsSudo = tool && (tool.needsSudo || (typeof tool.installCmd === 'string' && tool.installCmd.includes('sudo ')));
 
   if (needsSudo) {
-    sudoAsk(`Installing "${tool.label}" requires elevated privileges.`, pw => {
+    sudoAsk(`${verb} "${tool.label}" requires elevated privileges.`, pw => {
       if (pw === null) return; // user cancelled
-      _sysdepsRunInstall(id, pw);
+      _sysdepsRunInstall(id, pw, verb);
     });
   } else {
-    _sysdepsRunInstall(id, null);
+    _sysdepsRunInstall(id, null, verb);
   }
 }
 
-async function _sysdepsRunInstall(id, password) {
+async function _sysdepsRunInstall(id, password, verb = 'Installing') {
   _sysdepsInstalling = id;
   // Re-render with installing flag using cached tools list
   if (_sysdepsTools.length) _sysdepsRender(_sysdepsTools);
 
   const out = document.getElementById('sysdeps-out');
-  showStream(out, `Installing ${id}…\n`);
+  showStream(out, `${verb} ${id}…\n`);
 
   const body = { id };
   if (password !== null && password !== undefined) body.password = password;

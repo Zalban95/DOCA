@@ -46,8 +46,8 @@ async function devicesLoad() {
         <div class="provider-models">${d.scopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}</div>
         ${dead ? '' : `
         <div class="toolbar-right">
-          <button class="btn btn-xs"        onclick="devRotate('${escHtml(d.id)}','${escHtml(d.name)}')" title="Issue a replacement token">↻ Rotate</button>
-          <button class="btn btn-xs btn-red" onclick="devRevoke('${escHtml(d.id)}','${escHtml(d.name)}')" title="Invalidate this token now">✕ Revoke</button>
+          <button class="btn btn-xs"        onclick="devRotate(${jsArg(d.id)},${jsArg(d.name)})" title="Issue a replacement token">↻ Rotate</button>
+          <button class="btn btn-xs btn-red" onclick="devRevoke(${jsArg(d.id)},${jsArg(d.name)})" title="Invalidate this token now">✕ Revoke</button>
         </div>`}
       </div>`;
     }).join('');
@@ -132,7 +132,7 @@ function devRenderPairing(p) {
           <div class="status-line info" id="dev-pair-countdown"></div>
           <div class="input-label mt8">Scopes: <code>${escHtml((p.scopes || []).join(' '))}</code></div>
           <div class="toolbar-right mt8">
-            <button class="btn btn-xs" onclick="devCopy('${escHtml(p.url)}', this)">Copy link</button>
+            <button class="btn btn-xs" onclick="devCopy(${jsArg(p.url)}, this)">Copy link</button>
             <button class="btn btn-xs" onclick="devClearResult()">Done</button>
           </div>
         </div>
@@ -190,7 +190,7 @@ function devRenderToken(device, token, title) {
       <pre class="code-out" style="white-space:pre-wrap;word-break:break-all;margin-top:8px">${escHtml(token)}</pre>
       <div class="input-label">Scopes: <code>${escHtml((device.scopes || []).join(' '))}</code></div>
       <div class="toolbar-right mt8">
-        <button class="btn btn-xs btn-green" onclick="devCopy('${escHtml(token)}', this)">Copy token</button>
+        <button class="btn btn-xs btn-green" onclick="devCopy(${jsArg(token)}, this)">Copy token</button>
         <button class="btn btn-xs" onclick="devClearResult()">Dismiss</button>
       </div>
     </div>`;

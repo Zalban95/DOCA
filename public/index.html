@@ -124,8 +124,11 @@
           <button class="btn btn-green" onclick="action('start')">▶ Start</button>
           <button class="btn btn-red"   onclick="action('stop')">■ Stop</button>
           <button class="btn btn-amber" onclick="action('restart')">↺ Restart</button>
+          <button class="btn btn-teal" id="stack-update-btn" onclick="stackUpdate()"
+                  title="Pull the newest stack definition and images, then recreate the containers">⬆ Update</button>
         </div>
         <div class="status-line mt8" id="action-status"><span class="blink">_</span></div>
+        <pre id="stack-update-out" class="terminal" style="display:none;margin-top:8px;max-height:min(45vh,360px)"></pre>
       </div>
       <div class="card">
         <div class="card-title" style="display:flex;align-items:center;gap:8px">

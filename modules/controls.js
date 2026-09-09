@@ -6,7 +6,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const { COMPOSE_DIR } = require('./paths');
-const { run, sseHeaders, loadModelsPrefs } = require('./utils');
+const { run, sseHeaders, streamCmd, loadModelsPrefs } = require('./utils');
 const { getRunningInstances: getLlamaCppRunning } = require('./models-llamacpp');
 const { getStatsConfig, collectExtendedStats } = require('./stats');
 
@@ -215,6 +215,37 @@ async function handleAction(req, res) {
   }
 }
 
+/** POST /api/stack/update — refresh the stack definition and its images, then recreate.
+ *
+ *  Separate from /api/action's `restart` because `docker compose up -d` is not
+ *  an update: it only fetches an image that is absent locally, so a stack that
+ *  is already running keeps its old images forever. `pull` is the step that
+ *  actually updates it — and on a slow link it takes minutes, which is why this
+ *  streams instead of answering once like the other actions.
+ *
+ *  `git pull` is best effort: a stack unpacked from a tarball has no remote to
+ *  pull from but its images are still worth updating. */
+function handleStackUpdate(_req, res) {
+  if (!fs.existsSync(COMPOSE_DIR)) {
+    // Reported over SSE, not as a 4xx: the client reads this as a stream and
+    // would otherwise sit on "Updating…" waiting for a `done` that never came.
+    sseHeaders(res);
+    res.write(`data: ${JSON.stringify({
+      done: true, ok: false, error: true,
+      status: `No stack found at ${COMPOSE_DIR}.\nInstall OpenClaw from Settings → System first.`,
+    })}\n\n`);
+    return res.end();
+  }
+
+  const cmd = [
+    'if [ -d .git ]; then echo "── Updating stack definition ──"; git pull; else echo "── Not a git checkout — keeping the current compose file ──"; fi',
+    'echo; echo "── Pulling images ──"; docker compose pull',
+    'echo; echo "── Recreating containers ──"; docker compose up -d',
+  ].join(' && ');
+
+  streamCmd(res, cmd, { cwd: COMPOSE_DIR });
+}
+
 /** GET /api/logs — SSE stream of Docker Compose logs */
 function handleLogs(req, res) {
   sseHeaders(res);
@@ -227,4 +258,4 @@ function handleLogs(req, res) {
   req.on('close', () => child.kill());
 }
 
-module.exports = { handleStatus, handleAction, handleLogs, collectStatus };
+module.exports = { handleStatus, handleAction, handleStackUpdate, handleLogs, collectStatus };

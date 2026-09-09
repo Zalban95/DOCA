@@ -32,6 +32,24 @@ function escHtml(str) {
 }
 
 /**
+ * Escape a value for use as a JavaScript string argument inside an inline
+ * event attribute: `onclick="doThing(${jsArg(name)})"` — note, no quotes of
+ * your own around it.
+ *
+ * escHtml() is not enough there. It leaves quotes alone, so a value containing
+ * one ("Al's watch") ends the string literal early and the handler dies with a
+ * syntax error — a button that silently does nothing when clicked, with the
+ * only clue in the console. JSON.stringify does the quoting and JS escaping;
+ * the entity pass keeps the result intact inside a double-quoted attribute.
+ *
+ * @param {*} value
+ * @returns {string} a quoted JS string literal, attribute-safe
+ */
+function jsArg(value) {
+  return escHtml(JSON.stringify(String(value ?? ''))).replace(/"/g, '&quot;');
+}
+
+/**
  * POST JSON to an SSE endpoint and dispatch parsed `data: {...}` events.
  * Uses buffered decoding so events split across chunks are handled correctly.
  *
@@ -119,6 +137,7 @@ function showStream(el, initialText = '') {
  *   id: string, label: string, note?: string,
  *   detected: boolean, version?: string|null,
  *   canInstall?: boolean, installing?: boolean, installOnclick?: string,
+ *   updateOnclick?: string,  - opt-in: shows ↻ Update once the tool is detected
  *   gearOnclick?: string, repo?: string, repoLabel?: string,
  *   extraActions?: string,   - pre-built HTML appended to the actions cell
  * }} t
@@ -134,6 +153,16 @@ function toolRowHtml(t) {
   const installBtn = !t.detected && t.canInstall && t.installOnclick
     ? `<button class="btn btn-xs btn-teal" onclick="${t.installOnclick}" ${t.installing ? 'disabled' : ''}>
          ${t.installing ? '⏳ Installing…' : '⬇ Install'}
+       </button>`
+    : '';
+
+  // Re-running an installer is how most of these tools update (apt reinstalls
+  // the current release, vendor scripts fetch the latest, git-backed stacks
+  // pull). Opt-in per caller: not every tool list wants the extra button.
+  const updateBtn = t.detected && t.updateOnclick
+    ? `<button class="btn btn-xs" onclick="${t.updateOnclick}" ${t.installing ? 'disabled' : ''}
+               title="Re-run the installer to update to the latest version">
+         ${t.installing ? '⏳ Updating…' : '↻ Update'}
        </button>`
     : '';
 
@@ -154,7 +183,7 @@ function toolRowHtml(t) {
     <span class="tool-label">${escHtml(t.label)}</span>
     ${versionStr}
     <span class="tool-note">${escHtml(t.note || '')}</span>
-    <span class="tool-actions">${t.extraActions || ''}${installBtn}${repoLink}${manualNote}${gearBtn}</span>
+    <span class="tool-actions">${t.extraActions || ''}${installBtn}${updateBtn}${repoLink}${manualNote}${gearBtn}</span>
   </div>`;
 }
 

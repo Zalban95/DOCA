@@ -4,6 +4,7 @@ const os = require('os');
 const { exec } = require('child_process');
 
 const { streamCmd } = require('./utils');
+const { COMPOSE_DIR } = require('./paths');
 
 const SYSTEM_TOOLS = [
   {
@@ -52,10 +53,19 @@ const SYSTEM_TOOLS = [
   },
   {
     id: 'openclaw', label: 'OpenClaw', category: 'recommended',
-    detectCmd: 'test -f "$HOME/openclaw/docker-compose.yml" && cd "$HOME/openclaw" && git log -1 --format="rev %h (%cr)" 2>/dev/null',
-    note: 'OpenClaw AI stack — clone repo and start Docker Compose services',
+    // COMPOSE_DIR, not a hardcoded ~/openclaw: the Controls tab drives the stack
+    // through it, and a machine that overrides it would otherwise be told here
+    // that OpenClaw is missing while the dashboard happily starts and stops it.
+    // Falls back to "installed" so a stack that is not a git checkout (tarball,
+    // vendored copy) still reports as present instead of offering to clone
+    // over it — git clone into a non-empty directory fails.
+    detectCmd: `test -f "${COMPOSE_DIR}/docker-compose.yml" && { cd "${COMPOSE_DIR}" && git log -1 --format="rev %h (%cr)" 2>/dev/null || echo installed; }`,
+    note: 'OpenClaw AI stack — Docker Compose services. Updating pulls the newest definition and images',
     repo: 'https://github.com/openclaw/openclaw', repoLabel: 'openclaw/openclaw',
-    installCmd: 'if [ -d "$HOME/openclaw" ]; then cd "$HOME/openclaw" && git pull; else git clone https://github.com/openclaw/openclaw.git "$HOME/openclaw"; fi && cd "$HOME/openclaw" && docker compose up -d',
+    // `docker compose pull` matters: `up -d` only fetches images that are
+    // absent locally, so without it an existing stack would be "updated" to
+    // exactly the images it was already running.
+    installCmd: `if [ -d "${COMPOSE_DIR}" ]; then cd "${COMPOSE_DIR}" && git pull; else git clone https://github.com/openclaw/openclaw.git "${COMPOSE_DIR}"; fi && cd "${COMPOSE_DIR}" && docker compose pull && docker compose up -d`,
   },
   {
     id: 'git', label: 'Git', category: 'recommended',

@@ -19,6 +19,41 @@ async function action(act) {
   }
 }
 
+/** Update the stack: newest compose definition + images, then recreate.
+ *  Streamed rather than awaited like action() — pulling images is slow enough
+ *  that a spinner with no output looks like a hang. */
+function stackUpdate() {
+  appConfirm(
+    'Update the stack? This pulls the newest images and recreates the containers, ' +
+    'so services will restart. Running work may be interrupted.',
+    _stackRunUpdate,
+  );
+}
+
+async function _stackRunUpdate() {
+  const st   = document.getElementById('action-status');
+  const out  = document.getElementById('stack-update-out');
+  const btns = document.querySelectorAll('#tab-controls .btn');
+
+  setStatus(st, 'Updating stack…', 'info');
+  btns.forEach(b => b.disabled = true);
+  showStream(out, 'Updating stack…\n');
+
+  await sseStream('/api/stack/update', {}, {
+    onStatus: text => appendStream(out, text),
+    onDone: d => {
+      setStatus(st, d.ok ? '✓ Stack updated' : '✗ Update failed', d.ok ? 'ok' : 'err');
+      btns.forEach(b => b.disabled = false);
+      setTimeout(() => { pollStatus(); controlsRefreshContainers(); }, 2000);
+    },
+    onError: e => {
+      appendStream(out, `\nError: ${e.message}`);
+      setStatus(st, `✗ ${e.message}`, 'err');
+      btns.forEach(b => b.disabled = false);
+    },
+  });
+}
+
 /* ── All containers list ─────────────────────────────── */
 
 function controlsInit() {

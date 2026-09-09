@@ -59,6 +59,7 @@ const uploadMw = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5
 // ─── Routes: Controls ─────────────────────────────────────────────────────────
 app.get ('/api/status',     controls.handleStatus);
 app.post('/api/action',     controls.handleAction);
+app.post('/api/stack/update', controls.handleStackUpdate);
 app.get ('/api/logs',       controls.handleLogs);
 app.get ('/api/stats/defs', stats.handleDefs);
 
