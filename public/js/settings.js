@@ -355,11 +355,20 @@ async function updateCheck() {
 }
 
 async function updatePull() {
-  const btn = document.getElementById('update-pull-btn');
-  const log = document.getElementById('update-log');
-  const el  = document.getElementById('update-status');
+  const btn  = document.getElementById('update-pull-btn');
+  const log  = document.getElementById('update-log');
+  const el   = document.getElementById('update-status');
+  // An update can run `npm install`; restarting through that leaves a
+  // half-installed tree, so hold the button until the stream is done.
+  const rbtn = document.getElementById('restart-btn');
+  const rTitle = rbtn?.title;
   if (btn) btn.disabled = true;
+  if (rbtn) { rbtn.disabled = true; rbtn.title = 'Wait for the update to finish before restarting'; }
   if (log) { log.style.display = 'block'; log.textContent = ''; }
+
+  const releaseRestart = () => {
+    if (rbtn) { rbtn.disabled = false; if (rTitle) rbtn.title = rTitle; }
+  };
 
   await sseStream('/api/update', {}, {
     onStatus: text => appendStream(log, text),
@@ -370,31 +379,62 @@ async function updatePull() {
         </div>`;
       }
       if (btn) btn.disabled = false;
+      releaseRestart();
     },
     onError: e => {
       if (log) log.textContent += `\nError: ${e.message}`;
       if (btn) btn.disabled = false;
+      releaseRestart();
     },
   });
 }
 
+const RESTART_TIMEOUT_MS = 90000;
+
 function restartDoca() {
   appConfirm('Restart the DOCA server? The page will reload once it comes back.', async () => {
     const btn = document.getElementById('restart-btn');
+    const el  = document.getElementById('update-status');
     if (btn) { btn.disabled = true; btn.textContent = '⟳ Restarting…'; }
 
+    // The process exits ~500ms after replying, so a dropped response is normal.
+    let info = {};
     try {
-      await fetch('/api/restart', { method: 'POST' });
+      const r = await fetch('/api/restart', { method: 'POST' });
+      info = await r.json().catch(() => ({}));
     } catch {}
+
+    if (info.ok === false) {
+      if (el) el.innerHTML = `<div class="update-info" style="color:var(--red)">✗ ${escHtml(info.error || 'Restart failed.')}</div>`;
+      if (btn) { btn.disabled = false; btn.textContent = '⟳ Restart'; }
+      return;
+    }
+
+    const started = Date.now();
+
+    // Never spin forever: if nothing is listening again, say where to look.
+    const giveUp = () => {
+      if (btn) { btn.disabled = false; btn.textContent = '⟳ Restart'; }
+      if (!el) return;
+      const where = info.selfRespawn
+        ? `A successor process was started${info.handoff?.pid ? ` (pid ${info.handoff.pid})` : ''} but never began serving — check <code>${escHtml(info.handoff?.log || '.doca/restart.log')}</code> on the host.`
+        : `DOCA is supervised by <code>${escHtml(info.supervisor || 'an external supervisor')}</code>, so check it there — e.g. <code>systemctl status openclaw-panel</code>.`;
+      el.innerHTML = `<div class="update-info" style="color:var(--red)">
+        ✗ The server did not come back within ${Math.round(RESTART_TIMEOUT_MS / 1000)}s.<br>${where}
+      </div>`;
+    };
 
     const poll = () => {
       setTimeout(async () => {
         try {
-          await fetch('/api/status');
+          const r = await fetch('/api/status', { cache: 'no-store' });
+          if (!r.ok) throw new Error(String(r.status));
           location.reload();
-        } catch {
-          poll();
-        }
+          return;
+        } catch {}
+        if (Date.now() - started >= RESTART_TIMEOUT_MS) return giveUp();
+        if (btn) btn.textContent = `⟳ Restarting… ${Math.round((Date.now() - started) / 1000)}s`;
+        poll();
       }, 1500);
     };
     poll();

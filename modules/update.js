@@ -1,5 +1,6 @@
 'use strict';
 
+const fs    = require('fs');
 const path  = require('path');
 const https = require('https');
 const { exec, spawn } = require('child_process');
@@ -189,9 +190,54 @@ async function handleUpdate(req, res) {
   res.on('close', () => { if (!child.killed) child.kill(); });
 }
 
-/** POST /api/restart — graceful server restart */
+/** The supervisor that will start us again after we exit, or null if we are on
+ *  our own. Inside a container we must report one either way: if node is PID 1
+ *  a detached child dies with the container, so only the restart policy can
+ *  bring the panel back. */
+function supervisorName() {
+  if (process.env.INVOCATION_ID) return 'systemd';   // set by systemd >= 232 per unit
+  if (process.env.pm_id)         return 'pm2';
+  try { if (fs.existsSync('/.dockerenv')) return 'container'; } catch {}
+  return null;
+}
+
+/** POST /api/restart — exit, having made sure something will start us again.
+ *
+ *  Under a supervisor, exiting is the whole job and spawning a successor would
+ *  only race it for the port. Started by hand (`npm start`, a login shell, a
+ *  tmux window) nothing would ever come back and this endpoint would be a kill
+ *  switch, so we hand off to a detached successor first. That successor starts
+ *  while we still hold the port and retries the bind until we are gone — see
+ *  listenWithRetry() in server.js. Its output goes to a log file because a
+ *  detached process has nowhere else to report a failed boot. */
 function handleRestart(_req, res) {
-  res.json({ ok: true, message: 'Server restarting…' });
+  const supervisor  = supervisorName();
+  const selfRespawn = !supervisor;
+  let handoff = null;
+
+  if (selfRespawn) {
+    try {
+      const dataDir = process.env.DOCA_DATA_DIR || path.join(DASHBOARD_DIR, '.doca');
+      fs.mkdirSync(dataDir, { recursive: true });
+      const logPath = path.join(dataDir, 'restart.log');
+      const out = fs.openSync(logPath, 'a');
+      fs.writeSync(out, `\n── restart requested ${new Date().toISOString()} ──\n`);
+
+      const child = spawn(process.execPath, [...process.execArgv, ...process.argv.slice(1)], {
+        cwd: DASHBOARD_DIR, detached: true, stdio: ['ignore', out, out], env: process.env,
+      });
+      child.unref();
+      handoff = { pid: child.pid, log: logPath };
+    } catch (e) {
+      // Say so instead of exiting into a hole the user cannot see.
+      return res.status(500).json({
+        ok: false,
+        error: `Could not start a successor process: ${e.message}. DOCA is still running — restart it manually.`,
+      });
+    }
+  }
+
+  res.json({ ok: true, message: 'Server restarting…', supervisor, selfRespawn, handoff });
   setTimeout(() => process.exit(0), 500);
 }
 

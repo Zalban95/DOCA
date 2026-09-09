@@ -217,10 +217,39 @@ module.exports = { createApp };
 // ─── Server (HTTPS with HTTP fallback) + WebSocket Terminals ─────────────────
 if (require.main === module) {
 const app = createApp();
+/** Bind, tolerating a predecessor that has not finished shutting down.
+ *  POST /api/restart spawns its successor *before* exiting, so a short burst of
+ *  EADDRINUSE at startup is expected rather than fatal. */
+const BIND_RETRY_MS = 20000;
+function listenWithRetry(server, announce) {
+  const deadline = Date.now() + BIND_RETRY_MS;
+  let bound  = false;
+  let waited = false;
+
+  server.on('listening', () => { bound = true; announce(); });
+  server.on('error', err => {
+    if (bound || err.code !== 'EADDRINUSE') {
+      console.error(`[server] ${err.message}`);
+      process.exit(1);
+    }
+    if (Date.now() >= deadline) {
+      console.error(`[server] port ${PORT} is still in use after ${Math.round(BIND_RETRY_MS / 1000)}s — another OpenClaw Panel is probably already running.`);
+      process.exit(1);
+    }
+    if (!waited) {
+      waited = true;
+      console.log(`[server] port ${PORT} busy — waiting for the previous instance to exit…`);
+    }
+    setTimeout(() => server.listen(PORT, '0.0.0.0'), 250);
+  });
+
+  server.listen(PORT, '0.0.0.0');
+}
+
 ensureCerts().then(certs => {
   const server = https.createServer(certs, app);
   terminal.setup(server);
-  server.listen(PORT, '0.0.0.0', () => {
+  listenWithRetry(server, () => {
     const label = certs.tailscale
       ? `https://${certs.tailscale}:${PORT}  (Tailscale — trusted)`
       : `https://0.0.0.0:${PORT}  (self-signed)`;
@@ -230,7 +259,7 @@ ensureCerts().then(certs => {
   console.warn(`[HTTPS] Falling back to HTTP: ${e.message}`);
   const server = http.createServer(app);
   terminal.setup(server);
-  server.listen(PORT, '0.0.0.0', () => {
+  listenWithRetry(server, () => {
     console.log(`OpenClaw Panel v${pkg.version} → http://0.0.0.0:${PORT}`);
   });
 });

@@ -100,11 +100,15 @@ services:
 [Unit]
 Description=OpenClaw Dashboard
 After=network.target
+# Keep trying forever. With the default start limit (5 attempts in 10s) a brief
+# crash loop makes systemd give up and leaves the dashboard down for good.
+StartLimitIntervalSec=0
 
 [Service]
 WorkingDirectory=/home/youruser/openclaw-dashboard
 ExecStart=/usr/bin/node server.js
 Restart=always
+RestartSec=2
 User=youruser
 Environment=PORT=4242
 Environment=COMPOSE_DIR=/home/youruser/openclaw
@@ -122,6 +126,12 @@ WantedBy=multi-user.target
 sudo systemctl daemon-reload
 sudo systemctl enable --now openclaw-panel
 ```
+
+`⟳ Restart` in **Settings → Updates** works by exiting the process, so it relies on
+`Restart=always` to bring the panel back — and so does the restart you do after applying an
+update. Without a supervisor DOCA detects that and spawns its own detached successor instead
+(its boot output goes to `.doca/restart.log`), but letting systemd own the lifecycle is more
+reliable: it also recovers the panel after a crash or a reboot.
 
 ---
 
