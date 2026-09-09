@@ -22,16 +22,16 @@ async function keysLoadProviders() {
     list.innerHTML = Object.entries(providers).map(([name, p]) => `
       <div class="provider-card ${p.hasKey ? 'has-key' : 'no-key'}">
         <div class="provider-header">
-          <span class="provider-name">${name}</span>
+          <span class="provider-name">${escHtml(name)}</span>
           <span class="provider-badge ${p.hasKey ? 'ok' : 'no'}">${p.hasKey ? 'KEY SET' : 'NO KEY'}</span>
         </div>
-        ${p.models?.length ? `<div class="provider-models">Models: ${p.models.slice(0,4).join(', ')}${p.models.length>4?' …':''}</div>` : ''}
+        ${p.models?.length ? `<div class="provider-models">Models: ${escHtml(p.models.slice(0,4).join(', '))}${p.models.length>4?' …':''}</div>` : ''}
         <div class="provider-key-row">
-          <input class="input" type="password" id="key-${name}" placeholder="${p.apiKeyMasked || 'Enter API key…'}">
-          <button class="btn btn-sm btn-green" onclick="saveKey('${name}')">Save Key</button>
-          <button class="btn btn-sm btn-red"   onclick="deleteProvider('${name}')">✕</button>
+          <input class="input" type="password" id="key-${escHtml(name)}" placeholder="${escHtml(p.apiKeyMasked || 'Enter API key…')}">
+          <button class="btn btn-sm btn-green" onclick="saveKey(${jsArg(name)})">Save Key</button>
+          <button class="btn btn-sm btn-red"   onclick="deleteProvider(${jsArg(name)})">✕</button>
         </div>
-        <div class="status-line mt4" id="key-status-${name}"></div>
+        <div class="status-line mt4" id="key-status-${escHtml(name)}"></div>
       </div>
     `).join('');
   } catch (e) {
@@ -57,7 +57,7 @@ async function saveKey(provider) {
 function deleteProvider(name) {
   appConfirm(`Remove provider "${name}"?`, async () => {
     try {
-      await apiFetch(`/api/keys/${name}`, { method: 'DELETE' });
+      await apiFetch(`/api/keys/${encodeURIComponent(name)}`, { method: 'DELETE' });
       keysLoadProviders();
     } catch (e) { appAlert(`Error: ${e.message}`); }
   });

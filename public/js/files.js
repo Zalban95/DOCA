@@ -73,15 +73,15 @@ function fmRenderFavorites() {
     return;
   }
   el.innerHTML = fm.favorites.map(p => {
-    const name = p.split('/').pop() || p;
-    const safe = p.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    return `<div class="fm-fav-item" title="${p}">
-      <button class="fm-bookmark" onclick="fmNavigate('${safe.substring(0, safe.lastIndexOf('/')) || '/'}')"
+    const name   = p.split('/').pop() || p;
+    const parent = p.substring(0, p.lastIndexOf('/')) || '/';
+    return `<div class="fm-fav-item" title="${escHtml(p)}">
+      <button class="fm-bookmark" onclick="fmNavigate(${jsArg(parent)})"
               style="flex:1;justify-content:flex-start;text-overflow:ellipsis;overflow:hidden">
         <span class="fm-bookmark-icon">⭐</span>
-        <span class="fm-bookmark-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+        <span class="fm-bookmark-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(name)}</span>
       </button>
-      <button class="btn-icon" title="Remove" onclick="fmUnstar('${safe}')">✕</button>
+      <button class="btn-icon" title="Remove" onclick="fmUnstar(${jsArg(p)})">✕</button>
     </div>`;
   }).join('');
 }
@@ -124,12 +124,11 @@ async function fmLoadMounts() {
     el.innerHTML = mounts.map(m => {
       const label = m.path === '/' ? 'Root (/)' : m.path.split('/').pop() || m.path;
       const icon  = fmMountIcon(m.type, m.device);
-      const safe  = m.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-      return `<button class="fm-bookmark" title="${m.device} → ${m.path} (${m.type})"
-                      onclick="fmNavigate('${safe}')">
+      return `<button class="fm-bookmark" title="${escHtml(`${m.device} → ${m.path} (${m.type})`)}"
+                      onclick="fmNavigate(${jsArg(m.path)})">
         <span class="fm-bookmark-icon">${icon}</span>
-        <span class="fm-bookmark-name">${label}</span>
-        <span style="font-size:8px;color:var(--muted);margin-left:auto">${m.type}</span>
+        <span class="fm-bookmark-name">${escHtml(label)}</span>
+        <span style="font-size:8px;color:var(--muted);margin-left:auto">${escHtml(m.type)}</span>
       </button>`;
     }).join('');
   } catch {
@@ -250,22 +249,22 @@ function fmRowHTML(e) {
   const starred = fm.favorites.includes(fpath);
 
   return `<div class="fm-row ${e.isDir ? 'dir' : ''} ${selected ? 'selected' : ''} ${isCut ? 'cut' : ''}"
-               data-path="${fpath}" data-name="${e.name}" data-isdir="${e.isDir}"
-               onclick="fmClickRow(event, '${fpath}', ${e.isDir})"
-               ondblclick="fmDblClick('${fpath}', ${e.isDir})"
-               oncontextmenu="fmContextMenu(event, '${fpath}', ${e.isDir})">
+               data-path="${escHtml(fpath)}" data-name="${escHtml(e.name)}" data-isdir="${e.isDir}"
+               onclick="fmClickRow(event, ${jsArg(fpath)}, ${e.isDir})"
+               ondblclick="fmDblClick(${jsArg(fpath)}, ${e.isDir})"
+               oncontextmenu="fmContextMenu(event, ${jsArg(fpath)}, ${e.isDir})">
     <span class="fm-icon">${icon}</span>
-    <span class="fm-name" title="${e.name}">${e.name}</span>
-    <span class="fm-size">${size}</span>
-    <span class="fm-date">${date}</span>
+    <span class="fm-name" title="${escHtml(e.name)}">${escHtml(e.name)}</span>
+    <span class="fm-size">${escHtml(size)}</span>
+    <span class="fm-date">${escHtml(date)}</span>
     <span class="fm-acts">
       <button class="btn btn-xs fm-star-btn ${starred ? 'starred' : ''}" title="${starred ? 'Unstar' : 'Star'}"
-              onclick="fmStarToggle('${fpath}', event)">${starred ? '⭐' : '☆'}</button>
-      ${!e.isDir && fmMediaType(e.name) ? `<button class="btn btn-xs btn-teal" title="Preview" onclick="fmPreviewFile('${fpath}','${fmMediaType(e.name)}',event)">👁</button>` : ''}
-      ${!e.isDir ? `<button class="btn btn-xs" title="Download" onclick="fmDownloadFile('${fpath}', event)">⬇</button>` : ''}
-      ${!e.isDir ? `<button class="btn btn-xs" title="Edit" onclick="fmOpenEditor('${fpath}', event)">✏</button>` : ''}
-      <button class="btn btn-xs" title="Rename" onclick="fmRenameInline('${fpath}', '${e.name}', event)">↩</button>
-      <button class="btn btn-xs btn-red" title="Delete" onclick="fmDelete('${fpath}', ${e.isDir}, event)">✕</button>
+              onclick="fmStarToggle(${jsArg(fpath)}, event)">${starred ? '⭐' : '☆'}</button>
+      ${!e.isDir && fmMediaType(e.name) ? `<button class="btn btn-xs btn-teal" title="Preview" onclick="fmPreviewFile(${jsArg(fpath)},${jsArg(fmMediaType(e.name))},event)">👁</button>` : ''}
+      ${!e.isDir ? `<button class="btn btn-xs" title="Download" onclick="fmDownloadFile(${jsArg(fpath)}, event)">⬇</button>` : ''}
+      ${!e.isDir ? `<button class="btn btn-xs" title="Edit" onclick="fmOpenEditor(${jsArg(fpath)}, event)">✏</button>` : ''}
+      <button class="btn btn-xs" title="Rename" onclick="fmRenameInline(${jsArg(fpath)}, ${jsArg(e.name)}, event)">↩</button>
+      <button class="btn btn-xs btn-red" title="Delete" onclick="fmDelete(${jsArg(fpath)}, ${e.isDir}, event)">✕</button>
     </span>
   </div>`;
 }
@@ -796,11 +795,11 @@ const globalSearchDebounced = debounce(async () => {
       const icon = item.isDir ? '📁' : fmFileIcon(item.name);
       const dir  = item.path.substring(0, item.path.lastIndexOf('/')) || '/';
       return `<div class="header-search-item" data-idx="${i}"
-                   onclick="globalSearchGo('${item.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', ${item.isDir})"
+                   onclick="globalSearchGo(${jsArg(item.path)}, ${item.isDir})"
                    onmouseenter="globalSearchHover(${i})">
         <span class="header-search-item-icon">${icon}</span>
-        <span class="header-search-item-name">${item.name}</span>
-        <span class="header-search-item-path" title="${item.path}">${dir}</span>
+        <span class="header-search-item-name">${escHtml(item.name)}</span>
+        <span class="header-search-item-path" title="${escHtml(item.path)}">${escHtml(dir)}</span>
       </div>`;
     }).join('');
     results.classList.add('open');

@@ -139,11 +139,11 @@ async function modelsLoadList() {
       const size    = m.size ? fmtBytes(m.size) : '—';
       const modified = m.modified_at ? fmtDate(m.modified_at) : '—';
       return `<tr class="models-row">
-        <td class="models-name">${m.name}</td>
-        <td class="models-size">${size}</td>
-        <td class="models-date">${modified}</td>
+        <td class="models-name">${escHtml(m.name)}</td>
+        <td class="models-size">${escHtml(size)}</td>
+        <td class="models-date">${escHtml(modified)}</td>
         <td class="models-acts">
-          <button class="btn btn-xs btn-red" onclick="modelsDelete('${m.name}')">✕ Delete</button>
+          <button class="btn btn-xs btn-red" onclick="modelsDelete(${jsArg(m.name)})">✕ Delete</button>
         </td>
       </tr>`;
     }).join('');
@@ -166,9 +166,9 @@ async function modelsSearchOnline() {
     const list = data.results || [];
     if (!list.length) { results.innerHTML = '<div class="placeholder" style="padding:6px">No results</div>'; return; }
     results.innerHTML = '<div class="models-search-list">' + list.map(m => `
-      <div class="models-search-item" onclick="modelsSearchSelect('${m.name.replace(/'/g,"\\'")}')">
-        <span class="models-search-name">${m.name}</span>
-        <span class="models-search-desc">${m.description || ''}</span>
+      <div class="models-search-item" onclick="modelsSearchSelect(${jsArg(m.name)})">
+        <span class="models-search-name">${escHtml(m.name)}</span>
+        <span class="models-search-desc">${escHtml(m.description || '')}</span>
         ${m.pulls ? `<span class="models-search-pulls" style="font-size:9px;color:var(--muted)">${fmtNumber(m.pulls)} pulls</span>` : ''}
       </div>
     `).join('') + '</div>';
@@ -404,9 +404,9 @@ async function nlmSearch() {
     const list = data.results || [];
     if (!list.length) { results.innerHTML = '<div class="placeholder" style="padding:6px">No results</div>'; return; }
     results.innerHTML = '<div class="models-search-list">' + list.map(m => `
-      <div class="models-search-item" onclick="nlmSearchSelect('${m.name.replace(/'/g,"\\'")}')">
-        <span class="models-search-name">${m.name}</span>
-        <span class="models-search-desc">${m.description || ''}</span>
+      <div class="models-search-item" onclick="nlmSearchSelect(${jsArg(m.name)})">
+        <span class="models-search-name">${escHtml(m.name)}</span>
+        <span class="models-search-desc">${escHtml(m.description || '')}</span>
       </div>
     `).join('') + '</div>';
   } catch (e) {
@@ -435,8 +435,8 @@ async function nlmLoadList() {
     }
     tbody.innerHTML = models.map(m => `
       <tr class="models-row">
-        <td class="models-name">${m.name}</td>
-        <td style="font-size:10px;color:var(--muted);max-width:240px">${m.description || '—'}</td>
+        <td class="models-name">${escHtml(m.name)}</td>
+        <td style="font-size:10px;color:var(--muted);max-width:240px">${escHtml(m.description || '—')}</td>
         <td>
           <span class="badge ${m.detected ? 'badge-green' : 'badge-red'}" style="font-size:9px">
             ${m.detected ? '● Installed' : '○ Not installed'}
@@ -444,8 +444,8 @@ async function nlmLoadList() {
         </td>
         <td class="models-acts">
           ${m.detected
-            ? `<button class="btn btn-xs btn-red" onclick="nlmDelete('${tool}','${m.name}')">✕ Remove</button>`
-            : `<button class="btn btn-xs btn-teal" onclick="document.getElementById('nlm-install-input').value='${m.name}';nlmInstall()">⬇ Install</button>`
+            ? `<button class="btn btn-xs btn-red" onclick="nlmDelete(${jsArg(tool)},${jsArg(m.name)})">✕ Remove</button>`
+            : `<button class="btn btn-xs btn-teal" onclick="document.getElementById('nlm-install-input').value=${jsArg(m.name)};nlmInstall()">⬇ Install</button>`
           }
         </td>
       </tr>
@@ -568,9 +568,9 @@ async function hfSearch() {
       return;
     }
     if (box) box.innerHTML = results.map(m => `
-      <div class="models-search-item" onclick="hfSearchSelect('${m.id.replace(/'/g,"\\'")}')">
-        <span class="models-search-name">${m.id}</span>
-        <span class="models-search-desc">${m.pipeline_tag ? m.pipeline_tag + '  ·  ' : ''}⬇ ${fmtNumber(m.downloads)}  ♥ ${fmtNumber(m.likes)}</span>
+      <div class="models-search-item" onclick="hfSearchSelect(${jsArg(m.id)})">
+        <span class="models-search-name">${escHtml(m.id)}</span>
+        <span class="models-search-desc">${m.pipeline_tag ? escHtml(m.pipeline_tag) + '  ·  ' : ''}⬇ ${fmtNumber(m.downloads)}  ♥ ${fmtNumber(m.likes)}</span>
       </div>`).join('');
   } catch (e) {
     if (box) box.innerHTML = `<div class="placeholder" style="color:var(--red);padding:8px">${e.message}</div>`;
@@ -603,19 +603,18 @@ async function hfLoadList() {
     tbody.innerHTML = repos.map(r => {
       const size   = r.size_on_disk ? fmtBytes(r.size_on_disk) : '—';
       const date   = r.last_modified ? fmtDate(r.last_modified) : '—';
-      const safe   = r.repo_id.replace(/'/g, "\\'");
       const parts  = r.repo_id.split('/');
       const org    = parts.length > 1 ? parts[0] : '';
       const name   = parts.length > 1 ? parts.slice(1).join('/') : r.repo_id;
       return `<tr class="models-row">
-        <td class="models-name" title="${r.repo_id}">
-          ${org ? `<span style="opacity:.5;font-size:10px">${org}/</span>` : ''}${name}
+        <td class="models-name" title="${escHtml(r.repo_id)}">
+          ${org ? `<span style="opacity:.5;font-size:10px">${escHtml(org)}/</span>` : ''}${escHtml(name)}
         </td>
-        <td class="models-size">${r.repo_type || 'model'}</td>
-        <td class="models-size">${size}</td>
-        <td class="models-date">${date}</td>
+        <td class="models-size">${escHtml(r.repo_type || 'model')}</td>
+        <td class="models-size">${escHtml(size)}</td>
+        <td class="models-date">${escHtml(date)}</td>
         <td class="models-acts">
-          <button class="btn btn-xs btn-red" onclick="hfDelete('${safe}')">✕ Delete</button>
+          <button class="btn btn-xs btn-red" onclick="hfDelete(${jsArg(r.repo_id)})">✕ Delete</button>
         </td>
       </tr>`;
     }).join('');

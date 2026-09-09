@@ -17,11 +17,11 @@ async function loadSnapshots() {
     list.innerHTML = snaps.map(s => `
       <div class="snap-item fade-in">
         <div>
-          <div class="snap-name">${s.name}</div>
+          <div class="snap-name">${escHtml(s.name)}</div>
           <div class="snap-date">${fmtDate(s.created)}${s.size ? ' · ' + fmtBytes(s.size) : ''}</div>
         </div>
         <div class="snap-actions">
-          <button class="btn btn-sm btn-amber" onclick="restoreSnapshot('${s.name}')">↺ Restore</button>
+          <button class="btn btn-sm btn-amber" onclick="restoreSnapshot(${jsArg(s.name)})">↺ Restore</button>
         </div>
       </div>
     `).join('');

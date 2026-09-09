@@ -25,10 +25,18 @@ async function apiFetch(url, opts = {}) {
 
 /**
  * Escape HTML special characters (single shared implementation).
+ *
+ * Quotes are included so the result is safe in an attribute as well as in text
+ * — `title="${escHtml(name)}"` used to break on a name containing one. It is
+ * still not enough for a JS string inside an event attribute, because the
+ * browser decodes entities before parsing the script: use jsArg() there.
+ *
  * @param {string} str
  */
 function escHtml(str) {
-  return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(str ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 /**
@@ -46,7 +54,7 @@ function escHtml(str) {
  * @returns {string} a quoted JS string literal, attribute-safe
  */
 function jsArg(value) {
-  return escHtml(JSON.stringify(String(value ?? ''))).replace(/"/g, '&quot;');
+  return escHtml(JSON.stringify(String(value ?? '')));
 }
 
 /**

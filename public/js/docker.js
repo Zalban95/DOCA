@@ -49,10 +49,10 @@ function _dockerRenderPresets() {
       <div class="docker-preset-card-image">${escHtml(p.image)}</div>
       <div class="docker-preset-card-meta">${gpuTag} ${portsTag}</div>
       <div class="docker-preset-card-actions">
-        <button class="btn btn-xs btn-green" onclick="dockerPresetRun('${eName}')">▶ Run</button>
-        <button class="btn btn-xs btn-blue" onclick="dockerPresetCreate('${eName}')">+ Create</button>
-        <button class="btn btn-xs" onclick="dockerPresetEdit('${eName}')">✏ Edit</button>
-        <button class="btn btn-xs btn-red" onclick="dockerPresetDelete('${eName}')">✕</button>
+        <button class="btn btn-xs btn-green" onclick="dockerPresetRun(${jsArg(eName)})">▶ Run</button>
+        <button class="btn btn-xs btn-blue" onclick="dockerPresetCreate(${jsArg(eName)})">+ Create</button>
+        <button class="btn btn-xs" onclick="dockerPresetEdit(${jsArg(eName)})">✏ Edit</button>
+        <button class="btn btn-xs btn-red" onclick="dockerPresetDelete(${jsArg(eName)})">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -137,19 +137,19 @@ async function dockerLoadContainers() {
       const ports = c.Ports || '';
 
       return `<tr class="models-row" id="docker-container-${c.ID}">
-        <td class="models-name" style="font-size:11px">${c.Names || c.ID.slice(0,12)}</td>
-        <td style="font-size:10px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis">${c.Image || '—'}</td>
-        <td><span class="badge ${statusClass}" style="font-size:9px">${c.Status || c.State || '—'}</span></td>
-        <td style="font-size:10px;color:var(--muted)">${ports.slice(0,40) || '—'}</td>
+        <td class="models-name" style="font-size:11px">${escHtml(c.Names || c.ID.slice(0,12))}</td>
+        <td style="font-size:10px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis">${escHtml(c.Image || '—')}</td>
+        <td><span class="badge ${statusClass}" style="font-size:9px">${escHtml(c.Status || c.State || '—')}</span></td>
+        <td style="font-size:10px;color:var(--muted)">${escHtml(ports.slice(0,40) || '—')}</td>
         <td style="white-space:nowrap;text-align:right">
           <div style="display:flex;gap:4px;justify-content:flex-end">
             ${isRunning
-              ? `<button class="btn btn-xs btn-red"   onclick="dockerAction('${c.ID}','stop')">■ Stop</button>
-                 <button class="btn btn-xs"           onclick="dockerAction('${c.ID}','restart')">↺</button>`
-              : `<button class="btn btn-xs btn-green" onclick="dockerAction('${c.ID}','start')">▶ Start</button>
-                 <button class="btn btn-xs btn-red"   onclick="dockerRemoveContainer('${c.ID}','${(c.Names||'').replace(/'/g,"\\'")}')">✕</button>`
+              ? `<button class="btn btn-xs btn-red"   onclick="dockerAction(${jsArg(c.ID)},'stop')">■ Stop</button>
+                 <button class="btn btn-xs"           onclick="dockerAction(${jsArg(c.ID)},'restart')">↺</button>`
+              : `<button class="btn btn-xs btn-green" onclick="dockerAction(${jsArg(c.ID)},'start')">▶ Start</button>
+                 <button class="btn btn-xs btn-red"   onclick="dockerRemoveContainer(${jsArg(c.ID)},${jsArg(c.Names || '')})">✕</button>`
             }
-            <button class="btn btn-xs" onclick="dockerToggleLog('${c.ID}','${(c.Names||c.ID.slice(0,12)).replace(/'/g,"\\'")}')">📋 Logs</button>
+            <button class="btn btn-xs" onclick="dockerToggleLog(${jsArg(c.ID)},${jsArg(c.Names || c.ID.slice(0,12))})">📋 Logs</button>
           </div>
         </td>
       </tr>`;
@@ -235,13 +235,13 @@ async function dockerLoadImages() {
       const created = img.CreatedAt ? fmtDate(img.CreatedAt) : (img.CreatedSince || '—');
       const fullId = img.ID || '';
       return `<tr class="models-row">
-        <td class="models-name" style="font-size:11px">${repo}</td>
-        <td style="font-size:10px">${tag}</td>
-        <td style="font-size:10px;color:var(--muted)">${size}</td>
-        <td style="font-size:10px;color:var(--muted)">${created}</td>
+        <td class="models-name" style="font-size:11px">${escHtml(repo)}</td>
+        <td style="font-size:10px">${escHtml(tag)}</td>
+        <td style="font-size:10px;color:var(--muted)">${escHtml(size)}</td>
+        <td style="font-size:10px;color:var(--muted)">${escHtml(created)}</td>
         <td style="text-align:right;white-space:nowrap">
-          <button class="btn btn-xs btn-green" onclick="dockerRunImage('${repo}','${tag}')">▶ Run</button>
-          <button class="btn btn-xs btn-red" onclick="dockerRemoveImage('${fullId}','${repo}:${tag}')">✕ Remove</button>
+          <button class="btn btn-xs btn-green" onclick="dockerRunImage(${jsArg(repo)},${jsArg(tag)})">▶ Run</button>
+          <button class="btn btn-xs btn-red" onclick="dockerRemoveImage(${jsArg(fullId)},${jsArg(repo + ':' + tag)})">✕ Remove</button>
         </td>
       </tr>`;
     }).join('');

@@ -47,11 +47,10 @@ async function _fpLoadRoots() {
       return;
     }
     list.innerHTML = roots.map(r => {
-      const safe = r.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-      return `<div class="fp-item fp-dir" onclick="_fpLoadDir('${safe}')"
-                   ondblclick="_fpLoadDir('${safe}')">
+      return `<div class="fp-item fp-dir" onclick="_fpLoadDir(${jsArg(r)})"
+                   ondblclick="_fpLoadDir(${jsArg(r)})">
         <span class="fp-item-icon">💾</span>
-        <span class="fp-item-name">${r}</span>
+        <span class="fp-item-name">${escHtml(r)}</span>
       </div>`;
     }).join('');
   } catch (e) {
@@ -105,20 +104,19 @@ async function _fpLoadDir(path) {
 
     list.innerHTML = entries.map(e => {
       const full = `${path}/${e.name}`.replace('//', '/');
-      const safe = full.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
       if (e.isDir) {
-        return `<div class="fp-item fp-dir" onclick="_fpLoadDir('${safe}')"
-                     ondblclick="document.getElementById('fp-selected').value='${safe}'; fpConfirm()">
+        return `<div class="fp-item fp-dir" onclick="_fpLoadDir(${jsArg(full)})"
+                     ondblclick="document.getElementById('fp-selected').value=${jsArg(full)}; fpConfirm()">
           <span class="fp-item-icon">📁</span>
-          <span class="fp-item-name">${e.name}</span>
+          <span class="fp-item-name">${escHtml(e.name)}</span>
         </div>`;
       } else {
         const selectable = _fpMode === 'file';
         return `<div class="fp-item fp-file ${selectable ? '' : 'fp-file-hint'}"
-                     ${selectable ? `onclick="document.getElementById('fp-selected').value='${safe}'"` : ''}>
+                     ${selectable ? `onclick="document.getElementById('fp-selected').value=${jsArg(full)}"` : ''}>
           <span class="fp-item-icon">${_fpFileIcon(e.name)}</span>
-          <span class="fp-item-name">${e.name}</span>
+          <span class="fp-item-name">${escHtml(e.name)}</span>
           <span class="fp-item-size">${e.size ? _fpFmtSize(e.size) : ''}</span>
         </div>`;
       }

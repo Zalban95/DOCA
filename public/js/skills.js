@@ -44,18 +44,18 @@ function renderSkills(skills) {
   grid.innerHTML = skills.map(s => `
     <div class="skill-card fade-in ${s.enabled ? '' : 'disabled'}">
       <div class="skill-card-header">
-        <div class="skill-card-name" title="${s.name}">${s.name}</div>
+        <div class="skill-card-name" title="${escHtml(s.name)}">${escHtml(s.name)}</div>
         <label class="skill-toggle" title="${s.enabled ? 'Disable' : 'Enable'}">
           <input type="checkbox" ${s.enabled ? 'checked' : ''}
-                 onchange="toggleSkill('${s.name}', this.checked)">
+                 onchange="toggleSkill(${jsArg(s.name)}, this.checked)">
           <span class="skill-toggle-track"></span>
         </label>
       </div>
-      ${s.version ? `<div class="skill-card-ver">v${s.version}</div>` : ''}
-      <div class="skill-card-desc">${s.description || '—'}</div>
+      ${s.version ? `<div class="skill-card-ver">v${escHtml(s.version)}</div>` : ''}
+      <div class="skill-card-desc">${escHtml(s.description || '—')}</div>
       <div class="skill-card-footer">
-        <button class="skill-card-action" onclick="showSkillDetail('${s.name}')">Details</button>
-        <button class="skill-card-del" onclick="removeSkill('${s.name}')">✕ remove</button>
+        <button class="skill-card-action" onclick="showSkillDetail(${jsArg(s.name)})">Details</button>
+        <button class="skill-card-del" onclick="removeSkill(${jsArg(s.name)})">✕ remove</button>
       </div>
     </div>
   `).join('');
@@ -108,23 +108,22 @@ async function searchSkillsOnline() {
 
     const installed = new Set(allSkills.map(s => s.name));
     const cards = results.map(s => {
-      const nameEsc = s.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-      const urlLink = s.url ? `<a href="${s.url}" target="_blank" style="font-size:9px;color:var(--blue)">${s.stars ? '★ ' + s.stars : 'View'}</a>` : '';
+      const urlLink = s.url ? `<a href="${escHtml(s.url)}" target="_blank" style="font-size:9px;color:var(--blue)">${s.stars ? '★ ' + escHtml(s.stars) : 'View'}</a>` : '';
       return `
         <div class="skill-card fade-in">
           <div class="skill-card-header">
-            <div class="skill-card-name" title="${nameEsc}">${s.name}</div>
+            <div class="skill-card-name" title="${escHtml(s.name)}">${escHtml(s.name)}</div>
             <div class="skill-trust-badges">${_skillTrustBadge(s)}</div>
           </div>
-          ${s.version ? `<div class="skill-card-ver">v${s.version}</div>` : ''}
-          <div class="skill-card-desc">${s.description || '—'}</div>
+          ${s.version ? `<div class="skill-card-ver">v${escHtml(s.version)}</div>` : ''}
+          <div class="skill-card-desc">${escHtml(s.description || '—')}</div>
           <div class="skill-card-footer">
             ${installed.has(s.name)
               ? `<span class="badge badge-green" style="font-size:9px">Installed</span>`
-              : `<button class="skill-card-action" onclick="skillsInstallFromSearch('${nameEsc}', ${!s.official && !s.community})">Install</button>`
+              : `<button class="skill-card-action" onclick="skillsInstallFromSearch(${jsArg(s.name)}, ${!s.official && !s.community})">Install</button>`
             }
             ${urlLink}
-            <span style="font-size:9px;color:var(--muted)">${s.source || ''}</span>
+            <span style="font-size:9px;color:var(--muted)">${escHtml(s.source || '')}</span>
           </div>
         </div>
       `;
