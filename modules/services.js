@@ -166,6 +166,7 @@ function handleStop(req, res) {
 }
 
 module.exports = {
+  INFERENCE_SERVICES,
   handleList,
   handleSettings,
   handleStatus,

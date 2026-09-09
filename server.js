@@ -37,9 +37,19 @@ const docker       = require('./modules/docker');
 const services     = require('./modules/services');
 const update       = require('./modules/update');
 const terminal     = require('./modules/terminal');
+const apiV1        = require('./modules/api-v1/router');
 
-// ─── Express + Middleware ─────────────────────────────────────────────────────
+/**
+ * Build the Express app (no listening). Exported so tests can mount it on
+ * an ephemeral HTTP port without certificates.
+ */
+function createApp() {
 const app = express();
+
+// Device-agnostic client API — mounted first so it can apply its own,
+// tighter body limits and authentication. Legacy /api/* is untouched.
+app.use('/api/v1', apiV1.router);
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -199,7 +209,14 @@ app.get ('/api/services/status',   services.handleStatus);
 app.post('/api/services/start',    services.handleStart);
 app.post('/api/services/stop',     services.handleStop);
 
+return app;
+}
+
+module.exports = { createApp };
+
 // ─── Server (HTTPS with HTTP fallback) + WebSocket Terminals ─────────────────
+if (require.main === module) {
+const app = createApp();
 ensureCerts().then(certs => {
   const server = https.createServer(certs, app);
   terminal.setup(server);
@@ -217,3 +234,4 @@ ensureCerts().then(certs => {
     console.log(`OpenClaw Panel v${pkg.version} → http://0.0.0.0:${PORT}`);
   });
 });
+}
