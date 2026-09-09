@@ -69,6 +69,15 @@ function smiNum(v) {
 
 /** GET /api/status — system overview: Docker, GPU, CPU/RAM, Ollama, HuggingFace */
 async function handleStatus(req, res) {
+  res.json(await collectStatus());
+}
+
+/**
+ * Collect the full status object once. Shared by the legacy /api/status
+ * handler and the /api/v1 sampler (which caches and fans it out so several
+ * always-on clients do not each trigger a CPU sample + 4 child processes).
+ */
+async function collectStatus() {
   const mp = loadModelsPrefs();
   const ollamaUrl = (mp.ollamaUrl || 'http://127.0.0.1:11434').replace(/\/$/, '');
   const statsCfg  = getStatsConfig();
@@ -182,11 +191,11 @@ async function handleStatus(req, res) {
 
   const llamacppRunning = getLlamaCppRunning();
 
-  res.json({
+  return {
     containers, gpu, system, models, loadedModels, hfModels, llamacppRunning,
     statsEnabled: statsCfg,
     time: new Date().toISOString(),
-  });
+  };
 }
 
 /** POST /api/action — start / stop / restart Docker Compose */
@@ -218,4 +227,4 @@ function handleLogs(req, res) {
   req.on('close', () => child.kill());
 }
 
-module.exports = { handleStatus, handleAction, handleLogs };
+module.exports = { handleStatus, handleAction, handleLogs, collectStatus };

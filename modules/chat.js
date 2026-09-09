@@ -202,9 +202,9 @@ function loadVoiceServices() {
   const prefs = loadPrefs();
   const vs = prefs.voiceServices || {};
   return {
-    sttUrl:   (vs.sttUrl   || 'http://localhost:8000').replace(/\/+$/, ''),
+    sttUrl:   (process.env.DOCA_STT_URL || vs.sttUrl || 'http://localhost:8000').replace(/\/+$/, ''),
     sttModel: vs.sttModel  || 'whisper-1',
-    ttsUrl:   (vs.ttsUrl   || 'http://localhost:8880').replace(/\/+$/, ''),
+    ttsUrl:   (process.env.DOCA_TTS_URL || vs.ttsUrl || 'http://localhost:8880').replace(/\/+$/, ''),
     ttsModel: vs.ttsModel  || 'kokoro',
     ttsVoice: vs.ttsVoice  || 'af_heart',
     ttsSpeed: parseFloat(vs.ttsSpeed) || 1.0,
@@ -224,31 +224,38 @@ async function handleCallStatus(req, res) {
   res.json({ stt, tts, sttUrl: vs.sttUrl, ttsUrl: vs.ttsUrl });
 }
 
+/**
+ * Transcribe an audio buffer via the configured STT service.
+ * Shared by the legacy chat endpoint and the /api/v1 voice escape hatch.
+ * @returns {Promise<string>} transcript text
+ */
+async function transcribeAudio(buffer, mimetype, filename) {
+  const vs = loadVoiceServices();
+  const formData = new FormData();
+  formData.append('file', new Blob([buffer], { type: mimetype || 'audio/webm' }), filename || 'audio.webm');
+  formData.append('model', vs.sttModel);
+
+  const resp = await fetch(`${vs.sttUrl}/v1/audio/transcriptions`, {
+    method: 'POST',
+    body: formData,
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!resp.ok) {
+    const err = await resp.text();
+    throw Object.assign(new Error(`STT error ${resp.status}: ${err.slice(0, 300)}`), { status: resp.status });
+  }
+  const data = await resp.json();
+  return data.text || '';
+}
+
 /** POST /api/chat/transcribe — proxy audio to configured STT service */
 async function handleTranscribe(req, res) {
   if (!req.file) return res.status(400).json({ error: 'No audio file' });
-  const vs = loadVoiceServices();
-
   try {
-    const formData = new FormData();
-    formData.append('file', new Blob([req.file.buffer], { type: req.file.mimetype }), req.file.originalname || 'audio.webm');
-    formData.append('model', vs.sttModel);
-
-    const resp = await fetch(`${vs.sttUrl}/v1/audio/transcriptions`, {
-      method: 'POST',
-      body: formData,
-      signal: AbortSignal.timeout(30000),
-    });
-
-    if (!resp.ok) {
-      const err = await resp.text();
-      return res.status(resp.status).json({ error: `STT error ${resp.status}: ${err.slice(0, 300)}` });
-    }
-
-    const data = await resp.json();
-    res.json({ text: data.text || '' });
+    const text = await transcribeAudio(req.file.buffer, req.file.mimetype, req.file.originalname);
+    res.json({ text });
   } catch (e) {
-    res.status(500).json({ error: `STT request failed: ${e.message}` });
+    res.status(e.status && e.status >= 400 ? e.status : 500).json({ error: e.status ? e.message : `STT request failed: ${e.message}` });
   }
 }
 
@@ -289,4 +296,5 @@ async function handleSynthesize(req, res) {
 module.exports = {
   handleStatus, handleHistory, handleClear, handleChat,
   handleCallStatus, handleTranscribe, handleSynthesize,
+  loadGatewayChatConfig, loadVoiceServices, transcribeAudio,
 };

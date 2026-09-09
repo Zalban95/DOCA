@@ -323,4 +323,5 @@ module.exports = {
   handleRestart,
   handleHealth,
   getRunningInstances,
+  loadInstances,
 };
