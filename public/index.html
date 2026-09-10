@@ -629,12 +629,9 @@
         </div>
         <div class="card">
           <div class="card-title">Navigation Visibility</div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Show or hide tabs in the navigation bar. Changes take effect after saving.</p>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Show or hide tabs in the navigation bar. Saved as you toggle.</p>
           <div id="settings-tabs-list"><div class="placeholder pulse">Loading…</div></div>
-          <div class="toolbar" style="margin-top:14px">
-            <button class="btn btn-sm btn-blue" onclick="settingsSave()">Save</button>
-            <span class="status-line" id="settings-status"></span>
-          </div>
+          <span class="status-line" id="settings-status" style="margin-top:10px"></span>
         </div>
         <div class="card">
           <div class="card-title">Sidebar &amp; System Stats</div>
@@ -914,7 +911,9 @@
           <div class="card-title">Voice Services</div>
           <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
             Configure STT and TTS endpoints for voice call mode. Any OpenAI-compatible audio API works
-            (local Whisper/Kokoro, OpenAI, etc.).
+            (local Whisper/Kokoro, OpenAI, etc.). Unlike <strong>Paths</strong>, the
+            <code>DOCA_STT_URL</code> and <code>DOCA_TTS_URL</code> environment variables win over the
+            URLs saved here, so a deployment can pin them — if one is set, that is what voice calls use.
           </p>
           <div style="display:flex;flex-direction:column;gap:10px">
             <div style="display:flex;gap:8px;align-items:center">
@@ -953,6 +952,23 @@
 
       <!-- ── System ───────────────────────────────────── -->
       <div class="settings-panel" id="sp-system">
+        <div class="card">
+          <div class="card-title" style="display:flex;align-items:center;gap:8px">
+            Paths
+            <button class="btn btn-xs" onclick="pathsLoad()" title="Re-check what exists">↺</button>
+          </div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
+            Where DOCA looks for the stack, its config and the workspace. Leave a field empty to fall
+            back to its environment variable or the built-in default. Anything missing can be created
+            here. Most of the dashboard reads these once at start-up, so use <code>⟳ Restart</code>
+            in <strong>General</strong> after saving.
+          </p>
+          <div id="paths-list"><div class="placeholder pulse">Loading…</div></div>
+          <div class="toolbar" style="margin-top:12px">
+            <button class="btn btn-sm btn-blue" onclick="pathsSave()">Save</button>
+            <span class="status-line" id="paths-status"></span>
+          </div>
+        </div>
         <div class="card">
           <div class="card-title" style="display:flex;align-items:center;gap:8px">
             System Tools
@@ -1185,6 +1201,7 @@
 <script src="js/sudo.js"></script>
 <script src="js/themes.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/paths.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     themeApplyOnLoad();

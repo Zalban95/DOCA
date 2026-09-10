@@ -1,10 +1,8 @@
 'use strict';
 
-const fs = require('fs');
 const { spawn } = require('child_process');
 
-const { CONFIG_PATH } = require('./paths');
-const { loadPrefs, savePrefs, sseHeaders } = require('./utils');
+const { loadPrefs, savePrefs, loadConfig, saveConfig, sseHeaders } = require('./utils');
 
 const PREFS_KEY      = 'llamacpp';
 const BIND_HOST      = '0.0.0.0';
@@ -286,7 +284,7 @@ async function handleHealth(req, res) {
 
 function registerEndpoint(inst) {
   try {
-    const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    const cfg = loadConfig();
     if (!cfg.models) cfg.models = {};
     if (!cfg.models.providers) cfg.models.providers = {};
     cfg.models.providers[`llamacpp-${inst.id}`] = {
@@ -295,8 +293,7 @@ function registerEndpoint(inst) {
       api:     'openai-chat-completions',
       models:  [],
     };
-    fs.copyFileSync(CONFIG_PATH, CONFIG_PATH + '.bak');
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
+    saveConfig(cfg);
   } catch {}
 }
 

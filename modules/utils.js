@@ -5,7 +5,7 @@ const fs   = require('fs');
 const os   = require('os');
 const path = require('path');
 
-const { COMPOSE_DIR, PREFS_FILE, FM_ALLOWED_ROOTS } = require('./paths');
+const { COMPOSE_DIR, CONFIG_PATH, PREFS_FILE, FM_ALLOWED_ROOTS } = require('./paths');
 
 /** Run a shell command and return { stdout, stderr }. Rejects on non-zero exit. */
 function run(cmd, cwd) {
@@ -48,6 +48,35 @@ function savePrefs(data) {
   // DOCA_PREFS_FILE can point anywhere, including a directory nobody made yet.
   fs.mkdirSync(path.dirname(PREFS_FILE), { recursive: true });
   fs.writeFileSync(PREFS_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+
+/**
+ * Read the OpenClaw config JSON.
+ *
+ * A file that is not there yet reads as `{}` so callers can write the first
+ * provider into a fresh install instead of failing. A file that exists but does
+ * not parse still throws: silently starting from `{}` there would drop
+ * everything in it on the next save.
+ */
+function loadConfig() {
+  if (!fs.existsSync(CONFIG_PATH)) return {};
+  return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) || {};
+}
+
+/**
+ * Write a text file the way every editor in this dashboard should: create the
+ * directory if the tree does not exist yet, and keep the previous version
+ * alongside it as `<name>.bak` when there was one.
+ */
+function writeFileSafe(filePath, content) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  if (fs.existsSync(filePath)) fs.copyFileSync(filePath, filePath + '.bak');
+  fs.writeFileSync(filePath, content, 'utf8');
+}
+
+/** Write the OpenClaw config JSON. */
+function saveConfig(cfg) {
+  writeFileSafe(CONFIG_PATH, JSON.stringify(cfg, null, 2));
 }
 
 /** Load the models sub-object from prefs. */
@@ -185,6 +214,9 @@ module.exports = {
   fmSafe,
   loadPrefs,
   savePrefs,
+  loadConfig,
+  saveConfig,
+  writeFileSafe,
   loadModelsPrefs,
   saveModelsPrefs,
   streamCmd,

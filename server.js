@@ -66,8 +66,6 @@ app.get ('/api/stats/defs', stats.handleDefs);
 // ─── Routes: Config & Prefs ──────────────────────────────────────────────────
 app.get ('/api/configs/:id',       config.handleGetConfig);
 app.post('/api/configs/:id',       config.handlePostConfig);
-app.get ('/api/config',            config.handleGetLegacyConfig);
-app.post('/api/config',            config.handlePostLegacyConfig);
 app.get ('/api/prefs',             config.handleGetPrefs);
 app.post('/api/prefs',             config.handlePostPrefs);
 app.get ('/api/config-favorites',  config.handleGetConfigFavorites);
@@ -75,6 +73,8 @@ app.post('/api/config-favorites',  config.handlePostConfigFavorites);
 app.get ('/api/fm-favorites',      config.handleGetFmFavorites);
 app.post('/api/fm-favorites',      config.handlePostFmFavorites);
 app.get ('/api/paths',             config.handleGetPaths);
+app.post('/api/paths',             config.handlePostPaths);
+app.post('/api/paths/create',      config.handleCreatePath);
 
 // ─── Routes: API Keys & Tool Providers ────────────────────────────────────────
 app.get   ('/api/keys',                      keys.handleGetKeys);

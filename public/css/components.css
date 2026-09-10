@@ -493,6 +493,21 @@
 .settings-tab-row:last-child { border-bottom: none; }
 .settings-tab-label { font-size: 13px; cursor: default; }
 
+/* ── Settings → System: path rows ────────────────────── */
+.path-row {
+  display: grid; grid-template-columns: 190px 1fr;
+  align-items: start; gap: 6px 12px;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.path-row:last-child { border-bottom: none; }
+.path-label { font-size: 12px; padding-top: 5px; }
+.path-label small { display: block; font-size: 10px; color: var(--muted); }
+.path-fields { display: flex; gap: 6px; align-items: center; }
+.path-fields .input { font-size: 11px; padding: 4px 6px; }
+.path-meta { grid-column: 2; font-size: 10px; color: var(--muted); }
+.path-meta .path-ok      { color: var(--green); }
+.path-meta .path-missing { color: var(--amber); }
+
 /* ── Tool API rows ───────────────────────────────────── */
 .tool-api-row {
   display: grid; grid-template-columns: 180px 1fr auto;
@@ -635,10 +650,6 @@
   line-height: 1; transition: color var(--t-fast);
 }
 .btn-icon:hover { color: var(--text); }
-.sidebar-tab-toggle-row {
-  display: flex; align-items: center; gap: 4px;
-  padding: 2px 0; font-size: 11px;
-}
 
 /* ── File manager favorites ───────────────────────────── */
 .fm-fav-item {

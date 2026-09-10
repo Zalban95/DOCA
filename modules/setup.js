@@ -4,6 +4,7 @@ const fs   = require('fs');
 const path = require('path');
 
 const { SETUP_DIR, ALLOWED_SCRIPTS } = require('./paths');
+const { writeFileSafe } = require('./utils');
 
 /** GET /api/setup/scripts */
 function handleList(req, res) {
@@ -21,8 +22,10 @@ function handleList(req, res) {
 function handleGet(req, res) {
   if (!ALLOWED_SCRIPTS.includes(req.params.name)) return res.status(403).json({ error: 'Not allowed' });
   const fp = path.join(SETUP_DIR, req.params.name);
-  if (!fs.existsSync(fp)) return res.status(404).json({ error: 'Not found' });
-  res.json({ content: fs.readFileSync(fp, 'utf8') });
+  // A script that is not there yet opens empty and is written on save, the same
+  // way the config editor treats a missing file.
+  const exists = fs.existsSync(fp);
+  res.json({ content: exists ? fs.readFileSync(fp, 'utf8') : '', exists, path: fp });
 }
 
 /** POST /api/setup/scripts/:name */
@@ -32,8 +35,7 @@ function handlePost(req, res) {
   if (!content) return res.status(400).json({ error: 'No content' });
   const fp = path.join(SETUP_DIR, req.params.name);
   try {
-    if (fs.existsSync(fp)) fs.copyFileSync(fp, fp + '.bak');
-    fs.writeFileSync(fp, content, 'utf8');
+    writeFileSafe(fp, content);
     fs.chmodSync(fp, 0o755);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }

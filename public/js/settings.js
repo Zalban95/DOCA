@@ -20,7 +20,7 @@ const _SETTINGS_SUBTABS = [
   { id: 'setup',     label: 'Setup',     init: 'loadScripts' },
   { id: 'config',    label: 'Config',    init: 'initConfig' },
   { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit' },
-  { id: 'system',    label: 'System',    init: 'sysdepsLoad' },
+  { id: 'system',    label: 'System',    init: '_subtabSystemInit' },
 ];
 
 let _settingsHidden = [];
@@ -68,6 +68,11 @@ async function _subtabGeneralInit() {
   startupLoad();
 }
 
+function _subtabSystemInit() {
+  pathsLoad();
+  sysdepsLoad();
+}
+
 async function _subtabVoiceInit() {
   try {
     const prefs = await apiFetch('/api/prefs');
@@ -82,7 +87,8 @@ function _settingsRender() {
     <div class="settings-tab-row">
       <label class="skill-toggle">
         <input type="checkbox" id="settings-show-${t.id}"
-               ${!_settingsHidden.includes(t.id) ? 'checked' : ''}>
+               ${!_settingsHidden.includes(t.id) ? 'checked' : ''}
+               onchange="settingsSave()">
         <span class="skill-toggle-track"></span>
       </label>
       <span class="settings-tab-label">${t.label}</span>
@@ -90,6 +96,8 @@ function _settingsRender() {
   `).join('');
 }
 
+/** Saves on every toggle, like the sidebar stats next to it — a checkbox that
+ *  silently does nothing until you find a Save button is a trap. */
 async function settingsSave() {
   const status = document.getElementById('settings-status');
   const hiddenTabs = SETTINGS_TABS
@@ -669,19 +677,3 @@ async function voiceSettingsSave() {
   }
 }
 
-/* ── Sidebar quick tab-toggle panel ──────────────────── */
-
-async function sidebarTabToggleChange(tabId, visible) {
-  if (visible) {
-    _settingsHidden = _settingsHidden.filter(id => id !== tabId);
-  } else {
-    if (!_settingsHidden.includes(tabId)) _settingsHidden.push(tabId);
-  }
-  _applyHiddenTabs(_settingsHidden);
-  try {
-    await apiFetch('/api/prefs', { method: 'POST', body: { hiddenTabs: _settingsHidden } });
-  } catch {}
-  // Sync settings tab if open
-  const el = document.getElementById(`settings-show-${tabId}`);
-  if (el) el.checked = visible;
-}

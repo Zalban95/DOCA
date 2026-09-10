@@ -16,7 +16,7 @@ async function loadScripts() {
           }</div>
         </div>
         <div class="toolbar-right">
-          ${s.exists ? `<button class="btn btn-sm" onclick="editScript('${s.name}')">Edit</button>` : ''}
+          <button class="btn btn-sm" onclick="editScript('${s.name}')">${s.exists ? 'Edit' : 'Create'}</button>
         </div>
       </div>
     `).join('');
@@ -50,5 +50,6 @@ async function saveScript() {
     await apiFetch(`/api/setup/scripts/${name}`, { method: 'POST', body: { content } });
     setStatus(status, '✓ Saved', 'ok');
     setTimeout(() => setStatus(status, ''), 4000);
+    loadScripts();   // a new script flips from Create to Edit, with a size and date
   } catch (e) { setStatus(status, `✗ ${e.message}`, 'err'); }
 }

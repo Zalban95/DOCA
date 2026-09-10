@@ -4,18 +4,26 @@ const fs   = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const { SNAPSHOT_DIR, SNAPSHOT_SCRIPT, RESTORE_SCRIPT, PREFS_FILE } = require('./paths');
-const { sseHeaders, loadPrefs } = require('./utils');
+const { SNAPSHOT_DIR, SNAPSHOT_SCRIPT, RESTORE_SCRIPT } = require('./paths');
+const { sseHeaders, loadPrefs, savePrefs } = require('./utils');
 
-/** Merge snapshot settings from prefs with env/defaults. */
+/**
+ * Merge snapshot settings from prefs with env/defaults.
+ *
+ * The three paths live in `prefs.paths` with every other settable path, so
+ * Settings → Paths and this panel edit one value rather than two that disagree.
+ * `prefs.snapshotSettings` is still read for installs that saved them before
+ * they moved, and include paths stay here because nothing else uses them.
+ */
 function loadSnapshotSettings() {
-  const prefs = loadPrefs();
-  const s = prefs.snapshotSettings || {};
+  const prefs  = loadPrefs();
+  const s      = prefs.snapshotSettings || {};
+  const shared = prefs.paths || {};
   return {
-    snapshotDir:    s.snapshotDir    || SNAPSHOT_DIR,
-    snapshotScript: s.snapshotScript || SNAPSHOT_SCRIPT,
-    restoreScript:  s.restoreScript  || RESTORE_SCRIPT,
-    includePaths:   s.includePaths   || [],
+    snapshotDir:    shared.SNAPSHOT_DIR    || s.snapshotDir    || SNAPSHOT_DIR,
+    snapshotScript: shared.SNAPSHOT_SCRIPT || s.snapshotScript || SNAPSHOT_SCRIPT,
+    restoreScript:  shared.RESTORE_SCRIPT  || s.restoreScript  || RESTORE_SCRIPT,
+    includePaths:   s.includePaths || [],
   };
 }
 
@@ -28,9 +36,18 @@ function handleGetSettings(req, res) {
 function handlePostSettings(req, res) {
   const { snapshotDir, snapshotScript, restoreScript, includePaths } = req.body;
   const prefs = loadPrefs();
-  prefs.snapshotSettings = { snapshotDir, snapshotScript, restoreScript, includePaths };
+  prefs.paths = { ...prefs.paths };
+  // Blank means "back to the environment or the default", same as Settings → Paths.
+  for (const [key, value] of [
+    ['SNAPSHOT_DIR', snapshotDir], ['SNAPSHOT_SCRIPT', snapshotScript], ['RESTORE_SCRIPT', restoreScript],
+  ]) {
+    const trimmed = String(value ?? '').trim();
+    if (trimmed) prefs.paths[key] = trimmed;
+    else delete prefs.paths[key];
+  }
+  prefs.snapshotSettings = { includePaths: includePaths || [] };
   try {
-    fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
+    savePrefs(prefs);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }

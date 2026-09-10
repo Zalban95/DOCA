@@ -5,8 +5,7 @@ const os   = require('os');
 const path = require('path');
 const { exec, execSync, spawn } = require('child_process');
 
-const { PREFS_FILE } = require('./paths');
-const { sseHeaders, loadPrefs, loadModelsPrefs } = require('./utils');
+const { sseHeaders, loadPrefs, savePrefs, loadModelsPrefs } = require('./utils');
 
 const INFERENCE_SERVICES = [
   { id: 'whisper',  label: 'Whisper STT',     image: 'fedirz/faster-whisper-server:latest-cuda', port: 8000, internalPort: 8000, apiPath: '/v1', multiGpu: false,
@@ -47,7 +46,7 @@ function handleSettings(req, res) {
     const prefs = loadPrefs();
     if (!prefs.serviceSettings) prefs.serviceSettings = {};
     prefs.serviceSettings[id] = { gpu: gpu || 'all', modelId: modelId || '' };
-    fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
+    savePrefs(prefs);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
@@ -89,7 +88,7 @@ function handleStart(req, res) {
     const prefs = loadPrefs();
     if (!prefs.serviceSettings) prefs.serviceSettings = {};
     prefs.serviceSettings[id] = { gpu: gpu || 'all', modelId: modelId || '' };
-    fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
+    savePrefs(prefs);
   } catch {}
 
   sseHeaders(res);

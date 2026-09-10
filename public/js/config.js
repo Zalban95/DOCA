@@ -186,7 +186,11 @@ async function saveCustomFavorites() {
       method: 'POST',
       body: { favorites: customFavorites, hiddenBuiltins: [...hiddenFavorites] }
     });
-  } catch (e) { console.error('Failed to save favorites:', e); }
+  } catch (e) {
+    // The sidebar has already redrawn as if this worked, so say that it did not
+    // rather than leaving a favourite that disappears on the next reload.
+    setStatus(document.getElementById('json-status'), `✗ Could not save favorites: ${e.message}`, 'err');
+  }
 }
 
 async function hideBuiltinFavorite(id) {

@@ -11,7 +11,8 @@ Web-based control panel for managing the **OpenClaw** AI agent stack.
 - **Skills** — Install, remove, enable/disable workspace skills with detail view
 - **Snapshots** — Create and restore full agent snapshots
 - **Setup Scripts** — View and edit setup/restore shell scripts
-- **Config Editor** — Multi-file editor with favorites, per-type validation
+- **Config Editor** — Multi-file editor with favorites, per-type validation. A file that does not exist yet opens empty and is created on save, directories and all
+- **Paths** — Settings → System lists every path DOCA depends on with its current value, where that value came from (saved here / environment / default) and whether it is actually there, plus a one-click **Create** for anything missing
 - **File Manager** — Browse, edit, copy/cut/paste, rename, upload/download files with drag & drop
 - **Harnesses** — One line per agent runtime on the Controls page. Ships with the **DOCA Harness** (built in, no install) and knows 14 others — OpenClaw, Claude Code, Codex CLI, Gemini CLI, Copilot CLI, Cursor CLI, Amp, Qwen Code, OpenCode, Crush, Goose, Continue, OpenHands, Aider — installable with one click from the catalog. Anything else can be added as a custom harness. The default harness is what the chat panel and the Harness tab talk to
 - **DOCA Harness** — The resident agent: structured memory, tool calling and rolling summarisation against any OpenAI-compatible provider (Ollama, llama.cpp, OpenAI, Anthropic, Google, Groq, OpenRouter, Mistral, DeepSeek, xAI, Together, Cerebras). Model and generation parameters are set inline from the ⚙ on its row
@@ -193,6 +194,12 @@ the dashboard is portable across machines. Override any of them via the environm
 a `.env` file next to `server.js` — `run.sh` loads that before starting, so a hand start and the
 boot service see the same values.
 
+The eight path variables (`COMPOSE_DIR`, `CONFIG_PATH`, `SKILLS_DIR`, `WORKSPACE_DIR`, `SETUP_DIR`,
+`SNAPSHOT_DIR`, `SNAPSHOT_SCRIPT`, `RESTORE_SCRIPT`) are also editable in **Settings → System →
+Paths**, which shows whether each one exists, where its current value comes from, and offers to
+create anything missing. A path saved there beats the environment variable and is picked up on the
+next restart; clearing the field hands it back to the environment or the default.
+
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `4242` | Server port |
@@ -247,8 +254,8 @@ Reference clients live in `clients/reference/` (`watch.sh`, `agent-sim.js`).
 run.sh                      Launcher (deps, .env, node server.js) + boot-service verbs
 server.js                   Express orchestrator: wires middleware + routes, starts server
 modules/                    Backend feature modules (one per concern)
-  paths.js                  Env-overridable paths + config registry
-  utils.js                  run(), SSE helpers, prefs loaders, streamCmd(), detectBinary()
+  paths.js                  Paths (saved > env > default), config registry, create()
+  utils.js                  run(), SSE helpers, prefs + config load/save, streamCmd(), detectBinary()
   store.js                  Durable JSON / JSONL store under DOCA_DATA_DIR (atomic writes)
   https-cert.js             Self-signed / Tailscale cert handling
   controls.js               /api/status (Docker, GPU, CPU/RAM + extended stats), start/stop/restart, logs
@@ -319,7 +326,8 @@ public/
     docker.js               Docker manager UI
     services.js             Inference services UI (gear config, image pull)
     terminal.js             Embedded terminal UI
-    settings.js             Settings (tabs, theme, stats/sections toggles) + system tools UI
+    settings.js             Settings (tabs, theme, stats/sections toggles, boot service) + system tools UI
+    paths.js                Settings → System → Paths (edit, create, restart hints)
     themes.js               Theme switching
     sudo.js                 Sudo password prompt helper
     fp.js                   Misc front-panel helpers

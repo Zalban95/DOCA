@@ -1,13 +1,13 @@
 'use strict';
 
-const fs   = require('fs');
-const path = require('path');
+const fs = require('fs');
 
+const paths = require('./paths');
 const {
   HOME, COMPOSE_DIR, CONFIG_PATH, SKILLS_DIR, WORKSPACE_DIR,
-  SNAPSHOT_DIR, CONFIG_REGISTRY, PREFS_FILE,
-} = require('./paths');
-const { loadPrefs } = require('./utils');
+  SNAPSHOT_DIR, CONFIG_REGISTRY,
+} = paths;
+const { loadPrefs, savePrefs, writeFileSafe } = require('./utils');
 
 // ─── Multi-file config ────────────────────────────────────────────────────────
 
@@ -30,29 +30,8 @@ function handlePostConfig(req, res) {
   const { content } = req.body;
   if (content === undefined) return res.status(400).json({ error: 'No content' });
   try {
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    if (fs.existsSync(filePath)) fs.copyFileSync(filePath, filePath + '.bak');
-    fs.writeFileSync(filePath, content, 'utf8');
+    writeFileSafe(filePath, content);
     res.json({ ok: true, backup: filePath + '.bak' });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-}
-
-/** GET /api/config (legacy) */
-function handleGetLegacyConfig(req, res) {
-  try { res.json({ config: fs.readFileSync(CONFIG_PATH, 'utf8') }); }
-  catch (e) { res.status(500).json({ error: e.message }); }
-}
-
-/** POST /api/config (legacy) */
-function handlePostLegacyConfig(req, res) {
-  const { config } = req.body;
-  if (!config) return res.status(400).json({ error: 'No config provided' });
-  try {
-    JSON.parse(config);
-    fs.copyFileSync(CONFIG_PATH, CONFIG_PATH + '.bak');
-    fs.writeFileSync(CONFIG_PATH, config, 'utf8');
-    res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
@@ -66,9 +45,7 @@ function handleGetPrefs(req, res) {
 /** POST /api/prefs */
 function handlePostPrefs(req, res) {
   try {
-    const prefs = loadPrefs();
-    const updated = { ...prefs, ...req.body };
-    fs.writeFileSync(PREFS_FILE, JSON.stringify(updated, null, 2), 'utf8');
+    savePrefs({ ...loadPrefs(), ...req.body });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
@@ -89,7 +66,7 @@ function handlePostConfigFavorites(req, res) {
   prefs.favorites = favorites;
   if (Array.isArray(hiddenBuiltins)) prefs.hiddenBuiltins = hiddenBuiltins;
   try {
-    fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
+    savePrefs(prefs);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
@@ -109,7 +86,7 @@ function handlePostFmFavorites(req, res) {
   const prefs = loadPrefs();
   prefs.fmFavorites = favorites;
   try {
-    fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
+    savePrefs(prefs);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
@@ -126,14 +103,42 @@ function handleGetPaths(_req, res) {
     workspaceDir:   WORKSPACE_DIR,
     snapshotDir:    SNAPSHOT_DIR,
     configRegistry: CONFIG_REGISTRY,
+    settable:       paths.describe(),
   });
+}
+
+/** POST /api/paths — body { COMPOSE_DIR: '…', … }. An empty value clears the
+ *  override and hands the path back to the environment or the default. */
+function handlePostPaths(req, res) {
+  const keys = paths.SETTABLE.map(p => p.key);
+  const unknown = Object.keys(req.body || {}).filter(k => !keys.includes(k));
+  if (unknown.length) return res.status(400).json({ error: `Not a settable path: ${unknown.join(', ')}` });
+
+  try {
+    const prefs = loadPrefs();
+    const saved = { ...prefs.paths };
+    for (const [key, value] of Object.entries(req.body)) {
+      const trimmed = String(value ?? '').trim();
+      if (trimmed) saved[key] = trimmed;
+      else delete saved[key];
+    }
+    prefs.paths = saved;
+    savePrefs(prefs);
+    // The constants above were read at boot, so the change lands on restart.
+    res.json({ ok: true, restartRequired: true, settable: paths.describe() });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+}
+
+/** POST /api/paths/create — body { key }. Makes a path that is not there yet. */
+function handleCreatePath(req, res) {
+  try {
+    res.json({ ok: true, ...paths.create(req.body?.key), settable: paths.describe() });
+  } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
 }
 
 module.exports = {
   handleGetConfig,
   handlePostConfig,
-  handleGetLegacyConfig,
-  handlePostLegacyConfig,
   handleGetPrefs,
   handlePostPrefs,
   handleGetConfigFavorites,
@@ -141,4 +146,6 @@ module.exports = {
   handleGetFmFavorites,
   handlePostFmFavorites,
   handleGetPaths,
+  handlePostPaths,
+  handleCreatePath,
 };

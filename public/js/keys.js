@@ -56,10 +56,11 @@ async function saveKey(provider) {
 
 function deleteProvider(name) {
   appConfirm(`Remove provider "${name}"?`, async () => {
+    const status = document.getElementById(`key-status-${name}`);
     try {
       await apiFetch(`/api/keys/${encodeURIComponent(name)}`, { method: 'DELETE' });
       keysLoadProviders();
-    } catch (e) { appAlert(`Error: ${e.message}`); }
+    } catch (e) { setStatus(status, `✗ ${e.message}`, 'err'); }
   });
 }
 
