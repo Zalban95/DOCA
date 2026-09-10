@@ -267,7 +267,7 @@
   .fm-row  { min-height: 40px; }
   .fm-acts { opacity: 1; }
   .settings-subnav-btn { min-height: 34px; }
-  .code-tool-header { padding-top: 12px; padding-bottom: 12px; }
+  .harness-row  { padding-top: 10px; padding-bottom: 10px; }
   .skill-toggle { transform: scale(1.12); transform-origin: left center; }
   input[type="checkbox"] { min-width: 16px; min-height: 16px; }
 }

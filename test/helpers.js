@@ -11,11 +11,12 @@ const path = require('path');
 const http = require('http');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-test-'));
-process.env.DOCA_DATA_DIR = path.join(tmp, 'data');
-process.env.CONFIG_PATH   = path.join(tmp, 'openclaw.json');
-process.env.COMPOSE_DIR   = tmp;
-process.env.SKILLS_DIR    = path.join(tmp, 'skills');
-process.env.WORKSPACE_DIR = tmp;
+process.env.DOCA_DATA_DIR  = path.join(tmp, 'data');
+process.env.DOCA_PREFS_FILE = path.join(tmp, 'prefs.json');
+process.env.CONFIG_PATH    = path.join(tmp, 'openclaw.json');
+process.env.COMPOSE_DIR    = tmp;
+process.env.SKILLS_DIR     = path.join(tmp, 'skills');
+process.env.WORKSPACE_DIR  = tmp;
 
 const { createApp } = require('../server');
 const devices  = require('../modules/api-v1/devices');

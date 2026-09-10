@@ -24,8 +24,7 @@ const skills       = require('./modules/skills');
 const setup        = require('./modules/setup');
 const snapshots    = require('./modules/snapshots');
 const files        = require('./modules/files');
-const codeTools    = require('./modules/code-tools');
-const claude       = require('./modules/claude');
+const harness      = require('./modules/harness/routes');
 const chat         = require('./modules/chat');
 const models       = require('./modules/models');
 const modelsOllama   = require('./modules/models-ollama');
@@ -37,6 +36,7 @@ const stats        = require('./modules/stats');
 const docker       = require('./modules/docker');
 const services     = require('./modules/services');
 const update       = require('./modules/update');
+const startup      = require('./modules/startup');
 const terminal     = require('./modules/terminal');
 const apiV1        = require('./modules/api-v1/router');
 
@@ -125,18 +125,30 @@ app.post('/api/files/upload',   uploadMw.array('files', 20), files.handleUpload)
 app.get ('/api/files/download', files.handleDownload);
 app.get ('/api/files/raw',      files.handleRaw);
 
-// ─── Routes: Code Tools ──────────────────────────────────────────────────────
-app.get ('/api/code/tools',             codeTools.handleList);
-app.post('/api/code/tools/pin',         codeTools.handlePin);
-app.post('/api/code/tools/:id/config',  codeTools.handleConfig);
-app.post('/api/code/tools/:id/install', codeTools.handleInstall);
+// ─── Routes: Harnesses ───────────────────────────────────────────────────────
+// Catalog: the rows on the Controls page (install, default, params, custom).
+app.get   ('/api/harness',              harness.handleList);
+app.get   ('/api/harness/providers',    harness.handleProviders);
+app.get   ('/api/harness/models',       harness.handleModels);
+app.get   ('/api/harness/status',       harness.handleStatus);
+app.post  ('/api/harness/default',      harness.handleSetDefault);
+app.post  ('/api/harness/custom',       harness.handleAddCustom);
+app.delete('/api/harness/custom/:id',   harness.handleRemoveCustom);
 
-// ─── Routes: Claude Code ─────────────────────────────────────────────────────
-app.get ('/api/claude/status', claude.handleStatus);
-app.post('/api/claude/run',    claude.handleRun);
-app.post('/api/claude/stop',   claude.handleStop);
-app.post('/api/claude/start',  claude.handleStart);
-app.post('/api/claude/stdin',  claude.handleStdin);
+// Built-in harness console: one agent turn, its sessions and its memory.
+app.post  ('/api/harness/chat',                 harness.handleChat);
+app.get   ('/api/harness/sessions',             harness.handleSessions);
+app.post  ('/api/harness/sessions',             harness.handleSessionNew);
+app.get   ('/api/harness/sessions/:id',         harness.handleSession);
+app.post  ('/api/harness/sessions/:id/activate', harness.handleSessionActivate);
+app.delete('/api/harness/sessions/:id',         harness.handleSessionDelete);
+app.get   ('/api/harness/memory',               harness.handleMemoryList);
+app.post  ('/api/harness/memory',               harness.handleMemoryWrite);
+app.delete('/api/harness/memory/:key',          harness.handleMemoryForget);
+
+// Per-harness routes last: `:id` would otherwise swallow the fixed paths above.
+app.post  ('/api/harness/:id/install',  harness.handleInstall);
+app.post  ('/api/harness/:id/config',   harness.handleConfig);
 
 // ─── Routes: Chat ─────────────────────────────────────────────────────────────
 app.get ('/api/chat/status',      chat.handleStatus);
@@ -198,6 +210,10 @@ app.post('/api/system/tools/install', systemTools.handleInstall);
 app.get ('/api/update-check', update.handleUpdateCheck);
 app.post('/api/update',       update.handleUpdate);
 app.post('/api/restart',      update.handleRestart);
+
+// ─── Routes: Start at boot ────────────────────────────────────────────────────
+app.get ('/api/startup', startup.handleStatus);
+app.post('/api/startup', startup.handleSet);
 
 // ─── Routes: Docker ───────────────────────────────────────────────────────────
 app.get   ('/api/docker/containers',            docker.handleContainers);

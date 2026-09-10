@@ -4,16 +4,12 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 
 const { CONFIG_PATH, WORKSPACE_DIR } = require('./paths');
-const { sseHeaders, loadPrefs } = require('./utils');
+const { sseHeaders, loadPrefs, resolveEnvVars } = require('./utils');
+const catalog = require('./harness/catalog');
+const agent   = require('./harness/agent');
 
 // Module-scoped state
 const chatHistory = [];
-
-/** Resolve ${VAR} in string from process.env */
-function resolveEnvVars(str) {
-  if (typeof str !== 'string') return str;
-  return str.replace(/\$\{([^}]+)\}/g, (_, name) => process.env[name] ?? '');
-}
 
 /** Parse openclaw.json tolerantly (strip control chars and trailing commas) */
 function parseOpenclawConfig() {
@@ -56,14 +52,18 @@ function handleStatus(req, res) {
     gatewayCfg = cfg?.gateway || null;
   } catch (e) { parseError = e.message; }
 
-  const cfg = loadGatewayChatConfig();
+  const cfg     = loadGatewayChatConfig();
+  const harness = catalog.get(catalog.defaultId());
   res.json({
+    harness: harness && { id: harness.id, label: harness.label, kind: harness.kind },
     gateway: !!cfg,
-    chatEnabled: !!cfg,
+    chatEnabled: !!cfg || harness?.kind === 'builtin',
     parseError,
     gatewayCfg,
     configPath: CONFIG_PATH,
-    hint: cfg ? 'Using OpenClaw Gateway' : 'Enable gateway.http.endpoints.chatCompletions in openclaw.json'
+    hint: harness?.kind === 'builtin'
+      ? `Using the ${harness.label}`
+      : cfg ? 'Using OpenClaw Gateway' : 'Enable gateway.http.endpoints.chatCompletions in openclaw.json'
   });
 }
 
@@ -78,11 +78,44 @@ function handleClear(req, res) {
   res.json({ ok: true });
 }
 
-/** POST /api/chat — main chat endpoint (gateway -> claude CLI fallback) */
+/**
+ * POST /api/chat — the floating panel's chat.
+ *
+ * Whichever harness is the default answers here, so the panel and the Harness
+ * tab always talk to the same agent. With the built-in one selected that is
+ * modules/harness/agent.js; otherwise it is the OpenClaw Gateway, falling back
+ * to the `claude` CLI.
+ */
 async function handleChat(req, res) {
   const { message } = req.body;
   if (!message) return res.status(400).json({ error: 'No message' });
   chatHistory.push({ role: 'user', content: message, time: new Date().toISOString() });
+
+  if (catalog.defaultId() === catalog.BUILTIN_ID) {
+    // res, not req: the request stream closes as soon as express.json() has
+    // read the body, which would abort the turn before it started.
+    const ctrl = new AbortController();
+    res.on('close', () => ctrl.abort());
+    sseHeaders(res);
+    try {
+      const { text } = await agent.turn({
+        message,
+        emit: evt => {
+          // The panel renders plain text; tool activity shows as a one-line note
+          // so a long silence while a tool runs does not look like a hang.
+          if (evt.type === 'text')      res.write(`data: ${JSON.stringify({ type: 'text', text: evt.text })}\n\n`);
+          if (evt.type === 'tool_call') res.write(`data: ${JSON.stringify({ type: 'text', text: `\n· ${evt.name}\n` })}\n\n`);
+        },
+        signal: ctrl.signal,
+      });
+      if (text) chatHistory.push({ role: 'assistant', content: text, time: new Date().toISOString() });
+      res.write(`data: ${JSON.stringify({ type: 'done', code: 0 })}\n\n`);
+    } catch (e) {
+      res.write(`data: ${JSON.stringify({ type: 'stderr', text: `Harness error: ${e.message}` })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: 'done', code: 1 })}\n\n`);
+    }
+    return res.end();
+  }
 
   const gw = loadGatewayChatConfig();
   sseHeaders(res);

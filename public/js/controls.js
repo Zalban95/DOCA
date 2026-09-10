@@ -57,6 +57,7 @@ async function _stackRunUpdate() {
 /* ── All containers list ─────────────────────────────── */
 
 function controlsInit() {
+  harnessLoad();
   controlsRefreshContainers();
 }
 

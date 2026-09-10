@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="css/files.css">
 <link rel="stylesheet" href="css/terminal.css">
 <link rel="stylesheet" href="css/models.css">
+<link rel="stylesheet" href="css/harness.css">
 <link rel="stylesheet" href="css/responsive.css">
 <!-- xterm.js -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
@@ -37,7 +38,7 @@
     <button class="nav-tab active" data-tab="controls" onclick="nav('controls')">Controls</button>
     <button class="nav-tab"        data-tab="logs"     onclick="nav('logs')">Logs</button>
     <button class="nav-tab"        data-tab="files"    onclick="nav('files')">Files</button>
-    <button class="nav-tab"        data-tab="code"      onclick="nav('code')">Code</button>
+    <button class="nav-tab"        data-tab="harness"   onclick="nav('harness')">Harness</button>
     <button class="nav-tab"        data-tab="terminal"  onclick="nav('terminal')">Terminal</button>
     <button class="nav-tab"        data-tab="models"    onclick="nav('models')">Models</button>
     <button class="nav-tab"        data-tab="docker"    onclick="nav('docker')">Docker</button>
@@ -118,6 +119,35 @@
 
     <!-- ─── CONTROLS ──────────────────────────────────── -->
     <div id="tab-controls" class="tab-page active">
+
+      <!-- Agent harnesses: one line each, the default marked ● -->
+      <div class="card">
+        <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          Agent Harnesses
+          <button class="btn btn-xs btn-teal" onclick="harnessCatalogOpen()" title="Browse every harness DOCA knows">⬇ Install a harness</button>
+          <button class="btn btn-xs" onclick="harnessLoad()" title="Re-check">↺</button>
+          <span id="harness-default-label" style="font-size:10px;color:var(--muted);margin-left:auto"></span>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
+          Pick the agent DOCA talks to. ● marks the default — the chat panel and the
+          <a href="#" onclick="nav('harness');return false">Harness</a> tab both use it.
+          ⚙ sets the model and its parameters.
+        </p>
+        <div id="harness-list"><div class="placeholder pulse">Detecting harnesses…</div></div>
+        <div class="harness-add-row">
+          <span class="harness-add-caret">+</span>
+          <input class="input flex1" id="harness-new-label" placeholder="Add your own harness — name (e.g. My Agent)"
+                 onkeydown="if(event.key==='Enter') harnessAddCustom()">
+          <input class="input flex1" id="harness-new-cmd" placeholder="command (e.g. my-agent)"
+                 onkeydown="if(event.key==='Enter') harnessAddCustom()">
+          <input class="input flex1" id="harness-new-install" placeholder="install command (optional)"
+                 onkeydown="if(event.key==='Enter') harnessAddCustom()">
+          <button class="btn btn-xs btn-blue" onclick="harnessAddCustom()">Add</button>
+        </div>
+        <div class="status-line mt8" id="harness-status"></div>
+        <pre id="harness-install-out" class="terminal" style="display:none;margin-top:8px;max-height:min(45vh,360px)"></pre>
+      </div>
+
       <div class="card">
         <div class="card-title">DOCA Service Control</div>
         <div class="toolbar-left">
@@ -256,37 +286,11 @@
       </div>
     </div>
 
-    <!-- ─── CODE TOOLS ──────────────────────────────────── -->
-    <div id="tab-code" class="tab-page">
-      <div class="card">
-        <div class="card-title">Code Agent Tools</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Click a tool to expand it. Press 📌 to keep it open across sessions.</p>
-        <div id="code-tools-list">
-          <div class="placeholder pulse">Detecting tools…</div>
-        </div>
-        <div class="toolbar" style="margin-top:12px">
-          <button class="btn btn-sm" onclick="codeRefresh()">↺ Refresh</button>
-        </div>
-      </div>
-
-      <div class="card" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-        <div class="card-title">One-shot Run (claude -p)</div>
-        <div class="claude-prompt-row">
-          <span class="claude-prompt-caret">❯</span>
-          <input id="claude-input" class="input flex1" placeholder="Enter a one-shot prompt for Claude Code…"
-                 onkeydown="if(event.key==='Enter'){event.preventDefault();claudeRun();}">
-          <button class="btn btn-sm btn-blue" onclick="claudeRun()" id="claude-run-btn">▶ Run</button>
-          <button class="btn btn-sm btn-red" onclick="claudeStop()" id="claude-stop-btn" style="display:none">■ Stop</button>
-        </div>
-        <pre class="claude-output scroll-y" id="claude-output"><span class="text-muted">Ready. Enter a prompt above to run Claude Code in one-shot mode.</span></pre>
-      </div>
-
-      <div class="card">
-        <div class="card-title">History</div>
-        <div id="claude-history" class="scroll-y" style="max-height:min(45vh,360px)">
-          <div class="placeholder">No commands run yet</div>
-        </div>
-      </div>
+    <!-- ─── HARNESS ─────────────────────────────────────── -->
+    <!-- The default harness's workspace: the built-in agent's console, or an
+         embedded terminal for a CLI harness. Managed on the Controls page. -->
+    <div id="tab-harness" class="tab-page">
+      <div id="harness-console-shell"><div class="placeholder pulse">Loading harness…</div></div>
     </div>
 
     <!-- ─── MODELS ──────────────────────────────────────── -->
@@ -653,6 +657,26 @@
           </div>
           <pre id="update-log" class="code-out" style="display:none;max-height:min(45vh,360px);overflow:auto;font-size:11px;margin-top:8px"></pre>
         </div>
+        <div class="card">
+          <div class="card-title" style="display:flex;align-items:center;gap:8px">
+            Start at Boot
+            <button class="btn btn-xs" onclick="startupLoad()" title="Re-check the boot service">↺</button>
+          </div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
+            Install DOCA as a systemd service so the panel comes back on its own after a reboot —
+            and so <code>⟳ Restart</code> above is handled by a supervisor instead of a detached
+            child process. Same thing as running <code>./run.sh enable</code> on the host.
+          </p>
+          <div class="settings-tab-row">
+            <label class="skill-toggle">
+              <input type="checkbox" id="startup-toggle" onchange="startupToggle(this)">
+              <span class="skill-toggle-track"></span>
+            </label>
+            <span class="settings-tab-label">Start DOCA when this machine boots</span>
+          </div>
+          <span class="status-line" id="startup-status" style="margin-top:10px"></span>
+          <pre id="startup-log" class="code-out" style="display:none;max-height:min(35vh,260px);overflow:auto;font-size:11px;margin-top:8px"></pre>
+        </div>
       </div>
 
       <!-- ── API Keys & Device Tokens ─────────────────── -->
@@ -957,6 +981,25 @@
 <!-- ═══ MOBILE BOTTOM TAB BAR (≤768px) ═══════════════ -->
 <nav class="mobile-nav" id="mobile-nav" aria-label="Primary"></nav>
 
+<!-- ═══ HARNESS CATALOG MODAL ════════════════════════ -->
+<div id="harness-catalog-overlay" class="modal-overlay" style="display:none" onclick="harnessCatalogClose(event)">
+  <div class="modal" style="max-width:720px" onclick="event.stopPropagation()">
+    <div class="modal-title">Install a harness</div>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
+      Every harness DOCA knows about. Installing runs the vendor's own installer and
+      streams the output. Anything not listed here can be added as a custom harness
+      from the Controls page.
+    </p>
+    <input class="input" id="harness-catalog-filter" placeholder="Filter by name or vendor…"
+           style="width:100%;box-sizing:border-box;margin-bottom:8px" oninput="harnessCatalogRender()">
+    <div id="harness-catalog-list" style="max-height:52vh;overflow-y:auto"></div>
+    <pre id="harness-catalog-out" class="terminal" style="display:none;margin-top:8px;max-height:30vh"></pre>
+    <div class="modal-actions">
+      <button class="btn btn-sm" onclick="harnessCatalogClose()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ FILE PICKER MODAL ════════════════════════════ -->
 <div id="fp-modal" class="fp-overlay" style="display:none" onclick="fpClose()">
   <div class="fp-panel" onclick="event.stopPropagation()">
@@ -1132,7 +1175,7 @@
 <script src="js/setup.js"></script>
 <script src="js/config.js"></script>
 <script src="js/files.js"></script>
-<script src="js/claude.js"></script>
+<script src="js/harness.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/terminal.js"></script>
 <script src="js/models.js"></script>

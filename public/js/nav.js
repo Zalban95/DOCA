@@ -2,14 +2,14 @@
    OPENCLAW PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','logs','files','code','terminal','models','docker','settings'];
+const NAV_TABS = ['controls','logs','files','harness','terminal','models','docker','settings'];
 
 /** Single source for the mobile bottom bar (icon + short label per tab). */
 const NAV_TAB_DEFS = [
   { id: 'controls', label: 'Ctrl',   icon: '▶' },
   { id: 'logs',     label: 'Logs',   icon: '≣' },
   { id: 'files',    label: 'Files',  icon: '🗀' },
-  { id: 'code',     label: 'Code',   icon: '❯' },
+  { id: 'harness',  label: 'Agent',  icon: '⬡' },
   { id: 'terminal', label: 'Term',   icon: '⌨' },
   { id: 'models',   label: 'Models', icon: '◆' },
   { id: 'docker',   label: 'Docker', icon: '◧' },
@@ -40,10 +40,15 @@ function nav(name) {
     el.classList.toggle('active', el.id === `tab-${name}`);
   });
 
+  // The Harness tab is a full-size conversation with the same agent the
+  // floating panel talks to, so the panel steps aside while it is open.
+  document.body.classList.toggle('harness-tab', name === 'harness');
+  if (name === 'harness' && chatOpen) toggleChat();
+
   if (name === 'controls') controlsInit();
   if (name === 'logs'      && !logSource) startLogs();
   if (name === 'files')    fmInit();
-  if (name === 'code')     codeInit();
+  if (name === 'harness')  harnessTabInit();
   if (name === 'terminal') termInit();
   if (name === 'models')   modelsInit();
   if (name === 'docker')   dockerInit();

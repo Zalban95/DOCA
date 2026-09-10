@@ -6,7 +6,7 @@ const SETTINGS_TABS = [
   { id: 'controls',  label: 'Controls' },
   { id: 'logs',      label: 'Logs' },
   { id: 'files',     label: 'Files' },
-  { id: 'code',      label: 'Code' },
+  { id: 'harness',   label: 'Harness' },
   { id: 'terminal',  label: 'Terminal' },
   { id: 'models',    label: 'Models' },
   { id: 'docker',    label: 'Docker' },
@@ -65,6 +65,7 @@ async function _subtabGeneralInit() {
     if (el) el.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
   }
   updateCheck();
+  startupLoad();
 }
 
 async function _subtabVoiceInit() {
@@ -402,6 +403,49 @@ async function updatePull() {
       if (btn) btn.disabled = false;
       releaseRestart();
     },
+  });
+}
+
+/* ── Start at Boot ───────────────────────────────────── */
+
+async function startupLoad() {
+  const box = document.getElementById('startup-toggle');
+  const st  = document.getElementById('startup-status');
+  try {
+    const s = await apiFetch('/api/startup');
+    if (box) { box.checked = !!s.enabled; box.disabled = !s.supported; }
+    if (!s.supported) return setStatus(st, s.reason, 'warn');
+
+    if (!s.enabled) return setStatus(st, 'DOCA will not come back on its own after a reboot.', '');
+    setStatus(st, s.active
+      ? `✓ Enabled — ${s.service} is running${s.supervised ? ' and owns this panel' : ''}`
+      : `✓ Enabled — ${s.service} starts at the next boot`, 'ok');
+  } catch (e) {
+    if (box) box.disabled = true;
+    setStatus(st, `✗ ${e.message}`, 'err');
+  }
+}
+
+function startupToggle(box) {
+  const want = box.checked;
+  box.checked = !want;   // stay on the real state until the service confirms it
+  sudoAsk(
+    `${want ? 'Installing' : 'Removing'} the boot service requires elevated privileges.`,
+    pw => { if (pw !== null) _startupApply(want, pw); },
+  );
+}
+
+async function _startupApply(enabled, password) {
+  const box = document.getElementById('startup-toggle');
+  const log = document.getElementById('startup-log');
+  if (box) box.disabled = true;
+  showStream(log);
+
+  const finish = () => { if (box) box.disabled = false; startupLoad(); };
+  await sseStream('/api/startup', { enabled, password }, {
+    onStatus: text => appendStream(log, text),
+    onDone:   finish,
+    onError:  e => { appendStream(log, `\nError: ${e.message}`); finish(); },
   });
 }
 

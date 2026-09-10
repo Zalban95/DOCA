@@ -373,33 +373,6 @@
 }
 #chat-call-toggle.active { background: var(--green); color: var(--bg); }
 
-/* ── Claude Code terminal ───────────────────────────── */
-.claude-prompt-row {
-  display: flex; align-items: center; gap: 8px;
-  margin-bottom: 10px;
-}
-.claude-prompt-caret {
-  color: var(--accent); font-size: 14px; font-weight: 600; flex-shrink: 0;
-}
-.claude-output {
-  flex: 1; min-height: 0;
-  background: #060708; border: 1px solid var(--border2);
-  padding: 10px 12px; overflow-y: auto;
-  font-size: 11.5px; line-height: 1.7;
-  color: #8ab8d8; white-space: pre-wrap; word-break: break-word;
-}
-.claude-prompt-echo {
-  color: var(--accent); font-weight: 500; margin-bottom: 6px;
-  padding-bottom: 6px; border-bottom: 1px solid var(--border);
-}
-.claude-response { color: var(--text); }
-.claude-stderr   { color: var(--red); }
-.claude-done {
-  color: var(--muted); font-size: 10px;
-  margin-top: 10px; text-align: center;
-  letter-spacing: 0.1em;
-}
-
 /* ── Snapshot settings ───────────────────────────────── */
 .snap-warning {
   padding: 8px 12px; border-radius: 4px; font-size: 11px;
@@ -585,48 +558,7 @@
   display: flex; justify-content: flex-end; gap: 8px;
 }
 
-/* ── Code tool accordion ─────────────────────────────── */
-.code-tool-accordion {
-  border: 1px solid var(--border2);
-  background: var(--dim);
-  margin-bottom: 4px;
-}
-.code-tool-accordion.expanded {
-  border-color: var(--accent);
-}
-.code-tool-header {
-  display: flex; align-items: center; gap: 8px;
-  padding: 9px 12px; cursor: pointer; user-select: none;
-}
-.code-tool-header:hover { background: rgba(255,255,255,0.03); }
-.code-acc-chevron { font-size: 9px; color: var(--muted); flex-shrink: 0; width: 10px; }
-.code-tool-name { font-size: 12px; font-weight: 500; }
-.code-tool-pin-btn {
-  margin-left: auto; background: none; border: none; cursor: pointer;
-  font-size: 14px; opacity: 0.3; padding: 0 2px;
-  transition: opacity var(--t-fast);
-}
-.code-tool-pin-btn:hover { opacity: 0.7; }
-.code-tool-pin-btn.pinned { opacity: 1; }
-.code-tool-body {
-  display: flex; flex-direction: column; gap: 0;
-  padding: 8px 12px 10px 28px;
-  border-top: 1px solid var(--border);
-}
-.code-tool-config-row {
-  display: flex; align-items: center; gap: 8px;
-  padding-bottom: 8px; margin-bottom: 8px;
-  border-bottom: 1px solid var(--border2);
-}
-.code-tool-missing {
-  display: flex; align-items: center; gap: 8px;
-  flex-wrap: wrap; padding: 4px 0;
-  font-size: 11px; color: var(--muted);
-}
-.code-tool-hint {
-  font-size: 9px; color: var(--muted);
-  display: block; margin-top: 4px; width: 100%;
-}
+/* Streamed installer output, inline under a service / instance row */
 .install-out {
   width: 100%; margin: 6px 0 0; padding: 8px;
   background: var(--bg); border: 1px solid var(--border2);
@@ -634,18 +566,6 @@
   color: var(--text); white-space: pre-wrap; max-height: min(45vh, 360px);
   overflow-y: auto;
 }
-
-/* Claude history */
-.claude-hist-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 5px 8px; background: var(--dim); border: 1px solid var(--border2);
-  margin-bottom: 3px;
-}
-.claude-hist-prompt {
-  flex: 1; font-size: 11px; color: var(--text);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.claude-hist-time { font-size: 10px; color: var(--muted); flex-shrink: 0; }
 
 /* ── File Picker Modal ────────────────────────────────── */
 .fp-overlay {

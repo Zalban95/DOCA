@@ -13,25 +13,34 @@ Web-based control panel for managing the **OpenClaw** AI agent stack.
 - **Setup Scripts** — View and edit setup/restore shell scripts
 - **Config Editor** — Multi-file editor with favorites, per-type validation
 - **File Manager** — Browse, edit, copy/cut/paste, rename, upload/download files with drag & drop
-- **Code Agents** — Detect, install and run Claude Code, Aider, Codex CLI, Gemini CLI, Qwen Code, OpenCode, Crush, Cursor CLI and Goose in embedded terminals
+- **Harnesses** — One line per agent runtime on the Controls page. Ships with the **DOCA Harness** (built in, no install) and knows 14 others — OpenClaw, Claude Code, Codex CLI, Gemini CLI, Copilot CLI, Cursor CLI, Amp, Qwen Code, OpenCode, Crush, Goose, Continue, OpenHands, Aider — installable with one click from the catalog. Anything else can be added as a custom harness. The default harness is what the chat panel and the Harness tab talk to
+- **DOCA Harness** — The resident agent: structured memory, tool calling and rolling summarisation against any OpenAI-compatible provider (Ollama, llama.cpp, OpenAI, Anthropic, Google, Groq, OpenRouter, Mistral, DeepSeek, xAI, Together, Cerebras). Model and generation parameters are set inline from the ⚙ on its row
 - **AI Tools** — Whisper / Faster-Whisper (STT), Kokoro / Piper (TTS), Stable Diffusion / ComfyUI (image) with auto-detection, one-click install (⬇) and per-tool config (⚙)
 - **Inference Services** — Docker-based Whisper STT, Kokoro TTS, vLLM, Stable Diffusion and ComfyUI backends with GPU assignment, image-presence check and one-click pull
 - **System Tools** — Auto-checks 15 dependencies (Node, Docker, Compose, Git, Python, pip, Ollama, ffmpeg, curl, nvidia-smi, huggingface-cli, llama-server…) with ⬇ Install for anything missing and ↻ Update to re-run the installer on anything already present
-- **Agent Chat** — Floating chat panel to talk with the OpenClaw agent (uses Gateway API when enabled, falls back to `claude` CLI); full-screen sheet on phones
+- **Agent Chat** — Floating chat panel wired to the default harness; with an external harness selected it uses the OpenClaw Gateway API when enabled and falls back to the `claude` CLI. Full-screen sheet on phones
+- **Start at Boot** — One toggle in Settings installs DOCA as a systemd service (`./run.sh enable` does the same from a shell), so the panel survives reboots and `⟳ Restart` is handled by a real supervisor
 - **Mobile** — Fully responsive: bottom tab bar on phones (respects tab visibility settings), safe-area/notch support, reflowed tool rows and settings grids, full-screen chat and modals, coarse-pointer touch targets
 
 ## Quick Start
 
 ```bash
-npm install
-npm start
+./run.sh
 ```
 
-The panel runs on **http://localhost:4242** by default.
+`run.sh` installs dependencies on first run, loads a `.env` file if you have one, and starts the
+panel — on **http://localhost:4242** by default. `npm start` does the same thing without the
+first two steps.
+
+To have it come back after a reboot, either tick **Settings → General → Start at Boot** in the
+dashboard or run `./run.sh enable` on the host; both install the same systemd unit.
 
 ## Linking the Chat to OpenClaw Agent
 
-To have the floating chat panel use the OpenClaw Gateway API instead of the `claude` CLI, add this to `~/.openclaw/openclaw.json`:
+Out of the box the chat panel talks to the built-in DOCA Harness. Once you switch the default
+harness to OpenClaw (Controls → **Agent Harnesses**), the panel goes through OpenClaw instead.
+To have it use the OpenClaw Gateway API rather than the `claude` CLI, add this to
+`~/.openclaw/openclaw.json`:
 
 ```json
 {
@@ -95,37 +104,32 @@ services:
 
 ### 3. Running as a systemd service (host install)
 
-```ini
-# /etc/systemd/system/openclaw-panel.service
-[Unit]
-Description=OpenClaw Dashboard
-After=network.target
-# Keep trying forever. With the default start limit (5 attempts in 10s) a brief
-# crash loop makes systemd give up and leaves the dashboard down for good.
-StartLimitIntervalSec=0
-
-[Service]
-WorkingDirectory=/home/youruser/openclaw-dashboard
-ExecStart=/usr/bin/node server.js
-Restart=always
-RestartSec=2
-User=youruser
-Environment=PORT=4242
-Environment=COMPOSE_DIR=/home/youruser/openclaw
-Environment=CONFIG_PATH=/home/youruser/.openclaw/openclaw.json
-Environment=SKILLS_DIR=/home/youruser/.openclaw/workspace/skills
-Environment=WORKSPACE_DIR=/home/youruser/.openclaw/workspace
-Environment=SETUP_DIR=/home/youruser
-Environment=SNAPSHOT_DIR=/path/to/snapshots
-
-[Install]
-WantedBy=multi-user.target
-```
+Tick **Settings → General → Start at Boot**, or on the host:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now openclaw-panel
+./run.sh enable     # write /etc/systemd/system/openclaw-panel.service and enable it
+./run.sh status     # installed? running?
+./run.sh disable    # stop starting at boot (a running panel is left alone)
 ```
+
+Both routes run the same code, so the toggle and the CLI cannot drift apart. The generated unit
+runs `run.sh` as the user who enabled it, with `Restart=always` and `StartLimitIntervalSec=0` —
+without the latter, the default start limit (5 attempts in 10s) lets a brief crash loop take the
+dashboard down for good.
+
+Environment overrides go in a `.env` file next to `server.js`, which `run.sh` loads before
+starting; the unit does not have to repeat them:
+
+```bash
+# .env
+PORT=4242
+COMPOSE_DIR=/home/youruser/openclaw
+CONFIG_PATH=/home/youruser/.openclaw/openclaw.json
+```
+
+Enabling the service does not steal the port from a panel you already started by hand — systemd
+takes over at the next boot, or immediately if you stop that process and
+`sudo systemctl start openclaw-panel`.
 
 `⟳ Restart` in **Settings → Updates** works by exiting the process, so it relies on
 `Restart=always` to bring the panel back — and so does the restart you do after applying an
@@ -135,9 +139,56 @@ reliable: it also recovers the panel after a crash or a reboot.
 
 ---
 
+## Harnesses
+
+A *harness* is whatever agent runtime DOCA hands your prompts to. The **Agent Harnesses** card at
+the top of the Controls page lists one line per harness; exactly one is the default (`●`), and both
+the floating chat panel and the **Harness** tab use it.
+
+- **⬇ Install a harness** opens the full catalog. Installing runs the vendor's own installer
+  (`npm i -g …`, `pipx install …`, a `git clone` + `docker compose` for OpenClaw) and streams the
+  output, asking for a sudo password only when the command needs one.
+- **Add your own harness** — name, command, optional install command — registers anything the
+  catalog does not know about, including your own scripts. Custom harnesses can be deleted; known
+  ones cannot.
+- **⚙** on an external harness sets its launch command, model flag, config file path and extra env
+  vars. **▶ Open** runs it in a PTY on the Harness tab.
+
+### The built-in DOCA Harness
+
+The default on a fresh install, and the one harness that needs nothing installed. It is a plain
+agent loop over any **OpenAI-compatible** `/chat/completions` endpoint — which covers local Ollama
+and llama.cpp servers as well as OpenAI, Anthropic, Google, Groq, OpenRouter, Mistral, DeepSeek,
+xAI, Together and Cerebras. Provider keys come from **Settings → API Keys** (or the matching env
+var), and the model dropdown is populated live from the provider.
+
+**Tools.** `shell`, `read_file`, `write_file`, `list_dir`, `system_status`, `http_fetch`,
+`memory_write`, `memory_search`, `memory_forget`. File access is confined to
+`FM_ALLOWED_ROOTS`, writes leave a `.bak`, and each tool can be switched off individually in ⚙.
+
+**Memory** is structured in three layers, all under `DOCA_DATA_DIR/harness/`:
+
+| Layer | What it holds |
+|---|---|
+| Transcript | Every message and tool result of a conversation, appended to `sessions/<id>.jsonl` |
+| Rolling summary | Once a conversation passes *Summarise after*, the older half is folded into prose notes so the context window stays bounded without losing the thread |
+| Durable memory | Keyword-searchable facts the agent chose to keep (or you added by hand), carried into **every** new conversation |
+
+That last layer is why a fresh conversation still knows how your machine is set up. You can read,
+pin and delete entries from the Memory panel on the Harness tab.
+
+**Parameters** — provider, model, temperature, top-p, max tokens, max tool steps per turn, history
+window, summarise-after threshold and the system prompt — live in `.dashboard-prefs.json` under
+`harness.config.doca` and are editable from ⚙ without restarting anything.
+
+---
+
 ## Environment Variables
 
-Defaults are derived from the current user's home directory (`os.homedir()`, shown below as `~`) so the dashboard is portable across machines. Override any of them via the environment.
+Defaults are derived from the current user's home directory (`os.homedir()`, shown below as `~`) so
+the dashboard is portable across machines. Override any of them via the environment, or put them in
+a `.env` file next to `server.js` — `run.sh` loads that before starting, so a hand start and the
+boot service see the same values.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -151,7 +202,8 @@ Defaults are derived from the current user's home directory (`os.homedir()`, sho
 | `RESTORE_SCRIPT` | `~/restore-agent.sh` | Restore script path |
 | `SNAPSHOT_DIR` | `~/openclaw-snapshots` | Snapshot storage |
 | `OPENCLAW_GATEWAY_URL` | — | Override gateway base URL (e.g. `http://openclaw-gateway:18789` when dashboard runs in Docker) |
-| `DOCA_DATA_DIR` | `<repo>/.doca` | Durable state for the `/api/v1` client layer (devices, outboxes, profiles, media) |
+| `DOCA_DATA_DIR` | `<repo>/.doca` | Durable state for the `/api/v1` client layer (devices, outboxes, profiles, media) and the harness (conversations, memory) |
+| `DOCA_PREFS_FILE` | `<repo>/.dashboard-prefs.json` | Runtime preferences (theme, visible tabs, harness selection and model parameters) |
 | `DOCA_LEGACY_TRUST` | `1` | Allow device pairing and token issuance from the dashboard (Settings → API Keys). Set to `0` to make `npm run token` the only way to mint tokens; the device list stays visible either way |
 | `DOCA_STT_URL` / `DOCA_TTS_URL` | — | Override the voice service URLs saved in the dashboard settings |
 | `DOCA_FONT` | auto-detect | TTF used for text in server-rendered charts/figures |
@@ -189,10 +241,12 @@ Reference clients live in `clients/reference/` (`watch.sh`, `agent-sim.js`).
 ## Project Structure
 
 ```
+run.sh                      Launcher (deps, .env, node server.js) + boot-service verbs
 server.js                   Express orchestrator: wires middleware + routes, starts server
 modules/                    Backend feature modules (one per concern)
   paths.js                  Env-overridable paths + config registry
   utils.js                  run(), SSE helpers, prefs loaders, streamCmd(), detectBinary()
+  store.js                  Durable JSON / JSONL store under DOCA_DATA_DIR (atomic writes)
   https-cert.js             Self-signed / Tailscale cert handling
   controls.js               /api/status (Docker, GPU, CPU/RAM + extended stats), start/stop/restart, logs
   stats.js                  Stats registry (STATS_DEFS) + collectors (disk, net, procs, swap, freq…)
@@ -202,14 +256,20 @@ modules/                    Backend feature modules (one per concern)
   setup.js                  Setup script read / write
   snapshots.js              Snapshot create / restore / settings
   files.js                  File manager (list, read, write, upload, paste…)
-  code-tools.js             Code agent detection / install (9 tools)
-  claude.js                 Claude Code CLI session management
-  chat.js                   Agent chat (Gateway API / claude CLI fallback)
+  chat.js                   Floating chat panel (default harness, Gateway API / claude CLI fallback)
+  harness/                  Agent harnesses
+    catalog.js              Built-in + 14 known + custom harnesses: detect, install, default, config
+    providers.js            OpenAI-compatible provider presets, model listing, default params
+    memory.js               Sessions, transcripts, rolling summaries, durable memory entries
+    tools.js                The 9 tools the built-in harness can call
+    agent.js                The agent loop: prompt assembly, streaming, tool calls, summarisation
+    routes.js               /api/harness/* handlers
   models*.js                Ollama / llama.cpp / HuggingFace / local model managers + AI tools
   system-tools.js           System dependency detection / install (15 tools)
   docker.js                 Docker containers / images / presets
   services.js               Inference service management (incl. image-presence check)
   update.js                 Self-update / restart
+  startup.js                Start at boot — reports and drives run.sh enable/disable
   terminal.js               WebSocket PTY terminals
   api-v1/                   Device-agnostic client API (see PROTOCOL.md)
     router.js               All /api/v1 routes (device + agent side)
@@ -222,7 +282,7 @@ modules/                    Backend feature modules (one per concern)
     openapi.js              OpenAPI 3.1 document built from the registries (served at /api/v1/openapi.json)
 bin/doca-token.js           Token CLI (npm run token)
 clients/reference/          Reference watch client (bash) + agent simulator (Node) + demo
-test/                       node --test suites for the protocol
+test/                       node --test suites for the protocol and the harness
 public/
   index.html                Clean HTML shell
   css/
@@ -233,6 +293,7 @@ public/
     sidebar.css             GPU, CPU/RAM (+ logical cores), containers, models
     config.css              Multi-file editor layout
     files.css               File manager + drag-drop upload
+    harness.css             Harness rows, catalog modal, agent console
     models.css              Model manager views
     terminal.css            Embedded terminal styling
     responsive.css          Breakpoints 1024 / 768 / 480 px
@@ -249,7 +310,7 @@ public/
     setup.js                Setup script editor
     config.js               Multi-file config editor + editable favorites
     files.js                File manager + upload / download / drag-drop
-    claude.js               Code agent tools (install/gear/terminals) + Claude one-shot
+    harness.js              Harness lines + catalog modal + params panel + the agent console
     chat.js                 Floating agent chat panel
     models.js / llamacpp.js Model managers + AI tools card + local model files
     docker.js               Docker manager UI

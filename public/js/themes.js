@@ -359,11 +359,8 @@ function _applyTerminalThemes() {
       if (s.term) s.term.options.theme = xt;
     });
   }
-  if (typeof _codeTerms !== 'undefined') {
-    for (const id of Object.keys(_codeTerms)) {
-      const t = _codeTerms[id];
-      if (t?.term) t.term.options.theme = xt;
-    }
+  if (typeof _harnessTerm !== 'undefined' && _harnessTerm?.term) {
+    _harnessTerm.term.options.theme = xt;
   }
 }
 

@@ -1,0 +1,744 @@
+/* ═══════════════════════════════════════════════════════
+   DOCA PANEL — HARNESSES
+   Controls page: one line per harness (default, install, ⚙ params, custom).
+   Harness tab:   the default harness's workspace — the built-in agent's
+                  console, or an embedded terminal for a CLI harness.
+   ═══════════════════════════════════════════════════════ */
+
+let _harnesses     = [];
+let _harnessDflt   = null;
+let _harnessMeta   = null;   // { providers, tools, defaults } — fetched once
+let _harnessOpenCfg = null;  // id whose ⚙ strip is open
+let _harnessTerm   = null;   // { id, term, fit, ws, ro }
+
+/* ── Controls page: the lines ─────────────────────────── */
+
+async function harnessLoad() {
+  const list = document.getElementById('harness-list');
+  if (!list) return;
+  try {
+    const data   = await apiFetch('/api/harness');
+    _harnesses   = data.harnesses || [];
+    _harnessDflt = data.default;
+    _harnessRender();
+  } catch (e) {
+    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
+  }
+}
+
+/** Metadata for the ⚙ panel (providers, tool switches, defaults). */
+async function _harnessLoadMeta() {
+  if (_harnessMeta) return _harnessMeta;
+  _harnessMeta = await apiFetch('/api/harness/providers');
+  return _harnessMeta;
+}
+
+/**
+ * The main list stays short: the harnesses actually on this machine, plus the
+ * default even when it is missing. Everything else lives behind ⬇ Install.
+ */
+function _harnessRender() {
+  const list = document.getElementById('harness-list');
+  if (!list) return;
+
+  const shown = _harnesses.filter(h => h.detected || h.isDefault || h.kind === 'custom');
+  const label = document.getElementById('harness-default-label');
+  const dflt  = _harnesses.find(h => h.isDefault);
+  if (label) label.textContent = dflt ? `default: ${dflt.label}` : '';
+
+  list.innerHTML = shown.map(_harnessRowHtml).join('')
+    || '<div class="placeholder">No harness detected — use ⬇ Install a harness.</div>';
+
+  if (_harnessOpenCfg && shown.some(h => h.id === _harnessOpenCfg)) harnessConfigToggle(_harnessOpenCfg, true);
+}
+
+function _harnessRowHtml(h) {
+  const id  = h.id;
+  const arg = jsArg(id);
+  const badge = h.detected
+    ? `<span class="tool-version">${escHtml(h.version || 'installed')}</span>`
+    : `<span class="harness-missing">not installed</span>`;
+
+  const actions = [
+    h.isDefault
+      ? '<span class="badge badge-green" style="font-size:9px">default</span>'
+      : `<button class="btn btn-xs" onclick="harnessSetDefault(${arg})" title="Make this the harness DOCA talks to">Use</button>`,
+    h.detected
+      ? `<button class="btn btn-xs btn-green" onclick="harnessOpen(${arg})" title="Open it on the Harness tab">▶ Open</button>`
+      : '',
+    !h.detected && h.canInstall
+      ? `<button class="btn btn-xs btn-teal" onclick="harnessInstall(${arg})">⬇ Install</button>`
+      : '',
+    h.detected && h.canInstall
+      ? `<button class="btn btn-xs" onclick="harnessInstall(${arg})" title="Re-run the installer to update">↻</button>`
+      : '',
+    `<button class="btn btn-xs tool-gear" onclick="harnessConfigToggle(${arg})" title="Model and parameters">⚙</button>`,
+    h.url ? `<a class="tool-repo" href="${escHtml(h.url)}" target="_blank" rel="noopener" title="${escHtml(h.url)}">docs</a>` : '',
+    h.kind === 'custom'
+      ? `<button class="btn btn-xs btn-red" onclick="harnessRemoveCustom(${arg})" title="Remove this custom harness">🗑</button>`
+      : '',
+  ].filter(Boolean).join('');
+
+  return `<div class="harness-row ${h.detected ? 'harness-ok' : 'harness-off'} ${h.isDefault ? 'harness-default' : ''}" id="harness-row-${escHtml(id)}">
+      <span class="harness-dot" title="${h.isDefault ? 'Default harness' : 'Not the default'}">${h.isDefault ? '●' : '○'}</span>
+      <span class="harness-label">${escHtml(h.label)}</span>
+      <span class="harness-vendor">${escHtml(h.vendor || '')}</span>
+      ${badge}
+      <span class="harness-note">${escHtml(h.note || h.cmd || '')}</span>
+      <span class="tool-actions">${actions}</span>
+    </div>
+    <div class="tool-config-strip harness-cfg" id="harness-cfg-${escHtml(id)}" style="display:none"></div>`;
+}
+
+async function harnessSetDefault(id) {
+  const st = document.getElementById('harness-status');
+  try {
+    await apiFetch('/api/harness/default', { method: 'POST', body: { id } });
+    setStatus(st, '✓ Default harness updated', 'ok');
+    await harnessLoad();
+    _harnessConsoleReset();
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}
+
+function harnessInstall(id) {
+  const h = _harnesses.find(x => x.id === id) || _harnessCatalogFind(id);
+  if (!h) return;
+  const run = pw => _harnessRunInstall(id, pw);
+  if (h.needsSudo) sudoAsk(`Installing "${h.label}" requires elevated privileges.`, pw => { if (pw !== null) run(pw); });
+  else run(null);
+}
+
+async function _harnessRunInstall(id, password) {
+  // Output goes to whichever box is on screen: the catalog modal when it is
+  // open, otherwise the Controls card.
+  const inModal = document.getElementById('harness-catalog-overlay')?.style.display !== 'none';
+  const out = document.getElementById(inModal ? 'harness-catalog-out' : 'harness-install-out');
+  showStream(out, '');
+
+  const body = { };
+  if (password !== null && password !== undefined) body.password = password;
+
+  await sseStream(`/api/harness/${encodeURIComponent(id)}/install`, body, {
+    onStatus: text => appendStream(out, text),
+    onDone:   obj => { if (obj.ok) setTimeout(() => { harnessLoad().then(harnessCatalogRender); }, 1200); },
+    onError:  e => appendStream(out, `\nError: ${e.message}`),
+  });
+}
+
+async function harnessAddCustom() {
+  const st    = document.getElementById('harness-status');
+  const label = document.getElementById('harness-new-label');
+  const cmd   = document.getElementById('harness-new-cmd');
+  const inst  = document.getElementById('harness-new-install');
+  if (!label.value.trim() || !cmd.value.trim()) {
+    setStatus(st, 'A name and a command are required.', 'err');
+    return;
+  }
+  try {
+    await apiFetch('/api/harness/custom', { method: 'POST', body: {
+      label: label.value.trim(), cmd: cmd.value.trim(), installCmd: inst.value.trim() || null,
+    } });
+    label.value = cmd.value = inst.value = '';
+    setStatus(st, '✓ Harness added', 'ok');
+    harnessLoad();
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}
+
+function harnessRemoveCustom(id) {
+  const h = _harnesses.find(x => x.id === id);
+  appConfirm(`Remove the custom harness "${h?.label || id}"?`, async () => {
+    try {
+      await apiFetch(`/api/harness/custom/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      harnessLoad();
+    } catch (e) { setStatus(document.getElementById('harness-status'), `✗ ${e.message}`, 'err'); }
+  });
+}
+
+function harnessOpen(id) {
+  if (id !== _harnessDflt) { harnessSetDefault(id).then(() => nav('harness')); return; }
+  nav('harness');
+}
+
+/* ── ⚙ Parameters strip ──────────────────────────────── */
+
+async function harnessConfigToggle(id, keepOpen) {
+  const strip = document.getElementById(`harness-cfg-${id}`);
+  if (!strip) return;
+
+  if (!keepOpen && strip.style.display !== 'none') {
+    strip.style.display = 'none';
+    _harnessOpenCfg = null;
+    return;
+  }
+
+  _harnessOpenCfg = id;
+  strip.style.display = 'flex';
+  strip.innerHTML = '<div class="placeholder pulse" style="padding:4px">Loading…</div>';
+
+  const h = _harnesses.find(x => x.id === id);
+  if (!h) return;
+
+  if (h.kind !== 'builtin') { strip.innerHTML = _harnessExternalCfgHtml(h); return; }
+
+  const meta = await _harnessLoadMeta();
+  strip.innerHTML = _harnessParamsHtml(h, meta);
+  _harnessLoadModels(id, h.config.provider, h.config.model);
+}
+
+/** External harnesses: how to launch them and where their own config lives. */
+function _harnessExternalCfgHtml(h) {
+  const c = h.config || {};
+  return `
+    <div class="harness-cfg-grid">
+      <label>Launch command</label>
+      <input class="input" id="hcfg-launch-${h.id}" value="${escHtml(c.launchCmd || h.cmd || '')}" placeholder="${escHtml(h.cmd || 'command')}">
+      <label>Model</label>
+      <input class="input" id="hcfg-model-${h.id}" value="${escHtml(c.model || '')}" placeholder="passed as --model when set">
+      <label>Config file</label>
+      <div style="display:flex;gap:6px">
+        <input class="input flex1" id="hcfg-path-${h.id}" value="${escHtml(c.configPath || '')}" placeholder="${escHtml(h.configPathHint || '/path/to/config')}">
+        <button class="btn btn-xs" title="Browse" onclick="fpOpen('hcfg-path-${h.id}','file')">📁</button>
+        <button class="btn btn-xs btn-blue" title="Edit in the file manager" onclick="harnessEditConfigFile(${jsArg(h.id)})">✏</button>
+      </div>
+      <label>Environment</label>
+      <textarea class="input" id="hcfg-env-${h.id}" rows="2" placeholder="KEY=VALUE (one per line) — exported before launch">${escHtml(c.env || '')}</textarea>
+    </div>
+    <div class="harness-cfg-actions">
+      <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
+      <span class="status-line" id="hcfg-status-${h.id}"></span>
+    </div>`;
+}
+
+/** The built-in harness: model choice and the generation parameters. */
+function _harnessParamsHtml(h, meta) {
+  const c = h.config || {};
+  const providerOpts = (meta.providers || []).map(p =>
+    `<option value="${escHtml(p.id)}" ${p.id === c.provider ? 'selected' : ''}>
+       ${escHtml(p.label)}${p.hasKey ? '' : ' — no key'}
+     </option>`).join('');
+
+  const toolRows = (meta.tools || []).map(t => `
+    <label class="harness-tool-toggle" title="${escHtml(t.description)}">
+      <input type="checkbox" id="hcfg-tool-${h.id}-${escHtml(t.name)}"
+             ${(c.disabledTools || []).includes(t.name) ? '' : 'checked'}>
+      <span>${escHtml(t.name)}</span>${t.danger ? '<em title="Can change the system">!</em>' : ''}
+    </label>`).join('');
+
+  const num = (key, label, attrs, hint) => `
+      <label title="${escHtml(hint)}">${label}</label>
+      <input class="input" type="number" id="hcfg-${key}-${h.id}" value="${escHtml(c[key])}" ${attrs}>`;
+
+  return `
+    <div class="harness-cfg-grid">
+      <label>Provider</label>
+      <div style="display:flex;gap:6px">
+        <select class="input flex1" id="hcfg-provider-${h.id}" onchange="_harnessLoadModels(${jsArg(h.id)}, this.value)">${providerOpts}</select>
+        <button class="btn btn-xs" onclick="nav('settings'); settingsSubNav('keys')" title="Add an API key">+ key</button>
+      </div>
+      <label>Model</label>
+      <div style="display:flex;gap:6px">
+        <select class="input flex1" id="hcfg-model-select-${h.id}" onchange="document.getElementById('hcfg-model-${h.id}').value=this.value">
+          <option value="">loading…</option>
+        </select>
+        <input class="input flex1" id="hcfg-model-${h.id}" value="${escHtml(c.model || '')}" placeholder="model id">
+      </div>
+      ${num('temperature', 'Temperature', 'min="0" max="2" step="0.05"', 'Higher is more varied, lower is more deterministic.')}
+      ${num('topP', 'Top P', 'min="0" max="1" step="0.05"', 'Nucleus sampling cutoff.')}
+      ${num('maxTokens', 'Max tokens', 'min="0" step="128"', 'Longest reply the model may produce. 0 leaves it to the provider.')}
+      ${num('maxSteps', 'Max tool steps', 'min="1" max="40" step="1"', 'Tool rounds allowed in a single turn before the agent stops.')}
+      ${num('historyTurns', 'History window', 'min="2" max="200" step="2"', 'Messages kept verbatim; older ones fold into the summary.')}
+      ${num('summarizeAfter', 'Summarise after', 'min="0" max="400" step="5"', 'Messages before the older half is summarised. 0 disables it.')}
+      ${num('memoryLimit', 'Memory entries', 'min="0" max="100" step="1"', 'Durable memory entries injected into each turn.')}
+      <label title="Instructions prepended to every conversation.">System prompt</label>
+      <textarea class="input harness-prompt" id="hcfg-systemPrompt-${h.id}" rows="5">${escHtml(c.systemPrompt || '')}</textarea>
+      <label title="Switch off anything this agent should not be able to do.">Tools</label>
+      <div class="harness-tools">${toolRows}</div>
+    </div>
+    <div class="harness-cfg-actions">
+      <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
+      <button class="btn btn-xs" onclick="harnessResetParams(${jsArg(h.id)})" title="Back to the shipped defaults">Defaults</button>
+      <span class="status-line" id="hcfg-status-${h.id}"></span>
+    </div>`;
+}
+
+/** Fill the model dropdown for the selected provider. */
+async function _harnessLoadModels(id, provider, selected) {
+  const sel = document.getElementById(`hcfg-model-select-${id}`);
+  if (!sel) return;
+  sel.innerHTML = '<option value="">loading…</option>';
+  try {
+    const data = await apiFetch(`/api/harness/models?provider=${encodeURIComponent(provider)}`);
+    const cur  = selected ?? document.getElementById(`hcfg-model-${id}`)?.value ?? '';
+    const opts = (data.models || []).map(m =>
+      `<option value="${escHtml(m)}" ${m === cur ? 'selected' : ''}>${escHtml(m)}</option>`);
+    sel.innerHTML = `<option value="">${data.models?.length ? '— pick a model —' : (data.error ? 'unreachable' : 'none found')}</option>${opts.join('')}`;
+    if (data.error) sel.title = data.error;
+  } catch (e) {
+    sel.innerHTML = `<option value="">${escHtml(e.message)}</option>`;
+  }
+}
+
+async function harnessConfigSave(id) {
+  const h  = _harnesses.find(x => x.id === id);
+  const st = document.getElementById(`hcfg-status-${id}`);
+  const val = key => document.getElementById(`hcfg-${key}-${id}`)?.value;
+
+  const body = h?.kind === 'builtin'
+    ? {
+        provider:       val('provider'),
+        model:          (val('model') || '').trim(),
+        temperature:    parseFloat(val('temperature')),
+        topP:           parseFloat(val('topP')),
+        maxTokens:      parseInt(val('maxTokens'), 10) || 0,
+        maxSteps:       parseInt(val('maxSteps'), 10) || 1,
+        historyTurns:   parseInt(val('historyTurns'), 10) || 0,
+        summarizeAfter: parseInt(val('summarizeAfter'), 10) || 0,
+        memoryLimit:    parseInt(val('memoryLimit'), 10) || 0,
+        systemPrompt:   val('systemPrompt') || '',
+        disabledTools:  (_harnessMeta?.tools || [])
+          .filter(t => !document.getElementById(`hcfg-tool-${id}-${t.name}`)?.checked)
+          .map(t => t.name),
+      }
+    : {
+        launchCmd:  (val('launch') || '').trim(),
+        model:      (val('model')  || '').trim(),
+        configPath: (val('path')   || '').trim(),
+        env:        val('env') || '',
+      };
+
+  try {
+    const data = await apiFetch(`/api/harness/${encodeURIComponent(id)}/config`, { method: 'POST', body });
+    if (h) h.config = data.config;
+    setStatus(st, '✓ Saved', 'ok');
+    if (id === _harnessDflt) _harnessConsoleReset();
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}
+
+function harnessResetParams(id) {
+  appConfirm('Reset this harness back to the shipped defaults?', async () => {
+    const meta = await _harnessLoadMeta();
+    try {
+      const data = await apiFetch(`/api/harness/${encodeURIComponent(id)}/config`, { method: 'POST', body: meta.defaults });
+      const h = _harnesses.find(x => x.id === id);
+      if (h) h.config = data.config;
+      harnessConfigToggle(id, true);
+    } catch (e) { setStatus(document.getElementById(`hcfg-status-${id}`), `✗ ${e.message}`, 'err'); }
+  });
+}
+
+function harnessEditConfigFile(id) {
+  const p = document.getElementById(`hcfg-path-${id}`)?.value?.trim();
+  if (!p) { appAlert('Enter a config file path first.'); return; }
+  nav('files');
+  setTimeout(() => {
+    const dir = p.lastIndexOf('/') > 0 ? p.substring(0, p.lastIndexOf('/')) : '/';
+    fmNavigate(dir);
+    setTimeout(() => fmOpenEditor(p), 400);
+  }, 200);
+}
+
+/* ── Catalog modal: install anything DOCA knows ───────── */
+
+function _harnessCatalogFind(id) { return _harnesses.find(h => h.id === id); }
+
+function harnessCatalogOpen() {
+  document.getElementById('harness-catalog-overlay').style.display = 'flex';
+  document.getElementById('harness-catalog-out').style.display = 'none';
+  harnessCatalogRender();
+  if (!_harnesses.length) harnessLoad();
+}
+
+function harnessCatalogClose(event) {
+  if (event && event.target !== event.currentTarget) return;
+  document.getElementById('harness-catalog-overlay').style.display = 'none';
+}
+
+function harnessCatalogRender() {
+  const list = document.getElementById('harness-catalog-list');
+  if (!list) return;
+  const q = (document.getElementById('harness-catalog-filter')?.value || '').toLowerCase();
+  const rows = _harnesses.filter(h =>
+    !q || `${h.label} ${h.vendor} ${h.id}`.toLowerCase().includes(q));
+
+  list.innerHTML = rows.map(h => `
+    <div class="harness-cat-row">
+      <span class="harness-cat-status" style="color:${h.detected ? 'var(--green)' : 'var(--muted)'}">${h.detected ? '✓' : '○'}</span>
+      <span class="harness-label">${escHtml(h.label)}</span>
+      <span class="harness-vendor">${escHtml(h.vendor || '')}</span>
+      <span class="harness-note">${escHtml(h.detected ? (h.version || 'installed') : (h.note || h.cmd || ''))}</span>
+      <span class="tool-actions">
+        ${h.canInstall
+          ? `<button class="btn btn-xs ${h.detected ? '' : 'btn-teal'}" onclick="harnessInstall(${jsArg(h.id)})">${h.detected ? '↻ Update' : '⬇ Install'}</button>`
+          : '<span class="tool-manual">manual install</span>'}
+        ${h.isDefault ? '' : `<button class="btn btn-xs" onclick="harnessSetDefault(${jsArg(h.id)})">Use</button>`}
+        ${h.url ? `<a class="tool-repo" href="${escHtml(h.url)}" target="_blank" rel="noopener">docs</a>` : ''}
+      </span>
+    </div>`).join('') || '<div class="placeholder">Nothing matches that filter.</div>';
+}
+
+/* ═══════════════════════════════════════════════════════
+   HARNESS TAB — the default harness's workspace
+   ═══════════════════════════════════════════════════════ */
+
+let _hcSession  = null;
+let _hcBusy     = false;
+let _hcRendered = null;   // harness id the shell is currently built for
+
+function harnessTabInit() {
+  if (!_harnesses.length) harnessLoad().then(_harnessConsoleBuild);
+  else _harnessConsoleBuild();
+}
+
+function _harnessConsoleReset() {
+  _hcRendered = null;
+  _harnessTermClose();
+  if (currentTab === 'harness') _harnessConsoleBuild();
+}
+
+function _harnessConsoleBuild() {
+  const shell = document.getElementById('harness-console-shell');
+  if (!shell) return;
+  const h = _harnesses.find(x => x.isDefault);
+  if (!h) { shell.innerHTML = '<div class="placeholder">No harness selected — pick one on the Controls page.</div>'; return; }
+  if (_hcRendered === h.id) return;
+  _hcRendered = h.id;
+
+  shell.innerHTML = h.kind === 'builtin' ? _hcBuiltinHtml(h) : _hcExternalHtml(h);
+  if (h.kind === 'builtin') { _hcLoadSessions(); _hcLoadMemory(); _hcStatus(); }
+  else requestAnimationFrame(() => _harnessTermOpen(h));
+}
+
+/* ── Built-in harness console ─────────────────────────── */
+
+function _hcBuiltinHtml(h) {
+  return `
+    <div class="hc-layout">
+      <div class="hc-side">
+        <div class="hc-side-head">
+          Conversations
+          <button class="btn btn-xs btn-blue" onclick="hcNewSession()" title="Start a new conversation">+</button>
+        </div>
+        <div id="hc-sessions" class="hc-sessions"><div class="placeholder">Loading…</div></div>
+        <div class="hc-side-head" style="margin-top:10px">
+          Memory
+          <button class="btn btn-xs" onclick="_hcLoadMemory()" title="Refresh">↺</button>
+        </div>
+        <div class="hc-memory-add">
+          <input class="input" id="hc-mem-key" placeholder="key" onkeydown="if(event.key==='Enter') hcMemWrite()">
+          <input class="input" id="hc-mem-value" placeholder="what to remember" onkeydown="if(event.key==='Enter') hcMemWrite()">
+          <button class="btn btn-xs btn-blue" onclick="hcMemWrite()">+</button>
+        </div>
+        <div id="hc-memory" class="hc-memory"><div class="placeholder">Loading…</div></div>
+      </div>
+
+      <div class="hc-main">
+        <div class="hc-head">
+          <span class="hc-title">${escHtml(h.label)}</span>
+          <span class="badge badge-blue" id="hc-model-badge" style="font-size:9px">…</span>
+          <span class="status-line" id="hc-status"></span>
+          <div class="toolbar-right">
+            <button class="btn btn-xs tool-gear" onclick="nav('controls'); harnessConfigToggle(${jsArg(h.id)}, true)" title="Model and parameters">⚙</button>
+          </div>
+        </div>
+        <div class="hc-messages" id="hc-messages"><div class="placeholder">Ask it anything about this machine.</div></div>
+        <div class="hc-input-row">
+          <span class="hc-caret">❯</span>
+          <textarea class="input flex1 hc-input" id="hc-input" rows="1" placeholder="Message the harness…"
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();hcSend();}"></textarea>
+          <button class="btn btn-sm btn-amber" id="hc-send" onclick="hcSend()">Send</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function _hcStatus() {
+  const badge = document.getElementById('hc-model-badge');
+  const st    = document.getElementById('hc-status');
+  try {
+    const s = await apiFetch('/api/harness/status');
+    if (badge) {
+      badge.textContent = s.model ? `${s.provider} / ${s.model}` : `${s.provider} / no model`;
+      badge.className = `badge ${s.ready && s.reachable ? 'badge-green' : s.ready ? 'badge-amber' : 'badge-red'}`;
+    }
+    if (!s.ready)          setStatus(st, 'Pick a model with ⚙ before sending.', 'warn');
+    else if (!s.reachable) setStatus(st, `Provider unreachable — ${s.error || 'no response'}`, 'warn');
+    else                   setStatus(st, '', '');
+  } catch (e) {
+    if (badge) { badge.textContent = 'error'; badge.className = 'badge badge-red'; }
+    setStatus(st, e.message, 'err');
+  }
+}
+
+async function _hcLoadSessions() {
+  const el = document.getElementById('hc-sessions');
+  if (!el) return;
+  try {
+    const data = await apiFetch('/api/harness/sessions');
+    _hcSession = data.active || data.sessions[0]?.id || null;
+    el.innerHTML = data.sessions.map(s => `
+      <div class="hc-session ${s.id === _hcSession ? 'active' : ''}" data-session="${escHtml(s.id)}"
+           onclick="hcOpenSession(${jsArg(s.id)})">
+        <span class="hc-session-title" title="${escHtml(s.title)}">${escHtml(s.title)}</span>
+        <span class="hc-session-meta">${s.count}${s.summary ? ' ∙ ⊟' : ''}</span>
+        <button class="btn btn-xs btn-red" onclick="event.stopPropagation(); hcDeleteSession(${jsArg(s.id)})" title="Delete">✕</button>
+      </div>`).join('') || '<div class="placeholder">No conversations yet</div>';
+    if (_hcSession) hcOpenSession(_hcSession, true);
+  } catch (e) {
+    el.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
+  }
+}
+
+async function hcNewSession() {
+  try {
+    const { session } = await apiFetch('/api/harness/sessions', { method: 'POST', body: {} });
+    _hcSession = session.id;
+    await _hcLoadSessions();
+  } catch (e) { appAlert(e.message); }
+}
+
+async function hcOpenSession(id, skipReload) {
+  _hcSession = id;
+  const box = document.getElementById('hc-messages');
+  if (!box) return;
+  try {
+    if (!skipReload) await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}/activate`, { method: 'POST' });
+    const data = await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}`);
+    box.innerHTML = '';
+    if (data.session.summary) _hcAppend('summary', data.session.summary, 'Earlier in this conversation');
+    data.messages.forEach(m => {
+      if (m.role === 'tool') _hcAppend('tool-result', m.content, m.name);
+      else if (m.role === 'assistant' && m.tool_calls?.length && !m.content)
+        m.tool_calls.forEach(tc => _hcAppend('tool-call', tc.function?.arguments || '', tc.function?.name));
+      else if (m.content) _hcAppend(m.role, m.content);
+    });
+    if (!box.children.length) box.innerHTML = '<div class="placeholder">Ask it anything about this machine.</div>';
+    document.querySelectorAll('#hc-sessions .hc-session').forEach(el =>
+      el.classList.toggle('active', el.dataset.session === id));
+  } catch (e) { box.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; }
+}
+
+function hcDeleteSession(id) {
+  appConfirm('Delete this conversation and its transcript?', async () => {
+    try {
+      await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (_hcSession === id) _hcSession = null;
+      _hcLoadSessions();
+    } catch (e) { appAlert(e.message); }
+  });
+}
+
+/**
+ * One bubble in the transcript. `kind` is a message role or one of the
+ * harness-specific kinds (tool-call, tool-result, summary, error).
+ */
+function _hcAppend(kind, text, label) {
+  const box = document.getElementById('hc-messages');
+  if (!box) return null;
+  box.querySelector('.placeholder')?.remove();
+
+  const el = document.createElement('div');
+  el.className = `hc-msg hc-${kind}`;
+  if (label) {
+    const tag = document.createElement('span');
+    tag.className = 'hc-msg-tag';
+    tag.textContent = label;
+    el.appendChild(tag);
+  }
+  const body = document.createElement('span');
+  body.className = 'hc-msg-body';
+  body.textContent = text;
+  el.appendChild(body);
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+  return body;
+}
+
+async function hcSend() {
+  const input = document.getElementById('hc-input');
+  const btn   = document.getElementById('hc-send');
+  const text  = input?.value.trim();
+  if (!text || _hcBusy) return;
+
+  _hcBusy = true;
+  input.value = '';
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  _hcAppend('user', text);
+
+  let target = null;   // current assistant bubble
+  await sseStream('/api/harness/chat', { message: text, sessionId: _hcSession }, {
+    onEvent: evt => {
+      if (evt.type === 'session') _hcSession = evt.sessionId;
+      if (evt.type === 'text') {
+        if (!target) target = _hcAppend('assistant', '');
+        target.textContent += evt.text;
+        const box = document.getElementById('hc-messages');
+        if (box) box.scrollTop = box.scrollHeight;
+      }
+      if (evt.type === 'tool_call') {
+        target = null;
+        _hcAppend('tool-call', JSON.stringify(evt.args), evt.name);
+      }
+      if (evt.type === 'tool_result') _hcAppend('tool-result', evt.result, evt.name);
+      if (evt.type === 'error')       _hcAppend('error', evt.text, 'error');
+    },
+    onError: e => _hcAppend('error', e.message, 'error'),
+  });
+
+  _hcBusy = false;
+  if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
+  _hcLoadSessions();
+  _hcLoadMemory();
+  input?.focus();
+}
+
+async function _hcLoadMemory() {
+  const el = document.getElementById('hc-memory');
+  if (!el) return;
+  try {
+    const { entries } = await apiFetch('/api/harness/memory');
+    el.innerHTML = entries.map(e => `
+      <div class="hc-mem ${e.pinned ? 'pinned' : ''}" title="${escHtml(e.value)}">
+        <span class="hc-mem-key">${e.pinned ? '📌 ' : ''}${escHtml(e.key)}</span>
+        <span class="hc-mem-val">${escHtml(e.value)}</span>
+        <button class="btn btn-xs btn-red" onclick="hcMemForget(${jsArg(e.key)})" title="Forget">✕</button>
+      </div>`).join('') || '<div class="placeholder">Nothing remembered yet</div>';
+  } catch (e) {
+    el.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
+  }
+}
+
+async function hcMemWrite() {
+  const key = document.getElementById('hc-mem-key');
+  const val = document.getElementById('hc-mem-value');
+  if (!key?.value.trim() || !val?.value.trim()) return;
+  try {
+    await apiFetch('/api/harness/memory', { method: 'POST', body: { key: key.value.trim(), value: val.value.trim() } });
+    key.value = val.value = '';
+    _hcLoadMemory();
+  } catch (e) { appAlert(e.message); }
+}
+
+function hcMemForget(key) {
+  appConfirm(`Forget "${key}"?`, async () => {
+    try {
+      await apiFetch(`/api/harness/memory/${encodeURIComponent(key)}`, { method: 'DELETE' });
+      _hcLoadMemory();
+    } catch (e) { appAlert(e.message); }
+  });
+}
+
+/* ── External harness: an embedded terminal ───────────── */
+
+function _hcExternalHtml(h) {
+  const cmd = h.config?.launchCmd || h.cmd || '';
+  return `
+    <div class="card" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <div class="hc-head">
+        <span class="hc-title">${escHtml(h.label)}</span>
+        <span class="badge ${h.detected ? 'badge-green' : 'badge-red'}" style="font-size:9px">${escHtml(h.detected ? (h.version || 'installed') : 'not installed')}</span>
+        <div class="toolbar-right">
+          <button class="btn btn-xs btn-green" onclick="harnessTermLaunch()" ${h.detected ? '' : 'disabled'}>▶ Launch</button>
+          <span class="hc-term-status" id="harness-term-status">○ ready</span>
+          <button class="btn btn-xs tool-gear" onclick="nav('controls'); harnessConfigToggle(${jsArg(h.id)}, true)" title="Launch command and config">⚙</button>
+        </div>
+      </div>
+      <p class="hc-term-hint">Runs <code>${escHtml(cmd || '(no launch command set)')}</code> in a shell on the host.
+        ${h.kind === 'stack' ? 'Start and stop the stack itself from the Controls page.' : ''}</p>
+      <div class="hc-term" id="harness-term"></div>
+    </div>`;
+}
+
+function _harnessTermOpen(h) {
+  const container = document.getElementById('harness-term');
+  if (!container || _harnessTerm) return;
+
+  if (typeof Terminal === 'undefined') {
+    container.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--muted)">xterm.js not loaded</div>';
+    return;
+  }
+
+  const term = new Terminal({
+    cursorBlink: true,
+    fontSize: 12,
+    fontFamily: '"IBM Plex Mono", "Cascadia Code", "Fira Code", monospace',
+    scrollback: 4000,
+    theme: typeof getTerminalTheme === 'function' ? getTerminalTheme()
+      : { background: '#0d1117', foreground: '#c9d1d9', cursor: '#58a6ff' },
+  });
+  const fit = new FitAddon.FitAddon();
+  term.loadAddon(fit);
+  term.open(container);
+  requestAnimationFrame(() => { try { fit.fit(); } catch {} });
+
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = new WebSocket(`${proto}//${location.host}/ws/harness?id=${encodeURIComponent(h.id)}`);
+  _harnessTerm = { id: h.id, term, fit, ws };
+
+  const statusEl = document.getElementById('harness-term-status');
+  const setSt = (txt, color) => { if (statusEl) { statusEl.textContent = txt; statusEl.style.color = color; } };
+  setSt('○ connecting…', 'var(--muted)');
+
+  let opened = false;
+  ws.onopen = () => {
+    opened = true;
+    setSt('● connected', 'var(--green)');
+    try { fit.fit(); } catch {}
+    ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+  };
+  ws.onmessage = e => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'output') term.write(msg.data);
+      if (msg.type === 'exit') {
+        term.writeln('\r\n\x1b[33m[session ended]\x1b[0m');
+        setSt('○ disconnected', 'var(--red)');
+      }
+    } catch {}
+  };
+  ws.onclose = () => setSt('○ disconnected', 'var(--red)');
+  ws.onerror = () => {
+    if (!opened) { setSt('✗ node-pty missing', 'var(--red)'); ptyErrorBanner(container); }
+    else term.writeln('\r\n\x1b[31m[connection error]\x1b[0m\r\n');
+  };
+  term.onData(d => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'input', data: d })); });
+
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => {
+      if (!_harnessTerm) return;
+      try {
+        _harnessTerm.fit.fit();
+        if (_harnessTerm.ws?.readyState === WebSocket.OPEN)
+          _harnessTerm.ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+      } catch {}
+    });
+    ro.observe(container);
+    _harnessTerm.ro = ro;
+  }
+}
+
+/** Type the harness's launch command (with its env and model) into the shell. */
+function harnessTermLaunch() {
+  const h = _harnesses.find(x => x.isDefault);
+  if (!h) return;
+  if (!_harnessTerm || _harnessTerm.ws?.readyState !== WebSocket.OPEN) {
+    _harnessTermClose();
+    _harnessTermOpen(h);
+    setTimeout(harnessTermLaunch, 600);
+    return;
+  }
+  const cfg = h.config || {};
+  const env = (cfg.env || '').split('\n').map(l => l.trim())
+    .filter(l => l && !l.startsWith('#') && l.includes('='))
+    .map(l => `export ${l}`);
+  const cmd = [cfg.launchCmd || h.cmd, cfg.model ? `--model ${cfg.model}` : ''].filter(Boolean).join(' ');
+  _harnessTerm.ws.send(JSON.stringify({ type: 'input', data: [...env, cmd].join('\n') + '\n' }));
+}
+
+function _harnessTermClose() {
+  if (!_harnessTerm) return;
+  const t = _harnessTerm;
+  _harnessTerm = null;
+  if (t.ro)   { try { t.ro.disconnect(); } catch {} }
+  if (t.ws)   { try { t.ws.close(); } catch {} }
+  if (t.term) { try { t.term.dispose(); } catch {} }
+}

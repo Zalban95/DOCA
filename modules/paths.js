@@ -16,8 +16,9 @@ const RESTORE_SCRIPT  = process.env.RESTORE_SCRIPT  || path.join(HOME, 'restore-
 const SNAPSHOT_DIR    = process.env.SNAPSHOT_DIR    || path.join(HOME, 'openclaw-snapshots');
 const PORT            = process.env.PORT            || 4242;
 
-// Prefs stored next to the server entry point
-const PREFS_FILE = path.join(__dirname, '..', '.dashboard-prefs.json');
+// Prefs stored next to the server entry point (overridable so tests and
+// throwaway instances do not read-modify-write the real dashboard's prefs)
+const PREFS_FILE = process.env.DOCA_PREFS_FILE || path.join(__dirname, '..', '.dashboard-prefs.json');
 
 // Self-signed certificate directory
 const CERTS_DIR = path.join(__dirname, '..', '.certs');

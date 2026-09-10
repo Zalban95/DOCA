@@ -17,6 +17,12 @@ function run(cmd, cwd) {
   });
 }
 
+/** Expand `${VAR}` references in a config string from process.env. */
+function resolveEnvVars(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/\$\{([^}]+)\}/g, (_, name) => process.env[name] ?? '');
+}
+
 /** Set standard SSE headers on an Express response. */
 function sseHeaders(res) {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -39,6 +45,8 @@ function loadPrefs() {
 
 /** Persist dashboard preferences to disk. */
 function savePrefs(data) {
+  // DOCA_PREFS_FILE can point anywhere, including a directory nobody made yet.
+  fs.mkdirSync(path.dirname(PREFS_FILE), { recursive: true });
   fs.writeFileSync(PREFS_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
@@ -56,7 +64,7 @@ function saveModelsPrefs(models) {
 
 /**
  * Run a shell command and stream its output to the client as SSE.
- * Shared install/command runner used by system-tools, code-tools,
+ * Shared install/command runner used by system-tools, the harness catalog,
  * models-local and models tool installs.
  *
  * Emits `{status}` chunks and a final `{done, ok, status}` event.
@@ -172,6 +180,7 @@ function detectBinary(cmd) {
 
 module.exports = {
   run,
+  resolveEnvVars,
   sseHeaders,
   fmSafe,
   loadPrefs,
