@@ -29,8 +29,11 @@ Web-based control panel for managing the **OpenClaw** AI agent stack.
 ```
 
 `run.sh` installs dependencies on first run, loads a `.env` file if you have one, and starts the
-panel — on **http://localhost:4242** by default. `npm start` does the same thing without the
-first two steps.
+panel — on **http://localhost:4242** by default.
+
+On Windows, or anywhere without a POSIX shell, use `npm install` then `npm start` instead: that is
+all `run.sh` ultimately does. Note that the panel manages Docker, systemd and a set of Unix CLIs,
+so Windows is a fine place to develop it but not to run it in earnest.
 
 To have it come back after a reboot, either tick **Settings → General → Start at Boot** in the
 dashboard or run `./run.sh enable` on the host; both install the same systemd unit.
