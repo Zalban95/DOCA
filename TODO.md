@@ -1,0 +1,53 @@
+# TODO
+
+Known rough edges, deliberately deferred. Each one is small and independent —
+none of them break anything today.
+
+## Settings consistency
+
+- **Status lines clear on four different schedules.** `3000ms` is the de facto
+  convention (`public/js/snapshots.js:122`, `files.js:497`, `models.js:76`),
+  but `setup.js:52` uses `4000`, `llamacpp.js:264` uses `5000`, and most panels
+  never clear at all. Pick one rule — probably "success fades, errors stay" —
+  and put it behind an option on `setStatus()` instead of a `setTimeout` per
+  call site.
+
+- **"Restart to apply" is worded differently everywhere it appears.**
+  `keys.js:49` says "restart OpenClaw", `paths.js:77` says "restart DOCA",
+  `settings.js:403` says "Restart the server". The first one means the external
+  stack and the other two mean this process, which is a real distinction worth
+  making with consistent words rather than three phrasings.
+
+- **Shell scripts are editable in two places:** the Setup panel (which lists all
+  four, creates missing ones, and can run them) and the Config tab's file list.
+  This is tolerable because the Config tab is a generic editor that can open any
+  path via favourites, but note that `setup-phase2.sh` appears in the Setup panel
+  and in `ALLOWED_SCRIPTS` while being absent from `CONFIG_REGISTRY`. Either
+  decide the Config tab does not list scripts, or list all of them.
+
+## Errors that surface as the wrong thing
+
+- **`modules/files.js:79`** `statSync` on a custom config favourite whose file
+  was moved or deleted throws ENOENT, which the handler turns into a 500. The
+  user sees a server error for what is really "that file is gone" — the same
+  class of problem that produced the `keys.js` ENOENT bug.
+
+- **Device rotate/revoke (`public/js/devices.js`) and skill toggles report
+  failures through `appAlert()` only.** Not silent, but a modal for a failed
+  toggle is heavier than the inline status line those cards already have.
+
+## Settings that exist only as environment variables
+
+These are documented in the README but have no UI, unlike the eight paths in
+Settings → System:
+
+| Variable | Why it is still env-only |
+| --- | --- |
+| `PORT` | Changing it from the page would drop the page. Needs a "restart on :NNNN" flow, not a text box. |
+| `DOCA_DATA_DIR`, `DOCA_PREFS_FILE` | Moving these relocates the prefs file the UI writes to, so a bad value locks you out. Wants a migrate-and-verify step. |
+| `DOCA_LEGACY_TRUST` | Security-relevant; deliberately not a checkbox. |
+| `OPENCLAW_GATEWAY_URL` | Reasonable candidate for the Paths card treatment. |
+| `DOCA_FONT` | Cosmetic; belongs with the theme controls if it is ever surfaced. |
+
+`DOCA_STT_URL` / `DOCA_TTS_URL` are the inverse case: they override the Voice
+card rather than defaulting it, which the card now states.
