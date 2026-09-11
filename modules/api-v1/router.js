@@ -178,6 +178,50 @@ router.patch('/devices/:id/vars', wrap(async (req, res) => {
   res.json({ deviceId: id, ...r });
 }));
 
+// ─── The MCP server this device hosts ───────────────────────────────────────
+
+/**
+ * A client that hosts its own MCP server can see and correct *its own* entry,
+ * and nothing else. It cannot list other servers, cannot create one, and cannot
+ * turn a definition into a command — `mcpServers` holds something that gets
+ * spawned, so a client able to write one freely would be a way to run code on
+ * this host. Managing the registry stays where it is: the dashboard.
+ *
+ * What this does buy is the case that actually breaks. A client whose URL
+ * carries a secret regenerates it on restart, and until now that left a dead
+ * row nobody could fix but a human with a clipboard.
+ */
+const mcpSelf = require('../mcp/registry');
+
+router.get('/mcp/self', requireScope('mcp:self'), (req, res) => {
+  const spec = mcpSelf.forDevice(req.device.id);
+  if (!spec) return sendError(res, 404, 'not_found', 'No MCP server on this host is pointed at this device. Add one from the dashboard with "Runs on → a paired client".');
+  const s = mcpSelf.status(spec);
+  res.json({ server: { id: s.id, label: s.label, transport: s.transport, url: s.url, headers: s.headers, autostart: s.autostart, state: s.state, error: s.error, toolCount: s.toolCount } });
+});
+
+/**
+ * Offer the server this device hosts, instead of a human copying a URL between
+ * two machines. This writes nothing into the registry: it queues a card in the
+ * dashboard, and a click is what creates the definition.
+ */
+router.post('/mcp/offer', requireScope('mcp:self'), wrap(async (req, res) => {
+  try {
+    res.status(202).json({ offer: require('../mcp/offers').offer(req.device.id, req.device.name, req.body || {}) });
+  } catch (e) {
+    throw new ApiError(e.status || 400, e.status === 429 ? 'rate_limited' : 'invalid_request', e.message);
+  }
+}));
+
+router.patch('/mcp/self', requireScope('mcp:self'), wrap(async (req, res) => {
+  let spec;
+  try { spec = mcpSelf.updateFromDevice(req.device.id, req.body); }
+  catch (e) { throw new ApiError(e.status || 400, 'invalid_request', e.message); }
+  if (!spec) throw new ApiError(404, 'not_found', 'No MCP server on this host is pointed at this device');
+  const s = mcpSelf.status(spec);
+  res.json({ server: { id: s.id, label: s.label, transport: s.transport, url: s.url, headers: s.headers, state: s.state } });
+}));
+
 // ─── Sensors (device side) ──────────────────────────────────────────────────
 
 router.get('/devices/:id/sensors', (req, res) => {

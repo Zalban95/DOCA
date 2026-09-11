@@ -33,6 +33,12 @@ function available() {
     const c = registry.client(spec.id);
     if (c?.state !== 'running') continue;
 
+    // Once per server, not once per tool: this runs on every step of every turn.
+    const onClient   = spec.origin?.kind === 'client';
+    const originName = onClient
+      ? (registry.originDevice(spec.origin)?.name || spec.origin.deviceId)
+      : null;
+
     for (const t of c.tools) {
       let exposed = `${PREFIX}${SEP}${safe(spec.id)}${SEP}${safe(t.name)}`.slice(0, MAX_NAME);
       // Truncation (or two servers with lookalike ids) can collide; keep every
@@ -47,7 +53,8 @@ function available() {
         exposed,
         server:      spec.id,
         serverLabel: spec.label || spec.id,
-        origin:      spec.origin?.kind === 'client' ? 'client' : 'server',
+        origin:      onClient ? 'client' : 'server',
+        originLabel: originName,
         tool:        t.name,
         description: t.description,
         schema:      t.inputSchema,
@@ -69,22 +76,50 @@ function describe() {
     // Which machine the call lands on. A tool that reaches somebody's desktop
     // is worth telling apart from one that runs beside the panel.
     origin:      t.origin,
+    originLabel: t.originLabel,
   }));
+}
+
+/**
+ * Which machine a tool acts on, written for the model rather than for a person.
+ *
+ * The environment block already lists the servers and where they run, but that
+ * is one line far from the point of decision: when the model picks between two
+ * tools called `screenshot` it is reading *these* descriptions. Saying "on my
+ * PC" has to be answerable from here, or it is answerable only by luck.
+ *
+ * Only added once some tool actually reaches a client. With everything on the
+ * host there is nothing to disambiguate and the sentence would be per-tool
+ * noise in a prompt rebuilt on every step. Note the trigger is *any* client
+ * tool, not a mix of both: the built-in `shell` and `read_file` are always on
+ * the host, so one client server is already an ambiguity even when it is the
+ * only MCP server there is.
+ */
+function machineNote(t) {
+  return t.origin === 'client'
+    ? `Runs on "${t.originLabel}", a separate machine paired to DOCA. It acts on that machine — its files, screen and programs — not on the DOCA host.`
+    : 'Runs on the DOCA host itself, the machine this dashboard and your shell tool are on.';
 }
 
 /** Tool declarations for the model, minus anything switched off. */
 function schemas(disabled = []) {
-  return available()
+  const all       = available();
+  const anyClient = all.some(t => t.origin === 'client');
+
+  return all
     .filter(t => !disabled.includes(t.exposed))
-    .map(t => ({
-      type: 'function',
-      function: {
-        name:        t.exposed,
-        description: t.description || `${t.tool} (via the ${t.serverLabel} MCP server)`,
-        // A server may omit `type`, which some providers reject outright.
-        parameters:  { type: 'object', properties: {}, ...t.schema },
-      },
-    }));
+    .map(t => {
+      const own = t.description || `${t.tool} (via the ${t.serverLabel} MCP server)`;
+      return {
+        type: 'function',
+        function: {
+          name:        t.exposed,
+          description: anyClient ? `${own}\n\n${machineNote(t)}` : own,
+          // A server may omit `type`, which some providers reject outright.
+          parameters:  { type: 'object', properties: {}, ...t.schema },
+        },
+      };
+    });
 }
 
 function isMcpTool(name) {

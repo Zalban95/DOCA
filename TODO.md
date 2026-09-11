@@ -13,36 +13,43 @@ none of them break anything today.
   `virt-install` / `VBoxManage createvm` and their disk, ISO and network
   arguments — worth doing, but not while the panel could not yet start a VM.
 
-- **MCP HTTP transport is best-effort.** `modules/mcp/client.js` implements
-  streamable HTTP well enough for a server that answers a POST with JSON or a
-  single SSE frame, and it echoes `Mcp-Session-Id`. It does not hold a
-  long-lived event stream open, so a server that pushes notifications (tool
-  list changes, sampling requests) will not be heard. stdio is the tested path.
+- **MCP HTTP transport does not hold a stream open.** `modules/mcp/client.js`
+  answers the request/reply half of streamable HTTP — a POST returning JSON or a
+  single SSE frame, echoing `Mcp-Session-Id` — and that path is now covered by
+  `test/fixtures/mcp-http-server.js` in both framings. What is still missing is a
+  long-lived event stream, so a server that pushes notifications
+  (`notifications/tools/list_changed`, sampling requests) will not be heard;
+  `↺ Tools` is the manual stand-in.
 
-- **MCP servers are not reachable from the `/api/v1` client layer** — no phone
-  or watch can list or call them, and no client can register one. Only the
-  built-in harness sees their tools. A client that hosts its own MCP server
-  (`DocaDesk`) therefore publishes a URL for a human to paste into the MCP tab,
-  which is on purpose: `POST /api/mcp` is unauthenticated to any tailnet peer
-  and `mcpServers` holds a command that gets spawned, so a self-registering
-  client would be an unauthenticated path to running code on this host. Adding
-  `/api/v1` MCP routes means designing that authorisation first, not exposing
-  the legacy handler.
+- **The MCP registry is still panel-only.** A client can now read, re-address and
+  offer *its own* server (`GET`/`PATCH /api/v1/mcp/self`, `POST /api/v1/mcp/offer`,
+  scope `mcp:self`, PROTOCOL §22), but nobody can list, create, delete or start a
+  definition over `/api/v1` — including the ones a phone might reasonably want to
+  see. That is deliberate, not an oversight: `POST /api/mcp` is unauthenticated to
+  any tailnet peer and `mcpServers` holds a command that gets spawned, so the
+  authorisation has to be designed before the surface is widened. The self-only
+  routes are the shape that was safe to add, because `origin.deviceId` already
+  records a human's decision about which machine owns the row.
 
-- **The MCP add-server form has no `headers` field.** `registry.normalize()`
-  accepts `headers` and `client.js` sends them, but the only way to set one is
-  the API. A client-hosted server therefore cannot be given an
-  `Authorization` header from the UI and has to put its secret in the URL
-  instead (see `DocaDesk`'s brief §5.5). One textarea in the http section of the
-  form fixes it.
+- **The MCP add-server form still has no `headers` field.** `registry.normalize()`
+  accepts `headers`, `client.js` sends them, and a client can now set its own
+  through `offer` / `PATCH /mcp/self` — but there is no way to type one in the
+  dashboard, so a server the *user* adds by hand still cannot be given an
+  `Authorization` header. One textarea in the http section of the form fixes it.
 
-- **`origin` names the machine, it does not reach it.** A definition now carries
-  `origin: { kind, deviceId }` so the panel and the agent can tell a
-  client-hosted server from a local one, but nothing verifies that the URL
-  actually belongs to that device, and revoking the device does not stop the
-  server — the row just starts saying "(revoked)". Both are fine while this is a
-  label for a human's benefit; neither is fine if `origin` ever becomes a
-  permission.
+- **`origin` names the machine, it does not reach it.** A definition carries
+  `origin: { kind, deviceId }`, the agent is told per tool which machine a call
+  lands on, and the dashboard can ask a client to start its listener
+  (`mcp.listener`). But nothing verifies that the URL actually belongs to that
+  device, and revoking the device does not stop the server — the row just starts
+  saying "(revoked)", and `mcp:self` keeps working until the token dies. Fine
+  while this is a label plus a convenience; not fine if `origin` ever becomes a
+  permission boundary.
+
+- **`mcp.listener` is fire-and-forget.** The dashboard says "asked", and it means
+  it: there is no reply, no ack and no timeout, so a client that refuses on
+  consent grounds is indistinguishable from one that never received the event.
+  Reporting back would want the prompt machinery rather than a bare event.
 
 - **VMs are local-only, and client-hosted VMs are deferred.** `modules/vms.js`
   shells out to `virsh` and `VBoxManage` on this host, with one global

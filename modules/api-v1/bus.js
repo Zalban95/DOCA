@@ -42,6 +42,10 @@ const TYPES = {
   'artifact.deliver': { cls: 'durable', ttlSec: L.DEFAULT_EVENT_TTL_SEC },
   'sensor.request':   { cls: 'durable', ttlSec: 600 },
   'sensor.stop':      { cls: 'durable', ttlSec: 600 },
+  // Short-lived on purpose: "start your MCP listener" is a request made while
+  // somebody is looking at the panel. Replaying it hours later, to a client that
+  // has since been shut down deliberately, would be acting on a stale intent.
+  'mcp.listener':     { cls: 'durable', ttlSec: 300 },
   'job.done':         { cls: 'durable', ttlSec: 3600 },
   revoked:            { cls: 'durable', ttlSec: 60 },
   resync:             { cls: 'ephemeral' },

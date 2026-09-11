@@ -123,6 +123,18 @@ function schemas() {
     JobStarted: obj({ status: str({ const: 'running' }), jobId: str(), commandId: str(), jobUrl: str(), replay: bool() }),
     Job: obj({ id: str(), commandId: str(), status: str({ enum: ['running', 'done', 'failed'] }), startedAt: iso(), endedAt: nullable(iso()), result: any(), error: nullable(str()), outputTail: arr(str()) }),
 
+    OwnMcpServer: obj({
+      id: str(), label: str(), transport: str({ enum: ['http'] }), url: str(),
+      headers: obj({}, { additionalProperties: str() }), autostart: bool(),
+      state: str({ enum: ['stopped', 'starting', 'running', 'error'] }), error: nullable(str()), toolCount: int(),
+    }, { description: 'The host\'s record of the MCP server a client hosts. `state` is the host\'s view of reaching it, not the client\'s view of its own listener.' }),
+
+    McpOffer: obj({
+      id: str(), createdAt: iso(), deviceId: str(), deviceName: str(), label: str(), url: str(),
+      headers: obj({}, { additionalProperties: str() }), tools: arr(str()), note: str(),
+      status: str({ enum: ['pending', 'accepted', 'rejected'] }), decidedAt: nullable(iso()), serverId: nullable(str()),
+    }, { description: 'A client\'s offer of the MCP server it hosts, waiting on a dashboard click. `pending` means recorded and doing nothing.' }),
+
     EventEnvelope: obj({
       seq: int({ description: 'Per-device monotonic sequence — your cursor.' }), id: str(), ts: iso(), type: str({ enum: eventTypes }),
       class: str({ enum: ['durable', 'ephemeral'] }), ttlSec: int(), priority: str({ enum: prompts.PRIORITIES }), ack: bool(), v: int({ const: 1 }), payload: obj({}, { additionalProperties: true }),
@@ -269,6 +281,8 @@ function events() {
     'artifact.deliver': { audience: 'device', payload: obj({ artifact: ref('Artifact'), inline: str(), inlineEncoding: str({ enum: ['utf8', 'base64'] }), message: str(), ext: ext() }), note: 'Verify `artifact.sha256` before executing.' },
     'sensor.request':   { audience: 'device', payload: obj({ request: ref('SensorRequest') }) },
     'sensor.stop':      { audience: 'device', payload: obj({ requestId: str(), reason: str() }) },
+    'mcp.listener':     { audience: 'device', payload: obj({ action: str({ enum: ['start', 'stop'] }), serverId: str(), url: str(), by: str() }),
+      note: 'The host is asking the MCP server you host to be started or stopped. A request, not a command: refuse it if the user has consent switched off, and report the result by PATCHing /mcp/self or simply by becoming reachable. `url` is the address the host currently has, so a mismatch is your cue to correct it.' },
     'revoked':          { audience: 'device', payload: obj({ reason: str(), by: str() }), note: 'Followed by an SSE `close` frame; forget the token.' },
     'resync':           { audience: 'device', payload: obj({ reason: str(), cursor: int() }), note: 'Your cursor predates retained history: refetch capabilities, prompts and snapshot, then continue from `cursor`.' },
     'prompt.selected':  { audience: 'agent', payload: obj({ promptId: str(), selectionId: str(), deviceId: str(), choiceId: str(), payload: ref('SelectionPayload'), resolver: str() }), note: 'Only with `resolver: "agent"`; answer via POST /agent/prompts/{id}/outcome.' },
@@ -336,6 +350,21 @@ function paths() {
     },
     '/devices/{id}/sensors': { parameters: [deviceIdParam], get: { tags: ['Sensors'], summary: 'Declared sensors and latest sample per sensor', operationId: 'getDeviceSensors', ...scopeDoc('self | sensors:* | agent'),
       responses: { 200: json(obj({ deviceId: str(), declared: arr({}), latest: obj({}, { additionalProperties: ref('Sample') }) })), ...std(401, 403, 404) } } },
+    '/mcp/self': {
+      get: { tags: ['MCP'], summary: 'The MCP server this device hosts, as the host has it recorded', operationId: 'getOwnMcpServer', ...scopeDoc('mcp:self'),
+        description: 'Only the definition whose `origin.deviceId` is this device. 404 when no server on the host is pointed at it — the dashboard creates that entry, a client never can.',
+        responses: { 200: json(obj({ server: ref('OwnMcpServer') })), ...std(401, 403, 404) } },
+      patch: { tags: ['MCP'], summary: 'Correct the address of the server this device hosts', operationId: 'patchOwnMcpServer', ...scopeDoc('mcp:self'),
+        description: 'Address only. The transport, the owning device, `autostart` and any command are not writable here: `mcpServers` holds something the host spawns, so a client that could set a command would be a way to run code on it. Exists because a client that regenerates a secret in its URL would otherwise leave an entry only a human could repair.',
+        requestBody: body(obj({ url: str({ description: 'http(s) URL the host should call.' }), headers: obj({}, { additionalProperties: str(), description: 'Sent on every request; how to hand the host a bearer token.' }) })),
+        responses: { 200: json(obj({ server: ref('OwnMcpServer') })), ...std(400, 401, 403, 404) } },
+    },
+
+    '/mcp/offer': { post: { tags: ['MCP'], summary: 'Offer the MCP server this device hosts for the user to accept', operationId: 'offerOwnMcpServer', ...scopeDoc('mcp:self'),
+      description: 'Queues a card in the dashboard and writes nothing to the registry — a click is what creates the definition, because `mcpServers` is an address the host calls and, for stdio, a command it spawns. Accepting always produces `transport: http` with this device as the origin. One pending offer per device: offering again replaces it, which is how a client corrects a URL it has just regenerated. 202 means recorded, not accepted.',
+      requestBody: body(obj({ label: str({ maxLength: 64 }), url: str({ description: 'http(s) URL the host should call.' }), headers: obj({}, { additionalProperties: str() }), tools: arr(str(), { maxItems: 40, description: 'Tool names you expect to expose. Advertised, not verified — shown to whoever clicks Accept.' }), note: str({ maxLength: 400 }) }, { required: ['url'] })),
+      responses: { 202: json(obj({ offer: ref('McpOffer') })), ...std(400, 401, 403, 429) } } },
+
     '/sensors/samples': { post: { tags: ['Sensors'], summary: 'Report a batch of samples for an active request (or `autoReport` sensors)', operationId: 'postSamples', ...scopeDoc('sensors:report | sensors:*'),
       requestBody: body(obj({ requestId: str(), samples: arr(ref('Sample'), { maxItems: L.SENSOR_BATCH_MAX }) }, { required: ['samples'] })),
       responses: { 200: json(obj({ accepted: int(), rejected: arr(obj({ sensor: str(), reason: str() })) })), ...std(400, 401, 403, 404) } } },
@@ -449,6 +478,7 @@ function build() {
       { name: 'Profiles', description: 'Server-side per-device configuration (what to show, how often, which sensors are allowed).' },
       { name: 'Variables', description: 'Free-form per-device key/value document for unforeseen state.' },
       { name: 'Sensors', description: 'Device-side sensor reporting.' },
+      { name: 'MCP', description: 'A client that hosts its own MCP server, reading and correcting the one entry the host has for it. Managing the registry stays in the dashboard.' },
       { name: 'Surfaces', description: 'Typed platform state: metrics and lists with thresholds.' },
       { name: 'Commands', description: 'Actions and long-running jobs.' },
       { name: 'Events', description: 'Push channel (SSE or JSON poll) and acknowledgements.' },

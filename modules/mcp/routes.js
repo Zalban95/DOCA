@@ -6,6 +6,7 @@
  */
 const registry = require('./registry');
 const exporter = require('./export');
+const offers   = require('./offers');
 
 /** Turn a thrown error with a `status` into that status, anything else into 500. */
 function wrap(fn) {
@@ -15,9 +16,19 @@ function wrap(fn) {
   };
 }
 
-/** GET /api/mcp — every server, with live state and tools */
+/** GET /api/mcp — every server, with live state and tools, plus anything a client is offering */
 const handleList = wrap(async (_req, res) => {
-  res.json({ servers: registry.list(), targets: exporter.describeTargets() });
+  res.json({ servers: registry.list(), targets: exporter.describeTargets(), offers: offers.list().pending });
+});
+
+/** POST /api/mcp/offers/:id/accept — the click that turns an offer into a definition */
+const handleOfferAccept = wrap(async (req, res) => {
+  res.json({ ok: true, ...offers.accept(req.params.id) });
+});
+
+/** POST /api/mcp/offers/:id/reject */
+const handleOfferReject = wrap(async (req, res) => {
+  res.json({ ok: true, offer: offers.reject(req.params.id, req.body?.reason) });
 });
 
 /** POST /api/mcp — create or update a definition */
@@ -52,6 +63,36 @@ const handleAction = wrap(async (req, res) => {
     catch (e) { return res.json({ ok: false, error: e.message, server: registry.status(registry.get(id)) }); }
     return res.json({ ok: true, server: registry.status(registry.get(id)) });
   }
+  // Asking the *client* to bring its own listener up or down. Nothing local
+  // happens: DOCA has no handle on a process it did not spawn, so all "Start" on
+  // a client row could ever do before this was open a socket and hope. The
+  // client may refuse — its consent switch outranks this — so the honest answer
+  // is "asked", never "started".
+  if (action === 'listener-start' || action === 'listener-stop') {
+    if (spec.origin?.kind !== 'client')
+      return res.status(400).json({ error: 'That server runs on this host — start it here instead of asking a client to' });
+    const deviceId = spec.origin.deviceId;
+    const bus = require('../api-v1/bus');
+    const devices = require('../api-v1/devices');
+    const dev = devices.get(deviceId);
+    if (!dev || dev.revokedAt)
+      return res.status(409).json({ error: `The device that hosts it (${deviceId}) is no longer paired` });
+    bus.publish(deviceId, 'mcp.listener', {
+      action: action === 'listener-start' ? 'start' : 'stop',
+      serverId: spec.id, url: spec.url, by: 'dashboard',
+    });
+    // Queued for a client that is not connected: the event is durable for five
+    // minutes, so say so rather than implying it landed.
+    const online = bus.isOnline(deviceId);
+    return res.json({
+      ok: true, asked: true, online,
+      message: online
+        ? `Asked ${dev.name} to ${action === 'listener-start' ? 'start' : 'stop'} its MCP server`
+        : `${dev.name} is not connected — the request is queued for 5 minutes`,
+      server: registry.status(spec),
+    });
+  }
+
   if (action === 'refresh') {
     const c = registry.client(id);
     if (c?.state !== 'running') return res.status(409).json({ error: 'That server is not running' });
@@ -72,4 +113,7 @@ const handleExport = wrap(async (req, res) => {
   res.json(await exporter.write(req.body?.target, req.body?.ids));
 });
 
-module.exports = { handleList, handleUpsert, handleRemove, handleAction, handleLog, handleExport };
+module.exports = {
+  handleList, handleUpsert, handleRemove, handleAction, handleLog, handleExport,
+  handleOfferAccept, handleOfferReject,
+};

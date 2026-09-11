@@ -133,6 +133,7 @@ A scope is `family:target`; `target` may be `*` or a dotted prefix ending in
 | `sensors` | `report`, `*` | post own samples / read any device's samples |
 | `media` | `upload`, `*` | upload media / read anyone's media |
 | `artifacts` | `self`, `*` | fetch artifacts addressed to me / any artifact |
+| `mcp` | `self` | read and re-address the one MCP server this device hosts; offer a new one for the user to accept (§22) |
 | `devices` | `admin` | list/create/pair/patch/revoke devices |
 | `agent` | — | the `/agent/*` API (raise prompts and alerts, request sensors, deliver outcomes and artifacts, read devices/vars/sensors/media) |
 
@@ -146,7 +147,7 @@ Presets (returned by `GET /devices` and used by the CLI):
 | `admin` | `*` |
 | `agent` | `agent read:* artifacts:* media:* sensors:* vars:* profile:*` |
 | `watch` | `read:* interact profile:self vars:self sensors:report media:upload artifacts:self` |
-| `phone` | `read:* command:* interact profile:* vars:self sensors:report media:upload artifacts:self devices:admin` |
+| `phone` | `read:* command:* interact profile:* vars:self sensors:report media:upload artifacts:self devices:admin mcp:self` |
 | `viewer` | `read:*` |
 
 A device may `PATCH /devices/me` its own `name` and `caps`, never its scopes.
@@ -928,7 +929,65 @@ phone to relay. Use `If-None-Match` on snapshots/profiles; they are cheap 304s.
 
 **Agent**: `agent` preset. Listen on `/events`; answer `prompt.selected` when using `resolver:"agent"`; raise prompts/alerts; request sensors with a `reason`; ship artifacts only for declared runtimes; read `device.vars` and `device.message` for anything unforeseen.
 
-## 22. Server operations
+## 22. MCP servers a client hosts
+
+Most clients read and answer. A desktop-class client can also *offer* something:
+an MCP server of its own, giving the agent tools that act on that machine — its
+windows, its clipboard, its files — which the host cannot reach any other way.
+
+Such a server is always `transport: http`. There is no stdio to a machine the
+host is not running on, so a client-hosted server is a URL the host calls, and
+the definition records which device is behind it. The agent is told, per tool,
+which machine the call lands on, so "take a screenshot on my PC" resolves to the
+right function rather than to the host's own screen.
+
+**The registry is not yours to write.** `mcpServers` holds an address the host
+calls and, for a host-side server, a command it spawns — and the legacy
+`POST /api/mcp` is unauthenticated to every peer on the tailnet. So a client
+cannot create, delete or start a definition. It gets exactly two things:
+
+```http
+POST  /api/v1/mcp/offer      (scope mcp:self)
+{ "label": "DocaDesk", "url": "https://100.x.y.z:18765/mcp/<secret>",
+  "tools": ["list_windows", "screenshot"], "note": "Windows desktop tools" }
+202 { "offer": { "id": "mo_…", "status": "pending", … } }
+
+GET   /api/v1/mcp/self       (scope mcp:self)  → { server: { id, label, transport, url, headers, state, error, toolCount } }
+PATCH /api/v1/mcp/self       (scope mcp:self)  → { server }        body: { url?, headers? }
+```
+
+`202` means recorded, not accepted: the offer queues a card in the dashboard and
+a human click is what creates the definition. Accepting always produces an http
+server owned by the offering device. One pending offer per device — offering
+again replaces it, which is how a client corrects a URL it has just regenerated.
+
+`GET /mcp/self` is `404` until such a definition exists, and it is *self only*:
+there is no admin form of it and no way to see another device's server.
+`PATCH /mcp/self` writes the address and nothing else. Transport, owning device,
+`autostart` and any command are ignored however they are spelled, because a
+client that could set a command would be a way to run code on the host. It
+exists for the case that genuinely breaks: a listener that regenerates a secret
+in its URL on restart, which would otherwise leave a dead entry only a human
+with a clipboard could repair.
+
+`state` is the *host's* view of reaching you, not your view of your own listener.
+
+The host may ask you to bring that listener up or down:
+
+```
+mcp.listener  { action: "start"|"stop", serverId, url, by }
+```
+
+A request, not a command. Refuse it if the user has consent switched off. The
+`url` is the address the host currently holds, so a mismatch is your cue to
+`PATCH /mcp/self`. Report success simply by becoming reachable; the host
+discovers that when it connects.
+
+**Securing the listener is your problem, not the protocol's.** Bind to the
+tailnet interface only, and treat every request as untrusted until proven
+otherwise. `headers` exists so the host can carry a bearer token you require.
+
+## 23. Server operations
 
 - Data directory: `DOCA_DATA_DIR` (default `<repo>/.doca`, gitignored): `devices.json`, `prompts.json`, `profiles/`, `outbox/`, `media/`, `artifacts/`. Atomic writes; safe to back up.
 - Tokens: `npm run token -- issue|list|rotate|revoke|scopes`.
@@ -937,7 +996,7 @@ phone to relay. Use `If-None-Match` on snapshots/profiles; they are cheap 304s.
 - Tests: `npm test` (node --test, no external services required).
 - Extending: add a surface in `modules/api-v1/surfaces.js` (`DEFS` + `buildSurface`), a command in `commands.js` (`COMMANDS`), an event type in `bus.js` (`TYPES`). Everything appears in `/capabilities` automatically. Additive changes do not bump the protocol version.
 
-## 23. Endpoint index
+## 24. Endpoint index
 
 | Method | Path | Scope | Purpose |
 |---|---|---|---|
@@ -955,6 +1014,8 @@ phone to relay. Use `If-None-Match` on snapshots/profiles; they are cheap 304s.
 | GET / PATCH | `/devices/:id/vars` | self (`vars:self` to write) \| `vars:*` \| `agent` | §15 |
 | GET | `/devices/:id/sensors` | self \| `sensors:*` \| `agent` | latest samples |
 | POST | `/sensors/samples` | `sensors:report` | report samples |
+| GET / PATCH | `/mcp/self` | `mcp:self` | the MCP server this device hosts; correct its address (§22) |
+| POST | `/mcp/offer` | `mcp:self` | offer one for the user to accept (§22) |
 | GET | `/surfaces`, `/surfaces/:id`, `/snapshot` | `read:<id>` | §9 |
 | GET | `/commands` | any | runnable commands |
 | POST | `/commands/:id` | `command:<id>` | §10 |

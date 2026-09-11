@@ -15,14 +15,98 @@ async function mcpLoad() {
     const data   = await apiFetch('/api/mcp');
     _mcpTargets  = data.targets || [];
     const servers = data.servers || [];
-    list.innerHTML = servers.length
-      ? servers.map(_mcpCardHtml).join('')
-      : '<div class="placeholder">No MCP servers yet — add one below.</div>';
+    list.innerHTML = _mcpOffersHtml(data.offers || [])
+      + (servers.length
+        ? _mcpGroupsHtml(servers)
+        : '<div class="placeholder">No MCP servers yet — add one below.</div>');
     _mcpExportRender(servers.length);
     if (_mcpOpenLog) mcpShowLog(_mcpOpenLog, true);
   } catch (e) {
     list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
+}
+
+/**
+ * Clients asking to be let in, at the top because they are the only thing here
+ * that is waiting on you.
+ *
+ * An offer has done nothing yet — the point of the flow is that a request from
+ * the network cannot add a server, only ask. So the card leads with the machine
+ * that is asking and the address it gave, and Accept is the click that writes.
+ */
+function _mcpOffersHtml(offers) {
+  if (!offers.length) return '';
+  return offers.map(o => {
+    const arg = jsArg(o.id);
+    return `
+    <div class="card mb8" style="border-left:3px solid var(--blue)">
+      <div class="toolbar" style="margin-bottom:6px">
+        <div class="card-title" style="margin-bottom:0">${escHtml(o.deviceName)} is offering an MCP server</div>
+        <span class="provider-badge warn">WAITING FOR YOU</span>
+        <span style="flex:1"></span>
+        <button class="btn btn-xs btn-green" onclick="mcpOfferAccept(${arg})">✓ Accept</button>
+        <button class="btn btn-xs btn-red" onclick="mcpOfferReject(${arg})">✕ Decline</button>
+      </div>
+      <div class="mcp-where"><code>${escHtml(o.url)}</code></div>
+      ${o.note ? `<div class="input-label" style="margin:6px 0 0">${escHtml(o.note)}</div>` : ''}
+      ${o.tools?.length
+        ? `<div class="mcp-tools">${o.tools.map(t => `<span class="mcp-tool">${escHtml(t)}</span>`).join('')}</div>
+           <div class="input-label" style="margin:4px 0 0;opacity:.6">
+             Tools it says it has — not checked yet, since nothing has connected to it.
+           </div>`
+        : ''}
+      <div class="input-label" style="margin:6px 0 0;opacity:.6">
+        Accepting adds it as an http server acting on <strong>${escHtml(o.deviceName)}</strong>. Nothing is
+        running or reachable until you start it.
+      </div>
+      <div class="status-line mt4" id="mcp-offer-status-${escHtml(o.id)}"></div>
+    </div>`;
+  }).join('');
+}
+
+async function mcpOfferAccept(id) {
+  const status = document.getElementById(`mcp-offer-status-${id}`);
+  setStatus(status, 'accepting…', '');
+  try {
+    const r = await apiFetch(`/api/mcp/offers/${encodeURIComponent(id)}/accept`, { method: 'POST' });
+    await mcpLoad();
+    setStatus(document.getElementById(`mcp-status-${r.server.id}`), `✓ Added — Start it to see its tools`, 'ok');
+  } catch (e) { setStatus(status, `✗ ${e.message}`, 'err'); }
+}
+
+function mcpOfferReject(id) {
+  appConfirm('Decline this offer? The client can offer again.', async () => {
+    try { await apiFetch(`/api/mcp/offers/${encodeURIComponent(id)}/reject`, { method: 'POST' }); mcpLoad(); }
+    catch (e) { setStatus(document.getElementById(`mcp-offer-status-${id}`), `✗ ${e.message}`, 'err'); }
+  });
+}
+
+/**
+ * Two sections, because "which machine does this act on" is the first thing you
+ * need to know about an MCP server and the least visible. Both headings show
+ * even when one side is empty, so the split is a fact about the page rather
+ * than something that appears the first time you happen to add a client.
+ */
+function _mcpGroupsHtml(servers) {
+  const host   = servers.filter(s => s.origin?.kind !== 'client');
+  const client = servers.filter(s => s.origin?.kind === 'client');
+
+  const section = (title, note, rows, empty) => `
+    <div class="toolbar" style="margin:2px 0 6px">
+      <div class="input-label" style="margin:0;text-transform:uppercase;letter-spacing:.05em;opacity:.75">
+        ${escHtml(title)}
+      </div>
+      <span class="mcp-count">${rows.length}</span>
+    </div>
+    <div class="input-label" style="margin:0 0 8px;opacity:.6">${note}</div>
+    ${rows.length ? rows.map(_mcpCardHtml).join('') : `<div class="placeholder mb8">${empty}</div>`}`;
+
+  return section(
+    'On the DOCA host', 'Started here, and acting here — the same machine as this dashboard, the harness and its shell tool.',
+    host, 'None here yet.')
+    + section(
+      'On a paired client', 'Hosted by a machine you paired. Their tools read and change <em>that</em> machine, and the harness is told so.',
+      client, 'None yet — a client publishes a URL, and you add it here with <strong>Runs on → a paired client</strong>.');
 }
 
 function _mcpCardHtml(s) {
@@ -32,7 +116,8 @@ function _mcpCardHtml(s) {
 
   // Only worth a badge when it is not the host: "runs here" is the norm and
   // saying it on every row would just be noise.
-  const origin = s.origin?.kind === 'client'
+  const onClient = s.origin?.kind === 'client';
+  const origin = onClient
     ? `<span class="mcp-count" title="Its tools act on that machine, not on this host">on ${escHtml(s.originLabel || s.origin.deviceId)}</span>`
     : '';
 
@@ -61,7 +146,11 @@ function _mcpCardHtml(s) {
           ? `<button class="btn btn-xs" onclick="mcpAction(${arg}, 'restart')">↻ Restart</button>
              <button class="btn btn-xs" onclick="mcpAction(${arg}, 'refresh')" title="Ask again which tools it has">↺ Tools</button>
              <button class="btn btn-xs" onclick="mcpAction(${arg}, 'stop')">Stop</button>`
-          : `<button class="btn btn-xs btn-green" onclick="mcpAction(${arg}, 'start')">▶ Start</button>`}
+          : `<button class="btn btn-xs btn-green" onclick="mcpAction(${arg}, 'start')">▶ ${onClient ? 'Connect' : 'Start'}</button>`}
+        ${onClient
+          ? `<button class="btn btn-xs" onclick="mcpAction(${arg}, 'listener-start')"
+                     title="Push a request to that machine to bring its MCP server up. It can refuse.">✆ Ask to run</button>`
+          : ''}
         <button class="btn btn-xs" onclick="mcpShowLog(${arg})" title="What the server printed">Log</button>
         <button class="btn btn-xs" onclick="mcpEdit(${arg})">✎</button>
         <button class="btn btn-xs btn-red" onclick="mcpRemove(${arg})">✕</button>
@@ -74,12 +163,24 @@ function _mcpCardHtml(s) {
     </div>`;
 }
 
+const MCP_ACTION_LABEL = {
+  'listener-start': 'asking it to run',
+  'listener-stop':  'asking it to stop',
+  refresh:          'refreshing tools',
+};
+
 async function mcpAction(id, action) {
   const status = document.getElementById(`mcp-status-${id}`);
-  setStatus(status, `${action}…`, '');
+  setStatus(status, `${MCP_ACTION_LABEL[action] || action}…`, '');
   try {
     const r = await apiFetch(`/api/mcp/${encodeURIComponent(id)}/action`, { method: 'POST', body: { action } });
     await mcpLoad();
+    // Asking a client is not the same as it having happened: it may be offline,
+    // or it may say no. Report what we actually know.
+    if (r.asked) {
+      setStatus(document.getElementById(`mcp-status-${id}`), `${r.online ? '✓' : 'ℹ'} ${r.message}`, r.online ? 'ok' : 'warn');
+      return;
+    }
     // A server that refuses to start answers 200 with the reason — its own log
     // is the useful part, so open it rather than making the user go looking.
     if (r.ok === false) {

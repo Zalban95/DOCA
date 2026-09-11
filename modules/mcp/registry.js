@@ -55,6 +55,51 @@ function originDevice(origin) {
   try { return require('../api-v1/devices').get(origin.deviceId); } catch { return null; }
 }
 
+/** The definition a device hosts itself, if a human has pointed one at it. */
+function forDevice(deviceId) {
+  if (!deviceId) return null;
+  return load().find(s => s.origin?.kind === 'client' && s.origin.deviceId === deviceId) || null;
+}
+
+/**
+ * A device correcting its own address.
+ *
+ * The narrowest useful thing a client can be allowed to do, and the reason it
+ * is safe: the row already exists because a human created it and named this
+ * device, so consent is a fact rather than an assumption. Only the address is
+ * writable — never the transport, never a command, never which device owns it,
+ * never autostart. A client that could set `command` would be an
+ * unauthenticated way to run code on this host, which is the whole reason
+ * `mcpServers` is kept out of the agent's reach.
+ *
+ * This exists because the address genuinely changes: a client that regenerates
+ * the secret in its URL on restart would otherwise leave a dead row until
+ * somebody re-pasted it by hand.
+ */
+function updateFromDevice(deviceId, patch) {
+  const spec = forDevice(deviceId);
+  if (!spec) return null;
+
+  const p = patch && typeof patch === 'object' ? patch : {};
+  const next = { ...spec };
+
+  if (p.url !== undefined) {
+    const url = String(p.url || '').trim();
+    if (!/^https?:\/\//.test(url))
+      throw Object.assign(new Error('url must start with http:// or https://'), { status: 400 });
+    next.url = url;
+  }
+  if (p.headers !== undefined) {
+    if (!p.headers || typeof p.headers !== 'object' || Array.isArray(p.headers))
+      throw Object.assign(new Error('headers must be an object of name/value pairs'), { status: 400 });
+    next.headers = Object.fromEntries(
+      Object.entries(p.headers).slice(0, 20).map(([k, v]) => [String(k).slice(0, 128), String(v).slice(0, 2048)]));
+  }
+
+  save(load().map(s => (s.id === spec.id ? next : s)));
+  return next;
+}
+
 function load() {
   const list = loadPrefs()[PREFS_KEY];
   return Array.isArray(list) ? list : [];
@@ -220,5 +265,6 @@ function stopAll() {
 module.exports = {
   PREFS_KEY,
   load, list, get, client, status, slug, normalize, normalizeOrigin, originDevice,
+  forDevice, updateFromDevice,
   start, stop, restart, upsert, remove, startAutostart, stopAll,
 };
