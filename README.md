@@ -7,7 +7,7 @@ Web-based control panel for managing the **OpenClaw** AI agent stack.
 - **Service Control** — Start / Stop / Restart the Docker Compose stack, plus **Update** (pull the newest stack definition and images, then recreate the containers) with streamed output
 - **Live Logs** — SSE-streamed container logs with auto-scroll
 - **System Stats** — 14 toggleable sidebar stats (CPU %, per-core, temp, freq, load 1/5/15, RAM, swap, per-mount disk usage, disk I/O rate, network rate, uptime, processes, GPU core + extended metrics). Main stats enabled by default; everything else can be switched on in Settings → General
-- **API Keys** — Manage provider keys (OpenAI, Groq, Anthropic, Ollama…)
+- **API Keys** — Manage LLM endpoints: one click for the ones DOCA knows (llama.cpp, vLLM, LM Studio, OpenAI, Groq, Anthropic…), or any name and base URL by hand
 - **Skills** — Install, remove, enable/disable workspace skills with detail view
 - **Snapshots** — Create and restore full agent snapshots
 - **Setup Scripts** — View and edit setup/restore shell scripts
@@ -161,10 +161,13 @@ the floating chat panel and the **Harness** tab use it.
 ### The built-in DOCA Harness
 
 The default on a fresh install, and the one harness that needs nothing installed. It is a plain
-agent loop over any **OpenAI-compatible** `/chat/completions` endpoint — which covers local Ollama
-and llama.cpp servers as well as OpenAI, Anthropic, Google, Groq, OpenRouter, Mistral, DeepSeek,
-xAI, Together and Cerebras. Provider keys come from **Settings → API Keys** (or the matching env
-var), and the model dropdown is populated live from the provider.
+agent loop over any **OpenAI-compatible** `/chat/completions` endpoint. The endpoints it already
+knows are Ollama, llama.cpp, vLLM and LM Studio locally, and OpenAI, Anthropic, Google, Groq,
+OpenRouter, Mistral, DeepSeek, xAI, Together and Cerebras hosted — but that list is a set of
+shortcuts for default URLs, not a restriction: **Settings → API Keys → + Add provider** takes any
+name and base URL, and running a known server on a different port is just a base URL saved there.
+Keys come from the same screen (or the matching env var; local servers need none), and the model
+dropdown is populated live from the provider.
 
 **Tools.** `shell`, `read_file`, `write_file`, `list_dir`, `system_status`, `http_fetch`,
 `memory_write`, `memory_search`, `memory_forget`. File access is confined to

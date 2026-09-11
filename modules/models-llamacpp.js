@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const { spawn } = require('child_process');
 
 const { loadPrefs, savePrefs, loadConfig, saveConfig, sseHeaders } = require('./utils');

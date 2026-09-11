@@ -1,8 +1,25 @@
 'use strict';
 
 const { loadConfig, saveConfig } = require('./utils');
+const { PRESETS, isLocalUrl } = require('./harness/providers');
 
 // ─── Model Providers ──────────────────────────────────────────────────────────
+
+/**
+ * The endpoints we already know, offered as a starting point when adding one.
+ *
+ * Anything not in here is still addable by hand — a preset only saves you
+ * typing a URL, it is not a list of what is allowed.
+ */
+function presetList() {
+  return Object.entries(PRESETS).map(([id, p]) => ({
+    id,
+    label:   p.label,
+    baseUrl: p.baseUrl,
+    env:     p.env || null,
+    local:   isLocalUrl(p.baseUrl),
+  }));
+}
 
 /** Read the providers map, tolerating a config that has no models section. */
 function providersOf(cfg) {
@@ -18,27 +35,37 @@ function handleGetKeys(_req, res) {
     const result    = {};
     for (const [name, p] of Object.entries(providers)) {
       const key = p.apiKey || '';
+      const baseUrl = p.baseUrl || PRESETS[name]?.baseUrl || '';
       result[name] = {
-        baseUrl:      p.baseUrl || '',
+        baseUrl,
         apiKeyMasked: key && key !== 'ollama'
           ? key.slice(0, 4) + '••••••••' + key.slice(-4)
           : key,
         hasKey: !!key && key !== 'ollama',
+        // A local server needs no key, so "NO KEY" would read as broken.
+        local:  isLocalUrl(baseUrl),
         models: (p.models || []).map(m => m.id || m.name || m),
       };
     }
-    res.json({ providers: result });
+    res.json({ providers: result, presets: presetList() });
   } catch (e) { res.status(500).json({ error: e.message }); }
+}
+
+/** Local servers speak plain /chat/completions; the hosted APIs offer /responses. */
+function defaultApi(baseUrl) {
+  return isLocalUrl(baseUrl) ? 'openai-chat-completions' : 'openai-responses';
 }
 
 /** POST /api/keys */
 function handlePostKeys(req, res) {
   const { provider, apiKey, baseUrl } = req.body;
   if (!provider) return res.status(400).json({ error: 'provider required' });
+  if (!apiKey && !baseUrl) return res.status(400).json({ error: 'apiKey or baseUrl required' });
   try {
     const cfg = loadConfig();
     const providers = providersOf(cfg);
-    if (!providers[provider]) providers[provider] = { api: 'openai-responses', models: [] };
+    const url = baseUrl || providers[provider]?.baseUrl || PRESETS[provider]?.baseUrl || '';
+    if (!providers[provider]) providers[provider] = { api: defaultApi(url), models: [] };
     if (apiKey)  providers[provider].apiKey  = apiKey;
     if (baseUrl) providers[provider].baseUrl = baseUrl;
     saveConfig(cfg);
@@ -48,15 +75,17 @@ function handlePostKeys(req, res) {
 
 /** POST /api/keys/add-provider */
 function handleAddProvider(req, res) {
-  const { name, baseUrl, apiKey, api, models: pm } = req.body;
+  const { name, apiKey, api, models: pm } = req.body;
+  // A known id carries its own URL, so adding llama.cpp is just its name.
+  const baseUrl = req.body.baseUrl || PRESETS[name]?.baseUrl || '';
   if (!name || !baseUrl) return res.status(400).json({ error: 'name and baseUrl required' });
   try {
     const cfg = loadConfig();
     providersOf(cfg)[name] = {
-      baseUrl, apiKey: apiKey || '', api: api || 'openai-responses', models: pm || [],
+      baseUrl, apiKey: apiKey || '', api: api || defaultApi(baseUrl), models: pm || [],
     };
     saveConfig(cfg);
-    res.json({ ok: true });
+    res.json({ ok: true, provider: name, baseUrl });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 

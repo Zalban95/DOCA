@@ -744,17 +744,19 @@
               <button class="btn btn-xs btn-blue" onclick="showAddProvider()">+ Add provider</button>
             </div>
             <div class="input-label" style="margin-bottom:8px">
-              API keys for third-party LLM services. Nothing to do with the device tokens above.
+              LLM endpoints, hosted or local. Any OpenAI-compatible server works — the known ones
+              below are only shortcuts for their default URL. Nothing to do with the device tokens above.
             </div>
             <div id="providers-list"><div class="placeholder">Loading…</div></div>
+            <div id="provider-presets"></div>
             <div id="add-provider-form" style="display:none">
               <div class="card mt8">
                 <div class="card-title">New Provider</div>
                 <div class="row">
                   <div class="field flex1"><div class="input-label">Name (e.g. groq)</div><input id="np-name" class="input" placeholder="groq"></div>
-                  <div class="field flex1"><div class="input-label">Base URL</div><input id="np-url" class="input" placeholder="https://api.groq.com/openai/v1"></div>
+                  <div class="field flex1"><div class="input-label">Base URL</div><input id="np-url" class="input" placeholder="http://127.0.0.1:8080/v1"></div>
                 </div>
-                <div class="field"><div class="input-label">API Key</div><input id="np-key" class="input" type="password" placeholder="sk-…"></div>
+                <div class="field"><div class="input-label">API Key <span style="opacity:.6">— leave empty for a local server</span></div><input id="np-key" class="input" type="password" placeholder="sk-…"></div>
                 <div class="toolbar-right">
                   <button class="btn btn-sm" onclick="hideAddProvider()">Cancel</button>
                   <button class="btn btn-sm btn-blue" onclick="addProvider()">Add</button>

@@ -18,8 +18,24 @@ const fs = require('fs');
 const { CONFIG_PATH } = require('../paths');
 const { loadModelsPrefs, resolveEnvVars } = require('../utils');
 
-/** Vendors we know the endpoint of, so an API key alone is enough to start. */
+/** True for an endpoint on this machine or a private network — no key expected. */
+const LOCAL_URL = /^https?:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0|\[::1\]|172\.|192\.168\.|10\.)/;
+
+function isLocalUrl(url) {
+  return LOCAL_URL.test(url || '');
+}
+
+/**
+ * Endpoints we know, so a key alone (or nothing at all, locally) is enough.
+ *
+ * The local runtimes are listed at the port each one ships with. Running one
+ * somewhere else does not need a code change: declare it in Settings → API Keys
+ * with the same id and the base URL saved there wins over the default below.
+ */
 const PRESETS = {
+  llamacpp:   { label: 'llama.cpp (local)', baseUrl: 'http://127.0.0.1:8080/v1' },
+  vllm:       { label: 'vLLM (local)',      baseUrl: 'http://127.0.0.1:8000/v1' },
+  lmstudio:   { label: 'LM Studio (local)', baseUrl: 'http://127.0.0.1:1234/v1' },
   openai:     { label: 'OpenAI',        baseUrl: 'https://api.openai.com/v1',                            env: 'OPENAI_API_KEY' },
   anthropic:  { label: 'Anthropic',     baseUrl: 'https://api.anthropic.com/v1',                         env: 'ANTHROPIC_API_KEY' },
   google:     { label: 'Google Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', env: 'GEMINI_API_KEY' },
@@ -92,7 +108,7 @@ function endpoint(id) {
     label: preset?.label || id,
     baseUrl,
     apiKey,
-    local: /^https?:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0|172\.|192\.168\.|10\.)/.test(baseUrl),
+    local: isLocalUrl(baseUrl),
   };
 }
 
@@ -143,4 +159,4 @@ async function models(id) {
   }
 }
 
-module.exports = { PRESETS, DEFAULT_SYSTEM_PROMPT, defaultParams, endpoint, list, models, ollamaBase };
+module.exports = { PRESETS, DEFAULT_SYSTEM_PROMPT, defaultParams, endpoint, isLocalUrl, list, models, ollamaBase };
