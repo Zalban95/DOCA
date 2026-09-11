@@ -116,6 +116,15 @@
   /* Provider cards */
   .provider-key-row { flex-wrap: wrap; }
 
+  /* VM rows: name and state on one line, address and buttons underneath */
+  .vm-row {
+    grid-template-columns: 12px minmax(0, 1fr) auto;
+    row-gap: 6px;
+  }
+  .vm-display, .vm-acts { grid-column: 2 / -1; }
+  .vm-acts { justify-content: flex-start; }
+  .vm-uri-row { grid-template-columns: minmax(0, 1fr); }
+
   /* Skills grid single column */
   .skills-grid { grid-template-columns: 1fr; }
 

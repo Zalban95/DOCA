@@ -21,6 +21,19 @@ OpenClaw Dashboard — a single Node.js/Express web app (`server.js` + `modules/
 - These are legacy dashboard routes, not `/api/v1`, so they are **not** part of the OpenAPI document and adding one does not require regenerating it.
 - Selecting a model needs a reachable provider. Without one (no Ollama, no keys) the console shows "Pick a model with ⚙" — that is expected in a bare VM, not a bug.
 
+### MCP servers (`/api/mcp/*`)
+- `modules/mcp/` is self-contained: `client.js` is a hand-rolled JSON-RPC 2.0 client (newline-delimited JSON over a child process's stdio, or POST for an HTTP server), `registry.js` holds the definitions in prefs under `mcpServers` plus the live clients, `tools.js` presents running servers' tools to the harness, `export.js` writes them into other agents' config files. **Do not add the official MCP SDK** — it is ESM and this project is CommonJS with seven dependencies that all pull their weight.
+- Tools reach the model as `mcp__<server>__<tool>` (OpenAI function names allow only `[A-Za-z0-9_-]`, max 64 chars, hence the slugging in `registry.slug()`), and `modules/harness/tools.js` merges them into `describe()`/`schemas()`/`call()`. **Only servers in state `running` contribute tools**, which makes the harness tool list dynamic — that is why `_harnessLoadMeta(true)` re-fetches when the ⚙ panel opens, and why `_harnessDisabledTools()` starts from the saved list instead of reading absent checkboxes as unticked.
+- Nothing is started implicitly. `registry.startAutostart()` is called from the **listen path** in `server.js`, never from `createApp()`, so requiring the app (as every test does) cannot spawn somebody's child processes.
+- A server that fails to start answers **200 with `ok: false`** and its stderr in `/api/mcp/:id/log`, because the panel wants to draw that, not catch it. Unknown *servers* are still 404.
+- Tests use `test/fixtures/mcp-stub-server.js`, a real stdio MCP server; `--fail` makes it exit at once to exercise the failure path. No network, no installed server needed.
+
+### Virtual machines (`/api/vms`)
+- `modules/vms.js` shells out to `virsh` and `VBoxManage`. Both are optional and **neither is installed by default** — each hypervisor is reported separately with its own `available`/`error`, and "not found" is the expected state, not a bug.
+- Commands run through `execFile` with an **argv array and no shell**, with `LC_ALL=C` because the state words are parsed. A VM name from the client is checked against the machines that exist before it is used, so it cannot arrive as a flag (`--all`). Do not switch this to a shell string the way `modules/docker.js` does.
+- An empty libvirt list is almost always the connection URI (`virsh` defaults to `qemu:///session`, virt-manager's machines are usually in `qemu:///system`); it is settable and stored in prefs under `vms.libvirtUri`.
+- The parsers (`parseVirshList`, `parseVboxList`, `parseVboxDisplay`, `normalizeState`) are exported and tested against captured real CLI output, which is how this is covered without a hypervisor.
+
 ### `/api/v1` client layer
 - Spec: `PROTOCOL.md`. Developer guides: `docs/api/` (getting started, device app guide, agent guide, cookbook). Code: `modules/api-v1/`. Mint tokens with `npm run token -- issue --name x --preset admin|agent|phone|watch|viewer`.
 - OpenAPI: `modules/api-v1/openapi.js` is the source; `docs/api/openapi.json` is generated from it (`npm run openapi > docs/api/openapi.json`) and `test/openapi.test.js` fails if it is stale or if any Express route is missing from it. When adding or changing a route, update `openapi.js` and regenerate.
@@ -32,4 +45,5 @@ OpenClaw Dashboard — a single Node.js/Express web app (`server.js` + `modules/
 - Some sidebar stats (CPU temp, GPU) read host sensors that are unavailable in the VM and render as `-`.
 - Default paths (`COMPOSE_DIR`, `CONFIG_PATH`, `SKILLS_DIR`, `WORKSPACE_DIR`, `SNAPSHOT_DIR`) derive from `~` and may not exist; override via env vars (see README "Environment Variables") or in **Settings → System → Paths**, which also creates them. Precedence is saved-in-prefs > env > default, resolved in `modules/paths.js`: overrides are written into `process.env` at boot before the constants are computed, so a saved change needs a restart, and anything acting on a path outside boot should call `paths.describe()` rather than trusting the captured constant.
 - Writes go through `writeFileSafe()` / `saveConfig()` / `savePrefs()` in `modules/utils.js`, which create missing directories and keep a `.bak`. Do not reintroduce a bare `fs.writeFileSync` for a user-facing file: a config path whose parent does not exist is a normal first-run state, not an error to show the user.
+- No hypervisor and no MCP server is installed either. The **VMs** tab saying `virsh not found` and the **MCP** tab being empty are correct first-run states.
 - Runtime prefs are written to `.dashboard-prefs.json` and certs to `.certs/` (both gitignored).

@@ -54,6 +54,8 @@
   font-size: 10px; color: var(--fg); font-family: var(--font-mono); cursor: pointer;
 }
 .harness-tool-toggle em { color: var(--amber); font-style: normal; font-weight: 700; }
+/* Tools that came from an MCP server, so it is clear which are DOCA's own. */
+.harness-tool-mcp span { color: var(--accent); }
 
 /* ── Catalog modal rows ─────────────────────────────── */
 .harness-cat-row {

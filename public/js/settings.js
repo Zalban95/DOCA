@@ -10,6 +10,8 @@ const SETTINGS_TABS = [
   { id: 'terminal',  label: 'Terminal' },
   { id: 'models',    label: 'Models' },
   { id: 'docker',    label: 'Docker' },
+  { id: 'vms',       label: 'VMs' },
+  { id: 'mcp',       label: 'MCP' },
 ];
 
 const _SETTINGS_SUBTABS = [

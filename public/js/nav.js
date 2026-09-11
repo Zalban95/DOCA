@@ -2,7 +2,7 @@
    OPENCLAW PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','logs','files','harness','terminal','models','docker','settings'];
+const NAV_TABS = ['controls','logs','files','harness','terminal','models','docker','vms','mcp','settings'];
 
 /** Single source for the mobile bottom bar (icon + short label per tab). */
 const NAV_TAB_DEFS = [
@@ -13,6 +13,8 @@ const NAV_TAB_DEFS = [
   { id: 'terminal', label: 'Term',   icon: '⌨' },
   { id: 'models',   label: 'Models', icon: '◆' },
   { id: 'docker',   label: 'Docker', icon: '◧' },
+  { id: 'vms',      label: 'VMs',    icon: '▤' },
+  { id: 'mcp',      label: 'MCP',    icon: '⇄' },
   { id: 'settings', label: 'Set',    icon: '⚙' },
 ];
 
@@ -52,6 +54,8 @@ function nav(name) {
   if (name === 'terminal') termInit();
   if (name === 'models')   modelsInit();
   if (name === 'docker')   dockerInit();
+  if (name === 'vms')      vmsInit();
+  if (name === 'mcp')      mcpInit();
   if (name === 'settings') settingsInit();
 
   closeSidebar();

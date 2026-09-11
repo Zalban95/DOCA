@@ -16,6 +16,8 @@ Web-based control panel for managing the **OpenClaw** AI agent stack.
 - **File Manager** — Browse, edit, copy/cut/paste, rename, upload/download files with drag & drop
 - **Harnesses** — One line per agent runtime on the Controls page. Ships with the **DOCA Harness** (built in, no install) and knows 14 others — OpenClaw, Claude Code, Codex CLI, Gemini CLI, Copilot CLI, Cursor CLI, Amp, Qwen Code, OpenCode, Crush, Goose, Continue, OpenHands, Aider — installable with one click from the catalog. Anything else can be added as a custom harness. The default harness is what the chat panel and the Harness tab talk to
 - **DOCA Harness** — The resident agent: structured memory, tool calling and rolling summarisation against any OpenAI-compatible provider (Ollama, llama.cpp, OpenAI, Anthropic, Google, Groq, OpenRouter, Mistral, DeepSeek, xAI, Together, Cerebras). Model and generation parameters are set inline from the ⚙ on its row
+- **MCP Servers** — Register Model Context Protocol servers (a command over stdio, or a URL), start/stop/restart them and see the tools each one offers. A running server's tools are handed to the **DOCA Harness** alongside its built-in ones as `mcp__server__tool`, each switchable in the harness ⚙. One click also writes them into the config Cursor, Claude Code or a project `.mcp.json` reads
+- **Virtual Machines** — Guests on this host through whichever hypervisor CLI is installed — libvirt/KVM (`virsh`) and VirtualBox (`VBoxManage`). Start, stop (asks the guest), reboot, force off, resume, and the VNC/SPICE/RDP address to paste into your own viewer
 - **AI Tools** — Whisper / Faster-Whisper (STT), Kokoro / Piper (TTS), Stable Diffusion / ComfyUI (image) with auto-detection, one-click install (⬇) and per-tool config (⚙)
 - **Inference Services** — Docker-based Whisper STT, Kokoro TTS, vLLM, Stable Diffusion and ComfyUI backends with GPU assignment, image-presence check and one-click pull
 - **System Tools** — Auto-checks 15 dependencies (Node, Docker, Compose, Git, Python, pip, Ollama, ffmpeg, curl, nvidia-smi, huggingface-cli, llama-server…) with ⬇ Install for anything missing and ↻ Update to re-run the installer on anything already present
@@ -190,6 +192,51 @@ window, summarise-after threshold and the system prompt — live in `.dashboard-
 
 ---
 
+## MCP Servers
+
+The **MCP** tab is a registry of Model Context Protocol servers. A server is either a command DOCA
+spawns and talks to over stdio (`npx -y @modelcontextprotocol/server-filesystem /srv`) or a URL it
+POSTs to. Definitions are saved in `.dashboard-prefs.json` under `mcpServers`; the processes are not,
+so nothing runs until you start it — except servers ticked **Start this server when DOCA starts**,
+which come up with the panel and are stopped again when it exits.
+
+Start one and it reports the tools it offers. Those tools are then handed to the built-in DOCA
+harness next to its own, named `mcp__<server>__<tool>` so two servers offering `search` cannot
+collide, and each one appears as its own switch in the harness ⚙ panel. **Only running servers
+contribute tools**: a tool declared to a model has to be callable. A server that declares a tool
+read-only (`readOnlyHint`) is shown without the `!` that marks a tool as able to change something.
+
+Servers log to stderr, which is what the **Log** button shows — including the reason a server
+refused to start, which is reported in place rather than as a failed request.
+
+The export buttons write the same servers into the files other agents read: `~/.cursor/mcp.json`,
+`~/.claude.json`, or a project `.mcp.json`. Only the `mcpServers` key is touched, everything else in
+the file is preserved, a `.bak` is kept, and a file that does not parse is refused rather than
+overwritten. Codex CLI is the exception — its config is TOML, so DOCA hands you a snippet to paste
+instead of rewriting a file and losing your comments.
+
+## Virtual Machines
+
+The **VMs** tab manages guests on this host through whichever hypervisor CLI is installed —
+libvirt/KVM (`virsh`) and VirtualBox (`VBoxManage`). Both are optional and each is reported
+separately, so a libvirtd you cannot reach does not hide the other's machines, and neither being
+installed is stated plainly instead of looking broken.
+
+Per machine: **Start**, **Stop** (asks the guest to shut down), **Reboot**, **Force off** (does not
+ask, so it confirms first) and **Resume** for a paused domain. Running machines show their display
+address — `virsh domdisplay` covers VNC and SPICE alike, and VirtualBox's VRDE is reported as RDP,
+which is what it actually is unless you installed the VNC extension pack. Copy it into your own
+viewer; DOCA does not proxy the console.
+
+If libvirt shows no machines, it is nearly always the connection URI: `virsh` defaults to
+`qemu:///session`, while machines made with virt-manager as root live in `qemu:///system`. The card
+has a field for it.
+
+Commands are run with an argv array and no shell, and a name from the browser is checked against the
+machines that actually exist before it is passed to anything.
+
+---
+
 ## Environment Variables
 
 Defaults are derived from the current user's home directory (`os.homedir()`, shown below as `~`) so
@@ -274,9 +321,16 @@ modules/                    Backend feature modules (one per concern)
     catalog.js              Built-in + 14 known + custom harnesses: detect, install, default, config
     providers.js            OpenAI-compatible provider presets, model listing, default params
     memory.js               Sessions, transcripts, rolling summaries, durable memory entries
-    tools.js                The 9 tools the built-in harness can call
+    tools.js                The 9 built-in tools, plus whatever MCP is offering
     agent.js                The agent loop: prompt assembly, streaming, tool calls, summarisation
     routes.js               /api/harness/* handlers
+  mcp/                      MCP servers
+    client.js               JSON-RPC 2.0 over stdio or HTTP: handshake, tools/list, tools/call
+    registry.js             Server definitions in prefs + the live clients and their lifecycle
+    tools.js                Running servers' tools, namespaced for the harness
+    export.js               Write the servers into Cursor / Claude Code / .mcp.json / Codex TOML
+    routes.js               /api/mcp/* handlers
+  vms.js                    Virtual machines via virsh / VBoxManage (list, lifecycle, display address)
   models*.js                Ollama / llama.cpp / HuggingFace / local model managers + AI tools
   system-tools.js           System dependency detection / install (15 tools)
   docker.js                 Docker containers / images / presets
@@ -327,6 +381,8 @@ public/
     chat.js                 Floating agent chat panel
     models.js / llamacpp.js Model managers + AI tools card + local model files
     docker.js               Docker manager UI
+    mcp.js                  MCP servers UI (registry, lifecycle, logs, export)
+    vms.js                  Virtual machine UI (per-hypervisor cards, lifecycle, display address)
     services.js             Inference services UI (gear config, image pull)
     terminal.js             Embedded terminal UI
     settings.js             Settings (tabs, theme, stats/sections toggles, boot service) + system tools UI

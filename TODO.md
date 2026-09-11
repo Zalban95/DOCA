@@ -3,6 +3,25 @@
 Known rough edges, deliberately deferred. Each one is small and independent —
 none of them break anything today.
 
+## MCP and VMs, deliberately left out of the first pass
+
+- **No embedded VNC console.** The VMs tab shows the display address to paste
+  into your own viewer. Doing it in-page needs a websockify-style proxy plus a
+  JS VNC client, which is a feature of its own rather than a detail of this one.
+
+- **No VM creation.** Management only. A create wizard would have to mask
+  `virt-install` / `VBoxManage createvm` and their disk, ISO and network
+  arguments — worth doing, but not while the panel could not yet start a VM.
+
+- **MCP HTTP transport is best-effort.** `modules/mcp/client.js` implements
+  streamable HTTP well enough for a server that answers a POST with JSON or a
+  single SSE frame, and it echoes `Mcp-Session-Id`. It does not hold a
+  long-lived event stream open, so a server that pushes notifications (tool
+  list changes, sampling requests) will not be heard. stdio is the tested path.
+
+- **MCP servers are not reachable from the `/api/v1` client layer** — no phone
+  or watch can list or call them. Only the built-in harness sees their tools.
+
 ## Settings consistency
 
 - **Status lines clear on four different schedules.** `3000ms` is the de facto

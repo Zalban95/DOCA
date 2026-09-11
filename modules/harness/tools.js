@@ -19,6 +19,7 @@ const { exec } = require('child_process');
 const { WORKSPACE_DIR, FM_ALLOWED_ROOTS } = require('../paths');
 const { fmSafe } = require('../utils');
 const memory = require('./memory');
+const mcp    = require('../mcp/tools');
 
 const MAX_OUT   = 8000;   // characters of tool output handed back to the model
 const SHELL_MS  = 60000;
@@ -205,16 +206,22 @@ const TOOLS = [
   },
 ];
 
-/** Metadata for the ⚙ panel's per-tool switches. */
+/** Metadata for the ⚙ panel's per-tool switches, built-in ones then MCP's. */
 function describe() {
-  return TOOLS.map(t => ({ name: t.name, description: t.description.split('.')[0], danger: !!t.danger }));
+  return [
+    ...TOOLS.map(t => ({ name: t.name, description: t.description.split('.')[0], danger: !!t.danger })),
+    ...mcp.describe(),
+  ];
 }
 
 /** The tool declarations to send to the model, minus anything switched off. */
 function schemas(disabled = []) {
-  return TOOLS
-    .filter(t => !disabled.includes(t.name))
-    .map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } }));
+  return [
+    ...TOOLS
+      .filter(t => !disabled.includes(t.name))
+      .map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })),
+    ...mcp.schemas(disabled),
+  ];
 }
 
 /**
@@ -223,9 +230,11 @@ function schemas(disabled = []) {
  * @returns {Promise<string>}
  */
 async function call(name, args, disabled = []) {
-  const tool = TOOLS.find(t => t.name === name);
-  if (!tool)                  return `Error: no tool named "${name}".`;
   if (disabled.includes(name)) return `Error: the "${name}" tool is switched off for this harness.`;
+  if (mcp.isMcpTool(name))     return mcp.call(name, args);
+
+  const tool = TOOLS.find(t => t.name === name);
+  if (!tool) return `Error: no tool named "${name}".`;
   try {
     return String(await tool.run(args || {}));
   } catch (e) {

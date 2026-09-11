@@ -26,9 +26,15 @@ async function harnessLoad() {
   }
 }
 
-/** Metadata for the ⚙ panel (providers, tool switches, defaults). */
-async function _harnessLoadMeta() {
-  if (_harnessMeta) return _harnessMeta;
+/**
+ * Metadata for the ⚙ panel (providers, tool switches, defaults).
+ *
+ * Pass `force` when opening the panel: the tool list is no longer fixed at boot
+ * now that a running MCP server contributes to it, so a cached copy would offer
+ * tools of a server that has since stopped.
+ */
+async function _harnessLoadMeta(force) {
+  if (_harnessMeta && !force) return _harnessMeta;
   _harnessMeta = await apiFetch('/api/harness/providers');
   return _harnessMeta;
 }
@@ -180,7 +186,7 @@ async function harnessConfigToggle(id, keepOpen) {
 
   if (h.kind !== 'builtin') { strip.innerHTML = _harnessExternalCfgHtml(h); return; }
 
-  const meta = await _harnessLoadMeta();
+  const meta = await _harnessLoadMeta(true);
   strip.innerHTML = _harnessParamsHtml(h, meta);
   _harnessLoadModels(id, h.config.provider, h.config.model);
 }
@@ -217,11 +223,13 @@ function _harnessParamsHtml(h, meta) {
        ${escHtml(p.label)}${p.hasKey ? '' : ' — no key'}
      </option>`).join('');
 
+  // MCP tools carry a readable label ("GitHub: create_issue"); the built-in ones
+  // are named plainly enough to show as they are.
   const toolRows = (meta.tools || []).map(t => `
-    <label class="harness-tool-toggle" title="${escHtml(t.description)}">
+    <label class="harness-tool-toggle ${t.mcp ? 'harness-tool-mcp' : ''}" title="${escHtml(t.description)}">
       <input type="checkbox" id="hcfg-tool-${h.id}-${escHtml(t.name)}"
              ${(c.disabledTools || []).includes(t.name) ? '' : 'checked'}>
-      <span>${escHtml(t.name)}</span>${t.danger ? '<em title="Can change the system">!</em>' : ''}
+      <span>${escHtml(t.label || t.name)}</span>${t.danger ? '<em title="Can change the system">!</em>' : ''}
     </label>`).join('');
 
   const num = (key, label, attrs, hint) => `
@@ -279,6 +287,24 @@ async function _harnessLoadModels(id, provider, selected) {
   }
 }
 
+/**
+ * Which tools are switched off, starting from what was already saved.
+ *
+ * Only tools with a checkbox on screen are decided here. An MCP server that has
+ * stopped since the panel was drawn has no checkbox, and reading a missing one
+ * as "unchecked" would quietly switch off every tool it offers — so that its
+ * own switches come back as they were when it starts again.
+ */
+function _harnessDisabledTools(id, h) {
+  const off = new Set(h?.config?.disabledTools || []);
+  for (const t of _harnessMeta?.tools || []) {
+    const box = document.getElementById(`hcfg-tool-${id}-${t.name}`);
+    if (!box) continue;
+    if (box.checked) off.delete(t.name); else off.add(t.name);
+  }
+  return [...off];
+}
+
 async function harnessConfigSave(id) {
   const h  = _harnesses.find(x => x.id === id);
   const st = document.getElementById(`hcfg-status-${id}`);
@@ -296,9 +322,7 @@ async function harnessConfigSave(id) {
         summarizeAfter: parseInt(val('summarizeAfter'), 10) || 0,
         memoryLimit:    parseInt(val('memoryLimit'), 10) || 0,
         systemPrompt:   val('systemPrompt') || '',
-        disabledTools:  (_harnessMeta?.tools || [])
-          .filter(t => !document.getElementById(`hcfg-tool-${id}-${t.name}`)?.checked)
-          .map(t => t.name),
+        disabledTools:  _harnessDisabledTools(id, h),
       }
     : {
         launchCmd:  (val('launch') || '').trim(),

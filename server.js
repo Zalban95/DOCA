@@ -34,6 +34,9 @@ const modelsLocal    = require('./modules/models-local');
 const systemTools  = require('./modules/system-tools');
 const stats        = require('./modules/stats');
 const docker       = require('./modules/docker');
+const vms          = require('./modules/vms');
+const mcp          = require('./modules/mcp/routes');
+const mcpRegistry  = require('./modules/mcp/registry');
 const services     = require('./modules/services');
 const update       = require('./modules/update');
 const startup      = require('./modules/startup');
@@ -227,6 +230,19 @@ app.get   ('/api/docker/presets',               docker.handleGetPresets);
 app.post  ('/api/docker/presets',               docker.handleSavePreset);
 app.delete('/api/docker/presets/:name',         docker.handleDeletePreset);
 
+// ─── Routes: MCP Servers ──────────────────────────────────────────────────────
+app.get   ('/api/mcp',             mcp.handleList);
+app.post  ('/api/mcp',             mcp.handleUpsert);
+app.post  ('/api/mcp/export',      mcp.handleExport);
+app.get   ('/api/mcp/:id/log',     mcp.handleLog);
+app.post  ('/api/mcp/:id/action',  mcp.handleAction);
+app.delete('/api/mcp/:id',         mcp.handleRemove);
+
+// ─── Routes: Virtual Machines ─────────────────────────────────────────────────
+app.get ('/api/vms',                      vms.handleList);
+app.post('/api/vms/settings',             vms.handleSettings);
+app.post('/api/vms/:hypervisor/action',   vms.handleAction);
+
 // ─── Routes: Inference Services ───────────────────────────────────────────────
 app.get ('/api/services',          services.handleList);
 app.post('/api/services/settings', services.handleSettings);
@@ -271,6 +287,22 @@ function listenWithRetry(server, announce) {
   server.listen(PORT, '0.0.0.0');
 }
 
+/**
+ * MCP servers marked "start with DOCA", and their cleanup.
+ *
+ * Deliberately here and not in createApp(): requiring the app must never spawn
+ * somebody's child processes, which is what the tests do.
+ */
+function startMcpServers() {
+  mcpRegistry.startAutostart().then(results => {
+    for (const r of results.filter(x => !x.ok)) console.warn(`[mcp] ${r.id}: ${r.error}`);
+  });
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.once(signal, () => { mcpRegistry.stopAll(); process.exit(0); });
+  }
+  process.once('exit', () => mcpRegistry.stopAll());
+}
+
 ensureCerts().then(certs => {
   const server = https.createServer(certs, app);
   terminal.setup(server);
@@ -279,6 +311,7 @@ ensureCerts().then(certs => {
       ? `https://${certs.tailscale}:${PORT}  (Tailscale — trusted)`
       : `https://0.0.0.0:${PORT}  (self-signed)`;
     console.log(`OpenClaw Panel v${pkg.version} → ${label}`);
+    startMcpServers();
   });
 }).catch(e => {
   console.warn(`[HTTPS] Falling back to HTTP: ${e.message}`);
@@ -286,6 +319,7 @@ ensureCerts().then(certs => {
   terminal.setup(server);
   listenWithRetry(server, () => {
     console.log(`OpenClaw Panel v${pkg.version} → http://0.0.0.0:${PORT}`);
+    startMcpServers();
   });
 });
 }

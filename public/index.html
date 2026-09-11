@@ -42,6 +42,8 @@
     <button class="nav-tab"        data-tab="terminal"  onclick="nav('terminal')">Terminal</button>
     <button class="nav-tab"        data-tab="models"    onclick="nav('models')">Models</button>
     <button class="nav-tab"        data-tab="docker"    onclick="nav('docker')">Docker</button>
+    <button class="nav-tab"        data-tab="vms"       onclick="nav('vms')">VMs</button>
+    <button class="nav-tab"        data-tab="mcp"       onclick="nav('mcp')">MCP</button>
     <button class="nav-tab"        data-tab="settings"  onclick="nav('settings')">Settings</button>
   </nav>
 
@@ -600,6 +602,98 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- ─── MCP SERVERS ─────────────────────────────────── -->
+    <div id="tab-mcp" class="tab-page">
+      <div class="toolbar" style="margin-bottom:8px">
+        <div class="card-title" style="margin-bottom:0">MCP Servers</div>
+        <button class="btn btn-sm btn-blue" onclick="mcpNew()">+ Add server</button>
+        <button class="btn btn-sm" onclick="mcpLoad()">↺ Refresh</button>
+      </div>
+      <div class="input-label" style="margin-bottom:10px">
+        Model Context Protocol servers. A running server's tools are offered to the
+        <strong>DOCA harness</strong> alongside its built-in ones, named
+        <code>mcp__server__tool</code>, and each can be switched off in the harness ⚙ panel.
+        Only running servers contribute tools, and nothing is started unless you say so.
+      </div>
+
+      <div class="scroll-y" style="flex:1">
+        <div id="mcp-list"><div class="placeholder pulse">Loading…</div></div>
+        <div id="mcp-export"></div>
+
+        <div id="mcp-form" style="display:none">
+          <div class="card mt8">
+            <div class="card-title">MCP Server</div>
+            <div class="row">
+              <div class="field flex1">
+                <div class="input-label">Name</div>
+                <input id="mcp-name" class="input" placeholder="github">
+              </div>
+              <div class="field">
+                <div class="input-label">Transport</div>
+                <select id="mcp-transport" class="input" onchange="mcpTransportChange()">
+                  <option value="stdio">stdio (a command)</option>
+                  <option value="http">http (a URL)</option>
+                </select>
+              </div>
+            </div>
+            <div id="mcp-stdio-fields">
+              <div class="field">
+                <div class="input-label">Command</div>
+                <input id="mcp-command" class="input" placeholder="npx">
+              </div>
+              <div class="field">
+                <div class="input-label">Arguments — one per line</div>
+                <textarea id="mcp-args" class="input" rows="3" placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;/home/me/projects"></textarea>
+              </div>
+              <div class="field">
+                <div class="input-label">Environment — KEY=VALUE, one per line</div>
+                <textarea id="mcp-env" class="input" rows="2" placeholder="GITHUB_TOKEN=ghp_…"></textarea>
+              </div>
+              <div class="field">
+                <div class="input-label">Working directory <span style="opacity:.6">— optional</span></div>
+                <input id="mcp-cwd" class="input" placeholder="leave empty for DOCA's own">
+              </div>
+            </div>
+            <div id="mcp-http-fields" style="display:none">
+              <div class="field">
+                <div class="input-label">URL</div>
+                <input id="mcp-url" class="input" placeholder="https://example.com/mcp">
+              </div>
+            </div>
+            <div class="settings-tab-row">
+              <label class="skill-toggle">
+                <input type="checkbox" id="mcp-autostart">
+                <span class="skill-toggle-track"></span>
+              </label>
+              <span class="settings-tab-label">Start this server when DOCA starts</span>
+            </div>
+            <div class="toolbar-right">
+              <button class="btn btn-sm" onclick="mcpShowForm(false)">Cancel</button>
+              <button class="btn btn-sm btn-blue" onclick="mcpSave()">Save</button>
+            </div>
+            <div class="status-line mt8" id="mcp-form-status"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── VIRTUAL MACHINES ────────────────────────────── -->
+    <div id="tab-vms" class="tab-page">
+      <div class="toolbar" style="margin-bottom:8px">
+        <div class="card-title" style="margin-bottom:0">Virtual Machines</div>
+        <button class="btn btn-sm" onclick="vmsLoad()">↺ Refresh</button>
+        <span class="status-line" id="vms-status"></span>
+      </div>
+      <div class="input-label" style="margin-bottom:10px">
+        Guests on this machine, through whichever hypervisor CLI is installed — libvirt/KVM
+        (<code>virsh</code>) and VirtualBox (<code>VBoxManage</code>). Stop asks the guest to shut
+        down; Force off does not. Copy a display address into your own VNC or RDP viewer.
+      </div>
+      <div class="scroll-y" style="flex:1">
+        <div id="vms-list"><div class="placeholder pulse">Loading…</div></div>
       </div>
     </div>
 
@@ -1200,6 +1294,8 @@
 <script src="js/llamacpp.js"></script>
 <script src="js/services.js"></script>
 <script src="js/docker.js"></script>
+<script src="js/vms.js"></script>
+<script src="js/mcp.js"></script>
 <script src="js/sudo.js"></script>
 <script src="js/themes.js"></script>
 <script src="js/settings.js"></script>
