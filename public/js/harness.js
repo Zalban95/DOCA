@@ -256,7 +256,8 @@ function _harnessParamsHtml(h, meta) {
     </div>
     <div class="harness-cfg-actions">
       <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
-      <button class="btn btn-xs" onclick="harnessResetParams(${jsArg(h.id)})" title="Back to the shipped defaults">Defaults</button>
+      <button class="btn btn-xs" onclick="harnessResetParams(${jsArg(h.id)})"
+              title="Throw away these parameters and go back to the shipped ones">Reset</button>
       <span class="status-line" id="hcfg-status-${h.id}"></span>
     </div>`;
 }
@@ -314,15 +315,27 @@ async function harnessConfigSave(id) {
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
 
+/**
+ * Back to the shipped parameters — nothing to do with which harness is the
+ * *default* one, which is what "default" means everywhere else on this page.
+ * It saves as soon as it is confirmed, and the provider is part of what goes,
+ * so say which one you have been left on instead of redrawing in silence.
+ */
 function harnessResetParams(id) {
-  appConfirm('Reset this harness back to the shipped defaults?', async () => {
-    const meta = await _harnessLoadMeta();
-    try {
-      const data = await apiFetch(`/api/harness/${encodeURIComponent(id)}/config`, { method: 'POST', body: meta.defaults });
-      const h = _harnesses.find(x => x.id === id);
-      if (h) h.config = data.config;
-      harnessConfigToggle(id, true);
-    } catch (e) { setStatus(document.getElementById(`hcfg-status-${id}`), `✗ ${e.message}`, 'err'); }
+  _harnessLoadMeta().then(meta => {
+    const provider = (meta.providers || []).find(p => p.id === meta.defaults.provider);
+    const label    = provider?.label || meta.defaults.provider;
+    appConfirm(
+      `Reset this harness to the shipped parameters? The provider goes back to ${label} and the chosen model is cleared.`,
+      async () => {
+        try {
+          const data = await apiFetch(`/api/harness/${encodeURIComponent(id)}/config`, { method: 'POST', body: meta.defaults });
+          const h = _harnesses.find(x => x.id === id);
+          if (h) h.config = data.config;
+          await harnessConfigToggle(id, true);
+          setStatus(document.getElementById(`hcfg-status-${id}`), `↺ Reset — provider is ${label}, no model chosen`, 'warn');
+        } catch (e) { setStatus(document.getElementById(`hcfg-status-${id}`), `✗ ${e.message}`, 'err'); }
+      });
   });
 }
 
