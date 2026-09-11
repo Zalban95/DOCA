@@ -18,8 +18,9 @@ const { exec } = require('child_process');
 
 const { WORKSPACE_DIR, FM_ALLOWED_ROOTS } = require('../paths');
 const { fmSafe } = require('../utils');
-const memory = require('./memory');
-const mcp    = require('../mcp/tools');
+const memory   = require('./memory');
+const settings = require('./settings');
+const mcp      = require('../mcp/tools');
 
 const MAX_OUT   = 8000;   // characters of tool output handed back to the model
 const SHELL_MS  = 60000;
@@ -126,22 +127,57 @@ const TOOLS = [
   },
   {
     name: 'memory_write',
-    description: 'Remember something for good. Use it for facts about this machine, paths, ports, hardware, '
-      + 'and the user\'s standing preferences — anything you would want to know at the start of a future '
-      + 'conversation. Writing an existing key overwrites it. Never store secrets.',
+    description: 'Remember something for good, following the memory rules in your context. Use it for facts '
+      + 'about this machine, paths, ports, hardware, and the user\'s standing preferences — anything you would '
+      + 'want to know at the start of a future conversation. Writing an existing key overwrites it. Never store secrets.',
     parameters: {
       type: 'object',
       properties: {
-        key:    { type: 'string', description: 'Short stable identifier, e.g. "gpu" or "models-dir".' },
-        value:  { type: 'string', description: 'The fact itself, in one or two sentences.' },
-        tags:   { type: 'array', items: { type: 'string' }, description: 'Optional keywords to help you find it later.' },
-        pinned: { type: 'boolean', description: 'Pin to always include it in your context.' },
+        key:      { type: 'string', description: 'Short stable identifier, e.g. "gpu" or "models-dir".' },
+        value:    { type: 'string', description: 'The fact itself, in one or two sentences.' },
+        category: { type: 'string', description: 'One of your memory categories, listed in your context.' },
+        tags:     { type: 'array', items: { type: 'string' }, description: 'Optional keywords to help you find it later.' },
+        pinned:   { type: 'boolean', description: 'Pin to always include it in your context.' },
       },
       required: ['key', 'value'],
     },
-    run: ({ key, value, tags, pinned }) => {
-      const e = memory.memWrite({ key, value, tags, pinned, source: 'agent' });
-      return `Remembered "${e.key}"${e.pinned ? ' (pinned)' : ''}.`;
+    run: ({ key, value, tags, pinned, category }) => {
+      const e = memory.memWrite({ key, value, tags, pinned, category, source: 'agent' });
+      return `Remembered "${e.key}"${e.category ? ` under ${e.category}` : ''}${e.pinned ? ', pinned' : ''}.`;
+    },
+  },
+  {
+    name: 'memory_rules_write',
+    description: 'Change how you keep your own memory: the categories facts are filed under and the rules you '
+      + 'follow when writing them. Both are in your context every turn. Use it when you find a better way to '
+      + 'keep this memory, or when the user tells you one. Pass only the list you are changing.',
+    parameters: {
+      type: 'object',
+      properties: {
+        categories: {
+          type: 'array',
+          description: 'The complete new category list, replacing the old one.',
+          items: {
+            type: 'object',
+            properties: {
+              id:          { type: 'string', description: 'Short lower-case name, e.g. "machine".' },
+              description: { type: 'string', description: 'What belongs in it.' },
+            },
+            required: ['id'],
+          },
+        },
+        rules: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'The complete new rule list, replacing the old one. Include the rules you are keeping.',
+        },
+      },
+    },
+    run: ({ categories, rules }) => {
+      if (categories === undefined && rules === undefined)
+        return 'Error: pass categories, rules, or both.';
+      const doc = memory.rulesWrite({ categories, rules, source: 'agent' });
+      return `Memory rules updated: ${doc.categories.length} categories, ${doc.rules.length} rules.`;
     },
   },
   {
@@ -172,6 +208,57 @@ const TOOLS = [
       required: ['key'],
     },
     run: ({ key }) => { memory.memForget(key); return `Forgot "${key}".`; },
+  },
+  {
+    name: 'settings_read',
+    description: 'Read this panel\'s settings — every one you are allowed to suggest a change to, with its '
+      + 'current value. Do this before proposing anything, so you change what is actually set rather than what '
+      + 'you assumed.',
+    parameters: {
+      type: 'object',
+      properties: {
+        filter: { type: 'string', description: 'Optional substring to match against the setting paths, e.g. "paths" or "harness".' },
+      },
+    },
+    run: ({ filter }) => {
+      const q    = String(filter || '').toLowerCase();
+      const rows = settings.readable().filter(r => !q || r.path.toLowerCase().includes(q));
+      if (!rows.length) return `No settings match "${filter}".`;
+      const body = rows.map(r =>
+        `${r.path} = ${JSON.stringify(r.value)}${r.detail ? `   # ${r.detail}` : ''}`).join('\n');
+      return clip(`${rows.length} settings you may propose changes to:\n${body}`);
+    },
+  },
+  {
+    name: 'settings_propose',
+    description: 'Suggest a settings change. This does NOT apply it: the user sees the old and new values and '
+      + 'accepts or declines. Put every key of one coherent change in a single call, give a one-line reason, '
+      + 'then stop and let them answer — do not poll, repeat, or apply it another way.',
+    parameters: {
+      type: 'object',
+      properties: {
+        reason: { type: 'string', description: 'Why, in one line, in the user\'s terms.' },
+        changes: {
+          type: 'array',
+          description: 'The keys to change, as dotted settings paths from settings_read.',
+          items: {
+            type: 'object',
+            properties: {
+              path:  { type: 'string', description: 'Dotted settings path, e.g. "paths.WORKSPACE_DIR".' },
+              value: { description: 'The value to set. Same type as the current one.' },
+            },
+            required: ['path', 'value'],
+          },
+        },
+      },
+      required: ['reason', 'changes'],
+    },
+    run: ({ reason, changes }) => {
+      const p = settings.propose({ changes, reason });
+      const lines = p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`);
+      return `Proposed (${p.id}) — waiting for the user to accept or decline:\n${lines.join('\n')}\n`
+        + 'Tell them what you proposed and why, then stop.';
+    },
   },
   {
     name: 'system_status',

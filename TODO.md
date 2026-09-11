@@ -22,6 +22,16 @@ none of them break anything today.
 - **MCP servers are not reachable from the `/api/v1` client layer** — no phone
   or watch can list or call them. Only the built-in harness sees their tools.
 
+- **Settings proposals are panel-only too.** A pending change is drawn in the
+  Harness console and nowhere else, so a proposal made while you are on your
+  phone waits until you open the dashboard. The `/api/v1` prompt machinery
+  (`modules/api-v1/prompts.js`) is the natural home for it.
+
+- **A proposal is not tied to the conversation that made it.**
+  `settings.propose()` accepts a `sessionId` but the tool has no way to pass one,
+  so the card is not filed against the transcript it came from. Harmless with one
+  conversation open, confusing with several.
+
 ## Settings consistency
 
 - **Status lines clear on four different schedules.** `3000ms` is the de facto

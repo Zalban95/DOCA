@@ -441,7 +441,7 @@ function _harnessConsoleBuild() {
   _hcRendered = h.id;
 
   shell.innerHTML = h.kind === 'builtin' ? _hcBuiltinHtml(h) : _hcExternalHtml(h);
-  if (h.kind === 'builtin') { _hcLoadSessions(); _hcLoadMemory(); _hcStatus(); }
+  if (h.kind === 'builtin') { _hcLoadSessions(); _hcLoadMemory(); _hcLoadProposals(); _hcStatus(); }
   else requestAnimationFrame(() => _harnessTermOpen(h));
 }
 
@@ -458,6 +458,7 @@ function _hcBuiltinHtml(h) {
         <div id="hc-sessions" class="hc-sessions"><div class="placeholder">Loading…</div></div>
         <div class="hc-side-head" style="margin-top:10px">
           Memory
+          <button class="btn btn-xs" onclick="hcRulesOpen()" title="The categories and rules it keeps memory by">Rules</button>
           <button class="btn btn-xs" onclick="_hcLoadMemory()" title="Refresh">↺</button>
         </div>
         <div class="hc-memory-add">
@@ -474,10 +475,12 @@ function _hcBuiltinHtml(h) {
           <span class="badge badge-blue" id="hc-model-badge" style="font-size:9px">…</span>
           <span class="status-line" id="hc-status"></span>
           <div class="toolbar-right">
+            <button class="btn btn-xs" onclick="hcEnvOpen()" title="Everything this agent is told about your machine">Context</button>
             <button class="btn btn-xs tool-gear" onclick="nav('controls'); harnessConfigToggle(${jsArg(h.id)}, true)" title="Model and parameters">⚙</button>
           </div>
         </div>
         <div class="hc-messages" id="hc-messages"><div class="placeholder">Ask it anything about this machine.</div></div>
+        <div class="hc-proposals" id="hc-proposals"></div>
         <div class="hc-input-row">
           <span class="hc-caret">❯</span>
           <textarea class="input flex1 hc-input" id="hc-input" rows="1" placeholder="Message the harness…"
@@ -617,6 +620,9 @@ async function hcSend() {
       }
       if (evt.type === 'tool_result') _hcAppend('tool-result', evt.result, evt.name);
       if (evt.type === 'error')       _hcAppend('error', evt.text, 'error');
+      // Mid-turn, so the card is there to accept the moment the agent explains
+      // it rather than after the whole answer has finished streaming.
+      if (evt.type === 'proposal')    _hcLoadProposals();
     },
     onError: e => _hcAppend('error', e.message, 'error'),
   });
@@ -625,6 +631,7 @@ async function hcSend() {
   if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
   _hcLoadSessions();
   _hcLoadMemory();
+  _hcLoadProposals();
   input?.focus();
 }
 
@@ -662,6 +669,166 @@ function hcMemForget(key) {
       _hcLoadMemory();
     } catch (e) { appAlert(e.message); }
   });
+}
+
+/* ── The rules memory is kept by ──────────────────────── */
+
+function hcRulesOpen() {
+  const overlay = document.getElementById('hc-rules-overlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  _hcRulesFill();
+}
+
+async function _hcRulesFill(source) {
+  const cats  = document.getElementById('hc-rules-cats');
+  const rules = document.getElementById('hc-rules-list');
+  try {
+    const doc = source || (await apiFetch('/api/harness/memory/rules')).rules;
+    if (cats)  cats.value  = doc.categories.map(c => `${c.id}: ${c.description || ''}`.trim()).join('\n');
+    if (rules) rules.value = doc.rules.join('\n');
+    setStatus(document.getElementById('hc-rules-status'),
+      doc.source === 'default' ? 'The rules DOCA ships with.'
+        : `Last changed by the ${doc.source === 'agent' ? 'agent' : 'user'}.`, '');
+  } catch (e) { setStatus(document.getElementById('hc-rules-status'), e.message, 'err'); }
+}
+
+function hcRulesClose(event) {
+  if (event && event.target !== event.currentTarget) return;
+  const overlay = document.getElementById('hc-rules-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+/** `id: description` per line — the same shape the modal shows. */
+function _hcParseCategories(text) {
+  return text.split('\n').map(line => {
+    const [id, ...rest] = line.split(':');
+    return { id: (id || '').trim(), description: rest.join(':').trim() };
+  }).filter(c => c.id);
+}
+
+async function hcRulesSave() {
+  const st = document.getElementById('hc-rules-status');
+  try {
+    const { rules } = await apiFetch('/api/harness/memory/rules', {
+      method: 'POST',
+      body: {
+        categories: _hcParseCategories(document.getElementById('hc-rules-cats').value),
+        rules:      document.getElementById('hc-rules-list').value.split('\n').map(r => r.trim()).filter(Boolean),
+      },
+    });
+    _hcRulesFill(rules);
+    setStatus(st, '✓ Saved — in force from the next message', 'ok');
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}
+
+function hcRulesReset() {
+  appConfirm('Go back to the memory rules DOCA ships with? Anything you or the agent changed here is lost.',
+    async () => {
+      try {
+        const { rules } = await apiFetch('/api/harness/memory/rules', { method: 'DELETE' });
+        _hcRulesFill(rules);
+        setStatus(document.getElementById('hc-rules-status'), '↺ Back to the shipped rules', 'warn');
+      } catch (e) { setStatus(document.getElementById('hc-rules-status'), `✗ ${e.message}`, 'err'); }
+    });
+}
+
+/* ── What the agent is told ───────────────────────────── */
+
+async function hcEnvOpen() {
+  const overlay = document.getElementById('hc-env-overlay');
+  const out     = document.getElementById('hc-env-out');
+  if (!overlay || !out) return;
+  overlay.style.display = 'flex';
+  out.textContent = 'Loading…';
+  try {
+    const data = await apiFetch('/api/harness/environment');
+    out.textContent = `${data.charter}\n\n${data.block}`;
+  } catch (e) { out.textContent = e.message; }
+}
+
+function hcEnvClose(event) {
+  if (event && event.target !== event.currentTarget) return;
+  const overlay = document.getElementById('hc-env-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+/* ── Settings the agent wants changed ─────────────────── */
+
+async function _hcLoadProposals() {
+  const box = document.getElementById('hc-proposals');
+  if (!box) return;
+  try {
+    const { pending } = await apiFetch('/api/harness/proposals');
+    box.innerHTML = pending.map(_hcProposalHtml).join('');
+  } catch { box.innerHTML = ''; }
+}
+
+/**
+ * One pending change, with the values it would replace.
+ *
+ * The old value is shown next to the new one for every key, because "accept"
+ * has to be a decision about something visible: the agent proposing a path is
+ * also the agent that would use it, and nobody should have to open Settings in
+ * another tab to see what it is asking to overwrite.
+ */
+function _hcProposalHtml(p) {
+  const rows = p.changes.map(c => `
+    <div class="hc-prop-row">
+      <code class="hc-prop-key">${escHtml(c.path)}</code>
+      <span class="hc-prop-from">${escHtml(JSON.stringify(c.from))}</span>
+      <span class="hc-prop-arrow">→</span>
+      <span class="hc-prop-to">${escHtml(JSON.stringify(c.to))}</span>
+    </div>`).join('');
+
+  const notes = [...new Set(p.changes.map(c => c.note).filter(Boolean))];
+
+  return `
+    <div class="hc-prop" id="hc-prop-${escHtml(p.id)}">
+      <div class="hc-prop-head">
+        <span class="badge badge-amber" style="font-size:9px">SETTINGS CHANGE</span>
+        <span class="hc-prop-why">${escHtml(p.reason || 'The agent suggests this change.')}</span>
+      </div>
+      ${rows}
+      ${notes.map(n => `<div class="hc-prop-note">${escHtml(n)}</div>`).join('')}
+      <div class="hc-prop-actions">
+        <span class="status-line" id="hc-prop-status-${escHtml(p.id)}"></span>
+        <button class="btn btn-xs" onclick="hcProposalReject(${jsArg(p.id)})">Decline</button>
+        <button class="btn btn-xs btn-green" onclick="hcProposalApply(${jsArg(p.id)})">Accept</button>
+      </div>
+    </div>`;
+}
+
+async function hcProposalApply(id) {
+  const st = document.getElementById(`hc-prop-status-${id}`);
+  try {
+    const data = await apiFetch(`/api/harness/proposals/${encodeURIComponent(id)}/apply`, { method: 'POST' });
+    _hcAppend('summary', data.proposal.changes.map(c => `${c.path} = ${JSON.stringify(c.to)}`).join('\n'),
+      data.restartNeeded ? 'Applied — restart the panel for it to take effect' : 'Applied');
+    await _hcLoadProposals();
+    // Paths and stats are drawn from prefs elsewhere in the panel; the pages
+    // that show them read on open, so only this one needs telling.
+    if (typeof settingsLoad === 'function' && currentTab === 'settings') settingsLoad();
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}
+
+/**
+ * Decline, with the chance to say why.
+ *
+ * The reason is not politeness: it goes into the agent's context, which is what
+ * stops it proposing the same thing again next turn. Declining without one is
+ * still allowed — leaving the box empty should not cost anyone a click.
+ */
+function hcProposalReject(id) {
+  appPrompt('Why not? The agent sees this, so it will not suggest it again. Leave it empty to just decline.',
+    async reason => {
+      try {
+        await apiFetch(`/api/harness/proposals/${encodeURIComponent(id)}/reject`, {
+          method: 'POST', body: { reason: reason || '' },
+        });
+        await _hcLoadProposals();
+      } catch (e) { appAlert(e.message); }
+    }, '', { allowEmpty: true });
 }
 
 /* ── External harness: an embedded terminal ───────────── */

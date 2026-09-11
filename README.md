@@ -15,7 +15,7 @@ Web-based control panel for managing the **OpenClaw** AI agent stack.
 - **Paths** — Settings → System lists every path DOCA depends on with its current value, where that value came from (saved here / environment / default) and whether it is actually there, plus a one-click **Create** for anything missing
 - **File Manager** — Browse, edit, copy/cut/paste, rename, upload/download files with drag & drop
 - **Harnesses** — One line per agent runtime on the Controls page. Ships with the **DOCA Harness** (built in, no install) and knows 14 others — OpenClaw, Claude Code, Codex CLI, Gemini CLI, Copilot CLI, Cursor CLI, Amp, Qwen Code, OpenCode, Crush, Goose, Continue, OpenHands, Aider — installable with one click from the catalog. Anything else can be added as a custom harness. The default harness is what the chat panel and the Harness tab talk to
-- **DOCA Harness** — The resident agent: structured memory, tool calling and rolling summarisation against any OpenAI-compatible provider (Ollama, llama.cpp, OpenAI, Anthropic, Google, Groq, OpenRouter, Mistral, DeepSeek, xAI, Together, Cerebras). Model and generation parameters are set inline from the ⚙ on its row
+- **DOCA Harness** — The resident agent: structured memory, tool calling and rolling summarisation against any OpenAI-compatible provider (Ollama, llama.cpp, OpenAI, Anthropic, Google, Groq, OpenRouter, Mistral, DeepSeek, xAI, Together, Cerebras). Model and generation parameters are set inline from the ⚙ on its row. It knows where it is running (paths, providers, MCP servers, this panel's own version and source), keeps its memory by rules that it and you can both rewrite, and can suggest settings changes that only take effect when you accept them — under standing safety rules that ship in the code and cannot be edited away
 - **MCP Servers** — Register Model Context Protocol servers (a command over stdio, or a URL), start/stop/restart them and see the tools each one offers. A running server's tools are handed to the **DOCA Harness** alongside its built-in ones as `mcp__server__tool`, each switchable in the harness ⚙. One click also writes them into the config Cursor, Claude Code or a project `.mcp.json` reads
 - **Virtual Machines** — Guests on this host through whichever hypervisor CLI is installed — libvirt/KVM (`virsh`) and VirtualBox (`VBoxManage`). Start, stop (asks the guest), reboot, force off, resume, and the VNC/SPICE/RDP address to paste into your own viewer
 - **AI Tools** — Whisper / Faster-Whisper (STT), Kokoro / Piper (TTS), Stable Diffusion / ComfyUI (image) with auto-detection, one-click install (⬇) and per-tool config (⚙)
@@ -172,19 +172,48 @@ Keys come from the same screen (or the matching env var; local servers need none
 dropdown is populated live from the provider.
 
 **Tools.** `shell`, `read_file`, `write_file`, `list_dir`, `system_status`, `http_fetch`,
-`memory_write`, `memory_search`, `memory_forget`. File access is confined to
+`memory_write`, `memory_search`, `memory_forget`, `memory_rules_write`, `settings_read`,
+`settings_propose`, plus whatever any running MCP server offers. File access is confined to
 `FM_ALLOWED_ROOTS`, writes leave a `.bak`, and each tool can be switched off individually in ⚙.
 
-**Memory** is structured in three layers, all under `DOCA_DATA_DIR/harness/`:
+**Standing rules.** Every turn opens with a charter that lives in `modules/harness/providers.js`:
+look before you touch, one change at a time, follow the conventions already in the file, leave a way
+back, nothing destructive that was not asked for, settings go through the user, secrets stay where
+they are, report what actually happened. It is **not** in the prefs file and the ⚙ panel cannot edit
+it — an agent that can rewrite everything in prefs must not be able to rewrite the rules about it.
+The system prompt you *do* own is added after it. Read the whole thing, exactly as sent, with
+**Context** on the Harness tab.
+
+**Awareness.** After the charter comes the machine, read fresh each turn and cheap enough to be:
+host and hardware, the time and zone, this panel's version, port, pid, source directory, prefs and
+data locations, every managed path with where its value came from and whether it exists, which
+providers have a key, and which MCP servers are running with how many tools. Live figures that cost
+a subprocess — docker, GPUs, disks — stay behind the `system_status` tool.
+
+**Memory** is structured in four layers, all under `DOCA_DATA_DIR/harness/`:
 
 | Layer | What it holds |
 |---|---|
 | Transcript | Every message and tool result of a conversation, appended to `sessions/<id>.jsonl` |
 | Rolling summary | Once a conversation passes *Summarise after*, the older half is folded into prose notes so the context window stays bounded without losing the thread |
 | Durable memory | Keyword-searchable facts the agent chose to keep (or you added by hand), carried into **every** new conversation |
+| Memory rules | The categories facts are filed under and the rules for writing them — in context every turn, and editable by the agent (`memory_rules_write`) as well as by you (**Rules** on the Harness tab) |
 
-That last layer is why a fresh conversation still knows how your machine is set up. You can read,
-pin and delete entries from the Memory panel on the Harness tab.
+The durable layer is why a fresh conversation still knows how your machine is set up. You can read,
+pin and delete entries from the Memory panel on the Harness tab; **Rules** opens the filing system
+itself, with a one-click return to the shipped defaults.
+
+**Settings, with your consent.** The agent can read every setting it is allowed to touch
+(`settings_read`) and suggest changes (`settings_propose`), but it cannot apply one. A proposal
+appears in the console as a card with the old and new value of every key and a one-line reason, and
+nothing is written until you press Accept. Declining is remembered along with your reason, so it is
+not suggested again. What may be proposed is an allowlist of prefs sections in
+`modules/harness/settings.js` — paths, harness parameters, model, snapshot, service, voice and VM
+settings, theme, sidebar and navigation choices. Anything whose name is a credential is refused
+wherever it sits, and the API keys in `openclaw.json`, the MCP server definitions and the custom
+harnesses are not on the list at all, because each of those is a command that would later be run.
+Accepted changes are written with the same `savePrefs()` the Settings screens use; a path change
+says it needs a restart, because it does.
 
 **Parameters** — provider, model, temperature, top-p, max tokens, max tool steps per turn, history
 window, summarise-after threshold and the system prompt — live in `.dashboard-prefs.json` under
@@ -319,9 +348,11 @@ modules/                    Backend feature modules (one per concern)
   chat.js                   Floating chat panel (default harness, Gateway API / claude CLI fallback)
   harness/                  Agent harnesses
     catalog.js              Built-in + 14 known + custom harnesses: detect, install, default, config
-    providers.js            OpenAI-compatible provider presets, model listing, default params
-    memory.js               Sessions, transcripts, rolling summaries, durable memory entries
-    tools.js                The 9 built-in tools, plus whatever MCP is offering
+    providers.js            Provider presets, default params, and the standing safety charter
+    memory.js               Sessions, transcripts, rolling summaries, durable memory, memory rules
+    environment.js          What the agent is told about this machine, each turn
+    settings.js             Settings the agent may propose, and the proposals awaiting the user
+    tools.js                The 12 built-in tools, plus whatever MCP is offering
     agent.js                The agent loop: prompt assembly, streaming, tool calls, summarisation
     routes.js               /api/harness/* handlers
   mcp/                      MCP servers

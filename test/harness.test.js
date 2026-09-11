@@ -301,6 +301,51 @@ test('a switched-off tool is refused even if the model asks for it', async () =>
   await H.api(null, 'POST', '/api/harness/doca/config', { disabledTools: [] });
 });
 
+test('every turn carries the standing rules and the memory rules', async () => {
+  script = [{ text: 'ok' }];
+  await stream('/api/harness/chat', { message: 'hello' });
+
+  const system = seen[0].messages[0].content;
+  // In this order: the panel's rules first, then the user's own prompt, then the
+  // facts. The charter is not in prefs, so no saved parameter can drop it.
+  assert.ok(system.indexOf('# Standing rules') === 0, 'the charter opens the prompt');
+  assert.ok(system.indexOf('# Standing rules') < system.indexOf('# Environment'));
+  assert.match(system, /Settings belong to the user/);
+  assert.match(system, /# How you keep your memory/);
+  assert.match(system, /- machine: Hardware, OS, GPUs/, 'the memory categories are in context');
+  assert.match(system, /Never store a secret, key, token or password/);
+});
+
+test('a settings change the agent wants travels as its own event and writes nothing', async () => {
+  script = [
+    { tool: 'settings_propose', args: {
+      reason: 'the snapshot directory does not exist yet',
+      changes: [{ path: 'snapshotSettings.dir', value: '/srv/snapshots' }],
+    } },
+    { text: 'I have suggested moving the snapshot directory.' },
+  ];
+
+  const events = await stream('/api/harness/chat', { message: 'snapshots keep failing' });
+
+  // The console needs this as a card with buttons, not as one more line of tool
+  // output, so it is emitted separately from the tool result.
+  const proposal = events.find(e => e.type === 'proposal');
+  assert.ok(proposal, 'no proposal event was emitted');
+  assert.equal(proposal.proposal.changes[0].path, 'snapshotSettings.dir');
+  assert.equal(proposal.proposal.status, 'pending');
+  assert.match(events.find(e => e.type === 'tool_result').result, /waiting for the user/);
+
+  // Still nothing written, and the next turn is told it is waiting.
+  assert.equal(require('../modules/utils').loadPrefs().snapshotSettings?.dir, undefined);
+
+  script = [{ text: 'still waiting' }];
+  seen.length = 0;
+  await stream('/api/harness/chat', { message: 'and now?' });
+  assert.match(seen[0].messages[0].content, /WAITING on the user: snapshotSettings\.dir/);
+
+  await H.api(null, 'POST', `/api/harness/proposals/${proposal.proposal.id}/reject`, { reason: 'not now' });
+});
+
 test('an endpoint that ignores the stream flag still produces an answer', async () => {
   script = [{ json: 'Plain completion, no SSE.' }];
   const events = await stream('/api/harness/chat', { message: 'hi' });

@@ -1112,6 +1112,52 @@
   </div>
 </div>
 
+<!-- ═══ MEMORY RULES MODAL ═══════════════════════════ -->
+<div id="hc-rules-overlay" class="modal-overlay" style="display:none" onclick="hcRulesClose(event)">
+  <div class="modal" style="max-width:680px" onclick="event.stopPropagation()">
+    <div class="modal-title">How the agent keeps its memory</div>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
+      Categories and rules, in the agent's context every turn. It can rewrite them itself when
+      it finds a better way to file things, and so can you. The safety rules are not here —
+      those ship in the code and neither of you can edit them.
+    </p>
+    <div class="field">
+      <div class="input-label">Categories — one per line, <code>id: what belongs in it</code></div>
+      <textarea class="input" id="hc-rules-cats" rows="7" spellcheck="false"
+                style="width:100%;box-sizing:border-box"></textarea>
+    </div>
+    <div class="field">
+      <div class="input-label">Rules — one per line</div>
+      <textarea class="input" id="hc-rules-list" rows="9" spellcheck="false"
+                style="width:100%;box-sizing:border-box"></textarea>
+    </div>
+    <div class="status-line mt8" id="hc-rules-status"></div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" onclick="hcRulesReset()" title="Back to the rules DOCA ships with">↺ Defaults</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-sm" onclick="hcRulesClose()">Cancel</button>
+      <button class="btn btn-sm btn-blue" onclick="hcRulesSave()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AGENT CONTEXT MODAL ══════════════════════════ -->
+<div id="hc-env-overlay" class="modal-overlay" style="display:none" onclick="hcEnvClose(event)">
+  <div class="modal" style="max-width:820px" onclick="event.stopPropagation()">
+    <div class="modal-title">What the agent is told</div>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
+      Sent at the top of every turn, before your message. The standing rules come from DOCA's own
+      code and cannot be edited away; the rest is read fresh from this machine each time.
+    </p>
+    <pre id="hc-env-out" class="terminal" style="max-height:58vh;white-space:pre-wrap"></pre>
+    <div class="modal-actions">
+      <button class="btn btn-sm" onclick="devCopy(document.getElementById('hc-env-out').textContent, this)">Copy</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-sm" onclick="hcEnvClose()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ FILE PICKER MODAL ════════════════════════════ -->
 <div id="fp-modal" class="fp-overlay" style="display:none" onclick="fpClose()">
   <div class="fp-panel" onclick="event.stopPropagation()">

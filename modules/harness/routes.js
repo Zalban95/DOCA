@@ -7,9 +7,11 @@
 const { sseHeaders } = require('../utils');
 const catalog   = require('./catalog');
 const providers = require('./providers');
-const memory    = require('./memory');
-const tools     = require('./tools');
-const agent     = require('./agent');
+const memory      = require('./memory');
+const tools       = require('./tools');
+const agent       = require('./agent');
+const environment = require('./environment');
+const settings    = require('./settings');
 
 /** Send the thrown error with its own status when it carries one. */
 function fail(res, e) {
@@ -112,9 +114,37 @@ const handleMemoryForget = wrap(async (req, res) => {
   res.json({ ok: true });
 });
 
+const handleRulesGet = wrap(async (_req, res) =>
+  res.json({ rules: memory.rules(), defaults: memory.DEFAULT_RULES }));
+
+const handleRulesWrite = wrap(async (req, res) =>
+  res.json({ ok: true, rules: memory.rulesWrite({ ...req.body, source: 'user' }) }));
+
+const handleRulesReset = wrap(async (_req, res) =>
+  res.json({ ok: true, rules: memory.rulesReset() }));
+
+/* ── Environment and settings proposals ───────────────── */
+
+/** What the agent is told about this machine, verbatim, so the user can read it. */
+const handleEnvironment = wrap(async (_req, res) =>
+  res.json({ snapshot: environment.snapshot(), block: environment.block(), charter: providers.SAFETY_CHARTER }));
+
+const handleSettingsRead = wrap(async (_req, res) =>
+  res.json({ settings: settings.readable(), sections: settings.SETTABLE }));
+
+const handleProposals = wrap(async (_req, res) => res.json(settings.list()));
+
+const handleProposalApply = wrap(async (req, res) =>
+  res.json({ ok: true, ...settings.apply(req.params.id) }));
+
+const handleProposalReject = wrap(async (req, res) =>
+  res.json({ ok: true, proposal: settings.reject(req.params.id, req.body?.reason) }));
+
 module.exports = {
   handleList, handleSetDefault, handleInstall, handleConfig, handleAddCustom, handleRemoveCustom,
   handleProviders, handleModels, handleStatus,
   handleChat, handleSessions, handleSessionNew, handleSession, handleSessionActivate, handleSessionDelete,
   handleMemoryList, handleMemoryWrite, handleMemoryForget,
+  handleRulesGet, handleRulesWrite, handleRulesReset,
+  handleEnvironment, handleSettingsRead, handleProposals, handleProposalApply, handleProposalReject,
 };

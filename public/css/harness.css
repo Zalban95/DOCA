@@ -161,6 +161,30 @@
 .hc-tool-result { border-left: 2px solid var(--green); max-height: 180px; overflow-y: auto; }
 .hc-error       { align-self: stretch; max-width: 100%; color: var(--red); border: 1px solid var(--red); }
 
+/* Settings the agent is asking for: between the transcript and the composer,
+   because it is the one thing on this page that is waiting on the user. */
+.hc-proposals:not(:empty) { padding: 8px 10px 0; display: flex; flex-direction: column; gap: 6px; }
+.hc-prop {
+  border: 1px solid var(--amber); border-radius: var(--radius);
+  background: rgba(232,160,32,.07);
+  padding: 7px 9px; font-size: 11px;
+}
+.hc-prop-head { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 5px; }
+.hc-prop-head .badge { white-space: nowrap; flex-shrink: 0; }
+.hc-prop-why  { color: var(--text); line-height: 1.4; }
+.hc-prop-row {
+  display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: baseline; gap: 6px; padding: 2px 0;
+  font-family: var(--font-mono); font-size: 10px;
+}
+.hc-prop-key   { color: var(--accent); white-space: nowrap; }
+.hc-prop-from  { color: var(--muted); text-decoration: line-through; overflow: hidden; text-overflow: ellipsis; }
+.hc-prop-arrow { color: var(--muted); }
+.hc-prop-to    { color: var(--green); overflow: hidden; text-overflow: ellipsis; }
+.hc-prop-note  { color: var(--amber); font-size: 10px; margin-top: 3px; }
+.hc-prop-actions { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.hc-prop-actions .status-line { flex: 1; margin: 0; }
+
 .hc-input-row {
   display: flex; align-items: flex-end; gap: 6px;
   padding: 8px 10px; border-top: 1px solid var(--border);

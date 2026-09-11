@@ -147,7 +147,19 @@ app.post  ('/api/harness/sessions/:id/activate', harness.handleSessionActivate);
 app.delete('/api/harness/sessions/:id',         harness.handleSessionDelete);
 app.get   ('/api/harness/memory',               harness.handleMemoryList);
 app.post  ('/api/harness/memory',               harness.handleMemoryWrite);
+// Before `:key`, which would otherwise read a reset as forgetting an entry
+// called "rules".
+app.get   ('/api/harness/memory/rules',         harness.handleRulesGet);
+app.post  ('/api/harness/memory/rules',         harness.handleRulesWrite);
+app.delete('/api/harness/memory/rules',         harness.handleRulesReset);
 app.delete('/api/harness/memory/:key',          harness.handleMemoryForget);
+
+// What the agent knows, and the settings changes it wants the user to accept.
+app.get   ('/api/harness/environment',              harness.handleEnvironment);
+app.get   ('/api/harness/settings',                 harness.handleSettingsRead);
+app.get   ('/api/harness/proposals',                harness.handleProposals);
+app.post  ('/api/harness/proposals/:id/apply',      harness.handleProposalApply);
+app.post  ('/api/harness/proposals/:id/reject',     harness.handleProposalReject);
 
 // Per-harness routes last: `:id` would otherwise swallow the fixed paths above.
 app.post  ('/api/harness/:id/install',  harness.handleInstall);

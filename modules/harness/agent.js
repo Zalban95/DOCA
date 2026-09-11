@@ -12,12 +12,11 @@
  * Every message, tool call and tool result is appended to the session
  * transcript, so a reload or a restart resumes exactly where it left off.
  */
-const os = require('os');
-
-const { WORKSPACE_DIR, COMPOSE_DIR } = require('../paths');
-const memory    = require('./memory');
-const providers = require('./providers');
-const tools     = require('./tools');
+const environment = require('./environment');
+const memory      = require('./memory');
+const providers   = require('./providers');
+const settings    = require('./settings');
+const tools       = require('./tools');
 
 /** Per-harness params, resolved lazily to avoid a require cycle with catalog. */
 function params() {
@@ -26,18 +25,6 @@ function params() {
 }
 
 /* ── Prompt assembly ──────────────────────────────────── */
-
-function environmentBlock(ep, model) {
-  return [
-    '# Environment',
-    `host: ${os.hostname()} (${process.platform} ${process.arch}, ${os.cpus().length} cores, `
-      + `${Math.round(os.totalmem() / 1e9)} GB RAM)`,
-    `local time: ${new Date().toISOString()}`,
-    `workspace (your working directory): ${WORKSPACE_DIR}`,
-    `managed compose stack: ${COMPOSE_DIR}`,
-    `you are running on: ${ep.id} / ${model || '(model unset)'}`,
-  ].join('\n');
-}
 
 /**
  * Memory relevant to this turn: everything pinned, plus the best keyword
@@ -50,14 +37,39 @@ function memoryBlock(userText, limit) {
   const chosen = [...pinned, ...hits].filter(e => !seen.has(e.id) && seen.add(e.id)).slice(0, limit);
   if (!chosen.length) return '';
   memory.memTouch(hits);
-  return ['# What you remember', ...chosen.map(e => `- ${e.key}: ${e.value}`)].join('\n');
+  return ['# What you remember', ...chosen.map(e =>
+    `- ${e.key}${e.category ? ` [${e.category}]` : ''}: ${e.value}`)].join('\n');
 }
 
-function systemPrompt({ p, ep, userText, summary }) {
+/** The agent's own filing system, so it can follow it and change it. */
+function rulesBlock() {
+  const doc = memory.rules();
   return [
+    '# How you keep your memory',
+    'Categories:',
+    ...doc.categories.map(c => `- ${c.id}${c.description ? `: ${c.description}` : ''}`),
+    'Rules:',
+    ...doc.rules.map(r => `- ${r}`),
+    'These are yours to improve with memory_rules_write. The standing rules above are not.',
+  ].join('\n');
+}
+
+/**
+ * The whole system prompt, in the order it is read.
+ *
+ * The charter goes first and comes from code, so the panel's rules are the first
+ * thing in context and the last thing anybody can edit away. `p.systemPrompt` —
+ * which the user does own — follows it, then the facts, then what the agent
+ * knows, then where this conversation had got to.
+ */
+function systemPrompt({ p, userText, summary, toolCount, disabledCount }) {
+  return [
+    providers.SAFETY_CHARTER,
     p.systemPrompt || providers.DEFAULT_SYSTEM_PROMPT,
-    environmentBlock(ep, p.model),
+    environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount }),
+    rulesBlock(),
     memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)),
+    settings.block(),
     summary ? `# Earlier in this conversation\n${summary}` : '',
   ].filter(Boolean).join('\n\n');
 }
@@ -224,10 +236,20 @@ async function turn({ message, sessionId, emit, signal }) {
   const maxSteps = Math.max(1, Number(p.maxSteps) || 1);
   let text = '';
 
+  // Proposals already waiting when the turn started are on screen already; only
+  // the ones this turn creates need announcing.
+  const announced = new Set(settings.list().pending.map(x => x.id));
+
   for (let step = 1; step <= maxSteps; step++) {
     const { rows } = memory.window(session.id, Number(p.historyTurns) || 0);
     const messages = [
-      { role: 'system', content: systemPrompt({ p, ep, userText: message, summary }) },
+      {
+        role: 'system',
+        content: systemPrompt({
+          p, userText: message, summary,
+          toolCount: schemas.length, disabledCount: disabled.length,
+        }),
+      },
       ...toApiMessages(rows),
     ];
 
@@ -257,6 +279,15 @@ async function turn({ message, sessionId, emit, signal }) {
       say({ type: 'tool_result', name, result, step });
 
       memory.append(session.id, { role: 'tool', tool_call_id: tc.id || name, name, content: result });
+
+      // A settings proposal is the one tool result the user has to act on, so it
+      // travels as its own event and the console draws it as a card with buttons
+      // rather than as one more line of tool output to scroll past.
+      for (const proposal of settings.list().pending) {
+        if (announced.has(proposal.id)) continue;
+        announced.add(proposal.id);
+        say({ type: 'proposal', proposal });
+      }
     }
 
     if (step === maxSteps) {

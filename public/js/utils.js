@@ -378,8 +378,10 @@ function ptyErrorBanner(container) {
  * @param {string} message
  * @param {Function} onSubmit - called with the entered string
  * @param {string} [defaultValue]
+ * @param {{ allowEmpty?: boolean }} [opts] - `allowEmpty` for a prompt whose
+ *   answer is optional, where OK doing nothing would look broken
  */
-function appPrompt(message, onSubmit, defaultValue) {
+function appPrompt(message, onSubmit, defaultValue, opts = {}) {
   const modal = document.getElementById('app-prompt-modal');
   const msgEl = document.getElementById('app-prompt-message');
   const input = document.getElementById('app-prompt-input');
@@ -401,7 +403,7 @@ function appPrompt(message, onSubmit, defaultValue) {
 
   const submit = () => {
     const val = input.value.trim();
-    if (!val) return;
+    if (!val && !opts.allowEmpty) return;
     cleanup();
     onSubmit(val);
   };
