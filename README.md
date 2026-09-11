@@ -308,6 +308,7 @@ graphics for devices without an SVG engine.
 
 - **Developer docs:** [docs/api/](docs/api/README.md) — [getting started](docs/api/getting-started.md), [device app guide](docs/api/device-app-guide.md), [agent guide](docs/api/agent-guide.md), [cookbook](docs/api/cookbook.md) (JS / Kotlin / Swift / Python).
 - **Specification:** [PROTOCOL.md](PROTOCOL.md) (normative) and the OpenAPI 3.1 document at [docs/api/openapi.json](docs/api/openapi.json), also served live at `GET /api/v1/openapi.json`.
+- **Building a client:** [docs/client-briefs.md](docs/client-briefs.md) — the pattern used to brief coding agents on `DocaMobile` and `DocaWear`, and the starting point for the next client.
 
 **Enrolling devices from the dashboard.** Settings → **API Keys** → *This server — devices*
 lists every enrolled device with its scopes, and can pair a new one. **Pair a device** shows a
