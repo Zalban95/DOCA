@@ -48,6 +48,73 @@ test('a definition needs enough to actually run', async () => {
   assert.equal((await post('/api/mcp', { command: 'x' })).status, 400);   // no name
 });
 
+test('a server says which machine it runs on, and defaults to this one', async () => {
+  // Everything written before origin existed has none, which is what `server`
+  // means — so the default has to be that, not an error.
+  const { body } = await get('/api/mcp');
+  const stub = body.servers.find(s => s.id === 'stub-server');
+  assert.deepEqual(stub.origin, { kind: 'server', deviceId: null });
+  assert.equal(stub.originLabel, 'DOCA host');
+
+  const { device } = H.mkDevice('Al\'s PC', 'admin', { ...H.PHONE_CAPS, formFactor: 'other' });
+  const saved = await post('/api/mcp', {
+    label: 'Desk Tools', transport: 'http', url: 'https://desk.example/mcp',
+    origin: { kind: 'client', deviceId: device.id },
+  });
+  assert.equal(saved.status, 200);
+  assert.deepEqual(saved.body.server.origin, { kind: 'client', deviceId: device.id });
+  // Resolved server-side so a row can say where without fetching the device list.
+  assert.equal(saved.body.server.originLabel, 'Al\'s PC');
+
+  // The agent is told too, otherwise it cannot tell a file on the host from a
+  // file on somebody's desktop.
+  const env = require('../modules/harness/environment');
+  env.invalidate();
+  assert.match(env.block(), /desk-tools/);
+  assert.match(env.block(), /runs on Al's PC/);
+
+  assert.equal((await H.api(null, 'DELETE', '/api/mcp/desk-tools')).status, 200);
+});
+
+test('only an http server can live on a client, and only a paired one', async () => {
+  const { device } = H.mkDevice('Paired Thing', 'phone', H.PHONE_CAPS);
+
+  // stdio would spawn a child *here*, so naming another machine is a mistake,
+  // not a preference.
+  const stdio = await post('/api/mcp', {
+    label: 'Wrong Transport', command: process.execPath, args: [STUB],
+    origin: { kind: 'client', deviceId: device.id },
+  });
+  assert.equal(stdio.status, 400);
+  assert.match(stdio.body.error, /http/);
+
+  const ghost = await post('/api/mcp', {
+    label: 'Ghost Host', transport: 'http', url: 'https://nowhere.example/mcp',
+    origin: { kind: 'client', deviceId: 'dev_deadbeef' },
+  });
+  assert.equal(ghost.status, 400);
+  assert.match(ghost.body.error, /No paired device/);
+
+  const nameless = await post('/api/mcp', {
+    label: 'Nameless Host', transport: 'http', url: 'https://nowhere.example/mcp',
+    origin: { kind: 'client' },
+  });
+  assert.equal(nameless.status, 400);
+
+  assert.equal((await get('/api/mcp')).body.servers.some(s => s.id === 'wrong-transport'), false);
+});
+
+test('origin is DOCA\'s own bookkeeping and stays out of exported configs', () => {
+  // The other agents on this machine get a spawnable command or a URL. `origin`
+  // is a fact about *our* topology and would only confuse their parsers.
+  const spec = registry.normalize({
+    label: 'Exported', transport: 'http', url: 'https://desk.example/mcp',
+  });
+  assert.deepEqual(
+    exporter.entry({ ...spec, origin: { kind: 'client', deviceId: 'dev_1' }, originLabel: 'Al\'s PC' }),
+    { url: 'https://desk.example/mcp' });
+});
+
 test('starting a server completes the handshake and lists its tools', async () => {
   const r = await post('/api/mcp/stub-server/action', { action: 'start' });
   assert.equal(r.status, 200);

@@ -7,6 +7,35 @@ something known to work instead of a fresh guess.
 Nothing here is specific to Android. It is specific to *handing a whole project to an agent that
 cannot ask you a question for the next four hours*.
 
+## The briefs that exist
+
+| Brief | Client | State |
+|---|---|---|
+| `D:\doca\DocaMobile\.agent\DOCA_MOBILE_BRIEF.md` | Android phone/tablet, and the companion hub that pairs everything else | Partly built |
+| `D:\doca\DocaWear\.agent\DOCA_WEAR_BRIEF.md` | Wear OS watch | Partly built |
+| `D:\doca\DocaMobile\.agent\DOCA_AUTO_BRIEF.md` | Android Auto, as a `:car-app` module inside the phone APK | Not started |
+| `D:\doca\DocaDesk\.agent\DOCA_DESK_BRIEF.md` | Windows desktop (.NET 9 + WinUI 3) | Not started |
+
+The two new ones are worth reading as examples of the pattern being used *against* a target rather
+than for it. Each opens by naming the thing that makes the obvious plan impossible:
+
+- **Android Auto** cannot draw. The Car App Library is a closed set of host-rendered templates, the
+  screen stack is capped at five, over-refreshing a template throws at runtime, and Play only
+  publishes car apps in a fixed set of categories that does not include "control panel". So the
+  brief scopes the whole surface to prompts and alerts and says on page one that a store listing is
+  not promised — because an agent handed "put the dashboard in the car" would spend a week finding
+  that out.
+- **Windows** can do everything, which is the opposite problem. Its brief spends its energy on what
+  *not* to build: the dashboard goes in a WebView rather than being rewritten in XAML, and the one
+  genuinely new capability — hosting an MCP server the harness can call — is fenced with a consent
+  rule that outranks features, in the same slot where the watch's brief puts battery.
+
+Both also inherit one server-side decision worth knowing about: an MCP definition now carries
+`origin: { kind, deviceId }`, so the panel and the agent can tell a server running on a client from
+one running beside the panel. A client **publishes a URL and a human registers it**; a client that
+registered itself would be an unauthenticated way to get a command spawned on the host. `TODO.md`
+has the detail.
+
 ## Where a brief lives
 
 ```

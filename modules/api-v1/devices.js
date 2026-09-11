@@ -36,7 +36,7 @@ const newId  = (prefix, bytes = 6) => `${prefix}_${crypto.randomBytes(bytes).toS
 
 // ─── Capabilities ─────────────────────────────────────────────────────────────
 
-const FORM_FACTORS = ['watch', 'phone', 'glasses', 'tablet', 'browser', 'headless', 'other'];
+const FORM_FACTORS = ['watch', 'phone', 'car', 'glasses', 'tablet', 'desktop', 'browser', 'headless', 'other'];
 
 /**
  * Normalise a device's self-declared capabilities. Every section is optional:

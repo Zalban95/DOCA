@@ -662,6 +662,23 @@
                 <div class="input-label">URL</div>
                 <input id="mcp-url" class="input" placeholder="https://example.com/mcp">
               </div>
+              <div class="row">
+                <div class="field flex1">
+                  <div class="input-label">Runs on</div>
+                  <select id="mcp-origin-kind" class="input" onchange="mcpOriginChange()">
+                    <option value="server">the DOCA host</option>
+                    <option value="client">a paired client</option>
+                  </select>
+                </div>
+                <div class="field flex1" id="mcp-origin-device-field" style="display:none">
+                  <div class="input-label">Which client</div>
+                  <select id="mcp-origin-device" class="input"></select>
+                </div>
+              </div>
+              <div class="input-label" id="mcp-origin-note" style="display:none;opacity:.7">
+                Its tools act on that machine, not on this host. The agent is told which, so it does not
+                confuse the two.
+              </div>
             </div>
             <div class="settings-tab-row">
               <label class="skill-toggle">

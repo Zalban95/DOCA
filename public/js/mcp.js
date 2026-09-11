@@ -4,6 +4,7 @@
 
 let _mcpTargets = [];
 let _mcpOpenLog = null;   // id whose log is showing
+let _mcpDevices = [];     // paired devices, for the "runs on a client" picker
 
 function mcpInit() { mcpLoad(); }
 
@@ -29,6 +30,12 @@ function _mcpCardHtml(s) {
   const running = s.state === 'running';
   const badge = { running: 'ok', starting: 'warn', error: 'no', stopped: '' }[s.state] || '';
 
+  // Only worth a badge when it is not the host: "runs here" is the norm and
+  // saying it on every row would just be noise.
+  const origin = s.origin?.kind === 'client'
+    ? `<span class="mcp-count" title="Its tools act on that machine, not on this host">on ${escHtml(s.originLabel || s.origin.deviceId)}</span>`
+    : '';
+
   const where = s.transport === 'http'
     ? escHtml(s.url)
     : escHtml([s.command, ...(s.args || [])].join(' '));
@@ -47,6 +54,7 @@ function _mcpCardHtml(s) {
         <div class="card-title" style="margin-bottom:0">${escHtml(s.label || s.id)}</div>
         <span class="provider-badge ${badge}">${escHtml(s.state.toUpperCase())}</span>
         ${running ? `<span class="mcp-count">${s.toolCount} tool${s.toolCount === 1 ? '' : 's'}</span>` : ''}
+        ${origin}
         ${s.autostart ? '<span class="mcp-count">starts with DOCA</span>' : ''}
         <span style="flex:1"></span>
         ${running
@@ -111,6 +119,36 @@ function mcpTransportChange() {
   const http = document.getElementById('mcp-transport').value === 'http';
   document.getElementById('mcp-stdio-fields').style.display = http ? 'none' : '';
   document.getElementById('mcp-http-fields').style.display  = http ? '' : 'none';
+  // A stdio server is a child of this process, so it cannot be somebody else's
+  // machine. Switching back to stdio drops a client origin rather than saving
+  // one the server would refuse.
+  if (!http) document.getElementById('mcp-origin-kind').value = 'server';
+  mcpOriginChange();
+}
+
+function mcpOriginChange() {
+  const client = document.getElementById('mcp-origin-kind').value === 'client';
+  document.getElementById('mcp-origin-device-field').style.display = client ? '' : 'none';
+  document.getElementById('mcp-origin-note').style.display = client ? '' : 'none';
+}
+
+/** The paired devices, for the "which client" picker. Fetched once per form open. */
+async function _mcpLoadDevices(selected) {
+  const sel = document.getElementById('mcp-origin-device');
+  if (!sel) return;
+  try {
+    const { devices } = await apiFetch('/api/devices');
+    _mcpDevices = (devices || []).filter(d => !d.revokedAt);
+  } catch { _mcpDevices = []; }
+  // A device that has since been revoked stays listed while it is the one
+  // selected, so editing an old server does not silently repoint it.
+  const known = _mcpDevices.some(d => d.id === selected);
+  sel.innerHTML = [
+    ..._mcpDevices.map(d =>
+      `<option value="${escHtml(d.id)}">${escHtml(d.name)} — ${escHtml(d.caps?.formFactor || 'device')}</option>`),
+    ...(selected && !known ? [`<option value="${escHtml(selected)}">${escHtml(selected)} (no longer paired)</option>`] : []),
+  ].join('') || '<option value="">no paired devices — pair one first</option>';
+  if (selected) sel.value = selected;
 }
 
 function mcpShowForm(show) {
@@ -126,8 +164,10 @@ function mcpNew() {
   })) document.getElementById(id).value = v;
   document.getElementById('mcp-transport').value = 'stdio';
   document.getElementById('mcp-autostart').checked = false;
+  document.getElementById('mcp-origin-kind').value = 'server';
   document.getElementById('mcp-name').disabled = false;
   setStatus(document.getElementById('mcp-form-status'), '', '');
+  _mcpLoadDevices(null);
   mcpShowForm(true);
 }
 
@@ -143,6 +183,8 @@ async function mcpEdit(id) {
   document.getElementById('mcp-cwd').value       = s.cwd || '';
   document.getElementById('mcp-url').value       = s.url || '';
   document.getElementById('mcp-autostart').checked = !!s.autostart;
+  document.getElementById('mcp-origin-kind').value = s.origin?.kind === 'client' ? 'client' : 'server';
+  await _mcpLoadDevices(s.origin?.deviceId || null);
   // The id is derived from the name and keys the definition, so renaming here
   // would create a second server rather than rename this one.
   document.getElementById('mcp-name').disabled = true;
@@ -153,16 +195,21 @@ async function mcpEdit(id) {
 async function mcpSave() {
   const status = document.getElementById('mcp-form-status');
   const nameEl = document.getElementById('mcp-name');
+  const transport = document.getElementById('mcp-transport').value;
+  const originKind = transport === 'http' ? document.getElementById('mcp-origin-kind').value : 'server';
   const body = {
     id:        nameEl.disabled ? nameEl.dataset.editing : undefined,
     label:     nameEl.value.trim(),
-    transport: document.getElementById('mcp-transport').value,
+    transport,
     command:   document.getElementById('mcp-command').value.trim(),
     args:      document.getElementById('mcp-args').value,
     env:       document.getElementById('mcp-env').value,
     cwd:       document.getElementById('mcp-cwd').value.trim(),
     url:       document.getElementById('mcp-url').value.trim(),
     autostart: document.getElementById('mcp-autostart').checked,
+    origin:    originKind === 'client'
+      ? { kind: 'client', deviceId: document.getElementById('mcp-origin-device').value }
+      : { kind: 'server', deviceId: null },
   };
   try {
     const r = await apiFetch('/api/mcp', { method: 'POST', body });

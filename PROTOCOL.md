@@ -238,7 +238,7 @@ platform identifier** — it describes abilities, not brands.
 
 ```json
 {
-  "formFactor": "watch",                  // watch | phone | glasses | tablet | browser | headless | other
+  "formFactor": "watch",                  // watch | phone | car | glasses | tablet | desktop | browser | headless | other
   "protocol":   { "max": "1.0" },
   "screen":     { "w": 450, "h": 450, "shape": "round", "dpr": 2, "color": true },   // omit if no display
   "input":      { "touch": true, "voice": true, "text": false, "camera": false, "buttons": true, "gaze": false, "crown": true, "gesture": false },

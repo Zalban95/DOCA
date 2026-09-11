@@ -57,6 +57,12 @@ function mcpServers() {
   try {
     return require('../mcp/registry').list().map(s => ({
       id: s.id, label: s.label, state: s.state, tools: s.toolCount || 0,
+      // Which machine its tools act on. A file the agent writes through a
+      // client's server lands on that client, not on the host it is reading
+      // paths from, and an agent that cannot tell them apart will confuse the
+      // two the first time both offer a `read_file`.
+      origin: s.origin?.kind === 'client' ? 'client' : 'server',
+      originLabel: s.originLabel || null,
     }));
   } catch { return []; }
 }
@@ -160,7 +166,8 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
   if (s.mcp.length) {
     out.push('', '## MCP servers');
     for (const m of s.mcp)
-      out.push(`- ${m.id}: ${m.state}${m.state === 'running' ? `, ${m.tools} tools (called mcp__${m.id}__*)` : ''}`);
+      out.push(`- ${m.id}: ${m.state}${m.state === 'running' ? `, ${m.tools} tools (called mcp__${m.id}__*)` : ''}`
+        + (m.origin === 'client' ? `, runs on ${m.originLabel} — its tools act on that machine, not this one` : ''));
   }
 
   return out.join('\n');

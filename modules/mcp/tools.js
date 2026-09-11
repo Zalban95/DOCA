@@ -47,6 +47,7 @@ function available() {
         exposed,
         server:      spec.id,
         serverLabel: spec.label || spec.id,
+        origin:      spec.origin?.kind === 'client' ? 'client' : 'server',
         tool:        t.name,
         description: t.description,
         schema:      t.inputSchema,
@@ -65,6 +66,9 @@ function describe() {
     description: (t.description || `${t.tool} from ${t.serverLabel}`).split('\n')[0],
     danger:      !t.readOnly,
     mcp:         true,
+    // Which machine the call lands on. A tool that reaches somebody's desktop
+    // is worth telling apart from one that runs beside the panel.
+    origin:      t.origin,
   }));
 }
 

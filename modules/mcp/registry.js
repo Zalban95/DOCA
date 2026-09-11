@@ -21,6 +21,40 @@ function slug(s) {
   return String(s || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
+/**
+ * Where the server actually runs.
+ *
+ * `server` is this host — a stdio child of the panel, or a URL the panel
+ * happens to reach. `client` is a paired device hosting its own MCP server on
+ * the tailnet, and it names that device so revoking the device is visible here
+ * and so the agent can tell "a tool on my host" from "a tool on Al's PC".
+ *
+ * A client can only be reached over HTTP: there is no stdio to a machine the
+ * panel is not running on. And the deviceId has to be one we know, otherwise
+ * the label is a note-to-self rather than a fact.
+ */
+function normalizeOrigin(input, transport) {
+  const raw = input && typeof input === 'object' ? input : {};
+  if (raw.kind !== 'client') return { kind: 'server', deviceId: null };
+
+  if (transport !== 'http')
+    throw Object.assign(new Error('A server hosted on a client is reached over http — a stdio command would run here, not there'), { status: 400 });
+
+  const deviceId = String(raw.deviceId || '').trim();
+  if (!deviceId)
+    throw Object.assign(new Error('Which client hosts it? Pick a paired device'), { status: 400 });
+  if (!require('../api-v1/devices').get(deviceId))
+    throw Object.assign(new Error(`No paired device "${deviceId}" — pair it first, or set this server to run on the DOCA host`), { status: 400 });
+
+  return { kind: 'client', deviceId };
+}
+
+/** The device behind a client origin, when it still exists. */
+function originDevice(origin) {
+  if (origin?.kind !== 'client' || !origin.deviceId) return null;
+  try { return require('../api-v1/devices').get(origin.deviceId); } catch { return null; }
+}
+
 function load() {
   const list = loadPrefs()[PREFS_KEY];
   return Array.isArray(list) ? list : [];
@@ -71,6 +105,9 @@ function normalize(input, existing) {
     url:       String(input.url || '').trim(),
     headers:   input.headers && typeof input.headers === 'object' ? input.headers : {},
     autostart: !!input.autostart,
+    // Absent on every definition written before this existed, which is exactly
+    // what `server` means, so nothing has to be migrated.
+    origin:    normalizeOrigin(input.origin !== undefined ? input.origin : existing?.origin, transport),
   };
 
   if (transport === 'stdio' && !spec.command)
@@ -116,8 +153,17 @@ async function restart(id) {
 /** Everything a UI needs: the definition plus whatever the live client knows. */
 function status(spec) {
   const c = _clients.get(spec.id);
+  const origin = spec.origin || { kind: 'server', deviceId: null };
+  const device = originDevice(origin);
   return {
     ...spec,
+    origin,
+    // Resolved here so a row can say "on Al's PC" without the page fetching the
+    // device list per server. A revoked or deleted device leaves the id visible
+    // rather than silently reading as if it were still paired.
+    originLabel: origin.kind === 'client'
+      ? (device ? `${device.name}${device.revokedAt ? ' (revoked)' : ''}` : `${origin.deviceId} (unknown device)`)
+      : 'DOCA host',
     state:      c?.state || 'stopped',
     error:      c?.error || null,
     startedAt:  c?.startedAt || null,
@@ -173,6 +219,6 @@ function stopAll() {
 
 module.exports = {
   PREFS_KEY,
-  load, list, get, client, status, slug, normalize,
+  load, list, get, client, status, slug, normalize, normalizeOrigin, originDevice,
   start, stop, restart, upsert, remove, startAutostart, stopAll,
 };

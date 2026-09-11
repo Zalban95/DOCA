@@ -73,7 +73,7 @@ function schemas() {
     Scope: str({ description: '`family:target`; `target` may be `*` or a dotted prefix ending in `.*`. Families: ' + Object.keys(FAMILIES).join(', ') + '.', examples: ['read:*', 'read:system.*', 'command:services.stop', 'interact', 'profile:self', 'agent'] }),
 
     Caps: obj({
-      formFactor: str({ enum: ['watch', 'phone', 'glasses', 'tablet', 'browser', 'headless', 'other'] }),
+      formFactor: str({ enum: ['watch', 'phone', 'car', 'glasses', 'tablet', 'desktop', 'browser', 'headless', 'other'] }),
       protocol: obj({ max: str({ description: 'Highest protocol version the client understands.' }) }),
       screen: nullable(obj({ w: int(), h: int(), shape: str({ enum: ['round', 'rect'] }), dpr: num(), color: bool() }, { description: 'Omit when the device has no display.' })),
       input: obj({ touch: bool(), voice: bool(), text: bool(), camera: bool(), buttons: bool(), gaze: bool(), crown: bool(), gesture: bool() }),

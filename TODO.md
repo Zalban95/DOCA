@@ -20,7 +20,39 @@ none of them break anything today.
   list changes, sampling requests) will not be heard. stdio is the tested path.
 
 - **MCP servers are not reachable from the `/api/v1` client layer** — no phone
-  or watch can list or call them. Only the built-in harness sees their tools.
+  or watch can list or call them, and no client can register one. Only the
+  built-in harness sees their tools. A client that hosts its own MCP server
+  (`DocaDesk`) therefore publishes a URL for a human to paste into the MCP tab,
+  which is on purpose: `POST /api/mcp` is unauthenticated to any tailnet peer
+  and `mcpServers` holds a command that gets spawned, so a self-registering
+  client would be an unauthenticated path to running code on this host. Adding
+  `/api/v1` MCP routes means designing that authorisation first, not exposing
+  the legacy handler.
+
+- **The MCP add-server form has no `headers` field.** `registry.normalize()`
+  accepts `headers` and `client.js` sends them, but the only way to set one is
+  the API. A client-hosted server therefore cannot be given an
+  `Authorization` header from the UI and has to put its secret in the URL
+  instead (see `DocaDesk`'s brief §5.5). One textarea in the http section of the
+  form fixes it.
+
+- **`origin` names the machine, it does not reach it.** A definition now carries
+  `origin: { kind, deviceId }` so the panel and the agent can tell a
+  client-hosted server from a local one, but nothing verifies that the URL
+  actually belongs to that device, and revoking the device does not stop the
+  server — the row just starts saying "(revoked)". Both are fine while this is a
+  label for a human's benefit; neither is fine if `origin` ever becomes a
+  permission.
+
+- **VMs are local-only, and client-hosted VMs are deferred.** `modules/vms.js`
+  shells out to `virsh` and `VBoxManage` on this host, with one global
+  `vms.libvirtUri` as the only remote-ish knob. There is no per-machine origin
+  the way MCP servers now have one, so a VM running on a Windows client cannot
+  be listed or controlled from the panel. Doing it properly means a
+  `HYPERVISORS` entry whose transport is a client rather than a local binary,
+  which is a larger change than the MCP case: the parsers are fed real CLI
+  output, and a client would have to either ship that CLI's output format or a
+  translation of it.
 
 - **Settings proposals are panel-only too.** A pending change is drawn in the
   Harness console and nowhere else, so a proposal made while you are on your
