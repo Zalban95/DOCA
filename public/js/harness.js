@@ -547,9 +547,11 @@ async function hcOpenSession(id, skipReload) {
     if (data.session.summary) _hcAppend('summary', data.session.summary, 'Earlier in this conversation');
     data.messages.forEach(m => {
       if (m.role === 'tool') _hcAppend('tool-result', m.content, m.name);
-      else if (m.role === 'assistant' && m.tool_calls?.length && !m.content)
-        m.tool_calls.forEach(tc => _hcAppend('tool-call', tc.function?.arguments || '', tc.function?.name));
-      else if (m.content) _hcAppend(m.role, m.content);
+      else if (m.role === 'assistant') {
+        if (m.content) _hcAppendContent('assistant', m.content);
+        (m.tool_calls || []).forEach(tc =>
+          _hcAppend('tool-call', tc.function?.arguments || '', tc.function?.name));
+      } else if (m.content) _hcAppend(m.role, m.content);
     });
     if (!box.children.length) box.innerHTML = '<div class="placeholder">Ask it anything about this machine.</div>';
     document.querySelectorAll('#hc-sessions .hc-session').forEach(el =>
@@ -569,12 +571,28 @@ function hcDeleteSession(id) {
 
 /**
  * One bubble in the transcript. `kind` is a message role or one of the
- * harness-specific kinds (tool-call, tool-result, summary, error).
+ * harness-specific kinds (tool-call, tool-result, summary, error, thinking).
+ * Tool activity and thinking use collapsible folds (see agentFold).
  */
-function _hcAppend(kind, text, label) {
+function _hcAppend(kind, text, label, opts = {}) {
   const box = document.getElementById('hc-messages');
   if (!box) return null;
   box.querySelector('.placeholder')?.remove();
+
+  if (kind === 'tool-call' || kind === 'tool-result' || kind === 'thinking') {
+    const fold = agentFold({
+      kind,
+      label: kind === 'thinking' ? (label || 'Thinking')
+        : kind === 'tool-call'   ? `Command · ${label || 'tool'}`
+        : `Result · ${label || 'tool'}`,
+      body: kind === 'tool-call' ? _hcPrettyArgs(text) : (text == null ? '' : String(text)),
+      active: !!opts.active,
+      open: !!opts.open,
+    });
+    box.appendChild(fold.el);
+    box.scrollTop = box.scrollHeight;
+    return fold;
+  }
 
   const el = document.createElement('div');
   el.className = `hc-msg hc-${kind}`;
@@ -593,6 +611,30 @@ function _hcAppend(kind, text, label) {
   return body;
 }
 
+/** Pretty-print tool args JSON when it is valid; otherwise leave as-is. */
+function _hcPrettyArgs(raw) {
+  if (raw == null) return '';
+  if (typeof raw === 'object') return JSON.stringify(raw, null, 2);
+  const s = String(raw);
+  try { return JSON.stringify(JSON.parse(s), null, 2); }
+  catch { return s; }
+}
+
+/** Reload an assistant/user message that may contain `<think>` blocks. */
+function _hcAppendContent(role, content) {
+  if (role !== 'assistant') {
+    _hcAppend(role, content);
+    return;
+  }
+  const box = document.getElementById('hc-messages');
+  if (!box) return;
+  renderThoughtfulContent(content, {
+    mount: node => { box.querySelector('.placeholder')?.remove(); box.appendChild(node); },
+    makeText: text => { if (text) _hcAppend('assistant', text); },
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
 async function hcSend() {
   const input = document.getElementById('hc-input');
   const btn   = document.getElementById('hc-send');
@@ -604,28 +646,53 @@ async function hcSend() {
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
   _hcAppend('user', text);
 
-  let target = null;   // current assistant bubble
+  const box = document.getElementById('hc-messages');
+  const scroll = () => { if (box) box.scrollTop = box.scrollHeight; };
+  let pendingCall = null;
+
+  const stream = createThinkStream({
+    mount: node => { box?.querySelector('.placeholder')?.remove(); box?.appendChild(node); scroll(); },
+    makeText: () => _hcAppend('assistant', ''),
+    scroll,
+  });
+  stream.startWaiting();
+
   await sseStream('/api/harness/chat', { message: text, sessionId: _hcSession }, {
     onEvent: evt => {
       if (evt.type === 'session') _hcSession = evt.sessionId;
       if (evt.type === 'text') {
-        if (!target) target = _hcAppend('assistant', '');
-        target.textContent += evt.text;
-        const box = document.getElementById('hc-messages');
-        if (box) box.scrollTop = box.scrollHeight;
+        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+        stream.feed(evt.text);
       }
       if (evt.type === 'tool_call') {
-        target = null;
-        _hcAppend('tool-call', JSON.stringify(evt.args), evt.name);
+        stream.finish();
+        stream.resetText();
+        if (pendingCall) pendingCall.setActive(false);
+        pendingCall = _hcAppend('tool-call', JSON.stringify(evt.args ?? {}), evt.name, { active: true });
       }
-      if (evt.type === 'tool_result') _hcAppend('tool-result', evt.result, evt.name);
-      if (evt.type === 'error')       _hcAppend('error', evt.text, 'error');
+      if (evt.type === 'tool_result') {
+        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+        _hcAppend('tool-result', evt.result, evt.name);
+        stream.startWaiting();
+      }
+      if (evt.type === 'error') {
+        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+        stream.finish();
+        _hcAppend('error', evt.text, 'error');
+      }
       // Mid-turn, so the card is there to accept the moment the agent explains
       // it rather than after the whole answer has finished streaming.
       if (evt.type === 'proposal')    _hcLoadProposals();
     },
-    onError: e => _hcAppend('error', e.message, 'error'),
+    onError: e => {
+      if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+      stream.finish();
+      _hcAppend('error', e.message, 'error');
+    },
   });
+
+  if (pendingCall) pendingCall.setActive(false);
+  stream.finish();
 
   _hcBusy = false;
   if (btn) { btn.disabled = false; btn.textContent = 'Send'; }

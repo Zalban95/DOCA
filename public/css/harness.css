@@ -152,6 +152,8 @@
 .hc-assistant { align-self: flex-start; border-left: 2px solid var(--accent); background: rgba(255,255,255,0.02); }
 .hc-summary   { align-self: stretch; max-width: 100%; font-size: 11px; color: var(--muted);
                 border: 1px dashed var(--border2); }
+/* Tool activity uses .agent-fold (components.css); these keep history of the
+   old always-open blocks from looking broken if any linger. */
 .hc-tool-call, .hc-tool-result {
   align-self: flex-start; max-width: 100%;
   font-family: var(--font-mono); font-size: 10px;
@@ -159,6 +161,7 @@
 }
 .hc-tool-call   { border-left: 2px solid var(--amber); }
 .hc-tool-result { border-left: 2px solid var(--green); max-height: 180px; overflow-y: auto; }
+.hc-messages > .agent-fold { max-width: 100%; width: 100%; }
 .hc-error       { align-self: stretch; max-width: 100%; color: var(--red); border: 1px solid var(--red); }
 
 /* Settings the agent is asking for: between the transcript and the composer,

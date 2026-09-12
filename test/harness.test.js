@@ -413,3 +413,19 @@ test('the floating chat panel answers through the default harness', async () => 
   assert.equal(status.body.chatEnabled, true);
   assert.match(status.body.hint, /DOCA Harness/);
 });
+
+test('the floating chat panel forwards tool calls as structured events', async () => {
+  script = [
+    { tool: 'memory_read', args: { key: 'owner' } },
+    { text: 'Done.' },
+  ];
+  // Seed a memory entry so the tool succeeds without depending on prior turns.
+  await H.api(null, 'POST', '/api/harness/memory', { key: 'owner', value: 'Al' });
+  const events = await stream('/api/chat', { message: 'who owns this?' });
+  const call = events.find(e => e.type === 'tool_call');
+  assert.ok(call, `expected tool_call in ${events.map(e => e.type)}`);
+  assert.equal(call.name, 'memory_read');
+  assert.equal(call.args.key, 'owner');
+  assert.ok(events.find(e => e.type === 'tool_result'));
+  assert.match(events.filter(e => e.type === 'text').map(e => e.text).join(''), /Done/);
+});

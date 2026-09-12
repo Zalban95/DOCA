@@ -320,6 +320,61 @@
 }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
 
+/* ── Agent folds (Thinking / Command / Result) ──────── */
+/* Shared by the floating chat and the Harness console. Tap the header to
+   expand; `.active` animates the trailing dots while work is in flight. */
+.agent-fold {
+  align-self: flex-start;
+  max-width: 100%;
+  width: fit-content;
+  min-width: min(100%, 220px);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.agent-fold-thinking  { border-left: 2px solid var(--muted); }
+.agent-fold-tool-call { border-left: 2px solid var(--amber); }
+.agent-fold-tool-result { border-left: 2px solid var(--green); }
+.agent-fold-head {
+  display: flex; align-items: center; gap: 4px;
+  width: 100%; margin: 0; padding: 5px 8px;
+  background: transparent; border: 0; color: var(--muted);
+  font: inherit; text-align: left; cursor: pointer;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.agent-fold-head:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+.agent-fold-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-fold-dots {
+  display: none; overflow: hidden; width: 1.1em;
+  white-space: nowrap; flex-shrink: 0; text-transform: none; letter-spacing: 0;
+}
+.agent-fold.active .agent-fold-dots {
+  display: inline-block;
+  animation: agentFoldDots 1.2s steps(4, end) infinite;
+}
+.agent-fold-chevron {
+  flex-shrink: 0; font-size: 9px; opacity: .7;
+  transition: transform var(--t-fast);
+}
+.agent-fold.open .agent-fold-chevron { transform: rotate(90deg); }
+.agent-fold-body {
+  display: none; margin: 0; padding: 6px 8px 8px;
+  border-top: 1px solid var(--border2);
+  white-space: pre-wrap; word-break: break-word;
+  color: var(--text); max-height: 180px; overflow-y: auto;
+  font-size: 10px; line-height: 1.45;
+}
+.agent-fold.open .agent-fold-body { display: block; }
+.agent-fold.active .agent-fold-label { color: var(--amber); }
+.agent-fold-thinking.active { border-left-color: var(--amber); }
+@keyframes agentFoldDots {
+  0%  { width: 0; }
+  100% { width: 1.1em; }
+}
+
 /* ── Chat FAB ───────────────────────────────────────── */
 .chat-fab {
   position: fixed; bottom: 24px; right: 24px;
@@ -380,6 +435,7 @@
   font-size: 10px; color: var(--muted);
   text-align: center;
 }
+.chat-messages > .agent-fold { max-width: 100%; width: 100%; }
 .chat-input-row {
   display: flex; gap: 6px; padding: 10px;
   border-top: 1px solid var(--border2);

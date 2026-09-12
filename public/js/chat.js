@@ -23,7 +23,10 @@ async function chatLoadHistory() {
     if (msgs.length) {
       const container = document.getElementById('chat-messages');
       container.innerHTML = '';
-      msgs.forEach(m => chatAppendMsg(m.role, m.content));
+      msgs.forEach(m => {
+        if (m.role === 'assistant') _chatAppendContent(m.content);
+        else chatAppendMsg(m.role, m.content);
+      });
     }
   } catch {}
 }
@@ -38,6 +41,46 @@ function chatAppendMsg(role, text) {
   return el;
 }
 
+function _chatScroll() {
+  const container = document.getElementById('chat-messages');
+  if (container) container.scrollTop = container.scrollHeight;
+}
+
+function _chatAppendFold(kind, text, label, opts = {}) {
+  const container = document.getElementById('chat-messages');
+  if (!container) return null;
+  const fold = agentFold({
+    kind,
+    label: kind === 'thinking' ? (label || 'Thinking')
+      : kind === 'tool-call'   ? `Command · ${label || 'tool'}`
+      : `Result · ${label || 'tool'}`,
+    body: kind === 'tool-call' ? _chatPrettyArgs(text) : (text == null ? '' : String(text)),
+    active: !!opts.active,
+    open: !!opts.open,
+  });
+  container.appendChild(fold.el);
+  _chatScroll();
+  return fold;
+}
+
+function _chatPrettyArgs(raw) {
+  if (raw == null) return '';
+  if (typeof raw === 'object') return JSON.stringify(raw, null, 2);
+  const s = String(raw);
+  try { return JSON.stringify(JSON.parse(s), null, 2); }
+  catch { return s; }
+}
+
+function _chatAppendContent(content) {
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+  renderThoughtfulContent(content || '', {
+    mount: node => container.appendChild(node),
+    makeText: text => { if (text) chatAppendMsg('assistant', text); },
+  });
+  _chatScroll();
+}
+
 function chatSend() {
   const input   = document.getElementById('chat-input');
   const message = input.value.trim();
@@ -46,44 +89,44 @@ function chatSend() {
   input.value = '';
   chatAppendMsg('user', message);
 
-  const responseEl = chatAppendMsg('assistant', '');
-  responseEl.classList.add('pulse');
+  const container = document.getElementById('chat-messages');
+  let pendingCall = null;
+  const stream = createThinkStream({
+    mount: node => { container.appendChild(node); _chatScroll(); },
+    makeText: () => chatAppendMsg('assistant', ''),
+    scroll: _chatScroll,
+  });
+  stream.startWaiting();
 
-  fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message })
-  }).then(res => {
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    responseEl.textContent = '';
-    responseEl.classList.remove('pulse');
-
-    function read() {
-      reader.read().then(({ done, value }) => {
-        if (done) return;
-        const text = decoder.decode(value);
-        text.split('\n').forEach(line => {
-          if (!line.startsWith('data: ')) return;
-          try {
-            const evt = JSON.parse(line.slice(6));
-            if (evt.type === 'text') {
-              responseEl.textContent += evt.text;
-            } else if (evt.type === 'stderr') {
-              responseEl.textContent += evt.text;
-            }
-          } catch {}
-        });
-        document.getElementById('chat-messages').scrollTop =
-          document.getElementById('chat-messages').scrollHeight;
-        read();
-      });
-    }
-    read();
-  }).catch(e => {
-    responseEl.classList.remove('pulse');
-    responseEl.textContent = `Error: ${e.message}`;
-    responseEl.style.color = 'var(--red)';
+  sseStream('/api/chat', { message }, {
+    onEvent: evt => {
+      if (evt.type === 'text') {
+        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+        stream.feed(evt.text);
+      } else if (evt.type === 'tool_call') {
+        stream.finish();
+        stream.resetText();
+        if (pendingCall) pendingCall.setActive(false);
+        pendingCall = _chatAppendFold('tool-call', JSON.stringify(evt.args ?? {}), evt.name, { active: true });
+      } else if (evt.type === 'tool_result') {
+        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+        _chatAppendFold('tool-result', evt.result, evt.name);
+        stream.startWaiting();
+      } else if (evt.type === 'stderr') {
+        stream.finish();
+        const el = chatAppendMsg('assistant', evt.text);
+        el.style.color = 'var(--red)';
+      }
+    },
+    onError: e => {
+      if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+      stream.finish();
+      const el = chatAppendMsg('assistant', `Error: ${e.message}`);
+      el.style.color = 'var(--red)';
+    },
+  }).then(() => {
+    if (pendingCall) pendingCall.setActive(false);
+    stream.finish();
   });
 }
 
@@ -286,8 +329,17 @@ async function _callProcessAudio(audioBlob) {
 
     // 2. Send to chat and stream response
     _callSetStatus('Thinking…', 'processing');
-    const responseEl = chatAppendMsg('assistant', '');
-    responseEl.classList.add('pulse');
+    const container = document.getElementById('chat-messages');
+    let sentenceBuf  = '';
+    let inThinking   = false;
+    let pendingCall  = null;
+    const stream = createThinkStream({
+      mount: node => { container.appendChild(node); _chatScroll(); },
+      makeText: () => chatAppendMsg('assistant', ''),
+      scroll: _chatScroll,
+    });
+    stream.startWaiting();
+    _callSetStatus('Speaking…', 'speaking');
 
     const chatRes = await fetch('/api/chat', {
       method: 'POST',
@@ -298,48 +350,41 @@ async function _callProcessAudio(audioBlob) {
 
     const reader  = chatRes.body.getReader();
     const decoder = new TextDecoder();
-    let fullResponse = '';
-    let sentenceBuf  = '';
-    let inThinking   = false;
-    responseEl.textContent = '';
-    responseEl.classList.remove('pulse');
-    _callSetStatus('Speaking…', 'speaking');
+    let buf = '';
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       if (!_callActive) break;
 
-      const text = decoder.decode(value);
-      for (const line of text.split('\n')) {
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop() || '';
+      for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         try {
           const evt = JSON.parse(line.slice(6));
           if (evt.type === 'text') {
-            const chunk = evt.text;
+            if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+            stream.feed(evt.text);
 
-            // Detect thinking blocks: <think>...</think>
+            // Spoken text skips `<think>` blocks (character scan so tags
+            // split across SSE chunks still drop cleanly).
+            const chunk = evt.text;
             for (let i = 0; i < chunk.length; i++) {
               const remaining = chunk.slice(i);
               if (!inThinking && remaining.startsWith('<think>')) {
                 inThinking = true;
-                i += 6; // skip <think>
+                i += 6;
                 continue;
               }
               if (inThinking && remaining.startsWith('</think>')) {
                 inThinking = false;
-                i += 7; // skip </think>
+                i += 7;
                 continue;
               }
-              if (!inThinking) {
-                fullResponse += chunk[i];
-                sentenceBuf  += chunk[i];
-              }
+              if (!inThinking) sentenceBuf += chunk[i];
             }
-
-            responseEl.textContent = fullResponse;
-
-            // Synthesize complete sentences
             if (!inThinking) {
               const sentenceEnd = sentenceBuf.search(/[.!?;:\n]\s*/);
               if (sentenceEnd >= 0) {
@@ -348,12 +393,23 @@ async function _callProcessAudio(audioBlob) {
                 if (sentence.length > 1) _callEnqueueSynth(sentence);
               }
             }
+          } else if (evt.type === 'tool_call') {
+            stream.finish();
+            stream.resetText();
+            if (pendingCall) pendingCall.setActive(false);
+            pendingCall = _chatAppendFold('tool-call', JSON.stringify(evt.args ?? {}), evt.name, { active: true });
+          } else if (evt.type === 'tool_result') {
+            if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+            _chatAppendFold('tool-result', evt.result, evt.name);
+            stream.startWaiting();
           }
         } catch {}
       }
-      document.getElementById('chat-messages').scrollTop =
-        document.getElementById('chat-messages').scrollHeight;
+      _chatScroll();
     }
+
+    if (pendingCall) pendingCall.setActive(false);
+    stream.finish();
 
     // Synthesize any remaining text
     if (sentenceBuf.trim().length > 1 && _callActive) {

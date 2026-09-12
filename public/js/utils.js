@@ -123,6 +123,218 @@ function appendStream(el, text) {
 }
 
 /**
+ * How many trailing characters of `s` could be the start of `tag`.
+ * Used so a streamed `<think>` split across SSE chunks is not emitted as text.
+ */
+function _tagHold(s, tag) {
+  const max = Math.min(s.length, tag.length - 1);
+  for (let n = max; n > 0; n--) {
+    if (tag.startsWith(s.slice(-n))) return n;
+  }
+  return 0;
+}
+
+/**
+ * Collapsible Thinking / Command / Result block for the harness console and
+ * the floating chat. Tap the header to expand; `.active` drives the animated
+ * dots so it is obvious the model is still working.
+ *
+ * @param {{
+ *   kind: 'thinking'|'tool-call'|'tool-result',
+ *   label: string,
+ *   body?: string,
+ *   active?: boolean,
+ *   open?: boolean,
+ * }} opts
+ * @returns {{
+ *   el: HTMLElement,
+ *   body: HTMLElement,
+ *   setActive: (on: boolean) => void,
+ *   setOpen: (on: boolean) => void,
+ *   setLabel: (t: string) => void,
+ *   append: (t: string) => void,
+ *   setBody: (t: string) => void,
+ *   isEmpty: () => boolean,
+ *   remove: () => void,
+ * }}
+ */
+function agentFold(opts) {
+  const el = document.createElement('div');
+  el.className = `agent-fold agent-fold-${opts.kind}`;
+  if (opts.active) el.classList.add('active');
+  if (opts.open)   el.classList.add('open');
+
+  const head = document.createElement('button');
+  head.type = 'button';
+  head.className = 'agent-fold-head';
+  head.setAttribute('aria-expanded', opts.open ? 'true' : 'false');
+
+  const label = document.createElement('span');
+  label.className = 'agent-fold-label';
+  label.textContent = opts.label;
+
+  const dots = document.createElement('span');
+  dots.className = 'agent-fold-dots';
+  dots.setAttribute('aria-hidden', 'true');
+  dots.textContent = '...';
+
+  const chevron = document.createElement('span');
+  chevron.className = 'agent-fold-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.textContent = '▸';
+
+  head.append(label, dots, chevron);
+
+  const body = document.createElement('pre');
+  body.className = 'agent-fold-body';
+  body.textContent = opts.body || '';
+
+  head.addEventListener('click', () => {
+    const open = el.classList.toggle('open');
+    head.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  el.append(head, body);
+
+  return {
+    el, body,
+    setActive(on) { el.classList.toggle('active', !!on); },
+    setOpen(on) {
+      el.classList.toggle('open', !!on);
+      head.setAttribute('aria-expanded', on ? 'true' : 'false');
+    },
+    setLabel(t) { label.textContent = t; },
+    append(t) { body.textContent += t; },
+    setBody(t) { body.textContent = t; },
+    isEmpty() { return !body.textContent.trim(); },
+    remove() { el.remove(); },
+  };
+}
+
+/**
+ * Stream assistant text into thinking folds + plain bubbles, splitting on
+ * `<think>…</think>` (DeepSeek / Qwen-style reasoning) even when a tag is cut
+ * across chunks. Call `startWaiting()` as soon as the request is in flight so
+ * the user sees animated "Thinking…" before the first token.
+ *
+ * @param {{
+ *   mount: (node: HTMLElement) => void,
+ *   makeText: () => HTMLElement,
+ *   scroll?: () => void,
+ * }} ui
+ */
+function createThinkStream(ui) {
+  let think = null;
+  let textEl = null;
+  let pending = '';
+  let inThink = false;
+
+  const scroll = () => { if (ui.scroll) ui.scroll(); };
+
+  function ensureText() {
+    if (!textEl) textEl = ui.makeText();
+    return textEl;
+  }
+
+  function ensureThink(active) {
+    if (!think) {
+      think = agentFold({ kind: 'thinking', label: 'Thinking', active: true });
+      ui.mount(think.el);
+    }
+    think.setActive(active);
+    return think;
+  }
+
+  /** Drop an empty waiting indicator, or freeze a fold that has content. */
+  function settleThink() {
+    if (!think) return;
+    if (think.isEmpty()) think.remove();
+    else think.setActive(false);
+    think = null;
+  }
+
+  return {
+    startWaiting() { ensureThink(true); scroll(); },
+
+    feed(chunk) {
+      if (!chunk) return;
+      pending += chunk;
+      while (pending.length) {
+        if (!inThink) {
+          const i = pending.indexOf('<think>');
+          if (i === -1) {
+            const hold = _tagHold(pending, '<think>');
+            const emit = pending.slice(0, pending.length - hold);
+            pending = pending.slice(pending.length - hold);
+            if (emit) { settleThink(); ensureText().textContent += emit; }
+            break;
+          }
+          const before = pending.slice(0, i);
+          if (before) { settleThink(); ensureText().textContent += before; }
+          pending = pending.slice(i + 7);
+          inThink = true;
+          ensureThink(true);
+        } else {
+          const i = pending.indexOf('</think>');
+          if (i === -1) {
+            const hold = _tagHold(pending, '</think>');
+            const emit = pending.slice(0, pending.length - hold);
+            pending = pending.slice(pending.length - hold);
+            if (emit) ensureThink(true).append(emit);
+            break;
+          }
+          ensureThink(true).append(pending.slice(0, i));
+          pending = pending.slice(i + 8);
+          inThink = false;
+          settleThink();
+        }
+      }
+      scroll();
+    },
+
+    /** Next assistant prose starts a new bubble (after a tool call). */
+    resetText() { textEl = null; },
+
+    finish() {
+      if (pending) {
+        if (inThink) { ensureThink(false).append(pending); think = null; }
+        else { settleThink(); ensureText().textContent += pending; }
+        pending = '';
+        inThink = false;
+      } else {
+        settleThink();
+      }
+      scroll();
+    },
+  };
+}
+
+/**
+ * Split stored assistant content that may contain `<think>` blocks into
+ * thinking folds + plain text, for history reload.
+ *
+ * @param {string} content
+ * @param {{
+ *   mount: (node: HTMLElement) => void,
+ *   makeText: (text: string) => void,
+ * }} ui
+ */
+function renderThoughtfulContent(content, ui) {
+  const re = /<think>([\s\S]*?)<\/think>/gi;
+  let last = 0;
+  let m;
+  while ((m = re.exec(content)) !== null) {
+    const before = content.slice(last, m.index);
+    if (before) ui.makeText(before);
+    const fold = agentFold({ kind: 'thinking', label: 'Thinking', body: m[1], open: false });
+    ui.mount(fold.el);
+    last = m.index + m[0].length;
+  }
+  const rest = content.slice(last);
+  if (rest || last === 0) ui.makeText(rest);
+}
+
+/**
  * Reveal a streaming output box and bring it into view so the process
  * lines are visible from the first chunk.
  * @param {HTMLElement} el

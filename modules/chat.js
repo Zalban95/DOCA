@@ -101,10 +101,12 @@ async function handleChat(req, res) {
       const { text } = await agent.turn({
         message,
         emit: evt => {
-          // The panel renders plain text; tool activity shows as a one-line note
-          // so a long silence while a tool runs does not look like a hang.
-          if (evt.type === 'text')      res.write(`data: ${JSON.stringify({ type: 'text', text: evt.text })}\n\n`);
-          if (evt.type === 'tool_call') res.write(`data: ${JSON.stringify({ type: 'text', text: `\n· ${evt.name}\n` })}\n\n`);
+          if (evt.type === 'text')
+            res.write(`data: ${JSON.stringify({ type: 'text', text: evt.text })}\n\n`);
+          if (evt.type === 'tool_call')
+            res.write(`data: ${JSON.stringify({ type: 'tool_call', name: evt.name, args: evt.args })}\n\n`);
+          if (evt.type === 'tool_result')
+            res.write(`data: ${JSON.stringify({ type: 'tool_result', name: evt.name, result: evt.result })}\n\n`);
         },
         signal: ctrl.signal,
       });
