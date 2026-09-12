@@ -11,6 +11,12 @@
  *   npm run token -- list
  *   npm run token -- rotate dev_ab12cd34ef56
  *   npm run token -- revoke dev_ab12cd34ef56
+ *   npm run token -- grant  dev_ab12cd34ef56 --preset phone
+ *
+ * `grant` exists because a token carries the scopes it was minted with: a device
+ * paired before a scope family existed cannot reach the new routes, and the
+ * dashboard shows scopes without editing them. Re-applying a preset is cheaper
+ * than re-pairing a watch, and the token keeps working.
  *
  * Tokens are printed once and never stored in plaintext.
  */
@@ -29,6 +35,7 @@ function usage() {
   list
   rotate <deviceId>
   revoke <deviceId>
+  grant  <deviceId> (--preset <p> | --scopes a,b,c | --add a,b,c)
   scopes
 
 Presets: ${Object.keys(PRESETS).join(', ')}`);
@@ -59,6 +66,25 @@ switch (cmd) {
   case 'revoke':
     console.log(devices.revoke(args[1]) ? `revoked ${args[1]}` : 'unknown device');
     break;
+  case 'grant': {
+    const id = args[1];
+    const current = devices.get(id);
+    if (!current) { console.error('unknown device'); process.exit(1); }
+    const preset = opt('preset');
+    const next = opt('add') ? [...current.scopes, ...opt('add').split(',')]
+      : opt('scopes') ? opt('scopes').split(',')
+      : preset ? PRESETS[preset] : null;
+    if (!next) { usage(); process.exit(1); }
+    const before = current.scopes.join(' ');
+    const after = devices.update(id, { scopes: next });
+    // An unknown family is dropped silently by normalizeAll, so say which ones
+    // went nowhere rather than reporting success on a typo.
+    const dropped = next.filter(s => !after.scopes.includes(s.trim()));
+    console.log(`${id}\n  was  ${before}\n  now  ${after.scopes.join(' ')}`);
+    if (dropped.length) console.log(`  ignored (unknown scope): ${dropped.join(' ')}`);
+    console.log('\nThe existing token keeps working; the device sees the change in GET /api/v1/capabilities.');
+    break;
+  }
   case 'scopes':
     for (const [f, d] of Object.entries(FAMILIES)) console.log(`${f.padEnd(10)} ${d}`);
     console.log('\nPresets:'); for (const [p, s] of Object.entries(PRESETS)) console.log(`  ${p.padEnd(8)} ${s.join(' ')}`);

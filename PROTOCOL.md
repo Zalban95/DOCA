@@ -135,7 +135,14 @@ A scope is `family:target`; `target` may be `*` or a dotted prefix ending in
 | `artifacts` | `self`, `*` | fetch artifacts addressed to me / any artifact |
 | `mcp` | `self` | read and re-address the one MCP server this device hosts; offer a new one for the user to accept (§22) |
 | `devices` | `admin` | list/create/pair/patch/revoke devices |
+| `harness` | `chat`, `sessions`, `memory` | talk to the agent: post a message and receive turns / manage conversations / read what it remembers (§23) |
 | `agent` | — | the `/agent/*` API (raise prompts and alerts, request sensors, deliver outcomes and artifacts, read devices/vars/sensors/media) |
+
+`harness:*` and `agent` are opposite directions, not degrees of the same thing:
+`harness:*` is a client asking the agent for something, `agent` is the agent
+acting on clients. Neither implies the other. No target in `harness` lets a
+device define what the agent may run, and none writes a setting — a proposal is
+applied by a click in the dashboard, never by a token.
 
 Matching: `read:*` ⊇ `read:gpu.0`; `read:system.*` ⊇ `read:system.cpu`;
 `command:compose.restart` does **not** grant `command:compose.stop`.
@@ -146,8 +153,8 @@ Presets (returned by `GET /devices` and used by the CLI):
 |---|---|
 | `admin` | `*` |
 | `agent` | `agent read:* artifacts:* media:* sensors:* vars:* profile:*` |
-| `watch` | `read:* interact profile:self vars:self sensors:report media:upload artifacts:self` |
-| `phone` | `read:* command:* interact profile:* vars:self sensors:report media:upload artifacts:self devices:admin mcp:self` |
+| `watch` | `read:* interact profile:self vars:self sensors:report media:upload artifacts:self harness:chat` |
+| `phone` | `read:* command:* interact profile:* vars:self sensors:report media:upload artifacts:self devices:admin mcp:self harness:chat harness:sessions` |
 | `viewer` | `read:*` |
 
 A device may `PATCH /devices/me` its own `name` and `caps`, never its scopes.
@@ -450,6 +457,9 @@ data: {"reason":"revoked"}
 | `alert` | durable, high | `{ id, title, body[], priority, haptic, from, ext }` |
 | `profile.changed` | durable | `{ version, etag, updatedBy, url }` — refetch the profile |
 | `agent.message` | durable | `{ from, type, payload, ext }` — free-form from the agent |
+| `agent.turn` | durable | `{ turnId, sessionId, state: started\|done\|failed, by, message?, text?, steps?, proposals[]?, error? }` — one conversation turn (§23) |
+| `agent.text` | ephemeral | `{ turnId, sessionId, delta }` — reply text as produced; **only to the device that posted the message** |
+| `agent.tool` | ephemeral | `{ turnId, sessionId, name, phase: call\|result, step, args?, ok?, preview? }` |
 | `artifact.deliver` | durable | `{ artifact, inline?, inlineEncoding?: utf8|base64, message, ext }` |
 | `sensor.request` | durable (ttl = duration + 30 s) | `{ request: { id, sensors: [{ id, mode, rateHz, durationSec, unit }], reason, ext, expiresAt } }` |
 | `sensor.stop` | durable | `{ requestId, reason }` |
@@ -987,16 +997,78 @@ discovers that when it connects.
 tailnet interface only, and treat every request as untrusted until proven
 otherwise. `headers` exists so the host can carry a bearer token you require.
 
-## 23. Server operations
+## 23. Talking to the agent
+
+Every client is an input and an output to one agent. A watch, a phone and a
+kiosk are not three assistants; they are three ways into the same conversation.
+
+**Posting a message and receiving the answer are separate.**
+
+```http
+POST /api/v1/harness/messages          → 202 { turnId, sessionId }
+{ "message": "how many containers are up?", "sessionId": "s_…" }   // sessionId optional
+```
+
+The reply does not come back in that response. It is published on the push
+channel (§11), which is already cursor-based, resumable and multi-subscriber:
+
+| Event | Who receives it | Why |
+|---|---|---|
+| `agent.turn` `state: started` | every device with `harness:chat` | any client can show "Doca is answering", and `by` says which device asked |
+| `agent.tool` | every device with `harness:chat` | what it is doing, instead of a spinner |
+| `agent.text` | **only the device that posted** | a client with no screen open should not pay radio time for tokens |
+| `agent.turn` `state: done` | every device with `harness:chat` | carries the whole reply in `text`, so a client that missed the deltas missed nothing |
+| `agent.turn` `state: failed` | every device with `harness:chat` | `error.code` is `harness_unconfigured` (no model chosen) or `harness_error` |
+
+`agent.turn` is durable and the other two are ephemeral. That is the whole
+battery story: a watch may subscribe and simply ignore `agent.text`, or go
+offline mid-turn and still find the answer waiting when it returns. A client
+that connects during a turn can ask `GET /harness/turns` instead of waiting for
+the next event.
+
+A conversation is the unit of state, and it is the same conversation the
+dashboard console shows — there is no separate device-side history:
+
+```http
+GET  /harness/sessions              → { sessions[], active }
+POST /harness/sessions              → { session }        // becomes active
+GET  /harness/sessions/:id?limit=50 → { session, messages[] }
+POST /harness/sessions/:id/activate
+DELETE /harness/sessions/:id
+```
+
+`messages[]` is shaped for drawing a chat: `{ role, content, name?, tools[]? }`,
+where `tools[]` names what an assistant row called rather than reproducing the
+model's tool-call plumbing.
+
+Rules a client can rely on:
+
+- **One turn per conversation.** A second `POST` while one is running is `409
+  turn_in_flight` with the `turnId` to wait for, so two devices cannot interleave
+  one transcript.
+- **A device never writes a setting.** `GET /harness/memory` shows what the agent
+  remembers, the rules it follows, and any settings proposal it has made;
+  applying one is a click in the dashboard. A client should show a waiting
+  proposal, not offer to accept it.
+- **Unknown event types and payload fields must be ignored** (§3), which is how
+  thinking traces and multimodal turns will arrive without breaking you.
+
+> **FUTURE.** Images and audio in a turn (`mediaId` from §17, transcribed before
+> the model), voice out, and an `agent.thinking` event are specified in
+> `docs/proposals/hub-any-client-any-mcp.md` §3.1 and are **not implemented**: a
+> message carrying `mediaId` is refused with `400 unsupported` rather than
+> silently answered as text.
+
+## 24. Server operations
 
 - Data directory: `DOCA_DATA_DIR` (default `<repo>/.doca`, gitignored): `devices.json`, `prompts.json`, `profiles/`, `outbox/`, `media/`, `artifacts/`. Atomic writes; safe to back up.
-- Tokens: `npm run token -- issue|list|rotate|revoke|scopes`.
+- Tokens: `npm run token -- issue|list|rotate|revoke|grant|scopes`. A token carries the scopes it was minted with, so a device paired before a scope family existed needs `grant <deviceId> --preset <p>` (or `--add harness:chat`) to reach the new routes; its token keeps working.
 - Free-form resolution needs the gateway chat endpoint (`OPENCLAW_GATEWAY_URL`, `openclaw.json` → `gateway.http.endpoints.chatCompletions.enabled`) and, for audio, an STT service (`DOCA_STT_URL` or dashboard voice settings).
 - Fonts for rendered text: `DOCA_FONT=/path/to/font.ttf` (auto-detects DejaVu/Liberation/Noto).
 - Tests: `npm test` (node --test, no external services required).
 - Extending: add a surface in `modules/api-v1/surfaces.js` (`DEFS` + `buildSurface`), a command in `commands.js` (`COMMANDS`), an event type in `bus.js` (`TYPES`). Everything appears in `/capabilities` automatically. Additive changes do not bump the protocol version.
 
-## 24. Endpoint index
+## 25. Endpoint index
 
 | Method | Path | Scope | Purpose |
 |---|---|---|---|
@@ -1029,6 +1101,12 @@ otherwise. `headers` exists so the host can carry a bearer token you require.
 | GET | `/media/:id`, `/media/:id/info` | owner \| `media:*` \| `agent` | fetch |
 | GET | `/artifacts/:id`, `/artifacts/:id/content` | `artifacts:self` \| `artifacts:*` | fetch |
 | GET | `/render/chart`, `/render/figure/:id` | `read:<surface>` / any | §19 |
+| POST | `/harness/messages` | `harness:chat` | ask the agent; the turn arrives as events (§23) |
+| GET | `/harness/turns` | `harness:chat` | turns in flight |
+| GET / POST | `/harness/sessions` | `harness:sessions` | list / start a conversation |
+| GET / DELETE | `/harness/sessions/:id` | `harness:sessions` | transcript / delete |
+| POST | `/harness/sessions/:id/activate` | `harness:sessions` | make it the active one |
+| GET | `/harness/memory` | `harness:memory` | durable memory, rules, waiting proposals |
 | GET | `/agent/devices` | `agent` | devices with effective profiles |
 | POST / GET / DELETE | `/agent/prompts[/:id]` | `agent` | raise / list / cancel |
 | POST | `/agent/prompts/:id/outcome` | `agent` | resolve a pending selection |

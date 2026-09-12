@@ -19,6 +19,10 @@ const FAMILIES = {
   mcp:       'Read/update the MCP server this device itself hosts (self)',
   devices:   'Device administration: pair, list, revoke, rotate (admin)',
   agent:     'Agent-facing API: raise prompts/alerts, request sensors, deliver outcomes and artifacts',
+  // Talking *to* the agent, which is the opposite direction from `agent` above.
+  // There is deliberately no target that lets a device define what the agent may
+  // run: `harness:memory` reads, and applying a settings proposal stays a click.
+  harness:   'Converse with the built-in harness: chat, sessions (own conversations), memory (read)',
 };
 
 /** Scopes that are a bare family with no target (e.g. `interact`). */
@@ -70,12 +74,14 @@ function filterByScope(scopes, family, ids) {
 const PRESETS = {
   admin:    ['*'],
   agent:    ['agent', 'read:*', 'artifacts:*', 'media:*', 'sensors:*', 'vars:*', 'profile:*'],
-  watch:    ['read:*', 'interact', 'profile:self', 'vars:self', 'sensors:report', 'media:upload', 'artifacts:self'],
+  // A watch asks the agent; it does not administer conversations on a screen
+  // that small, so it gets `harness:chat` and nothing else from that family.
+  watch:    ['read:*', 'interact', 'profile:self', 'vars:self', 'sensors:report', 'media:upload', 'artifacts:self', 'harness:chat'],
   // `mcp:self` is in `phone` because that is the preset a desktop client pairs
   // with, and it is self-limiting by construction: it reaches only the one
   // definition a human already pointed at this device. A device hosting nothing
   // can do nothing with it.
-  phone:    ['read:*', 'command:*', 'interact', 'profile:*', 'vars:self', 'sensors:report', 'media:upload', 'artifacts:self', 'devices:admin', 'mcp:self'],
+  phone:    ['read:*', 'command:*', 'interact', 'profile:*', 'vars:self', 'sensors:report', 'media:upload', 'artifacts:self', 'devices:admin', 'mcp:self', 'harness:chat', 'harness:sessions'],
   viewer:   ['read:*'],
 };
 

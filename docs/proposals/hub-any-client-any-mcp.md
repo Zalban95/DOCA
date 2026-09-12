@@ -118,9 +118,26 @@ That single change is what buys the three things asked for:
 | Tool visibility | `agent.tool` `{turnId, name, phase, step}` | The harness already emits `tool_call`/`tool_result` internally |
 | Reply text | `agent.text` `{turnId, delta}` | Ephemeral deltas; the final message is durable |
 
+> **AS BUILT (2026-09-13).** Three of these four shipped. `agent.turn` has states
+> `started｜done｜failed` — no `streaming`, because the deltas already say that and
+> a state nobody sets is a lie in a table. **`agent.thinking` was not added: the
+> harness has no producer for it.** `agent.js` emits `session｜text｜tool_call｜
+> tool_result｜proposal`, and nothing about a model's reasoning; an event type
+> declared with no caller would advertise a capability that does not exist (§9).
+> It needs a step-boundary emit inside `agent.js` first — FUTURE, with phase 2.
+> `state: failed` was added instead, because a turn that dies has no response body
+> left to report into.
+
 Ephemeral vs durable matters for battery: a watch subscribes to `agent.turn` and
 the final message only, and never receives per-token deltas it cannot read
 anyway. The phone, foregrounded, takes the deltas.
+
+> **AS BUILT.** Stronger than specified: `agent.text` is published **only to the
+> device that posted the message**, because the bus has no per-type subscription —
+> a watch cannot decline deltas, it can only receive and discard them, which is
+> exactly the radio time this was meant to save. The device with a screen open
+> streams; everyone else gets `started`, the tool steps, and the whole reply on
+> `done`.
 
 ### 3.1 Multimodal input
 
@@ -162,6 +179,21 @@ local registry is UI-only. A device may *operate* what a human admitted, never
 widen it.
 
 ### 4.2 Routes
+
+> **CORRECTION (implemented 2026-09-13).** These went in under `/api/v1/harness/*`,
+> not `/api/v1/agent/*`: `POST /api/v1/agent/messages` **already existed** as the
+> agent-facing fan-out (`router.js`, scope `agent`, agent → devices). One prefix
+> for both directions, with opposite scopes, is a trap for whoever reads it next.
+> `/api/v1/harness/*` is a device asking the agent; `/api/v1/agent/*` is the agent
+> acting on devices. The scope family was `harness:*` from the start, so the
+> prefix now matches it. Implemented surface, normatively documented in
+> `PROTOCOL.md` §23: `POST /harness/messages`, `GET /harness/turns`,
+> `GET|POST /harness/sessions`, `GET|DELETE /harness/sessions/:id`,
+> `POST /harness/sessions/:id/activate`, `GET /harness/memory`.
+> Two additions the spec below did not have: `/harness/turns`, because a client
+> that opens mid-turn should not have to wait for an event to know one is running,
+> and `409 turn_in_flight`, because two devices posting into one conversation
+> would interleave one transcript.
 
 ```
 POST   /api/v1/agent/messages            → 202 {turnId, sessionId}   (harness:chat)
@@ -361,7 +393,7 @@ The rules worth writing down:
 
 | Phase | Delivers | Unlocks |
 |---|---|---|
-| 1 | `/api/v1/agent/*`, `harness:*` scopes, turns on the bus | Chat with Doca from phone and watch; typing and thinking on every client |
+| 1 — **DONE 2026-09-13** | `/api/v1/harness/*`, `harness:*` scopes, turns on the bus | Chat with Doca from phone and watch; typing and tool steps on every client |
 | 2 | Images + audio in, `POST /api/v1/synthesize` | Talk to it and be answered out loud; show it a screenshot |
 | 3 | `GET /api/v1/mcp` + `mcp:read` | "What can you reach right now?" |
 | 4 | `POST /api/v1/mcp/:id/action` + `mcp:control` | Start the desktop's filesystem server by voice |
@@ -377,11 +409,13 @@ that watch Doca and clients that talk to it.
 
 ## 8. What each repo has to do
 
-**DOCA (this repo).** All of §3 and §4. Adapter in `modules/api-v1/agent.js` over
-the existing harness; turns published on `bus.js`; scope entries; `host` on the
-MCP record; jobs list and titles; scoped transcribe/synthesize; OpenAPI
-regenerated. Do not fork the harness, do not move the charter, do not let a scope
-bypass proposals-need-a-click.
+**DOCA (this repo).** All of §3 and §4. Phase 1 is done: `modules/api-v1/harness.js`
+adapts the existing harness, turns are published on `bus.js`, the scopes and the
+`Harness` tag are in `scopes.js` and the OpenAPI document, and
+`test/harness-client.test.js` covers it against a scripted stub model (no key, no
+network). Still open here: `host` on the MCP record; jobs list and titles; scoped
+transcribe/synthesize; media in a turn. Do not fork the harness, do not move the
+charter, do not let a scope bypass proposals-need-a-click.
 
 **DocaDesk.** The reference host client: listener, offer/accept reconciliation,
 and a local stdio registry forwarding Windows-local servers. Remaining: report
@@ -390,7 +424,7 @@ desktop capture to the phone; and an agent console once §4.2 exists, so the
 desktop stops needing the WebView for chat.
 
 **DocaMobile.** Native monitoring is wired (capabilities, snapshots, push). Next:
-an agent chat screen on `/api/v1/agent/*` with images and audio (phase 1–2); use
+an agent chat screen on `/api/v1/harness/*` with images and audio (phase 1–2); use
 the server's `push.backoff`; **wire `:wear-bridge`, which nothing calls today**,
 and fix the `pairCode`/`certPin` vs `code`/`pin` mismatch; request the two
 permissions it already declares; use the `coil` dependency it already has for

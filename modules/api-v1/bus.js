@@ -26,6 +26,10 @@ const TYPES = {
   'job.progress':     { cls: 'ephemeral' },
   'prompt.progress':  { cls: 'ephemeral' },
   'sensor.samples':   { cls: 'ephemeral' },
+  // Reply deltas and tool steps are worth nothing after the turn they belong to,
+  // and a client that missed them gets the whole reply on `agent.turn` done.
+  'agent.text':       { cls: 'ephemeral' },
+  'agent.tool':       { cls: 'ephemeral' },
 
   'prompt.new':       { cls: 'durable', ttlSec: L.PROMPT_DEFAULT_TTL_SEC, priority: 'high' },
   'prompt.outcome':   { cls: 'durable', ttlSec: L.PROMPT_DEFAULT_TTL_SEC, priority: 'high' },
@@ -39,6 +43,9 @@ const TYPES = {
   'device.vars':      { cls: 'durable', ttlSec: 3600 },
   'device.message':   { cls: 'durable', ttlSec: 6 * 3600 },
   'agent.message':    { cls: 'durable', ttlSec: 6 * 3600 },
+  // Durable so a client that arrives mid-turn learns a turn is in flight, and one
+  // that was away still gets the answer it did not watch being typed.
+  'agent.turn':       { cls: 'durable', ttlSec: 6 * 3600 },
   'artifact.deliver': { cls: 'durable', ttlSec: L.DEFAULT_EVENT_TTL_SEC },
   'sensor.request':   { cls: 'durable', ttlSec: 600 },
   'sensor.stop':      { cls: 'durable', ttlSec: 600 },

@@ -522,7 +522,56 @@ attachment via `/messages`. Accepted types and limits are in
   log them in debug builds.
 - A major version is a new base path (`/api/v2`) running alongside `/api/v1`.
 
-## 20. Checklist
+## 20. Chatting with the agent *(§23)*
+
+You are not building a chat client that owns a conversation. You are building one
+window onto a conversation the user also has on their other devices, so **the
+answer to your question may arrive while you are in the background, and answers
+to questions you never asked will arrive too.** Both are features.
+
+```kotlin
+// Ask. Note what you get back: a receipt, not an answer.
+val (turnId, sessionId) = post("/harness/messages", mapOf("message" to text))
+// …then let the push loop deliver it, exactly like any other event.
+```
+
+Handle these in the same `when` block as your other events:
+
+```kotlin
+"agent.turn" -> when (p.state) {
+    "started" -> showTyping(p.turnId, askedByMe = p.by == myDeviceId, question = p.message)
+    "done"    -> { hideTyping(p.turnId); appendAssistant(p.text); p.proposals?.let { showWaitingChanges(it) } }
+    "failed"  -> { hideTyping(p.turnId); showError(p.error.message) }
+}
+"agent.tool" -> showActivity(p.turnId, p.name, p.phase)      // "reading containers…"
+"agent.text" -> appendDelta(p.turnId, p.delta)               // only for the turn you posted
+```
+
+Rules that will save you a rewrite:
+
+- **Never assemble the reply from `agent.text` alone.** Deltas are ephemeral and
+  arrive only on the device that posted; the authoritative reply is `text` on
+  `agent.turn` `done`. Render deltas as a live preview, then replace with `text`.
+- **Idempotency is on `turnId`.** A durable `agent.turn` can be replayed after a
+  reconnect, so appending on every `done` you see will double messages. Keep the
+  turnIds you have rendered.
+- **On resume, do not replay a chat from the bus.** Read
+  `GET /harness/sessions/:id` for history and `GET /harness/turns` for what is
+  running; the cursor is for events, not for scrollback.
+- **A `409 turn_in_flight` is not an error to show.** It carries the `turnId`
+  already running — wait for it, then send.
+- **A watch has `harness:chat` and nothing else.** `GET /harness/sessions` will be
+  `403`: chat in the active conversation and let the phone manage them.
+- **Show a waiting proposal, never an Accept button.** `proposals` on a `done`
+  event are settings changes the agent wants; only a click in the dashboard
+  applies one. Telling the user it is waiting is the whole job.
+
+> **FUTURE.** Sending an image or a voice recording with a message (`mediaId`),
+> spoken replies, and a thinking trace are not implemented yet — a `mediaId` is
+> refused with `400 unsupported` rather than quietly dropped. Ignore unknown
+> `agent.*` types now and they will appear without a client change.
+
+## 21. Checklist
 
 1. Pairing screen (code or QR) → `pair/complete` with honest `caps` → token in secure storage.
 2. `GET /capabilities`, `GET /devices/me/profile`, `GET /snapshot?surfaces=<first page>`.
@@ -530,7 +579,8 @@ attachment via `/messages`. Accepted types and limits are in
 4. Widgets driven by metric `kind`/`thresholds`/`display`; stale greying.
 5. Prompt UI: all five choice types you can perform, `selectionId` persistence, pending spinner, outcome + confirm/back, `prompt.closed`.
 6. Alerts and `agent.message` dispatch.
-7. Figures by `representation.kind`; charts via `render.chartUrl`.
-8. Background poll mode; `If-None-Match` everywhere.
-9. Optional: commands/jobs (phone), profile editor (phone), sensors, artifacts sandbox, media upload, vars.
-10. Test against `npm run client:demo` locally — the reference watch (`clients/reference/watch.sh`) is the executable version of this guide.
+7. Chat: post to `/harness/messages`, render `agent.turn`/`agent.tool`/`agent.text`, dedupe on `turnId`, history from `/harness/sessions/:id`.
+8. Figures by `representation.kind`; charts via `render.chartUrl`.
+9. Background poll mode; `If-None-Match` everywhere.
+10. Optional: commands/jobs (phone), profile editor (phone), sensors, artifacts sandbox, media upload, vars.
+11. Test against `npm run client:demo` locally — the reference watch (`clients/reference/watch.sh`) is the executable version of this guide.

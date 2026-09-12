@@ -82,6 +82,10 @@
       "description": "Server-rendered charts and figures for devices without an SVG engine."
     },
     {
+      "name": "Harness",
+      "description": "Talking to the agent (scopes `harness:*`): post a message, and receive the turn on the event stream so every device the user owns sees the same conversation."
+    },
+    {
       "name": "Agent",
       "description": "Agent-facing API (scope `agent`): raise prompts and alerts, resolve selections, request sensors, ship artifacts."
     }
@@ -3361,6 +3365,631 @@
         }
       }
     },
+    "/harness/messages": {
+      "post": {
+        "tags": [
+          "Harness"
+        ],
+        "summary": "Ask the agent something (the answer arrives as events)",
+        "operationId": "harnessPostMessage",
+        "x-scope": "harness:chat",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "maxLength": 8000
+                  },
+                  "sessionId": {
+                    "type": "string",
+                    "description": "Defaults to the active conversation."
+                  }
+                },
+                "required": [
+                  "message"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "turnId": {
+                      "type": "string"
+                    },
+                    "sessionId": {
+                      "type": "string"
+                    }
+                  },
+                  "description": "Accepted. Watch `agent.turn` / `agent.text` / `agent.tool` on the event stream."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input — `error.message` says which field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State machine refused the transition; body includes the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Over a documented payload budget.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/harness/turns": {
+      "get": {
+        "tags": [
+          "Harness"
+        ],
+        "summary": "Turns in flight, so a client arriving mid-turn can show it",
+        "operationId": "harnessListTurns",
+        "x-scope": "harness:chat",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "turns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "sessionId": {
+                            "type": "string"
+                          },
+                          "turnId": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/harness/sessions": {
+      "get": {
+        "tags": [
+          "Harness"
+        ],
+        "summary": "List conversations",
+        "operationId": "harnessListSessions",
+        "x-scope": "harness:sessions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/HarnessSession"
+                      }
+                    },
+                    "active": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Harness"
+        ],
+        "summary": "Start a conversation (and make it active)",
+        "operationId": "harnessCreateSession",
+        "x-scope": "harness:sessions",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "maxLength": 120
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "session": {
+                      "$ref": "#/components/schemas/HarnessSession"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/harness/sessions/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Conversation id.",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "description": "Most recent messages to return (default 50, max 200).",
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Harness"
+        ],
+        "summary": "One conversation, shaped for drawing a chat",
+        "operationId": "harnessGetSession",
+        "x-scope": "harness:sessions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "session": {
+                      "$ref": "#/components/schemas/HarnessSession"
+                    },
+                    "messages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "assistant",
+                              "tool",
+                              "system"
+                            ]
+                          },
+                          "content": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "tools": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "Tools the assistant called on this row."
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Harness"
+        ],
+        "summary": "Delete a conversation",
+        "operationId": "harnessDeleteSession",
+        "x-scope": "harness:sessions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State machine refused the transition; body includes the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/harness/sessions/{id}/activate": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Conversation id.",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Harness"
+        ],
+        "summary": "Make a conversation the active one",
+        "operationId": "harnessActivateSession",
+        "x-scope": "harness:sessions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "active": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/harness/memory": {
+      "get": {
+        "tags": [
+          "Harness"
+        ],
+        "summary": "What the agent durably remembers, its rules, and proposals awaiting a click",
+        "operationId": "harnessGetMemory",
+        "x-scope": "harness:memory",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": true
+                      }
+                    },
+                    "rules": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": true
+                    },
+                    "proposals": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "ISO-8601 timestamp"
+                          },
+                          "reason": {
+                            "type": "string"
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "path": {
+                                  "type": "string"
+                                },
+                                "to": {}
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "description": "Read-only: writing memory and applying a proposal are dashboard actions, deliberately absent from this API."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/agent/devices": {
       "get": {
         "tags": [
@@ -4723,7 +5352,7 @@
       },
       "Scope": {
         "type": "string",
-        "description": "`family:target`; `target` may be `*` or a dotted prefix ending in `.*`. Families: read, command, interact, profile, vars, sensors, media, artifacts, mcp, devices, agent.",
+        "description": "`family:target`; `target` may be `*` or a dotted prefix ending in `.*`. Families: read, command, interact, profile, vars, sensors, media, artifacts, mcp, devices, agent, harness.",
         "examples": [
           "read:*",
           "read:system.*",
@@ -5562,6 +6191,39 @@
         },
         "description": "A client's offer of the MCP server it hosts, waiting on a dashboard click. `pending` means recorded and doing nothing."
       },
+      "HarnessSession": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "examples": [
+              "s_mt0z3rfa"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO-8601 timestamp"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO-8601 timestamp"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Messages in the transcript."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Rolling summary of the folded-away part of the conversation."
+          }
+        },
+        "description": "One conversation with the built-in harness. Owned by `modules/harness/memory.js`; the dashboard console and every device see the same ones."
+      },
       "EventEnvelope": {
         "type": "object",
         "properties": {
@@ -5585,6 +6247,8 @@
               "job.progress",
               "prompt.progress",
               "sensor.samples",
+              "agent.text",
+              "agent.tool",
               "prompt.new",
               "prompt.outcome",
               "prompt.closed",
@@ -5597,6 +6261,7 @@
               "device.vars",
               "device.message",
               "agent.message",
+              "agent.turn",
               "artifact.deliver",
               "sensor.request",
               "sensor.stop",
@@ -7721,7 +8386,8 @@
       "artifacts": "Read artifacts delivered to this device",
       "mcp": "Read/update the MCP server this device itself hosts (self)",
       "devices": "Device administration: pair, list, revoke, rotate (admin)",
-      "agent": "Agent-facing API: raise prompts/alerts, request sensors, deliver outcomes and artifacts"
+      "agent": "Agent-facing API: raise prompts/alerts, request sensors, deliver outcomes and artifacts",
+      "harness": "Converse with the built-in harness: chat, sessions (own conversations), memory (read)"
     },
     "presets": {
       "admin": [
@@ -7743,7 +8409,8 @@
         "vars:self",
         "sensors:report",
         "media:upload",
-        "artifacts:self"
+        "artifacts:self",
+        "harness:chat"
       ],
       "phone": [
         "read:*",
@@ -7755,7 +8422,9 @@
         "media:upload",
         "artifacts:self",
         "devices:admin",
-        "mcp:self"
+        "mcp:self",
+        "harness:chat",
+        "harness:sessions"
       ],
       "viewer": [
         "read:*"
@@ -7845,6 +8514,64 @@
           }
         }
       }
+    },
+    "agent.text": {
+      "class": "ephemeral",
+      "audience": "device",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "turnId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "delta": {
+            "type": "string"
+          }
+        }
+      },
+      "note": "Reply text as it is produced, coalesced. Sent **only to the device that posted the message**: a client with no screen open should not pay radio time for tokens, and the whole reply arrives on `agent.turn` done."
+    },
+    "agent.tool": {
+      "class": "ephemeral",
+      "audience": "device",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "turnId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "call",
+              "result"
+            ]
+          },
+          "step": {
+            "type": "integer"
+          },
+          "args": {
+            "type": "string",
+            "description": "Truncated JSON."
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "preview": {
+            "type": "string"
+          }
+        }
+      },
+      "note": "What the agent is doing mid-turn, so a client can show it rather than a spinner."
     },
     "prompt.new": {
       "class": "durable",
@@ -8151,6 +8878,83 @@
           }
         }
       }
+    },
+    "agent.turn": {
+      "class": "durable",
+      "ttlSec": 21600,
+      "audience": "device",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "turnId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "started",
+              "done",
+              "failed"
+            ]
+          },
+          "by": {
+            "type": "string",
+            "description": "Device that asked."
+          },
+          "message": {
+            "type": "string",
+            "description": "On `started`: the question, truncated."
+          },
+          "text": {
+            "type": "string",
+            "description": "On `done`: the whole reply."
+          },
+          "steps": {
+            "type": "integer"
+          },
+          "proposals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "changes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string"
+                      },
+                      "to": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "note": "The lifecycle of one turn, sent to every device with `harness:chat` including the one that asked — so any client can show that a turn is running and what it answered. `proposals` are settings changes waiting on a click in the dashboard; a device cannot apply them."
     },
     "artifact.deliver": {
       "class": "durable",

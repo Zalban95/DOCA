@@ -135,6 +135,11 @@ function schemas() {
       status: str({ enum: ['pending', 'accepted', 'rejected'] }), decidedAt: nullable(iso()), serverId: nullable(str()),
     }, { description: 'A client\'s offer of the MCP server it hosts, waiting on a dashboard click. `pending` means recorded and doing nothing.' }),
 
+    HarnessSession: obj({
+      id: str({ examples: ['s_mt0z3rfa'] }), title: str(), createdAt: iso(), updatedAt: iso(), count: int({ description: 'Messages in the transcript.' }),
+      summary: str({ description: 'Rolling summary of the folded-away part of the conversation.' }),
+    }, { description: 'One conversation with the built-in harness. Owned by `modules/harness/memory.js`; the dashboard console and every device see the same ones.' }),
+
     EventEnvelope: obj({
       seq: int({ description: 'Per-device monotonic sequence — your cursor.' }), id: str(), ts: iso(), type: str({ enum: eventTypes }),
       class: str({ enum: ['durable', 'ephemeral'] }), ttlSec: int(), priority: str({ enum: prompts.PRIORITIES }), ack: bool(), v: int({ const: 1 }), payload: obj({}, { additionalProperties: true }),
@@ -278,6 +283,15 @@ function events() {
     'alert':            { audience: 'device', payload: obj({ id: str(), title: str(), body: arr(ref('Block')), priority: str({ enum: prompts.PRIORITIES }), haptic: bool(), from: str(), ext: ext() }) },
     'profile.changed':  { audience: 'device', payload: obj({ version: int(), etag: str(), updatedBy: str(), url: str() }), note: 'Refetch the profile (and capabilities).' },
     'agent.message':    { audience: 'device', payload: obj({ from: str(), type: str(), payload: any(), ext: ext() }) },
+    'agent.turn':       { audience: 'device', payload: obj({
+      turnId: str(), sessionId: str(), state: str({ enum: ['started', 'done', 'failed'] }), by: str({ description: 'Device that asked.' }),
+      message: str({ description: 'On `started`: the question, truncated.' }), text: str({ description: 'On `done`: the whole reply.' }), steps: int(),
+      proposals: arr(obj({ id: str(), reason: str(), changes: arr(obj({ path: str(), to: any() })) })), error: obj({ code: str(), message: str() }),
+    }), note: 'The lifecycle of one turn, sent to every device with `harness:chat` including the one that asked — so any client can show that a turn is running and what it answered. `proposals` are settings changes waiting on a click in the dashboard; a device cannot apply them.' },
+    'agent.text':       { audience: 'device', payload: obj({ turnId: str(), sessionId: str(), delta: str() }),
+      note: 'Reply text as it is produced, coalesced. Sent **only to the device that posted the message**: a client with no screen open should not pay radio time for tokens, and the whole reply arrives on `agent.turn` done.' },
+    'agent.tool':       { audience: 'device', payload: obj({ turnId: str(), sessionId: str(), name: str(), phase: str({ enum: ['call', 'result'] }), step: int(), args: str({ description: 'Truncated JSON.' }), ok: bool(), preview: str() }),
+      note: 'What the agent is doing mid-turn, so a client can show it rather than a spinner.' },
     'artifact.deliver': { audience: 'device', payload: obj({ artifact: ref('Artifact'), inline: str(), inlineEncoding: str({ enum: ['utf8', 'base64'] }), message: str(), ext: ext() }), note: 'Verify `artifact.sha256` before executing.' },
     'sensor.request':   { audience: 'device', payload: obj({ request: ref('SensorRequest') }) },
     'sensor.stop':      { audience: 'device', payload: obj({ requestId: str(), reason: str() }) },
@@ -419,6 +433,32 @@ function paths() {
       responses: { 200: { description: 'image/png (or image/svg+xml)', headers: { 'X-Doca-Frames': { schema: int() }, 'X-Doca-Duration-Ms': { schema: int() } }, content: { 'image/png': { schema: str({ format: 'binary' }) }, 'image/svg+xml': { schema: str() } } }, ...std(401, 404, 413) } } },
 
     // ── Agent-facing ──
+    // ── Talking to the agent (the mirror image of the Agent tag below) ──
+    '/harness/messages': { post: { tags: ['Harness'], summary: 'Ask the agent something (the answer arrives as events)', operationId: 'harnessPostMessage', ...scopeDoc('harness:chat'),
+      requestBody: body(obj({ message: str({ maxLength: 8000 }), sessionId: str({ description: 'Defaults to the active conversation.' }) }, { required: ['message'] })),
+      responses: { 202: json(obj({ turnId: str(), sessionId: str() }, { description: 'Accepted. Watch `agent.turn` / `agent.text` / `agent.tool` on the event stream.' })), ...std(400, 401, 403, 404, 409, 413) } } },
+    '/harness/turns': { get: { tags: ['Harness'], summary: 'Turns in flight, so a client arriving mid-turn can show it', operationId: 'harnessListTurns', ...scopeDoc('harness:chat'),
+      responses: { 200: json(obj({ turns: arr(obj({ sessionId: str(), turnId: str() })) })), ...std(401, 403) } } },
+    '/harness/sessions': {
+      get: { tags: ['Harness'], summary: 'List conversations', operationId: 'harnessListSessions', ...scopeDoc('harness:sessions'),
+        responses: { 200: json(obj({ sessions: arr(ref('HarnessSession')), active: nullable(str()) })), ...std(401, 403) } },
+      post: { tags: ['Harness'], summary: 'Start a conversation (and make it active)', operationId: 'harnessCreateSession', ...scopeDoc('harness:sessions'),
+        requestBody: body(obj({ title: str({ maxLength: 120 }) }), { required: false }),
+        responses: { 201: json(obj({ session: ref('HarnessSession') })), ...std(401, 403) } },
+    },
+    '/harness/sessions/{id}': {
+      parameters: [pathParam('id', 'Conversation id.'), query('limit', 'Most recent messages to return (default 50, max 200).', int())],
+      get: { tags: ['Harness'], summary: 'One conversation, shaped for drawing a chat', operationId: 'harnessGetSession', ...scopeDoc('harness:sessions'),
+        responses: { 200: json(obj({ session: ref('HarnessSession'), messages: arr(obj({ role: str({ enum: ['user', 'assistant', 'tool', 'system'] }), content: str(), name: str(), tools: arr(str({ description: 'Tools the assistant called on this row.' })) })) })), ...std(401, 403, 404) } },
+      delete: { tags: ['Harness'], summary: 'Delete a conversation', operationId: 'harnessDeleteSession', ...scopeDoc('harness:sessions'),
+        responses: { 200: json(obj({ ok: bool() })), ...std(401, 403, 404, 409) } },
+    },
+    '/harness/sessions/{id}/activate': { parameters: [pathParam('id', 'Conversation id.')],
+      post: { tags: ['Harness'], summary: 'Make a conversation the active one', operationId: 'harnessActivateSession', ...scopeDoc('harness:sessions'),
+        responses: { 200: json(obj({ ok: bool(), active: str() })), ...std(401, 403, 404) } } },
+    '/harness/memory': { get: { tags: ['Harness'], summary: 'What the agent durably remembers, its rules, and proposals awaiting a click', operationId: 'harnessGetMemory', ...scopeDoc('harness:memory'),
+      responses: { 200: json(obj({ entries: arr(obj({}, { additionalProperties: true })), rules: obj({}, { additionalProperties: true }), proposals: arr(obj({ id: str(), createdAt: iso(), reason: str(), changes: arr(obj({ path: str(), to: any() })) })) }, { description: 'Read-only: writing memory and applying a proposal are dashboard actions, deliberately absent from this API.' })), ...std(401, 403) } } },
+
     '/agent/devices': { get: { tags: ['Agent'], summary: 'All devices with their effective profiles', operationId: 'agentListDevices', ...scopeDoc('agent'),
       responses: { 200: json(obj({ devices: arr({ allOf: [ref('Device'), obj({ online: bool(), pending: int(), profile: ref('Profile') })] }) })), ...std(401, 403) } } },
     '/agent/prompts': {
@@ -487,6 +527,7 @@ function build() {
       { name: 'Media', description: 'Uploads (photos, audio) referenced by id.' },
       { name: 'Artifacts', description: 'Code/data shipped by agents to devices.' },
       { name: 'Render', description: 'Server-rendered charts and figures for devices without an SVG engine.' },
+      { name: 'Harness', description: 'Talking to the agent (scopes `harness:*`): post a message, and receive the turn on the event stream so every device the user owns sees the same conversation.' },
       { name: 'Agent', description: 'Agent-facing API (scope `agent`): raise prompts and alerts, resolve selections, request sensors, ship artifacts.' },
     ],
     security: [{ bearerToken: [] }],

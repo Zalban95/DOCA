@@ -26,6 +26,7 @@ const motion     = require('./motion');
 const render     = require('./render');
 const capabilities = require('./capabilities');
 const live       = require('./live');
+const harness    = require('./harness');
 
 const router = express.Router();
 router.use(express.json({ limit: L.JSON_BODY_LIMIT }));
@@ -446,6 +447,42 @@ router.get('/render/figure/:id', wrap(async (req, res) => {
   const png = await render.svgToPng(svg, { w: w * (meta.frames || 1) });
   res.setHeader('Content-Type', 'image/png'); res.setHeader('Cache-Control', 'private, max-age=300'); res.end(png);
 }));
+
+// ─── Talking to the agent (device → harness) ────────────────────────────────
+//
+// The mirror image of the agent-facing API below: there, a client *is* the agent
+// acting on devices; here, a device asks the agent for something. Different
+// direction, different scope family, so a separate prefix — `/agent` was already
+// taken by the other direction, and one prefix meaning both would be a trap.
+
+const harnessApi = express.Router();
+
+harnessApi.post('/messages', requireScope('harness:chat'), wrap(async (req, res) =>
+  res.status(202).json(harness.post(req.body, req.device))));
+
+// So a client that opens mid-turn can draw "typing" without waiting for an event.
+harnessApi.get('/turns', requireScope('harness:chat'), (_req, res) =>
+  res.json({ turns: harness.running() }));
+
+harnessApi.get('/sessions', requireScope('harness:sessions'), (_req, res) =>
+  res.json(harness.sessions()));
+harnessApi.post('/sessions', requireScope('harness:sessions'), wrap(async (req, res) =>
+  res.status(201).json({ session: harness.createSession(req.body?.title) })));
+harnessApi.get('/sessions/:id', requireScope('harness:sessions'), wrap(async (req, res) =>
+  res.json(harness.transcript(req.params.id, { limit: req.query.limit }))));
+harnessApi.post('/sessions/:id/activate', requireScope('harness:sessions'), wrap(async (req, res) =>
+  res.json({ ok: true, active: harness.activate(req.params.id) })));
+harnessApi.delete('/sessions/:id', requireScope('harness:sessions'), wrap(async (req, res) => {
+  harness.removeSession(req.params.id);
+  res.json({ ok: true });
+}));
+
+// Read-only on purpose: the agent may propose, and only a click in the dashboard
+// writes prefs. A device that could apply a proposal would make that rule empty.
+harnessApi.get('/memory', requireScope('harness:memory'), (_req, res) =>
+  res.json(harness.memoryList()));
+
+router.use('/harness', harnessApi);
 
 // ─── Agent-facing API ───────────────────────────────────────────────────────
 
