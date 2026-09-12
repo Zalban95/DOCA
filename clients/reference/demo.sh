@@ -98,7 +98,26 @@ FIG="$(jq -r 'select(.type=="prompt.new") | .payload.prompt.body[] | select(.typ
 api_bin "/api/v1/render/figure/$FIG?w=120&h=120&frames=8" "$WORK/sprite.png"
 [[ -n "${DOCA_ARTIFACT_DIR:-}" ]] && cp "$WORK/chart.png" "$WORK/sprite.png" "$DOCA_ARTIFACT_DIR"/ && echo "saved chart.png + sprite.png to $DOCA_ARTIFACT_DIR"
 
-step "12. Reconnect semantics: the watch drops its stream, misses events, resumes with since=<cursor>"
+step "12. Chat: the phone asks, and the turn belongs to the user — the watch sees it too"
+DOCA_TOKEN="$PHONE_TOKEN" bash "$here/watch.sh" stream 0 > "$WORK/phone.ndjson" 2>/dev/null &
+sleep 1
+DOCA_TOKEN="$PHONE_TOKEN"
+TURN="$(api POST /api/v1/harness/messages '{"message":"In one sentence: how busy is this machine?"}')"; show <<<"$TURN"
+TID="$(jq -r .turnId <<<"$TURN")"; SESSION="$(jq -r .sessionId <<<"$TURN")"
+echo "in flight: $(api GET /api/v1/harness/turns | jq -c .turns)"
+# A turn with no model configured fails in milliseconds; a real one can take a while.
+for _ in $(seq 1 120); do jq -e --arg t "$TID" 'select(.type=="agent.turn" and .payload.turnId==$t and .payload.state!="started")' "$WORK/phone.ndjson" >/dev/null 2>&1 && break; sleep 0.5; done
+echo "— the phone, which asked, gets the deltas and the tool steps:"
+jq -c --arg t "$TID" 'select(.payload.turnId==$t) | {type, state: .payload.state, tool: .payload.name, phase: .payload.phase, delta: .payload.delta, text: .payload.text, error: .payload.error} | with_entries(select(.value != null))' "$WORK/phone.ndjson" | sed 's/^/  /'
+echo "— the watch, which did not ask, gets the same turn and zero text deltas:"
+jq -c --arg t "$TID" 'select(.payload.turnId==$t and .type=="agent.turn") | {type, state: .payload.state, by: .payload.by, text: .payload.text}' "$WORK/watch.ndjson" | sed 's/^/  /'
+echo "  agent.text frames on the watch: $(jq -c --arg t "$TID" 'select(.type=="agent.text" and .payload.turnId==$t)' "$WORK/watch.ndjson" | wc -l) (by design: deltas go only to the device that posted)"
+echo "— one conversation, shared: the phone reads the transcript the dashboard also shows:"
+api GET "/api/v1/harness/sessions/$SESSION?limit=4" | jq '{title: .session.title, messages: [.messages[] | {role, content: (.content[0:70]), tools}]}' | show
+echo "watch tries to manage conversations (it holds harness:chat only):"
+DOCA_TOKEN="$WATCH_TOKEN" api GET /api/v1/harness/sessions | show; echo "(status $(st))"
+
+step "13. Reconnect semantics: the watch drops its stream, misses events, resumes with since=<cursor>"
 kill %1 2>/dev/null || true; sleep 0.3
 LAST="$(jq -r 'select(.seq!=null) | .seq' "$WORK/watch.ndjson" | tail -1)"
 DOCA_TOKEN="$AGENT_TOKEN" node "$here/agent-sim.js" alert "$WATCH_ID" >/dev/null
@@ -106,7 +125,7 @@ DOCA_TOKEN="$WATCH_TOKEN"
 echo "poll since=$LAST while offline:"; bash "$here/watch.sh" poll "$LAST" | jq '{events: [.events[] | {seq, type, class, title: .payload.title}], nextSince, resync}' | show
 bash "$here/watch.sh" ack "$(bash "$here/watch.sh" poll "$LAST" | jq .nextSince)" | show
 
-step "13. Phone revokes the watch; its token dies immediately"
+step "14. Phone revokes the watch; its token dies immediately"
 DOCA_TOKEN="$PHONE_TOKEN" api DELETE "/api/v1/devices/$WATCH_ID" | show
 DOCA_TOKEN="$WATCH_TOKEN" api GET /api/v1/capabilities | show; echo "(status $(st))"
 

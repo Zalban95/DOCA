@@ -19,6 +19,10 @@
 #   watch.sh samples <requestId> '<samples-json>'   report sensor samples
 #   watch.sh chart <metricIds> <out.png>        server-rendered chart sized for me
 #   watch.sh message <type> '<json>'    free-form message to the agent
+#   watch.sh ask '<question>' [sessionId]       ask the agent; the answer arrives on the stream
+#   watch.sh chat '<question>'          ask and wait for the answer (opens its own stream)
+#   watch.sh turns                      turns running right now
+#   watch.sh sessions [id]              conversations, or one transcript
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
@@ -72,5 +76,33 @@ case "$cmd" in
   samples)   api POST /api/v1/sensors/samples "$(jq -nc --arg r "${1:?requestId}" --argjson s "${2:?samples json}" '{requestId:$r,samples:$s}')" | jq . ;;
   chart)     api_bin "/api/v1/render/chart?metrics=${1:?metric ids}&title=$(printf %s "${1%%,*}" | jq -sRr @uri)" "${2:?out.png}" ;;
   message)   api POST /api/v1/messages "$(jq -nc --arg t "${1:?type}" --argjson p "${2:-null}" '{type:$t,payload:$p}')" | jq . ;;
-  *) sed -n '2,24p' "$0"; exit 1 ;;
+  ask)
+    body="$(jq -nc --arg m "${1:?question}" --arg s "${2:-}" '{message:$m} + (if $s == "" then {} else {sessionId:$s} end)')"
+    api POST /api/v1/harness/messages "$body" | jq . ;;
+  chat)
+    # The whole point of the protocol in one subcommand: the POST is a receipt,
+    # the answer is an event. A real client already holds the stream; this one
+    # opens a throwaway from the current cursor so nothing before it replays.
+    q="${1:?question}"
+    tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT
+    # since=0: a non-zero cursor is the implicit ack, and a throwaway stream must
+    # not swallow durable events the real client has not seen yet. Everything is
+    # filtered by turnId below, so the replayed backlog is harmless.
+    stream 0 > "$tmp" 2>/dev/null &
+    sp=$!
+    sleep 0.5
+    turn="$(api POST /api/v1/harness/messages "$(jq -nc --arg m "$q" '{message:$m}')")"
+    tid="$(jq -r '.turnId // empty' <<<"$turn")"
+    [[ -z "$tid" ]] && { kill $sp 2>/dev/null; jq . <<<"$turn"; exit 1; }
+    echo "turn $tid in session $(jq -r .sessionId <<<"$turn")" >&2
+    for _ in $(seq 1 240); do   # a real turn with tools can take a while
+      jq -e --arg t "$tid" 'select(.type=="agent.turn" and .payload.turnId==$t and .payload.state!="started")' "$tmp" >/dev/null 2>&1 && break
+      sleep 0.5
+    done
+    kill $sp 2>/dev/null || true
+    jq -c --arg t "$tid" 'select(.payload.turnId==$t) | {type, state: .payload.state, tool: .payload.name, phase: .payload.phase, delta: .payload.delta, text: .payload.text, error: .payload.error}' "$tmp" ;;
+  turns)     api GET /api/v1/harness/turns | jq . ;;
+  sessions)
+    if [[ -n "${1:-}" ]]; then api GET "/api/v1/harness/sessions/$1?limit=${2:-50}" | jq .; else api GET /api/v1/harness/sessions | jq .; fi ;;
+  *) sed -n '2,25p' "$0"; exit 1 ;;
 esac
