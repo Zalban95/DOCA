@@ -115,9 +115,26 @@ const handleMemoryWrite = wrap(async (req, res) =>
   res.json({ ok: true, entry: memory.memWrite({ ...req.body, source: 'user' }) }));
 
 const handleMemoryForget = wrap(async (req, res) => {
-  memory.memForget(req.params.key);
+  // The console is the user, and the user may delete anything, locked included —
+  // the lock exists to stop the agent, not its author.
+  memory.memForget(req.params.key, { source: 'user' });
   res.json({ ok: true });
 });
+
+/**
+ * POST /api/harness/memory/:key/lock — settle a fact, or unsettle it.
+ *
+ * The one asymmetry in this memory: both sides write it, but only this route
+ * locks. A locked entry is the user's answer to something that has already been
+ * argued about, and the agent can dispute it (`memory_flag`) without being able
+ * to overwrite it — the same shape as a settings proposal, for the same reason.
+ */
+const handleMemoryLock = wrap(async (req, res) =>
+  res.json({ ok: true, entry: memory.memLock(req.params.key, req.body?.locked !== false) }));
+
+/** POST /api/harness/memory/:key/flag — the user recording a contradiction too. */
+const handleMemoryFlag = wrap(async (req, res) =>
+  res.json({ ok: true, entry: memory.memDispute(req.params.key, { note: req.body?.note, source: 'user' }) }));
 
 const handleRulesGet = wrap(async (_req, res) =>
   res.json({ rules: memory.rules(), defaults: memory.DEFAULT_RULES }));
@@ -204,7 +221,7 @@ module.exports = {
   handleList, handleSetDefault, handleInstall, handleConfig, handleAddCustom, handleRemoveCustom,
   handleProviders, handleModels, handleStatus,
   handleChat, handleSessions, handleSessionNew, handleSession, handleSessionActivate, handleSessionDelete,
-  handleMemoryList, handleMemoryWrite, handleMemoryForget,
+  handleMemoryList, handleMemoryWrite, handleMemoryForget, handleMemoryLock, handleMemoryFlag,
   handleRulesGet, handleRulesWrite, handleRulesReset, handleRulesVerify,
   handleEnvironment, handleSettingsRead, handleProposals, handleProposalApply, handleProposalReject,
 };

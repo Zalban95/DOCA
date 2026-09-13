@@ -12,6 +12,7 @@
  * Every message, tool call and tool result is appended to the session
  * transcript, so a reload or a restart resumes exactly where it left off.
  */
+const budget      = require('./budget');
 const environment = require('./environment');
 const memory      = require('./memory');
 const providers   = require('./providers');
@@ -37,8 +38,25 @@ function memoryBlock(userText, limit) {
   const chosen = [...pinned, ...hits].filter(e => !seen.has(e.id) && seen.add(e.id)).slice(0, limit);
   if (!chosen.length) return '';
   memory.memTouch(hits);
-  return ['# What you remember', ...chosen.map(e =>
-    `- ${e.key}${e.category ? ` [${e.category}]` : ''}: ${e.value}`)].join('\n');
+
+  // A fact the user settled and a fact something contradicted are both still
+  // facts, and the agent has to be able to tell them from the ordinary ones:
+  // one it may not overwrite, the other it may not lean on.
+  const line = e => {
+    const marks = [e.category ? `[${e.category}]` : '', e.locked ? '(locked)' : ''].filter(Boolean).join(' ');
+    const head  = `- ${e.key}${marks ? ` ${marks}` : ''}: ${e.value}`;
+    return e.disputed
+      ? `${head}\n    ⚠ contradicted ${e.disputed.at.slice(0, 10)}: ${e.disputed.note} `
+        + '— check this before relying on it, and correct it when you know better.'
+      : head;
+  };
+
+  return ['# What you remember', ...chosen.map(line),
+    chosen.some(e => e.locked)
+      ? 'Locked entries are the user\'s settled answers: dispute them with memory_flag if you find otherwise, '
+        + 'but do not overwrite or work around them.'
+      : '',
+  ].filter(Boolean).join('\n');
 }
 
 /** The agent's own filing system, so it can follow it and change it. */
@@ -117,7 +135,7 @@ function clientBlock(client) {
  * which the user does own — follows it, then the facts, then what the agent
  * knows, then where this conversation had got to.
  */
-function systemPrompt({ p, userText, summary, toolCount, disabledCount, client }) {
+function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, ledger }) {
   return [
     providers.SAFETY_CHARTER,
     p.systemPrompt || providers.DEFAULT_SYSTEM_PROMPT,
@@ -125,6 +143,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client }
     clientBlock(client),
     rulesBlock(),
     memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)),
+    budget.block(p, ledger),
     settings.block(),
     summary ? `# Earlier in this conversation\n${summary}` : '',
   ].filter(Boolean).join('\n\n');
@@ -142,29 +161,41 @@ function toApiMessages(rows) {
 
 /* ── Model transport ──────────────────────────────────── */
 
-async function post(ep, body, signal) {
+async function post(ep, body, signal, p) {
   const headers = { 'Content-Type': 'application/json' };
   if (ep.apiKey) headers.Authorization = `Bearer ${ep.apiKey}`;
 
-  let r = await fetch(`${ep.baseUrl}/chat/completions`, {
-    method: 'POST', headers, body: JSON.stringify(body), signal,
+  const send = payload => fetch(`${ep.baseUrl}/chat/completions`, {
+    method: 'POST', headers, body: JSON.stringify(payload), signal,
   });
 
-  // Newer OpenAI models reject max_tokens and want max_completion_tokens.
-  // One blind retry is cheaper than asking every user to know which is which.
-  if (r.status === 400 && body.max_tokens) {
+  let r = await send(body);
+
+  // Two blind retries, both cheaper than asking every user to know which
+  // dialect their endpoint speaks.
+  if (r.status === 400) {
     const detail = await r.text();
-    if (detail.includes('max_completion_tokens')) {
+
+    // Newer OpenAI models reject max_tokens and want max_completion_tokens.
+    if (body.max_tokens && detail.includes('max_completion_tokens')) {
       const { max_tokens, ...rest } = body;
-      r = await fetch(`${ep.baseUrl}/chat/completions`, {
-        method: 'POST', headers, signal,
-        body: JSON.stringify({ ...rest, max_completion_tokens: max_tokens }),
-      });
+      r = await send({ ...rest, max_completion_tokens: max_tokens });
+
+    // Asking for a usage frame is how the token ledger gets measured numbers
+    // instead of estimates, but it is a newer field and a strict or older
+    // OpenAI-compatible server may reject the whole request for it — some of
+    // them without saying which field they disliked. So any 400 costs one retry
+    // without it: counting tokens is worth a round trip, and is never worth a
+    // failed turn. If the second attempt fails too, that error is the real one.
+    } else if (body.stream_options) {
+      const { stream_options, ...rest } = body;
+      r = await send(rest);
+
     } else {
-      throw new Error(`${ep.id} ${r.status}: ${detail.slice(0, 400)}`);
+      throw new Error(budget.explain({ status: 400, detail, ep, p }));
     }
   }
-  if (!r.ok) throw new Error(`${ep.id} ${r.status}: ${(await r.text()).slice(0, 400)}`);
+  if (!r.ok) throw new Error(budget.explain({ status: r.status, detail: await r.text(), ep, p }));
   return r;
 }
 
@@ -174,13 +205,14 @@ async function post(ep, body, signal) {
  * endpoint answers with JSON despite being asked to stream.
  * @returns {Promise<{ content: string, tool_calls: object[] }>}
  */
-async function complete({ ep, body, signal, onText }) {
-  const r = await post(ep, body, signal);
+async function complete({ ep, body, signal, onText, p }) {
+  const r = await post(ep, body, signal, p);
 
   if (!(r.headers.get('content-type') || '').includes('event-stream')) {
-    const msg = (await r.json())?.choices?.[0]?.message || {};
+    const json = await r.json();
+    const msg  = json?.choices?.[0]?.message || {};
     if (msg.content && onText) onText(msg.content);
-    return { content: msg.content || '', tool_calls: msg.tool_calls || [] };
+    return { content: msg.content || '', tool_calls: msg.tool_calls || [], usage: json?.usage || null };
   }
 
   const reader  = r.body.getReader();
@@ -188,6 +220,7 @@ async function complete({ ep, body, signal, onText }) {
   const calls   = [];               // accumulated by delta index
   let content = '';
   let buf     = '';
+  let usage   = null;
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -199,8 +232,13 @@ async function complete({ ep, body, signal, onText }) {
       if (!line.startsWith('data:')) continue;
       const payload = line.slice(5).trim();
       if (!payload || payload === '[DONE]') continue;
-      let delta;
-      try { delta = JSON.parse(payload).choices?.[0]?.delta; } catch { continue; }
+      let frame;
+      try { frame = JSON.parse(payload); } catch { continue; }
+      // The usage frame arrives last and carries no choices — it is the only
+      // measured number in the whole ledger, so it is read before the delta
+      // check that would otherwise skip it.
+      if (frame.usage) usage = frame.usage;
+      const delta = frame.choices?.[0]?.delta;
       if (!delta) continue;
       if (delta.content) { content += delta.content; if (onText) onText(delta.content); }
       for (const tc of delta.tool_calls || []) {
@@ -213,7 +251,7 @@ async function complete({ ep, body, signal, onText }) {
     }
   }
 
-  return { content, tool_calls: calls.filter(Boolean) };
+  return { content, tool_calls: calls.filter(Boolean), usage };
 }
 
 /**
@@ -229,7 +267,7 @@ async function ask({ system, user, temperature = 0.1, maxTokens, signal }) {
   const p = params();
   if (!p.model) throw Object.assign(new Error('No model chosen for the DOCA harness.'), { status: 400 });
   const { content } = await complete({
-    ep: providers.endpoint(p.provider),
+    p, ep: providers.endpoint(p.provider),
     // A turn has a user watching a stream and can wait; these callers are a tool
     // call and a button, both of which have to come back or say why.
     signal: signal || AbortSignal.timeout(120_000),
@@ -248,8 +286,8 @@ async function ask({ system, user, temperature = 0.1, maxTokens, signal }) {
  * Fold the older half of a long conversation into prose, so the window stays
  * small while nothing the user said simply vanishes.
  */
-async function foldSummary({ session, p, ep, signal }) {
-  const pending = memory.pendingFold(session.id, Number(p.summarizeAfter) || 0);
+async function foldSummary({ session, p, ep, signal, force = false }) {
+  const pending = memory.pendingFold(session.id, Number(p.summarizeAfter) || 0, { force });
   if (!pending) return session.summary || '';
 
   const transcript = pending.rows
@@ -258,7 +296,7 @@ async function foldSummary({ session, p, ep, signal }) {
 
   try {
     const { content } = await complete({
-      ep, signal,
+      ep, signal, p,
       body: {
         model: p.model, stream: false, temperature: 0.2,
         messages: [
@@ -319,11 +357,17 @@ async function turn({ message, sessionId, emit, signal, client }) {
     stream:      true,
     temperature: Number(p.temperature),
     top_p:       Number(p.topP),
+    // Ask for the usage frame. Providers that do not know the field have it
+    // stripped and retried once in `post()`, so the ledger degrades to estimates
+    // rather than the turn failing.
+    stream_options: { include_usage: true },
     ...(Number(p.maxTokens) > 0 ? { max_tokens: Number(p.maxTokens) } : {}),
     ...(schemas.length ? { tools: schemas, tool_choice: 'auto' } : {}),
   };
 
   const maxSteps = Math.max(1, Number(p.maxSteps) || 1);
+  const led      = budget.ledger();
+  let warned     = false;
   let text = '';
 
   // Proposals already waiting when the turn started are on screen already; only
@@ -336,25 +380,51 @@ async function turn({ message, sessionId, emit, signal, client }) {
       {
         role: 'system',
         content: systemPrompt({
-          p, userText: message, summary, client,
+          p, userText: message, summary, client, ledger: led,
           toolCount: schemas.length, disabledCount: disabled.length,
         }),
       },
       ...toApiMessages(rows),
     ];
 
+    // Measured when the provider answers with a usage frame, estimated when it
+    // does not. Both are recorded; only one is called a measurement.
+    const promptEstimate = budget.estimateMessages(messages);
+
     const reply = await complete({
-      ep, signal, body: { ...base, messages },
+      ep, signal, p, body: { ...base, messages },
       onText: t => { text += t; say({ type: 'text', text: t }); },
     });
+
+    budget.record(led, {
+      usage: reply.usage,
+      promptEstimate,
+      completionEstimate: budget.estimate(reply.content) + budget.estimate(JSON.stringify(reply.tool_calls || [])),
+    });
+    const spend = budget.report(led, p);
+    say({ type: 'usage', step, ...spend });
 
     memory.append(session.id, {
       role: 'assistant',
       content: reply.content || '',
       ...(reply.tool_calls.length ? { tool_calls: reply.tool_calls } : {}),
+      usage: { tokens: spend.totalTokens, prompt: led.lastPrompt, source: spend.source },
     });
 
-    if (!reply.tool_calls.length) return { sessionId: session.id, text, steps: step };
+    // Advisory, once per turn, to the user and to the agent. The hard stop
+    // belongs to the provider; this is the part that arrives before it.
+    const warn = budget.warning(led, p);
+    if (warn && !warned) {
+      warned = true;
+      say({ type: 'warning', ...warn });
+    }
+
+    if (!reply.tool_calls.length) {
+      memory.updateSession(session.id, {
+        tokens: (memory.getSession(session.id)?.tokens || 0) + spend.totalTokens,
+      });
+      return { sessionId: session.id, text, steps: step, usage: spend };
+    }
 
     for (const tc of reply.tool_calls) {
       const name = tc.function?.name || '(unnamed)';
@@ -380,16 +450,51 @@ async function turn({ message, sessionId, emit, signal, client }) {
       }
     }
 
+    // Token pressure folds the conversation early, before the message count
+    // would have. Without a declared window there is nothing to be a percentage
+    // of, so this does nothing and `summarizeAfter` remains the only trigger.
+    const window = budget.windowFor(p);
+    if (window && led.lastPrompt / window * 100 >= Math.max(1, Number(p.compactAt) || 60)) {
+      const folded = await foldSummary({ session: memory.getSession(session.id), p, ep, signal, force: true });
+      if (folded !== summary) {
+        summary = folded;
+        say({ type: 'compacted', at: step, contextTokens: led.lastPrompt, contextWindow: window });
+      }
+    }
+
     if (step === maxSteps) {
-      const note = `Stopped after ${maxSteps} tool steps without a final answer. `
-        + 'Raise "Max tool steps" in the harness settings, or ask again more narrowly.';
+      const note = `Stopped after ${maxSteps} tool steps without a final answer — that is this panel's own `
+        + 'limit (harness.config.doca.maxSteps), not the model\'s. Raise "Max tool steps" in the harness '
+        + 'settings, or ask again more narrowly.';
       say({ type: 'text', text: `\n\n${note}` });
       memory.append(session.id, { role: 'assistant', content: note });
       text += `\n\n${note}`;
     }
   }
 
-  return { sessionId: session.id, text, steps: maxSteps };
+  memory.updateSession(session.id, {
+    tokens: (memory.getSession(session.id)?.tokens || 0) + budget.report(led, p).totalTokens,
+  });
+  return { sessionId: session.id, text, steps: maxSteps, usage: budget.report(led, p) };
+}
+
+/**
+ * The system prompt this harness would send for a message, assembled but not
+ * sent.
+ *
+ * It exists because the prompt is the product here — the charter, the limits,
+ * the memory with its locks and disputes — and until now the only way to see it
+ * was to run a turn and trust the description. `GET /api/harness/environment`
+ * shows the user the environment block for the same reason; this is the whole
+ * of it, and it is what the prompt-order tests assert against.
+ */
+function preview({ message = '', client = null, ledger = null } = {}) {
+  const p = params();
+  const disabled = Array.isArray(p.disabledTools) ? p.disabledTools : [];
+  return systemPrompt({
+    p, userText: message, summary: '', client, ledger,
+    toolCount: tools.schemas(disabled).length, disabledCount: disabled.length,
+  });
 }
 
 /** Is the built-in harness ready to answer, and on what? */
@@ -413,4 +518,4 @@ async function status() {
   return out;
 }
 
-module.exports = { turn, status, params, ask };
+module.exports = { turn, status, params, ask, preview };

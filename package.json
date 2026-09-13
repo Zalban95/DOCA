@@ -1,6 +1,6 @@
 {
   "name": "openclaw-dashboard",
-  "version": "2.12.0",
+  "version": "2.13.0",
   "description": "OpenClaw Panel — Web dashboard for managing the OpenClaw AI agent stack",
   "main": "server.js",
   "scripts": {
@@ -9,6 +9,7 @@
     "token": "node bin/doca-token.js",
     "test": "node --test --test-timeout=30000 \"test/**/*.test.js\"",
     "openapi": "node -e \"process.stdout.write(JSON.stringify(require('./modules/api-v1/openapi').build(), null, 2) + '\\n')\"",
+    "openapi:write": "node -e \"require('fs').writeFileSync('docs/api/openapi.json', JSON.stringify(require('./modules/api-v1/openapi').build(), null, 2) + '\\n')\"",
     "client:demo": "bash clients/reference/demo.sh"
   },
   "dependencies": {

@@ -20,6 +20,7 @@ const environment = require('../modules/harness/environment');
 const settings    = require('../modules/harness/settings');
 const memory      = require('../modules/harness/memory');
 const tools       = require('../modules/harness/tools');
+const budget      = require('../modules/harness/budget');
 const { loadPrefs } = require('../modules/utils');
 
 before(H.start);
@@ -279,4 +280,166 @@ test('the new tools are offered to the model and switchable like the rest', asyn
   // And the ⚙ panel is told about them by the same route it always reads.
   const meta = (await get('/api/harness/providers')).body;
   assert.ok(meta.tools.some(t => t.name === 'settings_propose'));
+});
+
+/* ── What memory protects, and from whom ──────────────── */
+
+test('a locked fact cannot be overwritten or deleted by the agent, only disputed', async () => {
+  await post('/api/harness/memory', { key: 'blender-port', value: 'Blender listens on 9876 on the DocaDesk box.' });
+  const locked = await post('/api/harness/memory/blender-port/lock', { locked: true });
+  assert.equal(locked.status, 200);
+  assert.equal(locked.body.entry.locked, true);
+
+  // The agent's two ways of destroying it are both refused, with the reason and
+  // with what it should do instead.
+  const over = await callTool('memory_write', { key: 'blender-port', value: 'Nothing listens on 9876.' });
+  assert.match(over, /locked/);
+  assert.match(over, /memory_flag/);
+  assert.equal(memory.memFind('blender-port').value, 'Blender listens on 9876 on the DocaDesk box.');
+
+  const gone = await callTool('memory_forget', { key: 'blender-port' });
+  assert.match(gone, /locked/);
+  assert.ok(memory.memFind('blender-port'));
+
+  // Disputing it is allowed, and keeps the fact.
+  const flagged = await callTool('memory_flag', {
+    key: 'blender-port',
+    note: 'Connected from DocaDesk: nothing is listening on 9876, the addon server is not started.',
+  });
+  assert.match(flagged, /Flagged/);
+  const entry = memory.memFind('blender-port');
+  assert.equal(entry.value, 'Blender listens on 9876 on the DocaDesk box.', 'the fact survives the dispute');
+  assert.match(entry.disputed.note, /nothing is listening/);
+  assert.equal(entry.disputed.by, 'agent');
+
+  // And the dispute reaches the prompt, where it is the only thing that stops
+  // the agent leaning on the fact again next turn.
+  const block = require('../modules/harness/agent').preview({ message: 'what port is blender on' });
+  assert.match(block, /blender-port/);
+  assert.match(block, /contradicted/);
+  assert.match(block, /nothing is listening/);
+  assert.match(block, /\(locked\)/);
+
+  // The user is not the agent: the console can still delete it.
+  assert.equal((await del('/api/harness/memory/blender-port')).status, 200);
+  assert.equal(memory.memFind('blender-port'), null);
+});
+
+test('an overwrite keeps the value it replaced, and answers an open dispute', async () => {
+  await callTool('memory_write', { key: 'models-dir', value: '/srv/models' });
+  await callTool('memory_flag',  { key: 'models-dir', note: 'ls says that path does not exist.' });
+  assert.ok(memory.memFind('models-dir').disputed);
+
+  await callTool('memory_write', { key: 'models-dir', value: '/var/lib/models, moved after the disk swap.' });
+  const e = memory.memFind('models-dir');
+  assert.equal(e.disputed, undefined, 'a new value settles the dispute it answers');
+  assert.equal(e.history[0].value, '/srv/models', 'the value it replaced is recoverable');
+});
+
+test('the agent can change one memory rule without deleting the other twenty-nine', async () => {
+  const before = memory.rules().rules.length;
+
+  const out = await callTool('memory_rules_write', { add: ['Prefer the user\'s own words for anything they asked for.'] });
+  assert.match(out, /in place/);
+  const after = memory.rules().rules;
+  assert.equal(after.length, before + 1, 'the existing rules were kept');
+  assert.ok(after.some(r => /own words/.test(r)));
+
+  // Replace and remove address one rule each, by number.
+  await callTool('memory_rules_write', { replace: [{ index: 1, text: 'One fact per entry, keyed as you would search for it.' }] });
+  assert.match(memory.rules().rules[0], /keyed as you would search/);
+  assert.equal(memory.rules().rules.length, before + 1);
+
+  await callTool('memory_rules_write', { remove: [before + 1] });
+  assert.equal(memory.rules().rules.length, before);
+
+  // A rule number that does not exist is refused rather than guessed at.
+  assert.match(await callTool('memory_rules_write', { remove: [999] }), /no rule 999/);
+
+  // The wholesale form still exists, and now says what it did.
+  const replaced = await callTool('memory_rules_write', { rules: ['Only this one.'] });
+  assert.match(replaced, /replaced/);
+  assert.match(replaced, /is gone/);
+  assert.equal(memory.rules().rules.length, 1);
+  await del('/api/harness/memory/rules');
+});
+
+/* ── Limits, and whose they are ───────────────────────── */
+
+test('the agent is told its own limits, by name and by settings path', async () => {
+  const p = require('../modules/harness/catalog').configFor('doca');
+  const block = budget.block(p, null);
+
+  assert.match(block, /# Your limits/);
+  // Every limit that can stop a turn names the setting that sets it, because
+  // "propose a change" needs the dotted path and the user needs the words.
+  assert.match(block, /harness\.config\.doca\.maxSteps/);
+  assert.match(block, /harness\.config\.doca\.maxTokens/);
+  assert.match(block, /harness\.config\.doca\.historyTurns/);
+  assert.match(block, /harness\.config\.doca\.memoryLimit/);
+  // With no window declared it says so rather than implying one.
+  assert.match(block, /context window: not declared/);
+  assert.match(budget.block({ ...p, contextWindow: 32768 }, null), /context window: 32768 tokens/);
+
+  // And the charter makes naming the limit a standing rule, not a nicety.
+  assert.match(providers.SAFETY_CHARTER, /name which limit it was and whose it is/);
+});
+
+test('a provider refusal says which limit it was and who set it', async () => {
+  const ep = { id: 'stub' };
+  const p  = { ...require('../modules/harness/catalog').configFor('doca'), contextWindow: 8192 };
+
+  const ctx = budget.explain({ status: 400, detail: 'This model\'s maximum context length is 8192 tokens', ep, p });
+  assert.match(ctx, /context window/);
+  assert.match(ctx, /historyTurns/, 'it names the DOCA settings that decide how much is sent');
+  assert.match(ctx, /maximum context length is 8192/, 'the provider\'s own words survive');
+
+  const rate = budget.explain({ status: 429, detail: 'Rate limit reached', ep, p });
+  assert.match(rate, /not a DOCA setting/);
+
+  const auth = budget.explain({ status: 401, detail: 'invalid api key', ep, p });
+  assert.match(auth, /API Keys/);
+});
+
+test('the ledger counts what the provider reports, and says when it guessed', () => {
+  const p = { contextWindow: 1000, warnAt: 80 };
+
+  const measured = budget.ledger();
+  budget.record(measured, { usage: { prompt_tokens: 400, completion_tokens: 50 }, promptEstimate: 999 });
+  assert.equal(budget.report(measured, p).totalTokens, 450, 'the estimate is ignored when a real number arrived');
+  assert.equal(budget.report(measured, p).source, 'provider');
+  assert.equal(budget.report(measured, p).contextPercent, 40);
+  assert.equal(budget.warning(measured, p), null, 'nothing to warn about at 40%');
+
+  // A provider that reports nothing still produces a usable ledger, marked.
+  const guessed = budget.ledger();
+  budget.record(guessed, { usage: null, promptEstimate: 850, completionEstimate: 20 });
+  assert.equal(budget.report(guessed, p).source, 'estimated');
+  const warn = budget.warning(guessed, p);
+  assert.equal(warn.percent, 85);
+  assert.equal(warn.estimated, true);
+  assert.match(warn.text, /estimated/);
+
+  // With no window configured there is no percentage to warn on, and it does
+  // not invent one.
+  assert.equal(budget.warning(guessed, { contextWindow: 0 }), null);
+  assert.equal(budget.report(guessed, { contextWindow: 0 }).contextPercent, null);
+});
+
+test('the environment block keeps its volatile readings last, so the prefix is cacheable', async () => {
+  const args = { provider: 'ollama', model: 'qwen3', toolCount: 12, disabledCount: 1 };
+  const a = environment.block(args);
+  await new Promise(r => setTimeout(r, 1100));   // past the clock's resolution
+  const b = environment.block(args);
+
+  assert.notEqual(a, b, 'the clock is still in there somewhere');
+  assert.match(a, /## Right now/);
+  // Everything before "## Right now" is identical between steps: that head is
+  // the prefix a provider's cache and a local prefill match on.
+  const head = t => t.slice(0, t.indexOf('## Right now'));
+  assert.equal(head(a), head(b));
+  assert.ok(head(a).length > 300, 'the stable head is the bulk of the block');
+  // The readings themselves did not go missing on the way down.
+  assert.match(b, /time: \d{4}-\d{2}-\d{2}T/);
+  assert.match(b, /memory: .* free of /);
 });

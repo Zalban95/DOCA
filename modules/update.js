@@ -14,9 +14,20 @@ let cached = null;
 let cachedAt = 0;
 const CACHE_TTL_MS = 5 * 60 * 1000; // background cache: 5 min
 
+/**
+ * The newest *version* tag, which is not the same thing as the first tag GitHub
+ * returns.
+ *
+ * `/tags` is ordered however the API feels like ordering it — not by semver and
+ * not reliably by date — so `per_page=1` was asking one arbitrary tag whether it
+ * was the latest release. With tags v2.1.1 … v2.3.5 present and the package at
+ * 2.12.0 this happened to answer "no update", which is right by accident: the
+ * same code would have announced a downgrade just as confidently. Take a page of
+ * them and pick the highest.
+ */
 function fetchLatestTag() {
   return new Promise((resolve) => {
-    const url = `https://api.github.com/repos/${REPO}/tags?per_page=1`;
+    const url = `https://api.github.com/repos/${REPO}/tags?per_page=100`;
     const req = https.get(url, {
       headers: { 'User-Agent': 'DOCA-update-check', Accept: 'application/vnd.github.v3+json' },
       timeout: 8000,
@@ -28,7 +39,11 @@ function fetchLatestTag() {
         try {
           const tags = JSON.parse(body);
           if (!Array.isArray(tags) || !tags.length) return resolve(null);
-          resolve(tags[0].name.replace(/^v/, ''));
+          const versions = tags
+            .map(t => String(t?.name || '').replace(/^v/, ''))
+            .filter(v => /^\d+\.\d+\.\d+$/.test(v));
+          if (!versions.length) return resolve(null);
+          resolve(versions.reduce((a, b) => (compareSemver(a, b) < 0 ? b : a)));
         } catch { resolve(null); }
       });
     });

@@ -129,7 +129,9 @@ const TOOLS = [
     name: 'memory_write',
     description: 'Remember something for good, following the memory rules in your context. Use it for facts '
       + 'about this machine, paths, ports, hardware, and the user\'s standing preferences — anything you would '
-      + 'want to know at the start of a future conversation. Writing an existing key overwrites it. Never store secrets.',
+      + 'want to know at the start of a future conversation. Writing an existing key overwrites it, keeping the '
+      + 'previous value as history. An entry the user has locked cannot be overwritten here: flag it with '
+      + 'memory_flag instead. Never store secrets.',
     parameters: {
       type: 'object',
       properties: {
@@ -150,13 +152,48 @@ const TOOLS = [
     name: 'memory_rules_write',
     description: 'Change how you keep your own memory: the categories facts are filed under and the rules you '
       + 'follow when writing them. Both are in your context every turn. Use it when you find a better way to '
-      + 'keep this memory, or when the user tells you one. Pass only the list you are changing.',
+      + 'keep this memory, or when the user tells you one. Prefer add/remove/replace, which change one rule and '
+      + 'leave the rest alone; the full "rules" and "categories" lists replace everything and silently delete any '
+      + 'rule you did not retype.',
     parameters: {
       type: 'object',
       properties: {
+        add: {
+          type: 'array', items: { type: 'string' },
+          description: 'Rules to append, leaving every existing rule in place. This is usually what you want.',
+        },
+        remove: {
+          type: 'array', items: { type: 'string' },
+          description: 'Rules to drop, each either its number in the list you were shown or its exact text.',
+        },
+        replace: {
+          type: 'array',
+          description: 'Rules to rewrite in place, leaving the others alone.',
+          items: {
+            type: 'object',
+            properties: {
+              index: { type: 'integer', description: 'Which rule, numbered from 1 as shown in your context.' },
+              text:  { type: 'string',  description: 'What it should say instead.' },
+            },
+            required: ['index', 'text'],
+          },
+        },
+        addCategories: {
+          type: 'array',
+          description: 'Categories to add, leaving the existing ones alone.',
+          items: {
+            type: 'object',
+            properties: {
+              id:          { type: 'string', description: 'Short lower-case name, e.g. "machine".' },
+              description: { type: 'string', description: 'What belongs in it.' },
+            },
+            required: ['id'],
+          },
+        },
+        removeCategories: { type: 'array', items: { type: 'string' }, description: 'Category ids to drop.' },
         categories: {
           type: 'array',
-          description: 'The complete new category list, replacing the old one.',
+          description: 'The complete new category list, replacing the old one. Only for a deliberate rewrite.',
           items: {
             type: 'object',
             properties: {
@@ -169,15 +206,23 @@ const TOOLS = [
         rules: {
           type: 'array',
           items: { type: 'string' },
-          description: 'The complete new rule list, replacing the old one. Include the rules you are keeping.',
+          description: 'The complete new rule list, replacing the old one. Every rule you omit is deleted, so '
+            + 'use add/remove/replace unless you mean to rewrite the whole rulebook.',
         },
       },
     },
-    run: ({ categories, rules }) => {
+    run: ({ categories, rules, add, remove, replace, addCategories, removeCategories }) => {
+      const selective = [add, remove, replace, addCategories, removeCategories].some(x => x !== undefined);
+      if (selective) {
+        const doc = memory.rulesPatch({ add, remove, replace, addCategories, removeCategories, source: 'agent' });
+        return `Memory rules updated in place: ${doc.categories.length} categories, ${doc.rules.length} rules. `
+          + 'Everything you did not name was left as it was.';
+      }
       if (categories === undefined && rules === undefined)
-        return 'Error: pass categories, rules, or both.';
+        return 'Error: pass add, remove, replace, addCategories, removeCategories, categories or rules.';
       const doc = memory.rulesWrite({ categories, rules, source: 'agent' });
-      return `Memory rules updated: ${doc.categories.length} categories, ${doc.rules.length} rules.`;
+      return `Memory rules replaced: ${doc.categories.length} categories, ${doc.rules.length} rules. `
+        + 'Anything not in the list you sent is gone.';
     },
   },
   {
@@ -201,13 +246,35 @@ const TOOLS = [
   },
   {
     name: 'memory_forget',
-    description: 'Delete a memory entry by key once it is wrong or obsolete.',
+    description: 'Delete a memory entry by key once it is wrong AND you know what the right answer is. While you '
+      + 'only know it is wrong, use memory_flag instead — a fact known to be false is still worth having, and '
+      + 'deleting it means the next conversation rediscovers it the hard way. Locked entries cannot be deleted here.',
     parameters: {
       type: 'object',
       properties: { key: { type: 'string', description: 'The key to forget.' } },
       required: ['key'],
     },
-    run: ({ key }) => { memory.memForget(key); return `Forgot "${key}".`; },
+    run: ({ key }) => { memory.memForget(key, { source: 'agent' }); return `Forgot "${key}".`; },
+  },
+  {
+    name: 'memory_flag',
+    description: 'Record that something contradicted a remembered fact, without deleting it. Use it the moment '
+      + 'reality disagrees with your memory — the documented port is closed, the path has moved, the command the '
+      + 'user preferred now fails. The entry stays, marked, with what you saw; correct it with memory_write once '
+      + 'you know what is true instead. This is the only way to dispute an entry the user has locked.',
+    parameters: {
+      type: 'object',
+      properties: {
+        key:  { type: 'string', description: 'The key that turned out to be wrong.' },
+        note: { type: 'string', description: 'What contradicted it — what you ran or read, and what happened.' },
+      },
+      required: ['key', 'note'],
+    },
+    run: ({ key, note }) => {
+      const e = memory.memDispute(key, { note, source: 'agent' });
+      return `Flagged "${e.key}" as contradicted. It stays in memory, marked, until it is corrected`
+        + `${e.locked ? ' — it is locked, so the user decides what it says next.' : '.'}`;
+    },
   },
   {
     name: 'settings_read',

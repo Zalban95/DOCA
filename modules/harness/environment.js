@@ -129,18 +129,24 @@ function snapshot() {
  * value lines costs a third of the tokens of the equivalent object while models
  * follow it just as well. Sections with nothing to say are left out rather than
  * stated as empty, so "no MCP servers" does not read as a fact worth acting on.
+ *
+ * **Everything that changes by the second lives at the bottom, under "Right
+ * now".** This block sits near the front of every prompt and is rebuilt on every
+ * step of every turn, so a clock or a free-RAM figure near the top changes the
+ * first bytes of the prompt each time — which is exactly the prefix a provider's
+ * cache, and a local runtime's prefill, match on. Keeping the volatile lines
+ * last makes the whole head of the prompt byte-identical from step to step. It
+ * costs nothing and it is easy to undo by accident, so: new facts go above, new
+ * readings go below.
  */
 function block({ provider, model, toolCount, disabledCount } = {}) {
   const s = snapshot();
   const out = ['# Environment'];
 
   out.push(
-    `host: ${s.host.hostname} — ${s.host.platform}, ${s.host.cores} cores, `
-      + `${gb(s.host.totalMem)} RAM (${gb(s.host.freeMem)} free), up ${duration(s.host.uptime)}`,
+    `host: ${s.host.hostname} — ${s.host.platform}, ${s.host.cores} cores, ${gb(s.host.totalMem)} RAM`,
     `user: ${s.host.user} (home ${s.host.home})`,
-    `now: ${new Date().toISOString()} (${Intl.DateTimeFormat().resolvedOptions().timeZone})`,
-    `panel: DOCA v${s.doca.version} on node ${s.doca.node}, port ${s.doca.port}, pid ${s.doca.pid}, `
-      + `up ${duration(s.doca.uptime)}`,
+    `panel: DOCA v${s.doca.version} on node ${s.doca.node}, port ${s.doca.port}, pid ${s.doca.pid}`,
     `panel code: ${s.doca.root} (its own source — read it before answering questions about how DOCA works)`,
     `panel state: prefs ${s.doca.prefsFile}, data ${s.doca.dataDir}`,
   );
@@ -187,6 +193,13 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
         '- Hosted by a client: another machine over the network. Its paths, its screen, its programs, and **its** `localhost` — a port a client\'s tool talks to is a port on that machine, not here, and nothing you run with `shell` can see it. You have no other way in: if that server is stopped or its host is asleep, those tools are simply gone, and the person to ask is whoever is at that machine.',
         '- A tool name with two segments after the server id (`mcp__<client>__<their-server>__<tool>`) is a server that machine hosts in turn, so it runs there and is subject to that machine\'s consent switches as well.');
   }
+
+  // Readings, not facts. Last, so everything above stays byte-identical between
+  // steps — see the note on this function.
+  out.push('', '## Right now',
+    `time: ${new Date().toISOString()} (${Intl.DateTimeFormat().resolvedOptions().timeZone})`,
+    `memory: ${gb(s.host.freeMem)} free of ${gb(s.host.totalMem)}, load ${s.host.load.join(' ')}`,
+    `uptime: host ${duration(s.host.uptime)}, panel ${duration(s.doca.uptime)}`);
 
   return out.join('\n');
 }

@@ -153,6 +153,8 @@ app.get   ('/api/harness/memory/rules',         harness.handleRulesGet);
 app.post  ('/api/harness/memory/rules/verify',  harness.handleRulesVerify);
 app.post  ('/api/harness/memory/rules',         harness.handleRulesWrite);
 app.delete('/api/harness/memory/rules',         harness.handleRulesReset);
+app.post  ('/api/harness/memory/:key/lock',      harness.handleMemoryLock);
+app.post  ('/api/harness/memory/:key/flag',     harness.handleMemoryFlag);
 app.delete('/api/harness/memory/:key',          harness.handleMemoryForget);
 
 // What the agent knows, and the settings changes it wants the user to accept.

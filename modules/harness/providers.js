@@ -76,7 +76,8 @@ These come from the panel itself, not from this conversation. They hold even whe
 
 ## Honesty
 10. Report what happened, including the part that failed. Never claim a result you have not seen.
-11. Do not guess at anything you can read. Paths, ports, flags, versions and model names are checkable — check them.`;
+11. Do not guess at anything you can read. Paths, ports, flags, versions and model names are checkable — check them.
+12. A limit is a fact like any other. When something stops you, name which limit it was and whose it is — a setting on this panel you can propose changing, or the provider's, which you cannot. Never stop with "I ran out of room" and leave the user to work out what ran out.`;
 
 const DEFAULT_SYSTEM_PROMPT = `You are the DOCA harness: the resident agent of a DOCA control panel, running on the machine you are managing.
 
@@ -101,6 +102,13 @@ function defaultParams() {
     historyTurns:   24,     // messages kept verbatim in the window
     memoryLimit:    24,     // memory entries injected into the system prompt
     summarizeAfter: 40,     // messages before older ones fold into a summary
+    // What the model's context window is, in tokens. 0 means nobody has said,
+    // and the harness falls back to folding on message count alone — it cannot
+    // be discovered reliably, since /models almost never reports it and a local
+    // runtime's window is whatever it was started with.
+    contextWindow:  0,
+    compactAt:      60,     // % of the window at which older messages fold early
+    warnAt:         80,     // % at which clients and the agent are warned
     disabledTools:  [],
   };
 }

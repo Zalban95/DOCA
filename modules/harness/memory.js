@@ -15,6 +15,21 @@
  * The split is what lets a conversation outlive its context window: rows older
  * than the live window fold into `summary`, while anything worth keeping
  * forever has already been promoted into memory.json by the agent.
+ *
+ * An entry is not a scratch variable. Three things protect what has proven out:
+ *
+ *   locked    the user marked this fact as settled. The agent may read it and
+ *             may dispute it, but cannot overwrite or delete it — only the
+ *             console can, the same shape as a settings proposal.
+ *   disputed  something contradicted this fact. It stays, with what contradicted
+ *             it and when, because "the docs say 9876 but nothing listens there"
+ *             is worth more than the silence left by deleting the entry.
+ *   history   the last few values of a key, so an overwrite is recoverable and
+ *             a fact that keeps flip-flopping is visible as one.
+ *
+ * The rules are protected differently: `rulesPatch()` changes one rule without
+ * retyping the other twenty-nine, so an agent adding a rule cannot quietly drop
+ * the ones it did not think to repeat.
  */
 const path = require('path');
 
@@ -51,7 +66,9 @@ const DEFAULT_RULES = {
     'Write down what the user tells you to do differently, and quote them.',
     'Say where a fact came from when you inferred it rather than observed it.',
     'Pin only what belongs in every conversation — about ten entries, not fifty.',
-    'When something you remembered turns out wrong, forget it in the same turn you learn it was wrong.',
+    'When something you remembered turns out wrong, flag it with memory_flag in the same turn, saying what '
+      + 'contradicted it. Forget it only once you know the right answer — a fact known to be wrong is still information.',
+    'A locked entry is the user\'s settled answer. Do not work around it: dispute it with evidence and let them decide.',
   ],
 };
 
@@ -172,13 +189,21 @@ function window(id, historyTurns) {
   return { summary: s?.summary || '', rows: kept, folded: rows.length - kept.length };
 }
 
-/** Rows waiting to be folded into the summary, or null when there is no need. */
-function pendingFold(id, summarizeAfter) {
+/**
+ * Rows waiting to be folded into the summary, or null when there is no need.
+ *
+ * `force` is the token-pressure path: the message count says there is room but
+ * the window says otherwise, which is the normal case once tool output is in the
+ * transcript. Four rows is the floor — folding two messages costs a model call
+ * and saves nothing.
+ */
+function pendingFold(id, summarizeAfter, { force = false } = {}) {
   const s    = getSession(id);
   const rows = messages(id);
   const from = Math.max(0, s?.summarizedThrough || 0);
   const live = rows.slice(from);
-  if (!summarizeAfter || live.length <= summarizeAfter) return null;
+  if (force) { if (live.length < 4) return null; }
+  else if (!summarizeAfter || live.length <= summarizeAfter) return null;
   // Fold the older half, so the model still sees plenty of recent context.
   const upTo = from + Math.floor(live.length / 2);
   return { rows: rows.slice(from, upTo), through: upTo, previous: s?.summary || '' };
@@ -197,7 +222,7 @@ function readMemory() {
  * the same key twice updates it rather than leaving the agent to read two
  * contradictory versions of the same fact later.
  */
-function memWrite({ key, value, tags, pinned, source, category }) {
+function memWrite({ key, value, tags, pinned, source, category, locked }) {
   if (!key || !String(key).trim())     throw Object.assign(new Error('key required'),   { status: 400 });
   if (value === undefined || value === null || !String(value).trim())
     throw Object.assign(new Error('value required'), { status: 400 });
@@ -207,13 +232,37 @@ function memWrite({ key, value, tags, pinned, source, category }) {
   const now  = new Date().toISOString();
   const list = Array.isArray(tags) ? tags.map(String) : String(tags || '').split(',').map(t => t.trim()).filter(Boolean);
   const existing = doc.entries.find(e => e.key.toLowerCase() === k.toLowerCase());
+  const byUser   = (source || 'user') === 'user';
+
+  // The one thing the agent may not do to its own memory. A fact the user
+  // locked has been checked by them; an agent that could overwrite it would
+  // make the lock decoration, the same argument as the safety charter.
+  if (existing && existing.locked && !byUser)
+    throw Object.assign(new Error(
+      `"${existing.key}" is locked: the user marked it as settled, so it cannot be overwritten here. `
+      + 'If something contradicts it, record that with memory_flag and say so in your answer — '
+      + 'they decide whether the fact changes.'), { status: 409 });
 
   const entry = existing || { id: newId('m'), key: k, createdAt: now, hits: 0 };
+  const previous = entry.value;
+
   entry.value     = String(value).trim().slice(0, 4000);
   entry.tags      = list.slice(0, 8);
   entry.pinned    = pinned === undefined ? !!entry.pinned : !!pinned;
   entry.source    = source || entry.source || 'user';
   entry.updatedAt = now;
+
+  // Locking is the user's word, so it travels only on their writes. An agent
+  // that passes it is not refused — it is simply not the author of that field.
+  if (byUser && locked !== undefined) entry.locked = !!locked;
+
+  if (previous !== undefined && previous !== entry.value) {
+    // Bounded: this is a safety net for the last overwrite or two, not a log.
+    entry.history = [{ value: previous, at: existing.updatedAt || entry.createdAt, source: existing.source || null },
+      ...(entry.history || [])].slice(0, 3);
+    // A new value is an answer to whatever contradicted the old one.
+    delete entry.disputed;
+  }
   // A category outside the current list is still stored. The taxonomy is the
   // agent's own and it may be mid-rethink; losing the fact to enforce it would
   // be the wrong trade.
@@ -272,19 +321,132 @@ function rulesWrite({ categories, rules: list, source } = {}) {
   return doc;
 }
 
+/**
+ * Change one rule without retyping the rest.
+ *
+ * `rulesWrite` replaces a whole list, which is right for the modal — the user is
+ * looking at all of them — and wrong for the agent, which reaches for it to add
+ * a single line and has to reproduce twenty-nine others from memory to do it.
+ * Every one it forgets is silently deleted. This is the selective form: the
+ * lists it does not mention are not touched, and neither are the entries it
+ * does not name.
+ *
+ * @param {{ add?: string[], remove?: (number|string)[], replace?: {index:number, text:string}[],
+ *           addCategories?: object[], removeCategories?: string[], source?: string }} input
+ */
+function rulesPatch({ add, remove, replace, addCategories, removeCategories, source } = {}) {
+  const current = rules();
+  let list = [...current.rules];
+  let cats = [...current.categories];
+
+  // Replace first, while the indexes still mean what the caller saw.
+  for (const r of (Array.isArray(replace) ? replace : [])) {
+    const i = Number(r?.index);
+    if (!Number.isInteger(i) || i < 1 || i > list.length)
+      throw Object.assign(new Error(`there is no rule ${r?.index} to replace (1-${list.length})`), { status: 400 });
+    const text = String(r?.text ?? '').trim().replace(/^[-*]\s*/, '').slice(0, 300);
+    if (!text) throw Object.assign(new Error(`rule ${i}: replacement text is empty`), { status: 400 });
+    list[i - 1] = text;
+  }
+
+  // Then remove, by number or by the text itself, highest index first so the
+  // earlier ones keep their positions.
+  const drop = new Set();
+  for (const r of (Array.isArray(remove) ? remove : [])) {
+    if (typeof r === 'number' || /^\d+$/.test(String(r))) {
+      const i = Number(r);
+      if (!Number.isInteger(i) || i < 1 || i > list.length)
+        throw Object.assign(new Error(`there is no rule ${r} to remove (1-${list.length})`), { status: 400 });
+      drop.add(i - 1);
+    } else {
+      const i = list.findIndex(x => x === String(r).trim());
+      if (i < 0) throw Object.assign(new Error(`no rule reads exactly "${String(r).slice(0, 60)}"`), { status: 400 });
+      drop.add(i);
+    }
+  }
+  list = list.filter((_, i) => !drop.has(i));
+
+  for (const r of (Array.isArray(add) ? add : [])) {
+    const text = String(r ?? '').trim().replace(/^[-*]\s*/, '').slice(0, 300);
+    if (text && !list.includes(text)) list.push(text);
+  }
+
+  for (const c of (Array.isArray(addCategories) ? addCategories : [])) {
+    const id = String((typeof c === 'string' ? c : c?.id) || '').trim().slice(0, 40);
+    if (!id || cats.some(x => x.id === id)) continue;
+    cats.push({ id, description: String((typeof c === 'string' ? '' : c?.description) || '').trim().slice(0, 200) });
+  }
+  if (Array.isArray(removeCategories) && removeCategories.length) {
+    const gone = new Set(removeCategories.map(x => String(x).trim()));
+    cats = cats.filter(c => !gone.has(c.id));
+  }
+
+  return rulesWrite({ categories: cats, rules: list, source: source || 'agent' });
+}
+
 /** Back to the shipped rules, for when an experiment made them worse. */
 function rulesReset() {
   store.removeJson(RULES_DOC);
   return rules();
 }
 
-function memForget(idOrKey) {
-  const doc  = readMemory();
-  const kept = doc.entries.filter(e =>
-    e.id !== idOrKey && e.key.toLowerCase() !== String(idOrKey).toLowerCase());
-  if (kept.length === doc.entries.length) throw Object.assign(new Error('No such entry'), { status: 404 });
-  doc.entries = kept;
+/** The entry a key or id names, or null. */
+function memFind(idOrKey) {
+  const needle = String(idOrKey || '').toLowerCase();
+  return readMemory().entries.find(e => e.id === idOrKey || e.key.toLowerCase() === needle) || null;
+}
+
+function memForget(idOrKey, { source } = {}) {
+  const doc   = readMemory();
+  const found = doc.entries.find(e =>
+    e.id === idOrKey || e.key.toLowerCase() === String(idOrKey).toLowerCase());
+  if (!found) throw Object.assign(new Error('No such entry'), { status: 404 });
+
+  if (found.locked && (source || 'user') !== 'user')
+    throw Object.assign(new Error(
+      `"${found.key}" is locked and cannot be forgotten here. Flag it with memory_flag instead, `
+      + 'saying what contradicted it.'), { status: 409 });
+
+  doc.entries = doc.entries.filter(e => e !== found);
   store.writeJson(MEMORY_DOC, doc);
+}
+
+/**
+ * Something contradicted a remembered fact. Keep the fact, attach what
+ * happened.
+ *
+ * Deleting here would be the expensive mistake: the next conversation would
+ * rediscover the same wrong thing with no record that it had already been
+ * tried. A disputed entry still reaches the prompt, marked, so the agent knows
+ * to verify it rather than lean on it.
+ */
+function memDispute(idOrKey, { note, source } = {}) {
+  const doc   = readMemory();
+  const found = doc.entries.find(e =>
+    e.id === idOrKey || e.key.toLowerCase() === String(idOrKey).toLowerCase());
+  if (!found) throw Object.assign(new Error('No such entry'), { status: 404 });
+  if (!note || !String(note).trim())
+    throw Object.assign(new Error('say what contradicted it'), { status: 400 });
+
+  found.disputed = {
+    at:   new Date().toISOString(),
+    by:   source || 'agent',
+    note: String(note).trim().slice(0, 600),
+  };
+  store.writeJson(MEMORY_DOC, doc);
+  return found;
+}
+
+/** Settle or unsettle a fact. The console's call, never the agent's. */
+function memLock(idOrKey, locked) {
+  const doc   = readMemory();
+  const found = doc.entries.find(e =>
+    e.id === idOrKey || e.key.toLowerCase() === String(idOrKey).toLowerCase());
+  if (!found) throw Object.assign(new Error('No such entry'), { status: 404 });
+  found.locked = !!locked;
+  found.updatedAt = new Date().toISOString();
+  store.writeJson(MEMORY_DOC, doc);
+  return found;
 }
 
 /** Pinned first, then most recently updated. */
@@ -334,6 +496,6 @@ function memTouch(entries) {
 module.exports = {
   listSessions, createSession, activeSession, getSession, setActive, updateSession, deleteSession,
   messages, append, window, pendingFold,
-  memWrite, memForget, memList, memSearch, memTouch,
-  DEFAULT_RULES, rules, rulesWrite, rulesReset,
+  memWrite, memForget, memList, memSearch, memTouch, memDispute, memLock, memFind,
+  DEFAULT_RULES, rules, rulesWrite, rulesPatch, rulesReset,
 };
