@@ -475,3 +475,29 @@ test('every harness parameter has a box in the panel to type it into', () => {
   assert.match(table[0], /key: 'historyTurns'[\s\S]{0,200}?max="5000"/);
 });
 
+test('the MCP call timeout is a setting the agent can see and propose, and says so when it fires', async () => {
+  const { McpClient } = require('../modules/mcp/client');
+
+  // Visible without anything being saved first, the same way paths are.
+  const listed = settings.readable().map(r => r.path);
+  assert.ok(listed.includes('mcpSettings.callTimeoutMs'));
+  assert.ok(listed.includes('mcpSettings.listTimeoutMs'));
+  assert.equal(settings.refuse('mcpSettings.callTimeoutMs', 300000), null, 'it is proposable');
+
+  // And the neighbouring key that holds a spawnable command still is not.
+  assert.match(settings.refuse('mcpServers.evil', { command: 'sh' }), /not a setting the agent may change/);
+
+  // Proposing it reaches the prefs file only after the click.
+  const p = settings.propose({ reason: 'renders take longer than two minutes',
+    changes: [{ path: 'mcpSettings.callTimeoutMs', value: 300000 }] });
+  assert.equal(McpClient.timeoutFor('call'), 120000, 'nothing changed yet');
+  assert.equal((await post(`/api/harness/proposals/${p.id}/apply`)).status, 200);
+  assert.equal(McpClient.timeoutFor('call'), 300000, 'and the client reads it live');
+
+  // A nonsense value falls back rather than making every call fail instantly.
+  const prefs = loadPrefs();
+  prefs.mcpSettings.callTimeoutMs = 5;
+  require('../modules/utils').savePrefs(prefs);
+  assert.equal(McpClient.timeoutFor('call'), 120000);
+});
+

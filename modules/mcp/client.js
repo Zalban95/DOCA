@@ -118,6 +118,26 @@ class McpClient {
     this.child.stdin.write(`${JSON.stringify(obj)}\n`);
   }
 
+  /**
+   * How long to wait, and where that number comes from.
+   *
+   * These used to be literals at the two call sites, which made them the kind of
+   * limit that stops a turn without being able to say so: the agent hit one
+   * mid-render, went looking, found the `= 30000` default on `request()` and
+   * reported that as the cause. It was wrong — `callTool` passes its own value
+   * and always has — but it was a reasonable reading of code where the real
+   * number is written somewhere else entirely. Now there is one place, it has a
+   * name, and the name is in the timeout message.
+   */
+  static timeoutFor(kind) {
+    const fallback = kind === 'list' ? 20000 : 120000;
+    try {
+      const { loadPrefs } = require('../utils');
+      const n = Number(loadPrefs()?.mcpSettings?.[kind === 'list' ? 'listTimeoutMs' : 'callTimeoutMs']);
+      return Number.isFinite(n) && n >= 1000 ? Math.floor(n) : fallback;
+    } catch { return fallback; }
+  }
+
   async _httpRequest(method, params, timeoutMs) {
     const headers = {
       'Content-Type': 'application/json',
@@ -127,12 +147,28 @@ class McpClient {
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
 
-    const res = await fetch(this.spec.url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ jsonrpc: '2.0', id: this._nextId++, method, params: params || {} }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    let res;
+    try {
+      res = await fetch(this.spec.url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ jsonrpc: '2.0', id: this._nextId++, method, params: params || {} }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (e) {
+      // Node's own text for an aborted fetch is "The operation was aborted due
+      // to timeout" — no number, no owner, and no hint of the thing that makes
+      // this timeout different from every other one: we stopped waiting, the
+      // work did not stop. A render that outlives the wait still finishes and
+      // still writes its file, so an agent that retries blindly does it twice.
+      if (e?.name === 'TimeoutError' || e?.name === 'AbortError')
+        throw new Error(
+          `${method} gave up after ${Math.round(timeoutMs / 1000)}s waiting for "${this.id}". `
+          + 'That is this panel\'s limit (settings mcpSettings.callTimeoutMs), not the server\'s — '
+          + 'and it stopped the waiting, not the work: whatever you asked for may have finished on that '
+          + 'machine anyway. Check the result before asking for it again.');
+      throw e;
+    }
     const session = res.headers.get('mcp-session-id');
     if (session) this.sessionId = session;
     if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
@@ -149,14 +185,17 @@ class McpClient {
 
   /* ── Requests ──────────────────────────────────────── */
 
-  request(method, params, timeoutMs = 30000) {
+  request(method, params, timeoutMs = McpClient.timeoutFor('call')) {
     if (this.transport === 'http') return this._httpRequest(method, params, timeoutMs);
 
     const id = this._nextId++;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this._pending.delete(id);
-        reject(new Error(`${method} timed out after ${timeoutMs / 1000}s`));
+        reject(new Error(
+          `${method} gave up after ${Math.round(timeoutMs / 1000)}s waiting for "${this.id}". `
+          + 'That is this panel\'s limit (settings mcpSettings.callTimeoutMs), not the server\'s — '
+          + 'and it stopped the waiting, not the work. Check the result before asking for it again.'));
       }, timeoutMs);
       const done = fn => v => { clearTimeout(timer); fn(v); };
       this._pending.set(id, { resolve: done(resolve), reject: done(reject) });
@@ -204,7 +243,7 @@ class McpClient {
   }
 
   async listTools() {
-    const res = await this.request('tools/list', {}, 20000);
+    const res = await this.request('tools/list', {}, McpClient.timeoutFor('list'));
     this.tools = (res?.tools || []).map(t => ({
       name:        t.name,
       description: t.description || '',
@@ -222,7 +261,7 @@ class McpClient {
    * silently — "[image]" tells the model something came back that it cannot see.
    */
   async callTool(name, args) {
-    const res = await this.request('tools/call', { name, arguments: args || {} }, 120000);
+    const res = await this.request('tools/call', { name, arguments: args || {} }, McpClient.timeoutFor('call'));
     const text = (res?.content || [])
       .map(c => (c.type === 'text' ? c.text : `[${c.type}]`))
       .join('\n')

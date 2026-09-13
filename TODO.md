@@ -147,6 +147,75 @@ none of them block anything today.
   per-model or per-provider breakdown. The rows are all there; it is a reader,
   not new plumbing.
 
+## Two layers of learned knowledge, and the road between them
+
+Decided in discussion, not yet built. Written down because it is expensive to
+re-derive and the constraints are easier to honour before there is code.
+
+**Layer 1 — tool notes, local.** What this install learned about its own tools:
+that `execute_blender_code` returns `result` *and* `stdout`, that a window
+capture taken right after a screen change can be a stale frame and wants a
+retry. The agent proposes a note, the user accepts, and accepted notes append to
+that tool's `description` in `mcp/tools.js::schemas()` — the text the model
+reads at the moment it picks a function, so it costs tokens only for tools a
+running server is actually offering. Proposal and click rather than a free
+write, for the same reason settings work that way: a tool description is an
+instruction the model follows, and an agent that could rewrite its own
+descriptions could rewrite what it believes a dangerous tool does. Keyed by
+server id plus upstream tool name, bounded per tool, and stamped with the
+server's `serverInfo.version` so a note about a tool that has since changed
+reads as stale instead of as fact.
+
+**Layer 2 — skills, shipped.** "How to file an expense in Zucchetti" is not a
+fact about this machine; it is a fact about Zucchetti, and every install
+relearning it is waste. These ship with DOCA, curated, and reach the prompt as a
+**manifest**: name plus a one-line trigger always resident, body loaded only when
+the trigger matches — tens of tokens each instead of thousands. A cheap model
+pre-reading the tool list to brief the main one is a later optimisation, not a
+prerequisite; the manifest gets most of it for nothing.
+
+**The road between them is an opt-in report, and the report is the leak.** The
+agent learns TeamSystem invoicing while making a real invoice for a real client:
+the transcript holds their name, their VAT number, the amount, a URL with a
+tenant id, screenshots of a page full of somebody else's data. So the design
+does not rest on an agent redacting its own context:
+
+- What travels is a **typed procedure**, not prose — tool names, ordered steps,
+  preconditions, failure modes, placeholders where values go. A form has nowhere
+  for a client name to sit; free text has nothing else.
+- It is reviewed by the **quarantined reader** (`agent.ask()`, no tools, no
+  memory, no charter, no transcript) asked one question: does this name a
+  person, a company or a document? That is `research_docs` run backwards —
+  there, isolation keeps attacker text away from the agent; here it keeps user
+  data away from the outside.
+- The user sees the **exact bytes**, not a summary, with Send or Discard. A
+  global "send useful data" switch enables the feature; the click sends the item.
+- Reports queue in `.doca/outbox/` rather than streaming, so nothing leaves in
+  the moment of the work and a batch can be read before it goes.
+
+Private-instead-of-public fixes disclosure to the world, not disclosure to us:
+customer data in our own tracker is still a processing relationship. Redact at
+the source, not at the destination.
+
+**Two constraints for the autonomous evaluator**, whenever it gets built:
+
+- **Every shipped procedure must end by reading back what it wrote.** A stale
+  selector fails loudly and costs a retry; a stale *semantic* step fails
+  silently — the field moved, the right-looking box gets filled, the VAT rate is
+  wrong and every step reports success. The cabinet that measured 706 × 454
+  instead of 700 × 450 was caught only because the agent measured the scene
+  instead of trusting the code that built it; every step had said `ok`. A
+  verification step is what makes "users notice" a real detector rather than a
+  hope.
+- **The evaluator needs a test tenant, not a customer's.** A loop that checks
+  "can I still file an expense" by filing one puts junk in somebody's books.
+  Sandbox account, or navigate-and-confirm-the-fields-exist without submitting.
+
+And the payoff worth designing for: a report carrying the **reproduction** —
+typed procedure, the step that failed, observed against expected — is a bug
+report another agent can replay. That is what closes the loop instead of leaving
+it advisory, and it is where the debugging automation actually comes from.
+
 ## Wanted next: many agents, many jobs
 
 The goal this is all pointed at is one agent on the server, reachable from any

@@ -40,6 +40,10 @@ const SETTABLE = [
   { prefix: 'serviceSettings',  label: 'Inference services',   note: 'GPU assignment, ports, images' },
   { prefix: 'voiceServices',    label: 'Voice services',       note: '' },
   { prefix: 'vms',              label: 'Virtual machines',     note: 'The libvirt connection URI' },
+  // Numbers only, and deliberately a different key from `mcpServers`, which
+  // holds commands this host spawns and stays out of reach. `sectionFor` matches
+  // a whole prefix, so "mcpSettings" can never open the door to "mcpServers".
+  { prefix: 'mcpSettings',      label: 'MCP timeouts',         note: 'How long to wait for an MCP tool before giving up' },
   { prefix: 'sidebarStats',     label: 'Sidebar stats',        note: 'Which stats the sidebar shows' },
   { prefix: 'sidebarSections',  label: 'Sidebar sections',     note: '' },
   { prefix: 'hiddenTabs',       label: 'Navigation visibility', note: '' },
@@ -158,6 +162,20 @@ function readable() {
       if (k !== 'systemPrompt')
         out.push({ path: `harness.config.${catalog.BUILTIN_ID}.${k}`, value: v, section: 'Harness parameters' });
   } catch { /* catalog unavailable — the rest of the list is still useful */ }
+
+  // Effective values, like the paths and harness rows above: nothing is written
+  // to prefs until somebody changes one, and a setting the agent cannot see is a
+  // setting it will never propose — which is how the MCP call timeout spent this
+  // long being a number nobody could reach.
+  try {
+    const { McpClient } = require('../mcp/client');
+    out.push(
+      { path: 'mcpSettings.callTimeoutMs', value: McpClient.timeoutFor('call'), section: 'MCP timeouts',
+        detail: 'How long a single MCP tool call may take. It stops the waiting, not the work.' },
+      { path: 'mcpSettings.listTimeoutMs', value: McpClient.timeoutFor('list'), section: 'MCP timeouts',
+        detail: 'How long to wait for a server to list its tools when it starts.' },
+    );
+  } catch { /* mcp module unavailable — the rest of the list is still useful */ }
 
   const seen = new Set(out.map(r => r.path));
   for (const s of SETTABLE) {
