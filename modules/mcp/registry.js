@@ -92,8 +92,9 @@ function updateFromDevice(deviceId, patch) {
   if (p.headers !== undefined) {
     if (!p.headers || typeof p.headers !== 'object' || Array.isArray(p.headers))
       throw Object.assign(new Error('headers must be an object of name/value pairs'), { status: 400 });
-    next.headers = Object.fromEntries(
-      Object.entries(p.headers).slice(0, 20).map(([k, v]) => [String(k).slice(0, 128), String(v).slice(0, 2048)]));
+    next.headers = unmaskValues(Object.fromEntries(
+      Object.entries(p.headers).slice(0, 20).map(([k, v]) => [String(k).slice(0, 128), String(v).slice(0, 2048)])),
+    spec.headers);
   }
 
   save(load().map(s => (s.id === spec.id ? next : s)));
@@ -145,10 +146,12 @@ function normalize(input, existing) {
     transport,
     command:   String(input.command || '').trim(),
     args,
-    env,
+    // A value that comes back as the mask is one the caller never saw, so it
+    // means "leave it alone" rather than "set it to dots".
+    env:       unmaskValues(env, existing?.env),
     cwd:       String(input.cwd || '').trim(),
     url:       String(input.url || '').trim(),
-    headers:   input.headers && typeof input.headers === 'object' ? input.headers : {},
+    headers:   unmaskValues(input.headers && typeof input.headers === 'object' ? input.headers : {}, existing?.headers),
     autostart: !!input.autostart,
     // Absent on every definition written before this existed, which is exactly
     // what `server` means, so nothing has to be migrated.
@@ -196,12 +199,54 @@ async function restart(id) {
 }
 
 /** Everything a UI needs: the definition plus whatever the live client knows. */
+/**
+ * Secrets do not leave this module in a readable form.
+ *
+ * `env` is where a stdio server's tokens live and `headers` is where a
+ * client-hosted server's bearer token lives, and `GET /api/mcp` — which has no
+ * auth in front of it, so any tailnet peer can call it — used to answer with
+ * both in full, because `status()` spread the whole stored spec. The agent found
+ * this before anybody else did: it curled the panel to work around a stale tool
+ * list and the token came back in the listing. `environment.js` was already
+ * careful never to put these in the prompt; that care was worth nothing while
+ * another route handed them over.
+ *
+ * Names are kept and values replaced, so the panel can still show that a header
+ * or a variable exists without showing what it is. The live client is built from
+ * `get()`, not from here, so nothing masked ever reaches a connection, and
+ * `export.js` reads `load()` for the same reason.
+ */
+const MASK = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
+
+function maskValues(obj) {
+  if (!obj || typeof obj !== 'object') return {};
+  return Object.fromEntries(Object.keys(obj).map(k => [k, MASK]));
+}
+
+/**
+ * Put back what a mask stands for.
+ *
+ * Anything that reads a definition and writes it back — the dashboard form, a
+ * client correcting its own address — would otherwise save the mask over the
+ * real secret the first time somebody edited an unrelated field. So a value that
+ * comes back as the mask means "unchanged", and the stored one survives. This is
+ * what makes masking safe to do everywhere rather than only on the one route
+ * that leaked.
+ */
+function unmaskValues(next, previous) {
+  if (!next || typeof next !== 'object') return next;
+  const prev = previous && typeof previous === 'object' ? previous : {};
+  return Object.fromEntries(Object.entries(next).map(([k, v]) => [k, v === MASK ? (prev[k] ?? '') : v]));
+}
+
 function status(spec) {
   const c = _clients.get(spec.id);
   const origin = spec.origin || { kind: 'server', deviceId: null };
   const device = originDevice(origin);
   return {
     ...spec,
+    env:     maskValues(spec.env),
+    headers: maskValues(spec.headers),
     origin,
     // Resolved here so a row can say "on Al's PC" without the page fetching the
     // device list per server. A revoked or deleted device leaves the id visible
@@ -263,6 +308,7 @@ function stopAll() {
 }
 
 module.exports = {
+  MASK,
   PREFS_KEY,
   load, list, get, client, status, slug, normalize, normalizeOrigin, originDevice,
   forDevice, updateFromDevice,

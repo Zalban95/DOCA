@@ -27,6 +27,7 @@ after(async () => { registry.stopAll(); await H.stop(); });
 
 const get  = p => H.api(null, 'GET', p);
 const post = (p, body) => H.api(null, 'POST', p, body);
+const del  = p => H.api(null, 'DELETE', p);
 
 test('a server is defined by name and command, and starts out stopped', async () => {
   const saved = await post('/api/mcp', {
@@ -443,3 +444,56 @@ test('removing a server takes it out of the registry', async () => {
   }
   assert.deepEqual((await get('/api/mcp')).body.servers, []);
 });
+
+test('the unauthenticated server listing never carries a secret, and editing does not erase one', async () => {
+  const registry = require('../modules/mcp/registry');
+
+  // A stdio server with a token in its environment, and an HTTP one with a
+  // bearer header — the two places a secret actually lives.
+  await post('/api/mcp', {
+    id: 'stdio-secret', label: 'Stdio secret', transport: 'stdio',
+    command: 'node', args: ['x.js'], env: { API_TOKEN: 'sk-live-should-never-appear', HOME: '/tmp' },
+  });
+  await post('/api/mcp', {
+    id: 'http-secret', label: 'Http secret', transport: 'http',
+    url: 'https://example.invalid/mcp', headers: { Authorization: 'Bearer doca_dev.supersecret' },
+  });
+
+  const listed = await get('/api/mcp');
+  assert.equal(listed.status, 200);
+  const body = JSON.stringify(listed.body);
+  assert.equal(body.includes('sk-live-should-never-appear'), false, 'an env token reached the listing');
+  assert.equal(body.includes('supersecret'), false, 'a bearer token reached the listing');
+
+  // The names survive, so the panel can still say that a header exists.
+  const http = listed.body.servers.find(s => s.id === 'http-secret');
+  assert.deepEqual(Object.keys(http.headers), ['Authorization']);
+  assert.equal(http.headers.Authorization, registry.MASK);
+  const stdio = listed.body.servers.find(s => s.id === 'stdio-secret');
+  assert.deepEqual(Object.keys(stdio.env).sort(), ['API_TOKEN', 'HOME']);
+
+  // What the connection is built from is untouched.
+  assert.equal(registry.get('stdio-secret').env.API_TOKEN, 'sk-live-should-never-appear');
+  assert.equal(registry.get('http-secret').headers.Authorization, 'Bearer doca_dev.supersecret');
+
+  // The trap this has to survive: the form reads the masked value into its
+  // textarea and posts it straight back when the user edits something else.
+  await post('/api/mcp', {
+    id: 'stdio-secret', label: 'Renamed', transport: 'stdio',
+    command: 'node', args: ['x.js'], env: stdio.env,
+  });
+  assert.equal(registry.get('stdio-secret').env.API_TOKEN, 'sk-live-should-never-appear',
+    'a round-tripped mask overwrote the real value');
+  assert.equal(registry.get('stdio-secret').label, 'Renamed', 'the edit itself still applied');
+
+  // A real new value still replaces it.
+  await post('/api/mcp', {
+    id: 'stdio-secret', label: 'Renamed', transport: 'stdio',
+    command: 'node', args: ['x.js'], env: { API_TOKEN: 'sk-live-rotated', HOME: '/tmp' },
+  });
+  assert.equal(registry.get('stdio-secret').env.API_TOKEN, 'sk-live-rotated');
+
+  await del('/api/mcp/stdio-secret');
+  await del('/api/mcp/http-secret');
+});
+

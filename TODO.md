@@ -60,6 +60,14 @@ none of them break anything today.
   while this is a label plus a convenience; not fine if `origin` ever becomes a
   permission boundary.
 
+- **`/api/mcp` still has no authentication.** Values are masked now, so a
+  tailnet peer can no longer read a bearer token or a stdio server's env out of
+  the listing — but it can still read every definition's id, label, transport,
+  URL, command and args, and `POST /api/mcp` still creates a definition holding
+  a command this host will later spawn. Masking bought time; it is not the
+  authorisation this surface needs, and that is the same design question that
+  keeps the MCP registry out of `/api/v1`.
+
 - **A switched-off tool is not an unreachable one.** `disabledTools` filters the
   schemas the model is shown and `tools.call()` refuses a disabled name — but
   `http_fetch` takes any absolute URL with any method and a JSON body, and
