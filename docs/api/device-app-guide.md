@@ -565,6 +565,14 @@ Rules that will save you a rewrite:
 - **Show a waiting proposal, never an Accept button.** `proposals` on a `done`
   event are settings changes the agent wants; only a click in the dashboard
   applies one. Telling the user it is waiting is the whole job.
+- **Do not tell the agent what you are — you already did, at pairing.** The hub
+  tags every turn with your form factor, screen and inputs from your `caps`, and
+  that is what makes the answer fit your screen. There is no per-message field
+  for it, and a message that describes its own client only wastes context. The
+  practical consequence is the reverse of what it looks like: if your answers
+  come back too long for the screen you drew them on, fix your `caps`
+  (`PATCH /devices/me/caps`), not your prompt. Transcript rows carry `from`, so
+  a phone showing history can label the questions asked from the watch.
 
 > **FUTURE.** Sending an image or a voice recording with a message (`mediaId`),
 > spoken replies, and a thinking trace are not implemented yet — a `mediaId` is

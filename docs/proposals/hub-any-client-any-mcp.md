@@ -139,6 +139,26 @@ anyway. The phone, foregrounded, takes the deltas.
 > streams; everyone else gets `started`, the tool steps, and the whole reply on
 > `done`.
 
+> **ADDED (2026-09-13), not in this proposal: the turn says who asked.** One
+> conversation across many windows only works if the agent knows which window it
+> is answering into, so the hub renders a "Who is asking" block into the system
+> prompt of every turn — the device's name, form factor, screen and inputs from
+> the caps it paired with, plus one line on how much answer that client can hold
+> (`SHAPE` in `modules/harness/agent.js`). The dashboard console tags itself as a
+> desktop browser, so no entry point is anonymous.
+>
+> Two decisions worth keeping: the tag is **derived from the pairing caps, never
+> sent per message**, so there is nothing for a client to spoof beyond the caps it
+> already declared and nothing to keep in sync per request; and it is **never
+> concatenated onto the user's text** — provenance is a `from` field on the
+> transcript row, which is what lets a phone label the questions that were asked
+> from the watch without the model reading metadata as speech.
+>
+> This is the cheap half of the wear story in §5. It shapes *prose*. It does not
+> yet pick a *representation* — a watch that would rather have a rendered PNG than
+> three sentences still needs §19.4 selection wired into a turn, which stays
+> FUTURE.
+
 ### 3.1 Multimodal input
 
 Images: the harness builds plain string content today (`agent.js:78-84`,

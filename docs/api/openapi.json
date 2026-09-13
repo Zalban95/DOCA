@@ -3391,7 +3391,8 @@
                 },
                 "required": [
                   "message"
-                ]
+                ],
+                "description": "Send the question as the user typed it. The hub tags the turn with this device — name, form factor, screen and inputs, from the caps it was paired with — so the agent knows how much answer this client can hold. There is no field for a client to describe itself per message."
               }
             }
           }
@@ -3716,6 +3717,35 @@
                           },
                           "name": {
                             "type": "string"
+                          },
+                          "from": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "oneOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "formFactor": {
+                                "oneOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "description": "Which client asked. Absent on rows written before this was recorded, and on the dashboard console's own rows."
                           },
                           "tools": {
                             "type": "array",

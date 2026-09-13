@@ -24,6 +24,8 @@ let stub, stubUrl;
  * observe one in flight.
  */
 let script = [];
+/** Every request body the harness sent, so the prompt itself can be asserted. */
+let seen = [];
 
 function sseReply(res, frames) {
   res.writeHead(200, { 'Content-Type': 'text/event-stream' });
@@ -44,6 +46,7 @@ before(async () => {
     req.on('data', d => { raw += d; });
     req.on('end', () => {
       const body = JSON.parse(raw || '{}');
+      seen.push(body);
       const next = script.shift() || { text: '(script exhausted)' };
       const answer = () => {
         if (next.status) { res.writeHead(next.status, { 'Content-Type': 'application/json' }); return res.end('{"error":"stub failure"}'); }
@@ -88,7 +91,10 @@ after(async () => {
   await new Promise(r => stub.close(r));
 });
 
-beforeEach(() => { script = []; });
+beforeEach(() => { script = []; seen = []; });
+
+/** The system prompt of the last turn the stub was asked to answer. */
+const lastSystemPrompt = () => seen[seen.length - 1].messages.find(m => m.role === 'system').content;
 
 /**
  * How *this* turn ended. Scoped to a turnId on purpose: `agent.turn` is durable,
@@ -288,6 +294,58 @@ test('memory is readable with the scope for it, and proposals are visible but no
   // There is no route that writes memory or applies a proposal from a device:
   // the /api/harness ones are dashboard routes, deliberately not in /api/v1.
   assert.equal((await H.api(admin.token, 'POST', '/api/v1/harness/memory', { key: 'k', value: 'v' })).status, 404);
+});
+
+test('the agent is told which client asked, and how much answer it can hold', async () => {
+  script = [{ text: 'ok' }];
+  const fromWatch = await H.api(watch.token, 'POST', '/api/v1/harness/messages', { message: 'status?' });
+  let s = H.sse(watch.token); await s.ready; await settled(s, fromWatch.body.turnId); s.close();
+
+  const watchPrompt = lastSystemPrompt();
+  assert.match(watchPrompt, /# Who is asking/);
+  assert.match(watchPrompt, new RegExp(`"watch" \\(${watch.device.id}\\) — a watch, 450×450 round`));
+  assert.match(watchPrompt, /One or two short sentences/);
+  assert.match(watchPrompt, /Other devices of the same user may be reading this conversation/);
+  // The tag is a fact about the turn, not an edit of the user's words.
+  const asAsked = seen[seen.length - 1].messages.filter(m => m.role === 'user').pop();
+  assert.equal(asAsked.content, 'status?');
+
+  script = [{ text: 'ok' }];
+  const fromPhone = await H.api(phone.token, 'POST', '/api/v1/harness/messages', { message: 'status?' });
+  s = H.sse(phone.token); await s.ready; await settled(s, fromPhone.body.turnId); s.close();
+
+  const phonePrompt = lastSystemPrompt();
+  assert.match(phonePrompt, new RegExp(`"phone" \\(${phone.device.id}\\) — a phone, 1080×2400`));
+  assert.match(phonePrompt, /A few short paragraphs/);
+  assert.equal(/One or two short sentences/.test(phonePrompt), false, 'the phone is not treated as a watch');
+
+  // An agent client is told to stop formatting for a human at all.
+  script = [{ text: 'ok' }];
+  const headless = H.mkDevice('sim', 'agent', {}, ['harness:chat']);
+  const fromAgent = await H.api(headless.token, 'POST', '/api/v1/harness/messages', { message: 'status?' });
+  s = H.sse(headless.token); await s.ready; await settled(s, fromAgent.body.turnId); s.close();
+  assert.match(lastSystemPrompt(), /Complete and machine-readable/);
+
+  // And the transcript keeps who asked, so one shared conversation still shows
+  // which window each question came through.
+  const read = await H.api(phone.token, 'GET', `/api/v1/harness/sessions/${fromPhone.body.sessionId}?limit=12`);
+  const asked = read.body.messages.filter(m => m.role === 'user' && m.from);
+  assert.deepEqual(asked.find(m => m.from.id === phone.device.id).from,
+    { id: phone.device.id, name: 'phone', formFactor: 'phone' });
+  assert.deepEqual(asked.find(m => m.from.id === headless.device.id).from,
+    { id: headless.device.id, name: 'sim', formFactor: 'other' });
+});
+
+test('the dashboard console tags itself as well, so no turn is anonymous', async () => {
+  script = [{ text: 'ok' }];
+  const res = await fetch(`${H.base}/api/harness/chat`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: 'who am I talking from?' }),
+  });
+  await res.text();
+  const prompt = lastSystemPrompt();
+  assert.match(prompt, /"Dashboard console"/);
+  assert.match(prompt, /Full detail is welcome/);
 });
 
 test('the new event types are advertised with the class a client should expect', async () => {

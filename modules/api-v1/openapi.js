@@ -435,7 +435,8 @@ function paths() {
     // ── Agent-facing ──
     // ── Talking to the agent (the mirror image of the Agent tag below) ──
     '/harness/messages': { post: { tags: ['Harness'], summary: 'Ask the agent something (the answer arrives as events)', operationId: 'harnessPostMessage', ...scopeDoc('harness:chat'),
-      requestBody: body(obj({ message: str({ maxLength: 8000 }), sessionId: str({ description: 'Defaults to the active conversation.' }) }, { required: ['message'] })),
+      requestBody: body(obj({ message: str({ maxLength: 8000 }), sessionId: str({ description: 'Defaults to the active conversation.' }) },
+        { required: ['message'], description: 'Send the question as the user typed it. The hub tags the turn with this device — name, form factor, screen and inputs, from the caps it was paired with — so the agent knows how much answer this client can hold. There is no field for a client to describe itself per message.' })),
       responses: { 202: json(obj({ turnId: str(), sessionId: str() }, { description: 'Accepted. Watch `agent.turn` / `agent.text` / `agent.tool` on the event stream.' })), ...std(400, 401, 403, 404, 409, 413) } } },
     '/harness/turns': { get: { tags: ['Harness'], summary: 'Turns in flight, so a client arriving mid-turn can show it', operationId: 'harnessListTurns', ...scopeDoc('harness:chat'),
       responses: { 200: json(obj({ turns: arr(obj({ sessionId: str(), turnId: str() })) })), ...std(401, 403) } } },
@@ -449,7 +450,7 @@ function paths() {
     '/harness/sessions/{id}': {
       parameters: [pathParam('id', 'Conversation id.'), query('limit', 'Most recent messages to return (default 50, max 200).', int())],
       get: { tags: ['Harness'], summary: 'One conversation, shaped for drawing a chat', operationId: 'harnessGetSession', ...scopeDoc('harness:sessions'),
-        responses: { 200: json(obj({ session: ref('HarnessSession'), messages: arr(obj({ role: str({ enum: ['user', 'assistant', 'tool', 'system'] }), content: str(), name: str(), tools: arr(str({ description: 'Tools the assistant called on this row.' })) })) })), ...std(401, 403, 404) } },
+        responses: { 200: json(obj({ session: ref('HarnessSession'), messages: arr(obj({ role: str({ enum: ['user', 'assistant', 'tool', 'system'] }), content: str(), name: str(), from: obj({ id: nullable(str()), name: str(), formFactor: nullable(str()) }, { description: 'Which client asked. Absent on rows written before this was recorded, and on the dashboard console\'s own rows.' }), tools: arr(str({ description: 'Tools the assistant called on this row.' })) })) })), ...std(401, 403, 404) } },
       delete: { tags: ['Harness'], summary: 'Delete a conversation', operationId: 'harnessDeleteSession', ...scopeDoc('harness:sessions'),
         responses: { 200: json(obj({ ok: bool() })), ...std(401, 403, 404, 409) } },
     },

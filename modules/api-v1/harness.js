@@ -62,6 +62,25 @@ function toOne(deviceId, type, payload) {
   try { return bus.publish(deviceId, type, payload); } catch { return null; }
 }
 
+/**
+ * What the agent is told about the client that asked. Derived from the device's
+ * own capability document, so a client tags itself once at pairing and never has
+ * to repeat it per message — and cannot claim to be a desktop on Tuesday.
+ */
+function clientOf(device) {
+  const caps = device.caps || {};
+  return {
+    id: device.id,
+    name: device.name,
+    kind: device.kind,
+    formFactor: caps.formFactor || null,
+    label: device.kind === 'agent' ? 'an agent, not a person'
+      : caps.formFactor && caps.formFactor !== 'other' ? `a ${caps.formFactor}` : 'a device',
+    screen: caps.screen || null,
+    input: caps.input || null,
+  };
+}
+
 function brief(value, max) {
   if (value === undefined || value === null) return undefined;
   const s = typeof value === 'string' ? value : JSON.stringify(value);
@@ -108,6 +127,8 @@ function transcript(id, { limit = 50 } = {}) {
   const rows = memory.messages(id).slice(-n).map(row => ({
     role: row.role,
     content: typeof row.content === 'string' ? row.content : '',
+    // Which client this was asked from, so a shared conversation reads as one.
+    ...(row.from ? { from: row.from } : {}),
     ...(row.name ? { name: row.name } : {}),
     ...(Array.isArray(row.tool_calls) && row.tool_calls.length
       ? { tools: row.tool_calls.map(tc => tc.function?.name || '(unnamed)') }
@@ -199,7 +220,7 @@ async function run({ turnId, message, session, device, ctrl }) {
   };
 
   try {
-    const r = await agent.turn({ message, sessionId, emit, signal: ctrl.signal });
+    const r = await agent.turn({ message, sessionId, emit, signal: ctrl.signal, client: clientOf(device) });
     flush();
     fanout('agent.turn', {
       turnId, sessionId: r.sessionId, state: 'done', by: device.id,

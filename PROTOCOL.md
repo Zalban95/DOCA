@@ -1037,9 +1037,28 @@ POST /harness/sessions/:id/activate
 DELETE /harness/sessions/:id
 ```
 
-`messages[]` is shaped for drawing a chat: `{ role, content, name?, tools[]? }`,
-where `tools[]` names what an assistant row called rather than reproducing the
-model's tool-call plumbing.
+`messages[]` is shaped for drawing a chat: `{ role, content, from?, name?,
+tools[]? }`, where `tools[]` names what an assistant row called rather than
+reproducing the model's tool-call plumbing, and `from` is the client that asked
+(`{ id, name, formFactor }`) so one shared conversation still shows which window
+each question came through.
+
+**The hub tags the turn; the client does not.** A device does not describe itself
+per message and there is no field for it to try: the hub reads the caps the
+device was paired with (§7) and tells the agent, in the system prompt of that
+turn, which client is asking and how much answer it can hold — a watch gets one
+or two sentences and no tables, a phone short paragraphs, a desktop the full
+detail, an `agent`-kind client machine-readable output with no formatting at all.
+Three consequences worth knowing:
+
+- **Declaring your caps honestly is how you get a readable answer.** A phone that
+  claims a 450×450 screen will be answered like a watch.
+- **The tag is never glued to the user's words.** `content` is what was typed, so
+  a transcript stays quotable and a second device reads it as prose, not as
+  metadata.
+- **The dashboard console tags itself too** (as a desktop browser). No turn is
+  anonymous, which is why the agent can say "I'll keep this short, you're on the
+  watch" without being told.
 
 Rules a client can rely on:
 

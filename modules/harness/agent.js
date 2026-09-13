@@ -55,6 +55,61 @@ function rulesBlock() {
 }
 
 /**
+ * How much answer the thing in front of the user can actually hold.
+ *
+ * The rule lives here, not in the callers, so a watch gets the same treatment
+ * whether it asked through `/api/v1` or through anything added later. It is
+ * derived from what the device declared — form factor first, screen width when
+ * the form factor is one we do not know — because a client that lies about its
+ * screen is only lying to itself.
+ */
+const SHAPE = {
+  watch:   'One or two short sentences. No tables, no code blocks, no lists longer than three items. Lead with the number or the verdict; offer to send the detail to a bigger screen.',
+  glasses: 'One short sentence, spoken aloud rather than read. No formatting at all.',
+  phone:   'A few short paragraphs. A small table is fine, a wide one is not; keep code snippets under ten lines.',
+  tablet:  'Normal prose with tables and short code blocks.',
+  desktop: 'Full detail is welcome: tables, long code, complete output.',
+  tv:      'Very few words in large blocks. No tables, no code.',
+  headless:'Complete and machine-readable. Do not shorten for a human, and do not decorate.',
+};
+
+function shapeFor(client) {
+  if (client.kind === 'agent' || client.formFactor === 'headless') return SHAPE.headless;
+  const named = SHAPE[client.formFactor];
+  if (named) return named;
+  const w = Number(client.screen?.w) || 0;
+  if (!w) return SHAPE.phone;                 // unknown and undeclared: the middle is the safe guess
+  if (w < 400)  return SHAPE.watch;
+  if (w < 900)  return SHAPE.phone;
+  return SHAPE.desktop;
+}
+
+/**
+ * Who this turn came from. The agent is one mind with many windows, and the
+ * windows are not interchangeable: the same answer that is right on a desktop is
+ * unreadable on a watch. Every entry point names its client, so this block is
+ * present on every turn rather than only on the ones somebody remembered.
+ */
+function clientBlock(client) {
+  if (!client) return '';
+  const screen = client.screen?.w && client.screen?.h
+    ? `${client.screen.w}×${client.screen.h}${client.screen.shape === 'round' ? ' round' : ''}`
+    : 'screen not declared';
+  const can = [
+    client.input?.voice && 'voice',
+    client.input?.text && 'keyboard',
+    client.input?.touch && 'touch',
+    client.input?.camera && 'camera',
+  ].filter(Boolean).join(', ');
+  return [
+    '# Who is asking',
+    `This turn came from "${client.name}"${client.id ? ` (${client.id})` : ''} — ${client.label || client.formFactor || 'an unknown client'}, ${screen}${can ? `, input: ${can}` : ''}.`,
+    `Shape the answer for it: ${shapeFor(client)}`,
+    'Other devices of the same user may be reading this conversation too, so do not describe this one as if it were the only one.',
+  ].join('\n');
+}
+
+/**
  * The whole system prompt, in the order it is read.
  *
  * The charter goes first and comes from code, so the panel's rules are the first
@@ -62,11 +117,12 @@ function rulesBlock() {
  * which the user does own — follows it, then the facts, then what the agent
  * knows, then where this conversation had got to.
  */
-function systemPrompt({ p, userText, summary, toolCount, disabledCount }) {
+function systemPrompt({ p, userText, summary, toolCount, disabledCount, client }) {
   return [
     providers.SAFETY_CHARTER,
     p.systemPrompt || providers.DEFAULT_SYSTEM_PROMPT,
     environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount }),
+    clientBlock(client),
     rulesBlock(),
     memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)),
     settings.block(),
@@ -202,10 +258,12 @@ async function foldSummary({ session, p, ep, signal }) {
 /**
  * Run one turn of the built-in harness.
  *
- * @param {{ message: string, sessionId?: string, emit: (evt: object) => void, signal?: AbortSignal }} opts
+ * @param {{ message: string, sessionId?: string, emit: (evt: object) => void, signal?: AbortSignal,
+ *           client?: { id?: string, name: string, kind?: string, label?: string, formFactor?: string,
+ *                      screen?: object, input?: object } }} opts
  * @returns {Promise<{ sessionId: string, text: string, steps: number }>}
  */
-async function turn({ message, sessionId, emit, signal }) {
+async function turn({ message, sessionId, emit, signal, client }) {
   const say = evt => { try { emit(evt); } catch {} };
   const p   = params();
   const ep  = providers.endpoint(p.provider);
@@ -218,7 +276,13 @@ async function turn({ message, sessionId, emit, signal }) {
   memory.setActive(session.id);
   say({ type: 'session', sessionId: session.id });
 
-  memory.append(session.id, { role: 'user', content: message });
+  // Provenance stays on the row, not in the text: `toApiMessages` maps the
+  // fields the API takes, so a client can render "you asked this from the watch"
+  // without the model ever seeing a tag glued to the user's own words.
+  memory.append(session.id, {
+    role: 'user', content: message,
+    ...(client ? { from: { id: client.id || null, name: client.name, formFactor: client.formFactor || client.kind || null } } : {}),
+  });
 
   const summary = await foldSummary({ session: memory.getSession(session.id), p, ep, signal });
   const disabled = Array.isArray(p.disabledTools) ? p.disabledTools : [];
@@ -246,7 +310,7 @@ async function turn({ message, sessionId, emit, signal }) {
       {
         role: 'system',
         content: systemPrompt({
-          p, userText: message, summary,
+          p, userText: message, summary, client,
           toolCount: schemas.length, disabledCount: disabled.length,
         }),
       },
