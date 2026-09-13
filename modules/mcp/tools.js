@@ -130,16 +130,44 @@ function isMcpTool(name) {
  * Run one MCP tool call. Like the built-in tools, failures come back as text so
  * the model can react to them instead of the turn dying.
  */
+/**
+ * Somebody else's "localhost" is not this machine's.
+ *
+ * A tool hosted by a client runs on that client, so when its bridge fails to
+ * reach something it names an address on *that* box — "Cannot connect to Blender
+ * at localhost:9876". Read here, where the shell and the filesystem are the DOCA
+ * host's, that sentence is actively misleading: it invites checking a port on
+ * the wrong machine, and it has cost this project real debugging time more than
+ * once. The tool description already carries the machine (`machineNote`); this
+ * puts it on the failure, which is where it is actually needed.
+ *
+ * Annotation only — the bridge's own words are never altered, because the exact
+ * string is what a user searches for.
+ */
+const LOOPBACK = /\b(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?/i;
+
+function placeError(text, t) {
+  const body = String(text ?? '');
+  if (t.origin !== 'client' || !LOOPBACK.test(body)) return body;
+  const port = body.match(LOOPBACK)?.[2] || '';
+  return `${body}\n\n[DOCA] That address is on "${t.originLabel}", the machine hosting this tool — not on `
+    + `the DOCA host. Your shell, read_file and system_status cannot see it, and nothing you run here will `
+    + `open it${port ? `: a process on ${t.originLabel} has to be listening on${port}` : ''}. If it needs `
+    + 'starting, the person at that machine has to do it, or a tool on that machine does.';
+}
+
 async function call(name, args) {
   const t = available().find(x => x.exposed === name);
   if (!t) return `Error: no MCP tool named "${name}" — its server may have stopped.`;
   const c = registry.client(t.server);
   if (c?.state !== 'running') return `Error: the "${t.serverLabel}" MCP server is not running.`;
   try {
-    return await c.callTool(t.tool, args || {});
+    // A tool that answers with isError reports its failure as content, so the
+    // annotation belongs on the result as much as on a thrown one.
+    return placeError(await c.callTool(t.tool, args || {}), t);
   } catch (e) {
-    return `Error: ${e.message}`;
+    return placeError(`Error: ${e.message}`, t);
   }
 }
 
-module.exports = { available, describe, schemas, call, isMcpTool };
+module.exports = { available, describe, schemas, call, isMcpTool, placeError };

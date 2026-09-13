@@ -520,3 +520,25 @@ test('the unauthenticated server listing never carries a secret, and editing doe
   await del('/api/mcp/http-secret');
 });
 
+test("a client tool's failure says whose localhost it was talking about", () => {
+  const mcpTools = require('../modules/mcp/tools');
+
+  // The exact string the Blender bridge returns, which reads as if the port
+  // were on this host and is the reason two debugging sessions went to the
+  // wrong machine.
+  const real = 'Error executing tool execute_blender_code: Cannot connect to Blender at localhost:9876. '
+    + 'Ensure Blender is running with the MCP addon enabled and the server started.';
+
+  const annotated = mcpTools.placeError(real, { origin: 'client', originLabel: 'portal' });
+  assert.ok(annotated.startsWith(real), "the bridge's own words are kept verbatim");
+  assert.match(annotated, /on "portal", the machine hosting this tool/);
+  assert.match(annotated, /listening on:9876/);
+  assert.match(annotated, /shell, read_file and system_status cannot see it/);
+
+  // A server on this host is talking about this host: nothing to correct.
+  assert.equal(mcpTools.placeError(real, { origin: 'server', originLabel: 'DOCA host' }), real);
+  // And a failure with no address in it is left alone.
+  const plain = 'Error: the model refused the arguments.';
+  assert.equal(mcpTools.placeError(plain, { origin: 'client', originLabel: 'portal' }), plain);
+});
+
