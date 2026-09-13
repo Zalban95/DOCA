@@ -72,9 +72,20 @@ async function handleUpdateCheck(req, res) {
   }
 
   const latest = await fetchLatestTag();
+
+  // "I looked and you are current" and "I could not look" are different
+  // answers, and this used to give both as `updateAvailable: false` with
+  // `latest` falling back to the local version — so a private repo, a rate
+  // limit or no egress all rendered as a green "up to date" tick. A check that
+  // cannot fail visibly is not a check.
   const result = {
     current: LOCAL_VERSION,
-    latest: latest || LOCAL_VERSION,
+    latest: latest || null,
+    checked: !!latest,
+    reason: latest ? null
+      : `Could not read the tags of ${REPO}. The check is unauthenticated, so a private repository, a rate `
+        + 'limit or no outbound network all look the same from here — this is not a statement that you are '
+        + 'up to date.',
     updateAvailable: latest ? compareSemver(LOCAL_VERSION, latest) < 0 : false,
     repo: `https://github.com/${REPO}`,
     checkedAt: new Date().toISOString(),

@@ -365,6 +365,15 @@ async function updateCheck() {
       </div>`;
       if (badge) { badge.style.display = 'inline-block'; badge.title = `Update: v${data.latest} available`; }
       if (pullBtn) pullBtn.style.display = '';
+    } else if (data.checked === false) {
+      // Not an error and not an all-clear: the check did not happen. Saying
+      // "up to date" here is the panel asserting something it does not know.
+      if (el) el.innerHTML = `<div class="update-info" style="color:var(--amber)">
+        ? Could not check — running <code>${escHtml(data.current)}</code><br>
+        <span style="opacity:.8">${escHtml(data.reason || '')}</span>
+      </div>`;
+      if (badge) badge.style.display = 'none';
+      if (pullBtn) pullBtn.style.display = '';
     } else {
       if (el) el.innerHTML = `<div class="update-info" style="color:var(--green)">
         ✓ Up to date — <code>${escHtml(data.current)}</code>

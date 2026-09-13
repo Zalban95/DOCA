@@ -147,6 +147,37 @@ none of them block anything today.
   per-model or per-provider breakdown. The rows are all there; it is a reader,
   not new plumbing.
 
+## Wanted next: many agents, many jobs
+
+The goal this is all pointed at is one agent on the server, reachable from any
+paired device on the tailnet, able to work on anything anywhere. Two things are
+still missing from that sentence.
+
+- **One conversation, one turn at a time.** `POST /harness/messages` answers
+  `409 turn_in_flight` for a second turn in the same conversation, which is
+  right — two devices interleaving one transcript is not a feature. But it also
+  means a long job from the phone blocks the desk. Several *sessions* already
+  exist; nothing lets a device start one deliberately as "a job" and come back
+  to it, and `jobs.js` (in-memory, capped at 200, `GET /jobs/:id` only) is not
+  yet that thing.
+
+- **No second instance.** Spawning several harness instances to run jobs in
+  parallel — the Cursor/Grok-style fan-out — needs a job record with a
+  lifecycle, an owner and a result, and a decision about whether instances share
+  the durable memory (probably yes) and the session transcript (probably no).
+  The proposal's §4.4 "missions" is the same idea under another name; settle the
+  vocabulary before building either.
+
+- **"It is on the tailnet" is a network boundary, not an authorisation one.**
+  Worth writing down because it is the assumption the whole surface rests on:
+  every device on the tailnet, every container with tailnet access and every
+  compromised app on any of those machines reaches `:4242` equally, and the
+  legacy `/api/*` routes have no auth in front of them at all. That is survivable
+  for a personal setup with three devices. It stops being survivable exactly
+  when the thing above gets built, because more devices managing more
+  connections is more ways in — and the definitions they would be managing hold
+  commands this host spawns.
+
 ## Version and identity, across the four repos
 
 - **`/api/update-check` cannot see a private repository.** Tagging is not the

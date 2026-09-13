@@ -147,6 +147,29 @@ test('a client-hosted server really is reached over http, and its tools reach th
   assert.equal(await harnessTools.call('mcp__desk-reach__list_windows', {}), 'Notepad\nBlender');
   assert.equal(mcpTools.available().find(t => t.exposed === 'mcp__desk-reach__list_windows').origin, 'client');
 
+  // Whose machine does an unqualified request mean? The prompt now joins the two
+  // facts it always had separately: who asked, and where each tool lands.
+  const agent = require('../modules/harness/agent');
+
+  const fromThatBox = agent.preview({
+    message: 'what is open on my screen',
+    client: { id: device.id, name: 'Desk Box', formFactor: 'desktop' },
+  });
+  assert.match(fromThatBox, /# Whose machine to work on/);
+  assert.match(fromThatBox, /mcp__desk-reach__\* \(2 tools, on Desk Box\)/);
+  assert.match(fromThatBox, /almost certainly means/);
+  assert.match(fromThatBox, /name the machine you used/i);
+
+  // The same question from a device that hosts nothing gets the opposite
+  // steer — everything it does lands somewhere else, so say so.
+  const watch = H.mkDevice('wrist', 'watch', H.WATCH_CAPS);
+  const fromWatch = agent.preview({
+    message: 'what is open on my screen',
+    client: { id: watch.device.id, name: 'wrist', formFactor: 'watch' },
+  });
+  assert.match(fromWatch, /hosts no tools of its own/);
+  assert.match(fromWatch, /mcp__desk-reach__\* \(Desk Box\)/, 'it is still told the other machine exists');
+
   // Now the part that makes "do it on my PC" work. The environment block says
   // where each server runs, but that is one line far from the decision: when the
   // model chooses a function it is reading *these* descriptions.

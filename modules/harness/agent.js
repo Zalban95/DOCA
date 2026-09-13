@@ -128,6 +128,61 @@ function clientBlock(client) {
 }
 
 /**
+ * Which machine's tools to reach for, given who asked.
+ *
+ * Both halves of this were already in the prompt and nothing joined them: the
+ * agent is told which client this turn came from (`clientBlock`) and it is told,
+ * per tool, which machine that tool acts on (`mcp/tools.js::machineNote`). What
+ * it was never told is that those two facts are related. So with a Blender on
+ * the phone's machine and a Blender on the host, "look at my Blender scene" had
+ * no rule behind it and the answer came down to whether the user happened to
+ * name a machine.
+ *
+ * The rule is: whoever asked is probably talking about their own machine. It is
+ * a default, not a constraint — the agent may reach anywhere it has tools for,
+ * and the one thing it must not do is reach somewhere else silently.
+ *
+ * Rendered only when a client-hosted server exists, because with everything on
+ * one host there is nothing to choose between and this is prompt the user pays
+ * for on every step.
+ */
+function placeBlock(client) {
+  let servers = [];
+  try { servers = require('../mcp/registry').list(); } catch { return ''; }
+
+  const running = servers.filter(s => s.state === 'running');
+  const hosted  = running.filter(s => s.origin?.kind === 'client');
+  if (!hosted.length) return '';
+
+  const mine = client?.id ? hosted.filter(s => s.origin.deviceId === client.id) : [];
+  const out  = ['# Whose machine to work on'];
+
+  if (mine.length) {
+    out.push(`This turn came from a device that hosts its own tools: `
+      + `${mine.map(s => `mcp__${s.id}__* (${s.toolCount} tools, on ${s.originLabel})`).join(', ')}.`);
+    out.push('When the request does not name a machine, that is the one it almost certainly means — '
+      + 'somebody asking from their laptop about "my files" or "my Blender" means the laptop in front of them.');
+  } else {
+    out.push('This turn came from a device that hosts no tools of its own, so anything you do lands on '
+      + 'another machine. Say which one, in the answer, whenever that could surprise them.');
+  }
+
+  const elsewhere = hosted.filter(s => !mine.includes(s));
+  if (elsewhere.length)
+    out.push(`Also reachable, on other machines: `
+      + `${elsewhere.map(s => `mcp__${s.id}__* (${s.originLabel})`).join(', ')}.`);
+  if (running.some(s => s.origin?.kind !== 'client'))
+    out.push('The DOCA host\'s own servers, and your shell, act here — on the machine this panel runs on, '
+      + 'which is usually not the machine that asked.');
+
+  out.push('Two rules, and the second matters more: prefer the asking device when nothing says otherwise, '
+    + 'and **name the machine you used** whenever it is not theirs. A tool that failed on one machine may '
+    + 'succeed on another — offer that, do not silently substitute it.');
+
+  return out.join('\n');
+}
+
+/**
  * The whole system prompt, in the order it is read.
  *
  * The charter goes first and comes from code, so the panel's rules are the first
@@ -141,6 +196,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
     p.systemPrompt || providers.DEFAULT_SYSTEM_PROMPT,
     environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount }),
     clientBlock(client),
+    placeBlock(client),
     rulesBlock(),
     memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)),
     budget.block(p, ledger),
@@ -350,7 +406,6 @@ async function turn({ message, sessionId, emit, signal, client }) {
 
   const summary = await foldSummary({ session: memory.getSession(session.id), p, ep, signal });
   const disabled = Array.isArray(p.disabledTools) ? p.disabledTools : [];
-  const schemas  = tools.schemas(disabled);
 
   const base = {
     model:       p.model,
@@ -362,7 +417,6 @@ async function turn({ message, sessionId, emit, signal, client }) {
     // rather than the turn failing.
     stream_options: { include_usage: true },
     ...(Number(p.maxTokens) > 0 ? { max_tokens: Number(p.maxTokens) } : {}),
-    ...(schemas.length ? { tools: schemas, tool_choice: 'auto' } : {}),
   };
 
   const maxSteps = Math.max(1, Number(p.maxSteps) || 1);
@@ -374,7 +428,25 @@ async function turn({ message, sessionId, emit, signal, client }) {
   // the ones this turn creates need announcing.
   const announced = new Set(settings.list().pending.map(x => x.id));
 
+  let toolCount = null;
+
   for (let step = 1; step <= maxSteps; step++) {
+    // Rebuilt every step, not once per turn.
+    //
+    // Only running MCP servers contribute tools, and a turn is exactly when a
+    // server starts — the agent asks a client to start its listener, or starts
+    // one itself, and then cannot use what it just started until the next turn.
+    // Faced with that, the agent does not wait: it writes a script and speaks
+    // JSON-RPC to the listener through `shell`, which works, is reasonable, and
+    // routes around the tool layer along with every switch and label on it.
+    // Three separate turns did this before anyone noticed. Recomputing the list
+    // is an in-process registry read, so the honest path is now also the cheap
+    // one.
+    const schemas = tools.schemas(disabled);
+    if (toolCount !== null && schemas.length !== toolCount)
+      say({ type: 'tools', count: schemas.length, was: toolCount, step });
+    toolCount = schemas.length;
+
     const { rows } = memory.window(session.id, Number(p.historyTurns) || 0);
     const messages = [
       {
@@ -392,7 +464,8 @@ async function turn({ message, sessionId, emit, signal, client }) {
     const promptEstimate = budget.estimateMessages(messages);
 
     const reply = await complete({
-      ep, signal, p, body: { ...base, messages },
+      ep, signal, p,
+      body: { ...base, messages, ...(schemas.length ? { tools: schemas, tool_choice: 'auto' } : {}) },
       onText: t => { text += t; say({ type: 'text', text: t }); },
     });
 
