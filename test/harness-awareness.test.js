@@ -443,3 +443,35 @@ test('the environment block keeps its volatile readings last, so the prefix is c
   assert.match(b, /time: \d{4}-\d{2}-\d{2}T/);
   assert.match(b, /memory: .* free of /);
 });
+
+test('every harness parameter has a box in the panel to type it into', () => {
+  // A parameter added to defaultParams() does something the moment it exists,
+  // and is unreachable until somebody also adds a field for it. contextWindow
+  // shipped that way: read on every turn, settable only by editing the prefs
+  // file by hand. This is the check that would have caught it.
+  const fs   = require('node:fs');
+  const path = require('node:path');
+  const src  = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'harness.js'), 'utf8');
+
+  const table = src.match(/const HARNESS_PARAMS = \[([\s\S]*?)\n\];/);
+  assert.ok(table, 'HARNESS_PARAMS is what the config form renders from');
+  const fields = [...table[0].matchAll(/key: '([A-Za-z]+)'/g)].map(m => m[1]);
+
+  // These four have their own controls rather than a number box.
+  const elsewhere = ['provider', 'model', 'systemPrompt', 'disabledTools'];
+  for (const key of Object.keys(providers.defaultParams())) {
+    if (elsewhere.includes(key)) continue;
+    assert.ok(fields.includes(key), `${key} has no field in the harness config panel`);
+  }
+
+  // Every field explains itself on screen, because the panel is meant to be
+  // usable by somebody who did not write it.
+  for (const m of table[0].matchAll(/key: '([A-Za-z]+)'[\s\S]{0,400}?hint: '/g))
+    assert.ok(m[1], 'each parameter carries a hint');
+  assert.equal((table[0].match(/hint:/g) || []).length, fields.length, 'a parameter is missing its description');
+
+  // And the ranges are not still written for an 8k model.
+  assert.match(table[0], /key: 'maxSteps'[\s\S]{0,200}?max="1000"/);
+  assert.match(table[0], /key: 'historyTurns'[\s\S]{0,200}?max="5000"/);
+});
+

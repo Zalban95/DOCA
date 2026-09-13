@@ -223,6 +223,68 @@ function _harnessParamsHtml(h, meta) {
        ${escHtml(p.label)}${p.hasKey ? '' : ' — no key'}
      </option>`).join('');
 
+/**
+ * Every parameter of the built-in harness, in one place: what it is called, what
+ * it does in plain words, and a range that is actually sensible.
+ *
+ * The descriptions used to be `title` attributes — present, correct, and
+ * invisible unless you had a mouse and knew to hover. This panel is meant to be
+ * usable by somebody who did not build it, so they are on screen.
+ *
+ * The ranges were written for an 8k-context model and had not moved since: 40
+ * tool steps, 200 messages of history, 100 memory entries. Against a model with
+ * a million-token window those are not limits, they are typos waiting to clamp
+ * somebody's saved value back down to the maximum.
+ *
+ * When you add a parameter to `defaultParams()` in modules/harness/providers.js,
+ * add it here too — otherwise it exists, does something, and has no way to be
+ * set. That is exactly how `contextWindow` shipped without a box to type it in.
+ */
+const HARNESS_PARAMS = [
+  { key: 'temperature', label: 'Temperature', attrs: 'min="0" max="2" step="0.05"',
+    hint: 'How varied the answers are. Around 0.2 for work that should come out the same way twice; '
+        + '0.7–1.0 for drafting, naming and ideas.' },
+
+  { key: 'topP', label: 'Top P', attrs: 'min="0" max="1" step="0.05"',
+    hint: 'A second, blunter variety control. Leave it at 1 and use Temperature — changing both at once '
+        + 'makes the effect of either hard to judge.' },
+
+  { key: 'contextWindow', label: 'Context window', unit: 'tokens', attrs: 'min="0" step="1000"',
+    hint: 'How much the model can hold at once: these instructions, the conversation so far and everything '
+        + 'its tools returned, added together. Use the figure from the model\'s own documentation — '
+        + 'DeepSeek V4 is 1000000, most others are 128000 or 200000. Left at 0 it means "nobody has said", '
+        + 'and the two percentages below can never fire, because there is nothing to be a percentage of.' },
+
+  { key: 'maxTokens', label: 'Longest reply', unit: 'tokens', attrs: 'min="0" step="128"',
+    hint: 'The most the model may write in one answer. 0 leaves it to the provider. This is a cap on the '
+        + 'reply only — it has nothing to do with the context window above.' },
+
+  { key: 'maxSteps', label: 'Max tool steps', attrs: 'min="1" max="1000" step="1"',
+    hint: 'How many times the agent may use a tool and think again before it has to answer. Each step '
+        + 're-sends the whole conversation, so this is the setting that decides what one answer can cost.' },
+
+  { key: 'historyTurns', label: 'History window', unit: 'messages', attrs: 'min="2" max="5000" step="2"',
+    hint: 'How many recent messages are sent word for word. Anything older is represented by the running '
+        + 'summary instead — it is not lost, the full transcript is always kept on disk.' },
+
+  { key: 'summarizeAfter', label: 'Summarise after', unit: 'messages', attrs: 'min="0" max="5000" step="5"',
+    hint: 'Once a conversation passes this many messages, the older half is replaced by a short summary. '
+        + '0 never summarises, which is fine until a long conversation stops fitting.' },
+
+  { key: 'compactAt', label: 'Summarise at', unit: '% of window', attrs: 'min="0" max="99" step="5"',
+    hint: 'The same summarising, triggered by size instead of by count — which is the honest trigger, since '
+        + 'twenty lines of chat and twenty screens of tool output are the same number of messages. '
+        + 'Needs a context window set above.' },
+
+  { key: 'warnAt', label: 'Warn at', unit: '% of window', attrs: 'min="0" max="99" step="5"',
+    hint: 'Where a "context is filling up" warning appears, for you and for the agent. Advisory only — it '
+        + 'never stops an answer. Needs a context window set above.' },
+
+  { key: 'memoryLimit', label: 'Memory entries', attrs: 'min="0" max="2000" step="1"',
+    hint: 'How many remembered facts are put in front of the agent each turn. Pinned ones always come '
+        + 'first, then whichever others match what you just asked.' },
+];
+
   // MCP tools carry a readable label ("GitHub: create_issue"); the built-in ones
   // are named plainly enough to show as they are.
   const toolRows = (meta.tools || []).map(t => `
@@ -232,9 +294,16 @@ function _harnessParamsHtml(h, meta) {
       <span>${escHtml(t.label || t.name)}</span>${t.danger ? '<em title="Can change the system">!</em>' : ''}
     </label>`).join('');
 
-  const num = (key, label, attrs, hint) => `
-      <label title="${escHtml(hint)}">${label}</label>
-      <input class="input" type="number" id="hcfg-${key}-${h.id}" value="${escHtml(c[key])}" ${attrs}>`;
+  const num = key => {
+    const f = HARNESS_PARAMS.find(x => x.key === key);
+    return `
+      <label for="hcfg-${key}-${h.id}">${f.label}${f.unit ? ` <em style="opacity:.55;font-style:normal">(${f.unit})</em>` : ''}</label>
+      <div>
+        <input class="input" type="number" id="hcfg-${key}-${h.id}" value="${escHtml(c[key])}" ${f.attrs}
+               style="width:100%">
+        <small class="harness-hint">${escHtml(f.hint)}</small>
+      </div>`;
+  };
 
   return `
     <div class="harness-cfg-grid">
@@ -250,17 +319,20 @@ function _harnessParamsHtml(h, meta) {
         </select>
         <input class="input flex1" id="hcfg-model-${h.id}" value="${escHtml(c.model || '')}" placeholder="model id">
       </div>
-      ${num('temperature', 'Temperature', 'min="0" max="2" step="0.05"', 'Higher is more varied, lower is more deterministic.')}
-      ${num('topP', 'Top P', 'min="0" max="1" step="0.05"', 'Nucleus sampling cutoff.')}
-      ${num('maxTokens', 'Max tokens', 'min="0" step="128"', 'Longest reply the model may produce. 0 leaves it to the provider.')}
-      ${num('maxSteps', 'Max tool steps', 'min="1" max="40" step="1"', 'Tool rounds allowed in a single turn before the agent stops.')}
-      ${num('historyTurns', 'History window', 'min="2" max="200" step="2"', 'Messages kept verbatim; older ones fold into the summary.')}
-      ${num('summarizeAfter', 'Summarise after', 'min="0" max="400" step="5"', 'Messages before the older half is summarised. 0 disables it.')}
-      ${num('memoryLimit', 'Memory entries', 'min="0" max="100" step="1"', 'Durable memory entries injected into each turn.')}
-      <label title="Instructions prepended to every conversation.">System prompt</label>
-      <textarea class="input harness-prompt" id="hcfg-systemPrompt-${h.id}" rows="5">${escHtml(c.systemPrompt || '')}</textarea>
-      <label title="Switch off anything this agent should not be able to do.">Tools</label>
-      <div class="harness-tools">${toolRows}</div>
+      ${HARNESS_PARAMS.map(f => num(f.key)).join('')}
+      <label for="hcfg-systemPrompt-${h.id}">System prompt</label>
+      <div>
+        <textarea class="input harness-prompt" id="hcfg-systemPrompt-${h.id}" rows="5"
+                  style="width:100%">${escHtml(c.systemPrompt || '')}</textarea>
+        <small class="harness-hint">Standing instructions, read at the start of every conversation. The panel's
+          own safety rules are added ahead of this and cannot be edited here.</small>
+      </div>
+      <label>Tools</label>
+      <div>
+        <div class="harness-tools">${toolRows}</div>
+        <small class="harness-hint">What the agent is allowed to use. Unticking one hides it — it is a way to keep
+          the agent focused, not a security boundary.</small>
+      </div>
     </div>
     <div class="harness-cfg-actions">
       <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
@@ -321,6 +393,9 @@ async function harnessConfigSave(id) {
         historyTurns:   parseInt(val('historyTurns'), 10) || 0,
         summarizeAfter: parseInt(val('summarizeAfter'), 10) || 0,
         memoryLimit:    parseInt(val('memoryLimit'), 10) || 0,
+        contextWindow:  parseInt(val('contextWindow'), 10) || 0,
+        compactAt:      parseInt(val('compactAt'), 10) || 0,
+        warnAt:         parseInt(val('warnAt'), 10) || 0,
         systemPrompt:   val('systemPrompt') || '',
         disabledTools:  _harnessDisabledTools(id, h),
       }

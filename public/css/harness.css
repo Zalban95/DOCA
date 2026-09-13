@@ -45,6 +45,19 @@
   width: 100%;
 }
 .harness-cfg-grid > label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+/* A row is now a label, its input, and the sentence explaining what the input
+   does — so the labels sit at the top of their row rather than centred against
+   a two-line description. */
+.harness-cfg-grid { align-items: start; }
+.harness-cfg-grid > label { padding-top: 7px; }
+.harness-hint {
+  display: block;
+  margin: 3px 0 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+  max-width: 68ch;
+}
 .harness-cfg-grid textarea.input { resize: vertical; font-size: 11px; }
 .harness-prompt { min-height: 72px; font-family: var(--font-mono); }
 .harness-cfg-actions { display: flex; align-items: center; gap: 8px; }
