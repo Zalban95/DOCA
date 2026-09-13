@@ -128,6 +128,61 @@ const handleRulesWrite = wrap(async (req, res) =>
 const handleRulesReset = wrap(async (_req, res) =>
   res.json({ ok: true, rules: memory.rulesReset() }));
 
+/**
+ * POST /api/harness/memory/rules/verify — read the rules for sense, change nothing.
+ *
+ * Both sides write these rules, which is the point of them and also the risk: a
+ * rule the agent added months ago can contradict one the user just typed, name a
+ * category that no longer exists, or be so vague that following it is a coin
+ * toss. Nobody notices, because the file is only ever read by a model.
+ *
+ * So this asks a model to review them — with no tools, no memory and no
+ * conversation (`agent.ask`), because reviewing text is not a job that needs
+ * authority — and returns findings and questions. **It never writes.** A rule is
+ * the user's to change (Rules modal) or the agent's (`memory_rules_write`); a
+ * reviewer that edited them would be a third author nobody asked for.
+ */
+const handleRulesVerify = wrap(async (req, res) => {
+  const doc = memory.rules();
+  const proposed = req.body && typeof req.body === 'object' && (req.body.rules || req.body.categories)
+    ? { categories: req.body.categories || doc.categories, rules: req.body.rules || doc.rules }
+    : doc;
+
+  const catalogue = proposed.categories.map(c => `- ${c.id}${c.description ? `: ${c.description}` : ''}`).join('\n');
+  const listing   = proposed.rules.map((r, i) => `${i + 1}. ${r}`).join('\n');
+
+  const system = [
+    'You review a short rulebook that another assistant follows when it decides what to write into its',
+    'long-term memory. Judge only the rules as written.',
+    '',
+    'Report, in this order and nothing else:',
+    'CONFLICTS — pairs of rules that cannot both be followed. Name them by number.',
+    'UNCLEAR — rules whose meaning depends on a judgement the rule does not define, with the wording that is vague.',
+    'GAPS — a category with no rule about when to use it, or a rule referring to a category that is not listed.',
+    'QUESTIONS — up to three questions for the person who owns these rules, each one a question whose answer would',
+    'let a rule be rewritten precisely. Ask nothing you could answer from the rules themselves.',
+    '',
+    'One line per finding, starting with the rule number. Write "none" under a heading with no findings.',
+    'Do not rewrite the rules, do not propose replacement text, and do not comment on anything outside them.',
+  ].join('\n');
+
+  const review = await agent.ask({
+    system,
+    user: `Categories:\n${catalogue || '(none)'}\n\nRules:\n${listing || '(none)'}`,
+    maxTokens: 900,
+  });
+
+  res.json({
+    ok: true,
+    checked: { categories: proposed.categories.length, rules: proposed.rules.length },
+    // By content, not by identity: the Rules modal always posts its textareas,
+    // so an unedited draft is a different object saying the same thing, and
+    // telling the user their saved rules are "unsaved" is a small lie.
+    saved: JSON.stringify([proposed.categories, proposed.rules]) === JSON.stringify([doc.categories, doc.rules]),
+    review,
+  });
+});
+
 /* ── Environment and settings proposals ───────────────── */
 
 /** What the agent is told about this machine, verbatim, so the user can read it. */
@@ -150,6 +205,6 @@ module.exports = {
   handleProviders, handleModels, handleStatus,
   handleChat, handleSessions, handleSessionNew, handleSession, handleSessionActivate, handleSessionDelete,
   handleMemoryList, handleMemoryWrite, handleMemoryForget,
-  handleRulesGet, handleRulesWrite, handleRulesReset,
+  handleRulesGet, handleRulesWrite, handleRulesReset, handleRulesVerify,
   handleEnvironment, handleSettingsRead, handleProposals, handleProposalApply, handleProposalReject,
 };

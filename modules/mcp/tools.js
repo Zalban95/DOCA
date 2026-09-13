@@ -97,7 +97,7 @@ function describe() {
  */
 function machineNote(t) {
   return t.origin === 'client'
-    ? `Runs on "${t.originLabel}", a separate machine paired to DOCA. It acts on that machine — its files, screen and programs — not on the DOCA host.`
+    ? `Runs on "${t.originLabel}", a separate machine paired to DOCA. It acts on that machine — its files, screen, programs and its own localhost — not on the DOCA host, and your shell cannot see or check any of it.`
     : 'Runs on the DOCA host itself, the machine this dashboard and your shell tool are on.';
 }
 

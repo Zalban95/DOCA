@@ -150,6 +150,7 @@ app.post  ('/api/harness/memory',               harness.handleMemoryWrite);
 // Before `:key`, which would otherwise read a reset as forgetting an entry
 // called "rules".
 app.get   ('/api/harness/memory/rules',         harness.handleRulesGet);
+app.post  ('/api/harness/memory/rules/verify',  harness.handleRulesVerify);
 app.post  ('/api/harness/memory/rules',         harness.handleRulesWrite);
 app.delete('/api/harness/memory/rules',         harness.handleRulesReset);
 app.delete('/api/harness/memory/:key',          harness.handleMemoryForget);

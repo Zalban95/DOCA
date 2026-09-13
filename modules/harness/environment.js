@@ -167,7 +167,25 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
     out.push('', '## MCP servers');
     for (const m of s.mcp)
       out.push(`- ${m.id}: ${m.state}${m.state === 'running' ? `, ${m.tools} tools (called mcp__${m.id}__*)` : ''}`
-        + (m.origin === 'client' ? `, runs on ${m.originLabel} — its tools act on that machine, not this one` : ''));
+        + (m.origin === 'client'
+          ? `, hosted by ${m.originLabel} — a separate machine; its tools act there`
+          : ', on this host — the same machine as your shell'));
+
+    if (s.mcp.some(m => m.state === 'running'))
+      out.push('When a running server\'s tools are unfamiliar, learn it from its own documentation with '
+        + '`research_docs` before guessing at parameter names — a separate reader takes the pages so they never '
+        + 'enter this conversation. Do not put anything about this system into a page you fetch.');
+
+    // Only when both kinds are present. With everything in one place this is
+    // four lines of prompt explaining a distinction that does not yet exist,
+    // and the per-tool descriptions already carry the short version.
+    if (s.mcp.some(m => m.origin === 'client') && s.mcp.some(m => m.origin === 'server'))
+      out.push(
+        '',
+        'Two kinds of MCP server, and the difference decides where your work lands:',
+        '- On this host: same filesystem, same processes and same `localhost` as your `shell`, `read_file` and `system_status`. You can verify what it did by other means.',
+        '- Hosted by a client: another machine over the network. Its paths, its screen, its programs, and **its** `localhost` — a port a client\'s tool talks to is a port on that machine, not here, and nothing you run with `shell` can see it. You have no other way in: if that server is stopped or its host is asleep, those tools are simply gone, and the person to ask is whoever is at that machine.',
+        '- A tool name with two segments after the server id (`mcp__<client>__<their-server>__<tool>`) is a server that machine hosts in turn, so it runs there and is subject to that machine\'s consent switches as well.');
   }
 
   return out.join('\n');

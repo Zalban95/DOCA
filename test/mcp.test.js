@@ -72,7 +72,7 @@ test('a server says which machine it runs on, and defaults to this one', async (
   const env = require('../modules/harness/environment');
   env.invalidate();
   assert.match(env.block(), /desk-tools/);
-  assert.match(env.block(), /runs on Al's PC/);
+  assert.match(env.block(), /hosted by Al's PC — a separate machine; its tools act there/);
 
   assert.equal((await H.api(null, 'DELETE', '/api/mcp/desk-tools')).status, 200);
 });

@@ -328,6 +328,10 @@
   max-width: 100%;
   width: fit-content;
   min-width: min(100%, 220px);
+  /* Both transcripts are flex columns, and `overflow: hidden` below zeroes a
+     flex item's automatic minimum size — without this every fold in a long
+     turn is squeezed towards nothing, head included. */
+  flex-shrink: 0;
   font-family: var(--font-mono);
   font-size: 10px;
   background: var(--bg);
@@ -338,15 +342,27 @@
 .agent-fold-thinking  { border-left: 2px solid var(--muted); }
 .agent-fold-tool-call { border-left: 2px solid var(--amber); }
 .agent-fold-tool-result { border-left: 2px solid var(--green); }
+/* min-height keeps the whole row one line of text plus its padding, so a
+   collapsed fold is always readable and stays a comfortable click target. */
 .agent-fold-head {
   display: flex; align-items: center; gap: 4px;
-  width: 100%; margin: 0; padding: 5px 8px;
-  background: transparent; border: 0; color: var(--muted);
-  font: inherit; text-align: left; cursor: pointer;
+  width: 100%; margin: 0; padding: 6px 9px; min-height: 26px;
+  background: transparent; border: 0; color: var(--text);
+  font: inherit; line-height: 1.4; text-align: left; cursor: pointer;
   letter-spacing: .04em; text-transform: uppercase;
 }
-.agent-fold-head:hover { color: var(--text); background: rgba(255,255,255,0.03); }
-.agent-fold-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-fold-head:hover { color: var(--bright); background: var(--raised); }
+.agent-fold-label { flex-shrink: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The content's first line, on the collapsed head — lower case and dimmer than
+   the label, because it is a quotation and not a heading, and gone once the
+   fold is open and showing the whole thing. */
+.agent-fold-preview {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--muted); text-transform: none; letter-spacing: 0; opacity: .85;
+}
+.agent-fold-preview:not(:empty)::before { content: '· '; }
+.agent-fold.open > .agent-fold-head .agent-fold-preview { display: none; }
+.agent-fold.open > .agent-fold-head .agent-fold-label { flex: 1; }
 .agent-fold-dots {
   display: none; overflow: hidden; width: 1.1em;
   white-space: nowrap; flex-shrink: 0; text-transform: none; letter-spacing: 0;
@@ -359,21 +375,57 @@
   flex-shrink: 0; font-size: 9px; opacity: .7;
   transition: transform var(--t-fast);
 }
-.agent-fold.open .agent-fold-chevron { transform: rotate(90deg); }
+.agent-fold.open > .agent-fold-head .agent-fold-chevron { transform: rotate(90deg); }
+/* An opened body is ~17 lines tall at most and scrolls inside itself: a long
+   tool result that grew the row instead would shove the transcript around
+   while the next step of the turn is still streaming into it. `contain` stops
+   a flick at the end of the body from carrying on into the transcript. */
 .agent-fold-body {
   display: none; margin: 0; padding: 6px 8px 8px;
   border-top: 1px solid var(--border2);
   white-space: pre-wrap; word-break: break-word;
-  color: var(--text); max-height: 180px; overflow-y: auto;
+  color: var(--text); max-height: 260px; overflow-y: auto;
+  overscroll-behavior: contain;
   font-size: 10px; line-height: 1.45;
 }
-.agent-fold.open .agent-fold-body { display: block; }
+.agent-fold.open > .agent-fold-body { display: block; }
 .agent-fold.active .agent-fold-label { color: var(--amber); }
 .agent-fold-thinking.active { border-left-color: var(--amber); }
 @keyframes agentFoldDots {
   0%  { width: 0; }
   100% { width: 1.1em; }
 }
+
+/* ── A run of folds of one kind, as one row ──────────── */
+/* Built by agentFoldMount(): adjacent folds of the same kind move inside one
+   head that carries the count, and each of them still opens on its own. */
+.agent-fold-group {
+  align-self: flex-start;
+  max-width: 100%; width: 100%;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.agent-fold-group-thinking    { border-left: 2px solid var(--muted); }
+.agent-fold-group-tool-call   { border-left: 2px solid var(--amber); }
+.agent-fold-group-tool-result { border-left: 2px solid var(--green); }
+.agent-fold-count { flex-shrink: 0; color: var(--muted); letter-spacing: 0; text-transform: none; }
+.agent-fold-group.open > .agent-fold-group-head .agent-fold-chevron { transform: rotate(90deg); }
+/* 320px is one opened fold (26px head + its 260px body) plus the padding, so
+   the common case — a group open with one of its folds open — reads without a
+   second scrollbar inside the first. */
+.agent-fold-group-items {
+  display: none; flex-direction: column; gap: 4px;
+  padding: 4px; border-top: 1px solid var(--border2);
+  max-height: 320px; overflow-y: auto; overscroll-behavior: contain;
+}
+.agent-fold-group.open > .agent-fold-group-items { display: flex; }
+/* The per-console width rules only reach direct children of the transcript. */
+.agent-fold-group-items > .agent-fold { width: 100%; max-width: 100%; }
 
 /* ── Chat FAB ───────────────────────────────────────── */
 .chat-fab {

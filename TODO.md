@@ -31,6 +31,20 @@ none of them break anything today.
   routes are the shape that was safe to add, because `origin.deviceId` already
   records a human's decision about which machine owns the row.
 
+- **A client that proxies its own servers can shadow a tool name.** DocaDesk
+  presents its local servers' tools as `<serverId>__<tool>` truncated to 40
+  characters (`LocalMcpRegistry.ProxiedName`, no de-duplication), and DOCA then
+  prefixes `mcp__<client>__`. With Blender's official MCP server behind it, five
+  name pairs collide — `get_blendfile_summary_of_linked_libraries` and its
+  `_for_cli` twin share more than 40 characters, so no server id is short enough
+  to separate them. DOCA's `mcp/tools.js::available()` de-duplicates the names it
+  *exposes* (`…_2`), so the agent sees 26 distinct tools and no tool shadows
+  another in its list — but both entries carry the same truncated upstream name,
+  so `callTool` hands DocaDesk a name it resolves to whichever of the pair it
+  matches first, and the twin is unreachable. The fix belongs in DocaDesk
+  (dedupe in `LocalMcpRegistry.ProxiedName` the way `mcp/tools.js` does, plus a
+  test), not here. Observed, not theoretical.
+
 - **The MCP add-server form still has no `headers` field.** `registry.normalize()`
   accepts `headers`, `client.js` sends them, and a client can now set its own
   through `offer` / `PATCH /mcp/self` — but there is no way to type one in the

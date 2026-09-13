@@ -161,6 +161,9 @@ function _tagHold(s, tag) {
 function agentFold(opts) {
   const el = document.createElement('div');
   el.className = `agent-fold agent-fold-${opts.kind}`;
+  // agentFoldMount() groups a run of one kind and only ever sees the element,
+  // never these opts, so the kind has to travel on the node.
+  el.dataset.foldKind = opts.kind;
   if (opts.active) el.classList.add('active');
   if (opts.open)   el.classList.add('open');
 
@@ -173,6 +176,14 @@ function agentFold(opts) {
   label.className = 'agent-fold-label';
   label.textContent = opts.label;
 
+  // The first line of the content, on the head. A row that says only "THINKING"
+  // is legible without being informative: in a run of six the user is looking
+  // for the one that mentioned the port, and reading them one by one to find it
+  // is what the fold was supposed to save.
+  const preview = document.createElement('span');
+  preview.className = 'agent-fold-preview';
+  const setPreview = () => { preview.textContent = foldPreview(body.textContent); };
+
   const dots = document.createElement('span');
   dots.className = 'agent-fold-dots';
   dots.setAttribute('aria-hidden', 'true');
@@ -183,11 +194,12 @@ function agentFold(opts) {
   chevron.setAttribute('aria-hidden', 'true');
   chevron.textContent = '▸';
 
-  head.append(label, dots, chevron);
-
   const body = document.createElement('pre');
   body.className = 'agent-fold-body';
   body.textContent = opts.body || '';
+
+  head.append(label, preview, dots, chevron);
+  setPreview();
 
   head.addEventListener('click', () => {
     const open = el.classList.toggle('open');
@@ -204,11 +216,132 @@ function agentFold(opts) {
       head.setAttribute('aria-expanded', on ? 'true' : 'false');
     },
     setLabel(t) { label.textContent = t; },
-    append(t) { body.textContent += t; },
-    setBody(t) { body.textContent = t; },
+    append(t) { body.textContent += t; setPreview(); },
+    setBody(t) { body.textContent = t; setPreview(); },
     isEmpty() { return !body.textContent.trim(); },
-    remove() { el.remove(); },
+    remove() {
+      const items = el.parentElement;
+      el.remove();
+      // An empty "Thinking" indicator drops itself at the end of every turn.
+      // Inside a group that would leave the count a lie, or a group row around
+      // a single fold, so the group is re-read after the node is gone.
+      if (items && items.classList.contains('agent-fold-group-items')) _foldGroupSync(items.parentElement);
+    },
   };
+}
+
+/**
+ * The one line a collapsed head shows of its content.
+ *
+ * Whitespace is collapsed rather than kept: the first line of a tool call is
+ * `{` often as not, and pretty-printed JSON on one line is more use than the
+ * brace it starts with.
+ */
+function foldPreview(text) {
+  const s = String(text || '').replace(/\s+/g, ' ').trim();
+  return s.length > 120 ? `${s.slice(0, 120)}…` : s;
+}
+
+/**
+ * Head label for a run of folds of one kind. The individual heads name the tool
+ * ("Command · shell"), so the group head says only what kind of run it is.
+ */
+const FOLD_GROUP_LABELS = {
+  'thinking':    'Thinking',
+  'tool-call':   'Commands',
+  'tool-result': 'Results',
+};
+
+/**
+ * Append a fold to a transcript, folding a run of the same kind into one row
+ * ("Thinking × 4") that opens to reveal the individual folds, each still
+ * openable on its own.
+ *
+ * Takes the element and not the handle because the streaming state machine
+ * mounts `fold.el` through a caller-supplied `mount()` and keeps the handle to
+ * itself — and because a non-fold node (a message bubble) must be able to pass
+ * through here and break the run.
+ *
+ * @param {HTMLElement} container - the transcript (#hc-messages, #chat-messages)
+ * @param {HTMLElement} node - an element from agentFold()
+ */
+function agentFoldMount(container, node) {
+  const group = _foldGroupFor(container, node.dataset.foldKind);
+  if (!group) { container.appendChild(node); return; }
+
+  group.querySelector('.agent-fold-group-items').appendChild(node);
+  _foldGroupSync(group);
+  // The fold the user is watching arrive says "still working" with its dots and
+  // fills in as text streams: a closed group would hide exactly that row.
+  if (node.classList.contains('active')) _foldGroupOpen(group, true);
+}
+
+/**
+ * The group a fold of `kind` belongs in, or null when it starts its own run —
+ * which is anything other than a fold of the same kind directly before it: a
+ * different kind, a message bubble, or an empty transcript.
+ */
+function _foldGroupFor(container, kind) {
+  const last = container.lastElementChild;
+  if (!kind || !last || last.dataset.foldKind !== kind) return null;
+  if (last.classList.contains('agent-fold-group')) return last;
+
+  const group = _foldGroupCreate(kind);
+  last.replaceWith(group);
+  group.querySelector('.agent-fold-group-items').appendChild(last);
+  return group;
+}
+
+function _foldGroupCreate(kind) {
+  const el = document.createElement('div');
+  el.className = `agent-fold-group agent-fold-group-${kind}`;
+  el.dataset.foldKind = kind;
+
+  const head = document.createElement('button');
+  head.type = 'button';
+  head.className = 'agent-fold-head agent-fold-group-head';
+  head.setAttribute('aria-expanded', 'false');
+
+  const label = document.createElement('span');
+  label.className = 'agent-fold-label';
+  label.textContent = FOLD_GROUP_LABELS[kind] || kind;
+
+  const count = document.createElement('span');
+  count.className = 'agent-fold-count';
+
+  const chevron = document.createElement('span');
+  chevron.className = 'agent-fold-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.textContent = '▸';
+
+  head.append(label, count, chevron);
+  head.addEventListener('click', () => _foldGroupOpen(el, !el.classList.contains('open')));
+
+  const items = document.createElement('div');
+  items.className = 'agent-fold-group-items';
+
+  el.append(head, items);
+  return el;
+}
+
+function _foldGroupOpen(group, on) {
+  group.classList.toggle('open', !!on);
+  group.querySelector('.agent-fold-group-head').setAttribute('aria-expanded', on ? 'true' : 'false');
+}
+
+/**
+ * Re-read a group after a fold joined or left it: refresh the count, and undo
+ * the group once it is down to one fold, because a single fold must look and
+ * behave exactly as it does with no group around it.
+ */
+function _foldGroupSync(group) {
+  const folds = group.querySelector('.agent-fold-group-items').children;
+  if (folds.length > 1) {
+    group.querySelector('.agent-fold-count').textContent = `× ${folds.length}`;
+    return;
+  }
+  if (folds.length === 1) group.replaceWith(folds[0]);
+  else group.remove();
 }
 
 /**

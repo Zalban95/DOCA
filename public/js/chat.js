@@ -58,7 +58,7 @@ function _chatAppendFold(kind, text, label, opts = {}) {
     active: !!opts.active,
     open: !!opts.open,
   });
-  container.appendChild(fold.el);
+  agentFoldMount(container, fold.el);
   _chatScroll();
   return fold;
 }
@@ -75,7 +75,7 @@ function _chatAppendContent(content) {
   const container = document.getElementById('chat-messages');
   if (!container) return;
   renderThoughtfulContent(content || '', {
-    mount: node => container.appendChild(node),
+    mount: node => agentFoldMount(container, node),
     makeText: text => { if (text) chatAppendMsg('assistant', text); },
   });
   _chatScroll();
@@ -92,7 +92,7 @@ function chatSend() {
   const container = document.getElementById('chat-messages');
   let pendingCall = null;
   const stream = createThinkStream({
-    mount: node => { container.appendChild(node); _chatScroll(); },
+    mount: node => { agentFoldMount(container, node); _chatScroll(); },
     makeText: () => chatAppendMsg('assistant', ''),
     scroll: _chatScroll,
   });
@@ -334,7 +334,7 @@ async function _callProcessAudio(audioBlob) {
     let inThinking   = false;
     let pendingCall  = null;
     const stream = createThinkStream({
-      mount: node => { container.appendChild(node); _chatScroll(); },
+      mount: node => { agentFoldMount(container, node); _chatScroll(); },
       makeText: () => chatAppendMsg('assistant', ''),
       scroll: _chatScroll,
     });

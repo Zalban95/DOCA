@@ -1152,8 +1152,11 @@
                 style="width:100%;box-sizing:border-box"></textarea>
     </div>
     <div class="status-line mt8" id="hc-rules-status"></div>
+    <div class="hc-rules-review" id="hc-rules-review" style="display:none"></div>
     <div class="modal-actions">
       <button class="btn btn-sm" onclick="hcRulesReset()" title="Back to the rules DOCA ships with">↺ Defaults</button>
+      <button class="btn btn-sm" id="hc-rules-verify" onclick="hcRulesVerify()"
+              title="Have these rules read for conflicts, vague wording and gaps — it changes nothing">🔍 Verify rules</button>
       <span style="flex:1"></span>
       <button class="btn btn-sm" onclick="hcRulesClose()">Cancel</button>
       <button class="btn btn-sm btn-blue" onclick="hcRulesSave()">Save</button>

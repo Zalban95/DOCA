@@ -216,6 +216,32 @@ async function complete({ ep, body, signal, onText }) {
   return { content, tool_calls: calls.filter(Boolean) };
 }
 
+/**
+ * One completion with no agent around it: no charter, no memory, no tools, no
+ * transcript. The caller supplies both messages and gets the text back.
+ *
+ * This exists so that a job needing a model does not need a *turn*. The
+ * quarantined reader in `research.js` depends on there being no way for its
+ * prompt to grow tools by accident, and the rules review depends on the same.
+ * @returns {Promise<string>}
+ */
+async function ask({ system, user, temperature = 0.1, maxTokens, signal }) {
+  const p = params();
+  if (!p.model) throw Object.assign(new Error('No model chosen for the DOCA harness.'), { status: 400 });
+  const { content } = await complete({
+    ep: providers.endpoint(p.provider),
+    // A turn has a user watching a stream and can wait; these callers are a tool
+    // call and a button, both of which have to come back or say why.
+    signal: signal || AbortSignal.timeout(120_000),
+    body: {
+      model: p.model, stream: false, temperature,
+      ...(maxTokens ? { max_tokens: maxTokens } : {}),
+      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+    },
+  });
+  return (content || '').trim();
+}
+
 /* ── Rolling summary ──────────────────────────────────── */
 
 /**
@@ -387,4 +413,4 @@ async function status() {
   return out;
 }
 
-module.exports = { turn, status, params };
+module.exports = { turn, status, params, ask };
