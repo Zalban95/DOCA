@@ -237,9 +237,39 @@ test('a remembered fact can be filed under a category', async () => {
   assert.equal(memory.memList().find(e => e.key === 'odd').category, 'not-a-category');
 });
 
+test('the agent can see its own clients, and which of them are reachable', async () => {
+  const empty = await callTool('doca_clients', {});
+  assert.match(empty, /No devices are paired/, 'a fresh hub says so rather than inventing a list');
+
+  const phone = H.mkDevice('desk', 'phone', H.PHONE_CAPS);
+  const watch = H.mkDevice('wrist', 'watch', H.WATCH_CAPS);
+  const agent = H.mkDevice('sim', 'agent');
+
+  // The watch is asleep with something waiting for it; the phone is connected.
+  await H.api(agent.token, 'POST', '/api/v1/agent/alerts', { title: 'ping', targets: [watch.device.id] });
+  const stream = H.sse(phone.token);
+  await stream.ready;
+
+  const out = await callTool('doca_clients', {});
+  assert.match(out, /3 paired, 1 connected right now/);
+  assert.match(out, new RegExp(`${phone.device.id}\\s+desk\\s+phone\\s+ONLINE`));
+  assert.match(out, new RegExp(`${watch.device.id}\\s+wrist\\s+watch\\s+offline\\s+queued=1`));
+  assert.match(out, /sim\s+agent/, 'an agent client is listed as what it is');
+  // What each can do, so the agent does not offer a watch a route it cannot take.
+  assert.match(out, /can=chat,prompts,commands,sensors/);   // phone
+  assert.match(out, /can=chat,prompts,sensors/);            // watch: no command:*
+  assert.match(out, /Sockets and tailnet peers are a different question/);
+
+  stream.close();
+
+  // A revoked device is not a client any more.
+  await H.api(phone.token, 'DELETE', `/api/v1/devices/${watch.device.id}`);
+  assert.match(await callTool('doca_clients', {}), /2 paired/);
+});
+
 test('the new tools are offered to the model and switchable like the rest', async () => {
   const names = tools.describe().map(t => t.name);
-  for (const t of ['settings_read', 'settings_propose', 'memory_rules_write']) assert.ok(names.includes(t), t);
+  for (const t of ['settings_read', 'settings_propose', 'memory_rules_write', 'doca_clients']) assert.ok(names.includes(t), t);
 
   const off = tools.schemas(['settings_propose']).map(s => s.function.name);
   assert.equal(off.includes('settings_propose'), false);
