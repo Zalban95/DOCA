@@ -17,6 +17,7 @@ process.env.CONFIG_PATH    = path.join(tmp, 'openclaw.json');
 process.env.COMPOSE_DIR    = tmp;
 process.env.SKILLS_DIR     = path.join(tmp, 'skills');
 process.env.WORKSPACE_DIR  = tmp;
+process.env.ATTACHMENTS_DIR = path.join(tmp, 'attachments');
 
 const { createApp } = require('../server');
 const devices  = require('../modules/api-v1/devices');

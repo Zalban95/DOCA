@@ -1,0 +1,42 @@
+/* ═══════════════════════════════════════════════════════
+   CHAT ATTACHMENTS
+   A chip is a file that exists on the server already — it was uploaded when
+   it was dropped, not when Send was pressed, so removing one is removing a
+   reference and not a file.
+   ═══════════════════════════════════════════════════════ */
+
+.chat-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 8px 0;
+}
+
+.chat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text);
+  background: var(--dim);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+}
+
+.chat-chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-chip em { font-style: normal; cursor: pointer; opacity: 0.6; }
+.chat-chip em:hover { opacity: 1; color: var(--red); }
+.chat-chip.pending { opacity: 0.6; }
+.chat-chip.bad { border-color: var(--red); color: var(--red); }
+
+/* Whole-panel drop target: the composer is small and the messages are where
+   the eye already is, so the panel takes the drop rather than a strip. */
+.chat-panel.drop { outline: 1px dashed var(--accent); outline-offset: -3px; }

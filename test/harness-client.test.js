@@ -16,6 +16,7 @@ const http = require('http');
 const H = require('./helpers');
 
 const { CONFIG_PATH } = require('../modules/paths');
+const attachments = require('../modules/attachments');
 
 let stub, stubUrl;
 /**
@@ -213,14 +214,30 @@ test('two clients cannot interleave one transcript', async () => {
   after.close();
 });
 
-test('an empty message is refused, and media is refused honestly rather than ignored', async () => {
+test('an empty message is refused, and a media id becomes a file the agent can open', async () => {
   const empty = await H.api(phone.token, 'POST', '/api/v1/harness/messages', { message: '   ' });
   assert.equal(empty.status, 400);
   assert.equal(empty.body.error.code, 'invalid_request');
 
-  const media = await H.api(phone.token, 'POST', '/api/v1/harness/messages', { message: 'look', mediaId: 'med_x' });
-  assert.equal(media.status, 400);
-  assert.equal(media.body.error.code, 'unsupported');
+  // A media id that was never uploaded is a 404 and not a silent no-op: the
+  // device believes it sent something, and a turn that ignored it would answer
+  // the wrong question convincingly.
+  const missing = await H.api(phone.token, 'POST', '/api/v1/harness/messages', { message: 'look', mediaId: 'med_x' });
+  assert.equal(missing.status, 404);
+  assert.equal(missing.body.error.code, 'not_found');
+
+  // A real one is copied out of the expiring, unreadable media store and into
+  // the attachments directory, because what the turn carries is a path.
+  const fd = new FormData();
+  fd.append('file', new Blob(['hello'], { type: 'image/png' }), 'shot.png');
+  const up = await H.api(phone.token, 'POST', '/api/v1/media', fd);
+  assert.equal(up.status, 201, JSON.stringify(up.body));
+
+  const before = attachments.list().length;
+  const sent = await H.api(phone.token, 'POST', '/api/v1/harness/messages',
+    { message: 'what is this', mediaId: up.body.media.id });
+  assert.equal(sent.status, 202, JSON.stringify(sent.body));
+  assert.equal(attachments.list().length, before + 1, 'the media never reached the attachments directory');
 
   const big = await H.api(phone.token, 'POST', '/api/v1/harness/messages', { message: 'x'.repeat(9000) });
   assert.equal(big.status, 413);

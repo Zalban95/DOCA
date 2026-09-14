@@ -19,6 +19,7 @@ const environment = require('./environment');
 const memory      = require('./memory');
 const providers   = require('./providers');
 const settings    = require('./settings');
+const attachments = require('../attachments');
 const tools       = require('./tools');
 
 /**
@@ -226,7 +227,12 @@ function toApiMessages(rows) {
     if (r.role === 'tool') return { role: 'tool', tool_call_id: r.tool_call_id, name: r.name, content: r.content };
     if (r.role === 'assistant' && r.tool_calls?.length)
       return { role: 'assistant', content: r.content || null, tool_calls: r.tool_calls };
-    return { role: r.role, content: r.content || '' };
+    // Attachments are rendered here and stored separately on the row, the same
+    // split `from` uses — but the opposite decision about the model. Provenance
+    // is metadata and stays off the text; a file the user attached is part of
+    // what they said, and a path they can see in the composer and the model
+    // cannot is a conversation at cross purposes.
+    return { role: r.role, content: (r.content || '') + attachments.note(r.attachments) };
   });
 }
 
@@ -398,7 +404,7 @@ async function foldSummary({ session, p, ep, signal, force = false }) {
  *                      screen?: object, input?: object } }} opts
  * @returns {Promise<{ sessionId: string, text: string, steps: number }>}
  */
-async function turn({ message, sessionId, emit, signal, client }) {
+async function turn({ message, sessionId, emit, signal, client, attachments: attached }) {
   const say = evt => {
     try { emit(evt); } catch {}
     try { events.emit('event', evt); } catch {}
@@ -417,8 +423,10 @@ async function turn({ message, sessionId, emit, signal, client }) {
   // Provenance stays on the row, not in the text: `toApiMessages` maps the
   // fields the API takes, so a client can render "you asked this from the watch"
   // without the model ever seeing a tag glued to the user's own words.
+  const files = attachments.resolve(attached || []);
   memory.append(session.id, {
     role: 'user', content: message,
+    ...(files.length ? { attachments: files } : {}),
     ...(client ? { from: { id: client.id || null, name: client.name, formFactor: client.formFactor || client.kind || null } } : {}),
   });
 

@@ -26,7 +26,7 @@ test('every settable path reports its value, where it came from, and whether it 
 
   const keys = body.settable.map(r => r.key);
   assert.deepEqual(keys, [
-    'COMPOSE_DIR', 'CONFIG_PATH', 'SKILLS_DIR', 'WORKSPACE_DIR',
+    'COMPOSE_DIR', 'CONFIG_PATH', 'SKILLS_DIR', 'WORKSPACE_DIR', 'ATTACHMENTS_DIR',
     'SETUP_DIR', 'SNAPSHOT_DIR', 'SNAPSHOT_SCRIPT', 'RESTORE_SCRIPT',
   ]);
 

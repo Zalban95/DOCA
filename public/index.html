@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="css/terminal.css">
 <link rel="stylesheet" href="css/models.css">
 <link rel="stylesheet" href="css/logs.css">
+<link rel="stylesheet" href="css/attachments.css">
 <link rel="stylesheet" href="css/harness.css">
 <link rel="stylesheet" href="css/responsive.css">
 <!-- xterm.js -->
@@ -1221,7 +1222,10 @@
 <!-- ═══════════════════════════════════════════════════ CHAT FAB + PANEL -->
 <button class="chat-fab" id="chat-fab" onclick="toggleChat()" title="Chat with OpenClaw agent">⬡</button>
 
-<div class="chat-panel" id="chat-panel">
+<div class="chat-panel" id="chat-panel"
+     ondragover="event.preventDefault(); this.classList.add('drop');"
+     ondragleave="this.classList.remove('drop');"
+     ondrop="event.preventDefault(); this.classList.remove('drop'); chatAttachFiles(event.dataTransfer.files);">
   <div class="chat-header">
     <span class="chat-title">OpenClaw Agent</span>
     <div class="toolbar-right">
@@ -1234,9 +1238,14 @@
   <div class="chat-messages" id="chat-messages">
     <div class="chat-msg system">Send a message to chat with the OpenClaw agent.</div>
   </div>
+  <div class="chat-attachments" id="chat-attachments" style="display:none"></div>
   <div class="chat-input-row" id="chat-input-row">
+    <input type="file" id="chat-file" multiple style="display:none"
+           onchange="chatAttachFiles(this.files); this.value='';">
+    <button class="btn btn-sm" onclick="chatAttachPick()" title="Attach a file — the agent gets its path">📎</button>
     <textarea class="chat-input" id="chat-input" placeholder="Message…" rows="1"
-              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend();}"></textarea>
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend();}"
+              onpaste="if(event.clipboardData.files.length){event.preventDefault();chatAttachFiles(event.clipboardData.files);}"></textarea>
     <button class="btn btn-sm btn-amber" onclick="chatSend()">Send</button>
   </div>
   <div class="chat-call-bar" id="chat-call-bar" style="display:none">

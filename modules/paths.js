@@ -24,6 +24,8 @@ const SETTABLE = [
     note: 'One directory per installed skill' },
   { key: 'WORKSPACE_DIR', label: 'Workspace', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace'),
     note: 'Where the agent and the harness do their work' },
+  { key: 'ATTACHMENTS_DIR', label: 'Attachments', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace', 'attachments'),
+    note: 'Files attached to a conversation land here, and the agent reads them by path' },
   { key: 'SETUP_DIR', label: 'Setup scripts', kind: 'dir', fallback: HOME,
     note: 'Directory the Setup panel reads its shell scripts from' },
   { key: 'SNAPSHOT_DIR', label: 'Snapshot storage', kind: 'dir', fallback: path.join(HOME, 'openclaw-snapshots'),
@@ -57,6 +59,7 @@ const CONFIG_PATH     = process.env.CONFIG_PATH     || path.join(HOME, '.opencla
 const SKILLS_DIR      = process.env.SKILLS_DIR      || path.join(HOME, '.openclaw', 'workspace', 'skills');
 const WORKSPACE_DIR   = process.env.WORKSPACE_DIR   || path.join(HOME, '.openclaw', 'workspace');
 const SETUP_DIR       = process.env.SETUP_DIR       || HOME;
+const ATTACHMENTS_DIR = process.env.ATTACHMENTS_DIR || path.join(WORKSPACE_DIR, 'attachments');
 const SNAPSHOT_SCRIPT = process.env.SNAPSHOT_SCRIPT || path.join(HOME, 'snapshot-agent.sh');
 const RESTORE_SCRIPT  = process.env.RESTORE_SCRIPT  || path.join(HOME, 'restore-agent.sh');
 const SNAPSHOT_DIR    = process.env.SNAPSHOT_DIR    || path.join(HOME, 'openclaw-snapshots');
@@ -92,7 +95,7 @@ const ALLOWED_SCRIPTS = ['setup-openclaw.sh', 'setup-phase2.sh', 'snapshot-agent
 
 const VALUES = {
   COMPOSE_DIR, CONFIG_PATH, SKILLS_DIR, WORKSPACE_DIR,
-  SETUP_DIR, SNAPSHOT_DIR, SNAPSHOT_SCRIPT, RESTORE_SCRIPT,
+  SETUP_DIR, SNAPSHOT_DIR, SNAPSHOT_SCRIPT, RESTORE_SCRIPT, ATTACHMENTS_DIR,
 };
 
 /** What a path resolves to right now, including an override saved since boot.
@@ -145,6 +148,7 @@ module.exports = {
   CONFIG_PATH,
   SKILLS_DIR,
   WORKSPACE_DIR,
+  ATTACHMENTS_DIR,
   SETUP_DIR,
   SNAPSHOT_SCRIPT,
   RESTORE_SCRIPT,

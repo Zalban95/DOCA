@@ -81,13 +81,75 @@ function _chatAppendContent(content) {
   _chatScroll();
 }
 
+/* ── Attachments ───────────────────────────────────────
+   Attached files are uploaded to the panel and what the agent gets is the
+   path, not the bytes. That is why there is no size negotiation and no
+   image handling here: a CSV, a log and a photo are the same thing to this
+   code, and the model opens whichever of them it can make sense of. */
+
+let chatPending = [];   // attachment records waiting to be sent with the message
+
+function chatAttachPick() { document.getElementById('chat-file').click(); }
+
+async function chatAttachFiles(files) {
+  for (const file of [...files]) {
+    const chip = _chatChip({ name: file.name, bytes: file.size, pending: true });
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res  = await fetch('/api/attachments', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      chatPending.push(data);
+      chip.replaceWith(_chatChip(data));
+    } catch (e) {
+      chip.classList.add('bad');
+      chip.title = e.message;
+      chip.querySelector('em').textContent = '✕';
+    }
+  }
+}
+
+function _chatChip(a) {
+  const row = document.getElementById('chat-attachments');
+  const el  = document.createElement('span');
+  el.className = `chat-chip${a.pending ? ' pending' : ''}`;
+  el.title = a.path || a.name;
+  el.innerHTML = `<span></span><em>${a.pending ? '…' : '×'}</em>`;
+  el.firstChild.textContent = `${a.name} · ${_chatBytes(a.bytes)}`;
+  if (!a.pending) el.querySelector('em').onclick = () => {
+    chatPending = chatPending.filter(x => x.name !== a.name);
+    el.remove();
+  };
+  row.appendChild(el);
+  row.style.display = '';
+  return el;
+}
+
+function _chatBytes(n) {
+  if (!(n >= 0)) return '';
+  if (n < 1024) return `${n} B`;
+  if (n < 1e6)  return `${Math.round(n / 1024)} KB`;
+  return `${(n / 1e6).toFixed(1)} MB`;
+}
+
+function _chatClearChips() {
+  chatPending = [];
+  const row = document.getElementById('chat-attachments');
+  row.innerHTML = '';
+  row.style.display = 'none';
+}
+
 function chatSend() {
   const input   = document.getElementById('chat-input');
   const message = input.value.trim();
   if (!message) return;
 
+  const attachments = chatPending.map(a => a.name);
   input.value = '';
-  chatAppendMsg('user', message);
+  chatAppendMsg('user', message + (attachments.length
+    ? `\n📎 ${chatPending.map(a => a.name).join(', ')}` : ''));
+  _chatClearChips();
 
   const container = document.getElementById('chat-messages');
   let pendingCall = null;
@@ -98,7 +160,7 @@ function chatSend() {
   });
   stream.startWaiting();
 
-  sseStream('/api/chat', { message }, {
+  sseStream('/api/chat', { message, attachments }, {
     onEvent: evt => {
       if (evt.type === 'text') {
         if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }

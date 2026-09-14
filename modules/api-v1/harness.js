@@ -32,6 +32,9 @@ const agent    = require('../harness/agent');
 const memory   = require('../harness/memory');
 const settings = require('../harness/settings');
 
+const attachments = require('../attachments');
+const media       = require('./media');
+
 const MAX_MESSAGE      = 8000;
 const MAX_REPLY        = 8000;   // carried on the done event
 const MAX_TOOL_ARGS    = 300;
@@ -129,6 +132,9 @@ function transcript(id, { limit = 50 } = {}) {
     content: typeof row.content === 'string' ? row.content : '',
     // Which client this was asked from, so a shared conversation reads as one.
     ...(row.from ? { from: row.from } : {}),
+    ...(Array.isArray(row.attachments) && row.attachments.length
+      ? { attachments: row.attachments.map(f => ({ name: f.name, bytes: f.bytes, mime: f.mime })) }
+      : {}),
     ...(row.name ? { name: row.name } : {}),
     ...(Array.isArray(row.tool_calls) && row.tool_calls.length
       ? { tools: row.tool_calls.map(tc => tc.function?.name || '(unnamed)') }
@@ -146,9 +152,26 @@ function post(body, device) {
   const message = String(body?.message ?? '').trim();
   if (!message) throw new ApiError(400, 'invalid_request', 'message is required');
   if (message.length > MAX_MESSAGE) throw new ApiError(413, 'payload_too_large', `message exceeds ${MAX_MESSAGE} characters`);
-  // FUTURE(phase 2): images and audio arrive as mediaId references. Refusing
-  // them is honest; accepting and ignoring them would not be.
-  if (body?.mediaId) throw new ApiError(400, 'unsupported', 'Media in a harness message is not implemented yet');
+  // A device's upload arrives as a media id. Media expires, is mode 0600 and
+  // lives outside the roots the agent may read, so the bytes are copied into the
+  // attachments directory and what the turn gets is a path -- the same thing a
+  // browser's drag-and-drop produces, and the same thing the agent can open with
+  // read_file. This is what the phase 2 note here used to promise.
+  const attached = [];
+  for (const id of [].concat(body?.mediaId || [], body?.attachments || []).filter(Boolean)) {
+    if (typeof id === 'string' && id.startsWith('med_')) {
+      const rec = media.get(id);
+      const buf = rec && media.readBuffer(id);
+      if (!buf) throw new ApiError(404, 'not_found', `Unknown or expired media ${id}`);
+      const ext = media.ALLOWED[rec.mime]?.ext || 'bin';
+      attached.push(attachments.save(buf, rec.meta?.label || `${id}.${ext}`,
+        { from: device.id, mime: rec.mime }).name);
+    } else if (attachments.get(id)) {
+      attached.push(attachments.get(id).name);
+    } else {
+      throw new ApiError(404, 'not_found', `No attachment named ${id}`);
+    }
+  }
 
   const session = body?.sessionId ? requireSession(body.sessionId) : memory.activeSession();
 
@@ -164,11 +187,11 @@ function post(body, device) {
     message: brief(message, 200),
   });
 
-  run({ turnId, message, session, device, ctrl });   // deliberately not awaited
+  run({ turnId, message, session, device, ctrl, attached });   // deliberately not awaited
   return { turnId, sessionId: session.id };
 }
 
-async function run({ turnId, message, session, device, ctrl }) {
+async function run({ turnId, message, session, device, ctrl, attached }) {
   const sessionId = session.id;
   const proposals = [];
 
@@ -220,7 +243,8 @@ async function run({ turnId, message, session, device, ctrl }) {
   };
 
   try {
-    const r = await agent.turn({ message, sessionId, emit, signal: ctrl.signal, client: clientOf(device) });
+    const r = await agent.turn({ message, sessionId, emit, signal: ctrl.signal,
+      client: clientOf(device), attachments: attached });
     flush();
     fanout('agent.turn', {
       turnId, sessionId: r.sessionId, state: 'done', by: device.id,

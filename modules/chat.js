@@ -87,9 +87,12 @@ function handleClear(req, res) {
  * to the `claude` CLI.
  */
 async function handleChat(req, res) {
-  const { message } = req.body;
+  const { message, attachments: attached } = req.body;
   if (!message) return res.status(400).json({ error: 'No message' });
-  chatHistory.push({ role: 'user', content: message, time: new Date().toISOString() });
+  chatHistory.push({
+    role: 'user', content: message, time: new Date().toISOString(),
+    ...(Array.isArray(attached) && attached.length ? { attachments: attached } : {}),
+  });
 
   if (catalog.defaultId() === catalog.BUILTIN_ID) {
     // res, not req: the request stream closes as soon as express.json() has
@@ -100,6 +103,10 @@ async function handleChat(req, res) {
     try {
       const { text } = await agent.turn({
         message,
+        // Only the built-in harness understands these. The gateway and the
+        // claude CLI below get the message alone, which is why the composer
+        // says so rather than dropping the files silently.
+        attachments: attached,
         emit: evt => {
           if (evt.type === 'text')
             res.write(`data: ${JSON.stringify({ type: 'text', text: evt.text })}\n\n`);

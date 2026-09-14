@@ -18,6 +18,7 @@ const { ensureCerts }          = require('./modules/https-cert');
 // ─── Feature modules ──────────────────────────────────────────────────────────
 const controls     = require('./modules/controls');
 const logs         = require('./modules/logs');
+const attachments  = require('./modules/attachments');
 const config       = require('./modules/config');
 const keys         = require('./modules/keys');
 const devicesPanel = require('./modules/devices-panel');
@@ -66,7 +67,24 @@ app.post('/api/action',     controls.handleAction);
 app.post('/api/stack/update', controls.handleStackUpdate);
 app.get ('/api/logs',         logs.handleLogs);
 app.get ('/api/logs/sources', logs.handleSources);
+
 app.get ('/api/stats/defs', stats.handleDefs);
+
+// ─── Routes: Attachments ──────────────────────────────────────────────────────
+// The multer error is caught here rather than left to the default handler: a
+// file over the limit is a thing the user just did, and "500" is not an answer.
+app.get ('/api/attachments', attachments.handleList);
+app.post('/api/attachments', (req, res) =>
+  uploadMw.single('file')(req, res, err => {
+    if (!err) return attachments.handleUpload(req, res);
+    const tooBig = err.code === 'LIMIT_FILE_SIZE';
+    res.status(tooBig ? 413 : 400).json({
+      error: tooBig
+        ? `That is over the ${Math.round(attachments.MAX_BYTES / 1e6)} MB upload limit. Put the file in `
+          + `${attachments.dir()} yourself and say its name — the agent reads it the same way.`
+        : err.message,
+    });
+  }));
 
 // ─── Routes: Config & Prefs ──────────────────────────────────────────────────
 app.get ('/api/configs/:id',       config.handleGetConfig);
