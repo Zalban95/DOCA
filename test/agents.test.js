@@ -137,6 +137,30 @@ test('the mission index survives an agent being deleted', () => {
   assert.deepEqual(missions.list(), []);
 });
 
+test('a specialist can be written, edited and deleted over HTTP', async () => {
+  const def = { id: 'mech', label: 'Mech', note: 'CAD and Blender', role: 'You design parts.',
+                tools: ['shell', 'settings_propose'], maxSteps: 8 };
+
+  const made = await h.api(null, 'POST', '/api/harness/agents', def);
+  assert.equal(made.status, 200);
+  assert.deepEqual(made.body.agent.tools, ['shell'], 'the forbidden tool is stripped, not stored');
+  assert.deepEqual(made.body.agent.refusedTools, ['settings_propose'],
+    'and the panel is told what it removed rather than saving something different in silence');
+
+  const edited = await h.api(null, 'POST', '/api/harness/agents/mech', { ...def, tools: ['shell'], label: 'Mech II' });
+  assert.equal(edited.body.agent.label, 'Mech II');
+
+  const gone = await h.api(null, 'DELETE', '/api/harness/agents/mech');
+  assert.equal(gone.status, 200);
+  assert.equal(gone.body.agent, null, 'a definition that was not shipped disappears');
+
+  // A shipped one reverts instead, which is what a reset means.
+  const reverted = await h.api(null, 'DELETE', '/api/harness/agents/archivist');
+  assert.equal(reverted.status, 200);
+  assert.equal(reverted.body.agent.id, 'archivist');
+  assert.equal(reverted.body.agent.builtin, true);
+});
+
 test('GET /api/harness/agents reports the roster and the switch', async () => {
   const res = await h.api(null, 'GET', '/api/harness/agents');
   assert.equal(res.status, 200);

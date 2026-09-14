@@ -191,6 +191,7 @@ app.post  ('/api/harness/proposals/:id/apply',      harness.handleProposalApply)
 app.post  ('/api/harness/proposals/:id/reject',     harness.handleProposalReject);
 app.get   ('/api/harness/agents',                   harness.handleAgents);
 app.post  ('/api/harness/agents/enable',            harness.handleAgentsEnable);
+app.post  ('/api/harness/agents',                   harness.handleAgentSave);
 app.post  ('/api/harness/agents/:id',               harness.handleAgentSave);
 app.delete('/api/harness/agents/:id',               harness.handleAgentDelete);
 app.get   ('/api/harness/missions',                 harness.handleMissions);

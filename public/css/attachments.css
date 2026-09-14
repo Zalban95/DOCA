@@ -40,3 +40,84 @@
 /* Whole-panel drop target: the composer is small and the messages are where
    the eye already is, so the panel takes the drop rather than a strip. */
 .chat-panel.drop { outline: 1px dashed var(--accent); outline-offset: -3px; }
+
+/* ═══════════════════════════════════════════════════════
+   SPECIALISTS AND MISSIONS
+   A specialist is listed greyed out while the feature is off, rather than
+   hidden: "where did my agents go" is a worse question than a dim row.
+   ═══════════════════════════════════════════════════════ */
+
+.hc-agents { display: flex; flex-direction: column; gap: 3px; }
+
+.hc-agent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  font-size: 11px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.hc-agent.off { opacity: 0.5; }
+.hc-agent.bad { border-color: var(--red); }
+.hc-agent-id { font-weight: 500; color: var(--text); }
+.hc-agent-note {
+  flex: 1;
+  font-size: 10px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-agents-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.hc-agents-switch input { margin: 0; }
+
+/* The missions bar: a status light, not a transcript. */
+.hc-missions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hc-mission {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text);
+  background: var(--dim);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+}
+
+.hc-mission em { font-style: normal; color: var(--muted); }
+
+.hc-mission-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+
+.hc-mission.running   .hc-mission-dot { background: var(--blue); animation: hc-mission-pulse 1.4s ease-in-out infinite; }
+.hc-mission.done      .hc-mission-dot { background: var(--green); }
+.hc-mission.failed    .hc-mission-dot { background: var(--red); }
+.hc-mission.cancelled .hc-mission-dot { background: var(--amber); }
+.hc-mission.failed { border-color: var(--red); }
+
+@keyframes hc-mission-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }

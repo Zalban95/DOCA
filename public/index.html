@@ -1167,6 +1167,33 @@
   </div>
 </div>
 
+<!-- ═══ SPECIALIST AGENT MODAL ══════════════════════ -->
+<div id="hc-agent-overlay" class="modal-overlay" style="display:none" onclick="hcAgentClose(event)">
+  <div class="modal" style="max-width:680px" onclick="event.stopPropagation()">
+    <div class="modal-title" id="hc-agent-title">Specialist</div>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
+      A specialist is its prompt plus a short tool list. Keep both small — it runs its own
+      steps, and everything you add here it pays for on every one of them.
+      <code>role</code> is the system prompt, <code>tools</code> is an allowlist,
+      <code>memory</code> false means it searches memory rather than carrying it,
+      and <code>provider</code>/<code>model</code> are optional: leave them out and it uses
+      the panel's. Three tools can never be granted here — changing settings, installing
+      anything, or dispatching another specialist — and are removed if you ask for them.
+    </p>
+    <div class="field">
+      <div class="input-label">Definition</div>
+      <textarea class="input" id="hc-agent-json" rows="16" spellcheck="false"
+                style="width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:11px"></textarea>
+    </div>
+    <div class="status-line mt8" id="hc-agent-status"></div>
+    <div class="modal-actions">
+      <span style="flex:1"></span>
+      <button class="btn btn-sm" onclick="hcAgentClose()">Cancel</button>
+      <button class="btn btn-sm btn-blue" onclick="hcAgentSave()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ AGENT CONTEXT MODAL ══════════════════════════ -->
 <div id="hc-env-overlay" class="modal-overlay" style="display:none" onclick="hcEnvClose(event)">
   <div class="modal" style="max-width:820px" onclick="event.stopPropagation()">

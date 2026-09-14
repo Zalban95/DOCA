@@ -529,8 +529,142 @@ function _harnessConsoleBuild() {
   _hcRendered = h.id;
 
   shell.innerHTML = h.kind === 'builtin' ? _hcBuiltinHtml(h) : _hcExternalHtml(h);
-  if (h.kind === 'builtin') { _hcLoadSessions(); _hcLoadMemory(); _hcLoadProposals(); _hcStatus(); }
+  if (h.kind === 'builtin') { _hcLoadSessions(); _hcLoadMemory(); _hcLoadProposals(); _hcLoadAgents(); _hcStatus(); }
   else requestAnimationFrame(() => _harnessTermOpen(h));
+}
+
+/* ── Specialists and their missions ───────────────────── */
+
+/* A mission runs in its own conversation, so nothing here ever blocks the one
+   the user is typing in. That is also why this polls rather than streams: the
+   bar is a status light, not a transcript, and the transcript it would be
+   showing belongs to a conversation nobody has open. */
+let _hcMissionPoll = null;
+
+async function _hcLoadAgents() {
+  const box = document.getElementById('hc-agents');
+  const sw  = document.getElementById('hc-agents-on');
+  if (!box) return;
+  try {
+    const data = await apiFetch('/api/harness/agents');
+    if (sw) sw.checked = !!data.enabled;
+    box.innerHTML = (data.agents || []).map(a => _hcAgentHtml(a, data.enabled)).join('')
+      || '<div class="placeholder">No specialists defined</div>';
+    _hcLoadMissions();
+  } catch (e) { box.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; }
+}
+
+function _hcAgentHtml(a, enabled) {
+  if (a.broken) return `
+    <div class="hc-agent bad" title="${escHtml(a.broken)}">
+      <span class="hc-agent-id">${escHtml(a.id)}</span>
+      <span class="hc-agent-note" style="color:var(--red)">unreadable definition</span>
+    </div>`;
+  const tools = (a.tools || []).length ? `${a.tools.length} tool${a.tools.length === 1 ? '' : 's'}` : 'no tools';
+  return `
+    <div class="hc-agent ${enabled ? '' : 'off'}" title="${escHtml(a.note || '')}">
+      <span class="hc-agent-id">${escHtml(a.label || a.id)}</span>
+      <span class="hc-agent-note">${escHtml(tools)}${a.builtin ? ' · shipped' : ''}</span>
+      <button class="btn btn-xs" onclick="hcAgentEdit(${jsArg(a.id)})" title="Edit this definition">✎</button>
+      <button class="btn btn-xs btn-red" onclick="hcAgentDelete(${jsArg(a.id)})"
+              title="${a.builtin ? 'Revert to the shipped definition' : 'Delete'}">✕</button>
+    </div>`;
+}
+
+async function hcAgentsEnable(on) {
+  try {
+    await apiFetch('/api/harness/agents/enable', { method: 'POST', body: { enabled: !!on } });
+    _hcLoadAgents();
+  } catch (e) { appAlert(e.message); }
+}
+
+async function _hcLoadMissions() {
+  const bar = document.getElementById('hc-missions');
+  if (!bar) return;
+  let rows = [];
+  try { rows = (await apiFetch('/api/harness/missions?limit=8')).missions || []; } catch { /* leave the bar as it was */ }
+
+  if (!rows.length) { bar.style.display = 'none'; bar.innerHTML = ''; }
+  else {
+    bar.style.display = '';
+    bar.innerHTML = rows.map(m => `
+      <span class="hc-mission ${escHtml(m.state)}" title="${escHtml(m.task || '')}">
+        <span class="hc-mission-dot"></span>
+        ${escHtml(m.label || m.agentId)}
+        <em>${m.state === 'running' ? `step ${m.steps || 0}` : escHtml(m.state)}</em>
+      </span>`).join('');
+  }
+
+  // Poll only while something is actually running, and stop when it is not:
+  // a timer that outlives the thing it was watching is how a quiet panel ends
+  // up making a request a second for the rest of the day.
+  const busy = rows.some(m => m.state === 'running');
+  if (busy && !_hcMissionPoll) _hcMissionPoll = setInterval(_hcLoadMissions, 3000);
+  if (!busy && _hcMissionPoll) { clearInterval(_hcMissionPoll); _hcMissionPoll = null; }
+}
+
+/* A definition is a JSON file, and this edits it as one rather than as a form.
+   The fields are few, they are documented in modules/agents/registry.js, and a
+   form would have to be rewritten every time one is added — while the agent
+   itself writes these files with no form at all. */
+function hcAgentNew() {
+  _hcAgentModal({
+    id: '', label: '', note: '', role: '', tools: ['memory_search'],
+    memory: false, environment: 'minimal', maxSteps: 6,
+  }, true);
+}
+
+async function hcAgentEdit(id) {
+  try {
+    const { agents } = await apiFetch('/api/harness/agents');
+    const a = agents.find(x => x.id === id);
+    if (!a) return appAlert(`No specialist called "${id}".`);
+    const { builtin, refusedTools, broken, ...def } = a;
+    _hcAgentModal(def, false);
+  } catch (e) { appAlert(e.message); }
+}
+
+function _hcAgentModal(def, isNew) {
+  const overlay = document.getElementById('hc-agent-overlay');
+  const box     = document.getElementById('hc-agent-json');
+  const title   = document.getElementById('hc-agent-title');
+  if (!overlay || !box) return;
+  title.textContent = isNew ? 'New specialist' : `Editing ${def.id}`;
+  box.value = JSON.stringify(def, null, 2);
+  setStatus(document.getElementById('hc-agent-status'), '', '');
+  overlay.style.display = 'flex';
+  setTimeout(() => box.focus(), 50);
+}
+
+function hcAgentClose(event) {
+  if (event && event.target !== event.currentTarget) return;
+  const overlay = document.getElementById('hc-agent-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+async function hcAgentSave() {
+  const st = document.getElementById('hc-agent-status');
+  let def;
+  try { def = JSON.parse(document.getElementById('hc-agent-json').value); }
+  catch (e) { return setStatus(st, `Not valid JSON: ${e.message}`, 'err'); }
+  try {
+    const url = def.id ? `/api/harness/agents/${encodeURIComponent(def.id)}` : '/api/harness/agents';
+    const { agent } = await apiFetch(url, { method: 'POST', body: def });
+    // The panel says what it refused rather than saving a definition quietly
+    // different from the one that was typed.
+    if (agent.refusedTools?.length)
+      setStatus(st, `Saved. Removed tools a specialist may never have: ${agent.refusedTools.join(', ')}.`, 'warn');
+    else setStatus(st, '✓ Saved', 'ok');
+    _hcLoadAgents();
+    if (!agent.refusedTools?.length) setTimeout(hcAgentClose, 700);
+  } catch (e) { setStatus(st, e.message, 'err'); }
+}
+
+function hcAgentDelete(id) {
+  appConfirm(`Delete the definition for "${id}"? A shipped one reverts rather than disappearing.`, async () => {
+    try { await apiFetch(`/api/harness/agents/${encodeURIComponent(id)}`, { method: 'DELETE' }); _hcLoadAgents(); }
+    catch (e) { appAlert(e.message); }
+  });
 }
 
 /* ── Built-in harness console ─────────────────────────── */
@@ -555,6 +689,16 @@ function _hcBuiltinHtml(h) {
           <button class="btn btn-xs btn-blue" onclick="hcMemWrite()">+</button>
         </div>
         <div id="hc-memory" class="hc-memory"><div class="placeholder">Loading…</div></div>
+
+        <div class="hc-side-head" style="margin-top:10px">
+          Specialists
+          <label class="hc-agents-switch" title="Off by default. Turning it off is the rollback: same version, no second model.">
+            <input type="checkbox" id="hc-agents-on" onchange="hcAgentsEnable(this.checked)">
+            <span>on</span>
+          </label>
+          <button class="btn btn-xs btn-blue" onclick="hcAgentNew()" title="Define a new specialist">+</button>
+        </div>
+        <div id="hc-agents" class="hc-agents"><div class="placeholder">Loading…</div></div>
       </div>
 
       <div class="hc-main">
@@ -567,6 +711,7 @@ function _hcBuiltinHtml(h) {
             <button class="btn btn-xs tool-gear" onclick="nav('controls'); harnessConfigToggle(${jsArg(h.id)}, true)" title="Model and parameters">⚙</button>
           </div>
         </div>
+        <div class="hc-missions" id="hc-missions" style="display:none"></div>
         <div class="hc-messages" id="hc-messages"><div class="placeholder">Ask it anything about this machine.</div></div>
         <div class="hc-proposals" id="hc-proposals"></div>
         <div class="hc-input-row">
