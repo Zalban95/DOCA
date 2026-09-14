@@ -1,0 +1,56 @@
+/* ═══════════════════════════════════════════════════════
+   OPENCLAW PANEL — LOGS TAB
+   ═══════════════════════════════════════════════════════ */
+
+/* Source picker */
+.log-src-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.log-src {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+
+.log-src input { margin: 0; accent-color: currentColor; }
+.log-src:hover { color: var(--text); }
+.log-src.on    { color: var(--src); border-color: var(--src); }
+.log-src.off   { opacity: 0.45; cursor: not-allowed; }
+.log-src em    { font-style: normal; opacity: 0.6; }
+
+/* One hue per source, assigned by sorted id so it survives a reconnect.
+   Red and amber are absent: they belong to error and warning, and a source
+   wearing either would be a line you have to read twice to classify. */
+.src-blue   { --src: var(--blue); }
+.src-purple { --src: var(--purple); }
+.src-teal   { --src: var(--teal); }
+.src-cyan   { --src: var(--cyan); }
+.src-green  { --src: var(--green); }
+
+/* The tag in front of a line */
+.log-tag {
+  display: inline-block;
+  min-width: 88px;
+  margin-right: 8px;
+  font-weight: 500;
+  color: var(--src, var(--muted));
+}
+
+/* Level still wins over source colour: the text of an error line is red
+   whichever source it came from, which is the one rule that was already true
+   and had to stay true. */
+.log-out .ll.e { color: var(--red); }
+.log-out .ll.w { color: var(--amber); }

@@ -17,6 +17,7 @@ const { ensureCerts }          = require('./modules/https-cert');
 
 // ─── Feature modules ──────────────────────────────────────────────────────────
 const controls     = require('./modules/controls');
+const logs         = require('./modules/logs');
 const config       = require('./modules/config');
 const keys         = require('./modules/keys');
 const devicesPanel = require('./modules/devices-panel');
@@ -63,7 +64,8 @@ const uploadMw = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5
 app.get ('/api/status',     controls.handleStatus);
 app.post('/api/action',     controls.handleAction);
 app.post('/api/stack/update', controls.handleStackUpdate);
-app.get ('/api/logs',       controls.handleLogs);
+app.get ('/api/logs',         logs.handleLogs);
+app.get ('/api/logs/sources', logs.handleSources);
 app.get ('/api/stats/defs', stats.handleDefs);
 
 // ─── Routes: Config & Prefs ──────────────────────────────────────────────────

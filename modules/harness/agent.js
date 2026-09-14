@@ -12,12 +12,27 @@
  * Every message, tool call and tool result is appended to the session
  * transcript, so a reload or a restart resumes exactly where it left off.
  */
+const { EventEmitter } = require('events');
+
 const budget      = require('./budget');
 const environment = require('./environment');
 const memory      = require('./memory');
 const providers   = require('./providers');
 const settings    = require('./settings');
 const tools       = require('./tools');
+
+/**
+ * Every turn's events, for anything that was not the caller.
+ *
+ * `turn()` hands its events to whoever started it, which is right for the thing
+ * waiting on the answer and no use at all to a subscriber that arrived later —
+ * the Logs tab, most of all, which is open across turns and belongs to nobody's
+ * request. This is the same stream, published alongside. It never affects the
+ * caller: `say()` delivers to `emit` first, and a listener that throws here
+ * cannot reach into the turn.
+ */
+const events = new EventEmitter();
+events.setMaxListeners(0);   // one per open Logs stream; there is no sensible cap
 
 /** Per-harness params, resolved lazily to avoid a require cycle with catalog. */
 function params() {
@@ -384,7 +399,10 @@ async function foldSummary({ session, p, ep, signal, force = false }) {
  * @returns {Promise<{ sessionId: string, text: string, steps: number }>}
  */
 async function turn({ message, sessionId, emit, signal, client }) {
-  const say = evt => { try { emit(evt); } catch {} };
+  const say = evt => {
+    try { emit(evt); } catch {}
+    try { events.emit('event', evt); } catch {}
+  };
   const p   = params();
   const ep  = providers.endpoint(p.provider);
   if (!p.model)
@@ -591,4 +609,4 @@ async function status() {
   return out;
 }
 
-module.exports = { turn, status, params, ask, preview };
+module.exports = { turn, status, params, ask, preview, events };

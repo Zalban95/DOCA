@@ -246,16 +246,9 @@ function handleStackUpdate(_req, res) {
   streamCmd(res, cmd, { cwd: COMPOSE_DIR });
 }
 
-/** GET /api/logs — SSE stream of Docker Compose logs */
-function handleLogs(req, res) {
-  sseHeaders(res);
-  const tail  = req.query.tail || '100';
-  const child = spawn('docker', ['compose', 'logs', '--follow', '--tail', tail], { cwd: COMPOSE_DIR });
-  const emit  = line => line && res.write(`data: ${JSON.stringify(line)}\n\n`);
-  child.stdout.on('data', d => d.toString().split('\n').forEach(emit));
-  child.stderr.on('data', d => d.toString().split('\n').forEach(l => emit(l && '[stderr] ' + l)));
-  child.on('error', err => { emit(`[error] ${err.message}`); res.end(); });
-  req.on('close', () => child.kill());
-}
+/* The Compose log used to be served from here, as the only log this panel had.
+   It moved to modules/logs.js when the Logs tab learned to follow whichever
+   harness is selected -- the stack is one source among several now, and which
+   one you get is a question this file had no way to answer. */
 
-module.exports = { handleStatus, handleAction, handleStackUpdate, handleLogs, collectStatus };
+module.exports = { handleStatus, handleAction, handleStackUpdate, collectStatus };
