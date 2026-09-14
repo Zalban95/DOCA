@@ -206,6 +206,16 @@ const handleRulesVerify = wrap(async (req, res) => {
 const handleEnvironment = wrap(async (_req, res) =>
   res.json({ snapshot: environment.snapshot(), block: environment.block(), charter: providers.SAFETY_CHARTER }));
 
+/**
+ * Where the tokens go, so "my prompt is 135k" stops being a mystery.
+ *
+ * The percentage warnings answer "will it fit"; this answers "what is it made
+ * of", which is the question when the window is a million tokens and the bill
+ * is per step.
+ */
+const handlePromptSize = wrap(async (req, res) =>
+  res.json(agent.breakdown({ message: String(req.query.message || ''), sessionId: req.query.sessionId || null })));
+
 const handleSettingsRead = wrap(async (_req, res) =>
   res.json({ settings: settings.readable(), sections: settings.SETTABLE }));
 
@@ -223,5 +233,5 @@ module.exports = {
   handleChat, handleSessions, handleSessionNew, handleSession, handleSessionActivate, handleSessionDelete,
   handleMemoryList, handleMemoryWrite, handleMemoryForget, handleMemoryLock, handleMemoryFlag,
   handleRulesGet, handleRulesWrite, handleRulesReset, handleRulesVerify,
-  handleEnvironment, handleSettingsRead, handleProposals, handleProposalApply, handleProposalReject,
+  handleEnvironment, handlePromptSize, handleSettingsRead, handleProposals, handleProposalApply, handleProposalReject,
 };

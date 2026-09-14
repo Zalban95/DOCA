@@ -379,7 +379,13 @@ test('a mid-turn arrival can draw "typing" without waiting for the next event', 
 
   const inFlight = await H.api(watch.token, 'GET', '/api/v1/harness/turns');
   assert.equal(inFlight.status, 200);
-  assert.deepEqual(inFlight.body.turns, [{ sessionId: posted.body.sessionId, turnId: posted.body.turnId }]);
+  assert.equal(inFlight.body.turns.length, 1);
+  assert.equal(inFlight.body.turns[0].sessionId, posted.body.sessionId);
+  assert.equal(inFlight.body.turns[0].turnId, posted.body.turnId);
+  // Who started it and when, so a client can offer Stop with something to show
+  // for it rather than an anonymous spinner.
+  assert.match(inFlight.body.turns[0].by, /^dev_/, 'the turn has to name the device that started it');
+  assert.ok(!Number.isNaN(Date.parse(inFlight.body.turns[0].startedAt)));
 
   const s = H.sse(phone.token); await s.ready; await settled(s, posted.body.turnId); s.close();
   assert.deepEqual((await H.api(watch.token, 'GET', '/api/v1/harness/turns')).body.turns, []);

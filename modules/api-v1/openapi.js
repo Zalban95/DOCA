@@ -439,7 +439,12 @@ function paths() {
         { required: ['message'], description: 'Send the question as the user typed it. The hub tags the turn with this device — name, form factor, screen and inputs, from the caps it was paired with — so the agent knows how much answer this client can hold. There is no field for a client to describe itself per message.' })),
       responses: { 202: json(obj({ turnId: str(), sessionId: str() }, { description: 'Accepted. Watch `agent.turn` / `agent.text` / `agent.tool` on the event stream.' })), ...std(400, 401, 403, 404, 409, 413) } } },
     '/harness/turns': { get: { tags: ['Harness'], summary: 'Turns in flight, so a client arriving mid-turn can show it', operationId: 'harnessListTurns', ...scopeDoc('harness:chat'),
-      responses: { 200: json(obj({ turns: arr(obj({ sessionId: str(), turnId: str() })) })), ...std(401, 403) } } },
+      responses: { 200: json(obj({ turns: arr(obj({ sessionId: str(), turnId: str(), by: nullable(str({ description: 'Device that started it.' })), startedAt: iso() })) })), ...std(401, 403) } } },
+    '/harness/turns/{id}/cancel': {
+      parameters: [pathParam('id', 'Turn id, or the session id of the conversation it is running in.')],
+      post: { tags: ['Harness'], summary: 'Stop a running turn', operationId: 'harnessCancelTurn', ...scopeDoc('harness:chat'),
+        description: 'Any device that may chat may stop any turn, because a turn belongs to the user rather than to the device that started it — the phone that began a runaway turn may be in a pocket. The step already in flight still finishes: this cancels the request in progress, not the one the provider has already accepted, so it stops the *next* step and the tokens already spent stay spent. The turn ends with `agent.turn` in state `cancelled`, which is not `failed`.',
+        responses: { 200: json(obj({ ok: str(), turnId: str(), sessionId: str(), stoppedBy: nullable(str()) })), ...std(401, 403, 404) } } },
     '/harness/sessions': {
       get: { tags: ['Harness'], summary: 'List conversations', operationId: 'harnessListSessions', ...scopeDoc('harness:sessions'),
         responses: { 200: json(obj({ sessions: arr(ref('HarnessSession')), active: nullable(str()) })), ...std(401, 403) } },

@@ -596,6 +596,86 @@ function preview({ message = '', client = null, ledger = null } = {}) {
   });
 }
 
+/**
+ * Where the tokens in one prompt actually are, section by section.
+ *
+ * A turn re-sends the whole prompt on every step, so a fat prompt is not paid
+ * once — it is paid `steps` times, and the first screenshot that went through
+ * this harness cost 1.6 million tokens across eleven steps without the context
+ * ever passing 155k. Percentage-of-window warnings say nothing about that: with
+ * a million-token window, 150k per step reads as 15% full and perfectly fine.
+ *
+ * So this exists to answer "why is my prompt this big" with a number per
+ * section rather than a theory, and it counts the two things people forget:
+ * the tool schemas, which travel in the request body rather than the system
+ * prompt and are re-sent every step like everything else, and the transcript.
+ */
+function breakdown({ message = '', client = null, sessionId = null } = {}) {
+  const p = params();
+  const disabled = Array.isArray(p.disabledTools) ? p.disabledTools : [];
+  const schemas  = tools.schemas(disabled);
+
+  const measure = (name, text, note) => ({
+    name, note: note || null,
+    chars: (text || '').length,
+    tokens: budget.estimate(text || ''),
+  });
+
+  const sections = [
+    measure('safety charter', providers.SAFETY_CHARTER, 'ships in code, not editable'),
+    measure('system prompt', p.systemPrompt || providers.DEFAULT_SYSTEM_PROMPT, 'harness.config.doca.systemPrompt'),
+    measure('environment', environment.block({
+      provider: p.provider, model: p.model, toolCount: schemas.length, disabledCount: disabled.length,
+    }), 'host, paths, providers, MCP servers'),
+    measure('client', clientBlock(client), 'who asked'),
+    measure('where tools land', placeBlock(client)),
+    measure('memory rules', rulesBlock(), 'how the agent keeps its memory'),
+    measure('memory entries', memoryBlock(message, Math.max(0, Number(p.memoryLimit) || 0)),
+      `pinned + best matches, up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`),
+    measure('limits', budget.block(p, null)),
+    measure('settings proposals', settings.block()),
+  ];
+
+  // Per server, because "the prompt is big" is not actionable and "the blender
+  // server is 90k of it" is: that one can be switched off on the tools list.
+  const byOwner = new Map();
+  for (const sc of schemas) {
+    const name  = sc.function?.name || '?';
+    const owner = name.startsWith('mcp__') ? `mcp: ${name.split('__')[1]}` : 'built-in tools';
+    const t = budget.estimate(JSON.stringify(sc));
+    const cur = byOwner.get(owner) || { owner, count: 0, tokens: 0 };
+    cur.count += 1; cur.tokens += t;
+    byOwner.set(owner, cur);
+  }
+
+  const rows = memory.messages(sessionId || memory.activeSession()?.id || '') || [];
+  const transcript = {
+    messages: rows.length,
+    kept: Math.max(0, Number(p.historyTurns) || 0),
+    tokens: budget.estimateMessages(toApiMessages(rows.slice(-(Number(p.historyTurns) || 0)))),
+    note: 'this conversation only — a new conversation starts empty',
+  };
+
+  const promptTokens = sections.reduce((n, s) => n + s.tokens, 0);
+  const toolTokens   = [...byOwner.values()].reduce((n, o) => n + o.tokens, 0);
+
+  return {
+    sections: sections.filter(s => s.tokens > 0),
+    tools: {
+      count: schemas.length,
+      tokens: toolTokens,
+      note: 'sent in the request body on every step, not in the system prompt',
+      byOwner: [...byOwner.values()].sort((a, b) => b.tokens - a.tokens),
+    },
+    transcript,
+    total: promptTokens + toolTokens + transcript.tokens,
+    perStep: promptTokens + toolTokens,
+    maxSteps: Number(p.maxSteps) || 0,
+    worstCase: (promptTokens + toolTokens) * (Number(p.maxSteps) || 1),
+    source: 'estimated',
+  };
+}
+
 /** Is the built-in harness ready to answer, and on what? */
 async function status() {
   const p = params();
@@ -617,4 +697,4 @@ async function status() {
   return out;
 }
 
-module.exports = { turn, status, params, ask, preview, events };
+module.exports = { turn, status, params, ask, preview, breakdown, events };

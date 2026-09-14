@@ -165,6 +165,7 @@ app.post  ('/api/harness/sessions',             harness.handleSessionNew);
 app.get   ('/api/harness/sessions/:id',         harness.handleSession);
 app.post  ('/api/harness/sessions/:id/activate', harness.handleSessionActivate);
 app.delete('/api/harness/sessions/:id',         harness.handleSessionDelete);
+app.get   ('/api/harness/prompt',               harness.handlePromptSize);
 app.get   ('/api/harness/memory',               harness.handleMemoryList);
 app.post  ('/api/harness/memory',               harness.handleMemoryWrite);
 // Before `:key`, which would otherwise read a reset as forgetting an entry

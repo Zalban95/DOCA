@@ -73,12 +73,17 @@ function jsArg(value) {
  * @returns {Promise<void>} resolves when the stream ends
  */
 async function sseStream(url, body, handlers = {}) {
-  const { method, onEvent, onStatus, onDone, onError } = handlers;
+  const { method, onEvent, onStatus, onDone, onError, signal } = handlers;
   try {
     const res = await fetch(url, {
       method:  method || 'POST',
       headers: body != null ? { 'Content-Type': 'application/json' } : {},
       body:    body != null ? JSON.stringify(body) : undefined,
+      // Aborting here closes the response stream, which is what the server is
+      // listening for: every SSE handler that drives a turn ties res.on('close')
+      // to the turn's own AbortController. So Stop is not a message we send —
+      // it is us hanging up, and the turn notices.
+      signal,
     });
     if (!res.ok && !res.body) throw new Error(res.statusText);
 
@@ -106,6 +111,9 @@ async function sseStream(url, body, handlers = {}) {
       }
     }
   } catch (e) {
+    // Hanging up on purpose is not an error. Without this every Stop paints a
+    // red "The user aborted a request" under the answer it just stopped.
+    if (e.name === 'AbortError') return;
     if (onError) onError(e); else throw e;
   }
 }

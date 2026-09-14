@@ -463,6 +463,10 @@ harnessApi.post('/messages', requireScope('harness:chat'), wrap(async (req, res)
 // So a client that opens mid-turn can draw "typing" without waiting for an event.
 harnessApi.get('/turns', requireScope('harness:chat'), (_req, res) =>
   res.json({ turns: harness.running() }));
+// Stop by turn id or by session id -- a client that has the transcript open
+// knows the session; one that got the 202 knows the turn.
+harnessApi.post('/turns/:id/cancel', requireScope('harness:chat'), wrap(async (req, res) =>
+  res.json(harness.cancel(req.params.id, req.device))));
 
 harnessApi.get('/sessions', requireScope('harness:sessions'), (_req, res) =>
   res.json(harness.sessions()));

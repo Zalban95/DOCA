@@ -45,6 +45,10 @@ const DELTA_FLUSH_MS   = 150;
 const DELTA_FLUSH_CHARS = 400;
 
 /** sessionId → turnId, so two clients cannot interleave one transcript. */
+// sessionId -> { turnId, ctrl, by, startedAt }. The controller is in here
+// because a turn belongs to the user, not to the request that started it: the
+// phone that posted a runaway turn may be in a pocket, and the person watching
+// it burn tokens is at the dashboard.
 const _running = new Map();
 
 /**
@@ -110,7 +114,7 @@ function activate(id) {
 
 function removeSession(id) {
   requireSession(id);
-  if (_running.has(id)) throw new ApiError(409, 'turn_in_flight', 'A turn is running in this conversation', { turnId: _running.get(id) });
+  if (_running.has(id)) throw new ApiError(409, 'turn_in_flight', 'A turn is running in this conversation', { turnId: _running.get(id).turnId });
   memory.deleteSession(id);
 }
 
@@ -176,11 +180,11 @@ function post(body, device) {
   const session = body?.sessionId ? requireSession(body.sessionId) : memory.activeSession();
 
   const inFlight = _running.get(session.id);
-  if (inFlight) throw new ApiError(409, 'turn_in_flight', 'A turn is already running in this conversation', { turnId: inFlight });
+  if (inFlight) throw new ApiError(409, 'turn_in_flight', 'A turn is already running in this conversation', { turnId: inFlight.turnId });
 
   const turnId = `trn_${crypto.randomBytes(6).toString('hex')}`;
   const ctrl = new AbortController();
-  _running.set(session.id, turnId);
+  _running.set(session.id, { turnId, ctrl, by: device.id, startedAt: new Date().toISOString() });
 
   fanout('agent.turn', {
     turnId, sessionId: session.id, state: 'started', by: device.id,
@@ -253,18 +257,45 @@ async function run({ turnId, message, session, device, ctrl, attached }) {
     });
   } catch (e) {
     flush();
-    fanout('agent.turn', {
-      turnId, sessionId, state: 'failed', by: device.id,
-      error: { code: e.status === 400 ? 'harness_unconfigured' : 'harness_error', message: e.message },
-    });
+    // Stopping on purpose is not a failure, and a client that draws it as one
+    // teaches the user that pressing Stop broke something.
+    const stopped = ctrl.signal.aborted || e.name === 'AbortError';
+    fanout('agent.turn', stopped
+      ? { turnId, sessionId, state: 'cancelled', by: device.id, stoppedBy: ctrl.stoppedBy || null }
+      : {
+        turnId, sessionId, state: 'failed', by: device.id,
+        error: { code: e.status === 400 ? 'harness_unconfigured' : 'harness_error', message: e.message },
+      });
   } finally {
-    if (_running.get(sessionId) === turnId) _running.delete(sessionId);
+    if (_running.get(sessionId)?.turnId === turnId) _running.delete(sessionId);
   }
 }
 
 /** Which conversations are mid-turn, so a client can draw "typing" on arrival. */
 function running() {
-  return [..._running.entries()].map(([sessionId, turnId]) => ({ sessionId, turnId }));
+  return [..._running.entries()].map(([sessionId, r]) =>
+    ({ sessionId, turnId: r.turnId, by: r.by, startedAt: r.startedAt }));
+}
+
+/**
+ * Stop a running turn.
+ *
+ * Any device that may chat may stop any turn, deliberately: a turn is the
+ * user's, not the requesting device's, and the person who can see it looping is
+ * whoever happens to be looking. The step in flight still finishes — abort
+ * cancels the fetch, it does not unmake the request the provider already
+ * accepted — so this stops the *next* step, and the tokens already spent are
+ * already spent. Said plainly here because "Stop" that silently meant
+ * "eventually" would be the same lie as a timeout that claims to stop work.
+ */
+function cancel(idOrTurn, device) {
+  for (const [sessionId, r] of _running.entries()) {
+    if (idOrTurn !== sessionId && idOrTurn !== r.turnId) continue;
+    r.ctrl.stoppedBy = device?.id || null;
+    r.ctrl.abort();
+    return { ok: true, turnId: r.turnId, sessionId, stoppedBy: r.ctrl.stoppedBy };
+  }
+  throw new ApiError(404, 'not_found', `No turn running for ${idOrTurn}. It may have finished on its own.`);
 }
 
 /* ── Memory (read-only here; writing stays a click) ───── */
@@ -282,6 +313,6 @@ function memoryList() {
 
 module.exports = {
   sessions, createSession, activate, removeSession, transcript,
-  post, running, memoryList,
+  post, running, cancel, memoryList,
   MAX_MESSAGE,
 };

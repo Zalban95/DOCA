@@ -492,6 +492,19 @@ function harnessCatalogRender() {
    HARNESS TAB — the default harness's workspace
    ═══════════════════════════════════════════════════════ */
 
+/* The turn in flight in the Harness tab. Stop hangs up on the stream and the
+   server ties the response closing to the turn's AbortController. */
+let _hcTurn = null;
+
+function hcStop() {
+  if (!_hcTurn) return;
+  _hcTurn.abort();
+  const btn = document.getElementById('hc-send');
+  const stopBtn = document.getElementById('hc-stop');
+  if (btn) btn.style.display = '';
+  if (stopBtn) stopBtn.style.display = 'none';
+}
+
 let _hcSession  = null;
 let _hcBusy     = false;
 let _hcRendered = null;   // harness id the shell is currently built for
@@ -561,6 +574,8 @@ function _hcBuiltinHtml(h) {
           <textarea class="input flex1 hc-input" id="hc-input" rows="1" placeholder="Message the harness…"
                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();hcSend();}"></textarea>
           <button class="btn btn-sm btn-amber" id="hc-send" onclick="hcSend()">Send</button>
+          <button class="btn btn-sm btn-red" id="hc-stop" style="display:none" onclick="hcStop()"
+                  title="Stop this turn. The step already running finishes; nothing after it starts.">■ Stop</button>
         </div>
       </div>
     </div>`;
@@ -718,7 +733,10 @@ async function hcSend() {
 
   _hcBusy = true;
   input.value = '';
-  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  if (btn) btn.style.display = 'none';
+  const stopBtn = document.getElementById('hc-stop');
+  if (stopBtn) stopBtn.style.display = '';
+  _hcTurn = new AbortController();
   _hcAppend('user', text);
 
   const box = document.getElementById('hc-messages');
@@ -733,6 +751,7 @@ async function hcSend() {
   stream.startWaiting();
 
   await sseStream('/api/harness/chat', { message: text, sessionId: _hcSession }, {
+    signal: _hcTurn.signal,
     onEvent: evt => {
       if (evt.type === 'session') _hcSession = evt.sessionId;
       if (evt.type === 'text') {
@@ -768,9 +787,13 @@ async function hcSend() {
 
   if (pendingCall) pendingCall.setActive(false);
   stream.finish();
+  if (_hcTurn?.signal.aborted)
+    _hcAppend('error', 'Stopped. The step already running finishes on its own; nothing after it starts.', 'stopped');
 
   _hcBusy = false;
-  if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
+  _hcTurn = null;
+  if (btn) btn.style.display = '';
+  if (stopBtn) stopBtn.style.display = 'none';
   _hcLoadSessions();
   _hcLoadMemory();
   _hcLoadProposals();

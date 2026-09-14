@@ -89,6 +89,27 @@ function _chatAppendContent(content) {
 
 let chatPending = [];   // attachment records waiting to be sent with the message
 
+/* The turn in flight, if any. Stop hangs up on the stream; the server ties the
+   response closing to the turn's own AbortController, so the turn stops with
+   it. The step already in flight still finishes — abort cancels our fetch, not
+   the request the provider has already accepted — so Stop ends the *next* step
+   and the tokens already spent stay spent. The button says so. */
+let chatTurn = null;
+
+function _chatBusy(on) {
+  chatTurn = on ? chatTurn : null;
+  const send = document.getElementById('chat-send');
+  const stop = document.getElementById('chat-stop');
+  if (send) send.style.display = on ? 'none' : '';
+  if (stop) stop.style.display = on ? '' : 'none';
+}
+
+function chatStop() {
+  if (!chatTurn) return;
+  chatTurn.abort();
+  _chatBusy(false);
+}
+
 function chatAttachPick() { document.getElementById('chat-file').click(); }
 
 async function chatAttachFiles(files) {
@@ -160,7 +181,11 @@ function chatSend() {
   });
   stream.startWaiting();
 
+  chatTurn = new AbortController();
+  _chatBusy(true);
+
   sseStream('/api/chat', { message, attachments }, {
+    signal: chatTurn.signal,
     onEvent: evt => {
       if (evt.type === 'text') {
         if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
@@ -189,6 +214,8 @@ function chatSend() {
   }).then(() => {
     if (pendingCall) pendingCall.setActive(false);
     stream.finish();
+    if (chatTurn?.signal.aborted) chatAppendMsg('system', 'Stopped. The step already running finishes on its own.');
+    _chatBusy(false);
   });
 }
 

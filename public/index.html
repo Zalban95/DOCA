@@ -1246,7 +1246,9 @@
     <textarea class="chat-input" id="chat-input" placeholder="Message…" rows="1"
               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend();}"
               onpaste="if(event.clipboardData.files.length){event.preventDefault();chatAttachFiles(event.clipboardData.files);}"></textarea>
-    <button class="btn btn-sm btn-amber" onclick="chatSend()">Send</button>
+    <button class="btn btn-sm btn-amber" id="chat-send" onclick="chatSend()">Send</button>
+    <button class="btn btn-sm btn-red" id="chat-stop" style="display:none" onclick="chatStop()"
+            title="Stop this turn. The step already running finishes; nothing after it starts.">■ Stop</button>
   </div>
   <div class="chat-call-bar" id="chat-call-bar" style="display:none">
     <div class="chat-call-indicator" id="chat-call-indicator">
