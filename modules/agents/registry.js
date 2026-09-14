@@ -130,7 +130,11 @@ function normalize(def) {
     // it has a reason to.
     provider: def.provider ? String(def.provider) : null,
     model:    def.model    ? String(def.model)    : null,
-    maxSteps:      Number(def.maxSteps)      > 0 ? Number(def.maxSteps)      : 6,
+    // No ceiling, deliberately: a specialist's step count is the definition's
+    // business, and capping it here would be limiting the agent to fix a cost
+    // problem that lives in the prompt. The fallback is only for a definition
+    // that never mentions it.
+    maxSteps:      Number(def.maxSteps)      > 0 ? Number(def.maxSteps)      : 12,
     maxTokens:     Number(def.maxTokens)     > 0 ? Number(def.maxTokens)     : null,
     contextWindow: Number(def.contextWindow) > 0 ? Number(def.contextWindow) : null,
     builtin: !!def.builtin,

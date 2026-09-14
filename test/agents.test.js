@@ -168,3 +168,21 @@ test('GET /api/harness/agents reports the roster and the switch', async () => {
   assert.ok(res.body.agents.some(a => a.id === 'archivist'));
   assert.ok(res.body.never.includes('agent_dispatch'), 'the panel should be able to show what is forbidden');
 });
+
+test('a step count is the definition\'s business — nothing caps it', () => {
+  // Capping here would be limiting the agent to fix a cost problem that lives
+  // in the prompt, which is the wrong instrument aimed at the wrong thing.
+  assert.equal(registry.normalize({ id: 'long', role: 'x', maxSteps: 40 }).maxSteps, 40);
+  assert.equal(registry.normalize({ id: 'longer', role: 'x', maxSteps: 500 }).maxSteps, 500);
+  assert.equal(registry.normalize({ id: 'silent', role: 'x' }).maxSteps, 12, 'only the fallback applies');
+  assert.equal(registry.normalize({ id: 'zero', role: 'x', maxSteps: 0 }).maxSteps, 12);
+});
+
+test('when a specialist runs out of steps it names its own limit, not the panel\'s', () => {
+  const src = require('fs').readFileSync(require.resolve('../modules/harness/agent.js'), 'utf8');
+  const stop = src.slice(src.indexOf('if (step === maxSteps)'), src.indexOf('if (step === maxSteps)') + 900);
+  assert.match(stop, /this specialist's own/,
+    'a mission that stops must not send the user to the panel setting, which would change nothing');
+  assert.match(stop, /agent definition/);
+  assert.match(stop, /harness\.config\.doca\.maxSteps/, 'the orchestrator still names its own setting');
+});

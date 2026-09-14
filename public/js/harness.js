@@ -610,7 +610,7 @@ async function _hcLoadMissions() {
 function hcAgentNew() {
   _hcAgentModal({
     id: '', label: '', note: '', role: '', tools: ['memory_search'],
-    memory: false, environment: 'minimal', maxSteps: 6,
+    memory: false, environment: 'minimal', maxSteps: 12,
   }, true);
 }
 
