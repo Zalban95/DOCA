@@ -272,8 +272,33 @@ function explain({ status, detail, ep, p }) {
   return `${head}.${tail}`;
 }
 
+/**
+ * The message for a provider that accepted the request and then never answered.
+ *
+ * This is not a refusal — there is no status and no vendor text to quote, which
+ * is exactly what makes it hard to read. So it has to say all four things
+ * itself: who went quiet, for how long, whose limit stopped the waiting, and
+ * what to do. Charter rule 12 in the one case where the provider says nothing
+ * at all.
+ */
+function stalled({ ep, ms, frames }) {
+  const who     = ep?.label || ep?.id || 'the provider';
+  const seconds = Math.round((Number(ms) || 0) / 1000);
+  const held    = frames > 0
+    ? ` It sent ${frames} keep-alive frame${frames === 1 ? '' : 's'} and no content, which is a provider holding a `
+      + 'queued request open rather than a network fault.'
+    : '';
+
+  return `${who} held the connection open for ${seconds}s without sending a token — that is this panel's `
+    + 'firstTokenTimeoutMs, not the model\'s. Raise it in harness settings '
+    + '(harness.config.doca.firstTokenTimeoutMs), or try another provider or model.'
+    + held
+    + ' Nothing was cancelled at the provider\'s end: this stopped the waiting, not the work, so anything it was '
+    + 'about to charge for it may still charge for.';
+}
+
 module.exports = {
   CHARS_PER_TOKEN,
   estimate, estimateMessages, windowFor, compactTokensFor, shouldCompact,
-  ledger, record, report, warning, block, explain,
+  ledger, record, report, warning, block, explain, stalled,
 };

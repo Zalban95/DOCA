@@ -276,6 +276,12 @@ const HARNESS_PARAMS = [
         + 'trigger that works without a context window: 40000 is a working set, not a ceiling. 0 turns it off '
         + 'and leaves only the message-count and percentage triggers below.' },
 
+  { key: 'firstTokenTimeoutMs', label: 'Give up waiting after', unit: 'ms', attrs: 'min="0" step="5000"',
+    hint: 'How long to wait for the first word of a reply. This is not a limit on the answer — once the model '
+        + 'starts talking it can take as long as it needs. It exists because a provider can accept the request, '
+        + 'return OK and then never send anything, which otherwise looks exactly like a frozen panel. '
+        + '0 waits forever.' },
+
   { key: 'compactAt', label: 'Summarise at', unit: '% of window', attrs: 'min="0" max="99" step="5"',
     hint: 'The same summarising, triggered by size instead of by count — which is the honest trigger, since '
         + 'twenty lines of chat and twenty screens of tool output are the same number of messages. '
@@ -400,6 +406,7 @@ async function harnessConfigSave(id) {
         memoryLimit:    parseInt(val('memoryLimit'), 10) || 0,
         contextWindow:  parseInt(val('contextWindow'), 10) || 0,
         compactTokens:  parseInt(val('compactTokens'), 10) || 0,
+        firstTokenTimeoutMs: parseInt(val('firstTokenTimeoutMs'), 10) || 0,
         compactAt:      parseInt(val('compactAt'), 10) || 0,
         warnAt:         parseInt(val('warnAt'), 10) || 0,
         systemPrompt:   val('systemPrompt') || '',
@@ -893,6 +900,7 @@ async function hcSend() {
   const box = document.getElementById('hc-messages');
   const scroll = () => { if (box) box.scrollTop = box.scrollHeight; };
   let pendingCall = null;
+  let waitingRow  = null;
 
   const stream = createThinkStream({
     mount: node => { box?.querySelector('.placeholder')?.remove(); if (box) agentFoldMount(box, node); scroll(); },
@@ -924,6 +932,22 @@ async function hcSend() {
         if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
         stream.finish();
         _hcAppend('error', evt.text, 'error');
+      }
+      // The provider has the request and has not started answering. One row,
+      // rewritten in place, because the alternative is a console that shows
+      // nothing for ninety seconds and reads as broken.
+      if (evt.type === 'waiting') {
+        const note = `${evt.provider} has not sent a token yet — ${evt.seconds}s`
+          + (evt.frames ? `, ${evt.frames} keep-alive frames` : '')
+          + (evt.timeoutMs ? ` of ${Math.round(evt.timeoutMs / 1000)}s` : '');
+        if (waitingRow) waitingRow.textContent = note;
+        else waitingRow = _hcAppend('waiting', note, 'waiting');
+      }
+      // Anything real from the model means the wait is over. `_hcAppend`
+      // returns the body span, so the row is its parent.
+      if (waitingRow && (evt.type === 'text' || evt.type === 'tool_call' || evt.type === 'usage')) {
+        waitingRow.parentElement?.remove();
+        waitingRow = null;
       }
       // Mid-turn, so the card is there to accept the moment the agent explains
       // it rather than after the whole answer has finished streaming.

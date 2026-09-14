@@ -118,6 +118,14 @@ function fromHarness(evt) {
     case 'warning':
       return line(SELF, 'warn', evt.text || `${evt.kind} warning`);
 
+    // A provider holding the request without answering. The log is the only
+    // place this was ever visible before, and it was not there either.
+    case 'waiting':
+      return line(SELF, 'warn',
+        `step ${evt.step}: ${evt.provider} silent for ${evt.seconds}s`
+        + (evt.frames ? ` (${evt.frames} keep-alive frames, no content)` : '')
+        + (evt.timeoutMs ? ` — giving up at ${Math.round(evt.timeoutMs / 1000)}s` : ''));
+
     case 'tool_call':
       return line(SELF, 'info', `step ${evt.step} → ${evt.name}(${argNames(evt.args)})`);
 

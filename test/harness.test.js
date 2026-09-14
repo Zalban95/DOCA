@@ -31,6 +31,12 @@ function sse(res, frames) {
   res.end();
 }
 
+/**
+ * Held-open responses, so `after()` can destroy them. A stalling provider is
+ * one that never ends its response — the test has to be able to end it.
+ */
+let stalled = [];
+
 before(async () => {
   stub = http.createServer((req, res) => {
     if (req.url.endsWith('/models')) {
@@ -43,6 +49,21 @@ before(async () => {
       const body = JSON.parse(raw || '{}');
       seen.push(body);
       const next = script.shift() || { text: '(script exhausted)' };
+
+      // The provider that accepts and never answers: 200, the right
+      // content-type, and then either SSE comments forever or no body at all.
+      // Observed against DeepSeek, 2026-09-14 — see ISSUES.md H-5.
+      if (next.stall) {
+        stalled.push(res);
+        if (next.stall === 'json') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return;                                    // headers, then silence
+        }
+        res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+        const beat = setInterval(() => { try { res.write(': keep-alive\n\n'); } catch {} }, 40);
+        res.on('close', () => clearInterval(beat));
+        return;
+      }
 
       // A non-streaming request (the summariser) always gets a plain completion.
       if (body.stream === false || next.json) {
@@ -77,6 +98,7 @@ before(async () => {
 });
 
 after(async () => {
+  for (const res of stalled) { try { res.destroy(); } catch {} }
   await H.stop();
   await new Promise(r => stub.close(r));
 });
@@ -287,6 +309,58 @@ test('the step cap stops a model that keeps calling tools', async () => {
   assert.equal(events.at(-1).code, 0);
 
   await H.api(null, 'POST', '/api/harness/doca/config', { maxSteps: 8 });
+});
+
+/* ── A provider that accepts and never answers ────────── */
+
+test('a provider that only sends keep-alives ends the turn and names the setting', async () => {
+  await H.api(null, 'POST', '/api/harness/doca/config', { firstTokenTimeoutMs: 900 });
+  script = [{ stall: 'sse' }];
+
+  const events = await stream('/api/harness/chat', { message: 'anyone there?' });
+
+  // It ends. Before this it waited forever and the console showed nothing.
+  assert.equal(events.at(-1).type, 'done');
+
+  const err = events.find(e => e.type === 'error');
+  assert.ok(err, 'the turn reports the stall rather than hanging');
+  // Charter rule 12: whose limit, and what to do about it. Never a bare timeout.
+  assert.match(err.text, /without sending a token/);
+  assert.match(err.text, /firstTokenTimeoutMs/);
+  assert.match(err.text, /not the model's/);
+  assert.doesNotMatch(err.text, /^timeout$/i);
+
+  // The wait itself was visible while it was happening.
+  const waits = events.filter(e => e.type === 'waiting');
+  assert.ok(waits.length, 'silence is reported while it lasts, not only once it fails');
+  assert.ok(waits.at(-1).frames > 0, 'keep-alive frames are counted, not silently dropped');
+
+  await H.api(null, 'POST', '/api/harness/doca/config', { firstTokenTimeoutMs: 90000 });
+});
+
+test('the deadline covers the non-streaming path too', async () => {
+  await H.api(null, 'POST', '/api/harness/doca/config', { firstTokenTimeoutMs: 900 });
+  script = [{ stall: 'json' }];
+
+  const events = await stream('/api/harness/chat', { message: 'anyone there?' });
+  const err = events.find(e => e.type === 'error');
+  assert.ok(err, 'a JSON provider that sends headers and no body is the same fault');
+  assert.match(err.text, /firstTokenTimeoutMs/);
+
+  await H.api(null, 'POST', '/api/harness/doca/config', { firstTokenTimeoutMs: 90000 });
+});
+
+test('a slow first token is not a stall once it arrives', async () => {
+  // The deadline is on the first token only: a provider that starts late but
+  // does start must not be cut off, or the fix becomes a cap on long answers.
+  await H.api(null, 'POST', '/api/harness/doca/config', { firstTokenTimeoutMs: 5000 });
+  script = [{ text: 'here I am' }];
+
+  const events = await stream('/api/harness/chat', { message: 'hello' });
+  assert.equal(events.filter(e => e.type === 'error').length, 0);
+  assert.match(events.filter(e => e.type === 'text').map(e => e.text).join(''), /here I am/);
+
+  await H.api(null, 'POST', '/api/harness/doca/config', { firstTokenTimeoutMs: 90000 });
 });
 
 test('a switched-off tool is refused even if the model asks for it', async () => {

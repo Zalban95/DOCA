@@ -110,6 +110,13 @@ function defaultParams() {
     compactTokens:  40000,  // fold when the last prompt reaches this many tokens, window or not
     compactAt:      60,     // % of the window at which older messages fold early
     warnAt:         80,     // % at which clients and the agent are warned
+    // How long to wait for the *first* token of a reply. Not a cap on the turn:
+    // once the provider starts answering it may take as long as it likes. This
+    // exists because a provider can accept a request, return 200, and then hold
+    // the connection open forever without ever sending one — which is
+    // indistinguishable from a hung panel. 0 disables it and restores the old
+    // unbounded wait.
+    firstTokenTimeoutMs: 90000,
     disabledTools:  [],
   };
 }

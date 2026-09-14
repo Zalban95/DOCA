@@ -388,17 +388,94 @@ async function post(ep, body, signal, p) {
   return r;
 }
 
+/** How often a still-silent provider is reported while we wait for its first token. */
+const WAITING_EVERY_MS = 15000;
+
+/**
+ * A deadline on the *first* token, not on the call.
+ *
+ * A provider that refuses says so with a status and `explain()` turns that into
+ * a sentence. A provider that accepts, returns 200 and then sends nothing says
+ * nothing at all, and the old code waited on it forever: `reader.read()` with
+ * only the browser's hang-up as a signal. That is a blank screen with no error
+ * in any log, and it cost an evening to find once already.
+ *
+ * So: arm a timer before the request, disarm it the moment anything real
+ * arrives, and leave the rest of the stream unbounded — a long answer is not a
+ * stall and must never be cut off. The caller's own signal is honoured
+ * unchanged, and a user pressing Stop is told that, not this.
+ */
+function firstTokenGuard({ p, signal, onWaiting }) {
+  const ms = Number(p?.firstTokenTimeoutMs) || 0;
+  const ctrl = new AbortController();
+  const started = Date.now();
+  const state = { stalled: false, frames: 0, elapsed: () => Date.now() - started };
+
+  const onAbort = () => ctrl.abort(signal?.reason);
+  if (signal) {
+    if (signal.aborted) onAbort();
+    else signal.addEventListener('abort', onAbort, { once: true });
+  }
+
+  let deadline = null;
+  let heartbeat = null;
+  if (ms > 0) {
+    deadline = setTimeout(() => { state.stalled = true; ctrl.abort(); }, ms);
+    if (onWaiting) {
+      // A short deadline still has to report before it fires, or the only thing
+      // the user ever sees is the failure.
+      const every = Math.max(50, Math.min(WAITING_EVERY_MS, Math.floor(ms / 3)));
+      heartbeat = setInterval(() => {
+        try { onWaiting({ seconds: Math.round(state.elapsed() / 1000), frames: state.frames, timeoutMs: ms }); }
+        catch {}
+      }, every);
+    }
+  }
+
+  state.ms = ms;
+  state.signal = ctrl.signal;
+  // Called the moment the provider produces anything real. Idempotent: the
+  // streaming path calls it on the first frame and again on nothing after.
+  state.arrived = () => {
+    if (deadline)  { clearTimeout(deadline);   deadline = null; }
+    if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
+  };
+  state.done = () => {
+    state.arrived();
+    if (signal) signal.removeEventListener('abort', onAbort);
+  };
+  return state;
+}
+
 /**
  * One model call. Streams text deltas through `onText` and returns the
  * assistant message. Falls back to reading a plain completion when the
  * endpoint answers with JSON despite being asked to stream.
  * @returns {Promise<{ content: string, tool_calls: object[] }>}
  */
-async function complete({ ep, body, signal, onText, p }) {
-  const r = await post(ep, body, signal, p);
+async function complete({ ep, body, signal, onText, onWaiting, p }) {
+  const guard = firstTokenGuard({ p, signal, onWaiting });
+  try {
+    return await streamOrRead({ ep, body, guard, onText, p });
+  } catch (e) {
+    // Our abort and the user's are the same AbortError at this level; only the
+    // guard knows which one fired. A deliberate Stop keeps its own meaning.
+    if (guard.stalled) throw new Error(budget.stalled({ ep, ms: guard.ms, frames: guard.frames }));
+    throw e;
+  } finally {
+    guard.done();
+  }
+}
+
+async function streamOrRead({ ep, body, guard, onText, p }) {
+  const r = await post(ep, body, guard.signal, p);
 
   if (!(r.headers.get('content-type') || '').includes('event-stream')) {
+    // The non-streaming path needs the same deadline: this provider answered
+    // `application/json`, sent headers in under half a second, and then never
+    // sent a body at all. `r.json()` is bounded only by the signal.
     const json = await r.json();
+    guard.arrived();
     const msg  = json?.choices?.[0]?.message || {};
     if (msg.content && onText) onText(msg.content);
     return { content: msg.content || '', tool_calls: msg.tool_calls || [], usage: json?.usage || null };
@@ -418,11 +495,19 @@ async function complete({ ep, body, signal, onText, p }) {
     const lines = buf.split('\n');
     buf = lines.pop() || '';
     for (const line of lines) {
+      // An SSE comment is the provider saying "still here, nothing yet". It is
+      // not content and must not disarm the deadline — but it is the single
+      // most useful thing to report while waiting, because it distinguishes a
+      // queued request from a dead socket. Counted, never silently dropped.
+      if (line.startsWith(':')) { guard.frames++; continue; }
       if (!line.startsWith('data:')) continue;
       const payload = line.slice(5).trim();
       if (!payload || payload === '[DONE]') continue;
       let frame;
       try { frame = JSON.parse(payload); } catch { continue; }
+      // Anything parseable is the provider answering, so the wait is over even
+      // if this particular frame carries no delta.
+      guard.arrived();
       // The usage frame arrives last and carries no choices — it is the only
       // measured number in the whole ledger, so it is read before the delta
       // check that would otherwise skip it.
@@ -623,6 +708,10 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       ep, signal, p,
       body: { ...base, messages, ...(schemas.length ? { tools: schemas, tool_choice: 'auto' } : {}) },
       onText: t => { text += t; say({ type: 'text', text: t }); },
+      // Silence is a state worth drawing. Without this the console shows the
+      // session line and then nothing at all, which reads as a broken panel
+      // rather than as a provider that has not started answering.
+      onWaiting: w => say({ type: 'waiting', step, provider: ep.label || ep.id, ...w }),
     });
 
     budget.record(led, {

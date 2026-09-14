@@ -176,6 +176,9 @@
 .hc-tool-result { border-left: 2px solid var(--green); max-height: 180px; overflow-y: auto; }
 .hc-messages > .agent-fold { max-width: 100%; width: 100%; }
 .hc-error       { align-self: stretch; max-width: 100%; color: var(--red); border: 1px solid var(--red); }
+/* Waiting is not failing: amber, and it removes itself the moment a token
+   arrives. Red here would teach the user that a slow provider is a broken one. */
+.hc-waiting     { align-self: stretch; max-width: 100%; color: var(--amber, #d89000); opacity: .85; font-style: italic; }
 
 /* ── Rules review (Verify rules in the Rules modal) ──── */
 /* Model prose in headed sections, so it keeps the line breaks it was written
