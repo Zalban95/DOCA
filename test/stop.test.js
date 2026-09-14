@@ -74,3 +74,34 @@ test('a stop names the turn it stopped, and an unknown one says it may have fini
       return true;
     });
 });
+
+test('cached prompt tokens are reported, not silently added to the bill', () => {
+  const budget = require('../modules/harness/budget');
+
+  // Every provider spells this differently, and reading none of them is how an
+  // eleven-step turn reads as 1.6 million when most of it was the same prefix
+  // arriving again at a tenth of the price.
+  for (const usage of [
+    { prompt_tokens: 1000, completion_tokens: 10, prompt_cache_hit_tokens: 900 },        // DeepSeek
+    { prompt_tokens: 1000, completion_tokens: 10, prompt_tokens_details: { cached_tokens: 900 } }, // OpenAI
+    { prompt_tokens: 1000, completion_tokens: 10, cache_read_input_tokens: 900 },        // Anthropic-compatible
+  ]) {
+    const l = budget.ledger();
+    budget.record(l, { usage });
+    const r = budget.report(l, {});
+    assert.equal(r.cachedTokens, 900, `not read from ${Object.keys(usage).join(',')}`);
+    assert.equal(r.cachePercent, 90);
+  }
+});
+
+test('a provider that says nothing about caching reports null, not zero', () => {
+  const budget = require('../modules/harness/budget');
+  const l = budget.ledger();
+  budget.record(l, { usage: { prompt_tokens: 1000, completion_tokens: 10 } });
+  const r = budget.report(l, {});
+  // null is "it did not say"; 0 would be "it told us nothing was cached", and
+  // the panel would draw a confident 0% for a provider that never mentioned it.
+  assert.equal(r.cachedTokens, null);
+  assert.equal(r.cachePercent, null);
+  assert.equal(r.totalTokens, 1010, 'the tokens were still sent — nothing is subtracted');
+});

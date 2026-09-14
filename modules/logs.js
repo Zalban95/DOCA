@@ -106,9 +106,13 @@ function fromHarness(evt) {
       const ctx = evt.contextWindow
         ? `, context ${evt.contextTokens}/${evt.contextWindow} (${evt.contextPercent}%)`
         : `, context ${evt.contextTokens}`;
+      // The cache share is the difference between "this turn cost 1.6 million"
+      // and "it re-sent the same prefix eleven times at a tenth of the price".
+      const cache = evt.cachePercent !== null && evt.cachePercent !== undefined
+        ? `, ${evt.cachePercent}% cached` : '';
       return line(SELF, 'info',
         `step ${evt.step}: ${evt.totalTokens} tokens `
-        + `(${evt.promptTokens} in, ${evt.completionTokens} out, ${evt.source})${ctx}`);
+        + `(${evt.promptTokens} in, ${evt.completionTokens} out, ${evt.source}${cache})${ctx}`);
     }
 
     case 'warning':

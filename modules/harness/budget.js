@@ -70,6 +70,8 @@ function ledger() {
     totalTokens: 0,
     lastPrompt: 0,          // the prompt of the most recent step — what fills the window
     peakPrompt: 0,
+    cachedTokens: 0,        // prompt tokens the provider served from its prefix cache
+    cacheReported: false,   // did it tell us about caching at all?
     measured: false,        // did any provider actually tell us?
     estimated: false,       // did we have to guess for any step?
   };
@@ -79,6 +81,26 @@ function ledger() {
  * Record one model call. `usage` is the provider's if it sent one; the
  * estimates are used only for the parts it left out.
  */
+/**
+ * Cached prompt tokens, however this provider spells them.
+ *
+ * Every provider worth using caches a stable prompt prefix and bills a re-send
+ * at a fraction of the first one — which is the entire reason `environment.js`
+ * keeps its volatile readings last. But they each report it differently, and
+ * reading none of them means the panel shows raw prompt tokens and calls it
+ * spend. An eleven-step turn then reads as 1.6 million when most of it was the
+ * same prefix arriving again at a tenth of the price. That is the same class of
+ * mistake as a failed check reporting "up to date": a number stated without
+ * saying what kind of number it is.
+ */
+function cachedOf(usage) {
+  const n = v => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : null);
+  return n(usage?.prompt_cache_hit_tokens)              // DeepSeek
+    ?? n(usage?.prompt_tokens_details?.cached_tokens)   // OpenAI
+    ?? n(usage?.cache_read_input_tokens)                // Anthropic-compatible
+    ?? null;
+}
+
 function record(l, { usage, promptEstimate = 0, completionEstimate = 0 } = {}) {
   const measuredPrompt     = Number(usage?.prompt_tokens);
   const measuredCompletion = Number(usage?.completion_tokens);
@@ -94,6 +116,9 @@ function record(l, { usage, promptEstimate = 0, completionEstimate = 0 } = {}) {
   l.totalTokens       = l.promptTokens + l.completionTokens;
   l.lastPrompt        = prompt;
   l.peakPrompt        = Math.max(l.peakPrompt, prompt);
+
+  const cached = cachedOf(usage);
+  if (cached !== null) { l.cachedTokens += Math.min(cached, prompt); l.cacheReported = true; }
   if (havePrompt || haveCompletion) l.measured  = true;
   if (!havePrompt || !haveCompletion) l.estimated = true;
   return l;
@@ -111,6 +136,12 @@ function report(l, p) {
     contextWindow: window || null,
     contextPercent: window ? pct(l.lastPrompt, window) : null,
     source: l.measured ? (l.estimated ? 'mixed' : 'provider') : 'estimated',
+    // Reported separately rather than subtracted: the tokens really were sent,
+    // and a panel that quietly showed a smaller number would be lying in the
+    // other direction. What changes is what they cost.
+    cachedTokens: l.cacheReported ? l.cachedTokens : null,
+    cachePercent: l.cacheReported && l.promptTokens
+      ? pct(l.cachedTokens, l.promptTokens) : null,
   };
 }
 
@@ -171,6 +202,7 @@ function block(p, l) {
     const r = report(l, p);
     out.push('', `this turn so far: ${r.steps} model call${r.steps === 1 ? '' : 's'}, `
       + `${r.totalTokens} tokens (${r.source})`
+      + (r.cachePercent !== null ? `, ${r.cachePercent}% of the prompt served from cache` : '')
       + (r.contextPercent !== null ? `, last prompt ${r.contextTokens} = ${r.contextPercent}% of the window` : ''));
   }
 
