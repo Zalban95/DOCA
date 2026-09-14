@@ -462,7 +462,7 @@ function memList() {
  */
 function memSearch(query, limit = 8) {
   const terms = String(query || '').toLowerCase().split(/[^a-z0-9_.-]+/).filter(t => t.length > 1);
-  if (!terms.length) return memList().slice(0, limit);
+  if (!terms.length) return memList().filter(e => e.pinned).slice(0, limit);
 
   return memList()
     .map(e => {

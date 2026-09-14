@@ -376,6 +376,7 @@ test('the agent is told its own limits, by name and by settings path', async () 
   assert.match(block, /harness\.config\.doca\.maxSteps/);
   assert.match(block, /harness\.config\.doca\.maxTokens/);
   assert.match(block, /harness\.config\.doca\.historyTurns/);
+  assert.match(block, /harness\.config\.doca\.compactTokens/);
   assert.match(block, /harness\.config\.doca\.memoryLimit/);
   // With no window declared it says so rather than implying one.
   assert.match(block, /context window: not declared/);
@@ -499,5 +500,52 @@ test('the MCP call timeout is a setting the agent can see and propose, and says 
   prefs.mcpSettings.callTimeoutMs = 5;
   require('../modules/utils').savePrefs(prefs);
   assert.equal(McpClient.timeoutFor('call'), 120000);
+});
+
+test('older tool results are clipped and spilled so the model can read_file them', () => {
+  const { toApiMessages } = require('../modules/harness/agent');
+  const fs = require('node:fs');
+  const big = 'X'.repeat(8000);
+  const rows = [
+    { role: 'user', content: 'look' },
+    { role: 'tool', tool_call_id: 'c1', name: 'shell', content: `old-${big}` },
+    { role: 'tool', tool_call_id: 'c2', name: 'shell', content: `mid-${big}` },
+    { role: 'tool', tool_call_id: 'c3', name: 'read_file', content: `new-${big}` },
+  ];
+  const out = toApiMessages(rows, { sessionId: 's_clip' });
+  assert.equal(out[3].content, rows[3].content, 'the newest tool result stays in full');
+  assert.match(out[1].content, /full output:/, 'an older one is replaced by a pointer');
+  assert.match(out[1].content, /read_file/);
+  const m = out[1].content.match(/full output: (.+?) —/);
+  assert.ok(m, 'the pointer names a path');
+  assert.equal(fs.readFileSync(m[1], 'utf8'), rows[1].content, 'the spilled file is the original text');
+});
+
+test('folding fires on an absolute token budget even with no window declared', () => {
+  const p = { contextWindow: 0, compactTokens: 40000, compactAt: 60 };
+  assert.equal(budget.shouldCompact(p, 39999), false);
+  assert.equal(budget.shouldCompact(p, 40000), true);
+  assert.equal(budget.shouldCompact({ contextWindow: 0, compactTokens: 0, compactAt: 60 }, 200000), false,
+    'without a budget or a window nothing percentage-based can fire');
+  assert.equal(budget.shouldCompact({ contextWindow: 100000, compactTokens: 0, compactAt: 60 }, 60000), true);
+});
+
+test('an empty memory search returns pinned facts only, and the prompt stays token-capped', async () => {
+  assert.equal(memory.memSearch('', 50).length, 0, 'nothing pinned, nothing injected');
+  await callTool('memory_write', { key: 'always-on', value: 'this one is pinned', pinned: true });
+  await callTool('memory_write', { key: 'noise-a', value: 'unrelated unpinned fact A' });
+  const empty = memory.memSearch('', 50);
+  assert.equal(empty.length, 1);
+  assert.equal(empty[0].key, 'always-on');
+
+  for (let i = 0; i < 12; i++)
+    await callTool('memory_write', { key: `blob-${i}`, value: `zzzz shared ${'W'.repeat(900)}` });
+  const prompt = require('../modules/harness/agent').preview({ message: 'zzzz shared' });
+  const start = prompt.indexOf('# What you remember');
+  const rest = prompt.slice(start + 1);
+  const end = rest.search(/\n# /);
+  const mem = end < 0 ? rest : rest.slice(0, end);
+  assert.ok(mem.length < 9000, `memory block should stay near 2k tokens, got ${mem.length} chars`);
+  assert.match(mem, /always-on/);
 });
 

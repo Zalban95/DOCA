@@ -13,6 +13,8 @@
  * transcript, so a reload or a restart resumes exactly where it left off.
  */
 const { EventEmitter } = require('events');
+const fs   = require('fs');
+const path = require('path');
 
 const budget      = require('./budget');
 const environment = require('./environment');
@@ -21,6 +23,7 @@ const providers   = require('./providers');
 const settings    = require('./settings');
 const attachments = require('../attachments');
 const installs    = require('./installs');
+const store       = require('../store');
 // Required lazily inside the functions that use them: modules/agents requires
 // this file back, and a load-time cycle would leave one of the two half-built.
 const agents   = { block: () => require('../agents/registry').block() };
@@ -50,15 +53,17 @@ function params() {
 
 /**
  * Memory relevant to this turn: everything pinned, plus the best keyword
- * matches for what the user just said, up to `memoryLimit` entries.
+ * matches for what the user just said, up to `memoryLimit` entries and a
+ * token budget. A high count cap must not dump the whole file.
  */
+const MEMORY_BLOCK_CHARS = 8000;   // ~2k tokens; the rest stays behind memory_search
+
 function memoryBlock(userText, limit) {
   const pinned = memory.memList().filter(e => e.pinned);
   const hits   = memory.memSearch(userText, limit);
   const seen   = new Set();
-  const chosen = [...pinned, ...hits].filter(e => !seen.has(e.id) && seen.add(e.id)).slice(0, limit);
-  if (!chosen.length) return '';
-  memory.memTouch(hits);
+  const ranked = [...pinned, ...hits].filter(e => !seen.has(e.id) && seen.add(e.id)).slice(0, limit);
+  if (!ranked.length) return '';
 
   // A fact the user settled and a fact something contradicted are both still
   // facts, and the agent has to be able to tell them from the ordinary ones:
@@ -71,6 +76,16 @@ function memoryBlock(userText, limit) {
         + '— check this before relying on it, and correct it when you know better.'
       : head;
   };
+
+  const chosen = [];
+  let chars = 0;
+  for (const e of ranked) {
+    const text = line(e);
+    if (chosen.length && chars + text.length > MEMORY_BLOCK_CHARS) break;
+    chosen.push(e);
+    chars += text.length;
+  }
+  memory.memTouch(hits.filter(e => chosen.includes(e)));
 
   return ['# What you remember', ...chosen.map(line),
     chosen.some(e => e.locked)
@@ -268,10 +283,60 @@ function environmentBrief(p, toolCount) {
   ].join('\n');
 }
 
-/** Transcript rows → the message array the API expects. */
-function toApiMessages(rows) {
-  return rows.map(r => {
-    if (r.role === 'tool') return { role: 'tool', tool_call_id: r.tool_call_id, name: r.name, content: r.content };
+// Newest tool results stay verbatim until this many characters of them have
+// been kept; older ones become a head, a tail and a path. The transcript on
+// disk is not touched — this is only what the next model call sees.
+const TOOL_KEEP_CHARS = 12000;
+const TOOL_HEAD = 600;
+const TOOL_TAIL = 200;
+
+function safeSpillPart(s, max) {
+  return String(s || 'tool').replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, max) || 'tool';
+}
+
+/** Write one tool result so a clipped prompt can still retrieve it with read_file. */
+function spillTool(sessionId, row) {
+  const dir = store.dir(path.join('harness/tool-results', sessionId || 'anon'));
+  const file = path.join(dir,
+    `${safeSpillPart(row.tool_call_id || row.at, 48)}-${safeSpillPart(row.name, 32)}.txt`);
+  if (!fs.existsSync(file)) fs.writeFileSync(file, String(row.content ?? ''), 'utf8');
+  return file;
+}
+
+function clipToolContent(content, file) {
+  const s = String(content ?? '');
+  if (s.length <= TOOL_HEAD + TOOL_TAIL + 80) return s;
+  return `${s.slice(0, TOOL_HEAD)}\n… [full output: ${file} — ${s.length} characters; read_file to retrieve]\n${s.slice(-TOOL_TAIL)}`;
+}
+
+/**
+ * Transcript rows → the message array the API expects.
+ *
+ * Tool output is kept in full on disk and clipped here. Walking newest-first
+ * and stopping at TOOL_KEEP_CHARS is what stops a long session from re-sending
+ * every `read_file` it ever did; the spill file is how the model gets the rest.
+ */
+function toApiMessages(rows, { sessionId } = {}) {
+  const keepFull = new Set();
+  let used = 0;
+  for (let i = (rows || []).length - 1; i >= 0; i--) {
+    if (rows[i].role !== 'tool') continue;
+    const len = String(rows[i].content || '').length;
+    if (!keepFull.size || used + len <= TOOL_KEEP_CHARS) {
+      keepFull.add(i);
+      used += len;
+    }
+  }
+
+  return (rows || []).map((r, i) => {
+    if (r.role === 'tool') {
+      let content = r.content;
+      if (!keepFull.has(i)) {
+        const file = spillTool(sessionId, r);
+        content = clipToolContent(r.content, file);
+      }
+      return { role: 'tool', tool_call_id: r.tool_call_id, name: r.name, content };
+    }
     if (r.role === 'assistant' && r.tool_calls?.length)
       return { role: 'assistant', content: r.content || null, tool_calls: r.tool_calls };
     // Attachments are rendered here and stored separately on the row, the same
@@ -490,7 +555,7 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
     ...(client ? { from: { id: client.id || null, name: client.name, formFactor: client.formFactor || client.kind || null } } : {}),
   });
 
-  const summary = await foldSummary({ session: memory.getSession(session.id), p, ep, signal });
+  let summary = await foldSummary({ session: memory.getSession(session.id), p, ep, signal });
   // An allowlist is expressed as its complement, because `schemas()` filters by
   // what is switched off and there is no second mechanism worth adding. A
   // profile with no list gets the user's ordinary disabled-tools setting.
@@ -547,7 +612,7 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
           toolCount: schemas.length, disabledCount: disabled.length,
         }),
       },
-      ...toApiMessages(rows),
+      ...toApiMessages(rows, { sessionId: session.id }),
     ];
 
     // Measured when the provider answers with a usage frame, estimated when it
@@ -615,14 +680,14 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
     }
 
     // Token pressure folds the conversation early, before the message count
-    // would have. Without a declared window there is nothing to be a percentage
-    // of, so this does nothing and `summarizeAfter` remains the only trigger.
-    const window = budget.windowFor(p);
-    if (window && led.lastPrompt / window * 100 >= Math.max(1, Number(p.compactAt) || 60)) {
+    // would have. `compactTokens` is the honest trigger — a window nobody
+    // declared cannot be a percentage of anything, and message count treats
+    // twenty lines of chat and twenty screens of tool output as the same.
+    if (budget.shouldCompact(p, led.lastPrompt)) {
       const folded = await foldSummary({ session: memory.getSession(session.id), p, ep, signal, force: true });
       if (folded !== summary) {
         summary = folded;
-        say({ type: 'compacted', at: step, contextTokens: led.lastPrompt, contextWindow: window });
+        say({ type: 'compacted', at: step, contextTokens: led.lastPrompt, contextWindow: budget.windowFor(p) || null });
       }
     }
 
@@ -727,7 +792,8 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
   const transcript = {
     messages: rows.length,
     kept: Math.max(0, Number(p.historyTurns) || 0),
-    tokens: budget.estimateMessages(toApiMessages(rows.slice(-(Number(p.historyTurns) || 0)))),
+    tokens: budget.estimateMessages(toApiMessages(rows.slice(-(Number(p.historyTurns) || 0)),
+      { sessionId: sessionId || memory.activeSession()?.id })),
     note: 'this conversation only — a new conversation starts empty',
   };
 
@@ -772,4 +838,4 @@ async function status() {
   return out;
 }
 
-module.exports = { turn, status, params, ask, preview, breakdown, events };
+module.exports = { turn, status, params, ask, preview, breakdown, events, toApiMessages };

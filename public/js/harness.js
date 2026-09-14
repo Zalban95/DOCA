@@ -271,6 +271,11 @@ const HARNESS_PARAMS = [
     hint: 'Once a conversation passes this many messages, the older half is replaced by a short summary. '
         + '0 never summarises, which is fine until a long conversation stops fitting.' },
 
+  { key: 'compactTokens', label: 'Summarise at', unit: 'tokens', attrs: 'min="0" step="1000"',
+    hint: 'Fold older messages into the summary once the last prompt reaches this many tokens. This is the '
+        + 'trigger that works without a context window: 40000 is a working set, not a ceiling. 0 turns it off '
+        + 'and leaves only the message-count and percentage triggers below.' },
+
   { key: 'compactAt', label: 'Summarise at', unit: '% of window', attrs: 'min="0" max="99" step="5"',
     hint: 'The same summarising, triggered by size instead of by count — which is the honest trigger, since '
         + 'twenty lines of chat and twenty screens of tool output are the same number of messages. '
@@ -394,6 +399,7 @@ async function harnessConfigSave(id) {
         summarizeAfter: parseInt(val('summarizeAfter'), 10) || 0,
         memoryLimit:    parseInt(val('memoryLimit'), 10) || 0,
         contextWindow:  parseInt(val('contextWindow'), 10) || 0,
+        compactTokens:  parseInt(val('compactTokens'), 10) || 0,
         compactAt:      parseInt(val('compactAt'), 10) || 0,
         warnAt:         parseInt(val('warnAt'), 10) || 0,
         systemPrompt:   val('systemPrompt') || '',

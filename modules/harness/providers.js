@@ -107,6 +107,7 @@ function defaultParams() {
     // be discovered reliably, since /models almost never reports it and a local
     // runtime's window is whatever it was started with.
     contextWindow:  0,
+    compactTokens:  40000,  // fold when the last prompt reaches this many tokens, window or not
     compactAt:      60,     // % of the window at which older messages fold early
     warnAt:         80,     // % at which clients and the agent are warned
     disabledTools:  [],

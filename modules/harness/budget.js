@@ -57,6 +57,26 @@ function windowFor(p) {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
 
+/** Absolute prompt size at which older messages fold, or 0 when unset. */
+function compactTokensFor(p) {
+  const n = Number(p?.compactTokens);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+/**
+ * Should this prompt fold now?
+ *
+ * Two independent triggers: an absolute token budget (works with no window
+ * declared) and a percentage of a declared window. Either is enough.
+ */
+function shouldCompact(p, lastPrompt) {
+  const prompt = Number(lastPrompt) || 0;
+  const budgetTok = compactTokensFor(p);
+  if (budgetTok && prompt >= budgetTok) return true;
+  const window = windowFor(p);
+  return !!(window && prompt / window * 100 >= Math.max(1, Number(p.compactAt) || 60));
+}
+
 function pct(value, total) {
   return total > 0 ? Math.round((value / total) * 100) : 0;
 }
@@ -186,15 +206,18 @@ function block(p, l) {
   out.push(window
     ? `context window: ${window} tokens (setting harness.config.doca.contextWindow — what the model actually `
       + 'accepts is the provider\'s, this is only what you were told it is)'
-    : 'context window: not declared. Nobody has told this harness how big the model\'s window is, so it '
-      + 'compacts on message count alone. If you learn the real figure, propose it as '
-      + 'harness.config.doca.contextWindow.');
+    : 'context window: not declared. Nobody has told this harness how big the model\'s window is. '
+      + (compactTokensFor(p)
+        ? 'Older messages still fold once the prompt reaches harness.config.doca.compactTokens.'
+        : 'It would compact on message count alone. If you learn the real figure, propose it as '
+          + 'harness.config.doca.contextWindow.'));
 
   out.push(
     `reply cap: ${Number(p.maxTokens) > 0 ? `${p.maxTokens} tokens` : 'none set'} (harness.config.doca.maxTokens)`,
     `tool steps: ${p.maxSteps} per turn (harness.config.doca.maxSteps)`,
     `history kept verbatim: ${p.historyTurns} messages, older ones fold into the summary after `
-      + `${p.summarizeAfter} (harness.config.doca.historyTurns, .summarizeAfter)`,
+      + `${p.summarizeAfter} messages or ${compactTokensFor(p) || '(unset)'} tokens of prompt `
+      + `(harness.config.doca.historyTurns, .summarizeAfter, .compactTokens)`,
     `memory entries in this prompt: up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`,
   );
 
@@ -242,8 +265,8 @@ function explain({ status, detail, ep, p }) {
     return `${head}: the prompt was longer than the model's context window`
       + `${window ? ` (this harness is configured for ${window} tokens — if the model's real window is smaller, `
         + 'that setting is wrong)' : ' (no context window is configured for this harness, so it could not warn you)'}. `
-      + 'The DOCA settings that decide how much is sent are harness.config.doca.historyTurns, .summarizeAfter and '
-      + `.memoryLimit; the window itself is ${who}'s.${tail}`;
+      + 'The DOCA settings that decide how much is sent are harness.config.doca.historyTurns, .summarizeAfter, '
+      + `.compactTokens and .memoryLimit; the window itself is ${who}'s.${tail}`;
   }
 
   return `${head}.${tail}`;
@@ -251,6 +274,6 @@ function explain({ status, detail, ep, p }) {
 
 module.exports = {
   CHARS_PER_TOKEN,
-  estimate, estimateMessages, windowFor,
+  estimate, estimateMessages, windowFor, compactTokensFor, shouldCompact,
   ledger, record, report, warning, block, explain,
 };
