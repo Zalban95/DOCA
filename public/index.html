@@ -1220,14 +1220,15 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════ CHAT FAB + PANEL -->
-<button class="chat-fab" id="chat-fab" onclick="toggleChat()" title="Chat with OpenClaw agent">⬡</button>
+<button class="chat-fab" id="chat-fab" onclick="toggleChat()" title="Chat with the DOCA Agent"
+        data-brand-title="agent" data-brand-title-template="Chat with the {}">⬡</button>
 
 <div class="chat-panel" id="chat-panel"
      ondragover="event.preventDefault(); this.classList.add('drop');"
      ondragleave="this.classList.remove('drop');"
      ondrop="event.preventDefault(); this.classList.remove('drop'); chatAttachFiles(event.dataTransfer.files);">
   <div class="chat-header">
-    <span class="chat-title">OpenClaw Agent</span>
+    <span class="chat-title" data-brand="agent">DOCA Agent</span>
     <div class="toolbar-right">
       <button class="btn btn-xs" id="chat-call-toggle" onclick="chatToggleCall()" title="Voice call mode">🎙 Live</button>
       <button class="btn btn-xs tool-gear" onclick="nav('settings'); settingsSubNav('voice'); toggleChat()" title="Voice settings (STT/TTS)">⚙</button>
@@ -1236,7 +1237,7 @@
     </div>
   </div>
   <div class="chat-messages" id="chat-messages">
-    <div class="chat-msg system">Send a message to chat with the OpenClaw agent.</div>
+    <div class="chat-msg system" data-brand-text="agent">Send a message to chat with the {}.</div>
   </div>
   <div class="chat-attachments" id="chat-attachments" style="display:none"></div>
   <div class="chat-input-row" id="chat-input-row">
@@ -1357,6 +1358,7 @@
 <!-- ═══════════════════════════════════════════════════ JS MODULES -->
 <script src="js/state.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/branding.js"></script>
 <script src="js/fp.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/sidebar.js"></script>
@@ -1385,6 +1387,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     themeApplyOnLoad();
+    brandingLoad();
     mobileNavRender();
     settingsApplyOnLoad();
     controlsInit();

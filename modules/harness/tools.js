@@ -18,6 +18,7 @@ const { exec } = require('child_process');
 
 const { WORKSPACE_DIR, FM_ALLOWED_ROOTS } = require('../paths');
 const { fmSafe } = require('../utils');
+const installs = require('./installs');
 const memory   = require('./memory');
 const settings = require('./settings');
 const mcp      = require('../mcp/tools');
@@ -325,6 +326,33 @@ const TOOLS = [
       const lines = p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`);
       return `Proposed (${p.id}) — waiting for the user to accept or decline:\n${lines.join('\n')}\n`
         + 'Tell them what you proposed and why, then stop.';
+    },
+  },
+  {
+    name: 'install_propose',
+    description: 'Ask the user to install something this panel already knows how to install: an Ollama model '
+      + '(kind "ollama-model", id is the model name), one of its inference services (kind "service", id is '
+      + 'whisper / kokoro / vllm / sdwebui / comfyui), or an agent harness (kind "harness"). This does NOT '
+      + 'install it — the user sees what it is and clicks, and the panel then runs its own installer with the '
+      + 'right image, ports and flags. Use it instead of stopping at "I cannot do that": when the thing in your '
+      + 'way is a missing tool, say which one and offer to fetch it. Do not install anything with `shell` '
+      + 'instead — a hand-written docker run gets the GPU flags and cache mounts wrong and leaves something that '
+      + 'looks installed and is not. Propose once, say what you proposed, then carry on without it.',
+    parameters: {
+      type: 'object',
+      properties: {
+        kind:   { type: 'string', enum: ['ollama-model', 'service', 'harness'], description: 'What sort of thing.' },
+        id:     { type: 'string', description: 'Which one, e.g. "qwen2.5vl:7b" or "comfyui".' },
+        reason: { type: 'string', description: 'Why, in one line, in the user\'s terms.' },
+      },
+      required: ['kind', 'id', 'reason'],
+    },
+    run: ({ kind, id, reason }) => {
+      const row = installs.propose({ kind, id, reason });
+      if (row.status !== 'pending') return `Already ${row.status}: ${row.kind} "${row.target}".`;
+      return `Proposed (${row.id}) — waiting for the user to accept or decline:\n  ${row.what}\n`
+        + (row.needsPassword ? '  (its installer needs sudo, so the user types their password, not you)\n' : '')
+        + 'Tell them what you proposed and why, then carry on without it.';
     },
   },
   {

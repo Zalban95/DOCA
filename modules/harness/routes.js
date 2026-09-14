@@ -11,6 +11,7 @@ const memory      = require('./memory');
 const tools       = require('./tools');
 const agent       = require('./agent');
 const environment = require('./environment');
+const installs    = require('./installs');
 const settings    = require('./settings');
 
 /** Send the thrown error with its own status when it carries one. */
@@ -227,7 +228,19 @@ const handleProposalApply = wrap(async (req, res) =>
 const handleProposalReject = wrap(async (req, res) =>
   res.json({ ok: true, proposal: settings.reject(req.params.id, req.body?.reason) }));
 
+/* ── Install proposals ────────────────────────────────── */
+
+const handleInstalls = wrap(async (_req, res) => res.json({ ...installs.list(), kinds: installs.kinds() }));
+
+/** The click. Streams nothing: the installers it wraps already report at the end. */
+const handleInstallApply = wrap(async (req, res) =>
+  res.json({ ok: true, install: await installs.apply(req.params.id, { password: req.body?.password }) }));
+
+const handleInstallReject = wrap(async (req, res) =>
+  res.json({ ok: true, install: installs.reject(req.params.id, req.body?.reason) }));
+
 module.exports = {
+  handleInstalls, handleInstallApply, handleInstallReject,
   handleList, handleSetDefault, handleInstall, handleConfig, handleAddCustom, handleRemoveCustom,
   handleProviders, handleModels, handleStatus,
   handleChat, handleSessions, handleSessionNew, handleSession, handleSessionActivate, handleSessionDelete,

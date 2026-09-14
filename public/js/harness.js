@@ -983,10 +983,72 @@ function hcEnvClose(event) {
 async function _hcLoadProposals() {
   const box = document.getElementById('hc-proposals');
   if (!box) return;
+  // Settings changes and installs share one tray on purpose: they are the same
+  // question — the agent wants something done that only the user may do — and
+  // two lists would mean two places to look for an unanswered one.
+  const [props, inst] = await Promise.all([
+    apiFetch('/api/harness/proposals').catch(() => ({ pending: [] })),
+    apiFetch('/api/harness/installs').catch(() => ({ pending: [] })),
+  ]);
+  box.innerHTML = (props.pending || []).map(_hcProposalHtml).join('')
+    + (inst.pending || []).map(_hcInstallHtml).join('');
+}
+
+/**
+ * One thing the agent wants installed.
+ *
+ * It names the installer rather than a command, because that is the actual
+ * safety property here: the agent chose from a catalog, and Accept runs the
+ * same code the Models or Services tab runs when you click their buttons.
+ * There is nothing in this card the user could not already have clicked, which
+ * is what makes it a fair thing to be asked.
+ */
+function _hcInstallHtml(i) {
+  return `
+    <div class="hc-prop" id="hc-inst-${escHtml(i.id)}">
+      <div class="hc-prop-head">
+        <span class="badge badge-blue" style="font-size:9px">INSTALL</span>
+        <span class="hc-prop-why">${escHtml(i.reason || 'The agent needs this to continue.')}</span>
+      </div>
+      <div class="hc-prop-row">
+        <code class="hc-prop-key">${escHtml(i.kind)}</code>
+        <span class="hc-prop-to">${escHtml(i.target)}</span>
+      </div>
+      <div class="hc-prop-note">${escHtml(i.what)}</div>
+      ${i.needsPassword
+        ? '<div class="hc-prop-note">Its installer needs sudo — you will be asked for your password, not the agent.</div>'
+        : ''}
+      <div class="hc-prop-actions">
+        <span class="status-line" id="hc-inst-status-${escHtml(i.id)}"></span>
+        <button class="btn btn-xs" onclick="hcInstallReject(${jsArg(i.id)})">Decline</button>
+        <button class="btn btn-xs btn-green" onclick="hcInstallApply(${jsArg(i.id)})">${escHtml(i.verb || 'Install')}</button>
+      </div>
+    </div>`;
+}
+
+async function hcInstallApply(id) {
+  const st = document.getElementById(`hc-inst-status-${id}`);
+  setStatus(st, 'installing…', '');
   try {
-    const { pending } = await apiFetch('/api/harness/proposals');
-    box.innerHTML = pending.map(_hcProposalHtml).join('');
-  } catch { box.innerHTML = ''; }
+    const { install } = await apiFetch(`/api/harness/installs/${encodeURIComponent(id)}/apply`,
+      { method: 'POST', body: {} });
+    if (install.status === 'installed') {
+      setStatus(st, '✓ installed', 'ok');
+      // Tools are rebuilt per step server-side, but the ⚙ panel's copy is not.
+      _harnessLoadMeta(true);
+    } else {
+      setStatus(st, `✗ ${install.error || 'failed'}`, 'err');
+    }
+    setTimeout(_hcLoadProposals, 1500);
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}
+
+async function hcInstallReject(id) {
+  const st = document.getElementById(`hc-inst-status-${id}`);
+  try {
+    await apiFetch(`/api/harness/installs/${encodeURIComponent(id)}/reject`, { method: 'POST', body: {} });
+    _hcLoadProposals();
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
 
 /**

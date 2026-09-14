@@ -19,6 +19,7 @@ const { ensureCerts }          = require('./modules/https-cert');
 const controls     = require('./modules/controls');
 const logs         = require('./modules/logs');
 const attachments  = require('./modules/attachments');
+const branding     = require('./modules/branding');
 const config       = require('./modules/config');
 const keys         = require('./modules/keys');
 const devicesPanel = require('./modules/devices-panel');
@@ -69,6 +70,10 @@ app.get ('/api/logs',         logs.handleLogs);
 app.get ('/api/logs/sources', logs.handleSources);
 
 app.get ('/api/stats/defs', stats.handleDefs);
+
+// Every name the front end draws, so a rebrand is a settings change and not a
+// grep through forty files. Unauthenticated on purpose: it is a product name.
+app.get ('/api/branding', (_req, res) => res.json(branding.all()));
 
 // ─── Routes: Attachments ──────────────────────────────────────────────────────
 // The multer error is caught here rather than left to the default handler: a
@@ -184,6 +189,9 @@ app.get   ('/api/harness/settings',                 harness.handleSettingsRead);
 app.get   ('/api/harness/proposals',                harness.handleProposals);
 app.post  ('/api/harness/proposals/:id/apply',      harness.handleProposalApply);
 app.post  ('/api/harness/proposals/:id/reject',     harness.handleProposalReject);
+app.get   ('/api/harness/installs',                 harness.handleInstalls);
+app.post  ('/api/harness/installs/:id/apply',       harness.handleInstallApply);
+app.post  ('/api/harness/installs/:id/reject',      harness.handleInstallReject);
 
 // Per-harness routes last: `:id` would otherwise swallow the fixed paths above.
 app.post  ('/api/harness/:id/install',  harness.handleInstall);
@@ -313,7 +321,7 @@ function listenWithRetry(server, announce) {
       process.exit(1);
     }
     if (Date.now() >= deadline) {
-      console.error(`[server] port ${PORT} is still in use after ${Math.round(BIND_RETRY_MS / 1000)}s — another OpenClaw Panel is probably already running.`);
+      console.error(`[server] port ${PORT} is still in use after ${Math.round(BIND_RETRY_MS / 1000)}s — another ${branding.name('panel')} is probably already running.`);
       process.exit(1);
     }
     if (!waited) {
@@ -349,7 +357,7 @@ ensureCerts().then(certs => {
     const label = certs.tailscale
       ? `https://${certs.tailscale}:${PORT}  (Tailscale — trusted)`
       : `https://0.0.0.0:${PORT}  (self-signed)`;
-    console.log(`OpenClaw Panel v${pkg.version} → ${label}`);
+    console.log(`${branding.name('panel')} v${pkg.version} → ${label}`);
     startMcpServers();
   });
 }).catch(e => {
@@ -357,7 +365,7 @@ ensureCerts().then(certs => {
   const server = http.createServer(app);
   terminal.setup(server);
   listenWithRetry(server, () => {
-    console.log(`OpenClaw Panel v${pkg.version} → http://0.0.0.0:${PORT}`);
+    console.log(`${branding.name('panel')} v${pkg.version} → http://0.0.0.0:${PORT}`);
     startMcpServers();
   });
 });

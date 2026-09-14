@@ -20,6 +20,7 @@ const memory      = require('./memory');
 const providers   = require('./providers');
 const settings    = require('./settings');
 const attachments = require('../attachments');
+const installs    = require('./installs');
 const tools       = require('./tools');
 
 /**
@@ -217,6 +218,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
     memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)),
     budget.block(p, ledger),
     settings.block(),
+    installs.block(),
     summary ? `# Earlier in this conversation\n${summary}` : '',
   ].filter(Boolean).join('\n\n');
 }
