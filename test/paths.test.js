@@ -26,7 +26,7 @@ test('every settable path reports its value, where it came from, and whether it 
 
   const keys = body.settable.map(r => r.key);
   assert.deepEqual(keys, [
-    'COMPOSE_DIR', 'CONFIG_PATH', 'SKILLS_DIR', 'WORKSPACE_DIR', 'ATTACHMENTS_DIR',
+    'COMPOSE_DIR', 'CONFIG_PATH', 'SKILLS_DIR', 'WORKSPACE_DIR', 'ATTACHMENTS_DIR', 'AGENTS_DIR',
     'SETUP_DIR', 'SNAPSHOT_DIR', 'SNAPSHOT_SCRIPT', 'RESTORE_SCRIPT',
   ]);
 
@@ -38,6 +38,15 @@ test('every settable path reports its value, where it came from, and whether it 
 
   // A path nobody set anywhere falls back to the shipped default.
   assert.equal(row(body.settable, 'SNAPSHOT_DIR').source, 'default');
+});
+
+test('no path claims it needs a restart when nothing has been saved', async () => {
+  // `pending` is value !== the constant this process booted with, so a SETTABLE
+  // fallback and its constant that disagree light this up for ever with nothing
+  // to apply. It is invisible in code and obvious on the Paths screen.
+  const { body } = await get('/api/paths');
+  const stuck = body.settable.filter(r => r.pending).map(r => `${r.key} (${r.value} vs ${r.active})`);
+  assert.deepEqual(stuck, [], 'a path is permanently pending, which means its default and its constant differ');
 });
 
 test('saving an override is remembered, flagged as needing a restart, and clearable', async () => {

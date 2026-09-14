@@ -15,21 +15,61 @@ let cachedAt = 0;
 const CACHE_TTL_MS = 5 * 60 * 1000; // background cache: 5 min
 
 /**
- * The newest *version* tag, which is not the same thing as the first tag GitHub
- * returns.
+ * The newest version tag, asked of git before GitHub.
  *
- * `/tags` is ordered however the API feels like ordering it — not by semver and
- * not reliably by date — so `per_page=1` was asking one arbitrary tag whether it
- * was the latest release. With tags v2.1.1 … v2.3.5 present and the package at
- * 2.12.0 this happened to answer "no update", which is right by accident: the
- * same code would have announced a downgrade just as confidently. Take a page of
- * them and pick the highest.
+ * `git ls-remote --tags origin` is the better question and it was not being
+ * asked. It uses the credentials that are already working — the same ones that
+ * pushed the tag — so it reads a **private** repository, which the public API
+ * cannot: GitHub answers 404 for a private repo to avoid confirming it exists,
+ * and 404 arrived here as "no tags", which arrived at the user as "up to date".
+ * That is why a push never showed up. It needs no new secret, no PAT in prefs,
+ * and no outbound HTTPS beyond what git already does.
+ *
+ * GIT_TERMINAL_PROMPT=0 matters: without it, a machine whose credential helper
+ * has expired sits waiting for a username that nobody is there to type, and the
+ * update check hangs rather than failing.
+ *
+ * The API stays as the fallback for a checkout with no remote, and takes a
+ * token from the environment if one is there. Deliberately environment-only:
+ * prefs are served by an unauthenticated route, and a PAT in there would be the
+ * same leak `/api/mcp` had in 2.13.1.
  */
-function fetchLatestTag() {
+function highest(versions) {
+  const ok = versions.filter(v => /^\d+\.\d+\.\d+$/.test(v));
+  return ok.length ? ok.reduce((a, b) => (compareSemver(a, b) < 0 ? b : a)) : null;
+}
+
+/** Version tags out of `git ls-remote --tags` output. Exported so it is testable. */
+function parseLsRemote(stdout) {
+  return String(stdout || '')
+    .split('\n')
+    .map(l => (l.match(/refs\/tags\/v?(\d+\.\d+\.\d+)(?:\^\{\})?$/) || [])[1])
+    .filter(Boolean);
+}
+
+function fetchLatestTagFromGit() {
+  return new Promise(resolve => {
+    exec('git ls-remote --tags origin', {
+      cwd: DASHBOARD_DIR,
+      timeout: 15000,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_ASKPASS: 'echo' },
+    }, (err, stdout) => {
+      if (err) return resolve(null);
+      resolve(highest(parseLsRemote(stdout)));
+    });
+  });
+}
+
+function fetchLatestTagFromApi() {
   return new Promise((resolve) => {
     const url = `https://api.github.com/repos/${REPO}/tags?per_page=100`;
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
     const req = https.get(url, {
-      headers: { 'User-Agent': 'DOCA-update-check', Accept: 'application/vnd.github.v3+json' },
+      headers: {
+        'User-Agent': 'DOCA-update-check',
+        Accept: 'application/vnd.github.v3+json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       timeout: 8000,
     }, res => {
       let body = '';
@@ -39,17 +79,22 @@ function fetchLatestTag() {
         try {
           const tags = JSON.parse(body);
           if (!Array.isArray(tags) || !tags.length) return resolve(null);
-          const versions = tags
-            .map(t => String(t?.name || '').replace(/^v/, ''))
-            .filter(v => /^\d+\.\d+\.\d+$/.test(v));
-          if (!versions.length) return resolve(null);
-          resolve(versions.reduce((a, b) => (compareSemver(a, b) < 0 ? b : a)));
+          resolve(highest(tags.map(t => String(t?.name || '').replace(/^v/, ''))));
         } catch { resolve(null); }
       });
     });
     req.on('error', () => resolve(null));
     req.on('timeout', () => { req.destroy(); resolve(null); });
   });
+}
+
+/** @returns {Promise<{version: string, source: string}|null>} */
+async function fetchLatestTag() {
+  const fromGit = await fetchLatestTagFromGit();
+  if (fromGit) return { version: fromGit, source: 'git ls-remote' };
+  const fromApi = await fetchLatestTagFromApi();
+  if (fromApi) return { version: fromApi, source: 'GitHub API' };
+  return null;
 }
 
 function compareSemver(a, b) {
@@ -71,22 +116,22 @@ async function handleUpdateCheck(req, res) {
     return res.json(cached);
   }
 
-  const latest = await fetchLatestTag();
+  const found = await fetchLatestTag();
 
   // "I looked and you are current" and "I could not look" are different
-  // answers, and this used to give both as `updateAvailable: false` with
-  // `latest` falling back to the local version — so a private repo, a rate
-  // limit or no egress all rendered as a green "up to date" tick. A check that
-  // cannot fail visibly is not a check.
+  // answers, and giving both as `updateAvailable: false` is how a private repo,
+  // a rate limit or no egress all rendered as a green "up to date" tick. A
+  // check that cannot fail visibly is not a check.
   const result = {
     current: LOCAL_VERSION,
-    latest: latest || null,
-    checked: !!latest,
-    reason: latest ? null
-      : `Could not read the tags of ${REPO}. The check is unauthenticated, so a private repository, a rate `
-        + 'limit or no outbound network all look the same from here — this is not a statement that you are '
-        + 'up to date.',
-    updateAvailable: latest ? compareSemver(LOCAL_VERSION, latest) < 0 : false,
+    latest: found ? found.version : null,
+    checked: !!found,
+    source: found ? found.source : null,
+    reason: found ? null
+      : 'Could not read the tags of this repository. `git ls-remote` failed (no remote, or credentials that '
+        + 'need renewing) and the GitHub API returned nothing — for a private repo it answers 404 unless '
+        + 'GITHUB_TOKEN is set in the environment. This is not a statement that you are up to date.',
+    updateAvailable: found ? compareSemver(LOCAL_VERSION, found.version) < 0 : false,
     repo: `https://github.com/${REPO}`,
     checkedAt: new Date().toISOString(),
   };
@@ -267,4 +312,4 @@ function handleRestart(_req, res) {
   setTimeout(() => process.exit(0), 500);
 }
 
-module.exports = { handleUpdateCheck, handleUpdate, handleRestart };
+module.exports = { handleUpdateCheck, handleUpdate, handleRestart, parseLsRemote, highest, compareSemver };

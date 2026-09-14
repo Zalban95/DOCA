@@ -21,6 +21,10 @@ const providers   = require('./providers');
 const settings    = require('./settings');
 const attachments = require('../attachments');
 const installs    = require('./installs');
+// Required lazily inside the functions that use them: modules/agents requires
+// this file back, and a load-time cycle would leave one of the two half-built.
+const agents   = { block: () => require('../agents/registry').block() };
+const missions = { block: () => require('../agents/missions').block() };
 const tools       = require('./tools');
 
 /**
@@ -207,7 +211,28 @@ function placeBlock(client) {
  * which the user does own — follows it, then the facts, then what the agent
  * knows, then where this conversation had got to.
  */
-function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, ledger }) {
+function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, ledger, profile }) {
+  // A specialist's prompt is mostly what is left out of it. The charter is not
+  // one of those things: it goes first here exactly as it does for the
+  // orchestrator, and a definition has no way to drop it.
+  if (profile) {
+    return [
+      providers.SAFETY_CHARTER,
+      profile.systemPrompt,
+      `You are "${profile.label || profile.id}", working on one errand handed to you by the agent the `
+        + 'user is talking to. You cannot change settings, install anything, or dispatch another agent. '
+        + 'When you are done, answer with the result — that answer is the whole of what gets back. If '
+        + 'something is in your way that only the user can clear, say so plainly and stop rather than '
+        + 'working around it.',
+      profile.environment === 'full'
+        ? environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount })
+        : environmentBrief(p, toolCount),
+      profile.memory ? memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)) : '',
+      budget.block(p, ledger),
+      summary ? `# Earlier in this mission\n${summary}` : '',
+    ].filter(Boolean).join('\n\n');
+  }
+
   return [
     providers.SAFETY_CHARTER,
     p.systemPrompt || providers.DEFAULT_SYSTEM_PROMPT,
@@ -219,8 +244,28 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
     budget.block(p, ledger),
     settings.block(),
     installs.block(),
+    agents.block(),
+    missions.block(),
     summary ? `# Earlier in this conversation\n${summary}` : '',
   ].filter(Boolean).join('\n\n');
+}
+
+/**
+ * The environment, for something that only needs to know where it is standing.
+ *
+ * The full block lists every managed path, every provider and every MCP server,
+ * which is right for an agent that might use any of them and is pure cost for
+ * one with four tools. Rebuilt per step like everything else, so the saving is
+ * per step too.
+ */
+function environmentBrief(p, toolCount) {
+  const s = environment.snapshot();
+  return ['# Where you are',
+    `host: ${s.host.hostname} (${s.host.platform}), user ${s.host.user}, home ${s.host.home}`,
+    `now: ${new Date().toISOString()}`,
+    `running on: ${p.provider} / ${p.model || '(model unset)'}${toolCount ? `, ${toolCount} tools` : ''}`,
+    `workspace: ${(s.paths.find(x => x.key === 'WORKSPACE_DIR') || {}).value || '(unset)'}`,
+  ].join('\n');
 }
 
 /** Transcript rows → the message array the API expects. */
@@ -406,12 +451,25 @@ async function foldSummary({ session, p, ep, signal, force = false }) {
  *                      screen?: object, input?: object } }} opts
  * @returns {Promise<{ sessionId: string, text: string, steps: number }>}
  */
-async function turn({ message, sessionId, emit, signal, client, attachments: attached }) {
+async function turn({ message, sessionId, emit, signal, client, attachments: attached, profile }) {
   const say = evt => {
     try { emit(evt); } catch {}
     try { events.emit('event', evt); } catch {}
   };
-  const p   = params();
+  // A profile overrides only what it names. Everything it is silent about —
+  // temperature, history, the summariser — stays the panel's own setting, so a
+  // specialist does not quietly acquire a second set of defaults to maintain.
+  const p = profile
+    ? {
+      ...params(),
+      ...(profile.provider      ? { provider: profile.provider }           : {}),
+      ...(profile.model         ? { model: profile.model }                 : {}),
+      ...(profile.maxSteps      ? { maxSteps: profile.maxSteps }           : {}),
+      ...(profile.maxTokens     ? { maxTokens: profile.maxTokens }         : {}),
+      ...(profile.contextWindow ? { contextWindow: profile.contextWindow } : {}),
+      systemPrompt: profile.systemPrompt,
+    }
+    : params();
   const ep  = providers.endpoint(p.provider);
   if (!p.model)
     throw Object.assign(new Error(
@@ -433,7 +491,12 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
   });
 
   const summary = await foldSummary({ session: memory.getSession(session.id), p, ep, signal });
-  const disabled = Array.isArray(p.disabledTools) ? p.disabledTools : [];
+  // An allowlist is expressed as its complement, because `schemas()` filters by
+  // what is switched off and there is no second mechanism worth adding. A
+  // profile with no list gets the user's ordinary disabled-tools setting.
+  const disabled = profile && Array.isArray(profile.tools)
+    ? tools.schemas([]).map(sc => sc.function.name).filter(n => !profile.tools.includes(n))
+    : (Array.isArray(p.disabledTools) ? p.disabledTools : []);
 
   const base = {
     model:       p.model,
@@ -589,11 +652,13 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
  * shows the user the environment block for the same reason; this is the whole
  * of it, and it is what the prompt-order tests assert against.
  */
-function preview({ message = '', client = null, ledger = null } = {}) {
-  const p = params();
-  const disabled = Array.isArray(p.disabledTools) ? p.disabledTools : [];
+function preview({ message = '', client = null, ledger = null, profile = null } = {}) {
+  const p = profile ? { ...params(), systemPrompt: profile.systemPrompt } : params();
+  const disabled = profile && Array.isArray(profile.tools)
+    ? tools.schemas([]).map(sc => sc.function.name).filter(n => !profile.tools.includes(n))
+    : (Array.isArray(p.disabledTools) ? p.disabledTools : []);
   return systemPrompt({
-    p, userText: message, summary: '', client, ledger,
+    p, userText: message, summary: '', client, ledger, profile,
     toolCount: tools.schemas(disabled).length, disabledCount: disabled.length,
   });
 }

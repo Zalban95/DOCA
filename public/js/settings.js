@@ -375,8 +375,11 @@ async function updateCheck() {
       if (badge) badge.style.display = 'none';
       if (pullBtn) pullBtn.style.display = '';
     } else {
+      // Say how it knows. "Up to date" from a source that cannot see private
+      // tags is the claim that started all this.
       if (el) el.innerHTML = `<div class="update-info" style="color:var(--green)">
-        ✓ Up to date — <code>${escHtml(data.current)}</code>
+        ✓ Up to date — <code>${escHtml(data.current)}</code>${data.source
+          ? `<br><span style="opacity:.6;font-size:11px">checked with ${escHtml(data.source)}</span>` : ''}
       </div>`;
       if (badge) badge.style.display = 'none';
       if (pullBtn) pullBtn.style.display = 'none';

@@ -356,6 +356,51 @@ const TOOLS = [
     },
   },
   {
+    name: 'agent_dispatch',
+    description: 'Hand a self-contained errand to one of the specialists listed in your prompt. It runs as '
+      + 'a mission in the background: this returns a mission id at once and you are NOT blocked — carry on '
+      + 'talking to the user, and read the answer later with agent_results. Give it everything it needs in '
+      + '`context`, because a specialist sees only what you hand it. Use it when the work is a separable '
+      + 'errand (look something up, build something, check something); do it yourself when it is a '
+      + 'sentence of thinking. Tell the user what you sent and to whom.',
+    parameters: {
+      type: 'object',
+      properties: {
+        agent:   { type: 'string', description: 'The specialist\'s id, from the list in your prompt.' },
+        task:    { type: 'string', description: 'The errand, in full. Write it for somebody who was not in this conversation.' },
+        context: { type: 'string', description: 'Anything from this conversation it needs. It sees nothing else.' },
+      },
+      required: ['agent', 'task'],
+    },
+    run: ({ agent, task, context }) => {
+      const m = require('../agents/missions').dispatch({ agentId: agent, task, context });
+      return `Mission ${m.id} started — ${m.label} is working on it. You are not waiting: carry on, and `
+        + 'read the result with agent_results when you need it.';
+    },
+  },
+  {
+    name: 'agent_results',
+    description: 'How a mission you dispatched is getting on, and its answer once it has one. Call it when '
+      + 'you actually need the result — not in a loop waiting for it.',
+    parameters: {
+      type: 'object',
+      properties: { mission: { type: 'string', description: 'A mission id. Omit for all recent missions.' } },
+    },
+    run: ({ mission }) => {
+      const missions = require('../agents/missions');
+      if (!mission) {
+        const rows = missions.list({ limit: 10 });
+        if (!rows.length) return 'No missions.';
+        return rows.map(m => `${m.id} (${m.label}): ${m.state}`).join('\n');
+      }
+      const m = missions.get(mission);
+      if (!m) return `No mission called "${mission}".`;
+      if (m.state === 'running') return `${m.id} is still running (step ${m.steps}). Carry on; ask again later.`;
+      if (m.state !== 'done') return `${m.id} ${m.state}${m.error ? `: ${m.error}` : ''}.`;
+      return `${m.id} (${m.label}) finished in ${m.steps} steps:\n\n${m.result}`;
+    },
+  },
+  {
     name: 'system_status',
     description: 'Current state of the machine: CPU, RAM, GPU, disks, running containers and local models.',
     parameters: { type: 'object', properties: {} },
@@ -460,12 +505,23 @@ function describe() {
 }
 
 /** The tool declarations to send to the model, minus anything switched off. */
+/**
+ * The tool list, minus anything switched off.
+ *
+ * The dispatch pair is not in it while specialist agents are off — the list is
+ * rebuilt every step, so a flag nobody has turned on costs nothing and offers
+ * nothing. That is also what makes rolling the feature back a settings change
+ * rather than a release.
+ */
 function schemas(disabled = []) {
+  const off = require('../agents/registry').enabled()
+    ? disabled
+    : [...disabled, 'agent_dispatch', 'agent_results'];
   return [
     ...TOOLS
-      .filter(t => !disabled.includes(t.name))
+      .filter(t => !off.includes(t.name))
       .map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })),
-    ...mcp.schemas(disabled),
+    ...mcp.schemas(off),
   ];
 }
 

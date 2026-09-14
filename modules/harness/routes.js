@@ -12,6 +12,8 @@ const tools       = require('./tools');
 const agent       = require('./agent');
 const environment = require('./environment');
 const installs    = require('./installs');
+const registry    = require('../agents/registry');
+const missions    = require('../agents/missions');
 const settings    = require('./settings');
 
 /** Send the thrown error with its own status when it carries one. */
@@ -228,6 +230,30 @@ const handleProposalApply = wrap(async (req, res) =>
 const handleProposalReject = wrap(async (req, res) =>
   res.json({ ok: true, proposal: settings.reject(req.params.id, req.body?.reason) }));
 
+/* ── Specialist agents and their missions ─────────────── */
+
+const handleAgents = wrap(async (_req, res) =>
+  res.json({ enabled: registry.enabled(), dir: registry.dir(), agents: registry.list(), never: registry.NEVER }));
+
+/** The switch. Off is the default, and turning it off is the rollback. */
+const handleAgentsEnable = wrap(async (req, res) =>
+  res.json({ ok: true, enabled: registry.setEnabled(req.body?.enabled === true) }));
+
+const handleAgentSave = wrap(async (req, res) =>
+  res.json({ ok: true, agent: registry.save({ ...req.body, id: req.params.id || req.body?.id }) }));
+
+const handleAgentDelete = wrap(async (req, res) =>
+  res.json({ ok: true, agent: registry.remove(req.params.id) }));
+
+const handleMissions = wrap(async (req, res) =>
+  res.json({ missions: missions.list({ state: req.query.state, limit: Number(req.query.limit) || 50 }) }));
+
+const handleMission = wrap(async (req, res) => {
+  const m = missions.get(req.params.id);
+  if (!m) return res.status(404).json({ error: `No mission called "${req.params.id}"` });
+  res.json({ mission: m, events: missions.events(req.params.id) });
+});
+
 /* ── Install proposals ────────────────────────────────── */
 
 const handleInstalls = wrap(async (_req, res) => res.json({ ...installs.list(), kinds: installs.kinds() }));
@@ -240,6 +266,7 @@ const handleInstallReject = wrap(async (req, res) =>
   res.json({ ok: true, install: installs.reject(req.params.id, req.body?.reason) }));
 
 module.exports = {
+  handleAgents, handleAgentsEnable, handleAgentSave, handleAgentDelete, handleMissions, handleMission,
   handleInstalls, handleInstallApply, handleInstallReject,
   handleList, handleSetDefault, handleInstall, handleConfig, handleAddCustom, handleRemoveCustom,
   handleProviders, handleModels, handleStatus,

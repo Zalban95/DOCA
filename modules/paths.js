@@ -26,6 +26,8 @@ const SETTABLE = [
     note: 'Where the agent and the harness do their work' },
   { key: 'ATTACHMENTS_DIR', label: 'Attachments', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace', 'attachments'),
     note: 'Files attached to a conversation land here, and the agent reads them by path' },
+  { key: 'AGENTS_DIR', label: 'Specialist agents', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace', 'agents'),
+    note: 'One JSON file per specialist the orchestrator can dispatch' },
   { key: 'SETUP_DIR', label: 'Setup scripts', kind: 'dir', fallback: HOME,
     note: 'Directory the Setup panel reads its shell scripts from' },
   { key: 'SNAPSHOT_DIR', label: 'Snapshot storage', kind: 'dir', fallback: path.join(HOME, 'openclaw-snapshots'),
@@ -59,7 +61,12 @@ const CONFIG_PATH     = process.env.CONFIG_PATH     || path.join(HOME, '.opencla
 const SKILLS_DIR      = process.env.SKILLS_DIR      || path.join(HOME, '.openclaw', 'workspace', 'skills');
 const WORKSPACE_DIR   = process.env.WORKSPACE_DIR   || path.join(HOME, '.openclaw', 'workspace');
 const SETUP_DIR       = process.env.SETUP_DIR       || HOME;
-const ATTACHMENTS_DIR = process.env.ATTACHMENTS_DIR || path.join(WORKSPACE_DIR, 'attachments');
+// Same literal as the SETTABLE fallback above, not path.join(WORKSPACE_DIR, …):
+// describe() compares this constant against the row's value to decide whether a
+// path was saved since boot, so a constant that follows an override the row does
+// not would light up "restart to apply" for ever, with nothing to apply.
+const ATTACHMENTS_DIR = process.env.ATTACHMENTS_DIR || path.join(HOME, '.openclaw', 'workspace', 'attachments');
+const AGENTS_DIR      = process.env.AGENTS_DIR      || path.join(HOME, '.openclaw', 'workspace', 'agents');
 const SNAPSHOT_SCRIPT = process.env.SNAPSHOT_SCRIPT || path.join(HOME, 'snapshot-agent.sh');
 const RESTORE_SCRIPT  = process.env.RESTORE_SCRIPT  || path.join(HOME, 'restore-agent.sh');
 const SNAPSHOT_DIR    = process.env.SNAPSHOT_DIR    || path.join(HOME, 'openclaw-snapshots');
@@ -95,7 +102,7 @@ const ALLOWED_SCRIPTS = ['setup-openclaw.sh', 'setup-phase2.sh', 'snapshot-agent
 
 const VALUES = {
   COMPOSE_DIR, CONFIG_PATH, SKILLS_DIR, WORKSPACE_DIR,
-  SETUP_DIR, SNAPSHOT_DIR, SNAPSHOT_SCRIPT, RESTORE_SCRIPT, ATTACHMENTS_DIR,
+  SETUP_DIR, SNAPSHOT_DIR, SNAPSHOT_SCRIPT, RESTORE_SCRIPT, ATTACHMENTS_DIR, AGENTS_DIR,
 };
 
 /** What a path resolves to right now, including an override saved since boot.
@@ -149,6 +156,7 @@ module.exports = {
   SKILLS_DIR,
   WORKSPACE_DIR,
   ATTACHMENTS_DIR,
+  AGENTS_DIR,
   SETUP_DIR,
   SNAPSHOT_SCRIPT,
   RESTORE_SCRIPT,
