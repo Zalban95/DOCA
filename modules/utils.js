@@ -34,7 +34,15 @@ function sseHeaders(res) {
 /** Return true if the resolved path falls within an allowed root. */
 function fmSafe(p) {
   const abs = path.resolve(p);
-  return FM_ALLOWED_ROOTS.some(root => abs === root || abs.startsWith(root + '/'));
+  // `root + '/'` was a Unix assumption, and the machine this is developed on is
+  // Windows: every absolute path there is separated by `\`, so nothing but a root
+  // itself ever passed and the file tools refused the whole disk. Compare with
+  // the platform's separator, and case-insensitively where the filesystem is.
+  const fold = s => (process.platform === 'win32' ? s.toLowerCase() : s);
+  return FM_ALLOWED_ROOTS.some(rootRaw => {
+    const root = fold(path.resolve(rootRaw)), a = fold(abs);
+    return a === root || a.startsWith(root.endsWith(path.sep) ? root : root + path.sep);
+  });
 }
 
 /** Load dashboard preferences from disk (returns {} on missing/corrupt file). */

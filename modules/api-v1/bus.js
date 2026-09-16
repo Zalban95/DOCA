@@ -46,6 +46,11 @@ const TYPES = {
   // Durable so a client that arrives mid-turn learns a turn is in flight, and one
   // that was away still gets the answer it did not watch being typed.
   'agent.turn':       { cls: 'durable', ttlSec: 6 * 3600 },
+  // A mission starting and finishing is durable — it is the notification that
+  // work the user asked for is done, and it is worth having on waking. The step
+  // ticks in between are published ephemerally by the publisher, because a
+  // progress bar redrawn from an hour-old queue is not progress.
+  'agent.mission':    { cls: 'durable', ttlSec: 6 * 3600 },
   'artifact.deliver': { cls: 'durable', ttlSec: L.DEFAULT_EVENT_TTL_SEC },
   'sensor.request':   { cls: 'durable', ttlSec: 600 },
   'sensor.stop':      { cls: 'durable', ttlSec: 600 },

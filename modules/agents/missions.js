@@ -68,6 +68,40 @@ function patch(id, fields) {
   return row;
 }
 
+/**
+ * Tell the user's devices what a mission is doing.
+ *
+ * A mission is the one thing here that runs with nobody watching — the whole
+ * point is that the user walks away — and until now the only place it appeared
+ * was a bar in the panel that polls every three seconds. A phone in a pocket
+ * could not know a mission had finished. The audience is `harness:chat`, the same
+ * one `agent.turn` goes to: a device that follows the conversation is the device
+ * that should hear about work the conversation started.
+ *
+ * `ephemeral` for the step ticks, durable for the state changes, so the queue a
+ * sleeping watch drains holds "started" and "done" and not four hundred steps.
+ */
+function announce(row, { ephemeral = false } = {}) {
+  if (!row) return;
+  try {
+    const devices = require('../api-v1/devices');
+    const bus     = require('../api-v1/bus');
+    const { hasScope } = require('../api-v1/scopes');
+    const payload = {
+      missionId: row.id, agentId: row.agentId, label: row.label,
+      task: String(row.task || '').slice(0, 200),
+      state: row.state, steps: row.steps || 0, tokens: row.tokens || 0,
+      startedAt: row.startedAt, endedAt: row.endedAt,
+      result: row.result ? String(row.result).slice(0, 600) : undefined,
+      error: row.error || undefined,
+    };
+    for (const d of devices.list()) {
+      if (d.revokedAt || !hasScope(d.scopes, 'harness:chat')) continue;
+      bus.publish(d.id, 'agent.mission', payload, ephemeral ? { cls: 'ephemeral' } : undefined);
+    }
+  } catch { /* a mission's bookkeeping must never break the mission */ }
+}
+
 /* ── Running one ──────────────────────────────────────── */
 
 /** The profile the runner narrows the prompt and tool list with. */
@@ -127,6 +161,7 @@ function dispatch({ agentId, task, context, by, chainId } = {}) {
     result: null, error: null,
   };
   saveIndex([...loadIndex(), row]);
+  announce(row);
 
   const message = context
     ? `${text}\n\n## Context from the orchestrator\n${String(context).slice(0, 20000)}`
@@ -136,18 +171,18 @@ function dispatch({ agentId, task, context, by, chainId } = {}) {
   // and the user keeps typing.
   agent.turn({ message, sessionId: session.id, profile: profileOf(def), emit: evt => record(id, evt) })
     .then(r => {
-      patch(id, {
+      announce(patch(id, {
         state: 'done', endedAt: new Date().toISOString(),
         steps: r.steps, tokens: r.usage?.totalTokens || 0,
         result: String(r.text || '').slice(0, 20000),
-      });
+      }));
     })
     .catch(e => {
-      patch(id, {
+      announce(patch(id, {
         state: e?.name === 'AbortError' ? 'cancelled' : 'failed',
         endedAt: new Date().toISOString(),
         error: String(e?.message || e).slice(0, 600),
-      });
+      }));
     });
 
   return row;
@@ -164,7 +199,7 @@ function record(id, evt) {
   try {
     if (!evt || evt.type === 'text' || evt.type === 'session') return;
     if (evt.type === 'usage') {
-      patch(id, { steps: evt.step, tokens: evt.totalTokens || 0 });
+      announce(patch(id, { steps: evt.step, tokens: evt.totalTokens || 0 }), { ephemeral: true });
       return;
     }
     store.appendJsonl(logFor(id), { at: new Date().toISOString(), ...evt });

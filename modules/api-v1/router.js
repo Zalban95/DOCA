@@ -474,6 +474,19 @@ harnessApi.get('/turns', requireScope('harness:chat'), (_req, res) =>
 harnessApi.post('/turns/:id/cancel', requireScope('harness:chat'), wrap(async (req, res) =>
   res.json(harness.cancel(req.params.id, req.device))));
 
+// Missions ride the bus as `agent.mission`, but a client that has just woken up
+// has to be able to draw what is already running without waiting for the next
+// step tick. Read-only, and under `harness:chat` rather than a scope of its own:
+// a device that follows the conversation follows the work it started.
+harnessApi.get('/missions', requireScope('harness:chat'), (req, res) => {
+  const missions = require('../agents/missions');
+  const enabled = require('../agents/registry').enabled();
+  res.json({
+    enabled,
+    missions: enabled ? missions.list({ state: req.query.state, limit: Math.min(50, parseInt(req.query.limit, 10) || 20) }) : [],
+  });
+});
+
 harnessApi.get('/sessions', requireScope('harness:sessions'), (_req, res) =>
   res.json(harness.sessions()));
 harnessApi.post('/sessions', requireScope('harness:sessions'), wrap(async (req, res) =>

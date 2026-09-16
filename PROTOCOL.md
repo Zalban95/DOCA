@@ -467,6 +467,7 @@ data: {"reason":"revoked"}
 | `agent.turn` | durable | `{ turnId, sessionId, state: started\|done\|failed, by, message?, text?, steps?, proposals[]?, error? }` — one conversation turn (§23) |
 | `agent.text` | ephemeral | `{ turnId, sessionId, delta }` — reply text as produced; **only to the device that posted the message** |
 | `agent.tool` | ephemeral | `{ turnId, sessionId, name, phase: call\|result, step, args?, ok?, preview? }` |
+| `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error? }` — a specialist agent's work, to every device with `harness:chat`. `GET /harness/missions` is the same picture for a client that has just woken up. |
 | `artifact.deliver` | durable | `{ artifact, inline?, inlineEncoding?: utf8|base64, message, ext }` |
 | `sensor.request` | durable (ttl = duration + 30 s) | `{ request: { id, sensors: [{ id, mode, rateHz, durationSec, unit }], reason, ext, expiresAt } }` |
 | `sensor.stop` | durable | `{ requestId, reason }` |
@@ -503,6 +504,15 @@ open ──select dismiss──▶ dismissed        any ──▶ closed   (conf
 ```
 
 ### 12.2 Agent raises a prompt
+
+A prompt has two possible authors and a device cannot tell them apart, which is
+the intent: an external agent holding an `agent`-scoped token posts to the
+endpoint below, and the hub's own built-in harness raises one directly through
+the same code (its `ask_device` tool). A prompt from the harness carries
+`from`/`agentId` of `harness`, which is **not** a device id — do not look it up in
+the registry. It asks with `option` choices, waits for the answer, and cancels the
+prompt if nobody answers, so a device may see `prompt.closed` with reason
+`cancelled` for a question that simply went unanswered.
 
 ```http
 POST /api/v1/agent/prompts                       (scope agent)
@@ -1035,6 +1045,7 @@ channel (§11), which is already cursor-based, resumable and multi-subscriber:
 | `agent.text` | **only the device that posted** | a client with no screen open should not pay radio time for tokens |
 | `agent.turn` `state: done` | every device with `harness:chat` | carries the whole reply in `text`, so a client that missed the deltas missed nothing |
 | `agent.turn` `state: failed` | every device with `harness:chat` | `error.code` is `harness_unconfigured` (no model chosen) or `harness_error` |
+| `agent.mission` | every device with `harness:chat` | a mission runs with nobody watching, so its start and finish are worth having on waking; the step ticks in between are not |
 
 `agent.turn` is durable and the other two are ephemeral. That is the whole
 battery story: a watch may subscribe and simply ignore `agent.text`, or go

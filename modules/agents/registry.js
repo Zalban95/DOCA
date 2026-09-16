@@ -41,8 +41,18 @@ const path = require('path');
 const paths = require('../paths');
 const { loadPrefs, savePrefs } = require('../utils');
 
-/** Tools no sub-agent may have, whatever its definition says. */
-const NEVER = ['settings_propose', 'install_propose', 'agent_dispatch', 'agent_results'];
+/**
+ * Tools no sub-agent may have, whatever its definition says.
+ *
+ * `ask_device` is here for the same reason as the proposal tools: a mission runs
+ * with nobody watching it, and a specialist that stops to ask the user a
+ * question has gone around the orchestrator that dispatched it — which then
+ * reads a report that says "I asked" about a decision it never saw. Questions
+ * have one owner. `tell_device` is not blocked, but nothing grants it either:
+ * a profile's tool list is an allowlist, so a specialist has it only if
+ * somebody wrote it down.
+ */
+const NEVER = ['settings_propose', 'install_propose', 'agent_dispatch', 'agent_results', 'ask_device'];
 
 /**
  * Shipped definitions. Editable by writing a file of the same id, which wins —
