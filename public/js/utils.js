@@ -451,6 +451,47 @@ function createThinkStream(ui) {
 }
 
 /**
+ * A picture the agent showed with show_image.
+ *
+ * Built from elements, never innerHTML, and the address is always the panel's
+ * own attachment route built from a name — never a URL a model wrote. A chat
+ * that draws markdown images fetches whatever address the model was talked into
+ * writing, which is how a prompt injection sends a conversation to someone
+ * else's server; that is why text stays text here.
+ *
+ * @param {{ name: string, caption?: string }} image
+ * @param {() => void} [onLoad]  e.g. scroll the transcript once the height is known
+ */
+function agentImageEl(image, onLoad) {
+  const url = `/api/attachments/${encodeURIComponent(image.name)}`;
+  const fig = document.createElement('figure');
+  fig.className = 'agent-image';
+  const link = document.createElement('a');
+  link.href = url; link.target = '_blank'; link.rel = 'noopener';
+  link.title = 'Open full size';
+  const img = document.createElement('img');
+  img.src = url; img.alt = image.caption || image.name;
+  // Not loading="lazy": a lazy image has no size until it loads, a shrink-to-fit
+  // chat bubble gives it none, and the browser then never finds it near the
+  // viewport — the floating chat drew a 2 px box and never fetched it.
+  img.decoding = 'async';
+  if (onLoad) img.addEventListener('load', onLoad, { once: true });
+  img.addEventListener('error', () => {
+    fig.classList.add('missing');
+    img.remove();
+    link.textContent = `${image.name} is no longer in the attachments folder`;
+  }, { once: true });
+  link.appendChild(img);
+  fig.appendChild(link);
+  if (image.caption) {
+    const cap = document.createElement('figcaption');
+    cap.textContent = image.caption;
+    fig.appendChild(cap);
+  }
+  return fig;
+}
+
+/**
  * Split stored assistant content that may contain `<think>` blocks into
  * thinking folds + plain text, for history reload.
  *

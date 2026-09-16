@@ -46,6 +46,9 @@ function resolvePath(p) {
   return abs;
 }
 
+/** A chat picture is for looking at, and a phone on mobile data pays for every byte of it. */
+const SHOW_IMAGE_MAX = 20 * 1024 * 1024;
+
 const TOOLS = [
   {
     name: 'shell',
@@ -502,6 +505,39 @@ const TOOLS = [
     },
   },
   {
+    name: 'show_image',
+    description: 'Show the user a picture in this chat: a render, a chart, a screenshot, a photo or a diagram that '
+      + 'is a file on this machine (png, jpg, webp, gif, avif or svg). Show it rather than describing it. '
+      + 'Markdown image syntax is NOT drawn, so this is the only way a picture reaches the chat. A copy is kept '
+      + 'with the conversation, so changing the file later does not change what was shown. To put a picture on '
+      + 'a device the user is carrying instead, use tell_device.',
+    parameters: {
+      type: 'object',
+      properties: {
+        path:    { type: 'string', description: 'The image file. Absolute, or relative to the agent workspace.' },
+        caption: { type: 'string', description: 'One short line under the picture: what it is.' },
+      },
+      required: ['path'],
+    },
+    run: ({ path: p, caption }, ctx = {}) => {
+      const attachments = require('../attachments');
+      const abs  = resolvePath(p);
+      const mime = attachments.mimeFor(abs);
+      if (!attachments.IMAGE_MIME.has(mime))
+        throw new Error(`${path.basename(abs)} is not a picture a chat can draw (png, jpg, webp, gif, avif or svg). `
+          + 'Convert it first, for example: magick in.bmp out.png');
+      const bytes = fs.statSync(abs).size;
+      if (bytes > SHOW_IMAGE_MAX)
+        throw new Error(`${path.basename(abs)} is ${attachments.humanBytes(bytes)}; a chat picture is capped at `
+          + `${attachments.humanBytes(SHOW_IMAGE_MAX)}. Scale it down or save it as webp or jpg, then show that.`);
+      const rec = attachments.save(fs.readFileSync(abs), path.basename(abs), { from: 'agent', mime });
+      const image = { name: rec.name, mime, bytes, ...(caption ? { caption: String(caption).slice(0, 200) } : {}) };
+      if (typeof ctx.show === 'function') ctx.show(image);
+      return `Shown in the chat: ${rec.name} (${attachments.humanBytes(bytes)}). The user can see it now; `
+        + 'do not describe it again unless they ask.';
+    },
+  },
+  {
     name: 'tell_device',
     description: 'Send a notice to one of the user\'s devices — work finished, something needs their eyes, a step '
       + 'done — optionally with a picture. It does not wait for a reply and it is durable, so a watch that is '
@@ -607,14 +643,14 @@ function schemas(disabled = []) {
  * that gets "no such file" can correct itself, whereas a dead turn cannot.
  * @returns {Promise<string>}
  */
-async function call(name, args, disabled = []) {
+async function call(name, args, disabled = [], ctx = {}) {
   if (disabled.includes(name)) return `Error: the "${name}" tool is switched off for this harness.`;
   if (mcp.isMcpTool(name))     return mcp.call(name, args);
 
   const tool = TOOLS.find(t => t.name === name);
   if (!tool) return `Error: no tool named "${name}".`;
   try {
-    return String(await tool.run(args || {}));
+    return String(await tool.run(args || {}, ctx));
   } catch (e) {
     return `Error: ${e.message}`;
   }

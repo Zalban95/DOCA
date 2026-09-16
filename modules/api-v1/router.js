@@ -487,6 +487,13 @@ harnessApi.get('/missions', requireScope('harness:chat'), (req, res) => {
   });
 });
 
+// The bytes behind `images[].url` on `agent.turn` and in a transcript. Images
+// only, so `harness:chat` does not become a way to read every attachment.
+harnessApi.get('/images/:name', requireScope('harness:chat'), (req, res) => {
+  if (!require('../attachments').sendFile(res, req.params.name, { imagesOnly: true }))
+    sendError(res, 404, 'not_found', 'Unknown image');
+});
+
 harnessApi.get('/sessions', requireScope('harness:sessions'), (_req, res) =>
   res.json(harness.sessions()));
 harnessApi.post('/sessions', requireScope('harness:sessions'), wrap(async (req, res) =>

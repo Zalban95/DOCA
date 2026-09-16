@@ -118,6 +118,18 @@ function removeSession(id) {
   memory.deleteSession(id);
 }
 
+/**
+ * A picture the agent showed, as a device fetches it: with its token, under
+ * `harness:chat`, from a route that serves images and nothing else.
+ */
+function imageView(image) {
+  return {
+    name: image.name, mime: image.mime, bytes: image.bytes,
+    ...(image.caption ? { caption: image.caption } : {}),
+    url: `/api/v1/harness/images/${encodeURIComponent(image.name)}`,
+  };
+}
+
 function requireSession(id) {
   const session = memory.getSession(id);
   if (!session) throw new ApiError(404, 'not_found', 'Unknown session');
@@ -140,6 +152,7 @@ function transcript(id, { limit = 50 } = {}) {
       ? { attachments: row.attachments.map(f => ({ name: f.name, bytes: f.bytes, mime: f.mime })) }
       : {}),
     ...(row.name ? { name: row.name } : {}),
+    ...(Array.isArray(row.images) && row.images.length ? { images: row.images.map(imageView) } : {}),
     ...(Array.isArray(row.tool_calls) && row.tool_calls.length
       ? { tools: row.tool_calls.map(tc => tc.function?.name || '(unnamed)') }
       : {}),
@@ -198,6 +211,7 @@ function post(body, device) {
 async function run({ turnId, message, session, device, ctrl, attached }) {
   const sessionId = session.id;
   const proposals = [];
+  const images = [];
 
   let buffer = '';
   let timer = null;
@@ -233,6 +247,12 @@ async function run({ turnId, message, session, device, ctrl, attached }) {
         });
         break;
       }
+      case 'image':
+        // On the done event rather than an event of its own: a chat draws the
+        // reply when it lands, and a watch that slept through the turn still
+        // gets the picture with the answer it belongs to.
+        images.push(imageView(evt.image));
+        break;
       case 'proposal':
         // The device may see that a change is waiting; only a click applies it.
         proposals.push({
@@ -254,6 +274,7 @@ async function run({ turnId, message, session, device, ctrl, attached }) {
       turnId, sessionId: r.sessionId, state: 'done', by: device.id,
       text: brief(r.text, MAX_REPLY) || '', steps: r.steps,
       ...(proposals.length ? { proposals } : {}),
+      ...(images.length ? { images } : {}),
     });
   } catch (e) {
     flush();

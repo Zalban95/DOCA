@@ -800,12 +800,20 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       catch { args = { _raw: tc.function?.arguments }; }
 
       say({ type: 'tool_call', name, args, step });
+      // What a tool put in front of the user (show_image). It travels as its own
+      // event and is kept on the tool row, so a reloaded transcript draws it
+      // again; the model only ever reads the result text.
+      const shown = [];
       const result = args._raw !== undefined
         ? `Error: could not parse the arguments as JSON: ${args._raw}`
-        : await tools.call(name, args, disabled);
+        : await tools.call(name, args, disabled, { show: image => shown.push(image) });
+      for (const image of shown) say({ type: 'image', image, step });
       say({ type: 'tool_result', name, result, step });
 
-      memory.append(session.id, { role: 'tool', tool_call_id: tc.id || name, name, content: result });
+      memory.append(session.id, {
+        role: 'tool', tool_call_id: tc.id || name, name, content: result,
+        ...(shown.length ? { images: shown } : {}),
+      });
 
       // A settings proposal is the one tool result the user has to act on, so it
       // travels as its own event and the console draws it as a card with buttons

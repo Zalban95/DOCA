@@ -597,3 +597,83 @@ test('the floating chat panel forwards tool calls as structured events', async (
   assert.ok(events.find(e => e.type === 'tool_result'));
   assert.match(events.filter(e => e.type === 'text').map(e => e.text).join(''), /Done/);
 });
+
+/* ── Pictures in the chat ─────────────────────────────── */
+
+// 1×1 transparent PNG.
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAMAASsJTYQAAAAASUVORK5CYII=', 'base64');
+
+test('show_image puts a picture in the chat, keeps it with the transcript, and never shows the model', async () => {
+  const src = require('path').join(H.tmp, 'render.png');
+  fs.writeFileSync(src, PNG);
+  const { session } = (await H.api(null, 'POST', '/api/harness/sessions', {})).body;
+  script = [
+    { tool: 'show_image', args: { path: src, caption: 'the bracket, front view' } },
+    { text: 'There it is.' },
+  ];
+  const events = await stream('/api/harness/chat', { message: 'show me', sessionId: session.id });
+
+  const types = events.map(e => e.type);
+  const image = events.find(e => e.type === 'image');
+  assert.ok(image, `expected an image event in ${types}`);
+  assert.ok(types.indexOf('image') < types.indexOf('tool_result'),
+    'the picture comes before the Result fold, live and on reload alike');
+  assert.equal(image.image.mime, 'image/png');
+  assert.equal(image.image.caption, 'the bracket, front view');
+
+  // A copy, so changing the file later cannot change what was shown.
+  fs.writeFileSync(src, Buffer.from('changed'));
+  const served = await H.api(null, 'GET', `/api/attachments/${encodeURIComponent(image.image.name)}`);
+  assert.equal(served.status, 200);
+  assert.equal(served.headers.get('content-type'), 'image/png');
+  assert.deepEqual(served.body, PNG);
+  assert.equal(served.headers.get('x-content-type-options'), 'nosniff');
+  assert.match(served.headers.get('content-security-policy'), /sandbox/, 'an SVG opened in its own tab must not run');
+
+  const t = await get(`/api/harness/sessions/${session.id}`);
+  const row = t.body.messages.find(m => m.role === 'tool' && m.name === 'show_image');
+  assert.equal(row.images[0].name, image.image.name, 'a reloaded transcript draws it again');
+
+  // The model reads the result line and nothing else about the picture.
+  const toolMsg = seen[1].messages.find(m => m.role === 'tool');
+  assert.equal(toolMsg.images, undefined);
+  assert.match(toolMsg.content, /Shown in the chat/);
+});
+
+test('show_image refuses what a chat cannot draw, and says how to fix it', async () => {
+  const tools = require('../modules/harness/tools');
+  const bmp = require('path').join(H.tmp, 'old.bmp');
+  fs.writeFileSync(bmp, Buffer.from('BM'));
+  let shown = 0;
+  const out = await tools.call('show_image', { path: bmp }, [], { show: () => shown++ });
+  assert.match(out, /^Error: .*not a picture a chat can draw.*magick/);
+  assert.equal(shown, 0);
+});
+
+test('the floating chat draws the picture too, and keeps it for the next page load', async () => {
+  const src = require('path').join(H.tmp, 'chart.webp');
+  fs.writeFileSync(src, PNG);   // the bytes do not matter to the route, the extension does
+  script = [{ tool: 'show_image', args: { path: src } }, { text: 'Done.' }];
+  const events = await stream('/api/chat', { message: 'chart?' });
+  const image = events.find(e => e.type === 'image');
+  assert.ok(image, `expected an image event in ${events.map(e => e.type)}`);
+  assert.equal(image.image.mime, 'image/webp');
+  const last = (await get('/api/chat/history')).body.messages.at(-1);
+  assert.equal(last.images[0].name, image.image.name);
+});
+
+test('a device fetches pictures with its token, and only pictures', async () => {
+  const attachments = require('../modules/attachments');
+  const pic  = attachments.save(PNG, 'shot.png');
+  const text = attachments.save(Buffer.from('secret'), 'notes.txt');
+  const phone  = H.mkDevice('img-phone', 'phone', H.PHONE_CAPS);
+  const viewer = H.mkDevice('img-viewer', 'viewer');
+
+  const ok = await H.api(phone.token, 'GET', `/api/v1/harness/images/${pic.name}`);
+  assert.equal(ok.status, 200);
+  assert.deepEqual(ok.body, PNG);
+  assert.equal((await H.api(phone.token, 'GET', `/api/v1/harness/images/${text.name}`)).status, 404,
+    'harness:chat must not become a way to read every attachment');
+  assert.equal((await H.api(viewer.token, 'GET', `/api/v1/harness/images/${pic.name}`)).status, 403);
+  assert.equal((await H.api(null, 'GET', `/api/v1/harness/images/${pic.name}`)).status, 401);
+});

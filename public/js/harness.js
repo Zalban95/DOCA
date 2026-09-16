@@ -794,7 +794,10 @@ async function hcOpenSession(id, skipReload) {
     box.innerHTML = '';
     if (data.session.summary) _hcAppend('summary', data.session.summary, 'Earlier in this conversation');
     data.messages.forEach(m => {
-      if (m.role === 'tool') _hcAppend('tool-result', m.content, m.name);
+      if (m.role === 'tool') {
+        (m.images || []).forEach(_hcAppendImage);
+        _hcAppend('tool-result', m.content, m.name);
+      }
       else if (m.role === 'assistant') {
         if (m.content) _hcAppendContent('assistant', m.content);
         (m.tool_calls || []).forEach(tc =>
@@ -857,6 +860,16 @@ function _hcAppend(kind, text, label, opts = {}) {
   box.appendChild(el);
   box.scrollTop = box.scrollHeight;
   return body;
+}
+
+/** A picture the agent showed, between its Command and Result folds. */
+function _hcAppendImage(image) {
+  const box = document.getElementById('hc-messages');
+  if (!box || !image?.name) return;
+  box.querySelector('.placeholder')?.remove();
+  const scroll = () => { box.scrollTop = box.scrollHeight; };
+  box.appendChild(agentImageEl(image, scroll));
+  scroll();
 }
 
 /** Pretty-print tool args JSON when it is valid; otherwise leave as-is. */
@@ -923,6 +936,7 @@ async function hcSend() {
         if (pendingCall) pendingCall.setActive(false);
         pendingCall = _hcAppend('tool-call', JSON.stringify(evt.args ?? {}), evt.name, { active: true });
       }
+      if (evt.type === 'image') _hcAppendImage(evt.image);
       if (evt.type === 'tool_result') {
         if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
         _hcAppend('tool-result', evt.result, evt.name);

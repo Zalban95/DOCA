@@ -135,6 +135,7 @@ function schemas() {
       status: str({ enum: ['pending', 'accepted', 'rejected'] }), decidedAt: nullable(iso()), serverId: nullable(str()),
     }, { description: 'A client\'s offer of the MCP server it hosts, waiting on a dashboard click. `pending` means recorded and doing nothing.' }),
 
+    HarnessImage: obj({ name: str(), mime: str({ enum: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'] }), bytes: int(), caption: str({ description: 'One line under the picture, when the agent gave one.' }), url: str({ description: 'Fetch with the device token; `GET /harness/images/{name}`.' }) }, { required: ['name', 'mime', 'bytes', 'url'] }),
     HarnessSession: obj({
       id: str({ examples: ['s_mt0z3rfa'] }), title: str(), createdAt: iso(), updatedAt: iso(), count: int({ description: 'Messages in the transcript.' }),
       summary: str({ description: 'Rolling summary of the folded-away part of the conversation.' }),
@@ -287,7 +288,8 @@ function events() {
       turnId: str(), sessionId: str(), state: str({ enum: ['started', 'done', 'failed'] }), by: str({ description: 'Device that asked.' }),
       message: str({ description: 'On `started`: the question, truncated.' }), text: str({ description: 'On `done`: the whole reply.' }), steps: int(),
       proposals: arr(obj({ id: str(), reason: str(), changes: arr(obj({ path: str(), to: any() })) })), error: obj({ code: str(), message: str() }),
-    }), note: 'The lifecycle of one turn, sent to every device with `harness:chat` including the one that asked — so any client can show that a turn is running and what it answered. `proposals` are settings changes waiting on a click in the dashboard; a device cannot apply them.' },
+      images: arr(ref('HarnessImage'), { description: 'On `done`: pictures the agent showed during the turn, in order.' }),
+    }), note: 'The lifecycle of one turn, sent to every device with `harness:chat` including the one that asked — so any client can show that a turn is running and what it answered. `proposals` are settings changes waiting on a click in the dashboard; a device cannot apply them. `images` are drawn with the reply; fetch each `url` with the device token.' },
     'agent.mission':    { audience: 'device', payload: obj({
       missionId: str(), agentId: str(), label: str({ description: 'The specialist\'s name.' }), task: str({ description: 'What it was asked to do, truncated.' }),
       state: str({ enum: ['running', 'paused', 'done', 'failed', 'cancelled'] }), steps: int(), tokens: int(), startedAt: iso(), endedAt: nullable(iso()),
@@ -450,6 +452,10 @@ function paths() {
       description: 'What a client draws as progress after waking up, since the live picture arrives as `agent.mission` events. `enabled` is false and the list empty when specialist agents are switched off, which is the default — a client should say so rather than showing an empty list as "nothing running".',
       parameters: [{ name: 'state', in: 'query', schema: str({ description: 'running | paused | done | failed | cancelled' }) }, { name: 'limit', in: 'query', schema: int({ description: 'Default 20, maximum 50.' }) }],
       responses: { 200: json(obj({ enabled: bool(), missions: arr(obj({ id: str(), agentId: str(), label: str(), task: str(), state: str(), steps: int(), tokens: int(), startedAt: iso(), endedAt: nullable(iso()), result: nullable(str()), error: nullable(str()) })) })), ...std(401, 403) } } },
+    '/harness/images/{name}': { parameters: [pathParam('name', 'Image name, as given in `images[].name`.')],
+      get: { tags: ['Harness'], summary: 'A picture the agent showed in the chat', operationId: 'harnessGetImage', ...scopeDoc('harness:chat'),
+        description: 'Serves png, jpeg, webp, gif, avif and svg only; any other attachment is a 404. Sent with `X-Content-Type-Options: nosniff` and a sandboxing CSP, because an SVG is a document that can carry script.',
+        responses: { 200: { description: 'The image, with its Content-Type', content: { 'image/*': { schema: str({ format: 'binary' }) } } }, ...std(401, 403, 404) } } },
     '/harness/turns/{id}/cancel': {
       parameters: [pathParam('id', 'Turn id, or the session id of the conversation it is running in.')],
       post: { tags: ['Harness'], summary: 'Stop a running turn', operationId: 'harnessCancelTurn', ...scopeDoc('harness:chat'),
@@ -465,7 +471,7 @@ function paths() {
     '/harness/sessions/{id}': {
       parameters: [pathParam('id', 'Conversation id.'), query('limit', 'Most recent messages to return (default 50, max 200).', int())],
       get: { tags: ['Harness'], summary: 'One conversation, shaped for drawing a chat', operationId: 'harnessGetSession', ...scopeDoc('harness:sessions'),
-        responses: { 200: json(obj({ session: ref('HarnessSession'), messages: arr(obj({ role: str({ enum: ['user', 'assistant', 'tool', 'system'] }), content: str(), name: str(), from: obj({ id: nullable(str()), name: str(), formFactor: nullable(str()) }, { description: 'Which client asked. Absent on rows written before this was recorded, and on the dashboard console\'s own rows.' }), tools: arr(str({ description: 'Tools the assistant called on this row.' })) })) })), ...std(401, 403, 404) } },
+        responses: { 200: json(obj({ session: ref('HarnessSession'), messages: arr(obj({ role: str({ enum: ['user', 'assistant', 'tool', 'system'] }), content: str(), name: str(), from: obj({ id: nullable(str()), name: str(), formFactor: nullable(str()) }, { description: 'Which client asked. Absent on rows written before this was recorded, and on the dashboard console\'s own rows.' }), tools: arr(str({ description: 'Tools the assistant called on this row.' })), images: arr(ref('HarnessImage'), { description: 'On a `tool` row: pictures that tool showed.' }) })) })), ...std(401, 403, 404) } },
       delete: { tags: ['Harness'], summary: 'Delete a conversation', operationId: 'harnessDeleteSession', ...scopeDoc('harness:sessions'),
         responses: { 200: json(obj({ ok: bool() })), ...std(401, 403, 404, 409) } },
     },

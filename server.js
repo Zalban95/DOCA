@@ -79,6 +79,7 @@ app.get ('/api/branding', (_req, res) => res.json(branding.all()));
 // The multer error is caught here rather than left to the default handler: a
 // file over the limit is a thing the user just did, and "500" is not an answer.
 app.get ('/api/attachments', attachments.handleList);
+app.get ('/api/attachments/:name', attachments.handleRaw);
 app.post('/api/attachments', (req, res) =>
   uploadMw.single('file')(req, res, err => {
     if (!err) return attachments.handleUpload(req, res);

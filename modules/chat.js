@@ -100,6 +100,7 @@ async function handleChat(req, res) {
     const ctrl = new AbortController();
     res.on('close', () => ctrl.abort());
     sseHeaders(res);
+    const images = [];
     try {
       const { text } = await agent.turn({
         message,
@@ -114,10 +115,17 @@ async function handleChat(req, res) {
             res.write(`data: ${JSON.stringify({ type: 'tool_call', name: evt.name, args: evt.args })}\n\n`);
           if (evt.type === 'tool_result')
             res.write(`data: ${JSON.stringify({ type: 'tool_result', name: evt.name, result: evt.result })}\n\n`);
+          if (evt.type === 'image') {
+            images.push(evt.image);
+            res.write(`data: ${JSON.stringify({ type: 'image', image: evt.image })}\n\n`);
+          }
         },
         signal: ctrl.signal,
       });
-      if (text) chatHistory.push({ role: 'assistant', content: text, time: new Date().toISOString() });
+      if (text || images.length) chatHistory.push({
+        role: 'assistant', content: text || '', time: new Date().toISOString(),
+        ...(images.length ? { images } : {}),
+      });
       res.write(`data: ${JSON.stringify({ type: 'done', code: 0 })}\n\n`);
     } catch (e) {
       res.write(`data: ${JSON.stringify({ type: 'stderr', text: `Harness error: ${e.message}` })}\n\n`);

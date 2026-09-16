@@ -47,13 +47,20 @@ const MIME = {
   '.json': 'application/json', '.xml': 'application/xml', '.yml': 'text/yaml', '.yaml': 'text/yaml',
   '.log': 'text/plain', '.ini': 'text/plain', '.cfg': 'text/plain',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp',
-  '.gif': 'image/gif', '.svg': 'image/svg+xml', '.bmp': 'image/bmp',
+  '.gif': 'image/gif', '.svg': 'image/svg+xml', '.bmp': 'image/bmp', '.avif': 'image/avif',
   '.pdf': 'application/pdf', '.zip': 'application/zip', '.7z': 'application/x-7z-compressed',
   '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.m4a': 'audio/mp4',
   '.mp4': 'video/mp4', '.mkv': 'video/x-matroska',
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 };
+
+/**
+ * The pictures a chat draws inline: what every current browser renders in an
+ * `<img>`. BMP renders too, but nothing produces one on purpose any more;
+ * converting it is one command and keeps this list short.
+ */
+const IMAGE_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml']);
 
 function mimeFor(name) {
   return MIME[path.extname(String(name)).toLowerCase()] || 'application/octet-stream';
@@ -213,6 +220,31 @@ function handleList(req, res) {
   res.json({ dir: dir(), attachments: list({ limit }) });
 }
 
+/**
+ * Send one attachment's bytes, for a chat drawing a picture the agent showed.
+ *
+ * The headers are the part that matters. `nosniff` so a file is only ever the
+ * type its extension says; and a sandboxing CSP because an SVG is a document
+ * that can carry script — inert inside `<img>`, live if somebody opens the
+ * picture in its own tab. `imagesOnly` is for callers that must not become a
+ * way to read every file in the directory.
+ */
+function sendFile(res, name, { imagesOnly = false } = {}) {
+  const rec = get(name);
+  if (!rec || (imagesOnly && !IMAGE_MIME.has(rec.mime))) return false;
+  res.setHeader('Content-Type', rec.mime);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+  res.setHeader('Content-Disposition', `inline; filename="${rec.name.replace(/"/g, '')}"`);
+  res.sendFile(rec.path);
+  return true;
+}
+
+/** GET /api/attachments/:name */
+function handleRaw(req, res) {
+  if (!sendFile(res, req.params.name)) res.status(404).json({ error: 'No such attachment' });
+}
+
 /** POST /api/attachments — multipart, field `file`. */
 function handleUpload(req, res) {
   if (!req.file) return res.status(400).json({ error: 'No file' });
@@ -224,8 +256,8 @@ function handleUpload(req, res) {
 }
 
 module.exports = {
-  MAX_BYTES, MIME,
+  MAX_BYTES, MIME, IMAGE_MIME,
   dir, ensureDir, safeName, uniqueName, mimeFor, humanBytes,
   save, get, list, resolve, note,
-  handleList, handleUpload,
+  sendFile, handleList, handleRaw, handleUpload,
 };

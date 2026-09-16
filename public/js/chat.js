@@ -24,7 +24,10 @@ async function chatLoadHistory() {
       const container = document.getElementById('chat-messages');
       container.innerHTML = '';
       msgs.forEach(m => {
-        if (m.role === 'assistant') _chatAppendContent(m.content);
+        if (m.role === 'assistant') {
+          (m.images || []).forEach(_chatAppendImage);
+          if (m.content) _chatAppendContent(m.content);
+        }
         else chatAppendMsg(m.role, m.content);
       });
     }
@@ -41,6 +44,13 @@ function chatAppendMsg(role, text) {
   return el;
 }
 
+/** A picture the agent showed. */
+function _chatAppendImage(image) {
+  const container = document.getElementById('chat-messages');
+  if (!container || !image?.name) return;
+  container.appendChild(agentImageEl(image, _chatScroll));
+  _chatScroll();
+}
 function _chatScroll() {
   const container = document.getElementById('chat-messages');
   if (container) container.scrollTop = container.scrollHeight;
@@ -195,6 +205,8 @@ function chatSend() {
         stream.resetText();
         if (pendingCall) pendingCall.setActive(false);
         pendingCall = _chatAppendFold('tool-call', JSON.stringify(evt.args ?? {}), evt.name, { active: true });
+      } else if (evt.type === 'image') {
+        _chatAppendImage(evt.image);
       } else if (evt.type === 'tool_result') {
         if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
         _chatAppendFold('tool-result', evt.result, evt.name);
