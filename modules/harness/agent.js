@@ -310,16 +310,65 @@ function clipToolContent(content, file) {
 }
 
 /**
+ * Send calls and results only in pairs, dropping either half that has lost the
+ * other.
+ *
+ * `memory.foldBoundary` is what keeps a group on one side of every cut; this is
+ * the backstop, because the cost of one broken pair getting through is a provider
+ * rejecting *every* subsequent request in the session, and half a pair says
+ * nothing to a model anyway — a result whose call is gone is an answer with the
+ * question torn off.
+ *
+ * Both directions happen. A cut through a group leaves the results without the
+ * call; a turn that stops between the call and the result — Stop, a crash, an
+ * aborted step — leaves the call without its results, which strict providers
+ * reject just as firmly. An assistant row that loses every call keeps whatever it
+ * said and goes as ordinary text, or is dropped when it said nothing at all.
+ */
+function pairedRows(rows) {
+  const list = rows || [];
+  // The same fallback the result row was written with: a provider that sends no
+  // call id has its results filed under the tool's name, and matching on `id`
+  // alone would read every one of those pairs as two orphans.
+  const callId = c => c.id || c.function?.name || '(unnamed)';
+  const answered = new Set(list.filter(r => r.role === 'tool').map(r => r.tool_call_id));
+  const out = [];
+  let open = new Set();
+  for (const r of list) {
+    if (r.role === 'tool') {
+      if (open.has(r.tool_call_id)) out.push(r);
+      continue;
+    }
+    // A call is answered within the step that made it or not at all, so any
+    // other row closes the group.
+    open = new Set();
+    if (r.role === 'assistant' && r.tool_calls?.length) {
+      const kept = r.tool_calls.filter(c => answered.has(callId(c)));
+      if (kept.length) {
+        open = new Set(kept.map(callId));
+        out.push({ ...r, tool_calls: kept });
+      } else if (String(r.content || '').trim()) {
+        out.push({ ...r, tool_calls: undefined });
+      }
+      continue;
+    }
+    out.push(r);
+  }
+  return out;
+}
+
+/**
  * Transcript rows → the message array the API expects.
  *
  * Tool output is kept in full on disk and clipped here. Walking newest-first
  * and stopping at TOOL_KEEP_CHARS is what stops a long session from re-sending
  * every `read_file` it ever did; the spill file is how the model gets the rest.
  */
-function toApiMessages(rows, { sessionId } = {}) {
+function toApiMessages(allRows, { sessionId } = {}) {
+  const rows = pairedRows(allRows);
   const keepFull = new Set();
   let used = 0;
-  for (let i = (rows || []).length - 1; i >= 0; i--) {
+  for (let i = rows.length - 1; i >= 0; i--) {
     if (rows[i].role !== 'tool') continue;
     const len = String(rows[i].content || '').length;
     if (!keepFull.size || used + len <= TOOL_KEEP_CHARS) {
@@ -328,7 +377,7 @@ function toApiMessages(rows, { sessionId } = {}) {
     }
   }
 
-  return (rows || []).map((r, i) => {
+  return rows.map((r, i) => {
     if (r.role === 'tool') {
       let content = r.content;
       if (!keepFull.has(i)) {

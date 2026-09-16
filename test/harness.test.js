@@ -463,6 +463,100 @@ test('a long conversation folds its older half into a summary', async () => {
   await H.api(null, 'POST', '/api/harness/doca/config', { summarizeAfter: 40 });
 });
 
+/**
+ * The provider's rule, asserted on what we actually sent: a `tool` message is
+ * only legal after an assistant message carrying the call it answers, and a call
+ * has to be answered. DeepSeek refuses the whole request otherwise — and since
+ * the fold boundary is persisted, one bad cut used to break every later turn in
+ * that conversation rather than one.
+ */
+function assertPairedMessages(messages) {
+  let open = new Set();
+  for (const m of messages) {
+    if (m.role === 'tool') {
+      assert.ok(open.has(m.tool_call_id),
+        `tool result ${m.tool_call_id} has no call in front of it: ${messages.map(x => x.role).join(',')}`);
+      open.delete(m.tool_call_id);
+      continue;
+    }
+    assert.equal(open.size, 0, `call(s) ${[...open]} went out without a result`);
+    open = new Set((m.tool_calls || []).map(c => c.id || c.function?.name));
+  }
+  assert.equal(open.size, 0, `call(s) ${[...open]} went out without a result`);
+}
+
+test('a fold boundary never lands between a call and its result', () => {
+  const memory = require('../modules/harness/memory');
+  const s = memory.createSession('tool pairs');
+  // Six rows, two results in the middle: the older half is three rows, so the
+  // boundary computed by counting alone lands on the second result.
+  for (const r of [
+    { role: 'user', content: 'look at the disk' },
+    { role: 'assistant', content: '', tool_calls: [
+      { id: 'c1', function: { name: 'shell', arguments: '{}' } },
+      { id: 'c2', function: { name: 'shell', arguments: '{}' } },
+    ] },
+    { role: 'tool', tool_call_id: 'c1', name: 'shell', content: 'df output' },
+    { role: 'tool', tool_call_id: 'c2', name: 'shell', content: 'du output' },
+    { role: 'assistant', content: 'Plenty of room.' },
+    { role: 'user', content: 'thanks' },
+  ]) memory.append(s.id, r);
+
+  const rows = memory.messages(s.id);
+  assert.equal(rows[3].role, 'tool', 'the naive halfway row is a result — the case this is about');
+
+  const pending = memory.pendingFold(s.id, 0, { force: true });
+  assert.notEqual(rows[pending.through].role, 'tool', 'the boundary moved off the result');
+  assert.equal(pending.through, 4, 'forward, so the whole group folds together');
+
+  memory.updateSession(s.id, { summarizedThrough: pending.through, summary: 'checked the disk' });
+  assertPairedMessages(require('../modules/harness/agent').toApiMessages(memory.window(s.id, 0).rows));
+});
+
+test('the history cap does not cut a pair either, and repairs a boundary that did', () => {
+  const memory = require('../modules/harness/memory');
+  const agent = require('../modules/harness/agent');
+  const s = memory.createSession('capped');
+  for (const r of [
+    { role: 'user', content: 'run it' },
+    { role: 'assistant', content: '', tool_calls: [{ id: 'c1', function: { name: 'shell', arguments: '{}' } }] },
+    { role: 'tool', tool_call_id: 'c1', name: 'shell', content: 'output' },
+    { role: 'assistant', content: 'Ran it.' },
+  ]) memory.append(s.id, r);
+
+  // A cap of two would start the window on the result.
+  const capped = memory.window(s.id, 2);
+  assert.equal(capped.rows[0].role !== 'tool', true);
+  assertPairedMessages(agent.toApiMessages(capped.rows));
+
+  // And the state a session was left in before there was a rule: a stored
+  // boundary pointing straight at a result. It has to recover on its own — the
+  // turn fails before the next fold could move it.
+  memory.updateSession(s.id, { summarizedThrough: 2 });
+  assertPairedMessages(agent.toApiMessages(memory.window(s.id, 0).rows));
+});
+
+test('half a tool pair is never sent, in either direction', () => {
+  const { toApiMessages } = require('../modules/harness/agent');
+  const out = toApiMessages([
+    { role: 'tool', tool_call_id: 'folded', name: 'shell', content: 'a result whose call is gone' },
+    { role: 'user', content: 'hello' },
+    // Stopped between the call and the result: nothing said, nothing answered.
+    { role: 'assistant', content: '', tool_calls: [{ id: 'unanswered', function: { name: 'shell', arguments: '{}' } }] },
+    // Same, but it said something first, so the words survive as plain text.
+    { role: 'assistant', content: 'Let me look.', tool_calls: [{ id: 'also-unanswered', function: { name: 'shell', arguments: '{}' } }] },
+    // A provider that sends no call id: the result was filed under the name.
+    { role: 'assistant', content: '', tool_calls: [{ function: { name: 'read_file', arguments: '{}' } }] },
+    { role: 'tool', tool_call_id: 'read_file', name: 'read_file', content: 'file contents' },
+  ]);
+
+  assertPairedMessages(out);
+  assert.deepEqual(out.map(m => m.role), ['user', 'assistant', 'assistant', 'tool']);
+  assert.equal(out[1].content, 'Let me look.');
+  assert.equal(out[1].tool_calls, undefined, 'a call nobody answered does not travel');
+  assert.equal(out[2].tool_calls.length, 1, 'the id-less pair is intact');
+});
+
 test('sessions can be created, switched and deleted', async () => {
   const a = (await H.api(null, 'POST', '/api/harness/sessions', { title: 'alpha' })).body.session;
   const b = (await H.api(null, 'POST', '/api/harness/sessions', { title: 'beta' })).body.session;

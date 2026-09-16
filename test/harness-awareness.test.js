@@ -508,17 +508,21 @@ test('older tool results are clipped and spilled so the model can read_file them
   const big = 'X'.repeat(8000);
   const rows = [
     { role: 'user', content: 'look' },
+    // The call travels with its results or neither does (`pairedRows`), so the
+    // assistant row belongs in the fixture even though this is about clipping.
+    { role: 'assistant', content: '', tool_calls: ['c1', 'c2', 'c3'].map(id => ({ id, function: { name: 'shell', arguments: '{}' } })) },
     { role: 'tool', tool_call_id: 'c1', name: 'shell', content: `old-${big}` },
     { role: 'tool', tool_call_id: 'c2', name: 'shell', content: `mid-${big}` },
     { role: 'tool', tool_call_id: 'c3', name: 'read_file', content: `new-${big}` },
   ];
-  const out = toApiMessages(rows, { sessionId: 's_clip' });
-  assert.equal(out[3].content, rows[3].content, 'the newest tool result stays in full');
-  assert.match(out[1].content, /full output:/, 'an older one is replaced by a pointer');
-  assert.match(out[1].content, /read_file/);
-  const m = out[1].content.match(/full output: (.+?) —/);
+  const results = toApiMessages(rows, { sessionId: 's_clip' }).filter(m => m.role === 'tool');
+  assert.equal(results.length, 3, 'every result still travels');
+  assert.equal(results[2].content, rows[4].content, 'the newest tool result stays in full');
+  assert.match(results[0].content, /full output:/, 'an older one is replaced by a pointer');
+  assert.match(results[0].content, /read_file/);
+  const m = results[0].content.match(/full output: (.+?) —/);
   assert.ok(m, 'the pointer names a path');
-  assert.equal(fs.readFileSync(m[1], 'utf8'), rows[1].content, 'the spilled file is the original text');
+  assert.equal(fs.readFileSync(m[1], 'utf8'), rows[2].content, 'the spilled file is the original text');
 });
 
 test('folding fires on an absolute token budget even with no window declared', () => {

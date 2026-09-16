@@ -176,6 +176,29 @@ function append(id, msg) {
 }
 
 /**
+ * Where a transcript may be cut: anywhere except inside a tool-call group.
+ *
+ * A `tool` row only means anything after the assistant message carrying the
+ * `tool_calls` it answers, and providers enforce it — DeepSeek answers a window
+ * that opens on one with `Messages with role 'tool' must be a response to a
+ * preceding message with 'tool_calls'` and HTTP 400. Both cuts here used to be
+ * chosen by counting rows, and roughly half the rows in a working session are a
+ * call or its result, so cutting through a pair was a coin flip.
+ *
+ * Forward first, so the whole group ends up on the same side of the cut;
+ * backwards only when going forward would leave nothing live at all.
+ */
+function foldBoundary(rows, at, floor) {
+  const start = Math.min(Math.max(at, floor), rows.length);
+  let i = start;
+  while (i < rows.length && rows[i].role === 'tool') i++;
+  if (i < rows.length) return i;
+  i = start;
+  while (i > floor && rows[i].role === 'tool') i--;
+  return i;
+}
+
+/**
  * The live window: the rolling summary plus every row the summary does not
  * already cover, capped at `historyTurns` rows.
  * @returns {{ summary: string, rows: object[], folded: number }}
@@ -185,7 +208,13 @@ function window(id, historyTurns) {
   const rows = messages(id);
   const from = Math.max(0, s?.summarizedThrough || 0);
   const live = rows.slice(from);
-  const kept = historyTurns > 0 ? live.slice(-historyTurns) : live;
+  let kept = historyTurns > 0 ? live.slice(-historyTurns) : live;
+  // The cap is the second cut with the same hazard, and it also repairs a
+  // session whose stored boundary was set before there was a rule: the rows
+  // dropped here are the oldest, which is what the cap was discarding anyway.
+  let orphans = 0;
+  while (orphans < kept.length && kept[orphans].role === 'tool') orphans++;
+  if (orphans) kept = kept.slice(orphans);
   return { summary: s?.summary || '', rows: kept, folded: rows.length - kept.length };
 }
 
@@ -204,8 +233,11 @@ function pendingFold(id, summarizeAfter, { force = false } = {}) {
   const live = rows.slice(from);
   if (force) { if (live.length < 4) return null; }
   else if (!summarizeAfter || live.length <= summarizeAfter) return null;
-  // Fold the older half, so the model still sees plenty of recent context.
-  const upTo = from + Math.floor(live.length / 2);
+  // Fold the older half, so the model still sees plenty of recent context —
+  // snapped to a row that is not the answer to a call being folded away, since
+  // `through` is persisted and one bad boundary breaks every later turn.
+  const upTo = foldBoundary(rows, from + Math.floor(live.length / 2), from);
+  if (upTo <= from) return null;
   return { rows: rows.slice(from, upTo), through: upTo, previous: s?.summary || '' };
 }
 
