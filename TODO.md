@@ -1,7 +1,13 @@
 # TODO
 
-Known rough edges, deliberately deferred. Each one is small and independent —
-none of them break anything today.
+Known rough edges, deliberately deferred, and features wanted but not built.
+Every entry here is a **decision**, with its reason — that is what separates this
+file from `ISSUES.md`, which holds defects nobody chose. "Known since day one"
+does not put something here; only *somebody decided* does.
+
+When a deferred item turns out to bite someone, promote it to `ISSUES.md`. When
+an issue turns out to have been a decision, move it back here with the reason.
+Do not silently drop either.
 
 ## MCP and VMs, deliberately left out of the first pass
 
@@ -246,6 +252,60 @@ still missing from that sentence.
   when the thing above gets built, because more devices managing more
   connections is more ways in — and the definitions they would be managing hold
   commands this host spawns.
+
+## Falling back when a model stops answering
+
+**Wanted, not broken.** The defect behind this is H-5 in `ISSUES.md` and it is
+fixed: a turn that gets no first token now stops at a named deadline and says so.
+This entry is about what should happen *instead* of stopping.
+
+The case that prompted it, 2026-09-14: `deepseek-flash` returned
+`200 text/event-stream` and sent `: keep-alive` for three minutes without a
+single token, deterministically, on a key with $19.68 of balance — while
+`deepseek-v4-pro`, same provider, same key, answered normally. So the unit that
+failed was the **model**, not the provider, and the chain has to reflect that:
+next model on the same provider first, next provider second.
+
+Shape, if this gets built:
+
+- **An ordered chain of (provider, model) pairs in settings, empty by default.**
+  Empty means inert, so the feature ships without a flag and upgrading changes
+  nobody's behaviour until they order one.
+
+- **Local models belong at the end of the chain, not off it.** An Ollama or
+  llama.cpp instance on this machine has no balance, no vendor and no outage.
+  Being able to keep working slowly when the API is down is the whole local-first
+  argument, and it is the one rung that cannot fail for the reasons the others do.
+
+- **Two deadlines, not one.** `firstTokenTimeoutMs` (90 s) is when the panel gives
+  up entirely. A shorter `failoverAfterMs` (~20 s) is when it moves to the next
+  entry. Reusing the single 90 s deadline per rung makes a three-rung chain
+  slower than having no chain at all, which is the trap worth naming here.
+
+- **Fall back only before the first token of a step.** Once tokens have arrived,
+  switching mid-stream means a half-written answer stitched to a different
+  tokenizer's output. Past that point, fail honestly and let the user retry.
+
+- **One pass down the chain, then stop and report.** Never loop, never restart the
+  chain, never retry a rung that already stalled within the same turn.
+
+- **Remember a stalled entry as degraded for a few minutes**, so the next turn does
+  not pay the same 20 s again — but re-probe rather than blacklisting. A model
+  that came back has to become usable again without a restart.
+
+And the constraint that decides whether this is worth having at all, which is the
+lesson of the evening it came from rather than a style note:
+
+> **A fallback that happens quietly is a worse bug than the outage it hides.**
+> Every hop is announced in the chat and logged at `warn`, naming what stalled,
+> for how long, and what is answering instead. `environment.block()` already tells
+> the agent which model it is on, so it can say so itself when asked. If the user
+> cannot tell from the screen that they are on the second choice, the feature is
+> not finished — they will read a smaller model's answers as the big one's, and
+> the next investigation starts from a false premise.
+
+Nothing in this caps steps, tokens or tool use; it changes which endpoint answers,
+never what the agent is allowed to do.
 
 ## Version and identity, across the four repos
 
