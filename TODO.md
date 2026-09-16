@@ -243,6 +243,31 @@ still missing from that sentence.
   The proposal's §4.4 "missions" is the same idea under another name; settle the
   vocabulary before building either.
 
+- **A mission has no plan, so no client can draw how far along it is.** Wanted:
+  a `plan` on the mission document — `[{ title, state: done|running|queued|failed }]`
+  — so a device renders one segmented bar (green done, yellow running, orange
+  queued, red failed) and `done / total` is the percentage. Today the only
+  progress is `steps` and `tokens`, and neither says how much is left: a mission's
+  length is not known in advance and `maxSteps` is a ceiling, not an estimate.
+  This is §4.4's "a mission is a plan with a memory" made literal, and it keeps
+  §4.4's two rules: the plan lives **in the mission's own JSON document**, so a
+  human can open it and fix it by hand and the harness re-reads rather than
+  caches; and the specialist maintains it with an ordinary tool
+  (`mission_plan`: set the list, tick an item) — driving a mission, not
+  authorising anything, so it does not belong in `registry.NEVER`. A tool rather
+  than parsing `- [x]` out of a markdown file the model writes, because a
+  checklist the parser misreads is a progress bar that lies.
+  Delivery follows the split already used for missions: **a plan change is
+  durable** (`agent.mission` with `plan` attached), since items change a handful
+  of times per mission, unlike step ticks — which stay ephemeral, and which a
+  polling client never receives at all (`bus.publish` hands ephemerals only to
+  live subscribers). That is the part a watch needs: DocaWear polls, so today a
+  running mission reads `STEP 0` on the wrist until it finishes. Cap the list
+  (~12 items, titles ~60 chars) so the event stays well inside `EVENT_BYTES`.
+  Without a plan, clients fall back to the step count, as now. "Queued" only
+  means something once a mission's items are declared up front: `dispatch()`
+  itself has no queue, and `chainId` is stored but never set.
+
 - **"It is on the tailnet" is a network boundary, not an authorisation one.**
   Worth writing down because it is the assumption the whole surface rests on:
   every device on the tailnet, every container with tailnet access and every
