@@ -345,24 +345,81 @@ message paths (`/doca/pair/offer`, `/pair/result`, `/relay/event`, `/relay/ack`,
 `/state`, `/request`) and `DocaWear` already receives an offer, completes pairing
 itself and stores its own token in the Keystore. **But nothing in DocaMobile's
 `:app` ever calls the bridge** — `sendPairOffer`, `publishPhoneState` and
-`sendRelayEvent` have zero callers — and the two sides disagree on field names:
-the phone writes `pairCode`/`certPin`, the watch reads `code`/`pin`. Wiring it up
-without fixing that would fail silently with an empty code.
+`sendRelayEvent` have zero callers.
+
+`DocaMobile/docs/WEAR_BRIDGE.md` is the contract for the wire in both repos and is
+the authority for every field named below — **this section is not**. An earlier
+draft of it said the phone sends `{code, baseUrl, pin}`, which is where the field
+mismatch that cost DocaWear a release came from; the contract says `pairCode`,
+`baseUrl`, `certPin`, `serverName`, and now defines what each one holds. Three
+divergences have been found and fixed on the watch side — the field names, an
+explicit JSON `null` read back as the literal string `"null"`, and the two clients
+disagreeing about whether `baseUrl` carries the `/api/v1` suffix — and every one of
+them failed *silently*. Name a field here only by quoting that document.
 
 The flow, which needs no new protocol work on the hub:
 
 1. Both apps declare a Wearable **capability** (`doca_wear_app`,
    `doca_phone_app`) in `res/values/wear.xml` and discover each other with
-   `CapabilityClient`. Neither app does this today; it is why nothing is
-   automatic.
-2. On sign-in the phone notices a watch node and offers to link it. The phone
-   holds `devices:admin` in its preset, so it can mint the watch's pairing code
-   itself with the `watch` preset — the user taps once.
-3. The phone sends `{code, baseUrl, pin}` over `/doca/pair/offer`; the watch
+   `CapabilityClient`. **Done on both sides, 2026-09-16.**
+2. The phone mints the watch's pairing code itself with the `watch` preset — it
+   holds `devices:admin` — and the user taps once. **Done, 2026-09-16**:
+   `DocaClient.startPairing` plus `WatchPairingViewModel` behind Auth → Pair My
+   Watch. The watch is looked for before the code is minted, since a code lives
+   five minutes and is single use.
+3. The phone sends the contract's `PairOffer` over `/doca/pair/offer`; the watch
    completes pairing and gets **its own** token. The phone's token never crosses
-   the Data Layer — that rule is already right, keep it.
-4. If the watch is later unpaired from the phone, it keeps working standalone
-   over its own token while the server is reachable.
+   the Data Layer — that rule is already right, keep it. **Done on both sides**,
+   though the offer is still dropped if the watch app is closed (no
+   `WearableListenerService` there yet), which is why the phone shows the code too.
+4. **The watch asks; nobody has to touch the phone.** Opening DocaWear sends
+   `/doca/pair/request` and DocaMobile answers from a cold process — the hooks live
+   in `DocaApplication.onCreate`, not in a ViewModel, because the message is what
+   starts the process. **Done, 2026-09-16.** "As few steps as possible" turned out
+   to be one step: open the app on the watch.
+
+**One assumption in this section was wrong, and it changed the architecture.** Step 4
+of the old numbering — "if the watch is later unpaired from the phone it keeps working
+standalone over its own token" — quietly assumed the watch can reach the hub. It
+usually cannot: **there is no Tailscale client for Wear OS**, so a hub addressed by a
+tailnet name is unreachable from a wrist, and worse than unreachable — on a home
+router that appends its own search domain the name resolves to `127.0.0.1` and the
+watch pairs with itself. Measured 2026-09-16: the watch reached `192.168.1.212:4242`
+by IP in 3 ms and answered a ping to the tailnet name from its own loopback.
+
+So **the phone is the watch's network**, and phase 7's "relay transport" landed here
+out of order because without it the watch has no route at all. `/doca/request` carries
+a *path* (never a host — the address is the phone's knowledge) plus the watch's own
+`Authorization`; the phone performs it with a client holding **no token of its own**
+and answers on `/doca/response`. The identity rule above is therefore unchanged and is
+the one thing that must not be traded for convenience: the hub still sees a
+`watch`-scoped device, and losing the watch does not cost the host. Proven end to end
+on the two devices: `POST /devices/pair/complete` `201`, then `/devices/me/profile` and
+`/snapshot?spark=1` at `200`. The direct path stays as the fallback for a hub on the
+same LAN, and only "there is no phone" falls through to it — a timeout does not, since
+the phone may have made the call.
+
+What is still missing for the watch is the other direction: nothing pushes to it, so
+it fetches and is never told (§6.3), and a freshly enrolled watch has an empty
+hub-side profile, so it correctly reports "No surfaces configured" until somebody
+writes one.
+
+One prerequisite sits underneath all of them, now measured rather than assumed and
+since satisfied: **Play Services carries Data Layer traffic only between what is
+really one app** — one `applicationId`, one signing certificate, two APK variants.
+While DocaMobile was `tech.honlab.doca.mobile.dev` and DocaWear was
+`com.docawear.app`, the watch saw **0 of 1** connected nodes advertising
+`doca_phone_app`; with both shipping `tech.honlab.doca` it sees **1 of 1** (Pixel 10
+Pro XL and Xiaomi Watch 5, 2026-09-16, same debug keystore both sides). The same
+fact is why the phone cannot offer to install the watch app onto a paired watch.
+Worth recording because a paired watch reports one connected node either way, so
+the symptom was a bridge that looked written and dead rather than a packaging
+mistake. Two release consequences, both still open: one keystore shared across the
+two repos, and distinct `versionCode`s under the single package name.
+
+5. If the watch is later unpaired from the phone, it keeps its token and the direct
+   path still works — but only against a server it can actually address, which in
+   practice means one on the same LAN. See the paragraphs above.
 
 ### 6.2 The tile: active jobs and recent missions
 

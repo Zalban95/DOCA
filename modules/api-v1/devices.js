@@ -193,6 +193,29 @@ function remove(id) {
   return existed;
 }
 
+/**
+ * Revoke *and* forget: the row goes, and so does everything keyed to the id.
+ *
+ * Revoking deliberately keeps the row — it is the audit trail, and a device
+ * whose token stopped working should be visible as such. But nothing was ever
+ * removing them, so the panel accumulated `REVOKED` rows for every re-pair and
+ * every test, with no way to clear one. This is the other half of that pair.
+ *
+ * The cleanup lives here rather than in a route because the two HTTP surfaces
+ * (`/api/v1` and the panel) were already doing different amounts of it: the
+ * panel's `?purge=1` dropped the row and left the outbox file and the profile
+ * behind, orphaned under an id nothing could ever authenticate as again.
+ * `require`s are inline because the registry is loaded by almost everything and
+ * these two are not needed to read it.
+ */
+function forget(id) {
+  if (!db().devices[id]) return false;
+  revoke(id);
+  try { require('./bus').dropDevice(id, 'forgotten'); } catch {}
+  try { require('./profiles').remove(id); } catch {}
+  return remove(id);
+}
+
 function update(id, patch) {
   const rec = db().devices[id];
   if (!rec) return null;
@@ -244,6 +267,6 @@ function completePairing(codeInput, caps, nameOverride) {
 
 module.exports = {
   FORM_FACTORS, normalizeCaps, publicView,
-  list, get, create, authenticate, rotate, revoke, remove, update, patchVars, touchPersist,
+  list, get, create, authenticate, rotate, revoke, remove, forget, update, patchVars, touchPersist,
   startPairing, completePairing, _reset,
 };

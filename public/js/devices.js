@@ -44,7 +44,10 @@ async function devicesLoad() {
           · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}
         </div>
         <div class="provider-models">${d.scopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}</div>
-        ${dead ? '' : `
+        ${dead ? `
+        <div class="toolbar-right">
+          <button class="btn btn-xs btn-red" onclick="devForget(${jsArg(d.id)},${jsArg(d.name)})" title="Remove this row and everything kept under its id">🗑 Forget</button>
+        </div>` : `
         <div class="toolbar-right">
           <button class="btn btn-xs"        onclick="devRotate(${jsArg(d.id)},${jsArg(d.name)})" title="Issue a replacement token">↻ Rotate</button>
           <button class="btn btn-xs btn-red" onclick="devRevoke(${jsArg(d.id)},${jsArg(d.name)})" title="Invalidate this token now">✕ Revoke</button>
@@ -209,9 +212,20 @@ function devRotate(id, name) {
 }
 
 function devRevoke(id, name) {
-  appConfirm(`Revoke "${name}"? Its token stops working immediately and any live stream is closed.`, async () => {
+  appConfirm(`Revoke "${name}"? Its token stops working immediately and any live stream is closed. The row stays, so you can see it was revoked.`, async () => {
     try {
       await apiFetch(`/api/devices/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      devicesLoad();
+    } catch (e) { appAlert(`Error: ${e.message}`); }
+  });
+}
+
+// Revoking leaves the row on purpose; without this there was no way to clear one,
+// so every re-pair left a REVOKED card behind for good.
+function devForget(id, name) {
+  appConfirm(`Forget "${name}"? The row disappears along with its queued events and its saved profile. Nothing here will show that this device ever existed.`, async () => {
+    try {
+      await apiFetch(`/api/devices/${encodeURIComponent(id)}?purge=1`, { method: 'DELETE' });
       devicesLoad();
     } catch (e) { appAlert(`Error: ${e.message}`); }
   });

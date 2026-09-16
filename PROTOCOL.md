@@ -118,6 +118,13 @@ live streams receive a durable `revoked` event followed by an SSE `close`
 frame, its outbox and profile are deleted, and its token fails with
 `invalid_token` from then on. A device cannot revoke itself.
 
+**Forgetting.** `DELETE /devices/:id?purge=1` (same scope) revokes *and* deletes
+the registry row. Revocation deliberately keeps the row — it is the record that
+a credential was withdrawn — but a device that is re-paired on every test run
+leaves one behind each time, and nothing was ever removing them. The two are
+one call with a flag because forgetting a live device without revoking it first
+would drop the row while its token was still being honoured in flight.
+
 ### 4.3 Scopes
 
 A scope is `family:target`; `target` may be `*` or a dotted prefix ending in
@@ -918,6 +925,15 @@ clamped (50 ms – 10 s).
 Battery guidance: keep **one** SSE stream open while the app is foregrounded;
 in the background switch to the JSON poll at `retryAfterSec`, or rely on the
 phone to relay. Use `If-None-Match` on snapshots/profiles; they are cheap 304s.
+
+A relayed client is still a client. A companion device with no network of its own —
+a watch, which has no way to join a tailnet — may have a phone perform its requests,
+and the hub neither knows nor cares: what makes it the *same* device is that the
+relayed request carries **that device's own token**, so its scopes, its profile and
+its `from` attribution are unchanged. A relay that substituted the carrier's token
+would be handing out the carrier's authority, which §3's "losing a watch should not
+mean losing the host" exists to prevent. See `DocaMobile/docs/WEAR_BRIDGE.md` for the
+one implementation of this that exists.
 
 ## 21. Client implementation checklist
 

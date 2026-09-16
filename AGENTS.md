@@ -11,8 +11,8 @@ DOCA is the hub. Three first-party clients sit beside it — `../../DocaDesk`, `
 | Repo | What it is | Which direction it talks |
 |---|---|---|
 | `DocaDesk` | Windows desktop client — C# / WinUI 3 / .NET 9, WebView2 around this panel | `/api/v1` out, **and back in**: it hosts its own MCP server over HTTP on the tailnet, which `modules/mcp/` connects to as a `client`-origin server. It is the only client that hosts one today. |
-| `DocaMobile` | Android phone client — Kotlin / Gradle | `/api/v1` plus the SSE push loop. Also the only route by which a watch gets paired. |
-| `DocaWear` | Wear OS watch client — Kotlin / Gradle | `/api/v1` **directly**. It does not proxy through the phone; the phone hands it one pair offer (`pairCode`, `baseUrl`, `certPin`) over Play Services and then stays out of the way. |
+| `DocaMobile` | Android phone client — Kotlin / Gradle | `/api/v1` plus the SSE push loop. Also the only route by which a watch gets paired, **and the network a watch reaches this hub over** — it performs the watch's calls with the watch's own token, adding none of its own. |
+| `DocaWear` | Wear OS watch client — Kotlin / Gradle | `/api/v1` **through the phone**, which carries the bytes and nothing else: the watch holds its own `watch`-scoped token and the relay envelope forwards it verbatim, so the hub still sees a watch. It is tethered and there is no Tailscale for Wear OS, so a hub on a tailnet has no address a wrist can reach — the phone's does. The direct path survives as the fallback for a LAN hub. |
 
 Two things follow. A change to `/api/v1`, to a scope name, or to a caps field is a change to three shipped apps, and their `AGENTS.md` files record contracts this side can break in silence — `DocaWear/AGENTS.md`, "The pair-offer field contract", is the one that has already cost a day. And because DocaDesk hosts, **a tool can land on a machine that is not this one**; that is the whole reason `environment.block()` labels server origin and `placeBlock()` exists, and it is only exercisable with a real client running.
 

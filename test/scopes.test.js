@@ -117,6 +117,16 @@ test('revocation invalidates the token and closes a live stream', async () => {
   assert.equal((await H.api(d.token, 'GET', '/api/v1/capabilities')).status, 401);
   const self = await H.api(admin.token, 'DELETE', `/api/v1/devices/${admin.device.id}`);
   assert.equal(self.status, 400, 'cannot revoke self');
+
+  // ?purge=1 revokes and then forgets, so the row does not survive as a listing
+  // entry nobody can act on.
+  const gone = H.mkDevice('purged', 'watch', H.WATCH_CAPS);
+  const purge = await H.api(admin.token, 'DELETE', `/api/v1/devices/${gone.device.id}?purge=1`);
+  assert.equal(purge.status, 200);
+  assert.equal(purge.body.purged, true);
+  const listed = await H.api(admin.token, 'GET', '/api/v1/devices');
+  assert.equal(listed.body.devices.some(x => x.id === gone.device.id), false);
+  assert.equal((await H.api(gone.token, 'GET', '/api/v1/capabilities')).status, 401);
 });
 
 test('confirming an outcome with an action needs the command scope on the confirming device', async () => {

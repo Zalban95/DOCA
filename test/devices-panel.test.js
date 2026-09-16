@@ -112,6 +112,36 @@ test('rotate issues a replacement and revoke kills the token', async () => {
   assert.equal((await h.api(null, 'DELETE', '/api/devices/dev_deadbeef')).status, 404);
 });
 
+test('revoking keeps the row, forgetting removes it along with the profile', async () => {
+  const created = await h.api(null, 'POST', '/api/devices', { name: 'forget-me', preset: 'watch' });
+  const id = created.body.device.id;
+  const token = created.body.token;
+
+  // Something kept under the id, so the cleanup has work to do.
+  assert.equal((await h.api(token, 'PUT', `/api/v1/devices/me/profile`,
+    { pages: [{ id: 'home', surfaces: [{ id: 'system.cpu' }] }] })).status, 200);
+
+  await h.api(null, 'DELETE', `/api/devices/${id}`);
+  const afterRevoke = await h.api(null, 'GET', '/api/devices');
+  const row = afterRevoke.body.devices.find(d => d.id === id);
+  assert.ok(row, 'a revoked device stays listed: the row is the audit trail');
+  assert.ok(row.revokedAt, 'and it says when');
+
+  const purge = await h.api(null, 'DELETE', `/api/devices/${id}?purge=1`);
+  assert.equal(purge.status, 200);
+  assert.equal(purge.body.purged, true);
+
+  const afterForget = await h.api(null, 'GET', '/api/devices');
+  assert.equal(afterForget.body.devices.some(d => d.id === id), false, 'the row is gone');
+
+  // The profile went with it rather than being left orphaned under an id that can
+  // never authenticate again — which is what `remove()` alone used to do.
+  const profile = require('../modules/api-v1/profiles');
+  assert.deepEqual(profile.get(id).pages, profile.DEFAULT_PROFILE.pages, 'back to the default, i.e. no stored file');
+
+  assert.equal((await h.api(null, 'DELETE', '/api/devices/dev_deadbeef?purge=1')).status, 404);
+});
+
 test('DOCA_LEGACY_TRUST=0 disables minting but still allows the read-only listing', async () => {
   const victim = await h.api(null, 'POST', '/api/devices', { name: 'pre-existing', preset: 'viewer' });
   const id = victim.body.device.id;

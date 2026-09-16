@@ -121,10 +121,16 @@ router.delete('/devices/:id', requireScope('devices:admin'), wrap(async (req, re
   if (id === req.device.id) throw new ApiError(400, 'invalid_request', 'A device cannot revoke itself; use another admin device');
   if (!devices.get(id)) throw new ApiError(404, 'not_found', 'Unknown device');
   try { bus.publish(id, 'revoked', { reason: 'revoked_by_admin', by: req.device.id }); } catch {}
+  // The event is published before either path, because both close the stream it
+  // travels on: a device that is told nothing simply stops being answered.
+  if (req.query.purge === '1') {
+    devices.forget(id);
+    return res.json({ ok: true, deviceId: id, purged: true, revokedAt: new Date().toISOString() });
+  }
   devices.revoke(id);
   bus.dropDevice(id, 'revoked');
   profiles.remove(id);
-  res.json({ ok: true, deviceId: id, revokedAt: new Date().toISOString() });
+  res.json({ ok: true, deviceId: id, purged: false, revokedAt: new Date().toISOString() });
 }));
 
 // ─── Profiles ───────────────────────────────────────────────────────────────

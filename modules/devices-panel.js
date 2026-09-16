@@ -83,11 +83,15 @@ function handleRotate(req, res) {
   res.json(r);
 }
 
-/** DELETE /api/devices/:id — revoke (keeps the audit row) or ?purge=1 to forget entirely. */
+/**
+ * DELETE /api/devices/:id — revoke (keeps the audit row) or `?purge=1` to forget
+ * entirely. `devices.forget` drops the outbox and the profile with the row; this
+ * route used to call `remove()` alone and leave both behind.
+ */
 function handleRevoke(req, res) {
   if (blocked(req, res)) return;
   if (req.query.purge === '1') {
-    return devices.remove(req.params.id)
+    return devices.forget(req.params.id)
       ? res.json({ ok: true, purged: true })
       : res.status(404).json({ error: 'unknown_device' });
   }
