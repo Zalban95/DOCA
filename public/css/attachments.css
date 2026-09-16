@@ -118,6 +118,8 @@
 .hc-mission.done      .hc-mission-dot { background: var(--green); }
 .hc-mission.failed    .hc-mission-dot { background: var(--red); }
 .hc-mission.cancelled .hc-mission-dot { background: var(--amber); }
+.hc-mission.paused    .hc-mission-dot { background: var(--amber); }
+.hc-mission.paused { border-color: var(--amber); }
 .hc-mission.failed { border-color: var(--red); }
 
 @keyframes hc-mission-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }

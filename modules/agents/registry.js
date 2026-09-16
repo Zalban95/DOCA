@@ -52,7 +52,7 @@ const { loadPrefs, savePrefs } = require('../utils');
  * a profile's tool list is an allowlist, so a specialist has it only if
  * somebody wrote it down.
  */
-const NEVER = ['settings_propose', 'install_propose', 'agent_dispatch', 'agent_results', 'ask_device'];
+const NEVER = ['settings_propose', 'install_propose', 'agent_dispatch', 'agent_results', 'agent_resume', 'ask_device'];
 
 /**
  * Shipped definitions. Editable by writing a file of the same id, which wins —

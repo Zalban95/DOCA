@@ -38,6 +38,7 @@ test('specialists are off until somebody turns them on', () => {
   const names = tools.schemas([]).map(s => s.function.name);
   assert.ok(!names.includes('agent_dispatch'), 'dispatch must not exist while the flag is off');
   assert.ok(!names.includes('agent_results'));
+  assert.ok(!names.includes('agent_resume'));
   assert.equal(registry.block(), '', 'a switched-off feature costs no prompt either');
 
   assert.throws(() => missions.dispatch({ agentId: 'archivist', task: 'x' }), /switched off/);
@@ -185,4 +186,71 @@ test('when a specialist runs out of steps it names its own limit, not the panel\
     'a mission that stops must not send the user to the panel setting, which would change nothing');
   assert.match(stop, /agent definition/);
   assert.match(stop, /harness\.config\.doca\.maxSteps/, 'the orchestrator still names its own setting');
+});
+
+/* ── A restart pauses a mission, and the user decides ── */
+
+function seed(rows) {
+  require('../modules/store').writeJson('agents/missions', { missions: rows });
+}
+const row = (id, state, extra = {}) => ({
+  id, agentId: 'archivist', label: 'Archivist', task: `errand ${id}`, sessionId: null,
+  state, steps: 3, tokens: 1200, startedAt: new Date().toISOString(), endedAt: null,
+  result: null, error: null, ...extra,
+});
+
+test('a restart pauses what was running instead of leaving it running forever, and touches nothing else', () => {
+  seed([row('msn_a', 'running'), row('msn_b', 'done')]);
+  const paused = missions.recover();
+  assert.deepEqual(paused.map(m => m.id), ['msn_a']);
+  assert.equal(missions.get('msn_a').state, 'paused', 'not failed: the work so far is still worth offering');
+  assert.equal(missions.get('msn_b').state, 'done');
+  assert.equal(missions.running().length, 0, 'or the panel bar polls every 3 s for the rest of the day');
+  assert.deepEqual(missions.recover(), [], 'a second run finds nothing');
+
+  registry.setEnabled(true);
+  const block = missions.block();
+  assert.match(block, /msn_a .*PAUSED.*step 3/, 'the audit: what it was and how far it got');
+  assert.match(block, /one short question/);
+  assert.match(block, /agent_resume/);
+  assert.match(block, /Never resume without a yes/);
+  registry.setEnabled(false);
+});
+
+test('only the user\'s answer moves a paused mission, and a no drops it', () => {
+  seed([row('msn_a', 'paused'), row('msn_b', 'done')]);
+  assert.throws(() => missions.resume('msn_b', { go: true }), e => e.status === 409);
+  assert.throws(() => missions.resume('msn_x', { go: true }), e => e.status === 404);
+
+  registry.setEnabled(true);
+  seed([row('msn_a', 'paused', { agentId: 'deleted-agent' })]);
+  assert.throws(() => missions.resume('msn_a', { go: true }), /no longer exists/);
+  assert.equal(missions.get('msn_a').state, 'paused', 'a refused resume must not lose the question');
+
+  const dropped = missions.resume('msn_a', { go: false });
+  assert.equal(dropped.state, 'cancelled');
+  assert.ok(dropped.endedAt);
+  registry.setEnabled(false);
+});
+
+test('a yes resumes in the mission\'s own session', async () => {
+  registry.setEnabled(true);
+  const session = require('../modules/harness/memory').createSession('resume test');
+  seed([row('msn_a', 'paused', { sessionId: session.id })]);
+
+  const resumed = missions.resume('msn_a', { go: true });
+  assert.equal(resumed.state, 'running');
+  assert.equal(resumed.sessionId, session.id, 'its own session, so it reads what it already did');
+  assert.ok(resumed.resumedAt);
+
+  // No model is configured here, so the turn ends on its own; wait for that so
+  // it cannot write into the next test's index.
+  for (let i = 0; i < 100 && missions.get('msn_a').state === 'running'; i++)
+    await new Promise(r => setTimeout(r, 20));
+  assert.notEqual(missions.get('msn_a').state, 'paused');
+  registry.setEnabled(false);
+});
+
+test('a specialist cannot answer for the user', () => {
+  assert.ok(registry.NEVER.includes('agent_resume'));
 });

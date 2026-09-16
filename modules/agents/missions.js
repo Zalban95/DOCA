@@ -167,13 +167,22 @@ function dispatch({ agentId, task, context, by, chainId } = {}) {
     ? `${text}\n\n## Context from the orchestrator\n${String(context).slice(0, 20000)}`
     : text;
 
-  // Deliberately not awaited: dispatch returns, the orchestrator's turn ends,
-  // and the user keeps typing.
-  agent.turn({ message, sessionId: session.id, profile: profileOf(def), emit: evt => record(id, evt) })
+  run(row, def, message);
+  return row;
+}
+
+/**
+ * The turn itself. Deliberately not awaited: dispatch returns, the
+ * orchestrator's turn ends, and the user keeps typing. `base` is what a paused
+ * mission had already spent, so a resumed one reports its whole cost.
+ */
+function run(row, def, message, base = { steps: 0, tokens: 0 }) {
+  const { id } = row;
+  agent.turn({ message, sessionId: row.sessionId, profile: profileOf(def), emit: evt => record(id, evt, base) })
     .then(r => {
       announce(patch(id, {
         state: 'done', endedAt: new Date().toISOString(),
-        steps: r.steps, tokens: r.usage?.totalTokens || 0,
+        steps: base.steps + (r.steps || 0), tokens: base.tokens + (r.usage?.totalTokens || 0),
         result: String(r.text || '').slice(0, 20000),
       }));
     })
@@ -184,8 +193,71 @@ function dispatch({ agentId, task, context, by, chainId } = {}) {
         error: String(e?.message || e).slice(0, 600),
       }));
     });
+}
 
-  return row;
+/* ── A restart ────────────────────────────────────────── */
+
+/**
+ * Missions the last process was running when it stopped.
+ *
+ * The turn was a promise in a process that no longer exists, so without this a
+ * row says `running` forever — `agent_results` tells the orchestrator to ask
+ * again later, and the panel bar polls every 3 s for the rest of the day.
+ *
+ * It is **paused, not failed**. The work done so far is still in the mission's
+ * session, and whether it is worth finishing is the user's call: the
+ * orchestrator reports it and asks on whichever turn comes first, from whichever
+ * device (see `block()`), and `resume()` does what they answer. Called once at
+ * startup, before anything can dispatch — never while a mission could really be
+ * running.
+ */
+function recover() {
+  const rows = loadIndex();
+  const stuck = rows.filter(m => m.state === 'running');
+  if (!stuck.length) return [];
+  const at = new Date().toISOString();
+  for (const m of stuck) Object.assign(m, { state: 'paused', pausedAt: at });
+  saveIndex(rows);
+  for (const m of stuck) {
+    console.warn(`[agents] mission ${m.id} (${m.label}) paused by a restart at step ${m.steps}`);
+    announce(m);
+  }
+  return stuck;
+}
+
+/**
+ * The user's answer to "carry on?". Only a paused mission can be resumed, and it
+ * resumes in its own session, so the specialist reads what it already did
+ * instead of starting the errand over.
+ */
+function resume(id, { go } = {}) {
+  const row = get(id);
+  if (!row) throw Object.assign(new Error(`No mission called "${id}".`), { status: 404 });
+  if (row.state !== 'paused')
+    throw Object.assign(new Error(`${id} is ${row.state}, not paused — there is nothing to resume.`), { status: 409 });
+
+  if (!go) {
+    const dropped = patch(id, {
+      state: 'cancelled', endedAt: new Date().toISOString(),
+      error: 'paused by a restart; the user chose not to continue',
+    });
+    announce(dropped);
+    return dropped;
+  }
+
+  if (!registry.enabled())
+    throw Object.assign(new Error('Specialist agents are switched off (agents.enabled).'), { status: 409 });
+  const def = registry.get(row.agentId);
+  if (!def || def.broken) throw Object.assign(new Error(
+    `The "${row.agentId}" agent ${def ? 'cannot be read' : 'no longer exists'}, so ${id} cannot resume.`), { status: 409 });
+
+  const resumed = patch(id, { state: 'running', resumedAt: new Date().toISOString() });
+  announce(resumed);
+  run(resumed, def,
+    `The panel restarted while you were on this errand, after step ${row.steps}. What you already did is `
+      + `above. Carry on from there; do not redo finished work.\n\nThe errand: ${row.task}`,
+    { steps: row.steps || 0, tokens: row.tokens || 0 });
+  return resumed;
 }
 
 /**
@@ -195,11 +267,12 @@ function dispatch({ agentId, task, context, by, chainId } = {}) {
  * anybody reads, and the whole answer lands on the index when it finishes.
  * What is kept is the shape of the work — which tools ran, and what it cost.
  */
-function record(id, evt) {
+function record(id, evt, base = { steps: 0, tokens: 0 }) {
   try {
     if (!evt || evt.type === 'text' || evt.type === 'session') return;
     if (evt.type === 'usage') {
-      announce(patch(id, { steps: evt.step, tokens: evt.totalTokens || 0 }), { ephemeral: true });
+      announce(patch(id, { steps: base.steps + evt.step, tokens: base.tokens + (evt.totalTokens || 0) }),
+        { ephemeral: true });
       return;
     }
     store.appendJsonl(logFor(id), { at: new Date().toISOString(), ...evt });
@@ -228,13 +301,23 @@ function block() {
 
   const out = ['# Missions'];
   for (const m of rows) {
-    if (m.state === 'running') {
+    if (m.state === 'paused') {
+      out.push(`- ${m.id} (${m.label}): PAUSED by a restart at step ${m.steps}, ${m.tokens} tokens spent — "${m.task.slice(0, 80)}"`);
+    } else if (m.state === 'running') {
       out.push(`- ${m.id} (${m.label}): running, step ${m.steps} — "${m.task.slice(0, 80)}"`);
     } else {
       out.push(`- ${m.id} (${m.label}): ${m.state}${m.error ? ` — ${m.error}` : ''}`
         + `${m.state === 'done' ? ' — read it with agent_results' : ''}`);
     }
   }
+  // ponytail: "don't ask twice" is per conversation and trusts the model; a
+  // second device writing first in another conversation gets asked too. Record
+  // an askedAt when that turns out to nag.
+  if (rows.some(m => m.state === 'paused'))
+    out.push('A PAUSED mission was cut off by a restart and is waiting on the user. Before anything else in '
+      + 'your reply, tell them in one line what it was doing and how far it got, and ask one short question: '
+      + 'continue it? Then call agent_resume with their answer. Never resume without a yes, and if you have '
+      + 'already asked in this conversation, do not ask again.');
   if (rows.some(m => m.state === 'running'))
     out.push('A running mission is not blocking you. Carry on with the user; its answer will be here '
       + 'when you next look.');
@@ -243,4 +326,4 @@ function block() {
 
 function _reset() { store.writeJson(INDEX, { missions: [] }); }
 
-module.exports = { dispatch, get, list, running, events, block, patch, _reset };
+module.exports = { dispatch, recover, resume, get, list, running, events, block, patch, _reset };

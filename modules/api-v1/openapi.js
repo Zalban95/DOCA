@@ -290,7 +290,7 @@ function events() {
     }), note: 'The lifecycle of one turn, sent to every device with `harness:chat` including the one that asked — so any client can show that a turn is running and what it answered. `proposals` are settings changes waiting on a click in the dashboard; a device cannot apply them.' },
     'agent.mission':    { audience: 'device', payload: obj({
       missionId: str(), agentId: str(), label: str({ description: 'The specialist\'s name.' }), task: str({ description: 'What it was asked to do, truncated.' }),
-      state: str({ enum: ['running', 'done', 'failed', 'cancelled'] }), steps: int(), tokens: int(), startedAt: iso(), endedAt: nullable(iso()),
+      state: str({ enum: ['running', 'paused', 'done', 'failed', 'cancelled'] }), steps: int(), tokens: int(), startedAt: iso(), endedAt: nullable(iso()),
       result: str({ description: 'On `done`: the beginning of what it reported.' }), error: str(),
     }), note: 'A specialist agent\'s work, to every device with `harness:chat`. Starting and finishing are durable, so a watch that was asleep still learns the job is done; the step ticks in between are ephemeral, because progress replayed from an hour-old queue is not progress. `GET /harness/missions` is the same picture for a client that has just woken up.' },
     'agent.text':       { audience: 'device', payload: obj({ turnId: str(), sessionId: str(), delta: str() }),
@@ -448,7 +448,7 @@ function paths() {
       responses: { 200: json(obj({ turns: arr(obj({ sessionId: str(), turnId: str(), by: nullable(str({ description: 'Device that started it.' })), startedAt: iso() })) })), ...std(401, 403) } } },
     '/harness/missions': { get: { tags: ['Harness'], summary: 'Missions the specialist agents are running', operationId: 'harnessListMissions', ...scopeDoc('harness:chat'),
       description: 'What a client draws as progress after waking up, since the live picture arrives as `agent.mission` events. `enabled` is false and the list empty when specialist agents are switched off, which is the default — a client should say so rather than showing an empty list as "nothing running".',
-      parameters: [{ name: 'state', in: 'query', schema: str({ description: 'running | done | failed | cancelled' }) }, { name: 'limit', in: 'query', schema: int({ description: 'Default 20, maximum 50.' }) }],
+      parameters: [{ name: 'state', in: 'query', schema: str({ description: 'running | paused | done | failed | cancelled' }) }, { name: 'limit', in: 'query', schema: int({ description: 'Default 20, maximum 50.' }) }],
       responses: { 200: json(obj({ enabled: bool(), missions: arr(obj({ id: str(), agentId: str(), label: str(), task: str(), state: str(), steps: int(), tokens: int(), startedAt: iso(), endedAt: nullable(iso()), result: nullable(str()), error: nullable(str()) })) })), ...std(401, 403) } } },
     '/harness/turns/{id}/cancel': {
       parameters: [pathParam('id', 'Turn id, or the session id of the conversation it is running in.')],

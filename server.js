@@ -365,6 +365,7 @@ ensureCerts().then(certs => {
       ? `https://${certs.tailscale}:${PORT}  (Tailscale — trusted)`
       : `https://0.0.0.0:${PORT}  (self-signed)`;
     console.log(`${branding.name('panel')} v${pkg.version} → ${label}`);
+    require('./modules/agents/missions').recover();
     startMcpServers();
   });
 }).catch(e => {
@@ -373,6 +374,7 @@ ensureCerts().then(certs => {
   terminal.setup(server);
   listenWithRetry(server, () => {
     console.log(`${branding.name('panel')} v${pkg.version} → http://0.0.0.0:${PORT}`);
+    require('./modules/agents/missions').recover();
     startMcpServers();
   });
 });

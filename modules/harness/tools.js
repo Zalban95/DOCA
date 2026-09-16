@@ -379,6 +379,26 @@ const TOOLS = [
     },
   },
   {
+    name: 'agent_resume',
+    description: 'Act on the user\'s answer about a mission a restart PAUSED. continue: true picks it up where it '
+      + 'stopped, in its own session; continue: false drops it. Only call this after the user has answered — '
+      + 'the choice is theirs, not yours.',
+    parameters: {
+      type: 'object',
+      properties: {
+        mission:  { type: 'string', description: 'The paused mission\'s id, from the Missions list in your prompt.' },
+        continue: { type: 'boolean', description: 'What the user said: true to carry on, false to drop it.' },
+      },
+      required: ['mission', 'continue'],
+    },
+    run: ({ mission, continue: go }) => {
+      const m = require('../agents/missions').resume(mission, { go: go === true });
+      return m.state === 'running'
+        ? `${m.id} resumed — ${m.label} is carrying on from step ${m.steps}. You are not waiting; read it later with agent_results.`
+        : `${m.id} dropped, as the user asked.`;
+    },
+  },
+  {
     name: 'agent_results',
     description: 'How a mission you dispatched is getting on, and its answer once it has one. Call it when '
       + 'you actually need the result — not in a loop waiting for it.',
@@ -573,7 +593,7 @@ function describe() {
 function schemas(disabled = []) {
   const off = require('../agents/registry').enabled()
     ? disabled
-    : [...disabled, 'agent_dispatch', 'agent_results'];
+    : [...disabled, 'agent_dispatch', 'agent_results', 'agent_resume'];
   return [
     ...TOOLS
       .filter(t => !off.includes(t.name))
