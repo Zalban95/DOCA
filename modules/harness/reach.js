@@ -50,6 +50,8 @@ const MIME_BY_EXT = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image
 
 const ASK_DEFAULT_SEC = 120;
 const ASK_MAX_SEC     = 900;
+/** A poller checks at most every 60 s (the watch clamps `retryAfterSec`), so twice that is still "on". */
+const POLLING_WINDOW_SEC = 120;
 const POLL_MS         = 300;
 
 const api = () => ({
@@ -103,6 +105,12 @@ function reachNote(d) {
   if (bus.isOnline(d.id)) return 'now';
   const prof = profiles.get(d.id);
   if (prof.prompts?.receive === false) return 'declines prompts in its profile';
+  // No live stream is not "offline": a watch polls `GET /events` through its phone
+  // and never holds one, so for it "queued" is the normal path. A device seen
+  // recently collects the queue on its next check; telling the model it is offline
+  // sends it off diagnosing a connection that works.
+  const seenSec = d.lastSeenAt ? Math.round((Date.now() - Date.parse(d.lastSeenAt)) / 1000) : Infinity;
+  if (seenSec <= POLLING_WINDOW_SEC) return `queued, collected on its next check (it polls; seen ${seenSec} s ago)`;
   return `offline, queued (${bus.pendingCount(d.id)} waiting)`;
 }
 

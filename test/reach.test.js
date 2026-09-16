@@ -125,6 +125,11 @@ test('a notice reports whether it was seen or queued, and refuses what it cannot
   assert.equal(out.delivered.length, 1);
   assert.match(out.delivered[0].note, /offline, queued/, 'the model learns it landed in a queue, not on a screen');
 
+  // One poll later it is a device that checks in, not an offline one.
+  await h.api(watch.token, 'GET', '/api/v1/events');
+  const polled = reach.tell({ to: watch.device.id, title: 'Again' });
+  assert.match(polled.delivered[0].note, /collected on its next check/, 'a polling watch is not reported offline');
+
   assert.match(await tools.call('tell_device', { title: 'Look', to: 'watch', imagePath: require('path').join(h.tmp, 'notes.txt') }),
     /not an image this can send/);
 });
