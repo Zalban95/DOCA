@@ -368,7 +368,7 @@ test('the agent can change one memory rule without deleting the other twenty-nin
 
 test('the agent is told its own limits, by name and by settings path', async () => {
   const p = require('../modules/harness/catalog').configFor('doca');
-  const block = budget.block(p, null);
+  const block = budget.block(p);
 
   assert.match(block, /# Your limits/);
   // Every limit that can stop a turn names the setting that sets it, because
@@ -380,7 +380,7 @@ test('the agent is told its own limits, by name and by settings path', async () 
   assert.match(block, /harness\.config\.doca\.memoryLimit/);
   // With no window declared it says so rather than implying one.
   assert.match(block, /context window: not declared/);
-  assert.match(budget.block({ ...p, contextWindow: 32768 }, null), /context window: 32768 tokens/);
+  assert.match(budget.block({ ...p, contextWindow: 32768 }), /context window: 32768 tokens/);
 
   // And the charter makes naming the limit a standing rule, not a nicety.
   assert.match(providers.SAFETY_CHARTER, /name which limit it was and whose it is/);
@@ -427,22 +427,99 @@ test('the ledger counts what the provider reports, and says when it guessed', ()
   assert.equal(budget.report(guessed, { contextWindow: 0 }).contextPercent, null);
 });
 
-test('the environment block keeps its volatile readings last, so the prefix is cacheable', async () => {
+test('the environment block is entirely facts: two calls a second apart are identical', async () => {
   const args = { provider: 'ollama', model: 'qwen3', toolCount: 12, disabledCount: 1 };
   const a = environment.block(args);
   await new Promise(r => setTimeout(r, 1100));   // past the clock's resolution
   const b = environment.block(args);
 
+  // The whole block, not just the part before "## Right now".
+  //
+  // This test used to check only the head — `a.slice(0, a.indexOf('## Right
+  // now'))` — and that is why it passed while the provider's cache was stopped
+  // dead. The block is the third of thirteen in the system prompt, so a stable
+  // head of *this* block proves nothing about the head of the *request*: the
+  // clock it was protecting still sat ahead of the transcript, and the cache
+  // matched 1,152 tokens and not one more (ISSUES.md H-9). The invariant worth
+  // pinning is "nothing that changes between steps lives in here at all".
+  assert.equal(a, b, 'nothing in this block may differ between steps');
+  assert.equal(/## Right now/.test(a), false, 'the readings belong to live()');
+  assert.match(a, /# Environment/);
+  assert.match(a, /you are running on: ollama \/ qwen3, 12 tools available, 1 switched off/);
+});
+
+test('the readings are still sent — moved out of the block, not dropped', async () => {
+  const a = environment.live();
+  await new Promise(r => setTimeout(r, 1100));
+  const b = environment.live();
+
   assert.notEqual(a, b, 'the clock is still in there somewhere');
-  assert.match(a, /## Right now/);
-  // Everything before "## Right now" is identical between steps: that head is
-  // the prefix a provider's cache and a local prefill match on.
-  const head = t => t.slice(0, t.indexOf('## Right now'));
-  assert.equal(head(a), head(b));
-  assert.ok(head(a).length > 300, 'the stable head is the bulk of the block');
-  // The readings themselves did not go missing on the way down.
+  assert.match(b, /## Right now/);
+  // Every reading that used to end the block is still here. The fix is
+  // position, not content: dropping them would have been a silent behaviour
+  // change dressed up as a cache optimisation.
   assert.match(b, /time: \d{4}-\d{2}-\d{2}T/);
   assert.match(b, /memory: .* free of /);
+  assert.match(b, /uptime: host .* panel /);
+});
+
+test('the whole system prompt is byte-identical between steps — the invariant the cache needs', async () => {
+  const agentMod = require('../modules/harness/agent');
+  const a = agentMod.preview({ message: 'hello' });
+  await new Promise(r => setTimeout(r, 1100));   // past the clock's resolution
+  const b = agentMod.preview({ message: 'hello' });
+
+  // This is the assertion that was missing, and its absence is why H-9 shipped.
+  // A provider's prefix cache stops at the first byte that differs, so *every*
+  // line ahead of the history has to hold still — not just the head of the
+  // environment block. The clock and the running ledger used to live in here,
+  // and everything after them was re-sent uncached on every step.
+  assert.equal(a, b, 'nothing in the system prompt may change between steps');
+  assert.equal(/## Right now/.test(a), false, 'readings must not be in the system prompt');
+  assert.equal(/this turn so far/.test(a), false, 'the ledger must not be in the system prompt');
+
+  // Still assembled in reading order: the charter first, so the panel's rules
+  // are the first thing in context and the last thing anybody can edit away.
+  assert.ok(a.indexOf('# Safety') < a.indexOf('# Environment'),
+    'the charter still comes first');
+});
+
+test('the readings travel after the history, as the last thing the model reads', () => {
+  const agentMod = require('../modules/harness/agent');
+  const p = require('../modules/harness/catalog').configFor('doca');
+
+  const l = budget.ledger();
+  budget.record(l, { usage: { prompt_tokens: 1000, completion_tokens: 10, prompt_cache_hit_tokens: 900 } });
+
+  const live = agentMod.liveBlock(p, l);
+  assert.match(live, /## Right now/);
+  assert.match(live, /time: \d{4}-\d{2}-\d{2}T/);
+  assert.match(live, /this turn so far: 1 model call/);
+
+  // It is a trailing system message, not a rewrite of the leading one: the
+  // system message the model was given is still the system message it gets.
+  assert.equal(/## Right now/.test(agentMod.preview({ message: 'hi' })), false);
+});
+
+test('the limits block separates standing settings from the running ledger', () => {
+  const p = require('../modules/harness/catalog').configFor('doca');
+
+  // The settings half must not carry the step counter, or it reintroduces the
+  // same per-step byte one level up.
+  assert.equal(/this turn so far/.test(budget.block(p)), false,
+    'the running ledger belongs to live()');
+
+  // With no ledger there is nothing to say, and it says nothing rather than
+  // printing a zero.
+  assert.equal(budget.live(null, p), '');
+
+  // With one, it reports the turn and names nothing it cannot know.
+  const l = budget.ledger();
+  budget.record(l, { usage: { prompt_tokens: 1000, completion_tokens: 10, prompt_cache_hit_tokens: 900 } });
+  const line = budget.live(l, p);
+  assert.match(line, /this turn so far: 1 model call/);
+  assert.match(line, /1010 tokens \(provider\)/);
+  assert.match(line, /90% of the prompt served from cache/);
 });
 
 test('every harness parameter has a box in the panel to type it into', () => {

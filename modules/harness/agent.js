@@ -226,7 +226,7 @@ function placeBlock(client) {
  * which the user does own — follows it, then the facts, then what the agent
  * knows, then where this conversation had got to.
  */
-function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, ledger, profile }) {
+function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile }) {
   // A specialist's prompt is mostly what is left out of it. The charter is not
   // one of those things: it goes first here exactly as it does for the
   // orchestrator, and a definition has no way to drop it.
@@ -243,7 +243,6 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
         ? environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount })
         : environmentBrief(p, toolCount),
       profile.memory ? memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)) : '',
-      budget.block(p, ledger),
       summary ? `# Earlier in this mission\n${summary}` : '',
     ].filter(Boolean).join('\n\n');
   }
@@ -256,12 +255,37 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
     placeBlock(client),
     rulesBlock(),
     memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)),
-    budget.block(p, ledger),
     settings.block(),
     installs.block(),
     agents.block(),
     missions.block(),
     summary ? `# Earlier in this conversation\n${summary}` : '',
+  ].filter(Boolean).join('\n\n');
+}
+
+/**
+ * The readings, sent after the history rather than inside the system prompt.
+ *
+ * Everything here changes between steps — the clock, the load, the running
+ * ledger — and a provider's prefix cache stops at the first byte that differs.
+ * With these inside the system prompt, the cacheable prefix was pinned at 1,152
+ * tokens and never grew, so a four-step turn re-billed the entire transcript
+ * four times (ISSUES.md H-9).
+ *
+ * Position is the whole fix; nothing was removed. Every fact the model was
+ * given before it is given again, in the same words, as the last thing it
+ * reads. What changed is that the head of the request — charter, system prompt,
+ * environment facts, memory, limits, settings — is now byte-identical from step
+ * to step, so the cached prefix grows with the transcript instead of being
+ * truncated on the first line that moves.
+ *
+ * It is returned separately rather than appended here because the caller knows
+ * where the history ends; this function does not.
+ */
+function liveBlock(p, ledger) {
+  return [
+    environment.live(),
+    budget.live(ledger, p),
   ].filter(Boolean).join('\n\n');
 }
 
@@ -272,12 +296,15 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
  * which is right for an agent that might use any of them and is pure cost for
  * one with four tools. Rebuilt per step like everything else, so the saving is
  * per step too.
+ *
+ * The clock is not here: it belongs to `liveBlock()`, which is sent after the
+ * history. A `now:` line in this brief would put a changing byte ahead of the
+ * transcript for specialists exactly as it did for the orchestrator (H-9).
  */
 function environmentBrief(p, toolCount) {
   const s = environment.snapshot();
   return ['# Where you are',
     `host: ${s.host.hostname} (${s.host.platform}), user ${s.host.user}, home ${s.host.home}`,
-    `now: ${new Date().toISOString()}`,
     `running on: ${p.provider} / ${p.model || '(model unset)'}${toolCount ? `, ${toolCount} tools` : ''}`,
     `workspace: ${(s.paths.find(x => x.key === 'WORKSPACE_DIR') || {}).value || '(unset)'}`,
   ].join('\n');
@@ -742,12 +769,21 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       {
         role: 'system',
         content: systemPrompt({
-          p, userText: message, summary, client, ledger: led,
+          p, userText: message, summary, client,
           toolCount: schemas.length, disabledCount: disabled.length,
         }),
       },
       ...toApiMessages(rows, { sessionId: session.id }),
     ];
+
+    // The readings go last, after the history. Everything above is now
+    // byte-identical from one step to the next, so the cached prefix grows with
+    // the transcript instead of being cut off at the first line that moves —
+    // and a per-step line inside the system prompt is exactly what did the
+    // cutting (ISSUES.md H-9). Not persisted: this is this step's reading, and
+    // the next step generates its own.
+    const live = liveBlock(p, led);
+    if (live) messages.push({ role: 'system', content: live });
 
     // Measured when the provider answers with a usage frame, estimated when it
     // does not. Both are recorded; only one is called a measurement.
@@ -872,14 +908,18 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
  * was to run a turn and trust the description. `GET /api/harness/environment`
  * shows the user the environment block for the same reason; this is the whole
  * of it, and it is what the prompt-order tests assert against.
+ *
+ * This is the system message, which is now the *stable* half of what a turn
+ * sends. The per-step readings travel separately, after the history — see
+ * `liveBlock()`. A caller that needs the whole request wants both.
  */
-function preview({ message = '', client = null, ledger = null, profile = null } = {}) {
+function preview({ message = '', client = null, profile = null } = {}) {
   const p = profile ? { ...params(), systemPrompt: profile.systemPrompt } : params();
   const disabled = profile && Array.isArray(profile.tools)
     ? tools.schemas([]).map(sc => sc.function.name).filter(n => !profile.tools.includes(n))
     : (Array.isArray(p.disabledTools) ? p.disabledTools : []);
   return systemPrompt({
-    p, userText: message, summary: '', client, ledger, profile,
+    p, userText: message, summary: '', client, profile,
     toolCount: tools.schemas(disabled).length, disabledCount: disabled.length,
   });
 }
@@ -920,8 +960,12 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
     measure('memory rules', rulesBlock(), 'how the agent keeps its memory'),
     measure('memory entries', memoryBlock(message, Math.max(0, Number(p.memoryLimit) || 0)),
       `pinned + best matches, up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`),
-    measure('limits', budget.block(p, null)),
+    measure('limits', budget.block(p)),
     measure('settings proposals', settings.block()),
+    // Sent after the history rather than in the system message, so it is
+    // measured here but ordered last in the request. Same cost either way: it
+    // is re-sent on every step. See liveBlock() and ISSUES.md H-9.
+    measure('readings', environment.live(), 'clock, load, uptime — after the history'),
   ];
 
   // Per server, because "the prompt is big" is not actionable and "the blender
@@ -986,4 +1030,4 @@ async function status() {
   return out;
 }
 
-module.exports = { turn, status, params, ask, preview, breakdown, events, toApiMessages };
+module.exports = { turn, status, params, ask, preview, breakdown, liveBlock, events, toApiMessages };

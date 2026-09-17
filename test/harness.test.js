@@ -241,8 +241,20 @@ test('a turn calls a tool, feeds the result back, and answers', async () => {
   // The tool declarations really were offered, and the result was fed back in.
   assert.ok(seen[0].tools.some(t => t.function.name === 'memory_write'));
   const followUp = seen[1].messages;
-  assert.equal(followUp.at(-1).role, 'tool');
-  assert.match(followUp.at(-1).content, /Remembered/);
+
+  // The result is fed back ahead of the trailing readings block, which is the
+  // last thing in the request and is not part of the transcript (H-9). What the
+  // ordering is for: everything above that block — the system prompt and every
+  // history row — stays byte-identical from step to step, so the provider's
+  // prefix cache grows instead of stopping at a per-step line.
+  assert.equal(followUp.at(-1).role, 'system');
+  assert.match(followUp.at(-1).content, /## Right now/);
+  assert.equal(followUp[0].role, 'system');
+  assert.equal(/## Right now/.test(followUp[0].content), false,
+    'the readings are not in the system prompt');
+
+  const fed = followUp.findLast(m => m.role === 'tool');
+  assert.match(fed.content, /Remembered/);
 
   // The whole exchange is durable, and the entry is in memory.
   const { entries } = (await get('/api/harness/memory')).body;

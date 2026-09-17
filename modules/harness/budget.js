@@ -211,7 +211,7 @@ function warning(l, p) {
  * proposal — and, more importantly, so it does not tell the user to change
  * something that is not theirs to change.
  */
-function block(p, l) {
+function block(p) {
   const window = windowFor(p);
   const out = ['# Your limits'];
 
@@ -233,19 +233,30 @@ function block(p, l) {
     `memory entries in this prompt: up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`,
   );
 
-  if (l && l.steps) {
-    const r = report(l, p);
-    out.push('', `this turn so far: ${r.steps} model call${r.steps === 1 ? '' : 's'}, `
-      + `${r.totalTokens} tokens (${r.source})`
-      + (r.cachePercent !== null ? `, ${r.cachePercent}% of the prompt served from cache` : '')
-      + (r.contextPercent !== null ? `, last prompt ${r.contextTokens} = ${r.contextPercent}% of the window` : ''));
-  }
-
   out.push('',
     'These are settings on this panel, not the provider\'s. Propose a change when one of them is what is in your '
     + 'way, and say which it is — never stop with "I ran out" and leave the user to guess which limit it was.');
 
   return out.join('\n');
+}
+
+/**
+ * How the turn is going, kept out of the settings block above.
+ *
+ * "this turn so far" counts model calls, so it changes on every step by
+ * definition. It used to sit inside `block()`, which put a per-step byte in
+ * the middle of the system prompt, ahead of the transcript — and a provider's
+ * prefix cache stops at the first byte that differs, so everything after it
+ * was re-sent uncached on every step (ISSUES.md H-9). It is sent after the
+ * history now: same sentence, same numbers, later.
+ */
+function live(l, p) {
+  if (!l || !l.steps) return '';
+  const r = report(l, p);
+  return `this turn so far: ${r.steps} model call${r.steps === 1 ? '' : 's'}, `
+    + `${r.totalTokens} tokens (${r.source})`
+    + (r.cachePercent !== null ? `, ${r.cachePercent}% of the prompt served from cache` : '')
+    + (r.contextPercent !== null ? `, last prompt ${r.contextTokens} = ${r.contextPercent}% of the window` : '');
 }
 
 /* ── When the provider says no ─────────────────────────── */
@@ -312,5 +323,5 @@ function stalled({ ep, ms, frames }) {
 module.exports = {
   CHARS_PER_TOKEN,
   estimate, estimateMessages, windowFor, compactTokensFor, shouldCompact, compactReason,
-  ledger, record, report, warning, block, explain, stalled,
+  ledger, record, report, warning, block, live, explain, stalled,
 };

@@ -560,8 +560,10 @@ second is one line and fixes the suite without a dependency decision.
 
 ## H-9 — The prompt prefix changes on every step, so the provider's cache never warms
 
-**Status:** open. High priority — it is a per-step cost on every turn, and it is
-invisible in the panel.
+**Status:** fixed on `dev/troubleshoot`, 2026-09-17 — awaiting merge. It was a
+per-step cost on every turn and it was invisible in the panel. See *Fixed* below
+for the before/after; the cause and the diff that found it are kept because the
+reasoning is the part that generalises.
 
 ### What was seen
 
@@ -625,6 +627,47 @@ So both volatile writers are *in the system prompt, ahead of the history* —
 `environment.js:200` and the ledger line in `budget.block()`. No third cause
 exists; the earlier list of candidates was right about the shape and wrong
 about the ranking.
+
+### Fixed 2026-09-17 on `dev/troubleshoot`
+
+Both volatile writers were moved after the history: `environment.block()` lost
+its `## Right now` section to a new `environment.live()`, and `budget.block()`
+lost its running ledger to `budget.live()`. `agent.js::turn()` assembles the
+request as **stable system message → history → readings**, the readings
+travelling as a trailing `system` message that is generated per step and never
+persisted. Behaviour is unchanged: every fact the model was given before, it is
+given again, in the same words, as the last thing it reads. `breakdown()` gained
+a `readings` row so the token accounting still adds up.
+
+Same task, same provider, six-step turn, measured the same way:
+
+| Step | prompt Δ | cached Δ | per-step | *was* |
+| --- | --- | --- | --- | --- |
+| 1 | 5,748 | 5,376 | **93.5%** | 17.8% |
+| 2 | 6,001 | 5,632 | **93.9%** | 16.6% |
+| 3 | 6,073 | 5,888 | **97.0%** | 16.4% |
+| 4 | 6,134 | 5,888 | **96.0%** | 15.6% |
+| 5 | 6,222 | 6,016 | **96.7%** | — |
+| 6 | 6,396 | 6,016 | **94.1%** | — |
+
+The signature to read is the *shape*, not the percentage: the cached count now
+**grows every step** (5,376 → 5,632 → 5,888 → 6,016), which is what a stable
+prefix looks like. Before, it was pinned at exactly 1,152 forever. Average is
+≈95%, against 6–7% reported.
+
+The first differing byte in two consecutive bodies moved from offset 5,779
+(20.9%) to 8,068 (35.5%), and it is now the natural boundary — step 1's
+readings block against step 2's history growth — rather than a clock.
+
+### What the test should have caught, and now does
+
+The old test was green throughout. It checked `environment.block()`'s head
+against its own `## Right now` marker — the mitigation validated at the scale it
+was written at, not the scale it had to hold at. Three tests replace it:
+`environment.block()` must be byte-identical across two calls a second apart;
+`agent.preview()` must be byte-identical the same way; and a turn's request must
+carry the readings as its last message with the system prompt free of them. The
+second is the one that would have caught this on the day it shipped.
 
 ### Layout, for whoever implements the fix
 

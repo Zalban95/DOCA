@@ -130,14 +130,16 @@ function snapshot() {
  * follow it just as well. Sections with nothing to say are left out rather than
  * stated as empty, so "no MCP servers" does not read as a fact worth acting on.
  *
- * **Everything that changes by the second lives at the bottom, under "Right
- * now".** This block sits near the front of every prompt and is rebuilt on every
- * step of every turn, so a clock or a free-RAM figure near the top changes the
- * first bytes of the prompt each time — which is exactly the prefix a provider's
- * cache, and a local runtime's prefill, match on. Keeping the volatile lines
- * last makes the whole head of the prompt byte-identical from step to step. It
- * costs nothing and it is easy to undo by accident, so: new facts go above, new
- * readings go below.
+ * **Everything in here is a fact, not a reading.** This block sits near the
+ * front of every prompt and is rebuilt on every step of every turn, so anything
+ * that changes by the second would change the first bytes of the prompt each
+ * time — which is exactly the prefix a provider's cache, and a local runtime's
+ * prefill, match on. Clock, memory and load therefore live in `live()`, which
+ * is sent after the history. It costs nothing and it is easy to undo by
+ * accident, so: new facts go here, new readings go in `live()`.
+ *
+ * `test/harness-awareness.test.js` pins this — two calls a second apart must
+ * come back byte-identical, with no clock anywhere in the block.
  */
 function block({ provider, model, toolCount, disabledCount } = {}) {
   const s = snapshot();
@@ -194,14 +196,33 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
         '- A tool name with two segments after the server id (`mcp__<client>__<their-server>__<tool>`) is a server that machine hosts in turn, so it runs there and is subject to that machine\'s consent switches as well.');
   }
 
-  // Readings, not facts. Last, so everything above stays byte-identical between
-  // steps — see the note on this function.
-  out.push('', '## Right now',
-    `time: ${new Date().toISOString()} (${Intl.DateTimeFormat().resolvedOptions().timeZone})`,
-    `memory: ${gb(s.host.freeMem)} free of ${gb(s.host.totalMem)}, load ${s.host.load.join(' ')}`,
-    `uptime: host ${duration(s.host.uptime)}, panel ${duration(s.doca.uptime)}`);
-
   return out.join('\n');
 }
 
-module.exports = { snapshot, block, invalidate };
+/**
+ * The readings, kept out of the facts above.
+ *
+ * Everything here changes between steps: the clock to the millisecond, the
+ * load average, the uptimes. These used to end `block()`, which was the right
+ * instinct applied at the wrong scale — the invariant that matters is not
+ * "volatile last within this block" but "volatile last within the request".
+ * `block()` is only the third of thirteen blocks in the system prompt, so
+ * everything after it — memory, limits, settings, missions, the whole
+ * transcript — sat downstream of a byte that moves every step.
+ *
+ * Measured cost of getting that wrong: the provider's prefix cache stopped
+ * exactly here. 5,779 bytes of request were byte-identical and 1,152 tokens
+ * were cached, on every step, forever, because that is where the clock is
+ * (ISSUES.md H-9). The fix is position, not content: same words, same facts,
+ * sent after the history instead of before it.
+ */
+function live() {
+  const s = snapshot();
+  return ['## Right now',
+    `time: ${new Date().toISOString()} (${Intl.DateTimeFormat().resolvedOptions().timeZone})`,
+    `memory: ${gb(s.host.freeMem)} free of ${gb(s.host.totalMem)}, load ${s.host.load.join(' ')}`,
+    `uptime: host ${duration(s.host.uptime)}, panel ${duration(s.doca.uptime)}`,
+  ].join('\n');
+}
+
+module.exports = { snapshot, block, live, invalidate };

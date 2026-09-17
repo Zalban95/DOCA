@@ -153,6 +153,57 @@ none of them block anything today.
   per-model or per-provider breakdown. The rows are all there; it is a reader,
   not new plumbing.
 
+## The shape of the request, and what a prefix cache can see
+
+H-9 moved the clock and the running ledger after the history. Measured locally
+on a six-step turn, the per-step cached share went from 15.6–17.8% to 93.5–97%
+(≈95% average) — the 6–7% in the report was the same fault measured on the live
+install. What matters is the shape: the cached count went from pinned at exactly
+1,152 tokens to **growing every step**, which is what a stable prefix looks like.
+
+It fixed the two writers that were *measurably* breaking the prefix. Two things
+it deliberately did not do are still open, and both are the same idea — stable
+bytes first — applied to a part of the request the fix never reached.
+
+- **The tool schemas are serialized last, so they can never be cached.** In the
+  request body they travel *after* the messages (`agent.js`, the `body:` spread),
+  which puts ~14 KB of schemas on the far side of the transcript. History grows
+  every step, so that region can never be a prefix and the schemas are re-billed
+  in full on every step of every turn. They change only when the tool list does.
+  The open question is whether a provider's cache follows the *serialized* byte
+  order or an internal one that hoists tools to the front — the 1,152-token
+  ceiling in H-9 matched the body offset exactly, which is evidence for the
+  former, but one provider is not a rule. **Measure before changing it**: move
+  tools ahead of `messages` in the body, re-run the six-step comparison, and
+  keep it only if the cached count rises by roughly the size of the schemas.
+  Worth ~14 KB per step here, which is larger than what H-9 recovered.
+
+- **The panel reports cache cumulatively, so the number that matters is
+  invisible.** `budget.report()` sums `cachedTokens` and `promptTokens` across
+  every step of a turn and divides once, so the console shows a running turn
+  average. A cumulative figure is dragged down by step 1's unavoidable miss and
+  hides the trend: it reads ~17% whether the prefix is pinned at 1,152 tokens or
+  growing by thousands. Every step-level number in H-9 had to be differenced out
+  of the event stream by hand to see the fault at all. The provider sends
+  per-call figures and `record()` already reads them — this is a field on the
+  `usage` event and a column in the console, not new plumbing. **The signature
+  worth drawing is whether the cached region is growing**, because that is the
+  difference between a warm cache and a broken prefix, and the percentage alone
+  does not show it.
+
+Two smaller things noticed while measuring, neither yet a decision:
+
+- **`firstTokenTimeoutMs` and the tool count interact.** A turn that adds an MCP
+  server mid-flight changes the schema list, which changes the tools block, which
+  invalidates the cached prefix for that step — once per server start, not once
+  per step. Probably not worth avoiding; worth knowing when reading a dip.
+
+- **Sessions share a cached prefix.** Step 1 of a *fresh session* measured 93.5%
+  because the stable head — charter, system prompt, environment, limits — is
+  identical across sessions on one install. Anything that makes that head vary
+  per session (a session id in the system prompt, a per-conversation timestamp)
+  would cost every conversation its first step. Keep it that way deliberately.
+
 ## Two layers of learned knowledge, and the road between them
 
 Decided in discussion, not yet built. Written down because it is expensive to
