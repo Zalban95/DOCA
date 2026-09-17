@@ -25,14 +25,14 @@ Starting here because they are provable.
 
 | # | Item | Line | Status |
 | --- | --- | --- | --- |
-| W1.1 | Tool schemas serialized last, so never cached — measure then move | 175 | TODO |
+| W1.1 | Tool schemas serialized last, so never cached — measure then move | 175 | **CLOSED — premise false, measured** |
 | W1.2 | Panel reports cache cumulatively — surface per-step + growth | 188 | **DONE** |
 | W1.3 | `modules/files.js:79` ENOENT on a moved favourite → 500 | 565 | **DONE** |
 | W1.4 | Status lines clear on four schedules — one rule on `setStatus()` | 543 | **DONE** |
 | W1.5 | "Restart to apply" worded three ways | 550 | **DONE** |
-| W1.6 | Device rotate/revoke + skill toggles report via `appAlert()` only | 570 | TODO |
+| W1.6 | Device rotate/revoke + skill toggles report via `appAlert()` only | 570 | **DONE** |
 | W1.7 | Shell scripts editable in two places (`setup-phase2.sh` asymmetry) | 556 | **DONE** |
-| W1.8 | MCP add-server form has no `headers` field | 54 | TODO |
+| W1.8 | MCP add-server form has no `headers` field | 54 | **DONE** |
 | W1.9 | Proposal not tied to the conversation that made it | 113 | **DONE** |
 
 ## Wave 2 — medium features, specified well enough to build
@@ -162,3 +162,31 @@ cached-delta tracking the previous step's whole prompt within ~1%, i.e. the cach
 now takes everything that existed before the current step. Pinned by a new test
 in `test/harness.test.js` that sends a result, appends two more, and asserts the
 first is byte-identical.
+
+**W1.6 — failures report inline** (`904ed69`). Device rotate/revoke/forget and
+skill toggle/remove used `appAlert()` — a modal to say one card's button did not
+work, dismissing which was required before retrying the thing that failed. The
+devices grid gets a status line per card; the skills panel one outside its grid,
+because a toggle re-renders the grid and an in-card status would be wiped before
+it was read. Success keeps no message: the re-render is the report.
+
+**W1.8 — the add-server form can set headers** (`cc0c56e`). `normalize()`
+accepted them and `client.js` sent them, but only a client could ever set one, so
+a server the user added by hand could not be given an `Authorization` header.
+One textarea; parsed client-side into the object the registry wants; populated
+masked on edit, which is already safe because `unmaskValues()` reads a returned
+mask as "unchanged".
+
+**W1.1 — CLOSED, premise false** (no commit; nothing to change). The entry
+asserted the schemas "can never be a prefix" because they are serialized after
+`messages`. Measured: the cache gap per step is ~300–333 tokens, i.e. the
+readings block, against ~3,603 tokens of schema JSON — so the schemas are
+*already* inside the cached prefix. DeepSeek builds `[tools][system][messages]`
+and does not follow the body's key order. Moving them would have been a no-op.
+
+The reasoning is worth keeping because the trap is subtle: the 1,152-token
+ceiling in H-9 matched a body offset *exactly*, which is real evidence — and it
+still did not generalise. A byte offset matching a cache boundary once is not a
+rule about how caches work. The entry's own "measure before changing it" is what
+stopped a pointless edit, which is the argument for writing that instruction
+into a TODO rather than leaving it implied.
