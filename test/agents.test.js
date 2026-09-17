@@ -342,3 +342,47 @@ test('the mission_plan tool refuses politely outside a mission', () => {
       'the orchestrator\'s own conversation has no plan, and saying so beats an undefined');
   });
 });
+
+test('a specialist can reach mission_plan whatever its definition allows', () => {
+  // The bug this pins: a definition's `tools` is an allowlist, and NEVER is
+  // subtracted from it — so a tool that is merely "not forbidden" is still
+  // unreachable unless the definition names it. `mission_plan` was written on
+  // the assumption that "not in NEVER" was enough. The archivist definition
+  // lists memory_search and nothing else, so no specialist could tick its own
+  // plan: a plan was write-once at dispatch and stayed all-queued forever, and
+  // the progress bar the whole feature exists for would never move.
+  const narrow = { id: 'narrow', label: 'Narrow', systemPrompt: 'You do one thing.',
+    tools: ['memory_search'], memory: false, environment: 'minimal' };
+
+  const prompt = agent.preview({ message: 'x', profile: narrow });
+  // preview() reports the count, so the count is the observable.
+  // The minimal brief says ", N tools"; the full block says ", N tools
+  // available". Match both rather than pin the wording.
+  const m = prompt.match(/, (\d+) tools/);
+  assert.ok(m, 'the specialist prompt does not state a tool count');
+  assert.equal(Number(m[1]), 2,
+    'expected memory_search plus mission_plan; a specialist cannot drive its own errand without it');
+
+  // And the two implementations that compute this must agree — they were two,
+  // and a fix applied to one of them is a fix that does not exist.
+  const src = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '..', 'modules', 'harness', 'agent.js'), 'utf8');
+  assert.equal((src.match(/profile\.tools\.includes\(n\)/g) || []).length, 1,
+    'the allowlist is computed in more than one place again');
+
+  // A definition still cannot give itself a tool the charter withholds, and
+  // this goes through the real path: NEVER is subtracted in registry.normalize()
+  // when a definition is saved, not re-checked per turn — deliberately, so a
+  // definition asking for a forbidden tool is corrected once, visibly. So the
+  // profile a mission runs with is built from the normalized definition, and
+  // that is what this asserts.
+  const greedy = registry.normalize({
+    id: 'greedy', role: 'do anything',
+    tools: ['memory_search', 'settings_propose', 'agent_dispatch', 'install_propose'],
+  });
+  assert.deepEqual(greedy.tools, ['memory_search'], 'the forbidden ones are stripped on save');
+
+  const p2 = agent.preview({ message: 'x', profile: { ...narrow, tools: greedy.tools } });
+  assert.equal(Number(p2.match(/, (\d+) tools/)[1]), 2,
+    'memory_search plus mission_plan — and no way to reach the withheld tools');
+});

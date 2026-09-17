@@ -282,6 +282,41 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
  * It is returned separately rather than appended here because the caller knows
  * where the history ends; this function does not.
  */
+/**
+ * Tools every specialist has, whatever its definition lists.
+ *
+ * A definition's `tools` is an allowlist, and `registry.NEVER` is subtracted
+ * from it — so a tool that is "not forbidden" is still unreachable unless the
+ * definition happens to name it. `mission_plan` was written on that assumption
+ * and it was wrong: the `archivist` definition lists `memory_search` and
+ * nothing else, so no specialist could tick its own plan, and a plan is
+ * write-once (set by the orchestrator at dispatch) and stays all-`queued`
+ * forever. The progress bar the plan exists to draw would never move.
+ *
+ * These are the tools that act on the *mission* rather than on the world.
+ * Driving your own errand is not a capability a definition should have to opt
+ * into any more than the charter is — see `registry.NEVER` for the other side
+ * of the same list, and note that this one is asserted by a test that a
+ * specialist really is offered it.
+ */
+const ALWAYS_FOR_SPECIALISTS = ['mission_plan'];
+
+/**
+ * Which tools are off for this turn — one implementation, because there were
+ * two and a fix belongs in both.
+ *
+ * That is not hypothetical: `mission_plan` was added to `turn()`'s copy and
+ * `preview()` kept the old rule, so the prompt the panel shows and the prompt
+ * the model gets would have disagreed about a tool. The whole point of
+ * `preview()` is that it is what the tests assert against.
+ */
+function disabledFor(profile, p) {
+  if (profile && Array.isArray(profile.tools))
+    return tools.schemas([]).map(sc => sc.function.name)
+      .filter(n => !profile.tools.includes(n) && !ALWAYS_FOR_SPECIALISTS.includes(n));
+  return Array.isArray(p.disabledTools) ? p.disabledTools : [];
+}
+
 function liveBlock(p, ledger) {
   return [
     environment.live(),
@@ -744,9 +779,7 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
   // An allowlist is expressed as its complement, because `schemas()` filters by
   // what is switched off and there is no second mechanism worth adding. A
   // profile with no list gets the user's ordinary disabled-tools setting.
-  const disabled = profile && Array.isArray(profile.tools)
-    ? tools.schemas([]).map(sc => sc.function.name).filter(n => !profile.tools.includes(n))
-    : (Array.isArray(p.disabledTools) ? p.disabledTools : []);
+  const disabled = disabledFor(profile, p);
 
   const base = {
     model:       p.model,
@@ -939,9 +972,7 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
  */
 function preview({ message = '', client = null, profile = null } = {}) {
   const p = profile ? { ...params(), systemPrompt: profile.systemPrompt } : params();
-  const disabled = profile && Array.isArray(profile.tools)
-    ? tools.schemas([]).map(sc => sc.function.name).filter(n => !profile.tools.includes(n))
-    : (Array.isArray(p.disabledTools) ? p.disabledTools : []);
+  const disabled = disabledFor(profile, p);
   return systemPrompt({
     p, userText: message, summary: '', client, profile,
     toolCount: tools.schemas(disabled).length, disabledCount: disabled.length,
