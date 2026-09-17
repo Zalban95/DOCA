@@ -519,7 +519,39 @@ test('the limits block separates standing settings from the running ledger', () 
   const line = budget.live(l, p);
   assert.match(line, /this turn so far: 1 model call/);
   assert.match(line, /1010 tokens \(provider\)/);
-  assert.match(line, /90% of the prompt served from cache/);
+  assert.match(line, /90% of this step's prompt came from cache/);
+});
+
+test('the cache is reported per step as well as per turn', () => {
+  const p = require('../modules/harness/catalog').configFor('doca');
+  const l = budget.ledger();
+
+  // Step 1: nothing before it, so it can only match a prefix warmed elsewhere.
+  budget.record(l, { usage: { prompt_tokens: 1000, completion_tokens: 10, prompt_cache_hit_tokens: 100 } });
+  let r = budget.report(l, p);
+  assert.equal(r.stepCachedTokens, 100);
+  assert.equal(r.stepCachePercent, 10);
+  assert.equal(r.cachePercent, 10);
+
+  // Step 2: same prompt size, but now almost all of it is a prefix the
+  // provider has seen. The turn figure barely moves — which is exactly why it
+  // could not show a broken prefix, and why the step figure exists (H-9).
+  budget.record(l, { usage: { prompt_tokens: 1000, completion_tokens: 10, prompt_cache_hit_tokens: 950 } });
+  r = budget.report(l, p);
+  assert.equal(r.stepCachedTokens, 950, 'the step figure is this step alone');
+  assert.equal(r.stepCachePercent, 95);
+  assert.equal(r.cachedTokens, 1050, 'the turn figure still accumulates');
+  assert.equal(r.cachePercent, 53, 'and is dragged down by the first step');
+
+  // A growing step figure is what a warm prefix looks like; a flat one is a
+  // prefix being broken. Nothing in the turn figure distinguishes them.
+  assert.ok(r.stepCachedTokens > 100, 'the cached region grew');
+
+  // A provider that says nothing about caching reports null, not zero.
+  const silent = budget.ledger();
+  budget.record(silent, { usage: { prompt_tokens: 500, completion_tokens: 5 } });
+  assert.equal(budget.report(silent, p).stepCachePercent, null);
+  assert.equal(budget.report(silent, p).cachePercent, null);
 });
 
 test('every harness parameter has a box in the panel to type it into', () => {
@@ -579,10 +611,14 @@ test('the MCP call timeout is a setting the agent can see and propose, and says 
   assert.equal(McpClient.timeoutFor('call'), 120000);
 });
 
-test('older tool results are clipped and spilled so the model can read_file them', () => {
+test('an oversized tool result is clipped and spilled so the model can read_file it', () => {
   const { toApiMessages } = require('../modules/harness/agent');
   const fs = require('node:fs');
-  const big = 'X'.repeat(8000);
+  // Over TOOL_MAX_CHARS, so the clip applies. This used to be 8,000 — under the
+  // cap — because the old rule clipped every result older than the newest no
+  // matter how small, and this test was written against that. The rule is now
+  // per row, so a fixture has to actually be oversized to exercise it.
+  const big = 'X'.repeat(20000);
   const rows = [
     { role: 'user', content: 'look' },
     // The call travels with its results or neither does (`pairedRows`), so the
@@ -594,12 +630,31 @@ test('older tool results are clipped and spilled so the model can read_file them
   ];
   const results = toApiMessages(rows, { sessionId: 's_clip' }).filter(m => m.role === 'tool');
   assert.equal(results.length, 3, 'every result still travels');
-  assert.equal(results[2].content, rows[4].content, 'the newest tool result stays in full');
+  assert.match(results[2].content, /full output:/, 'the newest is clipped too, and on its own size');
   assert.match(results[0].content, /full output:/, 'an older one is replaced by a pointer');
   assert.match(results[0].content, /read_file/);
   const m = results[0].content.match(/full output: (.+?) —/);
   assert.ok(m, 'the pointer names a path');
   assert.equal(fs.readFileSync(m[1], 'utf8'), rows[2].content, 'the spilled file is the original text');
+});
+
+test('a result under the cap keeps the whole text, however much later output arrives', () => {
+  const { toApiMessages } = require('../modules/harness/agent');
+  // The other half of the rule, and the half that used to be wrong: the old
+  // budget clipped older results whatever their size, so a small result's
+  // serialization changed as the prompt filled up. Now a row under the cap is
+  // never touched, which is what makes the prefix append-only (ISSUES.md H-9b).
+  const small = 'Y'.repeat(4000);
+  const round = i => ([
+    { role: 'assistant', content: '', tool_calls: [{ id: `c${i}`, function: { name: 'shell', arguments: '{}' } }] },
+    { role: 'tool', tool_call_id: `c${i}`, name: 'shell', content: `r${i}-${small}` },
+  ]);
+
+  const alone = toApiMessages([...round(1)], { sessionId: 's_small' }).filter(m => m.role === 'tool');
+  const later = toApiMessages([...round(1), ...round(2), ...round(3)], { sessionId: 's_small' })
+    .filter(m => m.role === 'tool');
+  assert.equal(alone[0].content, later[0].content, 'the first result is byte-identical later on');
+  assert.equal(later[0].content.length, 4003, 'and still whole');
 });
 
 test('folding fires on an absolute token budget even with no window declared', () => {

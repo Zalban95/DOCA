@@ -27,7 +27,7 @@ Starting here because they are provable.
 | --- | --- | --- | --- |
 | W1.1 | Tool schemas serialized last, so never cached — measure then move | 175 | TODO |
 | W1.2 | Panel reports cache cumulatively — surface per-step + growth | 188 | TODO |
-| W1.3 | `modules/files.js:79` ENOENT on a moved favourite → 500 | 565 | TODO |
+| W1.3 | `modules/files.js:79` ENOENT on a moved favourite → 500 | 565 | **DONE** |
 | W1.4 | Status lines clear on four schedules — one rule on `setStatus()` | 543 | TODO |
 | W1.5 | "Restart to apply" worded three ways | 550 | TODO |
 | W1.6 | Device rotate/revoke + skill toggles report via `appAlert()` only | 570 | TODO |
@@ -39,7 +39,7 @@ Starting here because they are provable.
 
 | # | Item | Line | Status |
 | --- | --- | --- | --- |
-| W2.1 | **H-9b** — tool results rewritten between steps (ISSUES.md) | — | TODO |
+| W2.1 | **H-9b** — tool results rewritten between steps (ISSUES.md) | — | **DONE** |
 | W2.2 | Model fallback chain on stall, with the two deadlines | 451–472 | TODO |
 | W2.3 | Shared core context the orchestrator owns for all specialists | 368 | TODO |
 | W2.4 | Mission `plan` so a client can draw progress | 304 | TODO |
@@ -101,3 +101,15 @@ Starting here because they are provable.
 ## Progress log
 
 Appended as waves land. Each entry names the test that pins it.
+
+**W1.3 — files ENOENT → 404** (`e0d9c45`). `fsStatus()` maps ENOENT/ENOTDIR to
+404 and EACCES/EPERM to 403, leaving 500 for genuine faults; errno travels in
+the body. New `test/files.test.js` — 5 tests, the first for these routes.
+
+**W2.1 — H-9b, tool results are stable** (`56e4142`). `clipToolContent()` is now
+a pure function of the row; the backward character-budget walk is gone. Per-step
+on the large-output workload: 53.4 → 66.9 → 74.4 → 80.5% (was 52/55/57/60), with
+cached-delta tracking the previous step's whole prompt within ~1%, i.e. the cache
+now takes everything that existed before the current step. Pinned by a new test
+in `test/harness.test.js` that sends a result, appends two more, and asserts the
+first is byte-identical.

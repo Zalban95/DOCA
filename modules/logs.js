@@ -108,8 +108,19 @@ function fromHarness(evt) {
         : `, context ${evt.contextTokens}`;
       // The cache share is the difference between "this turn cost 1.6 million"
       // and "it re-sent the same prefix eleven times at a tenth of the price".
-      const cache = evt.cachePercent !== null && evt.cachePercent !== undefined
-        ? `, ${evt.cachePercent}% cached` : '';
+      //
+      // Two figures, because they answer different questions and only one of
+      // them can show a fault. This step's share says whether the prefix held;
+      // the turn's says what was billed. A turn figure alone read ~17% whether
+      // the cache was pinned at 1,152 tokens or growing by thousands, which is
+      // how H-9 and H-9b stayed invisible — so the step figure leads, since a
+      // *growing* step figure is what a warm prefix actually looks like.
+      const pct = n => (n === null || n === undefined) ? null : `${n}%`;
+      const step = pct(evt.stepCachePercent);
+      const turn = pct(evt.cachePercent);
+      const cache = step
+        ? `, ${step} cached this step${turn ? ` (${turn} turn)` : ''}`
+        : (turn ? `, ${turn} cached` : '');
       return line(SELF, 'info',
         `step ${evt.step}: ${evt.totalTokens} tokens `
         + `(${evt.promptTokens} in, ${evt.completionTokens} out, ${evt.source}${cache})${ctx}`);
