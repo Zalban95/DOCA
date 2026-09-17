@@ -365,6 +365,48 @@ still missing from that sentence.
   prompt is pinned: the orchestrator's per-step prompt stays small (target
   under ~8k) however many MCP servers are connected.
 
+- **A shared core context, owned and editable by the orchestrator.** A
+  specialist must not be given *only* its errand, or the first thing it gets
+  wrong is something the orchestrator already knew and forgot to pass on: which
+  machine it is on, which machine its tools act on, what the project is, what
+  has already been ruled out. Today `dispatch()` passes a definition and an
+  errand, and every definition re-states its own standing facts — which means
+  the same context is either duplicated per definition or silently missing from
+  the one that forgot.
+
+  Wanted: one block of common context that the **orchestrator maintains** and
+  every specialist receives, so "the thing every agent must know" has one
+  author, one place and one edit. Editable by the orchestrator because it is the
+  one holding the synthesized picture — it is the component that learns the
+  project, the constraints and the dead ends as the conversation goes. Kept
+  **small and tightly worded**: it is prepended to every mission, so it is paid
+  per mission, and a core context that grows into a second system prompt defeats
+  the reason specialists are worth having.
+
+  Two constraints, both learned the hard way elsewhere in this file:
+
+  - **It is not optional and not per-definition.** A definition may add to it,
+    never replace it. The floor is what stops a specialist misfiring — the
+    `placeBlock`/`environmentBrief` split exists precisely because an agent that
+    does not know which machine its tools land on will confidently act on the
+    wrong one. A definition that could drop the floor would reintroduce the bug
+    the floor is for.
+  - **It must be byte-stable between steps of a mission,** for the same reason
+    the clock had to move (ISSUES.md H-9). It sits at the very front of a
+    specialist's prompt, which is the most expensive place to put a byte that
+    changes: everything after it is re-billed uncached on every step. Editing it
+    is expected and fine — *changing it mid-mission* is what breaks the prefix,
+    so an edit should land between missions, or the specialist should be told
+    its prompt changed rather than quietly re-read one that did.
+
+  Related and separate: the skills manifest (see *Two layers of learned
+  knowledge*) belongs in this same block — name plus a one-line trigger for each
+  skill, always resident, body pulled only when the trigger matches. Same
+  discipline, same reason: tens of tokens each, and byte-stable, or it costs
+  more than it saves. The manifest must at minimum name skill creation itself,
+  so an agent that has just solved something new for the first time knows that
+  writing it down is a thing it can do.
+
 - **Every user authenticates, and `:4242` never answers without it.** Today
   `/api/v1` has a bearer token per device, with scopes; the dashboard itself and
   every legacy `/api/*` route have nothing, which is what makes `ISSUES.md` H-7
