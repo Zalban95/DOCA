@@ -28,10 +28,10 @@ Starting here because they are provable.
 | W1.1 | Tool schemas serialized last, so never cached — measure then move | 175 | TODO |
 | W1.2 | Panel reports cache cumulatively — surface per-step + growth | 188 | **DONE** |
 | W1.3 | `modules/files.js:79` ENOENT on a moved favourite → 500 | 565 | **DONE** |
-| W1.4 | Status lines clear on four schedules — one rule on `setStatus()` | 543 | TODO |
-| W1.5 | "Restart to apply" worded three ways | 550 | TODO |
+| W1.4 | Status lines clear on four schedules — one rule on `setStatus()` | 543 | **DONE** |
+| W1.5 | "Restart to apply" worded three ways | 550 | **DONE** |
 | W1.6 | Device rotate/revoke + skill toggles report via `appAlert()` only | 570 | TODO |
-| W1.7 | Shell scripts editable in two places (`setup-phase2.sh` asymmetry) | 556 | TODO |
+| W1.7 | Shell scripts editable in two places (`setup-phase2.sh` asymmetry) | 556 | **DONE** |
 | W1.8 | MCP add-server form has no `headers` field | 54 | TODO |
 | W1.9 | Proposal not tied to the conversation that made it | 113 | **DONE** |
 
@@ -101,6 +101,55 @@ Starting here because they are provable.
 ## Progress log
 
 Appended as waves land. Each entry names the test that pins it.
+
+### Commit attribution is partly wrong — read this before trusting `git log`
+
+The campaign driver used `git add -A`, which swept a subagent's uncommitted work
+into its own commits. Nothing is missing and every line is tested; what is wrong
+is that two commit messages do not describe their contents:
+
+| Commit | Message says | Actually also contains |
+| --- | --- | --- |
+| `cd7c1f9` | W1.9, proposals carry a sessionId | **all of W1.4 and W1.5**, and the `paths.js` half of W1.7 |
+| `1ee1f0d` | H-7, a browser guard on the apply routes | the `config.js` half of W1.7, and `test/status-lines.test.js` |
+
+`git log --oneline` therefore under-reports this campaign by three items. The
+correct fix is to split the commits, which is safe while the branch is unpushed
+but was not done unilaterally — history rewriting is the user's call. Recorded
+here so a later reader is not misled either way.
+
+**Lesson for the rest of the campaign: never `git add -A` while a subagent is
+working in the same tree.** Stage named paths, or wait for the agent to hand
+back.
+
+**W1.4 — one schedule on `setStatus()`** (in `cd7c1f9`). Rule is "success fades,
+errors stay": `'err'` persists, everything else clears at 3000 ms, per-call
+`opts.clear` overrides (a number, or `0` for a standing state). Pending timers
+are tracked per element in a `WeakMap` and cancelled by the next call — which
+also fixed a real bug where a ✓'s timer could erase the ✗ that replaced it. Five
+divergent call sites now use the shared default. New `test/status-lines.test.js`
+loads the real `public/js/utils.js` into a `vm` with a fake clock, and a second
+test fails if any other file goes back to timing its own status line.
+
+**W1.5 — two restart phrases, one meaning each** (in `cd7c1f9`, finished in
+`d0…`). "restart OpenClaw" means the external stack; "Restart DOCA" means this
+process. Both phrases now appear consistently with comments naming the
+distinction and warning against collapsing them. The two remaining instances in
+`modules/update.js` — missed in the first pass — were fixed in the follow-up,
+along with two standing states that were fading at 3 s (`logs.js` streaming,
+`harness.js` composer).
+
+**W1.7 — the Config tab lists all four scripts** (split across `cd7c1f9` and
+`1ee1f0d`). Chose "list all of them": dropping scripts would delete the only
+editor for the configured `SNAPSHOT_SCRIPT`/`RESTORE_SCRIPT`, which need not
+live in `SETUP_DIR`. `SCRIPT_CONFIG` in `modules/paths.js` is now the single
+source and `CONFIG_REGISTRY` is generated from it, so the two cannot drift
+structurally. Pinned in `test/paths.test.js`.
+
+**Follow-up pass** (`d0…`). `modules/update.js` still said "Restart the server"
+for the panel meaning; `logs.js` and `harness.js` faded standing states. All
+three fixed. These were loose ends caused by the non-atomic commits above — the
+subagent flagged them rather than fixing them, which was correct of it.
 
 **W1.3 — files ENOENT → 404** (`e0d9c45`). `fsStatus()` maps ENOENT/ENOTDIR to
 404 and EACCES/EPERM to 403, leaving 500 for genuine faults; errno travels in

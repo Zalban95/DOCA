@@ -750,8 +750,12 @@ async function _hcStatus() {
       badge.textContent = s.model ? `${s.provider} / ${s.model}` : `${s.provider} / no model`;
       badge.className = `badge ${s.ready && s.reachable ? 'badge-green' : s.ready ? 'badge-amber' : 'badge-red'}`;
     }
-    if (!s.ready)          setStatus(st, 'Pick a model with ⚙ before sending.', 'warn');
-    else if (!s.reachable) setStatus(st, `Provider unreachable — ${s.error || 'no response'}`, 'warn');
+    // Standing conditions, not events. "Pick a model" is true until you pick
+    // one, and a warning that fades on its own reads as though the problem
+    // went away. The third branch deliberately clears, because "nothing is
+    // wrong" is the absence of the message rather than a message.
+    if (!s.ready)          setStatus(st, 'Pick a model with ⚙ before sending.', 'warn', { clear: 0 });
+    else if (!s.reachable) setStatus(st, `Provider unreachable — ${s.error || 'no response'}`, 'warn', { clear: 0 });
     else                   setStatus(st, '', '');
   } catch (e) {
     if (badge) { badge.textContent = 'error'; badge.className = 'badge badge-red'; }

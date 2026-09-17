@@ -235,7 +235,10 @@ async function handleUpdate(req, res) {
       npm.stderr.on('data', chunk => sseWrite({ status: chunk.toString() }));
       npm.on('close', (npmCode) => {
         if (npmCode === 0) {
-          sseWrite({ done: true, ok: true, status: '\n✓ Dependencies updated. Restart the server to apply.\n' });
+          // "DOCA", not "the server": this restarts the panel process, and the
+          // phrase is reserved for that meaning — the other one is the external
+          // OpenClaw stack. See public/js/keys.js for the pair.
+          sseWrite({ done: true, ok: true, status: '\n✓ Dependencies updated. Restart DOCA to apply.\n' });
         } else {
           sseWrite({ done: true, ok: false, status: `\n✗ npm install exited with code ${npmCode}\n` });
         }
@@ -247,7 +250,7 @@ async function handleUpdate(req, res) {
         res.end();
       });
     } else {
-      sseWrite({ done: true, ok: true, status: '\n✓ Restart the server to apply the update.\n' });
+      sseWrite({ done: true, ok: true, status: '\n✓ Restart DOCA to apply the update.\n' });
       cached = null;
       res.end();
     }
