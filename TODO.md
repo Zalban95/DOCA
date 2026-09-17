@@ -161,9 +161,16 @@ on a six-step turn, the per-step cached share went from 15.6–17.8% to 93.5–9
 install. What matters is the shape: the cached count went from pinned at exactly
 1,152 tokens to **growing every step**, which is what a stable prefix looks like.
 
-It fixed the two writers that were *measurably* breaking the prefix. Two things
-it deliberately did not do are still open, and both are the same idea — stable
-bytes first — applied to a part of the request the fix never reached.
+**That was one of three, and not the largest on a real workload.** A later
+measurement on large tool outputs (the H-9b section of ISSUES.md) found the
+verification turn had been too easy: `ls` and `date` fit inside the 12,000-char
+verbatim window, so nothing ever aged out and nothing was rewritten. Real output
+does age out, and `toApiMessages()` rewrites it — which is worth more than the
+clock ever was, because the break anchors at the oldest aged result, right after
+the system prompt, and cuts the cacheable prefix back to roughly the system
+prompt for the rest of the turn. **The priority now is H-9b, not the two items
+below.** They remain open and are the same idea — stable bytes first — applied
+to parts of the request neither fix reached.
 
 - **The tool schemas are serialized last, so they can never be cached.** In the
   request body they travel *after* the messages (`agent.js`, the `body:` spread),
@@ -334,7 +341,15 @@ still missing from that sentence.
   the portal MCP): ten steps, all in the orchestrator's own conversation, each
   re-sending ~40k tokens of prompt — system prompt plus 53 tool schemas, 31 of
   them Blender's — for ~370k tokens in one turn, and the orchestrator busy (so
-  the user blocked) the whole time. The shape wanted: the orchestrator is the
+  the user blocked) the whole time. Observed again 2026-09-17, more sharply: the
+  user **asked for an agent to be deployed** and the orchestrator did the work
+  itself in the first person, across 28 steps. That is the failure this entry is
+  about, stated plainly — not that dispatch was slow, but that the request
+  "deploy an agent" did not register *as* a dispatch, so nothing was delegated
+  and the orchestrator's own conversation paid for all of it. The dispatch rule
+  named below as "a sentence of thinking" is what has to become decidable.
+
+  The shape wanted: the orchestrator is the
   user's interface. It holds the synthesised context (summary, memory), the
   roster of specialists, the running missions and a *catalogue* of what tools
   exist, not their schemas; it reads the request, dispatches, and reports.

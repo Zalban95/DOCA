@@ -669,6 +669,119 @@ was written at, not the scale it had to hold at. Three tests replace it:
 carry the readings as its last message with the system prompt free of them. The
 second is the one that would have caught this on the day it shipped.
 
+### H-9b — the same fault, still live: tool results are rewritten between steps
+
+Found 2026-09-17 by measuring a *realistic* turn rather than a convenient one.
+H-9 above is fixed and its numbers hold; this is a second, independent
+prefix-breaker that the H-9 verification failed to exercise, and it is the
+larger of the two on real workloads.
+
+#### Why the H-9 verification missed it
+
+The six-step turn used to prove H-9 ran `ls`, `date`, `pwd`, `whoami`,
+`uname -a` — outputs of a few hundred characters each, all of which fit inside
+`TOOL_KEEP_CHARS` (12,000). Nothing ever aged out of the verbatim window, so
+nothing was ever rewritten and the cache measured 93.5–97%. The fix was real;
+the test was too easy. A turn with large tool outputs measures **52–60%**, which
+is the number the live install had been reporting all along.
+
+#### Cause
+
+`agent.js::toApiMessages()` recomputes which tool results travel verbatim on
+every call, by walking backward from the newest until 12,000 characters are
+spent:
+
+```js
+for (let i = rows.length - 1; i >= 0; i--) {
+  if (rows[i].role !== 'tool') continue;
+  if (!keepFull.size || used + len <= TOOL_KEEP_CHARS) { keepFull.add(i); used += len; }
+}
+```
+
+`!keepFull.size` means the newest result is *always* kept whole whatever its
+size; everything older has to fit the remaining budget. So as results arrive,
+older ones fall out of the window and their serialization **changes** — from
+verbatim to a 600-character head, a 200-character tail and a spill path. The
+message array is not append-only, and a prefix cache stops at the first byte
+that differs.
+
+Measured directly, three rounds of 30,000-character results:
+
+```
+step 1: [30000]
+step 2: [916, 30000]
+step 3: [916, 916, 30000]
+result #1 as sent at step 1: 30000 chars
+result #1 as sent at step 3:   916 chars
+```
+
+Confirmed in two real request bodies as well. Step 3 truncates step 2's result
+at byte 10,529 of the body:
+
+```
+step 2:  "…185\n186\n187\n188\n189\n1…"            ← verbatim
+step 3:  "…173\n174\n175\n1\n… [full output: …]"   ← clipped
+```
+
+#### Why it is expensive out of proportion to its size
+
+The break anchors at the **oldest** result to age out, and that result sits
+immediately after the system prompt. So the cacheable prefix is cut back to
+roughly the system prompt and stays there for the rest of the turn — every
+subsequent step re-bills the whole transcript. It is not a small tail loss; it
+is the entire history.
+
+Live four-step turn, large outputs (`seq 1 3000` ×4):
+
+| Step | prompt Δ | cached Δ | per-step | ideal |
+| --- | --- | --- | --- | --- |
+| 2 | 11,044 | 5,760 | 52.2% | ~96% |
+| 3 | 12,076 | 6,656 | 55.1% | ~91% |
+| 4 | 12,730 | 7,296 | 57.3% | ~95% |
+| 5 | 13,159 | 7,936 | 60.3% | ~95% |
+
+The tell is the cached delta: ~640–900 tokens per step while the prompt grows
+by ~12,000. 640 tokens is the clipped form. Only the *already clipped* text is
+ever cacheable — each step's freshly-added verbatim result is rewritten at the
+next step, so it can never be matched.
+
+#### The design question, which is not mine to settle
+
+Within a turn the message array has to be **append-only**, and any rule that
+shrinks the prompt over time breaks that somewhere. So the real choice is
+*where* to break, and every option trades behaviour against cache:
+
+1. **Clip by row size, uniformly, from the first appearance.** Each row's
+   serialization becomes a pure function of the row, so the prefix is stable
+   forever. Costs the model the full text of its *own most recent* output — it
+   gets a head, a tail and a `read_file` path instead. This is the only option
+   that makes the prefix fully stable, and it is a real behavioural change.
+2. **Do not clip during a turn; clip at turn boundaries.** Preserves behaviour
+   exactly within a turn, and the prompt grows. Fatal for the case that
+   motivated clipping: the live run included a 2.4 MB and a 6.9 MB tool result,
+   which the current rule sends whole on the step that produced them and clips
+   after — under this option they would be re-sent whole on every remaining
+   step of the turn.
+3. **Raise the threshold and apply it uniformly.** Most results are far under
+   12,000 characters and would never be touched, so behaviour is preserved for
+   the common case and only pathological output is clipped — stably. Does not
+   bound total prompt size, which is what the budget was for.
+
+A version of (3) — a generous per-row cap, applied uniformly, with the existing
+spill file as the escape hatch — looks like the right shape, but it changes what
+the model sees on its own output, so it wants a decision rather than a patch.
+
+#### Two more writers of the same shape, not yet addressed
+
+- **`memory_write` rewrites the system prompt.** `memoryBlock()` sits inside it,
+  so a memory write changes the head and the next step misses essentially
+  everything: the live run's step 27→28 measured 8% (4,321 cached of a 53,214
+  prompt), and steps 5 and 27 both wrote memory. Less frequent than the clipping
+  fault and more expensive per occurrence.
+- **Compaction**, by design, rewrites the transcript. One-off and expected
+  (step 22→23 measured 9%), but it means the step after a compact should not be
+  read as a regression.
+
 ### Layout, for whoever implements the fix
 
 ```
