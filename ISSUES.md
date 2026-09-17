@@ -578,6 +578,70 @@ towards ~90% — not sit flat at 6%. A rate pinned near zero means the prefix is
 being rewritten on every call, and the repair is to find the first byte that
 differs and move whatever precedes it out of the changing region.
 
+### Cause, confirmed by diff — 2026-09-17
+
+Reproduced on a clean checkout at `4177ad1`, provider `ds` → DeepSeek
+`deepseek-flash`. A four-step turn (two `shell` calls) gave a per-step cache
+read that is its own diagnosis, once the cumulative ledger is differenced:
+
+| Step | prompt (Δ) | cached (Δ) | per-step |
+| --- | --- | --- | --- |
+| 1 | 6,482 | 1,152 | 17.8% |
+| 2 | 6,952 | **1,152** | 16.6% |
+| 3 | 7,024 | **1,152** | 16.4% |
+| 4 | 7,370 | **1,152** | 15.6% |
+
+The cached count is **exactly 1,152 tokens on every step and never grows.**
+History is appended, so each step's prompt begins with the whole of the
+previous step's prompt; a stable head makes the cached region *grow* every
+step. A constant means the first differing byte sits at a **fixed offset**, and
+nothing past it can ever be cached.
+
+The raw bodies were then captured by wrapping `global.fetch` from outside the
+process — `node --require /tmp/dump-fetch.js server.js`, no repo source touched —
+and the two consecutive `/chat/completions` bodies differenced:
+
+```
+first differing byte offset: 5779  (20.9% of body)
+
+  ## Right now
+  time: 2026-09-17T16:42:0[6.022Z]   ← step 1
+  time: 2026-09-17T16:42:0[8.431Z]   ← step 2
+```
+
+**5,779 bytes ÷ 1,152 tokens ≈ 5.0 bytes/token.** The stable prefix and the
+cached prefix are the same region: the provider caches exactly as far as the
+clock.
+
+Clustering every differing byte (gaps > 300 identical bytes separate clusters)
+leaves exactly **two** volatile regions in the whole 27,687-byte body:
+
+| Span | What |
+| --- | --- |
+| `5779..5784` (5 bytes) | `time:` in `## Right now` — `environment.block()` |
+| `8616..end` | `this turn so far: N model calls…` in `# Your limits` — `budget.block()`, then the expected history growth |
+
+So both volatile writers are *in the system prompt, ahead of the history* —
+`environment.js:200` and the ledger line in `budget.block()`. No third cause
+exists; the earlier list of candidates was right about the shape and wrong
+about the ranking.
+
+### Layout, for whoever implements the fix
+
+```
+byte     0 ..   128   {model, stream, temperature, …, max_tokens}
+byte   128 .. 13177   "messages": [ system(8,521 chars), …16 history rows ]
+byte 13177 .. 27687   "tools": 19 schemas, 14,410 bytes, serialized LAST
+```
+
+Within the system message, by character offset: `# Safety` 859, `## Right now`
+**5,489**, `# Who is asking` 5,627, `# Your limits` 7,758.
+
+Worth noting separately: the tool schemas are ~14 KB of *stable* content and
+they are serialized **after** the history, so they can never be inside a cached
+prefix — every step's history growth moves them. That is a second, larger
+saving than the clock, and it is the same fix: stable bytes first.
+
 ### The first suspect, from reading the code
 
 `modules/harness/environment.js:200`:
