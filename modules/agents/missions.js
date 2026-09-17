@@ -68,6 +68,96 @@ function patch(id, fields) {
   return row;
 }
 
+/* ── The plan ─────────────────────────────────────────── */
+
+/**
+ * How far along a mission is, as a list a client can draw.
+ *
+ * `steps` and `tokens` say what has been spent; neither says how much is left,
+ * because a mission's length is not known in advance and `maxSteps` is a
+ * ceiling, not an estimate. So a watch polls, sees `STEP 0`, and reads that as
+ * "nothing happening" until the mission is already over. A plan is the only
+ * thing that makes a progress bar possible, because it is the only thing that
+ * states the total.
+ *
+ * It lives in the mission's own JSON document rather than in memory, so a human
+ * can open the file and fix a wrong plan by hand and the harness re-reads it
+ * rather than serving a cached copy. That also means the specialist maintains it
+ * with an ordinary tool rather than by writing markdown — a checklist read back
+ * out of prose is a progress bar that lies, and a parser misreading it makes the
+ * lie quiet.
+ *
+ * Bounded, because it travels in a bus event: ~12 items of ~60 characters keeps
+ * a plan comfortably inside EVENT_BYTES, and a plan longer than that is not a
+ * plan, it is a transcript.
+ */
+const PLAN_MAX_ITEMS  = 12;
+const PLAN_TITLE_MAX  = 60;
+const PLAN_STATES     = ['done', 'running', 'queued', 'failed'];
+
+function normalizePlan(items) {
+  if (!Array.isArray(items)) return [];
+  return items.slice(0, PLAN_MAX_ITEMS).map(it => ({
+    title: String(it?.title ?? '').replace(/\s+/g, ' ').trim().slice(0, PLAN_TITLE_MAX),
+    state: PLAN_STATES.includes(it?.state) ? it.state : 'queued',
+  })).filter(it => it.title);
+}
+
+/**
+ * The mission a specialist is running in, found by its conversation.
+ *
+ * A specialist is not told its own mission id — it does not need one to do the
+ * work, and an id in the prompt is one more per-mission fact in a prompt that
+ * is meant to be narrow. The conversation is the link that already exists: a
+ * mission gets its own session so the orchestrator's is not held, and that
+ * session is the one the specialist's turn is running in.
+ */
+function forSession(sessionId) {
+  if (!sessionId) return null;
+  return loadIndex().find(m => m.sessionId === sessionId) || null;
+}
+
+/** done / total, or null when there is no plan to divide. */
+function planProgress(plan) {
+  if (!Array.isArray(plan) || !plan.length) return null;
+  const done = plan.filter(i => i.state === 'done').length;
+  return { done, total: plan.length, percent: Math.round(100 * done / plan.length) };
+}
+
+/**
+ * Set or tick a mission's plan.
+ *
+ * `set` replaces the list; `tick` moves one item, matched by its title, so a
+ * specialist that only knows "the third thing is finished" does not have to
+ * resend the whole plan and cannot accidentally reorder it. A change is durable
+ * (`announce` without `ephemeral`): items change a handful of times per
+ * mission, unlike step ticks, which a polling client never receives at all
+ * because `bus.publish` hands ephemerals only to live subscribers.
+ */
+function setPlan(id, { set, tick } = {}) {
+  const row = get(id);
+  if (!row) throw Object.assign(new Error(`No mission called "${id}"`), { status: 404 });
+
+  let plan = Array.isArray(row.plan) ? row.plan : [];
+  if (set !== undefined) {
+    plan = normalizePlan(set);
+  } else if (tick) {
+    const title = String(tick.title ?? '').replace(/\s+/g, ' ').trim();
+    const state = PLAN_STATES.includes(tick.state) ? tick.state : 'done';
+    const at = plan.findIndex(i => i.title === title);
+    // A tick for something not on the plan adds it rather than being dropped on
+    // the floor — the specialist knows something the plan did not.
+    if (at >= 0) plan = plan.map((i, n) => n === at ? { ...i, state } : i);
+    else plan = normalizePlan([...plan, { title, state }]);
+  } else {
+    return row.plan || null;
+  }
+
+  const updated = patch(id, { plan, planAt: new Date().toISOString() });
+  announce(updated);
+  return updated.plan;
+}
+
 /**
  * Tell the user's devices what a mission is doing.
  *
@@ -94,6 +184,11 @@ function announce(row, { ephemeral = false } = {}) {
       startedAt: row.startedAt, endedAt: row.endedAt,
       result: row.result ? String(row.result).slice(0, 600) : undefined,
       error: row.error || undefined,
+      // Sent whenever there is one, so a client that has never seen this
+      // mission can still draw the bar from a single event. A client without a
+      // plan falls back to the step count, exactly as before.
+      plan: Array.isArray(row.plan) && row.plan.length ? row.plan : undefined,
+      progress: planProgress(row.plan) || undefined,
     };
     for (const d of devices.list()) {
       if (d.revokedAt || !hasScope(d.scopes, 'harness:chat')) continue;
@@ -128,7 +223,7 @@ function profileOf(def) {
  * the orchestrator chose to hand over, and nothing else. That is the point of
  * the arrangement, not a limitation of it.
  */
-function dispatch({ agentId, task, context, by, chainId } = {}) {
+function dispatch({ agentId, task, context, by, chainId, plan } = {}) {
   if (!registry.enabled())
     throw Object.assign(new Error(
       'Specialist agents are switched off (agents.enabled). Ask the user to turn them on.'), { status: 409 });
@@ -159,6 +254,11 @@ function dispatch({ agentId, task, context, by, chainId } = {}) {
     endedAt: null,
     steps: 0, tokens: 0,
     result: null, error: null,
+    // An initial plan is optional — the orchestrator often knows the shape of
+    // the errand before it hands it over, and a specialist that starts with a
+    // plan can be drawn as a bar from its first second rather than only once
+    // it has bothered to write one.
+    ...(plan ? { plan: normalizePlan(plan), planAt: new Date().toISOString() } : {}),
   };
   saveIndex([...loadIndex(), row]);
   announce(row);
@@ -326,4 +426,6 @@ function block() {
 
 function _reset() { store.writeJson(INDEX, { missions: [] }); }
 
-module.exports = { dispatch, recover, resume, get, list, running, events, block, patch, _reset };
+module.exports = { dispatch, recover, resume, get, list, running, events, block, patch,
+  setPlan, planProgress, normalizePlan, forSession,
+  PLAN_MAX_ITEMS, PLAN_TITLE_MAX, PLAN_STATES, _reset };

@@ -608,8 +608,9 @@ const STATUS_TIMERS = new WeakMap();
  * something did not.
  *
  * `opts.clear` overrides the schedule for one call: a number of ms, or 0 for a
- * line that reports a standing state (a toggle's reason, "streaming") rather
- * than an event. Those are replaced by the next report, not by a clock.
+ * line that reports a standing state (why a toggle is greyed out, which service
+ * is running) rather than an event. Those are replaced by the next report, not
+ * by a clock.
  *
  * @param {HTMLElement} el
  * @param {string} msg
@@ -629,6 +630,7 @@ function setStatus(el, msg, cls, opts = {}) {
   el.className = `status-line ${cls || ''}`;
   if (!msg) return;   // an empty message is how callers wipe a line
 
+  // An error is the exception; an explicit `clear` on the call beats both.
   const ms = opts.clear != null ? opts.clear : cls === 'err' ? 0 : STATUS_CLEAR_MS;
   if (ms > 0) STATUS_TIMERS.set(el, setTimeout(() => setStatus(el, ''), ms));
 }

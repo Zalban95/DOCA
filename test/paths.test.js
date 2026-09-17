@@ -135,3 +135,53 @@ test('adding a provider creates the config file and its directory', async () => 
   assert.equal((await get('/api/keys')).body.providers.mistral, undefined);
   assert.equal((await H.api(null, 'DELETE', '/api/keys/mistral')).status, 404);
 });
+
+test('the Setup panel and the Config tab list the same scripts', async () => {
+  // Two panels can edit the same shell scripts: the Setup panel lists
+  // ALLOWED_SCRIPTS (creates the ones that are missing, runs them), and the
+  // Config tab's Scripts group is the rows CONFIG_REGISTRY carries. The two
+  // lists were written by hand in different files and drifted — setup-phase2.sh
+  // was in the first and in no row of the second, so which scripts existed
+  // depended on which panel you were looking at. The Config tab now renders
+  // from that one declaration, and this is what keeps a fifth script from
+  // landing in only one of them again.
+  const { ALLOWED_SCRIPTS, SCRIPT_CONFIG, SETUP_DIR, SNAPSHOT_SCRIPT, RESTORE_SCRIPT } = require('../modules/paths');
+  const { body } = await get('/api/paths');   // exactly what the Config tab is handed
+
+  const setup = await get('/api/setup/scripts');
+  assert.deepEqual(setup.body.scripts.map(s => s.name), ALLOWED_SCRIPTS,
+    'the Setup panel renders this list');
+
+  assert.deepEqual(Object.keys(SCRIPT_CONFIG).sort(), [...ALLOWED_SCRIPTS].sort(),
+    'a script one panel can edit is not in the other');
+
+  for (const [name, cfg] of Object.entries(SCRIPT_CONFIG)) {
+    assert.equal(body.configRegistry[cfg.id], cfg.path,
+      `${name} is drawn under "${cfg.id}", which opens another file`);
+  }
+
+  // The two setup scripts are the files the Setup panel reads and runs out of
+  // SETUP_DIR; the two agent scripts follow the settable paths instead, because
+  // the snapshot feature runs whatever SNAPSHOT_SCRIPT names.
+  assert.equal(SCRIPT_CONFIG['setup-openclaw.sh'].path, path.join(SETUP_DIR, 'setup-openclaw.sh'));
+  assert.equal(SCRIPT_CONFIG['setup-phase2.sh'].path, path.join(SETUP_DIR, 'setup-phase2.sh'));
+  assert.equal(SCRIPT_CONFIG['snapshot-agent.sh'].path, SNAPSHOT_SCRIPT);
+  assert.equal(SCRIPT_CONFIG['restore-agent.sh'].path, RESTORE_SCRIPT);
+
+  // And from the other side: no shell script sitting in SETUP_DIR may be absent
+  // from the panel's list, since that is the file the panel would run by name.
+  // The `.sh` filter is what keeps the dotfiles the same registry also carries
+  // out of this — SETUP_DIR is $HOME by default, and .aider.conf.yml is not a
+  // script anybody can run from the Setup panel.
+  for (const [id, p] of Object.entries(body.configRegistry)) {
+    if (path.dirname(p) !== SETUP_DIR || !p.endsWith('.sh')) continue;
+    assert.ok(ALLOWED_SCRIPTS.includes(path.basename(p)), `"${id}" is a shell script in SETUP_DIR the Setup panel does not list`);
+  }
+
+  // The rows are still drawn by hand in public/js/config.js, so the ids in the
+  // panel are the last place the two lists could come apart.
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'config.js'), 'utf8');
+  const rows = [...src.matchAll(/\{\s*group: 'custom',\s*id: '([\w-]+)'/g)].map(m => m[1]);
+  assert.deepEqual(rows.sort(), Object.values(SCRIPT_CONFIG).map(s => s.id).sort(),
+    'the Config tab draws a different set of script rows than the server offers');
+});

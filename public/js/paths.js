@@ -39,9 +39,11 @@ function _pathRowHtml(p) {
     ? '<span class="path-ok">● exists</span>'
     : '<span class="path-missing">✗ missing</span>';
 
-  // Saved, but this process is still running on the old value.
+  // Saved, but this process is still running on the old value. The same two
+  // words as the status line below says out loud: it is this panel that has to
+  // come back, not the external stack.
   const pending = p.pending
-    ? ` · <span class="path-missing">restart to apply</span> (using <code>${escHtml(p.active)}</code>)`
+    ? ` · <span class="path-missing">restart DOCA to apply</span> (using <code>${escHtml(p.active)}</code>)`
     : '';
 
   const create = p.exists ? '' : `
@@ -74,8 +76,8 @@ async function pathsSave() {
   try {
     const data = await apiFetch('/api/paths', { method: 'POST', body });
     _pathsRender(data.settable || []);
-    // "restart DOCA" — this process, which reads the saved paths at boot; that
-    // is why the row above it says "restart to apply" too. The external OpenClaw
+    // "restart DOCA" — this process, which reads the saved paths at boot, and
+    // the words each pending row is already marked with. The external OpenClaw
     // stack has its own phrase ("restart OpenClaw", keys.js) and the two are not
     // interchangeable: one brings this panel back, one brings the stack back.
     setStatus(st, '✓ Saved — restart DOCA to apply', 'ok');
