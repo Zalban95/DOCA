@@ -4,10 +4,33 @@ const { exec, spawn } = require('child_process');
 
 const { sseHeaders, loadPrefs, savePrefs } = require('./utils');
 
+/**
+ * "Docker is not installed here" is a fact about the machine, not a fault.
+ *
+ * The panel is useful without docker — Containers is one tab of many — and this
+ * answered 500 with the raw shell error, which is the same mistake as the files
+ * ENOENT 500 and the `keys.js` ENOENT bug: the user goes looking for what broke
+ * in the panel when nothing did. A 503 says "this dependency is not here"
+ * without saying the panel is unwell, and it is distinguishable in the UI
+ * because the code travels with it.
+ */
+function dockerMissing(err) {
+  return /not found|ENOENT|no such file/i.test(String((err && (err.message || err.stderr)) || ''));
+}
+
+/** Shared by the two read routes: the same shape, and the same two answers. */
+function dockerFailed(res, err, what) {
+  if (!dockerMissing(err)) return res.status(500).json({ error: err.message });
+  return res.status(503).json({
+    error: `Docker is not installed on this host, so there are no ${what} to list.`,
+    code: 'docker_missing',
+  });
+}
+
 /** GET /api/docker/containers */
 function handleContainers(req, res) {
   exec(`docker ps -a --format '{{json .}}'`, (err, stdout) => {
-    if (err) return res.status(500).json({ error: err.message });
+    if (err) return dockerFailed(res, err, 'containers');
     const containers = stdout.trim().split('\n').filter(Boolean).map(line => {
       try { return JSON.parse(line); } catch { return null; }
     }).filter(Boolean);
@@ -24,7 +47,10 @@ function handleContainerAction(req, res) {
   if (!allowed.includes(action)) return res.status(400).json({ error: 'Invalid action' });
   const cmd = action === 'remove' ? `docker rm -f ${id}` : `docker ${action} ${id}`;
   exec(cmd, (err, stdout, stderr) => {
-    if (err) return res.status(500).json({ error: stderr || err.message });
+    if (err) {
+      if (dockerMissing(err)) return dockerFailed(res, err, 'containers');
+      return res.status(500).json({ error: stderr || err.message });
+    }
     res.json({ ok: true, output: stdout.trim() });
   });
 }
@@ -47,7 +73,7 @@ function handleContainerLogs(req, res) {
 /** GET /api/docker/images */
 function handleImages(req, res) {
   exec(`docker images --format '{{json .}}'`, (err, stdout) => {
-    if (err) return res.status(500).json({ error: err.message });
+    if (err) return dockerFailed(res, err, 'images');
     const images = stdout.trim().split('\n').filter(Boolean).map(line => {
       try { return JSON.parse(line); } catch { return null; }
     }).filter(Boolean);
