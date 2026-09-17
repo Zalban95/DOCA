@@ -739,3 +739,54 @@ test('a device fetches pictures with its token, and only pictures', async () => 
   assert.equal((await H.api(viewer.token, 'GET', `/api/v1/harness/images/${pic.name}`)).status, 403);
   assert.equal((await H.api(null, 'GET', `/api/v1/harness/images/${pic.name}`)).status, 401);
 });
+
+test('a tool result is the same string on every step, so the prefix stays cacheable', async () => {
+  const agentMod = require('../modules/harness/agent');
+
+  // Rows are appended as a turn runs; `toApiMessages` must not rewrite the ones
+  // already sent. It used to: a backward walk kept results whole until 12,000
+  // characters were spent and clipped the rest, so a result was verbatim on the
+  // step that produced it and a head+tail+path on the next. The message array
+  // was not append-only, and the provider's prefix cache stops at the first byte
+  // that differs — anchored at the oldest result to change, which sits right
+  // after the system prompt, so only the system prompt stayed cacheable
+  // (ISSUES.md H-9b). An earlier version of this suite used `ls` and `date`,
+  // whose output fits the old budget, and so never exercised it. This does.
+  const big = n => 'L'.repeat(n) + '\n' + 'R'.repeat(n);
+  const round = (i, len) => ([
+    { role: 'assistant', content: null,
+      tool_calls: [{ id: `c${i}`, type: 'function', function: { name: 'shell', arguments: '{}' } }] },
+    { role: 'tool', tool_call_id: `c${i}`, name: 'shell', content: big(len) },
+  ]);
+
+  const rows1 = [...round(1, 30000)];
+  const seenAtStep1 = agentMod.toApiMessages(rows1, { sessionId: 'stability' })
+    .find(m => m.role === 'tool').content;
+
+  // Two more rounds arrive. The first result must be untouched.
+  const rows3 = [...round(1, 30000), ...round(2, 30000), ...round(3, 30000)];
+  const seenAtStep3 = agentMod.toApiMessages(rows3, { sessionId: 'stability' })
+    .filter(m => m.role === 'tool')[0].content;
+
+  assert.equal(seenAtStep3, seenAtStep1,
+    'an already-sent tool result was rewritten when later results arrived');
+
+  // A row under the cap passes through whole and is never touched later.
+  const small = agentMod.toApiMessages([...round(1, 200)], { sessionId: 'stability' })
+    .find(m => m.role === 'tool').content;
+  assert.equal(small.length, 401);
+
+  // A result over the cap is clipped — by its own size, not by its neighbours.
+  const huge = agentMod.toApiMessages([...round(4, 40000)], { sessionId: 'stability' })
+    .find(m => m.role === 'tool').content;
+  assert.ok(huge.length < 40000, 'an oversized result is clipped');
+  assert.match(huge, /full output: .*read_file to retrieve/);
+
+  // The same row clips to the same string whether or not other rows exist.
+  const alone = agentMod.toApiMessages([...round(5, 40000)], { sessionId: 'stability' })
+    .find(m => m.role === 'tool').content;
+  const withOthers = agentMod.toApiMessages([...round(1, 100), ...round(5, 40000)], { sessionId: 'stability' })
+    .filter(m => m.role === 'tool')[1].content;
+  assert.equal(alone.length, withOthers.length,
+    'clipping depends on the row alone, not on how much else is in the prompt');
+});

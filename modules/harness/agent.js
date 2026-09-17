@@ -310,12 +310,34 @@ function environmentBrief(p, toolCount) {
   ].join('\n');
 }
 
-// Newest tool results stay verbatim until this many characters of them have
-// been kept; older ones become a head, a tail and a path. The transcript on
-// disk is not touched — this is only what the next model call sees.
-const TOOL_KEEP_CHARS = 12000;
-const TOOL_HEAD = 600;
-const TOOL_TAIL = 200;
+// A tool result is the same string every time it is sent.
+//
+// It used to be decided per call instead: walk backward from the newest result,
+// keeping rows whole until 12,000 characters were spent, clipping the rest, and
+// always keeping the newest whole whatever its size. So a result travelled
+// verbatim on the step that produced it and became a head, a tail and a spill
+// path on the next — the message array was not append-only, and a provider's
+// prefix cache stops at the first byte that differs.
+//
+// The cost was not a small tail. The break anchored at the *oldest* result to
+// change, and that result sits immediately after the system prompt, so the
+// cacheable prefix was cut back to roughly the system prompt and the whole
+// transcript was re-billed on every step for the rest of the turn. Measured on
+// a four-step turn with large outputs: 52-60% cached against ~95% ideal, with
+// the cached count growing ~640 tokens a step while the prompt grew by 12,000
+// (ISSUES.md H-9b).
+//
+// The rule is now a function of the row alone — its length and its content —
+// so a row's serialization cannot change once it has been sent. The cap is per
+// row rather than shared across rows, which makes the prompt *larger* than the
+// old budget did. That is deliberate and it is the whole trade: at ~95% cached
+// the billed total is far smaller even though the prompt is bigger, because
+// what is billed is the miss, not the prompt.
+//
+// The transcript on disk is not touched — this is only what the next call sees.
+const TOOL_MAX_CHARS = 16000;
+const TOOL_HEAD = 12000;
+const TOOL_TAIL = 3000;
 
 function safeSpillPart(s, max) {
   return String(s || 'tool').replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, max) || 'tool';
@@ -330,9 +352,17 @@ function spillTool(sessionId, row) {
   return file;
 }
 
-function clipToolContent(content, file) {
+/**
+ * The one form a tool result can take, decided by the row and nothing else.
+ *
+ * `spill` is a callback rather than a path because only the clipped branch
+ * needs a file written, and a row that passes through whole should not leave
+ * one behind.
+ */
+function clipToolContent(content, spill) {
   const s = String(content ?? '');
-  if (s.length <= TOOL_HEAD + TOOL_TAIL + 80) return s;
+  if (s.length <= TOOL_MAX_CHARS) return s;
+  const file = spill();
   return `${s.slice(0, TOOL_HEAD)}\n… [full output: ${file} — ${s.length} characters; read_file to retrieve]\n${s.slice(-TOOL_TAIL)}`;
 }
 
@@ -387,30 +417,24 @@ function pairedRows(rows) {
 /**
  * Transcript rows → the message array the API expects.
  *
- * Tool output is kept in full on disk and clipped here. Walking newest-first
- * and stopping at TOOL_KEEP_CHARS is what stops a long session from re-sending
- * every `read_file` it ever did; the spill file is how the model gets the rest.
+ * Tool output is kept in full on disk and clipped here. Clipping anything over
+ * TOOL_MAX_CHARS is what stops a long session from re-sending every `read_file`
+ * it ever did; the spill file is how the model gets the rest.
+ *
+ * What matters beyond the clipping itself is that it is **stable**: the same
+ * row produces the same string on every call, so the message array is
+ * append-only and a prefix cache can follow it. `test/harness.test.js` pins
+ * that — an old result sent once verbatim must still be verbatim after new
+ * results arrive.
  */
 function toApiMessages(allRows, { sessionId } = {}) {
   const rows = pairedRows(allRows);
-  const keepFull = new Set();
-  let used = 0;
-  for (let i = rows.length - 1; i >= 0; i--) {
-    if (rows[i].role !== 'tool') continue;
-    const len = String(rows[i].content || '').length;
-    if (!keepFull.size || used + len <= TOOL_KEEP_CHARS) {
-      keepFull.add(i);
-      used += len;
-    }
-  }
 
   return rows.map((r, i) => {
     if (r.role === 'tool') {
-      let content = r.content;
-      if (!keepFull.has(i)) {
-        const file = spillTool(sessionId, r);
-        content = clipToolContent(r.content, file);
-      }
+      // Each row decides its own form, so appending a result cannot change how
+      // an earlier one is sent. See the note on TOOL_MAX_CHARS.
+      const content = clipToolContent(r.content, () => spillTool(sessionId, r));
       return { role: 'tool', tool_call_id: r.tool_call_id, name: r.name, content };
     }
     if (r.role === 'assistant' && r.tool_calls?.length)

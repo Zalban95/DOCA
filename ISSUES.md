@@ -671,10 +671,59 @@ second is the one that would have caught this on the day it shipped.
 
 ### H-9b — the same fault, still live: tool results are rewritten between steps
 
+**Status:** fixed on `dev/troubleshoot`, 2026-09-17 — awaiting merge. See *Fixed*
+below for the before/after. The cause and the reasoning are kept because the
+lesson is the part that generalises: **a verification workload that cannot
+trigger the fault is not a verification.**
+
 Found 2026-09-17 by measuring a *realistic* turn rather than a convenient one.
 H-9 above is fixed and its numbers hold; this is a second, independent
 prefix-breaker that the H-9 verification failed to exercise, and it is the
 larger of the two on real workloads.
+
+#### Fixed
+
+`clipToolContent()` is now a function of the row and nothing else. A result
+over `TOOL_MAX_CHARS` (16,000) becomes a 12,000-character head, a 3,000-char
+tail and a spill path — *on the step that produced it*, not retrospectively —
+and the backward character-budget walk that decided `keepFull` is gone. The
+message array is append-only again, so a row's serialization cannot change once
+it has been sent.
+
+The cap is now per row rather than shared across rows, so the prompt is
+**larger** than the old budget made it. That is the deliberate half of the
+trade: what a provider bills is the miss, not the prompt, so a bigger prompt at
+~99% cached costs far less than a smaller one at 55%.
+
+Same four-step workload (`seq 1 3000` ×4), large outputs, measured the same way:
+
+| Step | prompt Δ | cached Δ | per-step | *was* |
+| --- | --- | --- | --- | --- |
+| 2 | 10,796 | 5,760 | 53.4% | 52.2% |
+| 3 | 15,693 | 10,496 | **66.9%** | 55.1% |
+| 4 | 20,656 | 15,360 | **74.4%** | 57.3% |
+| 5 | 25,288 | 20,352 | **80.5%** | 60.3% |
+
+The decisive column is `cached Δ` against the previous step's whole prompt:
+10,496 against 10,596, 15,360 against 15,493, 20,352 against 20,456. The cache
+now captures ~99% of everything that existed before the current step; the
+remaining miss is only the new output that step just produced, which no prefix
+cache can match by definition. So the rate reads 80% rather than 95% because
+each step genuinely appends ~15,000 characters, not because the prefix breaks.
+
+In the bytes, the common prefix between consecutive bodies now grows by ~9,900
+bytes a step and extends past the whole transcript:
+
+```
+step1→2:  9,488 bytes      step3→4: 29,543 bytes
+step2→3: 19,625 bytes      step4→5: 39,461 bytes
+```
+
+`test/harness.test.js` pins it directly: a result sent once must still be the
+same string after two more results arrive, and a clipped row must clip to the
+same length whether or not other rows are present. The old suite used `ls` and
+`date`, whose output fits the old budget — which is exactly why it never caught
+this.
 
 #### Why the H-9 verification missed it
 
