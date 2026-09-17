@@ -12,6 +12,16 @@ until the "how to close it" line is true. Numbered `H-n` for harness faults.
 `deepseek-v4-pro` for this install to work.** The panel's fault was that it
 could not tell you any of this, and that part is fixed.
 
+*Re-verified 2026-09-17 on v2.27.2 (`4177ad1`), fresh checkout.* All three
+changes are present and pinned: `firstTokenTimeoutMs: 90000` at
+`providers.js:124`, the guard at `agent.js:458`, `budget.stalled()` at
+`budget.js:305`, the `HARNESS_PARAMS` row at `public/js/harness.js:262`, and
+the stall tests at `test/harness.test.js:316` — whose fixture serves
+`: keep-alive` frames and nothing else (`test/harness.test.js:63`), so the
+deadline and the `waiting` event are both covered. **The "how to close it" list
+below is satisfied; this entry can be closed** once the model is switched on the
+live install.
+
 ### What was seen
 
 The console prints the session line and then nothing, forever:
@@ -268,6 +278,13 @@ v2.22.2.**
 **Status:** open. Named separately from H-5 because it is what made H-5 take an
 evening.
 
+*Re-verified 2026-09-17 on v2.27.2 (`4177ad1`).* Unchanged since it was
+written: `agent.js:971` still defaults `reachable: false`, `agent.js:977` still
+fetches `${ep.baseUrl}/models`, and `agent.js:981` still assigns
+`out.reachable = r.ok`. Nothing calls `/chat/completions` from `status()`, and
+there is no `answers` field. The gap between "the provider is up" and "the
+provider will answer" is exactly as wide as it was.
+
 ### What was seen
 
 For hours, with every turn hanging, the panel reported the provider as fine.
@@ -344,6 +361,15 @@ of the thing it manages.
 
 **Status:** open. Not caused by 2.23.0 — pre-existing, found while reviewing it.
 This is the invariant a feature flag cannot roll back, and it does not hold.
+
+*Re-verified 2026-09-17 on v2.27.2 (`4177ad1`).* Still unauthenticated. The
+routes are registered bare at `server.js:191` and `server.js:201`; the only
+middleware above them is `app.use('/api/v1', apiV1.router)` at `server.js:58`,
+so legacy `/api/*` has no auth in front of it. `handleProposalApply`
+(`routes.js:227`) and `handleInstallApply` (`routes.js:262`) call straight into
+`settings.apply()` / `installs.apply()` with nothing between them and the
+request. `http_fetch` (`tools.js:600`) still takes any absolute URL, any method
+and a body, with no host policy — so fix shape (2) is untouched as well.
 
 ### The invariant
 
@@ -449,6 +475,28 @@ be a boundary or stop being described as one.
 
 **Status:** open, environmental. Not a code fault in this repo and not a 2.23.0
 regression.
+
+*Re-tested 2026-09-17 on a clean checkout (v2.27.2, `4177ad1`) — **it does not
+reproduce**.* `node_modules/node-pty` is still `1.1.0` and
+`node -e "require('node-pty')"` prints `pty ok` **and exits 0**; `npm test`
+reports `# tests 239 / # pass 239 / # fail 0` with a real exit code of `0`
+(measured without the `| tail` pipe this entry warns about). Both of this
+entry's inputs differ from the machine it was written on, and each explains one
+of the two failures:
+
+- **Node patch version.** It reproduced on **v22.22.2**; this machine is
+  **v22.22.1**. The abort is therefore specific to that patch, not to Node 22 as
+  a class — which also means the lazy-load fix in `terminal.js:22` is still
+  worth making, since it removes the addon from every test that never opens a
+  terminal regardless of which Node is installed.
+- **Hypervisor.** The one non-SIGABRT failure ("with no hypervisor installed the
+  panel still answers, saying which are missing") was environment-dependent:
+  that machine had `/usr/bin/virsh` and a qemu VM running, this one has neither
+  `virsh` nor `VBoxManage`, so the test's assumption holds and it passes.
+
+So the `# fail 23` in this entry is *not* a property of the code at `4177ad1` —
+it needs those two conditions to be present. Confirm on the original machine
+before closing this outright.
 
 ### What was seen
 

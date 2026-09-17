@@ -381,19 +381,37 @@ never what the agent is allowed to do.
 
 ## Version and identity, across the four repos
 
-- **`/api/update-check` cannot see a private repository.** Tagging is not the
-  problem it first looked like: every release from v2.4.0 to v2.12.0 is tagged
-  locally, and only the pre-v2.4 ones live in `.git/packed-refs` — reading that
-  file alone says "tags stopped at v2.3.5", which is a trap worth knowing about,
-  since `git tag -l` and `.git/refs/tags/` are the honest answers. What is real
-  is that `fetchLatestTag()` calls `api.github.com` with no credentials, so if
-  `Zalban95/DOCA` is private it gets a 404 or 403, resolves null, and the panel
-  reports "no update available" forever without ever saying it could not look.
-  Verify against the live API before trusting the banner; if the repo is
-  private, either the check needs a token or it should say "cannot check" rather
-  than "up to date". The ordering fix it now carries (highest semver out of a
-  page, instead of whatever `/tags?per_page=1` happened to return first) is
-  still right, but it was a latent bug, not an active one.
+- **`/api/update-check` cannot see a private repository.** — *Resolved
+  2026-09-17: `Zalban95/DOCA` is **public**. The condition this entry is
+  premised on does not hold, so it is not a live defect.* Verified against the
+  live API exactly as this entry asks, with no credentials:
+  `GET api.github.com/repos/Zalban95/DOCA/tags?per_page=100` → **HTTP 200**, 46
+  tags, `v2.27.2` first. `fetchLatestTagFromApi()` (`modules/update.js:63`) also
+  sits behind `fetchLatestTagFromGit()` (`update.js:92`), so the git path is
+  tried first anyway. **The uncertainty is gone; the reasoning below is kept
+  because it becomes true again the moment the repo is made private, and the
+  `packed-refs` trap is independent of visibility.** The recommendation stands
+  on its own merits: the check should say "cannot check" rather than "up to
+  date" when it cannot look — `/api/update-check` already has the three-state
+  honesty this needs elsewhere.
+
+  <details><summary>Original entry</summary>
+
+  Tagging is not the problem it first looked like: every release from v2.4.0 to
+  v2.12.0 is tagged locally, and only the pre-v2.4 ones live in
+  `.git/packed-refs` — reading that file alone says "tags stopped at v2.3.5",
+  which is a trap worth knowing about, since `git tag -l` and `.git/refs/tags/`
+  are the honest answers. What is real is that `fetchLatestTag()` calls
+  `api.github.com` with no credentials, so if `Zalban95/DOCA` is private it gets
+  a 404 or 403, resolves null, and the panel reports "no update available"
+  forever without ever saying it could not look. Verify against the live API
+  before trusting the banner; if the repo is private, either the check needs a
+  token or it should say "cannot check" rather than "up to date". The ordering
+  fix it now carries (highest semver out of a page, instead of whatever
+  `/tags?per_page=1` happened to return first) is still right, but it was a
+  latent bug, not an active one.
+
+  </details>
 
 - **Tags are not all the same kind.** v2.11.2 and earlier are annotated; v2.12.0
   is lightweight — its ref points straight at the commit. Both push and both
