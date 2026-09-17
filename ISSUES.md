@@ -557,3 +557,90 @@ second is one line and fixes the suite without a dependency decision.
   is present.
 
 ---
+
+## H-9 — The prompt prefix changes on every step, so the provider's cache never warms
+
+**Status:** open. High priority — it is a per-step cost on every turn, and it is
+invisible in the panel.
+
+### What was seen
+
+Reported 2026-09-17 from the live install. Against a provider with prefix
+caching, the per-step cache hit rate sits at **6–7%** and does not climb. The
+`in` counter on each step grows by very nearly the whole context (~23K), which
+is the signature of a prefix that matched almost nothing: the provider re-bills
+the context on every step instead of serving it from cache.
+
+The shape of the fault is fixed by what a prefix cache *is*. It matches the
+longest byte-identical run from the start of the request. Given a stable head,
+the first step misses and every step after it hits, so the rate should climb
+towards ~90% — not sit flat at 6%. A rate pinned near zero means the prefix is
+being rewritten on every call, and the repair is to find the first byte that
+differs and move whatever precedes it out of the changing region.
+
+### The first suspect, from reading the code
+
+`modules/harness/environment.js:200`:
+
+```js
+out.push('', '## Right now',
+  `time: ${new Date().toISOString()} (${Intl.DateTimeFormat().resolvedOptions().timeZone})`,
+```
+
+This is computed **fresh on every `block()` call**, and `block()` is called per
+step (`agent.js:254`). `snapshot()` is TTL-cached for 5 s (`environment.js:24`),
+which is what keeps the *other* volatile readings — free memory, load, uptime —
+mostly stable inside a fast tool loop. The clock is deliberately outside that
+cache, so it advances on every step regardless.
+
+The author knew about this class of bug — `environment.js:133-140` says so in as
+many words:
+
+> **Everything that changes by the second lives at the bottom, under "Right
+> now".** … a clock or a free-RAM figure near the top changes the first bytes of
+> the prompt each time — which is exactly the prefix a provider's cache, and a
+> local runtime's prefill, match on.
+
+The mitigation is correct and it is scoped too narrowly. It keeps the volatile
+lines at the bottom of *the environment block*, but that block is only **#3 of
+thirteen** in `systemPrompt()` (`agent.js:251-265`). Everything after it —
+`clientBlock`, `placeBlock`, `rulesBlock`, `memoryBlock`, `budget.block`,
+`settings.block`, `installs.block`, `agents.block`, `missions.block`, `summary`
+— sits *downstream* of a byte that changes every step, so none of it can ever be
+cacheable. The invariant that matters is not "volatile last within a block" but
+"volatile last within the **request**".
+
+### Other candidates, not yet excluded
+
+- **`memoryBlock(userText, …)`** (`agent.js:258`) selects memory using the
+  current user message, so it moves between turns — and it sits at position 7,
+  ahead of the budget, settings, installs, agents and missions blocks.
+- **`budget.block(p, ledger)`** (`agent.js:259`) renders the running ledger.
+- **Tool schemas** (`agent.js:735, 758`) are rebuilt per step from a live
+  registry read. If their order is not stable, the serialized `tools` array
+  changes as well — and it travels in the same request.
+
+These are suspects, not findings. Reading the code tells you what *can* change;
+only the bytes tell you what *did*, and there may be a fourth cause that reading
+has not suggested.
+
+### Fix shape
+
+The stable parts — charter, the user's system prompt, the environment's facts —
+stay byte-identical and first. Anything that changes per step moves after the
+history. This is **ordering and serialization only**: no content is added,
+removed or reworded, and what the agent is told does not change.
+
+The constraint that makes it safe to ship: behaviour must be identical. If a
+change to save tokens also changes an answer, it is not this fix.
+
+### How to close it
+
+- Log the raw request body for two consecutive steps of one turn and diff them.
+  The first differing byte names the cause; quote it here.
+- The same task rerun, with the per-step cached % shown **before and after**.
+- `npm test` stays green.
+- Verified on a branch first. Since this is shipped code, it is tagged for
+  production only once the before/after is in hand.
+
+---
