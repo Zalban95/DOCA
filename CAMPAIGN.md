@@ -49,7 +49,7 @@ Starting here because they are provable.
 | W2.8 | Ledger kept: reader for "what did this week cost" | 150 | TODO |
 | W2.9 | `contextWindow` discovery instead of hand-typing | 124 | TODO |
 | W2.10 | `mcp.listener` gets an ack instead of fire-and-forget | 93 | TODO |
-| W2.11 | `settings.propose()` takes a `sessionId` from the tool | 113 | TODO |
+| W2.11 | `settings.propose()` takes a `sessionId` from the tool | 113 | **DONE** (same work as W1.9) |
 
 ## Wave 3 — needs a design decision before code
 
