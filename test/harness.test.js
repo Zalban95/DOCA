@@ -505,12 +505,62 @@ test('a fold boundary never lands between a call and its result', () => {
   const rows = memory.messages(s.id);
   assert.equal(rows[3].role, 'tool', 'the naive halfway row is a result — the case this is about');
 
-  const pending = memory.pendingFold(s.id, 0, { force: true });
+  // The message-count path halves the live rows; the token-pressure path folds
+  // to the turn start, which is a user row by construction.
+  const pending = memory.pendingFold(s.id, 2);
   assert.notEqual(rows[pending.through].role, 'tool', 'the boundary moved off the result');
   assert.equal(pending.through, 4, 'forward, so the whole group folds together');
 
   memory.updateSession(s.id, { summarizedThrough: pending.through, summary: 'checked the disk' });
   assertPairedMessages(require('../modules/harness/agent').toApiMessages(memory.window(s.id, 0).rows));
+});
+
+test('token pressure mid-turn summarises earlier turns only, and never the work in progress', () => {
+  const memory = require('../modules/harness/memory');
+  const call = (id, n) => [
+    { role: 'assistant', content: '', tool_calls: [{ id, function: { name: 'shell', arguments: '{}' } }] },
+    { role: 'tool', tool_call_id: id, name: 'shell', content: `output ${n}` },
+  ];
+
+  // One long turn and nothing before it: nothing may fold, and no model call is made.
+  const alone = memory.createSession('one long turn');
+  memory.append(alone.id, { role: 'user', content: 'render the watch' });
+  for (let i = 0; i < 12; i++) for (const r of call(`a${i}`, i)) memory.append(alone.id, r);
+  assert.equal(memory.pendingFold(alone.id, 0, { force: true }), null,
+    'folding half of the turn in progress lost the code the agent was iterating on, then did it again next step');
+
+  // Earlier turns exist: those fold, up to exactly where this turn starts.
+  const s = memory.createSession('history then a long turn');
+  for (const r of [
+    { role: 'user', content: 'what is on the disk' }, ...call('b1', 1), { role: 'assistant', content: 'plenty' },
+    { role: 'user', content: 'and memory' }, ...call('b2', 2), { role: 'assistant', content: 'fine' },
+  ]) memory.append(s.id, r);
+  const turnStart = memory.messages(s.id).length;
+  memory.append(s.id, { role: 'user', content: 'now render the watch' });
+  for (let i = 0; i < 12; i++) for (const r of call(`c${i}`, i)) memory.append(s.id, r);
+
+  const pending = memory.pendingFold(s.id, 0, { force: true });
+  assert.equal(pending.through, turnStart, 'everything before this turn, nothing of it');
+  memory.updateSession(s.id, { summarizedThrough: pending.through, summary: 'checked disk and memory' });
+  assert.equal(memory.pendingFold(s.id, 0, { force: true }), null,
+    'once earlier turns are folded, the next step under pressure has nothing to fold — no repeat');
+});
+
+test('the history cap never drops the request of the turn in progress', () => {
+  const memory = require('../modules/harness/memory');
+  const s = memory.createSession('cap vs a long turn');
+  memory.append(s.id, { role: 'user', content: 'an old question' });
+  memory.append(s.id, { role: 'assistant', content: 'an old answer' });
+  memory.append(s.id, { role: 'user', content: 'render the watch' });
+  for (let i = 0; i < 15; i++) {
+    memory.append(s.id, { role: 'assistant', content: '', tool_calls: [{ id: `d${i}`, function: { name: 'shell', arguments: '{}' } }] });
+    memory.append(s.id, { role: 'tool', tool_call_id: `d${i}`, name: 'shell', content: 'ok' });
+  }
+  const { rows } = memory.window(s.id, 24);
+  assert.equal(rows[0].content, 'render the watch', 'a 30-row turn under a 24-row cap still starts with its request');
+  assert.equal(rows.length, 31);
+  assert.ok(!rows.some(r => r.content === 'an old question'), 'older turns are still capped');
+  assertPairedMessages(require('../modules/harness/agent').toApiMessages(rows));
 });
 
 test('the history cap does not cut a pair either, and repairs a boundary that did', () => {

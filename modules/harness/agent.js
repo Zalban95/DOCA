@@ -829,11 +829,13 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
     // would have. `compactTokens` is the honest trigger — a window nobody
     // declared cannot be a percentage of anything, and message count treats
     // twenty lines of chat and twenty screens of tool output as the same.
-    if (budget.shouldCompact(p, led.lastPrompt)) {
+    const reason = budget.compactReason(p, led.lastPrompt);
+    if (reason) {
       const folded = await foldSummary({ session: memory.getSession(session.id), p, ep, signal, force: true });
       if (folded !== summary) {
         summary = folded;
-        say({ type: 'compacted', at: step, contextTokens: led.lastPrompt, contextWindow: budget.windowFor(p) || null });
+        say({ type: 'compacted', at: step, contextTokens: led.lastPrompt, contextWindow: budget.windowFor(p) || null,
+          setting: reason.setting, threshold: reason.at });
       }
     }
 

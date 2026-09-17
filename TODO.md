@@ -278,6 +278,53 @@ still missing from that sentence.
   connections is more ways in — and the definitions they would be managing hold
   commands this host spawns.
 
+- **The orchestrator should drive the work, not do it.** Wanted, and the
+  evidence is a real session (2026-09-16, rendering a watch in Blender through
+  the portal MCP): ten steps, all in the orchestrator's own conversation, each
+  re-sending ~40k tokens of prompt — system prompt plus 53 tool schemas, 31 of
+  them Blender's — for ~370k tokens in one turn, and the orchestrator busy (so
+  the user blocked) the whole time. The shape wanted: the orchestrator is the
+  user's interface. It holds the synthesised context (summary, memory), the
+  roster of specialists, the running missions and a *catalogue* of what tools
+  exist, not their schemas; it reads the request, dispatches, and reports.
+  Heavy schemas such as an MCP server's belong on the allowlist of the specialist
+  that uses them, so only the mission that needs Blender pays for Blender.
+  Decisions to make first: when the orchestrator still does a thing itself (the
+  `agent_dispatch` description says "a sentence of thinking"; that needs a rule
+  it can apply); whether specialists stay off by default; a mission finishing
+  must **wake** the orchestrator instead of waiting for the user's next message;
+  a concurrency cap and a cancel (both still missing); and results come back
+  synthesised, not raw. Unchanged: depth one, the charter, and questions to the
+  user (`ask_device`) keep one owner. Pin it with a test the way the specialist
+  prompt is pinned: the orchestrator's per-step prompt stays small (target
+  under ~8k) however many MCP servers are connected.
+
+- **Every user authenticates, and `:4242` never answers without it.** Today
+  `/api/v1` has a bearer token per device, with scopes; the dashboard itself and
+  every legacy `/api/*` route have nothing, which is what makes `ISSUES.md` H-7
+  (an agent applying its own proposal over HTTP) possible at all. Wanted: a login
+  in front of the dashboard and all of `/api/*`, browser sessions as an httpOnly
+  `SameSite=Strict` cookie, device tokens unchanged for v1. Until it exists the
+  panel should bind to localhost and the tailnet interface only, not `0.0.0.0`.
+  Auth comes before groups, and on migration everything that exists becomes the
+  first user's, so upgrading a personal install changes nothing visible.
+
+- **Several users, in groups, with rights, on one server.** Wanted after auth.
+  A user belongs to any number of groups; a context (conversations, memory,
+  missions) belongs to a user *or* to a group, so people can work alone, share
+  one group's context, or be in several groups at once. Rights are per group
+  (roughly owner / admin / member / viewer) and decide who may chat, apply a
+  proposal, pair a device, or manage MCP, containers and VMs. A device is paired
+  *to a user*, so what it can do is that user's rights intersected with the
+  device's scopes. Memory splits three ways: the user's, the group's, and facts
+  about the machine that every group shares. The agent is told who is asking and
+  in which group (`clientBlock` already knows the device), and it must be
+  **unable** to read another group's memory or transcripts, which means
+  enforcing it in the store paths, not asking it to in the prompt. Every action
+  that changes something is logged with the user who caused it. The user's own
+  `statens` project already has this structure (users, groups, rights on one
+  server): read how it does it before designing this one.
+
 ## Falling back when a model stops answering
 
 **Wanted, not broken.** The defect behind this is H-5 in `ISSUES.md` and it is

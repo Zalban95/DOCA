@@ -208,7 +208,14 @@ function window(id, historyTurns) {
   const rows = messages(id);
   const from = Math.max(0, s?.summarizedThrough || 0);
   const live = rows.slice(from);
-  let kept = historyTurns > 0 ? live.slice(-historyTurns) : live;
+  // Never cut inside the turn in progress. A turn with ten tool calls is more
+  // than 24 rows, and cutting it dropped the user's own request and the agent's
+  // early work mid-turn — rows no summary covers yet, so they were simply gone.
+  // ponytail: a single turn larger than the model's window is still refused by
+  // the provider; splitting a turn is its own feature.
+  const turnStart = live.map(r => r.role).lastIndexOf('user');
+  const cut = historyTurns > 0 ? Math.max(0, live.length - historyTurns) : 0;
+  let kept = live.slice(turnStart >= 0 ? Math.min(cut, turnStart) : cut);
   // The cap is the second cut with the same hazard, and it also repairs a
   // session whose stored boundary was set before there was a rule: the rows
   // dropped here are the oldest, which is what the cap was discarding anyway.
@@ -231,8 +238,18 @@ function pendingFold(id, summarizeAfter, { force = false } = {}) {
   const rows = messages(id);
   const from = Math.max(0, s?.summarizedThrough || 0);
   const live = rows.slice(from);
-  if (force) { if (live.length < 4) return null; }
-  else if (!summarizeAfter || live.length <= summarizeAfter) return null;
+  if (force) {
+    // Token pressure strikes mid-turn, and folding "the older half" then meant
+    // summarising the turn in progress — the code the agent is iterating on,
+    // clipped into 250 words — and doing it again on the next step, because
+    // the fold barely shrank the prompt. Under pressure, fold only earlier turns;
+    // when there are none, there is nothing to fold and no model call is made.
+    const turnStart = rows.map(r => r.role).lastIndexOf('user');
+    const upTo = foldBoundary(rows, turnStart, from);
+    if (turnStart <= from || upTo - from < 4 || upTo > turnStart) return null;
+    return { rows: rows.slice(from, upTo), through: upTo, previous: s?.summary || '' };
+  }
+  if (!summarizeAfter || live.length <= summarizeAfter) return null;
   // Fold the older half, so the model still sees plenty of recent context —
   // snapped to a row that is not the answer to a call being folded away, since
   // `through` is persisted and one bad boundary breaks every later turn.

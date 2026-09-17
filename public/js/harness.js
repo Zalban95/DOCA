@@ -259,33 +259,35 @@ const HARNESS_PARAMS = [
     hint: 'The most the model may write in one answer. 0 leaves it to the provider. This is a cap on the '
         + 'reply only — it has nothing to do with the context window above.' },
 
-  { key: 'maxSteps', label: 'Max tool steps', attrs: 'min="1" max="1000" step="1"',
-    hint: 'How many times the agent may use a tool and think again before it has to answer. Each step '
-        + 're-sends the whole conversation, so this is the setting that decides what one answer can cost.' },
-
-  { key: 'historyTurns', label: 'History window', unit: 'messages', attrs: 'min="2" max="5000" step="2"',
-    hint: 'How many recent messages are sent word for word. Anything older is represented by the running '
-        + 'summary instead — it is not lost, the full transcript is always kept on disk.' },
-
-  { key: 'summarizeAfter', label: 'Summarise after', unit: 'messages', attrs: 'min="0" max="5000" step="5"',
-    hint: 'Once a conversation passes this many messages, the older half is replaced by a short summary. '
-        + '0 never summarises, which is fine until a long conversation stops fitting.' },
-
-  { key: 'compactTokens', label: 'Summarise at', unit: 'tokens', attrs: 'min="0" step="1000"',
-    hint: 'Fold older messages into the summary once the last prompt reaches this many tokens. This is the '
-        + 'trigger that works without a context window: 40000 is a working set, not a ceiling. 0 turns it off '
-        + 'and leaves only the message-count and percentage triggers below.' },
-
   { key: 'firstTokenTimeoutMs', label: 'Give up waiting after', unit: 'ms', attrs: 'min="0" step="5000"',
     hint: 'How long to wait for the first word of a reply. This is not a limit on the answer — once the model '
         + 'starts talking it can take as long as it needs. It exists because a provider can accept the request, '
         + 'return OK and then never send anything, which otherwise looks exactly like a frozen panel. '
         + '0 waits forever.' },
 
-  { key: 'compactAt', label: 'Summarise at', unit: '% of window', attrs: 'min="0" max="99" step="5"',
-    hint: 'The same summarising, triggered by size instead of by count — which is the honest trigger, since '
-        + 'twenty lines of chat and twenty screens of tool output are the same number of messages. '
-        + 'Needs a context window set above.' },
+  { key: 'maxSteps', label: 'Max tool steps', attrs: 'min="1" max="1000" step="1"',
+    hint: 'How many times the agent may use a tool and think again before it has to answer. Each step '
+        + 're-sends the whole conversation, so this is the setting that decides what one answer can cost.' },
+
+  { key: 'historyTurns', label: 'History window', unit: 'messages', attrs: 'min="2" max="5000" step="2"',
+    hint: 'How many recent messages are sent word for word. Anything older is represented by the running '
+        + 'summary instead — it is not lost, the full transcript is always kept on disk. The turn in progress '
+        + 'is always sent whole, even past this number, so a long job never loses the request that started it.' },
+
+  { key: 'summarizeAfter', label: 'Summarise after', unit: 'messages', attrs: 'min="0" max="5000" step="5"',
+    hint: 'Once a conversation passes this many messages, the older half is replaced by a short summary. '
+        + '0 never summarises, which is fine until a long conversation stops fitting.' },
+
+  { key: 'compactTokens', label: 'Summarise at size', unit: 'tokens', attrs: 'min="0" step="1000"',
+    hint: 'Summarise earlier turns once one step\'s prompt reaches this many tokens. It works with no context '
+        + 'window set, and it applies even when one is: this and the percentage below are both live, and '
+        + 'whichever is reached first wins. With a 1000000 window, 40000 fires at 4% — set this to 0 to let '
+        + 'the percentage decide, or raise it. The turn in progress is never summarised, only earlier ones.' },
+
+  { key: 'compactAt', label: 'Summarise at share', unit: '% of window', attrs: 'min="0" max="99" step="5"',
+    hint: 'The same summarising, as a share of the context window above — whichever of this and the size '
+        + 'above is reached first. Every step re-sends the whole prompt, so a high share of a large window '
+        + 'is also a large bill per step. Needs a context window set above.' },
 
   { key: 'warnAt', label: 'Warn at', unit: '% of window', attrs: 'min="0" max="99" step="5"',
     hint: 'Where a "context is filling up" warning appears, for you and for the agent. Advisory only — it '

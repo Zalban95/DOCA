@@ -70,11 +70,23 @@ function compactTokensFor(p) {
  * declared) and a percentage of a declared window. Either is enough.
  */
 function shouldCompact(p, lastPrompt) {
+  return !!compactReason(p, lastPrompt);
+}
+
+/**
+ * Which setting made this prompt fold, or null. The log used to print the
+ * prompt against the window ("47688 of 1000000"), which reads as folding at 5%
+ * for no reason when the trigger was `compactTokens` at 40000 all along.
+ */
+function compactReason(p, lastPrompt) {
   const prompt = Number(lastPrompt) || 0;
   const budgetTok = compactTokensFor(p);
-  if (budgetTok && prompt >= budgetTok) return true;
+  if (budgetTok && prompt >= budgetTok) return { setting: 'compactTokens', at: budgetTok };
   const window = windowFor(p);
-  return !!(window && prompt / window * 100 >= Math.max(1, Number(p.compactAt) || 60));
+  const pctAt = Math.max(1, Number(p.compactAt) || 60);
+  if (window && prompt / window * 100 >= pctAt)
+    return { setting: 'compactAt', at: Math.round(window * pctAt / 100) };
+  return null;
 }
 
 function pct(value, total) {
@@ -299,6 +311,6 @@ function stalled({ ep, ms, frames }) {
 
 module.exports = {
   CHARS_PER_TOKEN,
-  estimate, estimateMessages, windowFor, compactTokensFor, shouldCompact,
+  estimate, estimateMessages, windowFor, compactTokensFor, shouldCompact, compactReason,
   ledger, record, report, warning, block, explain, stalled,
 };

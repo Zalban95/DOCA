@@ -534,6 +534,18 @@ test('folding fires on an absolute token budget even with no window declared', (
   assert.equal(budget.shouldCompact({ contextWindow: 100000, compactTokens: 0, compactAt: 60 }, 60000), true);
 });
 
+test('a fold names the setting that caused it, so "47688 of 1000000" stops reading as a bug', () => {
+  const p = { contextWindow: 1000000, compactTokens: 40000, compactAt: 60 };
+  assert.deepEqual(budget.compactReason(p, 47688), { setting: 'compactTokens', at: 40000 },
+    'both triggers are live and the lower one wins');
+  assert.deepEqual(budget.compactReason({ ...p, compactTokens: 0 }, 600000), { setting: 'compactAt', at: 600000 });
+  assert.equal(budget.compactReason({ ...p, compactTokens: 0 }, 47688), null);
+  const { text } = require('../modules/logs').fromHarness({ type: 'compacted', at: 6, contextTokens: 47688,
+    contextWindow: 1000000, setting: 'compactTokens', threshold: 40000 });
+  assert.match(text, /reached compactTokens \(40000\), window 1000000/);
+  assert.match(text, /this one kept word for word/);
+});
+
 test('an empty memory search returns pinned facts only, and the prompt stays token-capped', async () => {
   assert.equal(memory.memSearch('', 50).length, 0, 'nothing pinned, nothing injected');
   await callTool('memory_write', { key: 'always-on', value: 'this one is pinned', pinned: true });

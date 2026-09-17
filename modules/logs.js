@@ -139,7 +139,9 @@ function fromHarness(evt) {
 
     case 'compacted':
       return line(SELF, 'warn',
-        `compacted at step ${evt.at} — ${evt.contextTokens} of ${evt.contextWindow} tokens`);
+        `compacted at step ${evt.at} — prompt ${evt.contextTokens} tokens reached ${evt.setting || 'the trigger'}`
+        + `${evt.threshold ? ` (${evt.threshold})` : ''}${evt.contextWindow ? `, window ${evt.contextWindow}` : ''}; `
+        + 'earlier turns summarised, this one kept word for word');
 
     default:
       return null;
