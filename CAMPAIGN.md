@@ -190,3 +190,76 @@ still did not generalise. A byte offset matching a cache boundary once is not a
 rule about how caches work. The entry's own "measure before changing it" is what
 stopped a pointless edit, which is the argument for writing that instruction
 into a TODO rather than leaving it implied.
+
+---
+
+## Real testing pass — 2026-09-18
+
+"No fake tests": drive the actual system over its real interfaces, on real data,
+and fix what breaks. Three real faults found, all of them invisible to the unit
+suite because the suite's inputs were convenient (`ls`-sized output, a
+definition that happened to list the right tool, a machine with docker).
+
+### Found and fixed
+
+**1. The spill file held already-truncated text, and never fired for `shell`.**
+Found by running `seq 1 8000` through the real tool. `MAX_OUT` was 8,000 in
+`tools.js` and `TOOL_MAX_CHARS` is 16,000 in `agent.js` — the layer that clips
+into a head, a tail and a *spill file holding the whole text*. Below it, so no
+built-in tool could ever produce a result long enough to reach it; and the one
+time it did fire (`read_file` returning 40,000), the file it wrote ended
+`… [truncated, 49284 more characters]`. The escape hatch contained a copy of the
+thing it was meant to let you escape. `MAX_OUT` is now 64,000, documented as a
+memory guard rather than a presentation choice, and a test fails if it drops back
+below `TOOL_MAX_CHARS`. Verified live: `seq 1 8000` → a 38,899-byte spill ending
+in `8000`, no marker. (`9ea307c`)
+
+**2. A specialist could not reach `mission_plan`.** Found by dispatching a real
+mission. A definition's `tools` is an allowlist and `NEVER` is subtracted from
+it, so a tool that is merely "not forbidden" is unreachable unless the
+definition names it. `archivist` lists `memory_search` only — so the plan
+shipped write-once, staying all-`queued` forever, and the progress bar the
+feature exists for would never have moved. `ALWAYS_FOR_SPECIALISTS` now names
+the tools that act on the mission rather than on the world; `NEVER` is
+unchanged. The allowlist was computed in two places (`turn()` and `preview()`),
+which is how a fix applied to one becomes a fix that does not exist — both now
+call `disabledFor()`, and a test fails if that count goes back to two. Verified
+live: the specialist reports "my tool list here is two entries" and moved its
+plan item to `[failed]` when it could not run the command. (`bbdedd5`)
+
+**3. Docker not installed was a 500.** Found by sweeping all 67 fixed GET routes
+on a machine without docker. Same class as the files ENOENT 500 and the
+`keys.js` ENOENT bug: the user goes looking for what broke in the panel when
+nothing did. Now 503 with `code: docker_missing`. `services.js` and
+`controls.js` already tolerated a missing docker, so only `docker.js` was
+affected. (`76caf41`)
+
+### Verified working, for real
+
+Not bugs — but each one is a claim the suite could only assert on a stub, and
+each is now known to hold against the live system:
+
+| Thing | How it was driven | Result |
+| --- | --- | --- |
+| Per-step cache reporting | real 6-step turn | 93–95% per step, the field reporting correctly |
+| MCP `headers` on the wire | real HTTP MCP server recording headers | present on `initialize` **and** `tools/call` |
+| Apply guard + propose→click→apply | real turn, real proposal, browser header | 403 without, applied with, setting changed |
+| Real terminal | websocket to `/ws/terminal`, ran a command | `TERMINAL-OK` echoed back |
+| Mission dispatch + plan | real mission to a real specialist | dispatched, ran, plan ticked |
+| Compaction | prior turn + long turn at `compactTokens: 9000` | fired at threshold; summary kept "HALCYON" and "8443" verbatim |
+| Device pairing | token tool → `pair/start` → `pair/complete` | device created with the right scopes; reused code refused |
+
+### Checked and found correct, not a bug
+
+`pendingFold` under `force` folds **only earlier turns** — a mid-turn fold would
+summarise the code the agent is iterating on, clipped into 250 words, and redo it
+every step. My first compaction test looked like a failure and was the guard
+working; written down because the next person will read it the same way.
+
+### Test data left behind
+
+Sessions `s_mu63*` and missions `msn_*` from these runs are in `.doca/`. The two
+`verify-*` devices were revoked and their tokens are dead. `compactTokens` was
+restored to 40,000 and `temperature` to 0.3.
+
+**Suite: 270/270, exit 0.**
