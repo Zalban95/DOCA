@@ -26,14 +26,14 @@ Starting here because they are provable.
 | # | Item | Line | Status |
 | --- | --- | --- | --- |
 | W1.1 | Tool schemas serialized last, so never cached — measure then move | 175 | TODO |
-| W1.2 | Panel reports cache cumulatively — surface per-step + growth | 188 | TODO |
+| W1.2 | Panel reports cache cumulatively — surface per-step + growth | 188 | **DONE** |
 | W1.3 | `modules/files.js:79` ENOENT on a moved favourite → 500 | 565 | **DONE** |
 | W1.4 | Status lines clear on four schedules — one rule on `setStatus()` | 543 | TODO |
 | W1.5 | "Restart to apply" worded three ways | 550 | TODO |
 | W1.6 | Device rotate/revoke + skill toggles report via `appAlert()` only | 570 | TODO |
 | W1.7 | Shell scripts editable in two places (`setup-phase2.sh` asymmetry) | 556 | TODO |
 | W1.8 | MCP add-server form has no `headers` field | 54 | TODO |
-| W1.9 | Proposal not tied to the conversation that made it | 113 | TODO |
+| W1.9 | Proposal not tied to the conversation that made it | 113 | **DONE** |
 
 ## Wave 2 — medium features, specified well enough to build
 
@@ -42,7 +42,7 @@ Starting here because they are provable.
 | W2.1 | **H-9b** — tool results rewritten between steps (ISSUES.md) | — | **DONE** |
 | W2.2 | Model fallback chain on stall, with the two deadlines | 451–472 | TODO |
 | W2.3 | Shared core context the orchestrator owns for all specialists | 368 | TODO |
-| W2.4 | Mission `plan` so a client can draw progress | 304 | TODO |
+| W2.4 | Mission `plan` so a client can draw progress | 304 | **DONE** |
 | W2.5 | Settings proposals reach `/api/v1` (not panel-only) | 108 | TODO |
 | W2.6 | MCP HTTP transport: hold the event stream open | 22 | TODO |
 | W2.7 | Keyword search / cross-session recall over sessions | 133 | TODO |
@@ -59,7 +59,7 @@ Starting here because they are provable.
 | W3.2 | MCP registry over `/api/v1` (blocked on W3.1) | 30 | DECISION |
 | W3.3 | `origin` as a label vs. a permission boundary | 60 | DECISION |
 | W3.4 | Are `disabledTools` advisory or a boundary? | 77 | DECISION |
-| W3.5 | `http_fetch` host policy (ISSUES.md H-7) | 77 | DECISION |
+| W3.5 | `http_fetch` host policy (ISSUES.md H-7) | 77 | **PARTIAL** — browser guard on the two apply routes; real answer is W4.1 |
 | W3.6 | VMs local-only / client-hosted VMs | 98 | DECISION |
 | W3.7 | Second harness instance, shared memory? | 297 | DECISION |
 | W3.8 | Search: embeddings or not | 144 | DECISION |
