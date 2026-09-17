@@ -604,3 +604,41 @@ test('the headers textarea parses the way the env textarea does', () => {
   const many = Array.from({ length: 30 }, (_, i) => `H${i}: v`).join('\n');
   assert.equal(Object.keys(parse(many)).length, 20);
 });
+
+test('a header typed into the form actually reaches the server', async () => {
+  // W1.8 end to end, over a real socket: the form's textarea is only worth
+  // having if the header lands on the wire, and storage plus masking proves
+  // neither. `httpStub.seen` records what the server actually received.
+  const httpStub = await httpServer.start();
+  test.after(() => httpStub.close());
+
+  const { device } = H.mkDevice('Auth Desk', 'phone',
+    { ...H.PHONE_CAPS, formFactor: 'desktop' });
+
+  const saved = await H.api(null, 'POST', '/api/mcp', {
+    label: 'Needs Auth', transport: 'http', url: httpStub.url,
+    headers: { Authorization: 'Bearer sk-wire-value', 'X-Tenant': 'acme' },
+    origin: { kind: 'client', deviceId: device.id },
+  });
+  assert.equal(saved.status, 200, JSON.stringify(saved.body));
+
+  const started = await H.api(null, 'POST', '/api/mcp/needs-auth/action', { action: 'start' });
+  assert.equal(started.body.ok, true, started.body.error || '');
+
+  // The header must be on the initialize call, not merely stored.
+  const init = httpStub.seen.find(s => s.method === 'initialize');
+  assert.ok(init, 'the server was never initialized');
+  assert.equal(init.headers.authorization, 'Bearer sk-wire-value',
+    'the token did not reach the server');
+  assert.equal(init.headers['x-tenant'], 'acme');
+
+  // And on a tool call, which is the one that matters — a handshake that
+  // authenticates and calls that do not is a server that half works.
+  assert.equal(await harnessTools.call('mcp__needs-auth__list_windows', {}), 'Notepad\nBlender');
+  const call = httpStub.seen.find(s => s.method === 'tools/call');
+  assert.ok(call, 'no tools/call reached the server');
+  assert.equal(call.headers.authorization, 'Bearer sk-wire-value',
+    'the token was dropped after the handshake');
+
+  await H.api(null, 'DELETE', '/api/mcp/needs-auth');
+});

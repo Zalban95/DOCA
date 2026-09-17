@@ -824,3 +824,58 @@ test('a proposal is filed against the conversation that made it', async () => {
   const inst = installsList.pending.find(i => i.sessionId === sessionId);
   assert.ok(inst, 'the install proposal does not name the session it came from');
 });
+
+test('a large tool result is spilled in full, not spilled already-truncated', async () => {
+  // The bug this pins: `clip()` truncated at 8,000 in tools.js, the row stored
+  // the truncated text, and the spill file wrote the row — so the escape hatch
+  // contained a copy of the thing it was meant to let you escape. It was worse
+  // than useless: 8,000 < TOOL_MAX_CHARS (16,000), so no built-in tool could
+  // ever produce a result long enough to trigger the spill at all, and the only
+  // time it fired (through read_file) the file it wrote was already clipped.
+  const toolsMod = require('../modules/harness/tools');
+  const agentMod = require('../modules/harness/agent');
+  const fs = require('node:fs');
+
+  // Real command, real output, through the real tool.
+  const out = await toolsMod.call('shell', { command: 'seq 1 8000' });
+  assert.ok(out.length > 16000,
+    `a shell result is still capped below the transcript clip (${out.length} chars)`);
+
+  // And it arrives whole — no "[truncated]" from the tool layer.
+  assert.equal(/\[truncated,/.test(out), false, 'the tool layer still truncates before the spill can see it');
+  assert.match(out, /8000$/, 'the last line survived');
+
+  // Now the transcript layer: the spill file must hold every character.
+  const rows = [
+    { role: 'user', content: 'big' },
+    { role: 'assistant', content: null, tool_calls: [{ id: 'cbig', type: 'function',
+        function: { name: 'shell', arguments: '{}' } }] },
+    { role: 'tool', tool_call_id: 'cbig', name: 'shell', content: out },
+  ];
+  const msg = agentMod.toApiMessages(rows, { sessionId: 's_spill_full' }).find(m => m.role === 'tool');
+  assert.match(msg.content, /full output: .*read_file to retrieve/, 'no spill pointer was offered');
+  assert.ok(msg.content.length < out.length, 'the prompt got the head and tail, not the whole thing');
+
+  const path = msg.content.match(/full output: (.+?) —/)[1];
+  const spilled = fs.readFileSync(path, 'utf8');
+  assert.equal(spilled, out, 'the spill file is not the full text');
+  assert.equal(/\[truncated,/.test(spilled), false, 'the spill file holds already-truncated text');
+  assert.match(spilled, /8000$/, 'the spill file is missing the end of the output');
+});
+
+test('the tool-layer cap stays above the transcript clip', () => {
+  // The relationship, not the numbers, is what matters: if the inner cap drops
+  // back below the outer one, the spill becomes unreachable again and every
+  // large result is silently truncated with no way to get the rest. Pinned
+  // because the two live in different files and nothing else connects them.
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'modules', 'harness', 'tools.js'), 'utf8');
+  const toolCap = Number(src.match(/const MAX_OUT\s*=\s*(\d+)/)[1]);
+
+  const agentSrc = fs.readFileSync(path.join(__dirname, '..', 'modules', 'harness', 'agent.js'), 'utf8');
+  const transcriptCap = Number(agentSrc.match(/const TOOL_MAX_CHARS\s*=\s*(\d+)/)[1]);
+
+  assert.ok(toolCap > transcriptCap,
+    `MAX_OUT (${toolCap}) must exceed TOOL_MAX_CHARS (${transcriptCap}), or the spill is unreachable`);
+});

@@ -23,14 +23,47 @@ const memory   = require('./memory');
 const settings = require('./settings');
 const mcp      = require('../mcp/tools');
 
-const MAX_OUT   = 8000;   // characters of tool output handed back to the model
+/**
+ * A memory guard, not the presentation limit.
+ *
+ * This used to be 8,000 and was described as "characters of tool output handed
+ * back to the model". It was the *only* limit at the time, and it was a bad one:
+ * it truncated permanently, its message said "[truncated, N more characters]"
+ * and gave no way to get them, and it silently disabled the layer above it.
+ *
+ * `toApiMessages()` clips a tool result over `TOOL_MAX_CHARS` into a head, a
+ * tail and a **spill file** holding the whole text — that is the designed
+ * escape hatch, and its comment says so: "the spill file is how the model gets
+ * the rest". With this at 8,000 and `TOOL_MAX_CHARS` at 16,000, no built-in
+ * tool could ever produce a result long enough to reach it. The spill was
+ * unreachable for every tool that clips, and the one time it did fire — through
+ * `read_file`, which may return 40,000 — the file it wrote held text that
+ * `clip()` had *already* truncated. The escape hatch contained a copy of the
+ * thing you were escaping from.
+ *
+ * So the ordering matters and is now pinned by a test: **this must stay well
+ * above `TOOL_MAX_CHARS`**, or the layer that preserves output is pre-empted by
+ * the layer that destroys it. What is left here is a guard against a runaway
+ * command, not a decision about what the model reads.
+ */
+const MAX_OUT   = 64000;
 const SHELL_MS  = 60000;
 
+/**
+ * Truncate a tool's output, and say what was lost.
+ *
+ * Reaching this at all now means the output passed `MAX_OUT`, which is a guard
+ * against a runaway command rather than the normal presentation path — the
+ * transcript clip handles that, and it spills. So the message says what the
+ * reader can actually do about it instead of only how many characters are
+ * missing: this layer cannot write a file, so "narrow the command" is the
+ * honest instruction and "read the rest from somewhere" would be a lie.
+ */
 function clip(text, limit = MAX_OUT) {
   const s = String(text ?? '');
-  return s.length <= limit
-    ? s
-    : `${s.slice(0, limit)}\n… [truncated, ${s.length - limit} more characters]`;
+  if (s.length <= limit) return s;
+  return `${s.slice(0, limit)}\n… [truncated, ${s.length - limit} more characters — the output was larger `
+    + 'than this tool hands back, so narrow the command (head, grep, wc) rather than asking again.]';
 }
 
 /** Working directory for shell + relative paths: the agent's workspace. */
