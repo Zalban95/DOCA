@@ -64,7 +64,7 @@ const SETUP_DIR       = process.env.SETUP_DIR       || HOME;
 // Same literal as the SETTABLE fallback above, not path.join(WORKSPACE_DIR, …):
 // describe() compares this constant against the row's value to decide whether a
 // path was saved since boot, so a constant that follows an override the row does
-// not would light up "restart to apply" for ever, with nothing to apply.
+// not would light up "restart DOCA to apply" for ever, with nothing to apply.
 const ATTACHMENTS_DIR = process.env.ATTACHMENTS_DIR || path.join(HOME, '.openclaw', 'workspace', 'attachments');
 const AGENTS_DIR      = process.env.AGENTS_DIR      || path.join(HOME, '.openclaw', 'workspace', 'agents');
 const SNAPSHOT_SCRIPT = process.env.SNAPSHOT_SCRIPT || path.join(HOME, 'snapshot-agent.sh');

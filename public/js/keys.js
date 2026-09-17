@@ -91,7 +91,8 @@ async function saveKey(provider) {
     // ~/.openclaw/openclaw.json, so the thing that reads it is the external
     // stack, and restarting this panel would change nothing about it. Two
     // phrases for two different restarts, on purpose — paths.js and settings.js
-    // say the other one — so do not collapse them into one "restart to apply".
+    // say the other one — so do not collapse them into one vague phrasing that
+    // leaves the user to work out what has to come back.
     setStatus(status, '✓ Saved — restart OpenClaw to apply', 'ok');
     document.getElementById(`key-${provider}`).value = '';
     setTimeout(keysLoadProviders, 1500);

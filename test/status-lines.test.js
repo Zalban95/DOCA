@@ -74,9 +74,9 @@ test('a status line fades when it is good news and stays when it is bad', () => 
   // Overridable per call in both directions: a standing state is replaced by
   // the next report rather than by a clock, and a one-off can still pick its own
   // delay.
-  setStatus(el, 'streaming', 'ok', { clear: 0 });
+  setStatus(el, '✓ Enabled — openclaw-panel.service is running', 'ok', { clear: 0 });
   clock.tick(STATUS_CLEAR_MS * 10);
-  assert.equal(el.textContent, 'streaming', 'clear: 0 is how a state stays up');
+  assert.match(el.textContent, /service is running/, 'clear: 0 is how a state stays up');
 
   setStatus(el, 'gone shortly', 'warn', { clear: 10 });
   clock.tick(10);
@@ -111,4 +111,10 @@ test('the two restart phrases stay two phrases', () => {
   const third = fs.readdirSync(JS).filter(f => f.endsWith('.js'))
     .filter(f => /restart the server/i.test(read(f)));
   assert.deepEqual(third, [], 'a third phrasing is back, and it belongs to one of the two meanings');
+
+  // Nor may a hint say restart without naming what restarts, which is the shape
+  // that let the same words mean either one.
+  const vague = fs.readdirSync(JS).filter(f => f.endsWith('.js'))
+    .filter(f => /restart to apply/i.test(read(f)));
+  assert.deepEqual(vague, [], 'a restart hint does not say which restart it is');
 });

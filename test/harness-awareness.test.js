@@ -133,6 +133,48 @@ test('a proposal changes nothing until it is accepted', async () => {
   assert.equal((await get('/api/harness/proposals')).body.pending.length, 0);
 });
 
+test('applying needs a browser, so a tool call cannot accept its own proposal', async () => {
+  // The propose/click split is the load-bearing invariant of this surface, and
+  // legacy /api/* has no auth in front of it (ISSUES.md H-7). The agent has
+  // http_fetch, which takes any URL and any method and cannot set a request
+  // header, so before this guard one tool call was enough to apply its own
+  // proposal and the whole mechanism was advisory.
+  const wasVms = JSON.stringify(loadPrefs().vms || {});
+  await callTool('settings_propose', {
+    reason: 'a change the agent should not be able to accept by itself',
+    changes: [{ path: 'vms.libvirtUri', value: 'qemu:///session' }],
+  });
+  const p = (await get('/api/harness/proposals')).body.pending.at(-1);
+  assert.ok(p, 'the proposal was not filed');
+
+  try {
+    // What http_fetch looks like: no Origin, no Sec-Fetch-Site.
+    const bare = await H.api(null, 'POST', `/api/harness/proposals/${p.id}/apply`, undefined,
+      { 'Sec-Fetch-Site': '' });
+    assert.equal(bare.status, 403, 'an unauthenticated POST applied a proposal');
+    assert.equal(bare.body.code, 'browser_only');
+
+    // And nothing moved.
+    assert.equal(JSON.stringify(loadPrefs().vms || {}), wasVms, 'the settings changed anyway');
+    assert.equal((await get('/api/harness/proposals')).body.pending.some(x => x.id === p.id), true,
+      'a refused apply must leave the proposal pending');
+
+    // The same for installs.
+    const i = await H.api(null, 'POST', '/api/harness/installs/i_nonexistent/apply', undefined,
+      { 'Sec-Fetch-Site': '' });
+    assert.equal(i.status, 403, 'the install apply route is not guarded');
+
+    // A forged header is not a boundary and the comment on requireBrowser says
+    // so — `shell` has curl, and curl sets whatever it likes. What this pins is
+    // that the tool layer cannot reach the route, which is the path the agent
+    // actually found and used on 2026-09-13.
+  } finally {
+    // Always clean up: a leaked pending proposal is read by the next test, and
+    // that is how one failure turns into a confusing second one.
+    await H.api(null, 'POST', `/api/harness/proposals/${p.id}/reject`, { reason: 'test cleanup' });
+  }
+});
+
 test('a declined proposal is remembered, with the reason, so it is not repeated', async () => {
   await callTool('settings_propose', {
     reason: 'faster replies',

@@ -42,9 +42,18 @@ async function stop() {
   require('../modules/api-v1/sampler').stop();
 }
 
-/** JSON request. Returns { status, body, headers }. */
+/**
+ * JSON request. Returns { status, body, headers }.
+ *
+ * `Sec-Fetch-Site: same-origin` is sent by default, because the overwhelming
+ * majority of these calls stand in for the dashboard and a browser would send
+ * it. Two routes that apply a change require it (ISSUES.md H-7), and a test
+ * that wants to prove they are guarded passes `{ 'Sec-Fetch-Site': '' }` to
+ * strip it — which is what a tool call or a bare curl looks like.
+ */
 async function api(token, method, p, body, headers = {}) {
-  const h = { ...headers };
+  const h = { 'Sec-Fetch-Site': 'same-origin', ...headers };
+  for (const [k, v] of Object.entries(h)) if (v === '') delete h[k];
   if (token) h.Authorization = `Bearer ${token}`;
   let payload;
   if (body instanceof FormData) payload = body;

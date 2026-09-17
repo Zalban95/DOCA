@@ -359,8 +359,35 @@ of the thing it manages.
 
 ## H-7 — `POST …/proposals/:id/apply` is unauthenticated, and the agent has `http_fetch`
 
-**Status:** open. Not caused by 2.23.0 — pre-existing, found while reviewing it.
+**Status:** **partially closed on `dev/troubleshoot`, 2026-09-17 — and deliberately
+not called closed.** Fix shape (1) is implemented: the two apply routes now
+require a browser-set header, so the tool-layer path is shut. It is not a
+security boundary and the code says so rather than implying otherwise — see
+*What this does and does not stop* below. The entry stays open until `/api/*` is
+authenticated, which is fix shape (3) and the only answer that is one.
+
+Not caused by 2.23.0 — pre-existing, found while reviewing it.
 This is the invariant a feature flag cannot roll back, and it does not hold.
+
+### What this does and does not stop
+
+`requireBrowser` in `server.js` requires `Sec-Fetch-Site` or a same-origin
+`Origin` on `POST …/proposals/:id/apply` and `…/installs/:id/apply`.
+
+- **Stops: `http_fetch`.** It takes any URL, any method and a body, and has no
+  way to set a request header — so the one-tool-call bypass this entry is about
+  is gone, and that was the path the agent actually found and used.
+- **Does not stop: `shell`.** It has curl, and curl sets whatever header it
+  likes. Nothing short of authenticating `/api/*` changes that, which is the
+  point TODO.md already makes and is correct.
+
+So the honest description of the click is now **a convention with a speed bump,
+not a gate**: the bypass requires deliberate header forgery spelled out in a
+shell command rather than being the accidental first thing an agent reaches
+for. That is worth having, and it is not the same thing as a boundary. AGENTS.md
+and TODO.md should say it that way; today AGENTS.md describes a click as the
+security property and this entry describes the route as reachable, and after
+this change neither sentence is quite right.
 
 *Re-verified 2026-09-17 on v2.27.2 (`4177ad1`).* Still unauthenticated. The
 routes are registered bare at `server.js:191` and `server.js:201`; the only
