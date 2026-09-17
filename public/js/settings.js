@@ -413,8 +413,11 @@ async function updatePull() {
     onStatus: text => appendStream(log, text),
     onDone: obj => {
       if (obj.ok && el) {
+        // "restart DOCA" — the update pulled *this* tree, so it is this process
+        // that has to come back. The external OpenClaw stack says "restart
+        // OpenClaw" (keys.js) and is a different restart entirely.
         el.innerHTML = `<div class="update-info" style="color:var(--green)">
-          ✓ Update pulled successfully. <strong>Restart the server</strong> to apply.
+          ✓ Update pulled successfully. <strong>Restart DOCA</strong> to apply.
         </div>`;
       }
       if (btn) btn.disabled = false;
@@ -436,12 +439,15 @@ async function startupLoad() {
   try {
     const s = await apiFetch('/api/startup');
     if (box) { box.checked = !!s.enabled; box.disabled = !s.supported; }
-    if (!s.supported) return setStatus(st, s.reason, 'warn');
+    // These three describe the machine as it stands rather than something that
+    // just happened, so they are `clear: 0` — the card would otherwise lose the
+    // reason its own toggle is greyed out three seconds after drawing it.
+    if (!s.supported) return setStatus(st, s.reason, 'warn', { clear: 0 });
 
-    if (!s.enabled) return setStatus(st, 'DOCA will not come back on its own after a reboot.', '');
+    if (!s.enabled) return setStatus(st, 'DOCA will not come back on its own after a reboot.', '', { clear: 0 });
     setStatus(st, s.active
       ? `✓ Enabled — ${s.service} is running${s.supervised ? ' and owns this panel' : ''}`
-      : `✓ Enabled — ${s.service} starts at the next boot`, 'ok');
+      : `✓ Enabled — ${s.service} starts at the next boot`, 'ok', { clear: 0 });
   } catch (e) {
     if (box) box.disabled = true;
     setStatus(st, `✗ ${e.message}`, 'err');

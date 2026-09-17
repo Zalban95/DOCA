@@ -324,8 +324,12 @@ const TOOLS = [
       },
       required: ['reason', 'changes'],
     },
-    run: ({ reason, changes }) => {
-      const p = settings.propose({ changes, reason });
+    run: ({ reason, changes }, ctx = {}) => {
+      // Filed against the conversation that asked, so the card can be read
+      // beside the transcript it came from. `propose()` always took a
+      // sessionId; nothing passed one, so every proposal was anonymous and
+      // several open conversations made the pending list ambiguous.
+      const p = settings.propose({ changes, reason, sessionId: ctx.sessionId });
       const lines = p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`);
       return `Proposed (${p.id}) — waiting for the user to accept or decline:\n${lines.join('\n')}\n`
         + 'Tell them what you proposed and why, then stop.';
@@ -350,8 +354,9 @@ const TOOLS = [
       },
       required: ['kind', 'id', 'reason'],
     },
-    run: ({ kind, id, reason }) => {
-      const row = installs.propose({ kind, id, reason });
+    run: ({ kind, id, reason }, ctx = {}) => {
+      // Filed against the conversation that asked — see settings_propose.
+      const row = installs.propose({ kind, id, reason, sessionId: ctx.sessionId });
       if (row.status !== 'pending') return `Already ${row.status}: ${row.kind} "${row.target}".`;
       return `Proposed (${row.id}) — waiting for the user to accept or decline:\n  ${row.what}\n`
         + (row.needsPassword ? '  (its installer needs sudo, so the user types their password, not you)\n' : '')

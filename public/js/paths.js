@@ -74,6 +74,10 @@ async function pathsSave() {
   try {
     const data = await apiFetch('/api/paths', { method: 'POST', body });
     _pathsRender(data.settable || []);
+    // "restart DOCA" — this process, which reads the saved paths at boot; that
+    // is why the row above it says "restart to apply" too. The external OpenClaw
+    // stack has its own phrase ("restart OpenClaw", keys.js) and the two are not
+    // interchangeable: one brings this panel back, one brings the stack back.
     setStatus(st, '✓ Saved — restart DOCA to apply', 'ok');
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }

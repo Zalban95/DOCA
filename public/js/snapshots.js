@@ -119,7 +119,6 @@ async function snapSaveSettings() {
       }
     });
     setStatus(status, '✓ Saved', 'ok');
-    setTimeout(() => setStatus(status, ''), 3000);
     await snapLoadSettings();
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');

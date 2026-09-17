@@ -87,6 +87,11 @@ async function saveKey(provider) {
   if (!apiKey && !baseUrl) { setStatus(status, 'Enter a key or a base URL first', 'err'); return; }
   try {
     await apiFetch('/api/keys', { method: 'POST', body: { provider, apiKey, baseUrl } });
+    // "restart OpenClaw", not "restart DOCA": the key lands in
+    // ~/.openclaw/openclaw.json, so the thing that reads it is the external
+    // stack, and restarting this panel would change nothing about it. Two
+    // phrases for two different restarts, on purpose — paths.js and settings.js
+    // say the other one — so do not collapse them into one "restart to apply".
     setStatus(status, '✓ Saved — restart OpenClaw to apply', 'ok');
     document.getElementById(`key-${provider}`).value = '';
     setTimeout(keysLoadProviders, 1500);

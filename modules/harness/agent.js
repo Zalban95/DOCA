@@ -866,7 +866,7 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       const shown = [];
       const result = args._raw !== undefined
         ? `Error: could not parse the arguments as JSON: ${args._raw}`
-        : await tools.call(name, args, disabled, { show: image => shown.push(image) });
+        : await tools.call(name, args, disabled, { show: image => shown.push(image), sessionId: session.id });
       for (const image of shown) say({ type: 'image', image, step });
       say({ type: 'tool_result', name, result, step });
 

@@ -75,7 +75,32 @@ const PORT            = process.env.PORT            || 4242;
 // Self-signed certificate directory
 const CERTS_DIR = path.join(__dirname, '..', '.certs');
 
-// Multi-file config registry — editable config files surfaced in the UI
+// Setup scripts the UI may read/write/run — the Setup panel's list, and the
+// whole of it.
+const ALLOWED_SCRIPTS = ['setup-openclaw.sh', 'setup-phase2.sh', 'snapshot-agent.sh', 'restore-agent.sh'];
+
+// Those same four files as the Config tab wants them: the id its Scripts group
+// draws the row under, and the path that row opens. CONFIG_REGISTRY is built
+// from this rather than having them typed out a second time, because they were
+// typed out twice and drifted — setup-phase2.sh sat in the Setup panel and in
+// no Config row at all, so the two panels disagreed about which scripts exist.
+// Keyed by file name, so the mapping to ALLOWED_SCRIPTS is the keys themselves
+// and test/paths.test.js fails if the two lists ever part company again.
+//
+// The two setup scripts live in SETUP_DIR, which is where the Setup panel reads
+// and runs them. The two agent scripts need not: the snapshot feature runs the
+// file at SNAPSHOT_SCRIPT/RESTORE_SCRIPT, which are settable paths and may well
+// be somewhere else, so those rows follow them rather than SETUP_DIR.
+const SCRIPT_CONFIG = {
+  'setup-openclaw.sh': { id: 'setup',    path: path.join(SETUP_DIR, 'setup-openclaw.sh') },
+  'setup-phase2.sh':   { id: 'phase2',   path: path.join(SETUP_DIR, 'setup-phase2.sh') },
+  'snapshot-agent.sh': { id: 'snapshot', path: SNAPSHOT_SCRIPT },
+  'restore-agent.sh':  { id: 'restore',  path: RESTORE_SCRIPT },
+};
+
+// Multi-file config registry — editable config files surfaced in the UI. The
+// script rows come from SCRIPT_CONFIG, so the Config tab lists exactly what the
+// Setup panel lists.
 const CONFIG_REGISTRY = {
   openclaw:          CONFIG_PATH,
   soul:              path.join(HOME, '.openclaw', 'SOUL.md'),
@@ -84,9 +109,7 @@ const CONFIG_REGISTRY = {
   env:               path.join(COMPOSE_DIR, '.env'),
   'modelfile-qwen':  path.join(HOME, '.ollama', 'Modelfile.qwen-coder-gpu'),
   'modelfile-qwen3': path.join(HOME, '.ollama', 'Modelfile.qwen3'),
-  setup:             path.join(SETUP_DIR, 'setup-openclaw.sh'),
-  snapshot:          SNAPSHOT_SCRIPT,
-  restore:           RESTORE_SCRIPT,
+  ...Object.fromEntries(Object.values(SCRIPT_CONFIG).map(s => [s.id, s.path])),
 };
 
 // File manager — directories the browser is allowed to access
@@ -96,9 +119,6 @@ const FM_ALLOWED_ROOTS = [
   '/mnt',
   '/tmp',
 ];
-
-// Setup scripts the UI may read/write/run
-const ALLOWED_SCRIPTS = ['setup-openclaw.sh', 'setup-phase2.sh', 'snapshot-agent.sh', 'restore-agent.sh'];
 
 const VALUES = {
   COMPOSE_DIR, CONFIG_PATH, SKILLS_DIR, WORKSPACE_DIR,
@@ -167,6 +187,7 @@ module.exports = {
   CONFIG_REGISTRY,
   FM_ALLOWED_ROOTS,
   ALLOWED_SCRIPTS,
+  SCRIPT_CONFIG,
   SETTABLE,
   describe,
   create,

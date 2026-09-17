@@ -790,3 +790,37 @@ test('a tool result is the same string on every step, so the prefix stays cachea
   assert.equal(alone.length, withOthers.length,
     'clipping depends on the row alone, not on how much else is in the prompt');
 });
+
+test('a proposal is filed against the conversation that made it', async () => {
+  // settings.propose() and installs.propose() have always taken a sessionId and
+  // stored it; nothing ever passed one, so every proposal was anonymous. With
+  // one conversation open that is invisible; with several, the pending list
+  // cannot be read against the transcript it came from.
+  const made = await H.api(null, 'POST', '/api/harness/sessions', { title: 'proposal-origin' });
+  const sessionId = made.body.session.id;
+
+  script = [
+    { tool: 'settings_propose', args: {
+        reason: 'the window is bigger than this',
+        changes: [{ path: 'harness.config.doca.contextWindow', value: 200000 }],
+    } },
+    { text: 'Proposed.' },
+  ];
+  await stream('/api/harness/chat', { message: 'bump the window', sessionId });
+
+  const props = (await get('/api/harness/proposals')).body;
+  const mine = props.pending.find(p => p.sessionId === sessionId);
+  assert.ok(mine, 'the proposal does not name the session it came from');
+  assert.equal(mine.status, 'pending');
+
+  // And an installer proposal is filed the same way.
+  script = [
+    { tool: 'install_propose', args: { kind: 'ollama-model', id: 'qwen3', reason: 'needed for the errand' } },
+    { text: 'Proposed.' },
+  ];
+  await stream('/api/harness/chat', { message: 'get me qwen3', sessionId });
+
+  const installsList = (await get('/api/harness/installs')).body;
+  const inst = installsList.pending.find(i => i.sessionId === sessionId);
+  assert.ok(inst, 'the install proposal does not name the session it came from');
+});
