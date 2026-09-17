@@ -685,6 +685,15 @@
                 Its tools act on that machine, not on this host. The agent is told which, so it does not
                 confuse the two.
               </div>
+              <div class="field">
+                <div class="input-label">Headers <span style="opacity:.6">— optional, one per line</span></div>
+                <textarea id="mcp-headers" class="input" rows="2"
+                  placeholder="Authorization: Bearer sk-…"></textarea>
+                <div class="input-label" style="opacity:.6;margin-top:4px">
+                  Sent with every request to this server. Kept with the definition, so treat it like the
+                  API keys on the Keys tab — anyone who can read this panel can read it.
+                </div>
+              </div>
             </div>
             <div class="settings-tab-row">
               <label class="skill-toggle">

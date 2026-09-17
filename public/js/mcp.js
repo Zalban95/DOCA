@@ -259,9 +259,35 @@ function mcpShowForm(show) {
   document.getElementById('mcp-name').focus();
 }
 
+/**
+ * "Name: value" lines → an object, the way `env` lines already work.
+ *
+ * Only the first colon splits, so a value that contains one — a URL, a bearer
+ * token with a colon in it — survives. Blank lines and lines with no colon are
+ * skipped rather than rejected: this is a textarea, and a trailing newline is
+ * not an error the user should have to think about.
+ *
+ * Capped at 20, matching registry.normalize(), so what the form accepts and
+ * what the server keeps are the same thing.
+ */
+function parseHeaderLines(text) {
+  const out = {};
+  for (const line of String(text || '').split('\n')) {
+    const at = line.indexOf(':');
+    if (at <= 0) continue;
+    const name = line.slice(0, at).trim();
+    const value = line.slice(at + 1).trim();
+    if (!name || !value) continue;
+    out[name] = value;
+    if (Object.keys(out).length >= 20) break;
+  }
+  return out;
+}
+
 function mcpNew() {
   for (const [id, v] of Object.entries({
     'mcp-name': '', 'mcp-command': '', 'mcp-args': '', 'mcp-env': '', 'mcp-cwd': '', 'mcp-url': '',
+    'mcp-headers': '',
   })) document.getElementById(id).value = v;
   document.getElementById('mcp-transport').value = 'stdio';
   document.getElementById('mcp-autostart').checked = false;
@@ -283,6 +309,10 @@ async function mcpEdit(id) {
   document.getElementById('mcp-env').value       = Object.entries(s.env || {}).map(([k, v]) => `${k}=${v}`).join('\n');
   document.getElementById('mcp-cwd').value       = s.cwd || '';
   document.getElementById('mcp-url').value       = s.url || '';
+  // Masked, and saving a mask writes nothing (registry.unmaskValues) — so an
+  // edit that does not touch this field leaves the stored header alone.
+  document.getElementById('mcp-headers').value   =
+    Object.entries(s.headers || {}).map(([k, v]) => `${k}: ${v}`).join('\n');
   document.getElementById('mcp-autostart').checked = !!s.autostart;
   document.getElementById('mcp-origin-kind').value = s.origin?.kind === 'client' ? 'client' : 'server';
   await _mcpLoadDevices(s.origin?.deviceId || null);
@@ -307,6 +337,7 @@ async function mcpSave() {
     env:       document.getElementById('mcp-env').value,
     cwd:       document.getElementById('mcp-cwd').value.trim(),
     url:       document.getElementById('mcp-url').value.trim(),
+    headers:   parseHeaderLines(document.getElementById('mcp-headers').value),
     autostart: document.getElementById('mcp-autostart').checked,
     origin:    originKind === 'client'
       ? { kind: 'client', deviceId: document.getElementById('mcp-origin-device').value }
