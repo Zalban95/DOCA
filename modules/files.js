@@ -71,6 +71,20 @@ function handleList(req, res) {
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
+/**
+ * An fs error that says something about the file, not about this server.
+ *
+ * A favourite whose file was moved or deleted is the ordinary way a read fails,
+ * and it answered 500 — "the server broke" for what is really "that file is
+ * gone". The same class as the keys ENOENT bug. EACCES is the other one people
+ * actually hit, and it is a 403: the path is fine, the permission is not.
+ */
+function fsStatus(e) {
+  if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) return 404;
+  if (e && (e.code === 'EACCES' || e.code === 'EPERM')) return 403;
+  return 500;
+}
+
 /** GET /api/files/read?path=... */
 function handleRead(req, res) {
   const filePath = req.query.path;
@@ -82,7 +96,13 @@ function handleRead(req, res) {
     if (s.size > MAX_READ) return res.status(413).json({ error: `File too large (${(s.size / 1e6).toFixed(1)} MB — limit is 100 MB)` });
     const content = fs.readFileSync(filePath, 'utf8');
     res.json({ content, size: s.size, mtime: s.mtime.toISOString() });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    const code = fsStatus(e);
+    res.status(code).json({
+      error: code === 404 ? `No such file: ${filePath}` : e.message,
+      code: e.code || null,
+    });
+  }
 }
 
 /** POST /api/files/write  { path, content } */
