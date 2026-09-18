@@ -76,3 +76,52 @@ test('a directory is refused as a directory, not as a fault', async () => {
   assert.equal(r.status, 400);
   assert.match(r.body.error, /Is a directory/);
 });
+
+test('the other filesystem routes report a missing file the same way', async () => {
+  // W1.3 named one line number (`files.js:79`) and the fix stopped at it. The
+  // same `catch (e) { res.status(500) }` sat on every neighbouring handler, so
+  // rename, raw and download each answered 500 for "that file is gone" — the
+  // user goes looking for what broke in the panel when nothing did. Found by
+  // probing them after fixing only the one the entry named.
+  const missing = path.join(os.tmpdir(), `doca-gone-${Date.now()}.txt`);
+
+  const rename = await h.api(null, 'POST', '/api/files/rename',
+    { from: missing, to: missing + '.moved' });
+  assert.equal(rename.status, 404, 'renaming a file that is gone is not a server fault');
+  assert.equal(rename.body.code, 'ENOENT');
+
+  const raw = await get('/api/files/raw?path=' + encodeURIComponent(missing));
+  assert.equal(raw.status, 404);
+  assert.match(String(raw.body.error), /No such file/);
+
+  const dl = await get('/api/files/download?path=' + encodeURIComponent(missing));
+  assert.equal(dl.status, 404);
+  assert.match(String(dl.body.error), /No such file/);
+
+  // A rename that CAN work still works, so the guard did not make the route
+  // refuse everything.
+  const src = path.join(os.tmpdir(), `doca-src-${Date.now()}.txt`);
+  fs.writeFileSync(src, 'move me');
+  try {
+    const ok = await h.api(null, 'POST', '/api/files/rename', { from: src, to: src + '.moved' });
+    assert.equal(ok.status, 200);
+    assert.equal(fs.readFileSync(src + '.moved', 'utf8'), 'move me');
+  } finally { try { fs.unlinkSync(src + '.moved'); } catch {} }
+});
+
+test('the filesystem error mapping itself, including the branches a probe cannot reach', async () => {
+  // The routes above exercise 404 and 200. EACCES needs a permission bit and
+  // root defeats that, and a genuine 500 needs a fault this process cannot
+  // produce on demand — so those two arms are checked directly rather than
+  // pretended to by a test that would pass for the wrong reason.
+  const src = fs.readFileSync(path.join(__dirname, '..', 'modules', 'files.js'), 'utf8');
+  const status = new Function('e', src.match(/function fsStatus\(e\) \{[\s\S]*?\n\}/)[0] + '; return fsStatus(e);');
+
+  assert.equal(status({ code: 'ENOENT' }), 404);
+  assert.equal(status({ code: 'ENOTDIR' }), 404);
+  assert.equal(status({ code: 'EACCES' }), 403);
+  assert.equal(status({ code: 'EPERM' }), 403);
+  assert.equal(status({ code: 'EIO' }), 500, 'a real fault is still a fault');
+  assert.equal(status(null), 500);
+  assert.equal(status(new Error('no code')), 500);
+});

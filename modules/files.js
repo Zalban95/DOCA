@@ -123,7 +123,18 @@ function handleRename(req, res) {
   const { from, to } = req.body;
   if (!from || !to || !fmSafe(from) || !fmSafe(to)) return res.status(403).json({ error: 'Path not allowed' });
   try { fs.renameSync(from, to); res.json({ ok: true }); }
-  catch (e) { res.status(500).json({ error: e.message }); }
+  catch (e) {
+    // Renaming a file that was moved or deleted underneath the panel is the
+    // ordinary way this fails — a stale file-list row, a favourite somebody
+    // renamed in another window. Same reasoning as `handleRead`, and it was
+    // missed when that one was fixed: the entry named a line number, and the
+    // fix stopped at it.
+    const code = fsStatus(e);
+    res.status(code).json({
+      error: code === 404 ? `No such file: ${from}` : e.message,
+      code: e.code || null,
+    });
+  }
 }
 
 /** POST /api/files/delete  { paths: [] } */
@@ -219,7 +230,13 @@ function handleDownload(req, res) {
     const s = fs.statSync(filePath);
     if (s.isDirectory()) return res.status(400).json({ error: 'Cannot download directory' });
     res.download(filePath, path.basename(filePath));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    const code = fsStatus(e);
+    // res.download may already have started streaming a real error body, which
+    // is why this only writes a status when nothing has been sent.
+    if (res.headersSent) return;
+    res.status(code).json({ error: code === 404 ? `No such file: ${filePath}` : e.message, code: e.code || null });
+  }
 }
 
 /** GET /api/files/raw?path=... — serve with correct MIME (media preview) */
@@ -230,7 +247,11 @@ function handleRaw(req, res) {
     const s = fs.statSync(filePath);
     if (s.isDirectory()) return res.status(400).json({ error: 'Cannot serve directory' });
     res.sendFile(path.resolve(filePath));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    const code = fsStatus(e);
+    if (res.headersSent) return;
+    res.status(code).json({ error: code === 404 ? `No such file: ${filePath}` : e.message, code: e.code || null });
+  }
 }
 
 // ─── File Search ──────────────────────────────────────────────────────────────
