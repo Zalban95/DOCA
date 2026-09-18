@@ -964,3 +964,55 @@ change to save tokens also changes an answer, it is not this fix.
   production only once the before/after is in hand.
 
 ---
+
+## H-10 — A thinking model's `reasoning_content` is read, dropped, and then demanded back
+
+**Status:** open, reported from a live mission 2026-09-18. Not caused by any
+release here: the field has never been handled, and the provider decides when it
+starts requiring it.
+
+### What happens
+
+DeepSeek's thinking-mode endpoint answers with `reasoning_content` beside
+`content`, and on a later turn it expects that field sent back on the previous
+assistant message. This panel never stores it and never sends it, so once the
+endpoint wants it, every later request in that conversation is malformed by the
+provider's rules and comes back `400`. The mission is over. Nothing on the host
+caused it and no setting here changes it.
+
+### Where it is lost, both times
+
+- **On the way in.** The stream reader takes `delta.content` and
+  `delta.tool_calls` from each frame and nothing else, so the field is gone
+  before anything could store it.
+- **On the way out.** `agent.js::toApiMessages` rebuilds every assistant row as
+  exactly `{ role, content, tool_calls }` (`:476-477`). Even a stored field
+  would not travel.
+- `grep -rn reasoning_content modules public` finds nothing at all.
+
+### Why it kills the turn rather than annoying it
+
+The fallback chain hops on a first-token stall and deliberately on nothing else
+— *"a refusal or a bad request is an answer about this request, and moving on
+would hide it"*. That is right for a refusal, and wrong here: a `400` caused by
+**our** message shape is not an answer about the request, it is the same
+malformed request that every rung would receive. So nothing else was tried.
+
+### Shapes of fix, in the order they stand up
+
+1. **Carry what the provider sent back to it.** Keep unknown-but-echoed fields
+   on the stored assistant row and put them back on the wire for that provider.
+   The rule is per provider, not per model, and it is data rather than code:
+   which fields a provider expects returned.
+2. **Repair once, then hop.** A `400` whose body names a field or a message
+   shape is a repairable request: drop or restore the field and retry once on
+   the same rung; if it fails again, treat it as a dead rung and hop, rather
+   than ending the turn. Keep the existing rule for `401`, `403`, `429` and a
+   genuine content refusal, which are answers about this request.
+3. **Say which provider contract is in play.** The panel knows the provider by
+   id and applies one request shape to all of them. Whatever carries the
+   per-provider rules (settings, a profile, a shipped file the harness can
+   update) has to be visible, because the failure it prevents is invisible.
+
+Until one of them lands, a thinking-mode endpoint that requires the field back
+cannot be used for anything longer than the turn before it asks.

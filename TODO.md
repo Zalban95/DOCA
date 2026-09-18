@@ -372,6 +372,34 @@ still missing from that sentence.
   The proposal's §4.4 "missions" is the same idea under another name; settle the
   vocabulary before building either.
 
+- **You cannot choose which specialist gets the errand, or watch one work.**
+  Wanted, asked for 2026-09-18 while debugging a mission that died of a provider
+  `400` (`ISSUES.md` H-10): the orchestrator picks the agent, the panel shows a
+  bar, and there is no way to say "send this one to the Qwen reporter" or to sit
+  and watch what a named specialist is doing. Two things, and the first is
+  small: a picker in the harness composer — the roster is already in the prompt
+  and `GET /api/harness/agents` already lists it — which sends the next message
+  as a mission to that agent rather than to the orchestrator. The second is the
+  window onto it: `GET /api/harness/missions/:id` already returns the mission
+  *and* its event log, and nothing draws it, so a mission that is blocked looks
+  exactly like a mission that is slow. Until both exist, diagnosing a specialist
+  means reading `agents/mission-*.jsonl` by hand — which is how H-10 was found.
+
+- **One request shape is sent to every provider, and they do not agree on one.**
+  Wanted, and H-10 is the first bite: DeepSeek's thinking mode returns
+  `reasoning_content` and later requires it back, so a conversation that starts
+  fine ends as a `400` nothing can retry. The panel has no notion of a provider
+  *contract* — `toApiMessages` builds one shape and `providers.js` knows only a
+  base URL, a key and a model list. What is wanted is that contract as **data**:
+  which extra fields to echo back, what a refusal looks like from this provider,
+  whether tools travel, what the token field is called. Then: the harness reads
+  it, a specialist definition may override it (a sub-agent on a different
+  provider is the common case, so the fields belong in the agent definition as
+  well as in settings), and a corrected contract can be pulled and applied
+  without a release — the same shape as skills, and worth building as skills if
+  the mechanism is going to exist twice otherwise. The cost of not having it is
+  paid per provider quirk and always as a dead turn.
+
 - **A mission has no plan, so no client can draw how far along it is.** Wanted:
   a `plan` on the mission document — `[{ title, state: done|running|queued|failed }]`
   — so a device renders one segmented bar (green done, yellow running, orange
@@ -575,6 +603,17 @@ Shape, as built:
 
 - **One pass down the chain, then stop and report.** Never loop, never restart the
   chain, never retry a rung that already stalled within the same turn.
+
+- **A `400` about our own message shape should not end the turn.** Added
+  2026-09-18, after `ISSUES.md` H-10 killed a mission. "Only a stall hops" is
+  right for a refusal, a rate limit or an authentication failure — those are
+  answers about this request, and moving on hides them. It is wrong for a
+  request the provider says it cannot parse: every rung would receive the same
+  malformed body, so failing without trying anything is neither honest nor
+  useful. Wanted: repair once on the same rung where the body names the problem,
+  then treat the rung as dead and hop. Decide it together with the provider
+  contract above, because the repair is only possible if something knows what
+  the provider wanted.
 
 - **Remember a stalled entry as degraded for a few minutes**, so the next turn does
   not pay the same 20 s again — but re-probe rather than blacklisting. A model
