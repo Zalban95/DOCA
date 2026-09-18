@@ -27,6 +27,8 @@ let stub, stubUrl;
 let script = [];
 /** Every request body the harness sent, so the prompt itself can be asserted. */
 let seen = [];
+/** Responses held open by a `{ stall: 'sse' }` script entry, so `after()` ends them. */
+let held = [];
 
 function sseReply(res, frames) {
   res.writeHead(200, { 'Content-Type': 'text/event-stream' });
@@ -49,6 +51,15 @@ before(async () => {
       const body = JSON.parse(raw || '{}');
       seen.push(body);
       const next = script.shift() || { text: '(script exhausted)' };
+      // The provider that accepts the request and then says nothing at all:
+      // 200, the right content-type, keep-alive comments, no token. Observed
+      // against DeepSeek — see ISSUES.md H-5.
+      if (next.stall) {
+        held.push(res);
+        res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+        const beat = setInterval(() => { try { res.write(': keep-alive\n\n'); } catch {} }, 40);
+        return void res.on('close', () => clearInterval(beat));
+      }
       const answer = () => {
         if (next.status) { res.writeHead(next.status, { 'Content-Type': 'application/json' }); return res.end('{"error":"stub failure"}'); }
         if (body.stream === false) {   // the summariser
@@ -88,6 +99,7 @@ before(async () => {
 });
 
 after(async () => {
+  for (const res of held) { try { res.destroy(); } catch {} }
   await H.stop();
   await new Promise(r => stub.close(r));
 });
@@ -389,4 +401,48 @@ test('a mid-turn arrival can draw "typing" without waiting for the next event', 
 
   const s = H.sse(phone.token); await s.ready; await settled(s, posted.body.turnId); s.close();
   assert.deepEqual((await H.api(watch.token, 'GET', '/api/v1/harness/turns')).body.turns, []);
+});
+
+test('a turn that fell back says so in its outcome, so a client that was away still knows', async () => {
+  // The device bus carries text, tool steps and the outcome — there is no room
+  // in it for a mid-turn notice, and a watch is not going to read one anyway.
+  // So if the hop is not in `done`, the client most likely to see the answer on
+  // its own is the one client that cannot tell which model wrote it.
+  const agentMod = require('../modules/harness/agent');
+  agentMod.forgetDegraded();
+  await H.api(null, 'POST', '/api/harness/doca/config', {
+    failoverAfterMs: 600, fallbackChain: [{ provider: 'stub', model: 'stub-mini' }],
+  });
+  try {
+    script = [{ stall: 'sse' }, { text: 'the backup answered' }];
+    const posted = await H.api(phone.token, 'POST', '/api/v1/harness/messages', { message: 'who answers?' });
+    assert.equal(posted.status, 202);
+
+    const s = H.sse(phone.token); await s.ready;
+    const done = await settled(s, posted.body.turnId); s.close();
+
+    assert.equal(done.payload.state, 'done');
+    assert.match(done.payload.text, /the backup answered/);
+    assert.ok(Array.isArray(done.payload.fallbacks) && done.payload.fallbacks.length === 1,
+      'the outcome of a turn that changed models has to say so');
+    assert.equal(done.payload.fallbacks[0].from, 'stub');
+    assert.equal(done.payload.fallbacks[0].toModel, 'stub-mini');
+    assert.equal(done.payload.fallbacks[0].step, 1);
+  } finally {
+    await H.api(null, 'POST', '/api/harness/doca/config', { failoverAfterMs: 20000, fallbackChain: [] });
+    agentMod.forgetDegraded();
+  }
+});
+
+test('a turn that did not fall back carries no fallback field at all', async () => {
+  // The field marks the turns that changed models. A `fallbacks: []` on every
+  // healthy turn is noise a client has to learn to ignore, and "present" is the
+  // signal.
+  script = [{ text: 'answered first time' }];
+  const posted = await H.api(phone.token, 'POST', '/api/v1/harness/messages', { message: 'hello' });
+  const s = H.sse(phone.token); await s.ready;
+  const done = await settled(s, posted.body.turnId); s.close();
+
+  assert.equal(done.payload.state, 'done');
+  assert.equal('fallbacks' in done.payload, false);
 });

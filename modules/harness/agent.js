@@ -524,6 +524,74 @@ async function post(ep, body, signal, p) {
   return r;
 }
 
+/* ── Falling down the chain ───────────────────────────── */
+
+/**
+ * Which entries to try, in order, and how long to give each.
+ *
+ * A chain answers one question: when the configured model stops answering, who
+ * answers instead. The unit of failure matters — the evening this was written
+ * for, `deepseek-flash` returned `200 text/event-stream` and sent `: keep-alive`
+ * for three minutes while `deepseek-v4-pro` on the same key, same account,
+ * answered in 430 ms. So the thing that went quiet was the **model**, and the
+ * chain has to be per model, not per provider.
+ *
+ * Three rules, each with a reason:
+ *
+ * - **The last rung gets `firstTokenTimeoutMs`, the others get
+ *   `failoverAfterMs`.** Reusing the one long deadline per rung would make a
+ *   three-rung chain wait three minutes before saying anything, i.e. slower
+ *   than having no chain. The user's own give-up deadline is unchanged.
+ * - **A rung that stalled recently goes to the back, not out.** `DEGRADED_MS`
+ *   keeps the next turn from paying the same 20 s for the same silence, but the
+ *   rung is still in the list, so a model that came back becomes usable again
+ *   without a restart. Blacklisting would make one bad afternoon permanent.
+ * - **An entry naming a provider that no longer exists is skipped, not fatal.**
+ *   Deleting a provider from Settings → API Keys should narrow the chain, not
+ *   break every turn.
+ */
+const DEGRADED_MS = 5 * 60 * 1000;
+const _degraded  = new Map();                    // "provider|model" -> last stall
+const rungKey    = (ep, model) => `${ep?.id || '?'}|${model || ''}`;
+
+function isDegraded(ep, model) {
+  const at = _degraded.get(rungKey(ep, model));
+  return !!at && (Date.now() - at) < DEGRADED_MS;
+}
+function markDegraded(ep, model) { _degraded.set(rungKey(ep, model), Date.now()); }
+/** For tests, and for a settings change that should take effect at once. */
+function forgetDegraded() { _degraded.clear(); }
+
+function rungsFor({ ep, model, p }) {
+  const chain   = Array.isArray(p?.fallbackChain) ? p.fallbackChain : [];
+  const failoverMs = Number(p?.failoverAfterMs) || 0;
+  const finalMs    = Number(p?.firstTokenTimeoutMs) || 0;
+
+  const entries = [{ provider: ep.id, model, ep }];
+  for (const c of chain) {
+    const pid = String(c?.provider || '').trim();
+    if (!pid) continue;
+    const cModel = String(c?.model || '').trim() || model;
+    // The same (provider, model) twice is a chain that waits for itself.
+    if (entries.some(e => e.provider === pid && e.model === cModel)) continue;
+    let cep;
+    try { cep = providers.endpoint(pid); }
+    catch { continue; }
+    entries.push({ provider: pid, model: cModel, ep: cep });
+  }
+
+  const warm    = entries.filter(e => !isDegraded(e.ep, e.model));
+  const cold    = entries.filter(e =>  isDegraded(e.ep, e.model));
+  const ordered = [...warm, ...cold];
+
+  return ordered.map((e, i) => ({
+    ...e,
+    last:      i === ordered.length - 1,
+    // The last one is never cut short — the user's deadline is the answer.
+    timeoutMs: i === ordered.length - 1 ? finalMs : (failoverMs || finalMs),
+  }));
+}
+
 /** How often a still-silent provider is reported while we wait for its first token. */
 const WAITING_EVERY_MS = 15000;
 
@@ -589,20 +657,50 @@ function firstTokenGuard({ p, signal, onWaiting }) {
  * endpoint answers with JSON despite being asked to stream.
  * @returns {Promise<{ content: string, tool_calls: object[] }>}
  */
-async function complete({ ep, body, signal, onText, onWaiting, p, meta = { kind: 'ask' } }) {
-  const guard = firstTokenGuard({ p, signal, onWaiting });
-  try {
-    const reply = await streamOrRead({ ep, body, guard, onText, p });
-    usage.record({ ...meta, provider: ep.id, model: body.model, usage: reply.usage, body, reply });
-    return reply;
-  } catch (e) {
-    // Our abort and the user's are the same AbortError at this level; only the
-    // guard knows which one fired. A deliberate Stop keeps its own meaning.
-    if (guard.stalled) throw new Error(budget.stalled({ ep, ms: guard.ms, frames: guard.frames }));
-    throw e;
-  } finally {
-    guard.done();
+async function complete({ ep, body, signal, onText, onWaiting, p, meta = { kind: 'ask' }, onHop }) {
+  const rungs = rungsFor({ ep, model: body.model, p });
+  let stalled = null;
+
+  for (let i = 0; i < rungs.length; i++) {
+    const rung = rungs[i];
+    const rungBody = rung.model === body.model ? body : { ...body, model: rung.model };
+    // Each rung gets its own guard, so the shorter `failoverAfterMs` applies to
+    // this entry rather than to the turn.
+    const guard = firstTokenGuard({
+      p: { ...p, firstTokenTimeoutMs: rung.timeoutMs }, signal, onWaiting,
+    });
+
+    try {
+      const reply = await streamOrRead({ ep: rung.ep, body: rungBody, guard, onText, p });
+      usage.record({ ...meta, provider: rung.ep.id, model: rungBody.model, usage: reply.usage, body: rungBody, reply });
+      // It answered, so whatever it was is over — including its own earlier stall.
+      if (i > 0) _degraded.delete(rungKey(rung.ep, rung.model));
+      return reply;
+    } catch (e) {
+      // Our abort and the user's are the same AbortError at this level; only the
+      // guard knows which one fired. A deliberate Stop keeps its own meaning.
+      if (!guard.stalled) throw e;
+
+      stalled = new Error(budget.stalled({ ep: rung.ep, ms: guard.ms, frames: guard.frames }));
+      stalled.stalled = { provider: rung.ep.id, model: rungBody.model, ms: guard.ms };
+      markDegraded(rung.ep, rung.model);
+
+      // One pass down the chain, then stop and report. Never loop, never restart
+      // the chain, and only ever after a stall: a refusal or a bad request is an
+      // answer about *this* request and moving on would hide it. The guard is
+      // only ever `stalled` before the first token, so this cannot cut a stream
+      // that had already started.
+      if (rung.last || !onHop) throw stalled;
+      onHop({ from: { provider: rung.ep.id, model: rungBody.model, label: rung.ep.label },
+              to:   { provider: rungs[i + 1].ep.id, model: rungs[i + 1].model, label: rungs[i + 1].ep.label },
+              seconds: Math.round(guard.ms / 1000), frames: guard.frames,
+              remaining: rungs.length - i - 1 });
+      continue;
+    } finally {
+      guard.done();
+    }
   }
+  throw stalled || new Error('No model to call.');
 }
 
 async function streamOrRead({ ep, body, guard, onText, p }) {
@@ -806,6 +904,11 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
   const announced = new Set(settings.list().pending.map(x => x.id));
 
   let toolCount = null;
+  // Every hop this turn made, so the answer can be told apart from one the
+  // chosen model gave. The event announces it while it happens; this is for the
+  // surfaces that only ever see the outcome — a device that was asleep, a log
+  // read tomorrow — and would otherwise read the backup's words as the primary's.
+  const fallbacks = [];
 
   for (let step = 1; step <= maxSteps; step++) {
     // Rebuilt every step, not once per turn.
@@ -857,6 +960,28 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       // session line and then nothing at all, which reads as a broken panel
       // rather than as a provider that has not started answering.
       onWaiting: w => say({ type: 'waiting', step, provider: ep.label || ep.id, ...w }),
+      // Announced, never quiet. A fallback that happens silently is a worse bug
+      // than the outage it hides: the user reads a smaller model's answers as
+      // the big one's, and the next investigation starts from a false premise.
+      // So this reaches the chat as its own row and the log at warn, naming
+      // what stalled, for how long, and what is answering instead.
+      onHop: h => {
+        fallbacks.push({
+          step, from: h.from.provider, fromModel: h.from.model,
+          to: h.to.provider, toModel: h.to.model, seconds: h.seconds,
+        });
+        say({
+          type: 'failover', step,
+          from: h.from.label || h.from.provider, to: h.to.label || h.to.provider,
+          fromModel: h.from.model, toModel: h.to.model,
+          seconds: h.seconds, frames: h.frames, remaining: h.remaining,
+          text: `${h.from.label || h.from.provider} stopped answering after ${h.seconds}s `
+            + `(${h.from.model || 'no model'}); continuing on ${h.to.label || h.to.provider}`
+            + `${h.to.model ? ` / ${h.to.model}` : ''}.`
+            + (h.frames ? ` It sent ${h.frames} keep-alive frame${h.frames === 1 ? '' : 's'} and no content.` : '')
+            + ` ${h.remaining} more in the chain.`,
+        });
+      },
     });
 
     budget.record(led, {
@@ -886,7 +1011,13 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       memory.updateSession(session.id, {
         tokens: (memory.getSession(session.id)?.tokens || 0) + spend.totalTokens,
       });
-      return { sessionId: session.id, text, steps: step, usage: spend };
+      // The ordinary way a turn ends, and the one the fallback field has to be
+      // on: a turn that hopped and then answered lands here, not on the return
+      // at the bottom of this function.
+      return {
+        sessionId: session.id, text, steps: step, usage: spend,
+        ...(fallbacks.length ? { fallbacks } : {}),
+      };
     }
 
     for (const tc of reply.tool_calls) {
@@ -956,7 +1087,12 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
   memory.updateSession(session.id, {
     tokens: (memory.getSession(session.id)?.tokens || 0) + budget.report(led, p).totalTokens,
   });
-  return { sessionId: session.id, text, steps: maxSteps, usage: budget.report(led, p) };
+  return {
+    sessionId: session.id, text, steps: maxSteps, usage: budget.report(led, p),
+    // Absent when nothing hopped, which is every turn on a healthy chain: the
+    // field exists to mark the ones that did, not to be a null to check.
+    ...(fallbacks.length ? { fallbacks } : {}),
+  };
 }
 
 /**
@@ -1088,4 +1224,5 @@ async function status() {
   return out;
 }
 
-module.exports = { turn, status, params, ask, preview, breakdown, liveBlock, events, toApiMessages };
+module.exports = { turn, status, params, ask, preview, breakdown, liveBlock, events, toApiMessages,
+  rungsFor, forgetDegraded, DEGRADED_MS };

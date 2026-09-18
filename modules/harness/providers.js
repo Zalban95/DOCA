@@ -122,6 +122,24 @@ function defaultParams() {
     // indistinguishable from a hung panel. 0 disables it and restores the old
     // unbounded wait.
     firstTokenTimeoutMs: 90000,
+    // When to stop waiting on one entry and try the next in `fallbackChain`.
+    //
+    // Deliberately much shorter than `firstTokenTimeoutMs`, and the reason is
+    // arithmetic rather than taste: reusing the one 90 s deadline per rung makes
+    // a three-rung chain wait three minutes before reporting anything, which is
+    // slower than having no chain at all. `firstTokenTimeoutMs` is the deadline
+    // for the *last* rung — and for the only rung, when there is no chain — so
+    // giving up entirely still takes as long as it always did.
+    failoverAfterMs: 20000,
+    // The chain to fall down, in order, as `{ provider, model }` pairs. Empty by
+    // default and therefore inert: upgrading changes nobody's behaviour, and a
+    // chain exists only because somebody ordered one in the settings panel.
+    //
+    // That default is the design, not caution. A fallback silently changes which
+    // model answers, so an install that has one it did not choose would be
+    // reading a smaller model's replies as the big one's — which is the failure
+    // this whole feature is written to avoid.
+    fallbackChain: [],
     disabledTools:  [],
   };
 }

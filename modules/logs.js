@@ -137,6 +137,14 @@ function fromHarness(evt) {
         + (evt.frames ? ` (${evt.frames} keep-alive frames, no content)` : '')
         + (evt.timeoutMs ? ` — giving up at ${Math.round(evt.timeoutMs / 1000)}s` : ''));
 
+    // A hop down the fallback chain. `warn`, not `info`: something that was
+    // meant to answer did not, and a log that files it as routine is a log that
+    // hides the outage the chain exists to survive.
+    case 'failover':
+      return line(SELF, 'warn', evt.text || (
+        `step ${evt.step}: ${evt.from} stopped answering after ${evt.seconds}s — `
+        + `continuing on ${evt.to}${evt.toModel ? ` / ${evt.toModel}` : ''}`));
+
     case 'tool_call':
       return line(SELF, 'info', `step ${evt.step} → ${evt.name}(${argNames(evt.args)})`);
 

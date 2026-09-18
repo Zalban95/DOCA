@@ -76,6 +76,30 @@ test('a warning carries the sentence the budget wrote, not a restatement', () =>
   assert.match(l.text, /84% full/);
 });
 
+test('a hop down the fallback chain is a warning, not a routine line', () => {
+  // Something that was meant to answer did not. A chain that hops every turn
+  // looks healthy from the chat window — the answer arrives — so the log is the
+  // only place the truth is on record, and it has to be filed as a fault.
+  const l = logs.fromHarness({
+    type: 'failover', step: 3, from: 'DeepSeek', to: 'DeepSeek',
+    fromModel: 'deepseek-flash', toModel: 'deepseek-v4-pro', seconds: 20, frames: 42, remaining: 0,
+    text: 'DeepSeek stopped answering after 20s (deepseek-flash); continuing on DeepSeek / deepseek-v4-pro.',
+  });
+  assert.equal(l.level, 'warn');
+  assert.match(l.text, /deepseek-v4-pro/);
+
+  // The sentence is written where the hop happens, because only it knows which
+  // model went quiet; the log must not restate it into something vaguer.
+  const bare = logs.fromHarness({
+    type: 'failover', step: 3, from: 'DeepSeek', to: 'Ollama',
+    toModel: 'qwen3', seconds: 20,
+  });
+  assert.match(bare.text, /DeepSeek/);
+  assert.match(bare.text, /Ollama/);
+  assert.match(bare.text, /qwen3/);
+  assert.match(bare.text, /20s/);
+});
+
 test('the level of an unlabelled line comes from its text alone', () => {
   assert.equal(logs.levelOf('[stderr] boom'), 'error');
   assert.equal(logs.levelOf('DEPRECATED: x'), 'warn');

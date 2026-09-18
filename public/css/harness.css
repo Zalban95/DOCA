@@ -180,6 +180,12 @@
 /* Waiting is not failing: amber, and it removes itself the moment a token
    arrives. Red here would teach the user that a slow provider is a broken one. */
 .hc-waiting     { align-self: stretch; max-width: 100%; color: var(--amber, #d89000); opacity: .85; font-style: italic; }
+/* A hop down the fallback chain: the same amber as waiting, because the turn is
+   still succeeding, but not italic — this is something that happened, not a
+   state it is in — and it keeps a left border so it cannot be skimmed past as
+   an ordinary line. The answer below it came from a different model. */
+.hc-failover    { align-self: stretch; max-width: 100%; color: var(--amber, #d89000);
+                  border-left: 2px solid var(--amber, #d89000); padding-left: 8px; }
 
 /* ── Rules review (Verify rules in the Rules modal) ──── */
 /* Model prose in headed sections, so it keeps the line breaks it was written

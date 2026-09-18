@@ -609,8 +609,12 @@ test('every harness parameter has a box in the panel to type it into', () => {
   assert.ok(table, 'HARNESS_PARAMS is what the config form renders from');
   const fields = [...table[0].matchAll(/key: '([A-Za-z]+)'/g)].map(m => m[1]);
 
-  // These four have their own controls rather than a number box.
-  const elsewhere = ['provider', 'model', 'systemPrompt', 'disabledTools'];
+  // These have their own controls rather than a number box: provider and model
+  // are selects, systemPrompt a textarea, disabledTools the tool checkboxes, and
+  // fallbackChain the `provider/model`-per-line textarea beside them. Each is in
+  // the same config strip — the point of this list is that nothing is reachable
+  // only by editing the prefs file, not that everything is a number box.
+  const elsewhere = ['provider', 'model', 'systemPrompt', 'disabledTools', 'fallbackChain'];
   for (const key of Object.keys(providers.defaultParams())) {
     if (elsewhere.includes(key)) continue;
     assert.ok(fields.includes(key), `${key} has no field in the harness config panel`);
@@ -625,6 +629,56 @@ test('every harness parameter has a box in the panel to type it into', () => {
   // And the ranges are not still written for an 8k model.
   assert.match(table[0], /key: 'maxSteps'[\s\S]{0,200}?max="1000"/);
   assert.match(table[0], /key: 'historyTurns'[\s\S]{0,200}?max="5000"/);
+});
+
+test('the fallback chain box keeps every line the user typed', () => {
+  // The chain is typed as text and stored as pairs, so the parser sits between
+  // the user's intent and the thing that decides who answers. A line it eats is
+  // a chain the user believes they configured and does not have — and they
+  // would find out during the outage the chain was meant to survive. The parser
+  // is run here rather than trusted.
+  const fs   = require('node:fs');
+  const path = require('node:path');
+  const src  = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'harness.js'), 'utf8');
+  const fn   = src.match(/function _chainToText[\s\S]*?\n\}/)[0] + '\n'
+             + src.match(/function _textToChain[\s\S]*?\n\}/)[0];
+  const { _chainToText, _textToChain } = new Function(`${fn}; return { _chainToText, _textToChain };`)();
+
+  // What is stored comes back out unchanged, so opening ⚙ and pressing Save
+  // without touching the box cannot quietly change the chain.
+  const chain = [{ provider: 'ds', model: 'deepseek-flash' }, { provider: 'dsfb', model: 'deepseek-v4-pro' }];
+  assert.deepEqual(_textToChain(_chainToText(chain)), chain);
+
+  // A bare provider keeps an empty model, which the server reads as "the same
+  // model as the one above it". The two sides are checked against each other
+  // rather than against a comment: the primary below is already on ollama/qwen3,
+  // so a bare `ollama` line has to resolve to exactly that pair and be dropped
+  // as a rung that would only ever wait for itself.
+  assert.deepEqual(_textToChain('dsfb'), [{ provider: 'dsfb', model: '' }]);
+  const agent = require('../modules/harness/agent');
+  agent.forgetDegraded();
+  const rungs = agent.rungsFor({
+    ep: providers.endpoint('ollama'), model: 'qwen3',
+    p: { firstTokenTimeoutMs: 1, failoverAfterMs: 1, fallbackChain: _textToChain('ollama') },
+  });
+  assert.equal(rungs.length, 1, 'a bare rung on the primary provider is the primary, not a second try');
+
+  // The ways a textarea is normally written: blank lines, a trailing newline, a
+  // comment, and the same entry twice.
+  assert.deepEqual(_textToChain('\n ds/deepseek-flash \n\n# the backup\n ds/deepseek-flash \n'),
+    [{ provider: 'ds', model: 'deepseek-flash' }]);
+
+  // A provider id may not contain a slash, a model id may — split on the first.
+  assert.deepEqual(_textToChain('openrouter/meta-llama/llama-3'),
+    [{ provider: 'openrouter', model: 'meta-llama/llama-3' }]);
+
+  // Nothing typed means nothing configured, which is the inert default.
+  assert.deepEqual(_textToChain(''), []);
+  assert.equal(_chainToText(undefined), '');
+  assert.equal(_chainToText([]), '');
+
+  // And a chain is bounded, because every rung is time the user waits.
+  assert.equal(_textToChain('a/1\nb/2\nc/3\nd/4\ne/5\nf/6').length, 5);
 });
 
 test('the MCP call timeout is a setting the agent can see and propose, and says so when it fires', async () => {

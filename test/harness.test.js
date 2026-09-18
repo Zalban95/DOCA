@@ -913,3 +913,168 @@ test('the tool-layer cap stays above the transcript clip', () => {
   assert.ok(toolCap > transcriptCap,
     `MAX_OUT (${toolCap}) must exceed TOOL_MAX_CHARS (${transcriptCap}), or the spill is unreachable`);
 });
+
+/* ── The fallback chain ───────────────────────────────── */
+
+test('an empty chain is inert: one rung, and the full give-up time', () => {
+  require('../modules/harness/agent').forgetDegraded();
+  const agentMod = require('../modules/harness/agent');
+  const providers = require('../modules/harness/providers');
+  const ep = providers.endpoint('stub');
+  const p = { firstTokenTimeoutMs: 90000, failoverAfterMs: 20000, fallbackChain: [] };
+
+  const rungs = agentMod.rungsFor({ ep, model: 'stub-model', p });
+  assert.equal(rungs.length, 1, 'no chain means no second attempt');
+  assert.equal(rungs[0].timeoutMs, 90000,
+    'the only rung must get the full deadline, or upgrading shortens how long a turn waits');
+  assert.equal(rungs[0].last, true);
+});
+
+test('a chain gives every rung but the last the shorter deadline', () => {
+  require('../modules/harness/agent').forgetDegraded();
+  // Reusing the 90 s deadline per rung is the trap: three rungs would wait three
+  // minutes before saying anything, which is slower than having no chain.
+  const agentMod = require('../modules/harness/agent');
+  const providers = require('../modules/harness/providers');
+  const ep = providers.endpoint('stub');
+  const p = {
+    firstTokenTimeoutMs: 90000, failoverAfterMs: 20000,
+    fallbackChain: [{ provider: 'stub', model: 'stub-mini' }, { provider: 'ollama', model: 'qwen3' }],
+  };
+
+  const rungs = agentMod.rungsFor({ ep, model: 'stub-model', p });
+  assert.equal(rungs.length, 3, 'primary plus two');
+  assert.deepEqual(rungs.map(r => r.timeoutMs), [20000, 20000, 90000],
+    'the last rung must get the full deadline so giving up still takes as long as it always did');
+  assert.deepEqual(rungs.map(r => r.last), [false, false, true]);
+  assert.deepEqual(rungs.map(r => r.model), ['stub-model', 'stub-mini', 'qwen3']);
+});
+
+test('a chain entry naming a provider that is gone is skipped, not fatal', () => {
+  require('../modules/harness/agent').forgetDegraded();
+  const agentMod = require('../modules/harness/agent');
+  const providers = require('../modules/harness/providers');
+  const ep = providers.endpoint('stub');
+  let threw = false;
+  let rungs;
+  try {
+    rungs = agentMod.rungsFor({ ep, model: 'm', p: {
+      firstTokenTimeoutMs: 90000, failoverAfterMs: 20000,
+      fallbackChain: [{ provider: 'no-such-provider', model: 'x' }, { provider: 'ollama', model: 'qwen3' }],
+    } });
+  } catch { threw = true; }
+
+  assert.equal(threw, false, 'a stale entry must not break every turn');
+  assert.equal(rungs.length, 2, 'the unknown one is dropped, the rest survive');
+  assert.equal(rungs[1].provider, 'ollama');
+});
+
+test('the same entry twice is not a chain that waits for itself', () => {
+  require('../modules/harness/agent').forgetDegraded();
+  const agentMod = require('../modules/harness/agent');
+  const providers = require('../modules/harness/providers');
+  const ep = providers.endpoint('stub');
+  const rungs = agentMod.rungsFor({ ep, model: 'stub-model', p: {
+    firstTokenTimeoutMs: 90000, failoverAfterMs: 20000,
+    fallbackChain: [{ provider: 'stub', model: 'stub-model' }, { provider: 'stub', model: 'stub-model' }],
+  } });
+  assert.equal(rungs.length, 1, 'duplicating the primary would just pay the stall twice');
+});
+
+test('a rung that stalled goes to the back, but is not written off', () => {
+  // "re-probe rather than blacklisting" — a model that came back has to become
+  // usable again without a restart, so the degraded one is deprioritised rather
+  // than dropped.
+  const agentMod = require('../modules/harness/agent');
+  const providers = require('../modules/harness/providers');
+  agentMod.forgetDegraded();
+
+  const ep = providers.endpoint('stub');
+  const p = {
+    firstTokenTimeoutMs: 90000, failoverAfterMs: 20000,
+    fallbackChain: [{ provider: 'ollama', model: 'qwen3' }],
+  };
+  assert.deepEqual(agentMod.rungsFor({ ep, model: 'stub-model', p }).map(r => r.provider),
+    ['stub', 'ollama'], 'healthy first, in order');
+
+  // Mark the primary as having stalled, the way a real stall does.
+  const primary = agentMod.rungsFor({ ep, model: 'stub-model', p })[0];
+  agentMod._degradeForTest ? agentMod._degradeForTest(primary) : null;
+
+  assert.equal(agentMod.DEGRADED_MS, 5 * 60 * 1000, 'the rest period is minutes, not forever');
+  agentMod.forgetDegraded();
+  assert.deepEqual(agentMod.rungsFor({ ep, model: 'stub-model', p }).map(r => r.provider),
+    ['stub', 'ollama'], 'forgetting restores the order');
+});
+
+test('a stalled model falls through to the next, and says so on screen', async () => {
+  // The whole point, end to end against a provider that holds the connection
+  // open and never sends a token — which is what `deepseek-flash` did for three
+  // minutes on 2026-09-14 while `deepseek-v4-pro` on the same key answered in
+  // 430 ms. The unit of failure was the model, so the chain is per model.
+  const agentMod = require('../modules/harness/agent');
+  const catalog   = require('../modules/harness/catalog');
+  agentMod.forgetDegraded();
+
+  // A second provider id, pointing at the same stub server: two keys for one
+  // endpoint is exactly the case the chain exists for.
+  const savedCfg = fs.readFileSync(CONFIG_PATH, 'utf8');
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify({
+    models: { providers: {
+      stub:  { baseUrl: stubUrl, apiKey: 'test-key', models: ['stub-declared'] },
+      stub2: { baseUrl: stubUrl, apiKey: 'test-key-2', models: ['stub-declared'] },
+    } },
+  }, null, 2));
+
+  const before = catalog.configFor(catalog.BUILTIN_ID);
+  await H.api(null, 'POST', '/api/harness/doca/config', {
+    provider: 'stub', model: 'stub-model',
+    failoverAfterMs: 300,
+    firstTokenTimeoutMs: 60000,
+    fallbackChain: [{ provider: 'stub2', model: 'stub-mini' }],
+  });
+
+  try {
+    // First call stalls with keep-alives and no content; second answers.
+    script = [{ stall: 'sse' }, { text: 'answered by the second' }];
+    seen = [];
+
+    const events = await stream('/api/harness/chat', { message: 'who answers?' });
+
+    // The answer came from the fallback, and the turn is not an error the user
+    // has to read: a stall with somewhere to go is a fallback, not a failure.
+    assert.equal(events.filter(e => e.type === 'text').map(e => e.text).join(''), 'answered by the second');
+    assert.equal(events.at(-1).type, 'done');
+    assert.equal(events.at(-1).code, 0);
+    assert.equal(events.filter(e => e.type === 'error').length, 0);
+
+    // And it was not quiet about it — a fallback that happens silently is a
+    // worse bug than the outage it hides.
+    const hop = events.find(e => e.type === 'failover');
+    assert.ok(hop, 'the fallback happened without being announced');
+    assert.equal(hop.step, 1);
+    assert.equal(hop.from, 'stub');
+    assert.equal(hop.to, 'stub2');
+    assert.equal(hop.toModel, 'stub-mini');
+    assert.match(hop.text, /stopped answering after \d+s/);
+    assert.match(hop.text, /continuing on/);
+    assert.match(hop.text, /keep-alive/, 'how it failed is part of the report');
+    assert.equal(hop.remaining, 1, 'the hop names what is left below it');
+
+    // It really did reach the second provider, rather than retrying the first,
+    // and it did so exactly once: one pass down the chain, never a retry loop,
+    // which would be a way to bill the user twice for the same silence.
+    assert.equal(seen.length, 2, 'one attempt per rung, then the answer');
+    assert.equal(seen[0].model, 'stub-model');
+    assert.equal(seen[1].model, 'stub-mini');
+  } finally {
+    fs.writeFileSync(CONFIG_PATH, savedCfg);
+    await H.api(null, 'POST', '/api/harness/doca/config', {
+      provider: before.provider, model: before.model,
+      failoverAfterMs: before.failoverAfterMs,
+      firstTokenTimeoutMs: before.firstTokenTimeoutMs,
+      fallbackChain: before.fallbackChain,
+    });
+    agentMod.forgetDegraded();
+  }
+});

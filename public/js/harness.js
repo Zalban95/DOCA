@@ -265,6 +265,12 @@ const HARNESS_PARAMS = [
         + 'return OK and then never send anything, which otherwise looks exactly like a frozen panel. '
         + '0 waits forever.' },
 
+  { key: 'failoverAfterMs', label: 'Try the next one after', unit: 'ms', attrs: 'min="0" step="1000"',
+    hint: 'Only used when a fallback chain is set below. How long to wait on one entry before moving to the '
+        + 'next. Much shorter than the setting above on purpose: waiting the full give-up time on every entry '
+        + 'would make a chain slower than having none. The last entry always gets the full give-up time, so '
+        + 'how long you wait in total is unchanged.' },
+
   { key: 'maxSteps', label: 'Max tool steps', attrs: 'min="1" max="1000" step="1"',
     hint: 'How many times the agent may use a tool and think again before it has to answer. Each step '
         + 're-sends the whole conversation, so this is the setting that decides what one answer can cost.' },
@@ -346,6 +352,19 @@ const HARNESS_PARAMS = [
         <small class="harness-hint">What the agent is allowed to use. Unticking one hides it — it is a way to keep
           the agent focused, not a security boundary.</small>
       </div>
+      <label for="hcfg-fallbackChain-${h.id}">Fallback chain</label>
+      <div>
+        <textarea class="input" id="hcfg-fallbackChain-${h.id}" rows="3"
+                  placeholder="provider/model, one per line — empty means no fallback">${escHtml(_chainToText(c.fallbackChain))}</textarea>
+        <small class="harness-hint">
+          Who answers when the model above stops answering. One entry per line, as <code>provider/model</code>
+          (for example <code>dsfb/deepseek-v4-flash</code>); the model is optional and defaults to the one above.
+          <strong>Empty is the default and means nothing changes.</strong> Order matters — each is tried in turn,
+          and every switch is announced in the chat, because an answer that quietly came from a different model
+          is worse than the outage it hides. A model that was quiet is given a short rest rather than being
+          written off, so one that recovers starts being used again on its own.
+        </small>
+      </div>
     </div>
     <div class="harness-cfg-actions">
       <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
@@ -390,6 +409,39 @@ function _harnessDisabledTools(id, h) {
   return [...off];
 }
 
+/**
+ * The chain as text, one `provider/model` per line, and back.
+ *
+ * Text rather than a list widget for the same reason `env` is: it is three
+ * entries at most, it sorts itself by being read top to bottom, and a
+ * drag-and-drop reorderer would be more code than the feature it configures.
+ *
+ * Parsed the way the headers field parses: a line with nothing on it is
+ * skipped rather than rejected, because a trailing newline in a textarea is
+ * not an error the user should have to think about.
+ */
+function _chainToText(chain) {
+  if (!Array.isArray(chain)) return '';
+  return chain.map(e => e && e.provider ? (e.model ? `${e.provider}/${e.model}` : e.provider) : '')
+    .filter(Boolean).join('\n');
+}
+
+function _textToChain(text) {
+  const out = [];
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    // Split on the FIRST slash: a model id may contain one, a provider id may not.
+    const at = line.indexOf('/');
+    const provider = (at < 0 ? line : line.slice(0, at)).trim();
+    const model    = at < 0 ? '' : line.slice(at + 1).trim();
+    if (!provider) continue;
+    if (!out.some(e => e.provider === provider && e.model === model)) out.push({ provider, model });
+    if (out.length >= 5) break;         // a chain longer than this is a denial of service on yourself
+  }
+  return out;
+}
+
 async function harnessConfigSave(id) {
   const h  = _harnesses.find(x => x.id === id);
   const st = document.getElementById(`hcfg-status-${id}`);
@@ -409,6 +461,8 @@ async function harnessConfigSave(id) {
         contextWindow:  parseInt(val('contextWindow'), 10) || 0,
         compactTokens:  parseInt(val('compactTokens'), 10) || 0,
         firstTokenTimeoutMs: parseInt(val('firstTokenTimeoutMs'), 10) || 0,
+        failoverAfterMs: parseInt(val('failoverAfterMs'), 10) || 0,
+        fallbackChain:  _textToChain(val('fallbackChain')),
         compactAt:      parseInt(val('compactAt'), 10) || 0,
         warnAt:         parseInt(val('warnAt'), 10) || 0,
         systemPrompt:   val('systemPrompt') || '',
@@ -978,6 +1032,15 @@ async function hcSend() {
           + (evt.timeoutMs ? ` of ${Math.round(evt.timeoutMs / 1000)}s` : '');
         if (waitingRow) waitingRow.textContent = note;
         else waitingRow = _hcAppend('waiting', note, 'waiting');
+      }
+      // A hop down the fallback chain. It gets a row of its own and is never
+      // quiet, because the answer that follows is not from the model the user
+      // chose: read without this line, a smaller model's reply is taken for the
+      // big one's, and the next investigation starts from a false premise.
+      if (evt.type === 'failover') {
+        if (waitingRow) { waitingRow.parentElement?.remove(); waitingRow = null; }
+        _hcAppend('failover', evt.text, 'fallback');
+        stream.startWaiting();   // the next rung has its own wait, and may be slow too
       }
       // Anything real from the model means the wait is over. `_hcAppend`
       // returns the body span, so the row is its parent.

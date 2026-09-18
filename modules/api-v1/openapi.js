@@ -289,7 +289,13 @@ function events() {
       message: str({ description: 'On `started`: the question, truncated.' }), text: str({ description: 'On `done`: the whole reply.' }), steps: int(),
       proposals: arr(obj({ id: str(), reason: str(), changes: arr(obj({ path: str(), to: any() })) })), error: obj({ code: str(), message: str() }),
       images: arr(ref('HarnessImage'), { description: 'On `done`: pictures the agent showed during the turn, in order.' }),
-    }), note: 'The lifecycle of one turn, sent to every device with `harness:chat` including the one that asked — so any client can show that a turn is running and what it answered. `proposals` are settings changes waiting on a click in the dashboard; a device cannot apply them. `images` are drawn with the reply; fetch each `url` with the device token.' },
+      fallbacks: arr(obj({
+        step: int({ description: 'Which step of the turn hopped.' }),
+        from: str({ description: 'Provider that went quiet.' }), fromModel: str(),
+        to: str({ description: 'Provider that answered instead.' }), toModel: str(),
+        seconds: int({ description: 'How long the silent one was given.' }),
+      }), { description: 'On `done`: present only when the fallback chain moved the turn to another model.' }),
+    }), note: 'The lifecycle of one turn, sent to every device with `harness:chat` including the one that asked — so any client can show that a turn is running and what it answered. `proposals` are settings changes waiting on a click in the dashboard; a device cannot apply them. `images` are drawn with the reply; fetch each `url` with the device token. `fallbacks` is absent unless the configured model stopped answering and another took over: an answer that quietly came from a different model is worse than the outage it hides, and a client that only ever reads the outcome would otherwise never know.' },
     'agent.mission':    { audience: 'device', payload: obj({
       missionId: str(), agentId: str(), label: str({ description: 'The specialist\'s name.' }), task: str({ description: 'What it was asked to do, truncated.' }),
       state: str({ enum: ['running', 'paused', 'done', 'failed', 'cancelled'] }), steps: int(), tokens: int(), startedAt: iso(), endedAt: nullable(iso()),

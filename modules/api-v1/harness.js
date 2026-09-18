@@ -273,6 +273,11 @@ async function run({ turnId, message, session, device, ctrl, attached }) {
     fanout('agent.turn', {
       turnId, sessionId: r.sessionId, state: 'done', by: device.id,
       text: brief(r.text, MAX_REPLY) || '', steps: r.steps,
+      // This answer did not come from the model that was chosen. A client that
+      // slept through the turn reads the outcome and nothing else, so the hop
+      // has to be in the outcome or that client is the one place a fallback
+      // stays quiet.
+      ...(r.fallbacks?.length ? { fallbacks: r.fallbacks } : {}),
       ...(proposals.length ? { proposals } : {}),
       ...(images.length ? { images } : {}),
     });

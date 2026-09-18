@@ -495,6 +495,14 @@
   font-size: 10px; color: var(--muted);
   text-align: center;
 }
+/* The provider went quiet (amber, italic, and it leaves when a token arrives),
+   and the fallback chain moved the turn to another model (amber with a border:
+   it happened, and the answer below it is not from the model that was chosen). */
+.chat-msg.waiting  { align-self: stretch; max-width: 100%; background: none; border: none;
+                     color: var(--amber, #d89000); opacity: .85; font-style: italic; font-size: 11px; }
+.chat-msg.failover { align-self: stretch; max-width: 100%; background: none; border: none;
+                     border-left: 2px solid var(--amber, #d89000); padding-left: 10px;
+                     color: var(--amber, #d89000); font-size: 11px; }
 .chat-messages > .agent-fold { max-width: 100%; width: 100%; }
 .chat-input-row {
   display: flex; gap: 6px; padding: 10px;

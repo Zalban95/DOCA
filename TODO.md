@@ -506,6 +506,19 @@ still missing from that sentence.
 
 ## Falling back when a model stops answering
 
+**Built 2026-09-18, on `main`.** Every rule below was implemented as written —
+the wording is kept because it is the reason each one is the way it is, not a
+record of intent. What is here is `fallbackChain` and `failoverAfterMs` in
+`Harness settings → ⚙` on the harness row, `agent.rungsFor()` / `complete()` for
+the chain itself, and the `failover` event on every surface (chat row, floating
+panel, `warn` log line, and `fallbacks` on the durable `agent.turn` outcome, so a
+device that slept through the turn still learns which model answered).
+
+**Still open, and not needed for the chain to work:** the chain is per registry
+entry, so a local Ollama rung is a rung like any other, but nothing on screen yet
+*suggests* local-first when a hosted model goes quiet — the settings hint says it,
+the panel does not.
+
 **Wanted, not broken.** The defect behind this is H-5 in `ISSUES.md` and it is
 fixed: a turn that gets no first token now stops at a named deadline and says so.
 This entry is about what should happen *instead* of stopping.
@@ -517,7 +530,7 @@ single token, deterministically, on a key with $19.68 of balance — while
 failed was the **model**, not the provider, and the chain has to reflect that:
 next model on the same provider first, next provider second.
 
-Shape, if this gets built:
+Shape, as built:
 
 - **An ordered chain of (provider, model) pairs in settings, empty by default.**
   Empty means inert, so the feature ships without a flag and upgrading changes

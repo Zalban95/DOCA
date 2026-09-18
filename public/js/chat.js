@@ -184,6 +184,10 @@ function chatSend() {
 
   const container = document.getElementById('chat-messages');
   let pendingCall = null;
+  // One row, rewritten in place while a provider stays silent, because the
+  // alternative is a page that shows nothing for as long as it is quiet and
+  // reads as broken rather than as slow.
+  let waitingRow  = null;
   const stream = createThinkStream({
     mount: node => { agentFoldMount(container, node); _chatScroll(); },
     makeText: () => chatAppendMsg('assistant', ''),
@@ -199,8 +203,23 @@ function chatSend() {
     onEvent: evt => {
       if (evt.type === 'text') {
         if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+        if (waitingRow) { waitingRow.remove(); waitingRow = null; }
         stream.feed(evt.text);
+      } else if (evt.type === 'waiting') {
+        const note = `${evt.provider} has not sent a token yet — ${evt.seconds}s`
+          + (evt.frames ? `, ${evt.frames} keep-alive frames` : '')
+          + (evt.timeoutMs ? ` of ${Math.round(evt.timeoutMs / 1000)}s` : '');
+        if (waitingRow) waitingRow.textContent = note;
+        else waitingRow = chatAppendMsg('waiting', note);
+      } else if (evt.type === 'failover') {
+        // The answer that follows is not from the model that was chosen. Saying
+        // so is the whole point of the chain: a switch nobody is told about is
+        // worse than the outage it was covering for.
+        if (waitingRow) { waitingRow.remove(); waitingRow = null; }
+        chatAppendMsg('failover', evt.text);
+        stream.startWaiting();
       } else if (evt.type === 'tool_call') {
+        if (waitingRow) { waitingRow.remove(); waitingRow = null; }
         stream.finish();
         stream.resetText();
         if (pendingCall) pendingCall.setActive(false);

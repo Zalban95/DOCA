@@ -119,6 +119,19 @@ async function handleChat(req, res) {
             images.push(evt.image);
             res.write(`data: ${JSON.stringify({ type: 'image', image: evt.image })}\n\n`);
           }
+          // Silence, and the end of it. A provider that has the request and has
+          // not started answering looks exactly like a frozen page, and a hop
+          // down the fallback chain is the one event the user must not miss:
+          // the answer that follows came from a different model than the one
+          // they chose. Forwarded rather than filtered to text and tools,
+          // because a switch nobody is told about is worse than the outage it
+          // was covering for.
+          if (evt.type === 'waiting')
+            res.write(`data: ${JSON.stringify({ type: 'waiting', provider: evt.provider,
+              seconds: evt.seconds, frames: evt.frames, timeoutMs: evt.timeoutMs })}\n\n`);
+          if (evt.type === 'failover')
+            res.write(`data: ${JSON.stringify({ type: 'failover', text: evt.text,
+              toModel: evt.toModel, remaining: evt.remaining })}\n\n`);
         },
         signal: ctrl.signal,
       });
