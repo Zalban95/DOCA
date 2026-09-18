@@ -98,6 +98,8 @@ function transcript(shape) {
     if (ch === 't') { const m = el('div', 'hc-msg hc-assistant'); m.textContent = 'an answer'; box.appendChild(m); }
     // A bubble the streamer opened and never filled, which a live turn is full of.
     if (ch === 'e') box.appendChild(el('div', 'hc-msg hc-assistant'));
+    // The user's own message: the only thing that ends a turn.
+    if (ch === 'u') { const m = el('div', 'hc-msg hc-user'); m.textContent = 'do the thing'; box.appendChild(m); }
   }
   return box;
 }
@@ -134,10 +136,10 @@ test('a run short enough to read is left alone', () => {
   }
 });
 
-test('a message bubble ends a run, so each turn collapses on its own', () => {
+test('only the user\'s own message ends a run, so each turn collapses on its own', () => {
   const { collapseFoldRuns } = api();
   global.document = { createElement: tag => el(tag) };
-  const box = transcript('crcrcrcr' + 't' + 'crcrcrcr');
+  const box = transcript('crcrcrcr' + 'u' + 'crcrcrcr');
 
   collapseFoldRuns(box);
 
@@ -212,4 +214,27 @@ test('a live turn collapses too: the empty bubbles between its rows are not sepa
   assert.deepEqual(kinds(box), ['agent-fold-more', 'agent-fold-group', 'agent-fold', 'agent-fold'],
     'the empty bubbles are gone and what is left is one run');
   assert.equal(box.children[0].children[1].children.length, 4, 'seven rows, three kept, four behind the "…"');
+});
+
+test('a narrating model collapses with its steps, and its answer stays', () => {
+  // The floating chat kept showing everything while the harness console looked
+  // fixed, and the only difference was that one conversation narrated: a model
+  // that says "checking the next one" between steps puts a text bubble in the
+  // middle of the working, which used to end the run — so every run was three
+  // rows and nothing ever reached the threshold. What the agent said on the way
+  // is working, not answer; the answer is the last thing in the turn.
+  const { collapseFoldRuns } = api();
+  global.document = { createElement: tag => el(tag) };
+  const box = transcript('u' + 'gtcr'.repeat(4) + 't');   // ask, four narrated steps, answer
+
+  collapseFoldRuns(box);
+
+  const shape = kinds(box);
+  assert.deepEqual(shape[0], 'hc-msg', 'the question stays');
+  assert.deepEqual(shape[1], 'agent-fold-more', 'everything since then collapsed to one row');
+  assert.equal(shape.at(-1), 'hc-msg', 'and the answer is still there, outside it');
+  assert.equal(box.children.at(-1).textContent, 'an answer');
+  assert.equal(shape.length, 6, 'question, "…", three rows, answer');
+  assert.equal(box.children[1].children[1].children.length, 13,
+    'sixteen rows of working, three kept');
 });
