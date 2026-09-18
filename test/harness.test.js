@@ -241,8 +241,20 @@ test('a turn calls a tool, feeds the result back, and answers', async () => {
   // The tool declarations really were offered, and the result was fed back in.
   assert.ok(seen[0].tools.some(t => t.function.name === 'memory_write'));
   const followUp = seen[1].messages;
-  assert.equal(followUp.at(-1).role, 'tool');
-  assert.match(followUp.at(-1).content, /Remembered/);
+
+  // The result is fed back ahead of the trailing readings block, which is the
+  // last thing in the request and is not part of the transcript (H-9). What the
+  // ordering is for: everything above that block — the system prompt and every
+  // history row — stays byte-identical from step to step, so the provider's
+  // prefix cache grows instead of stopping at a per-step line.
+  assert.equal(followUp.at(-1).role, 'system');
+  assert.match(followUp.at(-1).content, /## Right now/);
+  assert.equal(followUp[0].role, 'system');
+  assert.equal(/## Right now/.test(followUp[0].content), false,
+    'the readings are not in the system prompt');
+
+  const fed = followUp.findLast(m => m.role === 'tool');
+  assert.match(fed.content, /Remembered/);
 
   // The whole exchange is durable, and the entry is in memory.
   const { entries } = (await get('/api/harness/memory')).body;
@@ -752,4 +764,144 @@ test('a device fetches pictures with its token, and only pictures', async () => 
     'harness:chat must not become a way to read every attachment');
   assert.equal((await H.api(viewer.token, 'GET', `/api/v1/harness/images/${pic.name}`)).status, 403);
   assert.equal((await H.api(null, 'GET', `/api/v1/harness/images/${pic.name}`)).status, 401);
+});
+
+test('a tool result is the same string on every step, so the prefix stays cacheable', async () => {
+  const agentMod = require('../modules/harness/agent');
+
+  // Rows are appended as a turn runs; `toApiMessages` must not rewrite the ones
+  // already sent. It used to: a backward walk kept results whole until 12,000
+  // characters were spent and clipped the rest, so a result was verbatim on the
+  // step that produced it and a head+tail+path on the next. The message array
+  // was not append-only, and the provider's prefix cache stops at the first byte
+  // that differs — anchored at the oldest result to change, which sits right
+  // after the system prompt, so only the system prompt stayed cacheable
+  // (ISSUES.md H-9b). An earlier version of this suite used `ls` and `date`,
+  // whose output fits the old budget, and so never exercised it. This does.
+  const big = n => 'L'.repeat(n) + '\n' + 'R'.repeat(n);
+  const round = (i, len) => ([
+    { role: 'assistant', content: null,
+      tool_calls: [{ id: `c${i}`, type: 'function', function: { name: 'shell', arguments: '{}' } }] },
+    { role: 'tool', tool_call_id: `c${i}`, name: 'shell', content: big(len) },
+  ]);
+
+  const rows1 = [...round(1, 30000)];
+  const seenAtStep1 = agentMod.toApiMessages(rows1, { sessionId: 'stability' })
+    .find(m => m.role === 'tool').content;
+
+  // Two more rounds arrive. The first result must be untouched.
+  const rows3 = [...round(1, 30000), ...round(2, 30000), ...round(3, 30000)];
+  const seenAtStep3 = agentMod.toApiMessages(rows3, { sessionId: 'stability' })
+    .filter(m => m.role === 'tool')[0].content;
+
+  assert.equal(seenAtStep3, seenAtStep1,
+    'an already-sent tool result was rewritten when later results arrived');
+
+  // A row under the cap passes through whole and is never touched later.
+  const small = agentMod.toApiMessages([...round(1, 200)], { sessionId: 'stability' })
+    .find(m => m.role === 'tool').content;
+  assert.equal(small.length, 401);
+
+  // A result over the cap is clipped — by its own size, not by its neighbours.
+  const huge = agentMod.toApiMessages([...round(4, 40000)], { sessionId: 'stability' })
+    .find(m => m.role === 'tool').content;
+  assert.ok(huge.length < 40000, 'an oversized result is clipped');
+  assert.match(huge, /full output: .*read_file to retrieve/);
+
+  // The same row clips to the same string whether or not other rows exist.
+  const alone = agentMod.toApiMessages([...round(5, 40000)], { sessionId: 'stability' })
+    .find(m => m.role === 'tool').content;
+  const withOthers = agentMod.toApiMessages([...round(1, 100), ...round(5, 40000)], { sessionId: 'stability' })
+    .filter(m => m.role === 'tool')[1].content;
+  assert.equal(alone.length, withOthers.length,
+    'clipping depends on the row alone, not on how much else is in the prompt');
+});
+
+test('a proposal is filed against the conversation that made it', async () => {
+  // settings.propose() and installs.propose() have always taken a sessionId and
+  // stored it; nothing ever passed one, so every proposal was anonymous. With
+  // one conversation open that is invisible; with several, the pending list
+  // cannot be read against the transcript it came from.
+  const made = await H.api(null, 'POST', '/api/harness/sessions', { title: 'proposal-origin' });
+  const sessionId = made.body.session.id;
+
+  script = [
+    { tool: 'settings_propose', args: {
+        reason: 'the window is bigger than this',
+        changes: [{ path: 'harness.config.doca.contextWindow', value: 200000 }],
+    } },
+    { text: 'Proposed.' },
+  ];
+  await stream('/api/harness/chat', { message: 'bump the window', sessionId });
+
+  const props = (await get('/api/harness/proposals')).body;
+  const mine = props.pending.find(p => p.sessionId === sessionId);
+  assert.ok(mine, 'the proposal does not name the session it came from');
+  assert.equal(mine.status, 'pending');
+
+  // And an installer proposal is filed the same way.
+  script = [
+    { tool: 'install_propose', args: { kind: 'ollama-model', id: 'qwen3', reason: 'needed for the errand' } },
+    { text: 'Proposed.' },
+  ];
+  await stream('/api/harness/chat', { message: 'get me qwen3', sessionId });
+
+  const installsList = (await get('/api/harness/installs')).body;
+  const inst = installsList.pending.find(i => i.sessionId === sessionId);
+  assert.ok(inst, 'the install proposal does not name the session it came from');
+});
+
+test('a large tool result is spilled in full, not spilled already-truncated', async () => {
+  // The bug this pins: `clip()` truncated at 8,000 in tools.js, the row stored
+  // the truncated text, and the spill file wrote the row — so the escape hatch
+  // contained a copy of the thing it was meant to let you escape. It was worse
+  // than useless: 8,000 < TOOL_MAX_CHARS (16,000), so no built-in tool could
+  // ever produce a result long enough to trigger the spill at all, and the only
+  // time it fired (through read_file) the file it wrote was already clipped.
+  const toolsMod = require('../modules/harness/tools');
+  const agentMod = require('../modules/harness/agent');
+  const fs = require('node:fs');
+
+  // Real command, real output, through the real tool.
+  const out = await toolsMod.call('shell', { command: 'seq 1 8000' });
+  assert.ok(out.length > 16000,
+    `a shell result is still capped below the transcript clip (${out.length} chars)`);
+
+  // And it arrives whole — no "[truncated]" from the tool layer.
+  assert.equal(/\[truncated,/.test(out), false, 'the tool layer still truncates before the spill can see it');
+  assert.match(out, /8000$/, 'the last line survived');
+
+  // Now the transcript layer: the spill file must hold every character.
+  const rows = [
+    { role: 'user', content: 'big' },
+    { role: 'assistant', content: null, tool_calls: [{ id: 'cbig', type: 'function',
+        function: { name: 'shell', arguments: '{}' } }] },
+    { role: 'tool', tool_call_id: 'cbig', name: 'shell', content: out },
+  ];
+  const msg = agentMod.toApiMessages(rows, { sessionId: 's_spill_full' }).find(m => m.role === 'tool');
+  assert.match(msg.content, /full output: .*read_file to retrieve/, 'no spill pointer was offered');
+  assert.ok(msg.content.length < out.length, 'the prompt got the head and tail, not the whole thing');
+
+  const path = msg.content.match(/full output: (.+?) —/)[1];
+  const spilled = fs.readFileSync(path, 'utf8');
+  assert.equal(spilled, out, 'the spill file is not the full text');
+  assert.equal(/\[truncated,/.test(spilled), false, 'the spill file holds already-truncated text');
+  assert.match(spilled, /8000$/, 'the spill file is missing the end of the output');
+});
+
+test('the tool-layer cap stays above the transcript clip', () => {
+  // The relationship, not the numbers, is what matters: if the inner cap drops
+  // back below the outer one, the spill becomes unreachable again and every
+  // large result is silently truncated with no way to get the rest. Pinned
+  // because the two live in different files and nothing else connects them.
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'modules', 'harness', 'tools.js'), 'utf8');
+  const toolCap = Number(src.match(/const MAX_OUT\s*=\s*(\d+)/)[1]);
+
+  const agentSrc = fs.readFileSync(path.join(__dirname, '..', 'modules', 'harness', 'agent.js'), 'utf8');
+  const transcriptCap = Number(agentSrc.match(/const TOOL_MAX_CHARS\s*=\s*(\d+)/)[1]);
+
+  assert.ok(toolCap > transcriptCap,
+    `MAX_OUT (${toolCap}) must exceed TOOL_MAX_CHARS (${transcriptCap}), or the spill is unreachable`);
 });

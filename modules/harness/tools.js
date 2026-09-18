@@ -23,14 +23,47 @@ const memory   = require('./memory');
 const settings = require('./settings');
 const mcp      = require('../mcp/tools');
 
-const MAX_OUT   = 8000;   // characters of tool output handed back to the model
+/**
+ * A memory guard, not the presentation limit.
+ *
+ * This used to be 8,000 and was described as "characters of tool output handed
+ * back to the model". It was the *only* limit at the time, and it was a bad one:
+ * it truncated permanently, its message said "[truncated, N more characters]"
+ * and gave no way to get them, and it silently disabled the layer above it.
+ *
+ * `toApiMessages()` clips a tool result over `TOOL_MAX_CHARS` into a head, a
+ * tail and a **spill file** holding the whole text — that is the designed
+ * escape hatch, and its comment says so: "the spill file is how the model gets
+ * the rest". With this at 8,000 and `TOOL_MAX_CHARS` at 16,000, no built-in
+ * tool could ever produce a result long enough to reach it. The spill was
+ * unreachable for every tool that clips, and the one time it did fire — through
+ * `read_file`, which may return 40,000 — the file it wrote held text that
+ * `clip()` had *already* truncated. The escape hatch contained a copy of the
+ * thing you were escaping from.
+ *
+ * So the ordering matters and is now pinned by a test: **this must stay well
+ * above `TOOL_MAX_CHARS`**, or the layer that preserves output is pre-empted by
+ * the layer that destroys it. What is left here is a guard against a runaway
+ * command, not a decision about what the model reads.
+ */
+const MAX_OUT   = 64000;
 const SHELL_MS  = 60000;
 
+/**
+ * Truncate a tool's output, and say what was lost.
+ *
+ * Reaching this at all now means the output passed `MAX_OUT`, which is a guard
+ * against a runaway command rather than the normal presentation path — the
+ * transcript clip handles that, and it spills. So the message says what the
+ * reader can actually do about it instead of only how many characters are
+ * missing: this layer cannot write a file, so "narrow the command" is the
+ * honest instruction and "read the rest from somewhere" would be a lie.
+ */
 function clip(text, limit = MAX_OUT) {
   const s = String(text ?? '');
-  return s.length <= limit
-    ? s
-    : `${s.slice(0, limit)}\n… [truncated, ${s.length - limit} more characters]`;
+  if (s.length <= limit) return s;
+  return `${s.slice(0, limit)}\n… [truncated, ${s.length - limit} more characters — the output was larger `
+    + 'than this tool hands back, so narrow the command (head, grep, wc) rather than asking again.]';
 }
 
 /** Working directory for shell + relative paths: the agent's workspace. */
@@ -324,8 +357,12 @@ const TOOLS = [
       },
       required: ['reason', 'changes'],
     },
-    run: ({ reason, changes }) => {
-      const p = settings.propose({ changes, reason });
+    run: ({ reason, changes }, ctx = {}) => {
+      // Filed against the conversation that asked, so the card can be read
+      // beside the transcript it came from. `propose()` always took a
+      // sessionId; nothing passed one, so every proposal was anonymous and
+      // several open conversations made the pending list ambiguous.
+      const p = settings.propose({ changes, reason, sessionId: ctx.sessionId });
       const lines = p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`);
       return `Proposed (${p.id}) — waiting for the user to accept or decline:\n${lines.join('\n')}\n`
         + 'Tell them what you proposed and why, then stop.';
@@ -350,8 +387,9 @@ const TOOLS = [
       },
       required: ['kind', 'id', 'reason'],
     },
-    run: ({ kind, id, reason }) => {
-      const row = installs.propose({ kind, id, reason });
+    run: ({ kind, id, reason }, ctx = {}) => {
+      // Filed against the conversation that asked — see settings_propose.
+      const row = installs.propose({ kind, id, reason, sessionId: ctx.sessionId });
       if (row.status !== 'pending') return `Already ${row.status}: ${row.kind} "${row.target}".`;
       return `Proposed (${row.id}) — waiting for the user to accept or decline:\n  ${row.what}\n`
         + (row.needsPassword ? '  (its installer needs sudo, so the user types their password, not you)\n' : '')
@@ -372,13 +410,32 @@ const TOOLS = [
         agent:   { type: 'string', description: 'The specialist\'s id, from the list in your prompt.' },
         task:    { type: 'string', description: 'The errand, in full. Write it for somebody who was not in this conversation.' },
         context: { type: 'string', description: 'Anything from this conversation it needs. It sees nothing else.' },
+        plan: {
+          type: 'array',
+          description: 'Optional. The errand broken into steps, so a phone or a watch can draw how far along it '
+            + 'is. Roughly 3-12 items, each a short phrase. The specialist keeps it updated and may correct it.',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: 'One short step, e.g. "Read the current prices".' },
+              state: { type: 'string', enum: ['queued', 'running', 'done', 'failed'],
+                       description: 'Almost always "queued" when you dispatch — you are planning, not reporting.' },
+            },
+            required: ['title'],
+          },
+        },
       },
       required: ['agent', 'task'],
     },
-    run: ({ agent, task, context }) => {
-      const m = require('../agents/missions').dispatch({ agentId: agent, task, context });
+    run: ({ agent, task, context, plan }) => {
+      const m = require('../agents/missions').dispatch({ agentId: agent, task, context, plan });
+      // A plan is what lets every client draw progress instead of "STEP 0"
+      // until the mission is already over — see missions.setPlan().
+      const how = Array.isArray(plan) && plan.length
+        ? ` Its plan has ${plan.length} step${plan.length === 1 ? '' : 's'}, so devices can draw progress from now.`
+        : ' If you know the shape of the errand, passing `plan` lets devices draw progress from the start.';
       return `Mission ${m.id} started — ${m.label} is working on it. You are not waiting: carry on, and `
-        + 'read the result with agent_results when you need it.';
+        + `read the result with agent_results when you need it.${how}`;
     },
   },
   {
@@ -421,6 +478,55 @@ const TOOLS = [
       if (m.state === 'running') return `${m.id} is still running (step ${m.steps}). Carry on; ask again later.`;
       if (m.state !== 'done') return `${m.id} ${m.state}${m.error ? `: ${m.error}` : ''}.`;
       return `${m.id} (${m.label}) finished in ${m.steps} steps:\n\n${m.result}`;
+    },
+  },
+  {
+    name: 'mission_plan',
+    description: 'Set out how far along this mission is, so the user\'s devices can draw progress instead of '
+      + 'showing "STEP 0" until it is already over. Call it once near the start with the whole plan, then tick '
+      + 'items as you finish them. It drives the mission — it does not authorise anything, so it is available '
+      + 'inside a mission and not only to the agent that dispatched it.',
+    parameters: {
+      type: 'object',
+      properties: {
+        set: {
+          type: 'array',
+          description: 'Replace the plan with this list. Send the whole thing, not a diff.',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: 'One short step, roughly 60 characters or less.' },
+              state: { type: 'string', enum: ['queued', 'running', 'done', 'failed'] },
+            },
+            required: ['title'],
+          },
+        },
+        tick: {
+          type: 'object',
+          description: 'Move one item, matched by its title, without resending the list.',
+          properties: {
+            title: { type: 'string', description: 'The item\'s title, exactly as you set it.' },
+            state: { type: 'string', enum: ['queued', 'running', 'done', 'failed'] },
+          },
+          required: ['title'],
+        },
+      },
+    },
+    run: ({ set, tick }, ctx = {}) => {
+      const missions = require('../agents/missions');
+      const mine = missions.forSession(ctx.sessionId);
+      if (!mine) {
+        // The orchestrator's own conversation is not a mission. Saying so is
+        // better than "no mission called undefined" — and a specialist that
+        // started with a plan is told here that it already has one.
+        return 'This conversation is not a mission, so it has no plan to set. Plans belong to missions; '
+          + 'dispatch one with `agent_dispatch` and pass its `plan` there.';
+      }
+      const plan = missions.setPlan(mine.id, { set, tick });
+      if (!plan || !plan.length) return 'Plan cleared.';
+      const p = missions.planProgress(plan);
+      const drawn = plan.map(i => `${i.state === 'done' ? '[x]' : i.state === 'running' ? '[>]' : i.state === 'failed' ? '[!]' : '[ ]'} ${i.title}`).join('\n');
+      return `${p.done}/${p.total} done (${p.percent}%):\n${drawn}`;
     },
   },
   {

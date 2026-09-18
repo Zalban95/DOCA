@@ -73,7 +73,6 @@ async function modelsSaveSettings() {
       }
     });
     setStatus(status, '✓ Saved', 'ok');
-    setTimeout(() => setStatus(status, ''), 3000);
     modelsCheckOllama();
     modelsLoadList();
   } catch (e) {
@@ -371,7 +370,6 @@ async function nlmSaveSettings() {
       }
     });
     setStatus(status, '✓ Saved', 'ok');
-    setTimeout(() => setStatus(status, ''), 3000);
     nlmLoadList();
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
@@ -519,7 +517,6 @@ async function hfSaveSettings() {
   try {
     await apiFetch('/api/models/hf/settings', { method: 'POST', body: { cacheDir, token } });
     setStatus(status, '✓ Saved', 'ok');
-    setTimeout(() => setStatus(status, ''), 3000);
     hfCheckStatus();
     hfLoadList();
   } catch (e) {

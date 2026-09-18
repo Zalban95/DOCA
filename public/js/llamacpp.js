@@ -162,7 +162,6 @@ async function llamaSaveConfig(id) {
   try {
     await apiFetch('/api/models/llamacpp/config', { method: 'POST', body });
     setStatus(status, '✓ Saved', 'ok');
-    setTimeout(() => setStatus(status, ''), 3000);
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
   }
@@ -261,5 +260,7 @@ async function llamaHealth(id) {
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
   }
-  setTimeout(() => setStatus(status, ''), 5000);
+  // No clear of its own: a check that came back healthy fades on the shared
+  // schedule, and one that did not stays until the next check replaces it. The
+  // five-second wipe this used to end with took the unhealthy answer with it.
 }

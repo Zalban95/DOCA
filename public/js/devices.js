@@ -52,6 +52,7 @@ async function devicesLoad() {
           <button class="btn btn-xs"        onclick="devRotate(${jsArg(d.id)},${jsArg(d.name)})" title="Issue a replacement token">↻ Rotate</button>
           <button class="btn btn-xs btn-red" onclick="devRevoke(${jsArg(d.id)},${jsArg(d.name)})" title="Invalidate this token now">✕ Revoke</button>
         </div>`}
+        <div class="status-line" id="dev-status-${escHtml(d.id)}"></div>
       </div>`;
     }).join('');
   } catch (e) {
@@ -201,13 +202,34 @@ function devRenderToken(device, token, title) {
 
 /* ── Rotate / revoke ──────────────────────────────────── */
 
+/**
+ * Report a failure on the card it belongs to.
+ *
+ * These were `appAlert()`, which put a modal over the whole page to say that
+ * one card's button did not work. Not silent, but heavier than the answer
+ * deserves — every other action in this panel reports inline, and the card has
+ * a status line for exactly this. The modal also had to be dismissed before
+ * anything else could be done, including retrying the thing that failed.
+ *
+ * Only failures come here. A success re-renders the list, which would wipe the
+ * line before it was read, so success keeps its own feedback (the token card,
+ * or the row simply changing state).
+ */
+function devFailed(id, e) {
+  const el = document.getElementById(`dev-status-${id}`);
+  // The card can be gone if the list re-rendered underneath us; falling back to
+  // the modal is better than swallowing the only report of a failure.
+  if (el) setStatus(el, `✗ ${e.message}`, 'err');
+  else appAlert(`Error: ${e.message}`);
+}
+
 function devRotate(id, name) {
   appConfirm(`Rotate the token for "${name}"? The current one keeps working for a short grace period, then stops.`, async () => {
     try {
       const r = await apiFetch(`/api/devices/${encodeURIComponent(id)}/rotate`, { method: 'POST' });
       devRenderToken(r.device, r.token, 'Token rotated');
       devicesLoad();
-    } catch (e) { appAlert(`Error: ${e.message}`); }
+    } catch (e) { devFailed(id, e); }
   });
 }
 
@@ -216,7 +238,7 @@ function devRevoke(id, name) {
     try {
       await apiFetch(`/api/devices/${encodeURIComponent(id)}`, { method: 'DELETE' });
       devicesLoad();
-    } catch (e) { appAlert(`Error: ${e.message}`); }
+    } catch (e) { devFailed(id, e); }
   });
 }
 
@@ -227,7 +249,7 @@ function devForget(id, name) {
     try {
       await apiFetch(`/api/devices/${encodeURIComponent(id)}?purge=1`, { method: 'DELETE' });
       devicesLoad();
-    } catch (e) { appAlert(`Error: ${e.message}`); }
+    } catch (e) { devFailed(id, e); }
   });
 }
 

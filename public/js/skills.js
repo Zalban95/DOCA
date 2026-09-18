@@ -154,11 +154,31 @@ function skillsInstallFromSearch(name, isUnknown) {
 }
 
 /* ── Install / Toggle / Detail / Remove ─────────────── */
+
+/**
+ * Failures here are reported on the panel, not in a modal.
+ *
+ * A toggle that did not take is a small thing to say and was saying it with a
+ * modal over the whole page, which had to be dismissed before the card could be
+ * looked at again — heavier than the answer deserves, and unlike every other
+ * action in this panel. The line lives outside `skills-grid` because a toggle
+ * re-renders the grid, and a status inside a card would be wiped before it was
+ * read.
+ *
+ * Success has no message: the card re-renders into its new state, and that is
+ * the report.
+ */
+function skillsFailed(prefix, e) {
+  const el = document.getElementById('skills-status');
+  if (el) setStatus(el, `✗ ${prefix}${e.message}`, 'err');
+  else appAlert(`${prefix}${e.message}`);
+}
+
 async function toggleSkill(name, enable) {
   try {
     await apiFetch(`/api/skills/${name}/toggle`, { method: 'POST' });
     loadSkills();
-  } catch (e) { appAlert(`Toggle error: ${e.message}`); loadSkills(); }
+  } catch (e) { skillsFailed(`Could not toggle ${name}: `, e); loadSkills(); }
 }
 
 async function showSkillDetail(name) {
@@ -229,6 +249,6 @@ function removeSkill(name) {
     try {
       await apiFetch(`/api/skills/${name}`, { method: 'DELETE' });
       loadSkills();
-    } catch (e) { appAlert(`Error: ${e.message}`); }
+    } catch (e) { skillsFailed(`Could not remove ${name}: `, e); }
   });
 }

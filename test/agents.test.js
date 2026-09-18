@@ -254,3 +254,135 @@ test('a yes resumes in the mission\'s own session', async () => {
 test('a specialist cannot answer for the user', () => {
   assert.ok(registry.NEVER.includes('agent_resume'));
 });
+
+/* ── The plan ─────────────────────────────────────────── */
+
+test('a mission plan is what makes a progress bar possible', () => {
+  registry.setEnabled(true);
+  missions._reset();
+
+  // A plan can be handed over at dispatch: the orchestrator usually knows the
+  // shape of the errand before it delegates it.
+  const m = missions.dispatch({
+    agentId: 'archivist', task: 'tidy the index',
+    plan: [{ title: 'Read the index' }, { title: 'Group the entries' }],
+  });
+
+  assert.equal(m.plan.length, 2);
+  assert.deepEqual(m.plan.map(i => i.state), ['queued', 'queued'],
+    'a step you have not started is queued, not running');
+
+  // `steps` and `tokens` say what has been spent; only a plan states the total,
+  // which is why a client with no plan can only ever draw "STEP 0".
+  assert.deepEqual(missions.planProgress(m.plan), { done: 0, total: 2, percent: 0 });
+
+  // Ticking moves one item by title, without resending the list.
+  missions.setPlan(m.id, { tick: { title: 'Read the index', state: 'done' } });
+  const after = missions.get(m.id);
+  assert.deepEqual(after.plan.map(i => i.state), ['done', 'queued']);
+  assert.deepEqual(missions.planProgress(after.plan), { done: 1, total: 2, percent: 50 });
+
+  // A tick for something not on the plan is added, not dropped: the specialist
+  // knows something the plan did not.
+  missions.setPlan(m.id, { tick: { title: 'Found a third thing', state: 'running' } });
+  assert.equal(missions.get(m.id).plan.length, 3);
+});
+
+test('a plan is bounded, because it travels in a bus event', () => {
+  registry.setEnabled(true);
+  missions._reset();
+
+  const many = Array.from({ length: 40 }, (_, i) => ({ title: `step ${i} ${'x'.repeat(200)}` }));
+  const m = missions.dispatch({ agentId: 'archivist', task: 'long one', plan: many });
+
+  assert.equal(m.plan.length, missions.PLAN_MAX_ITEMS, 'a plan longer than this is a transcript');
+  for (const item of m.plan)
+    assert.ok(item.title.length <= missions.PLAN_TITLE_MAX, 'a title is bounded too');
+
+  // An unknown state becomes queued rather than travelling as-is.
+  missions.setPlan(m.id, { set: [{ title: 'x', state: 'exploded' }] });
+  assert.equal(missions.get(m.id).plan[0].state, 'queued');
+
+  // Whitespace is collapsed, so a title matched by `tick` matches what was set.
+  missions.setPlan(m.id, { set: [{ title: '  two   words  ' }] });
+  assert.equal(missions.get(m.id).plan[0].title, 'two words');
+});
+
+test('the plan is in the mission document, so a human can fix it by hand', () => {
+  registry.setEnabled(true);
+  missions._reset();
+  const store = require('../modules/store');
+  const fs = require('node:fs');
+  const path = require('node:path');
+
+  const m = missions.dispatch({ agentId: 'archivist', task: 'check the file',
+    plan: [{ title: 'first', state: 'running' }] });
+
+  // Stored, not cached in memory: the harness re-reads, so editing the JSON is
+  // a supported way to correct a wrong plan.
+  const file = path.join(store.DATA_DIR, 'agents', 'missions.json');
+  const onDisk = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const row = onDisk.missions.find(x => x.id === m.id);
+  assert.ok(row && Array.isArray(row.plan), 'the plan is not in the mission document');
+  assert.equal(row.plan[0].title, 'first');
+
+  // Edit it by hand and the next read sees the edit.
+  row.plan[0].state = 'failed';
+  fs.writeFileSync(file, JSON.stringify(onDisk, null, 2));
+  assert.equal(missions.get(m.id).plan[0].state, 'failed');
+});
+
+test('the mission_plan tool refuses politely outside a mission', () => {
+  registry.setEnabled(true);
+  missions._reset();
+  const ctx = { sessionId: 's_not_a_mission' };
+  const out = tools.call('mission_plan', { set: [{ title: 'x' }] }, [], ctx);
+  return out.then(text => {
+    assert.match(text, /not a mission/,
+      'the orchestrator\'s own conversation has no plan, and saying so beats an undefined');
+  });
+});
+
+test('a specialist can reach mission_plan whatever its definition allows', () => {
+  // The bug this pins: a definition's `tools` is an allowlist, and NEVER is
+  // subtracted from it — so a tool that is merely "not forbidden" is still
+  // unreachable unless the definition names it. `mission_plan` was written on
+  // the assumption that "not in NEVER" was enough. The archivist definition
+  // lists memory_search and nothing else, so no specialist could tick its own
+  // plan: a plan was write-once at dispatch and stayed all-queued forever, and
+  // the progress bar the whole feature exists for would never move.
+  const narrow = { id: 'narrow', label: 'Narrow', systemPrompt: 'You do one thing.',
+    tools: ['memory_search'], memory: false, environment: 'minimal' };
+
+  const prompt = agent.preview({ message: 'x', profile: narrow });
+  // preview() reports the count, so the count is the observable.
+  // The minimal brief says ", N tools"; the full block says ", N tools
+  // available". Match both rather than pin the wording.
+  const m = prompt.match(/, (\d+) tools/);
+  assert.ok(m, 'the specialist prompt does not state a tool count');
+  assert.equal(Number(m[1]), 2,
+    'expected memory_search plus mission_plan; a specialist cannot drive its own errand without it');
+
+  // And the two implementations that compute this must agree — they were two,
+  // and a fix applied to one of them is a fix that does not exist.
+  const src = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '..', 'modules', 'harness', 'agent.js'), 'utf8');
+  assert.equal((src.match(/profile\.tools\.includes\(n\)/g) || []).length, 1,
+    'the allowlist is computed in more than one place again');
+
+  // A definition still cannot give itself a tool the charter withholds, and
+  // this goes through the real path: NEVER is subtracted in registry.normalize()
+  // when a definition is saved, not re-checked per turn — deliberately, so a
+  // definition asking for a forbidden tool is corrected once, visibly. So the
+  // profile a mission runs with is built from the normalized definition, and
+  // that is what this asserts.
+  const greedy = registry.normalize({
+    id: 'greedy', role: 'do anything',
+    tools: ['memory_search', 'settings_propose', 'agent_dispatch', 'install_propose'],
+  });
+  assert.deepEqual(greedy.tools, ['memory_search'], 'the forbidden ones are stripped on save');
+
+  const p2 = agent.preview({ message: 'x', profile: { ...narrow, tools: greedy.tools } });
+  assert.equal(Number(p2.match(/, (\d+) tools/)[1]), 2,
+    'memory_search plus mission_plan — and no way to reach the withheld tools');
+});

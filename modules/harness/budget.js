@@ -103,6 +103,19 @@ function ledger() {
     lastPrompt: 0,          // the prompt of the most recent step — what fills the window
     peakPrompt: 0,
     cachedTokens: 0,        // prompt tokens the provider served from its prefix cache
+    // This step's own figures, kept apart from the running totals above.
+    //
+    // The totals are what is billed and they are right for a bill, but they
+    // cannot show a broken prefix: a cumulative rate is dragged down by the
+    // first step's unavoidable miss and then hides everything after it. It read
+    // ~17% whether the cache was pinned at 1,152 tokens or growing by
+    // thousands — which is exactly how H-9 and H-9b stayed invisible for as
+    // long as they did. A per-step number is what makes "is the cached region
+    // growing?" a question the panel can answer instead of one you work out
+    // from the event stream by hand.
+    stepPromptTokens: 0,
+    stepCachedTokens: 0,
+    stepCacheReported: false,
     cacheReported: false,   // did it tell us about caching at all?
     measured: false,        // did any provider actually tell us?
     estimated: false,       // did we have to guess for any step?
@@ -150,7 +163,15 @@ function record(l, { usage, promptEstimate = 0, completionEstimate = 0 } = {}) {
   l.peakPrompt        = Math.max(l.peakPrompt, prompt);
 
   const cached = cachedOf(usage);
-  if (cached !== null) { l.cachedTokens += Math.min(cached, prompt); l.cacheReported = true; }
+  if (cached !== null) {
+    const thisStep = Math.min(cached, prompt);
+    l.cachedTokens += thisStep;
+    l.cacheReported = true;
+    // Overwritten each call, not accumulated: this is the step just recorded.
+    l.stepPromptTokens    = prompt;
+    l.stepCachedTokens    = thisStep;
+    l.stepCacheReported   = true;
+  }
   if (havePrompt || haveCompletion) l.measured  = true;
   if (!havePrompt || !haveCompletion) l.estimated = true;
   return l;
@@ -174,6 +195,13 @@ function report(l, p) {
     cachedTokens: l.cacheReported ? l.cachedTokens : null,
     cachePercent: l.cacheReported && l.promptTokens
       ? pct(l.cachedTokens, l.promptTokens) : null,
+    // The most recent step alone. A growing `stepCachedTokens` is what a warm
+    // prefix looks like; a flat one is a prefix that is being broken, and the
+    // cumulative figure above cannot tell those apart.
+    stepPromptTokens: l.stepCacheReported ? l.stepPromptTokens : null,
+    stepCachedTokens: l.stepCacheReported ? l.stepCachedTokens : null,
+    stepCachePercent: l.stepCacheReported && l.stepPromptTokens
+      ? pct(l.stepCachedTokens, l.stepPromptTokens) : null,
   };
 }
 
@@ -211,7 +239,7 @@ function warning(l, p) {
  * proposal — and, more importantly, so it does not tell the user to change
  * something that is not theirs to change.
  */
-function block(p, l) {
+function block(p) {
   const window = windowFor(p);
   const out = ['# Your limits'];
 
@@ -233,19 +261,34 @@ function block(p, l) {
     `memory entries in this prompt: up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`,
   );
 
-  if (l && l.steps) {
-    const r = report(l, p);
-    out.push('', `this turn so far: ${r.steps} model call${r.steps === 1 ? '' : 's'}, `
-      + `${r.totalTokens} tokens (${r.source})`
-      + (r.cachePercent !== null ? `, ${r.cachePercent}% of the prompt served from cache` : '')
-      + (r.contextPercent !== null ? `, last prompt ${r.contextTokens} = ${r.contextPercent}% of the window` : ''));
-  }
-
   out.push('',
     'These are settings on this panel, not the provider\'s. Propose a change when one of them is what is in your '
     + 'way, and say which it is — never stop with "I ran out" and leave the user to guess which limit it was.');
 
   return out.join('\n');
+}
+
+/**
+ * How the turn is going, kept out of the settings block above.
+ *
+ * "this turn so far" counts model calls, so it changes on every step by
+ * definition. It used to sit inside `block()`, which put a per-step byte in
+ * the middle of the system prompt, ahead of the transcript — and a provider's
+ * prefix cache stops at the first byte that differs, so everything after it
+ * was re-sent uncached on every step (ISSUES.md H-9). It is sent after the
+ * history now: same sentence, same numbers, later.
+ */
+function live(l, p) {
+  if (!l || !l.steps) return '';
+  const r = report(l, p);
+  return `this turn so far: ${r.steps} model call${r.steps === 1 ? '' : 's'}, `
+    + `${r.totalTokens} tokens (${r.source})`
+    // Both figures, for the same reason the log line carries both: the step
+    // one is what says whether the prefix held, the turn one is what was
+    // billed. An agent asked "why is this expensive" needs the first.
+    + (r.stepCachePercent !== null ? `, ${r.stepCachePercent}% of this step's prompt came from cache` : '')
+    + (r.cachePercent !== null ? ` (${r.cachePercent}% over the turn)` : '')
+    + (r.contextPercent !== null ? `, last prompt ${r.contextTokens} = ${r.contextPercent}% of the window` : '');
 }
 
 /* ── When the provider says no ─────────────────────────── */
@@ -312,5 +355,5 @@ function stalled({ ep, ms, frames }) {
 module.exports = {
   CHARS_PER_TOKEN,
   estimate, estimateMessages, windowFor, compactTokensFor, shouldCompact, compactReason,
-  ledger, record, report, warning, block, explain, stalled, cachedOf,
+  ledger, record, report, warning, block, live, explain, stalled, cachedOf,
 };

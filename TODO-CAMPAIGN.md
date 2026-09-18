@@ -9,25 +9,6 @@ When a deferred item turns out to bite someone, promote it to `ISSUES.md`. When
 an issue turns out to have been a decision, move it back here with the reason.
 Do not silently drop either.
 
-**Broadened 2026-09-18.** This file is now also where **requirements for the
-final product** are collected, decided or not, while solutions are prototyped on
-`dev/troubleshoot`. Two consequences worth stating rather than leaving implicit:
-
-- An entry may now be a **defect nobody chose** — the markdown entry below is
-  one — which by the rule above would belong in `ISSUES.md`. The distinction
-  still holds and is still useful: `ISSUES.md` is for faults with a named cause
-  and a stated way to close them; this file is for what the finished product
-  should do. Where an item is both, it lives here while it is a requirement and
-  moves to `ISSUES.md` when somebody is assigned to fix it.
-- An entry may be **undecided**, and says so in as many words. The section
-  *"Memory that does not interrupt the agent doing the work"* is written as
-  settled-versus-open deliberately, and the markdown entry names its own open
-  questions. An entry that hides which half is which is worse than no entry,
-  because it reads as a plan.
-
-Nothing on `dev/troubleshoot` is merged. What works there is prototype evidence
-for these requirements, not a change to the product.
-
 ## MCP and VMs, deliberately left out of the first pass
 
 - **No embedded VNC console.** The VMs tab shows the display address to paste
@@ -166,15 +147,11 @@ none of them block anything today.
   starts missing things. Decide embeddings-or-not deliberately when that happens
   rather than drifting into it.
 
-- **The usage ledger has no page and no prices.** Every model call the built-in
-  harness makes (steps, summaries, `agent.ask`) is now one row in
-  `harness/usage/YYYY-MM.jsonl`, summed by `GET /api/harness/usage?days=&by=`
-  and shown as one "24h" line in the console. Deliberately not done: a table or
-  chart of the breakdown, money (prices move and differ by cache hit, so store
-  tokens and apply a price list when reading), and the OpenClaw gateway and CLI
-  harnesses, which bill somewhere this panel cannot see. The session's own
-  `tokens` still only adds a turn that ended cleanly; the ledger is the number
-  to trust.
+- **The ledger is per turn and is not kept.** `usage` lands on each assistant
+  row and the session index gains a cumulative `tokens`, but nothing aggregates
+  across sessions, so "what did this week cost" has no answer and there is no
+  per-model or per-provider breakdown. The rows are all there; it is a reader,
+  not new plumbing.
 
 ## The shape of the request, and what a prefix cache can see
 
@@ -195,18 +172,36 @@ prompt for the rest of the turn. **The priority now is H-9b, not the two items
 below.** They remain open and are the same idea — stable bytes first — applied
 to parts of the request neither fix reached.
 
-- **The tool schemas are serialized last, so they can never be cached.** In the
-  request body they travel *after* the messages (`agent.js`, the `body:` spread),
-  which puts ~14 KB of schemas on the far side of the transcript. History grows
-  every step, so that region can never be a prefix and the schemas are re-billed
-  in full on every step of every turn. They change only when the tool list does.
-  The open question is whether a provider's cache follows the *serialized* byte
-  order or an internal one that hoists tools to the front — the 1,152-token
-  ceiling in H-9 matched the body offset exactly, which is evidence for the
-  former, but one provider is not a rule. **Measure before changing it**: move
-  tools ahead of `messages` in the body, re-run the six-step comparison, and
-  keep it only if the cached count rises by roughly the size of the schemas.
-  Worth ~14 KB per step here, which is larger than what H-9 recovered.
+- ~~**The tool schemas are serialized last, so they can never be cached.**~~
+  **Measured 2026-09-17 — the premise is false, and no change was made.** The
+  entry assumed a provider's cache follows the *serialized* byte order. It does
+  not, at least not for DeepSeek: the schemas are already inside the cached
+  prefix even though they are serialized after `messages`.
+
+  The measurement, on the same four-step large-output turn H-9b was verified
+  with, with ~14,410 bytes of schema JSON (≈3,603 tokens by the 4-bytes/token
+  rule):
+
+  | step | prompt(prev) | cached Δ | gap |
+  | --- | --- | --- | --- |
+  | 2 | 6,072 | 5,760 | 312 |
+  | 3 | 10,796 | 10,496 | 300 |
+  | 4 | 15,693 | 15,360 | 333 |
+  | 5 | 20,656 | 20,352 | 304 |
+
+  The gap is the readings block, consistently ~300 tokens. Had the schemas been
+  outside the prefix the gap would be ~3,900. So the provider builds its token
+  sequence as `[tools][system][messages]` — tools hoisted to the front, as most
+  OpenAI-compatible implementations do — and the JSON key order in the body is
+  not what the cache sees.
+
+  Moving tools ahead of `messages` in the body would therefore have been a
+  no-op. Recorded as a measurement rather than deleted, because the *shape* of
+  the reasoning is the trap: the 1,152-token ceiling in H-9 matched a body
+  offset exactly, which is real evidence, and it still did not generalise to
+  this. **A byte offset matching a cache boundary once is not a rule about how
+  caches work.** The instruction to measure before changing it was right and is
+  what prevented a pointless edit.
 
 - **The panel reports cache cumulatively, so the number that matters is
   invisible.** `budget.report()` sums `cachedTokens` and `promptTokens` across
@@ -609,184 +604,3 @@ Settings → System:
 
 `DOCA_STT_URL` / `DOCA_TTS_URL` are the inverse case: they override the Voice
 card rather than defaulting it, which the card now states.
-
-## Memory that does not interrupt the agent doing the work
-
-Written 2026-09-18, after measuring what a memory write actually costs. Two
-separate problems had been discussed as one, and they have different fixes — so
-this section is deliberately split into what is **settled** and what is **not**,
-because the settled half is small and independently useful and should not wait
-on the rest.
-
-### The two problems
-
-**Cache.** `memoryBlock()` sits at position 7 of the 13 blocks in the system
-prompt, and is rebuilt on every step. So a `memory_write` mid-turn changes the
-head of the prompt and the next step misses essentially everything: measured at
-**23% cached on step 6 of a six-step turn**, against 93–95% either side of it.
-The write is cheap; the step after it is not. See `ISSUES.md` H-9b, where this
-is recorded among the writers of the same shape.
-
-**Flow.** The orchestrator spends its own steps on bookkeeping. In the 28-step
-run of 2026-09-17, step 5 was a `memory_flag` plus a `memory_write` and step 27
-was two writes plus a `memory_rules_write` — four steps of the user's turn spent
-filing, and the orchestrator busy throughout.
-
-They are not the same fault and a memory agent does not fix both.
-
-### Settled — decided, not yet built
-
-**1. Memory is snapshotted at the start of a turn and does not move during it.**
-
-Decided, because it is the cache fix and it is independent of everything below.
-Take the memory block once when the turn begins and rebuild every step from that
-snapshot. Writes during the turn land in the store but do not reach the prompt
-until the next turn starts.
-
-The consequence to accept: within a turn the agent cannot see a fact it just
-wrote. That is the correct trade — it wrote the fact, so it does not need it
-read back — and it converts "every write costs the next step" into "at most one
-prompt change per turn, at the boundary where a change is expected" (the new
-user message changes the prefix anyway). Expected effect: a memory write stops
-being a 23% step.
-
-This is the half to build first, and the half with a number attached.
-
-**2. Memory work leaves the orchestrator's turn.**
-
-Decided. A dedicated agent does it, out of band. This is not a new kind of
-thing: `archivist` is already the memory specialist, already runs in its own
-session, and is already `memory: false` / `environment: minimal` so it does not
-drag the orchestrator's context. It needs a **write** tool — today it has only
-`memory_search` — not a new architecture.
-
-Run as a mission, so `dispatch()` returns immediately and the orchestrator
-carries on. The orchestrator's step cost for memory becomes one dispatch.
-
-**3. Candidates are queued, not written.**
-
-Decided. A new `memory_note` tool appends a candidate to a queue instead of
-writing an entry. `memory_write` stays exactly as it is, for when the user says
-"remember this" and it must land now.
-
-The point is that the queue is **not in the prompt**, so calling `memory_note`
-costs no cache at all — where `memory_write` mid-turn costs a step's prefilled
-prefix. A memory agent drains the queue between turns.
-
-This is the same reasoning already written down in *"Nothing searches across
-conversations"* above: a thing the agent calls when relevant, not an index
-injected into every prompt, which would spend the window it is meant to protect.
-It also matches the outbox idea in *"Two layers of learned knowledge"* — queue
-first, read it before it goes, rather than acting in the moment of the work.
-
-### Not settled — needs a decision before it is built
-
-**Who tags a candidate as worth keeping?** The settled design says the writing
-agent calls `memory_note`. That makes the writer the judge of its own output,
-which is cheap and nearly free but is the wrong shape for anything subtle — and
-it is the same agent whose context is the thing being protected, so asking it to
-also be the filter is asking twice. The alternatives (a second model call per
-output, or a heuristic) each cost something real. `.doca/outbox/` style suggests
-the answer is "the writer marks, the reader judges", but that is a guess and has
-not been decided.
-
-**Does the memory agent write, or propose?** Everywhere else in this panel the
-agent proposes and the user clicks — `settings_propose`, `install_propose`, and
-the whole reason H-7 matters. Memory has no equivalent: `memory_write` writes
-directly today, so a memory agent writing directly would not be a new power, but
-it would be a larger one, because it would be consolidating on its own judgement
-rather than carrying out an instruction the user watched. `locked` and `disputed`
-protect individual entries and `source` records who wrote one; what does not
-exist is a review step. Undecided, and it decides how much the queue needs to
-carry.
-
-**How does the memory agent decide "this is new" without the window it is
-protecting?** Dedupe and contradiction need to see existing memory. Full entries
-for a few hundred is fine; the failure mode is the agent's own context becoming
-large enough to need the same treatment. The bounded version is a key-and-category
-listing rather than full text, with `memory_search` for the detail — plausible,
-not decided.
-
-**Does a memory agent get its own provider or model?** `archivist` definition
-already allows `provider` and `model` per definition. Filing is a cheap,
-mechanical job and a large model would be wasted on it — but a small model
-misjudging what matters is worse than no memory agent. Undecided.
-
-### What is deliberately not in this section
-
-Not a second summariser. The rolling session summary already exists and is
-already the per-topic artefact; this is about durable entries, which are a
-different thing and should stay one.
-
-## The agent writes markdown and the panel shows the asterisks
-
-Reported 2026-09-18. Every surface where the agent's own words appear renders
-them as **plain text**, so a reply arrives looking like this:
-
-```
-Done. Where things stand:
-
-**Three specialists, three independent answers** — all finished, all read:
-- archivist `msn_c470516a36fb` — 2 steps — HALCYON memory search
-- scribe `msn_f889eb6c55dc` — 5 steps — wrote `host-note.txt` (99 bytes)
-```
-
-The model is doing the right thing — that is markdown, and it is what it was
-trained to write. Nothing renders it. There is **no markdown renderer anywhere
-in the panel**: a grep for `marked`, `markdown`, `renderMarkdown` or `mdToHtml`
-across `public/js/` finds only the words in unrelated comments.
-
-### Where it bites
-
-Both surfaces that show agent prose, and they share the pipeline:
-
-- `public/js/harness.js` — the Harness console, `evt.type === 'text'` → `stream.feed(evt.text)`
-- `public/js/chat.js` — the chat panel, the same two lines
-
-Both feed the same streaming helper (`public/js/utils.js`, the `feed(chunk)`
-accumulator), which is where the output is written to the DOM. It already does
-**one** piece of structured handling — `<think>` blocks are detected and held
-back — so the shape of the fix is not new; markdown is simply a case that was
-never added.
-
-### What "done" means
-
-- A fenced code block shows as a code block, not as backticks and a language
-  tag; headings, bold, italics, inline code and lists render as themselves.
-- Tables render as tables — the agent emits them for anything comparative, and
-  they are unreadable as pipe-delimited text.
-- Links render, and are safe to click.
-- The **raw** text is still what is stored, copied and sent to the model. This
-  is a display concern only; nothing about the transcript changes.
-
-### The constraints that make it a real piece of work
-
-- **It streams.** Text arrives in deltas, so a renderer has to cope with a
-  half-written `**bold` or an unterminated fence without flashing the wrong
-  thing and then correcting itself. Rendering the finished message only at the
-  end is easier and loses the live-typing feel that exists today; a
-  re-render-per-chunk approach is easy and flickers. Whoever does this should
-  pick deliberately rather than discover the choice.
-- **The model's output is not trusted markup.** It is text a model wrote, in a
-  page that has the user's session. Whatever renders it must escape first and
-  then introduce only the tags it means to — the existing `escHtml()` discipline
-  is the reason nothing has gone wrong so far, and markdown is exactly the kind
-  of feature that quietly removes it.
-- **`<think>` already occupies the same pipeline.** Whatever is built has to
-  compose with that rather than fight it for the same buffer.
-
-### Not decided
-
-- **Which renderer.** No dependency is needed — the subset above is a few
-  hundred lines — but the choice between that and a library is a decision, and
-  the panel has kept its dependency list deliberately short (five entries in
-  `package.json`, none of them UI).
-- **Whether tool results get the same treatment.** They are the other half of
-  what fills the console, and they are often structured (JSON, tables, diffs)
-  where markdown would help more than it does in prose. Separate call, and it
-  may want syntax highlighting rather than markdown.
-- **Whether the panel should instead ask the agent not to use markdown.** It is
-  the cheaper answer and it is the wrong one — markdown is how these models
-  communicate structure, and suppressing it would cost readability in the
-  transcript, which is the artefact that outlives the chat. Recorded here so the
-  option is visibly rejected rather than forgotten.

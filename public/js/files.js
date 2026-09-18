@@ -494,7 +494,6 @@ async function fmSaveEditor() {
   try {
     await apiFetch('/api/files/write', { method: 'POST', body: { path: fm.editFile, content } });
     setStatus(status, '✓ Saved', 'ok');
-    setTimeout(() => setStatus(status, ''), 3000);
   } catch (e) { setStatus(status, `✗ ${e.message}`, 'err'); }
 }
 

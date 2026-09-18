@@ -66,7 +66,10 @@ function startLogs() {
     logSource.close(); logSource = null;
     setTimeout(startLogs, 4000);
   };
-  setStatus(document.getElementById('log-status'), 'streaming', 'ok');
+  // A standing state, not an event: the stream is either up or it is not, and
+  // a ✓ that fades after three seconds leaves the tab looking idle while it is
+  // still streaming. `{clear: 0}` is the rule for describing the machine.
+  setStatus(document.getElementById('log-status'), 'streaming', 'ok', { clear: 0 });
 }
 
 /* Accepts the old bare-string payload as well as the object one, so a browser

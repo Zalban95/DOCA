@@ -12,6 +12,16 @@ until the "how to close it" line is true. Numbered `H-n` for harness faults.
 `deepseek-v4-pro` for this install to work.** The panel's fault was that it
 could not tell you any of this, and that part is fixed.
 
+*Re-verified 2026-09-17 on v2.27.2 (`4177ad1`), fresh checkout.* All three
+changes are present and pinned: `firstTokenTimeoutMs: 90000` at
+`providers.js:124`, the guard at `agent.js:458`, `budget.stalled()` at
+`budget.js:305`, the `HARNESS_PARAMS` row at `public/js/harness.js:262`, and
+the stall tests at `test/harness.test.js:316` — whose fixture serves
+`: keep-alive` frames and nothing else (`test/harness.test.js:63`), so the
+deadline and the `waiting` event are both covered. **The "how to close it" list
+below is satisfied; this entry can be closed** once the model is switched on the
+live install.
+
 ### What was seen
 
 The console prints the session line and then nothing, forever:
@@ -268,6 +278,13 @@ v2.22.2.**
 **Status:** open. Named separately from H-5 because it is what made H-5 take an
 evening.
 
+*Re-verified 2026-09-17 on v2.27.2 (`4177ad1`).* Unchanged since it was
+written: `agent.js:971` still defaults `reachable: false`, `agent.js:977` still
+fetches `${ep.baseUrl}/models`, and `agent.js:981` still assigns
+`out.reachable = r.ok`. Nothing calls `/chat/completions` from `status()`, and
+there is no `answers` field. The gap between "the provider is up" and "the
+provider will answer" is exactly as wide as it was.
+
 ### What was seen
 
 For hours, with every turn hanging, the panel reported the provider as fine.
@@ -342,8 +359,68 @@ of the thing it manages.
 
 ## H-7 — `POST …/proposals/:id/apply` is unauthenticated, and the agent has `http_fetch`
 
-**Status:** open. Not caused by 2.23.0 — pre-existing, found while reviewing it.
+**Status:** **partially closed on `dev/troubleshoot`, 2026-09-17 — and deliberately
+not called closed.** Fix shape (1) is implemented: the two apply routes now
+require a browser-set header, so the tool-layer path is shut. It is not a
+security boundary and the code says so rather than implying otherwise — see
+*What this does and does not stop* below. The entry stays open until `/api/*` is
+authenticated, which is fix shape (3) and the only answer that is one.
+
+Not caused by 2.23.0 — pre-existing, found while reviewing it.
 This is the invariant a feature flag cannot roll back, and it does not hold.
+
+### What this does and does not stop
+
+`requireBrowser` in `server.js` requires `Sec-Fetch-Site` or a same-origin
+`Origin` on `POST …/proposals/:id/apply` and `…/installs/:id/apply`.
+
+- **Stops: `http_fetch`.** It takes any URL, any method and a body, and has no
+  way to set a request header — so the one-tool-call bypass this entry is about
+  is gone, and that was the path the agent actually found and used.
+- **Does not stop: `shell`.** It has curl, and curl sets whatever header it
+  likes. Nothing short of authenticating `/api/*` changes that, which is the
+  point TODO.md already makes and is correct.
+- **Does not stop: the panel's own settings routes, which is the wider hole and
+  was not visible until it was probed.** `POST /api/harness/doca/config` writes
+  **any harness setting directly** — no proposal, no click, no authentication.
+  Verified 2026-09-18: `{"temperature": 0.9}` moved the setting from 0.3 to 0.9
+  with a bare `curl`, and the agent has `http_fetch`. So the guard on the two
+  `apply` routes closes one door while the room behind it has no wall on that
+  side at all. The ⚙ panel uses this route to save what the user types, which
+  is legitimate — the fault is that the same route is reachable by the agent.
+
+  The full set that writes settings without the guard: `POST
+  /api/harness/:id/config`, `/api/configs/:id`, `/api/config-favorites`,
+  `/api/models/settings`, `/api/models/local/settings`, `/api/models/hf/settings`,
+  `/api/models/tools/:id/config`, `/api/snapshots/settings`, `/api/vms/settings`,
+  `/api/services/settings`.
+
+  Extending `requireBrowser` to them would close the `http_fetch` path for all
+  of them and the dashboard sends the header automatically — but it would also
+  break any script or CLI a user has pointed at those routes, which is a
+  decision rather than a patch. Not made unilaterally.
+
+  **The honest summary: the invariant "the agent proposes, only a human click
+  applies" holds against `settings_propose` and does not hold against the
+  panel's direct-write routes.** Fix shape (3), authenticating `/api/*`, closes
+  both at once, which is another reason it is the answer.
+
+So the honest description of the click is now **a convention with a speed bump,
+not a gate**: the bypass requires deliberate header forgery spelled out in a
+shell command rather than being the accidental first thing an agent reaches
+for. That is worth having, and it is not the same thing as a boundary. AGENTS.md
+and TODO.md should say it that way; today AGENTS.md describes a click as the
+security property and this entry describes the route as reachable, and after
+this change neither sentence is quite right.
+
+*Re-verified 2026-09-17 on v2.27.2 (`4177ad1`).* Still unauthenticated. The
+routes are registered bare at `server.js:191` and `server.js:201`; the only
+middleware above them is `app.use('/api/v1', apiV1.router)` at `server.js:58`,
+so legacy `/api/*` has no auth in front of it. `handleProposalApply`
+(`routes.js:227`) and `handleInstallApply` (`routes.js:262`) call straight into
+`settings.apply()` / `installs.apply()` with nothing between them and the
+request. `http_fetch` (`tools.js:600`) still takes any absolute URL, any method
+and a body, with no host policy — so fix shape (2) is untouched as well.
 
 ### The invariant
 
@@ -450,6 +527,28 @@ be a boundary or stop being described as one.
 **Status:** open, environmental. Not a code fault in this repo and not a 2.23.0
 regression.
 
+*Re-tested 2026-09-17 on a clean checkout (v2.27.2, `4177ad1`) — **it does not
+reproduce**.* `node_modules/node-pty` is still `1.1.0` and
+`node -e "require('node-pty')"` prints `pty ok` **and exits 0**; `npm test`
+reports `# tests 239 / # pass 239 / # fail 0` with a real exit code of `0`
+(measured without the `| tail` pipe this entry warns about). Both of this
+entry's inputs differ from the machine it was written on, and each explains one
+of the two failures:
+
+- **Node patch version.** It reproduced on **v22.22.2**; this machine is
+  **v22.22.1**. The abort is therefore specific to that patch, not to Node 22 as
+  a class — which also means the lazy-load fix in `terminal.js:22` is still
+  worth making, since it removes the addon from every test that never opens a
+  terminal regardless of which Node is installed.
+- **Hypervisor.** The one non-SIGABRT failure ("with no hypervisor installed the
+  panel still answers, saying which are missing") was environment-dependent:
+  that machine had `/usr/bin/virsh` and a qemu VM running, this one has neither
+  `virsh` nor `VBoxManage`, so the test's assumption holds and it passes.
+
+So the `# fail 23` in this entry is *not* a property of the code at `4177ad1` —
+it needs those two conditions to be present. Confirm on the original machine
+before closing this outright.
+
 ### What was seen
 
 ```
@@ -507,5 +606,361 @@ second is one line and fixes the suite without a dependency decision.
 - `npm test` exits 0 on this machine.
 - The vms test either provisions its own expectation or skips when a hypervisor
   is present.
+
+---
+
+## H-9 — The prompt prefix changes on every step, so the provider's cache never warms
+
+**Status:** fixed on `dev/troubleshoot`, 2026-09-17 — awaiting merge. It was a
+per-step cost on every turn and it was invisible in the panel. See *Fixed* below
+for the before/after; the cause and the diff that found it are kept because the
+reasoning is the part that generalises.
+
+### What was seen
+
+Reported 2026-09-17 from the live install. Against a provider with prefix
+caching, the per-step cache hit rate sits at **6–7%** and does not climb. The
+`in` counter on each step grows by very nearly the whole context (~23K), which
+is the signature of a prefix that matched almost nothing: the provider re-bills
+the context on every step instead of serving it from cache.
+
+The shape of the fault is fixed by what a prefix cache *is*. It matches the
+longest byte-identical run from the start of the request. Given a stable head,
+the first step misses and every step after it hits, so the rate should climb
+towards ~90% — not sit flat at 6%. A rate pinned near zero means the prefix is
+being rewritten on every call, and the repair is to find the first byte that
+differs and move whatever precedes it out of the changing region.
+
+### Cause, confirmed by diff — 2026-09-17
+
+Reproduced on a clean checkout at `4177ad1`, provider `ds` → DeepSeek
+`deepseek-flash`. A four-step turn (two `shell` calls) gave a per-step cache
+read that is its own diagnosis, once the cumulative ledger is differenced:
+
+| Step | prompt (Δ) | cached (Δ) | per-step |
+| --- | --- | --- | --- |
+| 1 | 6,482 | 1,152 | 17.8% |
+| 2 | 6,952 | **1,152** | 16.6% |
+| 3 | 7,024 | **1,152** | 16.4% |
+| 4 | 7,370 | **1,152** | 15.6% |
+
+The cached count is **exactly 1,152 tokens on every step and never grows.**
+History is appended, so each step's prompt begins with the whole of the
+previous step's prompt; a stable head makes the cached region *grow* every
+step. A constant means the first differing byte sits at a **fixed offset**, and
+nothing past it can ever be cached.
+
+The raw bodies were then captured by wrapping `global.fetch` from outside the
+process — `node --require /tmp/dump-fetch.js server.js`, no repo source touched —
+and the two consecutive `/chat/completions` bodies differenced:
+
+```
+first differing byte offset: 5779  (20.9% of body)
+
+  ## Right now
+  time: 2026-09-17T16:42:0[6.022Z]   ← step 1
+  time: 2026-09-17T16:42:0[8.431Z]   ← step 2
+```
+
+**5,779 bytes ÷ 1,152 tokens ≈ 5.0 bytes/token.** The stable prefix and the
+cached prefix are the same region: the provider caches exactly as far as the
+clock.
+
+Clustering every differing byte (gaps > 300 identical bytes separate clusters)
+leaves exactly **two** volatile regions in the whole 27,687-byte body:
+
+| Span | What |
+| --- | --- |
+| `5779..5784` (5 bytes) | `time:` in `## Right now` — `environment.block()` |
+| `8616..end` | `this turn so far: N model calls…` in `# Your limits` — `budget.block()`, then the expected history growth |
+
+So both volatile writers are *in the system prompt, ahead of the history* —
+`environment.js:200` and the ledger line in `budget.block()`. No third cause
+exists; the earlier list of candidates was right about the shape and wrong
+about the ranking.
+
+### Fixed 2026-09-17 on `dev/troubleshoot`
+
+Both volatile writers were moved after the history: `environment.block()` lost
+its `## Right now` section to a new `environment.live()`, and `budget.block()`
+lost its running ledger to `budget.live()`. `agent.js::turn()` assembles the
+request as **stable system message → history → readings**, the readings
+travelling as a trailing `system` message that is generated per step and never
+persisted. Behaviour is unchanged: every fact the model was given before, it is
+given again, in the same words, as the last thing it reads. `breakdown()` gained
+a `readings` row so the token accounting still adds up.
+
+Same task, same provider, six-step turn, measured the same way:
+
+| Step | prompt Δ | cached Δ | per-step | *was* |
+| --- | --- | --- | --- | --- |
+| 1 | 5,748 | 5,376 | **93.5%** | 17.8% |
+| 2 | 6,001 | 5,632 | **93.9%** | 16.6% |
+| 3 | 6,073 | 5,888 | **97.0%** | 16.4% |
+| 4 | 6,134 | 5,888 | **96.0%** | 15.6% |
+| 5 | 6,222 | 6,016 | **96.7%** | — |
+| 6 | 6,396 | 6,016 | **94.1%** | — |
+
+The signature to read is the *shape*, not the percentage: the cached count now
+**grows every step** (5,376 → 5,632 → 5,888 → 6,016), which is what a stable
+prefix looks like. Before, it was pinned at exactly 1,152 forever. Average is
+≈95%, against 6–7% reported.
+
+The first differing byte in two consecutive bodies moved from offset 5,779
+(20.9%) to 8,068 (35.5%), and it is now the natural boundary — step 1's
+readings block against step 2's history growth — rather than a clock.
+
+### What the test should have caught, and now does
+
+The old test was green throughout. It checked `environment.block()`'s head
+against its own `## Right now` marker — the mitigation validated at the scale it
+was written at, not the scale it had to hold at. Three tests replace it:
+`environment.block()` must be byte-identical across two calls a second apart;
+`agent.preview()` must be byte-identical the same way; and a turn's request must
+carry the readings as its last message with the system prompt free of them. The
+second is the one that would have caught this on the day it shipped.
+
+### H-9b — the same fault, still live: tool results are rewritten between steps
+
+**Status:** fixed on `dev/troubleshoot`, 2026-09-17 — awaiting merge. See *Fixed*
+below for the before/after. The cause and the reasoning are kept because the
+lesson is the part that generalises: **a verification workload that cannot
+trigger the fault is not a verification.**
+
+Found 2026-09-17 by measuring a *realistic* turn rather than a convenient one.
+H-9 above is fixed and its numbers hold; this is a second, independent
+prefix-breaker that the H-9 verification failed to exercise, and it is the
+larger of the two on real workloads.
+
+#### Fixed
+
+`clipToolContent()` is now a function of the row and nothing else. A result
+over `TOOL_MAX_CHARS` (16,000) becomes a 12,000-character head, a 3,000-char
+tail and a spill path — *on the step that produced it*, not retrospectively —
+and the backward character-budget walk that decided `keepFull` is gone. The
+message array is append-only again, so a row's serialization cannot change once
+it has been sent.
+
+The cap is now per row rather than shared across rows, so the prompt is
+**larger** than the old budget made it. That is the deliberate half of the
+trade: what a provider bills is the miss, not the prompt, so a bigger prompt at
+~99% cached costs far less than a smaller one at 55%.
+
+Same four-step workload (`seq 1 3000` ×4), large outputs, measured the same way:
+
+| Step | prompt Δ | cached Δ | per-step | *was* |
+| --- | --- | --- | --- | --- |
+| 2 | 10,796 | 5,760 | 53.4% | 52.2% |
+| 3 | 15,693 | 10,496 | **66.9%** | 55.1% |
+| 4 | 20,656 | 15,360 | **74.4%** | 57.3% |
+| 5 | 25,288 | 20,352 | **80.5%** | 60.3% |
+
+The decisive column is `cached Δ` against the previous step's whole prompt:
+10,496 against 10,596, 15,360 against 15,493, 20,352 against 20,456. The cache
+now captures ~99% of everything that existed before the current step; the
+remaining miss is only the new output that step just produced, which no prefix
+cache can match by definition. So the rate reads 80% rather than 95% because
+each step genuinely appends ~15,000 characters, not because the prefix breaks.
+
+In the bytes, the common prefix between consecutive bodies now grows by ~9,900
+bytes a step and extends past the whole transcript:
+
+```
+step1→2:  9,488 bytes      step3→4: 29,543 bytes
+step2→3: 19,625 bytes      step4→5: 39,461 bytes
+```
+
+`test/harness.test.js` pins it directly: a result sent once must still be the
+same string after two more results arrive, and a clipped row must clip to the
+same length whether or not other rows are present. The old suite used `ls` and
+`date`, whose output fits the old budget — which is exactly why it never caught
+this.
+
+#### Why the H-9 verification missed it
+
+The six-step turn used to prove H-9 ran `ls`, `date`, `pwd`, `whoami`,
+`uname -a` — outputs of a few hundred characters each, all of which fit inside
+`TOOL_KEEP_CHARS` (12,000). Nothing ever aged out of the verbatim window, so
+nothing was ever rewritten and the cache measured 93.5–97%. The fix was real;
+the test was too easy. A turn with large tool outputs measures **52–60%**, which
+is the number the live install had been reporting all along.
+
+#### Cause
+
+`agent.js::toApiMessages()` recomputes which tool results travel verbatim on
+every call, by walking backward from the newest until 12,000 characters are
+spent:
+
+```js
+for (let i = rows.length - 1; i >= 0; i--) {
+  if (rows[i].role !== 'tool') continue;
+  if (!keepFull.size || used + len <= TOOL_KEEP_CHARS) { keepFull.add(i); used += len; }
+}
+```
+
+`!keepFull.size` means the newest result is *always* kept whole whatever its
+size; everything older has to fit the remaining budget. So as results arrive,
+older ones fall out of the window and their serialization **changes** — from
+verbatim to a 600-character head, a 200-character tail and a spill path. The
+message array is not append-only, and a prefix cache stops at the first byte
+that differs.
+
+Measured directly, three rounds of 30,000-character results:
+
+```
+step 1: [30000]
+step 2: [916, 30000]
+step 3: [916, 916, 30000]
+result #1 as sent at step 1: 30000 chars
+result #1 as sent at step 3:   916 chars
+```
+
+Confirmed in two real request bodies as well. Step 3 truncates step 2's result
+at byte 10,529 of the body:
+
+```
+step 2:  "…185\n186\n187\n188\n189\n1…"            ← verbatim
+step 3:  "…173\n174\n175\n1\n… [full output: …]"   ← clipped
+```
+
+#### Why it is expensive out of proportion to its size
+
+The break anchors at the **oldest** result to age out, and that result sits
+immediately after the system prompt. So the cacheable prefix is cut back to
+roughly the system prompt and stays there for the rest of the turn — every
+subsequent step re-bills the whole transcript. It is not a small tail loss; it
+is the entire history.
+
+Live four-step turn, large outputs (`seq 1 3000` ×4):
+
+| Step | prompt Δ | cached Δ | per-step | ideal |
+| --- | --- | --- | --- | --- |
+| 2 | 11,044 | 5,760 | 52.2% | ~96% |
+| 3 | 12,076 | 6,656 | 55.1% | ~91% |
+| 4 | 12,730 | 7,296 | 57.3% | ~95% |
+| 5 | 13,159 | 7,936 | 60.3% | ~95% |
+
+The tell is the cached delta: ~640–900 tokens per step while the prompt grows
+by ~12,000. 640 tokens is the clipped form. Only the *already clipped* text is
+ever cacheable — each step's freshly-added verbatim result is rewritten at the
+next step, so it can never be matched.
+
+#### The design question, which is not mine to settle
+
+Within a turn the message array has to be **append-only**, and any rule that
+shrinks the prompt over time breaks that somewhere. So the real choice is
+*where* to break, and every option trades behaviour against cache:
+
+1. **Clip by row size, uniformly, from the first appearance.** Each row's
+   serialization becomes a pure function of the row, so the prefix is stable
+   forever. Costs the model the full text of its *own most recent* output — it
+   gets a head, a tail and a `read_file` path instead. This is the only option
+   that makes the prefix fully stable, and it is a real behavioural change.
+2. **Do not clip during a turn; clip at turn boundaries.** Preserves behaviour
+   exactly within a turn, and the prompt grows. Fatal for the case that
+   motivated clipping: the live run included a 2.4 MB and a 6.9 MB tool result,
+   which the current rule sends whole on the step that produced them and clips
+   after — under this option they would be re-sent whole on every remaining
+   step of the turn.
+3. **Raise the threshold and apply it uniformly.** Most results are far under
+   12,000 characters and would never be touched, so behaviour is preserved for
+   the common case and only pathological output is clipped — stably. Does not
+   bound total prompt size, which is what the budget was for.
+
+A version of (3) — a generous per-row cap, applied uniformly, with the existing
+spill file as the escape hatch — looks like the right shape, but it changes what
+the model sees on its own output, so it wants a decision rather than a patch.
+
+#### Two more writers of the same shape, not yet addressed
+
+- **`memory_write` rewrites the system prompt.** `memoryBlock()` sits inside it,
+  so a memory write changes the head and the next step misses essentially
+  everything: the live run's step 27→28 measured 8% (4,321 cached of a 53,214
+  prompt), and steps 5 and 27 both wrote memory. Less frequent than the clipping
+  fault and more expensive per occurrence.
+- **Compaction**, by design, rewrites the transcript. One-off and expected
+  (step 22→23 measured 9%), but it means the step after a compact should not be
+  read as a regression.
+
+### Layout, for whoever implements the fix
+
+```
+byte     0 ..   128   {model, stream, temperature, …, max_tokens}
+byte   128 .. 13177   "messages": [ system(8,521 chars), …16 history rows ]
+byte 13177 .. 27687   "tools": 19 schemas, 14,410 bytes, serialized LAST
+```
+
+Within the system message, by character offset: `# Safety` 859, `## Right now`
+**5,489**, `# Who is asking` 5,627, `# Your limits` 7,758.
+
+Worth noting separately: the tool schemas are ~14 KB of *stable* content and
+they are serialized **after** the history, so they can never be inside a cached
+prefix — every step's history growth moves them. That is a second, larger
+saving than the clock, and it is the same fix: stable bytes first.
+
+### The first suspect, from reading the code
+
+`modules/harness/environment.js:200`:
+
+```js
+out.push('', '## Right now',
+  `time: ${new Date().toISOString()} (${Intl.DateTimeFormat().resolvedOptions().timeZone})`,
+```
+
+This is computed **fresh on every `block()` call**, and `block()` is called per
+step (`agent.js:254`). `snapshot()` is TTL-cached for 5 s (`environment.js:24`),
+which is what keeps the *other* volatile readings — free memory, load, uptime —
+mostly stable inside a fast tool loop. The clock is deliberately outside that
+cache, so it advances on every step regardless.
+
+The author knew about this class of bug — `environment.js:133-140` says so in as
+many words:
+
+> **Everything that changes by the second lives at the bottom, under "Right
+> now".** … a clock or a free-RAM figure near the top changes the first bytes of
+> the prompt each time — which is exactly the prefix a provider's cache, and a
+> local runtime's prefill, match on.
+
+The mitigation is correct and it is scoped too narrowly. It keeps the volatile
+lines at the bottom of *the environment block*, but that block is only **#3 of
+thirteen** in `systemPrompt()` (`agent.js:251-265`). Everything after it —
+`clientBlock`, `placeBlock`, `rulesBlock`, `memoryBlock`, `budget.block`,
+`settings.block`, `installs.block`, `agents.block`, `missions.block`, `summary`
+— sits *downstream* of a byte that changes every step, so none of it can ever be
+cacheable. The invariant that matters is not "volatile last within a block" but
+"volatile last within the **request**".
+
+### Other candidates, not yet excluded
+
+- **`memoryBlock(userText, …)`** (`agent.js:258`) selects memory using the
+  current user message, so it moves between turns — and it sits at position 7,
+  ahead of the budget, settings, installs, agents and missions blocks.
+- **`budget.block(p, ledger)`** (`agent.js:259`) renders the running ledger.
+- **Tool schemas** (`agent.js:735, 758`) are rebuilt per step from a live
+  registry read. If their order is not stable, the serialized `tools` array
+  changes as well — and it travels in the same request.
+
+These are suspects, not findings. Reading the code tells you what *can* change;
+only the bytes tell you what *did*, and there may be a fourth cause that reading
+has not suggested.
+
+### Fix shape
+
+The stable parts — charter, the user's system prompt, the environment's facts —
+stay byte-identical and first. Anything that changes per step moves after the
+history. This is **ordering and serialization only**: no content is added,
+removed or reworded, and what the agent is told does not change.
+
+The constraint that makes it safe to ship: behaviour must be identical. If a
+change to save tokens also changes an answer, it is not this fix.
+
+### How to close it
+
+- Log the raw request body for two consecutive steps of one turn and diff them.
+  The first differing byte names the cause; quote it here.
+- The same task rerun, with the per-step cached % shown **before and after**.
+- `npm test` stays green.
+- Verified on a branch first. Since this is shipped code, it is tagged for
+  production only once the before/after is in hand.
 
 ---

@@ -57,6 +57,7 @@ async function loadConfigPaths() {
       { group: 'config', id: 'modelfile-qwen3', label: 'Modelfile.qwen3',      path: reg['modelfile-qwen3'] || h + '/.ollama/Modelfile.qwen3',     type: 'text', description: 'Ollama Modelfile for qwen3:30b' },
 
       { group: 'custom', id: 'setup',    label: 'setup-openclaw.sh', path: reg.setup    || h + '/setup-openclaw.sh', type: 'sh', description: 'Initial setup script' },
+      { group: 'custom', id: 'phase2',   label: 'setup-phase2.sh',   path: reg.phase2   || h + '/setup-phase2.sh',   type: 'sh', description: 'Second-phase setup script' },
       { group: 'custom', id: 'snapshot', label: 'snapshot-agent.sh', path: reg.snapshot  || h + '/snapshot-agent.sh', type: 'sh', description: 'Agent snapshot script' },
       { group: 'custom', id: 'restore',  label: 'restore-agent.sh',  path: reg.restore   || h + '/restore-agent.sh',  type: 'sh', description: 'Agent restore script' },
     ];
@@ -275,6 +276,11 @@ function saveConfig() {
   }
 
   const needsRestart = entry.id === 'openclaw';
+  // "restart OpenClaw" is the external stack, not this panel: the file is what
+  // the stack reads, so saving it changes nothing until the stack comes back —
+  // which is what action('restart') does below. The panel's own restart is
+  // worded "restart DOCA" (paths.js, settings.js); the two are not the same
+  // restart and must not be worded as if they were.
   const msg = needsRestart
     ? `Save ${entry.label} and restart OpenClaw?`
     : `Save ${entry.label}?`;

@@ -49,7 +49,6 @@ async function saveScript() {
   try {
     await apiFetch(`/api/setup/scripts/${name}`, { method: 'POST', body: { content } });
     setStatus(status, '✓ Saved', 'ok');
-    setTimeout(() => setStatus(status, ''), 4000);
     loadScripts();   // a new script flips from Create to Edit, with a size and date
   } catch (e) { setStatus(status, `✗ ${e.message}`, 'err'); }
 }

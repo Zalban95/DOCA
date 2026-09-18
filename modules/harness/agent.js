@@ -227,7 +227,7 @@ function placeBlock(client) {
  * which the user does own — follows it, then the facts, then what the agent
  * knows, then where this conversation had got to.
  */
-function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, ledger, profile }) {
+function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile }) {
   // A specialist's prompt is mostly what is left out of it. The charter is not
   // one of those things: it goes first here exactly as it does for the
   // orchestrator, and a definition has no way to drop it.
@@ -244,7 +244,6 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
         ? environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount })
         : environmentBrief(p, toolCount),
       profile.memory ? memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)) : '',
-      budget.block(p, ledger),
       summary ? `# Earlier in this mission\n${summary}` : '',
     ].filter(Boolean).join('\n\n');
   }
@@ -257,12 +256,72 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
     placeBlock(client),
     rulesBlock(),
     memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)),
-    budget.block(p, ledger),
     settings.block(),
     installs.block(),
     agents.block(),
     missions.block(),
     summary ? `# Earlier in this conversation\n${summary}` : '',
+  ].filter(Boolean).join('\n\n');
+}
+
+/**
+ * The readings, sent after the history rather than inside the system prompt.
+ *
+ * Everything here changes between steps — the clock, the load, the running
+ * ledger — and a provider's prefix cache stops at the first byte that differs.
+ * With these inside the system prompt, the cacheable prefix was pinned at 1,152
+ * tokens and never grew, so a four-step turn re-billed the entire transcript
+ * four times (ISSUES.md H-9).
+ *
+ * Position is the whole fix; nothing was removed. Every fact the model was
+ * given before it is given again, in the same words, as the last thing it
+ * reads. What changed is that the head of the request — charter, system prompt,
+ * environment facts, memory, limits, settings — is now byte-identical from step
+ * to step, so the cached prefix grows with the transcript instead of being
+ * truncated on the first line that moves.
+ *
+ * It is returned separately rather than appended here because the caller knows
+ * where the history ends; this function does not.
+ */
+/**
+ * Tools every specialist has, whatever its definition lists.
+ *
+ * A definition's `tools` is an allowlist, and `registry.NEVER` is subtracted
+ * from it — so a tool that is "not forbidden" is still unreachable unless the
+ * definition happens to name it. `mission_plan` was written on that assumption
+ * and it was wrong: the `archivist` definition lists `memory_search` and
+ * nothing else, so no specialist could tick its own plan, and a plan is
+ * write-once (set by the orchestrator at dispatch) and stays all-`queued`
+ * forever. The progress bar the plan exists to draw would never move.
+ *
+ * These are the tools that act on the *mission* rather than on the world.
+ * Driving your own errand is not a capability a definition should have to opt
+ * into any more than the charter is — see `registry.NEVER` for the other side
+ * of the same list, and note that this one is asserted by a test that a
+ * specialist really is offered it.
+ */
+const ALWAYS_FOR_SPECIALISTS = ['mission_plan'];
+
+/**
+ * Which tools are off for this turn — one implementation, because there were
+ * two and a fix belongs in both.
+ *
+ * That is not hypothetical: `mission_plan` was added to `turn()`'s copy and
+ * `preview()` kept the old rule, so the prompt the panel shows and the prompt
+ * the model gets would have disagreed about a tool. The whole point of
+ * `preview()` is that it is what the tests assert against.
+ */
+function disabledFor(profile, p) {
+  if (profile && Array.isArray(profile.tools))
+    return tools.schemas([]).map(sc => sc.function.name)
+      .filter(n => !profile.tools.includes(n) && !ALWAYS_FOR_SPECIALISTS.includes(n));
+  return Array.isArray(p.disabledTools) ? p.disabledTools : [];
+}
+
+function liveBlock(p, ledger) {
+  return [
+    environment.live(),
+    budget.live(ledger, p),
   ].filter(Boolean).join('\n\n');
 }
 
@@ -273,23 +332,48 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
  * which is right for an agent that might use any of them and is pure cost for
  * one with four tools. Rebuilt per step like everything else, so the saving is
  * per step too.
+ *
+ * The clock is not here: it belongs to `liveBlock()`, which is sent after the
+ * history. A `now:` line in this brief would put a changing byte ahead of the
+ * transcript for specialists exactly as it did for the orchestrator (H-9).
  */
 function environmentBrief(p, toolCount) {
   const s = environment.snapshot();
   return ['# Where you are',
     `host: ${s.host.hostname} (${s.host.platform}), user ${s.host.user}, home ${s.host.home}`,
-    `now: ${new Date().toISOString()}`,
     `running on: ${p.provider} / ${p.model || '(model unset)'}${toolCount ? `, ${toolCount} tools` : ''}`,
     `workspace: ${(s.paths.find(x => x.key === 'WORKSPACE_DIR') || {}).value || '(unset)'}`,
   ].join('\n');
 }
 
-// Newest tool results stay verbatim until this many characters of them have
-// been kept; older ones become a head, a tail and a path. The transcript on
-// disk is not touched — this is only what the next model call sees.
-const TOOL_KEEP_CHARS = 12000;
-const TOOL_HEAD = 600;
-const TOOL_TAIL = 200;
+// A tool result is the same string every time it is sent.
+//
+// It used to be decided per call instead: walk backward from the newest result,
+// keeping rows whole until 12,000 characters were spent, clipping the rest, and
+// always keeping the newest whole whatever its size. So a result travelled
+// verbatim on the step that produced it and became a head, a tail and a spill
+// path on the next — the message array was not append-only, and a provider's
+// prefix cache stops at the first byte that differs.
+//
+// The cost was not a small tail. The break anchored at the *oldest* result to
+// change, and that result sits immediately after the system prompt, so the
+// cacheable prefix was cut back to roughly the system prompt and the whole
+// transcript was re-billed on every step for the rest of the turn. Measured on
+// a four-step turn with large outputs: 52-60% cached against ~95% ideal, with
+// the cached count growing ~640 tokens a step while the prompt grew by 12,000
+// (ISSUES.md H-9b).
+//
+// The rule is now a function of the row alone — its length and its content —
+// so a row's serialization cannot change once it has been sent. The cap is per
+// row rather than shared across rows, which makes the prompt *larger* than the
+// old budget did. That is deliberate and it is the whole trade: at ~95% cached
+// the billed total is far smaller even though the prompt is bigger, because
+// what is billed is the miss, not the prompt.
+//
+// The transcript on disk is not touched — this is only what the next call sees.
+const TOOL_MAX_CHARS = 16000;
+const TOOL_HEAD = 12000;
+const TOOL_TAIL = 3000;
 
 function safeSpillPart(s, max) {
   return String(s || 'tool').replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, max) || 'tool';
@@ -304,9 +388,17 @@ function spillTool(sessionId, row) {
   return file;
 }
 
-function clipToolContent(content, file) {
+/**
+ * The one form a tool result can take, decided by the row and nothing else.
+ *
+ * `spill` is a callback rather than a path because only the clipped branch
+ * needs a file written, and a row that passes through whole should not leave
+ * one behind.
+ */
+function clipToolContent(content, spill) {
   const s = String(content ?? '');
-  if (s.length <= TOOL_HEAD + TOOL_TAIL + 80) return s;
+  if (s.length <= TOOL_MAX_CHARS) return s;
+  const file = spill();
   return `${s.slice(0, TOOL_HEAD)}\n… [full output: ${file} — ${s.length} characters; read_file to retrieve]\n${s.slice(-TOOL_TAIL)}`;
 }
 
@@ -361,30 +453,24 @@ function pairedRows(rows) {
 /**
  * Transcript rows → the message array the API expects.
  *
- * Tool output is kept in full on disk and clipped here. Walking newest-first
- * and stopping at TOOL_KEEP_CHARS is what stops a long session from re-sending
- * every `read_file` it ever did; the spill file is how the model gets the rest.
+ * Tool output is kept in full on disk and clipped here. Clipping anything over
+ * TOOL_MAX_CHARS is what stops a long session from re-sending every `read_file`
+ * it ever did; the spill file is how the model gets the rest.
+ *
+ * What matters beyond the clipping itself is that it is **stable**: the same
+ * row produces the same string on every call, so the message array is
+ * append-only and a prefix cache can follow it. `test/harness.test.js` pins
+ * that — an old result sent once verbatim must still be verbatim after new
+ * results arrive.
  */
 function toApiMessages(allRows, { sessionId } = {}) {
   const rows = pairedRows(allRows);
-  const keepFull = new Set();
-  let used = 0;
-  for (let i = rows.length - 1; i >= 0; i--) {
-    if (rows[i].role !== 'tool') continue;
-    const len = String(rows[i].content || '').length;
-    if (!keepFull.size || used + len <= TOOL_KEEP_CHARS) {
-      keepFull.add(i);
-      used += len;
-    }
-  }
 
   return rows.map((r, i) => {
     if (r.role === 'tool') {
-      let content = r.content;
-      if (!keepFull.has(i)) {
-        const file = spillTool(sessionId, r);
-        content = clipToolContent(r.content, file);
-      }
+      // Each row decides its own form, so appending a result cannot change how
+      // an earlier one is sent. See the note on TOOL_MAX_CHARS.
+      const content = clipToolContent(r.content, () => spillTool(sessionId, r));
       return { role: 'tool', tool_call_id: r.tool_call_id, name: r.name, content };
     }
     if (r.role === 'assistant' && r.tool_calls?.length)
@@ -696,9 +782,7 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
   // An allowlist is expressed as its complement, because `schemas()` filters by
   // what is switched off and there is no second mechanism worth adding. A
   // profile with no list gets the user's ordinary disabled-tools setting.
-  const disabled = profile && Array.isArray(profile.tools)
-    ? tools.schemas([]).map(sc => sc.function.name).filter(n => !profile.tools.includes(n))
-    : (Array.isArray(p.disabledTools) ? p.disabledTools : []);
+  const disabled = disabledFor(profile, p);
 
   const base = {
     model:       p.model,
@@ -745,12 +829,21 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       {
         role: 'system',
         content: systemPrompt({
-          p, userText: message, summary, client, ledger: led,
+          p, userText: message, summary, client,
           toolCount: schemas.length, disabledCount: disabled.length,
         }),
       },
       ...toApiMessages(rows, { sessionId: session.id }),
     ];
+
+    // The readings go last, after the history. Everything above is now
+    // byte-identical from one step to the next, so the cached prefix grows with
+    // the transcript instead of being cut off at the first line that moves —
+    // and a per-step line inside the system prompt is exactly what did the
+    // cutting (ISSUES.md H-9). Not persisted: this is this step's reading, and
+    // the next step generates its own.
+    const live = liveBlock(p, led);
+    if (live) messages.push({ role: 'system', content: live });
 
     // Measured when the provider answers with a usage frame, estimated when it
     // does not. Both are recorded; only one is called a measurement.
@@ -809,7 +902,7 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       const shown = [];
       const result = args._raw !== undefined
         ? `Error: could not parse the arguments as JSON: ${args._raw}`
-        : await tools.call(name, args, disabled, { show: image => shown.push(image) });
+        : await tools.call(name, args, disabled, { show: image => shown.push(image), sessionId: session.id });
       for (const image of shown) say({ type: 'image', image, step });
       say({ type: 'tool_result', name, result, step });
 
@@ -875,14 +968,16 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
  * was to run a turn and trust the description. `GET /api/harness/environment`
  * shows the user the environment block for the same reason; this is the whole
  * of it, and it is what the prompt-order tests assert against.
+ *
+ * This is the system message, which is now the *stable* half of what a turn
+ * sends. The per-step readings travel separately, after the history — see
+ * `liveBlock()`. A caller that needs the whole request wants both.
  */
-function preview({ message = '', client = null, ledger = null, profile = null } = {}) {
+function preview({ message = '', client = null, profile = null } = {}) {
   const p = profile ? { ...params(), systemPrompt: profile.systemPrompt } : params();
-  const disabled = profile && Array.isArray(profile.tools)
-    ? tools.schemas([]).map(sc => sc.function.name).filter(n => !profile.tools.includes(n))
-    : (Array.isArray(p.disabledTools) ? p.disabledTools : []);
+  const disabled = disabledFor(profile, p);
   return systemPrompt({
-    p, userText: message, summary: '', client, ledger, profile,
+    p, userText: message, summary: '', client, profile,
     toolCount: tools.schemas(disabled).length, disabledCount: disabled.length,
   });
 }
@@ -923,8 +1018,12 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
     measure('memory rules', rulesBlock(), 'how the agent keeps its memory'),
     measure('memory entries', memoryBlock(message, Math.max(0, Number(p.memoryLimit) || 0)),
       `pinned + best matches, up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`),
-    measure('limits', budget.block(p, null)),
+    measure('limits', budget.block(p)),
     measure('settings proposals', settings.block()),
+    // Sent after the history rather than in the system message, so it is
+    // measured here but ordered last in the request. Same cost either way: it
+    // is re-sent on every step. See liveBlock() and ISSUES.md H-9.
+    measure('readings', environment.live(), 'clock, load, uptime — after the history'),
   ];
 
   // Per server, because "the prompt is big" is not actionable and "the blender
@@ -989,4 +1088,4 @@ async function status() {
   return out;
 }
 
-module.exports = { turn, status, params, ask, preview, breakdown, events, toApiMessages };
+module.exports = { turn, status, params, ask, preview, breakdown, liveBlock, events, toApiMessages };
