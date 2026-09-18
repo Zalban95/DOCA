@@ -429,3 +429,51 @@ test('a mission log lives under the data directory, not the working directory', 
   missions._reset();
   registry.setEnabled(false);
 });
+
+test('a finished mission can be put away, and putting it away keeps it', async () => {
+  // The list is what is live, not everything that ever ran — two failed
+  // missions sat in the bar with no way to clear them, and the only mechanism
+  // that existed was a test helper that wipes the whole index.
+  registry.setEnabled(true);
+  missions._reset();
+  const store = require('../modules/store');
+
+  const done = { id: 'msn_done', agentId: 'archivist', label: 'Archivist', task: 'look something up',
+    sessionId: 's_1', state: 'failed', steps: 2, tokens: 10, startedAt: new Date().toISOString(),
+    endedAt: new Date().toISOString(), result: null, error: 'the provider refused the request' };
+  const live = { ...done, id: 'msn_live', state: 'running', endedAt: null, error: null };
+  store.writeJson('agents/missions', { missions: [done, live] });
+  missions.record('msn_done', { type: 'tool_call', name: 'memory_search', args: {}, step: 1 });
+
+  assert.deepEqual(missions.list().map(m => m.id).sort(), ['msn_done', 'msn_live']);
+
+  const archived = missions.archive('msn_done');
+  assert.ok(archived.archivedAt, 'it is marked, not removed');
+  assert.deepEqual(missions.list().map(m => m.id), ['msn_live'], 'and it is out of the list');
+
+  // Kept: the row, its error and its log all survive being tidied away, which
+  // is the point of archiving rather than deleting — "why did it fail" is asked
+  // after the row has been cleared, not before.
+  assert.equal(missions.get('msn_done').error, 'the provider refused the request');
+  assert.ok(missions.events('msn_done').length, 'its log is untouched');
+  assert.deepEqual(missions.list({ all: true }).map(m => m.id).sort(), ['msn_done', 'msn_live']);
+
+  // Reversible, and a running mission is refused: a row that vanished while its
+  // specialist carried on spending would hide the one thing worth watching.
+  missions.archive('msn_done', { on: false });
+  assert.equal(missions.get('msn_done').archivedAt, null);
+  assert.throws(() => missions.archive('msn_live'), e => e.status === 409 && /still running/.test(e.message));
+  assert.throws(() => missions.archive('msn_nope'), e => e.status === 404);
+
+  // Over HTTP it is a click in the dashboard, like the other routes that change
+  // something the agent could otherwise change about its own record.
+  const bare = await h.api(null, 'POST', '/api/harness/missions/msn_done/archive', {}, { 'Sec-Fetch-Site': '' });
+  assert.equal(bare.status, 403, 'a bare POST cannot tidy away a mission');
+  const clicked = await h.api(null, 'POST', '/api/harness/missions/msn_done/archive', {},
+    { 'Sec-Fetch-Site': 'same-origin' });
+  assert.equal(clicked.status, 200);
+  assert.ok(clicked.body.mission.archivedAt);
+  assert.deepEqual((await h.api(null, 'GET', '/api/harness/missions')).body.missions.map(m => m.id), ['msn_live']);
+
+  registry.setEnabled(false);
+});

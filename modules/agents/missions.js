@@ -51,11 +51,42 @@ function saveIndex(rows) {
 
 function get(id) { return loadIndex().find(m => m.id === id) || null; }
 
-function list({ state, chainId, limit = 50 } = {}) {
+/**
+ * The missions worth drawing. Archived ones are out unless asked for.
+ *
+ * `all` exists so nothing is lost: a mission that was put away is still in the
+ * file, still readable by id, and its log is untouched — which matters most for
+ * the failed ones, since "why did it fail" is asked after the row has been
+ * cleared away, not before.
+ */
+function list({ state, chainId, limit = 50, all = false } = {}) {
   return loadIndex()
     .filter(m => (!state || m.state === state) && (!chainId || m.chainId === chainId))
+    .filter(m => all || !m.archivedAt)
     .slice(-limit)
     .reverse();
+}
+
+/**
+ * Put a finished mission away. Not a delete: the row and its log stay, so the
+ * list is a list of what is live rather than a list of everything that ever
+ * ran, and the evidence survives being tidied up.
+ *
+ * A running mission is refused. It is still working, and a row that vanishes
+ * while its specialist carries on spending tokens is the one thing this must
+ * not do — a restart turns it into `paused`, which can be archived.
+ */
+function archive(id, { on = true } = {}) {
+  const row = get(id);
+  if (!row) throw Object.assign(new Error(`No mission called "${id}".`), { status: 404 });
+  if (on && row.state === 'running')
+    throw Object.assign(new Error(
+      `${id} is still running — archiving it would hide work that is still spending. Wait for it, or `
+      + 'restart the panel, which pauses it.'), { status: 409 });
+
+  const next = patch(id, { archivedAt: on ? new Date().toISOString() : null });
+  announce(next);
+  return next;
 }
 
 /** Missions still going, which is what a progress indicator draws. */
@@ -190,6 +221,9 @@ function announce(row, { ephemeral = false } = {}) {
       // mission can still draw the bar from a single event. A client without a
       // plan falls back to the step count, exactly as before.
       plan: Array.isArray(row.plan) && row.plan.length ? row.plan : undefined,
+      // So a client that is showing this mission takes it off the list when it
+      // is put away here, rather than keeping a row the panel no longer draws.
+      archivedAt: row.archivedAt || undefined,
       progress: planProgress(row.plan) || undefined,
     };
     for (const d of devices.list()) {
@@ -428,6 +462,6 @@ function block() {
 
 function _reset() { store.writeJson(INDEX, { missions: [] }); }
 
-module.exports = { dispatch, recover, resume, get, list, running, events, record, block, patch,
+module.exports = { dispatch, recover, resume, archive, get, list, running, events, record, block, patch,
   setPlan, planProgress, normalizePlan, forSession,
   PLAN_MAX_ITEMS, PLAN_TITLE_MAX, PLAN_STATES, _reset };

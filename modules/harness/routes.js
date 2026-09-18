@@ -268,7 +268,12 @@ const handleAgentDelete = wrap(async (req, res) =>
   res.json({ ok: true, agent: registry.remove(req.params.id) }));
 
 const handleMissions = wrap(async (req, res) =>
-  res.json({ missions: missions.list({ state: req.query.state, limit: Number(req.query.limit) || 50 }) }));
+  res.json({ missions: missions.list({ state: req.query.state, limit: Number(req.query.limit) || 50,
+    all: req.query.all === '1' }) }));
+
+/** POST /api/harness/missions/:id/archive - put a finished one away, or bring it back. */
+const handleMissionArchive = wrap(async (req, res) =>
+  res.json({ ok: true, mission: missions.archive(req.params.id, { on: req.body?.archived !== false }) }));
 
 const handleMission = wrap(async (req, res) => {
   const m = missions.get(req.params.id);
@@ -288,7 +293,7 @@ const handleInstallReject = wrap(async (req, res) =>
   res.json({ ok: true, install: installs.reject(req.params.id, req.body?.reason) }));
 
 module.exports = {
-  handleAgents, handleAgentsEnable, handleAgentSave, handleAgentDelete, handleMissions, handleMission,
+  handleAgents, handleAgentsEnable, handleAgentSave, handleAgentDelete, handleMissions, handleMission, handleMissionArchive,
   handleInstalls, handleInstallApply, handleInstallReject,
   handleList, handleSetDefault, handleInstall, handleConfig, handleAddCustom, handleRemoveCustom,
   handleProviders, handleModels, handleToolCheck, handleStatus, handleUsage,

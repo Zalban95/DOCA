@@ -483,7 +483,10 @@ harnessApi.get('/missions', requireScope('harness:chat'), (req, res) => {
   const enabled = require('../agents/registry').enabled();
   res.json({
     enabled,
-    missions: enabled ? missions.list({ state: req.query.state, limit: Math.min(50, parseInt(req.query.limit, 10) || 20) }) : [],
+    // Archived ones are out by default here too, so the panel and a watch agree
+    // about what is still open rather than each keeping its own idea of it.
+    missions: enabled ? missions.list({ state: req.query.state, all: req.query.all === '1',
+      limit: Math.min(50, parseInt(req.query.limit, 10) || 20) }) : [],
   });
 });
 

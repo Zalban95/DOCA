@@ -244,6 +244,9 @@ app.post  ('/api/harness/agents/:id',               harness.handleAgentSave);
 app.delete('/api/harness/agents/:id',               harness.handleAgentDelete);
 app.get   ('/api/harness/missions',                 harness.handleMissions);
 app.get   ('/api/harness/missions/:id',             harness.handleMission);
+// A click in the dashboard, like the other routes that change something the
+// agent would otherwise be able to change about its own record.
+app.post  ('/api/harness/missions/:id/archive',     requireBrowser, harness.handleMissionArchive);
 app.get   ('/api/harness/installs',                 harness.handleInstalls);
 app.post  ('/api/harness/installs/:id/apply',       requireBrowser, harness.handleInstallApply);
 app.post  ('/api/harness/installs/:id/reject',      harness.handleInstallReject);

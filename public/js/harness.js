@@ -872,6 +872,9 @@ async function _hcLoadMissions() {
         <em>${m.state === 'running' ? `step ${m.steps || 0}` : escHtml(m.state)}</em>
         <button class="btn btn-xs" onclick="hcMissionLog(${jsArg(m.id)})"
                 title="Its whole log, which stays open and can be copied">log</button>
+        ${m.state === 'running' ? '' : `
+        <button class="btn btn-xs" onclick="hcMissionArchive(${jsArg(m.id)})"
+                title="Put it away. The mission and its log are kept — this list is what is live, not everything that ever ran.">✕</button>`}
       </span>`).join('');
   }
 
@@ -881,6 +884,21 @@ async function _hcLoadMissions() {
   const busy = rows.some(m => m.state === 'running');
   if (busy && !_hcMissionPoll) _hcMissionPoll = setInterval(_hcLoadMissions, 3000);
   if (!busy && _hcMissionPoll) { clearInterval(_hcMissionPoll); _hcMissionPoll = null; }
+}
+
+/**
+ * Put a finished mission away.
+ *
+ * Archived rather than deleted: the row and its log stay on disk, so the reason
+ * a mission failed is still there to be read after the list has been tidied,
+ * which is when that question is usually asked. `?all=1` brings them back.
+ */
+async function hcMissionArchive(id) {
+  try {
+    await apiFetch(`/api/harness/missions/${encodeURIComponent(id)}/archive`, { method: 'POST', body: {} });
+    hcMissionPeekHide();
+    _hcLoadMissions();
+  } catch (e) { appAlert(e.message); }
 }
 
 /* ── Watching a specialist work ────────────────────────
