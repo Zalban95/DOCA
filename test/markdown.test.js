@@ -41,6 +41,11 @@ function stubDom() {
       parent: null, _text: '',
       get textContent() { return el._text + el.children.map(c => c.textContent).join(''); },
       set textContent(v) { el._text = String(v); el.children.length = 0; },
+      // Without this the stub cannot express nesting at all: `mdListEl` opens a
+      // sublist only when the item above it exists as `lastElementChild`, so a
+      // stub missing it renders every nested list flat — and a test written
+      // against that would pin the wrong shape while the panel drew another.
+      get lastElementChild() { return el.children.filter(c => c.tagName !== '#text').at(-1) || null; },
       appendChild(c) { el.children.push(c); c.parent = el; return c; },
       insertBefore(c, ref) {
         const i = el.children.indexOf(ref);
@@ -146,6 +151,10 @@ test('the block shapes the agent actually writes are recognised', () => {
 
   const ol = first('1. one\n2. two');
   assert.equal(ol.type, 'ol');
+  // Each item keeps its own marker, which is what a nested list is built from:
+  // the block-level type numbered every bullet nested under a numbered item.
+  assert.deepEqual(ul.items.map(i => i.ordered), [false, false, false]);
+  assert.deepEqual(ol.items.map(i => i.ordered), [true, true]);
 
   const table = first('| a | b |\n|---|--:|\n| 1 | 2 |\n| 3 | 4 |');
   assert.equal(table.type, 'table');
@@ -323,4 +332,29 @@ test('a stream that ends mid-fence still shows the code', () => {
   assert.match(el.textContent, /df -h/);
   const pre = el.children.find(c => c.tagName === 'pre');
   assert.ok(pre, 'an unterminated fence is still a code block');
+});
+
+test('a bullet list nested under a numbered one is still bullets', () => {
+  // The nested list used to be created with the outer list's tag, so bullets
+  // under a numbered item came out numbered — visible in the panel, invisible
+  // to every parser-level test, because the parts tree is right either way.
+  // Built inside withDom: the nodes have to be made while the stub document is
+  // the one in scope, the same way the tag-allowlist test does it.
+  const { value } = withDom(() => {
+    const { mdBlock, mdNodes } = new Function(`${SRC}; return { mdBlock, mdNodes };`)();
+    return {
+      numbered: mdNodes(mdBlock('1. first\n2. second\n   - nested one\n   - nested two').parts),
+      bulleted: mdNodes(mdBlock('- first\n- second\n  1. one\n  2. two').parts),
+    };
+  });
+
+  const ol = value.numbered.find(n => n.tagName === 'ol');
+  assert.ok(ol, 'the outer list is still ordered');
+  const sub = ol.children.at(-1).children.find(c => c.tagName === 'ul' || c.tagName === 'ol');
+  assert.equal(sub.tagName, 'ul', 'the nested list takes the marker of the item that opens it');
+  assert.deepEqual(sub.children.map(li => li.textContent), ['nested one', 'nested two']);
+
+  // And the other way round: numbers nested under a bullet stay numbers.
+  const ul = value.bulleted.find(n => n.tagName === 'ul');
+  assert.equal(ul.children.at(-1).children.find(c => /^(ul|ol)$/.test(c.tagName)).tagName, 'ol');
 });

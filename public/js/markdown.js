@@ -175,7 +175,11 @@ function mdBlock(text) {
       const ordered = /\d/.test(m[2]);
       const items = [];
       while (i < lines.length && (m = MD_LIST.exec(lines[i]))) {
-        items.push({ indent: Math.floor(m[1].replace(/\t/g, '  ').length / 2), text: m[3] });
+        // `ordered` per item, not per block: a bullet list nested under a
+        // numbered one is still a bullet list, and the block's own marker
+        // cannot say that.
+        items.push({ indent: Math.floor(m[1].replace(/\t/g, '  ').length / 2), text: m[3],
+          ordered: /\d/.test(m[2]) });
         i++;
       }
       parts.push({ type: ordered ? 'ol' : 'ul', items });
@@ -308,7 +312,9 @@ function mdListEl(type, items) {
     while (stack.length > 1 && it.indent < stack[stack.length - 1].indent) stack.pop();
     const top = stack[stack.length - 1];
     if (it.indent > top.indent && top.el.lastElementChild) {
-      const sub = document.createElement(type);
+      // The nested list takes the marker of the item that opens it. Reusing the
+      // outer list's type numbered every bullet nested under a numbered item.
+      const sub = document.createElement(it.ordered ? 'ol' : 'ul');
       top.el.lastElementChild.appendChild(sub);
       stack.push({ indent: it.indent, el: sub });
     }
