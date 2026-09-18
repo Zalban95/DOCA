@@ -380,6 +380,30 @@ This is the invariant a feature flag cannot roll back, and it does not hold.
 - **Does not stop: `shell`.** It has curl, and curl sets whatever header it
   likes. Nothing short of authenticating `/api/*` changes that, which is the
   point TODO.md already makes and is correct.
+- **Does not stop: the panel's own settings routes, which is the wider hole and
+  was not visible until it was probed.** `POST /api/harness/doca/config` writes
+  **any harness setting directly** — no proposal, no click, no authentication.
+  Verified 2026-09-18: `{"temperature": 0.9}` moved the setting from 0.3 to 0.9
+  with a bare `curl`, and the agent has `http_fetch`. So the guard on the two
+  `apply` routes closes one door while the room behind it has no wall on that
+  side at all. The ⚙ panel uses this route to save what the user types, which
+  is legitimate — the fault is that the same route is reachable by the agent.
+
+  The full set that writes settings without the guard: `POST
+  /api/harness/:id/config`, `/api/configs/:id`, `/api/config-favorites`,
+  `/api/models/settings`, `/api/models/local/settings`, `/api/models/hf/settings`,
+  `/api/models/tools/:id/config`, `/api/snapshots/settings`, `/api/vms/settings`,
+  `/api/services/settings`.
+
+  Extending `requireBrowser` to them would close the `http_fetch` path for all
+  of them and the dashboard sends the header automatically — but it would also
+  break any script or CLI a user has pointed at those routes, which is a
+  decision rather than a patch. Not made unilaterally.
+
+  **The honest summary: the invariant "the agent proposes, only a human click
+  applies" holds against `settings_propose` and does not hold against the
+  panel's direct-write routes.** Fix shape (3), authenticating `/api/*`, closes
+  both at once, which is another reason it is the answer.
 
 So the honest description of the click is now **a convention with a speed bump,
 not a gate**: the bypass requires deliberate header forgery spelled out in a
