@@ -586,3 +586,111 @@ Settings → System:
 
 `DOCA_STT_URL` / `DOCA_TTS_URL` are the inverse case: they override the Voice
 card rather than defaulting it, which the card now states.
+
+## Memory that does not interrupt the agent doing the work
+
+Written 2026-09-18, after measuring what a memory write actually costs. Two
+separate problems had been discussed as one, and they have different fixes — so
+this section is deliberately split into what is **settled** and what is **not**,
+because the settled half is small and independently useful and should not wait
+on the rest.
+
+### The two problems
+
+**Cache.** `memoryBlock()` sits at position 7 of the 13 blocks in the system
+prompt, and is rebuilt on every step. So a `memory_write` mid-turn changes the
+head of the prompt and the next step misses essentially everything: measured at
+**23% cached on step 6 of a six-step turn**, against 93–95% either side of it.
+The write is cheap; the step after it is not. See `ISSUES.md` H-9b, where this
+is recorded among the writers of the same shape.
+
+**Flow.** The orchestrator spends its own steps on bookkeeping. In the 28-step
+run of 2026-09-17, step 5 was a `memory_flag` plus a `memory_write` and step 27
+was two writes plus a `memory_rules_write` — four steps of the user's turn spent
+filing, and the orchestrator busy throughout.
+
+They are not the same fault and a memory agent does not fix both.
+
+### Settled — decided, not yet built
+
+**1. Memory is snapshotted at the start of a turn and does not move during it.**
+
+Decided, because it is the cache fix and it is independent of everything below.
+Take the memory block once when the turn begins and rebuild every step from that
+snapshot. Writes during the turn land in the store but do not reach the prompt
+until the next turn starts.
+
+The consequence to accept: within a turn the agent cannot see a fact it just
+wrote. That is the correct trade — it wrote the fact, so it does not need it
+read back — and it converts "every write costs the next step" into "at most one
+prompt change per turn, at the boundary where a change is expected" (the new
+user message changes the prefix anyway). Expected effect: a memory write stops
+being a 23% step.
+
+This is the half to build first, and the half with a number attached.
+
+**2. Memory work leaves the orchestrator's turn.**
+
+Decided. A dedicated agent does it, out of band. This is not a new kind of
+thing: `archivist` is already the memory specialist, already runs in its own
+session, and is already `memory: false` / `environment: minimal` so it does not
+drag the orchestrator's context. It needs a **write** tool — today it has only
+`memory_search` — not a new architecture.
+
+Run as a mission, so `dispatch()` returns immediately and the orchestrator
+carries on. The orchestrator's step cost for memory becomes one dispatch.
+
+**3. Candidates are queued, not written.**
+
+Decided. A new `memory_note` tool appends a candidate to a queue instead of
+writing an entry. `memory_write` stays exactly as it is, for when the user says
+"remember this" and it must land now.
+
+The point is that the queue is **not in the prompt**, so calling `memory_note`
+costs no cache at all — where `memory_write` mid-turn costs a step's prefilled
+prefix. A memory agent drains the queue between turns.
+
+This is the same reasoning already written down in *"Nothing searches across
+conversations"* above: a thing the agent calls when relevant, not an index
+injected into every prompt, which would spend the window it is meant to protect.
+It also matches the outbox idea in *"Two layers of learned knowledge"* — queue
+first, read it before it goes, rather than acting in the moment of the work.
+
+### Not settled — needs a decision before it is built
+
+**Who tags a candidate as worth keeping?** The settled design says the writing
+agent calls `memory_note`. That makes the writer the judge of its own output,
+which is cheap and nearly free but is the wrong shape for anything subtle — and
+it is the same agent whose context is the thing being protected, so asking it to
+also be the filter is asking twice. The alternatives (a second model call per
+output, or a heuristic) each cost something real. `.doca/outbox/` style suggests
+the answer is "the writer marks, the reader judges", but that is a guess and has
+not been decided.
+
+**Does the memory agent write, or propose?** Everywhere else in this panel the
+agent proposes and the user clicks — `settings_propose`, `install_propose`, and
+the whole reason H-7 matters. Memory has no equivalent: `memory_write` writes
+directly today, so a memory agent writing directly would not be a new power, but
+it would be a larger one, because it would be consolidating on its own judgement
+rather than carrying out an instruction the user watched. `locked` and `disputed`
+protect individual entries and `source` records who wrote one; what does not
+exist is a review step. Undecided, and it decides how much the queue needs to
+carry.
+
+**How does the memory agent decide "this is new" without the window it is
+protecting?** Dedupe and contradiction need to see existing memory. Full entries
+for a few hundred is fine; the failure mode is the agent's own context becoming
+large enough to need the same treatment. The bounded version is a key-and-category
+listing rather than full text, with `memory_search` for the detail — plausible,
+not decided.
+
+**Does a memory agent get its own provider or model?** `archivist` definition
+already allows `provider` and `model` per definition. Filing is a cheap,
+mechanical job and a large model would be wasted on it — but a small model
+misjudging what matters is worse than no memory agent. Undecided.
+
+### What is deliberately not in this section
+
+Not a second summariser. The rolling session summary already exists and is
+already the per-topic artefact; this is about durable entries, which are a
+different thing and should stay one.
