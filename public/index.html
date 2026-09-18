@@ -1180,6 +1180,19 @@
 </div>
 
 <!-- ═══ SPECIALIST AGENT MODAL ══════════════════════ -->
+<!-- A mission's own log. Opened from the bar, refreshes itself while the mission
+     runs, and is plain selectable text so it can be copied into a report. -->
+<div id="hc-mission-overlay" class="modal-overlay" style="display:none" onclick="hcMissionLogClose(event)">
+  <div class="modal" style="max-width:820px" onclick="event.stopPropagation()">
+    <div class="modal-title" id="hc-mission-title">Mission</div>
+    <pre class="hc-mission-log" id="hc-mission-log">…</pre>
+    <div class="toolbar-right mt8">
+      <button class="btn btn-xs" onclick="hcMissionLogCopy(this)">copy</button>
+      <button class="btn btn-xs" onclick="hcMissionLogClose()">close</button>
+    </div>
+  </div>
+</div>
+
 <div id="hc-agent-overlay" class="modal-overlay" style="display:none" onclick="hcAgentClose(event)">
   <div class="modal" style="max-width:680px" onclick="event.stopPropagation()">
     <div class="modal-title" id="hc-agent-title">Specialist</div>

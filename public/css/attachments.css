@@ -123,3 +123,27 @@
 .hc-mission.failed { border-color: var(--red); }
 
 @keyframes hc-mission-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+/* ── Watching a specialist work ───────────────────────
+   The bar said `failed` and the reason lived in a JSONL file on the host. The
+   peek is the last few lines under the pointer; the log is the whole thing,
+   stays open, and is selectable so it can be pasted into a report. */
+.hc-mission button { margin-left: 4px; padding: 1px 5px; font-size: 8px; line-height: 1.4; }
+.hc-mission-peek {
+  position: fixed; z-index: 60; display: none;
+  max-width: min(560px, 90vw); max-height: 240px; overflow: auto;
+  padding: 8px 10px;
+  background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+  font-family: var(--font-mono); font-size: 10px; line-height: 1.6; color: var(--text);
+  white-space: pre-wrap; word-break: break-word;
+  pointer-events: none;                    /* never steals the hover it was opened by */
+}
+.hc-mission-log {
+  margin: 0; max-height: min(60vh, 520px); overflow: auto;
+  padding: 10px 12px;
+  background: #060708; border: 1px solid var(--border2); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.65; color: #8ab8d8;
+  white-space: pre-wrap; word-break: break-word;
+  user-select: text;
+}

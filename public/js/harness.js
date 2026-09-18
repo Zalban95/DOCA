@@ -865,10 +865,13 @@ async function _hcLoadMissions() {
   else {
     bar.style.display = '';
     bar.innerHTML = rows.map(m => `
-      <span class="hc-mission ${escHtml(m.state)}" title="${escHtml(m.task || '')}">
+      <span class="hc-mission ${escHtml(m.state)}" title="${escHtml(m.task || '')}"
+            onmouseenter="hcMissionPeek(${jsArg(m.id)}, this)" onmouseleave="hcMissionPeekHide()">
         <span class="hc-mission-dot"></span>
         ${escHtml(m.label || m.agentId)}
         <em>${m.state === 'running' ? `step ${m.steps || 0}` : escHtml(m.state)}</em>
+        <button class="btn btn-xs" onclick="hcMissionLog(${jsArg(m.id)})"
+                title="Its whole log, which stays open and can be copied">log</button>
       </span>`).join('');
   }
 
@@ -878,6 +881,134 @@ async function _hcLoadMissions() {
   const busy = rows.some(m => m.state === 'running');
   if (busy && !_hcMissionPoll) _hcMissionPoll = setInterval(_hcLoadMissions, 3000);
   if (!busy && _hcMissionPoll) { clearInterval(_hcMissionPoll); _hcMissionPoll = null; }
+}
+
+/* ── Watching a specialist work ────────────────────────
+   A mission runs with nobody watching it — that is the point of dispatching one
+   — but "nobody watching" turned into "nowhere to look": the bar said `failed`
+   and the reason was only in `agents/mission-*.jsonl` on the host. The log was
+   always there (`GET /api/harness/missions/:id` returns the mission and its
+   events); nothing drew it. Hovering peeks, the button opens it properly. */
+
+/** One event as a line: what ran, and what came back. */
+function _hcEventLine(e) {
+  const at = String(e.at || '').slice(11, 19);
+  if (e.type === 'tool_call')   return `${at}  → ${e.name}(${_hcPrettyArgs(e.args || {}).replace(/\s+/g, ' ').slice(0, 120)})`;
+  if (e.type === 'tool_result') return `${at}  ← ${e.name}: ${String(e.result ?? '').replace(/\s+/g, ' ').slice(0, 200)}`;
+  if (e.type === 'usage')       return `${at}  · step ${e.step}, ${e.totalTokens || 0} tokens`;
+  if (e.type === 'error')       return `${at}  ✗ ${e.text || e.message || ''}`;
+  return `${at}  ${e.type}${e.text ? `: ${String(e.text).slice(0, 200)}` : ''}`;
+}
+
+/** The mission, its outcome and its log, as the text a person would paste. */
+function _hcMissionText(mission, events) {
+  const m = mission || {};
+  return [
+    `${m.id} — ${m.label || m.agentId} — ${m.state}`,
+    `task: ${m.task || ''}`,
+    `steps: ${m.steps || 0}   tokens: ${m.tokens || 0}   started: ${m.startedAt || '?'}   ended: ${m.endedAt || '—'}`,
+    m.error  ? `\nerror:\n${m.error}` : '',
+    m.result ? `\nresult:\n${m.result}` : '',
+    '', '— log —',
+    ...(events || []).map(_hcEventLine),
+  ].filter(l => l !== '').join('\n');
+}
+
+/* The peek: the last few lines, while the pointer is on the row. Fetched on
+   hover rather than polled for every mission, because a bar of six missions
+   polling their logs every three seconds is six requests a second for
+   something nobody is looking at. */
+let _hcPeekFor = null;
+
+async function hcMissionPeek(id, anchor) {
+  _hcPeekFor = id;
+  let data;
+  try { data = await apiFetch(`/api/harness/missions/${encodeURIComponent(id)}`); } catch { return; }
+  if (_hcPeekFor !== id) return;                 // the pointer moved on while we asked
+
+  const pop = document.getElementById('hc-mission-peek') || (() => {
+    const el = document.createElement('div');
+    el.id = 'hc-mission-peek';
+    el.className = 'hc-mission-peek';
+    document.body.appendChild(el);
+    return el;
+  })();
+
+  const lines = (data.events || []).slice(-6).map(_hcEventLine);
+  const head  = data.mission?.error ? `✗ ${data.mission.error}` : (data.mission?.result || data.mission?.task || '');
+  // A failed mission usually logged the same error it ended with; saying it
+  // twice in six lines wastes the half of them worth reading.
+  const body  = head && lines.some(l => l.includes(data.mission?.error || ' ')) ? lines : [head, ...lines];
+  pop.textContent = body.filter(Boolean).join('\n') || 'nothing logged yet';
+
+  const r = anchor.getBoundingClientRect();
+  pop.style.display = 'block';
+  pop.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8))}px`;
+  pop.style.top  = `${r.bottom + 6}px`;
+}
+
+function hcMissionPeekHide() {
+  _hcPeekFor = null;
+  const pop = document.getElementById('hc-mission-peek');
+  if (pop) pop.style.display = 'none';
+}
+
+/* The log: stays open, refreshes itself while the mission is still running, and
+   can be selected and copied — which is the whole reason it is a modal and not
+   a bigger tooltip. */
+let _hcLogFor = null;
+let _hcLogPoll = null;
+
+async function hcMissionLog(id) {
+  _hcLogFor = id;
+  hcMissionPeekHide();
+  const overlay = document.getElementById('hc-mission-overlay');
+  if (overlay) overlay.style.display = 'flex';
+  await _hcMissionLogLoad();
+  if (!_hcLogPoll) _hcLogPoll = setInterval(_hcMissionLogLoad, 3000);
+}
+
+async function _hcMissionLogLoad() {
+  if (!_hcLogFor) return;
+  const body  = document.getElementById('hc-mission-log');
+  const title = document.getElementById('hc-mission-title');
+  try {
+    const data = await apiFetch(`/api/harness/missions/${encodeURIComponent(_hcLogFor)}`);
+    const m = data.mission || {};
+    if (title) title.textContent = `${m.label || m.agentId || 'Mission'} — ${m.state || '?'}`;
+    if (body) {
+      const atEnd = body.scrollTop + body.clientHeight >= body.scrollHeight - 20;
+      body.textContent = _hcMissionText(m, data.events);
+      if (atEnd) body.scrollTop = body.scrollHeight;   // follow a running one, leave a scrolled reader alone
+    }
+    // A finished mission has nothing more to say; stop asking.
+    if (m.state !== 'running' && _hcLogPoll) { clearInterval(_hcLogPoll); _hcLogPoll = null; }
+  } catch (e) {
+    if (body) body.textContent = `Could not read the mission: ${e.message}`;
+  }
+}
+
+function hcMissionLogClose(event) {
+  if (event && event.target !== event.currentTarget) return;
+  _hcLogFor = null;
+  if (_hcLogPoll) { clearInterval(_hcLogPoll); _hcLogPoll = null; }
+  const overlay = document.getElementById('hc-mission-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+async function hcMissionLogCopy(btn) {
+  const body = document.getElementById('hc-mission-log');
+  if (!body) return;
+  try {
+    await navigator.clipboard.writeText(body.textContent);
+    if (btn) { const was = btn.textContent; btn.textContent = 'copied'; setTimeout(() => { btn.textContent = was; }, 1200); }
+  } catch {
+    // Clipboard permission is not guaranteed; selecting it is always allowed.
+    const range = document.createRange();
+    range.selectNodeContents(body);
+    const sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+  }
 }
 
 /* A definition is a JSON file, and this edits it as one rather than as a form.
