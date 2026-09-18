@@ -48,6 +48,10 @@ test('reading a path that is not a file at all is still 404', async () => {
 test('reading a file it may not read is 403, not 404 and not 500', async () => {
   // The path exists and is a file; the permission is what stops us. Reporting
   // 404 here would be a lie and 500 would be a false alarm.
+  // chmod is a no-op for reads on Windows — the file stays readable, so there
+  // is no "may not read" state to produce. Skipped rather than failed: a red
+  // mark that means "not applicable here" trains people to ignore red marks.
+  if (process.platform === 'win32') return;
   const f = path.join(os.tmpdir(), `doca-noperm-${Date.now()}.txt`);
   fs.writeFileSync(f, 'secret');
   fs.chmodSync(f, 0o000);

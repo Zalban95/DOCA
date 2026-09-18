@@ -863,7 +863,15 @@ test('a large tool result is spilled in full, not spilled already-truncated', as
   const fs = require('node:fs');
 
   // Real command, real output, through the real tool.
-  const out = await toolsMod.call('shell', { command: 'seq 1 8000' });
+  // The shell tool spawns /bin/bash by design — the panel manages a Linux host —
+  // so on a Windows development machine every shell call is ENOENT and there is
+  // no large result to spill. Skipped rather than failed, and rather than
+  // weakening the assertion to whatever this platform can produce.
+  if (process.platform === 'win32') return;
+  // Not `seq`: node is the one command guaranteed present wherever these run.
+  const out = await toolsMod.call('shell', {
+    command: 'node -e "for(let i=1;i<=8000;i++)console.log(i)"',
+  });
   assert.ok(out.length > 16000,
     `a shell result is still capped below the transcript clip (${out.length} chars)`);
 

@@ -23,43 +23,44 @@ const h = require('./helpers');           // must come first: it sets the env
 test.before(async () => { await h.start(); });
 test.after(async () => { await h.stop() });
 
-let hasDocker = false;
+// Three states, not two: no binary, a binary with nothing listening, and a
+// working daemon. The middle one is the commonest on a developer's machine —
+// Docker Desktop installed and not started — and it was answering 500.
+let hasDocker = false, daemonUp = false;
 try { execSync('docker --version', { stdio: 'ignore' }); hasDocker = true; } catch {}
+try { execSync('docker info', { stdio: 'ignore' }); daemonUp = true; } catch {}
+
+/** What this machine should answer, whichever of the three it is. */
+function expectDocker(r, what) {
+  assert.notEqual(r.status, 500, 'neither a missing binary nor a stopped daemon is a 500');
+  if (daemonUp) return assert.equal(r.status, 200);
+  assert.equal(r.status, 503, 'a dependency that is not available is a 503');
+  assert.equal(r.body.code, hasDocker ? 'docker_stopped' : 'docker_missing',
+    'the code travels so the UI can tell the difference');
+  assert.match(r.body.error, hasDocker ? /daemon is not running/ : /not installed/);
+  assert.ok(!/Command failed/.test(r.body.error), 'the raw shell error is not the message');
+  if (what) assert.match(r.body.error, new RegExp(what));
+}
 
 const get = p => h.api(null, 'GET', p);
 
-test('listing containers never reports a server fault for a missing docker', async () => {
+test('listing containers never reports a server fault when docker is missing or stopped', async () => {
   const r = await get('/api/docker/containers');
-  assert.notEqual(r.status, 500, 'a missing binary is not a 500');
-
-  if (hasDocker) {
-    assert.equal(r.status, 200);
-    assert.ok(Array.isArray(r.body.containers));
-  } else {
-    assert.equal(r.status, 503, 'a dependency that is not here is a 503');
-    assert.equal(r.body.code, 'docker_missing', 'the code travels so the UI can tell the difference');
-    assert.match(r.body.error, /not installed/);
-    assert.ok(!/Command failed/.test(r.body.error), 'the raw shell error is not the message');
-  }
+  expectDocker(r, 'containers');
+  if (daemonUp) assert.ok(Array.isArray(r.body.containers));
 });
 
-test('listing images never reports a server fault for a missing docker', async () => {
-  const r = await get('/api/docker/images');
-  assert.notEqual(r.status, 500, 'a missing binary is not a 500');
-  if (hasDocker) assert.equal(r.status, 200);
-  else {
-    assert.equal(r.status, 503);
-    assert.equal(r.body.code, 'docker_missing');
-  }
+test('listing images never reports a server fault when docker is missing or stopped', async () => {
+  expectDocker(await get('/api/docker/images'), 'images');
 });
 
-test('acting on a container says docker is missing rather than failing obscurely', async () => {
+test('acting on a container says why docker is unavailable rather than failing obscurely', async () => {
   const r = await h.api(null, 'POST', '/api/docker/containers/abc123/action', { action: 'start' });
-  assert.notEqual(r.status, 500, 'a missing binary is not a 500');
-  if (!hasDocker) {
-    assert.equal(r.status, 503);
-    assert.equal(r.body.code, 'docker_missing');
-  }
+  // With a working daemon this is a real docker error about a container that is
+  // not there, which stays a 500 with docker's own words — the two states of
+  // docker itself are what this route must not report as a panel fault.
+  if (!daemonUp) expectDocker(r);
+  else assert.match(String(r.body.error || ''), /No such container|no such container/i);
   // An action nobody offered is still refused as a bad request, docker or not.
   const bad = await h.api(null, 'POST', '/api/docker/containers/abc123/action', { action: 'explode' });
   assert.equal(bad.status, 400);
