@@ -9,6 +9,25 @@ When a deferred item turns out to bite someone, promote it to `ISSUES.md`. When
 an issue turns out to have been a decision, move it back here with the reason.
 Do not silently drop either.
 
+**Broadened 2026-09-18.** This file is now also where **requirements for the
+final product** are collected, decided or not, while solutions are prototyped on
+`dev/troubleshoot`. Two consequences worth stating rather than leaving implicit:
+
+- An entry may now be a **defect nobody chose** — the markdown entry below is
+  one — which by the rule above would belong in `ISSUES.md`. The distinction
+  still holds and is still useful: `ISSUES.md` is for faults with a named cause
+  and a stated way to close them; this file is for what the finished product
+  should do. Where an item is both, it lives here while it is a requirement and
+  moves to `ISSUES.md` when somebody is assigned to fix it.
+- An entry may be **undecided**, and says so in as many words. The section
+  *"Memory that does not interrupt the agent doing the work"* is written as
+  settled-versus-open deliberately, and the markdown entry names its own open
+  questions. An entry that hides which half is which is worse than no entry,
+  because it reads as a plan.
+
+Nothing on `dev/troubleshoot` is merged. What works there is prototype evidence
+for these requirements, not a change to the product.
+
 ## MCP and VMs, deliberately left out of the first pass
 
 - **No embedded VNC console.** The VMs tab shows the display address to paste
@@ -694,3 +713,76 @@ misjudging what matters is worse than no memory agent. Undecided.
 Not a second summariser. The rolling session summary already exists and is
 already the per-topic artefact; this is about durable entries, which are a
 different thing and should stay one.
+
+## The agent writes markdown and the panel shows the asterisks
+
+Reported 2026-09-18. Every surface where the agent's own words appear renders
+them as **plain text**, so a reply arrives looking like this:
+
+```
+Done. Where things stand:
+
+**Three specialists, three independent answers** — all finished, all read:
+- archivist `msn_c470516a36fb` — 2 steps — HALCYON memory search
+- scribe `msn_f889eb6c55dc` — 5 steps — wrote `host-note.txt` (99 bytes)
+```
+
+The model is doing the right thing — that is markdown, and it is what it was
+trained to write. Nothing renders it. There is **no markdown renderer anywhere
+in the panel**: a grep for `marked`, `markdown`, `renderMarkdown` or `mdToHtml`
+across `public/js/` finds only the words in unrelated comments.
+
+### Where it bites
+
+Both surfaces that show agent prose, and they share the pipeline:
+
+- `public/js/harness.js` — the Harness console, `evt.type === 'text'` → `stream.feed(evt.text)`
+- `public/js/chat.js` — the chat panel, the same two lines
+
+Both feed the same streaming helper (`public/js/utils.js`, the `feed(chunk)`
+accumulator), which is where the output is written to the DOM. It already does
+**one** piece of structured handling — `<think>` blocks are detected and held
+back — so the shape of the fix is not new; markdown is simply a case that was
+never added.
+
+### What "done" means
+
+- A fenced code block shows as a code block, not as backticks and a language
+  tag; headings, bold, italics, inline code and lists render as themselves.
+- Tables render as tables — the agent emits them for anything comparative, and
+  they are unreadable as pipe-delimited text.
+- Links render, and are safe to click.
+- The **raw** text is still what is stored, copied and sent to the model. This
+  is a display concern only; nothing about the transcript changes.
+
+### The constraints that make it a real piece of work
+
+- **It streams.** Text arrives in deltas, so a renderer has to cope with a
+  half-written `**bold` or an unterminated fence without flashing the wrong
+  thing and then correcting itself. Rendering the finished message only at the
+  end is easier and loses the live-typing feel that exists today; a
+  re-render-per-chunk approach is easy and flickers. Whoever does this should
+  pick deliberately rather than discover the choice.
+- **The model's output is not trusted markup.** It is text a model wrote, in a
+  page that has the user's session. Whatever renders it must escape first and
+  then introduce only the tags it means to — the existing `escHtml()` discipline
+  is the reason nothing has gone wrong so far, and markdown is exactly the kind
+  of feature that quietly removes it.
+- **`<think>` already occupies the same pipeline.** Whatever is built has to
+  compose with that rather than fight it for the same buffer.
+
+### Not decided
+
+- **Which renderer.** No dependency is needed — the subset above is a few
+  hundred lines — but the choice between that and a library is a decision, and
+  the panel has kept its dependency list deliberately short (five entries in
+  `package.json`, none of them UI).
+- **Whether tool results get the same treatment.** They are the other half of
+  what fills the console, and they are often structured (JSON, tables, diffs)
+  where markdown would help more than it does in prose. Separate call, and it
+  may want syntax highlighting rather than markdown.
+- **Whether the panel should instead ask the agent not to use markdown.** It is
+  the cheaper answer and it is the wrong one — markdown is how these models
+  communicate structure, and suppressing it would cost readability in the
+  transcript, which is the artefact that outlives the chat. Recorded here so the
+  option is visibly rejected rather than forgotten.
