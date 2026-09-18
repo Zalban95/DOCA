@@ -10,6 +10,7 @@ const providers = require('./providers');
 const memory      = require('./memory');
 const tools       = require('./tools');
 const agent       = require('./agent');
+const toolcheck   = require('./toolcheck');
 const environment = require('./environment');
 const installs    = require('./installs');
 const registry    = require('../agents/registry');
@@ -56,6 +57,23 @@ const handleProviders = wrap(async (_req, res) => res.json({
 
 const handleModels = wrap(async (req, res) =>
   res.json(await providers.models(req.query.provider || 'ollama')));
+
+/**
+ * GET /api/harness/tool-check?provider=…&model=…
+ *
+ * Whether a model will call a tool. A read, deliberately: it changes no
+ * setting, spends one 64-token call, and is exactly the question the agent
+ * should be able to ask about its own fallback — so it is not behind
+ * `requireBrowser`, which exists for routes that apply something.
+ */
+const handleToolCheck = wrap(async (req, res) =>
+  res.json(await toolcheck.check({
+    provider: req.query.provider,
+    model:    req.query.model,
+    // No signal from the request: Express 4 has no `req.signal`, and the check
+    // carries its own deadline, so a panel that goes away costs one abandoned
+    // 64-token call rather than a socket held open indefinitely.
+  })));
 
 const handleStatus = wrap(async (_req, res) => res.json(await agent.status()));
 
@@ -273,7 +291,7 @@ module.exports = {
   handleAgents, handleAgentsEnable, handleAgentSave, handleAgentDelete, handleMissions, handleMission,
   handleInstalls, handleInstallApply, handleInstallReject,
   handleList, handleSetDefault, handleInstall, handleConfig, handleAddCustom, handleRemoveCustom,
-  handleProviders, handleModels, handleStatus, handleUsage,
+  handleProviders, handleModels, handleToolCheck, handleStatus, handleUsage,
   handleChat, handleSessions, handleSessionNew, handleSession, handleSessionActivate, handleSessionDelete,
   handleMemoryList, handleMemoryWrite, handleMemoryForget, handleMemoryLock, handleMemoryFlag,
   handleRulesGet, handleRulesWrite, handleRulesReset, handleRulesVerify,

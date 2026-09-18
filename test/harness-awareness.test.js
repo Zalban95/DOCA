@@ -611,7 +611,7 @@ test('every harness parameter has a box in the panel to type it into', () => {
 
   // These have their own controls rather than a number box: provider and model
   // are selects, systemPrompt a textarea, disabledTools the tool checkboxes, and
-  // fallbackChain the `provider/model`-per-line textarea beside them. Each is in
+  // fallbackChain the repeatable provider/model rungs beside them. Each is in
   // the same config strip — the point of this list is that nothing is reachable
   // only by editing the prefs file, not that everything is a number box.
   const elsewhere = ['provider', 'model', 'systemPrompt', 'disabledTools', 'fallbackChain'];
@@ -631,54 +631,90 @@ test('every harness parameter has a box in the panel to type it into', () => {
   assert.match(table[0], /key: 'historyTurns'[\s\S]{0,200}?max="5000"/);
 });
 
-test('the fallback chain box keeps every line the user typed', () => {
-  // The chain is typed as text and stored as pairs, so the parser sits between
-  // the user's intent and the thing that decides who answers. A line it eats is
-  // a chain the user believes they configured and does not have — and they
-  // would find out during the outage the chain was meant to survive. The parser
-  // is run here rather than trusted.
+test('the fallback rungs read back exactly what the form is showing', () => {
+  // The form sits between the user's intent and the thing that decides who
+  // answers. A rung it drops is a chain the user believes they configured and
+  // does not have — and they would find out during the outage the chain was
+  // meant to survive. So `_fallbacksRead` is run here, against a stub of just
+  // the parts of the DOM it touches, rather than trusted.
   const fs   = require('node:fs');
   const path = require('node:path');
   const src  = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'harness.js'), 'utf8');
-  const fn   = src.match(/function _chainToText[\s\S]*?\n\}/)[0] + '\n'
-             + src.match(/function _textToChain[\s\S]*?\n\}/)[0];
-  const { _chainToText, _textToChain } = new Function(`${fn}; return { _chainToText, _textToChain };`)();
+  const fn   = src.match(/const HARNESS_MAX_FALLBACKS = \d+;/)[0] + '\n'
+             + src.match(/function _fallbacksRead[\s\S]*?\n\}/)[0];
+  const { _fallbacksRead } = new Function(`${fn}; return { _fallbacksRead };`)();
 
-  // What is stored comes back out unchanged, so opening ⚙ and pressing Save
-  // without touching the box cannot quietly change the chain.
+  // One rung as the DOM presents it: a provider select and a model box, both
+  // reachable only through `[data-role=…]`.
+  const rung = (provider, model) => ({
+    querySelector: sel => sel === '[data-role=provider]' ? { value: provider }
+                          : sel === '[data-role=model]'   ? { value: model }
+                          : null,
+  });
+
+  const read = (...rungs) => {
+    const prev = global.document;
+    global.document = { getElementById: id => (id === 'hcfg-fallbacks-doca' ? { querySelectorAll: () => rungs } : null) };
+    try { return _fallbacksRead('doca'); } finally { global.document = prev; }
+  };
+
+  // What was saved is what the form was built from, so opening ⚙ and pressing
+  // Save without touching anything cannot quietly change the chain.
   const chain = [{ provider: 'ds', model: 'deepseek-flash' }, { provider: 'dsfb', model: 'deepseek-v4-pro' }];
-  assert.deepEqual(_textToChain(_chainToText(chain)), chain);
+  assert.deepEqual(read(...chain.map(e => rung(e.provider, e.model))), chain);
 
-  // A bare provider keeps an empty model, which the server reads as "the same
-  // model as the one above it". The two sides are checked against each other
-  // rather than against a comment: the primary below is already on ollama/qwen3,
-  // so a bare `ollama` line has to resolve to exactly that pair and be dropped
-  // as a rung that would only ever wait for itself.
-  assert.deepEqual(_textToChain('dsfb'), [{ provider: 'dsfb', model: '' }]);
+  // A rung with a provider and no model is still a rung: the engine reads that
+  // as "the same model, at that provider". Checked against the engine rather
+  // than against a comment — on a primary of ollama/qwen3 a bare ollama rung
+  // resolves to exactly that pair, so it must be dropped as a rung that would
+  // only ever wait for itself.
+  assert.deepEqual(read(rung('dsfb', '')), [{ provider: 'dsfb', model: '' }]);
   const agent = require('../modules/harness/agent');
   agent.forgetDegraded();
   const rungs = agent.rungsFor({
     ep: providers.endpoint('ollama'), model: 'qwen3',
-    p: { firstTokenTimeoutMs: 1, failoverAfterMs: 1, fallbackChain: _textToChain('ollama') },
+    p: { firstTokenTimeoutMs: 1, failoverAfterMs: 1, fallbackChain: read(rung('ollama', '')) },
   });
   assert.equal(rungs.length, 1, 'a bare rung on the primary provider is the primary, not a second try');
 
-  // The ways a textarea is normally written: blank lines, a trailing newline, a
-  // comment, and the same entry twice.
-  assert.deepEqual(_textToChain('\n ds/deepseek-flash \n\n# the backup\n ds/deepseek-flash \n'),
-    [{ provider: 'ds', model: 'deepseek-flash' }]);
+  // A rung nobody chose a provider on is skipped rather than saved as a hole in
+  // the chain — including the one the "+ Add another fallback" button leaves
+  // sitting there when the user adds it and changes their mind.
+  assert.deepEqual(read(rung('dsfb', 'deepseek-v4-pro'), rung('', ''), rung('ds', 'flash')),
+    [{ provider: 'dsfb', model: 'deepseek-v4-pro' }, { provider: 'ds', model: 'flash' }]);
 
-  // A provider id may not contain a slash, a model id may — split on the first.
-  assert.deepEqual(_textToChain('openrouter/meta-llama/llama-3'),
+  // The same pair twice is a chain that waits for itself.
+  assert.deepEqual(read(rung('ds', 'flash'), rung('ds', 'flash')), [{ provider: 'ds', model: 'flash' }]);
+  assert.deepEqual(read(rung('ds', 'flash'), rung('ds', '')), [{ provider: 'ds', model: 'flash' }, { provider: 'ds', model: '' }],
+    'but two different models on one provider are two different rungs');
+
+  // A model id with a slash in it is now just a string in a box — the thing the
+  // text parser had to be careful about is no longer expressible as an error.
+  assert.deepEqual(read(rung('openrouter', 'meta-llama/llama-3')),
     [{ provider: 'openrouter', model: 'meta-llama/llama-3' }]);
 
-  // Nothing typed means nothing configured, which is the inert default.
-  assert.deepEqual(_textToChain(''), []);
-  assert.equal(_chainToText(undefined), '');
-  assert.equal(_chainToText([]), '');
+  // Whitespace is trimmed, because a pasted model id arrives with it.
+  assert.deepEqual(read(rung(' ds ', ' flash ')), [{ provider: 'ds', model: 'flash' }]);
 
-  // And a chain is bounded, because every rung is time the user waits.
-  assert.equal(_textToChain('a/1\nb/2\nc/3\nd/4\ne/5\nf/6').length, 5);
+  // Nothing filled in means nothing configured, which is the inert default.
+  assert.deepEqual(read(), []);
+  assert.deepEqual(read(rung('', 'flash')), []);
+
+  // And a chain is bounded, because every rung is time the user waits. The
+  // panel hides its own add button at the cap; this is the belt to that braces.
+  assert.equal(read(...'abcdef'.split('').map(c => rung(c, 'm'))).length, 5);
+
+  // The other half of the round trip: the box has to still *say* the provider
+  // that was saved. A rung on a provider deleted from Settings → API Keys since
+  // would otherwise fall back to the dropdown's first entry, and the next Save
+  // would write that instead — the chain changed by opening ⚙ and pressing Save.
+  const optsFor = new Function(
+    '_harnessMeta', 'escHtml',
+    src.match(/function _harnessProviderOpts[\s\S]*?\n\}/)[0] + '; return _harnessProviderOpts;',
+  )({ providers: [{ id: 'ollama', label: 'Ollama', hasKey: true }] }, s => String(s));
+
+  assert.match(optsFor('ghost'), /<option value="ghost" selected>/, 'a deleted provider is still shown as chosen');
+  assert.equal(/selected/.test(optsFor('ollama').split('<option')[2]), false, 'and a live one is not double-chosen');
 });
 
 test('the MCP call timeout is a setting the agent can see and propose, and says so when it fires', async () => {

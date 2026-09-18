@@ -1224,5 +1224,5 @@ async function status() {
   return out;
 }
 
-module.exports = { turn, status, params, ask, preview, breakdown, liveBlock, events, toApiMessages,
-  rungsFor, forgetDegraded, DEGRADED_MS };
+module.exports = { turn, status, params, ask, complete, preview, breakdown, liveBlock, events,
+  toApiMessages, rungsFor, forgetDegraded, DEGRADED_MS };

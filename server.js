@@ -204,6 +204,7 @@ app.get ('/api/files/raw',      files.handleRaw);
 app.get   ('/api/harness',              harness.handleList);
 app.get   ('/api/harness/providers',    harness.handleProviders);
 app.get   ('/api/harness/models',       harness.handleModels);
+app.get   ('/api/harness/tool-check',   harness.handleToolCheck);
 app.get   ('/api/harness/status',       harness.handleStatus);
 app.get   ('/api/harness/usage',        harness.handleUsage);
 app.post  ('/api/harness/default',      harness.handleSetDefault);

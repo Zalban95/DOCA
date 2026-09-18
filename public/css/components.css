@@ -458,11 +458,75 @@
   padding: 10px 14px;
   background: var(--raised); border-bottom: 1px solid var(--border2);
   flex-shrink: 0;
+  cursor: grab;
+  /* Without this a touch drag scrolls the page instead of moving the window. */
+  touch-action: none;
 }
+.chat-header:active { cursor: grabbing; }
+/* The buttons in the header are buttons, not handles. */
+.chat-header .btn { cursor: pointer; }
+/* The corner grip. Only shown where the gesture handlers are live — on the
+   mobile sheet the panel is sized by the stylesheet and there is nothing to
+   resize. */
+.chat-resize { display: none; }
+@media (min-width: 769px) {
+  .chat-resize {
+    display: block; position: absolute; right: 0; bottom: 0;
+    width: 18px; height: 18px; cursor: nwse-resize; touch-action: none;
+    background: linear-gradient(135deg, transparent 45%, var(--border2) 45%,
+                var(--border2) 55%, transparent 55%, transparent 70%,
+                var(--border2) 70%, var(--border2) 80%, transparent 80%);
+  }
+}
+/* While a gesture is running the pointer must not select the transcript. */
+body.chat-dragging, body.chat-resizing { user-select: none; }
+body.chat-dragging * { cursor: grabbing !important; }
+body.chat-resizing * { cursor: nwse-resize !important; }
 .chat-title {
   font-size: 11px; color: var(--accent);
   letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500;
 }
+/* ── Rendered markdown ──────────────────────────────────
+   Assistant prose, rendered by public/js/markdown.js. Every node under `.md`
+   was created by name in that file out of text the model wrote — see its
+   header for why no markup is ever assembled from model output. */
+.md { white-space: normal; }
+.md > :first-child { margin-top: 0; }
+.md > :last-child  { margin-bottom: 0; }
+.md p { margin: 0 0 8px; }
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
+  margin: 12px 0 6px; font-size: 13px; font-weight: 600; line-height: 1.35;
+}
+.md h1 { font-size: 15px; }
+.md h2 { font-size: 14px; }
+.md ul, .md ol { margin: 0 0 8px; padding-left: 20px; }
+.md li { margin: 2px 0; }
+.md code {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  background: var(--raised); border: 1px solid var(--border2);
+  padding: 0 4px; border-radius: 3px;
+}
+.md pre {
+  margin: 0 0 8px; padding: 8px 10px;
+  background: var(--bg); border: 1px solid var(--border2); border-radius: var(--radius);
+  max-height: 320px; overflow: auto;
+}
+.md pre code {
+  background: none; border: none; padding: 0;
+  font-size: 11px; line-height: 1.5; white-space: pre;
+}
+.md blockquote {
+  margin: 0 0 8px; padding: 2px 0 2px 10px;
+  border-left: 2px solid var(--border2); color: var(--muted);
+}
+.md-table { margin: 0 0 8px; overflow-x: auto; max-width: 100%; }
+.md table { border-collapse: collapse; font-size: 11px; }
+.md th, .md td { border: 1px solid var(--border2); padding: 3px 8px; text-align: left; vertical-align: top; }
+.md th { background: var(--raised); color: var(--accent); font-weight: 500; white-space: nowrap; }
+.md hr { border: none; border-top: 1px solid var(--border2); margin: 10px 0; }
+.md a { color: var(--accent); text-decoration: underline; }
+.md a:hover { text-decoration: none; }
+
 .chat-messages {
   flex: 1; overflow-y: auto; padding: 12px;
   display: flex; flex-direction: column; gap: 10px;

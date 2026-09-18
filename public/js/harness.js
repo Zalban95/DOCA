@@ -189,6 +189,7 @@ async function harnessConfigToggle(id, keepOpen) {
   const meta = await _harnessLoadMeta(true);
   strip.innerHTML = _harnessParamsHtml(h, meta);
   _harnessLoadModels(id, h.config.provider, h.config.model);
+  _harnessFallbacksMount(id, h.config.fallbackChain);
 }
 
 /** External harnesses: how to launch them and where their own config lives. */
@@ -215,13 +216,34 @@ function _harnessExternalCfgHtml(h) {
     </div>`;
 }
 
+/**
+ * The provider dropdown, shared by the primary model and every fallback rung.
+ *
+ * The rungs are built after this panel is drawn, so they read `_harnessMeta`
+ * rather than the `meta` the caller was handed — the two are the same object,
+ * because `harnessConfigToggle` awaits `_harnessLoadMeta(true)` first.
+ */
+function _harnessProviderOpts(selected) {
+  const list = _harnessMeta?.providers || [];
+  const opts = list.map(p =>
+    `<option value="${escHtml(p.id)}" ${p.id === selected ? 'selected' : ''}>` +
+    `${escHtml(p.label)}${p.hasKey ? '' : ' — no key'}</option>`).join('');
+
+  // A provider that has since been deleted from Settings → API Keys is still
+  // what this box says. Without this the dropdown would fall back to the first
+  // entry, and the next Save would quietly rewrite the chain to a provider the
+  // user never chose — the same silent edit the text box was replaced to stop.
+  // The engine already treats a rung naming a missing provider as a skip.
+  if (selected && !list.some(p => p.id === selected))
+    return `<option value="${escHtml(selected)}" selected>${escHtml(selected)} — not configured</option>${opts}`;
+
+  return opts;
+}
+
 /** The built-in harness: model choice and the generation parameters. */
 function _harnessParamsHtml(h, meta) {
   const c = h.config || {};
-  const providerOpts = (meta.providers || []).map(p =>
-    `<option value="${escHtml(p.id)}" ${p.id === c.provider ? 'selected' : ''}>
-       ${escHtml(p.label)}${p.hasKey ? '' : ' — no key'}
-     </option>`).join('');
+  const providerOpts = _harnessProviderOpts(c.provider);
 
 /**
  * Every parameter of the built-in harness, in one place: what it is called, what
@@ -352,17 +374,20 @@ const HARNESS_PARAMS = [
         <small class="harness-hint">What the agent is allowed to use. Unticking one hides it — it is a way to keep
           the agent focused, not a security boundary.</small>
       </div>
-      <label for="hcfg-fallbackChain-${h.id}">Fallback chain</label>
+      <label>Fallback chain</label>
       <div>
-        <textarea class="input" id="hcfg-fallbackChain-${h.id}" rows="3"
-                  placeholder="provider/model, one per line — empty means no fallback">${escHtml(_chainToText(c.fallbackChain))}</textarea>
+        <div class="hcfg-fallbacks" id="hcfg-fallbacks-${h.id}"></div>
+        <button class="btn btn-xs" id="hcfg-fallback-add-${h.id}"
+                onclick="harnessFallbackAdd(${jsArg(h.id)})">+ Add another fallback</button>
         <small class="harness-hint">
-          Who answers when the model above stops answering. One entry per line, as <code>provider/model</code>
-          (for example <code>dsfb/deepseek-v4-flash</code>); the model is optional and defaults to the one above.
-          <strong>Empty is the default and means nothing changes.</strong> Order matters — each is tried in turn,
-          and every switch is announced in the chat, because an answer that quietly came from a different model
-          is worse than the outage it hides. A model that was quiet is given a short rest rather than being
-          written off, so one that recovers starts being used again on its own.
+          Who answers when the model above stops answering. Each entry is a provider and a model, the same
+          way the model above is set; leaving the model blank means "the same model, at that provider".
+          <strong>None is the default and means nothing changes.</strong> Order matters — each is tried in
+          turn, and every switch is announced in the chat, because an answer that quietly came from a
+          different model is worse than the outage it hides. A model that was quiet is given a short rest
+          rather than being written off, so one that recovers starts being used again on its own. The line
+          under each entry is whether that model will call tools: a fallback that only answers in prose
+          cannot run the agent, it can only talk about it.
         </small>
       </div>
     </div>
@@ -374,20 +399,31 @@ const HARNESS_PARAMS = [
     </div>`;
 }
 
-/** Fill the model dropdown for the selected provider. */
-async function _harnessLoadModels(id, provider, selected) {
-  const sel = document.getElementById(`hcfg-model-select-${id}`);
+/**
+ * Fill the model dropdown for the selected provider.
+ *
+ * `scope` is one fallback rung; without it this is the primary block above,
+ * found by id exactly as before. The two are the same widget — a rung that
+ * picked its models differently from the model it is a fallback for would be
+ * a second thing to keep correct.
+ */
+async function _harnessLoadModels(id, provider, selected, scope) {
+  const sel = scope ? scope.querySelector('[data-role=model-select]')
+                    : document.getElementById(`hcfg-model-select-${id}`);
+  const box = scope ? scope.querySelector('[data-role=model]')
+                    : document.getElementById(`hcfg-model-${id}`);
   if (!sel) return;
   sel.innerHTML = '<option value="">loading…</option>';
   try {
     const data = await apiFetch(`/api/harness/models?provider=${encodeURIComponent(provider)}`);
-    const cur  = selected ?? document.getElementById(`hcfg-model-${id}`)?.value ?? '';
+    const cur  = selected ?? box?.value ?? '';
     const opts = (data.models || []).map(m =>
       `<option value="${escHtml(m)}" ${m === cur ? 'selected' : ''}>${escHtml(m)}</option>`);
+    if (!sel.isConnected) return;            // the rung was removed while we waited
     sel.innerHTML = `<option value="">${data.models?.length ? '— pick a model —' : (data.error ? 'unreachable' : 'none found')}</option>${opts.join('')}`;
     if (data.error) sel.title = data.error;
   } catch (e) {
-    sel.innerHTML = `<option value="">${escHtml(e.message)}</option>`;
+    if (sel.isConnected) sel.innerHTML = `<option value="">${escHtml(e.message)}</option>`;
   }
 }
 
@@ -409,37 +445,209 @@ function _harnessDisabledTools(id, h) {
   return [...off];
 }
 
+/* ── The fallback chain ───────────────────────────────── */
+
 /**
- * The chain as text, one `provider/model` per line, and back.
- *
- * Text rather than a list widget for the same reason `env` is: it is three
- * entries at most, it sorts itself by being read top to bottom, and a
- * drag-and-drop reorderer would be more code than the feature it configures.
- *
- * Parsed the way the headers field parses: a line with nothing on it is
- * skipped rather than rejected, because a trailing newline in a textarea is
- * not an error the user should have to think about.
+ * A chain longer than this is a denial of service on yourself: every entry is
+ * a wait the user pays before being told nothing answered.
  */
-function _chainToText(chain) {
-  if (!Array.isArray(chain)) return '';
-  return chain.map(e => e && e.provider ? (e.model ? `${e.provider}/${e.model}` : e.provider) : '')
-    .filter(Boolean).join('\n');
+const HARNESS_MAX_FALLBACKS = 5;
+
+/**
+ * One rung: the same two pickers the primary model above uses.
+ *
+ * It was a textarea reading `provider/model`, one per line, which is fine for
+ * whoever wrote the parser and wrong for everyone else — the provider has to
+ * already exist in Settings → API Keys, and a typo silently dropped the entry
+ * rather than saying so. Configured like the model above it, a wrong provider
+ * is not expressible: the dropdown only offers ones that are really there.
+ *
+ * Roles instead of ids, because this widget repeats: `[data-role=provider]`,
+ * `[data-role=model-select]`, `[data-role=model]`, `[data-role=verdict]`,
+ * all scoped by `closest('[data-rung]')`.
+ */
+function _harnessRungHtml(id, preset = {}) {
+  return `
+    <div class="hcfg-rung" data-rung>
+      <div class="hcfg-rung-head">
+        <span class="hcfg-rung-n"></span>
+        <button class="btn btn-xs" onclick="harnessFallbackRemove(this, ${jsArg(id)})"
+                title="Remove this fallback">✕</button>
+      </div>
+      <div class="hcfg-rung-row">
+        <select class="input flex1" data-role="provider"
+                onchange="_harnessLoadModels(${jsArg(id)}, this.value, null, this.closest('[data-rung]'))">
+          ${_harnessProviderOpts(preset.provider || '')}
+        </select>
+        <button class="btn btn-xs" onclick="nav('settings'); settingsSubNav('keys')"
+                title="Add an API key">+ key</button>
+      </div>
+      <div class="hcfg-rung-row">
+        <select class="input flex1" data-role="model-select"
+                onchange="harnessRungPickModel(this)">
+          <option value="">…</option>
+        </select>
+        <input class="input flex1" data-role="model" value="${escHtml(preset.model || '')}"
+               placeholder="model id — blank uses the one above" oninput="harnessRungProbe(this)">
+      </div>
+      <div class="harness-hint hcfg-rung-verdict" data-role="verdict"></div>
+    </div>`;
 }
 
-function _textToChain(text) {
-  const out = [];
-  for (const raw of String(text || '').split('\n')) {
-    const line = raw.trim();
-    if (!line || line.startsWith('#')) continue;
-    // Split on the FIRST slash: a model id may contain one, a provider id may not.
-    const at = line.indexOf('/');
-    const provider = (at < 0 ? line : line.slice(0, at)).trim();
-    const model    = at < 0 ? '' : line.slice(at + 1).trim();
-    if (!provider) continue;
-    if (!out.some(e => e.provider === provider && e.model === model)) out.push({ provider, model });
-    if (out.length >= 5) break;         // a chain longer than this is a denial of service on yourself
+/** Append a rung. Called by the "+ Add another fallback" button, and on open. */
+function harnessFallbackAdd(id, preset) {
+  const box = document.getElementById(`hcfg-fallbacks-${id}`);
+  if (!box || box.querySelectorAll('[data-rung]').length >= HARNESS_MAX_FALLBACKS) return null;
+
+  const t = document.createElement('template');
+  t.innerHTML = _harnessRungHtml(id, preset || {}).trim();
+  const rung = t.content.firstElementChild;
+  box.appendChild(rung);
+
+  const provider = rung.querySelector('[data-role=provider]').value;
+  if (provider) _harnessLoadModels(id, provider, preset?.model || '', rung);
+  harnessFallbackRenumber(id);
+  return rung;
+}
+
+/** The ✕ on a rung. Nothing is saved until Save, so this only edits the form. */
+function harnessFallbackRemove(btn, id) {
+  const rung = btn.closest('[data-rung]');
+  if (!rung) return;
+  // A check already in flight would otherwise paint its verdict into a detached
+  // node, and — worse — be counted as this page-load's answer for that pair.
+  clearTimeout(rung._probeTimer);
+  rung.remove();
+  harnessFallbackRenumber(id);
+}
+
+/** Renumber the rungs and hide the add button once the cap is reached. */
+function harnessFallbackRenumber(id) {
+  const box = document.getElementById(`hcfg-fallbacks-${id}`);
+  if (!box) return;
+  const rungs = [...box.querySelectorAll('[data-rung]')];
+
+  rungs.forEach((r, i) => {
+    const n = r.querySelector('.hcfg-rung-n');
+    if (n) n.textContent = `Fallback ${i + 1}`;
+  });
+
+  const add = document.getElementById(`hcfg-fallback-add-${id}`);
+  if (add) add.style.display = rungs.length >= HARNESS_MAX_FALLBACKS ? 'none' : '';
+}
+
+/** The dropdown picked a model: put it in the text box and check it. */
+function harnessRungPickModel(sel) {
+  const rung = sel.closest('[data-rung]');
+  if (!rung) return;
+  rung.querySelector('[data-role=model]').value = sel.value;
+  harnessRungProbe(sel);
+}
+
+/** Draw the rungs a saved config already had, and check each one. */
+function _harnessFallbacksMount(id, chain) {
+  const box = document.getElementById(`hcfg-fallbacks-${id}`);
+  if (!box) return;
+  box.textContent = '';
+
+  const saved = Array.isArray(chain) ? chain.slice(0, HARNESS_MAX_FALLBACKS) : [];
+  for (const e of saved) harnessFallbackAdd(id, { provider: e?.provider || '', model: e?.model || '' });
+
+  // A configured rung is checked as the panel opens, and the cache means that
+  // costs one call per pair per page-load rather than one per look at ⚙.
+  for (const rung of box.querySelectorAll('[data-rung]')) {
+    harnessRungProbe(rung.querySelector('[data-role=model]'));
   }
+}
+
+/**
+ * The chain as the engine stores it: `[{ provider, model }]`, in order.
+ *
+ * Same guarantees the text parser had — a rung nobody filled in is skipped
+ * rather than rejected, a duplicate is dropped because a chain that lists the
+ * same model twice waits for itself, and the cap holds. A rung with a provider
+ * and no model is still valid: the engine reads that as "the same model, at
+ * that provider".
+ */
+function _fallbacksRead(id) {
+  const box = document.getElementById(`hcfg-fallbacks-${id}`);
+  const out = [];
+
+  for (const rung of box ? box.querySelectorAll('[data-rung]') : []) {
+    const provider = (rung.querySelector('[data-role=provider]')?.value || '').trim();
+    const model    = (rung.querySelector('[data-role=model]')?.value || '').trim();
+    if (!provider) continue;
+    if (out.some(e => e.provider === provider && e.model === model)) continue;
+    out.push({ provider, model });
+    if (out.length >= HARNESS_MAX_FALLBACKS) break;
+  }
+
   return out;
+}
+
+/* ── Will it call tools? ──────────────────────────────── */
+
+/** Verdicts from this page-load, keyed `provider/model`. */
+const _toolVerdicts = new Map();
+
+const HARNESS_PROBE_DEBOUNCE_MS = 600;
+
+/**
+ * Ask whether a rung's model calls tools, and say so under the rung.
+ *
+ * Not a button: the answer is a property of the pair on screen, and a control
+ * to fetch it is a control the user has to know to press. Debounced because a
+ * model id is typed a character at a time, and cached because the answer does
+ * not change within a page-load and each look at it is a real API call.
+ */
+function harnessRungProbe(el) {
+  const rung = el?.closest('[data-rung]');
+  if (!rung) return;
+  clearTimeout(rung._probeTimer);
+
+  const out      = rung.querySelector('[data-role=verdict]');
+  const provider = (rung.querySelector('[data-role=provider]')?.value || '').trim();
+  const model    = (rung.querySelector('[data-role=model]')?.value || '').trim();
+
+  const say = v => {
+    if (!out) return;
+    out.className = 'harness-hint hcfg-rung-verdict';
+    if (v.supported === true) {
+      out.classList.add('ok');
+      out.textContent = `✓ this model calls tools — ${v.detail}`;
+    } else if (v.supported === false) {
+      out.classList.add('warn');
+      out.textContent = `✗ this model does not call tools — ${v.detail}`;
+    } else {
+      out.textContent = `? could not check — ${v.detail}`;
+    }
+  };
+
+  // Half a rung is not a question yet, and asking about the provider's default
+  // model would be answering about something the user has not chosen.
+  if (!provider || !model) {
+    if (out) { out.className = 'harness-hint hcfg-rung-verdict'; out.textContent = ''; }
+    return;
+  }
+
+  const key = `${provider}/${model}`;
+  if (_toolVerdicts.has(key)) return say(_toolVerdicts.get(key));
+
+  if (out) { out.className = 'harness-hint hcfg-rung-verdict'; out.textContent = 'checking whether it can call tools…'; }
+
+  rung._probeTimer = setTimeout(async () => {
+    try {
+      const v = await apiFetch(`/api/harness/tool-check?provider=${encodeURIComponent(provider)}`
+        + `&model=${encodeURIComponent(model)}`);
+      _toolVerdicts.set(key, v);
+      // The rung may have been removed or the model changed while this was in
+      // flight; a verdict about a model that is no longer on screen is worse
+      // than none, and the cache above still holds it for when it comes back.
+      if (rung.isConnected && (rung.querySelector('[data-role=model]')?.value || '').trim() === model) say(v);
+    } catch (e) {
+      if (rung.isConnected) say({ supported: null, detail: e.message });
+    }
+  }, HARNESS_PROBE_DEBOUNCE_MS);
 }
 
 async function harnessConfigSave(id) {
@@ -462,7 +670,7 @@ async function harnessConfigSave(id) {
         compactTokens:  parseInt(val('compactTokens'), 10) || 0,
         firstTokenTimeoutMs: parseInt(val('firstTokenTimeoutMs'), 10) || 0,
         failoverAfterMs: parseInt(val('failoverAfterMs'), 10) || 0,
-        fallbackChain:  _textToChain(val('fallbackChain')),
+        fallbackChain:  _fallbacksRead(id),
         compactAt:      parseInt(val('compactAt'), 10) || 0,
         warnAt:         parseInt(val('warnAt'), 10) || 0,
         systemPrompt:   val('systemPrompt') || '',
@@ -929,9 +1137,15 @@ function _hcAppend(kind, text, label, opts = {}) {
     tag.textContent = label;
     el.appendChild(tag);
   }
-  const body = document.createElement('span');
+  // A div, not a span: the assistant's prose is rendered as markdown, and
+  // headings, lists and tables are block elements that cannot live in one.
+  const body = document.createElement('div');
   body.className = 'hc-msg-body';
-  body.textContent = text;
+  // What the agent said is markdown and is rendered as markdown. Everything
+  // else here is the literal text it is — a tool result, an error, a step
+  // count — and re-typesetting those would be inventing structure.
+  if (kind === 'assistant' && !opts.plain) mdInto(body, text);
+  else body.textContent = text;
   el.appendChild(body);
   box.appendChild(el);
   box.scrollTop = box.scrollHeight;
@@ -1061,6 +1275,9 @@ async function hcSend() {
 
   if (pendingCall) pendingCall.setActive(false);
   stream.finish();
+  // The turn is over, so the rows it left open close: the account of a finished
+  // run is a few short lines, each one a click away from the detail.
+  closeFolds(box);
   if (_hcTurn?.signal.aborted)
     _hcAppend('error', 'Stopped. The step already running finishes on its own; nothing after it starts.', 'stopped');
 

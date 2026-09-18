@@ -62,6 +62,29 @@
 .harness-prompt { min-height: 72px; font-family: var(--font-mono); }
 .harness-cfg-actions { display: flex; align-items: center; gap: 8px; }
 .harness-tools { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+
+/* ── Fallback rungs ─────────────────────────────────── */
+/* Each rung is the model block above, repeated: the same two pickers, the same
+   "+ key", drawn as a box so the entries read as a list you can count. */
+.hcfg-fallbacks { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.hcfg-rung {
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg2);
+  padding: 6px 8px;
+}
+.hcfg-rung-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.hcfg-rung-n {
+  font-size: 10px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.hcfg-rung-row { display: flex; gap: 6px; margin-bottom: 4px; }
+.hcfg-rung-verdict { margin: 0; font-family: var(--font-mono); }
+.hcfg-rung-verdict.ok   { color: var(--green); }
+/* Amber, not red: a rung that only answers in prose is a degraded fallback,
+   not a failure — it will still answer, it just cannot run the agent. */
+.hcfg-rung-verdict.warn { color: var(--amber); }
 .harness-tool-toggle {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 10px; color: var(--fg); font-family: var(--font-mono); cursor: pointer;

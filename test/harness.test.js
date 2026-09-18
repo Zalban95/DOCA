@@ -65,11 +65,31 @@ before(async () => {
         return;
       }
 
-      // A non-streaming request (the summariser) always gets a plain completion.
+      // A refusal, for the paths that have to tell "the provider said no" from
+      // "the model answered no".
+      if (next.status) {
+        res.writeHead(next.status, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: { message: next.says || 'nope' } }));
+      }
+
+      // A non-streaming request (the summariser, the tool probe) always gets a
+      // plain completion — and `call` is how one answers with a tool call
+      // instead of text, which is the whole thing the probe is asking about.
       if (body.stream === false || next.json) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
+        const message = {
+          role: 'assistant',
+          content: next.call ? '' : (next.text ?? next.json ?? 'ok'),
+        };
+        if (next.call) {
+          message.tool_calls = [{
+            id: 'call_1', type: 'function',
+            function: { name: next.call, arguments: JSON.stringify(next.args || { word: 'ok' }) },
+          }];
+        }
         return res.end(JSON.stringify({
-          choices: [{ message: { content: next.text ?? next.json ?? 'ok', role: 'assistant' } }],
+          choices: [{ message }],
+          usage: { prompt_tokens: 42, completion_tokens: 6 },
         }));
       }
       if (next.tool) {
@@ -679,6 +699,116 @@ test('every model call is kept in the usage ledger, measured or estimated, and c
   const byModel = (await get('/api/harness/usage?days=1&by=model')).body;
   assert.ok(byModel.rows.some(r => r.key === 'stub/stub-model'));
   assert.equal((await get('/api/harness/usage?by=nonsense')).status, 400);
+});
+
+/* ── Can this model call tools? ───────────────────────── */
+
+/**
+ * The probe behind the line under each fallback rung.
+ *
+ * The three verdicts are three different things and the panel shows them
+ * differently, so each one is driven here against the same scripted provider
+ * the rest of this file uses.
+ */
+test('a model that calls a tool is a yes, and one request settles it', async () => {
+  const toolcheck = require('../modules/harness/toolcheck');
+  script = [{ call: 'doca_probe' }];
+
+  const v = await toolcheck.check({ provider: 'stub', model: 'stub-model' });
+  assert.equal(v.supported, true);
+  assert.deepEqual(v.attempts, ['auto'], 'a tool call on the first ask needs no second ask');
+  assert.match(v.detail, /as soon as/);
+
+  // The request really carried a tool: the verdict is about the provider, not
+  // about the probe's own optimism.
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].tools?.[0]?.function?.name, 'doca_probe');
+  assert.equal(seen[0].tool_choice, 'auto', 'the first attempt offers the tool rather than requiring it');
+  assert.equal(seen[0].stream, false, 'a tool call arrives in the JSON body, so there is nothing to stream');
+});
+
+test('a model that answers prose is asked twice before it is called unable to', async () => {
+  const toolcheck = require('../modules/harness/toolcheck');
+  // A model can say "I would call doca_probe" without calling it, which is not
+  // the same as being unable to — so the second attempt requires the call.
+  script = [{ text: 'Sure, calling doca_probe with "ok".' }, { text: 'The word is ok.' }];
+
+  const v = await toolcheck.check({ provider: 'stub', model: 'stub-mini' });
+  assert.equal(v.supported, false);
+  assert.deepEqual(v.attempts, ['auto', 'forced'], 'prose once is not proof; prose twice is');
+  assert.equal(seen.length, 2);
+  assert.equal(seen[1].tool_choice?.function?.name, 'doca_probe', 'the second ask requires the call');
+
+  // A model that only calls the tool when forced is a yes — with the caveat,
+  // because a turn that offers a tool without insisting would get prose.
+  script = [{ text: 'I would call it.' }, { call: 'doca_probe' }];
+  const forced = await toolcheck.check({ provider: 'stub', model: 'stub-mini' });
+  assert.equal(forced.supported, true);
+  assert.deepEqual(forced.attempts, ['auto', 'forced']);
+  assert.match(forced.detail, /only calls a tool when the call is required/);
+});
+
+test('a provider that refuses the call is not a verdict about the model', async () => {
+  const toolcheck = require('../modules/harness/toolcheck');
+  const usage = require('../modules/harness/usage');
+
+  const before = usage.summary({ days: 1, by: 'kind' }).rows.find(r => r.key === 'probe')?.calls || 0;
+
+  // A rejected key is the check failing to reach the model, not a fact about
+  // it — reporting "cannot call tools" here would slander something never
+  // asked, and send the user looking in the wrong place.
+  script = [{ status: 401, says: 'invalid api key' }];
+  const auth = await toolcheck.check({ provider: 'stub', model: 'stub-model' });
+  assert.equal(auth.supported, null);
+  assert.match(auth.detail, /key was rejected/);
+  assert.deepEqual(auth.attempts, [], 'nothing was asked, so nothing was attempted');
+
+  // A provider that refuses the request *because of* the tools field has
+  // answered the question, and said so itself.
+  script = [{ status: 400, says: 'this model does not support tools' }];
+  const refuses = await toolcheck.check({ provider: 'stub', model: 'stub-model' });
+  assert.equal(refuses.supported, false);
+  assert.match(refuses.detail, /does not support tools/);
+
+  // The words that matter are the provider's. `budget.explain` writes a
+  // sentence of its own around them, and it names the provider — which is how
+  // an unrelated refusal from a provider whose id contains "tool" could be
+  // mistaken for this one.
+  script = [{ status: 400, says: 'unsupported parameter' }];
+  const other = await toolcheck.check({ provider: 'stub', model: 'stub-model' });
+  assert.equal(other.supported, null, 'a 400 that is not about tools is not a verdict');
+
+  // Half a rung is not a question.
+  assert.equal((await toolcheck.check({ provider: 'stub' })).supported, null);
+  assert.equal((await toolcheck.check({})).supported, null);
+  assert.match((await toolcheck.check({ provider: 'stub' })).detail, /nothing to check/);
+
+  // A successful probe is counted, and counted as its own kind: a setting that
+  // quietly spends money has to be visible where the money is counted.
+  script = [{ call: 'doca_probe' }];
+  await toolcheck.check({ provider: 'stub', model: 'stub-model' });
+  const after = usage.summary({ days: 1, by: 'kind' }).rows.find(r => r.key === 'probe')?.calls || 0;
+  assert.equal(after, before + 1);
+});
+
+test('the probe is the route the panel calls, and it changes nothing', async () => {
+  script = [{ call: 'doca_probe' }];
+  const r = await get('/api/harness/tool-check?provider=stub&model=stub-model');
+  assert.equal(r.status, 200);
+  assert.equal(r.body.supported, true);
+
+  // It is not behind requireBrowser, because it applies no setting — the agent
+  // may ask about its own fallback. The route that *saves* the chain still is.
+  const src = fs.readFileSync(require.resolve('../server.js'), 'utf8');
+  assert.match(src, /app\.get\s*\('\/api\/harness\/tool-check',\s*harness\.handleToolCheck\)/);
+  assert.equal(/tool-check'[^)]*requireBrowser/.test(src), false);
+
+  // A rung naming a provider that is not configured is answered, not thrown at.
+  script = [];
+  const missing = await get('/api/harness/tool-check?provider=ghost&model=x');
+  assert.equal(missing.status, 200);
+  assert.equal(missing.body.supported, null);
+  assert.match(missing.body.detail, /no base URL/);
 });
 
 test('a mission\'s event log lives in the data dir, not wherever the process was started', () => {

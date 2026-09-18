@@ -1266,7 +1266,7 @@
      ondragover="event.preventDefault(); this.classList.add('drop');"
      ondragleave="this.classList.remove('drop');"
      ondrop="event.preventDefault(); this.classList.remove('drop'); chatAttachFiles(event.dataTransfer.files);">
-  <div class="chat-header">
+  <div class="chat-header" onpointerdown="chatDragStart(event)" title="Drag to move">
     <span class="chat-title" data-brand="agent">DOCA Agent</span>
     <div class="toolbar-right">
       <button class="btn btn-xs" id="chat-call-toggle" onclick="chatToggleCall()" title="Voice call mode">🎙 Live</button>
@@ -1297,6 +1297,10 @@
     </div>
     <button class="btn btn-xs btn-red" onclick="chatToggleCall()" title="End call">End</button>
   </div>
+  <!-- Desktop only: the resize grip. Hidden below the mobile breakpoint, where
+       the panel is a full-screen sheet and the stylesheet owns its geometry. -->
+  <div class="chat-resize" id="chat-resize" title="Drag to resize"
+       onpointerdown="chatResizeStart(event)"></div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════ SHARED MODALS -->
@@ -1396,6 +1400,8 @@
 
 <!-- ═══════════════════════════════════════════════════ JS MODULES -->
 <script src="js/state.js"></script>
+<!-- Before utils.js: createThinkStream renders assistant prose through it. -->
+<script src="js/markdown.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/branding.js"></script>
 <script src="js/fp.js"></script>

@@ -514,10 +514,33 @@ the chain itself, and the `failover` event on every surface (chat row, floating
 panel, `warn` log line, and `fallbacks` on the durable `agent.turn` outcome, so a
 device that slept through the turn still learns which model answered).
 
+**Configured like a provider, since 2.30.0.** The chain was a textarea reading
+`provider/model`, one per line — fine for whoever wrote the parser, wrong for
+everyone else: the provider had to exist already in Settings → API Keys, and a
+typo silently dropped the rung rather than saying so. It is now the same two
+pickers the primary model uses, repeated by "+ Add another fallback" up to five,
+with the stored shape unchanged at `[{provider, model}]` so nothing about the
+chain's runtime behaviour moved.
+
+**And a rung now says whether it can call tools.** A fallback that answers in
+prose is not a fallback for an agent — the turn does not fail loudly, it produces
+a message that talks about running a command instead of running it, which is
+worse than no fallback. `/models` cannot answer this (`providers.js` says so
+explicitly), so `modules/harness/toolcheck.js` asks the model: one trivial tool,
+offered first and then required, because a model that chats about a tool instead
+of calling it has not proved it cannot. Only two prose answers, or the provider
+refusing the request because of `tools`, is a "no". Everything else — a rejected
+key, a dead address, a provider that goes quiet — is `null` with the reason, and
+is never reported as a verdict about a model that was never reached. Each probe
+is a real call and is counted in the usage ledger under `kind: 'probe'`, so a
+settings box that spends money is visible where the money is counted.
+
 **Still open, and not needed for the chain to work:** the chain is per registry
 entry, so a local Ollama rung is a rung like any other, but nothing on screen yet
 *suggests* local-first when a hosted model goes quiet — the settings hint says it,
-the panel does not.
+the panel does not. The tool verdict is also per rung and shown under it; it is
+not consulted by the engine, so a chain whose only rung cannot call tools still
+falls to it and still says so.
 
 **Wanted, not broken.** The defect behind this is H-5 in `ISSUES.md` and it is
 fixed: a turn that gets no first token now stops at a named deadline and says so.
@@ -781,8 +804,48 @@ different thing and should stay one.
 
 ## The agent writes markdown and the panel shows the asterisks
 
-Reported 2026-09-18. Every surface where the agent's own words appear renders
-them as **plain text**, so a reply arrives looking like this:
+**Built 2026-09-18, on `main`.** Hand-written, no dependency — the subset below
+is `public/js/markdown.js`, loaded before `utils.js` and reached through the two
+places the agent's prose already goes (`_hcAppend` in the console, `chatAppendMsg`
+in the floating panel), so history reload inherits it with no further work. The
+three constraints are settled as written rather than discovered:
+
+- **It streams by committing whole blocks.** `mdSplitBlocks` cuts the text so far
+  into finished blocks and the one still being written; finished blocks are
+  appended once and never touched again, and only that trailing block is
+  redrawn per chunk. No flicker, no O(n²), and the live-typing feel survives.
+  A test asserts five blocks cost five insertions, not one per character.
+- **Emphasis matches only when its closing delimiter is in the same block**, so
+  a half-written `**bold` shows as the characters actually sent and turns bold
+  once rather than flickering between guesses.
+- **Nothing is built from an HTML string.** Every node is `createElement`, every
+  character run `textContent` — the strict form of the `escHtml` discipline
+  above. A test asserts the word `innerHTML` does not appear in the file, and
+  another feeds it a page of hostile markup and checks the set of tags it
+  created.
+
+Two consequences, both deliberate and both recorded here because they are
+security decisions rather than rendering ones: **`![alt](url)` is never an
+image** — a markdown image makes the browser fetch an address the model wrote,
+which is the prompt-injection channel `show_image` exists to avoid — and links
+are scheme-gated to `http`/`https`/`mailto`, so `javascript:` and `data:` come
+out as the literal text they are.
+
+**Still open, and not needed for it to work:** tool results are still shown raw.
+They are the other half of what fills the console and are often structured (JSON,
+tables, diffs) where markdown would help more than it does in prose — and they
+may want syntax highlighting rather than markdown. Separate call, unchanged.
+
+**Rejected, kept visible:** asking the agent not to use markdown, and reaching
+for a library. The first is the cheaper answer and the wrong one — markdown is
+how these models communicate structure, and suppressing it would cost
+readability in the transcript, which is the artefact that outlives the chat. The
+second would have been a sixth dependency in a list that has stayed at five,
+none of them UI, for a subset that is a few hundred lines of parser.
+
+**What it was reported as, 2026-09-18.** Every surface where the agent's own
+words appear rendered them as **plain text**, so a reply arrived looking like
+this:
 
 ```
 Done. Where things stand:
@@ -838,16 +901,11 @@ never added.
 
 ### Not decided
 
-- **Which renderer.** No dependency is needed — the subset above is a few
-  hundred lines — but the choice between that and a library is a decision, and
-  the panel has kept its dependency list deliberately short (five entries in
-  `package.json`, none of them UI).
 - **Whether tool results get the same treatment.** They are the other half of
   what fills the console, and they are often structured (JSON, tables, diffs)
   where markdown would help more than it does in prose. Separate call, and it
   may want syntax highlighting rather than markdown.
-- **Whether the panel should instead ask the agent not to use markdown.** It is
-  the cheaper answer and it is the wrong one — markdown is how these models
-  communicate structure, and suppressing it would cost readability in the
-  transcript, which is the artefact that outlives the chat. Recorded here so the
-  option is visibly rejected rather than forgotten.
+
+The other two — which renderer, and whether to ask the agent to stop writing
+markdown — were decided rather than deferred, and the decision is at the top of
+this entry.

@@ -142,6 +142,12 @@ function _tagHold(s, tag) {
   return 0;
 }
 
+/** Open or shut one fold, keeping its header's aria-expanded honest. */
+function _foldSetOpen(el, on) {
+  el.classList.toggle('open', !!on);
+  el.querySelector('.agent-fold-head')?.setAttribute('aria-expanded', on ? 'true' : 'false');
+}
+
 /**
  * Collapsible Thinking / Command / Result block for the harness console and
  * the floating chat. Tap the header to expand; `.active` drives the animated
@@ -173,7 +179,11 @@ function agentFold(opts) {
   // never these opts, so the kind has to travel on the node.
   el.dataset.foldKind = opts.kind;
   if (opts.active) el.classList.add('active');
-  if (opts.open)   el.classList.add('open');
+  // A fold that is still running is open, because the thing it is reporting is
+  // happening now and watching it is the reason it is on screen at all. The
+  // body used to stay shut until the run was over, which hid streaming
+  // thinking entirely behind a click. setActive(false) shuts it again.
+  if (opts.active || opts.open) el.classList.add('open');
 
   const head = document.createElement('button');
   head.type = 'button';
@@ -212,17 +222,28 @@ function agentFold(opts) {
   head.addEventListener('click', () => {
     const open = el.classList.toggle('open');
     head.setAttribute('aria-expanded', open ? 'true' : 'false');
+    // A row the user opened by hand is theirs: nothing automatic closes it.
+    if (open) el.dataset.userOpened = '1'; else delete el.dataset.userOpened;
   });
 
   el.append(head, body);
 
   return {
     el, body,
-    setActive(on) { el.classList.toggle('active', !!on); },
-    setOpen(on) {
-      el.classList.toggle('open', !!on);
-      head.setAttribute('aria-expanded', on ? 'true' : 'false');
+    setActive(on) {
+      el.classList.toggle('active', !!on);
+      if (on) return;
+      // The run this fold was reporting is over, so it folds away again — the
+      // whole point of the row is that a finished turn is a short transcript.
+      // A fold the user opened themselves is the one thing this must not undo.
+      if (!el.dataset.userOpened) _foldSetOpen(el, false);
+      const group = el.closest('.agent-fold-group');
+      if (group?.dataset.autoOpened && !group.dataset.userOpened && !el.dataset.userOpened) {
+        _foldGroupOpen(group, false);
+        delete group.dataset.autoOpened;
+      }
     },
+    setOpen(on) { _foldSetOpen(el, on); },
     setLabel(t) { label.textContent = t; },
     append(t) { body.textContent += t; setPreview(); },
     setBody(t) { body.textContent = t; setPreview(); },
@@ -280,8 +301,13 @@ function agentFoldMount(container, node) {
   group.querySelector('.agent-fold-group-items').appendChild(node);
   _foldGroupSync(group);
   // The fold the user is watching arrive says "still working" with its dots and
-  // fills in as text streams: a closed group would hide exactly that row.
-  if (node.classList.contains('active')) _foldGroupOpen(group, true);
+  // fills in as text streams: a closed group would hide exactly that row. The
+  // group remembers that it opened itself, so the end of the run can shut it
+  // again without touching one the user opened.
+  if (node.classList.contains('active')) {
+    _foldGroupOpen(group, true);
+    group.dataset.autoOpened = '1';
+  }
 }
 
 /**
@@ -323,7 +349,13 @@ function _foldGroupCreate(kind) {
   chevron.textContent = '▸';
 
   head.append(label, count, chevron);
-  head.addEventListener('click', () => _foldGroupOpen(el, !el.classList.contains('open')));
+  head.addEventListener('click', () => {
+    const open = !el.classList.contains('open');
+    // A deliberate open outranks the automatic close at the end of the run.
+    if (open) el.dataset.userOpened = '1'; else delete el.dataset.userOpened;
+    delete el.dataset.autoOpened;
+    _foldGroupOpen(el, open);
+  });
 
   const items = document.createElement('div');
   items.className = 'agent-fold-group-items';
@@ -353,6 +385,30 @@ function _foldGroupSync(group) {
 }
 
 /**
+ * Fold away everything a turn left standing, once the turn is over.
+ *
+ * A run of six commands should end as three short rows, not as three rows plus
+ * whichever one happened to be streaming when the turn ended. Rows the user
+ * opened or closed themselves are left exactly as they left them — this tidies
+ * up after the turn, it does not overrule a click.
+ *
+ * @param {HTMLElement} container - a transcript (#hc-messages, #chat-messages)
+ */
+function closeFolds(container) {
+  if (!container) return;
+  for (const fold of container.querySelectorAll('.agent-fold')) {
+    if (fold.dataset.userOpened) continue;
+    fold.classList.remove('active');
+    _foldSetOpen(fold, false);
+  }
+  for (const group of container.querySelectorAll('.agent-fold-group')) {
+    if (group.dataset.userOpened) continue;
+    _foldGroupOpen(group, false);
+    delete group.dataset.autoOpened;
+  }
+}
+
+/**
  * Stream assistant text into thinking folds + plain bubbles, splitting on
  * `<think>…</think>` (DeepSeek / Qwen-style reasoning) even when a tag is cut
  * across chunks. Call `startWaiting()` as soon as the request is in flight so
@@ -366,15 +422,25 @@ function _foldGroupSync(group) {
  */
 function createThinkStream(ui) {
   let think = null;
-  let textEl = null;
+  let md = null;
   let pending = '';
   let inThink = false;
 
   const scroll = () => { if (ui.scroll) ui.scroll(); };
 
-  function ensureText() {
-    if (!textEl) textEl = ui.makeText();
-    return textEl;
+  /**
+   * The markdown renderer for the current bubble, created with it.
+   *
+   * Assistant prose is rendered rather than shown raw, here and everywhere
+   * else it lands — the model writes headings, tables and fenced blocks, and
+   * unrendered they arrive as their own punctuation. Thinking is not: a
+   * `<think>` body stays the literal text the model wrote, because a fold is
+   * the record of what it was thinking and nothing about reading that back
+   * should be a guess. See public/js/markdown.js.
+   */
+  function ensureMd() {
+    if (!md) md = mdStream(ui.makeText());
+    return md;
   }
 
   function ensureThink(active) {
@@ -407,11 +473,11 @@ function createThinkStream(ui) {
             const hold = _tagHold(pending, '<think>');
             const emit = pending.slice(0, pending.length - hold);
             pending = pending.slice(pending.length - hold);
-            if (emit) { settleThink(); ensureText().textContent += emit; }
+            if (emit) { settleThink(); ensureMd().feed(emit); }
             break;
           }
           const before = pending.slice(0, i);
-          if (before) { settleThink(); ensureText().textContent += before; }
+          if (before) { settleThink(); ensureMd().feed(before); }
           pending = pending.slice(i + 7);
           inThink = true;
           ensureThink(true);
@@ -434,17 +500,21 @@ function createThinkStream(ui) {
     },
 
     /** Next assistant prose starts a new bubble (after a tool call). */
-    resetText() { textEl = null; },
+    resetText() { if (md) { md.end(); md = null; } },
 
     finish() {
       if (pending) {
         if (inThink) { ensureThink(false).append(pending); think = null; }
-        else { settleThink(); ensureText().textContent += pending; }
+        else { settleThink(); ensureMd().feed(pending); }
         pending = '';
         inThink = false;
       } else {
         settleThink();
       }
+      // The last block is closed out rather than left as the in-progress one,
+      // so a finished message is built exactly like the same message re-read
+      // from history.
+      if (md) { md.end(); md = null; }
       scroll();
     },
   };
