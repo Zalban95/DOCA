@@ -165,6 +165,7 @@ async function chatLoadHistory() {
         }
         else chatAppendMsg(m.role, m.content);
       });
+      collapseFoldRuns(container);
     }
   } catch {}
 }

@@ -396,6 +396,26 @@
   100% { width: 1.1em; }
 }
 
+/* ── The earlier steps of a finished run, behind one "…" ──
+   collapseFoldRuns() leaves the last few rows in place and moves the rest in
+   here, so a fifteen-tool turn does not push its own answer off the screen.
+   The head borrows .agent-fold-head, so it is the same row as everything
+   around it rather than a control of its own. */
+.agent-fold-more {
+  align-self: flex-start;
+  width: 100%; max-width: 100%;
+  flex-shrink: 0;
+  font-family: var(--font-mono); font-size: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-left: 2px solid var(--border2);
+  border-radius: var(--radius);
+}
+.agent-fold-more-head .agent-fold-label { color: var(--muted); letter-spacing: .12em; }
+.agent-fold-more-items { display: none; flex-direction: column; gap: 4px; padding: 4px; border-top: 1px solid var(--border2); }
+.agent-fold-more.open > .agent-fold-more-items { display: flex; }
+.agent-fold-more.open > .agent-fold-more-head .agent-fold-chevron { transform: rotate(90deg); }
+
 /* ── A run of folds of one kind, as one row ──────────── */
 /* Built by agentFoldMount(): adjacent folds of the same kind move inside one
    head that carries the count, and each of them still opens on its own. */

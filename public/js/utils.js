@@ -406,6 +406,93 @@ function closeFolds(container) {
     _foldGroupOpen(group, false);
     delete group.dataset.autoOpened;
   }
+  collapseFoldRuns(container);
+}
+
+/**
+ * The last rows of a finished run stay; everything above them goes behind "…".
+ *
+ * Closing the folds is not enough once a turn has run fifteen tools: fifteen
+ * one-line rows still push the answer off the screen, and the answer is the
+ * thing being waited for. Only the tail is worth having by default — the recent
+ * steps are the ones a reader is still holding in their head — so the rest
+ * collapse into a single row that says how many there are.
+ *
+ * Grouping does not do this: `agentFoldMount` folds a run of the *same* kind,
+ * and a turn alternates Command with Result, so the commonest long run is
+ * exactly the one that never grouped.
+ *
+ * It happens when the turn ends, never while it streams: a row that vanished
+ * upward as it arrived would take the eye with it. The "…" opens everything it
+ * hides in one click, each row inside still opens on its own, and a run the
+ * user has already opened is left alone.
+ *
+ * @param {HTMLElement} container - a transcript (#hc-messages, #chat-messages)
+ */
+const FOLD_RUN_KEEP = 3;
+
+function collapseFoldRuns(container) {
+  if (!container) return;
+  const isRow = el => el.classList.contains('agent-fold') || el.classList.contains('agent-fold-group');
+
+  let run = [];
+  const flush = () => {
+    if (run.length > FOLD_RUN_KEEP + 1) _foldRunCollapse(run.slice(0, run.length - FOLD_RUN_KEEP));
+    run = [];
+  };
+  for (const child of [...container.children]) {
+    // A run that already has its "…" is left as it is, opened or not: this runs
+    // again after every later turn, and re-collapsing would undo a click.
+    if (child.classList.contains('agent-fold-more')) { run = []; continue; }
+    if (isRow(child)) run.push(child);
+    else flush();
+  }
+  flush();
+}
+
+/** Move `rows` inside one "…" row, in their place in the transcript. */
+function _foldRunCollapse(rows) {
+  const more = document.createElement('div');
+  more.className = 'agent-fold-more';
+
+  const head = document.createElement('button');
+  head.type = 'button';
+  head.className = 'agent-fold-head agent-fold-more-head';
+  head.setAttribute('aria-expanded', 'false');
+  head.title = `Show the ${rows.length} earlier steps`;
+
+  const label = document.createElement('span');
+  label.className = 'agent-fold-label';
+  label.textContent = '…';
+
+  // `.agent-fold-preview` rather than a count: every other row reads
+  // "LABEL · what it was", so this one says what it is holding in the same
+  // voice instead of being a bare number in an otherwise empty row.
+  const count = document.createElement('span');
+  count.className = 'agent-fold-preview';
+  count.textContent = `${rows.length} earlier steps`;
+
+  const chevron = document.createElement('span');
+  chevron.className = 'agent-fold-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.textContent = '▸';
+
+  head.append(label, count, chevron);
+
+  const items = document.createElement('div');
+  items.className = 'agent-fold-more-items';
+
+  head.addEventListener('click', () => {
+    const open = !more.classList.contains('open');
+    more.classList.toggle('open', open);
+    head.setAttribute('aria-expanded', open ? 'true' : 'false');
+    head.title = open ? 'Hide them again' : `Show the ${rows.length} earlier steps`;
+  });
+
+  rows[0].replaceWith(more);
+  for (const row of rows) items.appendChild(row);
+  more.append(head, items);
+  return more;
 }
 
 /**

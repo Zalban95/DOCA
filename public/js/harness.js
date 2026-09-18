@@ -1089,6 +1089,9 @@ async function hcOpenSession(id, skipReload) {
       } else if (m.content) _hcAppend(m.role, m.content);
     });
     if (!box.children.length) box.innerHTML = '<div class="placeholder">Ask it anything about this machine.</div>';
+    // A reopened conversation reads the way it looked when its last turn ended,
+    // rather than as every step of every turn laid out again.
+    collapseFoldRuns(box);
     document.querySelectorAll('#hc-sessions .hc-session').forEach(el =>
       el.classList.toggle('active', el.dataset.session === id));
   } catch (e) { box.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; }
