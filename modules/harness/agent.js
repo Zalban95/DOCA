@@ -945,8 +945,16 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
     // and a per-step line inside the system prompt is exactly what did the
     // cutting (ISSUES.md H-9). Not persisted: this is this step's reading, and
     // the next step generates its own.
+    // Sent as `user`, not as a second `system`. A chat template is entitled to
+    // refuse a system message that is not the first one, and Qwen's does:
+    // llama.cpp with `--jinja` answers `500 Jinja Exception: System message must
+    // be at the beginning`, which killed every llamacpp-served turn on its first
+    // step from the moment the readings moved down here (H-9). The position is
+    // what H-9 was protecting, not the role, so the cached prefix is unaffected.
+    // It says whose words these are, because a bare block at the end of a
+    // conversation reads as the user's.
     const live = liveBlock(p, led);
-    if (live) messages.push({ role: 'system', content: live });
+    if (live) messages.push({ role: 'user', content: `[panel readings, not from the user]\n${live}` });
 
     // Measured when the provider answers with a usage frame, estimated when it
     // does not. Both are recorded; only one is called a measurement.

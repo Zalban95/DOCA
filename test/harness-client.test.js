@@ -335,8 +335,11 @@ test('the agent is told which client asked, and how much answer it can hold', as
   assert.match(watchPrompt, new RegExp(`"watch" \\(${watch.device.id}\\) — a watch, 450×450 round`));
   assert.match(watchPrompt, /One or two short sentences/);
   assert.match(watchPrompt, /Other devices of the same user may be reading this conversation/);
-  // The tag is a fact about the turn, not an edit of the user's words.
-  const asAsked = seen[seen.length - 1].messages.filter(m => m.role === 'user').pop();
+  // The tag is a fact about the turn, not an edit of the user's words. The
+  // panel's own readings ride at the end as a `user` row of their own, so the
+  // question is the last user row that is not them.
+  const asAsked = seen[seen.length - 1].messages
+    .filter(m => m.role === 'user' && !/panel readings/.test(m.content)).pop();
   assert.equal(asAsked.content, 'status?');
 
   script = [{ text: 'ok' }];

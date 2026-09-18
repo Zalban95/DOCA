@@ -267,7 +267,11 @@ test('a turn calls a tool, feeds the result back, and answers', async () => {
   // ordering is for: everything above that block — the system prompt and every
   // history row — stays byte-identical from step to step, so the provider's
   // prefix cache grows instead of stopping at a per-step line.
-  assert.equal(followUp.at(-1).role, 'system');
+  // `user`, not a second `system`: a chat template may refuse a system message
+  // that is not the first one, and Qwen's does — llama.cpp with --jinja answered
+  // 500 and every llamacpp-served turn died on its first step. The position is
+  // what H-9 needed; the role was never part of it.
+  assert.equal(followUp.at(-1).role, 'user');
   assert.match(followUp.at(-1).content, /## Right now/);
   assert.equal(followUp[0].role, 'system');
   assert.equal(/## Right now/.test(followUp[0].content), false,
@@ -302,7 +306,11 @@ test('what the agent remembered comes back in the next turn, in a new conversati
   assert.match(system.content, /# Environment/, 'the live environment is described too');
 
   // A fresh conversation starts from the user message, not the old transcript.
-  assert.equal(seen[0].messages.filter(m => m.role === 'user').length, 1);
+  // The readings ride at the end as a `user` row of the panel's own, so what is
+  // counted here is the conversation: everything but that.
+  const asked = seen[0].messages.filter(m => m.role === 'user' && !/panel readings/.test(m.content));
+  assert.equal(asked.length, 1);
+  assert.match(asked[0].content, /Which GPU/);
 });
 
 test('memory can be written and forgotten from the panel', async () => {
@@ -1241,4 +1249,33 @@ test('a stalled model falls through to the next, and says so on screen', async (
     });
     agentMod.forgetDegraded();
   }
+});
+
+test('every request carries exactly one system message, and it is first', async () => {
+  // A chat template may refuse a system message that is not the first one, and
+  // Qwen's does: llama.cpp with --jinja answers
+  // `500 Jinja Exception: System message must be at the beginning`. The readings
+  // moved below the history to protect the cached prefix (H-9) and went as a
+  // second system message, so from that moment every llamacpp-served turn died
+  // on its first step — mission or chat — while providers that tolerate it
+  // carried on, which is why it read as a model problem.
+  script = [
+    { tool: 'memory_search', args: { query: 'anything' } },
+    { text: 'Nothing to report.' },
+  ];
+  await stream('/api/harness/chat', { message: 'look something up' });
+
+  assert.ok(seen.length >= 2, 'a tool step and an answer');
+  for (const body of seen) {
+    const roles = body.messages.map(m => m.role);
+    const systems = roles.filter(r => r === 'system');
+    assert.equal(systems.length, 1, `one system message, got ${systems.length}: ${roles.join(', ')}`);
+    assert.equal(roles[0], 'system', `the system message is first, got ${roles.join(', ')}`);
+  }
+
+  // And the readings are still there, still last, still saying whose they are.
+  const last = seen.at(-1).messages.at(-1);
+  assert.equal(last.role, 'user');
+  assert.match(last.content, /panel readings, not from the user/);
+  assert.match(last.content, /## Right now/);
 });
