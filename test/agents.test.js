@@ -386,3 +386,46 @@ test('a specialist can reach mission_plan whatever its definition allows', () =>
   assert.equal(Number(p2.match(/, (\d+) tools/)[1]), 2,
     'memory_search plus mission_plan — and no way to reach the withheld tools');
 });
+
+test('a mission log lives under the data directory, not the working directory', () => {
+  // `logFor()` returned `agents/mission-${id}` — a bare relative path — and
+  // store.appendJsonl does NOT resolve through DATA_DIR the way readJson and
+  // writeJson do. It hands the path to fs, which resolves it against the
+  // process working directory. So the mission index went to
+  // .doca/agents/missions.json and the mission *logs* went to <cwd>/agents/:
+  // two halves of one feature in two places.
+  //
+  // Three consequences, and this test is about the third. Logs scattered
+  // wherever the panel was started from; they were not covered by .gitignore,
+  // so `git add -A` in the repo root would have committed them; and
+  // DOCA_DATA_DIR did not move them, so relocating the data dir left the
+  // mission logs behind and split a mission from its own history.
+  registry.setEnabled(true);
+  missions._reset();
+
+  const store = require('../modules/store');
+  const fs    = require('node:fs');
+  const path  = require('node:path');
+
+  const m = missions.dispatch({ agentId: 'archivist', task: 'leave a trace', plan: [{ title: 'x' }] });
+
+  // Write one event through the real path. A dispatched mission with no model
+  // behind it never emits, so without this the log is never created and the
+  // test would pass for the wrong reason — by finding nothing to find.
+  missions.record(m.id, { type: 'tool_call', name: 'memory_search', args: { query: 'x' }, step: 1 });
+  assert.ok(missions.events(m.id, 5).length > 0, 'the event was not written at all');
+
+  // Where did it go?
+  const underData = path.join(store.DATA_DIR, 'agents', `mission-${m.id}.jsonl`);
+  const inCwd     = path.resolve(process.cwd(), 'agents', `mission-${m.id}.jsonl`);
+  assert.ok(fs.existsSync(underData), `the mission log is not under the data dir (${underData})`);
+  assert.equal(fs.existsSync(inCwd), false,
+    'a mission log was written relative to the working directory — the bug is back');
+
+  // And the two halves sit together, which is the point of the fix.
+  assert.ok(fs.existsSync(path.join(store.DATA_DIR, 'agents', 'missions.json')),
+    'the index and the logs must be in the same directory');
+
+  missions._reset();
+  registry.setEnabled(false);
+});

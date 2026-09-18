@@ -428,6 +428,6 @@ function block() {
 
 function _reset() { store.writeJson(INDEX, { missions: [] }); }
 
-module.exports = { dispatch, recover, resume, get, list, running, events, block, patch,
+module.exports = { dispatch, recover, resume, get, list, running, events, record, block, patch,
   setPlan, planProgress, normalizePlan, forSession,
   PLAN_MAX_ITEMS, PLAN_TITLE_MAX, PLAN_STATES, _reset };
