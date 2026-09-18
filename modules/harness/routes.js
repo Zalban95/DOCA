@@ -59,6 +59,10 @@ const handleModels = wrap(async (req, res) =>
 
 const handleStatus = wrap(async (_req, res) => res.json(await agent.status()));
 
+/** GET /api/harness/usage?days=7&by=day|model|provider|session|agent|kind */
+const handleUsage = wrap(async (req, res) =>
+  res.json(require('./usage').summary({ days: req.query.days, by: req.query.by || 'day' })));
+
 /* ── Built-in harness console ─────────────────────────── */
 
 /** POST /api/harness/chat — one agent turn, streamed as SSE. */
@@ -269,7 +273,7 @@ module.exports = {
   handleAgents, handleAgentsEnable, handleAgentSave, handleAgentDelete, handleMissions, handleMission,
   handleInstalls, handleInstallApply, handleInstallReject,
   handleList, handleSetDefault, handleInstall, handleConfig, handleAddCustom, handleRemoveCustom,
-  handleProviders, handleModels, handleStatus,
+  handleProviders, handleModels, handleStatus, handleUsage,
   handleChat, handleSessions, handleSessionNew, handleSession, handleSessionActivate, handleSessionDelete,
   handleMemoryList, handleMemoryWrite, handleMemoryForget, handleMemoryLock, handleMemoryFlag,
   handleRulesGet, handleRulesWrite, handleRulesReset, handleRulesVerify,

@@ -34,7 +34,9 @@ const registry = require('./registry');
 const INDEX = 'agents/missions';
 const MAX_INDEX = 200;
 /** A mission's own event log, one per mission, so concurrent ones never race. */
-const logFor = id => `agents/mission-${id}`;
+// A real path in the data dir. `store.appendJsonl` takes a file path, not a
+// store name, so the old `agents/mission-<id>` landed in the repo checkout.
+const logFor = id => require('path').join(store.dir('agents'), `mission-${id}.jsonl`);
 
 /* ── Index ────────────────────────────────────────────── */
 

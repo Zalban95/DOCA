@@ -648,6 +648,32 @@ test('the floating chat panel forwards tool calls as structured events', async (
   assert.match(events.filter(e => e.type === 'text').map(e => e.text).join(''), /Done/);
 });
 
+/* ── Token ledger ─────────────────────────────────────── */
+
+test('every model call is kept in the usage ledger, measured or estimated, and can be summed', async () => {
+  const usage = require('../modules/harness/usage');
+  const before = usage.summary({ days: 1, by: 'kind' });
+  const count = kind => (before.rows.find(r => r.key === kind)?.calls || 0);
+
+  script = [{ tool: 'memory_search', args: { query: 'x' } }, { text: 'nothing there' }];
+  await stream('/api/harness/chat', { message: 'count me' });
+
+  const after = usage.summary({ days: 1, by: 'kind' });
+  const step = after.rows.find(r => r.key === 'step');
+  assert.equal(step.calls, count('step') + 2, 'one row per step, the tool step and the answer');
+  assert.ok(after.total.prompt > before.total.prompt, 'the stub sends no usage frame, so the prompt is estimated');
+  assert.ok(step.estimated >= 2, 'and says so');
+
+  const byModel = (await get('/api/harness/usage?days=1&by=model')).body;
+  assert.ok(byModel.rows.some(r => r.key === 'stub/stub-model'));
+  assert.equal((await get('/api/harness/usage?by=nonsense')).status, 400);
+});
+
+test('a mission\'s event log lives in the data dir, not wherever the process was started', () => {
+  const src = fs.readFileSync(require.resolve('../modules/agents/missions.js'), 'utf8');
+  assert.match(src, /store\.dir\('agents'\)/, 'appendJsonl takes a real path; a store name resolved against cwd');
+});
+
 /* ── Pictures in the chat ─────────────────────────────── */
 
 // 1×1 transparent PNG.

@@ -720,6 +720,7 @@ function _hcBuiltinHtml(h) {
         <div class="hc-head">
           <span class="hc-title">${escHtml(h.label)}</span>
           <span class="badge badge-blue" id="hc-model-badge" style="font-size:9px">…</span>
+          <span class="hc-usage" id="hc-usage" title="Tokens today (UTC), every model call: steps, summaries and one-off asks. GET /api/harness/usage for the breakdown."></span>
           <span class="status-line" id="hc-status"></span>
           <div class="toolbar-right">
             <button class="btn btn-xs" onclick="hcEnvOpen()" title="Everything this agent is told about your machine">Context</button>
@@ -741,7 +742,22 @@ function _hcBuiltinHtml(h) {
     </div>`;
 }
 
+/** Today's tokens, next to the model badge. */
+async function _hcLoadUsage() {
+  const el = document.getElementById('hc-usage');
+  if (!el) return;
+  try {
+    const { total } = await apiFetch('/api/harness/usage?days=1&by=kind');
+    const tok = total.prompt + total.completion;
+    const fmt = n => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(n);
+    el.textContent = total.calls
+      ? `24h ${fmt(tok)} tok · ${total.calls} calls${total.cached ? ` · ${Math.round(total.cached / total.prompt * 100)}% cached` : ''}${total.estimated ? ' · ~est' : ''}`
+      : '';
+  } catch { el.textContent = ''; }
+}
+
 async function _hcStatus() {
+  _hcLoadUsage();
   const badge = document.getElementById('hc-model-badge');
   const st    = document.getElementById('hc-status');
   try {
@@ -988,6 +1004,7 @@ async function hcSend() {
   _hcLoadSessions();
   _hcLoadMemory();
   _hcLoadProposals();
+  _hcLoadUsage();
   input?.focus();
 }
 

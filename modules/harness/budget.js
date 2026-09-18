@@ -312,5 +312,5 @@ function stalled({ ep, ms, frames }) {
 module.exports = {
   CHARS_PER_TOKEN,
   estimate, estimateMessages, windowFor, compactTokensFor, shouldCompact, compactReason,
-  ledger, record, report, warning, block, explain, stalled,
+  ledger, record, report, warning, block, explain, stalled, cachedOf,
 };

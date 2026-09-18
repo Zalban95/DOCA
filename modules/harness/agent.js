@@ -29,6 +29,7 @@ const store       = require('../store');
 const agents   = { block: () => require('../agents/registry').block() };
 const missions = { block: () => require('../agents/missions').block() };
 const tools       = require('./tools');
+const usage       = require('./usage');
 
 /**
  * Every turn's events, for anything that was not the caller.
@@ -502,10 +503,12 @@ function firstTokenGuard({ p, signal, onWaiting }) {
  * endpoint answers with JSON despite being asked to stream.
  * @returns {Promise<{ content: string, tool_calls: object[] }>}
  */
-async function complete({ ep, body, signal, onText, onWaiting, p }) {
+async function complete({ ep, body, signal, onText, onWaiting, p, meta = { kind: 'ask' } }) {
   const guard = firstTokenGuard({ p, signal, onWaiting });
   try {
-    return await streamOrRead({ ep, body, guard, onText, p });
+    const reply = await streamOrRead({ ep, body, guard, onText, p });
+    usage.record({ ...meta, provider: ep.id, model: body.model, usage: reply.usage, body, reply });
+    return reply;
   } catch (e) {
     // Our abort and the user's are the same AbortError at this level; only the
     // guard knows which one fired. A deliberate Stop keeps its own meaning.
@@ -619,7 +622,7 @@ async function foldSummary({ session, p, ep, signal, force = false }) {
 
   try {
     const { content } = await complete({
-      ep, signal, p,
+      ep, signal, p, meta: { kind: 'fold', sessionId: session.id },
       body: {
         model: p.model, stream: false, temperature: 0.2,
         messages: [
@@ -754,7 +757,7 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
     const promptEstimate = budget.estimateMessages(messages);
 
     const reply = await complete({
-      ep, signal, p,
+      ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id },
       body: { ...base, messages, ...(schemas.length ? { tools: schemas, tool_choice: 'auto' } : {}) },
       onText: t => { text += t; say({ type: 'text', text: t }); },
       // Silence is a state worth drawing. Without this the console shows the

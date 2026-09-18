@@ -147,11 +147,15 @@ none of them block anything today.
   starts missing things. Decide embeddings-or-not deliberately when that happens
   rather than drifting into it.
 
-- **The ledger is per turn and is not kept.** `usage` lands on each assistant
-  row and the session index gains a cumulative `tokens`, but nothing aggregates
-  across sessions, so "what did this week cost" has no answer and there is no
-  per-model or per-provider breakdown. The rows are all there; it is a reader,
-  not new plumbing.
+- **The usage ledger has no page and no prices.** Every model call the built-in
+  harness makes (steps, summaries, `agent.ask`) is now one row in
+  `harness/usage/YYYY-MM.jsonl`, summed by `GET /api/harness/usage?days=&by=`
+  and shown as one "24h" line in the console. Deliberately not done: a table or
+  chart of the breakdown, money (prices move and differ by cache hit, so store
+  tokens and apply a price list when reading), and the OpenClaw gateway and CLI
+  harnesses, which bill somewhere this panel cannot see. The session's own
+  `tokens` still only adds a turn that ended cleanly; the ledger is the number
+  to trust.
 
 ## Two layers of learned knowledge, and the road between them
 
