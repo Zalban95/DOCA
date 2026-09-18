@@ -435,6 +435,18 @@ function collapseFoldRuns(container) {
   if (!container) return;
   const isRow = el => el.classList.contains('agent-fold') || el.classList.contains('agent-fold-group');
 
+  // A bubble the streamer opened and never filled is not content, and it was
+  // quietly defeating the whole of this: `createThinkStream` makes a text
+  // bubble per text segment, so a live turn interleaves empty bubbles with its
+  // rows, every run came out one row long, and nothing ever collapsed. It only
+  // worked on a reloaded transcript, which has no empty bubbles — which is
+  // exactly where it was tested. They are dropped here rather than skipped,
+  // because an empty bubble is not worth a row of the transcript either.
+  for (const el of [...container.children]) {
+    if (isRow(el) || el.classList.contains('agent-fold-more')) continue;
+    if (!el.textContent.trim() && !el.querySelector('img, video, audio, svg, canvas')) el.remove();
+  }
+
   let run = [];
   const flush = () => {
     if (run.length > FOLD_RUN_KEEP + 1) _foldRunCollapse(run.slice(0, run.length - FOLD_RUN_KEEP));

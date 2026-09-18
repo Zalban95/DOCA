@@ -127,8 +127,11 @@ function devRenderPairing(p) {
     <div class="card mt8" style="border-color:var(--teal)">
       <div class="card-title">Pairing ${escHtml(p.name)}</div>
       <div class="row" style="align-items:center;gap:16px;flex-wrap:wrap">
-        <div style="flex:0 0 auto;background:#fff;padding:8px;border-radius:var(--radius);width:180px;height:180px">
-          ${p.qr || '<div class="placeholder">QR unavailable</div>'}
+        <!-- The QR is sized by the box, not by whatever intrinsic size the
+             encoder happened to emit: one rule here, and a code that scans. -->
+        <div class="dev-qr" style="flex:0 0 auto;background:#fff;padding:8px;border-radius:var(--radius);width:180px;height:180px">
+          ${p.qr || '<div class="placeholder">No QR: the encoder is not installed on this host '
+            + '(npm install qrcode). The code beside this still pairs.</div>'}
         </div>
         <div class="flex1" style="min-width:200px">
           <div class="input-label">Enter this code in the app</div>

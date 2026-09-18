@@ -272,3 +272,25 @@ test('prompt validation: choice ids unique, options need outcomes, size limit', 
   r = await H.api(agent.token, 'POST', '/api/v1/agent/prompts', { title: 'x', choices: [{ id: 'a', type: 'dismiss' }], body: Array.from({ length: 24 }, () => ({ type: 'text', text: 'y'.repeat(2000) })) });
   assert.equal(r.status, 413); assert.equal(r.body.error.code, 'payload_too_large');
 });
+
+test('a speech service that refuses the audio says so, and says where to look', async () => {
+  // Observed: a Whisper server answers `500 Internal Server Error` and nothing
+  // else when it dislikes the container, and the panel repeated exactly that —
+  // which reads as the panel being broken. The message now names the service,
+  // the model, and the two things that are actually wrong.
+  const FormData = global.FormData;
+  const fd = new FormData();
+  fd.append('audio', new Blob([Buffer.from('not really audio')], { type: 'audio/webm' }), 'voice.webm');
+
+  const url = process.env.DOCA_STT_URL;
+  process.env.DOCA_STT_URL = `${url}/refuses`;      // the mock answers 404 on anything else
+  try {
+    const r = await H.api(null, 'POST', '/api/chat/transcribe', fd);
+    assert.equal(r.status, 404, 'the service\'s own status is kept, not flattened to 500');
+    assert.match(r.body.error, /STT error 404/);
+    assert.ok(r.body.error.includes(url), 'it names what it called');
+    assert.match(r.body.error, /model whisper-1/, 'and with which model');
+    assert.match(r.body.error, /audio\/webm/, 'and the format the service was given');
+    assert.match(r.body.error, /Settings → Voice/, 'and where the URL is set');
+  } finally { process.env.DOCA_STT_URL = url; }
+});

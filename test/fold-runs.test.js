@@ -44,6 +44,26 @@ function el(tag, className = '') {
       node.children.push(c); c.parent = node; return c;
     },
     append(...cs) { for (const c of cs) node.appendChild(c); },
+    remove() {
+      const i = node.parent ? node.parent.children.indexOf(node) : -1;
+      if (i >= 0) node.parent.children.splice(i, 1);
+      node.parent = null;
+    },
+    // Only what collapseFoldRuns asks for: "does this bubble contain media?",
+    // as a comma-separated tag list. A stub that cannot answer it makes the
+    // empty-bubble rule untestable, which is how the rule was missing at all.
+    querySelector(sel) {
+      const tags = sel.split(',').map(s => s.trim().toLowerCase());
+      const walk = n => {
+        for (const c of n.children) {
+          if (tags.includes(String(c.tagName).toLowerCase())) return c;
+          const deeper = walk(c);
+          if (deeper) return deeper;
+        }
+        return null;
+      };
+      return walk(node);
+    },
     setAttribute(k, v) { node.attrs[k] = v; },
     addEventListener(ev, fn) { node._handlers[ev] = fn; },
     click() { node._handlers.click?.(); },
@@ -74,7 +94,10 @@ function transcript(shape) {
     if (ch === 'c') box.appendChild(el('div', 'agent-fold agent-fold-tool-call'));
     if (ch === 'r') box.appendChild(el('div', 'agent-fold agent-fold-tool-result'));
     if (ch === 'g') box.appendChild(el('div', 'agent-fold-group agent-fold-group-thinking'));
-    if (ch === 't') box.appendChild(el('div', 'hc-msg hc-assistant'));
+    // A bubble with words in it: what actually separates one turn from the next.
+    if (ch === 't') { const m = el('div', 'hc-msg hc-assistant'); m.textContent = 'an answer'; box.appendChild(m); }
+    // A bubble the streamer opened and never filled, which a live turn is full of.
+    if (ch === 'e') box.appendChild(el('div', 'hc-msg hc-assistant'));
   }
   return box;
 }
@@ -172,4 +195,21 @@ test('the "…" opens everything it hides, and closes again', () => {
   head.click();
   assert.equal(more.classList.contains('open'), false);
   assert.equal(head.attrs['aria-expanded'], 'false');
+});
+
+test('a live turn collapses too: the empty bubbles between its rows are not separators', () => {
+  // The regression this exists to stop. `createThinkStream` opens a text bubble
+  // per text segment, so a turn as it happens is row, empty bubble, row, empty
+  // bubble … — every run one row long, nothing ever collapsing. It looked right
+  // in testing because a *reloaded* transcript has no empty bubbles, which is
+  // the only shape that had been tried.
+  const { collapseFoldRuns } = api();
+  global.document = { createElement: tag => el(tag) };
+  const box = transcript('ecereceregecer');       // ten rows, four empty bubbles among them
+
+  collapseFoldRuns(box);
+
+  assert.deepEqual(kinds(box), ['agent-fold-more', 'agent-fold-group', 'agent-fold', 'agent-fold'],
+    'the empty bubbles are gone and what is left is one run');
+  assert.equal(box.children[0].children[1].children.length, 4, 'seven rows, three kept, four behind the "…"');
 });

@@ -1062,3 +1062,9 @@ body.chat-resizing * { cursor: nwse-resize !important; }
 }
 .update-info a { color: var(--teal); }
 .update-info code { background: var(--bg3); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+
+/* ── The pairing QR ───────────────────────────────────
+   The encoder's SVG is sized by this box rather than by its own attributes, so
+   a code that scans does not depend on which options the encoder was given. */
+.dev-qr { display: grid; place-items: center; overflow: hidden; }
+.dev-qr svg, .dev-qr img { display: block; width: 100%; height: 100%; }

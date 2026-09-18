@@ -329,6 +329,44 @@ function _chatVoiceStop() {
 }
 
 /**
+ * A recording as 16 kHz mono WAV, which is what speech services actually take.
+ *
+ * MediaRecorder writes WebM/Opus in Chrome and MP4/AAC in Safari, and a Whisper
+ * server given either commonly answers `500 Internal Server Error` — observed,
+ * and the reason a voice message failed the first time it was tried. Decoding
+ * is the browser's job anyway (`decodeAudioData` reads both), and WAV at 16 kHz
+ * mono is both the format every STT accepts and a smaller upload than the
+ * original: one channel, the sample rate speech models resample to regardless.
+ * It is also the format that plays back in every browser, so the attachment in
+ * the transcript is the same file that was transcribed.
+ */
+async function _chatWav(blob) {
+  const bytes = await blob.arrayBuffer();
+  const decoded = await new (window.AudioContext || window.webkitAudioContext)().decodeAudioData(bytes);
+
+  const rate = 16000;
+  const off  = new OfflineAudioContext(1, Math.ceil(decoded.duration * rate), rate);
+  const src  = off.createBufferSource();
+  src.buffer = decoded;                       // downmixed to mono by the 1-channel destination
+  src.connect(off.destination);
+  src.start();
+  const mono = (await off.startRendering()).getChannelData(0);
+
+  const buf  = new ArrayBuffer(44 + mono.length * 2);
+  const view = new DataView(buf);
+  const ascii = (at, s) => { for (let i = 0; i < s.length; i++) view.setUint8(at + i, s.charCodeAt(i)); };
+  ascii(0, 'RIFF'); view.setUint32(4, 36 + mono.length * 2, true); ascii(8, 'WAVE');
+  ascii(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true); view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true); ascii(36, 'data'); view.setUint32(40, mono.length * 2, true);
+  for (let i = 0; i < mono.length; i++) {
+    const s = Math.max(-1, Math.min(1, mono[i]));
+    view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+/**
  * Upload the recording, transcribe it, and send it as the message.
  *
  * The agent reads words, so the transcript is the message and the recording
@@ -336,13 +374,14 @@ function _chatVoiceStop() {
  * because a transcript is a guess about what was said. `spoken` is what makes
  * the answer come back out loud.
  */
-async function _chatVoiceSend(blob) {
+async function _chatVoiceSend(recorded) {
   const input = document.getElementById('chat-input');
-  const name  = `voice-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
-  const chip  = _chatChip({ name, bytes: blob.size, pending: true });
+  const name  = `voice-${new Date().toISOString().replace(/[:.]/g, '-')}.wav`;
+  const chip  = _chatChip({ name, bytes: recorded.size, pending: true });
   try {
+    const blob = await _chatWav(recorded);
     const fd = new FormData();
-    fd.append('file', new File([blob], name, { type: 'audio/webm' }));
+    fd.append('file', new File([blob], name, { type: 'audio/wav' }));
     const up = await fetch('/api/attachments', { method: 'POST', body: fd });
     const rec = await up.json();
     if (!up.ok) throw new Error(rec.error || `HTTP ${up.status}`);
@@ -350,7 +389,7 @@ async function _chatVoiceSend(blob) {
     chip.replaceWith(_chatChip(rec));
 
     const fd2 = new FormData();
-    fd2.append('audio', new File([blob], name, { type: 'audio/webm' }));
+    fd2.append('audio', new File([blob], name, { type: 'audio/wav' }));
     const st = await fetch('/api/chat/transcribe', { method: 'POST', body: fd2 });
     const data = await st.json();
     if (!st.ok) throw new Error(data.error || `HTTP ${st.status}`);

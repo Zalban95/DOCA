@@ -304,8 +304,16 @@ async function transcribeAudio(buffer, mimetype, filename) {
     signal: AbortSignal.timeout(30000),
   });
   if (!resp.ok) {
-    const err = await resp.text();
-    throw Object.assign(new Error(`STT error ${resp.status}: ${err.slice(0, 300)}`), { status: resp.status });
+    // The service's own words are usually "Internal Server Error" and nothing
+    // else, which sends the reader looking in this panel for a fault that is
+    // not here. Name what was called, with what, and the two things that are
+    // actually wrong when a speech service refuses a request it received.
+    const err = (await resp.text()).trim();
+    throw Object.assign(new Error(
+      `STT error ${resp.status} from ${vs.sttUrl} (model ${vs.sttModel})`
+      + `${err ? `: ${err.slice(0, 300)}` : ''}`
+      + ' — the service received the audio and refused it. Check that the model name is one it has, and that '
+      + `it accepts ${mimetype || 'this format'}; Settings → Voice has the URL.`), { status: resp.status });
   }
   const data = await resp.json();
   return data.text || '';

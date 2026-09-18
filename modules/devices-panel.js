@@ -129,6 +129,11 @@ async function handlePairStart(req, res) {
   try {
     qr = await require('qrcode').toString(url, {
       type: 'svg', errorCorrectionLevel: 'M', margin: 1,
+      // `width` is what makes the SVG carry width and height attributes. Without
+      // it the tag has a viewBox and nothing else, and an inline SVG with no
+      // intrinsic size renders at the CSS default 300×150 — so in the 180 px box
+      // the panel draws it in, the code came out cropped and would not scan.
+      width: 360,
       color: { dark: '#000000', light: '#ffffff' },
     });
   } catch (e) {
