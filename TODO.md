@@ -252,6 +252,36 @@ Two smaller things noticed while measuring, neither yet a decision:
   per session (a session id in the system prompt, a per-conversation timestamp)
   would cost every conversation its first step. Keep it that way deliberately.
 
+## Compaction folds earlier turns only, and that is deliberate
+
+Not a defect and not an open question — a decision that reads like a bug, which
+is exactly why it needs writing down. Found 2026-09-18 while testing compaction
+by lowering `compactTokens` and watching a turn run past it without folding.
+
+The first attempt looked like a failure: prompts reached 20,368 tokens against a
+threshold of 9,000 and nothing compacted. It was the guard working. Under token
+pressure `memory.pendingFold(…, { force: true })` folds **only turns that have
+already finished**, never the turn in progress:
+
+> folding "the older half" then meant summarising the turn in progress — the code
+> the agent is iterating on, clipped into 250 words — and doing it again on the
+> next step, because the fold barely shrank the prompt. Under pressure, fold only
+> earlier turns; when there are none, there is nothing to fold and no model call
+> is made.
+
+So in a **first** turn there is nothing to fold, however large the prompt gets,
+and no `compacted` event is emitted. That is correct, and it is worth knowing
+before someone reads a long single-turn session as a compaction bug — the fix
+would be to "make it fold" and the result would be worse than the problem.
+
+Confirmed working on a session with a prior turn: it fired exactly at the
+threshold, and the summary kept `HALCYON` and `8443` verbatim, which is what the
+summariser prompt asks for ("keep names, paths and numbers verbatim").
+
+Related: a fold rewrites the transcript, so the step after one always shows a
+cache collapse — measured at 16% on the step following, recovering to 77% and
+81% after. Expected, one-off, and not a regression; see the cache section above.
+
 ## Two layers of learned knowledge, and the road between them
 
 Decided in discussion, not yet built. Written down because it is expensive to
