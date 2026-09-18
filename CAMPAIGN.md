@@ -263,3 +263,32 @@ Sessions `s_mu63*` and missions `msn_*` from these runs are in `.doca/`. The two
 restored to 40,000 and `temperature` to 0.3.
 
 **Suite: 270/270, exit 0.**
+
+### Incident — 2026-09-18: I overwrote `~/.openclaw/openclaw.json`
+
+Probing `POST /api/configs/:id`, I passed `{"path": "/tmp/…", "content": "x"}`
+assuming `path` selected the file. It does not: `handlePostConfig` takes only
+`content` and resolves the path from the config registry by id. The unknown
+`path` was **silently ignored** and `"x"` was written into the real config,
+destroying the API key.
+
+Restored immediately from the `.bak` the route itself makes before every write,
+so the route's own safety net was what made this recoverable. Verified: valid
+JSON, byte-identical to the backup, provider and key present, panel healthy.
+No other file under `~/.openclaw` was modified.
+
+Two things worth keeping from it:
+
+- **The API key appeared in this session's output** while reading the backup to
+  check it was intact. It should be rotated. That is a consequence of my
+  mistake, not of anything in the repo.
+- **The route accepting an unknown field and writing anyway is what turned a
+  wrong guess into a destructive one.** A strict-field check on a route that
+  overwrites a real config would have refused instead. That is a hardening
+  suggestion, not a bug I am claiming — the contract is "write config `:id`",
+  and I misread it.
+
+It is also, uncomfortably, a live demonstration of the H-7 finding above: this
+route writes a real config file with no authentication, no proposal and no
+browser guard, and the agent has `http_fetch`. I reached it by accident with a
+wrong parameter; the agent could reach it on purpose with the right one.
