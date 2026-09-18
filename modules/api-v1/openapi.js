@@ -135,7 +135,7 @@ function schemas() {
       status: str({ enum: ['pending', 'accepted', 'rejected'] }), decidedAt: nullable(iso()), serverId: nullable(str()),
     }, { description: 'A client\'s offer of the MCP server it hosts, waiting on a dashboard click. `pending` means recorded and doing nothing.' }),
 
-    HarnessImage: obj({ name: str(), mime: str({ enum: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'] }), bytes: int(), caption: str({ description: 'One line under the picture, when the agent gave one.' }), url: str({ description: 'Fetch with the device token; `GET /harness/images/{name}`.' }) }, { required: ['name', 'mime', 'bytes', 'url'] }),
+    HarnessImage: obj({ name: str(), mime: str({ description: 'An image, audio or video type the panel can show: png, jpeg, webp, gif, avif, svg; mp4, webm, quicktime, matroska; mpeg, wav, ogg, mp4, flac, aac.' }), kind: str({ enum: ['image', 'audio', 'video'], description: 'Draw it, or give it a player. Decided by the hub so a client does not parse mime types.' }), bytes: int(), caption: str({ description: 'One line under it, when the agent gave one.' }), url: str({ description: 'Fetch with the device token; `GET /harness/images/{name}`.' }) }, { required: ['name', 'mime', 'kind', 'bytes', 'url'] }),
     HarnessSession: obj({
       id: str({ examples: ['s_mt0z3rfa'] }), title: str(), createdAt: iso(), updatedAt: iso(), count: int({ description: 'Messages in the transcript.' }),
       summary: str({ description: 'Rolling summary of the folded-away part of the conversation.' }),
@@ -288,7 +288,7 @@ function events() {
       turnId: str(), sessionId: str(), state: str({ enum: ['started', 'done', 'failed'] }), by: str({ description: 'Device that asked.' }),
       message: str({ description: 'On `started`: the question, truncated.' }), text: str({ description: 'On `done`: the whole reply.' }), steps: int(),
       proposals: arr(obj({ id: str(), reason: str(), changes: arr(obj({ path: str(), to: any() })) })), error: obj({ code: str(), message: str() }),
-      images: arr(ref('HarnessImage'), { description: 'On `done`: pictures the agent showed during the turn, in order.' }),
+      images: arr(ref('HarnessImage'), { description: 'On `done`: the media the agent showed during the turn, in order — pictures, video, audio.' }),
       fallbacks: arr(obj({
         step: int({ description: 'Which step of the turn hopped.' }),
         from: str({ description: 'Provider that went quiet.' }), fromModel: str(),
@@ -460,7 +460,7 @@ function paths() {
       responses: { 200: json(obj({ enabled: bool(), missions: arr(obj({ id: str(), agentId: str(), label: str(), task: str(), state: str(), steps: int(), tokens: int(), startedAt: iso(), endedAt: nullable(iso()), result: nullable(str()), error: nullable(str()) })) })), ...std(401, 403) } } },
     '/harness/images/{name}': { parameters: [pathParam('name', 'Image name, as given in `images[].name`.')],
       get: { tags: ['Harness'], summary: 'A picture the agent showed in the chat', operationId: 'harnessGetImage', ...scopeDoc('harness:chat'),
-        description: 'Serves png, jpeg, webp, gif, avif and svg only; any other attachment is a 404. Sent with `X-Content-Type-Options: nosniff` and a sandboxing CSP, because an SVG is a document that can carry script.',
+        description: 'Serves the image, audio and video types the panel shows; any other attachment is a 404. Sent with `X-Content-Type-Options: nosniff` and a sandboxing CSP, because an SVG is a document that can carry script.',
         responses: { 200: { description: 'The image, with its Content-Type', content: { 'image/*': { schema: str({ format: 'binary' }) } } }, ...std(401, 403, 404) } } },
     '/harness/turns/{id}/cancel': {
       parameters: [pathParam('id', 'Turn id, or the session id of the conversation it is running in.')],
@@ -477,7 +477,7 @@ function paths() {
     '/harness/sessions/{id}': {
       parameters: [pathParam('id', 'Conversation id.'), query('limit', 'Most recent messages to return (default 50, max 200).', int())],
       get: { tags: ['Harness'], summary: 'One conversation, shaped for drawing a chat', operationId: 'harnessGetSession', ...scopeDoc('harness:sessions'),
-        responses: { 200: json(obj({ session: ref('HarnessSession'), messages: arr(obj({ role: str({ enum: ['user', 'assistant', 'tool', 'system'] }), content: str(), name: str(), from: obj({ id: nullable(str()), name: str(), formFactor: nullable(str()) }, { description: 'Which client asked. Absent on rows written before this was recorded, and on the dashboard console\'s own rows.' }), tools: arr(str({ description: 'Tools the assistant called on this row.' })), images: arr(ref('HarnessImage'), { description: 'On a `tool` row: pictures that tool showed.' }) })) })), ...std(401, 403, 404) } },
+        responses: { 200: json(obj({ session: ref('HarnessSession'), messages: arr(obj({ role: str({ enum: ['user', 'assistant', 'tool', 'system'] }), content: str(), name: str(), from: obj({ id: nullable(str()), name: str(), formFactor: nullable(str()) }, { description: 'Which client asked. Absent on rows written before this was recorded, and on the dashboard console\'s own rows.' }), tools: arr(str({ description: 'Tools the assistant called on this row.' })), images: arr(ref('HarnessImage'), { description: 'On a `tool` row: the media that tool showed.' }) })) })), ...std(401, 403, 404) } },
       delete: { tags: ['Harness'], summary: 'Delete a conversation', operationId: 'harnessDeleteSession', ...scopeDoc('harness:sessions'),
         responses: { 200: json(obj({ ok: bool() })), ...std(401, 403, 404, 409) } },
     },

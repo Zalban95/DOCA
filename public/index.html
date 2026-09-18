@@ -1282,7 +1282,16 @@
   <div class="chat-input-row" id="chat-input-row">
     <input type="file" id="chat-file" multiple style="display:none"
            onchange="chatAttachFiles(this.files); this.value='';">
+    <!-- `capture` is the native way to ask for the camera: a phone opens it, a
+         desktop opens the file picker. No preview, no canvas, no permission of
+         our own to manage. -->
+    <input type="file" id="chat-camera" accept="image/*" capture="environment" style="display:none"
+           onchange="chatAttachFiles(this.files); this.value='';">
     <button class="btn btn-sm" onclick="chatAttachPick()" title="Attach a file — the agent gets its path">📎</button>
+    <button class="btn btn-sm" onclick="document.getElementById('chat-camera').click()"
+            title="Take a picture and send it">📷</button>
+    <button class="btn btn-sm" id="chat-mic" onclick="chatVoiceNote()"
+            title="Record a voice message. The agent answers out loud unless you ask it not to.">🎤</button>
     <textarea class="chat-input" id="chat-input" placeholder="Message…" rows="1"
               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend();}"
               onpaste="if(event.clipboardData.files.length){event.preventDefault();chatAttachFiles(event.clipboardData.files);}"></textarea>

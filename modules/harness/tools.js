@@ -79,8 +79,40 @@ function resolvePath(p) {
   return abs;
 }
 
-/** A chat picture is for looking at, and a phone on mobile data pays for every byte of it. */
+/**
+ * Chat media is for looking at or listening to, and a phone on mobile data pays
+ * for every byte. A still frame and a two-minute clip are not the same size of
+ * thing, so the cap is not the same number.
+ */
 const SHOW_IMAGE_MAX = 20 * 1024 * 1024;
+const SHOW_MEDIA_MAX = 200 * 1024 * 1024;
+
+/**
+ * Copy a file into attachments and put it in the chat. One implementation
+ * behind `show_media` and the `show_image` name it shipped under.
+ */
+function showMedia(p, caption, ctx = {}) {
+  const attachments = require('../attachments');
+  const abs  = resolvePath(p);
+  const mime = attachments.mimeFor(abs);
+  const kind = attachments.playableKind(mime);
+  if (!kind)
+    throw new Error(`${path.basename(abs)} is not something a chat can show (images: png, jpg, webp, gif, avif, `
+      + 'svg; video: mp4, webm, mov, mkv; audio: mp3, wav, ogg, m4a, flac, aac). Convert it first, for example: '
+      + 'ffmpeg -i in.avi out.mp4');
+
+  const cap = kind === 'image' ? SHOW_IMAGE_MAX : SHOW_MEDIA_MAX;
+  const bytes = fs.statSync(abs).size;
+  if (bytes > cap)
+    throw new Error(`${path.basename(abs)} is ${attachments.humanBytes(bytes)}; chat ${kind} is capped at `
+      + `${attachments.humanBytes(cap)}. Re-encode it smaller and show that.`);
+
+  const rec = attachments.save(fs.readFileSync(abs), path.basename(abs), { from: 'agent', mime });
+  const media = { name: rec.name, mime, kind, bytes, ...(caption ? { caption: String(caption).slice(0, 200) } : {}) };
+  if (typeof ctx.show === 'function') ctx.show(media);
+  return `Shown in the chat: ${rec.name} (${attachments.humanBytes(bytes)}, ${kind}). The user has it now; `
+    + 'do not describe it again unless they ask.';
+}
 
 const TOOLS = [
   {
@@ -611,12 +643,29 @@ const TOOLS = [
     },
   },
   {
+    name: 'show_media',
+    description: 'Put a picture, a video or a sound in this chat, from a file on this machine: a render, a chart, '
+      + 'a screenshot, a recording, a clip. Images are drawn (png, jpg, webp, gif, avif, svg); video and audio get '
+      + 'a player (mp4, webm, mov, mkv; mp3, wav, ogg, m4a, flac, aac). Show it rather than describing it. '
+      + 'Markdown image syntax is NOT drawn, so this is the only way media reaches the chat. A copy is kept with '
+      + 'the conversation, so changing the file later does not change what was shown. To put a picture on a device '
+      + 'the user is carrying instead, use tell_device.',
+    parameters: {
+      type: 'object',
+      properties: {
+        path:    { type: 'string', description: 'The media file. Absolute, or relative to the agent workspace.' },
+        caption: { type: 'string', description: 'One short line under it: what it is.' },
+      },
+      required: ['path'],
+    },
+    run: ({ path: p, caption }, ctx = {}) => showMedia(p, caption, ctx),
+  },
+  {
+    // The name this shipped under. A conversation that already contains
+    // `show_image` calls keeps working, and a model that learnt the old name
+    // from an older transcript is not told it no longer exists.
     name: 'show_image',
-    description: 'Show the user a picture in this chat: a render, a chart, a screenshot, a photo or a diagram that '
-      + 'is a file on this machine (png, jpg, webp, gif, avif or svg). Show it rather than describing it. '
-      + 'Markdown image syntax is NOT drawn, so this is the only way a picture reaches the chat. A copy is kept '
-      + 'with the conversation, so changing the file later does not change what was shown. To put a picture on '
-      + 'a device the user is carrying instead, use tell_device.',
+    description: 'Deprecated alias of show_media, which also plays video and audio. Prefer show_media.',
     parameters: {
       type: 'object',
       properties: {
@@ -625,23 +674,7 @@ const TOOLS = [
       },
       required: ['path'],
     },
-    run: ({ path: p, caption }, ctx = {}) => {
-      const attachments = require('../attachments');
-      const abs  = resolvePath(p);
-      const mime = attachments.mimeFor(abs);
-      if (!attachments.IMAGE_MIME.has(mime))
-        throw new Error(`${path.basename(abs)} is not a picture a chat can draw (png, jpg, webp, gif, avif or svg). `
-          + 'Convert it first, for example: magick in.bmp out.png');
-      const bytes = fs.statSync(abs).size;
-      if (bytes > SHOW_IMAGE_MAX)
-        throw new Error(`${path.basename(abs)} is ${attachments.humanBytes(bytes)}; a chat picture is capped at `
-          + `${attachments.humanBytes(SHOW_IMAGE_MAX)}. Scale it down or save it as webp or jpg, then show that.`);
-      const rec = attachments.save(fs.readFileSync(abs), path.basename(abs), { from: 'agent', mime });
-      const image = { name: rec.name, mime, bytes, ...(caption ? { caption: String(caption).slice(0, 200) } : {}) };
-      if (typeof ctx.show === 'function') ctx.show(image);
-      return `Shown in the chat: ${rec.name} (${attachments.humanBytes(bytes)}). The user can see it now; `
-        + 'do not describe it again unless they ask.';
-    },
+    run: ({ path: p, caption }, ctx = {}) => showMedia(p, caption, ctx),
   },
   {
     name: 'tell_device',

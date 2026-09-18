@@ -50,7 +50,8 @@ const MIME = {
   '.gif': 'image/gif', '.svg': 'image/svg+xml', '.bmp': 'image/bmp', '.avif': 'image/avif',
   '.pdf': 'application/pdf', '.zip': 'application/zip', '.7z': 'application/x-7z-compressed',
   '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.m4a': 'audio/mp4',
-  '.mp4': 'video/mp4', '.mkv': 'video/x-matroska',
+  '.opus': 'audio/ogg', '.flac': 'audio/flac', '.aac': 'audio/aac', '.weba': 'audio/webm',
+  '.mp4': 'video/mp4', '.mkv': 'video/x-matroska', '.webm': 'video/webm', '.mov': 'video/quicktime',
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 };
@@ -61,6 +62,26 @@ const MIME = {
  * converting it is one command and keeps this list short.
  */
 const IMAGE_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml']);
+
+/**
+ * The rest of what a chat can play, as against draw.
+ *
+ * The same list the Files tab previews with (`FM_VIDEO_EXTS`, `FM_AUDIO_EXTS`),
+ * because a file that plays when you click it there and does nothing when the
+ * agent sends it here is the panel disagreeing with itself. `<audio>`/`<video>`
+ * need no decoder from us — what they need is the byte range the browser asks
+ * for while seeking, which `res.sendFile` answers.
+ */
+const AUDIO_MIME = new Set(['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/webm', 'audio/flac', 'audio/aac']);
+const VIDEO_MIME = new Set(['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-matroska']);
+
+/** What a chat does with it: draw it, play it, or offer it as a file. */
+function playableKind(mime) {
+  if (IMAGE_MIME.has(mime)) return 'image';
+  if (AUDIO_MIME.has(mime)) return 'audio';
+  if (VIDEO_MIME.has(mime)) return 'video';
+  return null;
+}
 
 function mimeFor(name) {
   return MIME[path.extname(String(name)).toLowerCase()] || 'application/octet-stream';
@@ -226,12 +247,12 @@ function handleList(req, res) {
  * The headers are the part that matters. `nosniff` so a file is only ever the
  * type its extension says; and a sandboxing CSP because an SVG is a document
  * that can carry script — inert inside `<img>`, live if somebody opens the
- * picture in its own tab. `imagesOnly` is for callers that must not become a
+ * picture in its own tab. `mediaOnly` is for callers that must not become a
  * way to read every file in the directory.
  */
-function sendFile(res, name, { imagesOnly = false } = {}) {
+function sendFile(res, name, { mediaOnly = false } = {}) {
   const rec = get(name);
-  if (!rec || (imagesOnly && !IMAGE_MIME.has(rec.mime))) return false;
+  if (!rec || (mediaOnly && !playableKind(rec.mime))) return false;
   res.setHeader('Content-Type', rec.mime);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
@@ -256,7 +277,7 @@ function handleUpload(req, res) {
 }
 
 module.exports = {
-  MAX_BYTES, MIME, IMAGE_MIME,
+  MAX_BYTES, MIME, IMAGE_MIME, AUDIO_MIME, VIDEO_MIME, playableKind,
   dir, ensureDir, safeName, uniqueName, mimeFor, humanBytes,
   save, get, list, resolve, note,
   sendFile, handleList, handleRaw, handleUpload,

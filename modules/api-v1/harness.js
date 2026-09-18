@@ -125,6 +125,10 @@ function removeSession(id) {
 function imageView(image) {
   return {
     name: image.name, mime: image.mime, bytes: image.bytes,
+    // A client has to know whether to draw it or give it a player before it
+    // fetches the bytes, and parsing the mime is the client's job only when we
+    // have not already done it.
+    kind: image.kind || require('../attachments').playableKind(image.mime) || 'image',
     ...(image.caption ? { caption: image.caption } : {}),
     url: `/api/v1/harness/images/${encodeURIComponent(image.name)}`,
   };

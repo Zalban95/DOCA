@@ -163,7 +163,14 @@ async function chatLoadHistory() {
           (m.images || []).forEach(_chatAppendImage);
           if (m.content) _chatAppendContent(m.content);
         }
-        else chatAppendMsg(m.role, m.content);
+        else {
+          chatAppendMsg(m.role, m.content);
+          // What the user attached is drawn or played again on reload, the same
+          // as when it was sent; anything that is not media stays a name.
+          for (const name of m.attachments || []) {
+            if (_mediaKindOf('', name)) _chatAppendImage({ name });
+          }
+        }
       });
       collapseFoldRuns(container);
     }
@@ -282,6 +289,101 @@ async function chatAttachFiles(files) {
   }
 }
 
+/* ── A voice message ──────────────────────────────────
+   Press to record, press again to send. The recording is an ordinary
+   attachment, so it lands in the transcript and on disk like every other file;
+   what makes it a *voice message* is that the panel transcribes it and asks for
+   the answer out loud. The call mode below is a different thing: that one holds
+   the microphone open and talks back continuously. */
+let _chatRec = null;          // { recorder, chunks, stream }
+
+async function chatVoiceNote() {
+  const btn = document.getElementById('chat-mic');
+  if (_chatRec) return _chatVoiceStop();
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // webm/opus is what every browser that has MediaRecorder can write, and
+    // what the STT service is already fed by call mode.
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus' : 'audio/webm';
+    const recorder = new MediaRecorder(stream, { mimeType });
+    const chunks = [];
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => _chatVoiceSend(new Blob(chunks, { type: 'audio/webm' }));
+    recorder.start();
+    _chatRec = { recorder, stream };
+    if (btn) { btn.classList.add('btn-red'); btn.textContent = '■'; btn.title = 'Stop and send'; }
+  } catch (e) {
+    appAlert(`No microphone: ${e.message}`);
+  }
+}
+
+function _chatVoiceStop() {
+  const { recorder, stream } = _chatRec || {};
+  _chatRec = null;
+  const btn = document.getElementById('chat-mic');
+  if (btn) { btn.classList.remove('btn-red'); btn.textContent = '🎤'; btn.title = 'Record a voice message'; }
+  try { recorder?.stop(); } catch {}
+  try { stream?.getTracks().forEach(t => t.stop()); } catch {}
+}
+
+/**
+ * Upload the recording, transcribe it, and send it as the message.
+ *
+ * The agent reads words, so the transcript is the message and the recording
+ * rides along as the attachment — the file is there to be listened to, and
+ * because a transcript is a guess about what was said. `spoken` is what makes
+ * the answer come back out loud.
+ */
+async function _chatVoiceSend(blob) {
+  const input = document.getElementById('chat-input');
+  const name  = `voice-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
+  const chip  = _chatChip({ name, bytes: blob.size, pending: true });
+  try {
+    const fd = new FormData();
+    fd.append('file', new File([blob], name, { type: 'audio/webm' }));
+    const up = await fetch('/api/attachments', { method: 'POST', body: fd });
+    const rec = await up.json();
+    if (!up.ok) throw new Error(rec.error || `HTTP ${up.status}`);
+    chatPending.push(rec);
+    chip.replaceWith(_chatChip(rec));
+
+    const fd2 = new FormData();
+    fd2.append('audio', new File([blob], name, { type: 'audio/webm' }));
+    const st = await fetch('/api/chat/transcribe', { method: 'POST', body: fd2 });
+    const data = await st.json();
+    if (!st.ok) throw new Error(data.error || `HTTP ${st.status}`);
+
+    const text = (data.text || '').trim();
+    if (!text) { appAlert('Nothing was heard in that recording.'); return; }
+    if (input) input.value = text;
+    chatSend({ spoken: true });
+  } catch (e) {
+    chip.classList.add('bad');
+    chip.title = e.message;
+    chip.querySelector('em').textContent = '✕';
+    appAlert(`Voice message failed: ${e.message}`);
+  }
+}
+
+/** Read an answer out loud, through the same TTS the call mode uses. */
+async function _chatSpeak(text) {
+  const say = String(text || '').trim();
+  if (!say) return;
+  try {
+    const res = await fetch('/api/chat/synthesize', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: say.slice(0, 4000) }),
+    });
+    if (!res.ok) return;                       // no TTS configured is not an error worth a modal
+    const url = URL.createObjectURL(await res.blob());
+    const el = new Audio(url);
+    el.addEventListener('ended', () => URL.revokeObjectURL(url), { once: true });
+    el.play().catch(() => URL.revokeObjectURL(url));
+  } catch { /* the answer is on screen either way */ }
+}
+
 function _chatChip(a) {
   const row = document.getElementById('chat-attachments');
   const el  = document.createElement('span');
@@ -312,16 +414,30 @@ function _chatClearChips() {
   row.style.display = 'none';
 }
 
-function chatSend() {
+function chatSend({ spoken = false } = {}) {
   const input   = document.getElementById('chat-input');
   const message = input.value.trim();
   if (!message) return;
 
   const attachments = chatPending.map(a => a.name);
+  const shown = chatPending.filter(a => /^(image|audio|video)\//.test(a.mime || ''));
+  const named = chatPending.filter(a => !shown.includes(a));
   input.value = '';
-  chatAppendMsg('user', message + (attachments.length
-    ? `\n📎 ${chatPending.map(a => a.name).join(', ')}` : ''));
+  chatAppendMsg('user', message + (named.length ? `\n📎 ${named.map(a => a.name).join(', ')}` : ''));
+  // Media is shown rather than named: a picture the user sent reads as a
+  // picture, and a voice message can be played back out of the transcript.
+  for (const a of shown) _chatAppendImage({ name: a.name, mime: a.mime });
   _chatClearChips();
+
+  // The agent is told how this arrived and what to do about it, because
+  // "answer out loud" is a fact about the request rather than a setting. The
+  // panel still does the speaking; this is what stops a spoken question being
+  // answered with three screens of prose and a code block.
+  const sent = spoken
+    ? `${message}\n\n[Sent as a voice message; the text above is its transcript, and the recording is attached. `
+      + 'Answer as if speaking: a few sentences, no markdown, no lists, no code — unless the message itself asks '
+      + 'for something else. Your answer is read aloud as well as shown.]'
+    : message;
 
   const container = document.getElementById('chat-messages');
   let pendingCall = null;
@@ -339,12 +455,15 @@ function chatSend() {
   chatTurn = new AbortController();
   _chatBusy(true);
 
-  sseStream('/api/chat', { message, attachments }, {
+  // Kept so a spoken question can be answered out loud once the answer is whole.
+  let reply = '';
+  sseStream('/api/chat', { message: sent, attachments }, {
     signal: chatTurn.signal,
     onEvent: evt => {
       if (evt.type === 'text') {
         if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
         if (waitingRow) { waitingRow.remove(); waitingRow = null; }
+        reply += evt.text;
         stream.feed(evt.text);
       } else if (evt.type === 'waiting') {
         const note = `${evt.provider} has not sent a token yet — ${evt.seconds}s`
@@ -390,6 +509,9 @@ function chatSend() {
     // finished run is a few short lines rather than a wall of command bodies.
     closeFolds(container);
     if (chatTurn?.signal.aborted) chatAppendMsg('system', 'Stopped. The step already running finishes on its own.');
+    // Spoken to, speak back — after the answer is on screen, so a TTS that is
+    // not configured costs nothing but silence.
+    if (spoken && !chatTurn?.signal.aborted) _chatSpeak(reply);
     _chatBusy(false);
   });
 }

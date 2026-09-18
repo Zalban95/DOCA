@@ -858,14 +858,48 @@ test('show_image puts a picture in the chat, keeps it with the transcript, and n
   assert.match(toolMsg.content, /Shown in the chat/);
 });
 
-test('show_image refuses what a chat cannot draw, and says how to fix it', async () => {
+test('show_media refuses what a chat cannot show, and says how to fix it', async () => {
   const tools = require('../modules/harness/tools');
   const bmp = require('path').join(H.tmp, 'old.bmp');
   fs.writeFileSync(bmp, Buffer.from('BM'));
   let shown = 0;
-  const out = await tools.call('show_image', { path: bmp }, [], { show: () => shown++ });
-  assert.match(out, /^Error: .*not a picture a chat can draw.*magick/);
+  const out = await tools.call('show_media', { path: bmp }, [], { show: () => shown++ });
+  assert.match(out, /^Error: .*not something a chat can show.*ffmpeg/);
   assert.equal(shown, 0);
+});
+
+test('show_media plays video and audio, and show_image still works under its old name', async () => {
+  const tools = require('../modules/harness/tools');
+  const path  = require('path');
+
+  // The bytes do not matter to the route or the tool: the extension decides the
+  // type, and the browser decides whether it can play it.
+  const clip = path.join(H.tmp, 'render.mp4');
+  const note = path.join(H.tmp, 'reply.ogg');
+  fs.writeFileSync(clip, Buffer.from('fake mp4'));
+  fs.writeFileSync(note, Buffer.from('fake ogg'));
+
+  const shown = [];
+  const ctx = { show: m => shown.push(m) };
+  assert.match(await tools.call('show_media', { path: clip, caption: 'the turntable' }, [], ctx), /video/);
+  assert.match(await tools.call('show_media', { path: note }, [], ctx), /audio/);
+
+  assert.deepEqual(shown.map(m => m.kind), ['video', 'audio'], 'the kind travels, so a client never parses a mime type');
+  assert.deepEqual(shown.map(m => m.mime), ['video/mp4', 'audio/ogg']);
+  assert.equal(shown[0].caption, 'the turntable');
+
+  // Served with the same headers as a picture, and playable — which is what the
+  // Files tab has always done for the same file.
+  const served = await H.api(null, 'GET', `/api/attachments/${encodeURIComponent(shown[0].name)}`);
+  assert.equal(served.status, 200);
+  assert.equal(served.headers.get('content-type'), 'video/mp4');
+  assert.equal(served.headers.get('x-content-type-options'), 'nosniff');
+  assert.match(served.headers.get('accept-ranges') || '', /bytes/, 'a player seeks by asking for a byte range');
+
+  // The name it shipped under is an alias, not a second implementation.
+  const old = await tools.call('show_image', { path: clip }, [], ctx);
+  assert.match(old, /Shown in the chat/);
+  assert.equal(shown.at(-1).kind, 'video');
 });
 
 test('the floating chat draws the picture too, and keeps it for the next page load', async () => {
