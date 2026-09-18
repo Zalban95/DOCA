@@ -195,18 +195,36 @@ prompt for the rest of the turn. **The priority now is H-9b, not the two items
 below.** They remain open and are the same idea — stable bytes first — applied
 to parts of the request neither fix reached.
 
-- **The tool schemas are serialized last, so they can never be cached.** In the
-  request body they travel *after* the messages (`agent.js`, the `body:` spread),
-  which puts ~14 KB of schemas on the far side of the transcript. History grows
-  every step, so that region can never be a prefix and the schemas are re-billed
-  in full on every step of every turn. They change only when the tool list does.
-  The open question is whether a provider's cache follows the *serialized* byte
-  order or an internal one that hoists tools to the front — the 1,152-token
-  ceiling in H-9 matched the body offset exactly, which is evidence for the
-  former, but one provider is not a rule. **Measure before changing it**: move
-  tools ahead of `messages` in the body, re-run the six-step comparison, and
-  keep it only if the cached count rises by roughly the size of the schemas.
-  Worth ~14 KB per step here, which is larger than what H-9 recovered.
+- ~~**The tool schemas are serialized last, so they can never be cached.**~~
+  **Measured 2026-09-17 — the premise is false, and no change was made.** The
+  entry assumed a provider's cache follows the *serialized* byte order. It does
+  not, at least not for DeepSeek: the schemas are already inside the cached
+  prefix even though they are serialized after `messages`.
+
+  The measurement, on the same four-step large-output turn H-9b was verified
+  with, with ~14,410 bytes of schema JSON (≈3,603 tokens by the 4-bytes/token
+  rule):
+
+  | step | prompt(prev) | cached Δ | gap |
+  | --- | --- | --- | --- |
+  | 2 | 6,072 | 5,760 | 312 |
+  | 3 | 10,796 | 10,496 | 300 |
+  | 4 | 15,693 | 15,360 | 333 |
+  | 5 | 20,656 | 20,352 | 304 |
+
+  The gap is the readings block, consistently ~300 tokens. Had the schemas been
+  outside the prefix the gap would be ~3,900. So the provider builds its token
+  sequence as `[tools][system][messages]` — tools hoisted to the front, as most
+  OpenAI-compatible implementations do — and the JSON key order in the body is
+  not what the cache sees.
+
+  Moving tools ahead of `messages` in the body would therefore have been a
+  no-op. Recorded as a measurement rather than deleted, because the *shape* of
+  the reasoning is the trap: the 1,152-token ceiling in H-9 matched a body
+  offset exactly, which is real evidence, and it still did not generalise to
+  this. **A byte offset matching a cache boundary once is not a rule about how
+  caches work.** The instruction to measure before changing it was right and is
+  what prevented a pointless edit.
 
 - **The panel reports cache cumulatively, so the number that matters is
   invisible.** `budget.report()` sums `cachedTokens` and `promptTokens` across

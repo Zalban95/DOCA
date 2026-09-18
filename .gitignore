@@ -3,3 +3,8 @@ node_modules/
 .certs/
 .dashboard-prefs.json
 .doca/
+
+# Runtime artefacts that only appear here when a data path resolves against the
+# working directory (a bug, fixed) — never part of the repo.
+/agents/
+/harness/

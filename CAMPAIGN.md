@@ -1,9 +1,15 @@
-# CAMPAIGN — working through TODO-CAMPAIGN.md
+# CAMPAIGN — working through TODO.md
 
-`TODO.md` is frozen as of commit `3a9bc9e`-era and is **not to be edited again**.
-`TODO-CAMPAIGN.md` is the working copy and the source of truth for this list.
-Every item below carries the line number it came from, so the two can be
-diffed.
+**Changed 2026-09-18, when this branch merged into `main`:** `TODO.md` is the
+list again and is edited normally; `TODO-CAMPAIGN.md` is a pointer to it. The
+freeze made sense while this campaign ran alone, and stopped making sense the
+moment entries were being written on both sides — within a day the two copies
+had each gained items the other lacked, including a measured finding that lived
+only in the working copy. Annotations go on the live list; **status stays here**.
+
+This file is the campaign: what closed, what was disproved, what waits on a
+human. The line numbers below point at the frozen snapshot, which is still in
+git history — match by title, since `TODO.md` has moved on.
 
 Rules for this campaign, from the user:
 
