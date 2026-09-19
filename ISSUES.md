@@ -359,7 +359,8 @@ of the thing it manages.
 
 ## H-7 — `POST …/proposals/:id/apply` is unauthenticated, and the agent has `http_fetch`
 
-**Status:** **partially closed on `dev/troubleshoot`, 2026-09-17 — and deliberately
+**Status:** **partially closed 2026-09-17 on `dev/troubleshoot`, in `main` since
+v2.28.0 (`1ee1f0d`) — and deliberately
 not called closed.** Fix shape (1) is implemented: the two apply routes now
 require a browser-set header, so the tool-layer path is shut. It is not a
 security boundary and the code says so rather than implying otherwise — see
@@ -611,7 +612,8 @@ second is one line and fixes the suite without a dependency decision.
 
 ## H-9 — The prompt prefix changes on every step, so the provider's cache never warms
 
-**Status:** fixed on `dev/troubleshoot`, 2026-09-17 — awaiting merge. It was a
+**Status:** fixed 2026-09-17 on `dev/troubleshoot`, **in `main` since v2.28.0**
+(`a3a8ac1`). It was a
 per-step cost on every turn and it was invisible in the panel. See *Fixed* below
 for the before/after; the cause and the diff that found it are kept because the
 reasoning is the part that generalises.
@@ -722,8 +724,9 @@ second is the one that would have caught this on the day it shipped.
 
 ### H-9b — the same fault, still live: tool results are rewritten between steps
 
-**Status:** fixed on `dev/troubleshoot`, 2026-09-17 — awaiting merge. See *Fixed*
-below for the before/after. The cause and the reasoning are kept because the
+**Status:** fixed 2026-09-17 on `dev/troubleshoot`, **in `main` since v2.28.0**
+(`56e4142` — found and fixed with H-9, and released with it). See *Fixed* below
+for the before/after. The cause and the reasoning are kept because the
 lesson is the part that generalises: **a verification workload that cannot
 trigger the fault is not a verification.**
 
