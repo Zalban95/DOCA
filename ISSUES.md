@@ -967,9 +967,14 @@ change to save tokens also changes an answer, it is not this fix.
 
 ## H-10 — A thinking model's `reasoning_content` is read, dropped, and then demanded back
 
-**Status:** open, reported from a live mission 2026-09-18. Not caused by any
-release here: the field has never been handled, and the provider decides when it
-starts requiring it.
+**Status:** fixed on `main`, 2026-09-20 — shape 1 below, the field carried back
+to the provider that sent it. Reported from a live mission 2026-09-18; not caused
+by any release here, since the field had never been handled and the provider
+decides when it starts requiring it. The cause and the shapes are kept because
+the distinction they draw — a request we malformed versus a request that was
+refused — is the part that generalises. **What the live check did and did not
+reproduce is written down under *Fixed*; read that before treating the `400` as
+settled.**
 
 ### What happens
 
@@ -1016,3 +1021,139 @@ malformed request that every rung would receive. So nothing else was tried.
 
 Until one of them lands, a thinking-mode endpoint that requires the field back
 cannot be used for anything longer than the turn before it asks.
+
+### Fixed 2026-09-20 on `main`
+
+Shape 1, and only as much of it as one field needs.
+
+- **Read.** `streamOrRead` collects `reasoning_content` on both transports — the
+  `delta` of a stream frame and the `message` of a plain completion — and never
+  hands it to `onText`. It is the model thinking, not the answer, so it reaches
+  no screen and no `content`.
+- **Kept.** The assistant row stores it as `reasoning: { provider, text }`. The
+  provider is the rung that **answered**, which after a hop is not the rung that
+  was asked — `complete` now returns `provider` for exactly this, and the row
+  would otherwise file the fallback's thought under the primary's name.
+- **Returned.** `toApiMessages` puts `reasoning_content` back on an assistant
+  message only when the row's own record names the provider the request is
+  addressed to. Per provider, never per model: `providers.js` has no notion of a
+  model family, and two provider ids pointing at the same endpoint are a normal
+  configuration here (`ds`, `dsfb`).
+- **Not carried across a hop.** The messages are built for the provider the turn
+  starts on, and a stall hands them to another. `withoutEcho` strips the field
+  when a rung's provider differs from the one the call was made for — the mirror
+  of the rule above, because a field a strict endpoint never asked for is how
+  this fails in the other direction.
+
+**What the provider says.** `api-docs.deepseek.com/guides/thinking_mode`, read
+2026-09-20: *"for requests carrying the `tools` parameter, the `reasoning_content`
+must be fully passed back"*, in all subsequent requests, *"even for turns where
+the model did not perform a tool call"*, and *"if your code does not correctly
+pass back `reasoning_content`, the API will return a 400 error"*. Without
+`tools` the field *"does not need to be passed back; even if passed to the API,
+it will be ignored"* — which is why the echo is unconditional for the origin
+provider rather than conditioned on the request carrying tools.
+
+**What the live check showed, and what it did not.** Two small calls against
+`ds` → `deepseek-v4-pro`, the thinking model this install runs:
+
+| Sent | Result |
+| --- | --- |
+| turn 1, tools offered, plain question | `200`, `reasoning_content` returned, 132 chars |
+| turn 2, tools offered, previous assistant message **without** the field | `200`, no 400 |
+| turn 2, tools offered, previous assistant message **with** the field | `200` |
+
+So the fault as recorded — the provider refusing the turn once the field is
+missing — **did not reproduce** in a two-turn text conversation, and it is not
+claimed to be fixed on the strength of this. What is verified is the half this
+repo owns: the field is now read, kept, and put back for the provider that sent
+it, and the requests we build carry what the provider's own documentation says
+they must. The reported failure came from a mission, whose shape (a tool call
+that was answered, then continued) was **not** reached: the second attempt in
+that replay was refused before the conversation got there — see the next
+subsection. Settling it end to end means two real turns against a thinking model
+with a tool call in the first, which spends the user's key on every run, so it is
+neither in this document nor in the suite; a scripted stub cannot answer it,
+because the rule being tested is the provider's.
+
+**Same session, a second finding: the tool check lied about thinking models.**
+Probing the same model for tool support, `tool_choice: {type: "function", …}`
+returns `400 Thinking mode does not support this tool_choice` — verbatim, from
+the provider. The check asks twice (`auto`, then forced) and read that refusal as
+a provider that will not carry tools, so a model that calls tools perfectly well
+when one is merely offered was reported as **unable to call tools**. A refusal of
+the *insistence* is not the model declining the *call*; the verdict is now `null`
+with both facts, and only a refusal of the first attempt — the one that offers
+tools rather than requiring them — is still a no. Shipped in 2.30.0, found and
+fixed in the same session as this.
+
+### Still open, and deliberately
+
+- **The contract as data (shape 3).** The field name is still a literal in
+  `streamOrRead` and `toApiMessages`. Two places, both named in comments, is the
+  cheapest thing that works for one field; it is not the general answer, and
+  `TODO.md` carries what that would take.
+- **Repair once, then hop (shape 2).** Unchanged, and now less urgent: it exists
+  to survive a `400` this fix prevents. It stays unbuilt because doing it badly
+  hides real errors, and because the trigger is *our* malformed body rather than
+  a provider fault — the two want different rules, and the rule has not been
+  settled.
+- **A conversation already broken by this.** Rows written before the fix have no
+  `reasoning` and cannot be repaired — the text was never stored. Such a session
+  is still refused by the provider. Starting a new conversation is the only way
+  out, and nothing in the panel says so; a session whose rows predate the fix
+  could be flagged, and is not.
+
+---
+
+## H-11 — The largest panel file was stored as a binary, so every search silently skipped it
+
+**Status:** fixed on `main`, 2026-09-20. Found while tracing a provider field,
+and it had already misled two searches that session.
+
+### What was seen
+
+Searches over the panel returned nothing for things that were there. `grep -n
+fallback public/js/harness.js` printed no output at all; `grep -rn hcfg public/`
+named one CSS file and no JavaScript. Both read as "this was never built".
+
+The file held **one NUL byte**, at offset 47,306 of 87,816, inside a string used
+as a sentinel for "no error to look for":
+
+```js
+const body = head && lines.some(l => l.includes(data.mission?.error || '\x00')) ? lines : [head, ...lines];
+```
+
+### Why nothing looked wrong
+
+Git sniffs only the first 8 KB for a NUL to decide whether a blob is binary, and
+this one sat at byte 47,306 — so `git diff`, `git show --stat`, the line counts
+and the blame were all normal, and the file loaded and ran. Only two things
+noticed, and both said nothing rather than complaining:
+
+- `grep` classifies the **whole** file as binary and prints no matches for it. No
+  warning; an empty result, indistinguishable from a real absence.
+- `file` reports `data` instead of `JavaScript source, UTF-8 text`.
+
+The cost is not the byte, it is the belief: **a search that returns nothing is
+read as proof that nothing is there.** It was, twice.
+
+### Fixed
+
+The sentinel is a plain conditional — `data.mission?.error && lines.some(l =>
+l.includes(data.mission.error))` — which is also what it meant. Behaviour is
+identical, because `includes('')` is true of every string and that is the trap
+the NUL existed to dodge.
+
+Guarded by `test/status-lines.test.js`: *"no source file is stored as a binary"*
+walks `public/js` and `modules` and fails on any file containing a NUL. Verified
+by planting one: the test fails, and passes again without it.
+
+### Not fixed, and deliberately
+
+`public/js/harness.js` is the only file in the repo with CRLF line endings (1,879
+lines; every sibling is LF). It is invisible here and breaks nothing the way the
+NUL did — but the first edit that normalizes it will rewrite every line and cost
+`git blame` for the file. Normalizing is a one-line decision someone has to make
+on purpose, not a side effect of another change, so it is recorded rather than
+done.

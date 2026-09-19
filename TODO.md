@@ -386,11 +386,15 @@ still missing from that sentence.
   means reading `agents/mission-*.jsonl` by hand — which is how H-10 was found.
 
 - **One request shape is sent to every provider, and they do not agree on one.**
-  Wanted, and H-10 is the first bite: DeepSeek's thinking mode returns
-  `reasoning_content` and later requires it back, so a conversation that starts
-  fine ends as a `400` nothing can retry. The panel has no notion of a provider
-  *contract* — `toApiMessages` builds one shape and `providers.js` knows only a
-  base URL, a key and a model list. What is wanted is that contract as **data**:
+  Wanted, and H-10 was the first bite: DeepSeek's thinking mode returns
+  `reasoning_content` and requires it back on any request carrying tools, so a
+  conversation that starts fine can end as a `400` nothing can retry. **That one
+  field is handled as of 2.35.0** — captured, kept on the assistant row with the
+  provider that sent it, put back for that provider and no other (`ISSUES.md`
+  H-10) — which is deliberately the narrow version: the field name is a literal
+  in two functions rather than data, and it answers one provider's one quirk. The
+  panel still has no notion of a provider *contract* — `toApiMessages` builds one
+  shape and `providers.js` knows only a base URL, a key and a model list. What is wanted is that contract as **data**:
   which extra fields to echo back, what a refusal looks like from this provider,
   whether tools travel, what the token field is called. Then: the harness reads
   it, a specialist definition may override it (a sub-agent on a different
@@ -557,11 +561,20 @@ worse than no fallback. `/models` cannot answer this (`providers.js` says so
 explicitly), so `modules/harness/toolcheck.js` asks the model: one trivial tool,
 offered first and then required, because a model that chats about a tool instead
 of calling it has not proved it cannot. Only two prose answers, or the provider
-refusing the request because of `tools`, is a "no". Everything else — a rejected
-key, a dead address, a provider that goes quiet — is `null` with the reason, and
-is never reported as a verdict about a model that was never reached. Each probe
-is a real call and is counted in the usage ledger under `kind: 'probe'`, so a
-settings box that spends money is visible where the money is counted.
+refusing the *offer* of `tools`, is a "no". Everything else — a rejected key, a
+dead address, a provider that goes quiet — is `null` with the reason, and is
+never reported as a verdict about a model that was never reached. Each probe is a
+real call and is counted in the usage ledger under `kind: 'probe'`, so a settings
+box that spends money is visible where the money is counted.
+
+The second attempt is not the same question as the first, and reading it as one
+was wrong for a whole release (fixed 2026-09-20, `ISSUES.md` H-10). A provider
+can refuse to be *told* to call a tool while calling it happily when one is
+offered — DeepSeek's thinking mode answers `Thinking mode does not support this
+tool_choice` — so a refusal there is not the model declining the call, and the
+verdict is `null` carrying both facts rather than a "no". The distinction is the
+one the whole file turns on: what the provider says about the model, versus what
+it says about the request we built.
 
 **Still open, and not needed for the chain to work:** the chain is per registry
 entry, so a local Ollama rung is a rung like any other, but nothing on screen yet
@@ -614,6 +627,15 @@ Shape, as built:
   then treat the rung as dead and hop. Decide it together with the provider
   contract above, because the repair is only possible if something knows what
   the provider wanted.
+
+  **Still open, and less urgent since 2.35.0.** The `400` it was written for is
+  the one H-10's fix prevents — the panel now sends the field the provider asks
+  for, so the body it would repair is no longer built. Two things keep it open
+  rather than dropped: a live check did **not** reproduce that `400` at all
+  (`ISSUES.md` H-10, *Fixed*), so the rule would be written for a fault whose
+  shape is still not pinned down; and a repair path that guesses wrong turns a
+  loud failure into a quiet one, which is the worse of the two. Build it with the
+  contract, not before it.
 
 - **Remember a stalled entry as degraded for a few minutes**, so the next turn does
   not pay the same 20 s again — but re-probe rather than blacklisting. A model

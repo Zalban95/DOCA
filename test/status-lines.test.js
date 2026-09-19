@@ -118,3 +118,23 @@ test('the two restart phrases stay two phrases', () => {
     .filter(f => /restart to apply/i.test(read(f)));
   assert.deepEqual(vague, [], 'a restart hint does not say which restart it is');
 });
+
+test('no source file is stored as a binary', () => {
+  // `public/js/harness.js` spent a release with a single NUL byte in it, put
+  // there by an editor, inside a string that used it as a sentinel for "no
+  // error to look for". Nothing looked wrong: git only sniffs the first 8 KB
+  // for a NUL, so the diffs and the line counts were normal, and the file
+  // loaded and ran. But `grep` classifies the *whole* file as binary and prints
+  // nothing for it, and `file` calls it "data" — so every search across the
+  // panel silently skipped its largest file, and a function that was right
+  // there read as missing. That is how this was found, twice: once believing a
+  // feature was never built, once believing a field name appeared nowhere.
+  const walk = dir => fs.readdirSync(dir, { withFileTypes: true })
+    .flatMap(e => (e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]));
+
+  const files = [...walk(JS), ...walk(path.join(__dirname, '..', 'modules'))].filter(f => f.endsWith('.js'));
+  assert.ok(files.length > 50, 'the walk found the source tree');   // not an empty pass
+
+  const binary = files.filter(f => fs.readFileSync(f).includes(0));
+  assert.deepEqual(binary, [], 'a source file contains a NUL byte, so grep skips it entirely');
+});

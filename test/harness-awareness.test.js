@@ -789,6 +789,41 @@ test('a result under the cap keeps the whole text, however much later output arr
   assert.equal(later[0].content.length, 4003, 'and still whole');
 });
 
+test('a thinking model is given its own reasoning back, and no one else is', () => {
+  const { toApiMessages } = require('../modules/harness/agent');
+  // DeepSeek's thinking mode returns `reasoning_content` beside `content` and,
+  // for any request carrying tools, refuses the turn when an assistant message
+  // of that conversation is missing the field (ISSUES.md H-10). So the row keeps
+  // it, filed under the provider that produced it, and it goes back on the wire
+  // for that provider only: a field another provider never asked for is a
+  // refusal from a strict endpoint, and it means nothing there anyway.
+  const rows = [
+    { role: 'user', content: 'why?' },
+    { role: 'assistant', content: 'Because.', reasoning: { provider: 'ds', text: 'weighing it up' } },
+    { role: 'assistant', content: '', tool_calls: [{ id: 'c1', function: { name: 'shell', arguments: '{}' } }],
+      reasoning: { provider: 'ds', text: 'checking before I speak' } },
+    { role: 'tool', tool_call_id: 'c1', name: 'shell', content: 'ok' },
+    { role: 'assistant', content: 'Done.' },
+  ];
+
+  const toDs = toApiMessages(rows, { sessionId: 's_reason', provider: 'ds' });
+  assert.equal(toDs[1].reasoning_content, 'weighing it up', 'the answer keeps its reasoning');
+  assert.equal(toDs[1].content, 'Because.', 'and is still the answer');
+  assert.equal(toDs[2].reasoning_content, 'checking before I speak', 'a row that called a tool travels too');
+  assert.equal(toDs[2].tool_calls.length, 1);
+  assert.equal(toDs[4].reasoning_content, undefined, 'a row with no reasoning gains no field');
+  assert.equal(toDs[3].reasoning_content, undefined, 'and neither does a tool result');
+
+  const toOther = toApiMessages(rows, { sessionId: 's_reason', provider: 'ollama' });
+  assert.equal(toOther[1].reasoning_content, undefined, "another provider is not handed this one's reasoning");
+  assert.equal(toOther[2].reasoning_content, undefined);
+  assert.equal(toOther[1].content, 'Because.', 'though the text it does own still travels whole');
+
+  // No provider named — a caller that has not thought about providers — echoes
+  // nothing rather than everything.
+  assert.equal(toApiMessages(rows, { sessionId: 's_reason' })[1].reasoning_content, undefined);
+});
+
 test('folding fires on an absolute token budget even with no window declared', () => {
   const p = { contextWindow: 0, compactTokens: 40000, compactAt: 60 };
   assert.equal(budget.shouldCompact(p, 39999), false);

@@ -955,8 +955,11 @@ async function hcMissionPeek(id, anchor) {
   const lines = (data.events || []).slice(-6).map(_hcEventLine);
   const head  = data.mission?.error ? `✗ ${data.mission.error}` : (data.mission?.result || data.mission?.task || '');
   // A failed mission usually logged the same error it ended with; saying it
-  // twice in six lines wastes the half of them worth reading.
-  const body  = head && lines.some(l => l.includes(data.mission?.error || ' ')) ? lines : [head, ...lines];
+  // twice in six lines wastes the half of them worth reading. With no error
+  // there is nothing to look for, and it cannot be spelled as a default:
+  // `includes('')` is true of every string.
+  const logged = data.mission?.error && lines.some(l => l.includes(data.mission.error));
+  const body   = head && logged ? lines : [head, ...lines];
   pop.textContent = body.filter(Boolean).join('\n') || 'nothing logged yet';
 
   const r = anchor.getBoundingClientRect();

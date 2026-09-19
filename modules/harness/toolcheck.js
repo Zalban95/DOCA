@@ -25,6 +25,14 @@
  * would slander a model this never reached. Those come back `null` with the
  * same sentence a failed turn would have shown (`budget.explain`).
  *
+ * That includes a refusal of the *second* attempt. Some providers will not be
+ * told that a tool call is required — DeepSeek's thinking mode refuses the
+ * request outright (`Thinking mode does not support this tool_choice`) on a
+ * model that calls tools whenever one is merely offered. A provider refusing
+ * the insistence is not the model declining the call, and the two attempts
+ * together then prove neither, so the verdict is `null` and the detail carries
+ * both facts. Reported live, 2026-09-20.
+ *
  * The call goes through `agent.complete`, so it is an ordinary request to the
  * provider with the same headers and the same 400-retries as a real turn, and
  * it lands in the usage ledger under `kind: 'probe'` — a setting that spends
@@ -170,8 +178,9 @@ const TOOL_REFUSAL = /\btools?\b|tool_choice|function[_ ]?call/i;
  * @param {{provider?: string, model?: string, signal?: AbortSignal}} opts
  * @returns {Promise<{ supported: boolean|null, detail: string, attempts: string[] }>}
  *   `true`  — it called the tool.
- *   `false` — it answered prose twice, or refused the request because of `tools`.
- *   `null`  — the question could not be put to it. The detail says why.
+ *   `false` — it answered prose twice, or refused an offer of `tools`.
+ *   `null`  — the question could not be put to it, or could not be put twice.
+ *             The detail says which, in the provider's own words.
  */
 async function check({ provider, model, signal } = {}) {
   const id    = String(provider || '').trim();
@@ -194,13 +203,30 @@ async function check({ provider, model, signal } = {}) {
     try {
       reply = await attempt({ ep, model: name, p, force, signal: stop });
     } catch (e) {
-      // The provider refused the request itself. If it named `tools`, that is
-      // the answer to the question and it is a no; anything else is the check
-      // failing to reach the model, which is not a fact about the model.
+      // The provider refused the request itself. If it named `tools` on the
+      // attempt that only *offered* one, that is the answer to the question and
+      // it is a no; anything else is the check failing to reach the model, which
+      // is not a fact about the model.
       const said = vendorSaid(e.message);
-      if (!e.stalled && TOOL_REFUSAL.test(said)) {
+      const namesTools = !e.stalled && TOOL_REFUSAL.test(said);
+
+      if (!force && namesTools) {
         return { supported: false, detail: `the provider refused a request carrying tools — ${said.trim()}`.slice(0, 600), attempts };
       }
+
+      // On the second attempt it is not declining to call a tool, it is refusing
+      // our insistence that it must — DeepSeek's thinking mode answers
+      // `Thinking mode does not support this tool_choice` for a model that calls
+      // tools perfectly well when one is merely offered. The model was asked and
+      // did not call, and then the question was taken away: there is no verdict
+      // here, only the two facts, so both are reported and neither is spun.
+      if (force && namesTools) {
+        return { supported: null,
+          detail: `it answered in prose when the tool was offered, and the provider would not let the call be `
+            + `required — ${said.trim()}`.slice(0, 600),
+          attempts };
+      }
+
       return { supported: null, detail: e.message, attempts };
     }
 

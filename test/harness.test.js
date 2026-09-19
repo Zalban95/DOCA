@@ -19,7 +19,7 @@ const { CONFIG_PATH } = require('../modules/paths');
 /* ── Scripted model ───────────────────────────────────── */
 
 let stub, stubUrl;
-/** Queued replies, consumed in order. Each is { text } or { tool } or { json }. */
+/** Queued replies, consumed in order. Each is { text }, { tool }, { json } or { think }. */
 let script = [];
 /** Every request body the harness sent, for asserting on the prompt. */
 let seen = [];
@@ -81,6 +81,9 @@ before(async () => {
           role: 'assistant',
           content: next.call ? '' : (next.text ?? next.json ?? 'ok'),
         };
+        // A thinking model returns its chain of thought beside the answer, at
+        // the same level, on both transports.
+        if (next.think) message.reasoning_content = next.think;
         if (next.call) {
           message.tool_calls = [{
             id: 'call_1', type: 'function',
@@ -100,7 +103,14 @@ before(async () => {
       }
       // Split the text so the streaming accumulator is exercised, not bypassed.
       const mid = Math.ceil((next.text || '').length / 2);
+      const tmid = Math.ceil((next.think || '').length / 2);
       return sse(res, [
+        // The reasoning arrives first and in its own field, which is what
+        // DeepSeek's thinking mode does — never as content.
+        ...(next.think ? [
+          { choices: [{ delta: { reasoning_content: next.think.slice(0, tmid) } }] },
+          { choices: [{ delta: { reasoning_content: next.think.slice(tmid) } }] },
+        ] : []),
         { choices: [{ delta: { content: (next.text || '').slice(0, mid) } }] },
         { choices: [{ delta: { content: (next.text || '').slice(mid) } }] },
       ]);
@@ -461,10 +471,18 @@ test('a settings change the agent wants travels as its own event and writes noth
 });
 
 test('an endpoint that ignores the stream flag still produces an answer', async () => {
-  script = [{ json: 'Plain completion, no SSE.' }];
+  // Including a thinking model's reasoning, which arrives in the same shape it
+  // streams in and has to be read off the message rather than off a frame.
+  const memory = require('../modules/harness/memory');
+  script = [{ json: 'Plain completion, no SSE.', think: 'reasoned in one piece' }];
   const events = await stream('/api/harness/chat', { message: 'hi' });
   assert.equal(events.filter(e => e.type === 'text').map(e => e.text).join(''), 'Plain completion, no SSE.');
   assert.equal(events.at(-1).code, 0);
+
+  const row = memory.messages(memory.activeSession().id).at(-1);
+  assert.equal(row.content, 'Plain completion, no SSE.');
+  assert.equal(row.reasoning.text, 'reasoned in one piece',
+    'the non-streaming path drops the field the streaming path keeps');
 });
 
 test('a provider failure is reported on the stream, not as a dead request', async () => {
@@ -760,8 +778,6 @@ test('a provider that refuses the call is not a verdict about the model', async 
   const toolcheck = require('../modules/harness/toolcheck');
   const usage = require('../modules/harness/usage');
 
-  const before = usage.summary({ days: 1, by: 'kind' }).rows.find(r => r.key === 'probe')?.calls || 0;
-
   // A rejected key is the check failing to reach the model, not a fact about
   // it — reporting "cannot call tools" here would slander something never
   // asked, and send the user looking in the wrong place.
@@ -786,17 +802,32 @@ test('a provider that refuses the call is not a verdict about the model', async 
   const other = await toolcheck.check({ provider: 'stub', model: 'stub-model' });
   assert.equal(other.supported, null, 'a 400 that is not about tools is not a verdict');
 
+  // A refusal of the *second* attempt is the provider declining to be told what
+  // to do, not the model declining to call. This is DeepSeek's thinking mode,
+  // verbatim, observed live on 2026-09-20: the same model calls a tool happily
+  // when one is offered, and `deepseek-v4-pro` was being reported as unable to
+  // call tools at all because the retry that settles a prose answer is refused.
+  script = [{ text: 'I would call doca_probe.' }, { status: 400, says: 'Thinking mode does not support this tool_choice' }];
+  const insisted = await toolcheck.check({ provider: 'stub', model: 'stub-mini' });
+  assert.equal(insisted.supported, null, 'a refused insistence says nothing about the model');
+  assert.deepEqual(insisted.attempts, ['auto'], 'and the check says only what it managed to ask');
+  assert.match(insisted.detail, /answered in prose when the tool was offered/);
+  assert.match(insisted.detail, /does not support this tool_choice/, 'in the provider\'s own words');
+
   // Half a rung is not a question.
   assert.equal((await toolcheck.check({ provider: 'stub' })).supported, null);
   assert.equal((await toolcheck.check({})).supported, null);
   assert.match((await toolcheck.check({ provider: 'stub' })).detail, /nothing to check/);
 
   // A successful probe is counted, and counted as its own kind: a setting that
-  // quietly spends money has to be visible where the money is counted.
+  // quietly spends money has to be visible where the money is counted. Only the
+  // successes are — a call that was refused never reached a model and never
+  // cost anything, so it has no row.
+  const counted = () => usage.summary({ days: 1, by: 'kind' }).rows.find(r => r.key === 'probe')?.calls || 0;
+  const before = counted();
   script = [{ call: 'doca_probe' }];
   await toolcheck.check({ provider: 'stub', model: 'stub-model' });
-  const after = usage.summary({ days: 1, by: 'kind' }).rows.find(r => r.key === 'probe')?.calls || 0;
-  assert.equal(after, before + 1);
+  assert.equal(counted(), before + 1);
 });
 
 test('the probe is the route the panel calls, and it changes nothing', async () => {
@@ -1239,6 +1270,96 @@ test('a stalled model falls through to the next, and says so on screen', async (
     assert.equal(seen.length, 2, 'one attempt per rung, then the answer');
     assert.equal(seen[0].model, 'stub-model');
     assert.equal(seen[1].model, 'stub-mini');
+  } finally {
+    fs.writeFileSync(CONFIG_PATH, savedCfg);
+    await H.api(null, 'POST', '/api/harness/doca/config', {
+      provider: before.provider, model: before.model,
+      failoverAfterMs: before.failoverAfterMs,
+      firstTokenTimeoutMs: before.firstTokenTimeoutMs,
+      fallbackChain: before.fallbackChain,
+    });
+    agentMod.forgetDegraded();
+  }
+});
+
+/* ── A thinking model's chain of thought ──────────────── */
+
+test('a chain of thought is kept for the provider that sent it, and shown to no one', async () => {
+  // DeepSeek's thinking mode answers with `reasoning_content` beside `content`,
+  // and for any request carrying tools it 400s the whole turn when that field is
+  // missing from an earlier assistant message of the same conversation. The
+  // panel never read the field, so nothing could put it back and the mission was
+  // over — permanently, since every later request in that session was malformed
+  // by the same rule (ISSUES.md H-10).
+  const memory = require('../modules/harness/memory');
+  const made = await H.api(null, 'POST', '/api/harness/sessions', { title: 'thinking' });
+  const sessionId = made.body.session.id;
+
+  script = [{ think: 'They asked a question. I should answer it.', text: 'The answer.' }];
+  seen = [];
+  const events = await stream('/api/harness/chat', { message: 'what is it?', sessionId });
+
+  // The reasoning is not the reply, and the user is waiting for the reply: it
+  // reaches the screen as nothing at all.
+  assert.equal(events.filter(e => e.type === 'text').map(e => e.text).join(''), 'The answer.');
+
+  const row = memory.messages(sessionId).find(r => r.role === 'assistant');
+  assert.equal(row.content, 'The answer.', 'the answer is stored as the answer');
+  assert.equal(row.reasoning.text, 'They asked a question. I should answer it.');
+  assert.equal(row.reasoning.provider, 'stub', 'filed under the provider that sent it');
+
+  // The turn after that is the one that used to die: the field goes back.
+  script = [{ text: 'Second.' }];
+  seen = [];
+  await stream('/api/harness/chat', { message: 'again', sessionId });
+  const sent = seen.at(-1).messages.find(m => m.content === 'The answer.');
+  assert.equal(sent.reasoning_content, 'They asked a question. I should answer it.',
+    'the provider that asked for its reasoning back did not get it');
+  assert.equal(seen.at(-1).messages.at(-2).reasoning_content, undefined,
+    'The second answer had no reasoning of its own');
+});
+
+test('a hop does not hand one provider\'s reasoning to the next', async () => {
+  // The field belongs to the provider that sent it, in both directions. The
+  // messages are built for the rung the turn starts on; a stall hands them to a
+  // different provider, which never asked for the field and may refuse a body
+  // carrying it.
+  const agentMod = require('../modules/harness/agent');
+  const catalog  = require('../modules/harness/catalog');
+  agentMod.forgetDegraded();
+
+  const savedCfg = fs.readFileSync(CONFIG_PATH, 'utf8');
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify({
+    models: { providers: {
+      stub:  { baseUrl: stubUrl, apiKey: 'test-key', models: ['stub-declared'] },
+      stub2: { baseUrl: stubUrl, apiKey: 'test-key-2', models: ['stub-declared'] },
+    } },
+  }, null, 2));
+
+  const before = catalog.configFor(catalog.BUILTIN_ID);
+  await H.api(null, 'POST', '/api/harness/doca/config', {
+    provider: 'stub', model: 'stub-model',
+    failoverAfterMs: 300, firstTokenTimeoutMs: 60000,
+    fallbackChain: [{ provider: 'stub2', model: 'stub-mini' }],
+  });
+
+  try {
+    const made = await H.api(null, 'POST', '/api/harness/sessions', { title: 'hop-thinking' });
+    const sessionId = made.body.session.id;
+
+    script = [{ think: 'thinking about the question', text: 'First.' }];
+    await stream('/api/harness/chat', { message: 'hello', sessionId });
+
+    script = [{ stall: 'sse' }, { text: 'Second.' }];
+    seen = [];
+    await stream('/api/harness/chat', { message: 'again', sessionId });
+
+    assert.equal(seen.length, 2, 'one attempt per rung');
+    assert.equal(seen[0].messages.find(m => m.content === 'First.').reasoning_content,
+      'thinking about the question', 'the provider that asked for it gets it');
+    assert.ok(seen[1].messages.some(m => m.content === 'First.'), 'the message itself still travels');
+    assert.equal(seen[1].messages.some(m => m.reasoning_content !== undefined), false,
+      'a different provider was sent a field it never asked for');
   } finally {
     fs.writeFileSync(CONFIG_PATH, savedCfg);
     await H.api(null, 'POST', '/api/harness/doca/config', {

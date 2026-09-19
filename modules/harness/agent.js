@@ -463,8 +463,22 @@ function pairedRows(rows) {
  * that — an old result sent once verbatim must still be verbatim after new
  * results arrive.
  */
-function toApiMessages(allRows, { sessionId } = {}) {
+function toApiMessages(allRows, { sessionId, provider } = {}) {
   const rows = pairedRows(allRows);
+
+  // A field a provider sent is put back for the provider that sent it, and for
+  // no one else.
+  //
+  // DeepSeek's thinking mode returns `reasoning_content` beside `content`, and
+  // for any request carrying tools it demands the field returned on every
+  // assistant message of that conversation, 400ing the turn when it is missing
+  // (ISSUES.md H-10). Everyone else either ignores it or has never heard of it,
+  // and a body carrying an unknown field is a refusal from a strict endpoint —
+  // so the row's own record of who produced it decides, never the model name.
+  // `reasoning` is stored in exactly one place (`turn`) and read in exactly one
+  // (`streamOrRead`), so this is the whole rule.
+  const echo = r => (r.role === 'assistant' && r.reasoning?.text && r.reasoning.provider === provider
+    ? { reasoning_content: r.reasoning.text } : {});
 
   return rows.map((r, i) => {
     if (r.role === 'tool') {
@@ -474,13 +488,30 @@ function toApiMessages(allRows, { sessionId } = {}) {
       return { role: 'tool', tool_call_id: r.tool_call_id, name: r.name, content };
     }
     if (r.role === 'assistant' && r.tool_calls?.length)
-      return { role: 'assistant', content: r.content || null, tool_calls: r.tool_calls };
+      return { role: 'assistant', content: r.content || null, tool_calls: r.tool_calls, ...echo(r) };
     // Attachments are rendered here and stored separately on the row, the same
     // split `from` uses — but the opposite decision about the model. Provenance
     // is metadata and stays off the text; a file the user attached is part of
     // what they said, and a path they can see in the composer and the model
     // cannot is a conversation at cross purposes.
-    return { role: r.role, content: (r.content || '') + attachments.note(r.attachments) };
+    // `echo` checks the role itself, so a user or tool row cannot pick up a
+    // field by being shaped like an assistant one.
+    return { role: r.role, content: (r.content || '') + attachments.note(r.attachments), ...echo(r) };
+  });
+}
+
+/**
+ * The same messages with every echoed field removed.
+ *
+ * Used on the one path where the messages outlive the choice of provider: a hop
+ * down the fallback chain. They were built for one provider, and the field in
+ * them answers a rule that provider has and the next one may not.
+ */
+function withoutEcho(messages) {
+  return messages.map(m => {
+    if (!m || m.reasoning_content === undefined) return m;
+    const { reasoning_content: _dropped, ...rest } = m;
+    return rest;
   });
 }
 
@@ -655,7 +686,10 @@ function firstTokenGuard({ p, signal, onWaiting }) {
  * One model call. Streams text deltas through `onText` and returns the
  * assistant message. Falls back to reading a plain completion when the
  * endpoint answers with JSON despite being asked to stream.
- * @returns {Promise<{ content: string, tool_calls: object[] }>}
+ *
+ * `provider` on the reply is the rung that actually answered — the one that
+ * produced `reasoning`, which only it may be given back.
+ * @returns {Promise<{ content: string, tool_calls: object[], provider: string }>}
  */
 async function complete({ ep, body, signal, onText, onWaiting, p, meta = { kind: 'ask' }, onHop }) {
   const rungs = rungsFor({ ep, model: body.model, p });
@@ -663,7 +697,12 @@ async function complete({ ep, body, signal, onText, onWaiting, p, meta = { kind:
 
   for (let i = 0; i < rungs.length; i++) {
     const rung = rungs[i];
-    const rungBody = rung.model === body.model ? body : { ...body, model: rung.model };
+    let rungBody = rung.model === body.model ? body : { ...body, model: rung.model };
+    // The messages were built for the provider this call was made for, and a
+    // hop hands them to a different one. Anything in them that only the first
+    // provider asked for comes out first: it means nothing to the new rung, and
+    // an unknown field in a message is a refusal from a strict endpoint.
+    if (rung.ep.id !== ep.id) rungBody = { ...rungBody, messages: withoutEcho(rungBody.messages) };
     // Each rung gets its own guard, so the shorter `failoverAfterMs` applies to
     // this entry rather than to the turn.
     const guard = firstTokenGuard({
@@ -675,7 +714,7 @@ async function complete({ ep, body, signal, onText, onWaiting, p, meta = { kind:
       usage.record({ ...meta, provider: rung.ep.id, model: rungBody.model, usage: reply.usage, body: rungBody, reply });
       // It answered, so whatever it was is over — including its own earlier stall.
       if (i > 0) _degraded.delete(rungKey(rung.ep, rung.model));
-      return reply;
+      return { ...reply, provider: rung.ep.id };
     } catch (e) {
       // Our abort and the user's are the same AbortError at this level; only the
       // guard knows which one fired. A deliberate Stop keeps its own meaning.
@@ -714,13 +753,15 @@ async function streamOrRead({ ep, body, guard, onText, p }) {
     guard.arrived();
     const msg  = json?.choices?.[0]?.message || {};
     if (msg.content && onText) onText(msg.content);
-    return { content: msg.content || '', tool_calls: msg.tool_calls || [], usage: json?.usage || null };
+    return { content: msg.content || '', tool_calls: msg.tool_calls || [], usage: json?.usage || null,
+             reasoning: msg.reasoning_content || '' };
   }
 
   const reader  = r.body.getReader();
   const decoder = new TextDecoder();
   const calls   = [];               // accumulated by delta index
   let content = '';
+  let reasoning = '';
   let buf     = '';
   let usage   = null;
 
@@ -751,6 +792,12 @@ async function streamOrRead({ ep, body, guard, onText, p }) {
       const delta = frame.choices?.[0]?.delta;
       if (!delta) continue;
       if (delta.content) { content += delta.content; if (onText) onText(delta.content); }
+      // A thinking model's chain of thought arrives beside the answer, in its
+      // own field, and is not the answer: it is collected, never handed to
+      // `onText`, never shown as the reply and never stored as the content.
+      // It is kept only because the provider that sent it asks for it back
+      // (ISSUES.md H-10).
+      if (typeof delta.reasoning_content === 'string') reasoning += delta.reasoning_content;
       for (const tc of delta.tool_calls || []) {
         const i = tc.index ?? calls.length;
         calls[i] ||= { id: '', type: 'function', function: { name: '', arguments: '' } };
@@ -761,7 +808,7 @@ async function streamOrRead({ ep, body, guard, onText, p }) {
     }
   }
 
-  return { content, tool_calls: calls.filter(Boolean), usage };
+  return { content, tool_calls: calls.filter(Boolean), usage, reasoning };
 }
 
 /**
@@ -936,7 +983,9 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
           toolCount: schemas.length, disabledCount: disabled.length,
         }),
       },
-      ...toApiMessages(rows, { sessionId: session.id }),
+      // `provider` is the one this request is addressed to, which decides which
+      // echoes travel — see `toApiMessages`.
+      ...toApiMessages(rows, { sessionId: session.id, provider: ep.id }),
     ];
 
     // The readings go last, after the history. Everything above is now
@@ -1004,6 +1053,14 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       role: 'assistant',
       content: reply.content || '',
       ...(reply.tool_calls.length ? { tool_calls: reply.tool_calls } : {}),
+      // What the provider thought, kept beside what it said, because the
+      // provider that sent it asks for it back on every later request in this
+      // conversation and refuses the turn without it (ISSUES.md H-10). Filed
+      // under the rung that answered rather than the one that was asked: after
+      // a hop those differ, and the field is the fallback's, not the primary's.
+      // The panel reads `content` and ignores this; the browser is sent the row
+      // as stored, so it is downloadable with the rest of the transcript.
+      ...(reply.reasoning ? { reasoning: { provider: reply.provider || ep.id, text: reply.reasoning } } : {}),
       usage: { tokens: spend.totalTokens, prompt: led.lastPrompt, source: spend.source },
     });
 
@@ -1186,8 +1243,11 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
   const transcript = {
     messages: rows.length,
     kept: Math.max(0, Number(p.historyTurns) || 0),
+    // Counted with the echo, because the echo is part of what gets sent: a
+    // conversation with a thinking model is measurably larger than its visible
+    // text, and this reading exists to explain exactly that kind of gap.
     tokens: budget.estimateMessages(toApiMessages(rows.slice(-(Number(p.historyTurns) || 0)),
-      { sessionId: sessionId || memory.activeSession()?.id })),
+      { sessionId: sessionId || memory.activeSession()?.id, provider: p.provider })),
     note: 'this conversation only — a new conversation starts empty',
   };
 
