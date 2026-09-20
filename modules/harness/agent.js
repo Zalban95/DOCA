@@ -986,7 +986,7 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       {
         role: 'system',
         content: systemPrompt({
-          p, userText: message, summary, client,
+          p, userText: message, summary, client, profile,
           toolCount: schemas.length, disabledCount: disabled.length,
         }),
       },

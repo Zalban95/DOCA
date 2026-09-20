@@ -135,6 +135,32 @@ after(async () => {
 
 beforeEach(() => { script = []; seen = []; });
 
+test('a real specialist turn sends the narrowed prompt on every model request', async t => {
+  const agent = require('../modules/harness/agent');
+  const providers = require('../modules/harness/providers');
+  const memory = require('../modules/harness/memory');
+  const profile = { id: 'audit-specialist', label: 'Audit specialist',
+    systemPrompt: 'Find the requested memory.', tools: ['memory_search'],
+    memory: false, environment: 'minimal' };
+  script = [{ tool: 'memory_search', args: { query: 'hello' } }, { text: 'Finished.' }];
+  const session = memory.createSession('specialist wire regression');
+  t.after(() => memory.deleteSession(session.id));
+  await agent.turn({ message: 'hello', profile, sessionId: session.id });
+  assert.equal(seen.length, 2, 'exercise prompt construction again after a tool result');
+  const full = agent.preview({ message: 'hello' });
+  for (const request of seen) {
+    const prompt = request.messages[0].content;
+    assert.ok(prompt.startsWith(providers.SAFETY_CHARTER));
+    assert.ok(prompt.includes(profile.systemPrompt));
+    assert.ok(prompt.includes('working on one errand'));
+    assert.ok(prompt.includes('# Where you are'));
+    assert.ok(!prompt.includes('# How you keep your memory'));
+    assert.ok(prompt.length < full.length);
+    assert.deepEqual(request.tools.map(t => t.function.name).sort(),
+      ['memory_search', 'mission_plan']);
+  }
+});
+
 /** POST to an SSE endpoint and collect the parsed `data:` events. */
 async function stream(path, body) {
   const res = await fetch(H.base + path, {
