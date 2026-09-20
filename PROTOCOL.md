@@ -1035,6 +1035,11 @@ POST /api/v1/harness/messages          → 202 { turnId, sessionId }
 { "message": "how many containers are up?", "sessionId": "s_…" }   // sessionId optional
 ```
 
+Omitting `sessionId` addresses the persistent Orchestrator, independently of
+which conversation is selected in the Harness. An explicit `sessionId` still
+addresses that conversation. The dashboard's floating chat uses the same
+Orchestrator; clearing it archives its transcript and starts a fresh main chat.
+
 The reply does not come back in that response. It is published on the push
 channel (§11), which is already cursor-based, resumable and multi-subscriber:
 

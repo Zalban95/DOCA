@@ -175,6 +175,28 @@ async function stream(path, body) {
 
 const get = (p) => H.api(null, 'GET', p);
 
+test('floating chat keeps a persistent Orchestrator independent of Harness selection', async t => {
+  const memory = require('../modules/harness/memory');
+  const store = require('../modules/store');
+  const previous = store.readJson('harness/sessions', { sessions: [], active: null });
+  t.after(() => store.writeJson('harness/sessions', previous));
+  const main = memory.mainSession();
+  const work = memory.createSession('Separate work');
+  script = [{ text: 'Main answer' }, { text: 'Work answer' }];
+  await stream('/api/chat', { message: 'Owner request' });
+  assert.equal(memory.listSessions().active, work.id);
+  assert.ok(memory.messages(main.id).some(m => m.content === 'Owner request'));
+  assert.equal(memory.messages(work.id).length, 0);
+  await stream('/api/harness/chat', { message: 'Work request', sessionId: work.id });
+  const history = await get('/api/chat/history');
+  assert.ok(history.body.messages.some(m => m.content === 'Main answer'));
+  assert.ok(!history.body.messages.some(m => m.content === 'Work answer'));
+  await H.api(null, 'POST', '/api/chat/clear', {});
+  assert.notEqual(memory.mainSession().id, main.id);
+  assert.ok(memory.getSession(main.id).archivedAt);
+  assert.ok(memory.messages(main.id).length, 'clear retains an archived transcript');
+});
+
 test('mission completion reaches the originating conversation once, after a successful model request', async t => {
   const agent = require('../modules/harness/agent');
   const registry = require('../modules/agents/registry');

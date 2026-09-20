@@ -69,11 +69,27 @@ function handleStatus(req, res) {
 
 /** GET /api/chat/history */
 function handleHistory(req, res) {
+  if (catalog.defaultId() === catalog.BUILTIN_ID) {
+    const memory = require('./harness/memory');
+    const messages = [];
+    for (const row of memory.messages(memory.mainSession().id)) {
+      if (row.role === 'tool' && row.images?.length) {
+        messages.push({ role: 'assistant', content: '', images: row.images, time: row.at });
+      } else if (['user', 'assistant'].includes(row.role) && row.content) {
+        const last = messages.at(-1);
+        if (row.role === 'assistant' && last?.role === 'assistant') last.content += row.content;
+        else messages.push({ role: row.role, content: row.content, time: row.at,
+          ...(row.attachments?.length ? { attachments: row.attachments.map(a => a.name) } : {}) });
+      }
+    }
+    return res.json({ messages });
+  }
   res.json({ messages: chatHistory });
 }
 
 /** POST /api/chat/clear */
 function handleClear(req, res) {
+  if (catalog.defaultId() === catalog.BUILTIN_ID) require('./harness/memory').resetMain();
   chatHistory.length = 0;
   res.json({ ok: true });
 }
@@ -104,6 +120,7 @@ async function handleChat(req, res) {
     try {
       const { text } = await agent.turn({
         message,
+        sessionId: require('./harness/memory').mainSession().id,
         // Only the built-in harness understands these. The gateway and the
         // claude CLI below get the message alone, which is why the composer
         // says so rather than dropping the files silently.

@@ -946,7 +946,6 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
 
   const session = sessionId ? memory.getSession(sessionId) : memory.activeSession();
   if (!session) throw Object.assign(new Error('Unknown session'), { status: 404 });
-  memory.setActive(session.id);
   say({ type: 'session', sessionId: session.id });
 
   // Provenance stays on the row, not in the text: `toApiMessages` maps the

@@ -277,7 +277,9 @@ function dispatch({ agentId, task, context, by, chainId, plan } = {}) {
   const id = `msn_${crypto.randomBytes(6).toString('hex')}`;
   // Its own conversation, so the orchestrator's is not held by `_running` and
   // the two transcripts never interleave.
-  const session = memory.createSession(`${def.label}: ${text.slice(0, 40)}`);
+  const session = memory.createSession(`${def.label}: ${text.slice(0, 40)}`, {
+    activate: false, kind: 'specialist', parentId: by || memory.mainSession().id, profile: profileOf(def),
+  });
 
   const row = {
     id, agentId, label: def.label,

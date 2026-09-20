@@ -99,18 +99,39 @@ function listSessions() {
   };
 }
 
-function createSession(title) {
+function createSession(title, { activate = true, kind = 'work', parentId = null, profile = null } = {}) {
   const now = new Date().toISOString();
   const s = {
     id: newId('s'), title: title || 'New conversation',
     createdAt: now, updatedAt: now,
     count: 0, summary: '', summarizedThrough: 0,
+    kind, parentId, profile, archivedAt: null,
   };
   const doc = readIndex();
   doc.sessions.push(s);
-  doc.active = s.id;
+  if (activate) doc.active = s.id;
   writeIndex(doc);
   return s;
+}
+
+/** The user-facing conversation is independent of the Harness selection. */
+function mainSession() {
+  const doc = readIndex();
+  const found = doc.sessions.find(s => s.id === doc.main && !s.archivedAt);
+  if (found) return found;
+  const session = createSession('Orchestrator', { activate: false, kind: 'orchestrator' });
+  const next = readIndex();
+  next.main = session.id;
+  writeIndex(next);
+  return session;
+}
+
+function resetMain() {
+  const previous = mainSession();
+  updateSession(previous.id, { archivedAt: new Date().toISOString() });
+  const next = mainSession();
+  if (listSessions().active === previous.id) setActive(next.id);
+  return next;
 }
 
 /**
@@ -149,6 +170,7 @@ function updateSession(id, patch) {
 
 function deleteSession(id) {
   const doc = readIndex();
+  if (id === doc.main) throw Object.assign(new Error('The Orchestrator is persistent. Clear chat to archive it and start a new one.'), { status: 409 });
   doc.sessions = doc.sessions.filter(s => s.id !== id);
   if (doc.active === id) doc.active = doc.sessions[0]?.id || null;
   writeIndex(doc);
@@ -169,7 +191,7 @@ function append(id, msg) {
   store.appendJsonl(transcriptPath(id), row);
   const s = getSession(id);
   const patch = { count: (s?.count || 0) + 1 };
-  if (s && s.count === 0 && msg.role === 'user' && typeof msg.content === 'string')
+  if (s && s.kind !== 'orchestrator' && s.count === 0 && msg.role === 'user' && typeof msg.content === 'string')
     patch.title = msg.content.trim().replace(/\s+/g, ' ').slice(0, 60) || s.title;
   updateSession(id, patch);
   return row;
@@ -543,7 +565,7 @@ function memTouch(entries) {
 }
 
 module.exports = {
-  listSessions, createSession, activeSession, getSession, setActive, updateSession, deleteSession,
+  listSessions, createSession, mainSession, resetMain, activeSession, getSession, setActive, updateSession, deleteSession,
   messages, append, window, pendingFold,
   memWrite, memForget, memList, memSearch, memTouch, memDispute, memLock, memFind,
   DEFAULT_RULES, rules, rulesWrite, rulesPatch, rulesReset,

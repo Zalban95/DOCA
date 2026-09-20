@@ -449,7 +449,7 @@ function paths() {
     // ── Agent-facing ──
     // ── Talking to the agent (the mirror image of the Agent tag below) ──
     '/harness/messages': { post: { tags: ['Harness'], summary: 'Ask the agent something (the answer arrives as events)', operationId: 'harnessPostMessage', ...scopeDoc('harness:chat'),
-      requestBody: body(obj({ message: str({ maxLength: 8000 }), sessionId: str({ description: 'Defaults to the active conversation.' }) },
+      requestBody: body(obj({ message: str({ maxLength: 8000 }), sessionId: str({ description: 'Defaults to the persistent Orchestrator conversation, independently of the Harness selection. An explicit id addresses that work conversation.' }) },
         { required: ['message'], description: 'Send the question as the user typed it. The hub tags the turn with this device — name, form factor, screen and inputs, from the caps it was paired with — so the agent knows how much answer this client can hold. There is no field for a client to describe itself per message.' })),
       responses: { 202: json(obj({ turnId: str(), sessionId: str() }, { description: 'Accepted. Watch `agent.turn` / `agent.text` / `agent.tool` on the event stream.' })), ...std(400, 401, 403, 404, 409, 413) } } },
     '/harness/turns': { get: { tags: ['Harness'], summary: 'Turns in flight, so a client arriving mid-turn can show it', operationId: 'harnessListTurns', ...scopeDoc('harness:chat'),

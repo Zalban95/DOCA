@@ -194,7 +194,7 @@ function post(body, device) {
     }
   }
 
-  const session = body?.sessionId ? requireSession(body.sessionId) : memory.activeSession();
+  const session = body?.sessionId ? requireSession(body.sessionId) : memory.mainSession();
 
   const inFlight = _running.get(session.id);
   if (inFlight) throw new ApiError(409, 'turn_in_flight', 'A turn is already running in this conversation', { turnId: inFlight.turnId });
