@@ -1464,8 +1464,13 @@ test('a rung that stalled goes to the back, but is not written off', () => {
   agentMod.markDegraded(ep, 'stub-model');
   assert.deepEqual(order(), ['ollama/qwen3', 'stub/stub-model'],
     'a rung that stalled a moment ago is tried last, not dropped');
-  assert.equal(agentMod.rungsFor({ ep, model: 'stub-model', p })[1].stalledMsAgo, 0,
-    'and it carries how long ago it stalled, which is what the report of it is made of');
+  // "How long ago", not "exactly now": this is a wall-clock delta, and
+  // asserting it is 0 made the test fail whenever the millisecond happened to
+  // tick over between marking and reading. What it is here to pin is that the
+  // field is carried at all and is fresh.
+  const stalledMsAgo = agentMod.rungsFor({ ep, model: 'stub-model', p })[1].stalledMsAgo;
+  assert.ok(stalledMsAgo >= 0 && stalledMsAgo < 1000,
+    `and it carries how long ago it stalled, which is what the report of it is made of (got ${stalledMsAgo})`);
 
   assert.equal(agentMod.DEGRADED_MS, 5 * 60 * 1000, 'the rest period is minutes, not forever');
   agentMod.forgetDegraded();

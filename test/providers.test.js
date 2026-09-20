@@ -82,13 +82,24 @@ test('a provider nobody has heard of is still addable', async () => {
 test('llama.cpp instances start against a real file check', () => {
   // Regression guard: handleStart calls fs.existsSync on the model path, which
   // threw ReferenceError when the fs import was dropped as unused.
+  //
+  // The instance is created here rather than assumed. This used to name
+  // `nemotron-cascade`, the hardcoded instance every empty install was seeded
+  // with — so the guard was resting on the defect it sat next to, and went red
+  // the moment that stopped being invented.
   const llamacpp = require('../modules/models-llamacpp');
-  let code, payload;
+  const calls = [];
   const res = {
-    status(c) { code = c; return this; },
-    json(b)   { payload = b; return this; },
+    status(c) { calls.push(c); return this; },
+    json(b)   { this.payload = b; return this; },
   };
-  llamacpp.handleStart({ body: { id: 'nemotron-cascade' } }, res);
-  assert.equal(code, 400);
-  assert.match(payload.error, /Model file not found/);
+  llamacpp.handleConfig(
+    { body: { id: 'guard-inst', modelPath: '/nonexistent/model.gguf', port: 11498 } },
+    { json: () => {}, status() { return this; } });
+
+  llamacpp.handleStart({ body: { id: 'guard-inst' } }, res);
+  assert.equal(calls[0], 400);
+  assert.match(res.payload.error, /Model file not found/);
+
+  llamacpp.handleDelete({ params: { id: 'guard-inst' } }, { json: () => {} });
 });

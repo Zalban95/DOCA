@@ -89,13 +89,21 @@ async function handlePull(req, res) {
   const base = ollamaBase();
 
   sseHeaders(res);
-  const sseWrite = d => res.write(`data: ${JSON.stringify(d)}\n\n`);
+  // Guarded, like every other SSE writer here: a pull runs for minutes and the
+  // browser may close the tab at any point in it, and an unguarded write to a
+  // closed socket is an unhandled error on the response stream rather than a
+  // caught one. The abort then stops the read loop instead of leaving it
+  // draining an ollama download into a response nobody is listening to.
+  const sseWrite = d => { try { res.write(`data: ${JSON.stringify(d)}\n\n`); } catch {} };
+  const ctrl = new AbortController();
+  res.on('close', () => ctrl.abort());
 
   try {
     const r = await fetch(`${base}/api/pull`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, stream: true })
+      body: JSON.stringify({ name, stream: true }),
+      signal: ctrl.signal,
     });
     if (!r.ok) {
       sseWrite({ status: `Error: HTTP ${r.status}` });
@@ -121,7 +129,9 @@ async function handlePull(req, res) {
     }
     sseWrite({ status: 'success', done: true });
   } catch (e) {
-    sseWrite({ status: `Error: ${e.message}`, done: true, error: true });
+    // Hanging up is not a failure to report — there is nobody left to report
+    // it to, and the pull itself carries on at ollama's end regardless.
+    if (e.name !== 'AbortError') sseWrite({ status: `Error: ${e.message}`, done: true, error: true });
   }
   res.end();
 }

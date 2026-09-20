@@ -3,7 +3,6 @@
 const fs   = require('fs');
 const os   = require('os');
 const path = require('path');
-const { exec } = require('child_process');
 
 const { loadModelsPrefs, saveModelsPrefs, loadPrefs, detectBinary, streamCmd } = require('./utils');
 
@@ -137,12 +136,40 @@ function handleToolInstall(req, res) {
 const _diskCache = new Map(); // path -> { at, data }
 const DISK_CACHE_TTL = 60 * 1000;
 
-function _execOut(cmd, timeout) {
-  return new Promise(resolve =>
-    exec(cmd, { timeout }, (err, stdout) => resolve(err ? null : (stdout || '').trim())));
+/**
+ * Bytes under a directory, walked in process.
+ *
+ * This was `du -sk`, which does not exist on Windows — and `df -kP` for the
+ * free space beside it — so on the machine this panel is actually tested on,
+ * every row of the storage strip read "—". `fs.statfs` and a walk are the same
+ * two numbers from Node, on every platform.
+ *
+ * Hard links and sparse files are counted once per path rather than once per
+ * inode, which `du` would not do; for "how much of this drive are my models
+ * using" that is close enough, and it is the figure the strip already claimed
+ * to show. Symlinked directories are not followed — a cache full of links into
+ * the same blobs would otherwise count them again, and a cycle would not end.
+ */
+function _dirSizeBytes(root, deadline) {
+  let total = 0;
+  const stack = [root];
+  while (stack.length) {
+    if (Date.now() > deadline) return null;   // a partial total is worse than saying nothing
+    const dir = stack.pop();
+    let entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isSymbolicLink()) continue;
+      if (e.isDirectory()) { stack.push(full); continue; }
+      if (!e.isFile()) continue;
+      try { total += fs.statSync(full).size; } catch { /* vanished mid-walk */ }
+    }
+  }
+  return total;
 }
 
-/** df + du for one path (cached 60 s — du can be slow on huge model dirs). */
+/** Free space and directory size for one path (cached 60 s — the walk is not free). */
 async function _diskInfo(id, label, p) {
   const hit = _diskCache.get(p);
   if (hit && Date.now() - hit.at < DISK_CACHE_TTL) return { id, label, path: p, ...hit.data };
@@ -151,20 +178,28 @@ async function _diskInfo(id, label, p) {
 
   const data = { exists: true, mount: null, totalKB: null, usedKB: null, availKB: null, pct: null, dirSizeKB: null };
 
-  const df = await _execOut(`df -kP "${p}"`, 5000);
-  if (df) {
-    const parts = df.split('\n').slice(1).join(' ').trim().split(/\s+/);
-    if (parts.length >= 6) {
-      data.totalKB = parseInt(parts[1], 10) || null;
-      data.usedKB  = parseInt(parts[2], 10) || null;
-      data.availKB = parseInt(parts[3], 10) || null;
-      data.pct     = parseInt(parts[4], 10) || null;
-      data.mount   = parts.slice(5).join(' ');
+  try {
+    // bsize × blocks, the same arithmetic df does. `bavail` is what is free to
+    // this user, which is the number worth drawing: on a filesystem with root
+    // reserve, `bfree` promises space nobody here can write to.
+    const st = fs.statfsSync(p);
+    const bs = Number(st.bsize) || 0;
+    const kb = blocks => (bs && blocks != null ? Math.round(Number(blocks) * bs / 1024) : null);
+    data.totalKB = kb(st.blocks);
+    data.availKB = kb(st.bavail);
+    if (data.totalKB != null && data.availKB != null) {
+      data.usedKB = data.totalKB - kb(st.bfree);
+      data.pct    = data.totalKB > 0 ? Math.round((data.usedKB / data.totalKB) * 100) : null;
     }
-  }
+    // The drive, not the mount point: on Windows that is what a path belongs to,
+    // and statfs does not report a mount path on any platform.
+    data.mount = path.parse(path.resolve(p)).root || null;
+  } catch { /* an unreadable filesystem reports nulls, not an error page */ }
 
-  const du = await _execOut(`du -sk "${p}"`, 15000);
-  if (du) data.dirSizeKB = parseInt(du.split(/\s+/)[0], 10) || null;
+  data.dirSizeKB = (() => {
+    const bytes = _dirSizeBytes(p, Date.now() + 15000);
+    return bytes == null ? null : Math.round(bytes / 1024);
+  })();
 
   _diskCache.set(p, { at: Date.now(), data });
   return { id, label, path: p, ...data };

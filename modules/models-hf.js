@@ -3,7 +3,7 @@
 const fs   = require('fs');
 const os   = require('os');
 const path = require('path');
-const { exec, spawn } = require('child_process');
+const { execFile, spawn } = require('child_process');
 
 const { loadModelsPrefs, saveModelsPrefs, sseHeaders } = require('./utils');
 
@@ -24,15 +24,30 @@ function handlePostSettings(req, res) {
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
+/**
+ * The interpreters worth trying, in order.
+ *
+ * `python3` does not exist on Windows, where the launcher is `py` and the
+ * interpreter is `python` — so every HF call here failed on the machine this
+ * panel is actually tested on, and the tab reported "not detected" with a
+ * working huggingface_hub installed a metre away.
+ */
+const PYTHONS = process.platform === 'win32' ? ['python', 'py', 'python3'] : ['python3', 'python'];
+
 /** Helper: build env for HF CLI commands */
 function hfEnv() {
   const mp   = loadModelsPrefs();
   const home = process.env.HOME || os.homedir();
+  // `path.delimiter`, not ':'. Joining Windows paths with colons produces one
+  // unusable entry and takes the inherited PATH down with it, so the very
+  // interpreter this is trying to find stops being findable.
+  const extra = [path.join(home, '.local', 'bin'), '/usr/local/bin']
+    .filter(p => process.platform !== 'win32' || !p.startsWith('/'));
   return {
     env: {
       ...process.env,
       HOME: home,
-      PATH: `${home}/.local/bin:/usr/local/bin:${process.env.PATH || '/usr/bin:/bin'}`,
+      PATH: [...extra, process.env.PATH || ''].filter(Boolean).join(path.delimiter),
       ...(mp.hf?.token ? { HF_TOKEN: mp.hf.token } : {}),
     },
     home,
@@ -40,59 +55,129 @@ function hfEnv() {
   };
 }
 
-/** GET /api/models/hf/status */
-function handleStatus(req, res) {
-  const { env } = hfEnv();
-  const detectCmd = `python3 -c "import huggingface_hub; print(huggingface_hub.__version__)" 2>/dev/null || huggingface-cli --version 2>/dev/null`;
-  exec(`bash -lc "${detectCmd.replace(/"/g, '\\"')}"`, { env, timeout: 5000 }, (err, stdout) => {
-    const version = stdout.trim().split('\n')[0] || null;
-    if (err || !version) return res.json({ detected: false, version: null, user: null });
-    const whoamiCmd = `python3 -c "from huggingface_hub import whoami; u=whoami(); print(u.get('name',''))" 2>/dev/null || huggingface-cli whoami 2>/dev/null`;
-    exec(`bash -lc "${whoamiCmd.replace(/"/g, '\\"')}"`, { env, timeout: 5000 }, (e2, out2) => {
-      const user = e2 ? null : (out2.trim().split('\n')[0] || null);
-      res.json({ detected: true, version, user });
+/** The first interpreter on this machine that runs, or null. */
+function pythonBin(env) {
+  const attempt = i => new Promise(resolve => {
+    if (i >= PYTHONS.length) return resolve(null);
+    execFile(PYTHONS[i], ['-c', ''], { env, timeout: 5000, windowsHide: true }, err =>
+      resolve(err && err.code === 'ENOENT' ? attempt(i + 1) : PYTHONS[i]));
+  });
+  return attempt(0);
+}
+
+/**
+ * Run one python snippet, trying each interpreter until one exists.
+ *
+ * `execFile`, not `exec` through `bash -lc`: there is no shell on Windows to
+ * run `2>/dev/null` or `||`, and the script went through two rounds of quote
+ * mangling on the way to one. Resolves `{ ok, out }` — never rejects, because
+ * "no python" is an answer this panel draws rather than an error page.
+ */
+function runPython(script, { env, timeout = 5000, maxBuffer } = {}) {
+  const attempt = i => new Promise(resolve => {
+    if (i >= PYTHONS.length) return resolve({ ok: false, out: '' });
+    execFile(PYTHONS[i], ['-c', script], { env, timeout, maxBuffer, windowsHide: true }, (err, stdout) => {
+      // ENOENT means this interpreter is not here; any other failure means it
+      // ran and said no, which is a real answer and stops the search.
+      if (err && err.code === 'ENOENT') return resolve(attempt(i + 1));
+      resolve({ ok: !err, out: (stdout || '').trim() });
     });
   });
+  return attempt(0);
+}
+
+/** GET /api/models/hf/status */
+async function handleStatus(req, res) {
+  const { env } = hfEnv();
+  const ver = await runPython('import huggingface_hub; print(huggingface_hub.__version__)', { env });
+  const version = ver.ok ? ver.out.split('\n')[0] : null;
+  if (!version) return res.json({ detected: false, version: null, user: null });
+
+  const who = await runPython(
+    "from huggingface_hub import whoami; u=whoami(); print(u.get('name',''))", { env });
+  res.json({ detected: true, version, user: who.ok ? (who.out.split('\n')[0] || null) : null });
+}
+
+/**
+ * A date the panel can render, from whatever the scan produced.
+ *
+ * The python side prints `str(r.last_accessed)`, and in current
+ * huggingface_hub that is a float of epoch seconds — `1788300758.396` — which
+ * reaches `new Date()` as **Invalid Date**, so every row of the cached-models
+ * table showed one. Older versions hand back a datetime string, which parses;
+ * both arrive here and only one used to work.
+ */
+function _isoDate(v) {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  if (Number.isFinite(n) && n > 0) return new Date(n * 1000).toISOString();
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+/** Bytes and file count under one cache entry — the fallback's own `du`. */
+function _entrySize(root) {
+  let bytes = 0, files = 0, mtime = 0;
+  const stack = [root];
+  while (stack.length) {
+    const dir = stack.pop();
+    let entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isSymbolicLink()) continue;          // the cache links snapshots at blobs
+      if (e.isDirectory()) { stack.push(full); continue; }
+      if (!e.isFile()) continue;
+      try {
+        const st = fs.statSync(full);
+        bytes += st.size; files += 1;
+        if (st.mtimeMs > mtime) mtime = st.mtimeMs;
+      } catch { /* vanished mid-walk */ }
+    }
+  }
+  return { bytes, files, mtime };
 }
 
 /** GET /api/models/hf/list */
-function handleList(req, res) {
+async function handleList(req, res) {
   const { env, home, mp } = hfEnv();
   const cacheDir = mp.hf?.cacheDir || path.join(home, '.cache', 'huggingface', 'hub');
 
-  // Try Python API with the correct cache dir, then fall back to filesystem scan
+  // Try the Python API with the correct cache dir, then fall back to a scan.
   const scanPy = `import json,sys; from huggingface_hub import scan_cache_dir; info = scan_cache_dir(${JSON.stringify(cacheDir)}); print(json.dumps({"repos": [{"repo_id": r.repo_id, "repo_type": r.repo_type, "size_on_disk": r.size_on_disk, "nb_files": r.nb_files, "last_modified": str(r.last_accessed)} for r in info.repos]}))`;
-  exec(`python3 -u -c ${JSON.stringify(scanPy)} 2>/dev/null`, { env, timeout: 10000, maxBuffer: 5 * 1024 * 1024 }, (err, stdout) => {
-    if (!err && stdout.trim()) {
-      try {
-        const data  = JSON.parse(stdout.trim());
-        const repos = (data.repos || []).map(r => ({
-          repo_id:       r.repo_id,
-          repo_type:     r.repo_type || 'model',
-          size_on_disk:  r.size_on_disk || 0,
-          nb_files:      r.nb_files    || 0,
-          last_modified: r.last_modified || null,
-        }));
-        return res.json({ repos });
-      } catch {}
-    }
-    // Fallback: scan cache directory on filesystem
+  const scan = await runPython(scanPy, { env, timeout: 10000, maxBuffer: 5 * 1024 * 1024 });
+  if (scan.ok && scan.out) {
     try {
-      if (!fs.existsSync(cacheDir)) return res.json({ repos: [] });
-      const entries = fs.readdirSync(cacheDir);
-      const repos   = entries
-        .filter(e => e.startsWith('models--') || e.startsWith('datasets--'))
-        .map(e => {
-          const full    = path.join(cacheDir, e);
-          const stat    = fs.statSync(full);
-          const parts   = e.split('--');
-          const repo_id = parts.length >= 3 ? `${parts[1]}/${parts.slice(2).join('/')}` : e;
-          return { repo_id, repo_type: e.startsWith('datasets--') ? 'dataset' : 'model',
-                   size_on_disk: stat.size, nb_files: null, last_modified: stat.mtime.toISOString() };
-        });
-      res.json({ repos });
-    } catch (e2) { res.status(500).json({ error: e2.message }); }
-  });
+      const data  = JSON.parse(scan.out);
+      const repos = (data.repos || []).map(r => ({
+        repo_id:       r.repo_id,
+        repo_type:     r.repo_type || 'model',
+        size_on_disk:  r.size_on_disk || 0,
+        nb_files:      r.nb_files    || 0,
+        last_modified: _isoDate(r.last_modified),
+      }));
+      return res.json({ repos });
+    } catch { /* fall through to the scan below */ }
+  }
+
+  try {
+    if (!fs.existsSync(cacheDir)) return res.json({ repos: [] });
+    const repos = fs.readdirSync(cacheDir)
+      .filter(e => e.startsWith('models--') || e.startsWith('datasets--'))
+      .map(e => {
+        // `statSync(dir).size` is the size of the directory entry — a few
+        // kilobytes — not of what is in it, so without python every repo in
+        // this list read as 4 KB however many gigabytes it held.
+        const { bytes, files, mtime } = _entrySize(path.join(cacheDir, e));
+        const parts   = e.split('--');
+        const isData  = e.startsWith('datasets--');
+        const repo_id = parts.length >= 3 ? `${parts[1]}/${parts.slice(2).join('/')}` : e;
+        return { repo_id, repo_type: isData ? 'dataset' : 'model',
+                 size_on_disk: bytes, nb_files: files,
+                 last_modified: mtime ? new Date(mtime).toISOString() : null };
+      });
+    res.json({ repos });
+  } catch (e2) { res.status(500).json({ error: e2.message }); }
 }
 
 /** GET /api/models/hf/search */
@@ -115,7 +200,7 @@ async function handleSearch(req, res) {
 }
 
 /** POST /api/models/hf/download — SSE progress */
-function handleDownload(req, res) {
+async function handleDownload(req, res) {
   const { repoId } = req.body;
   if (!repoId) return res.status(400).json({ error: 'repoId required' });
 
@@ -186,17 +271,21 @@ except Exception as e:
   const displayCmd = `huggingface-cli download ${repoId}${cleanCache ? ' --cache-dir ' + cleanCache : ''}`;
   sseWrite({ status: `Downloading ${repoId}…\n$ ${displayCmd}\n\n` });
 
-  const hfPath = `/usr/bin:/usr/local/bin:${home}/.local/bin:/bin`;
-  const child  = spawn('python3', ['-u', '-c', pyScript], {
+  // The same interpreter `runPython` settled on, and the same PATH: this used
+  // to hardcode `python3` and join its directories with ':', which on Windows
+  // is neither the interpreter's name nor a path separator.
+  const { env: pyEnv } = hfEnv();
+  const bin = await pythonBin(pyEnv);
+  if (!bin) {
+    sseWrite({ done: true, ok: false,
+      status: `Error: no Python found (tried ${PYTHONS.join(', ')}). Install Python and huggingface_hub.` });
+    return res.end();
+  }
+  const child = spawn(bin, ['-u', '-c', pyScript], {
     cwd: home,
-    env: {
-      ...process.env,
-      HOME: home,
-      PATH: `${hfPath}:${process.env.PATH || ''}`,
-      PYTHONUNBUFFERED: '1',
-      ...(token ? { HF_TOKEN: token } : {}),
-    },
+    env: { ...pyEnv, PYTHONUNBUFFERED: '1', ...(token ? { HF_TOKEN: token } : {}) },
     stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
   });
 
   child.stdout.on('data', d => sseWrite({ status: d.toString() }));
@@ -210,7 +299,7 @@ except Exception as e:
     res.end();
   });
   child.on('error', e => {
-    sseWrite({ done: true, ok: false, status: `Error: ${e.message}. Is python3 + huggingface_hub installed?` });
+    sseWrite({ done: true, ok: false, status: `Error: ${e.message}. Is Python + huggingface_hub installed?` });
     res.end();
   });
   res.on('close', () => { if (!child.killed) child.kill(); });
@@ -224,13 +313,24 @@ function handleDelete(req, res) {
   const { home, mp } = hfEnv();
   const cache = mp.hf?.cacheDir || path.join(home, '.cache', 'huggingface', 'hub');
 
-  const dirName = `models--${repoId.replace(/\//g, '--')}`;
-  const full    = path.join(cache, dirName);
+  // A repo id is `owner/name`, so only those characters are turned into a
+  // directory name. Backslashes were left alone by the old `/`-only replace,
+  // which on Windows is a path separator — `..\..\something` walked straight
+  // out of the cache and into a recursive delete.
+  if (!/^[\w.-]+(\/[\w.-]+)*$/.test(repoId) || repoId.includes('..'))
+    return res.status(400).json({ error: `Not a repo id: ${repoId}` });
 
-  if (!fs.existsSync(full)) return res.status(404).json({ error: 'Cache entry not found' });
+  const slug = repoId.replace(/\//g, '--');
+  // Both prefixes: `handleList` lists datasets too, and delete only ever knew
+  // about `models--`, so every dataset in the list answered "not found".
+  const candidates = [`models--${slug}`, `datasets--${slug}`]
+    .map(d => path.join(cache, d))
+    .filter(full => fs.existsSync(full));
+
+  if (!candidates.length) return res.status(404).json({ error: 'Cache entry not found' });
   try {
-    fs.rmSync(full, { recursive: true, force: true });
-    res.json({ ok: true });
+    for (const full of candidates) fs.rmSync(full, { recursive: true, force: true });
+    res.json({ ok: true, deleted: candidates });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 

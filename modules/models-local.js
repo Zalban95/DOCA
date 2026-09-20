@@ -20,7 +20,8 @@ const LOCAL_NLM_TOOLS = {
       { name: 'large-v3',description: 'Large v3 — latest, best accuracy (~1.5 GB)' },
     ],
     installCmd: (model) => `pip install --user --break-system-packages openai-whisper && python3 -c "import whisper; whisper.load_model('${model}')"`,
-    detectFile: (dir, model) => path.join(dir || os.homedir(), '.cache', 'whisper', `${model}.pt`),
+    defaultDir: () => path.join(os.homedir(), '.cache', 'whisper'),
+    fileFor: (dir, model) => path.join(dir, `${model}.pt`),
   },
   kokoro: {
     label: 'Kokoro TTS',
@@ -28,8 +29,8 @@ const LOCAL_NLM_TOOLS = {
       { name: 'kokoro-v0_19', description: 'Kokoro v0.19 — main model (~326 MB)' },
       { name: 'voices',       description: 'Voice pack (~100 MB)' },
     ],
-    installCmd: (model) => `pip install --user --break-system-packages kokoro-onnx`,
-    detectFile: (dir) => path.join(dir || os.homedir(), 'kokoro'),
+    installCmd: () => `pip install --user --break-system-packages kokoro-onnx`,
+    defaultDir: () => path.join(os.homedir(), 'kokoro'),
   },
   'stable-diffusion': {
     label: 'Stable Diffusion',
@@ -39,7 +40,6 @@ const LOCAL_NLM_TOOLS = {
       { name: 'stable-diffusion-3',       description: 'SD 3 — latest architecture (~5 GB)' },
     ],
     installCmd: (model) => `pip install --user --break-system-packages diffusers transformers accelerate && python3 -c "from huggingface_hub import snapshot_download; snapshot_download('runwayml/${model}')"`,
-    detectFile: (dir) => dir || '',
   },
   comfyui: {
     label: 'ComfyUI Models',
@@ -48,9 +48,57 @@ const LOCAL_NLM_TOOLS = {
       { name: 'sdxl_base_1.0',       description: 'SDXL base checkpoint (~6.5 GB)' },
     ],
     installCmd: (model) => `wget -c https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/${model}.safetensors`,
-    detectFile: (dir) => dir || '',
   },
 };
+
+/**
+ * Where one model sits on disk, or null when nothing there answers to that name.
+ *
+ * Three of the four tools used to have a `detectFile` that ignored the model
+ * and returned the *directory*, which made two things wrong at once: every
+ * model in the list drew as "detected" the moment the folder existed, and
+ * deleting any one of them handed that folder to `rmSync(..., {recursive})` —
+ * one click on one model, and the whole models directory was gone.
+ *
+ * So the name is resolved against what is actually in the directory: the
+ * tool's own filename if it has a rule for one, otherwise a file whose base
+ * name is the model. A name that resolves to nothing is not detected and
+ * cannot be deleted, which is the honest answer in both directions.
+ */
+function modelFile(def, dir, model) {
+  if (!safeModelName(model)) return null;
+  const base = dir || (def.defaultDir ? def.defaultDir() : '');
+  if (!base) return null;
+
+  if (def.fileFor) {
+    const exact = def.fileFor(base, model);
+    if (exact && fs.existsSync(exact)) return exact;
+  }
+  let entries;
+  try { entries = fs.readdirSync(base, { withFileTypes: true }); } catch { return null; }
+  for (const e of entries) {
+    if (!e.isFile()) continue;
+    if (e.name === model || path.basename(e.name, path.extname(e.name)) === model)
+      return path.join(base, e.name);
+  }
+  return null;
+}
+
+/**
+ * A model name is a leaf, never a path.
+ *
+ * It arrives from a request body and is used two ways that both punish a
+ * separator: joined onto a directory that something may then delete, and — for
+ * the tools with an `installCmd` — interpolated into a shell string. `/api/models`
+ * has no auth in front of it, the same fact that made `GET /api/mcp` leak bearer
+ * tokens, so "the panel would never send that" is not the guarantee here.
+ */
+function safeModelName(model) {
+  return typeof model === 'string'
+    && model.length > 0 && model.length <= 128
+    && /^[\w][\w.\-]*$/.test(model)
+    && !model.includes('..');
+}
 
 /** GET /api/models/local/settings */
 function handleGetSettings(req, res) {
@@ -95,20 +143,25 @@ function handleList(req, res) {
   const def  = LOCAL_NLM_TOOLS[tool];
   if (!def) return res.json({ models: [] });
 
-  const known = new Set();
+  // What is on disk, by the file each catalogue entry resolved to — so a file
+  // already claimed by a known model is not listed a second time under its own
+  // name. The old check compared a bare model name against a filename with an
+  // extension, which never matched, so every detected model appeared twice.
+  const claimed = new Set();
   const models = def.models.map(m => {
-    const filePath = def.detectFile(dir, m.name);
-    const detected = filePath ? fs.existsSync(filePath) : false;
-    if (detected) known.add(m.name);
-    return { name: m.name, description: m.description, detected, path: filePath || '' };
+    const filePath = modelFile(def, dir, m.name);
+    if (filePath) claimed.add(path.resolve(filePath));
+    return { name: m.name, description: m.description, detected: !!filePath, path: filePath || '' };
   });
 
-  if (dir && fs.existsSync(dir)) {
+  const scanDir = dir || (def.defaultDir ? def.defaultDir() : '');
+  if (scanDir && fs.existsSync(scanDir)) {
     try {
-      fs.readdirSync(dir).forEach(f => {
+      fs.readdirSync(scanDir).forEach(f => {
         if (!NLM_MODEL_EXTS.has(path.extname(f).toLowerCase())) return;
-        if (known.has(f)) return;
-        models.push({ name: f, description: 'Detected on disk', detected: true, path: path.join(dir, f) });
+        const full = path.join(scanDir, f);
+        if (claimed.has(path.resolve(full))) return;
+        models.push({ name: f, description: 'Detected on disk', detected: true, path: full });
       });
     } catch {}
   }
@@ -123,6 +176,16 @@ function handleInstall(req, res) {
   const def = LOCAL_NLM_TOOLS[tool];
   if (!def) return res.status(400).json({ error: 'unknown tool' });
 
+  // The install command is a shell string with the model name in it, so the
+  // name has to be one this module put in the catalogue — not merely one that
+  // looks harmless. The refusal lists what does exist, because a dead end is
+  // worse than a no.
+  if (!def.models.some(m => m.name === model)) {
+    return res.status(400).json({
+      error: `Unknown ${def.label} model "${model}". Installable models: ${def.models.map(m => m.name).join(', ')}`,
+    });
+  }
+
   streamCmd(res, def.installCmd(model), { label: `${def.label} — ${model}` });
 }
 
@@ -135,13 +198,18 @@ function handleDelete(req, res) {
   const def = LOCAL_NLM_TOOLS[tool];
   if (!def) return res.status(400).json({ error: 'unknown tool' });
 
-  const filePath = def.detectFile(dir, model);
-  if (!filePath || !fs.existsSync(filePath))
-    return res.status(404).json({ error: 'File not found' });
+  const filePath = modelFile(def, dir, model);
+  if (!filePath) return res.status(404).json({ error: `No file for "${model}" under ${dir || '(no models path set)'}` });
 
+  // One file, never a tree. `recursive: true` is what turned "delete this
+  // model" into "delete the models directory" for every tool whose lookup
+  // returned the folder; `modelFile` cannot return a directory now, and this
+  // is the second lock on the same door.
   try {
-    fs.rmSync(filePath, { recursive: true, force: true });
-    res.json({ ok: true });
+    if (fs.statSync(filePath).isDirectory())
+      return res.status(400).json({ error: `Refusing to delete a directory: ${filePath}` });
+    fs.rmSync(filePath, { force: true });
+    res.json({ ok: true, deleted: filePath });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 

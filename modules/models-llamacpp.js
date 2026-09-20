@@ -7,30 +7,38 @@ const { loadPrefs, savePrefs, loadConfig, saveConfig, sseHeaders } = require('./
 
 const PREFS_KEY      = 'llamacpp';
 const BIND_HOST      = '0.0.0.0';
-const INTERNAL_HOST  = '172.18.0.1';
 
-const DEFAULT_INSTANCE = {
-  id:          'nemotron-cascade',
-  name:        'Nemotron Cascade 2 30B',
-  modelPath:   '/media/al/NewVolume/models/nemotron-cascade-2/Nemotron-Cascade-2-30B-A3B.Q4_K_M.gguf',
-  port:        11435,
-  nGpuLayers:  999,
-  ctxSize:     8192,
-};
+/**
+ * The address this machine is reachable at, for whoever is told about the
+ * instance — the panel's endpoint line and the provider written into
+ * `openclaw.json`.
+ *
+ * It used to be the constant `172.18.0.1`, which is one machine's Docker
+ * bridge: correct there, and on every other install an endpoint that nothing
+ * answers on. The server binds `0.0.0.0` regardless, so loopback is right for
+ * the common case, and `llamacpp.advertiseHost` in prefs is how a stack whose
+ * clients live in containers says otherwise.
+ */
+function advertiseHost() {
+  const h = (loadPrefs()[PREFS_KEY] || {}).advertiseHost;
+  return typeof h === 'string' && h.trim() ? h.trim() : '127.0.0.1';
+}
 
 const _procs = {};
 
+/**
+ * The configured instances, and nothing invented.
+ *
+ * This used to seed one hardcoded instance — a 30B gguf under `/media/al/…` —
+ * whenever the list was empty, which meant every fresh install acquired a
+ * phantom instance pointing at a path that does not exist on it, and a plain
+ * GET of the list wrote to prefs to put it there. The panel already draws "No
+ * llama.cpp instances configured" and has an Add button, so empty is a state
+ * it can render.
+ */
 function loadInstances() {
-  const prefs = loadPrefs();
-  const cfg   = prefs[PREFS_KEY] || {};
-  let instances = cfg.instances || [];
-  if (!instances.length) {
-    instances = [{ ...DEFAULT_INSTANCE }];
-    cfg.instances = instances;
-    prefs[PREFS_KEY] = cfg;
-    savePrefs(prefs);
-  }
-  return instances;
+  const cfg = loadPrefs()[PREFS_KEY] || {};
+  return Array.isArray(cfg.instances) ? cfg.instances : [];
 }
 
 function saveInstances(instances) {
@@ -48,7 +56,7 @@ function instanceStatus(inst) {
     running,
     pid: running ? proc.child.pid : null,
     startedAt: running ? proc.startedAt : null,
-    endpoint: `http://${INTERNAL_HOST}:${inst.port}/v1`,
+    endpoint: `http://${advertiseHost()}:${inst.port}/v1`,
   };
 }
 
@@ -168,7 +176,7 @@ function handleStart(req, res) {
     sseWrite({ status: text });
     if (!started && (text.includes('listening') || text.includes('server is listening'))) {
       started = true;
-      sseWrite({ done: true, ok: true, status: `\n✓ llama-server running on http://${INTERNAL_HOST}:${inst.port}/v1\n` });
+      sseWrite({ done: true, ok: true, status: `\n✓ llama-server running on http://${advertiseHost()}:${inst.port}/v1\n` });
       registerEndpoint(inst);
       res.end();
     }
@@ -179,7 +187,7 @@ function handleStart(req, res) {
     sseWrite({ status: text });
     if (!started && (text.includes('listening') || text.includes('server is listening'))) {
       started = true;
-      sseWrite({ done: true, ok: true, status: `\n✓ llama-server running on http://${INTERNAL_HOST}:${inst.port}/v1\n` });
+      sseWrite({ done: true, ok: true, status: `\n✓ llama-server running on http://${advertiseHost()}:${inst.port}/v1\n` });
       registerEndpoint(inst);
       res.end();
     }
@@ -289,7 +297,7 @@ function registerEndpoint(inst) {
     if (!cfg.models) cfg.models = {};
     if (!cfg.models.providers) cfg.models.providers = {};
     cfg.models.providers[`llamacpp-${inst.id}`] = {
-      baseUrl: `http://${INTERNAL_HOST}:${inst.port}/v1`,
+      baseUrl: `http://${advertiseHost()}:${inst.port}/v1`,
       apiKey:  '',
       api:     'openai-chat-completions',
       models:  [],
@@ -307,7 +315,7 @@ function getRunningInstances() {
       name:     inst.name,
       port:     inst.port,
       pid:      _procs[inst.id].child.pid,
-      endpoint: `http://${INTERNAL_HOST}:${inst.port}/v1`,
+      endpoint: `http://${advertiseHost()}:${inst.port}/v1`,
     }));
 }
 
