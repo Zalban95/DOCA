@@ -202,6 +202,12 @@ entries that exceed their declared window, and names the setting and model in th
 This is a character-based estimate, not a tokenizer measurement or a guarantee that images
 will fit; image tokens and an uncapped reply remain provider-dependent.
 
+**Mission completions.** Finished and failed missions appear in the originating
+conversation's next model request, in the panel readings after the transcript. A successful
+reply acknowledges those notices so later turns do not repeat them; a failed request leaves
+them pending. Older missions without a conversation recorded can notify the next orchestrator
+conversation. This does not wake an idle agent; device completion events still arrive independently.
+
 **Memory** is structured in four layers, all under `DOCA_DATA_DIR/harness/`:
 
 | Layer | What it holds |

@@ -430,9 +430,31 @@ function events(id, { limit = 200 } = {}) {
  * every mission it ever ran pasted into every prompt. A chain is called out
  * because its completion is the thing worth acting on.
  */
-function block() {
+const FINISHED = new Set(['done', 'failed', 'cancelled']);
+
+function notices(sessionId) {
+  if (!registry.enabled()) return [];
+  return list({ limit: MAX_INDEX }).filter(m => FINISHED.has(m.state) && !m.announcedToAgentAt
+    && (!m.by || m.by === sessionId)).slice(0, 12);
+}
+
+// A failed request did not deliver the readings. Acknowledge only the snapshot
+// that reached a successful reply, not missions that finished in the meantime.
+function acknowledgeNotices(shown) {
+  if (!shown.length) return;
+  const rows = loadIndex();
+  const at = new Date().toISOString();
+  for (const notice of shown) {
+    const row = rows.find(m => m.id === notice.id);
+    if (row && row.state === notice.state && row.endedAt === notice.endedAt)
+      row.announcedToAgentAt = at;
+  }
+  saveIndex(rows);
+}
+
+function block({ sessionId, completed = notices(sessionId) } = {}) {
   if (!registry.enabled()) return '';
-  const rows = list({ limit: 12 });
+  const rows = [...list({ limit: MAX_INDEX }).filter(m => !FINISHED.has(m.state)).slice(0, 12), ...completed];
   if (!rows.length) return '';
 
   const out = ['# Missions'];
@@ -442,7 +464,7 @@ function block() {
     } else if (m.state === 'running') {
       out.push(`- ${m.id} (${m.label}): running, step ${m.steps} — "${m.task.slice(0, 80)}"`);
     } else {
-      out.push(`- ${m.id} (${m.label}): ${m.state}${m.error ? ` — ${m.error}` : ''}`
+      out.push(`- ${m.id} (${m.label}): NEW ${m.state}, ended ${m.endedAt || '(time unknown)'} — "${String(m.task || '').slice(0, 80)}"${m.error ? ` — ${m.error}` : ''}`
         + `${m.state === 'done' ? ' — read it with agent_results' : ''}`);
     }
   }
@@ -457,11 +479,14 @@ function block() {
   if (rows.some(m => m.state === 'running'))
     out.push('A running mission is not blocking you. Carry on with the user; its answer will be here '
       + 'when you next look.');
+  if (completed.length)
+    out.push('These completed missions have not been announced to you before. Read any result you need with '
+      + 'agent_results and tell the user what finished or failed. Do not poll running missions.');
   return out.join('\n');
 }
 
 function _reset() { store.writeJson(INDEX, { missions: [] }); }
 
-module.exports = { dispatch, recover, resume, archive, get, list, running, events, record, block, patch,
+module.exports = { dispatch, recover, resume, archive, get, list, running, events, record, block, patch, notices, acknowledgeNotices,
   setPlan, planProgress, normalizePlan, forSession,
   PLAN_MAX_ITEMS, PLAN_TITLE_MAX, PLAN_STATES, _reset };

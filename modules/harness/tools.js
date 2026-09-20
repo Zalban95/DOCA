@@ -489,8 +489,8 @@ const TOOLS = [
       },
       required: ['agent', 'task'],
     },
-    run: ({ agent, task, context, plan }) => {
-      const m = require('../agents/missions').dispatch({ agentId: agent, task, context, plan });
+    run: ({ agent, task, context, plan }, ctx = {}) => {
+      const m = require('../agents/missions').dispatch({ agentId: agent, task, context, plan, by: ctx.sessionId });
       // A plan is what lets every client draw progress instead of "STEP 0"
       // until the mission is already over — see missions.setPlan().
       const how = Array.isArray(plan) && plan.length

@@ -175,6 +175,45 @@ async function stream(path, body) {
 
 const get = (p) => H.api(null, 'GET', p);
 
+test('mission completion reaches the originating conversation once, after a successful model request', async t => {
+  const agent = require('../modules/harness/agent');
+  const registry = require('../modules/agents/registry');
+  const missions = require('../modules/agents/missions');
+  const memory = require('../modules/harness/memory');
+  const store = require('../modules/store');
+  const previous = store.readJson('agents/missions', { missions: [] });
+  const enabled = registry.enabled();
+  const session = memory.createSession('completion notices');
+  t.after(() => {
+    store.writeJson('agents/missions', previous);
+    registry.setEnabled(enabled);
+    memory.deleteSession(session.id);
+  });
+  registry.setEnabled(true);
+  const done = { id: 'msn_notice', label: 'Archivist', state: 'done', task: 'look it up',
+    by: session.id, endedAt: '2026-09-20T12:00:00.000Z', result: 'Result stays behind agent_results.' };
+  store.writeJson('agents/missions', { missions: [done, { ...done, id: 'msn_other', by: 'other-session' }] });
+  const turn = () => agent.turn({ message: 'An unrelated question', sessionId: session.id });
+
+  script = [{ status: 500 }];
+  await assert.rejects(turn());
+  assert.equal(missions.get(done.id).announcedToAgentAt, undefined, 'failed delivery does not consume the notice');
+
+  script = [{ text: 'The mission finished.' }];
+  seen = [];
+  await turn();
+  assert.doesNotMatch(seen[0].messages[0].content, /msn_notice/, 'mission state is kept out of the cached prefix');
+  assert.match(seen[0].messages.at(-1).content, /msn_notice.*NEW done/);
+  assert.doesNotMatch(seen[0].messages.at(-1).content, /msn_other|Result stays behind/);
+  assert.ok(missions.get(done.id).announcedToAgentAt);
+  assert.equal(missions.get('msn_other').announcedToAgentAt, undefined);
+
+  script = [{ text: 'Another answer.' }];
+  seen = [];
+  await turn();
+  assert.doesNotMatch(seen[0].messages.at(-1).content, /msn_notice/);
+});
+
 /* ── Catalog ──────────────────────────────────────────── */
 
 test('a fresh install defaults to the built-in harness and lists the known ones', async () => {

@@ -27,7 +27,11 @@ const store       = require('../store');
 // Required lazily inside the functions that use them: modules/agents requires
 // this file back, and a load-time cycle would leave one of the two half-built.
 const agents   = { block: () => require('../agents/registry').block() };
-const missions = { block: () => require('../agents/missions').block() };
+const missions = {
+  block: opts => require('../agents/missions').block(opts),
+  notices: sessionId => require('../agents/missions').notices(sessionId),
+  acknowledgeNotices: shown => require('../agents/missions').acknowledgeNotices(shown),
+};
 const tools       = require('./tools');
 const usage       = require('./usage');
 
@@ -266,7 +270,6 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
     settings.block(),
     installs.block(),
     agents.block(),
-    missions.block(),
     summary ? `# Earlier in this conversation\n${summary}` : '',
   ].filter(Boolean).join('\n\n');
 }
@@ -1036,7 +1039,9 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
     // what H-9 was protecting, not the role, so the cached prefix is unaffected.
     // It says whose words these are, because a bare block at the end of a
     // conversation reads as the user's.
-    const live = [liveBlock(p, led), ...contextSkips.values()].filter(Boolean).join('\n');
+    const completed = profile ? [] : missions.notices(session.id);
+    const live = [liveBlock(p, led), profile ? '' : missions.block({ sessionId: session.id, completed }),
+      ...contextSkips.values()].filter(Boolean).join('\n');
     if (live) messages.push({ role: 'user', content: `[panel readings, not from the user]\n${live}` });
 
     // Measured when the provider answers with a usage frame, estimated when it
@@ -1082,6 +1087,7 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       },
     });
 
+    if (!profile) missions.acknowledgeNotices(completed);
     budget.record(led, {
       usage: reply.usage,
       promptEstimate,

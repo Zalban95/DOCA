@@ -255,6 +255,35 @@ test('a specialist cannot answer for the user', () => {
   assert.ok(registry.NEVER.includes('agent_resume'));
 });
 
+test('legacy mission notices are readable without mutation and acknowledgement only covers the shown completion', () => {
+  registry.setEnabled(true);
+  seed([row('msn_legacy', 'done', { endedAt: 'first' }), row('msn_running', 'running')]);
+  const shown = missions.notices('any-session');
+  assert.deepEqual(shown.map(m => m.id), ['msn_legacy']);
+  assert.equal(missions.get('msn_legacy').announcedToAgentAt, undefined);
+  missions.patch('msn_running', { state: 'done', endedAt: 'later' });
+  missions.acknowledgeNotices(shown);
+  assert.deepEqual(missions.notices('any-session').map(m => m.id), ['msn_running']);
+  const later = missions.notices('any-session');
+  missions.patch('msn_running', { state: 'running' });
+  missions.acknowledgeNotices(later);
+  assert.equal(missions.get('msn_running').announcedToAgentAt, undefined);
+  missions._reset();
+  registry.setEnabled(false);
+});
+
+test('dispatch associates a mission with the conversation that requested it', async () => {
+  registry.setEnabled(true);
+  missions._reset();
+  try {
+    await tools.call('agent_dispatch', { agent: 'archivist', task: 'look up one fact' }, [], { sessionId: 's_origin' });
+    assert.equal(missions.list()[0].by, 's_origin');
+  } finally {
+    missions._reset();
+    registry.setEnabled(false);
+  }
+});
+
 /* ── The plan ─────────────────────────────────────────── */
 
 test('a mission plan is what makes a progress bar possible', () => {
