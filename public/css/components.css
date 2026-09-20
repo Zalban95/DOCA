@@ -594,6 +594,25 @@ body.chat-resizing * { cursor: nwse-resize !important; }
                      border-left: 2px solid var(--amber, #d89000); padding-left: 10px;
                      color: var(--amber, #d89000); font-size: 11px; }
 .chat-messages > .agent-fold { max-width: 100%; width: 100%; }
+/* ── How full the context window is ─────────────────────
+   One ring, drawn the same in the floating chat and the harness console; see
+   `contextRingHtml` in public/js/utils.js. The light-orange band is the part
+   of the window past the fold point, where older messages become a summary —
+   not a warning, which is why it is not the same amber as one. It is drawn
+   over the used arc and translucent, so the part that is both used and past
+   the fold reads as one tinted segment rather than hiding one of the two. */
+.ctx-ring { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.ctx-ring svg { display: block; }
+.ctx-track { stroke: var(--border2); }
+.ctx-fold  { stroke: rgba(232, 160, 32, 0.45); }
+.ctx-used  { stroke: var(--blue); transition: stroke-dasharray 0.3s ease; }
+.ctx-label { font-size: 10px; color: var(--muted); white-space: nowrap; }
+/* The one line under a finished answer: how fast it came. */
+.turn-meta {
+  align-self: flex-start; max-width: 100%;
+  font-size: 10px; color: var(--muted); opacity: 0.8;
+  padding: 0 2px; white-space: nowrap;
+}
 .chat-input-row {
   display: flex; gap: 6px; padding: 10px;
   border-top: 1px solid var(--border2);

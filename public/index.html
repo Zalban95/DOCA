@@ -1293,6 +1293,7 @@
      ondrop="event.preventDefault(); this.classList.remove('drop'); chatAttachFiles(event.dataTransfer.files);">
   <div class="chat-header" onpointerdown="chatDragStart(event)" title="Drag to move">
     <span class="chat-title" data-brand="agent">DOCA Agent</span>
+    <span class="ctx-slot" id="chat-context"></span>
     <div class="toolbar-right">
       <button class="btn btn-xs" id="chat-call-toggle" onclick="chatToggleCall()" title="Voice call mode">🎙 Live</button>
       <button class="btn btn-xs tool-gear" onclick="nav('settings'); settingsSubNav('voice'); toggleChat()" title="Voice settings (STT/TTS)">⚙</button>

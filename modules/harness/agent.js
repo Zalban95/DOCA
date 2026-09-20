@@ -1218,6 +1218,10 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     // does not. Both are recorded; only one is called a measurement.
     const promptEstimate = budget.estimateRequest({ messages, tools: schemas });
 
+    // Model time for this step, which is what a tokens-per-second figure is
+    // about. Measured around the call and nothing else: the tool that runs
+    // after it belongs to the machine, not to the model's speed.
+    const startedAt = Date.now();
     const reply = await complete({
       ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id },
       body: { ...base, messages, ...(schemas.length ? { tools: schemas, tool_choice: 'auto' } : {}) },
@@ -1253,6 +1257,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
         });
       },
     });
+    const stepMs = Date.now() - startedAt;
 
     if (!isMission) missions.acknowledgeNotices(completed);
     organization.acknowledge(session.id, reports);
@@ -1260,6 +1265,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       usage: reply.usage,
       promptEstimate,
       completionEstimate: budget.estimate(reply.content) + budget.estimate(JSON.stringify(reply.tool_calls || [])),
+      ms: stepMs,
     });
     const spend = budget.report(led, p);
     say({ type: 'usage', step, ...spend });
@@ -1506,10 +1512,42 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
 }
 
 /** Is the built-in harness ready to answer, and on what? */
+/**
+ * The prompt size of the last step in this conversation, or 0.
+ *
+ * Read off the stored assistant rows rather than kept in memory: the ledger
+ * belongs to one turn and is gone when it ends, while the question "how full
+ * is this session's window" outlives the process that answered it.
+ */
+function lastPromptOf(sessionId) {
+  try {
+    const id = sessionId || memory.mainSession().id;
+    const rows = memory.messages(id);
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const n = Number(rows[i]?.usage?.prompt);
+      if (rows[i].role === 'assistant' && Number.isFinite(n) && n > 0) return n;
+    }
+  } catch { /* a session that cannot be read is one with no context to report */ }
+  return 0;
+}
+
+/** How full one conversation's window is, and where it folds. Cheap: no network. */
+function contextOf(sessionId) {
+  const org = require('./organization');
+  return budget.context(turnParams(sessionId ? org.profileFor(org.session(sessionId)) : null),
+    lastPromptOf(sessionId));
+}
+
 async function status({ sessionId } = {}) {
   const org = require('./organization');
   const p = turnParams(sessionId ? org.profileFor(org.session(sessionId)) : null);
   const out = { provider: p.provider, model: p.model || null, ready: false, reachable: false, error: null };
+  // How full the window is, before anything is sent. A conversation's context
+  // is a standing fact about it, not something that exists only while a turn
+  // is running — a panel opened on an old session would otherwise have to send
+  // a message to find out how much room it has left. Null when no window is
+  // declared, which is `budget.context`'s way of saying nobody has said.
+  out.context = contextOf(sessionId);
   try {
     const ep = providers.endpoint(p.provider);
     out.baseUrl = ep.baseUrl;
@@ -1527,5 +1565,5 @@ async function status({ sessionId } = {}) {
   return out;
 }
 
-module.exports = { turn, isRunning, cancel, status, params, ask, complete, preview, breakdown, liveBlock, events,
+module.exports = { turn, isRunning, cancel, status, contextOf, params, ask, complete, preview, breakdown, liveBlock, events,
   toApiMessages, rungsFor, markDegraded, forgetDegraded, openingHop, missionsFor, DEGRADED_MS };

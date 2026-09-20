@@ -179,7 +179,16 @@ async function chatLoadHistory() {
       });
       collapseFoldRuns(container);
     }
+    // How full the window already is, before this panel sends anything. Absent
+    // for a harness that does not report one, which is what '' draws.
+    _chatContext(data.context);
   } catch {}
+}
+
+/** Draw the context ring in the header. */
+function _chatContext(u) {
+  const el = document.getElementById('chat-context');
+  if (el) el.innerHTML = contextRingHtml(u);
 }
 
 function chatAppendMsg(role, text, opts = {}) {
@@ -509,6 +518,9 @@ function chatSend({ spoken = false } = {}) {
 
   // Kept so a spoken question can be answered out loud once the answer is whole.
   let reply = '';
+  // The last step's account of the turn: the ring follows it while the turn
+  // runs, and the rate under the answer is read off it once the turn ends.
+  let spend = null;
   sseStream('/api/chat', { message: sent, attachments }, {
     signal: chatTurn.signal,
     onEvent: evt => {
@@ -540,6 +552,9 @@ function chatSend({ spoken = false } = {}) {
         stream.resetText();
         if (pendingCall) pendingCall.setActive(false);
         pendingCall = _chatAppendFold('tool-call', JSON.stringify(evt.args ?? {}), evt.name, { active: true });
+      } else if (evt.type === 'usage') {
+        spend = evt;
+        _chatContext(evt);
       } else if (evt.type === 'image') {
         _chatAppendImage(evt.image);
       } else if (evt.type === 'tool_result') {
@@ -565,6 +580,10 @@ function chatSend({ spoken = false } = {}) {
     // finished run is a few short lines rather than a wall of command bodies.
     closeFolds(container);
     agentWorkingClose(container);
+    // After the fold closes, so the rate is the last thing under the answer
+    // rather than a line the collapsing run swallows.
+    const rate = tokenRateEl(spend);
+    if (rate) { container.appendChild(rate); _chatScroll(); }
     if (chatTurn?.signal.aborted) chatAppendMsg('system', 'Stopped. The step already running finishes on its own.');
     // Spoken to, speak back — after the answer is on screen, so a TTS that is
     // not configured costs nothing but silence.

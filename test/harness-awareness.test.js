@@ -469,6 +469,40 @@ test('the ledger counts what the provider reports, and says when it guessed', ()
   assert.equal(budget.report(guessed, { contextWindow: 0 }).contextPercent, null);
 });
 
+test('the ring has a window, a used share, a fold point and a rate — or says nothing', () => {
+  // What both chats draw. Each number is either a measurement or null; there
+  // is deliberately no "sensible default" anywhere in here, because a ring
+  // drawn against an invented window is a measurement nobody made.
+  const p = { contextWindow: 1000, compactAt: 60 };
+
+  const c = budget.context(p, 400);
+  assert.equal(c.contextWindow, 1000);
+  assert.equal(c.contextPercent, 40);
+  assert.equal(c.compactAt, 600, 'compactAt is a percentage of the window, in tokens');
+  assert.equal(c.compactPercent, 60, 'and the share of the ring past which folding starts');
+
+  // The lower trigger wins, and it is reported as a share of the window even
+  // though `compactTokens` is not a percentage of anything.
+  const byTokens = budget.context({ ...p, compactTokens: 250 }, 400);
+  assert.equal(byTokens.compactAt, 250);
+  assert.equal(byTokens.compactPercent, 25);
+
+  // Nobody has said how big the window is, so there is no ring to draw.
+  assert.equal(budget.context({ contextWindow: 0 }, 400), null);
+
+  // The rate is model time, not wall-clock: `ms` is measured around the
+  // provider call so a turn that spent a minute in a shell command is not
+  // reported as a slow model. Unmeasured stays null rather than becoming 0.
+  const l = budget.ledger();
+  budget.record(l, { usage: { prompt_tokens: 400, completion_tokens: 120 }, ms: 2000 });
+  assert.equal(budget.report(l, p).tokensPerSecond, 60);
+  assert.equal(budget.report(l, p).compactPercent, 60, 'the report carries the fold point too');
+
+  const untimed = budget.ledger();
+  budget.record(untimed, { usage: { prompt_tokens: 400, completion_tokens: 120 } });
+  assert.equal(budget.report(untimed, p).tokensPerSecond, null, 'no clock, no rate');
+});
+
 test('the environment block is entirely facts: two calls a second apart are identical', async () => {
   const args = { provider: 'ollama', model: 'qwen3', toolCount: 12, disabledCount: 1 };
   const a = environment.block(args);

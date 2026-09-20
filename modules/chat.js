@@ -94,7 +94,11 @@ function handleHistory(req, res) {
         }
       }
     }
-    return res.json({ messages });
+    // The ring the panel draws, seeded on open. Only the built-in harness has
+    // a window to report: the gateway and the CLI harnesses own their own and
+    // tell us nothing, so there the ring is absent rather than drawn against a
+    // number we invented.
+    return res.json({ messages, context: agent.contextOf(memory.mainSession().id) });
   }
   res.json({ messages: chatHistory });
 }
@@ -150,6 +154,12 @@ async function handleChat(req, res) {
             images.push(evt.image);
             res.write(`data: ${JSON.stringify({ type: 'image', image: evt.image })}\n\n`);
           }
+          // How full the window is and how fast the answer came. Forwarded
+          // whole rather than picked apart: it is `budget.report()`, the same
+          // object the harness console draws, and a floating chat that showed
+          // less of it would be a second shape to keep in step.
+          if (evt.type === 'usage')
+            res.write(`data: ${JSON.stringify(evt)}\n\n`);
           // Silence, and the end of it. A provider that has the request and has
           // not started answering looks exactly like a frozen page, and a hop
           // down the fallback chain is the one event the user must not miss:

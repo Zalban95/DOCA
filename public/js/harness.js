@@ -1159,6 +1159,7 @@ function _hcBuiltinHtml(h) {
         <div class="hc-head">
           <span class="hc-title" id="hc-session-title">${escHtml(h.label)}</span>
           <span class="badge badge-blue" id="hc-model-badge" style="font-size:9px">…</span>
+          <span class="ctx-slot" id="hc-context"></span>
           <span class="hc-usage" id="hc-usage" title="Tokens today (UTC), every model call: steps, summaries and one-off asks. GET /api/harness/usage for the breakdown."></span>
           <span class="status-line" id="hc-status"></span>
           <div class="toolbar-right">
@@ -1180,6 +1181,12 @@ function _hcBuiltinHtml(h) {
         </div>
       </div>
     </div>`;
+}
+
+/** How full this session's context window is, next to the model badge. */
+function _hcContext(u) {
+  const el = document.getElementById('hc-context');
+  if (el) el.innerHTML = contextRingHtml(u);
 }
 
 /** Today's tokens, next to the model badge. */
@@ -1204,6 +1211,10 @@ async function _hcStatus() {
   try {
     const s = await apiFetch(`/api/harness/status${sessionId ? '?sessionId=' + encodeURIComponent(sessionId) : ''}`);
     if (sessionId !== _hcSession) return;
+    // This session's window, as it stands before anything is sent. Each chat
+    // has its own, so it is redrawn on every session switch rather than left
+    // showing the last one's.
+    _hcContext(s.context);
     if (badge) {
       badge.textContent = s.model ? `${s.provider} / ${s.model}` : `${s.provider} / no model`;
       badge.className = `badge ${s.ready && s.reachable ? 'badge-green' : s.ready ? 'badge-amber' : 'badge-red'}`;
@@ -1499,6 +1510,9 @@ async function hcSend() {
   const scroll = () => { if (box) box.scrollTop = box.scrollHeight; };
   let pendingCall = null;
   let waitingRow  = null;
+  // The last step's account of the turn: the ring follows it while the turn
+  // runs, and the rate under the answer is read off it once the turn ends.
+  let spend = null;
 
   // Everything this turn does goes in one block that shows its current row and
   // becomes one line when the turn ends.
@@ -1528,6 +1542,7 @@ async function hcSend() {
         if (pendingCall) pendingCall.setActive(false);
         pendingCall = _hcAppend('tool-call', JSON.stringify(evt.args ?? {}), evt.name, { active: true });
       }
+      if (evt.type === 'usage') { spend = evt; _hcContext(evt); }
       if (evt.type === 'image') _hcAppendImage(evt.image);
       if (evt.type === 'tool_result') {
         if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
@@ -1581,6 +1596,10 @@ async function hcSend() {
   // run is a few short lines, each one a click away from the detail.
   closeFolds(box);
   agentWorkingClose(box);
+  // After the fold closes, so the rate is the last thing under the answer
+  // rather than a line the collapsing run swallows.
+  const rate = tokenRateEl(spend);
+  if (rate && box) { box.appendChild(rate); scroll(); }
   if (_hcTurn?.signal.aborted)
     _hcAppend('error', 'Stopped. The step already running finishes on its own; nothing after it starts.', 'stopped');
 

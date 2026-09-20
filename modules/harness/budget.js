@@ -121,6 +121,30 @@ function pct(value, total) {
   return total > 0 ? Math.round((value / total) * 100) : 0;
 }
 
+/**
+ * The window as a client draws it: how full it is, and where folding starts.
+ *
+ * `compactPercent` is the part of the ring that will not survive as written —
+ * past it the older messages become a summary — and it is a *percentage of the
+ * window* even though the trigger may be `compactTokens`, which is not a
+ * percentage of anything. Null while no window is declared, like everything
+ * else percentage-based here: a ring drawn against a guessed window is a
+ * measurement nobody made.
+ */
+function context(p, tokens) {
+  const window = windowFor(p);
+  if (!window) return null;
+  const used = Math.max(0, Number(tokens) || 0);
+  const fold = compactionFor(p);
+  return {
+    contextTokens: used,
+    contextWindow: window,
+    contextPercent: pct(used, window),
+    compactAt: fold ? fold.at : null,
+    compactPercent: fold ? Math.min(100, pct(fold.at, window)) : null,
+  };
+}
+
 /** A fresh ledger for one turn. */
 function ledger() {
   return {
@@ -145,6 +169,10 @@ function ledger() {
     stepCachedTokens: 0,
     stepCacheReported: false,
     cacheReported: false,   // did it tell us about caching at all?
+    // Time spent inside the model calls, not wall-clock for the turn. A turn
+    // that ran a forty-second shell command between two fast replies is not a
+    // slow model, and a rate measured over the whole turn would say it was.
+    ms: 0,
     measured: false,        // did any provider actually tell us?
     estimated: false,       // did we have to guess for any step?
   };
@@ -174,7 +202,7 @@ function cachedOf(usage) {
     ?? null;
 }
 
-function record(l, { usage, promptEstimate = 0, completionEstimate = 0 } = {}) {
+function record(l, { usage, promptEstimate = 0, completionEstimate = 0, ms = 0 } = {}) {
   const measuredPrompt     = Number(usage?.prompt_tokens);
   const measuredCompletion = Number(usage?.completion_tokens);
   const havePrompt     = Number.isFinite(measuredPrompt) && measuredPrompt > 0;
@@ -189,6 +217,7 @@ function record(l, { usage, promptEstimate = 0, completionEstimate = 0 } = {}) {
   l.totalTokens       = l.promptTokens + l.completionTokens;
   l.lastPrompt        = prompt;
   l.peakPrompt        = Math.max(l.peakPrompt, prompt);
+  if (Number(ms) > 0) l.ms += Number(ms);
 
   const cached = cachedOf(usage);
   if (cached !== null) {
@@ -213,10 +242,15 @@ function report(l, p) {
     promptTokens: l.promptTokens,
     completionTokens: l.completionTokens,
     totalTokens: l.totalTokens,
-    contextTokens: l.lastPrompt,
-    contextWindow: window || null,
-    contextPercent: window ? pct(l.lastPrompt, window) : null,
+    ...(context(p, l.lastPrompt)
+      || { contextTokens: l.lastPrompt, contextWindow: null, contextPercent: null,
+           compactAt: compactTokensFor(p) || null, compactPercent: null }),
     source: l.measured ? (l.estimated ? 'mixed' : 'provider') : 'estimated',
+    // Generation speed over this turn's model calls. Rounded to a tenth: the
+    // figure is worth a glance, not a benchmark, and three decimals invite it
+    // to be read as one.
+    tokensPerSecond: l.ms > 0 && l.completionTokens > 0
+      ? Math.round((l.completionTokens / (l.ms / 1000)) * 10) / 10 : null,
     // Reported separately rather than subtracted: the tokens really were sent,
     // and a panel that quietly showed a smaller number would be lying in the
     // other direction. What changes is what they cost.
@@ -386,5 +420,5 @@ function stalled({ ep, ms, frames }) {
 module.exports = {
   CHARS_PER_TOKEN,
   estimate, estimateMessages, estimateRequest, preflight, windowFor, compactTokensFor, shouldCompact, compactReason, compactionFor,
-  ledger, record, report, warning, block, live, explain, stalled, cachedOf,
+  ledger, record, report, warning, block, live, explain, stalled, cachedOf, context,
 };
