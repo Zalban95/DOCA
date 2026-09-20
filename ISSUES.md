@@ -1404,3 +1404,120 @@ Nothing else moved: the renderer, the reader, the cap, the duplicate-drop
 - **Not yet seen in a browser.** A DOM stub is a claim about the browser and has
   been wrong in this repo before (AGENTS.md:111), so the panel check is handed
   over rather than assumed, and the tag waits on it.
+
+---
+
+## H-14 — The Orchestrator is never told a mission exists
+
+**Status:** fixed on `fix/audit-2.45.1`, 2026-09-20, **v2.46.2**. Found by the
+`af416bd..origin/main` audit (`docs/audit-2.45.1.md`, finding F3). Introduced by
+`19c25eb` (2.45.0), which made `profileFor` the default for every non-specialist
+session.
+
+### What happens
+
+The Orchestrator's prompt carried no `# Missions` section, so the one level that
+dispatches missions was the one level never told about them. A mission that
+finished, failed, or was cut off by a restart sat unannounced; the Orchestrator
+could not ask the user whether to continue a paused one, because it did not know
+one was waiting.
+
+The README states the opposite in two places (`README.md:264-267`):
+
+> Finished and failed missions appear in the originating conversation's next
+> model request, in the panel readings after the transcript. […] Older missions
+> **without a conversation recorded can notify the next orchestrator
+> conversation.**
+
+`missions.notices` admits exactly that case — `(!m.by || m.by === sessionId)`
+(`modules/agents/missions.js:442`) — and the code path that would have consumed
+it was skipped for the Orchestrator too, so the promise could not hold even by
+accident.
+
+### Cause
+
+Three sites in the turn gated mission state on whether the session had a
+**profile**:
+
+```js
+const completed = profile ? [] : missions.notices(session.id);
+… profile ? '' : missions.block({ sessionId: session.id, completed })
+… if (!profile) missions.acknowledgeNotices(completed);
+```
+
+The test was written for the specialist, and it reads as a fair one: a specialist
+is inside a single errand, so the mission board is noise. But `profileFor`
+synthesises an **Orchestrator** profile (`modules/harness/organization.js:175`,
+`level: 'orchestrator'`), so "has a profile" is true of the Orchestrator as well.
+The gate meant to exempt the narrow end excluded the broad one. A work leader has
+no profile at all, which is why the fault looked like it only touched one level.
+
+### Fixed
+
+**v2.46.2, `fix/audit-2.45.1`** (`modules/harness/agent.js`,
+`modules/harness/routes.js`). The question is asked once, of the profile's
+`level`, in one place:
+
+```js
+function isMissionProfile(profile) { return !!profile && profile.level !== 'orchestrator'; }
+```
+
+and everything else goes through it — `turn()` at `:1141`, `:1145` and `:1194`,
+`breakdown()` at `:1372`, and the panel's environment view through
+`missionsFor()` (`:373`). This is the arrangement `disabledFor`'s own comment
+argues for: two copies of a question let the prompt the panel reports and the
+prompt the model receives disagree.
+
+Only the Orchestrator's profile carries a `level` at all — a specialist's is
+assembled from its definition (`agents/missions.js` `profileOf`) — so
+`isMissionProfile` answers today's question for every other level and flips only
+the Orchestrator. Every non-Orchestrator prompt is byte-identical to before this
+commit; that is asserted by the existing mission-completion test, which runs a
+profile-less work session and still passes.
+
+### Collateral, handled in the same commit
+
+- **`breakdown()` measured no mission section in either branch**, so the moment
+  the block began to be sent the panel's size accounting would have under-reported
+  the prompt by its size. A `missions` section is now measured in both branches
+  (`:1378`, `:1394`); `measure` drops an empty one, so a specialist needs no
+  branch of its own.
+- **The panel's environment view now shows it.** `GET /api/harness/environment`
+  (`modules/harness/routes.js:254`) builds `readings` from `organization.block`
+  and previously omitted the mission block. Its stated purpose is to show the
+  user what the agent was told, so it now appends `agent.missionsFor(id)` — the
+  same helper the turn uses, which keeps the view honest for the levels that are
+  told and silent for those that are not. This is the "decide either way" from the
+  audit, decided yes.
+- **The block stays in the after-history readings** and not in the cached prefix
+  (ISSUES.md H-9). The new test asserts the notice is absent from `messages[0]`
+  and present in the last message, which is the same shape the existing
+  completion test pins.
+- **Acknowledging for the Orchestrator is not a no-op, and is not described as
+  one.** `missions.notices` also admits `!m.by`, covering rows written before
+  `by` existed and any context-less dispatch, so the Orchestrator can now consume
+  a notice a work leader would otherwise have received. Acknowledging exactly the
+  snapshot that reached a successful reply is still the right behaviour; the
+  corner is recorded rather than smoothed over.
+
+### Verified
+
+- `test/harness.test.js` — *"the Orchestrator is told about missions, and a
+  specialist mid-errand is not"*: the Orchestrator's turn carries `msn_orch … NEW
+  done` and `msn_paused … PAUSED` in its last message, **not** in `messages[0]`,
+  and the notice is consumed; the specialist's turn carries no `# Missions` at all
+  even with a paused mission seeded, which is the half of the gate that is
+  deliberate and would otherwise be deleted by the next person to read it.
+- *"the panel measures the mission block it is now sent"*: `breakdown()` reports a
+  non-zero `missions` section for the Orchestrator and a work leader, none for a
+  specialist, and `GET /api/harness/environment?sessionId=` shows the block to the
+  first and not to the second.
+- Mutation-checked both ways: with `modules/harness/agent.js` reverted both new
+  tests fail; with the predicate forced to `false` (awareness for everyone) both
+  fail again, the specialist one on its own message *"a specialist is not shown
+  the mission board"*. So neither half of the gate can be removed unnoticed.
+- Suite 368/368, exit 0.
+
+### Not fixed here
+
+`agent_results` and `agent_resume` still check no ownership — **H-17**.

@@ -304,6 +304,96 @@ test('mission completion reaches the originating conversation once, after a succ
   assert.doesNotMatch(seen[0].messages.at(-1).content, /msn_notice/);
 });
 
+test('the Orchestrator is told about missions, and a specialist mid-errand is not', async t => {
+  // The level that dispatches was the one level never told a mission existed.
+  // `profileFor` synthesises an Orchestrator profile, and the mission block was
+  // gated on *having* a profile — a test written to exempt a narrow errand that
+  // caught the wrong end. The README promises the opposite in two places:
+  // finished missions reach the originating conversation's next request, and an
+  // older mission with no conversation recorded can notify the next Orchestrator
+  // conversation (`missions.notices` admits `!m.by` for exactly that case).
+  const agent = require('../modules/harness/agent');
+  const registry = require('../modules/agents/registry');
+  const missions = require('../modules/agents/missions');
+  const memory = require('../modules/harness/memory');
+  const store = require('../modules/store');
+  const previous = store.readJson('agents/missions', { missions: [] });
+  const enabled = registry.enabled();
+  t.after(() => { store.writeJson('agents/missions', previous); registry.setEnabled(enabled); });
+  registry.setEnabled(true);
+
+  // An orchestrator-kind conversation of its own, rather than the shared main
+  // one: the predicate turns on `kind`, and this keeps the suite's main
+  // transcript out of it. `mainSession()` resolves by `doc.main`, so a second
+  // orchestrator row cannot hijack it.
+  const orch = memory.createSession('Orchestrator under test', { activate: false, kind: 'orchestrator' });
+  const leader = memory.createSession('Leader under test', { activate: false, kind: 'work' });
+  const spec = memory.createSession('Specialist under test', { activate: false, kind: 'specialist',
+    parentId: leader.id, profile: { id: 'check', label: 'Check', tools: ['memory_search'], memory: false } });
+  t.after(() => [orch, leader, spec].forEach(s => memory.deleteSession(s.id)));
+
+  const done = { id: 'msn_orch', label: 'Archivist', state: 'done', task: 'look it up', by: orch.id,
+    endedAt: '2026-09-20T12:00:00.000Z', result: 'Result stays behind agent_results.' };
+  // Paused, and with no `by`: the running/paused half of the block is global, so
+  // this is exactly what a specialist would be shown if the gate were removed.
+  const paused = { id: 'msn_paused', label: 'Restart victim', state: 'paused', task: 'half done',
+    steps: 3, tokens: 100 };
+  store.writeJson('agents/missions', { missions: [done, paused] });
+
+  script = [{ text: 'The mission finished.' }];
+  seen = [];
+  await agent.turn({ message: 'An unrelated question', sessionId: orch.id });
+  const sent = seen[0].messages.map(m => m.content).join('\n');
+  assert.match(sent, /msn_orch.*NEW done/, 'the Orchestrator is told a mission it dispatched finished');
+  assert.match(sent, /msn_paused.*PAUSED/, 'and about one a restart cut off, since it is the one asked to resume it');
+  assert.doesNotMatch(seen[0].messages[0].content, /msn_orch|msn_paused/,
+    'but not in the cached prefix — the block stays in the after-history readings (ISSUES.md H-9)');
+  assert.ok(missions.get(done.id).announcedToAgentAt, 'and it is consumed once delivered');
+
+  // The half of the gate that is deliberate, pinned so the next person to read
+  // this does not delete it along with the fix: a specialist is inside one
+  // errand and is told none of this, even though the block is non-empty.
+  script = [{ text: 'Working on it.' }];
+  seen = [];
+  await agent.turn({ message: 'do the errand', sessionId: spec.id });
+  assert.doesNotMatch(seen[0].messages.map(m => m.content).join('\n'), /# Missions/,
+    'a specialist is not shown the mission board');
+});
+
+test('the panel measures the mission block it is now sent', async t => {
+  // `breakdown()` is what the environment view draws, and it measured no mission
+  // section in either branch — so the moment the block started being sent, the
+  // panel's accounting would have under-reported the prompt by its size.
+  const agent = require('../modules/harness/agent');
+  const registry = require('../modules/agents/registry');
+  const memory = require('../modules/harness/memory');
+  const store = require('../modules/store');
+  const previous = store.readJson('agents/missions', { missions: [] });
+  const enabled = registry.enabled();
+  t.after(() => { store.writeJson('agents/missions', previous); registry.setEnabled(enabled); });
+  registry.setEnabled(true);
+
+  const orch = memory.createSession('Breakdown orchestrator', { activate: false, kind: 'orchestrator' });
+  const leader = memory.createSession('Breakdown leader', { activate: false, kind: 'work' });
+  const spec = memory.createSession('Breakdown specialist', { activate: false, kind: 'specialist',
+    parentId: leader.id, profile: { id: 'check', label: 'Check', tools: ['memory_search'], memory: false } });
+  t.after(() => [orch, leader, spec].forEach(s => memory.deleteSession(s.id)));
+  store.writeJson('agents/missions', { missions: [{ id: 'msn_measured', label: 'Archivist', state: 'paused',
+    task: 'half done', steps: 3, tokens: 100 }] });
+
+  const section = id => agent.breakdown({ sessionId: id }).sections.find(s => s.name === 'missions');
+  assert.ok(section(orch.id), 'the Orchestrator\'s reading counts the mission block');
+  assert.ok(section(orch.id).tokens > 0);
+  assert.ok(section(leader.id), 'and so does a work leader\'s');
+  assert.equal(section(spec.id), undefined, 'a specialist is sent none, so none is measured');
+
+  // And the panel view of the same thing, since its whole purpose is showing the
+  // user what the agent was told rather than what somebody believes it was told.
+  const readings = async id => (await H.api(null, 'GET', `/api/harness/environment?sessionId=${id}`)).body.readings;
+  assert.match(await readings(orch.id), /# Missions.*msn_measured/s, 'the panel shows the Orchestrator the mission block');
+  assert.doesNotMatch(await readings(spec.id), /# Missions/, 'and shows a specialist none of it');
+});
+
 /* ── Catalog ──────────────────────────────────────────── */
 
 test('a fresh install defaults to the built-in harness and lists the known ones', async () => {

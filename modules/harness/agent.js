@@ -338,6 +338,44 @@ function disabledFor(profile, p) {
   return Array.isArray(p.disabledTools) ? p.disabledTools : [];
 }
 
+/**
+ * Whether this turn is a mission rather than a level that owns missions.
+ *
+ * One implementation, for the reason `disabledFor` gives above: `turn()` sends
+ * the mission block and `breakdown()` measures what was sent, so two copies of
+ * this question would let the panel report a prompt the model never received.
+ *
+ * Mission state belongs to the levels that dispatch. A specialist is inside one
+ * errand — it does not dispatch and cannot be a mission's `by`, while the
+ * running/paused half of `missions.block()` is global, so for a narrow mission
+ * that half is everybody's business rather than awareness.
+ *
+ * The Orchestrator owns missions and must be told about them, and it is the
+ * profile's `level` that says so: `profileFor` synthesises an Orchestrator
+ * profile, so a bare "has a profile" test — which is what this used to be —
+ * excluded the one level that dispatches. Only the Orchestrator's profile
+ * carries a level at all, because a specialist's is assembled from its
+ * definition (`agents/missions.js` `profileOf`).
+ */
+function isMissionProfile(profile) {
+  return !!profile && profile.level !== 'orchestrator';
+}
+
+/**
+ * The mission block for a conversation, or `''` when it is not told about
+ * missions at all.
+ *
+ * The three callers — the turn that sends it, the reading that measures it and
+ * the panel that shows the user what was sent — all come through here, because
+ * the one thing worse than a prompt the user cannot see is a panel confidently
+ * describing a prompt that was never built.
+ */
+function missionsFor(sessionId) {
+  const session = sessionId ? require('./organization').session(sessionId) : null;
+  if (!session || isMissionProfile(require('./organization').profileFor(session))) return '';
+  return missions.block({ sessionId: session.id });
+}
+
 function liveBlock(p, ledger) {
   return [
     environment.live(),
@@ -1100,10 +1138,11 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     // what H-9 was protecting, not the role, so the cached prefix is unaffected.
     // It says whose words these are, because a bare block at the end of a
     // conversation reads as the user's.
-    const completed = profile ? [] : missions.notices(session.id);
+    const isMission = isMissionProfile(profile);
+    const completed = isMission ? [] : missions.notices(session.id);
     const organization = require('./organization');
     const reports = organization.notices(session.id).slice(0, 10);
-    const live = [liveBlock(p, led), profile ? '' : missions.block({ sessionId: session.id, completed }),
+    const live = [liveBlock(p, led), isMission ? '' : missions.block({ sessionId: session.id, completed }),
       organization.block(session.id, reports),
       ...contextSkips.values()].filter(Boolean).join('\n');
     if (live) messages.push({ role: 'user', content: `[panel readings, not from the user]\n${live}` });
@@ -1152,7 +1191,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       },
     });
 
-    if (!profile) missions.acknowledgeNotices(completed);
+    if (!isMission) missions.acknowledgeNotices(completed);
     organization.acknowledge(session.id, reports);
     budget.record(led, {
       usage: reply.usage,
@@ -1327,10 +1366,16 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
     tokens: budget.estimate(text || ''),
   });
 
+  // What `turn()` will actually send: the same helper the turn and the panel
+  // use, so this reading cannot claim a block the request does not carry.
+  // `measure` drops an empty section, so a specialist needs no branch here.
+  const missionsBlock = missionsFor(sessionId);
+
   const sections = profile ? [
     measure('conversation prompt', systemPrompt({ p, userText: message, summary: session.summary, client, profile,
       toolCount: schemas.length, disabledCount: disabled.length }), `${session.kind} profile; includes the safety charter`),
     measure('organization', org.block(session.id, org.notices(session.id).slice(0, 10)), 'briefs and unread reports, after history'),
+    measure('missions', missionsBlock, 'paused and finished missions, after history'),
     measure('limits', budget.block(p)),
     measure('readings', environment.live()),
   ] : [
@@ -1346,6 +1391,7 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
       `pinned + best matches, up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`),
     measure('limits', budget.block(p)),
     measure('settings proposals', settings.block()),
+    measure('missions', missionsBlock, 'paused and finished missions, after history'),
     // Sent after the history rather than in the system message, so it is
     // measured here but ordered last in the request. Same cost either way: it
     // is re-sent on every step. See liveBlock() and ISSUES.md H-9.
@@ -1419,4 +1465,4 @@ async function status({ sessionId } = {}) {
 }
 
 module.exports = { turn, isRunning, cancel, status, params, ask, complete, preview, breakdown, liveBlock, events,
-  toApiMessages, rungsFor, forgetDegraded, DEGRADED_MS };
+  toApiMessages, rungsFor, forgetDegraded, missionsFor, DEGRADED_MS };

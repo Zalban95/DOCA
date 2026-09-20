@@ -246,7 +246,13 @@ const handleRulesVerify = wrap(async (req, res) => {
 const handleEnvironment = wrap(async (req, res) => {
   const id = req.query.sessionId;
   res.json({ snapshot: environment.snapshot(), block: environment.block(), charter: providers.SAFETY_CHARTER,
-    ...(id ? { prompt: agent.preview({ sessionId: id }), readings: organization.block(id, organization.notices(id).slice(0, 10)),
+    // `readings` is the after-history block verbatim, so it carries the mission
+    // state a turn sends as well — by the same helper the turn uses, which keeps
+    // this view honest for the levels that are told and silent for those that
+    // are not (a specialist is inside one errand, not running the board).
+    ...(id ? { prompt: agent.preview({ sessionId: id }),
+      readings: [organization.block(id, organization.notices(id).slice(0, 10)), agent.missionsFor(id)]
+        .filter(Boolean).join('\n'),
       context: agent.breakdown({ sessionId: id }) } : {}) });
 });
 
