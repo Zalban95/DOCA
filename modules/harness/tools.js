@@ -116,6 +116,39 @@ function showMedia(p, caption, ctx = {}) {
 
 const TOOLS = [
   {
+    name: 'work_chats',
+    description: 'Manage the three-level workspace. List/read conversations and archived work; read transcripts only on demand. '
+      + 'The Orchestrator creates work chats (planning:true for detailed planning), optionally starting a task with message. '
+      + 'Send continues a subordinate in the background; it returns immediately. Report records your brief and informs superiors. '
+      + 'Archive retains transcripts; recall reopens them. Reports are shown on the superior\'s next turn, without starting a model call.',
+    parameters: { type: 'object', properties: {
+      action: { type: 'string', enum: ['list', 'read', 'create', 'send', 'stop', 'report', 'archive', 'recall'] },
+      sessionId: { type: 'string' }, title: { type: 'string' }, message: { type: 'string' },
+      planning: { type: 'boolean' }, all: { type: 'boolean', description: 'Include archives in list.' },
+      transcript: { type: 'boolean' }, offset: { type: 'integer' }, limit: { type: 'integer' },
+    }, required: ['action'] },
+    run: async (args, ctx) => JSON.stringify(await require('./organization').tool(args, ctx)),
+  },
+  {
+    name: 'work_plan',
+    description: 'Read, draft or propose a durable plan for this conversation or a subordinate. '
+      + 'Draft needs title and steps, and replaces the current revision (requiring fresh approval). '
+      + 'Propose presents it in the Harness for the user to approve/reject. You cannot approve it. '
+      + 'Approval records a decision, never launches work. Progress marks a numbered step without changing the approved scope. '
+      + 'Use mission_plan for specialist mission progress.',
+    parameters: { type: 'object', properties: {
+      action: { type: 'string', enum: ['read', 'draft', 'propose', 'progress'] }, sessionId: { type: 'string' },
+      title: { type: 'string' }, steps: { type: 'array', items: { type: 'string' } }, note: { type: 'string' },
+      step: { type: 'integer', description: 'One-based step number for progress.' },
+      state: { type: 'string', enum: ['queued', 'running', 'done', 'blocked'] },
+    }, required: ['action'] },
+    run: (args, ctx) => {
+      const org = require('./organization'), id = args.sessionId || ctx.sessionId;
+      if (args.action !== 'read' && !org.canManage(ctx.sessionId, id)) throw new Error('You may edit only your own plan or a subordinate\'s.');
+      return JSON.stringify(org.plan(id, args));
+    },
+  },
+  {
     name: 'shell',
     description: 'Run a bash command on the host this panel manages and return its combined output. '
       + 'Use it to inspect the system, run docker/git/systemctl, and check anything you are unsure about.',
@@ -523,20 +556,34 @@ const TOOLS = [
   {
     name: 'agent_results',
     description: 'How a mission you dispatched is getting on, and its answer once it has one. Call it when '
-      + 'you actually need the result — not in a loop waiting for it.',
+      + 'you actually need the result. A work leader may set wait:true to wait up to 30 seconds for its '
+      + 'own specialist without spending model calls on polling; the Orchestrator stays available. '
+      + 'If still running at the deadline, report that status instead of looping.',
     parameters: {
       type: 'object',
-      properties: { mission: { type: 'string', description: 'A mission id. Omit for all recent missions.' } },
+      properties: { mission: { type: 'string', description: 'A mission id. Omit for all recent missions.' },
+        wait: { type: 'boolean', description: 'Work leaders only: bounded wait for a subordinate result.' } },
     },
-    run: ({ mission }) => {
+    run: async ({ mission, wait }, ctx = {}) => {
       const missions = require('../agents/missions');
       if (!mission) {
         const rows = missions.list({ limit: 10 });
         if (!rows.length) return 'No missions.';
         return rows.map(m => `${m.id} (${m.label}): ${m.state}`).join('\n');
       }
-      const m = missions.get(mission);
+      let m = missions.get(mission);
       if (!m) return `No mission called "${mission}".`;
+      if (wait && m.state === 'running') {
+        const org = require('./organization');
+        if (!ctx.sessionId || org.session(ctx.sessionId).kind !== 'work' || !org.canManage(ctx.sessionId, m.sessionId))
+          return 'Only the responsible work leader may wait. The Orchestrator should remain available to the user.';
+        const deadline = Date.now() + 30000;
+        while (m.state === 'running' && Date.now() < deadline) {
+          await require('node:timers/promises').setTimeout(250, undefined, { signal: ctx.signal });
+          m = missions.get(mission);
+          if (!m) return `Mission ${mission} is no longer indexed; inspect its conversation with work_chats.`;
+        }
+      }
       if (m.state === 'running') return `${m.id} is still running (step ${m.steps}). Carry on; ask again later.`;
       if (m.state !== 'done') return `${m.id} ${m.state}${m.error ? `: ${m.error}` : ''}.`;
       return `${m.id} (${m.label}) finished in ${m.steps} steps:\n\n${m.result}`;

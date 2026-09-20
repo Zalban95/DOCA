@@ -8,7 +8,7 @@ function toggleChat() {
   chatOpen = !chatOpen;
   document.getElementById('chat-panel').classList.toggle('open', chatOpen);
   document.getElementById('chat-fab').classList.toggle('active', chatOpen);
-  if (chatOpen && !chatLoaded) {
+  if (chatOpen && !chatTurn) {
     chatLoaded = true;
     chatLoadHistory();
   }
@@ -154,8 +154,9 @@ try {
 async function chatLoadHistory() {
   try {
     const data = await apiFetch('/api/chat/history');
+    if (chatTurn) return;
     const msgs = data.messages || [];
-    if (msgs.length) {
+    {
       const container = document.getElementById('chat-messages');
       container.innerHTML = '';
       msgs.forEach(m => {

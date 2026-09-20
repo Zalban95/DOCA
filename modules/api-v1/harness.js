@@ -198,6 +198,8 @@ function post(body, device) {
 
   const inFlight = _running.get(session.id);
   if (inFlight) throw new ApiError(409, 'turn_in_flight', 'A turn is already running in this conversation', { turnId: inFlight.turnId });
+  if (agent.isRunning(session.id)) throw new ApiError(409, 'turn_in_flight', 'A turn is already running in this conversation');
+  if (session.archivedAt) throw new ApiError(409, 'session_archived', 'Recall this conversation in the Harness before continuing.');
 
   const turnId = `trn_${crypto.randomBytes(6).toString('hex')}`;
   const ctrl = new AbortController();
@@ -325,6 +327,7 @@ function cancel(idOrTurn, device) {
     r.ctrl.abort();
     return { ok: true, turnId: r.turnId, sessionId, stoppedBy: r.ctrl.stoppedBy };
   }
+  if (agent.cancel(idOrTurn)) return { ok: true, sessionId: idOrTurn, stoppedBy: device?.id || null };
   throw new ApiError(404, 'not_found', `No turn running for ${idOrTurn}. It may have finished on its own.`);
 }
 

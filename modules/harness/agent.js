@@ -232,6 +232,14 @@ function placeBlock(client) {
  * knows, then where this conversation had got to.
  */
 function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile }) {
+  if (profile?.level === 'orchestrator') return [
+    providers.SAFETY_CHARTER, profile.systemPrompt,
+    p.coordinatorInstructions || providers.DEFAULT_SYSTEM_PROMPT,
+    environmentBrief(p, toolCount), clientBlock(client), rulesBlock(),
+    memoryBlock(userText, Math.min(3, Math.max(0, Number(p.memoryLimit) || 0))),
+    settings.block(), installs.block(),
+    summary ? `# Earlier decisions\n${summary}` : '',
+  ].filter(Boolean).join('\n\n');
   // A specialist's prompt is mostly what is left out of it. The charter is not
   // one of those things: it goes first here exactly as it does for the
   // orchestrator, and a definition has no way to drop it.
@@ -239,6 +247,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
     return [
       providers.SAFETY_CHARTER,
       profile.systemPrompt,
+      clientBlock(client),
       `You are "${profile.label || profile.id}", working on one errand handed to you by the agent the `
         + 'user is talking to. You cannot change settings, install anything, or dispatch another agent. '
         + 'When you are done, answer with the result — that answer is the whole of what gets back. If '
@@ -310,7 +319,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
  * of the same list, and note that this one is asserted by a test that a
  * specialist really is offered it.
  */
-const ALWAYS_FOR_SPECIALISTS = ['mission_plan'];
+const ALWAYS_FOR_SPECIALISTS = ['mission_plan', 'work_chats', 'work_plan'];
 
 /**
  * Which tools are off for this turn — one implementation, because there were
@@ -323,8 +332,9 @@ const ALWAYS_FOR_SPECIALISTS = ['mission_plan'];
  */
 function disabledFor(profile, p) {
   if (profile && Array.isArray(profile.tools))
-    return tools.schemas([]).map(sc => sc.function.name)
-      .filter(n => !profile.tools.includes(n) && !ALWAYS_FOR_SPECIALISTS.includes(n));
+    return tools.describe().map(t => t.name)
+      .filter(n => (p.disabledTools || []).includes(n) ||
+        (!profile.tools.includes(n) && !(profile.level !== 'orchestrator' && ALWAYS_FOR_SPECIALISTS.includes(n))));
   return Array.isArray(p.disabledTools) ? p.disabledTools : [];
 }
 
@@ -915,11 +925,47 @@ async function foldSummary({ session, p, ep, signal, force = false }) {
  *                      screen?: object, input?: object } }} opts
  * @returns {Promise<{ sessionId: string, text: string, steps: number }>}
  */
-async function turn({ message, sessionId, emit, signal, client, attachments: attached, profile }) {
-  const say = evt => {
-    try { emit(evt); } catch {}
-    try { events.emit('event', evt); } catch {}
-  };
+const running = new Map();
+const isRunning = id => running.has(id);
+function cancel(id) { const ctrl = running.get(id); if (ctrl) ctrl.abort(); return !!ctrl; }
+
+async function turn(options) {
+  const organization = require('./organization');
+  const id = options.sessionId || memory.activeSession().id;
+  const session = organization.session(id);
+  if (session.archivedAt) throw Object.assign(new Error('Recall this archived conversation before continuing.'), { status: 409 });
+  if (running.has(id)) throw Object.assign(new Error('A turn is already running in this conversation.'), { status: 409 });
+  const ctrl = new AbortController();
+  const abort = () => ctrl.abort();
+  options.signal?.addEventListener('abort', abort, { once: true });
+  if (options.signal?.aborted) ctrl.abort();
+  running.set(id, ctrl);
+  try {
+    const profile = session.kind === 'specialist' ? session.profile || options.profile
+      : options.profile || organization.profileFor(session);
+    if (profile && session.kind === 'specialist') {
+      profile.tools = (profile.tools || []).filter(n => !require('../agents/registry').NEVER.includes(n));
+    }
+    memory.updateSession(id, { state: 'running', lastError: null });
+    if (options.client && options.client.kind !== 'agent')
+      organization.report(id, 'user intervention', options.message, options.client.name || 'user');
+    const result = await runTurn({ ...options, sessionId: id, signal: ctrl.signal, profile });
+    const state = ctrl.signal.aborted ? 'cancelled' : 'idle';
+    memory.updateSession(id, { state, brief: String(result.text || '').slice(0, 600) });
+    organization.report(id, state === 'cancelled' ? state : 'turn completed', result.text);
+    return result;
+  } catch (e) {
+    const state = ctrl.signal.aborted ? 'cancelled' : 'failed';
+    memory.updateSession(id, { state, lastError: String(e.message).slice(0, 600) });
+    organization.report(id, state, e.message);
+    throw e;
+  } finally {
+    running.delete(id);
+    options.signal?.removeEventListener('abort', abort);
+  }
+}
+
+function turnParams(profile) {
   // A profile overrides only what it names. Everything it is silent about —
   // temperature, history, the summariser — stays the panel's own setting, so a
   // specialist does not quietly acquire a second set of defaults to maintain.
@@ -939,6 +985,20 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       systemPrompt: profile.systemPrompt,
     }
     : defaults;
+  if (profile?.level === 'orchestrator') {
+    p.coordinatorInstructions = defaults.systemPrompt;
+    p.historyTurns = Math.min(20, Number(defaults.historyTurns) || 20);
+    p.summarizeAfter = Math.min(p.historyTurns, Number(defaults.summarizeAfter) || 20);
+  }
+  return p;
+}
+
+async function runTurn({ message, sessionId, emit, signal, client, attachments: attached, profile }) {
+  const say = evt => {
+    try { emit(evt); } catch {}
+    try { events.emit('event', evt); } catch {}
+  };
+  const p = turnParams(profile);
   const ep  = providers.endpoint(p.provider);
   if (!p.model)
     throw Object.assign(new Error(
@@ -1005,7 +1065,8 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
     // Three separate turns did this before anyone noticed. Recomputing the list
     // is an in-process registry read, so the honest path is now also the cheap
     // one.
-    const schemas = tools.schemas(disabled);
+    const stepDisabled = disabledFor(profile, p);
+    const schemas = tools.schemas(stepDisabled);
     if (toolCount !== null && schemas.length !== toolCount)
       say({ type: 'tools', count: schemas.length, was: toolCount, step });
     toolCount = schemas.length;
@@ -1039,7 +1100,10 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
     // It says whose words these are, because a bare block at the end of a
     // conversation reads as the user's.
     const completed = profile ? [] : missions.notices(session.id);
+    const organization = require('./organization');
+    const reports = organization.notices(session.id).slice(0, 10);
     const live = [liveBlock(p, led), profile ? '' : missions.block({ sessionId: session.id, completed }),
+      organization.block(session.id, reports),
       ...contextSkips.values()].filter(Boolean).join('\n');
     if (live) messages.push({ role: 'user', content: `[panel readings, not from the user]\n${live}` });
 
@@ -1087,6 +1151,7 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
     });
 
     if (!profile) missions.acknowledgeNotices(completed);
+    organization.acknowledge(session.id, reports);
     budget.record(led, {
       usage: reply.usage,
       promptEstimate,
@@ -1144,7 +1209,9 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       const shown = [];
       const result = args._raw !== undefined
         ? `Error: could not parse the arguments as JSON: ${args._raw}`
-        : await tools.call(name, args, disabled, { show: image => shown.push(image), sessionId: session.id });
+        : !schemas.some(sc => sc.function.name === name)
+          ? `Error: the "${name}" tool is switched off for this conversation.`
+          : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), sessionId: session.id, signal });
       for (const image of shown) say({ type: 'image', image, step });
       say({ type: 'tool_result', name, result, step });
 
@@ -1220,8 +1287,9 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
  * sends. The per-step readings travel separately, after the history — see
  * `liveBlock()`. A caller that needs the whole request wants both.
  */
-function preview({ message = '', client = null, profile = null } = {}) {
-  const p = profile ? { ...params(), systemPrompt: profile.systemPrompt } : params();
+function preview({ message = '', client = null, profile = null, sessionId = null } = {}) {
+  if (sessionId) profile = require('./organization').profileFor(require('./organization').session(sessionId));
+  const p = turnParams(profile);
   const disabled = disabledFor(profile, p);
   return systemPrompt({
     p, userText: message, summary: '', client, profile,
@@ -1244,8 +1312,11 @@ function preview({ message = '', client = null, profile = null } = {}) {
  * prompt and are re-sent every step like everything else, and the transcript.
  */
 function breakdown({ message = '', client = null, sessionId = null } = {}) {
-  const p = params();
-  const disabled = Array.isArray(p.disabledTools) ? p.disabledTools : [];
+  const org = require('./organization');
+  const session = sessionId ? org.session(sessionId) : null;
+  const profile = session ? org.profileFor(session) : null;
+  const p = turnParams(profile);
+  const disabled = disabledFor(profile, p);
   const schemas  = tools.schemas(disabled);
 
   const measure = (name, text, note) => ({
@@ -1254,7 +1325,13 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
     tokens: budget.estimate(text || ''),
   });
 
-  const sections = [
+  const sections = profile ? [
+    measure('conversation prompt', systemPrompt({ p, userText: message, summary: session.summary, client, profile,
+      toolCount: schemas.length, disabledCount: disabled.length }), `${session.kind} profile; includes the safety charter`),
+    measure('organization', org.block(session.id, org.notices(session.id).slice(0, 10)), 'briefs and unread reports, after history'),
+    measure('limits', budget.block(p)),
+    measure('readings', environment.live()),
+  ] : [
     measure('safety charter', providers.SAFETY_CHARTER, 'ships in code, not editable'),
     measure('system prompt', p.systemPrompt || providers.DEFAULT_SYSTEM_PROMPT, 'harness.config.doca.systemPrompt'),
     measure('environment', environment.block({
@@ -1318,8 +1395,9 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
 }
 
 /** Is the built-in harness ready to answer, and on what? */
-async function status() {
-  const p = params();
+async function status({ sessionId } = {}) {
+  const org = require('./organization');
+  const p = turnParams(sessionId ? org.profileFor(org.session(sessionId)) : null);
   const out = { provider: p.provider, model: p.model || null, ready: false, reachable: false, error: null };
   try {
     const ep = providers.endpoint(p.provider);
@@ -1338,5 +1416,5 @@ async function status() {
   return out;
 }
 
-module.exports = { turn, status, params, ask, complete, preview, breakdown, liveBlock, events,
+module.exports = { turn, isRunning, cancel, status, params, ask, complete, preview, breakdown, liveBlock, events,
   toApiMessages, rungsFor, forgetDegraded, DEGRADED_MS };

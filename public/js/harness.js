@@ -791,6 +791,10 @@ function hcStop() {
 }
 
 let _hcSession  = null;
+let _hcMainSession = null;
+let _hcArchived = false;
+let _hcOrgPoll = null;
+let _hcSelected = null;
 let _hcBusy     = false;
 let _hcRendered = null;   // harness id the shell is currently built for
 
@@ -810,7 +814,7 @@ function _harnessConsoleBuild() {
   if (!shell) return;
   const h = _harnesses.find(x => x.isDefault);
   if (!h) { shell.innerHTML = '<div class="placeholder">No harness selected — pick one on the Controls page.</div>'; return; }
-  if (_hcRendered === h.id) return;
+  if (_hcRendered === h.id) { if (h.kind === 'builtin') _hcLoadSessions(true); return; }
   _hcRendered = h.id;
 
   shell.innerHTML = h.kind === 'builtin' ? _hcBuiltinHtml(h) : _hcExternalHtml(h);
@@ -878,6 +882,7 @@ async function _hcLoadMissions() {
         <span class="hc-mission-dot"></span>
         ${escHtml(m.label || m.agentId)}
         <em>${m.state === 'running' ? `step ${m.steps || 0}` : escHtml(m.state)}</em>
+        ${m.sessionId ? `<button class="btn btn-xs" onclick="hcOpenSession(${jsArg(m.sessionId)})">Chat</button>` : ''}
         <button class="btn btn-xs" onclick="hcMissionLog(${jsArg(m.id)})"
                 title="Its whole log, which stays open and can be copied">log</button>
         ${m.state === 'running' ? '' : `
@@ -1108,12 +1113,17 @@ function hcAgentDelete(id) {
 
 function _hcBuiltinHtml(h) {
   return `
+    <div class="hc-org-guide"><strong>Orchestrator → Work leaders → Specialists</strong>
+      <span>Your main chat reaches the Orchestrator. Work chats hold detailed execution and planning;
+      specialists handle focused errands. Open any level here. Direct messages and results are reported upward.</span></div>
     <div class="hc-layout">
       <div class="hc-side">
         <div class="hc-side-head">
-          Conversations
-          <button class="btn btn-xs btn-blue" onclick="hcNewSession()" title="Start a new conversation">+</button>
+          Workspace
+          <button class="btn btn-xs btn-blue" onclick="hcNewSession()">+ Work</button>
+          <button class="btn btn-xs" onclick="hcNewSession(true)">+ Plan</button>
         </div>
+        <label class="hc-archive-switch"><input type="checkbox" onchange="_hcArchived=this.checked;_hcLoadSessions()"> Show archived chats</label>
         <div id="hc-sessions" class="hc-sessions"><div class="placeholder">Loading…</div></div>
         <div class="hc-side-head" style="margin-top:10px">
           Memory
@@ -1129,7 +1139,7 @@ function _hcBuiltinHtml(h) {
 
         <div class="hc-side-head" style="margin-top:10px">
           Specialists
-          <label class="hc-agents-switch" title="Off by default. Turning it off is the rollback: same version, no second model.">
+          <label class="hc-agents-switch" title="Enable specialist missions for work leaders. Existing work chats remain available.">
             <input type="checkbox" id="hc-agents-on" onchange="hcAgentsEnable(this.checked)">
             <span>on</span>
           </label>
@@ -1140,7 +1150,7 @@ function _hcBuiltinHtml(h) {
 
       <div class="hc-main">
         <div class="hc-head">
-          <span class="hc-title">${escHtml(h.label)}</span>
+          <span class="hc-title" id="hc-session-title">${escHtml(h.label)}</span>
           <span class="badge badge-blue" id="hc-model-badge" style="font-size:9px">…</span>
           <span class="hc-usage" id="hc-usage" title="Tokens today (UTC), every model call: steps, summaries and one-off asks. GET /api/harness/usage for the breakdown."></span>
           <span class="status-line" id="hc-status"></span>
@@ -1149,6 +1159,7 @@ function _hcBuiltinHtml(h) {
             <button class="btn btn-xs tool-gear" onclick="nav('controls'); harnessConfigToggle(${jsArg(h.id)}, true)" title="Model and parameters">⚙</button>
           </div>
         </div>
+        <div id="hc-session-info" class="hc-session-info"></div>
         <div class="hc-missions" id="hc-missions" style="display:none"></div>
         <div class="hc-messages" id="hc-messages"><div class="placeholder">Ask it anything about this machine.</div></div>
         <div class="hc-proposals" id="hc-proposals"></div>
@@ -1179,11 +1190,13 @@ async function _hcLoadUsage() {
 }
 
 async function _hcStatus() {
+  const sessionId = _hcSession;
   _hcLoadUsage();
   const badge = document.getElementById('hc-model-badge');
   const st    = document.getElementById('hc-status');
   try {
-    const s = await apiFetch('/api/harness/status');
+    const s = await apiFetch(`/api/harness/status${sessionId ? '?sessionId=' + encodeURIComponent(sessionId) : ''}`);
+    if (sessionId !== _hcSession) return;
     if (badge) {
       badge.textContent = s.model ? `${s.provider} / ${s.model}` : `${s.provider} / no model`;
       badge.className = `badge ${s.ready && s.reachable ? 'badge-green' : s.ready ? 'badge-amber' : 'badge-red'}`;
@@ -1201,40 +1214,67 @@ async function _hcStatus() {
   }
 }
 
-async function _hcLoadSessions() {
+async function _hcLoadSessions(refreshOnly = false) {
   const el = document.getElementById('hc-sessions');
   if (!el) return;
   try {
     const data = await apiFetch('/api/harness/sessions');
-    _hcSession = data.active || data.sessions[0]?.id || null;
-    el.innerHTML = data.sessions.map(s => `
-      <div class="hc-session ${s.id === _hcSession ? 'active' : ''}" data-session="${escHtml(s.id)}"
-           onclick="hcOpenSession(${jsArg(s.id)})">
-        <span class="hc-session-title" title="${escHtml(s.title)}">${escHtml(s.title)}</span>
-        <span class="hc-session-meta">${s.count}${s.summary ? ' ∙ ⊟' : ''}</span>
-        <button class="btn btn-xs btn-red" onclick="event.stopPropagation(); hcDeleteSession(${jsArg(s.id)})" title="Delete">✕</button>
-      </div>`).join('') || '<div class="placeholder">No conversations yet</div>';
-    if (_hcSession) hcOpenSession(_hcSession, true);
+    _hcMainSession = data.main;
+    const rows = data.sessions.filter(s => _hcArchived || !s.archivedAt);
+    if (!rows.some(s => s.id === _hcSession)) _hcSession = rows.find(s => s.id === data.active)?.id || data.main;
+    const drawn = new Set();
+    const draw = (s, depth = 0) => {
+      if (drawn.has(s.id)) return '';
+      drawn.add(s.id);
+      const role = s.kind === 'orchestrator' ? '1 · Orchestrator' : s.kind === 'specialist' ? '3 · Specialist' : '2 · Work leader';
+      return `<div class="hc-session ${s.id === _hcSession ? 'active' : ''}" data-session="${escHtml(s.id)}"
+        style="margin-left:${Math.min(2, depth) * 12}px" onclick="hcOpenSession(${jsArg(s.id)})">
+        <span class="hc-session-title"><small>${role}${s.archivedAt ? ' · archived' : ''}</small>${escHtml(s.title)}</span>
+        <span class="hc-session-meta">${escHtml(s.state)}${s.unread ? ` · ${s.unread} new` : ''}${s.plan?.state === 'proposed' ? ' · plan?' : ''}</span>
+      </div>` + rows.filter(child => child.parentId === s.id).map(child => draw(child, depth + 1)).join('');
+    };
+    const main = rows.find(s => s.id === data.main);
+    el.innerHTML = (main ? draw(main) : '') + rows.filter(s => !drawn.has(s.id)).map(s => draw(s)).join('');
+    const selected = rows.find(s => s.id === _hcSession);
+    const editing = document.activeElement?.closest('#hc-session-info');
+    if (_hcSession && !_hcBusy && (!refreshOnly || !editing && selected?.updatedAt !== _hcSelected?.updatedAt)) await hcOpenSession(_hcSession, true);
+    clearTimeout(_hcOrgPoll);
+    _hcOrgPoll = setTimeout(() => {
+      if (document.body.classList.contains('harness-tab')) _hcLoadSessions(true);
+    }, 5000);
   } catch (e) {
     el.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 
-async function hcNewSession() {
-  try {
-    const { session } = await apiFetch('/api/harness/sessions', { method: 'POST', body: {} });
-    _hcSession = session.id;
-    await _hcLoadSessions();
-  } catch (e) { appAlert(e.message); }
+function hcNewSession(planning = false) {
+  appPrompt(planning ? 'Name this planning chat' : 'Name this work chat', async title => {
+    try {
+      const { session } = await apiFetch('/api/harness/sessions', { method: 'POST', body: { title, planning } });
+      _hcSession = session.id;
+      await _hcLoadSessions();
+    } catch (e) { appAlert(e.message); }
+  }, planning ? 'Planning work' : 'Work chat');
 }
 
 async function hcOpenSession(id, skipReload) {
+  if (_hcBusy && id !== _hcSession) return appAlert('Stop or finish this direct turn before switching conversations.');
   _hcSession = id;
   const box = document.getElementById('hc-messages');
   if (!box) return;
   try {
     if (!skipReload) await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}/activate`, { method: 'POST' });
     const data = await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}`);
+    if (_hcSession !== id) return;
+    const changed = _hcSelected?.id !== id;
+    _hcSelected = data.session;
+    if (data.session.archivedAt && !_hcArchived) {
+      _hcArchived = true;
+      const toggle = document.querySelector('.hc-archive-switch input');
+      if (toggle) toggle.checked = true;
+    }
+    _hcSessionInfo(data.session);
+    if (changed) _hcStatus();
     box.innerHTML = '';
     if (data.session.summary) _hcAppend('summary', data.session.summary, 'Earlier in this conversation');
     data.messages.forEach(m => {
@@ -1246,7 +1286,7 @@ async function hcOpenSession(id, skipReload) {
         if (m.content) _hcAppendContent('assistant', m.content);
         (m.tool_calls || []).forEach(tc =>
           _hcAppend('tool-call', tc.function?.arguments || '', tc.function?.name));
-      } else if (m.content) _hcAppend(m.role, m.content);
+      } else if (m.content) _hcAppend(m.role, m.content, m.from?.name);
       // The transcript stores when each row was written, and a rebuilt turn has
       // no other way to know how long it took — so the newest row carries it and
       // the summary reads the same as it did when the turn was watched. One
@@ -1260,6 +1300,78 @@ async function hcOpenSession(id, skipReload) {
     document.querySelectorAll('#hc-sessions .hc-session').forEach(el =>
       el.classList.toggle('active', el.dataset.session === id));
   } catch (e) { box.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; }
+}
+
+function _hcSessionInfo(s) {
+  const el = document.getElementById('hc-session-info');
+  const title = document.getElementById('hc-session-title');
+  if (!el) return;
+  if (title) title.textContent = s.title;
+  const isMain = s.id === _hcMainSession;
+  const readonly = s.archivedAt || s.state === 'running';
+  const input = document.getElementById('hc-input');
+  if (input) {
+    input.disabled = !!readonly;
+    input.placeholder = s.archivedAt ? 'Recall this chat to continue' : s.state === 'running' ? 'Working — stop it before intervening' : isMain ? 'Message your Orchestrator…' : 'Message directly — superiors will be informed…';
+  }
+  document.getElementById('hc-send').disabled = !!readonly;
+  const p = s.plan;
+  el.innerHTML = `<div class="hc-session-toolbar">
+    <span>${escHtml(s.kind)} · ${escHtml(s.state)} · ${escHtml(s.provider)} / ${escHtml(s.model || 'no model')} · ${Number(s.tokens || 0).toLocaleString()} tokens</span>
+    ${!isMain ? `<button class="btn btn-xs" onclick="hcOpenSession(${jsArg(s.parentId || _hcMainSession)})">↑ Superior</button>` : ''}
+    ${s.state === 'running' ? `<button class="btn btn-xs btn-red" onclick="hcSessionStop(${jsArg(s.id)})">Stop turn</button>` : ''}
+    ${!isMain ? `<button class="btn btn-xs" onclick="hcSessionArchive(${jsArg(s.id)},${!s.archivedAt})">${s.archivedAt ? 'Recall' : 'Archive'}</button>` : ''}
+  </div>
+  <p class="hc-session-hint">${isMain ? 'Your main contact. Short decisions and reports here; detailed work stays with its leaders.' : 'Direct interaction: your message, the answer and any failure are flagged to the superior and Orchestrator.'}</p>
+  ${s.brief ? `<details><summary>Latest brief</summary><p>${escHtml(s.brief)}</p></details>` : ''}
+  ${s.lastError ? `<p class="hc-prop-note">${escHtml(s.lastError)}</p>` : ''}
+  <details class="hc-plan" ${p?.state === 'proposed' ? 'open' : ''}>
+    <summary>Plan${p ? ` · ${escHtml(p.state)} · revision ${p.revision}` : ' · none yet'}</summary>
+    ${p ? `<strong>${escHtml(p.title)}</strong><ol>${p.steps.map((x, i) => `<li>${escHtml(x)} <small>· ${escHtml(p.progress?.[i + 1] || 'queued')}</small></li>`).join('')}</ol><p>${escHtml(p.note || '')}</p>` : '<p>Draft here, or ask this agent to plan the work.</p>'}
+    ${p?.state === 'proposed' && !s.archivedAt ? `<div class="hc-plan-actions"><button class="btn btn-xs btn-green" onclick="hcPlanAction('approve',${p.revision})">Approve revision ${p.revision}</button><button class="btn btn-xs" onclick="hcPlanAction('reject',${p.revision})">Reject</button></div><small>Approval records your decision. Ask the responsible chat to execute when ready.</small>` : ''}
+    ${!s.archivedAt ? `<details><summary>${p ? 'Edit as a new draft' : 'Create draft'}</summary>
+      <input class="input" id="hc-plan-title" aria-label="Plan title" placeholder="Plan title" value="${escHtml(p?.title || '')}">
+      <textarea class="input" id="hc-plan-steps" aria-label="Plan steps" rows="4" placeholder="One step per line">${escHtml((p?.steps || []).join('\n'))}</textarea>
+      <textarea class="input" id="hc-plan-note" aria-label="Plan notes" rows="2" placeholder="Scope, decisions or acceptance criteria">${escHtml(p?.note || '')}</textarea>
+      <button class="btn btn-xs" onclick="hcPlanDraft()">Save draft</button></details>
+      ${p && p.state !== 'proposed' ? '<button class="btn btn-xs" onclick="hcPlanAction(\'propose\')">Propose for review</button>' : ''}` : ''}
+  </details>
+  <details><summary>Reports from below · ${(s.reports || []).filter(n => !n.readAt).length} unread by this agent</summary>
+    <small>Reports enter its next turn. Opening this panel does not spend tokens or mark them read.</small>
+    ${(s.reports || []).slice(-50).reverse().map(n => `<p class="hc-report"><button class="btn btn-xs" onclick="hcOpenSession(${jsArg(n.from)})">Open source</button> <strong>${escHtml(n.type)}</strong> · ${escHtml(n.by)} · ${escHtml(n.at)}${n.readAt ? ' · seen' : ' · unread'}<br>${escHtml(n.text)}</p>`).join('') || '<p>No reports yet.</p>'}
+  </details>`;
+}
+
+async function hcSessionArchive(id, on) {
+  try {
+    await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}/archive`, { method: 'POST', body: { on } });
+    await _hcLoadSessions();
+  } catch (e) { appAlert(e.message); }
+}
+
+async function hcSessionStop(id) {
+  try {
+    await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}/stop`, { method: 'POST', body: {} });
+    await _hcLoadSessions();
+  } catch (e) { appAlert(e.message); }
+}
+
+async function hcPlanAction(action, revision) {
+  try {
+    await apiFetch(`/api/harness/sessions/${encodeURIComponent(_hcSession)}/plan`, { method: 'POST', body: { action, revision } });
+    await hcOpenSession(_hcSession, true);
+  } catch (e) { appAlert(e.message); }
+}
+
+async function hcPlanDraft() {
+  try {
+    await apiFetch(`/api/harness/sessions/${encodeURIComponent(_hcSession)}/plan`, { method: 'POST', body: {
+      action: 'draft', title: document.getElementById('hc-plan-title').value,
+      steps: document.getElementById('hc-plan-steps').value.split('\n').map(s => s.trim()).filter(Boolean),
+      note: document.getElementById('hc-plan-note').value,
+    } });
+    await hcOpenSession(_hcSession, true);
+  } catch (e) { appAlert(e.message); }
 }
 
 function hcDeleteSession(id) {
@@ -1634,8 +1746,8 @@ async function hcEnvOpen() {
   overlay.style.display = 'flex';
   out.textContent = 'Loading…';
   try {
-    const data = await apiFetch('/api/harness/environment');
-    out.textContent = `${data.charter}\n\n${data.block}`;
+    const data = await apiFetch(`/api/harness/environment?sessionId=${encodeURIComponent(_hcSession)}`);
+    out.textContent = `${data.prompt || data.charter + '\n\n' + data.block}\n\n${data.readings || ''}\n\n${data.context ? `Estimated context: ${data.context.total} tokens; ${data.context.tools.count} tools; recent history cap ${data.context.transcript.kept} rows (current turn kept whole).` : ''}`;
   } catch (e) { out.textContent = e.message; }
 }
 

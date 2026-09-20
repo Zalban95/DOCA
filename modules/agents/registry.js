@@ -26,8 +26,8 @@
  *   - Sub-agents **report**; they do not propose. `settings_propose` and
  *     `install_propose` are refused in a mission, so proposals keep one owner
  *     the user can hold responsible.
- *   - **No recursion.** A sub-agent cannot dispatch another. Depth one is where
- *     the cost of a mission stays a number somebody can predict.
+ *   - **No recursion below specialists.** Level-2 work leaders dispatch these
+ *     level-3 specialists; a specialist cannot create another leader or worker.
  *
  * Definitions are files under ATTACHMENTS-style managed path `AGENTS_DIR`, one
  * per agent, so they are editable, shippable as defaults, diffable, and — the

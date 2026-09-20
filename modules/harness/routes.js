@@ -16,6 +16,7 @@ const installs    = require('./installs');
 const registry    = require('../agents/registry');
 const missions    = require('../agents/missions');
 const settings    = require('./settings');
+const organization = require('./organization');
 
 /** Send the thrown error with its own status when it carries one. */
 function fail(res, e) {
@@ -75,7 +76,7 @@ const handleToolCheck = wrap(async (req, res) =>
     // 64-token call rather than a socket held open indefinitely.
   })));
 
-const handleStatus = wrap(async (_req, res) => res.json(await agent.status()));
+const handleStatus = wrap(async (req, res) => res.json(await agent.status({ sessionId: req.query.sessionId })));
 
 /** GET /api/harness/usage?days=7&by=day|model|provider|session|agent|kind */
 const handleUsage = wrap(async (req, res) =>
@@ -115,16 +116,30 @@ async function handleChat(req, res) {
   res.end();
 }
 
-const handleSessions = wrap(async (_req, res) => res.json(memory.listSessions()));
+const handleSessions = wrap(async (_req, res) => {
+  const main = memory.mainSession();
+  const data = memory.listSessions();
+  res.json({ main: main.id, active: data.active || main.id, sessions: data.sessions.map(organization.view) });
+});
 
-const handleSessionNew = wrap(async (req, res) =>
-  res.json({ session: memory.createSession(req.body?.title) }));
+const handleSessionNew = wrap(async (req, res) => {
+  const session = organization.create(req.body || {});
+  memory.setActive(session.id);
+  res.json({ session });
+});
 
 const handleSession = wrap(async (req, res) => {
   const session = memory.getSession(req.params.id);
   if (!session) return res.status(404).json({ error: 'Unknown session' });
-  res.json({ session, messages: memory.messages(req.params.id) });
+  res.json({ session: { ...session, ...organization.view(session) }, messages: memory.messages(req.params.id) });
 });
+
+const handleSessionArchive = wrap(async (req, res) =>
+  res.json({ session: organization.archive(req.params.id, req.body?.on !== false) }));
+const handleSessionStop = wrap(async (req, res) =>
+  res.json({ stopped: agent.cancel(req.params.id) }));
+const handlePlan = wrap(async (req, res) =>
+  res.json({ plan: organization.plan(req.params.id, req.body || {}, { user: true }) }));
 
 const handleSessionActivate = wrap(async (req, res) =>
   res.json({ ok: true, active: memory.setActive(req.params.id) }));
@@ -228,8 +243,12 @@ const handleRulesVerify = wrap(async (req, res) => {
 /* ── Environment and settings proposals ───────────────── */
 
 /** What the agent is told about this machine, verbatim, so the user can read it. */
-const handleEnvironment = wrap(async (_req, res) =>
-  res.json({ snapshot: environment.snapshot(), block: environment.block(), charter: providers.SAFETY_CHARTER }));
+const handleEnvironment = wrap(async (req, res) => {
+  const id = req.query.sessionId;
+  res.json({ snapshot: environment.snapshot(), block: environment.block(), charter: providers.SAFETY_CHARTER,
+    ...(id ? { prompt: agent.preview({ sessionId: id }), readings: organization.block(id, organization.notices(id).slice(0, 10)),
+      context: agent.breakdown({ sessionId: id }) } : {}) });
+});
 
 /**
  * Where the tokens go, so "my prompt is 135k" stops being a mystery.
@@ -293,6 +312,7 @@ const handleInstallReject = wrap(async (req, res) =>
   res.json({ ok: true, install: installs.reject(req.params.id, req.body?.reason) }));
 
 module.exports = {
+  handleSessionArchive, handleSessionStop, handlePlan,
   handleAgents, handleAgentsEnable, handleAgentSave, handleAgentDelete, handleMissions, handleMission, handleMissionArchive,
   handleInstalls, handleInstallApply, handleInstallReject,
   handleList, handleSetDefault, handleInstall, handleConfig, handleAddCustom, handleRemoveCustom,

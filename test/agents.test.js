@@ -276,8 +276,9 @@ test('dispatch associates a mission with the conversation that requested it', as
   registry.setEnabled(true);
   missions._reset();
   try {
-    await tools.call('agent_dispatch', { agent: 'archivist', task: 'look up one fact' }, [], { sessionId: 's_origin' });
-    assert.equal(missions.list()[0].by, 's_origin');
+    const origin = require('../modules/harness/memory').createSession('mission parent');
+    await tools.call('agent_dispatch', { agent: 'archivist', task: 'look up one fact' }, [], { sessionId: origin.id });
+    assert.equal(missions.list()[0].by, origin.id);
   } finally {
     missions._reset();
     registry.setEnabled(false);
@@ -389,8 +390,8 @@ test('a specialist can reach mission_plan whatever its definition allows', () =>
   // available". Match both rather than pin the wording.
   const m = prompt.match(/, (\d+) tools/);
   assert.ok(m, 'the specialist prompt does not state a tool count');
-  assert.equal(Number(m[1]), 2,
-    'expected memory_search plus mission_plan; a specialist cannot drive its own errand without it');
+  assert.equal(Number(m[1]), 4,
+    'expected memory_search, mission_plan and the two conversation/report/plan tools');
 
   // And the two implementations that compute this must agree — they were two,
   // and a fix applied to one of them is a fix that does not exist.
@@ -412,8 +413,8 @@ test('a specialist can reach mission_plan whatever its definition allows', () =>
   assert.deepEqual(greedy.tools, ['memory_search'], 'the forbidden ones are stripped on save');
 
   const p2 = agent.preview({ message: 'x', profile: { ...narrow, tools: greedy.tools } });
-  assert.equal(Number(p2.match(/, (\d+) tools/)[1]), 2,
-    'memory_search plus mission_plan — and no way to reach the withheld tools');
+  assert.equal(Number(p2.match(/, (\d+) tools/)[1]), 4,
+    'memory_search plus mission/report/plan tools — and no way to reach withheld tools');
 });
 
 test('a mission log lives under the data directory, not the working directory', () => {

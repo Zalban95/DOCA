@@ -254,9 +254,22 @@
 .hc-caret { color: var(--accent); font-family: var(--font-mono); padding-bottom: 6px; }
 .hc-input { resize: none; max-height: 160px; font-size: 12px; }
 
-/* The floating chat talks to the same harness this tab does, so it is only a
-   duplicate here — and its FAB sits on top of the Send button. */
+/* The Orchestrator is directly selectable here; keep its FAB off Send. */
 body.harness-tab .chat-fab { display: none; }
+
+.hc-org-guide { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: var(--radius); }
+.hc-org-guide span { color: var(--muted); font-size: 12px; max-width: 900px; }
+.hc-archive-switch { display: block; font-size: 11px; padding: 6px; color: var(--muted); }
+.hc-session-title small { display: block; color: var(--muted); font-size: 9px; }
+.hc-session { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.hc-session-info { padding: 8px 12px; border-bottom: 1px solid var(--border); max-height: 40vh; overflow: auto; font-size: 12px; }
+.hc-session-toolbar, .hc-plan-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.hc-session-toolbar span { flex: 1; color: var(--muted); }
+.hc-session-hint { color: var(--muted); margin: 6px 0; }
+.hc-session-info details { margin-top: 7px; }
+.hc-session-info summary { cursor: pointer; }
+.hc-plan .input { width: 100%; box-sizing: border-box; display: block; margin: 6px 0; }
+.hc-report { border-left: 2px solid var(--accent); padding-left: 8px; overflow-wrap: anywhere; }
 
 /* External harness terminal */
 .hc-term-hint { font-size: 11px; color: var(--muted); margin: 8px 0; }
@@ -265,8 +278,11 @@ body.harness-tab .chat-fab { display: none; }
 
 @media (max-width: 900px) {
   .hc-layout { grid-template-columns: minmax(0, 1fr); }
-  .hc-side   { max-height: 200px; }
-  .hc-sessions, .hc-memory { max-height: 90px; }
+  .hc-layout { grid-template-rows: minmax(150px, 200px) minmax(280px, 1fr); overflow-y: auto; }
+  .hc-side   { max-height: 200px; overflow-y: auto; }
+  .hc-side > * { flex-shrink: 0; }
+  .hc-sessions { max-height: none; overflow: visible; }
+  .hc-memory { max-height: 90px; flex: none; }
   .harness-row, .harness-cat-row { grid-template-columns: 14px minmax(0, 1fr) auto; }
   .harness-row .harness-vendor, .harness-row .harness-note,
   .harness-cat-row .harness-vendor, .harness-cat-row .harness-note { display: none; }

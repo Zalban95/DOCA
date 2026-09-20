@@ -260,6 +260,8 @@ function profileOf(def) {
  * the arrangement, not a limitation of it.
  */
 function dispatch({ agentId, task, context, by, chainId, plan } = {}) {
+  if (by && require('../harness/organization').session(by).kind === 'specialist')
+    throw Object.assign(new Error('A specialist cannot delegate further. Report to its work leader.'), { status: 403 });
   if (!registry.enabled())
     throw Object.assign(new Error(
       'Specialist agents are switched off (agents.enabled). Ask the user to turn them on.'), { status: 409 });
@@ -490,5 +492,5 @@ function block({ sessionId, completed = notices(sessionId) } = {}) {
 function _reset() { store.writeJson(INDEX, { missions: [] }); }
 
 module.exports = { dispatch, recover, resume, archive, get, list, running, events, record, block, patch, notices, acknowledgeNotices,
-  setPlan, planProgress, normalizePlan, forSession,
+  setPlan, planProgress, normalizePlan, forSession, profileOf,
   PLAN_MAX_ITEMS, PLAN_TITLE_MAX, PLAN_STATES, _reset };

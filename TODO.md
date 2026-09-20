@@ -53,13 +53,21 @@ what carries authority, and who manages whom.
   being done no longer matches what was asked — and that exception is the whole
   of the chat's authority over a running mission.
 
-What follows, and is not built:
+**Delivered in v2.44.0–v2.45.0:** the floating chat has a separate persistent
+Orchestrator; work leaders own detailed chats and delegate to narrow specialists.
+The Harness exposes every level, upward intervention/result reports, revisioned
+plan review and progress, and archive/recall. `work_chats` and `work_plan` provide
+on-demand access without copying transcripts into the main prompt. Reports wait
+for the superior's next turn rather than starting paid model calls automatically.
+See [the Harness guide](README.md#the-built-in-doca-harness).
+
+The requirements below are retained as design history and further direction:
 
 - **The chat must know what the harness conversations and missions are doing,
   without holding them.** A summary line, a result, a plan and its progress —
   addressable by id, fetched when needed, not pasted into the chat's own
   context. `GET /harness/sessions` and `GET /harness/missions` are the material;
-  what is missing is the agent-side notion that they belong to it.
+  `work_chats` now supplies the agent-side ownership and retrieval.
 - **Sync across devices is a property of the first level only.** The chat is one
   conversation wherever it is opened, so a message sent from a watch and read on
   the panel is the same row. The harness conversations are not synchronised in
@@ -69,11 +77,12 @@ What follows, and is not built:
   own missions; a mission reports and asks, and nothing below the first level
   asks the user anything except through the level above it (which is already
   true: `ask_device` is in `registry.NEVER`).
-- **The open question is the chat's own memory.** If the chat is the first-level
+- **Memory remains shared in v2.45.0.** If the chat is the first-level
   interface then its durable memory is the user's memory rather than a
   conversation's, and today `memory.*` is one store shared by everything. Decide
   whether the levels share one memory (probably) and what each may write to it
-  (undecided), before the chat starts summarising missions into it.
+  (specialists still opt in through their profile). Reports and plans are stored
+  on their conversations, not automatically promoted into durable memory.
 
 ## A plan is shown, not buried: the window a plan.md opens in
 

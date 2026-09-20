@@ -157,7 +157,7 @@ test('a real specialist turn sends the narrowed prompt on every model request', 
     assert.ok(!prompt.includes('# How you keep your memory'));
     assert.ok(prompt.length < full.length);
     assert.deepEqual(request.tools.map(t => t.function.name).sort(),
-      ['memory_search', 'mission_plan']);
+      ['memory_search', 'mission_plan', 'work_chats', 'work_plan']);
   }
 });
 
@@ -174,6 +174,65 @@ async function stream(path, body) {
 }
 
 const get = (p) => H.api(null, 'GET', p);
+
+test('direct specialist interaction keeps its saved profile and reports the intervention and outcome upward', async () => {
+  const memory = require('../modules/harness/memory');
+  const org = require('../modules/harness/organization');
+  const work = org.create({ title: 'Leader' });
+  const s = memory.createSession('Focused specialist', { activate: false, kind: 'specialist', parentId: work.id,
+    profile: { id: 'focused', label: 'Focused', systemPrompt: 'Only check memory.', tools: ['memory_search'], memory: false } });
+  script = [{ tool: 'work_chats', args: { action: 'create', title: 'Forbidden leader' } }, { text: 'Reported without delegating.' }];
+  await stream('/api/harness/chat', { message: 'Owner intervention', sessionId: s.id });
+  assert.match(seen[0].messages[0].content, /Only check memory/);
+  assert.ok(!seen[0].tools.some(t => ['shell', 'agent_dispatch', 'settings_propose'].includes(t.function.name)));
+  assert.match(memory.messages(s.id).find(m => m.role === 'tool').content, /Only the Orchestrator/);
+  for (const id of [work.id, memory.mainSession().id]) {
+    assert.ok(org.notices(id).some(n => n.from === s.id && n.type === 'user intervention'));
+    assert.ok(org.notices(id).some(n => n.from === s.id && n.type === 'turn completed'));
+  }
+});
+
+test('shared turn lock covers background, browser and device calls, and protects running archives', async () => {
+  const agent = require('../modules/harness/agent');
+  const org = require('../modules/harness/organization');
+  const s = org.create({ title: 'Busy work' });
+  script = [{ stall: 'sse' }];
+  const pending = agent.turn({ message: 'Wait for the stub', sessionId: s.id });
+  const rejected = assert.rejects(pending, e => e.name === 'AbortError');
+  const deadline = Date.now() + 3000;
+  while (!seen.length && Date.now() < deadline) await new Promise(r => setTimeout(r, 10));
+  assert.ok(seen.length);
+  await assert.rejects(agent.turn({ message: 'Collision', sessionId: s.id }), /already running/);
+  const phone = H.mkDevice('org-lock-phone', 'phone', H.PHONE_CAPS);
+  assert.equal((await H.api(phone.token, 'POST', '/api/v1/harness/messages', { message: 'Collision', sessionId: s.id })).status, 409);
+  assert.throws(() => org.archive(s.id), /running specialists/);
+  assert.equal(agent.cancel(s.id), true);
+  await rejected;
+  assert.equal(agent.isRunning(s.id), false);
+  assert.equal(org.session(s.id).state, 'cancelled');
+});
+
+test('Orchestrator uses a smaller tool context and failed requests do not consume upward reports', async () => {
+  const agent = require('../modules/harness/agent');
+  const memory = require('../modules/harness/memory');
+  const org = require('../modules/harness/organization');
+  const main = memory.mainSession(), work = org.create({ title: 'Report source' });
+  const note = org.report(work.id, 'report', 'Decision needed');
+  script = [{ status: 500 }];
+  await assert.rejects(agent.turn({ message: 'Check status', sessionId: main.id }));
+  assert.ok(org.notices(main.id).some(n => n.id === note.id));
+  script = [{ text: 'Decision acknowledged.' }];
+  seen = [];
+  await agent.turn({ message: 'Check status', sessionId: main.id });
+  const request = seen[0];
+  assert.ok(request.tools.length <= 20);
+  assert.ok(!request.tools.some(t => ['shell', 'agent_dispatch'].includes(t.function.name)));
+  assert.ok(request.tools.some(t => t.function.name === 'work_chats'));
+  assert.match(request.messages.at(-1).content, /Decision needed/);
+  assert.doesNotMatch(request.messages[0].content, /Decision needed/);
+  assert.ok(!org.notices(main.id).some(n => n.id === note.id));
+  assert.equal(agent.breakdown({ sessionId: main.id }).tools.count, request.tools.length);
+});
 
 test('floating chat keeps a persistent Orchestrator independent of Harness selection', async t => {
   const memory = require('../modules/harness/memory');
@@ -334,6 +393,7 @@ test('a provider with no base URL is reported rather than silently used', async 
 /* ── The agent loop ───────────────────────────────────── */
 
 test('a turn calls a tool, feeds the result back, and answers', async () => {
+  await H.api(null, 'POST', '/api/harness/sessions', {});
   script = [
     { tool: 'memory_write', args: { key: 'gpu', value: 'RTX 4090, 24 GB', tags: ['hardware'] } },
     { text: 'Noted: RTX 4090.' },
@@ -384,8 +444,7 @@ test('a turn calls a tool, feeds the result back, and answers', async () => {
   assert.equal(gpu.source, 'agent');
 
   const { sessions, active } = (await get('/api/harness/sessions')).body;
-  assert.equal(sessions[0].id, active);
-  assert.equal(sessions[0].title, 'The GPU here is an RTX 4090 with 24 GB.');
+  assert.equal(sessions.find(s => s.id === active).title, 'The GPU here is an RTX 4090 with 24 GB.');
   const roles = (await get(`/api/harness/sessions/${active}`)).body.messages.map(m => m.role);
   assert.deepEqual(roles, ['user', 'assistant', 'tool', 'assistant']);
 });

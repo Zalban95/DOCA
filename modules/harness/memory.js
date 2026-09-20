@@ -128,8 +128,13 @@ function mainSession() {
 
 function resetMain() {
   const previous = mainSession();
+  if (require('./agent').isRunning(previous.id)) throw Object.assign(new Error('Stop the Orchestrator before clearing chat.'), { status: 409 });
   updateSession(previous.id, { archivedAt: new Date().toISOString() });
   const next = mainSession();
+  for (const child of listSessions().sessions) {
+    if (child.parentId === previous.id) updateSession(child.id, { parentId: next.id });
+  }
+  updateSession(next.id, { reports: previous.reports || [] });
   if (listSessions().active === previous.id) setActive(next.id);
   return next;
 }
@@ -140,9 +145,9 @@ function resetMain() {
  */
 function activeSession() {
   const doc = readIndex();
-  const found = doc.active && doc.sessions.find(s => s.id === doc.active);
+  const found = doc.active && doc.sessions.find(s => s.id === doc.active && !s.archivedAt);
   if (found) return found;
-  const newest = [...doc.sessions].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))[0];
+  const newest = doc.sessions.filter(s => !s.archivedAt).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))[0];
   if (newest) { doc.active = newest.id; writeIndex(doc); return newest; }
   return createSession();
 }
@@ -169,6 +174,7 @@ function updateSession(id, patch) {
 }
 
 function deleteSession(id) {
+  if (require('./agent').isRunning(id)) throw Object.assign(new Error('Stop this conversation before deleting it.'), { status: 409 });
   const doc = readIndex();
   if (id === doc.main) throw Object.assign(new Error('The Orchestrator is persistent. Clear chat to archive it and start a new one.'), { status: 409 });
   doc.sessions = doc.sessions.filter(s => s.id !== id);
@@ -191,7 +197,7 @@ function append(id, msg) {
   store.appendJsonl(transcriptPath(id), row);
   const s = getSession(id);
   const patch = { count: (s?.count || 0) + 1 };
-  if (s && s.kind !== 'orchestrator' && s.count === 0 && msg.role === 'user' && typeof msg.content === 'string')
+  if (s && !s.titleLocked && s.kind !== 'orchestrator' && s.count === 0 && msg.role === 'user' && typeof msg.content === 'string')
     patch.title = msg.content.trim().replace(/\s+/g, ' ').slice(0, 60) || s.title;
   updateSession(id, patch);
   return row;

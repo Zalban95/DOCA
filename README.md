@@ -174,7 +174,59 @@ name and base URL, and running a known server on a different port is just a base
 Keys come from the same screen (or the matching env var; local servers need none), and the model
 dropdown is populated live from the provider.
 
-**Tools.** `shell`, `read_file`, `write_file`, `list_dir`, `system_status`, `http_fetch`,
+**Three levels, one workspace.** The floating chat always reaches a persistent
+**Orchestrator** — your main contact for goals, decisions and results. Selecting
+another conversation in the Harness never redirects it. Device messages without
+an explicit conversation id reach the same Orchestrator.
+
+- **1 · Orchestrator:** coordinates the work and keeps a small context. It has
+  coordination, memory, proposal and communication tools; execution and MCP
+  tools belong in work chats. It receives at most ten brief work rows and ten
+  unread reports per step. `work_chats` retrieves more, including full histories,
+  when needed. Its recent history is capped at 20 rows with earlier summarisation;
+  the current turn stays whole. It injects at most three memory entries.
+- **2 · Work leader:** owns a work chat, its detailed transcript and its plan.
+  The Orchestrator can create one and start or continue work in the background.
+  **+ Work** opens one for direct conversation; **+ Plan** marks a planning chat.
+  Work leaders can dispatch the existing specialists when the Specialists
+  switch is on. They cannot create another layer of work leaders.
+- **3 · Specialist:** handles a focused mission using its saved role and tool
+  allowlist, plus report and plan tools. Opening it directly does not grant it
+  general tools, and it cannot delegate further. The roster defines capabilities;
+  the workspace tree and mission's **Chat** button open actual conversations.
+
+You can talk directly to every level in the **Harness**. Direct interventions,
+results, failures and plan changes are recorded for the superior and Orchestrator.
+Reports become model context on the superior's next turn; viewing the Harness
+does not launch model calls. A work leader can inspect a specialist's result with
+`agent_results`, with `wait:true` to wait up to 30 seconds for its own specialist
+without extra model calls. A result received within that wait lets the leader
+continue its turn. Work outliving the wait is reported for later continuation;
+updates never start an automatic chain of model calls. One shared lock protects each transcript
+across browser, device and background turns. Stop the running turn before intervening.
+
+**Plans.** Every conversation has a Plan panel. Agents use `work_plan` to read,
+draft, propose and record step progress. You can edit a draft and approve or reject
+the exact proposed revision. Changing its scope creates a new draft; marking
+progress preserves the approved scope. Approval records your decision and does
+not start execution. Tell the responsible chat to proceed when ready. Specialist
+missions also retain their existing `mission_plan` checklist and device progress.
+
+**Archive and recall.** Archive keeps the transcript, plan and profile. Enable
+**Show archived chats**, open a chat and **Recall** it to continue. A running chat
+or a leader with running specialists cannot be archived. Clearing the main chat
+archives the old Orchestrator, carries its unread reports and work ownership to
+a new one, and retains the old transcript. Recalling an old Orchestrator opens it
+as a work chat. Existing conversations remain available; old specialist sessions
+derive their profile and parent from their mission records. Missing definitions
+fall back to reporting only. Interrupted work reads as paused after a restart.
+
+The same workspace is served to the phone and desktop WebViews. This does not
+add a separate native phone UI. Shared durable memory remains one store; specialist
+memory is still opt-in. **Context** displays the selected conversation's actual
+profile and estimated tool/history cost.
+
+**Work-chat tools.** `shell`, `read_file`, `write_file`, `list_dir`, `system_status`, `http_fetch`,
 `memory_write`, `memory_search`, `memory_forget`, `memory_rules_write`, `settings_read`,
 `settings_propose`, plus whatever any running MCP server offers. File access is confined to
 `FM_ALLOWED_ROOTS`, writes leave a `.bak`, and each tool can be switched off individually in ⚙.
