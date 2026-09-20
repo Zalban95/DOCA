@@ -224,6 +224,11 @@ function agentFold(opts) {
     head.setAttribute('aria-expanded', open ? 'true' : 'false');
     // A row the user opened by hand is theirs: nothing automatic closes it.
     if (open) el.dataset.userOpened = '1'; else delete el.dataset.userOpened;
+    // Opened onto the newest lines, not the oldest: this is opened mid-thought
+    // to watch it arrive, and a box that starts at the top shows the beginning
+    // of a paragraph that has since moved on — and then never follows, because
+    // `append` only follows a reader who is already at the end.
+    if (open) body.scrollTop = body.scrollHeight;
   });
 
   el.append(head, body);
@@ -245,7 +250,13 @@ function agentFold(opts) {
     },
     setOpen(on) { _foldSetOpen(el, on); },
     setLabel(t) { label.textContent = t; },
-    append(t) { body.textContent += t; setPreview(); },
+    append(t) {
+      const atEnd = body.scrollTop + body.clientHeight >= body.scrollHeight - 12;
+      body.textContent += t; setPreview();
+      // Follow the thinking as it arrives, unless the reader has scrolled up
+      // into it - which is the one time the newest line is not the wanted one.
+      if (atEnd) body.scrollTop = body.scrollHeight;
+    },
     setBody(t) { body.textContent = t; setPreview(); },
     isEmpty() { return !body.textContent.trim(); },
     remove() {
@@ -295,6 +306,21 @@ const FOLD_GROUP_LABELS = {
  * @param {HTMLElement} node - an element from agentFold()
  */
 function agentFoldMount(container, node) {
+  // While a turn is running its rows live in the working block, which shows one
+  // of them at a time. Grouping still applies inside it.
+  const live = container && container._working && container.contains(container._working)
+    ? container._working.querySelector('.agent-working-items') : null;
+  if (live) {
+    // Not open by default, even while active: the rule is one line for what is
+    // happening, with the thinking one click away.
+    node.classList.remove('open');
+    node.querySelector('.agent-fold-head')?.setAttribute('aria-expanded', 'false');
+    const g = _foldGroupFor(live, node.dataset.foldKind);
+    if (!g) { live.appendChild(node); return; }
+    g.querySelector('.agent-fold-group-items').appendChild(node);
+    _foldGroupSync(g);
+    return;
+  }
   const group = _foldGroupFor(container, node.dataset.foldKind);
   if (!group) { container.appendChild(node); return; }
 
@@ -385,6 +411,134 @@ function _foldGroupSync(group) {
 }
 
 /**
+ * What a finished turn's one line says.
+ *
+ * `seconds` is measured when the block was watched live and read from the rows'
+ * own timestamps when it was rebuilt from a transcript; when neither is
+ * available it is left out rather than guessed.
+ */
+function _workingSummary(rows, seconds) {
+  const commands = rows.filter(r => r.classList.contains('agent-fold-tool-call')).length;
+  const thinking = rows.filter(r => r.classList.contains('agent-fold-thinking')).length;
+  const took = !seconds ? ''
+    : seconds < 60 ? ` for ${seconds}s`
+    : ` for ${Math.round(seconds / 60)}m`;
+  return [
+    thinking ? `Thought${took}` : (took ? `Worked${took.slice(4)}` : ''),
+    commands ? `${commands} command${commands === 1 ? '' : 's'}` : '',
+  ].filter(Boolean).join(' · ') || `${rows.length} step${rows.length === 1 ? '' : 's'}`;
+}
+
+/** The span a set of rows covers, from the timestamps a transcript carries. */
+function _workingSeconds(rows) {
+  const times = rows.map(r => Date.parse(r.dataset.at || '')).filter(Number.isFinite);
+  if (times.length < 2) return 0;
+  return Math.max(1, Math.round((Math.max(...times) - Math.min(...times)) / 1000));
+}
+
+/**
+ * The working of one turn: one line while it happens, one line when it is done.
+ *
+ * A turn used to write every step into the transcript as it arrived — thinking,
+ * command, result, commentary, thinking, command — so watching the agent work
+ * meant watching the answer being pushed off the screen by the account of how it
+ * was reached. Collapsing it afterwards (the old "… N earlier steps") fixed the
+ * finished transcript and left the live one exactly as it was.
+ *
+ * So the working of a turn is one element. While the turn runs it shows its last
+ * row and nothing else: whatever the agent is doing *now*, which is the only row
+ * anybody reads at that moment. Each row is still a fold, so clicking the
+ * thinking row opens the thinking and it keeps streaming into a box that scrolls.
+ * When the turn ends the whole block becomes one line — "Thought for 12s · 6
+ * commands" — which opens to the whole working, in order.
+ *
+ * The answer is not working: trailing message bubbles are lifted back out of the
+ * block when it closes, so the thing that was being waited for is never inside
+ * the summary.
+ *
+ * @param {HTMLElement} container - a transcript (#hc-messages, #chat-messages)
+ * @returns {HTMLElement} the block, also remembered on the container
+ */
+function agentWorkingOpen(container) {
+  if (!container) return null;
+  if (container._working && container.contains(container._working)) return container._working;
+
+  const block = document.createElement('div');
+  block.className = 'agent-working live';
+  block.dataset.startedAt = String(Date.now());
+
+  const head = document.createElement('button');
+  head.type = 'button';
+  head.className = 'agent-fold-head agent-working-head';
+  head.setAttribute('aria-expanded', 'false');
+
+  const label = document.createElement('span');
+  label.className = 'agent-fold-label';
+  label.textContent = 'Working';
+
+  const chevron = document.createElement('span');
+  chevron.className = 'agent-fold-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.textContent = '▸';
+
+  head.append(label, chevron);
+  head.addEventListener('click', () => {
+    const open = !block.classList.contains('open');
+    block.classList.toggle('open', open);
+    head.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  const items = document.createElement('div');
+  items.className = 'agent-working-items';
+
+  block.append(head, items);
+  container.appendChild(block);
+  container._working = block;
+  return block;
+}
+
+/** Where a row of this turn goes: inside the open block, or the transcript. */
+function agentWorkingMount(container, node) {
+  const block = container && container._working;
+  if (block && container.contains(block)) {
+    block.querySelector('.agent-working-items').appendChild(node);
+    return;
+  }
+  container.appendChild(node);
+}
+
+/**
+ * Close the block: give the answer back, and say what the working was.
+ *
+ * Counted from the rows themselves rather than from a tally kept alongside,
+ * because the rows are what a reader will open to check the count against.
+ */
+function agentWorkingClose(container) {
+  const block = container && container._working;
+  container._working = null;
+  if (!block || !container.contains(block)) return;
+
+  const items = block.querySelector('.agent-working-items');
+
+  // The answer, and anything else the agent said last, belongs in the
+  // transcript rather than behind a summary.
+  while (items.lastElementChild && isBubble(items.lastElementChild)) {
+    container.appendChild(items.lastElementChild);
+  }
+
+  const rows = [...items.children];
+  if (!rows.length) { block.remove(); return; }
+
+  const seconds = Math.max(1, Math.round((Date.now() - Number(block.dataset.startedAt || Date.now())) / 1000));
+  const said = _workingSummary(rows, seconds);
+
+  block.classList.remove('live');
+  block.classList.add('done');
+  block.querySelector('.agent-fold-label').textContent = said;
+  block.querySelector('.agent-working-head').title = 'Show every step of this turn';
+}
+
+/**
  * Fold away everything a turn left standing, once the turn is over.
  *
  * A run of six commands should end as three short rows, not as three rows plus
@@ -443,7 +597,7 @@ function collapseFoldRuns(container) {
   // exactly where it was tested. They are dropped here rather than skipped,
   // because an empty bubble is not worth a row of the transcript either.
   for (const el of [...container.children]) {
-    if (isRow(el) || el.classList.contains('agent-fold-more')) continue;
+    if (isRow(el) || el.classList.contains('agent-working')) continue;
     if (!el.textContent.trim() && !el.querySelector('img, video, audio, svg, canvas')) el.remove();
   }
 
@@ -464,7 +618,10 @@ function collapseFoldRuns(container) {
     // thing the user was waiting for is never what gets hidden.
     let rows = run;
     if (last) while (rows.length && isBubble(rows[rows.length - 1])) rows = rows.slice(0, -1);
-    if (rows.length > FOLD_RUN_KEEP + 1) _foldRunCollapse(rows.slice(0, rows.length - FOLD_RUN_KEEP));
+    // One line per finished turn, not a tail of three: the same summary a
+    // live block closes into, so a reloaded transcript and a turn you watched
+    // happen look the same.
+    if (rows.length > 1) _foldRunCollapse(rows);
     run = [];
   };
   const children = [...container.children];
@@ -472,7 +629,7 @@ function collapseFoldRuns(container) {
     const child = children[i];
     // A run that already has its "…" is left as it is, opened or not: this runs
     // again after every later turn, and re-collapsing would undo a click.
-    if (child.classList.contains('agent-fold-more')) { run = []; continue; }
+    if (child.classList.contains('agent-working')) { run = []; continue; }
     if (isWorking(child)) { run.push(child); continue; }
     flush(true);                       // a user message, or a picture: the turn ended here
   }
@@ -490,49 +647,47 @@ function isUser(el) {
     || (el.classList.contains('chat-msg') && el.classList.contains('user'));
 }
 
-/** Move `rows` inside one "…" row, in their place in the transcript. */
+/**
+ * Wrap a finished turn's working in the same block a live turn closes into.
+ *
+ * Used on a reloaded transcript, which has no timings to report - so the
+ * summary is what can be counted rather than what was measured, and the shape
+ * a reader clicks is identical either way.
+ */
 function _foldRunCollapse(rows) {
-  const more = document.createElement('div');
-  more.className = 'agent-fold-more';
+  const container = rows[0].parentElement;
+  const block = document.createElement('div');
+  block.className = 'agent-working done';
 
   const head = document.createElement('button');
   head.type = 'button';
-  head.className = 'agent-fold-head agent-fold-more-head';
+  head.className = 'agent-fold-head agent-working-head';
   head.setAttribute('aria-expanded', 'false');
-  head.title = `Show the ${rows.length} earlier steps`;
+  head.title = 'Show every step of this turn';
 
   const label = document.createElement('span');
   label.className = 'agent-fold-label';
-  label.textContent = '…';
-
-  // `.agent-fold-preview` rather than a count: every other row reads
-  // "LABEL · what it was", so this one says what it is holding in the same
-  // voice instead of being a bare number in an otherwise empty row.
-  const count = document.createElement('span');
-  count.className = 'agent-fold-preview';
-  count.textContent = `${rows.length} earlier steps`;
+  label.textContent = _workingSummary(rows, _workingSeconds(rows));
 
   const chevron = document.createElement('span');
   chevron.className = 'agent-fold-chevron';
   chevron.setAttribute('aria-hidden', 'true');
   chevron.textContent = '▸';
 
-  head.append(label, count, chevron);
-
-  const items = document.createElement('div');
-  items.className = 'agent-fold-more-items';
-
+  head.append(label, chevron);
   head.addEventListener('click', () => {
-    const open = !more.classList.contains('open');
-    more.classList.toggle('open', open);
+    const open = !block.classList.contains('open');
+    block.classList.toggle('open', open);
     head.setAttribute('aria-expanded', open ? 'true' : 'false');
-    head.title = open ? 'Hide them again' : `Show the ${rows.length} earlier steps`;
   });
 
-  rows[0].replaceWith(more);
+  const items = document.createElement('div');
+  items.className = 'agent-working-items';
+
+  rows[0].replaceWith(block);
   for (const row of rows) items.appendChild(row);
-  more.append(head, items);
-  return more;
+  block.append(head, items);
+  return block;
 }
 
 /**

@@ -187,7 +187,8 @@ function chatAppendMsg(role, text, opts = {}) {
   // is how a caller says so.
   if (role === 'assistant' && !opts.plain) mdInto(el, text);
   else el.textContent = text;
-  container.appendChild(el);
+  if (role === 'user') container.appendChild(el);
+  else agentWorkingMount(container, el);
   container.scrollTop = container.scrollHeight;
   return el;
 }
@@ -484,6 +485,9 @@ function chatSend({ spoken = false } = {}) {
   // alternative is a page that shows nothing for as long as it is quiet and
   // reads as broken rather than as slow.
   let waitingRow  = null;
+  // Everything this turn does goes in one block that shows its current row and
+  // becomes one line when the turn ends.
+  agentWorkingOpen(container);
   const stream = createThinkStream({
     mount: node => { agentFoldMount(container, node); _chatScroll(); },
     makeText: () => chatAppendMsg('assistant', ''),
@@ -547,6 +551,7 @@ function chatSend({ spoken = false } = {}) {
     // The turn is over, so the rows it left open close: the account of a
     // finished run is a few short lines rather than a wall of command bodies.
     closeFolds(container);
+    agentWorkingClose(container);
     if (chatTurn?.signal.aborted) chatAppendMsg('system', 'Stopped. The step already running finishes on its own.');
     // Spoken to, speak back — after the answer is on screen, so a TTS that is
     // not configured costs nothing but silence.

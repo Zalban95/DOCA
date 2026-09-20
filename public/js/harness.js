@@ -1239,6 +1239,11 @@ async function hcOpenSession(id, skipReload) {
         (m.tool_calls || []).forEach(tc =>
           _hcAppend('tool-call', tc.function?.arguments || '', tc.function?.name));
       } else if (m.content) _hcAppend(m.role, m.content);
+      // The transcript stores when each row was written, and a rebuilt turn has
+      // no other way to know how long it took — so the newest row carries it and
+      // the summary reads the same as it did when the turn was watched. One
+      // stamp per message is enough: the summary wants the span, not each row.
+      if (m.at && box.lastElementChild) box.lastElementChild.dataset.at = m.at;
     });
     if (!box.children.length) box.innerHTML = '<div class="placeholder">Ask it anything about this machine.</div>';
     // A reopened conversation reads the way it looked when its last turn ended,
@@ -1302,7 +1307,10 @@ function _hcAppend(kind, text, label, opts = {}) {
   if (kind === 'assistant' && !opts.plain) mdInto(body, text);
   else body.textContent = text;
   el.appendChild(body);
-  box.appendChild(el);
+  // What the agent says mid-turn is part of the working and joins the block;
+  // the user's own message is what starts a turn, so it never does.
+  if (kind === 'user') box.appendChild(el);
+  else agentWorkingMount(box, el);
   box.scrollTop = box.scrollHeight;
   return body;
 }
@@ -1360,6 +1368,9 @@ async function hcSend() {
   let pendingCall = null;
   let waitingRow  = null;
 
+  // Everything this turn does goes in one block that shows its current row and
+  // becomes one line when the turn ends.
+  agentWorkingOpen(box);
   const stream = createThinkStream({
     mount: node => { box?.querySelector('.placeholder')?.remove(); if (box) agentFoldMount(box, node); scroll(); },
     makeText: () => _hcAppend('assistant', ''),
@@ -1433,6 +1444,7 @@ async function hcSend() {
   // The turn is over, so the rows it left open close: the account of a finished
   // run is a few short lines, each one a click away from the detail.
   closeFolds(box);
+  agentWorkingClose(box);
   if (_hcTurn?.signal.aborted)
     _hcAppend('error', 'Stopped. The step already running finishes on its own; nothing after it starts.', 'stopped');
 
