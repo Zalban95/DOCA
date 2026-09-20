@@ -721,6 +721,84 @@ test('the fallback rungs read back exactly what the form is showing', () => {
   assert.equal(/selected/.test(optsFor('ollama').split('<option')[2]), false, 'and a live one is not double-chosen');
 });
 
+test('a saved fallback window survives being opened and saved again', () => {
+  // The test above runs `_fallbacksRead` alone, and that is why it could not see
+  // this: the reader was always correct, and the defect was in the function that
+  // *feeds* it. `_harnessFallbacksMount` rebuilt each rung from `{provider,
+  // model}` only, so opening ⚙ showed every served limit as 0 — and the Save
+  // that followed wrote that 0 away, across the whole chain, without a word.
+  //
+  // "Save changes the chain" is the one thing this form must never do, so the
+  // mount is run here rather than trusted. It draws into a stub box and calls
+  // two spied dependencies: `harnessFallbackAdd` (one call per saved rung) and
+  // `harnessRungProbe`, which the mount calls for every rung it finds and which
+  // would otherwise reach for the network.
+  const fs     = require('node:fs');
+  const path   = require('node:path');
+  const js     = f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8');
+  const src    = js('harness.js'), utils = js('utils.js');
+  const helper = n => utils.match(new RegExp(`function ${n}\\([\\s\\S]*?\\n\\}`))[0];
+  const from   = n => src.match(new RegExp(`function ${n}[\\s\\S]*?\\n\\}`))[0];
+
+  const source = [
+    src.match(/const HARNESS_MAX_FALLBACKS = \d+;/)[0],
+    helper('escHtml'), helper('jsArg'),
+    from('_harnessProviderOpts'), from('_harnessRungHtml'), from('_fallbacksRead'),
+    from('_harnessFallbacksMount'),
+  ].join('\n');
+
+  // A fresh form each time: its own box, its own record of what was added.
+  const build = () => {
+    const rungs = [], added = [];
+    let probes = 0;
+    const box = { textContent: '', querySelectorAll: sel => (sel === '[data-rung]' ? rungs : []) };
+    const made = new Function('harnessFallbackAdd', 'harnessRungProbe', '_harnessMeta', source
+      + '; return { _harnessFallbacksMount, _fallbacksRead, _harnessRungHtml };')(
+      // Stands in for the real add: it renders nothing, but it appends the rung
+      // the mount then asks to have checked, which is the part the mount sees.
+      (id, preset) => { added.push(preset); rungs.push({
+        querySelector: sel => (sel === '[data-role=model]' ? { value: preset.model } : null) }); },
+      () => { probes++; },
+      { providers: [{ id: 'ds', label: 'DeepSeek', hasKey: true },
+                    { id: 'local', label: 'llama.cpp', hasKey: true }] });
+    return { ...made, box, added, probes: () => probes };
+  };
+
+  const opened = build();
+  const realDocument = global.document;
+  const showing = box => { global.document = { getElementById: id => (id === 'hcfg-fallbacks-doca' ? box : null) }; };
+  try {
+    const chain = [{ provider: 'ds', model: 'flash', contextWindow: 65536 },
+                   { provider: 'local', model: 'small' }];
+    showing(opened.box);
+    opened._harnessFallbacksMount('doca', chain);
+
+    assert.deepEqual(opened.added, chain,
+      'every field of a saved rung reaches the form — a dropped window is a deleted one');
+    assert.equal(opened.probes(), 2, 'and each configured rung is still checked as the panel opens');
+
+    // The rest of the round trip, through the real renderer: what the rung puts
+    // in the box, and what the reader takes back out of it. Pulling the value out
+    // of the rendered attribute is what the browser does with `value="…"` — the
+    // number is read from the real markup, and no DOM behaviour is invented.
+    const shown = e => opened._harnessRungHtml('doca', e)
+      .match(/data-role="context-window"[\s\S]*?value="([^"]*)"/)[1];
+    showing({ querySelectorAll: () => opened.added.map(e => ({
+      querySelector: sel => (sel === '[data-role=provider]' ? { value: e.provider }
+        : sel === '[data-role=model]' ? { value: e.model }
+        : sel === '[data-role=context-window]' ? { value: shown(e) } : null),
+    })) });
+    assert.deepEqual(opened._fallbacksRead('doca'), chain,
+      'so opening ⚙ and pressing Save writes back the chain that was already there');
+
+    // A chain longer than the cap is still trimmed on the way in, as before.
+    const capped = build();
+    showing(capped.box);
+    capped._harnessFallbacksMount('doca', Array(9).fill({ provider: 'ds', model: 'm' }));
+    assert.equal(capped.added.length, 5);
+  } finally { global.document = realDocument; }
+});
+
 test('the MCP call timeout is a setting the agent can see and propose, and says so when it fires', async () => {
   const { McpClient } = require('../modules/mcp/client');
 

@@ -1294,3 +1294,113 @@ reaching another leader's mission. `agent_resume`'s openness is deliberate for
 the Orchestrator; the question is whether `by` should gate the rest. That is a
 separate decision about mission ownership, recorded as **H-17** rather than
 folded into this entry.
+
+---
+
+## H-13 — A saved fallback's context window is deleted by opening the settings and pressing Save
+
+**Status:** fixed on `fix/audit-2.45.1`, 2026-09-20, **v2.46.1**. Found by the
+`af416bd..origin/main` audit (`docs/audit-2.45.1.md`, finding F2). Committed and
+untagged: `public/js` needs a browser look before the tag (AGENTS.md:111).
+
+### What happens
+
+A fallback rung's served context window is one of the three things a chain entry
+carries — `{ provider, model, contextWindow? }` (`modules/harness/providers.js:134`).
+The settings form reads it and writes it correctly at both ends. The **mount in
+the middle** rebuilt each rung from two fields:
+
+```js
+for (const e of saved) harnessFallbackAdd(id, { provider: e?.provider || '', model: e?.model || '' });
+```
+
+So a chain stored with a window of, say, 65536 reopened showing `0` in that box —
+which the form draws for "unknown", and which is also what an untouched box
+holds. Pressing Save then ran `_fallbacksRead`, whose rule is *omit the window
+unless it is a positive number* (`public/js/harness.js:594-596`), and every rung
+in the chain was written back without one.
+
+The value was not merely displayed wrong. It was **deleted**, silently, by the
+one action the form exists for, and the deletion persisted.
+
+### Why nothing looked wrong
+
+Every seam looked correct on its own:
+
+- `_harnessRungHtml` renders the window (`:494-495`), so the field is there.
+- `_fallbacksRead` returns it (`:594-596`), so the field is saved.
+- The hint under the box (`:497-499`) states the rule the form is supposed to
+  follow — *"0 means unknown; it never inherits the primary model's window"*.
+
+Only the mount dropping it was wrong, and it was the one piece of the round trip
+nothing exercised. The existing test extracted `_fallbacksRead` alone and drove it
+with rungs it built itself, so it asserted the reader against its own inputs and
+could not see what the mount had fed it.
+
+### What it cost
+
+`rungsFor` reads each chain entry's window on every turn
+(`modules/harness/agent.js:633-634`, `contextWindow: budget.windowFor(c)`,
+`windowSetting: harness.config.doca.fallbackChain[n].contextWindow`), and the
+preflight enforces a window that is present (`budget.js:70-72`; `budget.windowFor`
+returns 0 for anything not a positive number, and `preflight` returns `null` —
+no check — when the window is 0). So a window the user set in the panel held only
+until the next time the settings were opened and saved, and after that the rung
+was checked against nothing.
+
+### Fixed
+
+**v2.46.1, `fix/audit-2.45.1`** (`public/js/harness.js:565-567`). The mount
+forwards the window, and forwards it the way the reader carries it — present only
+when it is a positive number — so **opening ⚙ and pressing Save is now a fixed
+point on the stored chain** rather than a rewrite of it:
+
+```js
+for (const e of saved) harnessFallbackAdd(id, { provider: e?.provider || '', model: e?.model || '',
+  ...(Number(e?.contextWindow) > 0 ? { contextWindow: e.contextWindow } : {}) });
+```
+
+Nothing else moved: the renderer, the reader, the cap, the duplicate-drop
+(`provider`+`model` only) and `_harnessLoadModels`'s preselection are unchanged.
+
+### Collateral
+
+- **This does not start enforcing anything new.** The preflight already read and
+  enforced a stored rung window; what changes is that declaring one now *lasts*.
+  A window the user cleared to 0 stays cleared and stays unenforced — clearing
+  the box was never the broken half. Stated because the opposite is the natural
+  guess: a fix in a settings form looks like it could tighten a verdict.
+- The sentence at `:497-499` (*"0 means unknown; it never inherits the primary
+  model's window"*) becomes true of the form's own behaviour. Before this it was
+  a claim the form did not honour, since a window it never restored was a window
+  it could not keep.
+- A saved **chain** is only ever written by the panel, so no other writer was
+  working around the deletion.
+- **The file itself.** `public/js/harness.js` is the only CRLF file in the repo
+  and it is mixed (H-11). The first edit of the fix rewrote every line ending in
+  the file — 176 lines nobody had touched — because the editor normalises the
+  whole file. It was caught by comparing `git diff --stat` against the size of
+  the intended change, and the patch was rebuilt byte-exactly from
+  `git show <rev>:public/js/harness.js` with explicit `\r\n`. The committed diff
+  is the 9 lines of the fix and nothing else. Anyone editing this file should
+  check the same thing; the suite cannot see it.
+
+### Verified
+
+- `test/harness-awareness.test.js` — *"a saved fallback window survives being
+  opened and saved again"*. The mount is **run**, not read: it draws into a stub
+  box and calls two spied dependencies, `harnessFallbackAdd` (one call per saved
+  rung) and `harnessRungProbe` (which the mount calls for every rung it finds and
+  which would otherwise reach for the network). It asserts the presets the mount
+  hands over equal the saved chain, that both rungs are still probed on open, and
+  that the cap still trims.
+- The other two legs are run for real rather than re-stubbed: the rung is rendered
+  by the real `_harnessRungHtml`, the window is read out of the rendered
+  `value="…"` attribute — which is what the browser does with it — and the result
+  is fed to the real `_fallbacksRead`, which must return the chain it started
+  from. No DOM behaviour is invented.
+- Mutation-checked: with `public/js/harness.js` reverted the new test fails and
+  passes again with it restored. Suite 366/366, exit 0.
+- **Not yet seen in a browser.** A DOM stub is a claim about the browser and has
+  been wrong in this repo before (AGENTS.md:111), so the panel check is handed
+  over rather than assumed, and the tag waits on it.

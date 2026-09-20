@@ -556,8 +556,15 @@ function _harnessFallbacksMount(id, chain) {
   if (!box) return;
   box.textContent = '';
 
+  // All three fields travel, not just the pair: the rung renders `contextWindow`
+  // and `_fallbacksRead` writes it back, so leaving it off here showed an empty
+  // window on open and then saved that emptiness — deleting, silently, the served
+  // limit of every rung in the chain on the next Save. It is carried the way the
+  // reader carries it, so opening ⚙ and pressing Save is a fixed point on the
+  // stored chain rather than a rewrite of it.
   const saved = Array.isArray(chain) ? chain.slice(0, HARNESS_MAX_FALLBACKS) : [];
-  for (const e of saved) harnessFallbackAdd(id, { provider: e?.provider || '', model: e?.model || '' });
+  for (const e of saved) harnessFallbackAdd(id, { provider: e?.provider || '', model: e?.model || '',
+    ...(Number(e?.contextWindow) > 0 ? { contextWindow: e.contextWindow } : {}) });
 
   // A configured rung is checked as the panel opens, and the cache means that
   // costs one call per pair per page-load rather than one per look at ⚙.
