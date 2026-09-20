@@ -10,8 +10,10 @@ You need:
 - Shell access to that host once, to mint the first admin token.
 - `curl` and `jq` on your machine.
 
-> The server uses a self-signed or Tailscale certificate. Examples pass `-k` to curl;
-> in an app, pin the certificate or accept it at pairing time.
+> The server uses HTTPS with a self-signed or Tailscale certificate. Examples use
+> `curl -ksS`: `-k` accepts the certificate and `-sS` still prints connection errors.
+> In an app, pin the certificate or accept it at pairing time. Plain HTTP is only
+> a boot-time fallback if certificate setup fails, not a second listener or redirect.
 
 ## 1. Mint an admin token (on the host)
 
@@ -27,7 +29,7 @@ Token (shown once):
 
   doca_dev_2c1e7a9d40f3.k3JmZ0…
 
-Use:  curl -k -H "Authorization: Bearer doca_…" https://<host>:4242/api/v1/capabilities
+Use:  curl -ksS -H "Authorization: Bearer doca_…" https://<host>:4242/api/v1/capabilities
 ```
 
 The plaintext is never stored; only its SHA-256 is. Put it in an environment variable for the rest of this page:
@@ -42,7 +44,7 @@ export ADMIN=doca_dev_2c1e7a9d40f3.k3JmZ0…
 The root is the only unauthenticated read (besides the OpenAPI document):
 
 ```bash
-curl -sk $DOCA_URL/api/v1/ | jq
+curl -ksS $DOCA_URL/api/v1/ | jq
 ```
 
 ```json
@@ -66,7 +68,7 @@ own **capabilities** (`caps`) and receives a token scoped by the `preset`.
 
 ```bash
 # Admin side
-curl -sk -X POST $DOCA_URL/api/v1/devices/pair/start \
+curl -ksS -X POST $DOCA_URL/api/v1/devices/pair/start \
   -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' \
   -d '{"name":"my-watch","preset":"watch"}' | jq
 ```
@@ -84,7 +86,7 @@ curl -sk -X POST $DOCA_URL/api/v1/devices/pair/start \
 
 ```bash
 # Device side — no token yet. Declare what the device can do; nothing here names a platform.
-curl -sk -X POST $DOCA_URL/api/v1/devices/pair/complete -H 'Content-Type: application/json' -d '{
+curl -ksS -X POST $DOCA_URL/api/v1/devices/pair/complete -H 'Content-Type: application/json' -d '{
   "code": "825-381",
   "name": "my-watch",
   "caps": {
@@ -122,7 +124,7 @@ and let the watch scan it; the URI carries `code` and `host`.
 shaped by the device's caps, so a client never hard-codes an id:
 
 ```bash
-curl -sk $DOCA_URL/api/v1/capabilities -H "Authorization: Bearer $WATCH" \
+curl -ksS $DOCA_URL/api/v1/capabilities -H "Authorization: Bearer $WATCH" \
   | jq '{protocol: .protocol.version, surfaces: [.surfaces[].id], commands: [.commands[].id], render: .render.defaults, push: .push.url, sensors: .sensors}'
 ```
 
@@ -141,7 +143,7 @@ curl -sk $DOCA_URL/api/v1/capabilities -H "Authorization: Bearer $WATCH" \
 admin call with the watch token and you get a structured refusal:
 
 ```bash
-curl -sk $DOCA_URL/api/v1/devices -H "Authorization: Bearer $WATCH" | jq
+curl -ksS $DOCA_URL/api/v1/devices -H "Authorization: Bearer $WATCH" | jq
 ```
 
 ```json
@@ -154,7 +156,7 @@ Surfaces are typed groups of metrics. Ask only for what the current screen shows
 and add `spark=1` when you want sparkline history:
 
 ```bash
-curl -sk "$DOCA_URL/api/v1/snapshot?surfaces=system.cpu,system.memory&spark=1" -H "Authorization: Bearer $WATCH" \
+curl -ksS "$DOCA_URL/api/v1/snapshot?surfaces=system.cpu,system.memory&spark=1" -H "Authorization: Bearer $WATCH" \
   | jq '.surfaces[] | {id, metrics: [.metrics[] | {id, value, display, spark: (.spark // [] | length)}]}'
 ```
 
@@ -175,7 +177,7 @@ One Server-Sent Events stream carries everything the server wants to tell this
 device. Leave it running in a second terminal:
 
 ```bash
-curl -skN "$DOCA_URL/api/v1/events?since=0" -H "Authorization: Bearer $WATCH" -H 'Accept: text/event-stream'
+curl -ksSN "$DOCA_URL/api/v1/events?since=0" -H "Authorization: Bearer $WATCH" -H 'Accept: text/event-stream'
 ```
 
 ```
@@ -209,10 +211,10 @@ and get a JSON page: `{ events: [...], nextSince, resync, retryAfterSec }`.
 Agents are just devices with the `agent` scope. Mint one and ask the watch a question:
 
 ```bash
-AGENT=$(curl -sk -X POST $DOCA_URL/api/v1/devices -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' \
+AGENT=$(curl -ksS -X POST $DOCA_URL/api/v1/devices -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' \
   -d '{"name":"agent","preset":"agent","kind":"agent"}' | jq -r .token)
 
-curl -sk -X POST $DOCA_URL/api/v1/agent/prompts -H "Authorization: Bearer $AGENT" -H 'Content-Type: application/json' -d '{
+curl -ksS -X POST $DOCA_URL/api/v1/agent/prompts -H "Authorization: Bearer $AGENT" -H 'Content-Type: application/json' -d '{
   "title": "GPU 0 has been at 97 °C for 10 min",
   "priority": "high",
   "targets": ["dev_6c1d34a9dc42"],
@@ -249,7 +251,7 @@ data: {"seq":5,"id":"evt_…","ts":"…","type":"prompt.new","class":"durable","
 Selections are keyed by a client-generated `selectionId` so retries are safe:
 
 ```bash
-curl -sk -X POST $DOCA_URL/api/v1/prompts/prm_e8a441dd08aca116/select -H "Authorization: Bearer $WATCH" -H 'Content-Type: application/json' \
+curl -ksS -X POST $DOCA_URL/api/v1/prompts/prm_e8a441dd08aca116/select -H "Authorization: Bearer $WATCH" -H 'Content-Type: application/json' \
   -d '{"selectionId":"7c9e6679-7425-40de-944b-e07fc1f90ae7","choiceId":"wait"}' | jq
 ```
 
@@ -261,7 +263,7 @@ curl -sk -X POST $DOCA_URL/api/v1/prompts/prm_e8a441dd08aca116/select -H "Author
 Show the outcome with **Confirm** / **Back** buttons, then confirm:
 
 ```bash
-curl -sk -X POST $DOCA_URL/api/v1/prompts/prm_e8a441dd08aca116/confirm -H "Authorization: Bearer $WATCH" -H 'Content-Type: application/json' \
+curl -ksS -X POST $DOCA_URL/api/v1/prompts/prm_e8a441dd08aca116/confirm -H "Authorization: Bearer $WATCH" -H 'Content-Type: application/json' \
   -d '{"selectionId":"7c9e6679-7425-40de-944b-e07fc1f90ae7","decision":"confirm"}' | jq
 ```
 
@@ -279,7 +281,7 @@ updates) are retained until acknowledged. Either reconnect with the last `seq` y
 processed (`?since=5`) or ack explicitly:
 
 ```bash
-curl -sk -X POST $DOCA_URL/api/v1/events/ack -H "Authorization: Bearer $WATCH" -H 'Content-Type: application/json' -d '{"seq":5}' | jq
+curl -ksS -X POST $DOCA_URL/api/v1/events/ack -H "Authorization: Bearer $WATCH" -H 'Content-Type: application/json' -d '{"seq":5}' | jq
 ```
 
 ```json
@@ -291,7 +293,7 @@ curl -sk -X POST $DOCA_URL/api/v1/events/ack -H "Authorization: Bearer $WATCH" -
 Watches often cannot render SVG. Ask the server for a PNG sized to the screen:
 
 ```bash
-curl -sk "$DOCA_URL/api/v1/render/chart?metrics=system.cpu.pct,system.memory.pct&w=450&h=225" \
+curl -ksS "$DOCA_URL/api/v1/render/chart?metrics=system.cpu.pct,system.memory.pct&w=450&h=225" \
   -H "Authorization: Bearer $WATCH" -o chart.png && file chart.png
 ```
 

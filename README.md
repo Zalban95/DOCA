@@ -32,7 +32,10 @@ Web-based control panel for managing the **OpenClaw** AI agent stack.
 ```
 
 `run.sh` installs dependencies on first run, loads a `.env` file if you have one, and starts the
-panel — on **http://localhost:4242** by default.
+panel — on **https://localhost:4242** by default. Accept the self-signed certificate
+in your browser, or use `curl -ksS https://localhost:4242/api/v1/` from a shell.
+Plain HTTP is only a boot-time fallback if certificate setup fails; it is not a
+second listener or redirect. `-sS` keeps curl quiet while still showing connection errors.
 
 On Windows, or anywhere without a POSIX shell, use `npm install` then `npm start` instead: that is
 all `run.sh` ultimately does. Note that the panel manages Docker, systemd and a set of Unix CLIs,
@@ -320,7 +323,7 @@ turn issuing off and use only the CLI below.
 
 ```bash
 npm run token -- issue --name phone --preset phone      # mint a token from the host (shown once)
-curl -k -H "Authorization: Bearer doca_…" https://<host>:4242/api/v1/capabilities
+curl -ksS -H "Authorization: Bearer doca_…" https://<host>:4242/api/v1/capabilities
 npm test                                                 # protocol tests (node --test)
 DOCA_ADMIN_TOKEN=doca_… npm run client:demo              # end-to-end walkthrough with the reference clients
 npm run openapi > docs/api/openapi.json                  # regenerate the OpenAPI document
