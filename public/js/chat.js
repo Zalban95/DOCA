@@ -209,10 +209,13 @@ function _chatApproval(evt, container) {
   }
   if (evt.state === 'answered') {
     container.querySelector(`[data-approval-id="${CSS.escape(evt.id)}"]`)?.settleFrom?.(evt.decision);
+    approvalPopupClose(evt.id);
     _chatScroll();
     return;
   }
-  container.appendChild(approvalCardEl(evt, () => _chatLoadApproval()));
+  const card = approvalCardEl(evt, () => _chatLoadApproval());
+  container.appendChild(card);
+  approvalPopup(evt, d => { card.settleFrom?.(d); _chatLoadApproval(); });
   _chatScroll();
 }
 

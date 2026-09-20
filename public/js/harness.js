@@ -1206,10 +1206,17 @@ function _hcApproval(evt, box, scroll) {
   }
   if (evt.state === 'answered') {
     box.querySelector(`[data-approval-id="${CSS.escape(evt.id)}"]`)?.settleFrom?.(evt.decision);
+    // Answered elsewhere — the watch that started the turn, the floating chat,
+    // another tab. The popup must not keep asking something already decided.
+    approvalPopupClose(evt.id);
     scroll?.();
     return;
   }
-  box.appendChild(approvalCardEl(evt, () => _hcLoadApproval()));
+  const card = approvalCardEl(evt, () => _hcLoadApproval());
+  box.appendChild(card);
+  // The card is the record; the popup is what gets answered. A blocked turn
+  // whose question is three screens up reads as a hang.
+  approvalPopup(evt, d => { card.settleFrom?.(d); _hcLoadApproval(); });
   scroll?.();
 }
 

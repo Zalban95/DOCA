@@ -632,6 +632,13 @@ body.chat-resizing * { cursor: nwse-resize !important; }
 }
 .approval-settled { color: var(--muted); font-size: 10px; }
 .approval-mode.manual { color: var(--amber); border-color: var(--amber); }
+/* The popup. Above the chat panel (z-index 499) and the modal overlays, because
+   a turn is blocked behind it and nothing else on screen can be acted on until
+   it is answered. */
+.approval-overlay { z-index: 900; }
+.approval-modal { max-width: 520px; }
+.approval-modal .approval-card { border-width: 1px; border-left-width: 3px; }
+.approval-note { font-size: 10px; color: var(--muted); margin: 8px 0 0; }
 /* The standing allowlist, as the Approvals modal lists it. */
 .approval-key {
   display: flex; align-items: center; gap: 6px;

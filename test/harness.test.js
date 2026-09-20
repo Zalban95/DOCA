@@ -1902,3 +1902,65 @@ test('manual approval stops the tool, and the answer decides whether it runs', a
   approval.forget('shell:echo');
   approval.setMode('auto');
 });
+
+test('a turn from a watch is asked on the watch, with full auto as the third choice', async () => {
+  // A permission card drawn in a dashboard nobody has open is a turn that
+  // blocks for five minutes and gives up. The device that started the turn is
+  // where its owner is looking, so the question goes there too.
+  const agent    = require('../modules/harness/agent');
+  const approval = require('../modules/harness/approval');
+  const memory   = require('../modules/harness/memory');
+
+  approval.setMode('manual');
+  approval.settings().always.forEach(approval.forget);
+  const watch = H.mkDevice('approval-watch', 'watch', H.WATCH_CAPS);
+  const session = memory.createSession({ label: 'from the wrist' });
+
+  // A prompt the watch has answered stays in its list as an outcome view until
+  // the watch confirms it — that is `prompts`' design, and `reach.ask` leaves a
+  // single target's copy alone on purpose. So each round waits for a prompt it
+  // has not already answered, rather than re-answering the last one.
+  const seen = new Set();
+  const askOnWatch = async choiceId => {
+    script = [{ tool: 'shell', args: { command: 'echo from-the-wrist' } }, { text: 'done' }];
+    const events = [];
+    const turn = agent.turn({
+      message: 'do it', sessionId: session.id, emit: e => events.push(e),
+      client: { id: watch.device.id, kind: 'watch', name: 'Watch', formFactor: 'watch', label: 'a watch' },
+    });
+
+    let p = null;
+    for (let i = 0; i < 100 && !p; i++) {
+      const list = await H.api(watch.token, 'GET', '/api/v1/prompts');
+      p = (list.body.prompts || []).find(x => !seen.has(x.id));
+      if (!p) await H.sleep(50);
+    }
+    assert.ok(p, 'the watch was asked');
+    seen.add(p.id);
+    assert.match(p.title, /Allow shell/);
+    assert.deepEqual(p.choices.filter(c => c.type === 'option').map(c => c.id),
+      ['approve', 'deny', 'full_auto'],
+      'three options — Full auto included, because the alternative on a wrist is tapping Approve forty times');
+    assert.ok(p.choices.some(c => c.type === 'dismiss'), 'and a way out, like every prompt');
+
+    await H.api(watch.token, 'POST', `/api/v1/prompts/${p.id}/select`,
+      { selectionId: `sel-${Math.random().toString(16).slice(2)}`, choiceId });
+    await turn;
+    return events;
+  };
+
+  const denied = await askOnWatch('deny');
+  assert.match(denied.find(e => e.type === 'tool_result').result, /Refused by the user/);
+
+  const allowed = await askOnWatch('approve');
+  assert.match(allowed.find(e => e.type === 'tool_result').result, /from-the-wrist/);
+  assert.equal(approval.settings().mode, 'manual', 'approving once does not unlatch the mode');
+
+  // Full auto is a real escalation and is meant to be: it is the user, on
+  // their own device, turning the leash off for the whole panel.
+  const auto = await askOnWatch('full_auto');
+  assert.match(auto.find(e => e.type === 'tool_result').result, /from-the-wrist/);
+  assert.equal(approval.settings().mode, 'auto', 'and the panel is in auto afterwards');
+
+  approval.setMode('auto');
+});

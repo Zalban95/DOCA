@@ -151,7 +151,7 @@ function answerOf(prompt, targets) {
  * Ask, and wait. Resolves with what the model needs to carry on:
  * `{ status: 'answered' | 'dismissed' | 'timeout' | 'closed', ... }`.
  */
-async function ask({ to, question, choices, note, timeoutSec } = {}) {
+async function ask({ to, question, choices, note, timeoutSec, signal } = {}) {
   const { prompts } = api();
   const text = String(question || '').trim();
   if (!text) throw new Error('A question needs to be asked in words.');
@@ -185,6 +185,13 @@ async function ask({ to, question, choices, note, timeoutSec } = {}) {
         return { ...found, waitedSec: Math.round((Date.now() - (deadline - waitSec * 1000)) / 1000), targets };
       }
       if (cur.state !== 'open') return { status: 'closed', reason: cur.state, targets };
+      // Answered somewhere else — the panel, another device. The question is
+      // withdrawn rather than left lit on a wrist offering choices that now
+      // lead nowhere, which is the same rule the timeout below follows.
+      if (signal?.aborted) {
+        try { prompts.cancel(prompt.id, AGENT); } catch { /* already gone */ }
+        return { status: 'cancelled', targets };
+      }
       if (Date.now() >= deadline) {
         try { prompts.cancel(prompt.id, AGENT); } catch { /* already gone */ }
         return { status: 'timeout', waitedSec: waitSec, targets };

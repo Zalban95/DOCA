@@ -187,6 +187,69 @@ function ask(req, { sessionId, signal, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   };
 }
 
+/**
+ * Ask the panel and, when the turn came from a device, that device as well.
+ *
+ * The device that started a turn is often the only place its owner is looking
+ * — a watch on a wrist, a phone in a hand — and a permission card drawn in a
+ * dashboard nobody has open is a turn that blocks for five minutes and then
+ * gives up. So the same question goes to both, and the first answer wins:
+ * whichever place did not answer has its copy withdrawn, because a question
+ * that outlives the thing it was blocking is worse than no question at all
+ * (the rule `reach.ask` already follows on timeout).
+ *
+ * The wrist gets three options rather than two. **Full auto** is there because
+ * the realistic alternative on a small screen is a person tapping Approve
+ * forty times, which teaches them to tap without reading — and because the
+ * only party who may turn the leash off is the user, who is exactly who is
+ * being asked. It is a real escalation and is written down as one: it changes
+ * `harness.approval.mode` for the whole panel, not just this call.
+ *
+ * Returns the decision string, the same vocabulary `decide()` takes.
+ */
+function askAnywhere(req, { sessionId, signal, client } = {}) {
+  const { id, answer } = ask(req, { sessionId, signal });
+
+  // A device turn carries the device's id; the dashboard console does not.
+  // `kind: 'agent'` is a paired agent, not a person, and must never be asked
+  // to approve on the user's behalf.
+  const deviceId = client?.id && client.kind !== 'agent' && client.kind !== 'dashboard' ? client.id : null;
+  if (!deviceId) return { id, answer };
+
+  const ctrl = new AbortController();
+  const onAbort = () => ctrl.abort();
+  signal?.addEventListener?.('abort', onAbort, { once: true });
+
+  const viaDevice = (async () => {
+    try {
+      const reach = require('./reach');
+      const r = await reach.ask({
+        to: [deviceId],
+        question: `Allow ${req.tool}?`,
+        note: req.summary,
+        choices: [
+          { id: 'approve',   label: 'Approve' },
+          { id: 'deny',      label: 'Deny' },
+          { id: 'full_auto', label: 'Full auto' },
+        ],
+        timeoutSec: 240,
+        signal: ctrl.signal,
+      });
+      if (r.status !== 'answered') return null;          // dismissed, timed out, withdrawn
+      if (r.choiceId === 'full_auto') { setMode('auto'); return 'once'; }
+      return r.choiceId === 'approve' ? 'once' : 'deny';
+    } catch { return null; }                              // no such device, no prompts — the panel still has it
+  })();
+
+  // Feed a device answer back through `decide()` so the panel's card settles
+  // and the pending entry is cleaned up by the one code path that does that.
+  viaDevice.then(d => { if (d) decide(id, d); });
+  // And when the panel answers first, take the question off the wrist.
+  answer.then(() => ctrl.abort(), () => ctrl.abort());
+
+  return { id, answer };
+}
+
 /** Answer one pending request. Returns false if it is already gone. */
 function decide(id, decision) {
   if (!DECISIONS.includes(decision))
@@ -259,5 +322,5 @@ function block() {
 
 module.exports = {
   MODES, FREE, settings, setMode, remember, forget, block,
-  verbsOf, keysFor, gate, ask, decide, pending, refusal, missionRefusal,
+  verbsOf, keysFor, gate, ask, askAnywhere, decide, pending, refusal, missionRefusal,
 };

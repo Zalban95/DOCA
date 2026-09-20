@@ -1330,7 +1330,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
           refused = approval.missionRefusal(gate);
           say({ type: 'approval', step, state: 'refused', tool: name, ...gate });
         } else {
-          const { id, answer } = approval.ask(gate, { sessionId: session.id, signal });
+          const { id, answer } = approval.askAnywhere(gate, { sessionId: session.id, signal, client });
           say({ type: 'approval', step, state: 'asked', id, ...gate });
           const decision = await answer;
           say({ type: 'approval', step, state: 'answered', id, decision, tool: name });
