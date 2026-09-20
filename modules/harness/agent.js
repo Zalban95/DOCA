@@ -240,6 +240,13 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
         + 'When you are done, answer with the result — that answer is the whole of what gets back. If '
         + 'something is in your way that only the user can clear, say so plainly and stop rather than '
         + 'working around it.',
+      // A specialist always has `mission_plan`, whatever its definition lists,
+      // and nothing here used to say so — so the plan stayed empty and every
+      // client drew "STEP 0" until the mission was already over. The tool's own
+      // description explains how; this is what makes it expected.
+      'Say what you are going to do before you do it: call `mission_plan` once at the start with the '
+        + 'few steps you intend to take, and tick each one as you finish it. Nobody is watching you work, '
+        + 'so that list is the only thing a phone or a watch can draw while you are running.',
       profile.environment === 'full'
         ? environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount })
         : environmentBrief(p, toolCount),

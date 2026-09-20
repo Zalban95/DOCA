@@ -953,17 +953,25 @@ test('the floating chat draws the picture too, and keeps it for the next page lo
   assert.equal(last.images[0].name, image.image.name);
 });
 
-test('a device fetches pictures with its token, and only pictures', async () => {
+test('a device fetches what the chat shows, and nothing else in the folder', async () => {
   const attachments = require('../modules/attachments');
   const pic  = attachments.save(PNG, 'shot.png');
-  const text = attachments.save(Buffer.from('secret'), 'notes.txt');
+  const plan = attachments.save(Buffer.from('# Plan\n\nstep one\n'), 'shown-plan.md');
+  const other = attachments.save(Buffer.from('PK not for a chat'), 'archive.zip');
   const phone  = H.mkDevice('img-phone', 'phone', H.PHONE_CAPS);
   const viewer = H.mkDevice('img-viewer', 'viewer');
 
   const ok = await H.api(phone.token, 'GET', `/api/v1/harness/images/${pic.name}`);
   assert.equal(ok.status, 200);
   assert.deepEqual(ok.body, PNG);
-  assert.equal((await H.api(phone.token, 'GET', `/api/v1/harness/images/${text.name}`)).status, 404,
+
+  // A plan is a kind the chat shows, so a phone can open the one it was sent.
+  // This widened what `harness:chat` reaches — deliberately, and only to the
+  // kinds a conversation puts in front of a person.
+  assert.equal((await H.api(phone.token, 'GET', `/api/v1/harness/images/${plan.name}`)).status, 200);
+
+  // Everything else in the folder is still not readable through this route.
+  assert.equal((await H.api(phone.token, 'GET', `/api/v1/harness/images/${other.name}`)).status, 404,
     'harness:chat must not become a way to read every attachment');
   assert.equal((await H.api(viewer.token, 'GET', `/api/v1/harness/images/${pic.name}`)).status, 403);
   assert.equal((await H.api(null, 'GET', `/api/v1/harness/images/${pic.name}`)).status, 401);
@@ -1399,4 +1407,33 @@ test('every request carries exactly one system message, and it is first', async 
   assert.equal(last.role, 'user');
   assert.match(last.content, /panel readings, not from the user/);
   assert.match(last.content, /## Right now/);
+});
+
+test('a plan is shown as a document, opened rather than drawn', async () => {
+  // A plan pasted into a conversation scrolls away and a plan written to a file
+  // is never opened, so it travels the same road as a picture — copied into
+  // attachments, kept with the conversation, addressed by name — and differs
+  // only in what a client does with it, which is why it is a `kind`.
+  const tools = require('../modules/harness/tools');
+  const p = require('path').join(H.tmp, 'plan.md');
+  fs.writeFileSync(p, '# Plan\n\n1. Measure the shelf\n2. Cut it\n3. Render it\n');
+
+  const shown = [];
+  const out = await tools.call('show_media', { path: p, caption: 'Shelf plan' }, [], { show: m => shown.push(m) });
+  assert.match(out, /doc/);
+  assert.equal(shown[0].kind, 'doc');
+  assert.equal(shown[0].mime, 'text/markdown');
+  assert.equal(shown[0].caption, 'Shelf plan');
+
+  // Served as text, with the same headers as any other attachment, so the
+  // window that opens it reads the file rather than a copy in the transcript.
+  const served = await H.api(null, 'GET', `/api/attachments/${encodeURIComponent(shown[0].name)}`);
+  assert.equal(served.status, 200);
+  assert.match(served.headers.get('content-type'), /text\/markdown/);
+  assert.match(String(served.body), /Measure the shelf/);
+
+  // And a device is offered it under the same route as the rest of the media.
+  const phone = H.mkDevice('plan-phone', 'phone', H.PHONE_CAPS);
+  const got = await H.api(phone.token, 'GET', `/api/v1/harness/images/${shown[0].name}`);
+  assert.equal(got.status, 200);
 });

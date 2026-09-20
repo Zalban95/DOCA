@@ -1092,3 +1092,21 @@ body.chat-resizing * { cursor: nwse-resize !important; }
 .agent-working-head .agent-fold-label { color: var(--muted); }
 /* Thinking as it arrives: about ten lines, and it scrolls. */
 .agent-working.live .agent-fold-thinking > .agent-fold-body { max-height: 15em; }
+
+/* ── A document the agent showed ──────────────────────
+   A row in the transcript that opens a window, because a plan pasted into a
+   conversation scrolls away and a plan written to a file is never opened. */
+.agent-doc {
+  display: inline-flex; align-items: center; gap: 6px;
+  max-width: 100%; padding: 6px 10px;
+  background: var(--dim); border: 1px solid var(--border2); border-radius: var(--radius);
+  color: var(--text); font-family: var(--font-mono); font-size: 11px;
+  cursor: pointer; text-align: left;
+}
+.agent-doc:hover { background: var(--raised); color: var(--bright); border-color: var(--accent); }
+.agent-doc-body {
+  max-height: min(65vh, 560px); overflow: auto;
+  padding: 12px 14px;
+  background: var(--bg); border: 1px solid var(--border2); border-radius: var(--radius);
+  font-size: 12px; line-height: 1.6;
+}

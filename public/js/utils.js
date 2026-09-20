@@ -831,6 +831,20 @@ function agentImageEl(media, onLoad) {
     fig.textContent = `${media.name} ${note}`;
   };
 
+  if (kind === 'doc') {
+    // A document is a row that opens a window, not something drawn in the
+    // transcript: a plan pasted into a conversation scrolls away, and a plan
+    // written to a file is never opened. The row stays; the window is a click.
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'agent-doc';
+    open.title = 'Open it';
+    open.textContent = `📄 ${media.caption || media.name}`;
+    open.addEventListener('click', () => agentDocOpen(media));
+    fig.appendChild(open);
+    return fig;
+  }
+
   if (kind === 'audio' || kind === 'video') {
     // Controls and nothing else: no autoplay, because a transcript that starts
     // talking when it is reopened is a transcript nobody reopens.
@@ -1289,4 +1303,42 @@ function appAlert(message, onClose) {
     btnOk.onclick = null;
     if (onClose) onClose();
   };
+}
+
+/**
+ * Open a document the agent showed — a plan, a brief, a report.
+ *
+ * Rendered as markdown, in a window that stays until it is closed, with the
+ * conversation carrying on underneath. It is fetched rather than carried in the
+ * transcript, because the transcript is the record of what was said and a plan
+ * is a thing that was written.
+ */
+async function agentDocOpen(media) {
+  const overlay = document.getElementById('agent-doc-overlay');
+  const title   = document.getElementById('agent-doc-title');
+  const body    = document.getElementById('agent-doc-body');
+  if (!overlay || !body) return;
+
+  title.textContent = media.caption || media.name;
+  body.textContent = 'Opening…';
+  overlay.style.display = 'flex';
+  overlay.dataset.name = media.name;
+
+  try {
+    const res = await fetch(`/api/attachments/${encodeURIComponent(media.name)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    body.textContent = '';
+    // The same renderer the transcript uses, so a plan reads the way the agent
+    // wrote it — and, like everywhere else, from elements rather than markup.
+    mdInto(body, text);
+  } catch (e) {
+    body.textContent = `Could not open ${media.name}: ${e.message}`;
+  }
+}
+
+function agentDocClose(event) {
+  if (event && event.target !== event.currentTarget) return;
+  const overlay = document.getElementById('agent-doc-overlay');
+  if (overlay) overlay.style.display = 'none';
 }

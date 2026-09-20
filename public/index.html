@@ -1180,6 +1180,18 @@
 </div>
 
 <!-- ═══ SPECIALIST AGENT MODAL ══════════════════════ -->
+<!-- A document the agent showed: a plan, a brief, a report. Rendered as markdown,
+     open until it is closed, with the conversation carrying on underneath. -->
+<div id="agent-doc-overlay" class="modal-overlay" style="display:none" onclick="agentDocClose(event)">
+  <div class="modal" style="max-width:820px" onclick="event.stopPropagation()">
+    <div class="modal-title" id="agent-doc-title">Document</div>
+    <div class="agent-doc-body" id="agent-doc-body"></div>
+    <div class="toolbar-right mt8">
+      <button class="btn btn-xs" onclick="agentDocClose()">close</button>
+    </div>
+  </div>
+</div>
+
 <!-- A mission's own log. Opened from the bar, refreshes itself while the mission
      runs, and is plain selectable text so it can be copied into a report. -->
 <div id="hc-mission-overlay" class="modal-overlay" style="display:none" onclick="hcMissionLogClose(event)">

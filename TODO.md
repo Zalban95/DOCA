@@ -28,6 +28,79 @@ final product** are collected, decided or not, while solutions are prototyped on
 Nothing on `dev/troubleshoot` is merged. What works there is prototype evidence
 for these requirements, not a change to the product.
 
+## PRIORITY — three levels, and which one the user is talking to
+
+**Decided 2026-09-20, and the shape everything else here should be built
+against.** The panel has grown three ways to talk to an agent — the floating
+chat, a harness conversation, a dispatched mission — and nothing says how they
+relate, so each has been extended on its own terms. They are not three features.
+They are three levels of one thing, and the level decides what carries context,
+what carries authority, and who manages whom.
+
+- **First level: the chat is the user's interface, across devices, always in
+  sync.** It is where a person arrives, on a phone, a watch or the panel, and it
+  is the same conversation in each. It does not hold the full context of every
+  piece of work — it holds what the user needs to be told and what the user
+  asked for. It can *show* what a mission or a harness conversation produced
+  without carrying that work's transcript, which is the whole point: a result is
+  small, the working that produced it is not.
+- **Second level: the harness conversations are where work is organised.**
+  Managed by the chat and by the user directly, not by whoever wandered into
+  them. A harness conversation owns its own context and its own history and is
+  free to be long, because it is not the thing a phone is drawing.
+- **Third level: the agents running are managed by their harness conversation.**
+  The chat reaches down to them only when purpose has drifted — when what is
+  being done no longer matches what was asked — and that exception is the whole
+  of the chat's authority over a running mission.
+
+What follows, and is not built:
+
+- **The chat must know what the harness conversations and missions are doing,
+  without holding them.** A summary line, a result, a plan and its progress —
+  addressable by id, fetched when needed, not pasted into the chat's own
+  context. `GET /harness/sessions` and `GET /harness/missions` are the material;
+  what is missing is the agent-side notion that they belong to it.
+- **Sync across devices is a property of the first level only.** The chat is one
+  conversation wherever it is opened, so a message sent from a watch and read on
+  the panel is the same row. The harness conversations are not synchronised in
+  that sense — they are opened deliberately, on a screen big enough for them.
+- **Authority runs downward and reporting runs upward.** The chat may dispatch
+  and may interrupt; a harness conversation may dispatch and may interrupt its
+  own missions; a mission reports and asks, and nothing below the first level
+  asks the user anything except through the level above it (which is already
+  true: `ask_device` is in `registry.NEVER`).
+- **The open question is the chat's own memory.** If the chat is the first-level
+  interface then its durable memory is the user's memory rather than a
+  conversation's, and today `memory.*` is one store shared by everything. Decide
+  whether the levels share one memory (probably) and what each may write to it
+  (undecided), before the chat starts summarising missions into it.
+
+## A plan is shown, not buried: the window a plan.md opens in
+
+**Wanted 2026-09-20, across all three clients, and the panel first.** When the
+agent writes or revises a plan — a `plan.md`, a mission's plan, a proposal for
+what it is about to do — it has nowhere to put it that a person reads. Today it
+either pastes it into the chat, where it scrolls away, or writes a file nobody
+opens.
+
+- **The panel (and DocaDesk, which is the panel in a window):** a window that
+  opens with the plan in it, rendered as markdown, while the conversation
+  carries on underneath. `public/js/markdown.js` renders it already; the missing
+  half is the surface and the tool that opens it.
+- **The phone:** a notification that offers the choice rather than taking it —
+  open the plan, or carry on in the chat and evaluate it there. The point is
+  that a plan on a phone is something you *decide about*, so the decision is
+  what the notification carries.
+- **The watch:** never the document. The watch gets the message back, or a
+  notification when the run is long and the phone has not been touched for a
+  while. A plan is not a wrist artefact; the fact that one is waiting is.
+- **When nobody is at a screen, say so on the devices.** A long mission that
+  finishes while the clients have been idle should reach the phone and the watch
+  (`tell_device` already does this, durably) *and* answer in the chat. The rule
+  worth stating: the chat is always told; the devices are told when the chat is
+  not being read. The hub already knows the difference — `doca_clients` carries
+  `lastSeen` and `bus.isOnline` — and nothing uses it to decide.
+
 ## MCP and VMs, deliberately left out of the first pass
 
 - **No embedded VNC console.** The VMs tab shows the display address to paste

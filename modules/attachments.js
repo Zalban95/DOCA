@@ -75,11 +75,23 @@ const IMAGE_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif'
 const AUDIO_MIME = new Set(['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/webm', 'audio/flac', 'audio/aac']);
 const VIDEO_MIME = new Set(['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-matroska']);
 
-/** What a chat does with it: draw it, play it, or offer it as a file. */
+/**
+ * A document the chat opens rather than draws: a plan, a brief, a report.
+ *
+ * The same journey as a picture — copied into attachments, kept with the
+ * conversation, addressed by name — because a plan the agent wrote has exactly
+ * the problem a render had: pasted into the chat it scrolls away, written to a
+ * file it is never opened. What differs is only what the client does with it,
+ * which is why it travels as a `kind` and not as a second pipeline.
+ */
+const DOC_MIME = new Set(['text/markdown', 'text/plain']);
+
+/** What a chat does with it: draw it, play it, open it — or none of the three. */
 function playableKind(mime) {
   if (IMAGE_MIME.has(mime)) return 'image';
   if (AUDIO_MIME.has(mime)) return 'audio';
   if (VIDEO_MIME.has(mime)) return 'video';
+  if (DOC_MIME.has(mime))   return 'doc';
   return null;
 }
 
@@ -277,7 +289,7 @@ function handleUpload(req, res) {
 }
 
 module.exports = {
-  MAX_BYTES, MIME, IMAGE_MIME, AUDIO_MIME, VIDEO_MIME, playableKind,
+  MAX_BYTES, MIME, IMAGE_MIME, AUDIO_MIME, VIDEO_MIME, DOC_MIME, playableKind,
   dir, ensureDir, safeName, uniqueName, mimeFor, humanBytes,
   save, get, list, resolve, note,
   sendFile, handleList, handleRaw, handleUpload,

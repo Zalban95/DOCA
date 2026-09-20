@@ -864,3 +864,47 @@ test('an empty memory search returns pinned facts only, and the prompt stays tok
   assert.match(mem, /always-on/);
 });
 
+
+test('the standing rules name tools that exist, and the agent is offered the ones they name', () => {
+  // The charter told the agent to use `show_image` for months after the tool it
+  // should reach for became `show_media` — a standing instruction pointing at a
+  // deprecated alias, which nothing checked because prose is not code. Any
+  // backticked snake_case name in the charter is a claim about the tool list.
+  const names = new Set(tools.TOOLS.map(t => t.name));
+  const offered = new Set(tools.schemas([]).map(s => s.function.name));
+
+  const claimed = [...providers.SAFETY_CHARTER.matchAll(/`([a-z][a-z0-9_]{3,})`/g)].map(m => m[1]);
+  assert.ok(claimed.length >= 3, 'the charter names tools; if it stopped, this test is watching nothing');
+
+  for (const name of claimed) {
+    assert.ok(names.has(name), `the charter tells the agent to use "${name}", which is not a tool`);
+    assert.ok(offered.has(name),
+      `the charter names "${name}", which is not in the tool list the agent is given by default`);
+    // Existing is not enough, and this is the half that was actually wrong:
+    // `show_image` was kept as an alias so old transcripts still worked, and the
+    // charter went on naming it — a standing rule pointing at the tool nobody
+    // should reach for now.
+    const tool = tools.TOOLS.find(t => t.name === name);
+    assert.equal(/deprecated/i.test(tool.description), false,
+      `the charter tells the agent to use "${name}", which its own description calls deprecated`);
+  }
+
+  // And the one that was pointed at the old name: both exist, and the rules
+  // name the one that can do all three kinds of media.
+  assert.ok(names.has('show_media') && names.has('show_image'));
+  assert.match(providers.SAFETY_CHARTER, /show_media/);
+});
+
+test('a specialist is told to keep the plan it is always given', () => {
+  // `mission_plan` is forced into every specialist's allowlist, and nothing in
+  // its prompt asked it to use one — so plans stayed empty and a watch drew
+  // "STEP 0" until the mission was over.
+  const def = require('../modules/agents/registry').get('archivist');
+  const prompt = require('../modules/harness/agent').preview({
+    message: 'anything',
+    profile: { id: def.id, label: def.label, systemPrompt: def.role, tools: def.tools,
+               memory: def.memory, environment: def.environment },
+  });
+  assert.match(prompt, /mission_plan/, 'the specialist is never told about the plan it maintains');
+  assert.match(prompt, /tick/i);
+});
