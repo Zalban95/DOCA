@@ -1945,3 +1945,176 @@ narrower and would break the paused-mission flow H-5's recovery path depends on.
   the existing `agent_results` test at `:133`.
 - Bump and reference this entry. It is a behaviour change to a tool, so it is a
   **minor**, not a patch (AGENTS.md:28).
+
+---
+
+## H-18 — A turn led by the backup model because the main stalled a moment ago happens in silence
+
+**Status:** fixed on `fix/audit-2.45.1`, 2026-09-20, **v2.46.6**. Found while
+answering "is the fallback swapped with the main?" — the answer was *not yet,
+except here*, and the exception was invisible.
+
+### What happens
+
+The chain is per model and the configured model leads it, by construction:
+`rungsFor` puts the primary first (`agent.js:658`) and the configured order is
+what a turn follows. It gives way on two declared things, both announced — a
+declared window too small to fit the request (`budget.preflight`, a `context`
+hop) and a first token that never arrives inside `failoverAfterMs`
+(`firstTokenGuard`, a stall hop). A refusal does not move it: `if
+(!guard.stalled) throw e` (`agent.js:867`) is what stops a 4xx from becoming a
+quiet change of model.
+
+There is a third way the lead moves, and it was not announced at all:
+
+```js
+const warm    = entries.filter(e => !isDegraded(e.ep, e.model));
+const cold    = entries.filter(e =>  isDegraded(e.ep, e.model));
+const ordered = [...warm, ...cold];                       // agent.js:679-681
+```
+
+A rung that stalled within `DEGRADED_MS` (5 minutes) is pushed to the back, so
+the turns inside that window do not each pay the same stall again. When the rung
+that stalled is the **configured model**, the fallback leads — and because the
+rotation happens *before* the lead is compared with anything, nothing
+downstream could see it. Measured on the real path, three consecutive turns
+against a stub provider that accepts and never sends a token, one-entry chain:
+
+```
+turn 1  models asked, in order: ["stub-model","stub-mini"]
+        failovers announced    : [{from:"stub-model", to:"stub-mini", step:1, seconds:1}]
+turn 2  models asked, in order: ["stub-mini"]              ← the main was not asked
+        failovers announced    : null
+turn 3  models asked, in order: ["stub-model","stub-mini"]  ← clock moved past DEGRADED_MS
+        failovers announced    : [{from:"stub-model", to:"stub-mini", ...}]
+```
+
+Turn 2 is the fault. No `failover` row in the console (`harness.js:1556` is the
+only place one is drawn), no `warn` line in the log (`logs.js:143`, which only
+ever renders `evt.text` from that event), and no `fallbacks` on the turn's
+outcome (`agent.js:1243`) — which is the only thing a client that was asleep,
+or a watch with no screen, gets to read. The answer arrived from `stub-mini`
+and every surface a user reads said it came from `stub-model`. That is
+precisely the failure the `onHop` comment two lines above it names: *"A
+fallback that happens silently is a worse bug than the outage it hides."*
+
+### Cause
+
+The rotation is decided in `rungsFor`, which has no way to report anything; and
+`complete` compared the lead against `candidates[0]` — the post-rotation list —
+so a rotated chain compared equal to itself. What stood at the head of
+`complete`:
+
+```js
+if (rungs[0].provider !== candidates[0].provider || rungs[0].model !== candidates[0].model)
+  onHop?.({ …, reason: 'context', … });
+```
+
+That test can only ever see a rung the **preflight** dropped. It is structurally
+blind to a reorder, and it was comparing against the wrong side: the question is
+not "did the lead change between two lists", it is "is the model answering the
+one the settings name".
+
+### Why the defect survived
+
+The test that should have caught it never exercised the reorder. It marked a
+rung as stalled through a method that does not exist:
+
+```js
+const primary = agentMod.rungsFor({ ep, model: 'stub-model', p })[0];
+agentMod._degradeForTest ? agentMod._degradeForTest(primary) : null;   // no-op
+```
+
+`_degradeForTest` has never been exported, so the optional call did nothing and
+the test asserted the order of an untouched chain, twice — before and after a
+`forgetDegraded()` that was clearing an empty map. It is named *"a rung that
+stalled goes to the back, but is not written off"*; it was green for as long as
+the reorder has existed, and it could not have failed if the rotation had been
+deleted. The test is fixed in the same commit as this entry.
+
+### Fixed
+
+**v2.46.6, `fix/audit-2.45.1`.** Three parts, and the demotion itself is not
+one of them — it is the reason the turns inside `DEGRADED_MS` are fast, and it
+stays exactly as it was.
+
+- **`stalledAgo(ep, model)`** (`agent.js:647`) replaces the boolean
+  `isDegraded` at the bottom, and `rungsFor` carries the answer on the rung as
+  `stalledMsAgo` (`agent.js:692`). The rotation happens before anything
+  downstream can compare the order, so the fact has to travel *with* the rung or
+  it does not travel at all.
+- **`openingHop({ ep, model, candidates, rungs })`** (`agent.js:716`) — one
+  pure function that answers "is the configured model the one that answered, and
+  if not, which of the two mechanisms moved it". It compares against the model
+  the settings name rather than against `candidates[0]`, which is what closes the
+  blind spot, and it reports `reason: 'degraded'` with the stall's age rather
+  than the `0` the old call would have put in `seconds`. Replaces the two-line
+  check at the head of `complete` (`agent.js:840`).
+- **`hopText(h)`** (`agent.js:741`) — the wording moved out of the `onHop`
+  closure and given a third branch, so the console row and the log line stay one
+  sentence rather than two copies that drift. The two existing sentences are
+  byte-for-byte what they were; the new one reads:
+
+  > `stub stopped answering 41s ago and is being passed over while it recovers;
+  > continuing on stub2 / stub-mini. 1 more in the chain.`
+
+### Collateral
+
+- **`seconds` changes meaning on this one reason.** It was "how long the silent
+  one was given before the hop"; for a rotation it is "how long ago it stalled".
+  Both descriptions and the `from` field are widened in
+  `modules/api-v1/openapi.js`, and `docs/api/openapi.json` is regenerated in the
+  same commit. No field is added, so there is nothing for a reader to default.
+- **The log line comes for free.** `logs.js:143` already prefers `evt.text` and
+  falls back to its own wording only when it is absent; `say()` always sets it,
+  so no logging code changed.
+- **The console draws it with the row it already has.** `hc-msg hc-failover` and the
+  `failover` branch at `public/js/harness.js:1556` are untouched — this adds a
+  row where there was none, not a new kind of row. No CSS, no DOM, and
+  therefore no browser check owed (AGENTS.md:111 is about claims a DOM stub
+  makes, and this makes none).
+- **`markDegraded` is now exported** (`agent.js:1531`), the inverse of the
+  `forgetDegraded` that has been exported for tests all along. Without it there
+  is no way to reach the rotation in a test except by waiting out a real stall.
+- **Two announcements can now fire on one turn** in the rare case where the
+  configured model was rotated *and* what took its place was then dropped by the
+  preflight. Both are true and both are reported; when the configured model ends
+  up answering after all, neither fires, which the unit test pins.
+- **The last rung's deadline moves with the rotation.** If the configured model
+  is rotated to the back, it is now the `last` rung and gets the full
+  `firstTokenTimeoutMs` rather than the shorter `failoverAfterMs`. That is the
+  intended reading of "the last one is never cut short", but it is a change in
+  how long a demoted main model is given, so it is recorded rather than left to
+  be discovered.
+
+### Verified
+
+- `test/harness.test.js` — *"a turn that starts on the backup, because the
+  configured model stalled a moment ago, says so"*: two real turns over
+  `/api/harness/chat` against two provider ids on one stub. The first stalls the
+  configured model; the second asserts that `stub-model` is **not asked at all**
+  (`seen` holds one request, for `stub-mini`) and that a `failover` event with
+  `from: 'stub'`, `fromModel: 'stub-model'`, `toModel: 'stub-mini'`,
+  `reason`-sentence, `frames: 0` and `remaining: 1` is emitted before it answers.
+- *"a turn that will not run on the configured model says which way it was
+  passed over"* — `openingHop` on its own, all four cases: the configured model
+  answering (nothing to say), a rotation (`degraded`, with the stall's age), a
+  preflight drop (`context`, `seconds: 0`), and a rotation that the preflight
+  then undid (nothing to say, because the configured model answers).
+- *"a rung that stalled goes to the back, but is not written off"* — rewritten.
+  It now calls the exported `markDegraded`, asserts the rotated order
+  `['ollama/qwen3', 'stub/stub-model']`, asserts the rung carries
+  `stalledMsAgo`, asserts `forgetDegraded` restores the order, and — with the
+  clock moved rather than waited out — asserts the rest period ends on its own.
+  That last one is the half of the name the test never earned before: nothing
+  proved the demotion was temporary rather than a blacklist in all the time it
+  has been here.
+- Mutation-checked seven ways against the real code, each reddening exactly
+  what it should: removing the announcement from `complete` reddens the
+  end-to-end test alone; dropping `stalledMsAgo` from the rung reddens the
+  rewritten rotation test alone; removing the `degraded` branch from `hopText`
+  reddens the end-to-end test; always reporting `context` reddens both; never
+  rotating reddens the rotation and end-to-end tests; announcing when the
+  configured model is answering reddens the unit test and the pre-existing
+  context-hop test; and letting the rest period never expire reddens the
+  rotation test. Suite 377/377, exit 0.

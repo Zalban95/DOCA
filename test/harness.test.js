@@ -1442,6 +1442,12 @@ test('a rung that stalled goes to the back, but is not written off', () => {
   // "re-probe rather than blacklisting" — a model that came back has to become
   // usable again without a restart, so the degraded one is deprioritised rather
   // than dropped.
+  //
+  // The marking here used to be a no-op — `agentMod._degradeForTest?.(primary)`,
+  // a method that has never existed — so the only thing this test ever asserted
+  // was the order of a chain nothing had touched, twice. It rotates the chain
+  // now, which is the reason it is here at all, and which is what H-18 needed a
+  // working test of.
   const agentMod = require('../modules/harness/agent');
   const providers = require('../modules/harness/providers');
   agentMod.forgetDegraded();
@@ -1451,17 +1457,71 @@ test('a rung that stalled goes to the back, but is not written off', () => {
     firstTokenTimeoutMs: 90000, failoverAfterMs: 20000,
     fallbackChain: [{ provider: 'ollama', model: 'qwen3' }],
   };
-  assert.deepEqual(agentMod.rungsFor({ ep, model: 'stub-model', p }).map(r => r.provider),
-    ['stub', 'ollama'], 'healthy first, in order');
+  const order = () => agentMod.rungsFor({ ep, model: 'stub-model', p }).map(r => `${r.provider}/${r.model}`);
 
-  // Mark the primary as having stalled, the way a real stall does.
-  const primary = agentMod.rungsFor({ ep, model: 'stub-model', p })[0];
-  agentMod._degradeForTest ? agentMod._degradeForTest(primary) : null;
+  assert.deepEqual(order(), ['stub/stub-model', 'ollama/qwen3'], 'healthy first, in order');
+
+  agentMod.markDegraded(ep, 'stub-model');
+  assert.deepEqual(order(), ['ollama/qwen3', 'stub/stub-model'],
+    'a rung that stalled a moment ago is tried last, not dropped');
+  assert.equal(agentMod.rungsFor({ ep, model: 'stub-model', p })[1].stalledMsAgo, 0,
+    'and it carries how long ago it stalled, which is what the report of it is made of');
 
   assert.equal(agentMod.DEGRADED_MS, 5 * 60 * 1000, 'the rest period is minutes, not forever');
   agentMod.forgetDegraded();
-  assert.deepEqual(agentMod.rungsFor({ ep, model: 'stub-model', p }).map(r => r.provider),
-    ['stub', 'ollama'], 'forgetting restores the order');
+  assert.deepEqual(order(), ['stub/stub-model', 'ollama/qwen3'], 'forgetting restores the order');
+
+  // And it comes back on its own, which is the whole reason it is a rest and not
+  // a blacklist: "blacklisting would make one bad afternoon permanent". The
+  // clock is moved rather than waited out; the map is untouched, so this is the
+  // deadline expiring and nothing else.
+  agentMod.markDegraded(ep, 'stub-model');
+  const realNow = Date.now;
+  Date.now = () => realNow() + agentMod.DEGRADED_MS + 1000;
+  try {
+    assert.deepEqual(order(), ['stub/stub-model', 'ollama/qwen3'], 'the rest period ends without a restart');
+  } finally { Date.now = realNow; }
+  agentMod.forgetDegraded();
+});
+
+test('a turn that will not run on the configured model says which way it was passed over', () => {
+  // The decision `complete()` makes before its first request, on its own, so the
+  // three answers can be read without a provider in the way.
+  const agentMod  = require('../modules/harness/agent');
+  const providers = require('../modules/harness/providers');
+  const ep = providers.endpoint('stub');
+  const rung = (provider, model, extra = {}) => ({
+    provider, model, ep: providers.endpoint(provider), last: false, timeoutMs: 0, ...extra,
+  });
+  const primary = rung('stub', 'stub-model', { stalledMsAgo: 41000 });
+  const backup  = rung('ollama', 'qwen3');
+  const hop = (candidates, rungs) => agentMod.openingHop({ ep, model: 'stub-model', candidates, rungs });
+
+  assert.equal(hop([primary, backup], [primary, backup]), null,
+    'the configured model is answering: there is nothing to announce');
+
+  // A stall in the last few minutes rotated the chain, so the turn starts on the
+  // backup without the configured model being asked at all.
+  const rotated = hop([backup, primary], [backup, primary]);
+  assert.equal(rotated.reason, 'degraded');
+  assert.equal(rotated.from.provider, 'stub', 'the model named as not answering is the configured one');
+  assert.equal(rotated.from.model, 'stub-model');
+  assert.equal(rotated.to.model, 'qwen3');
+  assert.equal(rotated.seconds, 41, 'and the report can say how long ago it stalled');
+  assert.equal(rotated.remaining, 1);
+
+  // A declared window too small is the other way the lead changes, and it is not
+  // a stall: it must not be described as one.
+  const skipped = hop([primary, backup], [backup]);
+  assert.equal(skipped.reason, 'context');
+  assert.equal(skipped.seconds, 0);
+  assert.equal(skipped.remaining, 0);
+
+  // Rotated, and then the rung that took the lead could not fit either: the
+  // configured model is answering after all. Nothing is announced, because the
+  // rule is about who answers rather than about the order — the skip that put it
+  // back in front is reported by the preflight's own `onSkip`.
+  assert.equal(hop([backup, primary], [primary]), null);
 });
 
 test('a stalled model falls through to the next, and says so on screen', async () => {
@@ -1524,6 +1584,71 @@ test('a stalled model falls through to the next, and says so on screen', async (
     assert.equal(seen.length, 2, 'one attempt per rung, then the answer');
     assert.equal(seen[0].model, 'stub-model');
     assert.equal(seen[1].model, 'stub-mini');
+  } finally {
+    fs.writeFileSync(CONFIG_PATH, savedCfg);
+    await H.api(null, 'POST', '/api/harness/doca/config', {
+      provider: before.provider, model: before.model,
+      failoverAfterMs: before.failoverAfterMs,
+      firstTokenTimeoutMs: before.firstTokenTimeoutMs,
+      fallbackChain: before.fallbackChain,
+    });
+    agentMod.forgetDegraded();
+  }
+});
+
+test('a turn that starts on the backup, because the configured model stalled a moment ago, says so', async () => {
+  // The demotion is what keeps every turn in the next five minutes from paying
+  // the same stall again — but it rotates the chain before the lead is compared
+  // with anything, so this turn used to arrive with no row in the console, no
+  // line in the log, and no `fallbacks` on the outcome that a client which was
+  // asleep is the only reader of. The backup's answer then read as the
+  // configured model's, which is the failure the announcement exists to prevent.
+  const agentMod = require('../modules/harness/agent');
+  const catalog  = require('../modules/harness/catalog');
+  agentMod.forgetDegraded();
+
+  const savedCfg = fs.readFileSync(CONFIG_PATH, 'utf8');
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify({
+    models: { providers: {
+      stub:  { baseUrl: stubUrl, apiKey: 'test-key', models: ['stub-declared'] },
+      stub2: { baseUrl: stubUrl, apiKey: 'test-key-2', models: ['stub-declared'] },
+    } },
+  }, null, 2));
+
+  const before = catalog.configFor(catalog.BUILTIN_ID);
+  await H.api(null, 'POST', '/api/harness/doca/config', {
+    provider: 'stub', model: 'stub-model',
+    failoverAfterMs: 300,
+    firstTokenTimeoutMs: 60000,
+    fallbackChain: [{ provider: 'stub2', model: 'stub-mini' }],
+  });
+
+  try {
+    // One turn to make the configured model stall — which is what marks it
+    // degraded — and the backup answers it.
+    script = [{ stall: 'sse' }, { text: 'answered by the second' }];
+    await stream('/api/harness/chat', { message: 'who answers?' });
+
+    // The next turn, seconds later and well inside DEGRADED_MS. One scripted
+    // reply, so whichever model asks for it first is the one that answers.
+    script = [{ text: 'answered by the second again' }];
+    seen = [];
+    const events = await stream('/api/harness/chat', { message: 'and now?' });
+
+    assert.deepEqual(seen.map(r => r.model), ['stub-mini'],
+      'the configured model is not asked at all — that is what the demotion is for');
+
+    const hop = events.find(e => e.type === 'failover');
+    assert.ok(hop, 'the turn started on another model without saying so');
+    assert.equal(hop.step, 1);
+    assert.equal(hop.from, 'stub');
+    assert.equal(hop.fromModel, 'stub-model', 'the model named as not answering is the configured one');
+    assert.equal(hop.to, 'stub2');
+    assert.equal(hop.toModel, 'stub-mini');
+    assert.match(hop.text, /stopped answering \d+s ago and is being passed over/);
+    assert.match(hop.text, /continuing on/);
+    assert.equal(hop.frames, 0, 'nothing stalled in this turn, so there are no keep-alive frames to report');
+    assert.equal(hop.remaining, 1, 'the configured model is still below it, not written off');
   } finally {
     fs.writeFileSync(CONFIG_PATH, savedCfg);
     await H.api(null, 'POST', '/api/harness/doca/config', {
