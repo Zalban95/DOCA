@@ -64,9 +64,30 @@ function view(row) {
     missionId: require('../agents/missions').forSession(s.id)?.id || null };
 }
 
-function list({ all = false, offset = 0, limit = 40 } = {}) {
+/**
+ * The inventory, filtered to the conversations the caller may act on.
+ *
+ * It used to return every conversation to every caller, which is how a
+ * specialist came to hold the Orchestrator's row — and each row carries `brief`,
+ * the first 600 characters of that conversation's last answer, so the list was
+ * the same leak as reading a transcript, in miniature.
+ *
+ * The only thing that makes one conversation another's business is being in its
+ * reporting line, so `canManage` decides here too, rather than a second rule
+ * that could disagree with the one the write actions already use.
+ *
+ * Ancestors are deliberately *not* admitted. `ancestors()` always ends at the
+ * main session, so a rule that admitted ancestors would admit the Orchestrator
+ * to every specialist — exactly the fault this closes.
+ *
+ * No viewer means the caller is not a conversation (the tests, and anything
+ * reading the index directly) and sees the index as it was.
+ */
+function list({ all = false, offset = 0, limit = 40 } = {}, viewer = null) {
   const main = memory.mainSession();
-  const rows = memory.listSessions().sessions.map(s => session(s.id)).filter(s => all || !s.archivedAt);
+  const rows = memory.listSessions().sessions.map(s => session(s.id))
+    .filter(s => all || !s.archivedAt)
+    .filter(s => !viewer || canManage(viewer, s.id));
   const start = Math.max(0, Number(offset) || 0), size = Math.min(100, Math.max(1, Number(limit) || 40));
   return { main: main.id, total: rows.length, offset: start,
     sessions: rows.slice(start, start + size).map(row => {
@@ -174,7 +195,7 @@ function block(id, pending = []) {
     s.planning ? 'This is a planning work chat. Develop a plan and propose it; execution belongs in a separate work chat.' : '',
     s.kind === 'work' ? 'You lead this work chat (level 2). Own its detailed work and plan. Delegate narrow errands with agent_dispatch when specialists are enabled. When their result is needed to continue, agent_results with wait:true waits up to 30 seconds without model polling; if still running, report the status instead of looping. You cannot create another leader layer.' : '',
     s.plan ? `Your plan: ${s.plan.state} revision ${s.plan.revision}, ${short(s.plan.title, 140)}. Read its steps with work_plan.` : '',
-    `${ordered.length} active conversations in view. Full inventory and archives: work_chats list.`,
+    `${ordered.length} active conversations in view. The inventory and archives: work_chats list.`,
     ...ordered.slice(0, 10).map(row => {
       const v = view(row);
       return `${v.id} [${v.kind}/${v.state}] ${short(v.title, 70)} — ${short(v.brief, 180)}${v.plan ? `; plan ${v.plan.state} r${v.plan.revision}` : ''}`;
@@ -187,8 +208,12 @@ function block(id, pending = []) {
 
 async function tool(args, ctx) {
   const actor = session(ctx.sessionId), id = args.sessionId || actor.id;
-  if (args.action === 'list') return list(args);
+  if (args.action === 'list') return list(args, actor.id);
   if (args.action === 'read') {
+    // `list` and `read` used to return above the gate below, so `transcript:
+    // true` handed any conversation's history to any caller. Same rule as send,
+    // stop, archive and recall: a report travels upward, a transcript does not.
+    if (!canManage(actor.id, id)) throw error('This conversation is outside your reporting line.', 403);
     const s = session(id), start = Math.max(0, Number(args.offset) || 0);
     const reports = (s.reports || []).slice(start, start + 20);
     const messages = args.transcript ? memory.messages(id).slice(start, start + 20).map(m =>

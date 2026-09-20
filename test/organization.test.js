@@ -33,6 +33,45 @@ test('only the Orchestrator creates leaders and specialists cannot delegate thro
     { sessionId: specialist.id }), /only your own plan/);
 });
 
+test('a conversation reads only what it manages, and the inventory is the same line', async () => {
+  const main = memory.mainSession();
+  const leader = org.create({ title: 'Alpha leader' });
+  const other = org.create({ title: 'Beta leader' });
+  const mine = memory.createSession('Mine', { activate: false, kind: 'specialist', parentId: leader.id });
+  const theirs = memory.createSession('Theirs', { activate: false, kind: 'specialist', parentId: other.id });
+  memory.updateSession(other.id, { brief: 'SECRET_BRIEF_OF_ANOTHER_BRANCH' });
+  memory.append(theirs.id, { role: 'user', content: 'PRIVATE_OTHER_BRANCH_TRANSCRIPT' });
+  memory.append(mine.id, { role: 'user', content: 'the errand' });
+
+  // The specialist held `work_chats` and `list` handed it the Orchestrator's id,
+  // so a transcript came back with no check at all.
+  await assert.rejects(org.tool({ action: 'read', sessionId: main.id, transcript: true }, { sessionId: mine.id }),
+    /outside.*reporting line/);
+  await assert.rejects(org.tool({ action: 'read', sessionId: theirs.id, transcript: true }, { sessionId: mine.id }),
+    /outside.*reporting line/);
+  await assert.rejects(org.tool({ action: 'read', sessionId: other.id }, { sessionId: leader.id }),
+    /outside.*reporting line/, 'a leader does not read a sibling branch');
+
+  // A leader still reads its own line in full, which is what the tool is for.
+  const own = await org.tool({ action: 'read', sessionId: mine.id, transcript: true }, { sessionId: leader.id });
+  assert.equal(own.id, mine.id);
+  assert.equal(own.messages.length, 1);
+  const self = await org.tool({ action: 'read', transcript: true }, { sessionId: mine.id });
+  assert.equal(self.id, mine.id, 'and a conversation always reads itself');
+
+  const asSpecialist = await org.tool({ action: 'list', limit: 100 }, { sessionId: mine.id });
+  assert.deepEqual(asSpecialist.sessions.map(s => s.id), [mine.id], 'a specialist sees itself');
+  assert.doesNotMatch(JSON.stringify(asSpecialist), /SECRET_BRIEF_OF_ANOTHER_BRANCH|PRIVATE_OTHER_BRANCH_TRANSCRIPT/);
+
+  const asLeader = await org.tool({ action: 'list', limit: 100 }, { sessionId: leader.id });
+  assert.deepEqual(asLeader.sessions.map(s => s.id).sort(), [leader.id, mine.id].sort(), 'a leader sees its own line');
+
+  const asMain = await org.tool({ action: 'list', limit: 100 }, { sessionId: main.id });
+  assert.equal(asMain.sessions.length, org.list({ limit: 100 }).sessions.length,
+    'the Orchestrator still sees everything');
+  assert.equal(asMain.main, main.id, 'and every level is still told which conversation is the Orchestrator');
+});
+
 test('plan decisions require a user and the revision actually reviewed', async () => {
   const work = org.create({ title: 'Plan' });
   const draft = org.plan(work.id, { action: 'draft', title: 'Release', steps: ['Verify', 'Publish'] });

@@ -117,7 +117,7 @@ function showMedia(p, caption, ctx = {}) {
 const TOOLS = [
   {
     name: 'work_chats',
-    description: 'Manage the three-level workspace. List/read conversations and archived work; read transcripts only on demand. '
+    description: 'Manage the three-level workspace. List/read the conversations in your line and their archived work; read transcripts only on demand. '
       + 'The Orchestrator creates work chats (planning:true for detailed planning), optionally starting a task with message. '
       + 'Send continues a subordinate in the background; it returns immediately. Report records your brief and informs superiors. '
       + 'Archive retains transcripts; recall reopens them. Reports are shown on the superior\'s next turn, without starting a model call.',

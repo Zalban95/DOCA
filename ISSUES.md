@@ -1171,3 +1171,126 @@ NUL did — but the first edit that normalizes it will rewrite every line and co
 `git blame` for the file. Normalizing is a one-line decision someone has to make
 on purpose, not a side effect of another change, so it is recorded rather than
 done.
+
+---
+
+## H-12 — A specialist can read the Orchestrator's chat, and the inventory handed out every conversation
+
+**Status:** fixed on `fix/audit-2.45.1`, 2026-09-20, **v2.46.0**. Found by the
+`af416bd..origin/main` audit (`docs/audit-2.45.1.md`, finding F1). Minor rather
+than patch because it deliberately changes what a level can see.
+
+### What happens
+
+Two operations in `work_chats` ran **above** the reporting-line gate:
+
+```js
+if (args.action === 'list') return list(args);          // no caller consulted
+if (args.action === 'read') { … memory.messages(id) … } // no caller consulted
+```
+
+`list()` returned every conversation to every caller and named the main session
+in `main`, so a specialist could discover the Orchestrator's id and then read its
+history verbatim with `read`/`transcript:true`. `ALWAYS_FOR_SPECIALISTS`
+(`modules/harness/agent.js:322`) force-grants `work_chats` to every specialist,
+and `MAIN_TOOLS` gives it to the Orchestrator, so no caller was ever without it.
+
+Driving the real tool layer in a throwaway data dir, on the pre-fix source:
+
+```
+list as specialist   -> sessions: 3 | Orchestrator, Errand, Work leader
+READ SUCCEEDED (leak): [{"role":"user","content":"PRIVATE: my main-chat secret is hunter2."}]
+tools.call work_chats read -> {"id":"s_…","title":"Orchestrator","kind":"orchestrator", …
+```
+
+The list was not reconnaissance only. Every row carries `brief` — up to 600
+characters of that conversation's last answer (`short(value, 600)`,
+`modules/harness/organization.js:8`, written after every turn at
+`modules/harness/agent.js:955`) — so the unfiltered list was the same content
+leak as `read`, in miniature, one row per conversation.
+
+### Cause
+
+The two read actions were written to return early, and the `canManage` gate that
+`send`, `stop`, `archive` and `recall` all pass through sits below them. Every
+action that *changes* something was guarded; the two that only *read* were not.
+A specialist's own `send` to main was already refused by that gate — the
+asymmetry was visible in the test immediately above the one added here.
+
+### Fixed
+
+**v2.46.0, `fix/audit-2.45.1`** (`modules/harness/organization.js`,
+`modules/harness/tools.js`). One rule, the one the write actions already use:
+`canManage(actor, target)`.
+
+- `read` is refused with the existing `'This conversation is outside your
+  reporting line.'` 403.
+- `list` is **filtered**, inside `list()` and before its slice — not by
+  discarding rows from the returned page, which would leave `total` and every
+  `offset` wrong for a caller who pages. `viewer` is a new optional argument, so
+  the direct `org.list(…)` calls in the tests keep the index they assert.
+- The rule is `canManage` alone. Ancestors are deliberately **not** admitted:
+  `ancestors()` always ends at the main session, so an ancestor clause would have
+  re-admitted the Orchestrator to every specialist — the same fault, reopened.
+- `block()`'s `'Full inventory and archives: work_chats list.'` became untrue for
+  a leader the moment the list was filtered, so it now reads `'The inventory and
+  archives: work_chats list.'`.
+
+What each level sees: the Orchestrator, everything (unchanged); a work leader,
+itself and its own line; a specialist, itself. A conversation always reads
+itself, and `main` is still named in the response to every level, because it is
+the id work is addressed with.
+
+### Collateral, handled in the same commit
+
+- **A leader no longer sees other leaders' chats.** That is a real change to a
+  documented feature, and it is the intended cost of closing the `brief` leak
+  rather than an accident of the filter. `README.md:189-192` stays true for the
+  Orchestrator.
+- **`GET /api/harness/environment` (`modules/harness/routes.js:249-250`) is
+  deliberately untouched.** It calls `organization.block(id, …)` with the
+  session the panel is showing, and its reader is the **user**, who sits above
+  the organisation and is not a peer subject to `canManage`. A second gate there
+  would break the panel for no one's benefit.
+- **`test/harness.test.js:168-169` pins that a specialist is *offered*
+  `work_chats`.** The fix changes what the tool returns, not what is offered, so
+  that test stays green — and if it ever goes red, the fix took the wrong route
+  (withdrawing the tool) instead of gating it.
+
+### Verified
+
+- `test/organization.test.js` — *"a conversation reads only what it manages, and
+  the inventory is the same line"*: a specialist's `read` of main and of a
+  sibling branch is refused; a leader does not read a sibling branch; a leader
+  reads its own line's transcript in full; a conversation reads itself; the three
+  levels' lists are each asserted by id; the Orchestrator's list is unchanged in
+  size, and `main` is still named to every level. The secret brief and the
+  private transcript of the other branch are asserted **absent from the whole
+  serialised response**, not just from `sessions`.
+- Mutation-checked: with `modules/harness/organization.js` and
+  `modules/harness/tools.js` reverted the new test fails (`not ok 3`), and passes
+  again with them restored. The suite is 365/365, exit 0, from a green 364/364
+  baseline.
+- End-to-end against the real tool layer in a throwaway `DOCA_DATA_DIR` with a
+  throwaway `CONFIG_PATH` — the same probe, after the fix: a specialist's list is
+  one row (itself), a leader's two, the Orchestrator's three, and both
+  `organization.tool` and `tools.call('work_chats', …)` refuse the foreign read
+  with status 403.
+
+### Not fixed here
+
+`agent_results` (`modules/harness/tools.js:557-585`) and `agent_resume`
+(`:537-554`) are in the same class, and **unequally so** — the distinction was
+nearly lost when this entry was first written, so it is stated exactly:
+
+- `agent_results` **is** guarded, but only inside its wait branch. `wait:true`
+  demands `org.canManage(ctx.sessionId, m.sessionId)`; the plain read of a
+  finished mission's `result` has no check at all.
+- `agent_resume` has **no** check anywhere: it resumes or drops any paused
+  mission the caller names.
+
+`registry.NEVER` keeps both out of specialists, so the exposure is a work leader
+reaching another leader's mission. `agent_resume`'s openness is deliberate for
+the Orchestrator; the question is whether `by` should gate the rest. That is a
+separate decision about mission ownership, recorded as **H-17** rather than
+folded into this entry.
