@@ -36,21 +36,56 @@ function ancestors(id) {
   return ids;
 }
 
+/**
+ * How many read reports a conversation keeps.
+ *
+ * Unread ones are never dropped, so this is a retention policy for the record
+ * rather than a bound on what can be waiting for attention.
+ *
+ * The number matters less than its existence. A long-lived conversation takes a
+ * report from every descendant on every turn, and `memory.updateSession` rewrites
+ * the whole index per call, so an unbounded array is not only a bigger file but a
+ * slower one on every write: measured at roughly 576 bytes per report, 657 KB at
+ * 1100 of them, and a 5000-turn batch that did not finish in 120 seconds.
+ */
+const REPORTS_KEEP = 50;
+
+/**
+ * Drop old read reports, keep every unread one, and preserve the order.
+ *
+ * `reports` reads oldest-first everywhere it is shown, so this filters rather
+ * than reorders — a trim that moved the unread ones to the front would make the
+ * history jump about as things were read.
+ *
+ * An entry with no `readAt` is unread, which is what an index written before
+ * this existed holds: those reports have never been marked read, so they are
+ * kept, and nothing needs migrating (AGENTS.md:28).
+ *
+ * @returns {object[]} the same array when nothing needs dropping
+ */
+function trimReports(list) {
+  const read = list.filter(n => n.readAt);
+  const excess = read.length - REPORTS_KEEP;
+  if (excess <= 0) return list;
+  const drop = new Set(read.slice(0, excess).map(n => n.id));
+  return list.filter(n => !drop.has(n.id));
+}
+
 function report(id, type, text, by = 'agent') {
   const note = { id: crypto.randomUUID(), from: id, type, text: short(text), by, at: new Date().toISOString() };
-  for (const target of ancestors(id)) {
-    const row = memory.getSession(target);
-    memory.updateSession(target, { reports: [...(row.reports || []), note] });
-  }
+  // One read and one write for the whole fan-out, rather than one of each per
+  // ancestor — see `memory.updateSessions`.
+  memory.updateSessions(ancestors(id), row => ({ reports: trimReports([...(row.reports || []), note]) }));
   return note;
 }
 
 function notices(id) { return (session(id).reports || []).filter(n => !n.readAt); }
 function acknowledge(id, notes) {
   const ids = new Set(notes.map(n => n.id));
-  const row = session(id);
-  if (ids.size) memory.updateSession(id, { reports: (row.reports || []).map(n =>
-    ids.has(n.id) ? { ...n, readAt: new Date().toISOString() } : n) });
+  if (!ids.size) return;
+  const at = new Date().toISOString();
+  memory.updateSessions([id], row => ({ reports: trimReports((row.reports || []).map(n =>
+    ids.has(n.id) ? { ...n, readAt: at } : n)) }));
 }
 
 function view(row) {

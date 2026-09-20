@@ -173,6 +173,35 @@ function updateSession(id, patch) {
   return s;
 }
 
+/**
+ * Patch several sessions in one read and one write.
+ *
+ * `updateSession` reads and rewrites the entire index per call, so a caller that
+ * has several sessions to touch pays for the whole file once each. That is not
+ * hypothetical: a report fans out to every ancestor of the conversation that
+ * sent it, so one report cost two or three full rewrites of `sessions.json`.
+ *
+ * `make` is handed the current row — never undefined, because an id that is not
+ * in the index is skipped rather than created — and returns the patch. Rows are
+ * touched in the order given and all take the same `updatedAt`, which is what a
+ * fan-out means: one moment, several conversations.
+ *
+ * @returns {object[]} the rows that were changed, in the order given
+ */
+function updateSessions(ids, make) {
+  const doc = readIndex();
+  const at = new Date().toISOString();
+  const touched = [];
+  for (const id of ids) {
+    const s = doc.sessions.find(x => x.id === id);
+    if (!s) continue;
+    Object.assign(s, make(s) || {}, { updatedAt: at });
+    touched.push(s);
+  }
+  if (touched.length) writeIndex(doc);
+  return touched;
+}
+
 function deleteSession(id) {
   if (require('./agent').isRunning(id)) throw Object.assign(new Error('Stop this conversation before deleting it.'), { status: 409 });
   const doc = readIndex();
@@ -571,7 +600,8 @@ function memTouch(entries) {
 }
 
 module.exports = {
-  listSessions, createSession, mainSession, resetMain, activeSession, getSession, setActive, updateSession, deleteSession,
+  listSessions, createSession, mainSession, resetMain, activeSession, getSession, setActive, updateSession,
+  updateSessions, deleteSession,
   messages, append, window, pendingFold,
   memWrite, memForget, memList, memSearch, memTouch, memDispute, memLock, memFind,
   DEFAULT_RULES, rules, rulesWrite, rulesPatch, rulesReset,

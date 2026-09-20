@@ -1645,3 +1645,140 @@ being true when every run began collapsing to one row.
 - **Not yet seen in a browser.** A DOM stub is a claim about the browser and has
   been wrong in this repo before (AGENTS.md:111); the panel check is handed over
   rather than assumed, and the tag waits on it.
+
+---
+
+## H-16 — `reports` grow without bound, and every report rewrites the index per ancestor
+
+**Status:** fixed on `fix/audit-2.45.1`, 2026-09-20, **v2.46.4**. Found by the
+`af416bd..origin/main` audit (`docs/audit-2.45.1.md`, finding F5).
+
+### What happens
+
+Every work and specialist turn appends a report to the conversation's ancestors,
+and nothing ever removes one. The Orchestrator therefore accumulates a `turn
+completed` note from every conversation beneath it, forever, in a file that is
+re-serialized whole on every write. Measured through the real `report()`:
+
+```
+after create:            sessions.json    1610 bytes |    1 reports on the Orchestrator
+after  100 more turns:   sessions.json   61017 bytes |  101 reports
+after 1000 more turns:   sessions.json  656797 bytes | 1101 reports
+```
+
+≈576 bytes per report, linear and uncapped. The size is only half of it: a
+further 5000-turn batch did not finish inside 120 seconds, because the cost of
+each write is proportional to the file the previous report grew.
+
+### Cause
+
+Two independent faults, which is why the fix has two parts.
+
+```js
+function report(id, type, text, by = 'agent') {
+  for (const target of ancestors(id)) {
+    const row = memory.getSession(target);
+    memory.updateSession(target, { reports: [...(row.reports || []), note] });
+  }
+}
+function acknowledge(id, notes) { … map(n => ids.has(n.id) ? { ...n, readAt: … } : n) }
+```
+
+`report()` appends and never trims; `acknowledge()` only stamps `readAt`, so an
+acknowledged report is marked as seen and kept forever. And the fan-out loop
+calls `updateSession` once per ancestor — `memory.updateSession` reads and
+rewrites the entire index (`memory.js:167-174`) — so one report from a level-3
+specialist cost two full rewrites of `sessions.json`.
+
+### Fixed
+
+**v2.46.4, `fix/audit-2.45.1`.**
+
+**The bound** (`modules/harness/organization.js`, `REPORTS_KEEP = 50`). Applied
+on both paths that write the array — `report()` and `acknowledge()` — through one
+`trimReports()`:
+
+```js
+/**
+ * Drop old read reports, keep every unread one, and preserve the order.
+ */
+function trimReports(list) {
+  const read = list.filter(n => n.readAt);
+  const excess = read.length - REPORTS_KEEP;
+  if (excess <= 0) return list;
+  const drop = new Set(read.slice(0, excess).map(n => n.id));
+  return list.filter(n => !drop.has(n.id));
+}
+```
+
+It filters rather than reorders, because `reports` reads oldest-first everywhere
+it is shown and a trim that moved the unread ones to the front would make the
+history jump about as things were read. It drops the *oldest* read reports, so
+the recent history is what survives.
+
+**The write** (`modules/harness/memory.js`, `updateSessions(ids, make)`). One
+read, one write, one shared `updatedAt` for the whole fan-out, which is what a
+fan-out is. An id that is not in the index is skipped rather than created; that
+branch is unreachable from `ancestors()` — it guards the parent walk
+(`organization.js:30`) and takes `main` from the index — and it is written that
+way so a report can never *create* a conversation.
+
+### No new field, so no read-side default
+
+AGENTS.md:28 asks for a read-side default whenever something is added to a state
+file. **Nothing was added.** The trim is a filter over an array that already
+existed, and the field it keys on already existed: `readAt` has meant "read"
+since it was introduced, and an entry without one has always been unread —
+`notices()` is defined as exactly that filter (`organization.js:82`).
+
+That makes an index written before this release correct as-is, and it is why
+**an old report cannot be trimmed by the first run of the new code**: it has no
+`readAt`, so it counts as unread, so it is kept. There is no migration to write
+and none was written.
+
+### Collateral
+
+- **The report history is now finite, and that is the point.** `work_chats read`
+  returns `reportTotal` and a page of the array (`organization.js:256`), so a
+  conversation's report history stops at 50 read entries plus however many are
+  unread. That is a deliberate reduction in what is kept, not a leak — the
+  alternative was the measurement above.
+- **The F3 interaction, checked rather than assumed.** The plan flagged that
+  trimming on `readAt` is only safe if something can acknowledge what grows.
+  `organization.acknowledge` is called unconditionally for every session kind at
+  the end of a turn (`agent.js:1195`); F3's gate is on the line above
+  (`missions.acknowledgeNotices`, `:1194`) and does not touch this one. So any
+  conversation that runs a turn acknowledges the reports it was shown, and those
+  become trimmable. A conversation that never runs again keeps its unread reports
+  forever — and an unread report is never trimmed. **Nothing that no one can
+  acknowledge is ever dropped.**
+- **The per-ancestor loop is gone from `report()` only.** `create()`, `archive()`,
+  `plan()` and the `brief` write in `tool()` still call `updateSession` once
+  each, which is correct — each touches one session. `updateSessions` exists for
+  the fan-out and is not a general replacement.
+- **`updatedAt` for a fan-out is now one timestamp.** Previously each ancestor
+  took its own `new Date()` a few milliseconds apart; now they share one. No
+  reader orders by it (`list()` sorts by state, not time), and one moment is the
+  more accurate description of a single report.
+
+### Verified
+
+- `test/organization.test.js` — *"reports stay bounded: read history is trimmed,
+  unread is never"*, seeding 80 read reports plus one with no `readAt` (what an
+  index written before this release holds) plus one unread, then reporting
+  through the real `report()`: the read history lands on exactly 50, the three
+  unread survive in their original order, and the newest read report is kept
+  while the oldest is not.
+- *"acknowledging bounds the array too, and keeps the most recent"* — 85 unread
+  acknowledged at once leaves exactly `a35…a84`, and the unread count still
+  reaches zero.
+- *"one report is one index write, however many superiors it reaches"* — a
+  specialist's report reaches two superiors and produces **one**
+  `store.writeJson('harness/sessions', …)`, asserted by spying the store, with
+  both superiors' arrays checked in that single document.
+- Each of the three was mutation-checked against the real code: disabling the
+  bound reddens the first two, trimming unread entries reddens the first,
+  dropping the newest instead of the oldest reddens the first two, and restoring
+  the per-ancestor loop reddens the third. Suite 372/372, exit 0.
+- No browser check is owed: this entry changes no panel code and makes no claim
+  about the DOM.

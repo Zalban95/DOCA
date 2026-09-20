@@ -72,6 +72,53 @@ test('a conversation reads only what it manages, and the inventory is the same l
   assert.equal(asMain.main, main.id, 'and every level is still told which conversation is the Orchestrator');
 });
 
+test('reports stay bounded: read history is trimmed, unread is never', () => {
+  const main = memory.mainSession(), work = org.create({ title: 'Noisy' });
+  const read = [], at = new Date().toISOString();
+  for (let i = 0; i < 80; i++) read.push({ id: 'r' + i, from: work.id, type: 'report', text: 't' + i, at, readAt: at });
+  // `legacy` is what an index written before this existed holds: a report that
+  // was never marked read, because nothing marked reads when it was written.
+  const legacy = { id: 'legacy', from: work.id, type: 'report', text: 'old', at };
+  const unread = { id: 'unread', from: work.id, type: 'report', text: 'waiting', at };
+  memory.updateSession(main.id, { reports: [legacy, unread, ...read] });
+
+  const note = org.report(work.id, 'report', 'another');
+
+  const after = memory.getSession(main.id).reports;
+  assert.equal(after.filter(n => n.readAt).length, 50, 'the read history is bounded');
+  assert.deepEqual(after.filter(n => !n.readAt).map(n => n.id), ['legacy', 'unread', note.id],
+    'nothing that is still waiting to be read is dropped, and the order is preserved');
+  assert.ok(after.some(n => n.id === 'r79') && !after.some(n => n.id === 'r0'),
+    'it is the old read reports that go, not the recent ones');
+});
+
+test('acknowledging bounds the array too, and keeps the most recent', () => {
+  const work = org.create({ title: 'Ack' }), at = new Date().toISOString();
+  memory.updateSession(work.id, { reports: Array.from({ length: 85 }, (_, i) =>
+    ({ id: 'a' + i, from: work.id, type: 'report', text: 't' + i, at })) });
+  org.acknowledge(work.id, org.notices(work.id));
+  const after = memory.getSession(work.id).reports;
+  assert.equal(after.length, 50);
+  assert.deepEqual(after.map(n => n.id), Array.from({ length: 50 }, (_, i) => 'a' + (i + 35)));
+  assert.equal(org.notices(work.id).length, 0, 'and acknowledging still clears the unread count');
+});
+
+test('one report is one index write, however many superiors it reaches', t => {
+  const store = require('../modules/store');
+  const work = org.create({ title: 'Fan-out' });
+  const specialist = memory.createSession('Deep', { kind: 'specialist', parentId: work.id });
+  const real = store.writeJson, writes = [];
+  store.writeJson = (key, doc) => { if (key === 'harness/sessions') writes.push(doc); return real(key, doc); };
+  t.after(() => { store.writeJson = real; });
+
+  const note = org.report(specialist.id, 'report', 'two superiors above me');
+
+  assert.equal(writes.length, 1, 'one read-modify-write for the whole fan-out');
+  for (const id of [work.id, memory.mainSession().id])
+    assert.ok(writes[0].sessions.find(s => s.id === id).reports.some(n => n.id === note.id),
+      'and every superior still gets it');
+});
+
 test('plan decisions require a user and the revision actually reviewed', async () => {
   const work = org.create({ title: 'Plan' });
   const draft = org.plan(work.id, { action: 'draft', title: 'Release', steps: ['Verify', 'Publish'] });
