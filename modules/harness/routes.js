@@ -16,6 +16,7 @@ const installs    = require('./installs');
 const registry    = require('../agents/registry');
 const missions    = require('../agents/missions');
 const settings    = require('./settings');
+const approval    = require('./approval');
 const organization = require('./organization');
 
 /** Send the thrown error with its own status when it carries one. */
@@ -81,6 +82,28 @@ const handleStatus = wrap(async (req, res) => res.json(await agent.status({ sess
 /** GET /api/harness/usage?days=7&by=day|model|provider|session|agent|kind */
 const handleUsage = wrap(async (req, res) =>
   res.json(require('./usage').summary({ days: req.query.days, by: req.query.by || 'day' })));
+
+/* ── Approvals ────────────────────────────────────────── */
+
+/** GET /api/harness/approval — the mode, the standing allowlist, what is waiting. */
+const handleApproval = wrap(async (_req, res) =>
+  res.json({ ...approval.settings(), pending: approval.pending(), free: [...approval.FREE] }));
+
+/** POST /api/harness/approval — set the mode. Only ever from a click. */
+const handleApprovalMode = wrap(async (req, res) => res.json(approval.setMode(req.body?.mode)));
+
+/** POST /api/harness/approvals/:id — answer one waiting request. */
+const handleApprovalDecide = wrap(async (req, res) => {
+  const ok = approval.decide(req.params.id, req.body?.decision);
+  // Gone rather than never-there: a question withdraws itself on timeout and
+  // when the turn is stopped, so a click landing late is ordinary, not an error
+  // to shout about.
+  if (!ok) return res.status(409).json({ error: 'That request is no longer waiting for an answer.' });
+  res.json({ ok: true, ...approval.settings() });
+});
+
+/** DELETE /api/harness/approval/always/:key — take back a standing allowance. */
+const handleApprovalForget = wrap(async (req, res) => res.json(approval.forget(req.params.key)));
 
 /* ── Built-in harness console ─────────────────────────── */
 
@@ -327,4 +350,5 @@ module.exports = {
   handleMemoryList, handleMemoryWrite, handleMemoryForget, handleMemoryLock, handleMemoryFlag,
   handleRulesGet, handleRulesWrite, handleRulesReset, handleRulesVerify,
   handleEnvironment, handlePromptSize, handleSettingsRead, handleProposals, handleProposalApply, handleProposalReject,
+  handleApproval, handleApprovalMode, handleApprovalDecide, handleApprovalForget,
 };

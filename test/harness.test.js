@@ -1843,3 +1843,62 @@ test('a plan is shown as a document, opened rather than drawn', async () => {
   const got = await H.api(phone.token, 'GET', `/api/v1/harness/images/${shown[0].name}`);
   assert.equal(got.status, 200);
 });
+
+test('manual approval stops the tool, and the answer decides whether it runs', async () => {
+  // The whole point, end to end: the turn is genuinely blocked between the
+  // model asking for a tool and the tool running, and it is the click that
+  // lets it through. A test that only checked `gate()` would pass with the
+  // wiring absent.
+  const agent    = require('../modules/harness/agent');
+  const approval = require('../modules/harness/approval');
+  const memory   = require('../modules/harness/memory');
+
+  approval.setMode('manual');
+  approval.settings().always.forEach(approval.forget);
+  const session = memory.createSession({ label: 'approval' });
+
+  const run = async decision => {
+    script = [{ tool: 'shell', args: { command: 'echo let-me-through' } }, { text: 'done' }];
+    const events = [];
+    const turn = agent.turn({
+      message: 'run it', sessionId: session.id, emit: e => events.push(e),
+    });
+
+    const deadline = Date.now() + 5000;
+    let asked;
+    while (!(asked = events.find(e => e.type === 'approval' && e.state === 'asked')) && Date.now() < deadline)
+      await new Promise(r => setTimeout(r, 10));
+    assert.ok(asked, 'the turn asked');
+    assert.equal(asked.tool, 'shell');
+    assert.deepEqual(asked.keys, ['shell:echo'], 'and offered to remember the verb, not the whole tool');
+    assert.equal(events.some(e => e.type === 'tool_result'), false,
+      'nothing ran while the question was open');
+
+    assert.equal(approval.decide(asked.id, decision), true);
+    await turn;
+    return events.find(e => e.type === 'tool_result');
+  };
+
+  const denied = await run('deny');
+  assert.match(denied.result, /Refused by the user/);
+  assert.doesNotMatch(denied.result, /let-me-through/, 'the command did not run');
+
+  const allowed = await run('once');
+  assert.match(allowed.result, /let-me-through/, 'answering yes ran it');
+  assert.deepEqual(approval.settings().always, [], 'and "once" remembered nothing');
+
+  // "Always" is what makes the mode usable: the second identical call is not
+  // asked about at all.
+  const remembered = await run('always');
+  assert.match(remembered.result, /let-me-through/);
+  assert.deepEqual(approval.settings().always, ['shell:echo']);
+
+  script = [{ tool: 'shell', args: { command: 'echo let-me-through' } }, { text: 'done' }];
+  const quiet = [];
+  await agent.turn({ message: 'again', sessionId: session.id, emit: e => quiet.push(e) });
+  assert.equal(quiet.some(e => e.type === 'approval'), false, 'not asked a second time');
+  assert.match(quiet.find(e => e.type === 'tool_result').result, /let-me-through/);
+
+  approval.forget('shell:echo');
+  approval.setMode('auto');
+});

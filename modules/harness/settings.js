@@ -63,6 +63,19 @@ const SETTABLE = [
  */
 const FORBIDDEN = /(^|\.)(api)?(key|keys|token|secret|password|passwd|credential|credentials)(\.|$)/i;
 
+/**
+ * The approval mode and its allowlist, named outright rather than merely left
+ * off `SETTABLE`.
+ *
+ * No prefix covers `harness.approval` today, so this is belt and braces — but
+ * it is the one setting whose whole purpose is to constrain the thing doing
+ * the proposing. An agent that can move itself to full auto, or add `shell:rm`
+ * to the standing allowlist, is not being supervised; it is filling in its own
+ * permission slip. The day somebody adds a bare `harness` prefix to SETTABLE,
+ * this is what stops that from quietly becoming a hole.
+ */
+const NEVER_SETTABLE = /^harness\.approval(\.|$)/i;
+
 /** Keys that are not data, whatever section they appear under. */
 const PROTO = /(^|\.)(__proto__|prototype|constructor)(\.|$)/;
 
@@ -103,6 +116,8 @@ function refuse(dotted, value) {
   // the object it is meant to be setting.
   if (PROTO.test(dotted))                             return `${dotted} is not a settings path`;
   if (FORBIDDEN.test(dotted))                         return `${dotted} holds a secret — those are never set this way`;
+  if (NEVER_SETTABLE.test(dotted))
+    return `${dotted} is the approval mode that governs you — only the user changes it, in Harness → Approvals`;
   if (!sectionFor(dotted))
     return `${dotted} is not a setting the agent may change (allowed: ${SETTABLE.map(s => s.prefix).join(', ')})`;
 
@@ -194,7 +209,7 @@ function readable() {
     const current = get(prefs, s.prefix);
     if (current === undefined) continue;
     for (const [dotted, value] of Object.entries(flatten(current, s.prefix, {}))) {
-      if (FORBIDDEN.test(dotted) || seen.has(dotted)) continue;
+      if (FORBIDDEN.test(dotted) || NEVER_SETTABLE.test(dotted) || seen.has(dotted)) continue;
       out.push({ path: dotted, value, section: s.label });
     }
   }

@@ -147,6 +147,11 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
 
   out.push(
     `host: ${s.host.hostname} — ${s.host.platform}, ${s.host.cores} cores, ${gb(s.host.totalMem)} RAM`,
+    // Which shell `shell` types into, as a standing fact. This panel runs on
+    // Linux and on Windows, and a model that assumes bash on a PowerShell host
+    // writes `&&` and `/` into every command and cannot tell why they fail.
+    // It is stated once here and again in the tool's own description.
+    `shell: ${require('../shell').describe()}`,
     `user: ${s.host.user} (home ${s.host.home})`,
     `panel: DOCA v${s.doca.version} on node ${s.doca.node}, port ${s.doca.port}, pid ${s.doca.pid}`,
     `panel code: ${s.doca.root} (its own source — read it before answering questions about how DOCA works)`,

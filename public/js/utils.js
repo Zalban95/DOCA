@@ -1239,6 +1239,115 @@ function tokenRateEl(u) {
   return el;
 }
 
+/* ── Manual approval ───────────────────────────────────
+   One card, rendered the same in the floating chat and the harness console.
+   The turn is blocked on the other side of it, so this is the whole of what
+   the user has to go on: what would run, and what saying yes would mean. */
+
+/**
+ * The card a blocked tool call puts in the transcript.
+ *
+ * Buttons are built from the request, not assumed: a call that cannot be
+ * reduced to a type (a command assembled at run time) gets no "always" at all
+ * rather than one that would remember the wrong thing.
+ *
+ * @param {object} evt    the `approval` event: {id, tool, keys, summary}
+ * @param {Function} done called with the decision once the server has it
+ */
+function approvalCardEl(evt, done) {
+  const el = document.createElement('div');
+  el.className = 'approval-card';
+  el.dataset.approvalId = evt.id;
+
+  const head = document.createElement('div');
+  head.className = 'approval-head';
+  head.textContent = `Allow ${evt.tool}?`;
+  el.appendChild(head);
+
+  if (evt.summary) {
+    // textContent, never innerHTML: this string is a command the model wrote.
+    const body = document.createElement('pre');
+    body.className = 'approval-body';
+    body.textContent = evt.summary;
+    el.appendChild(body);
+  }
+
+  const row = document.createElement('div');
+  row.className = 'approval-actions';
+
+  const choices = [
+    { decision: 'once', label: 'Allow once', cls: 'btn-green' },
+    ...(evt.keys?.length
+      ? [{ decision: 'always', label: `Always allow ${evt.keys.join(', ')}`, cls: '' }]
+      : []),
+    ...(evt.keys?.length && !(evt.keys.length === 1 && evt.keys[0] === evt.tool)
+      ? [{ decision: 'always_tool', label: `Always allow all ${evt.tool}`, cls: '' }]
+      : []),
+    { decision: 'deny', label: 'Deny', cls: 'btn-red' },
+  ];
+
+  const settle = text => {
+    el.classList.add('settled');
+    el.innerHTML = '';
+    const line = document.createElement('div');
+    line.className = 'approval-settled';
+    line.textContent = text;
+    el.appendChild(line);
+  };
+
+  for (const c of choices) {
+    const b = document.createElement('button');
+    b.className = `btn btn-xs ${c.cls}`;
+    b.textContent = c.label;
+    b.addEventListener('click', async () => {
+      row.querySelectorAll('button').forEach(x => { x.disabled = true; });
+      try {
+        await apiFetch(`/api/harness/approvals/${encodeURIComponent(evt.id)}`,
+          { method: 'POST', body: { decision: c.decision } });
+        settle(`${evt.tool} — ${c.label.toLowerCase()}`);
+        done?.(c.decision);
+      } catch (e) {
+        // The usual cause is that the question withdrew itself: the turn was
+        // stopped, or five minutes passed. Saying so beats a red error.
+        settle(`${evt.tool} — ${e.message}`);
+        done?.(null);
+      }
+    });
+    row.appendChild(b);
+  }
+  el.appendChild(row);
+
+  // Answered somewhere else — the other chat, another tab. Both are looking at
+  // one turn, so the card has to stop offering a choice that is already made.
+  el.settleFrom = decision => settle(`${evt.tool} — ${decision}`);
+  return el;
+}
+
+/** The Auto / Manual pill both chats put in their header. */
+function approvalModeEl(onChange) {
+  const el = document.createElement('button');
+  el.className = 'btn btn-xs approval-mode';
+  el.type = 'button';
+  el.title = 'Manual asks before each tool call that does something, and can remember your answer by '
+    + 'command type. Auto runs everything the agent asks for.';
+  el.render = mode => {
+    const manual = mode === 'manual';
+    el.textContent = manual ? '🔒 Manual' : '⚡ Auto';
+    el.classList.toggle('manual', manual);
+    el.dataset.mode = manual ? 'manual' : 'auto';
+  };
+  el.addEventListener('click', async () => {
+    const next = el.dataset.mode === 'manual' ? 'auto' : 'manual';
+    try {
+      const r = await apiFetch('/api/harness/approval', { method: 'POST', body: { mode: next } });
+      el.render(r.mode);
+      onChange?.(r);
+    } catch (e) { appAlert(e.message); }
+  });
+  el.render('auto');
+  return el;
+}
+
 /**
  * Format a duration in seconds as "3d 4h 12m" (short, human-readable).
  * @param {number} sec

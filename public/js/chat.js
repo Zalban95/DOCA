@@ -182,6 +182,7 @@ async function chatLoadHistory() {
     // How full the window already is, before this panel sends anything. Absent
     // for a harness that does not report one, which is what '' draws.
     _chatContext(data.context);
+    _chatLoadApproval();
   } catch {}
 }
 
@@ -189,6 +190,42 @@ async function chatLoadHistory() {
 function _chatContext(u) {
   const el = document.getElementById('chat-context');
   if (el) el.innerHTML = contextRingHtml(u);
+}
+
+/**
+ * A blocked tool call, in the floating chat.
+ *
+ * The same three states the console handles, and for the same reasons: the
+ * card leaves the working fold (which collapses, and would hide the question
+ * the turn is stopped on) and settles itself when the answer came from the
+ * other chat.
+ */
+function _chatApproval(evt, container) {
+  if (!container) return;
+  agentWorkingGiveBack(container);
+  if (evt.state === 'refused') {
+    chatAppendMsg('system', `Not run — ${evt.tool} needs approval and a mission has nobody to ask.`);
+    return;
+  }
+  if (evt.state === 'answered') {
+    container.querySelector(`[data-approval-id="${CSS.escape(evt.id)}"]`)?.settleFrom?.(evt.decision);
+    _chatScroll();
+    return;
+  }
+  container.appendChild(approvalCardEl(evt, () => _chatLoadApproval()));
+  _chatScroll();
+}
+
+/** The Auto / Manual pill in the chat header. It is one global setting, so
+ *  this and the console's pill are two views of the same switch. */
+async function _chatLoadApproval() {
+  const slot = document.getElementById('chat-approval');
+  if (!slot) return;
+  try {
+    const a = await apiFetch('/api/harness/approval');
+    if (!slot.firstChild) slot.appendChild(approvalModeEl());
+    slot.firstChild.render(a.mode);
+  } catch { /* no pill rather than a broken header */ }
 }
 
 function chatAppendMsg(role, text, opts = {}) {
@@ -555,6 +592,8 @@ function chatSend({ spoken = false } = {}) {
       } else if (evt.type === 'usage') {
         spend = evt;
         _chatContext(evt);
+      } else if (evt.type === 'approval') {
+        _chatApproval(evt, container);
       } else if (evt.type === 'image') {
         _chatAppendImage(evt.image);
       } else if (evt.type === 'tool_result') {

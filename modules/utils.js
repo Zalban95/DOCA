@@ -1,9 +1,10 @@
 'use strict';
 
-const { exec, execSync, spawn } = require('child_process');
+const { exec, execFile } = require('child_process');
 const fs   = require('fs');
 const os   = require('os');
 const path = require('path');
+const shell = require('./shell');
 
 const { COMPOSE_DIR, CONFIG_PATH, PREFS_FILE, FM_ALLOWED_ROOTS } = require('./paths');
 
@@ -116,7 +117,7 @@ function saveModelsPrefs(models) {
  * inside install scripts. The helper file is removed when the command ends.
  *
  * @param {import('express').Response} res
- * @param {string} cmd - bash command line
+ * @param {string} cmd - a command line in the host shell's syntax
  * @param {{ label?: string, cwd?: string, env?: object, password?: string }} [opts]
  */
 function streamCmd(res, cmd, opts = {}) {
@@ -130,7 +131,11 @@ function streamCmd(res, cmd, opts = {}) {
   const extraEnv = {};
   let askpassFile = null;
 
-  const needsSudo = typeof password === 'string' && password.length > 0;
+  // sudo is a POSIX idea. On Windows there is nothing to hand a password to —
+  // elevation is a UAC prompt on the desktop, which this process cannot answer
+  // — so the askpass helper is simply not built, rather than writing a .sh
+  // nothing will run.
+  const needsSudo = !shell.WIN && typeof password === 'string' && password.length > 0;
   if (needsSudo) {
     // POSIX-safe single-quote escaping for the password embedded in the helper.
     const quoted = `'${password.replace(/'/g, `'\\''`)}'`;
@@ -148,7 +153,11 @@ function streamCmd(res, cmd, opts = {}) {
 
   sseWrite({ status: `${label ? `Installing ${label}…\n` : ''}$ ${cmd}\n` });
 
-  const child = spawn('bash', ['-lc', runCmd], {
+  // The host's own shell, and its own PATH separator. This used to be
+  // `spawn('bash', ['-lc'])` with a PATH joined by ':' — on Windows the shell
+  // does not exist, and the PATH it was handed would have been unusable if it
+  // had.
+  const child = shell.spawnShell(runCmd, {
     cwd:   cwd || home,
     env:   {
       ...process.env,
@@ -156,7 +165,10 @@ function streamCmd(res, cmd, opts = {}) {
       ...extraEnv,
       HOME: home,
       DEBIAN_FRONTEND: 'noninteractive',
-      PATH: `${home}/.local/bin:${home}/.npm-global/bin:${process.env.PATH || '/usr/local/bin:/usr/bin:/bin'}`,
+      PATH: [
+        ...(shell.WIN ? [] : [path.join(home, '.local', 'bin'), path.join(home, '.npm-global', 'bin')]),
+        process.env.PATH || '',
+      ].filter(Boolean).join(path.delimiter),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -189,28 +201,21 @@ function streamCmd(res, cmd, opts = {}) {
  * @returns {Promise<{ detected: boolean, path: string|null, version: string|null }>}
  */
 function detectBinary(cmd) {
-  const home = process.env.HOME || os.homedir();
-  const detectCmd = [
-    `bash -lc "which ${cmd} 2>/dev/null"`,
-    `{ test -f "$HOME/.npm-global/bin/${cmd}" && echo "$HOME/.npm-global/bin/${cmd}"; }`,
-    `{ test -f "$HOME/.local/bin/${cmd}"      && echo "$HOME/.local/bin/${cmd}"; }`,
-    `{ test -f "/usr/local/bin/${cmd}"        && echo "/usr/local/bin/${cmd}"; }`,
-    `find "$HOME/.nvm/versions" -name "${cmd}" -type f 2>/dev/null | grep -m1 .`,
-  ].join(' || ');
+  // PATH is walked in process rather than through `bash -lc which` and four
+  // `test -f` fallbacks: none of that exists on Windows, where the answer also
+  // has to consider PATHEXT, and a login shell can hang on somebody's profile.
+  const bin = shell.which(cmd);
+  if (!bin) return Promise.resolve({ detected: false, path: null, version: null });
 
   return new Promise(resolve => {
-    exec(detectCmd, { env: { ...process.env, HOME: home }, timeout: 10000 }, (err, stdout) => {
-      const bin = (stdout || '').trim().split('\n')[0] || null;
-      if (!bin) return resolve({ detected: false, path: null, version: null });
-      let version = null;
-      try {
-        const vOut = execSync(
-          `bash -lc "'${bin}' --version 2>/dev/null || '${bin}' version 2>/dev/null"`,
-          { timeout: 3000 }
-        ).toString().trim();
-        version = vOut.split('\n')[0].slice(0, 60) || null;
-      } catch {}
-      resolve({ detected: true, path: bin, version });
+    // `--version` then `version`: both are common and neither is universal.
+    // execFile on the binary itself, so a path with a space is an argument
+    // rather than two words for a shell to misread.
+    execFile(bin, ['--version'], { timeout: 3000, windowsHide: true }, (err, out) => {
+      const first = t => String(t || '').trim().split('\n')[0].slice(0, 60) || null;
+      if (!err && first(out)) return resolve({ detected: true, path: bin, version: first(out) });
+      execFile(bin, ['version'], { timeout: 3000, windowsHide: true }, (e2, out2) =>
+        resolve({ detected: true, path: bin, version: e2 ? null : first(out2) }));
     });
   });
 }

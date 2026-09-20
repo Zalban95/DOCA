@@ -20,6 +20,7 @@ const budget      = require('./budget');
 const environment = require('./environment');
 const memory      = require('./memory');
 const providers   = require('./providers');
+const approval    = require('./approval');
 const settings    = require('./settings');
 const attachments = require('../attachments');
 const installs    = require('./installs');
@@ -380,6 +381,10 @@ function liveBlock(p, ledger) {
   return [
     environment.live(),
     budget.live(ledger, p),
+    // Last-position, like every other reading: the allowlist changes mid-turn
+    // the moment the user answers "always allow", so it cannot sit in the
+    // cached prefix ahead of the transcript (H-9).
+    approval.block(),
   ].filter(Boolean).join('\n\n');
 }
 
@@ -1313,11 +1318,36 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       catch { args = { _raw: tc.function?.arguments }; }
 
       say({ type: 'tool_call', name, args, step });
+
+      // Manual approval, if it is on. The gate is here rather than inside
+      // `tools.call` because this is where `say()` is — the question has to
+      // reach the transcript the user is looking at — and because it must cover
+      // MCP tools, which `tools.call` dispatches before it sees a definition.
+      let refused = null;
+      const gate = args._raw === undefined ? approval.gate(name, args) : null;
+      if (gate) {
+        if (isMission) {
+          refused = approval.missionRefusal(gate);
+          say({ type: 'approval', step, state: 'refused', tool: name, ...gate });
+        } else {
+          const { id, answer } = approval.ask(gate, { sessionId: session.id, signal });
+          say({ type: 'approval', step, state: 'asked', id, ...gate });
+          const decision = await answer;
+          say({ type: 'approval', step, state: 'answered', id, decision, tool: name });
+          // Anything that is not one of the three yeses — a denial, a timeout,
+          // a stopped turn — stops the call and says which it was.
+          if (!['once', 'always', 'always_tool'].includes(decision))
+            refused = approval.refusal(decision, gate);
+        }
+      }
+
       // What a tool put in front of the user (show_image). It travels as its own
       // event and is kept on the tool row, so a reloaded transcript draws it
       // again; the model only ever reads the result text.
       const shown = [];
-      const result = args._raw !== undefined
+      const result = refused !== null
+        ? refused
+        : args._raw !== undefined
         ? `Error: could not parse the arguments as JSON: ${args._raw}`
         : !schemas.some(sc => sc.function.name === name)
           ? `Error: the "${name}" tool is switched off for this conversation.`

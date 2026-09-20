@@ -212,6 +212,14 @@ app.post  ('/api/harness/custom',       harness.handleAddCustom);
 app.delete('/api/harness/custom/:id',   harness.handleRemoveCustom);
 
 // Built-in harness console: one agent turn, its sessions and its memory.
+app.get   ('/api/harness/approval',             harness.handleApproval);
+// Answering a permission question, and changing the mode that asks them, are
+// the clearest cases of "only a user does this" in the whole panel — so they
+// carry the same click convention as applying a proposal. See requireBrowser:
+// it closes the tool-layer path, and is not a boundary while `shell` exists.
+app.post  ('/api/harness/approval',             requireBrowser, harness.handleApprovalMode);
+app.post  ('/api/harness/approvals/:id',        requireBrowser, harness.handleApprovalDecide);
+app.delete('/api/harness/approval/always/:key', requireBrowser, harness.handleApprovalForget);
 app.post  ('/api/harness/chat',                 harness.handleChat);
 app.get   ('/api/harness/sessions',             harness.handleSessions);
 app.post  ('/api/harness/sessions',             harness.handleSessionNew);

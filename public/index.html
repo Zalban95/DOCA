@@ -1148,6 +1148,24 @@
 </div>
 
 <!-- ═══ MEMORY RULES MODAL ═══════════════════════════ -->
+<div id="hc-approval-overlay" class="modal-overlay" style="display:none"
+     onclick="if(event.target===this) hcApprovalClose()">
+  <div class="modal" style="max-width:560px" onclick="event.stopPropagation()">
+    <div class="modal-title">What may run without asking</div>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
+      In <strong>Manual</strong> the agent is stopped before each tool call that does something, and you
+      answer it in the chat. Saying <em>always allow</em> puts the command type on this list — so
+      <code>shell: git</code> stops being a question while <code>shell: rm</code> is still asked every time.
+      A command that builds itself at run time can never join the list.
+      Reading this panel's own state never asks. In <strong>Auto</strong> nothing is asked at all.
+    </p>
+    <div id="hc-approval-list" class="hc-memory"><div class="placeholder">Loading…</div></div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" onclick="hcApprovalClose()">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="hc-rules-overlay" class="modal-overlay" style="display:none" onclick="hcRulesClose(event)">
   <div class="modal" style="max-width:680px" onclick="event.stopPropagation()">
     <div class="modal-title">How the agent keeps its memory</div>
@@ -1295,6 +1313,7 @@
     <span class="chat-title" data-brand="agent">DOCA Agent</span>
     <span class="ctx-slot" id="chat-context"></span>
     <div class="toolbar-right">
+      <span id="chat-approval"></span>
       <button class="btn btn-xs" id="chat-call-toggle" onclick="chatToggleCall()" title="Voice call mode">🎙 Live</button>
       <button class="btn btn-xs tool-gear" onclick="nav('settings'); settingsSubNav('voice'); toggleChat()" title="Voice settings (STT/TTS)">⚙</button>
       <button class="btn btn-xs" onclick="chatClear()" title="Clear history">Clear</button>

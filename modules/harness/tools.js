@@ -14,7 +14,7 @@
 const fs     = require('fs');
 const path   = require('path');
 const os     = require('os');
-const { exec } = require('child_process');
+const shell = require('../shell');
 
 const { WORKSPACE_DIR, FM_ALLOWED_ROOTS } = require('../paths');
 const { fmSafe } = require('../utils');
@@ -150,26 +150,34 @@ const TOOLS = [
   },
   {
     name: 'shell',
-    description: 'Run a bash command on the host this panel manages and return its combined output. '
-      + 'Use it to inspect the system, run docker/git/systemctl, and check anything you are unsure about.',
-    parameters: {
-      type: 'object',
-      properties: {
-        command: { type: 'string', description: 'The bash command line to run.' },
-        cwd:     { type: 'string', description: 'Optional working directory. Defaults to the agent workspace.' },
-      },
-      required: ['command'],
+    // The shell is named, and named at call time: a description that says
+    // "bash" on a Windows host teaches the model to write `&&` into a
+    // PowerShell prompt and then to be puzzled by the error.
+    get description() {
+      return `Run a command line on the host this panel manages and return its combined output. `
+        + `This host runs ${shell.describe()} `
+        + 'Use it to inspect the system, run docker/git, and check anything you are unsure about.';
+    },
+    get parameters() {
+      return {
+        type: 'object',
+        properties: {
+          command: { type: 'string', description: `The command line to run, in ${shell.spec().label} syntax.` },
+          cwd:     { type: 'string', description: 'Optional working directory. Defaults to the agent workspace.' },
+        },
+        required: ['command'],
+      };
     },
     danger: true,
-    run: ({ command, cwd: dir }) => new Promise(resolve => {
-      if (!command) return resolve('Error: command is required');
-      exec(command, { cwd: dir ? resolvePath(dir) : cwd(), timeout: SHELL_MS, maxBuffer: 4 << 20, shell: '/bin/bash' },
-        (err, stdout, stderr) => {
-          const body = [stdout, stderr].filter(s => s && s.trim()).join('\n').trim();
-          if (err && err.killed) return resolve(`Timed out after ${SHELL_MS / 1000}s.\n${clip(body)}`);
-          resolve(clip([err ? `exit ${err.code ?? 1}` : 'exit 0', body || '(no output)'].join('\n')));
-        });
-    }),
+    run: async ({ command, cwd: dir }) => {
+      if (!command) return 'Error: command is required';
+      const r = await shell.run(command, {
+        cwd: dir ? resolvePath(dir) : cwd(), timeout: SHELL_MS, maxBuffer: 4 << 20,
+      });
+      if (r.error) return `Error: ${r.error}.`;
+      if (r.timedOut) return `Timed out after ${SHELL_MS / 1000}s.\n${clip(r.out)}`;
+      return clip([`exit ${r.code}`, r.out || '(no output)'].join('\n'));
+    },
   },
   {
     name: 'read_file',

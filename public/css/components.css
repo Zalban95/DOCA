@@ -607,6 +607,39 @@ body.chat-resizing * { cursor: nwse-resize !important; }
 .ctx-fold  { stroke: rgba(232, 160, 32, 0.45); }
 .ctx-used  { stroke: var(--blue); transition: stroke-dasharray 0.3s ease; }
 .ctx-label { font-size: 10px; color: var(--muted); white-space: nowrap; }
+/* ── Manual approval ────────────────────────────────────
+   The turn is blocked behind this card, so it is deliberately the loudest
+   thing in the transcript: amber border, full width, and it does not collapse
+   into a fold run the way a tool row does. */
+.approval-card {
+  align-self: stretch; max-width: 100%; width: 100%;
+  border: 1px solid var(--amber); border-left-width: 3px;
+  border-radius: var(--radius); background: var(--bg-amber);
+  padding: 8px 10px; font-size: 11px;
+}
+.approval-head { color: var(--amber); font-weight: 600; margin-bottom: 5px; }
+.approval-body {
+  margin: 0 0 7px; padding: 6px 8px;
+  background: var(--bg); border: 1px solid var(--border2); border-radius: 3px;
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.45;
+  white-space: pre-wrap; word-break: break-word;
+  max-height: 180px; overflow: auto;
+}
+.approval-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+.approval-card.settled {
+  border-color: var(--border2); border-left-width: 1px;
+  background: none; padding: 3px 6px;
+}
+.approval-settled { color: var(--muted); font-size: 10px; }
+.approval-mode.manual { color: var(--amber); border-color: var(--amber); }
+/* The standing allowlist, as the Approvals modal lists it. */
+.approval-key {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 6px; border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.approval-key .flex1 { flex: 1; }
+
 /* The one line under a finished answer: how fast it came. */
 .turn-meta {
   align-self: flex-start; max-width: 100%;

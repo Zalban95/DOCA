@@ -28,10 +28,15 @@ function shellSession(ws, rows) {
     return;
   }
 
-  const shell = process.env.SHELL || '/bin/bash';
+  // The host's own shell, from the one place that decides it. `$SHELL` is
+  // unset on Windows and `/bin/bash` is not there, so this used to spawn
+  // nothing and report "Failed to spawn shell" as if node-pty were at fault.
+  // An interactive terminal keeps the profile a scripted call suppresses:
+  // this is a person's prompt, and their aliases belong in it.
+  const hostShell = require('./shell').spec();
   let ptyProc;
   try {
-    ptyProc = ptyMod.spawn(shell, [], {
+    ptyProc = ptyMod.spawn(hostShell.file, [], {
       name: 'xterm-256color',
       cols: 80, rows,
       cwd: process.env.HOME || WORKSPACE_DIR,
