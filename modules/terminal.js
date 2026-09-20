@@ -19,10 +19,6 @@ function getPty() {
   return pty;
 }
 
-if (!getPty()) {
-  console.warn('[terminal] node-pty not available — install it from Settings → System (works without restart)');
-}
-
 /** Bridge one WebSocket to a login shell in a PTY. */
 function shellSession(ws, rows) {
   const ptyMod = getPty();

@@ -3,9 +3,8 @@
 /**
  * Virtual machines.
  *
- * The hypervisor CLIs are not installed on CI or on a dev laptop, so the parsers
- * are tested against captured real output and the route is tested for the
- * behaviour that matters when nothing is installed: report it, do not fail.
+ * Parsers use captured real output. The route must report both hypervisors
+ * whether this machine has their CLIs and VMs installed or not.
  */
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -64,7 +63,7 @@ test('the state words each hypervisor uses collapse to the three the UI draws', 
   assert.equal(vms.normalizeState(''), 'unknown');
 });
 
-test('with no hypervisor installed the panel still answers, saying which are missing', async () => {
+test('the panel reports both hypervisors, including any that are missing', async () => {
   const { status, body } = await H.api(null, 'GET', '/api/vms');
   assert.equal(status, 200);
 
@@ -72,8 +71,11 @@ test('with no hypervisor installed the panel still answers, saying which are mis
   assert.deepEqual(ids, ['libvirt', 'virtualbox']);
 
   for (const hv of body.hypervisors) {
-    assert.deepEqual(hv.vms, [], 'nothing to list without the CLI');
-    if (!hv.available) assert.match(hv.error, /not found/, 'says why, rather than an empty panel');
+    assert.ok(Array.isArray(hv.vms));
+    if (!hv.available) {
+      assert.deepEqual(hv.vms, [], 'nothing to list without the CLI');
+      assert.match(hv.error, /not found/, 'says why, rather than an empty panel');
+    }
     // Each is reported on its own so one missing CLI cannot hide the other.
     assert.ok(hv.label && hv.bin);
   }
