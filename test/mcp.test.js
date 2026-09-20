@@ -50,6 +50,97 @@ test('a definition needs enough to actually run', async () => {
   assert.equal((await post('/api/mcp', { command: 'x' })).status, 400);   // no name
 });
 
+test('MCP connection and backend evidence are separate, expire, and reset', async t => {
+  registry.upsert({ id: 'backend-health', command: process.execPath, args: [STUB] });
+  t.after(() => registry.remove('backend-health'));
+  const c = await registry.start('backend-health');
+  const status = () => registry.status(registry.get('backend-health'));
+  assert.equal(status().state, 'running');
+  assert.equal(status().backend, 'unknown', 'initialize and tool discovery are not backend probes');
+
+  const failure = 'Cannot connect to Blender at localhost:9876: connection refused';
+  await c.callTool('explode', { message: failure });
+  assert.equal(status().state, 'running', 'the MCP process itself still answers');
+  assert.equal(status().backend, 'unreachable');
+  assert.ok(status().backendObservedAt);
+  await c.listTools();
+  assert.equal(status().backend, 'unreachable', 'rediscovering tools cannot make Blender healthy');
+
+  const observed = Date.parse(status().backendObservedAt);
+  t.mock.method(Date, 'now', () => observed + 60001);
+  assert.equal(status().backend, 'unknown', 'old evidence must not pretend to be a live probe');
+  t.mock.restoreAll();
+
+  await c.callTool('echo', { message: failure });
+  assert.equal(status().backend, 'unknown', 'success text quoting a connection error is not a failure');
+  assert.equal(status().backendObservedAt, null);
+  await c.callTool('explode', { message: 'Rendering timed out' });
+  assert.equal(status().backend, 'unknown', 'a slow backend is not an unreachable backend');
+  await assert.rejects(c.callTool('explode', { message: failure, rpcError: true }), /Cannot connect/);
+  assert.equal(status().backend, 'unreachable', 'JSON-RPC tool errors are evidence too');
+
+  registry.stop('backend-health');
+  assert.equal(status().backend, 'unknown');
+  assert.equal(status().backendObservedAt, null);
+  const restarted = await registry.start('backend-health');
+  assert.equal(status().backend, 'unknown');
+  let resolve;
+  t.mock.method(restarted, 'request', () => new Promise(r => { resolve = r; }));
+  const late = restarted.callTool('explode', {});
+  restarted.stop();
+  resolve({ isError: true, content: [{ type: 'text', text: failure }] });
+  await late;
+  assert.equal(status().backendObservedAt, null, 'a reply after disconnect cannot restore old evidence');
+});
+
+test('HTTP MCP tool errors are backend evidence, transport failures are not', async t => {
+  const { McpClient } = require('../modules/mcp/client');
+  const http = require('node:http');
+  let toolError = false;
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', c => { body += c; });
+    req.on('end', () => {
+      const msg = JSON.parse(body);
+      const response = msg.method === 'tools/call'
+        ? toolError
+          ? { result: { isError: true, content: [{ type: 'text', text: 'ECONNREFUSED 127.0.0.1:9876' }] } }
+          : { error: { code: -32000, message: 'EHOSTUNREACH' } }
+        : { result: msg.method === 'tools/list' ? { tools: [] } : { serverInfo: { name: 'backend-stub' } } };
+      res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ jsonrpc: '2.0', id: msg.id, ...response }));
+    });
+  });
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const c = new McpClient({ id: 'http-backend', transport: 'http', url: `http://127.0.0.1:${server.address().port}/mcp` });
+  t.after(() => c.stop());
+  await c.start();
+  assert.equal(c.backendStatus().backend, 'unknown');
+  await assert.rejects(c.callTool('scene', {}), /EHOSTUNREACH/);
+  assert.equal(c.backendStatus().backend, 'unreachable');
+  toolError = true;
+  assert.match(await c.callTool('scene', {}), /^Error: ECONNREFUSED/);
+  assert.equal(c.backendStatus().backend, 'unreachable');
+  server.closeAllConnections();
+  await new Promise(r => server.close(r));
+  await assert.rejects(c.callTool('scene', {}));
+  assert.equal(c.backendStatus().backend, 'unknown', 'failure reaching MCP does not establish backend failure');
+});
+
+test('MCP cards label connection separately from reported backend failures', () => {
+  const vm = require('node:vm');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'mcp.js'), 'utf8');
+  const context = vm.createContext({ escHtml: String, jsArg: JSON.stringify });
+  const card = vm.runInContext(source + '\n;_mcpCardHtml', context);
+  const server = { id: 'blender', transport: 'http', state: 'running', tools: [], toolCount: 0, backend: 'unknown' };
+  assert.match(card(server), /MCP CONNECTED/);
+  assert.match(card(server), /BACKEND UNKNOWN/);
+  assert.match(card(server), />Disconnect</);
+  assert.match(card({ ...server, backend: 'unreachable' }), /BACKEND REPORTED UNREACHABLE/);
+  assert.match(card({ ...server, state: 'stopped' }), /MCP DISCONNECTED/);
+  assert.match(card({ ...server, state: 'stopped' }), />▶ Connect</);
+});
+
 test('a server says which machine it runs on, and defaults to this one', async () => {
   // Everything written before origin existed has none, which is what `server`
   // means — so the default has to be that, not an error.

@@ -255,6 +255,9 @@ function status(spec) {
       ? (device ? `${device.name}${device.revokedAt ? ' (revoked)' : ''}` : `${origin.deviceId} (unknown device)`)
       : 'DOCA host',
     state:      c?.state || 'stopped',
+    // MCP connection state and evidence about a downstream app are separate.
+    // No generic MCP handshake or successful tool proves that backend is healthy.
+    ...(c?.backendStatus() || { backend: 'unknown', backendObservedAt: null }),
     error:      c?.error || null,
     startedAt:  c?.startedAt || null,
     serverInfo: c?.serverInfo || null,

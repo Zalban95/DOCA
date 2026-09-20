@@ -16,6 +16,10 @@ const { spawn } = require('child_process');
 
 const PROTOCOL_VERSION = '2025-06-18';
 const LOG_LINES = 200;
+// Only explicit connectivity failures reported by a tool count. A timeout may
+// just be a long render; initialize/tools/list say nothing about an app behind it.
+const BACKEND_UNREACHABLE = /\b(?:ECONNREFUSED|ENETUNREACH|EHOSTUNREACH|connection refused|network is unreachable|no route to host|cannot connect to|could not connect to)\b/i;
+const BACKEND_FRESH_MS = 60000;
 
 class McpClient {
   /**
@@ -36,6 +40,8 @@ class McpClient {
     this._nextId = 1;
     this._pending = new Map();
     this._buf    = '';
+    this._backendFailureAt = null;
+    this._lifecycle = 0;
   }
 
   get transport() { return this.spec.transport || 'stdio'; }
@@ -109,7 +115,7 @@ class McpClient {
     const pending = this._pending.get(msg.id);
     if (!pending) return;
     this._pending.delete(msg.id);
-    if (msg.error) pending.reject(new Error(msg.error.message || 'JSON-RPC error'));
+    if (msg.error) pending.reject(Object.assign(new Error(msg.error.message || 'JSON-RPC error'), { fromMcpServer: true }));
     else pending.resolve(msg.result);
   }
 
@@ -179,7 +185,7 @@ class McpClient {
       ? JSON.parse(body.split('\n').find(l => l.startsWith('data:'))?.slice(5).trim() || '{}')
       : JSON.parse(body || '{}');
 
-    if (json.error) throw new Error(json.error.message || 'JSON-RPC error');
+    if (json.error) throw Object.assign(new Error(json.error.message || 'JSON-RPC error'), { fromMcpServer: true });
     return json.result;
   }
 
@@ -215,6 +221,8 @@ class McpClient {
   async start() {
     if (this.state === 'running' || this.state === 'starting') return this;
     this.state = 'starting';
+    this._lifecycle++;
+    this._backendFailureAt = null;
     this.error = null;
     this.log   = [];
 
@@ -261,18 +269,40 @@ class McpClient {
    * silently — "[image]" tells the model something came back that it cannot see.
    */
   async callTool(name, args) {
-    const res = await this.request('tools/call', { name, arguments: args || {} }, McpClient.timeoutFor('call'));
-    const text = (res?.content || [])
-      .map(c => (c.type === 'text' ? c.text : `[${c.type}]`))
-      .join('\n')
-      .trim();
-    if (res?.isError) return `Error: ${text || 'the tool reported a failure'}`;
-    return text || '(no output)';
+    const lifecycle = this._lifecycle;
+    const observe = failure => {
+      if (this.state === 'running' && lifecycle === this._lifecycle)
+        this._backendFailureAt = failure ? Date.now() : null;
+    };
+    try {
+      const res = await this.request('tools/call', { name, arguments: args || {} }, McpClient.timeoutFor('call'));
+      const text = (res?.content || [])
+        .map(c => (c.type === 'text' ? c.text : `[${c.type}]`))
+        .join('\n')
+        .trim();
+      observe(res?.isError && BACKEND_UNREACHABLE.test(text));
+      if (res?.isError) return `Error: ${text || 'the tool reported a failure'}`;
+      return text || '(no output)';
+    } catch (e) {
+      // A local fetch/stdio failure describes the MCP transport, not its backend.
+      observe(e.fromMcpServer && BACKEND_UNREACHABLE.test(e.message));
+      throw e;
+    }
+  }
+
+  backendStatus() {
+    const at = this.state === 'running' ? this._backendFailureAt : null;
+    return {
+      backend: at !== null && Date.now() - at < BACKEND_FRESH_MS ? 'unreachable' : 'unknown',
+      backendObservedAt: at !== null ? new Date(at).toISOString() : null,
+    };
   }
 
   stop(quiet) {
     const child = this.child;
     this.state = 'stopped';
+    this._lifecycle++;
+    this._backendFailureAt = null;
     this.tools = [];
     if (!quiet) this.error = null;
     if (child) {

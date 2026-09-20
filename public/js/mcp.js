@@ -57,7 +57,7 @@ function _mcpOffersHtml(offers) {
         : ''}
       <div class="input-label" style="margin:6px 0 0;opacity:.6">
         Accepting adds it as an http server acting on <strong>${escHtml(o.deviceName)}</strong>. Nothing is
-        running or reachable until you start it.
+        connected to DOCA until you connect it.
       </div>
       <div class="status-line mt4" id="mcp-offer-status-${escHtml(o.id)}"></div>
     </div>`;
@@ -113,6 +113,11 @@ function _mcpCardHtml(s) {
   const arg = jsArg(s.id);
   const running = s.state === 'running';
   const badge = { running: 'ok', starting: 'warn', error: 'no', stopped: '' }[s.state] || '';
+  const connection = { running: 'MCP CONNECTED', starting: 'MCP CONNECTING', error: 'MCP ERROR', stopped: 'MCP DISCONNECTED' }[s.state] || s.state;
+  const backendUnreachable = running && s.backend === 'unreachable';
+  const backendNote = backendUnreachable
+    ? `A tool reported a backend connection failure${s.backendObservedAt ? ` at ${s.backendObservedAt}` : ''}. This is recent evidence, not a live probe.`
+    : 'MCP connection and tool discovery do not verify the app behind the server. No recent backend connection failure is known.';
 
   // Only worth a badge when it is not the host: "runs here" is the norm and
   // saying it on every row would just be noise.
@@ -137,16 +142,17 @@ function _mcpCardHtml(s) {
       <div class="toolbar" style="margin-bottom:6px">
         <span class="mcp-dot">${running ? '●' : '○'}</span>
         <div class="card-title" style="margin-bottom:0">${escHtml(s.label || s.id)}</div>
-        <span class="provider-badge ${badge}">${escHtml(s.state.toUpperCase())}</span>
+        <span class="provider-badge ${badge}" title="DOCA's MCP connection; a disconnected remote listener may still be running">${escHtml(connection)}</span>
+        <span class="provider-badge ${backendUnreachable ? 'warn' : ''}" title="${escHtml(backendNote)}">${backendUnreachable ? 'BACKEND REPORTED UNREACHABLE' : 'BACKEND UNKNOWN'}</span>
         ${running ? `<span class="mcp-count">${s.toolCount} tool${s.toolCount === 1 ? '' : 's'}</span>` : ''}
         ${origin}
         ${s.autostart ? '<span class="mcp-count">starts with DOCA</span>' : ''}
         <span style="flex:1"></span>
         ${running
           ? `<button class="btn btn-xs" onclick="mcpAction(${arg}, 'restart')">↻ Restart</button>
-             <button class="btn btn-xs" onclick="mcpAction(${arg}, 'refresh')" title="Ask again which tools it has">↺ Tools</button>
-             <button class="btn btn-xs" onclick="mcpAction(${arg}, 'stop')">Stop</button>`
-          : `<button class="btn btn-xs btn-green" onclick="mcpAction(${arg}, 'start')">▶ ${onClient ? 'Connect' : 'Start'}</button>`}
+             <button class="btn btn-xs" onclick="mcpAction(${arg}, 'refresh')" title="Refresh tool discovery; this does not test the backend app">↺ Tools</button>
+             <button class="btn btn-xs" onclick="mcpAction(${arg}, 'stop')">${s.transport === 'http' ? 'Disconnect' : 'Stop'}</button>`
+          : `<button class="btn btn-xs btn-green" onclick="mcpAction(${arg}, 'start')">▶ ${s.transport === 'http' ? 'Connect' : 'Start'}</button>`}
         ${onClient
           ? `<button class="btn btn-xs" onclick="mcpAction(${arg}, 'listener-start')"
                      title="Push a request to that machine to bring its MCP server up. It can refuse.">✆ Ask to run</button>`

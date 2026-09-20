@@ -68,7 +68,8 @@ process.stdin.on('data', chunk => {
       } else if (name === 'write_thing') {
         reply({ content: [{ type: 'text', text: `wrote ${args?.value ?? ''}` }] });
       } else if (name === 'explode') {
-        reply({ content: [{ type: 'text', text: 'that did not work' }], isError: true });
+        if (args?.rpcError) send({ jsonrpc: '2.0', id: msg.id, error: { code: -32000, message: args.message } });
+        else reply({ content: [{ type: 'text', text: args?.message || 'that did not work' }], isError: true });
       } else {
         send({ jsonrpc: '2.0', id: msg.id, error: { code: -32602, message: `no tool named ${name}` } });
       }
