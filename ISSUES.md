@@ -1521,3 +1521,127 @@ profile-less work session and still passes.
 ### Not fixed here
 
 `agent_results` and `agent_resume` still check no ownership — **H-17**.
+
+---
+
+## H-15 — A picture shown mid-turn splits the turn into two summary lines
+
+**Status:** fixed on `fix/audit-2.45.1`, 2026-09-20, **v2.46.3**. Found by the
+`af416bd..origin/main` audit (`docs/audit-2.45.1.md`, finding F4). Committed and
+untagged: `public/js` needs a browser look before the tag (AGENTS.md:111).
+
+### What happens
+
+One turn that shows a picture comes out as **two** finished-run lines instead of
+one — "1 command", then "1 step" — for the same turn. It is not a live-only
+artifact: the harness rebuilds the transcript at the end of a turn, so the reload
+shape and the watched shape are both wrong, and they are wrong the same way.
+
+Driven against the real `collapseFoldRuns` over the shape a picture actually
+produces — user, tool call, picture, tool result, answer — before the fix:
+
+```
+assert.equal(box.querySelectorAll('.agent-working').length, 1, 'one turn, one summary line');
+  expected: 1
+  actual:   2
+```
+
+### Cause
+
+`collapseFoldRuns` makes two separate decisions about every child, and a picture
+got both wrong — in opposite directions:
+
+```js
+const isWorking = el => isRow(el) || (isBubble(el) && !isUser(el) && !el.classList.contains('agent-image'));
+…
+if (isWorking(child)) { run.push(child); continue; }
+flush(true);                       // a user message, or a picture: the turn ended here
+```
+
+The `agent-image` clause in `isWorking` is **dead**: an image is not a bubble
+(`isBubble` knows only `hc-msg`/`chat-msg`, `utils.js:659`), so the condition is
+already false for it and the clause changes nothing. The comment on the `flush`
+line is the live fault: a picture arrives *in the middle* of a turn — between a
+tool call and its result — so treating it as a boundary ended the run early and
+started a second one with the remainder. Two runs, two summaries, each counting
+its own half of one turn.
+
+### Why the obvious fix was not the fix
+
+The audit recorded this as having no small collateral-free fix, having considered
+only mounting the picture *into* the working block. That is genuinely defeated by
+the CSS: a live block hides every row but the last
+(`components.css:1087`, `.agent-working.live > .agent-working-items >
+*:not(:last-child)`), so a picture inside it would be visible only until the next
+row arrived — and once the block is done, the whole body is hidden (`:1089`), so
+the picture would vanish entirely.
+
+The mistake was in the search, not the CSS. The split is caused by the `flush`,
+not by the picture's position: leaving the picture exactly where it is and letting
+the run continue across it gives one block, inserted at the run's first row, with
+the picture after the collapsed record and before the answer — which is where the
+live path already puts it (`agentWorkingClose` lifts the answer past it). Live and
+reload become identical, one line each, with no CSS change and no change to the
+chat's structure.
+
+### Fixed
+
+**v2.46.3, `fix/audit-2.45.1`** (`public/js/utils.js`). A picture neither joins
+the run nor ends it:
+
+```js
+if (isWorking(child)) { run.push(child); continue; }
+if (isOutput(child)) continue;      // shown, not summarised, and not a boundary
+flush(true);                        // a user message: the turn ended here
+```
+
+with `isOutput` as its own named predicate (`:615`) so the next reader can see
+that a picture is a third kind of row rather than an exception to the second. The
+dead `agent-image` clause is gone from `isWorking` (`:609`). In the same file:
+`FOLD_RUN_KEEP` (`:586` before this commit) is deleted — declared, never read
+anywhere in source, tests, CSS, HTML or docs, and its keep-3 behaviour no longer
+exists — and the doc comment above `collapseFoldRuns` is rewritten, because it
+still described "the last rows of a finished run stay … behind '…'", which stopped
+being true when every run began collapsing to one row.
+
+### Collateral
+
+- **No CSS changes, deliberately.** The picture is kept outside the block
+  precisely so the two rules above cannot hide it. A future change that moves it
+  inside must deal with both.
+- **`isBubble` does not know `.agent-image`**, and that is now recorded beside it
+  (`:659`) rather than left as a trap: `flush` gives back the run's trailing text
+  bubbles so the answer is never hidden, and a picture is not text — so a picture
+  as a run's *last* row would strand the answer inside the summary. Unreachable
+  today, since a picture is only drawn between a call and its result and an answer
+  ends the turn. The failure would have looked like a lost reply.
+- **The live path and both reload paths converge**, which is the point:
+  `closeFolds` (`utils.js:551-563`) runs this walk over the *live* DOM at end of
+  turn, so there is one implementation rather than one per path.
+- The alternative — replacing the block with a timestamp-derived span — was
+  rejected because it would trade the live block's measured duration
+  (`Date.now() - dataset.startedAt`) for a coarser estimate.
+- **The voice loop has no `image` branch.** The typed path handles one
+  (`public/js/chat.js:539`); the streaming loop inside `_callProcessAudio`
+  (`:745-875`) chains `thinking`, `text`, `tool_call` and `tool_result` and stops
+  there, so a picture shown during a voice call appears only on the next history
+  load. Out of scope for this entry and not half-fixed — it is a separate
+  question about what a voice call should *do* with a picture — and recorded in
+  TODO.md instead.
+
+### Verified
+
+- `test/fold-runs.test.js` — *"a picture shown mid-turn does not split the turn
+  into two summaries"*. The figure carries an `img` child **on purpose**: the
+  empty-node sweep spares a node containing media, so a bare `.agent-image` would
+  be removed and the test would pass while the browser did something else. That
+  is how the audit's first probe of this went wrong, and it is why the stub
+  models it. The test asserts one `.agent-working`, the picture surviving as its
+  own row after the collapsed record, the answer last, and both of the turn's rows
+  inside the one block. The existing ten tests in the file stay green.
+- The failing assertion above was captured **before** the fix, against the real
+  function — the executed evidence, not a reading.
+- Suite 369/369, exit 0.
+- **Not yet seen in a browser.** A DOM stub is a claim about the browser and has
+  been wrong in this repo before (AGENTS.md:111); the panel check is handed over
+  rather than assumed, and the tag waits on it.

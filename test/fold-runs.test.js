@@ -251,6 +251,37 @@ test('a reloaded transcript collapses each turn the same way, timed from its own
     'the span comes from the rows, so a reopened turn reads like the one that was watched');
 });
 
+test('a picture shown mid-turn does not split the turn into two summaries', () => {
+  // A picture arrives between a tool call and its result, and it was treated as
+  // the end of a turn — so one turn of call → picture → result → answer came out
+  // as two "1 command / 1 step" lines, live and on every reload alike.
+  //
+  // The figure carries an `img` on purpose: the empty-node sweep above spares a
+  // node with media in it, so a bare class would be removed and this test would
+  // pass while the browser did something else. That is how the audit's first
+  // probe of this went wrong.
+  const { collapseFoldRuns } = api();
+  const box = transcript();
+  const picture = el('div', 'agent-image');
+  picture.appendChild(el('img'));
+
+  box.appendChild(bubble('user', 'draw it'));
+  box.appendChild(fold('tool-call'));
+  box.appendChild(picture);
+  box.appendChild(fold('tool-result'));
+  box.appendChild(bubble('assistant', 'Here it is.'));
+
+  collapseFoldRuns(box);
+
+  assert.equal(box.querySelectorAll('.agent-working').length, 1, 'one turn, one summary line');
+  assert.deepEqual(kinds(box), [
+    'hc-msg hc-user', 'agent-working done', 'agent-image', 'hc-msg hc-assistant',
+  ], 'the picture keeps its own visible row, after the record of the turn that produced it');
+  assert.equal(box.lastElementChild.textContent, 'Here it is.', 'and the answer is still last');
+  assert.equal(box.children[1].querySelector('.agent-working-items').children.length, 2,
+    'both of the turn\'s rows are inside the one block');
+});
+
 test('an empty bubble the streamer left behind is not a row', () => {
   const { collapseFoldRuns } = api();
   const box = transcript();

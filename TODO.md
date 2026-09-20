@@ -1052,3 +1052,24 @@ never added.
 The other two — which renderer, and whether to ask the agent to stop writing
 markdown — were decided rather than deferred, and the decision is at the top of
 this entry.
+
+---
+
+## A picture shown during a voice call
+
+Found on 2026-09-20 while fixing `ISSUES.md` H-15, and deliberately not fixed
+there: H-15 is about a picture splitting a *transcript* into two summary lines,
+which is a different question from what a voice call should do with one.
+
+`chatSend` handles `evt.type === 'image'` (`public/js/chat.js:539`), so a picture
+arrives normally when the user is typing. The streaming loop inside
+`_callProcessAudio` (`:745-875`) chains `thinking`, `text`, `tool_call` and
+`tool_result` and has no `image` branch, so during a call the event is dropped
+and the picture appears only when the history is next loaded — after the call,
+which is the one moment the user is not looking at the screen.
+
+What is undecided is not how to draw it but what a call should *say* about it: a
+picture is the one tool result that cannot be read aloud, so the honest options
+differ — announce it and let the user look afterwards, try to describe it, or
+hold it until the call ends. That is a product decision, which is why this is
+here rather than in the fix.

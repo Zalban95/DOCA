@@ -564,13 +564,13 @@ function closeFolds(container) {
 }
 
 /**
- * The last rows of a finished run stay; everything above them goes behind "…".
+ * The working of a finished run becomes one row, and the answer stays out of it.
  *
  * Closing the folds is not enough once a turn has run fifteen tools: fifteen
  * one-line rows still push the answer off the screen, and the answer is the
- * thing being waited for. Only the tail is worth having by default — the recent
- * steps are the ones a reader is still holding in their head — so the rest
- * collapse into a single row that says how many there are.
+ * thing being waited for. So the whole run collapses into a single row that says
+ * what it was — the same shape a live block closes into, so a reloaded
+ * transcript and a turn you watched happen look the same.
  *
  * Grouping does not do this: `agentFoldMount` folds a run of the *same* kind,
  * and a turn alternates Command with Result, so the commonest long run is
@@ -583,8 +583,6 @@ function closeFolds(container) {
  *
  * @param {HTMLElement} container - a transcript (#hc-messages, #chat-messages)
  */
-const FOLD_RUN_KEEP = 3;
-
 function collapseFoldRuns(container) {
   if (!container) return;
   const isRow = el => el.classList.contains('agent-fold') || el.classList.contains('agent-fold-group');
@@ -608,8 +606,13 @@ function collapseFoldRuns(container) {
   // because one conversation happened to narrate and the other did not.
   // The working of a turn is everything the agent did *and* said on the way to
   // its answer, so commentary collapses with the steps it belongs to.
-  const isWorking = el =>
-    isRow(el) || (isBubble(el) && !isUser(el) && !el.classList.contains('agent-image'));
+  const isWorking = el => isRow(el) || (isBubble(el) && !isUser(el));
+
+  // Something the turn *showed* rather than something it did or said. A picture
+  // is drawn mid-turn, between a tool call and its result, so it belongs to the
+  // run without being part of its account: it keeps its own visible row and is
+  // neither swallowed by the summary nor allowed to end it. See the walk below.
+  const isOutput = el => el.classList.contains('agent-image');
 
   let run = [];
   const flush = last => {
@@ -631,12 +634,28 @@ function collapseFoldRuns(container) {
     // again after every later turn, and re-collapsing would undo a click.
     if (child.classList.contains('agent-working')) { run = []; continue; }
     if (isWorking(child)) { run.push(child); continue; }
-    flush(true);                       // a user message, or a picture: the turn ended here
+    // Shown, not summarised, and not a boundary either. Treating a picture as
+    // the end of a turn split one turn into two summaries — "1 command" then
+    // "1 step" — because it arrives in the middle of one. The run keeps going
+    // across it, so the block lands at the run's first row and the picture falls
+    // after the collapsed record, which is where the live path already puts it.
+    if (isOutput(child)) continue;
+    flush(true);                       // a user message: the turn ended here
   }
   flush(true);
 }
 
-/** A message bubble in either transcript, whoever wrote it. */
+/**
+ * A message bubble in either transcript, whoever wrote it.
+ *
+ * Deliberately not `.agent-image`. `flush` gives back the run's trailing text
+ * bubbles so the answer is never inside the summary, and a picture is not text
+ * — but that also means a picture as the run's *last* row would leave the answer
+ * behind it inside the block. It cannot happen today: a picture is only ever
+ * drawn between a call and its result, and an answer ends the turn. Noted here
+ * for whoever makes it possible, because the failure would look like a lost
+ * reply rather than a fold that took one row too many.
+ */
 function isBubble(el) {
   return el.classList.contains('hc-msg') || el.classList.contains('chat-msg');
 }
