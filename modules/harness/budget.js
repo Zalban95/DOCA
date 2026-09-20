@@ -78,14 +78,19 @@ function shouldCompact(p, lastPrompt) {
  * prompt against the window ("47688 of 1000000"), which reads as folding at 5%
  * for no reason when the trigger was `compactTokens` at 40000 all along.
  */
-function compactReason(p, lastPrompt) {
-  const prompt = Number(lastPrompt) || 0;
+function compactionFor(p) {
   const budgetTok = compactTokensFor(p);
-  if (budgetTok && prompt >= budgetTok) return { setting: 'compactTokens', at: budgetTok };
   const window = windowFor(p);
   const pctAt = Math.max(1, Number(p.compactAt) || 60);
-  if (window && prompt / window * 100 >= pctAt)
-    return { setting: 'compactAt', at: Math.round(window * pctAt / 100) };
+  const percentTokens = window ? Math.ceil(window * pctAt / 100) : 0;
+  if (budgetTok && (!percentTokens || budgetTok <= percentTokens))
+    return { setting: 'compactTokens', at: budgetTok };
+  return percentTokens ? { setting: 'compactAt', at: percentTokens } : null;
+}
+
+function compactReason(p, lastPrompt) {
+  const trigger = compactionFor(p);
+  if (trigger && (Number(lastPrompt) || 0) >= trigger.at) return trigger;
   return null;
 }
 
@@ -241,6 +246,7 @@ function warning(l, p) {
  */
 function block(p) {
   const window = windowFor(p);
+  const trigger = compactionFor(p);
   const out = ['# Your limits'];
 
   out.push(window
@@ -260,6 +266,9 @@ function block(p) {
       + `(harness.config.doca.historyTurns, .summarizeAfter, .compactTokens)`,
     `memory entries in this prompt: up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`,
   );
+
+  if (trigger) out.push(`effective token compaction trigger: ${trigger.at} tokens`
+    + ` (harness.config.doca.${trigger.setting}); message-count folding also applies.`);
 
   out.push('',
     'These are settings on this panel, not the provider\'s. Propose a change when one of them is what is in your '
@@ -354,6 +363,6 @@ function stalled({ ep, ms, frames }) {
 
 module.exports = {
   CHARS_PER_TOKEN,
-  estimate, estimateMessages, windowFor, compactTokensFor, shouldCompact, compactReason,
+  estimate, estimateMessages, windowFor, compactTokensFor, shouldCompact, compactReason, compactionFor,
   ledger, record, report, warning, block, live, explain, stalled, cachedOf,
 };

@@ -162,10 +162,16 @@ function readable() {
 
   try {
     const catalog = require('./catalog');
-    for (const [k, v] of Object.entries(catalog.configFor(catalog.BUILTIN_ID)))
+    const config = catalog.configFor(catalog.BUILTIN_ID);
+    const trigger = require('./budget').compactionFor(config);
+    for (const [k, v] of Object.entries(config))
       // The prompt is in the prompt already; repeating it here doubles it.
       if (k !== 'systemPrompt')
-        out.push({ path: `harness.config.${catalog.BUILTIN_ID}.${k}`, value: v, section: 'Harness parameters' });
+        out.push({ path: `harness.config.${catalog.BUILTIN_ID}.${k}`, value: v, section: 'Harness parameters',
+          ...(['compactTokens', 'compactAt'].includes(k) ? { detail: trigger
+            ? `Effective token trigger: ${trigger.at} (harness.config.${catalog.BUILTIN_ID}.${trigger.setting}); message-count folding also applies.`
+            : 'No token trigger is configured; message-count folding still applies.' } : {}),
+        });
   } catch { /* catalog unavailable — the rest of the list is still useful */ }
 
   // Effective values, like the paths and harness rows above: nothing is written

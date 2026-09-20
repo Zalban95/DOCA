@@ -96,3 +96,15 @@ test('specialists are visible but stay off until a boolean proposal is accepted 
   assert.throws(() => settings.apply(tampered.id), /boolean/);
   assert.equal(registry.enabled(), true);
 });
+
+test('settings explain the lower compaction trigger without changing the configuration', async () => {
+  const catalog = require('../modules/harness/catalog');
+  catalog.saveConfig(catalog.BUILTIN_ID, { contextWindow: 1000000, compactTokens: 500000, compactAt: 60 });
+  const before = loadPrefs();
+  const out = await tools.call('settings_read', { filter: 'compact' });
+  assert.match(out, /Effective token trigger: 500000 \(harness\.config\.doca\.compactTokens\)/);
+  assert.deepEqual(loadPrefs(), before);
+  catalog.saveConfig(catalog.BUILTIN_ID, { compactTokens: 800000 });
+  assert.match(await tools.call('settings_read', { filter: 'compact' }),
+    /Effective token trigger: 600000 \(harness\.config\.doca\.compactAt\)/);
+});
