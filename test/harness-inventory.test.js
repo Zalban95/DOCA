@@ -33,3 +33,29 @@ test('MCP inventory reports the owning machine without credentials or starting a
   assert.ok(tools.schemas().some(t => t.function.name === 'mcp_status'));
   assert.match(await tools.call('mcp_status', {}, ['mcp_status']), /switched off/);
 });
+
+test('memory inventory filters and pages keys without touching their values or usage counters', async () => {
+  memory.memWrite({ key: 'gpu', value: 'GPU first line\nHidden second line', category: 'Machine', pinned: true, locked: true });
+  memory.memDispute('gpu', { note: 'Hardware changed' });
+  memory.memWrite({ key: 'port', value: 'Connection port', category: 'machine' });
+  memory.memWrite({ key: 'name', value: 'User name', category: 'user' });
+  memory.memWrite({ key: 'legacy', value: 'Uncategorized fact' });
+  const before = memory.memList();
+  const out = await tools.call('memory_list', { category: ' MACHINE ', limit: 1 });
+  assert.match(out, /1 of 2 memory entries/);
+  assert.match(out, /"gpu" \[Machine; pinned, locked, disputed\]: GPU first line/);
+  assert.match(out, /offset 1 and the same category/);
+  assert.doesNotMatch(out, /Hidden second line|User name|Uncategorized fact/);
+  assert.match(await tools.call('memory_list', { category: 'machine', offset: 1 }), /"port"/);
+  assert.match(await tools.call('memory_list', { category: '' }), /"legacy" \[uncategorized\]/);
+  assert.match(await tools.call('memory_list', { category: 'missing' }), /0 of 0/);
+  assert.match(await tools.call('memory_list', { limit: 101 }), /Error: limit/);
+  assert.match(await tools.call('memory_list', { offset: -1 }), /Error: offset/);
+  assert.deepEqual(memory.memList(), before);
+
+  memory.memWrite({ key: 'long', value: 'x'.repeat(4000) });
+  const bounded = await tools.call('memory_list', {});
+  assert.ok(bounded.length < 1000);
+  assert.match(bounded, /x{200}…/);
+  assert.ok(tools.schemas().some(t => t.function.name === 'memory_list'));
+});

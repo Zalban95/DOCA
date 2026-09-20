@@ -314,6 +314,36 @@ const TOOLS = [
     },
   },
   {
+    name: 'memory_list',
+    description: 'List your durable memory keys, categories, pinned/locked/disputed flags, and the first line '
+      + 'of each value. Use this inventory to find an existing key before creating a near-duplicate. '
+      + 'Read-only; use memory_search for full values.',
+    parameters: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', description: 'Exact category, case-insensitive. Omit for all categories; empty string for uncategorized entries.' },
+        limit: { type: 'integer', minimum: 1, maximum: 100, description: 'Entries per page, default 50, maximum 100.' },
+        offset: { type: 'integer', minimum: 0, description: 'Entries to skip, default 0. Use the next offset in the result to continue.' },
+      },
+    },
+    run: ({ category, limit = 50, offset = 0 }) => {
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error('limit must be an integer from 1 to 100');
+      if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('offset must be a nonnegative integer');
+      const wanted = category === undefined ? null : String(category).trim().toLowerCase();
+      const entries = memory.memList().filter(e => wanted === null || (e.category || '').toLowerCase() === wanted);
+      const page = entries.slice(offset, offset + limit);
+      const rows = page.map(e => {
+        const first = String(e.value || '').split(/\r?\n/, 1)[0];
+        const flags = ['pinned', 'locked', 'disputed'].filter(k => e[k]);
+        return `- ${JSON.stringify(e.key)} [${e.category || 'uncategorized'}${flags.length ? `; ${flags.join(', ')}` : ''}]: `
+          + first.slice(0, 200) + (first.length > 200 ? '…' : '');
+      });
+      return clip(`${page.length} of ${entries.length} memory entries (offset ${offset})${wanted === null ? '' : ` in category ${JSON.stringify(category)}`}.\n`
+        + rows.join('\n')
+        + (offset + page.length < entries.length ? `\nMore entries: call memory_list with offset ${offset + page.length} and the same category.` : ''));
+    },
+  },
+  {
     name: 'memory_forget',
     description: 'Delete a memory entry by key once it is wrong AND you know what the right answer is. While you '
       + 'only know it is wrong, use memory_flag instead — a fact known to be false is still worth having, and '
