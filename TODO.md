@@ -1102,3 +1102,122 @@ picture is the one tool result that cannot be read aloud, so the honest options
 differ — announce it and let the user look afterwards, try to describe it, or
 hold it until the call ends. That is a product decision, which is why this is
 here rather than in the fix.
+
+---
+
+## Where this harness stands against the labs' agent SDKs, and what is left
+
+**Assessed 2026-09-21 against v2.47.0; re-checked against v2.50.0 before being
+written down here.** Three of the original findings were already closed by
+2.46.x and the approval work in 2.49–2.50, and are recorded below as closed
+rather than deleted — a comparison that only ever grows is one nobody trusts.
+
+The short version: the orchestration, memory bookkeeping, cost honesty and
+device-reach layers are at or above what Claude Code / the OpenAI Agents SDK
+ship. The **execution-safety and evaluation** layers are behind. Everything in
+this section is a DOCA feature, not a setting, so none of it is something the
+agent can propose in the ⚙ panel.
+
+### Closed since the assessment — do not re-file these
+
+- **Per-command approval.** Was "gap number one" alongside the sandbox.
+  `modules/harness/approval.js` (v2.49.0) gates every tool call that does
+  something, remembers a decision by tool-plus-verb, and v2.50.0 puts it in a
+  popup and on the watch that started the turn. The *sandbox* half is still
+  open and is the first entry below.
+- **The specialist prompt losing `profile`.** `agent.js`'s wire call passes
+  `profile` (`systemPrompt({ p, userText: message, summary, client, profile, … })`),
+  and `preview()` passes the same. Verified by reading both call sites.
+- **Failover dying on a smaller rung's window.** Each fallback entry carries its
+  own `contextWindow` and `windowSetting` (`rungsFor`), and `preflight` runs per
+  rung, so a chain that drops to a local model with a smaller window skips that
+  rung with a reason instead of taking a 400.
+
+### 1. No execution sandbox — the largest remaining gap
+
+`shell` runs unrestricted as the panel's own user. The only guards are a 60 s
+timeout, a 64 KB output clip and the per-tool off switch; `read_file` /
+`write_file` / `list_dir` enforce `FM_ALLOWED_ROOTS`, and a shell command walks
+straight around that. Manual approval now puts a person in front of each call,
+which is real mitigation and is **not** the same thing: an approved command
+still runs with the full rights of the process.
+
+What the labs put underneath the model — seatbelt on macOS, landlock/bubblewrap
+or a container on Linux, and a filesystem/network allowlist — has no equivalent
+here. On Windows there is no cheap equivalent at all, which is part of why this
+is unbuilt rather than merely undone.
+
+**Undecided:** whether the boundary is a container (clean, and cuts the agent
+off from the host it is meant to administer — which is the whole product), a
+per-command policy, or an unprivileged second user. The tension is real and is
+the reason this has not been picked: DOCA exists to manage the host.
+
+### 2. No trust boundary on content the agent did not write
+
+`research_docs` is the one place this is handled, and handled well: the page is
+read by `agent.ask()` with no tools, no memory and no charter, and `frame()`
+hands back a report labelled as somebody else's words. **Nothing else does
+this.** `http_fetch` output, `read_file` contents and MCP tool results enter the
+transcript with exactly the trust of the user's own message. `mcp/tools.js`
+tracks `origin`, but that is *which machine a tool runs on*, not *how far its
+output may be trusted* — the two are easy to confuse and are not the same field.
+
+Injection is the dominant real attack on an agent holding a shell, so the
+missing pieces are: a label on untrusted text, and dangerous tools re-gated
+after it enters the turn. A classifier is optional; the label is not.
+
+### 3. No retrieval layer
+
+`memory.memSearch` is keyword scoring over the memory list — substring hits,
+weighted for key matches and pins. There are no embeddings, no chunk-and-rerank
+over the workspace, and no document index, so context has to be hand-fed or
+found with `shell`. This is a deliberate simplification so far and is cheap to
+live with at one user's scale; it is the item most likely to be wanted first
+once the workspace is large.
+
+### 4. No evaluation, and no tracing
+
+`npm test` asserts mechanism against a scripted stub — prompt order, refusals,
+what reaches the wire. Nothing scores *behaviour*: no golden trajectories, no
+success metric per task, no judge, no regression corpus, and no per-turn trace
+that could be read after the fact. The `usage` JSONL is the closest thing and
+records cost, not outcome.
+
+The failure class this leaves open is the one the assessment itself hit: a bug
+that changes what the model is sent can pass a suite that asserts `preview()`
+rather than the request. That particular instance is fixed; the hole that let it
+through is not.
+
+### 5. Context management is one-shot folding
+
+A rolling summary is the only instrument. There is no pruning of stale tool
+results and no context editing, so a turn that read three large files carries
+all three until the fold. Defaults are sane (`compactTokens: 40000`,
+`compactAt: 60`, `contextWindow: 0` = nobody has said) — but **a saved config can
+disable folding without saying so**: this panel ran with a 1M window and
+`compactTokens` at 500 000, which is past where most turns end, so nothing ever
+folded. Worth a check in the ⚙ panel rather than a code change, and worth a
+warning when the two settings are configured so far apart that neither can fire.
+
+### 6. Vision is delegated, not native
+
+Images are described by calling a separate model from a specialist's role
+instructions. The main loop's input path carries a *path*, never image content —
+which is the attachments design and is deliberate (`AGENTS.md`, Attachments).
+When there is a vision model worth using, this becomes one optional thing done
+to a file that already exists; it is listed here as a known limit, not a defect.
+
+### 7. Not built, and correctly so
+
+No tenant model, no quotas, no policy engine. This is a single-owner panel and
+those are the enterprise gap, not a missing feature — recorded so the comparison
+is honest rather than because anyone should build them.
+
+### 8. Verified while writing this: no retry on a rate limit
+
+The assessment left this unchecked, so it was checked. The only retry in the
+call path is the one that drops `stream_options` after a 400 (`agent.js`, "any
+400 costs one retry"). A 429 or a 5xx is not retried and carries no backoff — it
+falls to the fallback chain if one is configured, and otherwise ends the turn.
+`budget.explain()` at least names whose limit it was. Whether to add backoff is
+open: a retry that is invisible is how a turn silently costs twice.
