@@ -1283,6 +1283,7 @@ async function hcOpenSession(id, skipReload) {
         _hcAppend('tool-result', m.content, m.name);
       }
       else if (m.role === 'assistant') {
+        if (m.reasoning?.text) _hcAppend('thinking', m.reasoning.text);
         if (m.content) _hcAppendContent('assistant', m.content);
         (m.tool_calls || []).forEach(tc =>
           _hcAppend('tool-call', tc.function?.arguments || '', tc.function?.name));
@@ -1502,6 +1503,10 @@ async function hcSend() {
     signal: _hcTurn.signal,
     onEvent: evt => {
       if (evt.type === 'session') _hcSession = evt.sessionId;
+      if (evt.type === 'thinking') {
+        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+        stream.feedThinking(evt.text);
+      }
       if (evt.type === 'text') {
         if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
         stream.feed(evt.text);
@@ -1544,7 +1549,7 @@ async function hcSend() {
       }
       // Anything real from the model means the wait is over. `_hcAppend`
       // returns the body span, so the row is its parent.
-      if (waitingRow && (evt.type === 'text' || evt.type === 'tool_call' || evt.type === 'usage')) {
+      if (waitingRow && (evt.type === 'thinking' || evt.type === 'text' || evt.type === 'tool_call' || evt.type === 'usage')) {
         waitingRow.parentElement?.remove();
         waitingRow = null;
       }

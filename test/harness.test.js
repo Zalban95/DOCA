@@ -101,6 +101,15 @@ before(async () => {
           function: { name: next.tool, arguments: JSON.stringify(next.args || {}) },
         }] } }] }]);
       }
+      if (next.gate) {
+        res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: next.think } }] })}\n\n`);
+        next.gate.then(() => {
+          res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: next.text } }] })}\n\n`);
+          res.end('data: [DONE]\n\n');
+        });
+        return;
+      }
       // Split the text so the streaming accumulator is exercised, not bypassed.
       const mid = Math.ceil((next.text || '').length / 2);
       const tmid = Math.ceil((next.think || '').length / 2);
@@ -623,6 +632,7 @@ test('an endpoint that ignores the stream flag still produces an answer', async 
   script = [{ json: 'Plain completion, no SSE.', think: 'reasoned in one piece' }];
   const events = await stream('/api/harness/chat', { message: 'hi' });
   assert.equal(events.filter(e => e.type === 'text').map(e => e.text).join(''), 'Plain completion, no SSE.');
+  assert.equal(events.find(e => e.type === 'thinking').text, 'reasoned in one piece');
   assert.equal(events.at(-1).code, 0);
 
   const row = memory.messages(memory.activeSession().id).at(-1);
@@ -1438,7 +1448,7 @@ test('a stalled model falls through to the next, and says so on screen', async (
 
 /* ── A thinking model's chain of thought ──────────────── */
 
-test('a chain of thought is kept for the provider that sent it, and shown to no one', async () => {
+test('provider thinking streams separately from the answer and is echoed only to its provider', async () => {
   // DeepSeek's thinking mode answers with `reasoning_content` beside `content`,
   // and for any request carrying tools it 400s the whole turn when that field is
   // missing from an earlier assistant message of the same conversation. The
@@ -1453,8 +1463,9 @@ test('a chain of thought is kept for the provider that sent it, and shown to no 
   seen = [];
   const events = await stream('/api/harness/chat', { message: 'what is it?', sessionId });
 
-  // The reasoning is not the reply, and the user is waiting for the reply: it
-  // reaches the screen as nothing at all.
+  assert.equal(events.filter(e => e.type === 'thinking').map(e => e.text).join(''),
+    'They asked a question. I should answer it.');
+  assert.ok(events.findIndex(e => e.type === 'thinking') < events.findIndex(e => e.type === 'text'));
   assert.equal(events.filter(e => e.type === 'text').map(e => e.text).join(''), 'The answer.');
 
   const row = memory.messages(sessionId).find(r => r.role === 'assistant');
@@ -1471,6 +1482,35 @@ test('a chain of thought is kept for the provider that sent it, and shown to no 
     'the provider that asked for its reasoning back did not get it');
   assert.equal(seen.at(-1).messages.at(-2).reasoning_content, undefined,
     'The second answer had no reasoning of its own');
+});
+
+test('both browser chats receive thinking before the provider releases its answer', async () => {
+  for (const route of ['/api/harness/chat', '/api/chat']) {
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    script = [{ think: 'Checking the inputs.', text: 'Finished.', gate }];
+    const res = await fetch((await H.start()) + route, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'live preview check' }), signal: AbortSignal.timeout(5000),
+    });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let received = '';
+    try {
+      while (!received.includes('Checking the inputs.')) {
+        const { done, value } = await reader.read();
+        assert.equal(done, false, route + ' ended before thinking arrived');
+        received += decoder.decode(value, { stream: true });
+      }
+      assert.ok(received.includes('"type":"thinking"'), route);
+      assert.equal(received.includes('Finished.'), false, 'the answer is still held at the provider');
+    } finally { release(); }
+    while (!(await reader.read()).done) { /* finish the turn before the next request */ }
+  }
+  const history = await H.api(null, 'GET', '/api/chat/history');
+  const answer = history.body.messages.at(-1);
+  assert.equal(answer.content, 'Finished.');
+  assert.equal(answer.working.find(s => s.kind === 'thinking').body, 'Checking the inputs.');
 });
 
 test('a hop does not hand one provider\'s reasoning to the next', async () => {

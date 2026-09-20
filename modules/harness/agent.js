@@ -495,8 +495,8 @@ function toApiMessages(allRows, { sessionId, provider } = {}) {
   // (ISSUES.md H-10). Everyone else either ignores it or has never heard of it,
   // and a body carrying an unknown field is a refusal from a strict endpoint —
   // so the row's own record of who produced it decides, never the model name.
-  // `reasoning` is stored in exactly one place (`turn`) and read in exactly one
-  // (`streamOrRead`), so this is the whole rule.
+  // The browser may preview the stored reasoning; echoing it to a model is
+  // restricted to the provider that produced it.
   const echo = r => (r.role === 'assistant' && r.reasoning?.text && r.reasoning.provider === provider
     ? { reasoning_content: r.reasoning.text } : {});
 
@@ -714,7 +714,7 @@ function firstTokenGuard({ p, signal, onWaiting }) {
  * produced `reasoning`, which only it may be given back.
  * @returns {Promise<{ content: string, tool_calls: object[], provider: string }>}
  */
-async function complete({ ep, body, signal, onText, onWaiting, p, meta = { kind: 'ask' }, onHop, onSkip }) {
+async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, meta = { kind: 'ask' }, onHop, onSkip }) {
   signal?.throwIfAborted();
   const candidates = rungsFor({ ep, model: body.model, p });
   const skipped = [];
@@ -751,7 +751,7 @@ async function complete({ ep, body, signal, onText, onWaiting, p, meta = { kind:
     });
 
     try {
-      const reply = await streamOrRead({ ep: rung.ep, body: rungBody, guard, onText, p });
+      const reply = await streamOrRead({ ep: rung.ep, body: rungBody, guard, onText, onThinking, p });
       usage.record({ ...meta, provider: rung.ep.id, model: rungBody.model, usage: reply.usage, body: rungBody, reply });
       // It answered, so whatever it was is over — including its own earlier stall.
       if (i > 0) _degraded.delete(rungKey(rung.ep, rung.model));
@@ -783,7 +783,7 @@ async function complete({ ep, body, signal, onText, onWaiting, p, meta = { kind:
   throw stalled || new Error('No model to call.');
 }
 
-async function streamOrRead({ ep, body, guard, onText, p }) {
+async function streamOrRead({ ep, body, guard, onText, onThinking, p }) {
   const r = await post(ep, body, guard.signal, p);
 
   if (!(r.headers.get('content-type') || '').includes('event-stream')) {
@@ -793,6 +793,7 @@ async function streamOrRead({ ep, body, guard, onText, p }) {
     const json = await r.json();
     guard.arrived();
     const msg  = json?.choices?.[0]?.message || {};
+    if (msg.reasoning_content && onThinking) onThinking(msg.reasoning_content);
     if (msg.content && onText) onText(msg.content);
     return { content: msg.content || '', tool_calls: msg.tool_calls || [], usage: json?.usage || null,
              reasoning: msg.reasoning_content || '' };
@@ -832,13 +833,13 @@ async function streamOrRead({ ep, body, guard, onText, p }) {
       if (frame.usage) usage = frame.usage;
       const delta = frame.choices?.[0]?.delta;
       if (!delta) continue;
+      // Provider reasoning has its own live preview, never the answer channel.
+      // Preserve the original field for the provider's next request (H-10).
+      if (typeof delta.reasoning_content === 'string') {
+        reasoning += delta.reasoning_content;
+        if (onThinking) onThinking(delta.reasoning_content);
+      }
       if (delta.content) { content += delta.content; if (onText) onText(delta.content); }
-      // A thinking model's chain of thought arrives beside the answer, in its
-      // own field, and is not the answer: it is collected, never handed to
-      // `onText`, never shown as the reply and never stored as the content.
-      // It is kept only because the provider that sent it asks for it back
-      // (ISSUES.md H-10).
-      if (typeof delta.reasoning_content === 'string') reasoning += delta.reasoning_content;
       for (const tc of delta.tool_calls || []) {
         const i = tc.index ?? calls.length;
         calls[i] ||= { id: '', type: 'function', function: { name: '', arguments: '' } };
@@ -1115,6 +1116,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id },
       body: { ...base, messages, ...(schemas.length ? { tools: schemas, tool_choice: 'auto' } : {}) },
       onText: t => { text += t; say({ type: 'text', text: t }); },
+      onThinking: t => say({ type: 'thinking', text: t }),
       // Silence is a state worth drawing. Without this the console shows the
       // session line and then nothing at all, which reads as a broken panel
       // rather than as a provider that has not started answering.

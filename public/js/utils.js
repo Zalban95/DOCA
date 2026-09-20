@@ -315,10 +315,9 @@ function agentFoldMount(container, node) {
     // happening, with the thinking one click away.
     node.classList.remove('open');
     node.querySelector('.agent-fold-head')?.setAttribute('aria-expanded', 'false');
-    const g = _foldGroupFor(live, node.dataset.foldKind);
-    if (!g) { live.appendChild(node); return; }
-    g.querySelector('.agent-fold-group-items').appendChild(node);
-    _foldGroupSync(g);
+    // Keep live rows flat: a group would put another closed header between
+    // the one visible activity line and the preview the user clicked.
+    live.appendChild(node);
     return;
   }
   const group = _foldGroupFor(container, node.dataset.foldKind);
@@ -418,8 +417,9 @@ function _foldGroupSync(group) {
  * available it is left out rather than guessed.
  */
 function _workingSummary(rows, seconds) {
-  const commands = rows.filter(r => r.classList.contains('agent-fold-tool-call')).length;
-  const thinking = rows.filter(r => r.classList.contains('agent-fold-thinking')).length;
+  const folds = rows.flatMap(r => r.classList.contains('agent-fold') ? [r] : [...r.querySelectorAll('.agent-fold')]);
+  const commands = folds.filter(r => r.classList.contains('agent-fold-tool-call')).length;
+  const thinking = folds.filter(r => r.classList.contains('agent-fold-thinking')).length;
   const took = !seconds ? ''
     : seconds < 60 ? ` for ${seconds}s`
     : ` for ${Math.round(seconds / 60)}m`;
@@ -621,7 +621,7 @@ function collapseFoldRuns(container) {
     // One line per finished turn, not a tail of three: the same summary a
     // live block closes into, so a reloaded transcript and a turn you watched
     // happen look the same.
-    if (rows.length > 1) _foldRunCollapse(rows);
+    if (rows.some(isRow)) _foldRunCollapse(rows);
     run = [];
   };
   const children = [...container.children];
@@ -744,6 +744,14 @@ function createThinkStream(ui) {
 
   return {
     startWaiting() { ensureThink(true); scroll(); },
+
+    // The provider's separate reasoning field is literal text, not markup to
+    // parse as <think> tags, and must never enter the answer or speech buffer.
+    feedThinking(chunk) {
+      if (!chunk) return;
+      ensureThink(true).append(chunk);
+      scroll();
+    },
 
     feed(chunk) {
       if (!chunk) return;

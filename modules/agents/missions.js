@@ -409,7 +409,7 @@ function resume(id, { go } = {}) {
  */
 function record(id, evt, base = { steps: 0, tokens: 0 }) {
   try {
-    if (!evt || evt.type === 'text' || evt.type === 'session') return;
+    if (!evt || evt.type === 'text' || evt.type === 'thinking' || evt.type === 'session') return;
     if (evt.type === 'usage') {
       announce(patch(id, { steps: base.steps + evt.step, tokens: base.tokens + (evt.totalTokens || 0) }),
         { ephemeral: true });

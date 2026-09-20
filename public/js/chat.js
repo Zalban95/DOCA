@@ -161,6 +161,10 @@ async function chatLoadHistory() {
       container.innerHTML = '';
       msgs.forEach(m => {
         if (m.role === 'assistant') {
+          for (const step of m.working || []) {
+            const fold = _chatAppendFold(step.kind, step.body, step.label);
+            if (step.at) fold.el.dataset.at = step.at;
+          }
           (m.images || []).forEach(_chatAppendImage);
           if (m.content) _chatAppendContent(m.content);
         }
@@ -504,7 +508,11 @@ function chatSend({ spoken = false } = {}) {
   sseStream('/api/chat', { message: sent, attachments }, {
     signal: chatTurn.signal,
     onEvent: evt => {
-      if (evt.type === 'text') {
+      if (evt.type === 'thinking') {
+        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+        if (waitingRow) { waitingRow.remove(); waitingRow = null; }
+        stream.feedThinking(evt.text);
+      } else if (evt.type === 'text') {
         if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
         if (waitingRow) { waitingRow.remove(); waitingRow = null; }
         reply += evt.text;
@@ -764,6 +772,7 @@ async function _callProcessAudio(audioBlob) {
     let sentenceBuf  = '';
     let inThinking   = false;
     let pendingCall  = null;
+    agentWorkingOpen(container);
     const stream = createThinkStream({
       mount: node => { agentFoldMount(container, node); _chatScroll(); },
       makeText: () => chatAppendMsg('assistant', ''),
@@ -795,7 +804,10 @@ async function _callProcessAudio(audioBlob) {
         if (!line.startsWith('data: ')) continue;
         try {
           const evt = JSON.parse(line.slice(6));
-          if (evt.type === 'text') {
+          if (evt.type === 'thinking') {
+            if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
+            stream.feedThinking(evt.text);
+          } else if (evt.type === 'text') {
             if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
             stream.feed(evt.text);
 
@@ -853,6 +865,7 @@ async function _callProcessAudio(audioBlob) {
       chatAppendMsg('system', `Voice error: ${e.message}`);
     }
   } finally {
+    agentWorkingClose(document.getElementById('chat-messages'));
     _callProcessing = false;
     if (_callActive && !_callCurrentSrc && _callPlayQueue.length === 0) {
       _callSetStatus('Listening…', 'listening');

@@ -31,11 +31,16 @@ function el(tag, className = '') {
       contains: c => node.className.split(/\s+/).includes(c),
       add(c) { if (!this.contains(c)) node.className = `${node.className} ${c}`.trim(); },
       remove(c) { node.className = node.className.split(/\s+/).filter(x => x && x !== c).join(' '); },
-      toggle(c, on) { (on === undefined ? !this.contains(c) : on) ? this.add(c) : this.remove(c); },
+      toggle(c, on) { const value = on === undefined ? !this.contains(c) : on; value ? this.add(c) : this.remove(c); return value; },
     },
     get textContent() { return node._text + node.children.map(c => c.textContent).join(''); },
     set textContent(v) { node._text = String(v); node.children.length = 0; },
     get lastElementChild() { return node.children.at(-1) || null; },
+    get parentElement() { return node.parent; },
+    closest(sel) {
+      for (let n = node; n; n = n.parent) if (n.classList.contains(sel.slice(1))) return n;
+      return null;
+    },
     appendChild(c) {
       const i = c.parent ? c.parent.children.indexOf(c) : -1;
       if (i >= 0) c.parent.children.splice(i, 1);   // never splice(-1): that drops the last child
@@ -94,7 +99,7 @@ function api() {
   const prev = global.document;
   global.document = doc;
   try {
-    const made = new Function(`${SRC}; return { agentWorkingOpen, agentWorkingMount, agentWorkingClose, collapseFoldRuns, _workingSummary };`)();
+    const made = new Function(`${SRC}; return { agentFold, agentFoldMount, createThinkStream, agentWorkingOpen, agentWorkingMount, agentWorkingClose, collapseFoldRuns, _workingSummary };`)();
     global.document = doc;                           // the functions build nodes when called, too
     return made;
   } finally { /* left in place deliberately; each test sets its own */ }
@@ -104,6 +109,45 @@ const transcript = () => el('div', 'hc-messages');
 const fold = kind => el('div', `agent-fold agent-fold-${kind}`);
 const bubble = (who, text) => { const b = el('div', `hc-msg hc-${who}`); b.textContent = text; return b; };
 const kinds = box => box.children.map(c => c.className.split(' ').slice(0, 2).join(' '));
+
+test('provider thinking fills the same one-click preview while it is still running', () => {
+  const { agentWorkingOpen, agentWorkingClose, agentFoldMount, createThinkStream } = api();
+  const box = transcript();
+  agentWorkingOpen(box);
+  const stream = createThinkStream({ mount: node => agentFoldMount(box, node) });
+  stream.startWaiting();
+  stream.feedThinking('First line.\n');
+  const fold = box.querySelector('.agent-fold-thinking');
+  assert.equal(fold.classList.contains('open'), false, 'one line until clicked');
+  fold.querySelector('.agent-fold-head').click();
+  stream.feedThinking('Next line.');
+  assert.equal(fold.classList.contains('open'), true);
+  assert.equal(fold.querySelector('.agent-fold-body').textContent, 'First line.\nNext line.');
+  assert.equal(box.querySelectorAll('.agent-fold-thinking').length, 1);
+  stream.finish();
+  agentWorkingClose(box);
+  assert.match(box.querySelector('.agent-working-head').textContent, /Thought/);
+});
+
+test('consecutive live commands stay flat and count individually', () => {
+  const { agentWorkingOpen, agentWorkingClose, agentFoldMount, agentFold } = api();
+  const box = transcript();
+  agentWorkingOpen(box);
+  for (let i = 0; i < 2; i++) agentFoldMount(box, agentFold({ kind: 'tool-call', label: 'Command', active: true }).el);
+  assert.equal(box.querySelectorAll('.agent-fold-group').length, 0);
+  agentWorkingClose(box);
+  assert.match(box.querySelector('.agent-working-head').textContent, /2 commands/);
+});
+
+test('one saved thinking preview becomes a finished summary while a plain reply stays plain', () => {
+  const { collapseFoldRuns } = api();
+  const box = transcript();
+  box.append(fold('thinking'), bubble('assistant', 'Answer.'), bubble('user', 'Again?'), bubble('assistant', 'Yes.'));
+  collapseFoldRuns(box);
+  assert.equal(box.querySelectorAll('.agent-working').length, 1);
+  assert.match(box.querySelector('.agent-working-head').textContent, /Thought/);
+  assert.equal(box.lastElementChild.textContent, 'Yes.');
+});
 
 test('while a turn runs its rows are in one block, and the block is the only thing added', () => {
   const { agentWorkingOpen, agentWorkingMount } = api();

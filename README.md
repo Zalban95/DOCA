@@ -174,6 +174,13 @@ name and base URL, and running a known server on a different port is just a base
 Keys come from the same screen (or the matching env var; local servers need none), and the model
 dropdown is populated live from the provider.
 
+Both the Harness and floating chat show one current activity line. Click
+**Thinking** to watch the provider's reasoning arrive in a scrollable preview
+about ten lines tall. Finished activity collapses to a thought/command summary;
+a reply without thinking or tools shows only the answer. Saved conversations
+keep their thinking previews. This supports `reasoning_content` and `<think>`
+blocks when the provider supplies them.
+
 **Three levels, one workspace.** The floating chat always reaches a persistent
 **Orchestrator** — your main contact for goals, decisions and results. Selecting
 another conversation in the Harness never redirects it. Device messages without

@@ -73,13 +73,25 @@ function handleHistory(req, res) {
     const memory = require('./harness/memory');
     const messages = [];
     for (const row of memory.messages(memory.mainSession().id)) {
-      if (row.role === 'tool' && row.images?.length) {
-        messages.push({ role: 'assistant', content: '', images: row.images, time: row.at });
-      } else if (['user', 'assistant'].includes(row.role) && row.content) {
-        const last = messages.at(-1);
-        if (row.role === 'assistant' && last?.role === 'assistant') last.content += row.content;
-        else messages.push({ role: row.role, content: row.content, time: row.at,
+      if (row.role === 'user') {
+        messages.push({ role: row.role, content: row.content, time: row.at,
           ...(row.attachments?.length ? { attachments: row.attachments.map(a => a.name) } : {}) });
+      } else if (row.role === 'assistant' || row.role === 'tool') {
+        let reply = messages.at(-1);
+        if (reply?.role !== 'assistant') {
+          reply = { role: 'assistant', content: '', time: row.at, working: [] };
+          messages.push(reply);
+        }
+        if (row.role === 'assistant') {
+          if (row.reasoning?.text) reply.working.push({ kind: 'thinking', body: row.reasoning.text, at: row.at });
+          reply.content += row.content || '';
+          for (const call of row.tool_calls || []) reply.working.push({
+            kind: 'tool-call', label: call.function?.name, body: call.function?.arguments || '', at: row.at,
+          });
+        } else {
+          reply.working.push({ kind: 'tool-result', label: row.name, body: row.content || '', at: row.at });
+          if (row.images?.length) reply.images = [...(reply.images || []), ...row.images];
+        }
       }
     }
     return res.json({ messages });
@@ -128,6 +140,8 @@ async function handleChat(req, res) {
         emit: evt => {
           if (evt.type === 'text')
             res.write(`data: ${JSON.stringify({ type: 'text', text: evt.text })}\n\n`);
+          if (evt.type === 'thinking')
+            res.write(`data: ${JSON.stringify({ type: 'thinking', text: evt.text })}\n\n`);
           if (evt.type === 'tool_call')
             res.write(`data: ${JSON.stringify({ type: 'tool_call', name: evt.name, args: evt.args })}\n\n`);
           if (evt.type === 'tool_result')
