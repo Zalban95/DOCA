@@ -19,6 +19,10 @@ process.env.SKILLS_DIR     = path.join(tmp, 'skills');
 process.env.WORKSPACE_DIR  = tmp;
 process.env.ATTACHMENTS_DIR = path.join(tmp, 'attachments');
 process.env.AGENTS_DIR      = path.join(tmp, 'agents');
+process.env.SETUP_DIR       = path.join(tmp, 'setup');
+process.env.SNAPSHOT_DIR    = path.join(tmp, 'snapshots');
+process.env.SNAPSHOT_SCRIPT = path.join(tmp, 'snapshot-agent.sh');
+process.env.RESTORE_SCRIPT  = path.join(tmp, 'restore-agent.sh');
 
 const { createApp } = require('../server');
 const devices  = require('../modules/api-v1/devices');

@@ -528,6 +528,17 @@ be a boundary or stop being described as one.
 **Status:** open, environmental. Not a code fault in this repo and not a 2.23.0
 regression.
 
+*2026-09-20 follow-up:* v2.37.2 removed the eager `node-pty` import and made
+the VM test tolerate installed hypervisors. The terminal regression mocks the
+addon: it verifies lazy loading, not native compatibility. Separately, setting
+`SNAPSHOT_DIR` in the parent environment reproduces **8 path tests / 6 pass /
+2 fail**, both `env !== default`; this is unrelated to the addon. v2.43.1 isolates
+all managed paths in the shared test helper and checks default resolution in a
+separate process with that variable unset. With inherited snapshot/setup paths,
+the full suite passes **348 / 348**, exit 0, on Windows with Node **v24.19.0**.
+This does not establish the result of the Linux Node v22.22.1 full-suite run or
+re-test the original native-addon failure on v22.22.2.
+
 *Re-tested 2026-09-17 on a clean checkout (v2.27.2, `4177ad1`) — **it does not
 reproduce**.* `node_modules/node-pty` is still `1.1.0` and
 `node -e "require('node-pty')"` prints `pty ok` **and exits 0**; `npm test`

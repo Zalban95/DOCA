@@ -36,8 +36,26 @@ test('every settable path reports its value, where it came from, and whether it 
   assert.equal(row(body.settable, 'CONFIG_PATH').value, process.env.CONFIG_PATH);
   assert.equal(row(body.settable, 'CONFIG_PATH').pending, false);
 
-  // A path nobody set anywhere falls back to the shipped default.
-  assert.equal(row(body.settable, 'SNAPSHOT_DIR').source, 'default');
+  // Every managed path belongs to this test, regardless of the launcher's env.
+  for (const r of body.settable) {
+    assert.equal(r.source, 'env');
+    assert.equal(r.value, process.env[r.key]);
+    assert.ok(!path.relative(H.tmp, r.value).startsWith('..'), `${r.key} escaped the test directory`);
+  }
+});
+
+test('a path absent from both preferences and the environment uses its shipped default', () => {
+  const { execFileSync } = require('node:child_process');
+  const result = execFileSync(process.execPath, ['-e',
+    "process.stdout.write(JSON.stringify(require('./modules/paths').describe().find(r => r.key === 'SNAPSHOT_DIR')))"], {
+    cwd: path.join(__dirname, '..'), encoding: 'utf8',
+    env: { ...process.env, SNAPSHOT_DIR: '', DOCA_PREFS_FILE: path.join(H.tmp, 'absent-prefs.json') },
+  });
+  const r = JSON.parse(result);
+  assert.equal(r.source, 'default');
+  assert.equal(r.value, r.fallback);
+  assert.equal(r.active, r.fallback);
+  assert.equal(r.pending, false);
 });
 
 test('no path claims it needs a restart when nothing has been saved', async () => {
@@ -71,7 +89,10 @@ test('saving an override is remembered, flagged as needing a restart, and cleara
 
   // Blank hands the path back to the environment or the default.
   const cleared = await post('/api/paths', { SNAPSHOT_DIR: '' });
-  assert.equal(row(cleared.body.settable, 'SNAPSHOT_DIR').source, 'default');
+  const restored = row(cleared.body.settable, 'SNAPSHOT_DIR');
+  assert.equal(restored.source, 'env');
+  assert.equal(restored.value, process.env.SNAPSHOT_DIR);
+  assert.equal(restored.pending, false);
 });
 
 test('a missing path can be created, and creating twice is not an error', async () => {
