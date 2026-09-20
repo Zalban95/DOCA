@@ -1782,3 +1782,74 @@ and none was written.
   the per-ancestor loop reddens the third. Suite 372/372, exit 0.
 - No browser check is owed: this entry changes no panel code and makes no claim
   about the DOM.
+
+---
+
+## H-17 — `agent_results` and `agent_resume` act on a mission by id, with no check on whose it is
+
+**Status:** open, not fixed. Surfaced while fixing H-12 (the same class of fault:
+a tool whose answer depends on the caller, with no caller in the condition) and
+deliberately left out of that commit — it needs a decision about mission
+ownership, and the entry below is that decision written down rather than taken.
+
+### What happens
+
+Two tools take a mission id and act on it:
+
+- **`agent_results`** returns any mission's `result` to any caller holding the
+  tool. `missions.get(mission)` (`tools.js:574`) looks a mission up by id with no
+  caller in the question, and the finished branch returns `m.result` verbatim
+  (`:588-589`).
+- **`agent_resume`** resumes or drops **any** paused mission the caller names —
+  `missions.resume(mission, { go })` (`tools.js:550`), and `resume()` itself takes
+  the id and acts (`missions.js:373-386`).
+
+Neither is reachable by a specialist: `registry.NEVER` (`registry.js:55`) keeps
+both out of a definition's allowlist, it is subtracted again at turn time
+(`agent.js:986`), and `agent_dispatch` goes with them while specialist agents are
+switched off (`tools.js:861-864`). So the exposure is **one work leader reaching
+another leader's mission**, or the Orchestrator reaching any — and for the
+Orchestrator that is the intended behaviour, not a fault.
+
+The two are not equally exposed, and the difference is the point of writing this
+down separately from H-12:
+
+- `agent_results` **does** check ownership in its `wait` branch
+  (`tools.js:576-579`, via `organization.canManage`), so the bounded wait is
+  already gated. What is ungated is the plain read of a mission that has already
+  finished — the `result` itself, which is the mission's whole answer.
+- `agent_resume` has **no** check anywhere, in the tool or in `missions.resume`.
+
+### Why it is not simply "add `canManage`"
+
+`canManage` answers "is this in my reporting line", which is the right question
+for a conversation and only half the right question for a mission. A mission
+carries `by` — the conversation that dispatched it (`missions.js:263-264` throws
+for a specialist, so `by` is always a level that owns missions). Two rules are
+available and they differ:
+
+- gate on `by` — the dispatcher, and only the dispatcher, reads or resumes its
+  own mission;
+- gate on `canManage(caller, mission.by)` — anyone above the dispatcher as well,
+  which is what lets the Orchestrator resume a paused mission the user has just
+  been asked about, and is why `agent_resume` is open in the first place.
+
+The second is the behaviour that exists today for the Orchestrator and is
+probably the one to keep, made explicit rather than incidental. The first is
+narrower and would break the paused-mission flow H-5's recovery path depends on.
+
+### How to close it
+
+- Decide which of the two rules above is the contract, and write it down — this
+  is the part that is not mechanical.
+- Apply it in one place: `agent_results`' read path and `agent_resume`'s `run`
+  should call the same predicate, and the `wait` branch's existing check should
+  move onto it rather than keeping a second copy of the rule. `disabledFor`'s
+  note at `agent.js:325-332` is the precedent for why it must be one
+  implementation: two copies is how the prompt the panel reports and the prompt
+  the model gets came to disagree once already.
+- Add the mirror tests — a leader reads its own mission, a leader is refused a
+  sibling's, the Orchestrator is allowed — in `test/organization.test.js`, beside
+  the existing `agent_results` test at `:133`.
+- Bump and reference this entry. It is a behaviour change to a tool, so it is a
+  **minor**, not a patch (AGENTS.md:28).
