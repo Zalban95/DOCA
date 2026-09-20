@@ -788,6 +788,35 @@ never what the agent is allowed to do.
   packages with one name in one tree is a trap for a human and worse for an
   agent pointed at the folder. Archive it.
 
+- **The panel reports the version it booted with, and updates by branch, not by
+  tag.** — *Added 2026-09-21, working out why a panel showed `v2.46.5` after
+  `v2.46.6` had been tagged and pushed.* The tagging was correct; three separate
+  mechanisms can make it look otherwise, and each can mislead the next person the
+  same way:
+
+  - `LOCAL_VERSION` (`modules/update.js:9`) is `package.json` read **once, at
+    module load**, and the header's number is that value by way of
+    `GET /api/update-check` → `current` (`public/index.html:1474`). A running
+    process keeps reporting the version it started with, so a bump — or a
+    `git pull` done outside the panel — appears only after a restart, or after a
+    page reload if the tab predates it. The check's own answer is cached for
+    `CACHE_TTL_MS = 5 * 60 * 1000`; `?force=1`, which the ↺ Check button sends,
+    skips the cache.
+  - `handleUpdate` runs a bare `git pull` — no refspec, no tag checkout. It
+    follows the current branch's upstream, so a branch with no upstream fails
+    outright ("There is no tracking information for the current branch") and a
+    checkout sitting on `main` pulls whatever `main` tracks, whatever the newest
+    tag is. Tags play no part in updating.
+  - The `api.github.com/repos/…/tags?per_page=100` fallback is near its ceiling:
+    origin carried **82** tags on 2026-09-21, against the 46 recorded in the entry
+    above on 2026-09-17. Past 100 the fallback sees one page, and nothing
+    guarantees the newest tag sorts onto it. `git ls-remote` is tried first and
+    works from this install, so it is latent rather than live.
+
+  Recorded, not changed: nothing misbehaves today, and deciding what "update"
+  should mean for a checkout that is not sitting on the release branch is a
+  product question, not a patch to slip into a tagging commit.
+
 ## Settings consistency
 
 - **Status lines clear on four different schedules.** `3000ms` is the de facto

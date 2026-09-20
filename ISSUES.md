@@ -1527,9 +1527,11 @@ profile-less work session and still passes.
 ## H-15 — A picture shown mid-turn splits the turn into two summary lines
 
 **Status:** fixed on `fix/audit-2.45.1`, 2026-09-20, **v2.46.3** — and revised in
-**v2.46.5** before either was tagged. Found by the `af416bd..origin/main` audit
-(`docs/audit-2.45.1.md`, finding F4). Committed and untagged: `public/js` needs a
-browser look before the tag (AGENTS.md:111).
+**v2.46.5**. Found by the `af416bd..origin/main` audit (`docs/audit-2.45.1.md`,
+finding F4). **Both tagged and pushed 2026-09-21**, the tags applied
+retroactively at the user's direction. One thing is still open on this entry: the
+browser look (AGENTS.md:111) was **not** done, and the tags did not wait for it —
+see the last bullet under **Verified**.
 
 The first fix stopped the turn splitting in two and gave the picture a row of its
 own, but it left the sentence that introduced the picture inside the summary —
@@ -1734,9 +1736,14 @@ And here is the picture explained.
   reverting to `if (isOutput(child)) continue`, the walk giving back trailing
   bubbles instead of the last one, `chat.js` dropping the call, and `harness.js`
   dropping it. Suite 375/375, exit 0.
-- **Not yet seen in a browser.** A DOM stub is a claim about the browser and has
-  been wrong in this repo before (AGENTS.md:111); the panel check is handed over
-  rather than assumed, and the tag waits on it.
+- **Not yet seen in a browser — the one thing still open on this entry.** A DOM
+  stub is a claim about the browser and has been wrong in this repo before
+  (AGENTS.md:111). The tags were applied at the user's direction on 2026-09-21
+  with this check outstanding, so it did not gate them. What to look at: a turn of
+  text → `show_media` → text, in the Harness and in the floating chat — the
+  picture under the sentence that introduced it, one summary line for the turn,
+  the answer last. If the browser disagrees with the stub, this entry reopens; the
+  tags stay where they are.
 
 ---
 
