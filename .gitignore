@@ -8,3 +8,9 @@ node_modules/
 # working directory (a bug, fixed) — never part of the repo.
 /agents/
 /harness/
+
+# Local harness transcripts and dashboard debug output.
+/.aider.chat.history.md
+/.aider.input.history
+/dashboard.log
+/debug-*.log
