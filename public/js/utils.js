@@ -507,6 +507,42 @@ function agentWorkingMount(container, node) {
   container.appendChild(node);
 }
 
+/** Index of the last message bubble in a list of rows, or -1 if there is none. */
+function _lastBubble(rows) {
+  for (let i = rows.length - 1; i >= 0; i--) if (isBubble(rows[i])) return i;
+  return -1;
+}
+
+/**
+ * Lift a message back out of the open block, into the transcript.
+ *
+ * The block is the account of how the turn reached its answer, and the account
+ * is what nobody asked to read — but two things in a turn are not account. The
+ * answer is one. The sentence that introduced a picture is the other: a picture
+ * is shown under whatever was said about it, and a picture whose sentence has
+ * been folded away has lost the place it was shown in. It falls to the end of
+ * the turn and stacks against every other picture there, so one shown first
+ * thing reads as though it came last.
+ *
+ * `trailing` takes the run of bubbles at the end, which is the answer when the
+ * block closes. Otherwise it takes the last bubble wherever it sits, which is
+ * where a picture's own sentence is: the call that showed the picture is drawn
+ * after the sentence and before the picture, so the sentence is not trailing.
+ *
+ * @param {HTMLElement} container - a transcript with an open block
+ * @param {{trailing?: boolean, block?: HTMLElement}} [opts]
+ */
+function agentWorkingGiveBack(container, { trailing = false, block = container && container._working } = {}) {
+  if (!block || !container.contains(block)) return;
+  const rows = [...block.querySelector('.agent-working-items').children];
+  if (trailing) {
+    for (let i = rows.length - 1; i >= 0 && isBubble(rows[i]); i--) container.appendChild(rows[i]);
+    return;
+  }
+  const at = _lastBubble(rows);
+  if (at >= 0) container.appendChild(rows[at]);
+}
+
 /**
  * Close the block: give the answer back, and say what the working was.
  *
@@ -518,14 +554,13 @@ function agentWorkingClose(container) {
   container._working = null;
   if (!block || !container.contains(block)) return;
 
-  const items = block.querySelector('.agent-working-items');
-
   // The answer, and anything else the agent said last, belongs in the
-  // transcript rather than behind a summary.
-  while (items.lastElementChild && isBubble(items.lastElementChild)) {
-    container.appendChild(items.lastElementChild);
-  }
+  // transcript rather than behind a summary. The same walk the picture uses,
+  // from the other end — one implementation, because a picture given back in
+  // the live chat and the same turn given back on a reload must agree.
+  agentWorkingGiveBack(container, { trailing: true, block });
 
+  const items = block.querySelector('.agent-working-items');
   const rows = [...items.children];
   if (!rows.length) { block.remove(); return; }
 
@@ -639,7 +674,18 @@ function collapseFoldRuns(container) {
     // "1 step" — because it arrives in the middle of one. The run keeps going
     // across it, so the block lands at the run's first row and the picture falls
     // after the collapsed record, which is where the live path already puts it.
-    if (isOutput(child)) continue;
+    //
+    // The run keeps going, but the sentence the picture was shown under does
+    // not come with it: a picture with its sentence folded away has nothing left
+    // to sit beside, so it drifts down to the end of the turn and stacks against
+    // every other picture there. The sentence is the *last* bubble in the run
+    // rather than the trailing one, because the call that showed the picture was
+    // drawn after the sentence and before the picture.
+    if (isOutput(child)) {
+      const at = _lastBubble(run);
+      if (at >= 0) run = run.slice(0, at).concat(run.slice(at + 1));
+      continue;
+    }
     flush(true);                       // a user message: the turn ended here
   }
   flush(true);

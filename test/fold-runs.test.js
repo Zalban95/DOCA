@@ -99,7 +99,7 @@ function api() {
   const prev = global.document;
   global.document = doc;
   try {
-    const made = new Function(`${SRC}; return { agentFold, agentFoldMount, createThinkStream, agentWorkingOpen, agentWorkingMount, agentWorkingClose, collapseFoldRuns, _workingSummary };`)();
+    const made = new Function(`${SRC}; return { agentFold, agentFoldMount, createThinkStream, agentWorkingOpen, agentWorkingMount, agentWorkingClose, agentWorkingGiveBack, collapseFoldRuns, _workingSummary };`)();
     global.document = doc;                           // the functions build nodes when called, too
     return made;
   } finally { /* left in place deliberately; each test sets its own */ }
@@ -280,6 +280,90 @@ test('a picture shown mid-turn does not split the turn into two summaries', () =
   assert.equal(box.lastElementChild.textContent, 'Here it is.', 'and the answer is still last');
   assert.equal(box.children[1].querySelector('.agent-working-items').children.length, 2,
     'both of the turn\'s rows are inside the one block');
+});
+
+test('a picture is shown under the sentence that introduced it, not at the end of the turn', () => {
+  // Two things in a turn are not the account of it: the answer, and the
+  // sentence a picture was shown under. Fold the sentence away and the picture
+  // has nothing left to sit beside, so it falls to the end of the turn and
+  // stacks against every other picture there — the one shown first reads as
+  // though it came last.
+  //
+  // The sentence is the *last* bubble in the run rather than the trailing one:
+  // the call that showed the picture is drawn after the sentence and before the
+  // picture, so a run that stopped at the trailing bubbles would find the call.
+  const { collapseFoldRuns } = api();
+  const box = transcript();
+  const picture = el('div', 'agent-image');
+  picture.appendChild(el('img'));
+
+  box.appendChild(bubble('user', 'render the data'));
+  box.appendChild(fold('thinking'));
+  box.appendChild(bubble('assistant', 'Here is the data you asked for:'));
+  box.appendChild(fold('tool-call'));
+  box.appendChild(picture);
+  box.appendChild(fold('tool-result'));
+  box.appendChild(bubble('assistant', 'And here is the picture explained.'));
+
+  collapseFoldRuns(box);
+
+  assert.deepEqual(kinds(box), [
+    'hc-msg hc-user', 'agent-working done', 'hc-msg hc-assistant', 'agent-image', 'hc-msg hc-assistant',
+  ], 'the sentence stands above the picture, and the picture above the answer');
+  assert.equal(box.children[2].textContent, 'Here is the data you asked for:');
+  assert.equal(box.lastElementChild.textContent, 'And here is the picture explained.');
+  assert.equal(box.querySelectorAll('.agent-working').length, 1, 'still one summary line for the turn');
+  assert.equal(box.querySelector('.agent-working-items').children.length, 3,
+    'only the sentence was given back: the folds still collapse');
+});
+
+test('the live chat gives a picture its sentence by the same rule', () => {
+  const { agentWorkingOpen, agentWorkingMount, agentWorkingClose, agentWorkingGiveBack } = api();
+  const box = transcript();
+  const picture = el('div', 'agent-image');
+  picture.appendChild(el('img'));
+
+  box.appendChild(bubble('user', 'render the data'));
+  agentWorkingOpen(box);
+  agentWorkingMount(box, fold('thinking'));
+  agentWorkingMount(box, bubble('assistant', 'Here is the data you asked for:'));
+  agentWorkingMount(box, fold('tool-call'));
+  agentWorkingGiveBack(box);                       // what _chatAppendImage does
+  box.appendChild(picture);
+  agentWorkingMount(box, fold('tool-result'));
+  agentWorkingMount(box, bubble('assistant', 'And here is the picture explained.'));
+  agentWorkingClose(box);
+
+  assert.deepEqual(kinds(box), [
+    'hc-msg hc-user', 'agent-working done', 'hc-msg hc-assistant', 'agent-image', 'hc-msg hc-assistant',
+  ], 'live and reloaded draw the same turn the same way');
+  assert.equal(box.children[2].textContent, 'Here is the data you asked for:');
+});
+
+test('both transcripts give the sentence back before they draw the picture', () => {
+  // The helper working is not the picture using it. The live paths are the two
+  // files that call it, and neither is loaded here otherwise — so the one thing
+  // worth pinning is the order: the sentence comes out of the block *before* the
+  // picture is appended, or the picture lands above its own sentence.
+  const container = el('div', 'hc-messages');
+  const calls = [];
+  const prevDoc = global.document;
+  global.document = { getElementById: () => container, createElement: tag => el(tag) };
+  try {
+    for (const [file, name] of [['chat.js', '_chatAppendImage'], ['harness.js', '_hcAppendImage']]) {
+      const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', file), 'utf8');
+      const body = src.match(new RegExp(`function ${name}\\([\\s\\S]*?\\n\\}`))[0];
+      const fn = new Function('agentImageEl', 'agentWorkingGiveBack', '_chatScroll',
+        `${body}; return ${name};`)(
+        () => { calls.push('draw'); return el('div', 'agent-image'); },
+        c => calls.push(c === container ? 'give back, into the transcript' : 'give back, into nowhere'),
+        () => {});
+      calls.length = 0;
+      fn({ name: 'x.png' });
+      assert.deepEqual(calls, ['give back, into the transcript', 'draw'],
+        `${file}: the sentence is given back before the picture is drawn`);
+    }
+  } finally { global.document = prevDoc; }
 });
 
 test('an empty bubble the streamer left behind is not a row', () => {

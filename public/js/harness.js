@@ -1449,6 +1449,10 @@ function _hcAppendImage(image) {
   if (!box || !image?.name) return;
   box.querySelector('.placeholder')?.remove();
   const scroll = () => { box.scrollTop = box.scrollHeight; };
+  // The sentence the picture is shown under comes out of the turn's account
+  // first, so the picture lands below it rather than below the whole turn.
+  // A no-op on a reload, which has no open block. See `agentWorkingGiveBack`.
+  agentWorkingGiveBack(box);
   box.appendChild(agentImageEl(image, scroll));
   scroll();
 }

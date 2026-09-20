@@ -1526,9 +1526,19 @@ profile-less work session and still passes.
 
 ## H-15 — A picture shown mid-turn splits the turn into two summary lines
 
-**Status:** fixed on `fix/audit-2.45.1`, 2026-09-20, **v2.46.3**. Found by the
-`af416bd..origin/main` audit (`docs/audit-2.45.1.md`, finding F4). Committed and
-untagged: `public/js` needs a browser look before the tag (AGENTS.md:111).
+**Status:** fixed on `fix/audit-2.45.1`, 2026-09-20, **v2.46.3** — and revised in
+**v2.46.5** before either was tagged. Found by the `af416bd..origin/main` audit
+(`docs/audit-2.45.1.md`, finding F4). Committed and untagged: `public/js` needs a
+browser look before the tag (AGENTS.md:111).
+
+The first fix stopped the turn splitting in two and gave the picture a row of its
+own, but it left the sentence that introduced the picture inside the summary —
+so the picture had nothing left to sit beside, fell to the end of the turn, and
+stacked against every other picture there. A turn that showed a picture under
+"Here is the data you asked for:" drew the summary line, then the picture, then
+the answer, with the sentence nowhere: the picture read as though it came last,
+and two pictures in one turn came out adjacent. v2.46.5 gives the sentence back.
+See **Shown, not summarised — and shown under its own sentence** below.
 
 ### What happens
 
@@ -1604,6 +1614,69 @@ exists — and the doc comment above `collapseFoldRuns` is rewritten, because it
 still described "the last rows of a finished run stay … behind '…'", which stopped
 being true when every run began collapsing to one row.
 
+### Shown, not summarised — and shown under its own sentence (v2.46.5)
+
+The v2.46.3 fix is necessary and was not sufficient. A picture kept its own row,
+but the run continuing across it meant the *sentence* the picture was shown under
+stayed in the summary — and a picture with nothing left to sit beside does not
+stay put. It falls to the end of the turn, above the answer and below everything
+else the turn drew, so a picture shown first thing reads as though it came last
+and two pictures in a turn come out adjacent:
+
+```
+▸ Thought for 12s · 2 commands
+[ picture 1 ]
+[ picture 2 ]
+And here is the picture explained.
+```
+
+The sentence that introduced each picture is nowhere in that rendering. The
+answer already gets given back for exactly this reason — "the thing that was
+being waited for is never inside the summary" — and a sentence framing something
+the user is about to *look at* is not the account of the turn either.
+
+The row to give back is the **last bubble in the run, not the trailing one**. The
+call that showed the picture is drawn after the sentence and before the picture
+(`agent.js:1256` emits `image` between `tool_call` and `tool_result`), so a rule
+keyed on trailing bubbles finds the call and gives back nothing:
+
+```js
+if (isOutput(child)) {
+  const at = _lastBubble(run);
+  if (at >= 0) run = run.slice(0, at).concat(run.slice(at + 1));
+  continue;
+}
+```
+
+`_lastBubble` only ever finds a non-user bubble, because `isWorking` is what put
+the row in the run and it excludes the user's own message. The row is dropped
+from the run rather than moved: `_foldRunCollapse` *moves* every row it is given
+into the block, so a row left out keeps its place in the transcript. That is what
+makes a middle element givable-back at all.
+
+The live path needs the same rule, and the live block is already built by then —
+`collapseFoldRuns` skips it, because a `.agent-working` child ends the run. So
+`agentWorkingGiveBack(container)` walks the open block from the end for its last
+bubble, and both `_chatAppendImage` (`chat.js:202`) and `_hcAppendImage`
+(`harness.js:1447`) call it **before** appending the picture — after would put
+the picture above its own sentence. It is a no-op on a reload, which has no open
+block, so the two reload paths still go through the walk.
+
+`agentWorkingClose` now calls the same helper with `{trailing: true}` for the
+answer instead of carrying its own copy of the loop. One implementation, because
+a picture given back in the live chat and the same turn given back on a reload
+must agree — which is the property `disabledFor` (`agent.js:325-332`) exists to
+protect after the two copies of it disagreed once already.
+
+Result, identical live and reloaded:
+
+```
+▸ Thought for 12s · 2 commands
+Here is the data you asked for:
+[ picture: test-render-2.png ]
+And here is the picture explained.
+```
+
 ### Collateral
 
 - **No CSS changes, deliberately.** The picture is kept outside the block
@@ -1641,7 +1714,26 @@ being true when every run began collapsing to one row.
   inside the one block. The existing ten tests in the file stay green.
 - The failing assertion above was captured **before** the fix, against the real
   function — the executed evidence, not a reading.
-- Suite 369/369, exit 0.
+- Suite 369/369, exit 0, at v2.46.3.
+- v2.46.5 adds three, and the load-bearing one is the third:
+  - *"a picture is shown under the sentence that introduced it, not at the end of
+    the turn"* — the walk, over the real row order (sentence, call, picture,
+    result, answer): one summary line, the sentence standing above the picture,
+    the picture above the answer, and the block still down to three rows so the
+    folds collapse. The figure carries an `img` child for the same reason as
+    above.
+  - *"the live chat gives a picture its sentence by the same rule"* — the open
+    block, driven through `agentWorkingOpen`/`Mount`/`Close` and asserted to
+    produce the identical shape.
+  - *"both transcripts give the sentence back before they draw the picture"* —
+    extracts `_chatAppendImage` and `_hcAppendImage` from `chat.js` and
+    `harness.js` and asserts the **order** of the two calls. The helper working
+    is not the picture using it, and neither the walk nor the helper test can see
+    the wiring; this is the only test that can.
+- Mutation-checked all four ways, each reddening exactly one test: the walk
+  reverting to `if (isOutput(child)) continue`, the walk giving back trailing
+  bubbles instead of the last one, `chat.js` dropping the call, and `harness.js`
+  dropping it. Suite 375/375, exit 0.
 - **Not yet seen in a browser.** A DOM stub is a claim about the browser and has
   been wrong in this repo before (AGENTS.md:111); the panel check is handed over
   rather than assumed, and the tag waits on it.

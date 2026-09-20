@@ -202,6 +202,10 @@ function chatAppendMsg(role, text, opts = {}) {
 function _chatAppendImage(image) {
   const container = document.getElementById('chat-messages');
   if (!container || !image?.name) return;
+  // The sentence the picture is shown under comes out of the turn's account
+  // first, so the picture lands below it rather than below the whole turn —
+  // see `agentWorkingGiveBack`. A no-op on a reload, which has no open block.
+  agentWorkingGiveBack(container);
   container.appendChild(agentImageEl(image, _chatScroll));
   _chatScroll();
 }
