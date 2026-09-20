@@ -59,3 +59,40 @@ test('memory inventory filters and pages keys without touching their values or u
   assert.match(bounded, /x{200}…/);
   assert.ok(tools.schemas().some(t => t.function.name === 'memory_list'));
 });
+
+test('specialists are visible but stay off until a boolean proposal is accepted in the dashboard', async () => {
+  assert.match(await tools.call('settings_read', { filter: 'agents' }), /agents\.enabled = false/);
+  assert.equal(loadPrefs().agents?.enabled, undefined);
+  const names = () => tools.schemas().map(t => t.function.name);
+  assert.equal(names().includes('agent_dispatch'), false);
+  for (const value of [null, 1, 'true', {}, []])
+    assert.match(settings.refuse('agents.enabled', value), /boolean/);
+  for (const path of ['agents', 'agents.enabled.command', 'agents.custom', 'mcpServers', 'harness.custom'])
+    assert.match(settings.refuse(path, {}), /not a setting/);
+
+  assert.match(await tools.call('settings_propose', {
+    reason: 'Enable specialist help', changes: [{ path: 'agents.enabled', value: true }],
+  }), /waiting for the user/);
+  const proposal = settings.list().pending.at(-1);
+  assert.equal(proposal.changes[0].from, false);
+  assert.equal(registry.enabled(), false);
+  const bare = await H.api(null, 'POST', `/api/harness/proposals/${proposal.id}/apply`, undefined,
+    { 'Sec-Fetch-Site': '' });
+  assert.equal(bare.status, 403);
+  assert.equal(registry.enabled(), false);
+  assert.equal((await H.api(null, 'POST', `/api/harness/proposals/${proposal.id}/apply`)).status, 200);
+  assert.equal(registry.enabled(), true);
+  assert.equal(names().includes('agent_dispatch'), true);
+
+  const decline = settings.propose({ changes: [{ path: 'agents.enabled', value: false }] });
+  settings.reject(decline.id, 'Keep specialists available');
+  assert.equal(registry.enabled(), true);
+  assert.match(settings.block(), /REJECTED: agents\.enabled.*Keep specialists available/);
+
+  const tampered = settings.propose({ changes: [{ path: 'agents.enabled', value: false }] });
+  const doc = store.readJson('harness/proposals');
+  doc.proposals.find(p => p.id === tampered.id).changes[0].to = 'false';
+  store.writeJson('harness/proposals', doc);
+  assert.throws(() => settings.apply(tampered.id), /boolean/);
+  assert.equal(registry.enabled(), true);
+});

@@ -35,6 +35,7 @@ const SETTABLE = [
   { prefix: 'paths',            label: 'Managed paths',        note: 'Applies after a restart of the panel' },
   { prefix: 'harness.config',   label: 'Harness parameters',   note: 'Includes this agent\'s own model and behaviour' },
   { prefix: 'harness.default',  label: 'Default harness',      note: 'Which runtime the chat panel talks to' },
+  { prefix: 'agents.enabled',   label: 'Specialist agents',    note: 'Allow the orchestrator to dispatch specialists', exact: true },
   { prefix: 'models',           label: 'Model manager',        note: 'Ollama URL, download directories' },
   { prefix: 'snapshotSettings', label: 'Snapshot settings',    note: '' },
   { prefix: 'serviceSettings',  label: 'Inference services',   note: 'GPU assignment, ports, images' },
@@ -87,7 +88,7 @@ function set(obj, dotted, value) {
 }
 
 function sectionFor(dotted) {
-  return SETTABLE.find(s => dotted === s.prefix || dotted.startsWith(`${s.prefix}.`)) || null;
+  return SETTABLE.find(s => dotted === s.prefix || (!s.exact && dotted.startsWith(`${s.prefix}.`))) || null;
 }
 
 /**
@@ -104,6 +105,9 @@ function refuse(dotted, value) {
   if (FORBIDDEN.test(dotted))                         return `${dotted} holds a secret — those are never set this way`;
   if (!sectionFor(dotted))
     return `${dotted} is not a setting the agent may change (allowed: ${SETTABLE.map(s => s.prefix).join(', ')})`;
+
+  if (dotted === 'agents.enabled' && typeof value !== 'boolean')
+    return 'agents.enabled must be a boolean (true or false)';
 
   if (value === undefined)                            return `${dotted}: no value given`;
   if (typeof value === 'function' || typeof value === 'bigint') return `${dotted}: value is not JSON`;
@@ -147,7 +151,8 @@ function flatten(value, prefix, out) {
  */
 function readable() {
   const prefs = loadPrefs();
-  const out = [];
+  const out = [{ path: 'agents.enabled', value: prefs.agents?.enabled === true, section: 'Specialist agents',
+    detail: 'Off by default. A proposal only enables specialists after the user accepts it.' }];
 
   for (const spec of paths.describe())
     out.push({
