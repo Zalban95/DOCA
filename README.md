@@ -193,6 +193,15 @@ data locations, every managed path with where its value came from and whether it
 providers have a key, and which MCP servers are running with how many tools. Live figures that cost
 a subprocess — docker, GPUs, disks — stay behind the `system_status` tool.
 
+**Context preflight.** Set the primary model's **Context window** and, independently,
+the served context window on each fallback row in the harness configuration. A specialist
+can declare `contextWindow` in its definition; a different specialist model does not inherit
+the primary model's window. Zero or an omitted fallback window means unknown. Before sending,
+DOCA estimates text, reasoning and tool-schema tokens plus the configured reply cap, skips
+entries that exceed their declared window, and names the setting and model in the warning.
+This is a character-based estimate, not a tokenizer measurement or a guarantee that images
+will fit; image tokens and an uncapped reply remain provider-dependent.
+
 **Memory** is structured in four layers, all under `DOCA_DATA_DIR/harness/`:
 
 | Layer | What it holds |

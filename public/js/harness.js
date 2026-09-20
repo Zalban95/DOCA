@@ -273,13 +273,13 @@ const HARNESS_PARAMS = [
 
   { key: 'contextWindow', label: 'Context window', unit: 'tokens', attrs: 'min="0" step="1000"',
     hint: 'How much the model can hold at once: these instructions, the conversation so far and everything '
-        + 'its tools returned, added together. Use the figure from the model\'s own documentation — '
-        + 'DeepSeek V4 is 1000000, most others are 128000 or 200000. Left at 0 it means "nobody has said", '
-        + 'and the two percentages below can never fire, because there is nothing to be a percentage of.' },
+        + 'its tools returned, tool descriptions and room for the reply. Use the served model\'s actual limit; '
+        + 'local servers may be configured below the model\'s maximum. Requests estimated to exceed this '
+        + 'are skipped before sending. 0 means unknown and disables this check and the percentages below.' },
 
   { key: 'maxTokens', label: 'Longest reply', unit: 'tokens', attrs: 'min="0" step="128"',
     hint: 'The most the model may write in one answer. 0 leaves it to the provider. This is a cap on the '
-        + 'reply only — it has nothing to do with the context window above.' },
+        + 'reply only; this much room is reserved when checking whether a request fits the context window.' },
 
   { key: 'firstTokenTimeoutMs', label: 'Give up waiting after', unit: 'ms', attrs: 'min="0" step="5000"',
     hint: 'How long to wait for the first word of a reply. This is not a limit on the answer — once the model '
@@ -490,6 +490,12 @@ function _harnessRungHtml(id, preset = {}) {
         <input class="input flex1" data-role="model" value="${escHtml(preset.model || '')}"
                placeholder="model id — blank uses the one above" oninput="harnessRungProbe(this)">
       </div>
+      <label class="harness-hint">Context window (tokens)
+        <input class="input" type="number" min="0" step="1000" data-role="context-window"
+               value="${escHtml(String(Number(preset.contextWindow) > 0 ? preset.contextWindow : 0))}">
+      </label>
+      <div class="harness-hint">This fallback's served limit. 0 means unknown; it never inherits the primary model's window.
+        The check estimates text and tool tokens plus the reply cap; it does not measure image tokens.</div>
       <div class="harness-hint hcfg-rung-verdict" data-role="verdict"></div>
     </div>`;
 }
@@ -561,7 +567,7 @@ function _harnessFallbacksMount(id, chain) {
 }
 
 /**
- * The chain as the engine stores it: `[{ provider, model }]`, in order.
+ * The chain as the engine stores it: `[{ provider, model, contextWindow? }]`, in order.
  *
  * Same guarantees the text parser had — a rung nobody filled in is skipped
  * rather than rejected, a duplicate is dropped because a chain that lists the
@@ -578,7 +584,9 @@ function _fallbacksRead(id) {
     const model    = (rung.querySelector('[data-role=model]')?.value || '').trim();
     if (!provider) continue;
     if (out.some(e => e.provider === provider && e.model === model)) continue;
-    out.push({ provider, model });
+    const contextWindow = Number(rung.querySelector('[data-role=context-window]')?.value);
+    out.push({ provider, model, ...(Number.isFinite(contextWindow) && contextWindow > 0
+      ? { contextWindow: Math.floor(contextWindow) } : {}) });
     if (out.length >= HARNESS_MAX_FALLBACKS) break;
   }
 

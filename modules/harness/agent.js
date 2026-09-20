@@ -605,8 +605,9 @@ function rungsFor({ ep, model, p }) {
   const failoverMs = Number(p?.failoverAfterMs) || 0;
   const finalMs    = Number(p?.firstTokenTimeoutMs) || 0;
 
-  const entries = [{ provider: ep.id, model, ep }];
-  for (const c of chain) {
+  const entries = [{ provider: ep.id, model, ep, contextWindow: budget.windowFor(p),
+    windowSetting: p?._windowSetting || 'harness.config.doca.contextWindow' }];
+  for (const [index, c] of chain.entries()) {
     const pid = String(c?.provider || '').trim();
     if (!pid) continue;
     const cModel = String(c?.model || '').trim() || model;
@@ -615,7 +616,9 @@ function rungsFor({ ep, model, p }) {
     let cep;
     try { cep = providers.endpoint(pid); }
     catch { continue; }
-    entries.push({ provider: pid, model: cModel, ep: cep });
+    entries.push({ provider: pid, model: cModel, ep: cep,
+      contextWindow: budget.windowFor(c),
+      windowSetting: `harness.config.doca.fallbackChain[${index}].contextWindow` });
   }
 
   const warm    = entries.filter(e => !isDegraded(e.ep, e.model));
@@ -698,8 +701,26 @@ function firstTokenGuard({ p, signal, onWaiting }) {
  * produced `reasoning`, which only it may be given back.
  * @returns {Promise<{ content: string, tool_calls: object[], provider: string }>}
  */
-async function complete({ ep, body, signal, onText, onWaiting, p, meta = { kind: 'ask' }, onHop }) {
-  const rungs = rungsFor({ ep, model: body.model, p });
+async function complete({ ep, body, signal, onText, onWaiting, p, meta = { kind: 'ask' }, onHop, onSkip }) {
+  signal?.throwIfAborted();
+  const candidates = rungsFor({ ep, model: body.model, p });
+  const skipped = [];
+  const rungs = candidates.filter(rung => {
+    const issue = budget.preflight({ ...body, messages: rung.ep.id === ep.id
+      ? body.messages : withoutEcho(body.messages) }, rung);
+    if (!issue) return true;
+    skipped.push(issue);
+    onSkip?.({ provider: rung.provider, model: rung.model, text: issue });
+    return false;
+  }).map((rung, i, usable) => ({ ...rung,
+    last: i === usable.length - 1,
+    timeoutMs: i === usable.length - 1 ? Number(p?.firstTokenTimeoutMs) || 0
+      : Number(p?.failoverAfterMs) || Number(p?.firstTokenTimeoutMs) || 0,
+  }));
+  if (!rungs.length) throw new Error(skipped.join('\n') || 'No model to call.');
+  if (rungs[0].provider !== candidates[0].provider || rungs[0].model !== candidates[0].model)
+    onHop?.({ from: candidates[0], to: rungs[0], reason: 'context', seconds: 0, frames: 0,
+      remaining: rungs.length - 1 });
   let stalled = null;
 
   for (let i = 0; i < rungs.length; i++) {
@@ -899,17 +920,22 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
   // A profile overrides only what it names. Everything it is silent about —
   // temperature, history, the summariser — stays the panel's own setting, so a
   // specialist does not quietly acquire a second set of defaults to maintain.
+  const defaults = params();
+  const changedModel = profile && ((profile.provider && profile.provider !== defaults.provider)
+    || (profile.model && profile.model !== defaults.model));
   const p = profile
     ? {
-      ...params(),
+      ...defaults,
       ...(profile.provider      ? { provider: profile.provider }           : {}),
       ...(profile.model         ? { model: profile.model }                 : {}),
       ...(profile.maxSteps      ? { maxSteps: profile.maxSteps }           : {}),
       ...(profile.maxTokens     ? { maxTokens: profile.maxTokens }         : {}),
-      ...(profile.contextWindow ? { contextWindow: profile.contextWindow } : {}),
+      contextWindow: profile.contextWindow ?? (changedModel ? 0 : defaults.contextWindow),
+      _windowSetting: profile.contextWindow ? `${profile.id} agent definition contextWindow`
+        : 'harness.config.doca.contextWindow',
       systemPrompt: profile.systemPrompt,
     }
-    : params();
+    : defaults;
   const ep  = providers.endpoint(p.provider);
   if (!p.model)
     throw Object.assign(new Error(
@@ -963,6 +989,7 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
   // surfaces that only ever see the outcome — a device that was asleep, a log
   // read tomorrow — and would otherwise read the backup's words as the primary's.
   const fallbacks = [];
+  const contextSkips = new Map();
 
   for (let step = 1; step <= maxSteps; step++) {
     // Rebuilt every step, not once per turn.
@@ -1009,12 +1036,12 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
     // what H-9 was protecting, not the role, so the cached prefix is unaffected.
     // It says whose words these are, because a bare block at the end of a
     // conversation reads as the user's.
-    const live = liveBlock(p, led);
+    const live = [liveBlock(p, led), ...contextSkips.values()].filter(Boolean).join('\n');
     if (live) messages.push({ role: 'user', content: `[panel readings, not from the user]\n${live}` });
 
     // Measured when the provider answers with a usage frame, estimated when it
     // does not. Both are recorded; only one is called a measurement.
-    const promptEstimate = budget.estimateMessages(messages);
+    const promptEstimate = budget.estimateRequest({ messages, tools: schemas });
 
     const reply = await complete({
       ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id },
@@ -1024,6 +1051,10 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
       // session line and then nothing at all, which reads as a broken panel
       // rather than as a provider that has not started answering.
       onWaiting: w => say({ type: 'waiting', step, provider: ep.label || ep.id, ...w }),
+      onSkip: skipped => {
+        contextSkips.set(`${skipped.provider}/${skipped.model}`, skipped.text);
+        say({ type: 'warning', step, kind: 'context-preflight', text: skipped.text });
+      },
       // Announced, never quiet. A fallback that happens silently is a worse bug
       // than the outage it hides: the user reads a smaller model's answers as
       // the big one's, and the next investigation starts from a false premise.
@@ -1039,7 +1070,10 @@ async function turn({ message, sessionId, emit, signal, client, attachments: att
           from: h.from.label || h.from.provider, to: h.to.label || h.to.provider,
           fromModel: h.from.model, toModel: h.to.model,
           seconds: h.seconds, frames: h.frames, remaining: h.remaining,
-          text: `${h.from.label || h.from.provider} stopped answering after ${h.seconds}s `
+          text: h.reason === 'context'
+            ? `${h.from.provider} / ${h.from.model} cannot fit the estimated request in its declared window; `
+              + `continuing on ${h.to.provider} / ${h.to.model}.`
+            : `${h.from.label || h.from.provider} stopped answering after ${h.seconds}s `
             + `(${h.from.model || 'no model'}); continuing on ${h.to.label || h.to.provider}`
             + `${h.to.model ? ` / ${h.to.model}` : ''}.`
             + (h.frames ? ` It sent ${h.frames} keep-alive frame${h.frames === 1 ? '' : 's'} and no content.` : '')

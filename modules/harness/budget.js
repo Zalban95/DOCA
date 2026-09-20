@@ -16,8 +16,8 @@
  *
  *   1. Every stop names its limit and says who set it — a DOCA setting the
  *      agent can propose changing, or the provider's own, which it cannot.
- *   2. A limit warns on the way up. Advisory first, at `warnAt` percent; the
- *      hard stop is the provider's and arrives without asking.
+ *   2. A limit warns on the way up. Advisory first, at `warnAt` percent;
+ *      requests estimated to exceed a declared model window are skipped locally.
  *
  * Usage is taken from the provider when it reports any (`usage` on the
  * completion, or the final frame of a stream when `stream_options.include_usage`
@@ -44,9 +44,14 @@ function estimate(text) {
 function estimateMessages(messages) {
   let chars = 0;
   for (const m of messages || []) {
-    chars += String(m.content || '').length + String(m.role || '').length + 4;
+    // Image bytes are not text tokens. Count text parts without treating a
+    // base64 attachment as hundreds of thousands of prompt tokens.
+    const content = Array.isArray(m.content)
+      ? m.content.map(part => part.text || '').join('\n') : String(m.content || '');
+    chars += content.length + String(m.role || '').length + 4;
     if (m.tool_calls) chars += JSON.stringify(m.tool_calls).length;
     if (m.name) chars += m.name.length;
+    if (m.reasoning_content) chars += String(m.reasoning_content).length;
   }
   return Math.ceil(chars / CHARS_PER_TOKEN);
 }
@@ -55,6 +60,24 @@ function estimateMessages(messages) {
 function windowFor(p) {
   const n = Number(p?.contextWindow);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+/** A text estimate, never a tokenizer measurement; tool schemas consume room too. */
+function estimateRequest(body) {
+  return estimateMessages(body.messages) + (body.tools?.length ? estimate(JSON.stringify(body.tools)) : 0);
+}
+
+function preflight(body, { provider, model, contextWindow, windowSetting }) {
+  const window = windowFor({ contextWindow });
+  if (!window) return null;
+  const prompt = estimateRequest(body);
+  const cap = Number(body.max_completion_tokens ?? body.max_tokens);
+  const reserve = Number.isFinite(cap) && cap > 0 ? Math.ceil(cap) : 0;
+  if (prompt + reserve <= window) return null;
+  return `DOCA skipped ${provider} / ${model}: the estimated text prompt and tool schemas need ${prompt} tokens`
+    + ` plus ${reserve} reserved for the reply, exceeding its declared ${window}-token context window`
+    + ` (${windowSetting}). This is a local estimate, not a provider refusal. Reduce the prompt or reply cap,`
+    + ' or correct the declared window if it is wrong; increasing it does not enlarge the model.';
 }
 
 /** Absolute prompt size at which older messages fold, or 0 when unset. */
@@ -266,7 +289,6 @@ function block(p) {
       + `(harness.config.doca.historyTurns, .summarizeAfter, .compactTokens)`,
     `memory entries in this prompt: up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`,
   );
-
   if (trigger) out.push(`effective token compaction trigger: ${trigger.at} tokens`
     + ` (harness.config.doca.${trigger.setting}); message-count folding also applies.`);
 
@@ -363,6 +385,6 @@ function stalled({ ep, ms, frames }) {
 
 module.exports = {
   CHARS_PER_TOKEN,
-  estimate, estimateMessages, windowFor, compactTokensFor, shouldCompact, compactReason, compactionFor,
+  estimate, estimateMessages, estimateRequest, preflight, windowFor, compactTokensFor, shouldCompact, compactReason, compactionFor,
   ledger, record, report, warning, block, live, explain, stalled, cachedOf,
 };

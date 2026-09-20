@@ -131,7 +131,9 @@ function defaultParams() {
     // for the *last* rung — and for the only rung, when there is no chain — so
     // giving up entirely still takes as long as it always did.
     failoverAfterMs: 20000,
-    // The chain to fall down, in order, as `{ provider, model }` pairs. Empty by
+    // The chain to fall down, in order, as `{ provider, model, contextWindow? }`.
+    // Each window describes that served model; omitted means unknown, never
+    // the primary model's limit. Empty by
     // default and therefore inert: upgrading changes nobody's behaviour, and a
     // chain exists only because somebody ordered one in the settings panel.
     //

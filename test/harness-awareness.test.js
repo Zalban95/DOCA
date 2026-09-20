@@ -646,9 +646,10 @@ test('the fallback rungs read back exactly what the form is showing', () => {
 
   // One rung as the DOM presents it: a provider select and a model box, both
   // reachable only through `[data-role=…]`.
-  const rung = (provider, model) => ({
+  const rung = (provider, model, contextWindow = '') => ({
     querySelector: sel => sel === '[data-role=provider]' ? { value: provider }
                           : sel === '[data-role=model]'   ? { value: model }
+                          : sel === '[data-role=context-window]' ? { value: contextWindow }
                           : null,
   });
 
@@ -662,6 +663,9 @@ test('the fallback rungs read back exactly what the form is showing', () => {
   // Save without touching anything cannot quietly change the chain.
   const chain = [{ provider: 'ds', model: 'deepseek-flash' }, { provider: 'dsfb', model: 'deepseek-v4-pro' }];
   assert.deepEqual(read(...chain.map(e => rung(e.provider, e.model))), chain);
+  assert.deepEqual(read(rung('local', 'small', '40960')),
+    [{ provider: 'local', model: 'small', contextWindow: 40960 }]);
+  assert.deepEqual(read(rung('local', 'small', '0')), [{ provider: 'local', model: 'small' }]);
 
   // A rung with a provider and no model is still a rung: the engine reads that
   // as "the same model, at that provider". Checked against the engine rather
