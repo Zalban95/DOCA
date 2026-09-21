@@ -1350,3 +1350,69 @@ which is cheaper than discovering it during the first migration.
   handles large results.
 - **Multi-project priority queue with an agent-slot pool** (#18). One host, one
   workspace, one owner. Revisit only if DOCA grows a second project.
+
+---
+
+## OpenClaw is a peer, not a prerequisite
+
+**Stated 2026-09-21.** DOCA began as a dashboard for an OpenClaw stack and has
+since grown its own harness, its own client protocol and its own agents. The
+rule from here: **an OpenClaw reference is live only when OpenClaw is
+installed.** Nothing in the panel may require it, assume its paths exist, or
+fail in its name when it is simply not there.
+
+Mostly this already holds — the built-in harness is the default on a fresh
+install, `loadConfig()` reads a missing file as `{}`, and the Controls page
+draws "not installed" rather than erroring. Three places do not, and they are
+the work:
+
+### 1. The panel's own API keys live in OpenClaw's config file
+
+`Settings → API Keys` writes to `CONFIG_PATH` — `~/.openclaw/openclaw.json` —
+and `providers.js:152` reads providers back out of it. So a user with no
+OpenClaw at all still has DOCA create a `.openclaw` directory and keep its
+credentials there, in another product's file and format.
+
+This is the coupling that matters most, because it is also half of `ISSUES.md`
+H-19: the file is inside `HOME`, therefore inside `FM_ALLOWED_ROOTS`, therefore
+readable by `read_file` — so "our keys live in their file" and "our keys are
+reachable by a tool call" are the same sentence.
+
+**Wanted:** DOCA's own provider store, under `DOCA_DATA_DIR`, with
+`openclaw.json` read as a *source of providers when it exists* and never
+written by us. Migration is a one-time copy. Undecided: whether to keep writing
+it for installs that do have OpenClaw and expect the two to agree.
+
+### 2. Detection commands are POSIX, so nothing is detected off Linux
+
+Fixed in part on 2026-09-21: `catalog.shellDetect` and `system-tools.handleList`
+ran `bash -lc`, so on Windows every row reported "not installed" whether it was
+there or not. Both now go through `modules/shell.js`.
+
+**What is left:** the `detectCmd` *strings* are still POSIX —
+`test -f "$COMPOSE_DIR/docker-compose.yml" && …` for OpenClaw, and similar for
+the system tools — so they still do not run under PowerShell. The fix is not to
+write a second string per platform but for each row to **declare what it looks
+for rather than how to look**: a file that must exist, a binary that must be on
+PATH, a command whose output is the version. `detectBinary` already does the
+third portably; the first two are a few lines and remove the last shell string
+from the catalogue.
+
+### 3. OpenClaw-shaped things named as if they were ours
+
+`openclaw-panel.service`, `COMPOSE_DIR`, the gateway path in `modules/chat.js`,
+the `openclaw` row in `catalog.js`. `branding.js` already draws the line
+correctly — a name that would break an existing install if changed is an
+identifier, not branding — so none of these get renamed. What they need is to
+be **inert and quiet** when OpenClaw is absent: the gateway path already falls
+back, Service Control already reports not-installed, and the remaining question
+is only whether the UI should keep showing a Service Control panel at all on a
+host with no stack. Undecided, and deliberately so: hiding it makes
+"where did it go" the next question.
+
+### The test that would keep this true
+
+A fixture with no `COMPOSE_DIR`, no `~/.openclaw` and no Docker, asserting that
+the panel boots, the built-in harness is selected, a turn runs, and every
+OpenClaw surface reports absence rather than failure. Cheap, and it is the only
+thing that stops this drifting back.

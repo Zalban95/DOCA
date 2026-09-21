@@ -2125,3 +2125,126 @@ stays exactly as it was.
   configured model is answering reddens the unit test and the pre-existing
   context-hop test; and letting the rest period never expire reddens the
   rotation test. Suite 377/377, exit 0.
+
+---
+
+## H-19 — The agent can write the control plane it is forbidden to propose changes to
+
+**Status:** found 2026-09-21 on v2.50.0 by audit, cause confirmed by reading
+the code and by running `fmSafe` against the real paths. **Not fixed.**
+
+### What is wrong
+
+`modules/harness/settings.js` is careful about what the agent may change. A
+proposal may only point into a `SETTABLE` prefix; `FORBIDDEN` refuses any dotted
+path whose segment is `key`, `token`, `secret`, `password` or `credential`;
+`mcpServers` and `harness.custom` are absent because each holds a command that
+later gets spawned; `harness.approval` is refused outright by `NEVER_SETTABLE`;
+and nothing is written until a click reaches `POST /api/harness/proposals/:id/apply`.
+Charter rule 6 says it in words too: *"Never write the prefs file, `openclaw.json`
+or a service unit yourself."*
+
+**`write_file` walks around all of it.** `fmSafe()` (`modules/utils.js`) asks
+one question — is the resolved path under an allowed root — and
+`FM_ALLOWED_ROOTS` is `[HOME, /media, /mnt, /tmp]`. It has no concept of a
+control plane, so every guarantee above is a prompt rule with no mechanism
+under it.
+
+### Evidence
+
+Run against v2.50.0 on the dev host:
+
+```
+PREFS_FILE:  D:\doca\doca\.dashboard-prefs.json   fmSafe: false
+DATA dir:    D:\doca\doca\.doca\harness           fmSafe: false
+CONFIG_PATH: C:\Users\alban\.openclaw\openclaw.json  fmSafe: true   ← reachable
+FM roots:    [ 'C:\Users\alban', '/media', '/mnt', '/tmp' ]
+```
+
+Two things follow, and the second is worse than the first.
+
+1. **`openclaw.json` is readable and writable today.** It holds every provider
+   API key in plaintext — `providers.js:152` parses it for exactly that. So
+   `read_file ~/.openclaw/openclaw.json` hands the model the keys that
+   `FORBIDDEN` exists to keep out of a tool call, and `write_file` can add a
+   provider pointing anywhere.
+2. **The prefs file and `.doca/` escape only by accident.** They are `false`
+   above because this checkout sits on `D:` while `HOME` is on `C:`. On an
+   ordinary install — cloned under `$HOME`, which is what `run.sh` and the
+   README assume — both are inside an allowed root, and the agent can rewrite
+   its own memory, its own approval allowlist, its own settings and its own
+   default harness directly, with no proposal and no click.
+
+This is the same class as H-7 (`proposals/:id/apply` being unauthenticated) and
+should be read beside it: H-7 is about reaching the apply route, this is about
+not needing it.
+
+### Why it was not caught
+
+Every test of the settings surface asserts that a **proposal** is refused.
+Nothing asserts that the path is unreachable by other means, because the file
+tools and the settings module are tested separately and neither owns the
+question. The audit found it by asking what `fmSafe` actually checks.
+
+### How to close it
+
+- A deny-list that does not depend on where the repo was cloned: `PREFS_FILE`,
+  `DOCA_DATA_DIR`, `CONFIG_PATH`, `CERTS_DIR` and any `.git` directory are
+  control plane, refused by `fmSafe` (or by a check above it) for **write**, and
+  `CONFIG_PATH` refused for **read** as well while it holds keys.
+- The refusal must name the route that does work — `settings_propose` — or it
+  teaches nothing.
+- A test that asserts each of those paths is refused *through the tools*, with
+  the repo placed inside `HOME` in the fixture, since that is the layout where
+  it bites and the dev host's layout hides it.
+- Longer term, keys do not belong in a plaintext file a tool can read at all;
+  that is a larger change and is `TODO.md`'s business.
+
+---
+
+## H-20 — `contextWindow` is declared to DOCA and never to the runtime
+
+**Status:** found 2026-09-21 on v2.50.0 by audit, confirmed by reading the
+request path. **Not fixed.**
+
+### What is wrong
+
+`harness.config.doca.contextWindow` is the number the whole compaction system
+reasons with: `compactAt` folds at a percentage of it, `budget.preflight()`
+skips a rung against it, `budget.warning()` warns at `warnAt` percent of it, and
+as of v2.47.0 the panel draws a ring of it in both chats.
+
+Ollama is reached at `${ollamaBase()}/v1` (`providers.js:168`) — its
+OpenAI-compatible shim — and **nothing in the request sets `num_ctx`.** The only
+option DOCA sends is `stream_options` (`agent.js:1146`). Ollama therefore
+applies the model's own default context, commonly 4096, and truncates
+everything past it **without reporting anything**: no error, no warning, and a
+`usage` frame describing the truncated request as if it were the whole one.
+
+### Why it matters more than it looks
+
+The failure is silent in both directions at once. Set `contextWindow: 32768`
+against an Ollama model and:
+
+- the ring, the warning and `compactAt` all describe a 32k window that is not
+  in use;
+- the preflight passes a request the runtime will quietly cut;
+- the agent is told, in `budget.block()`, that it has room it does not have;
+- and the first symptom is the model appearing to forget the beginning of its
+  own turn, which reads as a model quality problem rather than a config one.
+
+`budget.js`'s own rule — "a guess is never printed as a measurement" — is
+broken here by a number that is neither: it is a *claim about someone else's
+runtime* that nothing ever checked.
+
+### How to close it
+
+- Either send the window where the runtime takes it (Ollama: native
+  `/api/chat` with `options.num_ctx`, or `num_ctx` through the shim where the
+  version accepts it), or stop claiming a window we cannot set.
+- If it cannot be set, say so at the point of setting: the ⚙ field should mark
+  the value as advisory for that provider, and `budget.block()` should not
+  state it as fact.
+- A test that asserts the request carries the declared window for a provider
+  that accepts one — the stub server can assert on the body, which is where
+  this would have been caught.

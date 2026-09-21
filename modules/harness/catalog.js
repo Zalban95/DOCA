@@ -13,7 +13,7 @@
  * Everything the user can change lives in .dashboard-prefs.json under
  * `harness`: the default id, the custom list, and per-harness config.
  */
-const { exec } = require('child_process');
+const shell = require('../shell');
 const os       = require('os');
 
 const pkg = require('../../package.json');
@@ -158,15 +158,27 @@ function defaultId() {
 
 /* ── Detection ────────────────────────────────────────── */
 
+/**
+ * Run a catalogue row's `detectCmd` and read the one line it prints.
+ *
+ * Through `shell.run`, not `bash -lc`: this was the call site the v2.49.0 pass
+ * missed, so on Windows every harness with a `detectCmd` reported "not
+ * installed" whether it was there or not — and silently, because a detector
+ * that cannot run looks exactly like a thing that is not present.
+ *
+ * Note the `detectCmd` **strings** in this file are still POSIX
+ * (`test -f … && …`), so they do not run under PowerShell either. Making the
+ * runner portable is the half that belongs here; the other half is each row
+ * declaring what it looks for rather than how to look, which is `TODO.md`'s
+ * "OpenClaw is a peer, not a prerequisite".
+ */
 function shellDetect(cmd) {
-  return new Promise(resolve => {
-    exec(`bash -lc "${cmd.replace(/"/g, '\\"')}"`,
-      { env: { ...process.env, HOME: process.env.HOME || os.homedir() }, timeout: 6000 },
-      (err, stdout) => {
-        const out = (stdout || '').trim();
-        resolve({ detected: !err && !!out, version: out ? out.split('\n')[0].slice(0, 60) : null });
-      });
-  });
+  return shell.run(cmd, { timeout: 6000, env: { HOME: process.env.HOME || os.homedir() } })
+    .then(r => {
+      const out = (r.out || '').trim();
+      const ok = r.code === 0 && !r.error && !!out;
+      return { detected: ok, version: ok ? out.split('\n')[0].slice(0, 60) : null };
+    });
 }
 
 /** Detect one harness. The built-in one is always there — it *is* the panel. */

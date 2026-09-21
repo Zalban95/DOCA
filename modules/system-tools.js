@@ -1,7 +1,7 @@
 'use strict';
 
 const os = require('os');
-const { exec } = require('child_process');
+const shell = require('./shell');
 
 const { streamCmd } = require('./utils');
 const { COMPOSE_DIR } = require('./paths');
@@ -149,12 +149,15 @@ const SYSTEM_TOOLS = [
 
 /** GET /api/system/tools */
 async function handleList(req, res) {
-  const results = await Promise.all(SYSTEM_TOOLS.map(t => new Promise(resolve => {
-    exec(`bash -lc "${t.detectCmd.replace(/"/g, '\\"')}"`,
-      { env: { ...process.env, HOME: process.env.HOME || os.homedir() }, cwd: t.detectCwd || undefined, timeout: 5000 },
-      (err, stdout) => {
-        const out      = stdout.trim();
-        const detected = !err && !!out && out !== '' && out.toLowerCase() !== 'undefined';
+  // Through the host's shell, not `bash -lc`: the other call site the v2.49.0
+  // pass missed. On Windows every tool here reported "not installed" whether it
+  // was present or not, because a detector that cannot run is indistinguishable
+  // from a thing that is not there.
+  const results = await Promise.all(SYSTEM_TOOLS.map(t => shell
+    .run(t.detectCmd, { env: { HOME: process.env.HOME || os.homedir() }, cwd: t.detectCwd || undefined, timeout: 5000 })
+    .then(r => {
+        const out      = (r.out || '').trim();
+        const detected = r.code === 0 && !r.error && !!out && out.toLowerCase() !== 'undefined';
         const version  = detected ? out.split('\n')[0].replace(/^v/, '').slice(0, 60) : null;
         resolve({
           id:           t.id,
@@ -169,9 +172,7 @@ async function handleList(req, res) {
           detected,
           version,
         });
-      }
-    );
-  })));
+    })));
 
   res.json({ tools: results });
 }
