@@ -1221,3 +1221,132 @@ call path is the one that drops `stream_options` after a 400 (`agent.js`, "any
 falls to the fallback chain if one is configured, and otherwise ends the turn.
 `budget.explain()` at least names whose limit it was. Whether to add backoff is
 open: a retry that is invisible is how a turn silently costs twice.
+
+---
+
+## Distilled from an audit of another harness (2026-09-21)
+
+A 39-point audit of a **coding-agent orchestrator** — plan → contracts → graph
+→ orchestrator → providers — was offered as a quality checklist. Most of it is
+excellent and roughly a third of it transfers: that harness builds a dependency
+graph over declared interfaces, and DOCA has no such object and should not grow
+one to satisfy a checklist. What follows is the distillation, not the list.
+
+**The heuristic is worth adopting whole, and is the reason for the ordering
+below:** anything that strengthens a *mechanical guarantee* — something the
+panel can state without asking a model — outranks new surface area. DOCA
+already leans this way (`budget`, `environment`, `paths` and the whole graph of
+"what is running" are model-free), so this is a sharpening, not a turn.
+
+### Already true here — recorded so nobody re-files them
+
+- **A typed event bus, no polling** (#27): `agent.events` plus the `/api/v1` bus,
+  with the ephemeral/durable split. The missions bar polls and *stops* polling.
+- **Ledger every completion** (#21): `usage.js`, one JSONL row per call, marked
+  `provider` or `estimated`, tokens not money because prices move.
+- **Persist "running" and resume after restart** (#17): `missions.recover()`, and
+  `paused` rather than `failed` because the work is still there.
+- **Humans own the plan; agents propose** (#3, partly): `work_plan` — approval
+  records a decision and never launches work; revisions invalidate approval.
+- **Regression-test the mechanical core without a model** (#33): the whole suite
+  runs against a scripted stub; no key, no network, no Ollama.
+- **Sandbox agent writes to allowed roots** (#31, partly): `fmSafe` — with the
+  hole named below.
+- **Honest self-evaluation in the docs** (#36): `ISSUES.md`, this file, and the
+  rule that says which belongs where.
+
+### 1. The control plane is writable by the thing it governs
+
+The audit's #30/#31, and the sharpest finding in it for us. `settings.js` is
+careful — `FORBIDDEN` blocks anything named key/token/secret, `mcpServers` is
+out of reach because it holds spawnable commands, and only a click applies a
+proposal. **`write_file` walks around all of it**, because `fmSafe` asks only
+"is this under an allowed root".
+
+Verified on this machine: `read_file` / `write_file` can reach
+`~/.openclaw/openclaw.json`, which holds **every provider API key in
+plaintext** — the exact class of secret the proposal system refuses to carry.
+`.dashboard-prefs.json` and `.doca/` happen to be unreachable *here* only
+because this repo sits on `D:` and `HOME` is on `C:`; on an ordinary install
+cloned under `$HOME` they are inside an allowed root and the agent can rewrite
+its own memory, its own approval allowlist and its own settings directly.
+
+So the fix is a deny-list that does not depend on where the repo was cloned:
+`PREFS_FILE`, `DOCA_DATA_DIR`, `CONFIG_PATH`, `.git`, and the certs directory
+are control plane, not workspace. This is small, mechanical, and closes a hole
+that makes several existing guarantees decorative.
+
+### 2. A declared context window that is never declared to the runtime
+
+The audit's #19 — "do not force a local runtime through an OpenAI shim that
+silently truncates" — and DOCA does exactly that. Ollama is reached at
+`${ollamaBase()}/v1`, its OpenAI-compatible endpoint, and nothing in the request
+sets `num_ctx`. Ollama applies the model's own default (commonly 4096) and
+**truncates the rest without saying so**.
+
+Meanwhile `harness.config.doca.contextWindow` is the number the whole compaction
+system reasons with: `compactAt`, the preflight, the warning, and the ring the
+panel now draws. Set it to 32768 against an Ollama model and every one of those
+is confidently describing a window the runtime is not using. The failure is
+silent in both directions, which is the worst kind.
+
+Options are a native `/api/chat` path with `options.num_ctx`, or keeping the
+shim and passing the window through where the runtime accepts it — plus
+refusing to *claim* a window we have no way to set.
+
+### 3. Failure needs a structured shape, not a sentence
+
+The audit's #14 (retry → escalate → block) and #6's "mismatch carries a
+structured failure payload". DOCA's tool failures come back as prose — `Error:
+…` text the model reads — which is deliberate and right for the model, but it
+means nothing downstream can *reason* about a failure: no failure type, no
+upstream chain, no retry policy, no escalation to a stronger model, and no
+`blocked` state a human is asked to look at. A mission that fails reports in
+words and stops.
+
+Pairs with the missing retry/backoff already recorded above. The smallest
+version worth having: a typed failure on the tool result (kind, retryable,
+what it was trying to do) alongside the prose, and one policy that reads it.
+
+### 4. A budget ceiling that halts, not only warns
+
+The audit's #21 ends "hard-halt on a budget ceiling". `budget.js` has the whole
+apparatus — per-turn ledger, warning at `warnAt`, `explain()` naming whose limit
+was hit — and **no ceiling**. `maxSteps` bounds one turn; nothing bounds a day.
+A runaway loop across many turns is exactly the case the ledger was built to
+make visible and cannot currently stop. The honest shape is a per-day token
+ceiling that refuses to start a new turn and says so, rather than one that kills
+a turn mid-flight.
+
+### 5. Init and inspect without the server, and a model-free proof
+
+The audit's #23–#25 and #38. `bin/doca-token.js` is the only CLI; everything
+else needs the panel running and a browser. There is no `doca status`, no way to
+ask "what is stuck and why" from a terminal or a CI job, and no one-command
+demo that proves a mechanical property with no provider configured. That last
+one is the cheapest credibility this project could buy: the suite already proves
+things without a model, and nothing surfaces that to somebody evaluating it.
+
+### 6. Split what travels with a project from local operator state
+
+The audit's #35. DOCA keeps conversations, memory, missions and usage in
+`DOCA_DATA_DIR`, and providers, tokens, theme and settings in the prefs file —
+which is close to the right split already. What is missing is that the split is
+not *stated*, so it drifts: `harness.config` (portable-ish) and `models.hf.token`
+(emphatically local) sit in the same file. Worth writing down before it matters,
+which is cheaper than discovering it during the first migration.
+
+### Deliberately not adopted
+
+- **Contracts, canonicalised signatures, dead-end and cycle detection**
+  (#6–#11). These are the heart of that harness and assume a plan that declares
+  interfaces between steps. DOCA's plans are prose steps for a human to approve,
+  and inventing a contract registry to get a dependency graph would be building
+  a different product. The *idea* worth keeping is narrower and already listed
+  above: state stuckness mechanically, and say why.
+- **A raw `===FILE:===` agent protocol** (#15). That exists because small local
+  models cannot reliably emit JSON-escaped code. DOCA is built on tool calls and
+  gets the same property from the schema layer; the spill-file path already
+  handles large results.
+- **Multi-project priority queue with an agent-slot pool** (#18). One host, one
+  workspace, one owner. Revisit only if DOCA grows a second project.
