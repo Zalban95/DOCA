@@ -33,7 +33,7 @@ function shellSession(ws, rows) {
   // nothing and report "Failed to spawn shell" as if node-pty were at fault.
   // An interactive terminal keeps the profile a scripted call suppresses:
   // this is a person's prompt, and their aliases belong in it.
-  const hostShell = require('./shell').spec();
+  const hostShell = require('./shell').spec({ interactive: true });
   let ptyProc;
   try {
     ptyProc = ptyMod.spawn(hostShell.file, [], {

@@ -9,13 +9,17 @@
  * behaviour on *this* platform rather than a particular shell's name: they
  * pass on Linux and on Windows, which is the whole property.
  */
-const { test } = require('node:test');
+const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const os = require('node:os');
 const path = require('node:path');
 
 const shell = require('../modules/shell');
 const { detectBinary } = require('../modules/utils');
+const H = require('./helpers');
+
+// The route test boots the app; without this the process never exits.
+after(H.stop);
 
 test('there is a shell, and it is this platform\'s', () => {
   const s = shell.spec();
@@ -30,6 +34,43 @@ test('there is a shell, and it is this platform\'s', () => {
   } else {
     assert.ok(s.args.includes('-lc'));
   }
+});
+
+test('a script we wrote does not run in the user\'s login shell',
+  { skip: process.platform === 'win32' ? 'POSIX only' : false }, () => {
+  // v2.49.0 pointed everything at `$SHELL`, and the detector strings in
+  // `system-tools.js` and `catalog.js` are bash — `2>/dev/null`,
+  // `test -f x && { …; }`. On a host whose login shell is fish or tcsh that
+  // broke every detector and every installer, silently, because a detector
+  // that cannot run looks exactly like a thing that is not installed.
+  const old = process.env.SHELL;
+  try {
+    process.env.SHELL = '/usr/bin/fish';
+    const scripted = shell.spec();
+    assert.doesNotMatch(scripted.file, /fish/, 'a scripted command gets a shell whose syntax we know');
+    assert.match(scripted.file, /(bash|sh)$/);
+
+    // The Terminal is the exception: that is a person typing, and their shell
+    // and their aliases belong to them.
+    assert.equal(shell.spec({ interactive: true }).file, '/usr/bin/fish');
+  } finally {
+    if (old === undefined) delete process.env.SHELL; else process.env.SHELL = old;
+  }
+});
+
+test('a detector reads stdout, not stdout mixed with stderr', async () => {
+  // The version line is parsed, and stderr is where a shell puts things that
+  // are not it: a warning read back as a version is how a working tool reports
+  // a nonsense number.
+  const noisy = process.platform === 'win32'
+    ? '[Console]::Error.WriteLine("a warning"); Write-Output "v1.2.3"'
+    : 'echo "a warning" >&2; echo v1.2.3';
+  const r = await shell.run(noisy);
+  assert.equal(r.stdout, 'v1.2.3', 'stdout alone is what a parser gets');
+  assert.match(r.stderr, /a warning/);
+  // And the combined view still carries both, for a human reading output.
+  assert.match(r.out, /v1\.2\.3/);
+  assert.match(r.out, /a warning/);
 });
 
 test('a command runs, and its output comes back', async () => {
@@ -101,4 +142,27 @@ test('detectBinary reports a real path and version without a login shell', async
 
   const missing = await detectBinary('doca-definitely-not-installed');
   assert.deepEqual(missing, { detected: false, path: null, version: null });
+});
+
+test('the system tools route answers, and finds the node it is running on', async () => {
+  // This is the test that was missing. `node --check` passes on a
+  // `ReferenceError` — the refactor to `shell.run` left a `resolve(...)` call
+  // inside a `.then()`, which parses fine and throws on every request, and
+  // nothing exercised the route. Asserting the payload, not just the status,
+  // because "200 with everything undetected" is the other failure here.
+  await H.start();
+  const r = await H.api(null, 'GET', '/api/system/tools');
+  assert.equal(r.status, 200);
+  assert.ok(Array.isArray(r.body.tools) && r.body.tools.length, 'it lists tools');
+
+  const node = r.body.tools.find(t => t.id === 'node');
+  assert.ok(node, 'node is one of them');
+  // On POSIX the detector strings run, so the node running this test must be
+  // found. On Windows they are still bash and cannot — that is a known gap
+  // (TODO.md, "OpenClaw is a peer"), so the assertion is what each platform
+  // can honestly promise.
+  if (process.platform !== 'win32') {
+    assert.equal(node.detected, true, 'the node running this test is installed');
+    assert.match(node.version || '', /^\d+\.\d+/, 'and its version is a version');
+  }
 });

@@ -27,6 +27,7 @@
  * tells the agent which shell it has, and that is the honest fix — a
  * translation layer would be a new dialect that is subtly neither.
  */
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFile, spawn } = require('child_process');
@@ -41,7 +42,7 @@ const WIN = process.platform === 'win32';
  * answer a prompt — a shell that stops to ask blocks until the timeout kills
  * it, with no clue as to why.
  */
-function spec() {
+function spec({ interactive = false } = {}) {
   if (WIN) {
     return {
       name:  'powershell',
@@ -50,8 +51,29 @@ function spec() {
       label: 'PowerShell',
     };
   }
-  const file = process.env.DOCA_SHELL || process.env.SHELL || '/bin/bash';
-  return { name: path.basename(file), file, args: ['-lc'], label: path.basename(file) };
+
+  // A person's prompt gets their own shell; a script we wrote does not.
+  //
+  // v2.49.0 pointed *everything* at `$SHELL`, which broke detection and every
+  // installer on any host whose login shell is not bash: the strings in
+  // `system-tools.js` and `catalog.js` are bash — `2>/dev/null`,
+  // `test -f x && { …; }` — and fish and tcsh do not read them. The original
+  // code hardcoded `bash` for exactly this reason, and losing that was a
+  // regression, not a simplification.
+  //
+  // So `$SHELL` is honoured only where the user is the one typing (the
+  // Terminal tab). Everything scripted gets a shell whose syntax we know.
+  if (interactive) {
+    const file = process.env.DOCA_SHELL || process.env.SHELL || '/bin/bash';
+    return { name: path.basename(file), file, args: ['-lc'], label: path.basename(file), interactive: true };
+  }
+  if (process.env.DOCA_SHELL)
+    return { name: path.basename(process.env.DOCA_SHELL), file: process.env.DOCA_SHELL, args: ['-lc'], label: path.basename(process.env.DOCA_SHELL) };
+  for (const file of ['/bin/bash', '/usr/bin/bash'])
+    if (fs.existsSync(file)) return { name: 'bash', file, args: ['-lc'], label: 'bash' };
+  // No bash at all (Alpine, a minimal container). `-c`, not `-lc`: `-l` is not
+  // a POSIX `sh` option and dash treats it inconsistently.
+  return { name: 'sh', file: '/bin/sh', args: ['-c'], label: 'sh' };
 }
 
 /** The one sentence the agent is told about what it is typing into. */
@@ -80,6 +102,12 @@ function run(command, { cwd, timeout = 60000, maxBuffer = 4 << 20, env, signal }
       const out = [stdout, stderr].filter(t => t && String(t).trim()).join('\n').trim();
       resolve({
         out,
+        // Kept apart as well as combined. `out` is right for a human reading a
+        // command's output, and wrong for parsing: a detector that reads a
+        // version off `out` picks up a warning on stderr or a login shell's
+        // banner and reports it as the version. Callers that parse take this.
+        stdout: String(stdout || '').trim(),
+        stderr: String(stderr || '').trim(),
         // `killed` is how Node reports the timeout it enforced, which is a
         // different thing from the command exiting non-zero.
         timedOut: !!(err && err.killed),
@@ -110,7 +138,6 @@ function spawnShell(command, opts = {}) {
  */
 function which(cmd) {
   if (!cmd || /[\\/]/.test(cmd)) return null;
-  const fs = require('fs');
   const exts = WIN
     ? (process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean)
     : [''];

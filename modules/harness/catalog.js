@@ -175,7 +175,9 @@ function defaultId() {
 function shellDetect(cmd) {
   return shell.run(cmd, { timeout: 6000, env: { HOME: process.env.HOME || os.homedir() } })
     .then(r => {
-      const out = (r.out || '').trim();
+      // stdout only, for the same reason `system-tools` takes it: the version
+      // line is parsed, and stderr is where a shell puts things that are not it.
+      const out = r.stdout;
       const ok = r.code === 0 && !r.error && !!out;
       return { detected: ok, version: ok ? out.split('\n')[0].slice(0, 60) : null };
     });

@@ -156,10 +156,12 @@ async function handleList(req, res) {
   const results = await Promise.all(SYSTEM_TOOLS.map(t => shell
     .run(t.detectCmd, { env: { HOME: process.env.HOME || os.homedir() }, cwd: t.detectCwd || undefined, timeout: 5000 })
     .then(r => {
-        const out      = (r.out || '').trim();
+        // stdout, not the combined output: a tool that prints a warning to
+        // stderr would otherwise have that warning read back as its version.
+        const out      = r.stdout;
         const detected = r.code === 0 && !r.error && !!out && out.toLowerCase() !== 'undefined';
         const version  = detected ? out.split('\n')[0].replace(/^v/, '').slice(0, 60) : null;
-        resolve({
+        return ({
           id:           t.id,
           label:        t.label,
           category:     t.category,
