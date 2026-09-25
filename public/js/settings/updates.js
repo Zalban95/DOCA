@@ -255,7 +255,10 @@ async function versionsLoad() {
       switched back on its own. If the dashboard will not load at all: <code>./run.sh use &lt;version&gt;</code> on the host.
     </p>`;
   const st = document.getElementById('versions-status');
-  if (!_versions.launcher) {
+  if (!_versions.versions.length) {
+    document.getElementById('versions-use-btn').disabled = true;
+    setStatus(st, _versions.warning || 'No versions to switch to.', 'warn', { clear: 0 });
+  } else if (!_versions.launcher) {
     document.getElementById('versions-use-btn').disabled = true;
     setStatus(st, 'Started without run.sh — switching versions needs the launcher (./run.sh or the boot service).', 'warn', { clear: 0 });
   } else if (_versions.warning) {

@@ -74,6 +74,9 @@ function limited(keys) {
   return 0;
 }
 function failed(keys) {
+  // Old entries go when the table grows: an address that stopped trying is no
+  // reason to hold memory forever.
+  if (failures.size > 1000) { const t = Date.now(); for (const [k, f] of failures) if (f.until < t - 3600e3) failures.delete(k); }
   for (const k of keys) {
     const f = failures.get(k) || { n: 0, until: 0 };
     f.n++;
@@ -152,6 +155,7 @@ async function handleLogin(req, res) {
     return fail(res, Object.assign(new Error(why), { status: 401, code: 'bad_credentials' }));
   }
   succeeded(keys);
+  authStore.pruneSessions();   // expired sessions go whenever someone signs in
   const token = credentials.startSession({ user, orgId: org.id, req });
   authStore.audit({ orgId: org.id, actorId: user.id, action: 'login', ip: req.socket?.remoteAddress });
   res.setHeader('Set-Cookie', credentials.cookieHeader(token, { secure: secure(req) }));

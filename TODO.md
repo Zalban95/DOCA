@@ -1868,3 +1868,26 @@ and are recorded as wrong so nobody re-files them.
   managed in the Skills section, usable by the DOCA harness — part of the
   Settings review above.
 
+## Audit 2026-09-26 — the day's new surface (auth, versions, backups, supervisor, listen, rules, unattended)
+
+A sweep of every GET route as owner, member and viewer on an isolated server
+(8 s timeout each, streams noted), plus a read of the new modules. **Fixed in
+2.58.2:**
+- `/api/versions` answered 500 "not a git repository" on an install that did
+  not come from `git clone`; it now lists nothing and says why.
+- A restore replaced the accounts of the install it landed on: a backup from
+  before accounts existed would put the panel back in setup mode, claimable at
+  the machine. Accounts are now kept when the install has any; a new machine
+  still takes the backup's.
+- Expired sessions were only pruned when someone asked for the session list;
+  now at every sign-in. The login rate-limit table never shrank; now it does.
+
+**Recorded, not fixed (not urgent):**
+- The gate reads `auth/users.json`, `sessions.json` and `memberships.json` on
+  every request; fine at one person's polling rate, worth an mtime cache before
+  many users (it is the same pattern `devices.js` already uses).
+- `auth/audit.jsonl` grows forever — rotate it by month, like usage.
+- A backup upload has no size limit (owner-only, so a full disk is the worst case).
+- The sweep found no route that crashes for a role and no route answering a
+  role without the right for it.
+

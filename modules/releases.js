@@ -127,7 +127,19 @@ async function fetchTags() {
  * @returns {Promise<{ running: string, current: string, dataFormat: number, launcher: boolean,
  *                     warning: string|null, versions: object[] }>}
  */
+/** Whether this install can have versions at all: they are git worktrees of a checkout. */
+function isCheckout() {
+  return fs.existsSync(path.join(HOME, '.git'));
+}
+
 async function list() {
+  // An install that did not come from `git clone` (a download, a copy) has no
+  // tags to list; say so instead of answering 500 "not a git repository".
+  if (!isCheckout()) {
+    return { running: running(), current: current(), version: pkg.version, dataFormat: store.dataFormat(),
+      launcher: !!process.env.DOCA_HOME, versions: [],
+      warning: 'This install is not a git checkout, so there are no other versions to switch to. Install DOCA with git clone to use this.' };
+  }
   const warning = await fetchTags();
   const out = await git(['for-each-ref', '--sort=-creatordate', '--format=%(refname:short)%09%(creatordate:iso-strict)', 'refs/tags']);
   const rows = out.split('\n').map(l => l.split('\t')).filter(([t]) => TAG.test(t));
@@ -324,4 +336,4 @@ async function latest() {
   return out.split('\n').filter(t => TAG.test(t)).sort((a, b) => cmpVersion(b, a))[0] || null;
 }
 
-module.exports = { restartSelf, latest, list, install, use, refusal, current, running, history, prune, mount, cmpVersion, CHECKOUT, DIR, HOME, MENU_SINCE };
+module.exports = { isCheckout, restartSelf, latest, list, install, use, refusal, current, running, history, prune, mount, cmpVersion, CHECKOUT, DIR, HOME, MENU_SINCE };

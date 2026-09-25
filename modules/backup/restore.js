@@ -38,6 +38,17 @@ function incompatibility(manifest) {
   return null;
 }
 
+/** Put the current accounts into the staged data, if there are any. @returns {boolean} */
+function keepAccounts(current, stage) {
+  const users = path.join(current, 'auth', 'users.json');
+  let has = false;
+  try { has = Object.keys(JSON.parse(fs.readFileSync(users, 'utf8'))).length > 0; } catch {}
+  if (!has) return false;
+  fs.rmSync(path.join(stage, 'auth'), { recursive: true, force: true });
+  fs.cpSync(path.join(current, 'auth'), path.join(stage, 'auth'), { recursive: true });
+  return true;
+}
+
 /** What a restore would do, without doing it: for the confirmation the user reads. */
 async function plan(file, password) {
   const opened = await archive.open(file, password);
@@ -85,9 +96,18 @@ async function restore(file, { password = null, safety = null, say = () => {} } 
     }
     say(`✓ ${files} files verified against their checksums.\n`);
 
+    // Accounts are not restored over an install that has them. They live in the
+    // data directory, so a backup from before accounts existed would otherwise
+    // wipe them and put the panel back in setup mode — claimable by whoever gets
+    // there first — and any older backup would silently bring back old
+    // passwords and sessions. On an install without accounts (a new machine)
+    // the backup's accounts come along, which is how an owner moves house.
+    const data = staged.find(x => x.section === 'data');
+    const keptAccounts = data && keepAccounts(store.DATA_DIR, data.stage);
+    if (keptAccounts) say('Accounts: this install already has them, so they were kept as they are.\n');
+
     // Migrations would run here, on the staged data directory, before the swap.
     const from = Number(opened.manifest.dataFormat) || 1;
-    const data = staged.find(x => x.section === 'data');
     for (let f = from; f < store.DATA_FORMAT; f++) { say(`Migrating data format ${f} → ${f + 1}…\n`); await MIGRATIONS[f](data.stage); }
 
     let safetyBackup = null;

@@ -165,3 +165,13 @@ test('the routes: settings never return the password, and names cannot leave the
 });
 
 test.after(() => fs.rmSync(process.env.DOCA_HOME, { recursive: true, force: true }));
+
+test('a restore keeps the accounts of an install that has them', async () => {
+  const authStore = require('../modules/auth/store');
+  const b = await archive.create({ password: null, name: 'before-late-user.dBac' });
+  authStore.createUser({ email: 'late@test.local', passwordHash: 'x' });   // made after the backup
+  const r = await restorer.restore(b.file, { say: () => {} });
+  assert.ok(r.restored.includes('data'));
+  assert.ok(authStore.userByEmail('late@test.local'), 'the current accounts were kept, not rolled back');
+  assert.ok(authStore.userByEmail('owner@test.local'), 'and nobody was lost');
+});
