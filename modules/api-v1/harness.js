@@ -198,7 +198,8 @@ function post(body, device) {
 
   const inFlight = _running.get(session.id);
   if (inFlight) throw new ApiError(409, 'turn_in_flight', 'A turn is already running in this conversation', { turnId: inFlight.turnId });
-  if (agent.isRunning(session.id)) throw new ApiError(409, 'turn_in_flight', 'A turn is already running in this conversation');
+  // A turn the panel started by itself gives way to the person speaking (turn/lifecycle.claim).
+  if (agent.isRunning(session.id) && !agent.isAuto(session.id)) throw new ApiError(409, 'turn_in_flight', 'A turn is already running in this conversation');
   if (session.archivedAt) throw new ApiError(409, 'session_archived', 'Recall this conversation in the Harness before continuing.');
 
   const turnId = `trn_${crypto.randomBytes(6).toString('hex')}`;

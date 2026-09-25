@@ -1790,6 +1790,7 @@ and are recorded as wrong so nobody re-files them.
   publishes work chats in the same shape (no client update), announces every
   turn start/end (`turn/lifecycle.changed`), and at boot tells devices about
   work chats a restart cut off.
+- **Built 2026-09-25 (`harness/supervisor.js`): work that finishes itself.** A work chat's job ends only with a final report (`work_chats report` + outcome done/failed/blocked/question) or a stop; a turn ending short of that is followed by another; specialists finishing wake their work chat; the Orchestrator is woken only by final reports and its reply goes to the devices; a restart resumes what it cut off; an automatic turn always gives way to the owner. Brakes: `autoTurnsPerJob` (0 = off; past it, stalled), `autoWakesPerHour`, and 3 idle turns in a row = stalled. The two entries below are what it answers.
 - **A subordinate's report does not wake the orchestrator.** Measured by the
   agent with a timer probe: delivered, but no turn starts until someone speaks.
   Deliberate since 2.45 ("reports never start paid model calls"); the owner now

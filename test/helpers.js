@@ -28,6 +28,8 @@ process.env.SNAPSHOT_SCRIPT = path.join(tmp, 'snapshot-agent.sh');
 process.env.RESTORE_SCRIPT  = path.join(tmp, 'restore-agent.sh');
 
 const { createApp } = require('../server');
+// No automatic turns unless a test asks for them: they would eat the scripted replies.
+require('../modules/harness/supervisor')._setEnabled(false);
 const devices  = require('../modules/api-v1/devices');
 const { PRESETS } = require('../modules/api-v1/scopes');
 

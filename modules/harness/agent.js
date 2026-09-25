@@ -38,7 +38,7 @@ const { DEGRADED_MS, rungsFor, markDegraded, forgetDegraded, openingHop, hopText
 const { ask, complete } = require('./turn/transport');
 const { foldSummary } = require('./turn/summary');
 const { preview, breakdown, contextOf, status } = require('./turn/introspect');
-const { events, running, isRunning, cancel, changed } = require('./turn/lifecycle');
+const { events, running, isRunning, isAuto, cancel, claim, changed } = require('./turn/lifecycle');
 
 /* ── The turn ─────────────────────────────────────────── */
 
@@ -55,12 +55,11 @@ async function turn(options) {
   const id = options.sessionId || memory.activeSession().id;
   const session = organization.session(id);
   if (session.archivedAt) throw Object.assign(new Error('Recall this archived conversation before continuing.'), { status: 409 });
-  if (running.has(id)) throw Object.assign(new Error('A turn is already running in this conversation.'), { status: 409 });
   const ctrl = new AbortController();
+  await claim(id, ctrl, options.auto);        // an automatic turn gives way to anyone else
   const abort = () => ctrl.abort();
   options.signal?.addEventListener('abort', abort, { once: true });
   if (options.signal?.aborted) ctrl.abort();
-  running.set(id, ctrl);
   try {
     const profile = session.kind === 'specialist' ? session.profile || options.profile
       : options.profile || organization.profileFor(session);
@@ -72,6 +71,7 @@ async function turn(options) {
     if (options.client && options.client.kind !== 'agent')
       organization.report(id, 'user intervention', options.message, options.client.name || 'user');
     const result = await runTurn({ ...options, sessionId: id, signal: ctrl.signal, profile });
+    ctrl.steps = result.steps;
     const state = ctrl.signal.aborted ? 'cancelled' : 'idle';
     memory.updateSession(id, { state, brief: String(result.text || '').slice(0, 600) });
     organization.report(id, state === 'cancelled' ? state : 'turn completed', result.text);
@@ -83,7 +83,7 @@ async function turn(options) {
     throw e;
   } finally {
     running.delete(id);
-    changed(id);
+    changed(id, ctrl);
     options.signal?.removeEventListener('abort', abort);
   }
 }
@@ -413,5 +413,5 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
  * `liveBlock()`. A caller that needs the whole request wants both.
  */
 
-module.exports = { turn, isRunning, cancel, status, contextOf, params, ask, complete, preview, breakdown, liveBlock, events,
+module.exports = { turn, isRunning, isAuto, cancel, status, contextOf, params, ask, complete, preview, breakdown, liveBlock, events,
   toApiMessages, rungsFor, markDegraded, forgetDegraded, openingHop, missionsFor, DEGRADED_MS };

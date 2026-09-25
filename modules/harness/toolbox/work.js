@@ -10,12 +10,15 @@ module.exports = [
     name: 'work_chats',
     description: 'Manage the three-level workspace. List/read the conversations in your line and their archived work; read transcripts only on demand. '
       + 'The Orchestrator creates work chats (planning:true for detailed planning), optionally starting a task with message. '
-      + 'Send continues a subordinate in the background; it returns immediately. Report records your brief and informs superiors. '
-      + 'Archive retains transcripts; recall reopens them. Reports are shown on the superior\'s next turn, without starting a model call.',
+      + 'Send gives a subordinate a task in the background; it returns immediately, and the work chat carries it to the end on its own. '
+      + 'Report records your brief and informs superiors; with outcome done, failed, blocked or question it ends your job and wakes the Orchestrator, '
+      + 'without an outcome it is progress and wakes nobody. List shows every job\'s state. Archive retains transcripts; recall reopens them.',
     parameters: { type: 'object', properties: {
       action: { type: 'string', enum: ['list', 'read', 'create', 'send', 'stop', 'report', 'archive', 'recall'] },
       sessionId: { type: 'string' }, title: { type: 'string' }, message: { type: 'string' },
       planning: { type: 'boolean' }, all: { type: 'boolean', description: 'Include archives in list.' },
+      outcome: { type: 'string', enum: ['done', 'failed', 'blocked', 'question'],
+        description: 'With report, from a work chat: the job is over (done/failed), cannot go on without a decision from above (blocked), or needs the owner (question).' },
       transcript: { type: 'boolean' }, offset: { type: 'integer' }, limit: { type: 'integer' },
     }, required: ['action'] },
     run: async (args, ctx) => JSON.stringify(await require('../organization').tool(args, ctx)),

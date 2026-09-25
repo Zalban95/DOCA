@@ -50,6 +50,9 @@ function ancestors(id) {
  */
 const REPORTS_KEEP = 50;
 
+/** The reports that end a work chat's job (supervisor.js). Anything else is progress. */
+const FINAL = ['done', 'failed', 'blocked', 'question'];
+
 /**
  * Drop old read reports, keep every unread one, and preserve the order.
  *
@@ -96,6 +99,7 @@ function view(row) {
     summary: s.summary || '', brief: short(s.brief || s.summary), tokens: s.tokens || 0,
     provider: s.profile?.provider || p.provider, model: s.profile?.model || p.model,
     plan: s.plan || null, unread: (s.reports || []).filter(n => !n.readAt).length,
+    job: s.job ? { state: s.job.state, since: s.job.since, autoTurns: s.job.autoTurns || 0 } : null,
     missionId: require('../agents/missions').forSession(s.id)?.id || null };
 }
 
@@ -149,8 +153,12 @@ function create({ title, planning = false } = {}) {
 function start(id, message, from) {
   const s = session(id);
   if (s.archivedAt) throw error('Recall this archived conversation before continuing.');
-  if (require('./agent').isRunning(id)) throw error('This conversation is already working. Read its status or stop it first.');
+  const agent = require('./agent');
+  // A task from above takes over from a turn the panel started by itself.
+  if (agent.isRunning(id) && !agent.isAuto(id)) throw error('This conversation is already working. Read its status or stop it first.');
   if (!String(message || '').trim()) throw error('A task or message is required.', 400);
+  // A new task is a new job: its own count of automatic turns (supervisor.js).
+  memory.updateSession(id, { job: { state: 'working', since: new Date().toISOString(), autoTurns: 0, idleTurns: 0 } });
   // All entry points use the same runner and lock, including direct intervention.
   require('./agent').turn({ sessionId: id, message: short(message, 20000),
     client: { name: 'Delegated by ' + (memory.getSession(from)?.title || 'Orchestrator'), kind: 'agent' },
@@ -216,7 +224,11 @@ function profileFor(s) {
       + 'Read their briefs, unread reports and plans; open full history only when needed. '
       + 'Direct user interventions are reported upward automatically. Acknowledge relevant changes. '
       + 'Plan approval records a decision; it does not start execution. Never claim background work '
-      + 'finished before a result arrives. Specialists report back; you explain decisions to the user.' };
+      + 'finished before a result arrives. Specialists report back; you explain decisions to the user. '
+      + 'You are free while work runs: hand a job to a work chat and return to the user. Work chats carry '
+      + 'their jobs to the end on their own; you are woken only when one reports its final outcome '
+      + '(done, failed, blocked) or has a question for the user. Then say what matters in a few lines and '
+      + 'ask only for a decision that is theirs. work_chats list shows every job\'s state at any time.' };
 }
 
 function block(id, pending = []) {
@@ -228,7 +240,8 @@ function block(id, pending = []) {
   return [`# Organization — ${s.kind}, conversation ${id}`,
     s.parentId ? `Reports to ${s.parentId}. Use work_chats report for decisions, blockers and results.` : '',
     s.planning ? 'This is a planning work chat. Develop a plan and propose it; execution belongs in a separate work chat.' : '',
-    s.kind === 'work' ? 'You lead this work chat (level 2). Own its detailed work and plan. Delegate narrow errands with agent_dispatch when specialists are enabled. When their result is needed to continue, agent_results with wait:true waits up to 30 seconds without model polling; if still running, report the status instead of looping. You cannot create another leader layer.' : '',
+    s.kind === 'work' ? 'You lead this work chat (level 2). Own its detailed work and plan. Delegate narrow errands with agent_dispatch when specialists are enabled. You cannot create another leader layer. '
+      + 'Your job ends only when you say so: work_chats report with outcome done, failed, blocked (you cannot go on without a decision from above) or question (one only the owner can answer). Until then the panel keeps you going: a turn that ends short of a final report is followed by another, and when your specialists finish you are woken with their results, so end your turn while they work instead of waiting. Progress reports are optional and wake nobody.' : '',
     s.plan ? `Your plan: ${s.plan.state} revision ${s.plan.revision}, ${short(s.plan.title, 140)}. Read its steps with work_plan.` : '',
     `${ordered.length} active conversations in view. The inventory and archives: work_chats list.`,
     ...ordered.slice(0, 10).map(row => {
@@ -262,8 +275,12 @@ async function tool(args, ctx) {
     return view(s);
   }
   if (args.action === 'report') {
-    memory.updateSession(actor.id, { brief: short(args.message) });
-    return report(actor.id, 'report', args.message);
+    // A final report ends the job and is what wakes the Orchestrator; progress
+    // wakes nobody (supervisor.js). Only a work chat has a job to end.
+    const outcome = FINAL.includes(args.outcome) && actor.kind === 'work' ? args.outcome : 'report';
+    memory.updateSession(actor.id, { brief: short(args.message),
+      ...(outcome !== 'report' ? { job: { ...(actor.job || {}), state: outcome, at: new Date().toISOString() } } : {}) });
+    return report(actor.id, outcome, args.message);
   }
   if (!canManage(actor.id, id)) throw error('This conversation is outside your reporting line.', 403);
   if (args.action === 'send') {
@@ -275,5 +292,5 @@ async function tool(args, ctx) {
   throw error('Unknown work_chats action.', 400);
 }
 
-module.exports = { session, ancestors, report, notices, acknowledge, view, list, create, start,
+module.exports = { FINAL, session, ancestors, report, notices, acknowledge, view, list, create, start,
   archive, plan, profileFor, block, tool, canManage };

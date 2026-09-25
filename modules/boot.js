@@ -9,6 +9,7 @@
 function afterListen() {
   require('./agents/missions').recover();            // specialists a restart cut off: paused
   require('./harness/workview').recover();            // work chats likewise, told to the devices
+  require('./harness/supervisor').recover();          // and carried on: a restart is not a decision
   require('./mcp/registry').startWithDoca();          // MCP servers marked "start with DOCA"
 }
 

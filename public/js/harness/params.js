@@ -131,6 +131,16 @@ const HARNESS_PARAMS = [
         + 'would make a chain slower than having none. The last entry always gets the full give-up time, so '
         + 'how long you wait in total is unchanged.' },
 
+  { key: 'autoTurnsPerJob', label: 'Turns a job may take on its own', attrs: 'min="0" max="500" step="1"',
+    hint: 'A work chat keeps working until it reports the job done, failed, blocked or asks a question — or '
+        + 'you or the Orchestrator stop it. When a turn ends short of that, the panel starts the next one; '
+        + 'when its specialists finish, the panel wakes it. This is how many such turns one job may take '
+        + 'before it is reported as stalled instead. 0 switches this off: work then waits to be asked.' },
+
+  { key: 'autoWakesPerHour', label: 'Automatic turns per hour', attrs: 'min="0" max="1000" step="1"',
+    hint: 'Every turn the panel starts by itself, across all work chats and the Orchestrator together. Each '
+        + 'is a model call you pay for; past this many in an hour the panel waits instead, and says so.' },
+
   { key: 'maxSteps', label: 'Max tool steps', attrs: 'min="1" max="1000" step="1"',
     hint: 'How many times the agent may use a tool and think again before it has to answer. Each step '
         + 're-sends the whole conversation, so this is the setting that decides what one answer can cost.' },
@@ -296,6 +306,8 @@ async function harnessConfigSave(id) {
         topP:           parseFloat(val('topP')),
         maxTokens:      parseInt(val('maxTokens'), 10) || 0,
         maxSteps:       parseInt(val('maxSteps'), 10) || 1,
+        autoTurnsPerJob:  parseInt(val('autoTurnsPerJob'), 10) || 0,
+        autoWakesPerHour: parseInt(val('autoWakesPerHour'), 10) || 0,
         historyTurns:   parseInt(val('historyTurns'), 10) || 0,
         summarizeAfter: parseInt(val('summarizeAfter'), 10) || 0,
         memoryLimit:    parseInt(val('memoryLimit'), 10) || 0,

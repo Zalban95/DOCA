@@ -141,6 +141,15 @@ function defaultParams() {
     // for the *last* rung — and for the only rung, when there is no chain — so
     // giving up entirely still takes as long as it always did.
     failoverAfterMs: 20000,
+    // Work that finishes itself (harness/supervisor.js). A work chat keeps going
+    // until it files a final report — done, failed, blocked, or a question — or
+    // someone stops it; the panel starts the next turn when one ends short of
+    // that, and wakes the Orchestrator only for final reports. These two are the
+    // brakes. autoTurnsPerJob: turns the panel may start for one job before it
+    // calls the job stalled and says so; 0 switches autonomous work off.
+    // autoWakesPerHour: every automatic turn anywhere, together — the cost guard.
+    autoTurnsPerJob:  30,
+    autoWakesPerHour: 30,
     // The chain to fall down, in order, as `{ provider, model, contextWindow? }`.
     // Each window describes that served model; omitted means unknown, never
     // the primary model's limit. Empty by
