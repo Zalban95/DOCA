@@ -254,7 +254,7 @@ default (proposed: yes).
 - Colour themes (`themes.js`) and tokens (`public/css/variables.css`, 52 lines).
 - Mobile breakpoints (`responsive.css`, 282 lines).
 - About 3500 lines of CSS, much of it in `components.css` (1171 lines).
-- Markup for every screen in one `index.html`, with about 350 inline handlers.
+- Markup for every screen in one `index.html`, with 378 inline handlers (208 in the page, 170 in markup built by `public/js`).
 
 **There are two levels, and they cost very different amounts:**
 - **Skins: CSS only.** Tokens plus component styles, so a skin changes how
