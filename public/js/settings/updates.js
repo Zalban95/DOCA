@@ -11,6 +11,7 @@ async function updateCheck() {
   const pullBtn = document.getElementById('update-pull-btn');
   if (btn) btn.disabled = true;
   if (el) el.innerHTML = '<span class="placeholder pulse" style="font-size:12px">Checking for updates…</span>';
+  versionsLoad();
 
   try {
     const data = await apiFetch('/api/update-check?force=1');
@@ -182,6 +183,115 @@ function restartDoca() {
         poll();
       }, 1500);
     };
+    poll();
+  });
+}
+
+/* ── The version in use: roll back, or forward ───────── */
+
+let _versions = null;
+
+const _versionDay = iso => (iso ? fmtDate(iso) : '');
+
+/** One option's text: which version, when it was released, when it came to this machine, and what to know first. */
+function _versionLabel(v) {
+  if (v.tag === 'checkout') return `Working copy (${(v.head || '').split(' ')[0] || 'git checkout'})${v.running ? ' · running' : ''}`;
+  return [
+    v.tag,
+    `released ${_versionDay(v.releasedAt)}`,
+    v.installedAt ? `installed here ${_versionDay(v.installedAt)}` : '',
+    v.running ? 'running' : '',
+    !v.compatible ? 'too old: would not find your data' : '',
+    v.compatible && v.olderData ? 'older data format' : '',
+    v.compatible && !v.hasMenu ? 'no version menu' : '',
+  ].filter(Boolean).join(' · ');
+}
+
+/** Draw the version dropdown under the update card. */
+async function versionsLoad() {
+  const log = document.getElementById('update-log');
+  if (!log) return;
+  let box = document.getElementById('versions-box');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'versions-box';
+    box.style.cssText = 'margin-top:12px;display:flex;flex-direction:column;gap:6px';
+    log.after(box);
+  }
+  box.innerHTML = '<span class="placeholder pulse" style="font-size:12px">Reading versions…</span>';
+  try {
+    _versions = await apiFetch('/api/versions');
+  } catch (e) {
+    box.innerHTML = `<span class="status-line err">✗ ${escHtml(e.message)}</span>`;
+    return;
+  }
+  const opts = _versions.versions.map(v =>
+    `<option value="${escHtml(v.tag)}"${v.current ? ' selected' : ''}${v.compatible ? '' : ' disabled'}>${escHtml(_versionLabel(v))}</option>`).join('');
+  box.innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label for="versions-select" style="font-size:12px;color:var(--muted)">Version</label>
+      <select id="versions-select" style="flex:1;min-width:0;max-width:100%">${opts}</select>
+      <button class="btn btn-xs" id="versions-use-btn" onclick="versionsUse()">Switch</button>
+    </div>
+    <span class="status-line" id="versions-status"></span>
+    <p style="font-size:11px;color:var(--muted);margin:0">
+      Every version reads the same data. A version that does not answer within 90 s after a switch is
+      switched back on its own. If the dashboard will not load at all: <code>./run.sh use &lt;version&gt;</code> on the host.
+    </p>`;
+  const st = document.getElementById('versions-status');
+  if (!_versions.launcher) {
+    document.getElementById('versions-use-btn').disabled = true;
+    setStatus(st, 'Started without run.sh — switching versions needs the launcher (./run.sh or the boot service).', 'warn', { clear: 0 });
+  } else if (_versions.warning) {
+    setStatus(st, _versions.warning, 'warn', { clear: 0 });
+  }
+}
+
+/** Switch to the version in the dropdown, then wait for the panel to come back on it. */
+function versionsUse() {
+  const tag = document.getElementById('versions-select')?.value;
+  const v = _versions?.versions.find(x => x.tag === tag);
+  if (!v || v.current) return;
+  const lines = [`Switch DOCA from ${_versions.current} to ${tag}? The panel restarts.`,
+    `If ${tag} does not answer within 90 seconds, it switches back to ${_versions.current} on its own.`];
+  if (!v.hasMenu) lines.push(`${tag} predates this menu. To leave it, run ./run.sh use <version> on the host.`);
+  if (v.olderData) lines.push(`${tag} writes an older data format than yours. Running it risks the data — make a backup first.`);
+  appConfirm(lines.join('\n\n'), async () => {
+    const log = document.getElementById('update-log');
+    const st  = document.getElementById('versions-status');
+    const btn = document.getElementById('versions-use-btn');
+    if (btn) btn.disabled = true;
+    showStream(log, '');
+    let result = null;
+    await sseStream('/api/versions/use', { version: tag, force: !!v.olderData }, {
+      onStatus: o => appendStream(log, o.status || ''),
+      onDone:   o => { result = o; },
+      onError:  e => appendStream(log, `\n✗ ${e.message}\n`),
+    });
+    if (!result?.ok) {
+      if (btn) btn.disabled = false;
+      return setStatus(st, '✗ The switch did not happen — see the log above.', 'err');
+    }
+    if (!result.restarting) return versionsLoad();
+    // Asked of /api/update-check, which every version has — an older one has no
+    // /api/versions to ask. Its `current` is the version that process booted as.
+    const before = _versions.version, want = tag === 'checkout' ? null : tag.replace(/^v/, '');
+    const started = Date.now();
+    const poll = () => setTimeout(async () => {
+      try {
+        const r = await fetch('/api/update-check', { cache: 'no-store' });
+        if (r.ok) {
+          const now = (await r.json()).current;
+          if (want ? now === want : (now !== before || Date.now() - started > 8000)) return location.reload();
+          if (want && now === before && want !== before && Date.now() - started > 20000)
+            return setStatus(st, `✗ ${tag} did not come up, and the launcher switched back to ${result.from}. See .releases/log.jsonl on the host.`, 'err', { clear: 0 });
+        }
+      } catch {}
+      if (Date.now() - started > 150000)
+        return setStatus(st, '✗ The panel did not come back within 150 s. On the host: ./run.sh versions', 'err', { clear: 0 });
+      setStatus(st, `Restarting into ${tag}… ${Math.round((Date.now() - started) / 1000)}s`, '', { clear: 0 });
+      poll();
+    }, 2000);
     poll();
   });
 }

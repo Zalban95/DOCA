@@ -146,6 +146,40 @@ update. Without a supervisor DOCA detects that and spawns its own detached succe
 (its boot output goes to `.doca/restart.log`), but letting systemd own the lifecycle is more
 reliable: it also recovers the panel after a crash or a reboot.
 
+### Rolling back to another version
+
+**Settings → Updates → Version** lists every release tag with the date it was released and the date
+it was installed on this machine, plus the working copy. Pick one and **Switch**: DOCA installs that
+version beside the checkout and restarts into it. Every version reads the same data, prefs and
+certificates, because `run.sh` hands each of them the same `DOCA_HOME`.
+
+- **Where versions live.** `.releases/vX.Y.Z` — a git worktree of the checkout at that tag, with its
+  own `node_modules` (hard-linked from an installed version when the lockfile is identical, so a
+  switch usually downloads nothing). The newest five are kept. `.releases/current` names the one
+  `run.sh` starts; without it the checkout runs, exactly as before.
+- **A version that does not come up is undone for you.** After a switch, `run.sh` starts the new
+  version in the background and waits up to 90 s for it to answer on `/`. If it dies or stays
+  silent, the launcher switches back to the previous version and starts that. This is done by the
+  launcher, not by the panel, because the version being switched to is the one that cannot be
+  trusted to judge itself.
+- **When the dashboard itself will not load**, from a shell on the host:
+
+  ```bash
+  ./run.sh versions          # what is installed, and which one runs (*)
+  ./run.sh use v2.53.0       # switch; restarts the service if it is running
+  ./run.sh use checkout      # back to the git checkout
+  ```
+
+- **Versions older than 2.54.0 have no version menu.** You can switch to them, but to leave one
+  use `./run.sh use` on the host. Versions too old to read their data paths from the environment
+  are listed but cannot be selected: they would start with none of your data.
+- **Data format.** `.doca/format.json` records the shape of the stored data, and each version
+  declares the format it writes (`package.json` → `docaDataFormat`). A version older than your
+  data is refused unless you force it — restore a backup made on that version instead.
+- Every switch, confirmation and automatic revert is a line in `.releases/log.jsonl`.
+- Switching needs the panel to have been started by `run.sh` or the boot service — `npm start`
+  runs without the launcher, and the menu says so.
+
 ---
 
 ## Harnesses
@@ -368,6 +402,7 @@ next restart; clearing the field hands it back to the environment or the default
 | `RESTORE_SCRIPT` | `~/restore-agent.sh` | Restore script path |
 | `SNAPSHOT_DIR` | `~/openclaw-snapshots` | Snapshot storage |
 | `OPENCLAW_GATEWAY_URL` | — | Override gateway base URL (e.g. `http://openclaw-gateway:18789` when dashboard runs in Docker) |
+| `DOCA_HOME` | the checkout | Where what outlives a version lives: `.doca/`, `.dashboard-prefs.json`, `.certs/`, `.releases/`. Set by `run.sh`; you do not normally set it |
 | `DOCA_LISTEN` | `tailnet` | Who may connect: `tailnet` (loopback + Tailscale), `local` (loopback only — reach it through `tailscale serve` or an SSH tunnel), or `all` (every network, the pre-2.52 behaviour). Also prefs `network.listen`; the environment wins. The panel has no login yet, so this is what keeps the LAN out |
 | `DOCA_DATA_DIR` | `<repo>/.doca` | Durable state for the `/api/v1` client layer (devices, outboxes, profiles, media) and the harness (conversations, memory) |
 | `DOCA_PREFS_FILE` | `<repo>/.dashboard-prefs.json` | Runtime preferences (theme, visible tabs, harness selection and model parameters) |
@@ -455,6 +490,8 @@ modules/                    Backend feature modules (one per concern)
   docker.js                 Docker containers / images / presets
   services.js               Inference service management (incl. image-presence check)
   update.js                 Self-update / restart
+  releases.js               Versions side by side: list, install as worktrees, switch (Settings → Updates → Version)
+  listen.js                 Who may connect: loopback + tailnet by default (DOCA_LISTEN)
   startup.js                Start at boot — reports and drives run.sh enable/disable
   terminal.js               WebSocket PTY terminals
   api-v1/                   Device-agnostic client API (see PROTOCOL.md)

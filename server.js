@@ -327,6 +327,7 @@ app.post('/api/system/tools/install', systemTools.handleInstall);
 app.get ('/api/update-check', update.handleUpdateCheck);
 app.post('/api/update',       update.handleUpdate);
 app.post('/api/restart',      update.handleRestart);
+require('./modules/releases').mount(app);   // /api/versions: roll back or forward
 
 // ─── Routes: Start at boot ────────────────────────────────────────────────────
 app.get ('/api/startup', startup.handleStatus);

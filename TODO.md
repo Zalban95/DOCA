@@ -1561,7 +1561,8 @@ order it is to be done.
   first change, and add the eight-rule "Working on a repository" block from the
   audit (§1) to the charter and to this repo's `AGENTS.md`. Rules 2–4 and 8
   are enforced in code as soon as the git tool and the project root exist.
-- **P1 — roll back from a dropdown: release folders with a `current` link.**
+- **Done in 2.54.0:** Settings → Updates → Version, `modules/releases.js`, the launcher in `run.sh` (watched start, automatic revert after 90 s, `./run.sh versions` / `use`), `.releases/log.jsonl`, `DOCA_HOME`, the data-format stamp (`.doca/format.json`, `package.json` → `docaDataFormat`). Not yet: switching to a version that predates the launcher's pending protocol is fine, but the dropdown cannot follow you there (versions < 2.54.0 have no menu) — `./run.sh use` is the way back.
+  **P1 — roll back from a dropdown: release folders with a `current` link.**
   Each version a worktree `releases/vX.Y.Z` with its own `node_modules`; the
   service runs `current/run.sh`; switching moves the link and restarts. The
   dropdown shows the tag's date ("released") and an install log's date
@@ -1715,6 +1716,11 @@ and anything built for one is there for the other.
   - **File *names* are not encrypted by the zip format,** only contents. The
     names here are DOCA's own store paths, so nothing is learnt from them; if
     that ever changes, pack the data into one inner archive first.
+  - **Encryption is the user's choice (settled 2026-09-25).** Settings has a
+    switch: password-protected (default) or an open zip. Open is allowed, and
+    the UI says plainly what that means before the first one is made: the file
+    then carries every API key, token and private conversation in the clear,
+    and whoever holds it holds them — the user carries that responsibility.
   - **Password:** typed at backup time, or remembered in Settings for scheduled
     backups. Remembered, it is **not** kept in the prefs file — the agent's
     file tools can reach that (`ISSUES.md` H-19) — but in its own `0600` file

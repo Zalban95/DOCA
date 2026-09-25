@@ -13,7 +13,9 @@
 const fs   = require('fs');
 const path = require('path');
 
-const DATA_DIR = process.env.DOCA_DATA_DIR || path.join(__dirname, '..', '.doca');
+// DOCA_HOME is where the launcher (run.sh) keeps what outlives a version: set,
+// it holds the data even when this code runs from a release folder.
+const DATA_DIR = process.env.DOCA_DATA_DIR || path.join(process.env.DOCA_HOME || path.join(__dirname, '..'), '.doca');
 
 function ensureDir(p) { fs.mkdirSync(p, { recursive: true }); return p; }
 
@@ -58,4 +60,25 @@ function writeJsonl(file, rows) {
   fs.renameSync(tmp, file);
 }
 
-module.exports = { DATA_DIR, dir, readJson, writeJson, removeJson, appendJsonl, readJsonl, writeJsonl };
+/**
+ * The shape of the data in DATA_DIR, as one number.
+ *
+ * A version reads the data it finds, and a rollback runs older code on newer
+ * data — so the data says which shape it is in, and a version whose code is
+ * older than that shape is refused (see modules/releases.js), and so is a
+ * `.dBac` restore into it. `package.json` → `docaDataFormat` is what this code
+ * writes; bump both together, with a migration, when the shape changes.
+ * Stamped the first time this runs against a data directory without a stamp.
+ */
+const DATA_FORMAT = Number(require('../package.json').docaDataFormat) || 1;
+
+function dataFormat() {
+  let stamp = readJson('format', null);
+  if (!stamp) {
+    stamp = { dataFormat: DATA_FORMAT, stampedBy: require('../package.json').version, at: new Date().toISOString() };
+    try { writeJson('format', stamp); } catch {}
+  }
+  return Number(stamp.dataFormat) || 1;
+}
+
+module.exports = { DATA_DIR, DATA_FORMAT, dataFormat, dir, readJson, writeJson, removeJson, appendJsonl, readJsonl, writeJsonl };

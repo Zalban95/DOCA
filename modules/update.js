@@ -8,7 +8,9 @@ const { exec, spawn } = require('child_process');
 const pkg = require(path.join(__dirname, '..', 'package.json'));
 const LOCAL_VERSION = pkg.version;
 const REPO = 'Zalban95/DOCA';
-const DASHBOARD_DIR = path.join(__dirname, '..');
+// The checkout: what `git pull` updates and where run.sh lives — not the release
+// folder this code may be running from.
+const DASHBOARD_DIR = process.env.DOCA_HOME || path.join(__dirname, '..');
 
 let cached = null;
 let cachedAt = 0;
@@ -297,7 +299,13 @@ function handleRestart(_req, res) {
       const out = fs.openSync(logPath, 'a');
       fs.writeSync(out, `\n── restart requested ${new Date().toISOString()} ──\n`);
 
-      const child = spawn(process.execPath, [...process.execArgv, ...process.argv.slice(1)], {
+      // Started by run.sh, the successor is run.sh again: it is what reads
+      // .releases/current, so a restart after switching versions starts the
+      // version that was chosen rather than the one that is exiting.
+      const [cmd, args] = process.env.DOCA_HOME
+        ? ['bash', [path.join(DASHBOARD_DIR, 'run.sh'), 'start']]
+        : [process.execPath, [...process.execArgv, ...process.argv.slice(1)]];
+      const child = spawn(cmd, args, {
         cwd: DASHBOARD_DIR, detached: true, stdio: ['ignore', out, out], env: process.env,
       });
       child.unref();
@@ -315,4 +323,4 @@ function handleRestart(_req, res) {
   setTimeout(() => process.exit(0), 500);
 }
 
-module.exports = { handleUpdateCheck, handleUpdate, handleRestart, parseLsRemote, highest, compareSemver };
+module.exports = { handleUpdateCheck, handleUpdate, handleRestart, supervisorName, fetchLatestTag, parseLsRemote, highest, compareSemver };

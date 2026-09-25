@@ -8,7 +8,10 @@ const HOME = os.homedir();
 
 // Prefs are read here rather than through utils.js: this module is loaded before
 // everything else, and utils.js needs it for PREFS_FILE.
-const PREFS_FILE = process.env.DOCA_PREFS_FILE || path.join(__dirname, '..', '.dashboard-prefs.json');
+// What outlives a version — prefs, certificates, data — lives in DOCA_HOME, set by
+// run.sh. Unset (npm start, the tests), it is this checkout, as it always was.
+const HOME_DIR   = process.env.DOCA_HOME || path.join(__dirname, '..');
+const PREFS_FILE = process.env.DOCA_PREFS_FILE || path.join(HOME_DIR, '.dashboard-prefs.json');
 
 /**
  * The paths the dashboard needs, as Settings → Paths lists them. `kind` decides
@@ -73,7 +76,7 @@ const SNAPSHOT_DIR    = process.env.SNAPSHOT_DIR    || path.join(HOME, 'openclaw
 const PORT            = process.env.PORT            || 4242;
 
 // Self-signed certificate directory
-const CERTS_DIR = path.join(__dirname, '..', '.certs');
+const CERTS_DIR = path.join(HOME_DIR, '.certs');
 
 // Setup scripts the UI may read/write/run — the Setup panel's list, and the
 // whole of it.
@@ -186,6 +189,7 @@ module.exports = {
   CERTS_DIR,
   CONFIG_REGISTRY,
   FM_ALLOWED_ROOTS,
+  HOME_DIR,
   ALLOWED_SCRIPTS,
   SCRIPT_CONFIG,
   SETTABLE,
