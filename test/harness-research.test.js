@@ -210,3 +210,45 @@ test('the agent is told which MCP servers are on this host and which are on some
   registry.remove('local-thing');
   environment.invalidate();
 });
+
+test('the review\'s questions come back as data to answer, one line each', () => {
+  const { splitQuestions } = require('../modules/harness/rules-routes');
+  const r = splitQuestions('CONFLICTS\nnone\nQUESTIONS\n?? Keep a stale value in a quote? || Keep it verbatim || Drop the stale part\n- ?? Which wins? || stack || machine || ask me');
+  assert.deepEqual(r.questions, [
+    { question: 'Keep a stale value in a quote?', choices: ['Keep it verbatim', 'Drop the stale part'] },
+    { question: 'Which wins?', choices: ['stack', 'machine', 'ask me'] },
+  ]);
+  assert.equal(r.review.includes('??'), false, 'out of the text');
+  assert.match(r.review, /2 questions below, to answer/);
+});
+
+test('an answer changes the rules at once, keeps the previous version, and can be undone', async () => {
+  const before = memory.rules();
+  const next = { categories: before.categories, rules: [...before.rules, 'A stale value inside an owner instruction is dropped; the rest is kept word for word.'],
+    summary: 'Added: stale values are dropped from quoted instructions.' };
+  script = [{ text: JSON.stringify(next) }];
+  const res = await H.api(null, 'POST', '/api/harness/memory/rules/answer',
+    { question: 'Keep a stale value in a quote?', answer: 'Drop the stale part' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.summary, next.summary);
+  assert.equal(memory.rules().rules.length, before.rules.length + 1);
+  assert.match(seen.at(-1).messages[1].content, /The owner's answer: Drop the stale part/);
+
+  const undo = await H.api(null, 'POST', '/api/harness/memory/rules/undo');
+  assert.equal(undo.status, 200);
+  assert.deepEqual(memory.rules().rules, before.rules, 'back to exactly the rules before');
+
+  script = [{ text: 'Sure! I updated the rules for you.' }];
+  const bad = await H.api(null, 'POST', '/api/harness/memory/rules/answer', { question: 'q', answer: 'a' });
+  assert.equal(bad.status, 502);
+  assert.deepEqual(memory.rules().rules, before.rules, 'a reply that cannot be applied changes nothing');
+});
+
+test('the agent that writes rules and the reviewer that checks them read the same guide', async () => {
+  const tools = require('../modules/harness/tools');
+  const guide = memory.GUIDE[0];
+  assert.ok(tools.TOOLS.find(t => t.name === 'memory_rules_write').description.includes(guide));
+  script = [{ text: 'CONFLICTS\nnone' }];
+  await H.api(null, 'POST', '/api/harness/memory/rules/verify', {});
+  assert.ok(seen.at(-1).messages[0].content.includes(guide));
+});

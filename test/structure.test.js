@@ -28,19 +28,19 @@ const CEILING = 400;
  */
 const OVER = {
   'modules/harness/agent.js':      417,  // runTurn alone is 320 lines: next, split the turn's steps
-  'public/index.html':            1537,  // + the split scripts' <script> tags; ES modules take them back out
+  'public/index.html':            1538,  // + the split scripts' <script> tags; ES modules take them back out
   'public/css/components.css':    1171,
   'public/js/chat.js':             986,
   'public/js/files.js':            875,
   'public/js/settings.js':         515,
   'public/js/models.js':           687,
-  'modules/harness/memory.js':     608,
+  'modules/harness/memory.js':     463,
   'modules/api-v1/router.js':      591,
   'modules/api-v1/openapi.js':     583,
   'modules/agents/missions.js':    496,
   'modules/api-v1/prompts.js':     467,
   'public/js/markdown.js':         462,
-  'server.js':                     355,
+  'server.js':                     352,
   'modules/harness/budget.js':     424,
   'modules/chat.js':               412,
 };

@@ -37,7 +37,7 @@ module.exports = [
       + 'follow when writing them. Both are in your context every turn. Use it when you find a better way to '
       + 'keep this memory, or when the user tells you one. Prefer add/remove/replace, which change one rule and '
       + 'leave the rest alone; the full "rules" and "categories" lists replace everything and silently delete any '
-      + 'rule you did not retype.',
+      + 'rule you did not retype. How a rule is written here: ' + memory.GUIDE.join(' '),
     parameters: {
       type: 'object',
       properties: {

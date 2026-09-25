@@ -681,7 +681,7 @@ test('every turn carries the standing rules and the memory rules', async () => {
   assert.ok(system.indexOf('# Standing rules') < system.indexOf('# Environment'));
   assert.match(system, /Settings belong to the user/);
   assert.match(system, /# How you keep your memory/);
-  assert.match(system, /- machine: Hardware, OS, GPUs/, 'the memory categories are in context');
+  assert.match(system, /- machine: The host itself: hardware, OS, GPUs/, 'the memory categories are in context');
   assert.match(system, /Never store a secret, key, token or password/);
 });
 

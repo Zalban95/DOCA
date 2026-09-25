@@ -47,12 +47,13 @@ function hcRulesOpen() {
   _hcRulesFill();
 }
 
-async function _hcRulesFill(source) {
+async function _hcRulesFill(source, { keepReview = false } = {}) {
   const cats  = document.getElementById('hc-rules-cats');
   const rules = document.getElementById('hc-rules-list');
   // A review describes the text it was given, so it stops being true the
-  // moment the editor is refilled with another version of the rules.
-  _hcRulesReview(null);
+  // moment the editor is refilled with another version of the rules — except
+  // when the refill is an answer to that review: its other questions still stand.
+  if (!keepReview) _hcRulesReview(null);
   try {
     const doc = source || (await apiFetch('/api/harness/memory/rules')).rules;
     if (cats)  cats.value  = doc.categories.map(c => `${c.id}: ${c.description || ''}`.trim()).join('\n');
@@ -144,6 +145,7 @@ async function hcRulesVerify() {
       `${data.saved ? 'The saved rules' : 'The draft above, unsaved'} — `
       + `${categories} categor${categories === 1 ? 'y' : 'ies'}, ${rules} rule${rules === 1 ? '' : 's'} read. `
       + 'Nothing was changed.');
+    _hcRulesQuestions(data.questions || []);
   } catch (e) {
     _hcRulesReview(null);
     appAlert(`Error: ${e.message}`);
@@ -163,3 +165,50 @@ function hcRulesReset() {
       } catch (e) { setStatus(document.getElementById('hc-rules-status'), `✗ ${e.message}`, 'err'); }
     });
 }
+
+/**
+ * The review's questions, answerable in place: a choice or the owner's own
+ * words changes the rules right away (the previous version is kept — Undo),
+ * and "Discuss in chat" hands the question to the Orchestrator instead.
+ */
+function _hcRulesQuestions(questions) {
+  const box = document.getElementById('hc-rules-review');
+  if (!box || !questions.length) return;
+  for (const q of questions) {
+    box.appendChild(questionCardEl({
+      question: q.question, choices: q.choices,
+      onAnswer: async answer => {
+        const r = await apiFetch('/api/harness/memory/rules/answer', { method: 'POST', body: { question: q.question, answer } });
+        _hcRulesFill(r.rules, { keepReview: true });
+        _hcRulesUndoOffer(r.summary);
+        return r.summary;
+      },
+      discuss: `About my memory rules — ${q.question}${q.choices?.length ? `\nThe choices I was offered: ${q.choices.join(' / ')}.` : ''}`
+        + '\nLet us talk it through. Once we agree, change the rules with memory_rules_write.',
+    }));
+  }
+  box.querySelectorAll('.question-card .btn').forEach(b => {
+    if (b.textContent === 'Discuss in chat') b.addEventListener('click', () => hcRulesClose());
+  });
+}
+
+/** After an answer changed the rules: say what changed, and offer to take it back. */
+function _hcRulesUndoOffer(summary) {
+  const st = document.getElementById('hc-rules-status');
+  if (!st) return;
+  st.textContent = '';
+  st.className = 'status-line ok';
+  st.append(`✓ ${summary} `);
+  const undo = document.createElement('button');
+  undo.className = 'btn btn-xs';
+  undo.textContent = 'Undo';
+  undo.onclick = async () => {
+    try {
+      const r = await apiFetch('/api/harness/memory/rules/undo', { method: 'POST' });
+      _hcRulesFill(r.rules);
+      setStatus(st, '↺ Back to the rules before that answer.', 'ok');
+    } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+  };
+  st.appendChild(undo);
+}
+

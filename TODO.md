@@ -1833,3 +1833,38 @@ and are recorded as wrong so nobody re-files them.
 - **DocaDesk does not send its device token** on the panel's page load, so it
   signs in once instead of like DocaMobile. A change in DocaDesk.
 
+## Built 2026-09-25: rules that settle, questions you can answer, and a bench mode
+
+- **The memory rules were rewritten** (`harness/rules.js`, the shipped defaults,
+  which is what this install uses): the three conflicts around locked entries,
+  the secret-in-a-quote, what "stale" means, how keys are named, what counts as
+  inferred, and the category overlaps are settled; a new rule says that when two
+  rules pull apart the agent asks the owner and follows the stricter one until
+  then. **One minor conflict is left on purpose, because it is the owner's to
+  decide:** an owner instruction that contains a value which goes stale (rule 6
+  says keep their words, rule 5 says don't store the stale value).
+- **One guide for writing rules** (`rules.GUIDE`), read by the agent in
+  `memory_rules_write` and by the reviewer, so the two cannot disagree.
+- **Rules have a history** (last 10 versions) and an undo.
+- **The review's questions are answerable** in the Rules window: a choice, the
+  owner's own words, or "Discuss in chat". An answer is applied at once by the
+  model under the guide, with Undo.
+- **Unattended mode** (Harness → Approvals): tools run and the agent's own
+  settings changes and installs apply without a click, each audited. Owner only,
+  confirmed, never proposable, one click back to Auto.
+- Found on the way: the harness catalog's first write replaced the whole
+  `harness` prefs section, wiping the approval mode on a fresh install. Fixed.
+
+**Wanted next, same shape:**
+- **The question card everywhere the owner is asked.** `agent-ui/question-card.js`
+  is built to be called from anywhere: the floating chat and the Harness
+  transcript should draw a question the agent asks (a tool beside `ask_device`,
+  e.g. `ask_owner` with choices) as this card, and the Orchestrator's "a decision
+  that is theirs" after a wake should arrive as one.
+- **Skills get the same treatment as rules:** a guide for writing a skill, read
+  by whoever writes one and whoever reviews it; a review with answerable
+  questions; history and undo.
+- **Skills from other harnesses** (Claude Code, Codex, Cursor rules…) listed and
+  managed in the Skills section, usable by the DOCA harness — part of the
+  Settings review above.
+

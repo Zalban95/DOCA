@@ -37,40 +37,7 @@ const store = require('../store');
 
 const SESSIONS_DOC = 'harness/sessions';
 const MEMORY_DOC   = 'harness/memory';
-const RULES_DOC    = 'harness/memory-rules';
 
-/**
- * How memory is meant to be kept — categories and house rules, in the prompt
- * every turn.
- *
- * These are the shipped defaults, not the law: the agent can rewrite them with
- * `memory_rules_write` and the user can edit them in the console, because the
- * one keeping this memory is the one best placed to say what belongs in it.
- * What the agent cannot edit is the safety charter in `providers.js` — a rule
- * about not storing secrets that the agent could delete would be worth nothing.
- */
-const DEFAULT_RULES = {
-  categories: [
-    { id: 'machine', description: 'Hardware, OS, GPUs, disks, ports — what is true of this host' },
-    { id: 'paths',   description: 'Where things live on this box, and which of them are managed by the panel' },
-    { id: 'stack',   description: 'How the services, containers and models are set up and run' },
-    { id: 'prefs',   description: 'The user\'s standing preferences and instructions, in their words' },
-    { id: 'project', description: 'Facts about the code and projects in the workspace' },
-    { id: 'open',    description: 'Unfinished threads worth picking up in a later conversation' },
-  ],
-  rules: [
-    'One fact per entry. Key it the way you would search for it later, in lower case with dashes.',
-    'Update the existing key instead of adding a near-duplicate; two versions of one fact are worse than none.',
-    'Never store a secret, key, token or password. Record where it lives instead.',
-    'Do not store what will be stale tomorrow (a container id, a free-RAM figure). Store how to find it out.',
-    'Write down what the user tells you to do differently, and quote them.',
-    'Say where a fact came from when you inferred it rather than observed it.',
-    'Pin only what belongs in every conversation — about ten entries, not fifty.',
-    'When something you remembered turns out wrong, flag it with memory_flag in the same turn, saying what '
-      + 'contradicted it. Forget it only once you know the right answer — a fact known to be wrong is still information.',
-    'A locked entry is the user\'s settled answer. Do not work around it: dispute it with evidence and let them decide.',
-  ],
-};
 
 function newId(prefix) {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -382,119 +349,6 @@ function memWrite({ key, value, tags, pinned, source, category, locked }) {
 /* ── The rules memory is kept by ──────────────────────── */
 
 /** The rules in force: what was saved, or the shipped defaults. */
-function rules() {
-  const doc = store.readJson(RULES_DOC, null);
-  if (!doc || !Array.isArray(doc.rules) || !Array.isArray(doc.categories))
-    return { ...DEFAULT_RULES, source: 'default', updatedAt: null };
-  return doc;
-}
-
-/**
- * Replace the categories, the rules, or both. Whatever is left out is kept, so
- * "add a rule" is a read plus a write of the one list that changed.
- *
- * Bounded on purpose: this text is in the system prompt of every turn, and an
- * agent that keeps appending to its own instructions would quietly eat the
- * context window it was trying to spend well.
- */
-function rulesWrite({ categories, rules: list, source } = {}) {
-  const current = rules();
-
-  const nextCats = categories === undefined ? current.categories
-    : (Array.isArray(categories) ? categories : [])
-      .map(c => (typeof c === 'string'
-        ? { id: c.trim().slice(0, 40), description: '' }
-        : { id: String(c?.id || '').trim().slice(0, 40), description: String(c?.description || '').trim().slice(0, 200) }))
-      .filter(c => c.id)
-      .slice(0, 20);
-
-  const nextRules = list === undefined ? current.rules
-    : (Array.isArray(list) ? list : String(list).split('\n'))
-      .map(r => String(r).trim().replace(/^[-*]\s*/, '').slice(0, 300))
-      .filter(Boolean)
-      .slice(0, 30);
-
-  if (!nextCats.length)  throw Object.assign(new Error('at least one category is required'), { status: 400 });
-  if (!nextRules.length) throw Object.assign(new Error('at least one rule is required'), { status: 400 });
-
-  const doc = {
-    categories: nextCats,
-    rules: nextRules,
-    source: source || 'user',
-    updatedAt: new Date().toISOString(),
-  };
-  store.writeJson(RULES_DOC, doc);
-  return doc;
-}
-
-/**
- * Change one rule without retyping the rest.
- *
- * `rulesWrite` replaces a whole list, which is right for the modal — the user is
- * looking at all of them — and wrong for the agent, which reaches for it to add
- * a single line and has to reproduce twenty-nine others from memory to do it.
- * Every one it forgets is silently deleted. This is the selective form: the
- * lists it does not mention are not touched, and neither are the entries it
- * does not name.
- *
- * @param {{ add?: string[], remove?: (number|string)[], replace?: {index:number, text:string}[],
- *           addCategories?: object[], removeCategories?: string[], source?: string }} input
- */
-function rulesPatch({ add, remove, replace, addCategories, removeCategories, source } = {}) {
-  const current = rules();
-  let list = [...current.rules];
-  let cats = [...current.categories];
-
-  // Replace first, while the indexes still mean what the caller saw.
-  for (const r of (Array.isArray(replace) ? replace : [])) {
-    const i = Number(r?.index);
-    if (!Number.isInteger(i) || i < 1 || i > list.length)
-      throw Object.assign(new Error(`there is no rule ${r?.index} to replace (1-${list.length})`), { status: 400 });
-    const text = String(r?.text ?? '').trim().replace(/^[-*]\s*/, '').slice(0, 300);
-    if (!text) throw Object.assign(new Error(`rule ${i}: replacement text is empty`), { status: 400 });
-    list[i - 1] = text;
-  }
-
-  // Then remove, by number or by the text itself, highest index first so the
-  // earlier ones keep their positions.
-  const drop = new Set();
-  for (const r of (Array.isArray(remove) ? remove : [])) {
-    if (typeof r === 'number' || /^\d+$/.test(String(r))) {
-      const i = Number(r);
-      if (!Number.isInteger(i) || i < 1 || i > list.length)
-        throw Object.assign(new Error(`there is no rule ${r} to remove (1-${list.length})`), { status: 400 });
-      drop.add(i - 1);
-    } else {
-      const i = list.findIndex(x => x === String(r).trim());
-      if (i < 0) throw Object.assign(new Error(`no rule reads exactly "${String(r).slice(0, 60)}"`), { status: 400 });
-      drop.add(i);
-    }
-  }
-  list = list.filter((_, i) => !drop.has(i));
-
-  for (const r of (Array.isArray(add) ? add : [])) {
-    const text = String(r ?? '').trim().replace(/^[-*]\s*/, '').slice(0, 300);
-    if (text && !list.includes(text)) list.push(text);
-  }
-
-  for (const c of (Array.isArray(addCategories) ? addCategories : [])) {
-    const id = String((typeof c === 'string' ? c : c?.id) || '').trim().slice(0, 40);
-    if (!id || cats.some(x => x.id === id)) continue;
-    cats.push({ id, description: String((typeof c === 'string' ? '' : c?.description) || '').trim().slice(0, 200) });
-  }
-  if (Array.isArray(removeCategories) && removeCategories.length) {
-    const gone = new Set(removeCategories.map(x => String(x).trim()));
-    cats = cats.filter(c => !gone.has(c.id));
-  }
-
-  return rulesWrite({ categories: cats, rules: list, source: source || 'agent' });
-}
-
-/** Back to the shipped rules, for when an experiment made them worse. */
-function rulesReset() {
-  store.removeJson(RULES_DOC);
-  return rules();
-}
 
 /** The entry a key or id names, or null. */
 function memFind(idOrKey) {
@@ -604,5 +458,6 @@ module.exports = {
   updateSessions, deleteSession,
   messages, append, window, pendingFold,
   memWrite, memForget, memList, memSearch, memTouch, memDispute, memLock, memFind,
-  DEFAULT_RULES, rules, rulesWrite, rulesPatch, rulesReset,
+  // The rules live in ./rules.js; re-exported so every caller keeps working.
+  ...require('./rules'),
 };

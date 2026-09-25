@@ -309,3 +309,12 @@ body.harness-tab .chat-fab { display: none; }
   .hc-session-info { font-size: 10px; }
   .hc-msg { max-width: 100%; }
 }
+
+/* ── A question for the owner (agent-ui/question-card.js) ── */
+.question-card { border: 1px solid var(--border2); border-left: 2px solid var(--accent); padding: 8px 10px; margin: 8px 0; background: var(--bg); }
+.question-card-q { font-size: 12px; margin-bottom: 8px; }
+.question-card-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.question-card-choices .btn { white-space: normal; text-align: left; }
+.question-card-own { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.question-card-own .input { min-width: 0; }
+.question-card.answered { opacity: .75; }
