@@ -16,10 +16,22 @@ DOCA is the hub. Three first-party clients sit beside it — `../../DocaDesk`, `
 
 Two things follow. A change to `/api/v1`, to a scope name, or to a caps field is a change to three shipped apps, and their `AGENTS.md` files record contracts this side can break in silence — `DocaWear/AGENTS.md`, "The pair-offer field contract", is the one that has already cost a day. And because DocaDesk hosts, **a tool can land on a machine that is not this one**; that is the whole reason `environment.block()` labels server origin and `placeBlock()` exists, and it is only exercisable with a real client running.
 
+### Working on this repository
+The harness gives its agent eight rules for working on any repository (charter rules 16–23 in `modules/harness/providers.js`). This repository holds itself to the same ones, whoever is editing it:
+
+- **Read the rules first** — this file, and the `AGENTS.md` of any sibling repo you touch (`DocaDesk`, `DocaMobile`, `DocaWear`); their contracts break in silence from here.
+- **Leave other people's uncommitted work alone.** `git status` before you start; what is already modified or untracked (an `audit.md`, say) is not yours to stash, reset or commit.
+- **A branch per task.** Merging to `main`, tagging and pushing are the owner's call — ask. A release is a commit prefixed `[X.Y.Z]` plus an annotated tag `vX.Y.Z` (see version discipline below).
+- **One logical change per commit, and the message says why.** A pure move and a behaviour change go in separate commits, so the move can be reviewed as a move.
+- **Done means checked:** `npm test` green, and for a front-end change the page actually loaded with every tab visited and no page error. Report what you ran and what it printed, and what you did not check.
+- **Shape:** one idea per file; `test/structure.test.js` holds files under 400 lines (the oversized ones listed there may only shrink) and front-end globals unique. Split along seams instead of raising a number.
+- **Leave the tree clean:** no stray files, logs or `.bak`s (`write_file` now keeps its backups under `.doca/harness/backups/`), no lockfile churn you did not mean.
+- **The agent proposes, a person decides** — the rule every feature here follows (`settings_propose`, `install_propose`, `work_plan`). A new feature that lets the agent change what governs it without a click is a bug, not a shortcut (`ISSUES.md` H-19).
+
 ### Running
 - Dev: `npm run dev` (uses `node --watch server.js` for hot reload). Prod-style: `npm start`, or `./run.sh` which also installs deps on first run and sources `.env`.
 - `./run.sh enable|disable|status` manages the systemd unit `openclaw-panel.service`. **Settings → General → Start at Boot** calls the same script through `/api/startup`, so change the behaviour in `run.sh`, not in two places. Neither works in a container or any host without systemd — `/api/startup` reports `supported: false` with a reason and the toggle greys itself out, which is expected, not a bug.
-- Listens on `0.0.0.0:4242` (override with `PORT`).
+- Port `4242` (override with `PORT`). Accepts only loopback and the tailnet (`modules/listen.js`; `DOCA_LISTEN=local|tailnet|all`, default `tailnet`) — the panel has no login yet, so the network is its only guard. Opening it to `all` is a decision for the owner, not a fix for a connection problem.
 - The server serves **HTTPS with a self-signed cert** (auto-generated into `.certs/`), falling back to HTTP only if cert generation fails. Use `curl -k` and, in a browser, click through the "Your connection is not private" warning (Advanced → Proceed).
 
 ### Lint / test / build

@@ -21,6 +21,7 @@ const { clip } = require('./toolbox/common');
 const TOOLS = [
   ...require('./toolbox/work'),
   ...require('./toolbox/files'),
+  ...require('./toolbox/repo'),
   ...require('./toolbox/memory'),
   ...require('./toolbox/settings'),
   ...require('./toolbox/agents'),

@@ -7,6 +7,7 @@
 const fs     = require('fs');
 const path   = require('path');
 const shell  = require('../../shell');
+const repo   = require('../repo');
 const { MAX_OUT, SHELL_MS, clip, cwd, resolvePath } = require('./common');
 
 module.exports = [
@@ -71,12 +72,23 @@ module.exports = [
       required: ['path', 'content'],
     },
     danger: true,
-    run: ({ path: p, content }) => {
+    run: ({ path: p, content }, ctx = {}) => {
       const abs = resolvePath(p);
+      // Charter rule 16, held here rather than only asked for: a repository's
+      // own rules are read before the first change to it.
+      const unread = repo.unreadRoot(ctx.sessionId, abs);
+      if (unread) throw new Error(`${unread} is a git repository with its own rules, and this conversation has not read them. `
+        + `Call repo_rules with path "${abs}" first, then write again.`);
       fs.mkdirSync(path.dirname(abs), { recursive: true });
-      if (fs.existsSync(abs)) fs.copyFileSync(abs, abs + '.bak');
+      let backup = null;
+      if (fs.existsSync(abs)) {
+        backup = repo.backupPath(abs);
+        fs.mkdirSync(path.dirname(backup), { recursive: true });
+        fs.copyFileSync(abs, backup);
+      }
       fs.writeFileSync(abs, String(content ?? ''), 'utf8');
-      return `Wrote ${Buffer.byteLength(String(content ?? ''))} bytes to ${abs}`;
+      return `Wrote ${Buffer.byteLength(String(content ?? ''))} bytes to ${abs}`
+        + (backup ? ` (previous version kept at ${backup})` : '');
     },
   },
   {

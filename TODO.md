@@ -1555,7 +1555,8 @@ order it is to be done.
   `modules/listen.js` drops any other connection at the socket (`DOCA_LISTEN`:
   `tailnet` by default, `local`, `all`). Still to do from the same item: serve
   through `tailscale serve` and read its identity header, as the stop-gap login.
-- **P0 — rules for working on a repository.** Load the project's own
+- **Done in 2.53.0:** charter rules 16–23; `repo_rules` (rules + branch + uncommitted work); `write_file` refuses a repository whose rules this conversation has not read, and keeps its backups outside the tree; specialists that may write get `repo_rules` with it; `AGENTS.md` → "Working on this repository". Still to do from this item: the git tool (rules 18–21 in code) and the project root (rule 23), both P2.
+  **P0 — rules for working on a repository.** Load the project's own
   `AGENTS.md` / `CLAUDE.md` / `.cursor/rules/` / `CONTRIBUTING.md` before the
   first change, and add the eight-rule "Working on a repository" block from the
   audit (§1) to the charter and to this repo's `AGENTS.md`. Rules 2–4 and 8

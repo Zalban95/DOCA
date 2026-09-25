@@ -183,6 +183,14 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
 const ALWAYS_FOR_SPECIALISTS = ['mission_plan', 'work_chats', 'work_plan'];
 
 /**
+ * A tool that another tool's guard sends you to, given with it. `write_file`
+ * refuses a repository whose rules are unread and says "call repo_rules"; a
+ * specialist allowed to write but not to read the rules would be told to use a
+ * tool it does not have, and could not finish its errand at all.
+ */
+const COMES_WITH = { repo_rules: ['write_file'] };
+
+/**
  * Which tools are off for this turn — one implementation, because there were
  * two and a fix belongs in both.
  *
@@ -195,7 +203,8 @@ function disabledFor(profile, p) {
   if (profile && Array.isArray(profile.tools))
     return tools.describe().map(t => t.name)
       .filter(n => (p.disabledTools || []).includes(n) ||
-        (!profile.tools.includes(n) && !(profile.level !== 'orchestrator' && ALWAYS_FOR_SPECIALISTS.includes(n))));
+        (!profile.tools.includes(n) && !(profile.level !== 'orchestrator' && ALWAYS_FOR_SPECIALISTS.includes(n))
+          && !(COMES_WITH[n] || []).some(t => profile.tools.includes(t))));
   return Array.isArray(p.disabledTools) ? p.disabledTools : [];
 }
 
