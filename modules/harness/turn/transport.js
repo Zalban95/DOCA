@@ -46,10 +46,10 @@ async function post(ep, body, signal, p) {
       r = await send(rest);
 
     } else {
-      throw new Error(budget.explain({ status: 400, detail, ep, p }));
+      throw Object.assign(new Error(budget.explain({ status: 400, detail, ep, p })), { status: 400 });
     }
   }
-  if (!r.ok) throw new Error(budget.explain({ status: r.status, detail: await r.text(), ep, p }));
+  if (!r.ok) throw Object.assign(new Error(budget.explain({ status: r.status, detail: await r.text(), ep, p })), { status: r.status });
   return r;
 }
 
@@ -120,6 +120,20 @@ function firstTokenGuard({ p, signal, onWaiting }) {
  * produced `reasoning`, which only it may be given back.
  * @returns {Promise<{ content: string, tool_calls: object[], provider: string }>}
  */
+/**
+ * A provider that is out of capacity, as opposed to one answering about this
+ * request. Decided 2026-09-18: only unavailability moves down the fallback
+ * chain — a refusal, a rate limit (429: your quota) or a failed login is an
+ * answer, and hopping would hide it. A stall was the only unavailability
+ * recognised; "high demand" (2026-09-25) is the other: 502/503/504/529, or a
+ * 5xx that says overloaded, busy or at capacity.
+ */
+function unavailable(e) {
+  const st = Number(e?.status);
+  if ([502, 503, 504, 529].includes(st)) return true;
+  return st >= 500 && /overload|high demand|busy|capacity|temporarily unavailable/i.test(String(e?.message || ''));
+}
+
 async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, meta = { kind: 'ask' }, onHop, onSkip }) {
   signal?.throwIfAborted();
   const candidates = rungsFor({ ep, model: body.model, p });
@@ -164,10 +178,13 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
     } catch (e) {
       // Our abort and the user's are the same AbortError at this level; only the
       // guard knows which one fired. A deliberate Stop keeps its own meaning.
-      if (!guard.stalled) throw e;
+      // A provider out of capacity is the other way to be unavailable: it said
+      // so instead of staying silent, and it said nothing about this request.
+      const busy = !guard.stalled && unavailable(e);
+      if (!guard.stalled && !busy) throw e;
 
-      stalled = new Error(budget.stalled({ ep: rung.ep, ms: guard.ms, frames: guard.frames }));
-      stalled.stalled = { provider: rung.ep.id, model: rungBody.model, ms: guard.ms };
+      stalled = busy ? e : new Error(budget.stalled({ ep: rung.ep, ms: guard.ms, frames: guard.frames }));
+      stalled.stalled = { provider: rung.ep.id, model: rungBody.model, ms: guard.ms, ...(busy ? { status: e.status } : {}) };
       markDegraded(rung.ep, rung.model);
 
       // One pass down the chain, then stop and report. Never loop, never restart
@@ -270,18 +287,32 @@ async function streamOrRead({ ep, body, guard, onText, onThinking, p }) {
 async function ask({ system, user, temperature = 0.1, maxTokens, signal }) {
   const p = params();
   if (!p.model) throw Object.assign(new Error('No model chosen for the DOCA harness.'), { status: 400 });
-  const { content } = await complete({
-    p, ep: providers.endpoint(p.provider),
-    // A turn has a user watching a stream and can wait; these callers are a tool
-    // call and a button, both of which have to come back or say why.
-    signal: signal || AbortSignal.timeout(120_000),
+  // A turn has a user watching a stream and can wait; these callers are a tool
+  // call and a button, both of which have to come back or say why.
+  const deadline = signal || AbortSignal.timeout(120_000);
+  const once = max => complete({
+    p, ep: providers.endpoint(p.provider), signal: deadline,
+    // The fallback chain applies here too: complete() only hops for a caller
+    // that takes the hop, and a button is as entitled to an answer as a turn.
+    onHop: h => console.warn(`[harness] ask: ${h.from.model} unavailable — asking ${h.to.model}`),
     body: {
       model: p.model, stream: false, temperature,
-      ...(maxTokens ? { max_tokens: maxTokens } : {}),
+      ...(max ? { max_tokens: max } : {}),
       messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
     },
   });
-  return (content || '').trim();
+  let reply = await once(maxTokens);
+  // A reasoning model counts its thinking against max_tokens, and can spend all
+  // of it before writing a word: 900 of 900 tokens and an empty answer, which
+  // reached the Rules modal as a review that said nothing (2026-09-25). One
+  // retry with room for both, then say what happened instead of returning ''.
+  if (!(reply.content || '').trim() && maxTokens) reply = await once(Math.max(maxTokens * 4, 4000));
+  const text = (reply.content || '').trim();
+  if (!text) {
+    throw Object.assign(new Error(`${reply.provider || p.provider} / ${p.model} returned no answer`
+      + (reply.reasoning ? ' — it spent its whole reply thinking. Try again, or use a model that does not reason at length for this.' : '.')), { status: 502 });
+  }
+  return text;
 }
 
 module.exports = { ask, complete };

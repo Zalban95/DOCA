@@ -27,6 +27,8 @@ async function foldSummary({ session, p, ep, signal, force = false }) {
   try {
     const { content } = await complete({
       ep, signal, p, meta: { kind: 'fold', sessionId: session.id },
+      // A summary is as entitled to the fallback chain as the turn it serves.
+      onHop: () => {},
       body: {
         model: p.model, stream: false, temperature: 0.2,
         messages: [

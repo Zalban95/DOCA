@@ -1964,3 +1964,48 @@ test('a turn from a watch is asked on the watch, with full auto as the third cho
 
   approval.setMode('auto');
 });
+
+/* ── One-off calls: the chain, high demand, and empty answers (2026-09-25) ── */
+
+async function withChain(chain, fn) {
+  const agentMod = require('../modules/harness/agent');
+  agentMod.forgetDegraded();
+  await H.api(null, 'POST', '/api/harness/doca/config', { provider: 'stub', model: 'stub-model', fallbackChain: chain });
+  try { return await fn(agentMod); }
+  finally {
+    await H.api(null, 'POST', '/api/harness/doca/config', { provider: 'stub', model: 'stub-model', fallbackChain: [] });
+    agentMod.forgetDegraded();
+  }
+}
+
+test('a one-off call uses the fallback chain when the provider is out of capacity', async () => {
+  await withChain([{ provider: 'stub', model: 'stub-mini' }], async agentMod => {
+    script = [{ status: 503, says: 'Service unavailable: high demand' }, { text: 'from the fallback' }];
+    seen.length = 0;
+    assert.equal(await agentMod.ask({ system: 's', user: 'u' }), 'from the fallback');
+    assert.deepEqual(seen.map(b => b.model), ['stub-model', 'stub-mini'], 'high demand hops, like a stall');
+  });
+});
+
+test('a rate limit or a refusal is still an answer, and does not hop', async () => {
+  await withChain([{ provider: 'stub', model: 'stub-mini' }], async agentMod => {
+    for (const status of [429, 401]) {
+      script = [{ status, says: 'no' }, { text: 'must not be reached' }];
+      seen.length = 0;
+      await assert.rejects(agentMod.ask({ system: 's', user: 'u' }));
+      assert.equal(seen.length, 1, `${status} is about this request: no hop`);
+      script = [];
+    }
+  });
+});
+
+test('a reasoning model that spends the whole reply thinking gets one retry with room, then an explanation — never an empty answer', async () => {
+  const agentMod = require('../modules/harness/agent');
+  script = [{ text: '', think: 'thinking about the rules for a long time' }, { text: 'Rule 3 is vague.' }];
+  seen.length = 0;
+  assert.equal(await agentMod.ask({ system: 's', user: 'u', maxTokens: 900 }), 'Rule 3 is vague.');
+  assert.deepEqual(seen.map(b => b.max_tokens), [900, 4000], 'the retry has room for thinking and answering');
+
+  script = [{ text: '', think: 'still thinking' }, { text: '', think: 'and still' }];
+  await assert.rejects(agentMod.ask({ system: 's', user: 'u', maxTokens: 900 }), /spent its whole reply thinking/);
+});

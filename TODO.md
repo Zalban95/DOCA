@@ -699,6 +699,17 @@ Shape, as built:
 - **One pass down the chain, then stop and report.** Never loop, never restart the
   chain, never retry a rung that already stalled within the same turn.
 
+- **Extended 2026-09-25: "high demand" hops too.** A provider out of capacity
+  (502/503/504/529, or a 5xx saying overloaded/busy/at capacity) is unavailable in
+  the same sense as a stall and says nothing about the request, so it moves down
+  the chain and marks the rung degraded. A rate limit (429, the account's quota),
+  a refusal and a failed login still do not. And the chain now applies to one-off
+  calls (`agent.ask` — the rules review, the documentation reader) and summaries,
+  which never passed `onHop` and so never hopped; the tool-check probe still does
+  not, on purpose, since it tests one rung. A reasoning model that returns nothing
+  because it spent `max_tokens` thinking gets one retry with room, then an error
+  that says so — the Rules button had shown an empty review.
+
 - **A `400` about our own message shape should not end the turn.** Added
   2026-09-18, after `ISSUES.md` H-10 killed a mission. "Only a stall hops" is
   right for a refusal, a rate limit or an authentication failure — those are
