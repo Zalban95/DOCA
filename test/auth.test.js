@@ -189,6 +189,44 @@ test('signing out ends the session and clears the cookie', async () => {
   assert.equal((await call('GET', '/api/auth/me', { cookie: c })).status, 401);
 });
 
+test('a paired app opening the panel with its device token gets a session, capped by the device\'s scopes', async () => {
+  const devices = require('../modules/api-v1/devices');
+  const owner = authStore.userByEmail('owner@x.test');
+  const phone = H.mkDevice('Pixel', 'phone');
+  devices.update(phone.device.id, { userId: owner.id, orgId: authStore.defaultOrg().id });
+  const bearer = { Authorization: `Bearer ${phone.token}` };
+
+  // What DocaMobile does: loadUrl(dashboard, { Authorization: Bearer … }).
+  const page = await call('GET', '/', { headers: bearer });
+  assert.equal(page.status, 200, 'the panel, not the login page');
+  const c = cookieOf(page);
+  assert.match(c, /^doca_session=/);
+  assert.equal((await call('GET', '/api/status', { cookie: c })).status, 200, 'the cookie carries the rest');
+  assert.notEqual((await call('POST', '/api/harness/sessions', { cookie: c, body: {} })).status, 401, 'a phone may chat');
+
+  const files = await call('GET', '/api/files/list?path=/tmp', { cookie: c });
+  assert.equal(files.body.code, 'step_up_required', 'the machine itself needs the person, not the phone');
+  assert.match(files.body.error, /This device can look and chat/);
+  const up = await call('POST', '/api/auth/step-up', { cookie: c, body: { password: 'a brand new password' } });
+  assert.equal(up.status, 200);
+  assert.notEqual((await call('GET', '/api/files/list?path=/tmp', { cookie: c })).status, 401, 'the password lifts the cap to the owner\'s role');
+  assert.ok(authStore.auditTail(20).some(e => e.action === 'device sign-in' && e.via === phone.device.id));
+
+  devices.revoke(phone.device.id);
+  assert.equal((await call('GET', '/api/auth/me', { cookie: c })).status, 401, 'the session ends with the device');
+});
+
+test('a device token opens nothing for a device nobody owns, or on an API call', async () => {
+  const stray = H.mkDevice('Unclaimed', 'phone');
+  const page = await call('GET', '/', { headers: { Authorization: `Bearer ${stray.token}` } });
+  assert.equal(page.status, 302, 'no owner, no session: the login page');
+  const devices = require('../modules/api-v1/devices');
+  devices.update(stray.device.id, { userId: authStore.userByEmail('owner@x.test').id });
+  const api = await call('GET', '/api/status', { headers: { Authorization: `Bearer ${stray.token}` } });
+  assert.equal(api.body.code, 'unauthenticated', 'only a page load is turned into a session');
+  assert.equal(api.headers.get('set-cookie'), null);
+});
+
 test('every route the app has is in the rights table — nothing is reachable by omission', () => {
   const app = createApp();
   const routes = [];

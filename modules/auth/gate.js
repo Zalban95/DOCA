@@ -60,7 +60,15 @@ function gate(req, res, next) {
   if (authStore.userCount() === 0)
     return deny(req, res, 401, 'setup_required', 'No account exists yet. Open the panel to set up its owner.');
 
-  const who = credentials.resolve(req);
+  let who = credentials.resolve(req);
+  if (!who && wantsPage(req)) {
+    // A paired app opening the panel with its device token (DocaMobile's WebView).
+    const d = credentials.fromDevice(req);
+    if (d) {
+      who = d.who;
+      res.setHeader('Set-Cookie', credentials.cookieHeader(d.token, { secure: req.secure || req.socket?.encrypted === true }));
+    }
+  }
   if (!who) return deny(req, res, 401, 'unauthenticated', 'Sign in to use the panel.');
   req.auth = who;
 
@@ -75,6 +83,10 @@ function gate(req, res, next) {
     authStore.audit({ orgId: who.orgId, actorId: who.user.id, action: 'denied', detail: `${method} ${p} (needs ${right})` });
     return deny(req, res, 403, 'forbidden', `Your role (${who.role}) cannot do this; it needs the "${right}" right.`);
   }
+  // A session a device opened stops at what the device's scopes allow; the
+  // person's password lifts it to their role (routes.js, step-up).
+  if (right !== 'signed' && who.session.cap && !who.session.cap.includes(right))
+    return deny(req, res, 401, 'step_up_required', 'This device can look and chat. For this, confirm your password.');
   if (rights.STEP_UP.has(right) && !credentials.steppedUp(who.session))
     return deny(req, res, 401, 'step_up_required', 'Confirm your password to continue — it has been a while since you signed in.');
 
@@ -96,6 +108,7 @@ function upgradeAllowed(req, right) {
   if (authStore.userCount() === 0) return null;
   const who = credentials.resolve(req);
   if (!who || !rights.can(who.role, right)) return null;
+  if (who.session.cap && !who.session.cap.includes(right)) return null;
   if (rights.STEP_UP.has(right) && !credentials.steppedUp(who.session)) return null;
   // A socket opened from another site would carry the cookie; SameSite=Strict
   // stops that for a browser, and the Origin check stops the rest.

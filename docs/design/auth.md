@@ -137,6 +137,19 @@ request ──► listen guard (loopback/tailnet) ──► is it public? ──
 - **Rate limit:** failures per account and per address, with a growing delay
   after 5 and a 15-minute lock after 10; the lock is logged, not silent.
 
+### A paired app that shows the panel
+
+Added 2026-09-25, found on the live install: DocaMobile's WebView loads the
+dashboard with `Authorization: Bearer <device token>` on the page load, and
+sends nothing after it. That page load opens a session for the device's person
+(`credentials.fromDevice`), with `deviceId` and a `cap` from the device's scopes
+(`capOf`: `*` → the person's role; otherwise read, chat if `harness:*`, devices
+if `devices:admin`). A capped action answers `step_up_required`, so the panel
+asks for the password in place; the password lifts the cap. The session ends
+with the device. Only a page load is turned into a session — an API call with a
+bearer token is `/api/v1`'s business — and a browser cannot send that header on
+a cross-site navigation.
+
 ## 4. The first user, and existing installs
 
 - **No users yet ⇒ setup mode.** Every route but setup answers "set up an owner

@@ -165,6 +165,11 @@ The panel needs a signed-in person. Design and the reasons: `docs/design/auth.md
 - **Locked out:** `./run.sh reset-password <email>` on the host prints a one-time password.
 - Paired devices keep their tokens and now belong to a person; suspending the person silences
   their devices.
+- **A paired app that shows the panel** (DocaMobile) is signed in by its device token: the app sends
+  it on the page load, and the panel opens a session for the device's person — capped at what the
+  device's scopes allow (a phone: look, chat, devices). Anything beyond that, like a terminal or
+  Docker, asks for the person's password once, which lifts the cap. Revoking the device ends it.
+  DocaDesk does not send its token yet and signs in once instead.
 
 ### Backups (`.dBac`)
 

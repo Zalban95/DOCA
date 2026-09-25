@@ -195,7 +195,9 @@ async function handleStepUp(req, res) {
     return fail(res, Object.assign(new Error('That password is not right.'), { status: 403, code: 'bad_credentials' }));
   }
   succeeded(keys);
-  authStore.updateSession(req.auth.session.hash, { stepUpAt: new Date().toISOString() });
+  // The password is the person: it renews the recent sign-in, and lifts a
+  // device session's cap to the person's own role.
+  authStore.updateSession(req.auth.session.hash, { stepUpAt: new Date().toISOString(), cap: null });
   res.json({ ok: true });
 }
 

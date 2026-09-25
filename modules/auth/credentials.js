@@ -55,18 +55,63 @@ function oneTimePassword(length = 14) {
 
 const sha256 = s => crypto.createHash('sha256').update(String(s)).digest('hex');
 
-/** Start a session; returns the cookie value (the only place the token exists in the clear). */
-function startSession({ user, orgId, req }) {
+/**
+ * Start a session; returns the cookie value (the only place the token exists in
+ * the clear). A session opened from a device token carries `deviceId` and a
+ * `cap` — the rights that device's scopes allow — and no recent sign-in, so
+ * anything beyond the cap asks for the password first (see fromDevice).
+ */
+function startSession({ user, orgId, req, deviceId = null, cap = null }) {
   const token = crypto.randomBytes(32).toString('base64url');
   const at = Date.now();
   authStore.createSession(sha256(token), {
-    userId: user.id, orgId,
+    userId: user.id, orgId, deviceId, cap,
     expiresAt: new Date(at + SESSION_DAYS * 86400e3).toISOString(),
-    stepUpAt: new Date(at).toISOString(),
+    stepUpAt: deviceId ? null : new Date(at).toISOString(),
     userAgent: String(req?.get?.('user-agent') || '').slice(0, 200),
     ip: req?.socket?.remoteAddress || null,
   });
   return token;
+}
+
+/**
+ * What a device's scopes allow on the dashboard: all of its person's role for
+ * an admin token (`*`), else looking, the harness chat, and device management —
+ * never the machine itself without the person's password.
+ */
+function capOf(scopes) {
+  const { hasScope } = require('../api-v1/scopes');
+  if (hasScope(scopes, '*')) return null;
+  const cap = [];
+  if (scopes.some(s => s === 'read' || s.startsWith('read:'))) cap.push('read');
+  if (hasScope(scopes, 'harness:chat') || hasScope(scopes, 'harness:sessions')) cap.push('chat');
+  if (hasScope(scopes, 'devices:admin')) cap.push('devices');
+  return cap;
+}
+
+/**
+ * A page opened by a paired app with its device token: the app's WebView sends
+ * `Authorization: Bearer` on the page load (DocaMobile does), and nothing after
+ * it — so the token opens a session for the device's person, capped by the
+ * device's scopes, and the cookie carries the rest. A browser cannot send that
+ * header on a navigation from another site, so this is not a way in from one.
+ * @returns {{ who: object, token: string }|null}
+ */
+function fromDevice(req) {
+  const h = String(req.headers.authorization || '');
+  if (!/^Bearer\s+/i.test(h)) return null;
+  const device = require('../api-v1/devices').authenticate(h.replace(/^Bearer\s+/i, '').trim());
+  if (!device?.userId) return null;
+  const user = authStore.userById(device.userId);
+  if (!user || user.suspendedAt) return null;
+  const orgId = device.orgId || authStore.defaultOrg()?.id;
+  const m = authStore.membership(orgId, user.id);
+  if (!m || m.status !== 'active') return null;
+  const cap = capOf(device.scopes || []);
+  if (cap && !cap.includes('read')) return null;
+  const token = startSession({ user, orgId, req, deviceId: device.id, cap });
+  authStore.audit({ orgId, actorId: user.id, via: device.id, action: 'device sign-in', detail: device.name });
+  return { token, who: resolveHash(sha256(token)) };
 }
 
 function cookieHeader(token, { secure, clear = false } = {}) {
@@ -93,14 +138,21 @@ let _lastTouch = 0;
  */
 function resolve(req) {
   const token = tokenFrom(req);
-  if (!token) return null;
-  const hash = sha256(token);
+  return token ? resolveHash(sha256(token)) : null;
+}
+
+function resolveHash(hash) {
   const s = authStore.sessionByHash(hash);
   if (!s || Date.parse(s.expiresAt) < Date.now()) return null;
   const user = authStore.userById(s.userId);
   if (!user || user.suspendedAt) return null;
   const m = authStore.membership(s.orgId, user.id);
   if (!m || m.status !== 'active') return null;
+  // A device's session ends with the device.
+  if (s.deviceId) {
+    const d = require('../api-v1/devices').get(s.deviceId);
+    if (!d || d.revokedAt) return null;
+  }
   // lastSeenAt is best effort; writing it on every request would rewrite the file on every request.
   if (Date.now() - _lastTouch > 60e3) { _lastTouch = Date.now(); authStore.updateSession(hash, { lastSeenAt: new Date().toISOString() }); }
   return { user, orgId: s.orgId, role: m.role, session: { hash, ...s } };
@@ -113,5 +165,5 @@ function steppedUp(session) {
 module.exports = {
   COOKIE, SESSION_DAYS, STEP_UP_HOURS, MIN_PASSWORD,
   hashPassword, verifyPassword, checkNewPassword, oneTimePassword, sha256,
-  startSession, cookieHeader, tokenFrom, resolve, steppedUp,
+  startSession, fromDevice, capOf, cookieHeader, tokenFrom, resolve, steppedUp,
 };
