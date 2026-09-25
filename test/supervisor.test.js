@@ -97,6 +97,18 @@ test('a final report ends the job and wakes the Orchestrator once, and its reply
   assert.equal(supervisor.deliver(ceo()), 'nothing due', 'woken once per report');
 });
 
+test('a job that reports "done" twice is one line to the Orchestrator, the latest', async () => {
+  fresh();
+  const id = job('Twice');
+  await org.tool({ action: 'report', outcome: 'done', message: 'first' }, { sessionId: id });
+  await org.tool({ action: 'report', outcome: 'done', message: 'second, with timings' }, { sessionId: id });
+  supervisor.deliver(ceo());
+  await settle();
+  const msg = woken.at(-1).message;
+  assert.equal((msg.match(/Twice/g) || []).length, 1);
+  assert.match(msg, /second, with timings/);
+});
+
 test('progress wakes nobody', async () => {
   fresh();
   const id = job('Quiet');

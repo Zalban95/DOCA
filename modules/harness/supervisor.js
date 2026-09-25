@@ -178,7 +178,10 @@ function deliver(orchestratorId) {
   const due = (ceo.reports || []).filter(n => org.FINAL.includes(n.type) && !n.readAt && !n.wokeAt
     && memory.getSession(n.from)?.parentId === ceo.id);
   if (!due.length) return 'nothing due';
-  const lines = due.map(n => `- ${short(memory.getSession(n.from)?.title, 80)} (${n.from}) — ${n.type}: ${short(n.text, 500)}`);
+  // One line per job: a work chat that reports "done" twice (it happens: a
+  // short one, then one with the timings) is one outcome, the latest.
+  const latest = [...new Map(due.map(n => [n.from, n])).values()];
+  const lines = latest.map(n => `- ${short(memory.getSession(n.from)?.title, 80)} (${n.from}) — ${n.type}: ${short(n.text, 500)}`);
   const how = wake(ceo.id, '[panel] Work reported back. Tell the owner what matters, in a few lines; '
     + `ask only for a decision that is theirs.\n${lines.join('\n')}`, { retry: () => deliver(ceo.id) });
   if (how === 'woken') {
