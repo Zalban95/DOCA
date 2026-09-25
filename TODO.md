@@ -1461,3 +1461,68 @@ old unit, install the new one, enable it, and disable the old one — or
 `run.sh` does it, since it already owns the unit — and `startup.js` must
 recognise either name for one release so that the panel's own status check does
 not report "not installed" on a machine that is mid-migration.
+
+## Modules with explicit contracts, not one function per file
+
+**Decided 2026-09-25.** The project started maximally modular and has drifted:
+of 150 JS files, 82 are under 200 lines, but five carry the weight —
+`public/js/harness.js` (2168), `public/js/utils.js` (1654, 53 global
+functions), `modules/harness/agent.js` (1599), `public/index.html` (1500) and
+`public/css/components.css` (1171).
+
+**What is being fixed is coupling, not length.** "Change one place and something
+elsewhere breaks" comes from the front end being 31 classic `<script>` tags
+sharing one global namespace: any file can call any other file's functions, a
+later file silently replaces an earlier file's function of the same name, and
+nothing records who depends on what. One function per file was considered and
+rejected: it keeps every hidden dependency and spreads it over more files, so an
+agent reads ten files to understand one function, and things that must change
+together stop living together. The unit is **one idea per file**, with what it
+uses imported and what it offers exported, and a test beside it.
+
+**Staged, because the front end cannot switch in one step.** About 200 inline
+`onclick="fn()"` handlers in `index.html`, and about 150 more in HTML strings
+built by `public/js/*`, only work while those functions are global.
+
+1. **Split by responsibility, behaviour unchanged.** Classic scripts still,
+   globals still, but each file one topic: `utils.js` into its topics, the large
+   files along their seams. Pure moves, reviewable as such.
+2. **Guards so it does not drift back.** A test that fails when a source file
+   passes a line ceiling (current offenders listed, the list may only shrink),
+   and one that fails when two front-end files define the same global.
+3. **ES modules.** `<script type="module">` with `import`/`export`, inline
+   handlers replaced by delegated listeners (`data-action="…"`), one page at a
+   time. Until a page is done, what its markup still calls is published on
+   `window` explicitly, in one place, so the remaining global surface is a list
+   rather than an accident.
+4. **The back end** already has explicit `require`s; there only the size is the
+   problem, and `modules/harness/agent.js` is split along its seams.
+
+## Licence and per-customer builds
+
+**Decided 2026-09-25 in direction; the legal text is not written and needs a
+lawyer.** DOCA should stay free, and a larger customer should be able to buy a
+private, heavily customised version.
+
+- **Current state.** `LICENSE` is MIT, copyright Protolab.tech. Every commit is
+  the owner's (the Cursor Agent commits are the owner's tooling), so the owner
+  can relicense new versions at will. MIT never limited the owner; what it
+  permits is **anyone else** taking DOCA closed and selling it.
+- **Direction: dual licence.** The public core under **AGPL-3.0** — free to use;
+  whoever modifies it and serves it over a network publishes the modifications
+  — plus a **commercial licence** sold to customers who want a private build
+  without that obligation. Releases already published stay MIT; the change
+  applies from the release that makes it.
+- **A CLA before the first outside contribution.** Without one, contributed code
+  cannot be relicensed and the dual licence stops working.
+- **Not a closed branch per customer.** Branches of one repo drift from `main`
+  and every fix gets merged N times. Instead: one public core with extension
+  points, and a private repo per customer holding only its plugins, prefs and
+  branding, depending on the core. `branding.js` already works this way through
+  prefs overrides; the modules work above is what extends it to behaviour.
+- **Timing.** The company is renamed on 2026-09-28. The licence change, the new
+  copyright holder in `LICENSE`, and the identifier rename ("One rename, then
+  no more OpenClaw names of our own") belong in the same release. If the legal
+  entity changes and not only its name, copyright is assigned from Protolab.tech
+  to the new company first.
+
