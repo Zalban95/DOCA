@@ -1361,7 +1361,7 @@ test('the tool-layer cap stays above the transcript clip', () => {
   // because the two live in different files and nothing else connects them.
   const fs = require('node:fs');
   const path = require('node:path');
-  const src = fs.readFileSync(path.join(__dirname, '..', 'modules', 'harness', 'tools.js'), 'utf8');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'modules', 'harness', 'toolbox', 'common.js'), 'utf8');
   const toolCap = Number(src.match(/const MAX_OUT\s*=\s*(\d+)/)[1]);
 
   const agentSrc = fs.readFileSync(path.join(__dirname, '..', 'modules', 'harness', 'turn', 'messages.js'), 'utf8');
