@@ -49,17 +49,17 @@ const DEFAULT_RULES = {
     { id: 'open', description: 'Unfinished work and threads to pick up later, half-done code tasks included. When one is finished, its result moves to project.' },
   ],
   rules: [
-    'One fact per entry. Key it subject first, then aspect, in lower case with dashes (ollama-port, gpu0-model). Before adding, memory_search the subject and reuse its key.',
+    'One fact per entry. Key it subject first, then aspect, in lower case with dashes (ollama-port, root-disk-size). Before adding, memory_search the subject and reuse its key.',
     'Update the existing key rather than adding one with the same subject and aspect: two versions of one fact are worse than none.',
     "A fact that fits two categories goes in the more specific one: a service's port or config location in stack, a half-done task in open.",
     'Never store a secret, key, token or password, not even inside a quote. Store where it lives instead (deepseek-api-key: in ~/.openclaw/openclaw.json).',
     'Do not store what changes without anyone deciding it (a container id, a PID, free RAM): store how to find it out, under the thing it belongs to. What someone configured (ports, IPs, versions, paths) is stable: store it.',
     'When the owner tells you to do something differently, store it under prefs in their words, with the date — a preference stated in passing counts too. Leave out any secret (rule 4).',
     'When a fact comes from your reasoning rather than from something you ran or read, end it with (inferred from ...).',
-    'Pin only what every conversation needs — about ten entries. Unpin one before pinning past twelve.',
+    'Pin only what every conversation needs, and never more than ten: unpin one before pinning an eleventh.',
     'When a remembered fact turns out wrong, flag it with memory_flag in the same turn, saying what contradicted it. Replace it once you have checked the right answer yourself or the owner has given it; until then keep it, flagged.',
-    "A locked entry is the owner's settled answer: never change, replace or duplicate it. If it looks wrong, stale, or clashes with a newer instruction, flag it and ask the owner; rules 2, 6 and 9 wait for their answer.",
-    'When two rules pull in different directions in a case you face, do not choose silently: ask the owner one question with the options, and follow the stricter rule until they answer.',
+    "A locked entry is the owner's settled answer: never change, replace or duplicate it. If it is no longer true, or clashes with a newer instruction, flag it and ask the owner. A secret in one is removed at once (rule 4), and the owner told.",
+    'When two rules pull in different directions in a case you face, do not choose silently: ask the owner one question with the options. Until they answer, follow the rule that keeps something out of memory or changes nothing.',
   ],
 };
 
