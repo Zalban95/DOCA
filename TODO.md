@@ -1498,6 +1498,25 @@ built by `public/js/*`, only work while those functions are global.
 4. **The back end** already has explicit `require`s; there only the size is the
    problem, and `modules/harness/agent.js` is split along its seams.
 
+**Progress 2026-09-25** (branch `refactor/split-by-responsibility`):
+
+- Stage 1 for `public/js/utils.js` → `lib/` + `agent-ui/`, and for
+  `public/js/harness.js` → `harness/` + `harness-console/`. Pure moves.
+- Stage 2 done: `test/structure.test.js` (400-line ceiling with a shrink-only
+  allowance list, no duplicate front-end globals, `index.html` and `public/js`
+  agree). `test/frontend.js` finds functions by name, so tests do not pin
+  where code lives.
+- Stage 4 for `modules/harness/agent.js` → `agent.js` (the turn) +
+  `modules/harness/turn/` (8 parts), same exports.
+- **Next:** `runTurn` (320 lines in one function) split into its steps;
+  `public/css/components.css`, `public/js/chat.js`, `modules/harness/tools.js`,
+  `public/js/files.js`; then `index.html` into per-tab partials, which is where
+  stage 3 (ES modules) starts, one tab at a time.
+- `chat.js` and `harness-console/transcript.js` draw the same transcript twice
+  (`_chatAppendImage` / `_hcAppendImage` and their siblings). Where they are the
+  same, they become one function in `agent-ui/`; that is the agglomerating half
+  of this work and it changes behaviour, so it goes in its own commits.
+
 ## Licence and per-customer builds
 
 **Decided 2026-09-25 in direction; the legal text is not written and needs a

@@ -431,7 +431,16 @@ modules/                    Backend feature modules (one per concern)
     environment.js          What the agent is told about this machine, each turn
     settings.js             Settings the agent may propose, and the proposals awaiting the user
     tools.js                The 12 built-in tools, plus whatever MCP is offering
-    agent.js                The agent loop: prompt assembly, streaming, tool calls, summarisation
+    agent.js                The turn: runs the agent loop, tool calls, and re-exports its parts
+    turn/                   The turn's parts, one idea per file
+      params.js             The panel's params, and a profile's on top of them
+      prompt.js             The system prompt: instructions, environment, memory, missions
+      client.js             What the prompt says about the device the turn came from
+      messages.js           The transcript as the model sees it; tool output clipping
+      fallback.js           Which rung of the fallback chain to try next
+      transport.js          One model request, streamed or whole, with the first-token guard
+      summary.js            Folding older turns into the rolling summary
+      introspect.js         Preview, breakdown, context and status, without running a turn
     routes.js               /api/harness/* handlers
   mcp/                      MCP servers
     client.js               JSON-RPC 2.0 over stdio or HTTP: handshake, tools/list, tools/call
@@ -475,7 +484,17 @@ public/
     responsive.css          Breakpoints 1024 / 768 / 480 px
   js/
     state.js                Global vars (incl. stats/sections state)
-    utils.js                apiFetch, sseStream, escHtml, toolRowHtml, system-tools cache, helpers
+    lib/                    Shared helpers with no page of their own
+      api.js                apiFetch, sseStream, streamToEl
+      html.js               escHtml, jsArg
+      status.js             setStatus — the one place a status line is timed out
+      dialogs.js            appPrompt / appConfirm / appAlert
+      format.js             fmtBytes, fmtNumber, fmtDuration, fmtDate
+      output.js / debounce.js / system-tools.js / pty-banner.js
+    agent-ui/               The agent transcript, shared by chat.js and the Harness tab
+      fold.js / working.js / fold-runs.js   Folds, the per-turn working block, collapsing runs
+      think-stream.js       <think> blocks and rendered markdown, live and reloaded
+      media.js / context-meter.js / approval.js
     nav.js                  Tab routing + mobile drawer
     sidebar.js              Status polling (GPU, CPU/RAM + toggleable stats, containers, models)
     controls.js             Start / stop / restart actions
@@ -486,7 +505,11 @@ public/
     setup.js                Setup script editor
     config.js               Multi-file config editor + editable favorites
     files.js                File manager + upload / download / drag-drop
-    harness.js              Harness lines + catalog modal + params panel + the agent console
+    harness/                Harness settings on the Controls page
+      lines.js / params.js / fallbacks.js / probe.js / catalog.js
+    harness-console/        The Harness tab
+      shell.js / sessions.js / transcript.js / missions.js / agent-editor.js / approval.js
+      memory.js / env.js / proposals.js / builtin.js / external.js
     chat.js                 Floating agent chat panel
     models.js / llamacpp.js Model managers + AI tools card + local model files
     docker.js               Docker manager UI
