@@ -68,33 +68,36 @@ const handleRulesVerify = wrap(async (req, res) => {
   // a careful model then listed nearly every rule as unclear and every category
   // as a gap, although each category's description says what goes in it
   // (2026-09-25). A review that flags everything tells the owner nothing.
+  // The goal is a useful memory, not a list of conflicts. A reviewer told to
+  // find conflicts always finds some — each pass explored new corners, fixing
+  // one surfaced the next, and the rules never came to rest (2026-09-26). So it
+  // judges usefulness in context, reports only what would cause a real mistake,
+  // treats "no changes needed" as the good outcome, and is given what the owner
+  // has already decided so it never re-opens it.
+  const decided = memory.rulesDecisions();
   const system = [
-    'You review a short rulebook that another assistant follows when it decides what to write into its',
-    'long-term memory. Read it as that assistant would: capable, in good faith, and using ordinary words in',
-    'their ordinary sense. Your job is to find what would make it act wrongly — not to question every word.',
+    'You check the short rulebook an assistant follows when it writes its long-term memory. Your aim is to',
+    'tell the owner whether these rules let it keep a memory that is useful in later conversations — not to',
+    'find conflicts. The assistant applies the rules with judgment, in context, the way a capable colleague',
+    'would; a case that sensible judgment settles is not a problem, and neither is an unusual edge case.',
     '',
-    'The owner writes rules by this guide; a rule that breaks it is a finding:',
+    'The rules are written by this guide:',
     ...memory.GUIDE.map(g => `- ${g}`),
     '',
-    'What the assistant already knows, so none of it is a finding:',
-    '- Each category\'s description says what belongs in it. That description is the rule for when to use it.',
-    '- A locked entry is one the user has locked in the panel; the assistant cannot change or remove it.',
-    '- memory_flag marks an entry as doubtful, with a reason, without removing it.',
+    'What the assistant already knows: each category\'s description says what belongs in it; a locked entry',
+    'is one the owner locked in the panel; memory_flag marks an entry doubtful without removing it.',
+    ...(decided.length ? ['', 'The owner has already decided these. They are settled: never raise them again, in any form.',
+      ...decided.map(d => `- ${d.question} → ${d.answer}`)] : []),
     '',
     'Report, in this order and nothing else:',
-    'CONFLICTS — two rules that a realistic situation forces the assistant to choose between. Name both by',
-    'number and the situation, in a few words. A clash that needs a contrived case is not a conflict.',
-    'UNCLEAR — wording that would lead two careful assistants to do different things in a situation that will',
-    'actually come up. Quote the wording and name the situation. A word that ordinary sense settles is fine.',
-    'GAPS — a category with no description, or two whose descriptions overlap so the same fact could go in',
-    'either; a rule that names a category that is not listed; or a common kind of fact that fits no category.',
-    'QUESTIONS — at most three questions for the person who owns these rules, each one whose answer would fix',
-    'a finding above. Ask nothing you could answer from the rules themselves. Write each on its own line as',
+    'PROBLEMS — at most three: something in these rules likely to make the assistant do the wrong thing in',
+    'normal use. For each: the rule, the ordinary situation where it goes wrong, and what would go wrong.',
+    'QUESTIONS — at most two, only for a problem above that only the owner can settle, each on its own line as',
     '?? the question || a first choice || a second choice',
-    'with two to four short, concrete choices, each one a complete answer the owner could pick.',
+    'with two to four short, concrete choices, each a complete answer.',
     '',
-    'One line per finding, starting with the rule number or category. Most rulebooks have few real findings:',
-    'write "none" under a heading that has none, and do not add findings to fill one.',
+    'If nothing is likely to cause a real mistake, write only: No changes needed. That is a good result, and',
+    'the most common one for rules that have already been reviewed. Do not add findings to have something to say.',
     'Do not rewrite the rules, do not propose replacement text, and do not comment on anything outside them.',
   ].join('\n');
 
@@ -144,6 +147,7 @@ const handleRulesAnswer = wrap(async (req, res) => {
   if (!Array.isArray(next.rules) || !Array.isArray(next.categories))
     throw Object.assign(new Error('The model returned no rules to apply. Nothing was changed.'), { status: 502 });
   const rules = memory.rulesWrite({ categories: next.categories, rules: next.rules, source: 'owner answer' });
+  memory.rulesDecide({ question, answer });   // settled: the reviewer will not raise it again
   res.json({ ok: true, summary: String(next.summary || 'The rules were updated.').slice(0, 300), rules });
 });
 

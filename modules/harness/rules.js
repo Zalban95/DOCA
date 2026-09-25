@@ -26,6 +26,7 @@ const GUIDE = [
   'If a rule can meet another in a real case, say which one wins, or that the owner decides.',
   'A category is its description: what belongs in it. No two descriptions may fit the same fact; say which wins where they touch.',
   'Refer only to categories that exist, and to tools and terms the agent has (memory_flag, locked entries, pins).',
+  'Refer to another rule by what it says, never by its number: numbers change whenever a rule is added or removed.',
   'Keep the set short: every rule is read on every turn.',
 ];
 
@@ -44,22 +45,22 @@ const DEFAULT_RULES = {
     { id: 'machine', description: 'The host itself: hardware, OS, GPUs, disks, network interfaces. Not the services running on it (stack) or where files are (paths).' },
     { id: 'paths', description: 'Where files and folders live on this machine, and which of them the panel manages.' },
     { id: 'stack', description: 'How each service, container and model is set up and run: its ports, the location of its config file, how to start and check it.' },
-    { id: 'prefs', description: "The owner's standing preferences and instructions, in their words, dated." },
-    { id: 'project', description: 'Settled facts about code and projects in the workspace: structure, conventions, decisions.' },
+    { id: 'prefs', description: "The owner's standing instructions and preferences about how you work, in their words, dated." },
+    { id: 'project', description: "Settled facts about code and projects in the workspace: structure, conventions (the owner's included), decisions." },
     { id: 'open', description: 'Unfinished work and threads to pick up later, half-done code tasks included. When one is finished, its result moves to project.' },
   ],
   rules: [
-    'One fact per entry. Key it subject first, then aspect, in lower case with dashes (ollama-port, root-disk-size). Before adding, memory_search the subject and reuse its key.',
-    'Update the existing key rather than adding one with the same subject and aspect: two versions of one fact are worse than none.',
-    "A fact that fits two categories goes in the more specific one: a service's port or config location in stack, a half-done task in open.",
-    'Never store a secret, key, token or password, not even inside a quote. Store where it lives instead (deepseek-api-key: in ~/.openclaw/openclaw.json).',
-    'Do not store what changes without anyone deciding it (a container id, a PID, free RAM): store how to find it out, under the thing it belongs to. What someone configured (ports, IPs, versions, paths) is stable: store it.',
-    'When the owner tells you to do something differently, store it under prefs in their words, with the date — a preference stated in passing counts too. Leave out any secret (rule 4).',
+    'These rules exist to keep a memory that is useful in later conversations. Apply them with judgment: where one does not fit the case in front of you, do what serves that purpose and say what you did.',
+    'One fact per entry. Key it subject first, then aspect, lower case with dashes (ollama-port, root-disk-size). Before adding, memory_search the subject and reuse its key rather than adding a second one.',
+    'Never store a secret, key, token or password, not even inside a quote. Store where it lives instead (deepseek-api-key: in ~/.openclaw/openclaw.json). This holds for locked entries too: remove a secret from one and tell the owner.',
+    'Store what someone configured (ports, IPs, versions, paths). Do not store what changes by itself (a container id, a PID, free RAM): store how to find it out instead.',
+    "File a fact where the most specific category description fits: a service's port or config location in stack, even when the owner is the one who changed it; a code convention in project; a half-done task in open.",
+    "The owner's standing instructions about how you work go under prefs, in their words, with the date. A preference stated in passing counts.",
     'When a fact comes from your reasoning rather than from something you ran or read, end it with (inferred from ...).',
     'Pin only what every conversation needs, and never more than ten: unpin one before pinning an eleventh.',
-    'When a remembered fact turns out wrong, flag it with memory_flag in the same turn, saying what contradicted it. Replace it once you have checked the right answer yourself or the owner has given it; until then keep it, flagged.',
-    "A locked entry is the owner's settled answer: never change, replace or duplicate it. If it is no longer true, or clashes with a newer instruction, flag it and ask the owner. A secret in one is removed at once (rule 4), and the owner told.",
-    'When two rules pull in different directions in a case you face, do not choose silently: ask the owner one question with the options. Until they answer, follow the rule that keeps something out of memory or changes nothing.',
+    'When a remembered fact turns out wrong, flag it with memory_flag in the same turn, saying what contradicted it, and replace it once you have checked the right answer or the owner has given it.',
+    "A locked entry is the owner's settled answer: never change or duplicate it, even when it looks wrong. Flag it and ask the owner. The only exception is a secret in it (see the rule on secrets).",
+    'When it matters which of two rules applies and judgment does not settle it, ask the owner one short question. Until they answer, store nothing and change nothing.',
   ],
 };
 
@@ -91,7 +92,8 @@ function rulesWrite({ categories, rules: list, source } = {}) {
 
   const nextRules = list === undefined ? current.rules
     : (Array.isArray(list) ? list : String(list).split('\n'))
-      .map(r => String(r).trim().replace(/^[-*]\s*/, '').slice(0, 300))
+      // A list shown numbered comes back numbered; the number is not part of the rule.
+      .map(r => String(r).trim().replace(/^[-*]\s*/, '').replace(/^\d+[.)]\s+/, '').slice(0, 300))
       .filter(Boolean)
       .slice(0, 30);
 
@@ -202,4 +204,16 @@ function rulesUndo() {
   return rules();
 }
 
-module.exports = { GUIDE, DEFAULT_RULES, rules, rulesWrite, rulesPatch, rulesReset, rulesHistory, rulesUndo };
+/* ── What the owner has decided ───────────────────────────
+   Every answer to a review question is kept, and the reviewer is told these
+   are settled — otherwise each review re-opened what the owner had just
+   decided, and the rules never came to rest (2026-09-26). */
+const DECISIONS_DOC = 'harness/memory-rules-decisions';
+function rulesDecisions() { return store.readJson(DECISIONS_DOC, []); }
+function rulesDecide({ question, answer }) {
+  const list = rulesDecisions().filter(d => d.question !== question);
+  list.push({ question: String(question).slice(0, 500), answer: String(answer).slice(0, 1000), at: new Date().toISOString() });
+  store.writeJson(DECISIONS_DOC, list.slice(-30));
+}
+
+module.exports = { rulesDecisions, rulesDecide, GUIDE, DEFAULT_RULES, rules, rulesWrite, rulesPatch, rulesReset, rulesHistory, rulesUndo };
