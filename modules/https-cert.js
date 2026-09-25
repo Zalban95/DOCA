@@ -6,6 +6,7 @@ const path = require('path');
 const { X509Certificate } = require('crypto');
 const { execSync } = require('child_process');
 const { CERTS_DIR } = require('./paths');
+const branding = require('./branding');
 
 /** Renew this many days before expiry. Tailscale hands out Let's Encrypt certs,
  *  which live ~90 days, so a cert provisioned once and never revisited stops
@@ -112,7 +113,7 @@ async function ensureCerts() {
 async function generateSelfSigned(fqdn) {
   const selfsigned = require('selfsigned');
   const host  = os.hostname();
-  const attrs = [{ name: 'commonName', value: fqdn || host || 'OpenClaw Dashboard' }];
+  const attrs = [{ name: 'commonName', value: fqdn || host || branding.name('panel') }];
 
   // Name every address the panel is actually reached on. With only localhost in
   // here, hostname verification fails for any LAN or tailnet client, so an app

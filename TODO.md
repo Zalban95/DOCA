@@ -1400,6 +1400,9 @@ from the catalogue.
 
 ### 3. OpenClaw-shaped things named as if they were ours
 
+*Partly superseded 2026-09-25 — see "One rename, then no more OpenClaw names of
+our own" below: our own identifiers **are** now to be renamed, once.*
+
 `openclaw-panel.service`, `COMPOSE_DIR`, the gateway path in `modules/chat.js`,
 the `openclaw` row in `catalog.js`. `branding.js` already draws the line
 correctly — a name that would break an existing install if changed is an
@@ -1416,3 +1419,45 @@ A fixture with no `COMPOSE_DIR`, no `~/.openclaw` and no Docker, asserting that
 the panel boots, the built-in harness is selected, a turn runs, and every
 OpenClaw surface reports absence rather than failure. Cheap, and it is the only
 thing that stops this drifting back.
+
+## One rename, then no more OpenClaw names of our own
+
+**Decided 2026-09-25, deliberately deferred until the external name is
+settled.** The company is renamed on 2026-09-28. The product will be the engine
+and harness behind other workflows, so it should not carry a second product's
+name in its own identifiers into every future install. The rule in
+`branding.js` — an identifier that would break an existing machine is not
+branding — still holds; what changes is that we now choose to pay that cost
+**once**, in a single release on `main`, with a migration, rather than never.
+
+**Why wait.** Branding is already one file: once the name is settled, `vendor`
+(and `product`, if it changes) in `modules/branding.js` is the whole rebrand.
+The identifiers are the expensive part, and they should be named after the
+**product**, not the company. If the product name stays DOCA they could go
+today; if it might change, renaming now means migrating every install twice.
+
+**What gets renamed** — ours, carrying the old name:
+
+- `openclaw-panel.service` → `<product>.service`: `modules/startup.js:14`,
+  `run.sh:16`, the two user-facing hints in `public/js/settings.js:509` and
+  `public/js/utils.js:18`, `test/startup.test.js`,
+  `test/status-lines.test.js`, and the README/AGENTS instructions.
+- `openclaw-dashboard` as the npm name in `package.json` and
+  `package-lock.json`.
+- The `User-Agent: openclaw-dashboard/1.0` headers in
+  `modules/models-ollama.js` and `modules/skills.js`.
+- The `branding.js` header comment, which lists the first two as
+  not-renameable.
+
+**What does not** — OpenClaw is a real product the panel manages, and these
+name it, not us: `~/.openclaw/`, `openclaw.json`, `COMPOSE_DIR`, the gateway in
+`modules/chat.js`, the `openclaw` harness row in `catalog.js`,
+`github.com/openclaw/openclaw`. Moving DOCA's own API keys out of
+`openclaw.json` is §1 of "OpenClaw is a peer" above and a separate change.
+
+**The migration is the release.** An existing install has
+`openclaw-panel.service` enabled. The release must, on first start, notice the
+old unit, install the new one, enable it, and disable the old one — or
+`run.sh` does it, since it already owns the unit — and `startup.js` must
+recognise either name for one release so that the panel's own status check does
+not report "not installed" on a machine that is mid-migration.
