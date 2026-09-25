@@ -113,7 +113,20 @@ const handleExport = wrap(async (req, res) => {
   res.json(await exporter.write(req.body?.target, req.body?.ids));
 });
 
+function mount(app) {
+  app.get   ('/api/mcp',             handleList);
+  app.post  ('/api/mcp',             handleUpsert);
+  app.post  ('/api/mcp/export',      handleExport);
+  // Before /:id, or "offers" is read as a server id.
+  app.post  ('/api/mcp/offers/:id/accept', handleOfferAccept);
+  app.post  ('/api/mcp/offers/:id/reject', handleOfferReject);
+  app.get   ('/api/mcp/:id/log',     handleLog);
+  app.post  ('/api/mcp/:id/action',  handleAction);
+  app.delete('/api/mcp/:id',         handleRemove);
+}
+
 module.exports = {
+  mount,
   handleList, handleUpsert, handleRemove, handleAction, handleLog, handleExport,
   handleOfferAccept, handleOfferReject,
 };

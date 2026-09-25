@@ -295,15 +295,7 @@ app.post  ('/api/docker/presets',               docker.handleSavePreset);
 app.delete('/api/docker/presets/:name',         docker.handleDeletePreset);
 
 // ─── Routes: MCP Servers ──────────────────────────────────────────────────────
-app.get   ('/api/mcp',             mcp.handleList);
-app.post  ('/api/mcp',             mcp.handleUpsert);
-app.post  ('/api/mcp/export',      mcp.handleExport);
-// Before /:id, or "offers" is read as a server id.
-app.post  ('/api/mcp/offers/:id/accept', mcp.handleOfferAccept);
-app.post  ('/api/mcp/offers/:id/reject', mcp.handleOfferReject);
-app.get   ('/api/mcp/:id/log',     mcp.handleLog);
-app.post  ('/api/mcp/:id/action',  mcp.handleAction);
-app.delete('/api/mcp/:id',         mcp.handleRemove);
+mcp.mount(app);
 
 // ─── Routes: Virtual Machines ─────────────────────────────────────────────────
 app.get ('/api/vms',                      vms.handleList);
