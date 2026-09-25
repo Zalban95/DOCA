@@ -637,7 +637,7 @@ test('every harness parameter has a box in the panel to type it into', () => {
   // file by hand. This is the check that would have caught it.
   const fs   = require('node:fs');
   const path = require('node:path');
-  const src  = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'harness.js'), 'utf8');
+  const src  = require('./frontend').source(...require('./frontend').scripts());
 
   const table = src.match(/const HARNESS_PARAMS = \[([\s\S]*?)\n\];/);
   assert.ok(table, 'HARNESS_PARAMS is what the config form renders from');
@@ -673,7 +673,7 @@ test('the fallback rungs read back exactly what the form is showing', () => {
   // the parts of the DOM it touches, rather than trusted.
   const fs   = require('node:fs');
   const path = require('node:path');
-  const src  = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'harness.js'), 'utf8');
+  const src  = require('./frontend').source(...require('./frontend').scripts());
   const fn   = src.match(/const HARNESS_MAX_FALLBACKS = \d+;/)[0] + '\n'
              + src.match(/function _fallbacksRead[\s\S]*?\n\}/)[0];
   const { _fallbacksRead } = new Function(`${fn}; return { _fallbacksRead };`)();
@@ -769,9 +769,8 @@ test('a saved fallback window survives being opened and saved again', () => {
   // would otherwise reach for the network.
   const fs     = require('node:fs');
   const path   = require('node:path');
-  const js     = f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8');
   const { fn } = require('./frontend');
-  const src    = js('harness.js');
+  const src    = require('./frontend').source(...require('./frontend').scripts());
   const helper = fn, from = fn;
 
   const source = [

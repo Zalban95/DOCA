@@ -352,9 +352,8 @@ test('both transcripts give the sentence back before they draw the picture', () 
   const prevDoc = global.document;
   global.document = { getElementById: () => container, createElement: tag => el(tag) };
   try {
-    for (const [file, name] of [['chat.js', '_chatAppendImage'], ['harness.js', '_hcAppendImage']]) {
-      const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', file), 'utf8');
-      const body = src.match(new RegExp(`function ${name}\\([\\s\\S]*?\\n\\}`))[0];
+    for (const [file, name] of [['chat.js', '_chatAppendImage'], ['harness-console/transcript.js', '_hcAppendImage']]) {
+      const body = frontend.fn(name);
       const fn = new Function('agentImageEl', 'agentWorkingGiveBack', '_chatScroll',
         `${body}; return ${name};`)(
         () => { calls.push('draw'); return el('div', 'agent-image'); },

@@ -27,9 +27,8 @@ const CEILING = 400;
  * split the file instead.
  */
 const OVER = {
-  'public/js/harness.js':         2168,
   'modules/harness/agent.js':     1599,
-  'public/index.html':            1517,
+  'public/index.html':            1534,  // + the split scripts' <script> tags; ES modules take them back out
   'public/css/components.css':    1171,
   'public/js/chat.js':             986,
   'modules/harness/tools.js':      899,
