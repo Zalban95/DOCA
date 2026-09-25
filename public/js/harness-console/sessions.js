@@ -68,7 +68,7 @@ async function _hcLoadSessions(refreshOnly = false) {
       return `<div class="hc-session ${s.id === _hcSession ? 'active' : ''}" data-session="${escHtml(s.id)}"
         style="margin-left:${Math.min(2, depth) * 12}px" onclick="hcOpenSession(${jsArg(s.id)})">
         <span class="hc-session-title"><small>${role}${s.archivedAt ? ' · archived' : ''}</small>${escHtml(s.title)}</span>
-        <span class="hc-session-meta">${escHtml(s.state)}${s.unread ? ` · ${s.unread} new` : ''}${s.plan?.state === 'proposed' ? ' · plan?' : ''}</span>
+        <span class="hc-session-meta">${escHtml(_hcJobLabel(s))}${s.unread ? ` · ${s.unread} new` : ''}${s.plan?.state === 'proposed' ? ' · plan?' : ''}</span>
       </div>` + rows.filter(child => child.parentId === s.id).map(child => draw(child, depth + 1)).join('');
     };
     const main = rows.find(s => s.id === data.main);
@@ -95,9 +95,22 @@ function hcNewSession(planning = false) {
   }, planning ? 'Planning work' : 'Work chat');
 }
 
+/**
+ * Where a conversation stands, in a word. A work chat with a job says where the
+ * job is (supervisor.js) — "waiting" on its specialists, "stalled", "done" — which
+ * is the thing worth knowing at a glance; while a turn runs, that it is running.
+ */
+const _HC_JOB = { working: 'working', waiting: 'waiting on specialists', done: 'done', failed: 'failed',
+  blocked: 'blocked — needs a decision', question: 'asks you something', stalled: 'stalled', stopped: 'stopped' };
+function _hcJobLabel(s) {
+  if (s.state === 'running' || !s.job) return s.state;
+  return _HC_JOB[s.job.state] || s.state;
+}
+
 async function hcOpenSession(id, skipReload) {
   if (_hcBusy && id !== _hcSession) return appAlert('Stop or finish this direct turn before switching conversations.');
   _hcSession = id;
+  hcSideToggle(false);   // on a phone, back to the conversation just chosen
   const box = document.getElementById('hc-messages');
   if (!box) return;
   try {

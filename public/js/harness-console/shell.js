@@ -24,6 +24,16 @@ let _hcSelected = null;
 let _hcBusy     = false;
 let _hcRendered = null;   // harness id the shell is currently built for
 
+/**
+ * On a phone the workspace (conversations, memory, specialists) is a drawer
+ * the ☰ in the conversation header opens, so the conversation gets the screen;
+ * choosing a conversation closes it. On a wide screen it is always open and
+ * this does nothing visible.
+ */
+function hcSideToggle(open) {
+  document.querySelector('#harness-console-shell .hc-layout')?.classList.toggle('side-open', open);
+}
+
 function harnessTabInit() {
   if (!_harnesses.length) harnessLoad().then(_harnessConsoleBuild);
   else _harnessConsoleBuild();

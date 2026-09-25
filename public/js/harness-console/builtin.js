@@ -43,6 +43,7 @@ function _hcBuiltinHtml(h) {
 
       <div class="hc-main">
         <div class="hc-head">
+          <button class="btn btn-xs hc-side-toggle" onclick="hcSideToggle()" title="Conversations, memory and specialists">☰</button>
           <span class="hc-title" id="hc-session-title">${escHtml(h.label)}</span>
           <span class="badge badge-blue" id="hc-model-badge" style="font-size:9px">…</span>
           <span class="ctx-slot" id="hc-context"></span>
