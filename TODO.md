@@ -1652,3 +1652,72 @@ order it is to be done.
     obliges a host to publish its modifications; a commercial licence lets a
     customer host a private build. Settle them together.
 
+## Wanted 2026-09-25 (second pass) — the UI shows the logic it already has
+
+The rule for all three: **one set of operations, two faces.** Every panel a
+person uses is backed by the same operation the agent calls as a tool — the file
+tree is `list_dir`, the editor is `read_file`/`write_file`, the git panel is the
+git tool — so what the user sees and what the agent does cannot drift apart,
+and anything built for one is there for the other.
+
+- **A Projects tab, beside the Harness tab.** The Harness tab stays for work
+  that is not about a codebase. A project (the record in "A project is a work
+  leader with a place to stand") gets a workspace of its own:
+  - **left:** the file tree, rooted at the project, from the Files tab's own
+    tree and editor rather than a second implementation — which means
+    extracting them from `public/js/files.js` (875 lines) into `agent-ui/`-style
+    components first;
+  - **centre:** editor tabs;
+  - **right:** the project's work-leader conversation — the *same* session the
+    Harness tab lists, shown here next to its files, not a copy;
+  - **later panels:** source control in the VS Code manner (changes, diff,
+    stage, commit, branches drawn as a graph); the structure map; contracts.
+  - **Links between files are three different things and are drawn as three:**
+    *imports* (derived from the code, exact — the map), *mentions* (a file named
+    in another file's text or docs, derived, weak), and *contracts* (declared in
+    a plan, HonTabs-style, and checked). Only a project with a contract plan
+    shows the third.
+  - **Mobile:** the tree is a drawer, the editor is full width, the chat floats.
+
+- **A canvas the agent opens, writes into and keeps.** For anything that reads
+  better as a page than as markdown or chat: a served project, an MCP app's UI,
+  a diagram, the map, a small tool the agent made for the task. The chat floats
+  above it. In the transcript it is a distinct chip ("◧ Open canvas: title"),
+  not a link in prose, so a phone shows it as a button. Mobile opens it as a
+  full-screen sheet. Several per conversation, saved with revisions like
+  attachments. The plan/document overlay (`agentDocOpen`) is its ancestor.
+
+  **It must not run on the panel's origin.** Anything on the panel's origin can
+  call `/api/*`, and `/api/*` runs shell commands — an agent-written page, or a
+  served project that pulls in a hostile script, would own the machine.
+  So: a sandboxed `<iframe>` served from a **second origin** (its own port,
+  e.g. `:4243`, no panel cookies, a strict CSP), talking to the panel only by
+  `postMessage` through a short allowlist ("save this", "send to the agent",
+  "open file"). Served projects on `localhost` ports are reached through a
+  preview proxy on that same second origin — which is also what lets a phone on
+  the tailnet see a dev server that only listens on this machine's loopback.
+
+- **Isolated work: hand it to a harness that already isolates.** Where a task
+  should run apart — its own checkout, its own process — the agent starts
+  Claude Code or a similar CLI through the harness catalog (which already lists
+  them) instead of DOCA growing its own isolation. Nothing to build.
+
+- **Settled: `.dBac` is an AES-256 password-protected zip, and it includes
+  everything, settings and keys too.** Supersedes "minus secrets unless asked"
+  above: once the file is encrypted, leaving the keys out only makes restoring
+  harder.
+  - **Library: `@zip.js/zip.js`** (BSD-3-Clause, pure JS, no native build,
+    reads and writes WinZip AES-256). The archive opens in 7-Zip, WinRAR and
+    Keka with the password. **Not ZipCrypto,** the old "classic" zip password,
+    which a known-plaintext attack breaks — and a backup always contains known
+    plaintext (`manifest.json`, `package.json`).
+  - **File *names* are not encrypted by the zip format,** only contents. The
+    names here are DOCA's own store paths, so nothing is learnt from them; if
+    that ever changes, pack the data into one inner archive first.
+  - **Password:** typed at backup time, or remembered in Settings for scheduled
+    backups. Remembered, it is **not** kept in the prefs file — the agent's
+    file tools can reach that (`ISSUES.md` H-19) — but in its own `0600` file
+    outside `FM_ALLOWED_ROOTS`, write-only from the UI: settable and
+    replaceable, never shown again. Restore asks for it. A lost password is a
+    lost backup, and the UI says so before the first one is made.
+
