@@ -231,18 +231,34 @@ const handleRulesVerify = wrap(async (req, res) => {
   const catalogue = proposed.categories.map(c => `- ${c.id}${c.description ? `: ${c.description}` : ''}`).join('\n');
   const listing   = proposed.rules.map((r, i) => `${i + 1}. ${r}`).join('\n');
 
+  // Written to find what would make an assistant act wrongly, not every word a
+  // pedant could question. The first version asked for "rules whose meaning
+  // depends on a judgement" and "a category with no rule about when to use it";
+  // a careful model then listed nearly every rule as unclear and every category
+  // as a gap, although each category's description says what goes in it
+  // (2026-09-25). A review that flags everything tells the owner nothing.
   const system = [
     'You review a short rulebook that another assistant follows when it decides what to write into its',
-    'long-term memory. Judge only the rules as written.',
+    'long-term memory. Read it as that assistant would: capable, in good faith, and using ordinary words in',
+    'their ordinary sense. Your job is to find what would make it act wrongly — not to question every word.',
+    '',
+    'What the assistant already knows, so none of it is a finding:',
+    '- Each category\'s description says what belongs in it. That description is the rule for when to use it.',
+    '- A locked entry is one the user has locked in the panel; the assistant cannot change or remove it.',
+    '- memory_flag marks an entry as doubtful, with a reason, without removing it.',
     '',
     'Report, in this order and nothing else:',
-    'CONFLICTS — pairs of rules that cannot both be followed. Name them by number.',
-    'UNCLEAR — rules whose meaning depends on a judgement the rule does not define, with the wording that is vague.',
-    'GAPS — a category with no rule about when to use it, or a rule referring to a category that is not listed.',
-    'QUESTIONS — up to three questions for the person who owns these rules, each one a question whose answer would',
-    'let a rule be rewritten precisely. Ask nothing you could answer from the rules themselves.',
+    'CONFLICTS — two rules that a realistic situation forces the assistant to choose between. Name both by',
+    'number and the situation, in a few words. A clash that needs a contrived case is not a conflict.',
+    'UNCLEAR — wording that would lead two careful assistants to do different things in a situation that will',
+    'actually come up. Quote the wording and name the situation. A word that ordinary sense settles is fine.',
+    'GAPS — a category with no description, or two whose descriptions overlap so the same fact could go in',
+    'either; a rule that names a category that is not listed; or a common kind of fact that fits no category.',
+    'QUESTIONS — at most three questions for the person who owns these rules, each one whose answer would fix',
+    'a finding above. Ask nothing you could answer from the rules themselves.',
     '',
-    'One line per finding, starting with the rule number. Write "none" under a heading with no findings.',
+    'One line per finding, starting with the rule number or category. Most rulebooks have few real findings:',
+    'write "none" under a heading that has none, and do not add findings to fill one.',
     'Do not rewrite the rules, do not propose replacement text, and do not comment on anything outside them.',
   ].join('\n');
 
