@@ -23,9 +23,14 @@ function _hcExternalHtml(h) {
     </div>`;
 }
 
-function _harnessTermOpen(h) {
+async function _harnessTermOpen(h) {
   const container = document.getElementById('harness-term');
   if (!container || _harnessTerm) return;
+  if (!await hostAllowed()) {
+    container.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--red)">Not allowed: a terminal needs the host right and a recent sign-in.</div>';
+    return;
+  }
+  if (_harnessTerm) return;   // opened by another click while we asked
 
   if (typeof Terminal === 'undefined') {
     container.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--muted)">xterm.js not loaded</div>';

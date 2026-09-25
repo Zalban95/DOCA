@@ -82,6 +82,12 @@ function setup(httpServer) {
   // Route WS upgrades; strip permessage-deflate to avoid RSV1 frame errors with ws@8
   httpServer.on('upgrade', (req, socket, head) => {
     delete req.headers['sec-websocket-extensions'];
+    // Both sockets are a shell on this machine: the "host" right, a recent
+    // sign-in, and this panel's own page (modules/auth/gate.js).
+    if (!require('./auth/gate').upgradeAllowed(req, 'host')) {
+      socket.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+      return;
+    }
     if (req.url === '/ws/terminal') {
       termWss.handleUpgrade(req, socket, head, ws => termWss.emit('connection', ws, req));
     } else if (req.url.startsWith('/ws/harness')) {

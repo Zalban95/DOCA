@@ -10,6 +10,9 @@
 #   ./run.sh use VER    switch to a version (a tag like v2.53.0, or "checkout") —
 #                       the way back when the dashboard itself will not load
 #
+#   ./run.sh setup-code          the code that sets up the first account
+#   ./run.sh reset-password EMAIL  a one-time password for that account (signs it out everywhere)
+#
 # Settings → General → "Start at Boot" drives the same three verbs, so the
 # dashboard and the command line can never drift apart.
 
@@ -120,6 +123,28 @@ versions() {
     }).catch(e => { console.error(e.message); process.exit(1); });'
 }
 
+setup_code() {
+  if [ -f "$DIR/.setup-code" ]; then cat "$DIR/.setup-code"; echo
+  else echo "No setup code: either an account exists already, or the panel has not been opened since it started." >&2; exit 1; fi
+}
+
+# Having a shell on this host is already having everything, so this opens
+# nothing new: it is the way back for an owner who lost their password.
+reset_password() {
+  [ -n "${1:-}" ] || { echo "usage: $0 reset-password <email>" >&2; exit 2; }
+  cd "$DIR" && DOCA_HOME="$DIR" DOCA_DATA_DIR="${DOCA_DATA_DIR:-$DIR/.doca}" node -e '
+    const S = require("./modules/auth/store"), C = require("./modules/auth/credentials");
+    (async () => {
+      const u = S.userByEmail(process.argv[1]);
+      if (!u) { console.error(`No account for ${process.argv[1]}.`); process.exit(1); }
+      const once = C.oneTimePassword();
+      S.updateUser(u.id, { passwordHash: await C.hashPassword(once), mustChangePassword: true, suspendedAt: null });
+      S.deleteSessionsOf(u.id);
+      S.audit({ actorId: null, subjectId: u.id, via: "run.sh", action: "password reset on the host" });
+      console.log(`One-time password for ${u.email}: ${once}\nIt must be replaced at the next sign-in. Every session of this account was signed out.`);
+    })();' "$1"
+}
+
 use_version() {
   [ -n "${1:-}" ] || { echo "usage: $0 use <vX.Y.Z|checkout> [--force]" >&2; exit 2; }
   cd "$DIR" && DOCA_HOME="$DIR" node -e '
@@ -202,5 +227,7 @@ case "${1:-start}" in
   status)  status ;;
   versions) versions ;;
   use)     use_version "${2:-}" "${3:-}" ;;
-  *) echo "usage: $0 [start|enable|disable|status|versions|use VER]" >&2; exit 2 ;;
+  setup-code)     setup_code ;;
+  reset-password) reset_password "${2:-}" ;;
+  *) echo "usage: $0 [start|enable|disable|status|versions|use VER|setup-code|reset-password EMAIL]" >&2; exit 2 ;;
 esac

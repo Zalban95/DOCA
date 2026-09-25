@@ -13,6 +13,7 @@ async function updateCheck() {
   if (el) el.innerHTML = '<span class="placeholder pulse" style="font-size:12px">Checking for updates…</span>';
   versionsLoad();
   backupsLoad();
+  accountLoad();
 
   try {
     const data = await apiFetch('/api/update-check?force=1');

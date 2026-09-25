@@ -371,7 +371,7 @@ test('the agent is told which client asked, and how much answer it can hold', as
 test('the dashboard console tags itself as well, so no turn is anonymous', async () => {
   script = [{ text: 'ok' }];
   const res = await fetch(`${H.base}/api/harness/chat`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: H.owner.cookie, 'Sec-Fetch-Site': 'same-origin' },
     body: JSON.stringify({ message: 'who am I talking from?' }),
   });
   await res.text();

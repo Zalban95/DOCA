@@ -3,6 +3,56 @@
    streamed response written into an element.
    ═══════════════════════════════════════════════════════ */
 
+/* ── Signed in, and staying so ─────────────────────────
+   Every request the page makes goes through here (window.fetch is wrapped
+   once), so a session that ended or a sign-in that is too old for the machine
+   itself is handled in one place rather than as a red error in whichever card
+   happened to ask. See modules/auth/gate.js for the codes. */
+
+// Only in a browser: tests load these scripts into a sandbox with no window.
+const _rawFetch = typeof window !== 'undefined' && window.fetch ? window.fetch.bind(window) : null;
+let _stepUp = null;   // one password prompt at a time, however many requests hit it
+
+function _toLogin() {
+  location.assign(`/login?next=${encodeURIComponent(location.pathname + location.search + location.hash)}`);
+  return new Promise(() => {});   // the page is leaving; nothing after this should run
+}
+
+/** Ask for the password once and renew the recent sign-in. Resolves true when renewed. */
+function _renewSignIn() {
+  if (_stepUp) return _stepUp;
+  _stepUp = new Promise(resolve => {
+    const ask = message => appPrompt(message, async password => {
+      const r = await _rawFetch('/api/auth/step-up', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }) });
+      if (r.ok) return resolve(true);
+      const d = await r.json().catch(() => ({}));
+      ask(`${d.error || 'That did not work.'} Your password:`);
+    }, '', { secret: true });
+    ask('This touches the machine itself, and it has been a while since you signed in. Your password:');
+  }).finally(() => { _stepUp = null; });
+  return _stepUp;
+}
+
+if (_rawFetch) window.fetch = async (input, init) => {
+  const res = await _rawFetch(input, init);
+  if (res.status !== 401 && res.status !== 403) return res;
+  const url = typeof input === 'string' ? input : input?.url || '';
+  if (!url.startsWith('/') || url.startsWith('/api/auth/')) return res;
+  const code = await res.clone().json().then(d => d.code, () => null);
+  if (code === 'unauthenticated' || code === 'setup_required' || code === 'password_change_required') return _toLogin();
+  if (code === 'step_up_required' && await _renewSignIn()) return _rawFetch(input, init);
+  return res;
+};
+
+/**
+ * Before opening a shell socket: a WebSocket cannot ask for the password, so a
+ * host route is asked first and the wrapper above prompts if it has to.
+ */
+async function hostAllowed() {
+  try { return (await fetch('/api/auth/host-check', { cache: 'no-store' })).ok; } catch { return false; }
+}
+
 /**
  * Fetch JSON from the API. Throws on HTTP errors.
  * @param {string} url

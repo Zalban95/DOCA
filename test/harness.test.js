@@ -173,7 +173,7 @@ test('a real specialist turn sends the narrowed prompt on every model request', 
 /** POST to an SSE endpoint and collect the parsed `data:` events. */
 async function stream(path, body) {
   const res = await fetch(H.base + path, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: H.owner.cookie, 'Sec-Fetch-Site': 'same-origin' }, body: JSON.stringify(body),
   });
   const text = await res.text();
   return text.split('\n')
@@ -1710,7 +1710,7 @@ test('both browser chats receive thinking before the provider releases its answe
     const gate = new Promise(resolve => { release = resolve; });
     script = [{ think: 'Checking the inputs.', text: 'Finished.', gate }];
     const res = await fetch((await H.start()) + route, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: H.owner.cookie, 'Sec-Fetch-Site': 'same-origin' },
       body: JSON.stringify({ message: 'live preview check' }), signal: AbortSignal.timeout(5000),
     });
     const reader = res.body.getReader();

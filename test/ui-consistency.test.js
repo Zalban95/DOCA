@@ -17,6 +17,7 @@ const frontend = require('./frontend');
 
 const SOURCES = [
   ['index.html', fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8')],
+  ['login.html', fs.readFileSync(path.join(__dirname, '..', 'public', 'login.html'), 'utf8')],
   ...frontend.files().map(f => [f, frontend.read(f)]),
 ];
 

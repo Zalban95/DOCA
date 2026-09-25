@@ -1570,6 +1570,7 @@ order it is to be done.
   warn. A version that fails its health check within ~60 s of a switch is
   switched back automatically, and `run.sh rollback [version]` works without
   the dashboard — the dashboard being what broke is the case this is for.
+- **Phase 1 built on branch `auth/phase-1` (2026-09-25):** gate + rights table (fail closed, route walk test), setup with a log code, Argon2id, hashed session cookies, step-up at 12 h, same-origin check for every change (replaces `requireBrowser`), audit of every change, rate limiting, WebSockets gated, devices owned by a user and pairing bound to one, `./run.sh setup-code` / `reset-password`, login page, Account card. **Not yet in phase 1:** the Tailscale-identity shortcut (§5), and the harness being told who is asking (§6 — `agent.turn` still gets no user). Phase 2 next: users page, TOTP, pending approvals.
 - **Decided 2026-09-25: `docs/design/auth.md` §8** — Argon2id via hash-wasm; JSON behind a query-shaped store module so a database is one file later; the rest as proposed. Phase 1 in progress. Found while writing it: the dashboard's pairing route is unauthenticated, so anyone who reaches the panel can mint a device token with admin scope; phase 1 closes it.
 - **P1 — authentication: StatENS's model, ported to Node.** Users,
   organisations, memberships with a role and a `pending` state an admin

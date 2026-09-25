@@ -59,54 +59,12 @@ const app = express();
 app.use('/api/v1', apiV1.router);
 
 app.use(express.json({ limit: '50mb' }));
+// Everything below needs a signed-in person with the right for it; unknown routes are refused.
+app.use(require('./modules/auth/gate').gate);
+require('./modules/auth/routes').mount(app);
 app.use(express.static(path.join(__dirname, 'public')));
 
 const uploadMw = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
-
-/**
- * "A human clicked this", for the two routes where that is the whole property.
- *
- * The design says the agent proposes and only a user's click applies. That is
- * the load-bearing invariant of the settings and installs surfaces — and on
- * these two routes it was the *only* thing standing between the agent and
- * applying its own proposal, because legacy `/api/*` has no authentication in
- * front of it at all (ISSUES.md H-7). The agent has `http_fetch`, which takes
- * any URL and any method and cannot set this header, so one tool call used to
- * be enough to accept its own proposal.
- *
- * **This is not a security boundary and must not be described as one.** It
- * closes the tool-layer path — `http_fetch` cannot forge a forbidden header,
- * and nothing in the tool schemas lets an agent set arbitrary request headers —
- * but `shell` can run curl, and curl sets any header it likes. The honest
- * position is the one ISSUES.md already reaches: while an agent has `shell` on
- * this host, the click is a *convention with a speed bump*, not a gate. The
- * real answer is authenticating `/api/*`, which is the same design question
- * that keeps the MCP registry out of `/api/v1`, and much larger than this.
- *
- * What it does buy: the bypass needs deliberate header forgery spelled out in a
- * shell command, rather than being the accidental first thing an agent reaches
- * for. That is worth having even though it is not a boundary, and the comment
- * says so rather than letting the code imply more than it does.
- */
-function requireBrowser(req, res, next) {
-  // Both are set by browsers and neither can be set by page JavaScript.
-  // `Origin` is sent even same-origin; `Sec-Fetch-Site` is belt to its braces.
-  const site   = String(req.get('sec-fetch-site') || '').toLowerCase();
-  const origin = req.get('origin');
-  const sameSite = site === 'same-origin' || site === 'same-site' || site === 'none';
-  if (sameSite) return next();
-  if (origin && origin !== 'null') {
-    try {
-      const host = req.get('host');
-      if (new URL(origin).host === host) return next();
-    } catch { /* a malformed Origin is not a browser's */ }
-  }
-  return res.status(403).json({
-    error: 'This route applies a change and expects a click in the dashboard. Open the panel in a '
-      + 'browser and accept it there.',
-    code: 'browser_only',
-  });
-}
 
 // ─── Routes: Controls ─────────────────────────────────────────────────────────
 app.get ('/api/status',     controls.handleStatus);
@@ -214,21 +172,19 @@ app.delete('/api/harness/custom/:id',   harness.handleRemoveCustom);
 
 // Built-in harness console: one agent turn, its sessions and its memory.
 app.get   ('/api/harness/approval',             harness.handleApproval);
-// Answering a permission question, and changing the mode that asks them, are
-// the clearest cases of "only a user does this" in the whole panel — so they
-// carry the same click convention as applying a proposal. See requireBrowser:
-// it closes the tool-layer path, and is not a boundary while `shell` exists.
-app.post  ('/api/harness/approval',             requireBrowser, harness.handleApprovalMode);
-app.post  ('/api/harness/approvals/:id',        requireBrowser, harness.handleApprovalDecide);
-app.delete('/api/harness/approval/always/:key', requireBrowser, harness.handleApprovalForget);
+// Answering a permission question, and changing the mode that asks them, need
+// the "host" right and a click from the panel's own page (modules/auth/gate.js).
+app.post  ('/api/harness/approval',             harness.handleApprovalMode);
+app.post  ('/api/harness/approvals/:id',        harness.handleApprovalDecide);
+app.delete('/api/harness/approval/always/:key', harness.handleApprovalForget);
 app.post  ('/api/harness/chat',                 harness.handleChat);
 app.get   ('/api/harness/sessions',             harness.handleSessions);
 app.post  ('/api/harness/sessions',             harness.handleSessionNew);
 app.get   ('/api/harness/sessions/:id',         harness.handleSession);
 app.post  ('/api/harness/sessions/:id/activate', harness.handleSessionActivate);
-app.post  ('/api/harness/sessions/:id/archive', requireBrowser, harness.handleSessionArchive);
-app.post  ('/api/harness/sessions/:id/stop', requireBrowser, harness.handleSessionStop);
-app.post  ('/api/harness/sessions/:id/plan', requireBrowser, harness.handlePlan);
+app.post  ('/api/harness/sessions/:id/archive', harness.handleSessionArchive);
+app.post  ('/api/harness/sessions/:id/stop', harness.handleSessionStop);
+app.post  ('/api/harness/sessions/:id/plan', harness.handlePlan);
 app.delete('/api/harness/sessions/:id',         harness.handleSessionDelete);
 app.get   ('/api/harness/prompt',               harness.handlePromptSize);
 app.get   ('/api/harness/memory',               harness.handleMemoryList);
@@ -247,7 +203,7 @@ app.delete('/api/harness/memory/:key',          harness.handleMemoryForget);
 app.get   ('/api/harness/environment',              harness.handleEnvironment);
 app.get   ('/api/harness/settings',                 harness.handleSettingsRead);
 app.get   ('/api/harness/proposals',                harness.handleProposals);
-app.post  ('/api/harness/proposals/:id/apply',      requireBrowser, harness.handleProposalApply);
+app.post  ('/api/harness/proposals/:id/apply',      harness.handleProposalApply);
 app.post  ('/api/harness/proposals/:id/reject',     harness.handleProposalReject);
 app.get   ('/api/harness/agents',                   harness.handleAgents);
 app.post  ('/api/harness/agents/enable',            harness.handleAgentsEnable);
@@ -258,9 +214,9 @@ app.get   ('/api/harness/missions',                 harness.handleMissions);
 app.get   ('/api/harness/missions/:id',             harness.handleMission);
 // A click in the dashboard, like the other routes that change something the
 // agent would otherwise be able to change about its own record.
-app.post  ('/api/harness/missions/:id/archive',     requireBrowser, harness.handleMissionArchive);
+app.post  ('/api/harness/missions/:id/archive',     harness.handleMissionArchive);
 app.get   ('/api/harness/installs',                 harness.handleInstalls);
-app.post  ('/api/harness/installs/:id/apply',       requireBrowser, harness.handleInstallApply);
+app.post  ('/api/harness/installs/:id/apply',       harness.handleInstallApply);
 app.post  ('/api/harness/installs/:id/reject',      harness.handleInstallReject);
 
 // Per-harness routes last: `:id` would otherwise swallow the fixed paths above.

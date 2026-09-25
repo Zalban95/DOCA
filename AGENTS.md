@@ -28,6 +28,12 @@ The harness gives its agent eight rules for working on any repository (charter r
 - **Leave the tree clean:** no stray files, logs or `.bak`s (`write_file` now keeps its backups under `.doca/harness/backups/`), no lockfile churn you did not mean.
 - **The agent proposes, a person decides** — the rule every feature here follows (`settings_propose`, `install_propose`, `work_plan`). A new feature that lets the agent change what governs it without a click is a bug, not a shortcut (`ISSUES.md` H-19).
 
+### Accounts and rights (since phase 1 of docs/design/auth.md)
+- **Every dashboard request passes `modules/auth/gate.js`**: a session cookie, a role holding the route's right, a sign-in within 12 h for `host`/`users`/`org`, and — for anything that changes state — a request from the panel's own page. `/api/v1` keeps its bearer tokens.
+- **A new route needs a row in `modules/auth/rights.js`.** Unmapped routes are refused (`no_rule`), and `test/auth.test.js` walks every route the app registers and fails on one without a row. Decide the right by what the route can *do*: anything that is the machine, or lets the agent act on it (approving tool calls, Auto mode, a specialist's tools), is `host`.
+- **Auth state is read and written only through `modules/auth/store.js`**, whose functions are queries; `test/auth-store.test.js` is its contract, so a database can replace it as one file.
+- **Tests are signed in for you:** `H.start()` makes an owner and `H.api()` sends their cookie; `H.signIn('member')` makes someone else; `{ Cookie: '' }` makes a call as nobody. A test that `fetch`es directly must send `H.owner.cookie`.
+
 ### Running
 - Dev: `npm run dev` (uses `node --watch server.js` for hot reload). Prod-style: `npm start`, or `./run.sh` which also installs deps on first run and sources `.env`.
 - `./run.sh enable|disable|status` manages the systemd unit `openclaw-panel.service`. **Settings → General → Start at Boot** calls the same script through `/api/startup`, so change the behaviour in `run.sh`, not in two places. Neither works in a container or any host without systemd — `/api/startup` reports `supported: false` with a reason and the toggle greys itself out, which is expected, not a bug.

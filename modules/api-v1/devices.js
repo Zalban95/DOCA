@@ -223,6 +223,9 @@ function update(id, patch) {
   if (patch.scopes !== undefined) rec.scopes = normalizeAll(patch.scopes);
   if (patch.caps !== undefined)   rec.caps = normalizeCaps({ ...rec.caps, ...patch.caps, ext: { ...(rec.caps.ext || {}), ...(patch.caps.ext || {}) } });
   if (patch.expiresAt !== undefined) rec.expiresAt = patch.expiresAt || null;
+  // Whose device it is (docs/design/auth.md): set when accounts arrive, and at pairing.
+  if (patch.userId !== undefined) rec.userId = patch.userId || null;
+  if (patch.orgId !== undefined)  rec.orgId = patch.orgId || null;
   persist();
   return publicView(rec);
 }
@@ -247,11 +250,11 @@ function patchVars(id, patch) {
 
 const _pairings = new Map();
 
-function startPairing({ name, scopes, expiresAt, kind, createdBy }) {
+function startPairing({ name, scopes, expiresAt, kind, createdBy, userId = null, orgId = null }) {
   for (const [code, p] of _pairings) if (p.expiresAt < Date.now()) _pairings.delete(code);
   let code;
   do { code = String(crypto.randomInt(0, 1e6)).padStart(6, '0'); } while (_pairings.has(code));
-  const rec = { code, name, scopes: normalizeAll(scopes), tokenExpiresAt: expiresAt || null, kind, createdBy,
+  const rec = { code, name, scopes: normalizeAll(scopes), tokenExpiresAt: expiresAt || null, kind, createdBy, userId, orgId,
                 expiresAt: Date.now() + L.PAIR_CODE_TTL_SEC * 1000 };
   _pairings.set(code, rec);
   return { code: `${code.slice(0, 3)}-${code.slice(3)}`, expiresAt: new Date(rec.expiresAt).toISOString(), scopes: rec.scopes, name };
@@ -262,7 +265,9 @@ function completePairing(codeInput, caps, nameOverride) {
   const p = _pairings.get(code);
   if (!p || p.expiresAt < Date.now()) { _pairings.delete(code); return null; }
   _pairings.delete(code);
-  return create({ name: nameOverride || p.name, scopes: p.scopes, caps, expiresAt: p.tokenExpiresAt, kind: p.kind });
+  const made = create({ name: nameOverride || p.name, scopes: p.scopes, caps, expiresAt: p.tokenExpiresAt, kind: p.kind });
+  if (p.userId) made.device = update(made.device.id, { userId: p.userId, orgId: p.orgId });
+  return made;
 }
 
 module.exports = {

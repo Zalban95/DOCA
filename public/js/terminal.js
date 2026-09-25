@@ -83,12 +83,13 @@ function termCloseSession(id) {
   _termUpdateCount();
 }
 
-function _termSessionConnect(id) {
+async function _termSessionConnect(id) {
   const session  = _termSessions.find(s => s.id === id);
   if (!session) return;
 
   const statusEl = document.getElementById(`term-st-${id}`);
   const setSt    = (t, c) => { if (statusEl) { statusEl.textContent = t; statusEl.style.color = c; } };
+  if (!await hostAllowed()) return setSt('not allowed — needs the host right and a recent sign-in', 'var(--red)');
 
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const ws    = new WebSocket(`${proto}//${location.host}/ws/terminal`);

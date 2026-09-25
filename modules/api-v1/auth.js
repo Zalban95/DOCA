@@ -18,6 +18,11 @@ function authenticate(opts = {}) {
     if (!token) return sendError(res, 401, 'unauthenticated', 'Missing bearer token', { hint: 'Authorization: Bearer doca_<device>.<secret>' });
     const device = devices.authenticate(token);
     if (!device) return sendError(res, 401, 'invalid_token', 'Token is unknown, expired or revoked');
+    // A device belongs to a person: suspending them silences it.
+    if (device.userId) {
+      const owner = require('../auth/store').userById(device.userId);
+      if (!owner || owner.suspendedAt) return sendError(res, 401, 'invalid_token', 'This device\'s account is suspended');
+    }
     req.device = device;
     req.clientInfo = String(req.headers['x-doca-client'] || '').slice(0, 64) || null;
     next();

@@ -120,6 +120,8 @@ async function handlePairStart(req, res) {
     expiresAt: expiresAt || null,
     kind: preset === 'agent' ? 'agent' : 'device',
     createdBy: 'dashboard',
+    // The device belongs to whoever paired it (docs/design/auth.md).
+    userId: req.auth?.user.id || null, orgId: req.auth?.orgId || null,
   });
 
   const host = req.headers.host || '';

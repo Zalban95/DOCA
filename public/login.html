@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-brand="panel">DOCA Panel</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<style>
+  /* Only the page's own layout; every control is the panel's own class. */
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; box-sizing: border-box; }
+  .login { width: 100%; max-width: 380px; }
+  .login-brand { font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 0.25em; text-transform: uppercase;
+                 color: var(--accent); margin-bottom: 14px; text-align: center; }
+  .login form { display: flex; flex-direction: column; }
+  .login .btn { width: 100%; justify-content: center; margin-top: 4px; }
+  .login-note { font-size: 11px; color: var(--muted); margin: 0 0 12px; line-height: 1.5; }
+  .login-warn { font-size: 11px; color: var(--amber); margin: 0 0 12px; }
+</style>
+</head>
+<body>
+<main class="login">
+  <div class="login-brand" data-brand="panel">DOCA Panel</div>
+
+  <!-- First run: the owner, with the code from the server log -->
+  <div class="card" id="setup-card" hidden>
+    <div class="card-title">Set up the owner</div>
+    <p class="login-note">
+      No account exists yet. The first one owns this panel and everything already in it.
+      The setup code is in the server log — or run <code>./run.sh setup-code</code> on the host.
+    </p>
+    <form id="setup-form">
+      <div class="field"><label class="input-label" for="setup-code">Setup code</label>
+        <input class="input" id="setup-code" autocomplete="one-time-code" required></div>
+      <div class="field"><label class="input-label" for="setup-name">Name</label>
+        <input class="input" id="setup-name" autocomplete="name"></div>
+      <div class="field"><label class="input-label" for="setup-email">Email</label>
+        <input class="input" id="setup-email" type="email" autocomplete="username" required></div>
+      <div class="field"><label class="input-label" for="setup-password">Password (10 characters or more)</label>
+        <input class="input" id="setup-password" type="password" autocomplete="new-password" required></div>
+      <div class="field"><label class="input-label" for="setup-password2">Password again</label>
+        <input class="input" id="setup-password2" type="password" autocomplete="new-password" required></div>
+      <button class="btn btn-sm btn-teal" type="submit">Create the owner</button>
+    </form>
+  </div>
+
+  <!-- Signing in -->
+  <div class="card" id="login-card" hidden>
+    <div class="card-title">Sign in</div>
+    <p class="login-warn" id="login-insecure" hidden>This connection is not encrypted.</p>
+    <form id="login-form">
+      <div class="field"><label class="input-label" for="login-email">Email</label>
+        <input class="input" id="login-email" type="email" autocomplete="username" required></div>
+      <div class="field"><label class="input-label" for="login-password">Password</label>
+        <input class="input" id="login-password" type="password" autocomplete="current-password" required></div>
+      <button class="btn btn-sm btn-teal" type="submit">Sign in</button>
+    </form>
+  </div>
+
+  <!-- An account someone else made: its own password first -->
+  <div class="card" id="change-card" hidden>
+    <div class="card-title">Choose your password</div>
+    <p class="login-note">This account was made with a one-time password. Replace it to continue.</p>
+    <form id="change-form">
+      <div class="field"><label class="input-label" for="change-current">One-time password</label>
+        <input class="input" id="change-current" type="password" autocomplete="current-password" required></div>
+      <div class="field"><label class="input-label" for="change-password">New password (10 characters or more)</label>
+        <input class="input" id="change-password" type="password" autocomplete="new-password" required></div>
+      <button class="btn btn-sm btn-teal" type="submit">Save and continue</button>
+    </form>
+  </div>
+
+  <span class="status-line" id="login-status" style="display:block;margin-top:10px;text-align:center"></span>
+</main>
+<script src="js/login.js"></script>
+</body>
+</html>

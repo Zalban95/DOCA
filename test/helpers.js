@@ -11,6 +11,9 @@ const path = require('path');
 const http = require('http');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-test-'));
+// Home too, unless a test set its own: setup codes, backups and release state live there,
+// and a test must never write them into the checkout.
+process.env.DOCA_HOME = process.env.DOCA_HOME || tmp;
 process.env.DOCA_DATA_DIR  = path.join(tmp, 'data');
 process.env.DOCA_PREFS_FILE = path.join(tmp, 'prefs.json');
 process.env.CONFIG_PATH    = path.join(tmp, 'openclaw.json');
@@ -35,7 +38,25 @@ async function start() {
   server = http.createServer(createApp());
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   base = `http://127.0.0.1:${server.address().port}`;
+  if (!owner) owner = await signIn('owner', 'owner@test.local');
   return base;
+}
+
+/**
+ * The dashboard needs a signed-in person (docs/design/auth.md). Every test
+ * process gets an owner, signed in once; `api()` sends their cookie unless the
+ * call carries a bearer token or passes `{ Cookie: '' }` to be nobody.
+ * `signIn(role)` makes another person, for tests about what a role may do.
+ */
+let owner = null;
+async function signIn(role, email = `${role}-${Math.random().toString(36).slice(2, 8)}@test.local`) {
+  const authStore = require('../modules/auth/store');
+  const credentials = require('../modules/auth/credentials');
+  const org = authStore.defaultOrg() || authStore.createOrg('Test');
+  const user = authStore.createUser({ email, name: role, passwordHash: await credentials.hashPassword('test-password-1') });
+  authStore.addMembership({ orgId: org.id, userId: user.id, role, status: 'active' });
+  const token = credentials.startSession({ user, orgId: org.id });
+  return { user, orgId: org.id, role, cookie: `${credentials.COOKIE}=${token}`, password: 'test-password-1' };
 }
 
 async function stop() {
@@ -56,7 +77,7 @@ async function stop() {
  * strip it — which is what a tool call or a bare curl looks like.
  */
 async function api(token, method, p, body, headers = {}) {
-  const h = { 'Sec-Fetch-Site': 'same-origin', ...headers };
+  const h = { 'Sec-Fetch-Site': 'same-origin', ...(token || !owner ? {} : { Cookie: owner.cookie }), ...headers };
   for (const [k, v] of Object.entries(h)) if (v === '') delete h[k];
   if (token) h.Authorization = `Bearer ${token}`;
   let payload;
@@ -140,4 +161,4 @@ const PHONE_CAPS = { formFactor: 'phone', screen: { w: 1080, h: 2400 }, input: {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-module.exports = { start, stop, api, sse, mkDevice, WATCH_CAPS, PHONE_CAPS, sleep, tmp, get base() { return base; } };
+module.exports = { start, stop, api, sse, signIn, get owner() { return owner; }, mkDevice, WATCH_CAPS, PHONE_CAPS, sleep, tmp, get base() { return base; } };

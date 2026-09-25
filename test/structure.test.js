@@ -28,7 +28,7 @@ const CEILING = 400;
  */
 const OVER = {
   'modules/harness/agent.js':      433,  // runTurn alone is 320 lines: next, split the turn's steps
-  'public/index.html':            1536,  // + the split scripts' <script> tags; ES modules take them back out
+  'public/index.html':            1537,  // + the split scripts' <script> tags; ES modules take them back out
   'public/css/components.css':    1171,
   'public/js/chat.js':             986,
   'public/js/files.js':            875,
@@ -40,7 +40,7 @@ const OVER = {
   'modules/agents/missions.js':    496,
   'modules/api-v1/prompts.js':     467,
   'public/js/markdown.js':         462,
-  'server.js':                     402,
+  'server.js':                     358,
   'modules/harness/budget.js':     424,
   'modules/chat.js':               412,
 };
@@ -100,7 +100,9 @@ test('no two front-end files define the same global', () => {
 });
 
 test('every script the page loads exists, and every script that exists is loaded', () => {
-  const loaded = frontend.scripts();
+  // index.html loads the app; login.html loads only its own script.
+  const loginPage = fs.readFileSync(path.join(ROOT, 'public', 'login.html'), 'utf8');
+  const loaded = [...frontend.scripts(), ...[...loginPage.matchAll(/<script src="js\/([^"]+)"><\/script>/g)].map(m => m[1])];
   const onDisk = frontend.files();
   assert.deepEqual(loaded.filter(f => !onDisk.includes(f)), [], 'index.html loads a file that is not there');
   assert.deepEqual(onDisk.filter(f => !loaded.includes(f)), [], 'a front-end file nothing loads');

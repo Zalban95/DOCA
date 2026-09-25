@@ -146,6 +146,25 @@ update. Without a supervisor DOCA detects that and spawns its own detached succe
 (its boot output goes to `.doca/restart.log`), but letting systemd own the lifecycle is more
 reliable: it also recovers the panel after a crash or a reboot.
 
+### Accounts
+
+The panel needs a signed-in person. Design and the reasons: `docs/design/auth.md`.
+
+- **First start:** opening the panel shows *Set up the owner*. The setup code is in the server
+  log, or run `./run.sh setup-code` on the host — being on the tailnet is not enough to claim the
+  panel. The owner owns everything that already exists, devices included.
+- **Roles:** viewer (look), member (and talk to the harness), admin (and the machine: shell,
+  terminal, files, Docker, VMs, models, MCP, keys; applying proposals; devices; users), owner (and
+  backups, versions, update, restart). A route with no rule is refused.
+- **The machine itself asks for the password again** when the last sign-in is more than 12 hours
+  old, and the panel prompts for it in place.
+- **Sessions** are an HttpOnly, SameSite=Strict cookie holding a random token; only its SHA-256 is
+  stored. Passwords are Argon2id (the same format and parameters as StatENS). Every change made
+  through the dashboard is written to `.doca/auth/audit.jsonl` with who made it.
+- **Locked out:** `./run.sh reset-password <email>` on the host prints a one-time password.
+- Paired devices keep their tokens and now belong to a person; suspending the person silences
+  their devices.
+
 ### Backups (`.dBac`)
 
 **Settings → Backups → ⬇ Back up now** writes everything this install is into one `.dBac` file in
