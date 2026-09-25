@@ -15,3 +15,5 @@ node_modules/
 /dashboard.log
 /debug-*.log
 /.releases/
+/backups/
+/.backup-password

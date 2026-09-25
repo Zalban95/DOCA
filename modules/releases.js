@@ -324,4 +324,4 @@ async function latest() {
   return out.split('\n').filter(t => TAG.test(t)).sort((a, b) => cmpVersion(b, a))[0] || null;
 }
 
-module.exports = { latest, list, install, use, refusal, current, running, history, prune, mount, cmpVersion, CHECKOUT, DIR, HOME, MENU_SINCE };
+module.exports = { restartSelf, latest, list, install, use, refusal, current, running, history, prune, mount, cmpVersion, CHECKOUT, DIR, HOME, MENU_SINCE };

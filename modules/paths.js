@@ -78,6 +78,12 @@ const PORT            = process.env.PORT            || 4242;
 // Self-signed certificate directory
 const CERTS_DIR = path.join(HOME_DIR, '.certs');
 
+// Backups: where they are written, and the one file that remembers their password.
+const BACKUP_DIR           = process.env.DOCA_BACKUP_DIR || path.join(HOME_DIR, 'backups');
+const BACKUP_PASSWORD_FILE = path.join(HOME_DIR, '.backup-password');
+// Paths the agent's file tools refuse even inside the allowed roots.
+const PROTECTED_FILES = [BACKUP_PASSWORD_FILE];
+
 // Setup scripts the UI may read/write/run — the Setup panel's list, and the
 // whole of it.
 const ALLOWED_SCRIPTS = ['setup-openclaw.sh', 'setup-phase2.sh', 'snapshot-agent.sh', 'restore-agent.sh'];
@@ -190,6 +196,9 @@ module.exports = {
   CONFIG_REGISTRY,
   FM_ALLOWED_ROOTS,
   HOME_DIR,
+  BACKUP_DIR,
+  BACKUP_PASSWORD_FILE,
+  PROTECTED_FILES,
   ALLOWED_SCRIPTS,
   SCRIPT_CONFIG,
   SETTABLE,

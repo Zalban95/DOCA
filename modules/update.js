@@ -343,4 +343,13 @@ function handleRestart(_req, res) {
   setTimeout(() => process.exit(0), 500);
 }
 
-module.exports = { handleUpdateCheck, handleUpdate, handleRestart, supervisorName, fetchLatestTag, parseLsRemote, highest, compareSemver };
+/** The panel's own lifecycle routes: update, restart, versions, backups. */
+function mount(app) {
+  app.get ('/api/update-check', handleUpdateCheck);
+  app.post('/api/update',       handleUpdate);
+  app.post('/api/restart',      handleRestart);
+  require('./releases').mount(app);          // /api/versions: roll back or forward
+  require('./backup/routes').mount(app);     // /api/backups: .dBac
+}
+
+module.exports = { mount, handleUpdateCheck, handleUpdate, handleRestart, supervisorName, fetchLatestTag, parseLsRemote, highest, compareSemver };

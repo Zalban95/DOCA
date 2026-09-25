@@ -324,10 +324,7 @@ app.get ('/api/system/tools',         systemTools.handleList);
 app.post('/api/system/tools/install', systemTools.handleInstall);
 
 // ─── Routes: Update ──────────────────────────────────────────────────────────
-app.get ('/api/update-check', update.handleUpdateCheck);
-app.post('/api/update',       update.handleUpdate);
-app.post('/api/restart',      update.handleRestart);
-require('./modules/releases').mount(app);   // /api/versions: roll back or forward
+update.mount(app);   // update, restart, /api/versions, /api/backups
 
 // ─── Routes: Start at boot ────────────────────────────────────────────────────
 app.get ('/api/startup', startup.handleStatus);

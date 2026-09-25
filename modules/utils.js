@@ -6,7 +6,7 @@ const os   = require('os');
 const path = require('path');
 const shell = require('./shell');
 
-const { COMPOSE_DIR, CONFIG_PATH, PREFS_FILE, FM_ALLOWED_ROOTS } = require('./paths');
+const { COMPOSE_DIR, CONFIG_PATH, PREFS_FILE, FM_ALLOWED_ROOTS, PROTECTED_FILES } = require('./paths');
 
 /** Run a shell command and return { stdout, stderr }. Rejects on non-zero exit. */
 function run(cmd, cwd) {
@@ -32,9 +32,13 @@ function sseHeaders(res) {
   res.flushHeaders();
 }
 
-/** Return true if the resolved path falls within an allowed root. */
+/** Return true if the resolved path falls within an allowed root, and is not a protected file. */
 function fmSafe(p) {
   const abs = path.resolve(p);
+  // By its real path too: a symlink made to a protected file is the same file.
+  let real = abs;
+  try { real = fs.realpathSync(abs); } catch {}
+  if (PROTECTED_FILES.some(f => { const r = path.resolve(f); return r === abs || r === real; })) return false;
   // `root + '/'` was a Unix assumption, and the machine this is developed on is
   // Windows: every absolute path there is separated by `\`, so nothing but a root
   // itself ever passed and the file tools refused the whole disk. Compare with

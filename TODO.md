@@ -1704,6 +1704,7 @@ and anything built for one is there for the other.
   Claude Code or a similar CLI through the harness catalog (which already lists
   them) instead of DOCA growing its own isolation. Nothing to build.
 
+- **Done in 2.55.0:** `.dBac` backups — Settings → Backups, `modules/backup/`, password on/off, saved password, upload, verified all-or-nothing restore with a safety backup, the data-format check. Not yet: **scheduled** backups (the saved password exists for them) and a retention count; migrations (`restore.js` → `MIGRATIONS`) are empty because there has only been format 1. AES interoperability with 7-Zip was not checked on this host (no 7z installed); the open format was, with Python's zipfile.
 - **Settled: `.dBac` is an AES-256 password-protected zip, and it includes
   everything, settings and keys too.** Supersedes "minus secrets unless asked"
   above: once the file is encrypted, leaving the keys out only makes restoring

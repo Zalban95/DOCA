@@ -12,6 +12,7 @@ async function updateCheck() {
   if (btn) btn.disabled = true;
   if (el) el.innerHTML = '<span class="placeholder pulse" style="font-size:12px">Checking for updates…</span>';
   versionsLoad();
+  backupsLoad();
 
   try {
     const data = await apiFetch('/api/update-check?force=1');

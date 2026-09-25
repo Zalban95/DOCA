@@ -146,6 +146,28 @@ update. Without a supervisor DOCA detects that and spawns its own detached succe
 (its boot output goes to `.doca/restart.log`), but letting systemd own the lifecycle is more
 reliable: it also recovers the panel after a crash or a reboot.
 
+### Backups (`.dBac`)
+
+**Settings → Backups → ⬇ Back up now** writes everything this install is into one `.dBac` file in
+`backups/` (`DOCA_BACKUP_DIR` to move it): conversations, memory, devices and media (`.doca/`),
+the prefs file, `.env`, the provider API keys (`openclaw.json`), specialist definitions and
+attachments. Certificates are left out — they belong to the machine and are made again.
+
+- **Password or not is your choice.** On by default: an AES-256 zip (WinZip AES), which 7-Zip,
+  WinRAR and Keka open with the password — never the old ZipCrypto, which a backup's known
+  contents would break. Turned off, the backup is a plain zip carrying every key and conversation
+  in the clear, and the panel says so before you do it. File *names* inside a zip are not
+  encrypted, only contents.
+- **A saved password** (optional) is kept in `.backup-password`, mode 0600, never in the prefs
+  file and never shown again. The agent's file tools refuse it, symlinks included; its shell runs
+  as the same user and could still read it. Without a saved one you are asked each time.
+- **Restore** checks the password, then the data format — a backup from a newer DOCA is refused
+  and names the version that can read it — then unpacks every section beside its target and
+  verifies each file's checksum. Only then does it back up the current state
+  (`…-before-restore.dBac`), swap everything in (all or nothing) and restart DOCA.
+- **Another machine's backup:** ⬆ Upload it, then Restore. Each section goes to *this* machine's
+  paths, whatever they are called.
+
 ### Rolling back to another version
 
 **Settings → Updates → Version** lists every release tag with the date it was released and the date
@@ -490,6 +512,7 @@ modules/                    Backend feature modules (one per concern)
   docker.js                 Docker containers / images / presets
   services.js               Inference service management (incl. image-presence check)
   update.js                 Self-update / restart
+  backup/                   .dBac: archive.js (make/read/verify), restore.js (all-or-nothing), secret.js (password choice), routes.js
   releases.js               Versions side by side: list, install as worktrees, switch (Settings → Updates → Version)
   listen.js                 Who may connect: loopback + tailnet by default (DOCA_LISTEN)
   startup.js                Start at boot — reports and drives run.sh enable/disable

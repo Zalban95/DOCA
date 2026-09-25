@@ -7,8 +7,9 @@
  * @param {string} message
  * @param {Function} onSubmit - called with the entered string
  * @param {string} [defaultValue]
- * @param {{ allowEmpty?: boolean }} [opts] - `allowEmpty` for a prompt whose
- *   answer is optional, where OK doing nothing would look broken
+ * @param {{ allowEmpty?: boolean, secret?: boolean }} [opts] - `allowEmpty` for a prompt whose
+ *   answer is optional, where OK doing nothing would look broken; `secret` for a
+ *   password: masked, not trimmed, and wiped from the field when the modal closes
  */
 function appPrompt(message, onSubmit, defaultValue, opts = {}) {
   const modal = document.getElementById('app-prompt-modal');
@@ -19,19 +20,21 @@ function appPrompt(message, onSubmit, defaultValue, opts = {}) {
   if (!modal) { const v = prompt(message, defaultValue || ''); if (v !== null) onSubmit(v); return; }
 
   msgEl.textContent = message;
+  input.type  = opts.secret ? 'password' : 'text';
   input.value = defaultValue || '';
   modal.classList.add('open');
   setTimeout(() => { input.focus(); input.select(); }, 50);
 
   const cleanup = () => {
     modal.classList.remove('open');
+    if (opts.secret) { input.value = ''; input.type = 'text'; }
     btnOk.onclick = null;
     btnCan.onclick = null;
     input.onkeydown = null;
   };
 
   const submit = () => {
-    const val = input.value.trim();
+    const val = opts.secret ? input.value : input.value.trim();
     if (!val && !opts.allowEmpty) return;
     cleanup();
     onSubmit(val);
