@@ -31,10 +31,10 @@
     <div class="card-title">Set up the owner</div>
     <p class="login-note">
       No account exists yet. The first one owns this panel and everything already in it.
-      The setup code is in the server log — or run <code>./run.sh setup-code</code> on the host.
+      <span id="setup-where"></span>
     </p>
     <form id="setup-form">
-      <div class="field"><label class="input-label" for="setup-code">Setup code</label>
+      <div class="field" id="setup-code-field"><label class="input-label" for="setup-code">Setup code</label>
         <input class="input" id="setup-code" autocomplete="one-time-code" required></div>
       <div class="field"><label class="input-label" for="setup-name">Name</label>
         <input class="input" id="setup-name" autocomplete="name"></div>

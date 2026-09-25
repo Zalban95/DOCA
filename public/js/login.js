@@ -37,7 +37,15 @@ async function start() {
   let s;
   try { s = await fetch('/api/auth/state').then(r => r.json()); }
   catch (e) { return say(`Cannot reach the panel: ${e.message}`, 'err'); }
-  if (s.needsSetup) return show('setup-card');
+  if (s.needsSetup) {
+    // At the machine itself no code is asked for; from anywhere else it is.
+    $('setup-code-field').hidden = !s.codeNeeded;
+    $('setup-code').required = s.codeNeeded;
+    $('setup-where').textContent = s.codeNeeded
+      ? 'The setup code is in the server log — or run ./run.sh setup-code on the host.'
+      : 'You are at the machine itself, so no setup code is needed.';
+    return show('setup-card');
+  }
   if (s.signedIn && s.user.mustChangePassword) return show('change-card');
   if (s.signedIn) return location.replace(nextUrl());
   $('login-insecure').hidden = s.secure;

@@ -150,9 +150,10 @@ reliable: it also recovers the panel after a crash or a reboot.
 
 The panel needs a signed-in person. Design and the reasons: `docs/design/auth.md`.
 
-- **First start:** opening the panel shows *Set up the owner*. The setup code is in the server
-  log, or run `./run.sh setup-code` on the host — being on the tailnet is not enough to claim the
-  panel. The owner owns everything that already exists, devices included.
+- **First start:** opening the panel shows *Set up the owner*. In a browser on the machine itself
+  (`https://localhost:4242`) that is all. From any other device the setup code is asked for too —
+  it is in the server log, or run `./run.sh setup-code` on the host — so being on the tailnet is
+  not enough to claim the panel. The owner owns everything that already exists, devices included.
 - **Roles:** viewer (look), member (and talk to the harness), admin (and the machine: shell,
   terminal, files, Docker, VMs, models, MCP, keys; applying proposals; devices; users), owner (and
   backups, versions, update, restart). A route with no rule is refused.

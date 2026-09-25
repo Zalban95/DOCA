@@ -50,20 +50,41 @@ test('with no accounts, nothing answers but the login page and setup', async () 
   assert.equal((await call('GET', '/css/base.css')).status, 200, 'and its styles');
   const state = await call('GET', '/api/auth/state');
   assert.equal(state.body.needsSetup, true);
+  assert.equal(state.body.codeNeeded, false, 'at the machine itself, no code');
+  const remote = await call('GET', '/api/auth/state', { headers: { 'X-Forwarded-For': '100.102.108.110' } });
+  assert.equal(remote.body.codeNeeded, true, 'from anywhere else, the code');
 });
 
-test('setup needs the code from the log, and makes the owner of everything that exists', async () => {
+test('who counts as "at the machine": loopback, a loopback host, and nothing forwarded', () => {
+  const at = (remoteAddress, host, headers = {}) => authRoutes.atTheMachine({ socket: { remoteAddress }, headers: { host, ...headers } });
+  assert.equal(at('127.0.0.1', '127.0.0.1:4242'), true);
+  assert.equal(at('::1', '[::1]:4242'), true);
+  assert.equal(at('::ffff:127.0.0.1', 'localhost:4242'), true);
+  assert.equal(at('100.102.108.110', '100.115.89.4:4242'), false, 'a tailnet device');
+  assert.equal(at('127.0.0.1', 'al-office-desk.tail08f157.ts.net'), false, 'tailscale serve: loopback, but asked for the ts.net name');
+  assert.equal(at('127.0.0.1', 'localhost:4242', { 'x-forwarded-for': '100.1.2.3' }), false, 'forwarded by a proxy');
+  assert.equal(at('127.0.0.1', 'localhost:4242', { 'tailscale-user-login': 'x@y' }), false);
+});
+
+test('from elsewhere, setup needs the code from the log', async () => {
+  const away = { 'X-Forwarded-For': '100.102.108.110' };
+  const code = fs.readFileSync(authRoutes.SETUP_FILE, 'utf8');
+  for (const tried of [undefined, 'nope']) {
+    const r = await call('POST', '/api/auth/setup', { headers: away, body: { code: tried, email: 'a@b.c', password: 'long enough pw' } });
+    assert.equal(r.body.code, 'bad_setup_code');
+  }
+  assert.equal(authStore.userCount(), 0);
+  assert.ok(code.length >= 12);
+});
+
+test('at the machine, setup needs no code, and makes the owner of everything that exists', async () => {
   const device = H.mkDevice('Old phone', 'phone');                 // paired before accounts existed
   const code = fs.readFileSync(authRoutes.SETUP_FILE, 'utf8');
 
-  const wrong = await call('POST', '/api/auth/setup', { body: { code: 'nope', email: 'a@b.c', password: 'long enough pw' } });
-  assert.equal(wrong.status, 403);
-  assert.equal(authStore.userCount(), 0);
-
-  const weak = await call('POST', '/api/auth/setup', { body: { code, email: 'owner@x.test', password: 'short' } });
+  const weak = await call('POST', '/api/auth/setup', { body: { email: 'owner@x.test', password: 'short' } });
   assert.equal(weak.body.code, 'weak_password');
 
-  const ok = await call('POST', '/api/auth/setup', { body: { code, email: 'Owner@X.test', name: 'Owner', password: 'the owner password' } });
+  const ok = await call('POST', '/api/auth/setup', { body: { email: 'Owner@X.test', name: 'Owner', password: 'the owner password' } });
   assert.equal(ok.status, 200);
   assert.equal(ok.body.user.role, 'owner');
   assert.equal(ok.body.user.email, 'owner@x.test', 'addresses are kept lower-case');
@@ -74,6 +95,7 @@ test('setup needs the code from the log, and makes the owner of everything that 
   assert.equal(fs.existsSync(authRoutes.SETUP_FILE), false, 'the code is spent');
   assert.equal(require('../modules/api-v1/devices').get(device.device.id).userId, ok.body.user.id, 'existing devices are the owner\'s');
   assert.equal((await call('POST', '/api/auth/setup', { body: { code, email: 'x@y.z', password: 'another long pw' } })).status, 409);
+  assert.match(authStore.auditTail(10).find(e => e.action === 'setup').detail, /at the machine/);
 
   const stored = authStore.userByEmail('owner@x.test');
   assert.match(stored.passwordHash, /^\$argon2id\$v=19\$m=65536,t=3,p=4\$/, 'StatENS\'s parameters and format');

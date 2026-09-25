@@ -37,6 +37,28 @@ function setupCode() {
   return code;
 }
 
+/**
+ * A browser on this machine, not one that reached it through something.
+ *
+ * Setting up the owner needs the logged code from anywhere else — another
+ * device on the tailnet must not be able to claim the panel first — but not
+ * from the machine itself: whoever can open `localhost` there is at the desk,
+ * or is a program already running as this user, and before the owner exists
+ * nothing can start an agent turn (every harness route needs a session).
+ *
+ * All three must hold, because `tailscale serve` proxies from 127.0.0.1: the
+ * connection comes from loopback, the browser asked for a loopback host (a
+ * proxied request asks for the ts.net name), and nothing says it was forwarded.
+ */
+function atTheMachine(req) {
+  const plain = a => String(a || '').replace(/^::ffff:/, '');
+  const from = plain(req.socket?.remoteAddress);
+  if (!(from === '::1' || /^127\./.test(from))) return false;
+  const host = String(req.headers.host || '').replace(/:\d+$/, '').replace(/^\[|\]$/g, '').toLowerCase();
+  if (!['localhost', '127.0.0.1', '::1'].includes(host)) return false;
+  return !['x-forwarded-for', 'x-forwarded-host', 'forwarded', 'tailscale-user-login'].some(h => req.headers[h]);
+}
+
 const same = (a, b) => {
   const x = Buffer.from(String(a)), y = Buffer.from(String(b));
   return x.length === y.length && crypto.timingSafeEqual(x, y);
@@ -75,9 +97,10 @@ function me(auth) {
 /** GET — what the login page should show. */
 function handleState(req, res) {
   const needsSetup = authStore.userCount() === 0;
-  if (needsSetup) setupCode();
+  const codeNeeded = needsSetup && !atTheMachine(req);
+  if (codeNeeded) setupCode();
   const who = needsSetup ? null : credentials.resolve(req);
-  res.json({ needsSetup, signedIn: !!who, user: who ? me(who) : null, secure: secure(req) });
+  res.json({ needsSetup, codeNeeded, signedIn: !!who, user: who ? me(who) : null, secure: secure(req) });
 }
 
 /** POST { code, email, name, password } — the first account, which owns everything that exists. */
@@ -85,7 +108,8 @@ async function handleSetup(req, res) {
   try {
     if (authStore.userCount() > 0) throw Object.assign(new Error('The owner is already set up. Sign in instead.'), { status: 409 });
     const { code, email, name, password } = req.body || {};
-    if (!same(String(code || '').trim(), setupCode()))
+    const local = atTheMachine(req);
+    if (!local && !same(String(code || '').trim(), setupCode()))
       throw Object.assign(new Error('That setup code is not right. It is in the server log, or run ./run.sh setup-code on the host.'), { status: 403, code: 'bad_setup_code' });
     credentials.checkNewPassword(password);
     const org = authStore.defaultOrg() || authStore.createOrg(require('../branding').name('product'));
@@ -93,7 +117,8 @@ async function handleSetup(req, res) {
     authStore.addMembership({ orgId: org.id, userId: user.id, role: 'owner', status: 'active' });
     const moved = claimDevices(org.id, user.id);
     fs.rmSync(SETUP_FILE, { force: true });
-    authStore.audit({ orgId: org.id, actorId: user.id, action: 'setup', detail: `owner created; ${moved} existing devices now theirs` });
+    authStore.audit({ orgId: org.id, actorId: user.id, action: 'setup',
+      detail: `owner created ${local ? 'at the machine' : 'with the setup code'}; ${moved} existing devices now theirs` });
     const token = credentials.startSession({ user, orgId: org.id, req });
     res.setHeader('Set-Cookie', credentials.cookieHeader(token, { secure: secure(req) }));
     res.json({ ok: true, user: me({ user, role: 'owner', orgId: org.id }) });
@@ -201,4 +226,4 @@ function mount(app) {
   app.delete('/api/auth/sessions', handleSessions);
 }
 
-module.exports = { mount, setupCode, SETUP_FILE, _failures: failures };
+module.exports = { mount, atTheMachine, setupCode, SETUP_FILE, _failures: failures };
