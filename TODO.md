@@ -1545,3 +1545,110 @@ private, heavily customised version.
   entity changes and not only its name, copyright is assigned from Protolab.tech
   to the new company first.
 
+## Settled 2026-09-25 — from `docs/audits/2026-09-25-harness-rules-map-roadmap.md`
+
+The five questions in that audit were answered **yes** on 2026-09-25. The
+audit keeps the reasoning; this is the list of what is now decided, in the
+order it is to be done.
+
+- **Done in 2.52.0 — nothing but loopback and the tailnet reaches the panel.**
+  `modules/listen.js` drops any other connection at the socket (`DOCA_LISTEN`:
+  `tailnet` by default, `local`, `all`). Still to do from the same item: serve
+  through `tailscale serve` and read its identity header, as the stop-gap login.
+- **P0 — rules for working on a repository.** Load the project's own
+  `AGENTS.md` / `CLAUDE.md` / `.cursor/rules/` / `CONTRIBUTING.md` before the
+  first change, and add the eight-rule "Working on a repository" block from the
+  audit (§1) to the charter and to this repo's `AGENTS.md`. Rules 2–4 and 8
+  are enforced in code as soon as the git tool and the project root exist.
+- **P1 — roll back from a dropdown: release folders with a `current` link.**
+  Each version a worktree `releases/vX.Y.Z` with its own `node_modules`; the
+  service runs `current/run.sh`; switching moves the link and restarts. The
+  dropdown shows the tag's date ("released") and an install log's date
+  ("installed here"). A data-format stamp makes a rollback past a store change
+  warn. A version that fails its health check within ~60 s of a switch is
+  switched back automatically, and `run.sh rollback [version]` works without
+  the dashboard — the dashboard being what broke is the case this is for.
+- **P1 — authentication: StatENS's model, ported to Node.** Users,
+  organisations, memberships with a role and a `pending` state an admin
+  approves, opaque session tokens hashed at rest in an `HttpOnly`
+  `SameSite=Strict` cookie, Argon2id (or `node:crypto` scrypt), TOTP, an
+  append-only audit log of who acted on whose behalf. Reviewed for security
+  before a customer depends on it. Designed for the hosted case below from the
+  start: an organisation is the tenant.
+- **P2 — project, git tool, then the structure map (JS/TS first).** The map's
+  change overlay needs both of the first two, so they come first.
+
+## Wanted 2026-09-25, not yet settled
+
+- **A project is a work leader with a place to stand.** Asked for: a
+  sub-orchestrator per project, with its own agents and work folders, every
+  level directly reachable by the user and by the main orchestrator.
+
+  Most of this already exists as the second level (see PRIORITY above): the
+  orchestrator creates work chats, a work leader owns its context, dispatches
+  specialists, reports up, and the user can open any level. What is missing is
+  that a work chat is not *about* anything on disk. Proposed: a **project
+  record** — root directory, the repo's rule files, an approved plan (with an
+  origin snapshot, HonTabs-style, so drift is measurable), a core-context block
+  (the "shared core context" entry above, per project), a roster of the
+  specialists it may use, a memory scope, and its git branch — and a work
+  leader **bound** to one project. Its file tools and `shell` default to the
+  project root; its specialists inherit the binding.
+
+  Not a new level and not a new process. A fourth level doubles the reporting
+  path and the cost of every message passed down; a separate DOCA process per
+  project splits memory, devices and MCP servers for no gain on one machine.
+  Processes (a container or VM per project) come in only where isolation is
+  the point — see the hosted entry below.
+
+  **The end-of-work check is mechanical, not a question to the model.** When a
+  work leader says a piece of work is done, before it may report "done"
+  upward: the project's own tests / lint / build pass (run, not claimed); every
+  plan step is done or explicitly deferred with a reason; the files changed
+  (`git diff --name-only` against the branch point) are inside what the plan
+  named, and anything outside is listed; drift from the approved plan is
+  scored (HonTabs' weighting: contracts and acceptance criteria weigh more than
+  wording); and, once the map exists, no new import cycle appeared. A failed
+  check goes back to the work leader as a structured failure, not as prose;
+  after N rounds it goes up to the orchestrator and the user. This is the
+  "actual loop check" — context drift is caught by comparing the work with the
+  plan and the tree, not by asking the drifted context whether it drifted.
+
+- **Backups that survive versions: `.dBac`.** A zip with a different
+  extension, so it opens as what it is and is not mistaken for a generic
+  archive. Inside: `manifest.json` (`{ format, dataFormat, appVersion,
+  createdAt, host, contents: [{ path, bytes, sha256 }] }`) and the data under
+  `DOCA_DATA_DIR` plus prefs, **minus secrets unless asked** (API keys stay out
+  of a file that gets copied around; a restore says which keys to re-enter).
+  Cross-version by rule, not by hope: restoring into a newer DOCA runs the data
+  migrations from the backup's `dataFormat` forward; restoring into an older
+  DOCA refuses when the backup's `dataFormat` is newer, and says which version
+  to install. The same `dataFormat` stamp as rollback needs — one number,
+  introduced once, used by both. Checksums verified before anything is
+  replaced; the current data is itself backed up before a restore. Separate
+  from `snapshots.js`, which snapshots the OpenClaw agent, not DOCA.
+
+- **The hosted case: DOCA as a website where logging in opens your work
+  environment.** A link to the dashboard lands on a login; after it, the
+  harness *is* the user's workspace, and their devices connect through
+  `/api/v1` exactly as they do today, to use every service. More storage (and
+  compute) rented as needed, with fees. What this changes now, before any of it
+  is built:
+  - **Auth is tenant-shaped from the first line** — the organisation in the
+    StatENS model is the tenant, every store path is scoped by it, and a
+    device token belongs to a user in an organisation. Retrofitting tenancy
+    onto single-user storage is the expensive version.
+  - **The machine the agent drives cannot be the shared server.** `shell`,
+    Docker and VM control are the product, and on a shared host they are a
+    way into everyone's data. Hosted, each tenant gets its own container or VM
+    as its "machine" — this is where the VM/Docker idea from the auth
+    discussion is right: not to guard the panel, but to give every tenant a
+    box of its own to be the host of.
+  - **Usage is metered where it is spent:** storage per tenant (the store knows
+    its paths), model tokens (the budget ledger already counts them per turn),
+    and compute time per tenant machine. Quotas enforced in the same places;
+    billing reads the meters and never the other way round.
+  - **The licence decision and this one are the same decision.** An AGPL core
+    obliges a host to publish its modifications; a commercial licence lets a
+    customer host a private build. Settle them together.
+
