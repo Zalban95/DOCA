@@ -368,6 +368,7 @@ next restart; clearing the field hands it back to the environment or the default
 | `RESTORE_SCRIPT` | `~/restore-agent.sh` | Restore script path |
 | `SNAPSHOT_DIR` | `~/openclaw-snapshots` | Snapshot storage |
 | `OPENCLAW_GATEWAY_URL` | — | Override gateway base URL (e.g. `http://openclaw-gateway:18789` when dashboard runs in Docker) |
+| `DOCA_LISTEN` | `tailnet` | Who may connect: `tailnet` (loopback + Tailscale), `local` (loopback only — reach it through `tailscale serve` or an SSH tunnel), or `all` (every network, the pre-2.52 behaviour). Also prefs `network.listen`; the environment wins. The panel has no login yet, so this is what keeps the LAN out |
 | `DOCA_DATA_DIR` | `<repo>/.doca` | Durable state for the `/api/v1` client layer (devices, outboxes, profiles, media) and the harness (conversations, memory) |
 | `DOCA_PREFS_FILE` | `<repo>/.dashboard-prefs.json` | Runtime preferences (theme, visible tabs, harness selection and model parameters) |
 | `DOCA_LEGACY_TRUST` | `1` | Allow device pairing and token issuance from the dashboard (Settings → API Keys). Set to `0` to make `npm run token` the only way to mint tokens; the device list stays visible either way |

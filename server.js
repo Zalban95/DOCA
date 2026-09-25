@@ -20,6 +20,7 @@ const controls     = require('./modules/controls');
 const logs         = require('./modules/logs');
 const attachments  = require('./modules/attachments');
 const branding     = require('./modules/branding');
+const listen       = require('./modules/listen');
 const config       = require('./modules/config');
 const keys         = require('./modules/keys');
 const devicesPanel = require('./modules/devices-panel');
@@ -374,34 +375,10 @@ module.exports = { createApp };
 // ─── Server (HTTPS with HTTP fallback) + WebSocket Terminals ─────────────────
 if (require.main === module) {
 const app = createApp();
-/** Bind, tolerating a predecessor that has not finished shutting down.
- *  POST /api/restart spawns its successor *before* exiting, so a short burst of
- *  EADDRINUSE at startup is expected rather than fatal. */
-const BIND_RETRY_MS = 20000;
-function listenWithRetry(server, announce) {
-  const deadline = Date.now() + BIND_RETRY_MS;
-  let bound  = false;
-  let waited = false;
-
-  server.on('listening', () => { bound = true; announce(); });
-  server.on('error', err => {
-    if (bound || err.code !== 'EADDRINUSE') {
-      console.error(`[server] ${err.message}`);
-      process.exit(1);
-    }
-    if (Date.now() >= deadline) {
-      console.error(`[server] port ${PORT} is still in use after ${Math.round(BIND_RETRY_MS / 1000)}s — another ${branding.name('panel')} is probably already running.`);
-      process.exit(1);
-    }
-    if (!waited) {
-      waited = true;
-      console.log(`[server] port ${PORT} busy — waiting for the previous instance to exit…`);
-    }
-    setTimeout(() => server.listen(PORT, '0.0.0.0'), 250);
-  });
-
-  server.listen(PORT, '0.0.0.0');
-}
+// Who may connect: loopback + tailnet unless told otherwise. See modules/listen.js.
+const LISTEN_MODE = listen.mode(require('./modules/utils').loadPrefs());
+const listenWithRetry = (server, announce) =>
+  listen.start(server, { port: PORT, mode: LISTEN_MODE, name: branding.name('panel'), announce });
 
 /**
  * MCP servers marked "start with DOCA", and their cleanup.
@@ -426,7 +403,7 @@ ensureCerts().then(certs => {
     const label = certs.tailscale
       ? `https://${certs.tailscale}:${PORT}  (Tailscale — trusted)`
       : `https://0.0.0.0:${PORT}  (self-signed)`;
-    console.log(`${branding.name('panel')} v${pkg.version} → ${label}`);
+    console.log(`${branding.name('panel')} v${pkg.version} → ${label}  [accepting: ${LISTEN_MODE}]`);
     require('./modules/agents/missions').recover();
     startMcpServers();
   });
@@ -435,7 +412,7 @@ ensureCerts().then(certs => {
   const server = http.createServer(app);
   terminal.setup(server);
   listenWithRetry(server, () => {
-    console.log(`${branding.name('panel')} v${pkg.version} → http://0.0.0.0:${PORT}`);
+    console.log(`${branding.name('panel')} v${pkg.version} → http://0.0.0.0:${PORT}  [accepting: ${LISTEN_MODE}]`);
     require('./modules/agents/missions').recover();
     startMcpServers();
   });
