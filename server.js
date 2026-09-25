@@ -40,7 +40,6 @@ const stats        = require('./modules/stats');
 const docker       = require('./modules/docker');
 const vms          = require('./modules/vms');
 const mcp          = require('./modules/mcp/routes');
-const mcpRegistry  = require('./modules/mcp/registry');
 const services     = require('./modules/services');
 const update       = require('./modules/update');
 const startup      = require('./modules/startup');
@@ -342,8 +341,7 @@ ensureCerts().then(certs => {
       ? `https://${certs.tailscale}:${PORT}  (Tailscale — trusted)`
       : `https://0.0.0.0:${PORT}  (self-signed)`;
     console.log(`${branding.name('panel')} v${pkg.version} → ${label}  [accepting: ${LISTEN_MODE}]`);
-    require('./modules/agents/missions').recover();
-    mcpRegistry.startWithDoca();
+    require('./modules/boot').afterListen();
   });
 }).catch(e => {
   console.warn(`[HTTPS] Falling back to HTTP: ${e.message}`);
@@ -351,8 +349,7 @@ ensureCerts().then(certs => {
   terminal.setup(server);
   listenWithRetry(server, () => {
     console.log(`${branding.name('panel')} v${pkg.version} → http://0.0.0.0:${PORT}  [accepting: ${LISTEN_MODE}]`);
-    require('./modules/agents/missions').recover();
-    mcpRegistry.startWithDoca();
+    require('./modules/boot').afterListen();
   });
 });
 }

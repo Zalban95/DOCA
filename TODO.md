@@ -1778,3 +1778,42 @@ preparing a release, with the tests run before it is tagged. Security advisories
 dependency at the most sensitive point, and it should be kept current by a
 habit, not by memory.
 
+## Found in use 2026-09-25 (the agent's issue list, checked)
+
+The resident agent kept a list during a long run; each item was checked against
+the code and the data before landing here. Two of its explanations were wrong,
+and are recorded as wrong so nobody re-files them.
+
+- **Fixed in 2.56.2: devices did not see work chats.** `agent.mission` and
+  `GET /api/v1/harness/missions` carried only specialists, while most work runs
+  in work chats — a watch's picture was always behind. `harness/workview.js`
+  publishes work chats in the same shape (no client update), announces every
+  turn start/end (`turn/lifecycle.changed`), and at boot tells devices about
+  work chats a restart cut off.
+- **A subordinate's report does not wake the orchestrator.** Measured by the
+  agent with a timer probe: delivered, but no turn starts until someone speaks.
+  Deliberate since 2.45 ("reports never start paid model calls"); the owner now
+  wants the wake. To design: wake on *final* reports only (done, failed,
+  blocked, a question), rate-limited, a setting, default on.
+- **Restarts pause work mid-turn.** Seen three times on 2026-09-25 — the day of
+  many version switches. Wanted: a version switch or restart that sees running
+  turns says so and offers to wait; and paused work chats offered for resume.
+- **`shell` stops at 60 s** (`SHELL_MS`), whatever `mcpSettings.callTimeoutMs`
+  says (that one is MCP's). A harness param, and a background-job form for long
+  commands, rather than the agent splitting `sleep 150` into three.
+- **Not a bug, and wrong in the agent's report:** "no paired device has
+  `harness:chat`". The phone (`Smp`) and the watch both have it; the agent read
+  the watch's scopes as the phone's. Its own `doca_clients` output in the same
+  conversation said the phone can chat.
+- **Not a bug, and wrong in the agent's report:** "device ids are not stable
+  across restarts". They are (created 09-11, 09-18, 09-20, unchanged); the two ids
+  it missed were older pairings, removed.
+- **Already fixed, stale in the agent's memory:** "llama.cpp fallback: trailing
+  system message → HTTP 500" (ISSUES.md H-9; the readings go as `user`). Its
+  memory entry should be corrected.
+- **"Send it to the desktop" was read as DocaDesk,** offline since 09-21, so the
+  list sat in a device queue. A request naming a place, not a device, should be
+  a file (`~/Desktop`) — or the agent should ask which one when both exist.
+- **DocaDesk does not send its device token** on the panel's page load, so it
+  signs in once instead of like DocaMobile. A change in DocaDesk.
+

@@ -13,7 +13,6 @@
  * transcript, so a reload or a restart resumes exactly where it left off.
  */
 
-const { EventEmitter } = require('events');
 
 const budget      = require('./budget');
 const memory      = require('./memory');
@@ -39,20 +38,7 @@ const { DEGRADED_MS, rungsFor, markDegraded, forgetDegraded, openingHop, hopText
 const { ask, complete } = require('./turn/transport');
 const { foldSummary } = require('./turn/summary');
 const { preview, breakdown, contextOf, status } = require('./turn/introspect');
-
-/**
- * Every turn's events, for anything that was not the caller.
- *
- * `turn()` hands its events to whoever started it, which is right for the thing
- * waiting on the answer and no use at all to a subscriber that arrived later —
- * the Logs tab, most of all, which is open across turns and belongs to nobody's
- * request. This is the same stream, published alongside. It never affects the
- * caller: `say()` delivers to `emit` first, and a listener that throws here
- * cannot reach into the turn.
- */
-const events = new EventEmitter();
-events.setMaxListeners(0);   // one per open Logs stream; there is no sensible cap
-
+const { events, running, isRunning, cancel, changed } = require('./turn/lifecycle');
 
 /* ── The turn ─────────────────────────────────────────── */
 
@@ -64,10 +50,6 @@ events.setMaxListeners(0);   // one per open Logs stream; there is no sensible c
  *                      screen?: object, input?: object } }} opts
  * @returns {Promise<{ sessionId: string, text: string, steps: number }>}
  */
-const running = new Map();
-const isRunning = id => running.has(id);
-function cancel(id) { const ctrl = running.get(id); if (ctrl) ctrl.abort(); return !!ctrl; }
-
 async function turn(options) {
   const organization = require('./organization');
   const id = options.sessionId || memory.activeSession().id;
@@ -86,6 +68,7 @@ async function turn(options) {
       profile.tools = (profile.tools || []).filter(n => !require('../agents/registry').NEVER.includes(n));
     }
     memory.updateSession(id, { state: 'running', lastError: null });
+    changed(id);
     if (options.client && options.client.kind !== 'agent')
       organization.report(id, 'user intervention', options.message, options.client.name || 'user');
     const result = await runTurn({ ...options, sessionId: id, signal: ctrl.signal, profile });
@@ -100,6 +83,7 @@ async function turn(options) {
     throw e;
   } finally {
     running.delete(id);
+    changed(id);
     options.signal?.removeEventListener('abort', abort);
   }
 }

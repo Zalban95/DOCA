@@ -478,17 +478,11 @@ harnessApi.post('/turns/:id/cancel', requireScope('harness:chat'), wrap(async (r
 // has to be able to draw what is already running without waiting for the next
 // step tick. Read-only, and under `harness:chat` rather than a scope of its own:
 // a device that follows the conversation follows the work it started.
-harnessApi.get('/missions', requireScope('harness:chat'), (req, res) => {
-  const missions = require('../agents/missions');
-  const enabled = require('../agents/registry').enabled();
-  res.json({
-    enabled,
-    // Archived ones are out by default here too, so the panel and a watch agree
-    // about what is still open rather than each keeping its own idea of it.
-    missions: enabled ? missions.list({ state: req.query.state, all: req.query.all === '1',
-      limit: Math.min(50, parseInt(req.query.limit, 10) || 20) }) : [],
-  });
-});
+// Work chats too, in the same shape (harness/workview.js): they are most of what
+// runs, and a watch that saw only specialists showed a picture always behind.
+// Archived ones are out by default, so the panel and a watch agree about what is open.
+harnessApi.get('/missions', requireScope('harness:chat'), (req, res) =>
+  res.json(require('../harness/workview').forDevices(req.query)));
 
 // The bytes behind `images[].url` on `agent.turn` and in a transcript. Images
 // only, so `harness:chat` does not become a way to read every attachment.
