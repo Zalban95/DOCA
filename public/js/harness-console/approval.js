@@ -56,6 +56,30 @@ let _hcApprovalState = null;
 function _hcApprovalFill(list, a) {
   list.innerHTML = '';
 
+  // Unattended: the owner's switch for a test bench (modules/harness/approval.js).
+  const bench = document.createElement('div');
+  bench.className = 'approval-unattended';
+  const on = a.mode === 'unattended';
+  bench.innerHTML = `<div class="hc-side-head">Unattended mode${on ? ' — on' : ''}</div>
+    <p style="font-size:11px;color:${on ? 'var(--red)' : 'var(--muted)'};margin:0 0 6px">
+      ${on ? 'Tools run, and the agent\'s own settings changes and installs apply the moment it makes them. Each one is in the audit log.'
+           : 'Off. When on, nothing is asked: tools run, and the agent\'s own settings changes and installs apply without a click. For a machine you are testing on.'}</p>`;
+  const toggle = document.createElement('button');
+  toggle.className = `btn btn-xs ${on ? '' : 'btn-red'}`;
+  toggle.textContent = on ? 'Turn it off' : 'Turn on unattended mode…';
+  toggle.onclick = () => {
+    const set = async body => {
+      try { await apiFetch('/api/harness/approval', { method: 'POST', body }); _hcLoadApproval(); }
+      catch (e) { appAlert(e.message); }
+    };
+    if (on) return set({ mode: 'auto' });
+    appConfirm('Turn on unattended mode?\n\nNothing will be asked any more: every tool runs, and the agent applies its own '
+      + 'settings changes and installs without your click. Each is logged. Meant for a machine you are testing on.',
+      () => set({ mode: 'unattended', confirm: 'unattended' }));
+  };
+  bench.appendChild(toggle);
+  list.appendChild(bench);
+
   // Questions raised elsewhere — a turn a phone started, or one in a chat that
   // is not open. Without this they block until they time out with nothing on
   // screen anywhere, because the card only ever appears in the transcript that

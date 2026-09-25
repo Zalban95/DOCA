@@ -153,13 +153,19 @@ function approvalModeEl(onChange) {
   el.title = 'Manual asks before each tool call that does something, and can remember your answer by '
     + 'command type. Auto runs everything the agent asks for.';
   el.render = mode => {
-    const manual = mode === 'manual';
-    el.textContent = manual ? '🔒 Manual' : '⚡ Auto';
+    const manual = mode === 'manual', unattended = mode === 'unattended';
+    el.textContent = unattended ? '⚠ Unattended' : manual ? '🔒 Manual' : '⚡ Auto';
     el.classList.toggle('manual', manual);
-    el.dataset.mode = manual ? 'manual' : 'auto';
+    el.classList.toggle('btn-red', unattended);
+    el.title = unattended
+      ? 'Unattended: tools run and the agent\'s own settings changes and installs apply without asking. Click to go back to Auto.'
+      : 'Manual asks before each tool call that does something, and can remember your answer by '
+        + 'command type. Auto runs everything the agent asks for.';
+    el.dataset.mode = mode;
   };
   el.addEventListener('click', async () => {
-    const next = el.dataset.mode === 'manual' ? 'auto' : 'manual';
+    // Out of unattended is always one click; into it is only from the Approvals window, confirmed.
+    const next = el.dataset.mode === 'manual' ? 'auto' : el.dataset.mode === 'unattended' ? 'auto' : 'manual';
     try {
       const r = await apiFetch('/api/harness/approval', { method: 'POST', body: { mode: next } });
       el.render(r.mode);

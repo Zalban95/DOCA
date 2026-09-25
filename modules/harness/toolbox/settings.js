@@ -8,6 +8,10 @@ const installs = require('../installs');
 const settings = require('../settings');
 const { clip } = require('./common');
 
+const approval = require('../approval');
+/** Who did it and through what: the owner was not asked, so the log is what remains. */
+const audit = (ctx, action, id) => { try { require('../../auth/store').audit({ actorId: null, via: ctx.sessionId, action, detail: id }); } catch {} };
+
 module.exports = [
   {
     name: 'settings_read',
@@ -59,6 +63,12 @@ module.exports = [
       // sessionId; nothing passed one, so every proposal was anonymous and
       // several open conversations made the pending list ambiguous.
       const p = settings.propose({ changes, reason, sessionId: ctx.sessionId });
+      // Unattended mode (approval.js): the owner chose not to be asked.
+      if (approval.isUnattended()) {
+        settings.apply(p.id);
+        audit(ctx, 'unattended: settings applied', p.id);
+        return `Applied at once — unattended mode is on, so nobody was asked:\n${p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`).join('\n')}`;
+      }
       const lines = p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`);
       return `Proposed (${p.id}) — waiting for the user to accept or decline:\n${lines.join('\n')}\n`
         + 'Tell them what you proposed and why, then stop.';
@@ -83,10 +93,15 @@ module.exports = [
       },
       required: ['kind', 'id', 'reason'],
     },
-    run: ({ kind, id, reason }, ctx = {}) => {
+    run: async ({ kind, id, reason }, ctx = {}) => {
       // Filed against the conversation that asked — see settings_propose.
       const row = installs.propose({ kind, id, reason, sessionId: ctx.sessionId });
       if (row.status !== 'pending') return `Already ${row.status}: ${row.kind} "${row.target}".`;
+      if (approval.isUnattended()) {
+        audit(ctx, 'unattended: install applied', row.id);
+        const done = await installs.apply(row.id);
+        return `Installed at once — unattended mode is on, so nobody was asked: ${row.what}\n${JSON.stringify(done).slice(0, 2000)}`;
+      }
       return `Proposed (${row.id}) — waiting for the user to accept or decline:\n  ${row.what}\n`
         + (row.needsPassword ? '  (its installer needs sudo, so the user types their password, not you)\n' : '')
         + 'Tell them what you proposed and why, then carry on without it.';

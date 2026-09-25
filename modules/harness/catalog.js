@@ -127,7 +127,11 @@ function loadHarnessPrefs() {
   const h = prefs.harness;
   if (h && h.default) return { custom: [], config: {}, ...h };
 
-  const seeded = { default: BUILTIN_ID, custom: [], config: { [BUILTIN_ID]: providers.defaultParams() } };
+  // Seed what is missing, and keep what is there: `harness` also holds the
+  // approval mode and its allowlist, which used to be wiped by this first write
+  // on an install where the mode was chosen before any harness was configured.
+  const seeded = { ...(h || {}), default: BUILTIN_ID, custom: h?.custom || [],
+    config: { [BUILTIN_ID]: providers.defaultParams(), ...(h?.config || {}) } };
   prefs.harness = seeded;
   try { savePrefs(prefs); } catch { /* read-only prefs: still serve the defaults */ }
   return seeded;

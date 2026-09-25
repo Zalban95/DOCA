@@ -27,7 +27,15 @@
  */
 const { loadPrefs, savePrefs } = require('../utils');
 
-const MODES = ['auto', 'manual'];
+/**
+ * `unattended` is the third, added 2026-09-25 for machines the owner runs as a
+ * test bench: tools run as in auto, and the agent's own proposals — settings
+ * and installs, which otherwise wait for a click — are applied the moment they
+ * are made (toolbox/settings.js), each one audited. It is the owner's switch
+ * alone (routes.js), set only with an explicit confirmation, and like the
+ * others it is not proposable. Off on every install unless someone turns it on.
+ */
+const MODES = ['auto', 'manual', 'unattended'];
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
@@ -64,10 +72,16 @@ function save(patch) {
   return settings();
 }
 
-function setMode(mode) {
+function setMode(mode, { role = 'owner', confirm = '' } = {}) {
   if (!MODES.includes(mode)) throw Object.assign(new Error(`mode must be one of: ${MODES.join(', ')}`), { status: 400 });
+  if (mode === 'unattended') {
+    if (role !== 'owner') throw Object.assign(new Error('Only the owner can turn on unattended mode.'), { status: 403 });
+    if (confirm !== 'unattended') throw Object.assign(new Error('Unattended mode needs an explicit confirmation.'), { status: 400 });
+  }
   return save({ mode });
 }
+
+const isUnattended = () => settings().mode === 'unattended';
 
 /** Remember a decision. Keys are `tool` or `tool:verb`; duplicates collapse. */
 function remember(keys) {
@@ -321,6 +335,6 @@ function block() {
 }
 
 module.exports = {
-  MODES, FREE, settings, setMode, remember, forget, block,
+  MODES, FREE, settings, setMode, isUnattended, remember, forget, block,
   verbsOf, keysFor, gate, ask, askAnywhere, decide, pending, refusal, missionRefusal,
 };
