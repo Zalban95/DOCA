@@ -1,6 +1,6 @@
 {
   "name": "openclaw-dashboard",
-  "version": "2.57.2",
+  "version": "2.57.3",
   "docaDataFormat": 1,
   "description": "OpenClaw Panel — Web dashboard for managing the OpenClaw AI agent stack",
   "main": "server.js",
