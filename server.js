@@ -380,22 +380,6 @@ const LISTEN_MODE = listen.mode(require('./modules/utils').loadPrefs());
 const listenWithRetry = (server, announce) =>
   listen.start(server, { port: PORT, mode: LISTEN_MODE, name: branding.name('panel'), announce });
 
-/**
- * MCP servers marked "start with DOCA", and their cleanup.
- *
- * Deliberately here and not in createApp(): requiring the app must never spawn
- * somebody's child processes, which is what the tests do.
- */
-function startMcpServers() {
-  mcpRegistry.startAutostart().then(results => {
-    for (const r of results.filter(x => !x.ok)) console.warn(`[mcp] ${r.id}: ${r.error}`);
-  });
-  for (const signal of ['SIGINT', 'SIGTERM']) {
-    process.once(signal, () => { mcpRegistry.stopAll(); process.exit(0); });
-  }
-  process.once('exit', () => mcpRegistry.stopAll());
-}
-
 ensureCerts().then(certs => {
   const server = https.createServer(certs, app);
   terminal.setup(server);
@@ -405,7 +389,7 @@ ensureCerts().then(certs => {
       : `https://0.0.0.0:${PORT}  (self-signed)`;
     console.log(`${branding.name('panel')} v${pkg.version} → ${label}  [accepting: ${LISTEN_MODE}]`);
     require('./modules/agents/missions').recover();
-    startMcpServers();
+    mcpRegistry.startWithDoca();
   });
 }).catch(e => {
   console.warn(`[HTTPS] Falling back to HTTP: ${e.message}`);
@@ -414,7 +398,7 @@ ensureCerts().then(certs => {
   listenWithRetry(server, () => {
     console.log(`${branding.name('panel')} v${pkg.version} → http://0.0.0.0:${PORT}  [accepting: ${LISTEN_MODE}]`);
     require('./modules/agents/missions').recover();
-    startMcpServers();
+    mcpRegistry.startWithDoca();
   });
 });
 }

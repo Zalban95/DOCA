@@ -310,10 +310,27 @@ function stopAll() {
   _clients.clear();
 }
 
+/**
+ * MCP servers marked "start with DOCA", and their cleanup.
+ *
+ * Called only from server.js's boot block, never from createApp(): requiring the
+ * app must never spawn somebody's child processes, which is what the tests do.
+ */
+function startWithDoca() {
+  startAutostart().then(results => {
+    for (const r of results.filter(x => !x.ok)) console.warn(`[mcp] ${r.id}: ${r.error}`);
+  });
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.once(signal, () => { stopAll(); process.exit(0); });
+  }
+  process.once('exit', () => stopAll());
+}
+
+
 module.exports = {
   MASK,
   PREFS_KEY,
   load, list, get, client, status, slug, normalize, normalizeOrigin, originDevice,
   forDevice, updateFromDevice,
-  start, stop, restart, upsert, remove, startAutostart, stopAll,
+  start, stop, restart, upsert, remove, startAutostart, stopAll, startWithDoca,
 };

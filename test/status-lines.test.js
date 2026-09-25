@@ -107,7 +107,7 @@ test('the two restart phrases stay two phrases', () => {
   assert.match(read('keys.js'), /restart OpenClaw to apply/);
   assert.match(read('config.js'), /restart OpenClaw\?/);
   assert.match(read('paths.js'), /restart DOCA to apply/);
-  assert.match(read('settings.js'), /Restart DOCA<\/strong> to apply/);
+  assert.match(read('settings/updates.js'), /Restart DOCA<\/strong> to apply/);
 
   const third = files()
     .filter(f => /restart the server/i.test(read(f)));
