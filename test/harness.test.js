@@ -1364,7 +1364,7 @@ test('the tool-layer cap stays above the transcript clip', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'modules', 'harness', 'tools.js'), 'utf8');
   const toolCap = Number(src.match(/const MAX_OUT\s*=\s*(\d+)/)[1]);
 
-  const agentSrc = fs.readFileSync(path.join(__dirname, '..', 'modules', 'harness', 'agent.js'), 'utf8');
+  const agentSrc = fs.readFileSync(path.join(__dirname, '..', 'modules', 'harness', 'turn', 'messages.js'), 'utf8');
   const transcriptCap = Number(agentSrc.match(/const TOOL_MAX_CHARS\s*=\s*(\d+)/)[1]);
 
   assert.ok(toolCap > transcriptCap,

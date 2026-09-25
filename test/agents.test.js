@@ -395,8 +395,11 @@ test('a specialist can reach mission_plan whatever its definition allows', () =>
 
   // And the two implementations that compute this must agree — they were two,
   // and a fix applied to one of them is a fix that does not exist.
-  const src = require('node:fs').readFileSync(
-    require('node:path').join(__dirname, '..', 'modules', 'harness', 'agent.js'), 'utf8');
+  // The turn and every part of it under turn/, so moving the code between them
+  // cannot hide a second copy.
+  const dir = require('node:path').join(__dirname, '..', 'modules', 'harness');
+  const src = ['agent.js', ...require('node:fs').readdirSync(require('node:path').join(dir, 'turn')).map(f => `turn/${f}`)]
+    .map(f => require('node:fs').readFileSync(require('node:path').join(dir, f), 'utf8')).join('\n');
   assert.equal((src.match(/profile\.tools\.includes\(n\)/g) || []).length, 1,
     'the allowlist is computed in more than one place again');
 
