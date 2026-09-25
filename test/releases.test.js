@@ -29,7 +29,9 @@ function release(tag, { compatible = true, dataFormat = 2, server = 'answer' } =
   w('modules/store.js', compatible ? 'process.env.DOCA_DATA_DIR' : 'nothing');
   w('modules/paths.js', compatible ? 'process.env.DOCA_PREFS_FILE' : 'nothing');
   w('package.json', JSON.stringify({ name: 'fake', version: tag.slice(1), docaDataFormat: dataFormat }));
-  w('package-lock.json', '{"lockfileVersion":3}');
+  // Real lockfiles repeat the app's own version; identical dependencies must still match.
+  w('package-lock.json', JSON.stringify({ name: 'fake', version: tag.slice(1), lockfileVersion: 3,
+    packages: { '': { name: 'fake', version: tag.slice(1) }, 'node_modules/dep': { version: '1.0.0' } } }));
   w('server.js', server === 'answer'
     ? `require('http').createServer((q, r) => r.end('${tag}')).listen(process.env.PORT, '127.0.0.1');`
     : 'process.exit(1);');
@@ -137,6 +139,17 @@ test('the launcher switches back on its own when a new version does not answer',
   assert.match(out, /v1\.1\.0 did not answer within 90 s — switched back to v1\.0\.0/);
   assert.equal(fs.readFileSync(path.join(HOME, '.releases', 'current'), 'utf8').trim(), 'v1.0.0', 'back on the one that worked');
   assert.equal(fs.existsSync(path.join(HOME, '.releases', 'pending')), false);
+});
+
+test('a second release links its dependencies from the first, although its lockfile names another version', async () => {
+  const said = [];
+  await releases.install('v2.0.0', s => said.push(s));
+  assert.match(said.join(''), /identical to (the checkout|\.releases\/v1\.[01]\.0)'s — linking/);
+  assert.equal(said.join('').includes('npm ci'), false, 'nothing downloaded');
+});
+
+test('the newest version is the highest tag, not the latest made', async () => {
+  assert.equal(await releases.latest(), 'v2.0.0');
 });
 
 test('back to the checkout removes the choice, and the checkout runs as before', async () => {

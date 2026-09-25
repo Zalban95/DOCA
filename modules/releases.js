@@ -168,9 +168,19 @@ function checkoutFormat() {
 
 /* ── Installing and switching ─────────────────────────── */
 
+/**
+ * What a version's dependencies are, as a hash — without its own version number.
+ * package-lock.json repeats the app's version at the top and on the root
+ * package, so hashing the file whole made every release look different from
+ * every other and hard-linking never happened.
+ */
 const lockHash = dir => {
-  try { return crypto.createHash('sha1').update(fs.readFileSync(path.join(dir, 'package-lock.json'))).digest('hex'); }
-  catch { return null; }
+  try {
+    const lock = JSON.parse(fs.readFileSync(path.join(dir, 'package-lock.json'), 'utf8'));
+    delete lock.version;
+    if (lock.packages?.['']) delete lock.packages[''].version;
+    return crypto.createHash('sha1').update(JSON.stringify(lock)).digest('hex');
+  } catch { return null; }
 };
 
 function run(cmd, args, cwd, say) {
@@ -307,4 +317,11 @@ function mount(app) {
   app.post('/api/versions/use', handleUse);
 }
 
-module.exports = { list, install, use, refusal, current, running, history, prune, mount, cmpVersion, CHECKOUT, DIR, HOME, MENU_SINCE };
+/** The newest version tag here, after fetching. */
+async function latest() {
+  await fetchTags();
+  const out = await git(['tag', '--list', 'v*']);
+  return out.split('\n').filter(t => TAG.test(t)).sort((a, b) => cmpVersion(b, a))[0] || null;
+}
+
+module.exports = { latest, list, install, use, refusal, current, running, history, prune, mount, cmpVersion, CHECKOUT, DIR, HOME, MENU_SINCE };

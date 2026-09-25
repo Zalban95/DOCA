@@ -46,7 +46,7 @@ release_dir() {
 }
 
 release_log() {   # event to from
-  printf '{"at":"%s","event":"%s","to":"%s","from":"%s","by":"launcher"}\n' "$(date -Is)" "$1" "$2" "$3" >> "$RELEASES/log.jsonl"
+  printf '{"at":"%s","event":"%s","to":"%s","from":"%s","by":"launcher"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$2" "$3" >> "$RELEASES/log.jsonl"
 }
 
 # Does the panel answer on / ? Asked with node, which is certainly here; HTTPS

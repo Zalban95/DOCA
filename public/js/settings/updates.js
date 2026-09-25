@@ -70,7 +70,19 @@ async function updatePull() {
   await sseStream('/api/update', {}, {
     onStatus: text => appendStream(log, text),
     onDone: obj => {
-      if (obj.ok && el) {
+      // Running a release, the server updated by switching to the newest one
+      // and is restarting into it: follow it back instead of asking for a restart.
+      if (obj.ok && obj.restarting) {
+        if (el) el.innerHTML = '<div class="update-info">Restarting into the new version…</div>';
+        const started = Date.now();
+        const poll = () => setTimeout(async () => {
+          try { if ((await fetch('/api/update-check', { cache: 'no-store' })).ok && Date.now() - started > 4000) return location.reload(); } catch {}
+          if (Date.now() - started < 150000) poll();
+          else if (el) el.innerHTML = '<div class="update-info" style="color:var(--red)">✗ The panel did not come back within 150 s. On the host: ./run.sh versions</div>';
+        }, 2000);
+        return poll();
+      }
+      if (obj.ok && el && /Restart DOCA to apply/.test(log?.textContent || '')) {
         // "restart DOCA" — the update pulled *this* tree, so it is this process
         // that has to come back. The external OpenClaw stack says "restart
         // OpenClaw" (keys.js) and is a different restart entirely.
@@ -264,7 +276,7 @@ function versionsUse() {
     showStream(log, '');
     let result = null;
     await sseStream('/api/versions/use', { version: tag, force: !!v.olderData }, {
-      onStatus: o => appendStream(log, o.status || ''),
+      onStatus: text => appendStream(log, text),
       onDone:   o => { result = o; },
       onError:  e => appendStream(log, `\n✗ ${e.message}\n`),
     });

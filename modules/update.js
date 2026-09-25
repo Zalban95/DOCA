@@ -161,6 +161,26 @@ async function handleUpdate(req, res) {
   sseHeaders(res);
   const sseWrite = d => { try { res.write(`data: ${JSON.stringify(d)}\n\n`); } catch {} };
 
+  // Running an installed release, a pull would change only the checkout, which
+  // the launcher is not starting — the update would look applied and not be.
+  // So "update" means the newest release, installed and switched to.
+  const releases = require('./releases');
+  if (releases.current() !== releases.CHECKOUT) {
+    try {
+      const tag = await releases.latest();
+      if (!tag || releases.cmpVersion(tag, LOCAL_VERSION) <= 0) {
+        sseWrite({ done: true, ok: true, status: `✓ Already on the newest version (v${LOCAL_VERSION}).\n` });
+      } else {
+        const r = await releases.use(tag, { by: 'update', say: status => sseWrite({ status }) });
+        sseWrite({ done: true, ok: true, restarting: r.restarting, status: '\n✓ Restarting into the new version.\n' });
+      }
+    } catch (e) {
+      sseWrite({ done: true, ok: false, status: `\n✗ ${e.message}\n` });
+    }
+    cached = null;
+    return res.end();
+  }
+
   sseWrite({ status: `Updating dashboard from ${REPO}…\n$ cd ${DASHBOARD_DIR}\n` });
 
   // Remember where we were so we can diff exactly what the pull brought in.
