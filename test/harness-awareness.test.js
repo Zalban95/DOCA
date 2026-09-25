@@ -770,9 +770,9 @@ test('a saved fallback window survives being opened and saved again', () => {
   const fs     = require('node:fs');
   const path   = require('node:path');
   const js     = f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8');
-  const src    = js('harness.js'), utils = js('utils.js');
-  const helper = n => utils.match(new RegExp(`function ${n}\\([\\s\\S]*?\\n\\}`))[0];
-  const from   = n => src.match(new RegExp(`function ${n}[\\s\\S]*?\\n\\}`))[0];
+  const { fn } = require('./frontend');
+  const src    = js('harness.js');
+  const helper = fn, from = fn;
 
   const source = [
     src.match(/const HARNESS_MAX_FALLBACKS = \d+;/)[0],

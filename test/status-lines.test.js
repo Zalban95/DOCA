@@ -5,7 +5,7 @@
  * phrases one may carry.
  *
  * `setStatus()` is the only thing that clears a line now, so the rule lives
- * there and this drives it for real: `public/js/utils.js` is loaded into a vm
+ * there and this drives it for real: `public/js/lib/status.js` is loaded into a vm
  * context with a fake element and a mocked clock, which is all it needs because
  * the function touches nothing but `textContent`, `className` and one timer.
  *
@@ -22,6 +22,7 @@ const vm   = require('node:vm');
 
 const JS   = path.join(__dirname, '..', 'public', 'js');
 const read = f => fs.readFileSync(path.join(JS, f), 'utf8');
+const { files } = require('./frontend');
 
 /** A clock that only moves when the test says so, so nothing waits three seconds. */
 function fakeClock() {
@@ -41,7 +42,7 @@ function fakeClock() {
 function loadUtils(clock) {
   const sandbox = { setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout, console };
   vm.createContext(sandbox);
-  return vm.runInContext(read('utils.js') + '\n;({ setStatus, STATUS_CLEAR_MS })', sandbox);
+  return vm.runInContext(read('lib/status.js') + '\n;({ setStatus, STATUS_CLEAR_MS })', sandbox);
 }
 
 test('a status line fades when it is good news and stays when it is bad', () => {
@@ -89,10 +90,10 @@ test('a status line fades when it is good news and stays when it is bad', () => 
 test('no panel clears its own status line', () => {
   // What this replaced: a 3000 in three files, a 4000 in setup.js, a 5000 in
   // the llama.cpp health check, and no clear at all almost everywhere else.
-  // utils.js is the one place a status timer belongs; a second one at a call
+  // lib/status.js is the one place a status timer belongs; a second one at a call
   // site is how they drifted apart in the first place, and a second one is
   // also what would erase a newer message when the old delay elapses.
-  const offenders = fs.readdirSync(JS).filter(f => f.endsWith('.js') && f !== 'utils.js')
+  const offenders = files().filter(f => f !== 'lib/status.js')
     .filter(f => /setTimeout\(\s*\(\s*\)\s*=>\s*setStatus\(/.test(read(f)));
   assert.deepEqual(offenders, [], 'a call site has gone back to timing its own status line');
 });
@@ -108,13 +109,13 @@ test('the two restart phrases stay two phrases', () => {
   assert.match(read('paths.js'), /restart DOCA to apply/);
   assert.match(read('settings.js'), /Restart DOCA<\/strong> to apply/);
 
-  const third = fs.readdirSync(JS).filter(f => f.endsWith('.js'))
+  const third = files()
     .filter(f => /restart the server/i.test(read(f)));
   assert.deepEqual(third, [], 'a third phrasing is back, and it belongs to one of the two meanings');
 
   // Nor may a hint say restart without naming what restarts, which is the shape
   // that let the same words mean either one.
-  const vague = fs.readdirSync(JS).filter(f => f.endsWith('.js'))
+  const vague = files()
     .filter(f => /restart to apply/i.test(read(f)));
   assert.deepEqual(vague, [], 'a restart hint does not say which restart it is');
 });

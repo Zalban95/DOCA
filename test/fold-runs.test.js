@@ -21,7 +21,9 @@ const assert = require('node:assert/strict');
 const fs   = require('node:fs');
 const path = require('node:path');
 
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'utils.js'), 'utf8');
+const frontend = require('./frontend');
+// The shared scripts the transcript is built from, in the order the page loads them.
+const SRC = frontend.source(...frontend.scripts().filter(f => /^(lib|agent-ui)\//.test(f)));
 
 function el(tag, className = '') {
   const node = {

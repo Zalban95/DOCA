@@ -1454,9 +1454,26 @@
 
 <!-- ═══════════════════════════════════════════════════ JS MODULES -->
 <script src="js/state.js"></script>
-<!-- Before utils.js: createThinkStream renders assistant prose through it. -->
+<!-- Before agent-ui/: createThinkStream renders assistant prose through it. -->
 <script src="js/markdown.js"></script>
-<script src="js/utils.js"></script>
+<!-- Shared helpers, no page of their own. -->
+<script src="js/lib/api.js"></script>
+<script src="js/lib/html.js"></script>
+<script src="js/lib/output.js"></script>
+<script src="js/lib/status.js"></script>
+<script src="js/lib/format.js"></script>
+<script src="js/lib/debounce.js"></script>
+<script src="js/lib/dialogs.js"></script>
+<script src="js/lib/system-tools.js"></script>
+<script src="js/lib/pty-banner.js"></script>
+<!-- The agent transcript, shared by the floating chat and the harness console. -->
+<script src="js/agent-ui/fold.js"></script>
+<script src="js/agent-ui/working.js"></script>
+<script src="js/agent-ui/fold-runs.js"></script>
+<script src="js/agent-ui/think-stream.js"></script>
+<script src="js/agent-ui/media.js"></script>
+<script src="js/agent-ui/context-meter.js"></script>
+<script src="js/agent-ui/approval.js"></script>
 <script src="js/branding.js"></script>
 <script src="js/fp.js"></script>
 <script src="js/nav.js"></script>
