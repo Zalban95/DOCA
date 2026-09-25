@@ -1570,6 +1570,7 @@ order it is to be done.
   warn. A version that fails its health check within ~60 s of a switch is
   switched back automatically, and `run.sh rollback [version]` works without
   the dashboard — the dashboard being what broke is the case this is for.
+- **Design pass done 2026-09-25: `docs/design/auth.md`** — seven decisions to settle before phase 1. Found while writing it: the dashboard's pairing route is unauthenticated, so anyone who reaches the panel can mint a device token with admin scope; phase 1 closes it.
 - **P1 — authentication: StatENS's model, ported to Node.** Users,
   organisations, memberships with a role and a `pending` state an admin
   approves, opaque session tokens hashed at rest in an `HttpOnly`
