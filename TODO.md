@@ -1729,3 +1729,34 @@ and anything built for one is there for the other.
     replaceable, never shown again. Restore asks for it. A lost password is a
     lost backup, and the UI says so before the first one is made.
 
+## Wanted 2026-09-25 — review the panel's sections for what DOCA is now
+
+The panel's sections were drawn when it was a dashboard for an OpenClaw stack;
+several still describe that product rather than this one. Review them against
+"OpenClaw is a peer, not a prerequisite" (above) and against the harness, before
+more is built on top of them. Proposed shape, to settle per section:
+
+- **Settings sub-tabs today:** General, API Keys, Skills, Snapshots, Setup,
+  Config, Voice, System.
+  - **Snapshots, Setup, Config** are OpenClaw's (snapshots of its agent, its
+    setup scripts, its config files). Not deleted outright — a user with
+    OpenClaw still needs them — but **moved into one "OpenClaw" section that
+    appears only when OpenClaw is installed**, which is the rule that entry
+    already sets. On a DOCA without OpenClaw they vanish.
+  - **Backups** gets its own sub-tab (today it sits in General under Updates).
+  - **Skills** becomes the harness's skills — the manifest and bodies from "Two
+    layers of learned knowledge" — with OpenClaw's skills a filtered view of the
+    same list when OpenClaw is present, not the other way round.
+  - **Config** in its DOCA sense: the harness's own configuration (params,
+    fallback chain, memory rules, charter view) — today split between the ⚙
+    strip on Controls and the Rules modal.
+  - **General, System, Voice, API Keys** stay, each checked for OpenClaw-only
+    wording and for keys that DOCA stores in OpenClaw's file (§1 of "OpenClaw is
+    a peer").
+- **Then the tabs:** Models, Docker, Controls, and the left status bar — each
+  reviewed for what is DOCA's and what is the OpenClaw stack's, the same way.
+- **Every control built from the existing pieces** (`.input`, `.input-label`,
+  `.btn` variants, the toggle, the Snapshots row); `test/ui-consistency.test.js`
+  holds the fields to it, and screenshots at desktop and phone width before
+  shipping.
+

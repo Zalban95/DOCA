@@ -77,3 +77,13 @@ a:hover { text-decoration: underline; }
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 .pulse { animation: pulse 1.5s ease-in-out infinite; }
+
+/* ── The list a <select> opens ─────────────────────────────
+   The browser draws it, not the page, and without being told it draws it
+   light — with the options inheriting the field's light text, so a dark theme's
+   dropdown opened as pale grey on white. Colouring the options from the theme's
+   own variables (not a hard-coded dark) keeps a custom light theme right too. */
+select.input option,
+select.input optgroup  { background: var(--dim); color: var(--text); }
+select.input option:checked  { background: var(--raised); color: var(--bright); }
+select.input option:disabled { color: var(--muted); }
