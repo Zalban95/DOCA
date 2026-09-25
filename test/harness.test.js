@@ -1999,13 +1999,16 @@ test('a rate limit or a refusal is still an answer, and does not hop', async () 
   });
 });
 
-test('a reasoning model that spends the whole reply thinking gets one retry with room, then an explanation — never an empty answer', async () => {
+test('a one-off call streams under the harness\'s own reply limit, lets the model think, and never returns an empty answer', async () => {
   const agentMod = require('../modules/harness/agent');
-  script = [{ text: '', think: 'thinking about the rules for a long time' }, { text: 'Rule 3 is vague.' }];
+  await H.api(null, 'POST', '/api/harness/doca/config', { provider: 'stub', model: 'stub-model', maxTokens: 256000 });
+  script = [{ think: 'a long think about the rules', text: 'Rule 3 is vague.' }];
   seen.length = 0;
-  assert.equal(await agentMod.ask({ system: 's', user: 'u', maxTokens: 900 }), 'Rule 3 is vague.');
-  assert.deepEqual(seen.map(b => b.max_tokens), [900, 4000], 'the retry has room for thinking and answering');
+  assert.equal(await agentMod.ask({ system: 's', user: 'u' }), 'Rule 3 is vague.');
+  assert.equal(seen[0].stream, true, 'streamed: thinking keeps the first-token guard satisfied');
+  assert.equal(seen[0].max_tokens, 256000, 'the harness\'s Longest reply, not a small cap of its own');
 
-  script = [{ text: '', think: 'still thinking' }, { text: '', think: 'and still' }];
-  await assert.rejects(agentMod.ask({ system: 's', user: 'u', maxTokens: 900 }), /spent its whole reply thinking/);
+  script = [{ think: 'thinking, and nothing else' }];
+  await assert.rejects(agentMod.ask({ system: 's', user: 'u' }), /thought, then stopped before writing one .* capped at 256000 tokens by "Longest reply"/);
+  await H.api(null, 'POST', '/api/harness/doca/config', { provider: 'stub', model: 'stub-model', maxTokens: 2048 });
 });

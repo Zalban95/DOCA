@@ -708,7 +708,11 @@ Shape, as built:
   which never passed `onHop` and so never hopped; the tool-check probe still does
   not, on purpose, since it tests one rung. A reasoning model that returns nothing
   because it spent `max_tokens` thinking gets one retry with room, then an error
-  that says so — the Rules button had shown an empty review.
+  that says so — the Rules button had shown an empty review. **Superseded the
+  same night:** one-off calls now stream like turns and take the harness's own
+  "Longest reply" (the owner's is 256k) instead of a cap of their own, so a
+  reasoning model may think as long as it is doing useful work; only the
+  first-token guard (silence) and a 60-minute backstop stop them.
 
 - **A `400` about our own message shape should not end the turn.** Added
   2026-09-18, after `ISSUES.md` H-10 killed a mission. "Only a stall hops" is

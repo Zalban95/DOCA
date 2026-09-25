@@ -133,7 +133,10 @@ async function hcRulesVerify() {
   const btn = document.getElementById('hc-rules-verify');
   const was = btn?.textContent;
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Reading…'; }
-  _hcRulesReview('Reading the rules — this goes through the model, so give it a few seconds.');
+  _hcRulesReview('Reading the rules. A model that reasons may think for a while first — the seconds count on the button.');
+  // A reasoning model may think for minutes before it answers; a counter says it is still at it.
+  const started = Date.now();
+  const tick = setInterval(() => { if (btn) btn.textContent = `⏳ Thinking… ${Math.round((Date.now() - started) / 1000)}s`; }, 1000);
   try {
     const data = await apiFetch('/api/harness/memory/rules/verify', { method: 'POST', body: _hcRulesDraft() });
     const { categories, rules } = data.checked;
@@ -145,6 +148,7 @@ async function hcRulesVerify() {
     _hcRulesReview(null);
     appAlert(`Error: ${e.message}`);
   } finally {
+    clearInterval(tick);
     if (btn) { btn.disabled = false; btn.textContent = was; }
   }
 }

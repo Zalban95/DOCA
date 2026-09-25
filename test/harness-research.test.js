@@ -102,7 +102,9 @@ test('documentation is read by something that has nothing to hijack', async () =
   assert.equal('tools' in call, false, 'the reader was offered tools');
   assert.equal('tool_choice' in call, false);
   assert.equal(call.messages.length, 2, 'no conversation was carried in');
-  assert.equal(call.stream, false);
+  // Streamed since 2026-09-25, like a turn, so a reasoning model may think at
+  // length; what matters here is the line above — no tools to be hijacked into.
+  assert.equal(call.stream, true);
 
   // And nothing about this system travelled with the page.
   const whole = JSON.stringify(call);

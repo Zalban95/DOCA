@@ -118,7 +118,7 @@ async function read({ subject, urls, questions, signal }) {
     ...usable.flatMap(p => ['', `--- BEGIN UNTRUSTED PAGE: ${p.url} ---`, p.text, '--- END UNTRUSTED PAGE ---']),
   ].join('\n');
 
-  const report = await agent.ask({ system: READER_PROMPT, user: body, maxTokens: 1600, signal });
+  const report = await agent.ask({ system: READER_PROMPT, user: body, signal });
   return { subject, pages, report: report.slice(0, MAX_REPORT) };
 }
 

@@ -284,33 +284,33 @@ async function streamOrRead({ ep, body, guard, onText, onThinking, p }) {
  * prompt to grow tools by accident, and the rules review depends on the same.
  * @returns {Promise<string>}
  */
-async function ask({ system, user, temperature = 0.1, maxTokens, signal }) {
+async function ask({ system, user, temperature = 0.1, signal }) {
   const p = params();
   if (!p.model) throw Object.assign(new Error('No model chosen for the DOCA harness.'), { status: 400 });
-  // A turn has a user watching a stream and can wait; these callers are a tool
-  // call and a button, both of which have to come back or say why.
-  const deadline = signal || AbortSignal.timeout(120_000);
-  const once = max => complete({
+  // Streamed, like a turn, and for the same reason: the first-token guard still
+  // catches a provider that never answers, and once it answers — thinking
+  // included — nothing cuts it off. These calls used to wait for a whole reply
+  // under a 2-minute clock and a 900-token cap, which a reasoning model spent
+  // entirely on thinking (2026-09-25). The cap is now the harness's own
+  // "Longest reply", the same as a turn's; the ceiling below is only a backstop.
+  const deadline = signal || AbortSignal.timeout(60 * 60e3);
+  const cap = Number(p.maxTokens) || 0;
+  const reply = await complete({
     p, ep: providers.endpoint(p.provider), signal: deadline,
     // The fallback chain applies here too: complete() only hops for a caller
     // that takes the hop, and a button is as entitled to an answer as a turn.
     onHop: h => console.warn(`[harness] ask: ${h.from.model} unavailable — asking ${h.to.model}`),
     body: {
-      model: p.model, stream: false, temperature,
-      ...(max ? { max_tokens: max } : {}),
+      model: p.model, stream: true, stream_options: { include_usage: true }, temperature,
+      ...(cap > 0 ? { max_tokens: cap } : {}),
       messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
     },
   });
-  let reply = await once(maxTokens);
-  // A reasoning model counts its thinking against max_tokens, and can spend all
-  // of it before writing a word: 900 of 900 tokens and an empty answer, which
-  // reached the Rules modal as a review that said nothing (2026-09-25). One
-  // retry with room for both, then say what happened instead of returning ''.
-  if (!(reply.content || '').trim() && maxTokens) reply = await once(Math.max(maxTokens * 4, 4000));
   const text = (reply.content || '').trim();
   if (!text) {
     throw Object.assign(new Error(`${reply.provider || p.provider} / ${p.model} returned no answer`
-      + (reply.reasoning ? ' — it spent its whole reply thinking. Try again, or use a model that does not reason at length for this.' : '.')), { status: 502 });
+      + (reply.reasoning ? `: it thought, then stopped before writing one${cap ? ` — its reply is capped at ${cap} tokens by "Longest reply" in the harness settings` : ''}.` : '.')),
+    { status: 502 });
   }
   return text;
 }

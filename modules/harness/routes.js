@@ -249,7 +249,6 @@ const handleRulesVerify = wrap(async (req, res) => {
   const review = await agent.ask({
     system,
     user: `Categories:\n${catalogue || '(none)'}\n\nRules:\n${listing || '(none)'}`,
-    maxTokens: 900,
   });
 
   res.json({
