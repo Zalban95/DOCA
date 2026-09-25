@@ -240,10 +240,12 @@ async function versionsLoad() {
   const opts = _versions.versions.map(v =>
     `<option value="${escHtml(v.tag)}"${v.current ? ' selected' : ''}${v.compatible ? '' : ' disabled'}>${escHtml(_versionLabel(v))}</option>`).join('');
   box.innerHTML = `
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <label for="versions-select" style="font-size:12px;color:var(--muted)">Version</label>
-      <select id="versions-select" style="flex:1;min-width:0;max-width:100%">${opts}</select>
-      <button class="btn btn-xs" id="versions-use-btn" onclick="versionsUse()">Switch</button>
+    <div class="field" style="margin-bottom:0">
+      <label class="input-label" for="versions-select" style="display:block">Version</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select class="input flex1" id="versions-select" style="min-width:0">${opts}</select>
+        <button class="btn btn-xs btn-teal" id="versions-use-btn" onclick="versionsUse()" title="Switch to the selected version">Switch</button>
+      </div>
     </div>
     <span class="status-line" id="versions-status"></span>
     <p style="font-size:11px;color:var(--muted);margin:0">
