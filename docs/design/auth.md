@@ -1,6 +1,6 @@
 # Authentication — design
 
-**Status:** design pass, 2026-09-25, for decision. Nothing here is built.
+**Status:** decided 2026-09-25 (§8); phase 1 in progress.
 **Settled already** (`TODO.md`): port StatENS's model, shaped for tenants from
 the first line; device tokens keep working; on migration everything that exists
 becomes the first user's; auth comes before groups.
@@ -181,7 +181,27 @@ login.
 | **3** | Groups; conversations, memory and missions scoped to a user or a group in the store paths; the agent unable to read another group's | Shared machine, separate work |
 | **4** | Hosted: many organisations, self-registration with approval, a machine (container/VM) per tenant, metering, billing | DOCA as a service |
 
-## 8. Decisions to make
+## 8. Decisions — settled 2026-09-25
+
+1. **Argon2id via `hash-wasm`** — the more maintainable option: WebAssembly, no
+   native build to break on a Node upgrade, the same algorithm and parameters as
+   StatENS. It is updated with the other dependencies (see the dependency toggle
+   in `TODO.md`).
+2. **JSON now, on one condition: converting to a database later must not
+   multiply the work.** So every read and write of auth state goes through one
+   module, `modules/auth/store.js`, whose functions are the queries
+   (`userByEmail`, `createSession`, `sessionByHash`, `membershipsOf`, `audit`…),
+   never "load the file". Nothing else knows there are files. Moving to a
+   database is rewriting that one module against the same function list, and a
+   contract test (`test/auth-store.test.js`) runs against whichever
+   implementation is configured, so the second one is proven by the same tests
+   as the first.
+3. Roles owner / admin / member / viewer, as in §2. 4. Step-up after 12 hours.
+5. Tailscale identity opt-in. 6. Pairing closed by phase 1. 7. A shared spec
+   with StatENS after phase 1. — all as proposed.
+
+### Original options, for the record
+
 
 1. **Argon2id via `hash-wasm`** (MIT, WebAssembly, no native build; same
    algorithm and parameters as StatENS) — or **`node:crypto` scrypt** (no

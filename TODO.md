@@ -1570,7 +1570,7 @@ order it is to be done.
   warn. A version that fails its health check within ~60 s of a switch is
   switched back automatically, and `run.sh rollback [version]` works without
   the dashboard — the dashboard being what broke is the case this is for.
-- **Design pass done 2026-09-25: `docs/design/auth.md`** — seven decisions to settle before phase 1. Found while writing it: the dashboard's pairing route is unauthenticated, so anyone who reaches the panel can mint a device token with admin scope; phase 1 closes it.
+- **Decided 2026-09-25: `docs/design/auth.md` §8** — Argon2id via hash-wasm; JSON behind a query-shaped store module so a database is one file later; the rest as proposed. Phase 1 in progress. Found while writing it: the dashboard's pairing route is unauthenticated, so anyone who reaches the panel can mint a device token with admin scope; phase 1 closes it.
 - **P1 — authentication: StatENS's model, ported to Node.** Users,
   organisations, memberships with a role and a `pending` state an admin
   approves, opaque session tokens hashed at rest in an `HttpOnly`
@@ -1739,6 +1739,7 @@ more is built on top of them. Proposed shape, to settle per section:
 
 - **Settings sub-tabs today:** General, API Keys, Skills, Snapshots, Setup,
   Config, Voice, System.
+  - **Decided 2026-09-25:** OpenClaw's settings are kept but live only in an "OpenClaw" section that appears when OpenClaw is installed — nobody uses them through this UI (OpenClaw has its own), and the point is that it is never unclear whose settings they are.
   - **Snapshots, Setup, Config** are OpenClaw's (snapshots of its agent, its
     setup scripts, its config files). Not deleted outright — a user with
     OpenClaw still needs them — but **moved into one "OpenClaw" section that
@@ -1760,4 +1761,16 @@ more is built on top of them. Proposed shape, to settle per section:
   `.btn` variants, the toggle, the Snapshots row); `test/ui-consistency.test.js`
   holds the fields to it, and screenshots at desktop and phone width before
   shipping.
+
+## Wanted 2026-09-25 — update the dependencies on purpose, with the version
+
+An update installs the new version's own `package-lock.json`, so dependencies
+move only when a release moves them, and nothing reminds anyone that they are
+stale. Wanted: in Settings → Updates, a **"check dependencies"** toggle beside
+Update — `npm outdated` for the checkout, the list shown (current → wanted →
+latest, with the licence), and updating within the declared ranges as part of
+preparing a release, with the tests run before it is tagged. Security advisories
+(`npm audit`) shown in the same list. Chosen with auth in mind: `hash-wasm` is a
+dependency at the most sensitive point, and it should be kept current by a
+habit, not by memory.
 
