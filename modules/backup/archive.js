@@ -58,7 +58,9 @@ function walk(dir, base = dir) {
   try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
   for (const e of entries) {
     const abs = path.join(dir, e.name);
-    if (e.isDirectory()) out = out.concat(walk(abs, base));
+    // Checkpoint repositories (projects/checkpoints.js) are this machine's undo
+    // history of project folders, not state: large, and useless elsewhere.
+    if (e.isDirectory()) { if (!(dir === base && e.name === 'checkpoints')) out = out.concat(walk(abs, base)); }
     else if (e.isFile() && !SKIP.test(e.name)) out.push(path.relative(base, abs));
   }
   return out;

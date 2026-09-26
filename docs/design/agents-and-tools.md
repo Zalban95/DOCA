@@ -109,7 +109,7 @@ The agent editing its own files is by design. What changes is which files ask
 
 ## Phases
 
-**Phase 1 built in v2.75.0; phase 2 in v2.76.0** — `agents/markdown.js`
+**Phase 1 built in v2.75.0; phase 2 in v2.76.0; phase 3 in v2.77.0** (checkpoints: `modules/projects/checkpoints.js`) — `agents/markdown.js`
 (definitions as `.md`, Claude Code subagents imported with their tools mapped
 onto kits, a folder import, export), the registry saving markdown (an older
 `.json` moved aside), `harness/identity.js` (`persona.md` in the Orchestrator's

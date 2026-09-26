@@ -57,6 +57,14 @@ function mount(app) {
   }));
   app.post('/api/projects/:id/jobs/:job/stop', h(req => { P(req); return { job: require('../harness/jobs').stop(req.params.job) }; }));
 
+  // Checkpoints (./checkpoints.js): undo for agent runs.
+  const cps = () => require('./checkpoints');
+  app.get('/api/projects/:id/checkpoints', h(req => ({ checkpoints: cps().list(P(req)) })));
+  app.post('/api/projects/:id/checkpoints', h(async req => ({ checkpoint: await cps().take(P(req), { label: req.body?.label || 'checkpoint', by: 'person' }) })));
+  app.get('/api/projects/:id/checkpoints/:cp/changes', h(async req => ({ changes: await cps().changes(P(req), req.params.cp) })));
+  app.get('/api/projects/:id/checkpoints/:cp/diff', h(async req => ({ diff: await cps().fileDiff(P(req), req.params.cp, String(req.query.file || '')) })));
+  app.post('/api/projects/:id/checkpoints/:cp/restore', h(req => cps().restore(P(req), req.params.cp, { by: 'person' })));
+
   // The project's conversation: its bound work chat, made on first use.
   app.post('/api/projects/:id/chat', h(req => ({ sessionId: projects.workChat(req.params.id).id })));
 }

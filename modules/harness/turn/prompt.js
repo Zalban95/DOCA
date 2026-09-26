@@ -328,6 +328,8 @@ function environmentBrief(p, toolCount) {
  */
 async function turnPreamble({ session, profile, p }) {
   const projectBrief = await require('../../projects/brief').forSession(session.id).catch(() => '');
+  // A project's conversation: a checkpoint before it changes anything, if the files changed since the last.
+  if (projectBrief) await require('../../projects/checkpoints').beforeTurn(session.id);
   let toolNews = '';
   try {
     const news = require('./tool-news');
