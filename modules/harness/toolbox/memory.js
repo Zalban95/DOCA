@@ -189,4 +189,40 @@ module.exports = [
         + `${e.locked ? ' — it is locked, so the user decides what it says next.' : '.'}`;
     },
   },
+  {
+    name: 'recall_conversations',
+    description: 'Find an earlier conversation about the subject at hand, and read it. Use it when the person '
+      + 'refers to something discussed before ("like last time", "the Blender bridge we fixed"), or when a task '
+      + 'looks like one solved in another conversation — before redoing the work. search matches titles, the '
+      + 'topics and rolling summary of every conversation (archived ones too) and the words in the recent '
+      + 'transcripts; read gives one conversation\'s summary and its last messages. What you learn there that '
+      + 'will matter again belongs in memory_write.',
+    parameters: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['search', 'read'], description: 'search (default) or read.' },
+        query:  { type: 'string', description: 'search: the subject, in a few words.' },
+        id:     { type: 'string', description: 'read: a conversation id from a search.' },
+        limit:  { type: 'integer', description: 'search: how many conversations, up to 12 (default 6).' },
+      },
+    },
+    run: ({ action = 'search', query, id, limit }, ctx = {}) => {
+      const recall = require('../recall');
+      if (action === 'read') {
+        const c = recall.read(String(id || ''));
+        return clip([`# ${c.title} (${c.id}, ${c.kind}, last active ${c.updatedAt})`,
+          c.topics.length ? `Topics: ${c.topics.join(', ')}` : '',
+          c.summary ? `Summary: ${c.summary}` : 'No summary yet: the conversation was never long enough to fold.',
+          '', `Last ${c.messages.length} messages:`, ...c.messages.map(m => `[${m.role} ${m.at || ''}] ${m.text}`)].filter(x => x !== '').join('\n'));
+      }
+      if (!recall.terms(query).length) return 'Error: say what to look for in query.';
+      const hits = recall.search(query, { limit: Math.min(12, Math.max(1, Number(limit) || 6)), exclude: ctx.sessionId });
+      if (!hits.length) return `No earlier conversation mentions "${query}".`;
+      return clip(hits.map(h => [`- ${h.title} — id ${h.id}, ${h.kind}${h.archived ? ', archived' : ''}, last active ${h.updatedAt}`,
+        h.topics.length ? `  topics: ${h.topics.join(', ')}` : '',
+        h.summary ? `  summary: ${h.summary}` : '',
+        ...h.matches.map(m => `  ${m.role} said: ${m.text}`)].filter(Boolean).join('\n')).join('\n')
+        + '\n\nread one with action read and its id.');
+    },
+  },
 ];

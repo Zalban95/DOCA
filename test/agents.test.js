@@ -58,7 +58,7 @@ test('the shipped archivist is a real definition', () => {
   const a = registry.get('archivist');
   assert.ok(a, 'the memory specialist ships with the panel');
   assert.equal(a.builtin, true);
-  assert.deepEqual(a.tools, ['memory_search']);
+  assert.deepEqual(a.tools, ['memory_search', 'recall_conversations']);
   assert.equal(a.memory, false, 'it searches memory; it does not need it pasted in');
   assert.equal(a.environment, 'minimal');
 });
@@ -111,7 +111,7 @@ test('an allowlist really is an allowlist', () => {
   const all = tools.schemas([]).map(s => s.function.name);
   const disabled = all.filter(n => !def.tools.includes(n));
   const left = tools.schemas(disabled).map(s => s.function.name);
-  assert.deepEqual(left, ['memory_search']);
+  assert.deepEqual(left, ['memory_search', 'recall_conversations']);
   assert.ok(!left.includes('shell'), 'the archivist has no business running commands');
 });
 

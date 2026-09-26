@@ -9,6 +9,7 @@ const memory      = require('../memory');
 const tools       = require('../tools');
 
 const { complete } = require('./transport');
+const { splitTopics } = require('../recall');
 
 /* ── Rolling summary ──────────────────────────────────── */
 
@@ -34,13 +35,17 @@ async function foldSummary({ session, p, ep, signal, force = false }) {
         messages: [
           { role: 'system', content: 'Merge the notes and new transcript into a compact brief of this '
             + 'conversation: decisions made, facts established, work completed, and anything still open. '
-            + 'Keep names, paths and numbers verbatim. Prose, under 250 words, no preamble.' },
+            + 'Keep names, paths and numbers verbatim. Prose, under 250 words, no preamble. '
+            // The topics are what recall_conversations finds this conversation by later (harness/recall.js).
+            + 'End with one line "Topics: " and the 3 to 8 subjects of the whole conversation, short, '
+            + 'lower-case, comma-separated.' },
           { role: 'user', content: `Existing notes:\n${pending.previous || '(none)'}\n\nNew transcript:\n${transcript}` },
         ],
       },
     });
-    const summary = (content || '').trim() || pending.previous;
-    memory.updateSession(session.id, { summary, summarizedThrough: pending.through });
+    const { summary: text, topics } = splitTopics(content);
+    const summary = text || pending.previous;
+    memory.updateSession(session.id, { summary, summarizedThrough: pending.through, ...(topics?.length ? { topics } : {}) });
     return summary;
   } catch {
     // Summarising is an optimisation. If it fails, keep the old notes and let

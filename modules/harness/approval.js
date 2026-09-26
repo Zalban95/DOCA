@@ -48,7 +48,7 @@ const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
  * network, writes, or speaks to another machine is deliberately absent.
  */
 const FREE = new Set([
-  'memory_list', 'memory_search', 'settings_read', 'system_status',
+  'memory_list', 'memory_search', 'recall_conversations', 'settings_read', 'system_status',
   'mcp_status', 'doca_clients', 'work_chats', 'agent_results',
   'show_media', 'show_image',
 ]);
