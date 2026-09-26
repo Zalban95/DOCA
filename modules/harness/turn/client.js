@@ -55,6 +55,8 @@ function clientBlock(client) {
   return [
     '# Who is asking',
     `This turn came from "${client.name}"${client.id ? ` (${client.id})` : ''} — ${client.label || client.formFactor || 'an unknown client'}, ${screen}${can ? `, input: ${can}` : ''}.`,
+    ...(client.user ? [`Signed in as ${client.user.name || client.user.email}${client.user.name && client.user.email ? ` <${client.user.email}>` : ''}`
+      + `${client.user.role ? `, ${client.user.role} of this panel` : ''}. What changes on this machine in this turn is logged as theirs.`] : []),
     `Shape the answer for it: ${shapeFor(client)}`,
     'Other devices of the same user may be reading this conversation too, so do not describe this one as if it were the only one.',
   ].join('\n');
@@ -115,4 +117,30 @@ function placeBlock(client) {
   return out.join('\n');
 }
 
-module.exports = { shapeFor, clientBlock, placeBlock };
+/**
+ * The person behind a turn (docs/design/auth.md §6): from a signed-in browser
+ * (`req.auth`, set by auth/gate.js) or from the account a device is paired to.
+ * Rides on the client, so every entry point that names its client names them.
+ */
+function personOf(auth) {
+  if (!auth?.user) return null;
+  return { id: auth.user.id, name: auth.user.name || '', email: auth.user.email || '', role: auth.role || null, orgId: auth.orgId || null };
+}
+
+function deviceOwner(device) {
+  if (!device?.userId) return null;
+  const authStore = require('../../auth/store');
+  const u = authStore.userById(device.userId);
+  if (!u) return null;
+  const orgId = device.orgId || authStore.defaultOrg()?.id || null;
+  return personOf({ user: u, orgId, role: orgId ? authStore.membership(orgId, u.id)?.role : null });
+}
+
+/** The dashboard in a browser, as a client — with whoever is signed in to it. */
+function dashboardClient(req) {
+  return { name: 'Dashboard console', kind: 'dashboard', formFactor: 'desktop',
+    label: 'the dashboard in a desktop browser, next to every panel you can read',
+    input: { text: true, touch: false }, user: personOf(req?.auth) };
+}
+
+module.exports = { shapeFor, clientBlock, placeBlock, personOf, deviceOwner, dashboardClient };

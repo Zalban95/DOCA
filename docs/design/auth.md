@@ -177,6 +177,9 @@ login.
 
 - `agent.turn()` receives `{ user, org }`; `clientBlock()` says who is asking;
   tool calls that change something audit as `actor = user, via = harness`.
+  **Built in 2.86.0** — the person travels as `client.user`; reads
+  (`read_file`, `list_dir`, `search_files`, the web, the approval-free tools)
+  are not audited.
 - `settings_propose` / `install_propose` apply only with `propose`; a mission's
   proposals belong to the user who dispatched it (closes `ISSUES.md` H-7: the
   agent cannot apply its own proposal over HTTP because it has no session).

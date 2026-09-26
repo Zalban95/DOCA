@@ -136,7 +136,7 @@ async function handleChat(req, res) {
     try {
       const { text } = await agent.turn({
         message,
-        sessionId: require('./harness/memory').mainSession().id,
+        sessionId: require('./harness/memory').mainSession().id, client: require('./harness/turn/client').dashboardClient(req),
         // Only the built-in harness understands these. The gateway and the
         // claude CLI below get the message alone, which is why the composer
         // says so rather than dropping the files silently.

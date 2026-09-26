@@ -112,12 +112,18 @@ function handleUpload(req, res) {
     if (bytes > limit && !over) {
       over = true;
       req.unpipe(out); out.destroy();
-      fs.rmSync(partial, { force: true });
-      res.setHeader('Connection', 'close');   // the rest is read and dropped, then the connection ends
-      fail(res, tooBig(limit));
       req.resume();
+      // Removed once the stream has closed — it may still have been opening the
+      // file — and only then answered, so a refusal never leaves a .partial behind.
+      out.once('close', () => {
+        fs.rmSync(partial, { force: true });
+        res.setHeader('Connection', 'close');   // the rest is read and dropped, then the connection ends
+        fail(res, tooBig(limit));
+      });
     }
   });
+  // A sender that goes away mid-file leaves nothing either.
+  req.on('aborted', () => { if (over) return; over = true; req.unpipe(out); out.destroy(); out.once('close', () => fs.rmSync(partial, { force: true })); });
   req.pipe(out);
   out.on('finish', async () => {
     if (over) return;
