@@ -499,6 +499,12 @@ still missing from that sentence.
   *and* its event log, and nothing draws it, so a mission that is blocked looks
   exactly like a mission that is slow. Until both exist, diagnosing a specialist
   means reading `agents/mission-*.jsonl` by hand — which is how H-10 was found.
+  **Both built.** The window: the missions bar's log overlay (`hcMissionLog`)
+  draws `GET /api/harness/missions/:id` and polls it. The picker (2.95.0): a
+  "to" selector in the harness composer — Orchestrator, or "→ <specialist>" when
+  specialists are on — sends the message through `POST /api/harness/missions`
+  (`chat` right) as a mission to that agent, opens its log to watch it, and the
+  mission runs as the person who sent it and reports to the Orchestrator.
 
 - **One request shape is sent to every provider, and they do not agree on one.**
   Wanted, and H-10 was the first bite: DeepSeek's thinking mode returns

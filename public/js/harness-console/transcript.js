@@ -96,6 +96,8 @@ async function hcSend() {
   const btn   = document.getElementById('hc-send');
   const text  = input?.value.trim();
   if (!text || _hcBusy) return;
+  const to = document.getElementById('hc-to')?.value;
+  if (to) { if (await hcSendMission(to, text)) input.value = ''; return; }
 
   _hcBusy = true;
   input.value = '';

@@ -63,6 +63,7 @@ function _hcBuiltinHtml(h) {
         <div class="hc-proposals" id="hc-proposals"></div>
         <div class="hc-input-row">
           <span class="hc-caret">❯</span>
+          <select class="input hc-to" id="hc-to" style="display:none" title="Who this message goes to: the Orchestrator, or straight to one specialist as an errand"></select>
           <textarea class="input flex1 hc-input" id="hc-input" rows="1" placeholder="Message the harness…"
                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();hcSend();}"></textarea>
           <button class="btn btn-sm btn-amber" id="hc-send" onclick="hcSend()">Send</button>
