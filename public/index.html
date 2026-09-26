@@ -1232,13 +1232,11 @@
   <div class="modal" style="max-width:680px" onclick="event.stopPropagation()">
     <div class="modal-title" id="hc-agent-title">Specialist</div>
     <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
-      A specialist is its prompt plus a short tool list. Keep both small — it runs its own
-      steps, and everything you add here it pays for on every one of them.
-      <code>role</code> is the system prompt, <code>tools</code> is an allowlist,
-      <code>memory</code> false means it searches memory rather than carrying it,
-      and <code>provider</code>/<code>model</code> are optional: leave them out and it uses
-      the panel's. Three tools can never be granted here — changing settings, installing
-      anything, or dispatching another specialist — and are removed if you ask for them.
+      A specialist is its role plus a few <strong>kits</strong> (families of tools: files, code, shell, web,
+      canvas, memory, devices…); a tool added to a kit later reaches it by itself. Markdown: a front matter
+      (<code>name</code>, <code>description</code>, <code>kits</code>, optional <code>tools</code>, <code>model</code>),
+      then the role. Claude Code subagent files import as they are. Changing settings, installing, dispatching
+      and asking the person are never granted to a specialist.
     </p>
     <div class="field">
       <div class="input-label">Definition</div>
@@ -1247,6 +1245,7 @@
     </div>
     <div class="status-line mt8" id="hc-agent-status"></div>
     <div class="modal-actions">
+      <a class="btn btn-sm" id="hc-agent-export" download title="Download as .md">⬇ Export</a>
       <span style="flex:1"></span>
       <button class="btn btn-sm" onclick="hcAgentClose()">Cancel</button>
       <button class="btn btn-sm btn-blue" onclick="hcAgentSave()">Save</button>
@@ -1536,6 +1535,7 @@
 <script src="js/settings/backups.js"></script>
 <script src="js/settings/backup-schedule.js"></script>
 <script src="js/settings/deps.js"></script>
+<script src="js/settings/identity.js"></script>
 <script src="js/settings/subnav.js"></script>
 <script src="js/settings/account.js"></script>
 <script src="js/settings/appearance.js"></script>

@@ -95,8 +95,9 @@ function rulesBlock() {
 function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile, projectBrief = '' }) {
   // What this turn is offered, described (turn/tools-section.js).
   const toolList = require('./tools-section').toolsSection(tools.schemas(disabledFor(profile, p)));
+  const identity = require('../identity');
   if (profile?.level === 'orchestrator') return [
-    providers.SAFETY_CHARTER, profile.systemPrompt,
+    providers.SAFETY_CHARTER, profile.systemPrompt, identity.personaBlock(), identity.humanBlock(),
     p.coordinatorInstructions || providers.DEFAULT_SYSTEM_PROMPT,
     environmentBrief(p, toolCount), toolList, clientBlock(client), rulesBlock(),
     memoryBlock(userText, Math.min(3, Math.max(0, Number(p.memoryLimit) || 0))),
@@ -141,6 +142,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
     clientBlock(client),
     placeBlock(client),
     rulesBlock(),
+    identity.humanBlock(),
     // A conversation bound to a project (projects/brief.js): where it works, how it builds.
     projectBrief,
     memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)),

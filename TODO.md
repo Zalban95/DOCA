@@ -2106,7 +2106,7 @@ honoured, `registry.NEVER` still subtracted), the update notice
 (`turn/tool-news.js`, per agent type, once), and control-plane writes that
 **ask in every mode** (never "always", refused to a specialist) instead of the
 flat refusal of 2.74.0. The readings-as-`user` test is in `test/harness.test.js`.
-Adjusted with the person 2026-09-26: `me.md`, not `owner.md`; tools decided by
+Adjusted with the person 2026-09-26: `human.md` and `persona.md` (Letta's names; `me.md` would read as the agent itself), not `owner.md`; tools decided by
 agent type; and **undo for agent runs** (git checkpoints, retry with another
 prompt/model/specialist) added as phase 3.
 
@@ -2114,3 +2114,12 @@ From the agent's latest findings, also: its memory note
 `llamacpp-cannot-serve-harness` is obsolete (two missions ran end to end on
 llama.cpp with `--jinja`); and add a test that the per-step readings travel as a
 `user` message, which is what keeps a Qwen `--jinja` template from refusing.
+
+**Phase 2 built in 2.76.0:** specialist definitions are markdown (front matter +
+role; `agents/markdown.js`), Claude Code subagents import as they are (Read →
+files, Grep/Glob → code, Bash → shell, WebFetch → web; their MCP tools and
+model names are left out with a note), a folder imports without overwriting,
+each exports as `.md`, the registry saves `.md` and moves an older `.json`
+aside. `persona.md` (the Orchestrator's) and `human.md` (the Orchestrator's and
+work chats') are in `<DATA_DIR>/identity/`, in Settings → Harness → Who.
+**Next in this design:** phase 3, undo for agent runs (git checkpoints).

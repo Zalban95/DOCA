@@ -9,6 +9,7 @@ function mount(app) {
   require('./questions-routes').mount(app);   // questions the agent is waiting on the owner for
   require('../canvas/routes').mount(app);     // canvases: where to open one (never the page itself)
   require('../projects/routes').mount(app);   // projects: search, git, commands, the bound work chat
+  require('../agents/routes').mount(app);     // definitions as markdown in and out; persona.md, human.md
   // What a restart would cut off, and whether one is waiting for it (drain.js).
   app.get('/api/harness/busy', (_req, res) => {
     const drain = require('./drain');

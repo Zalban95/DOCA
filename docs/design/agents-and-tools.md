@@ -84,11 +84,13 @@ model: default
 You are the Blender engineer. … (its role, its voice)
 ```
 
-- `agents/orchestrator.md` — who the Orchestrator is and how it works (the
-  "soul"). The orchestrator may edit it.
-- `me.md` — the person it works for, in their own voice ("I like short
-  answers; I build Android apps"). They edit it; durable facts the agent
-  learns stay in memory. (Named 2026-09-26: warmer than any corporate word.)
+- `persona.md` — who the Orchestrator is and how it works (the "soul"). It
+  may edit it.
+- `human.md` — the person it works for, in their own voice ("I like short
+  answers; I build Android apps"). Durable facts the agent learns stay in
+  memory. (Named 2026-09-26. `human.md` was considered and dropped: read by the
+  agent, "me" is itself. `persona`/`human` is the Letta/MemGPT convention,
+  unambiguous from both sides.)
 - `agents/<id>.md` — one per specialist. Shipped ones live in the repository
   (global, standard figures); ones made on this machine live in the data folder
   (this person's own). Later: promote a local one to the repository.
@@ -98,7 +100,7 @@ You are the Blender engineer. … (its role, its voice)
 
 The agent editing its own files is by design. What changes is which files ask
 (built in phase 1):
-- **free** — its own identity file, its specialists' definitions, `me.md`;
+- **free** — its own identity file, its specialists' definitions, `human.md`;
 - **ask** — the control plane (panel settings, keys, accounts, devices, the
   release pointer, service units): the write waits for the person's click
   **in every approval mode**, Unattended included — never a silent write, never
@@ -107,7 +109,13 @@ The agent editing its own files is by design. What changes is which files ask
 
 ## Phases
 
-**Phase 1 built in v2.75.0.**
+**Phase 1 built in v2.75.0; phase 2 in v2.76.0** — `agents/markdown.js`
+(definitions as `.md`, Claude Code subagents imported with their tools mapped
+onto kits, a folder import, export), the registry saving markdown (an older
+`.json` moved aside), `harness/identity.js` (`persona.md` in the Orchestrator's
+prompt, `human.md` in the Orchestrator's and work chats', both in the data
+folder, capped, editable in Settings → Harness → Who and by the agent). Shipped
+standard agents in the repository are phase 4.
 
 
 1. **Now:** kits and per-tool "when" lines; the generated `# Your tools`
@@ -116,7 +124,7 @@ The agent editing its own files is by design. What changes is which files ask
    ask instead of refusing; a test that the readings travel as `user` (the
    local-model trap the audit named).
 2. **Next:** markdown definitions (`agents/*.md`, `orchestrator.md`,
-   `me.md`), import from a Claude Code / OpenClaw folder, export.
+   `human.md`), import from a Claude Code / OpenClaw folder, export.
 3. **Then: undo for agent runs.** Before a work chat or a specialist changes a
    project, a git checkpoint (a commit on a side ref, or a stash-like snapshot
    of the tree); after it, one click — or the agent itself — goes back to the

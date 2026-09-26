@@ -37,6 +37,7 @@ function _hcBuiltinHtml(h) {
             <span>on</span>
           </label>
           <button class="btn btn-xs btn-blue" onclick="hcAgentNew()" title="Define a new specialist">+</button>
+          <button class="btn btn-xs" onclick="hcAgentImport()" title="Import .md definitions — ours or Claude Code subagents">⬆</button>
         </div>
         <div id="hc-agents" class="hc-agents"><div class="placeholder">Loading…</div></div>
       </div>
