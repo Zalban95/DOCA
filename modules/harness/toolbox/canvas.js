@@ -33,7 +33,10 @@ module.exports = [
       + 'inline scripts and styles work, and scripts or styles from cdn.jsdelivr.net and cdnjs.cloudflare.com, '
       + 'but it cannot fetch anything or load remote images — put data and images in the page (data: URLs). It '
       + 'can hand text back with parent.postMessage({ doca: "send", text }, "*"), which puts the text in the '
-      + 'user\'s chat box for them to send. `preview` shows a server running on this machine — a dev '
+      + 'user\'s chat box for them to send; ask to save with { doca: "save", name, text } (the person picks where, '
+      + 'the page gets { doca: "saved", path }) and for a file with { doca: "open", accept? } (the person picks '
+      + 'one; the page gets { doca: "opened", name, type, text | dataUrl }) — either can come back as '
+      + '{ doca: "refused", reason }; listen with addEventListener("message"). `preview` shows a server running on this machine — a dev '
       + 'server, a served project — by its port: the user gets a button that opens it in the same window, from '
       + 'any device on the tailnet, even when it listens on localhost only. Good for 12 hours.',
     parameters: {

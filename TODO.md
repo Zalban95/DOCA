@@ -1889,7 +1889,12 @@ and anything built for one is there for the other.
   script and a same-origin fetch all load. One preview per browser at a time.
   **Not yet:** canvases on **devices** (left out of their
   transcripts for now — a phone could open the canvas URL in its WebView);
-  "save this" / "open file" messages. Deleting a canvas from the panel: done
+  ~~"save this" / "open file" messages~~ — **done in 2.98.0**: `{ doca: "save",
+  name, text }` asks the person where (default: the workspace) and writes it
+  through `/api/files/write`; `{ doca: "open", accept? }` asks, then opens the
+  file picker inside that click and hands the file back as text or a data URL
+  (5 MB cap); the page gets `saved` / `opened` / `refused` back. Checked in a
+  browser, desk and phone. Deleting a canvas from the panel: done
   in 2.70.1 (🗑 in its window, `DELETE /api/harness/canvases/:id`, chat right).
 - **Isolated work: hand it to a harness that already isolates.** Where a task
   should run apart — its own checkout, its own process — the agent starts

@@ -118,6 +118,46 @@ function _canvasChatInput() {
   return document.getElementById('chat-input');
 }
 
+/**
+ * "Save this" and "open a file", asked by the page. The page cannot reach the
+ * panel or the disk (opaque origin, connect-src 'none'), so it asks, and the
+ * person decides: where a save goes, and whether — and which — file is handed
+ * in. The answer goes back to the page as { doca: 'saved' | 'opened' | 'refused', … }.
+ */
+const CANVAS_MAX_FILE = 5 << 20;
+function _canvasReply(frame, msg) { try { frame.contentWindow.postMessage(msg, '*'); } catch { /* closed */ } }
+
+async function _canvasSave(frame, d) {
+  if (typeof d.text !== 'string' || d.text.length > CANVAS_MAX_FILE) return _canvasReply(frame, { doca: 'refused', what: 'save', reason: 'text only, up to 5 MB' });
+  const name = String(d.name || 'canvas.txt').replace(/[\\/\0]+/g, '_').replace(/^\.+/, '').slice(0, 120) || 'canvas.txt';
+  let dir = '';
+  try { dir = (await apiFetch('/api/paths')).workspaceDir || ''; } catch { /* no default then */ }
+  appPrompt(`This canvas wants to save "${name}" (${Math.ceil(d.text.length / 1024)} KB). Save it where?`, async to => {
+    try {
+      await apiFetch('/api/files/write', { method: 'POST', body: { path: to, content: d.text } });
+      _canvasReply(frame, { doca: 'saved', path: to });
+    } catch (e) { appAlert(`Could not save it: ${e.message}`); _canvasReply(frame, { doca: 'refused', what: 'save', reason: e.message }); }
+  }, dir ? `${dir.replace(/\/+$/, '')}/${name}` : name);
+}
+
+function _canvasOpen(frame, d) {
+  appConfirm('This canvas asks for a file from this device. Choose one to hand it?', () => {
+    // Inside the click on "OK": the one moment a browser lets a page open a file picker.
+    const pick = Object.assign(document.createElement('input'), { type: 'file' });
+    if (typeof d.accept === 'string') pick.accept = d.accept.slice(0, 200);
+    pick.onchange = () => {
+      const f = pick.files?.[0];
+      if (!f) return _canvasReply(frame, { doca: 'refused', what: 'open', reason: 'no file chosen' });
+      if (f.size > CANVAS_MAX_FILE) return _canvasReply(frame, { doca: 'refused', what: 'open', reason: 'larger than 5 MB' });
+      const text = /^text\/|json|xml|javascript|csv|svg/.test(f.type) || /\.(txt|md|csv|json|js|ts|html|css|svg|xml|ya?ml|py|kt|java|c|h|cpp|rs|go|sh)$/i.test(f.name);
+      const r = new FileReader();
+      r.onload = () => _canvasReply(frame, { doca: 'opened', name: f.name, type: f.type, size: f.size, ...(text ? { text: r.result } : { dataUrl: r.result }) });
+      if (text) r.readAsText(f); else r.readAsDataURL(f);
+    };
+    pick.click();
+  }, () => _canvasReply(frame, { doca: 'refused', what: 'open', reason: 'the person said no' }));
+}
+
 // Only in a browser: tests evaluate these scripts without one.
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   window.addEventListener('message', e => {
@@ -126,6 +166,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     const d = e.data;
     if (!d || typeof d !== 'object') return;
     if (d.doca === 'close') return canvasClose();
+    if (d.doca === 'save') return _canvasSave(_canvas.frame, d);
+    if (d.doca === 'open') return _canvasOpen(_canvas.frame, d);
     if (d.doca === 'send' && typeof d.text === 'string') {
       const input = _canvasChatInput();
       if (!input) return;
