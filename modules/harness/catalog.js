@@ -13,8 +13,7 @@
  * Everything the user can change lives in .dashboard-prefs.json under
  * `harness`: the default id, the custom list, and per-harness config.
  */
-const shell = require('../shell');
-const os       = require('os');
+const path     = require('path');
 
 const pkg = require('../../package.json');
 const { COMPOSE_DIR } = require('../paths');
@@ -39,7 +38,7 @@ const KNOWN = [
     url: 'https://github.com/openclaw/openclaw',
     // Falls back to "installed" so a stack that is not a git checkout still
     // reports as present instead of offering to clone over it.
-    detectCmd: `test -f "${COMPOSE_DIR}/docker-compose.yml" && { cd "${COMPOSE_DIR}" && git log -1 --format="rev %h (%cr)" 2>/dev/null || echo installed; }`,
+    detect: { file: path.join(COMPOSE_DIR, 'docker-compose.yml'), gitRev: true },
     installCmd: `if [ -d "${COMPOSE_DIR}" ]; then cd "${COMPOSE_DIR}" && git pull; else git clone https://github.com/openclaw/openclaw.git "${COMPOSE_DIR}"; fi && cd "${COMPOSE_DIR}" && docker compose pull && docker compose up -d`,
   },
   {
@@ -162,35 +161,10 @@ function defaultId() {
 
 /* ── Detection ────────────────────────────────────────── */
 
-/**
- * Run a catalogue row's `detectCmd` and read the one line it prints.
- *
- * Through `shell.run`, not `bash -lc`: this was the call site the v2.49.0 pass
- * missed, so on Windows every harness with a `detectCmd` reported "not
- * installed" whether it was there or not — and silently, because a detector
- * that cannot run looks exactly like a thing that is not present.
- *
- * Note the `detectCmd` **strings** in this file are still POSIX
- * (`test -f … && …`), so they do not run under PowerShell either. Making the
- * runner portable is the half that belongs here; the other half is each row
- * declaring what it looks for rather than how to look, which is `TODO.md`'s
- * "OpenClaw is a peer, not a prerequisite".
- */
-function shellDetect(cmd) {
-  return shell.run(cmd, { timeout: 6000, env: { HOME: process.env.HOME || os.homedir() } })
-    .then(r => {
-      // stdout only, for the same reason `system-tools` takes it: the version
-      // line is parsed, and stderr is where a shell puts things that are not it.
-      const out = r.stdout;
-      const ok = r.code === 0 && !r.error && !!out;
-      return { detected: ok, version: ok ? out.split('\n')[0].slice(0, 60) : null };
-    });
-}
-
 /** Detect one harness. The built-in one is always there — it *is* the panel. */
 async function detect(h) {
   if (h.kind === 'builtin') return { detected: true, version: `v${pkg.version}` };
-  if (h.detectCmd)          return shellDetect(h.detectCmd);
+  if (h.detect)             return require('../detect').detect(h.detect);   // declared: a file, a binary
   if (!h.cmd)               return { detected: false, version: null };
   const { detected, version } = await detectBinary(h.cmd);
   return { detected, version };

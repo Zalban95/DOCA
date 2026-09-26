@@ -1398,7 +1398,15 @@ Fixed in part on 2026-09-21: `catalog.shellDetect` and `system-tools.handleList`
 ran `bash -lc`, so on Windows every row reported "not installed" whether it was
 there or not. Both now go through `modules/shell.js`.
 
-**What is left:** the `detectCmd` *strings* are still POSIX —
+**Done in 2.69.0** (`modules/detect.js`): every row in the harness catalogue
+and in System Tools declares what it looks for — `{ file, gitRev }`,
+`{ bin, args, stderr?, match? }` (run directly, found by `shell.which`), or
+`{ any: [...] }` — and no detection runs a shell line. Checked against the old
+detectors on this host: the same answer for every row, except llama-server's
+version, which the old `^v` strip had cut to "ersion: 9174". The regression
+test the section asks for is `test/without-openclaw.test.js`.
+
+**What was left:** the `detectCmd` *strings* were still POSIX —
 `test -f "$COMPOSE_DIR/docker-compose.yml" && …` for OpenClaw, and similar for
 the system tools — so they still do not run under PowerShell. The fix is not to
 write a second string per platform but for each row to **declare what it looks
@@ -1423,6 +1431,11 @@ host with no stack. Undecided, and deliberately so: hiding it makes
 "where did it go" the next question.
 
 ### The test that would keep this true
+
+**Built in 2.69.0:** `test/without-openclaw.test.js` — no compose dir, no
+`openclaw.json`: the built-in harness is the default, OpenClaw is "not
+installed", a provider added in Settings runs a turn, every OpenClaw surface
+answers without a 5xx, and no OpenClaw file is created.
 
 A fixture with no `COMPOSE_DIR`, no `~/.openclaw` and no Docker, asserting that
 the panel boots, the built-in harness is selected, a turn runs, and every
