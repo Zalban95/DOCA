@@ -1385,6 +1385,13 @@ ask "what is stuck and why" from a terminal or a CI job, and no one-command
 demo that proves a mechanical property with no provider configured. That last
 one is the cheapest credibility this project could buy: the suite already proves
 things without a model, and nothing surfaces that to somebody evaluating it.
+**`doca status` built in 2.92.0** (`bin/doca-status.js`, `modules/status-report.js`,
+`npm run status [-- --json | --strict]`): failed and interrupted conversations,
+stalled jobs, missions by state, proposals waiting for a click, the last 24 h of
+tokens against the ceiling, and the fold-check warning — read from disk, with no
+panel and no model; `--strict` exits 1 when anything needs attention. Not in it:
+tool calls waiting for approval, which live only in the running panel's memory.
+The model-free *demo* is still open.
 
 ### 6. Split what travels with a project from local operator state
 
