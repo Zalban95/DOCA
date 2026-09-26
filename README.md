@@ -483,6 +483,7 @@ npm run token -- issue --name phone --preset phone      # mint a token from the 
 curl -ksS -H "Authorization: Bearer doca_…" https://<host>:4242/api/v1/capabilities
 npm test                                                 # protocol tests (node --test)
 npm run status -- --strict                               # what is stuck and why, from disk: no panel, no model
+npm run prove                                            # the guarantees DOCA holds, proved in seconds with no model
 DOCA_ADMIN_TOKEN=doca_… npm run client:demo              # end-to-end walkthrough with the reference clients
 npm run openapi > docs/api/openapi.json                  # regenerate the OpenAPI document
 ```
@@ -554,6 +555,7 @@ modules/                    Backend feature modules (one per concern)
     openapi.js              OpenAPI 3.1 document built from the registries (served at /api/v1/openapi.json)
 bin/doca-token.js           Token CLI (npm run token)
 bin/doca-status.js          What is stuck and why, offline (npm run status [--json] [--strict])
+bin/doca-prove.js           The model-free guarantees, as held / not held (npm run prove)
 clients/reference/          Reference watch client (bash) + agent simulator (Node) + demo
 test/                       node --test suites for the protocol and the harness
 public/
