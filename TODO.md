@@ -1361,6 +1361,13 @@ words and stops.
 Pairs with the missing retry/backoff already recorded above. The smallest
 version worth having: a typed failure on the tool result (kind, retryable,
 what it was trying to do) alongside the prose, and one policy that reads it.
+**That smallest version is built (2.94.0, `harness/turn/failures.js`):** every
+failed tool result carries `failure: { kind, retryable }` — refused, bad-args,
+unavailable, not-found, permission, timeout, network, tool-error — on its
+transcript row and its live `tool_result` event, the prose unchanged. The policy:
+the same call (tool + arguments) failing the same way a second time in one turn
+is told so, and a third time is told to stop and report itself blocked. Not yet:
+escalating to a stronger model, or a `blocked` job state set from it.
 
 ### 4. A budget ceiling that halts, not only warns
 

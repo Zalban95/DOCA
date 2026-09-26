@@ -2081,3 +2081,26 @@ test('a daily token ceiling refuses to start a turn, and says whose setting it i
   script = [{ text: 'back' }];
   assert.ok((await stream('/api/harness/chat', { message: 'again' })).some(e => e.type === 'done'), '0 lifts it');
 });
+
+test('a failure is typed beside its prose, and the same failure a third time is told to stop (failures.js)', async () => {
+  const failures = require('../modules/harness/turn/failures');
+  assert.deepEqual(failures.classify('Error: ENOENT: no such file or directory, stat \'/x\''), { kind: 'not-found', retryable: true });
+  assert.deepEqual(failures.classify('Refused by the user: "shell" was not allowed'), { kind: 'refused', retryable: false });
+  assert.deepEqual(failures.classify('Error: the "shell" tool is switched off for this conversation.'), { kind: 'unavailable', retryable: false });
+  assert.equal(failures.classify('exit 0\nfine'), null);
+
+  const memory = require('../modules/harness/memory');
+  const { body } = await H.api(null, 'POST', '/api/harness/sessions', { title: 'loops on a missing file' });
+  const miss = { tool: 'read_file', args: { path: require('path').join(H.tmp, 'not-here.txt') } };
+  script = [miss, miss, miss, { tool: 'read_file', args: { path: require('path').join(H.tmp, 'also-not-here.txt') } }, { text: 'Blocked: the file is not there.' }];
+  const events = await stream('/api/harness/chat', { message: 'read it', sessionId: body.session.id });
+  const results = events.filter(e => e.type === 'tool_result');
+  assert.equal(results.length, 4);
+  assert.equal(results[0].failure.kind, 'not-found');
+  assert.doesNotMatch(results[0].result, /this exact call/i, 'a first failure is only itself');
+  assert.match(results[1].result, /failed the same way twice in this turn \(not-found\)/);
+  assert.match(results[2].result, /Failed the same way 3 times .*blocked/);
+  assert.doesNotMatch(results[3].result, /same way/, 'different arguments are a different call');
+  const rows = memory.messages(body.session.id).filter(r => r.role === 'tool');
+  assert.deepEqual(rows[0].failure, { kind: 'not-found', retryable: true });
+});
