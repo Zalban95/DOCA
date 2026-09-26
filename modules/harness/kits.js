@@ -25,6 +25,7 @@ const KITS = {
   memory:       { label: 'Memory',       about: 'what you know across conversations, and its rules' },
   devices:      { label: 'Devices',      about: 'reach the person on their phone, watch and desk; show media' },
   panel:        { label: 'Panel',        about: 'this panel\'s state and settings, which you propose' },
+  skills:       { label: 'Skills',       about: 'procedures to load when a task matches, and to keep what you learn' },
   mcp:          { label: 'MCP',          about: 'tools from MCP servers running now' },
 };
 
@@ -40,6 +41,7 @@ const KIT_OF = {
   memory_write: 'memory', memory_rules_write: 'memory', memory_search: 'memory', memory_list: 'memory',
   memory_forget: 'memory', memory_flag: 'memory',
   ask_device: 'devices', tell_device: 'devices', doca_clients: 'devices', show_media: 'devices', show_image: 'devices',
+  skill: 'skills',
   settings_read: 'panel', settings_propose: 'panel', install_propose: 'panel', system_status: 'panel', mcp_status: 'panel',
 };
 

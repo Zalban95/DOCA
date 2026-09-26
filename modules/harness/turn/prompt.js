@@ -97,7 +97,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
   const toolList = require('./tools-section').toolsSection(tools.schemas(disabledFor(profile, p)));
   const identity = require('../identity');
   if (profile?.level === 'orchestrator') return [
-    providers.SAFETY_CHARTER, profile.systemPrompt, identity.personaBlock(), identity.humanBlock(),
+    providers.SAFETY_CHARTER, profile.systemPrompt, identity.personaBlock(), identity.humanBlock(), require('../skills').manifestBlock(),
     p.coordinatorInstructions || providers.DEFAULT_SYSTEM_PROMPT,
     environmentBrief(p, toolCount), toolList, clientBlock(client), rulesBlock(),
     memoryBlock(userText, Math.min(3, Math.max(0, Number(p.memoryLimit) || 0))),
@@ -129,6 +129,8 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
         : environmentBrief(p, toolCount),
       toolList,
       projectBrief,
+      // A specialist sees the skills its definition names, or all with the skills kit.
+      profile.skills?.length ? require('../skills').manifestBlock(profile.skills) : (profile.kits || []).includes('skills') ? require('../skills').manifestBlock() : '',
       profile.memory ? memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)) : '',
       summary ? `# Earlier in this mission\n${summary}` : '',
     ].filter(Boolean).join('\n\n');
@@ -143,6 +145,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
     placeBlock(client),
     rulesBlock(),
     identity.humanBlock(),
+    require('../skills').manifestBlock(),
     // A conversation bound to a project (projects/brief.js): where it works, how it builds.
     projectBrief,
     memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)),

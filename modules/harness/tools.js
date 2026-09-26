@@ -30,6 +30,7 @@ const TOOLS = [
   ...require('./toolbox/web'),
   ...require('./toolbox/canvas'),
   ...require('./toolbox/project'),
+  ...require('./toolbox/skills'),
 ];
 
 

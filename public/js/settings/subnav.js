@@ -79,6 +79,7 @@ function _settingsHarnessRender() {
     ${row('<button class="btn btn-sm" onclick="hcApprovalOpen()">Approvals</button>', 'What runs without asking: Ask, Auto, Unattended')}
   </div>`;
   identityRender(panel);   // persona.md and human.md (settings/identity.js)
+  skillsCardRender(panel); // skills (settings/skills.js)
 }
 /** Settings → Harness → ⚙: the built-in agent's parameters are edited on Controls, beside its row. */
 async function settingsOpenHarnessParams() {

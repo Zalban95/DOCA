@@ -241,7 +241,7 @@ function profileOf(def) {
     id: def.id,
     label: def.label,
     systemPrompt: def.role,
-    tools: def.tools, kits: def.kits || [],
+    tools: def.tools, kits: def.kits || [], skills: def.skills || [],
     memory: def.memory,
     environment: def.environment,
     provider: def.provider,

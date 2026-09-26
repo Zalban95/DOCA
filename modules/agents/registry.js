@@ -133,6 +133,7 @@ function normalize(def) {
     // single tools on top.
     kits:  Array.isArray(def.kits) ? def.kits.map(String).filter(k => k !== '*') : [],
     tools: asked.filter(t => !NEVER.includes(t)),
+    skills: Array.isArray(def.skills) ? def.skills.map(String) : [],
     refusedTools: asked.filter(t => NEVER.includes(t)),
     memory: def.memory === true,
     environment: def.environment === 'full' ? 'full' : 'minimal',
