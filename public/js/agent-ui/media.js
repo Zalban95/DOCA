@@ -38,8 +38,10 @@ function agentImageEl(media, onLoad) {
     open.type = 'button';
     open.className = 'agent-doc';
     open.title = 'Open the canvas';
-    open.textContent = `◧ Open canvas: ${media.caption || 'Canvas'}${media.rev > 1 ? ` (rev ${media.rev})` : ''}`;
-    open.addEventListener('click', () => canvasOpen(media.canvasId, media.rev));
+    open.textContent = media.previewId
+      ? `◧ Open preview: ${media.caption || 'Preview'}`
+      : `◧ Open canvas: ${media.caption || 'Canvas'}${media.rev > 1 ? ` (rev ${media.rev})` : ''}`;
+    open.addEventListener('click', () => (media.previewId ? canvasPreviewOpen(media.previewId, media.at) : canvasOpen(media.canvasId, media.rev)));
     fig.appendChild(open);
     return fig;
   }

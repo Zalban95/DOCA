@@ -36,6 +36,27 @@ function _canvasWindow() {
   return overlay;
 }
 
+/**
+ * Open a preview of a localhost port (modules/canvas/previews.js). Unlike a
+ * canvas page it is an app that talks to its own server, so it keeps the canvas
+ * origin (allow-same-origin) — which holds nothing of the panel's.
+ */
+async function canvasPreviewOpen(id, at = '/') {
+  let info;
+  try { info = await apiFetch(`/api/harness/previews/${encodeURIComponent(id)}`); }
+  catch (e) { appAlert(`Could not open the preview: ${e.message}`); return; }
+  const overlay = _canvasWindow();
+  const frame = document.getElementById('canvas-frame');
+  frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-modals allow-popups allow-downloads allow-same-origin');
+  const url = `${location.protocol}//${location.hostname}:${info.canvasPort}${info.path}${at}`;
+  _canvas = { id, base: null, frame };
+  document.getElementById('canvas-title').textContent = `${info.preview.title} · localhost:${info.preview.port}`;
+  document.getElementById('canvas-rev').style.display = 'none';
+  document.getElementById('canvas-newtab').href = url;
+  overlay.style.display = 'flex';
+  frame.src = url;
+}
+
 /** Open a canvas at a revision (the latest when omitted). */
 async function canvasOpen(id, rev) {
   let info;
@@ -44,6 +65,9 @@ async function canvasOpen(id, rev) {
   const overlay = _canvasWindow();
   const base = `${location.protocol}//${location.hostname}:${info.port}${info.path}`;
   _canvas = { id, base, frame: document.getElementById('canvas-frame') };
+  // A page of the agent's: sandboxed to an opaque origin, whatever a preview set before.
+  _canvas.frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-modals allow-popups allow-downloads');
+  document.getElementById('canvas-rev').style.display = '';
   document.getElementById('canvas-title').textContent = info.canvas.title;
   const sel = document.getElementById('canvas-rev');
   sel.innerHTML = '';

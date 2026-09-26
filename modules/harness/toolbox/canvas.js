@@ -33,11 +33,15 @@ module.exports = [
       + 'inline scripts and styles work, and scripts or styles from cdn.jsdelivr.net and cdnjs.cloudflare.com, '
       + 'but it cannot fetch anything or load remote images — put data and images in the page (data: URLs). It '
       + 'can hand text back with parent.postMessage({ doca: "send", text }, "*"), which puts the text in the '
-      + 'user\'s chat box for them to send.',
+      + 'user\'s chat box for them to send. `preview` shows a server running on this machine — a dev '
+      + 'server, a served project — by its port: the user gets a button that opens it in the same window, from '
+      + 'any device on the tailnet, even when it listens on localhost only. Good for 12 hours.',
     parameters: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['open', 'write', 'read', 'list'] },
+        action: { type: 'string', enum: ['open', 'write', 'read', 'list', 'preview'] },
+        port:   { type: 'integer', description: 'For preview: the localhost port the server listens on.' },
+        at:     { type: 'string', description: 'For preview: the path to open, e.g. /docs. Default /.' },
         id:     { type: 'string', description: 'The canvas, for write and read.' },
         title:  { type: 'string', description: 'For open (and optionally write): a few words.' },
         html:   { type: 'string', description: 'The whole page, <!doctype html> and all.' },
@@ -73,7 +77,13 @@ module.exports = [
             ? rows.map(c => `${c.id} — ${c.title} (revision ${c.revisions.at(-1).rev}, ${c.updatedAt})`).join('\n')
             : 'No canvases in this conversation yet.';
         }
-        default: throw new Error('action is one of open, write, read, list.');
+        case 'preview': {
+          const p = require('../../canvas/previews').create({ port: args.port, title: args.title, sessionId: ctx.sessionId || null });
+          const at = String(args.at || '/').startsWith('/') ? String(args.at || '/') : `/${args.at}`;
+          if (typeof ctx.show === 'function') ctx.show({ kind: 'canvas', name: p.id, previewId: p.id, at, caption: p.title });
+          return `Preview ${p.id} of localhost:${p.port} is a button in the chat; it works for ${require('../../canvas/previews').TTL_H} hours.`;
+        }
+        default: throw new Error('action is one of open, write, read, list, preview.');
       }
     },
   },

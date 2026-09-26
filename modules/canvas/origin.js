@@ -19,6 +19,7 @@
  *
  *   GET /c/<token>          the latest revision
  *   GET /c/<token>/<rev>    one revision
+ *   /p/<token>/…            a preview of a localhost port (./previews.js, ./proxy.js)
  */
 const http  = require('http');
 const https = require('https');
@@ -56,11 +57,16 @@ function send(res, status, body, headers = {}) {
   res.end(body);
 }
 
-/** The whole server: nothing but GET /c/<token>[/<rev>]. */
+/** Canvas pages (GET /c/<token>[/<rev>]); previews (/p/<token>/…, then by cookie — ./proxy.js). */
 function handler(req, res) {
-  const m = /^\/c\/([A-Za-z0-9_-]{22})(?:\/(\d{1,4}))?\/?$/.exec(String(req.url).split('?')[0]);
+  const url = String(req.url).split('?')[0];
+  const m = /^\/c\/([A-Za-z0-9_-]{22})(?:\/(\d{1,4}))?\/?$/.exec(url);
+  if (!m) {
+    const proxy = require('./proxy');
+    if (proxy.enter(req, res) || proxy.forward(req, res)) return;
+    return send(res, 404, 'Nothing here.');
+  }
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Only pages here.');
-  if (!m) return send(res, 404, 'Nothing here.');
   const c = canvases.byToken(m[1]);
   const html = c && canvases.page(c, m[2]);
   if (!html) return send(res, 404, 'No such canvas.');
@@ -78,6 +84,7 @@ function handler(req, res) {
 function start({ certs, mode }) {
   const server = certs ? https.createServer(certs, handler) : http.createServer(handler);
   listen.guard(server, mode);
+  server.on('upgrade', (req, socket, head) => require('./proxy').upgrade(req, socket, head));
   server.on('error', e => console.warn(`[canvas] not serving canvases on :${CANVAS_PORT}: ${e.message}`));
   server.listen(CANVAS_PORT, '0.0.0.0', () => console.log(`[canvas] canvases on :${CANVAS_PORT} (their own origin)`));
   return server;
