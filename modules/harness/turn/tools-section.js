@@ -35,7 +35,8 @@ function toolsSection(schemas) {
   }
   const order = [...Object.keys(KITS), 'other'];
   const lines = [`# Your tools — ${schemas.length}, by kit`,
-    'Prefer the specific tool to shell: search_files over grep, replace_in_files over sed, git and project run over typed commands, canvas for anything that reads better as a page.'];
+    'Prefer the specific tool to shell: search_files over grep, replace_in_files over sed, git and project run over typed commands, canvas for anything that reads better as a page.',
+    require('../untrusted').RULE];
   for (const kit of order) {
     const list = byKit.get(kit);
     if (!list) continue;
