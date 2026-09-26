@@ -84,7 +84,10 @@ const CERTS_DIR = path.join(HOME_DIR, '.certs');
 const BACKUP_DIR           = process.env.DOCA_BACKUP_DIR || path.join(HOME_DIR, 'backups');
 const BACKUP_PASSWORD_FILE = path.join(HOME_DIR, '.backup-password');
 // Paths the agent's file tools refuse even inside the allowed roots.
-const PROTECTED_FILES = [BACKUP_PASSWORD_FILE];
+// DOCA's own provider keys (modules/provider-keys.js), in the data folder so a
+// backup carries them. The same formula as store.DATA_DIR, which paths cannot require.
+const PROVIDER_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'providers.json');
+const PROTECTED_FILES = [BACKUP_PASSWORD_FILE, PROVIDER_KEYS_FILE];
 
 // Setup scripts the UI may read/write/run — the Setup panel's list, and the
 // whole of it.
@@ -202,6 +205,7 @@ module.exports = {
   BACKUP_DIR,
   BACKUP_PASSWORD_FILE,
   PROTECTED_FILES,
+  PROVIDER_KEYS_FILE,
   ALLOWED_SCRIPTS,
   SCRIPT_CONFIG,
   SETTABLE,

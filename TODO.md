@@ -1381,10 +1381,16 @@ H-19: the file is inside `HOME`, therefore inside `FM_ALLOWED_ROOTS`, therefore
 readable by `read_file` — so "our keys live in their file" and "our keys are
 reachable by a tool call" are the same sentence.
 
-**Wanted:** DOCA's own provider store, under `DOCA_DATA_DIR`, with
-`openclaw.json` read as a *source of providers when it exists* and never
-written by us. Migration is a one-time copy. Undecided: whether to keep writing
-it for installs that do have OpenClaw and expect the two to agree.
+**Done in 2.68.0** (`modules/provider-keys.js`): DOCA's providers and keys
+live in `<DATA_DIR>/keys/providers.json`, 0600, refused by the file tools
+(`PROTECTED_FILES`) and carried by every backup. `openclaw.json` is read as a
+source when it exists (DOCA's entry wins; a provider removed in DOCA stays
+removed), copied once on the first read, and **written only when OpenClaw is
+installed** — the undecided half, settled that way so an existing OpenClaw keeps
+seeing the keys it was given here, and an install without it never gets a
+`.openclaw` folder. Found on the way: a key of 8 characters or fewer was
+"masked" as itself twice over (`m-1••••••••m-1`); keys under 16 characters
+are now shown only as dots.
 
 ### 2. Detection commands are POSIX, so nothing is detected off Linux
 

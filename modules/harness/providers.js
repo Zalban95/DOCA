@@ -13,9 +13,7 @@
  * instances there) or picked up from the environment variable the vendor
  * documents.
  */
-const fs = require('fs');
 
-const { CONFIG_PATH } = require('../paths');
 const { loadModelsPrefs, resolveEnvVars } = require('../utils');
 
 /** True for an endpoint on this machine or a private network — no key expected. */
@@ -168,12 +166,9 @@ function defaultParams() {
   };
 }
 
-/** Providers declared in openclaw.json (Settings → API Keys, llama.cpp). */
+/** Providers declared in Settings → API Keys (provider-keys.js: DOCA's own, over OpenClaw's). */
 function declared() {
-  try {
-    const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-    return cfg?.models?.providers || {};
-  } catch { return {}; }
+  try { return require('../provider-keys').all(); } catch { return {}; }
 }
 
 function ollamaBase() {
