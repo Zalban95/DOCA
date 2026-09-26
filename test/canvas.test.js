@@ -158,3 +158,13 @@ test('a preview shows a localhost port through the canvas origin — and only th
     assert.equal(r.body.path, `/p/${p.token}`);
   } finally { wss.close(); app.close(); csrv.close(); }
 });
+
+test('a canvas can be deleted from the panel, and then is gone from its origin too', async () => {
+  const c = canvases.create({ title: 'Delete me', html: PAGE });
+  assert.equal((await fetch(`${cbase}/c/${c.token}`)).status, 200);
+  const viewer = await H.signIn('viewer');
+  assert.equal((await H.api(null, 'DELETE', `/api/harness/canvases/${c.id}`, undefined, { Cookie: viewer.cookie })).status, 403);
+  assert.equal((await H.api(null, 'DELETE', `/api/harness/canvases/${c.id}`)).status, 200);
+  assert.equal((await fetch(`${cbase}/c/${c.token}`)).status, 404);
+  assert.equal((await H.api(null, 'DELETE', `/api/harness/canvases/${c.id}`)).status, 404);
+});

@@ -25,6 +25,10 @@ function mount(app) {
 
   app.get('/api/harness/canvases', (req, res) =>
     res.json({ canvases: canvases.list({ sessionId: req.query.sessionId || undefined }) }));
+  app.delete('/api/harness/canvases/:id', (req, res) => {
+    try { canvases.remove(req.params.id); res.json({ ok: true }); }
+    catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  });
   app.get('/api/harness/canvases/:id', (req, res) => {
     const c = canvases.get(req.params.id);
     if (!c) return res.status(404).json({ error: 'No such canvas.' });
