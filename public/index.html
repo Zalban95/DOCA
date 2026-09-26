@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="css/settings.css">
 <link rel="stylesheet" href="css/canvas.css">
 <link rel="stylesheet" href="css/skin-modern.css">
+<link rel="stylesheet" href="css/projects.css">
 <link rel="stylesheet" href="css/sidebar.css">
 <link rel="stylesheet" href="css/config.css">
 <link rel="stylesheet" href="css/files.css">
@@ -43,6 +44,7 @@
     <button class="nav-tab active" data-tab="controls" onclick="nav('controls')">Controls</button>
     <button class="nav-tab"        data-tab="logs"     onclick="nav('logs')">Logs</button>
     <button class="nav-tab"        data-tab="files"    onclick="nav('files')">Files</button>
+    <button class="nav-tab"        data-tab="projects" onclick="nav('projects')">Projects</button>
     <button class="nav-tab"        data-tab="harness"   onclick="nav('harness')">Harness</button>
     <button class="nav-tab"        data-tab="terminal"  onclick="nav('terminal')">Terminal</button>
     <button class="nav-tab"        data-tab="models"    onclick="nav('models')">Models</button>
@@ -731,6 +733,9 @@
         <div id="vms-list"><div class="placeholder pulse">Loading…</div></div>
       </div>
     </div>
+
+    <!-- ─── PROJECTS: drawn by js/projects/ide.js ─────────── -->
+    <div id="tab-projects" class="tab-page"></div>
 
     <!-- ─── SETTINGS ─────────────────────────────────────── -->
     <div id="tab-settings" class="tab-page">
@@ -1473,6 +1478,13 @@
 <script src="js/agent-ui/think-stream.js"></script>
 <script src="js/agent-ui/media.js"></script>
 <script src="js/agent-ui/canvas.js"></script>
+<script src="js/projects/ide.js"></script>
+<script src="js/projects/editor.js"></script>
+<script src="js/projects/tree.js"></script>
+<script src="js/projects/search.js"></script>
+<script src="js/projects/git.js"></script>
+<script src="js/projects/run.js"></script>
+<script src="js/projects/chat.js"></script>
 <script src="js/agent-ui/context-meter.js"></script>
 <script src="js/agent-ui/approval.js"></script>
 <script src="js/agent-ui/question-card.js"></script>

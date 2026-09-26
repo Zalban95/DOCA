@@ -45,6 +45,10 @@ test('an Android project is recognised, with its Gradle commands and what they n
   assert.ok(byName.install.needs.includes('adb'));
   assert.ok(byName.build.missing.includes('android-sdk'), 'no SDK where it looks: said, not hidden');
   assert.equal(r.kinds.some(k => k.kind === 'gradle'), false, 'an Android build is not also listed as plain Gradle');
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ scripts: { test: 'node -e 0' } }));
+  const both = await inspect(root);
+  assert.equal(both.commands.find(c => c.name === 'test').kind, 'android');
+  assert.equal(both.commands.find(c => c.name === 'node:test').run, 'npm test', 'the second kind\'s test is still runnable');
 });
 
 test('a Node project\'s own scripts are its commands; the owner can add one; run waits and reports', async () => {
@@ -84,6 +88,9 @@ test('git: status, history, diffs and a file as it was — the same calls the pa
   assert.deepEqual((await git.log(root, { file: 'b.txt' })).map(x => x.subject), ['first'], 'history of one file');
   st = await git.status(root);
   assert.equal(st.files.length, 0);
+  assert.deepEqual((await git.branches(root)).map(b => [b.name, b.current]), [['main', true]]);
+  await git.checkout(root, 'feature', { create: true });
+  assert.deepEqual((await git.branches(root)).filter(b => b.current).map(b => b.name), ['feature']);
   await assert.rejects(git.checkout(root, '--force'), /Not a branch name/);
 
   const t = await tools.call('git', { action: 'log', path: root });

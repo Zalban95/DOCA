@@ -2,13 +2,14 @@
    DOCA PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','logs','files','harness','terminal','models','docker','vms','mcp','settings'];
+const NAV_TABS = ['controls','logs','files','projects','harness','terminal','models','docker','vms','mcp','settings'];
 
 /** Single source for the mobile bottom bar (icon + short label per tab). */
 const NAV_TAB_DEFS = [
   { id: 'controls', label: 'Ctrl',   icon: '▶' },
   { id: 'logs',     label: 'Logs',   icon: '≣' },
   { id: 'files',    label: 'Files',  icon: '🗀' },
+  { id: 'projects', label: 'Code',   icon: '⟨⟩' },
   { id: 'harness',  label: 'Agent',  icon: '⬡' },
   { id: 'terminal', label: 'Term',   icon: '⌨' },
   { id: 'models',   label: 'Models', icon: '◆' },
@@ -50,6 +51,7 @@ function nav(name) {
   if (name === 'controls') controlsInit();
   if (name === 'logs'      && !logSource) startLogs();
   if (name === 'files')    fmInit();
+  if (name === 'projects') projectsInit();
   if (name === 'harness')  harnessTabInit();
   if (name === 'terminal') termInit();
   if (name === 'models')   modelsInit();

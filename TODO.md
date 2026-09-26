@@ -1628,9 +1628,25 @@ order it is to be done.
   before reporting done), its shell and paths start at the root, and its
   specialists inherit the binding. New agent tools: `search_files`,
   `replace_in_files`, `git`, `project` (info/list/open/bind/run). Routes:
-  `/api/projects…` (host right). **Next:** phase 2, the Projects tab (Monaco
-  editor, tree, search/replace panel, compare, git panel, command buttons, the
-  bound chat); phase 3, the mechanical end-of-work check below.
+  `/api/projects…` (host right).
+  **Phase 2 built in 2.72.0 — the Projects tab** (`public/js/projects/`): an
+  activity bar (Files, Search, Source control, Build & test), editor tabs on
+  **Monaco** (MIT, loaded from jsDelivr on first use: find/replace with regex,
+  multi-cursor, go to line, F1 palette, folding, minimap, Ctrl+S), **search in
+  files** with a per-file, per-line **replace preview** and "Replace all",
+  **compare** (a file with its last commit, with any earlier version from its
+  history, or with another file — Monaco's diff view, editable on the right),
+  **source control** (branch switch, changes → side-by-side diff, stage /
+  unstage / commit, history → a commit's changes), **build & test** buttons
+  with live output, toolchains found or missing (and what to install for
+  Android), your own commands, and the project's **conversation** beside the
+  files. A phone gets the side views as a drawer and the editor full width.
+  Found while checking it in a browser: `git branch --format` spells a hex byte
+  `%1f`, not `%x1f` (branches came back empty); an Android app with a
+  package.json had npm's `test` hidden behind Gradle's (now `node:test`).
+  **Next:** phase 3, the mechanical end-of-work check below; then the file tree
+  from the Files tab as a shared component, and editor extensions (e.g. a
+  language server for Kotlin/TypeScript) as opt-in add-ons.
 
 - **A project is a work leader with a place to stand.** Asked for: a
   sub-orchestrator per project, with its own agents and work folders, every

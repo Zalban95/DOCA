@@ -143,12 +143,15 @@ async function inspect(root) {
   const kinds = [androidKind(root), androidKind(root) ? null : gradleKind(root), nodeKind(root), pythonKind(root), dotnetKind(root), makeKind(root),
     ...SIMPLE.map(([f, kind, label, commands]) => (exists(root, f) ? { kind, label, commands } : null))].filter(Boolean);
   const tc = await toolchains(kinds.flatMap(k => k.commands.flatMap(c => c.needs)));
-  // One list of commands, first kind first; a name two kinds share keeps the first.
+  // One list of commands, first kind first. A name two kinds share (an Android
+  // app with a package.json both have "test") keeps the plain name for the
+  // first and is "<kind>:<name>" for the rest, so every one stays runnable.
   const seen = new Set(), commands = [];
   for (const k of kinds) for (const c of k.commands) {
-    if (seen.has(c.name)) continue;
-    seen.add(c.name);
-    commands.push({ ...c, kind: k.kind, missing: c.needs.filter(n => !tc[n]?.detected) });
+    const name = seen.has(c.name) ? `${k.kind}:${c.name}` : c.name;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    commands.push({ ...c, name, kind: k.kind, missing: c.needs.filter(n => !tc[n]?.detected) });
   }
   return { kinds: kinds.map(({ kind, label, apk }) => ({ kind, label, ...(apk ? { apk } : {}) })), commands, toolchains: tc };
 }

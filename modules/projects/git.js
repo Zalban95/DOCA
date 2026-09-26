@@ -70,8 +70,9 @@ async function log(root, { file, limit = 50, rev } = {}) {
 
 /** Branches, local and remote, with the current one marked. */
 async function branches(root) {
-  const out = await git(root, ['branch', '-a', '--format=%(HEAD)%x1f%(refname:short)%x1f%(objectname:short)%x1f%(committerdate:iso-strict)']);
-  return out.split('\n').filter(Boolean).map(l => { const [h, name, hash, date] = l.split('\x1f'); return { name, hash, date, current: h === '*' }; });
+  // ref-filter spells a hex byte %1f (git log's format spells it %x1f).
+  const out = await git(root, ['branch', '-a', '--format=%(HEAD)%1f%(refname:short)%1f%(objectname:short)%1f%(committerdate:iso-strict)']);
+  return out.split('\n').filter(Boolean).map(l => { const [h, name, hash, date] = l.split('\x1f'); return { name, hash, date, current: h === '*' }; }).filter(b => b.name);
 }
 
 /**
