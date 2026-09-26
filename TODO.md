@@ -1372,8 +1372,11 @@ failed tool result carries `failure: { kind, retryable }` — refused, bad-args,
 unavailable, not-found, permission, timeout, network, tool-error — on its
 transcript row and its live `tool_result` event, the prose unchanged. The policy:
 the same call (tool + arguments) failing the same way a second time in one turn
-is told so, and a third time is told to stop and report itself blocked. Not yet:
-escalating to a stronger model, or a `blocked` job state set from it.
+is told so, and a third time is told to stop and report itself blocked. **And
+since 2.99.0 the supervisor reads it:** a work chat whose turn looped that way
+(`failures.looped`) is set `blocked` and reported to the Orchestrator ("Blocked:
+<tool> failed the same way N times"), instead of being given another automatic
+turn to pay for the same loop. Not yet: escalating to a stronger model.
 
 ### 4. A budget ceiling that halts, not only warns
 
