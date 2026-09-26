@@ -15,6 +15,14 @@ function mount(app) {
     try { res.json(await require('./ollama-context').check(String(req.query.model || ''), Number(req.query.declared) || 0)); }
     catch (e) { res.status(500).json({ error: e.message }); }
   });
+  // The model this conversation runs on, chosen in the chat, with or without the fallback order (turn/choice.js).
+  app.get('/api/harness/sessions/:id/model', (req, res) => {
+    try { res.json(require('./turn/choice').view(req.params.id)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  });
+  app.post('/api/harness/sessions/:id/model', (req, res) => {
+    try { require('./turn/choice').set(req.params.id, req.body || {}); res.json(require('./turn/choice').view(req.params.id)); }
+    catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  });
   // What a restart would cut off, and whether one is waiting for it (drain.js).
   app.get('/api/harness/busy', (_req, res) => {
     const drain = require('./drain');

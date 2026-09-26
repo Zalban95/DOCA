@@ -47,6 +47,7 @@ function _hcBuiltinHtml(h) {
           <button class="btn btn-xs hc-side-toggle" onclick="hcSideToggle()" title="Conversations, memory and specialists">☰</button>
           <span class="hc-title" id="hc-session-title">${escHtml(h.label)}</span>
           <span class="badge badge-blue" id="hc-model-badge" style="font-size:9px">…</span>
+          <span class="chat-model-host" id="hc-model-pick"></span>
           <span class="ctx-slot" id="hc-context"></span>
           <span class="hc-usage" id="hc-usage" title="Tokens today (UTC), every model call: steps, summaries and one-off asks. GET /api/harness/usage for the breakdown."></span>
           <span class="status-line" id="hc-status"></span>

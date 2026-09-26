@@ -683,6 +683,16 @@ still missing from that sentence.
 
 ## Falling back when a model stops answering
 
+**The model is chosen per conversation too (2.102.0, `harness/turn/choice.js`).**
+Asked for while coding: the project's chat and the Harness console carry a model
+picker and a **fallback** toggle (`POST /api/harness/sessions/:id/model`, chat
+right). A conversation with a choice starts every turn on that model; with
+fallback on, a stall hops down the harness's own order — its model, then the
+fallback chain — from the entry after the chosen one (a model outside that order
+is followed by the whole order); with fallback off, the chosen model runs alone.
+The saved harness settings never change; the status badge names what a turn
+would use.
+
 **Built 2026-09-18, on `main`.** Every rule below was implemented as written —
 the wording is kept because it is the reason each one is the way it is, not a
 record of intent. What is here is `fallbackChain` and `failoverAfterMs` in

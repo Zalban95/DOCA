@@ -160,7 +160,8 @@ function contextOf(sessionId) {
 
 async function status({ sessionId } = {}) {
   const org = require('../organization');
-  const p = turnParams(sessionId ? org.profileFor(org.session(sessionId)) : null);
+  // With the conversation's own model choice (turn/choice.js), so the badge names what a turn would use.
+  const p = require('./choice').apply(turnParams(sessionId ? org.profileFor(org.session(sessionId)) : null), sessionId);
   const out = { provider: p.provider, model: p.model || null, ready: false, reachable: false, error: null };
   // How full the window is, before anything is sent. A conversation's context
   // is a standing fact about it, not something that exists only while a turn

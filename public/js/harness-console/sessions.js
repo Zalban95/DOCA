@@ -27,6 +27,7 @@ async function _hcStatus() {
   const sessionId = _hcSession;
   _hcLoadUsage();
   const badge = document.getElementById('hc-model-badge');
+  chatModelPicker(document.getElementById('hc-model-pick'), sessionId);
   const st    = document.getElementById('hc-status');
   try {
     const s = await apiFetch(`/api/harness/status${sessionId ? '?sessionId=' + encodeURIComponent(sessionId) : ''}`);
