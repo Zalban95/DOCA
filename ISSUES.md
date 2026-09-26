@@ -2212,7 +2212,7 @@ question. The audit found it by asking what `fmSafe` actually checks.
 
 ## H-20 — `contextWindow` is declared to DOCA and never to the runtime
 
-**Answered 2026-09-26, v2.80.0 — measured and said, since it cannot be sent.** `modules/harness/ollama-context.js` asks Ollama's native API what the model is loaded with (`/api/ps` `context_length`), its Modelfile's `num_ctx` and its maximum (`/api/show`); when the declared window is larger, the turn's readings tell the agent (and it tells the person once), and the ⚙ strip says it under Context window, with the fix (`PARAMETER num_ctx`, or `OLLAMA_CONTEXT_LENGTH`). Not yet: the same for an Ollama rung in a fallback chain, and using the measured window for compaction instead of only warning.
+**Answered 2026-09-26, v2.80.0 — measured and said, since it cannot be sent.** `modules/harness/ollama-context.js` asks Ollama's native API what the model is loaded with (`/api/ps` `context_length`), its Modelfile's `num_ctx` and its maximum (`/api/show`); when the declared window is larger, the turn's readings tell the agent (and it tells the person once), and the ⚙ strip says it under Context window, with the fix (`PARAMETER num_ctx`, or `OLLAMA_CONTEXT_LENGTH`). **Both done in 2.97.0:** every Ollama rung of the fallback chain is measured the same way (said in the readings as "Fallback N: …", and under the rung in the ⚙ panel), and a turn *uses* the served window — main and per rung — for folding, the preflight and the ring, on its own copy of the settings, so the saved number stays what the person typed (`turn/prompt.js` `ollamaWindows`).
 
 **Status:** found 2026-09-21 on v2.50.0 by audit, confirmed by reading the
 request path. **Not fixed.**

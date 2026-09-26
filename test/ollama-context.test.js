@@ -51,3 +51,22 @@ test('a Modelfile\'s num_ctx counts when the model is not loaded; a smaller decl
   assert.equal(unknown.effective, null, 'Ollama not answering: nothing claimed');
   assert.equal(unknown.mismatch, false);
 });
+
+test('a turn uses what Ollama really serves — for the main model and each Ollama fallback — and says so once', async () => {
+  const { loadPrefs, savePrefs } = require('../modules/utils');
+  const before = loadPrefs();
+  savePrefs({ ...before, models: { ...(before.models || {}), ollamaUrl: base } });
+  try {
+    const { ollamaWindows } = require('../modules/harness/turn/prompt');
+    const p = { provider: 'ollama', model: 'qwen3:8b', contextWindow: 32768,
+      fallbackChain: [{ provider: 'ollama', model: 'qwen3:8b', contextWindow: 65536 }, { provider: 'openai', model: 'gpt', contextWindow: 128000 }, { provider: 'ollama', model: 'tuned:1', contextWindow: 8192 }] };
+    const saved = p.fallbackChain;
+    const note = await ollamaWindows(p);
+    assert.equal(p.contextWindow, 4096, 'folding and the preflight reason with the served window');
+    assert.equal(p.fallbackChain[0].contextWindow, 4096);
+    assert.equal(p.fallbackChain[1].contextWindow, 128000, 'another provider is left alone');
+    assert.equal(p.fallbackChain[2].contextWindow, 8192, 'a declaration within what is served is left alone');
+    assert.equal(saved[0].contextWindow, 65536, 'the saved chain is not mutated');
+    assert.match(note, /^# Context\n.*32768 is declared.*Tell the person once, then work within 4096\.\nFallback 1: .*65536 is declared/s);
+  } finally { savePrefs(before); }
+});

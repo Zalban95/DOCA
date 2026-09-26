@@ -26,3 +26,19 @@ async function harnessOllamaHint(id) {
     hint.style.color = r.mismatch ? 'var(--amber)' : '';
   } catch { /* Ollama not reachable: nothing to say */ }
 }
+
+/** The same, under an Ollama fallback: its declared window against what Ollama serves it with. */
+async function harnessRungOllamaHint(el) {
+  const rung = el?.closest('[data-rung]');
+  const hint = rung?.querySelector('[data-role=ctxhint]');
+  if (!hint) return;
+  hint.textContent = '';
+  const provider = rung.querySelector('[data-role=provider]')?.value;
+  const model = (rung.querySelector('[data-role=model]')?.value || '').trim();
+  const declared = Number(rung.querySelector('[data-role=context-window]')?.value) || 0;
+  if (provider !== 'ollama' || !model || !declared) return;
+  try {
+    const r = await apiFetch(`/api/harness/ollama-context?model=${encodeURIComponent(model)}&declared=${declared}`);
+    if (r.mismatch) hint.textContent = r.advice;
+  } catch { /* Ollama not reachable: nothing to say */ }
+}
