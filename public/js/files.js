@@ -45,6 +45,7 @@ async function fmInit() {
   }
 
   fmBuildBookmarks();
+  fmTreeMount(fm.cwd);
   fmSetupDragDrop();
   await fmLoadFavorites();
   fmLoadMounts();
@@ -156,9 +157,25 @@ function fmBuildBookmarks() {
     btn.title     = b.path;
     btn.innerHTML = `<span class="fm-bookmark-icon">${b.icon}</span>
                      <span class="fm-bookmark-name">${b.label}</span>`;
-    btn.onclick   = () => fmNavigate(b.path);
+    btn.onclick   = () => { fmNavigate(b.path); fmTreeMount(b.path); };
     ul.appendChild(btn);
   });
+}
+
+/** The sidebar's tree (lib/filetree.js, the same one the Projects tab uses), rooted at the last bookmark. */
+function fmTreeMount(root) {
+  let box = document.getElementById('fm-tree');
+  if (!box) {
+    const group = Object.assign(document.createElement('div'), { className: 'fm-sidebar-group fm-tree-group' });
+    group.innerHTML = '<div class="fm-sidebar-label">🌳 Tree</div><div id="fm-tree"></div>';
+    document.querySelector('#tab-files .fm-sidebar')?.appendChild(group);
+    box = document.getElementById('fm-tree');
+  }
+  if (!box) return;
+  fm.tree = fileTree(box, { root, onOpenDir: fmNavigate, onOpen: p => {
+    const mt = fmMediaType(p.split('/').pop());
+    if (mt) fmPreviewFile(p, mt); else fmOpenEditor(p);
+  } });
 }
 
 function fmUpdateBookmarkActive() {
@@ -335,32 +352,6 @@ function fmContextMenu(event, path, isDir) {
     { label: '✕ Delete',  fn: () => fmDelete(path, isDir) },
   ];
   showContextModal(event.clientX, event.clientY, acts);
-}
-
-function showContextModal(x, y, actions) {
-  removeContextModal();
-  const menu = document.createElement('div');
-  menu.id = 'fm-ctx-menu';
-  menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;z-index:9999;
-    background:var(--raised);border:1px solid var(--border2);min-width:140px;
-    box-shadow:0 4px 20px rgba(0,0,0,0.5)`;
-  actions.forEach(a => {
-    const btn = document.createElement('button');
-    btn.style.cssText = `display:block;width:100%;padding:7px 14px;text-align:left;
-      background:transparent;border:none;color:var(--text);font-family:inherit;
-      font-size:11px;cursor:pointer;border-bottom:1px solid var(--border);`;
-    btn.textContent = a.label;
-    btn.onmouseenter = () => btn.style.background = 'var(--dim)';
-    btn.onmouseleave = () => btn.style.background = 'transparent';
-    btn.onclick      = () => { removeContextModal(); a.fn(); };
-    menu.appendChild(btn);
-  });
-  document.body.appendChild(menu);
-  setTimeout(() => document.addEventListener('click', removeContextModal, { once: true }), 50);
-}
-
-function removeContextModal() {
-  document.getElementById('fm-ctx-menu')?.remove();
 }
 
 /* ── Clipboard operations ────────────────────────────── */
@@ -704,62 +695,6 @@ document.addEventListener('keydown', e => {
     fmNavigate(parent);
   }
 });
-
-/* ── Media type detection ────────────────────────────── */
-const FM_IMG_EXTS   = new Set(['jpg','jpeg','png','gif','webp','svg','bmp','ico','avif','tiff']);
-const FM_VIDEO_EXTS = new Set(['mp4','webm','ogg','mov','avi','mkv','m4v']);
-const FM_AUDIO_EXTS = new Set(['mp3','wav','flac','aac','m4a','opus']);
-
-function fmMediaType(name) {
-  const ext = name.split('.').pop().toLowerCase();
-  if (FM_IMG_EXTS.has(ext))   return 'image';
-  if (FM_VIDEO_EXTS.has(ext)) return 'video';
-  if (FM_AUDIO_EXTS.has(ext)) return 'audio';
-  return null;
-}
-
-/* ── Helpers ─────────────────────────────────────────── */
-function fmFileIcon(name) {
-  const ext = name.split('.').pop().toLowerCase();
-  const map = {
-    json: '{}', yml: '⚙', yaml: '⚙', sh: '⚡', md: '📝',
-    txt: '📄', log: '📋', py: '🐍', js: '📜', ts: '📜',
-    html: '🌐', css: '🎨', env: '🔑', conf: '⚙', cfg: '⚙',
-    xml: '🌐', toml: '⚙', ini: '⚙',
-    gz: '📦', tar: '📦', zip: '📦', '7z': '📦', rar: '📦', xz: '📦', bz2: '📦', zst: '📦',
-    deb: '📦', rpm: '📦', pkg: '📦', appimage: '📦',
-    bak: '♻', tmp: '♻', swp: '♻',
-    jpg: '🖼', jpeg: '🖼', png: '🖼', gif: '🖼', svg: '🖼',
-    webp: '🖼', avif: '🖼', bmp: '🖼', ico: '🖼', tiff: '🖼',
-    mp4: '🎬', webm: '🎬', mkv: '🎬', mov: '🎬', avi: '🎬', m4v: '🎬',
-    mp3: '🎵', wav: '🎵', flac: '🎵', aac: '🎵', ogg: '🎵', opus: '🎵', m4a: '🎵',
-    pdf: '📕', doc: '📘', docx: '📘', xls: '📗', xlsx: '📗', ppt: '📙', pptx: '📙', csv: '📊',
-    gguf: '🧠', bin: '⬛', safetensors: '🧠', onnx: '🧠', pt: '🧠', pth: '🧠',
-    stl: '🧊', obj: '🧊', step: '🧊', stp: '🧊', gcode: '🧊',
-    iso: '💿', img: '💿', dmg: '💿',
-    db: '🗄', sqlite: '🗄', sql: '🗄',
-    so: '⬛', dll: '⬛', exe: '⬛', o: '⬛', a: '⬛',
-    c: '📜', cpp: '📜', h: '📜', hpp: '📜', rs: '📜', go: '📜', java: '📜', rb: '📜', lua: '📜',
-  };
-  return map[ext] || '📄';
-}
-
-function fmFmtSize(bytes) {
-  if (!bytes) return '0 B';
-  return fmtBytes(bytes);
-}
-
-function fmShortDate(iso) {
-  try {
-    const d = new Date(iso);
-    const now = new Date();
-    const diff = (now - d) / 1000;
-    if (diff < 60)   return 'just now';
-    if (diff < 3600) return `${Math.round(diff/60)}m ago`;
-    if (diff < 86400) return `${Math.round(diff/3600)}h ago`;
-    return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short' });
-  } catch { return '—'; }
-}
 
 /* ═══════════════════════════════════════════════════════
    GLOBAL FILE SEARCH (header bar)

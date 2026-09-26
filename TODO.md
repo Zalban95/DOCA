@@ -1775,9 +1775,15 @@ order it is to be done.
   live: `typescript@7` (the native compiler) has no `tsserver.js`, so the install
   pins `typescript@<7`, and the bridge hands the server the project's own
   TypeScript when it has one.
-  **Next:** the file tree
-  from the Files tab as a shared component, and editor extensions (e.g. a
-  language server for Kotlin/TypeScript) as opt-in add-ons.
+  **The shared file tree: done in 2.101.0** (`public/js/lib/filetree.js`) — one
+  component for the Projects tab's Files view and a new 🌳 Tree group in the Files
+  tab's sidebar (rooted at the bookmark chosen): new file / folder, rename (F2),
+  delete (Del), copy path, download, upload here, drag a node onto a folder to
+  move it, drop files from the computer onto a folder to upload them, long-press
+  on touch. The project keeps its own entries (compare with last commit, history,
+  compare two files). The Files tab's context menu and file-type helpers moved
+  into it, which shrank `files.js` (875 → 810). **Next:** editor extensions as
+  opt-in add-ons.
 
 - **A project is a work leader with a place to stand.** Asked for: a
   sub-orchestrator per project, with its own agents and work folders, every

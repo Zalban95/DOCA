@@ -85,3 +85,8 @@
   .pj-chat.open { position: absolute; inset: 0; width: auto; z-index: 6; }
   .pj-meta { max-width: 100%; }
 }
+/* The shared tree (lib/filetree.js): a folder a node is dragged over, and the Files tab's sidebar copy. */
+.pj-node.drop { background: var(--dim); outline: 1px dashed var(--accent); }
+.pj-tree:focus { outline: none; }
+.fm-tree-group .pj-tree-tools { flex-wrap: wrap; }
+.fm-tree-group .pj-tree { max-height: 45vh; overflow: auto; }
