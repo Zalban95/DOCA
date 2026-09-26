@@ -151,53 +151,62 @@ async function _startupApply(enabled, password) {
 const RESTART_TIMEOUT_MS = 90000;
 
 function restartDoca() {
-  appConfirm('Restart the DOCA server? The page will reload once it comes back.', async () => {
-    const btn = document.getElementById('restart-btn');
-    const el  = document.getElementById('update-status');
-    if (btn) { btn.disabled = true; btn.textContent = '⟳ Restarting…'; }
+  settingsAskIfBusy('Restarting', whenIdle => {
+    if (whenIdle === null) return appConfirm('Restart the DOCA server? The page will reload once it comes back.', () => _restartGo(false));
+    _restartGo(whenIdle);
+  }, 'Restart now');
+}
 
-    // The process exits ~500ms after replying, so a dropped response is normal.
-    let info = {};
-    try {
-      const r = await fetch('/api/restart', { method: 'POST' });
-      info = await r.json().catch(() => ({}));
-    } catch {}
+async function _restartGo(whenIdle) {
+  const btn = document.getElementById('restart-btn');
+  const el  = document.getElementById('update-status');
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ Restarting…'; }
 
-    if (info.ok === false) {
-      if (el) el.innerHTML = `<div class="update-info" style="color:var(--red)">✗ ${escHtml(info.error || 'Restart failed.')}</div>`;
-      if (btn) { btn.disabled = false; btn.textContent = '⟳ Restart'; }
-      return;
-    }
+  // The process exits ~500ms after replying, so a dropped response is normal.
+  let info = {};
+  try {
+    const r = await fetch('/api/restart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ whenIdle }) });
+    info = await r.json().catch(() => ({}));
+  } catch {}
 
-    const started = Date.now();
+  if (info.ok === false) {
+    if (el) el.innerHTML = `<div class="update-info" style="color:var(--red)">✗ ${escHtml(info.error || 'Restart failed.')}</div>`;
+    if (btn) { btn.disabled = false; btn.textContent = '⟳ Restart'; }
+    return;
+  }
 
-    // Never spin forever: if nothing is listening again, say where to look.
-    const giveUp = () => {
-      if (btn) { btn.disabled = false; btn.textContent = '⟳ Restart'; }
-      if (!el) return;
-      const where = info.selfRespawn
-        ? `A successor process was started${info.handoff?.pid ? ` (pid ${info.handoff.pid})` : ''} but never began serving — check <code>${escHtml(info.handoff?.log || '.doca/restart.log')}</code> on the host.`
-        : `DOCA is supervised by <code>${escHtml(info.supervisor || 'an external supervisor')}</code>, so check it there — e.g. <code>systemctl status openclaw-panel</code>.`;
-      el.innerHTML = `<div class="update-info" style="color:var(--red)">
-        ✗ The server did not come back within ${Math.round(RESTART_TIMEOUT_MS / 1000)}s.<br>${where}
-      </div>`;
-    };
+  let started = Date.now();
 
-    const poll = () => {
-      setTimeout(async () => {
-        try {
-          const r = await fetch('/api/status', { cache: 'no-store' });
-          if (!r.ok) throw new Error(String(r.status));
-          location.reload();
-          return;
-        } catch {}
-        if (Date.now() - started >= RESTART_TIMEOUT_MS) return giveUp();
-        if (btn) btn.textContent = `⟳ Restarting… ${Math.round((Date.now() - started) / 1000)}s`;
-        poll();
-      }, 1500);
-    };
-    poll();
-  });
+  // Never spin forever: if nothing is listening again, say where to look.
+  const giveUp = () => {
+    if (btn) { btn.disabled = false; btn.textContent = '⟳ Restart'; }
+    if (!el) return;
+    const where = info.selfRespawn
+      ? `A successor process was started${info.handoff?.pid ? ` (pid ${info.handoff.pid})` : ''} but never began serving — check <code>${escHtml(info.handoff?.log || '.doca/restart.log')}</code> on the host.`
+      : `DOCA is supervised by <code>${escHtml(info.supervisor || 'an external supervisor')}</code>, so check it there — e.g. <code>systemctl status openclaw-panel</code>.`;
+    el.innerHTML = `<div class="update-info" style="color:var(--red)">
+      ✗ The server did not come back within ${Math.round(RESTART_TIMEOUT_MS / 1000)}s.<br>${where}
+    </div>`;
+  };
+
+  const poll = () => {
+    setTimeout(async () => {
+      try {
+        const r = await fetch('/api/status', { cache: 'no-store' });
+        if (!r.ok) throw new Error(String(r.status));
+        location.reload();
+        return;
+      } catch {}
+      if (Date.now() - started >= RESTART_TIMEOUT_MS) return giveUp();
+      if (btn) btn.textContent = `⟳ Restarting… ${Math.round((Date.now() - started) / 1000)}s`;
+      poll();
+    }, 1500);
+  };
+  if (info.waiting) {
+    if (btn) btn.textContent = '⟳ Waiting…';
+    return settingsWaitForIdle(el, () => { started = Date.now(); poll(); });
+  }
+  poll();
 }
 
 /* ── The version in use: roll back, or forward ───────── */
@@ -274,14 +283,14 @@ function versionsUse() {
     `If ${tag} does not answer within 90 seconds, it switches back to ${_versions.current} on its own.`];
   if (!v.hasMenu) lines.push(`${tag} predates this menu. To leave it, run ./run.sh use <version> on the host.`);
   if (v.olderData) lines.push(`${tag} writes an older data format than yours. Running it risks the data — make a backup first.`);
-  appConfirm(lines.join('\n\n'), async () => {
+  const go = async whenIdle => {
     const log = document.getElementById('update-log');
     const st  = document.getElementById('versions-status');
     const btn = document.getElementById('versions-use-btn');
     if (btn) btn.disabled = true;
     showStream(log, '');
     let result = null;
-    await sseStream('/api/versions/use', { version: tag, force: !!v.olderData }, {
+    await sseStream('/api/versions/use', { version: tag, force: !!v.olderData, whenIdle }, {
       onStatus: text => appendStream(log, text),
       onDone:   o => { result = o; },
       onError:  e => appendStream(log, `\n✗ ${e.message}\n`),
@@ -290,11 +299,11 @@ function versionsUse() {
       if (btn) btn.disabled = false;
       return setStatus(st, '✗ The switch did not happen — see the log above.', 'err');
     }
-    if (!result.restarting) return versionsLoad();
+    if (!result.restarting && !result.waiting) return versionsLoad();
     // Asked of /api/update-check, which every version has — an older one has no
     // /api/versions to ask. Its `current` is the version that process booted as.
     const before = _versions.version, want = tag === 'checkout' ? null : tag.replace(/^v/, '');
-    const started = Date.now();
+    let started = Date.now();
     const poll = () => setTimeout(async () => {
       try {
         const r = await fetch('/api/update-check', { cache: 'no-store' });
@@ -310,7 +319,13 @@ function versionsUse() {
       setStatus(st, `Restarting into ${tag}… ${Math.round((Date.now() - started) / 1000)}s`, '', { clear: 0 });
       poll();
     }, 2000);
+    if (result.waiting) return settingsWaitForIdle(st, () => { started = Date.now(); poll(); });
     poll();
-  });
+  };
+  settingsAskIfBusy(`Switching to ${tag}`, whenIdle => {
+    if (whenIdle === null) return appConfirm(lines.join('\n\n'), () => go(false));
+    if (v.olderData) return appConfirm(lines.join('\n\n'), () => go(whenIdle));
+    go(whenIdle);
+  }, 'Switch now');
 }
 

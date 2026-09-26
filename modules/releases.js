@@ -316,7 +316,16 @@ async function handleUse(req, res) {
   const send = d => { try { res.write(`data: ${JSON.stringify(d)}\n\n`); } catch {} };
   const say = status => send({ status });
   try {
-    const r = await use(String(req.body?.version || ''), { force: req.body?.force === true, by: 'ui', say });
+    // { whenIdle: true }: switch now, restart into it once running turns end (harness/drain.js).
+    const drain = require('./harness/drain');
+    const wait = req.body?.whenIdle === true && drain.busy().length > 0;
+    const r = await use(String(req.body?.version || ''), { force: req.body?.force === true, by: 'ui', say, restart: !wait });
+    if (wait && r.from !== r.to) {
+      const waiting = drain.whenIdle(() => restartSelf(), { label: `switch to ${r.to}` });
+      say(`Waiting for ${waiting.waitingOn.length} running turn(s) to finish before restarting into ${r.to}.\n`);
+      send({ done: true, ok: true, ...r, restarting: false, waiting });
+      return res.end();
+    }
     send({ done: true, ok: true, ...r });
   } catch (e) {
     send({ done: true, ok: false, status: `\n✗ ${e.message}\n` });

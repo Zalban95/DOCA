@@ -8,6 +8,11 @@ function mount(app) {
   require('./rules-routes').mount(app);       // the memory rules: read, write, review, answer, undo
   require('./questions-routes').mount(app);   // questions the agent is waiting on the owner for
   require('../canvas/routes').mount(app);     // canvases: where to open one (never the page itself)
+  // What a restart would cut off, and whether one is waiting for it (drain.js).
+  app.get('/api/harness/busy', (_req, res) => {
+    const drain = require('./drain');
+    res.json({ turns: drain.busy(), pending: drain.pending() });
+  });
 }
 
 module.exports = { mount };

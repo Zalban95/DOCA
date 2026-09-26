@@ -306,7 +306,20 @@ function supervisorName() {
  *  while we still hold the port and retries the bind until we are gone — see
  *  listenWithRetry() in server.js. Its output goes to a log file because a
  *  detached process has nowhere else to report a failed boot. */
-function handleRestart(_req, res) {
+function handleRestart(req, res) {
+  // Running turns are not cut off unless asked: { whenIdle: true } waits for
+  // them (harness/drain.js), { cancel: true } calls a waiting restart off.
+  const drain = require('./harness/drain');
+  if (req.body?.cancel) return res.json({ ok: true, cancelled: drain.cancel() });
+  if (req.body?.whenIdle && drain.busy().length) {
+    const waiting = drain.whenIdle(() => restartNow(), { label: 'restart' });
+    return res.status(202).json({ ok: true, waiting });
+  }
+  restartNow(res);
+}
+
+function restartNow(res = null) {
+  const reply = (status, body) => { if (res) res.status(status).json(body); else if (!body.ok) console.warn(`[restart] ${body.error}`); };
   const supervisor  = supervisorName();
   const selfRespawn = !supervisor;
   let handoff = null;
@@ -332,14 +345,14 @@ function handleRestart(_req, res) {
       handoff = { pid: child.pid, log: logPath };
     } catch (e) {
       // Say so instead of exiting into a hole the user cannot see.
-      return res.status(500).json({
+      return reply(500, {
         ok: false,
         error: `Could not start a successor process: ${e.message}. DOCA is still running — restart it manually.`,
       });
     }
   }
 
-  res.json({ ok: true, message: 'Server restarting…', supervisor, selfRespawn, handoff });
+  reply(200, { ok: true, message: 'Server restarting…', supervisor, selfRespawn, handoff });
   setTimeout(() => process.exit(0), 500);
 }
 

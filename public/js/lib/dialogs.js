@@ -103,3 +103,33 @@ function appAlert(message, onClose) {
     if (onClose) onClose();
   };
 }
+
+/**
+ * A question with more answers than yes and no, in the same modal.
+ * @param {string} message
+ * @param {{ label: string, value: any, cls?: string }[]} choices  left to right; the last is the default
+ * @param {(value: any) => void} onPick  called with the chosen value (Escape/backdrop never picks)
+ */
+function appChoose(message, choices, onPick) {
+  const modal = document.getElementById('app-confirm-modal');
+  const actions = modal?.querySelector('.app-confirm-actions');
+  if (!modal || !actions) { if (confirm(message)) onPick(choices.at(-1).value); return; }
+  document.getElementById('app-confirm-message').textContent = message;
+  const kept = [...actions.children];
+  kept.forEach(el => { el.style.display = 'none'; });
+  const done = value => {
+    modal.classList.remove('open');
+    actions.querySelectorAll('.app-choose-btn').forEach(b => b.remove());
+    kept.forEach(el => { el.style.display = ''; });
+    onPick(value);
+  };
+  for (const c of choices) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `btn btn-sm app-choose-btn ${c.cls || ''}`.trim();
+    b.textContent = c.label;
+    b.onclick = () => done(c.value);
+    actions.appendChild(b);
+  }
+  modal.classList.add('open');
+}
