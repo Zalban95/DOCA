@@ -23,12 +23,14 @@ async function pjChatLoad() {
   pane.innerHTML = `
     <div class="pj-chat-head"><span>${escHtml(PJ.project.project.name)}</span><span class="pj-spacer"></span>
       <button class="btn btn-xs" onclick="pjChatOpenInHarness()" title="The whole conversation, in the Harness tab">↗ Harness</button></div>
+    <div class="pj-chat-model chat-model-host" id="pj-chat-model"></div>
     <div class="pj-chat-msgs" id="pj-chat-msgs"></div>
     <div class="pj-chat-input">
       <textarea class="input" id="pj-chat-in" rows="2" placeholder="Ask about this project, or give it a job…"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();pjChatSend()}"></textarea>
       <button class="btn btn-sm btn-teal" id="pj-chat-send" onclick="pjChatSend()">Send</button>
     </div>`;
+  chatModelPicker(document.getElementById('pj-chat-model'), PJC.sessionId);
   let data;
   try { data = await apiFetch(`/api/harness/sessions/${encodeURIComponent(PJC.sessionId)}`); } catch { return; }
   const box = document.getElementById('pj-chat-msgs');
@@ -103,4 +105,50 @@ function pjChatStop() {
 function pjChatOpenInHarness() {
   nav('harness');
   setTimeout(() => { if (typeof hcOpenSession === 'function') hcOpenSession(PJC.sessionId); }, 300);
+}
+
+/**
+ * The model a conversation runs on, and whether it may fall back — a select and
+ * a toggle, used by the project's chat and the Harness console
+ * (POST /api/harness/sessions/:id/model, harness/turn/choice.js). Fallback
+ * follows the harness's order from the chosen model onward.
+ */
+async function chatModelPicker(host, sessionId) {
+  if (!host || !sessionId) return;
+  if (host.dataset.session === sessionId && host.contains(document.activeElement)) return;   // being used: leave it open
+  host.dataset.session = sessionId;
+  let v;
+  try { v = await apiFetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/model`); } catch { host.innerHTML = ''; return; }
+  const key = e => `${e.provider}/${e.model}`;
+  const shown = e => (e.model ? key(e) : `${e.provider} · no model`);
+  const chosen = v.choice?.model ? key(v.choice) : '';
+  const opts = [`<option value="">Default · ${escHtml(shown(v.order[0]))}</option>`,
+    ...v.order.slice(1).map(e => `<option value="${escHtml(key(e))}">${escHtml(key(e))}</option>`),
+    ...(chosen && !v.order.some(e => key(e) === chosen) ? [`<option value="${escHtml(chosen)}">${escHtml(chosen)}</option>`] : []),
+    '<option value="__other">Other…</option>'];
+  host.innerHTML = `<select class="input chat-model" title="The model this conversation runs on">${opts.join('')}</select>
+    <label class="chat-fallback" title="${escHtml(v.effective.fallback.length ? `Then: ${v.effective.fallback.join(' → ')}` : 'No fallback: the chosen model alone')}">
+      <input type="checkbox" ${v.choice?.fallback === false ? '' : 'checked'}> fallback</label>`;
+  const sel = host.querySelector('select'), box = host.querySelector('input');
+  sel.value = chosen;
+  const save = async (provider, model) => {
+    try { await apiFetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/model`, { method: 'POST', body: { provider, model, fallback: box.checked } }); }
+    catch (e) { appAlert(e.message); }
+    chatModelPicker(host, sessionId);
+    if (typeof _hcStatus === 'function' && typeof _hcSession !== 'undefined' && _hcSession === sessionId) _hcStatus();
+  };
+  const split = val => { const i = val.indexOf('/'); return [val.slice(0, i), val.slice(i + 1)]; };
+  sel.onchange = () => {
+    if (sel.value === '__other') {
+      sel.value = chosen;
+      return appPrompt('Model for this conversation, as provider/model (e.g. openai/gpt-5.1):', val => {
+        const [pr, m] = split(val);
+        if (!pr || !m) return appAlert('Write it as provider/model.');
+        save(pr, m);
+      }, chosen || `${v.order[0].provider}/`);
+    }
+    const [pr, m] = sel.value ? split(sel.value) : ['', ''];
+    save(pr, m);
+  };
+  box.onchange = () => { const [pr, m] = sel.value ? split(sel.value) : ['', '']; save(pr, m); };
 }

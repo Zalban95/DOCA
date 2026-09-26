@@ -2123,3 +2123,30 @@ test('the person can send an errand straight to one specialist, and it runs as t
     assert.equal((await H.api(null, 'POST', '/api/harness/missions', { agentId: 'nobody', task: 'x' })).status, 404);
   } finally { registry.setEnabled(false); }
 });
+
+test('a conversation runs on the model chosen in its chat; fallback follows the harness order from there, or is off', async () => {
+  const choice = require('../modules/harness/turn/choice');
+  await H.api(null, 'POST', '/api/harness/doca/config', { fallbackChain: [{ provider: 'stub', model: 'stub-mini' }, { provider: 'stub', model: 'stub-third' }] });
+  try {
+    const { body } = await H.api(null, 'POST', '/api/harness/sessions', { title: 'coding with a quick model' });
+    const id = body.session.id;
+    const picked = await H.api(null, 'POST', `/api/harness/sessions/${id}/model`, { provider: 'stub', model: 'stub-mini', fallback: true });
+    assert.equal(picked.status, 200, JSON.stringify(picked.body));
+    assert.deepEqual(picked.body.effective, { provider: 'stub', model: 'stub-mini', fallback: ['stub/stub-third'] }, 'from the chosen one onward');
+    assert.deepEqual(picked.body.order.map(e => e.model), ['stub-model', 'stub-mini', 'stub-third']);
+
+    seen = []; script = [{ text: 'quick answer' }];
+    await stream('/api/harness/chat', { message: 'hi', sessionId: id });
+    assert.equal(seen[0].model, 'stub-mini', 'the turn ran on the chosen model');
+
+    const off = await H.api(null, 'POST', `/api/harness/sessions/${id}/model`, { provider: 'stub', model: 'stub-model', fallback: false });
+    assert.deepEqual(off.body.effective, { provider: 'stub', model: 'stub-model', fallback: [] }, 'fallback off: the chosen model alone');
+    const outside = choice.apply({ provider: 'stub', model: 'stub-model', fallbackChain: [{ provider: 'stub', model: 'stub-mini' }] }, null);
+    assert.equal(outside.model, 'stub-model', 'no choice on the active conversation: unchanged');
+    assert.equal((await H.api(null, 'POST', `/api/harness/sessions/${id}/model`, { provider: 'nope', model: 'x' })).status >= 400, true, 'an unknown provider is refused');
+    const cleared = await H.api(null, 'POST', `/api/harness/sessions/${id}/model`, {});
+    assert.equal(cleared.body.choice, null);
+  } finally {
+    await H.api(null, 'POST', '/api/harness/doca/config', { fallbackChain: [] });
+  }
+});
