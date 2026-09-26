@@ -335,6 +335,14 @@ async function turnPreamble({ session, profile, p }) {
     const news = require('./tool-news');
     toolNews = news.news(news.typeOf(require('../organization').session(session.id), profile), tools.schemas(disabledFor(profile, p)));
   } catch { /* a notice never breaks a turn */ }
+  // Ollama: the context it really serves the model with, when it is smaller
+  // than the one declared (harness/ollama-context.js; ISSUES.md H-20).
+  if ((p.provider || 'ollama') === 'ollama' && p.model && Number(p.contextWindow) > 0) {
+    try {
+      const c = await require('../ollama-context').check(p.model, p.contextWindow);
+      if (c.mismatch) toolNews = [toolNews, `# Context\n${c.advice} Tell the person once, then work within ${c.effective}.`].filter(Boolean).join('\n\n');
+    } catch { /* not measurable: nothing said */ }
+  }
   return { projectBrief, toolNews };
 }
 

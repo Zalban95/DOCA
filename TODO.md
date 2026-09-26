@@ -2139,3 +2139,7 @@ shipped fallback; a file of the same id on this machine wins. **Promote** (the
 specialist editor's ⇪, `POST /api/harness/agents/:id/promote`) writes one made
 here into the checkout's `specialists/`, to ship once committed. Skills as a
 layer beside kits and identity remain for later.
+
+**H-20 answered in 2.80.0** — Ollama's real context is measured (`/api/ps`,
+`/api/show`) and said when the declared window is larger: in the agent's
+readings and under the ⚙ Context window field (`harness/ollama-context.js`).

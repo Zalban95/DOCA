@@ -2212,7 +2212,7 @@ question. The audit found it by asking what `fmSafe` actually checks.
 
 ## H-20 — `contextWindow` is declared to DOCA and never to the runtime
 
-*2026-09-26: still open. Note for the fix — Ollama's OpenAI-compatible `/v1` shim takes no per-request context size, so closing this needs Ollama's native API for that provider, or the runtime's own setting (`OLLAMA_CONTEXT_LENGTH`, a Modelfile `num_ctx`) checked against the declared window and said when they differ.*
+**Answered 2026-09-26, v2.80.0 — measured and said, since it cannot be sent.** `modules/harness/ollama-context.js` asks Ollama's native API what the model is loaded with (`/api/ps` `context_length`), its Modelfile's `num_ctx` and its maximum (`/api/show`); when the declared window is larger, the turn's readings tell the agent (and it tells the person once), and the ⚙ strip says it under Context window, with the fix (`PARAMETER num_ctx`, or `OLLAMA_CONTEXT_LENGTH`). Not yet: the same for an Ollama rung in a fallback chain, and using the measured window for compaction instead of only warning.
 
 **Status:** found 2026-09-21 on v2.50.0 by audit, confirmed by reading the
 request path. **Not fixed.**
