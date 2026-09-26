@@ -756,12 +756,14 @@ test('a long conversation folds its older half into a summary', async () => {
     await stream('/api/harness/chat', { message: `question ${i}`, sessionId: id });
   }
   // 8 rows now exceed the threshold, so the next turn summarises the older half.
-  script = [{ text: 'brief: talked about questions 0-1' }, { text: 'reply 4' }];
+  script = [{ text: 'brief: talked about questions 0-1\nTopics: Questions, numbering' }, { text: 'reply 4' }];
   await stream('/api/harness/chat', { message: 'question 4', sessionId: id });
 
   const session = (await get(`/api/harness/sessions/${id}`)).body.session;
   assert.ok(session.summarizedThrough > 0, 'some rows were folded away');
   assert.equal(session.summary, 'brief: talked about questions 0-1');
+  assert.deepEqual(session.topics, ['questions', 'numbering'], 'the fold names the topics recall finds it by');
+  assert.match(seen.at(-2).messages[0].content, /End with one line "Topics: "/);
 
   // The summary reaches the model, and the folded rows no longer do.
   const last = seen.at(-1).messages;

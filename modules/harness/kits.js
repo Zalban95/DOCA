@@ -39,7 +39,7 @@ const KIT_OF = {
   canvas: 'canvas',
   http_fetch: 'web', research_docs: 'web',
   memory_write: 'memory', memory_rules_write: 'memory', memory_search: 'memory', memory_list: 'memory',
-  memory_forget: 'memory', memory_flag: 'memory',
+  memory_forget: 'memory', memory_flag: 'memory', recall_conversations: 'memory',
   ask_device: 'devices', tell_device: 'devices', doca_clients: 'devices', show_media: 'devices', show_image: 'devices',
   skill: 'skills', tool_note: 'skills',
   settings_read: 'panel', settings_propose: 'panel', install_propose: 'panel', system_status: 'panel', mcp_status: 'panel',

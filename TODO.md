@@ -241,6 +241,14 @@ none of them block anything today.
   would spend the window it is meant to protect. Do not add a second summariser
   for it: the rolling summary is already the per-topic artefact, it just is not
   indexed.
+  **Built in 2.85.0** (`harness/recall.js`): the fold now ends its summary with a
+  `Topics:` line, stored as `topics` on the session row (same model call, no
+  second summariser). `recall_conversations` (memory kit, no approval — it reads
+  only DOCA's own store) searches titles, topics and summaries of every
+  conversation, archived ones included, plus the words of the newest 300
+  transcripts; `read` gives one conversation's summary and last messages. The
+  Archivist has it beside `memory_search`. Sessions folded before 2.85.0 have no
+  topics until their next fold; titles, summaries and transcripts still find them.
 
 - **Keyword search will not scale to that.** `memSearch` is word overlap on
   purpose — no model call, no index to keep warm — and it is right for a few
