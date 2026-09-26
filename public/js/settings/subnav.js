@@ -80,6 +80,7 @@ function _settingsHarnessRender() {
   </div>`;
   identityRender(panel);   // persona.md and human.md (settings/identity.js)
   skillsCardRender(panel); // skills (settings/skills.js)
+  guardsCardRender(panel); // guards (settings/guards.js)
 }
 /** Settings → Harness → ⚙: the built-in agent's parameters are edited on Controls, beside its row. */
 async function settingsOpenHarnessParams() {
