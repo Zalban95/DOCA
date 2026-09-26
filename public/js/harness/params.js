@@ -28,6 +28,7 @@ async function harnessConfigToggle(id, keepOpen) {
   strip.innerHTML = _harnessParamsHtml(h, meta);
   _harnessLoadModels(id, h.config.provider, h.config.model);
   _harnessFallbacksMount(id, h.config.fallbackChain);
+  harnessOllamaHint(id);   // the context Ollama really serves (harness/ollama-hint.js)
 }
 
 /** External harnesses: how to launch them and where their own config lives. */
