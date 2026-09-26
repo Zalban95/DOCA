@@ -22,3 +22,14 @@
   border-left: 1px solid var(--border); font-size: 9px; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--muted); font-family: var(--font-mono);
 }
+/* Settings → Harness → Guards (settings/guards.js) */
+.guard-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.guard-on { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; cursor: pointer; }
+.guard-on small { color: var(--muted); font-size: 10px; }
+.guard-thr { display: flex; gap: 8px; font-size: 10px; color: var(--muted); }
+.guard-thr .input { width: 64px; padding: 2px 4px; font-size: 11px; }
+.guard-act { display: flex; gap: 4px; }
+.guards-add { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.guards-add .input { flex: 1; min-width: 180px; }
+.guard-log-row { padding: 4px 0; border-bottom: 1px solid var(--border); color: var(--text); }
+@media (max-width: 640px) { .guard-row { grid-template-columns: 1fr; } }
