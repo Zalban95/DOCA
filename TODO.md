@@ -28,6 +28,30 @@ final product** are collected, decided or not, while solutions are prototyped on
 Nothing on `dev/troubleshoot` is merged. What works there is prototype evidence
 for these requirements, not a change to the product.
 
+## To discuss next (asked for 2026-09-26, not decided)
+
+In this order, after the settled work in progress (IDE tree, per-conversation
+model with fallback, the scout and "ask again after outside text"):
+
+- **Export skills and specialists, or send them to DOCA.** A section with
+  multiselection over the skills and agent definitions: export them as files,
+  or **send them to DOCA** — the name taken from the branding, so a rename
+  follows — which posts the chosen files to a future server that evaluates
+  skills and lists the good ones as top downloads. Joins "the road between
+  them" (layer 2 above: typed procedure, quarantined review, exact bytes shown,
+  outbox) and needs that server's contract before it is built.
+- **DocaDesk-side work prepared on the panel.** The MCP proxied-name dedupe
+  (`LocalMcpRegistry.ProxiedName`), answering `notifications/tools/list_changed`
+  now that the panel hears it (2.90.0), and whatever the apps need — to settle
+  when working on the other machine.
+- **State in a database instead of a set of files.** Conversations, memory,
+  missions, usage, auth and devices are JSON/JSONL files today
+  (`docs/design/state.md`). A database is better for long-term management and
+  for working online (hosted DOCA, several users, queries over months of
+  conversations — see "Keyword search will not scale"). To decide: which
+  (SQLite first, embedded, one file, backups stay simple; a server database for
+  hosted), what moves first, and how the file format migrates.
+
 ## PRIORITY — three levels, and which one the user is talking to
 
 **Decided 2026-09-20, and the shape everything else here should be built
