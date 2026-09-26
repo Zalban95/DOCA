@@ -12,6 +12,7 @@ function afterListen({ certs = null, mode } = {}) {
   require('./harness/supervisor').recover();          // and carried on: a restart is not a decision
   require('./mcp/registry').startWithDoca();          // MCP servers marked "start with DOCA"
   require('./canvas/origin').start({ certs, mode });  // agent-written pages, on their own origin
+  require('./backup/schedule').start();               // backups on a schedule, when switched on
 }
 
 module.exports = { afterListen };

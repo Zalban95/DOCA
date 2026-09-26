@@ -76,6 +76,8 @@ async function backupsLoad() {
   pw.placeholder = s.hasSavedPassword ? '•••••••• saved — type a new one to replace it' : 'none saved — you will be asked each time';
   document.getElementById('backup-forget-btn').disabled = !s.hasSavedPassword;
 
+  if (typeof backupScheduleRender === 'function') backupScheduleRender(_backups.schedule, s);
+
   const est = _backups.estimate;
   document.getElementById('backup-summary').title = `About ${est.files} files, ${fmtBytes(est.bytes)} before compression · saved in ${_backups.dir}`;
 
