@@ -40,7 +40,7 @@ async function handleList(_req, res) {
     const inv = archive.inventory();
     let bytes = 0;
     for (const f of inv) try { bytes += fs.statSync(f.abs).size; } catch {}
-    res.json({ dir: BACKUP_DIR, settings: secret.settings(), backups, estimate: { files: inv.length, bytes } });
+    res.json({ dir: BACKUP_DIR, settings: secret.settings(), schedule: require('./schedule').status(), backups, estimate: { files: inv.length, bytes } });
   } catch (e) { fail(res, e); }
 }
 
@@ -53,6 +53,12 @@ function handleSettings(req, res) {
     if (b.password) secret.save(b.password);
     res.json(secret.settings());
   } catch (e) { fail(res, e); }
+}
+
+/** POST { every?, at?, keep? } — backups on a schedule (schedule.js). */
+function handleSchedule(req, res) {
+  try { res.json(require('./schedule').setConfig(req.body || {})); }
+  catch (e) { fail(res, e); }
 }
 
 /** POST { password? } — make one now. */
@@ -170,6 +176,7 @@ function mount(app) {
   app.get   ('/api/backups',                 handleList);
   app.post  ('/api/backups',                 handleCreate);
   app.post  ('/api/backups/settings',        handleSettings);
+  app.post  ('/api/backups/schedule',        handleSchedule);
   app.post  ('/api/backups/upload',          handleUpload);
   app.get   ('/api/backups/:name/download',  handleDownload);
   app.post  ('/api/backups/:name/plan',      handlePlan);

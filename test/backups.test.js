@@ -191,3 +191,48 @@ test('an upload larger than the disk can take (or than DOCA_BACKUP_UPLOAD_MAX) i
     assert.deepEqual(fs.readdirSync(paths.BACKUP_DIR).filter(n => n.startsWith('big.dBac')), [], 'no partial file left');
   } finally { delete process.env.DOCA_BACKUP_UPLOAD_MAX; }
 });
+
+test('scheduled backups: due at the set time, never open when no password is saved, and only auto- ones are pruned', async () => {
+  const schedule = require('../modules/backup/schedule');
+  assert.throws(() => schedule.setConfig({ every: 'hourly' }), /off, daily or weekly/);
+  assert.throws(() => schedule.setConfig({ at: '25:00' }), /HH:MM/);
+  assert.throws(() => schedule.setConfig({ keep: 0 }), /between 1 and 365/);
+
+  let st = schedule.setConfig({ every: 'daily', at: '03:00', keep: 2 });
+  assert.equal(new Date(st.nextAt).getHours(), 3, 'due at 03:00 local');
+  assert.ok(Date.parse(st.nextAt) > Date.now() - 1000 && Date.parse(st.nextAt) - Date.now() <= 24 * 3600e3, 'within the next day');
+
+  // A daily one that finished at 03:04 is next due tomorrow at 03:00, not the day after.
+  const last = new Date(); last.setHours(3, 4, 0, 0);
+  const next = new Date(schedule.nextAt(schedule.config(), { lastAt: last.toISOString() }));
+  assert.equal(next.getHours(), 3);
+  assert.equal(Math.round((next - last) / 3600e3), 24);
+
+  // Encrypted, no password saved: nothing is made, and it says why.
+  secret.setEncrypt(true); secret.forget();
+  const before = fs.readdirSync(paths.BACKUP_DIR).filter(n => n.startsWith('auto-')).length;
+  let r = await schedule.run();
+  assert.match(r.error, /no password is saved/);
+  assert.equal(fs.readdirSync(paths.BACKUP_DIR).filter(n => n.startsWith('auto-')).length, before, 'never an open backup instead');
+  assert.match(schedule.status().lastError, /no password is saved/);
+
+  secret.save('schedule password');
+  const manual = await archive.create({ password: 'schedule password', name: 'by-hand.dBac' });
+  for (let i = 0; i < 3; i++) {
+    r = await schedule.run({ now: Date.now() + i * 60e3 });
+    assert.ok(r.made.startsWith('auto-'), r.error);
+    await new Promise(res => setTimeout(res, 20));   // distinct mtimes
+  }
+  const autos = fs.readdirSync(paths.BACKUP_DIR).filter(n => n.startsWith('auto-'));
+  assert.equal(autos.length, 2, 'keeps the last 2');
+  assert.ok(fs.existsSync(manual.file), 'a backup made by hand is never pruned');
+  assert.equal(schedule.status().lastError, null);
+  assert.equal((await archive.peek(path.join(paths.BACKUP_DIR, autos[0]))).encrypted, true);
+
+  const list = await H.api(null, 'GET', '/api/backups');
+  assert.equal(list.body.schedule.every, 'daily');
+  const set = await H.api(null, 'POST', '/api/backups/schedule', { every: 'off' });
+  assert.equal(set.status, 200);
+  assert.equal(set.body.nextAt, null);
+  secret.forget();
+});
