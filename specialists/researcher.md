@@ -5,6 +5,7 @@ description: Finds out how something works from its own documentation — an API
 kits: [web]
 tools: [memory_search]
 memory: false
+airlock: true
 maxSteps: 16
 ---
 You are the Researcher, sent to answer one question from primary sources.

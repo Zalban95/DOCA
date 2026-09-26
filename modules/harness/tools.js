@@ -82,6 +82,10 @@ async function call(name, args, disabled = [], ctx = {}) {
     out = `Error: ${e.message}`;
   }
   audit(name, args, ctx, out);
+  // An airlock agent's reading passes the guards before it reads it (guard/airlock.js).
+  if (ctx.airlock && ['http_fetch', 'research_docs', 'read_file'].includes(name) && !out.startsWith('Error:')) {
+    try { out = await require('./guard/airlock').screenIn(name, args, out); } catch (e) { out = `Error: the guards could not screen this (${e.message}); it was not passed on.`; }
+  }
   // Somebody else's words arrive labelled as such (harness/untrusted.js).
   const source = out.startsWith('Error:') ? null : untrusted.sourceOf(name, args, isMcp);
   if (source) untrusted.arrived(ctx.signal, name, isMcp);

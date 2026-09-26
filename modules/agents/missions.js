@@ -242,7 +242,7 @@ function profileOf(def) {
     label: def.label,
     systemPrompt: def.role,
     tools: def.tools, kits: def.kits || [], skills: def.skills || [],
-    memory: def.memory,
+    memory: def.memory, airlock: !!def.airlock,
     environment: def.environment,
     provider: def.provider,
     model: def.model,
@@ -319,11 +319,11 @@ function dispatch({ agentId, task, context, by, chainId, plan } = {}) {
 function run(row, def, message, base = { steps: 0, tokens: 0 }) {
   const { id } = row;
   agent.turn({ message, sessionId: row.sessionId, profile: profileOf(def), emit: evt => record(id, evt, base) })
-    .then(r => {
+    .then(async r => {
       announce(patch(id, {
         state: 'done', endedAt: new Date().toISOString(),
         steps: base.steps + (r.steps || 0), tokens: base.tokens + (r.usage?.totalTokens || 0),
-        result: String(r.text || '').slice(0, 20000),
+        result: await require('../harness/guard/airlock').result(def, id, r.text),   // an airlock's report, screened
       }));
     })
     .catch(e => {

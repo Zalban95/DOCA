@@ -37,10 +37,14 @@ DocaDesk runs and the apps are debugged). Finished work is in the *Done log* at
 the end, and in the sections as "built in …" notes.
 
 **Build — the approved plan (2026-09-27), in order**
-1. **The airlock**: only the scout and researcher read the web; guard models
-   (several at once, all must pass, a Harness settings section) screen what
-   comes in and the scout's report going out; the scout writes only its report.
-   → *Where this harness stands…* §2, *To discuss next*.
+1. ~~**The airlock**~~ — **built in 2.104.0–2.106.0** (`docs/design/airlock.md`):
+   guards (rules, ONNX models run in their own process, endpoints; all must
+   agree; Harness settings → Guards), `AIRLOCK_ONLY` (only the scout and the
+   researcher read the web while specialists are on), `scout_report`, screening
+   in and out. Measured: 100% of the eval set's injections caught, 8% false
+   alarms with rules + Prompt Guard 2 22M + ProtectAI. **Left:** install the
+   runtime and a model guard on the live panel (Settings → Harness → Guards;
+   ~1.4 GB with ProtectAI) — until then the rules guard alone screens.
 2. **The data layer**: SQLite now (`node:sqlite`), PostgreSQL-ready for hosting;
    usage and audit first, then sessions and memory. → *To discuss next*.
 3. **Off-site backups**: scheduled `.dBac` to an S3-compatible bucket.
