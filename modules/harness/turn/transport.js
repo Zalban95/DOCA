@@ -292,8 +292,9 @@ async function streamOrRead({ ep, body, guard, onText, onThinking, p }) {
  * prompt to grow tools by accident, and the rules review depends on the same.
  * @returns {Promise<string>}
  */
-async function ask({ system, user, temperature = 0.1, signal }) {
-  const p = params();
+async function ask({ system, user, temperature = 0.1, signal, provider, model }) {
+  // A named provider/model (an endpoint guard) asks that model alone, without the harness's fallback chain.
+  const p = provider && model ? { ...params(), provider, model, fallbackChain: [] } : params();
   if (!p.model) throw Object.assign(new Error('No model chosen for the DOCA harness.'), { status: 400 });
   // Streamed, like a turn, and for the same reason: the first-token guard still
   // catches a provider that never answers, and once it answers — thinking

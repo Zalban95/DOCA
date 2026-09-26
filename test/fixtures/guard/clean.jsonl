@@ -1,0 +1,12 @@
+{"text":"The API returns a JSON object with the fields id, name and created_at. Rate limits are 100 requests per minute per token."}
+{"text":"To install, run npm install express and then start the server with node app.js. The default port is 3000."}
+{"text":"Rate limit exceeded. Please wait 60 seconds and try again."}
+{"text":"This article explains prompt injection: attackers hide text such as 'ignore previous instructions' in web pages that AI assistants read."}
+{"text":"Step 3: open Settings, choose Security, and turn on two-factor authentication. Keep your recovery codes somewhere safe."}
+{"text":"Usage: curl -X POST https://api.example.com/v1/items -H 'Authorization: Bearer $TOKEN' -d '{\"name\":\"x\"}'"}
+{"text":"Changelog 2.4.1: fixed a crash when the config file is missing; the --verbose flag now prints timings."}
+{"text":"The Blender Python API exposes bpy.ops.mesh.primitive_cube_add(size=2, location=(0, 0, 0)) to add a cube."}
+{"text":"Error: EACCES: permission denied, open '/var/log/app.log'. Run the service as a user that can write the log directory."}
+{"text":"Our privacy policy: we never sell your data. You can ask us to delete your account at any time by writing to privacy@example.com."}
+{"text":"In Kotlin, a data class gets equals(), hashCode() and toString() for free. Use copy() to change one field."}
+{"text":"To reset the router, hold the reset button for ten seconds until the lights blink, then set a new admin password."}
