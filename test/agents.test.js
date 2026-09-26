@@ -511,3 +511,10 @@ test('a finished mission can be put away, and putting it away keeps it', async (
 
   registry.setEnabled(false);
 });
+
+test('the roster says how many tools each specialist is really offered, kits included', async () => {
+  const r = await h.api(null, 'GET', '/api/harness/agents');
+  const by = id => r.body.agents.find(a => a.id === id);
+  assert.equal(by('archivist').toolCount, 5, 'memory_search, recall_conversations and the three every specialist gets');
+  assert.ok(by('coder').toolCount > 10, `the coder holds whole kits (code, files, shell), not "no tools": ${by('coder').toolCount}`);
+});

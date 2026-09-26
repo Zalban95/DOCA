@@ -52,7 +52,9 @@ function _hcAgentHtml(a, enabled) {
       <span class="hc-agent-id">${escHtml(a.id)}</span>
       <span class="hc-agent-note" style="color:var(--red)">unreadable definition</span>
     </div>`;
-  const tools = (a.tools || []).length ? `${a.tools.length} tool${a.tools.length === 1 ? '' : 's'}` : 'no tools';
+  const n = a.toolCount ?? (a.tools || []).length;
+  const kits = Array.isArray(a.kits) && a.kits.length ? ` (${a.kits.join(', ')})` : '';
+  const tools = `${n} tool${n === 1 ? '' : 's'}${kits}`;
   return `
     <div class="hc-agent ${enabled ? '' : 'off'}" title="${escHtml(a.note || '')}">
       <span class="hc-agent-id">${escHtml(a.label || a.id)}</span>

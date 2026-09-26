@@ -244,8 +244,16 @@ const handleProposalReject = wrap(async (req, res) =>
 
 /* ── Specialist agents and their missions ─────────────── */
 
-const handleAgents = wrap(async (_req, res) =>
-  res.json({ enabled: registry.enabled(), dir: registry.dir(), agents: registry.list(), never: registry.NEVER }));
+const handleAgents = wrap(async (_req, res) => {
+  // `toolCount` is what the specialist is really offered — its kits, its named
+  // tools and the ones every specialist gets, minus NEVER — the same answer
+  // disabledFor gives its turns; a definition made of kits names no tools.
+  const all = tools.describe().length;
+  const { disabledFor } = require('./turn/prompt');
+  const agents = registry.list().map(a => (a.broken ? a
+    : { ...a, toolCount: all - disabledFor({ kits: a.kits || [], tools: a.tools || [], level: 'specialist' }, {}).length }));
+  res.json({ enabled: registry.enabled(), dir: registry.dir(), agents, never: registry.NEVER });
+});
 
 /** The switch. Off is the default, and turning it off is the rollback. */
 const handleAgentsEnable = wrap(async (req, res) =>
