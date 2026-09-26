@@ -93,10 +93,12 @@ function rulesBlock() {
  * knows, then where this conversation had got to.
  */
 function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile, projectBrief = '' }) {
+  // What this turn is offered, described (turn/tools-section.js).
+  const toolList = require('./tools-section').toolsSection(tools.schemas(disabledFor(profile, p)));
   if (profile?.level === 'orchestrator') return [
     providers.SAFETY_CHARTER, profile.systemPrompt,
     p.coordinatorInstructions || providers.DEFAULT_SYSTEM_PROMPT,
-    environmentBrief(p, toolCount), clientBlock(client), rulesBlock(),
+    environmentBrief(p, toolCount), toolList, clientBlock(client), rulesBlock(),
     memoryBlock(userText, Math.min(3, Math.max(0, Number(p.memoryLimit) || 0))),
     settings.block(), installs.block(),
     summary ? `# Earlier decisions\n${summary}` : '',
@@ -124,6 +126,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
       profile.environment === 'full'
         ? environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount })
         : environmentBrief(p, toolCount),
+      toolList,
       projectBrief,
       profile.memory ? memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)) : '',
       summary ? `# Earlier in this mission\n${summary}` : '',
@@ -134,6 +137,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
     providers.SAFETY_CHARTER,
     p.systemPrompt || providers.DEFAULT_SYSTEM_PROMPT,
     environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount }),
+    toolList,
     clientBlock(client),
     placeBlock(client),
     rulesBlock(),
@@ -203,12 +207,20 @@ const COMES_WITH = { repo_rules: ['write_file'] };
  * `preview()` is that it is what the tests assert against.
  */
 function disabledFor(profile, p) {
-  if (profile && Array.isArray(profile.tools))
-    return tools.describe().map(t => t.name)
-      .filter(n => (p.disabledTools || []).includes(n) ||
-        (!profile.tools.includes(n) && !(profile.level !== 'orchestrator' && ALWAYS_FOR_SPECIALISTS.includes(n))
-          && !(COMES_WITH[n] || []).some(t => profile.tools.includes(t))));
-  return Array.isArray(p.disabledTools) ? p.disabledTools : [];
+  const off = Array.isArray(p.disabledTools) ? p.disabledTools : [];
+  // No profile (a work chat): every tool, minus the owner's switches. The
+  // Orchestrator's profile holds every kit, so it lands in the same place.
+  if (!profile || (!Array.isArray(profile.tools) && !profile.kits)) return off;
+  const all = tools.describe().map(t => t.name);
+  // By agent type: its kits (harness/kits.js) plus single tools. A tool added
+  // to a kit later reaches every type holding the kit.
+  const held = new Set(require('../kits').expand({ kits: profile.kits || [], add: profile.tools || [] }, all));
+  for (const [n, withTools] of Object.entries(COMES_WITH)) if (withTools.some(t => held.has(t))) held.add(n);
+  if (profile.level !== 'orchestrator') {
+    for (const n of ALWAYS_FOR_SPECIALISTS) held.add(n);
+    for (const n of require('../../agents/registry').NEVER) held.delete(n);
+  }
+  return all.filter(n => off.includes(n) || !held.has(n));
 }
 
 /**
@@ -307,4 +319,19 @@ function environmentBrief(p, toolCount) {
 //
 // The transcript on disk is not touched — this is only what the next call sees.
 
-module.exports = { memoryBlock, rulesBlock, systemPrompt, disabledFor, isMissionProfile, missionsFor, liveBlock };
+/**
+ * What a turn needs once, before its first step: the project brief of the
+ * conversation (projects/brief.js) and what changed in this agent type's tools
+ * since its last turn (turn/tool-news.js) — the notice goes in the readings.
+ */
+async function turnPreamble({ session, profile, p }) {
+  const projectBrief = await require('../../projects/brief').forSession(session.id).catch(() => '');
+  let toolNews = '';
+  try {
+    const news = require('./tool-news');
+    toolNews = news.news(news.typeOf(require('../organization').session(session.id), profile), tools.schemas(disabledFor(profile, p)));
+  } catch { /* a notice never breaks a turn */ }
+  return { projectBrief, toolNews };
+}
+
+module.exports = { memoryBlock, rulesBlock, systemPrompt, disabledFor, isMissionProfile, missionsFor, liveBlock, turnPreamble };

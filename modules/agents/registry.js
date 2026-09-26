@@ -132,6 +132,10 @@ function normalize(def) {
     label: String(def.label || id).slice(0, 60),
     note:  String(def.note || '').slice(0, 300),
     role:  String(def.role).slice(0, 20000),
+    // Kits: families of tools (harness/kits.js) — a tool added to a kit later
+    // reaches this specialist without its file being edited. `tools` adds
+    // single tools on top.
+    kits:  Array.isArray(def.kits) ? def.kits.map(String).filter(k => k !== '*') : [],
     tools: asked.filter(t => !NEVER.includes(t)),
     refusedTools: asked.filter(t => NEVER.includes(t)),
     memory: def.memory === true,

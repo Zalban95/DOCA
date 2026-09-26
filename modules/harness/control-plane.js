@@ -8,8 +8,10 @@
  * them. write_file used to have no such check — only its approval prompt stood
  * between the agent and the prefs file, and in Auto mode or with an
  * "always allow" rule that prompt is not there (audit 2026-09-26, N2). So the
- * write tools (write_file, replace_in_files) refuse these, whatever the
- * approval mode:
+ * write tools ask before writing these — write_file puts every such write to
+ * the person, in every approval mode, Unattended included, and never as an
+ * "always allow"; replace_in_files skips them (a bulk replace is no way to edit
+ * them). A specialist, which cannot ask, is refused:
  *   - the panel's settings (the prefs file, which holds the approval mode itself)
  *   - OpenClaw's config and DOCA's provider keys
  *   - accounts and sessions (auth/), devices and their scopes, the backup schedule
@@ -59,11 +61,29 @@ function which(abs) {
   return null;
 }
 
-/** Throw the refusal the agent reads, when `abs` is part of the control plane. */
-function refuse(abs) {
+/**
+ * A tool call that would write one of these files: { path, what }, else null.
+ * Used by the approval gate, which then asks the person first — in every
+ * approval mode (decided 2026-09-26: the agent may edit its own files; these
+ * few ask).
+ */
+function target(name, args, ctx = {}) {
+  if (name !== 'write_file' || !args?.path) return null;
+  let abs;
+  try { abs = require('./toolbox/common').resolvePath(args.path, ctx); } catch { return null; }
   const what = which(abs);
-  if (what) throw new Error(`${abs} is ${what} — part of what governs this agent, which its own tools do not write. `
-    + 'Propose the change instead (settings_propose), or tell the owner what to change; a person decides.');
+  return what ? { path: abs, what } : null;
 }
 
-module.exports = { which, refuse, entries };
+/**
+ * The tool's own check, behind the gate: a control-plane write goes through only
+ * when this very call was put to the person and they said yes (`ctx.approved`).
+ * Any caller that skipped the gate gets a refusal, not a write.
+ */
+function refuse(abs, ctx = {}) {
+  const what = which(abs);
+  if (what && !ctx.approved) throw new Error(`${abs} is ${what} — part of what governs this agent. Writing it needs `
+    + 'a yes from the person each time; this call was not put to them. Ask through the turn, or propose the change (settings_propose).');
+}
+
+module.exports = { which, refuse, target, entries };

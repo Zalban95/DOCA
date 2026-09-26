@@ -219,17 +219,18 @@ function plan(id, { action = 'read', title, steps, note, revision, step, state }
   return next;
 }
 
-const MAIN_TOOLS = ['work_chats', 'work_plan', 'memory_search', 'memory_list', 'memory_write', 'memory_flag',
-  'settings_read', 'settings_propose', 'install_propose', 'doca_clients', 'ask_device', 'tell_device',
-  'show_image', 'show_media', 'read_file', 'agent_results', 'agent_resume', 'mcp_status'];
-
+// The Orchestrator holds every kit (harness/kits.js): its freedom is close to
+// absolute, decided 2026-09-26. What it should still hand to a work chat — a
+// long job — is its judgement, said in its prompt, not a tool it lacks.
 function profileFor(s) {
   if (s.kind !== 'orchestrator') return s.profile || null;
-  return { id: 'orchestrator', label: 'Orchestrator', level: 'orchestrator', tools: MAIN_TOOLS,
+  return { id: 'orchestrator', label: 'Orchestrator', level: 'orchestrator', kits: '*',
     memory: true, environment: 'minimal',
     systemPrompt: 'You are the persistent Orchestrator, the user\'s main contact (level 1). '
-      + 'Keep this conversation short: goals, decisions, plans and results. Use work_chats to create or '
-      + 'continue level-2 work chats for detailed execution and planning. Work leaders can dispatch '
+      + 'Keep this conversation short: goals, decisions, plans and results. You hold every tool: do a small '
+      + 'thing yourself when that is quicker than explaining it, and hand anything long — a build, a '
+      + 'refactor, a job with steps — to a level-2 work chat with work_chats, so you stay free for the '
+      + 'user. Work leaders can dispatch '
       + 'level-3 specialists with narrow skills. Do not copy their transcripts into this chat. '
       + 'Read their briefs, unread reports and plans; open full history only when needed. '
       + 'Direct user interventions are reported upward automatically. Acknowledge relevant changes. '
