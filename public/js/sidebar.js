@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — SIDEBAR STATUS POLLING
+   DOCA PANEL — SIDEBAR STATUS POLLING
    ═══════════════════════════════════════════════════════ */
 
 async function pollStatus() {

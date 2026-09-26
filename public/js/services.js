@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — INFERENCE SERVICES
+   DOCA PANEL — INFERENCE SERVICES
    Manages Docker-based inference backends (Whisper, vLLM,
    Stable Diffusion, ComfyUI) with GPU assignment.
    ═══════════════════════════════════════════════════════ */

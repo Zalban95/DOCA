@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — VIRTUAL MACHINES
+   DOCA PANEL — VIRTUAL MACHINES
    ═══════════════════════════════════════════════════════ */
 
 function vmsInit() { vmsLoad(); }

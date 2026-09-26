@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — LOGS  (SSE streaming, one or more sources)
+   DOCA PANEL — LOGS  (SSE streaming, one or more sources)
    ═══════════════════════════════════════════════════════ */
 
 /* Which sources are being followed. Empty means "auto": whichever harness is

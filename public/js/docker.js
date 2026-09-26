@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — DOCKER TAB
+   DOCA PANEL — DOCKER TAB
    ═══════════════════════════════════════════════════════ */
 
 let _dockerLogSrc = null;

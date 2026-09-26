@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — NAVIGATION
+   DOCA PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
 const NAV_TABS = ['controls','logs','files','harness','terminal','models','docker','vms','mcp','settings'];

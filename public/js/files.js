@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — FILE MANAGER (upload / download / drag-drop)
+   DOCA PANEL — FILE MANAGER (upload / download / drag-drop)
    ═══════════════════════════════════════════════════════ */
 
 /* ── State ───────────────────────────────────────────── */

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — SETTINGS TAB
+   SETTINGS TAB — sub-navigation, General (tabs, theme, sidebar), Voice, System
    ═══════════════════════════════════════════════════════ */
 
 const SETTINGS_TABS = [
@@ -14,46 +14,7 @@ const SETTINGS_TABS = [
   { id: 'mcp',       label: 'MCP' },
 ];
 
-const _SETTINGS_SUBTABS = [
-  { id: 'general',   label: 'General',   init: '_subtabGeneralInit' },
-  { id: 'keys',      label: 'API Keys',  init: 'loadKeys' },
-  { id: 'skills',    label: 'Skills',    init: 'loadSkills' },
-  { id: 'snapshots', label: 'Snapshots', init: 'loadSnapshots' },
-  { id: 'setup',     label: 'Setup',     init: 'loadScripts' },
-  { id: 'config',    label: 'Config',    init: 'initConfig' },
-  { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit' },
-  { id: 'system',    label: 'System',    init: '_subtabSystemInit' },
-];
-
 let _settingsHidden = [];
-let _settingsActiveSubtab = 'general';
-let _subtabInited = {};
-
-async function settingsInit() {
-  settingsSubNav(_settingsActiveSubtab);
-}
-
-function settingsSubNav(panelId) {
-  _settingsActiveSubtab = panelId;
-
-  document.querySelectorAll('#settings-subnav .settings-subnav-btn').forEach((btn, i) => {
-    const active = _SETTINGS_SUBTABS[i]?.id === panelId;
-    btn.classList.toggle('active', active);
-    // Keep the active pill visible when the sub-nav scrolls horizontally (mobile)
-    if (active && btn.scrollIntoView) btn.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
-  });
-
-  document.querySelectorAll('#tab-settings .settings-panel').forEach(p => {
-    p.classList.toggle('active', p.id === `sp-${panelId}`);
-  });
-
-  const entry = _SETTINGS_SUBTABS.find(t => t.id === panelId);
-  if (entry && !_subtabInited[panelId]) {
-    _subtabInited[panelId] = true;
-    const fn = window[entry.init];
-    if (typeof fn === 'function') fn();
-  }
-}
 
 async function _subtabGeneralInit() {
   try {
@@ -512,4 +473,5 @@ async function voiceSettingsSave() {
     setStatus(status, `✗ ${e.message}`, 'err');
   }
 }
+
 

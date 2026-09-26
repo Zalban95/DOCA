@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — SETUP SCRIPTS
+   SETTINGS → OPENCLAW (only when it is installed) — SETUP SCRIPTS
    ═══════════════════════════════════════════════════════ */
 
 async function loadScripts() {

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — GLOBAL STATE
+   DOCA PANEL — GLOBAL STATE
    ═══════════════════════════════════════════════════════ */
 
 var autoScroll  = true;

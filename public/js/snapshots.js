@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — SNAPSHOTS
+   SETTINGS → OPENCLAW (only when it is installed) — SNAPSHOTS
    ═══════════════════════════════════════════════════════ */
 
 let snapSettingsOpen = false;

@@ -1,17 +1,17 @@
 /* ═══════════════════════════════════════════════════════
-   Settings → General: backups (.dBac) — make, download, upload, restore.
+   Settings → Backups: backups (.dBac) — make, download, upload, restore.
    Built from the same pieces as the rest of the panel: the Snapshots list rows,
    the Start-at-Boot toggle, .input fields under .input-label.
    ═══════════════════════════════════════════════════════ */
 
 let _backups = null;
 
-/** The card, placed after the Updates card the first time Settings opens. */
+/** The card, drawn into Settings → Backups the first time it opens. */
 function _backupsCard() {
   let card = document.getElementById('backups-card');
   if (card) return card;
-  const after = document.getElementById('update-log')?.closest('.card');
-  if (!after) return null;
+  const panel = document.getElementById('sp-backups');
+  if (!panel) return null;
   card = document.createElement('div');
   card.className = 'card';
   card.id = 'backups-card';
@@ -54,7 +54,7 @@ function _backupsCard() {
     <span class="status-line" id="backup-status"></span>
     <div id="backup-list" style="margin-top:10px"></div>
     <pre id="backup-log" class="code-out" style="display:none;max-height:min(45vh,360px);overflow:auto;font-size:11px;margin-top:8px"></pre>`;
-  after.after(card);
+  panel.appendChild(card);
   return card;
 }
 

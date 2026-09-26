@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — COLOR THEMES
+   DOCA PANEL — COLOR THEMES
    ═══════════════════════════════════════════════════════ */
 
 let _currentTheme = 'default';

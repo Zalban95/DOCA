@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — MODELS (Ollama + non-LLM tools)
+   DOCA PANEL — MODELS (Ollama + non-LLM tools)
    ═══════════════════════════════════════════════════════ */
 
 let modelsOllamaConnected = false;

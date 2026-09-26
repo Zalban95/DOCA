@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — TERMINAL (multi-session xterm.js)
+   DOCA PANEL — TERMINAL (multi-session xterm.js)
    ═══════════════════════════════════════════════════════ */
 
 let _termSessions = []; // { id, term, fit, ws, ro }
