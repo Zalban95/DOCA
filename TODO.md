@@ -1407,7 +1407,10 @@ stalled jobs, missions by state, proposals waiting for a click, the last 24 h of
 tokens against the ceiling, and the fold-check warning — read from disk, with no
 panel and no model; `--strict` exits 1 when anything needs attention. Not in it:
 tool calls waiting for approval, which live only in the running panel's memory.
-The model-free *demo* is still open.
+**The model-free proof: `npm run prove` (2.100.0, `bin/doca-prove.js`)** — eleven
+guarantees (sign-in on every route, approval, the control plane, labelled external
+text, kits, undo, verified restore, …), each run from its tests against the stub
+in a scratch data folder and printed as held or not, in about eight seconds.
 
 ### 6. Split what travels with a project from local operator state
 
