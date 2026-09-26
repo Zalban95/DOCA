@@ -250,8 +250,11 @@ const handleAgents = wrap(async (_req, res) =>
 const handleAgentsEnable = wrap(async (req, res) =>
   res.json({ ok: true, enabled: registry.setEnabled(req.body?.enabled === true) }));
 
-const handleAgentSave = wrap(async (req, res) =>
-  res.json({ ok: true, agent: registry.save({ ...req.body, id: req.params.id || req.body?.id }) }));
+// Markdown (the editor's format, agents/markdown.js) or the older JSON fields.
+const handleAgentSave = wrap(async (req, res) => {
+  const def = req.body?.markdown ? require('../agents/markdown').parse(req.body.markdown, { fallbackId: req.params.id }) : req.body;
+  res.json({ ok: true, agent: registry.save({ ...def, id: req.params.id || def?.id }) });
+});
 
 const handleAgentDelete = wrap(async (req, res) =>
   res.json({ ok: true, agent: registry.remove(req.params.id) }));

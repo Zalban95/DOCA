@@ -78,6 +78,7 @@ function _settingsHarnessRender() {
     ${row('<button class="btn btn-sm" onclick="hcRulesOpen()">Memory rules</button>', 'How it keeps memory: the rules, their review, history and undo')}
     ${row('<button class="btn btn-sm" onclick="hcApprovalOpen()">Approvals</button>', 'What runs without asking: Ask, Auto, Unattended')}
   </div>`;
+  identityRender(panel);   // persona.md and human.md (settings/identity.js)
 }
 /** Settings → Harness → ⚙: the built-in agent's parameters are edited on Controls, beside its row. */
 async function settingsOpenHarnessParams() {

@@ -103,7 +103,7 @@ function dir() {
   return (row && row.value) || paths.AGENTS_DIR;
 }
 
-function fileFor(id) { return path.join(dir(), `${id}.json`); }
+function fileFor(id, ext = 'md') { return path.join(dir(), `${id}.${ext}`); }
 
 /** An id that is safe in a filename, a URL and a tool argument. */
 function validId(id) {
@@ -155,23 +155,29 @@ function normalize(def) {
   };
 }
 
-/** Definitions on disk, which win over the shipped ones of the same id. */
+/**
+ * Definitions on disk, which win over the shipped ones of the same id: markdown
+ * (`<id>.md`, agents/markdown.js — also a Claude Code subagent file) or the older
+ * JSON (`<id>.json`); markdown wins where both exist.
+ */
 function fromFiles() {
   let names;
   try { names = fs.readdirSync(dir()); } catch { return []; }
-  const out = [];
-  for (const name of names) {
-    if (!name.endsWith('.json')) continue;
+  const out = new Map();
+  for (const name of names.filter(n => /\.(md|json)$/.test(n)).sort((a, b) => (a.endsWith('.md') ? 1 : 0) - (b.endsWith('.md') ? 1 : 0))) {
+    const base = name.replace(/\.(md|json)$/, '');
     try {
-      const def = JSON.parse(fs.readFileSync(path.join(dir(), name), 'utf8'));
-      out.push(normalize({ ...def, id: def.id || name.replace(/\.json$/, '') }));
+      const text = fs.readFileSync(path.join(dir(), name), 'utf8');
+      const def = name.endsWith('.md') ? require('./markdown').parse(text, { fallbackId: base }) : JSON.parse(text);
+      const row = normalize({ ...def, id: def.id || base });
+      out.set(row.id, { ...row, file: name });
     } catch (e) {
       // A broken file is listed as broken rather than skipped: a definition
       // that silently vanished is a bug report nobody can write.
-      out.push({ id: name.replace(/\.json$/, ''), label: name, broken: e.message });
+      out.set(base, { id: base, label: name, broken: e.message, file: name });
     }
   }
-  return out;
+  return [...out.values()];
 }
 
 function list() {
@@ -183,19 +189,25 @@ function list() {
 
 function get(id) { return list().find(a => a.id === id) || null; }
 
-/** Write a definition. This is how the agent builds a new specialist. */
+/**
+ * Write a definition — as markdown (agents/markdown.js), readable and importable
+ * elsewhere. An older `<id>.json` is moved aside to `<id>.json.migrated`, never
+ * deleted, so nothing is lost and one id has one file. This is how the agent
+ * builds a new specialist.
+ */
 function save(def) {
   const row = normalize(def);
   fs.mkdirSync(dir(), { recursive: true });
-  const { builtin, refusedTools, ...stored } = row;
-  fs.writeFileSync(fileFor(row.id), `${JSON.stringify(stored, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(fileFor(row.id), require('./markdown').format(row), 'utf8');
+  const old = fileFor(row.id, 'json');
+  if (fs.existsSync(old)) fs.renameSync(old, `${old}.migrated`);
   return row;
 }
 
 function remove(id) {
   const row = get(id);
   if (!row) throw Object.assign(new Error(`No agent called "${id}"`), { status: 404 });
-  try { fs.rmSync(fileFor(id), { force: true }); } catch { /* already gone */ }
+  for (const ext of ['md', 'json']) { try { fs.rmSync(fileFor(id, ext), { force: true }); } catch { /* already gone */ } }
   // A built-in whose file is deleted reverts to the shipped definition rather
   // than disappearing, which is the behaviour people expect from a reset.
   return get(id);
