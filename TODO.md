@@ -1248,11 +1248,17 @@ after it enters the turn. A classifier is optional; the label is not.
 `⟦end of external content⟧`; a marker inside the text is defused so it cannot
 close the frame early, and "# Your tools" says what the markers mean. Errors
 (ours) and DOCA's own store are not framed. MCP calls now go through the same
-audit as built-in tools. **Still open, and a decision rather than a patch:**
-re-gating dangerous tools once external text is in the turn — it would put a
-question in front of the Orchestrator after every page it reads, against the
-near-absolute freedom it is meant to have — and `shell` output (curl) is not
-framed, because a shell's output is mostly the machine's own.
+audit as built-in tools. **Decided 2026-09-26 and built in 2.103.0:** once
+outside text has entered a turn — a page (`http_fetch`) or another machine's
+tool result (MCP), not a local file — the **first** call after it that changes
+something asks again, once or deny (never "always"), even when allowed, and the
+person's devices are asked like any approval ("Ask again after outside text" in
+Approvals, on by default; not in Unattended mode or a mission, where nobody
+would answer). And the **scout** specialist (`specialists/scout.md`: web and
+read-only file tools, nothing that changes anything) is the way to read what is
+not trusted: it reports, and flags instructions it found instead of following
+them; the tools section tells the agent to send it. `shell` output (curl) is
+still not framed, because a shell's output is mostly the machine's own.
 
 ### 3. No retrieval layer
 

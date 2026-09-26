@@ -61,8 +61,12 @@ function settings() {
   return {
     mode:   MODES.includes(a.mode) ? a.mode : 'auto',
     always: Array.isArray(a.always) ? a.always.filter(k => typeof k === 'string' && k) : [],
+    recheckOutside: a.recheckOutside !== false,   // on unless switched off in Approvals
   };
 }
+
+/** The "ask again after outside text" switch. */
+function setRecheck(on) { return save({ recheckOutside: !!on }); }
 
 function save(patch) {
   const prefs = loadPrefs();
@@ -151,7 +155,14 @@ function gate(name, args, ctx = {}) {
   const cp = require('./control-plane').target(name, args, ctx);
   if (cp) return { tool: name, keys: null, forced: true,
     summary: `${cp.path} — ${cp.what}. Writing it always asks you first, whatever the approval mode.` };
-  const { mode, always } = settings();
+  const { mode, always, recheckOutside } = settings();
+  // Outside text entered this turn (harness/untrusted.js): the first call after it that does something
+  // is asked about again, once, even when allowed. Not in Unattended mode or a mission: nobody would answer.
+  if (recheckOutside && mode !== 'unattended' && !ctx.mission && !FREE.has(name) && !require('./tools').READS.has(name)) {
+    const from = require('./untrusted').pending(ctx.signal, { take: true });
+    if (from) return { tool: name, keys: null, recheck: true,
+      summary: `${summarize(name, args)} — asked again because text from ${from} entered this turn; it could be steering the agent.` };
+  }
   if (mode !== 'manual') return null;
   if (FREE.has(name)) return null;
   if (always.includes(name)) return null;           // the whole tool was allowed
@@ -340,6 +351,6 @@ function block() {
 }
 
 module.exports = {
-  MODES, FREE, settings, setMode, isUnattended, remember, forget, block,
+  MODES, FREE, settings, setMode, setRecheck, isUnattended, remember, forget, block,
   verbsOf, keysFor, summarize, gate, ask, askAnywhere, decide, pending, refusal, missionRefusal,
 };

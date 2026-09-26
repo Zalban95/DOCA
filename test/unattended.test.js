@@ -54,6 +54,6 @@ test('setting up the harness settings for the first time keeps the approval mode
   prefs.harness = { approval: { mode: 'manual', always: ['shell:git'] } };   // chosen before any harness existed
   savePrefs(prefs);
   require('../modules/harness/catalog').configFor('doca');                  // the first read seeds the rest
-  assert.deepEqual(approval.settings(), { mode: 'manual', always: ['shell:git'] });
+  assert.deepEqual(approval.settings(), { mode: 'manual', always: ['shell:git'], recheckOutside: true });
   approval.setMode('auto');
 });

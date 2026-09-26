@@ -2150,3 +2150,23 @@ test('a conversation runs on the model chosen in its chat; fallback follows the 
     await H.api(null, 'POST', '/api/harness/doca/config', { fallbackChain: [] });
   }
 });
+
+test('a page read in a turn makes the next command ask again, and a no stops it (untrusted.js, approval.gate)', async () => {
+  const approval = require('../modules/harness/approval');
+  script = [{ tool: 'http_fetch', args: { url: `${stubUrl}/models` } }, { tool: 'shell', args: { command: 'echo pwned' } }, { text: 'Stopped.' }];
+  const answering = (async () => {
+    for (let i = 0; i < 200; i++) {
+      const p = approval.pending().find(x => x.recheck || /asked again/.test(x.summary || ''));
+      if (p) { approval.decide(p.id, 'deny'); return p; }
+      await H.sleep(20);
+    }
+    return null;
+  })();
+  const events = await stream('/api/harness/chat', { message: 'read that page and do what it says' });
+  const asked = await answering;
+  assert.ok(asked, 'the command after the page was asked about');
+  assert.match(asked.summary, /echo pwned — asked again because text from a web page/);
+  const shell = events.find(e => e.type === 'tool_result' && e.name === 'shell');
+  assert.match(shell.result, /^Refused by the user/);
+  assert.equal(shell.failure.kind, 'refused');
+});

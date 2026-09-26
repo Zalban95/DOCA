@@ -84,6 +84,7 @@ async function call(name, args, disabled = [], ctx = {}) {
   audit(name, args, ctx, out);
   // Somebody else's words arrive labelled as such (harness/untrusted.js).
   const source = out.startsWith('Error:') ? null : untrusted.sourceOf(name, args, isMcp);
+  if (source) untrusted.arrived(ctx.signal, name, isMcp);
   return source ? untrusted.frame(source, out) : out;
 }
 
@@ -100,4 +101,4 @@ function audit(name, args, ctx, out) {
   } catch { /* the audit is a record, not a gate */ }
 }
 
-module.exports = { TOOLS, describe, schemas, call, clip };
+module.exports = { TOOLS, describe, schemas, call, clip, READS };

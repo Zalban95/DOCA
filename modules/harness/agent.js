@@ -291,7 +291,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       // reach the transcript the user is looking at — and because it must cover
       // MCP tools, which `tools.call` dispatches before it sees a definition.
       let refused = null;
-      const gate = args._raw === undefined ? approval.gate(name, args, { sessionId: session.id }) : null;
+      const gate = args._raw === undefined ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission }) : null;
       if (gate) {
         if (isMission) {
           refused = approval.missionRefusal(gate);
