@@ -2064,3 +2064,20 @@ test('delegated work runs as the person who started it, and stops when they are 
   assert.throws(() => who.withPerson(undefined, child.id), /suspended or no longer here/);
   memory.deleteSession(child.id); memory.deleteSession(parent.id);
 });
+
+test('a daily token ceiling refuses to start a turn, and says whose setting it is', async () => {
+  script = [{ text: 'counted' }];
+  await stream('/api/harness/chat', { message: 'use some tokens' });
+  await H.api(null, 'POST', '/api/harness/doca/config', { tokensPerDay: 1 });
+  const usage = await get('/api/harness/usage?days=1&by=kind');
+  assert.equal(usage.body.tokensPerDay, 1);
+  seen = [];
+  const events = await stream('/api/harness/chat', { message: 'one more' });
+  const err = events.find(e => e.type === 'error');
+  assert.ok(err, 'the turn is refused');
+  assert.match(err.text, /daily ceiling is 1 \(harness setting "Tokens per day", harness\.config\.doca\.tokensPerDay\)/);
+  assert.equal(seen.length, 0, 'no model call was made');
+  await H.api(null, 'POST', '/api/harness/doca/config', { tokensPerDay: 0 });
+  script = [{ text: 'back' }];
+  assert.ok((await stream('/api/harness/chat', { message: 'again' })).some(e => e.type === 'done'), '0 lifts it');
+});

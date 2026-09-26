@@ -156,6 +156,11 @@ const HARNESS_PARAMS = [
     hint: 'Every turn the panel starts by itself, across all work chats and the Orchestrator together. Each '
         + 'is a model call you pay for; past this many in an hour the panel waits instead, and says so.' },
 
+  { key: 'tokensPerDay', label: 'Tokens per day', unit: 'tokens', attrs: 'min="0" step="100000"',
+    hint: 'A ceiling on every model call together — chats, work chats, specialists, summaries — over the last '
+        + '24 hours. Past it, a new turn is refused and says why; one already running is never cut off. '
+        + '0 means no ceiling. The "24h … tok" counter in the harness console shows what a day really costs.' },
+
   { key: 'shellTimeoutSec', label: 'Shell command limit', unit: 's', attrs: 'min="1" max="3600" step="1"',
     hint: 'How long one shell command may run before it is stopped. Longer work — a build, an install, a '
         + 'download — the agent runs in the background instead and checks on it, so this is not a cap on those.' },
@@ -327,6 +332,7 @@ async function harnessConfigSave(id) {
         maxSteps:       parseInt(val('maxSteps'), 10) || 1,
         autoTurnsPerJob:  parseInt(val('autoTurnsPerJob'), 10) || 0,
         autoWakesPerHour: parseInt(val('autoWakesPerHour'), 10) || 0,
+        tokensPerDay:     parseInt(val('tokensPerDay'), 10) || 0,
         shellTimeoutSec:  parseInt(val('shellTimeoutSec'), 10) || 60,
         historyTurns:   parseInt(val('historyTurns'), 10) || 0,
         summarizeAfter: parseInt(val('summarizeAfter'), 10) || 0,

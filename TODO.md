@@ -1371,6 +1371,11 @@ A runaway loop across many turns is exactly the case the ledger was built to
 make visible and cannot currently stop. The honest shape is a per-day token
 ceiling that refuses to start a new turn and says so, rather than one that kills
 a turn mid-flight.
+**Built in 2.91.0 (`harness/turn/ceiling.js`):** `tokensPerDay` (0 = none, the
+default) is checked as each turn starts, against every call in the usage ledger
+over the last 24 hours; past it the turn is refused with the setting's name and
+path, and one already running is never cut off. It is "Tokens per day" in the
+harness ⚙ panel, and the console's "24h … tok" counter shows it as "used / limit".
 
 ### 5. Init and inspect without the server, and a model-free proof
 

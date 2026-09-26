@@ -148,6 +148,9 @@ function defaultParams() {
     // autoWakesPerHour: every automatic turn anywhere, together — the cost guard.
     autoTurnsPerJob:  30,
     autoWakesPerHour: 30,
+    // Tokens every model call may use together in 24 hours before new turns are
+    // refused (turn/ceiling.js). 0 = no ceiling, so upgrading changes nothing.
+    tokensPerDay: 0,
     // How long one `shell` call may wait before it is stopped (seconds, at most
     // 3600). Longer work goes in the background (harness/jobs.js).
     shellTimeoutSec: 60,

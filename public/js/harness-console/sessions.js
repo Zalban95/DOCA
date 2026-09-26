@@ -14,11 +14,11 @@ async function _hcLoadUsage() {
   const el = document.getElementById('hc-usage');
   if (!el) return;
   try {
-    const { total } = await apiFetch('/api/harness/usage?days=1&by=kind');
+    const { total, tokensPerDay } = await apiFetch('/api/harness/usage?days=1&by=kind');
     const tok = total.prompt + total.completion;
     const fmt = n => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(n);
     el.textContent = total.calls
-      ? `24h ${fmt(tok)} tok · ${total.calls} calls${total.cached ? ` · ${Math.round(total.cached / total.prompt * 100)}% cached` : ''}${total.estimated ? ' · ~est' : ''}`
+      ? `24h ${fmt(tok)}${tokensPerDay ? ` / ${fmt(tokensPerDay)}` : ''} tok · ${total.calls} calls${total.cached ? ` · ${Math.round(total.cached / total.prompt * 100)}% cached` : ''}${total.estimated ? ' · ~est' : ''}`
       : '';
   } catch { el.textContent = ''; }
 }

@@ -91,7 +91,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     try { emit(evt); } catch {}
     try { events.emit('event', evt); } catch {}
   };
-  const p = turnParams(profile);
+  const p = require('./turn/ceiling').check(turnParams(profile));   // a day's token ceiling refuses to start, never stops
   const ep  = providers.endpoint(p.provider);
   if (!p.model)
     throw Object.assign(new Error(
