@@ -361,6 +361,7 @@ function mount(app) {
   app.get ('/api/update-check', handleUpdateCheck);
   app.post('/api/update',       handleUpdate);
   app.post('/api/restart',      handleRestart);
+  app.get ('/api/deps',         require('./deps').handleDeps);   // outdated packages and advisories
   require('./releases').mount(app);          // /api/versions: roll back or forward
   require('./backup/routes').mount(app);     // /api/backups: .dBac
 }

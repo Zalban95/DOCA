@@ -1810,6 +1810,17 @@ more is built on top of them. Proposed shape, to settle per section:
 
 ## Wanted 2026-09-25 — update the dependencies on purpose, with the version
 
+**Done in 2.67.0.** Settings → General → Updates → "Check dependencies": when
+on, every update check also lists the panel's packages that are behind
+(current → wanted → latest, licence, "a new major version: a decision, not an
+update") and npm's advisories, worst first (`modules/deps.js`, `GET /api/deps`,
+owner only, cached an hour). Updating stays a release step: `npm run
+deps:update` (update within ranges, audit, tests). Used at once: the first
+check found 4 advisories (2 high — `ws` memory disclosure, `path-to-regexp`
+ReDoS; `qs`, `body-parser`), all fixed within the declared ranges in 2.67.0.
+Left as decisions: express 5 and multer 2 (new majors).
+
+
 An update installs the new version's own `package-lock.json`, so dependencies
 move only when a release moves them, and nothing reminds anyone that they are
 stale. Wanted: in Settings → Updates, a **"check dependencies"** toggle beside
