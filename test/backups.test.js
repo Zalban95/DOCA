@@ -175,3 +175,19 @@ test('a restore keeps the accounts of an install that has them', async () => {
   assert.ok(authStore.userByEmail('late@test.local'), 'the current accounts were kept, not rolled back');
   assert.ok(authStore.userByEmail('owner@test.local'), 'and nobody was lost');
 });
+
+test('an upload larger than the disk can take (or than DOCA_BACKUP_UPLOAD_MAX) is refused, and leaves nothing', async () => {
+  process.env.DOCA_BACKUP_UPLOAD_MAX = '1000';
+  try {
+    const url = `${H.base}/api/backups/upload?name=big.dBac`;
+    const headers = { Cookie: H.owner.cookie, 'Sec-Fetch-Site': 'same-origin', 'Content-Type': 'application/octet-stream' };
+    let r = await fetch(url, { method: 'POST', headers, body: Buffer.alloc(5000) });
+    assert.equal(r.status, 413, 'by its declared length');
+    assert.match((await r.json()).error, /larger than this machine can take/);
+    // No length declared: counted as it arrives.
+    const stream = new ReadableStream({ start(c) { for (let i = 0; i < 5; i++) c.enqueue(new Uint8Array(1000)); c.close(); } });
+    r = await fetch(url, { method: 'POST', headers, body: stream, duplex: 'half' });
+    assert.equal(r.status, 413, 'by what arrived');
+    assert.deepEqual(fs.readdirSync(paths.BACKUP_DIR).filter(n => n.startsWith('big.dBac')), [], 'no partial file left');
+  } finally { delete process.env.DOCA_BACKUP_UPLOAD_MAX; }
+});

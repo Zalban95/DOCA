@@ -72,16 +72,49 @@ function handleDownload(req, res) {
 }
 
 /** POST ?name=x.dBac, the file as the raw body — a backup from another machine. */
+/**
+ * How big an upload may be: what the disk can take while leaving 2 GB free,
+ * and at most DOCA_BACKUP_UPLOAD_MAX bytes when that is set. A backup holds
+ * attachments, so there is no small fixed number that fits everyone; a full
+ * disk is what this prevents.
+ */
+const DISK_MARGIN = 2 * 1024 ** 3;
+function uploadLimit() {
+  let free = Infinity;
+  try { const st = fs.statfsSync(BACKUP_DIR); free = st.bavail * st.bsize - DISK_MARGIN; } catch { /* no statfs: the env cap only */ }
+  const cap = Number(process.env.DOCA_BACKUP_UPLOAD_MAX) || Infinity;
+  return Math.max(0, Math.min(free, cap));
+}
+const gb = n => `${(n / 1024 ** 3).toFixed(1)} GB`;
+const tooBig = limit => Object.assign(new Error(`That file is larger than this machine can take now (${gb(limit)}, keeping 2 GB free).`), { status: 413 });
+
 function handleUpload(req, res) {
   const name = String(req.query.name || '').replace(/[^A-Za-z0-9._-]/g, '_');
   if (!NAME.test(name)) return fail(res, Object.assign(new Error('Upload a .dBac file.'), { status: 400 }));
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
   const file = path.join(BACKUP_DIR, name);
   if (fs.existsSync(file)) return fail(res, Object.assign(new Error(`${name} is already here.`), { status: 409 }));
+  const limit = uploadLimit();
+  const declared = Number(req.headers['content-length']) || 0;
+  if (declared > limit) return fail(res, tooBig(limit));
   const partial = `${file}.partial`;
   const out = fs.createWriteStream(partial, { mode: 0o600 });
+  // Counted as it arrives too: a sender can leave the length out, or lie.
+  let bytes = 0, over = false;
+  req.on('data', chunk => {
+    bytes += chunk.length;
+    if (bytes > limit && !over) {
+      over = true;
+      req.unpipe(out); out.destroy();
+      fs.rmSync(partial, { force: true });
+      res.setHeader('Connection', 'close');   // the rest is read and dropped, then the connection ends
+      fail(res, tooBig(limit));
+      req.resume();
+    }
+  });
   req.pipe(out);
   out.on('finish', async () => {
+    if (over) return;
     try {
       const info = await archive.peek(partial);
       if (!info.valid) throw Object.assign(new Error('That file is not a DOCA backup.'), { status: 400 });

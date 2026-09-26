@@ -856,10 +856,9 @@ never what the agent is allowed to do.
 
 ## Errors that surface as the wrong thing
 
-- **`modules/files.js:79`** `statSync` on a custom config favourite whose file
-  was moved or deleted throws ENOENT, which the handler turns into a 500. The
-  user sees a server error for what is really "that file is gone" — the same
-  class of problem that produced the `keys.js` ENOENT bug.
+- ~~**`modules/files.js:79`** a moved or deleted favourite answered 500.~~
+  Already fixed (`files.fsStatus`: ENOENT/ENOTDIR → 404, EACCES/EPERM → 403);
+  the entry was stale, checked 2026-09-26.
 
 - **Device rotate/revoke (`public/js/devices.js`) and skill toggles report
   failures through `appAlert()` only.** Not silent, but a modal for a failed
@@ -1936,12 +1935,15 @@ A sweep of every GET route as owner, member and viewer on an isolated server
 - Expired sessions were only pruned when someone asked for the session list;
   now at every sign-in. The login rate-limit table never shrank; now it does.
 
-**Recorded, not fixed (not urgent):**
-- The gate reads `auth/users.json`, `sessions.json` and `memberships.json` on
-  every request; fine at one person's polling rate, worth an mtime cache before
-  many users (it is the same pattern `devices.js` already uses).
-- `auth/audit.jsonl` grows forever — rotate it by month, like usage.
-- A backup upload has no size limit (owner-only, so a full disk is the worst case).
+**Recorded, then fixed in 2.65.0:**
+- ~~The gate re-read the auth documents on every request~~ — `auth/store.read`
+  now parses once per change of the file (inode, size, mtime) and hands out
+  copies, so an edit that was never written cannot stay in the cache.
+- ~~`auth/audit.jsonl` grows forever~~ — one file a month,
+  `audit-YYYY-MM.jsonl`; the old single file is kept and read as the oldest.
+- ~~A backup upload has no size limit~~ — refused (413) past what the disk can
+  take while keeping 2 GB free, or past `DOCA_BACKUP_UPLOAD_MAX`; checked by
+  the declared length and again as bytes arrive; no partial file is left.
 - The sweep found no route that crashes for a role and no route answering a
   role without the right for it.
 
