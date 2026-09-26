@@ -338,15 +338,40 @@ async function turnPreamble({ session, profile, p }) {
     const news = require('./tool-news');
     toolNews = news.news(news.typeOf(require('../organization').session(session.id), profile), tools.schemas(disabledFor(profile, p)));
   } catch { /* a notice never breaks a turn */ }
-  // Ollama: the context it really serves the model with, when it is smaller
-  // than the one declared (harness/ollama-context.js; ISSUES.md H-20).
-  if ((p.provider || 'ollama') === 'ollama' && p.model && Number(p.contextWindow) > 0) {
-    try {
-      const c = await require('../ollama-context').check(p.model, p.contextWindow);
-      if (c.mismatch) toolNews = [toolNews, `# Context\n${c.advice} Tell the person once, then work within ${c.effective}.`].filter(Boolean).join('\n\n');
-    } catch { /* not measurable: nothing said */ }
-  }
+  const context = await ollamaWindows(p);
+  if (context) toolNews = [toolNews, context].filter(Boolean).join('\n\n');
   return { projectBrief, toolNews };
 }
 
-module.exports = { memoryBlock, rulesBlock, systemPrompt, disabledFor, isMissionProfile, missionsFor, liveBlock, turnPreamble };
+/**
+ * Ollama: the context it really serves each model with — the main one and every
+ * Ollama rung of the fallback chain — when smaller than the one declared
+ * (harness/ollama-context.js; ISSUES.md H-20). Said once in the readings, and
+ * the served number *used* for this turn: `p` is the turn's own copy, so
+ * folding, the preflight and a rung's window reason with what the runtime
+ * will really hold, while the saved setting stays what the person typed.
+ */
+async function ollamaWindows(p) {
+  const oc = require('../ollama-context');
+  const notes = [];
+  if ((p.provider || 'ollama') === 'ollama' && p.model && Number(p.contextWindow) > 0) {
+    try {
+      const c = await oc.check(p.model, p.contextWindow);
+      if (c.mismatch) { notes.push(`${c.advice} Tell the person once, then work within ${c.effective}.`); p.contextWindow = c.effective; }
+    } catch { /* not measurable: nothing said */ }
+  }
+  if (Array.isArray(p.fallbackChain)) {
+    p.fallbackChain = await Promise.all(p.fallbackChain.map(async (rung, i) => {
+      if (rung?.provider !== 'ollama' || !(Number(rung.contextWindow) > 0)) return rung;
+      try {
+        const c = await oc.check(rung.model || p.model, rung.contextWindow);
+        if (!c.mismatch) return rung;
+        notes.push(`Fallback ${i + 1}: ${c.advice}`);
+        return { ...rung, contextWindow: c.effective };
+      } catch { return rung; }
+    }));
+  }
+  return notes.length ? `# Context\n${notes.join('\n')}` : '';
+}
+
+module.exports = { memoryBlock, rulesBlock, systemPrompt, disabledFor, isMissionProfile, missionsFor, liveBlock, turnPreamble, ollamaWindows };

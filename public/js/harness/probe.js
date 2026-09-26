@@ -21,6 +21,7 @@ const HARNESS_PROBE_DEBOUNCE_MS = 600;
 function harnessRungProbe(el) {
   const rung = el?.closest('[data-rung]');
   if (!rung) return;
+  harnessRungOllamaHint(el);
   clearTimeout(rung._probeTimer);
 
   const out      = rung.querySelector('[data-role=verdict]');

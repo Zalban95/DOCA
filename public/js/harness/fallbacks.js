@@ -50,11 +50,13 @@ function _harnessRungHtml(id, preset = {}) {
       </div>
       <label class="harness-hint">Context window (tokens)
         <input class="input" type="number" min="0" step="1000" data-role="context-window"
-               value="${escHtml(String(Number(preset.contextWindow) > 0 ? preset.contextWindow : 0))}">
+               value="${escHtml(String(Number(preset.contextWindow) > 0 ? preset.contextWindow : 0))}"
+               onchange="harnessRungOllamaHint(this)">
       </label>
       <div class="harness-hint">This fallback's served limit. 0 means unknown; it never inherits the primary model's window.
         The check estimates text and tool tokens plus the reply cap; it does not measure image tokens.</div>
       <div class="harness-hint hcfg-rung-verdict" data-role="verdict"></div>
+      <div class="harness-hint" data-role="ctxhint" style="color:var(--amber)"></div>
     </div>`;
 }
 
