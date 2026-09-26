@@ -65,6 +65,10 @@ function mount(app) {
   app.get('/api/projects/:id/checkpoints/:cp/diff', h(async req => ({ diff: await cps().fileDiff(P(req), req.params.cp, String(req.query.file || '')) })));
   app.post('/api/projects/:id/checkpoints/:cp/restore', h(req => cps().restore(P(req), req.params.cp, { by: 'person' })));
 
+  // Code intelligence (./lsp.js): which language servers are here, and installing the npm-based ones.
+  app.get('/api/projects/lsp/servers', h(() => ({ servers: require('./lsp').status() })));
+  app.post('/api/projects/lsp/servers/:name/install', h(req => require('./lsp').install(req.params.name)));
+
   // The project's conversation: its bound work chat, made on first use.
   app.post('/api/projects/:id/chat', h(req => ({ sessionId: projects.workChat(req.params.id).id })));
 }

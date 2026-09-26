@@ -40,6 +40,7 @@ function pjRunRender(body) {
   const add = Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: '+ Add a command' });
   add.onclick = pjRunAdd;
   body.appendChild(add);
+  pjLspSection(body);   // which language servers are here (projects/lsp.js)
 }
 
 async function pjRunCommand(name) {
