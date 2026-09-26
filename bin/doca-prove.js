@@ -20,6 +20,7 @@ const GUARANTEES = [
   ['A tool call that does something asks first in manual mode, and a refusal is final', ['approval.test.js']],
   ['The files that govern the agent cannot be written without that call\'s own yes', ['control-plane.test.js']],
   ['Text from pages, files and other machines is labelled as data, not instructions', ['untrusted.test.js']],
+  ['Several guards screen outside text; it is clean only if all agree, and blocked parts are withheld and logged', ['guard.test.js']],
   ['Every tool belongs to a kit; what an agent type holds is decided by its kits', ['kits.test.js']],
   ['An agent run can be undone: checkpoints restore a project, and a restore can be undone', ['checkpoints.test.js']],
   ['A backup is verified all-or-nothing before a restore touches anything', ['backups.test.js']],

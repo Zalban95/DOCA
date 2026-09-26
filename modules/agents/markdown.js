@@ -95,7 +95,7 @@ function parse(text, { fallbackId } = {}) {
   for (const k of ['model', 'provider', 'environment']) if (meta[k] != null && meta[k] !== '') def[k] = String(scalar(meta[k]));
   // Claude Code's `model: inherit` / `sonnet` names models that are not ours: use the panel's.
   if (['inherit', 'sonnet', 'opus', 'haiku'].includes(def.model)) { notes.push(`model "${def.model}" is Claude Code's; this one uses the panel's model`); delete def.model; }
-  for (const k of ['memory']) if (meta[k] != null) def[k] = scalar(meta[k]) === true;
+  for (const k of ['memory', 'airlock']) if (meta[k] != null) def[k] = scalar(meta[k]) === true;
   for (const k of ['maxSteps', 'maxTokens', 'contextWindow']) if (Number(scalar(meta[k])) > 0) def[k] = Number(scalar(meta[k]));
   return { ...def, imported: notes };
 }
@@ -113,6 +113,7 @@ function format(def) {
   for (const k of ['provider', 'model']) if (def[k]) lines.push(`${k}: ${def[k]}`);
   if (def.environment && def.environment !== 'minimal') lines.push(`environment: ${def.environment}`);
   lines.push(`memory: ${def.memory === true}`);
+  if (def.airlock) lines.push('airlock: true');
   for (const k of ['maxSteps', 'maxTokens', 'contextWindow']) if (def[k]) lines.push(`${k}: ${def[k]}`);
   lines.push('---', '', String(def.role || '').trim(), '');
   return lines.join('\n');

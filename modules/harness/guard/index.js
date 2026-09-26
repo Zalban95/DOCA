@@ -146,6 +146,22 @@ async function scores(g, pieces) {
 }
 
 const LOG = () => path.join(store.dir('harness'), 'guard-log.jsonl');
+const NOTE = '[a part of this text tried to give an AI instructions and was withheld by the guards]';
+
+/** A blocked piece, line by line: clean lines kept, the rest replaced by the note. A guard that fails withholds. */
+async function refine(active, piece) {
+  const lines = piece.split('\n');
+  if (lines.length < 2) return NOTE;
+  const blocked = lines.map(l => !l.trim() ? false : null);
+  for (const g of active) {
+    const idx = blocked.map((b, i) => (b === null ? i : -1)).filter(i => i >= 0);
+    if (!idx.length) break;
+    let s;
+    try { s = await scores(g, idx.map(i => lines[i])); } catch { idx.forEach(i => { blocked[i] = true; }); continue; }
+    idx.forEach((li, k) => { if (s[k] >= g.blockAt) blocked[li] = true; });
+  }
+  return lines.map((l, i) => (blocked[i] === true ? NOTE : l)).join('\n');
+}
 const RANK = { clean: 0, suspicious: 1, blocked: 2 };
 
 /**
@@ -171,10 +187,12 @@ async function screen(text, { direction = 'in', source = '' } = {}) {
   const verdict = per.reduce((w, c) => (RANK[c.verdict] > RANK[w] ? c.verdict : w), 'clean');
   // Overlapping pieces: rebuild from the non-overlapping part of each.
   const step = 1000;
-  const kept = pieces.length === 1 ? [per[0].verdict === 'blocked' ? null : pieces[0]]
-    : pieces.map((p, i) => (per[i].verdict === 'blocked' ? null : (i === pieces.length - 1 ? p : p.slice(0, step))));
-  const note = '[a part of this text tried to give an AI instructions and was withheld by the guards]';
-  const out = kept.map(k => (k === null ? note : k)).join('').replace(new RegExp(`(${note.replace(/[[\]]/g, '\\$&')})+`, 'g'), note);
+  const own = pieces.map((p, i) => (pieces.length === 1 || i === pieces.length - 1 ? p : p.slice(0, step)));
+  // A blocked piece is read again line by line, so only the lines that instruct are withheld
+  // and the facts around them still reach the reader.
+  const kept = [];
+  for (let i = 0; i < own.length; i++) kept.push(per[i].verdict === 'blocked' ? await refine(active, own[i]) : own[i]);
+  const out = kept.join('').replace(new RegExp(`(${NOTE.replace(/[[\]]/g, '\\$&')}\n?)+`, 'g'), `${NOTE}\n`).replace(/\n$/, s => (String(text).endsWith('\n') ? s : ''));
   if (verdict !== 'clean') {
     try {
       store.appendJsonl(LOG(), { at: new Date().toISOString(), direction, source: String(source).slice(0, 200), verdict,

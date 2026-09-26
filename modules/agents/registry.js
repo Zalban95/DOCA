@@ -55,6 +55,14 @@ const { loadPrefs, savePrefs } = require('../utils');
 const NEVER = ['settings_propose', 'install_propose', 'tool_note', 'agent_dispatch', 'agent_results', 'agent_resume', 'ask_device'];
 
 /**
+ * The airlock (docs/design/airlock.md): tools only an `airlock: true` definition
+ * holds — reading the web, and the scout's report. While specialists are on,
+ * every other level (the Orchestrator and work chats included) sends the scout
+ * instead; its report reaches them screened by the guards.
+ */
+const AIRLOCK_ONLY = ['http_fetch', 'research_docs', 'scout_report'];
+
+/**
  * Shipped definitions: the standard specialist types, markdown files in the
  * repository's `specialists/` folder (agents/markdown.js), so they ship and
  * update with each release — a tool added to one of their kits reaches them as
@@ -136,6 +144,7 @@ function normalize(def) {
     skills: Array.isArray(def.skills) ? def.skills.map(String) : [],
     refusedTools: asked.filter(t => NEVER.includes(t)),
     memory: def.memory === true,
+    airlock: def.airlock === true,   // reads the outside for the others (AIRLOCK_ONLY)
     environment: def.environment === 'full' ? 'full' : 'minimal',
     // Absent means "use the orchestrator's". A definition only overrides what
     // it has a reason to.
@@ -252,4 +261,4 @@ function promote(id) {
   return { file: dest, note: 'Commit it; the next version ships it to every install.' };
 }
 
-module.exports = { promote, SHIPPED_DIR, NEVER, enabled, setEnabled, dir, list, get, save, remove, normalize, validId, block };
+module.exports = { promote, SHIPPED_DIR, NEVER, AIRLOCK_ONLY, enabled, setEnabled, dir, list, get, save, remove, normalize, validId, block };

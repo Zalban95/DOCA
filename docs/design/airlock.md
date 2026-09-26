@@ -1,5 +1,7 @@
 # The airlock — full reach, but outside text never reaches the agents that act
 
+**Built in 2.104.0 (guards), 2.105.0 (Guards section), 2.106.0 (the airlock).**
+
 Decided with Al, 2026-09-27. The agents keep every tool and act without a person
 in the loop; what is controlled is **what they read**.
 

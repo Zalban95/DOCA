@@ -212,8 +212,11 @@ const COMES_WITH = { repo_rules: ['write_file'] };
  * `preview()` is that it is what the tests assert against.
  */
 function disabledFor(profile, p) {
-  const off = Array.isArray(p.disabledTools) ? p.disabledTools : [];
-  // No profile (a work chat): every tool, minus the owner's switches. The
+  const own = Array.isArray(p.disabledTools) ? p.disabledTools : [];
+  // The airlock (docs/design/airlock.md): while specialists are on, only an airlock definition reads the web.
+  const registry = require('../../agents/registry');
+  const off = profile?.airlock || !registry.enabled() ? own : [...new Set([...own, ...registry.AIRLOCK_ONLY])];
+  // No profile (a work chat): every tool, minus the owner's switches and the airlock's. The
   // Orchestrator's profile holds every kit, so it lands in the same place.
   if (!profile || (!Array.isArray(profile.tools) && !profile.kits)) return off;
   const all = tools.describe().map(t => t.name);
