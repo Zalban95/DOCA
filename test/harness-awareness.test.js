@@ -293,10 +293,18 @@ test('the agent can see its own clients, and which of them are reachable', async
   const stream = H.sse(phone.token);
   await stream.ready;
 
-  const out = await callTool('doca_clients', {});
-  assert.match(out, /3 paired, 1 connected right now/);
-  assert.match(out, new RegExp(`${phone.device.id}\\s+desk\\s+phone\\s+ONLINE`));
-  assert.match(out, new RegExp(`${watch.device.id}\\s+wrist\\s+watch\\s+offline\\s+queued=1`));
+  let out = await callTool('doca_clients', {});
+  assert.match(out, /3 paired: 1 with a stream open, 0 polling/);
+  assert.match(out, new RegExp(`${phone.device.id}\\s+desk\\s+phone\\s+STREAM`));
+  assert.match(out, new RegExp(`${watch.device.id}\\s+wrist\\s+watch\\s+offline\\s+queued=1 \\(0 fetched but not acknowledged, 1 not fetched`));
+
+  // The watch polls and never sends its cursor back: it has the event, and the
+  // queue does not shrink. That is "polling", and "fetched, not acknowledged" —
+  // not "offline, queued", which is what the owner used to be told (audit §4a/§4b).
+  await H.api(watch.token, 'GET', '/api/v1/events');
+  out = await callTool('doca_clients', {});
+  assert.match(out, /1 with a stream open, 1 polling/);
+  assert.match(out, new RegExp(`${watch.device.id}\\s+wrist\\s+watch\\s+POLLING \\(last poll \\d+s ago\\)\\s+queued=1 \\(1 fetched but not acknowledged, 0 not fetched`));
   assert.match(out, /sim\s+agent/, 'an agent client is listed as what it is');
   // What each can do, so the agent does not offer a watch a route it cannot take.
   assert.match(out, /can=chat,prompts,commands,sensors/);   // phone

@@ -212,3 +212,23 @@ test('the main prompt stays bounded while all conversations remain addressable',
   assert.ok(a.total > 35);
   assert.ok(!a.sessions.some(s => b.sessions.some(t => s.id === t.id)));
 });
+
+test('a mission is its dispatcher\'s and its superiors\': a sibling leader cannot read or resume it (H-17)', async t => {
+  const store = require('../modules/store');
+  const old = store.readJson('agents/missions', { missions: [] });
+  t.after(() => store.writeJson('agents/missions', old));
+  const mine = org.create({ title: 'Owner leader' }), other = org.create({ title: 'Sibling leader' });
+  const s = memory.createSession('Specialist', { kind: 'specialist', parentId: mine.id });
+  store.writeJson('agents/missions', { missions: [
+    { id: 'msn_own', sessionId: s.id, by: mine.id, state: 'done', steps: 2, label: 'Own', result: 'The secret result' },
+    { id: 'msn_paused', sessionId: s.id, by: mine.id, state: 'paused', steps: 1, label: 'Paused' },
+  ] });
+  assert.match(await tools.call('agent_results', { mission: 'msn_own' }, [], { sessionId: mine.id }), /The secret result/);
+  assert.match(await tools.call('agent_results', { mission: 'msn_own' }, [], { sessionId: memory.mainSession().id }), /The secret result/, 'the Orchestrator is above it');
+  const refused = await tools.call('agent_results', { mission: 'msn_own' }, [], { sessionId: other.id });
+  assert.match(refused, /outside your reporting line/);
+  assert.doesNotMatch(refused, /secret/);
+  assert.doesNotMatch(await tools.call('agent_results', {}, [], { sessionId: other.id }), /msn_own/, 'nor listed to it');
+  assert.match(await tools.call('agent_resume', { mission: 'msn_paused', continue: false }, [], { sessionId: other.id }), /outside your reporting line/);
+  assert.equal(store.readJson('agents/missions').missions.find(m => m.id === 'msn_paused').state, 'paused', 'untouched');
+});

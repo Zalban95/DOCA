@@ -77,13 +77,18 @@ function stateFor(id) {
     const meta = store.readJson(metaName(id), { seq: 0, trimmedBelow: 0 });
     const outbox = store.readJsonl(outboxFile(id));
     const seq = Math.max(meta.seq || 0, ...outbox.map(e => e.seq || 0));
-    s = { seq, trimmedBelow: meta.trimmedBelow || 0, outbox, subs: new Set(), dirty: false };
+    s = { seq, trimmedBelow: meta.trimmedBelow || 0, outbox, subs: new Set(), dirty: false, delivery: meta.delivery || {} };
     _state.set(id, s);
   }
   return s;
 }
 
-function persistMeta(id, s) { store.writeJson(metaName(id), { seq: s.seq, trimmedBelow: s.trimmedBelow }); }
+// `delivery`: what the hub has seen of this device's side (sentUpTo — the
+// highest seq handed over by a stream or a poll; lastPollAt / lastPollSince;
+// lastAckAt). It is what lets the panel tell "fetched but never acknowledged"
+// (the app has the events, and does not send its cursor back) from "never
+// fetched" — a queued count alone cannot (audit 2026-09-26, §4b).
+function persistMeta(id, s) { store.writeJson(metaName(id), { seq: s.seq, trimmedBelow: s.trimmedBelow, delivery: s.delivery || {} }); }
 
 function persistOutbox(id, s) { store.writeJsonl(outboxFile(id), s.outbox); persistMeta(id, s); }
 
@@ -141,7 +146,7 @@ function publish(deviceId, type, payload, opts = {}) {
     persistMeta(deviceId, s);
     if (!s.subs.size) return null;
   }
-  for (const sub of s.subs) { try { sub.send(envelope); } catch {} }
+  for (const sub of s.subs) { try { sub.send(envelope); sent(s, envelope.seq); } catch {} }
   emitter.emit('event', deviceId, envelope);
   return envelope;
 }
@@ -160,7 +165,9 @@ function subscribe(deviceId, since, subscriber) {
   if (trimmedChanged) persistOutbox(deviceId, s);
   const replay = s.outbox.filter(e => e.seq > sinceSeq);
   const resync = sinceSeq > 0 && sinceSeq < s.trimmedBelow;
+  for (const e of replay) sent(s, e.seq);
   s.subs.add(subscriber);
+  persistMeta(deviceId, s);
   return { replay, cursor: s.seq, resync, unsubscribe: () => s.subs.delete(subscriber) };
 }
 
@@ -170,8 +177,12 @@ function drain(deviceId, since) {
   const sinceSeq = Number.isFinite(since) ? since : 0;
   if (sinceSeq > 0) ackUpTo(deviceId, sinceSeq);
   if (trim(deviceId, s)) persistOutbox(deviceId, s);
+  const events = s.outbox.filter(e => e.seq > sinceSeq);
+  s.delivery = { ...(s.delivery || {}), lastPollAt: new Date().toISOString(), lastPollSince: sinceSeq };
+  for (const e of events) sent(s, e.seq);
+  persistMeta(deviceId, s);
   return {
-    events: s.outbox.filter(e => e.seq > sinceSeq),
+    events,
     nextSince: s.seq,
     resync: sinceSeq > 0 && sinceSeq < s.trimmedBelow,
   };
@@ -182,14 +193,49 @@ function ackUpTo(deviceId, upTo) {
   const s = stateFor(deviceId);
   const before = s.outbox.length;
   s.outbox = s.outbox.filter(e => e.seq > upTo);
-  if (s.outbox.length !== before) persistOutbox(deviceId, s);
+  if (s.outbox.length !== before) { s.delivery = { ...(s.delivery || {}), lastAckAt: new Date().toISOString() }; persistOutbox(deviceId, s); }
   return before - s.outbox.length;
+}
+
+function sent(s, seq) { if (!(s.delivery?.sentUpTo >= seq)) s.delivery = { ...(s.delivery || {}), sentUpTo: seq }; }
+
+/**
+ * Where one device's events stand: { pending, delivered (handed over, not
+ * acknowledged), unfetched, oldestPendingAt, sentUpTo, lastPollAt, lastAckAt }.
+ */
+function delivery(deviceId) {
+  const s = stateFor(deviceId), d = s.delivery || {};
+  const delivered = s.outbox.filter(e => e.seq <= (d.sentUpTo || 0)).length;
+  return { pending: s.outbox.length, delivered, unfetched: s.outbox.length - delivered,
+    oldestPendingAt: s.outbox[0]?.ts || null, sentUpTo: d.sentUpTo || 0,
+    lastPollAt: d.lastPollAt || null, lastAckAt: d.lastAckAt || null, streaming: s.subs.size > 0 };
 }
 
 function pendingCount(deviceId) { return stateFor(deviceId).outbox.length; }
 function liveCount(deviceId)    { return stateFor(deviceId).subs.size; }
 function isOnline(deviceId)     { return liveCount(deviceId) > 0; }
 function cursor(deviceId)       { return stateFor(deviceId).seq; }
+
+/**
+ * Outbox files of devices that no longer exist — a re-pairing, a revoked and
+ * forgotten device, a pairing that failed — collected at boot (audit N5).
+ * Returns the ids removed.
+ */
+function collectOrphans(knownIds) {
+  const fs = require('fs');
+  const known = new Set(knownIds);
+  const removed = [];
+  let files = [];
+  try { files = fs.readdirSync(store.dir('outbox')); } catch { return removed; }
+  for (const f of files) {
+    const m = /^(dev_[a-z0-9]+)\.(jsonl|meta\.json)$/.exec(f);
+    if (!m || known.has(m[1])) continue;
+    fs.rmSync(require('path').join(store.dir('outbox'), f), { force: true });
+    if (!removed.includes(m[1])) removed.push(m[1]);
+    _state.delete(m[1]);
+  }
+  return removed;
+}
 
 /** Close every live stream for a device (revocation) and delete its outbox. */
 function dropDevice(deviceId, reason) {
@@ -202,14 +248,35 @@ function dropDevice(deviceId, reason) {
   _state.delete(deviceId);
 }
 
-/** Publish to every device satisfying `filter(deviceRecord)`. */
+/**
+ * Publish to every device satisfying `filter(deviceRecord)`. Returns
+ * [{ deviceId, seq, live }] — `live` when a stream took it at once, else it
+ * waits in the device's outbox.
+ *
+ * An event meant for the owner (a turn's answer, a question) that matched no
+ * device, or reached none that has been heard from lately, is said once in the
+ * log: the supervisor's promise is that the owner is told on their devices,
+ * and until this it could fail completely without a trace (audit N1).
+ */
+const WATCHED = new Set(['agent.turn', 'prompt.new']);
+const _warned = new Map();   // type -> last warning time
 function publishWhere(allDevices, filter, type, payload, opts) {
   const out = [];
+  let matched = 0;
   for (const d of allDevices) {
     if (d.revokedAt) continue;
     if (!filter(d)) continue;
+    matched++;
     const env = publish(d.id, type, payload, opts);
-    if (env) out.push({ deviceId: d.id, seq: env.seq });
+    if (env) out.push({ deviceId: d.id, seq: env.seq, live: stateFor(d.id).subs.size > 0 });
+  }
+  if (WATCHED.has(type)) {
+    const recent = id => { const q = delivery(id); return q.streaming || (q.lastPollAt && Date.now() - Date.parse(q.lastPollAt) < 120e3); };
+    const why = !matched ? 'no paired device may receive it' : !out.some(o => recent(o.deviceId)) ? `it waits for ${out.length} device(s), none heard from in 2 minutes` : null;
+    if (why && Date.now() - (_warned.get(type) || 0) > 3600e3) {
+      _warned.set(type, Date.now());
+      console.warn(`[bus] a ${type} event reached no device: ${why}. (Said once an hour.)`);
+    }
   }
   return out;
 }
@@ -219,5 +286,5 @@ function _reset() { _state.clear(); }
 
 module.exports = {
   TYPES, emitter, publish, publishWhere, subscribe, drain, ackUpTo,
-  pendingCount, liveCount, isOnline, cursor, dropDevice, _reset,
+  pendingCount, delivery, liveCount, isOnline, cursor, dropDevice, collectOrphans, _reset,
 };

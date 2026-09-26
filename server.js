@@ -115,11 +115,7 @@ app.post  ('/api/keys/add-provider',         keys.handleAddProvider);
 app.delete('/api/keys/:name',                keys.handleDeleteProvider);
 
 // ─── Routes: Doca device tokens (the /api/v1 registry, managed from the panel) ─
-app.get   ('/api/devices',             devicesPanel.handleList);
-app.post  ('/api/devices',             devicesPanel.handleIssue);
-app.post  ('/api/devices/pair',        devicesPanel.handlePairStart);
-app.post  ('/api/devices/:id/rotate',  devicesPanel.handleRotate);
-app.delete('/api/devices/:id',         devicesPanel.handleRevoke);
+devicesPanel.mount(app);   // list, issue, pair, rotate, grant scopes, revoke
 
 // ─── Routes: Skills ───────────────────────────────────────────────────────────
 // /search must come before /:name to avoid matching "search" as a skill name

@@ -46,6 +46,11 @@ module.exports = [
       const live = devices.list().filter(d => !d.revokedAt);
       if (!live.length) return 'No devices are paired with this hub yet. Pairing happens in the dashboard (Devices), not from here.';
 
+      // "Connected" used to mean "a stream is open", so a phone that polls read
+      // offline while it fetched every few seconds (audit 2026-09-26, §4a/§4b).
+      // Now: how it is reached, and where its events stand.
+      const ago = t => (t ? `${Math.max(0, Math.round((Date.now() - Date.parse(t)) / 1000))}s ago` : 'never');
+      const reach = (d, q) => (q.streaming ? 'STREAM' : q.lastPollAt && Date.now() - Date.parse(q.lastPollAt) < 120e3 ? `POLLING (last poll ${ago(q.lastPollAt)})` : 'offline');
       const rows = live.map(d => {
         const can = [
           hasScope(d.scopes, 'harness:chat') && 'chat',
@@ -53,22 +58,24 @@ module.exports = [
           hasScope(d.scopes, 'command:*')    && 'commands',
           hasScope(d.scopes, 'sensors:report') && 'sensors',
         ].filter(Boolean).join(',') || 'read-only';
-        const pending = bus.pendingCount(d.id);
+        const q = bus.delivery(d.id);
         return [
-          d.id,
-          d.name,
+          d.id, d.name,
           d.kind === 'agent' ? 'agent' : (d.caps?.formFactor || 'device'),
-          bus.isOnline(d.id) ? 'ONLINE' : 'offline',
-          `queued=${pending}`,
-          `lastSeen=${d.lastSeenAt || 'never'}`,
+          reach(d, q),
+          q.pending ? `queued=${q.pending} (${q.delivered} fetched but not acknowledged, ${q.unfetched} not fetched; oldest ${ago(q.oldestPendingAt)})` : 'queued=0',
+          `lastSeen=${ago(d.lastSeenAt)}`,
           `can=${can}`,
         ].join('  ');
       });
 
       // The counts first: a model that only reads the first line still answers
       // "who is connected" correctly.
-      const online = live.filter(d => bus.isOnline(d.id)).length;
-      return `${live.length} paired, ${online} connected right now.\n${rows.join('\n')}\n`
+      const qs = live.map(d => [d, bus.delivery(d.id)]);
+      const streaming = qs.filter(([, q]) => q.streaming).length;
+      const polling = qs.filter(([, q]) => !q.streaming && q.lastPollAt && Date.now() - Date.parse(q.lastPollAt) < 120e3).length;
+      return `${live.length} paired: ${streaming} with a stream open, ${polling} polling, ${live.length - streaming - polling} not heard from in 2 minutes.\n${rows.join('\n')}\n`
+        + '"Fetched but not acknowledged" means the device received those events and has not sent its cursor back; they are delivered, and the queue will not shrink until it does. '
         + 'These are the hub\'s own paired clients. Sockets and tailnet peers are a different question — use system_status or shell for those.';
     },
   },

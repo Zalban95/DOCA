@@ -144,7 +144,7 @@ async function search(root, opts = {}) {
  * writes, and says how many replacements in how many files. `$1` works in
  * regex mode. Only files under `root`, only text files.
  */
-function replaceInFiles(root, { replacement = '', dryRun = false, only, ...opts } = {}) {
+function replaceInFiles(root, { replacement = '', dryRun = false, only, refuse, ...opts } = {}) {
   const re = patternOf(opts);
   const onlySet = only ? new Set([].concat(only)) : null;
   const changes = [];
@@ -152,6 +152,7 @@ function replaceInFiles(root, { replacement = '', dryRun = false, only, ...opts 
   for (const abs of files(root, opts)) {
     const r = rel(root, abs);
     if (onlySet && !onlySet.has(r)) continue;
+    if (refuse && refuse(abs)) continue;   // the agent's calls skip what governs it (harness/control-plane.js)
     let buf;
     try { if (fs.statSync(abs).size > MAX_FILE) continue; buf = fs.readFileSync(abs); } catch { continue; }
     if (!isText(buf)) continue;

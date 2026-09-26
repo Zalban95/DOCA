@@ -2022,3 +2022,47 @@ A sweep of every GET route as owner, member and viewer on an isolated server
 - The sweep found no route that crashes for a role and no route answering a
   role without the right for it.
 
+
+## The resident agent's audit of 2026-09-26 (Desktop: `DOCA-issues-audit-2026-09-26-2.73.1.md`) — answered in 2.74.0
+
+Every finding was checked against the code before it was changed; its line
+numbers held. Fixed:
+- **§4e, high — truncated replies passed off as whole.** `finish_reason` is now
+  read (streamed and plain JSON); a reply stopped at the length limit is said in
+  every chat, stored with `truncated: true`, and the supervisor no longer counts
+  it as a turn that did nothing — it asks the work chat to carry on from the
+  cut. Found on the way: no chat drew `warning` events at all, so the budget and
+  context warnings the turn already sent were never seen either; all three
+  chats draw them now.
+- **N2 / H-19, high — the agent could write what governs it.**
+  `harness/control-plane.js`: `write_file` and `replace_in_files` refuse the
+  prefs file, OpenClaw's config, the keys, accounts, devices, the backup
+  schedule, the release pointer, `.env` and service units, whatever the
+  approval mode. `shell` still could — the stated limit.
+- **N1, high — events that reach nobody.** `publishWhere` returns whether a
+  stream took each event, and a turn or question event that matched no device,
+  or none heard from in 2 minutes, is logged (once an hour).
+- **§4a/§4b, medium — "offline" and "queued".** The bus records what each
+  device fetched, when it last polled and last acknowledged; `doca_clients`
+  says STREAM / POLLING (last poll Ns ago) / offline, and splits the queue into
+  "fetched but not acknowledged" and "not fetched", with the oldest's age.
+  **Open, app-side:** a device whose queue is all "fetched but not
+  acknowledged" has the events and never sends its cursor back — DocaMobile /
+  DocaWear should poll with `since=` or call `POST /events/ack`.
+- **§4g, medium — a fallback entry dropped in silence.** Announced as a warning
+  in the turn, naming the entry and the provider that is gone.
+- **N3, medium — final reports cut to 600 characters.** Kept up to 20,000, with
+  `textTruncated` past that; progress notes stay short.
+- **N4, medium — scopes frozen at pairing.** Settings → API Keys shows what a
+  device's preset gained since it paired, with **+ Grant** (same id, queue and
+  token; only the preset's scopes; audited). Never widened by itself.
+- **§4f, low — a device named "null".** Refused at pairing and rename; names
+  stored that way are repaired at boot. **N5, low** — orphan outbox files
+  collected at boot. **N6, low** — `/api/v1` is now covered: every route but
+  the three public ones is called with no token and must answer 401.
+- **Register:** H-7 closed (proven by a live-call test), H-17 fixed (a mission
+  is its dispatcher's and its superiors'), H-19 fixed for the write tools,
+  H-6's citations marked stale, H-20 left open with the note that Ollama's
+  `/v1` shim takes no per-request context size. The audit's claim that H-13,
+  H-14 and H-18 are "still written as open" was mistaken: their status lines
+  already read fixed.

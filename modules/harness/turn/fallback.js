@@ -55,6 +55,7 @@ function rungsFor({ ep, model, p }) {
   const failoverMs = Number(p?.failoverAfterMs) || 0;
   const finalMs    = Number(p?.firstTokenTimeoutMs) || 0;
 
+  const missing = [];
   const entries = [{ provider: ep.id, model, ep, contextWindow: budget.windowFor(p),
     windowSetting: p?._windowSetting || 'harness.config.doca.contextWindow' }];
   for (const [index, c] of chain.entries()) {
@@ -65,7 +66,12 @@ function rungsFor({ ep, model, p }) {
     if (entries.some(e => e.provider === pid && e.model === cModel)) continue;
     let cep;
     try { cep = providers.endpoint(pid); }
-    catch { continue; }
+    catch (e) {
+      // Skipped, not fatal — and said: a chain that silently gets shorter is a
+      // protection that narrowed without anyone knowing (audit 2026-09-26, §4g).
+      missing.push({ index, provider: pid, model: cModel, reason: String(e.message).split('\n')[0] });
+      continue;
+    }
     entries.push({ provider: pid, model: cModel, ep: cep,
       contextWindow: budget.windowFor(c),
       windowSetting: `harness.config.doca.fallbackChain[${index}].contextWindow` });
@@ -75,7 +81,7 @@ function rungsFor({ ep, model, p }) {
   const cold    = entries.filter(e =>  isDegraded(e.ep, e.model));
   const ordered = [...warm, ...cold];
 
-  return ordered.map((e, i) => ({
+  const rungs = ordered.map((e, i) => ({
     ...e,
     last:      i === ordered.length - 1,
     // The last one is never cut short — the user's deadline is the answer.
@@ -86,6 +92,8 @@ function rungsFor({ ep, model, p }) {
     // the rung, or `complete` cannot report a turn that starts on the backup.
     stalledMsAgo: stalledAgo(e.ep, e.model),
   }));
+  rungs.missing = missing;   // entries whose provider no longer resolves (complete() reports them)
+  return rungs;
 }
 
 /**
@@ -149,4 +157,42 @@ function hopText(h) {
 
 /** How often a still-silent provider is reported while we wait for its first token. */
 
-module.exports = { DEGRADED_MS, _degraded, rungKey, markDegraded, forgetDegraded, rungsFor, openingHop, hopText };
+/**
+ * The turn's `onHop`: a hop is announced, never quiet. A fallback that happens
+ * silently is a worse bug than the outage it hides — the user reads a smaller
+ * model's answers as the big one's, and the next investigation starts from a
+ * false premise. So it reaches the chat as its own row and the log at warn,
+ * naming what stalled, for how long, and what is answering instead — including
+ * the hop a turn makes before its first token (`openingHop`). Each hop is also
+ * kept in `fallbacks`, for the turn's outcome.
+ */
+function hopReporter({ fallbacks, say, step }) {
+  return h => {
+    fallbacks.push({ step, from: h.from.provider, fromModel: h.from.model, to: h.to.provider, toModel: h.to.model, seconds: h.seconds });
+    say({
+      type: 'failover', step,
+      from: h.from.label || h.from.provider, to: h.to.label || h.to.provider,
+      fromModel: h.from.model, toModel: h.to.model,
+      seconds: h.seconds, frames: h.frames, remaining: h.remaining,
+      text: hopText(h),
+    });
+  };
+}
+
+/**
+ * A reply the provider stopped because it reached max_tokens ("finish_reason":
+ * "length"). Before this was read, a reply cut off mid-sentence was stored and
+ * shown as the reply, and a work chat whose turn ended that way was counted as
+ * idle and could be reported "stalled". The same wording as ask()'s.
+ */
+function truncationNotice({ step, p, provider }) {
+  const cap = Number(p.maxTokens) || 0;
+  return {
+    type: 'warning', step, kind: 'truncated',
+    text: `${provider} stopped because the reply reached its length limit`
+      + (cap ? ` (${cap} tokens, "Longest reply" in the harness settings)` : '')
+      + ' — the answer above is cut off, not finished.',
+  };
+}
+
+module.exports = { DEGRADED_MS, _degraded, rungKey, markDegraded, forgetDegraded, rungsFor, openingHop, hopText, hopReporter, truncationNotice };

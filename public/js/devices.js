@@ -44,6 +44,9 @@ async function devicesLoad() {
           · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}
         </div>
         <div class="provider-models">${d.scopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}</div>
+        ${d.missingScopes?.length ? `<div class="input-label mt8" style="text-transform:none;letter-spacing:0;color:var(--amber)">
+          Paired before its preset (${escHtml(d.preset)}) gained: ${d.missingScopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}
+          <button class="btn btn-xs" onclick="devGrant(${jsArg(d.id)}, ${jsArg(d.missingScopes.join(','))})" title="Add these to this device — same id, queue and token">+ Grant</button></div>` : ''}
         ${dead ? `
         <div class="toolbar-right">
           <button class="btn btn-xs btn-red" onclick="devForget(${jsArg(d.id)},${jsArg(d.name)})" title="Remove this row and everything kept under its id">🗑 Forget</button>
@@ -269,4 +272,13 @@ async function devCopy(text, btn) {
     return;
   }
   if (btn) setTimeout(() => { btn.textContent = label; }, 1500);
+}
+
+/** Add the scopes a device's preset now grants and its record lacks (devices-panel.handleGrant). */
+function devGrant(id, list) {
+  const add = String(list).split(',').filter(Boolean);
+  appConfirm(`Give this device ${add.join(', ')}? It keeps its id, its queue and its token.`, async () => {
+    try { await apiFetch(`/api/devices/${encodeURIComponent(id)}/scopes`, { method: 'POST', body: { add } }); devicesLoad(); }
+    catch (e) { setStatus(document.getElementById(`dev-status-${id}`), `✗ ${e.message}`, 'err'); }
+  });
 }

@@ -27,10 +27,9 @@ const CEILING = 400;
  * split the file instead.
  */
 const OVER = {
-  'modules/harness/agent.js': 414,  // runTurn alone is 320 lines: next, split the turn's steps
   'public/index.html': 1558,  // + the split scripts' <script> tags; ES modules take them back out
   'public/css/components.css': 1154,
-  'public/js/chat.js':             986,
+  'public/js/chat.js': 985,
   'public/js/files.js':            875,
   'public/js/models.js':           687,
   'modules/harness/memory.js':     463,
@@ -39,7 +38,7 @@ const OVER = {
   'modules/agents/missions.js':    496,
   'modules/api-v1/prompts.js':     467,
   'public/js/markdown.js':         462,
-  'server.js':                     344,
+  'server.js': 340,
   'modules/harness/budget.js':     424,
   'modules/chat.js':               412,
 };

@@ -239,3 +239,31 @@ test('every route the app has is in the rights table — nothing is reachable by
     && rights.rightFor(m, p.replace(/:[^/]+/g, 'x')) === null).map(r => r.join(' '));
   assert.deepEqual(unmapped, [], 'add a row to modules/auth/rights.js');
 });
+
+test('every /api/v1 route but the three public ones refuses a caller with no token', async () => {
+  // The walk above covers routes on the app itself; /api/v1 is a mounted router
+  // (and has routers inside it) with bearer tokens of its own, so it is checked
+  // here by calling each route for real (audit 2026-09-26, N6).
+  const { router } = require('../modules/api-v1/router');
+  const routes = [];
+  const walk = (stack, prefix) => {
+    for (const layer of stack) {
+      if (layer.route) for (const m of Object.keys(layer.route.methods)) routes.push([m.toUpperCase(), prefix + layer.route.path]);
+      else if (layer.handle?.stack) {
+        const mount = (layer.regexp.source.match(/^\^\\\/([^?\\]+)/) || [])[1];
+        walk(layer.handle.stack, mount ? `${prefix}/${mount.replace(/\\\//g, '/')}` : prefix);
+      }
+    }
+  };
+  walk(router.stack, '/api/v1');
+  assert.ok(routes.length > 35, `the walk found the v1 routes (${routes.length})`);
+  const PUBLIC = new Set(['GET /api/v1/', 'GET /api/v1/openapi.json', 'POST /api/v1/devices/pair/complete']);
+  const open = [];
+  for (const [m, p] of routes) {
+    const url = p.replace(/:[^/]+/g, 'x');
+    if (PUBLIC.has(`${m} ${p}`)) continue;
+    const r = await fetch(base + url, { method: m, headers: { 'Content-Type': 'application/json' }, body: m === 'GET' ? undefined : '{}' });
+    if (r.status !== 401) open.push(`${m} ${p} → ${r.status}`);
+  }
+  assert.deepEqual(open, [], 'a v1 route answered without a token');
+});

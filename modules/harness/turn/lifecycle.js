@@ -60,7 +60,7 @@ function changed(sessionId, ctrl = null) {
   try { require('../workview').announce(sessionId); } catch { /* bookkeeping never breaks a turn */ }
   if (ctrl) try {
     require('../supervisor').afterTurn(sessionId, {
-      auto: !!ctrl.auto, preempted: !!ctrl.preempted, steps: ctrl.steps ?? null,
+      auto: !!ctrl.auto, preempted: !!ctrl.preempted, steps: ctrl.steps ?? null, truncated: !!ctrl.truncated,
       stopped: ctrl.signal.aborted && !ctrl.preempted,
     });
   } catch { /* nor does deciding what comes next */ }

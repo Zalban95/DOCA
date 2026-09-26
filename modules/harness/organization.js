@@ -74,8 +74,18 @@ function trimReports(list) {
   return list.filter(n => !drop.has(n.id));
 }
 
+/**
+ * A final report is the durable record of a job's outcome, so it is kept whole
+ * (up to FINAL_TEXT) — it was cut to 600 characters like any note, and the
+ * record that survived was not the text the Orchestrator acted on (audit
+ * 2026-09-26, N3). Progress and bookkeeping notes stay short: every report is
+ * copied to each ancestor. Readers shorten for display, not the store.
+ */
+const FINAL_TEXT = 20000;
 function report(id, type, text, by = 'agent') {
-  const note = { id: crypto.randomUUID(), from: id, type, text: short(text), by, at: new Date().toISOString() };
+  const full = String(text || ''), limit = FINAL.includes(type) ? FINAL_TEXT : 600;
+  const note = { id: crypto.randomUUID(), from: id, type, text: full.slice(0, limit), by, at: new Date().toISOString(),
+    ...(full.length > limit ? { textTruncated: true } : {}) };
   // One read and one write for the whole fan-out, rather than one of each per
   // ancestor — see `memory.updateSessions`.
   memory.updateSessions(ancestors(id), row => ({ reports: trimReports([...(row.reports || []), note]) }));

@@ -146,6 +146,7 @@ async function hcSend() {
       // card, so it goes in as its own row rather than into the working fold,
       // which collapses and would hide the thing being asked.
       if (evt.type === 'approval') _hcApproval(evt, box, scroll);
+      if (evt.type === 'warning') _hcAppend('failover', evt.text, 'warning');   // a cut-off reply, budget, context
       if (evt.type === 'image') _hcAppendImage(evt.image);
       if (evt.type === 'tool_result') {
         if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }

@@ -123,6 +123,7 @@ module.exports = [
     danger: true,
     run: ({ path: p, content }, ctx = {}) => {
       const abs = resolvePath(p, ctx);
+      require('../control-plane').refuse(abs);   // what governs the agent is proposed, never written (H-19)
       // Charter rule 16, held here rather than only asked for: a repository's
       // own rules are read before the first change to it.
       const unread = repo.unreadRoot(ctx.sessionId, abs);

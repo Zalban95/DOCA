@@ -34,7 +34,7 @@ const missions = {
 const { params, turnParams, profileForTurn } = require('./turn/params');
 const { disabledFor, isMissionProfile, liveBlock, missionsFor, systemPrompt } = require('./turn/prompt');
 const { toApiMessages } = require('./turn/messages');
-const { DEGRADED_MS, rungsFor, markDegraded, forgetDegraded, openingHop, hopText } = require('./turn/fallback');
+const { DEGRADED_MS, rungsFor, markDegraded, forgetDegraded, openingHop, hopReporter, truncationNotice } = require('./turn/fallback');
 const { ask, complete } = require('./turn/transport');
 const { foldSummary } = require('./turn/summary');
 const { preview, breakdown, contextOf, status } = require('./turn/introspect');
@@ -68,6 +68,7 @@ async function turn(options) {
       organization.report(id, 'user intervention', options.message, options.client.name || 'user');
     const result = await runTurn({ ...options, sessionId: id, signal: ctrl.signal, profile });
     ctrl.steps = result.steps;
+    ctrl.truncated = !!result.truncated;
     const state = ctrl.signal.aborted ? 'cancelled' : 'idle';
     memory.updateSession(id, { state, brief: String(result.text || '').slice(0, 600) });
     organization.report(id, state === 'cancelled' ? state : 'turn completed', result.text);
@@ -222,27 +223,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
         contextSkips.set(`${skipped.provider}/${skipped.model}`, skipped.text);
         say({ type: 'warning', step, kind: 'context-preflight', text: skipped.text });
       },
-      // Announced, never quiet. A fallback that happens silently is a worse bug
-      // than the outage it hides: the user reads a smaller model's answers as
-      // the big one's, and the next investigation starts from a false premise.
-      // So this reaches the chat as its own row and the log at warn, naming
-      // what stalled, for how long, and what is answering instead — including
-      // the hop a turn makes before its first token, when the model the
-      // settings name was passed over for one that stalled a moment ago
-      // (`openingHop`).
-      onHop: h => {
-        fallbacks.push({
-          step, from: h.from.provider, fromModel: h.from.model,
-          to: h.to.provider, toModel: h.to.model, seconds: h.seconds,
-        });
-        say({
-          type: 'failover', step,
-          from: h.from.label || h.from.provider, to: h.to.label || h.to.provider,
-          fromModel: h.from.model, toModel: h.to.model,
-          seconds: h.seconds, frames: h.frames, remaining: h.remaining,
-          text: hopText(h),
-        });
-      },
+      // Announced, never quiet (turn/fallback.hopReporter says why).
+      onHop: hopReporter({ fallbacks, say, step }),
     });
     const stepMs = Date.now() - startedAt;
 
@@ -270,7 +252,10 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       // as stored, so it is downloadable with the rest of the transcript.
       ...(reply.reasoning ? { reasoning: { provider: reply.provider || ep.id, text: reply.reasoning } } : {}),
       usage: { tokens: spend.totalTokens, prompt: led.lastPrompt, source: spend.source },
+      ...(reply.finish === 'length' ? { truncated: true } : {}),
     });
+    // Cut off at the reply cap: said, marked, and never passed off as the whole answer (turn/fallback.js).
+    if (reply.finish === 'length') say(truncationNotice({ step, p, provider: reply.provider || ep.id }));
 
     // Advisory, once per turn, to the user and to the agent. The hard stop
     // belongs to the provider; this is the part that arrives before it.
@@ -289,7 +274,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       // at the bottom of this function.
       return {
         sessionId: session.id, text, steps: step, usage: spend,
-        ...(fallbacks.length ? { fallbacks } : {}),
+        ...(fallbacks.length ? { fallbacks } : {}), ...(reply.finish === 'length' ? { truncated: true } : {}),
       };
     }
 
