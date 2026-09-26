@@ -863,9 +863,9 @@ restarting OpenClaw only when OpenClaw is installed.
   Already fixed (`files.fsStatus`: ENOENT/ENOTDIR → 404, EACCES/EPERM → 403);
   the entry was stale, checked 2026-09-26.
 
-- **Device rotate/revoke (`public/js/devices.js`) and skill toggles report
-  failures through `appAlert()` only.** Not silent, but a modal for a failed
-  toggle is heavier than the inline status line those cards already have.
+- ~~**Device rotate/revoke and skill toggles report failures through
+  `appAlert()` only.**~~ Already done (checked 2026-09-26): both use the card's
+  status line, `appAlert` only as a fallback when there is none.
 
 ## Settings that exist only as environment variables
 
@@ -877,8 +877,8 @@ Settings → System:
 | `PORT` | Changing it from the page would drop the page. Needs a "restart on :NNNN" flow, not a text box. |
 | `DOCA_DATA_DIR`, `DOCA_PREFS_FILE` | Moving these relocates the prefs file the UI writes to, so a bad value locks you out. Wants a migrate-and-verify step. |
 | `DOCA_LEGACY_TRUST` | Security-relevant; deliberately not a checkbox. |
-| `OPENCLAW_GATEWAY_URL` | Reasonable candidate for the Paths card treatment. |
-| `DOCA_FONT` | Cosmetic; belongs with the theme controls if it is ever surfaced. |
+| `OPENCLAW_GATEWAY_URL` | **In the Paths card since 2.84.0** (a URL: checked as `http(s)://`, never on disk). |
+| `DOCA_FONT` | **In the Paths card since 2.84.0** — it is a file (the .ttf for text in images the hub draws), so it sits with the paths rather than the theme. |
 
 `DOCA_STT_URL` / `DOCA_TTS_URL` are the inverse case: they override the Voice
 card rather than defaulting it, which the card now states.

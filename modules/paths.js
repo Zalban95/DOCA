@@ -30,7 +30,7 @@ const SETTABLE = [
   { key: 'ATTACHMENTS_DIR', label: 'Attachments', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace', 'attachments'),
     note: 'Files attached to a conversation land here, and the agent reads them by path' },
   { key: 'AGENTS_DIR', label: 'Specialist agents', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace', 'agents'),
-    note: 'One JSON file per specialist the orchestrator can dispatch' },
+    note: 'One definition per specialist you made here (markdown; the shipped ones live in the code)' },
   { key: 'SETUP_DIR', label: 'Setup scripts', kind: 'dir', fallback: HOME,
     note: 'Directory the Setup panel reads its shell scripts from' },
   { key: 'SNAPSHOT_DIR', label: 'Snapshot storage', kind: 'dir', fallback: path.join(HOME, 'openclaw-snapshots'),
@@ -39,6 +39,11 @@ const SETTABLE = [
     note: 'Optional — without it snapshots fall back to tar' },
   { key: 'RESTORE_SCRIPT', label: 'Restore script', kind: 'script', fallback: path.join(HOME, 'restore-agent.sh'),
     note: 'Optional — without it restores fall back to tar' },
+  // Two settings that were environment-only (TODO.md "Settings that exist only as environment variables").
+  { key: 'DOCA_FONT', label: 'Font for rendered images', kind: 'file', fallback: '', optional: true,
+    note: 'A .ttf for the text in pictures the hub draws for watches; empty uses a font found on the system' },
+  { key: 'OPENCLAW_GATEWAY_URL', label: 'OpenClaw gateway', kind: 'url', fallback: '', optional: true,
+    note: 'Where the OpenClaw gateway listens, when it is not where its config says' },
 ];
 
 /** Path overrides saved from Settings → Paths. */
@@ -137,6 +142,7 @@ const FM_ALLOWED_ROOTS = [
 const VALUES = {
   COMPOSE_DIR, CONFIG_PATH, SKILLS_DIR, WORKSPACE_DIR,
   SETUP_DIR, SNAPSHOT_DIR, SNAPSHOT_SCRIPT, RESTORE_SCRIPT, ATTACHMENTS_DIR, AGENTS_DIR,
+  DOCA_FONT: process.env.DOCA_FONT || '', OPENCLAW_GATEWAY_URL: process.env.OPENCLAW_GATEWAY_URL || '',
 };
 
 /** What a path resolves to right now, including an override saved since boot.
@@ -160,7 +166,8 @@ function describe() {
       active:  VALUES[p.key],
       pending: value !== VALUES[p.key],
       source:  saved[p.key] ? 'saved' : ENV_AT_BOOT[p.key] ? 'env' : 'default',
-      exists:  fs.existsSync(value),
+      // A URL is not on disk; an optional path left empty is not missing.
+      exists:  p.kind === 'url' || (p.optional && !value) ? null : fs.existsSync(value),
     };
   });
 }

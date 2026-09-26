@@ -27,8 +27,13 @@ test('every settable path reports its value, where it came from, and whether it 
   const keys = body.settable.map(r => r.key);
   assert.deepEqual(keys, [
     'COMPOSE_DIR', 'CONFIG_PATH', 'SKILLS_DIR', 'WORKSPACE_DIR', 'ATTACHMENTS_DIR', 'AGENTS_DIR',
-    'SETUP_DIR', 'SNAPSHOT_DIR', 'SNAPSHOT_SCRIPT', 'RESTORE_SCRIPT',
+    'SETUP_DIR', 'SNAPSHOT_DIR', 'SNAPSHOT_SCRIPT', 'RESTORE_SCRIPT', 'DOCA_FONT', 'OPENCLAW_GATEWAY_URL',
   ]);
+  // Optional and empty: not "missing"; a URL is never checked on disk.
+  assert.equal(row(body.settable, 'OPENCLAW_GATEWAY_URL').exists, null);
+  assert.equal(row(body.settable, 'DOCA_FONT').exists, null);
+  const bad = await H.api(null, 'POST', '/api/paths', { OPENCLAW_GATEWAY_URL: 'not a url' });
+  assert.equal(bad.status, 400);
 
   // The helper sets these in the environment, so they must not read as the
   // user's own saved choice.
@@ -37,7 +42,7 @@ test('every settable path reports its value, where it came from, and whether it 
   assert.equal(row(body.settable, 'CONFIG_PATH').pending, false);
 
   // Every managed path belongs to this test, regardless of the launcher's env.
-  for (const r of body.settable) {
+  for (const r of body.settable.filter(x => !x.optional)) {
     assert.equal(r.source, 'env');
     assert.equal(r.value, process.env[r.key]);
     assert.ok(!path.relative(H.tmp, r.value).startsWith('..'), `${r.key} escaped the test directory`);

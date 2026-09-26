@@ -35,7 +35,9 @@ function _pathRowHtml(p) {
     : p.source === 'env' ? `from ${p.key}`
     : 'default';
 
-  const state = p.exists
+  const state = p.exists === null
+    ? `<span class="path-note">${p.value ? '' : 'not set (optional)'}</span>`
+    : p.exists
     ? '<span class="path-ok">● exists</span>'
     : '<span class="path-missing">✗ missing</span>';
 
@@ -46,7 +48,7 @@ function _pathRowHtml(p) {
     ? ` · <span class="path-missing">restart DOCA to apply</span> (using <code>${escHtml(p.active)}</code>)`
     : '';
 
-  const create = p.exists ? '' : `
+  const create = p.exists !== false || !['dir', 'json', 'script'].includes(p.kind) ? '' : `
     <button class="btn btn-xs btn-teal" onclick="pathsCreate(${jsArg(p.key)})"
             title="Create this ${PATH_KIND_LABEL[p.kind] || 'path'}">+ Create</button>`;
 
@@ -58,7 +60,7 @@ function _pathRowHtml(p) {
           <input id="${id}" class="input flex1" data-key="${escHtml(p.key)}"
                  value="${p.source === 'saved' ? escHtml(p.value) : ''}"
                  placeholder="${escHtml(p.value)}">
-          <button class="btn btn-xs" title="Browse" onclick="fpOpen('${id}','${browse}')">📁</button>
+          ${p.kind === 'url' ? '' : `<button class="btn btn-xs" title="Browse" onclick="fpOpen('${id}','${browse}')">📁</button>`}
           ${create}
         </div>
         <div class="path-meta">${state} · ${escHtml(origin)} · <code>${escHtml(p.value)}</code>${pending}</div>
