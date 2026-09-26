@@ -44,6 +44,7 @@ const TABLE = [
   R(ANY, '/api/backups(/.*)?', 'org'),
   R(ANY, '/api/versions/use', 'org'),
   R(ANY, '/api/(update|restart)', 'org'),
+  R(GET, '/api/deps', 'org'),                              // runs npm against the registry
 
   // ── Devices ──
   R(GET, '/api/devices', 'devices'),
