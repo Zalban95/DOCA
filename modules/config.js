@@ -119,6 +119,8 @@ function handlePostPaths(req, res) {
     const saved = { ...prefs.paths };
     for (const [key, value] of Object.entries(req.body)) {
       const trimmed = String(value ?? '').trim();
+      if (trimmed && paths.SETTABLE.find(p => p.key === key)?.kind === 'url' && !/^https?:\/\/\S+$/.test(trimmed))
+        return res.status(400).json({ error: `${key} is a URL: http://… or https://…` });
       if (trimmed) saved[key] = trimmed;
       else delete saved[key];
     }
