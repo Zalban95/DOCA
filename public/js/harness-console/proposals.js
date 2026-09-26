@@ -88,9 +88,9 @@ function _hcProposalHtml(p) {
   const rows = p.changes.map(c => `
     <div class="hc-prop-row">
       <code class="hc-prop-key">${escHtml(c.path)}</code>
-      <span class="hc-prop-from">${escHtml(JSON.stringify(c.from))}</span>
+      <span class="hc-prop-from">${escHtml(_hcPropValue(c.from))}</span>
       <span class="hc-prop-arrow">→</span>
-      <span class="hc-prop-to">${escHtml(JSON.stringify(c.to))}</span>
+      <span class="hc-prop-to">${escHtml(_hcPropValue(c.to))}</span>
     </div>`).join('');
 
   const notes = [...new Set(p.changes.map(c => c.note).filter(Boolean))];
@@ -141,4 +141,9 @@ function hcProposalReject(id) {
         await _hcLoadProposals();
       } catch (e) { appAlert(e.message); }
     }, '', { allowEmpty: true });
+}
+
+/** A value as the card shows it: a tool note's words, not its bookkeeping (modules/harness/tool-notes.js). */
+function _hcPropValue(v) {
+  return v && typeof v === 'object' && typeof v.text === 'string' && 'fp' in v ? v.text : JSON.stringify(v);
 }

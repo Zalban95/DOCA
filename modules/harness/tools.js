@@ -55,12 +55,13 @@ function schemas(disabled = []) {
   const off = require('../agents/registry').enabled()
     ? disabled
     : [...disabled, 'agent_dispatch', 'agent_results', 'agent_resume'];
-  return [
+  // Each tool's accepted note from this install is added to its description (tool-notes.js).
+  return require('./tool-notes').annotate([
     ...TOOLS
       .filter(t => !off.includes(t.name))
       .map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })),
     ...mcp.schemas(off),
-  ];
+  ]);
 }
 
 /**
