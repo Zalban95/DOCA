@@ -2104,3 +2104,22 @@ test('a failure is typed beside its prose, and the same failure a third time is 
   const rows = memory.messages(body.session.id).filter(r => r.role === 'tool');
   assert.deepEqual(rows[0].failure, { kind: 'not-found', retryable: true });
 });
+
+test('the person can send an errand straight to one specialist, and it runs as them (POST /api/harness/missions)', async () => {
+  const registry = require('../modules/agents/registry');
+  const missions = require('../modules/agents/missions');
+  const memory = require('../modules/harness/memory');
+  registry.setEnabled(true);
+  try {
+    script = [{ text: 'The archivist found nothing about that.' }];
+    const r = await H.api(null, 'POST', '/api/harness/missions', { agentId: 'archivist', task: 'What do we know about the telescope mount?' });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const m = r.body.mission;
+    assert.equal(m.agentId, 'archivist');
+    assert.equal(memory.getSession(m.sessionId).person.id, H.owner.user.id, 'the mission is the sender\'s');
+    for (let i = 0; i < 100 && missions.get(m.id).state === 'running'; i++) await H.sleep(20);
+    assert.equal(missions.get(m.id).state, 'done');
+    assert.match(missions.get(m.id).result, /found nothing/);
+    assert.equal((await H.api(null, 'POST', '/api/harness/missions', { agentId: 'nobody', task: 'x' })).status, 404);
+  } finally { registry.setEnabled(false); }
+});

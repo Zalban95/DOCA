@@ -19,8 +19,31 @@ async function _hcLoadAgents() {
     if (sw) sw.checked = !!data.enabled;
     box.innerHTML = (data.agents || []).map(a => _hcAgentHtml(a, data.enabled)).join('')
       || '<div class="placeholder">No specialists defined</div>';
+    _hcToFill(data.enabled ? (data.agents || []).filter(a => !a.broken) : []);
     _hcLoadMissions();
   } catch (e) { box.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; }
+}
+
+/** The composer's "to": the Orchestrator, or one specialist (shown only when there are some). */
+function _hcToFill(agents) {
+  const sel = document.getElementById('hc-to');
+  if (!sel) return;
+  const keep = sel.value;
+  sel.innerHTML = `<option value="">Orchestrator</option>${agents.map(a => `<option value="${escHtml(a.id)}">→ ${escHtml(a.label || a.id)}</option>`).join('')}`;
+  sel.value = agents.some(a => a.id === keep) ? keep : '';
+  sel.style.display = agents.length ? '' : 'none';
+}
+
+/** Send the composer's text to one specialist as a mission, and open its log to watch it work. */
+async function hcSendMission(agentId, text) {
+  try {
+    const { mission } = await apiFetch('/api/harness/missions', { method: 'POST', body: { agentId, task: text } });
+    _hcAppend('user', text);
+    _hcAppend('assistant', `Sent to **${mission.label}** as mission \`${mission.id}\` — it reports back to the Orchestrator when it is done.`);
+    _hcLoadMissions();
+    hcMissionLog(mission.id);
+    return true;
+  } catch (e) { appAlert(e.message); return false; }
 }
 
 function _hcAgentHtml(a, enabled) {
