@@ -150,6 +150,9 @@ function defaultParams() {
     // autoWakesPerHour: every automatic turn anywhere, together — the cost guard.
     autoTurnsPerJob:  30,
     autoWakesPerHour: 30,
+    // How long one `shell` call may wait before it is stopped (seconds, at most
+    // 3600). Longer work goes in the background (harness/jobs.js).
+    shellTimeoutSec: 60,
     // The chain to fall down, in order, as `{ provider, model, contextWindow? }`.
     // Each window describes that served model; omitted means unknown, never
     // the primary model's limit. Empty by
