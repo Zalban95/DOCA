@@ -34,7 +34,7 @@ module.exports = [
       type: 'object',
       properties: {
         query:         { type: 'string' },
-        path:          { type: 'string', description: 'Folder to search. Default: the project root, or the workspace.' },
+        path:          { type: 'string', description: 'A folder to search, or one file. Default: the project root, or the workspace.' },
         regex:         { type: 'boolean' },
         caseSensitive: { type: 'boolean' },
         wholeWord:     { type: 'boolean' },
@@ -47,7 +47,7 @@ module.exports = [
   },
   {
     name: 'replace_in_files',
-    description: 'Replace text across every file under a folder, with the same options as search_files ($1 works in '
+    description: 'Replace text in one file, or across every file under a folder, with the same options as search_files ($1 works in '
       + 'regex mode). It is a dry run unless apply is true: look at the changes it lists first, then call again with '
       + 'apply: true (and `only` to limit it to some of those files).',
     parameters: {

@@ -57,12 +57,27 @@ function isText(buf) { return !buf.subarray(0, 8000).includes(0); }
 
 function rel(root, abs) { return path.relative(root, abs).split(path.sep).join('/'); }
 
-/** Candidate files, with include/exclude applied. */
-function files(root, { include, exclude } = {}) {
+/**
+ * Where to look. A folder is itself; a file is its folder limited to that one
+ * file — the agent's calls named a file often, and a file walked as a folder
+ * matched nothing and said "0 occurrences", which read as a successful no-match
+ * (reported by the agent itself, 2026-09-26). A path that is not there is an error.
+ */
+function scope(root, opts = {}) {
+  let st;
+  try { st = fs.statSync(root); } catch { throw Object.assign(new Error(`Nothing at ${root}.`), { status: 404 }); }
+  if (st.isDirectory()) return { root, opts };
+  return { root: path.dirname(root), opts: { ...opts, include: undefined, exclude: undefined, only: [path.basename(root)] } };
+}
+
+/** Candidate files, with include/exclude (and `only`, relative paths) applied. */
+function files(root, { include, exclude, only } = {}) {
   const inc = globTest(include), exc = globTest(exclude);
+  const onlySet = only ? new Set([].concat(only)) : null;
   const out = [];
   for (const abs of walk(root)) {
     const r = rel(root, abs);
+    if (onlySet && !onlySet.has(r)) continue;
     if (inc && !inc(r)) continue;
     if (exc && exc(r)) continue;
     out.push(abs);
@@ -136,7 +151,9 @@ function searchRg(root, opts) {
 /** Search `root`. { matches: [{ file, line, col, length, text }], files, truncated, engine }. */
 async function search(root, opts = {}) {
   patternOf(opts);   // a bad pattern is a 400 either way
-  return (await searchRg(root, opts)) || searchText(root, opts);
+  ({ root, opts } = scope(root, opts));
+  // One file: the walker, which honours `only`; ripgrep is for trees.
+  return (!opts.only && (await searchRg(root, opts))) || searchText(root, opts);
 }
 
 /**
@@ -144,14 +161,14 @@ async function search(root, opts = {}) {
  * writes, and says how many replacements in how many files. `$1` works in
  * regex mode. Only files under `root`, only text files.
  */
-function replaceInFiles(root, { replacement = '', dryRun = false, only, refuse, ...opts } = {}) {
-  const re = patternOf(opts);
-  const onlySet = only ? new Set([].concat(only)) : null;
+function replaceInFiles(root, { replacement = '', dryRun = false, refuse, ...given } = {}) {
+  const re = patternOf(given);
+  const { root: dir, opts } = scope(root, given);
+  root = dir;
   const changes = [];
   let count = 0;
   for (const abs of files(root, opts)) {
     const r = rel(root, abs);
-    if (onlySet && !onlySet.has(r)) continue;
     if (refuse && refuse(abs)) continue;   // the agent's calls skip what governs it (harness/control-plane.js)
     let buf;
     try { if (fs.statSync(abs).size > MAX_FILE) continue; buf = fs.readFileSync(abs); } catch { continue; }

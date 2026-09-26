@@ -2258,3 +2258,24 @@ runtime* that nothing ever checked.
 - A test that asserts the request carries the declared window for a provider
   that accepts one — the stub server can assert on the body, which is where
   this would have been caught.
+
+## H-21 — Two of the agent's own tools answered a reasonable call with a misleading success
+
+**Fixed 2026-09-26, v2.93.0.** Found by the resident agent, which filed both as
+tool-note proposals (`p_muim10ozde0u`, `p_muim5k34qahs`) describing how to work
+around them; fixing the tools makes those notes wrong, so they should be rejected
+rather than applied.
+
+- **`replace_in_files` / `search_files` given a file path matched nothing.** The
+  walker read the path as a folder, found no entries, and the tool said "Replaced
+  0 occurrence(s) in 0 file(s)" — indistinguishable from a real no-match; four
+  `apply: true` calls changed nothing. Now a file is searched as its folder
+  limited to that one file (`projects/search.js` `scope`), and a path that is not
+  there is an error.
+- **`read_file` had no offset, and its truncation notice was the shell's.** It
+  told the model to "narrow the command (head, grep, wc)" and counted what was
+  left of the file rather than naming the slice, so `maxLength: 1200` read as a
+  failed read. Now `offset` + `maxLength` select a window and the notice says
+  "characters A–B of N; read on with offset B".
+
+`test/tool-slices.test.js` holds both.
