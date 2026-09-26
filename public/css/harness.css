@@ -330,3 +330,5 @@ body.harness-tab .chat-fab { display: none; }
 @media (max-width: 768px) {
   .questions-dock { right: 16px; left: 16px; width: auto; bottom: calc(var(--mobile-nav-h, 56px) + 76px); }
 }
+.approval-recheck { display: flex; gap: 8px; align-items: flex-start; font-size: 11px; margin: 8px 0; color: var(--text); }
+.approval-recheck input { margin-top: 2px; }

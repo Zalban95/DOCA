@@ -101,7 +101,7 @@ test('persona.md reaches the Orchestrator, human.md the Orchestrator and work ch
 test('standard specialists ship as markdown in the repository; a local file of the same id wins; promote writes into the checkout', () => {
   const fs = require('node:fs'), path = require('node:path');
   const shippedIds = fs.readdirSync(registry.SHIPPED_DIR).filter(n => n.endsWith('.md')).map(n => n.replace(/\.md$/, ''));
-  assert.deepEqual(shippedIds.sort(), ['archivist', 'coder', 'researcher']);
+  assert.deepEqual(shippedIds.sort(), ['archivist', 'coder', 'researcher', 'scout']);
   for (const id of shippedIds) {
     const a = registry.get(id);
     assert.ok(a && !a.broken && a.builtin, `${id} loads as a shipped definition`);

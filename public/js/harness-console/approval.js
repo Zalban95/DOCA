@@ -80,6 +80,18 @@ function _hcApprovalFill(list, a) {
   bench.appendChild(toggle);
   list.appendChild(bench);
 
+  // After outside text (a web page, another machine's tool result), the next action asks again, once.
+  const re = document.createElement('label');
+  re.className = 'approval-recheck';
+  re.innerHTML = `<input type="checkbox" ${a.recheckOutside !== false ? 'checked' : ''}>
+    <span><b>Ask again after outside text</b> — once a web page or another machine's answer has entered a turn, the
+    first command after it that changes something asks you, even if it is allowed. Your devices are told too.</span>`;
+  re.querySelector('input').onchange = async ev => {
+    try { await apiFetch('/api/harness/approval', { method: 'POST', body: { recheckOutside: ev.target.checked } }); _hcLoadApproval(); }
+    catch (e) { appAlert(e.message); }
+  };
+  list.appendChild(re);
+
   // Questions raised elsewhere — a turn a phone started, or one in a chat that
   // is not open. Without this they block until they time out with nothing on
   // screen anywhere, because the card only ever appears in the transcript that

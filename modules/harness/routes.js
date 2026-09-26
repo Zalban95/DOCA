@@ -94,8 +94,14 @@ const handleApproval = wrap(async (_req, res) =>
 
 /** POST /api/harness/approval — set the mode. Only ever from a click. */
 const handleApprovalMode = wrap(async (req, res) => {
+  const audit = action => require('../auth/store').audit({ orgId: req.auth?.orgId, actorId: req.auth?.user.id, action });
+  if (typeof req.body?.recheckOutside === 'boolean') {
+    approval.setRecheck(req.body.recheckOutside);
+    audit(`approval: ask again after outside text ${req.body.recheckOutside ? 'on' : 'off'}`);
+    if (!req.body.mode) return res.json(approval.settings());
+  }
   const r = approval.setMode(req.body?.mode, { role: req.auth?.role || 'owner', confirm: req.body?.confirm });
-  require('../auth/store').audit({ orgId: req.auth?.orgId, actorId: req.auth?.user.id, action: `approval mode: ${r.mode}` });
+  audit(`approval mode: ${r.mode}`);
   res.json(r);
 });
 
