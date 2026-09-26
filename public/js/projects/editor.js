@@ -84,6 +84,7 @@ async function pjOpenFile(path, line, col) {
     const model = monaco.editor.createModel(r.content, _pjLang(monaco, path), monaco.Uri.file(path));
     tab = { key: path, path, title: path.split('/').pop(), model, saved: model.getAlternativeVersionId() };
     PJE.tabs.push(tab);
+    pjLspAttach(model);   // problems, hover, completion, definition — when its language server is here (projects/lsp.js)
   }
   pjActivate(tab.key);
   if (window.innerWidth <= 768) document.getElementById('pj-body')?.classList.remove('side-open');

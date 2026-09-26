@@ -92,6 +92,8 @@ function setup(httpServer) {
       termWss.handleUpgrade(req, socket, head, ws => termWss.emit('connection', ws, req));
     } else if (req.url.startsWith('/ws/harness')) {
       harnessWss.handleUpgrade(req, socket, head, ws => harnessWss.emit('connection', ws, req));
+    } else if (req.url.startsWith('/ws/lsp')) {
+      require('./projects/lsp').upgrade(req, socket, head);   // a language server, for the Projects editor
     } else {
       socket.destroy();
     }

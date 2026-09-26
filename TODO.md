@@ -1655,6 +1655,15 @@ order it is to be done.
   this job's changes — and which of those files its plan did not name ("say
   why, or put them back"); a note, not a failure. Not yet: scoring drift against
   a plan's contracts (HonTabs-style), and the import-cycle check (needs the map).
+  **Code intelligence built in 2.81.0** (`projects/lsp.js`, `public/js/projects/lsp.js`):
+  language servers bridged to the editor over `/ws/lsp` (same gate as the
+  terminal), one per project and language — problems as you type, hover,
+  completion, go to definition across files. TypeScript/JavaScript and Python
+  install into DOCA's data folder from Projects → Build & test (no sudo); Go,
+  Rust, C/C++, Kotlin and Java servers are used when installed. Found checking it
+  live: `typescript@7` (the native compiler) has no `tsserver.js`, so the install
+  pins `typescript@<7`, and the bridge hands the server the project's own
+  TypeScript when it has one.
   **Next:** the file tree
   from the Files tab as a shared component, and editor extensions (e.g. a
   language server for Kotlin/TypeScript) as opt-in add-ons.
