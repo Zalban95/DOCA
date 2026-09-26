@@ -10,18 +10,41 @@
  * calls (the docs reader, the rules review) were not counted anywhere. So "what
  * did this week cost, and on which model" had no answer.
  *
- * One JSONL file per month under `harness/usage/`: append-only, one writer per
- * line, readable with `jq`, and a query for "the last 7 days" opens at most two
- * files. Every row says whether its numbers were measured or estimated, the same
+ * A table in the database since 2.107.0 (docs/design/database.md; the monthly
+ * JSONL files it replaced are imported once and left in place). Every row says whether its numbers were measured or estimated, the same
  * honesty the ledger keeps. Tokens, not money: prices change and differ by
  * cache hit, and a stored cost would be wrong the day the price list moves.
  */
+const fs   = require('fs');
 const path = require('path');
 
 const store  = require('../store');
 const budget = require('./budget');
+const db     = require('../db');
 
+// The ledger was one JSONL file a month under harness/usage/ until 2.107.0; it
+// now lives in the database (docs/design/database.md). Those files are read
+// once, into the table, and left where they are.
 const fileFor = d => path.join(store.dir('harness/usage'), `${d.toISOString().slice(0, 7)}.jsonl`);
+
+let _imported = null;
+function imported() {
+  if (!_imported) _imported = (async () => {
+    if (await db.get("SELECT value FROM meta WHERE key = 'usage.imported'")) return;
+    const dir = store.dir('harness/usage');
+    let files = [];
+    try { files = fs.readdirSync(dir).filter(f => /^\d{4}-\d{2}\.jsonl$/.test(f)).sort(); } catch { /* none */ }
+    await db.tx(async q => {
+      for (const f of files) for (const r of store.readJsonl(path.join(dir, f))) {
+        if (!r.at) continue;
+        await q.run('INSERT INTO usage (at, kind, provider, model, session_id, agent, prompt, completion, cached, source) VALUES (?,?,?,?,?,?,?,?,?,?)',
+          [r.at, r.kind || null, r.provider || null, r.model || null, r.sessionId || null, r.agent || null, r.prompt || 0, r.completion || 0, r.cached || 0, r.source || null]);
+      }
+      await q.run("INSERT INTO meta (key, value) VALUES ('usage.imported', ?)", [new Date().toISOString()]);
+    });
+  })().catch(e => { _imported = null; throw e; });
+  return _imported;
+}
 
 /** Record one call. Never throws: accounting must not break the work it counts. */
 function record({ kind, sessionId, agent, provider, model, usage, body, reply }) {
@@ -29,64 +52,42 @@ function record({ kind, sessionId, agent, provider, model, usage, body, reply })
     const p = Number(usage?.prompt_tokens);
     const c = Number(usage?.completion_tokens);
     const measured = p > 0 && Number.isFinite(c) && c >= 0;
-    store.appendJsonl(fileFor(new Date()), {
-      at: new Date().toISOString(),
-      kind, provider, model,
-      ...(sessionId ? { sessionId } : {}),
-      ...(agent ? { agent } : {}),
-      prompt: p > 0 ? p
-        : budget.estimateMessages(body?.messages) + (body?.tools ? budget.estimate(JSON.stringify(body.tools)) : 0),
-      completion: Number.isFinite(c) && c >= 0 ? c
-        : budget.estimate(reply?.content) + budget.estimate(JSON.stringify(reply?.tool_calls || [])),
-      cached: budget.cachedOf(usage),
-      source: measured ? 'provider' : 'estimated',
-    });
+    const row = [new Date().toISOString(), kind || null, provider || null, model || null, sessionId || null, agent || null,
+      p > 0 ? p : budget.estimateMessages(body?.messages) + (body?.tools ? budget.estimate(JSON.stringify(body.tools)) : 0),
+      Number.isFinite(c) && c >= 0 ? c : budget.estimate(reply?.content) + budget.estimate(JSON.stringify(reply?.tool_calls || [])),
+      budget.cachedOf(usage) || 0, measured ? 'provider' : 'estimated'];
+    imported().then(() => db.run('INSERT INTO usage (at, kind, provider, model, session_id, agent, prompt, completion, cached, source) VALUES (?,?,?,?,?,?,?,?,?,?)', row))
+      .catch(e => console.warn(`[usage] not recorded: ${e.message}`));
   } catch { /* see above */ }
 }
 
 const KEYS = {
-  day:      r => r.at.slice(0, 10),
-  model:    r => `${r.provider}/${r.model}`,
-  provider: r => r.provider,
-  session:  r => r.sessionId || '(none)',
-  agent:    r => r.agent || 'orchestrator',
-  kind:     r => r.kind,
+  day:      "substr(at, 1, 10)",
+  model:    "coalesce(provider, '') || '/' || coalesce(model, '')",
+  provider: "coalesce(provider, '')",
+  session:  "coalesce(session_id, '(none)')",
+  agent:    "coalesce(agent, 'orchestrator')",
+  kind:     "coalesce(kind, '')",
 };
 
 /**
  * Totals since `days` ago, grouped. Days are UTC, like every timestamp here.
- * @returns {{ since: string, by: string, total: object, rows: object[] }}
+ * @returns {Promise<{ since: string, by: string, total: object, rows: object[] }>}
  */
-function summary({ days = 7, by = 'day', now = new Date() } = {}) {
+async function summary({ days = 7, by = 'day', now = new Date() } = {}) {
   if (!KEYS[by]) throw Object.assign(new Error(`by must be one of: ${Object.keys(KEYS).join(', ')}`), { status: 400 });
+  await imported();
   const n = Math.min(Math.max(Number(days) || 7, 1), 366);
-  const since = new Date(now.getTime() - n * 86400000);
-
-  const months = new Set();
-  for (let d = new Date(since); d <= now; d = new Date(d.getTime() + 86400000)) months.add(d.toISOString().slice(0, 7));
-  months.add(now.toISOString().slice(0, 7));
-
-  const zero = () => ({ calls: 0, prompt: 0, completion: 0, cached: 0, estimated: 0 });
-  const add = (t, r) => {
-    t.calls += 1; t.prompt += r.prompt || 0; t.completion += r.completion || 0;
-    t.cached += r.cached || 0; if (r.source !== 'provider') t.estimated += 1;
-  };
-  const total = zero();
-  const groups = new Map();
-  const sinceIso = since.toISOString();
-  for (const m of months) {
-    for (const r of store.readJsonl(path.join(store.dir('harness/usage'), `${m}.jsonl`))) {
-      if (!r.at || r.at < sinceIso) continue;
-      const k = KEYS[by](r);
-      if (!groups.has(k)) groups.set(k, zero());
-      add(groups.get(k), r);
-      add(total, r);
-    }
-  }
-  const rows = [...groups].map(([key, t]) => ({ key, ...t }));
+  const since = new Date(now.getTime() - n * 86400000).toISOString();
+  const cols = `count(*) AS calls, coalesce(sum(prompt), 0) AS prompt, coalesce(sum(completion), 0) AS completion,
+    coalesce(sum(cached), 0) AS cached, coalesce(sum(CASE WHEN source = 'provider' THEN 0 ELSE 1 END), 0) AS estimated`;
+  const num = r => ({ calls: Number(r.calls), prompt: Number(r.prompt), completion: Number(r.completion), cached: Number(r.cached), estimated: Number(r.estimated) });
+  const total = num(await db.get(`SELECT ${cols} FROM usage WHERE tenant_id = 'local' AND at >= ?`, [since]));
+  const rows = (await db.all(`SELECT ${KEYS[by]} AS key, ${cols} FROM usage WHERE tenant_id = 'local' AND at >= ? GROUP BY ${KEYS[by]}`, [since]))
+    .map(r => ({ key: r.key, ...num(r) }));
   rows.sort(by === 'day' ? (a, b) => a.key.localeCompare(b.key)
     : (a, b) => (b.prompt + b.completion) - (a.prompt + a.completion));
-  return { since: sinceIso, by, total, rows };
+  return { since, by, total, rows };
 }
 
-module.exports = { record, summary };
+module.exports = { record, summary, fileFor };

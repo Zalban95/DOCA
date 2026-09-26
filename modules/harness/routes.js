@@ -83,8 +83,8 @@ const handleStatus = wrap(async (req, res) => res.json(await agent.status({ sess
 
 /** GET /api/harness/usage?days=7&by=day|model|provider|session|agent|kind */
 const handleUsage = wrap(async (req, res) =>
-  res.json({ ...require('./usage').summary({ days: req.query.days, by: req.query.by || 'day' }),
-    tokensPerDay: require('./turn/ceiling').state(require('./turn/params').params()).limit }));
+  res.json({ ...(await require('./usage').summary({ days: req.query.days, by: req.query.by || 'day' })),
+    tokensPerDay: (await require('./turn/ceiling').state(require('./turn/params').params())).limit }));
 
 /* ── Approvals ────────────────────────────────────────── */
 

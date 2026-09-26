@@ -964,13 +964,13 @@ test('the floating chat panel forwards tool calls as structured events', async (
 
 test('every model call is kept in the usage ledger, measured or estimated, and can be summed', async () => {
   const usage = require('../modules/harness/usage');
-  const before = usage.summary({ days: 1, by: 'kind' });
+  const before = await usage.summary({ days: 1, by: 'kind' });
   const count = kind => (before.rows.find(r => r.key === kind)?.calls || 0);
 
   script = [{ tool: 'memory_search', args: { query: 'x' } }, { text: 'nothing there' }];
   await stream('/api/harness/chat', { message: 'count me' });
 
-  const after = usage.summary({ days: 1, by: 'kind' });
+  const after = await usage.summary({ days: 1, by: 'kind' });
   const step = after.rows.find(r => r.key === 'step');
   assert.equal(step.calls, count('step') + 2, 'one row per step, the tool step and the answer');
   assert.ok(after.total.prompt > before.total.prompt, 'the stub sends no usage frame, so the prompt is estimated');
@@ -1077,11 +1077,11 @@ test('a provider that refuses the call is not a verdict about the model', async 
   // quietly spends money has to be visible where the money is counted. Only the
   // successes are — a call that was refused never reached a model and never
   // cost anything, so it has no row.
-  const counted = () => usage.summary({ days: 1, by: 'kind' }).rows.find(r => r.key === 'probe')?.calls || 0;
-  const before = counted();
+  const counted = async () => (await usage.summary({ days: 1, by: 'kind' })).rows.find(r => r.key === 'probe')?.calls || 0;
+  const before = await counted();
   script = [{ call: 'doca_probe' }];
   await toolcheck.check({ provider: 'stub', model: 'stub-model' });
-  assert.equal(counted(), before + 1);
+  assert.equal(await counted(), before + 1);
 });
 
 test('the probe is the route the panel calls, and it changes nothing', async () => {

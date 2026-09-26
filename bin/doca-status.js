@@ -13,6 +13,8 @@
 const { report, render } = require('../modules/status-report');
 
 const args = process.argv.slice(2);
-const r = report();
-console.log(args.includes('--json') ? JSON.stringify(r, null, 2) : render(r));
-if (args.includes('--strict') && r.attention.length) process.exitCode = 1;
+report().then(r => {
+  console.log(args.includes('--json') ? JSON.stringify(r, null, 2) : render(r));
+  if (args.includes('--strict') && r.attention.length) process.exitCode = 1;
+  require('../modules/db').close();
+});

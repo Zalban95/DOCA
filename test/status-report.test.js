@@ -16,14 +16,14 @@ const status   = require('../modules/status-report');
 test.before(() => H.start());
 test.after(() => H.stop());
 
-test('a failed conversation, a stalled job and a waiting proposal are named, and --strict fails on them', () => {
+test('a failed conversation, a stalled job and a waiting proposal are named, and --strict fails on them', async () => {
   const s = memory.createSession('Broken build', { activate: false });
   memory.updateSession(s.id, { state: 'failed', lastError: 'npm ERR! missing script: build' });
   const w = memory.createSession('Endless job', { activate: false });
   memory.updateSession(w.id, { job: { state: 'stalled', autoTurns: 30 } });
   settings.propose({ changes: [{ path: 'harness.config.doca.temperature', value: 0.5 }], reason: 'steadier answers' });
 
-  const r = status.report();
+  const r = await status.report();
   assert.ok(r.conversations.failed.some(x => x.id === s.id && /missing script/.test(x.error)));
   assert.ok(r.conversations.stalled.some(x => x.id === w.id && x.autoTurns === 30));
   assert.ok(r.waitingOnAPerson.proposals.some(x => x.paths.includes('harness.config.doca.temperature')));

@@ -132,6 +132,7 @@ async function restore(file, { password = null, safety = null, say = () => {} } 
  */
 function swap(staged, stamp, say) {
   const done = [];
+  require('../db').close();   // the database file is about to be replaced; the next call opens the restored one
   try {
     for (const x of staged) {
       // A file section holds one file, named as it was on the machine that made
