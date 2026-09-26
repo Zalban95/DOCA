@@ -1,7 +1,8 @@
 'use strict';
 
-const os = require('os');
-const shell = require('./shell');
+const path = require('path');
+
+const { detect } = require('./detect');
 
 const { streamCmd } = require('./utils');
 const { COMPOSE_DIR } = require('./paths');
@@ -9,21 +10,21 @@ const { COMPOSE_DIR } = require('./paths');
 const SYSTEM_TOOLS = [
   {
     id: 'node', label: 'Node.js', category: 'required',
-    detectCmd: 'node --version 2>/dev/null',
+    detect: { bin: process.execPath, args: ['--version'] },
     note: 'JavaScript runtime — the dashboard runs on Node.js',
     repo: 'https://github.com/nvm-sh/nvm', repoLabel: 'nvm (recommended)',
     installCmd: `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm install --lts`,
   },
   {
     id: 'npm', label: 'npm', category: 'required',
-    detectCmd: 'npm --version 2>/dev/null',
+    detect: { bin: 'npm', args: ['--version'] },
     note: 'Package manager — bundled with Node.js',
     repo: 'https://github.com/nvm-sh/nvm', repoLabel: 'nvm (installs Node + npm)',
     installCmd: `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm install --lts`,
   },
   {
     id: 'node-pty', label: 'node-pty', category: 'recommended',
-    detectCmd: `node -e "require('node-pty');console.log('ok')" 2>/dev/null`,
+    detect: { bin: process.execPath, args: ['-e', "require('node-pty');console.log('ok')"], cwd: __dirname + '/..' },
     note: 'Only for embedded terminals (Terminal tab, Code launchers) — everything else works without it; active right after install. No password needed: installs user-level via npm',
     repo: 'https://www.npmjs.com/package/node-pty', repoLabel: 'npm: node-pty',
     // Native addon. Self-healing install:
@@ -42,11 +43,10 @@ const SYSTEM_TOOLS = [
       'echo "✓ node-pty built and verified."',
     ].join('; '),
     installCwd: __dirname + '/..',
-    detectCwd:  __dirname + '/..',
   },
   {
     id: 'docker', label: 'Docker', category: 'recommended',
-    detectCmd: 'docker --version 2>/dev/null',
+    detect: { bin: 'docker', args: ['--version'] },
     note: 'Container runtime — required for container management',
     repo: 'https://docs.docker.com/engine/install/', repoLabel: 'docs.docker.com',
     installCmd: 'curl -fsSL https://get.docker.com | sh',
@@ -59,7 +59,7 @@ const SYSTEM_TOOLS = [
     // Falls back to "installed" so a stack that is not a git checkout (tarball,
     // vendored copy) still reports as present instead of offering to clone
     // over it — git clone into a non-empty directory fails.
-    detectCmd: `test -f "${COMPOSE_DIR}/docker-compose.yml" && { cd "${COMPOSE_DIR}" && git log -1 --format="rev %h (%cr)" 2>/dev/null || echo installed; }`,
+    detect: { file: path.join(COMPOSE_DIR, 'docker-compose.yml'), gitRev: true },
     note: 'OpenClaw AI stack — Docker Compose services. Updating pulls the newest definition and images',
     repo: 'https://github.com/openclaw/openclaw', repoLabel: 'openclaw/openclaw',
     // `docker compose pull` matters: `up -d` only fetches images that are
@@ -69,21 +69,21 @@ const SYSTEM_TOOLS = [
   },
   {
     id: 'git', label: 'Git', category: 'recommended',
-    detectCmd: 'git --version 2>/dev/null',
+    detect: { bin: 'git', args: ['--version'] },
     note: 'Version control — required for skills management',
     repo: 'https://git-scm.com', repoLabel: 'apt: git',
     installCmd: 'sudo apt-get update && sudo apt-get install -y git',
   },
   {
     id: 'build-tools', label: 'Build tools', category: 'recommended',
-    detectCmd: 'g++ --version 2>/dev/null | head -1',
+    detect: { bin: 'g++', args: ['--version'] },
     note: 'C/C++ toolchain — needed to compile native addons (node-pty)',
     repo: 'https://packages.ubuntu.com/build-essential', repoLabel: 'apt: build-essential',
     installCmd: 'sudo apt-get update && sudo apt-get install -y build-essential python3',
   },
   {
     id: 'ollama', label: 'Ollama', category: 'recommended',
-    detectCmd: 'ollama --version 2>/dev/null',
+    detect: { bin: 'ollama', args: ['--version'] },
     note: 'Local LLM runtime — powers the Ollama model manager',
     repo: 'https://ollama.com', repoLabel: 'ollama.com',
     installCmd: 'curl -fsSL https://ollama.com/install.sh | sh',
@@ -91,56 +91,56 @@ const SYSTEM_TOOLS = [
   },
   {
     id: 'docker-compose', label: 'Docker Compose', category: 'recommended',
-    detectCmd: 'docker compose version 2>/dev/null',
+    detect: { bin: 'docker', args: ['compose', 'version'] },
     note: 'Compose v2 plugin — required for stack start/stop/restart',
     repo: 'https://docs.docker.com/compose/', repoLabel: 'apt: docker-compose-plugin',
     installCmd: 'sudo apt-get update && sudo apt-get install -y docker-compose-plugin',
   },
   {
     id: 'ffmpeg', label: 'ffmpeg', category: 'recommended',
-    detectCmd: 'ffmpeg -version 2>/dev/null | head -1',
+    detect: { bin: 'ffmpeg', args: ['-version'] },
     note: 'Audio/video toolkit — used by voice (STT/TTS) features',
     repo: 'https://ffmpeg.org', repoLabel: 'apt: ffmpeg',
     installCmd: 'sudo apt-get update && sudo apt-get install -y ffmpeg',
   },
   {
     id: 'curl', label: 'curl', category: 'recommended',
-    detectCmd: 'curl --version 2>/dev/null | head -1',
+    detect: { bin: 'curl', args: ['--version'] },
     note: 'HTTP client — used for service health checks and installers',
     repo: 'https://curl.se', repoLabel: 'apt: curl',
     installCmd: 'sudo apt-get update && sudo apt-get install -y curl',
   },
   {
     id: 'python3', label: 'Python 3', category: 'recommended',
-    detectCmd: 'python3 --version 2>/dev/null || python --version 2>/dev/null',
+    detect: { any: [{ bin: 'python3', args: ['--version'] }, { bin: 'python', args: ['--version'] }] },
     note: 'Required for Python-based AI tools (Aider, Whisper, Kokoro)',
     repo: 'https://python.org', repoLabel: 'apt: python3',
     installCmd: 'sudo apt-get update && sudo apt-get install -y python3 python3-pip python3-venv',
   },
   {
     id: 'pip', label: 'pip', category: 'recommended',
-    detectCmd: 'PATH="$HOME/.local/bin:$PATH" pip3 --version 2>/dev/null || PATH="$HOME/.local/bin:$PATH" pip --version 2>/dev/null || python3 -m pip --version 2>/dev/null',
+    detect: { any: [{ bin: 'pip3', args: ['--version'] }, { bin: 'pip', args: ['--version'] }, { bin: 'python3', args: ['-m', 'pip', '--version'] }] },
     note: 'Python package manager — required for AI tools',
     repo: 'https://pip.pypa.io', repoLabel: 'apt: python3-pip',
     installCmd: 'sudo apt-get install -y python3-pip',
   },
   {
     id: 'nvidia-smi', label: 'nvidia-smi', category: 'optional',
-    detectCmd: 'nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null || nvidia-smi 2>/dev/null | head -1',
+    detect: { any: [{ bin: 'nvidia-smi', args: ['--query-gpu=driver_version', '--format=csv,noheader'] }, { bin: 'nvidia-smi', args: [] }] },
     note: 'NVIDIA GPU monitoring — optional',
     repo: 'https://www.nvidia.com/drivers', repoLabel: 'nvidia.com/drivers',
     installCmd: null,
   },
   {
     id: 'huggingface-cli', label: 'huggingface-cli', category: 'optional',
-    detectCmd: 'python3 -c "import huggingface_hub; print(huggingface_hub.__version__)" 2>/dev/null || PATH="$HOME/.local/bin:$PATH" huggingface-cli --version 2>/dev/null',
+    detect: { any: [{ bin: 'python3', args: ['-c', 'import huggingface_hub; print(huggingface_hub.__version__)'] }, { bin: 'huggingface-cli', args: ['--version'] }] },
     note: 'HuggingFace Hub CLI — for downloading local models',
     repo: 'https://pypi.org/project/huggingface-hub/', repoLabel: 'pip: huggingface-hub',
     installCmd: 'pip install --user --break-system-packages "huggingface_hub[cli]"',
   },
   {
     id: 'llama-server', label: 'llama-server', category: 'optional',
-    detectCmd: 'llama-server --version 2>&1 | head -1 | grep -i version',
+    detect: { bin: 'llama-server', args: ['--version'], stderr: true, match: /version/i },
     note: 'llama.cpp server binary — required by the llama.cpp Servers manager',
     repo: 'https://github.com/ggml-org/llama.cpp/releases', repoLabel: 'llama.cpp releases (manual)',
     installCmd: null,
@@ -149,18 +149,10 @@ const SYSTEM_TOOLS = [
 
 /** GET /api/system/tools */
 async function handleList(req, res) {
-  // Through the host's shell, not `bash -lc`: the other call site the v2.49.0
-  // pass missed. On Windows every tool here reported "not installed" whether it
-  // was present or not, because a detector that cannot run is indistinguishable
-  // from a thing that is not there.
-  const results = await Promise.all(SYSTEM_TOOLS.map(t => shell
-    .run(t.detectCmd, { env: { HOME: process.env.HOME || os.homedir() }, cwd: t.detectCwd || undefined, timeout: 5000 })
-    .then(r => {
-        // stdout, not the combined output: a tool that prints a warning to
-        // stderr would otherwise have that warning read back as its version.
-        const out      = r.stdout;
-        const detected = r.code === 0 && !r.error && !!out && out.toLowerCase() !== 'undefined';
-        const version  = detected ? out.split('\n')[0].replace(/^v/, '').slice(0, 60) : null;
+  // Each row declares what it looks for (modules/detect.js): no shell line,
+  // so a tool is found on Windows as it is on Linux.
+  const results = await Promise.all(SYSTEM_TOOLS.map(t => detect(t.detect)
+    .then(({ detected, version }) => {
         return ({
           id:           t.id,
           label:        t.label,
