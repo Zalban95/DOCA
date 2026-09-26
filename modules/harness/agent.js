@@ -91,7 +91,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     try { emit(evt); } catch {}
     try { events.emit('event', evt); } catch {}
   };
-  const p = require('./turn/ceiling').check(require('./turn/choice').apply(turnParams(profile), sessionId));   // the chat's model choice; a day's token ceiling refuses to start
+  const p = await require('./turn/ceiling').check(require('./turn/choice').apply(turnParams(profile), sessionId));   // the chat's model choice; a day's token ceiling refuses to start
   const ep  = providers.endpoint(p.provider);
   if (!p.model)
     throw Object.assign(new Error(

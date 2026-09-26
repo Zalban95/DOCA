@@ -49,7 +49,8 @@ const PREFS = {
 const DATA = {
   'harness/memory.json':  { is: 'travels', note: 'what the agent knows (with memory-rules*.json)' },
   'harness/sessions':     { is: 'travels', note: 'conversations and their index (sessions.json)' },
-  'harness/usage':        { is: 'travels', note: 'the token ledger' },
+  'harness/usage':        { is: 'travels', note: 'the token ledger before 2.107.0 (imported into doca.db once)' },
+  'doca.db':              { is: 'travels', note: 'the database (docs/design/database.md): the usage ledger, and more as it moves in' },
   'harness/proposals.json': { is: 'travels', note: 'settings proposals and their decisions' },
   'harness/tool-results': { is: 'local',   note: 'spilled tool output: a cache, rebuildable' },
   'harness/jobs':         { is: 'local',   note: 'background shell jobs of this machine' },

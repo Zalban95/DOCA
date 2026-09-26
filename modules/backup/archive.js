@@ -50,7 +50,8 @@ function sections() {
 }
 
 /** Leftovers of a write in progress, and logs, are not state. */
-const SKIP = /(\.tmp$|^restart\.log$)/;
+// The database's live side files: a backup carries a consistent copy of doca.db instead (create()).
+const SKIP = /(\.tmp$|^restart\.log$|^doca\.db-(wal|shm)$)/;
 
 function walk(dir, base = dir) {
   let out = [];
@@ -102,7 +103,11 @@ async function create({ password = null, dir = paths.BACKUP_DIR, name = fileName
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, name);
   const partial = `${file}.partial`;
-  const files = inventory();
+  // The database is copied consistently (VACUUM INTO), not read while it may be mid-write.
+  const snap = path.join(store.DATA_DIR, `.doca.db.backup-${process.pid}.tmp`);
+  let snapped = null;
+  if (fs.existsSync(path.join(store.DATA_DIR, 'doca.db'))) { try { snapped = await require('../db').snapshot(snap); } catch { /* not SQLite, or not open */ } }
+  const files = inventory().map(f => (snapped && f.section === 'data' && f.rel === 'doca.db' ? { ...f, abs: snapped } : f));
 
   const manifest = {
     format: FORMAT, formatVersion: FORMAT_VERSION,
@@ -128,7 +133,7 @@ async function create({ password = null, dir = paths.BACKUP_DIR, name = fileName
   } catch (e) {
     fs.rmSync(partial, { force: true });
     throw e;
-  }
+  } finally { if (snapped) fs.rmSync(snapped, { force: true }); }
   fs.renameSync(partial, file);
   return { name, file, bytes: fs.statSync(file).size, files: files.length, encrypted: !!password };
 }

@@ -45,8 +45,12 @@ the end, and in the sections as "built in …" notes.
    alarms with rules + Prompt Guard 2 22M + ProtectAI. **Left:** install the
    runtime and a model guard on the live panel (Settings → Harness → Guards;
    ~1.4 GB with ProtectAI) — until then the rules guard alone screens.
-2. **The data layer**: SQLite now (`node:sqlite`), PostgreSQL-ready for hosting;
-   usage and audit first, then sessions and memory. → *To discuss next*.
+2. **The data layer** — **started in 2.107.0** (`modules/db`,
+   `docs/design/database.md`): SQLite via `node:sqlite` (no dependency),
+   PostgreSQL behind the same calls (`DOCA_DB_URL`), numbered migrations,
+   `tenant_id` on every table; the **usage ledger** is in it (old monthly files
+   imported once), backups carry a consistent copy (`VACUUM INTO`). **Next:** the
+   audit log, then sessions and memory, then `npm run db-bench`.
 3. **Off-site backups**: scheduled `.dBac` to an S3-compatible bucket.
 4. **Review and fix the VMs, Docker and Models sections**, with VM management
    (snapshots, autostart, create). → *MCP and VMs…*.

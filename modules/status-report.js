@@ -20,14 +20,14 @@ const { params } = require('./harness/turn/params');
 
 const DAY = 86400000;
 
-function report({ now = new Date() } = {}) {
+async function report({ now = new Date() } = {}) {
   const sessions = memory.listSessions().sessions.filter(s => !s.archivedAt);
   const recent = s => now - new Date(s.updatedAt || 0) < 7 * DAY;
   const row = s => ({ id: s.id, title: s.title, kind: s.kind, updatedAt: s.updatedAt, ...(s.lastError ? { error: s.lastError } : {}) });
 
   const p = params();
-  const spent = ceiling.state(p, now);
-  const day = usage.summary({ days: 1, by: 'kind', now }).total;
+  const spent = await ceiling.state(p, now);
+  const day = (await usage.summary({ days: 1, by: 'kind', now })).total;
   const attention = [];
 
   const failed = sessions.filter(s => s.state === 'failed' && recent(s)).map(row);
