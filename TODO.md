@@ -373,8 +373,12 @@ a name clash; `~/.claude/skills` imports as it is). The Orchestrator's and work
 chats' prompts carry the manifest (name + when to use); the body is loaded with
 the `skill` tool (the `skills` kit), which also lets the agent keep a procedure
 it worked out. A specialist sees the skills its definition names. Settings →
-Harness → Skills lists and imports them. Not yet: layer 1 (tool notes), and the
-opt-in report upward below.
+Harness → Skills lists and imports them. **Layer 1 built in 2.83.0**
+(`harness/tool-notes.js`): the agent proposes a note on a tool (`tool_note`),
+the person accepts it on the ordinary proposal card (`toolNotes.<tool>`), and it
+is added to that tool's description; a note written before the tool changed is
+shown as possibly out of date (a fingerprint of the description it was written
+against). Specialists cannot propose one. Not yet: the opt-in report upward below.
 
 Decided in discussion, not yet built (except as above). Written down because it is expensive to
 re-derive and the constraints are easier to honour before there is code.

@@ -53,6 +53,8 @@ const SETTABLE = [
   { prefix: 'customTheme',      label: 'Custom theme colours', note: '' },
   { prefix: 'favorites',        label: 'Config favourites',    note: '' },
   { prefix: 'fmFavorites',      label: 'File manager favourites', note: '' },
+  // What this install learned about one of its tools (tool-notes.js): added to that tool's description.
+  { prefix: 'toolNotes',        label: 'Tool note',            note: 'Added to the tool\'s description — what the agent reads when it picks the tool' },
 ];
 
 /**
@@ -121,6 +123,7 @@ function refuse(dotted, value) {
   if (!sectionFor(dotted))
     return `${dotted} is not a setting the agent may change (allowed: ${SETTABLE.map(s => s.prefix).join(', ')})`;
 
+  if (dotted.startsWith('toolNotes')) { const why = require('./tool-notes').refuseValue(dotted, value); if (why) return why; }
   if (dotted === 'agents.enabled' && typeof value !== 'boolean')
     return 'agents.enabled must be a boolean (true or false)';
 
