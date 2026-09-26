@@ -1644,7 +1644,16 @@ order it is to be done.
   Found while checking it in a browser: `git branch --format` spells a hex byte
   `%1f`, not `%x1f` (branches came back empty); an Android app with a
   package.json had npm's `test` hidden behind Gradle's (now `node:test`).
-  **Next:** phase 3, the mechanical end-of-work check below; then the file tree
+  **Phase 3 built in 2.73.0 — the end-of-work check** (`projects/finish.js`): a
+  project's work chat reporting "done" has its plan checked (every step done,
+  or blocked = deferred with its reason), the project's `test` command run
+  (must exit 0; tests that cannot run here or do not exist are noted, not
+  failed), and its uncommitted changes listed in the report. A failed check
+  comes back to the work chat as a list; the third refusal goes up as
+  "blocked" with the failures. Not yet: scoring drift from an approved plan's
+  named files and contracts (HonTabs-style), and the import-cycle check (needs
+  the map).
+  **Next:** the file tree
   from the Files tab as a shared component, and editor extensions (e.g. a
   language server for Kotlin/TypeScript) as opt-in add-ons.
 
