@@ -182,8 +182,9 @@ function deliver(orchestratorId) {
   // short one, then one with the timings) is one outcome, the latest.
   const latest = [...new Map(due.map(n => [n.from, n])).values()];
   const lines = latest.map(n => `- ${short(memory.getSession(n.from)?.title, 80)} (${n.from}) — ${n.type}: ${short(n.text, 500)}`);
-  const how = wake(ceo.id, '[panel] Work reported back. Tell the owner what matters, in a few lines; '
-    + `ask only for a decision that is theirs.\n${lines.join('\n')}`, { retry: () => deliver(ceo.id) });
+  const how = wake(ceo.id, '[panel] Work reported back. Tell the owner what matters, in a few lines. '
+    + 'Where a decision is theirs, ask it with ask_device and give the choices — it reaches their phone, '
+    + `their watch and the panel at once.\n${lines.join('\n')}`, { retry: () => deliver(ceo.id) });
   if (how === 'woken') {
     const ids = new Set(due.map(n => n.id)), at = new Date().toISOString();
     memory.updateSessions([ceo.id], row => ({ reports: (row.reports || []).map(n => (ids.has(n.id) ? { ...n, wokeAt: at } : n)) }));

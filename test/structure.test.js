@@ -28,7 +28,7 @@ const CEILING = 400;
  */
 const OVER = {
   'modules/harness/agent.js':      417,  // runTurn alone is 320 lines: next, split the turn's steps
-  'public/index.html':            1538,  // + the split scripts' <script> tags; ES modules take them back out
+  'public/index.html':            1539,  // + the split scripts' <script> tags; ES modules take them back out
   'public/css/components.css':    1171,
   'public/js/chat.js':             986,
   'public/js/files.js':            875,

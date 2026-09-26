@@ -190,7 +190,7 @@ app.get   ('/api/harness/memory',               harness.handleMemoryList);
 app.post  ('/api/harness/memory',               harness.handleMemoryWrite);
 // Before `:key`, which would otherwise read a reset as forgetting an entry
 // called "rules".
-require('./modules/harness/rules-routes').mount(app);   // the memory rules: read, write, review, answer, undo
+require('./modules/harness/mount').mount(app);   // rules and owner questions
 app.post  ('/api/harness/memory/:key/lock',      harness.handleMemoryLock);
 app.post  ('/api/harness/memory/:key/flag',     harness.handleMemoryFlag);
 app.delete('/api/harness/memory/:key',          harness.handleMemoryForget);

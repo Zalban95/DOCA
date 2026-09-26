@@ -147,6 +147,28 @@ function answerOf(prompt, targets) {
   return null;
 }
 
+/* ── Answering at the panel ─────────────────────────────
+   The same question the devices get is open at the desk too: the dashboard
+   shows it as a question card (agent-ui/question-card.js) — its choices, or an
+   answer in the owner's own words — and whichever answers first is the answer;
+   the devices are then told it closed, as when one of several devices answers. */
+
+const _open = new Map();   // promptId -> { id, question, note, choices, at }
+
+/** The questions waiting for an answer right now, for the dashboard. */
+function openQuestions() { return [..._open.values()]; }
+
+/** Answer from the panel: a choice by id, or the owner's own words. */
+function answerAtPanel(promptId, { choiceId, text } = {}) {
+  const q = _open.get(promptId);
+  if (!q) throw Object.assign(new Error('That question is no longer waiting for an answer.'), { status: 409 });
+  const choice = choiceId ? q.choices.find(c => c.id === choiceId) : null;
+  const own = String(text || '').trim().slice(0, 1000);
+  if (!choice && !own) throw Object.assign(new Error('Pick a choice or write an answer.'), { status: 400 });
+  q.answer = choice ? { choiceId: choice.id, label: choice.label } : { choiceId: 'own_words', label: own };
+  return q.answer;
+}
+
 /**
  * Ask, and wait. Resolves with what the model needs to carry on:
  * `{ status: 'answered' | 'dismissed' | 'timeout' | 'closed', ... }`.
@@ -172,9 +194,17 @@ async function ask({ to, question, choices, note, timeoutSec, signal } = {}) {
   }, AGENT);
 
   const deadline = Date.now() + waitSec * 1000;
+  _open.set(prompt.id, { id: prompt.id, question: text, note: note ? String(note).slice(0, 800) : '',
+    choices: built.filter(c => c.type === 'option').map(c => ({ id: c.id, label: c.label })), at: new Date().toISOString() });
   try {
     for (;;) {
       const cur = prompts.get(prompt.id) || prompt;
+      const atPanel = _open.get(prompt.id)?.answer;
+      if (atPanel) {
+        try { prompts.cancel(prompt.id, AGENT); } catch { /* already gone */ }
+        return { status: 'answered', device: { name: 'the owner at the panel', kind: 'dashboard' }, ...atPanel,
+          waitedSec: Math.round((Date.now() - (deadline - waitSec * 1000)) / 1000), targets };
+      }
       const found = answerOf(cur, targets);
       if (found) {
         // Asked in several places, answered in one: close it everywhere else, or
@@ -199,6 +229,7 @@ async function ask({ to, question, choices, note, timeoutSec, signal } = {}) {
       await new Promise(r => setTimeout(r, POLL_MS));
     }
   } finally {
+    _open.delete(prompt.id);
     clearAgentOutbox();
   }
 }
@@ -252,4 +283,4 @@ function tell({ to, title, text, imagePath, urgent } = {}) {
   return { alertId: id, delivered, imageBytes: image?.bytes || 0 };
 }
 
-module.exports = { ask, tell, resolveTargets, reachNote, label, AGENT_ID, ASK_DEFAULT_SEC, ASK_MAX_SEC };
+module.exports = { openQuestions, answerAtPanel, ask, tell, resolveTargets, reachNote, label, AGENT_ID, ASK_DEFAULT_SEC, ASK_MAX_SEC };

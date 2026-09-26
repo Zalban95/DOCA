@@ -1856,11 +1856,14 @@ and are recorded as wrong so nobody re-files them.
   `harness` prefs section, wiping the approval mode on a fresh install. Fixed.
 
 **Wanted next, same shape:**
-- **The question card everywhere the owner is asked.** `agent-ui/question-card.js`
-  is built to be called from anywhere: the floating chat and the Harness
-  transcript should draw a question the agent asks (a tool beside `ask_device`,
-  e.g. `ask_owner` with choices) as this card, and the Orchestrator's "a decision
-  that is theirs" after a wake should arrive as one.
+- ~~**The question card everywhere the owner is asked.**~~ **Built 2026-09-26
+  (2.59.0):** a question the agent asks with `ask_device` now reaches the phone,
+  the watch *and* the panel at once: `reach.openQuestions()` /
+  `answerAtPanel()`, `GET/POST /api/harness/questions`, and a dock of question
+  cards on every page (`agent-ui/questions-dock.js`, a badge on the chat
+  button). The first answer wins wherever it is given; the others are
+  withdrawn, a late one gets 409. The Orchestrator's wake after final reports
+  tells it to ask decisions that way.
 - **Skills get the same treatment as rules:** a guide for writing a skill, read
   by whoever writes one and whoever reviews it; a review with answerable
   questions; history and undo.
