@@ -142,3 +142,39 @@ test('a specialist agent cannot ask the user anything, whatever its definition s
   assert.ok(saved.refusedTools.includes('ask_device'), 'and the panel is told what was removed');
   registry.remove('nosy');
 });
+
+/** Wait until the panel sees the question. */
+async function openAtPanel(title) {
+  for (let i = 0; i < 100; i++) {
+    const r = await h.api(null, 'GET', '/api/harness/questions');
+    const q = (r.body.questions || []).find(x => x.question === title);
+    if (q) return q;
+    await new Promise(res => setTimeout(res, 50));
+  }
+  throw new Error('the question never reached the panel');
+}
+
+test('the same question is open at the panel, and a choice there answers it and closes it on the devices', async () => {
+  const watch = h.mkDevice('reach-panel-watch', 'watch', h.WATCH_CAPS);
+  const asking = tools.call('ask_device', { to: 'watch', question: 'Ship it tonight?', choices: ['Yes', 'Tomorrow'], timeoutSec: 20 });
+  const q = await openAtPanel('Ship it tonight?');
+  assert.deepEqual(q.choices.map(c => c.label), ['Yes', 'Tomorrow']);
+
+  const r = await h.api(null, 'POST', `/api/harness/questions/${q.id}`, { choiceId: q.choices[1].id });
+  assert.equal(r.status, 200);
+  const out = await asking;
+  assert.match(out, /the owner at the panel \(dashboard\) answered: "Tomorrow"/);
+  const onWatch = await h.api(watch.token, 'GET', '/api/v1/prompts');
+  assert.equal(onWatch.body.prompts.length, 0, 'the watch is no longer offering it');
+  assert.equal((await h.api(null, 'GET', '/api/harness/questions')).body.questions.some(x => x.id === q.id), false);
+});
+
+test('at the panel the owner can answer in their own words, and a late answer is refused plainly', async () => {
+  h.mkDevice('reach-panel-watch-2', 'watch', h.WATCH_CAPS);
+  const asking = tools.call('ask_device', { to: 'watch', question: 'Which colour?', choices: ['Red', 'Blue'], timeoutSec: 20 });
+  const q = await openAtPanel('Which colour?');
+  await h.api(null, 'POST', `/api/harness/questions/${q.id}`, { text: 'Green, like the old logo' });
+  assert.match(await asking, /answered: "Green, like the old logo"/);
+  const late = await h.api(null, 'POST', `/api/harness/questions/${q.id}`, { choiceId: 'c1' });
+  assert.equal(late.status, 409);
+});

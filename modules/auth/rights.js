@@ -57,6 +57,7 @@ const TABLE = [
   R(ANY, '/api/harness/(custom|default)(/.*)?', 'host'),
   R(ANY, '/api/harness/[^/]+/(config|install)', 'host'),
   R(ANY, '/api/harness/proposals/[^/]+/(apply|reject)', 'propose'),
+  R(ANY, '/api/harness/questions/[^/]+', 'chat'),          // answering what the agent asked
   R(GET, '/api/harness(/.*)?', 'read'),
   R(ANY, '/api/harness/(chat|sessions|memory|missions)(/.*)?', 'chat'),
 
