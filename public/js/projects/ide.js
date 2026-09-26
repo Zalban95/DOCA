@@ -23,6 +23,7 @@ const PJ_VIEWS = [
   { id: 'search', icon: '⌕', label: 'Search' },
   { id: 'git',    icon: '⎇', label: 'Source control' },
   { id: 'run',    icon: '▶', label: 'Build & test' },
+  { id: 'checkpoints', icon: '↶', label: 'Checkpoints' },
 ];
 
 function _pjFrame() {
@@ -113,7 +114,7 @@ function pjView(id, tapped = false) {
   const side = document.getElementById('pj-side-body');
   side.innerHTML = '';
   if (!PJ.project) return;
-  ({ files: pjTreeRender, search: pjSearchRender, git: pjGitRender, run: pjRunRender })[id]?.(side);
+  ({ files: pjTreeRender, search: pjSearchRender, git: pjGitRender, run: pjRunRender, checkpoints: pjCheckpointsRender })[id]?.(side);
 }
 
 function pjNew() {

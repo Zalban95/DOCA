@@ -2122,4 +2122,13 @@ model names are left out with a note), a folder imports without overwriting,
 each exports as `.md`, the registry saves `.md` and moves an older `.json`
 aside. `persona.md` (the Orchestrator's) and `human.md` (the Orchestrator's and
 work chats') are in `<DATA_DIR>/identity/`, in Settings → Harness → Who.
-**Next in this design:** phase 3, undo for agent runs (git checkpoints).
+**Phase 3 built in 2.77.0 — undo for agent runs** (`projects/checkpoints.js`):
+a shadow git repository per project in `<DATA_DIR>/checkpoints/` whose work tree
+is the project — works on folders without git, never touches a project's own
+repository (no ref, index or status change; tested). A checkpoint is taken
+before every turn of a project's conversation when files changed, by hand in
+Projects → ↶ Checkpoints, or by the agent (`project` checkpoint / checkpoints /
+changes / restore). Restore removes files made since, puts the rest back, and
+first checkpoints the present so it can itself be undone. Not in backups (it is
+this machine's undo history). **Next in this design:** phase 4, standard agents
+shipped from the repository.

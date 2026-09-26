@@ -125,11 +125,16 @@ module.exports = [
       + 'this conversation works in (or `id`). list: all projects. open: make a folder a project (root). bind: make '
       + 'this conversation work in a project. run: run one of its commands by name (build, test, lint, install…), in '
       + 'the project root; it waits up to waitSec (default 60) and otherwise returns a background job to follow '
-      + 'with shell_job.',
+      + 'with shell_job. Checkpoints undo a run: one is taken before each of your turns in a project (when '
+      + 'files changed); checkpoint takes one now, checkpoints lists them, changes shows what differs since '
+      + 'one, restore puts the project back as it was then (after taking a checkpoint of now, so a restore '
+      + 'is undoable) — then try again another way.',
     parameters: {
       type: 'object',
       properties: {
-        action:  { type: 'string', enum: ['info', 'list', 'open', 'bind', 'run'] },
+        action:  { type: 'string', enum: ['info', 'list', 'open', 'bind', 'run', 'checkpoint', 'checkpoints', 'changes', 'restore'] },
+        checkpoint: { type: 'string', description: 'For changes and restore: a checkpoint id (cp_…).' },
+        label:   { type: 'string', description: 'For checkpoint: what this moment is.' },
         id:      { type: 'string', description: 'A project id; default: this conversation\'s project.' },
         root:    { type: 'string', description: 'For open: the folder.' },
         name:    { type: 'string', description: 'For open: a name.' },
@@ -164,6 +169,23 @@ module.exports = [
           const r = await require('../../projects/run').run(pick().id, a.command, { waitSec: a.waitSec ?? 60, sessionId: ctx.sessionId || null });
           if (r.job.state === 'running') return `${r.command.run} is still running as background job ${r.job.id}; follow it with shell_job.`;
           return clip(`${r.command.run} — ${r.job.state}${r.job.code != null ? ` (exit ${r.job.code})` : ''}\n${r.output || '(no output)'}`);
+        }
+        case 'checkpoint': {
+          const c = await require('../../projects/checkpoints').take(pick(), { label: a.label || 'checkpoint by the agent', sessionId: ctx.sessionId || null, by: 'agent' });
+          return c.unchanged ? `Nothing changed since ${c.id} (${c.label}); no new checkpoint.` : `Checkpoint ${c.id}: ${c.label}.`;
+        }
+        case 'checkpoints': {
+          const list = require('../../projects/checkpoints').list(pick()).slice(0, 20);
+          return list.length ? list.map(c => `${c.id} ${c.at} ${c.by}: ${c.label}${c.changedSincePrevious != null ? ` (${c.changedSincePrevious} files since the one before)` : ''}`).join('\n') : 'No checkpoints yet.';
+        }
+        case 'changes': {
+          const ch = await require('../../projects/checkpoints').changes(pick(), a.checkpoint);
+          return ch.length ? `${ch.length} file(s) differ since ${a.checkpoint}:\n${ch.map(c => `${c.status} ${c.path}`).join('\n')}` : `Nothing differs since ${a.checkpoint}.`;
+        }
+        case 'restore': {
+          const r = await require('../../projects/checkpoints').restore(pick(), a.checkpoint, { sessionId: ctx.sessionId || null, by: 'agent' });
+          return `Restored ${r.restored.id} (${r.restored.label}): ${r.reverted} file(s) put back, ${r.removed} made since removed.`
+            + (r.undo ? ` To undo this restore: restore ${r.undo}.` : '');
         }
         default: throw new Error('Unknown project action.');
       }
