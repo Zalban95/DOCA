@@ -1650,9 +1650,11 @@ order it is to be done.
   (must exit 0; tests that cannot run here or do not exist are noted, not
   failed), and its uncommitted changes listed in the report. A failed check
   comes back to the work chat as a list; the third refusal goes up as
-  "blocked" with the failures. Not yet: scoring drift from an approved plan's
-  named files and contracts (HonTabs-style), and the import-cycle check (needs
-  the map).
+  "blocked" with the failures. **Scope, built in 2.79.0:** a "done" report also
+  says what the job changed — measured from the job's first checkpoint, so only
+  this job's changes — and which of those files its plan did not name ("say
+  why, or put them back"); a note, not a failure. Not yet: scoring drift against
+  a plan's contracts (HonTabs-style), and the import-cycle check (needs the map).
   **Next:** the file tree
   from the Files tab as a shared component, and editor extensions (e.g. a
   language server for Kotlin/TypeScript) as opt-in add-ons.
