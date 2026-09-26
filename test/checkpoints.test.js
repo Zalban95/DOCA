@@ -87,3 +87,24 @@ test('a project conversation\'s turn takes a checkpoint first; the agent can lis
   const r = await H.api(null, 'GET', `/api/projects/${p.id}/checkpoints`);
   assert.ok(r.body.checkpoints.length >= 2);
 });
+
+test('"done" says what the job changed, and what of that its plan did not name', async () => {
+  const org = require('../modules/harness/organization');
+  const memory = require('../modules/harness/memory');
+  const { namedPaths } = require('../modules/projects/finish');
+  assert.deepEqual(namedPaths({ title: 'Fix login', steps: ['Change src/auth/login.kt and its test', 'Update README.md.'] }).sort(), ['README.md', 'src/auth/login.kt']);
+
+  const root = mk({ 'src/auth/login.kt': 'old\n', 'src/other.kt': 'x\n', 'README.md': 'r\n' });
+  const p = projects.create({ root, name: 'Scoped' });
+  const sid = projects.workChat(p.id).id;
+  memory.updateSession(sid, { job: { state: 'working', since: new Date(Date.now() - 1000).toISOString() } });
+  await org.plan(sid, { action: 'draft', title: 'Fix login', steps: ['Change src/auth/login.kt'] });
+  await org.plan(sid, { action: 'progress', step: 1, state: 'done' });
+  await cps.beforeTurn(sid);   // the job's first checkpoint
+  fs.writeFileSync(path.join(root, 'src/auth/login.kt'), 'new\n');
+  fs.writeFileSync(path.join(root, 'src/other.kt'), 'drifted\n');
+  await org.tool({ action: 'report', outcome: 'done', message: 'Fixed.' }, { sessionId: sid });
+  const brief = memory.getSession(sid).brief;
+  assert.match(brief, /Changed during this job \(2\): /);
+  assert.match(brief, /Outside what the plan named \(1\): src\/other\.kt/);
+});

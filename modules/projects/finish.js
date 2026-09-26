@@ -65,8 +65,40 @@ async function check(session) {
           : 'Working tree clean.');
       }
     } catch { /* git unreadable: nothing to list */ }
+    try { notes.push(...await scope(p, session)); } catch { /* no checkpoint to compare with */ }
   }
   return { ok: failures.length === 0, failures, notes };
+}
+
+/** Paths a plan names: file-like tokens (with an extension) and folders ending in "/". */
+function namedPaths(plan) {
+  const text = [plan?.title, ...(plan?.steps || []), plan?.note].filter(Boolean).join('\n');
+  const found = text.match(/(?:[\w.-]+\/)+[\w.-]*|\b[\w-]+\.[a-z][a-z0-9]{0,5}\b/gi) || [];
+  return [...new Set(found.map(s => s.replace(/^\.\//, '').replace(/[.,;:]+$/, '')))].filter(s => s && !/^https?:/.test(s));
+}
+
+/**
+ * What this job changed, and what of that its plan did not name. The baseline
+ * is the first checkpoint taken during the job (projects/checkpoints.js — one
+ * is taken before every turn), so "changed" means changed by this job, not
+ * whatever else is uncommitted. Notes, not failures: a plan names what it
+ * means to touch, rarely every file.
+ */
+async function scope(p, session) {
+  const since = session.job?.since;
+  const cps = require('./checkpoints').list(p).filter(c => c.sessionId === session.id && (!since || c.at >= since));
+  const base = cps.at(-1);   // list() is newest first: the earliest of this job
+  if (!base) return [];
+  const changed = (await require('./checkpoints').changes(p, base.id)).map(c => c.path);
+  if (!changed.length) return ['This job changed no files.'];
+  const out = [`Changed during this job (${changed.length}): ${changed.slice(0, 30).join(', ')}${changed.length > 30 ? ', …' : ''}.`];
+  const named = namedPaths(session.plan);
+  if (named.length) {
+    const inPlan = f => named.some(n => f === n || f.endsWith(`/${n}`) || f.startsWith(n.endsWith('/') ? n : `${n}/`) || f.split('/').pop() === n);
+    const outside = changed.filter(f => !inPlan(f));
+    if (outside.length) out.push(`Outside what the plan named (${outside.length}): ${outside.slice(0, 20).join(', ')}${outside.length > 20 ? ', …' : ''} — say why, or put them back.`);
+  }
+  return out;
 }
 
 /**
@@ -87,4 +119,4 @@ async function review(session, message) {
   return { outcome: 'blocked', message: `Reported done ${rounds} times, and the checks still fail:\n- ${v.failures.join('\n- ')}\n\nIts report: ${message}` };
 }
 
-module.exports = { check, review, testCommand, MAX_ROUNDS };
+module.exports = { check, review, testCommand, namedPaths, scope, MAX_ROUNDS };
