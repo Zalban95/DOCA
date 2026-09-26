@@ -369,6 +369,7 @@ function _applyTerminalThemes() {
 async function themeApplyOnLoad() {
   try {
     const prefs = await apiFetch('/api/prefs');
+    if (typeof lookApply === 'function') lookApply(prefs.skin);
     const name = prefs.theme || 'default';
     if (name === 'custom' && prefs.customTheme) {
       _customThemeColors = prefs.customTheme;

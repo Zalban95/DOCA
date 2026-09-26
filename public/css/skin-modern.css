@@ -1,0 +1,116 @@
+/* ═══════════════════════════════════════════════════════
+   The Modern style (look.js): lighter, rounder, roomier.
+
+   Only shape, never colour — every colour still comes from the theme, so
+   Modern works with any palette, and with Daylight best. Everything is scoped
+   to html[data-skin="modern"]; Classic is the stylesheets as they are.
+   Code, logs, editors and terminals keep the mono face on purpose.
+   ═══════════════════════════════════════════════════════ */
+
+html[data-skin="modern"] {
+  --radius: 10px;
+  --font-ui: 'Inter', 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+html[data-skin="modern"] body {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The mono face stays where text lines up in columns. */
+html[data-skin="modern"] :is(code, pre, kbd, .editor, .terminal, .code-out, .xterm, .log-line, .logs-output, .theme-color-hex) {
+  font-family: var(--font-mono);
+}
+
+/* ── Controls take the UI face and drop the capitals ── */
+html[data-skin="modern"] :is(.btn, .input, .nav-tab, .settings-subnav-btn, .skills-mode-btn, .mobile-nav-label, button, select, textarea:not(.editor)) {
+  font-family: var(--font-ui);
+}
+html[data-skin="modern"] :is(.btn, .nav-tab, .settings-subnav-btn, .badge, .mobile-nav-label, .input-label,
+  .card-title, .sec-label, .modal-title, .sys-card-title, .sys-label, .gm-l, .sys-cores > summary,
+  .harness-cfg-grid > label, .settings-subnav-group, .logo-ver, .chat-title) {
+  text-transform: none;
+  letter-spacing: 0.005em;
+}
+
+/* ── Buttons ── */
+html[data-skin="modern"] .btn {
+  border-radius: 8px;
+  font-size: 13px; font-weight: 500;
+  padding: 8px 14px;
+}
+html[data-skin="modern"] .btn-sm { font-size: 12.5px; padding: 5px 11px; }
+html[data-skin="modern"] .btn-xs { font-size: 12px; padding: 3px 9px; border-radius: 7px; }
+html[data-skin="modern"] .btn:active { transform: scale(0.98); }
+
+/* ── Inputs ── */
+html[data-skin="modern"] .input {
+  border-radius: 8px;
+  font-size: 13.5px;
+  padding: 8px 11px;
+}
+html[data-skin="modern"] .input:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+html[data-skin="modern"] .input-label { font-size: 12px; font-weight: 500; }
+
+/* ── Cards and titles ── */
+html[data-skin="modern"] .card {
+  border-radius: 14px;
+  border-color: var(--border);
+  padding: 18px 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+html[data-skin="modern"] .card + .card { margin-top: 4px; }
+html[data-skin="modern"] :is(.card-title, .sec-label) {
+  font-size: 13px; font-weight: 600; color: var(--bright);
+  margin-bottom: 12px;
+}
+html[data-skin="modern"] :is(.card-title, .sec-label)::after { display: none; }
+
+/* ── Rows, lists, badges ── */
+html[data-skin="modern"] :is(.snap-item, .script-item, .sys-card) { border-radius: 10px; }
+html[data-skin="modern"] .badge { border-radius: 999px; font-size: 11px; padding: 2px 8px; font-weight: 500; }
+html[data-skin="modern"] .settings-tab-label { font-size: 14px; }
+
+/* ── Navigation ── */
+html[data-skin="modern"] .nav-tab { font-size: 13.5px; font-weight: 500; padding: 0 12px; }
+html[data-skin="modern"] .settings-subnav { gap: 6px; }
+html[data-skin="modern"] .settings-subnav-btn {
+  border-radius: 999px; font-size: 13px; padding: 6px 14px;
+}
+html[data-skin="modern"] .settings-subnav-group { font-size: 11px; font-weight: 600; }
+html[data-skin="modern"] .mobile-nav-label { font-size: 10px; }
+
+/* ── Sidebar ── */
+html[data-skin="modern"] :is(.sys-card-title, .sys-label, .gm-l, .sys-cores > summary) { font-size: 11.5px; }
+
+/* ── Windows ── */
+html[data-skin="modern"] .modal {
+  border-radius: 16px; padding: 22px 24px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+}
+html[data-skin="modern"] .modal-title { font-size: 16px; font-weight: 600; }
+html[data-skin="modern"] .chat-title { font-size: 14px; font-weight: 600; }
+html[data-skin="modern"] .chat-panel { border-radius: 16px; overflow: hidden; }
+html[data-skin="modern"] .canvas-window { border-radius: 14px; overflow: hidden; }
+html[data-skin="modern"] .theme-swatch { border-radius: 12px; overflow: hidden; }
+
+@media (max-width: 768px) {
+  html[data-skin="modern"] .canvas-window { border-radius: 0; }
+}
+
+/* ── The style picker (settings/appearance.js), in either style ── */
+.look-picker { margin-bottom: 14px; }
+.look-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.look-tile {
+  flex-direction: row; align-items: center; gap: 12px; padding: 10px 12px;
+  background: var(--dim); color: var(--text); text-align: left;
+}
+.look-tile-sample { font-size: 22px; color: var(--bright); width: 34px; text-align: center; }
+.look-tile-classic .look-tile-sample { font-family: var(--font-mono); }
+.look-tile-modern  .look-tile-sample { font-family: 'Inter', 'IBM Plex Sans', sans-serif; font-weight: 600; }
+.look-tile-text { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.look-tile .theme-swatch-label { text-align: left; padding: 0; }
+.look-tile-note { font-size: 11px; color: var(--muted); }

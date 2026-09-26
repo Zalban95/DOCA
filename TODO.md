@@ -1802,6 +1802,17 @@ more is built on top of them. Proposed shape, to settle per section:
   harness's own skills (none exist yet: "Two layers of learned knowledge");
   API keys still live in OpenClaw's file, so saving one still says "restart
   OpenClaw" — moving them to DOCA's own file is §1 of "OpenClaw is a peer".
+- **Done in 2.62.0 (2026-09-26): a lighter, modern style, as a choice.**
+  Settings → General → Appearance now has a **Style** (Classic — the panel as
+  it was; Modern — Inter, rounded, roomier, sentence case; `public/js/look.js`,
+  `public/css/skin-modern.css`, scoped to `html[data-skin="modern"]`, shape only,
+  never colour) beside the colour themes, plus a light palette, **Daylight**.
+  Saved as `prefs.skin` and remembered in the browser so the page is drawn in
+  the right style before prefs arrive. The theme picker moved to
+  `settings/appearance.js` (settings.js 477 → 344 lines, off the oversized
+  list). Code, logs, editors and terminals keep the mono face in both.
+  **Not yet:** the login page is still Classic; a per-user look (it is one
+  prefs file for the install).
 - **Then the tabs:** Models, Docker, Controls, and the left status bar — each
   reviewed for what is DOCA's and what is the OpenClaw stack's, the same way.
 - **Every control built from the existing pieces** (`.input`, `.input-label`,
