@@ -25,6 +25,7 @@ function _canvasWindow() {
         <span class="canvas-title" id="canvas-title"></span>
         <select class="input canvas-rev" id="canvas-rev" title="Revision"></select>
         <a class="btn btn-xs" id="canvas-newtab" target="_blank" rel="noopener noreferrer" title="Open in a tab of its own">↗</a>
+        <button class="btn btn-xs" type="button" id="canvas-delete" onclick="canvasDelete()" title="Delete this canvas and all its revisions">🗑</button>
         <button class="btn btn-xs" type="button" onclick="canvasClose()" title="Close">✕</button>
       </div>
       <iframe class="canvas-frame" id="canvas-frame" title="Canvas"
@@ -52,6 +53,7 @@ async function canvasPreviewOpen(id, at = '/') {
   _canvas = { id, base: null, frame };
   document.getElementById('canvas-title').textContent = `${info.preview.title} · localhost:${info.preview.port}`;
   document.getElementById('canvas-rev').style.display = 'none';
+  document.getElementById('canvas-delete').style.display = 'none';
   document.getElementById('canvas-newtab').href = url;
   overlay.style.display = 'flex';
   frame.src = url;
@@ -68,6 +70,7 @@ async function canvasOpen(id, rev) {
   // A page of the agent's: sandboxed to an opaque origin, whatever a preview set before.
   _canvas.frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-modals allow-popups allow-downloads');
   document.getElementById('canvas-rev').style.display = '';
+  document.getElementById('canvas-delete').style.display = '';
   document.getElementById('canvas-title').textContent = info.canvas.title;
   const sel = document.getElementById('canvas-rev');
   sel.innerHTML = '';
@@ -88,6 +91,16 @@ function _canvasShow(rev) {
   const url = `${_canvas.base}/${rev}`;
   _canvas.frame.src = url;
   document.getElementById('canvas-newtab').href = url;
+}
+
+/** Delete the open canvas (every revision); its chips then say it is gone. */
+function canvasDelete() {
+  if (!_canvas?.base) return;   // a preview is not deleted, it expires
+  const id = _canvas.id;
+  appConfirm('Delete this canvas and all its revisions?', async () => {
+    try { await apiFetch(`/api/harness/canvases/${encodeURIComponent(id)}`, { method: 'DELETE' }); canvasClose(); }
+    catch (e) { appAlert(`Could not delete it: ${e.message}`); }
+  });
 }
 
 function canvasClose() {

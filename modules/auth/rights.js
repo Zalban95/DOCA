@@ -60,6 +60,7 @@ const TABLE = [
   R(ANY, '/api/harness/proposals/[^/]+/(apply|reject)', 'propose'),
   R(ANY, '/api/harness/previews', 'host'),                 // shows a localhost port to the tailnet
   R(ANY, '/api/harness/questions/[^/]+', 'chat'),          // answering what the agent asked
+  R(ANY, '/api/harness/canvases/[^/]+', 'chat'),           // deleting one (reading is a GET below)
   R(GET, '/api/harness(/.*)?', 'read'),
   R(ANY, '/api/harness/(chat|sessions|memory|missions)(/.*)?', 'chat'),
 
