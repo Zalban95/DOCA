@@ -2039,3 +2039,28 @@ test('the harness is told who is asking, and what their turn changes is audited 
   assert.ok(!rows.some(r => r.action === 'tool memory_search'), 'reads are not audited');
   require('../modules/harness/memory').memForget('who-asks-probe');
 });
+
+test('delegated work runs as the person who started it, and stops when they are suspended', async () => {
+  const memory = require('../modules/harness/memory');
+  const authStore = require('../modules/auth/store');
+  const who = require('../modules/harness/turn/client');
+  const parent = memory.createSession('asked by a person', { activate: false });
+  const child = memory.createSession('delegated', { activate: false, kind: 'specialist', parentId: parent.id });
+
+  const dash = who.dashboardClient({ auth: H.owner });
+  assert.equal(who.withPerson(dash, parent.id), dash);
+  assert.equal(memory.getSession(parent.id).person.id, H.owner.user.id, 'a person\'s turn marks the conversation as theirs');
+
+  const inherited = who.withPerson(undefined, child.id);
+  assert.equal(inherited.user.id, H.owner.user.id);
+  assert.match(who.clientBlock(inherited), /# Who is asking\nOn behalf of .*owner of this panel: they started the work/);
+  const work = who.withPerson({ name: 'Delegated by X', kind: 'agent' }, child.id);
+  assert.match(who.clientBlock(work), /On behalf of/);
+  assert.doesNotMatch(who.clientBlock(work), /Signed in as/);
+
+  const member = await H.signIn('member');
+  who.withPerson({ name: 'phone', user: who.personOf(member) }, parent.id);
+  authStore.updateUser(member.user.id, { suspendedAt: new Date().toISOString() });
+  assert.throws(() => who.withPerson(undefined, child.id), /suspended or no longer here/);
+  memory.deleteSession(child.id); memory.deleteSession(parent.id);
+});
