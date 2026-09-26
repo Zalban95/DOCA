@@ -66,7 +66,7 @@ async function turn(options) {
     changed(id);
     if (options.client && options.client.kind !== 'agent')
       organization.report(id, 'user intervention', options.message, options.client.name || 'user');
-    const result = await runTurn({ ...options, sessionId: id, signal: ctrl.signal, profile });
+    const result = await runTurn({ ...options, client: require('./turn/client').withPerson(options.client, id), sessionId: id, signal: ctrl.signal, profile });
     ctrl.steps = result.steps;
     ctrl.truncated = !!result.truncated;
     const state = ctrl.signal.aborted ? 'cancelled' : 'idle';

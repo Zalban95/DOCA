@@ -43,6 +43,7 @@ function shapeFor(client) {
  */
 function clientBlock(client) {
   if (!client) return '';
+  if (!client.name) return client.user ? ['# Who is asking', ...personLines(client)].join('\n') : '';
   const screen = client.screen?.w && client.screen?.h
     ? `${client.screen.w}×${client.screen.h}${client.screen.shape === 'round' ? ' round' : ''}`
     : 'screen not declared';
@@ -55,7 +56,7 @@ function clientBlock(client) {
   return [
     '# Who is asking',
     `This turn came from "${client.name}"${client.id ? ` (${client.id})` : ''} — ${client.label || client.formFactor || 'an unknown client'}, ${screen}${can ? `, input: ${can}` : ''}.`,
-    ...(client.user ? [`Signed in as ${client.user.name || client.user.email}${client.user.name && client.user.email ? ` <${client.user.email}>` : ''}`
+    ...(client.user?.onBehalf ? personLines(client) : client.user ? [`Signed in as ${client.user.name || client.user.email}${client.user.name && client.user.email ? ` <${client.user.email}>` : ''}`
       + `${client.user.role ? `, ${client.user.role} of this panel` : ''}. What changes on this machine in this turn is logged as theirs.`] : []),
     `Shape the answer for it: ${shapeFor(client)}`,
     'Other devices of the same user may be reading this conversation too, so do not describe this one as if it were the only one.',
@@ -117,6 +118,10 @@ function placeBlock(client) {
   return out.join('\n');
 }
 
+/** A turn with no client of its own (a mission, an automatic turn): whose work it is. */
+const personLines = client => [`On behalf of ${client.user.name || client.user.email}${client.user.role ? `, ${client.user.role} of this panel` : ''}: `
+  + 'they started the work this turn belongs to, and what it changes on this machine is logged as theirs.'];
+
 /**
  * The person behind a turn (docs/design/auth.md §6): from a signed-in browser
  * (`req.auth`, set by auth/gate.js) or from the account a device is paired to.
@@ -143,4 +148,38 @@ function dashboardClient(req) {
     input: { text: true, touch: false }, user: personOf(req?.auth) };
 }
 
-module.exports = { shapeFor, clientBlock, placeBlock, personOf, deviceOwner, dashboardClient };
+/** The person with this id as they are now, or null when gone or suspended. */
+function personById({ id, orgId }) {
+  const authStore = require('../../auth/store');
+  const u = authStore.userById(id);
+  if (!u || u.suspendedAt) return null;
+  const m = orgId ? authStore.membership(orgId, u.id) : null;
+  if (orgId && (!m || m.status !== 'active')) return null;
+  return personOf({ user: u, orgId, role: m?.role });
+}
+
+/**
+ * The turn's client with its person (auth.md §6: work runs as whoever started it).
+ * A person's own turn marks the conversation as theirs; a turn without one — a
+ * mission, a work chat, an automatic turn — takes the person from the nearest
+ * conversation above it that has one, and is refused when that person has been
+ * suspended or removed since, so their delegated work stops with them.
+ */
+function withPerson(client, sessionId) {
+  const memory = require('../memory');
+  if (client?.user) {
+    const s = memory.getSession(sessionId);
+    if (s && s.person?.id !== client.user.id) memory.updateSession(sessionId, { person: { id: client.user.id, orgId: client.user.orgId } });
+    return client;
+  }
+  for (const id of [sessionId, ...require('../organization').ancestors(sessionId)]) {
+    const mark = memory.getSession(id)?.person;
+    if (!mark) continue;
+    const user = personById(mark);
+    if (!user) throw Object.assign(new Error('The person this work was started for is suspended or no longer here, so it does not run.'), { status: 403 });
+    return { ...(client || {}), user: { ...user, onBehalf: true } };
+  }
+  return client;
+}
+
+module.exports = { shapeFor, clientBlock, placeBlock, personOf, deviceOwner, dashboardClient, withPerson };

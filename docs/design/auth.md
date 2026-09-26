@@ -185,6 +185,9 @@ login.
   agent cannot apply its own proposal over HTTP because it has no session).
 - Missions and scheduled work run as the user who started them; a suspended
   user's missions stop.
+  **Built in 2.87.0** — `turn/client.js` `withPerson`: the person is the
+  nearest one marked on the conversation or its ancestors; a suspended or
+  removed one makes the next turn fail.
 - **Memory stays shared in phase 1** (`TODO.md`: auth before groups). Per-user
   and per-group memory, enforced in store paths, is phase 3.
 
