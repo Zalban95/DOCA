@@ -57,4 +57,20 @@ function note(signal, name, args, result) {
   return result;
 }
 
-module.exports = { classify, typed, note };
+/**
+ * The call a turn kept failing on, if any reached the stop note (3 or more):
+ * { tool, kind, times }. The supervisor reads it when the turn ends — a job
+ * whose turn looped is reported blocked instead of being given another turn.
+ */
+function looped(signal) {
+  const seen = signal && turns.get(signal);
+  if (!seen) return null;
+  let worst = null;
+  for (const [key, n] of seen) if (n >= 3 && (!worst || n > worst.times)) {
+    const [tool, , kind] = key.split('\u0000');
+    worst = { tool, kind, times: n };
+  }
+  return worst;
+}
+
+module.exports = { classify, typed, note, looped };

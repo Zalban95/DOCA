@@ -138,6 +138,15 @@ function decide(id, info = {}) {
     return wake(id, RESULTS, { retry: () => decide(id) });
   }
 
+  // The same call failed the same way three times or more (turn/failures.js):
+  // another automatic turn would pay for the same loop. The job is blocked, and says on what.
+  if (info.looped) {
+    setJob(id, { ...job, state: 'blocked' });
+    org.report(id, 'blocked', `Blocked: ${info.looped.tool} failed the same way ${info.looped.times} times in one turn `
+      + `(${info.looped.kind}). Last brief: ${short(s.brief, 300) || '(none)'}`, 'panel');
+    return deliver(s.parentId);
+  }
+
   const { perJob } = limits();
   if (perJob <= 0) return 'off';
   // A turn cut off at the length limit did not do nothing: it ran out of room (turn/fallback.truncationNotice).

@@ -184,3 +184,19 @@ test('after a restart, work it cut off is carried on', async () => {
   assert.ok(resumed.includes(id));
   assert.ok(woken.some(w => w.sessionId === id && w.message === supervisor.RESTARTED));
 });
+
+test('a turn that looped on one failing call ends the job as blocked, not with another turn (failures.js)', async () => {
+  fresh();
+  const id = job('Stuck on a file');
+  const failures = require('../modules/harness/turn/failures');
+  const signal = new AbortController().signal;
+  for (let i = 0; i < 3; i++) failures.note(signal, 'read_file', { path: '/x' }, 'Error: ENOENT: no such file or directory');
+  assert.deepEqual(failures.looped(signal), { tool: 'read_file', kind: 'not-found', times: 3 });
+  assert.equal(failures.looped(new AbortController().signal), null, 'another turn starts clean');
+
+  assert.equal(supervisor.decide(id, { steps: 4, looped: failures.looped(signal) }), 'woken', 'the Orchestrator is woken instead');
+  await settle();
+  assert.equal(jobOf(id).state, 'blocked');
+  assert.ok(!woken.some(w => w.sessionId === id), 'no further turn for the looping job');
+  assert.deepEqual(woken.map(w => w.sessionId), [ceo()]);
+});
