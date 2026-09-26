@@ -30,7 +30,7 @@ const OVER = {
   'public/index.html': 1562,  // + the split scripts' <script> tags; ES modules take them back out
   'public/css/components.css': 1154,
   'public/js/chat.js': 985,
-  'public/js/files.js':            875,
+  'public/js/files.js':            810,
   'public/js/models.js':           687,
   'modules/harness/memory.js':     463,
   'modules/api-v1/router.js':      591,

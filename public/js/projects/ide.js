@@ -138,3 +138,22 @@ function pjAbs(rel) {
   const root = PJ.project.project.root;
   return rel.startsWith('/') || /^[A-Za-z]:\\/.test(rel) ? rel : `${root}/${rel}`;
 }
+
+/* ── Files: the shared tree (lib/filetree.js), rooted at the project ── */
+const PJT = { compareFrom: null };
+
+function pjTreeRender(body) {
+  fileTree(body, { root: PJ.project.project.root, onOpen: pjOpenFile, extraMenu: (abs, isDir) => (isDir ? [] : _pjFileMenu(abs)) });
+}
+
+/** What a project file offers besides the tree's own: comparisons and its history. */
+function _pjFileMenu(abs) {
+  const rel = pjRel(abs);
+  return [
+    PJ.project.git ? { label: '⇄ Compare with last commit', fn: () => pjCompareHead(abs) } : null,
+    PJ.project.git ? { label: '🕘 History', fn: () => pjFileHistory(abs) } : null,
+    PJT.compareFrom && PJT.compareFrom !== abs
+      ? { label: `⇄ Compare with ${pjRel(PJT.compareFrom)}`, fn: () => pjCompare({ title: `${pjRel(PJT.compareFrom)} ↔ ${rel}`, originalPath: PJT.compareFrom, modifiedPath: abs }) } : null,
+    { label: '◎ Select for compare', fn: () => { PJT.compareFrom = abs; setStatus(document.getElementById('pj-status'), `Selected ${rel} — right-click another file to compare`, 'info'); } },
+  ].filter(Boolean);
+}
