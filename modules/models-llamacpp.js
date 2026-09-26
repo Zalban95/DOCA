@@ -3,7 +3,7 @@
 const fs = require('fs');
 const { spawn } = require('child_process');
 
-const { loadPrefs, savePrefs, loadConfig, saveConfig, sseHeaders } = require('./utils');
+const { loadPrefs, savePrefs, sseHeaders } = require('./utils');
 
 const PREFS_KEY      = 'llamacpp';
 const BIND_HOST      = '0.0.0.0';
@@ -293,16 +293,12 @@ async function handleHealth(req, res) {
 
 function registerEndpoint(inst) {
   try {
-    const cfg = loadConfig();
-    if (!cfg.models) cfg.models = {};
-    if (!cfg.models.providers) cfg.models.providers = {};
-    cfg.models.providers[`llamacpp-${inst.id}`] = {
+    require('./provider-keys').set(`llamacpp-${inst.id}`, {
       baseUrl: `http://${advertiseHost()}:${inst.port}/v1`,
       apiKey:  '',
       api:     'openai-chat-completions',
       models:  [],
-    };
-    saveConfig(cfg);
+    });
   } catch {}
 }
 

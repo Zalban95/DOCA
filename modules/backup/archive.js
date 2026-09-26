@@ -43,7 +43,7 @@ function sections() {
     { name: 'data',        kind: 'dir',  at: store.DATA_DIR,         what: 'conversations, memory, devices, media, missions' },
     { name: 'prefs',       kind: 'file', at: paths.PREFS_FILE,       what: 'panel settings' },
     { name: 'env',         kind: 'file', at: path.join(paths.HOME_DIR, '.env'), what: 'environment overrides' },
-    { name: 'keys',        kind: 'file', at: paths.CONFIG_PATH,      what: 'provider API keys (openclaw.json)' },
+    { name: 'keys',        kind: 'file', at: paths.CONFIG_PATH,      what: "OpenClaw's config (DOCA's own keys are in data/keys)" },
     { name: 'agents',      kind: 'dir',  at: paths.AGENTS_DIR,       what: 'specialist definitions' },
     { name: 'attachments', kind: 'dir',  at: paths.ATTACHMENTS_DIR,  what: 'files attached to conversations' },
   ];
