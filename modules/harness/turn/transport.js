@@ -137,6 +137,10 @@ function unavailable(e) {
 async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, meta = { kind: 'ask' }, onHop, onSkip }) {
   signal?.throwIfAborted();
   const candidates = rungsFor({ ep, model: body.model, p });
+  for (const m of candidates.missing || []) {
+    onSkip?.({ provider: m.provider, model: m.model, text: `Fallback entry ${m.index + 1} (${m.provider} / ${m.model}) `
+      + `is skipped: that provider is no longer in Settings → API Keys (${m.reason}). The fallback chain is one entry shorter until it is fixed.` });
+  }
   const skipped = [];
   const rungs = candidates.filter(rung => {
     const issue = budget.preflight({ ...body, messages: rung.ep.id === ep.id
@@ -218,7 +222,7 @@ async function streamOrRead({ ep, body, guard, onText, onThinking, p }) {
     if (msg.reasoning_content && onThinking) onThinking(msg.reasoning_content);
     if (msg.content && onText) onText(msg.content);
     return { content: msg.content || '', tool_calls: msg.tool_calls || [], usage: json?.usage || null,
-             reasoning: msg.reasoning_content || '' };
+             reasoning: msg.reasoning_content || '', finish: json?.choices?.[0]?.finish_reason || null };
   }
 
   const reader  = r.body.getReader();
@@ -228,6 +232,7 @@ async function streamOrRead({ ep, body, guard, onText, onThinking, p }) {
   let reasoning = '';
   let buf     = '';
   let usage   = null;
+  let finish  = null;
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -253,6 +258,9 @@ async function streamOrRead({ ep, body, guard, onText, onThinking, p }) {
       // measured number in the whole ledger, so it is read before the delta
       // check that would otherwise skip it.
       if (frame.usage) usage = frame.usage;
+      // Why the provider stopped. "length" means it hit max_tokens: the reply
+      // is cut off, and must never be stored and shown as if it were whole.
+      if (frame.choices?.[0]?.finish_reason) finish = frame.choices[0].finish_reason;
       const delta = frame.choices?.[0]?.delta;
       if (!delta) continue;
       // Provider reasoning has its own live preview, never the answer channel.
@@ -272,7 +280,7 @@ async function streamOrRead({ ep, body, guard, onText, onThinking, p }) {
     }
   }
 
-  return { content, tool_calls: calls.filter(Boolean), usage, reasoning };
+  return { content, tool_calls: calls.filter(Boolean), usage, reasoning, finish };
 }
 
 /**

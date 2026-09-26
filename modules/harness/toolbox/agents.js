@@ -5,6 +5,20 @@
  */
 
 
+/**
+ * Whose a mission is (ISSUES.md H-17, decided 2026-09-26): the conversation that
+ * dispatched it, and anyone above that one in the reporting line — which is what
+ * lets the Orchestrator resume a paused mission the owner was just asked about.
+ * One predicate for reading a result, listing, waiting and resuming. A call with
+ * no conversation (the panel's own code) is not an agent reaching sideways.
+ */
+function mayHandle(ctx, m) {
+  if (!ctx?.sessionId) return true;
+  if (!m?.by || m.by === ctx.sessionId) return true;
+  try { return require('../organization').canManage(ctx.sessionId, m.by); } catch { return false; }
+}
+const NOT_YOURS = id => `Mission ${id} was dispatched outside your reporting line; ask the conversation that owns it, or the Orchestrator.`;
+
 module.exports = [
   {
     name: 'agent_dispatch',
@@ -61,8 +75,10 @@ module.exports = [
       },
       required: ['mission', 'continue'],
     },
-    run: ({ mission, continue: go }) => {
-      const m = require('../../agents/missions').resume(mission, { go: go === true });
+    run: ({ mission, continue: go }, ctx = {}) => {
+      const missions = require('../../agents/missions');
+      if (!mayHandle(ctx, missions.get(mission))) return NOT_YOURS(mission);
+      const m = missions.resume(mission, { go: go === true });
       return m.state === 'running'
         ? `${m.id} resumed — ${m.label} is carrying on from step ${m.steps}. You are not waiting; read it later with agent_results.`
         : `${m.id} dropped, as the user asked.`;
@@ -82,15 +98,16 @@ module.exports = [
     run: async ({ mission, wait }, ctx = {}) => {
       const missions = require('../../agents/missions');
       if (!mission) {
-        const rows = missions.list({ limit: 10 });
+        const rows = missions.list({ limit: 30 }).filter(m => mayHandle(ctx, m)).slice(0, 10);
         if (!rows.length) return 'No missions.';
         return rows.map(m => `${m.id} (${m.label}): ${m.state}`).join('\n');
       }
       let m = missions.get(mission);
       if (!m) return `No mission called "${mission}".`;
+      if (!mayHandle(ctx, m)) return NOT_YOURS(mission);
       if (wait && m.state === 'running') {
-        const org = require('../organization');
-        if (!ctx.sessionId || org.session(ctx.sessionId).kind !== 'work' || !org.canManage(ctx.sessionId, m.sessionId))
+        // Waiting is the work leader's: the Orchestrator stays available to the owner.
+        if (!ctx.sessionId || require('../organization').session(ctx.sessionId).kind !== 'work')
           return 'Only the responsible work leader may wait. The Orchestrator should remain available to the user.';
         const deadline = Date.now() + 30000;
         while (m.state === 'running' && Date.now() < deadline) {

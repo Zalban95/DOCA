@@ -34,6 +34,8 @@ const CONTINUE = '[panel] Your job is not reported finished, and nothing you sta
   + 'Carry on with it. If it is over, say so: work_chats report with outcome done, failed, blocked or question.';
 const RESULTS = '[panel] Results from your specialists have arrived; they are in your context. Carry on with your job.';
 const RESTARTED = '[panel] The panel restarted during your last turn. Carry on where you left off.';
+const CUT_OFF = '[panel] Your last reply was cut off: it reached the reply length limit before it finished. '
+  + 'Carry on from where it stopped — shorter, or in parts.';
 
 const short = (v, n) => String(v || '').replace(/\s+/g, ' ').slice(0, n);
 
@@ -138,7 +140,8 @@ function decide(id, info = {}) {
 
   const { perJob } = limits();
   if (perJob <= 0) return 'off';
-  const idleTurns = info.steps != null && info.steps <= 1 ? (job.idleTurns || 0) + 1 : 0;
+  // A turn cut off at the length limit did not do nothing: it ran out of room (turn/fallback.truncationNotice).
+  const idleTurns = !info.truncated && info.steps != null && info.steps <= 1 ? (job.idleTurns || 0) + 1 : 0;
   const autoTurns = (job.autoTurns || 0) + 1;
   if (autoTurns > perJob || idleTurns > IDLE_TURNS_MAX) {
     const why = autoTurns > perJob
@@ -149,7 +152,7 @@ function decide(id, info = {}) {
     return deliver(s.parentId);
   }
   setJob(id, { ...job, state: 'working', autoTurns, idleTurns });
-  return wake(id, CONTINUE, { retry: () => decide(id) });
+  return wake(id, info.truncated ? CUT_OFF : CONTINUE, { retry: () => decide(id) });
 }
 
 /** A specialist's turn ended: when its mission is over, the work chat that sent it carries on. */
@@ -220,4 +223,4 @@ function recover() {
   return done;
 }
 
-module.exports = { afterTurn, decide, deliver, missionEnded, recover, wake, limits, _setTurn, _setEnabled, CONTINUE, RESULTS, RESTARTED, IDLE_TURNS_MAX };
+module.exports = { afterTurn, decide, deliver, missionEnded, recover, wake, limits, _setTurn, _setEnabled, CONTINUE, RESULTS, RESTARTED, CUT_OFF, IDLE_TURNS_MAX };

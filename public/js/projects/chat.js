@@ -76,6 +76,7 @@ async function pjChatSend() {
         box.scrollTop = box.scrollHeight;
       }
       if (evt.type === 'error') _pjChatRow('error', evt.text);
+      if (evt.type === 'warning' || evt.type === 'failover') _pjChatRow('warning', evt.text);
     },
     onError: e => _pjChatRow('error', e.message),
   });

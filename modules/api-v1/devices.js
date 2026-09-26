@@ -120,12 +120,22 @@ function get(id) { return db().devices[id] || null; }
  * Create a device and mint its token. Returns { device, token } — the only
  * time the plaintext token is ever available.
  */
+/**
+ * A device's name: what it sent, trimmed, unless that is empty or the text of
+ * a missing value — a client that sends `String(null)` got a device called
+ * "null" in every list (audit 2026-09-26, §4f). Then its id.
+ */
+function cleanName(name, id) {
+  const n = String(name ?? '').trim();
+  return (!n || /^(null|undefined|nan)$/i.test(n) ? id : n).slice(0, 64);
+}
+
 function create({ name, scopes, caps, expiresAt, kind }) {
   const id = newId('dev');
   const secret = crypto.randomBytes(32).toString('base64url');
   const rec = {
     id,
-    name:       String(name || id).slice(0, 64),
+    name:       cleanName(name, id),
     kind:       kind || 'device',
     scopes:     normalizeAll(scopes),
     caps:       normalizeCaps(caps),
@@ -219,7 +229,7 @@ function forget(id) {
 function update(id, patch) {
   const rec = db().devices[id];
   if (!rec) return null;
-  if (patch.name !== undefined)   rec.name = String(patch.name).slice(0, 64);
+  if (patch.name !== undefined)   rec.name = cleanName(patch.name, rec.name || id);
   if (patch.scopes !== undefined) rec.scopes = normalizeAll(patch.scopes);
   if (patch.caps !== undefined)   rec.caps = normalizeCaps({ ...rec.caps, ...patch.caps, ext: { ...(rec.caps.ext || {}), ...(patch.caps.ext || {}) } });
   if (patch.expiresAt !== undefined) rec.expiresAt = patch.expiresAt || null;
@@ -270,7 +280,21 @@ function completePairing(codeInput, caps, nameOverride) {
   return made;
 }
 
-module.exports = {
+/** Names stored before cleanName existed ("null"): the device's form factor and id instead. Once, at boot. */
+function repairNames() {
+  const d = db();
+  let n = 0;
+  for (const rec of Object.values(d.devices)) {
+    if (cleanName(rec.name, rec.id) === rec.id && rec.name !== rec.id) {
+      rec.name = `${rec.caps?.formFactor || 'device'} ${rec.id.slice(-4)}`;
+      n++;
+    }
+  }
+  if (n) persist();
+  return n;
+}
+
+module.exports = { repairNames, cleanName,
   FORM_FACTORS, normalizeCaps, publicView,
   list, get, create, authenticate, rotate, revoke, remove, forget, update, patchVars, touchPersist,
   startPairing, completePairing, _reset,

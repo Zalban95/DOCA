@@ -45,8 +45,34 @@ function resolveScopes({ preset, scopes }) {
 }
 
 /** GET /api/devices — registry plus everything the UI needs to render the form. */
+/**
+ * The preset a paired device's form factor implies. A desktop client pairs
+ * with the phone preset (see scopes.PRESETS), so it is compared with that.
+ */
+function presetFor(d) {
+  if (d.kind === 'agent') return null;
+  const ff = d.caps?.formFactor;
+  return ff === 'watch' ? 'watch' : ['phone', 'desktop', 'tablet', 'browser', 'other'].includes(ff) ? 'phone' : null;
+}
+
+/**
+ * Scopes the device's preset grants today that its record does not hold. A
+ * record keeps the scopes it was paired with; when a preset grows (harness:chat
+ * was added after the desktop client paired) the device never gets it, and the
+ * only way out was a re-pair that mints a new identity and orphans the old
+ * queue (audit 2026-09-26, N4). Reported, never granted by itself: widening a
+ * device's permissions is the owner's click (handleGrant).
+ */
+function missingScopes(d) {
+  const preset = presetFor(d);
+  if (!preset || d.revokedAt) return [];
+  const { hasScope } = require('./api-v1/scopes');
+  return PRESETS[preset].filter(sc => !hasScope(d.scopes, sc));
+}
+
 function handleList(_req, res) {
-  const list = devices.list().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const list = devices.list().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .map(d => ({ ...d, missingScopes: missingScopes(d), preset: presetFor(d) }));
   res.json({
     devices: list,
     presets: PRESETS,
@@ -146,7 +172,29 @@ async function handlePairStart(req, res) {
   res.status(201).json({ ...p, url, qr, completeUrl: '/api/v1/devices/pair/complete' });
 }
 
+/** POST /api/devices/:id/scopes { add: [...] } — grant what its preset now includes, and nothing else. Same id, queue and token. */
+function handleGrant(req, res) {
+  if (blocked(req, res)) return;
+  const d = devices.list().find(x => x.id === req.params.id);
+  if (!d) return res.status(404).json({ error: 'unknown_device' });
+  const may = missingScopes(d);
+  const add = [].concat(req.body?.add || []).filter(sc => may.includes(sc));
+  if (!add.length) return res.status(400).json({ error: 'nothing_to_grant', message: `Grantable here: ${may.join(', ') || 'nothing'}.` });
+  const next = devices.update(d.id, { scopes: [...d.scopes, ...add] });
+  try { require('./auth/store').audit({ orgId: req.auth?.orgId, actorId: req.auth?.user?.id, action: 'device scopes granted', detail: `${d.id}: ${add.join(', ')}` }); } catch {}
+  res.json({ device: { ...next, tokenHash: undefined, missingScopes: missingScopes(next) } });
+}
+
+function mount(app) {
+  app.get   ('/api/devices',             handleList);
+  app.post  ('/api/devices',             handleIssue);
+  app.post  ('/api/devices/pair',        handlePairStart);
+  app.post  ('/api/devices/:id/rotate',  handleRotate);
+  app.post  ('/api/devices/:id/scopes',  handleGrant);
+  app.delete('/api/devices/:id',         handleRevoke);
+}
+
 module.exports = {
-  legacyTrusted,
-  handleList, handleIssue, handleRotate, handleRevoke, handlePairStart,
+  legacyTrusted, mount, missingScopes,
+  handleList, handleIssue, handleRotate, handleRevoke, handlePairStart, handleGrant,
 };

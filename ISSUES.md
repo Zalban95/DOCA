@@ -275,6 +275,8 @@ v2.22.2.**
 
 ## H-6 — The health check cannot fail for the reason turns fail
 
+*2026-09-26: the line citations below (`agent.js:971…`) are stale — `agent.js` is under 400 lines now and the health check lives elsewhere; re-verify before acting on this entry.*
+
 **Status:** open. Named separately from H-5 because it is what made H-5 take an
 evening.
 
@@ -358,6 +360,8 @@ of the thing it manages.
 ---
 
 ## H-7 — `POST …/proposals/:id/apply` is unauthenticated, and the agent has `http_fetch`
+
+**Closed 2026-09-26 (v2.74.0 check).** Since v2.56.0 every dashboard route needs a signed-in person, and this one the `propose` right plus the browser-set same-origin header (`modules/auth/rights.js`, `gate.js`); `test/harness-inventory.test.js` calls the route live — owner's cookie without the header: 403, nothing applied. `http_fetch` carries neither. The history below is kept.
 
 **Status:** **partially closed 2026-09-17 on `dev/troubleshoot`, in `main` since
 v2.28.0 (`1ee1f0d`) — and deliberately
@@ -1886,6 +1890,8 @@ and none was written.
 
 ## H-17 — `agent_results` and `agent_resume` act on a mission by id, with no check on whose it is
 
+**Fixed 2026-09-26, v2.74.0.** Decided: a mission is its dispatcher's and its superiors' (`canManage(caller, mission.by)`), the second rule below — it keeps the Orchestrator's paused-mission flow. One predicate, `mayHandle` in `modules/harness/toolbox/agents.js`, for the result, the listing, the wait and resume; mirror tests in `test/organization.test.js`.
+
 **Status:** open, not fixed. Surfaced while fixing H-12 (the same class of fault:
 a tool whose answer depends on the caller, with no caller in the condition) and
 deliberately left out of that commit — it needs a decision about mission
@@ -2130,6 +2136,8 @@ stays exactly as it was.
 
 ## H-19 — The agent can write the control plane it is forbidden to propose changes to
 
+**Fixed 2026-09-26, v2.74.0, for the write tools.** `modules/harness/control-plane.js`: `write_file` and `replace_in_files` refuse the prefs file, OpenClaw's config, the provider keys, accounts and sessions, devices and scopes, the backup schedule, the release pointer, `.env` and service units — whatever the approval mode, by real path too (`test/control-plane.test.js`). `shell` runs as the same user and still could: that is the stated limit of one account, and why `shell` is a danger tool. Found again by the resident agent's audit of 2026-09-26 (N2).
+
 **Status:** found 2026-09-21 on v2.50.0 by audit, cause confirmed by reading
 the code and by running `fmSafe` against the real paths. **Not fixed.**
 
@@ -2203,6 +2211,8 @@ question. The audit found it by asking what `fmSafe` actually checks.
 ---
 
 ## H-20 — `contextWindow` is declared to DOCA and never to the runtime
+
+*2026-09-26: still open. Note for the fix — Ollama's OpenAI-compatible `/v1` shim takes no per-request context size, so closing this needs Ollama's native API for that provider, or the runtime's own setting (`OLLAMA_CONTEXT_LENGTH`, a Modelfile `num_ctx`) checked against the declared window and said when they differ.*
 
 **Status:** found 2026-09-21 on v2.50.0 by audit, confirmed by reading the
 request path. **Not fixed.**

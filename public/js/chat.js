@@ -579,13 +579,12 @@ function chatSend({ spoken = false } = {}) {
           + (evt.timeoutMs ? ` of ${Math.round(evt.timeoutMs / 1000)}s` : '');
         if (waitingRow) waitingRow.textContent = note;
         else waitingRow = chatAppendMsg('waiting', note);
-      } else if (evt.type === 'failover') {
-        // The answer that follows is not from the model that was chosen. Saying
-        // so is the whole point of the chain: a switch nobody is told about is
-        // worse than the outage it was covering for.
+      } else if (evt.type === 'failover' || evt.type === 'warning') {
+        // A switch of model, a reply cut off at its length limit, a budget or
+        // context warning: each changes what the answer is, so each is said.
         if (waitingRow) { waitingRow.remove(); waitingRow = null; }
         chatAppendMsg('failover', evt.text);
-        stream.startWaiting();
+        if (evt.type === 'failover') stream.startWaiting();
       } else if (evt.type === 'tool_call') {
         if (waitingRow) { waitingRow.remove(); waitingRow = null; }
         stream.finish();
