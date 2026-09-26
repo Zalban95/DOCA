@@ -61,12 +61,15 @@ function limits() {
 /**
  * Start an automatic turn. Returns why it did or did not happen: 'woken',
  * 'off' (autonomy switched off), 'busy' (a turn is running — its end decides
- * again), or 'limited' (the hourly limit; tried again later).
+ * again), 'draining' (a restart is waiting for turns to end), or 'limited'
+ * (the hourly limit; tried again later).
  */
 function wake(sessionId, message, { retry } = {}) {
   const { perJob, perHour } = limits();
   if (perJob <= 0 || !_enabled) return 'off';
   if (require('./agent').isRunning(sessionId)) return 'busy';
+  // A restart is waiting for running turns to end (drain.js): starting more would keep it waiting.
+  if (require('./drain').pending()) { if (retry) setTimeout(retry, RETRY_MS).unref?.(); return 'draining'; }
   const hourAgo = Date.now() - 3600e3;
   while (recent.length && recent[0] < hourAgo) recent.shift();
   if (recent.length >= perHour) {

@@ -1850,9 +1850,16 @@ and are recorded as wrong so nobody re-files them.
   Deliberate since 2.45 ("reports never start paid model calls"); the owner now
   wants the wake. To design: wake on *final* reports only (done, failed,
   blocked, a question), rate-limited, a setting, default on.
-- **Restarts pause work mid-turn.** Seen three times on 2026-09-25 — the day of
-  many version switches. Wanted: a version switch or restart that sees running
-  turns says so and offers to wait; and paused work chats offered for resume.
+- ~~**Restarts pause work mid-turn.**~~ **Done in 2.64.0:** Restart and a version
+  switch first ask `GET /api/harness/busy`; when turns are running the page
+  names them and offers Cancel / Restart now / **When they finish**
+  (`appChoose`, `settings/busy.js`). Waiting (`harness/drain.js`) holds the
+  restart until no turn runs — at most 30 minutes — and meanwhile the
+  supervisor starts no automatic turns (`wake` → 'draining'), or it might never
+  be idle. A version switch installs at once and restarts into it when idle.
+  The page shows what it waits on, with "Stop waiting" (`POST /api/restart
+  {cancel:true}`). Paused work was already resumed after a restart
+  (`supervisor.recover`).
 - ~~**`shell` stops at 60 s**~~ **Done in 2.63.0:** the limit is a harness param,
   `shellTimeoutSec` (⚙ → "Shell command limit", default 60, at most 3600), and
   a call may ask for less with `timeoutSec`. Longer work runs with
