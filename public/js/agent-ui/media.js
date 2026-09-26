@@ -32,6 +32,18 @@ function agentImageEl(media, onLoad) {
     fig.textContent = `${media.name} ${note}`;
   };
 
+  if (kind === 'canvas') {
+    // A page the agent made (agent-ui/canvas.js): a button, opened in its own window.
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'agent-doc';
+    open.title = 'Open the canvas';
+    open.textContent = `◧ Open canvas: ${media.caption || 'Canvas'}${media.rev > 1 ? ` (rev ${media.rev})` : ''}`;
+    open.addEventListener('click', () => canvasOpen(media.canvasId, media.rev));
+    fig.appendChild(open);
+    return fig;
+  }
+
   if (kind === 'doc') {
     // A document is a row that opens a window, not something drawn in the
     // transcript: a plan pasted into a conversation scrolls away, and a plan

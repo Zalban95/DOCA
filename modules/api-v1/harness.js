@@ -118,6 +118,9 @@ function removeSession(id) {
   memory.deleteSession(id);
 }
 
+/** A canvas opens only in the panel for now: a device has nowhere safe to run one. */
+const forDevices = image => image?.kind !== 'canvas';
+
 /**
  * A picture the agent showed, as a device fetches it: with its token, under
  * `harness:chat`, from a route that serves images and nothing else.
@@ -156,7 +159,7 @@ function transcript(id, { limit = 50 } = {}) {
       ? { attachments: row.attachments.map(f => ({ name: f.name, bytes: f.bytes, mime: f.mime })) }
       : {}),
     ...(row.name ? { name: row.name } : {}),
-    ...(Array.isArray(row.images) && row.images.length ? { images: row.images.map(imageView) } : {}),
+    ...(Array.isArray(row.images) && row.images.length ? { images: row.images.filter(forDevices).map(imageView) } : {}),
     ...(Array.isArray(row.tool_calls) && row.tool_calls.length
       ? { tools: row.tool_calls.map(tc => tc.function?.name || '(unnamed)') }
       : {}),
@@ -258,7 +261,7 @@ async function run({ turnId, message, session, device, ctrl, attached }) {
         // On the done event rather than an event of its own: a chat draws the
         // reply when it lands, and a watch that slept through the turn still
         // gets the picture with the answer it belongs to.
-        images.push(imageView(evt.image));
+        if (forDevices(evt.image)) images.push(imageView(evt.image));
         break;
       case 'proposal':
         // The device may see that a change is waiting; only a click applies it.

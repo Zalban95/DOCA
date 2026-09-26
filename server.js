@@ -330,7 +330,7 @@ ensureCerts().then(certs => {
       ? `https://${certs.tailscale}:${PORT}  (Tailscale — trusted)`
       : `https://0.0.0.0:${PORT}  (self-signed)`;
     console.log(`${branding.name('panel')} v${pkg.version} → ${label}  [accepting: ${LISTEN_MODE}]`);
-    require('./modules/boot').afterListen();
+    require('./modules/boot').afterListen({ certs, mode: LISTEN_MODE });
   });
 }).catch(e => {
   console.warn(`[HTTPS] Falling back to HTTP: ${e.message}`);
@@ -338,7 +338,7 @@ ensureCerts().then(certs => {
   terminal.setup(server);
   listenWithRetry(server, () => {
     console.log(`${branding.name('panel')} v${pkg.version} → http://0.0.0.0:${PORT}  [accepting: ${LISTEN_MODE}]`);
-    require('./modules/boot').afterListen();
+    require('./modules/boot').afterListen({ mode: LISTEN_MODE });
   });
 });
 }

@@ -74,6 +74,8 @@ const SNAPSHOT_SCRIPT = process.env.SNAPSHOT_SCRIPT || path.join(HOME, 'snapshot
 const RESTORE_SCRIPT  = process.env.RESTORE_SCRIPT  || path.join(HOME, 'restore-agent.sh');
 const SNAPSHOT_DIR    = process.env.SNAPSHOT_DIR    || path.join(HOME, 'openclaw-snapshots');
 const PORT            = process.env.PORT            || 4242;
+// Canvases are served from here, never from PORT: see modules/canvas/origin.js.
+const CANVAS_PORT     = Number(process.env.CANVAS_PORT) || Number(PORT) + 1;
 
 // Self-signed certificate directory
 const CERTS_DIR = path.join(HOME_DIR, '.certs');
@@ -191,6 +193,7 @@ module.exports = {
   RESTORE_SCRIPT,
   SNAPSHOT_DIR,
   PORT,
+  CANVAS_PORT,
   PREFS_FILE,
   CERTS_DIR,
   CONFIG_REGISTRY,
