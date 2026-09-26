@@ -97,3 +97,20 @@ test('persona.md reaches the Orchestrator, human.md the Orchestrator and work ch
   assert.doesNotMatch(w, /# Persona/, 'the persona is the Orchestrator\'s');
   assert.throws(() => identity.write('human', 'x'.repeat(identity.CAP + 1)), /capped/);
 });
+
+test('standard specialists ship as markdown in the repository; a local file of the same id wins; promote writes into the checkout', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const shippedIds = fs.readdirSync(registry.SHIPPED_DIR).filter(n => n.endsWith('.md')).map(n => n.replace(/\.md$/, ''));
+  assert.deepEqual(shippedIds.sort(), ['archivist', 'coder', 'researcher']);
+  for (const id of shippedIds) {
+    const a = registry.get(id);
+    assert.ok(a && !a.broken && a.builtin, `${id} loads as a shipped definition`);
+  }
+  assert.deepEqual(registry.get('coder').kits, ['code', 'files', 'shell']);
+  // A local override of a shipped type.
+  fs.writeFileSync(path.join(registry.dir(), 'researcher.md'), '---\nname: researcher\nkits: [web]\n---\nMy own researcher.');
+  assert.equal(registry.get('researcher').role, 'My own researcher.');
+  assert.equal(registry.get('researcher').builtin, false);
+  // Promote needs a git checkout at DOCA_HOME: this test home is not one, and says so.
+  assert.throws(() => registry.promote('researcher'), /not a git checkout/);
+});

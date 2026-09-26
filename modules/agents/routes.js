@@ -43,6 +43,9 @@ function mount(app) {
       res.json({ imported });
     } catch (e) { fail(res, e); }
   });
+  app.post('/api/harness/agents/:id/promote', (req, res) => {
+    try { res.json(registry.promote(req.params.id)); } catch (e) { fail(res, e); }
+  });
   app.get('/api/harness/agents/:id/export', (req, res) => {
     const a = registry.get(req.params.id);
     if (!a || a.broken) return res.status(404).json({ error: 'No such agent.' });
