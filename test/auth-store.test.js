@@ -70,3 +70,24 @@ test('audit: appended, read back in order, never rewritten', () => {
   assert.deepEqual(tail.map(e => e.action), ['first', 'second']);
   assert.ok(tail.every(e => e.at));
 });
+
+test('audit: a file a month, and the log it used to be is still read, as the oldest', () => {
+  const fs = require('fs'), path = require('path'), store = require('../modules/store');
+  const dir = store.dir('auth');
+  fs.writeFileSync(path.join(dir, 'audit.jsonl'), JSON.stringify({ at: '2026-01-01T00:00:00Z', action: 'from before' }) + '\n');
+  fs.writeFileSync(path.join(dir, 'audit-2026-08.jsonl'), JSON.stringify({ at: '2026-08-02T00:00:00Z', action: 'last month' }) + '\n');
+  S.audit({ action: 'this month' });
+  assert.ok(fs.existsSync(path.join(dir, `audit-${new Date().toISOString().slice(0, 7)}.jsonl`)));
+  const all = S.auditTail(1000).map(e => e.action);
+  assert.ok(all.indexOf('from before') < all.indexOf('last month') && all.indexOf('last month') < all.indexOf('this month'));
+  assert.deepEqual(S.auditTail(1).map(e => e.action), ['this month']);
+});
+
+test('reads are cached per change of the file, and handed out as copies', () => {
+  const u = S.createUser({ email: 'cache@test.local', passwordHash: 'x' });
+  const a = S.userById(u.id);
+  a.name = 'changed but never written';
+  assert.equal(S.userById(u.id).name, '', 'an edit that was not written is not in the next read');
+  S.updateUser(u.id, { name: 'written' });
+  assert.equal(S.userById(u.id).name, 'written', 'a write is seen at once');
+});

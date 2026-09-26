@@ -14,15 +14,34 @@
  *   orgs         { [id]: { id, name, createdAt } }
  *   memberships  [ { orgId, userId, role, status, approvedBy?, approvedAt?, createdAt } ]
  *   sessions     { [tokenHash]: { userId, orgId, createdAt, expiresAt, lastSeenAt, stepUpAt, userAgent, ip } }
- *   audit.jsonl  append-only
+ *   audit-YYYY-MM.jsonl  append-only, a file a month (audit.jsonl before 2.65)
  */
 const crypto = require('crypto');
 const path   = require('path');
 const store  = require('../store');
 
 const doc = name => `auth/${name}`;
-const read = (name, fallback) => store.readJson(doc(name), fallback);
 const write = (name, data) => store.writeJson(doc(name), data);
+
+/**
+ * The gate reads users, memberships and sessions on every request. Parsed once
+ * per change of the file (inode, size, mtime — a write is an atomic rename, so
+ * the inode alone changes), and handed out as a copy, so a caller that edits
+ * what it read and then fails to write cannot leave the edit in the cache.
+ */
+const _cache = new Map();   // name -> { key, data }
+function read(name, fallback) {
+  const file = path.join(store.DATA_DIR, `${doc(name)}.json`);
+  let st;
+  try { st = require('fs').statSync(file); } catch { _cache.delete(name); return store.readJson(doc(name), fallback); }
+  const key = `${st.ino}:${st.size}:${st.mtimeMs}`;
+  const hit = _cache.get(name);
+  if (hit?.key === key) return structuredClone(hit.data);
+  const data = store.readJson(doc(name), undefined);
+  if (data === undefined) return typeof fallback === 'function' ? fallback() : fallback;
+  _cache.set(name, { key, data });
+  return structuredClone(data);
+}
 const id = prefix => `${prefix}_${crypto.randomBytes(8).toString('hex')}`;
 const now = () => new Date().toISOString();
 
@@ -128,12 +147,29 @@ function pruneSessions() {
 /* ── Audit ─────────────────────────────────────────────── */
 
 /** Append only, and never deleted with what it describes. */
+/*
+ * The audit log, one file a month (audit-YYYY-MM.jsonl), so it never grows
+ * without end and an old month can be archived or removed on its own. The
+ * single audit.jsonl it used to be is kept as it is and read as the oldest.
+ */
+const AUDIT_LEGACY = 'audit.jsonl';
+const auditFile = (at = now()) => `audit-${at.slice(0, 7)}.jsonl`;
+
 function audit(entry) {
-  store.appendJsonl(path.join(store.dir('auth'), 'audit.jsonl'), { at: now(), ...entry });
+  const at = now();
+  store.appendJsonl(path.join(store.dir('auth'), auditFile(at)), { at, ...entry });
 }
 
+/** The last n entries, newest last, across months. */
 function auditTail(n = 100) {
-  return store.readJsonl(path.join(store.dir('auth'), 'audit.jsonl')).slice(-n);
+  const dir = store.dir('auth');
+  const months = require('fs').readdirSync(dir).filter(f => /^audit-\d{4}-\d{2}\.jsonl$/.test(f)).sort().reverse();
+  let out = [];
+  for (const f of [...months, AUDIT_LEGACY]) {
+    out = [...store.readJsonl(path.join(dir, f)), ...out];
+    if (out.length >= n) break;
+  }
+  return out.slice(-n);
 }
 
 module.exports = {
