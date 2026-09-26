@@ -87,13 +87,13 @@ async function saveKey(provider) {
   if (!apiKey && !baseUrl) { setStatus(status, 'Enter a key or a base URL first', 'err'); return; }
   try {
     await apiFetch('/api/keys', { method: 'POST', body: { provider, apiKey, baseUrl } });
-    // "restart OpenClaw", not "restart DOCA": the key lands in
-    // ~/.openclaw/openclaw.json, so the thing that reads it is the external
-    // stack, and restarting this panel would change nothing about it. Two
-    // phrases for two different restarts, on purpose — paths.js and settings.js
-    // say the other one — so do not collapse them into one vague phrasing that
-    // leaves the user to work out what has to come back.
-    setStatus(status, '✓ Saved — restart OpenClaw to apply', 'ok');
+    // DOCA's own harness reads this file on every call (harness/providers.js),
+    // so the key works at once — "restart" was wrong for it, and for everyone
+    // without OpenClaw. OpenClaw reads it at start, so when it is installed it
+    // gets its own phrase: "restart OpenClaw", never "restart DOCA" — paths.js
+    // and settings say that one, and the two are different restarts.
+    const oc = typeof _openclawInstalled !== 'undefined' && _openclawInstalled;
+    setStatus(status, `✓ Saved — DOCA uses it now${oc ? '; restart OpenClaw to apply it there' : ''}`, 'ok');
     document.getElementById(`key-${provider}`).value = '';
     setTimeout(keysLoadProviders, 1500);
   } catch (e) {

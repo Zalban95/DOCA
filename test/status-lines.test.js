@@ -104,7 +104,7 @@ test('the two restart phrases stay two phrases', () => {
   // DOCA" is this process, which reads the prefs and the paths at boot. Both
   // comments say so where they are set — what must not come back is a third
   // phrasing for one of them, which is how "Restart the server" got here.
-  assert.match(read('keys.js'), /restart OpenClaw to apply/);
+  assert.match(read('keys.js'), /restart OpenClaw to apply it there/);
   assert.match(read('config.js'), /restart OpenClaw\?/);
   assert.match(read('paths.js'), /restart DOCA to apply/);
   assert.match(read('settings/updates.js'), /Restart DOCA<\/strong> to apply/);

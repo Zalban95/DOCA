@@ -834,25 +834,14 @@ never what the agent is allowed to do.
 
 ## Settings consistency
 
-- **Status lines clear on four different schedules.** `3000ms` is the de facto
-  convention (`public/js/snapshots.js:122`, `files.js:497`, `models.js:76`),
-  but `setup.js:52` uses `4000`, `llamacpp.js:264` uses `5000`, and most panels
-  never clear at all. Pick one rule — probably "success fades, errors stay" —
-  and put it behind an option on `setStatus()` instead of a `setTimeout` per
-  call site.
-
-- **"Restart to apply" is worded differently everywhere it appears.**
-  `keys.js:49` says "restart OpenClaw", `paths.js:77` says "restart DOCA",
-  `settings.js:403` says "Restart the server". The first one means the external
-  stack and the other two mean this process, which is a real distinction worth
-  making with consistent words rather than three phrasings.
-
-- **Shell scripts are editable in two places:** the Setup panel (which lists all
-  four, creates missing ones, and can run them) and the Config tab's file list.
-  This is tolerable because the Config tab is a generic editor that can open any
-  path via favourites, but note that `setup-phase2.sh` appears in the Setup panel
-  and in `ALLOWED_SCRIPTS` while being absent from `CONFIG_REGISTRY`. Either
-  decide the Config tab does not list scripts, or list all of them.
+**All three done** (checked 2026-09-26; the entries had gone stale): status
+lines follow one rule in `setStatus()` — success fades, errors stay
+(`test/status-lines.test.js`); two restart phrases, "restart DOCA" and "restart
+OpenClaw", each meaning one thing; and the Config tab lists exactly the Setup
+panel's four scripts (`paths.SCRIPT_CONFIG`). **Changed in 2.65.1:** saving an
+API key said "restart OpenClaw to apply" to everyone, but DOCA's own harness
+reads the key on every call — it now says DOCA uses it at once, and mentions
+restarting OpenClaw only when OpenClaw is installed.
 
 ## Errors that surface as the wrong thing
 
