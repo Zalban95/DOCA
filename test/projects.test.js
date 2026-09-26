@@ -170,3 +170,53 @@ test('the routes are the host\'s', async () => {
   const s = await H.api(null, 'POST', `/api/projects/${p.id}/search`, { query: 'needle' });
   assert.equal(s.body.matches[0].file, 'x.txt');
 });
+
+test('"done" is checked, not taken on its word: plan steps, the project\'s tests; refused, then blocked upward', async () => {
+  const org = require('../modules/harness/organization');
+  const memory = require('../modules/harness/memory');
+  const root = mk(dir('finish'), { 'package.json': JSON.stringify({ scripts: { test: 'node -e "process.exit(1)"' } }) });
+  const p = projects.create({ root, name: 'Checked' });
+  const sid = projects.workChat(p.id).id;
+  memory.updateSession(sid, { job: { state: 'working' } });
+  const job = () => memory.getSession(sid).job;
+
+  // A plan step still open, and failing tests: refused, with both.
+  await org.plan(sid, { action: 'draft', title: 'Fix it', steps: ['Change the code', 'Write the test'] });
+  await org.plan(sid, { action: 'progress', step: 1, state: 'done' });
+  let r = await org.tool({ action: 'report', outcome: 'done', message: 'All done.' }, { sessionId: sid });
+  assert.equal(r.accepted, false);
+  assert.equal(r.round, 1);
+  assert.match(r.failures.join('\n'), /Plan steps not done: 2\. Write the test \(queued\)/);
+  assert.match(r.failures.join('\n'), /npm test failed \(exit 1\)/);
+  assert.equal(job().state, 'working', 'the job is not ended by a refused report');
+
+  // Fixed: the step deferred with its reason, the tests passing — accepted, with what was checked.
+  await org.plan(sid, { action: 'progress', step: 2, state: 'blocked' });
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ scripts: { test: 'node -e "console.log(1)"' } }));
+  r = await org.tool({ action: 'report', outcome: 'done', message: 'Fixed.' }, { sessionId: sid });
+  assert.notEqual(r.accepted, false);
+  assert.equal(job().state, 'done');
+  const brief = memory.getSession(sid).brief;
+  assert.match(brief, /Checks: .*Tests passed: npm test \(exit 0\)/s);
+  assert.match(brief, /Deferred plan steps: Write the test/);
+
+  // Three refusals in a row go up as blocked, with the failures.
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ scripts: { test: 'node -e "process.exit(2)"' } }));
+  memory.updateSession(sid, { job: { state: 'working' }, plan: null });
+  for (let i = 1; i <= 2; i++) assert.equal((await org.tool({ action: 'report', outcome: 'done', message: 'Done?' }, { sessionId: sid })).round, i);
+  r = await org.tool({ action: 'report', outcome: 'done', message: 'Done!' }, { sessionId: sid });
+  assert.notEqual(r.accepted, false);
+  assert.equal(job().state, 'blocked');
+  assert.match(memory.getSession(sid).brief, /Reported done 3 times, and the checks still fail/);
+});
+
+test('a project without tests, or a work chat outside projects: "done" is accepted, and says what was not checked', async () => {
+  const org = require('../modules/harness/organization');
+  const memory = require('../modules/harness/memory');
+  const p = projects.create({ root: mk(dir('notests'), { 'README.md': 'x' }), name: 'No tests' });
+  const sid = projects.workChat(p.id).id;
+  memory.updateSession(sid, { job: { state: 'working' } });
+  await org.tool({ action: 'report', outcome: 'done', message: 'Wrote the readme.' }, { sessionId: sid });
+  assert.equal(memory.getSession(sid).job.state, 'done');
+  assert.match(memory.getSession(sid).brief, /has no test command; nothing was run/);
+});

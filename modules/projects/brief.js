@@ -34,8 +34,9 @@ async function text(p) {
     missing.length ? `Not installed here: ${missing.join(', ')} — say so rather than working around it.` : '',
     'How to work here: find code with search_files (not shell grep), change many files with replace_in_files '
       + '(dry run first), read history and changes with git, build and test with project run. Read the '
-      + 'repository rules (repo_rules) before your first change. Before you report work done, run the '
-      + 'project\'s tests and say what they returned; if there are none, say that.',
+      + 'repository rules (repo_rules) before your first change. Reporting done is checked, not taken on '
+      + 'your word: the project\'s tests are run and every plan step must be done (or blocked, with why); a '
+      + 'failed check comes back to you — run the tests yourself first.',
   ].filter(Boolean).join('\n');
   _cache.set(p.id, { at: Date.now(), text: lines });
   return lines;

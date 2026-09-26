@@ -277,7 +277,15 @@ async function tool(args, ctx) {
   if (args.action === 'report') {
     // A final report ends the job and is what wakes the Orchestrator; progress
     // wakes nobody (supervisor.js). Only a work chat has a job to end.
-    const outcome = FINAL.includes(args.outcome) && actor.kind === 'work' ? args.outcome : 'report';
+    let outcome = FINAL.includes(args.outcome) && actor.kind === 'work' ? args.outcome : 'report';
+    if (outcome === 'done') {
+      // Not taken on its word: the plan, the project's tests, what changed (projects/finish.js).
+      const r = await require('../projects/finish').review(actor, args.message);
+      if (r.refused) return { accepted: false, round: r.round, of: r.of, failures: r.failures, notes: r.notes,
+        next: 'Not accepted as done yet. Fix what failed and report done again; if you cannot, report blocked with why.' };
+      outcome = r.outcome;
+      args = { ...args, message: r.message };
+    }
     memory.updateSession(actor.id, { brief: short(args.message),
       ...(outcome !== 'report' ? { job: { ...(actor.job || {}), state: outcome, at: new Date().toISOString() } } : {}) });
     return report(actor.id, outcome, args.message);
