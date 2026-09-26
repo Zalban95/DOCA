@@ -18,6 +18,23 @@ function shellLimitSec() {
   } catch { return SHELL_MS / 1000; }
 }
 
+/**
+ * A window on a file's text. The notice used to be the shell's ("narrow the
+ * command, head, grep"), counted the rest of the file rather than naming the
+ * slice, and there was no way to read on — so a small maxLength looked like a
+ * failed read (the agent reported it, 2026-09-26).
+ */
+function slice(text, offset, maxLength) {
+  const total = text.length;
+  const from = Math.min(Math.max(0, Math.floor(Number(offset) || 0)), total);
+  const size = Math.min(Math.max(1, Math.floor(Number(maxLength) || MAX_OUT)), 40000);
+  const to = Math.min(total, from + size);
+  if (from === 0 && to === total) return text;
+  if (from >= total) return `[offset ${from} is at or past the end: the file has ${total} characters]`;
+  return `${text.slice(from, to)}\n… [characters ${from + 1}–${to} of ${total}`
+    + (to < total ? `; ${total - to} more — read on with offset ${to}]` : '; that is the end of the file]');
+}
+
 module.exports = [
   {
     name: 'shell',
@@ -93,20 +110,22 @@ module.exports = [
   },
   {
     name: 'read_file',
-    description: 'Read a UTF-8 text file from the host.',
+    description: 'Read a UTF-8 text file from the host, or a slice of it: offset and maxLength are in characters, '
+      + 'and a partial read ends by saying which characters it showed and the offset to read on from.',
     parameters: {
       type: 'object',
       properties: {
         path:      { type: 'string', description: 'Absolute path, or relative to the agent workspace.' },
-        maxLength: { type: 'integer', description: 'Characters to read at most (default 8000).' },
+        offset:    { type: 'integer', description: 'Character to start at (default 0).' },
+        maxLength: { type: 'integer', description: 'Characters to read at most (default 8000, at most 40000).' },
       },
       required: ['path'],
     },
-    run: ({ path: p, maxLength }, ctx = {}) => {
+    run: ({ path: p, offset, maxLength }, ctx = {}) => {
       const abs = resolvePath(p, ctx);
       const st  = fs.statSync(abs);
       if (st.isDirectory()) throw new Error(`${abs} is a directory — use list_dir`);
-      return clip(fs.readFileSync(abs, 'utf8'), Math.min(Number(maxLength) || MAX_OUT, 40000));
+      return slice(fs.readFileSync(abs, 'utf8'), offset, maxLength);
     },
   },
   {
