@@ -141,6 +141,10 @@ const HARNESS_PARAMS = [
     hint: 'Every turn the panel starts by itself, across all work chats and the Orchestrator together. Each '
         + 'is a model call you pay for; past this many in an hour the panel waits instead, and says so.' },
 
+  { key: 'shellTimeoutSec', label: 'Shell command limit', unit: 's', attrs: 'min="1" max="3600" step="1"',
+    hint: 'How long one shell command may run before it is stopped. Longer work — a build, an install, a '
+        + 'download — the agent runs in the background instead and checks on it, so this is not a cap on those.' },
+
   { key: 'maxSteps', label: 'Max tool steps', attrs: 'min="1" max="1000" step="1"',
     hint: 'How many times the agent may use a tool and think again before it has to answer. Each step '
         + 're-sends the whole conversation, so this is the setting that decides what one answer can cost.' },
@@ -308,6 +312,7 @@ async function harnessConfigSave(id) {
         maxSteps:       parseInt(val('maxSteps'), 10) || 1,
         autoTurnsPerJob:  parseInt(val('autoTurnsPerJob'), 10) || 0,
         autoWakesPerHour: parseInt(val('autoWakesPerHour'), 10) || 0,
+        shellTimeoutSec:  parseInt(val('shellTimeoutSec'), 10) || 60,
         historyTurns:   parseInt(val('historyTurns'), 10) || 0,
         summarizeAfter: parseInt(val('summarizeAfter'), 10) || 0,
         memoryLimit:    parseInt(val('memoryLimit'), 10) || 0,

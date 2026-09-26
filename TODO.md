@@ -1853,9 +1853,14 @@ and are recorded as wrong so nobody re-files them.
 - **Restarts pause work mid-turn.** Seen three times on 2026-09-25 — the day of
   many version switches. Wanted: a version switch or restart that sees running
   turns says so and offers to wait; and paused work chats offered for resume.
-- **`shell` stops at 60 s** (`SHELL_MS`), whatever `mcpSettings.callTimeoutMs`
-  says (that one is MCP's). A harness param, and a background-job form for long
-  commands, rather than the agent splitting `sleep 150` into three.
+- ~~**`shell` stops at 60 s**~~ **Done in 2.63.0:** the limit is a harness param,
+  `shellTimeoutSec` (⚙ → "Shell command limit", default 60, at most 3600), and
+  a call may ask for less with `timeoutSec`. Longer work runs with
+  `background: true` as a detached job (`harness/jobs.js`: log file, exit code,
+  its own process group so `stop` ends what it started, 8 at once, last 50
+  kept) that the agent follows with the new `shell_job` tool (status, output,
+  stop, list). After a panel restart a job whose process is gone says "gone":
+  its exit code is not known, and it does not pretend otherwise.
 - **Not a bug, and wrong in the agent's report:** "no paired device has
   `harness:chat`". The phone (`Smp`) and the watch both have it; the agent read
   the watch's scopes as the phone's. Its own `doca_clients` output in the same
