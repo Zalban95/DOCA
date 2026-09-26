@@ -366,7 +366,17 @@ cache collapse — measured at 16% on the step following, recovering to 77% and
 
 ## Two layers of learned knowledge, and the road between them
 
-Decided in discussion, not yet built. Written down because it is expensive to
+**Layer 2 built in 2.82.0** (`modules/harness/skills.js`): skills in the open
+Agent Skills format (a folder with `SKILL.md`), shipped in `skills/` (android-app,
+make-a-specialist) or made/imported on this machine (`<DATA_DIR>/skills/`, wins on
+a name clash; `~/.claude/skills` imports as it is). The Orchestrator's and work
+chats' prompts carry the manifest (name + when to use); the body is loaded with
+the `skill` tool (the `skills` kit), which also lets the agent keep a procedure
+it worked out. A specialist sees the skills its definition names. Settings →
+Harness → Skills lists and imports them. Not yet: layer 1 (tool notes), and the
+opt-in report upward below.
+
+Decided in discussion, not yet built (except as above). Written down because it is expensive to
 re-derive and the constraints are easier to honour before there is code.
 
 **Layer 1 — tool notes, local.** What this install learned about its own tools:

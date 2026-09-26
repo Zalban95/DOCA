@@ -90,6 +90,7 @@ function parse(text, { fallbackId } = {}) {
     role: body,
     kits: [...kits],
     tools,
+    skills: Array.isArray(meta.skills) ? meta.skills : parseList(meta.skills),
   };
   for (const k of ['model', 'provider', 'environment']) if (meta[k] != null && meta[k] !== '') def[k] = String(scalar(meta[k]));
   // Claude Code's `model: inherit` / `sonnet` names models that are not ours: use the panel's.
@@ -108,6 +109,7 @@ function format(def) {
   if (def.note) lines.push(`description: ${String(def.note).replace(/\n/g, ' ')}`);
   if (def.kits?.length) lines.push(`kits: ${listOut(def.kits)}`);
   if (def.tools?.length) lines.push(`tools: ${listOut(def.tools)}`);
+  if (def.skills?.length) lines.push(`skills: ${listOut(def.skills)}`);
   for (const k of ['provider', 'model']) if (def[k]) lines.push(`${k}: ${def[k]}`);
   if (def.environment && def.environment !== 'minimal') lines.push(`environment: ${def.environment}`);
   lines.push(`memory: ${def.memory === true}`);

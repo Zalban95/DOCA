@@ -53,6 +53,17 @@ function mount(app) {
     res.setHeader('Content-Disposition', `attachment; filename="${a.id}.md"`);
     res.end(md.format(a));
   });
+  const skills = require('../harness/skills');
+  app.get('/api/harness/skills', (_req, res) => res.json({ skills: skills.list() }));
+  app.get('/api/harness/skills/:name', (req, res) => { try { res.json(skills.read(req.params.name)); } catch (e) { fail(res, e); } });
+  app.post('/api/harness/skills/import', (req, res) => {
+    try {
+      const { fmSafe } = require('../utils');
+      const dir = path.resolve(String(req.body?.folder || '').replace(/^~(?=$|[/\\])/, require('os').homedir()));
+      if (!fmSafe(dir) || !fs.existsSync(dir)) throw Object.assign(new Error(`${dir} is not a folder the panel may read.`), { status: 400 });
+      res.json({ imported: skills.importFrom(dir, { overwrite: req.body?.overwrite === true }) });
+    } catch (e) { fail(res, e); }
+  });
   const identity = require('../harness/identity');
   app.get('/api/harness/identity', (_req, res) => res.json(identity.get()));
   app.post('/api/harness/identity', (req, res) => {
