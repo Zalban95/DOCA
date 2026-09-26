@@ -1414,6 +1414,11 @@ which is close to the right split already. What is missing is that the split is
 not *stated*, so it drifts: `harness.config` (portable-ish) and `models.hf.token`
 (emphatically local) sit in the same file. Worth writing down before it matters,
 which is cheaper than discovering it during the first migration.
+**Written down in 2.96.0:** `docs/design/state.md` states the rule and
+`modules/state-map.js` classifies every prefs key and data-folder entry as
+travels / local / mixed (with which part is which); `test/state-map.test.js`
+fails when code reads — or the browser writes — a prefs key the map does not
+classify. An export that uses it is still to build.
 
 ### Deliberately not adopted
 
