@@ -85,6 +85,7 @@ function clientOf(device) {
       : caps.formFactor && caps.formFactor !== 'other' ? `a ${caps.formFactor}` : 'a device',
     screen: caps.screen || null,
     input: caps.input || null,
+    user: require('../harness/turn/client').deviceOwner(device),
   };
 }
 

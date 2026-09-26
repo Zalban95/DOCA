@@ -341,5 +341,5 @@ function block() {
 
 module.exports = {
   MODES, FREE, settings, setMode, isUnattended, remember, forget, block,
-  verbsOf, keysFor, gate, ask, askAnywhere, decide, pending, refusal, missionRefusal,
+  verbsOf, keysFor, summarize, gate, ask, askAnywhere, decide, pending, refusal, missionRefusal,
 };

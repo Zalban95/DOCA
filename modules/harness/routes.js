@@ -129,9 +129,7 @@ async function handleChat(req, res) {
       message: String(message), sessionId: req.body?.sessionId, emit, signal: ctrl.signal,
       // The browser tags itself too: "who is asking" must never be missing, or
       // the agent would answer a watch the way it answers a 27-inch monitor.
-      client: { name: 'Dashboard console', kind: 'dashboard', formFactor: 'desktop',
-                label: 'the dashboard in a desktop browser, next to every panel you can read',
-                input: { text: true, touch: false } },
+      client: require('./turn/client').dashboardClient(req),
     });
     emit({ type: 'done', code: 0, sessionId, steps });
   } catch (e) {

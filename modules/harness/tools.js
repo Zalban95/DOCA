@@ -75,11 +75,27 @@ async function call(name, args, disabled = [], ctx = {}) {
 
   const tool = TOOLS.find(t => t.name === name);
   if (!tool) return `Error: no tool named "${name}".`;
+  let out;
   try {
-    return String(await tool.run(args || {}, ctx));
+    out = String(await tool.run(args || {}, ctx));
   } catch (e) {
-    return `Error: ${e.message}`;
+    out = `Error: ${e.message}`;
   }
+  audit(name, args, ctx, out);
+  return out;
+}
+
+// Tools that only read (DOCA's own store, files, the web): not audited. Every
+// other call a signed-in person's turn makes is, as theirs (docs/design/auth.md §6).
+const READS = new Set(['read_file', 'list_dir', 'search_files', 'http_fetch', 'research_docs', 'skill', 'repo_rules']);
+
+function audit(name, args, ctx, out) {
+  const approval = require('./approval');
+  if (!ctx.user?.id || READS.has(name) || approval.FREE.has(name)) return;
+  try {
+    require('../auth/store').audit({ orgId: ctx.user.orgId, actorId: ctx.user.id, via: 'harness', sessionId: ctx.sessionId || null,
+      action: `tool ${name}`, detail: approval.summarize(name, args), ok: !out.startsWith('Error:') });
+  } catch { /* the audit is a record, not a gate */ }
 }
 
 module.exports = { TOOLS, describe, schemas, call, clip };

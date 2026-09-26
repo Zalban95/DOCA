@@ -2020,3 +2020,22 @@ test('a one-off call streams under the harness\'s own reply limit, lets the mode
   await assert.rejects(agentMod.ask({ system: 's', user: 'u' }), /thought, then stopped before writing one .* capped at 256000 tokens by "Longest reply"/);
   await H.api(null, 'POST', '/api/harness/doca/config', { provider: 'stub', model: 'stub-model', maxTokens: 2048 });
 });
+
+test('the harness is told who is asking, and what their turn changes is audited as theirs (auth §6)', async () => {
+  const authStore = require('../modules/auth/store');
+  script = [{ tool: 'memory_write', args: { key: 'who-asks-probe', value: 'set by the signed-in owner' } },
+    { tool: 'memory_search', args: { query: 'probe' } }, { text: 'Noted.' }];
+  seen = [];
+  await stream('/api/harness/chat', { message: 'remember the probe' });
+  const prompt = seen[0].messages[0].content;
+  assert.match(prompt, /Signed in as .*<owner@test\.local>, owner of this panel\. What changes on this machine in this turn is logged as theirs\./);
+
+  const rows = authStore.auditTail(50).filter(r => r.via === 'harness');
+  const wrote = rows.find(r => r.action === 'tool memory_write');
+  assert.ok(wrote, 'the write is in the audit log');
+  assert.equal(wrote.actorId, H.owner.user.id);
+  assert.equal(wrote.ok, true);
+  assert.match(wrote.detail, /who-asks-probe/);
+  assert.ok(!rows.some(r => r.action === 'tool memory_search'), 'reads are not audited');
+  require('../modules/harness/memory').memForget('who-asks-probe');
+});
