@@ -28,6 +28,67 @@ final product** are collected, decided or not, while solutions are prototyped on
 Nothing on `dev/troubleshoot` is merged. What works there is prototype evidence
 for these requirements, not a change to the product.
 
+## Live — what is left (updated 2026-09-27)
+
+About 30 open items. Each points to the section that holds its reasons; the
+sections themselves keep their history. Tags: **build** (settled, waiting to be
+built), **decide** (needs Al first), **portal** (done on the laptop where
+DocaDesk runs and the apps are debugged). Finished work is in the *Done log* at
+the end, and in the sections as "built in …" notes.
+
+**Build — the approved plan (2026-09-27), in order**
+1. **The airlock**: only the scout and researcher read the web; guard models
+   (several at once, all must pass, a Harness settings section) screen what
+   comes in and the scout's report going out; the scout writes only its report.
+   → *Where this harness stands…* §2, *To discuss next*.
+2. **The data layer**: SQLite now (`node:sqlite`), PostgreSQL-ready for hosting;
+   usage and audit first, then sessions and memory. → *To discuss next*.
+3. **Off-site backups**: scheduled `.dBac` to an S3-compatible bucket.
+4. **Review and fix the VMs, Docker and Models sections**, with VM management
+   (snapshots, autostart, create). → *MCP and VMs…*.
+5. **Clients from this side**: clone DocaDesk / DocaMobile / DocaWear, fix what
+   is visible here, and a Linux client (Avalonia over `DocaDesk.Core`).
+
+**Build — later**
+- Retry with backoff on a rate limit (429). → *Where this harness stands…* §8.
+- A usage page with prices. → *Memory, limits and context*.
+- Provider quirks as data (a provider contract). → *Wanted next: many agents*.
+- The Orchestrator drives the work rather than doing it; a shared core context.
+  → *Wanted next: many agents*.
+- One turn per conversation vs. jobs started from devices; parallel instances.
+  → *Wanted next: many agents*.
+- Switching to a stronger model when a job is stuck. → *Where this harness
+  stands…* §3 (failure types).
+- Skills: a writing guide read like the rules', and importing from other
+  harnesses (Codex, Cursor rules…); every shipped procedure reads back what it
+  wrote. → *Done log: Built 2026-09-25*, *Two layers of learned knowledge*.
+- A plan shown on every device (panel window, phone notification, watch,
+  "nobody is at a screen"). → *A plan is shown, not buried*.
+- Markdown rendered while it streams. → *The agent writes markdown…*.
+- `contextWindow` found rather than typed. → *Memory, limits and context*.
+- Settings sub-tabs reviewed for what DOCA is now. → *Wanted 2026-09-25 — review*.
+- Editor add-ons; the project structure map (P2). → *Settled 2026-09-25*,
+  *Wanted 2026-09-25*.
+- VM console in the page (VNC). → *MCP and VMs*.
+- The MCP registry over `/api/v1`, and `mcp.listener` answering. → *MCP and VMs*.
+- Several users in groups (auth phases 2–3). → *Wanted next: many agents*.
+- Split `runTurn` (agent.js sits at 399 of 400 lines). → *Modules with explicit
+  contracts*.
+- A retrieval layer (embeddings) — with the database's `pgvector`. → *Memory,
+  limits and context*, *Where this harness stands…* §3.
+
+**Decide**
+- Rename, licence and CLA — Monday. → *One rename*, *Licence and per-customer builds*.
+- Export skills and specialists / send them to DOCA. → *To discuss next*.
+- Hosted DOCA (a machine per tenant, billing). → *Settled 2026-09-25*.
+
+**Portal**
+- DocaDesk: check first; the MCP proxied-name dedupe; answer
+  `tools/list_changed`; send its device token on page load. → *Done log: the
+  resident agent's audit* ("To do on the other machine"), *MCP and VMs*.
+- DocaMobile and DocaWear: cursor/ack against the hub's delivery counters.
+- The clients version themselves (PROTOCOL §2). → *Version and identity*.
+
 ## To discuss next (asked for 2026-09-26, not decided)
 
 In this order, after the settled work in progress (IDE tree, per-conversation
@@ -2107,7 +2168,15 @@ and are recorded as wrong so nobody re-files them.
 - **DocaDesk does not send its device token** on the panel's page load, so it
   signs in once instead of like DocaMobile. A change in DocaDesk.
 
-## Built 2026-09-25: rules that settle, questions you can answer, and a bench mode
+---
+
+# Done log
+
+Whole sections whose work is finished, kept as written (the rule at the top:
+nothing is silently dropped). Open items that lived in them are listed in
+*Live* above.
+
+### Built 2026-09-25: rules that settle, questions you can answer, and a bench mode
 
 - **The memory rules were rewritten** (`harness/rules.js`, the shipped defaults,
   which is what this install uses): the three conflicts around locked entries,
@@ -2145,7 +2214,7 @@ and are recorded as wrong so nobody re-files them.
   managed in the Skills section, usable by the DOCA harness — part of the
   Settings review above.
 
-## Audit 2026-09-26 — the day's new surface (auth, versions, backups, supervisor, listen, rules, unattended)
+### Audit 2026-09-26 — the day's new surface (auth, versions, backups, supervisor, listen, rules, unattended)
 
 A sweep of every GET route as owner, member and viewer on an isolated server
 (8 s timeout each, streams noted), plus a read of the new modules. **Fixed in
@@ -2172,7 +2241,7 @@ A sweep of every GET route as owner, member and viewer on an isolated server
   role without the right for it.
 
 
-## The resident agent's audit of 2026-09-26 (Desktop: `DOCA-issues-audit-2026-09-26-2.73.1.md`) — answered in 2.74.0
+### The resident agent's audit of 2026-09-26 (Desktop: `DOCA-issues-audit-2026-09-26-2.73.1.md`) — answered in 2.74.0
 
 Every finding was checked against the code before it was changed; its line
 numbers held. Fixed:
@@ -2235,7 +2304,7 @@ debugged from. That machine is off at the moment.
   H-14 and H-18 are "still written as open" was mistaken: their status lines
   already read fixed.
 
-## Agents that know their tools, and keep knowing them after an update (asked 2026-09-26)
+### Agents that know their tools, and keep knowing them after an update (asked 2026-09-26)
 
 The design is `docs/design/agents-and-tools.md`: **kits** (tools grouped by
 family, each tool with one "when to use it" line beside it; agents hold kits,
