@@ -1774,6 +1774,17 @@ more is built on top of them. Proposed shape, to settle per section:
   - **General, System, Voice, API Keys** stay, each checked for OpenClaw-only
     wording and for keys that DOCA stores in OpenClaw's file (§1 of "OpenClaw is
     a peer").
+- **Done in 2.60.0 (2026-09-26):** the sub-nav is drawn from one list
+  (`public/js/settings/subnav.js`): General, API Keys, **Backups** (its own tab
+  now), **Harness** (the built-in agent's ⚙ parameters, memory rules and
+  approvals, each opened where it is edited), Voice, System — then an
+  **OpenClaw** group (Skills, Snapshots, Setup, Config) drawn only when
+  OpenClaw is detected (`/api/harness` → `openclaw.detected`). Skills went into
+  that group because they *are* OpenClaw's (clawhub, `~/.openclaw/workspace/skills`).
+  The file headers no longer say "OPENCLAW PANEL". **Still open:** the
+  harness's own skills (none exist yet: "Two layers of learned knowledge");
+  API keys still live in OpenClaw's file, so saving one still says "restart
+  OpenClaw" — moving them to DOCA's own file is §1 of "OpenClaw is a peer".
 - **Then the tabs:** Models, Docker, Controls, and the left status bar — each
   reviewed for what is DOCA's and what is the OpenClaw stack's, the same way.
 - **Every control built from the existing pieces** (`.input`, `.input-label`,

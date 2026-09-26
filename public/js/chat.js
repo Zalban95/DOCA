@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — FLOATING CHAT (agent)
+   DOCA PANEL — FLOATING CHAT (agent)
    ═══════════════════════════════════════════════════════ */
 
 let chatLoaded = false;

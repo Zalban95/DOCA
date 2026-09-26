@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — LLAMA.CPP SERVER MANAGEMENT
+   DOCA PANEL — LLAMA.CPP SERVER MANAGEMENT
    Manages native llama-server processes with configurable
    model, port, GPU layers, and context size.
    ═══════════════════════════════════════════════════════ */

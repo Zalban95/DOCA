@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — MARKDOWN
+   DOCA PANEL — MARKDOWN
 
    The agent writes markdown. It is what the models were trained to write and
    it is how they say anything with structure in it, so the transcript renders

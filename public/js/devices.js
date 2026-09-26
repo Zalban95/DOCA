@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — DOCA DEVICE TOKENS  (/api/v1 registry)
+   DOCA PANEL — DOCA DEVICE TOKENS  (/api/v1 registry)
    ═══════════════════════════════════════════════════════ */
 
 let _devData = { presets: {}, pairTtlSec: 300, trusted: true };

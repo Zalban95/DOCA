@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — CONFIG  (multi-file editor + editable favorites)
+   SETTINGS → OPENCLAW (only when it is installed) — CONFIG  (multi-file editor + editable favorites)
    ═══════════════════════════════════════════════════════ */
 
 /* ── File registry (populated at init from /api/paths) ──

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — FILE PICKER MODAL
+   DOCA PANEL — FILE PICKER MODAL
    Reusable directory/file browser for path inputs.
    Usage: fpOpen('input-element-id', 'dir' | 'file')
    ═══════════════════════════════════════════════════════ */

@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/settings.css">
 <link rel="stylesheet" href="css/sidebar.css">
 <link rel="stylesheet" href="css/config.css">
 <link rel="stylesheet" href="css/files.css">
@@ -732,17 +733,8 @@
     <!-- ─── SETTINGS ─────────────────────────────────────── -->
     <div id="tab-settings" class="tab-page">
 
-      <!-- Sub-navigation pills -->
-      <div class="settings-subnav" id="settings-subnav">
-        <button class="settings-subnav-btn active" onclick="settingsSubNav('general')">General</button>
-        <button class="settings-subnav-btn" onclick="settingsSubNav('keys')">API Keys</button>
-        <button class="settings-subnav-btn" onclick="settingsSubNav('skills')">Skills</button>
-        <button class="settings-subnav-btn" onclick="settingsSubNav('snapshots')">Snapshots</button>
-        <button class="settings-subnav-btn" onclick="settingsSubNav('setup')">Setup</button>
-        <button class="settings-subnav-btn" onclick="settingsSubNav('config')">Config</button>
-        <button class="settings-subnav-btn" onclick="settingsSubNav('voice')">Voice</button>
-        <button class="settings-subnav-btn" onclick="settingsSubNav('system')">System</button>
-      </div>
+      <!-- Sub-navigation pills: drawn by settings/subnav.js (OpenClaw's only when it is installed) -->
+      <div class="settings-subnav" id="settings-subnav"></div>
 
       <!-- ── General ──────────────────────────────────── -->
       <div class="settings-panel active" id="sp-general">
@@ -845,7 +837,7 @@
                   Use this for agents and headless clients that cannot scan anything.
                 </div>
                 <div class="row">
-                  <div class="field flex1"><div class="input-label">Device name</div><input id="dev-issue-name" class="input" placeholder="openclaw-agent"></div>
+                  <div class="field flex1"><div class="input-label">Device name</div><input id="dev-issue-name" class="input" placeholder="my-agent"></div>
                   <div class="field flex1"><div class="input-label">Role</div><select id="dev-issue-preset" class="input"></select></div>
                 </div>
                 <div class="input-label" id="dev-issue-scopes" style="margin-bottom:8px"></div>
@@ -894,6 +886,12 @@
 
         </div>
       </div>
+
+      <!-- ── Backups (the card is drawn by settings/backups.js) ── -->
+      <div class="settings-panel" id="sp-backups"></div>
+
+      <!-- ── Harness: drawn by settings/subnav.js ── -->
+      <div class="settings-panel" id="sp-harness"></div>
 
       <!-- ── Skills ───────────────────────────────────── -->
       <div class="settings-panel" id="sp-skills">
@@ -1520,6 +1518,7 @@
 <script src="js/settings.js"></script>
 <script src="js/settings/updates.js"></script>
 <script src="js/settings/backups.js"></script>
+<script src="js/settings/subnav.js"></script>
 <script src="js/settings/account.js"></script>
 <script src="js/paths.js"></script>
 <script>

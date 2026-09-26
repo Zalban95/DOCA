@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   OPENCLAW PANEL — SKILLS (installed + online search)
+   SETTINGS → OPENCLAW (only when it is installed) — SKILLS (installed + online search)
    ═══════════════════════════════════════════════════════ */
 
 let allSkills    = [];
