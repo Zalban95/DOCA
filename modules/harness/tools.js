@@ -17,6 +17,7 @@
 // reorder without a reason.
 const mcp      = require('../mcp/tools');
 const { clip } = require('./toolbox/common');
+const untrusted = require('./untrusted');
 
 const TOOLS = [
   ...require('./toolbox/work'),
@@ -71,9 +72,8 @@ function schemas(disabled = []) {
  */
 async function call(name, args, disabled = [], ctx = {}) {
   if (disabled.includes(name)) return `Error: the "${name}" tool is switched off for this harness.`;
-  if (mcp.isMcpTool(name))     return mcp.call(name, args);
-
-  const tool = TOOLS.find(t => t.name === name);
+  const isMcp = mcp.isMcpTool(name);
+  const tool = isMcp ? { run: a => mcp.call(name, a) } : TOOLS.find(t => t.name === name);
   if (!tool) return `Error: no tool named "${name}".`;
   let out;
   try {
@@ -82,7 +82,9 @@ async function call(name, args, disabled = [], ctx = {}) {
     out = `Error: ${e.message}`;
   }
   audit(name, args, ctx, out);
-  return out;
+  // Somebody else's words arrive labelled as such (harness/untrusted.js).
+  const source = out.startsWith('Error:') ? null : untrusted.sourceOf(name, args, isMcp);
+  return source ? untrusted.frame(source, out) : out;
 }
 
 // Tools that only read (DOCA's own store, files, the web): not audited. Every
