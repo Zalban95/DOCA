@@ -18,6 +18,6 @@ module.exports = [
       properties: { path: { type: 'string', description: 'A file or directory inside the repository (the one you are about to change).' } },
       required: ['path'],
     },
-    run: ({ path: p }, ctx = {}) => repo.brief(ctx.sessionId, resolvePath(p)),
+    run: ({ path: p }, ctx = {}) => repo.brief(ctx.sessionId, resolvePath(p, ctx)),
   },
 ];

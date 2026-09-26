@@ -31,7 +31,7 @@ const missions = {
 
 // The turn's parts, one idea per file under ./turn. This file runs the turn;
 // the rest is imported, and re-exported where other modules already use it.
-const { params, turnParams } = require('./turn/params');
+const { params, turnParams, profileForTurn } = require('./turn/params');
 const { disabledFor, isMissionProfile, liveBlock, missionsFor, systemPrompt } = require('./turn/prompt');
 const { toApiMessages } = require('./turn/messages');
 const { DEGRADED_MS, rungsFor, markDegraded, forgetDegraded, openingHop, hopText } = require('./turn/fallback');
@@ -61,11 +61,7 @@ async function turn(options) {
   options.signal?.addEventListener('abort', abort, { once: true });
   if (options.signal?.aborted) ctrl.abort();
   try {
-    const profile = session.kind === 'specialist' ? session.profile || options.profile
-      : options.profile || organization.profileFor(session);
-    if (profile && session.kind === 'specialist') {
-      profile.tools = (profile.tools || []).filter(n => !require('../agents/registry').NEVER.includes(n));
-    }
+    const profile = profileForTurn(session, options.profile);
     memory.updateSession(id, { state: 'running', lastError: null });
     changed(id);
     if (options.client && options.client.kind !== 'agent')
@@ -148,6 +144,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   // read tomorrow — and would otherwise read the backup's words as the primary's.
   const fallbacks = [];
   const contextSkips = new Map();
+  const projectBrief = await require('../projects/brief').forSession(session.id).catch(() => '');   // once per turn
 
   for (let step = 1; step <= maxSteps; step++) {
     // Rebuilt every step, not once per turn.
@@ -172,7 +169,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       {
         role: 'system',
         content: systemPrompt({
-          p, userText: message, summary, client, profile,
+          p, userText: message, summary, client, profile, projectBrief,
           toolCount: schemas.length, disabledCount: disabled.length,
         }),
       },

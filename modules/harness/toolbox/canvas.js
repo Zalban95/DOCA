@@ -7,9 +7,9 @@
  */
 const { resolvePath } = require('./common');
 
-function htmlFrom({ html, path: p }) {
+function htmlFrom({ html, path: p }, ctx = {}) {
   if (html != null && String(html).trim()) return String(html);
-  if (p) return require('fs').readFileSync(resolvePath(p), 'utf8');
+  if (p) return require('fs').readFileSync(resolvePath(p, ctx), 'utf8');
   throw new Error('Give the page as `html`, or a `path` to an .html file.');
 }
 
@@ -54,14 +54,14 @@ module.exports = [
       const canvases = require('../../canvas/store');
       switch (args.action) {
         case 'open': {
-          const c = canvases.create({ title: args.title, html: htmlFrom(args), sessionId: ctx.sessionId || null });
+          const c = canvases.create({ title: args.title, html: htmlFrom(args, ctx), sessionId: ctx.sessionId || null });
           chip(c, ctx);
           return `Opened canvas ${c.id} ("${c.title}"); the user has a button for it in the chat. Change it with write.`;
         }
         case 'write': {
           const c = canvases.get(args.id);
           if (!c) throw new Error(`No canvas "${args.id}". list shows this conversation's.`);
-          const next = canvases.write(c.id, { html: htmlFrom(args), title: args.title });
+          const next = canvases.write(c.id, { html: htmlFrom(args, ctx), title: args.title });
           const rev = chip(next, ctx);
           return `Canvas ${c.id} is at revision ${rev}; the chat has a button for it.`;
         }
