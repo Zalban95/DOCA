@@ -181,13 +181,23 @@ test('an upload larger than the disk can take (or than DOCA_BACKUP_UPLOAD_MAX) i
   try {
     const url = `${H.base}/api/backups/upload?name=big.dBac`;
     const headers = { Cookie: H.owner.cookie, 'Sec-Fetch-Site': 'same-origin', 'Content-Type': 'application/octet-stream' };
-    let r = await fetch(url, { method: 'POST', headers, body: Buffer.alloc(5000) });
-    assert.equal(r.status, 413, 'by its declared length');
-    assert.match((await r.json()).error, /larger than this machine can take/);
+    // The server refuses and closes while the body may still be on its way, so
+    // a client can see the 413 or, under load, a reset connection. Both are a
+    // refusal; what must hold is the answer when there is one, and that
+    // nothing was kept.
+    const refused = async (body, extra = {}) => {
+      try {
+        const r = await fetch(url, { method: 'POST', headers, body, ...extra });
+        assert.equal(r.status, 413);
+        assert.match((await r.json()).error, /larger than this machine can take/);
+      } catch (e) {
+        if (e.code === 'ERR_ASSERTION') throw e;
+        assert.match(String(e.cause?.code || e.message), /ECONNRESET|EPIPE|UND_ERR_SOCKET|other side closed|fetch failed/);
+      }
+    };
+    await refused(Buffer.alloc(5000));   // by its declared length
     // No length declared: counted as it arrives.
-    const stream = new ReadableStream({ start(c) { for (let i = 0; i < 5; i++) c.enqueue(new Uint8Array(1000)); c.close(); } });
-    r = await fetch(url, { method: 'POST', headers, body: stream, duplex: 'half' });
-    assert.equal(r.status, 413, 'by what arrived');
+    await refused(new ReadableStream({ start(c) { for (let i = 0; i < 5; i++) c.enqueue(new Uint8Array(1000)); c.close(); } }), { duplex: 'half' });
     assert.deepEqual(fs.readdirSync(paths.BACKUP_DIR).filter(n => n.startsWith('big.dBac')), [], 'no partial file left');
   } finally { delete process.env.DOCA_BACKUP_UPLOAD_MAX; }
 });
