@@ -4,7 +4,8 @@
  * A small MCP client.
  *
  * MCP is JSON-RPC 2.0 over one of two transports. `stdio` spawns the server and
- * exchanges newline-delimited JSON with it; `http` POSTs to a URL. Both are
+ * exchanges newline-delimited JSON with it; `http` POSTs to a URL, and holds
+ * the URL's GET event stream open for what the server pushes. Both are
  * about a hundred lines, which is why this is hand-rolled rather than pulling in
  * the official SDK: it is ESM, and everything else in this project is CommonJS
  * with seven dependencies that all do heavy lifting.
@@ -111,12 +112,64 @@ class McpClient {
         error: { code: -32601, message: `${msg.method} is not supported by this client` },
       });
     }
-    if (msg.id === undefined) return;                 // a notification, nothing to do
+    if (msg.id === undefined) return this._onNotification(msg);
     const pending = this._pending.get(msg.id);
     if (!pending) return;
     this._pending.delete(msg.id);
     if (msg.error) pending.reject(Object.assign(new Error(msg.error.message || 'JSON-RPC error'), { fromMcpServer: true }));
     else pending.resolve(msg.result);
+  }
+
+  /**
+   * A server's notification. The one acted on: its tool list changed, so it is
+   * read again — the agent's next step sees the new tools, where it used to take
+   * someone pressing ↺ Tools. Several in a burst cost one tools/list.
+   */
+  _onNotification(msg) {
+    if (msg.method !== 'notifications/tools/list_changed' || this.state !== 'running') return;
+    this._note('the server says its tools changed; reading them again');
+    clearTimeout(this._relist);
+    this._relist = setTimeout(() => this.listTools().catch(e => this._note(`tools/list after a change failed: ${e.message}`)), 200);
+    this._relist.unref?.();
+  }
+
+  /**
+   * Streamable HTTP's other half: the GET stream a server pushes notifications
+   * on. A 405 (or 404) means it offers none, which is allowed and ends this.
+   * A dropped stream is reopened with backoff while the server stays running.
+   */
+  async _listen(lifecycle) {
+    let failures = 0;
+    while (this.state === 'running' && lifecycle === this._lifecycle && failures < 6) {
+      const ctrl = this._stream = new AbortController();
+      const opened = Date.now();
+      try {
+        const headers = { Accept: 'text/event-stream', ...(this.spec.headers || {}) };
+        if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
+        const res = await fetch(this.spec.url, { method: 'GET', headers, signal: ctrl.signal });
+        if (res.status === 405 || res.status === 404) { res.body?.cancel?.().catch(() => {}); return; }
+        if (res.ok && res.headers.get('content-type')?.includes('event-stream')) await this._readStream(res.body);
+        else res.body?.cancel?.().catch(() => {});
+      } catch { /* refused, reset or aborted: decided below */ }
+      if (ctrl.signal.aborted) return;
+      failures = Date.now() - opened > 60000 ? 1 : failures + 1;   // a stream that lived a while was not a failure
+      await new Promise(r => setTimeout(r, Math.min(30000, 500 * 2 ** failures)).unref?.());
+    }
+  }
+
+  /** SSE frames off the GET stream: each data payload is one JSON-RPC message. */
+  async _readStream(body) {
+    const dec = new TextDecoder();
+    let buf = '';
+    for await (const chunk of body) {
+      buf += dec.decode(chunk, { stream: true }).replace(/\r\n/g, '\n');
+      let end;
+      while ((end = buf.indexOf('\n\n')) >= 0) {
+        const data = sseData(buf.slice(0, end));
+        buf = buf.slice(end + 2);
+        try { const m = data && JSON.parse(data); if (m?.method && m.id === undefined) this._onNotification(m); } catch { /* not JSON */ }
+      }
+    }
   }
 
   _send(obj) {
@@ -152,13 +205,14 @@ class McpClient {
       ...(this.spec.headers || {}),
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
+    const id = this._nextId++;
 
     let res;
     try {
       res = await fetch(this.spec.url, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ jsonrpc: '2.0', id: this._nextId++, method, params: params || {} }),
+        body: JSON.stringify({ jsonrpc: '2.0', id, method, params: params || {} }),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (e) {
@@ -180,10 +234,14 @@ class McpClient {
     if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
 
     const body = await res.text();
-    const json = res.headers.get('content-type')?.includes('event-stream')
-      // SSE framing: the JSON-RPC reply is the first data: payload.
-      ? JSON.parse(body.split('\n').find(l => l.startsWith('data:'))?.slice(5).trim() || '{}')
-      : JSON.parse(body || '{}');
+    let json;
+    if (res.headers.get('content-type')?.includes('event-stream')) {
+      // SSE framing: the reply is the frame carrying our id; a server may send
+      // notifications on the same response before it, and those are heard too.
+      const frames = body.replace(/\r\n/g, '\n').split('\n\n').map(sseData).filter(Boolean).map(d => { try { return JSON.parse(d); } catch { return null; } }).filter(Boolean);
+      for (const m of frames) if (m.method && m.id === undefined) this._onNotification(m);
+      json = frames.find(m => m.id === id) || frames.find(m => 'result' in m || 'error' in m) || {};
+    } else json = JSON.parse(body || '{}');
 
     if (json.error) throw Object.assign(new Error(json.error.message || 'JSON-RPC error'), { fromMcpServer: true });
     return json.result;
@@ -241,6 +299,8 @@ class McpClient {
 
       this.state     = 'running';
       this.startedAt = new Date().toISOString();
+      // Only a server that says its tool list can change is listened to: some answer a GET badly, or not at all.
+      if (this.transport === 'http' && info?.capabilities?.tools?.listChanged) this._listen(this._lifecycle);   // not awaited
       return this;
     } catch (e) {
       this.error = e.message;
@@ -304,6 +364,8 @@ class McpClient {
     this._lifecycle++;
     this._backendFailureAt = null;
     this.tools = [];
+    this._stream?.abort();
+    clearTimeout(this._relist);
     if (!quiet) this.error = null;
     if (child) {
       this.child = null;
@@ -314,6 +376,11 @@ class McpClient {
     }
     this._failAll('stopped');
   }
+}
+
+/** The data of one SSE frame (its `data:` lines joined), or ''. */
+function sseData(frame) {
+  return frame.split('\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).replace(/^ /, '')).join('\n').trim();
 }
 
 module.exports = { McpClient, PROTOCOL_VERSION };

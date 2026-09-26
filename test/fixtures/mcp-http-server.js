@@ -14,6 +14,10 @@
  *
  * `sse: true` answers with `text/event-stream` framing instead of plain JSON,
  * because the client accepts either and both shapes are real.
+ *
+ * `stream: true` also serves the GET event stream; `push(msg)` sends a message
+ * down every open one and `addTool(t)` changes what tools/list answers. Without
+ * it a GET is a 405 — a server that offers no stream, which is allowed.
  */
 const http = require('http');
 
@@ -39,8 +43,18 @@ const TOOLS = [
  */
 async function start(opts = {}) {
   const seen = [];
+  const tools = [...TOOLS];
+  const streams = new Set();
 
   const server = http.createServer((req, res) => {
+    if (req.method === 'GET' && opts.stream) {
+      seen.push({ method: 'GET', headers: req.headers });
+      res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
+      res.write(': open\n\n');
+      streams.add(res);
+      req.on('close', () => streams.delete(res));
+      return;
+    }
     if (req.method !== 'POST') { res.writeHead(405).end(); return; }
     if (opts.requirePath && req.url !== opts.requirePath) { res.writeHead(404).end('no'); return; }
 
@@ -55,11 +69,11 @@ async function start(opts = {}) {
       if (msg.method === 'initialize') {
         result = {
           protocolVersion: msg.params?.protocolVersion || '2025-06-18',
-          capabilities: { tools: {} },
+          capabilities: { tools: opts.stream ? { listChanged: true } : {} },
           serverInfo: { name: 'http-stub', version: '2.0.0' },
         };
       } else if (msg.method === 'tools/list') {
-        result = { tools: TOOLS };
+        result = { tools };
       } else if (msg.method === 'tools/call') {
         const { name, arguments: args } = msg.params || {};
         result = name === 'list_windows'
@@ -80,7 +94,9 @@ async function start(opts = {}) {
       // A session id the client is expected to echo back on later calls.
       if (opts.sse) {
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Mcp-Session-Id': 'sess-http-stub' });
-        res.end(`event: message\ndata: ${payload}\n\n`);
+        // `noteFirst`: a notification on the same response, ahead of the reply, as servers may send.
+        const note = opts.noteFirst && msg.method === 'tools/call' ? `event: message\ndata: ${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' })}\n\n` : '';
+        res.end(`${note}event: message\ndata: ${payload}\n\n`);
       } else {
         res.writeHead(200, { 'Content-Type': 'application/json', 'Mcp-Session-Id': 'sess-http-stub' });
         res.end(payload);
@@ -94,6 +110,9 @@ async function start(opts = {}) {
   return {
     url: `http://127.0.0.1:${port}${opts.requirePath || '/mcp'}`,
     seen,
+    streams,
+    push: msg => { for (const r of streams) r.write(`event: message\ndata: ${JSON.stringify(msg)}\n\n`); },
+    addTool: t => tools.push(t),
     close: () => new Promise(r => { server.closeAllConnections(); server.close(r); }),
   };
 }

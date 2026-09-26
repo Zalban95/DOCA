@@ -127,6 +127,13 @@ opens.
   long-lived event stream, so a server that pushes notifications
   (`notifications/tools/list_changed`, sampling requests) will not be heard;
   `↺ Tools` is the manual stand-in.
+  **Built in 2.90.0:** a server whose `initialize` says `tools.listChanged` gets
+  its GET event stream held open (reopened with backoff, closed on stop; a 405
+  ends it quietly), and `notifications/tools/list_changed` — on that stream, on
+  stdio, or ahead of the reply inside an SSE POST response — makes the client
+  read the tools again. The SSE reply is now picked by its id, not by being the
+  first frame. Sampling and other server→client *requests* are still answered
+  "not supported".
 
 - **The MCP registry is still panel-only.** A client can now read, re-address and
   offer *its own* server (`GET`/`PATCH /api/v1/mcp/self`, `POST /api/v1/mcp/offer`,
@@ -152,7 +159,10 @@ opens.
   (dedupe in `LocalMcpRegistry.ProxiedName` the way `mcp/tools.js` does, plus a
   test), not here. Observed, not theoretical.
 
-- **The MCP add-server form still has no `headers` field.** `registry.normalize()`
+- ~~**The MCP add-server form still has no `headers` field.**~~ **Done** (found so
+  on 2026-09-26: the http section has a Headers box, one `Name: value` per line,
+  and `test/mcp.test.js` "a header typed into the form actually reaches the
+  server" proves it). `registry.normalize()`
   accepts `headers`, `client.js` sends them, and a client can now set its own
   through `offer` / `PATCH /mcp/self` — but there is no way to type one in the
   dashboard, so a server the *user* adds by hand still cannot be given an
@@ -167,7 +177,9 @@ opens.
   while this is a label plus a convenience; not fine if `origin` ever becomes a
   permission boundary.
 
-- **`/api/mcp` still has no authentication.** Values are masked now, so a
+- ~~**`/api/mcp` still has no authentication.**~~ **Closed by auth phase 1**
+  (v2.56.0): reading it needs a sign-in, changing it the `host` right with a
+  recent sign-in (`modules/auth/rights.js`). Kept below for the history. Values are masked now, so a
   tailnet peer can no longer read a bearer token or a stdio server's env out of
   the listing — but it can still read every definition's id, label, transport,
   URL, command and args, and `POST /api/mcp` still creates a definition holding
