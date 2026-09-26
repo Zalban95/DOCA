@@ -38,6 +38,8 @@ function _hcAgentModal(text, id) {
   box.value = text;
   const exp = document.getElementById('hc-agent-export');
   if (exp) { exp.style.display = id ? '' : 'none'; exp.href = id ? `/api/harness/agents/${encodeURIComponent(id)}/export` : '#'; }
+  const pro = document.getElementById('hc-agent-promote');
+  if (pro) pro.style.display = id ? '' : 'none';
   setStatus(document.getElementById('hc-agent-status'), '', '');
   overlay.style.display = 'flex';
   setTimeout(() => box.focus(), 50);
@@ -96,4 +98,14 @@ async function _hcAgentImportSend(body) {
     appAlert(imported.length ? imported.map(r => r.error ? `✗ ${r.file}: ${r.error}` : r.skipped ? `– ${r.id}: ${r.skipped}`
       : `✓ ${r.id}${r.kits?.length ? ` — kits ${r.kits.join(', ')}` : ''}${r.notes?.length ? ` (${r.notes.join('; ')})` : ''}`).join('\n') : 'No .md files there.');
   } catch (e) { appAlert(e.message); }
+}
+
+/** Make this specialist a standard one: into the repository's specialists/ folder, shipped with the next version. */
+function hcAgentPromote() {
+  if (!_hcAgentEditing) return;
+  appConfirm(`Promote "${_hcAgentEditing}" to a standard specialist? Its definition is written into the repository's specialists/ folder; commit it and the next version ships it to every install.`, async () => {
+    try { const r = await apiFetch(`/api/harness/agents/${encodeURIComponent(_hcAgentEditing)}/promote`, { method: 'POST' });
+      setStatus(document.getElementById('hc-agent-status'), `✓ Written to ${r.file}. ${r.note}`, 'ok'); }
+    catch (e) { setStatus(document.getElementById('hc-agent-status'), `✗ ${e.message}`, 'err'); }
+  });
 }

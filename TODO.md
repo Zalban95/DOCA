@@ -2130,5 +2130,10 @@ before every turn of a project's conversation when files changed, by hand in
 Projects → ↶ Checkpoints, or by the agent (`project` checkpoint / checkpoints /
 changes / restore). Restore removes files made since, puts the rest back, and
 first checkpoints the present so it can itself be undone. Not in backups (it is
-this machine's undo history). **Next in this design:** phase 4, standard agents
-shipped from the repository.
+this machine's undo history). **Phase 4 built in 2.78.0 — standard specialists
+ship from the repository:** `specialists/*.md` (archivist — moved out of code —,
+coder: code/files/shell kits, researcher: web kit + memory_search), loaded as the
+shipped fallback; a file of the same id on this machine wins. **Promote** (the
+specialist editor's ⇪, `POST /api/harness/agents/:id/promote`) writes one made
+here into the checkout's `specialists/`, to ship once committed. Skills as a
+layer beside kits and identity remain for later.

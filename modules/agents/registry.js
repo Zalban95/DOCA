@@ -55,27 +55,23 @@ const { loadPrefs, savePrefs } = require('../utils');
 const NEVER = ['settings_propose', 'install_propose', 'agent_dispatch', 'agent_results', 'agent_resume', 'ask_device'];
 
 /**
- * Shipped definitions. Editable by writing a file of the same id, which wins —
- * the code version is the fallback, not the law.
+ * Shipped definitions: the standard specialist types, markdown files in the
+ * repository's `specialists/` folder (agents/markdown.js), so they ship and
+ * update with each release — a tool added to one of their kits reaches them as
+ * well. A file of the same id in AGENTS_DIR wins: the shipped version is the
+ * fallback, not the law. `promote()` copies one made here into that folder.
  */
-const BUILTIN = [
-  {
-    id: 'archivist',
-    label: 'Archivist',
-    note: 'Long-term memory. Answers the orchestrator\'s questions about what it already knows.',
-    role: 'You are the Archivist: this panel\'s memory, asked a question by the agent the user is '
-      + 'talking to.\n\n'
-      + 'Search what is remembered and answer from it. Be short — a few lines, the entries you found, '
-      + 'and nothing else. If the memory does not contain the answer, say exactly that; a guess dressed '
-      + 'as a recollection is worse than nothing, because the agent that asked will act on it.\n\n'
-      + 'You do not act on the machine, you do not change settings, and you do not talk to the user. '
-      + 'You answer the question you were given.',
-    tools: ['memory_search'],
-    memory: false,          // it *searches* memory; it does not need it pasted in
-    environment: 'minimal',
-    maxSteps: 4,
-  },
-];
+const SHIPPED_DIR = path.join(__dirname, '..', '..', 'specialists');
+function shipped() {
+  let names = [];
+  try { names = fs.readdirSync(SHIPPED_DIR).filter(n => n.endsWith('.md')); } catch { return []; }
+  const out = [];
+  for (const n of names) {
+    try { out.push(require('./markdown').parse(fs.readFileSync(path.join(SHIPPED_DIR, n), 'utf8'), { fallbackId: n.replace(/\.md$/, '') })); }
+    catch { /* a broken shipped file is a release bug, caught by the tests */ }
+  }
+  return out;
+}
 
 /* ── The switch ───────────────────────────────────────── */
 
@@ -183,7 +179,7 @@ function fromFiles() {
 function list() {
   const files = fromFiles();
   const ids = new Set(files.map(f => f.id));
-  const builtin = BUILTIN.filter(b => !ids.has(b.id)).map(b => normalize({ ...b, builtin: true }));
+  const builtin = shipped().filter(b => !ids.has(b.id)).map(b => { const { imported, ...d } = b; return normalize({ ...d, builtin: true }); });
   return [...builtin, ...files].sort((a, b) => a.id.localeCompare(b.id));
 }
 
@@ -238,4 +234,21 @@ function block() {
   return out.join('\n');
 }
 
-module.exports = { BUILTIN, NEVER, enabled, setEnabled, dir, list, get, save, remove, normalize, validId, block };
+/**
+ * Promote a specialist made on this machine to a standard one: its markdown
+ * goes into the repository checkout's `specialists/` folder (DOCA_HOME, where
+ * the code is committed from — not the running release's copy), to be shipped
+ * with the next version once it is committed. Returns the file written.
+ */
+function promote(id) {
+  const a = get(id);
+  if (!a || a.broken) throw Object.assign(new Error(`No agent called "${id}".`), { status: 404 });
+  const checkout = paths.HOME_DIR;
+  if (!fs.existsSync(path.join(checkout, '.git'))) throw Object.assign(new Error('This install is not a git checkout, so there is no repository to promote into.'), { status: 409 });
+  const dest = path.join(checkout, 'specialists', `${a.id}.md`);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.writeFileSync(dest, require('./markdown').format(a), 'utf8');
+  return { file: dest, note: 'Commit it; the next version ships it to every install.' };
+}
+
+module.exports = { promote, SHIPPED_DIR, NEVER, enabled, setEnabled, dir, list, get, save, remove, normalize, validId, block };
