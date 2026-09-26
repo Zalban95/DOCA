@@ -29,6 +29,7 @@ const TOOLS = [
   ...require('./toolbox/devices'),
   ...require('./toolbox/web'),
   ...require('./toolbox/canvas'),
+  ...require('./toolbox/project'),
 ];
 
 

@@ -54,14 +54,24 @@ function clip(text, limit = MAX_OUT) {
     + 'than this tool hands back, so narrow the command (head, grep, wc) rather than asking again.]';
 }
 
-/** Working directory for shell + relative paths: the agent's workspace. */
-function cwd() {
+/**
+ * Working directory for shell + relative paths: the project root when this
+ * conversation (or the one that dispatched it) is bound to a project
+ * (projects/store.forSession), else the agent's workspace.
+ */
+function cwd(ctx = {}) {
+  if (ctx.sessionId) {
+    try {
+      const p = require('../../projects/store').forSession(ctx.sessionId);
+      if (p && fs.existsSync(p.root)) return p.root;
+    } catch { /* not in a project */ }
+  }
   return fs.existsSync(WORKSPACE_DIR) ? WORKSPACE_DIR : os.homedir();
 }
 
-function resolvePath(p) {
+function resolvePath(p, ctx = {}) {
   const expanded = String(p || '').replace(/^~(?=$|[/\\])/, os.homedir());
-  const abs = path.resolve(cwd(), expanded);
+  const abs = path.resolve(cwd(ctx), expanded);
   if (!fmSafe(abs))
     throw new Error(`Path is outside the allowed roots (${FM_ALLOWED_ROOTS.join(', ')}): ${abs}`);
   return abs;

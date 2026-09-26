@@ -1609,6 +1609,29 @@ order it is to be done.
 
 ## Wanted 2026-09-25, not yet settled
 
+- **Projects — phase 1 built in 2.71.0 (asked for 2026-09-26: "feel like an IDE
+  such as VS Code, with everything Notepad++ has for search, replace and
+  compare; recognise git and show versions; build and test an Android app when
+  the tools are there").** `modules/projects/`: a project record (root, name,
+  its work chat, the owner's own commands); `inspect.js` reads the kind from the
+  tree (Android/Gradle, Gradle, Maven, Node, Python, Rust, Go, Flutter, .NET,
+  CMake/Make) with its build/test/lint/install/run commands and which
+  toolchains are present (Android SDK found via ANDROID_HOME/Android Studio's
+  defaults, adb, java…); `git.js` (status, log per file, branches, diff, show a
+  file at a revision, stage/unstage/commit/switch — never push, reset or
+  discard); `search.js` (ripgrep or a built-in walker; regex, case, whole
+  word, include/exclude; replace with a dry run first, `$1` in regex mode).
+  **Instructions to the harness: a brief, not skills** (the cheaper way — skills
+  do not exist yet): a conversation bound to a project gets a project block in
+  its prompt (where, kind, git state, commands with what is missing, how to
+  work: search_files / replace_in_files / git / project run, run the tests
+  before reporting done), its shell and paths start at the root, and its
+  specialists inherit the binding. New agent tools: `search_files`,
+  `replace_in_files`, `git`, `project` (info/list/open/bind/run). Routes:
+  `/api/projects…` (host right). **Next:** phase 2, the Projects tab (Monaco
+  editor, tree, search/replace panel, compare, git panel, command buttons, the
+  bound chat); phase 3, the mechanical end-of-work check below.
+
 - **A project is a work leader with a place to stand.** Asked for: a
   sub-orchestrator per project, with its own agents and work folders, every
   level directly reachable by the user and by the main orchestrator.

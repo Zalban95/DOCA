@@ -38,4 +38,17 @@ function turnParams(profile) {
   return p;
 }
 
-module.exports = { params, turnParams };
+/**
+ * The profile a turn runs under: a specialist's own (minus what no specialist
+ * may ever have, registry.NEVER), else the one asked for, else its level's.
+ */
+function profileForTurn(session, asked) {
+  const organization = require('../organization');
+  const profile = session.kind === 'specialist' ? session.profile || asked : asked || organization.profileFor(session);
+  if (profile && session.kind === 'specialist') {
+    profile.tools = (profile.tools || []).filter(n => !require('../../agents/registry').NEVER.includes(n));
+  }
+  return profile;
+}
+
+module.exports = { profileForTurn, params, turnParams };

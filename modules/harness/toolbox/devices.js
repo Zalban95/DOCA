@@ -22,7 +22,7 @@ const SHOW_MEDIA_MAX = 200 * 1024 * 1024;
  */
 function showMedia(p, caption, ctx = {}) {
   const attachments = require('../../attachments');
-  const abs  = resolvePath(p);
+  const abs  = resolvePath(p, ctx);
   const mime = attachments.mimeFor(abs);
   const kind = attachments.playableKind(mime);
   if (!kind)

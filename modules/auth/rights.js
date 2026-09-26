@@ -78,6 +78,7 @@ const TABLE = [
 
   // ── Everything else is the machine ──
   R(ANY, '/api/(files|fm-favorites|configs|config-favorites|keys|logs|setup|snapshots|stack|action)(/.*)?', 'host'),
+  R(ANY, '/api/projects(/.*)?', 'host'),                   // a project is files and a shell
   R(ANY, '/api/(docker|vms|models|services|mcp|skills|system|paths|prefs|startup)(/.*)?', 'host'),
 ];
 

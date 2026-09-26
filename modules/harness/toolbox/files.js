@@ -47,7 +47,7 @@ module.exports = [
     danger: true,
     run: async ({ command, cwd: dir, timeoutSec, background }, ctx = {}) => {
       if (!command) return 'Error: command is required';
-      const where = dir ? resolvePath(dir) : cwd();
+      const where = dir ? resolvePath(dir, ctx) : cwd(ctx);
       if (background) {
         const j = require('../jobs').start(command, { cwd: where, sessionId: ctx.sessionId || null });
         return `Started background job ${j.id} (pid ${j.pid}). It keeps running after this call; `
@@ -102,8 +102,8 @@ module.exports = [
       },
       required: ['path'],
     },
-    run: ({ path: p, maxLength }) => {
-      const abs = resolvePath(p);
+    run: ({ path: p, maxLength }, ctx = {}) => {
+      const abs = resolvePath(p, ctx);
       const st  = fs.statSync(abs);
       if (st.isDirectory()) throw new Error(`${abs} is a directory — use list_dir`);
       return clip(fs.readFileSync(abs, 'utf8'), Math.min(Number(maxLength) || MAX_OUT, 40000));
@@ -122,7 +122,7 @@ module.exports = [
     },
     danger: true,
     run: ({ path: p, content }, ctx = {}) => {
-      const abs = resolvePath(p);
+      const abs = resolvePath(p, ctx);
       // Charter rule 16, held here rather than only asked for: a repository's
       // own rules are read before the first change to it.
       const unread = repo.unreadRoot(ctx.sessionId, abs);
@@ -148,8 +148,8 @@ module.exports = [
       properties: { path: { type: 'string', description: 'Absolute path, or relative to the agent workspace.' } },
       required: ['path'],
     },
-    run: ({ path: p }) => {
-      const abs  = resolvePath(p);
+    run: ({ path: p }, ctx = {}) => {
+      const abs  = resolvePath(p, ctx);
       const rows = fs.readdirSync(abs, { withFileTypes: true }).map(d => {
         let size = '';
         try { if (d.isFile()) size = ` ${fs.statSync(path.join(abs, d.name)).size}b`; } catch {}

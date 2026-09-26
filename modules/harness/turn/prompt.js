@@ -92,7 +92,7 @@ function rulesBlock() {
  * which the user does own — follows it, then the facts, then what the agent
  * knows, then where this conversation had got to.
  */
-function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile }) {
+function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile, projectBrief = '' }) {
   if (profile?.level === 'orchestrator') return [
     providers.SAFETY_CHARTER, profile.systemPrompt,
     p.coordinatorInstructions || providers.DEFAULT_SYSTEM_PROMPT,
@@ -124,6 +124,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
       profile.environment === 'full'
         ? environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount })
         : environmentBrief(p, toolCount),
+      projectBrief,
       profile.memory ? memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)) : '',
       summary ? `# Earlier in this mission\n${summary}` : '',
     ].filter(Boolean).join('\n\n');
@@ -136,6 +137,8 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
     clientBlock(client),
     placeBlock(client),
     rulesBlock(),
+    // A conversation bound to a project (projects/brief.js): where it works, how it builds.
+    projectBrief,
     memoryBlock(userText, Math.max(0, Number(p.memoryLimit) || 0)),
     settings.block(),
     installs.block(),
