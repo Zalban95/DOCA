@@ -324,7 +324,7 @@ function block(p) {
     `memory entries in this prompt: up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`,
   );
   if (trigger) out.push(`effective token compaction trigger: ${trigger.at} tokens`
-    + ` (harness.config.doca.${trigger.setting}); message-count folding also applies.`);
+    + ` (harness.config.doca.${trigger.setting}); message-count folding also applies.${require('./fold-check').warning(p) ? ` Warning: ${require('./fold-check').warning(p)}` : ''}`);
 
   out.push('',
     'These are settings on this panel, not the provider\'s. Propose a change when one of them is what is in your '

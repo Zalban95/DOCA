@@ -1234,6 +1234,12 @@ disable folding without saying so**: this panel ran with a 1M window and
 `compactTokens` at 500 000, which is past where most turns end, so nothing ever
 folded. Worth a check in the ⚙ panel rather than a code change, and worth a
 warning when the two settings are configured so far apart that neither can fire.
+**The warning is built (2.89.0, `harness/fold-check.js`):** a token trigger at or
+past the declared window, or past 200 000 tokens of prompt, is named in amber
+under "Summarise at size" in the ⚙ panel (on load and on save) and in the
+agent's "# Your limits", which is where it can propose the fix. This panel's own
+saved config (1M window, `compactTokens` 500000) trips it; the value was left as
+the owner set it.
 
 ### 6. Vision is delegated, not native
 
