@@ -29,6 +29,20 @@ async function harnessConfigToggle(id, keepOpen) {
   _harnessLoadModels(id, h.config.provider, h.config.model);
   _harnessFallbacksMount(id, h.config.fallbackChain);
   harnessOllamaHint(id);   // the context Ollama really serves (harness/ollama-hint.js)
+  _harnessFoldHint(id, h.foldWarning);
+}
+
+/** Under "Summarise at size": when the saved settings mean folding never fires (harness/fold-check.js). */
+function _harnessFoldHint(id, text) {
+  const field = document.getElementById(`hcfg-compactTokens-${id}`);
+  if (!field) return;
+  let hint = document.getElementById(`hcfg-foldhint-${id}`);
+  if (!hint) {
+    hint = Object.assign(document.createElement('small'), { id: `hcfg-foldhint-${id}`, className: 'harness-hint' });
+    hint.style.color = 'var(--amber)';
+    field.parentElement.appendChild(hint);
+  }
+  hint.textContent = text || '';
 }
 
 /** External harnesses: how to launch them and where their own config lives. */
@@ -336,7 +350,8 @@ async function harnessConfigSave(id) {
 
   try {
     const data = await apiFetch(`/api/harness/${encodeURIComponent(id)}/config`, { method: 'POST', body });
-    if (h) h.config = data.config;
+    if (h) { h.config = data.config; h.foldWarning = data.foldWarning || null; }
+    _harnessFoldHint(id, data.foldWarning);
     setStatus(st, '✓ Saved', 'ok');
     if (id === _harnessDflt) _harnessConsoleReset();
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }

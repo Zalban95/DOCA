@@ -38,8 +38,10 @@ function handleInstall(req, res) {
   catalog.install(res, req.params.id, req.body?.password);
 }
 
-const handleConfig = wrap(async (req, res) =>
-  res.json({ ok: true, config: catalog.saveConfig(req.params.id, req.body || {}) }));
+const handleConfig = wrap(async (req, res) => {
+  const config = catalog.saveConfig(req.params.id, req.body || {});
+  res.json({ ok: true, config, foldWarning: catalog.get(req.params.id)?.kind === 'builtin' ? require('./fold-check').warning(config) : null });
+});
 
 const handleAddCustom = wrap(async (req, res) =>
   res.json({ ok: true, harness: catalog.addCustom(req.body || {}) }));

@@ -184,6 +184,7 @@ async function list() {
     needsSudo:  !!h.installCmd && h.installCmd.includes('sudo '),
     isDefault:  h.id === hp.default,
     config:     configFor(h.id),
+    ...(h.kind === 'builtin' ? { foldWarning: require('./fold-check').warning(configFor(h.id)) } : {}),
   })));
   return { harnesses: rows, default: defaultId() };
 }
