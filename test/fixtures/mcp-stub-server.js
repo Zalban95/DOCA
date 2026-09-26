@@ -67,6 +67,11 @@ process.stdin.on('data', chunk => {
         reply({ content: [{ type: 'text', text: `echo: ${args?.message ?? ''}` }] });
       } else if (name === 'write_thing') {
         reply({ content: [{ type: 'text', text: `wrote ${args?.value ?? ''}` }] });
+      } else if (name === 'grow') {
+        // Adds a tool and says so, the way a server whose tools depend on what is open does.
+        TOOLS.push({ name: `grown_${TOOLS.length}`, description: 'A tool that appeared later.', inputSchema: { type: 'object', properties: {} } });
+        reply({ content: [{ type: 'text', text: 'grew' }] });
+        send({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' });
       } else if (name === 'explode') {
         if (args?.rpcError) send({ jsonrpc: '2.0', id: msg.id, error: { code: -32000, message: args.message } });
         else reply({ content: [{ type: 'text', text: args?.message || 'that did not work' }], isError: true });
