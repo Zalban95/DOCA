@@ -312,18 +312,18 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       // event and is kept on the tool row, so a reloaded transcript draws it
       // again; the model only ever reads the result text.
       const shown = [];
-      const result = refused !== null
+      const result = require('./turn/failures').note(signal, name, args, refused !== null
         ? refused
         : args._raw !== undefined
         ? `Error: could not parse the arguments as JSON: ${args._raw}`
         : !schemas.some(sc => sc.function.name === name)
           ? `Error: the "${name}" tool is switched off for this conversation.`
-          : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), sessionId: session.id, signal, approved: !!gate, user: client?.user });
+          : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), sessionId: session.id, signal, approved: !!gate, user: client?.user }));
       for (const image of shown) say({ type: 'image', image, step });
-      say({ type: 'tool_result', name, result, step });
+      say({ type: 'tool_result', name, result, step, ...require('./turn/failures').typed(result) });
 
       memory.append(session.id, {
-        role: 'tool', tool_call_id: tc.id || name, name, content: result,
+        role: 'tool', tool_call_id: tc.id || name, name, content: result, ...require('./turn/failures').typed(result),
         ...(shown.length ? { images: shown } : {}),
       });
 
