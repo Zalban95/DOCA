@@ -6,7 +6,7 @@
 <title>DOCA Panel</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- CSS modules -->
 <link rel="stylesheet" href="css/variables.css">
 <link rel="stylesheet" href="css/base.css">
@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/settings.css">
 <link rel="stylesheet" href="css/canvas.css">
+<link rel="stylesheet" href="css/skin-modern.css">
 <link rel="stylesheet" href="css/sidebar.css">
 <link rel="stylesheet" href="css/config.css">
 <link rel="stylesheet" href="css/files.css">
@@ -740,8 +741,8 @@
       <!-- ── General ──────────────────────────────────── -->
       <div class="settings-panel active" id="sp-general">
         <div class="card">
-          <div class="card-title">Color Theme</div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Choose a color theme for the dashboard. Changes apply immediately.</p>
+          <div class="card-title">Appearance</div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">A style for the shape of things and a theme for the colours. Changes apply immediately.</p>
           <div id="theme-picker-grid" class="theme-grid"></div>
           <div id="theme-custom-editor" class="theme-custom-editor" style="display:none"></div>
           <span class="status-line" id="theme-status" style="margin-top:10px"></span>
@@ -1517,11 +1518,13 @@
 <script src="js/mcp.js"></script>
 <script src="js/sudo.js"></script>
 <script src="js/themes.js"></script>
+<script src="js/look.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/settings/updates.js"></script>
 <script src="js/settings/backups.js"></script>
 <script src="js/settings/subnav.js"></script>
 <script src="js/settings/account.js"></script>
+<script src="js/settings/appearance.js"></script>
 <script src="js/paths.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
