@@ -1739,8 +1739,15 @@ and anything built for one is there for the other.
   picker and ↗ open-in-tab. postMessage allowlist: `send` (text into the chat
   box, the user sends it) and `close`. Checked in a browser: the page's
   fetch to `/api` is refused by the CSP and its storage is blocked.
-  **Not yet:** the **preview proxy** for served projects on localhost ports
-  (same origin, `/p/<port>/…`); canvases on **devices** (left out of their
+  **Preview proxy: done in 2.70.0** — `canvas` action `preview` (or `POST
+  /api/harness/previews`, host right) issues a 12-hour token for one localhost
+  port (never the panel's own); `/p/<token>/` on the canvas origin sets an
+  HttpOnly cookie and the app's root-relative URLs, fetches and WebSockets
+  (hot reload) are proxied to that port (`canvas/previews.js`, `canvas/proxy.js`).
+  The app keeps the canvas origin (allow-same-origin), never the panel's; our
+  cookie is never passed to it. Checked in a browser, desk and phone: CSS,
+  script and a same-origin fetch all load. One preview per browser at a time.
+  **Not yet:** canvases on **devices** (left out of their
   transcripts for now — a phone could open the canvas URL in its WebView);
   "save this" / "open file" messages; deleting a canvas from the panel.
 - **Isolated work: hand it to a harness that already isolates.** Where a task

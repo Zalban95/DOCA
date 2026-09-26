@@ -96,3 +96,65 @@ test('a revision is capped, and old revisions go past the limit', () => {
   assert.equal(revs.length, canvases.MAX_REVS);
   assert.equal(revs.at(-1).rev, canvases.MAX_REVS + 4);
 });
+
+test('a preview shows a localhost port through the canvas origin — and only that port, only with its cookie', async () => {
+  const previews = require('../modules/canvas/previews');
+  const seen = [];
+  const app = http.createServer((req, res) => {
+    seen.push({ url: req.url, cookie: req.headers.cookie || '' });
+    res.setHeader('X-Frame-Options', 'DENY');
+    if (req.url === '/') return res.end('<script src="/assets/app.js"></script>');
+    if (req.url === '/assets/app.js') return res.end('console.log("app")');
+    res.writeHead(404); res.end();
+  });
+  const { WebSocketServer } = require('ws');
+  const wss = new WebSocketServer({ server: app });
+  wss.on('connection', s => s.on('message', m => s.send(`echo ${m}`)));
+  await new Promise(r => app.listen(0, '127.0.0.1', r));
+  // The canvas origin with upgrades, as origin.start() wires it.
+  const csrv = http.createServer(origin.handler);
+  csrv.on('upgrade', (req, sock, head) => require('../modules/canvas/proxy').upgrade(req, sock, head));
+  await new Promise(r => csrv.listen(0, '127.0.0.1', r));
+  const cb = `http://127.0.0.1:${csrv.address().port}`;
+  try {
+    const shown = [];
+    const out = await tools.call('canvas', { action: 'preview', port: app.address().port, title: 'Vite app' }, [], { show: m => shown.push(m) });
+    assert.match(out, /Preview prv_[0-9a-f]{12} of localhost:\d+ is a button/);
+    const p = previews.get(shown[0].previewId);
+    assert.throws(() => previews.create({ port: require('../modules/paths').PORT }), /panel's own ports/);
+
+    let r = await fetch(`${cb}/p/${p.token}/`, { redirect: 'manual' });
+    assert.equal(r.status, 302);
+    const cookie = r.headers.get('set-cookie').split(';')[0];
+    assert.match(r.headers.get('set-cookie'), /HttpOnly; Secure/);
+
+    r = await fetch(`${cb}/assets/app.js`, { headers: { cookie: `${cookie}; theirs=1` } });
+    assert.equal(await r.text(), 'console.log("app")', 'a root-relative URL reaches the app');
+    assert.equal(seen.at(-1).cookie, 'theirs=1', 'the app never sees the preview cookie');
+    r = await fetch(`${cb}/`, { headers: { cookie } });
+    assert.equal(r.headers.get('x-frame-options'), null);
+    assert.match(r.headers.get('content-security-policy'), /frame-ancestors https:\/\/\*:\d+/);
+    assert.equal((await fetch(`${cb}/assets/app.js`)).status, 404, 'no cookie, no proxy');
+
+    // Hot reload: a WebSocket through the same cookie.
+    const WebSocket = require('ws');
+    const ws = new WebSocket(`ws://127.0.0.1:${csrv.address().port}/hmr`, { headers: { cookie } });
+    const reply = await new Promise((resolve, reject) => {
+      ws.on('open', () => ws.send('hi')); ws.on('message', m => resolve(String(m))); ws.on('error', reject);
+    });
+    assert.equal(reply, 'echo hi');
+    ws.close();
+
+    // Nothing listening: said plainly.
+    const dead = previews.create({ port: 1 });
+    r = await fetch(`${cb}/x`, { headers: { cookie: `doca_preview=${dead.token}` } });
+    assert.equal(r.status, 502);
+    assert.match(await r.text(), /Nothing answered on localhost:1/);
+
+    const member = await H.signIn('member');
+    r = await H.api(null, 'POST', '/api/harness/previews', { port: 5173 }, { Cookie: member.cookie });
+    assert.equal(r.status, 403, 'showing a local port to the tailnet is a host right');
+    r = await H.api(null, 'GET', `/api/harness/previews/${p.id}`);
+    assert.equal(r.body.path, `/p/${p.token}`);
+  } finally { wss.close(); app.close(); csrv.close(); }
+});
