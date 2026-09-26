@@ -221,7 +221,7 @@ test('shared turn lock covers background, browser and device calls, and protects
   assert.equal(org.session(s.id).state, 'cancelled');
 });
 
-test('Orchestrator uses a smaller tool context and failed requests do not consume upward reports', async () => {
+test('the Orchestrator holds every tool, and failed requests do not consume upward reports', async () => {
   const agent = require('../modules/harness/agent');
   const memory = require('../modules/harness/memory');
   const org = require('../modules/harness/organization');
@@ -234,10 +234,16 @@ test('Orchestrator uses a smaller tool context and failed requests do not consum
   seen = [];
   await agent.turn({ message: 'Check status', sessionId: main.id });
   const request = seen[0];
-  assert.ok(request.tools.length <= 20);
-  assert.ok(!request.tools.some(t => ['shell', 'agent_dispatch'].includes(t.function.name)));
-  assert.ok(request.tools.some(t => t.function.name === 'work_chats'));
+  // Decided 2026-09-26: the Orchestrator's freedom is close to absolute — every kit
+  // (harness/kits.js). What it hands to a work chat is judgement, in its prompt.
+  const names = request.tools.map(t => t.function.name);
+  for (const n of ['shell', 'work_chats', 'canvas', 'search_files', 'git', 'project', 'write_file']) assert.ok(names.includes(n), n);
+  assert.match(request.messages[0].content, /# Your tools — \d+, by kit/);
   assert.match(request.messages.at(-1).content, /Decision needed/);
+  // The readings travel as `user`, after the history: a second `system` message
+  // is refused by Qwen's template under llama.cpp --jinja (agent audit 2026-09-26).
+  assert.equal(request.messages.at(-1).role, 'user');
+  assert.deepEqual(request.messages.map((m, i) => (m.role === 'system' ? i : null)).filter(i => i !== null), [0]);
   assert.doesNotMatch(request.messages[0].content, /Decision needed/);
   assert.ok(!org.notices(main.id).some(n => n.id === note.id));
   assert.equal(agent.breakdown({ sessionId: main.id }).tools.count, request.tools.length);

@@ -32,7 +32,7 @@ const missions = {
 // The turn's parts, one idea per file under ./turn. This file runs the turn;
 // the rest is imported, and re-exported where other modules already use it.
 const { params, turnParams, profileForTurn } = require('./turn/params');
-const { disabledFor, isMissionProfile, liveBlock, missionsFor, systemPrompt } = require('./turn/prompt');
+const { disabledFor, isMissionProfile, liveBlock, missionsFor, systemPrompt, turnPreamble } = require('./turn/prompt');
 const { toApiMessages } = require('./turn/messages');
 const { DEGRADED_MS, rungsFor, markDegraded, forgetDegraded, openingHop, hopReporter, truncationNotice } = require('./turn/fallback');
 const { ask, complete } = require('./turn/transport');
@@ -145,7 +145,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   // read tomorrow — and would otherwise read the backup's words as the primary's.
   const fallbacks = [];
   const contextSkips = new Map();
-  const projectBrief = await require('../projects/brief').forSession(session.id).catch(() => '');   // once per turn
+  const { projectBrief, toolNews } = await turnPreamble({ session, profile, p });   // once per turn: project, tool changes
 
   for (let step = 1; step <= maxSteps; step++) {
     // Rebuilt every step, not once per turn.
@@ -197,7 +197,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     const completed = isMission ? [] : missions.notices(session.id);
     const organization = require('./organization');
     const reports = organization.notices(session.id).slice(0, 10);
-    const live = [liveBlock(p, led), isMission ? '' : missions.block({ sessionId: session.id, completed }),
+    const live = [liveBlock(p, led), toolNews, isMission ? '' : missions.block({ sessionId: session.id, completed }),
       organization.block(session.id, reports),
       ...contextSkips.values()].filter(Boolean).join('\n');
     if (live) messages.push({ role: 'user', content: `[panel readings, not from the user]\n${live}` });
@@ -291,7 +291,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       // reach the transcript the user is looking at — and because it must cover
       // MCP tools, which `tools.call` dispatches before it sees a definition.
       let refused = null;
-      const gate = args._raw === undefined ? approval.gate(name, args) : null;
+      const gate = args._raw === undefined ? approval.gate(name, args, { sessionId: session.id }) : null;
       if (gate) {
         if (isMission) {
           refused = approval.missionRefusal(gate);
@@ -318,7 +318,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
         ? `Error: could not parse the arguments as JSON: ${args._raw}`
         : !schemas.some(sc => sc.function.name === name)
           ? `Error: the "${name}" tool is switched off for this conversation.`
-          : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), sessionId: session.id, signal });
+          : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), sessionId: session.id, signal, approved: !!gate });
       for (const image of shown) say({ type: 'image', image, step });
       say({ type: 'tool_result', name, result, step });
 

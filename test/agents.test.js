@@ -400,7 +400,8 @@ test('a specialist can reach mission_plan whatever its definition allows', () =>
   const dir = require('node:path').join(__dirname, '..', 'modules', 'harness');
   const src = ['agent.js', ...require('node:fs').readdirSync(require('node:path').join(dir, 'turn')).map(f => `turn/${f}`)]
     .map(f => require('node:fs').readFileSync(require('node:path').join(dir, f), 'utf8')).join('\n');
-  assert.equal((src.match(/profile\.tools\.includes\(n\)/g) || []).length, 1,
+  // One implementation: an agent type's kits and tools, expanded (harness/kits.js).
+  assert.equal((src.match(/kits'\)\.expand\(/g) || []).length, 1,
     'the allowlist is computed in more than one place again');
 
   // A definition still cannot give itself a tool the charter withholds, and

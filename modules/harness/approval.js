@@ -145,7 +145,12 @@ function summarize(name, args) {
  * Does this call need a person? Returns null when it may simply run, or the
  * request to put in front of the user.
  */
-function gate(name, args) {
+function gate(name, args, ctx = {}) {
+  // What governs the agent always asks, in every mode — Unattended included —
+  // and can never be "always allowed" (harness/control-plane.js).
+  const cp = require('./control-plane').target(name, args, ctx);
+  if (cp) return { tool: name, keys: null, forced: true,
+    summary: `${cp.path} — ${cp.what}. Writing it always asks you first, whatever the approval mode.` };
   const { mode, always } = settings();
   if (mode !== 'manual') return null;
   if (FREE.has(name)) return null;

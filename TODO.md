@@ -2049,6 +2049,25 @@ numbers held. Fixed:
   **Open, app-side:** a device whose queue is all "fetched but not
   acknowledged" has the events and never sends its cursor back — DocaMobile /
   DocaWear should poll with `since=` or call `POST /events/ack`.
+
+### To do on the other machine (where DocaDesk runs and the apps are debugged) — together
+
+Decided 2026-09-26: DocaDesk and the two apps are worked on in the same
+session, directly on the machine where DocaDesk is installed and the apps are
+debugged from. That machine is off at the moment.
+- **DocaDesk — check first**, before changing anything: it has not polled since
+  2026-09-21 (`lastSeen`); its record lacks `harness:chat` and
+  `harness:sessions`, so it can receive no agent replies — Settings → API Keys
+  now offers **+ Grant** for exactly those (v2.74.0), which keeps its id and
+  queue. Then: does it start, reach the hub over the tailnet, and poll? And the
+  older item: it signs the panel in by password, not by its device token.
+- **DocaMobile and DocaWear — cursor/ack**: with the hub's new delivery
+  counters (`doca_clients`: "fetched but not acknowledged" vs "not fetched"),
+  see whether each app polls with `since=<last seq>` or acks
+  (`POST /api/v1/events/ack`); if not, their queues never shrink. Fix in the
+  apps. Also the apps' side of question cards (`prompt.new`) and canvases
+  (open `https://<host>:4243/c/<token>` in the WebView — the hub leaves canvas
+  items out of device transcripts until then).
 - **§4g, medium — a fallback entry dropped in silence.** Announced as a warning
   in the turn, naming the entry and the provider that is gone.
 - **N3, medium — final reports cut to 600 characters.** Kept up to 20,000, with
@@ -2066,3 +2085,32 @@ numbers held. Fixed:
   `/v1` shim takes no per-request context size. The audit's claim that H-13,
   H-14 and H-18 are "still written as open" was mistaken: their status lines
   already read fixed.
+
+## Agents that know their tools, and keep knowing them after an update (asked 2026-09-26)
+
+The design is `docs/design/agents-and-tools.md`: **kits** (tools grouped by
+family, each tool with one "when to use it" line beside it; agents hold kits,
+so a new tool reaches every agent whose kit it joins), a **generated
+`# Your tools` section** in every prompt (the audit's N7: nothing hand-kept),
+the **Orchestrator on every kit** (its freedom close to absolute; the audit's
+§3), an **update notice** telling each level what changed, **per-file edit
+permissions** (free / ask even in Unattended / never) replacing the flat
+control-plane refusal, and later **markdown definitions** (`orchestrator.md`,
+`owner.md`, `agents/<id>.md`, Claude Code / OpenClaw-importable) with standard
+agents shipped from the repository. Phase 1 is the first five — **built in 2.75.0**: `harness/kits.js` (every tool
+in a kit; a tool in no kit fails `test/kits.test.js`), the generated "# Your
+tools" section at every level (`turn/tools-section.js`, ~1.2k tokens, in the
+cached prefix), the Orchestrator and work chats on every kit, specialists on
+the kits their definition names (`kits: [...]`, old `tools` lists still
+honoured, `registry.NEVER` still subtracted), the update notice
+(`turn/tool-news.js`, per agent type, once), and control-plane writes that
+**ask in every mode** (never "always", refused to a specialist) instead of the
+flat refusal of 2.74.0. The readings-as-`user` test is in `test/harness.test.js`.
+Adjusted with the person 2026-09-26: `me.md`, not `owner.md`; tools decided by
+agent type; and **undo for agent runs** (git checkpoints, retry with another
+prompt/model/specialist) added as phase 3.
+
+From the agent's latest findings, also: its memory note
+`llamacpp-cannot-serve-harness` is obsolete (two missions ran end to end on
+llama.cpp with `--jinja`); and add a test that the per-step readings travel as a
+`user` message, which is what keeps a Qwen `--jinja` template from refusing.
