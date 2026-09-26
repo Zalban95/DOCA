@@ -6,11 +6,12 @@
  * Here and not in createApp(): requiring the app must never spawn somebody's
  * child processes or publish to their devices, which is what the tests do.
  */
-function afterListen() {
+function afterListen({ certs = null, mode } = {}) {
   require('./agents/missions').recover();            // specialists a restart cut off: paused
   require('./harness/workview').recover();            // work chats likewise, told to the devices
   require('./harness/supervisor').recover();          // and carried on: a restart is not a decision
   require('./mcp/registry').startWithDoca();          // MCP servers marked "start with DOCA"
+  require('./canvas/origin').start({ certs, mode });  // agent-written pages, on their own origin
 }
 
 module.exports = { afterListen };

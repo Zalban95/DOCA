@@ -1719,6 +1719,23 @@ and anything built for one is there for the other.
   preview proxy on that same second origin — which is also what lets a phone on
   the tailnet see a dev server that only listens on this machine's loopback.
 
+- **Done in 2.61.0 (2026-09-26): canvases, first version.** The `canvas` tool
+  (open / write / read / list; `modules/harness/toolbox/canvas.js`), stored with
+  their last 20 revisions (`modules/canvas/store.js`), served **only** from the
+  canvas origin — `CANVAS_PORT`, default PORT + 1, same certificate and listen
+  mode, no sessions, no cookies (`modules/canvas/origin.js`) — with a CSP
+  `sandbox` (no allow-same-origin), `connect-src 'none'`, inline images only,
+  scripts/styles from the two CDNs, and `frame-ancestors` the panel's port. The
+  address is a 128-bit token; the panel's `/api/harness/canvases/:id` gives it
+  out, the list does not. In the chat: a "◧ Open canvas" chip; the window sits
+  under the floating chat, a full-screen sheet on a phone, with a revision
+  picker and ↗ open-in-tab. postMessage allowlist: `send` (text into the chat
+  box, the user sends it) and `close`. Checked in a browser: the page's
+  fetch to `/api` is refused by the CSP and its storage is blocked.
+  **Not yet:** the **preview proxy** for served projects on localhost ports
+  (same origin, `/p/<port>/…`); canvases on **devices** (left out of their
+  transcripts for now — a phone could open the canvas URL in its WebView);
+  "save this" / "open file" messages; deleting a canvas from the panel.
 - **Isolated work: hand it to a harness that already isolates.** Where a task
   should run apart — its own checkout, its own process — the agent starts
   Claude Code or a similar CLI through the harness catalog (which already lists
