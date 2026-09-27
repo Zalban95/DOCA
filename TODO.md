@@ -102,7 +102,7 @@ the end, and in the sections as "built in …" notes.
 - A retrieval layer (embeddings) — with the database's `pgvector`. → *Memory,
   limits and context*, *Where this harness stands…* §3.
 
-**Proposed 2026-09-27 — devices as hands** (`docs/design/devices-as-hands.md`, to approve)
+**Approved 2026-09-27 — devices as hands** (`docs/design/devices-as-hands.md`). **Built so far (2.112.0):** device actions (`device.control`: refresh, reconnect, ask, disconnect, revoke/restore a family — reconnect and disconnect also enforced by DOCA itself), grants reported by the device (`PUT /api/v1/devices/self/grants`), the device's page `/d/<id>/` (only its own session or its owner) with a "This device" card, and the same controls on every device in Settings → API Keys → Devices; PROTOCOL §22.1. **Next here:** trust origins, the machine selector in Files and Projects, client checkpoints.
 - Paired devices extend the harness's reach: the same tool families as the host
   (files, shell, processes, screen, input, apps, elevated) on DocaDesk, what the
   OS allows on the apps; consent once per device and family; your own devices

@@ -72,7 +72,7 @@ function missingScopes(d) {
 
 function handleList(_req, res) {
   const list = devices.list().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
-    .map(d => ({ ...d, missingScopes: missingScopes(d), preset: presetFor(d) }));
+    .map(d => ({ ...d, missingScopes: missingScopes(d), preset: presetFor(d), control: require('./devices-control').state(d.id) }));
   res.json({
     devices: list,
     presets: PRESETS,
@@ -192,6 +192,26 @@ function mount(app) {
   app.post  ('/api/devices/:id/rotate',  handleRotate);
   app.post  ('/api/devices/:id/scopes',  handleGrant);
   app.delete('/api/devices/:id',         handleRevoke);
+  // Devices as hands (devices-control.js): what a device granted, and the actions on it.
+  const control = require('./devices-control');
+  app.get   ('/api/devices/:id/control', (req, res) => res.json(control.state(req.params.id)));
+  app.post  ('/api/devices/:id/control', (req, res) => {
+    try {
+      const s = control.send(req.params.id, String(req.body?.action || ''), { family: req.body?.family || null, by: req.auth?.user?.id || null });
+      require('./auth/store').audit({ orgId: req.auth?.orgId, actorId: req.auth?.user?.id, action: `device ${req.body?.action}`, detail: `${req.params.id}${req.body?.family ? ` ${req.body.family}` : ''}` });
+      res.json(s);
+    } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  });
+  // A device's own page (docs/design/devices-as-hands.md §5): the panel, personalised for it.
+  // The path is a view, never a key — served only to that device's session, or to a person who owns it.
+  const page = require('express').static(require('path').join(__dirname, '..', 'public'));
+  app.use('/d/:id', (req, res, next) => {
+    const d = devices.get(req.params.id);
+    const who = req.auth;
+    const mine = d && !d.revokedAt && who && (who.session?.deviceId === d.id || (d.userId && d.userId === who.user?.id));
+    if (!mine) return res.status(404).type('text/plain').send('Not a device of yours.');
+    return page(req, res, next);
+  });
 }
 
 module.exports = {

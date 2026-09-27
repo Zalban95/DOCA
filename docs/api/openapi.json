@@ -5637,6 +5637,226 @@
           }
         }
       }
+    },
+    "/devices/self/control/{id}/ack": {
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Answer a device.control action",
+        "operationId": "ackDeviceControl",
+        "description": "The device did (or refused) what a `device.control` event asked: refresh, reconnect, ask, disconnect, revoke, restore. docs/design/devices-as-hands.md.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ok": {
+                    "type": "boolean"
+                  },
+                  "detail": {
+                    "type": "string",
+                    "maxLength": 300
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "control": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input — `error.message` says which field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/devices/self/grants": {
+      "put": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Report which tool families this device has granted",
+        "operationId": "putDeviceGrants",
+        "description": "Families: files, shell, processes, screen, input, apps, device, elevated, mcp. The harness is offered only a granted family that DOCA has not revoked. Reporting also clears a disconnect.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "grants": {
+                    "type": "object",
+                    "properties": {
+                      "files": {
+                        "type": "boolean"
+                      },
+                      "shell": {
+                        "type": "boolean"
+                      },
+                      "processes": {
+                        "type": "boolean"
+                      },
+                      "screen": {
+                        "type": "boolean"
+                      },
+                      "input": {
+                        "type": "boolean"
+                      },
+                      "apps": {
+                        "type": "boolean"
+                      },
+                      "device": {
+                        "type": "boolean"
+                      },
+                      "elevated": {
+                        "type": "boolean"
+                      },
+                      "mcp": {
+                        "type": "boolean"
+                      }
+                    },
+                    "description": "Each family: true granted on this device, false refused."
+                  }
+                },
+                "required": [
+                  "grants"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "grants": {
+                      "type": "object",
+                      "properties": {
+                        "files": {
+                          "type": "boolean"
+                        },
+                        "shell": {
+                          "type": "boolean"
+                        },
+                        "processes": {
+                          "type": "boolean"
+                        },
+                        "screen": {
+                          "type": "boolean"
+                        },
+                        "input": {
+                          "type": "boolean"
+                        },
+                        "apps": {
+                          "type": "boolean"
+                        },
+                        "device": {
+                          "type": "boolean"
+                        },
+                        "elevated": {
+                          "type": "boolean"
+                        },
+                        "mcp": {
+                          "type": "boolean"
+                        }
+                      },
+                      "description": "Each family: true granted on this device, false refused."
+                    },
+                    "usable": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input — `error.message` says which field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6670,6 +6890,7 @@
               "profile.changed",
               "device.vars",
               "device.message",
+              "device.control",
               "agent.message",
               "agent.turn",
               "agent.mission",
@@ -9265,6 +9486,16 @@
             "description": "Opaque client/agent data, stored and forwarded untouched (≤ 8192 bytes)."
           }
         }
+      }
+    },
+    "device.control": {
+      "class": "durable",
+      "ttlSec": 86400,
+      "audience": "device",
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": true
       }
     },
     "agent.message": {
