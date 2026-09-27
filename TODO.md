@@ -108,9 +108,13 @@ the end, and in the sections as "built in …" notes.
 - Hosted DOCA (a machine per tenant, billing). → *Settled 2026-09-25*.
 
 **Portal**
-- DocaDesk: check first; the MCP proxied-name dedupe; answer
-  `tools/list_changed`; send its device token on page load. → *Done log: the
-  resident agent's audit* ("To do on the other machine"), *MCP and VMs*.
+- DocaDesk (cloned beside DOCA, 2026-09-27): the proxied-name dedupe was
+  **already fixed** there (a stable hash suffix, tested on Blender's tool list);
+  **`tools/list_changed` (D-8) and the device token on page load (D-9)** are on
+  branch `doca-2.111-listchanged-token` — D-8 tested on Linux, and end to end
+  against DOCA's own MCP client; D-9 needs a Windows build. **To do on portal:**
+  build, `dotnet test tests\DocaDesk.Tests`, check both, merge. Then check the
+  rest ("To do on the other machine").
 - DocaMobile and DocaWear: cursor/ack against the hub's delivery counters.
 - The clients version themselves (PROTOCOL §2). → *Version and identity*.
 
