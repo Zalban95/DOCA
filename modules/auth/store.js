@@ -148,28 +148,47 @@ function pruneSessions() {
 
 /** Append only, and never deleted with what it describes. */
 /*
- * The audit log, one file a month (audit-YYYY-MM.jsonl), so it never grows
- * without end and an old month can be archived or removed on its own. The
- * single audit.jsonl it used to be is kept as it is and read as the oldest.
+ * The audit log is a table in the database since 2.108.0 (docs/design/database.md).
+ * It was one file a month (audit-YYYY-MM.jsonl) before that, and a single
+ * audit.jsonl before those; both are imported once, oldest first, and left on disk.
  */
 const AUDIT_LEGACY = 'audit.jsonl';
-const auditFile = (at = now()) => `audit-${at.slice(0, 7)}.jsonl`;
+const db = () => require('../db');
 
-function audit(entry) {
-  const at = now();
-  store.appendJsonl(path.join(store.dir('auth'), auditFile(at)), { at, ...entry });
+let _auditImported = null;
+function auditImported() {
+  if (!_auditImported) _auditImported = (async () => {
+    if (await db().get("SELECT value FROM meta WHERE key = 'audit.imported'")) return;
+    const dir = store.dir('auth');
+    let months = [];
+    try { months = require('fs').readdirSync(dir).filter(f => /^audit-\d{4}-\d{2}\.jsonl$/.test(f)).sort(); } catch { /* none */ }
+    await db().tx(async q => {
+      if (await q.get("SELECT value FROM meta WHERE key = 'audit.imported'")) return;   // another process got there first
+      for (const f of [AUDIT_LEGACY, ...months]) for (const e of store.readJsonl(path.join(dir, f))) await insertAudit(q, e);
+      await q.run("INSERT INTO meta (key, value) VALUES ('audit.imported', ?)", [now()]);
+    });
+  })().catch(e => { _auditImported = null; throw e; });
+  return _auditImported;
 }
 
-/** The last n entries, newest last, across months. */
-function auditTail(n = 100) {
-  const dir = store.dir('auth');
-  const months = require('fs').readdirSync(dir).filter(f => /^audit-\d{4}-\d{2}\.jsonl$/.test(f)).sort().reverse();
-  let out = [];
-  for (const f of [...months, AUDIT_LEGACY]) {
-    out = [...store.readJsonl(path.join(dir, f)), ...out];
-    if (out.length >= n) break;
-  }
-  return out.slice(-n);
+function insertAudit(q, e) {
+  const { at, orgId, actorId, action, detail, ...rest } = e;
+  return q.run('INSERT INTO audit (at, org_id, actor_id, action, detail, data) VALUES (?,?,?,?,?,?)',
+    [at || now(), orgId || null, actorId || null, action || null, detail == null ? null : String(detail), Object.keys(rest).length ? JSON.stringify(rest) : null]);
+}
+
+/** Record one action. Never throws and never waits: the audit must not break what it records. */
+function audit(entry) {
+  const e = { at: now(), ...entry };
+  auditImported().then(() => insertAudit(db(), e)).catch(err => console.warn(`[audit] not recorded: ${err.message}`));
+}
+
+/** The last n entries, newest last. */
+async function auditTail(n = 100) {
+  await auditImported();
+  const rows = await db().all("SELECT at, org_id, actor_id, action, detail, data FROM audit WHERE tenant_id = 'local' ORDER BY at DESC, id DESC LIMIT ?", [Math.max(1, Number(n) || 100)]);
+  return rows.reverse().map(r => ({ at: r.at, ...(r.org_id ? { orgId: r.org_id } : {}), ...(r.actor_id ? { actorId: r.actor_id } : {}),
+    action: r.action, ...(r.detail != null ? { detail: r.detail } : {}), ...(r.data ? JSON.parse(r.data) : {}) }));
 }
 
 module.exports = {
@@ -177,4 +196,5 @@ module.exports = {
   defaultOrg, createOrg, membership, membershipsOf, addMembership,
   createSession, sessionByHash, updateSession, deleteSession, deleteSessionsOf, pruneSessions,
   audit, auditTail,
+  _resetAuditImport: () => { _auditImported = null; },   // tests only
 };

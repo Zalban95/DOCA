@@ -60,7 +60,7 @@ const DATA = {
   canvas:                 { is: 'travels', note: 'canvases' },
   attachments:            { is: 'travels', note: 'files attached to conversations' },
   media:                  { is: 'travels', note: 'media shown to devices' },
-  auth:                   { is: 'mixed',   note: 'users and orgs travel; sign-in sessions and the audit log are this install\'s' },
+  auth:                   { is: 'mixed',   note: 'users and orgs travel; sign-in sessions are this install\'s (the audit log is in doca.db since 2.108.0)' },
   keys:                   { is: 'local',   note: 'provider API keys: secret' },
   'devices.json':         { is: 'local',   note: 'paired devices and their token hashes, bound to this host' },
   projects:               { is: 'local',   note: 'projects are folders of this machine' },
