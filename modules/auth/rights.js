@@ -48,6 +48,7 @@ const TABLE = [
 
   // ── Devices ──
   R(GET, '/api/devices', 'devices'),
+  R(ANY, '/api/devices/[^/]+/files(/.*)?', 'host'),         // a device's disk is the machine, like the host's files
   R(ANY, '/api/devices(/.*)?', 'devices'),
 
   // ── The harness: what lets the agent act on the machine is host ──

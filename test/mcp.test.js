@@ -238,6 +238,10 @@ test('a client-hosted server really is reached over http, and its tools reach th
 
   // And a call actually lands on it, through the harness dispatcher.
   assert.equal(inner(await harnessTools.call('mcp__desk-reach__list_windows', {})), 'Notepad\nBlender');
+  // A paired device's own tools are its person's machine talking: trusted like the host, not framed
+  // (docs/design/devices-as-hands.md §3). A tool it forwarded (<server>__<tool>) would stay third party.
+  assert.equal(await harnessTools.call('mcp__desk-reach__list_windows', {}), 'Notepad\nBlender');
+  assert.equal(mcpTools.available().find(t => t.exposed === 'mcp__desk-reach__list_windows').trusted, true);
   assert.equal(mcpTools.available().find(t => t.exposed === 'mcp__desk-reach__list_windows').origin, 'client');
 
   // Whose machine does an unqualified request mean? The prompt now joins the two

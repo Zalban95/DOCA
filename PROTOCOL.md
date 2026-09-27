@@ -1044,6 +1044,18 @@ A paired client can offer the harness the same **tool families** the host has �
     opens the app again; stay paired (DOCA also ends the device's panel sessions);
   - `revoke` / `restore` — DOCA took `family` back / allowed it again; stop or
     resume offering it.
+- **The `files` family**, on the MCP server the device hosts (§22): tools
+  `files_list {path}` → `{path, entries:[{name,isDir,size,mtime}]}` (an empty
+  path is the device's home), `files_read {path, encoding?}` → `{content, size,
+  mtime}` (`encoding: "base64"` for bytes), `files_write {path, content,
+  encoding?}`, `files_mkdir {path}`, `files_move {from,to}`, `files_copy
+  {from,to}`, `files_delete {paths}` → `{ok}`; results as JSON text, a refusal as
+  an MCP error. DOCA's Files tab and tree then browse the device
+  (`/api/devices/{id}/files/*`, the host's shapes), only while `files` is granted
+  and not revoked. The device decides what it shares.
+- **Trust.** A paired device's own tools are trusted like the host's (not framed
+  as outside text); a tool it forwards from another server, named
+  `<server>__<tool>`, stays third party.
 - **The device's page** is `https://<host>:<port>/d/<device-id>/` — the panel,
   with a "This device" card in Settings. Open it with the device token on the
   first load (as DocaMobile does); it is served only to that device's session or

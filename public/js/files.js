@@ -45,7 +45,7 @@ async function fmInit() {
   }
 
   fmBuildBookmarks();
-  fmTreeMount(fm.cwd);
+  fmTreeMount(fm.cwd); fmMachinesMount();   // the tree, and a machine selector when a paired device shares its files
   fmSetupDragDrop();
   await fmLoadFavorites();
   fmLoadMounts();
@@ -116,7 +116,7 @@ async function fmLoadMounts() {
   const el = document.getElementById('fm-mounts-list');
   if (!el) return;
   try {
-    const data = await apiFetch('/api/files/mounts');
+    const data = await apiFetch(`${fmApi()}/mounts`);
     const mounts = data.mounts || [];
     if (!mounts.length) {
       el.innerHTML = '<div class="placeholder" style="font-size:10px;padding:4px">No mounts detected</div>';
@@ -172,7 +172,7 @@ function fmTreeMount(root) {
     box = document.getElementById('fm-tree');
   }
   if (!box) return;
-  fm.tree = fileTree(box, { root, onOpenDir: fmNavigate, onOpen: p => {
+  fm.tree = fileTree(box, { root, api: fmApi(), onOpenDir: fmNavigate, onOpen: p => {
     const mt = fmMediaType(p.split('/').pop());
     if (mt) fmPreviewFile(p, mt); else fmOpenEditor(p);
   } });
@@ -199,7 +199,7 @@ async function fmRefresh() {
   const list = document.getElementById('fm-list-inner');
   list.innerHTML = '<div class="placeholder pulse" style="padding:16px">Loading…</div>';
   try {
-    const data    = await apiFetch(`/api/files/list?path=${encodeURIComponent(fm.cwd)}`);
+    const data    = await apiFetch(`${fmApi()}/list?path=${encodeURIComponent(fm.cwd)}`);
     fm.entries    = data.entries || [];
     fmRenderList();
   } catch (e) {
@@ -375,7 +375,7 @@ async function fmPaste() {
   if (!fm.clipboard?.paths.length) return;
   const { op, paths } = fm.clipboard;
   try {
-    await apiFetch('/api/files/paste', {
+    await apiFetch(`${fmApi()}/paste`, {
       method: 'POST',
       body: { op, paths, dest: fm.cwd }
     });
@@ -390,7 +390,7 @@ function fmDelete(path, isDir, evt) {
   const targets = fm.selected.size > 1 ? [...fm.selected] : [path];
   appConfirm(`Delete ${targets.length} item(s)?`, async () => {
     try {
-      await apiFetch('/api/files/delete', { method: 'POST', body: { paths: targets } });
+      await apiFetch(`${fmApi()}/delete`, { method: 'POST', body: { paths: targets } });
       fm.selected = new Set();
       fmRefresh();
     } catch (e) { appAlert(`Delete error: ${e.message}`); }
@@ -421,7 +421,7 @@ function fmRenameInline(path, name, evt) {
     const dir     = path.substring(0, path.lastIndexOf('/'));
     const newPath = `${dir}/${newName}`;
     try {
-      await apiFetch('/api/files/rename', { method: 'POST', body: { from: path, to: newPath } });
+      await apiFetch(`${fmApi()}/rename`, { method: 'POST', body: { from: path, to: newPath } });
       fmRefresh();
     } catch (e) { appAlert(`Rename error: ${e.message}`); fmRenderList(); }
   };
@@ -437,7 +437,7 @@ function fmRenameInline(path, name, evt) {
 function fmNewFolder() {
   appPrompt('New folder name:', async (name) => {
     try {
-      await apiFetch('/api/files/mkdir', { method: 'POST', body: { path: `${fm.cwd}/${name}` } });
+      await apiFetch(`${fmApi()}/mkdir`, { method: 'POST', body: { path: `${fm.cwd}/${name}` } });
       fmRefresh();
     } catch (e) { appAlert(`Error: ${e.message}`); }
   });
@@ -448,7 +448,7 @@ function fmNewFile() {
   appPrompt('New file name:', async (name) => {
     const fpath = `${fm.cwd}/${name}`;
     try {
-      await apiFetch('/api/files/write', { method: 'POST', body: { path: fpath, content: '' } });
+      await apiFetch(`${fmApi()}/write`, { method: 'POST', body: { path: fpath, content: '' } });
       fmRefresh();
       fmOpenEditor(fpath);
     } catch (e) { appAlert(`Error: ${e.message}`); }
@@ -467,7 +467,7 @@ async function fmOpenEditor(path, evt) {
   panel.style.display = 'flex';
 
   try {
-    const data  = await apiFetch(`/api/files/read?path=${encodeURIComponent(path)}`);
+    const data  = await apiFetch(`${fmApi()}/read?path=${encodeURIComponent(path)}`);
     editor.value = data.content;
     editor.focus();
   } catch (e) { editor.value = `// Error: ${e.message}`; }
@@ -483,7 +483,7 @@ async function fmSaveEditor() {
   const content = document.getElementById('fm-editor').value;
   const status  = document.getElementById('fm-editor-status');
   try {
-    await apiFetch('/api/files/write', { method: 'POST', body: { path: fm.editFile, content } });
+    await apiFetch(`${fmApi()}/write`, { method: 'POST', body: { path: fm.editFile, content } });
     setStatus(status, '✓ Saved', 'ok');
   } catch (e) { setStatus(status, `✗ ${e.message}`, 'err'); }
 }
@@ -506,7 +506,7 @@ function fmPreviewFile(fpath, mediaType, evt) {
   title.textContent = fpath.split('/').pop();
   body.innerHTML = '';
 
-  const url = `/api/files/raw?path=${encodeURIComponent(fpath)}`;
+  const url = `${fmApi()}/raw?path=${encodeURIComponent(fpath)}`;
 
   if (mediaType === 'image') {
     const img = document.createElement('img');
@@ -619,7 +619,7 @@ function fmUploadFiles(fileList) {
     document.getElementById('fm-upload-input').value = '';
   });
 
-  xhr.open('POST', '/api/files/upload');
+  xhr.open('POST', `${fmApi()}/upload`);
   xhr.send(formData);
 }
 
@@ -627,7 +627,7 @@ function fmUploadFiles(fileList) {
 function fmDownloadFile(fpath, evt) {
   if (evt) evt.stopPropagation();
   const a  = document.createElement('a');
-  a.href   = `/api/files/download?path=${encodeURIComponent(fpath)}`;
+  a.href   = `${fmApi()}/download?path=${encodeURIComponent(fpath)}`;
   a.download = fpath.split('/').pop();
   document.body.appendChild(a);
   a.click();
@@ -715,7 +715,7 @@ const globalSearchDebounced = debounce(async () => {
 
   const root = (typeof fm !== 'undefined' && fm.cwd) ? fm.cwd : '/';
   try {
-    const data = await apiFetch(`/api/files/search?root=${encodeURIComponent(root)}&q=${encodeURIComponent(q)}`);
+    const data = await apiFetch(`${fmApi()}/search?root=${encodeURIComponent(root)}&q=${encodeURIComponent(q)}`);
     const items = data.results || [];
     _searchActiveIdx = -1;
 

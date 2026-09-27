@@ -35,9 +35,12 @@ function available() {
 
     // Once per server, not once per tool: this runs on every step of every turn.
     const onClient   = spec.origin?.kind === 'client';
-    const originName = onClient
-      ? (registry.originDevice(spec.origin)?.name || spec.origin.deviceId)
-      : null;
+    const device     = onClient ? registry.originDevice(spec.origin) : null;
+    const originName = onClient ? (device?.name || spec.origin.deviceId) : null;
+    // Trust origin (docs/design/devices-as-hands.md §3): a paired device's own tools are
+    // your machine talking, not outside text. A tool it forwards from another MCP server
+    // (DocaDesk names those <serverId>__<tool>) stays third party.
+    const ownDevice  = !!(device && !device.revokedAt);
 
     for (const t of c.tools) {
       let exposed = `${PREFIX}${SEP}${safe(spec.id)}${SEP}${safe(t.name)}`.slice(0, MAX_NAME);
@@ -56,6 +59,7 @@ function available() {
         origin:      onClient ? 'client' : 'server',
         originLabel: originName,
         tool:        t.name,
+        trusted:     ownDevice && !String(t.name).includes('__'),
         description: t.description,
         schema:      t.inputSchema,
         readOnly:    t.readOnly,
@@ -170,4 +174,7 @@ async function call(name, args) {
   }
 }
 
-module.exports = { available, describe, schemas, call, isMcpTool, placeError };
+/** Whether an exposed tool is a paired device's own (trusted like the host), not third party. */
+function isTrusted(name) { return available().some(t => t.exposed === name && t.trusted); }
+
+module.exports = { available, describe, schemas, call, isMcpTool, placeError, isTrusted };

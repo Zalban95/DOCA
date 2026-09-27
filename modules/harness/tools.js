@@ -87,7 +87,8 @@ async function call(name, args, disabled = [], ctx = {}) {
     try { out = await require('./guard/airlock').screenIn(name, args, out); } catch (e) { out = `Error: the guards could not screen this (${e.message}); it was not passed on.`; }
   }
   // Somebody else's words arrive labelled as such (harness/untrusted.js).
-  const source = out.startsWith('Error:') ? null : untrusted.sourceOf(name, args, isMcp);
+  // A paired device's own tools are trusted like the host's: not framed, no re-check (devices-as-hands §3).
+  const source = out.startsWith('Error:') || (isMcp && mcp.isTrusted(name)) ? null : untrusted.sourceOf(name, args, isMcp);
   if (source) untrusted.arrived(ctx.signal, name, isMcp);
   return source ? untrusted.frame(source, out) : out;
 }
