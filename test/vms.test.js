@@ -110,3 +110,41 @@ test('the libvirt connection URI is settable, since qemu:///session hides system
   await H.api(null, 'POST', '/api/vms/settings', { libvirtUri: '' });
   assert.equal((await H.api(null, 'GET', '/api/vms')).body.libvirtUri, '');
 });
+
+test('libvirt management: details, autostart, snapshots — names checked before argv, never the real VMs', async t => {
+  const fs = require('fs'), path = require('path');
+  const bin = path.join(H.tmp, 'fake-virsh');
+  fs.mkdirSync(bin, { recursive: true });
+  const log = path.join(bin, 'calls.log');
+  // A virsh that answers like the real one for a machine "devbox" with one snapshot, and records every call.
+  fs.writeFileSync(path.join(bin, 'virsh'), `#!/bin/sh
+echo "$*" >> "${log}"
+case "$1" in
+  list) echo devbox ;;
+  dominfo) printf 'Name: devbox\\nState: shut off\\nCPU(s): 4\\nMax memory: 8388608 KiB\\nPersistent: yes\\nAutostart: disable\\n' ;;
+  snapshot-list) echo before-upgrade ;;
+  snapshot-current) echo before-upgrade ;;
+  *) : ;;
+esac
+`, { mode: 0o755 });
+  const oldPath = process.env.PATH;
+  process.env.PATH = `${bin}:${oldPath}`;
+  t.after(() => { process.env.PATH = oldPath; });
+
+  const d = await H.api(null, 'GET', '/api/vms/libvirt/devbox');
+  assert.equal(d.status, 200, JSON.stringify(d.body));
+  assert.deepEqual({ cpus: d.body.cpus, memoryMb: d.body.memoryMb, autostart: d.body.autostart, snapshots: d.body.snapshots, current: d.body.currentSnapshot },
+    { cpus: 4, memoryMb: 8192, autostart: false, snapshots: ['before-upgrade'], current: 'before-upgrade' });
+  assert.equal((await H.api(null, 'GET', '/api/vms/libvirt/nothere')).status, 404);
+  assert.equal((await H.api(null, 'POST', '/api/vms/libvirt/devbox/autostart', { on: true })).status, 200);
+  assert.equal((await H.api(null, 'POST', '/api/vms/libvirt/devbox/snapshots', { snapshot: 'bad name; rm -rf' })).status, 400);
+  assert.equal((await H.api(null, 'POST', '/api/vms/libvirt/devbox/snapshots', { snapshot: 'clean-1' })).status, 200);
+  assert.equal((await H.api(null, 'POST', '/api/vms/libvirt/devbox/snapshots/nope/revert')).status, 404, 'only a snapshot that exists');
+  assert.equal((await H.api(null, 'POST', '/api/vms/libvirt/devbox/snapshots/before-upgrade/revert')).status, 200);
+  assert.equal((await H.api(null, 'POST', '/api/vms/libvirt/create', { name: 'x', iso: '/etc/passwd' })).status, 400, 'an ISO, inside the allowed folders');
+  const calls = fs.readFileSync(log, 'utf8');
+  assert.match(calls, /^autostart devbox$/m);
+  assert.match(calls, /^snapshot-create-as devbox clean-1 --description Taken from the DOCA panel --atomic$/m);
+  assert.match(calls, /^snapshot-revert devbox before-upgrade$/m);
+  assert.doesNotMatch(calls, /rm -rf|nothere|nope/, 'nothing unchecked reached virsh');
+});

@@ -294,9 +294,7 @@ app.delete('/api/docker/presets/:name',         docker.handleDeletePreset);
 mcp.mount(app);
 
 // ─── Routes: Virtual Machines ─────────────────────────────────────────────────
-app.get ('/api/vms',                      vms.handleList);
-app.post('/api/vms/settings',             vms.handleSettings);
-app.post('/api/vms/:hypervisor/action',   vms.handleAction);
+vms.mount(app);   // list, power, settings (vms.js) and management: details, autostart, snapshots, create (vms-manage.js)
 
 // ─── Routes: Inference Services ───────────────────────────────────────────────
 app.get ('/api/services',          services.handleList);

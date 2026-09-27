@@ -205,6 +205,31 @@ async function _diskInfo(id, label, p) {
   return { id, label, path: p, ...data };
 }
 
+/**
+ * Where Ollama really keeps its models: the panel's setting, else the running
+ * server's OLLAMA_MODELS (its process environment, or its systemd unit), else
+ * Ollama's own default. The card used to assume ~/.ollama and showed 3 KB for a
+ * machine holding 67 GB of models elsewhere (found 2026-09-27).
+ */
+function ollamaModelsDir(mp, home) {
+  if (mp.ollamaPath) return mp.ollamaPath;
+  try {
+    for (const pid of fs.readdirSync('/proc').filter(d => /^\d+$/.test(d))) {
+      let comm = '';
+      try { comm = fs.readFileSync(`/proc/${pid}/comm`, 'utf8').trim(); } catch { continue; }
+      if (comm !== 'ollama') continue;
+      const env = fs.readFileSync(`/proc/${pid}/environ`, 'utf8').split('\0').find(v => v.startsWith('OLLAMA_MODELS='));
+      if (env) return env.slice(14);
+    }
+  } catch { /* not Linux, or not ours to read */ }
+  try {
+    const out = require('child_process').execFileSync('systemctl', ['show', '-p', 'Environment', 'ollama'], { encoding: 'utf8', timeout: 3000 });
+    const m = /OLLAMA_MODELS=(\S+)/.exec(out);
+    if (m) return m[1];
+  } catch { /* no systemd unit */ }
+  return path.join(home, '.ollama', 'models');
+}
+
 /** GET /api/models/disk — storage overview for every model location */
 async function handleGetDisk(req, res) {
   if (req.query && req.query.force === '1') _diskCache.clear();
@@ -212,7 +237,7 @@ async function handleGetDisk(req, res) {
   const home = process.env.HOME || os.homedir();
 
   const targets = [
-    { id: 'ollama', label: 'Ollama models',     path: mp.ollamaPath || path.join(home, '.ollama') },
+    { id: 'ollama', label: 'Ollama models',     path: ollamaModelsDir(mp, home) },
     { id: 'hf',     label: 'HuggingFace cache', path: mp.hf?.cacheDir || path.join(home, '.cache', 'huggingface', 'hub') },
   ];
 

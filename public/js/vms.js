@@ -40,7 +40,9 @@ function _vmHypervisorHtml(hv, data) {
       <div class="toolbar" style="margin-bottom:8px">
         <div class="card-title" style="margin-bottom:0">${escHtml(hv.label)}</div>
         <span class="vm-count">${hv.available ? `${hv.vms.length} machine${hv.vms.length === 1 ? '' : 's'}` : 'not installed'}</span>
+        ${hv.id === 'libvirt' && hv.available ? '<button class="btn btn-xs btn-blue" onclick="vmCreateToggle()" title="A new machine from an ISO (virt-install)">+ New machine</button>' : ''}
       </div>
+      ${hv.id === 'libvirt' && hv.available ? _vmCreateHtml() : ''}
       ${body}
       ${uriRow}
     </div>`;
@@ -74,8 +76,9 @@ function _vmRowHtml(hvId, vm) {
       <span class="vm-name">${escHtml(vm.name)}</span>
       <span class="vm-state">${escHtml(vm.stateRaw || vm.state)}</span>
       ${display}
-      <span class="vm-acts">${actions.join('')}</span>
-    </div>`;
+      <span class="vm-acts">${actions.join('')}${hvId === 'libvirt' ? `<button class="btn btn-xs" title="Details, autostart and snapshots" onclick="vmDetails(${arg}, this)">⋯</button>` : ''}</span>
+    </div>
+    ${hvId === 'libvirt' ? `<div class="vm-details" id="vm-details-${escHtml(vm.name)}" style="display:none"></div>` : ''}`;
 }
 
 /** Force off is the one that can lose the guest's data, so it asks first. */
@@ -111,4 +114,80 @@ async function vmsSaveUri() {
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
   }
+}
+
+/* ── libvirt management (modules/vms-manage.js): details, autostart, snapshots, a new machine ── */
+
+async function vmDetails(name, btn, keepOpen) {
+  const box = document.getElementById(`vm-details-${name}`);
+  if (!box) return;
+  if (!keepOpen && box.style.display !== 'none') { box.style.display = 'none'; return; }
+  box.style.display = '';
+  box.innerHTML = '<div class="placeholder pulse">Reading…</div>';
+  let d;
+  try { d = await apiFetch(`/api/vms/libvirt/${encodeURIComponent(name)}`); }
+  catch (e) { box.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; return; }
+  const n = jsArg(name);
+  box.innerHTML = `
+    <div class="vm-facts">${d.cpus || '?'} CPU · ${d.memoryMb ? `${Math.round(d.memoryMb / 1024 * 10) / 10} GB` : '?'} RAM
+      <label class="vm-auto"><input type="checkbox" ${d.autostart ? 'checked' : ''} onchange="vmAutostart(${n}, this.checked)"> start with this machine</label></div>
+    <div class="input-label" style="margin-top:6px">Snapshots</div>
+    ${d.snapshots.length ? d.snapshots.map(s => `<div class="vm-snap"><span>${escHtml(s)}${s === d.currentSnapshot ? ' <em>(current)</em>' : ''}</span>
+        <button class="btn btn-xs" onclick="vmSnapAct(${n}, ${jsArg(s)}, 'revert')" title="Put the machine back as it was then">↶ Revert</button>
+        <button class="btn btn-xs btn-red" onclick="vmSnapAct(${n}, ${jsArg(s)}, 'delete')" title="Remove this snapshot">✕</button></div>`).join('')
+      : '<div class="placeholder" style="font-size:11px">None yet.</div>'}
+    <div class="vm-snap-new"><input class="input" id="vm-snapname-${escHtml(name)}" placeholder="snapshot name (optional)">
+      <button class="btn btn-xs btn-blue" onclick="vmSnapTake(${n})">Take snapshot</button></div>`;
+}
+
+async function _vmCall(name, url, opts, what) {
+  const status = document.getElementById('vms-status');
+  setStatus(status, `${what}…`, '');
+  try { await apiFetch(url, opts); setStatus(status, `✓ ${what}`, 'ok'); vmDetails(name, null, true); }
+  catch (e) { setStatus(status, `✗ ${e.message}`, 'err'); }
+}
+
+function vmAutostart(name, on) {
+  _vmCall(name, `/api/vms/libvirt/${encodeURIComponent(name)}/autostart`, { method: 'POST', body: { on } }, on ? `${name} starts with this machine` : `${name} no longer starts with this machine`);
+}
+
+function vmSnapTake(name) {
+  const snapshot = document.getElementById(`vm-snapname-${name}`)?.value.trim() || '';
+  _vmCall(name, `/api/vms/libvirt/${encodeURIComponent(name)}/snapshots`, { method: 'POST', body: { snapshot } }, `Snapshot of ${name} taken`);
+}
+
+function vmSnapAct(name, snap, act) {
+  const url = `/api/vms/libvirt/${encodeURIComponent(name)}/snapshots/${encodeURIComponent(snap)}`;
+  if (act === 'revert') appConfirm(`Put "${name}" back as it was at "${snap}"? What changed since is lost unless it has its own snapshot.`,
+    () => _vmCall(name, `${url}/revert`, { method: 'POST' }, `${name} reverted to ${snap}`));
+  else appConfirm(`Delete the snapshot "${snap}" of "${name}"?`, () => _vmCall(name, url, { method: 'DELETE' }, `Snapshot ${snap} deleted`));
+}
+
+function _vmCreateHtml() {
+  return `<div class="vm-create" id="vm-create" style="display:none">
+    <div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end">
+      <div class="field"><div class="input-label">Name</div><input class="input" id="vmc-name" style="width:150px" placeholder="dev-box"></div>
+      <div class="field" style="flex:1;min-width:220px"><div class="input-label">ISO on this machine</div><input class="input" id="vmc-iso" placeholder="/home/al/Downloads/ubuntu-24.04.iso"></div>
+      <div class="field"><div class="input-label">RAM (MB)</div><input class="input" type="number" id="vmc-mem" value="4096" min="512" step="512" style="width:100px"></div>
+      <div class="field"><div class="input-label">CPUs</div><input class="input" type="number" id="vmc-cpu" value="2" min="1" style="width:70px"></div>
+      <div class="field"><div class="input-label">Disk (GB)</div><input class="input" type="number" id="vmc-disk" value="40" min="4" style="width:80px"></div>
+      <div class="field"><div class="input-label">OS (optional)</div><input class="input" id="vmc-os" style="width:120px" placeholder="ubuntu24.04"></div>
+      <div class="field"><button class="btn btn-sm btn-blue" onclick="vmCreate()">Create</button></div>
+    </div>
+    <div class="input-label" style="text-transform:none;letter-spacing:0;margin-top:4px">The disk goes in libvirt's default pool; the display listens on this machine only (VNC) — reach it with an SSH tunnel.</div>
+  </div>`;
+}
+
+function vmCreateToggle() { const f = document.getElementById('vm-create'); if (f) f.style.display = f.style.display === 'none' ? '' : 'none'; }
+
+async function vmCreate() {
+  const v = id => document.getElementById(id).value.trim();
+  const status = document.getElementById('vms-status');
+  setStatus(status, `Creating ${v('vmc-name')}…`, '');
+  try {
+    await apiFetch('/api/vms/libvirt/create', { method: 'POST', body: { name: v('vmc-name'), iso: v('vmc-iso'),
+      memoryMb: Number(v('vmc-mem')), vcpus: Number(v('vmc-cpu')), diskGb: Number(v('vmc-disk')), osVariant: v('vmc-os') } });
+    setStatus(status, `✓ ${v('vmc-name')} created and started — install the OS through its display`, 'ok');
+    vmsLoad();
+  } catch (e) { setStatus(status, `✗ ${e.message}`, 'err'); }
 }

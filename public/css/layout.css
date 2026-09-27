@@ -265,3 +265,12 @@ header {
   min-height: 0;
 }
 .tab-page.active { display: flex; }
+
+/* ── VMs tab: a machine's details, snapshots and the new-machine form (public/js/vms.js) ── */
+.vm-details { padding: 6px 10px 10px 28px; border-bottom: 1px solid var(--border); font-size: 11px; }
+.vm-facts { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; color: var(--text); }
+.vm-auto { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+.vm-snap { display: flex; gap: 6px; align-items: center; padding: 3px 0; }
+.vm-snap span { flex: 1; } .vm-snap em { color: var(--accent); font-style: normal; }
+.vm-snap-new { display: flex; gap: 6px; margin-top: 6px; } .vm-snap-new .input { flex: 1; max-width: 260px; }
+.vm-create { padding: 8px 0 12px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }

@@ -60,8 +60,15 @@ the end, and in the sections as "built in …" notes.
    **Decide:** conversations and memory into the database need either async call
    sites everywhere (~100 synchronous readers) or an in-memory copy that writes
    through — it decides how a many-tenant host works; to settle with Al.
-4. **Review and fix the VMs, Docker and Models sections**, with VM management
-   (snapshots, autostart, create). → *MCP and VMs…*.
+4. **Review and fix the VMs, Docker and Models sections** — **first pass in
+   2.110.0**: the sidebar was empty on any install without a compose folder
+   (every status command ran in a missing cwd); Docker image dates read
+   "Invalid Date", and a created or cleanly exited container showed red; the
+   Ollama storage card measured ~/.ollama instead of the server's OLLAMA_MODELS;
+   VM management added (`vms-manage.js`: details, autostart, snapshots
+   take/revert/delete, a new machine from an ISO with virt-install). **Left:** a
+   VM console reachable over the tailnet (VNC listens on this machine only), and
+   a second pass on the Models tab (`models.js` is 687 lines, over the ceiling).
 5. **Clients from this side**: clone DocaDesk / DocaMobile / DocaWear, fix what
    is visible here, and a Linux client (Avalonia over `DocaDesk.Core`).
 
