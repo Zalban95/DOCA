@@ -42,7 +42,7 @@ test('a background job returns at once, keeps running, and its output and exit c
 
   assert.ok(await until(() => jobs.get(id).state === 'exited'), 'it finishes on its own');
   assert.match(await tools.call('shell_job', { action: 'status', id }), /exited \(exit 3\)/);
-  assert.match(await tools.call('shell_job', { action: 'output', id }), /one\ntwo/);
+  assert.match(await tools.call('shell_job', { action: 'output', id }), /one\r?\ntwo/);
   assert.match(await tools.call('shell_job', { action: 'list' }, [], { sessionId: 'sj' }), new RegExp(id));
   assert.match(await tools.call('shell_job', { action: 'list' }, [], { sessionId: 'other' }), /No background jobs/);
 });

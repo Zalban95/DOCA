@@ -130,7 +130,7 @@ test('a backup from a newer data format is refused, and says which version can r
 
 test('the remembered password is its own 0600 file, which the agent\'s file tools refuse', () => {
   secret.save('remember me please');
-  assert.equal(fs.statSync(paths.BACKUP_PASSWORD_FILE).mode & 0o777, 0o600);
+  if (process.platform !== 'win32') assert.equal(fs.statSync(paths.BACKUP_PASSWORD_FILE).mode & 0o777, 0o600);   // Windows has no POSIX modes
   assert.equal(secret.settings().hasSavedPassword, true);
   assert.equal(fmSafe(paths.BACKUP_PASSWORD_FILE), false);
   const link = path.join(H.tmp, 'innocent.txt');

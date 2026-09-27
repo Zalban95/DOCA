@@ -27,7 +27,7 @@ function scripts() {
 function files(dir = JS) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory()
     ? files(path.join(dir, e.name))
-    : e.name.endsWith('.js') ? [path.relative(JS, path.join(dir, e.name))] : []);
+    : e.name.endsWith('.js') ? [path.relative(JS, path.join(dir, e.name)).split(path.sep).join('/')] : []);   // '/' as index.html writes it, on Windows too
 }
 
 /** One script's source. */

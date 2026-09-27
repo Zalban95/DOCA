@@ -39,7 +39,7 @@ function git(p, args, { timeout = 120000, input } = {}) {
   const bin = shell.which('git');
   if (!bin) return Promise.reject(Object.assign(new Error('Checkpoints need git on this machine.'), { status: 501 }));
   return new Promise((resolve, reject) => {
-    const child = execFile(bin, ['--git-dir', shadowDir(p), '--work-tree', p.root, '-c', 'core.quotepath=off', ...args],
+    const child = execFile(bin, ['--git-dir', shadowDir(p), '--work-tree', p.root, '-c', 'core.quotepath=off', '-c', 'core.autocrlf=false', ...args],
       { timeout, maxBuffer: 32 << 20, windowsHide: true, env: { ...process.env, GIT_AUTHOR_NAME: 'DOCA', GIT_AUTHOR_EMAIL: 'doca@localhost', GIT_COMMITTER_NAME: 'DOCA', GIT_COMMITTER_EMAIL: 'doca@localhost' } },
       (err, stdout, stderr) => (err ? reject(Object.assign(new Error(String(stderr || err.message).trim().split('\n')[0]), { status: 400 })) : resolve(String(stdout))));
     if (input != null) { child.stdin.write(input); child.stdin.end(); }
@@ -48,10 +48,14 @@ function git(p, args, { timeout = 120000, input } = {}) {
 
 async function ensure(p) {
   const dir = shadowDir(p);
-  if (fs.existsSync(path.join(dir, 'HEAD'))) return;
+  // A checkpoint keeps bytes, never line endings: Git for Windows turns autocrlf on system-wide, and a
+  // project's .gitattributes may say eol=; info/attributes outranks both (and shadows made before this).
+  const attrs = path.join(dir, 'info', 'attributes');
+  if (fs.existsSync(path.join(dir, 'HEAD'))) { if (!fs.existsSync(attrs)) fs.writeFileSync(attrs, '* -text\n'); return; }
   await git(p, ['init', '-q']);   // --git-dir + --work-tree: a normal (not bare) repository whose files are the project's
   fs.mkdirSync(path.join(dir, 'info'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'info', 'exclude'), [...SKIP_DIRS].map(d => `${d}/`).join('\n') + '\n');
+  fs.writeFileSync(attrs, '* -text\n');
 }
 
 function rows(p) { return store.readJson(`checkpoints/${p.id}`, { checkpoints: [] }).checkpoints; }
@@ -63,7 +67,7 @@ async function snapshotTree(p) {
   const index = path.join(shadowDir(p), 'doca-index');
   const env = { GIT_INDEX_FILE: index };
   const bin = shell.which('git');
-  const run = args => new Promise((resolve, reject) => execFile(bin, ['--git-dir', shadowDir(p), '--work-tree', p.root, ...args],
+  const run = args => new Promise((resolve, reject) => execFile(bin, ['--git-dir', shadowDir(p), '--work-tree', p.root, '-c', 'core.autocrlf=false', ...args],
     { env: { ...process.env, ...env }, maxBuffer: 32 << 20, timeout: 300000, windowsHide: true },
     (err, out, se) => (err ? reject(new Error(String(se || err.message).trim().split('\n')[0])) : resolve(String(out).trim()))));
   await run(['add', '-A', '--', '.']);

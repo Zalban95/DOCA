@@ -29,7 +29,7 @@ function sqlite() {
   const file = path.join(store.DATA_DIR, 'doca.db');
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const d = new DatabaseSync(file);
-  d.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000;');
+  d.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;');   // the timeout first: WAL's switch takes a lock a second process must wait for
   const q = {
     run: async (sql, p = []) => { const r = d.prepare(sql).run(...p); return { changes: Number(r.changes) }; },
     all: async (sql, p = []) => d.prepare(sql).all(...p),
