@@ -137,6 +137,15 @@ function deleteSessionsOf(userId, except = null) {
   write('sessions', all);
 }
 
+/** End every panel session a device's token opened (a disconnect; the device stays paired). */
+function deleteSessionsOfDevice(deviceId) {
+  const all = read('sessions', {});
+  let n = 0;
+  for (const [h, s] of Object.entries(all)) if (s.deviceId === deviceId) { delete all[h]; n++; }
+  if (n) write('sessions', all);
+  return n;
+}
+
 function pruneSessions() {
   const all = read('sessions', {}), t = Date.now();
   let changed = false;
@@ -194,7 +203,7 @@ async function auditTail(n = 100) {
 module.exports = {
   userCount, userById, userByEmail, createUser, updateUser,
   defaultOrg, createOrg, membership, membershipsOf, addMembership,
-  createSession, sessionByHash, updateSession, deleteSession, deleteSessionsOf, pruneSessions,
+  createSession, sessionByHash, updateSession, deleteSession, deleteSessionsOf, deleteSessionsOfDevice, pruneSessions,
   audit, auditTail,
   _resetAuditImport: () => { _auditImported = null; },   // tests only
 };

@@ -62,7 +62,7 @@ router.post('/devices/pair/complete', wrap(async (req, res) => {
 // ─── Everything below requires a token ──────────────────────────────────────
 
 router.use((req, res, next) => authenticate({ allowQuery: req.path === '/events' })(req, res, next));
-router.use((req, _res, next) => { devices.touchPersist(); next(); });
+router.use((req, _res, next) => { devices.touchPersist(); next(); }); require('../devices-control').mount(router);   // device.control acks, grants (after auth)
 
 router.get('/capabilities', wrap(async (req, res) => res.json(await capabilities.build(req.device))));
 

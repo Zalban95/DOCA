@@ -33,3 +33,11 @@
 .guards-add .input { flex: 1; min-width: 180px; }
 .guard-log-row { padding: 4px 0; border-bottom: 1px solid var(--border); color: var(--text); }
 @media (max-width: 640px) { .guard-row { grid-template-columns: 1fr; } }
+/* Devices as hands (public/js/devices.js): a device's permission families and actions */
+.dev-hands { margin: 8px 0 4px; }
+.dev-fams { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.dev-fam { font: inherit; font-size: 10px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; }
+.dev-fam.on { border-color: var(--green); color: var(--green); }
+.dev-fam.revoked { border-color: var(--red); color: var(--red); text-decoration: line-through; }
+.dev-acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 4px; }
+.dev-off { font-size: 10px; color: var(--amber); }

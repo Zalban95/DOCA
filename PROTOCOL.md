@@ -472,6 +472,7 @@ data: {"reason":"revoked"}
 | `sensor.request` | durable (ttl = duration + 30 s) | `{ request: { id, sensors: [{ id, mode, rateHz, durationSec, unit }], reason, ext, expiresAt } }` |
 | `sensor.stop` | durable | `{ requestId, reason }` |
 | `revoked` | durable | `{ reason, by }` — then the stream closes; forget the token |
+| `device.control` | durable (24 h) | `{ id, action: refresh\|reconnect\|ask\|disconnect\|revoke\|restore, family? }` — do it, then `POST /devices/self/control/{id}/ack { ok, detail }` (§22.1) |
 | `resync` | ephemeral | `{ reason, cursor }` |
 | **Agent-side** | | |
 | `prompt.selected` | durable | `{ promptId, selectionId, deviceId, choiceId, payload: { kind, text?, transcript?, caption?, mediaId?, mediaUrl?, ext? }, resolver }` |
@@ -1022,6 +1023,31 @@ discovers that when it connects.
 **Securing the listener is your problem, not the protocol's.** Bind to the
 tailnet interface only, and treat every request as untrusted until proven
 otherwise. `headers` exists so the host can carry a bearer token you require.
+
+### 22.1 A device as the harness's hands
+
+A paired client can offer the harness the same **tool families** the host has —
+`files`, `shell`, `processes`, `screen`, `input`, `apps`, `device`, `elevated`,
+`mcp` — as far as its operating system allows (docs/design/devices-as-hands.md).
+
+- The client asks its person **once per family**, in its own UI, and reports the
+  result: `PUT /devices/self/grants { grants: { files: true, shell: false, … } }`.
+  DOCA offers the harness only a family that is granted and not revoked on
+  DOCA's side. Reporting also clears a disconnect.
+- DOCA may send `device.control` (§11.4). Handle each action, then
+  `POST /devices/self/control/{id}/ack { ok, detail }`:
+  - `refresh` — report caps (`PATCH /devices/{id}`) and grants again;
+  - `reconnect` — drop and reopen the push stream (DOCA also closes it);
+  - `ask` — ask the person for `family` again (on Android, `screen` restarts the
+    capture session, which is otherwise held open in a foreground service);
+  - `disconnect` — close sessions and stop background services until the person
+    opens the app again; stay paired (DOCA also ends the device's panel sessions);
+  - `revoke` / `restore` — DOCA took `family` back / allowed it again; stop or
+    resume offering it.
+- **The device's page** is `https://<host>:<port>/d/<device-id>/` — the panel,
+  with a "This device" card in Settings. Open it with the device token on the
+  first load (as DocaMobile does); it is served only to that device's session or
+  its owner, so the id in the path grants nothing.
 
 ## 23. Talking to the agent
 

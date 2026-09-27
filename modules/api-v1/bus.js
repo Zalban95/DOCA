@@ -42,6 +42,7 @@ const TYPES = {
   'profile.changed':  { cls: 'durable', ttlSec: L.DEFAULT_EVENT_TTL_SEC },
   'device.vars':      { cls: 'durable', ttlSec: 3600 },
   'device.message':   { cls: 'durable', ttlSec: 6 * 3600 },
+  'device.control':   { cls: 'durable', ttlSec: 24 * 3600 },   // refresh / reconnect / ask / disconnect / revoke (devices-control.js)
   'agent.message':    { cls: 'durable', ttlSec: 6 * 3600 },
   // Durable so a client that arrives mid-turn learns a turn is in flight, and one
   // that was away still gets the answer it did not watch being typed.
@@ -237,6 +238,13 @@ function collectOrphans(knownIds) {
   return removed;
 }
 
+/** Close a device's live streams and keep its outbox: it reconnects and catches up (device.control reconnect/disconnect). */
+function closeStreams(deviceId, reason) {
+  const s = stateFor(deviceId);
+  for (const sub of [...s.subs]) { try { sub.close(reason); } catch {} }
+  s.subs.clear();
+}
+
 /** Close every live stream for a device (revocation) and delete its outbox. */
 function dropDevice(deviceId, reason) {
   const s = stateFor(deviceId);
@@ -285,6 +293,7 @@ function publishWhere(allDevices, filter, type, payload, opts) {
 function _reset() { _state.clear(); }
 
 module.exports = {
+  closeStreams,
   TYPES, emitter, publish, publishWhere, subscribe, drain, ackUpTo,
   pendingCount, delivery, liveCount, isOnline, cursor, dropDevice, collectOrphans, _reset,
 };

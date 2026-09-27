@@ -47,6 +47,7 @@ async function devicesLoad() {
         ${d.missingScopes?.length ? `<div class="input-label mt8" style="text-transform:none;letter-spacing:0;color:var(--amber)">
           Paired before its preset (${escHtml(d.preset)}) gained: ${d.missingScopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}
           <button class="btn btn-xs" onclick="devGrant(${jsArg(d.id)}, ${jsArg(d.missingScopes.join(','))})" title="Add these to this device — same id, queue and token">+ Grant</button></div>` : ''}
+        ${dead ? '' : devHandsHtml(d)}
         ${dead ? `
         <div class="toolbar-right">
           <button class="btn btn-xs btn-red" onclick="devForget(${jsArg(d.id)},${jsArg(d.name)})" title="Remove this row and everything kept under its id">🗑 Forget</button>
@@ -282,3 +283,70 @@ function devGrant(id, list) {
     catch (e) { setStatus(document.getElementById(`dev-status-${id}`), `✗ ${e.message}`, 'err'); }
   });
 }
+
+/* ── Devices as hands (modules/devices-control.js; docs/design/devices-as-hands.md) ── */
+
+const DEV_FAMILY_LABEL = { files: 'Files', shell: 'Shell', processes: 'Processes', screen: 'Screen', input: 'Input',
+  apps: 'Apps', device: 'Device', elevated: 'Admin', mcp: 'MCP' };
+
+/** What a device lets the harness do, and the actions on it. */
+function devHandsHtml(d) {
+  const c = d.control || { grants: {}, revoked: [], history: [], families: Object.keys(DEV_FAMILY_LABEL) };
+  const id = jsArg(d.id);
+  const chips = c.families.map(f => {
+    const granted = c.grants?.[f] === true, revoked = c.revoked?.includes(f);
+    const state = revoked ? 'revoked here' : granted ? 'granted' : c.grants?.[f] === false ? 'refused on the device' : 'not reported';
+    const cls = revoked ? 'dev-fam revoked' : granted ? 'dev-fam on' : 'dev-fam';
+    const act = revoked ? 'restore' : granted ? 'revoke' : 'ask';
+    const tip = revoked ? 'Revoked here — click to allow again' : granted ? 'Granted on the device — click to take it back from here' : 'Click to ask the device for it';
+    return `<button class="${cls}" title="${escHtml(`${DEV_FAMILY_LABEL[f]}: ${state}. ${tip}`)}" onclick="devControl(${id}, '${act}', '${f}')">${escHtml(DEV_FAMILY_LABEL[f])}</button>`;
+  }).join('');
+  const last = c.history?.[0];
+  const lastLine = last ? `Last: ${escHtml(last.action)}${last.family ? ` ${escHtml(last.family)}` : ''} ${escHtml(new Date(last.at).toLocaleTimeString())} —
+      ${last.ackAt ? (last.ok ? `done${last.detail ? `: ${escHtml(last.detail)}` : ''}` : `refused: ${escHtml(last.detail || '')}`) : 'not answered yet'}` : '';
+  return `<div class="dev-hands">
+      <div class="dev-fams">${chips}</div>
+      <div class="dev-acts">
+        <button class="btn btn-xs" onclick="devControl(${id}, 'refresh')" title="The device reports its caps, permissions and state again">⟳ Refresh</button>
+        <button class="btn btn-xs" onclick="devControl(${id}, 'reconnect')" title="Drop and reopen its connection">⇄ Reconnect</button>
+        <button class="btn btn-xs" onclick="devControl(${id}, 'disconnect')" title="End its sessions and stop its services until it is opened again — it stays paired">⏻ Disconnect</button>
+        ${c.disconnected ? '<span class="dev-off">disconnected</span>' : ''}
+      </div>
+      ${lastLine ? `<div class="input-label" style="text-transform:none;letter-spacing:0">${lastLine}</div>` : ''}
+    </div>`;
+}
+
+async function devControl(id, action, family) {
+  const go = async () => {
+    try {
+      await apiFetch(`/api/devices/${encodeURIComponent(id)}/control`, { method: 'POST', body: { action, ...(family ? { family } : {}) } });
+      setStatus(document.getElementById(`dev-status-${id}`), `✓ ${action}${family ? ` ${family}` : ''} sent`, 'ok');
+      devicesLoad(); devThisDevice();
+    } catch (e) { setStatus(document.getElementById(`dev-status-${id}`), `✗ ${e.message}`, 'err'); }
+  };
+  if (action === 'disconnect') appConfirm('Disconnect this device? Its sessions end and its services stop until it is opened again. It stays paired.', go);
+  else go();
+}
+
+/** On a device's own page (/d/<id>/): a "This device" card at the top of Settings. */
+const DOCA_DEVICE_ID = (location.pathname.match(/^\/d\/([^/]+)\//) || [])[1] || null;
+async function devThisDevice() {
+  if (!DOCA_DEVICE_ID) return;
+  const panel = document.getElementById('sp-general');
+  if (!panel) return;
+  let card = document.getElementById('dev-this-card');
+  if (!card) {
+    card = Object.assign(document.createElement('div'), { className: 'card', id: 'dev-this-card' });
+    panel.prepend(card);
+  }
+  try {
+    const { devices } = await apiFetch('/api/devices');
+    const d = devices.find(x => x.id === DOCA_DEVICE_ID);
+    if (!d) { card.remove(); return; }
+    card.innerHTML = `<div class="card-title">This device — ${escHtml(d.name)}</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:8px">What this device lets DOCA's agents do here, and its connection.
+        Permissions are granted on the device itself; you can take any of them back from here.</p>
+      ${devHandsHtml(d)}<div class="status-line" id="dev-status-${escHtml(d.id)}"></div>`;
+  } catch { card.remove(); }
+}
+if (typeof document !== 'undefined' && DOCA_DEVICE_ID) document.addEventListener('DOMContentLoaded', () => setTimeout(devThisDevice, 500));
