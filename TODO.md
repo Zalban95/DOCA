@@ -57,9 +57,11 @@ the end, and in the sections as "built in …" notes.
    sent, pruned to the last N, downloaded and opened with the password); keys in
    the data folder, write-only; only password-protected backups by default.
    Settings → Backups → Off-site copy; `npm run status` reports it.
-   **Decide:** conversations and memory into the database need either async call
-   sites everywhere (~100 synchronous readers) or an in-memory copy that writes
-   through — it decides how a many-tenant host works; to settle with Al.
+   **Decided with Al (option 1) and built in 2.111.0:** conversations (index and
+   transcripts) and memory are in the database through a synchronous store
+   (`db/docs.js` on node:sqlite), old files imported once per key; with
+   PostgreSQL they stay in files until the async path (option 2) is built, when
+   hosting is real.
 4. **Review and fix the VMs, Docker and Models sections** — **first pass in
    2.110.0**: the sidebar was empty on any install without a compose folder
    (every status command ran in a missing cwd); Docker image dates read

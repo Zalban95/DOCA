@@ -40,7 +40,10 @@ One small interface, two backends, chosen by `DOCA_DB_URL`:
 1. **Append-only logs — done first, lowest risk:** the usage ledger
    (`harness/usage.js`) and the auth audit log (`auth/store.js`). On first open
    the existing JSONL files are imported once; they stay on disk, readable.
-2. Sessions and memory — full-text search then backs `recall_conversations`.
+2. **Done in 2.111.0:** sessions (the index and every transcript) and memory, as
+   documents and lines (`db/docs.js`), read and written synchronously on SQLite so
+   the ~100 places that read them did not change. Full-text search for
+   `recall_conversations` is the next use of it.
 3. Missions, proposals, devices, then the rest.
 
 The JSON/JSONL files remain the **export** format (and what an older version can

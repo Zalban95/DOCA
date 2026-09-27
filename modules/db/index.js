@@ -42,6 +42,7 @@ function sqlite() {
     tx: async fn => { d.exec('BEGIN IMMEDIATE'); try { const r = await fn(q); d.exec('COMMIT'); return r; } catch (e) { d.exec('ROLLBACK'); throw e; } },
     snapshot: async to => { fs.rmSync(to, { force: true }); d.prepare('VACUUM INTO ?').run(to); return to; },
     close: () => d.close(),
+    raw: d,
   };
 }
 
@@ -82,8 +83,24 @@ function ready() {
 
 const call = name => async (...a) => (await ready())[name](...a);
 
+/**
+ * The SQLite handle, opened and migrated synchronously — for the stores that
+ * must stay synchronous (conversations, memory: ./docs.js). Null when the
+ * database is PostgreSQL, whose driver cannot be.
+ */
+function syncHandle() {
+  if (process.env.DOCA_DB_URL) return null;
+  if (!impl) {
+    const d = sqlite();
+    require('./migrations').migrateSync(d.raw);
+    impl = d;
+    opening = Promise.resolve(d);
+  }
+  return impl.raw || null;
+}
+
 /** For tests and for a restore that replaces the file: close, so the next call opens again. */
 function close() { try { impl?.close(); } catch { /* closed */ } impl = null; opening = null; }
 
-module.exports = { ready, run: call('run'), all: call('all'), get: call('get'), tx: call('tx'), snapshot: call('snapshot'), close,
+module.exports = { ready, syncHandle, run: call('run'), all: call('all'), get: call('get'), tx: call('tx'), snapshot: call('snapshot'), close,
   get kind() { return impl?.kind || (process.env.DOCA_DB_URL ? 'postgres' : 'sqlite'); } };
