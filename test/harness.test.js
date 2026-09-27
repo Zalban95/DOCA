@@ -2030,7 +2030,7 @@ test('the harness is told who is asking, and what their turn changes is audited 
   const prompt = seen[0].messages[0].content;
   assert.match(prompt, /Signed in as .*<owner@test\.local>, owner of this panel\. What changes on this machine in this turn is logged as theirs\./);
 
-  const rows = authStore.auditTail(50).filter(r => r.via === 'harness');
+  const rows = (await authStore.auditTail(50)).filter(r => r.via === 'harness');
   const wrote = rows.find(r => r.action === 'tool memory_write');
   assert.ok(wrote, 'the write is in the audit log');
   assert.equal(wrote.actorId, H.owner.user.id);

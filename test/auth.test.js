@@ -95,7 +95,7 @@ test('at the machine, setup needs no code, and makes the owner of everything tha
   assert.equal(fs.existsSync(authRoutes.SETUP_FILE), false, 'the code is spent');
   assert.equal(require('../modules/api-v1/devices').get(device.device.id).userId, ok.body.user.id, 'existing devices are the owner\'s');
   assert.equal((await call('POST', '/api/auth/setup', { body: { code, email: 'x@y.z', password: 'another long pw' } })).status, 409);
-  assert.match(authStore.auditTail(10).find(e => e.action === 'setup').detail, /at the machine/);
+  assert.match((await authStore.auditTail(10)).find(e => e.action === 'setup').detail, /at the machine/);
 
   const stored = authStore.userByEmail('owner@x.test');
   assert.match(stored.passwordHash, /^\$argon2id\$v=19\$m=65536,t=3,p=4\$/, 'StatENS\'s parameters and format');
@@ -118,7 +118,7 @@ test('signing in: wrong passwords are refused, then slowed down, and a right one
   const ok = await call('POST', '/api/auth/login', { body: { email: 'OWNER@x.test', password: 'the owner password' } });
   assert.equal(ok.status, 200);
   assert.equal((await call('GET', '/api/auth/me', { cookie: cookieOf(ok) })).body.role, 'owner');
-  assert.ok(authStore.auditTail(50).some(e => e.action === 'login failed'));
+  assert.ok((await authStore.auditTail(50)).some(e => e.action === 'login failed'));
 });
 
 test('a role only reaches what its rights allow, and an unknown route is refused', async () => {
@@ -151,7 +151,7 @@ test('a change must come from the panel\'s own page', async () => {
   assert.equal(other.body.code, 'browser_only');
   const own = await call('POST', '/api/harness/sessions', { cookie: ownerCookie, body: {}, headers: { 'Sec-Fetch-Site': '', Origin: base } });
   assert.notEqual(own.body.code, 'browser_only', 'its own origin passes');
-  assert.ok(authStore.auditTail(20).some(e => e.action === 'POST /api/harness/sessions'), 'and the change is audited');
+  assert.ok((await authStore.auditTail(20)).some(e => e.action === 'POST /api/harness/sessions'), 'and the change is audited');
 });
 
 test('a new password signs out every other session; a suspended person and their devices are out', async () => {
@@ -210,7 +210,7 @@ test('a paired app opening the panel with its device token gets a session, cappe
   const up = await call('POST', '/api/auth/step-up', { cookie: c, body: { password: 'a brand new password' } });
   assert.equal(up.status, 200);
   assert.notEqual((await call('GET', '/api/files/list?path=/tmp', { cookie: c })).status, 401, 'the password lifts the cap to the owner\'s role');
-  assert.ok(authStore.auditTail(20).some(e => e.action === 'device sign-in' && e.via === phone.device.id));
+  assert.ok((await authStore.auditTail(20)).some(e => e.action === 'device sign-in' && e.via === phone.device.id));
 
   devices.revoke(phone.device.id);
   assert.equal((await call('GET', '/api/auth/me', { cookie: c })).status, 401, 'the session ends with the device');

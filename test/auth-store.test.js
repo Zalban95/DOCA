@@ -63,24 +63,29 @@ test('sessions: by hash, updated, deleted one at a time or all but one, expired 
   assert.equal(S.sessionByHash('h1'), null);
 });
 
-test('audit: appended, read back in order, never rewritten', () => {
+test('audit: appended, read back in order, never rewritten', async () => {
   S.audit({ action: 'first', actorId: 'a' });
-  S.audit({ action: 'second', actorId: 'a' });
-  const tail = S.auditTail(2);
+  S.audit({ action: 'second', actorId: 'a', via: 'harness', ok: true });
+  const tail = await S.auditTail(2);
   assert.deepEqual(tail.map(e => e.action), ['first', 'second']);
   assert.ok(tail.every(e => e.at));
+  assert.equal(tail[1].via, 'harness', 'extra fields come back as they went in');
+  assert.equal(tail[1].ok, true);
 });
 
-test('audit: a file a month, and the log it used to be is still read, as the oldest', () => {
-  const fs = require('fs'), path = require('path'), store = require('../modules/store');
+test('audit: it lives in the database; the files it used to be are imported once, oldest first', async () => {
+  const fs = require('fs'), path = require('path'), store = require('../modules/store'), db = require('../modules/db');
   const dir = store.dir('auth');
+  // What versions before 2.108.0 left behind; the import runs only once, so reset its marker for this test.
   fs.writeFileSync(path.join(dir, 'audit.jsonl'), JSON.stringify({ at: '2026-01-01T00:00:00Z', action: 'from before' }) + '\n');
   fs.writeFileSync(path.join(dir, 'audit-2026-08.jsonl'), JSON.stringify({ at: '2026-08-02T00:00:00Z', action: 'last month' }) + '\n');
+  await db.run("DELETE FROM meta WHERE key = 'audit.imported'");
+  S._resetAuditImport();
   S.audit({ action: 'this month' });
-  assert.ok(fs.existsSync(path.join(dir, `audit-${new Date().toISOString().slice(0, 7)}.jsonl`)));
-  const all = S.auditTail(1000).map(e => e.action);
-  assert.ok(all.indexOf('from before') < all.indexOf('last month') && all.indexOf('last month') < all.indexOf('this month'));
-  assert.deepEqual(S.auditTail(1).map(e => e.action), ['this month']);
+  const all = (await S.auditTail(1000)).map(e => e.action);
+  assert.ok(all.indexOf('from before') < all.indexOf('last month') && all.indexOf('last month') < all.indexOf('this month'), all.join(', '));
+  assert.deepEqual((await S.auditTail(1)).map(e => e.action), ['this month']);
+  assert.ok(!fs.existsSync(path.join(dir, `audit-${new Date().toISOString().slice(0, 7)}.jsonl`)), 'nothing new is written to files');
 });
 
 test('reads are cached per change of the file, and handed out as copies', () => {

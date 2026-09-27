@@ -26,7 +26,7 @@ test('only the owner, and only with the confirmation, can turn it on', async () 
   const ok = await H.api(null, 'POST', '/api/harness/approval', { mode: 'unattended', confirm: 'unattended' });
   assert.equal(ok.status, 200);
   assert.equal(ok.body.mode, 'unattended');
-  assert.ok(authStore.auditTail(10).some(e => e.action === 'approval mode: unattended'));
+  assert.ok((await authStore.auditTail(10)).some(e => e.action === 'approval mode: unattended'));
 });
 
 test('in unattended mode the agent\'s settings proposal applies at once, and is audited', async () => {
@@ -37,7 +37,7 @@ test('in unattended mode the agent\'s settings proposal applies at once, and is 
   const out = await tools.call('settings_propose', { reason: 'bench test', changes: [{ path, value: next }] }, [], { sessionId: 's_test' });
   assert.match(out, /^Applied at once — unattended mode is on/);
   assert.equal(settings.readable().find(r => r.path === path).value, next, 'the change is in effect');
-  assert.ok(authStore.auditTail(10).some(e => e.action === 'unattended: settings applied'));
+  assert.ok((await authStore.auditTail(10)).some(e => e.action === 'unattended: settings applied'));
 });
 
 test('the mode is not something the agent can propose, and one click takes it back to auto', async () => {

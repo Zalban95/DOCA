@@ -49,8 +49,8 @@ the end, and in the sections as "built in …" notes.
    `docs/design/database.md`): SQLite via `node:sqlite` (no dependency),
    PostgreSQL behind the same calls (`DOCA_DB_URL`), numbered migrations,
    `tenant_id` on every table; the **usage ledger** is in it (old monthly files
-   imported once), backups carry a consistent copy (`VACUUM INTO`). **Next:** the
-   audit log, then sessions and memory, then `npm run db-bench`.
+   imported once), backups carry a consistent copy (`VACUUM INTO`); the **audit
+   log** since 2.108.0. **Next:** sessions and memory, then `npm run db-bench`.
 3. **Off-site backups**: scheduled `.dBac` to an S3-compatible bucket.
 4. **Review and fix the VMs, Docker and Models sections**, with VM management
    (snapshots, autostart, create). → *MCP and VMs…*.
