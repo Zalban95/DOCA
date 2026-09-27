@@ -183,6 +183,10 @@ function mount(app) {
   app.post  ('/api/backups',                 handleCreate);
   app.post  ('/api/backups/settings',        handleSettings);
   app.post  ('/api/backups/schedule',        handleSchedule);
+  // The off-site copy (remote.js): settings (keys write-only), and a round trip to the bucket.
+  app.get   ('/api/backups/remote',          (_req, res) => res.json(require('./remote').view()));
+  app.post  ('/api/backups/remote',          (req, res) => { try { res.json(require('./remote').setConfig(req.body || {})); } catch (e) { fail(res, e); } });
+  app.post  ('/api/backups/remote/test',     async (_req, res) => { try { res.json(await require('./remote').test()); } catch (e) { fail(res, e); } });
   app.post  ('/api/backups/upload',          handleUpload);
   app.get   ('/api/backups/:name/download',  handleDownload);
   app.post  ('/api/backups/:name/plan',      handlePlan);

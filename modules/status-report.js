@@ -47,6 +47,8 @@ async function report({ now = new Date() } = {}) {
   if (spent.over) attention.push(`the daily token ceiling is reached (${spent.used} of ${spent.limit}): new turns are refused`);
   const fold = foldCheck.warning(p);
   if (fold) attention.push(fold);
+  const bs = require('./store').readJson('backup/schedule', {});
+  if (bs.remoteError && (!bs.remoteAt || bs.remoteTriedAt > bs.remoteAt)) attention.push(`the off-site backup copy failed: ${bs.remoteError}`);
 
   return {
     at: now.toISOString(),
@@ -60,6 +62,7 @@ async function report({ now = new Date() } = {}) {
     },
     waitingOnAPerson: { proposals, installs: installsPending },
     usage24h: { calls: day.calls, tokens: day.prompt + day.completion, ceiling: spent.limit || null },
+    backups: { lastAt: bs.lastAt || null, offsiteAt: bs.remoteAt || null, offsiteKey: bs.remoteKey || null },
     attention,
   };
 }
@@ -67,7 +70,8 @@ async function report({ now = new Date() } = {}) {
 function render(r) {
   const out = [`DOCA ${r.version} — ${r.at}`, `model: ${r.model || '(none chosen)'}`,
     `conversations: ${r.conversations.open} open`,
-    `last 24 h: ${r.usage24h.calls} model calls, ${r.usage24h.tokens} tokens${r.usage24h.ceiling ? ` of ${r.usage24h.ceiling} a day` : ''}`, ''];
+    `last 24 h: ${r.usage24h.calls} model calls, ${r.usage24h.tokens} tokens${r.usage24h.ceiling ? ` of ${r.usage24h.ceiling} a day` : ''}`,
+    `backups: last ${r.backups.lastAt || 'never'}${r.backups.offsiteAt ? `, off-site ${r.backups.offsiteAt}` : ''}`, ''];
   const list = (title, rows, line) => { if (rows.length) out.push(`${title}:`, ...rows.map(x => `  ${line(x)}`), ''); };
   list('Failed conversations (7 days)', r.conversations.failed, s => `${s.title} (${s.id}) — ${s.error || 'no reason recorded'}`);
   list('Interrupted (marked running; the panel will call them paused)', r.conversations.interrupted, s => `${s.title} (${s.id})`);
