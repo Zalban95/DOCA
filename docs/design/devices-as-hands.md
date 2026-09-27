@@ -1,6 +1,6 @@
 # Devices as hands — the harness works on the clients as it does on the host
 
-**Status: proposed 2026-09-27, for Al's approval.** Nothing here is built yet.
+**Status: approved by Al 2026-09-27.** Step 2 (the DOCA side) in progress.
 
 Decided in discussion: the harness's reach is near-absolute on the host, and a
 paired device should be an **extension of that reach**, not a remote control with
@@ -20,7 +20,7 @@ Tool families, the same names on every machine so an agent learns them once:
 | **files** — list, read, write, move, delete | yes | yes (everywhere the user can) | user storage, after the one-time "all files" permission | minimal |
 | **shell** — commands, background jobs | yes | yes (PowerShell / sh) | the app's own sandbox only (no root) | no |
 | **processes** — list, start, stop | yes | yes | its own | no |
-| **screen** — capture a window or the screen | via DocaDesk | yes (Windows Graphics Capture; Linux: the desktop portal) | yes (MediaProjection, asks each session — Android's rule) | no |
+| **screen** — capture a window or the screen | via DocaDesk | yes (Windows Graphics Capture; Linux: the desktop portal) | yes (MediaProjection: consent once, the session held open in the background — see below) | no |
 | **input** — click, type, keys | no | yes | only through an Accessibility service: a separate, clearly labelled switch (Play restricts it; fine for our own builds) | no |
 | **apps** — open an app, a link, a file | yes | yes | yes (intents) | limited |
 | **device** — notifications, prompts, camera, location, sensors | — | notifications, prompts | yes | notifications, sensors |
@@ -39,6 +39,17 @@ Tool families, the same names on every machine so an agent learns them once:
   not shown as available.
 - The harness's approval mode still applies on top (Auto / Manual / Unattended),
   exactly as for host tools; in Auto, a granted family runs without asking.
+
+### The phone's screen, held open
+
+Android asks for screen capture per *session*, not per frame. The app starts one
+session after the person's consent, inside a foreground service of type
+`mediaProjection` (Android 14+), and keeps it open: a frame is taken whenever the
+harness asks, with no new prompt. It asks again only when the session has really
+ended — the person tapped stop on the system's screen-sharing chip (Android shows
+it while the session is open, and that cannot be hidden), the app was killed, or
+the phone restarted. The same foreground service holds the connection to DOCA, so
+"disconnected" is a state the device reports, not a guess.
 
 ## 3. Trust: your devices are not "outside"
 
@@ -73,7 +84,15 @@ The apps and DocaDesk open **their own page**, the panel personalised for the
 device that opened it:
 
 - **Settings → This device**: what it has granted, its local MCP servers, its
-  folders, its checkpoints — the "local" section.
+  folders, its checkpoints — the "local" section — and its **actions**:
+  - **Refresh** — the device reports its caps, grants and state again;
+  - **Reconnect** — drop and reopen its push stream;
+  - **Ask again** — re-request a family's permission (or the screen session);
+  - **Disconnect** — close its sessions and stop its services until it is
+    opened again, without unpairing;
+  - **Revoke a family** — take one permission back from DOCA's side;
+  - **Unpair** — forget the device (what Settings → Devices does today).
+  The same actions on every device's row in Settings → Devices.
 - **Files and Projects**: a **machine selector** — *host · portal · phone…* — the
   shared tree (2.101.0) showing that machine's folders through its files family;
   a project can live on a client, with search, git and run executed there.
