@@ -33,7 +33,7 @@
  */
 const path = require('path');
 
-const store = require('../store');
+const store = require('../store'), docs = require('../db/docs');   // conversations and memory: the database (db/docs.js)
 
 const SESSIONS_DOC = 'harness/sessions';
 const MEMORY_DOC   = 'harness/memory';
@@ -50,12 +50,12 @@ function transcriptPath(id) {
 /* ── Sessions ─────────────────────────────────────────── */
 
 function readIndex() {
-  const doc = store.readJson(SESSIONS_DOC, { sessions: [], active: null });
+  const doc = docs.getDoc(SESSIONS_DOC, { sessions: [], active: null });
   if (!Array.isArray(doc.sessions)) doc.sessions = [];
   return doc;
 }
 
-function writeIndex(doc) { store.writeJson(SESSIONS_DOC, doc); }
+function writeIndex(doc) { docs.setDoc(SESSIONS_DOC, doc); }
 
 /** Newest first, without transcripts. */
 function listSessions() {
@@ -176,12 +176,12 @@ function deleteSession(id) {
   doc.sessions = doc.sessions.filter(s => s.id !== id);
   if (doc.active === id) doc.active = doc.sessions[0]?.id || null;
   writeIndex(doc);
-  try { require('fs').rmSync(transcriptPath(id), { force: true }); } catch {}
+  try { docs.dropLines(`transcript:${id}`, transcriptPath(id)); } catch {}
 }
 
 /** Every row of a transcript, oldest first. */
 function messages(id) {
-  return store.readJsonl(transcriptPath(id));
+  return docs.lines(`transcript:${id}`, transcriptPath(id));
 }
 
 /**
@@ -190,7 +190,7 @@ function messages(id) {
  */
 function append(id, msg) {
   const row = { ...msg, at: msg.at || new Date().toISOString() };
-  store.appendJsonl(transcriptPath(id), row);
+  docs.append(`transcript:${id}`, transcriptPath(id), row);
   const s = getSession(id);
   const patch = { count: (s?.count || 0) + 1 };
   if (s && !s.titleLocked && s.kind !== 'orchestrator' && s.count === 0 && msg.role === 'user' && typeof msg.content === 'string')
@@ -285,7 +285,7 @@ function pendingFold(id, summarizeAfter, { force = false } = {}) {
 /* ── Durable memory entries ───────────────────────────── */
 
 function readMemory() {
-  const doc = store.readJson(MEMORY_DOC, { entries: [] });
+  const doc = docs.getDoc(MEMORY_DOC, { entries: [] });
   if (!Array.isArray(doc.entries)) doc.entries = [];
   return doc;
 }
@@ -342,7 +342,7 @@ function memWrite({ key, value, tags, pinned, source, category, locked }) {
   if (category !== undefined) entry.category = String(category || '').trim().slice(0, 40) || undefined;
 
   if (!existing) doc.entries.push(entry);
-  store.writeJson(MEMORY_DOC, doc);
+  docs.setDoc(MEMORY_DOC, doc);
   return entry;
 }
 
@@ -368,7 +368,7 @@ function memForget(idOrKey, { source } = {}) {
       + 'saying what contradicted it.'), { status: 409 });
 
   doc.entries = doc.entries.filter(e => e !== found);
-  store.writeJson(MEMORY_DOC, doc);
+  docs.setDoc(MEMORY_DOC, doc);
 }
 
 /**
@@ -393,7 +393,7 @@ function memDispute(idOrKey, { note, source } = {}) {
     by:   source || 'agent',
     note: String(note).trim().slice(0, 600),
   };
-  store.writeJson(MEMORY_DOC, doc);
+  docs.setDoc(MEMORY_DOC, doc);
   return found;
 }
 
@@ -405,7 +405,7 @@ function memLock(idOrKey, locked) {
   if (!found) throw Object.assign(new Error('No such entry'), { status: 404 });
   found.locked = !!locked;
   found.updatedAt = new Date().toISOString();
-  store.writeJson(MEMORY_DOC, doc);
+  docs.setDoc(MEMORY_DOC, doc);
   return found;
 }
 
@@ -450,7 +450,7 @@ function memTouch(entries) {
     const e = doc.entries.find(x => x.id === hit.id);
     if (e) e.hits = (e.hits || 0) + 1;
   }
-  store.writeJson(MEMORY_DOC, doc);
+  docs.setDoc(MEMORY_DOC, doc);
 }
 
 module.exports = {

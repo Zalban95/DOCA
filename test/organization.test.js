@@ -104,12 +104,12 @@ test('acknowledging bounds the array too, and keeps the most recent', () => {
 });
 
 test('one report is one index write, however many superiors it reaches', t => {
-  const store = require('../modules/store');
+  const docs = require('../modules/db/docs');   // where the index is written since 2.111.0
   const work = org.create({ title: 'Fan-out' });
   const specialist = memory.createSession('Deep', { kind: 'specialist', parentId: work.id });
-  const real = store.writeJson, writes = [];
-  store.writeJson = (key, doc) => { if (key === 'harness/sessions') writes.push(doc); return real(key, doc); };
-  t.after(() => { store.writeJson = real; });
+  const real = docs.setDoc, writes = [];
+  docs.setDoc = (key, doc) => { if (key === 'harness/sessions') writes.push(JSON.parse(JSON.stringify(doc))); return real(key, doc); };
+  t.after(() => { docs.setDoc = real; });
 
   const note = org.report(specialist.id, 'report', 'two superiors above me');
 

@@ -13,15 +13,11 @@
  * Word overlap, like memSearch: no model call, no index to keep warm. The TODO
  * entry after this one says when that stops being enough.
  */
-const fs     = require('fs');
-const path   = require('path');
-const store  = require('../store');
 const memory = require('./memory');
 
 const SCAN_SESSIONS = 300;          // newest transcripts read for words the summary did not keep
-const SCAN_BYTES    = 4 << 20;      // a transcript larger than this is searched by its summary only
+const SCAN_ROWS     = 5000;         // a transcript longer than this is searched by its summary only
 const terms = q => [...new Set(String(q || '').toLowerCase().split(/[^\p{L}\p{N}_.-]+/u).filter(t => t.length > 1))];
-const transcript = id => path.join(store.dir('harness/sessions'), `${id}.jsonl`);
 
 /** A short piece of `text` around the first term it holds. */
 function excerpt(text, ts, width = 160) {
@@ -34,10 +30,10 @@ function excerpt(text, ts, width = 160) {
 
 /** Transcript rows (the person's and the agent's words, not tool output) holding the terms. */
 function transcriptHits(id, ts, max = 3) {
-  const file = transcript(id);
-  try { if (fs.statSync(file).size > SCAN_BYTES) return []; } catch { return []; }
+  const rows = memory.messages(id);   // the database since 2.111.0 (db/docs.js), not the file
+  if (rows.length > SCAN_ROWS) return [];
   const out = [];
-  for (const r of store.readJsonl(file)) {
+  for (const r of rows) {
     if ((r.role !== 'user' && r.role !== 'assistant') || typeof r.content !== 'string') continue;
     const low = r.content.toLowerCase();
     const n = ts.filter(t => low.includes(t)).length;
