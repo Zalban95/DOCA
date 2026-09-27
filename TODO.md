@@ -113,7 +113,7 @@ the end, and in the sections as "built in …" notes.
   DocaDesk (after the D-4 review) and the apps on portal.
 
 **Asked for 2026-09-27 — a device as a console, and a watch that is woken.** Hub
-side written from the DocaWear session and **not committed**; see *A device as a
+side committed 2026-09-27 (05379cf) with its panel card; see *A device as a
 console* for the files, what is built and what is open.
 
 **Decide**
@@ -1024,7 +1024,7 @@ surface whose layout and meaning are set here, used as a game controller, as
 buttons that run functions on the dashboard host, or as input to a connected
 device.
 
-**Built, uncommitted in this tree (from the DocaWear session).** Tests pass
+**Built (from the DocaWear session), committed in 05379cf.** Tests pass
 (`test/wake.test.js`, `test/device-console.test.js`, openapi); the one structure
 failure ("every script the page loads exists") predates these changes.
 - `modules/device-console.js`: `POST /api/v1/console` (`sensors:report`, which
@@ -1052,10 +1052,11 @@ failure ("every script the page loads exists") predates these changes.
   404 until this code is deployed).
 
 **Open — the part to design here.**
-- **Nothing shows it in the panel yet.** A card on the device's page (`/d/<id>/`
-  and Settings → Devices) with the live frames, the last presses and the link
-  picker is the first thing to build; until then links are set by
-  `PUT /api/devices/:id/console`.
+- ~~Nothing shows it in the panel yet.~~ **Built 2026-09-27:** a "Console"
+  section (collapsed) on every device with `sensors:report`, in Settings →
+  Devices and the device's own page (`/d/<id>/`): enabled, the last frame, crown,
+  the last presses, polled once a second while open, and the link picker
+  (`public/js/devices.js`, `devConsoleHtml`).
 - **The layout is hard-coded on the watch** (four quarters, A/B/C). Per the
   clients' rule that a device renders what the hub declares and never enumerates
   features, the versatile shape is a **console profile** on the hub: controls
