@@ -102,6 +102,16 @@ the end, and in the sections as "built in …" notes.
 - A retrieval layer (embeddings) — with the database's `pgvector`. → *Memory,
   limits and context*, *Where this harness stands…* §3.
 
+**Proposed 2026-09-27 — devices as hands** (`docs/design/devices-as-hands.md`, to approve)
+- Paired devices extend the harness's reach: the same tool families as the host
+  (files, shell, processes, screen, input, apps, elevated) on DocaDesk, what the
+  OS allows on the apps; consent once per device and family; your own devices
+  trusted like the host (not "outside"); folder checkpoints everywhere and
+  system snapshots where possible before dangerous actions; each device's own
+  page at `/d/<device-id>/` (a view, never a key) with Settings → This device
+  and a machine selector in Files and Projects. Order: the DOCA side here, then
+  DocaDesk (after the D-4 review) and the apps on portal.
+
 **Decide**
 - Rename, licence and CLA — Monday. → *One rename*, *Licence and per-customer builds*.
 - Export skills and specialists / send them to DOCA. → *To discuss next*.
