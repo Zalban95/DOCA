@@ -41,6 +41,37 @@ test('http: the GET stream is held open and a pushed change is heard; stop close
   assert.ok(await until(() => stub.streams.size === 0), 'stopping closes the stream');
 });
 
+test('http: a stream lost for longer than six reopen attempts comes back, and a change made meanwhile is seen', async t => {
+  // DocaDesk ISSUES.md D-25: _listen used to give up after six failures (about a
+  // minute at the real backoff) and never say so. Shrunk here so the test is fast.
+  const saved = McpClient.streamBackoff;
+  McpClient.streamBackoff = { baseMs: 2, maxMs: 10 };
+  t.after(() => { McpClient.streamBackoff = saved; });
+
+  const stub = await httpServer.start({ stream: true });
+  t.after(() => stub.close());
+  const c = new McpClient({ id: 'away', transport: 'http', url: stub.url });
+  await c.start();
+  t.after(() => c.stop());
+  assert.ok(await until(() => stub.streams.size === 1), 'the client opened the event stream');
+
+  stub.drop();
+  assert.ok(await until(() => stub.cut >= 12), 'the client kept trying well past the old limit of six');
+  // The tools change while nobody can be told.
+  stub.addTool({ name: 'while_away', description: 'x', inputSchema: { type: 'object', properties: {} } });
+  stub.resume();
+
+  assert.ok(await until(() => stub.streams.size === 1), 'the stream was reopened after the long absence');
+  assert.ok(await until(() => c.tools.some(x => x.name === 'while_away')), 'the change made while away was read on return');
+  assert.ok(c.log.some(l => /event stream closed/.test(l)), 'the log says it went');
+  assert.ok(c.log.some(l => /event stream back/.test(l)), 'and that it came back');
+
+  // And the ordinary path still works afterwards.
+  stub.addTool({ name: 'after', description: 'x', inputSchema: { type: 'object', properties: {} } });
+  stub.push({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' });
+  assert.ok(await until(() => c.tools.some(x => x.name === 'after')));
+});
+
 test('http: a server without a stream (405) is fine, and an SSE reply is matched by id past a notification', async t => {
   const stub = await httpServer.start({ sse: true, noteFirst: true });
   t.after(() => stub.close());

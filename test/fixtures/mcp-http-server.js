@@ -46,7 +46,10 @@ async function start(opts = {}) {
   const tools = [...TOOLS];
   const streams = new Set();
 
+  let down = false, cut = 0;   // drop(): every request is cut off, the way a listener that went away looks
+
   const server = http.createServer((req, res) => {
+    if (down) { cut++; req.socket.destroy(); return; }
     if (req.method === 'GET' && opts.stream) {
       seen.push({ method: 'GET', headers: req.headers });
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
@@ -113,6 +116,11 @@ async function start(opts = {}) {
     streams,
     push: msg => { for (const r of streams) r.write(`event: message\ndata: ${JSON.stringify(msg)}\n\n`); },
     addTool: t => tools.push(t),
+    /** Go away: open streams are cut and every new request is reset, until resume(). */
+    drop: () => { down = true; for (const r of streams) r.socket?.destroy(); streams.clear(); },
+    resume: () => { down = false; },
+    /** How many requests drop() has cut off. */
+    get cut() { return cut; },
     close: () => new Promise(r => { server.closeAllConnections(); server.close(r); }),
   };
 }
