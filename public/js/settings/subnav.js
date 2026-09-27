@@ -9,6 +9,7 @@
 const _SETTINGS_SUBTABS = [
   { id: 'general',   label: 'General',   init: '_subtabGeneralInit' },
   { id: 'keys',      label: 'API Keys',  init: 'loadKeys' },
+  { id: 'wearables', label: 'Wearables', init: 'wearablesLoad' },
   { id: 'backups',   label: 'Backups',   init: 'backupsLoad' },
   { id: 'harness',   label: 'Harness',   init: '_settingsHarnessRender' },
   { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit' },

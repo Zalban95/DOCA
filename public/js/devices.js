@@ -47,7 +47,7 @@ async function devicesLoad() {
         ${d.missingScopes?.length ? `<div class="input-label mt8" style="text-transform:none;letter-spacing:0;color:var(--amber)">
           Paired before its preset (${escHtml(d.preset)}) gained: ${d.missingScopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}
           <button class="btn btn-xs" onclick="devGrant(${jsArg(d.id)}, ${jsArg(d.missingScopes.join(','))})" title="Add these to this device — same id, queue and token">+ Grant</button></div>` : ''}
-        ${dead ? '' : devHandsHtml(d) + devConsoleHtml(d)}
+        ${dead ? '' : devHandsHtml(d)}
         ${dead ? `
         <div class="toolbar-right">
           <button class="btn btn-xs btn-red" onclick="devForget(${jsArg(d.id)},${jsArg(d.name)})" title="Remove this row and everything kept under its id">🗑 Forget</button>
@@ -316,52 +316,6 @@ function devHandsHtml(d) {
     </div>`;
 }
 
-/* ── A device as a console (modules/device-console.js): its live stream, and who receives it ── */
-
-function devConsoleHtml(d) {
-  if (!d.scopes?.includes('sensors:report')) return '';
-  return `<details class="dev-console" style="margin-top:6px" ontoggle="devConsoleToggle(this, ${jsArg(d.id)})">
-      <summary class="input-label" style="cursor:pointer">Console — motion, heading, crown, A/B/C</summary>
-      <div class="dev-console-live" style="font-size:11px;margin:4px 0">…</div>
-      <div class="dev-console-links" style="font-size:11px"></div>
-    </details>`;
-}
-
-// ponytail: polls once a second while open; an SSE feed if a console ever needs more than a glance
-async function devConsoleToggle(el, id) {
-  if (!el.open) return;
-  const url = `/api/devices/${encodeURIComponent(id)}/console`;
-  try {
-    const [{ devices }, c] = await Promise.all([apiFetch('/api/devices'), apiFetch(url)]);
-    const others = devices.filter(x => x.id !== id && !x.revokedAt);
-    el.querySelector('.dev-console-links').innerHTML = others.length
-      ? `Send it to: ${others.map(x => `<label style="margin-right:10px"><input type="checkbox" value="${escHtml(x.id)}" ${c.links.includes(x.id) ? 'checked' : ''}
-          onchange="devConsoleLinks(this.closest('details'), ${jsArg(id)})"> ${escHtml(x.name)}</label>`).join('')}`
-      : 'No other device to send it to.';
-  } catch (e) { el.querySelector('.dev-console-live').textContent = `✗ ${e.message}`; return; }
-  const draw = async () => {
-    if (!el.open || !el.isConnected) return clearInterval(timer);
-    try {
-      const c = await apiFetch(url);
-      const f = c.frames.at(-1) || {};
-      const crown = c.frames.reduce((s, x) => s + (x.crown || 0), 0);
-      el.querySelector('.dev-console-live').innerHTML = `
-        <b>${c.enabled ? 'ENABLED' : 'off'}</b>${c.at ? ` · last input ${escHtml(new Date(c.at).toLocaleTimeString())}` : ' · nothing received yet'}<br>
-        accel ${f.accel ? f.accel.map(v => v.toFixed(1)).join(', ') : '—'} · heading ${f.heading !== undefined ? `${Math.round(f.heading)}°` : '—'}
-        · crown ${crown ? crown.toFixed(1) : '—'} (last ${c.frames.length} frames)<br>
-        presses ${c.presses.length ? c.presses.slice(-8).reverse().map(p => `<code>${escHtml(p.press)}</code> ${escHtml(new Date(p.at).toLocaleTimeString())}`).join(' · ') : '—'}`;
-    } catch { /* the next tick tries again */ }
-  };
-  const timer = setInterval(draw, 1000);
-  draw();
-}
-
-async function devConsoleLinks(el, id) {
-  const links = [...el.querySelectorAll('.dev-console-links input:checked')].map(i => i.value);
-  try { await apiFetch(`/api/devices/${encodeURIComponent(id)}/console`, { method: 'PUT', body: { links } }); }
-  catch (e) { setStatus(document.getElementById(`dev-status-${id}`), `✗ ${e.message}`, 'err'); }
-}
-
 async function devControl(id, action, family) {
   const go = async () => {
     try {
@@ -392,7 +346,7 @@ async function devThisDevice() {
     card.innerHTML = `<div class="card-title">This device — ${escHtml(d.name)}</div>
       <p style="font-size:11px;color:var(--muted);margin-bottom:8px">What this device lets DOCA's agents do here, and its connection.
         Permissions are granted on the device itself; you can take any of them back from here.</p>
-      ${devHandsHtml(d)}${devConsoleHtml(d)}<div class="status-line" id="dev-status-${escHtml(d.id)}"></div>
+      ${devHandsHtml(d)}<div class="status-line" id="dev-status-${escHtml(d.id)}"></div>
       ${/DocaMobile\//.test(navigator.userAgent) ? '<a class="btn" href="doca://settings" style="display:inline-block;margin-top:8px">App settings — connection and permissions</a>' : ''}`;
   } catch { card.remove(); }
 }

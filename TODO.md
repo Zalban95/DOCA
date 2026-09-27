@@ -1052,11 +1052,14 @@ failure ("every script the page loads exists") predates these changes.
   404 until this code is deployed).
 
 **Open — the part to design here.**
-- ~~Nothing shows it in the panel yet.~~ **Built 2026-09-27:** a "Console"
-  section (collapsed) on every device with `sensors:report`, in Settings →
-  Devices and the device's own page (`/d/<id>/`): enabled, the last frame, crown,
-  the last presses, polled once a second while open, and the link picker
-  (`public/js/devices.js`, `devConsoleHtml`).
+- ~~Nothing shows it in the panel yet.~~ **Built 2026-09-27:** Settings →
+  **Wearables**, one card per paired wearable ("DocaWear — <name>" for a
+  `formFactor: watch`, glasses when they come), with its console: enabled, the
+  last frame, crown, the last presses (polled once a second while open), and the
+  link picker (`public/js/wearables.js`). Where Al wanted it: the settings stay
+  device-agnostic, and a wearable gets its own section rather than a row among
+  the phones. The sub-tab loads its list once; a watch paired meanwhile shows
+  after a reload.
 - **The layout is hard-coded on the watch** (four quarters, A/B/C). Per the
   clients' rule that a device renders what the hub declares and never enumerates
   features, the versatile shape is a **console profile** on the hub: controls
