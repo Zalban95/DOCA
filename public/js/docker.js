@@ -133,7 +133,9 @@ async function dockerLoadContainers() {
     }
     tbody.innerHTML = _dockerContainers.map(c => {
       const isRunning = (c.State || '').toLowerCase() === 'running';
-      const statusClass = isRunning ? 'badge-green' : 'badge-red';
+      // Red only for a failure: a container never started, paused, or that exited cleanly (code 0) is not one.
+      const failed = /^(dead|restarting)$/i.test(c.State || '') || (/^exited$/i.test(c.State || '') && !/\(0\)/.test(c.Status || ''));
+      const statusClass = isRunning ? 'badge-green' : failed ? 'badge-red' : 'badge-amber';
       const ports = c.Ports || '';
 
       return `<tr class="models-row" id="docker-container-${c.ID}">
@@ -232,7 +234,9 @@ async function dockerLoadImages() {
       const repo = img.Repository || '<none>';
       const tag  = img.Tag || 'latest';
       const size = img.Size || '—';
-      const created = img.CreatedAt ? fmtDate(img.CreatedAt) : (img.CreatedSince || '—');
+      // Docker writes "2026-09-23 10:52:30 +0200 CEST", which Date cannot read; made ISO first.
+      const iso = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ([+-]\d{2})(\d{2})/.exec(img.CreatedAt || '');
+      const created = iso ? `${fmtDate(`${iso[1]}T${iso[2]}${iso[3]}:${iso[4]}`)}${img.CreatedSince ? ` · ${img.CreatedSince}` : ''}` : (img.CreatedSince || '—');
       const fullId = img.ID || '';
       return `<tr class="models-row">
         <td class="models-name" style="font-size:11px">${escHtml(repo)}</td>

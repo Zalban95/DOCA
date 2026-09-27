@@ -233,7 +233,15 @@ function handleSettings(req, res) {
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
+function mount(app) {
+  require('./vms-manage').mount(app);   // before /:hypervisor/action, which it does not overlap, but reads first
+  app.get ('/api/vms',                    handleList);
+  app.post('/api/vms/settings',           handleSettings);
+  app.post('/api/vms/:hypervisor/action', handleAction);
+}
+
 module.exports = {
+  mount,
   handleList,
   handleAction,
   handleSettings,

@@ -38,7 +38,7 @@ const OVER = {
   'modules/agents/missions.js':    496,
   'modules/api-v1/prompts.js':     467,
   'public/js/markdown.js':         462,
-  'server.js': 340,
+  'server.js': 338,
   'modules/harness/budget.js':     424,
   'modules/chat.js':               412,
 };

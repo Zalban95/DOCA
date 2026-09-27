@@ -44,6 +44,7 @@ const PREFS = {
   dockerPresets:    { is: 'local',   note: 'compose presets for this machine\'s Docker' },
   backup:           { is: 'local',   note: 'the backup schedule of this machine' },
   network:          { is: 'local',   note: 'how this machine listens' },
+  vms:              { is: 'local',   note: 'the libvirt connection URI of this machine' },
 };
 
 const DATA = {

@@ -10,8 +10,12 @@ const { COMPOSE_DIR, CONFIG_PATH, PREFS_FILE, FM_ALLOWED_ROOTS, PROTECTED_FILES 
 
 /** Run a shell command and return { stdout, stderr }. Rejects on non-zero exit. */
 function run(cmd, cwd) {
+  // The compose folder only when it is there: on an install without OpenClaw it is not, and a missing
+  // working directory made every command fail at once — docker ps, nvidia-smi, curl — so the sidebar
+  // said "None running" and "No GPU data" on a machine with both (found 2026-09-27).
+  const dir = cwd || (require('fs').existsSync(COMPOSE_DIR) ? COMPOSE_DIR : require('os').homedir());
   return new Promise((resolve, reject) => {
-    exec(cmd, { cwd: cwd || COMPOSE_DIR, timeout: 60000 }, (err, stdout, stderr) => {
+    exec(cmd, { cwd: dir, timeout: 60000 }, (err, stdout, stderr) => {
       if (err) reject({ error: err.message, stderr, stdout });
       else resolve({ stdout, stderr });
     });
