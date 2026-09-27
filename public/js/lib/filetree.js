@@ -19,6 +19,7 @@
 const FT_DIM = new Set(['.git', 'node_modules', 'build', 'dist', '.gradle', 'target', '.idea', '.dart_tool', '__pycache__', '.next', 'out', '.venv']);
 
 function fileTree(container, opts = {}) {
+  const api = opts.api || '/api/files';   // a paired device's files: /api/devices/<id>/files (device-files.js)
   const t = { root: String(opts.root || '/').replace(/\/+$/, '') || '/', open: new Set(), selected: null, opts };
   const join = (dir, name) => (dir === '/' ? `/${name}` : `${dir}/${name}`);
   const parent = abs => abs.slice(0, abs.lastIndexOf('/')) || '/';
@@ -42,25 +43,25 @@ function fileTree(container, opts = {}) {
     collapse: () => { t.open.clear(); level(tree, t.root, 0); },
     file: (dir = here()) => appPrompt(`New file in ${dir}:`, async name => {
       const abs = join(dir, name.replace(/^\/+/, ''));
-      try { await apiFetch('/api/files/write', { method: 'POST', body: { path: abs, content: '' } }); t.open.add(dir); act.refresh(); opts.onOpen?.(abs); }
+      try { await apiFetch(`${api}/write`, { method: 'POST', body: { path: abs, content: '' } }); t.open.add(dir); act.refresh(); opts.onOpen?.(abs); }
       catch (e) { appAlert(e.message); }
     }),
     folder: (dir = here()) => appPrompt(`New folder in ${dir}:`, async name => {
-      try { await apiFetch('/api/files/mkdir', { method: 'POST', body: { path: join(dir, name.replace(/^\/+/, '')) } }); t.open.add(dir); act.refresh(); }
+      try { await apiFetch(`${api}/mkdir`, { method: 'POST', body: { path: join(dir, name.replace(/^\/+/, '')) } }); t.open.add(dir); act.refresh(); }
       catch (e) { appAlert(e.message); }
     }),
     upload: (dir = here()) => { upload.dataset.dest = dir; upload.click(); },
     rename: abs => appPrompt(`Rename ${abs.split('/').pop()} to:`, async name => {
-      try { await apiFetch('/api/files/rename', { method: 'POST', body: { from: abs, to: join(parent(abs), name) } }); act.refresh(); }
+      try { await apiFetch(`${api}/rename`, { method: 'POST', body: { from: abs, to: join(parent(abs), name) } }); act.refresh(); }
       catch (e) { appAlert(e.message); }
     }, abs.split('/').pop()),
     remove: (abs, isDir) => appConfirm(`Delete ${abs}${isDir ? ' and everything in it' : ''}?`, async () => {
-      try { await apiFetch('/api/files/delete', { method: 'POST', body: { paths: [abs] } }); if (t.selected === abs) t.selected = null; act.refresh(); }
+      try { await apiFetch(`${api}/delete`, { method: 'POST', body: { paths: [abs] } }); if (t.selected === abs) t.selected = null; act.refresh(); }
       catch (e) { appAlert(e.message); }
     }),
     move: async (from, dir) => {
       if (from === dir || dir.startsWith(`${from}/`) || parent(from) === dir) return;
-      try { await apiFetch('/api/files/paste', { method: 'POST', body: { op: 'cut', paths: [from], dest: dir } }); t.open.add(dir); act.refresh(); }
+      try { await apiFetch(`${api}/paste`, { method: 'POST', body: { op: 'cut', paths: [from], dest: dir } }); t.open.add(dir); act.refresh(); }
       catch (e) { appAlert(`Could not move it: ${e.message}`); }
     },
     send: async (files, dir) => {
@@ -68,7 +69,7 @@ function fileTree(container, opts = {}) {
       form.append('dest', dir);
       for (const f of files) form.append('files', f);
       try {
-        const r = await fetch('/api/files/upload', { method: 'POST', body: form });
+        const r = await fetch(`${api}/upload`, { method: 'POST', body: form });
         if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `HTTP ${r.status}`);
         t.open.add(dir); act.refresh();
       } catch (e) { appAlert(`Upload failed: ${e.message}`); }
@@ -85,7 +86,7 @@ function fileTree(container, opts = {}) {
       ...(opts.extraMenu?.(abs, isDir) || []),
       { label: '↩ Rename', fn: () => act.rename(abs) },
       { label: '⧉ Copy path', fn: () => navigator.clipboard?.writeText(abs).catch(() => appAlert(abs)) },
-      ...(!isDir ? [{ label: '⬇ Download', fn: () => { const a = document.createElement('a'); a.href = `/api/files/download?path=${encodeURIComponent(abs)}`; a.download = name; a.click(); } }] : []),
+      ...(!isDir ? [{ label: '⬇ Download', fn: () => { const a = document.createElement('a'); a.href = `${api}/download?path=${encodeURIComponent(abs)}`; a.download = name; a.click(); } }] : []),
       { label: '✕ Delete', fn: () => act.remove(abs, isDir) },
     ]);
   }
@@ -98,7 +99,7 @@ function fileTree(container, opts = {}) {
 
   async function level(box, dir, depth) {
     let entries = [];
-    try { entries = (await apiFetch(`/api/files/list?path=${encodeURIComponent(dir)}`)).entries || []; }
+    try { entries = (await apiFetch(`${api}/list?path=${encodeURIComponent(dir)}`)).entries || []; }
     catch (e) { box.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; return; }
     entries.sort((a, b) => (b.isDir - a.isDir) || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
     box.innerHTML = '';
@@ -157,6 +158,41 @@ function fileTree(container, opts = {}) {
 
   level(tree, t.root, 0);
   return { refresh: act.refresh, collapse: act.collapse, get root() { return t.root; }, get selected() { return t.selected; } };
+}
+
+/* ── The Files tab's machine: the host, or a paired device whose files are usable (device-files.js) ── */
+let FM_MACHINE = null;
+function fmApi() { return FM_MACHINE ? `/api/devices/${encodeURIComponent(FM_MACHINE)}/files` : '/api/files'; }
+
+async function fmMachinesMount() {
+  const side = document.querySelector('#tab-files .fm-sidebar');
+  if (!side || document.getElementById('fm-machine')) return;
+  let devs = [];
+  try { devs = ((await apiFetch('/api/devices')).devices || []).filter(d => !d.revokedAt && d.control?.usable?.includes('files')); } catch { /* host only */ }
+  if (!devs.length) return;   // nothing to choose between
+  const group = Object.assign(document.createElement('div'), { className: 'fm-sidebar-group' });
+  group.innerHTML = `<div class="fm-sidebar-label">🖥 Machine</div>
+    <select class="input" id="fm-machine" style="width:100%">
+      <option value="">This host</option>${devs.map(d => `<option value="${escHtml(d.id)}">${escHtml(d.name)}</option>`).join('')}
+    </select>`;
+  side.prepend(group);
+  document.getElementById('fm-machine').onchange = e => fmUseMachine(e.target.value || null);
+}
+
+/** Switch the list and the tree to another machine; the host's bookmarks and mounts only mean something on the host. */
+async function fmUseMachine(id) {
+  FM_MACHINE = id;
+  for (const g of document.querySelectorAll('#tab-files .fm-sidebar-group')) {
+    if (g.querySelector('#fm-machine') || g.classList.contains('fm-tree-group')) continue;
+    g.style.display = id ? 'none' : '';
+  }
+  let home = FM_BOOKMARKS[0]?.path || '/';
+  if (id) {
+    try { home = (await apiFetch(`${fmApi()}/list?path=`)).path || '/'; }
+    catch (e) { appAlert(e.message); document.getElementById('fm-machine').value = ''; return fmUseMachine(null); }
+  }
+  fmNavigate(home);
+  fmTreeMount(home);
 }
 
 /* ── The context menu at the pointer (Files tab rows and the tree) ── */
