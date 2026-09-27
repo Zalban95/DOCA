@@ -68,3 +68,82 @@ async function backupScheduleSave() {
     setStatus(st, sch.every === 'off' ? '✓ Scheduled backups are off' : `✓ ${sch.every === 'daily' ? 'Daily' : 'Weekly'} at ${sch.at}, keeping ${sch.keep}`, 'ok');
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
+
+/* ── Off-site copy (modules/backup/remote.js): each scheduled backup also goes to an S3-compatible bucket ── */
+
+function _backupRemoteCard() {
+  let card = document.getElementById('backup-remote-card');
+  if (card) return card;
+  const panel = document.getElementById('sp-backups');
+  if (!panel) return null;
+  card = document.createElement('div');
+  card.className = 'card';
+  card.id = 'backup-remote-card';
+  card.innerHTML = `
+    <div class="card-title">Off-site copy</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
+      Each scheduled backup is also sent to a bucket on any S3-compatible store — AWS S3, Backblaze B2, Cloudflare R2,
+      Hetzner, Wasabi, MinIO — and only the last few <code>auto-…</code> files are kept there. The keys stay on this machine.
+    </p>
+    <div class="row" style="flex-wrap:wrap;gap:10px;align-items:flex-end">
+      <div class="field" style="flex:2;min-width:220px"><div class="input-label">Endpoint</div>
+        <input class="input" id="bremote-endpoint" placeholder="https://s3.eu-central-1.amazonaws.com"></div>
+      <div class="field"><div class="input-label">Region</div><input class="input" id="bremote-region" style="width:130px"></div>
+      <div class="field"><div class="input-label">Bucket</div><input class="input" id="bremote-bucket" style="width:160px"></div>
+      <div class="field"><div class="input-label">Folder</div><input class="input" id="bremote-prefix" style="width:110px"></div>
+      <div class="field"><div class="input-label">Keep the last</div>
+        <input class="input" type="number" id="bremote-keep" min="1" max="365" step="1" style="width:90px"></div>
+    </div>
+    <div class="row" style="flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:8px">
+      <div class="field"><div class="input-label">Access key id</div><input class="input" id="bremote-akid" autocomplete="off" style="width:200px"></div>
+      <div class="field"><div class="input-label">Secret</div><input class="input" type="password" id="bremote-secret" autocomplete="new-password" style="width:220px"></div>
+      <label class="input-label" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="bremote-enc"> only password-protected backups</label>
+      <label class="input-label" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="bremote-on"> on</label>
+      <div class="field"><button class="btn btn-sm btn-blue" onclick="backupRemoteSave()">Save</button></div>
+      <div class="field"><button class="btn btn-sm" onclick="backupRemoteTest()">Test</button></div>
+    </div>
+    <div class="input-label" id="bremote-info" style="text-transform:none;letter-spacing:0;margin-top:4px"></div>
+    <span class="status-line" id="bremote-status"></span>`;
+  panel.appendChild(card);
+  return card;
+}
+
+async function backupRemoteRender(sch) {
+  if (!_backupRemoteCard()) return;
+  let r;
+  try { r = await apiFetch('/api/backups/remote'); } catch { return; }
+  const set = (id, v) => { document.getElementById(id).value = v ?? ''; };
+  set('bremote-endpoint', r.endpoint); set('bremote-region', r.region); set('bremote-bucket', r.bucket);
+  set('bremote-prefix', r.prefix); set('bremote-keep', r.keep);
+  document.getElementById('bremote-enc').checked = !!r.encryptedOnly;
+  document.getElementById('bremote-on').checked = !!r.enabled;
+  document.getElementById('bremote-akid').placeholder = r.hasKeys ? 'saved — type to replace' : '';
+  document.getElementById('bremote-secret').placeholder = r.hasKeys ? 'saved' : '';
+  const info = document.getElementById('bremote-info');
+  info.textContent = sch?.remoteAt ? `Last sent: ${fmtDate(sch.remoteAt)} (${sch.remoteKey}).` : r.enabled ? 'Nothing sent yet: the next scheduled backup will be.' : '';
+  info.style.color = '';
+  if (sch?.remoteError && (!sch.remoteAt || sch.remoteTriedAt > sch.remoteAt)) { info.textContent += ` The last attempt failed: ${sch.remoteError}`; info.style.color = 'var(--red)'; }
+}
+
+async function backupRemoteSave() {
+  const st = document.getElementById('bremote-status');
+  const v = id => document.getElementById(id).value.trim();
+  const body = { endpoint: v('bremote-endpoint'), region: v('bremote-region'), bucket: v('bremote-bucket'), prefix: v('bremote-prefix'),
+    keep: parseInt(v('bremote-keep'), 10), encryptedOnly: document.getElementById('bremote-enc').checked, enabled: document.getElementById('bremote-on').checked };
+  if (v('bremote-akid') || v('bremote-secret')) { body.accessKeyId = v('bremote-akid'); body.secretAccessKey = document.getElementById('bremote-secret').value; }
+  try {
+    await apiFetch('/api/backups/remote', { method: 'POST', body });
+    document.getElementById('bremote-akid').value = ''; document.getElementById('bremote-secret').value = '';
+    setStatus(st, '✓ Saved', 'ok');
+    backupRemoteRender(_backups?.schedule);
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}
+
+async function backupRemoteTest() {
+  const st = document.getElementById('bremote-status');
+  setStatus(st, 'Writing a small file there and removing it…', 'info');
+  try { await apiFetch('/api/backups/remote/test', { method: 'POST' }); setStatus(st, '✓ The bucket takes files: written, listed and removed', 'ok'); }
+  catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}

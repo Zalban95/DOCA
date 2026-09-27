@@ -51,7 +51,15 @@ the end, and in the sections as "built in …" notes.
    `tenant_id` on every table; the **usage ledger** is in it (old monthly files
    imported once), backups carry a consistent copy (`VACUUM INTO`); the **audit
    log** since 2.108.0. **Next:** sessions and memory, then `npm run db-bench`.
-3. **Off-site backups**: scheduled `.dBac` to an S3-compatible bucket.
+3. ~~**Off-site backups**~~ — **built in 2.109.0** (`backup/remote.js`): each
+   scheduled `.dBac` also goes to any S3-compatible bucket (Signature V4 by hand,
+   checked against AWS's published example; round-tripped against SeaweedFS:
+   sent, pruned to the last N, downloaded and opened with the password); keys in
+   the data folder, write-only; only password-protected backups by default.
+   Settings → Backups → Off-site copy; `npm run status` reports it.
+   **Decide:** conversations and memory into the database need either async call
+   sites everywhere (~100 synchronous readers) or an in-memory copy that writes
+   through — it decides how a many-tenant host works; to settle with Al.
 4. **Review and fix the VMs, Docker and Models sections**, with VM management
    (snapshots, autostart, create). → *MCP and VMs…*.
 5. **Clients from this side**: clone DocaDesk / DocaMobile / DocaWear, fix what

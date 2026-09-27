@@ -85,7 +85,8 @@ function nextAt(cfg = config(), st = state()) {
 function status() {
   const cfg = config(), st = state(), n = nextAt(cfg, st);
   return { ...cfg, nextAt: n ? new Date(n).toISOString() : null,
-    lastAt: st.lastAt || null, lastName: st.lastName || null, lastError: st.lastError || null, lastTriedAt: st.lastTriedAt || null };
+    lastAt: st.lastAt || null, lastName: st.lastName || null, lastError: st.lastError || null, lastTriedAt: st.lastTriedAt || null,
+    remoteAt: st.remoteAt || null, remoteKey: st.remoteKey || null, remoteError: st.remoteError || null, remoteTriedAt: st.remoteTriedAt || null };
 }
 
 /** Keep the newest `keep` automatic backups; the rest go. Returns what was removed. */
@@ -115,7 +116,16 @@ async function run({ now = Date.now() } = {}) {
     const b = await archive.create({ password, name: PREFIX + archive.fileName(new Date(now)) });
     const removed = prune();
     writeState({ ...state(), lastAt: at, lastTriedAt: at, lastName: b.name, lastError: null });
-    return { made: b.name, removed };
+    // The off-site copy (remote.js): its failure is its own, and never undoes the local backup.
+    let remote = null;
+    try {
+      remote = await require('./remote').afterBackup(b.file, { encrypted: b.encrypted });
+      if (remote) writeState({ ...state(), remoteAt: new Date().toISOString(), remoteKey: remote.key, remoteError: null });
+    } catch (e) {
+      console.warn(`[backup] off-site copy failed: ${e.message}`);
+      writeState({ ...state(), remoteTriedAt: new Date().toISOString(), remoteError: e.message });
+    }
+    return { made: b.name, removed, remote };
   } catch (e) {
     console.warn(`[backup] scheduled backup failed: ${e.message}`);
     writeState({ ...state(), lastTriedAt: at, lastError: e.message });
