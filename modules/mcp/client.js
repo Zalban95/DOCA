@@ -136,11 +136,14 @@ class McpClient {
   /**
    * Streamable HTTP's other half: the GET stream a server pushes notifications
    * on. A 405 (or 404) means it offers none, which is allowed and ends this.
-   * A dropped stream is reopened with backoff while the server stays running.
+   * A dropped stream is reopened for as long as the client runs, and the log
+   * says so. It used to stop after six tries (~1 min) in silence: a listener
+   * away longer left the old tool list until ↺ (DocaDesk ISSUES.md D-25).
    */
   async _listen(lifecycle) {
     let failures = 0;
-    while (this.state === 'running' && lifecycle === this._lifecycle && failures < 6) {
+    let lost = false;
+    while (this.state === 'running' && lifecycle === this._lifecycle) {
       const ctrl = this._stream = new AbortController();
       const opened = Date.now();
       try {
@@ -148,12 +151,20 @@ class McpClient {
         if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
         const res = await fetch(this.spec.url, { method: 'GET', headers, signal: ctrl.signal });
         if (res.status === 405 || res.status === 404) { res.body?.cancel?.().catch(() => {}); return; }
-        if (res.ok && res.headers.get('content-type')?.includes('event-stream')) await this._readStream(res.body);
-        else res.body?.cancel?.().catch(() => {});
+        if (res.ok && res.headers.get('content-type')?.includes('event-stream')) {
+          if (lost) {   // whatever changed while it was away was said to nobody
+            this._note('event stream back; reading the tools again');
+            lost = false;
+            this.listTools().catch(e => this._note(`tools/list after the stream came back failed: ${e.message}`));
+          }
+          await this._readStream(res.body);
+        } else res.body?.cancel?.().catch(() => {});
       } catch { /* refused, reset or aborted: decided below */ }
       if (ctrl.signal.aborted) return;
       failures = Date.now() - opened > 60000 ? 1 : failures + 1;   // a stream that lived a while was not a failure
-      await new Promise(r => setTimeout(r, Math.min(30000, 500 * 2 ** failures)).unref?.());
+      if (!lost) { this._note('event stream closed; reopening until it is back'); lost = true; }
+      const { baseMs, maxMs } = McpClient.streamBackoff;
+      await new Promise(r => setTimeout(r, Math.min(maxMs, baseMs * 2 ** Math.min(failures, 16))).unref?.());
     }
   }
 
@@ -382,5 +393,7 @@ class McpClient {
 function sseData(frame) {
   return frame.split('\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).replace(/^ /, '')).join('\n').trim();
 }
+
+McpClient.streamBackoff = { baseMs: 500, maxMs: 30000 };   // reopening a stream: 1 s, 2 s … 30 s; tests shrink it
 
 module.exports = { McpClient, PROTOCOL_VERSION };
