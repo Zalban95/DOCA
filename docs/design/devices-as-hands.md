@@ -40,15 +40,18 @@ Tool families, the same names on every machine so an agent learns them once:
 - The harness's approval mode still applies on top (Auto / Manual / Unattended),
   exactly as for host tools; in Auto, a granted family runs without asking.
 
-### The phone's screen, held open
+### The phone's screen, on demand
 
-Android asks for screen capture per *session*, not per frame. The app starts one
-session after the person's consent, inside a foreground service of type
-`mediaProjection` (Android 14+), and keeps it open: a frame is taken whenever the
-harness asks, with no new prompt. It asks again only when the session has really
-ended — the person tapped stop on the system's screen-sharing chip (Android shows
-it while the session is open, and that cannot be hidden), the app was killed, or
-the phone restarted. The same foreground service holds the connection to DOCA, so
+Android asks for screen capture per *session*, not per frame. The first build
+held one session open (2026-09-27) and it was the wrong trade: the red
+screen-sharing chip stayed on for good, a virtual display rendered for nobody, and
+a rotation re-asked. **Decided by Al the same day: the screen is captured only
+when the harness asks.** With the phone's input control (its Accessibility
+service) on, the app takes an Accessibility screenshot — no prompt, no chip. Without
+it, a `screen_capture` opens a MediaProjection session for that request (the person
+taps once; the call waits up to a minute), and the session ends after 30 s without
+another capture, taking the chip with it. Granting the `screen` family is the
+one-time consent; each burst of captures costs one tap unless input control is on. The same foreground service holds the connection to DOCA, so
 "disconnected" is a state the device reports, not a guess.
 
 ## 3. Trust: your devices are not "outside"

@@ -473,6 +473,8 @@ data: {"reason":"revoked"}
 | `sensor.stop` | durable | `{ requestId, reason }` |
 | `revoked` | durable | `{ reason, by }` — then the stream closes; forget the token |
 | `device.control` | durable (24 h) | `{ id, action: refresh\|reconnect\|ask\|disconnect\|revoke\|restore, family? }` — do it, then `POST /devices/self/control/{id}/ack { ok, detail }` (§22.1) |
+| `device.wake` | durable (120 s) | `{ deviceId, type }` — to the phone that paired a watch (`pairedBy`), when a durable event lands for that watch and it is not listening. Pass it to the watch (Data Layer `/doca/wake`); the watch polls with its own token. Never carries the event (`modules/api-v1/wake.js`) |
+| `console.input` | ephemeral (frames) / durable 60 s (a press) | `{ deviceId, enabled, frames[{ t, accel?, heading?, crown? }], press?: A\|B\|C }` — only to the devices the panel linked to a console (`modules/device-console.js`); never to the harness |
 | `resync` | ephemeral | `{ reason, cursor }` |
 | **Agent-side** | | |
 | `prompt.selected` | durable | `{ promptId, selectionId, deviceId, choiceId, payload: { kind, text?, transcript?, caption?, mediaId?, mediaUrl?, ext? }, resolver }` |
@@ -1038,8 +1040,8 @@ A paired client can offer the harness the same **tool families** the host has �
   `POST /devices/self/control/{id}/ack { ok, detail }`:
   - `refresh` — report caps (`PATCH /devices/{id}`) and grants again;
   - `reconnect` — drop and reopen the push stream (DOCA also closes it);
-  - `ask` — ask the person for `family` again (on Android, `screen` restarts the
-    capture session, which is otherwise held open in a foreground service);
+  - `ask` — ask the person for `family` again (on Android, `screen` also ends any
+    capture session; sessions are opened per request and close after 30 s idle);
   - `disconnect` — close sessions and stop background services until the person
     opens the app again; stay paired (DOCA also ends the device's panel sessions);
   - `revoke` / `restore` — DOCA took `family` back / allowed it again; stop or
@@ -1192,6 +1194,7 @@ Rules a client can rely on:
 | GET | `/render/chart`, `/render/figure/:id` | `read:<surface>` / any | §19 |
 | POST | `/harness/messages` | `harness:chat` | ask the agent; the turn arrives as events (§23) |
 | GET | `/harness/turns` | `harness:chat` | turns in flight |
+| GET | `/harness/usage?days=1` | `harness:chat` | model calls and tokens per provider — `{ since, total, rows[{ key, calls, prompt, completion, cached, estimated }] }`, tokens only |
 | GET / POST | `/harness/sessions` | `harness:sessions` | list / start a conversation |
 | GET / DELETE | `/harness/sessions/:id` | `harness:sessions` | transcript / delete |
 | POST | `/harness/sessions/:id/activate` | `harness:sessions` | make it the active one |

@@ -559,7 +559,7 @@ function build() {
       { name: 'Agent', description: 'Agent-facing API (scope `agent`): raise prompts and alerts, resolve selections, request sensors, ship artifacts.' },
     ],
     security: [{ bearerToken: [] }],
-    paths: { ...paths(), ...require('../devices-control').openapi({ obj, str, bool, arr, body, json, std }) },   // device.control acks, grants
+    paths: { ...paths(), ...require('../devices-control').openapi({ obj, str, bool, arr, body, json, std }), ...require('./usage-route').openapi({ obj, str, int, arr, json, std }), ...require('../device-console').openapi({ obj, str, int, arr, bool, body, json, std }) },   // device.control acks, grants
     components: {
       securitySchemes: {
         bearerToken: { type: 'http', scheme: 'bearer', description: '`Authorization: Bearer doca_<deviceId>.<secret>`. `GET /events` additionally accepts `?access_token=` for EventSource clients.' },

@@ -236,6 +236,8 @@ function update(id, patch) {
   // Whose device it is (docs/design/auth.md): set when accounts arrive, and at pairing.
   if (patch.userId !== undefined) rec.userId = patch.userId || null;
   if (patch.orgId !== undefined)  rec.orgId = patch.orgId || null;
+  // The phone that minted this device's pairing code: where a wake goes (wake.js).
+  if (patch.pairedBy !== undefined) rec.pairedBy = patch.pairedBy || null;
   persist();
   return publicView(rec);
 }
@@ -277,6 +279,7 @@ function completePairing(codeInput, caps, nameOverride) {
   _pairings.delete(code);
   const made = create({ name: nameOverride || p.name, scopes: p.scopes, caps, expiresAt: p.tokenExpiresAt, kind: p.kind });
   if (p.userId) made.device = update(made.device.id, { userId: p.userId, orgId: p.orgId });
+  if (p.createdBy) made.device = update(made.device.id, { pairedBy: p.createdBy });
   return made;
 }
 

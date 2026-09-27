@@ -5857,6 +5857,226 @@
           }
         }
       }
+    },
+    "/harness/usage": {
+      "get": {
+        "tags": [
+          "Harness"
+        ],
+        "summary": "Model calls and tokens per provider, for a glance",
+        "operationId": "harnessUsage",
+        "x-scope": "harness:chat",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "description": "Default 1, maximum 366."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "since": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "by": {
+                      "type": "string"
+                    },
+                    "total": {
+                      "type": "object",
+                      "properties": {
+                        "calls": {
+                          "type": "integer"
+                        },
+                        "prompt": {
+                          "type": "integer"
+                        },
+                        "completion": {
+                          "type": "integer"
+                        },
+                        "cached": {
+                          "type": "integer"
+                        },
+                        "estimated": {
+                          "type": "integer",
+                          "description": "Calls whose numbers the provider did not report."
+                        }
+                      }
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "description": "Provider id."
+                          },
+                          "calls": {
+                            "type": "integer"
+                          },
+                          "prompt": {
+                            "type": "integer"
+                          },
+                          "completion": {
+                            "type": "integer"
+                          },
+                          "cached": {
+                            "type": "integer"
+                          },
+                          "estimated": {
+                            "type": "integer",
+                            "description": "Calls whose numbers the provider did not report."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/console": {
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Stream console input: motion, heading, crown, A/B/C",
+        "operationId": "postConsole",
+        "x-scope": "sensors:report",
+        "description": "For the services the panel linked to this device, as `console.input` events. Never reaches the harness.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "frames": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "t": {
+                          "type": "integer"
+                        },
+                        "accel": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        "heading": {
+                          "type": "number"
+                        },
+                        "crown": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  },
+                  "press": {
+                    "type": "string",
+                    "enum": [
+                      "A",
+                      "B",
+                      "C"
+                    ]
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accepted": {
+                      "type": "integer"
+                    },
+                    "press": {
+                      "type": "string"
+                    },
+                    "linked": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input — `error.message` says which field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

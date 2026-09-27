@@ -112,6 +112,10 @@ the end, and in the sections as "built in …" notes.
   and a machine selector in Files and Projects. Order: the DOCA side here, then
   DocaDesk (after the D-4 review) and the apps on portal.
 
+**Asked for 2026-09-27 — a device as a console, and a watch that is woken.** Hub
+side written from the DocaWear session and **not committed**; see *A device as a
+console* for the files, what is built and what is open.
+
 **Decide**
 - Rename, licence and CLA — Monday. → *One rename*, *Licence and per-customer builds*.
 - Export skills and specialists / send them to DOCA. → *To discuss next*.
@@ -125,7 +129,10 @@ the end, and in the sections as "built in …" notes.
   against DOCA's own MCP client; D-9 needs a Windows build. **To do on portal:**
   build, `dotnet test tests\DocaDesk.Tests`, check both, merge. Then check the
   rest ("To do on the other machine").
-- DocaMobile and DocaWear: cursor/ack against the hub's delivery counters.
+- DocaMobile: cursor/ack against the hub's delivery counters. (DocaWear: checked
+  2026-09-27 — poll, cursor-after-handler and ack match `bus.delivery()`; one gap
+  fixed there, a re-pair kept the old cursor and `since=<old seq>` acked the new
+  device's first queue.)
 - The clients version themselves (PROTOCOL §2). → *Version and identity*.
 
 ## To discuss next (asked for 2026-09-26, not decided)
@@ -1004,6 +1011,66 @@ never what the agent is allowed to do.
   Recorded, not changed: nothing misbehaves today, and deciding what "update"
   should mean for a checkout that is not sitting on the release branch is a
   product question, not a patch to slip into a tagging commit.
+
+## A device as a console (asked for 2026-09-27, partly built)
+
+**What Al asked for.** The watch's third page is a console: an ENABLE quarter and
+three buttons (A, B, C), and while enabled it streams accelerometer, compass
+heading and crown rotation. The data is for *whatever service is linked to the
+device* — the panel, another device, a game — and **never for the harness**.
+Wanted next: make it a **customizable virtual device**. A page on any client
+(the watch today, the phone or a DocaDesk window tomorrow) becomes a control
+surface whose layout and meaning are set here, used as a game controller, as
+buttons that run functions on the dashboard host, or as input to a connected
+device.
+
+**Built, uncommitted in this tree (from the DocaWear session).** Tests pass
+(`test/wake.test.js`, `test/device-console.test.js`, openapi); the one structure
+failure ("every script the page loads exists") predates these changes.
+- `modules/device-console.js`: `POST /api/v1/console` (`sensors:report`, which
+  the `watch` preset has) takes `{ frames[], press?, enabled? }`; keeps the last
+  120 frames and 20 presses per device in memory; forwards `console.input` to the
+  devices linked in `<DATA_DIR>/device-console.json` (frames ephemeral, a press
+  durable for 60 s, since a button is an intent). Panel side:
+  `GET /api/devices/:id/console` (last frames, presses, links) and
+  `PUT /api/devices/:id/console { links: [deviceId] }`. Mounted from
+  `api-v1/router.js` and `devices-panel.js`; OpenAPI and PROTOCOL §11.4 updated.
+- `modules/api-v1/wake.js` — the other half of the same session: a watch only
+  polls with its screen on, so a question sent while its app was shut waited
+  until it was opened. The phone that minted the watch's pairing code (now kept
+  as `pairedBy` in `devices.js`) gets `device.wake { deviceId, type }` and
+  passes it over the Data Layer; the watch polls once with its own token. A
+  watch paired before this falls back to phones that hold `devices:admin`.
+  DocaMobile (`device.wake` → `WearableDataBridge.sendWake`) and DocaWear
+  (`notify/WakeService.kt`) are built and installed; **not yet verified end to
+  end, because the live hub does not have this code.**
+- `modules/api-v1/usage-route.js`: `GET /api/v1/harness/usage` (`harness:chat`),
+  today's calls and tokens per provider, which the watch draws as a ring.
+- Watch side: `DocaWear/app/.../ui/console/ConsolePage.kt` — 20 Hz sampling sent
+  4× a second, streaming only while enabled, on screen and with the display on;
+  verified on a Xiaomi Watch 5 (heading, accelerometer, a press; the hub answered
+  404 until this code is deployed).
+
+**Open — the part to design here.**
+- **Nothing shows it in the panel yet.** A card on the device's page (`/d/<id>/`
+  and Settings → Devices) with the live frames, the last presses and the link
+  picker is the first thing to build; until then links are set by
+  `PUT /api/devices/:id/console`.
+- **The layout is hard-coded on the watch** (four quarters, A/B/C). Per the
+  clients' rule that a device renders what the hub declares and never enumerates
+  features, the versatile shape is a **console profile** on the hub: controls
+  (buttons with labels and colours, a toggle, a pad or slider, which sensors at
+  what rate) that any client draws generically, several named profiles a device
+  can switch between, and nothing on the client that knows what a control means.
+- **Bindings live on the hub, not on the client.** An input maps to one of:
+  forward to a device (`console.input`, built), run a command (`/commands`), call
+  a tool on a linked MCP server, fire a webhook, or drive a virtual gamepad —
+  DocaDesk's `input` family could present a real controller to Windows (ViGEm) so
+  a game sees a watch as a gamepad. Which of these first is a decision for Al.
+- **Undecided:** whether the harness may ever *read* a console (e.g. "what did I
+  press last") — today it may not, deliberately; the rates a hub accepts before it
+  throttles; whether a phone should be a console too (the same page, more
+  sensors).
 
 ## Settings consistency
 

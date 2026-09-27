@@ -192,6 +192,7 @@ function mount(app) {
   app.post  ('/api/devices/:id/rotate',  handleRotate);
   app.post  ('/api/devices/:id/scopes',  handleGrant);
   app.delete('/api/devices/:id',         handleRevoke);
+  require('./device-console').mountPanel(app);   // a device as a console: its stream, and who receives it
   require('./device-files').mount(app);   // a device's files, as the Files tab speaks them (device-files.js)
   // Devices as hands (devices-control.js): what a device granted, and the actions on it.
   const control = require('./devices-control');

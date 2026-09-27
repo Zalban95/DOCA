@@ -346,7 +346,8 @@ async function devThisDevice() {
     card.innerHTML = `<div class="card-title">This device — ${escHtml(d.name)}</div>
       <p style="font-size:11px;color:var(--muted);margin-bottom:8px">What this device lets DOCA's agents do here, and its connection.
         Permissions are granted on the device itself; you can take any of them back from here.</p>
-      ${devHandsHtml(d)}<div class="status-line" id="dev-status-${escHtml(d.id)}"></div>`;
+      ${devHandsHtml(d)}<div class="status-line" id="dev-status-${escHtml(d.id)}"></div>
+      ${/DocaMobile\//.test(navigator.userAgent) ? '<a class="btn" href="doca://settings" style="display:inline-block;margin-top:8px">App settings — connection and permissions</a>' : ''}`;
   } catch { card.remove(); }
 }
 if (typeof document !== 'undefined' && DOCA_DEVICE_ID) document.addEventListener('DOMContentLoaded', () => setTimeout(devThisDevice, 500));
