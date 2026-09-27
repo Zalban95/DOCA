@@ -38,7 +38,8 @@ function sqlite() {
   return {
     kind: 'sqlite', file, ...q,
     exec: async sql => d.exec(sql),
-    tx: async fn => { d.exec('BEGIN'); try { const r = await fn(q); d.exec('COMMIT'); return r; } catch (e) { d.exec('ROLLBACK'); throw e; } },
+    // IMMEDIATE: take the write lock at the start, so two processes checking then writing cannot interleave.
+    tx: async fn => { d.exec('BEGIN IMMEDIATE'); try { const r = await fn(q); d.exec('COMMIT'); return r; } catch (e) { d.exec('ROLLBACK'); throw e; } },
     snapshot: async to => { fs.rmSync(to, { force: true }); d.prepare('VACUUM INTO ?').run(to); return to; },
     close: () => d.close(),
   };

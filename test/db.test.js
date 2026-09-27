@@ -46,3 +46,19 @@ test('a backup carries a consistent copy of the database, never its live side fi
   assert.ok(!names.some(n => /doca\.db-(wal|shm)$/.test(n)));
   assert.ok(!fs.readdirSync(store.DATA_DIR).some(n => n.includes('.doca.db.backup-')), 'the snapshot is cleaned up');
 });
+
+test('two processes opening the database at once import the old ledger once', async () => {
+  const { spawn } = require('node:child_process');
+  const dir = path.join(H.tmp, 'race');
+  fs.mkdirSync(path.join(dir, 'harness', 'usage'), { recursive: true });
+  const at = new Date().toISOString();
+  fs.writeFileSync(path.join(dir, 'harness', 'usage', `${at.slice(0, 7)}.jsonl`),
+    Array.from({ length: 300 }, (_, i) => JSON.stringify({ at, kind: 'turn', provider: 'p', model: 'm', prompt: i, completion: 1, source: 'provider' })).join('\n') + '\n');
+  const run = () => new Promise(resolve => {
+    const c = spawn(process.execPath, ['-e', "require('./modules/harness/usage').summary({ days: 1 }).then(s => { console.log(s.total.calls); require('./modules/db').close(); })"],
+      { cwd: path.join(__dirname, '..'), env: { ...process.env, DOCA_DATA_DIR: dir } });
+    let out = ''; c.stdout.on('data', d => { out += d; }); c.on('exit', () => resolve(out.trim()));
+  });
+  const [a, b] = await Promise.all([run(), run()]);
+  assert.deepEqual([a, b], ['300', '300'], 'each sees the 300 rows once');
+});

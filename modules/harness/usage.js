@@ -35,6 +35,8 @@ function imported() {
     let files = [];
     try { files = fs.readdirSync(dir).filter(f => /^\d{4}-\d{2}\.jsonl$/.test(f)).sort(); } catch { /* none */ }
     await db.tx(async q => {
+      // Checked again under the write lock: another process (npm run status, the panel) may have imported meanwhile.
+      if (await q.get("SELECT value FROM meta WHERE key = 'usage.imported'")) return;
       for (const f of files) for (const r of store.readJsonl(path.join(dir, f))) {
         if (!r.at) continue;
         await q.run('INSERT INTO usage (at, kind, provider, model, session_id, agent, prompt, completion, cached, source) VALUES (?,?,?,?,?,?,?,?,?,?)',
