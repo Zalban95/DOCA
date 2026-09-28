@@ -115,9 +115,9 @@ async function factsOf(tag) {
 
 let _fetchedAt = 0;
 
-/** Fetch the tags at most every five minutes; a list without the network is still a list. */
-async function fetchTags() {
-  if (Date.now() - _fetchedAt < 5 * 60 * 1000) return null;
+/** Fetch the tags at most every five minutes (unless `fresh`); a list without the network is still a list. */
+async function fetchTags(fresh = false) {
+  if (!fresh && Date.now() - _fetchedAt < 5 * 60 * 1000) return null;
   try { await git(['fetch', '--tags', '--quiet', 'origin'], { timeout: 20000 }); _fetchedAt = Date.now(); return null; }
   catch (e) { return `Could not fetch new versions (${e.message.split('\n')[0]}); showing the ones already known here.`; }
 }
@@ -338,9 +338,15 @@ function mount(app) {
   app.post('/api/versions/use', handleUse);
 }
 
-/** The newest version tag here, after fetching. */
-async function latest() {
-  await fetchTags();
+/**
+ * The newest version tag here, after fetching. `fresh` is for Update: it
+ * fetches whatever the throttle says, because the check that offered the
+ * update asked the remote just now, and throws when it cannot, because a tag
+ * list it could not refresh is not "you are on the newest".
+ */
+async function latest({ fresh = false } = {}) {
+  const warning = await fetchTags(fresh);
+  if (fresh && warning) throw new Error(warning.replace(/; showing.*/, '.'));
   const out = await git(['tag', '--list', 'v*']);
   return out.split('\n').filter(t => TAG.test(t)).sort((a, b) => cmpVersion(b, a))[0] || null;
 }
