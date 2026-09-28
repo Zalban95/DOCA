@@ -5976,7 +5976,7 @@
         "summary": "Stream console input: motion, heading, crown, A/B/C",
         "operationId": "postConsole",
         "x-scope": "sensors:report",
-        "description": "For the services the panel linked to this device, as `console.input` events. Never reaches the harness.",
+        "description": "For the services the panel linked to this device, as `console.input` events. Never reaches the harness. `mode` switches between `keys` and `joystick`; the answer carries the mode and the latched toggles for the device to draw.",
         "requestBody": {
           "required": true,
           "content": {
@@ -6017,6 +6017,13 @@
                   },
                   "enabled": {
                     "type": "boolean"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "keys",
+                      "joystick"
+                    ]
                   }
                 }
               }
@@ -6039,6 +6046,30 @@
                     },
                     "linked": {
                       "type": "integer"
+                    },
+                    "host": {
+                      "type": "boolean"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "keys",
+                        "joystick"
+                      ]
+                    },
+                    "toggles": {
+                      "type": "object",
+                      "properties": {
+                        "A": {
+                          "type": "boolean"
+                        },
+                        "B": {
+                          "type": "boolean"
+                        },
+                        "C": {
+                          "type": "boolean"
+                        }
+                      }
                     }
                   }
                 }
