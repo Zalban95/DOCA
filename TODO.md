@@ -1075,6 +1075,58 @@ failure ("every script the page loads exists") predates these changes.
   press last") — today it may not, deliberately; the rates a hub accepts before it
   throttles; whether a phone should be a console too (the same page, more
   sensors).
+- **Built in 2.115.0 (asked for 2026-09-28):** a console has a **mode**, `keys`
+  or `joystick`, set in Wearables or by a tap on the watch's centre; per button a
+  **behaviour** (`button` or `toggle`, latched, with `down`) and a **macro** — `keys`
+  for receiving devices to type, `run` for the host; **the host** can be ticked as
+  a receiver and then runs `run` (told `DOCA_BUTTON`, `DOCA_BUTTON_STATE`, 30 s,
+  one at a time per button). Buttons are edited under `host`; `device-console.json`
+  is in `PROTECTED_FILES`. `doca_clients` shows `console=on|off,<mode> → <receivers>`.
+  **Still open:** no receiver types `macro.keys` yet — DocaDesk has no
+  `console.input` handler (SendInput for keys, ViGEm for a joystick); the joystick
+  axes have no dead zone or inversion (a receiver applies them). The watch side
+  (`ConsolePage.kt` mode tap and latched quarters) is **uncommitted in DocaWear**,
+  on top of Al's own uncommitted console work there.
+
+## The watch as a canvas (asked for 2026-09-28, built in 2.116.0)
+
+**What Al asked for:** "an svg blank canvas on the watch that shows whatever the
+agent needs": four touchable quadrants for a multiple-choice question drawn by the
+agent, serial questions, or just something to show without an image file.
+**Built:** `ask_device`/`tell_device` take `svg` (a `figure` block; a watch gets a
+PNG at its screen size from `/render/figure`), and `ask_device` takes
+`layout: "quadrants"` (≤ 4 choices; `ext.layout`, PROTOCOL §12.3). Serial
+questions are consecutive `ask_device` calls. `render.js` now finds Windows fonts
+(before, every `<text>` rendered as nothing on the host). Watch side, **uncommitted
+in DocaWear**: `ui/prompt/QuadrantCanvas.kt` (figure full screen, quarter = choice,
+long press = Not now) and `figure` blocks drawn in `PromptScreen`. **Not yet
+verified on the wrist.** Ceiling: a canvas that fails to load leaves only a swipe
+back; the list view could be its fallback.
+
+## Projects: an IDE, and its chats out of the orchestrator's way (asked for 2026-09-28)
+
+Al's words, kept because the intent is the spec: "consider only the intentions and
+the projects logic as a guide, with higher priority to my requests."
+
+- **Build & test / Code intelligence read wrong in Projects** while Settings shows
+  the same tools as found ("No build system recognised", every language server ✗).
+  Being diagnosed on branch `projects-detection` (not merged yet).
+- **Delete a checkpoint.** `projects/checkpoints.js` can make and restore them; the
+  panel cannot remove one.
+- **Preview media in Projects as in Files**: images, and audio/video/documents too
+  if it is a port of the Files tab's previewer rather than a second one.
+- **A terminal inside the Projects tab**, as other IDEs have: the Terminal tab's
+  PTY (`modules/terminal.js`), opened in the project root.
+- **Call skills from the chat** (a `/skill` or a picker in the composer).
+- **More tabs in the chat**: several conversations open side by side.
+- **Project work does not wake the orchestrator.** Agents working in a project
+  record their progress in a separate SQL-backed page/log (per project, per job)
+  that the orchestrator does *not* read on every edit or request. The orchestrator
+  learns a job's state only when the project chat explicitly tells it to report to
+  the user. Today a work chat's report goes up (`organization.js` report/blocked);
+  the ask is that routine progress stays down.
+- **Maybe: move project chats into their own section of the Harness**, apart from
+  the orchestrator's conversations.
 
 ## Settings consistency
 

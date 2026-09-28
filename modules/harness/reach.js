@@ -173,19 +173,37 @@ function answerAtPanel(promptId, { choiceId, text } = {}) {
  * Ask, and wait. Resolves with what the model needs to carry on:
  * `{ status: 'answered' | 'dismissed' | 'timeout' | 'closed', ... }`.
  */
-async function ask({ to, question, choices, note, timeoutSec, signal } = {}) {
+/**
+ * An SVG the agent drew, as a `figure` block: each device gets it as it can draw
+ * it (a watch: a PNG at its own screen size, from /render/figure). `quadrants`
+ * makes it the whole screen, its four quarters the choices (top-left, top-right,
+ * bottom-left, bottom-right), for the agent to label in the drawing itself.
+ */
+function figureBlock(svg, alt) {
+  const s = String(svg || '').trim();
+  if (!s) return null;
+  if (!/^<svg[\s>]/i.test(s.replace(/^<\?xml[^>]*>\s*/i, ''))) throw new Error('svg must be one <svg> element.');
+  return { type: 'figure', svg: s, alt: String(alt || 'drawing').slice(0, 200) };
+}
+
+async function ask({ to, question, choices, note, timeoutSec, signal, svg, layout } = {}) {
   const { prompts } = api();
   const text = String(question || '').trim();
   if (!text) throw new Error('A question needs to be asked in words.');
 
   const targets = resolveTargets(to);
   const built = buildChoices(choices);
+  const quadrants = layout === 'quadrants';
+  if (quadrants && (!svg || built.filter(c => c.type === 'option').length > 4))
+    throw new Error('layout "quadrants" needs an svg and at most four choices, one per quarter.');
+  const figure = figureBlock(svg, text);
   const waitSec = Math.min(ASK_MAX_SEC, Math.max(5, Number(timeoutSec) || ASK_DEFAULT_SEC));
 
   const { prompt } = prompts.create({
     title: text.slice(0, 120),
-    body: note ? [{ type: 'text', text: String(note).slice(0, 800) }] : [],
+    body: [...(note ? [{ type: 'text', text: String(note).slice(0, 800) }] : []), ...(figure ? [figure] : [])],
     choices: built,
+    ...(quadrants ? { ext: { layout: 'quadrants' } } : {}),
     targets: targets.map(d => d.id),
     priority: 'high',
     // The prompt outlives the wait by a little so a tap landing as the wait ends
@@ -259,7 +277,7 @@ function attachImage(imagePath, targets) {
  * Tell, without waiting. One durable `alert` per device, high priority, so it
  * survives a watch being asleep and arrives when it wakes.
  */
-function tell({ to, title, text, imagePath, urgent } = {}) {
+function tell({ to, title, text, imagePath, svg, urgent } = {}) {
   const { bus, media, profiles, motion } = { ...api(), motion: require('../api-v1/motion') };
   const head = String(title || text || '').trim();
   if (!head) throw new Error('A notice needs something to say.');
@@ -268,6 +286,7 @@ function tell({ to, title, text, imagePath, urgent } = {}) {
   if (!targets.length) throw new Error('Every matching device declines notices in its profile (prompts.receive is false).');
 
   const image = imagePath ? attachImage(imagePath, targets) : null;
+  const figure = figureBlock(svg, head);
   const priority = urgent ? 'urgent' : 'high';
   const id = `alt_${require('crypto').randomBytes(6).toString('hex')}`;
 
@@ -275,6 +294,7 @@ function tell({ to, title, text, imagePath, urgent } = {}) {
     const body = [];
     if (title && text) body.push({ type: 'text', text: String(text).slice(0, 2000) });
     if (image) body.push({ type: 'media', mediaId: image.byDevice.get(d.id), alt: path.basename(imagePath) });
+    if (figure) body.push(figure);
     const payload = { id, title: head.slice(0, 120), body: motion.tailorBlocks(motion.normalizeBlocks(body), d.caps), priority, haptic: true, from: AGENT_ID };
     bus.publish(d.id, 'alert', payload, { priority, ttlSec: 6 * 3600 });
     return { device: d, note: reachNote(d) };

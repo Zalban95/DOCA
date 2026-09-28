@@ -178,3 +178,27 @@ test('at the panel the owner can answer in their own words, and a late answer is
   const late = await h.api(null, 'POST', `/api/harness/questions/${q.id}`, { choiceId: 'c1' });
   assert.equal(late.status, 409);
 });
+
+test('a drawing reaches the watch as a picture its size, and quadrants make its quarters the choices', async () => {
+  const watch = h.mkDevice('reach-canvas', 'watch', h.WATCH_CAPS);
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"/>'
+    + '<text x="25" y="30">Yes</text><text x="75" y="30">No</text></svg>';
+  const asking = tools.call('ask_device', { to: 'watch', question: 'Deploy?', choices: ['Yes', 'No'], svg, layout: 'quadrants', timeoutSec: 20 });
+
+  let figure;
+  await answerFirstPrompt(watch.token, p => {
+    assert.deepEqual(p.ext, { layout: 'quadrants' });
+    figure = p.body.find(b => b.type === 'figure');
+    return p.choices[0].id;
+  });
+  assert.match(await asking, /answered: "Yes"/);
+  // The watch draws images, not SVG: it gets a PNG rendered at its own screen size.
+  assert.equal(figure.representation.kind, 'image');
+  const png = await h.api(watch.token, 'GET', figure.representation.url);
+  assert.equal(png.status, 200);
+  assert.equal(png.body.subarray(1, 4).toString(), 'PNG');
+
+  await assert.rejects(reach.ask({ to: 'watch', question: 'Pick', choices: ['a', 'b', 'c', 'd', 'e'], svg, layout: 'quadrants' }), /at most four choices/);
+  await assert.rejects(reach.ask({ to: 'watch', question: 'Pick', choices: ['a', 'b'], layout: 'quadrants' }), /needs an svg/);
+  await assert.rejects(reach.ask({ to: 'watch', question: 'Pick', choices: ['a', 'b'], svg: '<div/>' }), /one <svg>/);
+});
