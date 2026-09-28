@@ -101,7 +101,10 @@ function mount(router) {
     catch (e) { res.status(e.status || 500).json({ error: { code: e.status === 404 ? 'not_found' : 'bad_request', message: e.message } }); }
   });
   router.put('/devices/self/grants', (req, res) => {
-    try { res.json(reportGrants(req.device.id, req.body?.grants || {})); }
+    try {
+      res.json(reportGrants(req.device.id, req.body?.grants || {}));
+      require('./mcp/registry').wakeForDevice(req.device.id);   // a device reports its grants when it (re)connects
+    }
     catch (e) { res.status(e.status || 500).json({ error: { code: 'bad_request', message: e.message } }); }
   });
 }

@@ -98,6 +98,7 @@ function updateFromDevice(deviceId, patch) {
   }
 
   save(load().map(s => (s.id === spec.id ? next : s)));
+  wakeForDevice(deviceId);   // the running client still dials the old address otherwise
   return next;
 }
 
@@ -196,6 +197,24 @@ function stop(id) {
 async function restart(id) {
   stop(id);
   return start(id);
+}
+
+/**
+ * A device said it is here (its grants, a new address): connect to the server it
+ * hosts, or reconnect when the address moved. Without this a device's server is
+ * left stopped by every hub restart (it is not autostart: it may be asleep then),
+ * and a phone that moved from Wi-Fi to Tailscale patched its URL into a row whose
+ * live client kept dialling the old one. Never throws; a failed connect shows in
+ * the MCP tab as it always did.
+ */
+function wakeForDevice(deviceId) {
+  const spec = forDevice(deviceId);
+  if (!spec) return;
+  const c = _clients.get(spec.id);
+  if (c?.state === 'running' && c.spec.url === spec.url) return;
+  if (c) c.stop(true);
+  _clients.delete(spec.id);
+  start(spec.id).catch(() => {});
 }
 
 /** Everything a UI needs: the definition plus whatever the live client knows. */
@@ -331,6 +350,6 @@ module.exports = {
   MASK,
   PREFS_KEY,
   load, list, get, client, status, slug, normalize, normalizeOrigin, originDevice,
-  forDevice, updateFromDevice,
+  forDevice, updateFromDevice, wakeForDevice,
   start, stop, restart, upsert, remove, startAutostart, stopAll, startWithDoca,
 };
