@@ -40,14 +40,16 @@ const WIN = process.platform === 'win32';
  * `-NoProfile` because a profile that prints a banner corrupts the first lines
  * of every command's output, and `-NonInteractive` because nothing here can
  * answer a prompt — a shell that stops to ask blocks until the timeout kills
- * it, with no clue as to why.
+ * it, with no clue as to why. `-ExecutionPolicy Bypass`, for this process
+ * only, because `npm` on PATH is npm.ps1, and a machine whose policy refuses
+ * unsigned scripts fails every `npm test` with a SecurityError instead.
  */
 function spec({ interactive = false } = {}) {
   if (WIN) {
     return {
       name:  'powershell',
       file:  process.env.DOCA_SHELL || 'powershell.exe',
-      args:  ['-NoProfile', '-NonInteractive', '-Command'],
+      args:  ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command'],
       label: 'PowerShell',
     };
   }
