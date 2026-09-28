@@ -739,3 +739,25 @@ test('a header typed into the form actually reaches the server', async () => {
 
   await H.api(null, 'DELETE', '/api/mcp/needs-auth');
 });
+
+test('a device that reconnects gets its server connected, and a moved address is redialled', async () => {
+  // A hub restart leaves a device's server stopped (it is not autostart: the device may be
+  // asleep), and a phone that moved from Wi-Fi to Tailscale patched its URL into a row whose
+  // live client kept dialling the old one. Both showed as "its MCP server is not running".
+  const wifi = await httpServer.start({ requirePath: '/mcp/s1' });
+  const tailnet = await httpServer.start({ requirePath: '/mcp/s1' });
+  after(() => { wifi.close(); tailnet.close(); });
+  const { device, token } = H.mkDevice('Roaming Phone', 'phone', H.PHONE_CAPS);
+  const saved = await post('/api/mcp', { label: 'Roaming', transport: 'http', url: wifi.url, origin: { kind: 'client', deviceId: device.id } });
+  const id = saved.body.server.id;
+  assert.notEqual(registry.client(id)?.state, 'running', 'stopped, as after a restart');
+
+  const until = async f => { for (let i = 0; i < 100 && !f(); i++) await new Promise(r => setTimeout(r, 50)); assert.ok(f()); };
+  assert.equal((await H.api(token, 'PUT', '/api/v1/devices/self/grants', { grants: { files: true } })).status, 200);
+  await until(() => registry.client(id)?.state === 'running');
+  assert.equal(registry.client(id).spec.url, wifi.url);
+
+  assert.equal((await H.api(token, 'PATCH', '/api/v1/mcp/self', { url: tailnet.url })).status, 200);
+  await until(() => registry.client(id)?.state === 'running' && registry.client(id).spec.url === tailnet.url);
+  assert.equal(tailnet.seen[0].method, 'initialize', 'the new address was dialled');
+});
