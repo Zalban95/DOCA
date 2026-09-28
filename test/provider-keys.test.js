@@ -25,7 +25,7 @@ test('the first read copies OpenClaw\'s providers once; afterwards DOCA keeps it
   fs.writeFileSync(paths.CONFIG_PATH, JSON.stringify({ models: { providers: { groq: { baseUrl: 'https://api.groq.com/openai/v1', apiKey: 'gsk-old' } } } }));
   assert.equal(keys.get('groq').apiKey, 'gsk-old');
   assert.ok(fs.existsSync(keys.FILE), 'copied into DOCA\'s own file');
-  assert.equal(fs.statSync(keys.FILE).mode & 0o777, 0o600);
+  if (process.platform !== 'win32') assert.equal(fs.statSync(keys.FILE).mode & 0o777, 0o600);   // Windows has no POSIX modes
   assert.equal(fmSafe(keys.FILE), false, 'read_file cannot reach it');
   assert.ok(keys.FILE.startsWith(require('../modules/store').DATA_DIR), 'in the data folder, so a backup carries it');
 });

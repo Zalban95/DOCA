@@ -39,7 +39,8 @@ process.stdin.on('data', framer(raw => {
 }));
 `);
   fs.chmodSync(fake, 0o755);
-  lsp.SERVERS.fake = { label: 'Fake', langs: ['plaintext'], bin: fake, args: [] };
+  // node by name: Windows runs no shebang.
+  lsp.SERVERS.fake = { label: 'Fake', langs: ['plaintext'], bin: process.execPath, args: [fake] };
   const root = fs.mkdtempSync(path.join(H.tmp, 'lsp-proj-'));
   const p = projects.create({ root, name: 'LSP' });
 

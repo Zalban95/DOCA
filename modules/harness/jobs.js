@@ -36,10 +36,14 @@ function alive(pid) {
   try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
 }
 
+// Jobs this process started whose 'exit' has not arrived yet: a dead pid here
+// is an exit on its way, not a restart that lost it.
+const waiting = new Set();
+
 /** Where a job stands: running, exited (with its code), stopped, or gone (a restart lost its code). */
 function view(j) {
   let state = j.state;
-  if (state === 'running' && !alive(j.pid)) state = 'gone';
+  if (state === 'running' && !waiting.has(j.id) && !alive(j.pid)) state = 'gone';
   return { ...j, state };
 }
 
@@ -66,11 +70,12 @@ function start(command, { cwd, sessionId = null } = {}) {
   for (const d of drop) fs.rmSync(logOf(d.id), { force: true });
   save(all.filter(j => !drop.includes(j)));
 
-  child.on('error', e => update(id, { state: 'exited', code: -1, endedAt: new Date().toISOString(), error: e.message }));
+  waiting.add(id);
+  child.on('error', e => { update(id, { state: 'exited', code: -1, endedAt: new Date().toISOString(), error: e.message }); waiting.delete(id); });
   child.on('exit', (code, signal) => {
     const cur = rows().find(j => j.id === id);
-    if (cur?.state === 'stopped') return;
-    update(id, { state: 'exited', code: code ?? null, signal: signal || undefined, endedAt: new Date().toISOString() });
+    if (cur?.state !== 'stopped') update(id, { state: 'exited', code: code ?? null, signal: signal || undefined, endedAt: new Date().toISOString() });
+    waiting.delete(id);
   });
   child.unref();
   return view(job);

@@ -106,8 +106,9 @@ const TOOLCHAINS = {
   java: { bin: 'java', args: ['-version'], stderr: true },
   gradle: { bin: 'gradle', args: ['--version'], match: /^Gradle/ },
   maven: { bin: 'mvn', args: ['-v'] },
-  adb: { any: [{ bin: 'adb', args: ['version'] }, ...sdkBins('platform-tools/adb', ['version'])] },
-  'android-sdk': { any: sdkRoots().map(r => ({ file: path.join(r, 'platform-tools', WIN ? 'adb.exe' : 'adb') })) },
+  // Getters: ANDROID_HOME is read per check, not once at require.
+  get adb() { return { any: [{ bin: 'adb', args: ['version'] }, ...sdkBins('platform-tools/adb', ['version'])] }; },
+  get 'android-sdk'() { return { any: sdkRoots().map(r => ({ file: path.join(r, 'platform-tools', WIN ? 'adb.exe' : 'adb') })) }; },
   cargo: { bin: 'cargo', args: ['--version'] }, go: { bin: 'go', args: ['version'] },
   flutter: { bin: 'flutter', args: ['--version'] },
   python: { any: [{ bin: 'python3', args: ['--version'] }, { bin: 'python', args: ['--version'] }] },

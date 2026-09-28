@@ -31,8 +31,11 @@ const TIMEOUT = 5000;
 function firstLine(s) { return String(s || '').split('\n').map(l => l.trim()).find(Boolean) || ''; }
 
 function runBin(file, args, { cwd, timeout = TIMEOUT } = {}) {
+  // Node refuses a .cmd/.bat without a shell (EINVAL), and npm, pnpm and yarn
+  // are .cmd on Windows. Safe: args come from the specs in code, never a request.
+  const bat = process.platform === 'win32' && /\.(cmd|bat)$/i.test(file);
   return new Promise(resolve => {
-    execFile(file, args, { cwd, timeout, windowsHide: true, maxBuffer: 1 << 20 },
+    execFile(bat ? `"${file}"` : file, args, { cwd, timeout, windowsHide: true, maxBuffer: 1 << 20, shell: bat },
       (err, stdout, stderr) => resolve({ ok: !err, stdout: String(stdout || ''), stderr: String(stderr || '') }));
   });
 }

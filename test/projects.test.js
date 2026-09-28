@@ -30,18 +30,24 @@ const mk = (root, files) => {
 };
 const dir = name => fs.mkdtempSync(path.join(H.tmp, `${name}-`));
 
-test('an Android project is recognised, with its Gradle commands and what they need', async () => {
+test('an Android project is recognised, with its Gradle commands and what they need', async t => {
   process.env.ANDROID_HOME = path.join(H.tmp, 'no-sdk-here');
+  // And none in Android Studio's defaults under ~, which a dev box has.
+  const { HOME, USERPROFILE } = process.env;
+  process.env.HOME = process.env.USERPROFILE = H.tmp;
+  t.after(() => { process.env.HOME = HOME; process.env.USERPROFILE = USERPROFILE; });
   const root = mk(dir('android'), {
     'settings.gradle': "include ':app'",
     'app/build.gradle': "plugins { id 'com.android.application' }\nandroid { namespace 'x' }",
     'gradlew': '#!/bin/sh\necho gradle',
+    'gradlew.bat': '@echo gradle',
   });
   const r = await inspect(root);
   assert.equal(r.kinds[0].kind, 'android');
   const byName = Object.fromEntries(r.commands.map(c => [c.name, c]));
-  assert.equal(byName.build.run, './gradlew assembleDebug');
-  assert.equal(byName.test.run, './gradlew testDebugUnitTest');
+  const gw = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
+  assert.equal(byName.build.run, `${gw} assembleDebug`);
+  assert.equal(byName.test.run, `${gw} testDebugUnitTest`);
   assert.ok(byName.install.needs.includes('adb'));
   assert.ok(byName.build.missing.includes('android-sdk'), 'no SDK where it looks: said, not hidden');
   assert.equal(r.kinds.some(k => k.kind === 'gradle'), false, 'an Android build is not also listed as plain Gradle');
@@ -59,7 +65,7 @@ test('a Node project\'s own scripts are its commands; the owner can add one; run
 
   const p = projects.create({ root, name: 'Nodey' });
   assert.equal(projects.create({ root }).id, p.id, 'the same folder is the same project');
-  projects.update(p.id, { commands: { hello: 'echo hello from $PWD' } });
+  projects.update(p.id, { commands: { hello: `node -e "console.log('hello from ' + process.cwd())"` } });
   const out = await require('../modules/projects/run').run(p.id, 'hello', { waitSec: 10 });
   assert.equal(out.job.state, 'exited');
   assert.equal(out.job.code, 0);

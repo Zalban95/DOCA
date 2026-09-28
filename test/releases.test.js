@@ -109,11 +109,14 @@ async function launch(until, ms = 30000) {
   const t0 = Date.now();
   try {
     while (Date.now() - t0 < ms) {
-      if (until()) return out;
+      if (until(out)) return out;
       await new Promise(r => setTimeout(r, 300));
     }
     throw new Error(`timed out; launcher said:\n${out}`);
   } finally {
+    // Windows has no process groups and no SIGTERM to pass on: take the tree
+    // while it still hangs off the launcher.
+    if (process.platform === 'win32') try { execFileSync('taskkill', ['/T', '/F', '/PID', String(child.pid)], { stdio: 'ignore' }); } catch {}
     // The launcher alone, as a stop reaches it; it must pass the stop on.
     child.kill('SIGTERM');
     const gone = await new Promise(r => { child.on('exit', () => r(true)); setTimeout(() => r(child.exitCode !== null), 5000); });
@@ -126,7 +129,8 @@ const events = () => releases.history().map(e => `${e.event}:${e.to}`);
 
 test('the launcher keeps a version that answers, and confirms it', async () => {
   fs.writeFileSync(path.join(HOME, '.releases', 'pending'), 'v1.0.0 checkout\n');
-  const out = await launch(() => events().includes('confirm:v1.0.0'));
+  // The launcher logs, then says it: wait for both.
+  const out = await launch(o => events().includes('confirm:v1.0.0') && /keeping it/.test(o));
   assert.match(out, /v1\.0\.0 answers — keeping it/);
   assert.equal(fs.existsSync(path.join(HOME, '.releases', 'pending')), false);
   assert.equal(fs.readFileSync(path.join(HOME, '.releases', 'current'), 'utf8').trim(), 'v1.0.0');
@@ -135,7 +139,7 @@ test('the launcher keeps a version that answers, and confirms it', async () => {
 test('the launcher switches back on its own when a new version does not answer', async () => {
   const r = await releases.use('v1.1.0', { restart: false });
   assert.equal(r.from, 'v1.0.0');
-  const out = await launch(() => events().includes('revert:v1.0.0'));
+  const out = await launch(o => events().includes('revert:v1.0.0') && /switched back/.test(o));
   assert.match(out, /v1\.1\.0 did not answer within 90 s — switched back to v1\.0\.0/);
   assert.equal(fs.readFileSync(path.join(HOME, '.releases', 'current'), 'utf8').trim(), 'v1.0.0', 'back on the one that worked');
   assert.equal(fs.existsSync(path.join(HOME, '.releases', 'pending')), false);
