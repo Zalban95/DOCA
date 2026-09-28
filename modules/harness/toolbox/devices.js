@@ -62,12 +62,14 @@ module.exports = [
         to:         { type: 'string', description: 'Which device: an id, a form factor ("watch", "phone"), or a name. Omit to ask every device that can answer.' },
         note:       { type: 'string', description: 'Optional extra context shown under the question.' },
         timeoutSec: { type: 'integer', description: 'How long to wait for an answer. Default 120, maximum 900.' },
+        svg:        { type: 'string', description: 'Optional drawing shown with it: one <svg> with a viewBox; a device gets it at its own screen size.' },
+        layout:     { type: 'string', enum: ['quadrants'], description: 'With svg and up to 4 choices: the drawing fills a watch and its quarters (top-left, top-right, bottom-left, bottom-right) are choices 1–4. Label them in the drawing; keep it inside the circle.' },
       },
       required: ['question', 'choices'],
     },
-    run: async ({ question, choices, to, note, timeoutSec }) => {
+    run: async ({ question, choices, to, note, timeoutSec, svg, layout }) => {
       const reach = require('../reach');
-      const r = await reach.ask({ to, question, choices, note, timeoutSec });
+      const r = await reach.ask({ to, question, choices, note, timeoutSec, svg, layout });
       const who = r.targets.map(reach.label).join(', ');
       switch (r.status) {
         case 'answered':  return `${reach.label(r.device)} answered: "${r.label}" (choice ${r.choiceId}).`;
@@ -124,14 +126,15 @@ module.exports = [
         title:     { type: 'string', description: 'The headline, short enough for a watch.' },
         text:      { type: 'string', description: 'Optional detail under the headline.' },
         imagePath: { type: 'string', description: 'Optional path to a png, jpg, webp or gif on this host to show with it.' },
+        svg:       { type: 'string', description: 'Optional drawing instead of a file: one <svg> with a viewBox, drawn at the screen size of the device.' },
         to:        { type: 'string', description: 'Which device: an id, a form factor ("watch", "phone"), or a name. Omit to tell every device that receives notices.' },
         urgent:    { type: 'boolean', description: 'True only if it should break through quiet hours.' },
       },
       required: ['title'],
     },
-    run: ({ title, text, imagePath, to, urgent }) => {
+    run: ({ title, text, imagePath, svg, to, urgent }) => {
       const reach = require('../reach');
-      const r = reach.tell({ to, title, text, urgent, imagePath: imagePath ? resolvePath(imagePath) : undefined });
+      const r = reach.tell({ to, title, text, urgent, svg, imagePath: imagePath ? resolvePath(imagePath) : undefined });
       const rows = r.delivered.map(d => `${reach.label(d.device)} — ${d.note}`).join('\n');
       return `Sent${r.imageBytes ? ` with a ${Math.round(r.imageBytes / 1024)} KB picture` : ''} to:\n${rows}`;
     },

@@ -574,6 +574,12 @@ tells the client whether its own token could confirm that action.
   "haptic": true, "ext": { "incident": "gpu-temp-001" } }
 ```
 
+**`ext.layout: "quadrants"`** (the agent's `ask_device` with an `svg`): the prompt's
+`figure` block is the whole screen and its quarters are the `option` choices in
+order — top-left, top-right, bottom-left, bottom-right; at most four. The drawing
+labels them itself. A client that does not know the layout shows the figure and
+the choices as usual, which is always correct.
+
 ### 12.4 Select
 
 ```http
