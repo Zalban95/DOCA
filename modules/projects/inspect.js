@@ -103,7 +103,8 @@ function makeKind(root) {
 const TOOLCHAINS = {
   npm: { bin: 'npm', args: ['--version'] }, pnpm: { bin: 'pnpm', args: ['--version'] },
   yarn: { bin: 'yarn', args: ['--version'] }, bun: { bin: 'bun', args: ['--version'] },
-  java: { bin: 'java', args: ['-version'], stderr: true },
+  // The version line, not whatever the JVM prints first ('Picked up JAVA_TOOL_OPTIONS: ...').
+  java: { bin: 'java', args: ['-version'], stderr: true, match: /version/ },
   gradle: { bin: 'gradle', args: ['--version'], match: /^Gradle/ },
   maven: { bin: 'mvn', args: ['-v'] },
   // Getters: ANDROID_HOME is read per check, not once at require.
