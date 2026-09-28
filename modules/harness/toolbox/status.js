@@ -66,7 +66,9 @@ module.exports = [
           q.pending ? `queued=${q.pending} (${q.delivered} fetched but not acknowledged, ${q.unfetched} not fetched; oldest ${ago(q.oldestPendingAt)})` : 'queued=0',
           `lastSeen=${ago(d.lastSeenAt)}`,
           `can=${can}`,
-        ].join('  ');
+          // That it has a console and where it goes; what it streams never reaches a model.
+          require('../../device-console').summary(d.id, id => devices.get(id)?.name || id),
+        ].filter(Boolean).join('  ');
       });
 
       // The counts first: a model that only reads the first line still answers
