@@ -167,7 +167,7 @@ async function handleUpdate(req, res) {
   const releases = require('./releases');
   if (releases.current() !== releases.CHECKOUT) {
     try {
-      const tag = await releases.latest();
+      const tag = await releases.latest({ fresh: true });
       if (!tag || releases.cmpVersion(tag, LOCAL_VERSION) <= 0) {
         sseWrite({ done: true, ok: true, status: `✓ Already on the newest version (v${LOCAL_VERSION}).\n` });
       } else {

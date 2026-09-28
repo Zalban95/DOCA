@@ -163,6 +163,23 @@ test('back to the checkout removes the choice, and the checkout runs as before',
   fs.rmSync(path.join(HOME, '.releases', 'pending'), { force: true });
 });
 
+test('Update fetches past the throttle, and cannot fetch is not "the newest"', async () => {
+  await assert.rejects(releases.latest({ fresh: true }), /Could not fetch new versions/, 'no origin yet');
+  const origin = path.join(HOME, '..', `${path.basename(HOME)}-origin.git`);
+  execFileSync('git', ['init', '-q', '--bare', origin]);
+  git('remote', 'add', 'origin', origin);
+  git('push', '-q', 'origin', 'main', '--tags');
+  assert.equal(await releases.latest({ fresh: true }), 'v2.0.0');
+  // A tag pushed from elsewhere a moment after that fetch: the throttle hides it, Update must not.
+  const other = `${origin}-clone`;
+  execFileSync('git', ['clone', '-q', origin, other]);
+  execFileSync('git', ['-C', other, 'tag', 'v2.1.0', 'v2.0.0']);
+  execFileSync('git', ['-C', other, 'push', '-q', 'origin', 'v2.1.0']);
+  assert.equal(await releases.latest(), 'v2.0.0', 'the list keeps its five minutes');
+  assert.equal(await releases.latest({ fresh: true }), 'v2.1.0');
+  for (const d of [origin, other]) fs.rmSync(d, { recursive: true, force: true });
+});
+
 test.after(() => {
   fs.rmSync(HOME, { recursive: true, force: true });
 });
