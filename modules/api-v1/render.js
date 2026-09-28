@@ -33,6 +33,9 @@ const FONT_CANDIDATES = [
   ['/usr/share/fonts/truetype/freefont/FreeSans.ttf', 'FreeSans'],
   ['/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf', 'Liberation Sans'],
   ['/System/Library/Fonts/Supplemental/Arial.ttf', 'Arial'],
+  // Windows: without these every <text> in an agent's drawing rendered as nothing.
+  [path.join(process.env.WINDIR || 'C:/Windows', 'Fonts', 'segoeui.ttf'), 'Segoe UI'],
+  [path.join(process.env.WINDIR || 'C:/Windows', 'Fonts', 'arial.ttf'), 'Arial'],
 ];
 
 function loadFont() {
