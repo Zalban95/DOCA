@@ -1,8 +1,34 @@
 /* ═══════════════════════════════════════════════════════
-   GLOBAL FILE SEARCH (header bar)
+   HEADER SEARCH: pages and Settings sections first, then files.
+   It sits on every page, so it finds places as well as files;
+   places are matched here, with no request, and come first.
    ═══════════════════════════════════════════════════════ */
 
 let _searchActiveIdx = -1;
+let _searchPlaces = [];
+
+/** The panel's pages and Settings sections whose name (or `find` words) contains q. */
+function globalSearchPlaces(q) {
+  const t = q.toLowerCase();
+  const pages = [...document.querySelectorAll('nav .nav-tab[data-tab]')]
+    .map(b => ({ label: b.textContent.trim(), where: 'Page', go: () => nav(b.dataset.tab) }));
+  const sections = (typeof _SETTINGS_SUBTABS !== 'undefined' ? _SETTINGS_SUBTABS : [])
+    .filter(s => !s.group || _openclawInstalled)
+    .map(s => ({ label: s.label, words: s.find, where: 'Settings',
+      go: () => { _settingsActiveSubtab = s.id; nav('settings'); settingsSubNav(s.id); } }));
+  return [...pages, ...sections].filter(p => `${p.label} ${p.words || ''}`.toLowerCase().includes(t));
+}
+
+/** A path's folder, on either separator: Windows paths have no '/' to cut at. */
+function globalSearchDir(p) {
+  return p.substring(0, Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'))) || '/';
+}
+
+function globalSearchPlace(i) {
+  document.getElementById('global-search-results').classList.remove('open');
+  document.getElementById('global-search').value = '';
+  _searchPlaces[i]?.go();
+}
 
 const globalSearchDebounced = debounce(async () => {
   const input   = document.getElementById('global-search');
@@ -15,21 +41,27 @@ const globalSearchDebounced = debounce(async () => {
     return;
   }
 
-  const root = (typeof fm !== 'undefined' && fm.cwd) ? fm.cwd : '/';
+  _searchPlaces = globalSearchPlaces(q);
+  const places = _searchPlaces.map((p, i) => `<div class="header-search-item" data-idx="${i}"
+                   onclick="globalSearchPlace(${i})" onmouseenter="globalSearchHover(${i})">
+        <span class="header-search-item-icon">${p.where === 'Page' ? '▸' : '⚙'}</span>
+        <span class="header-search-item-name">${escHtml(p.label)}</span>
+        <span class="header-search-item-path">${p.where}</span>
+      </div>`).join('');
+  // Places at once; a search of home can take seconds, and they need no request.
+  _searchActiveIdx = -1;
+  results.innerHTML = places + '<div class="header-search-empty">Searching files…</div>';
+  results.classList.add('open');
+
+  // Where the Files tab is, else nothing: the server then searches home. '/' is refused on Windows.
+  const root = (typeof fm !== 'undefined' && fm.cwd) || '';
+  let files;
   try {
-    const data = await apiFetch(`${fmApi()}/search?root=${encodeURIComponent(root)}&q=${encodeURIComponent(q)}`);
-    const items = data.results || [];
-    _searchActiveIdx = -1;
-
-    if (!items.length) {
-      results.innerHTML = '<div class="header-search-empty">No results found</div>';
-      results.classList.add('open');
-      return;
-    }
-
-    results.innerHTML = items.map((item, i) => {
+    const items = (await apiFetch(`${fmApi()}/search?root=${encodeURIComponent(root)}&q=${encodeURIComponent(q)}`)).results || [];
+    files = items.map((item, j) => {
+      const i = _searchPlaces.length + j;
       const icon = item.isDir ? '📁' : fmFileIcon(item.name);
-      const dir  = item.path.substring(0, item.path.lastIndexOf('/')) || '/';
+      const dir  = globalSearchDir(item.path);
       return `<div class="header-search-item" data-idx="${i}"
                    onclick="globalSearchGo(${jsArg(item.path)}, ${item.isDir})"
                    onmouseenter="globalSearchHover(${i})">
@@ -38,11 +70,12 @@ const globalSearchDebounced = debounce(async () => {
         <span class="header-search-item-path" title="${escHtml(item.path)}">${escHtml(dir)}</span>
       </div>`;
     }).join('');
-    results.classList.add('open');
   } catch {
-    results.innerHTML = '<div class="header-search-empty">Search error</div>';
-    results.classList.add('open');
+    // A file search refused or failed still leaves the places worth showing.
+    files = '<div class="header-search-empty">File search unavailable</div>';
   }
+  if (input.value.trim() !== q) return;   // typed on meanwhile; the newer search draws
+  results.innerHTML = places + files || '<div class="header-search-empty">No results found</div>';
 }, 300);
 
 function globalSearchShow() {
@@ -99,7 +132,7 @@ function globalSearchGo(filePath, isDir) {
   if (isDir) {
     fmNavigate(filePath);
   } else {
-    const dir = filePath.substring(0, filePath.lastIndexOf('/')) || '/';
+    const dir = globalSearchDir(filePath);
     fmNavigate(dir);
   }
 }
