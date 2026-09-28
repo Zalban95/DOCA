@@ -112,6 +112,7 @@ test('the libvirt connection URI is settable, since qemu:///session hides system
 });
 
 test('libvirt management: details, autostart, snapshots — names checked before argv, never the real VMs', async t => {
+  if (process.platform === 'win32') return t.skip('libvirt is Linux, and the fake virsh is a sh script');
   const fs = require('fs'), path = require('path');
   const bin = path.join(H.tmp, 'fake-virsh');
   fs.mkdirSync(bin, { recursive: true });
