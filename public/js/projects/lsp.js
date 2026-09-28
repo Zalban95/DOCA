@@ -42,7 +42,9 @@ function _pjlConn(server) {
   };
   c.ready = new Promise(resolve => {
     ws.onopen = async () => {
-      const r = await c.request('initialize', { processId: null, rootUri: `file://${root}`, workspaceFolders: [{ uri: `file://${root}`, name: PJ.project.project.name }],
+      // Monaco's own file URI, as the documents' are: a bare 'file://' + a Windows path is no URI at all.
+      const rootUri = monaco.Uri.file(root).toString();
+      const r = await c.request('initialize', { processId: null, rootUri, workspaceFolders: [{ uri: rootUri, name: PJ.project.project.name }],
         capabilities: { textDocument: { hover: { contentFormat: ['markdown', 'plaintext'] }, completion: { completionItem: { snippetSupport: true } },
           definition: {}, publishDiagnostics: {}, synchronization: { didSave: true } }, workspace: { configuration: true } } });
       c.caps = r?.capabilities || {};
