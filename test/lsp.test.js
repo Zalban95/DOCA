@@ -80,3 +80,10 @@ test('TypeScript: the project\'s own tsserver when it has one, else ours; and ne
   fs.writeFileSync(own, '');
   assert.deepEqual(ts.init(root), { tsserver: { path: own } });
 });
+
+test('asking which servers are here writes nothing', () => {
+  const dir = path.join(require('../modules/store').DATA_DIR, 'lsp');
+  fs.rmSync(dir, { recursive: true, force: true });
+  lsp.status();
+  assert.equal(fs.existsSync(dir), false, 'the folder is made by an install, not by a look');
+});

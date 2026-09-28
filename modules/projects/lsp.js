@@ -42,7 +42,8 @@ const SERVERS = {
   java:       { label: 'Java (jdtls)', langs: ['java'], bin: 'jdtls', args: [] },
 };
 
-const localDir = () => store.dir('lsp');
+// Only named here: install() makes it, and a status check must not write.
+const localDir = () => path.join(store.DATA_DIR, 'lsp');
 
 /** The server's binary: DOCA's own install first, then PATH. */
 function binOf(name) {
