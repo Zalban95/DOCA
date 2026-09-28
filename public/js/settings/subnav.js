@@ -8,8 +8,8 @@
 // ~/.openclaw/workspace/skills; the harness has none of its own yet.
 const _SETTINGS_SUBTABS = [
   { id: 'general',   label: 'General',   init: '_subtabGeneralInit' },
-  { id: 'keys',      label: 'API Keys',  init: 'loadKeys' },
-  { id: 'wearables', label: 'Wearables', init: 'wearablesLoad' },
+  { id: 'keys',      label: 'API Keys',  init: 'loadKeys',       find: 'tokens devices pairing' },
+  { id: 'wearables', label: 'Wearables', init: 'wearablesLoad',  find: 'watch DocaWear console macros joystick' },
   { id: 'backups',   label: 'Backups',   init: 'backupsLoad' },
   { id: 'harness',   label: 'Harness',   init: '_settingsHarnessRender' },
   { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit' },

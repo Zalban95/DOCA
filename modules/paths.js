@@ -92,7 +92,10 @@ const BACKUP_PASSWORD_FILE = path.join(HOME_DIR, '.backup-password');
 // DOCA's own provider keys (modules/provider-keys.js), in the data folder so a
 // backup carries them. The same formula as store.DATA_DIR, which paths cannot require.
 const PROVIDER_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'providers.json');
-const PROTECTED_FILES = [BACKUP_PASSWORD_FILE, PROVIDER_KEYS_FILE];
+// A console's buttons hold commands a press runs on the host (modules/device-console.js):
+// an agent that could write one would have a command run with nobody asked.
+const DEVICE_CONSOLE_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'device-console.json');
+const PROTECTED_FILES = [BACKUP_PASSWORD_FILE, PROVIDER_KEYS_FILE, DEVICE_CONSOLE_FILE];
 
 // Setup scripts the UI may read/write/run — the Setup panel's list, and the
 // whole of it.
