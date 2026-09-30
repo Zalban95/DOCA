@@ -129,7 +129,16 @@ function handleStart(req, res) {
     const uid = process.getuid ? process.getuid() : 1000;
     const gid = process.getgid ? process.getgid() : 1000;
     dockerArgs.push('-e', `WANTED_UID=${uid}`, '-e', `WANTED_GID=${gid}`);
+    // The image's init ends in `comfy setup --project-dir /basedir` run as WANTED_UID, and it
+    // never creates /basedir itself: the host directory must exist and be owned by that uid
+    // before the first run, or that step exits 1 and the container restart-loops. The image's
+    // README binds it on every run beside /comfy/mnt, so we do the same.
+    const basedir = path.join(comfyDir, 'basedir');
+    try {
+      if (!fs.existsSync(basedir)) { fs.mkdirSync(basedir, { recursive: true }); fs.chownSync(basedir, uid, gid); }
+    } catch {}
     dockerArgs.push('-v', `${comfyDir}:/comfy/mnt`);
+    dockerArgs.push('-v', `${basedir}:/basedir`);
     dockerArgs.push('-v', `${hfCache}:/root/.cache/huggingface`);
     dockerArgs.push(image);
   } else {
