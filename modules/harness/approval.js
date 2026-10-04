@@ -107,10 +107,17 @@ function forget(key) {
 function verbsOf(command) {
   const text = String(command || '').trim();
   if (!text) return [];
-  if (/\$\(|`/.test(text)) return null;                 // the command is computed, not written
+  if (/\$\(|`|[<>]\(/.test(text)) return null;          // the command is computed, not written
+  // Outside quotes (where they are inert in bash, and PowerShell's own $( is caught above), these run
+  // something no verb shows: PowerShell's (…) and @(…), script blocks {…}, and a redirect that writes a
+  // file. `git log (Remove-Item x)` read as plain `git` (audit 2026-10-04).
+  const bare = text.replace(/'[^']*'|"(?:[^"\\]|\\.)*"/g, '""');
+  if (/[(){}]/.test(bare)) return null;
+  if (/(^|[^0-9&])>{1,2}\s*(?!&\d|\/dev\/null\b)\S/.test(bare) || /&>{1,2}\s*(?!\/dev\/null\b)\S/.test(bare)) return null;
 
   return text
-    .split(/\s*(?:&&|\|\||[;|\n])\s*/)
+    .replace(/\d*>&\d+|&>{1,2}\s*\/dev\/null/g, ' ')        // 2>&1 and &>/dev/null are not commands
+    .split(/\s*(?:&&|\|\||[;|&\n])\s*/)
     .map(s => s.trim())
     .filter(Boolean)
     .map(segment => {
