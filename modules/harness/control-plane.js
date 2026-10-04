@@ -43,6 +43,12 @@ function entries() {
     { at: path.join(dataDir(), 'backup'), dir: true, what: 'the backup schedule' },
     { at: path.join(os.homedir(), '.config', 'systemd'), dir: true, what: 'service units' },
     { at: '/etc/systemd', dir: true, what: 'service units' },
+    // Windows' own place for what starts at sign-in (the systemd folders' counterpart there).
+    { at: path.join(os.homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup'), dir: true, what: 'programs started at sign-in' },
+    // Memory lives in the database since 2.111.0: write_file to it would overwrite what the person
+    // locked, which memory_write refuses (audit 2026-10-04). The rules are files beside it.
+    { at: path.join(dataDir(), 'doca.db'), what: 'the database (memory, conversations, usage)' },
+    { at: path.join(dataDir(), 'harness'), dir: true, what: 'the agent\'s memory, rules and conversations' },
   ];
 }
 
@@ -55,7 +61,8 @@ function which(abs) {
   for (const p of cands) {
     for (const e of entries()) {
       const at = path.resolve(e.at);
-      if (same(p, at) || (e.dir && (p.startsWith(at + path.sep)))) return e.what;
+      // The folder test is case-blind on Windows like the file test: .DOCA\\Auth is .doca\\auth there (audit 2026-10-04).
+      if (same(p, at) || (e.dir && (process.platform === 'win32' ? p.toLowerCase().startsWith(at.toLowerCase() + path.sep) : p.startsWith(at + path.sep)))) return e.what;
     }
   }
   return null;

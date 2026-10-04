@@ -43,3 +43,12 @@ test('replace_in_files skips what governs the agent, even with apply', async () 
   assert.equal(fs.readFileSync(path.join(dir, 'a.txt'), 'utf8'), 'mode: unattended\n', 'an ordinary file is');
   assert.ok(cp.which(paths.PREFS_FILE));
 });
+
+test('the database and the agent\'s memory files ask before write_file touches them (audit 2026-10-04)', () => {
+  const path = require('node:path');
+  const store = require('../modules/store');
+  const cp = require('../modules/harness/control-plane');
+  assert.ok(cp.target('write_file', { path: path.join(store.DATA_DIR, 'doca.db') }), 'the database');
+  assert.ok(cp.target('write_file', { path: path.join(store.DATA_DIR, 'harness', 'memory-rules.json') }), 'the memory rules');
+  assert.equal(cp.target('write_file', { path: path.join(store.DATA_DIR, 'skills', 'x', 'SKILL.md') }), null, 'skills stay the agent\'s to keep');
+});
