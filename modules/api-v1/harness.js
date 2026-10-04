@@ -82,7 +82,7 @@ function clientOf(device) {
     name: device.name,
     kind: device.kind,
     formFactor: caps.formFactor || null,
-    label: device.kind === 'agent' ? 'an agent, not a person'
+    label: device.kind === 'agent' ? 'an agent, not a person' : device.kind === 'channel' ? `a ${caps.ext?.channel || 'messaging'} chat`
       : caps.formFactor && caps.formFactor !== 'other' ? `a ${caps.formFactor}` : 'a device',
     screen: caps.screen || null,
     input: caps.input || null,

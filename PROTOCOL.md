@@ -110,6 +110,13 @@ Codes live 5 minutes and are single use.
 `{ name, preset | scopes, caps?, expiresAt?, kind? }` returns `{ token, device }`.
 On the host: `npm run token -- issue --name phone --preset phone`.
 
+**`kind`** is `device` by default and `agent` for a paired agent. Since hub 2.157.0 the hub itself makes
+devices of kind **`channel`**: one per linked chat of a messaging channel (Telegram first), bound to the
+person who linked it, with `caps.ext.channel` naming the service. They appear in device lists like any
+other; a client that does not know the kind should draw it as a device and may leave it out of lists of
+things to hand a screen to (it has no screen of its own to show a canvas on). The kind is additive: no
+existing field changed.
+
 **Rotation.** `POST /devices/me/rotate` returns a new token; the old one stays
 valid for 60 s (`previousValidUntil`) so a client can swap atomically.
 

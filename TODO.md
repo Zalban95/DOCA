@@ -149,9 +149,11 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] Specialists with name, role, instructions, per-agent tools — DOCA's specialists (kits, NEVER, levels).
 - [x] A computer per agent with browser, files, terminal, take-over — 2.153 (H7.2, H13).
 - [ ] Persistent browser profile per agent (logins kept) — H13.3.
-- [ ] **Telegram** — and Slack, mail, WhatsApp: a message there is a turn, the answer goes back there,
-  approvals answered with inline buttons; each channel a client kind (H9.1). Telegram first: a bot token,
-  allowlisted chats bound to people, voice notes through the existing STT.
+- [x] **Telegram** (2.157.0) — a message there is a turn, the answer goes back there, approvals and questions
+  answered with inline buttons; each linked chat a device of kind `channel` (H9.1); a bot token, chats linked by a
+  one-time code to people, voice notes through the existing STT, photos/files as attachments. **Left:** Slack, mail,
+  WhatsApp on the same shape; mission start/finish notices to a chat; markdown rendered as Telegram HTML; a
+  voice answer (TTS → sendVoice) to a voice note; group chats with per-member binding.
 - [ ] Voice calls with work continuing in the background — DOCA's call mode exists; realtime speech and
   barge-in left (H8.3).
 - [ ] Schedules ("recurring instructions") with pause/retry — H7.1.

@@ -32,6 +32,7 @@ const PREFS = {
   agents:           { is: 'travels', note: 'whether specialists are switched on' },
   toolNotes:        { is: 'travels', note: 'notes added to tool descriptions (fingerprinted per tool)' },
   mcpSettings:      { is: 'travels', note: 'MCP timeouts' },
+  channels:         { is: 'local', note: 'channel bots (Telegram): a token and a switch for this hub' },
   computers:        { is: 'travels', note: 'limits on agents\' computers: how many run, when they stop and are removed' },
   usagePrices:      { is: 'travels', note: 'the owner\'s price list for the usage window (harness/prices.js)' },
   providerContracts: { is: 'mixed',  note: 'the owner\'s corrections to what a provider accepts (harness/contracts.js): about a remote provider they travel, about a server on this machine they are local' },
