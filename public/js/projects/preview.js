@@ -5,8 +5,8 @@
    pictures, sound, video, PDF, fonts and 3D models are shown as themselves, and
    a binary nothing can show gets a card with its size and a download instead of
    being decoded into an editor full of replacement characters. Text that has a
-   rendered form — markdown, HTML, SVG, CSV/TSV, JSON — opens as source with a
-   👁 toggle to the rendering, which is drawn from the editor's current text, so
+   rendered form — HTML, SVG, CSV/TSV, JSON — opens as source with a 👁 toggle to
+   the rendering (markdown opens rendered, md-doc.js), which is drawn from the editor's current text, so
    an unsaved edit previews as it stands.
 
    Everything is fetched from /api/files/raw by path, never from a URL the file

@@ -28,7 +28,28 @@ final product** are collected, decided or not, while solutions are prototyped on
 Nothing on `dev/troubleshoot` is merged. What works there is prototype evidence
 for these requirements, not a change to the product.
 
-## Live — what is left (updated 2026-09-27)
+## Live — what is left (updated 2026-10-04)
+
+**Built 2026-10-04 (2.116.3 – 2.137.3)**, each with its note in its section: runTurn
+split; 429 retry; plans shown in a window, Approve starts the work; streaming
+markdown in Projects; escalation to a stronger model; contextWindow found from the
+server; charter rules 24–27 (understand, size, ask, go-ahead); db-bench; presence and
+`quiet` pushes (hub side); clearing a turn's old tool results; the usage window with
+prices; skills from other harnesses, the skill audit and adapter, cross-harness and
+loose search; provider contracts; Projects previews for every format, markdown as
+documents, environments (venvs), git buttons, editable checkpoints; and the three-agent
+audit's fixes (2.137.1 security, 2.137.2 robustness, 2.137.3 front end).
+
+**Decide (from 2026-10-04)**
+- The `chat` right lets a member — or a watch — start a turn whose tools run unasked in
+  Auto mode. Should a person without `host` always be asked (or their turns run in
+  Manual), whatever the panel's mode? → *Audit 2026-10-04* below.
+- `harness:sessions` reads, lists and deletes every conversation, not the device
+  owner's own; `agent.turn` summaries reach every person's devices. Per-person
+  conversations are auth phase 2.
+
+**Portal (added 2026-10-04)**: DocaMobile/DocaWear read `quiet`; run the Windows paths
+fixed by reading in 2.137.2 (npm.cmd spawns, pip into a venv via PowerShell).
 
 About 30 open items. Each points to the section that holds its reasons; the
 sections themselves keep their history. Tags: **build** (settled, waiting to be
@@ -93,8 +114,8 @@ the end, and in the sections as "built in …" notes.
 - ~~Switching to a stronger model when a job is stuck~~ — **built in 2.119.0**
   (`harness/escalate.js`, off until a model is named). → §3 (failure types).
 - Skills — **importing from other harnesses and a writing guide built in
-  2.128.0** (`harness/skill-sources.js`, `skills/write-a-skill`); left: a review
-  with answerable questions, history and undo. Was: a writing guide read like the rules', and importing from other
+  2.128.0** (`harness/skill-sources.js`, `skills/write-a-skill`); an adaptation can be
+  restored (2.131.0); left: a review with answerable questions, and a skill's history. Was: a writing guide read like the rules', and importing from other
   harnesses (Codex, Cursor rules…); every shipped procedure reads back what it
   wrote. → *Done log: Built 2026-09-25*, *Two layers of learned knowledge*.
 - A plan shown on every device — **panel window, phone and watch built in
@@ -1237,8 +1258,8 @@ next one's change count and touches no file.
 **Asked 2026-10-04, built in 2.130.0 — every format previews when a file is
 opened** (`public/js/projects/preview.js`). Pictures, video, audio, PDF, fonts
 (a specimen) and glb/gltf models (`<model-viewer>`, loaded on first use) open as
-themselves; markdown, HTML, SVG, CSV/TSV and JSON open as source with a 👁
-toggle to the rendering of the text as it stands, saved or not; a binary
+themselves; HTML, SVG, CSV/TSV and JSON open as source with a 👁 toggle (markdown
+opens rendered since 2.137.0) to the rendering of the text as it stands, saved or not; a binary
 nothing can show gets a size-and-download card (`/api/files/read?sniff=1`)
 instead of an editor of replacement characters. HTML renders sandboxed, scripts
 off. Not yet: STL/OBJ, office documents.

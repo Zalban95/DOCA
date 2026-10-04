@@ -1049,6 +1049,9 @@ A paired client can offer the harness the same **tool families** the host has �
 
 - The client asks its person **once per family**, in its own UI, and reports the
   result: `PUT /devices/self/grants { grants: { files: true, shell: false, … } }`.
+  Note the spelling: these two routes are a literal `/devices/self/…`, while the
+  device's own record elsewhere is `/devices/me` (an alias of its id). `me` is
+  not accepted here, and `self` is not an alias there.
   DOCA offers the harness only a family that is granted and not revoked on
   DOCA's side. Reporting also clears a disconnect.
 - DOCA may send `device.control` (§11.4). Handle each action, then

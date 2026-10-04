@@ -8,8 +8,9 @@
    calls the same operations the agent's tools do (modules/projects), so what
    you see and what the agent does cannot drift apart.
 
-   Files: ide.js (this: the frame, the project, the views), editor.js, tree.js,
-   search.js, git.js, run.js, chat.js — under public/js/projects/.
+   Files under public/js/projects/: ide.js (this: the frame, the project, the views),
+   editor.js, preview.js, md-doc.js, search.js, git.js, run.js, env.js, lsp.js,
+   checkpoints.js, chat.js (the file tree is in ide.js itself).
    ═══════════════════════════════════════════════════════ */
 
 const PJ = {
