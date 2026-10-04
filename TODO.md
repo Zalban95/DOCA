@@ -91,7 +91,8 @@ the end, and in the sections as "built in …" notes.
   2.118.0**; left: "nobody is at a screen". → *A plan is shown, not buried*.
 - ~~Markdown rendered while it streams~~ — built 2026-09-18 for both chats; the
   Projects chat joined them in 2.118.1. Tool results stay raw (undecided). → *The agent writes markdown…*.
-- `contextWindow` found rather than typed. → *Memory, limits and context*.
+- ~~`contextWindow` found rather than typed~~ — **built in 2.120.0** (`harness/context-window.js`),
+  offered in ⚙, never applied by itself. → *Memory, limits and context*.
 - Settings sub-tabs reviewed for what DOCA is now. → *Wanted 2026-09-25 — review*.
 - Editor add-ons; the project structure map (P2). → *Settled 2026-09-25*,
   *Wanted 2026-09-25*.
@@ -384,6 +385,15 @@ none of them block anything today.
   model name would cover the common cases and be wrong for the rest, which is
   why there isn't one. Setting it per harness is a one-line proposal the agent
   can make itself.
+  **Found where the server says it, since 2.120.0** (`harness/context-window.js`,
+  `GET /api/harness/context-window`): vLLM `max_model_len`, OpenRouter/Together
+  `context_length`, Groq `context_window`, Mistral `max_context_length`, LM
+  Studio's loaded length, llama.cpp `/props` n_ctx, Ollama through
+  `ollama-context.js`. Still no table by model name: a server that reports
+  nothing gets `null`, and one that did not answer is said to be unreachable.
+  The ⚙ panel asks on open when the box is 0 and offers "Use N" with the source
+  named; Save is still the decision. Not yet: the fallback rungs, and the agent
+  asking for it itself (a tool, or a line in `# Your limits`).
 
 - **Nothing searches across conversations.** Each session carries a title and a
   rolling summary and nothing ever reads another session's. So a conversation

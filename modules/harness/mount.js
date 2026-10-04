@@ -16,6 +16,11 @@ function mount(app) {
     try { res.json(await require('./ollama-context').check(String(req.query.model || ''), Number(req.query.declared) || 0)); }
     catch (e) { res.status(500).json({ error: e.message }); }
   });
+  // A model's window as its own server reports it, or null (context-window.js). Offered, never applied.
+  app.get('/api/harness/context-window', async (req, res) => {
+    try { res.json(await require('./context-window').discover(String(req.query.provider || ''), String(req.query.model || ''))); }
+    catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  });
   // The model this conversation runs on, chosen in the chat, with or without the fallback order (turn/choice.js).
   app.get('/api/harness/sessions/:id/model', (req, res) => {
     try { res.json(require('./turn/choice').view(req.params.id)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
