@@ -74,7 +74,9 @@ test('a Node project\'s own scripts are its commands; the owner can add one; run
   const out = await require('../modules/projects/run').run(p.id, 'hello', { waitSec: 10 });
   assert.equal(out.job.state, 'exited');
   assert.equal(out.job.code, 0);
-  assert.match(out.output, new RegExp(`hello from ${root.replace(/[/\\]/g, '.')}`), 'run in the project root');
+  // The OS's own name for the folder: /private/var on macOS, the long name on Windows (CI, 2026-10-04).
+  const named = p => fs.realpathSync.native(p).replace(/[/\\]/g, '.');
+  assert.match(out.output, new RegExp(`hello from ${named(root)}`, 'i'), 'run in the project root');
   await assert.rejects(require('../modules/projects/run').run(p.id, 'nope'), /not a command of Nodey/);
   assert.throws(() => projects.create({ root: '/etc' }), /outside the folders|not a folder/);
 });
@@ -154,7 +156,7 @@ test('a work chat bound to a project works in it; its specialists too; its promp
   const sid = r.body.sessionId;
   assert.equal((await H.api(null, 'POST', `/api/projects/${p.id}/chat`)).body.sessionId, sid, 'one work chat per project');
 
-  assert.match(await tools.call('shell', { command: 'pwd' }, [], { sessionId: sid }), new RegExp(root.replace(/[/\\]/g, '.')));
+  assert.match(await tools.call('shell', { command: 'pwd' }, [], { sessionId: sid }), new RegExp(fs.realpathSync.native(root).replace(/[/\\]/g, '.'), 'i'));
   assert.match(await tools.call('read_file', { path: 'README.md' }, [], { sessionId: sid }), /hi/);
   const memory = require('../modules/harness/memory');
   const spec = memory.createSession('Helper', { activate: false, kind: 'specialist', parentId: sid });

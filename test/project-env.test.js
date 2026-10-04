@@ -42,11 +42,13 @@ test('the project\'s venv is found and used by default; the machine can be chose
 });
 
 test('the project\'s commands run with its venv first on PATH', async () => {
-  const cmd = WIN ? 'echo %VIRTUAL_ENV%' : 'echo "$VIRTUAL_ENV|$PATH"';
+  // A project command runs in PowerShell on Windows (shell.js), where a variable is $env:NAME, not %NAME%.
+  const cmd = WIN ? 'echo $env:VIRTUAL_ENV' : 'echo "$VIRTUAL_ENV|$PATH"';
   projects.update(p.id, { commands: { where: cmd } });
   const r = await require('../modules/projects/run').run(p.id, 'where', { waitSec: 10 });
   assert.equal(r.job.code, 0);
-  assert.match(r.output, new RegExp(path.join(root, '.venv').replace(/[\\^$.*+?()[\]{}|]/g, '\\$&')));
+  const esc = s => s.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+  assert.match(r.output, new RegExp(`${esc(path.join(root, '.venv'))}|${esc(path.join(fs.realpathSync.native(root), '.venv'))}`, 'i'));
   if (!WIN) assert.ok(r.output.split('|')[1].startsWith(path.join(root, '.venv', 'bin')), 'its bin comes first');
 });
 

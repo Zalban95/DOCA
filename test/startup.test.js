@@ -16,7 +16,8 @@ after(H.stop);
 test('the boot service reports its state, or says why it cannot', async () => {
   const { status, body } = await H.api(null, 'GET', '/api/startup');
   assert.equal(status, 200);
-  assert.equal(body.service, 'openclaw-panel.service');
+  // Per OS (bin/doca-launch.js): systemd's unit on Linux, a Task Scheduler entry on Windows, a launchd agent on macOS.
+  assert.equal(body.service, { win32: 'DOCA', darwin: 'tech.doca.panel' }[process.platform] || 'openclaw-panel.service');
 
   if (body.supported) {
     assert.equal(typeof body.enabled, 'boolean');

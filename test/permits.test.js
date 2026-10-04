@@ -122,7 +122,9 @@ test('a symlink inside an allowed folder does not reach outside it (audit 2026-1
   const { fmSafe } = require('../modules/utils');
   const inside = fs.mkdtempSync(path.join(H.tmp, 'root-'));
   const link = path.join(inside, 'escape');
-  try { fs.symlinkSync('/etc', link); } catch { return; }   // no symlinks here (Windows without the right)
+  // A folder that exists outside every root on this OS (the Windows folder, or /etc).
+  const outside = process.platform === 'win32' ? (process.env.SystemRoot || 'C:\\Windows') : '/etc';
+  try { fs.symlinkSync(outside, link, 'dir'); } catch { return; }   // no symlinks here (Windows without the right)
   assert.equal(fmSafe(inside), true);
   assert.equal(fmSafe(path.join(link, 'hostname')), false, 'through the link is outside');
 });
