@@ -134,13 +134,21 @@ const CONFIG_REGISTRY = {
   ...Object.fromEntries(Object.values(SCRIPT_CONFIG).map(s => [s.id, s.path])),
 };
 
-// File manager — directories the browser is allowed to access
-const FM_ALLOWED_ROOTS = [
-  HOME,
-  '/media',
-  '/mnt',
-  '/tmp',
-];
+// File manager — directories the browser and the agent's file tools may open. Per OS (hive.md §7, found by the
+// first CI run on Windows and macOS, 2026-10-04): the list was Linux's (/media, /mnt, /tmp), so on Windows and
+// macOS only the home folder was reachable and the system's own temp folder was refused. Other disks are where
+// each OS mounts them: /media and /mnt, /Volumes, or a drive letter.
+function defaultRoots(platform = process.platform) {
+  const roots = [HOME];
+  if (platform === 'win32') {
+    const system = (process.env.SystemDrive || 'C:').toUpperCase().charAt(0);
+    for (const l of 'DEFGHIJKLMNOPQRSTUVWXYZ') if (l !== system && fs.existsSync(`${l}:\\`)) roots.push(`${l}:\\`);
+  } else if (platform === 'darwin') roots.push('/Volumes', '/tmp');
+  else roots.push('/media', '/mnt', '/tmp');
+  roots.push(require('os').tmpdir());
+  return [...new Set(roots)];
+}
+const FM_ALLOWED_ROOTS = defaultRoots();
 
 const VALUES = {
   COMPOSE_DIR, CONFIG_PATH, SKILLS_DIR, WORKSPACE_DIR,

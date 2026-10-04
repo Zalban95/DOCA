@@ -2,7 +2,7 @@
 name: test
 on:
   push:
-    branches: [main]
+    branches: ['**']   # every branch, so a fix is seen on all three OSes before it is merged
   pull_request:
 jobs:
   test:

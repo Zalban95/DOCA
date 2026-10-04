@@ -44,7 +44,9 @@ function sseHeaders(res) {
 function realOf(abs) {
   let base = abs, rest = '';
   for (;;) {
-    try { return path.join(fs.realpathSync(base), rest); } catch { /* not there yet */ }
+    // .native: the OS's own answer, which on Windows also expands 8.3 short names (C:\\Users\\RUNNER~1 → runneradmin)
+    // so a temp path and the home folder compare as the same place.
+    try { return path.join(fs.realpathSync.native(base), rest); } catch { /* not there yet */ }
     const up = path.dirname(base);
     if (up === base) return abs;
     rest = rest ? path.join(path.basename(base), rest) : path.basename(base);
