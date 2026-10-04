@@ -150,7 +150,7 @@ app.post('/api/files/delete',   files.handleDelete);
 app.post('/api/files/mkdir',    files.handleMkdir);
 app.post('/api/files/paste',    files.handlePaste);
 app.post('/api/files/upload',   uploadMw.array('files', 20), files.handleUpload);
-app.get ('/api/files/download', files.handleDownload);
+app.get (['/api/files/download', '/api/files/download/:name'], files.handleDownload);   // the name in the URL: phones name downloads from it
 app.get ('/api/files/raw',      files.handleRaw);
 
 // ─── Routes: Harnesses ───────────────────────────────────────────────────────

@@ -499,34 +499,11 @@ function fmGoPath(evt) {
 function fmPreviewFile(fpath, mediaType, evt) {
   if (evt) evt.stopPropagation();
   fm._previewPath = fpath;
-  const modal = document.getElementById('fm-preview-modal');
-  const title = document.getElementById('fm-preview-title');
-  const body  = document.getElementById('fm-preview-body');
-
-  title.textContent = fpath.split('/').pop();
-  body.innerHTML = '';
-
-  const url = `${fmApi()}/raw?path=${encodeURIComponent(fpath)}`;
-
-  if (mediaType === 'image') {
-    const img = document.createElement('img');
-    img.src   = url;
-    img.alt   = title.textContent;
-    body.appendChild(img);
-  } else if (mediaType === 'video') {
-    const v = document.createElement('video');
-    v.src      = url;
-    v.controls = true;
-    v.autoplay = false;
-    body.appendChild(v);
-  } else if (mediaType === 'audio') {
-    const a = document.createElement('audio');
-    a.src      = url;
-    a.controls = true;
-    body.appendChild(a);
-  }
-
-  modal.style.display = 'flex';
+  // In the page's media viewer: zoomable, and Back closes it (agent-ui/media-viewer.js). Either separator:
+  // a device's paths may be Windows ones.
+  const name = fpath.split(/[\\/]/).pop();
+  mediaViewerOpen({ src: `${fmApi()}/raw?path=${encodeURIComponent(fpath)}`, kind: mediaType, name,
+    download: `${fmApi()}/download/${encodeURIComponent(name)}?path=${encodeURIComponent(fpath)}` });
 }
 
 function fmClosePreview() {
@@ -627,8 +604,10 @@ function fmUploadFiles(fileList) {
 function fmDownloadFile(fpath, evt) {
   if (evt) evt.stopPropagation();
   const a  = document.createElement('a');
-  a.href   = `${fmApi()}/download?path=${encodeURIComponent(fpath)}`;
-  a.download = fpath.split('/').pop();
+  // The name at the end of the URL too: a phone's download manager names the file from the URL, and
+  // ".../download?path=…" came out as download.bin (2026-10-04).
+  a.download = fpath.split(/[\\/]/).pop();
+  a.href   = `${fmApi()}/download/${encodeURIComponent(a.download)}?path=${encodeURIComponent(fpath)}`;
   document.body.appendChild(a);
   a.click();
   a.remove();
