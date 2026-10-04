@@ -40,6 +40,41 @@ loose search; provider contracts; Projects previews for every format, markdown a
 documents, environments (venvs), git buttons, editable checkpoints; and the three-agent
 audit's fixes (2.137.1 security, 2.137.2 robustness, 2.137.3 front end).
 
+**The hive — the direction, asked 2026-10-04** (`docs/design/hive.md`: install a client and the device
+becomes part of DOCA; every capability the other harnesses have, then narrower editions to sell).
+Each line is one releasable step; the order is P0 → P2.
+- **P0 · settings per device** (hive.md §1): a settings schema (`settings-schema.js`: home device |
+  hive | person, type, default, hint, rights, proposable) that the forms, `SETTABLE` and the rights
+  derive from; a browser is a device; `/d/<id>/settings` holds look, tabs, voice, notifications,
+  console, the face, lent tool families; hive → person → device layering behind one effective-settings
+  call; today's prefs become the hive defaults. *Decided 2026-10-04: everything per-device goes to the
+  device's page; the rest stays in the clients structure.*
+- **P0 · recipes** (§2.3): "save as recipe" from a turn that worked → parameterised tool calls with
+  checks, run without a model (button, schedule, macro, `recipe_run`), repaired by the agent when a step
+  fails; skills point to them. The answer to "repeat it minus the thinking".
+- **P0 · one pack format** (§2.4): `.dpack` for skills, recipes, specialists, MCP definitions (secrets
+  stripped), canvases, rules, levels, layouts, faces, presets, editions; import is a dry run listing
+  what it needs; a library; hub-to-hub send; whatever the agent builds is a pack when saved.
+- **P0 · browser control** (§3.1): the agent's own Chromium over CDP (snapshot, click/type by ref,
+  screenshot, tabs, profile per agent), a live view the person can take over, page text through the
+  airlock, submits and logins asked first, credentials from a vault; then the person's own browser
+  through a desktop client; Playwright MCP in the catalogue meanwhile.
+- **P1 · the client core and one-step pairing** (§4): protocol, pairing by QR/link bound to the
+  person, push, presence, offline queue, device page, face, and the tool families a device lends the
+  hive as an MCP server — for every client, not DocaDesk alone; discovery on the tailnet; clients
+  update from the hub. **A Linux desktop client.**
+- **P1 · schedules and triggers** (§3.3), **a computer per agent** (§3.2, the sandbox gap), **the face**
+  (§5: a field of dots that forms a face, protolab.tech's palette and type, states from the events that
+  exist, editable as a pack, canvas 2D so a watch and an old tablet can draw it; `/face` for a kiosk).
+- **P2**: channels as client kinds (Slack, Telegram, mail, WhatsApp); realtime voice with barge-in;
+  AG-UI, A2A, DOCA as an MCP server; pages; parallel work in git worktrees; OAuth connectors with a
+  vault; evaluation, tracing, retrieval; a pack registry; federated hives and hosting.
+- **Coherence (§2.2), to do along the way**: one chat component in three sizes (retire the floating
+  chat's gateway/CLI paths if no non-built-in default is still real); fold `jobs.js` into `runs`; the
+  Wearables sub-tab becomes the watch's device page; every new capability lands in `/api/v1` first.
+  The four questions — upgradable, necessary, repeatable without the thinking, portable — are asked of
+  every new part before it ships.
+
 **Decide (from 2026-10-04)**
 - Durable memory is shared by everyone (per-user memory is auth phase 3); editing it from
   the panel needs host since 2.146.0. Conversations are per person since 2.145.0, and their
