@@ -11,6 +11,20 @@ function ollamaBase() {
 }
 
 /** GET /api/models/ollama/search */
+/** One search page of ollama.com into [{ name, description, tags }]: capabilities and sizes, as the page shows them. */
+function parseSearchPage(html) {
+  const out = [];
+  for (const item of String(html).split('<li').slice(1)) {
+    const name = /href="\/library\/([\w.:-]+)"/.exec(item)?.[1];
+    if (!name || out.some(m => m.name === name)) continue;
+    const description = (/<p class="[^"]*break-words[^"]*">([^<]*)/.exec(item)?.[1] || '').trim()
+      .replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    const tags = [...item.matchAll(/<span\s+class="inline-flex[^"]*">([^<]+)<\/span>/g)].map(m => m[1].trim()).filter(Boolean);
+    out.push({ name, description, ...(tags.length ? { tags } : {}) });
+  }
+  return out;
+}
+
 async function handleSearch(req, res) {
   const q = (req.query.q || '').toLowerCase().trim();
   if (!q) return res.json({ results: OLLAMA_POPULAR.slice(0, 12) });
@@ -19,19 +33,15 @@ async function handleSearch(req, res) {
     m.name.includes(q) || m.description.toLowerCase().includes(q)
   );
 
+  // Ollama's library has no search API (api/search answers 404, so this used to be a fixed list of about
+  // twenty names: "qwen" found qwen2.5 and nothing newer). Its search page lists the real results.
   try {
-    const r = await fetch(`https://ollama.com/api/search?q=${encodeURIComponent(q)}&limit=20`, {
-      headers: { 'User-Agent': 'openclaw-dashboard/1.0' },
-      signal: AbortSignal.timeout(5000)
+    const r = await fetch(`https://ollama.com/search?q=${encodeURIComponent(q)}`, {
+      headers: { 'User-Agent': 'DOCA/1.0' }, signal: AbortSignal.timeout(6000),
     });
     if (r.ok) {
-      const data = await r.json();
-      const apiResults = (data.models || []).map(m => ({
-        name: m.name, description: m.description || '', pulls: m.pulls
-      }));
-      const names = new Set(curated.map(m => m.name));
-      const merged = [...curated, ...apiResults.filter(m => !names.has(m.name))];
-      return res.json({ results: merged });
+      const found = parseSearchPage(await r.text());
+      if (found.length) return res.json({ results: found.slice(0, 30), source: 'ollama.com' });
     }
   } catch {}
 
@@ -160,5 +170,4 @@ module.exports = {
   handleRunning,
   handleList,
   handlePull,
-  handleDelete,
-};
+  handleDelete, parseSearchPage };

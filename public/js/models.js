@@ -42,7 +42,7 @@ async function modelsLoadDisk(force = false) {
       return `<div class="disk-row">
         <span class="disk-label">${escHtml(d.label)}</span>
         <span class="disk-path" title="${escHtml(d.path)}${d.mount ? ` (mount ${escHtml(d.mount)})` : ''}">${escHtml(d.path)}</span>
-        <span class="disk-size" title="Size of this directory">◆ ${size}</span>
+        <span class="disk-size" title="${d.inside ? `Size of this directory — part of ${escHtml(d.inside)}'s, not added to it` : 'Size of this directory'}">◆ ${size}${d.inside ? ' <span style="color:var(--muted)">within</span>' : ''}</span>
         <div class="res-bar disk-bar" title="Drive usage ${pct}%"><div class="res-bar-fill ${color}" style="width:${pct}%"></div></div>
         <span class="disk-free" title="Free space on this drive">${free} free of ${total}</span>
       </div>`;
@@ -170,6 +170,7 @@ async function modelsSearchOnline() {
         <span class="models-search-name">${escHtml(m.name)}</span>
         <span class="models-search-desc">${escHtml(m.description || '')}</span>
         ${m.pulls ? `<span class="models-search-pulls" style="font-size:9px;color:var(--muted)">${fmtNumber(m.pulls)} pulls</span>` : ''}
+        ${m.tags?.length ? `<span style="font-size:9px;color:var(--muted)" title="What it can do, and the sizes it comes in (pull name:size)">${escHtml(m.tags.join(' · '))}</span>` : ''}
       </div>
     `).join('') + '</div>';
   } catch (e) {

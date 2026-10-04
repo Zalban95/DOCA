@@ -252,7 +252,19 @@ async function handleGetDisk(req, res) {
     targets.push({ id: `llamacpp-${inst.id}`, label: `llama.cpp — ${inst.name || inst.id}`, path: dir });
   });
 
-  const disks = await Promise.all(targets.map(t => _diskInfo(t.id, t.label, t.path)));
+  // One card per folder: Ollama and HuggingFace pointed at the same one showed its size twice (review
+  // 2026-10-04). A folder inside another keeps its card, and says its size is part of the other's.
+  const merged = [];
+  for (const t of targets) {
+    const same = merged.find(m => path.resolve(m.path) === path.resolve(t.path));
+    if (same) same.label += ` · ${t.label}`;
+    else merged.push({ ...t });
+  }
+  for (const t of merged) {
+    const outer = merged.find(o => o !== t && path.resolve(t.path).startsWith(path.resolve(o.path) + path.sep));
+    if (outer) t.inside = outer.label;
+  }
+  const disks = await Promise.all(merged.map(async t => ({ ...(await _diskInfo(t.id, t.label, t.path)), ...(t.inside ? { inside: t.inside } : {}) })));
   res.json({ disks });
 }
 

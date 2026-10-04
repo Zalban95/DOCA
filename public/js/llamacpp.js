@@ -36,8 +36,24 @@ async function llamaLoadList() {
   try {
     const data = await apiFetch('/api/models/llamacpp/list');
     _llamaInstances = data.instances || [];
+    _llamaRenderExternal(data.external || []);
   } catch { _llamaInstances = []; }
   _renderLlamaGrid();
+}
+
+/** llama-servers running without the panel — found through the harness's local providers. Shown, not managed. */
+function _llamaRenderExternal(list) {
+  const grid = document.getElementById('llamacpp-grid');
+  if (!grid) return;
+  let box = document.getElementById('llamacpp-external');
+  if (!box) { box = document.createElement('div'); box.id = 'llamacpp-external'; grid.after(box); }
+  box.innerHTML = list.length ? `<div class="input-label" style="margin:12px 0 6px">Running outside the panel</div>` + list.map(s => `
+    <div class="disk-row" title="${escHtml(s.build ? `llama.cpp ${s.build}` : 'llama.cpp')} — started outside DOCA, so it is shown here and managed where it was started">
+      <span class="disk-label">${escHtml(s.label)}${s.router ? ' · router' : ''}</span>
+      <span class="disk-path">${escHtml(s.url)}</span>
+      <span class="disk-free">${s.models.length ? s.models.map(m => `${escHtml(m.id)} (${escHtml(m.state || '?')}${m.ctx ? `, ${m.ctx.toLocaleString()} ctx` : ''})`).join(' · ')
+        : s.ctx ? `${s.ctx.toLocaleString()} ctx` : ''}</span>
+    </div>`).join('') : '';
 }
 
 async function llamaLoadStatus() {

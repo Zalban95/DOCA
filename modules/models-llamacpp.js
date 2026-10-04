@@ -67,11 +67,11 @@ function isPortTaken(port, excludeId) {
 }
 
 /** GET /api/models/llamacpp/list */
-function handleList(_req, res) {
+async function handleList(_req, res) {
   const instances = loadInstances();
-  res.json({
-    instances: instances.map(instanceStatus),
-  });
+  // And the llama-servers running without the panel (models-llamacpp-external.js), so the tab shows what is there.
+  const external = await require('./models-llamacpp-external').find(instances.map(i => Number(i.port))).catch(() => []);
+  res.json({ instances: instances.map(instanceStatus), external });
 }
 
 /** GET /api/models/llamacpp/status */

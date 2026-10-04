@@ -58,6 +58,7 @@ function _hcBuiltinHtml(h) {
             <button class="btn btn-xs tool-gear" onclick="nav('controls'); harnessConfigToggle(${jsArg(h.id)}, true)" title="Model and parameters">⚙</button>
           </div>
         </div>
+        <div class="pj-chat-tabs hc-tabs" id="hc-tabs" role="tablist"></div>
         <div class="conv-bar hc-conv" id="hc-conv"></div>
         <div id="hc-session-info" class="hc-session-info"></div>
         <div class="hc-missions" id="hc-missions" style="display:none"></div>

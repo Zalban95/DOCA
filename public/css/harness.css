@@ -357,3 +357,4 @@ body.harness-tab .chat-fab { display: none; }
 .agent-fold-step[data-state="blocked"] { color: var(--red); }
 .hc-conv { padding: 4px 12px; border-bottom: 1px solid var(--border); }
 .hc-conv:empty { display: none; }
+.hc-tabs { padding-left: 10px; }
