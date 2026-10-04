@@ -224,6 +224,9 @@ function disabledFor(profile, p) {
   // to a kit later reaches every type holding the kit.
   const held = new Set(require('../kits').expand({ kits: profile.kits || [], add: profile.tools || [] }, all));
   for (const [n, withTools] of Object.entries(COMES_WITH)) if (withTools.some(t => held.has(t))) held.add(n);
+  // A specialist holds only the computer its mission was given (agent_dispatch computer:), not every one running.
+  if (profile.level !== 'orchestrator')
+    for (const n of [...held]) if (/^mcp__computer-/.test(n) && !(profile.computer && n.startsWith(`mcp__computer-${profile.computer}__`))) held.delete(n);
   if (profile.level !== 'orchestrator') {
     for (const n of ALWAYS_FOR_SPECIALISTS) held.add(n);
     // Granted beyond its definition, to its type or its mission (auth/permits.js) — before NEVER, which still wins.

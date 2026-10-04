@@ -52,7 +52,7 @@ const { loadPrefs, savePrefs } = require('../utils');
  * a profile's tool list is an allowlist, so a specialist has it only if
  * somebody wrote it down.
  */
-const NEVER = ['settings_propose', 'install_propose', 'tool_note', 'agent_dispatch', 'agent_results', 'agent_resume', 'ask_device', 'permission_grant'];
+const NEVER = ['settings_propose', 'install_propose', 'tool_note', 'agent_dispatch', 'agent_results', 'agent_resume', 'ask_device', 'permission_grant', 'computer'];
 
 /**
  * The airlock (docs/design/airlock.md): tools only an `airlock: true` definition

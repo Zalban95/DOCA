@@ -2,7 +2,7 @@
    DOCA PANEL — VIRTUAL MACHINES
    ═══════════════════════════════════════════════════════ */
 
-function vmsInit() { vmsLoad(); }
+function vmsInit() { vmsLoad(); computersLoad(); }
 
 async function vmsLoad() {
   const list = document.getElementById('vms-list');

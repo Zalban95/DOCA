@@ -259,7 +259,7 @@ function profileOf(def) {
  * the orchestrator chose to hand over, and nothing else. That is the point of
  * the arrangement, not a limitation of it.
  */
-function dispatch({ agentId, task, context, by, chainId, plan } = {}) {
+function dispatch({ agentId, task, context, by, chainId, plan, computer = null } = {}) {
   if (by && require('../harness/organization').session(by).kind === 'specialist')
     throw Object.assign(new Error('A specialist cannot delegate further. Report to its work leader.'), { status: 403 });
   if (!registry.enabled())
@@ -280,7 +280,7 @@ function dispatch({ agentId, task, context, by, chainId, plan } = {}) {
   // Its own conversation, so the orchestrator's is not held by `_running` and
   // the two transcripts never interleave.
   const session = memory.createSession(`${def.label}: ${text.slice(0, 40)}`, {
-    activate: false, kind: 'specialist', parentId: by || memory.mainSession().id, profile: profileOf(def),
+    activate: false, kind: 'specialist', parentId: by || memory.mainSession().id, profile: { ...profileOf(def), ...(computer ? { computer: require('../computers').need(computer).id } : {}) },   // + its computer (computers/)
   });
 
   const row = {

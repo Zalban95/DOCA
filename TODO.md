@@ -111,8 +111,19 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 **H7 · Work that runs by itself**
 - [ ] H7.1 Schedules (recurring) and triggers (file, webhook, device event, mail) starting a recipe
   or a turn; per person; shown in the queue fold.
-- [ ] H7.2 A computer per agent — files, terminal, browser in isolation, off by default. [OS] per
-  §7's row.
+- [x] H7.2 (2.153.0) **A computer per agent** — decided 2026-10-04: a container by default (Docker runs Linux
+  containers on every host OS), a VM backend for another OS or a kernel. `clients/computer` is the image
+  (Xvfb, fluxbox, Chromium over CDP, ffmpeg, xdotool, VNC/noVNC) and its control server, an **MCP server**,
+  so a computer is a client of the hive lending its tools; `modules/computers` makes, starts, stops and
+  removes them and registers each as `computer-<id>`; the `computer` tool (Orchestrator, work chats) and
+  `agent_dispatch computer:` give a mission one computer; the shipped **Tester** works in it, records the
+  screen (videos come back as attachments) and shows screenshots. VMs tab → Computers for agents.
+  **Left:** H7.2a the live view through the hub (today noVNC is on 127.0.0.1, so only this machine's browser
+  can watch — proxy it, authenticated, so a phone on the tailnet can take over); H7.2b a VM backend
+  (libvirt/Hyper-V/UTM; a Windows guest); H7.2c the image prebuilt and pulled instead of built (2.1 GB,
+  minutes); H7.2d computer tools hidden from the Orchestrator's own turns (today '*' holds them); H7.2e the
+  window manager's stray message window. Also done on the way: **an MCP tool's pictures and files are kept as
+  attachments** (they arrived as the word "[image]").
 - [ ] H7.3 Parallel work chats on one repo, each in its own git worktree.
 
 **H8 · Presence: the face and voice**

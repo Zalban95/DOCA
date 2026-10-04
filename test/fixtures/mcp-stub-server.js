@@ -63,7 +63,10 @@ process.stdin.on('data', chunk => {
       reply({ tools: TOOLS });
     } else if (msg.method === 'tools/call') {
       const { name, arguments: args } = msg.params || {};
-      if (name === 'echo') {
+      // Not listed, so tool counts elsewhere stay as they were: called directly, it answers with a picture.
+      if (name === 'picture') {
+        reply({ content: [{ type: 'text', text: 'here it is' }, { type: 'image', mimeType: 'image/png', data: Buffer.from('fakepng').toString('base64') }] });
+      } else if (name === 'echo') {
         reply({ content: [{ type: 'text', text: `echo: ${args?.message ?? ''}` }] });
       } else if (name === 'write_thing') {
         reply({ content: [{ type: 'text', text: `wrote ${args?.value ?? ''}` }] });

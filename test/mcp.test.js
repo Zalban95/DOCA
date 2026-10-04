@@ -761,3 +761,13 @@ test('a device that reconnects gets its server connected, and a moved address is
   await until(() => registry.client(id)?.state === 'running' && registry.client(id).spec.url === tailnet.url);
   assert.equal(tailnet.seen[0].method, 'initialize', 'the new address was dialled');
 });
+
+test('a picture a tool returns is kept as an attachment, and the agent is told where (computers, 2026-10-04)', async t => {
+  registry.upsert({ id: 'pictures', command: process.execPath, args: [STUB] });
+  t.after(() => registry.remove('pictures'));
+  const c = await registry.start('pictures');
+  const out = await c.callTool('picture', {});
+  assert.match(out, /^here it is\n\[image image\/png, 7 bytes, saved as .+\.png — show it with show_media\]$/);
+  const saved = out.match(/saved as (.+\.png)/)[1];
+  assert.equal(fs.readFileSync(saved, 'utf8'), 'fakepng');
+});

@@ -34,6 +34,9 @@ module.exports = [
         agent:   { type: 'string', description: 'The specialist\'s id, from the list in your prompt.' },
         task:    { type: 'string', description: 'The errand, in full. Write it for somebody who was not in this conversation.' },
         context: { type: 'string', description: 'Anything from this conversation it needs. It sees nothing else.' },
+        computer: { type: 'string', description: 'Optional: the id of a computer (from the computer tool) the mission works in — '
+          + 'a Linux desktop in a container. The specialist gets that computer\'s tools and no other\'s. For testing something risky, '
+          + 'browsing as a person would, or recording a demo: send the tester.' },
         plan: {
           type: 'array',
           description: 'Optional. The errand broken into steps, so a phone or a watch can draw how far along it '
@@ -51,8 +54,8 @@ module.exports = [
       },
       required: ['agent', 'task'],
     },
-    run: ({ agent, task, context, plan }, ctx = {}) => {
-      const m = require('../../agents/missions').dispatch({ agentId: agent, task, context, plan, by: ctx.sessionId });
+    run: ({ agent, task, context, plan, computer }, ctx = {}) => {
+      const m = require('../../agents/missions').dispatch({ agentId: agent, task, context, plan, computer, by: ctx.sessionId });
       // A plan is what lets every client draw progress instead of "STEP 0"
       // until the mission is already over — see missions.setPlan().
       const how = Array.isArray(plan) && plan.length
