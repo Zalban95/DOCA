@@ -16,6 +16,14 @@ DOCA is the hub. Three first-party clients sit beside it — `../../DocaDesk`, `
 
 Two things follow. A change to `/api/v1`, to a scope name, or to a caps field is a change to three shipped apps, and their `AGENTS.md` files record contracts this side can break in silence — `DocaWear/AGENTS.md`, "The pair-offer field contract", is the one that has already cost a day. And because DocaDesk hosts, **a tool can land on a machine that is not this one**; that is the whole reason `environment.block()` labels server origin and `placeBlock()` exists, and it is only exercisable with a real client running.
 
+### Where this is going
+`docs/design/hive.md` (2026-10-04): installing a client makes a device part of DOCA. Every new part is
+held to its four questions — **upgradable** (a new version changes it without a person redoing
+anything: a schema, a default, a migration), **necessary** (not a second way of doing what exists),
+**repeatable without the thinking** (what the agent got working once can run again as a recipe, not a
+fresh round of reasoning), **portable** (exportable and importable as a pack). Per-device settings go to
+the device's page; new capabilities land in `/api/v1` first so a client can have them.
+
 ### Working on this repository
 The harness gives its agent eight rules for working on any repository (charter rules 16–23 in `modules/harness/providers.js`). This repository holds itself to the same ones, whoever is editing it:
 
