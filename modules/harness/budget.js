@@ -322,6 +322,8 @@ function block(p) {
       + `${p.summarizeAfter} messages or ${compactTokensFor(p) || '(unset)'} tokens of prompt `
       + `(harness.config.doca.historyTurns, .summarizeAfter, .compactTokens)`,
     `memory entries in this prompt: up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`,
+    `rate limits (HTTP 429): waited out ${require('./turn/rate-limit').limits(p).tries} times, up to `
+      + `${require('./turn/rate-limit').limits(p).cap / 1000}s each (harness.config.doca.rateLimitRetries, .rateLimitMaxWaitMs)`,
   );
   if (trigger) out.push(`effective token compaction trigger: ${trigger.at} tokens`
     + ` (harness.config.doca.${trigger.setting}); message-count folding also applies.${require('./fold-check').warning(p) ? ` Warning: ${require('./fold-check').warning(p)}` : ''}`);

@@ -12,6 +12,7 @@ const usage       = require('../usage');
 const { params } = require('./params');
 const { withoutEcho } = require('./messages');
 const { _degraded, markDegraded, openingHop, rungKey, rungsFor } = require('./fallback');
+const rateLimit = require('./rate-limit');
 
 /* ── Model transport ──────────────────────────────────── */
 
@@ -49,7 +50,8 @@ async function post(ep, body, signal, p) {
       throw Object.assign(new Error(budget.explain({ status: 400, detail, ep, p })), { status: 400 });
     }
   }
-  if (!r.ok) throw Object.assign(new Error(budget.explain({ status: r.status, detail: await r.text(), ep, p })), { status: r.status });
+  if (!r.ok) throw Object.assign(new Error(budget.explain({ status: r.status, detail: await r.text(), ep, p })),
+    { status: r.status, retryAfterMs: rateLimit.retryAfterMs(r.headers) });
   return r;
 }
 
@@ -134,7 +136,7 @@ function unavailable(e) {
   return st >= 500 && /overload|high demand|busy|capacity|temporarily unavailable/i.test(String(e?.message || ''));
 }
 
-async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, meta = { kind: 'ask' }, onHop, onSkip }) {
+async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, meta = { kind: 'ask' }, onHop, onSkip, onRetry }) {
   signal?.throwIfAborted();
   const candidates = rungsFor({ ep, model: body.model, p });
   for (const m of candidates.missing || []) {
@@ -158,6 +160,7 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
   const opening = openingHop({ ep, model: body.model, candidates, rungs });
   if (opening) onHop?.(opening);
   let stalled = null;
+  let retries = 0;   // on the current rung; a rate limit is waited out where it happened (turn/rate-limit.js)
 
   for (let i = 0; i < rungs.length; i++) {
     const rung = rungs[i];
@@ -180,6 +183,17 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
       if (i > 0) _degraded.delete(rungKey(rung.ep, rung.model));
       return { ...reply, provider: rung.ep.id };
     } catch (e) {
+      const retry = guard.stalled ? null : rateLimit.plan(e, retries, p);
+      if (retry?.giveUp) throw rateLimit.tooLong(e, retry.waitMs, p);
+      if (retry) {
+        retries++;
+        guard.done();
+        onRetry?.({ provider: rung.ep.id, model: rungBody.model, ...retry,
+          text: rateLimit.notice({ who: rung.ep.label || rung.ep.id, model: rungBody.model, ...retry }) });
+        await rateLimit.sleep(retry.waitMs, signal);
+        i--;
+        continue;
+      }
       // Our abort and the user's are the same AbortError at this level; only the
       // guard knows which one fired. A deliberate Stop keeps its own meaning.
       // A provider out of capacity is the other way to be unavailable: it said
@@ -201,6 +215,7 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
               to:   { provider: rungs[i + 1].ep.id, model: rungs[i + 1].model, label: rungs[i + 1].ep.label },
               seconds: Math.round(guard.ms / 1000), frames: guard.frames,
               remaining: rungs.length - i - 1 });
+      retries = 0;
       continue;
     } finally {
       guard.done();
@@ -309,6 +324,7 @@ async function ask({ system, user, temperature = 0.1, signal, provider, model })
     // The fallback chain applies here too: complete() only hops for a caller
     // that takes the hop, and a button is as entitled to an answer as a turn.
     onHop: h => console.warn(`[harness] ask: ${h.from.model} unavailable — asking ${h.to.model}`),
+    onRetry: r => console.warn(`[harness] ask: ${r.text}`),
     body: {
       model: p.model, stream: true, stream_options: { include_usage: true }, temperature,
       ...(cap > 0 ? { max_tokens: cap } : {}),

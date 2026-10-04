@@ -51,6 +51,15 @@ const HARNESS_PARAMS = [
         + 'would make a chain slower than having none. The last entry always gets the full give-up time, so '
         + 'how long you wait in total is unchanged.' },
 
+  { key: 'rateLimitRetries', label: 'Retries when rate-limited', attrs: 'min="0" max="20" step="1"',
+    hint: 'When a provider answers "too many requests", wait and ask again this many times before giving up. '
+        + 'A refused request is not charged, so a retry does not cost twice, and every wait is shown in the chat. '
+        + 'A quota or billing refusal is never retried — waiting does not fix an empty account. 0 gives up at once.' },
+
+  { key: 'rateLimitMaxWaitMs', label: 'Longest rate-limit wait', unit: 'ms', attrs: 'min="0" step="1000"',
+    hint: 'The most one of those waits may take. The provider usually says how long to wait and that is used; '
+        + 'if it asks for longer than this, the turn stops and says so instead of hanging. 0 means 60 seconds.' },
+
   { key: 'autoTurnsPerJob', label: 'Turns a job may take on its own', attrs: 'min="0" max="500" step="1"',
     hint: 'A work chat keeps working until it reports the job done, failed, blocked or asks a question — or '
         + 'you or the Orchestrator stop it. When a turn ends short of that, the panel starts the next one; '

@@ -75,7 +75,7 @@ the end, and in the sections as "built in …" notes.
    is visible here, and a Linux client (Avalonia over `DocaDesk.Core`).
 
 **Build — later**
-- Retry with backoff on a rate limit (429). → *Where this harness stands…* §8.
+- ~~Retry with backoff on a rate limit (429)~~ — **built in 2.117.0** (`turn/rate-limit.js`). → §8.
 - A usage page with prices. → *Memory, limits and context*.
 - Provider quirks as data (a provider contract). → *Wanted next: many agents*.
 - The Orchestrator drives the work rather than doing it; a shared core context.
@@ -1544,6 +1544,16 @@ call path is the one that drops `stream_options` after a 400 (`agent.js`, "any
 falls to the fallback chain if one is configured, and otherwise ends the turn.
 `budget.explain()` at least names whose limit it was. Whether to add backoff is
 open: a retry that is invisible is how a turn silently costs twice.
+
+**Built in 2.117.0** (`modules/harness/turn/rate-limit.js`). The worry above
+does not apply to a 429: the provider refused the request, so it was not
+charged, and a retry cannot cost twice. What does apply — that it must not be
+invisible — is kept: every wait is a `warning` event (`kind: 'rate-limit'`) in
+the chat, naming the attempt and both settings. Retried on the same rung, never
+hopped (the 2026-09-18 decision stands); Retry-After wins over the 2 s/4 s/…
+backoff; a wait longer than `rateLimitMaxWaitMs` fails at once and says how long
+it was asked for; a quota or billing 429 is not retried. A 5xx is still not
+retried — it hops when it reads as "out of capacity", and is otherwise an answer.
 
 ---
 

@@ -241,6 +241,8 @@ async function harnessConfigSave(id) {
         compactTokens:  parseInt(val('compactTokens'), 10) || 0,
         firstTokenTimeoutMs: parseInt(val('firstTokenTimeoutMs'), 10) || 0,
         failoverAfterMs: parseInt(val('failoverAfterMs'), 10) || 0,
+        rateLimitRetries:   parseInt(val('rateLimitRetries'), 10) || 0,
+        rateLimitMaxWaitMs: parseInt(val('rateLimitMaxWaitMs'), 10) || 0,
         fallbackChain:  _fallbacksRead(id),
         compactAt:      parseInt(val('compactAt'), 10) || 0,
         warnAt:         parseInt(val('warnAt'), 10) || 0,
