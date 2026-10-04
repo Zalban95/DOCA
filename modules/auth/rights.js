@@ -85,7 +85,8 @@ const TABLE = [
   // ── Everything else is the machine ──
   R(ANY, '/api/(files|fm-favorites|configs|config-favorites|keys|logs|setup|snapshots|stack|action)(/.*)?', 'host'),
   R(ANY, '/api/projects(/.*)?', 'host'),                   // a project is files and a shell
-  R(ANY, '/api/harness/(agent-import|identity|skills/import)', 'host'),  // who the agents are: persona.md, human.md, definitions
+  R(ANY, '/api/harness/(agent-import|identity|skills/import)', 'host'),
+  R(ANY, '/api/harness/skills/[^/]+/(adapt|restore)', 'host'),  // rewriting a skill is rewriting instructions the agent follows  // who the agents are: persona.md, human.md, definitions
   R(ANY, '/api/(docker|vms|models|services|mcp|skills|system|paths|prefs|startup)(/.*)?', 'host'),
 ];
 

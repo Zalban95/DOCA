@@ -66,6 +66,14 @@ async function docaSkillsLoad() {
     const b = Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: s.name });
     b.onclick = async () => { const r = await apiFetch(`/api/harness/skills/${encodeURIComponent(s.name)}`); appAlert(`${r.name} (${r.source})\n\n${r.body.slice(0, 3000)}${r.files.length ? `\n\nFiles: ${r.files.join(', ')}` : ''}`); };
     row.append(b, Object.assign(document.createElement('span'), { className: 'settings-tab-label', textContent: `${s.description}${s.source === 'local' ? ' — made here' : ''}` }));
+    if (s.harness) {
+      // Written for another harness and not adapted yet (settings/skill-audit.js).
+      const flag = Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: `⚠ for ${s.harness} — adapt` });
+      flag.style.cssText = 'color:var(--amber);border-color:var(--amber);flex-shrink:0';
+      flag.title = 'Written in another harness\'s terms (its tool names, placeholders). The agent translates it while reading; adapt it to make that permanent.';
+      flag.onclick = () => skillAuditOpen(s.name);
+      row.appendChild(flag);
+    }
     box.appendChild(row);
   }
 }

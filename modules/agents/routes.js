@@ -78,6 +78,11 @@ function mount(app) {
     try { res.json({ sources: require('../harness/skill-sources').detect({ project: projectOf(req.query.project) }) }); } catch (e) { fail(res, e); }
   });
   app.get('/api/harness/skills/:name', (req, res) => { try { res.json(skills.read(req.params.name)); } catch (e) { fail(res, e); } });
+  // Written for another harness? What, where, and the mechanical rewrite (harness/skill-audit.js).
+  const audit = require('../harness/skill-audit');
+  app.get('/api/harness/skills/:name/audit', (req, res) => { try { res.json(audit.audit(req.params.name)); } catch (e) { fail(res, e); } });
+  app.post('/api/harness/skills/:name/adapt', (req, res) => { try { res.json(audit.adapt(req.params.name, { apply: req.body?.apply === true })); } catch (e) { fail(res, e); } });
+  app.post('/api/harness/skills/:name/restore', (req, res) => { try { res.json(audit.restore(req.params.name)); } catch (e) { fail(res, e); } });
   app.post('/api/harness/skills/import', (req, res) => {
     try {
       if (req.body?.source) {
