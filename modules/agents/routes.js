@@ -67,9 +67,24 @@ function mount(app) {
   });
   const skills = require('../harness/skills');
   app.get('/api/harness/skills', (_req, res) => res.json({ skills: skills.list() }));
+  // Before /skills/:name, which would take "sources" for a skill's name. Other harnesses' procedures (skill-sources.js).
+  const projectOf = q => {
+    if (!q) return undefined;
+    const dir = path.resolve(String(q).replace(/^~(?=$|[/\\])/, require('os').homedir()));
+    if (!require('../utils').fmSafe(dir) || !fs.existsSync(dir)) throw Object.assign(new Error(`${dir} is not a folder the panel may read.`), { status: 400 });
+    return dir;
+  };
+  app.get('/api/harness/skills/sources', (req, res) => {
+    try { res.json({ sources: require('../harness/skill-sources').detect({ project: projectOf(req.query.project) }) }); } catch (e) { fail(res, e); }
+  });
   app.get('/api/harness/skills/:name', (req, res) => { try { res.json(skills.read(req.params.name)); } catch (e) { fail(res, e); } });
   app.post('/api/harness/skills/import', (req, res) => {
     try {
+      if (req.body?.source) {
+        return res.json({ imported: require('../harness/skill-sources').importSource(String(req.body.source), {
+          names: Array.isArray(req.body.names) ? req.body.names.map(String) : [], overwrite: req.body.overwrite === true,
+          project: projectOf(req.body.project) }) });
+      }
       const { fmSafe } = require('../utils');
       const dir = path.resolve(String(req.body?.folder || '').replace(/^~(?=$|[/\\])/, require('os').homedir()));
       if (!fmSafe(dir) || !fs.existsSync(dir)) throw Object.assign(new Error(`${dir} is not a folder the panel may read.`), { status: 400 });
