@@ -1922,6 +1922,8 @@ test('a turn from a watch is asked on the watch, with full auto as the third cho
   approval.setMode('manual');
   approval.settings().always.forEach(approval.forget);
   const watch = H.mkDevice('approval-watch', 'watch', H.WATCH_CAPS);
+  // The owner's watch: only a device whose owner holds `host` may approve (audit 2026-10-04).
+  require('../modules/api-v1/devices').update(watch.device.id, { userId: H.owner.user.id, orgId: H.owner.orgId });
   const session = memory.createSession({ label: 'from the wrist' });
 
   // A prompt the watch has answered stays in its list as an outcome view until
@@ -1971,6 +1973,21 @@ test('a turn from a watch is asked on the watch, with full auto as the third cho
   assert.equal(approval.settings().mode, 'auto', 'and the panel is in auto afterwards');
 
   approval.setMode('auto');
+});
+
+test('a member\'s watch is never asked to approve: the card waits at the panel (audit 2026-10-04)', async () => {
+  const approval = require('../modules/harness/approval');
+  const member = await H.signIn('member');
+  const watch = H.mkDevice('member-watch', 'watch', H.WATCH_CAPS);
+  require('../modules/api-v1/devices').update(watch.device.id, { userId: member.user.id, orgId: member.orgId });
+  const req = { tool: 'shell', summary: 'echo x', keys: ['shell:echo'] };
+  const client = { id: watch.device.id, kind: 'watch', name: 'Watch', user: { id: member.user.id, role: 'member' } };
+  const { id } = approval.askAnywhere(req, { client });
+  await H.sleep(150);
+  const list = await H.api(watch.token, 'GET', '/api/v1/prompts');
+  assert.equal((list.body.prompts || []).length, 0, 'nothing on the wrist');
+  assert.ok(approval.pending().some(p => p.id === id), 'the panel has it');
+  approval.decide(id, 'deny');
 });
 
 /* ── One-off calls: the chain, high demand, and empty answers (2026-09-25) ── */

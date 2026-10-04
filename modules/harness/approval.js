@@ -251,7 +251,10 @@ function askAnywhere(req, { sessionId, signal, client } = {}) {
   // `kind: 'agent'` is a paired agent, not a person, and must never be asked
   // to approve on the user's behalf.
   const deviceId = client?.id && client.kind !== 'agent' && client.kind !== 'dashboard' ? client.id : null;
-  if (!deviceId) return { id, answer };
+  // Approving a tool call, and Full auto above all, are what the panel keeps to the `host` right
+  // (auth/rights.js). A device answers only for an owner whose role holds it; a member's or an
+  // ownerless device's turn is answered at the panel (audit 2026-10-04).
+  if (!deviceId || !require('../auth/rights').can(client.user?.role, 'host')) return { id, answer };
 
   const ctrl = new AbortController();
   const onAbort = () => ctrl.abort();
