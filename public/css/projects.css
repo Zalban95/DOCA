@@ -101,3 +101,19 @@ body:has(.pj-chat.open) .chat-fab { display: none; }
 /* A file shown as itself (projects/preview.js). */
 .pj-view { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 8px; }
 .pj-view-doc { align-items: flex-start; justify-content: flex-start; padding: 16px; }
+/* A markdown file as a document (projects/md-doc.js): prose in a reading font, code in mono. */
+.pj-md { max-width: 860px; width: 100%; margin: 0 auto; padding: 8px 24px 40px; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: var(--text); }
+.pj-md h1, .pj-md h2 { border-bottom: 1px solid var(--border); padding-bottom: 4px; margin: 1.2em 0 .6em; }
+.pj-md h1 { font-size: 1.8em; } .pj-md h2 { font-size: 1.4em; } .pj-md h3 { font-size: 1.15em; margin: 1em 0 .5em; }
+.pj-md p, .pj-md ul, .pj-md ol, .pj-md blockquote, .pj-md pre, .pj-md table { margin: 0 0 1em; }
+.pj-md code, .pj-md pre { font-family: var(--mono, ui-monospace, monospace); font-size: 12.5px; }
+.pj-md pre { padding: 12px; overflow: auto; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; }
+.pj-md img { max-width: 100%; }
+.pj-md a { cursor: pointer; }
+.pj-md li.pj-md-task { list-style: none; margin-left: -18px; }
+.pj-md li.pj-md-task input { margin-right: 6px; vertical-align: middle; }
+.pj-md-meta { font-size: 12px; border-collapse: collapse; margin: 0 0 16px; opacity: .8; }
+.pj-md-meta th { text-align: left; padding: 2px 12px 2px 0; color: var(--muted); font-weight: normal; }
+.pj-md-missing { color: var(--muted); font-style: italic; }
+.pj-md details { margin: 0 0 1em; } .pj-md summary { cursor: pointer; }
+.pj-md kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; font-size: .85em; }

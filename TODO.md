@@ -1184,6 +1184,15 @@ back; the list view could be its fallback.
 
 ## Projects: an IDE, and its chats out of the orchestrator's way (asked for 2026-09-28)
 
+**Asked 2026-10-04, built in 2.137.0 — markdown files render as documents**
+(`public/js/projects/md-doc.js`). A .md opens rendered (✎ Source a click away;
+not when opened at a line from search): front matter as a key/value box, a
+relative image drawn when it resolves inside the project (never a remote one),
+relative links open the file in a tab and #heading scrolls, ~~strike~~ and task
+boxes, code coloured by Monaco, a reading font, and GitHub's safe HTML subset
+(details/summary, kbd, sub/sup, br…) rebuilt without attributes. markdown.js —
+the renderer for model output, which must never fetch a URL — is unchanged.
+
 **Asked 2026-10-04, built in 2.135.0 — git managed from Source control**
 (`modules/projects/git-manage.js`). Initialize a repository (optionally with a
 first commit), set the remote, Fetch / Pull (fast-forward only) / Push (sets the

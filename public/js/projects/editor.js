@@ -93,7 +93,9 @@ async function pjOpenFile(path, line, col) {
       return;
     }
     const model = monaco.editor.createModel(r.content, _pjLang(monaco, path), monaco.Uri.file(path));
-    tab = { key: path, path, title: path.split('/').pop(), model, saved: model.getAlternativeVersionId() };
+    // A markdown file opens as the document it is; ✎ Source is one click. Not when asked for a line (search).
+    tab = { key: path, path, title: path.split('/').pop(), model, saved: model.getAlternativeVersionId(),
+      preview: !line && pjRenderedKind(path) === 'markdown' };
     PJE.tabs.push(tab);
     pjLspAttach(model);   // problems, hover, completion, definition — when its language server is here (projects/lsp.js)
   }
