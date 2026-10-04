@@ -96,6 +96,7 @@ function afterOrchestrator(sessionId, r) {
     const { hasScope } = require('../api-v1/scopes');
     bus.publishWhere(devices.list(), d => hasScope(d.scopes, 'harness:chat'), 'agent.turn', {
       turnId: `auto_${Date.now().toString(36)}`, sessionId, state: 'done', by: 'panel', text: short(r.text, 4000),
+      ...require('../presence').quietFlag(),
     });
   } catch { /* the chat has it either way */ }
 }

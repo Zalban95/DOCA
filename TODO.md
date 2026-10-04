@@ -157,6 +157,8 @@ console* for the files, what is built and what is open.
   fixed there, a re-pair kept the old cursor and `since=<old seq>` acked the new
   device's first queue.)
 - The clients version themselves (PROTOCOL §2). → *Version and identity*.
+- DocaMobile and DocaWear read `quiet: true` on `agent.turn` / `agent.mission`
+  (hub 2.127.0, PROTOCOL §11.4): update, but no notification and no buzz.
 
 ## To discuss next (asked for 2026-09-26, not decided)
 
@@ -286,6 +288,12 @@ and would show "running" forever — and sending it ephemeral does not help,
 because DocaMobile notifies on any `agent.mission`/`agent.turn` done it sees.
 So it needs a field the clients read, e.g. `quiet: true` meaning "update, do not
 notify": an `/api/v1` addition and a change in DocaMobile and DocaWear.
+**Decided with Al 2026-10-04; hub side built in 2.127.0:** `quiet: true` on
+`agent.turn` (automatic replies only) and `agent.mission` (missions and work
+chats starting/finishing) while somebody reads the panel (PROTOCOL §11.4); a
+quiet event wakes no watch. Never on a turn a device asked for. **Left, on
+portal:** DocaMobile's `PushService` skips the notification when `quiet` is
+true, and DocaWear's `DocaNotifier` skips the buzz — both still update state.
 
 ## MCP and VMs, deliberately left out of the first pass
 

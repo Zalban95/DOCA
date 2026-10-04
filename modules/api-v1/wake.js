@@ -46,6 +46,7 @@ function phonesFor(watch) {
 
 function onEvent(deviceId, env) {
   if (env.class !== 'durable' || !WAKES.has(env.type)) return;
+  if (env.payload?.quiet) return;   // the owner is at the panel: nothing worth waking a wrist for
   const watch = devices.get(deviceId);
   if (!isWatch(watch) || watch.revokedAt || awake(deviceId)) return;
   if (Date.now() - (_last.get(deviceId) || 0) < THROTTLE_MS) return;

@@ -9882,6 +9882,10 @@
               }
             },
             "description": "On `done`: present only when the fallback chain moved the turn to another model — including a turn that never reached the configured model, because it stalled in the last few minutes."
+          },
+          "quiet": {
+            "type": "boolean",
+            "description": "Present and true when the owner is reading the panel right now: update what you show, raise no notification. Only on turns the hub started itself, never on one a device asked for."
           }
         }
       },
@@ -9947,6 +9951,10 @@
           },
           "error": {
             "type": "string"
+          },
+          "quiet": {
+            "type": "boolean",
+            "description": "Present and true when the owner is reading the panel right now: update what you show, raise no notification."
           }
         }
       },

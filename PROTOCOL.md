@@ -464,10 +464,10 @@ data: {"reason":"revoked"}
 | `alert` | durable, high | `{ id, title, body[], priority, haptic, from, ext }` |
 | `profile.changed` | durable | `{ version, etag, updatedBy, url }` — refetch the profile |
 | `agent.message` | durable | `{ from, type, payload, ext }` — free-form from the agent |
-| `agent.turn` | durable | `{ turnId, sessionId, state: started\|done\|failed, by, message?, text?, steps?, proposals[]?, error? }` — one conversation turn (§23) |
+| `agent.turn` | durable | `{ turnId, sessionId, state: started\|done\|failed, by, message?, text?, steps?, proposals[]?, error?, quiet? }` — one conversation turn (§23) |
 | `agent.text` | ephemeral | `{ turnId, sessionId, delta }` — reply text as produced; **only to the device that posted the message** |
 | `agent.tool` | ephemeral | `{ turnId, sessionId, name, phase: call\|result, step, args?, ok?, preview? }` |
-| `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|paused\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error? }` — a specialist agent's work, to every device with `harness:chat`. `paused` means a restart cut it off; the agent asks the user whether to continue on the next turn from any device. `GET /harness/missions` is the same picture for a client that has just woken up. |
+| `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|paused\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error?, quiet? }` — a specialist agent's work, to every device with `harness:chat`. `paused` means a restart cut it off; the agent asks the user whether to continue on the next turn from any device. `GET /harness/missions` is the same picture for a client that has just woken up. |
 | `artifact.deliver` | durable | `{ artifact, inline?, inlineEncoding?: utf8|base64, message, ext }` |
 | `sensor.request` | durable (ttl = duration + 30 s) | `{ request: { id, sensors: [{ id, mode, rateHz, durationSec, unit }], reason, ext, expiresAt } }` |
 | `sensor.stop` | durable | `{ requestId, reason }` |
@@ -483,6 +483,15 @@ data: {"reason":"revoked"}
 | `device.vars` | durable | `{ deviceId, vars, version, updatedAt, changed[] }` |
 | `device.message` | durable | `{ from, type, payload, ext }` |
 | `sensor.samples` | ephemeral | `{ deviceId, requestId, samples[] }` |
+
+**`quiet: true`** (hub 2.127.0) may appear on `agent.turn` and `agent.mission`
+when the hub itself started the work — an automatic reply, a mission or work
+chat starting or finishing — **and the owner is reading the panel right now**
+(the panel reports its page visible every 30 s). It means: update what you show,
+**raise no notification and no haptic**. It is never set on a turn a device
+asked for. Absent means notify as before; a client that ignores the field (§3)
+only notifies once more than it needs to. A quiet event does not trigger a
+`device.wake` for a watch.
 
 ## 12. Prompts — the interaction protocol
 
