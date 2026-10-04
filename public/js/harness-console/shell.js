@@ -54,6 +54,6 @@ function _harnessConsoleBuild() {
   _hcRendered = h.id;
 
   shell.innerHTML = h.kind === 'builtin' ? _hcBuiltinHtml(h) : _hcExternalHtml(h);
-  if (h.kind === 'builtin') { _hcLoadSessions(); _hcLoadMemory(); _hcLoadProposals(); _hcLoadAgents(); _hcStatus(); _hcLoadApproval(); }
+  if (h.kind === 'builtin') { _hcLoadSessions(); _hcLoadMemory(); _hcLoadProposals(); _hcLoadAgents(); hcRecipesLoad(); _hcStatus(); _hcLoadApproval(); }
   else requestAnimationFrame(() => _harnessTermOpen(h));
 }

@@ -13,6 +13,7 @@ function mount(app) {
   // What this host can do, probed per OS (host-capabilities.js, hive.md §7).
   app.get('/api/host/capabilities', (req, res) => res.json(require('../host-capabilities').capabilities({ fresh: req.query.fresh === '1' })));
   require('./tab-routes').mount(app);
+  require('../recipes/routes').mount(app);   // recipes: what worked, run again without the thinking (recipes/)
   require('../channels/telegram/routes').mount(app);   // Telegram as a channel (channels/telegram)
   require('../computers/routes').mount(app);   // computers for agents (computers/)           // a conversation as a chat tab: title, mode, approval, its queue
   require('./guard/routes').mount(app);         // the guards that screen what the airlock lets in (guard/)

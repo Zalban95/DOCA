@@ -70,10 +70,12 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [ ] H2.5 Migrations for prefs keys (rename, move, default) — the upgradability gap.
 
 **H3 · Recipes — repeat it without the thinking** (§2.3)
-- [ ] H3.1 Recipe format (parameters, steps = tool calls, checks), stored per hive. [IO] runnable
-  script per OS + Agent Skills `scripts/`.
-- [ ] H3.2 "Save as recipe" from a finished turn, and `recipe_save` for the agent.
-- [ ] H3.3 `recipe_run` and a Run button: no model, the same gate/permits/approvals per step.
+- [x] H3.1 (2.159.0) Recipe format (parameters, steps = tool calls, checks), stored per hive. [IO] runnable
+  script per OS + Agent Skills `scripts/` (bash/PowerShell export for shell-only recipes; the Skills folder itself comes with H4).
+- [x] H3.2 (2.159.0) "Save as recipe" from a finished turn, and `recipe_save` for the agent (`recipe save_last` / `save`;
+  "＋ last turn" in the Harness side panel). Left: the button on the turn itself in the transcript.
+- [x] H3.3 (2.159.0) `recipe_run` and a Run button: no model, the same gate/permits/approvals per step (through
+  `runToolCalls` itself). Left: filling parameters from a sentence with the cheapest model.
 - [ ] H3.4 A failed step goes to the agent with the log; it proposes the repaired revision. [X]
 - [ ] H3.5 Skills link their recipes; device macros and install proposals become recipes.
 

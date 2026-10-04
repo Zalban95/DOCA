@@ -42,6 +42,12 @@ function _hcBuiltinHtml(h) {
         <div id="hc-agents" class="hc-agents"><div class="placeholder">Loading…</div></div>
         <div class="hc-roster-links">Tools held by the <a href="#" onclick="hcAgentTools('orchestrator');return false">Orchestrator</a>
           · <a href="#" onclick="hcAgentTools('work');return false">a work chat</a></div>
+
+        <div class="hc-side-head" style="margin-top:10px">
+          Recipes
+          <button class="btn btn-xs" onclick="hcRecipeKeep()" title="Keep what this conversation's last turn did, as a recipe">＋ last turn</button>
+        </div>
+        <div id="hc-recipes" class="hc-agents"><div class="placeholder">Loading…</div></div>
       </div>
 
       <div class="hc-main">

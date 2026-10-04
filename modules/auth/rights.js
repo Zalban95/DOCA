@@ -95,6 +95,8 @@ const TABLE = [
   R(ANY, '/api/(files|fm-favorites|configs|config-favorites|keys|logs|setup|snapshots|stack|action)(/.*)?', 'host'),
   R(ANY, '/api/projects(/.*)?', 'host'),
   R(ANY, '/api/computers(/.*)?', 'host'),
+  R('DELETE', '/api/recipes/[^/]+', 'host'),                   // a recipe the hive shares (recipes/routes.js)
+  R(ANY, '/api/recipes(/.*)?', 'chat'),                       // reading, saving and running one: as the signed-in person
   R('POST', '/api/channels/telegram', 'host'),               // the bot's token and switch: it answers as the hive
   R(ANY, '/api/channels/telegram(/.*)?', 'chat'),             // a link code, and one's own linked chats (channels/telegram/routes.js)
   R(GET, '/computers/[a-f0-9]+/vnc(/.*)?', 'host'),         // a computer's screen, proxied (computers/vnc.js)                  // computers for agents: containers on this machine (computers/)                   // a project is files and a shell
