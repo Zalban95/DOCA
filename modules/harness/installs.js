@@ -93,6 +93,17 @@ const KINDS = {
     /** A vendor installer may need sudo, and the agent must never hold that. */
     needsPassword: id => !!require('./catalog').get(id)?.installCmd?.includes('sudo '),
   },
+
+  // An MCP server from the panel's catalogue (mcp/catalog.js): added, not started — its command is the catalogue's.
+  mcp: {
+    label: 'MCP server',
+    verb: 'Add',
+    validate: id => (require('../mcp/catalog').get(id) ? null
+      : `No catalogue server "${id}". The catalogue has: ${require('../mcp/catalog').CATALOG.map(c => c.id).join(', ')}`),
+    describe: id => { const c = require('../mcp/catalog').get(id); return c ? `Add ${c.label} as an MCP server (${c.about}) — off until started.` : `Add ${id}.`; },
+    handler: () => async (req, res) => { try { res.json({ ok: true, server: await require('../mcp/catalog').add(req.body.id) }); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } },
+    request: id => ({ body: { id } }),
+  },
 };
 
 /** What the agent is told it may ask for. */

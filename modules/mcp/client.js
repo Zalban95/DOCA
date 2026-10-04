@@ -58,9 +58,10 @@ class McpClient {
 
   _spawn() {
     if (!this.spec.command) throw new Error('command required for a stdio server');
-    const child = spawn(this.spec.command, this.spec.args || [], {
+    const how = require('./spawn-spec').spawnSpec(this.spec.command, this.spec.args || []);   // npx.cmd on Windows
+    const child = spawn(how.file, how.args, {
       cwd: this.spec.cwd || undefined,
-      env: { ...process.env, ...(this.spec.env || {}) },
+      env: { ...process.env, ...(this.spec.env || {}) }, ...how.opts,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     this.child = child;

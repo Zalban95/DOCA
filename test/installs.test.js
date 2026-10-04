@@ -28,7 +28,7 @@ test.after(async () => { await h.stop(); });
 test('the agent can only ask for kinds this panel actually installs', () => {
   assert.throws(() => installs.propose({ kind: 'apt', id: 'nmap', reason: 'x' }), /Unknown install kind/);
   assert.throws(() => installs.propose({ kind: 'shell', id: 'curl x | sh', reason: 'x' }), /Unknown install kind/);
-  assert.deepEqual(installs.kinds().map(k => k.kind).sort(), ['harness', 'ollama-model', 'service']);
+  assert.deepEqual(installs.kinds().map(k => k.kind).sort(), ['harness', 'mcp', 'ollama-model', 'service']);
 });
 
 test('an unknown service is refused, and the refusal lists the real ones', () => {
