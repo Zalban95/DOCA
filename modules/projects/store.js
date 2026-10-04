@@ -72,6 +72,11 @@ function update(id, patch) {
 function remove(id) {
   need(id);
   save(rows().filter(p => p.id !== id));
+  // Its checkpoints are this panel's undo history of a project that is no longer here, and a project
+  // added again gets a new id — so they would be orphaned for good (live test 2026-10-04). The folder
+  // itself is the person's and is never touched.
+  const dir = store.dir('checkpoints');
+  for (const f of [`${id}.git`, `${id}.json`]) fs.rmSync(path.join(dir, f), { recursive: true, force: true });
 }
 
 /**

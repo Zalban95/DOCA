@@ -146,3 +146,15 @@ test('a checkpoint can be renamed, given a note, pinned past the keep limit, and
   assert.ok(!kept.includes('cp_f0'), 'the oldest unpinned is dropped');
   assert.equal(kept.length, 61);
 });
+
+test('removing a project removes its checkpoints, never its folder (live test 2026-10-04)', async () => {
+  const root = fs.mkdtempSync(path.join(H.tmp, 'gone-'));
+  fs.writeFileSync(path.join(root, 'a.txt'), 'a');
+  const p = projects.create({ root });
+  await cps.take(p, { label: 'one' });
+  const dir = require('../modules/store').dir('checkpoints');
+  assert.ok(fs.existsSync(path.join(dir, `${p.id}.git`)));
+  assert.equal((await H.api(null, 'DELETE', `/api/projects/${p.id}`)).status, 200);
+  assert.ok(!fs.existsSync(path.join(dir, `${p.id}.git`)) && !fs.existsSync(path.join(dir, `${p.id}.json`)));
+  assert.ok(fs.existsSync(path.join(root, 'a.txt')), 'the folder is the person\'s');
+});
