@@ -28,6 +28,7 @@ async function harnessConfigToggle(id, keepOpen) {
   strip.innerHTML = _harnessParamsHtml(h, meta);
   _harnessLoadModels(id, h.config.provider, h.config.model);
   _harnessFallbacksMount(id, h.config.fallbackChain);
+  _harnessEscalateMount(id, h.config.escalateTo);
   harnessOllamaHint(id);   // the context Ollama really serves (harness/ollama-hint.js)
   _harnessFoldHint(id, h.foldWarning);
 }
@@ -162,6 +163,18 @@ function _harnessParamsHtml(h, meta) {
           cannot run the agent, it can only talk about it.
         </small>
       </div>
+      <label>When a job is stuck</label>
+      <div>
+        <div class="hcfg-fallbacks" id="hcfg-escalate-${h.id}"></div>
+        <button class="btn btn-xs" id="hcfg-escalate-add-${h.id}"
+                onclick="harnessEscalateAdd(${jsArg(h.id)})">+ Try a stronger model</button>
+        <small class="harness-hint">
+          A work chat is stuck when the same step keeps failing the same way, or its turns stop doing anything.
+          With a model here it gets <strong>one more try on it</strong> before it is reported blocked — the chat's
+          model picker shows the switch and the Orchestrator is told. <strong>None is the default:</strong> a
+          stronger model usually costs more, so this only happens if you choose one.
+        </small>
+      </div>
     </div>
     <div class="harness-cfg-actions">
       <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
@@ -244,6 +257,7 @@ async function harnessConfigSave(id) {
         rateLimitRetries:   parseInt(val('rateLimitRetries'), 10) || 0,
         rateLimitMaxWaitMs: parseInt(val('rateLimitMaxWaitMs'), 10) || 0,
         fallbackChain:  _fallbacksRead(id),
+        escalateTo:     _harnessEscalateRead(id),
         compactAt:      parseInt(val('compactAt'), 10) || 0,
         warnAt:         parseInt(val('warnAt'), 10) || 0,
         systemPrompt:   val('systemPrompt') || '',

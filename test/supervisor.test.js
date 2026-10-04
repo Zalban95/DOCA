@@ -200,3 +200,77 @@ test('a turn that looped on one failing call ends the job as blocked, not with a
   assert.ok(!woken.some(w => w.sessionId === id), 'no further turn for the looping job');
   assert.deepEqual(woken.map(w => w.sessionId), [ceo()]);
 });
+
+/* ── A stuck job gets one try on a stronger model (escalate.js) ── */
+
+function withStrongModel() {
+  const fs = require('node:fs');
+  const { CONFIG_PATH } = require('../modules/paths');
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify({ models: { providers: {
+    stub: { baseUrl: 'http://127.0.0.1:9/v1' }, big: { baseUrl: 'http://127.0.0.1:9/v1' },
+  } } }));
+  catalog.saveConfig(catalog.BUILTIN_ID, { provider: 'stub', model: 'weak', fallbackChain: [], escalateTo: { provider: 'big', model: 'strong' } });
+}
+function loopedSignal() {
+  const failures = require('../modules/harness/turn/failures');
+  const signal = new AbortController().signal;
+  for (let i = 0; i < 3; i++) failures.note(signal, 'read_file', { path: '/x' }, 'Error: ENOENT: no such file or directory');
+  return failures.looped(signal);
+}
+
+test('a looping job is moved to the stronger model once, visibly, and blocked if it loops again', async () => {
+  fresh();
+  withStrongModel();
+  const id = job('Hard file');
+  assert.equal(supervisor.decide(id, { steps: 4, looped: loopedSignal() }), 'woken');
+  await settle();
+  assert.deepEqual(woken.map(w => w.sessionId), [id], 'the job itself gets the try, the Orchestrator is not woken');
+  assert.match(woken[0].message, /You were stuck: read_file failed the same way 3 times.*big\/strong/s);
+  assert.deepEqual(memory.getSession(id).modelChoice, { provider: 'big', model: 'strong', fallback: true },
+    'the conversation\'s own model choice, so the picker shows it');
+  assert.equal(require('../modules/harness/turn/choice').apply(require('../modules/harness/agent').params(), id).model, 'strong');
+  assert.equal(jobOf(id).escalated.from, 'stub/weak');
+  assert.ok(org.notices(ceo()).some(n => /Escalated: .*Trying once on big\/strong instead of stub\/weak/.test(n.text)),
+    'the Orchestrator is told, without being woken');
+
+  woken = [];
+  assert.equal(supervisor.decide(id, { steps: 4, looped: loopedSignal() }), 'woken');
+  await settle();
+  assert.equal(jobOf(id).state, 'blocked');
+  assert.deepEqual(woken.map(w => w.sessionId), [ceo()]);
+  assert.match(woken[0].message, /already been moved to big\/strong/);
+});
+
+test('a job that stops doing anything escalates too; running out of turns does not', async () => {
+  fresh();
+  withStrongModel();
+  const idle = job('Idle');
+  for (let i = 0; i < supervisor.IDLE_TURNS_MAX; i++) supervisor.decide(idle, { steps: 1 });
+  await settle();
+  woken = [];
+  supervisor.decide(idle, { steps: 1 });
+  await settle();
+  assert.match(woken.at(-1).message, /You were stuck: its last 3 turns did nothing/);
+  assert.equal(jobOf(idle).state, 'working');
+
+  fresh({ perJob: 1 });
+  withStrongModel();
+  const long = job('Budget');
+  supervisor.decide(long, { steps: 9 });
+  await settle();
+  woken = [];
+  supervisor.decide(long, { steps: 9 });
+  await settle();
+  assert.equal(jobOf(long).state, 'stalled', 'the budget is the budget');
+  assert.equal(memory.getSession(long).modelChoice ?? null, null);
+});
+
+test('with no stronger model named, a looping job is blocked exactly as before', async () => {
+  fresh();
+  catalog.saveConfig(catalog.BUILTIN_ID, { escalateTo: null });
+  const id = job('Plain');
+  supervisor.decide(id, { steps: 4, looped: loopedSignal() });
+  await settle();
+  assert.equal(jobOf(id).state, 'blocked');
+  assert.equal(memory.getSession(id).modelChoice ?? null, null);
+});

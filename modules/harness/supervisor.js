@@ -139,11 +139,15 @@ function decide(id, info = {}) {
   }
 
   // The same call failed the same way three times or more (turn/failures.js):
-  // another automatic turn would pay for the same loop. The job is blocked, and says on what.
+  // another automatic turn would pay for the same loop. One try on a stronger
+  // model if one is configured (escalate.js); otherwise the job is blocked, and says on what.
+  const escalate = require('./escalate');
   if (info.looped) {
+    const why = `${info.looped.tool} failed the same way ${info.looped.times} times in one turn (${info.looped.kind})`;
+    const retry = escalate.tryEscalate(s, why, require('./agent').params());
+    if (retry) return wake(id, retry, { retry: () => decide(id) });
     setJob(id, { ...job, state: 'blocked' });
-    org.report(id, 'blocked', `Blocked: ${info.looped.tool} failed the same way ${info.looped.times} times in one turn `
-      + `(${info.looped.kind}). Last brief: ${short(s.brief, 300) || '(none)'}`, 'panel');
+    org.report(id, 'blocked', `Blocked: ${why}.${escalate.note(s)} Last brief: ${short(s.brief, 300) || '(none)'}`, 'panel');
     return deliver(s.parentId);
   }
 
@@ -152,12 +156,18 @@ function decide(id, info = {}) {
   // A turn cut off at the length limit did not do nothing: it ran out of room (turn/fallback.truncationNotice).
   const idleTurns = !info.truncated && info.steps != null && info.steps <= 1 ? (job.idleTurns || 0) + 1 : 0;
   const autoTurns = (job.autoTurns || 0) + 1;
+  if (autoTurns <= perJob && idleTurns > IDLE_TURNS_MAX) {
+    // Doing nothing is stuck; running out of turns is the budget, and is not escalated.
+    const retry = escalate.tryEscalate({ ...s, job: { ...job, autoTurns } }, `its last ${IDLE_TURNS_MAX} turns did nothing`,
+      require('./agent').params());
+    if (retry) return wake(id, retry, { retry: () => decide(id) });
+  }
   if (autoTurns > perJob || idleTurns > IDLE_TURNS_MAX) {
     const why = autoTurns > perJob
       ? `it has taken ${perJob} turns on its own (autoTurnsPerJob) without a final report`
       : `its last ${IDLE_TURNS_MAX} turns did nothing`;
     setJob(id, { ...job, state: 'stalled', autoTurns, idleTurns });
-    org.report(id, 'blocked', `Stalled: ${why}. Last brief: ${short(s.brief, 300) || '(none)'}`, 'panel');
+    org.report(id, 'blocked', `Stalled: ${why}.${escalate.note(s)} Last brief: ${short(s.brief, 300) || '(none)'}`, 'panel');
     return deliver(s.parentId);
   }
   setJob(id, { ...job, state: 'working', autoTurns, idleTurns });

@@ -656,7 +656,7 @@ test('every harness parameter has a box in the panel to type it into', () => {
   // fallbackChain the repeatable provider/model rungs beside them. Each is in
   // the same config strip — the point of this list is that nothing is reachable
   // only by editing the prefs file, not that everything is a number box.
-  const elsewhere = ['provider', 'model', 'systemPrompt', 'disabledTools', 'fallbackChain'];
+  const elsewhere = ['provider', 'model', 'systemPrompt', 'disabledTools', 'fallbackChain', 'escalateTo'];
   for (const key of Object.keys(providers.defaultParams())) {
     if (elsewhere.includes(key)) continue;
     assert.ok(fields.includes(key), `${key} has no field in the harness config panel`);

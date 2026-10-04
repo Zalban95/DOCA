@@ -145,6 +145,10 @@ function defaultParams() {
     // retried. 0 retries restores failing on the first 429 (turn/rate-limit.js).
     rateLimitRetries:   2,
     rateLimitMaxWaitMs: 60000,
+    // A stuck job's one try on a stronger model before it is called blocked
+    // (escalate.js): { provider, model }. null = off — which model is stronger,
+    // and whether it is worth the price, is the user's call, never guessed.
+    escalateTo: null,
     // Work that finishes itself (harness/supervisor.js). A work chat keeps going
     // until it files a final report — done, failed, blocked, or a question — or
     // someone stops it; the panel starts the next turn when one ends short of
