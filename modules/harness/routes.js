@@ -25,6 +25,10 @@ function fail(res, e) {
 }
 
 const wrap = fn => async (req, res) => { try { await fn(req, res); } catch (e) { fail(res, e); } };
+// A person without host sees and uses only their own conversations (session-access.js).
+const access = require('./session-access');
+const who = req => req.auth && { ...req.auth.user, role: req.auth.role, orgId: req.auth.orgId };
+const own = handler => wrap(async (req, res) => { access.check(who(req), req.params.id); return handler(req, res); });
 
 /* ── Catalog ──────────────────────────────────────────── */
 
@@ -142,7 +146,8 @@ async function handleChat(req, res) {
 
   try {
     const { sessionId, steps } = await agent.turn({
-      message: String(message), sessionId: req.body?.sessionId, emit, signal: ctrl.signal,
+      message: String(message), emit, signal: ctrl.signal,
+      sessionId: req.body?.sessionId ? (access.check(who(req), req.body.sessionId), req.body.sessionId) : access.defaultFor(who(req)),
       // The browser tags itself too: "who is asking" must never be missing, or
       // the agent would answer a watch the way it answers a 27-inch monitor.
       client: require('./turn/client').dashboardClient(req),
@@ -157,29 +162,30 @@ async function handleChat(req, res) {
   res.end();
 }
 
-const handleSessions = wrap(async (_req, res) => {
-  const main = memory.mainSession();
-  const data = memory.listSessions();
-  res.json({ main: main.id, active: data.active || main.id, sessions: data.sessions.map(organization.view) });
+const handleSessions = wrap(async (req, res) => {
+  const main = memory.mainSession(), person = who(req), data = memory.listSessions();
+  if (!person?.id || access.isHost(person))
+    return res.json({ main: main.id, active: data.active || main.id, sessions: data.sessions.map(organization.view) });
+  res.json({ main: null, active: access.newestOwn(person), sessions: access.visible(person, data.sessions).map(organization.view) });
 });
 
 const handleSessionNew = wrap(async (req, res) => {
   const session = organization.create(req.body || {});
-  memory.setActive(session.id);
+  access.claim(who(req), session.id);
+  if (access.mayUse(who(req), memory.mainSession().id)) memory.setActive(session.id);   // the active pointer is the host's
   res.json({ session });
 });
 
-const handleSession = wrap(async (req, res) => {
+const handleSession = own(async (req, res) => {
   const session = memory.getSession(req.params.id);
-  if (!session) return res.status(404).json({ error: 'Unknown session' });
   res.json({ session: { ...session, ...organization.view(session) }, messages: memory.messages(req.params.id) });
 });
 
-const handleSessionArchive = wrap(async (req, res) =>
+const handleSessionArchive = own(async (req, res) =>
   res.json({ session: organization.archive(req.params.id, req.body?.on !== false) }));
-const handleSessionStop = wrap(async (req, res) =>
+const handleSessionStop = own(async (req, res) =>
   res.json({ stopped: agent.cancel(req.params.id) }));
-const handlePlan = wrap(async (req, res) => {
+const handlePlan = own(async (req, res) => {
   const plan = organization.plan(req.params.id, req.body || {}, { user: true });
   // Approve is the go-ahead: the work starts (organization.carryOut).
   const started = req.body?.action === 'approve'
@@ -187,10 +193,10 @@ const handlePlan = wrap(async (req, res) => {
   res.json({ plan, ...(started ? { started } : {}) });
 });
 
-const handleSessionActivate = wrap(async (req, res) =>
-  res.json({ ok: true, active: memory.setActive(req.params.id) }));
+const handleSessionActivate = own(async (req, res) =>
+  res.json({ ok: true, active: access.isHost(who(req)) || !who(req)?.id ? memory.setActive(req.params.id) : req.params.id }));
 
-const handleSessionDelete = wrap(async (req, res) => {
+const handleSessionDelete = own(async (req, res) => {
   memory.deleteSession(req.params.id);
   res.json({ ok: true });
 });
@@ -228,6 +234,7 @@ const handleMemoryFlag = wrap(async (req, res) =>
 /** What the agent is told about this machine, verbatim, so the user can read it. */
 const handleEnvironment = wrap(async (req, res) => {
   const id = req.query.sessionId;
+  if (id) access.check(who(req), String(id));
   res.json({ snapshot: environment.snapshot(), block: environment.block(), charter: providers.SAFETY_CHARTER,
     // `readings` is the after-history block verbatim, so it carries the mission
     // state a turn sends as well — by the same helper the turn uses, which keeps
@@ -246,8 +253,10 @@ const handleEnvironment = wrap(async (req, res) => {
  * of", which is the question when the window is a million tokens and the bill
  * is per step.
  */
-const handlePromptSize = wrap(async (req, res) =>
-  res.json(agent.breakdown({ message: String(req.query.message || ''), sessionId: req.query.sessionId || null })));
+const handlePromptSize = wrap(async (req, res) => {
+  if (req.query.sessionId) access.check(who(req), String(req.query.sessionId));
+  res.json(agent.breakdown({ message: String(req.query.message || ''), sessionId: req.query.sessionId || null }));
+});
 
 const handleSettingsRead = wrap(async (_req, res) =>
   res.json({ settings: settings.readable(), sections: settings.SETTABLE }));

@@ -20,7 +20,7 @@ const { execFile } = require('child_process');
 
 const shell = require('../shell');
 
-const SKIP_DIRS = new Set(['.git', 'node_modules', '.gradle', 'build', 'dist', 'out', 'target', '.next', '.venv', 'venv', '__pycache__', '.idea', '.dart_tool', 'Pods', '.releases']);
+const SKIP_DIRS = new Set(['.git', 'node_modules', '.gradle', 'build', 'dist', 'out', 'target', '.next', '.venv', 'venv', '__pycache__', '.pytest_cache', '.mypy_cache', '.ruff_cache', '.tox', '.idea', '.dart_tool', 'Pods', '.releases']);
 const MAX_FILE = 2 << 20;
 const MAX_MATCHES = 2000;
 

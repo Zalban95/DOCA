@@ -16,6 +16,7 @@ before(async () => {
   realHome = process.env.HOME; realProfile = process.env.USERPROFILE;
   process.env.HOME = process.env.USERPROFILE = fakeHome;
   put('.claude/skills/pdf-tables/SKILL.md', '---\nname: pdf-tables\ndescription: Pull tables out of PDFs.\n---\nUse pdfplumber.\n');
+  put('.claude/skills/synced/acct_1/xlsx/SKILL.md', '---\nname: xlsx\ndescription: Spreadsheets.\n---\nUse openpyxl.\n');
   put('.claude/plugins/cache/mkt/eng/1.0/skills/deploy-check/SKILL.md', '---\nname: deploy-check\ndescription: Before a deploy.\n---\nRun the checklist.\n');
   put('.claude/commands/Review PR.md', '---\ndescription: Review the current branch\n---\nRead the diff and list risks.\n');
   put('.codex/prompts/release-notes.md', '# Write release notes\n\nFrom git log since the last tag.\n');
@@ -30,7 +31,7 @@ test('each harness\'s own shape is found, named and described', async () => {
   const r = await H.api(null, 'GET', `/api/harness/skills/sources?project=${encodeURIComponent(path.join(fakeHome, 'proj'))}`);
   assert.equal(r.status, 200, JSON.stringify(r.body));
   const by = Object.fromEntries(r.body.sources.map(s => [s.id, s.items]));
-  assert.deepEqual(by['claude-skills'].map(i => i.name), ['pdf-tables']);
+  assert.deepEqual(by['claude-skills'].map(i => i.name).sort(), ['pdf-tables', 'xlsx'], 'synced skills, two folders down, too (live test)');
   assert.deepEqual(by['claude-plugins'].map(i => i.name), ['deploy-check'], 'nested plugin skills are found');
   assert.deepEqual(by['claude-commands'][0], { name: 'review-pr', description: 'Review the current branch', here: false });
   assert.equal(by['codex-prompts'].find(i => i.name === 'release-notes').description, 'Write release notes', 'no front matter: the first line');

@@ -97,24 +97,32 @@ function brief(value, max) {
 
 /* ── Sessions ─────────────────────────────────────────── */
 
-function sessions() {
+// A device acts as the person it is paired to, who sees only their own conversations
+// unless they hold host (harness/session-access.js).
+const access = () => require('../harness/session-access');
+const ownerOf = device => require('../harness/turn/client').deviceOwner(device);
+const hostOrNobody = device => { const p = ownerOf(device); return !p?.id || access().isHost(p); };
+
+function sessions(device) {
   const { sessions: list, active } = memory.listSessions();
-  return { sessions: list, active };
+  if (hostOrNobody(device)) return { sessions: list, active };
+  return { sessions: access().visible(ownerOf(device), list), active: access().newestOwn(ownerOf(device)) };
 }
 
-function createSession(title, { activate = true } = {}) {
+function createSession(title, { activate = true, device } = {}) {
   const session = memory.createSession(typeof title === 'string' ? title.slice(0, 120) : undefined);
-  if (activate) memory.setActive(session.id);
+  access().claim(ownerOf(device), session.id);
+  if (activate && hostOrNobody(device)) memory.setActive(session.id);
   return session;
 }
 
-function activate(id) {
-  requireSession(id);
-  return memory.setActive(id);
+function activate(id, device) {
+  requireSession(id, device);
+  return hostOrNobody(device) ? memory.setActive(id) : id;
 }
 
-function removeSession(id) {
-  requireSession(id);
+function removeSession(id, device) {
+  requireSession(id, device);
   if (_running.has(id)) throw new ApiError(409, 'turn_in_flight', 'A turn is running in this conversation', { turnId: _running.get(id).turnId });
   memory.deleteSession(id);
 }
@@ -138,9 +146,9 @@ function imageView(image) {
   };
 }
 
-function requireSession(id) {
+function requireSession(id, device) {
   const session = memory.getSession(id);
-  if (!session) throw new ApiError(404, 'not_found', 'Unknown session');
+  if (!session || !access().mayUse(ownerOf(device), id)) throw new ApiError(404, 'not_found', 'Unknown session');
   return session;
 }
 
@@ -148,8 +156,8 @@ function requireSession(id) {
  * One conversation, tailored for a client that draws a chat: the tool plumbing
  * a model needs is reduced to the names of the tools that ran.
  */
-function transcript(id, { limit = 50 } = {}) {
-  const session = requireSession(id);
+function transcript(id, { limit = 50, device } = {}) {
+  const session = requireSession(id, device);
   const n = Math.min(Math.max(Number(limit) || 50, 1), MAX_HISTORY);
   const rows = memory.messages(id).slice(-n).map(row => ({
     role: row.role,
@@ -198,7 +206,8 @@ function post(body, device) {
     }
   }
 
-  const session = body?.sessionId ? requireSession(body.sessionId) : memory.mainSession();
+  const session = body?.sessionId ? requireSession(body.sessionId, device)
+    : hostOrNobody(device) ? memory.mainSession() : memory.getSession(access().defaultFor(ownerOf(device)));
 
   const inFlight = _running.get(session.id);
   if (inFlight) throw new ApiError(409, 'turn_in_flight', 'A turn is already running in this conversation', { turnId: inFlight.turnId });

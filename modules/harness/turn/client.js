@@ -160,7 +160,7 @@ function personById({ id, orgId }) {
 
 /**
  * The turn's client with its person (auth.md §6: work runs as whoever started it).
- * A person's own turn marks the conversation as theirs; a turn without one — a
+ * A person's own turn marks an unmarked conversation as theirs; a turn without one — a
  * mission, a work chat, an automatic turn — takes the person from the nearest
  * conversation above it that has one, and is refused when that person has been
  * suspended or removed since, so their delegated work stops with them.
@@ -169,7 +169,9 @@ function withPerson(client, sessionId) {
   const memory = require('../memory');
   if (client?.user) {
     const s = memory.getSession(sessionId);
-    if (s && s.person?.id !== client.user.id) memory.updateSession(sessionId, { person: { id: client.user.id, orgId: client.user.orgId } });
+    // The first person to write in a conversation owns it (harness/session-access.js); a host answering
+    // in somebody else's does not take it from them.
+    if (s && !s.person?.id) memory.updateSession(sessionId, { person: { id: client.user.id, orgId: client.user.orgId } });
     return client;
   }
   for (const id of [sessionId, ...require('../organization').ancestors(sessionId)]) {

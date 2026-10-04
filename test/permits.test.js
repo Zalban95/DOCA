@@ -141,3 +141,14 @@ test('approvals by device and by panel: Always and Approve all, offered by what 
   assert.throws(() => answer.answerAs({ id: c.id, decision: 'once', person: person(member) }), /someone else's turn/);
   approval.decide(c.id, 'deny');
 });
+
+test('a host\'s "always" on a member\'s level-asked call is that member\'s grant, not the panel\'s allowlist (live test)', () => {
+  const answer = require('../modules/harness/approval-answer');
+  const q = approval.ask({ tool: 'shell', keys: ['shell:uname'], summary: 'uname', level: true, personId: member.user.id }, {});
+  assert.equal(answer.answerAs({ id: q.id, decision: 'always', person: { ...H.owner.user, role: 'owner' } }), true);
+  assert.ok(!approval.settings().always.includes('shell:uname'), 'the allowlist was not touched');
+  const g = grants.list({ subjectKind: 'user', subjectId: member.user.id }).find(x => x.permission === 'approve:shell:uname');
+  assert.ok(g, 'the member holds it now');
+  assert.equal(permits.tool({ person: person(member), name: 'shell', args: { command: 'uname' } }).ask, false);
+  grants.revoke(g.id);
+});

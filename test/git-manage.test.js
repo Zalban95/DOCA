@@ -22,6 +22,7 @@ before(async () => {
   bare = fs.mkdtempSync(path.join(H.tmp, 'remote-'));
   execFileSync('git', ['init', '--bare', '-q', '-b', 'main', bare]);
   fs.writeFileSync(path.join(root, 'a.txt'), 'one\n');
+  fs.mkdirSync(path.join(root, '__pycache__')); fs.writeFileSync(path.join(root, '__pycache__', 'a.pyc'), 'x');
   p = projects.create({ root, name: 'Git buttons' });
 });
 after(() => H.stop());
@@ -31,6 +32,9 @@ test('a folder becomes a repository, with its files as the first commit', async 
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.branch, 'main');
   assert.match(execFileSync('git', ['-C', root, 'log', '--oneline']).toString(), /Initial commit/);
+  const tracked = execFileSync('git', ['-C', root, 'ls-files']).toString();
+  assert.match(tracked, /\.gitignore/);
+  assert.doesNotMatch(tracked, /__pycache__/, 'caches stay out of the first commit (live test)');
 });
 
 test('push without a remote says to add one; with one, the first push publishes the branch', async () => {

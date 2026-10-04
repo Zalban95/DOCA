@@ -2082,9 +2082,13 @@ test('delegated work runs as the person who started it, and stops when they are 
 
   const member = await H.signIn('member');
   who.withPerson({ name: 'phone', user: who.personOf(member) }, parent.id);
+  assert.equal(memory.getSession(parent.id).person.id, H.owner.user.id, 'the first person to write owns it (session-access.js)');
+  const theirs = memory.createSession('asked by a member', { activate: false });
+  const theirChild = memory.createSession('delegated', { activate: false, kind: 'specialist', parentId: theirs.id });
+  who.withPerson({ name: 'phone', user: who.personOf(member) }, theirs.id);
   authStore.updateUser(member.user.id, { suspendedAt: new Date().toISOString() });
-  assert.throws(() => who.withPerson(undefined, child.id), /suspended or no longer here/);
-  memory.deleteSession(child.id); memory.deleteSession(parent.id);
+  assert.throws(() => who.withPerson(undefined, theirChild.id), /suspended or no longer here/);
+  for (const s of [theirChild, theirs, child, parent]) memory.deleteSession(s.id);
 });
 
 test('a daily token ceiling refuses to start a turn, and says whose setting it is', async () => {
