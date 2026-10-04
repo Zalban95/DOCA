@@ -83,7 +83,9 @@ the end, and in the sections as "built in …" notes.
 - ~~Retry with backoff on a rate limit (429)~~ — **built in 2.117.0** (`turn/rate-limit.js`). → §8.
 - ~~A usage page with prices~~ — **built in 2.125.0** (`harness/prices.js`, the
   window behind the console's "24h" line); prices are typed, none shipped. → *Memory, limits and context*.
-- Provider quirks as data (a provider contract). → *Wanted next: many agents*.
+- Provider quirks as data — **started in 2.129.0** (`harness/contracts.js`: the
+  token field and usage frames, learned once, overridable in prefs); left: echo
+  fields, refusal shapes, per-agent overrides, pulled corrections. → *Wanted next: many agents*.
 - The Orchestrator drives the work rather than doing it; a shared core context.
   → *Wanted next: many agents*.
 - One turn per conversation vs. jobs started from devices; parallel instances.
@@ -724,6 +726,14 @@ still missing from that sentence.
   without a release — the same shape as skills, and worth building as skills if
   the mechanism is going to exist twice otherwise. The cost of not having it is
   paid per provider quirk and always as a dead turn.
+  **First half built in 2.129.0** (`modules/harness/contracts.js`): `tokenField`
+  (per model) and `streamUsage` (per provider) are contract fields. What a
+  400-and-retry proves is kept in `harness/contracts` and the request is shaped
+  to it beforehand, so the failed round trip that every call to such a server
+  used to pay is paid once; `providerContracts.<provider>` in prefs overrides a
+  lesson, `DELETE /api/harness/contracts/:provider` forgets one. **Not yet:**
+  the `reasoning_content` echo as a contract field, refusal shapes, the fields
+  in an agent definition, and pulling corrected contracts like skills.
 
 - **A mission has no plan, so no client can draw how far along it is.** Wanted:
   a `plan` on the mission document — `[{ title, state: done|running|queued|failed }]`

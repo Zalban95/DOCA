@@ -33,6 +33,9 @@ function mount(app) {
   app.post('/api/harness/usage/prices', (req, res) => {
     try { res.json(require('./prices').save(req.body || {})); } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
+  // What each provider was found to accept (contracts.js): read, and a lesson forgotten.
+  app.get('/api/harness/contracts', (_req, res) => res.json({ learned: require('./contracts').all() }));
+  app.delete('/api/harness/contracts/:provider', (req, res) => { require('./contracts').forget(req.params.provider); res.json({ ok: true }); });
   // The panel saying its page is visible (presence.js): read by the agent's per-step readings.
   app.post('/api/presence', (req, res) => {
     require('../presence').beat(req.auth?.user, req.body?.visible !== false);

@@ -17,6 +17,10 @@ const rateLimit = require('./rate-limit');
 /* ── Model transport ──────────────────────────────────── */
 
 async function post(ep, body, signal, p) {
+  // Sent in the shape this provider is known to accept (harness/contracts.js), so a
+  // quirk one retry proved is not paid for again on every call.
+  const contracts = require('../contracts');
+  body = contracts.shape(body, contracts.forProvider(ep.id, body.model));
   const headers = { 'Content-Type': 'application/json' };
   if (ep.apiKey) headers.Authorization = `Bearer ${ep.apiKey}`;
 
@@ -35,6 +39,7 @@ async function post(ep, body, signal, p) {
     if (body.max_tokens && detail.includes('max_completion_tokens')) {
       const { max_tokens, ...rest } = body;
       r = await send({ ...rest, max_completion_tokens: max_tokens });
+      if (r.ok) contracts.learn(ep.id, body.model, { tokenField: 'max_completion_tokens' }, { perModel: true });
 
     // Asking for a usage frame is how the token ledger gets measured numbers
     // instead of estimates, but it is a newer field and a strict or older
@@ -45,6 +50,7 @@ async function post(ep, body, signal, p) {
     } else if (body.stream_options) {
       const { stream_options, ...rest } = body;
       r = await send(rest);
+      if (r.ok) contracts.learn(ep.id, body.model, { streamUsage: false });
 
     } else {
       throw Object.assign(new Error(budget.explain({ status: 400, detail, ep, p })), { status: 400 });
