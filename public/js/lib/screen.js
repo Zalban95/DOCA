@@ -6,10 +6,12 @@
    ═══════════════════════════════════════════════════════ */
 
 let _screen = null;
+/** On a device's own page (/d/<id>/) the screen is that device's; elsewhere, this browser's. */
+const _screenQ = () => (typeof DOCA_DEVICE_ID !== 'undefined' && DOCA_DEVICE_ID ? `?device=${encodeURIComponent(DOCA_DEVICE_ID)}` : '');
 
 async function screenLoad(force) {
   if (_screen && !force) return _screen;
-  try { _screen = await apiFetch('/api/screen'); } catch { _screen = { settings: {}, from: {}, keys: [] }; }
+  try { _screen = await apiFetch(`/api/screen${_screenQ()}`); } catch { _screen = { settings: {}, from: {}, keys: [] }; }
   return _screen;
 }
 
@@ -21,7 +23,7 @@ async function screenPrefs() {
 
 /** Change how this screen shows the panel; null puts a key back to the hive's. */
 async function screenSave(patch) {
-  _screen = { ...(_screen || {}), ...(await apiFetch('/api/screen/settings', { method: 'POST', body: patch })) };
+  _screen = { ...(_screen || {}), ...(await apiFetch(`/api/screen/settings${_screenQ()}`, { method: 'POST', body: patch })) };
   return _screen;
 }
 

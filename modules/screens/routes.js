@@ -11,13 +11,32 @@ const screens = require('./index');
 function mount(app) {
   app.get('/api/screen', (req, res) => {
     try {
-      const d = screens.ensure(req, res);
-      res.json({ id: d.id, name: d.name, ...screens.effective(d.id, req.auth.user.id), keys: screens.screenKeys() });
+      const d = screens.ensure(req, res, req.query.device || null);
+      res.json({ id: d.id, name: d.name, kind: d.kind, ...screens.effective(d.id, req.auth.user.id), keys: screens.screenKeys() });
+    } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  });
+  // A device's own notifications (its profile: questions, haptics, quiet hours), for its page — the device's
+  // own session or its person. The rest of the profile (pages, commands) is the client's and is kept.
+  app.get('/api/screen/profile', (req, res) => {
+    try { const d = screens.ensure(req, res, req.query.device || null); res.json({ id: d.id, profile: require('../api-v1/profiles').get(d.id) }); }
+    catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  });
+  app.post('/api/screen/profile', (req, res) => {
+    try {
+      const d = screens.ensure(req, res, req.query.device || null);
+      if (d.kind === 'browser') throw Object.assign(new Error('A browser takes no questions of its own; its person\'s devices do.'), { status: 400 });
+      const profiles = require('../api-v1/profiles');
+      const cur = profiles.get(d.id);
+      const { prompts, quietHours } = req.body || {};
+      const stored = profiles.put(d.id, { ...cur, ...(prompts ? { prompts: { ...cur.prompts, ...prompts } } : {}), ...(quietHours !== undefined ? { quietHours } : {}) }, req.auth.user.id);
+      const eff = profiles.effective(stored, d.scopes);
+      require('../api-v1/bus').publish(d.id, 'profile.changed', { version: stored.version, etag: eff.etag, updatedBy: req.auth.user.id, url: '/api/v1/devices/me/profile' });
+      res.json({ id: d.id, profile: stored });
     } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
   app.post('/api/screen/settings', (req, res) => {
     try {
-      const d = screens.ensure(req, res);
+      const d = screens.ensure(req, res, req.query.device || null);
       screens.set(d.id, req.body || {});
       res.json({ id: d.id, ...screens.effective(d.id, req.auth.user.id) });
     } catch (e) { res.status(e.status || 500).json({ error: e.message }); }

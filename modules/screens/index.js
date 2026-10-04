@@ -32,11 +32,19 @@ function nameOf(ua = '') {
 const cookieOf = req => (/(?:^|;\s*)doca_screen=([\w-]+)/.exec(req.headers.cookie || '') || [])[1] || null;
 const valid = (d, userId) => d && d.kind === 'browser' && !d.revokedAt && d.userId === userId;
 
-/** This browser's device record, made the first time; binds the sign-in session to it. */
-function ensure(req, res) {
+/**
+ * The device whose screen this is. On a device's own page (/d/<id>/, TODO H2.4) it is that device — opened
+ * by its own token, or by the person who owns it — so a phone's look is what its app reads back from
+ * /api/v1/settings/effective. Anywhere else it is this browser's record, made the first time and bound to
+ * the sign-in session.
+ */
+function ensure(req, res, deviceId = null) {
   const devices = require('../api-v1/devices');
   const who = req.auth;
   if (!who?.user?.id) throw bad('Sign in first.', 401);
+  const own = id => { const x = id && devices.get(id); return x && !x.revokedAt && (who.session?.deviceId === x.id || x.userId === who.user.id) ? x : null; };
+  if (who.session?.deviceId) return own(who.session.deviceId) || (() => { throw bad('This device is not paired any more.', 401); })();
+  if (deviceId) return own(deviceId) || (() => { throw bad('Not a device of yours.', 404); })();
   let d = who.session?.screen ? devices.get(who.session.screen) : null;
   if (!valid(d, who.user.id)) d = cookieOf(req) ? devices.get(cookieOf(req)) : null;
   if (!valid(d, who.user.id)) {

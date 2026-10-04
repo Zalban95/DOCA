@@ -69,8 +69,11 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [x] H2.2 (2.164.0) A browser is a device (a `browser` record on first sign-in, revocable).
 - [x] H2.3 (2.164.0) Layering hive → person → device; `GET /api/v1/settings/effective`. The person layer is read but
   nothing writes it yet (per-person settings arrive with the first person-home key).
-- [ ] H2.4 `/d/<id>/settings`: look, tabs, sidebar, voice, notifications, console, face, lent tool
-  families; Settings keeps the hive's; Wearables becomes the watch's device page.
+- [x] H2.4 (2.165.0) `/d/<id>/settings`: look, tabs, sidebar, voice, notifications, console, face, lent tool
+  families; Settings keeps the hive's; Wearables becomes the watch's device page. Done on the existing `/d/<id>/` page:
+  look, tabs and sections as the device's own, notifications (asked here, haptics, quiet hours), lent tool families.
+  **Left:** voice and the face per device on the server (both per browser today), the watch's console moving from
+  Wearables to its page, a link to each device's page from its row in the Devices list.
 - [ ] H2.5 Migrations for prefs keys (rename, move, default) — the upgradability gap.
 
 **H3 · Recipes — repeat it without the thinking** (§2.3)

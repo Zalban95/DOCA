@@ -24,7 +24,36 @@ async function devThisDevice() {
       <p style="font-size:11px;color:var(--muted);margin-bottom:8px">What this device lets DOCA's agents do here, and its connection.
         Permissions are granted on the device itself; you can take any of them back from here.</p>
       ${devHandsHtml(d)}<div class="status-line" id="dev-status-${escHtml(d.id)}"></div>
+      <div id="dev-this-notify" style="margin-top:12px"></div>
       ${/DocaMobile\//.test(navigator.userAgent) ? '<a class="btn" href="doca://settings" style="display:inline-block;margin-top:8px">App settings — connection and permissions</a>' : ''}`;
+    devNotifyRender();
   } catch { card.remove(); }
+}
+
+/** This device's notifications (its profile): whether it is asked, haptics, quiet hours. Saved on the device's profile. */
+async function devNotifyRender() {
+  const box = document.getElementById('dev-this-notify');
+  if (!box) return;
+  let p;
+  try { ({ profile: p } = await apiFetch(`/api/screen/profile?device=${encodeURIComponent(DOCA_DEVICE_ID)}`)); } catch { box.remove(); return; }
+  const q = p.quietHours || {};
+  box.innerHTML = `<div class="card-title" style="font-size:12px">Notifications on this device</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px">
+      <label><input type="checkbox" id="dn-receive" ${p.prompts?.receive !== false ? 'checked' : ''}> The agent may ask here</label>
+      <label><input type="checkbox" id="dn-haptic" ${p.prompts?.haptic !== false ? 'checked' : ''}> Vibrate for urgent ones</label>
+      <label>Quiet from <input class="input" style="width:auto;display:inline-block" type="time" id="dn-from" value="${escHtml(q.from || '')}"> to <input class="input" style="width:auto;display:inline-block" type="time" id="dn-to" value="${escHtml(q.to || '')}"></label>
+      <label><input type="checkbox" id="dn-urgent" ${q.allowUrgent !== false ? 'checked' : ''}> urgent still comes through</label>
+      <button class="btn btn-xs btn-blue" onclick="devNotifySave()">Save</button><span class="status-line" id="dn-status"></span></div>`;
+}
+
+async function devNotifySave() {
+  const v = id => document.getElementById(id);
+  const from = v('dn-from').value, to = v('dn-to').value;
+  try {
+    await apiFetch(`/api/screen/profile?device=${encodeURIComponent(DOCA_DEVICE_ID)}`, { method: 'POST', body: {
+      prompts: { receive: v('dn-receive').checked, haptic: v('dn-haptic').checked },
+      quietHours: from && to ? { from, to, allowUrgent: v('dn-urgent').checked } : null } });
+    setStatus(v('dn-status'), '✓ Saved — the device is told', 'ok');
+  } catch (e) { setStatus(v('dn-status'), `✗ ${e.message}`, 'err'); }
 }
 if (typeof document !== 'undefined' && DOCA_DEVICE_ID) document.addEventListener('DOMContentLoaded', () => setTimeout(devThisDevice, 500));
