@@ -27,12 +27,13 @@ const KITS = {
   panel:        { label: 'Panel',        about: 'this panel\'s state and settings, which you propose' },
   skills:       { label: 'Skills',       about: 'procedures to load when a task matches, and to keep what you learn' },
   mcp:          { label: 'MCP',          about: 'tools from MCP servers running now' },
+  computer:     { label: 'Computer',     about: 'a Linux desktop in a container: shell, files, screen, a real browser, recording (computers/)' },
 };
 
 /** Every built-in tool's kit. A tool missing here fails the test — on purpose. */
 const KIT_OF = {
   work_chats: 'organization', work_plan: 'organization', agent_dispatch: 'organization',
-  agent_results: 'organization', agent_resume: 'organization', permission_grant: 'organization', mission_plan: 'organization', scout_report: 'organization',
+  agent_results: 'organization', agent_resume: 'organization', computer: 'organization', permission_grant: 'organization', mission_plan: 'organization', scout_report: 'organization',
   search_files: 'code', replace_in_files: 'code', git: 'code', project: 'code', repo_rules: 'code',
   read_file: 'files', write_file: 'files', list_dir: 'files',
   shell: 'shell', shell_job: 'shell',
@@ -48,6 +49,7 @@ const KIT_OF = {
 /** A tool's kit: its own entry, an MCP server's tool, or none. */
 function kitOf(name) {
   if (KIT_OF[name]) return KIT_OF[name];
+  if (/^mcp__computer-[a-f0-9]+__/.test(name)) return 'computer';   // a computer's own tools (modules/computers)
   try { if (require('../mcp/tools').isMcpTool(name)) return 'mcp'; } catch { /* no MCP */ }
   return null;
 }

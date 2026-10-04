@@ -348,7 +348,7 @@ class McpClient {
     try {
       const res = await this.request('tools/call', { name, arguments: args || {} }, McpClient.timeoutFor('call'));
       const text = (res?.content || [])
-        .map(c => (c.type === 'text' ? c.text : `[${c.type}]`))
+        .map(c => (c.type === 'text' ? c.text : require('./content').keep(c, this.spec.id)))
         .join('\n')
         .trim();
       observe(res?.isError && BACKEND_UNREACHABLE.test(text));

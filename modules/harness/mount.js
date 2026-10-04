@@ -12,7 +12,8 @@ function mount(app) {
   require('../agents/routes').mount(app);     // definitions as markdown in and out; persona.md, human.md
   // What this host can do, probed per OS (host-capabilities.js, hive.md §7).
   app.get('/api/host/capabilities', (req, res) => res.json(require('../host-capabilities').capabilities({ fresh: req.query.fresh === '1' })));
-  require('./tab-routes').mount(app);           // a conversation as a chat tab: title, mode, approval, its queue
+  require('./tab-routes').mount(app);
+  require('../computers/routes').mount(app);   // computers for agents (computers/)           // a conversation as a chat tab: title, mode, approval, its queue
   require('./guard/routes').mount(app);         // the guards that screen what the airlock lets in (guard/)
   // The context Ollama really serves a model with (ollama-context.js; H-20).
   app.get('/api/harness/ollama-context', async (req, res) => {
