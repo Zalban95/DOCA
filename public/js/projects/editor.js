@@ -54,7 +54,8 @@ async function _pjEditors() {
   const monaco = await pjMonaco();
   const host = document.getElementById('pj-editor');
   if (!PJE.editor) {
-    host.innerHTML = '<div id="pj-ed-code" class="pj-ed"></div><div id="pj-ed-diff" class="pj-ed" style="display:none"></div>';
+    host.innerHTML = '<div id="pj-ed-code" class="pj-ed"></div><div id="pj-ed-diff" class="pj-ed" style="display:none"></div>'
+      + '<div id="pj-ed-view" class="pj-ed" style="display:none"></div>';   // pictures, players, renderings (projects/preview.js)
     const common = { automaticLayout: true, theme: _pjTheme(), fontSize: 13, minimap: { enabled: window.innerWidth > 900 } };
     PJE.editor = monaco.editor.create(document.getElementById('pj-ed-code'), { ...common, model: null });
     PJE.diffEditor = monaco.editor.createDiffEditor(document.getElementById('pj-ed-diff'), { ...common, renderSideBySide: window.innerWidth > 900, originalEditable: false });
@@ -77,10 +78,20 @@ function _pjLang(monaco, path) {
 async function pjOpenFile(path, line, col) {
   const monaco = await _pjEditors();
   let tab = PJE.tabs.find(t => t.key === path);
-  if (!tab) {
+  const kind = pjViewKind(path);   // shown as itself, not as text (projects/preview.js)
+  if (!tab && kind) {
+    tab = { key: path, path, title: path.split('/').pop(), view: { kind, path } };
+    PJE.tabs.push(tab);
+  } else if (!tab) {
     let r;
-    try { r = await apiFetch(`/api/files/read?path=${encodeURIComponent(path)}`); }
+    try { r = await apiFetch(`/api/files/read?path=${encodeURIComponent(path)}&sniff=1`); }
     catch (e) { return setStatus(document.getElementById('pj-status'), `✗ ${e.message}`, 'err'); }
+    if (r.binary) {
+      tab = { key: path, path, title: path.split('/').pop(), view: { kind: 'binary', path, size: r.size } };
+      PJE.tabs.push(tab);
+      pjActivate(tab.key);
+      return;
+    }
     const model = monaco.editor.createModel(r.content, _pjLang(monaco, path), monaco.Uri.file(path));
     tab = { key: path, path, title: path.split('/').pop(), model, saved: model.getAlternativeVersionId() };
     PJE.tabs.push(tab);
@@ -88,7 +99,7 @@ async function pjOpenFile(path, line, col) {
   }
   pjActivate(tab.key);
   if (window.innerWidth <= 768) document.getElementById('pj-body')?.classList.remove('side-open');
-  if (line) {
+  if (line && tab.model) {
     PJE.editor.revealLineInCenter(line);
     PJE.editor.setPosition({ lineNumber: line, column: col || 1 });
     PJE.editor.focus();
@@ -117,19 +128,30 @@ function pjActivate(key) {
   const tab = PJE.tabs.find(t => t.key === key);
   if (!tab) return;
   PJE.active = key;
-  const code = document.getElementById('pj-ed-code'), diff = document.getElementById('pj-ed-diff');
-  if (tab.diff) {
-    code.style.display = 'none'; diff.style.display = '';
-    PJE.diffEditor.setModel(tab.diff);
+  const code = document.getElementById('pj-ed-code'), diff = document.getElementById('pj-ed-diff'), view = document.getElementById('pj-ed-view');
+  const show = el => { for (const x of [code, diff, view]) x.style.display = x === el ? '' : 'none'; };
+  if (tab.view) {
+    show(view); pjDrawView(view, tab.view);
+  } else if (tab.diff) {
+    show(diff); PJE.diffEditor.setModel(tab.diff);
+  } else if (tab.preview) {
+    show(view); pjDrawRendered(view, pjRenderedKind(tab.path), tab.model.getValue(), tab.path);
   } else {
-    diff.style.display = 'none'; code.style.display = '';
-    PJE.editor.setModel(tab.model);
+    show(code); PJE.editor.setModel(tab.model);
   }
   _pjTabsRender();
   _pjCursor(PJE.editor.getPosition());
 }
 
-function _pjDirty(t) { return t.path && t.model.getAlternativeVersionId() !== t.saved; }
+function _pjDirty(t) { return !!(t.path && t.model && t.model.getAlternativeVersionId() !== t.saved); }
+
+/** 👁 on a text file with a rendered form: source ⇄ rendering, from the current (unsaved) text. */
+function pjTogglePreview() {
+  const t = PJE.tabs.find(x => x.key === PJE.active);
+  if (!t?.model || t.diff || !pjRenderedKind(t.path)) return;
+  t.preview = !t.preview;
+  pjActivate(t.key);
+}
 
 function _pjTabsRender() {
   const bar = document.getElementById('pj-tabs');
@@ -148,6 +170,16 @@ function _pjTabsRender() {
     el.append(name, x);
     bar.appendChild(el);
   }
+  const active = PJE.tabs.find(t => t.key === PJE.active);
+  if (active?.model && !active.diff && pjRenderedKind(active.path)) {
+    const eye = document.createElement('button');
+    eye.className = `btn btn-xs pj-tab-preview${active.preview ? ' btn-blue' : ''}`;
+    eye.textContent = active.preview ? '✎ Source' : '👁 Preview';
+    eye.title = active.preview ? 'Back to the source' : 'Show it rendered (from the text as it stands, saved or not)';
+    eye.style.cssText = 'margin:3px 6px 3px auto;flex-shrink:0';
+    eye.onclick = pjTogglePreview;
+    bar.appendChild(eye);
+  }
 }
 
 function pjClose(key) {
@@ -156,12 +188,13 @@ function pjClose(key) {
   const go = () => {
     PJE.tabs = PJE.tabs.filter(x => x.key !== key);
     // A file's model is shared with its comparisons; dispose it only when no tab still shows it.
-    if (!PJE.tabs.some(x => x.model === t.model)) t.model.dispose();
+    if (t.model && !PJE.tabs.some(x => x.model === t.model)) t.model.dispose();
+    if (t.view) document.getElementById('pj-ed-view')?.querySelectorAll('video,audio').forEach(m => { try { m.pause(); } catch {} });
     if (t.diff) t.diff.original.dispose();
     if (PJE.active === key) {
       const next = PJE.tabs.at(-1);
       if (next) pjActivate(next.key);
-      else { PJE.active = null; PJE.editor?.setModel(null); document.getElementById('pj-ed-diff').style.display = 'none'; document.getElementById('pj-ed-code').style.display = ''; }
+      else { PJE.active = null; PJE.editor?.setModel(null); document.getElementById('pj-ed-diff').style.display = 'none'; document.getElementById('pj-ed-view').style.display = 'none'; document.getElementById('pj-ed-code').style.display = ''; }
     }
     _pjTabsRender();
   };
@@ -171,7 +204,7 @@ function pjClose(key) {
 
 async function pjSave() {
   const t = PJE.tabs.find(x => x.key === PJE.active);
-  if (!t?.path) return;
+  if (!t?.path || !t.model) return;
   const st = document.getElementById('pj-status');
   try {
     await apiFetch('/api/files/write', { method: 'POST', body: { path: t.path, content: t.model.getValue() } });
@@ -188,13 +221,15 @@ function _pjCursor(pos) {
   const st = document.getElementById('pj-status');
   const t = PJE.tabs.find(x => x.key === PJE.active);
   if (!st || !t || st.classList.contains('ok') || st.classList.contains('err')) return;
-  st.textContent = `${t.path ? pjRel(t.path) : t.title}${pos ? `   Ln ${pos.lineNumber}, Col ${pos.column}` : ''}   ${t.model.getLanguageId()}`;
+  st.textContent = t.model
+    ? `${t.path ? pjRel(t.path) : t.title}${pos && !t.preview ? `   Ln ${pos.lineNumber}, Col ${pos.column}` : ''}   ${t.preview ? 'preview' : t.model.getLanguageId()}`
+    : `${pjRel(t.path)}   ${t.view.kind}`;
 }
 
 /** Another project: close everything, asking once if anything is unsaved. */
 function pjEditorReset() {
   for (const t of PJE.tabs) { if (t.diff) t.diff.original.dispose(); }
-  for (const m of new Set(PJE.tabs.map(t => t.model))) m.dispose();
+  for (const m of new Set(PJE.tabs.map(t => t.model).filter(Boolean))) m.dispose();
   PJE.tabs = []; PJE.active = null;
   PJE.editor?.setModel(null);
   _pjTabsRender();

@@ -127,7 +127,7 @@ async function pjGitCommit() {
 }
 
 async function pjGitSwitch(branch) {
-  if (PJE.tabs.some(t => t.path && t.model.getAlternativeVersionId() !== t.saved))
+  if (PJE.tabs.some(_pjDirty))
     return appAlert('Save or close the files with unsaved changes before switching branch.');
   try { await apiFetch(_pjg('/switch'), { method: 'POST', body: { branch } }); }
   catch (e) { appAlert(e.message); }

@@ -94,8 +94,11 @@ function handleRead(req, res) {
     if (s.isDirectory()) return res.status(400).json({ error: 'Is a directory' });
     const MAX_READ = 100 * 1024 * 1024; // 100 MB
     if (s.size > MAX_READ) return res.status(413).json({ error: `File too large (${(s.size / 1e6).toFixed(1)} MB — limit is 100 MB)` });
-    const content = fs.readFileSync(filePath, 'utf8');
-    res.json({ content, size: s.size, mtime: s.mtime.toISOString() });
+    const buf = fs.readFileSync(filePath);
+    // ?sniff=1: a file with a NUL in its first 8 KB is binary, and is answered as
+    // such instead of as text nobody can read (the Projects editor previews it).
+    if (req.query.sniff && buf.subarray(0, 8192).includes(0)) return res.json({ binary: true, size: s.size, mtime: s.mtime.toISOString() });
+    res.json({ content: buf.toString('utf8'), size: s.size, mtime: s.mtime.toISOString() });
   } catch (e) {
     const code = fsStatus(e);
     res.status(code).json({

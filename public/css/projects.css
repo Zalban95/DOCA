@@ -98,3 +98,6 @@
 .pj-chat-model .chat-model { flex: 1; max-width: none; }
 /* The project's chat has its own Send; the floating chat button would sit on it (as on the Harness tab). */
 body:has(.pj-chat.open) .chat-fab { display: none; }
+/* A file shown as itself (projects/preview.js). */
+.pj-view { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 8px; }
+.pj-view-doc { align-items: flex-start; justify-content: flex-start; padding: 16px; }

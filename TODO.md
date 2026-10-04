@@ -1184,6 +1184,15 @@ back; the list view could be its fallback.
 
 ## Projects: an IDE, and its chats out of the orchestrator's way (asked for 2026-09-28)
 
+**Asked 2026-10-04, built in 2.130.0 — every format previews when a file is
+opened** (`public/js/projects/preview.js`). Pictures, video, audio, PDF, fonts
+(a specimen) and glb/gltf models (`<model-viewer>`, loaded on first use) open as
+themselves; markdown, HTML, SVG, CSV/TSV and JSON open as source with a 👁
+toggle to the rendering of the text as it stands, saved or not; a binary
+nothing can show gets a size-and-download card (`/api/files/read?sniff=1`)
+instead of an editor of replacement characters. HTML renders sandboxed, scripts
+off. Not yet: STL/OBJ, office documents.
+
 Al's words, kept because the intent is the spec: "consider only the intentions and
 the projects logic as a guide, with higher priority to my requests."
 
