@@ -16,7 +16,7 @@
  *   fold(kind, body, name, opts?): { setActive(on) } | null,   // a tool call or result row
  *   note(kind, text, cls?): HTMLElement,                         // waiting / failover / warning / error rows
  *   removeNote?(el), image(img), approval(evt), error(text),
- *   context?(usage), onText?(text), onSession?(id), onProposal?(evt),
+ *   context?(usage), onText?(text), onSession?(id), onProposal?(evt), userAdded?(evt),
  * }} ui
  */
 function agentEventSink(ui) {
@@ -51,6 +51,13 @@ function agentEventSink(ui) {
       case 'error': settleCall(); ui.stream.finish(); ui.error(evt.text); break;
       case 'stderr': ui.stream.finish(); ui.error(evt.text); break;
       case 'proposal': ui.onProposal?.(evt); break;
+      // A message written while this turn worked, read before its next step (modules/harness/inbox.js): the
+      // reply so far ends, the message shows (unless this page sent it and drew it already), the reply goes on.
+      case 'user_added':
+        settleCall(); clearWait(); ui.stream.finish(); ui.stream.resetText?.();
+        if (!(typeof AGENT_QUEUED_MINE !== 'undefined' && AGENT_QUEUED_MINE.has(evt.id))) ui.userAdded?.(evt);
+        ui.stream.startWaiting?.();
+        break;
       default: break;
     }
   }

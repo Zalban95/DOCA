@@ -58,12 +58,27 @@ function _pjChatRow(role, text) {
 async function pjChatSend() {
   const input = document.getElementById('pj-chat-in');
   const text = input.value.trim();
-  if (!text || PJC.busy) return;
-  PJC.busy = true;
+  if (!text) return;
   input.value = '';
+  const row = _pjChatRow('user', text);
+  // Working already: it waits and is read at the next step, or starts the next turn (agent-ui/queued-send.js).
+  if (PJC.busy) {
+    await agentQueuedSend('/api/harness/chat', { message: text, sessionId: PJC.sessionId }, { mark: agentQueuedTag(row),
+      startTurn: async () => { while (PJC.busy) await new Promise(r => setTimeout(r, 50)); return _pjTurnUi(); } });
+    return;
+  }
+  const ui = _pjTurnUi();
+  await sseStream('/api/harness/chat', { message: text, sessionId: PJC.sessionId }, {
+    signal: PJC.turn.signal, onEvent: ui.onEvent, onError: ui.onError,
+  });
+  await ui.finish();
+}
+
+/** One turn drawn in the project's chat. */
+function _pjTurnUi() {
+  PJC.busy = true;
   const send = document.getElementById('pj-chat-send');
   send.textContent = '■'; send.onclick = pjChatStop;
-  _pjChatRow('user', text);
   // What each event means is decided once (agent-ui/event-sink.js); this chat draws less of it: rendered
   // markdown as it streams, a line per tool, approvals, pictures, notes.
   const box = document.getElementById('pj-chat-msgs');
@@ -80,18 +95,21 @@ async function pjChatSend() {
     image: img => { box.appendChild(agentImageEl(img)); scroll(); },
     approval: evt => agentApprovalEvent(evt, box, { note: text => _pjChatRow('warning', text), scroll }),
     error: msg => _pjChatRow('error', msg),
+    userAdded: evt => _pjChatRow('user', evt.text),
   });
   PJC.turn = new AbortController();
-  await sseStream('/api/harness/chat', { message: text, sessionId: PJC.sessionId }, {
-    signal: PJC.turn.signal, onEvent: sink.onEvent, onError: sink.onError,
-  });
-  sink.finish();
-  PJC.busy = false; PJC.turn = null;
-  send.textContent = 'Send'; send.onclick = pjChatSend;
-  // The agent may have changed files: refresh what the side shows, reload clean editors.
-  pjRefresh();
-  if (PJ.view === 'git' || PJ.view === 'files') pjView(PJ.view);
-  await pjEditorsReloadClean();
+  return {
+    onEvent: sink.onEvent, onError: sink.onError,
+    finish: async () => {
+      sink.finish();
+      PJC.busy = false; PJC.turn = null;
+      send.textContent = 'Send'; send.onclick = pjChatSend;
+      // The agent may have changed files: refresh what the side shows, reload clean editors.
+      pjRefresh();
+      if (PJ.view === 'git' || PJ.view === 'files') pjView(PJ.view);
+      await pjEditorsReloadClean();
+    },
+  };
 }
 
 function pjChatStop() {

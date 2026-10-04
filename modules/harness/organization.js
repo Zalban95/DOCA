@@ -263,7 +263,10 @@ function profileFor(s) {
       + 'You are free while work runs: hand a job to a work chat and return to the user. Work chats carry '
       + 'their jobs to the end on their own; you are woken only when one reports its final outcome '
       + '(done, failed, blocked) or has a question for the user. Then say what matters in a few lines and '
-      + 'ask only for a decision that is theirs. work_chats list shows every job\'s state at any time.' };
+      + 'ask only for a decision that is theirs. work_chats list shows every job\'s state at any time. '
+      + 'The person can write while you work: their message reaches you before your next step — answer it '
+      + 'briefly, then carry on or change course. After a few steps of real work in your own turn, the job '
+      + 'moves to a work chat by itself; better to hand it over before that.' };
 }
 
 function block(id, pending = []) {

@@ -46,7 +46,7 @@ audit's fixes (2.137.1 security, 2.137.2 robustness, 2.137.3 front end).
   news reaches only their people's devices since 2.147.0 (session-access.js). (A member's
   calls are asked whatever the mode since 2.139: the `ask` level — settled.)
 
-**Portal (added 2026-10-04)**: DocaWear/DocaMobile render the new approval option ids
+**Portal (added 2026-10-04)**: DocaMobile/DocaWear: a message sent while the agent works is now `202 {queued: true}` instead of `409 turn_in_flight` (hub 2.148.0) — check nothing waits for a 409 before sending, and optionally show "queued". DocaWear/DocaMobile render the new approval option ids
 `always` and `approve_all` (they are ordinary options; check nothing assumes exactly three);
 DocaMobile/DocaWear read `quiet`; run the Windows paths
 fixed by reading in 2.137.2 (npm.cmd spawns, pip into a venv via PowerShell).
@@ -107,10 +107,11 @@ the end, and in the sections as "built in …" notes.
 - Provider quirks as data — **started in 2.129.0** (`harness/contracts.js`: the
   token field and usage frames, learned once, overridable in prefs); left: echo
   fields, refusal shapes, per-agent overrides, pulled corrections. → *Wanted next: many agents*.
-- The Orchestrator drives the work rather than doing it; a shared core context.
-  → *Wanted next: many agents*.
-- One turn per conversation vs. jobs started from devices; parallel instances.
-  → *Wanted next: many agents*.
+- The Orchestrator drives the work rather than doing it — **bounded by code in 2.148.0**
+  (`turn/handoff.js`, `orchestratorWorkSteps`); left: a shared core context. → *Wanted next: many agents*.
+- ~~One turn per conversation vs. jobs started from devices~~ — **2.148.0: nobody waits**
+  (`harness/inbox.js`: read mid-turn or the next turn, everywhere). Parallel instances: not wanted
+  (decided 2026-10-04: one conversation, one history). → *Wanted next: many agents*.
 - ~~Switching to a stronger model when a job is stuck~~ — **built in 2.119.0**
   (`harness/escalate.js`, off until a model is named). → §3 (failure types).
 - Skills — **importing from other harnesses and a writing guide built in
