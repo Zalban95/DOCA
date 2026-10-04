@@ -13,6 +13,9 @@ async function skillsCardRender(panel) {
       <button class="btn btn-xs" onclick="docaSkillsImport()" title="Copy skill folders (each with a SKILL.md) from a folder on this machine">⬆ Import</button></div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Procedures the agent loads when a task matches: it always sees each one's name and
       when to use it, and reads the rest only when needed. The agent keeps new ones as it learns them (on this machine).</p>
+    <input class="input" id="doca-skills-q" placeholder="Search every skill on this machine — DOCA's and other harnesses'" style="width:100%;margin-bottom:8px"
+      oninput="clearTimeout(window._docaSkillsQT); window._docaSkillsQT = setTimeout(docaSkillsSearch, 250)">
+    <div id="doca-skills-results"></div>
     <div id="doca-skills-list"><div class="placeholder pulse">Loading…</div></div>
     <div class="card-title" style="margin-top:14px;display:flex;align-items:center;gap:8px">From other harnesses
       <button class="btn btn-xs" onclick="docaSkillsProject()" title="A project's .cursor/rules">Cursor rules…</button></div>
@@ -47,6 +50,40 @@ async function docaSkillsSources(project) {
       } catch (e) { appAlert(e.message); }
     };
     row.append(b, Object.assign(document.createElement('span'), { className: 'settings-tab-label', textContent: `${s.label} — ${s.items.length} in ${s.path}` }));
+    box.appendChild(row);
+  }
+}
+
+/** One search over DOCA's skills and every other harness's (skill-sources.js search). */
+async function docaSkillsSearch() {
+  const q = document.getElementById('doca-skills-q')?.value.trim();
+  const box = document.getElementById('doca-skills-results');
+  if (!box) return;
+  if (!q) { box.textContent = ''; return; }
+  let results = [];
+  try { results = (await apiFetch(`/api/harness/skills/search?q=${encodeURIComponent(q)}`)).results; } catch (e) { box.textContent = e.message; return; }
+  box.innerHTML = results.length ? '' : '<div class="placeholder">No skill mentions that.</div>';
+  for (const r of results) {
+    const row = document.createElement('div');
+    row.className = 'settings-tab-row';
+    const act = Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: r.inDoca ? r.name : `⬇ Import ${r.name}` });
+    act.title = r.inDoca ? 'Open it' : `Copy it into DOCA's skills from ${r.where}`;
+    act.onclick = async () => {
+      try {
+        if (r.inDoca) { const s = await apiFetch(`/api/harness/skills/${encodeURIComponent(r.name)}`); return appAlert(`${s.name} (${s.source})\n\n${s.body.slice(0, 3000)}`); }
+        const { imported } = await apiFetch('/api/harness/skills/import', { method: 'POST', body: { source: r.source, names: [r.name] } });
+        appAlert(imported.map(x => x.skipped ? `– ${x.name}: ${x.skipped}` : `✓ ${x.name} imported`).join('\n'));
+        docaSkillsLoad(); docaSkillsSources(); docaSkillsSearch();
+      } catch (e) { appAlert(e.message); }
+    };
+    const label = Object.assign(document.createElement('span'), { className: 'settings-tab-label' });
+    label.append(Object.assign(document.createElement('strong'), { textContent: r.where }), ` — ${r.description || ''}`);
+    if (r.snippet) {
+      const snip = Object.assign(document.createElement('div'), { textContent: `…${r.snippet}…` });
+      snip.style.cssText = 'opacity:.65;font-size:10px';
+      label.appendChild(snip);
+    }
+    row.append(act, label);
     box.appendChild(row);
   }
 }

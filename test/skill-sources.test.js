@@ -69,3 +69,21 @@ test('importing is the host\'s right, a project outside the allowed roots is ref
   assert.equal(guide.source, 'shipped');
   assert.match(guide.body, /The description is the trigger/);
 });
+
+test('one search covers DOCA\'s skills and every other harness\'s, saying which are in DOCA', async () => {
+  const r = await H.api(null, 'GET', '/api/harness/skills/search?q=release%20notes');
+  assert.equal(r.status, 200);
+  const top = r.body.results[0];
+  assert.equal(top.name, 'release-notes');
+  assert.equal(top.where, 'Codex prompts');
+  assert.equal(top.inDoca, false);
+  assert.match(top.snippet, /git log since the last tag/);
+  const doca = await H.api(null, 'GET', '/api/harness/skills/search?q=specialist');
+  assert.ok(doca.body.results.some(x => x.name === 'make-a-specialist' && x.where === 'DOCA (shipped)' && x.inDoca));
+  const both = await H.api(null, 'GET', '/api/harness/skills/search?q=diff%20risks');
+  assert.ok(both.body.results.some(x => x.name === 'review-pr' && x.where === 'DOCA (this machine)'), 'imported earlier, found in DOCA');
+  assert.ok(both.body.results.some(x => x.name === 'review-pr' && x.where === 'Claude Code commands' && x.inDoca), 'and at its source, marked as already in');
+  assert.deepEqual((await H.api(null, 'GET', '/api/harness/skills/search?q=')).body.results, []);
+  const tool = await require('../modules/harness/tools').call('skill', { action: 'search', query: 'pdf tables' }, []);
+  assert.match(tool, /pdf-tables — Claude Code skills/);
+});

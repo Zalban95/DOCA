@@ -2499,6 +2499,11 @@ nothing is silently dropped). Open items that lived in them are listed in
   and DOCA equivalent, shows the mechanical rewrite side by side, and Adapt
   writes it (original kept as SKILL.original.md; Restore undoes). What cannot
   be rewritten by rule is left marked for review.
+- **One search over every skill on the machine — built in 2.132.0** (asked
+  2026-10-04; `skill-sources.search`): DOCA's shipped and local skills and every
+  other harness's, imported or not, by name, description and body, each result
+  saying where it lives and whether it is in DOCA, with Import beside it.
+  The agent has it too (`skill` action `search`, read-only).
 - **Skills from other harnesses** (Claude Code, Codex, Cursor rules…) listed and
   managed in the Skills section, usable by the DOCA harness — part of the
   Settings review above. **Built in 2.128.0** (`harness/skill-sources.js`):
