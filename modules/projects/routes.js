@@ -35,7 +35,7 @@ function mount(app) {
   app.post('/api/projects/:id/replace', h(async req => {
     const p = P(req);
     // Applying writes many files at once: a checkpoint first, as discard and pull take (audit 2026-10-04).
-    const checkpoint = req.body?.apply ? await require('./checkpoints').take(p, { label: `before replacing "${String(req.body.find || '').slice(0, 40)}"`, by: 'person' }).catch(() => null) : null;
+    const checkpoint = req.body?.apply ? await require('./checkpoints').take(p, { label: `before replacing "${String(req.body.query || req.body.find || '').slice(0, 40)}"`, by: 'person' }).catch(() => null) : null;
     return { ...(await require('./search').replaceInFiles(p.root, { ...(req.body || {}), dryRun: !req.body?.apply })), ...(checkpoint ? { checkpoint: checkpoint.id } : {}) };
   }));
 

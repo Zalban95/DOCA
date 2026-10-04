@@ -10,7 +10,7 @@
  * kind of thing — a named procedure with a line saying when to use it — as one
  * file each, in their own shape:
  *
- *   Claude Code   ~/.claude/skills/<n>/SKILL.md           folder, as is
+ *   Claude Code   ~/.claude/skills/<n>/SKILL.md           folder, as is (also synced/<account>/<n>)
  *                 ~/.claude/plugins/…/skills/<n>/SKILL.md folder, as is
  *                 ~/.claude/commands/<n>.md               front matter `description`, body
  *   Codex         ~/.codex/prompts/<n>.md                 same shape
@@ -76,7 +76,7 @@ function sources({ project } = {}) {
     return { name: String(meta.name || path.basename(dir)).trim(), description: String(meta.description || '').trim().slice(0, 300), dir };
   };
   const list = [
-    { id: 'claude-skills', label: 'Claude Code skills', path: path.join(h, '.claude', 'skills'), items: () => skillDirs(path.join(h, '.claude', 'skills')).map(folder) },
+    { id: 'claude-skills', label: 'Claude Code skills', path: path.join(h, '.claude', 'skills'), items: () => skillDirs(path.join(h, '.claude', 'skills'), 2).map(folder) },   // synced/<account>/<skill> is two down (live test)
     { id: 'claude-plugins', label: 'Claude Code plugin skills', path: path.join(h, '.claude', 'plugins'), items: () => skillDirs(path.join(h, '.claude', 'plugins'), 5).map(folder) },
     { id: 'claude-commands', label: 'Claude Code commands', path: path.join(h, '.claude', 'commands'), items: () => filesIn(path.join(h, '.claude', 'commands'), '.md').map(fromMarkdown) },
     { id: 'codex-prompts', label: 'Codex prompts', path: path.join(h, '.codex', 'prompts'), items: () => filesIn(path.join(h, '.codex', 'prompts'), '.md').map(fromMarkdown) },

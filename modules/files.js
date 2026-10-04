@@ -124,7 +124,8 @@ function handleWrite(req, res) {
 /** POST /api/files/rename  { from, to } */
 function handleRename(req, res) {
   const { from, to } = req.body;
-  if (!from || !to || !fmSafe(from) || !fmSafe(to)) return res.status(403).json({ error: 'Path not allowed' });
+  if (!from || !to) return res.status(400).json({ error: 'from and to are both needed' });
+  if (!fmSafe(from) || !fmSafe(to)) return res.status(403).json({ error: 'Path not allowed' });
   try { fs.renameSync(from, to); res.json({ ok: true }); }
   catch (e) {
     // Renaming a file that was moved or deleted underneath the panel is the
@@ -143,7 +144,8 @@ function handleRename(req, res) {
 /** POST /api/files/delete  { paths: [] } */
 function handleDelete(req, res) {
   const { paths } = req.body;
-  if (!Array.isArray(paths) || !paths.every(p => fmSafe(p))) return res.status(403).json({ error: 'Path not allowed' });
+  if (!Array.isArray(paths) || !paths.length) return res.status(400).json({ error: 'paths: a list of the files to delete' });
+  if (!paths.every(p => fmSafe(p))) return res.status(403).json({ error: 'Path not allowed' });
   const errors = [];
   paths.forEach(p => {
     try { fs.rmSync(p, { recursive: true, force: true }); }
@@ -164,7 +166,8 @@ function handleMkdir(req, res) {
 /** POST /api/files/paste  { op: 'copy'|'cut', paths: [], dest } */
 function handlePaste(req, res) {
   const { op, paths, dest } = req.body;
-  if (!dest || !fmSafe(dest) || !Array.isArray(paths)) return res.status(403).json({ error: 'Invalid request' });
+  if (!dest || !Array.isArray(paths)) return res.status(400).json({ error: 'paths (a list) and dest are both needed' });
+  if (!fmSafe(dest)) return res.status(403).json({ error: 'Destination not allowed' });
   if (!paths.every(p => fmSafe(p))) return res.status(403).json({ error: 'Source path not allowed' });
 
   const errors = [];
@@ -211,7 +214,8 @@ function handlePaste(req, res) {
 /** POST /api/files/upload (expects multer middleware in front) */
 function handleUpload(req, res) {
   const dest = req.body.dest;
-  if (!dest || !fmSafe(dest)) return res.status(403).json({ error: 'Destination not allowed' });
+  if (!dest) return res.status(400).json({ error: 'dest: the folder to upload into' });
+  if (!fmSafe(dest)) return res.status(403).json({ error: 'Destination not allowed' });
   if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
   const results = [];
   for (const file of (req.files || [])) {

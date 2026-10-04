@@ -23,10 +23,15 @@ const { git, status } = require('./git');
 
 const bad = (m, s = 400) => Object.assign(new Error(m), { status: s });
 const NAME = /^(?!-)[\w./-]{1,100}$/;
+const JUNK = ['__pycache__/', '*.pyc', '.pytest_cache/', '.mypy_cache/', '.ruff_cache/', '.venv/', 'venv/', 'node_modules/', '.DS_Store'];
 
 async function init(root, { branch = 'main', commit = false } = {}) {
   if (!NAME.test(branch)) throw bad('Not a branch name.');
   await git(root, ['init', '-b', branch]);
+  // Caches and environments are not the project: without this a first "commit everything" took
+  // __pycache__ and .venv along (live test 2026-10-04). Only when there is no .gitignore yet.
+  const ignore = path.join(root, '.gitignore');
+  if (!fs.existsSync(ignore)) fs.writeFileSync(ignore, `${JUNK.join('\n')}\n`);
   if (commit) {
     await git(root, ['add', '-A']);
     await git(root, ['commit', '-m', 'Initial commit']).catch(e => { throw bad(`Initialised, but the first commit failed: ${e.message}`); });
