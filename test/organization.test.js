@@ -270,14 +270,15 @@ test('a proposed plan is put in front of the person as a document, and only they
   assert.equal(quiet.length, 0);
 });
 
-test('approving does not interrupt a conversation already busy with its own turn', () => {
+test('approving does not interrupt a conversation busy with its own turn: the approval waits in its inbox', () => {
   const work = org.create({ title: 'Busy' });
-  const agent = require('../modules/harness/agent');
-  const realRunning = agent.isRunning, realAuto = agent.isAuto;
-  agent.isRunning = id => id === work.id; agent.isAuto = () => false;
+  const { running } = require('../modules/harness/turn/lifecycle');
+  const inbox = require('../modules/harness/inbox');
+  running.set(work.id, new AbortController());
   try {
     const r = org.carryOut(work.id, { revision: 1, title: 'X' }, { name: 'Dashboard console', kind: 'dashboard' });
     assert.equal(r.started, false);
-    assert.match(r.reason, /busy with a turn; it sees the approval/);
-  } finally { agent.isRunning = realRunning; agent.isAuto = realAuto; }
+    assert.equal(r.queued, true);
+    assert.match(inbox.waiting(work.id)[0].message, /Approved revision 1/);
+  } finally { running.delete(work.id); inbox.take(work.id); }
 });

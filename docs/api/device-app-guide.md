@@ -558,8 +558,11 @@ Rules that will save you a rewrite:
 - **On resume, do not replay a chat from the bus.** Read
   `GET /harness/sessions/:id` for history and `GET /harness/turns` for what is
   running; the cursor is for events, not for scrollback.
-- **A `409 turn_in_flight` is not an error to show.** It carries the `turnId`
-  already running — wait for it, then send.
+- **Send while the agent is working.** Since hub 2.148.0 a message to a busy
+  conversation is `202` with `queued: true`: show it as sent (optionally "queued"),
+  and wait for `agent.turn` events with its `turnId` as for any other turn. An
+  older hub answers `409 turn_in_flight` with the `turnId` running — wait for it,
+  then send.
 - **A watch has `harness:chat` and nothing else.** `GET /harness/sessions` will be
   `403`: chat in the active conversation and let the phone manage them.
 - **Show a waiting proposal, never an Accept button.** `proposals` on a `done`

@@ -1158,9 +1158,13 @@ Three consequences worth knowing:
 
 Rules a client can rely on:
 
-- **One turn per conversation.** A second `POST` while one is running is `409
-  turn_in_flight` with the `turnId` to wait for, so two devices cannot interleave
-  one transcript.
+- **One turn per conversation, and nobody waits for it.** A `POST` while a turn is
+  running is accepted (`202`, with `queued: true` and the `position` it waits at) —
+  never refused (hub 2.148.0; it was `409 turn_in_flight` before). The running turn
+  reads the message before its next step, and this `turnId` then goes `started` →
+  `done` carrying *that* turn's answer; or, if the turn ends first, the message
+  starts the next turn as this device. Two devices still never interleave one
+  transcript: messages are read in order, between steps.
 - **A device never writes a setting.** `GET /harness/memory` shows what the agent
   remembers, the rules it follows, and any settings proposal it has made;
   applying one is a click in the dashboard. A client should show a waiting

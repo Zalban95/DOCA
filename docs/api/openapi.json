@@ -3423,9 +3423,17 @@
                     },
                     "sessionId": {
                       "type": "string"
+                    },
+                    "queued": {
+                      "type": "boolean",
+                      "description": "The conversation was working: the message waits, is read by the running turn before its next step (this turnId then goes started → done with that answer), or starts the next turn."
+                    },
+                    "position": {
+                      "type": "integer",
+                      "description": "Its place among the waiting messages, when queued."
                     }
                   },
-                  "description": "Accepted. Watch `agent.turn` / `agent.text` / `agent.tool` on the event stream."
+                  "description": "Accepted — also while a turn is running. Watch `agent.turn` / `agent.text` / `agent.tool` on the event stream."
                 }
               }
             }

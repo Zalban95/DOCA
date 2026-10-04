@@ -145,14 +145,16 @@ async function handleChat(req, res) {
   const emit = evt => { try { res.write(`data: ${JSON.stringify(evt)}\n\n`); } catch {} };
 
   try {
-    const { sessionId, steps } = await agent.turn({
+    const opts = {
       message: String(message), emit, signal: ctrl.signal,
       sessionId: req.body?.sessionId ? (access.check(who(req), req.body.sessionId), req.body.sessionId) : access.defaultFor(who(req)),
       // The browser tags itself too: "who is asking" must never be missing, or
       // the agent would answer a watch the way it answers a 27-inch monitor.
       client: require('./turn/client').dashboardClient(req),
-    });
-    emit({ type: 'done', code: 0, sessionId, steps });
+    };
+    // A conversation that is working takes the message into its inbox (send-stream.js, inbox.js).
+    const r = await require('./send-stream').sendStreamed(opts, { res, emit });
+    emit({ type: 'done', code: 0, ...(r ? { sessionId: r.sessionId, steps: r.steps } : { read: true }) });
   } catch (e) {
     // The stream is already open, so the failure has to travel as an event —
     // a status code here would never reach the client.

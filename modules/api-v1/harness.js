@@ -210,22 +210,29 @@ function post(body, device) {
   const session = body?.sessionId ? requireSession(body.sessionId, device)
     : hostOrNobody(device) ? memory.mainSession() : memory.getSession(access().defaultFor(ownerOf(device)));
 
-  const inFlight = _running.get(session.id);
-  if (inFlight) throw new ApiError(409, 'turn_in_flight', 'A turn is already running in this conversation', { turnId: inFlight.turnId });
-  // A turn the panel started by itself gives way to the person speaking (turn/lifecycle.claim).
-  if (agent.isRunning(session.id) && !agent.isAuto(session.id)) throw new ApiError(409, 'turn_in_flight', 'A turn is already running in this conversation');
   if (session.archivedAt) throw new ApiError(409, 'session_archived', 'Recall this conversation in the Harness before continuing.');
 
   const turnId = `trn_${crypto.randomBytes(6).toString('hex')}`;
-  const ctrl = new AbortController();
-  _running.set(session.id, { turnId, ctrl, by: device.id, startedAt: new Date().toISOString() });
-
-  fanout('agent.turn', {
-    turnId, sessionId: session.id, state: 'started', by: device.id,
-    message: brief(message, 200),
-  });
-
-  run({ turnId, message, session, device, ctrl, attached });   // deliberately not awaited
+  const begin = () => {
+    const ctrl = new AbortController();
+    _running.set(session.id, { turnId, ctrl, by: device.id, startedAt: new Date().toISOString() });
+    fanout('agent.turn', { turnId, sessionId: session.id, state: 'started', by: device.id, message: brief(message, 200) });
+    return run({ turnId, message, session, device, ctrl, attached });   // deliberately not awaited
+  };
+  // A conversation that is working is not a refusal any more (hub 2.148.0, harness/inbox.js): the message
+  // waits, and the running turn reads it before its next step — this turnId then goes started → done
+  // with that turn's answer — or it starts the next turn as this device. A turn the panel started by
+  // itself still gives way at once (turn/lifecycle.claim).
+  const busy = _running.has(session.id) || (agent.isRunning(session.id) && !agent.isAuto(session.id));
+  if (busy) {
+    let q;
+    try { q = require('../harness/inbox').put(session.id, { message, client: clientOf(device), attachments: attached, start: begin,
+      onRead: () => fanout('agent.turn', { turnId, sessionId: session.id, state: 'started', by: device.id, message: brief(message, 200) }),
+      onAnswer: r => fanout('agent.turn', { turnId, sessionId: session.id, state: 'done', by: device.id, text: brief(r.text, MAX_REPLY) || '', steps: r.steps }) }); }
+    catch (e) { throw new ApiError(429, 'too_many_waiting', e.message); }
+    return { turnId, sessionId: session.id, queued: true, position: q.position };
+  }
+  begin();
   return { turnId, sessionId: session.id };
 }
 
