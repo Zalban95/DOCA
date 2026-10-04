@@ -73,7 +73,8 @@ async function auditTail(n = 100) {
 
 const ACCOUNT_QUERIES = ['userCount', 'userById', 'userByEmail', 'createUser', 'updateUser',
   'defaultOrg', 'createOrg', 'membership', 'membershipsOf', 'addMembership',
-  'createSession', 'sessionByHash', 'updateSession', 'deleteSession', 'deleteSessionsOf', 'deleteSessionsOfDevice', 'pruneSessions'];
+  'createSession', 'sessionByHash', 'updateSession', 'deleteSession', 'deleteSessionsOf', 'deleteSessionsOfDevice', 'pruneSessions',
+  'listUsers', 'membersOf', 'sessionsOf'];
 
 module.exports = {
   ...Object.fromEntries(ACCOUNT_QUERIES.map(q => [q, (...a) => accounts()[q](...a)])),

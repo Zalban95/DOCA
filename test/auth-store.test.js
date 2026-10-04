@@ -96,3 +96,13 @@ test('reads are cached per change of the file, and handed out as copies', () => 
   S.updateUser(u.id, { name: 'written' });
   assert.equal(S.userById(u.id).name, 'written', 'a write is seen at once');
 });
+
+test('listing: every user, an organisation\'s members, a user\'s sessions (the Users page)', () => {
+  const org = S.defaultOrg() || S.createOrg('L');
+  const u = S.createUser({ email: `list-${Date.now()}@example.test`, passwordHash: 'h' });
+  S.addMembership({ orgId: org.id, userId: u.id, role: 'member' });
+  S.createSession(`tok-${u.id}`, { userId: u.id, orgId: org.id, expiresAt: '2099-01-01T00:00:00Z' });
+  assert.ok(S.listUsers().some(x => x.id === u.id));
+  assert.ok(S.membersOf(org.id).some(m => m.userId === u.id && m.role === 'member'));
+  assert.deepEqual(S.sessionsOf(u.id).map(s => s.tokenHash), [`tok-${u.id}`]);
+});

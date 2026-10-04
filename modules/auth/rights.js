@@ -19,12 +19,15 @@
  *           do those (approving its tool calls, Auto mode, a specialist's tools)
  *   devices pair, rotate and revoke devices
  *   org     replace everyone's data or code: backups, versions, update, restart
+ *   delegate make exceptions (grants) for people of your level or below
+ * A role is a permission level (auth/levels.js): these four are the built-ins,
+ * and an admin can make more, bound to the settings and tools they may touch.
  */
 const ROLES = {
   viewer: ['read'],
   member: ['read', 'chat'],
-  admin:  ['read', 'chat', 'propose', 'host', 'devices', 'users'],
-  owner:  ['read', 'chat', 'propose', 'host', 'devices', 'users', 'org'],
+  admin:  ['read', 'chat', 'propose', 'host', 'devices', 'users', 'delegate'],
+  owner:  ['read', 'chat', 'propose', 'host', 'devices', 'users', 'org', 'delegate'],
 };
 
 /** Rights that need a sign-in within the last STEP_UP_HOURS. */
@@ -39,6 +42,7 @@ const TABLE = [
   R(GET, '/api/branding', 'public'),
   R(GET, '/api/auth/host-check', 'host'),                 // asked before opening a terminal socket
   R(ANY, '/api/auth/(me|logout|password|step-up|sessions)', 'signed'),
+  R(ANY, '/api/auth/(users|levels)(/.*)?', 'users'),        // people and their permission levels (auth/users-routes.js)
   R(ANY, '/api/presence', 'signed'),                       // "this page is visible": a heartbeat, no data
 
   // ── The panel's own lifecycle: everyone's data and code ──
@@ -96,6 +100,7 @@ function rightFor(method, p) {
   return null;
 }
 
-function can(role, right) { return !!ROLES[role]?.includes(right); }
+/** Whether a level holds a right — built-in or one an admin made (auth/levels.js). Unknown: no. */
+function can(role, right) { return require('./levels').rightsOf(role).includes(right); }
 
 module.exports = { ROLES, STEP_UP, TABLE, rightFor, can };

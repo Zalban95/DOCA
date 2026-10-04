@@ -67,7 +67,7 @@ whoever it reports to.
 ## 6. Steps
 
 1. Accounts in SQL — **2.138.0**.
-2. Levels, the `delegate` right, and the Users & levels page.
+2. Levels, the `delegate` right, and the Users & levels page — **2.139.0**.
 3. Grants and `permits()`; agents at the person's level; `ask` levels; real paths.
 4. Device approvals: Always allow / Approve all, by level.
 5. `runs`: one state record; plan comparison.
