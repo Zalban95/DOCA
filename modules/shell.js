@@ -132,6 +132,18 @@ function spawnShell(command, opts = {}) {
 }
 
 /**
+ * How to start a program directly: { file, args, opts }. On Windows a .cmd/.bat
+ * (npm.cmd, a language server's .bin\\x.cmd) cannot be spawned without a shell
+ * since Node's 2024 fix (spawn EINVAL), so it goes through cmd.exe with each
+ * argument quoted; everything else, and every POSIX program, starts as itself.
+ */
+function direct(bin, args = []) {
+  if (!WIN || !/\.(cmd|bat)$/i.test(bin)) return { file: bin, args, opts: {} };
+  const q = a => (/[\s"&|<>^()]/.test(a) ? `"${String(a).replace(/"/g, '""')}"` : String(a));
+  return { file: process.env.ComSpec || 'cmd.exe', args: ['/d', '/s', '/c', `"${[bin, ...args].map(q).join(' ')}"`], opts: { windowsVerbatimArguments: true } };
+}
+
+/**
  * Find an executable, without asking a shell to do it.
  *
  * This was `bash -lc "which x"` with four `test -f` fallbacks and a `find`
@@ -166,4 +178,4 @@ function which(cmd) {
   return null;
 }
 
-module.exports = { WIN, spec, describe, run, spawnShell, which };
+module.exports = { WIN, spec, describe, run, spawnShell, which, direct };

@@ -72,7 +72,8 @@ function install(name) {
   fs.mkdirSync(localDir(), { recursive: true });
   if (!fs.existsSync(path.join(localDir(), 'package.json'))) fs.writeFileSync(path.join(localDir(), 'package.json'), '{"private":true}\n');
   return new Promise((resolve, reject) => {
-    execFile(npm, ['install', '--no-audit', '--no-fund', '--prefix', localDir(), ...s.npm], { timeout: 10 * 60e3, maxBuffer: 16 << 20 },
+    const d = shell.direct(npm, ['install', '--no-audit', '--no-fund', '--prefix', localDir(), ...s.npm]);   // npm.cmd on Windows
+    execFile(d.file, d.args, { timeout: 10 * 60e3, maxBuffer: 16 << 20, ...d.opts },
       (err, out, errOut) => (err ? reject(Object.assign(new Error(String(errOut || err.message).trim().split('\n').slice(-3).join(' ')), { status: 500 }))
         : resolve({ name, found: !!binOf(name), output: String(out).trim().split('\n').slice(-5).join('\n') })));
   });
@@ -109,7 +110,13 @@ function upgrade(req, socket, head) {
   if (!p || !bin) { socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n'); return; }
   if (!_wss) _wss = new (require('ws').WebSocketServer)({ noServer: true });
   _wss.handleUpgrade(req, socket, head, ws => {
-    const child = spawn(bin, SERVERS[name].args, { cwd: p.root, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+    // A .cmd server on Windows needs cmd.exe (shell.direct); and a throw here is inside the upgrade
+    // callback, where it would take the process down — so it closes the socket instead (audit 2026-10-04).
+    let child;
+    try {
+      const d = shell.direct(bin, SERVERS[name].args);
+      child = spawn(d.file, d.args, { cwd: p.root, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, ...d.opts });
+    } catch (e) { try { ws.close(1011, `the language server did not start: ${String(e.message).slice(0, 80)}`); } catch { /* already */ } return; }
     child.stdout.on('data', framer(msg => { try { ws.send(msg); } catch { /* closed */ } }));
     child.stderr.on('data', () => { /* servers log to stderr; not the editor's business */ });
     child.on('exit', () => { try { ws.close(); } catch { /* already */ } });
