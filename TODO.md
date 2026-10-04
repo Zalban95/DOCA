@@ -2526,6 +2526,11 @@ nothing is silently dropped). Open items that lived in them are listed in
   and DOCA equivalent, shows the mechanical rewrite side by side, and Adapt
   writes it (original kept as SKILL.original.md; Restore undoes). What cannot
   be rewritten by rule is left marked for review.
+- **The skills search matches loosely — 2.136.0** (asked 2026-10-04,
+  `harness/skill-match.js`): stems, prefixes, typos (a swap counts as one edit),
+  a short synonym list, filler words ignored; weighted name > description >
+  important lines (headings, "use when", first paragraph) > body; covering more
+  of the query ranks higher, under half of it is no result.
 - **One search over every skill on the machine — built in 2.132.0** (asked
   2026-10-04; `skill-sources.search`): DOCA's shipped and local skills and every
   other harness's, imported or not, by name, description and body, each result
