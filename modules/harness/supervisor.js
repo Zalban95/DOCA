@@ -94,10 +94,11 @@ function afterOrchestrator(sessionId, r) {
   try {
     const bus = require('../api-v1/bus'), devices = require('../api-v1/devices');
     const { hasScope } = require('../api-v1/scopes');
-    bus.publishWhere(devices.list(), d => hasScope(d.scopes, 'harness:chat'), 'agent.turn', {
-      turnId: `auto_${Date.now().toString(36)}`, sessionId, state: 'done', by: 'panel', text: short(r.text, 4000),
-      ...require('../presence').quietFlag(),
-    });
+    const turnId = `auto_${Date.now().toString(36)}`;
+    bus.publishWhere(devices.list(), d => hasScope(d.scopes, 'harness:chat'), 'agent.turn', d => ({
+      turnId, sessionId, state: 'done', by: 'panel', text: short(r.text, 4000),
+      ...require('../presence').quietFlag(d.userId),
+    }));
   } catch { /* the chat has it either way */ }
 }
 

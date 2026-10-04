@@ -51,7 +51,7 @@ function explain({ status, detail, ep, p }) {
  * what to do. Charter rule 12 in the one case where the provider says nothing
  * at all.
  */
-function stalled({ ep, ms, frames }) {
+function stalled({ ep, ms, frames, setting = 'firstTokenTimeoutMs' }) {
   const who     = ep?.label || ep?.id || 'the provider';
   const seconds = Math.round((Number(ms) || 0) / 1000);
   const held    = frames > 0
@@ -59,9 +59,10 @@ function stalled({ ep, ms, frames }) {
       + 'queued request open rather than a network fault.'
     : '';
 
+  // The limit that fired: failoverAfterMs on every rung but the last (audit 2026-10-04: it always said the other one).
   return `${who} held the connection open for ${seconds}s without sending a token — that is this panel's `
-    + 'firstTokenTimeoutMs, not the model\'s. Raise it in harness settings '
-    + '(harness.config.doca.firstTokenTimeoutMs), or try another provider or model.'
+    + `${setting}, not the model's. Raise it in harness settings `
+    + `(harness.config.doca.${setting}), or try another provider or model.`
     + held
     + ' Nothing was cancelled at the provider\'s end: this stopped the waiting, not the work, so anything it was '
     + 'about to charge for it may still charge for.';

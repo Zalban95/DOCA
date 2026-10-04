@@ -275,7 +275,8 @@ function publishWhere(allDevices, filter, type, payload, opts) {
     if (d.revokedAt) continue;
     if (!filter(d)) continue;
     matched++;
-    const env = publish(d.id, type, payload, opts);
+    // A payload may depend on the device (quiet: whether this device's owner is at the panel).
+    const env = publish(d.id, type, typeof payload === 'function' ? payload(d) : payload, opts);
     if (env) out.push({ deviceId: d.id, seq: env.seq, live: stateFor(d.id).subs.size > 0 });
   }
   if (WATCHED.has(type)) {

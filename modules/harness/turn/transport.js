@@ -207,7 +207,7 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
       const busy = !guard.stalled && unavailable(e);
       if (!guard.stalled && !busy) throw e;
 
-      stalled = busy ? e : new Error(budget.stalled({ ep: rung.ep, ms: guard.ms, frames: guard.frames }));
+      stalled = busy ? e : new Error(budget.stalled({ ep: rung.ep, ms: guard.ms, frames: guard.frames, setting: rung.last ? 'firstTokenTimeoutMs' : 'failoverAfterMs' }));
       stalled.stalled = { provider: rung.ep.id, model: rungBody.model, ms: guard.ms, ...(busy ? { status: e.status } : {}) };
       markDegraded(rung.ep, rung.model);
 

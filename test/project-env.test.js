@@ -79,3 +79,11 @@ test('a panel started inside a venv does not hand it to a project set to the mac
     projects.update(p.id, { env: { python: '.venv' } });
   }
 });
+
+test('a project\'s job route returns its own jobs only (audit 2026-10-04)', async () => {
+  const jobs = require('../modules/harness/jobs');
+  const mine = jobs.start('echo mine', { cwd: root });
+  const other = jobs.start('echo other', { cwd: H.tmp });
+  assert.equal((await H.api(null, 'GET', `/api/projects/${p.id}/jobs/${mine.id}`)).status, 200);
+  assert.equal((await H.api(null, 'GET', `/api/projects/${p.id}/jobs/${other.id}`)).status, 404);
+});

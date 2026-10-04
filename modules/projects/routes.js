@@ -6,6 +6,7 @@
  * call. Files themselves are read and written through /api/files, as the Files
  * tab does: one implementation of "open a file", with its root checks.
  */
+const path     = require('path');
 const projects = require('./store');
 const git      = require('./git');
 
@@ -31,7 +32,12 @@ function mount(app) {
   app.delete('/api/projects/:id', h(req => { projects.remove(req.params.id); return { ok: true }; }));
 
   app.post('/api/projects/:id/search', h(req => require('./search').search(P(req).root, req.body || {})));
-  app.post('/api/projects/:id/replace', h(req => require('./search').replaceInFiles(P(req).root, { ...(req.body || {}), dryRun: !req.body?.apply })));
+  app.post('/api/projects/:id/replace', h(async req => {
+    const p = P(req);
+    // Applying writes many files at once: a checkpoint first, as discard and pull take (audit 2026-10-04).
+    const checkpoint = req.body?.apply ? await require('./checkpoints').take(p, { label: `before replacing "${String(req.body.find || '').slice(0, 40)}"`, by: 'person' }).catch(() => null) : null;
+    return { ...(await require('./search').replaceInFiles(p.root, { ...(req.body || {}), dryRun: !req.body?.apply })), ...(checkpoint ? { checkpoint: checkpoint.id } : {}) };
+  }));
 
   app.get('/api/projects/:id/git/status', h(req => git.status(P(req).root)));
   app.get('/api/projects/:id/git/log', h(async req => ({ commits: await git.log(P(req).root, { file: req.query.file, limit: req.query.limit, rev: req.query.rev }) })));
@@ -60,6 +66,9 @@ function mount(app) {
   app.post('/api/projects/:id/git/discard', h(async req => {
     const p = P(req);
     const checkpoint = await cp(p, `before discarding ${[].concat(req.body?.files || []).slice(0, 3).join(', ')}`);
+    // Without its checkpoint a discard cannot be undone: say so and wait for force (audit 2026-10-04).
+    if (!checkpoint && !req.body?.force)
+      throw Object.assign(new Error('A checkpoint could not be taken first (is git installed?), so this discard could not be undone. Send force to discard anyway.'), { status: 409 });
     return { ...(await gm().discard(p.root, req.body?.files)), checkpoint: checkpoint?.id || null };
   }));
   app.post('/api/projects/:id/git/stash', h(req => gm().stash(P(req).root, { pop: !!req.body?.pop })));
@@ -69,12 +78,19 @@ function mount(app) {
     const r = await require('./run').run(req.params.id, String(req.body?.command || ''), { waitSec: 0 });
     return { command: r.command, job: r.job };
   }));
+  // A project's own jobs only — ones that ran in its folder — not any job by id (audit 2026-10-04).
+  const projectJob = req => {
+    const p = P(req), j = require('../harness/jobs').get(req.params.job);
+    const inside = j?.cwd && (path.resolve(j.cwd) + path.sep).startsWith(path.resolve(p.root) + path.sep);
+    if (!inside) throw Object.assign(new Error(`No job ${req.params.job} in ${p.name}.`), { status: 404 });
+    return j;
+  };
   app.get('/api/projects/:id/jobs/:job', h(req => {
     const jobs = require('../harness/jobs');
-    P(req);
+    projectJob(req);
     return { job: jobs.get(req.params.job), output: jobs.output(req.params.job, Number(req.query.bytes) || 64000) };
   }));
-  app.post('/api/projects/:id/jobs/:job/stop', h(req => { P(req); return { job: require('../harness/jobs').stop(req.params.job) }; }));
+  app.post('/api/projects/:id/jobs/:job/stop', h(req => { projectJob(req); return { job: require('../harness/jobs').stop(req.params.job) }; }));
 
   // The project's environment (./env.js): the machine's runtimes, its own venv / node_modules, which is used.
   const envm = () => require('./env');
