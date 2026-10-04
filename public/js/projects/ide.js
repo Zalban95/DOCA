@@ -81,6 +81,10 @@ async function pjOpen(id) {
   }
   try { PJ.project = await apiFetch(`/api/projects/${encodeURIComponent(id)}`); }
   catch (e) { return appAlert(`Could not open the project: ${e.message}`); }
+  // The old project's chat turn and followed job stop here: they streamed into the new one's panes, and
+  // a busy flag left set made the new Send do nothing (audit 2026-10-04).
+  PJC.turn?.abort(); PJC.turn = null; PJC.busy = false; PJC.sessionId = null;
+  clearTimeout(PJR.timer);
   pjEditorReset();
   _pjMeta();
   pjView(PJ.view);

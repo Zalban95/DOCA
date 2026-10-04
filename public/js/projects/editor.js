@@ -77,6 +77,9 @@ function _pjLang(monaco, path) {
 /** Open a file (absolute path) in a tab, optionally at a line and column. */
 async function pjOpenFile(path, line, col) {
   const monaco = await _pjEditors();
+  // The same file opened twice while its read is in flight: wait for the first, not a second model with the
+  // same URI, which Monaco refuses (audit 2026-10-04).
+  if (PJE.opening?.[path]) { await PJE.opening[path]; return pjOpenFile(path, line, col); }
   let tab = PJE.tabs.find(t => t.key === path);
   const kind = pjViewKind(path);   // shown as itself, not as text (projects/preview.js)
   if (!tab && kind) {
@@ -84,8 +87,11 @@ async function pjOpenFile(path, line, col) {
     PJE.tabs.push(tab);
   } else if (!tab) {
     let r;
-    try { r = await apiFetch(`/api/files/read?path=${encodeURIComponent(path)}&sniff=1`); }
+    PJE.opening ||= {};
+    const reading = PJE.opening[path] = apiFetch(`/api/files/read?path=${encodeURIComponent(path)}&sniff=1`);
+    try { r = await reading; }
     catch (e) { return setStatus(document.getElementById('pj-status'), `✗ ${e.message}`, 'err'); }
+    finally { delete PJE.opening[path]; }
     if (r.binary) {
       tab = { key: path, path, title: path.split('/').pop(), view: { kind: 'binary', path, size: r.size } };
       PJE.tabs.push(tab);
@@ -118,9 +124,11 @@ async function pjCompare({ title, originalText, originalPath, modifiedPath, modi
   let modified;
   if (modifiedPath) {
     await pjOpenFile(modifiedPath);
-    modified = PJE.tabs.find(t => t.key === modifiedPath).model;
+    modified = PJE.tabs.find(t => t.key === modifiedPath)?.model;
+    if (!modified) { original.dispose(); return setStatus(document.getElementById('pj-status'), `✗ ${pjRel(modifiedPath)} is not text, so it has no line-by-line comparison.`, 'err'); }
   } else modified = monaco.editor.createModel(modifiedText ?? '', l);
   const key = `diff:${title}`;
+  for (const old of PJE.tabs.filter(t => t.key === key)) old.diff?.original.dispose();   // the comparison it replaces
   PJE.tabs = PJE.tabs.filter(t => t.key !== key);
   PJE.tabs.push({ key, title: `⇆ ${title}`, path: modifiedPath || null, model: modified, diff: { original, modified }, saved: modified.getAlternativeVersionId() });
   pjActivate(key);
@@ -226,6 +234,22 @@ function _pjCursor(pos) {
   st.textContent = t.model
     ? `${t.path ? pjRel(t.path) : t.title}${pos && !t.preview ? `   Ln ${pos.lineNumber}, Col ${pos.column}` : ''}   ${t.preview ? 'preview' : t.model.getLanguageId()}`
     : `${pjRel(t.path)}   ${t.view.kind}`;
+}
+
+/**
+ * After anything that can change files on disk — an agent turn, a pull, a stash, a command run — reload
+ * the open editors that hold no unsaved edits. A pull used to leave the old text open, and Ctrl+S on it
+ * quietly undid the pull (audit 2026-10-04). Edited tabs are left alone: those are the person's.
+ */
+async function pjEditorsReloadClean() {
+  for (const t of PJE.tabs) {
+    if (!t.path || !t.model || t.model.getAlternativeVersionId() !== t.saved) continue;
+    try {
+      const { content } = await apiFetch(`/api/files/read?path=${encodeURIComponent(t.path)}`);
+      if (content !== t.model.getValue()) { t.model.setValue(content); t.saved = t.model.getAlternativeVersionId(); }
+    } catch { /* deleted: the tab stays until closed */ }
+    if (t.preview && PJE.active === t.key) pjActivate(t.key);
+  }
 }
 
 /** Another project: close everything, asking once if anything is unsaved. */

@@ -31,6 +31,7 @@ async function pjGitRender(body) {
   let st, log, br;
   try { [st, { commits: log }, { branches: br }] = await Promise.all([apiFetch(_pjg('/status')), apiFetch(_pjg('/log?limit=60')), apiFetch(_pjg('/branches'))]); }
   catch (e) { body.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; return; }
+  if (PJ.view !== 'git') return;   // switched away while reading: this is no longer the view on screen (audit 2026-10-04)
   body.innerHTML = '';
 
   const branch = document.createElement('div');
@@ -160,12 +161,14 @@ function _pjGitToolbar(st) {
 }
 
 async function pjGitSync(action) {
+  if (action === 'pull' && PJE.tabs.some(_pjDirty)) return appAlert('Save or close the files with unsaved changes before pulling.');
   let r;
   try { r = await apiFetch(_pjg('/sync'), { method: 'POST', body: { action } }); }
   catch (e) { return appAlert(e.message); }
   if (r.checkpoint) setStatus(document.getElementById('pj-status'), `Checkpoint ${r.checkpoint} taken before ${action}`, 'info');
   pjFollowJob(r.job, r.command.run, async job => {
     if (job.code !== 0) setStatus(document.getElementById('pj-status'), `✗ git ${action} failed — the output says why (a login? a conflict?)`, 'err');
+    await pjEditorsReloadClean();
     await pjRefresh(); if (PJ.view === 'git') pjView('git');
   });
 }
@@ -216,6 +219,6 @@ async function pjGitSwitch(branch) {
   if (PJE.tabs.some(_pjDirty))
     return appAlert('Save or close the files with unsaved changes before switching branch.');
   try { await apiFetch(_pjg('/switch'), { method: 'POST', body: { branch } }); }
-  catch (e) { appAlert(e.message); }
+  catch (e) { appAlert(e.message); return pjView('git'); }   // refused: redraw, so the picker shows the branch you are on
   pjEditorReset(); pjView('git'); pjRefresh();
 }

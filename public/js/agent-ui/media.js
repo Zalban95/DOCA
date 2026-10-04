@@ -142,6 +142,7 @@ async function agentDocOpen(media) {
     const res = await fetch(`/api/attachments/${encodeURIComponent(media.name)}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
+    if (overlay.dataset.name !== media.name) return;   // another document opened meanwhile: not this text under its title
     body.textContent = '';
     // The same renderer the transcript uses, so a plan reads the way the agent
     // wrote it — and, like everywhere else, from elements rather than markup.
