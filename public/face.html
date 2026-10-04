@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050507">
+<title>DOCA · Face</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #050507; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; cursor: none; }
+  #hint { position: fixed; bottom: 12px; right: 14px; font: 11px 'JetBrains Mono', monospace; color: #707a85; opacity: 0; transition: opacity .4s; }
+  body:hover #hint { opacity: .8; }
+  a { color: #57c9c2; }
+</style>
+</head>
+<body>
+<canvas id="face" aria-label="What the hive is doing"></canvas>
+<div id="hint">[ F ] full screen · <a href="/">panel</a></div>
+<script src="js/face/face.js"></script>
+<script src="js/face/kiosk.js"></script>
+</body>
+</html>

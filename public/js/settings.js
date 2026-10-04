@@ -25,6 +25,7 @@ async function _subtabGeneralInit() {
     _settingsRender();
     _lookPickerRender(prefs);
     _themePickerRender(prefs);
+    faceSettingsRender();   // the face: in this screen's corner, or full screen (face/corner.js)
     _statsSettingsRender(prefs);
   } catch (e) {
     const el = document.getElementById('settings-tabs-list');
