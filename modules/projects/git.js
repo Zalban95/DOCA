@@ -40,7 +40,10 @@ async function status(root) {
   // got repository-relative paths, so discard and compare resolved them one folder too deep (audit 2026-10-04).
   const out = await git(root, ['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all', '--', '.']);
   const t = await top(root);
-  const prefix = t ? path.relative(t, path.resolve(root)).split(path.sep).join('/') : '';
+  // Both by their real paths: git reports the top as the OS resolves it (/private/var on macOS, the long name
+  // and forward slashes on Windows) while the project's root is as it was written (CI on macOS/Windows, 2026-10-04).
+  const { realOf } = require('../utils');
+  const prefix = t ? path.relative(realOf(path.resolve(t)), realOf(path.resolve(root))).split(path.sep).join('/') : '';
   const local = p => (prefix && p && p.startsWith(`${prefix}/`) ? p.slice(prefix.length + 1) : p);
   const r = { branch: null, upstream: null, ahead: 0, behind: 0, files: [] };
   const parts = out.split('\0');

@@ -17,6 +17,9 @@ const api = (m, url, body) => H.api(null, m, `/api/projects/${p.id}/git${url}`, 
 const done = async id => { for (let i = 0; i < 100; i++) { const j = jobs.get(id); if (j.state !== 'running') return j; await H.sleep(100); } throw new Error('job did not end'); };
 
 before(async () => {
+  // Windows' git converts line endings on checkout (core.autocrlf), so a file read back is not the bytes
+  // written; these tests are about git's verbs, not about line endings (CI, 2026-10-04).
+  Object.assign(process.env, { GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'core.autocrlf', GIT_CONFIG_VALUE_0: 'false' });
   await H.start();
   root = fs.mkdtempSync(path.join(H.tmp, 'gm-'));
   bare = fs.mkdtempSync(path.join(H.tmp, 'remote-'));

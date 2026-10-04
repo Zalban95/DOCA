@@ -31,11 +31,16 @@ const mk = (root, files) => {
 const dir = name => fs.mkdtempSync(path.join(H.tmp, `${name}-`));
 
 test('an Android project is recognised, with its Gradle commands and what they need', async t => {
+  // No SDK anywhere it looks: ANDROID_HOME, ANDROID_SDK_ROOT (GitHub's runners set it) and Android Studio's
+  // defaults under ~, which a dev box has.
+  const { HOME, USERPROFILE, ANDROID_HOME, ANDROID_SDK_ROOT, LOCALAPPDATA } = process.env;
   process.env.ANDROID_HOME = path.join(H.tmp, 'no-sdk-here');
-  // And none in Android Studio's defaults under ~, which a dev box has.
-  const { HOME, USERPROFILE } = process.env;
-  process.env.HOME = process.env.USERPROFILE = H.tmp;
-  t.after(() => { process.env.HOME = HOME; process.env.USERPROFILE = USERPROFILE; });
+  delete process.env.ANDROID_SDK_ROOT;
+  process.env.HOME = process.env.USERPROFILE = process.env.LOCALAPPDATA = H.tmp;
+  t.after(() => {
+    Object.assign(process.env, { HOME, USERPROFILE });
+    for (const [k, v] of Object.entries({ ANDROID_HOME, ANDROID_SDK_ROOT, LOCALAPPDATA })) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+  });
   const root = mk(dir('android'), {
     'settings.gradle': "include ':app'",
     'app/build.gradle': "plugins { id 'com.android.application' }\nandroid { namespace 'x' }",
@@ -69,7 +74,9 @@ test('a Node project\'s own scripts are its commands; the owner can add one; run
   const out = await require('../modules/projects/run').run(p.id, 'hello', { waitSec: 10 });
   assert.equal(out.job.state, 'exited');
   assert.equal(out.job.code, 0);
-  assert.match(out.output, new RegExp(`hello from ${root.replace(/[/\\]/g, '.')}`), 'run in the project root');
+  // The OS's own name for the folder: /private/var on macOS, the long name on Windows (CI, 2026-10-04).
+  const named = p => fs.realpathSync.native(p).replace(/[/\\]/g, '.');
+  assert.match(out.output, new RegExp(`hello from ${named(root)}`, 'i'), 'run in the project root');
   await assert.rejects(require('../modules/projects/run').run(p.id, 'nope'), /not a command of Nodey/);
   assert.throws(() => projects.create({ root: '/etc' }), /outside the folders|not a folder/);
 });
@@ -149,7 +156,7 @@ test('a work chat bound to a project works in it; its specialists too; its promp
   const sid = r.body.sessionId;
   assert.equal((await H.api(null, 'POST', `/api/projects/${p.id}/chat`)).body.sessionId, sid, 'one work chat per project');
 
-  assert.match(await tools.call('shell', { command: 'pwd' }, [], { sessionId: sid }), new RegExp(root.replace(/[/\\]/g, '.')));
+  assert.match(await tools.call('shell', { command: 'pwd' }, [], { sessionId: sid }), new RegExp(fs.realpathSync.native(root).replace(/[/\\]/g, '.'), 'i'));
   assert.match(await tools.call('read_file', { path: 'README.md' }, [], { sessionId: sid }), /hi/);
   const memory = require('../modules/harness/memory');
   const spec = memory.createSession('Helper', { activate: false, kind: 'specialist', parentId: sid });

@@ -44,7 +44,9 @@ function sseHeaders(res) {
 function realOf(abs) {
   let base = abs, rest = '';
   for (;;) {
-    try { return path.join(fs.realpathSync(base), rest); } catch { /* not there yet */ }
+    // .native: the OS's own answer, which on Windows also expands 8.3 short names (C:\\Users\\RUNNER~1 → runneradmin)
+    // so a temp path and the home folder compare as the same place.
+    try { return path.join(fs.realpathSync.native(base), rest); } catch { /* not there yet */ }
     const up = path.dirname(base);
     if (up === base) return abs;
     rest = rest ? path.join(path.basename(base), rest) : path.basename(base);
@@ -57,7 +59,11 @@ function fmSafe(p) {
   // By its real path too: a symlink made to a protected file is the same file, and a symlink inside an
   // allowed folder pointing outside it reaches outside it (audit 2026-10-04) — so both must be inside.
   const real = realOf(abs);
-  if (PROTECTED_FILES.some(f => { const r = path.resolve(f); return r === abs || r === real; })) return false;
+  // The protected file by its real path as well: on macOS /var is /private/var and on Windows a path can name a
+  // folder by its 8.3 short name, so a link to the prefs file compared unequal and was written through (CI on
+  // macOS/Windows, 2026-10-04). Case-insensitively where the filesystem is.
+  const same = (x, y) => (process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y);
+  if (PROTECTED_FILES.some(f => { const r = path.resolve(f), rr = realOf(r); return [r, rr].some(p => same(p, abs) || same(p, real)); })) return false;
   // `root + '/'` was a Unix assumption, and the machine this is developed on is
   // Windows: every absolute path there is separated by `\`, so nothing but a root
   // itself ever passed and the file tools refused the whole disk. Compare with
