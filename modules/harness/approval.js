@@ -324,7 +324,8 @@ function pending() {
 function refusal(decision, req) {
   const what = req.keys?.length ? req.keys.join(', ') : req.tool;
   if (decision === 'timeout')
-    return `Not run: this harness is in manual approval mode and nobody answered the request to run "${req.tool}" `
+    return `Not run: ${req.level ? 'the level of the person this turn acts for asks before every tool call'
+      : req.recheck ? 'it came after outside text, which is asked about' : 'this harness is in manual approval mode'}, and nobody answered the request to run "${req.tool}" `
       + 'within five minutes. The question has been withdrawn. Say what you were going to do and why, and let the '
       + 'user start it again — do not retry it on your own.';
   if (decision === 'cancelled')

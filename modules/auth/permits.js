@@ -54,6 +54,9 @@ function subjectsOf({ person, profile, missionId, sessionId }) {
  */
 function tool({ person, profile, missionId, sessionId, name, args }) {
   if (!person?.role) return { allowed: true, ask: false };
+  // What acts on nothing — reporting to the superior, reading its own memory, showing a picture — is the
+  // agent working, not the machine: no level has to list it, and it is never asked (approval.FREE, live test).
+  if (require('../harness/approval').FREE.has(name)) return { allowed: true, ask: false };
   const L = levels.get(person.role);
   if (!L) return { allowed: false, ask: false, why: `the level "${person.role}" no longer exists — an admin can give ${person.name || 'this person'} another in Settings → Users` };
   const keys = keysOf(name, args);

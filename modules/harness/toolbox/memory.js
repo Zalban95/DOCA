@@ -209,14 +209,14 @@ module.exports = [
     run: ({ action = 'search', query, id, limit }, ctx = {}) => {
       const recall = require('../recall');
       if (action === 'read') {
-        const c = recall.read(String(id || ''));
+        const c = recall.read(String(id || ''), { person: ctx.user });
         return clip([`# ${c.title} (${c.id}, ${c.kind}, last active ${c.updatedAt})`,
           c.topics.length ? `Topics: ${c.topics.join(', ')}` : '',
           c.summary ? `Summary: ${c.summary}` : 'No summary yet: the conversation was never long enough to fold.',
           '', `Last ${c.messages.length} messages:`, ...c.messages.map(m => `[${m.role} ${m.at || ''}] ${m.text}`)].filter(x => x !== '').join('\n'));
       }
       if (!recall.terms(query).length) return 'Error: say what to look for in query.';
-      const hits = recall.search(query, { limit: Math.min(12, Math.max(1, Number(limit) || 6)), exclude: ctx.sessionId });
+      const hits = recall.search(query, { limit: Math.min(12, Math.max(1, Number(limit) || 6)), exclude: ctx.sessionId, person: ctx.user });
       if (!hits.length) return `No earlier conversation mentions "${query}".`;
       return clip(hits.map(h => [`- ${h.title} — id ${h.id}, ${h.kind}${h.archived ? ', archived' : ''}, last active ${h.updatedAt}`,
         h.topics.length ? `  topics: ${h.topics.join(', ')}` : '',

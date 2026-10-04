@@ -65,3 +65,25 @@ test('a member reads the shared memory but does not edit it; /me says which righ
   const me = await H.api(null, 'GET', '/api/auth/me', undefined, as(member));
   assert.deepEqual(me.body.rights, ['read', 'chat']);
 });
+
+test('a member\'s agent recalls only the member\'s conversations (live test)', () => {
+  const memory = require('../modules/harness/memory');
+  const recall = require('../modules/harness/recall');
+  const access = require('../modules/harness/session-access');
+  const theirs = memory.createSession('zebra notes, theirs', { activate: false });
+  access.claim({ ...member.user, role: 'member' }, theirs.id);
+  const owners = memory.createSession('zebra notes, the owner\'s', { activate: false });
+  access.claim({ ...H.owner.user, role: 'owner' }, owners.id);
+  const m = { ...member.user, role: 'member' };
+  assert.deepEqual(recall.search('zebra', { person: m }).map(h => h.id), [theirs.id]);
+  assert.equal(recall.search('zebra', { person: { ...H.owner.user, role: 'owner' } }).length, 2, 'a host recalls all');
+  assert.throws(() => recall.read(owners.id, { person: m }), /No conversation/);
+});
+
+test('what acts on nothing needs no place in a level (work_chats, memory_search)', () => {
+  const permits = require('../modules/auth/permits');
+  require('../modules/auth/levels').create({ name: 'Nothing', rights: ['read', 'chat'], tools: { allow: [] }, approval: 'ask' }, { actorLevel: 'owner' });
+  const p = { ...member.user, role: 'nothing' };
+  assert.deepEqual(permits.tool({ person: p, name: 'work_chats', args: { action: 'report' } }), { allowed: true, ask: false });
+  assert.equal(permits.tool({ person: p, name: 'shell', args: { command: 'ls' } }).allowed, false);
+});
