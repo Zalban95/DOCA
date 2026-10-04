@@ -53,7 +53,7 @@ function workChats({ all = false } = {}) {
 }
 
 /** GET /api/v1/harness/missions: specialists' missions and work chats, newest first. */
-function forDevices(query = {}) {
+function forDevices(query = {}, device = null) {
   const missions = require('../agents/missions');
   const enabled = require('../agents/registry').enabled();
   const all = query.all === '1';
@@ -61,7 +61,8 @@ function forDevices(query = {}) {
   const rows = [
     ...(enabled ? missions.list({ state: query.state, all, limit }) : []),
     ...workChats({ all }).map(payloadOf).filter(p => !query.state || p.state === query.state),
-  ].sort((a, b) => String(b.endedAt || b.startedAt || '').localeCompare(String(a.endedAt || a.startedAt || '')))
+  ].filter(r => !device || require('./session-access').hears(device, r.sessionId || r.by || r.missionId))
+    .sort((a, b) => String(b.endedAt || b.startedAt || '').localeCompare(String(a.endedAt || a.startedAt || '')))
     .slice(0, limit);
   // `enabled` said "specialists are on"; a watch reads false-and-empty as
   // switched off. With work chats listed there is something to show either way.
@@ -75,9 +76,8 @@ function announce(sessionId) {
   if (s.kind !== 'work') return;
   const bus = require('../api-v1/bus');
   const devices = require('../api-v1/devices');
-  const { hasScope } = require('../api-v1/scopes');
   const payload = payloadOf(s);
-  bus.publishWhere(devices.list(), d => hasScope(d.scopes, 'harness:chat'), 'agent.mission',
+  bus.publishWhere(devices.list(), d => require('./session-access').hears(d, sessionId), 'agent.mission',
     d => ({ ...payload, ...require('../presence').quietFlag(d.userId) }));
 }
 

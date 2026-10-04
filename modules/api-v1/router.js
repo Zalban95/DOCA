@@ -480,7 +480,7 @@ harnessApi.post('/turns/:id/cancel', requireScope('harness:chat'), wrap(async (r
 // runs, and a watch that saw only specialists showed a picture always behind.
 // Archived ones are out by default, so the panel and a watch agree about what is open.
 harnessApi.get('/missions', requireScope('harness:chat'), (req, res) =>
-  res.json(require('../harness/workview').forDevices(req.query)));
+  res.json(require('../harness/workview').forDevices(req.query, req.device)));
 
 // The bytes behind `images[].url` on `agent.turn` and in a transcript. Images
 // only, so `harness:chat` does not become a way to read every attachment.

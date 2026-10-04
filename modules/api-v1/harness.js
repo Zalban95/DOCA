@@ -57,7 +57,8 @@ const _running = new Map();
  */
 function fanout(type, payload) {
   try {
-    return bus.publishWhere(devices.list(), d => hasScope(d.scopes, 'harness:chat'), type, payload);
+    // Only the devices whose owner may open this conversation (session-access.js hears).
+    return bus.publishWhere(devices.list(), d => access().hears(d, payload.sessionId), type, payload);
   } catch (e) {
     // An oversized event must not abort a turn that is otherwise fine.
     if (e.code === 'event_too_large') return [];
