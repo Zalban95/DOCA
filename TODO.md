@@ -1184,6 +1184,14 @@ back; the list view could be its fallback.
 
 ## Projects: an IDE, and its chats out of the orchestrator's way (asked for 2026-09-28)
 
+**Asked 2026-10-04, built in 2.135.0 — git managed from Source control**
+(`modules/projects/git-manage.js`). Initialize a repository (optionally with a
+first commit), set the remote, Fetch / Pull (fast-forward only) / Push (sets the
+upstream on the first push), a new branch, stash and pop, and ↶ discard per file.
+Discard and pull take a checkpoint first; network commands are jobs with git's
+prompt off, so a missing login fails with its message. The agent's `git` tool
+does not gain these. Not yet: merge/rebase, conflict resolution, tags.
+
 **Asked 2026-10-04, built in 2.134.0 — a project's environment is visible and
 chosen** (`modules/projects/env.js`, Build & test → Environment). The machine's
 runtimes (Python, Node, Java, Go, Rust, .NET, conda, uv) with versions; what the

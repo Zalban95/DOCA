@@ -8,7 +8,8 @@
  * or a commit message is never parsed as a command. Reading is free; changing
  * (stage, unstage, commit, checkout a branch) is what the host right and, for
  * the agent, the approval mode are for. Nothing here pushes, rewrites history
- * or discards work: those stay deliberate, in a terminal.
+ * or discards work. The person's own buttons for those (init, remotes, push,
+ * pull, stash, discard — each guarded) are git-manage.js, not the agent's tool.
  */
 const path = require('path');
 const { execFile } = require('child_process');
