@@ -71,4 +71,4 @@ whoever it reports to.
 3. Grants and `permits()`; agents at the person's level; `ask` levels; real paths — **2.140.0**.
 4. Device approvals: Always allow / Approve all, by level — **2.141.0**.
 5. `runs`: one state record; plan comparison — **2.142.0** (missions; work chats are checked by projects/finish.js).
-6. One event sink for the three chats (front end, alongside).
+6. One event sink for the three chats (front end, alongside) — **2.143.0** (four, with the voice call).

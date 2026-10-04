@@ -213,6 +213,9 @@ The harness gives its agent eight rules for working on any repository (charter r
 - **`tok/s` is model time, not wall-clock.** `budget` accumulates `ms` measured around the provider call only, so a turn that spent forty seconds in a `shell` tool is not reported as a slow model; `tokenRateEl()` draws it as one line under the finished answer, and it is `null` rather than `0` when nothing measured it.
 - The ⚙ panel re-fetches its metadata on open (`_harnessLoadMeta(true)`) because the tool list is dynamic — starting an MCP server changes it — and `_harnessDisabledTools()` starts from the saved list rather than reading absent checkboxes as unticked.
 
+### The chats: one event sink
+- **What a turn's events mean is decided once: `public/js/agent-ui/event-sink.js`** (since 2.143.0). `agentEventSink(ui)` holds the state every chat used to keep its own copy of — the open tool fold, the waiting row rewritten in place, failover and warning notes, errors — and `agentApprovalEvent()` the three approval states (refused note; answered settles the card and closes the popup; asked draws card and popup). The floating chat, its voice call, the harness console and the Projects chat each pass only how they draw (`fold`, `note`, `image`, `approval`, `error`, …). A new event type is added there, once; the audit found the copies had drifted three ways.
+
 ### Projects: which environment a command runs in
 - **Per project, visible, and inside the command line** (`modules/projects/env.js`, since 2.134.0). `chosen(p)` is a project venv (default when one exists) or the machine's Python (`p.env.python`); `vars(p)` + `wrap(p, cmd)` put the venv's bin and `node_modules/.bin` first. The `wrap` is load-bearing: scripted commands run in `bash -lc`, whose profile prepends `~/.local/bin` and pyenv shims *after* the environment we pass, so an env var alone leaves the venv behind the machine's python.
 

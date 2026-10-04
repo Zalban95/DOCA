@@ -109,11 +109,6 @@ async function hcSend() {
 
   const box = document.getElementById('hc-messages');
   const scroll = () => { if (box) box.scrollTop = box.scrollHeight; };
-  let pendingCall = null;
-  let waitingRow  = null;
-  // The last step's account of the turn: the ring follows it while the turn
-  // runs, and the rate under the answer is read off it once the turn ends.
-  let spend = null;
 
   // Everything this turn does goes in one block that shows its current row and
   // becomes one line when the turn ends.
@@ -125,86 +120,31 @@ async function hcSend() {
   });
   stream.startWaiting();
 
+  // What each event means is decided once (agent-ui/event-sink.js); this is how the console draws it.
+  const sink = agentEventSink({
+    stream,
+    fold: (kind, body, name, opts) => _hcAppend(kind, body, name, opts),
+    note: (kind, text, cls) => _hcAppend(kind === 'waiting' ? 'waiting' : 'failover', text, cls),
+    removeNote: el => el.parentElement?.remove(),   // _hcAppend returns the row's body
+    image: img => _hcAppendImage(img),
+    approval: evt => _hcApproval(evt, box, scroll),
+    error: msg => _hcAppend('error', msg, 'error'),
+    context: evt => _hcContext(evt),
+    onSession: id => { _hcSession = id; },
+    onProposal: () => _hcLoadProposals(),   // mid-turn, so the card is there when the agent explains it
+  });
   await sseStream('/api/harness/chat', { message: text, sessionId: _hcSession }, {
-    signal: _hcTurn.signal,
-    onEvent: evt => {
-      if (evt.type === 'session') _hcSession = evt.sessionId;
-      if (evt.type === 'thinking') {
-        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
-        stream.feedThinking(evt.text);
-      }
-      if (evt.type === 'text') {
-        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
-        stream.feed(evt.text);
-      }
-      if (evt.type === 'tool_call') {
-        stream.finish();
-        stream.resetText();
-        if (pendingCall) pendingCall.setActive(false);
-        pendingCall = _hcAppend('tool-call', JSON.stringify(evt.args ?? {}), evt.name, { active: true });
-      }
-      if (evt.type === 'usage') { spend = evt; _hcContext(evt); }
-      // A blocked tool call. The turn is waiting on the other side of this
-      // card, so it goes in as its own row rather than into the working fold,
-      // which collapses and would hide the thing being asked.
-      if (evt.type === 'approval') _hcApproval(evt, box, scroll);
-      if (evt.type === 'warning') _hcAppend('failover', evt.text, 'warning');   // a cut-off reply, budget, context
-      if (evt.type === 'image') _hcAppendImage(evt.image);
-      if (evt.type === 'tool_result') {
-        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
-        _hcAppend('tool-result', evt.result, evt.name);
-        stream.startWaiting();
-      }
-      if (evt.type === 'error') {
-        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
-        stream.finish();
-        _hcAppend('error', evt.text, 'error');
-      }
-      // The provider has the request and has not started answering. One row,
-      // rewritten in place, because the alternative is a console that shows
-      // nothing for ninety seconds and reads as broken.
-      if (evt.type === 'waiting') {
-        const note = `${evt.provider} has not sent a token yet — ${evt.seconds}s`
-          + (evt.frames ? `, ${evt.frames} keep-alive frames` : '')
-          + (evt.timeoutMs ? ` of ${Math.round(evt.timeoutMs / 1000)}s` : '');
-        if (waitingRow) waitingRow.textContent = note;
-        else waitingRow = _hcAppend('waiting', note, 'waiting');
-      }
-      // A hop down the fallback chain. It gets a row of its own and is never
-      // quiet, because the answer that follows is not from the model the user
-      // chose: read without this line, a smaller model's reply is taken for the
-      // big one's, and the next investigation starts from a false premise.
-      if (evt.type === 'failover') {
-        if (waitingRow) { waitingRow.parentElement?.remove(); waitingRow = null; }
-        _hcAppend('failover', evt.text, 'fallback');
-        stream.startWaiting();   // the next rung has its own wait, and may be slow too
-      }
-      // Anything real from the model means the wait is over. `_hcAppend`
-      // returns the body span, so the row is its parent.
-      if (waitingRow && (evt.type === 'thinking' || evt.type === 'text' || evt.type === 'tool_call' || evt.type === 'usage')) {
-        waitingRow.parentElement?.remove();
-        waitingRow = null;
-      }
-      // Mid-turn, so the card is there to accept the moment the agent explains
-      // it rather than after the whole answer has finished streaming.
-      if (evt.type === 'proposal')    _hcLoadProposals();
-    },
-    onError: e => {
-      if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
-      stream.finish();
-      _hcAppend('error', e.message, 'error');
-    },
+    signal: _hcTurn.signal, onEvent: sink.onEvent, onError: sink.onError,
   });
 
-  if (pendingCall) pendingCall.setActive(false);
-  stream.finish();
+  sink.finish();
   // The turn is over, so the rows it left open close: the account of a finished
   // run is a few short lines, each one a click away from the detail.
   closeFolds(box);
   agentWorkingClose(box);
   // After the fold closes, so the rate is the last thing under the answer
   // rather than a line the collapsing run swallows.
-  const rate = tokenRateEl(spend);
+  const rate = tokenRateEl(sink.spend);
   if (rate && box) { box.appendChild(rate); scroll(); }
   if (_hcTurn?.signal.aborted)
     _hcAppend('error', 'Stopped. The step already running finishes on its own; nothing after it starts.', 'stopped');
