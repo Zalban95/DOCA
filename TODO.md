@@ -269,6 +269,18 @@ agent is told to end its turn and wait. **Left:** "when nobody is at a screen"
 — telling the devices only when the chat is not being read, from `lastSeen` /
 `bus.isOnline`.
 
+**Half built in 2.123.0** (`modules/presence.js`): the panel sends a heartbeat
+while its page is visible (`POST /api/presence`, every 30 s, and once more when
+hidden), and the agent's per-step readings say whether the owner is at the
+panel, so charter rule 15 — chat or device — has a fact to go on. **Not built,
+decide:** the hub muting its *own* device pushes (an automatic Orchestrator
+reply, a mission's start/finish) while somebody is reading the panel. Skipping
+the event is wrong — the watch keeps its mission list from those durable events
+and would show "running" forever — and sending it ephemeral does not help,
+because DocaMobile notifies on any `agent.mission`/`agent.turn` done it sees.
+So it needs a field the clients read, e.g. `quiet: true` meaning "update, do not
+notify": an `/api/v1` addition and a change in DocaMobile and DocaWear.
+
 ## MCP and VMs, deliberately left out of the first pass
 
 - **No embedded VNC console.** The VMs tab shows the display address to paste
