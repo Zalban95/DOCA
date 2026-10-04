@@ -20,7 +20,7 @@ test.after(() => H.stop());
 
 test('the shipped skills load, each with a name and a description', () => {
   const shipped = skills.list().filter(s => s.source === 'shipped');
-  assert.deepEqual(shipped.map(s => s.name).sort(), ['android-app', 'make-a-specialist']);
+  assert.deepEqual(shipped.map(s => s.name).sort(), ['android-app', 'make-a-specialist', 'write-a-skill']);
   for (const s of shipped) assert.ok(s.description.length > 20, `${s.name} says when to use it`);
 });
 

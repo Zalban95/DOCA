@@ -90,7 +90,9 @@ the end, and in the sections as "built in …" notes.
   → *Wanted next: many agents*.
 - ~~Switching to a stronger model when a job is stuck~~ — **built in 2.119.0**
   (`harness/escalate.js`, off until a model is named). → §3 (failure types).
-- Skills: a writing guide read like the rules', and importing from other
+- Skills — **importing from other harnesses and a writing guide built in
+  2.128.0** (`harness/skill-sources.js`, `skills/write-a-skill`); left: a review
+  with answerable questions, history and undo. Was: a writing guide read like the rules', and importing from other
   harnesses (Codex, Cursor rules…); every shipped procedure reads back what it
   wrote. → *Done log: Built 2026-09-25*, *Two layers of learned knowledge*.
 - A plan shown on every device — **panel window, phone and watch built in
@@ -2470,7 +2472,11 @@ nothing is silently dropped). Open items that lived in them are listed in
   questions; history and undo.
 - **Skills from other harnesses** (Claude Code, Codex, Cursor rules…) listed and
   managed in the Skills section, usable by the DOCA harness — part of the
-  Settings review above.
+  Settings review above. **Built in 2.128.0** (`harness/skill-sources.js`):
+  Claude Code skills, plugin skills and commands, Codex prompts, Gemini CLI
+  commands and a project's Cursor rules are found and offered in Settings →
+  Harness → Skills; single-file ones become skill folders, originals untouched.
+  The writing guide ships as the `write-a-skill` skill.
 
 ### Audit 2026-09-26 — the day's new surface (auth, versions, backups, supervisor, listen, rules, unattended)
 
