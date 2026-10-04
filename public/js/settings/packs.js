@@ -1,0 +1,84 @@
+/* ═══════════════════════════════════════════════════════
+   Settings → Packs (modules/packs; TODO H4): what this hive made, in one
+   .dpack another hive imports — skills, specialists, recipes, MCP servers,
+   memory and its rules, each inside in its own world's format — and bringing
+   one in (or a zip of another tool's things): a dry run, then what you choose.
+   ═══════════════════════════════════════════════════════ */
+
+let _packFile = null;
+
+async function packsLoad() {
+  const panel = document.getElementById('sp-packs');
+  if (!panel) return;
+  let c;
+  try { c = await apiFetch('/api/packs/contents'); }
+  catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
+  const group = (kind, title, list) => `<div style="margin-bottom:8px"><div class="input-label">${title}</div>${list.length
+    ? list.map(x => `<label style="display:inline-flex;align-items:center;gap:4px;margin:2px 10px 2px 0;font-size:12px" title="${escHtml(x.label || '')}">
+        <input type="checkbox" data-pack="${kind}" value="${escHtml(x.id)}"> ${escHtml(x.id)}</label>`).join('')
+    : '<span style="font-size:11px;color:var(--muted)">none</span>'}</div>`;
+  panel.innerHTML = `<div class="card">
+      <div class="card-title">Make a pack</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">One .dpack file (a zip) that another DOCA imports — and that other tools read without DOCA: skills are
+        Agent Skills folders, specialists are subagent markdown, MCP servers are the mcpServers JSON Claude Desktop and Cursor read, a shell-only
+        recipe comes with a bash and a PowerShell script. Secrets never travel: they are left empty and listed for whoever imports it.</p>
+      <div class="toolbar" style="gap:6px;margin-bottom:10px"><input class="input" id="pack-name" placeholder="Pack name" style="flex:1;max-width:280px"></div>
+      ${group('skills', 'Skills', c.skills)}${group('specialists', 'Specialists', c.specialists)}${group('recipes', 'Recipes', c.recipes)}${group('mcp', 'MCP servers', c.mcp)}
+      <div style="margin-bottom:10px;font-size:12px"><label><input type="checkbox" id="pack-memory"> Memory</label>
+        <label style="margin-left:12px"><input type="checkbox" id="pack-rules"> Memory rules (as AGENTS.md)</label></div>
+      <button class="btn btn-sm btn-blue" onclick="packsExport()">⬇ Download the pack</button></div>
+    <div class="card">
+      <div class="card-title">Bring one in</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">A .dpack, or a zip of another tool's things: Agent Skills folders, a Claude Desktop / Cursor / Claude Code
+        config with mcpServers, AGENTS.md or CLAUDE.md rules. You see what it adds, overwrites and needs before anything is written.
+        An MCP server is added switched off.</p>
+      <input type="file" id="pack-file" accept=".dpack,.zip" onchange="packsPlan(this.files[0])">
+      <div id="pack-plan" style="margin-top:10px"></div></div>`;
+}
+
+async function packsExport() {
+  const pick = kind => [...document.querySelectorAll(`#sp-packs input[data-pack="${kind}"]:checked`)].map(i => i.value);
+  const body = { name: document.getElementById('pack-name').value.trim() || 'pack', skills: pick('skills'), specialists: pick('specialists'),
+    recipes: pick('recipes'), mcp: pick('mcp'), memory: document.getElementById('pack-memory').checked, rules: document.getElementById('pack-rules').checked };
+  const res = await fetch('/api/packs/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) return appAlert((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+  const name = (/filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '') || [])[1] || 'pack.dpack';
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(await res.blob()), download: name });
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+async function packsPlan(file) {
+  const out = document.getElementById('pack-plan');
+  if (!file) return;
+  _packFile = file;
+  const form = new FormData(); form.append('file', file);
+  const res = await fetch('/api/packs/plan', { method: 'POST', body: form });
+  const p = await res.json().catch(() => ({}));
+  if (!res.ok) { out.innerHTML = `<div style="color:var(--red);font-size:12px">${escHtml(p.error || `HTTP ${res.status}`)}</div>`; return; }
+  const rows = p.items.map(i => `<label class="disk-row" style="cursor:pointer"><span class="disk-label"><input type="checkbox" data-key="${escHtml(i.key)}" ${i.overwrites ? '' : 'checked'}>
+      ${escHtml(i.kind)} · ${escHtml(i.id)}</span><span class="disk-path">${escHtml(i.command || i.path || '')}${i.steps ? ` · ${i.steps} steps` : ''}${i.count !== undefined ? ` · ${i.count}` : ''}</span>
+      <span class="disk-free" style="color:${i.overwrites ? 'var(--amber)' : 'var(--green)'}">${i.overwrites ? 'exists here' : 'new'}</span></label>`).join('');
+  const needs = [...(p.needs.secrets || []).map(s => `fill in ${s}`), ...(p.needs.missingTools || []).map(t => `a tool this hive lacks: ${t}`), ...(p.needs.doca ? [p.needs.doca] : [])];
+  out.innerHTML = `<div style="font-size:12px;margin-bottom:6px"><b>${escHtml(p.name || file.name)}</b>${p.native ? ' — another tool\'s files, read as they are' : ''}${p.description ? ` — ${escHtml(p.description)}` : ''}</div>
+    ${rows || '<div class="placeholder">Nothing a pack carries.</div>'}
+    ${needs.length ? `<div style="font-size:11px;color:var(--amber);margin-top:6px">Needs: ${needs.map(escHtml).join(' · ')}</div>` : ''}
+    ${p.skipped.length ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Skipped: ${p.skipped.map(s => `${escHtml(s.path)} (${escHtml(s.why)})`).join(', ')}</div>` : ''}
+    ${rows ? `<div class="toolbar" style="gap:8px;margin-top:8px"><label style="font-size:12px"><input type="checkbox" id="pack-overwrite"> replace what exists</label>
+      <button class="btn btn-sm btn-blue" onclick="packsImport()">Bring in the ticked ones</button></div>` : ''}`;
+}
+
+async function packsImport() {
+  const only = [...document.querySelectorAll('#pack-plan input[data-key]:checked')].map(i => i.dataset.key);
+  if (!only.length || !_packFile) return;
+  const form = new FormData(); form.append('file', _packFile); form.append('only', JSON.stringify(only));
+  form.append('overwrite', String(document.getElementById('pack-overwrite').checked));
+  const res = await fetch('/api/packs/import', { method: 'POST', body: form });
+  const r = await res.json().catch(() => ({}));
+  if (!res.ok) return appAlert(r.error || `HTTP ${res.status}`);
+  appAlert(r.done.map(d => `${d.key}: ${d.ok ? `done${d.note ? ` (${d.note})` : ''}` : d.skipped ? `skipped — ${d.skipped}` : `failed — ${d.error}`}`).join('\n'));
+  packsLoad();
+}
+
+// Its panel is made here rather than in index.html, which is at its line ceiling.
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('DOMContentLoaded', () =>
+  document.getElementById('sp-backups')?.before(Object.assign(document.createElement('div'), { className: 'settings-panel', id: 'sp-packs' })));
