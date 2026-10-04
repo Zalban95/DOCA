@@ -168,11 +168,14 @@ async function agentDocOpen(media) {
  * leaves the window shut.
  */
 const _agentPlansOpened = new Set();
-function _agentPlanArrived(media) {
+async function _agentPlanArrived(media) {
   const at = Date.parse(media.plan?.at || '');
   if (!media.plan || _agentPlansOpened.has(media.name) || !(Date.now() - at < 120000)) return;
   _agentPlansOpened.add(media.name);
-  setTimeout(() => agentDocOpen(media), 0);
+  // Still waiting? A plan approved a minute ago reopened, on a reload, asking again (live test 2026-10-04).
+  const now = await apiFetch(`/api/harness/sessions/${encodeURIComponent(media.plan.sessionId)}/inbox`).then(r => r.plan).catch(() => null);
+  if (now && (now.state !== 'proposed' || now.revision !== media.plan.revision)) return;
+  agentDocOpen(media);
 }
 
 /**
