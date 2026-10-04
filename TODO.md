@@ -50,7 +50,10 @@ the end, and in the sections as "built in …" notes.
    PostgreSQL behind the same calls (`DOCA_DB_URL`), numbered migrations,
    `tenant_id` on every table; the **usage ledger** is in it (old monthly files
    imported once), backups carry a consistent copy (`VACUUM INTO`); the **audit
-   log** since 2.108.0. **Next:** sessions and memory, then `npm run db-bench`.
+   log** since 2.108.0. Sessions and memory since 2.111.0; **`npm run db-bench`
+   since 2.122.0** (`bin/doca-db-bench.js`). **Next:** run it against a real
+   PostgreSQL (and any Postgres-protocol engine) on the machine that will host it;
+   then missions, proposals, devices.
 3. ~~**Off-site backups**~~ — **built in 2.109.0** (`backup/remote.js`): each
    scheduled `.dBac` also goes to any S3-compatible bucket (Signature V4 by hand,
    checked against AWS's published example; round-tripped against SeaweedFS:

@@ -99,8 +99,15 @@ function syncHandle() {
   return impl.raw || null;
 }
 
+/**
+ * A backend opened bare: no migrations, not the shared handle. For the bench
+ * (bin/doca-db-bench.js), which must measure an engine without writing DOCA's
+ * schema into whatever database it was pointed at.
+ */
+function openBare(url) { return url ? postgres(url) : sqlite(); }
+
 /** For tests and for a restore that replaces the file: close, so the next call opens again. */
 function close() { try { impl?.close(); } catch { /* closed */ } impl = null; opening = null; }
 
-module.exports = { ready, syncHandle, run: call('run'), all: call('all'), get: call('get'), tx: call('tx'), snapshot: call('snapshot'), close,
+module.exports = { ready, syncHandle, openBare, run: call('run'), all: call('all'), get: call('get'), tx: call('tx'), snapshot: call('snapshot'), close,
   get kind() { return impl?.kind || (process.env.DOCA_DB_URL ? 'postgres' : 'sqlite'); } };
