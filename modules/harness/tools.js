@@ -34,6 +34,7 @@ const TOOLS = [
   ...require('./toolbox/skills'),
   ...require('./toolbox/computers'),
   ...require('./toolbox/recipes'),
+  ...require('./toolbox/schedules'),
 ];
 
 

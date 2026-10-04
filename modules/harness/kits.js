@@ -33,7 +33,7 @@ const KITS = {
 /** Every built-in tool's kit. A tool missing here fails the test — on purpose. */
 const KIT_OF = {
   work_chats: 'organization', work_plan: 'organization', agent_dispatch: 'organization',
-  agent_results: 'organization', agent_resume: 'organization', computer: 'organization', permission_grant: 'organization', mission_plan: 'organization', scout_report: 'organization',
+  agent_results: 'organization', agent_resume: 'organization', schedule: 'organization', computer: 'organization', permission_grant: 'organization', mission_plan: 'organization', scout_report: 'organization',
   search_files: 'code', replace_in_files: 'code', git: 'code', project: 'code', repo_rules: 'code',
   read_file: 'files', write_file: 'files', list_dir: 'files',
   shell: 'shell', shell_job: 'shell',

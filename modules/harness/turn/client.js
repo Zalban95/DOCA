@@ -186,4 +186,4 @@ function withPerson(client, sessionId) {
   return client;
 }
 
-module.exports = { shapeFor, clientBlock, placeBlock, personOf, deviceOwner, dashboardClient, withPerson };
+module.exports = { shapeFor, clientBlock, placeBlock, personOf, personById, deviceOwner, dashboardClient, withPerson };

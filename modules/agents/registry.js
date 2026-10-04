@@ -53,7 +53,7 @@ const { loadPrefs, savePrefs } = require('../utils');
  * somebody wrote it down. `recipe` runs its steps in a conversation of its own, asking for approval as a
  * person's turn does — which a mission, running unwatched, must never do; its leader runs recipes.
  */
-const NEVER = ['settings_propose', 'install_propose', 'tool_note', 'agent_dispatch', 'agent_results', 'agent_resume', 'ask_device', 'permission_grant', 'computer', 'recipe'];
+const NEVER = ['settings_propose', 'install_propose', 'tool_note', 'agent_dispatch', 'agent_results', 'agent_resume', 'ask_device', 'permission_grant', 'computer', 'recipe', 'schedule'];
 
 /**
  * The airlock (docs/design/airlock.md): tools only an `airlock: true` definition

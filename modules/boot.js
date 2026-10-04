@@ -15,6 +15,7 @@ function afterListen({ certs = null, mode } = {}) {
   require('./backup/schedule').start();               // backups on a schedule, when switched on
   require('./computers/lifecycle').start();           // agents' computers nobody kept, tidied away
   require('./channels/telegram').start().catch(() => {});   // the Telegram bot, when a host switched it on
+  require('./schedules').start();                     // turns and recipes on a timetable, as their person
   const devices = require('./api-v1/devices');         // audit 2026-09-26 §4f, N5: tidy the device registry
   devices.repairNames();
   require('./api-v1/bus').collectOrphans(devices.list().map(d => d.id));
