@@ -83,12 +83,14 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [ ] H3.5 Skills link their recipes; device macros and install proposals become recipes.
 
 **H4 · Packs — portable everything** (§2.4, §9)
-- [ ] H4.1 `.dpack` envelope + `pack.json` (requirements incl. OS); native formats inside.
-- [ ] H4.2 Export: skills (Agent Skills), specialists (subagent md), MCP (`mcpServers` JSON),
-  rules (`AGENTS.md`), memory (JSONL), conversations (JSONL), faces/layouts/presets (JSON schema).
-- [ ] H4.3 Import: the same, plus `AGENTS.md`/`CLAUDE.md`/`.mdc` rules and other clients' MCP configs;
+- [x] H4.1 (2.163.0) `.dpack` envelope + `pack.json` (requirements incl. OS); native formats inside. (OS requirements left.)
+- [x] H4.2 (2.163.0) Export: skills (Agent Skills), specialists (subagent md), MCP (`mcpServers` JSON),
+  rules (`AGENTS.md`), memory (JSONL), conversations (JSONL), faces/layouts/presets (JSON schema). Done: skills,
+  specialists, recipes (+ scripts), MCP, memory, rules. **Left:** conversations, faces (they live per browser until H2.4).
+- [x] H4.3 (2.163.0) Import: the same, plus `AGENTS.md`/`CLAUDE.md`/`.mdc` rules and other clients' MCP configs;
   a dry run listing what it adds, needs and overwrites.
-- [ ] H4.4 Round-trip tests per converter, with fixtures from the other tools.
+- [x] H4.4 (2.163.0) Round-trip tests per converter, with fixtures from the other tools (`test/packs.test.js`, a
+  zip made by Python's zipfile). More fixtures as more converters arrive.
 - [ ] H4.5 The library in Settings; hub-to-hub send; whatever the agent saves is a pack.
 - [ ] H4.6 A registry to publish and fetch packs. [X]
 
