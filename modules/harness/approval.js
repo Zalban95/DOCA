@@ -158,7 +158,7 @@ function gate(name, args, ctx = {}) {
   const { mode, always, recheckOutside } = settings();
   // Outside text entered this turn (harness/untrusted.js): the first call after it that does something
   // is asked about again, once, even when allowed. Not in Unattended mode or a mission: nobody would answer.
-  if (recheckOutside && mode !== 'unattended' && !ctx.mission && !FREE.has(name) && !require('./tools').READS.has(name)) {
+  if (recheckOutside && mode !== 'unattended' && !ctx.mission && !FREE.has(name) && !require('./tools').isRead(name, args)) {
     const from = require('./untrusted').pending(ctx.signal, { take: true });
     if (from) return { tool: name, keys: null, recheck: true,
       summary: `${summarize(name, args)} — asked again because text from ${from} entered this turn; it could be steering the agent.` };

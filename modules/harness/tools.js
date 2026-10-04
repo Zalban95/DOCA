@@ -97,13 +97,25 @@ async function call(name, args, disabled = [], ctx = {}) {
 // other call a signed-in person's turn makes is, as theirs (docs/design/auth.md §6).
 const READS = new Set(['read_file', 'list_dir', 'search_files', 'http_fetch', 'research_docs', 'skill', 'repo_rules']);
 
+/**
+ * Whether this call only reads. http_fetch is a read only as GET/HEAD: with a
+ * method and a body it sends data out, and counting it as a read skipped the
+ * audit and the "ask again after outside text" check — the defence against a
+ * page telling the agent to POST its notes somewhere (audit 2026-10-04).
+ */
+function isRead(name, args = {}) {
+  if (!READS.has(name)) return false;
+  if (name === 'http_fetch') return ['GET', 'HEAD'].includes(String(args.method || 'GET').toUpperCase());
+  return true;
+}
+
 function audit(name, args, ctx, out) {
   const approval = require('./approval');
-  if (!ctx.user?.id || READS.has(name) || approval.FREE.has(name)) return;
+  if (!ctx.user?.id || isRead(name, args) || approval.FREE.has(name)) return;
   try {
     require('../auth/store').audit({ orgId: ctx.user.orgId, actorId: ctx.user.id, via: 'harness', sessionId: ctx.sessionId || null,
       action: `tool ${name}`, detail: approval.summarize(name, args), ok: !out.startsWith('Error:') });
   } catch { /* the audit is a record, not a gate */ }
 }
 
-module.exports = { TOOLS, describe, schemas, call, clip, READS };
+module.exports = { TOOLS, describe, schemas, call, clip, READS, isRead };
