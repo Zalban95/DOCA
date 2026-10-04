@@ -21,7 +21,7 @@ const authStore   = require('./store');
 const PUBLIC_FILES = /^\/(login(\.html)?|favicon\.svg|css\/[\w.-]+\.css|js\/login\.js)$/;
 
 const isApi = p => p.startsWith('/api/');
-const wantsPage = req => req.method === 'GET' && !isApi(req.path);
+const wantsPage = req => req.method === 'GET' && !isApi(req.path.toLowerCase());
 
 function deny(req, res, status, code, error) {
   if (wantsPage(req) && status === 401) {
@@ -49,7 +49,10 @@ function sameOrigin(req) {
 const CHANGES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 function gate(req, res, next) {
-  const p = req.path;
+  // As Express matches it: case-insensitively and ignoring a trailing slash. Matching the raw path let
+  // /api/devices/x/Console/Buttons fall past its host rule to a weaker one, and /API/… not count as an
+  // API path at all (audit 2026-10-04).
+  const p = req.path.toLowerCase().replace(/\/+$/, '') || '/';
   if (PUBLIC_FILES.test(p)) return next();
 
   const method = req.method === 'HEAD' ? 'GET' : req.method;

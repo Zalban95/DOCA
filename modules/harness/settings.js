@@ -78,6 +78,14 @@ const FORBIDDEN = /(^|\.)(api)?(key|keys|token|secret|password|passwd|credential
  */
 const NEVER_SETTABLE = /^harness\.approval(\.|$)/i;
 
+/**
+ * What a harness launches: a CLI harness's launchCmd, env and configPath sit
+ * under harness.config (SETTABLE), and the browser types launchCmd into a
+ * terminal — so proposing one was proposing a command, the exact reason
+ * mcpServers and harness.custom are out of reach (audit 2026-10-04).
+ */
+const SPAWNED = /^harness\.config\.[^.]+\.(launchCmd|env|configPath)(\.|$)/i;
+
 /** Keys that are not data, whatever section they appear under. */
 const PROTO = /(^|\.)(__proto__|prototype|constructor)(\.|$)/;
 
@@ -120,6 +128,8 @@ function refuse(dotted, value) {
   if (FORBIDDEN.test(dotted))                         return `${dotted} holds a secret — those are never set this way`;
   if (NEVER_SETTABLE.test(dotted))
     return `${dotted} is the approval mode that governs you — only the user changes it, in Harness → Approvals`;
+  if (SPAWNED.test(dotted))
+    return `${dotted} is a command, or what one runs with — only the user sets it, in the harness settings`;
   if (!sectionFor(dotted))
     return `${dotted} is not a setting the agent may change (allowed: ${SETTABLE.map(s => s.prefix).join(', ')})`;
 

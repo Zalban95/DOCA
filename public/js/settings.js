@@ -27,7 +27,7 @@ async function _subtabGeneralInit() {
     _statsSettingsRender(prefs);
   } catch (e) {
     const el = document.getElementById('settings-tabs-list');
-    if (el) el.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    if (el) el.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
   updateCheck();
   startupLoad();
@@ -156,7 +156,7 @@ async function _statsSettingsRender(prefs) {
 
     list.innerHTML = html;
   } catch (e) {
-    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 
@@ -215,7 +215,7 @@ async function sysdepsLoad() {
     _sysdepsTools = data.tools || [];
     _sysdepsRender(_sysdepsTools);
   } catch (e) {
-    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   } finally {
     if (btn) btn.disabled = false;
   }

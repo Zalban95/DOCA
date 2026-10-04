@@ -18,7 +18,7 @@ async function aiToolsLoad() {
     _aiTools = data.tools || [];
     _aiToolsRender();
   } catch (e) {
-    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   } finally {
     if (btn) btn.disabled = false;
   }

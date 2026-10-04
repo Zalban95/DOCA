@@ -203,7 +203,7 @@ async function fmRefresh() {
     fm.entries    = data.entries || [];
     fmRenderList();
   } catch (e) {
-    list.innerHTML = `<div class="placeholder" style="padding:16px;color:var(--red)">${e.message}</div>`;
+    list.innerHTML = `<div class="placeholder" style="padding:16px;color:var(--red)">${escHtml(e.message)}</div>`;
   }
   fmUpdateStatus();
 }

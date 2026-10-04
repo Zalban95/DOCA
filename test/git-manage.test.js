@@ -80,3 +80,13 @@ test('stash puts changes aside and pop brings them back', async () => {
   assert.equal(fs.readFileSync(path.join(root, 'a.txt'), 'utf8'), 'one — local edit\n');
   assert.equal((await api('POST', '/remote', { url: '--upload-pack=evil' })).status, 400, 'a URL cannot be an option');
 });
+
+test('a revision can never be an option (audit 2026-10-04)', async () => {
+  const git = require('../modules/projects/git');
+  const out = path.join(H.tmp, 'injected.txt');
+  await assert.rejects(git.log(root, { rev: `--output=${out}` }), /not a revision/);
+  await assert.rejects(git.diff(root, { commit: '--output=x' }), /not a revision/);
+  await assert.rejects(git.show(root, 'a.txt', '--output=y'), /not a revision/);
+  assert.equal(fs.existsSync(out), false);
+  assert.ok((await git.log(root, { rev: 'HEAD~0' })).length > 0, 'ordinary revisions still work');
+});

@@ -95,6 +95,16 @@ test('the verb is the command, not the thing standing in front of it', () => {
   assert.deepEqual(approval.verbsOf(''), []);
 });
 
+test('what runs a hidden command is never reduced to its first verb (audit 2026-10-04)', () => {
+  for (const command of ['git status & rm -rf ~', 'git diff <(rm x)', 'git log (Remove-Item -Recurse C:\\Users\\x)',
+    'git log @(Remove-Item x)', 'git log > ~/.bashrc', 'git log { rm x }'])
+    assert.ok(approval.verbsOf(command) === null || approval.verbsOf(command).includes('rm'), `${command} → ${JSON.stringify(approval.verbsOf(command))}`);
+  assert.deepEqual(approval.verbsOf('git status & rm -rf ~'), ['git', 'rm'], 'a single & separates commands');
+  assert.deepEqual(approval.verbsOf('git commit -m "fix (the) {thing}"'), ['git'], 'brackets inside quotes are text');
+  assert.deepEqual(approval.verbsOf('npm test 2>&1'), ['npm']);
+  assert.deepEqual(approval.verbsOf('make > /dev/null'), ['make']);
+});
+
 test('answering once does not remember; answering always does', async () => {
   approval.setMode('manual');
   const gate = approval.gate('shell', { command: 'git status' });

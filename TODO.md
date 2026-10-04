@@ -1184,6 +1184,20 @@ back; the list view could be its fallback.
 
 ## Projects: an IDE, and its chats out of the orchestrator's way (asked for 2026-09-28)
 
+**Audit 2026-10-04 — three fresh agents (harness core; server, auth, API; front end and
+docs). Security fixes in 2.137.1:** the gate matched rules case-sensitively while
+Express routes case-insensitively (a member listed files through /API/…; a phone
+reached a host route through …/Console/Buttons); a devices:admin PATCH could change
+whose device it was, devices granted beyond their own scopes and minted ownerless
+ones; pairing codes were unthrottled; imported skill names could climb out of the
+skills folder; git revisions could be options (--output=); http_fetch POST counted as
+a read; a CLI harness's launchCmd was proposable; the chained-command check missed
+`&`, `<(…)` and PowerShell brackets; a member's device could approve tool calls and
+switch to Full auto; raw HTML/SVG ran same-origin; 23 error messages reached
+innerHTML unescaped; doca.db, the memory files and Windows startup were unprotected.
+**Decide:** the `chat` right lets a member (or a watch) start a turn whose tools run
+unasked in Auto mode — should a non-host person's turns always ask?
+
 **Asked 2026-10-04, built in 2.137.0 — markdown files render as documents**
 (`public/js/projects/md-doc.js`). A .md opens rendered (✎ Source a click away;
 not when opened at a line from search): front matter as a key/value box, a

@@ -54,7 +54,7 @@ async function _fpLoadRoots() {
       </div>`;
     }).join('');
   } catch (e) {
-    list.innerHTML = `<div class="placeholder" style="color:var(--red);padding:12px">${e.message}</div>`;
+    list.innerHTML = `<div class="placeholder" style="color:var(--red);padding:12px">${escHtml(e.message)}</div>`;
   }
 }
 
@@ -122,7 +122,7 @@ async function _fpLoadDir(path) {
       }
     }).join('');
   } catch (e) {
-    list.innerHTML = `<div class="placeholder" style="color:var(--red);padding:12px">${e.message}</div>`;
+    list.innerHTML = `<div class="placeholder" style="color:var(--red);padding:12px">${escHtml(e.message)}</div>`;
   }
 }
 

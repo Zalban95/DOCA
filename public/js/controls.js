@@ -106,7 +106,7 @@ async function controlsRefreshContainers() {
       </div>`;
     }).join('');
   } catch (e) {
-    if (list) list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    if (list) list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 

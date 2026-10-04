@@ -249,6 +249,12 @@ function handleRaw(req, res) {
   try {
     const s = fs.statSync(filePath);
     if (s.isDirectory()) return res.status(400).json({ error: 'Cannot serve directory' });
+    // A file that can run script (HTML, SVG, XML) is served sandboxed, as attachments are: served bare
+    // from the panel's own origin it ran with the person's session (audit 2026-10-04). Pictures, media
+    // and PDF are unaffected — an <img> of an SVG never runs its script anyway.
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (/\.(html?|xhtml|svg|xml|xsl)$/i.test(filePath))
+      res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox");
     res.sendFile(path.resolve(filePath));
   } catch (e) {
     const code = fsStatus(e);

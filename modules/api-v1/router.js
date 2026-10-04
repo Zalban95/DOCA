@@ -11,6 +11,7 @@ const L          = require('./limits');
 const { ApiError, sendError, errorMiddleware, wrap } = require('./errors');
 const { authenticate, requireScope, can, resolveDeviceId } = require('./auth');
 const { hasScope, normalizeAll, PRESETS, FAMILIES } = require('./scopes');
+const { ownScopesOnly, ownerOf, patchFor, pairComplete } = require('./device-guards');
 const devices    = require('./devices');
 const bus        = require('./bus');
 const sampler    = require('./sampler');
@@ -51,13 +52,7 @@ router.get('/', (_req, res) => res.json({
 // Machine-readable description of this API; public so generators and API tools can fetch it before pairing.
 router.get('/openapi.json', (_req, res) => { res.setHeader('Cache-Control', 'public, max-age=300'); res.json(require('./openapi').document()); });
 
-router.post('/devices/pair/complete', wrap(async (req, res) => {
-  const { code, caps, name } = req.body || {};
-  if (!code) throw new ApiError(400, 'invalid_pairing', 'code is required');
-  const r = devices.completePairing(code, caps, name);
-  if (!r) throw new ApiError(400, 'invalid_pairing', 'Pairing code is unknown or expired');
-  res.status(201).json({ token: r.token, device: r.device, capabilitiesUrl: '/api/v1/capabilities', protocol: L.PROTOCOL_VERSION });
-}));
+router.post('/devices/pair/complete', wrap(pairComplete));   // unauthenticated, throttled (device-guards.js)
 
 // ─── Everything below requires a token ──────────────────────────────────────
 
@@ -82,7 +77,9 @@ router.post('/devices', requireScope('devices:admin'), wrap(async (req, res) => 
   const { name, scopes, preset, caps, expiresAt, kind } = req.body || {};
   const sc = scopes || (preset && PRESETS[preset]);
   if (!sc) throw new ApiError(400, 'invalid_device', 'scopes[] or preset is required', { presets: Object.keys(PRESETS) });
+  ownScopesOnly(req, sc);
   const r = devices.create({ name, scopes: sc, caps, expiresAt, kind });
+  if (req.device.userId) r.device = devices.update(r.device.id, ownerOf(req));
   res.status(201).json(r);
 }));
 
@@ -90,7 +87,8 @@ router.post('/devices/pair/start', requireScope('devices:admin'), wrap(async (re
   const { name, scopes, preset, expiresAt, kind } = req.body || {};
   const sc = scopes || PRESETS[preset || 'watch'];
   if (!sc) throw new ApiError(400, 'invalid_pairing', 'scopes[] or a known preset is required', { presets: Object.keys(PRESETS) });
-  const p = devices.startPairing({ name: name || 'New device', scopes: sc, expiresAt, kind, createdBy: req.device.id });
+  ownScopesOnly(req, sc);
+  const p = devices.startPairing({ name: name || 'New device', scopes: sc, expiresAt, kind, createdBy: req.device.id, ...ownerOf(req) });
   res.status(201).json({ ...p, completeUrl: '/api/v1/devices/pair/complete', qr: `doca://pair?code=${p.code.replace('-', '')}&host=${req.headers.host || ''}` });
 }));
 
@@ -104,7 +102,7 @@ router.get('/devices/:id', selfOr('devices:admin', 'agent'), (req, res) => {
 router.patch('/devices/:id', selfOr('devices:admin'), wrap(async (req, res) => {
   const id = resolveDeviceId(req);
   const body = req.body || {};
-  const patch = id === req.device.id && !can(req, 'devices:admin') ? { caps: body.caps, name: body.name } : body;
+  const patch = patchFor(req, id, body, can(req, 'devices:admin'));
   const d = devices.update(id, patch);
   if (!d) throw new ApiError(404, 'not_found', 'Unknown device');
   res.json({ device: d });

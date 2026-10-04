@@ -21,7 +21,7 @@ async function loadScripts() {
       </div>
     `).join('');
   } catch (e) {
-    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 

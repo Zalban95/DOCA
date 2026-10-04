@@ -134,6 +134,15 @@ test('a role only reaches what its rights allow, and an unknown route is refused
   assert.equal(unknown.body.code, 'no_rule', 'fails closed');
 });
 
+test('a route reached by another case or a trailing slash gets the same rule (audit 2026-10-04)', async () => {
+  const member = await H.signIn('member');
+  for (const [m, url] of [['GET', '/API/files/list?path=/tmp'], ['GET', '/api/Files/List?path=/tmp'], ['GET', '/api/files/list/?path=/tmp'],
+    ['PUT', '/api/devices/x/Console/Buttons'], ['GET', '/api/harness/AGENTS'], ['POST', '/api/harness/approval/']]) {
+    const r = await call(m, url, { cookie: member.cookie, body: m === 'GET' ? undefined : {} });
+    assert.equal(r.status, 403, `${m} ${url} as a member: ${r.status} ${JSON.stringify(r.body)}`);
+  }
+});
+
 test('the machine itself needs a recent sign-in', async () => {
   const hash = credentials.sha256(ownerCookie.split('=')[1]);
   authStore.updateSession(hash, { stepUpAt: new Date(Date.now() - 13 * 3600e3).toISOString() });

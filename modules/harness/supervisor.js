@@ -152,6 +152,15 @@ function decide(id, info = {}) {
     return deliver(s.parentId);
   }
 
+  // The turn threw — no model, the day's ceiling, a refused key, a provider 4xx/5xx. Waking it again
+  // repeats the same failure up to autoTurnsPerJob times in a second, pays for any steps it got through,
+  // and spends the hourly budget every other job shares (audit 2026-10-04). It is blocked, and says why.
+  if (info.failed) {
+    setJob(id, { ...job, state: 'blocked' });
+    org.report(id, 'blocked', `Blocked: its turn failed — ${short(info.failed, 300)}. Last brief: ${short(s.brief, 300) || '(none)'}`, 'panel');
+    return deliver(s.parentId);
+  }
+
   const { perJob } = limits();
   if (perJob <= 0) return 'off';
   // A turn cut off at the length limit did not do nothing: it ran out of room (turn/fallback.truncationNotice).

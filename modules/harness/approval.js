@@ -107,10 +107,17 @@ function forget(key) {
 function verbsOf(command) {
   const text = String(command || '').trim();
   if (!text) return [];
-  if (/\$\(|`/.test(text)) return null;                 // the command is computed, not written
+  if (/\$\(|`|[<>]\(/.test(text)) return null;          // the command is computed, not written
+  // Outside quotes (where they are inert in bash, and PowerShell's own $( is caught above), these run
+  // something no verb shows: PowerShell's (…) and @(…), script blocks {…}, and a redirect that writes a
+  // file. `git log (Remove-Item x)` read as plain `git` (audit 2026-10-04).
+  const bare = text.replace(/'[^']*'|"(?:[^"\\]|\\.)*"/g, '""');
+  if (/[(){}]/.test(bare)) return null;
+  if (/(^|[^0-9&])>{1,2}\s*(?!&\d|\/dev\/null\b)\S/.test(bare) || /&>{1,2}\s*(?!\/dev\/null\b)\S/.test(bare)) return null;
 
   return text
-    .split(/\s*(?:&&|\|\||[;|\n])\s*/)
+    .replace(/\d*>&\d+|&>{1,2}\s*\/dev\/null/g, ' ')        // 2>&1 and &>/dev/null are not commands
+    .split(/\s*(?:&&|\|\||[;|&\n])\s*/)
     .map(s => s.trim())
     .filter(Boolean)
     .map(segment => {
@@ -158,7 +165,7 @@ function gate(name, args, ctx = {}) {
   const { mode, always, recheckOutside } = settings();
   // Outside text entered this turn (harness/untrusted.js): the first call after it that does something
   // is asked about again, once, even when allowed. Not in Unattended mode or a mission: nobody would answer.
-  if (recheckOutside && mode !== 'unattended' && !ctx.mission && !FREE.has(name) && !require('./tools').READS.has(name)) {
+  if (recheckOutside && mode !== 'unattended' && !ctx.mission && !FREE.has(name) && !require('./tools').isRead(name, args)) {
     const from = require('./untrusted').pending(ctx.signal, { take: true });
     if (from) return { tool: name, keys: null, recheck: true,
       summary: `${summarize(name, args)} — asked again because text from ${from} entered this turn; it could be steering the agent.` };
@@ -244,7 +251,10 @@ function askAnywhere(req, { sessionId, signal, client } = {}) {
   // `kind: 'agent'` is a paired agent, not a person, and must never be asked
   // to approve on the user's behalf.
   const deviceId = client?.id && client.kind !== 'agent' && client.kind !== 'dashboard' ? client.id : null;
-  if (!deviceId) return { id, answer };
+  // Approving a tool call, and Full auto above all, are what the panel keeps to the `host` right
+  // (auth/rights.js). A device answers only for an owner whose role holds it; a member's or an
+  // ownerless device's turn is answered at the panel (audit 2026-10-04).
+  if (!deviceId || !require('../auth/rights').can(client.user?.role, 'host')) return { id, answer };
 
   const ctrl = new AbortController();
   const onAbort = () => ctrl.abort();

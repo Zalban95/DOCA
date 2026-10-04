@@ -57,10 +57,21 @@ async function status(root) {
   return r;
 }
 
+/**
+ * A revision as git will read it: never an option. `rev: '--output=/x'` reached
+ * `git log` as a flag and wrote a file anywhere, past every check on write_file
+ * (audit 2026-10-04). Hashes, refs, ranges and ~/^ suffixes pass.
+ */
+function rev(v) {
+  const s = String(v ?? '');
+  if (!s || s.startsWith('-') || !/^[\w./~^@{}:+-]{1,200}$/.test(s)) throw Object.assign(new Error(`"${s.slice(0, 60)}" is not a revision.`), { status: 400 });
+  return s;
+}
+
 /** Commits, newest first; for one file when `file` is given (following renames). */
 async function log(root, { file, limit = 50, rev } = {}) {
   const args = ['log', `-n${Math.min(500, Number(limit) || 50)}`, '--format=%H%x1f%h%x1f%an%x1f%aI%x1f%s%x1f%D%x1e'];
-  if (rev) args.push(String(rev));
+  if (rev) args.push(module.exports.rev(rev));
   if (file) args.push('--follow', '--', file);
   const out = await git(root, args);
   return out.split('\x1e').map(s => s.trim()).filter(Boolean).map(s => {
@@ -81,7 +92,7 @@ async function branches(root) {
  * `staged`, or one commit with `commit`. Optionally for one file.
  */
 async function diff(root, { file, rev, staged = false, commit } = {}) {
-  const args = commit ? ['show', '--format=', commit] : ['diff', ...(staged ? ['--cached'] : []), ...(rev ? [rev] : [])];
+  const args = commit ? ['show', '--format=', module.exports.rev(commit)] : ['diff', ...(staged ? ['--cached'] : []), ...(rev ? [module.exports.rev(rev)] : [])];
   if (file) args.push('--', file);
   return git(root, args);
 }
@@ -89,7 +100,7 @@ async function diff(root, { file, rev, staged = false, commit } = {}) {
 /** A file as it was at `rev` (HEAD by default) — what the compare view puts on the left. */
 async function show(root, file, rev = 'HEAD') {
   const rel = path.isAbsolute(file) ? path.relative(root, file) : file;
-  return git(root, ['show', `${rev}:${rel.split(path.sep).join('/')}`]);
+  return git(root, ['show', `${module.exports.rev(rev)}:${rel.split(path.sep).join('/')}`]);
 }
 
 async function stage(root, files) { await git(root, ['add', '--', ...files]); return status(root); }
@@ -110,4 +121,4 @@ async function checkout(root, branch, { create = false } = {}) {
   return status(root);
 }
 
-module.exports = { git, top, status, log, branches, diff, show, stage, unstage, commit, checkout };
+module.exports = { git, top, status, log, branches, diff, show, stage, unstage, commit, checkout, rev };

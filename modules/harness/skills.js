@@ -99,10 +99,23 @@ function write(name, { description, body }) {
 }
 
 /** Copy every skill folder (one holding SKILL.md) from `folder` to this machine's. */
+/**
+ * Where an imported skill folder may land: under the skills folder, by a name
+ * write() would accept. The name comes from a third party's front matter, and
+ * `name: ../../auth` copied a folder over the panel's accounts (audit 2026-10-04).
+ */
+function importDest(name) {
+  if (!NAME.test(String(name || ''))) throw bad(`"${name}" is not a skill name (lower-case letters, digits and -, up to 64).`);
+  const dest = path.join(local(), name);
+  if (path.dirname(dest) !== path.resolve(local())) throw bad(`"${name}" would land outside the skills folder.`);
+  return dest;
+}
+
 function importFrom(folder, { overwrite = false } = {}) {
   const out = [];
   for (const s of readDir(folder, 'import')) {
-    const dest = path.join(local(), s.name);
+    let dest;
+    try { dest = importDest(s.name); } catch (e) { out.push({ name: s.name, skipped: e.message }); continue; }
     if (fs.existsSync(dest) && !overwrite) { out.push({ name: s.name, skipped: 'exists here' }); continue; }
     fs.cpSync(s.dir, dest, { recursive: true });
     out.push({ name: s.name, description: s.description });
@@ -118,4 +131,4 @@ function manifestBlock(only) {
     ...rows.map(s => `- ${s.name}: ${s.description || '(no description)'}${s.harness ? ` [written for ${s.harness}; reading it says how to translate]` : ''}`)].join('\n');
 }
 
-module.exports = { list, read, file, write, importFrom, manifestBlock, SHIPPED };
+module.exports = { list, read, file, write, importFrom, importDest, manifestBlock, SHIPPED };

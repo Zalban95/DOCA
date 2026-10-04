@@ -78,7 +78,7 @@ async function hfSearch() {
         <span class="models-search-desc">${m.pipeline_tag ? escHtml(m.pipeline_tag) + '  ·  ' : ''}⬇ ${fmtNumber(m.downloads)}  ♥ ${fmtNumber(m.likes)}</span>
       </div>`).join('');
   } catch (e) {
-    if (box) box.innerHTML = `<div class="placeholder" style="color:var(--red);padding:8px">${e.message}</div>`;
+    if (box) box.innerHTML = `<div class="placeholder" style="color:var(--red);padding:8px">${escHtml(e.message)}</div>`;
   }
 }
 
@@ -124,7 +124,7 @@ async function hfLoadList() {
       </tr>`;
     }).join('');
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:12px;color:var(--red)">${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:12px;color:var(--red)">${escHtml(e.message)}</td></tr>`;
   }
 }
 
