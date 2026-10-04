@@ -22,7 +22,7 @@ async function pjCheckpointsRender(body) {
     row.className = 'pj-git-commit';
     row.title = `${c.id} · ${c.by}`;
     row.append(Object.assign(document.createElement('span'), { className: 'pj-git-hash', textContent: new Date(c.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }),
-      Object.assign(document.createElement('span'), { className: 'pj-git-subj', textContent: c.label }),
+      Object.assign(document.createElement('span'), { className: 'pj-git-subj', textContent: `${c.pinned ? '📌 ' : ''}${c.label}`, title: c.note || '' }),
       Object.assign(document.createElement('span'), { className: 'pj-meta', textContent: c.changedSincePrevious != null ? ` ${c.changedSincePrevious}Δ` : '' }));
     const box = document.createElement('div');
     row.onclick = () => (box.childElementCount ? (box.innerHTML = '') : _pjCheckpointOpen(c, box));
@@ -37,7 +37,16 @@ async function _pjCheckpointOpen(c, box) {
   box.innerHTML = '';
   const restore = Object.assign(document.createElement('button'), { className: 'btn btn-xs btn-amber', textContent: '↶ Restore this' });
   restore.onclick = () => pjCheckpointRestore(c, changes.length);
-  box.append(Object.assign(document.createElement('div'), { className: 'pj-meta', textContent: changes.length ? `${changes.length} file(s) differ since then` : 'Nothing differs since then.' }), restore);
+  // Rename, note, pin, delete (asked 2026-10-04): DOCA's list changes, the snapshot does not.
+  const btn = (text, title, fn, cls = '') => Object.assign(document.createElement('button'), { className: `btn btn-xs ${cls}`, textContent: text, title, onclick: fn });
+  const tools = document.createElement('div');
+  tools.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;margin:4px 0';
+  tools.append(restore,
+    btn('✎ Edit', 'Rename it and add a note', () => _pjCheckpointEdit(c, box)),
+    btn(c.pinned ? '📌 Unpin' : '📌 Pin', c.pinned ? 'Let it go when it gets old' : 'Keep it however many newer ones are taken', () => _pjCheckpointPatch(c, { pinned: !c.pinned })),
+    btn('🗑 Delete', 'Take it off the list (no file changes)', () => pjCheckpointDelete(c), 'btn-red'));
+  box.append(...(c.note ? [Object.assign(document.createElement('div'), { className: 'pj-meta', textContent: c.note, style: 'white-space:pre-wrap;margin:4px 0' })] : []),
+    Object.assign(document.createElement('div'), { className: 'pj-meta', textContent: changes.length ? `${changes.length} file(s) differ since then` : 'Nothing differs since then.' }), tools);
   for (const ch of changes) {
     const row = document.createElement('div');
     row.className = 'pj-git-file';
@@ -55,6 +64,38 @@ async function _pjCheckpointOpen(c, box) {
     };
     box.appendChild(row);
   }
+}
+
+/** Inline form: label and note, saved with PATCH. */
+function _pjCheckpointEdit(c, box) {
+  box.querySelector('.pj-cp-edit')?.remove();
+  const form = Object.assign(document.createElement('div'), { className: 'pj-cp-edit' });
+  form.style.cssText = 'display:flex;flex-direction:column;gap:4px;margin:4px 0';
+  const label = Object.assign(document.createElement('input'), { className: 'input', value: c.label, placeholder: 'Name' });
+  const note = Object.assign(document.createElement('textarea'), { className: 'input', value: c.note || '', rows: 3, placeholder: 'A note: what this state was, why it matters' });
+  const save = Object.assign(document.createElement('button'), { className: 'btn btn-xs btn-blue', textContent: 'Save' });
+  save.onclick = () => _pjCheckpointPatch(c, { label: label.value, note: note.value });
+  form.append(label, note, save);
+  box.insertBefore(form, box.firstChild);
+  label.focus();
+}
+
+async function _pjCheckpointPatch(c, changes) {
+  try {
+    await apiFetch(_pjc(`/${c.id}`), { method: 'PATCH', body: changes });
+    setStatus(document.getElementById('pj-status'), '✓ Checkpoint updated', 'ok');
+    pjView('checkpoints');
+  } catch (e) { appAlert(e.message); }
+}
+
+function pjCheckpointDelete(c) {
+  appConfirm(`Delete the checkpoint "${c.label}"? No file changes; it only comes off the list, and you can no longer go back to it.`, async () => {
+    try {
+      await apiFetch(_pjc(`/${c.id}`), { method: 'DELETE' });
+      setStatus(document.getElementById('pj-status'), `✓ Deleted ${c.label}`, 'ok');
+      pjView('checkpoints');
+    } catch (e) { appAlert(e.message); }
+  });
 }
 
 function pjCheckpointTake() {

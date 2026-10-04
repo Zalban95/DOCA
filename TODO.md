@@ -1184,6 +1184,13 @@ back; the list view could be its fallback.
 
 ## Projects: an IDE, and its chats out of the orchestrator's way (asked for 2026-09-28)
 
+**Asked 2026-10-04, built in 2.133.0 — checkpoints can be renamed, noted,
+pinned and deleted** (`projects/checkpoints.js` update/remove; PATCH and DELETE
+`/api/projects/:id/checkpoints/:cp`). Only DOCA's list changes — the snapshot
+underneath is the same, so a renamed one restores exactly as before. A pinned
+checkpoint survives the keep-the-newest-60 pruning; deleting one recomputes the
+next one's change count and touches no file.
+
 **Asked 2026-10-04, built in 2.130.0 — every format previews when a file is
 opened** (`public/js/projects/preview.js`). Pictures, video, audio, PDF, fonts
 (a specimen) and glb/gltf models (`<model-viewer>`, loaded on first use) open as
