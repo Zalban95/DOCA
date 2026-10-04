@@ -68,4 +68,16 @@ function defaultFor(person) {
   return s.id;
 }
 
-module.exports = { ownerOf, mayUse, check, visible, claim, newestOwn, defaultFor, isHost };
+/**
+ * Which devices hear about a conversation: those following the harness (harness:chat) whose owner
+ * may open it. A turn's summary, a mission's progress and an automatic reply used to reach every
+ * person's phone and watch; they now reach the people the conversation belongs to, and hosts.
+ * A device paired to nobody (an older token) is not narrowed, as everywhere else.
+ */
+function hears(device, sessionId) {
+  const { hasScope } = require('../api-v1/scopes');
+  if (device.revokedAt || !hasScope(device.scopes, 'harness:chat')) return false;
+  return !sessionId || mayUse(require('./turn/client').deviceOwner(device), sessionId);
+}
+
+module.exports = { ownerOf, mayUse, check, visible, claim, newestOwn, defaultFor, isHost, hears };

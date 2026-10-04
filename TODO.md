@@ -41,12 +41,10 @@ documents, environments (venvs), git buttons, editable checkpoints; and the thre
 audit's fixes (2.137.1 security, 2.137.2 robustness, 2.137.3 front end).
 
 **Decide (from 2026-10-04)**
-- The `chat` right lets a member — or a watch — start a turn whose tools run unasked in
-  Auto mode. Should a person without `host` always be asked (or their turns run in
-  Manual), whatever the panel's mode? → *Audit 2026-10-04* below.
-- `agent.turn` summaries and mission announcements still reach every person's devices,
-  and durable memory is shared by everyone (per-user memory is auth phase 3). Conversations
-  themselves are per person since 2.145.0 (session-access.js).
+- Durable memory is shared by everyone (per-user memory is auth phase 3); editing it from
+  the panel needs host since 2.146.0. Conversations are per person since 2.145.0, and their
+  news reaches only their people's devices since 2.147.0 (session-access.js). (A member's
+  calls are asked whatever the mode since 2.139: the `ask` level — settled.)
 
 **Portal (added 2026-10-04)**: DocaWear/DocaMobile render the new approval option ids
 `always` and `approve_all` (they are ordinary options; check nothing assumes exactly three);

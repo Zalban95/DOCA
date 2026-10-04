@@ -467,7 +467,7 @@ data: {"reason":"revoked"}
 | `agent.turn` | durable | `{ turnId, sessionId, state: started\|done\|failed, by, message?, text?, steps?, proposals[]?, error?, quiet? }` — one conversation turn (§23) |
 | `agent.text` | ephemeral | `{ turnId, sessionId, delta }` — reply text as produced; **only to the device that posted the message** |
 | `agent.tool` | ephemeral | `{ turnId, sessionId, name, phase: call\|result, step, args?, ok?, preview? }` |
-| `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|paused\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error?, quiet? }` — a specialist agent's work, to every device with `harness:chat`. `paused` means a restart cut it off; the agent asks the user whether to continue on the next turn from any device. `GET /harness/missions` is the same picture for a client that has just woken up. |
+| `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|paused\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error?, quiet? }` — a specialist agent's work, to every device with `harness:chat` whose owner may open the conversation (§23). `paused` means a restart cut it off; the agent asks the user whether to continue on the next turn from any device. `GET /harness/missions` is the same picture for a client that has just woken up. |
 | `artifact.deliver` | durable | `{ artifact, inline?, inlineEncoding?: utf8|base64, message, ext }` |
 | `sensor.request` | durable (ttl = duration + 30 s) | `{ request: { id, sensors: [{ id, mode, rateHz, durationSec, unit }], reason, ext, expiresAt } }` |
 | `sensor.stop` | durable | `{ requestId, reason }` |
@@ -1109,6 +1109,12 @@ channel (§11), which is already cursor-based, resumable and multi-subscriber:
 | `agent.turn` `state: done` | every device with `harness:chat` | carries the whole reply in `text`, so a client that missed the deltas missed nothing |
 | `agent.turn` `state: failed` | every device with `harness:chat` | `error.code` is `harness_unconfigured` (no model chosen) or `harness_error` |
 | `agent.mission` | every device with `harness:chat` | a mission runs with nobody watching, so its start and finish are worth having on waking; the step ticks in between are not |
+
+"Every device with `harness:chat`" means, since hub 2.147.0, every such device **whose owner
+may open the conversation**: the person it belongs to (the first to write in it, or the person
+above a work chat or mission), and anyone holding `host`. A device paired to nobody is not narrowed.
+`GET /harness/missions` and `GET /harness/sessions` list the same set. A client needs no change; a
+phone simply stops receiving another person's turns.
 
 `agent.turn` is durable and the other two are ephemeral. That is the whole
 battery story: a watch may subscribe and simply ignore `agent.text`, or go

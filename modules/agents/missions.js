@@ -209,7 +209,6 @@ function announce(row, { ephemeral = false } = {}) {
   try {
     const devices = require('../api-v1/devices');
     const bus     = require('../api-v1/bus');
-    const { hasScope } = require('../api-v1/scopes');
     const payload = {
       missionId: row.id, agentId: row.agentId, label: row.label,
       task: String(row.task || '').slice(0, 200),
@@ -226,8 +225,9 @@ function announce(row, { ephemeral = false } = {}) {
       archivedAt: row.archivedAt || undefined,
       progress: planProgress(row.plan) || undefined,
     };
+    const access = require('../harness/session-access');
     for (const d of devices.list()) {
-      if (d.revokedAt || !hasScope(d.scopes, 'harness:chat')) continue;
+      if (!access.hears(d, row.sessionId || row.by)) continue;   // the mission's person, and hosts
       bus.publish(d.id, 'agent.mission', ephemeral ? payload : { ...payload, ...require('../presence').quietFlag(d.userId) }, ephemeral ? { cls: 'ephemeral' } : undefined);   // its owner at the panel: update, do not notify
     }
   } catch { /* a mission's bookkeeping must never break the mission */ }
@@ -491,6 +491,6 @@ function block({ sessionId, completed = notices(sessionId) } = {}) {
 
 function _reset() { store.writeJson(INDEX, { missions: [] }); }
 
-module.exports = { dispatch, recover, resume, archive, get, list, running, events, record, block, patch, notices, acknowledgeNotices,
+module.exports = { announce, dispatch, recover, resume, archive, get, list, running, events, record, block, patch, notices, acknowledgeNotices,
   setPlan, planProgress, normalizePlan, forSession, profileOf,
   PLAN_MAX_ITEMS, PLAN_TITLE_MAX, PLAN_STATES, _reset };

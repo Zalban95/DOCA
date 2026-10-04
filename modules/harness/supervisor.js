@@ -93,9 +93,8 @@ function afterOrchestrator(sessionId, r) {
   if (s?.kind !== 'orchestrator' || !r?.text) return;
   try {
     const bus = require('../api-v1/bus'), devices = require('../api-v1/devices');
-    const { hasScope } = require('../api-v1/scopes');
     const turnId = `auto_${Date.now().toString(36)}`;
-    bus.publishWhere(devices.list(), d => hasScope(d.scopes, 'harness:chat'), 'agent.turn', d => ({
+    bus.publishWhere(devices.list(), d => require('./session-access').hears(d, sessionId), 'agent.turn', d => ({
       turnId, sessionId, state: 'done', by: 'panel', text: short(r.text, 4000),
       ...require('../presence').quietFlag(d.userId),
     }));
