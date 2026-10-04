@@ -1031,3 +1031,15 @@ test('a specialist is told to keep the plan it is always given', () => {
   assert.match(prompt, /mission_plan/, 'the specialist is never told about the plan it maintains');
   assert.match(prompt, /tick/i);
 });
+
+test('the charter asks the agent to understand, size and get a go-ahead before real work (rules 24–27)', () => {
+  const c = providers.SAFETY_CHARTER;
+  assert.match(c, /## Understanding what is asked\n24\. Understand the request before you act on it/);
+  assert.match(c, /25\. Size the work[\s\S]*get their go-ahead[\s\S]*`work_plan`[\s\S]*until then, look but do not change/);
+  assert.match(c, /26\. Ask for what is missing, not for what you can find out[\s\S]*at most three[\s\S]*on a device, one at a time \(rule 14\)/);
+  assert.match(c, /27\. Keep an approved plan true[\s\S]*already has its go-ahead/, 'a mission is not told to stop and ask');
+  // Appended, so every rule cited by number elsewhere (12, 13, 16–23) keeps its number.
+  assert.match(c, /\n12\. A limit is a fact/);
+  assert.match(c, /\n16\. The repository's rules come first/);
+  assert.match(c, /\n23\. Stay inside the repository's root/);
+});
