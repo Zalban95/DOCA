@@ -121,17 +121,18 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   ✓ H7.2a (2.153.1) the live view through the hub: `/computers/<id>/vnc/` and `/ws/computer/<id>`, behind
   the host right and a recent sign-in, so a phone on the tailnet can watch and take over. **Left:** H7.2b a VM backend
   (libvirt/Hyper-V/UTM; a Windows guest); H7.2c the image prebuilt and pulled instead of built (2.1 GB,
-  minutes); H7.2d computer tools hidden from the Orchestrator's own turns (today '*' holds them); H7.2e the
-  window manager's stray message window. Also done on the way: **an MCP tool's pictures and files are kept as
+  minutes); H7.2d computer tools hidden from the Orchestrator's own turns (today '*' holds them); ✓ H7.2e (2.154.0) the
+  window manager's stray message window (fbsetbg finding no wallpaper setter). Also done on the way: **an MCP tool's pictures and files are kept as
   attachments** (they arrived as the word "[image]").
 - [ ] H7.3 Parallel work chats on one repo, each in its own git worktree.
 
 **H13 · Agents' computers, everywhere they help** (asked 2026-10-05)
-- [ ] H13.1 **A coherent view of the agents' computers**: a "Computers" side tab (or a strip in the Harness
+- [x] H13.1 (2.154.0) **A coherent view of the agents' computers**: a "Computers" side tab (or a strip in the Harness
   console beside the missions) listing every computer with a live thumbnail (a screenshot every few
   seconds while running), its mission and specialist, state, and one click into the live view — the
   noVNC proxy (2.153.1) in a panel tab, not a new window; recordings and screenshots it produced listed
-  under it. On a phone: the same list, the live view full screen.
+  under it. On a phone: the same list, the live view full screen. Done as a **Computers** tab (PCs on a phone); a
+  strip beside the missions bar is left for when a running mission's computer should be one glance away.
 - [ ] H13.2 **Agents make the environment whenever they need one**, not only when asked: the Orchestrator and
   work chats already hold `computer`; their prompt says *when* (testing something risky, using a site as a
   person would, building or running something that should not touch the host, recording a demo), and a

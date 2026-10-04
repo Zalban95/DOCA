@@ -120,6 +120,41 @@ function view(c, state = null) {
     vnc: { url: require('./vnc').watchUrl(c), local: `http://127.0.0.1:${c.vncPort}/vnc.html`, password: c.vncPassword } };
 }
 
+/** A mission is lent this computer (agents/missions dispatch): remembered, so the view can say who works in it. */
+function lend(id, missionId) {
+  const c = need(id);
+  save(rows().map(x => (x.id === c.id ? { ...x, missionId, missions: [...(x.missions || []), missionId].slice(-20) } : x)));
+  return c.id;
+}
+
+/** Its screen now, as PNG bytes — the control server's own screenshot tool, asked directly so nothing is kept. */
+const _screens = new Map();
+async function screen(id) {
+  const c = need(id);
+  const hit = _screens.get(c.id);
+  if (hit && Date.now() - hit.at < 2000) return hit.png;   // one capture for every viewer of the same moment
+  const r = await fetch(`http://127.0.0.1:${c.mcpPort}/mcp`, { method: 'POST', signal: AbortSignal.timeout(10000),
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.token}` },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'screenshot', arguments: {} } }) })
+    .then(x => x.json()).catch(() => null);
+  const img = r?.result?.content?.find(x => x.type === 'image');
+  if (!img) throw bad('The computer is not answering — is it running?', 502);
+  const png = Buffer.from(img.data, 'base64');
+  _screens.set(c.id, { at: Date.now(), png });
+  return png;
+}
+
+/** For the Computers view: who works in each (the mission) and what it produced (kept MCP pictures and files). */
+async function detailed() {
+  const missions = require('../agents/missions');
+  const files = require('../attachments').list({ limit: 1000 });
+  return (await list()).map(v => {
+    const m = v.missionId ? missions.get(v.missionId) : null;
+    return { ...v, mission: m && { id: m.id, agentId: m.agentId, label: m.label, state: m.state, task: String(m.task || '').slice(0, 200) },
+      media: files.filter(f => f.from === `mcp:${v.server}`).slice(0, 12).map(({ name, mime, bytes, at }) => ({ name, mime, bytes, at })) };
+  });
+}
+
 async function list() {
   let states = {};
   try {
@@ -129,4 +164,4 @@ async function list() {
   return rows().map(c => view(c, states[container(c)] || 'missing'));
 }
 
-module.exports = { IMAGE, imageReady, build, create, start, stop, remove, list, get, need };
+module.exports = { IMAGE, imageReady, build, create, start, stop, remove, list, detailed, screen, lend, get, need };

@@ -1,32 +1,103 @@
 /* ═══════════════════════════════════════════════════════
-   VMs → Computers for agents (modules/computers, clients/computer): Linux
-   desktops in containers that missions work in — make one, watch it (noVNC,
-   from this machine's browser), stop it, remove it with its files.
+   COMPUTERS — the agents' computers (modules/computers, clients/computer;
+   TODO H13.1): Linux desktops in containers that missions work in. Each card
+   is a live thumbnail (a still every few seconds while this tab is open and
+   the page is visible), who works in it, what it produced, and one click into
+   the live view — the noVNC page through the hub, inside the panel, so a
+   phone watches it full screen and Back closes it.
    ═══════════════════════════════════════════════════════ */
 
+const COMPUTERS_STILL_MS = 4000;
+const COMPUTERS_LIST_MS = 15000;
+let _computersTimers = [];
+let _computersView = null;
+
+/** nav() calls this on every tab change: the timers run only while the tab is shown. */
+function computersTab(shown) {
+  _computersTimers.forEach(clearInterval); _computersTimers = [];
+  if (!shown) return;
+  computersLoad();
+  _computersTimers.push(setInterval(computersStills, COMPUTERS_STILL_MS), setInterval(computersLoad, COMPUTERS_LIST_MS));
+}
+
+/** Fetch a new still for every running computer; an image that fails keeps the last one it had. */
+function computersStills() {
+  if (document.visibilityState !== 'visible') return;
+  document.querySelectorAll('#tab-computers img.pc-still[data-id]').forEach(img => {
+    const next = new Image();
+    next.onload = () => { img.src = next.src; img.classList.remove('pc-still-empty'); };
+    next.src = `/api/computers/${img.dataset.id}/screen?t=${Date.now()}`;
+  });
+}
+
 async function computersLoad() {
-  const tab = document.getElementById('tab-vms');
+  const tab = document.getElementById('tab-computers');
   if (!tab) return;
-  let card = document.getElementById('computers-card');
-  if (!card) { card = document.createElement('div'); card.className = 'card'; card.id = 'computers-card'; tab.prepend(card); }
   let data;
   try { data = await apiFetch('/api/computers'); }
-  catch (e) { card.innerHTML = `<div class="card-title">Computers for agents</div><div class="placeholder">${escHtml(e.message)}</div>`; return; }
-  const rows = data.computers.map(c => `<div class="disk-row">
-      <span class="disk-label">${c.state === 'running' ? '●' : '○'} ${escHtml(c.name)} <span style="color:var(--muted)">${escHtml(c.id)}</span></span>
-      <span class="disk-path" title="${escHtml(c.purpose || '')}">${escHtml(c.purpose || c.state)}</span>
-      <span class="disk-free">
-        ${c.state === 'running' ? `<a class="btn btn-xs" href="${escHtml(c.vnc.url)}" target="_blank" rel="noopener" title="Watch or take over (VNC password ${escHtml(c.vnc.password)}) — from this machine's browser">Watch</a>
-          <button class="btn btn-xs" onclick="computersAct('stop', ${jsArg(c.id)})">Stop</button>` : `<button class="btn btn-xs" onclick="computersAct('start', ${jsArg(c.id)})">Start</button>`}
-        <button class="btn btn-xs btn-red" onclick="computersAct('remove', ${jsArg(c.id)})" title="Remove it and its files">✕</button></span></div>`).join('');
-  card.innerHTML = `<div class="card-title" style="display:flex;align-items:center;gap:8px">Computers for agents
-      ${data.image.ready ? '<button class="btn btn-xs btn-blue" onclick="computersNew()">＋ New</button>' : '<button class="btn btn-xs btn-amber" onclick="computersBuild()">Build the image</button>'}
-      <button class="btn btn-xs" onclick="computersLoad()">↺</button></div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">A Linux desktop in a container — shell, files, a real Chromium, screen recording — where a mission can try
-      something risky, use a site as a person would, or record a demo, without touching this machine. The Orchestrator makes them with its
-      <code>computer</code> tool and sends the <b>Tester</b> to work in one.</p>
-    ${rows || '<div class="placeholder">None yet.</div>'}
-    <pre class="terminal" id="computers-out" style="display:none;margin-top:8px;max-height:240px"></pre>`;
+  catch (e) { tab.innerHTML = `<div class="card"><div class="card-title">Computers</div><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
+  const running = data.computers.filter(c => c.state === 'running').length;
+  tab.innerHTML = `<div class="toolbar" style="margin-bottom:8px">
+      <div class="card-title" style="margin-bottom:0">Computers</div>
+      ${data.image.ready ? '<button class="btn btn-sm btn-blue" onclick="computersNew()">＋ New</button>'
+        : '<button class="btn btn-sm btn-amber" onclick="computersBuild()">Build the image</button>'}
+      <button class="btn btn-sm" onclick="computersLoad()">↺</button>
+      <span class="status-line">${data.computers.length ? `${running} running of ${data.computers.length}` : ''}</span></div>
+    <div class="input-label" style="margin-bottom:10px">The agents' computers: a Linux desktop in a container — shell, files, a real Chromium,
+      screen recording — where a mission tries something risky, uses a site as a person would, or records a demo, without touching this
+      machine. The Orchestrator and work chats make them with their <code>computer</code> tool and send a specialist (the <b>Tester</b>) to
+      work in one. Click a screen to watch or take over.</div>
+    <pre class="terminal" id="computers-out" style="display:none;max-height:240px;margin-bottom:8px"></pre>
+    <div class="scroll-y" style="flex:1"><div class="pc-grid">${data.computers.map(computersCard).join('')
+      || `<div class="placeholder">${data.image.ready ? 'None yet — an agent makes one when it needs it, or ＋ New.' : 'Build the image once (several minutes: Chromium, a desktop, ffmpeg), then agents can make computers.'}</div>`}</div></div>`;
+  computersStills();
+}
+
+function computersCard(c) {
+  const on = c.state === 'running';
+  const m = c.mission;
+  const who = m ? `<div class="pc-who" title="${escHtml(m.task)}"><b>${escHtml(m.label || m.agentId)}</b> · ${escHtml(m.state)} — ${escHtml(m.task)}</div>`
+    : `<div class="pc-who pc-dim">${escHtml(c.purpose || 'No mission yet.')}</div>`;
+  const media = (c.media || []).map(f => `<button class="pc-file" title="${escHtml(f.name)}" onclick="computersMedia(${jsArg(f.name)}, ${jsArg(f.mime)})">${
+    /^video\//.test(f.mime) ? '▶' : /^image\//.test(f.mime) ? '▣' : '▤'} ${escHtml(f.name.replace(/^computer-[a-f0-9]+-/, '').slice(0, 28))}</button>`).join('');
+  return `<div class="pc-card ${on ? '' : 'pc-off'}">
+    ${on ? `<img class="pc-still pc-still-empty" data-id="${escHtml(c.id)}" alt="${escHtml(c.name)}'s screen" onclick="computersWatch(${jsArg(c.id)})" title="Watch or take over">`
+      : `<div class="pc-still pc-blank">${escHtml(c.state)}</div>`}
+    <div class="pc-head"><span class="pc-dot ${on ? 'on' : ''}"></span><b>${escHtml(c.name)}</b><span class="pc-dim">${escHtml(c.id)}</span>
+      <span style="flex:1"></span>
+      ${on ? `<button class="btn btn-xs" onclick="computersWatch(${jsArg(c.id)})">Watch</button>
+        <button class="btn btn-xs" onclick="computersAct('stop', ${jsArg(c.id)})">Stop</button>`
+        : `<button class="btn btn-xs" onclick="computersAct('start', ${jsArg(c.id)})">Start</button>`}
+      <button class="btn btn-xs btn-red" onclick="computersAct('remove', ${jsArg(c.id)})" title="Remove it and its files">✕</button></div>
+    ${who}${media ? `<div class="pc-files">${media}</div>` : ''}</div>`;
+}
+
+/** The live view inside the panel: the noVNC page through the hub (computers/vnc.js); Back or ✕ closes it. */
+async function computersWatch(id) {
+  const c = (await apiFetch('/api/computers').catch(() => ({ computers: [] }))).computers.find(x => x.id === id);
+  if (!c) return appAlert('That computer is gone.');
+  computersWatchClose();
+  const ov = document.createElement('div');
+  ov.className = 'pc-live';
+  ov.innerHTML = `<div class="pc-live-bar"><b>${escHtml(c.name)}</b><span class="pc-dim">${escHtml(c.mission ? `${c.mission.label} · ${c.mission.state}` : c.purpose || '')}</span>
+      <span style="flex:1"></span><a class="btn btn-xs" href="${escHtml(c.vnc.url)}" target="_blank" rel="noopener">Open in a window</a>
+      <button class="btn btn-xs" onclick="computersWatchClose()">✕</button></div>
+    <iframe src="${escHtml(c.vnc.url)}" title="${escHtml(c.name)}" allow="clipboard-read; clipboard-write"></iframe>`;
+  document.body.appendChild(ov);
+  _computersView = { ov, release: overlayBack(() => computersWatchClose(true)) };
+}
+
+function computersWatchClose(fromBack) {
+  if (!_computersView) return;
+  const { ov, release } = _computersView;
+  _computersView = null;
+  ov.remove();
+  if (!fromBack) release();
+}
+
+function computersMedia(name, mime) {
+  mediaViewerOpen({ src: `/api/attachments/${encodeURIComponent(name)}`, name,
+    kind: /^video\//.test(mime) ? 'video' : /^audio\//.test(mime) ? 'audio' : 'image' });
 }
 
 function computersNew() {

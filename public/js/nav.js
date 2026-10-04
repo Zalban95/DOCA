@@ -2,9 +2,9 @@
    DOCA PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','logs','files','projects','harness','terminal','models','docker','vms','mcp','settings'];
+const NAV_TABS = ['controls','logs','files','projects','harness','computers','terminal','models','docker','vms','mcp','settings'];
 /** Tabs that are the machine itself: left out for a person without host (settings.js). */
-const HOST_TABS = ['logs', 'files', 'projects', 'terminal'];
+const HOST_TABS = ['logs', 'files', 'projects', 'terminal', 'computers'];
 
 /** Single source for the mobile bottom bar (icon + short label per tab). */
 const NAV_TAB_DEFS = [
@@ -13,6 +13,7 @@ const NAV_TAB_DEFS = [
   { id: 'files',    label: 'Files',  icon: '🗀' },
   { id: 'projects', label: 'Code',   icon: '⟨⟩' },
   { id: 'harness',  label: 'Agent',  icon: '⬡' },
+  { id: 'computers', label: 'PCs',   icon: '🖵' },
   { id: 'terminal', label: 'Term',   icon: '⌨' },
   { id: 'models',   label: 'Models', icon: '◆' },
   { id: 'docker',   label: 'Docker', icon: '◧' },
@@ -55,6 +56,7 @@ function nav(name) {
   if (name === 'files')    fmInit();
   if (name === 'projects') projectsInit();
   if (name === 'harness')  harnessTabInit();
+  computersTab(name === 'computers');   // starts and stops its thumbnails' timer
   if (name === 'terminal') termInit();
   if (name === 'models')   modelsInit();
   if (name === 'docker')   dockerInit();
