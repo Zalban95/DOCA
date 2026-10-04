@@ -97,8 +97,8 @@ the end, and in the sections as "built in …" notes.
 - VM console in the page (VNC). → *MCP and VMs*.
 - The MCP registry over `/api/v1`, and `mcp.listener` answering. → *MCP and VMs*.
 - Several users in groups (auth phases 2–3). → *Wanted next: many agents*.
-- Split `runTurn` (agent.js sits at 399 of 400 lines). → *Modules with explicit
-  contracts*.
+- ~~Split `runTurn`~~ — **done in 2.116.3**: `turn/step-request.js`,
+  `turn/tool-calls.js`, `turn/step-limit.js`; agent.js 278 lines.
 - A retrieval layer (embeddings) — with the database's `pgvector`. → *Memory,
   limits and context*, *Where this harness stands…* §3.
 
@@ -1880,8 +1880,8 @@ built by `public/js/*`, only work while those functions are global.
   where code lives.
 - Stage 4 for `modules/harness/agent.js` → `agent.js` (the turn) +
   `modules/harness/turn/` (8 parts), same exports.
-- **Next:** `runTurn` (320 lines in one function) split into its steps;
-  `public/css/components.css`, `public/js/chat.js`, `modules/harness/tools.js`,
+- `runTurn` split into its steps in 2.116.3 (request, tool calls, step limit).
+- **Next:** `public/css/components.css`, `public/js/chat.js`, `modules/harness/tools.js`,
   `public/js/files.js`; then `index.html` into per-tab partials, which is where
   stage 3 (ES modules) starts, one tab at a time.
 - `chat.js` and `harness-console/transcript.js` draw the same transcript twice
