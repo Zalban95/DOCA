@@ -46,12 +46,13 @@ audit's fixes (2.137.1 security, 2.137.2 robustness, 2.137.3 front end).
   news reaches only their people's devices since 2.147.0 (session-access.js). (A member's
   calls are asked whatever the mode since 2.139: the `ask` level — settled.)
 
-**Built 2026-10-04 (2.149.0) — chat tabs in Projects**: several conversations per project as tabs, sub-agents opening beside the tab that started them, a mode per conversation (Agent · Plan · Ask · Debug, Plan and Ask enforced), its own Auto/Manual approval (host) and model, and the queue and plan folded above the composer — in the console too. *Not yet:* tabs in the Harness console itself (it has the conversation list), and Ask/Plan on the phone and watch.
+**Built 2026-10-04 (2.149.0) — chat tabs in Projects**: several conversations per project as tabs, sub-agents opening beside the tab that started them, a mode per conversation (Agent · Plan · Ask · Debug, Plan and Ask enforced), its own Auto/Manual approval (host) and model, and the queue and plan folded above the composer — in the console too. The Harness console has tabs too since 2.151.0 (the Orchestrator pinned, sub-agents beside their parent). The phone has all of it (it is the panel's page); the watch deliberately gets no mode switch (DocaWear TODO).
 
-**Portal (added 2026-10-04)**: DocaMobile/DocaWear: a message sent while the agent works is now `202 {queued: true}` instead of `409 turn_in_flight` (hub 2.148.0) — check nothing waits for a 409 before sending, and optionally show "queued". DocaWear/DocaMobile render the new approval option ids
-`always` and `approve_all` (they are ordinary options; check nothing assumes exactly three);
-DocaMobile/DocaWear read `quiet`; run the Windows paths
-fixed by reading in 2.137.2 (npm.cmd spawns, pip into a venv via PowerShell).
+**Portal (2026-10-04)**: what DocaMobile and DocaWear still need from the hub's 2.118–2.150 changes is
+written in their own `TODO.md`, "From the hub, 2.118 → 2.150" — first of all DocaMobile's Android Back
+(the WebView's `canGoBack` misses `pushState`, so Back leaves the app instead of closing the picture
+viewer), then quiet pushes, `202 queued`, five approval choices, re-pairing the ownerless watch. Still
+here: run the Windows paths fixed by reading in 2.137.2 (npm.cmd spawns, pip into a venv via PowerShell).
 
 About 30 open items. Each points to the section that holds its reasons; the
 sections themselves keep their history. Tags: **build** (settled, waiting to be
@@ -2445,10 +2446,11 @@ more is built on top of them. Proposed shape, to settle per section:
   compose` in the stack folder — OpenClaw's — so Stop read as stopping the panel; it is now named by
   what it drives ("OpenClaw stack · docker compose", the folder in its tooltip) and drawn only when
   the folder holds a compose file (`GET /api/stack/info`). Docker and the status bar list the
-  machine's containers, which is right whoever made them. Models is DOCA's. **Noted, not changed:**
-  Ollama and HuggingFace pointed at one folder show the same size twice; a llama-server started outside
-  the panel (a router on :8080, say) is not on the Models tab, which lists only the instances it
-  starts; the Ollama search is a short fixed list. The Settings "still open" notes above were stale:
+  machine's containers, which is right whoever made them. Models is DOCA's. **The three notes, settled
+  in 2.151.0:** one storage card per folder (a folder inside another says so); llama-servers running
+  outside the panel listed read-only under llama.cpp (from the harness's local providers that answer
+  llama.cpp's /props, with each model's state and --ctx-size); Ollama search reads ollama.com's search
+  page (its api/search is a 404), the fixed list kept as the fallback. The Settings "still open" notes above were stale:
   DOCA's own skills are in Harness → Skills (2.128.0), and its keys left openclaw.json in 2.68.0.
 - **Every control built from the existing pieces** (`.input`, `.input-label`,
   `.btn` variants, the toggle, the Snapshots row); `test/ui-consistency.test.js`
