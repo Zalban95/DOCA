@@ -10,31 +10,8 @@
  * a choice here), and `refused` is a mission that had nobody to ask.
  */
 function _hcApproval(evt, box, scroll) {
-  if (!box) return;
-  box.querySelector('.placeholder')?.remove();
-  // Out of the working fold and into the transcript: a collapsing run would
-  // hide the question the turn is blocked on.
-  agentWorkingGiveBack(box);
-
-  if (evt.state === 'refused') {
-    _hcAppend('error', `Not run — ${evt.tool} needs approval and a mission has nobody to ask.`, 'approval');
-    scroll?.();
-    return;
-  }
-  if (evt.state === 'answered') {
-    box.querySelector(`[data-approval-id="${CSS.escape(evt.id)}"]`)?.settleFrom?.(evt.decision);
-    // Answered elsewhere — the watch that started the turn, the floating chat,
-    // another tab. The popup must not keep asking something already decided.
-    approvalPopupClose(evt.id);
-    scroll?.();
-    return;
-  }
-  const card = approvalCardEl(evt, () => _hcLoadApproval());
-  box.appendChild(card);
-  // The card is the record; the popup is what gets answered. A blocked turn
-  // whose question is three screens up reads as a hang.
-  approvalPopup(evt, d => { card.settleFrom?.(d); _hcLoadApproval(); });
-  scroll?.();
+  // Its three states are decided once, for every chat (agent-ui/event-sink.js).
+  agentApprovalEvent(evt, box, { note: text => _hcAppend('error', text, 'approval'), onSettle: () => _hcLoadApproval(), scroll });
 }
 
 /** The Auto / Manual pill and the standing allowlist behind it. */

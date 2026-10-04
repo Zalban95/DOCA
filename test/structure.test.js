@@ -27,9 +27,9 @@ const CEILING = 400;
  * split the file instead.
  */
 const OVER = {
-  'public/index.html': 1575,  // + the split scripts' <script> tags; ES modules take them back out
+  'public/index.html': 1576,  // + the split scripts' <script> tags; ES modules take them back out
   'public/css/components.css': 1154,
-  'public/js/chat.js': 985,
+  'public/js/chat.js': 902,
   'public/js/files.js':            697,
   'modules/harness/memory.js':     463,
   'modules/api-v1/router.js':      589,

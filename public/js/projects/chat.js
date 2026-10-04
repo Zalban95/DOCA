@@ -64,34 +64,28 @@ async function pjChatSend() {
   const send = document.getElementById('pj-chat-send');
   send.textContent = '■'; send.onclick = pjChatStop;
   _pjChatRow('user', text);
-  // Rendered while it streams, block by block (markdown.js mdStream), like the other two chats.
+  // What each event means is decided once (agent-ui/event-sink.js); this chat draws less of it: rendered
+  // markdown as it streams, a line per tool, approvals, pictures, notes.
+  const box = document.getElementById('pj-chat-msgs');
+  const scroll = () => { box.scrollTop = box.scrollHeight; };
   let md = null;
+  const stream = {
+    feed: t => { md ||= mdStream(_pjChatRow('assistant', '')); md.feed(t); scroll(); },
+    finish: () => { md?.end(); md = null; },
+  };
+  const sink = agentEventSink({
+    stream,
+    fold: (kind, _body, name) => { if (kind === 'tool-call') _pjChatRow('tool', name); return null; },
+    note: (_kind, text) => _pjChatRow('warning', text),
+    image: img => { box.appendChild(agentImageEl(img)); scroll(); },
+    approval: evt => agentApprovalEvent(evt, box, { note: text => _pjChatRow('warning', text), scroll }),
+    error: msg => _pjChatRow('error', msg),
+  });
   PJC.turn = new AbortController();
   await sseStream('/api/harness/chat', { message: text, sessionId: PJC.sessionId }, {
-    signal: PJC.turn.signal,
-    onEvent: evt => {
-      if (evt.type === 'text') {
-        md ||= mdStream(_pjChatRow('assistant', ''));
-        md.feed(evt.text);
-        const box = document.getElementById('pj-chat-msgs'); box.scrollTop = box.scrollHeight;
-      }
-      if (evt.type === 'tool_call') { md?.end(); md = null; _pjChatRow('tool', evt.name); }
-      if (evt.type === 'image') document.getElementById('pj-chat-msgs').appendChild(agentImageEl(evt.image));
-      if (evt.type === 'approval') {
-        // The three states, as the other chats draw them: an answer settles its card (it drew a second,
-        // live one), a mission's refusal is a note, and a question gets the popup too (audit 2026-10-04).
-        const box = document.getElementById('pj-chat-msgs');
-        if (evt.state === 'refused') _pjChatRow('warning', `Not run — ${evt.tool} needs approval and a mission has nobody to ask.`);
-        else if (evt.state === 'answered') { box.querySelector(`[data-approval-id="${CSS.escape(evt.id)}"]`)?.settleFrom?.(evt.decision); approvalPopupClose(evt.id); }
-        else { const card = approvalCardEl(evt, () => {}); box.appendChild(card); approvalPopup(evt, d => card.settleFrom?.(d)); }
-        box.scrollTop = box.scrollHeight;
-      }
-      if (evt.type === 'error') _pjChatRow('error', evt.text);
-      if (evt.type === 'warning' || evt.type === 'failover') _pjChatRow('warning', evt.text);
-    },
-    onError: e => _pjChatRow('error', e.message),
+    signal: PJC.turn.signal, onEvent: sink.onEvent, onError: sink.onError,
   });
-  md?.end();
+  sink.finish();
   PJC.busy = false; PJC.turn = null;
   send.textContent = 'Send'; send.onclick = pjChatSend;
   // The agent may have changed files: refresh what the side shows, reload clean editors.

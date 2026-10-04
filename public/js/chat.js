@@ -201,22 +201,8 @@ function _chatContext(u) {
  * other chat.
  */
 function _chatApproval(evt, container) {
-  if (!container) return;
-  agentWorkingGiveBack(container);
-  if (evt.state === 'refused') {
-    chatAppendMsg('system', `Not run — ${evt.tool} needs approval and a mission has nobody to ask.`);
-    return;
-  }
-  if (evt.state === 'answered') {
-    container.querySelector(`[data-approval-id="${CSS.escape(evt.id)}"]`)?.settleFrom?.(evt.decision);
-    approvalPopupClose(evt.id);
-    _chatScroll();
-    return;
-  }
-  const card = approvalCardEl(evt, () => _chatLoadApproval());
-  container.appendChild(card);
-  approvalPopup(evt, d => { card.settleFrom?.(d); _chatLoadApproval(); });
-  _chatScroll();
+  // Its three states are decided once, for every chat (agent-ui/event-sink.js).
+  agentApprovalEvent(evt, container, { note: text => chatAppendMsg('system', text), onSettle: () => _chatLoadApproval(), scroll: _chatScroll });
 }
 
 /** The Auto / Manual pill in the chat header. It is one global setting, so
@@ -538,11 +524,6 @@ function chatSend({ spoken = false } = {}) {
     : message;
 
   const container = document.getElementById('chat-messages');
-  let pendingCall = null;
-  // One row, rewritten in place while a provider stays silent, because the
-  // alternative is a page that shows nothing for as long as it is quiet and
-  // reads as broken rather than as slow.
-  let waitingRow  = null;
   // Everything this turn does goes in one block that shows its current row and
   // becomes one line when the turn ends.
   agentWorkingOpen(container);
@@ -558,72 +539,28 @@ function chatSend({ spoken = false } = {}) {
 
   // Kept so a spoken question can be answered out loud once the answer is whole.
   let reply = '';
-  // The last step's account of the turn: the ring follows it while the turn
-  // runs, and the rate under the answer is read off it once the turn ends.
-  let spend = null;
+  // What each event means is decided once (agent-ui/event-sink.js); this is how the floating chat draws it.
+  const sink = agentEventSink({
+    stream,
+    fold: (kind, body, name, opts) => _chatAppendFold(kind, body, name, opts),
+    note: (kind, text) => chatAppendMsg(kind === 'waiting' ? 'waiting' : 'failover', text),
+    image: img => _chatAppendImage(img),
+    approval: evt => _chatApproval(evt, container),
+    error: msg => { const el = chatAppendMsg('assistant', `Error: ${msg}`, { plain: true }); el.style.color = 'var(--red)'; },
+    context: evt => _chatContext(evt),
+    onText: t => { reply += t; },
+  });
   sseStream('/api/chat', { message: sent, attachments }, {
-    signal: chatTurn.signal,
-    onEvent: evt => {
-      if (evt.type === 'thinking') {
-        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
-        if (waitingRow) { waitingRow.remove(); waitingRow = null; }
-        stream.feedThinking(evt.text);
-      } else if (evt.type === 'text') {
-        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
-        if (waitingRow) { waitingRow.remove(); waitingRow = null; }
-        reply += evt.text;
-        stream.feed(evt.text);
-      } else if (evt.type === 'waiting') {
-        const note = `${evt.provider} has not sent a token yet — ${evt.seconds}s`
-          + (evt.frames ? `, ${evt.frames} keep-alive frames` : '')
-          + (evt.timeoutMs ? ` of ${Math.round(evt.timeoutMs / 1000)}s` : '');
-        if (waitingRow) waitingRow.textContent = note;
-        else waitingRow = chatAppendMsg('waiting', note);
-      } else if (evt.type === 'failover' || evt.type === 'warning') {
-        // A switch of model, a reply cut off at its length limit, a budget or
-        // context warning: each changes what the answer is, so each is said.
-        if (waitingRow) { waitingRow.remove(); waitingRow = null; }
-        chatAppendMsg('failover', evt.text);
-        if (evt.type === 'failover') stream.startWaiting();
-      } else if (evt.type === 'tool_call') {
-        if (waitingRow) { waitingRow.remove(); waitingRow = null; }
-        stream.finish();
-        stream.resetText();
-        if (pendingCall) pendingCall.setActive(false);
-        pendingCall = _chatAppendFold('tool-call', JSON.stringify(evt.args ?? {}), evt.name, { active: true });
-      } else if (evt.type === 'usage') {
-        spend = evt;
-        _chatContext(evt);
-      } else if (evt.type === 'approval') {
-        _chatApproval(evt, container);
-      } else if (evt.type === 'image') {
-        _chatAppendImage(evt.image);
-      } else if (evt.type === 'tool_result') {
-        if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
-        _chatAppendFold('tool-result', evt.result, evt.name);
-        stream.startWaiting();
-      } else if (evt.type === 'stderr') {
-        stream.finish();
-        const el = chatAppendMsg('assistant', evt.text, { plain: true });
-        el.style.color = 'var(--red)';
-      }
-    },
-    onError: e => {
-      if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
-      stream.finish();
-      const el = chatAppendMsg('assistant', `Error: ${e.message}`, { plain: true });
-      el.style.color = 'var(--red)';
-    },
+    signal: chatTurn.signal, onEvent: sink.onEvent, onError: sink.onError,
   }).then(() => {
-    if (pendingCall) pendingCall.setActive(false);
-    stream.finish();
+    sink.finish();
     // The turn is over, so the rows it left open close: the account of a
     // finished run is a few short lines rather than a wall of command bodies.
     closeFolds(container);
     agentWorkingClose(container);
     // After the fold closes, so the rate is the last thing under the answer
     // rather than a line the collapsing run swallows.
-    const rate = tokenRateEl(spend);
+    const rate = tokenRateEl(sink.spend);
     if (rate) { container.appendChild(rate); _chatScroll(); }
     if (turn.signal.aborted) chatAppendMsg('system', 'Stopped. The step already running finishes on its own.');
     // Spoken to, speak back — after the answer is on screen, so a TTS that is
@@ -835,7 +772,6 @@ async function _callProcessAudio(audioBlob) {
     const container = document.getElementById('chat-messages');
     let sentenceBuf  = '';
     let inThinking   = false;
-    let pendingCall  = null;
     agentWorkingOpen(container);
     const stream = createThinkStream({
       mount: node => { agentFoldMount(container, node); _chatScroll(); },
@@ -843,6 +779,30 @@ async function _callProcessAudio(audioBlob) {
       scroll: _chatScroll,
     });
     stream.startWaiting();
+    // The same sink as a typed turn — approvals, warnings and pictures included — and speaking on the side:
+    // spoken text skips `<think>` blocks (a character scan, so tags split across chunks still drop cleanly).
+    const callSink = agentEventSink({
+      stream,
+      fold: (kind, body, name, opts) => _chatAppendFold(kind, body, name, opts),
+      note: (kind, text) => chatAppendMsg(kind === 'waiting' ? 'waiting' : 'failover', text),
+      image: img => _chatAppendImage(img),
+      approval: evt => _chatApproval(evt, container),
+      error: msg => chatAppendMsg('system', `Error: ${msg}`),
+      onText: chunk => {
+        for (let i = 0; i < chunk.length; i++) {
+          const remaining = chunk.slice(i);
+          if (!inThinking && remaining.startsWith('<think>')) { inThinking = true; i += 6; continue; }
+          if (inThinking && remaining.startsWith('</think>')) { inThinking = false; i += 7; continue; }
+          if (!inThinking) sentenceBuf += chunk[i];
+        }
+        if (inThinking) return;
+        const sentenceEnd = sentenceBuf.search(/[.!?;:\n]\s*/);
+        if (sentenceEnd < 0) return;
+        const sentence = sentenceBuf.slice(0, sentenceEnd + 1).trim();
+        sentenceBuf = sentenceBuf.slice(sentenceEnd + 1);
+        if (sentence.length > 1) _callEnqueueSynth(sentence);
+      },
+    });
     _callSetStatus('Speaking…', 'speaking');
 
     const chatRes = await fetch('/api/chat', {
@@ -867,56 +827,13 @@ async function _callProcessAudio(audioBlob) {
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         try {
-          const evt = JSON.parse(line.slice(6));
-          if (evt.type === 'thinking') {
-            if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
-            stream.feedThinking(evt.text);
-          } else if (evt.type === 'text') {
-            if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
-            stream.feed(evt.text);
-
-            // Spoken text skips `<think>` blocks (character scan so tags
-            // split across SSE chunks still drop cleanly).
-            const chunk = evt.text;
-            for (let i = 0; i < chunk.length; i++) {
-              const remaining = chunk.slice(i);
-              if (!inThinking && remaining.startsWith('<think>')) {
-                inThinking = true;
-                i += 6;
-                continue;
-              }
-              if (inThinking && remaining.startsWith('</think>')) {
-                inThinking = false;
-                i += 7;
-                continue;
-              }
-              if (!inThinking) sentenceBuf += chunk[i];
-            }
-            if (!inThinking) {
-              const sentenceEnd = sentenceBuf.search(/[.!?;:\n]\s*/);
-              if (sentenceEnd >= 0) {
-                const sentence = sentenceBuf.slice(0, sentenceEnd + 1).trim();
-                sentenceBuf = sentenceBuf.slice(sentenceEnd + 1);
-                if (sentence.length > 1) _callEnqueueSynth(sentence);
-              }
-            }
-          } else if (evt.type === 'tool_call') {
-            stream.finish();
-            stream.resetText();
-            if (pendingCall) pendingCall.setActive(false);
-            pendingCall = _chatAppendFold('tool-call', JSON.stringify(evt.args ?? {}), evt.name, { active: true });
-          } else if (evt.type === 'tool_result') {
-            if (pendingCall) { pendingCall.setActive(false); pendingCall = null; }
-            _chatAppendFold('tool-result', evt.result, evt.name);
-            stream.startWaiting();
-          }
+          callSink.onEvent(JSON.parse(line.slice(6)));   // what it means: agent-ui/event-sink.js; speaking: onText above
         } catch {}
       }
       _chatScroll();
     }
 
-    if (pendingCall) pendingCall.setActive(false);
-    stream.finish();
+    callSink.finish();
     closeFolds(container);
 
     // Synthesize any remaining text
