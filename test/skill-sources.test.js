@@ -87,3 +87,13 @@ test('one search covers DOCA\'s skills and every other harness\'s, saying which 
   const tool = await require('../modules/harness/tools').call('skill', { action: 'search', query: 'pdf tables' }, []);
   assert.match(tool, /pdf-tables — Claude Code skills/);
 });
+
+test('an imported skill named to climb out of the skills folder is refused (audit 2026-10-04)', async () => {
+  put('.claude/skills/evil/SKILL.md', '---\nname: ../../escaped\ndescription: x\n---\nbody\n');
+  const r = await H.api(null, 'POST', '/api/harness/skills/import', { source: 'claude-skills' });
+  assert.equal(r.status, 200);
+  const evil = r.body.imported.find(i => i.name === '../../escaped');
+  assert.match(evil.skipped, /not a skill name/);
+  const store = require('../modules/store');
+  assert.equal(fs.existsSync(path.join(store.dir('skills'), '..', '..', 'escaped')), false);
+});

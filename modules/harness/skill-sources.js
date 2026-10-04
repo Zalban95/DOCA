@@ -109,7 +109,7 @@ function importSource(id, { names = [], overwrite = false, project } = {}) {
     if (have.has(item.name) && !overwrite) { out.push({ name: item.name, skipped: 'exists here' }); continue; }
     try {
       if (item.dir) {
-        fs.cpSync(item.dir, path.join(require('../store').dir('skills'), item.name), { recursive: true });
+        fs.cpSync(item.dir, skills.importDest(item.name), { recursive: true });
       } else {
         if (!item.body) { out.push({ name: item.name, skipped: 'empty' }); continue; }
         skills.write(item.name, { description: item.description || `Imported from ${src.label}.`,
