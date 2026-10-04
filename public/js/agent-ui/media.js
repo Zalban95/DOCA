@@ -69,10 +69,16 @@ function agentImageEl(media, onLoad) {
     if (onLoad) el.addEventListener('loadedmetadata', onLoad, { once: true });
     el.addEventListener('error', () => fail('cannot be played — it is no longer in the attachments folder'), { once: true });
     fig.appendChild(el);
+    // Full screen in the page (agent-ui/media-viewer.js), where Back closes it.
+    const big = Object.assign(document.createElement('button'), { type: 'button', className: 'btn btn-xs agent-media-expand', textContent: '⤢ Full screen' });
+    big.addEventListener('click', () => { el.pause?.(); mediaViewerOpen({ src: url, kind, name: media.caption || media.name, download: url }); });
+    fig.appendChild(big);
   } else {
     const link = document.createElement('a');
     link.href = url; link.target = '_blank'; link.rel = 'noopener';
     link.title = 'Open full size';
+    // Opened in the page, zoomable, and closed by Back — a tab of its own on a phone was a dead end (2026-10-04).
+    link.addEventListener('click', e => { e.preventDefault(); mediaViewerOpen({ src: url, kind: 'image', name: media.caption || media.name, download: url }); });
     const img = document.createElement('img');
     img.src = url; img.alt = media.caption || media.name;
     // Not loading="lazy": a lazy image has no size until it loads, a shrink-to-fit
@@ -135,6 +141,9 @@ async function agentDocOpen(media) {
   title.textContent = media.caption || media.name;
   body.textContent = 'Opening…';
   overlay.style.display = 'flex';
+  // Back closes the window rather than leaving the page (agent-ui/media-viewer.js).
+  overlay._release?.();
+  overlay._release = overlayBack(() => { overlay._release = null; overlay.style.display = 'none'; });
   overlay.dataset.name = media.name;
   _agentDocActions(media);
 
@@ -209,5 +218,5 @@ function _agentDocActions(media) {
 function agentDocClose(event) {
   if (event && event.target !== event.currentTarget) return;
   const overlay = document.getElementById('agent-doc-overlay');
-  if (overlay) overlay.style.display = 'none';
+  if (overlay) { overlay.style.display = 'none'; overlay._release?.(); overlay._release = null; }
 }

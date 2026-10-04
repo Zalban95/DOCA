@@ -72,11 +72,27 @@ function mount(app) {
     return { results };
   }));
   // Download: the file's bytes, fetched from the device as base64.
-  app.get(`${base}/download`, async (req, res) => {
+  // A device's file, read through its files_read tool. Its name is cut on either separator — a Windows
+  // device's path through this Linux hub kept its whole C:\… as the name — and it is served with its own
+  // type, so a phone saves report.pdf rather than download.bin (2026-10-04).
+  const nameOf = p => String(p || 'file').split(/[\\/]/).pop() || 'file';
+  const typeOf = p => require('./attachments').mimeFor(nameOf(p)) || 'application/octet-stream';
+  const fetchFile = async req => Buffer.from((await call(req.params.id, 'files_read', { path: String(req.query.path || ''), encoding: 'base64' })).content || '', 'base64');
+  app.get([`${base}/download`, `${base}/download/:name`], async (req, res) => {
     try {
-      const r = await call(req.params.id, 'files_read', { path: String(req.query.path || ''), encoding: 'base64' });
-      res.setHeader('Content-Disposition', `attachment; filename="${path.basename(String(req.query.path || 'file')).replace(/"/g, '')}"`);
-      res.type('application/octet-stream').send(Buffer.from(r.content || '', 'base64'));
+      const buf = await fetchFile(req), name = nameOf(req.query.path);
+      res.setHeader('Content-Disposition', `attachment; filename="${name.replace(/[^\x20-\x7e]|"/g, '_')}"; filename*=UTF-8''${encodeURIComponent(name)}`);
+      res.type(typeOf(req.query.path)).send(buf);
+    } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  });
+  // For the previews (the Files tab asks …/raw like the host's): its type, inline, script sandboxed as the host's raw is.
+  app.get(`${base}/raw`, async (req, res) => {
+    try {
+      const buf = await fetchFile(req);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      if (/\.(html?|xhtml|svg|xml|xsl)$/i.test(nameOf(req.query.path)))
+        res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox");
+      res.type(typeOf(req.query.path)).send(buf);
     } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
 }
