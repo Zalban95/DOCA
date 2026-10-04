@@ -285,7 +285,8 @@ function restartSelf() {
   const { supervisorName } = require('./update');
   if (!supervisorName()) {
     const out = fs.openSync(path.join(DIR, 'restart.log'), 'a');
-    spawn('bash', [path.join(HOME, 'run.sh'), 'start'], { cwd: HOME, detached: true, stdio: ['ignore', out, out], env: process.env }).unref();
+    // The Node launcher, so a restart works on Windows and macOS as on Linux (bin/doca-launch.js).
+    spawn(process.execPath, [path.join(HOME, 'bin', 'doca-launch.js'), 'start'], { cwd: HOME, detached: true, stdio: ['ignore', out, out], env: process.env, windowsHide: true }).unref();
   }
   process.exit(0);
 }

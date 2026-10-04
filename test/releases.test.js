@@ -40,7 +40,10 @@ function release(tag, { compatible = true, dataFormat = 2, server = 'answer' } =
 
 execFileSync('git', ['init', '-q', '-b', 'main', HOME]);
 fs.copyFileSync(path.join(__dirname, '..', 'run.sh'), path.join(HOME, 'run.sh'));
-fs.writeFileSync(path.join(HOME, '.gitignore'), '/.releases/\n/node_modules/\n/.doca/\n/run.sh\n');
+// run.sh starts through the Node launcher (bin/doca-launch.js), which must sit beside it.
+fs.mkdirSync(path.join(HOME, 'bin'), { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', 'bin', 'doca-launch.js'), path.join(HOME, 'bin', 'doca-launch.js'));
+fs.writeFileSync(path.join(HOME, '.gitignore'), '/.releases/\n/node_modules/\n/.doca/\n/run.sh\n/bin/\n');
 release('v0.9.0', { compatible: false });
 release('v1.0.0');
 release('v1.1.0', { server: 'crash' });
