@@ -42,6 +42,7 @@ const TABLE = [
   R(GET, '/api/branding', 'public'),
   R(GET, '/api/auth/host-check', 'host'),                 // asked before opening a terminal socket
   R(ANY, '/api/auth/(me|logout|password|step-up|sessions)', 'signed'),
+  R(ANY, '/api/auth/grants(/.*)?', 'signed'),              // exceptions: users or delegate, checked in users-routes.js
   R(ANY, '/api/auth/(users|levels)(/.*)?', 'users'),        // people and their permission levels (auth/users-routes.js)
   R(ANY, '/api/presence', 'signed'),                       // "this page is visible": a heartbeat, no data
 
@@ -58,7 +59,7 @@ const TABLE = [
   R(ANY, '/api/devices(/.*)?', 'devices'),
 
   // ── The harness: what lets the agent act on the machine is host ──
-  R(ANY, '/api/harness/approvals/[^/]+', 'host'),          // approving a tool call it asked to run
+  R(ANY, '/api/harness/approvals/[^/]+', 'chat'),          // answering a tool call: a host, or the person whose turn it is (routes.js)
   R(ANY, '/api/harness/approval(/.*)?', 'host'),           // Auto/Manual, and the always-allowed list
   R(ANY, '/api/harness/agents(/.*)?', 'host'),             // a specialist's definition is its tool list
   R(ANY, '/api/harness/installs/[^/]+/(apply|reject)', 'host'),

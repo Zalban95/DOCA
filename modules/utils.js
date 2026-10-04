@@ -37,21 +37,37 @@ function sseHeaders(res) {
 }
 
 /** Return true if the resolved path falls within an allowed root, and is not a protected file. */
+/**
+ * A path as the filesystem will really reach it: symlinks resolved, and for a
+ * file not made yet, its nearest existing parent's real path with the rest kept.
+ */
+function realOf(abs) {
+  let base = abs, rest = '';
+  for (;;) {
+    try { return path.join(fs.realpathSync(base), rest); } catch { /* not there yet */ }
+    const up = path.dirname(base);
+    if (up === base) return abs;
+    rest = rest ? path.join(path.basename(base), rest) : path.basename(base);
+    base = up;
+  }
+}
+
 function fmSafe(p) {
   const abs = path.resolve(p);
-  // By its real path too: a symlink made to a protected file is the same file.
-  let real = abs;
-  try { real = fs.realpathSync(abs); } catch {}
+  // By its real path too: a symlink made to a protected file is the same file, and a symlink inside an
+  // allowed folder pointing outside it reaches outside it (audit 2026-10-04) — so both must be inside.
+  const real = realOf(abs);
   if (PROTECTED_FILES.some(f => { const r = path.resolve(f); return r === abs || r === real; })) return false;
   // `root + '/'` was a Unix assumption, and the machine this is developed on is
   // Windows: every absolute path there is separated by `\`, so nothing but a root
   // itself ever passed and the file tools refused the whole disk. Compare with
   // the platform's separator, and case-insensitively where the filesystem is.
   const fold = s => (process.platform === 'win32' ? s.toLowerCase() : s);
-  return FM_ALLOWED_ROOTS.some(rootRaw => {
-    const root = fold(path.resolve(rootRaw)), a = fold(abs);
+  const inside = target => FM_ALLOWED_ROOTS.some(rootRaw => {
+    const root = fold(realOf(path.resolve(rootRaw))), a = fold(target);
     return a === root || a.startsWith(root.endsWith(path.sep) ? root : root + path.sep);
   });
+  return inside(real);   // roots by their real path too: /tmp is a symlink on some systems
 }
 
 /** Load dashboard preferences from disk (returns {} on missing/corrupt file). */
@@ -229,6 +245,7 @@ function detectBinary(cmd) {
 }
 
 module.exports = {
+  realOf,
   run,
   resolveEnvVars,
   sseHeaders,

@@ -110,7 +110,20 @@ const handleApprovalMode = wrap(async (req, res) => {
 
 /** POST /api/harness/approvals/:id — answer one waiting request. */
 const handleApprovalDecide = wrap(async (req, res) => {
-  const ok = approval.decide(req.params.id, req.body?.decision);
+  // Who may answer (auth phase 2): anyone holding host, or the person whose own turn asked. A person
+  // without host answering "always" gets their own approve: grant, not the panel's global allowlist.
+  const e = approval.entry(req.params.id);
+  const host = require('../auth/rights').can(req.auth?.role, 'host');
+  if (e && !host && e.req.personId !== req.auth?.user?.id)
+    return res.status(403).json({ error: 'This request belongs to someone else\'s turn; it is theirs, or a host\'s, to answer.' });
+  let decision = req.body?.decision;
+  if (e && !host && (decision === 'always' || decision === 'always_tool')) {
+    if (!e.req.keys || e.req.forced || e.req.recheck) return res.status(400).json({ error: 'This request can only be allowed once.' });
+    for (const k of decision === 'always' ? e.req.keys : [e.req.tool])
+      require('../auth/grants').create({ subject: { kind: 'user', id: req.auth.user.id }, permission: `approve:${k}`, by: { kind: 'user', id: req.auth.user.id, user: req.auth.user.id }, note: 'their own "always" answer' });
+    decision = 'once';
+  }
+  const ok = approval.decide(req.params.id, decision);
   // Gone rather than never-there: a question withdraws itself on timeout and
   // when the turn is stopped, so a click landing late is ordinary, not an error
   // to shout about.
@@ -250,8 +263,15 @@ const handleSettingsRead = wrap(async (_req, res) =>
 
 const handleProposals = wrap(async (_req, res) => res.json(settings.list()));
 
-const handleProposalApply = wrap(async (req, res) =>
-  res.json({ ok: true, ...settings.apply(req.params.id) }));
+const handleProposalApply = wrap(async (req, res) => {
+  // A level is bound to the settings it may change (auth/levels.js): every path the proposal touches must
+  // be within the applier's — or granted to them (setting:<prefix>).
+  const p = settings.list().pending.find(x => x.id === req.params.id);
+  const person = req.auth && { ...req.auth.user, role: req.auth.role };
+  const outside = (p?.changes || []).map(c => c.path).filter(path => person?.role && !require('../auth/permits').holds(person, `setting:${path}`));
+  if (outside.length) return res.status(403).json({ error: `Your level does not cover ${outside.join(', ')}; someone whose level does can apply it.` });
+  res.json({ ok: true, ...settings.apply(req.params.id) });
+});
 
 const handleProposalReject = wrap(async (req, res) =>
   res.json({ ok: true, proposal: settings.reject(req.params.id, req.body?.reason) }));

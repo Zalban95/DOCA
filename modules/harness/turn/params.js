@@ -44,7 +44,9 @@ function turnParams(profile) {
  */
 function profileForTurn(session, asked) {
   const organization = require('../organization');
-  const profile = session.kind === 'specialist' ? session.profile || asked : asked || organization.profileFor(session);
+  const stored = session.kind === 'specialist' ? session.profile || asked : asked || organization.profileFor(session);
+  // The mission it runs for travels with it, so grants to that mission reach its tools (auth/permits.js).
+  const profile = stored && asked?.missionId ? { ...stored, missionId: asked.missionId } : stored;
   if (profile && session.kind === 'specialist') {
     profile.tools = (profile.tools || []).filter(n => !require('../../agents/registry').NEVER.includes(n));
   }

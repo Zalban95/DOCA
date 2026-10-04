@@ -170,6 +170,10 @@ function gate(name, args, ctx = {}) {
     if (from) return { tool: name, keys: null, recheck: true,
       summary: `${summarize(name, args)} — asked again because text from ${from} entered this turn; it could be steering the agent.` };
   }
+  // The person's level asks before every call (auth/permits.js) — whatever the panel's mode. Not for the
+  // free reads, which buy no safety and would teach a person to click Allow without reading.
+  if (ctx.forceAsk && !FREE.has(name))
+    return { tool: name, keys: keysFor(name, args), level: true, summary: `${summarize(name, args)} — the level of the person this turn acts for asks before every tool call.` };
   if (mode !== 'manual') return null;
   if (FREE.has(name)) return null;
   if (always.includes(name)) return null;           // the whole tool was allowed
@@ -254,7 +258,9 @@ function askAnywhere(req, { sessionId, signal, client } = {}) {
   // Approving a tool call, and Full auto above all, are what the panel keeps to the `host` right
   // (auth/rights.js). A device answers only for an owner whose role holds it; a member's or an
   // ownerless device's turn is answered at the panel (audit 2026-10-04).
-  if (!deviceId || !require('../auth/rights').can(client.user?.role, 'host')) return { id, answer };
+  // …or for the person whose own turn this is, confirming their own call (an "ask" level, auth/permits.js).
+  const host = require('../auth/rights').can(client?.user?.role, 'host');
+  if (!deviceId || !(host || (req.personId && client.user?.id === req.personId))) return { id, answer };
 
   const ctrl = new AbortController();
   const onAbort = () => ctrl.abort();
@@ -267,16 +273,17 @@ function askAnywhere(req, { sessionId, signal, client } = {}) {
         to: [deviceId],
         question: `Allow ${req.tool}?`,
         note: req.summary,
+        // Full auto switches the whole panel: only for someone who holds host.
         choices: [
           { id: 'approve',   label: 'Approve' },
           { id: 'deny',      label: 'Deny' },
-          { id: 'full_auto', label: 'Full auto' },
+          ...(host ? [{ id: 'full_auto', label: 'Full auto' }] : []),
         ],
         timeoutSec: 240,
         signal: ctrl.signal,
       });
       if (r.status !== 'answered') return null;          // dismissed, timed out, withdrawn
-      if (r.choiceId === 'full_auto') { setMode('auto'); return 'once'; }
+      if (r.choiceId === 'full_auto' && host) { setMode('auto'); return 'once'; }
       return r.choiceId === 'approve' ? 'once' : 'deny';
     } catch { return null; }                              // no such device, no prompts — the panel still has it
   })();
@@ -336,10 +343,21 @@ function refusal(decision, req) {
  * be given the verbs it needs in advance, on purpose.
  */
 function missionRefusal(req) {
+  const what = req.keys?.length ? req.keys.join(' or ') : req.tool;
+  // Each reason names the fix that actually works (audit 2026-10-04: a protected write was told to use the allowlist).
+  if (req.forced) return `Not run: ${req.summary} A mission runs unwatched, and a file that governs the agent is never written `
+    + 'without a person — no allowlist or grant changes that. Report it; the person can make the change themselves.';
+  if (req.level) return `Not run: the level of the person this mission acts for asks before every tool call, and a mission has `
+    + `nobody to ask. Report it; a grant approve:${what} for this mission (permission_grant, from the agent that dispatched it) or `
+    + 'for the person (Settings → Users) lets it run.';
+  if (req.recheck) return `Not run: ${req.summary} A mission has nobody to ask. Report what you read and what you meant to do.`;
   return `Not run: this harness is in manual approval mode and "${req.tool}" is not on the standing allowlist. `
     + 'A mission runs unwatched, so there is nobody to ask. Report this as the reason you stopped; the user can '
-    + `allow ${req.keys?.length ? req.keys.join(' or ') : req.tool} in Harness → Approvals and start it again.`;
+    + `allow ${what} in Harness → Approvals and start it again.`;
 }
+
+/** One waiting request, with who may answer it (its person, or anyone holding host). */
+function entry(id) { return _pending.get(id) || null; }
 
 /**
  * What the agent is told about its own leash.
@@ -367,5 +385,5 @@ function block() {
 
 module.exports = {
   MODES, FREE, settings, setMode, setRecheck, isUnattended, remember, forget, block,
-  verbsOf, keysFor, summarize, gate, ask, askAnywhere, decide, pending, refusal, missionRefusal,
+  verbsOf, keysFor, summarize, gate, ask, askAnywhere, decide, pending, refusal, missionRefusal, entry,
 };

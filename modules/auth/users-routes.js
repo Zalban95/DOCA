@@ -94,6 +94,27 @@ function mount(app) {
     return { ok: true };
   }));
 
+  // Grants: exceptions to a level (auth/grants.js), given by someone holding delegate, within what they hold.
+  const giver = req => ({ ...req.auth.user, role: req.auth.role });
+  const mayManage = req => { if (!levels.rightsOf(req.auth.role).some(r => r === 'users' || r === 'delegate')) throw bad('Managing grants needs the users or delegate right.', 403); };
+  app.get('/api/auth/grants', wrap(req => { mayManage(req); return { grants: require('./grants').list({ all: req.query.all === '1' }) }; }));
+  app.post('/api/auth/grants', wrap(req => {
+    const g = require('./grants'), b = req.body || {};
+    const why = require('./permits').mayGrant({ giver: giver(req), subject: b.subject || {}, permission: String(b.permission || '') });
+    if (why) throw bad(`Not given: ${why}.`, 403);
+    const made = g.create({ subject: b.subject, permission: b.permission, scope: b.scope || 'permanent', expiresAt: b.expiresAt || null,
+      note: b.note, by: { kind: 'user', id: req.auth.user.id, user: req.auth.user.id } });
+    store.audit({ orgId: orgOf(req), actorId: req.auth.user.id, action: 'grant given', detail: `${made.permission} to ${made.subject.kind} ${made.subject.id}` });
+    return { grant: made };
+  }));
+  app.delete('/api/auth/grants/:id', wrap(req => {
+    const g = require('./grants'), cur = g.get(req.params.id);
+    if (!cur) throw bad('No such grant.', 404);
+    if (cur.by.user !== req.auth.user.id) mayManage(req);
+    store.audit({ orgId: orgOf(req), actorId: req.auth.user.id, action: 'grant revoked', detail: `${cur.permission} from ${cur.subject.kind} ${cur.subject.id}` });
+    return { grant: g.revoke(req.params.id) };
+  }));
+
   app.get('/api/auth/levels', wrap(() => ({ levels: levels.list(), rights: levels.RIGHTS })));
   app.post('/api/auth/levels', wrap(req => ({ level: levels.create(req.body || {}, { actorLevel: req.auth.role }) })));
   app.patch('/api/auth/levels/:id', wrap(req => ({ level: levels.update(req.params.id, req.body || {}, { actorLevel: req.auth.role }) })));
