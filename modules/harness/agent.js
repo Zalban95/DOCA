@@ -253,6 +253,11 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
         summary = folded;
         say({ type: 'compacted', at: step, contextTokens: led.lastPrompt, contextWindow: budget.windowFor(p) || null,
           setting: reason.setting, threshold: reason.at });
+      } else {
+        // Nothing earlier to fold: the pressure is this turn. Clear its older tool results instead (turn/clear-results.js).
+        const cleared = require('./turn/clear-results').clearOld(session.id);
+        if (cleared) say({ type: 'compacted', at: step, contextTokens: led.lastPrompt, contextWindow: budget.windowFor(p) || null,
+          setting: reason.setting, threshold: reason.at, cleared });
       }
     }
 

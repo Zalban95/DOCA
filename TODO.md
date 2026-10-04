@@ -1564,7 +1564,14 @@ through is not.
 
 A rolling summary is the only instrument. There is no pruning of stale tool
 results and no context editing, so a turn that read three large files carries
-all three until the fold. Defaults are sane (`compactTokens: 40000`,
+all three until the fold.
+**Pruning built in 2.124.0** (`harness/turn/clear-results.js`): under the same
+token trigger, when the fold finds no earlier turn to fold — the pressure is
+the turn in progress — results over 1200 characters except the newest three are
+replaced, in what is sent, by one line saying what was there and to run the tool
+again. One forward-only mark (`clearedThrough`) keeps the request byte-stable
+between clears; the stored transcript is untouched; the call/result pair stays.
+Still a ceiling: one *result* larger than the window. Defaults are sane (`compactTokens: 40000`,
 `compactAt: 60`, `contextWindow: 0` = nobody has said) — but **a saved config can
 disable folding without saying so**: this panel ran with a 1M window and
 `compactTokens` at 500 000, which is past where most turns end, so nothing ever
