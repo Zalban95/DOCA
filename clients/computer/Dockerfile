@@ -6,7 +6,9 @@ FROM node:22-bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
       chromium xvfb fluxbox x11vnc novnc websockify ffmpeg xdotool \
       fonts-dejavu-core fonts-noto-color-emoji ca-certificates curl git python3 procps \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    # fluxbox asks fbsetbg for a wallpaper and, finding no setter, leaves an xmessage window on the screen
+    && ln -sf /bin/true /usr/bin/fbsetbg
 RUN useradd -m -s /bin/bash agent
 COPY agent.js tools.js cdp.js start.sh /opt/doca-computer/
 RUN chmod +x /opt/doca-computer/start.sh
