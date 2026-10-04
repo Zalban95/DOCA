@@ -41,6 +41,8 @@ function approvalCardEl(evt, done) {
 
   const choices = [
     { decision: 'once', label: 'Allow once', cls: 'btn-green' },
+    // This and every other request waiting that you may answer (approval-answer.js), once each.
+    { decision: 'approve_all', label: 'Approve all waiting', cls: '' },
     ...(evt.keys?.length
       ? [{ decision: 'always', label: `Always allow ${evt.keys.join(', ')}`, cls: '' }]
       : []),

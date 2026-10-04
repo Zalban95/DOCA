@@ -48,7 +48,9 @@ audit's fixes (2.137.1 security, 2.137.2 robustness, 2.137.3 front end).
   owner's own; `agent.turn` summaries reach every person's devices. Per-person
   conversations are auth phase 2.
 
-**Portal (added 2026-10-04)**: DocaMobile/DocaWear read `quiet`; run the Windows paths
+**Portal (added 2026-10-04)**: DocaWear/DocaMobile render the new approval option ids
+`always` and `approve_all` (they are ordinary options; check nothing assumes exactly three);
+DocaMobile/DocaWear read `quiet`; run the Windows paths
 fixed by reading in 2.137.2 (npm.cmd spawns, pip into a venv via PowerShell).
 
 About 30 open items. Each points to the section that holds its reasons; the
