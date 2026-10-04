@@ -17,7 +17,9 @@ const missions = () => require('../../agents/missions');
  *   only when the step that carried it actually went out.
  */
 function stepRequest({ p, ep, message, summary, client, profile, projectBrief, schemas, disabled, session, led, toolNews, contextSkips }) {
-  const { rows } = memory.window(session.id, Number(p.historyTurns) || 0);
+  const { rows: windowRows, folded } = memory.window(session.id, Number(p.historyTurns) || 0);
+  // Old tool results this turn already used, shortened in what is sent once token pressure cleared them.
+  const rows = require('./clear-results').view(windowRows, folded, memory.getSession(session.id)?.clearedThrough);
   const messages = [
     {
       role: 'system',

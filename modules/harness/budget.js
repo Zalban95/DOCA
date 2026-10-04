@@ -322,6 +322,9 @@ function block(p) {
       + `${p.summarizeAfter} messages or ${compactTokensFor(p) || '(unset)'} tokens of prompt `
       + `(harness.config.doca.historyTurns, .summarizeAfter, .compactTokens)`,
     `memory entries in this prompt: up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`,
+    `tool results: under that same pressure, when there are no earlier turns to fold, results over `
+      + `${require('./turn/clear-results').MIN_CHARS} characters except your newest ${require('./turn/clear-results').KEEP} `
+      + 'are cleared from what you are sent (the user keeps them); run the tool again if you need one back',
     `rate limits (HTTP 429): waited out ${require('./turn/rate-limit').limits(p).tries} times, up to `
       + `${require('./turn/rate-limit').limits(p).cap / 1000}s each (harness.config.doca.rateLimitRetries, .rateLimitMaxWaitMs)`,
   );

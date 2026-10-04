@@ -160,7 +160,8 @@ function fromHarness(evt) {
       return line(SELF, 'warn',
         `compacted at step ${evt.at} — prompt ${evt.contextTokens} tokens reached ${evt.setting || 'the trigger'}`
         + `${evt.threshold ? ` (${evt.threshold})` : ''}${evt.contextWindow ? `, window ${evt.contextWindow}` : ''}; `
-        + 'earlier turns summarised, this one kept word for word');
+        + (evt.cleared ? `nothing earlier to fold, so ${evt.cleared} older tool result${evt.cleared === 1 ? '' : 's'} of this turn cleared from what the model is sent`
+          : 'earlier turns summarised, this one kept word for word'));
 
     default:
       return null;
