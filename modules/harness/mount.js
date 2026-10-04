@@ -29,6 +29,11 @@ function mount(app) {
     try { require('./turn/choice').set(req.params.id, req.body || {}); res.json(require('./turn/choice').view(req.params.id)); }
     catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
+  // The panel saying its page is visible (presence.js): read by the agent's per-step readings.
+  app.post('/api/presence', (req, res) => {
+    require('../presence').beat(req.auth?.user, req.body?.visible !== false);
+    res.json({ ok: true });
+  });
   // What a restart would cut off, and whether one is waiting for it (drain.js).
   app.get('/api/harness/busy', (_req, res) => {
     const drain = require('./drain');

@@ -39,6 +39,7 @@ const TABLE = [
   R(GET, '/api/branding', 'public'),
   R(GET, '/api/auth/host-check', 'host'),                 // asked before opening a terminal socket
   R(ANY, '/api/auth/(me|logout|password|step-up|sessions)', 'signed'),
+  R(ANY, '/api/presence', 'signed'),                       // "this page is visible": a heartbeat, no data
 
   // ── The panel's own lifecycle: everyone's data and code ──
   R(ANY, '/api/backups(/.*)?', 'org'),

@@ -277,6 +277,9 @@ function liveBlock(p, ledger) {
     // the moment the user answers "always allow", so it cannot sit in the
     // cached prefix ahead of the transcript (H-9).
     approval.block(),
+    // Whether the owner is reading the panel (presence.js): which of the chat or
+    // a device actually reaches them, so charter rule 15 has a fact to go on.
+    require('../../presence').line(),
   ].filter(Boolean).join('\n\n');
 }
 
