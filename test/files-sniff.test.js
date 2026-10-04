@@ -34,3 +34,21 @@ test('raw HTML and SVG are served sandboxed; a picture is not (audit 2026-10-04)
   const p = await fetch(`${H.base}/api/files/raw?path=${encodeURIComponent(png)}`, { headers: { Cookie: H.owner.cookie } });
   assert.equal(p.headers.get('content-security-policy'), null);
 });
+
+test('paste: never into itself, links copied as links, protected files inside a folder left behind (audit 2026-10-04)', async () => {
+  const fs2 = require('node:fs');
+  const src = fs2.mkdtempSync(path.join(H.tmp, 'paste-src-'));
+  fs2.mkdirSync(path.join(src, 'sub'));
+  fs2.writeFileSync(path.join(src, 'a.txt'), 'a');
+  let linked = true;
+  try { fs2.symlinkSync('/etc/hostname', path.join(src, 'host-link')); } catch { linked = false; }
+  const into = await H.api(null, 'POST', '/api/files/paste', { op: 'copy', paths: [src], dest: path.join(src, 'sub') });
+  assert.equal(into.status, 207);
+  assert.match(into.body.errors[0], /cannot be pasted into itself/);
+  const dest = fs2.mkdtempSync(path.join(H.tmp, 'paste-dest-'));
+  const ok = await H.api(null, 'POST', '/api/files/paste', { op: 'copy', paths: [src], dest });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  const copied = path.join(dest, path.basename(src));
+  assert.equal(fs2.readFileSync(path.join(copied, 'a.txt'), 'utf8'), 'a');
+  if (linked) assert.equal(fs2.lstatSync(path.join(copied, 'host-link')).isSymbolicLink(), true, 'a link stays a link');
+});

@@ -168,8 +168,12 @@ function handlePaste(req, res) {
   if (!paths.every(p => fmSafe(p))) return res.status(403).json({ error: 'Source path not allowed' });
 
   const errors = [];
+  const { realOf } = require('./utils');
   paths.forEach(src => {
     try {
+      // Into itself (or below itself) a copy never ends, and a move is impossible (audit 2026-10-04).
+      const rs = realOf(path.resolve(src)), rd = realOf(path.resolve(dest));
+      if (rd === rs || rd.startsWith(rs + path.sep)) throw new Error('cannot be pasted into itself');
       const base = path.basename(src);
       let target = path.join(dest, base);
       if (fs.existsSync(target) && src !== target) {
@@ -180,8 +184,12 @@ function handlePaste(req, res) {
       if (op === 'cut') {
         fs.renameSync(src, target);
       } else {
+        // A link is copied as a link (its target is not read through it), and every file is checked on its
+        // own, so a protected file inside a copied folder stays where it is (audit 2026-10-04).
         function cpRecurse(s, d) {
-          const st = fs.statSync(s);
+          const st = fs.lstatSync(s);
+          if (st.isSymbolicLink()) return fs.symlinkSync(fs.readlinkSync(s), d);
+          if (!fmSafe(s)) { errors.push(`${s}: not copied (protected or outside the allowed folders)`); return; }
           if (st.isDirectory()) {
             fs.mkdirSync(d, { recursive: true });
             fs.readdirSync(s).forEach(f => cpRecurse(path.join(s, f), path.join(d, f)));
