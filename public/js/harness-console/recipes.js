@@ -17,6 +17,7 @@ async function hcRecipesLoad() {
       <span class="hc-agent-id">${escHtml(r.title)}</span>
       <span class="hc-agent-note">${r.steps.length} step${r.steps.length === 1 ? '' : 's'}${r.params.length ? ` · ${escHtml(r.params.map(p => p.name).join(', '))}` : ''} · r${r.revision}</span>
       <button class="btn btn-xs btn-blue" onclick="hcRecipeRun(${jsArg(r.id)})" title="Run it">▶</button>
+      <button class="btn btn-xs" onclick="hcScheduleNew(${jsArg(r.id)})" title="Run it on a timetable">⏰</button>
       <button class="btn btn-xs" onclick="hcRecipeExport(${jsArg(r.id)})" title="Export: JSON, or a script">⬇</button>
       <button class="btn btn-xs btn-red" onclick="hcRecipeDelete(${jsArg(r.id)})" title="Delete">✕</button>
     </div>`).join('') || '<div class="placeholder">None yet — when a turn got something working, keep it with ＋ last turn.</div>';

@@ -48,6 +48,12 @@ function _hcBuiltinHtml(h) {
           <button class="btn btn-xs" onclick="hcRecipeKeep()" title="Keep what this conversation's last turn did, as a recipe">＋ last turn</button>
         </div>
         <div id="hc-recipes" class="hc-agents"><div class="placeholder">Loading…</div></div>
+
+        <div class="hc-side-head" style="margin-top:10px">
+          Schedules
+          <button class="btn btn-xs" onclick="hcScheduleNew()" title="Send a message to a conversation on a timetable">＋</button>
+        </div>
+        <div id="hc-schedules" class="hc-agents"><div class="placeholder">Loading…</div></div>
       </div>
 
       <div class="hc-main">
