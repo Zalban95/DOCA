@@ -44,6 +44,25 @@ function mount(app) {
   app.post('/api/projects/:id/git/stage', h(req => git.stage(P(req).root, [].concat(req.body?.files || []))));
   app.post('/api/projects/:id/git/unstage', h(req => git.unstage(P(req).root, [].concat(req.body?.files || []))));
   app.post('/api/projects/:id/git/commit', h(async req => ({ commit: await git.commit(P(req).root, req.body?.message, { files: req.body?.files }) })));
+  // Managing the repository from the panel (./git-manage.js): init, remotes, fetch/pull/push, stash, discard.
+  const gm = () => require('./git-manage');
+  const cp = (p, label) => require('./checkpoints').take(p, { label, by: 'person' }).catch(() => null);
+  app.post('/api/projects/:id/git/init', h(req => gm().init(P(req).root, { branch: req.body?.branch || 'main', commit: !!req.body?.commit })));
+  app.get('/api/projects/:id/git/remotes', h(async req => ({ remotes: await gm().remotes(P(req).root), stashes: await gm().stashCount(P(req).root) })));
+  app.post('/api/projects/:id/git/remote', h(async req => ({ remotes: await gm().setRemote(P(req).root, req.body || {}) })));
+  app.post('/api/projects/:id/git/sync', h(async req => {
+    const p = P(req), action = String(req.body?.action || '');
+    const run = await gm().syncCommand(p.root, action);
+    const checkpoint = action === 'pull' ? await cp(p, 'before git pull') : null;
+    const job = require('../harness/jobs').start(run, { cwd: p.root, env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_ASKPASS: 'echo' } });
+    return { job, command: { run }, checkpoint: checkpoint && !checkpoint.unchanged ? checkpoint.id : checkpoint?.id || null };
+  }));
+  app.post('/api/projects/:id/git/discard', h(async req => {
+    const p = P(req);
+    const checkpoint = await cp(p, `before discarding ${[].concat(req.body?.files || []).slice(0, 3).join(', ')}`);
+    return { ...(await gm().discard(p.root, req.body?.files)), checkpoint: checkpoint?.id || null };
+  }));
+  app.post('/api/projects/:id/git/stash', h(req => gm().stash(P(req).root, { pop: !!req.body?.pop })));
   app.post('/api/projects/:id/git/switch', h(req => git.checkout(P(req).root, req.body?.branch, { create: !!req.body?.create })));
 
   app.post('/api/projects/:id/run', h(async req => {

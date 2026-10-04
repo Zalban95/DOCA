@@ -4,7 +4,9 @@
    stage and unstage, a commit message and Commit; below, the history — click a
    commit to see what it changed, and a file's history (right-click in the
    tree) lets you compare the file with any earlier version of it.
-   Nothing here pushes, resets or discards — those stay in a terminal.
+   Since 2.135.0 also the rest of managing it (asked 2026-10-04): start a
+   repository, remotes, fetch / pull / push, a new branch, stash, and discarding
+   a file's changes — discard and pull take a checkpoint first (git-manage.js).
    ═══════════════════════════════════════════════════════ */
 
 const _pjg = p => `/api/projects/${encodeURIComponent(PJ.project.project.id)}/git${p}`;
@@ -12,7 +14,17 @@ const PJG_STATE = { M: 'modified', A: 'added', D: 'deleted', R: 'renamed', C: 'c
 
 async function pjGitRender(body) {
   if (!PJ.project.git) {
-    body.innerHTML = '<div class="placeholder">Not a git repository. Run <code>git init</code> in the terminal to start one.</div>';
+    body.innerHTML = '<div class="placeholder">Not a git repository yet.</div>';
+    const init = Object.assign(document.createElement('button'), { className: 'btn btn-sm btn-teal', textContent: '+ Initialize repository' });
+    init.onclick = () => appChoose('Start a git repository in this folder:', [
+      { label: 'Cancel', value: null }, { label: 'Initialize (branch main)', value: 'init' }, { label: 'Initialize and commit every file', value: 'commit' },
+    ], async v => {
+      if (!v) return;
+      try { await apiFetch(_pjg('/init'), { method: 'POST', body: { commit: v === 'commit' } }); setStatus(document.getElementById('pj-status'), '✓ Repository started', 'ok'); }
+      catch (e) { appAlert(e.message); }
+      await pjRefresh(); pjView('git');
+    });
+    body.appendChild(init);
     return;
   }
   body.innerHTML = '<div class="placeholder pulse">Reading…</div>';
@@ -31,6 +43,7 @@ async function pjGitRender(body) {
   branch.append('⎇ ', sel, Object.assign(document.createElement('span'), {
     className: 'pj-meta', textContent: `${st.upstream ? ` ${st.upstream}` : ''}${st.ahead ? ` ↑${st.ahead}` : ''}${st.behind ? ` ↓${st.behind}` : ''}` }));
   body.appendChild(branch);
+  body.appendChild(_pjGitToolbar(st));
 
   const msg = Object.assign(document.createElement('textarea'), { className: 'input', rows: 2, id: 'pjg-msg', placeholder: 'Commit message' });
   const commit = Object.assign(document.createElement('button'), { className: 'btn btn-sm btn-teal', textContent: '✓ Commit' });
@@ -50,6 +63,11 @@ async function pjGitRender(body) {
         Object.assign(document.createElement('span'), { className: 'pj-git-path', textContent: f.path }));
       const b = Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: isStaged ? '−' : '+', title: isStaged ? 'Unstage' : 'Stage' });
       b.onclick = e => { e.stopPropagation(); pjGitStage([f.path], !isStaged); };
+      if (!isStaged) {
+        const d = Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: '↶', title: 'Discard the changes to this file (a checkpoint is taken first)' });
+        d.onclick = e => { e.stopPropagation(); pjGitDiscard([f.path]); };
+        row.appendChild(d);
+      }
       row.appendChild(b);
       row.onclick = () => pjCompareHead(pjAbs(f.path), code === 'D');
       body.appendChild(row);
@@ -124,6 +142,74 @@ async function pjGitCommit() {
     setStatus(document.getElementById('pj-status'), `✓ Committed ${commit.short}: ${commit.subject}`, 'ok');
   } catch (e) { return appAlert(e.message); }
   pjView('git'); pjRefresh();
+}
+
+/** Fetch / Pull / Push, New branch, Remote, Stash — one row under the branch. */
+function _pjGitToolbar(st) {
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;margin:6px 0';
+  const b = (text, title, fn) => bar.appendChild(Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: text, title, onclick: fn }));
+  b('⟳ Fetch', 'Get what is new on the remotes, without changing your files', () => pjGitSync('fetch'));
+  b(`↓ Pull${st.behind ? ` ${st.behind}` : ''}`, 'Bring in the remote branch (fast-forward only; a checkpoint is taken first)', () => pjGitSync('pull'));
+  b(`↑ Push${st.ahead ? ` ${st.ahead}` : ''}`, st.upstream ? `Send your commits to ${st.upstream}` : 'Publish this branch to the remote', () => pjGitSync('push'));
+  b('+ Branch', 'Make a new branch here and switch to it', pjGitNewBranch);
+  b('Remote…', 'Add or change where Push and Pull go', pjGitRemote);
+  b('Stash', 'Put your uncommitted changes aside', () => pjGitStash(false));
+  b('Pop stash', 'Bring the last stashed changes back', () => pjGitStash(true));
+  return bar;
+}
+
+async function pjGitSync(action) {
+  let r;
+  try { r = await apiFetch(_pjg('/sync'), { method: 'POST', body: { action } }); }
+  catch (e) { return appAlert(e.message); }
+  if (r.checkpoint) setStatus(document.getElementById('pj-status'), `Checkpoint ${r.checkpoint} taken before ${action}`, 'info');
+  pjFollowJob(r.job, r.command.run, async job => {
+    if (job.code !== 0) setStatus(document.getElementById('pj-status'), `✗ git ${action} failed — the output says why (a login? a conflict?)`, 'err');
+    await pjRefresh(); if (PJ.view === 'git') pjView('git');
+  });
+}
+
+function pjGitNewBranch() {
+  if (PJE.tabs.some(_pjDirty)) return appAlert('Save or close the files with unsaved changes first.');
+  appPrompt('Name of the new branch:', async name => {
+    if (!name) return;
+    try { await apiFetch(_pjg('/switch'), { method: 'POST', body: { branch: name.trim(), create: true } }); setStatus(document.getElementById('pj-status'), `✓ On ${name}`, 'ok'); }
+    catch (e) { appAlert(e.message); }
+    pjView('git'); pjRefresh();
+  });
+}
+
+async function pjGitRemote() {
+  let rs = [];
+  try { rs = (await apiFetch(_pjg('/remotes'))).remotes; } catch {}
+  const origin = rs.find(r => r.name === 'origin');
+  appPrompt(`${rs.length ? `Remotes: ${rs.map(r => `${r.name} → ${r.url}`).join(', ')}\n\n` : ''}URL for origin (where Push and Pull go):`, async url => {
+    if (!url) return;
+    try { await apiFetch(_pjg('/remote'), { method: 'POST', body: { name: 'origin', url: url.trim() } }); setStatus(document.getElementById('pj-status'), '✓ Remote set', 'ok'); }
+    catch (e) { appAlert(e.message); }
+    pjView('git');
+  }, origin?.url || '');
+}
+
+async function pjGitStash(pop) {
+  if (PJE.tabs.some(_pjDirty)) return appAlert('Save or close the files with unsaved changes first.');
+  try {
+    const r = await apiFetch(_pjg('/stash'), { method: 'POST', body: { pop } });
+    setStatus(document.getElementById('pj-status'), pop ? '✓ Stash brought back' : `✓ Changes stashed (${r.stashes} in the stash)`, 'ok');
+  } catch (e) { appAlert(e.message); }
+  pjEditorReset(); pjView('git'); pjRefresh();
+}
+
+function pjGitDiscard(files) {
+  appConfirm(`Discard the changes to ${files.join(', ')}? A checkpoint is taken first, so Checkpoints → Restore can bring them back.`, async () => {
+    try {
+      const r = await apiFetch(_pjg('/discard'), { method: 'POST', body: { files } });
+      setStatus(document.getElementById('pj-status'), `✓ Discarded${r.checkpoint ? ` — checkpoint ${r.checkpoint} has them` : ''}`, 'ok');
+    } catch (e) { appAlert(e.message); }
+    for (const t of PJE.tabs.filter(t => t.path && files.includes(pjRel(t.path)))) pjClose(t.key);
+    pjView('git'); pjRefresh();
+  });
 }
 
 async function pjGitSwitch(branch) {
