@@ -73,7 +73,9 @@ the end, and in the sections as "built in …" notes.
    VM management added (`vms-manage.js`: details, autostart, snapshots
    take/revert/delete, a new machine from an ISO with virt-install). **Left:** a
    VM console reachable over the tailnet (VNC listens on this machine only), and
-   a second pass on the Models tab (`models.js` is 687 lines, over the ceiling).
+   a second pass on the Models tab — `public/js/models.js` split along its seams
+   in 2.123.1 (Ollama · AI tools · local files · HuggingFace, each under 250
+   lines, off the oversized list); the behaviour review is still to do.
 5. **Clients from this side**: clone DocaDesk / DocaMobile / DocaWear, fix what
    is visible here, and a Linux client (Avalonia over `DocaDesk.Core`).
 
