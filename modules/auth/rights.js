@@ -12,7 +12,7 @@
  *   public  no session needed (the login page's own calls)
  *   signed  any signed-in person (their own account)
  *   read    look: status, transcripts, lists
- *   chat    talk to the harness, keep its memory, attach files
+ *   chat    talk to the harness, attach files (editing its shared memory is host)
  *   propose apply a settings proposal the agent made
  *   host    anything that is the machine: shell, terminal, files, Docker, VMs,
  *           models, MCP servers, keys, logs — and anything that lets the agent
@@ -73,6 +73,9 @@ const TABLE = [
   R(ANY, '/api/harness/canvases/[^/]+', 'chat'),           // deleting one (reading is a GET below)
   R(ANY, '/api/harness/usage/prices', 'chat'),              // the owner's price list: display only, changes nothing the agent does
   R(GET, '/api/harness(/.*)?', 'read'),
+  // The agent's durable memory is one for everybody until per-person memory (auth phase 3): a member
+  // deleting or locking the owner's facts was found by the live test 2026-10-04. Reading is read, above.
+  R(ANY, '/api/harness/memory(/.*)?', 'host'),
   R(ANY, '/api/harness/(chat|sessions|memory|missions)(/.*)?', 'chat'),
 
   // ── The floating chat and attachments ──

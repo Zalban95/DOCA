@@ -145,6 +145,8 @@
 .hc-session-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hc-session-meta  { font-size: 9px; color: var(--muted); font-family: var(--font-mono); }
 
+/* Without host the shared memory is read, not edited, and specialists are not shown (settings.js adds .no-host). */
+.no-host .hc-memory-add, .no-host .hc-mem .btn-red, .no-host .hc-specialists-head, .no-host #hc-agents { display: none; }
 /* Key on its own row: the sidebar is too narrow to read two inputs side by side */
 .hc-memory-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px; margin-bottom: 6px; }
 .hc-memory-add .input { font-size: 10px; padding: 3px 5px; }

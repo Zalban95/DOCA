@@ -61,3 +61,11 @@ test('a mission that ends done with plan items open is flagged and reported to w
   assert.ok(org.notices(lead.id).some(n => /Plan check: Scribe \(msn_plan\) ended done with 1 plan item not done/.test(n.text)));
   store.writeJson('agents/missions', { missions: [] });
 });
+
+test('a delegated turn records the person it ran for, found above it (live test 2026-10-04)', async () => {
+  const parent = memory.createSession('asked by the owner', { activate: false });
+  memory.updateSession(parent.id, { person: { id: H.owner.user.id } });
+  const child = memory.createSession('specialist', { activate: false, kind: 'specialist', parentId: parent.id });
+  const r = await require('../modules/harness/agent').turn({ message: 'go', sessionId: child.id, client: { name: 'Delegated', kind: 'agent' } });
+  assert.equal(runs.get(r.runId).personId, H.owner.user.id);
+});

@@ -30,7 +30,7 @@ function _hcBuiltinHtml(h) {
         </div>
         <div id="hc-memory" class="hc-memory"><div class="placeholder">Loading…</div></div>
 
-        <div class="hc-side-head" style="margin-top:10px">
+        <div class="hc-side-head hc-specialists-head" style="margin-top:10px">
           Specialists
           <label class="hc-agents-switch" title="Enable specialist missions for work leaders. Existing work chats remain available.">
             <input type="checkbox" id="hc-agents-on" onchange="hcAgentsEnable(this.checked)">

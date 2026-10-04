@@ -19,6 +19,9 @@ const routes = {
   '/llama/props': { default_generation_settings: { n_ctx: 8192 } },
   '/lms/v1/models': { data: [{ id: 'qwen-7b' }] },
   '/lms/api/v0/models/qwen-7b': { id: 'qwen-7b', max_context_length: 32768, loaded_context_length: 4096 },
+  // llama.cpp in router mode: /props says 0 until a model loads; the list carries each model's arguments.
+  '/llrouter/v1/models': { data: [{ id: 'qwen3.8-27b', status: { value: 'sleeping', args: ['llama-server', '--port', '36139', '--ctx-size', '40960'] } }] },
+  '/llrouter/props': { role: 'router', default_generation_settings: { n_ctx: 0 } },
   '/plain/v1/models': { data: [{ id: 'gpt-x' }] },                // an OpenAI-shaped server that says nothing
 };
 
@@ -31,7 +34,7 @@ before(async () => {
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const at = p => ({ baseUrl: `http://127.0.0.1:${server.address().port}/${p}/v1` });
   fs.writeFileSync(CONFIG_PATH, JSON.stringify({ models: { providers: {
-    vllm: at('vllm'), router: at('router'), groq: at('groq'), llama: at('llama'), lms: at('lms'), plain: at('plain'),
+    vllm: at('vllm'), router: at('router'), groq: at('groq'), llama: at('llama'), lms: at('lms'), plain: at('plain'), llrouter: at('llrouter'),
   } } }));
   await H.start();
 });
@@ -49,6 +52,9 @@ test('each server\'s own field is read, and the source names the server and the 
   const lms = await cw.discover('lms', 'qwen-7b');
   assert.equal(lms.tokens, 4096, 'what LM Studio loaded it with, not the most it could');
   assert.match(lms.source, /LM Studio/);
+  const rt = await cw.discover('llrouter', 'qwen3.8-27b');
+  assert.equal(rt.tokens, 40960, 'a llama.cpp router\'s model, from its --ctx-size, without waking it (live test)');
+  assert.match(rt.source, /--ctx-size \(llama\.cpp router\)/);
 });
 
 test('a server that reports nothing gets null, never a guess from the model\'s name', async () => {

@@ -46,10 +46,13 @@ function transcriptHits(id, ts, max = 3) {
  * Conversations about `query`, best first: [{ id, title, kind, updatedAt,
  * topics, summary, matches }]. `exclude` is the asking conversation.
  */
-function search(query, { limit = 6, exclude = null } = {}) {
+function search(query, { limit = 6, exclude = null, person = null } = {}) {
   const ts = terms(query);
   if (!ts.length) return [];
-  const rows = memory.listSessions().sessions.filter(s => s.id !== exclude);
+  // Only what the person this turn acts for may open (session-access.js): a member's agent recalling the
+  // owner's conversations was the same leak as listing them (live test 2026-10-04).
+  const mine = require('./session-access');
+  const rows = memory.listSessions().sessions.filter(s => s.id !== exclude && mine.mayUse(person, s.id));
   const scored = rows.map((s, i) => {
     const title = String(s.title || '').toLowerCase(), topics = (s.topics || []).join(' ').toLowerCase();
     const summary = String(s.summary || '');
@@ -71,9 +74,9 @@ function search(query, { limit = 6, exclude = null } = {}) {
 }
 
 /** One earlier conversation: its summary and its last words, bounded. */
-function read(id, { last = 12 } = {}) {
+function read(id, { last = 12, person = null } = {}) {
   const s = memory.getSession(id);
-  if (!s) throw Object.assign(new Error(`No conversation ${id}. Search first; the ids come from there.`), { status: 404 });
+  if (!s || !require('./session-access').mayUse(person, id)) throw Object.assign(new Error(`No conversation ${id}. Search first; the ids come from there.`), { status: 404 });
   const tail = memory.messages(id).filter(r => (r.role === 'user' || r.role === 'assistant') && typeof r.content === 'string' && r.content.trim())
     .slice(-last).map(r => ({ role: r.role, at: r.at, text: r.content.slice(0, 1200) }));
   return { id, title: s.title, kind: s.kind, updatedAt: s.updatedAt, topics: s.topics || [], summary: s.summary || '', messages: tail };

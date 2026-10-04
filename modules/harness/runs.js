@@ -38,6 +38,12 @@ function end(id, { state, outcome = '', steps = null, tokens = null } = {}) {
   } catch { /* see begin */ }
 }
 
+/** Whom a run was on behalf of, once known (a mission's person is found above it). */
+function person(id, personId) {
+  if (!id || !personId) return;
+  try { raw()?.prepare("UPDATE runs SET person_id = ? WHERE tenant_id = 'local' AND id = ?").run(personId, id); } catch { /* see begin */ }
+}
+
 const view = r => r && ({ id: r.id, kind: r.kind, sessionId: r.session_id, missionId: r.mission_id, personId: r.person_id, state: r.state,
   outcome: r.outcome || '', steps: r.steps, tokens: r.tokens, planCheck: r.plan_check ? JSON.parse(r.plan_check) : null,
   startedAt: r.started_at, endedAt: r.ended_at });
@@ -76,4 +82,4 @@ function checkPlan(id) {
   } catch { return null; }
 }
 
-module.exports = { begin, end, get, forSession, checkPlan, openItems };
+module.exports = { begin, end, person, get, forSession, checkPlan, openItems };

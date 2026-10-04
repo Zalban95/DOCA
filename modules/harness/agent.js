@@ -63,7 +63,10 @@ async function turn(options) {
     changed(id);
     if (options.client && options.client.kind !== 'agent')
       organization.report(id, 'user intervention', options.message, options.client.name || 'user');
-    const result = await runTurn({ ...options, client: require('./turn/client').withPerson(options.client, id), sessionId: id, signal: ctrl.signal, profile });
+    const client = require('./turn/client').withPerson(options.client, id);
+    // A mission or work chat runs for the person above it: the record says so (live test 2026-10-04).
+    if (!options.client?.user && client?.user) require('./runs').person(runId, client.user.id);
+    const result = await runTurn({ ...options, client, sessionId: id, signal: ctrl.signal, profile });
     ctrl.steps = result.steps;
     ctrl.truncated = !!result.truncated;
     const state = ctrl.signal.aborted ? 'cancelled' : 'idle';
