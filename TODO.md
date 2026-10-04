@@ -167,18 +167,21 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   checkpoints, plans before work, export/import, multi-OS hosts.
 
 **H15 · Every agent knows every tool it holds** (asked 2026-10-05)
-- [ ] H15.1 An audit, per agent type (Orchestrator, work chat, project chat, each specialist): which tools it
+- [x] H15.1 (2.156.0) An audit, per agent type (Orchestrator, work chat, project chat, each specialist): which tools it
   holds, which it is *told* about, and which the prompt explains when to use — and a test that fails when a
   held tool is in no kit, has no description, or a kit is held but never mentioned. The Projects tools
   (`project`, `git`, `search_files`, `replace_in_files`, `repo_rules`) must be known to a project chat and to
   a specialist working on code, the computer tools to the agent that holds a computer, MCP servers' tools by
-  their machine (`placeBlock`).
-- [ ] H15.2 A "your tools" block that is generated, not written: per kit, one line of what it is for and
+  their machine (`placeBlock`). Most of it was already pinned by `test/kits.test.js` (every tool in a kit, the
+  prompt names what a type holds); `test/tool-awareness.test.js` adds that every tool's first sentence says what it is
+  for, that shipped specialists name only real tools and kits, and that a project chat is told the project tools.
+- [x] H15.2 (already: `turn/tools-section.js`, audit N7) A "your tools" block that is generated, not written: per kit, one line of what it is for and
   when to reach for it (the kit's `about` plus the tools' first sentence), byte-stable between steps so
   the prefix cache holds; `tool-news` already says what changed.
-- [ ] H15.3 The panel shows it: a "Tools" view per agent type (Harness → Specialists, and ⚙) listing what
+- [x] H15.3 (2.156.0) The panel shows it: a "Tools" view per agent type (Harness → Specialists, and ⚙) listing what
   that agent holds and why it holds it (kit, grant, mission), so a missing tool is visible before a turn
-  fails on it.
+  fails on it. Done: the tool count on each specialist, and "Tools held by the Orchestrator · a work chat" under
+  them, open the roster (`tool-roster.js`, `GET /api/harness/agents/:id/tools`).
 
 **H8 · Presence: the face and voice**
 - [ ] H8.1 The face (§5): dots that form a face, protolab.tech's palette and type, states from
