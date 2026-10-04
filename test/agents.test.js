@@ -180,12 +180,13 @@ test('a step count is the definition\'s business — nothing caps it', () => {
 });
 
 test('when a specialist runs out of steps it names its own limit, not the panel\'s', () => {
-  const src = require('fs').readFileSync(require.resolve('../modules/harness/agent.js'), 'utf8');
-  const stop = src.slice(src.indexOf('if (step === maxSteps)'), src.indexOf('if (step === maxSteps)') + 900);
+  const { stepLimitNote } = require('../modules/harness/turn/step-limit');
+  const stop = stepLimitNote({ id: 'archivist' }, 12);
   assert.match(stop, /this specialist's own/,
     'a mission that stops must not send the user to the panel setting, which would change nothing');
-  assert.match(stop, /agent definition/);
-  assert.match(stop, /harness\.config\.doca\.maxSteps/, 'the orchestrator still names its own setting');
+  assert.match(stop, /"maxSteps" in the archivist agent definition/);
+  assert.doesNotMatch(stop, /harness\.config/);
+  assert.match(stepLimitNote(null, 8), /harness\.config\.doca\.maxSteps/, 'the orchestrator still names its own setting');
 });
 
 /* ── A restart pauses a mission, and the user decides ── */
