@@ -126,6 +126,58 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   attachments** (they arrived as the word "[image]").
 - [ ] H7.3 Parallel work chats on one repo, each in its own git worktree.
 
+**H13 · Agents' computers, everywhere they help** (asked 2026-10-05)
+- [ ] H13.1 **A coherent view of the agents' computers**: a "Computers" side tab (or a strip in the Harness
+  console beside the missions) listing every computer with a live thumbnail (a screenshot every few
+  seconds while running), its mission and specialist, state, and one click into the live view — the
+  noVNC proxy (2.153.1) in a panel tab, not a new window; recordings and screenshots it produced listed
+  under it. On a phone: the same list, the live view full screen.
+- [ ] H13.2 **Agents make the environment whenever they need one**, not only when asked: the Orchestrator and
+  work chats already hold `computer`; their prompt says *when* (testing something risky, using a site as a
+  person would, building or running something that should not touch the host, recording a demo), and a
+  specialist that finds it needs one says so in its report and the leader makes it (specialists keep not
+  holding `computer` — depth one). Computers a mission made are stopped when it ends and removed after a
+  retention period unless pinned; a level caps how many run at once.
+- [ ] H13.3 **The computer as OpenDots' "Dot computer"**: persistent per specialist type (the same profile,
+  logins and files next time, opt-in), a person's take-over with hand-back that the agent notices (it pauses
+  while a person drives), and downloads/uploads between the computer and attachments.
+
+**H14 · OpenDots parity — checked feature by feature** (2026-10-05; hive.md §3)
+Each row: what OpenDots does → where DOCA stands → what is left.
+- [x] Specialists with name, role, instructions, per-agent tools — DOCA's specialists (kits, NEVER, levels).
+- [x] A computer per agent with browser, files, terminal, take-over — 2.153 (H7.2, H13).
+- [ ] Persistent browser profile per agent (logins kept) — H13.3.
+- [ ] **Telegram** — and Slack, mail, WhatsApp: a message there is a turn, the answer goes back there,
+  approvals answered with inline buttons; each channel a client kind (H9.1). Telegram first: a bot token,
+  allowlisted chats bound to people, voice notes through the existing STT.
+- [ ] Voice calls with work continuing in the background — DOCA's call mode exists; realtime speech and
+  barge-in left (H8.3).
+- [ ] Schedules ("recurring instructions") with pause/retry — H7.1.
+- [ ] Spaces and Pages (docs with an editor and a chat per page) — H9.4.
+- [x] Human-in-the-loop approval cards — DOCA's approvals, on every device, with levels.
+- [ ] Automatic Learning (conversations → reviewed skills) — H10.3, and recipes (H3).
+- [x] Any OpenAI-compatible model; self-hosted — DOCA's providers and fallback chain.
+- [ ] AG-UI so an AG-UI front end can be a client — H9.2.
+- [x] Mobile and web — the panel, DocaMobile, DocaWear (OpenDots has no watch).
+- [ ] Web search as a provider choice (OpenDots: Parallel by default, or the browser) — DOCA has
+  `research_docs`/`http_fetch` and the scout; a search provider setting is left.
+- What DOCA has that OpenDots does not: accounts with levels and grants, devices and wearables, the airlock,
+  checkpoints, plans before work, export/import, multi-OS hosts.
+
+**H15 · Every agent knows every tool it holds** (asked 2026-10-05)
+- [ ] H15.1 An audit, per agent type (Orchestrator, work chat, project chat, each specialist): which tools it
+  holds, which it is *told* about, and which the prompt explains when to use — and a test that fails when a
+  held tool is in no kit, has no description, or a kit is held but never mentioned. The Projects tools
+  (`project`, `git`, `search_files`, `replace_in_files`, `repo_rules`) must be known to a project chat and to
+  a specialist working on code, the computer tools to the agent that holds a computer, MCP servers' tools by
+  their machine (`placeBlock`).
+- [ ] H15.2 A "your tools" block that is generated, not written: per kit, one line of what it is for and
+  when to reach for it (the kit's `about` plus the tools' first sentence), byte-stable between steps so
+  the prefix cache holds; `tool-news` already says what changed.
+- [ ] H15.3 The panel shows it: a "Tools" view per agent type (Harness → Specialists, and ⚙) listing what
+  that agent holds and why it holds it (kit, grant, mission), so a missing tool is visible before a turn
+  fails on it.
+
 **H8 · Presence: the face and voice**
 - [ ] H8.1 The face (§5): dots that form a face, protolab.tech's palette and type, states from
   existing events, editable as a pack, canvas 2D; in the panel's corner, `/face` kiosk, DocaDesk
@@ -282,7 +334,9 @@ side committed 2026-09-27 (05379cf) with its panel card; see *A device as a
 console* for the files, what is built and what is open.
 
 **Decide**
-- Rename, licence and CLA — Monday. → *One rename*, *Licence and per-customer builds*.
+- Rename, licence and CLA — **deferred (2026-10-05): the repos are private; the MIT `LICENSE` was removed
+  and `package.json` says `UNLICENSED` + `private` until the product is cooked enough to decide the name
+  and the licence together.** → *One rename*, *Licence and per-customer builds*.
 - Export skills and specialists / send them to DOCA. → *To discuss next*.
 - Hosted DOCA (a machine per tenant, billing). → *Settled 2026-09-25*.
 
