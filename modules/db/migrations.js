@@ -27,6 +27,25 @@ const STEPS = [
        id INTEGER PRIMARY KEY, tenant_id TEXT NOT NULL DEFAULT 'local', key TEXT NOT NULL, value TEXT NOT NULL)`,
     'CREATE INDEX IF NOT EXISTS lines_key ON lines (tenant_id, key, id)',
   ] },
+  // Auth phase 2 (docs/design/permissions.md): the keys a query uses are columns, the whole record is `data`.
+  { id: 3, what: 'accounts: users, organisations, memberships, sessions', sql: [
+    `CREATE TABLE IF NOT EXISTS users (
+       tenant_id TEXT NOT NULL DEFAULT 'local', id TEXT NOT NULL, email TEXT NOT NULL, created_at TEXT, data TEXT NOT NULL,
+       PRIMARY KEY (tenant_id, id))`,
+    'CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users (tenant_id, email)',
+    `CREATE TABLE IF NOT EXISTS orgs (
+       tenant_id TEXT NOT NULL DEFAULT 'local', id TEXT NOT NULL, created_at TEXT, data TEXT NOT NULL,
+       PRIMARY KEY (tenant_id, id))`,
+    `CREATE TABLE IF NOT EXISTS memberships (
+       tenant_id TEXT NOT NULL DEFAULT 'local', org_id TEXT NOT NULL, user_id TEXT NOT NULL, role TEXT, status TEXT, data TEXT NOT NULL,
+       PRIMARY KEY (tenant_id, org_id, user_id))`,
+    'CREATE INDEX IF NOT EXISTS memberships_user ON memberships (tenant_id, user_id)',
+    `CREATE TABLE IF NOT EXISTS sessions (
+       tenant_id TEXT NOT NULL DEFAULT 'local', token_hash TEXT NOT NULL, user_id TEXT, device_id TEXT, expires_at TEXT, data TEXT NOT NULL,
+       PRIMARY KEY (tenant_id, token_hash))`,
+    'CREATE INDEX IF NOT EXISTS sessions_user ON sessions (tenant_id, user_id)',
+    'CREATE INDEX IF NOT EXISTS sessions_device ON sessions (tenant_id, device_id)',
+  ] },
 ];
 
 /** The same steps on a synchronous SQLite handle (node:sqlite), for the stores that must stay synchronous. */

@@ -38,14 +38,44 @@ function incompatibility(manifest) {
   return null;
 }
 
-/** Put the current accounts into the staged data, if there are any. @returns {boolean} */
+/**
+ * Put the current accounts into the staged data, if there are any. @returns {boolean}
+ *
+ * Accounts are tables in doca.db since auth phase 2 (accounts-sql.js), and a
+ * restore replaces doca.db — so the current rows are copied into the staged
+ * database, which is marked as imported so the backup's older auth/*.json are
+ * not read over them. The auth/ folder is still carried as before, for an
+ * install whose accounts are files (PostgreSQL, accounts-json.js).
+ */
+const ACCOUNT_TABLES = ['users', 'orgs', 'memberships', 'sessions'];
 function keepAccounts(current, stage) {
+  let kept = false;
   const users = path.join(current, 'auth', 'users.json');
   let has = false;
   try { has = Object.keys(JSON.parse(fs.readFileSync(users, 'utf8'))).length > 0; } catch {}
-  if (!has) return false;
-  fs.rmSync(path.join(stage, 'auth'), { recursive: true, force: true });
-  fs.cpSync(path.join(current, 'auth'), path.join(stage, 'auth'), { recursive: true });
+  if (has) {
+    fs.rmSync(path.join(stage, 'auth'), { recursive: true, force: true });
+    fs.cpSync(path.join(current, 'auth'), path.join(stage, 'auth'), { recursive: true });
+    kept = true;
+  }
+  const live = require('../db').syncHandle();
+  if (!live || !require('../auth/store').userCount()) return kept;
+  const rows = Object.fromEntries(ACCOUNT_TABLES.map(t => [t, live.prepare(`SELECT * FROM ${t}`).all()]));
+  const { DatabaseSync } = require('node:sqlite');
+  const staged = new DatabaseSync(path.join(stage, 'doca.db'));
+  try {
+    require('../db/migrations').migrateSync(staged);
+    staged.exec('BEGIN IMMEDIATE');
+    for (const t of ACCOUNT_TABLES) {
+      staged.exec(`DELETE FROM ${t}`);
+      for (const r of rows[t]) {
+        const cols = Object.keys(r);
+        staged.prepare(`INSERT INTO ${t} (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`).run(...cols.map(c => r[c]));
+      }
+    }
+    staged.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('imported:auth', ?)").run(new Date().toISOString());
+    staged.exec('COMMIT');
+  } finally { staged.close(); }
   return true;
 }
 

@@ -53,7 +53,7 @@ const DATA = {
   'harness/memory.json':  { is: 'travels', note: 'what the agent knew before 2.111.0 (imported into doca.db once); memory-rules*.json stay files' },
   'harness/sessions':     { is: 'travels', note: 'conversations and their index before 2.111.0 (imported into doca.db once)' },
   'harness/usage':        { is: 'travels', note: 'the token ledger before 2.107.0 (imported into doca.db once)' },
-  'doca.db':              { is: 'travels', note: 'the database (docs/design/database.md): the usage ledger, and more as it moves in' },
+  'doca.db':              { is: 'mixed',   note: 'the database (docs/design/database.md): usage, audit, conversations and memory travel; accounts travel, their sessions are this install\'s' },
   'harness/proposals.json': { is: 'travels', note: 'settings proposals and their decisions' },
   'harness/tool-results': { is: 'local',   note: 'spilled tool output: a cache, rebuildable' },
   'harness/jobs':         { is: 'local',   note: 'background shell jobs of this machine' },

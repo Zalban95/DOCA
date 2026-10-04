@@ -31,7 +31,7 @@ test('the usage ledger moves into the database: old monthly files imported once,
   assert.deepEqual(s2.rows.find(r => r.key === 'new/n'), { key: 'new/n', calls: 1, prompt: 40, completion: 4, cached: 0, estimated: 0 });
 
   const migrations = await db.all('SELECT id FROM schema_migrations');
-  assert.deepEqual(migrations.map(r => Number(r.id)), [1, 2]);
+  assert.deepEqual(migrations.map(r => Number(r.id)).sort((a, b) => a - b), require('../modules/db/migrations').STEPS.map(s => s.id), 'every step, once');
   const snap = await db.snapshot(path.join(H.tmp, 'snap.db'));
   assert.ok(fs.statSync(snap).size > 0, 'a consistent copy for backups');
   assert.equal(db.kind, 'sqlite');

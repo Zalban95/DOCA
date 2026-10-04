@@ -10,8 +10,8 @@ let _impl = null;
 function get() {
   if (_impl) return _impl;
   const want = process.env.DOCA_AUTH_BACKEND;
-  void want;
-  _impl = require('./accounts-json');   // accounts-sql.js arrives in the next commit
+  const sql = want !== 'json' && !process.env.DOCA_DB_URL;
+  _impl = sql ? require('./accounts-sql') : require('./accounts-json');
   return _impl;
 }
 module.exports = { get, _reset: () => { _impl = null; } };
