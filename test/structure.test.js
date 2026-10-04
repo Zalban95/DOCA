@@ -32,7 +32,7 @@ const OVER = {
   'public/js/chat.js': 985,
   'public/js/files.js':            697,
   'modules/harness/memory.js':     463,
-  'modules/api-v1/router.js':      591,
+  'modules/api-v1/router.js':      589,
   'modules/api-v1/openapi.js':     583,
   'modules/agents/missions.js':    496,
   'modules/api-v1/prompts.js':     467,
