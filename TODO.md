@@ -87,8 +87,8 @@ the end, and in the sections as "built in …" notes.
 - Skills: a writing guide read like the rules', and importing from other
   harnesses (Codex, Cursor rules…); every shipped procedure reads back what it
   wrote. → *Done log: Built 2026-09-25*, *Two layers of learned knowledge*.
-- A plan shown on every device (panel window, phone notification, watch,
-  "nobody is at a screen"). → *A plan is shown, not buried*.
+- A plan shown on every device — **panel window, phone and watch built in
+  2.118.0**; left: "nobody is at a screen". → *A plan is shown, not buried*.
 - Markdown rendered while it streams. → *The agent writes markdown…*.
 - `contextWindow` found rather than typed. → *Memory, limits and context*.
 - Settings sub-tabs reviewed for what DOCA is now. → *Wanted 2026-09-25 — review*.
@@ -240,6 +240,17 @@ opens.
   worth stating: the chat is always told; the devices are told when the chat is
   not being read. The hub already knows the difference — `doca_clients` carries
   `lastSeen` and `bus.isOnline` — and nothing uses it to decide.
+
+**Built in 2.118.0** (`modules/harness/plan-doc.js`): `work_plan propose`
+writes the revision out as a markdown document and shows it through the
+`doc` media road, so no `/api/v1` contract changed. The panel opens it in a
+window by itself (fresh proposals only, once per page) with Approve / Reject on
+it, calling the existing user-only route; a stale window gets the server's
+sentence. A phone receives it as a `doc` on `images[]` — its existing "open it
+or carry on in the chat" choice; a watch skips a `doc`, as it already did. The
+agent is told to end its turn and wait. **Left:** "when nobody is at a screen"
+— telling the devices only when the chat is not being read, from `lastSeen` /
+`bus.isOnline`.
 
 ## MCP and VMs, deliberately left out of the first pass
 

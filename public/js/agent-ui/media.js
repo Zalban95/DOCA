@@ -57,6 +57,7 @@ function agentImageEl(media, onLoad) {
     open.textContent = `📄 ${media.caption || media.name}`;
     open.addEventListener('click', () => agentDocOpen(media));
     fig.appendChild(open);
+    _agentPlanArrived(media);
     return fig;
   }
 
@@ -135,6 +136,7 @@ async function agentDocOpen(media) {
   body.textContent = 'Opening…';
   overlay.style.display = 'flex';
   overlay.dataset.name = media.name;
+  _agentDocActions(media);
 
   try {
     const res = await fetch(`/api/attachments/${encodeURIComponent(media.name)}`);
@@ -147,6 +149,61 @@ async function agentDocOpen(media) {
   } catch (e) {
     body.textContent = `Could not open ${media.name}: ${e.message}`;
   }
+}
+
+/**
+ * A plan the agent has just proposed opens by itself: it is a question to the
+ * person, and a question in a row they have to notice is one they miss. Only a
+ * fresh one, once per page — a transcript reopened tomorrow draws the row and
+ * leaves the window shut.
+ */
+const _agentPlansOpened = new Set();
+function _agentPlanArrived(media) {
+  const at = Date.parse(media.plan?.at || '');
+  if (!media.plan || _agentPlansOpened.has(media.name) || !(Date.now() - at < 120000)) return;
+  _agentPlansOpened.add(media.name);
+  setTimeout(() => agentDocOpen(media), 0);
+}
+
+/**
+ * The window's buttons: Close always, and Approve / Reject when the document
+ * is a proposed plan. The server decides whether the decision still applies
+ * (a newer revision, or one already answered), and its sentence is shown as is.
+ */
+function _agentDocActions(media) {
+  const bar = document.getElementById('agent-doc-actions');
+  if (!bar) return;
+  bar.textContent = '';
+  const button = (label, cls, onClick) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = `btn btn-xs ${cls}`; b.textContent = label;
+    b.addEventListener('click', onClick);
+    bar.appendChild(b);
+    return b;
+  };
+  if (media.plan) {
+    const note = document.createElement('small');
+    note.className = 'agent-doc-note';
+    note.style.cssText = 'margin-right:auto;opacity:.8';
+    const decide = action => async () => {
+      bar.querySelectorAll('button').forEach(b => { b.disabled = true; });
+      try {
+        await apiFetch(`/api/harness/sessions/${encodeURIComponent(media.plan.sessionId)}/plan`,
+          { method: 'POST', body: { action, revision: media.plan.revision } });
+        note.textContent = action === 'approve'
+          ? 'Approved. Nothing has started — tell the agent when to begin.'
+          : 'Rejected. Say why in the chat, so the next revision fixes it.';
+        bar.querySelectorAll('.btn-green, .agent-doc-reject').forEach(b => b.remove());
+      } catch (e) {
+        note.textContent = e.message;
+      }
+      bar.querySelectorAll('button').forEach(b => { b.disabled = false; });
+    };
+    bar.appendChild(note);
+    button(`Approve revision ${media.plan.revision}`, 'btn-green', decide('approve'));
+    button('Reject', 'agent-doc-reject', decide('reject'));
+  }
+  button('close', '', () => agentDocClose());
 }
 
 function agentDocClose(event) {

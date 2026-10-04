@@ -232,3 +232,35 @@ test('a mission is its dispatcher\'s and its superiors\': a sibling leader canno
   assert.match(await tools.call('agent_resume', { mission: 'msn_paused', continue: false }, [], { sessionId: other.id }), /outside your reporting line/);
   assert.equal(store.readJson('agents/missions').missions.find(m => m.id === 'msn_paused').state, 'paused', 'untouched');
 });
+
+test('a proposed plan is put in front of the person as a document, and only they can decide it', async () => {
+  const work = org.create({ title: 'Plan me' });
+  await tools.call('work_plan', { action: 'draft', title: 'Move the box', steps: ['Lift', 'Carry', 'Drop'], note: 'Gently.' }, [],
+    { sessionId: work.id });
+  const shown = [];
+  const result = JSON.parse(await tools.call('work_plan', { action: 'propose' }, [], { sessionId: work.id, show: m => shown.push(m) }));
+  assert.equal(result.state, 'proposed');
+  assert.match(result.shown, /Do not start the work until they approve/, 'the agent is told to wait, not to carry on');
+
+  assert.equal(shown.length, 1);
+  const [doc] = shown;
+  assert.equal(doc.kind, 'doc', 'the road every client already knows: a window on the panel, a choice on a phone, nothing on a watch');
+  assert.deepEqual({ sessionId: doc.plan.sessionId, revision: doc.plan.revision }, { sessionId: work.id, revision: 1 });
+  assert.match(doc.caption, /Move the box.*revision 1.*waiting for your decision/);
+  const text = require('node:fs').readFileSync(require('../modules/attachments').resolve(doc.name)[0].path, 'utf8');
+  assert.match(text, /^# Move the box\n[\s\S]*1\. Lift\n2\. Carry\n3\. Drop\n[\s\S]*## Notes\n\nGently\./);
+  assert.match(text, /does not start the work/);
+
+  // The agent cannot decide it; the window's buttons can.
+  assert.throws(() => org.plan(work.id, { action: 'approve', revision: 1 }), /Only the user/);
+  const r = await H.api(null, 'POST', `/api/harness/sessions/${work.id}/plan`, { action: 'approve', revision: 1 });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.plan.state, 'approved');
+  const again = await H.api(null, 'POST', `/api/harness/sessions/${work.id}/plan`, { action: 'reject', revision: 1 });
+  assert.match(again.body.error, /changed/, 'a stale window gets a sentence, not a second decision');
+
+  // Draft and progress show nothing: only a proposal asks a person anything.
+  const quiet = [];
+  await tools.call('work_plan', { action: 'progress', step: 1, state: 'done' }, [], { sessionId: work.id, show: m => quiet.push(m) });
+  assert.equal(quiet.length, 0);
+});

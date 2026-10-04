@@ -27,7 +27,8 @@ module.exports = [
     name: 'work_plan',
     description: 'Read, draft or propose a durable plan for this conversation or a subordinate. '
       + 'Draft needs title and steps, and replaces the current revision (requiring fresh approval). '
-      + 'Propose presents it in the Harness for the user to approve/reject. You cannot approve it. '
+      + 'Propose opens it in a window in front of the user, with Approve and Reject, and offers it on their phone; '
+      + 'you cannot approve it, so end your turn after proposing and wait for their decision. '
       + 'Approval records a decision, never launches work. Progress marks a numbered step without changing the approved scope. '
       + 'Use mission_plan for specialist mission progress.',
     parameters: { type: 'object', properties: {
@@ -39,7 +40,13 @@ module.exports = [
     run: (args, ctx) => {
       const org = require('../organization'), id = args.sessionId || ctx.sessionId;
       if (args.action !== 'read' && !org.canManage(ctx.sessionId, id)) throw new Error('You may edit only your own plan or a subordinate\'s.');
-      return JSON.stringify(org.plan(id, args));
+      const plan = org.plan(id, args);
+      if (args.action !== 'propose') return JSON.stringify(plan);
+      // A proposal is a question to a person, so it goes where people look (plan-doc.js).
+      const shown = require('../plan-doc').show(id, plan, ctx);
+      return JSON.stringify({ ...plan, shown: shown
+        ? 'Opened in front of the user as a window with Approve and Reject. Do not start the work until they approve; end this turn and say in one line what you are waiting for.'
+        : 'Recorded; the user sees it in the Harness tab.' });
     },
   },
 ];
