@@ -56,13 +56,16 @@ const same = (a, b) => (process.platform === 'win32' ? a.toLowerCase() === b.toL
 
 /** What `abs` is, when it is part of the control plane; else null. By its real path too. */
 function which(abs) {
-  const cands = [path.resolve(abs)];
-  try { cands.push(require('fs').realpathSync(abs)); } catch { /* a new file */ }
+  // Both sides by their real paths too (utils.realOf, the OS's own resolver): the target was resolved and the
+  // entries were not, so on macOS (/var is /private/var) a link to the prefs file was written through (CI, 2026-10-04).
+  const { realOf } = require('../utils');
+  const cands = [path.resolve(abs), realOf(path.resolve(abs))];
   for (const p of cands) {
     for (const e of entries()) {
-      const at = path.resolve(e.at);
-      // The folder test is case-blind on Windows like the file test: .DOCA\\Auth is .doca\\auth there (audit 2026-10-04).
-      if (same(p, at) || (e.dir && (process.platform === 'win32' ? p.toLowerCase().startsWith(at.toLowerCase() + path.sep) : p.startsWith(at + path.sep)))) return e.what;
+      for (const at of new Set([path.resolve(e.at), realOf(path.resolve(e.at))])) {
+        // The folder test is case-blind on Windows like the file test: .DOCA\\Auth is .doca\\auth there (audit 2026-10-04).
+        if (same(p, at) || (e.dir && (process.platform === 'win32' ? p.toLowerCase().startsWith(at.toLowerCase() + path.sep) : p.startsWith(at + path.sep)))) return e.what;
+      }
     }
   }
   return null;
