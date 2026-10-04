@@ -46,6 +46,11 @@ const STEPS = [
     'CREATE INDEX IF NOT EXISTS sessions_user ON sessions (tenant_id, user_id)',
     'CREATE INDEX IF NOT EXISTS sessions_device ON sessions (tenant_id, device_id)',
   ] },
+  { id: 4, what: 'permission levels', sql: [
+    `CREATE TABLE IF NOT EXISTS levels (
+       tenant_id TEXT NOT NULL DEFAULT 'local', id TEXT NOT NULL, name TEXT NOT NULL, created_at TEXT, data TEXT NOT NULL,
+       PRIMARY KEY (tenant_id, id))`,
+  ] },
 ];
 
 /** The same steps on a synchronous SQLite handle (node:sqlite), for the stores that must stay synchronous. */

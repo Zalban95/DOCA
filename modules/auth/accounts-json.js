@@ -144,7 +144,12 @@ function pruneSessions() {
   if (changed) write('sessions', all);
 }
 
+function listUsers() { return Object.values(read('users', {})).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))); }
+function membersOf(orgId) { return read('memberships', []).filter(m => m.orgId === orgId); }
+function sessionsOf(userId) { return Object.entries(read('sessions', {})).filter(([, s]) => s.userId === userId).map(([tokenHash, s]) => ({ tokenHash, ...s })); }
+
 module.exports = {
+  listUsers, membersOf, sessionsOf,
   userCount, userById, userByEmail, createUser, updateUser,
   defaultOrg, createOrg, membership, membershipsOf, addMembership,
   createSession, sessionByHash, updateSession, deleteSession, deleteSessionsOf, deleteSessionsOfDevice, pruneSessions,
