@@ -64,6 +64,8 @@ function mount(app) {
   app.get('/api/projects/:id/checkpoints/:cp/changes', h(async req => ({ changes: await cps().changes(P(req), req.params.cp) })));
   app.get('/api/projects/:id/checkpoints/:cp/diff', h(async req => ({ diff: await cps().fileDiff(P(req), req.params.cp, String(req.query.file || '')) })));
   app.post('/api/projects/:id/checkpoints/:cp/restore', h(req => cps().restore(P(req), req.params.cp, { by: 'person' })));
+  app.patch('/api/projects/:id/checkpoints/:cp', h(req => ({ checkpoint: cps().update(P(req), req.params.cp, req.body || {}) })));
+  app.delete('/api/projects/:id/checkpoints/:cp', h(req => cps().remove(P(req), req.params.cp)));
 
   // Code intelligence (./lsp.js): which language servers are here, and installing the npm-based ones.
   app.get('/api/projects/lsp/servers', h(() => ({ servers: require('./lsp').status() })));

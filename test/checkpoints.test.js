@@ -108,3 +108,41 @@ test('"done" says what the job changed, and what of that its plan did not name',
   assert.match(brief, /Changed during this job \(2\): /);
   assert.match(brief, /Outside what the plan named \(1\): src\/other\.kt/);
 });
+
+test('a checkpoint can be renamed, given a note, pinned past the keep limit, and deleted', async () => {
+  const root = mk({ 'a.txt': '1\n' });
+  const p = projects.create({ root, name: 'Editable' });
+  const c1 = await cps.take(p, { label: 'first' });
+  fs.writeFileSync(path.join(root, 'a.txt'), '2\n'); fs.writeFileSync(path.join(root, 'b.txt'), 'b\n');
+  const c2 = await cps.take(p, { label: 'second' });
+  fs.writeFileSync(path.join(root, 'a.txt'), '3\n');
+  const c3 = await cps.take(p, { label: 'third' });
+  assert.equal(c3.changedSincePrevious, 1);
+
+  const r = await H.api(null, 'PATCH', `/api/projects/${p.id}/checkpoints/${c1.id}`, { label: 'the good layout', note: 'before the redesign', pinned: true });
+  assert.equal(r.status, 200);
+  assert.deepEqual([r.body.checkpoint.label, r.body.checkpoint.note, r.body.checkpoint.pinned], ['the good layout', 'before the redesign', true]);
+  assert.equal(r.body.checkpoint.commit, c1.commit, 'the commit underneath is unchanged');
+  assert.equal((await H.api(null, 'PATCH', `/api/projects/${p.id}/checkpoints/${c1.id}`, { label: '   ' })).body.checkpoint.label, 'the good layout', 'an empty label keeps the old one');
+
+  const del = await H.api(null, 'DELETE', `/api/projects/${p.id}/checkpoints/${c2.id}`);
+  assert.equal(del.status, 200);
+  const list = cps.list(p);
+  assert.deepEqual(list.map(c => c.id), [c3.id, c1.id]);
+  assert.equal(list[0].changedSincePrevious, 2, 'the next one now counts against the one before the deleted one');
+  assert.equal(read(root, 'a.txt'), '3\n', 'deleting a checkpoint touches no file');
+  await cps.restore(p, c1.id);
+  assert.equal(read(root, 'a.txt'), '1\n', 'a renamed checkpoint restores exactly as before');
+  assert.equal((await H.api(null, 'DELETE', `/api/projects/${p.id}/checkpoints/cp_nope`)).status, 404);
+
+  // A pin outlives the keep limit; an unpinned one of the same age does not.
+  const store = require('../modules/store');
+  const doc = store.readJson(`checkpoints/${p.id}`);
+  const filler = Array.from({ length: 70 }, (_, i) => ({ ...doc.checkpoints.at(-1), id: `cp_f${i}`, pinned: false }));
+  store.writeJson(`checkpoints/${p.id}`, { checkpoints: [doc.checkpoints[0], ...filler] });
+  cps.update(p, 'cp_f69', { label: 'newest' });
+  const kept = cps.list(p).map(c => c.id);
+  assert.ok(kept.includes(c1.id), 'the pinned one is kept');
+  assert.ok(!kept.includes('cp_f0'), 'the oldest unpinned is dropped');
+  assert.equal(kept.length, 61);
+});

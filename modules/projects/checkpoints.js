@@ -59,7 +59,12 @@ async function ensure(p) {
 }
 
 function rows(p) { return store.readJson(`checkpoints/${p.id}`, { checkpoints: [] }).checkpoints; }
-function save(p, list) { store.writeJson(`checkpoints/${p.id}`, { checkpoints: list.slice(-KEEP) }); }
+/** Keep the newest KEEP, and every pinned one however old: a pin is "do not let this one go". */
+function save(p, list) {
+  const unpinned = list.filter(c => !c.pinned);
+  const drop = new Set(unpinned.slice(0, Math.max(0, unpinned.length - KEEP)).map(c => c.id));
+  store.writeJson(`checkpoints/${p.id}`, { checkpoints: list.filter(c => !drop.has(c.id)) });
+}
 
 /** The project's current tree, written into the shadow's object store: its tree hash. */
 async function snapshotTree(p) {
@@ -142,4 +147,41 @@ async function beforeTurn(sessionId) {
   } catch { return null; }
 }
 
-module.exports = { take, list, changes, fileDiff, restore, beforeTurn, shadowDir };
+/**
+ * Change what a checkpoint is called and says — label, a longer note, pinned —
+ * asked for 2026-10-04. Only DOCA's list changes: the commit underneath keeps
+ * its tree, so restoring it is exactly what it was.
+ */
+function update(p, id, { label, note, pinned } = {}) {
+  need(p, id);
+  const list = rows(p).map(c => (c.id !== id ? c : {
+    ...c,
+    ...(label !== undefined ? { label: String(label).trim().slice(0, 200) || c.label } : {}),
+    ...(note !== undefined ? { note: String(note).slice(0, 2000) } : {}),
+    ...(pinned !== undefined ? { pinned: !!pinned } : {}),
+    editedAt: new Date().toISOString(),
+  }));
+  save(p, list);
+  return list.find(c => c.id === id);
+}
+
+/**
+ * Take a checkpoint off the list. Its files are not touched and nothing is
+ * restored; the one after it now counts its changes against the one before.
+ * The objects stay in the shadow repository until git collects them.
+ */
+async function remove(p, id) {
+  const list = rows(p);
+  const at = list.findIndex(c => c.id === id);
+  if (at < 0) throw Object.assign(new Error(`No checkpoint ${id} in ${p.name}.`), { status: 404 });
+  const next = list[at + 1], prev = list[at - 1];
+  if (next) {
+    try { next.changedSincePrevious = prev ? (await git(p, ['diff', '--name-only', prev.tree, next.tree])).split('\n').filter(Boolean).length : null; }
+    catch { next.changedSincePrevious = null; }
+  }
+  list.splice(at, 1);
+  save(p, list);
+  return { removed: id };
+}
+
+module.exports = { take, list, changes, fileDiff, restore, update, remove, beforeTurn, shadowDir };
