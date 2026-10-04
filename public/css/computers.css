@@ -16,5 +16,6 @@
 .pc-file:hover { border-color: var(--accent); }
 .pc-live { position: fixed; inset: 0; z-index: 900; background: var(--bg); display: flex; flex-direction: column; }
 .pc-live-bar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.pc-driving { color: var(--amber); font-size: 12px; }
 .pc-live iframe { flex: 1; width: 100%; border: 0; background: #000; }
 @media (max-width: 768px) { .pc-grid { grid-template-columns: 1fr; } }

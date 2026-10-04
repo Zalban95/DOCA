@@ -78,6 +78,8 @@ async function call(name, args, disabled = [], ctx = {}) {
   if (disabled.includes(name)) return `Error: the "${name}" tool is switched off for this harness.`;
   if (ctx.signal?.aborted) return 'Not run: the turn was stopped before this call.';
   const isMcp = mcp.isMcpTool(name);
+  const held = isMcp && require('../computers/takeover').before(name);   // a person is driving that computer: DOCA's words, not framed
+  if (held) return held;
   const tool = isMcp ? { run: a => mcp.call(name, a) } : TOOLS.find(t => t.name === name);
   if (!tool) return `Error: no tool named "${name}".`;
   let out;
@@ -95,7 +97,8 @@ async function call(name, args, disabled = [], ctx = {}) {
   // A paired device's own tools are trusted like the host's: not framed, no re-check (devices-as-hands §3).
   const source = out.startsWith('Error:') || (isMcp && mcp.isTrusted(name)) ? null : untrusted.sourceOf(name, args, isMcp);
   if (source) untrusted.arrived(ctx.signal, name, isMcp);
-  return source ? untrusted.frame(source, out) : out;
+  const framed = source ? untrusted.frame(source, out) : out;
+  return isMcp ? require('../computers/takeover').after(name, framed) : framed;   // a hand-back note, above the frame
 }
 
 // Tools that only read (DOCA's own store, files, the web): not audited. Every

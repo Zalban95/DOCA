@@ -67,6 +67,8 @@ function computersCard(c) {
     <div class="pc-head"><span class="pc-dot ${on ? 'on' : ''}"></span><b>${escHtml(c.name)}</b><span class="pc-dim">${escHtml(c.id)}</span>
       <span style="flex:1"></span>
       ${on ? `<button class="btn btn-xs" onclick="computersWatch(${jsArg(c.id)})">Watch</button>
+        <button class="btn btn-xs ${c.driving ? 'btn-amber' : ''}" onclick="computersWatch(${jsArg(c.id)}, true)" title="Drive it yourself: the agent's mouse and keys wait until you close the view">${c.driving ? 'Driving' : 'Take over'}</button>
+        <button class="btn btn-xs" onclick="computersFiles(${jsArg(c.id)})" title="Send it a file, or keep one of its files">⇄</button>
         <button class="btn btn-xs" onclick="computersAct('stop', ${jsArg(c.id)})">Stop</button>`
         : `<button class="btn btn-xs" onclick="computersAct('start', ${jsArg(c.id)})">Start</button>`}
       <button class="btn btn-xs ${c.pinned ? 'btn-amber' : ''}" onclick="computersPin(${jsArg(c.id)}, ${!c.pinned})"
@@ -76,16 +78,17 @@ function computersCard(c) {
 }
 
 /** The live view inside the panel: the noVNC page through the hub (computers/vnc.js); Back or ✕ closes it. */
-async function computersWatch(id) {
+async function computersWatch(id, drive = false) {
   const c = (await apiFetch('/api/computers').catch(() => ({ computers: [] }))).computers.find(x => x.id === id);
   if (!c) return appAlert('That computer is gone.');
   computersWatchClose();
   const ov = document.createElement('div');
   ov.className = 'pc-live';
   ov.innerHTML = `<div class="pc-live-bar"><b>${escHtml(c.name)}</b><span class="pc-dim">${escHtml(c.mission ? `${c.mission.label} · ${c.mission.state}` : c.purpose || '')}</span>
-      <span style="flex:1"></span><a class="btn btn-xs" href="${escHtml(c.vnc.url)}" target="_blank" rel="noopener">Open in a window</a>
-      <button class="btn btn-xs" onclick="computersWatchClose()">✕</button></div>
-    <iframe src="${escHtml(c.vnc.url)}" title="${escHtml(c.name)}" allow="clipboard-read; clipboard-write"></iframe>`;
+      ${drive ? '<span class="pc-driving">You are driving — the agent\'s mouse and keys wait</span>' : ''}
+      <span style="flex:1"></span><a class="btn btn-xs" href="${escHtml(drive ? c.vnc.drive : c.vnc.url)}" target="_blank" rel="noopener">Open in a window</a>
+      <button class="btn btn-xs" onclick="computersWatchClose()">${drive ? 'Hand back' : '✕'}</button></div>
+    <iframe src="${escHtml(drive ? c.vnc.drive : c.vnc.url)}" title="${escHtml(c.name)}" allow="clipboard-read; clipboard-write"></iframe>`;
   document.body.appendChild(ov);
   _computersView = { ov, release: overlayBack(() => computersWatchClose(true)) };
 }
@@ -96,6 +99,30 @@ function computersWatchClose(fromBack) {
   _computersView = null;
   ov.remove();
   if (!fromBack) release();
+}
+
+/** Send a file into the computer's work folder, or keep one of its files as an attachment. */
+function computersFiles(id) {
+  appChoose('Files and this computer', [{ label: 'Send it a file', value: 'put' }, { label: 'Keep one of its files', value: 'get' }], how => {
+    if (how === 'get') return appPrompt('Which file? (relative to its work folder, or an absolute path)', async p => {
+      try { const a = await apiFetch(`/api/computers/${id}/get`, { method: 'POST', body: { path: p } }); appAlert(`Kept as ${a.name} — it is listed under the computer.`); } catch (e) { appAlert(e.message); }
+      computersLoad();
+    }, 'recordings/');
+    const input = Object.assign(document.createElement('input'), { type: 'file' });
+    input.onchange = async () => {
+      const f = input.files[0];
+      if (!f) return;
+      try {
+        const form = new FormData(); form.append('file', f);
+        const up = await fetch('/api/attachments', { method: 'POST', body: form }).then(r => r.json());
+        const name = up.name;
+        if (!name) throw new Error(up.error || 'The upload failed.');
+        const r = await apiFetch(`/api/computers/${id}/put`, { method: 'POST', body: { attachment: name } });
+        appAlert(`In the computer at ${r.path}.`);
+      } catch (e) { appAlert(e.message); }
+    };
+    input.click();
+  });
 }
 
 function computersMedia(name, mime) {
