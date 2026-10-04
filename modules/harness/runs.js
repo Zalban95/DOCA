@@ -1,0 +1,79 @@
+'use strict';
+
+/**
+ * One record of how each turn went (docs/design/permissions.md §5): who it ran
+ * for, how it ended, what it cost — written once when it starts and once when
+ * it ends, and read by everything that shows it, so a mission and its
+ * conversation can no longer tell two stories about the same turn (audit
+ * 2026-10-04: Stop during a mission's last step left the conversation
+ * 'cancelled' and the mission 'done').
+ *
+ * And the state compared to the plan, automatically: a mission that ends done
+ * with plan items not done is flagged on the mission and reported to whoever
+ * dispatched it. (A work chat's plan is checked when it reports done —
+ * projects/finish.js.)
+ */
+const crypto = require('crypto');
+
+const raw = () => require('../db').syncHandle();   // null with PostgreSQL: runs are not recorded there yet
+const now = () => new Date().toISOString();
+
+function begin({ kind = 'turn', sessionId = null, missionId = null, personId = null } = {}) {
+  const r = raw();
+  if (!r) return null;
+  const id = `run_${crypto.randomBytes(6).toString('hex')}`;
+  try {
+    r.prepare("INSERT INTO runs (id, kind, session_id, mission_id, person_id, state, started_at) VALUES (?,?,?,?,?,'running',?)")
+      .run(id, kind, sessionId, missionId, personId, now());
+    return id;
+  } catch { return null; }   // a record must never stop the work it records
+}
+
+/** How it ended: 'done', 'cancelled' or 'failed'. */
+function end(id, { state, outcome = '', steps = null, tokens = null } = {}) {
+  if (!id) return;
+  try {
+    raw()?.prepare("UPDATE runs SET state = ?, outcome = ?, steps = ?, tokens = ?, ended_at = ? WHERE tenant_id = 'local' AND id = ?")
+      .run(state, String(outcome || '').slice(0, 600), steps, tokens, now(), id);
+  } catch { /* see begin */ }
+}
+
+const view = r => r && ({ id: r.id, kind: r.kind, sessionId: r.session_id, missionId: r.mission_id, personId: r.person_id, state: r.state,
+  outcome: r.outcome || '', steps: r.steps, tokens: r.tokens, planCheck: r.plan_check ? JSON.parse(r.plan_check) : null,
+  startedAt: r.started_at, endedAt: r.ended_at });
+
+function get(id) { return view(raw()?.prepare("SELECT * FROM runs WHERE tenant_id = 'local' AND id = ?").get(String(id))); }
+
+function forSession(sessionId, limit = 20) {
+  return (raw()?.prepare("SELECT * FROM runs WHERE tenant_id = 'local' AND session_id = ? ORDER BY started_at DESC LIMIT ?").all(String(sessionId), limit) || []).map(view);
+}
+
+/** Plan items not finished, in a mission's plan ([{ title, state }]). */
+function openItems(plan) { return (Array.isArray(plan) ? plan : []).filter(i => !['done', 'failed'].includes(i.state)); }
+
+/**
+ * After a run ends: if it was a mission's and it ended done with plan items
+ * open, say so — on the run, on the mission, and to the conversation that
+ * dispatched it. Never throws.
+ */
+function checkPlan(id) {
+  try {
+    const run = get(id);
+    if (!run || run.state !== 'done' || !run.sessionId) return null;
+    const missions = require('../agents/missions');
+    const m = missions.forSession(run.sessionId);
+    if (!m) return null;
+    const open = openItems(m.plan);
+    if (!open.length) return null;
+    const check = { open: open.map(i => `${i.title} (${i.state || 'queued'})`) };
+    raw()?.prepare("UPDATE runs SET plan_check = ? WHERE tenant_id = 'local' AND id = ?").run(JSON.stringify(check), id);
+    missions.patch(m.id, { planCheck: check.open });
+    // Reported as the mission's own conversation: a report reaches its ancestors, the dispatcher first.
+    require('./organization').report(run.sessionId, 'progress',
+      `Plan check: ${m.label} (${m.id}) ended done with ${open.length} plan item${open.length === 1 ? '' : 's'} not done — ${check.open.join('; ')}. `
+      + 'Read its result before relying on it.', 'panel');
+    return check;
+  } catch { return null; }
+}
+
+module.exports = { begin, end, get, forSession, checkPlan, openItems };
