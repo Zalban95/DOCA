@@ -59,6 +59,15 @@ const STEPS = [
        PRIMARY KEY (tenant_id, id))`,
     'CREATE INDEX IF NOT EXISTS grants_subject ON grants (tenant_id, subject_kind, subject_id)',
   ] },
+  { id: 6, what: 'runs: one record of how each turn went', sql: [
+    `CREATE TABLE IF NOT EXISTS runs (
+       tenant_id TEXT NOT NULL DEFAULT 'local', id TEXT NOT NULL, kind TEXT NOT NULL, session_id TEXT, mission_id TEXT,
+       person_id TEXT, state TEXT NOT NULL, outcome TEXT, steps INTEGER, tokens INTEGER, plan_check TEXT,
+       started_at TEXT NOT NULL, ended_at TEXT,
+       PRIMARY KEY (tenant_id, id))`,
+    'CREATE INDEX IF NOT EXISTS runs_session ON runs (tenant_id, session_id, started_at)',
+    'CREATE INDEX IF NOT EXISTS runs_mission ON runs (tenant_id, mission_id)',
+  ] },
 ];
 
 /** The same steps on a synchronous SQLite handle (node:sqlite), for the stores that must stay synchronous. */

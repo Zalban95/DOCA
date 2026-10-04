@@ -321,7 +321,7 @@ function run(row, def, message, base = { steps: 0, tokens: 0 }) {
   agent.turn({ message, sessionId: row.sessionId, profile: { ...profileOf(def), missionId: id }, emit: evt => record(id, evt, base) })
     .then(async r => {
       announce(patch(id, {
-        state: 'done', endedAt: new Date().toISOString(), steps: base.steps + (r.steps || 0), tokens: base.tokens + (r.usage?.totalTokens || 0),
+        state: r.ended === 'cancelled' ? 'cancelled' : 'done', endedAt: new Date().toISOString(), steps: base.steps + (r.steps || 0), tokens: base.tokens + (r.usage?.totalTokens || 0),
         result: await require('../harness/guard/airlock').result(def, id, r.text),   // an airlock's report, screened
       }));
       require('../harness/supervisor').afterTurn(row.sessionId, {});   // decided again now it is recorded: an airlock's screening outlived the turn's end (audit 2026-10-04)

@@ -41,6 +41,8 @@ function mount(app) {
     require('../presence').beat(req.auth?.user, req.body?.visible !== false);
     res.json({ ok: true });
   });
+  // How each turn of a conversation went: the one record (runs.js).
+  app.get('/api/harness/runs', (req, res) => res.json({ runs: require('./runs').forSession(String(req.query.sessionId || ''), Math.min(100, Number(req.query.limit) || 20)) }));
   // What a restart would cut off, and whether one is waiting for it (drain.js).
   app.get('/api/harness/busy', (_req, res) => {
     const drain = require('./drain');

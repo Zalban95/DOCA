@@ -55,6 +55,8 @@ async function turn(options) {
   const abort = () => ctrl.abort();
   options.signal?.addEventListener('abort', abort, { once: true });
   if (options.signal?.aborted) ctrl.abort();
+  // One record of how this turn goes (runs.js): the mission and the conversation read the same row.
+  const runId = require('./runs').begin({ sessionId: id, missionId: options.profile?.missionId || null, personId: options.client?.user?.id || null });
   try {
     const profile = profileForTurn(session, options.profile);
     memory.updateSession(id, { state: 'running', lastError: null });
@@ -67,12 +69,16 @@ async function turn(options) {
     const state = ctrl.signal.aborted ? 'cancelled' : 'idle';
     memory.updateSession(id, { state, brief: String(result.text || '').slice(0, 600) });
     organization.report(id, state === 'cancelled' ? state : 'turn completed', result.text);
-    return result;
+    const ended = state === 'cancelled' ? 'cancelled' : 'done';
+    require('./runs').end(runId, { state: ended, outcome: result.text, steps: result.steps, tokens: result.usage?.totalTokens ?? null });
+    if (ended === 'done') require('./runs').checkPlan(runId);
+    return { ...result, ended, runId };
   } catch (e) {
     const state = ctrl.signal.aborted ? 'cancelled' : 'failed';
     if (state === 'failed') ctrl.failed = String(e.message).slice(0, 300);   // the supervisor must not rewake into the same failure
     memory.updateSession(id, { state, lastError: String(e.message).slice(0, 600) });
     organization.report(id, state, e.message);
+    require('./runs').end(runId, { state, outcome: e.message });
     throw e;
   } finally {
     running.delete(id);
