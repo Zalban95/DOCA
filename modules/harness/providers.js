@@ -139,6 +139,12 @@ function defaultParams() {
     // for the *last* rung — and for the only rung, when there is no chain — so
     // giving up entirely still takes as long as it always did.
     failoverAfterMs: 20000,
+    // A rate limit (HTTP 429) is waited out on the same model this many times,
+    // never longer than rateLimitMaxWaitMs per wait — the provider's Retry-After
+    // when it sends one, otherwise 2 s, 4 s, … A quota or billing refusal is not
+    // retried. 0 retries restores failing on the first 429 (turn/rate-limit.js).
+    rateLimitRetries:   2,
+    rateLimitMaxWaitMs: 60000,
     // Work that finishes itself (harness/supervisor.js). A work chat keeps going
     // until it files a final report — done, failed, blocked, or a question — or
     // someone stops it; the panel starts the next turn when one ends short of

@@ -1996,6 +1996,10 @@ test('a one-off call uses the fallback chain when the provider is out of capacit
 });
 
 test('a rate limit or a refusal is still an answer, and does not hop', async () => {
+  // A 429 is waited out on the same model first (turn/rate-limit.js, tested in
+  // harness-rate-limit.test.js); with retries off, what is left to show here
+  // is that it never moves down the chain.
+  await H.api(null, 'POST', '/api/harness/doca/config', { rateLimitRetries: 0 });
   await withChain([{ provider: 'stub', model: 'stub-mini' }], async agentMod => {
     for (const status of [429, 401]) {
       script = [{ status, says: 'no' }, { text: 'must not be reached' }];
@@ -2005,6 +2009,7 @@ test('a rate limit or a refusal is still an answer, and does not hop', async () 
       script = [];
     }
   });
+  await H.api(null, 'POST', '/api/harness/doca/config', { rateLimitRetries: 2 });
 });
 
 test('a one-off call streams under the harness\'s own reply limit, lets the model think, and never returns an empty answer', async () => {
