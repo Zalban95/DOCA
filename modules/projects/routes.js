@@ -57,6 +57,16 @@ function mount(app) {
   }));
   app.post('/api/projects/:id/jobs/:job/stop', h(req => { P(req); return { job: require('../harness/jobs').stop(req.params.job) }; }));
 
+  // The project's environment (./env.js): the machine's runtimes, its own venv / node_modules, which is used.
+  const envm = () => require('./env');
+  app.get('/api/projects/:id/env', h(req => envm().view(P(req))));
+  app.post('/api/projects/:id/env', h(req => { projects.update(req.params.id, { env: { python: req.body?.python ?? null } }); require('./brief').forget(req.params.id); return envm().view(P(req)); }));
+  app.post('/api/projects/:id/env/setup', h(req => {
+    const p = P(req);
+    const s = envm().setupCommand(p, String(req.body?.action || ''), { dir: req.body?.dir || '.venv' });
+    const job = require('../harness/jobs').start(envm().wrap(p, s.run), { cwd: p.root, env: envm().vars(p) });
+    return { job, command: { run: s.run }, then: s.then || null };
+  }));
   // Checkpoints (./checkpoints.js): undo for agent runs.
   const cps = () => require('./checkpoints');
   app.get('/api/projects/:id/checkpoints', h(req => ({ checkpoints: cps().list(P(req)) })));

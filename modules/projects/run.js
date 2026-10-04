@@ -30,7 +30,8 @@ async function run(projectId, name, { waitSec = 0, sessionId = null } = {}) {
   const c = list.find(x => x.name === name);
   if (!c) throw bad(`"${name}" is not a command of ${p.name}. It has: ${list.map(x => x.name).join(', ') || 'none detected'}.`, 404);
   if (c.missing.length) throw bad(`${c.run} needs ${c.missing.join(', ')}, which ${c.missing.length === 1 ? 'is' : 'are'} not installed on this machine.`, 424);
-  const job = jobs.start(c.run, { cwd: p.root, sessionId });
+  // In the project's own environment: its venv and node_modules/.bin first on PATH (env.js).
+  const job = jobs.start(require('./env').wrap(p, c.run), { cwd: p.root, sessionId, env: require('./env').vars(p) });
   const until = Date.now() + Math.max(0, Number(waitSec) || 0) * 1000;
   let j = jobs.get(job.id);
   while (j.state === 'running' && Date.now() < until) {
