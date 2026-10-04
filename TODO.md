@@ -81,7 +81,8 @@ the end, and in the sections as "built in …" notes.
 
 **Build — later**
 - ~~Retry with backoff on a rate limit (429)~~ — **built in 2.117.0** (`turn/rate-limit.js`). → §8.
-- A usage page with prices. → *Memory, limits and context*.
+- ~~A usage page with prices~~ — **built in 2.125.0** (`harness/prices.js`, the
+  window behind the console's "24h" line); prices are typed, none shipped. → *Memory, limits and context*.
 - Provider quirks as data (a provider contract). → *Wanted next: many agents*.
 - The Orchestrator drives the work rather than doing it; a shared core context.
   → *Wanted next: many agents*.
@@ -449,7 +450,11 @@ none of them block anything today.
   starts missing things. Decide embeddings-or-not deliberately when that happens
   rather than drifting into it.
 
-- **The usage ledger has no page and no prices.** Every model call the built-in
+- **The usage ledger has no page and no prices.** *(Both built in 2.125.0: the
+  console's "24h" line opens a per-model window over 1/7/30/90 days, and costs
+  come from a price list the owner types — `usagePrices` in prefs, per million
+  tokens, cached at its own rate — applied when reading. None shipped; an
+  unpriced model shows "no price", never 0.)* Every model call the built-in
   harness makes (steps, summaries, `agent.ask`) is now one row in
   `harness/usage/YYYY-MM.jsonl`, summed by `GET /api/harness/usage?days=&by=`
   and shown as one "24h" line in the console. Deliberately not done: a table or

@@ -82,9 +82,12 @@ const handleToolCheck = wrap(async (req, res) =>
 const handleStatus = wrap(async (req, res) => res.json(await agent.status({ sessionId: req.query.sessionId })));
 
 /** GET /api/harness/usage?days=7&by=day|model|provider|session|agent|kind */
-const handleUsage = wrap(async (req, res) =>
-  res.json({ ...(await require('./usage').summary({ days: req.query.days, by: req.query.by || 'day' })),
-    tokensPerDay: (await require('./turn/ceiling').state(require('./turn/params').params())).limit }));
+const handleUsage = wrap(async (req, res) => {
+  const summary = await require('./usage').summary({ days: req.query.days, by: req.query.by || 'day' });
+  // Money only where it is meaningful: per model, from the owner's own price list (prices.js).
+  res.json({ ...(summary.by === 'model' ? require('./prices').apply(summary) : summary),
+    tokensPerDay: (await require('./turn/ceiling').state(require('./turn/params').params())).limit });
+});
 
 /* ── Approvals ────────────────────────────────────────── */
 
