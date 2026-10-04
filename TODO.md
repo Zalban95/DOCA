@@ -49,12 +49,12 @@ Linux-only; **[X]** experiments behind a flag with their drawbacks written and m
 releasable step; ✓ marks done. Order: the workstreams run in parallel, top items first.
 
 **H1 · Host on every OS** (§7)
-- [ ] H1.1 CI matrix: `npm test` + a headless browser smoke on ubuntu, windows, macos. **Written** (branch `ci-matrix`, `.github/workflows/test.yml`); pushing it needs the `workflow` scope: `gh auth refresh -h github.com -s workflow`.
+- [x] H1.1 (2.152.1) CI matrix: `npm test` on ubuntu, windows and macos for every branch push (`.github/workflows/test.yml`). The first run failed 1 / 61 / 61: Linux-only file roots, short and `/private` paths, and a protected-file bypass on macOS/Windows — all fixed. Left: a headless browser smoke in CI.
 - [x] H1.2 (2.152.0) `GET /api/host/capabilities`: what this host can do (shell, boot, GPU, containers, VMs,
   browser, inference), drawn by the panel so absent things grey out with a reason.
 - [x] H1.3 (2.152.0) Start at boot on Windows (Task Scheduler at sign-in) and macOS (launchd agent), beside the systemd unit — through a Node launcher (`bin/doca-launch.js`) that replaced run.sh's bash start, so version switches restart on every OS. Not yet run on Windows or macOS: H1.9.
 - [ ] H1.4 GPU readings beyond nvidia-smi: AMD (rocm-smi), Intel, Apple (unified memory).
-- [ ] H1.5 File-manager roots and default paths per OS (drive letters, `/Volumes`).
+- [x] H1.5 (2.152.1) File roots per OS (Linux /media /mnt /tmp; macOS /Volumes /tmp; Windows the other drive letters) plus the OS's temp folder; real paths by the OS's resolver. Left: default *paths* (workspace, attachments) per OS.
 - [ ] H1.6 Containers: Podman, Docker Desktop, Colima/OrbStack; WSL2-aware paths.
 - [ ] H1.7 VMs: Hyper-V, UTM/Parallels beside libvirt/VirtualBox.
 - [ ] H1.8 An installer per OS (Node, panel, boot entry, certificate, pairing QR).
