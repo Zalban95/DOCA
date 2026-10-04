@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="css/logs.css">
 <link rel="stylesheet" href="css/attachments.css">
 <link rel="stylesheet" href="css/harness.css">
+<link rel="stylesheet" href="css/computers.css">
 <link rel="stylesheet" href="css/responsive.css">
 <!-- xterm.js -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
@@ -46,6 +47,7 @@
     <button class="nav-tab"        data-tab="files"    onclick="nav('files')">Files</button>
     <button class="nav-tab"        data-tab="projects" onclick="nav('projects')">Projects</button>
     <button class="nav-tab"        data-tab="harness"   onclick="nav('harness')">Harness</button>
+    <button class="nav-tab"        data-tab="computers" onclick="nav('computers')">Computers</button>
     <button class="nav-tab"        data-tab="terminal"  onclick="nav('terminal')">Terminal</button>
     <button class="nav-tab"        data-tab="models"    onclick="nav('models')">Models</button>
     <button class="nav-tab"        data-tab="docker"    onclick="nav('docker')">Docker</button>
@@ -119,7 +121,6 @@
       <div class="sec-label">Inference Services</div>
       <div id="s-services"><div class="placeholder">Loading…</div></div>
     </div>
-
 
   </aside>
 
@@ -724,15 +725,14 @@
         <button class="btn btn-sm" onclick="vmsLoad()">↺ Refresh</button>
         <span class="status-line" id="vms-status"></span>
       </div>
-      <div class="input-label" style="margin-bottom:10px">
-        Guests on this machine, through whichever hypervisor CLI is installed — libvirt/KVM
-        (<code>virsh</code>) and VirtualBox (<code>VBoxManage</code>). Stop asks the guest to shut
-        down; Force off does not. Copy a display address into your own VNC or RDP viewer.
-      </div>
+      <div class="input-label" style="margin-bottom:10px">Guests on this machine, through whichever hypervisor CLI is installed — libvirt/KVM (<code>virsh</code>) and VirtualBox
+        (<code>VBoxManage</code>). Stop asks the guest to shut down; Force off does not. Copy a display address into your own VNC or RDP viewer. Agents' computers are under <a href="#" onclick="nav('computers');return false">Computers</a>.</div>
       <div class="scroll-y" style="flex:1">
         <div id="vms-list"><div class="placeholder pulse">Loading…</div></div>
       </div>
     </div>
+
+    <div id="tab-computers" class="tab-page"></div><!-- the agents' computers: drawn by js/computers.js -->
 
     <!-- ─── PROJECTS: drawn by js/projects/ide.js ─────────── -->
     <div id="tab-projects" class="tab-page"></div>

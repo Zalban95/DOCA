@@ -6,7 +6,7 @@ const computers = require('./index');
 const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
 
 function mount(app) {
-  app.get('/api/computers', h(async () => ({ computers: await computers.list(), image: { name: computers.IMAGE, ready: await computers.imageReady() } })));
+  app.get('/api/computers', h(async () => ({ computers: await computers.detailed(), image: { name: computers.IMAGE, ready: await computers.imageReady() } })));
   app.post('/api/computers/image', async (req, res) => {
     const { sseHeaders } = require('../utils');
     sseHeaders(res);
@@ -16,6 +16,10 @@ function mount(app) {
     res.end();
   });
   app.post('/api/computers', h(req => computers.create({ ...(req.body || {}), by: req.auth?.user?.id || null })));
+  app.get('/api/computers/:id/screen', async (req, res) => {   // a still for the view's thumbnails (index.js screen)
+    try { res.set('Cache-Control', 'no-store').type('png').send(await computers.screen(req.params.id)); }
+    catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  });
   app.post('/api/computers/:id/start', h(req => computers.start(req.params.id)));
   app.post('/api/computers/:id/stop', h(req => computers.stop(req.params.id)));
   app.delete('/api/computers/:id', h(req => computers.remove(req.params.id)));

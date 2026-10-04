@@ -1,0 +1,20 @@
+/* The agents' computers (js/computers.js): a grid of live thumbnails, and the live view over the panel. */
+.pc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.pc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+.pc-card.pc-off { opacity: .75; }
+.pc-still { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: contain; background: #000; cursor: pointer; }
+.pc-still-empty { background: #000 linear-gradient(90deg, transparent, var(--dim), transparent) no-repeat; background-size: 40% 100%; animation: pc-wait 1.4s linear infinite; }
+@keyframes pc-wait { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+.pc-blank { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; cursor: default; }
+.pc-head { display: flex; align-items: center; gap: 6px; padding: 8px 10px 4px; font-size: 13px; }
+.pc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.pc-dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.pc-dim { color: var(--muted); font-size: 11px; }
+.pc-who { padding: 0 10px 8px; font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-files { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 10px 10px; }
+.pc-file { background: var(--raised); border: 1px solid var(--border2); color: var(--text); border-radius: 4px; font-size: 11px; padding: 2px 6px; cursor: pointer; }
+.pc-file:hover { border-color: var(--accent); }
+.pc-live { position: fixed; inset: 0; z-index: 900; background: var(--bg); display: flex; flex-direction: column; }
+.pc-live-bar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.pc-live iframe { flex: 1; width: 100%; border: 0; background: #000; }
+@media (max-width: 768px) { .pc-grid { grid-template-columns: 1fr; } }

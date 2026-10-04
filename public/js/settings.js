@@ -8,6 +8,7 @@ const SETTINGS_TABS = [
   { id: 'files',     label: 'Files' },
   { id: 'projects',  label: 'Projects' },
   { id: 'harness',   label: 'Harness' },
+  { id: 'computers', label: 'Computers' },
   { id: 'terminal',  label: 'Terminal' },
   { id: 'models',    label: 'Models' },
   { id: 'docker',    label: 'Docker' },

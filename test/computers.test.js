@@ -50,3 +50,29 @@ test('a specialist holds only the computer its mission was given', () => {
     assert.ok(disabledFor({ id: 'tester', kits: ['computer'] }, p).includes('mcp__computer-aaaa__shell'), 'none given: none held');
   } finally { require('../modules/harness/tools').describe = real; }
 });
+
+test('the Computers view says who works in each and what it produced; a stopped one has no screen', async () => {
+  const store = require('../modules/store');
+  const row = { id: 'c0ffee01', name: 'view', purpose: 'p', token: 'secret-token-x', vncPassword: 'pw', mcpPort: 1, vncPort: 2, createdAt: new Date().toISOString() };
+  const before = store.readJson('computers', { computers: [] }).computers;
+  store.writeJson('computers', { computers: [...before, row] });
+  try {
+    const m = { id: 'msn_view01', agentId: 'tester', label: 'Tester', state: 'running', task: 'try the installer' };
+    const missions = require('../modules/agents/missions');
+    const realGet = missions.get;
+    missions.get = id => (id === m.id ? m : realGet(id));
+    try {
+      assert.equal(computers.lend(row.id, m.id), row.id);
+      require('../modules/attachments').save(Buffer.from('fake'), 'computer-c0ffee01-demo.webm', { mime: 'video/webm', from: 'mcp:computer-c0ffee01' });
+      const r = await H.api(null, 'GET', '/api/computers');
+      const c = r.body.computers.find(x => x.id === row.id);
+      assert.equal(c.mission.label, 'Tester');
+      assert.match(c.mission.task, /installer/);
+      assert.deepEqual(c.media.map(f => f.mime), ['video/webm']);
+      assert.ok(!JSON.stringify(r.body).includes('secret-token-x'), 'the token never leaves');
+    } finally { missions.get = realGet; }
+    const s = await H.api(null, 'GET', `/api/computers/${row.id}/screen`);
+    assert.equal(s.status, 502);
+    assert.equal((await H.api(null, 'GET', '/api/computers/nope/screen')).status, 404);
+  } finally { store.writeJson('computers', { computers: before }); }
+});
