@@ -39,7 +39,8 @@ const TOOLS = [
 /** Metadata for the ⚙ panel's per-tool switches, built-in ones then MCP's. */
 function describe() {
   return [
-    ...TOOLS.map(t => ({ name: t.name, description: t.description.split('.')[0], danger: !!t.danger })),
+    // The first sentence, by the rule the prompt uses: a split on '.' cut "AGENTS.md" and "e.g." in half.
+    ...TOOLS.map(t => ({ name: t.name, description: require('./turn/tools-section').firstSentence(t.description, 400).replace(/\.$/, ''), danger: !!t.danger })),
     ...mcp.describe(),
   ];
 }
