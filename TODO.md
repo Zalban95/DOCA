@@ -44,9 +44,9 @@ audit's fixes (2.137.1 security, 2.137.2 robustness, 2.137.3 front end).
 - The `chat` right lets a member — or a watch — start a turn whose tools run unasked in
   Auto mode. Should a person without `host` always be asked (or their turns run in
   Manual), whatever the panel's mode? → *Audit 2026-10-04* below.
-- `harness:sessions` reads, lists and deletes every conversation, not the device
-  owner's own; `agent.turn` summaries reach every person's devices. Per-person
-  conversations are auth phase 2.
+- `agent.turn` summaries and mission announcements still reach every person's devices,
+  and durable memory is shared by everyone (per-user memory is auth phase 3). Conversations
+  themselves are per person since 2.145.0 (session-access.js).
 
 **Portal (added 2026-10-04)**: DocaWear/DocaMobile render the new approval option ids
 `always` and `approve_all` (they are ordinary options; check nothing assumes exactly three);
