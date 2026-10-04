@@ -29,7 +29,14 @@ function sqlite() {
   const file = path.join(store.DATA_DIR, 'doca.db');
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const d = new DatabaseSync(file);
-  d.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;');   // the timeout first: WAL's switch takes a lock a second process must wait for
+  d.exec('PRAGMA busy_timeout = 5000;');
+  // Switching a new file to WAL takes a lock that busy_timeout does not cover: two processes opening it at once
+  // got SQLITE_BUSY about one time in ten (measured 2026-10-04). Retried briefly, then the error is the real one.
+  for (let i = 0; ; i++) {
+    try { d.exec('PRAGMA journal_mode = WAL;'); break; }
+    catch (e) { if (e.errcode !== 5 || i >= 50) throw e; Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50); }
+  }
+  d.exec('PRAGMA synchronous = NORMAL;');
   const q = {
     run: async (sql, p = []) => { const r = d.prepare(sql).run(...p); return { changes: Number(r.changes) }; },
     all: async (sql, p = []) => d.prepare(sql).all(...p),
