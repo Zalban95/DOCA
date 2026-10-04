@@ -69,6 +69,7 @@ async function _hcLoadSessions(refreshOnly = false) {
     _hcMainSession = data.main;
     const rows = data.sessions.filter(s => _hcArchived || !s.archivedAt);
     if (!rows.some(s => s.id === _hcSession)) _hcSession = rows.find(s => s.id === data.active)?.id || data.main;
+    hcTabsSync(rows, data.main);   // the tabs over the open conversations (harness-console/tabs.js)
     const drawn = new Set();
     const draw = (s, depth = 0) => {
       if (drawn.has(s.id)) return '';
@@ -119,6 +120,7 @@ function _hcJobLabel(s) {
 async function hcOpenSession(id, skipReload) {
   if (_hcBusy && id !== _hcSession) return appAlert('Stop or finish this direct turn before switching conversations.');
   _hcSession = id;
+  hcTabsShow(id);
   hcSideToggle(false);   // on a phone, back to the conversation just chosen
   const box = document.getElementById('hc-messages');
   if (!box) return;
