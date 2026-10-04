@@ -196,3 +196,14 @@ test('the routes answer, and refuse a decision nobody is waiting on', async () =
 
   await H.api(null, 'POST', '/api/harness/approval', { mode: 'auto' });
 });
+
+test('a question that must always be asked cannot be answered "always" (audit 2026-10-04)', () => {
+  approval.setMode('manual');
+  const gate = approval.gate('shell', { command: 'echo $(whoami)' });
+  assert.equal(gate.keys, null);
+  const { id } = approval.ask(gate, {});
+  assert.throws(() => approval.decide(id, 'always_tool'), /only be allowed once/);
+  assert.ok(!approval.settings().always.includes('shell'), 'nothing was allowlisted');
+  assert.equal(approval.decide(id, 'once'), true);
+  approval.setMode('auto');
+});
