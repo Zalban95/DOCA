@@ -204,17 +204,19 @@ test('a turn that fails says so on the bus, because there is no response left to
   onPhone.close();
 });
 
-test('two clients cannot interleave one transcript', async () => {
-  script = [{ text: 'first answer', delayMs: 400 }];
-  const first = await H.api(phone.token, 'POST', '/api/v1/harness/messages', { message: 'one' });
+test('a message to a working conversation waits and is answered; nothing interleaves (inbox.js)', async () => {
+  script = [{ text: 'first answer', delayMs: 400 }, { text: 'answer to two' }];
+  const onPhone = H.sse(phone.token); await onPhone.ready;
+  const own = (await H.api(phone.token, 'POST', '/api/v1/harness/sessions', { title: 'queue' })).body.session.id;   // its own, so the main one does not grow
+  const first = await H.api(phone.token, 'POST', '/api/v1/harness/messages', { message: 'one', sessionId: own });
   const second = await H.api(watch.token, 'POST', '/api/v1/harness/messages', { message: 'two', sessionId: first.body.sessionId });
 
-  assert.equal(second.status, 409);
-  assert.equal(second.body.error.code, 'turn_in_flight');
-  assert.equal(second.body.error.turnId, first.body.turnId, 'so a client can wait for the right turn');
-
-  const onPhone = H.sse(phone.token); await onPhone.ready;
+  assert.equal(second.status, 202, 'never refused for being busy');
+  assert.equal(second.body.queued, true);
   await settled(onPhone, first.body.turnId);
+  const answered = await settled(onPhone, second.body.turnId);
+  assert.equal(answered.payload.state, 'done');
+  assert.match(answered.payload.text, /answer to two/, 'the turn it started answered it');
   onPhone.close();
 
   // Once it settles, the same session accepts the next turn.

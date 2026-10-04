@@ -334,3 +334,6 @@ body.harness-tab .chat-fab { display: none; }
 }
 .approval-recheck { display: flex; gap: 8px; align-items: flex-start; font-size: 11px; margin: 8px 0; color: var(--text); }
 .approval-recheck input { margin-top: 2px; }
+/* A message written while the agent works: queued, then read (agent-ui/queued-send.js). */
+.agent-queued-tag { font-size: 10px; color: var(--muted); margin-top: 3px; text-align: right; }
+.agent-queued-tag[data-state="read"] { color: var(--green); }

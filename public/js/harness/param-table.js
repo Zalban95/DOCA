@@ -83,6 +83,11 @@ const HARNESS_PARAMS = [
     hint: 'How many times the agent may use a tool and think again before it has to answer. Each step '
         + 're-sends the whole conversation, so this is the setting that decides what one answer can cost.' },
 
+  { key: 'orchestratorWorkSteps', label: 'Orchestrator work steps', attrs: 'min="0" max="1000" step="1"',
+    hint: 'How many steps of real work (commands, writing files, MCP tools, the web) the Orchestrator does in its '
+        + 'own turn before the rest of the job moves to a work chat by itself — so the main chat stays free to '
+        + 'talk to while work runs. Reading and coordinating do not count. 0 means no limit.' },
+
   { key: 'historyTurns', label: 'History window', unit: 'messages', attrs: 'min="2" max="5000" step="2"',
     hint: 'How many recent messages are sent word for word. Anything older is represented by the running '
         + 'summary instead — it is not lost, the full transcript is always kept on disk. The turn in progress '

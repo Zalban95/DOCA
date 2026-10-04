@@ -134,12 +134,10 @@ async function handleChat(req, res) {
     sseHeaders(res);
     const images = [];
     try {
-      const { text } = await agent.turn({
-        message,
-        sessionId: require('./harness/memory').mainSession().id, client: require('./harness/turn/client').dashboardClient(req),
-        // Only the built-in harness understands these. The gateway and the
-        // claude CLI below get the message alone, which is why the composer
-        // says so rather than dropping the files silently.
+      // Busy (a turn in the console, say): it waits and is read mid-turn, or starts the next (send-stream.js).
+      const r = await require('./harness/send-stream').sendStreamed({
+        message, sessionId: require('./harness/memory').mainSession().id, client: require('./harness/turn/client').dashboardClient(req),
+        // Only the built-in harness understands attachments: the gateway and the claude CLI get the message alone.
         attachments: attached,
         emit: evt => {
           if (evt.type === 'text')
@@ -157,7 +155,7 @@ async function handleChat(req, res) {
           // Forwarded whole: `usage` is `budget.report()`, the object the console draws; `approval` is the card
           // a Manual-mode turn blocks on, and `warning` the budget and cut-off notices — both were dropped here,
           // so a turn from this chat waited five minutes on a question nobody could see (audit 2026-10-04).
-          if (['usage', 'approval', 'warning'].includes(evt.type)) res.write(`data: ${JSON.stringify(evt)}\n\n`);
+          if (['usage', 'approval', 'warning', 'queued', 'queued_read', 'queued_started', 'user_added', 'handoff'].includes(evt.type)) res.write(`data: ${JSON.stringify(evt)}\n\n`);
           // Silence, and the end of it. A provider that has the request and has
           // not started answering looks exactly like a frozen page, and a hop
           // down the fallback chain is the one event the user must not miss:
@@ -173,7 +171,8 @@ async function handleChat(req, res) {
               toModel: evt.toModel, remaining: evt.remaining })}\n\n`);
         },
         signal: ctrl.signal,
-      });
+      }, { res, emit: evt => res.write(`data: ${JSON.stringify(evt)}\n\n`) });
+      const text = r?.text;
       if (text || images.length) chatHistory.push({
         role: 'assistant', content: text || '', time: new Date().toISOString(),
         ...(images.length ? { images } : {}),

@@ -93,19 +93,34 @@ function _hcAppendContent(role, content) {
 
 async function hcSend() {
   const input = document.getElementById('hc-input');
-  const btn   = document.getElementById('hc-send');
   const text  = input?.value.trim();
-  if (!text || _hcBusy) return;
+  if (!text) return;
   const to = document.getElementById('hc-to')?.value;
   if (to) { if (await hcSendMission(to, text)) input.value = ''; return; }
-
-  _hcBusy = true;
   input.value = '';
-  if (btn) btn.style.display = 'none';
+  const row = _hcAppend('user', text);
+  // Working already: the message waits and is read at its next step, or starts the next turn (agent-ui/queued-send.js).
+  if (_hcBusy) {
+    const mark = agentQueuedTag(row?.parentElement || row);
+    await agentQueuedSend('/api/harness/chat', { message: text, sessionId: _hcSession }, {
+      mark, startTurn: async () => { while (_hcBusy) await new Promise(r => setTimeout(r, 50)); return _hcTurnUi(); },
+    });
+    return;
+  }
+  const ui = _hcTurnUi();
+  await sseStream('/api/harness/chat', { message: text, sessionId: _hcSession }, {
+    signal: _hcTurn.signal, onEvent: ui.onEvent, onError: ui.onError,
+  });
+  ui.finish();
+}
+
+/** One turn drawn in the console: set up when it starts, closed when it ends. */
+function _hcTurnUi() {
+  const input = document.getElementById('hc-input');
   const stopBtn = document.getElementById('hc-stop');
+  _hcBusy = true;
   if (stopBtn) stopBtn.style.display = '';
   _hcTurn = new AbortController();
-  _hcAppend('user', text);
 
   const box = document.getElementById('hc-messages');
   const scroll = () => { if (box) box.scrollTop = box.scrollHeight; };
@@ -132,30 +147,32 @@ async function hcSend() {
     context: evt => _hcContext(evt),
     onSession: id => { _hcSession = id; },
     onProposal: () => _hcLoadProposals(),   // mid-turn, so the card is there when the agent explains it
-  });
-  await sseStream('/api/harness/chat', { message: text, sessionId: _hcSession }, {
-    signal: _hcTurn.signal, onEvent: sink.onEvent, onError: sink.onError,
+    userAdded: evt => _hcAppend('user', evt.text),
   });
 
-  sink.finish();
-  // The turn is over, so the rows it left open close: the account of a finished
-  // run is a few short lines, each one a click away from the detail.
-  closeFolds(box);
-  agentWorkingClose(box);
-  // After the fold closes, so the rate is the last thing under the answer
-  // rather than a line the collapsing run swallows.
-  const rate = tokenRateEl(sink.spend);
-  if (rate && box) { box.appendChild(rate); scroll(); }
-  if (_hcTurn?.signal.aborted)
-    _hcAppend('error', 'Stopped. The step already running finishes on its own; nothing after it starts.', 'stopped');
-
-  _hcBusy = false;
-  _hcTurn = null;
-  if (btn) btn.style.display = '';
-  if (stopBtn) stopBtn.style.display = 'none';
-  _hcLoadSessions();
-  _hcLoadMemory();
-  _hcLoadProposals();
-  _hcLoadUsage();
-  input?.focus();
+  return {
+    onEvent: sink.onEvent,
+    onError: sink.onError,
+    finish: () => {
+      sink.finish();
+      // The turn is over, so the rows it left open close: the account of a finished
+      // run is a few short lines, each one a click away from the detail.
+      closeFolds(box);
+      agentWorkingClose(box);
+      // After the fold closes, so the rate is the last thing under the answer
+      // rather than a line the collapsing run swallows.
+      const rate = tokenRateEl(sink.spend);
+      if (rate && box) { box.appendChild(rate); scroll(); }
+      if (_hcTurn?.signal.aborted)
+        _hcAppend('error', 'Stopped. The step already running finishes on its own; nothing after it starts.', 'stopped');
+      _hcBusy = false;
+      _hcTurn = null;
+      if (stopBtn) stopBtn.style.display = 'none';
+      _hcLoadSessions();
+      _hcLoadMemory();
+      _hcLoadProposals();
+      _hcLoadUsage();
+      input?.focus();
+    },
+  };
 }

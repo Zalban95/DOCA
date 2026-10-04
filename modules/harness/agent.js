@@ -66,7 +66,9 @@ async function turn(options) {
     const client = require('./turn/client').withPerson(options.client, id);
     // A mission or work chat runs for the person above it: the record says so (live test 2026-10-04).
     if (!options.client?.user && client?.user) require('./runs').person(runId, client.user.id);
-    const result = await runTurn({ ...options, client, sessionId: id, signal: ctrl.signal, profile });
+    const read = [];
+    const result = await runTurn({ ...options, client, sessionId: id, signal: ctrl.signal, profile, read });
+    for (const i of read) try { i.onAnswer?.(result); } catch { /* its sender may be gone */ }
     ctrl.steps = result.steps;
     ctrl.truncated = !!result.truncated;
     const state = ctrl.signal.aborted ? 'cancelled' : 'idle';
@@ -87,14 +89,39 @@ async function turn(options) {
     running.delete(id);
     changed(id, ctrl);
     options.signal?.removeEventListener('abort', abort);
+    nextWaiting(id);
   }
 }
 
+/** What is still waiting when a turn ends starts the next one, as whoever wrote it (inbox.js). */
+function nextWaiting(id) {
+  const inbox = require('./inbox');
+  const [first, ...rest] = inbox.take(id);
+  if (!first) return;
+  for (const r of rest) inbox.put(id, r);   // read by the new turn before its first step
+  setImmediate(() => {
+    const run = first.start ? first.start() : turn({ message: first.message, sessionId: id, client: first.client, attachments: first.attachments });
+    Promise.resolve(run).catch(() => { /* the turn records its own failure */ });
+  });
+}
 
-async function runTurn({ message, sessionId, emit, signal, client, attachments: attached, profile }) {
+/**
+ * A message to a conversation: a turn of its own when it is free, or waiting
+ * in its inbox when it is working (a turn the panel started by itself still
+ * gives way, as before). @returns {{ queued: true, id, position } | Promise<turn result>}
+ */
+function send(options, waitingItem = {}) {
+  const id = options.sessionId || memory.activeSession().id;
+  if (running.has(id) && !(running.get(id).auto && !options.auto))
+    return { queued: true, sessionId: id, ...require('./inbox').put(id, { message: options.message, client: options.client, attachments: options.attachments, ...waitingItem }) };
+  return turn({ ...options, sessionId: id });
+}
+
+
+async function runTurn({ message, sessionId, emit, signal, client, attachments: attached, profile, read = [] }) {
   const say = evt => {
     try { emit(evt); } catch {}
-    try { events.emit('event', evt); } catch {}
+    try { events.emit('event', { sessionId, ...evt }); } catch {}
   };
   const p = await require('./turn/ceiling').check(require('./turn/choice').apply(turnParams(profile), sessionId));   // the chat's model choice; a day's token ceiling refuses to start
   const ep  = providers.endpoint(p.provider);
@@ -109,12 +136,15 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   // Provenance stays on the row, not in the text: `toApiMessages` maps the
   // fields the API takes, so a client can render "you asked this from the watch"
   // without the model ever seeing a tag glued to the user's own words.
-  const files = attachments.resolve(attached || []);
-  memory.append(session.id, {
-    role: 'user', content: message,
+  const userRow = (text, from, files) => memory.append(session.id, {
+    role: 'user', content: text,
     ...(files.length ? { attachments: files } : {}),
-    ...(client ? { from: { id: client.id || null, name: client.name, formFactor: client.formFactor || client.kind || null, ...(client.user ? { userId: client.user.id } : {}) } } : {}),
+    ...(from ? { from: { id: from.id || null, name: from.name, formFactor: from.formFactor || from.kind || null, ...(from.user ? { userId: from.user.id } : {}) } } : {}),
   });
+  userRow(message, client, attachments.resolve(attached || []));
+  const from = memory.messages(session.id).length;   // where this turn's own work starts (turn/handoff.js)
+  const orchestrating = profile?.level === 'orchestrator' && Number(p.orchestratorWorkSteps) > 0;
+  let workSteps = 0;
 
   let summary = await foldSummary({ session: memory.getSession(session.id), p, ep, signal });
   // An allowlist is expressed as its complement, because `schemas()` filters by
@@ -169,6 +199,9 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     if (toolCount !== null && schemas.length !== toolCount)
       say({ type: 'tools', count: schemas.length, was: toolCount, step });
     toolCount = schemas.length;
+
+    // Messages written to this conversation while it works are read now, before the next step (inbox.js).
+    read.push(...require('./inbox').takeInto(session, { say, append: i => userRow(i.message, i.client, attachments.resolve(i.attachments || [])) }));
 
     const isMission = isMissionProfile(profile);
     const { messages, acknowledge } = stepRequest({ p, ep, message, summary, client, profile, projectBrief,
@@ -250,6 +283,17 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       };
     }
 
+    // The Orchestrator does a few steps of real work at most; the rest moves to a work chat (turn/handoff.js).
+    const handoff = require('./turn/handoff');
+    const working = orchestrating && reply.tool_calls.some(handoff.isWork);
+    if (working && workSteps >= Number(p.orchestratorWorkSteps)) {
+      const note = handoff.handOff({ session, message, from, reply, say, step });
+      memory.append(session.id, { role: 'assistant', content: note });
+      say({ type: 'text', text: note });
+      return { sessionId: session.id, text: text + note, steps: step, usage: spend, handedOff: true, ...(fallbacks.length ? { fallbacks } : {}) };
+    }
+    if (working) workSteps++;
+
     await runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced });
 
     // Token pressure folds the conversation early, before the message count
@@ -290,5 +334,5 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   };
 }
 
-module.exports = { turn, isRunning, isAuto, cancel, status, contextOf, params, ask, complete, preview, breakdown, liveBlock, events,
+module.exports = { turn, send, isRunning, isAuto, cancel, status, contextOf, params, ask, complete, preview, breakdown, liveBlock, events,
   toApiMessages, rungsFor, markDegraded, forgetDegraded, openingHop, missionsFor, DEGRADED_MS };

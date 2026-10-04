@@ -213,7 +213,10 @@ test('shared turn lock covers background, browser and device calls, and protects
   assert.ok(seen.length);
   await assert.rejects(agent.turn({ message: 'Collision', sessionId: s.id }), /already running/);
   const phone = H.mkDevice('org-lock-phone', 'phone', H.PHONE_CAPS);
-  assert.equal((await H.api(phone.token, 'POST', '/api/v1/harness/messages', { message: 'Collision', sessionId: s.id })).status, 409);
+  const queued = await H.api(phone.token, 'POST', '/api/v1/harness/messages', { message: 'Collision', sessionId: s.id });
+  assert.equal(queued.status, 202, 'a device\'s message waits rather than being refused (inbox.js)');
+  assert.equal(queued.body.queued, true);
+  require('../modules/harness/inbox').take(s.id);   // withdrawn, so the stopped turn starts nothing after it
   assert.throws(() => org.archive(s.id), /running specialists/);
   assert.equal(agent.cancel(s.id), true);
   await rejected;

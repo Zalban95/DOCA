@@ -221,10 +221,7 @@ function chatAppendMsg(role, text, opts = {}) {
   const container = document.getElementById('chat-messages');
   const el = document.createElement('div');
   el.className = `chat-msg ${role}`;
-  // What the agent said is markdown, so it is rendered rather than shown as
-  // its own punctuation. Everything else in this transcript — the user's own
-  // words, a status line, an error, raw stderr — is literal text, and `plain`
-  // is how a caller says so.
+  // The agent's words are markdown, rendered; everything else (the user's words, status, errors) is literal: `plain`.
   if (role === 'assistant' && !opts.plain) mdInto(el, text);
   else el.textContent = text;
   if (role === 'user') container.appendChild(el);
@@ -292,19 +289,14 @@ function _chatAppendContent(content) {
 
 let chatPending = [];   // attachment records waiting to be sent with the message
 
-/* The turn in flight, if any. Stop hangs up on the stream; the server ties the
-   response closing to the turn's own AbortController, so the turn stops with
-   it. The step already in flight still finishes — abort cancels our fetch, not
-   the request the provider has already accepted — so Stop ends the *next* step
-   and the tokens already spent stay spent. The button says so. */
+/* The turn in flight, if any. Stop hangs up on the stream, and the server stops the turn with it. The step
+   already in flight still finishes (the provider accepted it), so Stop ends the *next* step; the button says so. */
 let chatTurn = null;
 
 function _chatBusy(on) {
   chatTurn = on ? chatTurn : null;
-  const send = document.getElementById('chat-send');
   const stop = document.getElementById('chat-stop');
-  if (send) send.style.display = on ? 'none' : '';
-  if (stop) stop.style.display = on ? '' : 'none';
+  if (stop) stop.style.display = on ? '' : 'none';   // Send stays: a message mid-turn waits for the next step
 }
 
 function chatStop() {
@@ -501,31 +493,38 @@ function _chatClearChips() {
 function chatSend({ spoken = false } = {}) {
   const input   = document.getElementById('chat-input');
   const message = input.value.trim();
-  if (!message || chatTurn) return;   // Enter during a turn sent a second one, and Stop lost the first (audit 2026-10-04)
+  if (!message) return;
 
   const attachments = chatPending.map(a => a.name);
   const shown = chatPending.filter(a => /^(image|audio|video)\//.test(a.mime || ''));
   const named = chatPending.filter(a => !shown.includes(a));
   input.value = '';
   chatAppendMsg('user', message + (named.length ? `\n📎 ${named.map(a => a.name).join(', ')}` : ''));
-  // Media is shown rather than named: a picture the user sent reads as a
-  // picture, and a voice message can be played back out of the transcript.
+  // Media is shown rather than named: a picture reads as a picture, a voice message plays back.
   for (const a of shown) _chatAppendImage({ name: a.name, mime: a.mime });
   _chatClearChips();
 
-  // The agent is told how this arrived and what to do about it, because
-  // "answer out loud" is a fact about the request rather than a setting. The
-  // panel still does the speaking; this is what stops a spoken question being
-  // answered with three screens of prose and a code block.
+  // The agent is told how this arrived: "answer out loud" is a fact about the request, not a setting. The panel
+  // does the speaking; this stops a spoken question being answered with three screens of prose.
   const sent = spoken
     ? `${message}\n\n[Sent as a voice message; the text above is its transcript, and the recording is attached. `
       + 'Answer as if speaking: a few sentences, no markdown, no lists, no code — unless the message itself asks '
       + 'for something else. Your answer is read aloud as well as shown.]'
     : message;
 
+  // Working already: it waits and is read at the next step, or starts the next turn (agent-ui/queued-send.js).
+  if (chatTurn) {
+    agentQueuedSend('/api/chat', { message: sent, attachments }, { mark: agentQueuedTag(document.getElementById('chat-messages').lastElementChild),
+      startTurn: async () => { while (chatTurn) await new Promise(r => setTimeout(r, 50)); return _chatTurnUi(spoken); } });
+    return;
+  }
+  const ui = _chatTurnUi(spoken);
+  sseStream('/api/chat', { message: sent, attachments }, { signal: chatTurn.signal, onEvent: ui.onEvent, onError: ui.onError }).then(ui.finish);
+}
+
+/** One turn drawn in the floating chat (everything in one block that becomes one line when it ends). */
+function _chatTurnUi(spoken) {
   const container = document.getElementById('chat-messages');
-  // Everything this turn does goes in one block that shows its current row and
-  // becomes one line when the turn ends.
   agentWorkingOpen(container);
   const stream = createThinkStream({
     mount: node => { agentFoldMount(container, node); _chatScroll(); },
@@ -549,10 +548,9 @@ function chatSend({ spoken = false } = {}) {
     error: msg => { const el = chatAppendMsg('assistant', `Error: ${msg}`, { plain: true }); el.style.color = 'var(--red)'; },
     context: evt => _chatContext(evt),
     onText: t => { reply += t; },
+    userAdded: evt => chatAppendMsg('user', evt.text),
   });
-  sseStream('/api/chat', { message: sent, attachments }, {
-    signal: chatTurn.signal, onEvent: sink.onEvent, onError: sink.onError,
-  }).then(() => {
+  return { onEvent: sink.onEvent, onError: sink.onError, finish: () => {
     sink.finish();
     // The turn is over, so the rows it left open close: the account of a
     // finished run is a few short lines rather than a wall of command bodies.
@@ -567,7 +565,7 @@ function chatSend({ spoken = false } = {}) {
     // not configured costs nothing but silence.
     if (spoken && !turn.signal.aborted) _chatSpeak(reply);
     if (chatTurn === turn) _chatBusy(false);
-  });
+  } };
 }
 
 function chatClear() {

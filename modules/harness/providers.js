@@ -118,6 +118,9 @@ function defaultParams() {
     maxTokens:      2048,
     systemPrompt:   DEFAULT_SYSTEM_PROMPT,
     maxSteps:       8,      // tool-call rounds per turn before we stop
+    // Steps of real work the Orchestrator does in its own turn before the job moves to a work chat
+    // (turn/handoff.js), so it stays free for the person. 0: no limit.
+    orchestratorWorkSteps: 3,
     historyTurns:   24,     // messages kept verbatim in the window
     memoryLimit:    24,     // memory entries injected into the system prompt
     summarizeAfter: 40,     // messages before older ones fold into a summary

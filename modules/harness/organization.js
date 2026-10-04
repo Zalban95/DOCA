@@ -164,15 +164,17 @@ function start(id, message, from) {
   const s = session(id);
   if (s.archivedAt) throw error('Recall this archived conversation before continuing.');
   const agent = require('./agent');
-  // A task from above takes over from a turn the panel started by itself.
-  if (agent.isRunning(id) && !agent.isAuto(id)) throw error('This conversation is already working. Read its status or stop it first.');
   if (!String(message || '').trim()) throw error('A task or message is required.', 400);
+  // A task from above takes over from a turn the panel started by itself; a conversation busy with a turn
+  // of its own reads it before its next step, or starts on it next (inbox.js) — it is never refused.
+  const busy = agent.isRunning(id) && !agent.isAuto(id);
   // A new task is a new job: its own count of automatic turns (supervisor.js).
-  memory.updateSession(id, { job: { state: 'working', since: new Date().toISOString(), autoTurns: 0, idleTurns: 0 } });
+  if (!busy) memory.updateSession(id, { job: { state: 'working', since: new Date().toISOString(), autoTurns: 0, idleTurns: 0 } });
   // All entry points use the same runner and lock, including direct intervention.
-  require('./agent').turn({ sessionId: id, message: short(message, 20000),
-    client: { name: 'Delegated by ' + (memory.getSession(from)?.title || 'Orchestrator'), kind: 'agent' },
-  }).catch(() => { /* the runner records failure and reports it upward */ });
+  const r = agent.send({ sessionId: id, message: short(message, 20000),
+    client: { name: 'Delegated by ' + (memory.getSession(from)?.title || 'Orchestrator'), kind: 'agent' } });
+  if (r.queued) return { sessionId: id, state: 'queued', note: 'It is working: it reads this before its next step.' };
+  r.catch(() => { /* the runner records failure and reports it upward */ });
   return { sessionId: id, state: 'running' };
 }
 
@@ -187,12 +189,14 @@ function start(id, message, from) {
 function carryOut(id, plan, client) {
   const s = session(id);
   const agent = require('./agent');
-  if (agent.isRunning(id) && !agent.isAuto(id))
-    return { started: false, reason: 'That conversation is busy with a turn; it sees the approval and carries on from there.' };
-  if (s.kind === 'work') memory.updateSession(id, { job: { state: 'working', since: new Date().toISOString(), autoTurns: 0, idleTurns: 0 } });
-  agent.turn({ sessionId: id, client, message: `Approved revision ${plan.revision} of "${short(plan.title, 200)}" — go ahead and carry it out. `
+  const busy = agent.isRunning(id) && !agent.isAuto(id);
+  if (s.kind === 'work' && !busy) memory.updateSession(id, { job: { state: 'working', since: new Date().toISOString(), autoTurns: 0, idleTurns: 0 } });
+  // Busy with a turn of its own: the approval waits in its inbox and is read before its next step (inbox.js).
+  const r = agent.send({ sessionId: id, client, message: `Approved revision ${plan.revision} of "${short(plan.title, 200)}" — go ahead and carry it out. `
     + 'Mark each step with work_plan progress as you go, and propose a revision if the work turns out different from the plan. '
-    + '(Sent by the panel when I clicked Approve.)' }).catch(() => { /* the runner records failure and reports it upward */ });
+    + '(Sent by the panel when I clicked Approve.)' });
+  if (r.queued) return { started: false, queued: true, reason: 'That conversation is busy with a turn; it reads the approval before its next step.' };
+  r.catch(() => { /* the runner records failure and reports it upward */ });
   return { started: true };
 }
 
@@ -259,7 +263,10 @@ function profileFor(s) {
       + 'You are free while work runs: hand a job to a work chat and return to the user. Work chats carry '
       + 'their jobs to the end on their own; you are woken only when one reports its final outcome '
       + '(done, failed, blocked) or has a question for the user. Then say what matters in a few lines and '
-      + 'ask only for a decision that is theirs. work_chats list shows every job\'s state at any time.' };
+      + 'ask only for a decision that is theirs. work_chats list shows every job\'s state at any time. '
+      + 'The person can write while you work: their message reaches you before your next step — answer it '
+      + 'briefly, then carry on or change course. After a few steps of real work in your own turn, the job '
+      + 'moves to a work chat by itself; better to hand it over before that.' };
 }
 
 function block(id, pending = []) {
