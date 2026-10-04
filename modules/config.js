@@ -39,13 +39,14 @@ function handlePostConfig(req, res) {
 
 /** GET /api/prefs */
 function handleGetPrefs(req, res) {
-  res.json(loadPrefs());
+  res.json(require('./secrets-mask').mask(loadPrefs()));   // readable with `read`: no secrets in it
 }
 
 /** POST /api/prefs */
 function handlePostPrefs(req, res) {
   try {
-    savePrefs({ ...loadPrefs(), ...req.body });
+    const stored = loadPrefs();
+    savePrefs({ ...stored, ...require('./secrets-mask').unmask(req.body || {}, stored) });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }

@@ -67,13 +67,13 @@ const OLLAMA_POPULAR = [
 
 /** GET /api/models/settings */
 function handleGetSettings(req, res) {
-  res.json(loadModelsPrefs());
+  res.json(require('./secrets-mask').mask(loadModelsPrefs()));
 }
 
 /** POST /api/models/settings */
 function handlePostSettings(req, res) {
   try {
-    saveModelsPrefs(req.body);
+    saveModelsPrefs(require('./secrets-mask').unmask(req.body || {}, loadModelsPrefs()));
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
