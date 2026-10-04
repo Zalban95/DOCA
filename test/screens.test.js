@@ -70,3 +70,35 @@ test('a paired client reads its own effective settings from /api/v1', async () =
   assert.equal(r.body.from.theme, 'device');
   assert.equal(r.body.from.hiddenTabs, undefined);
 });
+
+test('on a device\'s own page its look is that device\'s, and its app reads it back; another\'s device is refused', async () => {
+  const devices = require('../modules/api-v1/devices');
+  const phone = H.mkDevice('my phone', 'phone', H.PHONE_CAPS);
+  devices.update(phone.device.id, { userId: H.owner.user.id });
+  const r = await call(H.owner.cookie, 'POST', `/api/screen/settings?device=${phone.device.id}`, { theme: 'gruvbox' });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.id, phone.device.id);
+  assert.equal((await H.api(phone.token, 'GET', '/api/v1/settings/effective')).body.settings.theme, 'gruvbox');
+  const stranger = H.mkDevice('not mine', 'phone', H.PHONE_CAPS);
+  const member = await H.signIn('member', 'screens-device-member@test.local');
+  devices.update(stranger.device.id, { userId: H.owner.user.id });
+  assert.equal((await call(member.cookie, 'GET', `/api/screen?device=${stranger.device.id}`)).status, 404);
+});
+
+test('a device\'s notifications are saved on its profile, the rest of the profile kept, and the device is told', async () => {
+  const devices = require('../modules/api-v1/devices');
+  const profiles = require('../modules/api-v1/profiles');
+  const phone = H.mkDevice('quiet phone', 'phone', H.PHONE_CAPS);
+  devices.update(phone.device.id, { userId: H.owner.user.id });
+  const pagesBefore = profiles.get(phone.device.id).pages;
+  const r = await call(H.owner.cookie, 'POST', `/api/screen/profile?device=${phone.device.id}`, { prompts: { haptic: false }, quietHours: { from: '22:30', to: '07:00', allowUrgent: true } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const p = profiles.get(phone.device.id);
+  assert.deepEqual(p.quietHours, { from: '22:30', to: '07:00', allowUrgent: true });
+  assert.equal(p.prompts.haptic, false);
+  assert.equal(p.prompts.receive, true, 'what was not sent is kept');
+  assert.deepEqual(p.pages, pagesBefore, 'the client\'s pages are kept');
+  assert.ok(require('../modules/api-v1/bus').drain(phone.device.id, 0).events.some(e => e.type === 'profile.changed'));
+  const browser = await call(H.owner.cookie, 'POST', '/api/screen/profile', { prompts: { receive: false } });
+  assert.equal(browser.status, 400, 'a browser takes no questions of its own');
+});
