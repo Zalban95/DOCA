@@ -90,3 +90,19 @@ test('a revision can never be an option (audit 2026-10-04)', async () => {
   assert.equal(fs.existsSync(out), false);
   assert.ok((await git.log(root, { rev: 'HEAD~0' })).length > 0, 'ordinary revisions still work');
 });
+
+test('a project inside a repository sees its own files, with paths relative to itself (audit 2026-10-04)', async () => {
+  const repo = fs.mkdtempSync(path.join(H.tmp, 'mono-'));
+  execFileSync('git', ['init', '-q', '-b', 'main', repo]);
+  fs.mkdirSync(path.join(repo, 'app')); fs.writeFileSync(path.join(repo, 'app', 'x.txt'), 'x\n'); fs.writeFileSync(path.join(repo, 'other.txt'), 'o\n');
+  execFileSync('git', ['-C', repo, 'add', '.']); execFileSync('git', ['-C', repo, 'commit', '-qm', 'init']);
+  fs.writeFileSync(path.join(repo, 'app', 'new.txt'), 'n\n'); fs.writeFileSync(path.join(repo, 'other.txt'), 'changed\n');
+  const sub = projects.create({ root: path.join(repo, 'app'), name: 'Sub' });
+  const st = await H.api(null, 'GET', `/api/projects/${sub.id}/git/status`);
+  assert.deepEqual(st.body.files.map(f => f.path), ['new.txt'], 'only the project\'s files, relative to it');
+  const d = await H.api(null, 'POST', `/api/projects/${sub.id}/git/discard`, { files: ['new.txt'] });
+  assert.equal(d.status, 200);
+  assert.equal(fs.existsSync(path.join(repo, 'app', 'new.txt')), false, 'the right file was discarded');
+  assert.equal(fs.readFileSync(path.join(repo, 'other.txt'), 'utf8'), 'changed\n', 'nothing outside the project touched');
+  assert.equal(await require('../modules/projects/git').show(path.join(repo, 'app'), 'x.txt'), 'x\n', 'and the compare view finds the committed version');
+});

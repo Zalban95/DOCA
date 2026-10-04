@@ -36,7 +36,12 @@ async function top(root) {
 
 /** Branch, upstream, ahead/behind, and every changed file with its state. */
 async function status(root) {
-  const out = await git(root, ['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all']);
+  // Only the project's folder, with paths relative to it: a project that is a subfolder of a repository
+  // got repository-relative paths, so discard and compare resolved them one folder too deep (audit 2026-10-04).
+  const out = await git(root, ['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all', '--', '.']);
+  const t = await top(root);
+  const prefix = t ? path.relative(t, path.resolve(root)).split(path.sep).join('/') : '';
+  const local = p => (prefix && p && p.startsWith(`${prefix}/`) ? p.slice(prefix.length + 1) : p);
   const r = { branch: null, upstream: null, ahead: 0, behind: 0, files: [] };
   const parts = out.split('\0');
   for (let i = 0; i < parts.length; i++) {
@@ -50,9 +55,9 @@ async function status(root) {
       const xy = f[1];
       const file = l[0] === '1' ? f.slice(8).join(' ') : f.slice(9).join(' ');
       const from = l[0] === '2' ? parts[++i] : undefined;   // a rename carries its old path next
-      r.files.push({ path: file, from, staged: xy[0] !== '.' ? xy[0] : null, unstaged: xy[1] !== '.' ? xy[1] : null });
-    } else if (l[0] === '?') r.files.push({ path: l.slice(2), staged: null, unstaged: '?' });
-    else if (l[0] === 'u') r.files.push({ path: l.split(' ').slice(10).join(' '), staged: 'U', unstaged: 'U', conflict: true });
+      r.files.push({ path: local(file), from: from && local(from), staged: xy[0] !== '.' ? xy[0] : null, unstaged: xy[1] !== '.' ? xy[1] : null });
+    } else if (l[0] === '?') r.files.push({ path: local(l.slice(2)), staged: null, unstaged: '?' });
+    else if (l[0] === 'u') r.files.push({ path: local(l.split(' ').slice(10).join(' ')), staged: 'U', unstaged: 'U', conflict: true });
   }
   return r;
 }
@@ -100,7 +105,8 @@ async function diff(root, { file, rev, staged = false, commit } = {}) {
 /** A file as it was at `rev` (HEAD by default) — what the compare view puts on the left. */
 async function show(root, file, rev = 'HEAD') {
   const rel = path.isAbsolute(file) ? path.relative(root, file) : file;
-  return git(root, ['show', `${module.exports.rev(rev)}:${rel.split(path.sep).join('/')}`]);
+  // ./ makes the path relative to the project, not to the repository's top (a project can be a subfolder of one).
+  return git(root, ['show', `${module.exports.rev(rev)}:./${rel.split(path.sep).join('/')}`]);
 }
 
 async function stage(root, files) { await git(root, ['add', '--', ...files]); return status(root); }
