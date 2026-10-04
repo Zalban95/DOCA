@@ -30,7 +30,7 @@ async function loadSkills() {
     allSkills  = data.skills || [];
     renderSkills(allSkills);
   } catch (e) {
-    grid.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    grid.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 
@@ -130,7 +130,7 @@ async function searchSkillsOnline() {
     }).join('');
     grid.innerHTML = viaNote + cards;
   } catch (e) {
-    grid.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    grid.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 
@@ -222,7 +222,7 @@ async function showSkillDetail(name) {
     html += `<div style="margin-top:12px;font-size:10px;color:var(--muted)">Path: ${data.path}</div>`;
     body.innerHTML = html;
   } catch (e) {
-    body.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    body.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 

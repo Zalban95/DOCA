@@ -25,7 +25,7 @@ async function keysLoadProviders() {
     }
     list.innerHTML = Object.entries(providers).map(([name, p]) => _providerCardHtml(name, p)).join('');
   } catch (e) {
-    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 

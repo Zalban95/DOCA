@@ -48,7 +48,7 @@ async function modelsLoadDisk(force = false) {
       </div>`;
     }).join('');
   } catch (e) {
-    strip.innerHTML = `<div class="placeholder" style="color:var(--red)">${e.message}</div>`;
+    strip.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 
@@ -148,7 +148,7 @@ async function modelsLoadList() {
       </tr>`;
     }).join('');
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="4" style="padding:12px;color:var(--red)">${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" style="padding:12px;color:var(--red)">${escHtml(e.message)}</td></tr>`;
   }
 }
 
@@ -173,7 +173,7 @@ async function modelsSearchOnline() {
       </div>
     `).join('') + '</div>';
   } catch (e) {
-    results.innerHTML = `<div class="placeholder" style="color:var(--red);padding:6px">${e.message}</div>`;
+    results.innerHTML = `<div class="placeholder" style="color:var(--red);padding:6px">${escHtml(e.message)}</div>`;
   }
 }
 

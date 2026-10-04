@@ -158,7 +158,7 @@ async function dockerLoadContainers() {
     }).join('');
     _dockerRenderPresets();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:12px;color:var(--red)">${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:12px;color:var(--red)">${escHtml(e.message)}</td></tr>`;
   }
 }
 
@@ -250,7 +250,7 @@ async function dockerLoadImages() {
       </tr>`;
     }).join('');
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:12px;color:var(--red)">${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:12px;color:var(--red)">${escHtml(e.message)}</td></tr>`;
   }
 }
 
