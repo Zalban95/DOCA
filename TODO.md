@@ -61,8 +61,11 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [ ] H1.9 Run the whole panel once on macOS and record what breaks.
 
 **H2 · Settings per device** (§1)
-- [ ] H2.1 `settings-schema.js`: every key's home (device | hive | person), type, default, hint,
-  rights, proposable; forms, `SETTABLE` and rights derived; a test fails on an undeclared key.
+- [x] H2.1 (2.160.0) `settings-schema.js`: every key's home (device | hive | person), type, default, hint,
+  rights, proposable; forms, `SETTABLE` and rights derived; a test fails on an undeclared key. Done: homes (device
+  split into host and screen), travels/local, `propose` → SETTABLE, typed leaves with defaults read through `value()`
+  (computers, Telegram so far), the state map derived. **Left:** leaves for the remaining sections as they are touched,
+  per-key rights (needed when a member may change their own screen's settings, H2.2–H2.4), forms drawn from it.
 - [ ] H2.2 A browser is a device (a `browser` record on first sign-in, revocable).
 - [ ] H2.3 Layering hive → person → device; `GET /api/v1/settings/effective`.
 - [ ] H2.4 `/d/<id>/settings`: look, tabs, sidebar, voice, notifications, console, face, lent tool

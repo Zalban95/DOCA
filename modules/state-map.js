@@ -14,42 +14,11 @@
  *   mixed    both, key by key — named in `note`, so the split is written down
  *            where the next key will be added
  *
- * test/state-map.test.js fails when code reads a prefs key this map does not
- * classify, so the split cannot drift silently.
+ * test/state-map.test.js fails when code reads a prefs key the schema does not
+ * declare, so the split cannot drift silently.
  */
-const PREFS = {
-  theme:            { is: 'travels', note: 'colour theme' },
-  customTheme:      { is: 'travels', note: 'a theme the person made' },
-  skin:             { is: 'travels', note: 'the panel skin' },
-  branding:         { is: 'travels', note: 'the name and look the panel wears' },
-  hiddenTabs:       { is: 'travels', note: 'which tabs are hidden' },
-  codeExpanded:     { is: 'travels', note: 'a UI fold state' },
-  sidebarStats:     { is: 'travels', note: 'which stats the sidebar shows' },
-  sidebarSections:  { is: 'travels', note: 'which sidebar sections are open' },
-  favorites:        { is: 'travels', note: 'favourite config files, by registry id' },
-  hiddenBuiltins:   { is: 'travels', note: 'built-in config entries hidden from the list' },
-  updates:          { is: 'travels', note: 'how updates are offered' },
-  agents:           { is: 'travels', note: 'whether specialists are switched on' },
-  toolNotes:        { is: 'travels', note: 'notes added to tool descriptions (fingerprinted per tool)' },
-  mcpSettings:      { is: 'travels', note: 'MCP timeouts' },
-  channels:         { is: 'local', note: 'channel bots (Telegram): a token and a switch for this hub' },
-  computers:        { is: 'travels', note: 'limits on agents\' computers: how many run, when they stop and are removed' },
-  usagePrices:      { is: 'travels', note: 'the owner\'s price list for the usage window (harness/prices.js)' },
-  providerContracts: { is: 'mixed',  note: 'the owner\'s corrections to what a provider accepts (harness/contracts.js): about a remote provider they travel, about a server on this machine they are local' },
-  harness:          { is: 'mixed',   note: 'config (model, limits, fallback chain, prompts), the guards\' settings and approval mode travel (the guard model files are local, in the data folder); the always-allowed list names commands of this machine and is local. Provider keys are not here: they live in the data folder (keys/).' },
-  models:           { is: 'mixed',   note: 'preferences travel; models.hf.token is a secret and local, and runtime URLs name this machine' },
-  paths:            { is: 'local',   note: 'folders and URLs of this machine (paths.js SETTABLE)' },
-  fmFavorites:      { is: 'local',   note: 'favourite folders: paths of this machine' },
-  llamacpp:         { is: 'local',   note: 'binary paths and server instances' },
-  serviceSettings:  { is: 'local',   note: 'ports and URLs of services on this machine' },
-  voiceServices:    { is: 'local',   note: 'speech services on this machine or the tailnet' },
-  snapshotSettings: { is: 'local',   note: 'where snapshots of this machine go' },
-  mcpServers:       { is: 'local',   note: 'spawnable commands and URLs — never proposed, never exported' },
-  dockerPresets:    { is: 'local',   note: 'compose presets for this machine\'s Docker' },
-  backup:           { is: 'local',   note: 'the backup schedule of this machine' },
-  network:          { is: 'local',   note: 'how this machine listens' },
-  vms:              { is: 'local',   note: 'the libvirt connection URI of this machine' },
-};
+// The prefs file's keys are declared once, with their home and defaults, in settings-schema.js (TODO H2.1).
+const PREFS = Object.fromEntries(Object.entries(require('./settings-schema').SCHEMA).map(([k, d]) => [k, { is: d.is, note: d.note }]));
 
 const DATA = {
   'harness/memory.json':  { is: 'travels', note: 'what the agent knew before 2.111.0 (imported into doca.db once); memory-rules*.json stay files' },
