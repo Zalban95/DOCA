@@ -489,16 +489,16 @@ harnessApi.get('/images/:name', requireScope('harness:chat'), (req, res) => {
     sendError(res, 404, 'not_found', 'Unknown image');
 });
 
-harnessApi.get('/sessions', requireScope('harness:sessions'), (_req, res) =>
-  res.json(harness.sessions()));
+harnessApi.get('/sessions', requireScope('harness:sessions'), (req, res) =>
+  res.json(harness.sessions(req.device)));
 harnessApi.post('/sessions', requireScope('harness:sessions'), wrap(async (req, res) =>
-  res.status(201).json({ session: harness.createSession(req.body?.title) })));
+  res.status(201).json({ session: harness.createSession(req.body?.title, { device: req.device }) })));
 harnessApi.get('/sessions/:id', requireScope('harness:sessions'), wrap(async (req, res) =>
-  res.json(harness.transcript(req.params.id, { limit: req.query.limit }))));
+  res.json(harness.transcript(req.params.id, { limit: req.query.limit, device: req.device }))));
 harnessApi.post('/sessions/:id/activate', requireScope('harness:sessions'), wrap(async (req, res) =>
-  res.json({ ok: true, active: harness.activate(req.params.id) })));
+  res.json({ ok: true, active: harness.activate(req.params.id, req.device) })));
 harnessApi.delete('/sessions/:id', requireScope('harness:sessions'), wrap(async (req, res) => {
-  harness.removeSession(req.params.id);
+  harness.removeSession(req.params.id, req.device);
   res.json({ ok: true });
 }));
 

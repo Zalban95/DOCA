@@ -7,7 +7,10 @@
  *   - who: anyone holding host, or the person whose own turn asked;
  *   - "always" (this kind of call from now on): for a host, the panel's
  *     standing allowlist; for anyone else, their own approve: grant — a person
- *     without host does not set what other people's turns may do;
+ *     without host does not set what other people's turns may do. A question
+ *     asked because of the person's level is not governed by the allowlist,
+ *     so a host's "always" on it is an approve: grant to that person (the
+ *     host must be able to give it — live test 2026-10-04);
  *   - "approve all": this request and every other one waiting that the same
  *     person may answer;
  *   - a request that must be asked every time (a protected file, a re-ask
@@ -27,10 +30,20 @@ function answerAs({ id, decision, person }) {
   if (!mayAnswer(e, person)) throw bad('This request belongs to someone else\'s turn; it is theirs, or a host\'s, to answer.', 403);
   if (decision === 'approve_all') return approveAll({ person, first: id }) > 0;
   if ((decision === 'always' || decision === 'always_tool') && onceOnly(e)) throw bad('This request can only be allowed once.', 400);
-  if ((decision === 'always' || decision === 'always_tool') && !isHost(person)) {
-    for (const k of decision === 'always' ? e.req.keys : [e.req.tool])
-      require('../auth/grants').create({ subject: { kind: 'user', id: person.id }, permission: `approve:${k}`,
-        by: { kind: 'user', id: person.id, user: person.id }, note: 'their own "always" answer' });
+  const forOther = e.req.level && e.req.personId && e.req.personId !== person?.id;
+  if ((decision === 'always' || decision === 'always_tool') && (!isHost(person) || forOther)) {
+    const to = forOther ? e.req.personId : person.id;
+    const perms = (decision === 'always' ? e.req.keys : [e.req.tool]).map(k => `approve:${k}`);
+    if (forOther) {
+      const permits = require('../auth/permits');
+      for (const permission of perms) {
+        const why = permits.mayGrant({ giver: person, subject: { kind: 'user', id: to }, permission });
+        if (why) throw bad(`Not remembered: ${why}. Approve it once instead.`, 403);
+      }
+    }
+    for (const permission of perms)
+      require('../auth/grants').create({ subject: { kind: 'user', id: to }, permission,
+        by: { kind: 'user', id: person.id, user: person.id }, note: forOther ? `"always", answered by ${person.name || person.email || 'a host'}` : 'their own "always" answer' });
     return approval.decide(id, 'once');
   }
   return approval.decide(id, decision);

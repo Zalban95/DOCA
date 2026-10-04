@@ -22,11 +22,12 @@ function mount(app) {
     catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
   // The model this conversation runs on, chosen in the chat, with or without the fallback order (turn/choice.js).
+  const own = req => require('./session-access').check(req.auth && { ...req.auth.user, role: req.auth.role }, req.params.id);
   app.get('/api/harness/sessions/:id/model', (req, res) => {
-    try { res.json(require('./turn/choice').view(req.params.id)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+    try { own(req); res.json(require('./turn/choice').view(req.params.id)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
   app.post('/api/harness/sessions/:id/model', (req, res) => {
-    try { require('./turn/choice').set(req.params.id, req.body || {}); res.json(require('./turn/choice').view(req.params.id)); }
+    try { own(req); require('./turn/choice').set(req.params.id, req.body || {}); res.json(require('./turn/choice').view(req.params.id)); }
     catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
   // The owner's price list for the usage window (prices.js): read with the by-model usage, replaced here.
@@ -42,7 +43,10 @@ function mount(app) {
     res.json({ ok: true });
   });
   // How each turn of a conversation went: the one record (runs.js).
-  app.get('/api/harness/runs', (req, res) => res.json({ runs: require('./runs').forSession(String(req.query.sessionId || ''), Math.min(100, Number(req.query.limit) || 20)) }));
+  app.get('/api/harness/runs', (req, res) => {
+    try { own({ ...req, params: { id: String(req.query.sessionId || '') } }); } catch (e) { return res.status(e.status).json({ error: e.message }); }
+    res.json({ runs: require('./runs').forSession(String(req.query.sessionId || ''), Math.min(100, Number(req.query.limit) || 20)) });
+  });
   // What a restart would cut off, and whether one is waiting for it (drain.js).
   app.get('/api/harness/busy', (_req, res) => {
     const drain = require('./drain');
