@@ -341,6 +341,8 @@ async function turnPreamble({ session, profile, p }) {
   const projectBrief = await require('../../projects/brief').forSession(session.id).catch(() => '');
   // A project's conversation: a checkpoint before it changes anything, if the files changed since the last.
   if (projectBrief) await require('../../projects/checkpoints').beforeTurn(session.id);
+  // The conversation's mode (harness/modes.js), read once per turn so it never changes mid-turn.
+  const modeBlock = require('../modes').block(session.id);
   let toolNews = '';
   try {
     const news = require('./tool-news');
@@ -348,7 +350,7 @@ async function turnPreamble({ session, profile, p }) {
   } catch { /* a notice never breaks a turn */ }
   const context = await ollamaWindows(p);
   if (context) toolNews = [toolNews, context].filter(Boolean).join('\n\n');
-  return { projectBrief, toolNews };
+  return { projectBrief: [projectBrief, modeBlock].filter(Boolean).join('\n\n'), toolNews };
 }
 
 /**

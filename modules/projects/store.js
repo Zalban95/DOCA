@@ -113,6 +113,27 @@ function workChat(id) {
   return memory.getSession(s.id);
 }
 
+/**
+ * Every conversation working in this project (asked 2026-10-04: chat tabs, with sub-agents in parallel tabs):
+ * the ones bound to it, then what they started — work chats and specialists below them — oldest first.
+ */
+function chats(id, { all = false } = {}) {
+  need(id);
+  const memory = require('../harness/memory'), org = require('../harness/organization');
+  return memory.listSessions().sessions
+    .filter(s => (all || !s.archivedAt) && s.kind !== 'orchestrator' && forSession(s.id)?.id === id)
+    .map(s => ({ ...org.view(s), sub: !memory.getSession(s.id)?.projectId, running: require('../harness/agent').isRunning(s.id) }))
+    .sort((a, b) => Number(a.sub) - Number(b.sub) || String(a.updatedAt).localeCompare(String(b.updatedAt)));
+}
+
+/** A new chat in this project: a work chat bound to it, as the first one is. */
+function newChat(id, { title } = {}) {
+  const p = need(id);
+  const s = require('../harness/organization').create({ title: String(title || '').trim() || `${p.name} chat` });
+  bind(p.id, s.id);
+  return require('../harness/memory').getSession(s.id);
+}
+
 function bind(id, sessionId) {
   need(id);
   const memory = require('../harness/memory');
@@ -121,4 +142,4 @@ function bind(id, sessionId) {
   return update(id, { sessionId });
 }
 
-module.exports = { list, get, need, create, update, remove, forSession, workChat, bind };
+module.exports = { list, get, need, create, update, remove, forSession, workChat, bind, chats, newChat };

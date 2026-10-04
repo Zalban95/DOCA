@@ -58,10 +58,12 @@ function _hcBuiltinHtml(h) {
             <button class="btn btn-xs tool-gear" onclick="nav('controls'); harnessConfigToggle(${jsArg(h.id)}, true)" title="Model and parameters">⚙</button>
           </div>
         </div>
+        <div class="conv-bar hc-conv" id="hc-conv"></div>
         <div id="hc-session-info" class="hc-session-info"></div>
         <div class="hc-missions" id="hc-missions" style="display:none"></div>
         <div class="hc-messages" id="hc-messages"><div class="placeholder">Ask it anything about this machine.</div></div>
         <div class="hc-proposals" id="hc-proposals"></div>
+        <div class="agent-fold" id="hc-fold" hidden></div>
         <div class="hc-input-row">
           <span class="hc-caret">❯</span>
           <select class="input hc-to" id="hc-to" style="display:none" title="Who this message goes to: the Orchestrator, or straight to one specialist as an errand"></select>

@@ -1,51 +1,102 @@
 /* ═══════════════════════════════════════════════════════
-   Projects → the project's conversation, beside its files: the same work chat
-   the Harness tab lists (bound to this project, so it works in its root and is
-   told how it builds), drawn compactly — its words in full, its tool calls as
-   one line each. "Open in Harness" shows the whole of it there.
+   Projects → the project's conversations, beside its files, as tabs (asked
+   2026-10-04: "manage tabs like in a browser or Cursor … sub agents open in
+   parallel tabs"). Each tab is a conversation bound to the project — the work
+   chat the Harness tab lists, working in the project's root — with its own
+   mode, approval switch and model (agent-ui/conv-bar.js), its own message
+   area (so a turn running in a background tab keeps drawing in its own place),
+   and what is lined up for it folded above the composer (agent-ui/side-fold.js).
+   Tabs, their order and the sub-agents: projects/chat-tabs.js.
    ═══════════════════════════════════════════════════════ */
 
-const PJC = { sessionId: null, busy: false, turn: null };
+const PJC = { tabs: new Map(), open: [], active: null, chats: [], seen: new Set(), poll: null, fold: null };
 
 function pjChatToggle() {
   const pane = document.getElementById('pj-chat');
   const open = !pane.classList.contains('open');
   pane.classList.toggle('open', open);
   document.getElementById('pj-chat-toggle').classList.toggle('btn-teal', open);
-  if (open) pjChatLoad();
+  if (open) pjChatLoad(); else pjChatReset({ keepTurns: true });
+}
+
+/** Leaving the project (or closing the pane): polling stops; turns are stopped only when the project changes. */
+function pjChatReset({ keepTurns = false } = {}) {
+  clearInterval(PJC.poll); PJC.poll = null;
+  if (keepTurns) return;
+  for (const t of PJC.tabs.values()) t.turn?.abort();
+  PJC.tabs.clear(); PJC.open = []; PJC.active = null; PJC.chats = []; PJC.seen = new Set();
 }
 
 async function pjChatLoad() {
   const pane = document.getElementById('pj-chat');
-  pane.innerHTML = '<div class="placeholder pulse">Opening the project\'s conversation…</div>';
-  try { PJC.sessionId = (await apiFetch(`/api/projects/${encodeURIComponent(PJ.project.project.id)}/chat`, { method: 'POST' })).sessionId; }
+  pane.innerHTML = '<div class="placeholder pulse">Opening the project\'s conversations…</div>';
+  let first;
+  try { first = (await apiFetch(`/api/projects/${encodeURIComponent(PJ.project.project.id)}/chat`, { method: 'POST' })).sessionId; }
   catch (e) { pane.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; return; }
   pane.innerHTML = `
-    <div class="pj-chat-head"><span>${escHtml(PJ.project.project.name)}</span><span class="pj-spacer"></span>
-      <button class="btn btn-xs" onclick="pjChatOpenInHarness()" title="The whole conversation, in the Harness tab">↗ Harness</button></div>
-    <div class="pj-chat-model chat-model-host" id="pj-chat-model"></div>
-    <div class="pj-chat-msgs" id="pj-chat-msgs"></div>
+    <div class="pj-chat-tabs" id="pj-chat-tabs" role="tablist"></div>
+    <div class="pj-chat-bar conv-bar" id="pj-chat-bar"></div>
+    <div class="pj-chat-stack" id="pj-chat-stack"></div>
+    <div class="agent-fold" id="pj-chat-fold" hidden></div>
     <div class="pj-chat-input">
       <textarea class="input" id="pj-chat-in" rows="2" placeholder="Ask about this project, or give it a job…"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();pjChatSend()}"></textarea>
       <button class="btn btn-sm btn-teal" id="pj-chat-send" onclick="pjChatSend()">Send</button>
+      <button class="btn btn-sm btn-red" id="pj-chat-stop" onclick="pjChatStop()" style="display:none" title="Stop this tab's turn">■</button>
     </div>`;
-  chatModelPicker(document.getElementById('pj-chat-model'), PJC.sessionId);
-  let data;
-  try { data = await apiFetch(`/api/harness/sessions/${encodeURIComponent(PJC.sessionId)}`); } catch { return; }
-  const box = document.getElementById('pj-chat-msgs');
-  for (const m of (data.messages || []).slice(-60)) {
-    if (m.role === 'user' || (m.role === 'assistant' && m.content)) _pjChatRow(m.role, m.content);
-    for (const t of m.tool_calls || []) _pjChatRow('tool', t.function?.name || t.name || 'tool');
-    for (const img of m.images || []) box.appendChild(agentImageEl(img));
-  }
-  if (!box.children.length) box.innerHTML = '<div class="placeholder">This project\'s work chat. It works in the project folder and knows how the project builds and tests.</div>';
-  box.scrollTop = box.scrollHeight;
+  PJC.fold = agentSideFold(document.getElementById('pj-chat-fold'), null);
+  await pjTabsRestore(first);
+  clearInterval(PJC.poll);
+  PJC.poll = setInterval(() => pjTabsSync(), 4000);
 }
 
-function _pjChatRow(role, text) {
-  const box = document.getElementById('pj-chat-msgs');
-  box?.querySelector('.placeholder')?.remove();
+/** A tab's state: its own message area, turn and busy flag. */
+function _pjTab(id) {
+  if (PJC.tabs.has(id)) return PJC.tabs.get(id);
+  const box = document.createElement('div');
+  box.className = 'pj-chat-msgs';
+  box.hidden = true;
+  document.getElementById('pj-chat-stack')?.appendChild(box);
+  const t = { id, box, busy: false, turn: null, loaded: false };
+  PJC.tabs.set(id, t);
+  return t;
+}
+
+/** Show one tab: its messages (loaded once), its switches, its fold, its Send/Stop. */
+async function pjChatActivate(id) {
+  PJC.active = id;
+  const t = _pjTab(id);
+  for (const x of PJC.tabs.values()) x.box.hidden = x !== t;
+  pjTabsRender();
+  _pjButtons();
+  const view = PJC.chats.find(c => c.id === id) || null;
+  agentConvBar(document.getElementById('pj-chat-bar'), id, view);
+  PJC.fold?.setSession(id);
+  if (!t.loaded) {
+    t.loaded = true;
+    let data;
+    try { data = await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}`); } catch { return; }
+    for (const m of (data.messages || []).slice(-60)) {
+      if (m.role === 'user' || (m.role === 'assistant' && m.content)) _pjChatRow(m.role, m.content, t.box);
+      for (const tc of m.tool_calls || []) _pjChatRow('tool', tc.function?.name || tc.name || 'tool', t.box);
+      for (const img of m.images || []) t.box.appendChild(agentImageEl(img));
+    }
+    if (!t.box.children.length) t.box.innerHTML = `<div class="placeholder">${view?.sub
+      ? 'A sub-agent working for another tab. Writing here speaks to it directly; its parent hears about it.'
+      : 'A conversation in this project: it works in the project folder and knows how the project builds and tests.'}</div>`;
+  }
+  t.box.scrollTop = t.box.scrollHeight;
+}
+
+function _pjButtons() {
+  const t = PJC.tabs.get(PJC.active);
+  const stop = document.getElementById('pj-chat-stop');
+  if (stop) stop.style.display = t?.busy ? '' : 'none';
+}
+
+function _pjChatRow(role, text, box = PJC.tabs.get(PJC.active)?.box) {
+  if (!box) return null;
+  box.querySelector(':scope > .placeholder')?.remove();
   const row = document.createElement('div');
   row.className = `pj-msg pj-msg-${role}`;
   if (role === 'assistant') mdInto(row, text || '');
@@ -58,52 +109,53 @@ function _pjChatRow(role, text) {
 async function pjChatSend() {
   const input = document.getElementById('pj-chat-in');
   const text = input.value.trim();
-  if (!text) return;
+  const t = PJC.tabs.get(PJC.active);
+  if (!text || !t) return;
   input.value = '';
-  const row = _pjChatRow('user', text);
+  const row = _pjChatRow('user', text, t.box);
   // Working already: it waits and is read at the next step, or starts the next turn (agent-ui/queued-send.js).
-  if (PJC.busy) {
-    await agentQueuedSend('/api/harness/chat', { message: text, sessionId: PJC.sessionId }, { mark: agentQueuedTag(row),
-      startTurn: async () => { while (PJC.busy) await new Promise(r => setTimeout(r, 50)); return _pjTurnUi(); } });
+  if (t.busy) {
+    await agentQueuedSend('/api/harness/chat', { message: text, sessionId: t.id }, { mark: s => { agentQueuedTag(row)(s); PJC.fold?.refresh(); },
+      startTurn: async () => { while (t.busy) await new Promise(r => setTimeout(r, 50)); return _pjTurnUi(t); } });
+    PJC.fold?.refresh();
     return;
   }
-  const ui = _pjTurnUi();
-  await sseStream('/api/harness/chat', { message: text, sessionId: PJC.sessionId }, {
-    signal: PJC.turn.signal, onEvent: ui.onEvent, onError: ui.onError,
-  });
+  const ui = _pjTurnUi(t);
+  await sseStream('/api/harness/chat', { message: text, sessionId: t.id }, { signal: t.turn.signal, onEvent: ui.onEvent, onError: ui.onError });
   await ui.finish();
 }
 
-/** One turn drawn in the project's chat. */
-function _pjTurnUi() {
-  PJC.busy = true;
-  const send = document.getElementById('pj-chat-send');
-  send.textContent = '■'; send.onclick = pjChatStop;
-  // What each event means is decided once (agent-ui/event-sink.js); this chat draws less of it: rendered
-  // markdown as it streams, a line per tool, approvals, pictures, notes.
-  const box = document.getElementById('pj-chat-msgs');
+/** One turn drawn in its tab's own message area, whichever tab is showing. */
+function _pjTurnUi(t) {
+  t.busy = true;
+  t.turn = new AbortController();
+  if (PJC.active === t.id) _pjButtons();
+  pjTabsRender();
+  const box = t.box;
   const scroll = () => { box.scrollTop = box.scrollHeight; };
   let md = null;
   const stream = {
-    feed: t => { md ||= mdStream(_pjChatRow('assistant', '')); md.feed(t); scroll(); },
+    feed: x => { md ||= mdStream(_pjChatRow('assistant', '', box)); md.feed(x); scroll(); },
     finish: () => { md?.end(); md = null; },
   };
+  // What each event means is decided once (agent-ui/event-sink.js); this chat draws less of it.
   const sink = agentEventSink({
     stream,
-    fold: (kind, _body, name) => { if (kind === 'tool-call') _pjChatRow('tool', name); return null; },
-    note: (_kind, text) => _pjChatRow('warning', text),
+    fold: (kind, _body, name) => { if (kind === 'tool-call') _pjChatRow('tool', name, box); return null; },
+    note: (_kind, text) => _pjChatRow('warning', text, box),
     image: img => { box.appendChild(agentImageEl(img)); scroll(); },
-    approval: evt => agentApprovalEvent(evt, box, { note: text => _pjChatRow('warning', text), scroll }),
-    error: msg => _pjChatRow('error', msg),
-    userAdded: evt => _pjChatRow('user', evt.text),
+    approval: evt => agentApprovalEvent(evt, box, { note: text => _pjChatRow('warning', text, box), scroll }),
+    error: msg => _pjChatRow('error', msg, box),
+    userAdded: evt => { _pjChatRow('user', evt.text, box); if (PJC.active === t.id) PJC.fold?.refresh(); },
   });
-  PJC.turn = new AbortController();
   return {
-    onEvent: sink.onEvent, onError: sink.onError,
+    onEvent: e => { sink.onEvent(e); if (['work_plan', 'agent_dispatch', 'work_chats'].includes(e.name) && e.type === 'tool_result') pjTabsSync(); },
+    onError: sink.onError,
     finish: async () => {
       sink.finish();
-      PJC.busy = false; PJC.turn = null;
-      send.textContent = 'Send'; send.onclick = pjChatSend;
+      t.busy = false; t.turn = null;
+      if (PJC.active === t.id) { _pjButtons(); PJC.fold?.refresh(); }
+      pjTabsSync();
       // The agent may have changed files: refresh what the side shows, reload clean editors.
       pjRefresh();
       if (PJ.view === 'git' || PJ.view === 'files') pjView(PJ.view);
@@ -113,57 +165,14 @@ function _pjTurnUi() {
 }
 
 function pjChatStop() {
-  PJC.turn?.abort();
-  if (PJC.sessionId) apiFetch(`/api/harness/sessions/${encodeURIComponent(PJC.sessionId)}/stop`, { method: 'POST' }).catch(() => {});
+  const t = PJC.tabs.get(PJC.active);
+  if (!t) return;
+  t.turn?.abort();
+  apiFetch(`/api/harness/sessions/${encodeURIComponent(t.id)}/stop`, { method: 'POST' }).catch(() => {});
 }
 
 function pjChatOpenInHarness() {
+  const id = PJC.active;
   nav('harness');
-  setTimeout(() => { if (typeof hcOpenSession === 'function') hcOpenSession(PJC.sessionId); }, 300);
-}
-
-/**
- * The model a conversation runs on, and whether it may fall back — a select and
- * a toggle, used by the project's chat and the Harness console
- * (POST /api/harness/sessions/:id/model, harness/turn/choice.js). Fallback
- * follows the harness's order from the chosen model onward.
- */
-async function chatModelPicker(host, sessionId) {
-  if (!host || !sessionId) return;
-  if (host.dataset.session === sessionId && host.contains(document.activeElement)) return;   // being used: leave it open
-  host.dataset.session = sessionId;
-  let v;
-  try { v = await apiFetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/model`); } catch { host.innerHTML = ''; return; }
-  const key = e => `${e.provider}/${e.model}`;
-  const shown = e => (e.model ? key(e) : `${e.provider} · no model`);
-  const chosen = v.choice?.model ? key(v.choice) : '';
-  const opts = [`<option value="">Default · ${escHtml(shown(v.order[0]))}</option>`,
-    ...v.order.slice(1).map(e => `<option value="${escHtml(key(e))}">${escHtml(key(e))}</option>`),
-    ...(chosen && !v.order.some(e => key(e) === chosen) ? [`<option value="${escHtml(chosen)}">${escHtml(chosen)}</option>`] : []),
-    '<option value="__other">Other…</option>'];
-  host.innerHTML = `<select class="input chat-model" title="The model this conversation runs on">${opts.join('')}</select>
-    <label class="chat-fallback" title="${escHtml(v.effective.fallback.length ? `Then: ${v.effective.fallback.join(' → ')}` : 'No fallback: the chosen model alone')}">
-      <input type="checkbox" ${v.choice?.fallback === false ? '' : 'checked'}> fallback</label>`;
-  const sel = host.querySelector('select'), box = host.querySelector('input');
-  sel.value = chosen;
-  const save = async (provider, model) => {
-    try { await apiFetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/model`, { method: 'POST', body: { provider, model, fallback: box.checked } }); }
-    catch (e) { appAlert(e.message); }
-    chatModelPicker(host, sessionId);
-    if (typeof _hcStatus === 'function' && typeof _hcSession !== 'undefined' && _hcSession === sessionId) _hcStatus();
-  };
-  const split = val => { const i = val.indexOf('/'); return [val.slice(0, i), val.slice(i + 1)]; };
-  sel.onchange = () => {
-    if (sel.value === '__other') {
-      sel.value = chosen;
-      return appPrompt('Model for this conversation, as provider/model (e.g. openai/gpt-5.1):', val => {
-        const [pr, m] = split(val);
-        if (!pr || !m) return appAlert('Write it as provider/model.');
-        save(pr, m);
-      }, chosen || `${v.order[0].provider}/`);
-    }
-    const [pr, m] = sel.value ? split(sel.value) : ['', ''];
-    save(pr, m);
-  };
-  box.onchange = () => { const [pr, m] = sel.value ? split(sel.value) : ['', '']; save(pr, m); };
+  setTimeout(() => { if (typeof hcOpenSession === 'function') hcOpenSession(id); }, 300);
 }

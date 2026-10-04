@@ -101,7 +101,8 @@ async function hcSend() {
   const row = _hcAppend('user', text);
   // Working already: the message waits and is read at its next step, or starts the next turn (agent-ui/queued-send.js).
   if (_hcBusy) {
-    const mark = agentQueuedTag(row?.parentElement || row);
+    const tag = agentQueuedTag(row?.parentElement || row);
+    const mark = (s, d) => { tag(s, d); window._hcFold?.refresh(); };
     await agentQueuedSend('/api/harness/chat', { message: text, sessionId: _hcSession }, {
       mark, startTurn: async () => { while (_hcBusy) await new Promise(r => setTimeout(r, 50)); return _hcTurnUi(); },
     });
@@ -172,6 +173,7 @@ function _hcTurnUi() {
       _hcLoadMemory();
       _hcLoadProposals();
       _hcLoadUsage();
+      window._hcFold?.refresh();
       input?.focus();
     },
   };

@@ -337,3 +337,23 @@ body.harness-tab .chat-fab { display: none; }
 /* A message written while the agent works: queued, then read (agent-ui/queued-send.js). */
 .agent-queued-tag { font-size: 10px; color: var(--muted); margin-top: 3px; text-align: right; }
 .agent-queued-tag[data-state="read"] { color: var(--green); }
+/* A conversation's switches (agent-ui/conv-bar.js) and what is lined up for it (agent-ui/side-fold.js). */
+.conv-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.conv-bar select.input { font-size: 11px; padding: 3px 6px; width: auto; }
+.conv-bar .conv-model { display: flex; gap: 6px; align-items: center; flex: 1; min-width: 160px; }
+.conv-bar .conv-model .chat-model { flex: 1; max-width: none; }
+.no-host .host-only { display: none; }
+.agent-fold { border-top: 1px solid var(--border); background: var(--bg); font-size: 11px; align-self: stretch; width: 100%; box-sizing: border-box; flex-shrink: 0; }
+.agent-fold[hidden], .agent-fold-body[hidden] { display: none; }
+.agent-fold-head { width: 100%; text-align: left; background: none; border: 0; color: var(--muted); padding: 5px 10px; cursor: pointer; font: inherit; }
+.agent-fold-head:hover { color: var(--text); }
+.agent-fold-body { padding: 0 10px 8px; max-height: 180px; overflow: auto; display: flex; flex-direction: column; gap: 4px; }
+.agent-fold-q { display: flex; gap: 6px; align-items: flex-start; justify-content: space-between; color: var(--text); }
+.agent-fold-q span { white-space: pre-wrap; word-break: break-word; }
+.agent-fold-title { color: var(--bright); margin: 4px 0 2px; }
+.agent-fold-step { color: var(--muted); padding-left: 2px; }
+.agent-fold-step[data-state="done"] { color: var(--green); }
+.agent-fold-step[data-state="running"] { color: var(--amber); }
+.agent-fold-step[data-state="blocked"] { color: var(--red); }
+.hc-conv { padding: 4px 12px; border-bottom: 1px solid var(--border); }
+.hc-conv:empty { display: none; }

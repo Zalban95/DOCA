@@ -110,7 +110,10 @@ function view(row) {
     provider: s.profile?.provider || p.provider, model: s.profile?.model || p.model,
     plan: s.plan || null, unread: (s.reports || []).filter(n => !n.readAt).length,
     job: s.job ? { state: s.job.state, since: s.job.since, autoTurns: s.job.autoTurns || 0 } : null,
-    missionId: require('../agents/missions').forSession(s.id)?.id || null };
+    missionId: require('../agents/missions').forSession(s.id)?.id || null,
+    // What a chat tab draws (tab-routes.js): how it works, whether it asks, and what is waiting for it.
+    mode: require('./modes').of(s.id), approval: s.approval || null, projectId: s.projectId || null,
+    waiting: require('./inbox').waiting(s.id).length };
 }
 
 /**
@@ -190,6 +193,7 @@ function carryOut(id, plan, client) {
   const s = session(id);
   const agent = require('./agent');
   const busy = agent.isRunning(id) && !agent.isAuto(id);
+  if (s.mode === 'plan') require('./modes').set(id, 'agent');   // the go-ahead: Plan mode becomes Agent mode
   if (s.kind === 'work' && !busy) memory.updateSession(id, { job: { state: 'working', since: new Date().toISOString(), autoTurns: 0, idleTurns: 0 } });
   // Busy with a turn of its own: the approval waits in its inbox and is read before its next step (inbox.js).
   const r = agent.send({ sessionId: id, client, message: `Approved revision ${plan.revision} of "${short(plan.title, 200)}" — go ahead and carry it out. `

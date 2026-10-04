@@ -46,6 +46,8 @@ audit's fixes (2.137.1 security, 2.137.2 robustness, 2.137.3 front end).
   news reaches only their people's devices since 2.147.0 (session-access.js). (A member's
   calls are asked whatever the mode since 2.139: the `ask` level — settled.)
 
+**Built 2026-10-04 (2.149.0) — chat tabs in Projects**: several conversations per project as tabs, sub-agents opening beside the tab that started them, a mode per conversation (Agent · Plan · Ask · Debug, Plan and Ask enforced), its own Auto/Manual approval (host) and model, and the queue and plan folded above the composer — in the console too. *Not yet:* tabs in the Harness console itself (it has the conversation list), and Ask/Plan on the phone and watch.
+
 **Portal (added 2026-10-04)**: DocaMobile/DocaWear: a message sent while the agent works is now `202 {queued: true}` instead of `409 turn_in_flight` (hub 2.148.0) — check nothing waits for a 409 before sending, and optionally show "queued". DocaWear/DocaMobile render the new approval option ids
 `always` and `approve_all` (they are ordinary options; check nothing assumes exactly three);
 DocaMobile/DocaWear read `quiet`; run the Windows paths

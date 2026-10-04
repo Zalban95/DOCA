@@ -31,6 +31,11 @@ async function _hcStatus() {
   _hcLoadUsage();
   const badge = document.getElementById('hc-model-badge');
   chatModelPicker(document.getElementById('hc-model-pick'), sessionId);
+  // Its mode and approval switch, and what is lined up for it (agent-ui/conv-bar.js, side-fold.js).
+  agentConvBar(document.getElementById('hc-conv'), sessionId, null, { model: false });
+  const fold = document.getElementById('hc-fold');
+  if (fold && (!window._hcFold || window._hcFold.host !== fold)) window._hcFold = { host: fold, ...agentSideFold(fold, sessionId) };
+  else window._hcFold?.setSession(sessionId);
   const st    = document.getElementById('hc-status');
   try {
     const s = await apiFetch(`/api/harness/status${sessionId ? '?sessionId=' + encodeURIComponent(sessionId) : ''}`);

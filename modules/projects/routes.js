@@ -118,6 +118,9 @@ function mount(app) {
 
   // The project's conversation: its bound work chat, made on first use.
   app.post('/api/projects/:id/chat', h(req => ({ sessionId: projects.workChat(req.params.id).id })));
+  // Its chat tabs: every conversation working here, sub-agents included, and a new one.
+  app.get('/api/projects/:id/chats', h(req => ({ chats: projects.chats(req.params.id, { all: req.query.all === '1' }) })));
+  app.post('/api/projects/:id/chats', h(req => ({ chat: projects.newChat(req.params.id, req.body || {}) })));
 }
 
 module.exports = { mount, detail };

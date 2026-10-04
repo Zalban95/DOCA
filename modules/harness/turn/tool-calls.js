@@ -38,12 +38,13 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     // `tools.call` because this is where `say()` is — the question has to
     // reach the transcript the user is looking at — and because it must cover
     // MCP tools, which `tools.call` dispatches before it sees a definition.
-    let refused = null;
+    // The conversation's mode first (harness/modes.js): Plan and Ask run nothing that changes anything.
+    let refused = args._raw === undefined ? require('../modes').refusal(session.id, tc) : null;
     // The person's level first (auth/permits.js): what it does not allow, and no grant covers, is refused
     // with who could grant it; a level that asks forces the question below.
     const missionId = isMission ? require('../../agents/missions').forSession(session.id)?.id : null;
     const permit = args._raw === undefined ? require('../../auth/permits').tool({ person: client?.user, profile, missionId, sessionId: session.id, name, args }) : { allowed: true };
-    if (!permit.allowed) refused = `Refused: ${permit.why}. An admin, or someone holding delegate, can grant it in Settings → Users`
+    if (!permit.allowed && refused === null) refused = `Refused: ${permit.why}. An admin, or someone holding delegate, can grant it in Settings → Users`
       + `${isMission ? '; the agent that dispatched this mission can grant it for the mission with permission_grant' : ''}.`;
     const gate = args._raw === undefined && refused === null ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission, forceAsk: permit.ask }) : null;
     if (gate) {

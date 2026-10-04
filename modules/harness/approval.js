@@ -162,7 +162,8 @@ function gate(name, args, ctx = {}) {
   const cp = require('./control-plane').target(name, args, ctx);
   if (cp) return { tool: name, keys: null, forced: true,
     summary: `${cp.path} — ${cp.what}. Writing it always asks you first, whatever the approval mode.` };
-  const { mode, always, recheckOutside } = settings();
+  const { mode: panelMode, always, recheckOutside } = settings();
+  const mode = require('./modes').approvalMode(ctx.sessionId, panelMode);   // a chat tab's own Auto/Manual
   // Outside text entered this turn (harness/untrusted.js): the first call after it that does something
   // is asked about again, once, even when allowed. Not in Unattended mode or a mission: nobody would answer.
   if (recheckOutside && mode !== 'unattended' && !ctx.mission && !FREE.has(name) && !require('./tools').isRead(name, args)) {
