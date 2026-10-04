@@ -22,6 +22,7 @@ function mount(app) {
   });
   app.post('/api/computers/:id/start', h(req => computers.start(req.params.id)));
   app.post('/api/computers/:id/stop', h(req => computers.stop(req.params.id)));
+  app.post('/api/computers/:id/pin', h(req => computers.pin(req.params.id, req.body?.pinned !== false)));   // a person's call, never the agent's
   app.delete('/api/computers/:id', h(req => computers.remove(req.params.id)));
   app.get('/computers/:id/vnc/*', require('./vnc').page);   // its screen, through the hub (vnc.js)
 }

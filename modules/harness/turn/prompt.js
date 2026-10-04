@@ -92,9 +92,9 @@ function rulesBlock() {
  * which the user does own — follows it, then the facts, then what the agent
  * knows, then where this conversation had got to.
  */
-function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile, projectBrief = '' }) {
+function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile, projectBrief = '', sessionId = null }) {
   // What this turn is offered, described (turn/tools-section.js).
-  const toolList = require('./tools-section').toolsSection(tools.schemas(disabledFor(profile, p)));
+  const toolList = require('./tools-section').toolsSection(tools.schemas(disabledFor(profile, p, sessionId)));
   const identity = require('../identity');
   if (profile?.level === 'orchestrator') return [
     providers.SAFETY_CHARTER, profile.systemPrompt, identity.personaBlock(), identity.humanBlock(), require('../skills').manifestBlock(),
@@ -203,6 +203,17 @@ const ALWAYS_FOR_SPECIALISTS = ['mission_plan', 'work_chats', 'work_plan'];
 const COMES_WITH = { repo_rules: ['write_file'] };
 
 /**
+ * Every computer's tools but this conversation's own (TODO H7.2d): sixteen tools a computer, and a
+ * conversation works in at most the ones it was given. A specialist holds the one its mission was lent
+ * (agent_dispatch computer:); a work chat the ones it made; the Orchestrator none — it hands the work on.
+ */
+function othersComputers(all, profile, sessionId) {
+  const mine = new Set(profile?.computer ? [profile.computer]
+    : sessionId && profile?.level !== 'orchestrator' ? require('../../computers').madeBy(sessionId) : []);
+  return all.filter(n => { const m = /^mcp__computer-([a-f0-9]+)__/.exec(n); return m && !mine.has(m[1]); });
+}
+
+/**
  * Which tools are off for this turn — one implementation, because there were
  * two and a fix belongs in both.
  *
@@ -211,22 +222,21 @@ const COMES_WITH = { repo_rules: ['write_file'] };
  * the model gets would have disagreed about a tool. The whole point of
  * `preview()` is that it is what the tests assert against.
  */
-function disabledFor(profile, p) {
+function disabledFor(profile, p, sessionId = null) {
   const own = Array.isArray(p.disabledTools) ? p.disabledTools : [];
   // The airlock (docs/design/airlock.md): while specialists are on, only an airlock definition reads the web.
   const registry = require('../../agents/registry');
   const off = profile?.airlock || !registry.enabled() ? own : [...new Set([...own, ...registry.AIRLOCK_ONLY])];
   // No profile (a work chat): every tool, minus the owner's switches and the airlock's. The
   // Orchestrator's profile holds every kit, so it lands in the same place.
-  if (!profile || (!Array.isArray(profile.tools) && !profile.kits)) return off;
   const all = tools.describe().map(t => t.name);
+  const notMine = othersComputers(all, profile, sessionId);
+  if (!profile || (!Array.isArray(profile.tools) && !profile.kits)) return [...new Set([...off, ...notMine])];
   // By agent type: its kits (harness/kits.js) plus single tools. A tool added
   // to a kit later reaches every type holding the kit.
   const held = new Set(require('../kits').expand({ kits: profile.kits || [], add: profile.tools || [] }, all));
   for (const [n, withTools] of Object.entries(COMES_WITH)) if (withTools.some(t => held.has(t))) held.add(n);
-  // A specialist holds only the computer its mission was given (agent_dispatch computer:), not every one running.
-  if (profile.level !== 'orchestrator')
-    for (const n of [...held]) if (/^mcp__computer-/.test(n) && !(profile.computer && n.startsWith(`mcp__computer-${profile.computer}__`))) held.delete(n);
+  for (const n of notMine) held.delete(n);
   if (profile.level !== 'orchestrator') {
     for (const n of ALWAYS_FOR_SPECIALISTS) held.add(n);
     // Granted beyond its definition, to its type or its mission (auth/permits.js) — before NEVER, which still wins.
@@ -349,7 +359,7 @@ async function turnPreamble({ session, profile, p }) {
   let toolNews = '';
   try {
     const news = require('./tool-news');
-    toolNews = news.news(news.typeOf(require('../organization').session(session.id), profile), tools.schemas(disabledFor(profile, p)));
+    toolNews = news.news(news.typeOf(require('../organization').session(session.id), profile), tools.schemas(disabledFor(profile, p, session.id)));
   } catch { /* a notice never breaks a turn */ }
   const context = await ollamaWindows(p);
   if (context) toolNews = [toolNews, context].filter(Boolean).join('\n\n');

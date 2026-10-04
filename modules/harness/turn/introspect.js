@@ -20,8 +20,8 @@ const { toApiMessages } = require('./messages');
 function preview({ message = '', client = null, profile = null, sessionId = null } = {}) {
   if (sessionId) profile = require('../organization').profileFor(require('../organization').session(sessionId));
   const p = turnParams(profile);
-  const disabled = disabledFor(profile, p);
-  return systemPrompt({
+  const disabled = disabledFor(profile, p, sessionId);
+  return systemPrompt({ sessionId,
     p, userText: message, summary: '', client, profile,
     toolCount: tools.schemas(disabled).length, disabledCount: disabled.length,
   });
@@ -46,7 +46,7 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
   const session = sessionId ? org.session(sessionId) : null;
   const profile = session ? org.profileFor(session) : null;
   const p = turnParams(profile);
-  const disabled = disabledFor(profile, p);
+  const disabled = disabledFor(profile, p, sessionId);
   const schemas  = tools.schemas(disabled);
 
   const measure = (name, text, note) => ({
@@ -61,7 +61,7 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
   const missionsBlock = missionsFor(sessionId);
 
   const sections = profile ? [
-    measure('conversation prompt', systemPrompt({ p, userText: message, summary: session.summary, client, profile,
+    measure('conversation prompt', systemPrompt({ p, userText: message, summary: session.summary, client, profile, sessionId,
       toolCount: schemas.length, disabledCount: disabled.length }), `${session.kind} profile; includes the safety charter`),
     measure('organization', org.block(session.id, org.notices(session.id).slice(0, 10)), 'briefs and unread reports, after history'),
     measure('missions', missionsBlock, 'paused and finished missions, after history'),

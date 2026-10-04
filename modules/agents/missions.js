@@ -206,6 +206,7 @@ function setPlan(id, { set, tick } = {}) {
  */
 function announce(row, { ephemeral = false } = {}) {
   if (!row) return;
+  if (!ephemeral && row.state !== 'running') require('../computers/lifecycle').missionEnded(row.id);   // its computer stops (H13.2)
   try {
     const devices = require('../api-v1/devices');
     const bus     = require('../api-v1/bus');
@@ -216,9 +217,8 @@ function announce(row, { ephemeral = false } = {}) {
       startedAt: row.startedAt, endedAt: row.endedAt,
       result: row.result ? String(row.result).slice(0, 600) : undefined,
       error: row.error || undefined,
-      // Sent whenever there is one, so a client that has never seen this
-      // mission can still draw the bar from a single event. A client without a
-      // plan falls back to the step count, exactly as before.
+      // Sent whenever there is one, so a client that has never seen this mission can still draw the bar
+      // from a single event. A client without a plan falls back to the step count, exactly as before.
       plan: Array.isArray(row.plan) && row.plan.length ? row.plan : undefined,
       // So a client that is showing this mission takes it off the list when it
       // is put away here, rather than keeping a row the panel no longer draws.

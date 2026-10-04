@@ -8,11 +8,13 @@
 module.exports = [
   {
     name: 'computer',
-    description: 'Computers for missions: a Linux desktop in a container, with a shell, files, a screen, a real Chromium '
-      + 'and screen recording — a real environment where a risky thing can be tried, a site used as a person would, or a demo '
-      + 'recorded, without touching this machine. create returns an id; pass it as computer: to agent_dispatch (the tester is '
-      + 'made for this). list shows them; stop keeps its files, remove deletes it with its files. A person can watch or take '
-      + 'over through the VNC link the list gives.',
+    description: 'Make a computer whenever the work needs a real environment: testing something risky, using a site as a person '
+      + 'would, building or running what should not touch this machine, or recording a demo. A computer is a Linux desktop in a '
+      + 'container with a shell, files, a screen, a real Chromium and screen recording. create returns an id: its tools '
+      + '(mcp__computer-<id>__*) are yours from your next step, or pass it as computer: to agent_dispatch (the tester is made for '
+      + 'this). It stops by itself a few minutes after the mission it was lent to ends, and one you made is removed some days after '
+      + 'it stopped unless a person pins it; stop it yourself when you are done with it. list shows them; stop keeps its files, '
+      + 'remove deletes it with its files. A person watches or takes over from the Computers tab.',
     parameters: {
       type: 'object',
       properties: {
@@ -25,11 +27,11 @@ module.exports = [
     },
     run: async ({ action, id, name, purpose }, ctx = {}) => {
       const computers = require('../../computers');
-      const line = c => `- ${c.id} "${c.name}" ${c.state || ''}${c.purpose ? ` — ${c.purpose}` : ''}; tools ${c.tools}; watch: ${c.vnc.url} (password ${c.vnc.password})`;
+      const line = c => `- ${c.id} "${c.name}" ${c.state || ''}${c.pinned ? ' pinned' : ''}${c.purpose ? ` — ${c.purpose}` : ''}; tools ${c.tools}`;
       if (action === 'list') { const l = await computers.list(); return l.length ? l.map(line).join('\n') : 'No computers. create makes one.'; }
       if (action === 'create') {
-        const c = await computers.create({ name, purpose, by: ctx.sessionId || null });
-        return `Computer ${c.id} "${c.name}" is up. Send a specialist to it with agent_dispatch { agent: "tester", computer: "${c.id}", task: … }.\n${line(c)}`;
+        const c = await computers.create({ name, purpose, by: ctx.sessionId || null, auto: true });
+        return `Computer ${c.id} "${c.name}" is up. Its tools (mcp__computer-${c.id}__*) are yours from your next step; or send a specialist with agent_dispatch { agent: "tester", computer: "${c.id}", task: … }.\n${line(c)}`;
       }
       if (!id) return 'Error: say which computer (id).';
       if (action === 'start') return `Started.\n${line(await computers.start(id))}`;

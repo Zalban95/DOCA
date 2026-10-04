@@ -41,6 +41,7 @@ const SETTABLE = [
   { prefix: 'serviceSettings',  label: 'Inference services',   note: 'GPU assignment, ports, images' },
   { prefix: 'voiceServices',    label: 'Voice services',       note: '' },
   { prefix: 'vms',              label: 'Virtual machines',     note: 'The libvirt connection URI' },
+  { prefix: 'computers',        label: 'Agents\' computers',    note: 'How many run at once, when they stop and when they are removed' },
   // Numbers only, and deliberately a different key from `mcpServers`, which
   // holds commands this host spawns and stays out of reach. `sectionFor` matches
   // a whole prefix, so "mcpSettings" can never open the door to "mcpServers".
@@ -206,6 +207,11 @@ function readable() {
   // to prefs until somebody changes one, and a setting the agent cannot see is a
   // setting it will never propose — which is how the MCP call timeout spent this
   // long being a number nobody could reach.
+  const lc = require('../computers/lifecycle');
+  for (const [k, detail] of [['maxRunning', 'How many agents\' computers may run at once.'], ['idleStopMinutes', 'Minutes after its mission ends that a computer stops (its files stay).'],
+    ['retainHours', 'Hours a stopped computer an agent made is kept before it is removed with its files; a pinned one is kept.']])
+    out.push({ path: `computers.${k}`, value: lc.limit(k), section: 'Agents\' computers', detail });
+
   try {
     const { McpClient } = require('../mcp/client');
     out.push(
