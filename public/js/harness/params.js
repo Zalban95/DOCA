@@ -30,6 +30,7 @@ async function harnessConfigToggle(id, keepOpen) {
   _harnessFallbacksMount(id, h.config.fallbackChain);
   _harnessEscalateMount(id, h.config.escalateTo);
   harnessOllamaHint(id);   // the context Ollama really serves (harness/ollama-hint.js)
+  harnessContextFind(id, { onlyIfUnknown: true });   // what the server reports, offered (harness/context-find.js)
   _harnessFoldHint(id, h.foldWarning);
 }
 
