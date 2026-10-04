@@ -88,7 +88,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [ ] H4.6 A registry to publish and fetch packs. [X]
 
 **H5 · Browser control** (§3.1)
-- [ ] H5.1 Playwright MCP in the services/MCP catalogue (the quick path).
+- [x] H5.1 (2.158.0) Playwright MCP in the services/MCP catalogue (the quick path) — with Chrome DevTools, an `mcp`
+  install kind for the agent's proposals, and npx-launched servers fixed on Windows on the way. Checked live: the
+  agent's tool layer opened a page and read its snapshot.
 - [ ] H5.2 The agent's own Chromium over CDP: navigate, accessibility snapshot, click/type by ref,
   screenshot, tabs, downloads; a profile per agent. [OS] Chrome/Edge/Chromium on all three.
 - [ ] H5.3 Live view in the panel (CDP screencast) with take-over and hand-back.
