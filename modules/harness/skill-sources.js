@@ -121,4 +121,41 @@ function importSource(id, { names = [], overwrite = false, project } = {}) {
   return out;
 }
 
-module.exports = { detect, importSource, sources, fromMarkdown, fromToml, slug };
+/**
+ * One search over every skill this machine has: DOCA's own (shipped and made
+ * here) and every other harness's, imported or not (asked 2026-10-04). Words
+ * score by where they hit — name, then description, then body — and a result
+ * says where it lives, whether it is in DOCA yet, and a line of context.
+ */
+function search(q, { project, limit = 30 } = {}) {
+  const words = String(q || '').toLowerCase().split(/\s+/).filter(w => w.length > 1);
+  if (!words.length) return [];
+  const score = (name, desc, body) => words.reduce((n, w) => n
+    + (name.toLowerCase().includes(w) ? 5 : 0) + (desc.toLowerCase().includes(w) ? 3 : 0) + (body.toLowerCase().includes(w) ? 1 : 0), 0);
+  const snippet = body => {
+    const lower = body.toLowerCase();
+    const at = words.map(w => lower.indexOf(w)).filter(i => i >= 0).sort((a, b) => a - b)[0];
+    return at === undefined ? '' : body.slice(Math.max(0, at - 60), at + 100).replace(/\s+/g, ' ').trim();
+  };
+  const bodyOf = dir => { try { return split(fs.readFileSync(path.join(dir, 'SKILL.md'), 'utf8')).body || ''; } catch { return ''; } };
+  const out = [];
+  for (const s of require('./skills').list()) {
+    const body = bodyOf(s.dir);
+    const n = score(s.name, s.description, body);
+    if (n) out.push({ name: s.name, description: s.description, where: s.source === 'shipped' ? 'DOCA (shipped)' : 'DOCA (this machine)',
+      source: 'doca', inDoca: true, harness: s.harness || null, score: n, snippet: snippet(body) });
+  }
+  const have = new Set(require('./skills').list().map(s => s.name));
+  for (const src of sources({ project })) {
+    let items = [];
+    try { items = src.items(); } catch { continue; }
+    for (const i of items) {
+      const body = i.body ?? bodyOf(i.dir);
+      const n = score(i.name, i.description || '', body);
+      if (n) out.push({ name: i.name, description: i.description, where: src.label, source: src.id, inDoca: have.has(i.name), score: n, snippet: snippet(body) });
+    }
+  }
+  return out.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, limit);
+}
+
+module.exports = { detect, importSource, search, sources, fromMarkdown, fromToml, slug };

@@ -74,6 +74,9 @@ function mount(app) {
     if (!require('../utils').fmSafe(dir) || !fs.existsSync(dir)) throw Object.assign(new Error(`${dir} is not a folder the panel may read.`), { status: 400 });
     return dir;
   };
+  app.get('/api/harness/skills/search', (req, res) => {
+    try { res.json({ results: require('../harness/skill-sources').search(req.query.q, { project: projectOf(req.query.project) }) }); } catch (e) { fail(res, e); }
+  });
   app.get('/api/harness/skills/sources', (req, res) => {
     try { res.json({ sources: require('../harness/skill-sources').detect({ project: projectOf(req.query.project) }) }); } catch (e) { fail(res, e); }
   });

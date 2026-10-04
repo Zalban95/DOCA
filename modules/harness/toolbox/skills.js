@@ -33,11 +33,13 @@ module.exports = [
     description: 'Load a skill — a procedure for a kind of task — when the task matches one in the Skills list of your '
       + 'prompt: read returns its instructions and the files beside them, file one of those files, list them all. '
       + 'write keeps a procedure you worked out, on this machine, for the next time: steps, commands, what to check — '
-      + 'never a person\'s or a client\'s data.',
+      + 'never a person\'s or a client\'s data. search looks through every skill on this machine, other harnesses\' too, '
+      + 'when none in your list fits.',
     parameters: {
       type: 'object',
       properties: {
-        action:      { type: 'string', enum: ['list', 'read', 'file', 'write'] },
+        action:      { type: 'string', enum: ['list', 'read', 'file', 'write', 'search'] },
+        query:       { type: 'string', description: 'For search: words to look for in every skill on this machine — DOCA\'s and other harnesses\' (Claude Code, Codex, Gemini CLI).' },
         name:        { type: 'string' },
         path:        { type: 'string', description: 'For file: a path inside the skill, as read lists it.' },
         description: { type: 'string', description: 'For write: when to use it, in one line.' },
@@ -52,7 +54,12 @@ module.exports = [
         case 'read': { const s = skills.read(a.name); return `# ${s.name}\n${s.body}${s.files.length ? `\n\nFiles beside it (skill action file): ${s.files.join(', ')}` : ''}`; }
         case 'file': return skills.file(a.name, a.path).text;
         case 'write': { const s = skills.write(a.name, a); return `Skill ${s.name} kept on this machine; it is in the Skills list from the next turn.`; }
-        default: throw new Error('action is list, read, file or write.');
+        case 'search': {
+          const hits = require('../skill-sources').search(a.query);
+          return hits.length ? hits.map(h => `${h.name} — ${h.where}${h.inDoca ? '' : ' (not in DOCA: the user can import it in Settings → Harness → Skills)'}: ${h.description}`).join('\n')
+            : `No skill on this machine mentions "${a.query}".`;
+        }
+        default: throw new Error('action is list, read, file, write or search.');
       }
     },
   },
