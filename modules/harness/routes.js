@@ -175,8 +175,13 @@ const handleSessionArchive = wrap(async (req, res) =>
   res.json({ session: organization.archive(req.params.id, req.body?.on !== false) }));
 const handleSessionStop = wrap(async (req, res) =>
   res.json({ stopped: agent.cancel(req.params.id) }));
-const handlePlan = wrap(async (req, res) =>
-  res.json({ plan: organization.plan(req.params.id, req.body || {}, { user: true }) }));
+const handlePlan = wrap(async (req, res) => {
+  const plan = organization.plan(req.params.id, req.body || {}, { user: true });
+  // Approve is the go-ahead: the work starts (organization.carryOut).
+  const started = req.body?.action === 'approve'
+    ? organization.carryOut(req.params.id, plan, require('./turn/client').dashboardClient(req)) : undefined;
+  res.json({ plan, ...(started ? { started } : {}) });
+});
 
 const handleSessionActivate = wrap(async (req, res) =>
   res.json({ ok: true, active: memory.setActive(req.params.id) }));

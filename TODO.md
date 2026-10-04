@@ -118,9 +118,12 @@ through `work_plan` propose (the window from 2.118.0); ask only what cannot be
 checked, at most three numbered questions in the chat, one at a time on a
 device; keep an approved plan's progress true and propose a revision when the
 work drifts. A task from the Orchestrator or a mission already has its go-ahead.
-Costs ~450 prompt tokens per step. **Open, for Al:** approving a plan still only
-records the decision (decided 2026-09-26); with these rules, should Approve also
-start the work, as "carry it out" sent to the conversation that proposed it?
+Costs ~450 prompt tokens per step. **Decided with Al 2026-10-04 and built in
+2.126.0:** Approve starts the work — `organization.carryOut()` sends "carry it
+out" to the conversation that proposed the plan, as the person who clicked; a
+conversation busy with its own turn is not interrupted (it reads the approval),
+and a work chat gets a fresh job. This replaces "approval records a decision,
+never launches work" (2026-09-26).
 
 **Approved 2026-09-27 — devices as hands** (`docs/design/devices-as-hands.md`). **Built so far (2.112.0):** device actions (`device.control`: refresh, reconnect, ask, disconnect, revoke/restore a family — reconnect and disconnect also enforced by DOCA itself), grants reported by the device (`PUT /api/v1/devices/self/grants`), the device's page `/d/<id>/` (only its own session or its owner) with a "This device" card, and the same controls on every device in Settings → API Keys → Devices; PROTOCOL §22.1. **2.113.0:** trust origins (a paired device's own MCP tools are not "outside"; forwarded `<server>__<tool>` ones are), and the Files tab's **machine selector** browsing a device through its `files_*` tools (`device-files.js`, tested against a stand-in device). **Next:** Projects on a client (needs the device's `shell` family), and checkpoints of client folders — both need DocaDesk's side, on portal.
 - Paired devices extend the harness's reach: the same tool families as the host

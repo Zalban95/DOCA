@@ -29,7 +29,7 @@ module.exports = [
       + 'Draft needs title and steps, and replaces the current revision (requiring fresh approval). '
       + 'Propose opens it in a window in front of the user, with Approve and Reject, and offers it on their phone; '
       + 'you cannot approve it, so end your turn after proposing and wait for their decision. '
-      + 'Approval records a decision, never launches work. Progress marks a numbered step without changing the approved scope. '
+      + 'Their approval starts the work here, with a message telling you to carry it out. Progress marks a numbered step without changing the approved scope. '
       + 'Use mission_plan for specialist mission progress.',
     parameters: { type: 'object', properties: {
       action: { type: 'string', enum: ['read', 'draft', 'propose', 'progress'] }, sessionId: { type: 'string' },
@@ -45,7 +45,7 @@ module.exports = [
       // A proposal is a question to a person, so it goes where people look (plan-doc.js).
       const shown = require('../plan-doc').show(id, plan, ctx);
       return JSON.stringify({ ...plan, shown: shown
-        ? 'Opened in front of the user as a window with Approve and Reject. Do not start the work until they approve; end this turn and say in one line what you are waiting for.'
+        ? 'Opened in front of the user as a window with Approve and Reject. Do not start the work until they approve — their approval arrives here as a message to carry it out; end this turn and say in one line what you are waiting for.'
         : 'Recorded; the user sees it in the Harness tab.' });
     },
   },

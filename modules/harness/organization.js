@@ -176,6 +176,26 @@ function start(id, message, from) {
   return { sessionId: id, state: 'running' };
 }
 
+/**
+ * Approving a plan is the go-ahead, and starts the work (decided with Al
+ * 2026-10-04, replacing "approval records a decision, never launches work"
+ * from 2026-09-26): the conversation that proposed it is sent "carry it out"
+ * as the person who clicked. A conversation already busy with a turn of its
+ * own is not interrupted — it reads the approval in its readings — and a work
+ * chat gets a fresh job, as any new task does.
+ */
+function carryOut(id, plan, client) {
+  const s = session(id);
+  const agent = require('./agent');
+  if (agent.isRunning(id) && !agent.isAuto(id))
+    return { started: false, reason: 'That conversation is busy with a turn; it sees the approval and carries on from there.' };
+  if (s.kind === 'work') memory.updateSession(id, { job: { state: 'working', since: new Date().toISOString(), autoTurns: 0, idleTurns: 0 } });
+  agent.turn({ sessionId: id, client, message: `Approved revision ${plan.revision} of "${short(plan.title, 200)}" — go ahead and carry it out. `
+    + 'Mark each step with work_plan progress as you go, and propose a revision if the work turns out different from the plan. '
+    + '(Sent by the panel when I clicked Approve.)' }).catch(() => { /* the runner records failure and reports it upward */ });
+  return { started: true };
+}
+
 function archive(id, on = true) {
   if (id === memory.mainSession().id) throw error('The current Orchestrator stays available. Clear main chat to archive it.');
   if (require('./agent').isRunning(id) || memory.listSessions().sessions.some(s =>
@@ -234,7 +254,7 @@ function profileFor(s) {
       + 'level-3 specialists with narrow skills. Do not copy their transcripts into this chat. '
       + 'Read their briefs, unread reports and plans; open full history only when needed. '
       + 'Direct user interventions are reported upward automatically. Acknowledge relevant changes. '
-      + 'Plan approval records a decision; it does not start execution. Never claim background work '
+      + 'Approving a plan starts its work in the conversation that proposed it. Never claim background work '
       + 'finished before a result arrives. Specialists report back; you explain decisions to the user. '
       + 'You are free while work runs: hand a job to a work chat and return to the user. Work chats carry '
       + 'their jobs to the end on their own; you are woken only when one reports its final outcome '
@@ -311,5 +331,5 @@ async function tool(args, ctx) {
   throw error('Unknown work_chats action.', 400);
 }
 
-module.exports = { FINAL, session, ancestors, report, notices, acknowledge, view, list, create, start,
+module.exports = { FINAL, session, ancestors, report, notices, acknowledge, view, list, create, start, carryOut,
   archive, plan, profileFor, block, tool, canManage };
