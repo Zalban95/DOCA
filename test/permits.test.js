@@ -126,3 +126,18 @@ test('a symlink inside an allowed folder does not reach outside it (audit 2026-1
   assert.equal(fmSafe(inside), true);
   assert.equal(fmSafe(path.join(link, 'hostname')), false, 'through the link is outside');
 });
+
+test('approvals by device and by panel: Always and Approve all, offered by what the answerer may decide', async () => {
+  const answer = require('../modules/harness/approval-answer');
+  const req = { tool: 'shell', keys: ['shell:ls'], summary: 'ls', personId: member.user.id };
+  const a = approval.ask(req, {}), b = approval.ask({ ...req, keys: ['shell:pwd'] }, {}), c = approval.ask({ ...req, personId: 'someone-else' }, {});
+  const memberChoices = answer.deviceChoices(req, person(member)).map(x => x.id);
+  assert.deepEqual(memberChoices, ['approve', 'always', 'approve_all', 'deny'], 'no Full auto without host');
+  assert.ok(answer.deviceChoices(req, { ...H.owner.user, role: 'owner' }).some(x => x.id === 'full_auto'));
+  assert.ok(!answer.deviceChoices({ tool: 'write_file', keys: null, forced: true }, person(admin)).some(x => x.id === 'always'), 'a forced question has no Always');
+  assert.equal(answer.answerAs({ id: a.id, decision: 'approve_all', person: person(member) }), true);
+  assert.equal(await a.answer, 'once'); assert.equal(await b.answer, 'once');
+  assert.ok(approval.entry(c.id), 'someone else\'s request was not approved by the member\'s Approve all');
+  assert.throws(() => answer.answerAs({ id: c.id, decision: 'once', person: person(member) }), /someone else's turn/);
+  approval.decide(c.id, 'deny');
+});

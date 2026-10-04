@@ -1949,8 +1949,8 @@ test('a turn from a watch is asked on the watch, with full auto as the third cho
     seen.add(p.id);
     assert.match(p.title, /Allow shell/);
     assert.deepEqual(p.choices.filter(c => c.type === 'option').map(c => c.id),
-      ['approve', 'deny', 'full_auto'],
-      'three options — Full auto included, because the alternative on a wrist is tapping Approve forty times');
+      ['approve', 'always', 'deny', 'full_auto'],
+      'Always (this kind of call) and Full auto included, because the alternative on a wrist is tapping Approve forty times');
     assert.ok(p.choices.some(c => c.type === 'dismiss'), 'and a way out, like every prompt');
 
     await H.api(watch.token, 'POST', `/api/v1/prompts/${p.id}/select`,

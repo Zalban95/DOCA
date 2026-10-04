@@ -273,24 +273,24 @@ function askAnywhere(req, { sessionId, signal, client } = {}) {
         to: [deviceId],
         question: `Allow ${req.tool}?`,
         note: req.summary,
-        // Full auto switches the whole panel: only for someone who holds host.
-        choices: [
-          { id: 'approve',   label: 'Approve' },
-          { id: 'deny',      label: 'Deny' },
-          ...(host ? [{ id: 'full_auto', label: 'Full auto' }] : []),
-        ],
+        // By what its owner may decide (approval-answer.js): Always, Approve all, and Full auto for a host only.
+        choices: require('./approval-answer').deviceChoices(req, client.user),
         timeoutSec: 240,
         signal: ctrl.signal,
       });
       if (r.status !== 'answered') return null;          // dismissed, timed out, withdrawn
       if (r.choiceId === 'full_auto' && host) { setMode('auto'); return 'once'; }
+      if (['always', 'approve_all'].includes(r.choiceId)) return r.choiceId;
       return r.choiceId === 'approve' ? 'once' : 'deny';
     } catch { return null; }                              // no such device, no prompts — the panel still has it
   })();
 
   // Feed a device answer back through `decide()` so the panel's card settles
   // and the pending entry is cleaned up by the one code path that does that.
-  viaDevice.then(d => { if (d) decide(id, d); });
+  viaDevice.then(d => {
+    if (!d) return;
+    try { require('./approval-answer').answerAs({ id, decision: d, person: client.user }); } catch { decide(id, 'once'); }
+  });
   // And when the panel answers first, take the question off the wrist.
   answer.then(() => ctrl.abort(), () => ctrl.abort());
 
