@@ -46,3 +46,14 @@ test('a watch that is polling is not woken, and a watch paired before pairedBy f
   bus.publish(watch.id, 'prompt.new', { prompt: { id: 'p2' } });
   assert.equal(wakesFor(phone.id).length, 0);
 });
+
+test('a quiet event does not wake a watch: the owner is at the panel (PROTOCOL §11.4 quiet)', () => {
+  wake._reset();
+  const phone = devices.create({ name: 'phone q', scopes: ['devices:admin'], caps: { formFactor: 'phone' } }).device;
+  const { code } = devices.startPairing({ name: 'wq', scopes: PRESETS.watch, createdBy: phone.id });
+  const watch = devices.completePairing(code, { formFactor: 'watch' }).device;
+  bus.publish(watch.id, 'agent.turn', { turnId: 't', state: 'done', quiet: true });
+  assert.equal(wakesFor(phone.id).length, 0);
+  bus.publish(watch.id, 'agent.turn', { turnId: 't2', state: 'done' });
+  assert.equal(wakesFor(phone.id).length, 1, 'the same event without quiet still wakes it');
+});

@@ -76,7 +76,8 @@ function announce(sessionId) {
   const bus = require('../api-v1/bus');
   const devices = require('../api-v1/devices');
   const { hasScope } = require('../api-v1/scopes');
-  bus.publishWhere(devices.list(), d => hasScope(d.scopes, 'harness:chat'), 'agent.mission', payloadOf(s));
+  bus.publishWhere(devices.list(), d => hasScope(d.scopes, 'harness:chat'), 'agent.mission',
+    { ...payloadOf(s), ...require('../presence').quietFlag() });
 }
 
 /**

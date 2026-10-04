@@ -39,6 +39,15 @@ function line(now = Date.now()) {
   return `owner: not at the panel (last seen ${human(s.ago)} ago) — what matters reaches them on a device (tell_device), not only in the chat.`;
 }
 
+/**
+ * `{ quiet: true }` while somebody is reading the panel, else `{}` — spread into
+ * the hub's *own* pushes (an automatic reply, a mission or work chat starting
+ * and finishing). PROTOCOL §11.4: a client updates what it shows and raises no
+ * notification; one that does not know the field notifies as before. Never on
+ * a turn a device asked for: that device wants its answer.
+ */
+function quietFlag(now = Date.now()) { return state(now).atPanel ? { quiet: true } : {}; }
+
 function _reset() { seen.clear(); }
 
-module.exports = { beat, state, line, FRESH_MS, _reset };
+module.exports = { beat, state, line, quietFlag, FRESH_MS, _reset };

@@ -224,7 +224,7 @@ function announce(row, { ephemeral = false } = {}) {
       // So a client that is showing this mission takes it off the list when it
       // is put away here, rather than keeping a row the panel no longer draws.
       archivedAt: row.archivedAt || undefined,
-      progress: planProgress(row.plan) || undefined,
+      progress: planProgress(row.plan) || undefined, ...(ephemeral ? {} : require('../presence').quietFlag()),   // at the panel: update, do not notify
     };
     for (const d of devices.list()) {
       if (d.revokedAt || !hasScope(d.scopes, 'harness:chat')) continue;

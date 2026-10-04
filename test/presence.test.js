@@ -42,3 +42,25 @@ test('it needs a signed-in person, and it reaches the agent\'s readings, not the
   assert.match(preview, /# Standing rules/);
   assert.doesNotMatch(preview, /owner: at the panel/, 'a per-step reading never sits ahead of the transcript (H-9)');
 });
+
+test('the hub\'s own pushes carry quiet: true while somebody reads the panel, and only then', async () => {
+  const devices = require('../modules/api-v1/devices');
+  const bus = require('../modules/api-v1/bus');
+  const { PRESETS } = require('../modules/api-v1/scopes');
+  const workview = require('../modules/harness/workview');
+  const work = require('../modules/harness/organization').create({ title: 'Quiet job' });
+  const phone = devices.create({ name: 'quiet phone', scopes: PRESETS.phone, caps: { formFactor: 'phone' } }).device;
+  const last = () => bus.drain(phone.id, 0).events.filter(e => e.type === 'agent.mission').at(-1);
+
+  workview.announce(work.id);
+  assert.equal(last().payload.quiet, undefined, 'nobody at the panel: notify as before');
+
+  presence.beat({ id: 'u1', name: 'owner' }, true);
+  assert.deepEqual(presence.quietFlag(), { quiet: true });
+  workview.announce(work.id);
+  assert.equal(last().payload.quiet, true, 'update, do not notify');
+
+  presence.beat({ id: 'u1', name: 'owner' }, false);
+  workview.announce(work.id);
+  assert.equal(last().payload.quiet, undefined, 'a hidden tab is nobody reading');
+});
