@@ -37,8 +37,12 @@ function readDir(root, source) {
     const file = path.join(root, n, 'SKILL.md');
     if (!fs.existsSync(file)) continue;
     try {
-      const { meta } = split(fs.readFileSync(file, 'utf8'));
-      out.push({ name: String(meta.name || n).trim(), description: String(meta.description || '').trim().slice(0, 400), source, dir: path.join(root, n) });
+      const src = fs.readFileSync(file, 'utf8');
+      const { meta } = split(src);
+      // Written for another harness and not adapted yet (skill-audit.js): the harness's name, else null.
+      const a = require('./skill-audit').auditText(src);
+      out.push({ name: String(meta.name || n).trim(), description: String(meta.description || '').trim().slice(0, 400), source, dir: path.join(root, n),
+        harness: a.status === 'adapt' ? (a.label || 'another harness') : null });
     } catch { /* unreadable: left out */ }
   }
   return out;
@@ -65,10 +69,12 @@ function read(name) {
   const files = [];
   const walk = (d, rel = '') => { for (const e of fs.readdirSync(d, { withFileTypes: true })) {
     const r = rel ? `${rel}/${e.name}` : e.name;
-    if (e.isDirectory()) walk(path.join(d, e.name), r); else if (r !== 'SKILL.md') files.push(r);
+    if (e.isDirectory()) walk(path.join(d, e.name), r); else if (r !== 'SKILL.md' && r !== 'SKILL.original.md') files.push(r);
   } };
   walk(s.dir);
-  return { ...s, body: body.slice(0, MAX_BODY), files };
+  // Not adapted yet: a note above the body says how to translate it (skill-audit.js).
+  const note = s.harness ? require('./skill-audit').readingNote(require('./skill-audit').audit(name)) : '';
+  return { ...s, body: (note + body).slice(0, MAX_BODY), files };
 }
 
 /** One of a skill's own files (a script, a template), inside its folder only. */
@@ -109,7 +115,7 @@ function manifestBlock(only) {
   const rows = list().filter(s => !only || only.includes(s.name));
   if (!rows.length) return '';
   return ['# Skills — procedures you load when a task matches (skill action read, then follow it)',
-    ...rows.map(s => `- ${s.name}: ${s.description || '(no description)'}`)].join('\n');
+    ...rows.map(s => `- ${s.name}: ${s.description || '(no description)'}${s.harness ? ` [written for ${s.harness}; reading it says how to translate]` : ''}`)].join('\n');
 }
 
 module.exports = { list, read, file, write, importFrom, manifestBlock, SHIPPED };

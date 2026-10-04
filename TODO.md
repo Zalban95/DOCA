@@ -2489,6 +2489,16 @@ nothing is silently dropped). Open items that lived in them are listed in
 - **Skills get the same treatment as rules:** a guide for writing a skill, read
   by whoever writes one and whoever reviews it; a review with answerable
   questions; history and undo.
+- **Skills written for another harness are audited — built in 2.131.0**
+  (`harness/skill-audit.js`, asked 2026-10-04). Each skill is read for another
+  harness's dialect (Claude Code tool names, `allowed-tools`, `$ARGUMENTS`,
+  `!` command lines, plugin paths, Gemini's `{{args}}`, Cursor's `globs`); one
+  that has it shows "⚠ for <harness> — adapt" in Settings → Harness → Skills,
+  its manifest line is tagged and reading it prepends a translation, so it
+  works before anyone adapts it. The window lists each finding with its line
+  and DOCA equivalent, shows the mechanical rewrite side by side, and Adapt
+  writes it (original kept as SKILL.original.md; Restore undoes). What cannot
+  be rewritten by rule is left marked for review.
 - **Skills from other harnesses** (Claude Code, Codex, Cursor rules…) listed and
   managed in the Skills section, usable by the DOCA harness — part of the
   Settings review above. **Built in 2.128.0** (`harness/skill-sources.js`):
