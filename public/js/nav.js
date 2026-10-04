@@ -3,6 +3,8 @@
    ═══════════════════════════════════════════════════════ */
 
 const NAV_TABS = ['controls','logs','files','projects','harness','terminal','models','docker','vms','mcp','settings'];
+/** Tabs that are the machine itself: left out for a person without host (settings.js). */
+const HOST_TABS = ['logs', 'files', 'projects', 'terminal'];
 
 /** Single source for the mobile bottom bar (icon + short label per tab). */
 const NAV_TAB_DEFS = [

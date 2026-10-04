@@ -57,3 +57,11 @@ test('a turn with no conversation named goes to the member\'s own, never the hos
   assert.equal(access.ownerOf(id), fresh.id);
   assert.equal(access.defaultFor(fresh), id, 'and the same one next time');
 });
+
+test('a member reads the shared memory but does not edit it; /me says which rights they hold (live test)', async () => {
+  assert.equal((await H.api(null, 'GET', '/api/harness/memory', undefined, as(member))).status, 200);
+  assert.equal((await H.api(null, 'POST', '/api/harness/memory', { key: 'k', value: 'v' }, as(member))).status, 403);
+  assert.equal((await H.api(null, 'DELETE', '/api/harness/memory/anything', undefined, as(member))).status, 403);
+  const me = await H.api(null, 'GET', '/api/auth/me', undefined, as(member));
+  assert.deepEqual(me.body.rights, ['read', 'chat']);
+});

@@ -92,7 +92,11 @@ async function settingsApplyOnLoad() {
   try {
     const prefs = await apiFetch('/api/prefs');
     _settingsHidden = prefs.hiddenTabs || [];
-    _applyHiddenTabs(_settingsHidden);
+    // Without host, the tabs that are the machine are left out instead of drawn as refusals (live test 2026-10-04).
+    const me = await apiFetch('/api/auth/me').catch(() => null);
+    const noHost = !!me?.rights && !me.rights.includes('host');
+    document.body.classList.toggle('no-host', noHost);
+    _applyHiddenTabs(noHost ? [...new Set([..._settingsHidden, ...HOST_TABS])] : _settingsHidden);
     _sidebarSections = prefs.sidebarSections || {};
     applySidebarSections(_sidebarSections);
   } catch {}
