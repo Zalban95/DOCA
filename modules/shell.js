@@ -112,7 +112,9 @@ function run(command, { cwd, timeout = 60000, maxBuffer = 4 << 20, env, signal }
         stderr: String(stderr || '').trim(),
         // `killed` is how Node reports the timeout it enforced, which is a
         // different thing from the command exiting non-zero.
-        timedOut: !!(err && err.killed),
+        timedOut: !!(err && err.killed && err.name !== 'AbortError'),
+        // Stopped by the caller's signal (a person pressing Stop), not by the timeout.
+        aborted: !!(err && err.name === 'AbortError'),
         code: err ? (typeof err.code === 'number' ? err.code : 1) : 0,
         // ENOENT here means the shell itself is missing, not the command —
         // worth saying plainly, because it is the one failure no amount of
