@@ -45,6 +45,13 @@ function fromModelEntry(m) {
     ['context_length', m.context_length], ['context_window', m.context_window],
     ['max_context_length', m.max_context_length], ['top_provider.context_length', m.top_provider?.context_length],
   ]) if (n(v)) return { tokens: n(v), field };
+  // llama.cpp in router mode lists each model with the arguments it starts it with; its /props
+  // says n_ctx 0 until one is loaded, and asking per model would wake it (live test 2026-10-04).
+  const args = m.status?.args;
+  if (Array.isArray(args)) {
+    const i = args.findIndex(a => a === '--ctx-size' || a === '-c');
+    if (i >= 0 && n(args[i + 1])) return { tokens: n(args[i + 1]), field: 'status.args --ctx-size (llama.cpp router)' };
+  }
   return null;
 }
 
