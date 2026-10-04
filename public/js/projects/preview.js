@@ -105,7 +105,7 @@ function pjDrawRendered(host, kind, text, path) {
   host.textContent = '';
   const box = _pjEl('div', { className: 'pj-view pj-view-doc' });
   try {
-    if (kind === 'markdown') { const d = _pjEl('div', { className: 'agent-doc-body' }, 'max-width:860px;width:100%'); mdInto(d, text); box.appendChild(d); }
+    if (kind === 'markdown') pjMarkdownDoc(box, text, path);   // as a document: its images, links, tasks (projects/md-doc.js)
     else if (kind === 'html') box.appendChild(Object.assign(_pjEl('iframe', { title: path, srcdoc: text }, 'width:100%;height:100%;border:0;background:#fff'), { sandbox: '' }));
     else if (kind === 'svg') box.appendChild(_pjEl('img', { src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`, alt: path }, 'max-width:100%;max-height:100%'));
     else if (kind === 'csv' || kind === 'tsv') box.appendChild(_pjTable(text, kind === 'tsv' ? '\t' : ','));
