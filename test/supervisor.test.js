@@ -274,3 +274,13 @@ test('with no stronger model named, a looping job is blocked exactly as before',
   assert.equal(jobOf(id).state, 'blocked');
   assert.equal(memory.getSession(id).modelChoice ?? null, null);
 });
+
+test('a turn that failed blocks its job with the reason, instead of being woken into the same failure', async () => {
+  fresh();
+  const id = job('No model');
+  assert.equal(supervisor.decide(id, { steps: null, failed: 'No model chosen for the DOCA harness' }), 'woken', 'the Orchestrator is told');
+  await settle();
+  assert.equal(jobOf(id).state, 'blocked');
+  assert.ok(!woken.some(w => w.sessionId === id), 'no further turn for the failing job');
+  assert.match(woken.at(-1).message, /Blocked: its turn failed — No model chosen/);
+});

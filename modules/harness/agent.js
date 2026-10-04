@@ -70,6 +70,7 @@ async function turn(options) {
     return result;
   } catch (e) {
     const state = ctrl.signal.aborted ? 'cancelled' : 'failed';
+    if (state === 'failed') ctrl.failed = String(e.message).slice(0, 300);   // the supervisor must not rewake into the same failure
     memory.updateSession(id, { state, lastError: String(e.message).slice(0, 600) });
     organization.report(id, state, e.message);
     throw e;
