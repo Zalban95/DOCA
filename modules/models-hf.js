@@ -10,7 +10,7 @@ const { loadModelsPrefs, saveModelsPrefs, sseHeaders } = require('./utils');
 /** GET /api/models/hf/settings */
 function handleGetSettings(req, res) {
   const mp = loadModelsPrefs();
-  res.json(mp.hf || { cacheDir: '', token: '' });
+  res.json(require('./secrets-mask').mask(mp.hf || { cacheDir: '', token: '' }));
 }
 
 /** POST /api/models/hf/settings */
@@ -18,7 +18,7 @@ function handlePostSettings(req, res) {
   try {
     const mp = loadModelsPrefs();
     const { cacheDir, token } = req.body;
-    mp.hf = { cacheDir: cacheDir || '', token: token || '' };
+    mp.hf = { cacheDir: cacheDir || '', token: require('./secrets-mask').unmask(token || '', mp.hf?.token) };
     saveModelsPrefs(mp);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
