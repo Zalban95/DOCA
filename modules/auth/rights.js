@@ -59,6 +59,7 @@ const TABLE = [
   R(ANY, '/api/harness/agents(/.*)?', 'host'),             // a specialist's definition is its tool list
   R(ANY, '/api/harness/installs/[^/]+/(apply|reject)', 'host'),
   R(ANY, '/api/harness/(custom|default)(/.*)?', 'host'),
+  R(ANY, '/api/harness/contracts/[^/]+', 'host'),          // forgetting what a provider was found to accept
   R(ANY, '/api/harness/[^/]+/(config|install)', 'host'),
   R(ANY, '/api/harness/proposals/[^/]+/(apply|reject)', 'propose'),
   R(ANY, '/api/harness/previews', 'host'),                 // shows a localhost port to the tailnet
