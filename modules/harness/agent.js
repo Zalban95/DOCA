@@ -17,22 +17,17 @@
 const budget      = require('./budget');
 const memory      = require('./memory');
 const providers   = require('./providers');
-const approval    = require('./approval');
 const settings    = require('./settings');
 const attachments = require('../attachments');
 const tools       = require('./tools');
-// Required lazily inside the functions that use them: modules/agents requires
-// this file back, and a load-time cycle would leave one of the two half-built.
-const missions = {
-  block: opts => require('../agents/missions').block(opts),
-  notices: sessionId => require('../agents/missions').notices(sessionId),
-  acknowledgeNotices: shown => require('../agents/missions').acknowledgeNotices(shown),
-};
 
 // The turn's parts, one idea per file under ./turn. This file runs the turn;
 // the rest is imported, and re-exported where other modules already use it.
 const { params, turnParams, profileForTurn } = require('./turn/params');
-const { disabledFor, isMissionProfile, liveBlock, missionsFor, systemPrompt, turnPreamble } = require('./turn/prompt');
+const { disabledFor, isMissionProfile, liveBlock, missionsFor, turnPreamble } = require('./turn/prompt');
+const { stepRequest } = require('./turn/step-request');
+const { runToolCalls } = require('./turn/tool-calls');
+const { stepLimitNote } = require('./turn/step-limit');
 const { toApiMessages } = require('./turn/messages');
 const { DEGRADED_MS, rungsFor, markDegraded, forgetDegraded, openingHop, hopReporter, truncationNotice } = require('./turn/fallback');
 const { ask, complete } = require('./turn/transport');
@@ -165,42 +160,9 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       say({ type: 'tools', count: schemas.length, was: toolCount, step });
     toolCount = schemas.length;
 
-    const { rows } = memory.window(session.id, Number(p.historyTurns) || 0);
-    const messages = [
-      {
-        role: 'system',
-        content: systemPrompt({
-          p, userText: message, summary, client, profile, projectBrief,
-          toolCount: schemas.length, disabledCount: disabled.length,
-        }),
-      },
-      // `provider` is the one this request is addressed to, which decides which
-      // echoes travel — see `toApiMessages`.
-      ...toApiMessages(rows, { sessionId: session.id, provider: ep.id }),
-    ];
-
-    // The readings go last, after the history. Everything above is now
-    // byte-identical from one step to the next, so the cached prefix grows with
-    // the transcript instead of being cut off at the first line that moves —
-    // and a per-step line inside the system prompt is exactly what did the
-    // cutting (ISSUES.md H-9). Not persisted: this is this step's reading, and
-    // the next step generates its own.
-    // Sent as `user`, not as a second `system`. A chat template is entitled to
-    // refuse a system message that is not the first one, and Qwen's does:
-    // llama.cpp with `--jinja` answers `500 Jinja Exception: System message must
-    // be at the beginning`, which killed every llamacpp-served turn on its first
-    // step from the moment the readings moved down here (H-9). The position is
-    // what H-9 was protecting, not the role, so the cached prefix is unaffected.
-    // It says whose words these are, because a bare block at the end of a
-    // conversation reads as the user's.
     const isMission = isMissionProfile(profile);
-    const completed = isMission ? [] : missions.notices(session.id);
-    const organization = require('./organization');
-    const reports = organization.notices(session.id).slice(0, 10);
-    const live = [liveBlock(p, led), toolNews, isMission ? '' : missions.block({ sessionId: session.id, completed }),
-      organization.block(session.id, reports),
-      ...contextSkips.values()].filter(Boolean).join('\n');
-    if (live) messages.push({ role: 'user', content: `[panel readings, not from the user]\n${live}` });
+    const { messages, acknowledge } = stepRequest({ p, ep, message, summary, client, profile, projectBrief,
+      schemas, disabled, session, led, toolNews, contextSkips });
 
     // Measured when the provider answers with a usage frame, estimated when it
     // does not. Both are recorded; only one is called a measurement.
@@ -228,8 +190,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     });
     const stepMs = Date.now() - startedAt;
 
-    if (!isMission) missions.acknowledgeNotices(completed);
-    organization.acknowledge(session.id, reports);
+    acknowledge();
     budget.record(led, {
       usage: reply.usage,
       promptEstimate,
@@ -278,64 +239,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       };
     }
 
-    for (const tc of reply.tool_calls) {
-      const name = tc.function?.name || '(unnamed)';
-      let args = {};
-      try { args = tc.function?.arguments ? JSON.parse(tc.function.arguments) : {}; }
-      catch { args = { _raw: tc.function?.arguments }; }
-
-      say({ type: 'tool_call', name, args, step });
-
-      // Manual approval, if it is on. The gate is here rather than inside
-      // `tools.call` because this is where `say()` is — the question has to
-      // reach the transcript the user is looking at — and because it must cover
-      // MCP tools, which `tools.call` dispatches before it sees a definition.
-      let refused = null;
-      const gate = args._raw === undefined ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission }) : null;
-      if (gate) {
-        if (isMission) {
-          refused = approval.missionRefusal(gate);
-          say({ type: 'approval', step, state: 'refused', tool: name, ...gate });
-        } else {
-          const { id, answer } = approval.askAnywhere(gate, { sessionId: session.id, signal, client });
-          say({ type: 'approval', step, state: 'asked', id, ...gate });
-          const decision = await answer;
-          say({ type: 'approval', step, state: 'answered', id, decision, tool: name });
-          // Anything that is not one of the three yeses — a denial, a timeout,
-          // a stopped turn — stops the call and says which it was.
-          if (!['once', 'always', 'always_tool'].includes(decision))
-            refused = approval.refusal(decision, gate);
-        }
-      }
-
-      // What a tool put in front of the user (show_image). It travels as its own
-      // event and is kept on the tool row, so a reloaded transcript draws it
-      // again; the model only ever reads the result text.
-      const shown = [];
-      const result = require('./turn/failures').note(signal, name, args, refused !== null
-        ? refused
-        : args._raw !== undefined
-        ? `Error: could not parse the arguments as JSON: ${args._raw}`
-        : !schemas.some(sc => sc.function.name === name)
-          ? `Error: the "${name}" tool is switched off for this conversation.`
-          : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), sessionId: session.id, signal, approved: !!gate, user: client?.user, airlock: !!profile?.airlock }));
-      for (const image of shown) say({ type: 'image', image, step });
-      say({ type: 'tool_result', name, result, step, ...require('./turn/failures').typed(result) });
-
-      memory.append(session.id, {
-        role: 'tool', tool_call_id: tc.id || name, name, content: result, ...require('./turn/failures').typed(result),
-        ...(shown.length ? { images: shown } : {}),
-      });
-
-      // A settings proposal is the one tool result the user has to act on, so it
-      // travels as its own event and the console draws it as a card with buttons
-      // rather than as one more line of tool output to scroll past.
-      for (const proposal of settings.list().pending) {
-        if (announced.has(proposal.id)) continue;
-        announced.add(proposal.id);
-        say({ type: 'proposal', proposal });
-      }
-    }
+    await runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced });
 
     // Token pressure folds the conversation early, before the message count
     // would have. `compactTokens` is the honest trigger — a window nobody
@@ -352,17 +256,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     }
 
     if (step === maxSteps) {
-      // Name the limit that actually stopped it. A specialist's step cap comes
-      // from its own definition file, so sending the user to the panel's
-      // harness settings would be sending them somewhere that changes nothing —
-      // which is charter rule 12 broken by the code that enforces it.
-      const note = profile
-        ? `Stopped after ${maxSteps} tool steps without a final answer — that is this specialist's own `
-          + `limit, "maxSteps" in the ${profile.id} agent definition, not the model's and not the panel's. `
-          + 'Raise it there, or give it a narrower errand.'
-        : `Stopped after ${maxSteps} tool steps without a final answer — that is this panel's own `
-          + 'limit (harness.config.doca.maxSteps), not the model\'s. Raise "Max tool steps" in the harness '
-          + 'settings, or ask again more narrowly.';
+      const note = stepLimitNote(profile, maxSteps);
       say({ type: 'text', text: `\n\n${note}` });
       memory.append(session.id, { role: 'assistant', content: note });
       text += `\n\n${note}`;
@@ -379,21 +273,6 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     ...(fallbacks.length ? { fallbacks } : {}),
   };
 }
-
-/**
- * The system prompt this harness would send for a message, assembled but not
- * sent.
- *
- * It exists because the prompt is the product here — the charter, the limits,
- * the memory with its locks and disputes — and until now the only way to see it
- * was to run a turn and trust the description. `GET /api/harness/environment`
- * shows the user the environment block for the same reason; this is the whole
- * of it, and it is what the prompt-order tests assert against.
- *
- * This is the system message, which is now the *stable* half of what a turn
- * sends. The per-step readings travel separately, after the history — see
- * `liveBlock()`. A caller that needs the whole request wants both.
- */
 
 module.exports = { turn, isRunning, isAuto, cancel, status, contextOf, params, ask, complete, preview, breakdown, liveBlock, events,
   toApiMessages, rungsFor, markDegraded, forgetDegraded, openingHop, missionsFor, DEGRADED_MS };
