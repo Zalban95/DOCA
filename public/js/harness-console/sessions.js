@@ -13,6 +13,8 @@ function _hcContext(u) {
 async function _hcLoadUsage() {
   const el = document.getElementById('hc-usage');
   if (!el) return;
+  el.onclick = hcUsageOpen;   // the per-model window, with costs (harness-console/usage.js)
+  el.style.cursor = 'pointer';
   try {
     const { total, tokensPerDay } = await apiFetch('/api/harness/usage?days=1&by=kind');
     const tok = total.prompt + total.completion;

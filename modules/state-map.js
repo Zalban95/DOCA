@@ -32,6 +32,7 @@ const PREFS = {
   agents:           { is: 'travels', note: 'whether specialists are switched on' },
   toolNotes:        { is: 'travels', note: 'notes added to tool descriptions (fingerprinted per tool)' },
   mcpSettings:      { is: 'travels', note: 'MCP timeouts' },
+  usagePrices:      { is: 'travels', note: 'the owner\'s price list for the usage window (harness/prices.js)' },
   harness:          { is: 'mixed',   note: 'config (model, limits, fallback chain, prompts), the guards\' settings and approval mode travel (the guard model files are local, in the data folder); the always-allowed list names commands of this machine and is local. Provider keys are not here: they live in the data folder (keys/).' },
   models:           { is: 'mixed',   note: 'preferences travel; models.hf.token is a secret and local, and runtime URLs name this machine' },
   paths:            { is: 'local',   note: 'folders and URLs of this machine (paths.js SETTABLE)' },

@@ -65,6 +65,7 @@ const TABLE = [
   R(ANY, '/api/harness/guards(/.*)?', 'host'),             // what the agents may read (guard/)
   R(ANY, '/api/harness/questions/[^/]+', 'chat'),          // answering what the agent asked
   R(ANY, '/api/harness/canvases/[^/]+', 'chat'),           // deleting one (reading is a GET below)
+  R(ANY, '/api/harness/usage/prices', 'chat'),              // the owner's price list: display only, changes nothing the agent does
   R(GET, '/api/harness(/.*)?', 'read'),
   R(ANY, '/api/harness/(chat|sessions|memory|missions)(/.*)?', 'chat'),
 
