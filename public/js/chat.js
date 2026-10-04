@@ -515,7 +515,7 @@ function _chatClearChips() {
 function chatSend({ spoken = false } = {}) {
   const input   = document.getElementById('chat-input');
   const message = input.value.trim();
-  if (!message) return;
+  if (!message || chatTurn) return;   // Enter during a turn sent a second one, and Stop lost the first (audit 2026-10-04)
 
   const attachments = chatPending.map(a => a.name);
   const shown = chatPending.filter(a => /^(image|audio|video)\//.test(a.mime || ''));
@@ -553,7 +553,7 @@ function chatSend({ spoken = false } = {}) {
   });
   stream.startWaiting();
 
-  chatTurn = new AbortController();
+  const turn = chatTurn = new AbortController();   // this turn's own, so its end cannot clear the next one's
   _chatBusy(true);
 
   // Kept so a spoken question can be answered out loud once the answer is whole.
@@ -625,11 +625,11 @@ function chatSend({ spoken = false } = {}) {
     // rather than a line the collapsing run swallows.
     const rate = tokenRateEl(spend);
     if (rate) { container.appendChild(rate); _chatScroll(); }
-    if (chatTurn?.signal.aborted) chatAppendMsg('system', 'Stopped. The step already running finishes on its own.');
+    if (turn.signal.aborted) chatAppendMsg('system', 'Stopped. The step already running finishes on its own.');
     // Spoken to, speak back — after the answer is on screen, so a TTS that is
     // not configured costs nothing but silence.
-    if (spoken && !chatTurn?.signal.aborted) _chatSpeak(reply);
-    _chatBusy(false);
+    if (spoken && !turn.signal.aborted) _chatSpeak(reply);
+    if (chatTurn === turn) _chatBusy(false);
   });
 }
 

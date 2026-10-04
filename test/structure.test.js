@@ -38,7 +38,7 @@ const OVER = {
   'modules/api-v1/prompts.js':     467,
   'public/js/markdown.js':         462,
   'server.js': 338,
-  'modules/chat.js':               412,
+  'modules/chat.js':               410,
 };
 
 function walk(dir) {

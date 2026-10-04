@@ -48,17 +48,20 @@ async function pjRunCommand(name) {
   let r;
   try { r = await apiFetch(_pjp('/run'), { method: 'POST', body: { command: name } }); }
   catch (e) { return appAlert(e.message); }
-  pjFollowJob(r.job, r.command.run, () => { pjRefresh(); if (PJ.view === 'git') pjView('git'); });
+  pjFollowJob(r.job, r.command.run, () => { pjEditorsReloadClean(); pjRefresh(); if (PJ.view === 'git') pjView('git'); });
 }
 
 /** Show a background job's output in the pane until it ends, then call `done(job)`. */
 function pjFollowJob(job, run, done) {
-  PJR.job = job;
+  // The job's own project, fixed now: switching project mid-build pointed the polling (and Stop) at
+  // the other one (audit 2026-10-04).
+  const base = _pjp('');
+  PJR.job = job; PJR.base = base;
   _pjOutput(`$ ${run}\n`, true);
   clearTimeout(PJR.timer);
   const poll = async () => {
     let j;
-    try { j = await apiFetch(`${_pjp(`/jobs/${job.id}`)}?bytes=200000`); } catch { return; }
+    try { j = await apiFetch(`${base}/jobs/${job.id}?bytes=200000`); } catch { return; }
     _pjOutput(`$ ${run}\n${j.output}`, j.job.state === 'running', j.job);
     if (j.job.state === 'running') PJR.timer = setTimeout(poll, 1000);
     else done?.(j.job);
@@ -89,7 +92,7 @@ function _pjOutput(text, running, job) {
 
 async function pjRunStop() {
   if (!PJR.job) return;
-  try { await apiFetch(_pjp(`/jobs/${PJR.job.id}/stop`), { method: 'POST' }); } catch {}
+  try { await apiFetch(`${PJR.base || _pjp('')}/jobs/${PJR.job.id}/stop`, { method: 'POST' }); } catch {}
 }
 
 function pjRunAdd() {

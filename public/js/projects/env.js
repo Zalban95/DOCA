@@ -12,6 +12,7 @@ async function pjEnvSection(body) {
   body.prepend(box);
   let v;
   try { v = await apiFetch(_pjp('/env')); } catch (e) { box.lastChild.textContent = e.message; return; }
+  if (!box.isConnected) return;   // the view changed while asking
   box.lastChild.remove();
   const el = (tag, props = {}, style = '') => Object.assign(document.createElement(tag), props, style ? { style: style } : {});
   const line = (ok, text, title = '') => el('div', { className: `pj-tc ${ok ? 'ok' : 'missing'}`, textContent: `${ok ? '✓' : '✗'} ${text}`, title });

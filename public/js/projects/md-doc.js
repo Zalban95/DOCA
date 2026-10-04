@@ -23,7 +23,9 @@
 function _pjMdResolve(from, rel, root) {
   const sep = from.includes('\\') && !from.includes('/') ? '\\' : '/';
   const parts = from.split(/[\\/]/).slice(0, -1);
-  for (const seg of decodeURIComponent(rel).split(/[\\/]/)) {
+  let decoded;
+  try { decoded = decodeURIComponent(rel); } catch { decoded = rel; }   // one malformed % must not sink the whole document
+  for (const seg of decoded.split(/[\\/]/)) {
     if (!seg || seg === '.') continue;
     if (seg === '..') parts.pop(); else parts.push(seg);
   }

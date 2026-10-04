@@ -24,3 +24,7 @@ test('Windows paths, either separator, any case', () => {
   assert.equal(resolve('D:\\doca\\proj\\README.md', 'docs/a.png', 'D:\\doca\\proj'), 'D:\\doca\\proj\\docs\\a.png');
   assert.equal(resolve('D:\\doca\\proj\\README.md', '..\\..\\x.png', 'd:\\doca\\proj'), null);
 });
+
+test('a malformed %-escape is taken as written, not a thrown error (audit 2026-10-04)', () => {
+  assert.equal(resolve('/p/README.md', 'a%zz.png', '/p'), '/p/a%zz.png');
+});

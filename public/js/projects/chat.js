@@ -78,8 +78,12 @@ async function pjChatSend() {
       if (evt.type === 'tool_call') { md?.end(); md = null; _pjChatRow('tool', evt.name); }
       if (evt.type === 'image') document.getElementById('pj-chat-msgs').appendChild(agentImageEl(evt.image));
       if (evt.type === 'approval') {
+        // The three states, as the other chats draw them: an answer settles its card (it drew a second,
+        // live one), a mission's refusal is a note, and a question gets the popup too (audit 2026-10-04).
         const box = document.getElementById('pj-chat-msgs');
-        box.appendChild(approvalCardEl(evt, () => {}));
+        if (evt.state === 'refused') _pjChatRow('warning', `Not run — ${evt.tool} needs approval and a mission has nobody to ask.`);
+        else if (evt.state === 'answered') { box.querySelector(`[data-approval-id="${CSS.escape(evt.id)}"]`)?.settleFrom?.(evt.decision); approvalPopupClose(evt.id); }
+        else { const card = approvalCardEl(evt, () => {}); box.appendChild(card); approvalPopup(evt, d => card.settleFrom?.(d)); }
         box.scrollTop = box.scrollHeight;
       }
       if (evt.type === 'error') _pjChatRow('error', evt.text);
@@ -93,13 +97,7 @@ async function pjChatSend() {
   // The agent may have changed files: refresh what the side shows, reload clean editors.
   pjRefresh();
   if (PJ.view === 'git' || PJ.view === 'files') pjView(PJ.view);
-  for (const t of PJE.tabs) {
-    if (!t.path || !t.model || t.model.getAlternativeVersionId() !== t.saved) continue;
-    try {
-      const { content } = await apiFetch(`/api/files/read?path=${encodeURIComponent(t.path)}`);
-      if (content !== t.model.getValue()) { t.model.setValue(content); t.saved = t.model.getAlternativeVersionId(); }
-    } catch { /* deleted: the tab stays until closed */ }
-  }
+  await pjEditorsReloadClean();
 }
 
 function pjChatStop() {

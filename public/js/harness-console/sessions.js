@@ -19,9 +19,10 @@ async function _hcLoadUsage() {
     const { total, tokensPerDay } = await apiFetch('/api/harness/usage?days=1&by=kind');
     const tok = total.prompt + total.completion;
     const fmt = n => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(n);
+    // Never empty: it is also the way into the usage window, where prices are set before the first call.
     el.textContent = total.calls
       ? `24h ${fmt(tok)}${tokensPerDay ? ` / ${fmt(tokensPerDay)}` : ''} tok · ${total.calls} calls${total.cached ? ` · ${Math.round(total.cached / total.prompt * 100)}% cached` : ''}${total.estimated ? ' · ~est' : ''}`
-      : '';
+      : 'usage';
   } catch { el.textContent = ''; }
 }
 
