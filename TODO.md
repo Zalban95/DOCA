@@ -82,8 +82,8 @@ the end, and in the sections as "built in …" notes.
   → *Wanted next: many agents*.
 - One turn per conversation vs. jobs started from devices; parallel instances.
   → *Wanted next: many agents*.
-- Switching to a stronger model when a job is stuck. → *Where this harness
-  stands…* §3 (failure types).
+- ~~Switching to a stronger model when a job is stuck~~ — **built in 2.119.0**
+  (`harness/escalate.js`, off until a model is named). → §3 (failure types).
 - Skills: a writing guide read like the rules', and importing from other
   harnesses (Codex, Cursor rules…); every shipped procedure reads back what it
   wrote. → *Done log: Built 2026-09-25*, *Two layers of learned knowledge*.
@@ -1665,7 +1665,15 @@ is told so, and a third time is told to stop and report itself blocked. **And
 since 2.99.0 the supervisor reads it:** a work chat whose turn looped that way
 (`failures.looped`) is set `blocked` and reported to the Orchestrator ("Blocked:
 <tool> failed the same way N times"), instead of being given another automatic
-turn to pay for the same loop. Not yet: escalating to a stronger model.
+turn to pay for the same loop. **Since 2.119.0 it escalates first**
+(`harness/escalate.js`): with `harness.config.doca.escalateTo` set (⚙ → "When
+a job is stuck"), a looping or idle work chat gets one more try on that model —
+set as the conversation's own model choice, so the picker shows it, and
+reported to the Orchestrator without waking it — and is blocked as before if it
+is stuck again, the report saying the stronger model was tried. Off by default:
+which model is stronger, and whether it is worth its price, is the user's call.
+Once per job; running out of `autoTurnsPerJob` is the budget and is not
+escalated.
 
 ### 4. A budget ceiling that halts, not only warns
 
