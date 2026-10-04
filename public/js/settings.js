@@ -34,6 +34,7 @@ async function _subtabGeneralInit() {
 }
 
 function _subtabSystemInit() {
+  hostCapsLoad();
   pathsLoad();
   sysdepsLoad();
 }
