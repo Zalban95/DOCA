@@ -31,7 +31,7 @@ async function _lookSelect(id) {
   const skin = lookApply(id);
   _lookPickerRender({ skin });
   try {
-    await apiFetch('/api/prefs', { method: 'POST', body: { skin } });
+    await screenSave({ skin });
     setStatus(document.getElementById('theme-status'), `✓ ${SKINS[skin].label} style`, 'ok');
   } catch (e) {
     setStatus(document.getElementById('theme-status'), `✗ ${e.message}`, 'err');
@@ -105,7 +105,7 @@ async function _themeSelect(name) {
   document.getElementById('theme-custom-editor').style.display = 'none';
 
   try {
-    await apiFetch('/api/prefs', { method: 'POST', body: { theme: name } });
+    await screenSave({ theme: name });
     setStatus(status, '✓ Theme applied', 'ok');
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
@@ -165,7 +165,7 @@ function _themeCustomChange(input) {
 async function _themeCustomSave(colors) {
   const status = document.getElementById('theme-status');
   try {
-    await apiFetch('/api/prefs', { method: 'POST', body: { theme: 'custom', customTheme: colors } });
+    await screenSave({ theme: 'custom', customTheme: colors });
     setStatus(status, '✓ Custom theme saved', 'ok');
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');

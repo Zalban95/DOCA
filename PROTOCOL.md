@@ -115,7 +115,9 @@ devices of kind **`channel`**: one per linked chat of a messaging channel (Teleg
 person who linked it, with `caps.ext.channel` naming the service. They appear in device lists like any
 other; a client that does not know the kind should draw it as a device and may leave it out of lists of
 things to hand a screen to (it has no screen of its own to show a canvas on). The kind is additive: no
-existing field changed.
+existing field changed. Since hub 2.164.0 there is also **`browser`**: a browser someone signed in on,
+with no scopes and no token of its own (it reaches the hub by its sign-in session); revoking it signs that
+browser out. `GET /settings/effective` answers any token with that device's settings over the hive's.
 
 **Rotation.** `POST /devices/me/rotate` returns a new token; the old one stays
 valid for 60 s (`previousValidUntil`) so a client can swap atomically.

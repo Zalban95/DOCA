@@ -148,9 +148,9 @@ function resolveHash(hash) {
   if (!user || user.suspendedAt) return null;
   const m = authStore.membership(s.orgId, user.id);
   if (!m || m.status !== 'active') return null;
-  // A device's session ends with the device.
-  if (s.deviceId) {
-    const d = require('../api-v1/devices').get(s.deviceId);
+  // A device's session ends with the device — and a browser's with its record (screens/), which is how revoking one signs it out.
+  for (const id of [s.deviceId, s.screen].filter(Boolean)) {
+    const d = require('../api-v1/devices').get(id);
     if (!d || d.revokedAt) return null;
   }
   // lastSeenAt is best effort; writing it on every request would rewrite the file on every request.

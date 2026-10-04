@@ -66,8 +66,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   split into host and screen), travels/local, `propose` → SETTABLE, typed leaves with defaults read through `value()`
   (computers, Telegram so far), the state map derived. **Left:** leaves for the remaining sections as they are touched,
   per-key rights (needed when a member may change their own screen's settings, H2.2–H2.4), forms drawn from it.
-- [ ] H2.2 A browser is a device (a `browser` record on first sign-in, revocable).
-- [ ] H2.3 Layering hive → person → device; `GET /api/v1/settings/effective`.
+- [x] H2.2 (2.164.0) A browser is a device (a `browser` record on first sign-in, revocable).
+- [x] H2.3 (2.164.0) Layering hive → person → device; `GET /api/v1/settings/effective`. The person layer is read but
+  nothing writes it yet (per-person settings arrive with the first person-home key).
 - [ ] H2.4 `/d/<id>/settings`: look, tabs, sidebar, voice, notifications, console, face, lent tool
   families; Settings keeps the hive's; Wearables becomes the watch's device page.
 - [ ] H2.5 Migrations for prefs keys (rename, move, default) — the upgradability gap.

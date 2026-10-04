@@ -50,7 +50,7 @@ function resolveScopes({ preset, scopes }) {
  * with the phone preset (see scopes.PRESETS), so it is compared with that.
  */
 function presetFor(d) {
-  if (d.kind === 'agent') return null;
+  if (['agent', 'browser', 'channel'].includes(d.kind)) return null;   // a browser or a linked chat holds no token to widen
   const ff = d.caps?.formFactor;
   return ff === 'watch' ? 'watch' : ['phone', 'desktop', 'tablet', 'browser', 'other'].includes(ff) ? 'phone' : null;
 }

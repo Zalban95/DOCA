@@ -336,7 +336,7 @@ function paths() {
     '/': { get: { tags: ['Discovery'], summary: 'Discovery (no auth)', operationId: 'discover', security: [], responses: { 200: json(ref('Discovery')), 404: E[404] } } },
     '/openapi.json': { get: { tags: ['Discovery'], summary: 'This document (no auth)', operationId: 'openapi', security: [], responses: { 200: { description: 'OpenAPI 3.1 document', content: { 'application/json': { schema: obj({}, { additionalProperties: true }) } } }, 404: E[404] } } },
     '/capabilities': { get: { tags: ['Discovery'], summary: 'Capability discovery — the first call after authentication', operationId: 'getCapabilities', responses: { 200: json(ref('Capabilities')), ...std(401) } } },
-
+    '/settings/effective': { get: { tags: ['Discovery'], summary: 'This device\'s settings: its own layer over the person\'s and the hive\'s', operationId: 'getEffectiveSettings', description: 'For the keys a device keeps (settings-schema.js: home device, on screen — theme, tabs, sidebar…). `from` says which layer each value came from: device, person or hive. Any token; it answers for the device that asks.', responses: { 200: json(obj({ deviceId: str(), settings: obj({}), from: obj({}) })), ...std(401) } } },
     '/devices/pair/complete': { post: { tags: ['Devices'], summary: 'Finish pairing with a six-digit code → token (no auth)', operationId: 'completePairing', security: [],
       requestBody: body(obj({ code: str({ examples: ['641-598'] }), name: str(), caps: ref('Caps') }, { required: ['code'] })),
       responses: { 201: json(obj({ token: str(), device: ref('Device'), capabilitiesUrl: str(), protocol: str() })), ...std(400) } } },
