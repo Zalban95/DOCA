@@ -1184,6 +1184,18 @@ back; the list view could be its fallback.
 
 ## Projects: an IDE, and its chats out of the orchestrator's way (asked for 2026-09-28)
 
+**Asked 2026-10-04, built in 2.134.0 — a project's environment is visible and
+chosen** (`modules/projects/env.js`, Build & test → Environment). The machine's
+runtimes (Python, Node, Java, Go, Rust, .NET, conda, uv) with versions; what the
+project has of its own (a venv — any folder with pyvenv.cfg — node_modules,
+requirements/pyproject/environment.yml/.nvmrc); and which Python it uses: a
+venv in the project by default, the machine's on request. Commands run with that
+venv and node_modules/.bin first on PATH — put inside the command line, because
+`bash -lc` profiles prepend after the environment — and the agent's brief says
+which Python. Buttons: create a venv, pip install into the chosen one, npm
+install. "Code intelligence" now says it is the editor's language servers, after
+a missing Pyright read as missing Python. Not yet: conda environments, per-project Node versions.
+
 **Asked 2026-10-04, built in 2.133.0 — checkpoints can be renamed, noted,
 pinned and deleted** (`projects/checkpoints.js` update/remove; PATCH and DELETE
 `/api/projects/:id/checkpoints/:cp`). Only DOCA's list changes — the snapshot

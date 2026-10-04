@@ -32,6 +32,7 @@ async function text(p) {
       ? `Commands (project action run): ${commands.map(c => `${c.name}${c.missing.length ? ' [missing ' + c.missing.join('+') + ']' : ''}`).join(', ')}.`
       : 'No build or test commands were recognised; ask the owner how it builds.',
     missing.length ? `Not installed here: ${missing.join(', ')} — say so rather than working around it.` : '',
+    require('./env').briefLine(p),
     'How to work here: find code with search_files (not shell grep), change many files with replace_in_files '
       + '(dry run first), read history and changes with git, build and test with project run. Read the '
       + 'repository rules (repo_rules) before your first change. Reporting done is checked, not taken on '

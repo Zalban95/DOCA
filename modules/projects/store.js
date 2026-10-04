@@ -58,6 +58,12 @@ function update(id, patch) {
     for (const [k, v] of Object.entries(patch.commands || {})) if (/^[\w:-]{1,40}$/.test(k)) c[k] = String(v).slice(0, 500);
     allowed.commands = c;
   }
+  if (patch.env !== undefined) {
+    // Which Python the project uses (env.js): 'machine', a venv folder in the root, or null for "a venv if there is one".
+    const py = patch.env?.python;
+    if (py != null && py !== 'machine' && !/^[\w.-]{1,40}$/.test(String(py))) throw bad('env.python is "machine" or a folder name in the project.');
+    allowed.env = { python: py ?? null };
+  }
   for (const k of ['sessionId', 'openedAt']) if (patch[k] !== undefined) allowed[k] = patch[k];
   save(rows().map(p => (p.id === id ? { ...p, ...allowed } : p)));
   return get(id);

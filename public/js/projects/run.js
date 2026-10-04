@@ -12,8 +12,9 @@ const _pjp = p => `/api/projects/${encodeURIComponent(PJ.project.project.id)}${p
 function pjRunRender(body) {
   const d = PJ.project;
   body.innerHTML = '';
+  pjEnvSection(body);   // which Python / Node the project runs with (projects/env.js)
   if (!d.commands.length) {
-    body.innerHTML = '<div class="placeholder">No build system recognised in this folder. Add a command below, or ask the agent how it builds.</div>';
+    body.appendChild(Object.assign(document.createElement('div'), { className: 'placeholder', textContent: 'No build system recognised in this folder. Add a command below, or ask the agent how it builds.' }));
   }
   for (const c of d.commands) {
     const row = document.createElement('div');
@@ -47,15 +48,20 @@ async function pjRunCommand(name) {
   let r;
   try { r = await apiFetch(_pjp('/run'), { method: 'POST', body: { command: name } }); }
   catch (e) { return appAlert(e.message); }
-  PJR.job = r.job;
-  _pjOutput(`$ ${r.command.run}\n`, true);
+  pjFollowJob(r.job, r.command.run, () => { pjRefresh(); if (PJ.view === 'git') pjView('git'); });
+}
+
+/** Show a background job's output in the pane until it ends, then call `done(job)`. */
+function pjFollowJob(job, run, done) {
+  PJR.job = job;
+  _pjOutput(`$ ${run}\n`, true);
   clearTimeout(PJR.timer);
   const poll = async () => {
     let j;
-    try { j = await apiFetch(`${_pjp(`/jobs/${r.job.id}`)}?bytes=200000`); } catch { return; }
-    _pjOutput(`$ ${r.command.run}\n${j.output}`, j.job.state === 'running', j.job);
+    try { j = await apiFetch(`${_pjp(`/jobs/${job.id}`)}?bytes=200000`); } catch { return; }
+    _pjOutput(`$ ${run}\n${j.output}`, j.job.state === 'running', j.job);
     if (j.job.state === 'running') PJR.timer = setTimeout(poll, 1000);
-    else { pjRefresh(); if (PJ.view === 'git') pjView('git'); }
+    else done?.(j.job);
   };
   poll();
 }

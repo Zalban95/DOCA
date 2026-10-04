@@ -47,7 +47,7 @@ function view(j) {
   return { ...j, state };
 }
 
-function start(command, { cwd, sessionId = null } = {}) {
+function start(command, { cwd, sessionId = null, env } = {}) {
   if (!String(command || '').trim()) throw bad('command is required');
   const running = rows().map(view).filter(j => j.state === 'running');
   if (running.length >= MAX_RUNNING)
@@ -59,7 +59,7 @@ function start(command, { cwd, sessionId = null } = {}) {
   let child;
   try {
     // Its own process group (detached), so stopping it stops what it started too.
-    child = shell.spawnShell(command, { cwd, detached: !shell.WIN, stdio: ['ignore', fd, fd] });
+    child = shell.spawnShell(command, { cwd, detached: !shell.WIN, stdio: ['ignore', fd, fd], ...(env ? { env } : {}) });
   } finally { fs.closeSync(fd); }
 
   const job = { id, command: String(command).slice(0, 2000), cwd: cwd || null, pid: child.pid || null,

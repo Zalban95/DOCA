@@ -142,7 +142,10 @@ function _pjlProviders(lang, server) {
 /** Build & test view: the code intelligence servers, found or installable. */
 async function pjLspSection(body) {
   const servers = await _pjlServers(true);
-  body.appendChild(Object.assign(document.createElement('div'), { className: 'pj-res-file', textContent: 'Code intelligence' }));
+  body.appendChild(Object.assign(document.createElement('div'), { className: 'pj-res-file', textContent: 'Code intelligence — editor language servers' }));
+  // Not the languages themselves: a ✗ here read as "no Python" on a machine that has one (see Environment above).
+  body.appendChild(Object.assign(document.createElement('div'), { className: 'pj-meta', style: 'white-space:normal;margin-bottom:4px',
+    textContent: 'Autocomplete, errors and go-to-definition in the editor. ✗ means the language server is not installed — the language itself may well be (see Environment).' }));
   for (const s of servers) {
     const row = document.createElement('div');
     row.className = `pj-tc ${s.found ? 'ok' : 'missing'}`;
