@@ -183,7 +183,7 @@ function _hcSessionInfo(s) {
   <details class="hc-plan" ${p?.state === 'proposed' ? 'open' : ''}>
     <summary>Plan${p ? ` · ${escHtml(p.state)} · revision ${p.revision}` : ' · none yet'}</summary>
     ${p ? `<strong>${escHtml(p.title)}</strong><ol>${p.steps.map((x, i) => `<li>${escHtml(x)} <small>· ${escHtml(p.progress?.[i + 1] || 'queued')}</small></li>`).join('')}</ol><p>${escHtml(p.note || '')}</p>` : '<p>Draft here, or ask this agent to plan the work.</p>'}
-    ${p?.state === 'proposed' && !s.archivedAt ? `<div class="hc-plan-actions"><button class="btn btn-xs btn-green" onclick="hcPlanAction('approve',${p.revision})">Approve revision ${p.revision}</button><button class="btn btn-xs" onclick="hcPlanAction('reject',${p.revision})">Reject</button></div><small>Approval records your decision. Ask the responsible chat to execute when ready.</small>` : ''}
+    ${p?.state === 'proposed' && !s.archivedAt ? `<div class="hc-plan-actions"><button class="btn btn-xs btn-green" onclick="hcPlanAction('approve',${p.revision})">Approve revision ${p.revision}</button><button class="btn btn-xs" onclick="hcPlanAction('reject',${p.revision})">Reject</button></div><small>Approving starts the work in this chat.</small>` : ''}
     ${!s.archivedAt ? `<details><summary>${p ? 'Edit as a new draft' : 'Create draft'}</summary>
       <input class="input" id="hc-plan-title" aria-label="Plan title" placeholder="Plan title" value="${escHtml(p?.title || '')}">
       <textarea class="input" id="hc-plan-steps" aria-label="Plan steps" rows="4" placeholder="One step per line">${escHtml((p?.steps || []).join('\n'))}</textarea>

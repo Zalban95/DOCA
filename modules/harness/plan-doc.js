@@ -31,7 +31,7 @@ function render(plan) {
   return [
     `# ${plan.title}`,
     '',
-    `*Revision ${plan.revision} — waiting for your decision. Approving records the decision; it does not start the work.*`,
+    `*Revision ${plan.revision} — waiting for your decision. Approving starts the work; rejecting stops it here.*`,
     '',
     '## Steps',
     '',

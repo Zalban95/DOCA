@@ -188,11 +188,10 @@ function _agentDocActions(media) {
     const decide = action => async () => {
       bar.querySelectorAll('button').forEach(b => { b.disabled = true; });
       try {
-        await apiFetch(`/api/harness/sessions/${encodeURIComponent(media.plan.sessionId)}/plan`,
+        const r = await apiFetch(`/api/harness/sessions/${encodeURIComponent(media.plan.sessionId)}/plan`,
           { method: 'POST', body: { action, revision: media.plan.revision } });
-        note.textContent = action === 'approve'
-          ? 'Approved. Nothing has started — tell the agent when to begin.'
-          : 'Rejected. Say why in the chat, so the next revision fixes it.';
+        note.textContent = action !== 'approve' ? 'Rejected. Say why in the chat, so the next revision fixes it.'
+          : r.started?.started ? 'Approved — the agent has started on it.' : `Approved. ${r.started?.reason || ''}`;
         bar.querySelectorAll('.btn-green, .agent-doc-reject').forEach(b => b.remove());
       } catch (e) {
         note.textContent = e.message;

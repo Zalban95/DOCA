@@ -249,13 +249,18 @@ test('a proposed plan is put in front of the person as a document, and only they
   assert.match(doc.caption, /Move the box.*revision 1.*waiting for your decision/);
   const text = require('node:fs').readFileSync(require('../modules/attachments').resolve(doc.name)[0].path, 'utf8');
   assert.match(text, /^# Move the box\n[\s\S]*1\. Lift\n2\. Carry\n3\. Drop\n[\s\S]*## Notes\n\nGently\./);
-  assert.match(text, /does not start the work/);
+  assert.match(text, /Approving starts the work/);
 
   // The agent cannot decide it; the window's buttons can.
   assert.throws(() => org.plan(work.id, { action: 'approve', revision: 1 }), /Only the user/);
   const r = await H.api(null, 'POST', `/api/harness/sessions/${work.id}/plan`, { action: 'approve', revision: 1 });
   assert.equal(r.status, 200);
   assert.equal(r.body.plan.state, 'approved');
+  // Approve is the go-ahead (2026-10-04): the work starts in the conversation that proposed it.
+  assert.deepEqual(r.body.started, { started: true });
+  assert.equal(memory.getSession(work.id).job.state, 'working', 'a work chat gets a fresh job');
+  await new Promise(res => setTimeout(res, 50));
+  assert.ok(['failed', 'running', 'idle'].includes(memory.getSession(work.id).state), 'a turn was started (no model here, so it fails fast)');
   const again = await H.api(null, 'POST', `/api/harness/sessions/${work.id}/plan`, { action: 'reject', revision: 1 });
   assert.match(again.body.error, /changed/, 'a stale window gets a sentence, not a second decision');
 
@@ -263,4 +268,16 @@ test('a proposed plan is put in front of the person as a document, and only they
   const quiet = [];
   await tools.call('work_plan', { action: 'progress', step: 1, state: 'done' }, [], { sessionId: work.id, show: m => quiet.push(m) });
   assert.equal(quiet.length, 0);
+});
+
+test('approving does not interrupt a conversation already busy with its own turn', () => {
+  const work = org.create({ title: 'Busy' });
+  const agent = require('../modules/harness/agent');
+  const realRunning = agent.isRunning, realAuto = agent.isAuto;
+  agent.isRunning = id => id === work.id; agent.isAuto = () => false;
+  try {
+    const r = org.carryOut(work.id, { revision: 1, title: 'X' }, { name: 'Dashboard console', kind: 'dashboard' });
+    assert.equal(r.started, false);
+    assert.match(r.reason, /busy with a turn; it sees the approval/);
+  } finally { agent.isRunning = realRunning; agent.isAuto = realAuto; }
 });
