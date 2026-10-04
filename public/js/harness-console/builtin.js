@@ -40,6 +40,8 @@ function _hcBuiltinHtml(h) {
           <button class="btn btn-xs" onclick="hcAgentImport()" title="Import .md definitions — ours or Claude Code subagents">⬆</button>
         </div>
         <div id="hc-agents" class="hc-agents"><div class="placeholder">Loading…</div></div>
+        <div class="hc-roster-links">Tools held by the <a href="#" onclick="hcAgentTools('orchestrator');return false">Orchestrator</a>
+          · <a href="#" onclick="hcAgentTools('work');return false">a work chat</a></div>
       </div>
 
       <div class="hc-main">

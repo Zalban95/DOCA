@@ -291,6 +291,9 @@ const handleAgents = wrap(async (_req, res) => {
   res.json({ enabled: registry.enabled(), dir: registry.dir(), agents, never: registry.NEVER });
 });
 
+/** What an agent type holds and why: `orchestrator`, `work` or a specialist's id (tool-roster.js). */
+const handleAgentTools = wrap(async (req, res) => res.json(require('./tool-roster').roster(req.params.id)));
+
 /** The switch. Off is the default, and turning it off is the rollback. */
 const handleAgentsEnable = wrap(async (req, res) =>
   res.json({ ok: true, enabled: registry.setEnabled(req.body?.enabled === true) }));
@@ -331,7 +334,7 @@ const handleInstallReject = wrap(async (req, res) =>
 
 module.exports = {
   handleSessionArchive, handleSessionStop, handlePlan,
-  handleAgents, handleAgentsEnable, handleAgentSave, handleAgentDelete, handleMissions, handleMission, handleMissionArchive,
+  handleAgents, handleAgentTools, handleAgentsEnable, handleAgentSave, handleAgentDelete, handleMissions, handleMission, handleMissionArchive,
   handleInstalls, handleInstallApply, handleInstallReject,
   handleList, handleSetDefault, handleInstall, handleConfig, handleAddCustom, handleRemoveCustom,
   handleProviders, handleModels, handleToolCheck, handleStatus, handleUsage,

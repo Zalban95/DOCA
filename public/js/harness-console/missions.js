@@ -58,7 +58,7 @@ function _hcAgentHtml(a, enabled) {
   return `
     <div class="hc-agent ${enabled ? '' : 'off'}" title="${escHtml(a.note || '')}">
       <span class="hc-agent-id">${escHtml(a.label || a.id)}</span>
-      <span class="hc-agent-note">${escHtml(tools)}${a.builtin ? ' · shipped' : ''}</span>
+      <span class="hc-agent-note"><a href="#" onclick="hcAgentTools(${jsArg(a.id)});return false" title="What it holds, and why">${escHtml(tools)}</a>${a.builtin ? ' · shipped' : ''}</span>
       <button class="btn btn-xs" onclick="hcAgentEdit(${jsArg(a.id)})" title="Edit this definition">✎</button>
       <button class="btn btn-xs btn-red" onclick="hcAgentDelete(${jsArg(a.id)})"
               title="${a.builtin ? 'Revert to the shipped definition' : 'Delete'}">✕</button>

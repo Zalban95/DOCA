@@ -358,3 +358,17 @@ body.harness-tab .chat-fab { display: none; }
 .hc-conv { padding: 4px 12px; border-bottom: 1px solid var(--border); }
 .hc-conv:empty { display: none; }
 .hc-tabs { padding-left: 10px; }
+
+/* What an agent type holds (harness-console/tool-roster.js) */
+.hc-roster-links { font-size: 11px; color: var(--muted); padding: 4px 2px; }
+.hc-roster { position: fixed; inset: 0; z-index: 800; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.hc-roster-box { background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; width: min(860px, 100%); max-height: 100%; display: flex; flex-direction: column; }
+.hc-roster-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.hc-roster-dim, .hc-roster-note { color: var(--muted); font-size: 11px; }
+.hc-roster-note { padding: 6px 12px 0; }
+.hc-roster-list { overflow-y: auto; padding: 6px 12px 12px; }
+.hc-roster-kit { margin-top: 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
+.hc-roster-row { display: grid; grid-template-columns: minmax(140px, 220px) 1fr auto; gap: 10px; padding: 3px 0; font-size: 12px; border-bottom: 1px solid var(--border); align-items: baseline; }
+.hc-roster-row span { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-roster-row em { color: var(--muted); font-style: normal; font-size: 11px; white-space: nowrap; }
+@media (max-width: 768px) { .hc-roster-row { grid-template-columns: 1fr; gap: 0; } .hc-roster-row span { white-space: normal; } }

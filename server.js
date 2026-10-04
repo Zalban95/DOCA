@@ -190,7 +190,6 @@ require('./modules/harness/mount').mount(app);   // rules and owner questions
 app.post  ('/api/harness/memory/:key/lock',      harness.handleMemoryLock);
 app.post  ('/api/harness/memory/:key/flag',     harness.handleMemoryFlag);
 app.delete('/api/harness/memory/:key',          harness.handleMemoryForget);
-
 // What the agent knows, and the settings changes it wants the user to accept.
 app.get   ('/api/harness/environment',              harness.handleEnvironment);
 app.get   ('/api/harness/settings',                 harness.handleSettingsRead);
@@ -199,6 +198,7 @@ app.post  ('/api/harness/proposals/:id/apply',      harness.handleProposalApply)
 app.post  ('/api/harness/proposals/:id/reject',     harness.handleProposalReject);
 app.get   ('/api/harness/agents',                   harness.handleAgents);
 app.post  ('/api/harness/agents/enable',            harness.handleAgentsEnable);
+app.get   ('/api/harness/agents/:id/tools',         harness.handleAgentTools);   // what a type holds, and why
 app.post  ('/api/harness/agents',                   harness.handleAgentSave);
 app.post  ('/api/harness/agents/:id',               harness.handleAgentSave);
 app.delete('/api/harness/agents/:id',               harness.handleAgentDelete);
