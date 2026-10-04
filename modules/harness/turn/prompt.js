@@ -397,4 +397,4 @@ async function ollamaWindows(p) {
   return notes.length ? `# Context\n${notes.join('\n')}` : '';
 }
 
-module.exports = { memoryBlock, rulesBlock, systemPrompt, disabledFor, isMissionProfile, missionsFor, liveBlock, turnPreamble, ollamaWindows };
+module.exports = { ALWAYS_FOR_SPECIALISTS, COMES_WITH, memoryBlock, rulesBlock, systemPrompt, disabledFor, isMissionProfile, missionsFor, liveBlock, turnPreamble, ollamaWindows };
