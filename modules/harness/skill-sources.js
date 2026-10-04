@@ -128,13 +128,14 @@ function importSource(id, { names = [], overwrite = false, project } = {}) {
  * says where it lives, whether it is in DOCA yet, and a line of context.
  */
 function search(q, { project, limit = 30 } = {}) {
-  const words = String(q || '').toLowerCase().split(/\s+/).filter(w => w.length > 1);
+  const words = String(q || '').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 1);
   if (!words.length) return [];
-  const score = (name, desc, body) => words.reduce((n, w) => n
-    + (name.toLowerCase().includes(w) ? 5 : 0) + (desc.toLowerCase().includes(w) ? 3 : 0) + (body.toLowerCase().includes(w) ? 1 : 0), 0);
+  // Loose: stems, prefixes, typos, a few synonyms, weighted by where (skill-match.js).
+  const m = require('./skill-match').matcher(q);
+  const score = (name, description, body) => m({ name, description, body });
   const snippet = body => {
     const lower = body.toLowerCase();
-    const at = words.map(w => lower.indexOf(w)).filter(i => i >= 0).sort((a, b) => a - b)[0];
+    const at = words.flatMap(w => [w, require('./skill-match').stem(w)]).map(w => lower.indexOf(w)).filter(i => i >= 0).sort((a, b) => a - b)[0];
     return at === undefined ? '' : body.slice(Math.max(0, at - 60), at + 100).replace(/\s+/g, ' ').trim();
   };
   const bodyOf = dir => { try { return split(fs.readFileSync(path.join(dir, 'SKILL.md'), 'utf8')).body || ''; } catch { return ''; } };
