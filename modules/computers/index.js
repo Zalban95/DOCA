@@ -115,7 +115,9 @@ async function remove(id) {
 /** What the panel and the agent see: never the token. The VNC password is for the person who opens the view. */
 function view(c, state = null) {
   return { id: c.id, name: c.name, purpose: c.purpose, missionId: c.missionId, createdAt: c.createdAt, state,
-    server: serverId(c), tools: `mcp__${serverId(c)}__*`, vnc: { url: `http://127.0.0.1:${c.vncPort}/vnc.html?autoconnect=1&resize=scale`, password: c.vncPassword } };
+    server: serverId(c), tools: `mcp__${serverId(c)}__*`,
+    // Through the hub, so any signed-in host's browser can watch — the phone on the tailnet included (vnc.js).
+    vnc: { url: require('./vnc').watchUrl(c), local: `http://127.0.0.1:${c.vncPort}/vnc.html`, password: c.vncPassword } };
 }
 
 async function list() {
