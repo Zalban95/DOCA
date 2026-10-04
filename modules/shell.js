@@ -112,7 +112,9 @@ function run(command, { cwd, timeout = 60000, maxBuffer = 4 << 20, env, signal }
         stderr: String(stderr || '').trim(),
         // `killed` is how Node reports the timeout it enforced, which is a
         // different thing from the command exiting non-zero.
-        timedOut: !!(err && err.killed),
+        timedOut: !!(err && err.killed && err.name !== 'AbortError'),
+        // Stopped by the caller's signal (a person pressing Stop), not by the timeout.
+        aborted: !!(err && err.name === 'AbortError'),
         code: err ? (typeof err.code === 'number' ? err.code : 1) : 0,
         // ENOENT here means the shell itself is missing, not the command —
         // worth saying plainly, because it is the one failure no amount of
@@ -127,6 +129,18 @@ function run(command, { cwd, timeout = 60000, maxBuffer = 4 << 20, env, signal }
 function spawnShell(command, opts = {}) {
   const s = spec();
   return spawn(s.file, [...s.args, command], { windowsHide: true, ...opts });
+}
+
+/**
+ * How to start a program directly: { file, args, opts }. On Windows a .cmd/.bat
+ * (npm.cmd, a language server's .bin\\x.cmd) cannot be spawned without a shell
+ * since Node's 2024 fix (spawn EINVAL), so it goes through cmd.exe with each
+ * argument quoted; everything else, and every POSIX program, starts as itself.
+ */
+function direct(bin, args = []) {
+  if (!WIN || !/\.(cmd|bat)$/i.test(bin)) return { file: bin, args, opts: {} };
+  const q = a => (/[\s"&|<>^()]/.test(a) ? `"${String(a).replace(/"/g, '""')}"` : String(a));
+  return { file: process.env.ComSpec || 'cmd.exe', args: ['/d', '/s', '/c', `"${[bin, ...args].map(q).join(' ')}"`], opts: { windowsVerbatimArguments: true } };
 }
 
 /**
@@ -164,4 +178,4 @@ function which(cmd) {
   return null;
 }
 
-module.exports = { WIN, spec, describe, run, spawnShell, which };
+module.exports = { WIN, spec, describe, run, spawnShell, which, direct };

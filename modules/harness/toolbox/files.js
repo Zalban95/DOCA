@@ -72,7 +72,9 @@ module.exports = [
       }
       const limit = shellLimitSec();
       const sec = Math.min(limit, Math.max(1, Number(timeoutSec) || limit));
-      const r = await shell.run(command, { cwd: where, timeout: sec * 1000, maxBuffer: 4 << 20 });
+      // The turn's signal: Stop ends the command, instead of it running to its timeout (audit 2026-10-04).
+      const r = await shell.run(command, { cwd: where, timeout: sec * 1000, maxBuffer: 4 << 20, signal: ctx.signal });
+      if (r.aborted) return `Not finished: the turn was stopped while this ran, and the command was ended.\n${clip(r.out)}`;
       if (r.error) return `Error: ${r.error}.`;
       if (r.timedOut) return `Timed out after ${sec}s and was stopped. For long commands use background: true.\n${clip(r.out)}`;
       return clip([`exit ${r.code}`, r.out || '(no output)'].join('\n'));

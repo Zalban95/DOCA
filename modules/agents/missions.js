@@ -224,11 +224,11 @@ function announce(row, { ephemeral = false } = {}) {
       // So a client that is showing this mission takes it off the list when it
       // is put away here, rather than keeping a row the panel no longer draws.
       archivedAt: row.archivedAt || undefined,
-      progress: planProgress(row.plan) || undefined, ...(ephemeral ? {} : require('../presence').quietFlag()),   // at the panel: update, do not notify
+      progress: planProgress(row.plan) || undefined,
     };
     for (const d of devices.list()) {
       if (d.revokedAt || !hasScope(d.scopes, 'harness:chat')) continue;
-      bus.publish(d.id, 'agent.mission', payload, ephemeral ? { cls: 'ephemeral' } : undefined);
+      bus.publish(d.id, 'agent.mission', ephemeral ? payload : { ...payload, ...require('../presence').quietFlag(d.userId) }, ephemeral ? { cls: 'ephemeral' } : undefined);   // its owner at the panel: update, do not notify
     }
   } catch { /* a mission's bookkeeping must never break the mission */ }
 }
@@ -321,10 +321,10 @@ function run(row, def, message, base = { steps: 0, tokens: 0 }) {
   agent.turn({ message, sessionId: row.sessionId, profile: profileOf(def), emit: evt => record(id, evt, base) })
     .then(async r => {
       announce(patch(id, {
-        state: 'done', endedAt: new Date().toISOString(),
-        steps: base.steps + (r.steps || 0), tokens: base.tokens + (r.usage?.totalTokens || 0),
+        state: 'done', endedAt: new Date().toISOString(), steps: base.steps + (r.steps || 0), tokens: base.tokens + (r.usage?.totalTokens || 0),
         result: await require('../harness/guard/airlock').result(def, id, r.text),   // an airlock's report, screened
       }));
+      require('../harness/supervisor').afterTurn(row.sessionId, {});   // decided again now it is recorded: an airlock's screening outlived the turn's end (audit 2026-10-04)
     })
     .catch(e => {
       announce(patch(id, {

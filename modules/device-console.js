@@ -174,6 +174,8 @@ function mountPanel(app) {
   });
   app.put('/api/devices/:id/console', (req, res) => {
     const devices = require('./api-v1/devices');
+    // Only a device that exists gets a console record (audit 2026-10-04: any id made one).
+    if (!devices.get(req.params.id)) return res.status(404).json({ error: 'Unknown device' });
     const b = req.body || {};
     const patch = {};
     if (Array.isArray(b.links)) {

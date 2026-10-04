@@ -20,6 +20,14 @@ const failures = require('./failures');
 async function runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced }) {
   for (const tc of reply.tool_calls) {
     const name = tc.function?.name || '(unnamed)';
+    // Stop means the next call too: the rest of this step's calls get a result row (so no call is
+    // left without its answer) and do not run (audit 2026-10-04).
+    if (signal?.aborted) {
+      const result = 'Not run: the turn was stopped before this call.';
+      say({ type: 'tool_result', name, result, step });
+      memory.append(session.id, { role: 'tool', tool_call_id: tc.id || name, name, content: result });
+      continue;
+    }
     let args = {};
     try { args = tc.function?.arguments ? JSON.parse(tc.function.arguments) : {}; }
     catch { args = { _raw: tc.function?.arguments }; }

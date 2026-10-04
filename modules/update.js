@@ -223,7 +223,8 @@ async function handleUpdate(req, res) {
 
   // ── 2. Pull (streamed) ──────────────────────────────────────────────────────
   sseWrite({ status: `$ git pull\n\n` });
-  const child = spawn('git', ['pull'], { cwd: DASHBOARD_DIR });
+  // No prompt: an expired credential helper would wait for a username nobody can type (as the check does).
+  const child = spawn('git', ['pull'], { cwd: DASHBOARD_DIR, env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_ASKPASS: 'echo' } });
 
   child.stdout.on('data', chunk => sseWrite({ status: chunk.toString() }));
   child.stderr.on('data', chunk => sseWrite({ status: chunk.toString() }));
@@ -252,7 +253,9 @@ async function handleUpdate(req, res) {
     const changed = diff.stdout.trim().split('\n');
     if (changed.includes('package.json')) {
       sseWrite({ status: '\npackage.json changed — running npm install…\n' });
-      const npm = spawn('npm', ['install', '--omit=dev'], { cwd: DASHBOARD_DIR });
+      // `npm` is npm.cmd on Windows, which spawn cannot start as 'npm' (ENOENT) nor bare (EINVAL): shell.direct.
+      const d = require('./shell').direct(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install', '--omit=dev']);
+      const npm = spawn(d.file, d.args, { cwd: DASHBOARD_DIR, ...d.opts });
       npm.stdout.on('data', chunk => sseWrite({ status: chunk.toString() }));
       npm.stderr.on('data', chunk => sseWrite({ status: chunk.toString() }));
       npm.on('close', (npmCode) => {

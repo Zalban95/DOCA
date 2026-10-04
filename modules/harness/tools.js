@@ -72,6 +72,7 @@ function schemas(disabled = []) {
  */
 async function call(name, args, disabled = [], ctx = {}) {
   if (disabled.includes(name)) return `Error: the "${name}" tool is switched off for this harness.`;
+  if (ctx.signal?.aborted) return 'Not run: the turn was stopped before this call.';
   const isMcp = mcp.isMcpTool(name);
   const tool = isMcp ? { run: a => mcp.call(name, a) } : TOOLS.find(t => t.name === name);
   if (!tool) return `Error: no tool named "${name}".`;

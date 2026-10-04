@@ -94,10 +94,11 @@ function afterOrchestrator(sessionId, r) {
   try {
     const bus = require('../api-v1/bus'), devices = require('../api-v1/devices');
     const { hasScope } = require('../api-v1/scopes');
-    bus.publishWhere(devices.list(), d => hasScope(d.scopes, 'harness:chat'), 'agent.turn', {
-      turnId: `auto_${Date.now().toString(36)}`, sessionId, state: 'done', by: 'panel', text: short(r.text, 4000),
-      ...require('../presence').quietFlag(),
-    });
+    const turnId = `auto_${Date.now().toString(36)}`;
+    bus.publishWhere(devices.list(), d => hasScope(d.scopes, 'harness:chat'), 'agent.turn', d => ({
+      turnId, sessionId, state: 'done', by: 'panel', text: short(r.text, 4000),
+      ...require('../presence').quietFlag(d.userId),
+    }));
   } catch { /* the chat has it either way */ }
 }
 
@@ -195,8 +196,11 @@ function missionEnded(s) {
       || lead.job.state === 'stopped' || lead.job.state === 'stalled') return 'lead not working';
   if (require('./agent').isRunning(lead.id)) return 'lead busy';   // its own turn end picks the result up
   if (specialistsRunning(lead.id)) return 'others still running';  // woken by the last one
+  if (m.leadWokenAt) return 'already woken';   // the turn's end and the mission's record can both get here
   setJob(lead.id, { ...lead.job, state: 'working' });
-  return wake(lead.id, RESULTS, { retry: () => missionEnded(s) });
+  const how = wake(lead.id, RESULTS, { retry: () => missionEnded(s) });
+  if (how === 'woken') require('../agents/missions').patch(m.id, { leadWokenAt: new Date().toISOString() });
+  return how;
 }
 
 /**

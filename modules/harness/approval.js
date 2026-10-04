@@ -297,6 +297,11 @@ function decide(id, decision) {
   const entry = _pending.get(id);
   if (!entry) return false;
 
+  // A request with no keys (a protected file, a re-ask after outside text, a computed command) has no
+  // "always" to give: the card hides it, and the server must refuse it too — `always_tool` here allowlisted
+  // the whole tool from a question that exists because it must always be asked (audit 2026-10-04).
+  if ((decision === 'always' || decision === 'always_tool') && (!entry.req.keys || entry.req.forced || entry.req.recheck))
+    throw Object.assign(new Error('This request can only be allowed once.'), { status: 400 });
   if (decision === 'always' && entry.req.keys?.length) remember(entry.req.keys);
   if (decision === 'always_tool') remember(entry.req.tool);
   entry.resolve(decision);

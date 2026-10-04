@@ -28,7 +28,8 @@ let _cache = null;   // { at, result }
 /** npm, with its JSON on stdout — both commands exit 1 when they found something. */
 let npmJson = function npmJson(args, { cwd = ROOT, timeout = 90000 } = {}) {
   return new Promise(resolve => {
-    execFile(NPM, [...args, '--json'], { cwd, timeout, maxBuffer: 16 << 20, windowsHide: true }, (err, stdout) => {
+    const d = require('./shell').direct(NPM, [...args, '--json']);   // npm.cmd needs cmd.exe on Windows
+    execFile(d.file, d.args, { cwd, timeout, maxBuffer: 16 << 20, windowsHide: true, ...d.opts }, (err, stdout) => {
       try { resolve({ json: JSON.parse(stdout || '{}') }); }
       catch { resolve({ error: err?.killed ? 'npm did not answer in time' : (err?.message || 'npm gave no answer').split('\n')[0] }); }
     });

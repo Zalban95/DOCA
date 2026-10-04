@@ -50,7 +50,8 @@ async function setRemote(root, { name = 'origin', url } = {}) {
   return remotes(root);
 }
 
-const q = s => `'${String(s).replace(/'/g, "'\\''")}'`;   // jobs run in bash; names are validated already
+// Jobs run in bash, or PowerShell on Windows: each quotes single-quoted strings its own way.
+const q = s => (process.platform === 'win32' ? `'${String(s).replace(/'/g, "''")}'` : `'${String(s).replace(/'/g, "'\\''")}'`);
 
 /** The command line for fetch / pull / push, run as a job by the route. */
 async function syncCommand(root, action) {
@@ -64,6 +65,7 @@ async function syncCommand(root, action) {
   }
   if (action === 'push') {
     if (!st.branch || st.branch === '(detached)') throw bad('Not on a branch.');
+    if (!NAME.test(st.branch)) throw bad(`The branch name "${st.branch}" has characters this button will not pass to a shell; push it from a terminal.`);
     return st.upstream ? 'git push' : `git push -u ${q(rs.some(r => r.name === 'origin') ? 'origin' : rs[0].name)} ${q(st.branch)}`;
   }
   throw bad('action is fetch, pull or push.');

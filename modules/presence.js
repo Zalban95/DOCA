@@ -21,10 +21,10 @@ function beat(user, visible) {
   seen.set(user.id, { at: Date.now(), visible: !!visible, name: user.name || user.email || 'someone' });
 }
 
-/** { atPanel, who, ago } — ago in ms since the last visible heartbeat, null when never. */
-function state(now = Date.now()) {
+/** { atPanel, who, ago } — ago in ms since the last visible heartbeat, null when never. For one person with `userId`. */
+function state(now = Date.now(), userId = null) {
   let last = null;
-  for (const v of seen.values()) if (v.visible && (!last || v.at > last.at)) last = v;
+  for (const [id, v] of seen) if ((!userId || id === userId) && v.visible && (!last || v.at > last.at)) last = v;
   if (!last) return { atPanel: false, who: null, ago: null };
   return { atPanel: now - last.at < FRESH_MS, who: last.name, ago: now - last.at };
 }
@@ -34,7 +34,7 @@ const human = ms => (ms < 90e3 ? `${Math.round(ms / 1000)}s` : ms < 90 * 60e3 ? 
 /** One line for the agent's per-step readings (turn/prompt.js liveBlock). */
 function line(now = Date.now()) {
   const s = state(now);
-  if (s.atPanel) return `owner: at the panel now (${s.who}) — the chat is in front of them.`;
+  if (s.atPanel) return `owner: at the panel now (${s.who}) — the chat is in front of whoever is there.`;
   if (s.ago === null) return 'owner: the panel has not been open since the server started — a device (tell_device) is how to reach them.';
   return `owner: not at the panel (last seen ${human(s.ago)} ago) — what matters reaches them on a device (tell_device), not only in the chat.`;
 }
@@ -44,9 +44,11 @@ function line(now = Date.now()) {
  * the hub's *own* pushes (an automatic reply, a mission or work chat starting
  * and finishing). PROTOCOL §11.4: a client updates what it shows and raises no
  * notification; one that does not know the field notifies as before. Never on
- * a turn a device asked for: that device wants its answer.
+ * a turn a device asked for: that device wants its answer. Per device: quiet only
+ * when *that device's owner* is the one at the panel — a member reading the panel
+ * says nothing about whether the owner has seen it (audit 2026-10-04).
  */
-function quietFlag(now = Date.now()) { return state(now).atPanel ? { quiet: true } : {}; }
+function quietFlag(userId, now = Date.now()) { return userId && state(now, userId).atPanel ? { quiet: true } : {}; }
 
 function _reset() { seen.clear(); }
 

@@ -166,3 +166,12 @@ test('the system tools route answers, and finds the node it is running on', asyn
     assert.match(node.version || '', /^\d+\.\d+/, 'and its version is a version');
   }
 });
+
+test('a .cmd on Windows starts through cmd.exe with its arguments quoted; anything else as itself', () => {
+  const { direct } = require('../modules/shell');
+  assert.deepEqual(direct('/usr/bin/npm', ['install', 'x']), { file: '/usr/bin/npm', args: ['install', 'x'], opts: {} });
+  if (process.platform === 'win32') {
+    const d = direct('C:\\Program Files\\nodejs\\npm.cmd', ['install', '--prefix', 'C:\\My Data']);
+    assert.match(d.args.at(-1), /^""C:\\Program Files\\nodejs\\npm\.cmd" install --prefix "C:\\My Data""$/);
+  }
+});

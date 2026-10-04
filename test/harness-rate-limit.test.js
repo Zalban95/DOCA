@@ -149,3 +149,14 @@ test('the limit is in the defaults and in the agent\'s own list of limits', () =
   assert.equal(d.rateLimitMaxWaitMs, 60000);
   assert.match(budget.block(d), /rate limits \(HTTP 429\): waited out 2 times, up to 60s each \(harness\.config\.doca\.rateLimitRetries/);
 });
+
+test('Stop ends a running shell command and skips the step\'s remaining calls (audit 2026-10-04)', async () => {
+  const tools = require('../modules/harness/tools');
+  const ctrl = new AbortController();
+  const t = Date.now();
+  setTimeout(() => ctrl.abort(), 300);
+  const out = await tools.call('shell', { command: process.platform === 'win32' ? 'Start-Sleep 20' : 'sleep 20' }, [], { signal: ctrl.signal });
+  assert.ok(Date.now() - t < 5000, `ended promptly (${Date.now() - t} ms)`);
+  assert.match(out, /turn was stopped/);
+  assert.match(await tools.call('shell', { command: 'echo hi' }, [], { signal: ctrl.signal }), /^Not run: the turn was stopped/);
+});

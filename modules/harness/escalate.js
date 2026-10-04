@@ -51,7 +51,8 @@ function tryEscalate(s, why, p) {
     console.warn(`[escalate] ${s.id}: ${e.message}`);
     return null;
   }
-  memory.updateSession(s.id, { job: { ...s.job, state: 'working', idleTurns: 0,
+  // The escalated turn is an automatic turn like any other, and counts against autoTurnsPerJob (audit 2026-10-04).
+  memory.updateSession(s.id, { job: { ...s.job, state: 'working', idleTurns: 0, autoTurns: (s.job?.autoTurns || 0) + 1,
     escalated: { from: `${current.provider}/${current.model}`, to: `${to.provider}/${to.model}`, why, at: new Date().toISOString() } } });
   require('./organization').report(s.id, 'progress', `Escalated: ${why}. Trying once on ${to.provider}/${to.model} `
     + `instead of ${current.provider}/${current.model} (harness.config.doca.escalateTo).`, 'panel');

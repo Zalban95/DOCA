@@ -61,3 +61,29 @@ test('setup: a venv with the machine\'s Python, pip into the chosen one, refusal
   assert.throws(() => env.setupCommand(pj, 'npm'), /no package\.json/);
   assert.throws(() => env.setupCommand(pj, 'venv', { dir: '../x' }), /folder name/);
 });
+
+test('a panel started inside a venv does not hand it to a project set to the machine (audit 2026-10-04)', () => {
+  const pj = projects.update(p.id, { env: { python: 'machine' } });
+  const own = path.join(H.tmp, 'panel-venv');
+  const saved = { V: process.env.VIRTUAL_ENV, P: process.env.PATH };
+  process.env.VIRTUAL_ENV = own;
+  process.env.PATH = [path.join(own, WIN ? 'Scripts' : 'bin'), saved.P].join(path.delimiter);
+  try {
+    const v = env.vars(projects.need(p.id));
+    assert.equal(v.VIRTUAL_ENV, undefined);
+    assert.ok(!String(v.PATH || v.Path).split(path.delimiter).includes(path.join(own, WIN ? 'Scripts' : 'bin')));
+    assert.equal(env.wrap(projects.need(p.id), 'python -V'), 'python -V', 'nothing to put first');
+  } finally {
+    if (saved.V === undefined) delete process.env.VIRTUAL_ENV; else process.env.VIRTUAL_ENV = saved.V;
+    process.env.PATH = saved.P;
+    projects.update(p.id, { env: { python: '.venv' } });
+  }
+});
+
+test('a project\'s job route returns its own jobs only (audit 2026-10-04)', async () => {
+  const jobs = require('../modules/harness/jobs');
+  const mine = jobs.start('echo mine', { cwd: root });
+  const other = jobs.start('echo other', { cwd: H.tmp });
+  assert.equal((await H.api(null, 'GET', `/api/projects/${p.id}/jobs/${mine.id}`)).status, 200);
+  assert.equal((await H.api(null, 'GET', `/api/projects/${p.id}/jobs/${other.id}`)).status, 404);
+});

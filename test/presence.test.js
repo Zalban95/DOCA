@@ -50,15 +50,20 @@ test('the hub\'s own pushes carry quiet: true while somebody reads the panel, an
   const workview = require('../modules/harness/workview');
   const work = require('../modules/harness/organization').create({ title: 'Quiet job' });
   const phone = devices.create({ name: 'quiet phone', scopes: PRESETS.phone, caps: { formFactor: 'phone' } }).device;
+  devices.update(phone.id, { userId: 'u1' });
+  const theirs = devices.create({ name: 'someone else\'s phone', scopes: PRESETS.phone, caps: { formFactor: 'phone' } }).device;
+  devices.update(theirs.id, { userId: 'u2' });
   const last = () => bus.drain(phone.id, 0).events.filter(e => e.type === 'agent.mission').at(-1);
 
   workview.announce(work.id);
   assert.equal(last().payload.quiet, undefined, 'nobody at the panel: notify as before');
 
   presence.beat({ id: 'u1', name: 'owner' }, true);
-  assert.deepEqual(presence.quietFlag(), { quiet: true });
+  assert.deepEqual(presence.quietFlag('u1'), { quiet: true });
+  assert.deepEqual(presence.quietFlag('u2'), {}, 'someone else at the panel is not you at the panel');
   workview.announce(work.id);
   assert.equal(last().payload.quiet, true, 'update, do not notify');
+  assert.equal(bus.drain(theirs.id, 0).events.filter(e => e.type === 'agent.mission').at(-1).payload.quiet, undefined, 'the other person\'s phone still notifies');
 
   presence.beat({ id: 'u1', name: 'owner' }, false);
   workview.announce(work.id);

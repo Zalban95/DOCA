@@ -85,20 +85,30 @@ function chosen(p) {
   return v ? { kind: 'venv', dir: v.dir, version: v.version } : { kind: 'machine', ...(want ? { missing: want } : {}) };
 }
 
+/** The folders put first on PATH for the project: its venv's bin, then node_modules/.bin. */
+function front(p) {
+  const out = [];
+  const c = chosen(p);
+  if (c.kind === 'venv') out.push(path.join(p.root, c.dir, BIN));
+  if (fs.existsSync(path.join(p.root, 'node_modules', '.bin'))) out.push(path.join(p.root, 'node_modules', '.bin'));
+  return out;
+}
+
 /** Environment variables for a command run in the project. */
 function vars(p) {
   const env = { ...process.env };
-  const front = [];
-  const c = chosen(p);
-  if (c.kind === 'venv') {
-    const dir = path.join(p.root, c.dir);
-    front.push(path.join(dir, BIN));
-    env.VIRTUAL_ENV = dir;
-    delete env.PYTHONHOME;
-  }
-  if (fs.existsSync(path.join(p.root, 'node_modules', '.bin'))) front.push(path.join(p.root, 'node_modules', '.bin'));
   const key = Object.keys(env).find(k => k.toUpperCase() === 'PATH') || 'PATH';
-  if (front.length) env[key] = [...front, env[key] || ''].join(path.delimiter);
+  const c = chosen(p);
+  // A panel started from inside a venv hands that venv to every child: "machine" must not mean the panel's own
+  // venv, so it is taken off PATH and out of VIRTUAL_ENV (audit 2026-10-04).
+  if (env.VIRTUAL_ENV) {
+    const own = path.join(env.VIRTUAL_ENV, BIN);
+    env[key] = String(env[key] || '').split(path.delimiter).filter(d => path.resolve(d) !== path.resolve(own)).join(path.delimiter);
+    delete env.VIRTUAL_ENV;
+  }
+  if (c.kind === 'venv') { env.VIRTUAL_ENV = path.join(p.root, c.dir); delete env.PYTHONHOME; }
+  const f = front(p);
+  if (f.length) env[key] = [...f, env[key] || ''].join(path.delimiter);
   return env;
 }
 
@@ -109,12 +119,10 @@ function vars(p) {
  * the variable alone would leave the venv behind the machine's python.
  */
 function wrap(p, command) {
-  const v = vars(p);
-  const key = Object.keys(v).find(k => k.toUpperCase() === 'PATH') || 'PATH';
-  const front = String(v[key]).split(path.delimiter).slice(0, Number(!!v.VIRTUAL_ENV) + Number(fs.existsSync(path.join(p.root, 'node_modules', '.bin'))));
-  if (!front.length) return command;
-  if (WIN) return `$env:PATH = '${front.join(';').replace(/'/g, "''")};' + $env:PATH; ${command}`;
-  return `export PATH=${front.map(f => `'${f.replace(/'/g, "'\\''")}'`).join(':')}:"$PATH"; ${command}`;
+  const f = front(p);
+  if (!f.length) return command;
+  if (WIN) return `$env:PATH = '${f.join(';').replace(/'/g, "''")};' + $env:PATH; ${command}`;
+  return `export PATH=${f.map(d => `'${d.replace(/'/g, "'\\''")}'`).join(':')}:"$PATH"; ${command}`;
 }
 
 /** One line for the agent's project brief. */
@@ -130,7 +138,8 @@ function setupCommand(p, action, { dir = '.venv' } = {}) {
   if (!/^[\w.-]{1,40}$/.test(dir)) throw Object.assign(new Error('A venv folder name is letters, digits, . _ and -.'), { status: 400 });
   const machinePy = shell.which('python3') ? 'python3' : shell.which('python') ? 'python' : shell.which('py') ? 'py' : null;
   const c = chosen(p);
-  const py = c.kind === 'venv' ? `"${venvPython(path.join(p.root, c.dir))}"` : machinePy;
+  // A quoted path is a string to PowerShell, not a command: it needs the call operator (audit 2026-10-04).
+  const py = c.kind === 'venv' ? `${WIN ? '& ' : ''}"${venvPython(path.join(p.root, c.dir))}"` : machinePy;
   const has = f => fs.existsSync(path.join(p.root, f));
   if (action === 'venv') {
     if (!machinePy) throw Object.assign(new Error('There is no Python on this machine to make a venv with.'), { status: 424 });

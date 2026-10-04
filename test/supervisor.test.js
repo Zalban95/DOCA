@@ -284,3 +284,20 @@ test('a turn that failed blocks its job with the reason, instead of being woken 
   assert.ok(!woken.some(w => w.sessionId === id), 'no further turn for the failing job');
   assert.match(woken.at(-1).message, /Blocked: its turn failed — No model chosen/);
 });
+
+test('a mission recorded after its turn ended still wakes its lead — once (audit 2026-10-04)', async () => {
+  fresh();
+  const id = job('Airlock lead');
+  const spec = memory.createSession('Scout', { activate: false, kind: 'specialist', parentId: id });
+  const rows = [{ id: 'msn_air', agentId: 'scout', label: 'Scout', by: id, state: 'running', sessionId: spec.id }];
+  store.writeJson('agents/missions', { missions: rows });
+  memory.updateSession(id, { job: { ...jobOf(id), state: 'waiting' } });
+  assert.equal(supervisor.missionEnded(org.session(spec.id)), 'mission running', 'the turn ended while the screening awaited');
+  rows[0].state = 'done';
+  store.writeJson('agents/missions', { missions: rows });
+  assert.equal(supervisor.missionEnded(org.session(spec.id)), 'woken', 'the record lands, and the lead is woken');
+  await settle();
+  memory.updateSession(id, { job: { ...jobOf(id), state: 'waiting' } });
+  assert.equal(supervisor.missionEnded(org.session(spec.id)), 'already woken', 'a second path does not wake it twice');
+  store.writeJson('agents/missions', { missions: [] });
+});
