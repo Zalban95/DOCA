@@ -46,6 +46,19 @@ One small interface, two backends, chosen by `DOCA_DB_URL`:
    `recall_conversations` is the next use of it.
 3. Missions, proposals, devices, then the rest.
 
+## Judging an engine: `npm run db-bench`
+
+`bin/doca-db-bench.js` runs DOCA's own shapes through the layer's own calls —
+single appends (the ledger), one big transaction (an import), point reads, a
+`GROUP BY` aggregate (usage by day), JSON-document upserts (a session row), and
+point reads eight at a time — and prints ops/s with p50/p95 per workload
+(`--json` for a machine, `--n` for size). It opens the backend bare
+(`db.openBare`): no migrations, only `bench_*` tables it creates and drops, and
+without `DOCA_DB_URL` a temp SQLite file rather than `doca.db`. Still, point it
+at a scratch database. Measured 2026-10-04 on the office desk, SQLite, n=2000:
+appends ~160k/s, point reads ~250k/s, aggregate ~1.5k/s — the numbers any
+server engine has to beat over a socket to be worth running.
+
 The JSON/JSONL files remain the **export** format (and what an older version can
 read), never the other way round.
 
