@@ -22,3 +22,15 @@ test('a NUL in the first 8 KB is binary when asked; text and the unasked read ar
   const plain = await H.api(null, 'GET', `/api/files/read?path=${encodeURIComponent(bin)}`);
   assert.equal(typeof plain.body.content, 'string', "the Files tab's own read is as it was");
 });
+
+test('raw HTML and SVG are served sandboxed; a picture is not (audit 2026-10-04)', async () => {
+  const fs2 = require('node:fs');
+  const html = path.join(H.tmp, 'evil.html'), png = path.join(H.tmp, 'ok.png');
+  fs2.writeFileSync(html, '<script>fetch("/api/files/list")</script>');
+  fs2.writeFileSync(png, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+  const r = await fetch(`${H.base}/api/files/raw?path=${encodeURIComponent(html)}`, { headers: { Cookie: H.owner.cookie } });
+  assert.match(r.headers.get('content-security-policy') || '', /sandbox/);
+  assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
+  const p = await fetch(`${H.base}/api/files/raw?path=${encodeURIComponent(png)}`, { headers: { Cookie: H.owner.cookie } });
+  assert.equal(p.headers.get('content-security-policy'), null);
+});
