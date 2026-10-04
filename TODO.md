@@ -193,9 +193,11 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   them, open the roster (`tool-roster.js`, `GET /api/harness/agents/:id/tools`).
 
 **H8 · Presence: the face and voice**
-- [ ] H8.1 The face (§5): dots that form a face, protolab.tech's palette and type, states from
+- [x] H8.1 (2.161.0) The face (§5): dots that form a face, protolab.tech's palette and type, states from
   existing events, editable as a pack, canvas 2D; in the panel's corner, `/face` kiosk, DocaDesk
-  overlay, watch.
+  overlay, watch. Done in the hub: the state feed, the renderer, `/face`, the corner per screen. **Left:** an editor
+  for the spec and faces as packs (H4); DocaDesk's overlay and the watch face (their TODOs); listening/speaking
+  from the voice call's audio levels (H8.2); quiet hours from the device profile.
 - [ ] H8.2 The face reacting to the voice call's audio. [X]
 - [ ] H8.3 Realtime speech-to-speech with barge-in, work continuing in the background.
 

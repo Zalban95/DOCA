@@ -96,9 +96,9 @@ test('no two front-end files define the same global', () => {
 });
 
 test('every script the page loads exists, and every script that exists is loaded', () => {
-  // index.html loads the app; login.html loads only its own script.
-  const loginPage = fs.readFileSync(path.join(ROOT, 'public', 'login.html'), 'utf8');
-  const loaded = [...frontend.scripts(), ...[...loginPage.matchAll(/<script src="js\/([^"]+)"><\/script>/g)].map(m => m[1])];
+  // index.html loads the app; login.html and face.html (the kiosk face) load only their own scripts.
+  const pages = ['login.html', 'face.html'].map(p => fs.readFileSync(path.join(ROOT, 'public', p), 'utf8'));
+  const loaded = [...frontend.scripts(), ...pages.flatMap(page => [...page.matchAll(/<script src="js\/([^"]+)"><\/script>/g)].map(m => m[1]))];
   const onDisk = frontend.files();
   assert.deepEqual(loaded.filter(f => !onDisk.includes(f)), [], 'index.html loads a file that is not there');
   assert.deepEqual(onDisk.filter(f => !loaded.includes(f)), [], 'a front-end file nothing loads');
