@@ -325,6 +325,9 @@ function run(row, def, message, base = { steps: 0, tokens: 0 }) {
         steps: base.steps + (r.steps || 0), tokens: base.tokens + (r.usage?.totalTokens || 0),
         result: await require('../harness/guard/airlock').result(def, id, r.text),   // an airlock's report, screened
       }));
+      // Decided again now it is recorded: the turn's own end found it still running while the airlock's
+      // screening awaited real I/O, and nothing woke the work chat (audit 2026-10-04).
+      require('../harness/supervisor').afterTurn(row.sessionId, {});
     })
     .catch(e => {
       announce(patch(id, {
