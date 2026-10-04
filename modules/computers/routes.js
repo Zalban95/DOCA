@@ -19,6 +19,7 @@ function mount(app) {
   app.post('/api/computers/:id/start', h(req => computers.start(req.params.id)));
   app.post('/api/computers/:id/stop', h(req => computers.stop(req.params.id)));
   app.delete('/api/computers/:id', h(req => computers.remove(req.params.id)));
+  app.get('/computers/:id/vnc/*', require('./vnc').page);   // its screen, through the hub (vnc.js)
 }
 
 module.exports = { mount };

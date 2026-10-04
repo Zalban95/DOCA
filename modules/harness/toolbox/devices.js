@@ -36,7 +36,11 @@ function showMedia(p, caption, ctx = {}) {
     throw new Error(`${path.basename(abs)} is ${attachments.humanBytes(bytes)}; chat ${kind} is capped at `
       + `${attachments.humanBytes(cap)}. Re-encode it smaller and show that.`);
 
-  const rec = attachments.save(fs.readFileSync(abs), path.basename(abs), { from: 'agent', mime });
+  // A file the hub itself just kept from an MCP tool (a computer's screenshot or recording, mcp/content.js) is
+  // already an attachment: shown as it is, not copied a second time (each one was stored twice).
+  const kept = path.dirname(require('../../utils').realOf(abs)) === require('../../utils').realOf(attachments.dir()) && attachments.get(path.basename(abs));
+  const rec = kept && String(kept.from || '').startsWith('mcp:') ? kept
+    : attachments.save(fs.readFileSync(abs), path.basename(abs), { from: 'agent', mime });
   const media = { name: rec.name, mime, kind, bytes, ...(caption ? { caption: String(caption).slice(0, 200) } : {}) };
   if (typeof ctx.show === 'function') ctx.show(media);
   return `Shown in the chat: ${rec.name} (${attachments.humanBytes(bytes)}, ${kind}). The user has it now; `

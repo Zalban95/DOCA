@@ -770,4 +770,9 @@ test('a picture a tool returns is kept as an attachment, and the agent is told w
   assert.match(out, /^here it is\n\[image image\/png, 7 bytes, saved as .+\.png — show it with show_media\]$/);
   const saved = out.match(/saved as (.+\.png)/)[1];
   assert.equal(fs.readFileSync(saved, 'utf8'), 'fakepng');
+  const before = fs.readdirSync(path.dirname(saved)).length;
+  const shown = [];
+  await harnessTools.call('show_media', { path: saved }, [], { show: m => shown.push(m) });
+  assert.equal(shown[0].name, path.basename(saved), 'shown as it is');
+  assert.equal(fs.readdirSync(path.dirname(saved)).length, before, 'not stored a second time');
 });

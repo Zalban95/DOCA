@@ -118,8 +118,8 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   removes them and registers each as `computer-<id>`; the `computer` tool (Orchestrator, work chats) and
   `agent_dispatch computer:` give a mission one computer; the shipped **Tester** works in it, records the
   screen (videos come back as attachments) and shows screenshots. VMs tab → Computers for agents.
-  **Left:** H7.2a the live view through the hub (today noVNC is on 127.0.0.1, so only this machine's browser
-  can watch — proxy it, authenticated, so a phone on the tailnet can take over); H7.2b a VM backend
+  ✓ H7.2a (2.153.1) the live view through the hub: `/computers/<id>/vnc/` and `/ws/computer/<id>`, behind
+  the host right and a recent sign-in, so a phone on the tailnet can watch and take over. **Left:** H7.2b a VM backend
   (libvirt/Hyper-V/UTM; a Windows guest); H7.2c the image prebuilt and pulled instead of built (2.1 GB,
   minutes); H7.2d computer tools hidden from the Orchestrator's own turns (today '*' holds them); H7.2e the
   window manager's stray message window. Also done on the way: **an MCP tool's pictures and files are kept as
