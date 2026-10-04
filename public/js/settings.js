@@ -20,12 +20,13 @@ let _settingsHidden = [];
 
 async function _subtabGeneralInit() {
   try {
-    const prefs = await apiFetch('/api/prefs');
+    const prefs = await screenPrefs();   // this screen's look, tabs and sections over the hive's (lib/screen.js)
     _settingsHidden = prefs.hiddenTabs || [];
     _settingsRender();
     _lookPickerRender(prefs);
     _themePickerRender(prefs);
     faceSettingsRender();   // the face: in this screen's corner, or full screen (face/corner.js)
+    screenSettingsNote();   // these are this screen's own (lib/screen.js)
     _statsSettingsRender(prefs);
   } catch (e) {
     const el = document.getElementById('settings-tabs-list');
@@ -73,7 +74,7 @@ async function settingsSave() {
     .map(t => t.id);
 
   try {
-    await apiFetch('/api/prefs', { method: 'POST', body: { hiddenTabs } });
+    await screenSave({ hiddenTabs });
     setStatus(status, '✓ Saved', 'ok');
     _settingsHidden = hiddenTabs;
     _applyHiddenTabs(hiddenTabs);
@@ -93,7 +94,7 @@ function _applyHiddenTabs(hiddenTabs) {
 /* Called on app startup to apply persisted hidden tabs + sidebar sections */
 async function settingsApplyOnLoad() {
   try {
-    const prefs = await apiFetch('/api/prefs');
+    const prefs = await screenPrefs();
     _settingsHidden = prefs.hiddenTabs || [];
     // Without host, the tabs that are the machine are left out instead of drawn as refusals (live test 2026-10-04).
     const me = await apiFetch('/api/auth/me').catch(() => null);
@@ -185,7 +186,7 @@ async function sectionToggleChange(id, visible) {
   _sidebarSections = { ..._sidebarSections, [id]: visible };
   applySidebarSections(_sidebarSections);
   try {
-    await apiFetch('/api/prefs', { method: 'POST', body: { sidebarSections: _sidebarSections } });
+    await screenSave({ sidebarSections: _sidebarSections });
     setStatus(status, '✓ Saved', 'ok');
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');

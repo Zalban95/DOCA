@@ -368,7 +368,7 @@ function _applyTerminalThemes() {
 
 async function themeApplyOnLoad() {
   try {
-    const prefs = await apiFetch('/api/prefs');
+    const prefs = await screenPrefs();   // this screen's look over the hive's (lib/screen.js)
     if (typeof lookApply === 'function') lookApply(prefs.skin);
     const name = prefs.theme || 'default';
     if (name === 'custom' && prefs.customTheme) {

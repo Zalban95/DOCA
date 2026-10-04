@@ -33,6 +33,7 @@ async function devicesLoad() {
       const revoked = !!d.revokedAt;
       const expired = d.expiresAt && Date.parse(d.expiresAt) < Date.now();
       const dead    = revoked || expired;
+      if (d.kind === 'browser' || d.kind === 'channel') return devSessionCardHtml(d, dead);
       return `
       <div class="provider-card ${dead ? 'no-key' : 'has-key'}">
         <div class="provider-header">
@@ -205,6 +206,28 @@ function devRenderToken(device, token, title) {
         <button class="btn btn-xs" onclick="devClearResult()">Dismiss</button>
       </div>
     </div>`;
+}
+
+/**
+ * A browser someone signed in on (modules/screens) or a linked chat (channels/telegram): no token, so no
+ * scopes to show, no hands and nothing to rotate — revoking signs the browser out or unlinks the chat.
+ */
+function devSessionCardHtml(d, dead) {
+  const what = d.kind === 'browser' ? 'BROWSER' : String(d.caps?.ext?.channel || 'chat').toUpperCase();
+  return `
+      <div class="provider-card ${dead ? 'no-key' : 'has-key'}">
+        <div class="provider-header">
+          <span class="provider-name">${escHtml(d.name)}</span>
+          <span class="provider-badge ${dead ? 'no' : 'ok'}">${dead ? 'REVOKED' : what}</span>
+        </div>
+        <div class="provider-models"><code>${escHtml(d.id)}</code> · ${d.kind === 'browser' ? 'its own look, tabs and sections; signed in by password' : 'a linked chat'}
+          · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}</div>
+        <div class="toolbar-right">
+          ${dead ? `<button class="btn btn-xs btn-red" onclick="devForget(${jsArg(d.id)},${jsArg(d.name)})" title="Remove this row and its settings">🗑 Forget</button>`
+            : `<button class="btn btn-xs btn-red" onclick="devRevoke(${jsArg(d.id)},${jsArg(d.name)})" title="${d.kind === 'browser' ? 'Sign this browser out now' : 'Stop this chat reaching the hive'}">✕ ${d.kind === 'browser' ? 'Sign out' : 'Unlink'}</button>`}
+        </div>
+        <div class="status-line" id="dev-status-${escHtml(d.id)}"></div>
+      </div>`;
 }
 
 /* ── Rotate / revoke ──────────────────────────────────── */
