@@ -51,11 +51,22 @@ router.get('/', (_req, res) => res.json({
 // Machine-readable description of this API; public so generators and API tools can fetch it before pairing.
 router.get('/openapi.json', (_req, res) => { res.setHeader('Cache-Control', 'public, max-age=300'); res.json(require('./openapi').document()); });
 
+// Wrong codes, for everyone together (audit 2026-10-04): a 6-digit code lives 300 s, and this route needs
+// no token, so unthrottled a tailnet peer could try them all. Ten misses a minute leaves ~50 guesses per
+// code's life — one chance in 20 000 — and a person mistyping twice never notices.
+const _pairMisses = [];
+const PAIR_MISSES_PER_MIN = 10;
+
 router.post('/devices/pair/complete', wrap(async (req, res) => {
   const { code, caps, name } = req.body || {};
   if (!code) throw new ApiError(400, 'invalid_pairing', 'code is required');
+  while (_pairMisses.length && _pairMisses[0] < Date.now() - 60e3) _pairMisses.shift();
+  if (_pairMisses.length >= PAIR_MISSES_PER_MIN) {
+    res.setHeader('Retry-After', String(Math.ceil((_pairMisses[0] + 60e3 - Date.now()) / 1000)));
+    throw new ApiError(429, 'pairing_throttled', 'Too many wrong pairing codes in the last minute. Wait a minute and try again.');
+  }
   const r = devices.completePairing(code, caps, name);
-  if (!r) throw new ApiError(400, 'invalid_pairing', 'Pairing code is unknown or expired');
+  if (!r) { _pairMisses.push(Date.now()); throw new ApiError(400, 'invalid_pairing', 'Pairing code is unknown or expired'); }
   res.status(201).json({ token: r.token, device: r.device, capabilitiesUrl: '/api/v1/capabilities', protocol: L.PROTOCOL_VERSION });
 }));
 
@@ -78,11 +89,26 @@ router.get('/devices', requireScope('devices:admin', 'agent'), (req, res) => {
   res.json({ devices: devices.list().map(d => ({ ...d, online: bus.isOnline(d.id), pending: bus.pendingCount(d.id) })), presets: PRESETS, scopeFamilies: FAMILIES });
 });
 
+/**
+ * A device may hand on only what it holds (audit 2026-10-04): a phone with
+ * devices:admin minted '*' devices, and patched itself to '*'. And what it
+ * makes belongs to whoever it belongs to — an ownerless device escaped the
+ * rule that suspending a person silences their devices.
+ */
+function ownScopesOnly(req, scopes) {
+  const held = req.device.scopes || [];
+  const extra = (scopes || []).filter(s => !hasScope(held, s));
+  if (extra.length) throw new ApiError(403, 'scope_exceeds_own', `This device cannot grant what it does not hold: ${extra.join(', ')}`);
+}
+const ownerOf = req => ({ userId: req.device.userId || null, orgId: req.device.orgId || null });
+
 router.post('/devices', requireScope('devices:admin'), wrap(async (req, res) => {
   const { name, scopes, preset, caps, expiresAt, kind } = req.body || {};
   const sc = scopes || (preset && PRESETS[preset]);
   if (!sc) throw new ApiError(400, 'invalid_device', 'scopes[] or preset is required', { presets: Object.keys(PRESETS) });
+  ownScopesOnly(req, sc);
   const r = devices.create({ name, scopes: sc, caps, expiresAt, kind });
+  if (req.device.userId) r.device = devices.update(r.device.id, ownerOf(req));
   res.status(201).json(r);
 }));
 
@@ -90,7 +116,8 @@ router.post('/devices/pair/start', requireScope('devices:admin'), wrap(async (re
   const { name, scopes, preset, expiresAt, kind } = req.body || {};
   const sc = scopes || PRESETS[preset || 'watch'];
   if (!sc) throw new ApiError(400, 'invalid_pairing', 'scopes[] or a known preset is required', { presets: Object.keys(PRESETS) });
-  const p = devices.startPairing({ name: name || 'New device', scopes: sc, expiresAt, kind, createdBy: req.device.id });
+  ownScopesOnly(req, sc);
+  const p = devices.startPairing({ name: name || 'New device', scopes: sc, expiresAt, kind, createdBy: req.device.id, ...ownerOf(req) });
   res.status(201).json({ ...p, completeUrl: '/api/v1/devices/pair/complete', qr: `doca://pair?code=${p.code.replace('-', '')}&host=${req.headers.host || ''}` });
 }));
 
@@ -104,7 +131,11 @@ router.get('/devices/:id', selfOr('devices:admin', 'agent'), (req, res) => {
 router.patch('/devices/:id', selfOr('devices:admin'), wrap(async (req, res) => {
   const id = resolveDeviceId(req);
   const body = req.body || {};
-  const patch = id === req.device.id && !can(req, 'devices:admin') ? { caps: body.caps, name: body.name } : body;
+  // An admin changes a device's name, scopes, expiry and caps (PROTOCOL §25) — never whose device it is
+  // (userId, orgId) or what paired it: that turned a phone into an owner's session (audit 2026-10-04).
+  const patch = id === req.device.id && !can(req, 'devices:admin') ? { caps: body.caps, name: body.name }
+    : { name: body.name, scopes: body.scopes, expiresAt: body.expiresAt, caps: body.caps };
+  if (patch.scopes !== undefined) ownScopesOnly(req, patch.scopes);
   const d = devices.update(id, patch);
   if (!d) throw new ApiError(404, 'not_found', 'Unknown device');
   res.json({ device: d });
