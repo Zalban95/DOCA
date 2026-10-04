@@ -89,7 +89,8 @@ the end, and in the sections as "built in …" notes.
   wrote. → *Done log: Built 2026-09-25*, *Two layers of learned knowledge*.
 - A plan shown on every device — **panel window, phone and watch built in
   2.118.0**; left: "nobody is at a screen". → *A plan is shown, not buried*.
-- Markdown rendered while it streams. → *The agent writes markdown…*.
+- ~~Markdown rendered while it streams~~ — built 2026-09-18 for both chats; the
+  Projects chat joined them in 2.118.1. Tool results stay raw (undecided). → *The agent writes markdown…*.
 - `contextWindow` found rather than typed. → *Memory, limits and context*.
 - Settings sub-tabs reviewed for what DOCA is now. → *Wanted 2026-09-25 — review*.
 - Editor add-ons; the project structure map (P2). → *Settled 2026-09-25*,
@@ -1312,6 +1313,10 @@ image** — a markdown image makes the browser fetch an address the model wrote,
 which is the prompt-injection channel `show_image` exists to avoid — and links
 are scheme-gated to `http`/`https`/`mailto`, so `javascript:` and `data:` come
 out as the literal text they are.
+
+**2.118.1:** the Projects chat was the one surface still showing raw text while
+streaming and swapping in markdown at the end — the flicker this entry rejected.
+It now uses `mdStream` like the other two.
 
 **Still open, and not needed for it to work:** tool results are still shown raw.
 They are the other half of what fills the console and are often structured (JSON,

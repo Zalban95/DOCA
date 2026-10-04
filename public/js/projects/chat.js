@@ -64,13 +64,18 @@ async function pjChatSend() {
   const send = document.getElementById('pj-chat-send');
   send.textContent = '■'; send.onclick = pjChatStop;
   _pjChatRow('user', text);
-  let row = null, acc = '';
+  // Rendered while it streams, block by block (markdown.js mdStream), like the other two chats.
+  let md = null;
   PJC.turn = new AbortController();
   await sseStream('/api/harness/chat', { message: text, sessionId: PJC.sessionId }, {
     signal: PJC.turn.signal,
     onEvent: evt => {
-      if (evt.type === 'text') { acc += evt.text; if (!row) row = _pjChatRow('assistant', ''); row.textContent = acc; }
-      if (evt.type === 'tool_call') { if (row) { mdInto(row, acc); row = null; acc = ''; } _pjChatRow('tool', evt.name); }
+      if (evt.type === 'text') {
+        md ||= mdStream(_pjChatRow('assistant', ''));
+        md.feed(evt.text);
+        const box = document.getElementById('pj-chat-msgs'); box.scrollTop = box.scrollHeight;
+      }
+      if (evt.type === 'tool_call') { md?.end(); md = null; _pjChatRow('tool', evt.name); }
       if (evt.type === 'image') document.getElementById('pj-chat-msgs').appendChild(agentImageEl(evt.image));
       if (evt.type === 'approval') {
         const box = document.getElementById('pj-chat-msgs');
@@ -82,7 +87,7 @@ async function pjChatSend() {
     },
     onError: e => _pjChatRow('error', e.message),
   });
-  if (row) { row.innerHTML = ''; mdInto(row, acc); }
+  md?.end();
   PJC.busy = false; PJC.turn = null;
   send.textContent = 'Send'; send.onclick = pjChatSend;
   // The agent may have changed files: refresh what the side shows, reload clean editors.
