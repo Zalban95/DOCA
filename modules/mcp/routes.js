@@ -117,6 +117,8 @@ function mount(app) {
   app.get   ('/api/mcp',             handleList);
   app.post  ('/api/mcp',             handleUpsert);
   app.post  ('/api/mcp/export',      handleExport);
+  app.get   ('/api/mcp/catalog',     wrap(async (_req, res) => res.json({ servers: require('./catalog').list() })));   // servers the panel knows how to add
+  app.post  ('/api/mcp/catalog/:id', wrap(async (req, res) => res.json({ ok: true, server: await require('./catalog').add(req.params.id) })));
   // Before /:id, or "offers" is read as a server id.
   app.post  ('/api/mcp/offers/:id/accept', handleOfferAccept);
   app.post  ('/api/mcp/offers/:id/reject', handleOfferReject);
