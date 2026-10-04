@@ -59,6 +59,21 @@ async function _stackRunUpdate() {
 function controlsInit() {
   harnessLoad();
   controlsRefreshContainers();
+  controlsStackCard();
+}
+
+/** The Start/Stop card runs docker compose in the stack folder: named for that, and shown only when there is one. */
+async function controlsStackCard() {
+  const card = document.getElementById('stack-card');
+  if (!card) return;
+  let info = null;
+  try { info = await apiFetch('/api/stack/info'); } catch { /* without host, or no answer: no card */ }
+  card.style.display = info?.exists ? '' : 'none';
+  if (info?.exists) {
+    const t = document.getElementById('stack-card-title');
+    t.textContent = `${info.label} · docker compose`;
+    t.title = `Start, stop and update run docker compose in ${info.dir} (${info.file}). They do not stop DOCA itself.`;
+  }
 }
 
 async function controlsRefreshContainers() {
