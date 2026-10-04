@@ -31,32 +31,8 @@ const KEEP_DECIDED  = 20;      // decided proposals kept as the audit trail
  * Sections of the prefs file a proposal may point into, each with the sentence
  * the confirmation card shows so the user is not reading a dotted path cold.
  */
-const SETTABLE = [
-  { prefix: 'paths',            label: 'Managed paths',        note: 'Applies after a restart of the panel' },
-  { prefix: 'harness.config',   label: 'Harness parameters',   note: 'Includes this agent\'s own model and behaviour' },
-  { prefix: 'harness.default',  label: 'Default harness',      note: 'Which runtime the chat panel talks to' },
-  { prefix: 'agents.enabled',   label: 'Specialist agents',    note: 'Allow the orchestrator to dispatch specialists', exact: true },
-  { prefix: 'models',           label: 'Model manager',        note: 'Ollama URL, download directories' },
-  { prefix: 'snapshotSettings', label: 'Snapshot settings',    note: '' },
-  { prefix: 'serviceSettings',  label: 'Inference services',   note: 'GPU assignment, ports, images' },
-  { prefix: 'voiceServices',    label: 'Voice services',       note: '' },
-  { prefix: 'vms',              label: 'Virtual machines',     note: 'The libvirt connection URI' },
-  { prefix: 'computers',        label: 'Agents\' computers',    note: 'How many run at once, when they stop and when they are removed' },
-  // Numbers only, and deliberately a different key from `mcpServers`, which
-  // holds commands this host spawns and stays out of reach. `sectionFor` matches
-  // a whole prefix, so "mcpSettings" can never open the door to "mcpServers".
-  { prefix: 'mcpSettings',      label: 'MCP timeouts',         note: 'How long to wait for an MCP tool before giving up' },
-  { prefix: 'sidebarStats',     label: 'Sidebar stats',        note: 'Which stats the sidebar shows' },
-  { prefix: 'sidebarSections',  label: 'Sidebar sections',     note: '' },
-  { prefix: 'hiddenTabs',       label: 'Navigation visibility', note: '' },
-  { prefix: 'hiddenBuiltins',   label: 'Hidden built-ins',     note: '' },
-  { prefix: 'theme',            label: 'Theme',                note: '' },
-  { prefix: 'customTheme',      label: 'Custom theme colours', note: '' },
-  { prefix: 'favorites',        label: 'Config favourites',    note: '' },
-  { prefix: 'fmFavorites',      label: 'File manager favourites', note: '' },
-  // What this install learned about one of its tools (tool-notes.js): added to that tool's description.
-  { prefix: 'toolNotes',        label: 'Tool note',            note: 'Added to the tool\'s description — what the agent reads when it picks the tool' },
-];
+// Declared with each key in settings-schema.js (`propose`), so a section is proposable by being declared so there.
+const SETTABLE = require('../settings-schema').settable();
 
 /**
  * Names that never travel through a tool call, wherever they sit.
@@ -207,10 +183,9 @@ function readable() {
   // to prefs until somebody changes one, and a setting the agent cannot see is a
   // setting it will never propose — which is how the MCP call timeout spent this
   // long being a number nobody could reach.
-  const lc = require('../computers/lifecycle');
-  for (const [k, detail] of [['maxRunning', 'How many agents\' computers may run at once.'], ['idleStopMinutes', 'Minutes after its mission ends that a computer stops (its files stay).'],
-    ['retainHours', 'Hours a stopped computer an agent made is kept before it is removed with its files; a pinned one is kept.']])
-    out.push({ path: `computers.${k}`, value: lc.limit(k), section: 'Agents\' computers', detail });
+  // Declared leaves of proposable sections, with their effective values (settings-schema.js).
+  for (const l of require('../settings-schema').leaves(prefs))
+    if (sectionFor(l.path)) out.push({ path: l.path, value: l.value, section: sectionFor(l.path).label, detail: l.hint });
 
   try {
     const { McpClient } = require('../mcp/client');

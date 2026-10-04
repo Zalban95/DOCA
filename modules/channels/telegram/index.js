@@ -16,8 +16,9 @@ const SCOPES = ['interact', 'harness:chat', 'harness:sessions'];
 const CAPS = { formFactor: 'other', input: { text: true, voice: true, camera: true, touch: true }, render: ['text', 'image'], ext: { channel: 'telegram' } };
 
 const state = { running: false, bot: null, lastPollAt: null, error: null, ctrl: null, subs: new Map(), queues: new Map() };
-const pollSec = () => { const n = Number(api.prefs().pollSec); return Number.isFinite(n) && n >= 0 ? Math.min(n, 50) : 25; };
-const enabled = () => api.prefs().enabled === true && !!api.token();
+const schema = () => require('../../settings-schema');
+const pollSec = () => schema().value('channels.telegram.pollSec');
+const enabled = () => schema().value('channels.telegram.enabled') === true && !!api.token();
 
 /** One chat's events in order: a reply never overtakes the question before it. */
 function queue(chatId, job) {

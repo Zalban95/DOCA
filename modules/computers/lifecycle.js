@@ -9,15 +9,12 @@
  * - One an agent made and nobody pinned is removed, files and all, `retainHours` after it stopped.
  * - At most `maxRunning` run at once; making one more is refused with the setting's name.
  *
- * All three are under `computers` in prefs (proposable: settings.SETTABLE), read on every use.
+ * All three are under `computers` in prefs (declared in settings-schema.js, proposable), read on every use.
  */
-const LIMITS = { maxRunning: 4, idleStopMinutes: 10, retainHours: 72 };
 const SWEEP_MS = 30 * 60 * 1000;
 
-function limit(key) {
-  const v = Number(require('../utils').loadPrefs().computers?.[key]);
-  return Number.isFinite(v) && v >= 0 ? v : LIMITS[key];
-}
+/** `maxRunning`, `idleStopMinutes`, `retainHours`: declared with their defaults in settings-schema.js. */
+const limit = key => require('../settings-schema').value(`computers.${key}`);
 
 /** Refuses a new computer past the cap, saying which setting it is and how to get under it. */
 async function roomForOne() {
@@ -68,4 +65,4 @@ function start() {
   _sweeper.unref?.();
 }
 
-module.exports = { LIMITS, limit, roomForOne, missionEnded, sweep, start };
+module.exports = { limit, roomForOne, missionEnded, sweep, start };
