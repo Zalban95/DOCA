@@ -75,7 +75,7 @@ async function projectsInit() {
 }
 
 async function pjOpen(id) {
-  if (PJ.project && PJ.project.project.id !== id && PJE.tabs.some(t => t.path && t.model.getAlternativeVersionId() !== t.saved)) {
+  if (PJ.project && PJ.project.project.id !== id && PJE.tabs.some(_pjDirty)) {
     document.getElementById('pj-picker').value = PJ.project.project.id;
     return appAlert('Save or close the files with unsaved changes before opening another project.');
   }

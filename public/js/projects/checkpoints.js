@@ -68,7 +68,7 @@ function pjCheckpointTake() {
 }
 
 function pjCheckpointRestore(c, n) {
-  if (PJE.tabs.some(t => t.path && t.model.getAlternativeVersionId() !== t.saved))
+  if (PJE.tabs.some(_pjDirty))
     return appAlert('Save or close the files with unsaved changes first.');
   appConfirm(`Put the project back as it was at "${c.label}"? ${n} file(s) change. A checkpoint of now is taken first, so this can be undone.`, async () => {
     try {

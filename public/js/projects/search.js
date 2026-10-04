@@ -121,7 +121,7 @@ function pjReplaceApply() {
       setStatus(document.getElementById('pj-status'), `✓ ${r.replacements} replacements in ${r.files} files`, 'ok');
       // Reload the files that changed, unless there are edits in them that were not saved.
       for (const t of PJE.tabs) {
-        if (!t.path || !pv.files.has(pjRel(t.path)) || t.model.getAlternativeVersionId() !== t.saved) continue;
+        if (!t.path || !t.model || !pv.files.has(pjRel(t.path)) || t.model.getAlternativeVersionId() !== t.saved) continue;
         const { content } = await apiFetch(`/api/files/read?path=${encodeURIComponent(t.path)}`);
         t.model.setValue(content); t.saved = t.model.getAlternativeVersionId();
       }

@@ -94,7 +94,7 @@ async function pjChatSend() {
   pjRefresh();
   if (PJ.view === 'git' || PJ.view === 'files') pjView(PJ.view);
   for (const t of PJE.tabs) {
-    if (!t.path || t.model.getAlternativeVersionId() !== t.saved) continue;
+    if (!t.path || !t.model || t.model.getAlternativeVersionId() !== t.saved) continue;
     try {
       const { content } = await apiFetch(`/api/files/read?path=${encodeURIComponent(t.path)}`);
       if (content !== t.model.getValue()) { t.model.setValue(content); t.saved = t.model.getAlternativeVersionId(); }
