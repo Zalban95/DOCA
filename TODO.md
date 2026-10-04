@@ -121,7 +121,7 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   ✓ H7.2a (2.153.1) the live view through the hub: `/computers/<id>/vnc/` and `/ws/computer/<id>`, behind
   the host right and a recent sign-in, so a phone on the tailnet can watch and take over. **Left:** H7.2b a VM backend
   (libvirt/Hyper-V/UTM; a Windows guest); H7.2c the image prebuilt and pulled instead of built (2.1 GB,
-  minutes); H7.2d computer tools hidden from the Orchestrator's own turns (today '*' holds them); ✓ H7.2e (2.154.0) the
+  minutes); ✓ H7.2d (2.155.0) computer tools hidden from the Orchestrator's own turns, and from every conversation but the one that holds the computer; ✓ H7.2e (2.154.0) the
   window manager's stray message window (fbsetbg finding no wallpaper setter). Also done on the way: **an MCP tool's pictures and files are kept as
   attachments** (they arrived as the word "[image]").
 - [ ] H7.3 Parallel work chats on one repo, each in its own git worktree.
@@ -133,12 +133,13 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   noVNC proxy (2.153.1) in a panel tab, not a new window; recordings and screenshots it produced listed
   under it. On a phone: the same list, the live view full screen. Done as a **Computers** tab (PCs on a phone); a
   strip beside the missions bar is left for when a running mission's computer should be one glance away.
-- [ ] H13.2 **Agents make the environment whenever they need one**, not only when asked: the Orchestrator and
+- [x] H13.2 (2.155.0) **Agents make the environment whenever they need one**, not only when asked: the Orchestrator and
   work chats already hold `computer`; their prompt says *when* (testing something risky, using a site as a
   person would, building or running something that should not touch the host, recording a demo), and a
   specialist that finds it needs one says so in its report and the leader makes it (specialists keep not
   holding `computer` — depth one). Computers a mission made are stopped when it ends and removed after a
-  retention period unless pinned; a level caps how many run at once.
+  retention period unless pinned; a level caps how many run at once. Done with one hive-wide cap
+  (`computers.maxRunning`); **left:** a cap per level (levels have no numeric limits yet).
 - [ ] H13.3 **The computer as OpenDots' "Dot computer"**: persistent per specialist type (the same profile,
   logins and files next time, opt-in), a person's take-over with hand-back that the agent notices (it pauses
   while a person drives), and downloads/uploads between the computer and attachments.

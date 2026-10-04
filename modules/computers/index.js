@@ -39,6 +39,9 @@ function docker(args, { timeout = 120000 } = {}) {
 const rows = () => store.readJson(DOC, { computers: [] }).computers;
 const save = list => store.writeJson(DOC, { computers: list });
 const get = id => rows().find(c => c.id === id) || null;
+const all = () => rows();
+/** The computers a conversation made: a work chat works in these directly (turn/prompt.js disabledFor). */
+const madeBy = sessionId => rows().filter(c => c.by === sessionId).map(c => c.id);
 const need = id => get(String(id)) || (() => { throw bad(`No computer ${id}. Make one with the computer tool first.`, 404); })();
 const container = c => `doca-computer-${c.id}`;
 const serverId = c => `computer-${c.id}`;
@@ -75,10 +78,12 @@ async function connect(c) {
   return registry.start(serverId(c));
 }
 
-async function create({ name, purpose = '', missionId = null, by = null } = {}) {
-  if (!(await imageReady())) throw bad('The computer image is not built yet: build it once (Settings → … or POST /api/computers/image).', 409);
+/** `auto`: an agent made it, so it is tidied away after it stops (lifecycle.js) unless a person pins it. */
+async function create({ name, purpose = '', missionId = null, by = null, auto = false } = {}) {
+  if (!(await imageReady())) throw bad('The computer image is not built yet: build it once (Computers → Build the image).', 409);
+  await require('./lifecycle').roomForOne();
   const c = { id: crypto.randomBytes(4).toString('hex'), name: String(name || 'computer').replace(/[^\w .-]/g, '').slice(0, 40) || 'computer',
-    purpose: String(purpose).slice(0, 300), missionId, by, token: crypto.randomBytes(24).toString('hex'),
+    purpose: String(purpose).slice(0, 300), missionId, by, auto: !!auto, pinned: false, token: crypto.randomBytes(24).toString('hex'),
     vncPassword: crypto.randomBytes(6).toString('hex'), mcpPort: await freePort(), vncPort: await freePort(), createdAt: new Date().toISOString() };
   await docker(['run', '-d', '--name', container(c), '--shm-size=1g', '--label', 'doca.computer=1',
     '-p', `127.0.0.1:${c.mcpPort}:8765`, '-p', `127.0.0.1:${c.vncPort}:6080`,
@@ -89,9 +94,13 @@ async function create({ name, purpose = '', missionId = null, by = null } = {}) 
   return view(c);
 }
 
+const patch = (id, fields) => save(rows().map(x => (x.id === id ? { ...x, ...fields } : x)));
+
 async function start(id) {
   const c = need(id);
+  if (!(await list()).some(x => x.id === c.id && x.state === 'running')) await require('./lifecycle').roomForOne();
   await docker(['start', container(c)]);
+  patch(c.id, { stoppedAt: null });
   await connect(c);
   return view(c);
 }
@@ -100,7 +109,15 @@ async function stop(id) {
   const c = need(id);
   try { require('../mcp/registry').stop(serverId(c)); } catch { /* not connected */ }
   await docker(['stop', '-t', '5', container(c)]).catch(() => {});
+  patch(c.id, { stoppedAt: new Date().toISOString() });
   return view(c);
+}
+
+/** Kept until a person unpins it: never stopped when its mission ends, never tidied away (lifecycle.js). */
+function pin(id, pinned = true) {
+  const c = need(id);
+  patch(c.id, { pinned: !!pinned });
+  return view({ ...c, pinned: !!pinned });
 }
 
 async function remove(id) {
@@ -115,6 +132,7 @@ async function remove(id) {
 /** What the panel and the agent see: never the token. The VNC password is for the person who opens the view. */
 function view(c, state = null) {
   return { id: c.id, name: c.name, purpose: c.purpose, missionId: c.missionId, createdAt: c.createdAt, state,
+    auto: !!c.auto, pinned: !!c.pinned, stoppedAt: c.stoppedAt || null, by: c.by || null,
     server: serverId(c), tools: `mcp__${serverId(c)}__*`,
     // Through the hub, so any signed-in host's browser can watch — the phone on the tailnet included (vnc.js).
     vnc: { url: require('./vnc').watchUrl(c), local: `http://127.0.0.1:${c.vncPort}/vnc.html`, password: c.vncPassword } };
@@ -123,7 +141,8 @@ function view(c, state = null) {
 /** A mission is lent this computer (agents/missions dispatch): remembered, so the view can say who works in it. */
 function lend(id, missionId) {
   const c = need(id);
-  save(rows().map(x => (x.id === c.id ? { ...x, missionId, missions: [...(x.missions || []), missionId].slice(-20) } : x)));
+  patch(c.id, { missionId, missions: [...(c.missions || []), missionId].slice(-20) });
+  list().then(l => { if (l.find(x => x.id === c.id)?.state !== 'running') start(c.id).catch(() => {}); });   // stopped since its last errand
   return c.id;
 }
 
@@ -164,4 +183,4 @@ async function list() {
   return rows().map(c => view(c, states[container(c)] || 'missing'));
 }
 
-module.exports = { IMAGE, imageReady, build, create, start, stop, remove, list, detailed, screen, lend, get, need };
+module.exports = { IMAGE, imageReady, build, create, start, stop, remove, pin, list, detailed, screen, lend, get, all, madeBy, need };

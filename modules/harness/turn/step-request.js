@@ -24,7 +24,7 @@ function stepRequest({ p, ep, message, summary, client, profile, projectBrief, s
     {
       role: 'system',
       content: systemPrompt({
-        p, userText: message, summary, client, profile, projectBrief,
+        p, userText: message, summary, client, profile, projectBrief, sessionId: session.id,
         toolCount: schemas.length, disabledCount: disabled.length,
       }),
     },

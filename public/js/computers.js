@@ -46,7 +46,8 @@ async function computersLoad() {
     <div class="input-label" style="margin-bottom:10px">The agents' computers: a Linux desktop in a container — shell, files, a real Chromium,
       screen recording — where a mission tries something risky, uses a site as a person would, or records a demo, without touching this
       machine. The Orchestrator and work chats make them with their <code>computer</code> tool and send a specialist (the <b>Tester</b>) to
-      work in one. Click a screen to watch or take over.</div>
+      work in one. One an agent made stops after its mission and is removed some days later unless pinned (📌; the limits are
+      under <code>computers</code> in settings). Click a screen to watch or take over.</div>
     <pre class="terminal" id="computers-out" style="display:none;max-height:240px;margin-bottom:8px"></pre>
     <div class="scroll-y" style="flex:1"><div class="pc-grid">${data.computers.map(computersCard).join('')
       || `<div class="placeholder">${data.image.ready ? 'None yet — an agent makes one when it needs it, or ＋ New.' : 'Build the image once (several minutes: Chromium, a desktop, ffmpeg), then agents can make computers.'}</div>`}</div></div>`;
@@ -68,6 +69,8 @@ function computersCard(c) {
       ${on ? `<button class="btn btn-xs" onclick="computersWatch(${jsArg(c.id)})">Watch</button>
         <button class="btn btn-xs" onclick="computersAct('stop', ${jsArg(c.id)})">Stop</button>`
         : `<button class="btn btn-xs" onclick="computersAct('start', ${jsArg(c.id)})">Start</button>`}
+      <button class="btn btn-xs ${c.pinned ? 'btn-amber' : ''}" onclick="computersPin(${jsArg(c.id)}, ${!c.pinned})"
+        title="${c.pinned ? 'Pinned: kept as it is. Click to let it be tidied away.' : c.auto ? 'Made by an agent: it stops after its mission and is removed some days later. Pin to keep it.' : 'Pin to keep it running after its missions.'}">📌</button>
       <button class="btn btn-xs btn-red" onclick="computersAct('remove', ${jsArg(c.id)})" title="Remove it and its files">✕</button></div>
     ${who}${media ? `<div class="pc-files">${media}</div>` : ''}</div>`;
 }
@@ -98,6 +101,11 @@ function computersWatchClose(fromBack) {
 function computersMedia(name, mime) {
   mediaViewerOpen({ src: `/api/attachments/${encodeURIComponent(name)}`, name,
     kind: /^video\//.test(mime) ? 'video' : /^audio\//.test(mime) ? 'audio' : 'image' });
+}
+
+async function computersPin(id, pinned) {
+  try { await apiFetch(`/api/computers/${id}/pin`, { method: 'POST', body: { pinned } }); } catch (e) { appAlert(e.message); }
+  computersLoad();
 }
 
 function computersNew() {

@@ -150,7 +150,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   // An allowlist is expressed as its complement, because `schemas()` filters by
   // what is switched off and there is no second mechanism worth adding. A
   // profile with no list gets the user's ordinary disabled-tools setting.
-  const disabled = disabledFor(profile, p);
+  const disabled = disabledFor(profile, p, session.id);
 
   const base = {
     model:       p.model,
@@ -194,7 +194,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     // Three separate turns did this before anyone noticed. Recomputing the list
     // is an in-process registry read, so the honest path is now also the cheap
     // one.
-    const stepDisabled = disabledFor(profile, p);
+    const stepDisabled = disabledFor(profile, p, session.id);
     const schemas = tools.schemas(stepDisabled);
     if (toolCount !== null && schemas.length !== toolCount)
       say({ type: 'tools', count: schemas.length, was: toolCount, step });
