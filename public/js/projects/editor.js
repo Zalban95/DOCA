@@ -252,7 +252,7 @@ async function pjEditorsReloadClean() {
   }
 }
 
-/** Another project: close everything, asking once if anything is unsaved. */
+/** Another project: close everything. Callers check for unsaved files first (pjOpen, a branch switch). */
 function pjEditorReset() {
   for (const t of PJE.tabs) { if (t.diff) t.diff.original.dispose(); }
   for (const m of new Set(PJE.tabs.map(t => t.model).filter(Boolean))) m.dispose();
