@@ -40,40 +40,107 @@ loose search; provider contracts; Projects previews for every format, markdown a
 documents, environments (venvs), git buttons, editable checkpoints; and the three-agent
 audit's fixes (2.137.1 security, 2.137.2 robustness, 2.137.3 front end).
 
-**The hive — the direction, asked 2026-10-04** (`docs/design/hive.md`: install a client and the device
-becomes part of DOCA; every capability the other harnesses have, then narrower editions to sell).
-Each line is one releasable step; the order is P0 → P2.
-- **P0 · settings per device** (hive.md §1): a settings schema (`settings-schema.js`: home device |
-  hive | person, type, default, hint, rights, proposable) that the forms, `SETTABLE` and the rights
-  derive from; a browser is a device; `/d/<id>/settings` holds look, tabs, voice, notifications,
-  console, the face, lent tool families; hive → person → device layering behind one effective-settings
-  call; today's prefs become the hive defaults. *Decided 2026-10-04: everything per-device goes to the
-  device's page; the rest stays in the clients structure.*
-- **P0 · recipes** (§2.3): "save as recipe" from a turn that worked → parameterised tool calls with
-  checks, run without a model (button, schedule, macro, `recipe_run`), repaired by the agent when a step
-  fails; skills point to them. The answer to "repeat it minus the thinking".
-- **P0 · one pack format** (§2.4): `.dpack` for skills, recipes, specialists, MCP definitions (secrets
-  stripped), canvases, rules, levels, layouts, faces, presets, editions; import is a dry run listing
-  what it needs; a library; hub-to-hub send; whatever the agent builds is a pack when saved.
-- **P0 · browser control** (§3.1): the agent's own Chromium over CDP (snapshot, click/type by ref,
-  screenshot, tabs, profile per agent), a live view the person can take over, page text through the
-  airlock, submits and logins asked first, credentials from a vault; then the person's own browser
-  through a desktop client; Playwright MCP in the catalogue meanwhile.
-- **P1 · the client core and one-step pairing** (§4): protocol, pairing by QR/link bound to the
-  person, push, presence, offline queue, device page, face, and the tool families a device lends the
-  hive as an MCP server — for every client, not DocaDesk alone; discovery on the tailnet; clients
-  update from the hub. **A Linux desktop client.**
-- **P1 · schedules and triggers** (§3.3), **a computer per agent** (§3.2, the sandbox gap), **the face**
-  (§5: a field of dots that forms a face, protolab.tech's palette and type, states from the events that
-  exist, editable as a pack, canvas 2D so a watch and an old tablet can draw it; `/face` for a kiosk).
-- **P2**: channels as client kinds (Slack, Telegram, mail, WhatsApp); realtime voice with barge-in;
-  AG-UI, A2A, DOCA as an MCP server; pages; parallel work in git worktrees; OAuth connectors with a
-  vault; evaluation, tracing, retrieval; a pack registry; federated hives and hosting.
-- **Coherence (§2.2), to do along the way**: one chat component in three sizes (retire the floating
-  chat's gateway/CLI paths if no non-built-in default is still real); fold `jobs.js` into `runs`; the
-  Wearables sub-tab becomes the watch's device page; every new capability lands in `/api/v1` first.
-  The four questions — upgradable, necessary, repeatable without the thinking, portable — are asked of
-  every new part before it ships.
+## The hive — the backlog (asked 2026-10-04; plan in `docs/design/hive.md`)
+
+All of it is wanted ("I'd tackle all of it"). Three rules run through every item:
+**[OS]** the host runs on Linux, Windows and macOS up to the hardware (hive.md §7) — nothing ships
+Linux-only; **[X]** experiments behind a flag with their drawbacks written and measured (§8);
+**[IO]** assets import from and export to other tools' native formats (§9). Each item is one
+releasable step; ✓ marks done. Order: the workstreams run in parallel, top items first.
+
+**H1 · Host on every OS** (§7)
+- [ ] H1.1 CI matrix: `npm test` + a headless browser smoke on ubuntu, windows, macos.
+- [ ] H1.2 `GET /api/host/capabilities`: what this host can do (shell, boot, GPU, containers, VMs,
+  browser, inference), drawn by the panel so absent things grey out with a reason.
+- [ ] H1.3 Start at boot on Windows (Task Scheduler) and macOS (launchd), beside the systemd unit.
+- [ ] H1.4 GPU readings beyond nvidia-smi: AMD (rocm-smi), Intel, Apple (unified memory).
+- [ ] H1.5 File-manager roots and default paths per OS (drive letters, `/Volumes`).
+- [ ] H1.6 Containers: Podman, Docker Desktop, Colima/OrbStack; WSL2-aware paths.
+- [ ] H1.7 VMs: Hyper-V, UTM/Parallels beside libvirt/VirtualBox.
+- [ ] H1.8 An installer per OS (Node, panel, boot entry, certificate, pairing QR).
+- [ ] H1.9 Run the whole panel once on macOS and record what breaks.
+
+**H2 · Settings per device** (§1)
+- [ ] H2.1 `settings-schema.js`: every key's home (device | hive | person), type, default, hint,
+  rights, proposable; forms, `SETTABLE` and rights derived; a test fails on an undeclared key.
+- [ ] H2.2 A browser is a device (a `browser` record on first sign-in, revocable).
+- [ ] H2.3 Layering hive → person → device; `GET /api/v1/settings/effective`.
+- [ ] H2.4 `/d/<id>/settings`: look, tabs, sidebar, voice, notifications, console, face, lent tool
+  families; Settings keeps the hive's; Wearables becomes the watch's device page.
+- [ ] H2.5 Migrations for prefs keys (rename, move, default) — the upgradability gap.
+
+**H3 · Recipes — repeat it without the thinking** (§2.3)
+- [ ] H3.1 Recipe format (parameters, steps = tool calls, checks), stored per hive. [IO] runnable
+  script per OS + Agent Skills `scripts/`.
+- [ ] H3.2 "Save as recipe" from a finished turn, and `recipe_save` for the agent.
+- [ ] H3.3 `recipe_run` and a Run button: no model, the same gate/permits/approvals per step.
+- [ ] H3.4 A failed step goes to the agent with the log; it proposes the repaired revision. [X]
+- [ ] H3.5 Skills link their recipes; device macros and install proposals become recipes.
+
+**H4 · Packs — portable everything** (§2.4, §9)
+- [ ] H4.1 `.dpack` envelope + `pack.json` (requirements incl. OS); native formats inside.
+- [ ] H4.2 Export: skills (Agent Skills), specialists (subagent md), MCP (`mcpServers` JSON),
+  rules (`AGENTS.md`), memory (JSONL), conversations (JSONL), faces/layouts/presets (JSON schema).
+- [ ] H4.3 Import: the same, plus `AGENTS.md`/`CLAUDE.md`/`.mdc` rules and other clients' MCP configs;
+  a dry run listing what it adds, needs and overwrites.
+- [ ] H4.4 Round-trip tests per converter, with fixtures from the other tools.
+- [ ] H4.5 The library in Settings; hub-to-hub send; whatever the agent saves is a pack.
+- [ ] H4.6 A registry to publish and fetch packs. [X]
+
+**H5 · Browser control** (§3.1)
+- [ ] H5.1 Playwright MCP in the services/MCP catalogue (the quick path).
+- [ ] H5.2 The agent's own Chromium over CDP: navigate, accessibility snapshot, click/type by ref,
+  screenshot, tabs, downloads; a profile per agent. [OS] Chrome/Edge/Chromium on all three.
+- [ ] H5.3 Live view in the panel (CDP screencast) with take-over and hand-back.
+- [ ] H5.4 Page text through the airlock; submits, payments and logins asked first; a credentials
+  vault.
+- [ ] H5.5 The person's own browser through a desktop client (extension or CDP), consent per site.
+- [ ] H5.6 A vision pass on screenshots where the accessibility tree is not enough. [X]
+
+**H6 · The client core and joining the hive** (§4)
+- [ ] H6.1 One client core per platform: protocol, pairing, push, presence, offline queue, device
+  page, face.
+- [ ] H6.2 Tool families a device lends the hive, hosted as an MCP server (files, shell, screen,
+  input, apps, browser, camera, mic, sensors), for every client.
+- [ ] H6.3 Pairing in one step (QR/link) bound to the person; consent per family on the device.
+- [ ] H6.4 Discovery on the tailnet / mDNS.
+- [ ] H6.5 Clients update from the hub's release channel.
+- [ ] H6.6 A Linux desktop client; a macOS one; iOS later; a browser-only client.
+- [ ] H6.7 Headless clients (a server, a Pi) and channel adapters as clients.
+
+**H7 · Work that runs by itself**
+- [ ] H7.1 Schedules (recurring) and triggers (file, webhook, device event, mail) starting a recipe
+  or a turn; per person; shown in the queue fold.
+- [ ] H7.2 A computer per agent — files, terminal, browser in isolation, off by default. [OS] per
+  §7's row.
+- [ ] H7.3 Parallel work chats on one repo, each in its own git worktree.
+
+**H8 · Presence: the face and voice**
+- [ ] H8.1 The face (§5): dots that form a face, protolab.tech's palette and type, states from
+  existing events, editable as a pack, canvas 2D; in the panel's corner, `/face` kiosk, DocaDesk
+  overlay, watch.
+- [ ] H8.2 The face reacting to the voice call's audio. [X]
+- [ ] H8.3 Realtime speech-to-speech with barge-in, work continuing in the background.
+
+**H9 · Reach and protocols**
+- [ ] H9.1 Channels: Slack, Telegram, mail, WhatsApp, Matrix — each a client kind.
+- [ ] H9.2 DOCA as an MCP server; AG-UI events so AG-UI front ends are clients; A2A.
+- [ ] H9.3 OAuth connectors (Google, GitHub, calendars, mail) with a vault, scoped per agent/level.
+- [ ] H9.4 Pages: markdown documents with a chat beside each.
+
+**H10 · Quality**
+- [ ] H10.1 Evaluation sets and tracing per turn (hive.md §3.11; "Where this harness stands" §4).
+- [ ] H10.2 Retrieval (embeddings; pgvector with PostgreSQL).
+- [ ] H10.3 Learning loop: "this conversation becomes a skill or a recipe", reviewed.
+
+**H11 · Coherence along the way** (§2.2)
+- [ ] H11.1 One chat component in three sizes; retire the floating chat's gateway/CLI paths if no
+  non-built-in default harness is still a real case.
+- [ ] H11.2 Fold `jobs.js` into the `runs` table.
+- [ ] H11.3 Every new capability lands in `/api/v1` first.
+
+**H12 · Editions** (§6): an edition is a pack (level, skills, recipes, visible parts, face), built
+on branding + levels + hidden tabs.
 
 **Decide (from 2026-10-04)**
 - Durable memory is shared by everyone (per-user memory is auth phase 3); editing it from
