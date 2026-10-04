@@ -21,10 +21,12 @@ const SHAPE = {
   tablet:  'Normal prose with tables and short code blocks.',
   desktop: 'Full detail is welcome: tables, long code, complete output.',
   tv:      'Very few words in large blocks. No tables, no code.',
+  channel: 'A chat message (Telegram), read on a phone as often as a desktop: a few short paragraphs of plain text. No markdown — it is shown as typed — no tables, code only when asked for.',
   headless:'Complete and machine-readable. Do not shorten for a human, and do not decorate.',
 };
 
 function shapeFor(client) {
+  if (client.kind === 'channel') return SHAPE.channel;
   if (client.kind === 'agent' || client.formFactor === 'headless') return SHAPE.headless;
   const named = SHAPE[client.formFactor];
   if (named) return named;

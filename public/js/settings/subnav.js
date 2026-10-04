@@ -11,6 +11,7 @@ const _SETTINGS_SUBTABS = [
   { id: 'keys',      label: 'API Keys',  init: 'loadKeys',       find: 'tokens devices pairing' },
   { id: 'users',     label: 'Users',     init: 'usersLoad',      find: 'people accounts levels permissions roles' },
   { id: 'wearables', label: 'Wearables', init: 'wearablesLoad',  find: 'watch DocaWear console macros joystick' },
+  { id: 'channels',  label: 'Channels',  init: 'channelsLoad',   find: 'telegram bot chat messaging' },
   { id: 'backups',   label: 'Backups',   init: 'backupsLoad' },
   { id: 'harness',   label: 'Harness',   init: '_settingsHarnessRender', find: 'skills memory rules approvals parameters guards' },
   { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit' },
