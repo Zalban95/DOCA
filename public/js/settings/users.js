@@ -12,11 +12,11 @@ async function usersLoad() {
   if (!panel) return;
   panel.innerHTML = '<div class="placeholder pulse">Loading…</div>';
   try {
-    const [u, l] = await Promise.all([apiFetch('/api/auth/users'), apiFetch('/api/auth/levels')]);
-    _usersData = { users: u.users, levels: l.levels, rights: l.rights };
+    const [u, l, g] = await Promise.all([apiFetch('/api/auth/users'), apiFetch('/api/auth/levels'), apiFetch('/api/auth/grants').catch(() => ({ grants: [] }))]);
+    _usersData = { users: u.users, levels: l.levels, rights: l.rights, grants: g.grants };
   } catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
   panel.innerHTML = '';
-  panel.append(_usersPeopleCard(), _usersLevelsCard());
+  panel.append(_usersPeopleCard(), _usersLevelsCard(), _usersGrantsCard());
 }
 
 const _levelName = id => _usersData.levels.find(l => l.id === id)?.name || id;
@@ -91,6 +91,42 @@ function _usersLevelsCard() {
       textContent: `${l.name}${l.builtin ? ' (built in)' : ''} — ${l.rights.join(', ') || 'nothing'} · settings: ${l.settings.join(', ') || 'none'} · tools: ${l.tools.allow.join(', ') || 'none'}${l.tools.deny.length ? ` except ${l.tools.deny.join(', ')}` : ''} · ${l.approval === 'ask' ? 'always asks' : 'follows the panel\'s mode'} · ${holders} ${holders === 1 ? 'person' : 'people'}` }));
     card.appendChild(row);
   }
+  return card;
+}
+
+/** Exceptions to a level (auth/grants.js): who gave what to whom, and taking one back. */
+function _usersGrantsCard() {
+  const card = Object.assign(document.createElement('div'), { className: 'card' });
+  card.innerHTML = `<div class="card-title">Grants — exceptions to a level</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">A grant gives one person, specialist or mission one thing their level does not:
+      a tool (tool:shell:git), a call without asking (approve:shell:git), a setting (setting:models) or a folder (path:/srv/x). Given by someone
+      holding delegate, never beyond what they hold; the agent can give its own missions tool grants the same way. The rules — files that govern
+      the agent, asking people — are never grantable.</p>`;
+  const who = id => _usersData.users.find(u => u.id === id)?.email || id;
+  if (!(_usersData.grants || []).length) card.appendChild(Object.assign(document.createElement('div'), { className: 'placeholder', textContent: 'No grants.' }));
+  for (const g of _usersData.grants || []) {
+    const row = Object.assign(document.createElement('div'), { className: 'settings-tab-row' });
+    const rev = Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: 'Revoke' });
+    rev.onclick = async () => { try { await apiFetch(`/api/auth/grants/${encodeURIComponent(g.id)}`, { method: 'DELETE' }); usersLoad(); } catch (e) { appAlert(e.message); } };
+    row.append(rev, Object.assign(document.createElement('span'), { className: 'settings-tab-label',
+      textContent: `${g.permission} → ${g.subject.kind} ${g.subject.kind === 'user' ? who(g.subject.id) : g.subject.id} · ${g.scope} · by ${g.by.kind === 'agent' ? 'an agent for ' : ''}${who(g.by.user || g.by.id)}${g.note ? ` · ${g.note}` : ''}` }));
+    card.appendChild(row);
+  }
+  const form = Object.assign(document.createElement('div'), { style: 'display:flex;gap:6px;flex-wrap:wrap;margin-top:10px' });
+  form.innerHTML = `<select class="input" id="grant-kind"><option value="user">person</option><option value="specialist">specialist type</option></select>
+    <select class="input" id="grant-user">${_usersData.users.map(u => `<option value="${escHtml(u.id)}">${escHtml(u.email)}</option>`).join('')}</select>
+    <input class="input" id="grant-spec" placeholder="specialist id (e.g. scribe)" style="display:none;min-width:140px">
+    <input class="input" id="grant-perm" placeholder="tool:shell:git" style="flex:1;min-width:160px">
+    <input class="input" id="grant-note" placeholder="why (kept with it)" style="flex:1;min-width:120px">
+    <button class="btn btn-xs btn-blue" id="grant-give">Give</button>`;
+  card.appendChild(form);
+  const kind = form.querySelector('#grant-kind');
+  kind.onchange = () => { form.querySelector('#grant-user').style.display = kind.value === 'user' ? '' : 'none'; form.querySelector('#grant-spec').style.display = kind.value === 'user' ? 'none' : ''; };
+  form.querySelector('#grant-give').onclick = async () => {
+    const subject = { kind: kind.value, id: kind.value === 'user' ? form.querySelector('#grant-user').value : form.querySelector('#grant-spec').value.trim() };
+    try { await apiFetch('/api/auth/grants', { method: 'POST', body: { subject, permission: form.querySelector('#grant-perm').value.trim(), note: form.querySelector('#grant-note').value } }); usersLoad(); }
+    catch (e) { appAlert(e.message); }
+  };
   return card;
 }
 

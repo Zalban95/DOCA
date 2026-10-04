@@ -51,6 +51,14 @@ const STEPS = [
        tenant_id TEXT NOT NULL DEFAULT 'local', id TEXT NOT NULL, name TEXT NOT NULL, created_at TEXT, data TEXT NOT NULL,
        PRIMARY KEY (tenant_id, id))`,
   ] },
+  { id: 5, what: 'grants: exceptions to a level, given by someone entitled to', sql: [
+    `CREATE TABLE IF NOT EXISTS grants (
+       tenant_id TEXT NOT NULL DEFAULT 'local', id TEXT NOT NULL, subject_kind TEXT NOT NULL, subject_id TEXT NOT NULL,
+       permission TEXT NOT NULL, scope TEXT NOT NULL, by_kind TEXT NOT NULL, by_id TEXT NOT NULL, by_user TEXT,
+       created_at TEXT NOT NULL, expires_at TEXT, revoked_at TEXT, note TEXT,
+       PRIMARY KEY (tenant_id, id))`,
+    'CREATE INDEX IF NOT EXISTS grants_subject ON grants (tenant_id, subject_kind, subject_id)',
+  ] },
 ];
 
 /** The same steps on a synchronous SQLite handle (node:sqlite), for the stores that must stay synchronous. */

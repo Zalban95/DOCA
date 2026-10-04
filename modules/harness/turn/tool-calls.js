@@ -39,13 +39,19 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     // reach the transcript the user is looking at — and because it must cover
     // MCP tools, which `tools.call` dispatches before it sees a definition.
     let refused = null;
-    const gate = args._raw === undefined ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission }) : null;
+    // The person's level first (auth/permits.js): what it does not allow, and no grant covers, is refused
+    // with who could grant it; a level that asks forces the question below.
+    const missionId = isMission ? require('../../agents/missions').forSession(session.id)?.id : null;
+    const permit = args._raw === undefined ? require('../../auth/permits').tool({ person: client?.user, profile, missionId, sessionId: session.id, name, args }) : { allowed: true };
+    if (!permit.allowed) refused = `Refused: ${permit.why}. An admin, or someone holding delegate, can grant it in Settings → Users`
+      + `${isMission ? '; the agent that dispatched this mission can grant it for the mission with permission_grant' : ''}.`;
+    const gate = args._raw === undefined && refused === null ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission, forceAsk: permit.ask }) : null;
     if (gate) {
       if (isMission) {
         refused = approval.missionRefusal(gate);
         say({ type: 'approval', step, state: 'refused', tool: name, ...gate });
       } else {
-        const { id, answer } = approval.askAnywhere(gate, { sessionId: session.id, signal, client });
+        const { id, answer } = approval.askAnywhere({ ...gate, personId: client?.user?.id || null }, { sessionId: session.id, signal, client });
         say({ type: 'approval', step, state: 'asked', id, ...gate });
         const decision = await answer;
         say({ type: 'approval', step, state: 'answered', id, decision, tool: name });

@@ -85,6 +85,37 @@ module.exports = [
     },
   },
   {
+    // Decided with Al 2026-10-04: users and higher agents may give a specialist more than its definition,
+    // within their own permissions (auth/permits.js mayGrant), recorded in grants and revocable.
+    name: 'permission_grant',
+    description: 'Give a mission you dispatched one permission, for that mission only: a tool beyond its definition '
+      + '(tool:shell or tool:shell:git) or its calls without asking (approve:shell:git). Only what the person you act for '
+      + 'holds themselves; the rules (files that govern the agent, asking people, settings) are never grantable. Use it when a '
+      + 'specialist reports it was refused and the step is needed — then resume it with agent_resume if it stopped.',
+    parameters: {
+      type: 'object',
+      properties: {
+        mission: { type: 'string', description: 'The mission id (from agent_dispatch or agent_results).' },
+        permission: { type: 'string', description: 'tool:<name>[:<verb>] or approve:<name>[:<verb>].' },
+        note: { type: 'string', description: 'Why, in one line — it is kept with the grant.' },
+      },
+      required: ['mission', 'permission'],
+    },
+    run: ({ mission, permission, note }, ctx = {}) => {
+      const m = require('../../agents/missions').get(mission);
+      if (!m) return `Error: no mission ${mission}.`;
+      if (!mayHandle(ctx, m)) return NOT_YOURS(mission);
+      if (!/^(tool|approve):/.test(String(permission || ''))) return 'Error: an agent gives tool: or approve: permissions; settings and paths are a person\'s to give.';
+      if (!ctx.user?.id) return 'Error: this conversation acts for nobody signed in, so there is nothing to delegate.';
+      const why = require('../../auth/permits').mayGrant({ giver: { ...ctx.user, agent: true }, subject: { kind: 'mission', id: m.id }, permission });
+      if (why) return `Error: not given — ${why}.`;
+      const g = require('../../auth/grants').create({ subject: { kind: 'mission', id: m.id }, permission, scope: 'mission',
+        by: { kind: 'agent', id: ctx.sessionId || 'agent', user: ctx.user.id }, note });
+      require('../../auth/store').audit({ orgId: ctx.user.orgId, actorId: ctx.user.id, via: 'harness', action: 'grant given', detail: `${permission} to mission ${m.id}` });
+      return `Granted ${permission} to ${m.id} for this mission (${g.id}); it applies from the specialist's next step. Resume it with agent_resume if it stopped.`;
+    },
+  },
+  {
     name: 'agent_results',
     description: 'How a mission you dispatched is getting on, and its answer once it has one. Call it when '
       + 'you actually need the result. A work leader may set wait:true to wait up to 30 seconds for its '

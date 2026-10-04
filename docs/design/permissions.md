@@ -68,7 +68,7 @@ whoever it reports to.
 
 1. Accounts in SQL — **2.138.0**.
 2. Levels, the `delegate` right, and the Users & levels page — **2.139.0**.
-3. Grants and `permits()`; agents at the person's level; `ask` levels; real paths.
+3. Grants and `permits()`; agents at the person's level; `ask` levels; real paths — **2.140.0**.
 4. Device approvals: Always allow / Approve all, by level.
 5. `runs`: one state record; plan comparison.
 6. One event sink for the three chats (front end, alongside).

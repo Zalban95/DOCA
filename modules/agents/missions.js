@@ -318,7 +318,7 @@ function dispatch({ agentId, task, context, by, chainId, plan } = {}) {
  */
 function run(row, def, message, base = { steps: 0, tokens: 0 }) {
   const { id } = row;
-  agent.turn({ message, sessionId: row.sessionId, profile: profileOf(def), emit: evt => record(id, evt, base) })
+  agent.turn({ message, sessionId: row.sessionId, profile: { ...profileOf(def), missionId: id }, emit: evt => record(id, evt, base) })
     .then(async r => {
       announce(patch(id, {
         state: 'done', endedAt: new Date().toISOString(), steps: base.steps + (r.steps || 0), tokens: base.tokens + (r.usage?.totalTokens || 0),
