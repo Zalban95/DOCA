@@ -126,9 +126,12 @@ definitions exported to other harnesses' configs, backups whole. Wanted: **one p
 everything a person or an agent makes.
 
 - **`.dpack`**: a zip with `pack.json` — `{ kind, name, version, description, requires: { tools,
-  mcp, services, models, level }, files }` — for skills, recipes, specialists, MCP server definitions
-  (secrets stripped, asked for on import), canvases, memory rules, levels, device console layouts,
-  faces (§5), harness parameter presets, editions (§6).
+  mcp, services, models, level, os }, files }` — for skills, recipes, specialists, MCP server
+  definitions (secrets stripped, asked for on import), canvases, memory rules, levels, device console
+  layouts, faces (§5), harness parameter presets, editions (§6). **Its contents are in other tools'
+  native formats wherever one exists (§9)** — a pack is an envelope, never a dialect: unzip it and a
+  skill is a `SKILL.md` folder Claude Code reads, a specialist is a subagent markdown, an MCP server is
+  an `mcpServers` entry. `pack.json` only adds what no standard carries (version, requirements).
 - **Import is a dry run first**: what it adds, what it needs that this hive lacks (a tool, a model, a
   service) and offers to install through install proposals, what it would overwrite.
 - **A library** in Settings lists installed packs with versions; packs can be sent to another hive
@@ -247,7 +250,7 @@ kiosk mode (`/face`), DocaDesk as an overlay, the panel's corner in place of the
 visible parts, a face — which is a pack (§2.4) built on what exists: branding, levels, hidden tabs.
 Until then, every capability first.
 
-**Order** (each step is releasable on its own):
+**Order** (each step is releasable on its own; §7–§9 apply to every step):
 
 - **P0 — foundations**: the settings schema and per-device settings (§1); the pack format and a
   library (§2.4); recipes (§2.3); browser control, the agent's own browser first (§3.1).
@@ -256,3 +259,83 @@ Until then, every capability first.
 - **P2 — reach**: channels (§3.4); realtime voice (§3.5); AG-UI, A2A, DOCA as an MCP server (§3.7);
   pages (§3.6); parallel worktrees (§3.9); OAuth connectors (§3.10); evaluation, tracing, retrieval;
   a pack registry; federation and hosting (§4.8).
+
+---
+
+## 7. The host runs on any major OS, up to what the hardware can do
+
+Decided 2026-10-04: **the platform is OS-agnostic, at least on the host side** — Linux, Windows and
+macOS each host DOCA up to their hardware's capabilities. Today it is developed on Linux and tested on
+a Windows box; macOS has never been run (there is no `darwin` branch anywhere in `modules/`).
+
+**The rule:** a capability probes for what it needs and degrades by saying so — it never assumes a
+POSIX box, a Linux service manager, an NVIDIA card or Docker (the Models section's rule, `AGENTS.md`,
+made universal). Every OS-specific piece sits behind one module with a per-OS implementation and a
+test that runs the parser against captured output from each OS.
+
+| Area | Linux | Windows | macOS | Today |
+|---|---|---|---|---|
+| Shell for agent and installers | bash | PowerShell | zsh/bash | ✓ `shell.js` (macOS: untested) |
+| Start at boot | systemd unit | Task Scheduler / a service | launchd agent | **Linux only** (`startup.js`) |
+| GPU readings | nvidia-smi, rocm-smi, Intel | nvidia-smi, WMI/DXGI | `ioreg`/`powermetrics` (Apple GPU, unified memory) | **nvidia-smi only** |
+| Containers (services, sandbox) | Docker / Podman | Docker Desktop / WSL2 | Docker Desktop / Colima / OrbStack | Docker only, Linux-shaped paths |
+| VMs | libvirt, VirtualBox | Hyper-V, VirtualBox | UTM / Parallels / VirtualBox | libvirt, VirtualBox |
+| A computer per agent (§3.2) | container / namespaces | Windows Sandbox / WSL2 / container | VM (Virtualization.framework) / container | none |
+| Local inference | llama.cpp, Ollama, vLLM | llama.cpp, Ollama | llama.cpp (Metal), Ollama, MLX | llama.cpp, Ollama (paths Linux-shaped) |
+| Browser for the agent (§3.1) | Chromium | Chrome/Edge | Chrome/Chromium | none |
+| Certificates, listen on tailnet | ✓ | ✓ | untested | `https-cert.js`, `listen.js` |
+| Paths and file manager roots | `$HOME`, `/media`, `/mnt` | user profile, drive letters | `$HOME`, `/Volumes` | roots Linux-shaped |
+| Installer | `run.sh` | `.cmd` wrappers by hand | none | Linux script |
+
+What it takes: **a CI matrix** (GitHub Actions: ubuntu, windows, macos) running `npm test` and a
+headless browser smoke on each; per-OS probes for the rows above; an installer per OS (a script that
+installs Node, the panel, the boot entry and the certificate, and prints the pairing QR); and a
+**capabilities report** (`GET /api/host/capabilities`) that says what this host can and cannot do, so
+the panel greys out what is absent instead of failing in its name.
+
+---
+
+## 8. Experiments — innovative, with their drawbacks found before they ship
+
+An edge needs new approaches; every new approach needs its pull-backs measured. Decided 2026-10-04:
+experiments are welcome, and each one is run the same way.
+
+- **Behind a flag, off by default** (`experiments.<id>` in the settings schema, listed in Settings →
+  Experiments with what each does and costs). Switching it off is a settings change, never a release —
+  the rule specialists already follow (`agents.enabled`).
+- **Written down first** (`docs/experiments/<id>.md`): the hypothesis, what is measured and how,
+  the cost (tokens, latency, money, complexity), the risks (security, privacy, reliability, lock-in,
+  OS coverage), and how it is rolled back with nothing left behind.
+- **Measured, not admired**: an eval set or a benchmark, run before and after (the airlock's guard
+  eval and `db-bench` are the shape); the result goes in the same file.
+- **Graduates or dies**: kept only when the numbers say so; then the flag goes, or the code does.
+- **Candidates now**: recipes repaired by the agent (§2.3); speculative decoding / a draft model for
+  local inference; the face reacting to audio (§5); learned contracts shared between hives; agent-made
+  tools hot-loaded as MCP servers; a vision pass on screenshots for browser control; on-device small
+  models for routing; packs published to a registry.
+
+---
+
+## 9. Cross-compatible assets — import from anywhere, export to anywhere
+
+Decided 2026-10-04: **exportable and importable assets are prioritised for cross-compatibility.** A
+skill made in DOCA must be usable in Claude Code, and one made there usable here, with nothing lost
+that both can express. The pack (§2.4) is an envelope around native formats:
+
+| Asset | Native format exported | Imported from |
+|---|---|---|
+| Skill | Agent Skills folder (`SKILL.md` + files) — Claude Code, Codex skills | ✓ Claude Code, plugins, commands, Codex prompts, Gemini CLI, Cursor rules (2.128) |
+| Specialist | Claude Code subagent markdown (frontmatter `name`, `description`, `tools`, `model`) | ✓ ours and Claude Code's (`agent-import`) |
+| MCP server | the `mcpServers` JSON every MCP client reads; Claude Code / Cursor / Codex config entries | ✓ ours; other configs to add |
+| Rules / instructions | `AGENTS.md` (and `CLAUDE.md`, `.cursor/rules/*.mdc`) | to add |
+| Recipe | the recipe JSON **and** a runnable script per OS (bash / PowerShell) and an Agent Skills `scripts/` entry | — |
+| Prompt / persona | markdown | ✓ (`persona.md`, `human.md`) |
+| Face, layout, preset, edition | small JSON with a published schema | — |
+| Memory | JSONL of entries (key, value, category, provenance) | to add |
+| Conversation | JSONL transcript in the OpenAI message shape | to add |
+
+Rules: a field another tool does not understand goes into frontmatter it ignores, never into the body
+it reads; secrets never leave in an export; a lossy conversion says what it dropped (the skill
+adapter's rule); each converter has a round-trip test (export → import → identical) and a fixture from
+the other tool. Interoperable tool protocols follow the same rule: MCP (client and server), AG-UI,
+A2A.
