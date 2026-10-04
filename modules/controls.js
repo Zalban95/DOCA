@@ -199,6 +199,18 @@ async function collectStatus() {
 }
 
 /** POST /api/action — start / stop / restart Docker Compose */
+/**
+ * GET /api/stack/info — what the Start/Stop/Restart card drives: `docker compose` in COMPOSE_DIR, and
+ * whether there is a compose file there at all. The card said "DOCA Service Control" while it ran the
+ * OpenClaw stack's compose (live review 2026-10-04): Stop read as stopping the panel. It is named by
+ * what it runs, and drawn only when there is a stack to run.
+ */
+function handleStackInfo(_req, res) {
+  const file = ['compose.yaml', 'compose.yml', 'docker-compose.yml', 'docker-compose.yaml'].find(f => fs.existsSync(path.join(COMPOSE_DIR, f))) || null;
+  const label = /openclaw/i.test(COMPOSE_DIR) || (file && /openclaw/i.test(fs.readFileSync(path.join(COMPOSE_DIR, file), 'utf8').slice(0, 4000))) ? 'OpenClaw stack' : 'Compose stack';
+  res.json({ dir: COMPOSE_DIR, file, exists: !!file, label });
+}
+
 async function handleAction(req, res) {
   const { action } = req.body;
   const cmds = {
@@ -251,4 +263,4 @@ function handleStackUpdate(_req, res) {
    harness is selected -- the stack is one source among several now, and which
    one you get is a question this file had no way to answer. */
 
-module.exports = { handleStatus, handleAction, handleStackUpdate, collectStatus };
+module.exports = { handleStatus, handleAction, handleStackUpdate, handleStackInfo, collectStatus };

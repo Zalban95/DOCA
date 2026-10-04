@@ -127,7 +127,7 @@ the end, and in the sections as "built in …" notes.
   Projects chat joined them in 2.118.1. Tool results stay raw (undecided). → *The agent writes markdown…*.
 - ~~`contextWindow` found rather than typed~~ — **built in 2.120.0** (`harness/context-window.js`),
   offered in ⚙, never applied by itself. → *Memory, limits and context*.
-- Settings sub-tabs reviewed for what DOCA is now. → *Wanted 2026-09-25 — review*.
+- ~~Settings sub-tabs reviewed for what DOCA is now~~ — **done** (2.60.0, keys 2.68.0; the tabs pass 2.150.0). → *Wanted 2026-09-25 — review*.
 - Editor add-ons; the project structure map (P2). → *Settled 2026-09-25*,
   *Wanted 2026-09-25*.
 - VM console in the page (VNC). → *MCP and VMs*.
@@ -2441,6 +2441,15 @@ more is built on top of them. Proposed shape, to settle per section:
   prefs file for the install).
 - **Then the tabs:** Models, Docker, Controls, and the left status bar — each
   reviewed for what is DOCA's and what is the OpenClaw stack's, the same way.
+  **Done 2026-10-04 (2.150.0), on the live panel:** Controls' "DOCA Service Control" ran `docker
+  compose` in the stack folder — OpenClaw's — so Stop read as stopping the panel; it is now named by
+  what it drives ("OpenClaw stack · docker compose", the folder in its tooltip) and drawn only when
+  the folder holds a compose file (`GET /api/stack/info`). Docker and the status bar list the
+  machine's containers, which is right whoever made them. Models is DOCA's. **Noted, not changed:**
+  Ollama and HuggingFace pointed at one folder show the same size twice; a llama-server started outside
+  the panel (a router on :8080, say) is not on the Models tab, which lists only the instances it
+  starts; the Ollama search is a short fixed list. The Settings "still open" notes above were stale:
+  DOCA's own skills are in Harness → Skills (2.128.0), and its keys left openclaw.json in 2.68.0.
 - **Every control built from the existing pieces** (`.input`, `.input-label`,
   `.btn` variants, the toggle, the Snapshots row); `test/ui-consistency.test.js`
   holds the fields to it, and screenshots at desktop and phone width before

@@ -4,15 +4,15 @@
 
 // DOCA's own settings first; OpenClaw's after them, in a group of their own that
 // is drawn only when OpenClaw is installed — so it is never unclear whose they
-// are (decided 2026-09-25). Skills are OpenClaw's today: clawhub skills in
-// ~/.openclaw/workspace/skills; the harness has none of its own yet.
+// are (decided 2026-09-25). The OpenClaw group's Skills are OpenClaw's (clawhub, ~/.openclaw/workspace/skills);
+// DOCA's own skills — shipped, made here, imported from other harnesses — are in Harness → Skills.
 const _SETTINGS_SUBTABS = [
   { id: 'general',   label: 'General',   init: '_subtabGeneralInit' },
   { id: 'keys',      label: 'API Keys',  init: 'loadKeys',       find: 'tokens devices pairing' },
   { id: 'users',     label: 'Users',     init: 'usersLoad',      find: 'people accounts levels permissions roles' },
   { id: 'wearables', label: 'Wearables', init: 'wearablesLoad',  find: 'watch DocaWear console macros joystick' },
   { id: 'backups',   label: 'Backups',   init: 'backupsLoad' },
-  { id: 'harness',   label: 'Harness',   init: '_settingsHarnessRender' },
+  { id: 'harness',   label: 'Harness',   init: '_settingsHarnessRender', find: 'skills memory rules approvals parameters guards' },
   { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit' },
   { id: 'system',    label: 'System',    init: '_subtabSystemInit' },
   { id: 'skills',    label: 'Skills',    init: 'loadSkills',    group: 'openclaw' },
