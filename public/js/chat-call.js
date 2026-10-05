@@ -30,7 +30,7 @@ let _callThreshold = 15;
 // A recording is sent only with this much audio over the threshold in it: a click, a cough or a door is shorter, and
 // Whisper turns such a blip into "Thank you." (the hub screens those phrases too: modules/stt-filter.js).
 const CALL_MIN_VOICED_MS = 300;
-let _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending = 0, _callTtsWarned = false, _callLastActive = 0;
+let _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending = 0, _callTtsWarned = false, _callLastActive = 0, _callOverMs = 0;
 /** How long nobody has spoken and nothing has been said or worked on (assistant mode's idle timer). */
 const _callIdleMs = () => (_callActive && _callLastActive ? performance.now() - _callLastActive : 0);
 
@@ -149,7 +149,8 @@ function _callVadLoop() {
   const energy = data.reduce((a, b) => a + b, 0) / data.length;
   const now = performance.now(), dt = _callLastFrame ? Math.min(100, now - _callLastFrame) : 0;
   _callLastFrame = now;
-  if (energy > _callThreshold || _callCurrentSrc || _callProcessing || _callSynthPending || _callSpeaking) _callLastActive = now;
+  // Activity is an exchange — something sent, worked on or spoken — never mere sound, or a noisy room keeps it awake.
+  if (_callCurrentSrc || _callProcessing || _callSynthPending || (_callSpeaking && _callVoicedMs >= CALL_MIN_VOICED_MS)) _callLastActive = now;
   if (_callFaceVoice && typeof faceCornerVoice === 'function') {
     if (_callCurrentSrc && _callOutAnalyser) {
       const out = new Uint8Array(_callOutAnalyser.frequencyBinCount);
@@ -158,15 +159,14 @@ function _callVadLoop() {
     } else if (energy > _callThreshold) faceCornerVoice('listening', energy / 80);
   }
 
-  if (energy > _callThreshold) {
+  // While the voice plays it keeps the floor: a cough, a door or the room is not a person talking over it. Only with
+  // barge-in on does a sustained sound well over the threshold (≈0.35 s) interrupt it.
+  const playing = !!_callCurrentSrc && !_callHold;
+  _callOverMs = playing && energy > _callThreshold * 1.6 + 5 ? _callOverMs + dt : 0;
+  if (playing) { if (_callOverMs >= 350) _callHoldStart(); }   // paused, then decided by the first words (chat-call-hold.js)
+  else if (energy > _callThreshold) {
     // Speech detected
-    if (_callCurrentSrc) {
-      _callStopPlayback();
-      if (_callBargeIn) { _callEpoch++; _callStats.bargeIns++; }   // what it was about to say is no longer an answer
-      _callSetStatus('Listening…', 'listening');
-    }
-
-    if (!_callSpeaking && (!_callProcessing || _callBargeIn)) {
+    if (!_callSpeaking && (!_callProcessing || _callBargeIn || _callHold)) {
       _callSpeaking = true;
       _callVoicedMs = 0;
       _callStartRecording();
@@ -200,6 +200,7 @@ function _callStartRecording() {
   _callRecorder.onstop = () => {
     _callRecorder = null;
     if (_callVoicedMs < CALL_MIN_VOICED_MS) return;   // a blip, not speech: nothing is sent
+    if (_callHoldDiscard && Date.now() - _callHoldDiscard < 8000) { _callHoldDiscard = 0; return; }   // a hold heard no words in it
     if (chunks.length && _callActive) {
       const blob = new Blob(chunks, { type: mimeType });
       _callProcessAudio(blob);
@@ -247,6 +248,7 @@ async function _callProcessAudio(audioBlob) {
 async function _callAnswer(userText) {
   if (!_callActive) return;
   _callProcessing++;
+  _callHeardReset();
   try {
     chatAppendMsg('user', userText);
 
@@ -315,6 +317,7 @@ async function _callAnswer(userText) {
     }
 
     callSink.finish();
+    _callHeardRetry();   // an interruption came before this answer's row was written
     closeFolds(container);
 
     // Synthesize any remaining text
@@ -332,62 +335,5 @@ async function _callAnswer(userText) {
     if (_callActive && !_callCurrentSrc && _callPlayQueue.length === 0 && !_callSynthPending) {
       _callSetStatus('Listening…', 'listening');
     }
-  }
-}
-
-async function _callEnqueueSynth(text) {
-  if (!_callActive) return;
-  const epoch = _callEpoch;   // said before an interruption: dropped when it arrives after one (barge-in)
-  _callSynthPending++;
-  try {
-    const res = await fetch('/api/chat/synthesize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-      signal: _callAbort?.signal,
-    });
-    if (!res.ok) throw new Error(`speech service answered ${res.status}${await res.text().then(t => `: ${t.slice(0, 120)}`).catch(() => '')}`);
-
-    const arrayBuf = await res.arrayBuffer();
-    if (!_callActive || !_callPlayCtx) return;
-    if (_callPlayCtx.state === 'suspended') await _callPlayCtx.resume().catch(() => {});
-    const audioBuf = await _callPlayCtx.decodeAudioData(arrayBuf);
-    if (epoch !== _callEpoch) { _callStats && _callStats.dropped++; return; }
-    _callPlayQueue.push(audioBuf);
-    if (!_callCurrentSrc) _callPlayNext();
-  } catch (e) {
-    // Once per call: a voice that fails silently reads as a call that answers only in text.
-    if (e.name !== 'AbortError' && _callActive && !_callTtsWarned) { _callTtsWarned = true; chatAppendMsg('system', `The answer could not be spoken: ${e.message}`); }
-  } finally {
-    _callSynthPending = Math.max(0, _callSynthPending - 1);
-    if (_callActive && !_callSynthPending && !_callCurrentSrc && !_callPlayQueue.length && !_callProcessing) _callSetStatus('Listening…', 'listening');
-  }
-}
-
-function _callPlayNext() {
-  if (!_callActive || !_callPlayCtx || _callPlayQueue.length === 0) {
-    _callCurrentSrc = null;
-    if (_callActive && !_callProcessing) _callSetStatus('Listening…', 'listening');
-    return;
-  }
-
-  const buf = _callPlayQueue.shift();
-  const src = _callPlayCtx.createBufferSource();
-  src.buffer = buf;
-  src.connect(_callOutAnalyser || _callPlayCtx.destination);
-  src.onended = () => {
-    _callCurrentSrc = null;
-    _callPlayNext();
-  };
-  _callCurrentSrc = src;
-  _callSetStatus('Speaking…', 'speaking');
-  src.start();
-}
-
-function _callStopPlayback() {
-  _callPlayQueue = [];
-  if (_callCurrentSrc) {
-    try { _callCurrentSrc.stop(); } catch {}
-    _callCurrentSrc = null;
   }
 }

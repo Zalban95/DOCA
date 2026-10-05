@@ -29,7 +29,7 @@ async function liveCallRender() {
       ${row('Microphone threshold', `<input type="range" id="lc-sens" min="1" max="60" step="1" value="${c.sensitivity || 15}" style="width:180px"
           oninput="document.getElementById('lc-sens-val').textContent=this.value"><span id="lc-sens-val" style="font-size:11px;min-width:22px">${c.sensitivity || 15}</span>`,
         'Lower hears quieter voices — and more of the room.')}
-      ${row('Assistant mode', `<input class="input" id="lc-idle" type="number" min="5" max="600" value="${c.assistantIdleSec || 20}" style="width:80px"> s`,
+      ${row('Assistant mode', `<input class="input" id="lc-idle" type="number" min="5" max="600" value="${c.assistantIdleSec || 12}" style="width:80px"> s`,
         'Tapping the face opens it: the face full screen, talking. After this long with nobody speaking it waits for the name again (where it listens for one); otherwise it keeps listening.')}
       ${row('Call by name', `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="lc-listen" ${c.listenWithFace ? 'checked' : ''}>
           while the corner face shows, listen for</label><input class="input" id="lc-word" value="${escHtml(c.wakeWord || '')}" placeholder="${escHtml((typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA')}" style="width:120px">`,

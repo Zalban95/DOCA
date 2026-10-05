@@ -77,6 +77,29 @@ function append(key, file, row) {
   raw.prepare('INSERT INTO lines (tenant_id, key, value) VALUES (\'local\', ?, ?)').run(key, JSON.stringify(row));
 }
 
+/**
+ * Rewrite the newest of `key`'s lines that `change` returns a new value for (it returns null to pass one by), looking
+ * back at most `depth` lines. The one place a line changes after it was written: a spoken answer cut short by the
+ * person (chat-call-hold.js) keeps only what was heard.
+ */
+function editLast(key, file, change, depth = 60) {
+  const raw = h();
+  if (!raw) {
+    const rows = store.readJsonl(file);
+    for (let i = rows.length - 1; i >= Math.max(0, rows.length - depth); i--) {
+      const next = change(rows[i]);
+      if (next) { rows[i] = next; fs.writeFileSync(file, rows.map(r => JSON.stringify(r)).join('\n') + '\n'); return next; }
+    }
+    return null;
+  }
+  importOnce(raw, key, file, 'lines');
+  for (const r of raw.prepare('SELECT id, value FROM lines WHERE tenant_id = \'local\' AND key = ? ORDER BY id DESC LIMIT ?').all(key, depth)) {
+    const next = change(JSON.parse(r.value));
+    if (next) { raw.prepare('UPDATE lines SET value = ? WHERE id = ?').run(JSON.stringify(next), r.id); return next; }
+  }
+  return null;
+}
+
 /** Forget a key's lines — and its old file, so it is not imported again. */
 function dropLines(key, file) {
   const raw = h();
@@ -86,4 +109,4 @@ function dropLines(key, file) {
   mark(raw, key);
 }
 
-module.exports = { getDoc, setDoc, lines, append, dropLines };
+module.exports = { getDoc, setDoc, lines, append, editLast, dropLines };

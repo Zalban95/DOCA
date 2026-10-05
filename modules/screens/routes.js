@@ -11,6 +11,11 @@ const screens = require('./index');
 function mount(app) {
   // The speech service's voices, for a screen to pick its own from (Settings → Voice → This screen's voice).
   app.get('/api/chat/voices', require('../chat').handleVoices);
+  // A spoken answer the person talked over: the floating chat's conversation keeps only what was heard (harness/heard.js).
+  app.post('/api/chat/heard', (req, res) => {
+    const row = require('../harness/heard').cut(require('../harness/memory').mainSession().id, req.body?.heard);
+    res.json({ cut: !!row, ...(row ? { content: row.content } : {}) });
+  });
   app.get('/api/screen', (req, res) => {
     try {
       const d = screens.ensure(req, res, req.query.device || null);

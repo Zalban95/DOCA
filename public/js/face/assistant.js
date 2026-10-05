@@ -55,7 +55,7 @@ async function _assistantIdle() {
   if (!_assistant || !_callActive || typeof _callIdleMs !== 'function') return;
   let c = {}, ex = {};
   try { const s = await screenLoad(); c = s.settings?.call || {}; ex = s.experiments || {}; } catch { /* defaults */ }
-  if (_callIdleMs() < (c.assistantIdleSec >= 5 ? c.assistantIdleSec : 20) * 1000) return;
+  if (_callIdleMs() < (c.assistantIdleSec >= 5 ? c.assistantIdleSec : 12) * 1000) return;
   if (!(ex.wakeWord && c.listenWithFace)) return;   // no name to wait for: keep listening
   _callStop();   // which starts the wake word listening again (wake-word.js)
   const word = String(c.wakeWord || '').trim() || (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA';

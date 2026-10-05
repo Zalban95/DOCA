@@ -1,0 +1,25 @@
+// Face concepts: signs, marks and answers.
+FACE_CONCEPTS.push(
+  { id: 'check', glyph: '✓', color: '#5ad870', words: { en: ['completed', 'succeeded', 'confirmed', 'confirm'], it: ['completato', 'completata', 'riuscito', 'riuscita', 'confermato', 'confermata', 'confermo'] } },
+  { id: 'cross', glyph: '✕', color: '#f04a4a', words: { en: ['error', 'errors', 'failed', 'failure', 'fail', 'fails', 'incorrect', 'cancelled', 'canceled', 'denied'], it: ['errore', 'errori', 'fallito', 'fallita', 'sbagliato', 'sbagliata', 'annullato', 'annullata', 'negato', 'negata', 'fallimento'] } },
+  { id: 'warning', glyph: '⚠', color: '#e8a020', words: { en: ['warning', 'warnings', 'warn', 'careful', 'caution', 'danger', 'dangerous', 'risky', 'alert', 'alerts'], it: ['avvertenza', 'avvertimento', 'attento', 'attenta', 'cautela', 'pericolo', 'pericoloso', 'pericolosa', 'rischio', 'rischioso', 'allerta'] } },
+  { id: 'forbidden', glyph: '⛔', color: '#f03a3a', words: { en: ['forbidden', 'prohibited', 'blocked', 'banned', 'refused', 'refuse'], it: ['vietato', 'vietata', 'proibito', 'proibita', 'bloccati', 'rifiutare'] } },
+  { id: 'question', glyph: '?', color: '#e8c060', words: { en: ['question', 'questions', 'unknown', 'unsure', 'doubt', 'confused'], it: ['domanda', 'domande', 'dubbio', 'dubbi', 'sconosciuto', 'confuso', 'confusa'] } },
+  { id: 'exclamation', glyph: '!', color: '#f0a030', words: { en: ['urgent', 'urgently', 'asap', 'critical'], it: ['urgente', 'urgenti', 'immediatamente', 'critico', 'critica'] } },
+  { id: 'info', glyph: 'ℹ', color: '#57a8f0', words: { en: ['info', 'information', 'details', 'detail', 'faq'], it: ['informazione', 'informazioni', 'dettagli', 'dettaglio'] } },
+  { id: 'infinity', glyph: '∞', color: '#b08af0', words: { en: ['infinity', 'infinite', 'forever', 'endless', 'unlimited', 'eternal'], it: ['infinito', 'infinita', 'illimitato', 'illimitata', 'eterno', 'eterna'] } },
+  { id: 'plus', glyph: '+', color: '#57c9c2', words: { en: ['plus'], it: ['aggiungi', 'aggiungere', 'aggiunto', 'aggiunta'] } },
+  { id: 'minus', glyph: '−', color: '#57c9c2', words: { en: ['minus', 'remove', 'removed', 'removing', 'subtract', 'fewer'], it: ['rimuovi', 'rimuovere', 'rimosso', 'rimossa', 'togliere', 'sottrarre'] } },
+  { id: 'percent', glyph: '%', color: '#57c9c2', words: { en: ['percent', 'percentage', 'percentages', 'ratio', 'rate'], it: ['percento', 'percentuale', 'percentuali', 'tasso'] } },
+  { id: 'arrow-up', glyph: '↑', color: '#5ad870', words: { en: ['upward', 'upwards', 'higher', 'raise', 'raised'], it: ['alzare', 'alza', 'alzato', 'superiore'] } },
+  { id: 'arrow-down', glyph: '↓', color: '#f0805a', words: { en: ['downward', 'downwards', 'lowered', 'reduce', 'reduced'], it: ['abbassare', 'abbassa', 'ridurre', 'ridotto', 'inferiore'] } },
+  { id: 'arrow-right', glyph: '➤', color: '#57c9c2', words: { en: ['sending', 'sent'], it: ['invia', 'inviare', 'inviato', 'inviata', 'mandare', 'mandato'] } },
+  { id: 'arrow-left', glyph: '←', color: '#57c9c2', words: { en: ['backward', 'backwards', 'returned'], it: ['indietro', 'tornare', 'ritorno', 'ritornare'] } },
+  { id: 'recycle', glyph: '♻', color: '#4ad070', words: { en: ['recycle', 'recycling', 'recycled', 'reuse', 'sustainable', 'sustainability', 'environment', 'environmental'], it: ['riciclo', 'riciclare', 'riciclaggio', 'differenziata', 'sostenibile', 'sostenibilità', 'ambiente', 'ambientale'] } },
+  { id: 'peace', glyph: '☮', color: '#8ad8f0', words: { en: ['peace', 'peaceful', 'harmony'], it: ['pace', 'pacifico', 'pacifica', 'armonia'] } },
+  { id: 'atom', glyph: '⚛', color: '#6ab8f0', words: { en: ['atom', 'atoms', 'atomic', 'nuclear', 'physics', 'quantum'], it: ['atomo', 'atomi', 'atomico', 'nucleare', 'fisica', 'quantistico'] } },
+  { id: 'accessibility', glyph: '♿', color: '#4a8ae8', words: { en: ['accessibility', 'accessible', 'wheelchair', 'disabled', 'disability'], it: ['accessibilità', 'accessibile', 'disabile', 'disabili', 'disabilità'] } },
+  { id: 'stop-sign', glyph: '⏹', color: '#f05a5a', words: { en: ['stopped', 'stopping', 'halted'], it: ['fermato', 'fermata', 'fermare', 'interrotto'] } },
+  { id: 'hourglass-flow', glyph: '⏳', color: '#e8c070', words: { en: ['pending', 'processing'], it: ['elaborazione'] } },
+  { id: 'scroll', glyph: '📜', color: '#e8c890', words: { en: ['scroll', 'scrolls', 'manuscript', 'rules', 'policy', 'policies', 'terms'], it: ['pergamena', 'manoscritto', 'regole', 'regola', 'termini'] } }
+);
