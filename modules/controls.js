@@ -58,15 +58,6 @@ function readCpuTemp() {
   return null;
 }
 
-/** Parse one numeric nvidia-smi field; returns null for blank / "[N/A]". */
-function smiNum(v) {
-  if (v == null) return null;
-  const s = String(v).trim();
-  if (!s || /n\/?a|not supported|unknown/i.test(s)) return null;
-  const n = parseFloat(s);
-  return Number.isFinite(n) ? n : null;
-}
-
 /** GET /api/status — system overview: Docker, GPU, CPU/RAM, Ollama, HuggingFace */
 async function handleStatus(req, res) {
   res.json(await collectStatus());
@@ -85,7 +76,7 @@ async function collectStatus() {
   const [dockerResult, gpuResult, ollamaTagsResult, ollamaPsResult, cpuSample, extStats] = await Promise.all([
     Promise.allSettled([
       run(`docker ps --format '{{json .}}'`),
-      run('nvidia-smi --query-gpu=name,temperature.gpu,utilization.gpu,memory.used,memory.total,power.draw,power.limit,fan.speed,clocks.sm,utilization.memory,clocks.mem,pstate --format=csv,noheader,nounits'),
+      require('./gpu').read(),   // NVIDIA, AMD, Apple, Intel, Windows adapters (gpu.js)
       run(`curl -s ${ollamaUrl}/api/tags`),
       run(`curl -s ${ollamaUrl}/api/ps`),
     ]),
@@ -101,26 +92,7 @@ async function collectStatus() {
       .filter(Boolean);
   }
 
-  let gpu = null;
-  if (gpuResult.status === 'fulfilled') {
-    gpu = gpuResult.value.stdout.trim().split('\n').filter(Boolean).map(l => {
-      const p = l.split(',').map(s => s.trim());
-      return {
-        name:       p[0],
-        temp:       p[1],
-        util:       p[2],
-        memUsed:    p[3],
-        memTotal:   p[4],
-        powerDraw:  smiNum(p[5]),
-        powerLimit: smiNum(p[6]),
-        fan:        smiNum(p[7]),
-        clockSm:    smiNum(p[8]),
-        memUtil:    smiNum(p[9]),
-        clockMem:   smiNum(p[10]),
-        pstate:     p[11] && !/n\/?a/i.test(p[11]) ? p[11] : null,
-      };
-    });
-  }
+  const gpu = gpuResult.status === 'fulfilled' ? gpuResult.value : null;
 
   const loadAvg = os.loadavg();
   const { cpuPct, cores } = cpuSample;
