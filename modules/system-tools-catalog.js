@@ -69,6 +69,23 @@ const NVIDIA_CTK = [
   'sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker',
 ].join(' && ');
 
+/**
+ * A Temurin JDK where Gradle looks for toolchains by itself (~/.gradle/jdks), carrying the markers Gradle's own
+ * provisioned JDKs have (.ready, provisioned.ok) so it trusts the folder: no sudo, nothing on PATH changed.
+ */
+function temurin(v, forWhat, why) {
+  const dir = path.join(HOME, '.gradle', 'jdks', `temurin-${v}`);
+  // javac, not java: a runtime without a compiler (Ubuntu's openjdk-NN-jre) is not a JDK, and Gradle cannot use it.
+  const javac = (...p) => ({ bin: path.join(...p, process.platform === 'win32' ? 'javac.exe' : 'javac'), args: ['-version'], stderr: true, match: /javac/ });
+  return { id: `jdk${v}`, label: `JDK ${v} toolchain`, category: 'clients', for: forWhat,
+    detect: { any: [javac(dir, 'bin'), javac(dir, 'Contents', 'Home', 'bin'), javac(`/usr/lib/jvm/java-${v}-openjdk-amd64`, 'bin')] },
+    version: /javac ([\d.]+)/,
+    note: `${why} Eclipse Temurin ${v} in ~/.gradle/jdks/temurin-${v}, where Gradle finds it.`,
+    repo: `https://adoptium.net/temurin/releases/?version=${v}`, repoLabel: 'adoptium.net',
+    install: { all: `OS=$(uname -s | tr A-Z a-z | sed s/darwin/mac/); ARCH=$(uname -m | sed "s/x86_64/x64/;s/arm64/aarch64/"); D="$HOME/.gradle/jdks"; mkdir -p "$D" && cd "$D" && rm -rf temurin-${v} t${v}.tgz && echo "Downloading Temurin ${v} ($OS/$ARCH)…" && curl -fsSLo t${v}.tgz "https://api.adoptium.net/v3/binary/latest/${v}/ga/$OS/$ARCH/jdk/hotspot/normal/eclipse" && mkdir temurin-${v} && tar -xzf t${v}.tgz -C temurin-${v} --strip-components=1 && rm t${v}.tgz && touch temurin-${v}/.ready temurin-${v}/provisioned.ok && echo "✓ JDK ${v} in $D/temurin-${v} — Gradle finds it there."`,
+      win32: `$d = "$HOME\\.gradle\\jdks"; New-Item -ItemType Directory -Force $d | Out-Null; Invoke-WebRequest -UseBasicParsing "https://api.adoptium.net/v3/binary/latest/${v}/ga/windows/x64/jdk/hotspot/normal/eclipse" -OutFile "$d\\t${v}.zip"; Remove-Item -Recurse -Force "$d\\temurin-${v}" -ErrorAction SilentlyContinue; Expand-Archive -Force "$d\\t${v}.zip" "$d\\t${v}"; Move-Item (Get-ChildItem "$d\\t${v}")[0].FullName "$d\\temurin-${v}"; Remove-Item -Recurse "$d\\t${v}", "$d\\t${v}.zip"; New-Item -ItemType File "$d\\temurin-${v}\\.ready", "$d\\temurin-${v}\\provisioned.ok" | Out-Null; "JDK ${v} in $d\\temurin-${v}"` } };
+}
+
 const SYSTEM_TOOLS = [
   // ── What DOCA runs on ──
   { id: 'node', label: 'Node.js', category: 'required', for: 'DOCA itself',
@@ -170,19 +187,12 @@ const SYSTEM_TOOLS = [
 
   // ── For building DOCA's own apps (DocaMobile, DocaWear, DocaDesk) ──
   { id: 'jdk', label: 'Java (JDK 17+)', category: 'clients', for: 'DocaMobile, DocaWear',
-    detect: { bin: 'java', args: ['-version'], stderr: true, match: /version/ }, version: /version "([\d.]+)/,
-    note: 'Gradle runs on it to build the Android apps.', repo: 'https://adoptium.net', repoLabel: 'adoptium.net',
+    // javac, not java: Ubuntu's openjdk-NN-jre is a runtime that cannot compile, and Gradle refuses it as a JDK.
+    detect: { bin: 'javac', args: ['-version'], stderr: true, match: /javac/ }, version: /javac ([\d.]+)/,
+    note: 'A JDK on PATH (javac), for Gradle and other Java tools. DocaMobile\'s Gradle can fetch a JDK of its own to run on; DocaWear\'s needs one of the toolchains below.', repo: 'https://adoptium.net', repoLabel: 'adoptium.net',
     install: { linux: pkg({ apt: 'openjdk-21-jdk', dnf: 'java-21-openjdk-devel', pacman: 'jdk21-openjdk' }), darwin: brew('openjdk@21'), win32: winget('Microsoft.OpenJDK.21') } },
-  { id: 'jdk11', label: 'JDK 11 toolchain', category: 'clients', for: 'DocaMobile\'s core-doca',
-    // Gradle finds JDKs in its own folder (~/.gradle/jdks) by itself — those carrying its markers (.ready, provisioned.ok),
-    // as one it provisioned would: Temurin goes there, no sudo, nothing on PATH changed.
-    detect: { any: [{ bin: path.join(HOME, '.gradle', 'jdks', 'temurin-11', 'bin', process.platform === 'win32' ? 'java.exe' : 'java'), args: ['-version'], stderr: true, match: /version/ },
-      { bin: path.join(HOME, '.gradle', 'jdks', 'temurin-11', 'Contents', 'Home', 'bin', 'java'), args: ['-version'], stderr: true, match: /version/ },
-      { bin: '/usr/lib/jvm/java-11-openjdk-amd64/bin/java', args: ['-version'], stderr: true, match: /version/ }] }, version: /version "([\d.]+)/,
-    note: 'core-doca compiles against Java 11 (its Gradle toolchain); Gradle runs on the JDK above. Eclipse Temurin 11 in ~/.gradle/jdks, where Gradle finds it.',
-    repo: 'https://adoptium.net/temurin/releases/?version=11', repoLabel: 'adoptium.net',
-    install: { all: 'OS=$(uname -s | tr A-Z a-z | sed s/darwin/mac/); ARCH=$(uname -m | sed "s/x86_64/x64/;s/arm64/aarch64/"); D="$HOME/.gradle/jdks"; mkdir -p "$D" && cd "$D" && rm -rf temurin-11 t11.tgz && echo "Downloading Temurin 11 ($OS/$ARCH)…" && curl -fsSLo t11.tgz "https://api.adoptium.net/v3/binary/latest/11/ga/$OS/$ARCH/jdk/hotspot/normal/eclipse" && mkdir temurin-11 && tar -xzf t11.tgz -C temurin-11 --strip-components=1 && rm t11.tgz && touch temurin-11/.ready temurin-11/provisioned.ok && echo "✓ JDK 11 in $D/temurin-11 — Gradle finds it there."',
-      win32: '$d = "$HOME\\.gradle\\jdks"; New-Item -ItemType Directory -Force $d | Out-Null; Invoke-WebRequest -UseBasicParsing "https://api.adoptium.net/v3/binary/latest/11/ga/windows/x64/jdk/hotspot/normal/eclipse" -OutFile "$d\\t11.zip"; Remove-Item -Recurse -Force "$d\\temurin-11" -ErrorAction SilentlyContinue; Expand-Archive -Force "$d\\t11.zip" "$d\\t11"; Move-Item (Get-ChildItem "$d\\t11")[0].FullName "$d\\temurin-11"; Remove-Item -Recurse "$d\\t11", "$d\\t11.zip"; New-Item -ItemType File "$d\\temurin-11\\.ready", "$d\\temurin-11\\provisioned.ok" | Out-Null; "JDK 11 in $d\\temurin-11"' } },
+  temurin(11, 'DocaMobile\'s core-doca', 'core-doca compiles against Java 11 (its Gradle toolchain); Gradle runs on the JDK above.'),
+  temurin(21, 'DocaWear\'s Gradle', 'DocaWear builds with Gradle 8.12, which runs on Java up to 23 — not on 25. Pointed at with JAVA_HOME, or found by Gradle as a toolchain.'),
   { id: 'android-sdk', label: 'Android SDK', category: 'clients', for: 'DocaMobile, DocaWear',
     // The Android CLI first, told not to report usage: this check runs every time the section is opened.
     detect: { any: [{ bin: androidCli, args: ['--no-metrics', '--version'] }, { bin: sdkmanager, args: ['--version'] }, { bin: 'sdkmanager', args: ['--version'] }] },
