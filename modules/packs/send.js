@@ -31,8 +31,8 @@ function request(dest, method, p, { body, headers = {}, first = false } = {}) {
       const cert = first && res.socket.getPeerCertificate ? res.socket.getPeerCertificate() : null;
       const parts = [];
       res.on('data', d => parts.push(d));
-      res.on('end', () => { const raw = Buffer.concat(parts).toString('utf8'); let json = null; try { json = JSON.parse(raw); } catch { /* not JSON */ }
-        resolve({ status: res.statusCode, body: json, tls: cert ? { authorized: res.socket.authorized === true, pem: cert.raw ? pemOf(cert.raw) : null, fp: cert.fingerprint256 || null } : null }); });
+      res.on('end', () => { const bytes = Buffer.concat(parts), raw = bytes.toString('utf8'); let json = null; try { json = JSON.parse(raw); } catch { /* not JSON */ }
+        resolve({ status: res.statusCode, body: json, bytes, tls: cert ? { authorized: res.socket.authorized === true, pem: cert.raw ? pemOf(cert.raw) : null, fp: cert.fingerprint256 || null } : null }); });
     });
     req.on('timeout', () => req.destroy(new Error('no answer in time')));
     req.on('error', e => reject(bad(dest.pinPem && /CERT|SELF_SIGNED|certificate/i.test(`${e.code} ${e.message}`)
@@ -42,7 +42,8 @@ function request(dest, method, p, { body, headers = {}, first = false } = {}) {
   });
 }
 
-const view = d => ({ id: d.id, url: d.url, label: d.label, hub: d.hub || null, pinned: d.pinFp || null, addedAt: d.addedAt });
+const view = d => ({ id: d.id, url: d.url, label: d.label, hub: d.hub || null, pinned: d.pinFp || null, addedAt: d.addedAt,
+  send: d.send !== false, read: !!d.read });
 const list = () => Object.values(all()).map(view);
 
 async function add({ url, token, label }) {
@@ -53,9 +54,13 @@ async function add({ url, token, label }) {
   if (knock.status !== 200 || !knock.body?.product) throw bad(`${u} does not answer as a DOCA hub.`, 502);
   const dest = { id: `hub_${crypto.randomBytes(5).toString('hex')}`, url: u, token: String(token).trim(), label: String(label || knock.body.product).slice(0, 60),
     ...(knock.tls && !knock.tls.authorized ? { pinPem: knock.tls.pem, pinFp: knock.tls.fp } : {}), addedAt: new Date().toISOString() };
+  // What the token may do there: send (the hub preset) and/or browse what it publishes (the registry preset).
   const hello = await request(dest, 'GET', '/api/v1/packs');
-  if (hello.status !== 200) throw bad(`${u} refused the token (${hello.status}${hello.body?.error?.message ? `: ${hello.body.error.message}` : ''}). It needs packs:send — the "hub" preset.`, 400);
-  dest.hub = hello.body.hub;
+  const reg = await request(dest, 'GET', '/api/v1/packs/published');
+  dest.send = hello.status === 200;
+  dest.read = reg.status === 200;
+  if (!dest.send && !dest.read) throw bad(`${u} refused the token (${hello.status}${hello.body?.error?.message ? `: ${hello.body.error.message}` : ''}). It needs the "hub" preset (to send) or "registry" (to browse what it publishes).`, 400);
+  dest.hub = hello.body?.hub || reg.body?.hub;
   write({ ...all(), [dest.id]: dest });
   return view(dest);
 }
@@ -75,4 +80,23 @@ async function send(destId, packId) {
   return { sent: packId, to: dest.label, received: r.body.received };
 }
 
-module.exports = { list, add, remove, send };
+/** What another hub publishes (its registry; experiments.packRegistry on both sides). */
+async function browse(destId) {
+  const dest = all()[destId];
+  if (!dest) throw bad('No such hub.', 404);
+  const r = await request(dest, 'GET', '/api/v1/packs/published');
+  if (r.status !== 200) throw bad(`${dest.label} publishes nothing to this token (${r.status}).`, 502);
+  return { hub: r.body.hub, packs: r.body.packs };
+}
+
+/** Fetch one into this library, marked as from that registry — nothing applied. */
+async function fetchPack(destId, packId) {
+  const dest = all()[destId];
+  if (!dest) throw bad('No such hub.', 404);
+  if (!/^pk_[a-f0-9]{12}$/.test(String(packId))) throw bad('No such pack.', 404);
+  const r = await request(dest, 'GET', `/api/v1/packs/published/${packId}`);
+  if (r.status !== 200) throw bad(`${dest.label} did not serve it (${r.status}).`, 502);
+  return require('./library').save(r.bytes, { origin: 'registry', from: dest.label });
+}
+
+module.exports = { list, add, remove, send, browse, fetchPack };

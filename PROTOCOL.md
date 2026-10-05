@@ -136,6 +136,9 @@ sha256, and `GET /clients/node/:file` the bytes — a client compares, fetches w
 Since hub 2.194.0 the scope family `packs` (`packs:send`; the `hub` preset holds it and nothing else) lets another hub
 send this one packs: `GET /packs` says who it is, `POST /packs` (the `.dpack` as multipart `file`) puts it in the
 library for a host to bring in — nothing is applied on arrival.
+Since 2.198.0, `packs:read` (the `registry` preset) lists what a hub publishes (`GET /packs/published`) and downloads one
+(`GET /packs/published/:id`) — only while that hub's `experiments.packRegistry` is on (else 404), only packs a host
+published.
 
 **Rotation.** `POST /devices/me/rotate` returns a new token; the old one stays
 valid for 60 s (`previousValidUntil`) so a client can swap atomically.

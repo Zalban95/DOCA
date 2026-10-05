@@ -27,7 +27,7 @@ function mount(app) {
   app.post('/api/packs/plan', upload, h(req => require('./import').plan(file(req))));
   // The library (library.js): what this hive keeps — made here, by the agent, or received — and other hubs to send to (send.js).
   const lib = () => require('./library');
-  app.get('/api/packs/library', h(() => ({ packs: lib().list(), hubs: require('./send').list() })));
+  app.get('/api/packs/library', h(() => ({ packs: lib().list(), hubs: require('./send').list(), registry: require('../experiments').on('packRegistry') })));
   app.post('/api/packs/library', h(req => lib().save(require('./export').build(req.body || {}).buffer, { origin: 'made', from: req.auth?.user?.name || req.auth?.user?.email || null })));
   app.get('/api/packs/library/:id', (req, res) => {
     try { const { meta, buffer } = lib().get(req.params.id); res.set('Content-Disposition', `attachment; filename="${meta.name.replace(/[^\w.-]+/g, '-') || 'pack'}.dpack"`).type('application/zip').send(buffer); }
@@ -39,6 +39,11 @@ function mount(app) {
     overwrite: req.body?.overwrite === true, person: require('../harness/turn/client').dashboardClient(req).user, actorLevel: req.auth?.role || null })));
   app.post('/api/packs/library/:id/send', h(req => require('./send').send(String(req.body?.hub || ''), req.params.id)));
   app.post('/api/packs/hubs', h(req => require('./send').add(req.body || {})));
+  // The registry (experiments.packRegistry): publishing from this library, browsing and fetching from another hub's.
+  const reg = () => { if (!require('../experiments').on('packRegistry')) throw Object.assign(new Error('The pack registry is an experiment that is off (Settings → Experiments).'), { status: 409 }); };
+  app.post('/api/packs/library/:id/publish', h(req => { reg(); return lib().publish(req.params.id, req.body?.on !== false); }));
+  app.get('/api/packs/hubs/:id/published', h(req => { reg(); return require('./send').browse(req.params.id); }));
+  app.post('/api/packs/hubs/:id/fetch', h(req => { reg(); return require('./send').fetchPack(req.params.id, String(req.body?.pack || '')); }));
   app.delete('/api/packs/hubs/:id', h(req => require('./send').remove(req.params.id)));
   app.post('/api/packs/import', upload, h(req => {
     let only = null;

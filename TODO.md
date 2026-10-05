@@ -110,7 +110,8 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [x] H4.5 (2.194.0) The library in Settings; hub-to-hub send; whatever the agent saves is a pack. The library keeps
   packs made here, by the agent (`pack` tool) or received; another hub sends with a `hub`-preset token (`packs:send`),
   pinned on first contact; bringing one in is the dry run.
-- [ ] H4.6 A registry to publish and fetch packs. [X]
+- [x] H4.6 (2.198.0, experiment `packRegistry`) A registry to publish and fetch packs. [X] A hub publishes library
+  packs to registry tokens (`packs:read`); another hub browses and fetches into its library. **Left:** measuring use.
 
 **H5 · Browser control** (§3.1)
 - [x] H5.1 (2.158.0) Playwright MCP in the services/MCP catalogue (the quick path) — with Chrome DevTools, an `mcp`

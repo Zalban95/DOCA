@@ -59,16 +59,37 @@ async function packsLibraryRender() {
       <span class="disk-path">${escHtml(p.contents.map(c => `${c.kind}${c.id ? ` ${c.id}` : ''}`).join(', ') || (p.native ? 'another tool\'s files' : ''))}</span>
       <span class="disk-free" style="display:flex;gap:4px"><a class="btn btn-xs" href="/api/packs/library/${encodeURIComponent(p.id)}">⬇</a>
         <button class="btn btn-xs" onclick="packsPlan(null, ${jsArg(p.id)})">Bring in…</button>
+        ${d.registry ? `<button class="btn btn-xs ${p.published ? 'btn-blue' : ''}" onclick="packsPublish(${jsArg(p.id)}, ${!p.published})" title="Listed to hubs holding a registry token">${p.published ? 'Published' : 'Publish'}</button>` : ''}
         ${d.hubs.length ? `<select class="input" style="width:auto;font-size:11px" onchange="if (this.value) packsSend(${jsArg(p.id)}, this.value); this.value=''"><option value="">Send to…</option>${hubOpts}</select>` : ''}
         <button class="btn btn-xs btn-red" onclick="packsDelete(${jsArg(p.id)})">✕</button></span></div>`).join('') || '<div class="placeholder">Empty.</div>'}
     <div class="card-title" style="font-size:12px;margin-top:10px">Other hubs to send to</div>
-    <p style="font-size:11px;color:var(--muted)">On the other DOCA: Settings → API Keys → a token with the <b>hub</b> preset (it can only send packs). Its certificate is pinned when you add it.</p>
-    ${d.hubs.map(h => `<div class="disk-row"><span class="disk-label">${escHtml(h.label)}</span><span class="disk-path">${escHtml(h.url)}${h.pinned ? ' · pinned' : ''}</span>
-      <span class="disk-free"><button class="btn btn-xs btn-red" onclick="packsHubRemove(${jsArg(h.id)})">✕</button></span></div>`).join('')}
+    <p style="font-size:11px;color:var(--muted)">On the other DOCA: Settings → API Keys → a token with the <b>hub</b> preset (it can only send packs)${d.registry ? ', or <b>registry</b> (to browse and fetch what it publishes)' : ''}. Its certificate is pinned when you add it.</p>
+    ${d.hubs.map(h => `<div class="disk-row"><span class="disk-label">${escHtml(h.label)}</span><span class="disk-path">${escHtml(h.url)}${h.pinned ? ' · pinned' : ''} · ${[h.send && 'send', h.read && 'browse'].filter(Boolean).join(', ')}</span>
+      <span class="disk-free" style="display:flex;gap:4px">${d.registry && h.read ? `<button class="btn btn-xs" onclick="packsBrowse(${jsArg(h.id)})">Browse</button>` : ''}<button class="btn btn-xs btn-red" onclick="packsHubRemove(${jsArg(h.id)})">✕</button></span></div>`).join('')}
+    <div id="pack-browse"></div>
     <div class="toolbar" style="gap:6px;margin-top:6px;flex-wrap:wrap">
       <input class="input" id="pack-hub-url" placeholder="https://other-hub:4242" style="flex:1;min-width:200px">
       <input class="input" id="pack-hub-token" type="password" autocomplete="off" placeholder="its hub token (doca_…)" style="flex:1;min-width:200px">
       <button class="btn btn-sm" onclick="packsHubAdd()">Add</button></div>`;
+}
+
+/* The registry (experiments.packRegistry): publish from this library; browse another hub's and fetch into this one. */
+async function packsPublish(id, on) {
+  try { await apiFetch(`/api/packs/library/${encodeURIComponent(id)}/publish`, { method: 'POST', body: { on } }); } catch (e) { appAlert(e.message); }
+  packsLibraryRender();
+}
+async function packsBrowse(hub) {
+  const el = document.getElementById('pack-browse');
+  let d;
+  try { d = await apiFetch(`/api/packs/hubs/${encodeURIComponent(hub)}/published`); } catch (e) { el.innerHTML = `<div class="placeholder">${escHtml(e.message)}</div>`; return; }
+  el.innerHTML = `<div class="input-label" style="margin-top:8px">${escHtml(d.hub)} publishes</div>` + (d.packs.map(p => `<div class="disk-row"><span class="disk-label">${escHtml(p.name)}</span>
+    <span class="disk-path">${escHtml(p.description || p.contents.map(c => `${c.kind} ${c.id || ''}`).join(', '))}</span>
+    <span class="disk-free"><button class="btn btn-xs" onclick="packsFetch(${jsArg(hub)}, ${jsArg(p.id)})">Fetch</button></span></div>`).join('') || '<div class="placeholder">Nothing published.</div>');
+}
+async function packsFetch(hub, pack) {
+  try { const m = await apiFetch(`/api/packs/hubs/${encodeURIComponent(hub)}/fetch`, { method: 'POST', body: { pack } }); appAlert(`"${m.name}" is in your library: bring it in from there.`); }
+  catch (e) { appAlert(e.message); }
+  packsLibraryRender();
 }
 
 async function packsSend(id, hub) {

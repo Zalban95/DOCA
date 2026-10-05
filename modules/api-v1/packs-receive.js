@@ -22,4 +22,21 @@ function mount(router, upload) {
   });
 }
 
-module.exports = { mount };
+/**
+ * The registry side (TODO H4.6, experiments.packRegistry): what this hub publishes, for a hub holding packs:read to
+ * browse and fetch. Off (404) unless the experiment is on; only packs a host published are listed or served.
+ */
+function mountRegistry(router) {
+  const on = (req, res, next) => (require('../experiments').on('packRegistry') ? next() : res.status(404).json({ error: { code: 'not_found', message: 'This hub publishes no packs.' } }));
+  router.get('/packs/published', requireScope('packs:read'), on, (req, res) => res.json({ hub: require('../branding').name('product'),
+    packs: require('../packs/library').published().map(({ id, name, description, contents, bytes, savedAt }) => ({ id, name, description, contents, bytes, savedAt })) }));
+  router.get('/packs/published/:id', requireScope('packs:read'), on, (req, res) => {
+    try {
+      const { meta, buffer } = require('../packs/library').get(req.params.id);
+      if (!meta.published) throw Object.assign(new Error('Not published.'), { status: 404 });
+      res.type('application/zip').send(buffer);
+    } catch (e) { res.status(e.status || 500).json({ error: { code: 'not_found', message: e.message } }); }
+  });
+}
+
+module.exports = { mount, mountRegistry };

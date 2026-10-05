@@ -72,3 +72,27 @@ test('this hub sends to another: added with its hub token (refused without one),
   assert.equal((await H.api(null, 'GET', '/api/packs/library')).body.packs.length, lib.body.packs.length + 1, 'it arrived (here, since it sent to itself)');
   assert.ok(require('../modules/paths').PROTECTED_FILES.includes(require('../modules/paths').HUB_KEYS_FILE));
 });
+
+test('a registry (experiment): published packs only, to a registry token, fetched into the library — nothing while off', async () => {
+  const issued = await H.api(null, 'POST', '/api/devices', { name: 'Team registry', preset: 'registry' });
+  const token = issued.body.token;
+  const get = p => fetch(`${H.base}/api/v1${p}`, { headers: { Authorization: `Bearer ${token}` } });
+  assert.equal((await get('/packs/published')).status, 404, 'off: there is no registry');
+  require('../modules/experiments').set('packRegistry', true);
+  assert.deepEqual((await (await get('/packs/published')).json()).packs, [], 'nothing published yet');
+  const lib = (await H.api(null, 'GET', '/api/packs/library')).body.packs;
+  const pk = lib.find(p => p.origin === 'agent');
+  assert.equal((await H.api(null, 'POST', `/api/packs/library/${pk.id}/publish`, { on: true })).body.published, true);
+  const listed = (await (await get('/packs/published')).json()).packs;
+  assert.deepEqual(listed.map(p => p.id), [pk.id]);
+  const other = lib.find(p => p.id !== pk.id);
+  assert.equal((await get(`/packs/published/${other.id}`)).status, 404, 'an unpublished pack is not served');
+  assert.equal((await fetch(`${H.base}/api/v1/packs`, { headers: { Authorization: `Bearer ${token}` } })).status, 403, 'a registry token cannot send');
+  const added = await H.api(null, 'POST', '/api/packs/hubs', { url: H.base, token, label: 'Team' });
+  assert.equal(added.status, 200, JSON.stringify(added.body));
+  assert.deepEqual([added.body.send, added.body.read], [false, true]);
+  const browsed = await H.api(null, 'GET', `/api/packs/hubs/${added.body.id}/published`);
+  assert.equal(browsed.body.packs[0].id, pk.id);
+  const fetched = await H.api(null, 'POST', `/api/packs/hubs/${added.body.id}/fetch`, { pack: pk.id });
+  assert.deepEqual([fetched.body.origin, fetched.body.from, fetched.body.name], ['registry', 'Team', pk.name]);
+});
