@@ -39,8 +39,14 @@ function makeLink(app, req) {
   for (const [t, l] of _links) if (l.until < Date.now()) _links.delete(t);
   const token = require('crypto').randomBytes(24).toString('base64url');
   _links.set(token, { app, until: Date.now() + LINK_MS });
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  return { url: `https://${host}/api/clients/apps/${app}/apk/${token}`, path: `/api/clients/apps/${app}/apk/${token}`, expiresAt: new Date(Date.now() + LINK_MS).toISOString() };
+  // The address a phone can open: the one the request came in on, unless that is this machine's own loopback (a link
+  // made here, for a phone, must not say 127.0.0.1) — then the hub's tailnet name, which its certificate is for.
+  let host = req.headers['x-forwarded-host'] || req.headers.host || '';
+  if (/^(127\.|localhost|\[::1\])/.test(host)) {
+    const fqdn = (() => { try { return require('../https-cert').getTailscaleFqdn(); } catch { return null; } })();
+    if (fqdn) host = `${fqdn}:${String(host).split(':').pop()}`;
+  }
+  return { url: `${req.protocol === 'http' && !req.secure ? 'http' : 'https'}://${host}/api/clients/apps/${app}/apk/${token}`, path: `/api/clients/apps/${app}/apk/${token}`, expiresAt: new Date(Date.now() + LINK_MS).toISOString() };
 }
 
 function mount(app) {
