@@ -38,7 +38,7 @@ const OVER = {
   'modules/api-v1/prompts.js':     467,
   'public/js/markdown.js':         462,
   'server.js': 338,
-  'modules/chat.js':               409,
+  'modules/chat.js':               403,
 };
 
 function walk(dir) {
@@ -102,4 +102,15 @@ test('every script the page loads exists, and every script that exists is loaded
   const onDisk = frontend.files();
   assert.deepEqual(loaded.filter(f => !onDisk.includes(f)), [], 'index.html loads a file that is not there');
   assert.deepEqual(onDisk.filter(f => !loaded.includes(f)), [], 'a front-end file nothing loads');
+});
+
+// A classic script with a syntax error defines none of its globals, and the page carries on without them: a card
+// that never draws, with no failing test (2.190.0's voice card, caught in a browser). Parsing each one is cheap.
+test('every front-end script parses', () => {
+  const vm = require('node:vm');
+  const broken = [];
+  for (const f of frontend.files()) {
+    try { new vm.Script(frontend.source(f), { filename: f }); } catch (e) { broken.push(`${f}: ${e.message}`); }
+  }
+  assert.deepEqual(broken, []);
 });

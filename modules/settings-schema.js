@@ -7,7 +7,7 @@
  *   home     hive   — the whole DOCA: how its agents behave, what they may do
  *            device — one machine: `on: 'host'` for what is bound to the machine DOCA runs on (paths, ports,
  *                     binaries), `on: 'screen'` for how one screen shows the panel (theme, tabs, sidebar)
- *            person — one person's own (none yet: per-person memory and voice will be)
+ *            person — one person's own (none yet: per-person memory will be)
  *   note     what it is, in a phrase
  *   propose  where in it the agent may point a settings proposal, with the card's label — settings.SETTABLE is
  *            built from these, so a key is proposable by being declared so here, and nowhere else
@@ -28,6 +28,7 @@ const SCHEMA = {
   sidebarStats:     { is: 'travels', home: 'device', on: 'host', note: 'which stats the host collects for the sidebar (the collectors run here, for every screen)', propose: p('Sidebar stats', 'Which stats the sidebar shows') },
   sidebarSections:  { is: 'travels', home: 'device', on: 'screen', note: 'which sidebar sections are open', propose: p('Sidebar sections') },
   favorites:        { is: 'travels', home: 'device', on: 'screen', note: 'favourite config files, by registry id', propose: p('Config favourites') },
+  voice:            { is: 'travels', home: 'device', on: 'screen', note: 'the voice this screen is answered in: ttsVoice and ttsSpeed, over voiceServices (chat.js handleSynthesize)' },
   face:             { is: 'travels', home: 'device', on: 'screen', note: 'the face: its look, a spec over the default (face/face.js); an edition carries one' },
   hiddenBuiltins:   { is: 'travels', home: 'device', on: 'screen', note: 'built-in config entries hidden from the list', propose: p('Hidden built-ins') },
 

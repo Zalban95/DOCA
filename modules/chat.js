@@ -373,6 +373,7 @@ async function handleSynthesize(req, res) {
   const { text, voice } = req.body;
   if (!text) return res.status(400).json({ error: 'No text' });
   const vs = loadVoiceServices();
+  const mine = require('./screens').voiceOf(req);   // this screen's own voice, when it chose one, over the hive's
 
   try {
     const resp = await fetch(`${vs.ttsUrl}/v1/audio/speech`, {
@@ -381,22 +382,15 @@ async function handleSynthesize(req, res) {
       body: JSON.stringify({
         model: vs.ttsModel,
         input: text,
-        voice: voice || vs.ttsVoice,
+        voice: voice || mine.ttsVoice || vs.ttsVoice,
         response_format: 'mp3',
-        speed: vs.ttsSpeed,
+        speed: Number(mine.ttsSpeed) > 0 ? Number(mine.ttsSpeed) : vs.ttsSpeed,
       }),
       signal: AbortSignal.timeout(30000),
     });
-
-    if (!resp.ok) {
-      const err = await resp.text();
-      return res.status(resp.status).json({ error: `TTS error ${resp.status}: ${err.slice(0, 300)}` });
-    }
-
-    const contentType = resp.headers.get('content-type') || 'audio/mpeg';
-    res.setHeader('Content-Type', contentType);
-    const arrayBuf = await resp.arrayBuffer();
-    res.send(Buffer.from(arrayBuf));
+    if (!resp.ok) return res.status(resp.status).json({ error: `TTS error ${resp.status}: ${(await resp.text()).slice(0, 300)}` });
+    res.setHeader('Content-Type', resp.headers.get('content-type') || 'audio/mpeg');
+    res.send(Buffer.from(await resp.arrayBuffer()));
   } catch (e) {
     res.status(500).json({ error: `TTS request failed: ${e.message}` });
   }

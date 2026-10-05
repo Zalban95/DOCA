@@ -70,9 +70,10 @@ function missingScopes(d) {
   return PRESETS[preset].filter(sc => !hasScope(d.scopes, sc));
 }
 
-function handleList(_req, res) {
+function handleList(req, res) {
+  // `mine`: whose page /d/<id>/ this person may open (screens.ensure): their own devices' (TODO H2.4).
   const list = devices.list().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
-    .map(d => ({ ...d, missingScopes: missingScopes(d), preset: presetFor(d), control: require('./devices-control').state(d.id) }));
+    .map(d => ({ ...d, missingScopes: missingScopes(d), preset: presetFor(d), control: require('./devices-control').state(d.id), mine: !!d.userId && d.userId === req.auth?.user?.id }));
   res.json({
     devices: list,
     presets: PRESETS,

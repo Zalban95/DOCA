@@ -70,6 +70,15 @@ function effective(deviceId, userId, prefs = require('../utils').loadPrefs()) {
   return { settings: out, from };
 }
 
+/** The settings of the screen a request comes from (its browser device, or the device whose token opened the session). */
+function forRequest(req) {
+  const id = req.auth?.session?.screen || req.auth?.session?.deviceId;
+  return id && req.auth?.user ? effective(id, req.auth.user.id).settings : {};
+}
+
+/** The voice the screen a request comes from chose (`voice`: ttsVoice, ttsSpeed), or {} for the hive's. */
+function voiceOf(req) { try { return forRequest(req).voice || {}; } catch { return {}; } }
+
 /** Change this device's layer: a value sets it, null puts it back to the hive's (or the person's). */
 function set(deviceId, patch = {}) {
   const keys = screenKeys();
@@ -83,4 +92,4 @@ function set(deviceId, patch = {}) {
   return cur;
 }
 
-module.exports = { ensure, effective, set, layer, screenKeys, nameOf, COOKIE };
+module.exports = { forRequest, voiceOf, ensure, effective, set, layer, screenKeys, nameOf, COOKIE };

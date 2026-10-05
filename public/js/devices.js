@@ -54,6 +54,7 @@ async function devicesLoad() {
           <button class="btn btn-xs btn-red" onclick="devForget(${jsArg(d.id)},${jsArg(d.name)})" title="Remove this row and everything kept under its id">🗑 Forget</button>
         </div>` : `
         <div class="toolbar-right">
+          ${d.mine ? `<a class="btn btn-xs" href="/d/${encodeURIComponent(d.id)}/" target="_blank" rel="noopener" title="Its own page: its look, tabs and notifications, as it shows them">⧉ Its page</a>` : ''}
           <button class="btn btn-xs"        onclick="devRotate(${jsArg(d.id)},${jsArg(d.name)})" title="Issue a replacement token">↻ Rotate</button>
           <button class="btn btn-xs btn-red" onclick="devRevoke(${jsArg(d.id)},${jsArg(d.name)})" title="Invalidate this token now">✕ Revoke</button>
         </div>`}

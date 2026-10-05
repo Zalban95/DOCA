@@ -79,8 +79,8 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [x] H2.4 (2.165.0) `/d/<id>/settings`: look, tabs, sidebar, voice, notifications, console, face, lent tool
   families; Settings keeps the hive's; Wearables becomes the watch's device page. Done on the existing `/d/<id>/` page:
   look, tabs and sections as the device's own, notifications (asked here, haptics, quiet hours), lent tool families.
-  **Left:** voice and the face per device on the server (both per browser today), the watch's console moving from
-  Wearables to its page, a link to each device's page from its row in the Devices list.
+  Since: the face per screen on the server (2.184.0), a screen's own voice and a link to each of one's devices' pages from
+  the Devices list (2.190.0). **Left:** the watch's console moving from Wearables to its page.
 - [x] H2.5 (2.178.0) Migrations for prefs keys (rename, move, default) — the upgradability gap. `modules/migrations.js`:
   rows of `move` / `defaultChanged` / `drop`, run once per prefs file at start with a copy kept, recorded in the file;
   a new file is born having had them all; listed in Settings → System. None has been needed yet: the list is empty.
