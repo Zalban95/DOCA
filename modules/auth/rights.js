@@ -109,6 +109,7 @@ const TABLE = [
   R(ANY, '/api/channels/telegram(/.*)?', 'chat'),             // a link code, and one's own linked chats (channels/telegram/routes.js)
   R('POST', '/api/channels/matrix', 'host'),                 // the homeserver, the bot's token and switch
   R(ANY, '/api/channels/matrix(/.*)?', 'chat'),               // a link code, and one's own linked rooms (channels/matrix/routes.js)
+  R(ANY, '/api/evals(/.*)?', 'host'),                         // evaluation sets: a run spends tokens, results hold answers (evals/routes.js)
   R(GET, '/api/retrieval', 'read'),                          // the embedding model and what the index holds (retrieval/routes.js)
   R(ANY, '/api/retrieval(/.*)?', 'host'),                     // choosing the model, trying it, emptying the index
   R('POST', '/api/channels/slack', 'host'),                  // the Slack app's two tokens and the switch
