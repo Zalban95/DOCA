@@ -117,6 +117,8 @@ const TABLE = [
   R(ANY, '/api/connectors(/.*)?', 'host'),                    // the keys to the owner's accounts (connectors/routes.js)                         // evaluation sets: a run spends tokens, results hold answers (evals/routes.js)
   R(GET, '/api/retrieval', 'read'),                          // the embedding model and what the index holds (retrieval/routes.js)
   R(ANY, '/api/retrieval(/.*)?', 'host'),                     // choosing the model, trying it, emptying the index
+  R('POST', '/api/channels/mail', 'host'),                   // the mailbox and its password
+  R(ANY, '/api/channels/mail(/.*)?', 'chat'),                 // a link code, and one's own linked addresses
   R('POST', '/api/channels/slack', 'host'),                  // the Slack app's two tokens and the switch
   R(ANY, '/api/channels/slack(/.*)?', 'chat'),                // a link code, and one's own linked DMs (channels/routes.js)
   R(GET, '/computers/[a-f0-9]+/vnc(/.*)?', 'host'),         // a computer's screen, proxied (computers/vnc.js)                  // computers for agents: containers on this machine (computers/)                   // a project is files and a shell

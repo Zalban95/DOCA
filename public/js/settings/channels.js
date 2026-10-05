@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════
    Settings → Channels (modules/channels; TODO H14, H9.1): talking to the hive
-   from Telegram, Matrix or Slack. A host gives each bot's token and switches it on;
+   from Telegram, Matrix, Slack or mail. A host gives each bot's token and switches it on;
    anyone who may chat links their own chat with a one-time code, and sees and
    unlinks their own chats (a host sees every one).
    ═══════════════════════════════════════════════════════ */
@@ -8,8 +8,8 @@
 async function channelsLoad() {
   const panel = document.getElementById('sp-channels');
   if (!panel) return;
-  let t, mx, sl;
-  try { [t, mx, sl] = await Promise.all(['telegram', 'matrix', 'slack'].map(c => apiFetch(`/api/channels/${c}`))); }
+  let t, mx, sl, ml;
+  try { [t, mx, sl, ml] = await Promise.all(['telegram', 'matrix', 'slack', 'mail'].map(c => apiFetch(`/api/channels/${c}`))); }
   catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
   const host = !document.body.classList.contains('no-host');
   const chats = (t.chats || []).map(c => `<div class="disk-row">
@@ -33,7 +33,7 @@ async function channelsLoad() {
     ${chats || '<div class="placeholder">None yet.</div>'}
     <div class="toolbar" style="margin-top:10px;gap:6px">
       <button class="btn btn-sm" onclick="channelsLink()" ${t.running ? '' : 'disabled title="The bot is not running"'}>Link a Telegram chat</button>
-      <span id="tg-code" style="font-size:12px"></span></div></div>${channelsMatrixCard(mx, host, state)}${channelsSlackCard(sl, host, state)}`;
+      <span id="tg-code" style="font-size:12px"></span></div></div>${channelsMatrixCard(mx, host, state)}${channelsSlackCard(sl, host, state)}${channelsMailCard(ml, host, state)}`;
 }
 
 /* Matrix (modules/channels/matrix): a bot account on any homeserver, synced from here; direct rooms only, unencrypted. */
@@ -83,6 +83,51 @@ function channelsSlackCard(m, host, state) {
     <div class="toolbar" style="margin-top:10px;gap:6px">
       <button class="btn btn-sm" onclick="channelsSlackLink()" ${m.running ? '' : 'disabled title="The app is not connected"'}>Link a Slack chat</button>
       <span id="sl-code" style="font-size:12px"></span></div></div>`;
+}
+
+/* Mail (modules/channels/mail): a mailbox read over IMAP and answered over SMTP; a mail counts only when its
+   receiving server vouched for the sender (DMARC, or DKIM for the From domain). */
+function channelsMailCard(m, host, state) {
+  const rows = (m.chats || []).map(c => `<div class="disk-row"><span class="disk-label">${escHtml(c.username || c.name)}</span>
+      <span class="disk-path">speaks as ${escHtml(c.person || '?')} · linked ${escHtml(String(c.linkedAt || '').slice(0, 10))}</span>
+      <span class="disk-free"><button class="btn btn-xs btn-red" onclick="channelsUnlink(${jsArg(c.chatId)}, 'mail')">Unlink</button></span></div>`).join('');
+  const v = k => escHtml(m[k] || '');
+  return `<div class="card">
+    <div class="card-title">Mail</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Write to the hive by mail and get the answer as a reply in the thread. Use a mailbox of its own (an app password, IMAP on 993 and SMTP on 465).
+      A From line is only a claim, so a mail counts only when the receiving server vouched for its sender — name that server (e.g. <code>mx.google.com</code>) to read only its verdict.</p>
+    <div style="margin-bottom:10px">${state(m)}${m.error ? ` — <span style="color:var(--red)">${escHtml(m.error)}</span>` : ''}</div>
+    ${host ? `<div class="toolbar" style="gap:6px;margin-bottom:6px;flex-wrap:wrap">
+        <input class="input" id="ml-imap" placeholder="IMAP host (imap.gmail.com)" value="${v('imapHost')}" style="flex:1;min-width:170px">
+        <input class="input" id="ml-smtp" placeholder="SMTP host (smtp.gmail.com)" value="${v('smtpHost')}" style="flex:1;min-width:170px">
+        <input class="input" id="ml-auth" placeholder="its receiving server (mx.google.com)" value="${v('authservId')}" style="flex:1;min-width:170px"></div>
+      <div class="toolbar" style="gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <input class="input" id="ml-user" placeholder="mailbox (doca@example.com)" value="${v('user')}" style="flex:1;min-width:170px">
+        <input class="input" id="ml-pass" type="password" autocomplete="off" placeholder="${m.hasPassword ? 'saved — paste to replace' : 'app password'}" style="flex:1;min-width:150px">
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="ml-on" ${m.enabled ? 'checked' : ''}> on</label>
+        <button class="btn btn-sm btn-blue" onclick="channelsMailSave()">Save</button></div>` : ''}
+    <div class="card-title" style="font-size:12px;margin-top:6px">${host ? 'Linked addresses' : 'Your linked addresses'}</div>
+    ${rows || '<div class="placeholder">None yet.</div>'}
+    <div class="toolbar" style="margin-top:10px;gap:6px">
+      <button class="btn btn-sm" onclick="channelsMailLink()" ${m.running ? '' : 'disabled title="The mailbox is not being read"'}>Link my address</button>
+      <span id="ml-code" style="font-size:12px"></span></div></div>`;
+}
+
+async function channelsMailSave() {
+  const v = id => document.getElementById(id).value.trim();
+  try {
+    await apiFetch('/api/channels/mail', { method: 'POST', body: { enabled: document.getElementById('ml-on').checked, imapHost: v('ml-imap'), smtpHost: v('ml-smtp') || v('ml-imap'),
+      authservId: v('ml-auth'), user: v('ml-user'), address: v('ml-user'), ...(v('ml-pass') ? { password: v('ml-pass') } : {}) } });
+  } catch (e) { appAlert(e.message); }
+  channelsLoad();
+}
+
+async function channelsMailLink() {
+  const out = document.getElementById('ml-code');
+  try {
+    const r = await apiFetch('/api/channels/mail/link', { method: 'POST' });
+    out.innerHTML = `Send a mail to <b>${escHtml(r.bot || 'the mailbox')}</b> from your own address with the subject <code>link ${escHtml(r.code)}</code> — within 15 minutes.`;
+  } catch (e) { out.textContent = e.message; }
 }
 
 async function channelsSlackSave() {

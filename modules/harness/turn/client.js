@@ -21,7 +21,7 @@ const SHAPE = {
   tablet:  'Normal prose with tables and short code blocks.',
   desktop: 'Full detail is welcome: tables, long code, complete output.',
   tv:      'Very few words in large blocks. No tables, no code.',
-  channel: 'A chat message (Telegram, Matrix, Slack), read on a phone as often as a desktop: a few short paragraphs of plain text. No markdown — it is shown as typed — no tables, code only when asked for.',
+  channel: 'A chat message (Telegram, Matrix, Slack, mail), read on a phone as often as a desktop: a few short paragraphs of plain text. No markdown — it is shown as typed — no tables, code only when asked for.',
   headless:'Complete and machine-readable. Do not shorten for a human, and do not decorate.',
 };
 

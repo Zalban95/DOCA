@@ -88,7 +88,7 @@ const SCHEMA = {
   backup:           { is: 'local', home: 'device', on: 'host', note: 'the backup schedule of this machine' },
   network:          { is: 'local', home: 'device', on: 'host', note: 'how this machine listens' },
   vms:              { is: 'local', home: 'device', on: 'host', note: 'the libvirt connection URI of this machine', propose: p('Virtual machines', 'The libvirt connection URI') },
-  channels:         { is: 'local', home: 'device', on: 'host', note: 'channel bots (Telegram, Matrix, Slack): tokens and a switch for this hub',
+  channels:         { is: 'local', home: 'device', on: 'host', note: 'channel bots (Telegram, Matrix, Slack, mail): tokens and a switch for this hub',
     keys: {
       'telegram.enabled': { type: 'boolean', default: false, hint: 'Whether the Telegram bot is polled.' },
       'telegram.pollSec': { type: 'number', min: 0, max: 50, default: 25, hint: 'How long one getUpdates call waits for a message.' },
@@ -96,6 +96,8 @@ const SCHEMA = {
       'matrix.homeserver': { type: 'string', default: '', hint: 'The bot account\'s homeserver, e.g. https://matrix.org.' },
       'matrix.pollSec':   { type: 'number', min: 0, max: 50, default: 25, hint: 'How long one /sync waits for a message.' },
       'slack.enabled':    { type: 'boolean', default: false, hint: 'Whether the Slack app\'s Socket Mode connection is opened.' },
+      'mail.enabled':     { type: 'boolean', default: false, hint: 'Whether the mailbox is read and answered.' },
+      'mail.pollSec':     { type: 'number', min: 5, max: 3600, default: 60, hint: 'How often the mailbox is read for new mail.' },
     } },
 };
 
