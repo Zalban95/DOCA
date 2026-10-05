@@ -27,6 +27,7 @@ const KITS = {
   panel:        { label: 'Panel',        about: 'this panel\'s state and settings, which you propose' },
   skills:       { label: 'Skills',       about: 'procedures to load when a task matches, recipes to run again without the thinking, and to keep what you learn' },
   mcp:          { label: 'MCP',          about: 'tools from MCP servers running now' },
+  connectors:   { label: 'Connectors',   about: 'the accounts the owner connected (GitHub, Google, Microsoft…), through their own APIs (connectors/)' },
   computer:     { label: 'Computer',     about: 'a Linux desktop in a container: shell, files, screen, a real browser, recording (computers/)' },
 };
 
@@ -50,6 +51,7 @@ const KIT_OF = {
 function kitOf(name) {
   if (KIT_OF[name]) return KIT_OF[name];
   if (/^mcp__computer-[a-f0-9]+__/.test(name)) return 'computer';   // a computer's own tools (modules/computers)
+  if (/^connector_[a-z]/.test(name)) return 'connectors';            // a connected account (modules/connectors)
   try { if (require('../mcp/tools').isMcpTool(name)) return 'mcp'; } catch { /* no MCP */ }
   return null;
 }

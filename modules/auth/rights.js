@@ -40,6 +40,9 @@ const TABLE = [
   // ── The login page's own calls, and the account itself ──
   R(ANY, '/api/auth/(login|setup|state)', 'public'),
   R(GET, '/api/branding', 'public'),
+  // A service's sign-in sends the browser back here from its own site, so the SameSite=Strict cookie stays behind;
+  // what guards it is OAuth's state: one-time, ten minutes, minted only by a host's Connect (connectors/oauth.js).
+  R(GET, '/api/connectors/callback', 'public'),
   R(GET, '/api/auth/host-check', 'host'),                 // asked before opening a terminal socket
   R(ANY, '/api/auth/(me|logout|password|step-up|sessions)', 'signed'),
   R(ANY, '/api/auth/grants(/.*)?', 'signed'),              // exceptions: users or delegate, checked in users-routes.js
@@ -109,7 +112,8 @@ const TABLE = [
   R(ANY, '/api/channels/telegram(/.*)?', 'chat'),             // a link code, and one's own linked chats (channels/telegram/routes.js)
   R('POST', '/api/channels/matrix', 'host'),                 // the homeserver, the bot's token and switch
   R(ANY, '/api/channels/matrix(/.*)?', 'chat'),               // a link code, and one's own linked rooms (channels/matrix/routes.js)
-  R(ANY, '/api/evals(/.*)?', 'host'),                         // evaluation sets: a run spends tokens, results hold answers (evals/routes.js)
+  R(ANY, '/api/evals(/.*)?', 'host'),
+  R(ANY, '/api/connectors(/.*)?', 'host'),                    // the keys to the owner's accounts (connectors/routes.js)                         // evaluation sets: a run spends tokens, results hold answers (evals/routes.js)
   R(GET, '/api/retrieval', 'read'),                          // the embedding model and what the index holds (retrieval/routes.js)
   R(ANY, '/api/retrieval(/.*)?', 'host'),                     // choosing the model, trying it, emptying the index
   R('POST', '/api/channels/slack', 'host'),                  // the Slack app's two tokens and the switch

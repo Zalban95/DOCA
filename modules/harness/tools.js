@@ -44,6 +44,7 @@ function describe() {
     // The first sentence, by the rule the prompt uses: a split on '.' cut "AGENTS.md" and "e.g." in half.
     ...TOOLS.map(t => ({ name: t.name, description: require('./turn/tools-section').firstSentence(t.description, 400).replace(/\.$/, ''), danger: !!t.danger })),
     ...mcp.describe(),
+    ...require('../connectors/tools').describe(),
   ];
 }
 
@@ -66,6 +67,7 @@ function schemas(disabled = []) {
       .filter(t => !off.includes(t.name))
       .map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })),
     ...mcp.schemas(off),
+    ...require('../connectors/tools').schemas(off),   // a connected account is a tool (connectors/tools.js)
   ]);
 }
 
@@ -80,7 +82,8 @@ async function call(name, args, disabled = [], ctx = {}) {
   const isMcp = mcp.isMcpTool(name);
   const held = isMcp && require('../computers/takeover').before(name);   // a person is driving that computer: DOCA's words, not framed
   if (held) return held;
-  const tool = isMcp ? { run: a => mcp.call(name, a) } : TOOLS.find(t => t.name === name);
+  const conn = !isMcp && require('../connectors/tools').is(name);
+  const tool = isMcp ? { run: a => mcp.call(name, a) } : conn ? { run: (a, c) => require('../connectors/tools').call(name, a, c) } : TOOLS.find(t => t.name === name);
   if (!tool) return `Error: no tool named "${name}".`;
   let out;
   try {
