@@ -95,9 +95,15 @@ const handleUsage = wrap(async (req, res) => {
 
 /* ── Approvals ────────────────────────────────────────── */
 
-/** GET /api/harness/approval — the mode, the standing allowlist, what is waiting. */
-const handleApproval = wrap(async (_req, res) =>
-  res.json({ ...approval.settings(), pending: approval.pending(), free: [...approval.FREE] }));
+/** GET /api/harness/approval — the mode, the standing allowlist, what is waiting. Anyone who may chat reads the mode
+ *  (the chat's Auto/Manual pill); the allowlist and every waiting question — other people's included — are a host's.
+ *  A phone's session stops at what its device may do, so opening the chat there asked for the password (2026-10-05). */
+const handleApproval = wrap(async (req, res) => {
+  const cap = req.auth?.session?.cap;
+  const host = !req.auth || (require('../auth/rights').can(req.auth.role, 'host') && (!cap || cap.includes('host')));
+  if (!host) return res.json({ mode: approval.settings().mode });
+  res.json({ ...approval.settings(), pending: approval.pending(), free: [...approval.FREE] });
+});
 
 /** POST /api/harness/approval — set the mode. Only ever from a click. */
 const handleApprovalMode = wrap(async (req, res) => {
