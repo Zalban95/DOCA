@@ -166,3 +166,14 @@ function faceFeed(onState) {
   open();
   return () => { closed = true; es?.close(); };
 }
+
+/** This screen's face: the hive's or this screen's (`face.spec`, settings-schema.js — an edition carries one), under
+ *  a spec kept in this browser (localStorage `doca.face.spec`), over the default. Fetched without the panel's helpers,
+ *  since /face loads only this file. */
+async function faceSpec() {
+  let shared = {}, local = {};
+  try { const r = await fetch('/api/screen', { credentials: 'same-origin' }); if (r.ok) shared = (await r.json()).settings?.face?.spec || {}; } catch { /* the default */ }
+  try { local = JSON.parse(localStorage.getItem('doca.face.spec') || '{}'); } catch { /* the default */ }
+  return { ...shared, ...local };
+}
+
