@@ -225,6 +225,11 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] Web search as a provider choice (OpenDots: Parallel by default, or the browser) — `web_search` (2.170.0):
   SearXNG, Brave, Tavily or DuckDuckGo, airlock-only while specialists are on. Parallel itself is left (a key-based
   provider like Tavily; one function in `modules/search`).
+- [ ] **OpenDots as a peer harness** — a catalog row like Claude Code's: install/connect, setup checks, Use, Open,
+  converse and stop through the same Controls, Harness tab and Logs; its own data, never a prerequisite. The plan from
+  the portal PC (2026-10-04) is [docs/design/opendots-integration.md](docs/design/opendots-integration.md) §3–§4 (its
+  baseline is 2.116.2). OpenDots is built on CopilotKit, which speaks AG-UI: DOCA as an AG-UI *client* is the likely
+  adapter, the mirror of `api-v1/agui.js`.
 - What DOCA has that OpenDots does not: accounts with levels and grants, devices and wearables, the airlock,
   checkpoints, plans before work, export/import, multi-OS hosts.
 
