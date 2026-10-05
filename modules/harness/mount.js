@@ -17,6 +17,7 @@ function mount(app) {
   require('../migrations').mount(app);   // which prefs migrations this install has had (migrations.js)   // experiments behind flags, each with its write-up (experiments.js)
   require('../search/routes').mount(app);
   require('../retrieval/routes').mount(app);
+  require('../vision/routes').mount(app);
   require('../realtime/routes').mount(app);
   require('../api-v1/client-files').mountPanel(app);
   require('../client-apps/routes').mount(app);

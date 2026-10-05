@@ -114,6 +114,7 @@ function _settingsHarnessRender() {
   guardsCardRender(panel); // guards (settings/guards.js)
   searchCardRender(panel); // web search (settings/search.js)
   retrievalCardRender(panel); // retrieval: the embedding model (settings/retrieval.js)
+  visionCardRender(panel);    // vision: the screen readers (settings/vision.js)
 }
 /** Settings → Harness → ⚙: the built-in agent's parameters are edited on Controls, beside its row. */
 async function settingsOpenHarnessParams() {
