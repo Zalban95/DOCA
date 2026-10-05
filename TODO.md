@@ -53,7 +53,8 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [x] H1.2 (2.152.0) `GET /api/host/capabilities`: what this host can do (shell, boot, GPU, containers, VMs,
   browser, inference), drawn by the panel so absent things grey out with a reason.
 - [x] H1.3 (2.152.0) Start at boot on Windows (Task Scheduler at sign-in) and macOS (launchd agent), beside the systemd unit — through a Node launcher (`bin/doca-launch.js`) that replaced run.sh's bash start, so version switches restart on every OS. Not yet run on Windows or macOS: H1.9.
-- [ ] H1.4 GPU readings beyond nvidia-smi: AMD (rocm-smi), Intel, Apple (unified memory).
+- [x] H1.4 (2.167.0) GPU readings beyond nvidia-smi: AMD (rocm-smi), Intel, Apple (unified memory). **Left:** checking
+  the AMD and Apple parsers on real hardware; Intel utilisation (intel_gpu_top needs root); temperatures on Apple.
 - [x] H1.5 (2.152.1) File roots per OS (Linux /media /mnt /tmp; macOS /Volumes /tmp; Windows the other drive letters) plus the OS's temp folder; real paths by the OS's resolver. Left: default *paths* (workspace, attachments) per OS.
 - [ ] H1.6 Containers: Podman, Docker Desktop, Colima/OrbStack; WSL2-aware paths.
 - [ ] H1.7 VMs: Hyper-V, UTM/Parallels beside libvirt/VirtualBox.

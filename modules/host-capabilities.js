@@ -26,15 +26,15 @@ const firstFile = files => files.find(f => { try { return fs.existsSync(f); } ca
 
 function boot() {
   if (process.platform === 'linux') return shell.which('systemctl') ? found('systemd') : absent('no systemd on this host');
-  if (process.platform === 'win32') return { available: false, via: 'Task Scheduler', note: 'supported by Windows; DOCA does not install the entry yet (TODO H1.3)' };
-  if (process.platform === 'darwin') return { available: false, via: 'launchd', note: 'supported by macOS; DOCA does not install the agent yet (TODO H1.3)' };
+  if (process.platform === 'win32') return found('Task Scheduler', { note: 'an entry at sign-in (bin/doca-launch.js enable)' });
+  if (process.platform === 'darwin') return found('launchd', { note: 'a launch agent (bin/doca-launch.js enable)' });
   return absent(`no known boot manager on ${process.platform}`);
 }
 
 function gpu() {
   const via = firstBin(['nvidia-smi', 'rocm-smi', 'xpu-smi']);
-  if (via) return found(via, { readings: via === 'nvidia-smi' });
-  if (process.platform === 'darwin' && os.arch() === 'arm64') return { available: true, via: 'Apple GPU (unified memory)', readings: false, note: 'readings not drawn yet (TODO H1.4)' };
+  if (via) return found(via, { readings: via !== 'xpu-smi' });
+  if (process.platform === 'darwin' && os.arch() === 'arm64') return { available: true, via: 'Apple GPU (unified memory)', readings: true, note: 'utilisation and memory in use, from ioreg' };
   return absent('no GPU tool found (nvidia-smi, rocm-smi, xpu-smi); inference still runs on the CPU');
 }
 

@@ -133,15 +133,18 @@ function renderGPU(gpus, en = {}) {
       if (g.pstate)           extra.push(`<div class="gm"><span class="gm-l">P-state</span><span class="gm-v">${escHtml(g.pstate)}</span></div>`);
     }
 
+    // A reading this GPU's tool does not give is null (modules/gpu.js), drawn as a dash rather than "null°C".
+    const v = (x, unit) => (x == null || x === '' ? '—' : `${escHtml(String(x))}${unit}`);
+    const mem = g.unified ? 'Memory (shared)' : 'VRAM';
     return `<div class="gpu-card">
-      <div class="gpu-name">GPU ${i} — ${g.name}</div>
+      <div class="gpu-name">GPU ${i} — ${escHtml(String(g.name || 'GPU'))}</div>
       <div class="gpu-grid">
-        <div class="gm"><span class="gm-l">Temp</span><span class="gm-v">${g.temp}°C</span></div>
-        <div class="gm"><span class="gm-l">Util</span><span class="gm-v">${g.util}%</span></div>
+        <div class="gm"><span class="gm-l">Temp</span><span class="gm-v">${v(g.temp, '°C')}</span></div>
+        <div class="gm"><span class="gm-l">Util</span><span class="gm-v">${v(g.util, '%')}</span></div>
         <div class="res-bar"><div class="res-bar-fill ${utilBar}" style="width:${util}%"></div></div>
 
-        <div class="gm"><span class="gm-l">VRAM</span><span class="gm-v">${g.memUsed}/${g.memTotal} MB</span></div>
-        <div class="gm"><span class="gm-l">VRAM Used</span><span class="gm-v">${pct}%</span></div>
+        <div class="gm"><span class="gm-l">${mem}</span><span class="gm-v">${g.memUsed == null ? '—' : `${escHtml(String(g.memUsed))}/${escHtml(String(g.memTotal ?? '?'))} MB`}</span></div>
+        <div class="gm"><span class="gm-l">${mem} used</span><span class="gm-v">${g.memUsed == null ? '—' : `${pct}%`}</span></div>
         <div class="res-bar"><div class="res-bar-fill ${memBar}" style="width:${pct}%"></div></div>
         ${extra.join('')}
       </div>
