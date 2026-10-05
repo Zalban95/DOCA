@@ -234,7 +234,9 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   for the spec and faces as packs (H4); DocaDesk's overlay and the watch face (their TODOs); listening/speaking
   from the voice call's audio levels (H8.2); quiet hours from the device profile.
 - [ ] H8.2 The face reacting to the voice call's audio. [X]
-- [ ] H8.3 Realtime speech-to-speech with barge-in, work continuing in the background.
+- [ ] H8.3 Realtime speech-to-speech with barge-in, work continuing in the background. Done (2.192.0, experiment
+  `bargeIn`): talking over a working agent is heard and read by the running turn, stale sentences dropped. **Left:**
+  measuring it in real calls; a realtime speech-to-speech model (OpenAI Realtime or a local one) in place of STT → turn → TTS.
 
 **H9 · Reach and protocols**
 - [ ] H9.1 Channels: Slack, Telegram, mail, WhatsApp, Matrix — each a client kind. Done: Telegram (2.157.0), the

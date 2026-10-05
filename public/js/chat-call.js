@@ -9,12 +9,17 @@ let _callAnalyser     = null;   // AnalyserNode
 let _callRecorder     = null;   // MediaRecorder
 let _callSpeaking     = false;  // user is currently speaking
 let _callSilenceTimer = null;   // timeout after silence
-let _callProcessing   = false;  // transcribe+chat+synth in progress
+let _callProcessing   = 0;      // utterances being transcribed and answered (more than one with barge-in)
 let _callPlayQueue    = [];     // queued audio buffers to play
 let _callCurrentSrc   = null;   // currently playing AudioBufferSourceNode
 let _callPlayCtx      = null;   // AudioContext for playback
 let _callAbort        = null;   // AbortController for in-flight requests
 let _callVadRafId     = null;   // requestAnimationFrame id
+
+// Barge-in (experiments.bargeIn; docs/experiments/barge-in.md, TODO H8.3): speak over a working agent — what you say
+// is recorded and sent while its turn runs (the turn reads it before its next step: harness/inbox.js), and what it
+// was about to say when you interrupted is dropped. Off: the call waits for the turn, as it always did.
+let _callBargeIn = false, _callEpoch = 0, _callStats = null;
 
 const CALL_SILENCE_MS     = 2000;
 const CALL_ENERGY_THRESH  = 15;
@@ -47,8 +52,11 @@ async function chatToggleCall() {
     return;
   }
 
+  try { _callBargeIn = !!(await apiFetch('/api/experiments')).experiments.find(x => x.id === 'bargeIn')?.on; } catch { _callBargeIn = false; }
+  _callStats = { at: Date.now(), bargeIns: 0, dropped: 0 };
   try {
-    _callStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Echo cancellation keeps the agent's own voice from reading as yours — which matters most with barge-in on.
+    _callStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
   } catch (e) {
     chatAppendMsg('system', `Microphone access denied: ${e.message}`);
     return;
@@ -76,6 +84,9 @@ async function chatToggleCall() {
 
 function _callStop() {
   _callActive = false;
+  // With barge-in on, the call says how it went — the experiment's measure (docs/experiments/barge-in.md).
+  if (_callBargeIn && _callStats) chatAppendMsg('system', `Call: ${Math.max(1, Math.round((Date.now() - _callStats.at) / 60000))} min, interrupted ${_callStats.bargeIns}×, ${_callStats.dropped} stale sentence${_callStats.dropped === 1 ? '' : 's'} not spoken.`);
+  _callStats = null;
 
   if (_callAbort) { _callAbort.abort(); _callAbort = null; }
   if (_callVadRafId) { cancelAnimationFrame(_callVadRafId); _callVadRafId = null; }
@@ -93,7 +104,7 @@ function _callStop() {
   if (_callPlayCtx) { _callPlayCtx.close().catch(() => {}); _callPlayCtx = null; }
 
   _callSpeaking = false;
-  _callProcessing = false;
+  _callProcessing = 0;
   _callPlayQueue = [];
 
   document.getElementById('chat-panel').classList.remove('call-active');
@@ -113,10 +124,11 @@ function _callVadLoop() {
     // Speech detected
     if (_callCurrentSrc) {
       _callStopPlayback();
+      if (_callBargeIn) { _callEpoch++; _callStats.bargeIns++; }   // what it was about to say is no longer an answer
       _callSetStatus('Listening…', 'listening');
     }
 
-    if (!_callSpeaking && !_callProcessing) {
+    if (!_callSpeaking && (!_callProcessing || _callBargeIn)) {
       _callSpeaking = true;
       _callStartRecording();
       _callSetStatus('Listening…', 'listening');
@@ -163,7 +175,7 @@ function _callStopRecording() {
 
 async function _callProcessAudio(audioBlob) {
   if (!_callActive) return;
-  _callProcessing = true;
+  _callProcessing++;
   _callSetStatus('Transcribing…', 'processing');
 
   try {
@@ -177,9 +189,8 @@ async function _callProcessAudio(audioBlob) {
     });
     const transcribeData = await transcribeRes.json();
     if (!transcribeData.text || !transcribeData.text.trim()) {
-      _callProcessing = false;
       _callSetStatus('Listening…', 'listening');
-      return;
+      return;   // the finally below counts it done
     }
 
     const userText = transcribeData.text.trim();
@@ -265,7 +276,7 @@ async function _callProcessAudio(audioBlob) {
     }
   } finally {
     agentWorkingClose(document.getElementById('chat-messages'));
-    _callProcessing = false;
+    _callProcessing = Math.max(0, _callProcessing - 1);
     if (_callActive && !_callCurrentSrc && _callPlayQueue.length === 0) {
       _callSetStatus('Listening…', 'listening');
     }
@@ -274,6 +285,7 @@ async function _callProcessAudio(audioBlob) {
 
 async function _callEnqueueSynth(text) {
   if (!_callActive) return;
+  const epoch = _callEpoch;   // said before an interruption: dropped when it arrives after one (barge-in)
   try {
     const res = await fetch('/api/chat/synthesize', {
       method: 'POST',
@@ -286,6 +298,7 @@ async function _callEnqueueSynth(text) {
     const arrayBuf = await res.arrayBuffer();
     if (!_callActive || !_callPlayCtx) return;
     const audioBuf = await _callPlayCtx.decodeAudioData(arrayBuf);
+    if (epoch !== _callEpoch) { _callStats && _callStats.dropped++; return; }
     _callPlayQueue.push(audioBuf);
     if (!_callCurrentSrc) _callPlayNext();
   } catch {}

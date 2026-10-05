@@ -57,7 +57,8 @@ const SCHEMA = {
   // never proposable: an agent switching on its own experiments would be grading its own homework.
   experiments:      { is: 'travels', home: 'hive', note: 'experiments switched on (docs/experiments)',
     keys: { recipeRepair: { type: 'boolean', default: false, hint: 'When a recipe fails, the agent investigates and proposes a repaired revision for a person to accept.' },
-      retrieval: { type: 'boolean', default: false, hint: 'memory_search and recall_conversations also search by meaning, with the embedding model under retrieval.' } } },
+      retrieval: { type: 'boolean', default: false, hint: 'memory_search and recall_conversations also search by meaning, with the embedding model under retrieval.' },
+      bargeIn: { type: 'boolean', default: false, hint: 'In a voice call, speaking while the agent works or talks is sent at once, and what it was about to say is dropped.' } } },
   tracing:          { is: 'travels', home: 'hive', note: 'traces of each turn: whether they are kept, and for how long (harness/trace.js)',
     keys: { enabled: { type: 'boolean', default: true, hint: 'Keep a trace of each turn: model requests, tool calls, waits — names and numbers, never content.' },
       retainDays: { type: 'number', min: 1, max: 3650, default: 30, hint: 'Days a turn\'s trace is kept.' } } },
