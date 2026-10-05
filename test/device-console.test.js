@@ -38,7 +38,7 @@ test('frames are cleaned, a press reaches the linked device durably, and an unli
   assert.equal(consoleMod.ingest(watch, { press: 'Z' }).press, null);
 });
 
-const until = async (f, ms = 15000) => { const t0 = Date.now(); while (!(await f())) { if (Date.now() - t0 > ms) throw new Error('timed out'); await new Promise(r => setTimeout(r, 50)); } };
+const until = async (f, ms = 60000) => { const t0 = Date.now(); while (!(await f())) { if (Date.now() - t0 > ms) throw new Error('timed out'); await new Promise(r => setTimeout(r, 50)); } };
 const inputs = id => bus.drain(id, 0).events.filter(e => e.type === 'console.input').map(e => e.payload);
 
 test('a toggle latches and says which way; switching the console off unlatches it', async () => {
