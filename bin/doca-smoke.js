@@ -94,7 +94,7 @@ async function main() {
     const tabs = (await cdp.send('Runtime.evaluate', { expression: 'JSON.stringify(NAV_TABS)', returnByValue: true })).result.value;
     if (!tabs) throw new Error('The panel did not load (no NAV_TABS).');
     for (const t of JSON.parse(tabs)) { await cdp.send('Runtime.evaluate', { expression: `nav(${JSON.stringify(t)})` }); await sleep(500); }
-    for (const sub of ['general', 'channels', 'packs', 'system']) { await cdp.send('Runtime.evaluate', { expression: `nav('settings'); settingsSubNav(${JSON.stringify(sub)})` }); await sleep(500); }
+    for (const sub of ['general', 'channels', 'packs', 'harness', 'system']) { await cdp.send('Runtime.evaluate', { expression: `nav('settings'); settingsSubNav(${JSON.stringify(sub)})` }); await sleep(500); }
     const face = await cdp.send('Page.navigate', { url: `${base}/face` }); void face;
     await sleep(1500);
     console.log(`smoke: ${process.platform}, ${path.basename(browserPath)}, ${JSON.parse(tabs).length} tabs visited, /face opened — ${errors.length} page error${errors.length === 1 ? '' : 's'}`);

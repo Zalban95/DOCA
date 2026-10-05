@@ -184,8 +184,9 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] Any OpenAI-compatible model; self-hosted — DOCA's providers and fallback chain.
 - [ ] AG-UI so an AG-UI front end can be a client — H9.2.
 - [x] Mobile and web — the panel, DocaMobile, DocaWear (OpenDots has no watch).
-- [ ] Web search as a provider choice (OpenDots: Parallel by default, or the browser) — DOCA has
-  `research_docs`/`http_fetch` and the scout; a search provider setting is left.
+- [x] Web search as a provider choice (OpenDots: Parallel by default, or the browser) — `web_search` (2.170.0):
+  SearXNG, Brave, Tavily or DuckDuckGo, airlock-only while specialists are on. Parallel itself is left (a key-based
+  provider like Tavily; one function in `modules/search`).
 - What DOCA has that OpenDots does not: accounts with levels and grants, devices and wearables, the airlock,
   checkpoints, plans before work, export/import, multi-OS hosts.
 

@@ -13,6 +13,7 @@ function mount(app) {
   // What this host can do, probed per OS (host-capabilities.js, hive.md §7).
   app.get('/api/host/capabilities', (req, res) => res.json(require('../host-capabilities').capabilities({ fresh: req.query.fresh === '1' })));
   require('./tab-routes').mount(app);
+  require('../search/routes').mount(app);   // web search: the provider and its key (search/)
   require('../screens/routes').mount(app);   // a browser is a device: this screen's settings (screens/)
   require('../packs/routes').mount(app);   // packs: export and import in other tools' formats (packs/)
   require('../schedules/routes').mount(app);   // turns and recipes on a timetable (schedules/)
