@@ -87,7 +87,16 @@ async function api(token, method, p, body, headers = {}) {
   let payload;
   if (body instanceof FormData) payload = body;
   else if (body !== undefined) { h['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
-  const res = await fetch(base + p, { method, headers: h, body: payload });
+  // Windows resets an idle keep-alive socket under the client now and then ("fetch failed", ECONNRESET): a request
+  // sent on a dead socket never reached the server, so it is sent once more on a fresh one.
+  const send = () => fetch(base + p, { method, headers: h, body: payload });
+  let res;
+  try { res = await send(); }
+  catch (e) {
+    if (!/ECONNRESET|UND_ERR_SOCKET|EPIPE/.test(String(e.cause?.code || e.cause?.message || ''))) throw e;
+    await sleep(100);
+    res = await send();
+  }
   const ct = res.headers.get('content-type') || '';
   const out = ct.includes('json') ? await res.json() : ct.startsWith('image/') || ct.includes('octet') || ct.startsWith('audio/') ? Buffer.from(await res.arrayBuffer()) : await res.text();
   return { status: res.status, body: out, headers: res.headers };
