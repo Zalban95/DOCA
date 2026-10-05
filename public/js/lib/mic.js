@@ -16,7 +16,9 @@ async function micOpen(audio = true) {
         : 'the browser was refused it. Allow the microphone for this site (the icon beside the address), then try again.',
       SecurityError: 'the browser blocks the microphone on this page (an insecure or untrusted connection).',
       NotFoundError: 'there is no microphone on this device, or it is switched off.',
-      NotReadableError: 'another app is using the microphone. Close it (a call, a recorder) and try again.',
+      NotReadableError: app
+        ? 'the app could not open the microphone. Update the DOCA app: versions before 1.0.1 lack an Android permission (MODIFY_AUDIO_SETTINGS) its web view needs.'
+        : 'another app is using the microphone. Close it (a call, a recorder) and try again.',
       AbortError: 'the system stopped it before it opened. Try again.',
       OverconstrainedError: 'this microphone cannot record the way the call asks.',
     }[e.name];
