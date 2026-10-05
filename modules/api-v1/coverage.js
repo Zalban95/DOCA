@@ -20,6 +20,7 @@ const COVERAGE = {
   devices: { v1: ['/devices'] },
   screen: { v1: ['/settings/effective'] },
   realtime: { v1: ['/realtime'] },
+  clients: { v1: ['/clients'], note: 'the hub\'s own clients, to install and update' },
   recipes: { v1: ['/recipes'] },
   schedules: { v1: ['/schedules'] },
   face: { v1: ['/face'] },

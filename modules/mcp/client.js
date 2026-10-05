@@ -297,7 +297,7 @@ class McpClient {
     this.log   = [];
 
     try {
-      if (this.transport === 'stdio') this._spawn();
+      if (this.transport === 'stdio') this._spawn(); else if (this.transport === 'socket') require('./socket-hosts').attach(this);   // a device's own socket
 
       const info = await this.request('initialize', {
         protocolVersion: PROTOCOL_VERSION,
@@ -328,9 +328,8 @@ class McpClient {
       name:        t.name,
       description: t.description || '',
       inputSchema: t.inputSchema || { type: 'object', properties: {} },
-      // `readOnlyHint` is how a server says a tool only looks at things. Absent
-      // it, assume a tool can change something.
-      readOnly:    !!t.annotations?.readOnlyHint,
+      // `readOnlyHint`: a tool only looks (absent, assume it can change something); `openWorldHint`: it reads the open world.
+      readOnly:    !!t.annotations?.readOnlyHint, openWorld: !!t.annotations?.openWorldHint,
     }));
     return this.tools;
   }

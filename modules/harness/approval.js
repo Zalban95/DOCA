@@ -166,8 +166,8 @@ function gate(name, args, ctx = {}) {
   // computers' clients/computer/tools.js sensitive()): always a person's decision, every mode, never "always" (TODO H5.4).
   if (name === 'computer_login') return { tool: name, keys: null, forced: true,
     summary: `Sign in on computer ${args?.computer} with the stored login "${args?.login}" — the hub types its password; the agent never sees it. Always asked.` };
-  if (/^mcp__computer-[a-f0-9]+__browser_(click|type)$/.test(name) && args?.confirm === true)
-    return { tool: name, keys: null, forced: true, summary: `${summarize(name, args)} — on a control that pays, buys, signs in or submits in the computer's browser. Always asked, whatever the approval mode.` };
+  if (/^mcp__[\w-]+__browser_(click|type)$/.test(name) && args?.confirm === true)   // a computer's browser, or the person's own (H5.5)
+    return { tool: name, keys: null, forced: true, summary: `${summarize(name, args)} — on a control that pays, buys, signs in or submits in a browser. Always asked, whatever the approval mode.` };
   const { mode: panelMode, always, recheckOutside } = settings();
   const mode = require('./modes').approvalMode(ctx.sessionId, panelMode);   // a chat tab's own Auto/Manual
   // Outside text entered this turn (harness/untrusted.js): the first call after it that does something

@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "DOCA in this browser",
+  "version": "1.0.0",
+  "description": "Lets your DOCA hive use the sites you allow in this browser, with your sign-ins — and ask you before it pays, signs in or submits.",
+  "permissions": ["storage", "tabs", "scripting", "alarms"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": { "service_worker": "background.js", "scripts": ["page.js", "mcp.js", "background.js"] },
+  "action": { "default_title": "DOCA", "default_popup": "popup.html" },
+  "browser_specific_settings": { "gecko": { "id": "browser@doca.local", "strict_min_version": "121.0" } }
+}

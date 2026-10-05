@@ -37,8 +37,8 @@ function normalizeOrigin(input, transport) {
   const raw = input && typeof input === 'object' ? input : {};
   if (raw.kind !== 'client') return { kind: 'server', deviceId: null };
 
-  if (transport !== 'http')
-    throw Object.assign(new Error('A server hosted on a client is reached over http — a stdio command would run here, not there'), { status: 400 });
+  if (transport !== 'http' && transport !== 'socket')
+    throw Object.assign(new Error('A server hosted on a client is reached over http or its own socket — a stdio command would run here, not there'), { status: 400 });
 
   const deviceId = String(raw.deviceId || '').trim();
   if (!deviceId)
@@ -126,7 +126,7 @@ function get(id) {
  * type `--flag value` than a JSON array.
  */
 function normalize(input, existing) {
-  const transport = input.transport === 'http' ? 'http' : 'stdio';
+  const transport = ['http', 'socket'].includes(input.transport) ? input.transport : 'stdio';
   const id = slug(input.id || input.label);
   if (!id) throw Object.assign(new Error('A name is required'), { status: 400 });
 
@@ -161,6 +161,8 @@ function normalize(input, existing) {
 
   if (transport === 'stdio' && !spec.command)
     throw Object.assign(new Error('A stdio server needs a command'), { status: 400 });
+  if (transport === 'socket' && spec.origin.kind !== 'client')
+    throw Object.assign(new Error('A socket server is one a paired device hosts: name the device'), { status: 400 });
   if (transport === 'http' && !/^https?:\/\//.test(spec.url))
     throw Object.assign(new Error('An HTTP server needs a URL starting with http:// or https://'), { status: 400 });
 

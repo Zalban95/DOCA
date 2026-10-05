@@ -76,7 +76,8 @@ function devPopulatePresets() {
     ).join('');
     const show = () => {
       const el = document.getElementById(`dev-${kind}-scopes`);
-      const warn = sel.value === 'admin' ? ' <strong style="color:var(--red)">— full control of this server</strong>' : '';
+      const warn = sel.value === 'admin' ? ' <strong style="color:var(--red)">— full control of this server</strong>'
+        : sel.value === 'extension' ? ' — for the DOCA browser extension: <a href="/api/clients/browser.zip">download it</a> (Chrome, Edge, Brave: Extensions → Developer mode → Load unpacked, from the unzipped folder; Firefox: about:debugging → Load Temporary Add-on → manifest.json)' : '';
       if (el) el.innerHTML = `Scopes: <code>${escHtml(describe(sel.value))}</code>${warn}`;
     };
     sel.onchange = show;

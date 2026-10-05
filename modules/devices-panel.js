@@ -51,6 +51,7 @@ function resolveScopes({ preset, scopes }) {
  */
 function presetFor(d) {
   if (['agent', 'browser', 'channel'].includes(d.kind)) return null;   // a browser or a linked chat holds no token to widen
+  if (d.caps?.ext?.client === 'doca-browser') return 'extension';   // the browser extension lends tabs and nothing more
   const ff = d.caps?.formFactor;
   return ff === 'watch' ? 'watch' : ['phone', 'desktop', 'tablet', 'browser', 'other'].includes(ff) ? 'phone' : null;
 }
@@ -218,6 +219,6 @@ function mount(app) {
 }
 
 module.exports = {
-  legacyTrusted, mount, missingScopes,
+  legacyTrusted, mount, missingScopes, presetFor,
   handleList, handleIssue, handleRotate, handleRevoke, handlePairStart, handleGrant,
 };

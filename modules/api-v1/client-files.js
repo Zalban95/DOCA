@@ -22,7 +22,20 @@ function manifest() {
     }) };
 }
 
+/** The browser extension (clients/browser, TODO H5.5) as a zip, to load unpacked in Chromium or as a Firefox add-on. */
+const BROWSER_DIR = path.join(__dirname, '..', '..', 'clients', 'browser');
+function browserZip() {
+  const files = fs.readdirSync(BROWSER_DIR).filter(f => /\.(js|json|html|md|png)$/.test(f)).sort()
+    .map(f => ({ name: `doca-browser/${f}`, data: fs.readFileSync(path.join(BROWSER_DIR, f)) }));
+  return require('../packs/zip').write(files);
+}
+const sendZip = (_req, res) => res.type('application/zip').attachment(`doca-browser-${require('../../package.json').version}.zip`).send(browserZip());
+
+/** The panel's own download link (Settings → API Keys, preset "extension"). */
+function mountPanel(app) { app.get('/api/clients/browser.zip', sendZip); }
+
 function mount(router) {
+  router.get('/clients/browser.zip', sendZip);
   router.get('/clients/node', (_req, res) => res.json(manifest()));
   router.get('/clients/node/:file', (req, res) => {
     if (!FILES.includes(req.params.file)) return res.status(404).json({ error: { code: 'not_found', message: `No client file ${req.params.file}.` } });
@@ -30,4 +43,4 @@ function mount(router) {
   });
 }
 
-module.exports = { mount, manifest, FILES };
+module.exports = { mount, mountPanel, browserZip, manifest, FILES };
