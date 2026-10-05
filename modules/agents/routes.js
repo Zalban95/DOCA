@@ -30,9 +30,12 @@ function mount(app) {
   // Send an errand to one specialist, chosen by the person rather than by the
   // Orchestrator (TODO.md "You cannot choose which specialist gets the errand").
   // It reports to the Orchestrator like any mission, and runs as whoever sent it.
-  app.post('/api/harness/missions', (req, res) => {
+  app.post('/api/harness/missions', async (req, res) => {
     try {
-      const row = require('./missions').dispatch({ agentId: String(req.body?.agentId || ''), task: req.body?.task, context: req.body?.context });
+      const agentId = String(req.body?.agentId || '');
+      const def = require('./registry').get(agentId);
+      const computer = def?.computer === 'own' ? await require('../computers').ownFor(def) : null;   // its own computer (computers.ownFor)
+      const row = require('./missions').dispatch({ agentId, task: req.body?.task, context: req.body?.context, computer });
       // Marked before its turn reaches withPerson: dispatch starts the turn, which awaits its claim first.
       if (req.auth?.user) require('../harness/memory').updateSession(row.sessionId, { person: { id: req.auth.user.id, orgId: req.auth.orgId } });
       res.json({ mission: row });

@@ -64,7 +64,7 @@ function computersCard(c) {
   return `<div class="pc-card ${on ? '' : 'pc-off'}">
     ${on ? `<img class="pc-still pc-still-empty" data-id="${escHtml(c.id)}" alt="${escHtml(c.name)}'s screen" onclick="computersWatch(${jsArg(c.id)})" title="Watch or take over">`
       : `<div class="pc-still pc-blank">${escHtml(c.state)}</div>`}
-    <div class="pc-head"><span class="pc-dot ${on ? 'on' : ''}"></span><b>${escHtml(c.name)}</b><span class="pc-dim">${escHtml(c.id)}</span>
+    <div class="pc-head"><span class="pc-dot ${on ? 'on' : ''}"></span><b>${escHtml(c.name)}</b><span class="pc-dim">${escHtml(c.id)}${c.agentType ? ` · kept for ${escHtml(c.agentType)}` : ''}</span>
       <span style="flex:1"></span>
       ${on ? `<button class="btn btn-xs" onclick="computersWatch(${jsArg(c.id)})">Watch</button>
         <button class="btn btn-xs ${c.driving ? 'btn-amber' : ''}" onclick="computersWatch(${jsArg(c.id)}, true)" title="Drive it yourself: the agent's mouse and keys wait until you close the view">${c.driving ? 'Driving' : 'Take over'}</button>

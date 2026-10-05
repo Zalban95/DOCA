@@ -79,11 +79,11 @@ async function connect(c) {
 }
 
 /** `auto`: an agent made it, so it is tidied away after it stops (lifecycle.js) unless a person pins it. */
-async function create({ name, purpose = '', missionId = null, by = null, auto = false } = {}) {
+async function create({ name, purpose = '', missionId = null, by = null, auto = false, agentType = null } = {}) {
   if (!(await imageReady())) throw bad('The computer image is not built yet: build it once (Computers → Build the image).', 409);
   await require('./lifecycle').roomForOne();
   const c = { id: crypto.randomBytes(4).toString('hex'), name: String(name || 'computer').replace(/[^\w .-]/g, '').slice(0, 40) || 'computer',
-    purpose: String(purpose).slice(0, 300), missionId, by, auto: !!auto, pinned: false, token: crypto.randomBytes(24).toString('hex'),
+    purpose: String(purpose).slice(0, 300), missionId, by, auto: !!auto, pinned: false, ...(agentType ? { agentType } : {}), token: crypto.randomBytes(24).toString('hex'),
     vncPassword: crypto.randomBytes(6).toString('hex'), mcpPort: await freePort(), vncPort: await freePort(), createdAt: new Date().toISOString() };
   await docker(['run', '-d', '--name', container(c), '--shm-size=1g', '--label', 'doca.computer=1',
     '-p', `127.0.0.1:${c.mcpPort}:8765`, '-p', `127.0.0.1:${c.vncPort}:6080`,
@@ -132,7 +132,7 @@ async function remove(id) {
 /** What the panel and the agent see: never the token. The VNC password is for the person who opens the view. */
 function view(c, state = null) {
   return { id: c.id, name: c.name, purpose: c.purpose, missionId: c.missionId, createdAt: c.createdAt, state,
-    auto: !!c.auto, pinned: !!c.pinned, stoppedAt: c.stoppedAt || null, by: c.by || null,
+    auto: !!c.auto, pinned: !!c.pinned, stoppedAt: c.stoppedAt || null, by: c.by || null, agentType: c.agentType || null,
     server: serverId(c), tools: `mcp__${serverId(c)}__*`,
     // Through the hub, so any signed-in host's browser can watch — the phone on the tailnet included (vnc.js).
     vnc: { url: require('./vnc').watchUrl(c), drive: require('./vnc').driveUrl(c), local: `http://127.0.0.1:${c.vncPort}/vnc.html`, password: c.vncPassword },
@@ -140,6 +140,18 @@ function view(c, state = null) {
 }
 
 /** A mission is lent this computer (agents/missions dispatch): remembered, so the view can say who works in it. */
+/**
+ * The computer a specialist type keeps (a definition with `computer: own`, TODO H13.3): made the first time and the
+ * same one every mission after — its browser profile, logins and files are where the last mission left them. It is
+ * not `auto`, so the sweep never removes it; it stops when idle like any other and starts again when lent. Removing
+ * it by hand gives the next mission a fresh one.
+ */
+async function ownFor(def) {
+  const have = rows().find(c => c.agentType === def.id);
+  if (have) return have.id;
+  return (await module.exports.create({ name: `${def.label}'s computer`.slice(0, 40), purpose: `Kept for ${def.label}: the same desktop, logins and files every mission.`, agentType: def.id })).id;
+}
+
 function lend(id, missionId) {
   const c = need(id);
   patch(c.id, { missionId, missions: [...(c.missions || []), missionId].slice(-20) });
@@ -215,4 +227,4 @@ async function list() {
   return rows().map(c => view(c, states[container(c)] || 'missing'));
 }
 
-module.exports = { IMAGE, imageReady, build, create, start, stop, remove, pin, list, detailed, screen, lend, get, all, madeBy, need, put, fetchFile };
+module.exports = { IMAGE, imageReady, build, create, start, stop, remove, pin, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, fetchFile };

@@ -147,6 +147,9 @@ function normalize(def) {
     memory: def.memory === true,
     airlock: def.airlock === true,   // reads the outside for the others (AIRLOCK_ONLY)
     environment: def.environment === 'full' ? 'full' : 'minimal',
+    // A computer of its own (computers.ownFor): every mission of this type works in the same desktop — browser
+    // profile and logins, files — instead of whichever one it is lent. Opt-in; the sweep never removes it.
+    computer: def.computer === 'own' ? 'own' : null,
     // Absent means "use the orchestrator's". A definition only overrides what
     // it has a reason to.
     provider: def.provider ? String(def.provider) : null,

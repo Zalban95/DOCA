@@ -92,7 +92,7 @@ function parse(text, { fallbackId } = {}) {
     tools,
     skills: Array.isArray(meta.skills) ? meta.skills : parseList(meta.skills),
   };
-  for (const k of ['model', 'provider', 'environment']) if (meta[k] != null && meta[k] !== '') def[k] = String(scalar(meta[k]));
+  for (const k of ['model', 'provider', 'environment', 'computer']) if (meta[k] != null && meta[k] !== '') def[k] = String(scalar(meta[k]));
   // Claude Code's `model: inherit` / `sonnet` names models that are not ours: use the panel's.
   if (['inherit', 'sonnet', 'opus', 'haiku'].includes(def.model)) { notes.push(`model "${def.model}" is Claude Code's; this one uses the panel's model`); delete def.model; }
   for (const k of ['memory', 'airlock']) if (meta[k] != null) def[k] = scalar(meta[k]) === true;
@@ -114,6 +114,7 @@ function format(def) {
   if (def.environment && def.environment !== 'minimal') lines.push(`environment: ${def.environment}`);
   lines.push(`memory: ${def.memory === true}`);
   if (def.airlock) lines.push('airlock: true');
+  if (def.computer === 'own') lines.push('computer: own');
   for (const k of ['maxSteps', 'maxTokens', 'contextWindow']) if (def[k]) lines.push(`${k}: ${def[k]}`);
   lines.push('---', '', String(def.role || '').trim(), '');
   return lines.join('\n');
