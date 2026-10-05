@@ -1229,6 +1229,21 @@ The call is a **WebSocket on the same path**, `wss://<hub>/api/v1/realtime`, wit
   device as a prompt, §12). A request longer than the owner's `realtime.waitSec` keeps running and is spoken when done.
 - The provider's key stays on the hub: a client needs no account with the speech service.
 
+### 23.2 What a person has in the hive (since hub 2.201.0)
+
+The device's person's recipes, schedules and face, answered as that person exactly as the panel answers them:
+
+- `GET /recipes` (`harness:chat`) — `{recipes: [{id, title, description, params}]}`; `POST /recipes/:id/run`
+  (`harness:chat`, `{values}`) runs one with no model, through the person's approvals (a question may reach this
+  device as a prompt, §12), and answers when it ends: `{ok, summary, steps}`.
+- `GET /schedules` (`harness:sessions`) — the person's schedules, including ones the agent `proposed`;
+  `POST /schedules/:id/state` (`harness:chat`, `{state: "on" | "paused"}`). Switching one on is a person's decision:
+  a device of kind `agent` may pause and gets `403 person_only` for `on`.
+- `GET /face` (`harness:sessions`) — `{state, detail}`: idle, thinking, working, speaking, asking, error (`detail`,
+  a tool name, only for a host's device); `GET /face/stream` is the same as server-sent events, on every change and
+  a heartbeat every 15 s — what a watch face or a desktop overlay draws from.
+
+## 24. Server operations
 
 - Data directory: `DOCA_DATA_DIR` (default `<repo>/.doca`, gitignored): `devices.json`, `prompts.json`, `profiles/`, `outbox/`, `media/`, `artifacts/`. Atomic writes; safe to back up.
 - Tokens: `npm run token -- issue|list|rotate|revoke|grant|scopes`. A token carries the scopes it was minted with, so a device paired before a scope family existed needs `grant <deviceId> --preset <p>` (or `--add harness:chat`) to reach the new routes; its token keeps working.
@@ -1277,6 +1292,11 @@ The call is a **WebSocket on the same path**, `wss://<hub>/api/v1/realtime`, wit
 | GET / DELETE | `/harness/sessions/:id` | `harness:sessions` | transcript / delete |
 | POST | `/harness/sessions/:id/activate` | `harness:sessions` | make it the active one |
 | GET | `/harness/memory` | `harness:memory` | durable memory, rules, waiting proposals |
+| GET, WS | `/realtime` | `harness:chat` | a live call with a realtime speech model (§23.1) |
+| GET | `/recipes`, POST `/recipes/:id/run` | `harness:chat` | the person's recipes (§23.2) |
+| GET | `/schedules` | `harness:sessions` | the person's schedules (§23.2) |
+| POST | `/schedules/:id/state` | `harness:chat` | on / paused; never on for an `agent` device |
+| GET | `/face`, `/face/stream` | `harness:sessions` | what the hive is doing (§23.2) |
 | GET | `/agent/devices` | `agent` | devices with effective profiles |
 | POST / GET / DELETE | `/agent/prompts[/:id]` | `agent` | raise / list / cancel |
 | POST | `/agent/prompts/:id/outcome` | `agent` | resolve a pending selection |
