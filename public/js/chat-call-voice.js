@@ -16,9 +16,10 @@ async function _callEnqueueSynth(text) {
 
     const arrayBuf = await res.arrayBuffer();
     if (!_callActive || !_callPlayCtx) return;
-    if (_callPlayCtx.state === 'suspended') await _callPlayCtx.resume().catch(() => {});
+    if (_callPlayCtx.state === 'suspended' && !_callHold) await _callPlayCtx.resume().catch(() => {});   // a hold keeps it paused
     const audioBuf = await _callPlayCtx.decodeAudioData(arrayBuf);
     if (epoch !== _callEpoch) { _callStats && _callStats.dropped++; return; }
+    audioBuf._docaText = text;   // what it says: the face shows a concept it names (face/concept-engine.js)
     _callPlayQueue.push(audioBuf);
     if (!_callCurrentSrc) _callPlayNext();
   } catch (e) {
@@ -48,6 +49,8 @@ function _callPlayNext() {
   _callCurrentSrc = src;
   _callSetStatus('Speaking…', 'speaking');
   src.start();
+  _callHeardMark(buf);   // what is heard, for a cut (chat-call-hold.js)
+  if (typeof faceConceptSay === 'function') faceConceptSay(buf._docaText, buf.duration);
 }
 
 function _callStopPlayback() {

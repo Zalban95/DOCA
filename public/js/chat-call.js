@@ -161,18 +161,12 @@ function _callVadLoop() {
 
   // While the voice plays it keeps the floor: a cough, a door or the room is not a person talking over it. Only with
   // barge-in on does a sustained sound well over the threshold (≈0.35 s) interrupt it.
-  const playing = !!_callCurrentSrc;
+  const playing = !!_callCurrentSrc && !_callHold;
   _callOverMs = playing && energy > _callThreshold * 1.6 + 5 ? _callOverMs + dt : 0;
-  if (playing && !(_callBargeIn && _callOverMs >= 350)) { /* the answer goes on */ }
+  if (playing) { if (_callOverMs >= 350) _callHoldStart(); }   // paused, then decided by the first words (chat-call-hold.js)
   else if (energy > _callThreshold) {
     // Speech detected
-    if (playing) {
-      _callStopPlayback();
-      _callEpoch++; _callStats.bargeIns++;   // what it was about to say is no longer an answer
-      _callSetStatus('Listening…', 'listening');
-    }
-
-    if (!_callSpeaking && (!_callProcessing || _callBargeIn)) {
+    if (!_callSpeaking && (!_callProcessing || _callBargeIn || _callHold)) {
       _callSpeaking = true;
       _callVoicedMs = 0;
       _callStartRecording();
@@ -206,6 +200,7 @@ function _callStartRecording() {
   _callRecorder.onstop = () => {
     _callRecorder = null;
     if (_callVoicedMs < CALL_MIN_VOICED_MS) return;   // a blip, not speech: nothing is sent
+    if (_callHoldDiscard && Date.now() - _callHoldDiscard < 8000) { _callHoldDiscard = 0; return; }   // a hold heard no words in it
     if (chunks.length && _callActive) {
       const blob = new Blob(chunks, { type: mimeType });
       _callProcessAudio(blob);
@@ -253,6 +248,7 @@ async function _callProcessAudio(audioBlob) {
 async function _callAnswer(userText) {
   if (!_callActive) return;
   _callProcessing++;
+  _callHeardReset();
   try {
     chatAppendMsg('user', userText);
 
@@ -321,6 +317,7 @@ async function _callAnswer(userText) {
     }
 
     callSink.finish();
+    _callHeardRetry();   // an interruption came before this answer's row was written
     closeFolds(container);
 
     // Synthesize any remaining text

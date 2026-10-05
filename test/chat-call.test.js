@@ -21,7 +21,7 @@ function load() {
     chatAppendMsg: () => {},
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${['chat-call.js', 'chat-call-voice.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8')).join('\n')}
+  vm.runInContext(`${['chat-call.js', 'chat-call-voice.js', 'chat-call-hold.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8')).join('\n')}
     ;globalThis.__ = { get: n => eval(n), set: (n, v) => eval(n + ' = v') };`, sandbox);
   const s = sandbox.__;
   s.set('_callPlayCtx', { decodeAudioData: () => new Promise(r => { resolveDecode = r; }), createBufferSource: () => ({ connect() {}, start() {}, stop() {} }), destination: {} });
@@ -41,25 +41,40 @@ test('with barge-in on, speech while a turn works is recorded; off, it waits as 
   }
 });
 
-test('an interruption drops what the agent was about to say, and counts it', async () => {
-  const { s, decoded, sandbox } = load();
-  s.set('_callActive', true); s.set('_callBargeIn', true); s.set('_callStream', {});
-  s.set('_callStats', { at: Date.now(), bargeIns: 0, dropped: 0 });
-  const pending = s.get('_callEnqueueSynth')('A sentence from before.');
-  await new Promise(r => setImmediate(r));
-  // The person speaks while it is still playing something: a blip does not stop it, a sustained voice does.
-  s.set('_callCurrentSrc', { stop() {} });
-  speaking(s);
-  let t = 1000; sandbox.performance = { now: () => t };
-  vm.runInContext('performance = globalThis.performance', sandbox);
-  s.get('_callVadLoop')(); t += 50; s.get('_callVadLoop')();
-  assert.equal(s.get('_callStats').bargeIns, 0, 'a 50 ms sound is not a person talking over the answer');
-  for (let i = 0; i < 8; i++) { t += 50; s.get('_callVadLoop')(); }
-  assert.equal(s.get('_callStats').bargeIns, 1);
-  decoded();
-  await pending;
-  assert.equal(s.get('_callPlayQueue').length, 0, 'the stale sentence is not queued');
-  assert.equal(s.get('_callStats').dropped, 1);
+test('talking over the voice pauses it; words stop it where the person stopped listening, noise lets it go on', async () => {
+  for (const [said, stops] of [['Wait, stop.', true], ['', false]]) {
+    const { s, sandbox } = load();
+    const ctx = { state: 'running', currentTime: 10, suspend() { this.state = 'suspended'; return Promise.resolve(); }, resume() { this.state = 'running'; return Promise.resolve(); },
+      decodeAudioData: async () => ({}), createBufferSource: () => ({ connect() {}, start() {}, stop() {} }), destination: {} };
+    let stopped = 0, posted = null;
+    sandbox.Blob = function Blob() {}; sandbox.FormData = function FormData() { this.append = () => {}; };
+    sandbox.fetch = async () => ({ ok: true, json: async () => ({ text: said }) });
+    sandbox.apiFetch = async (url, o) => { posted = [url, o.body]; return { cut: true }; };
+    s.set('_callPlayCtx', ctx);
+    s.set('_callActive', true); s.set('_callBargeIn', false); s.set('_callStream', {});
+    s.set('_callStats', { at: Date.now(), bargeIns: 0, dropped: 0 });
+    s.set('_callCurrentSrc', { stop() { stopped++; } });
+    // Two sentences: the first heard to the end, the second half heard when the person spoke.
+    s.set('_callHeard', [{ text: 'It will snow tomorrow.', start: 4, dur: 3 }, { text: 'Take the red coat and gloves.', start: 7, dur: 6 }]);
+    speaking(s);
+    let t = 1000; sandbox.performance = { now: () => t };
+    vm.runInContext('performance = globalThis.performance', sandbox);
+    s.get('_callVadLoop')(); t += 50; s.get('_callVadLoop')();
+    assert.equal(ctx.state, 'running', 'a 50 ms sound does nothing');
+    for (let i = 0; i < 8; i++) { t += 50; s.get('_callVadLoop')(); }
+    assert.equal(ctx.state, 'suspended', 'a sustained one pauses the voice — it does not stop it');
+    assert.equal(stopped, 0);
+    await s.get('_callHoldDecide')({});
+    if (stops) {
+      assert.equal(stopped, 1);
+      assert.equal(s.get('_callStats').bargeIns, 1);
+      assert.equal(JSON.stringify(posted), JSON.stringify(['/api/chat/heard', { heard: 'It will snow tomorrow. Take the red' }]));
+    } else {
+      assert.equal(stopped, 0, 'no words: it goes on');
+      assert.equal(posted, null);
+    }
+    assert.equal(ctx.state, 'running');
+  }
 });
 
 test('with faceVoice on, the face speaks with the voice and listens to the person', () => {
@@ -110,16 +125,3 @@ test('a speech service that fails says so once per call, not silently', async ()
   assert.match(said[0], /could not be spoken.*502.*kokoro down/);
 });
 
-test('without barge-in, nothing the microphone hears stops the answer', () => {
-  const { s, sandbox } = load();
-  let stopped = 0;
-  s.set('_callActive', true); s.set('_callBargeIn', false); s.set('_callStream', {});
-  s.set('_callStats', { at: Date.now(), bargeIns: 0, dropped: 0 });
-  s.set('_callCurrentSrc', { stop() { stopped++; } });
-  speaking(s);
-  let t = 1000; sandbox.performance = { now: () => t };
-  vm.runInContext('performance = globalThis.performance', sandbox);
-  for (let i = 0; i < 40; i++) { t += 50; s.get('_callVadLoop')(); }
-  assert.equal(stopped, 0);
-  assert.ok(s.get('_callCurrentSrc'), 'still speaking');
-});
