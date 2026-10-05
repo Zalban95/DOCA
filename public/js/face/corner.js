@@ -1,6 +1,15 @@
 /* The face in the panel's corner (TODO H8.1): in place of the ⬡ on the chat button, for screens that switch it
    on (Settings → General → Appearance; per screen, kept in this browser). The button still opens the chat. */
 let _faceCorner = null;
+let _faceVoiceUntil = 0;   // while a call drives the face (faceCornerVoice), the hive's own feed waits
+
+/** A voice call drives the corner face for a moment: its state and how loud (experiments.faceVoice, chat-call.js). */
+function faceCornerVoice(state, level) {
+  if (!_faceCorner?.face?.level) return;
+  _faceVoiceUntil = Date.now() + 1500;
+  _faceCorner.face.set(state);
+  _faceCorner.face.level(Math.max(0, Math.min(1, level)));
+}
 
 function faceCornerOn() { try { return localStorage.getItem('doca.face.corner') === '1'; } catch { return false; } }
 
@@ -22,7 +31,7 @@ async function faceCornerApply() {
   const canvas = document.createElement('canvas');
   fab.appendChild(canvas);
   const face = faceMount(canvas, { ...spec, dots: 90, hud: false, grain: false });
-  _faceCorner = { face, close: faceFeed(s => face.set(s.state, s.detail)) };
+  _faceCorner = { face, close: faceFeed(s => { if (Date.now() > _faceVoiceUntil) face.set(s.state, s.detail); }) };
 }
 
 function faceCornerToggle(on) {

@@ -20,6 +20,9 @@ let _callVadRafId     = null;   // requestAnimationFrame id
 // is recorded and sent while its turn runs (the turn reads it before its next step: harness/inbox.js), and what it
 // was about to say when you interrupted is dropped. Off: the call waits for the turn, as it always did.
 let _callBargeIn = false, _callEpoch = 0, _callStats = null;
+// The face follows the call (experiments.faceVoice; docs/experiments/face-voice.md, TODO H8.2): the agent's voice moves
+// its mouth, yours makes it listen — levels read from the two analysers the call already has, once a frame.
+let _callFaceVoice = false, _callOutAnalyser = null;
 
 const CALL_SILENCE_MS     = 2000;
 const CALL_ENERGY_THRESH  = 15;
@@ -52,7 +55,8 @@ async function chatToggleCall() {
     return;
   }
 
-  try { _callBargeIn = !!(await apiFetch('/api/experiments')).experiments.find(x => x.id === 'bargeIn')?.on; } catch { _callBargeIn = false; }
+  try { const ex = (await apiFetch('/api/experiments')).experiments; _callBargeIn = !!ex.find(x => x.id === 'bargeIn')?.on; _callFaceVoice = !!ex.find(x => x.id === 'faceVoice')?.on; }
+  catch { _callBargeIn = false; _callFaceVoice = false; }
   _callStats = { at: Date.now(), bargeIns: 0, dropped: 0 };
   try {
     // Echo cancellation keeps the agent's own voice from reading as yours — which matters most with barge-in on.
@@ -77,6 +81,7 @@ async function chatToggleCall() {
   source.connect(_callAnalyser);
 
   _callPlayCtx = new AudioContext();
+  if (_callFaceVoice) { _callOutAnalyser = _callPlayCtx.createAnalyser(); _callOutAnalyser.fftSize = 256; _callOutAnalyser.connect(_callPlayCtx.destination); }
 
   _callSetStatus('Listening…', 'listening');
   _callVadLoop();
@@ -102,6 +107,7 @@ function _callStop() {
 
   _callStopPlayback();
   if (_callPlayCtx) { _callPlayCtx.close().catch(() => {}); _callPlayCtx = null; }
+  _callOutAnalyser = null;
 
   _callSpeaking = false;
   _callProcessing = 0;
@@ -119,6 +125,13 @@ function _callVadLoop() {
   const data = new Uint8Array(_callAnalyser.frequencyBinCount);
   _callAnalyser.getByteFrequencyData(data);
   const energy = data.reduce((a, b) => a + b, 0) / data.length;
+  if (_callFaceVoice && typeof faceCornerVoice === 'function') {
+    if (_callCurrentSrc && _callOutAnalyser) {
+      const out = new Uint8Array(_callOutAnalyser.frequencyBinCount);
+      _callOutAnalyser.getByteFrequencyData(out);
+      faceCornerVoice('speaking', out.reduce((a, b) => a + b, 0) / out.length / 80);
+    } else if (energy > CALL_ENERGY_THRESH) faceCornerVoice('listening', energy / 80);
+  }
 
   if (energy > CALL_ENERGY_THRESH) {
     // Speech detected
@@ -314,7 +327,7 @@ function _callPlayNext() {
   const buf = _callPlayQueue.shift();
   const src = _callPlayCtx.createBufferSource();
   src.buffer = buf;
-  src.connect(_callPlayCtx.destination);
+  src.connect(_callOutAnalyser || _callPlayCtx.destination);
   src.onended = () => {
     _callCurrentSrc = null;
     _callPlayNext();

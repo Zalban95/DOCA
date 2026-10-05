@@ -57,3 +57,20 @@ test('an interruption drops what the agent was about to say, and counts it', asy
   assert.equal(s.get('_callPlayQueue').length, 0, 'the stale sentence is not queued');
   assert.equal(s.get('_callStats').dropped, 1);
 });
+
+test('with faceVoice on, the face speaks with the voice and listens to the person', () => {
+  const { s, sandbox } = load();
+  const seen = [];
+  sandbox.faceCornerVoice = (state, level) => seen.push([state, Math.round(level * 100) / 100]);
+  s.set('_callActive', true); s.set('_callFaceVoice', true); s.set('_callStream', {}); s.set('_callProcessing', 1);
+  s.set('_callStats', { at: Date.now(), bargeIns: 0, dropped: 0 });
+  s.set('_callOutAnalyser', { frequencyBinCount: 4, getByteFrequencyData: d => d.fill(40) });
+  s.set('_callCurrentSrc', { stop() {} });
+  s.set('_callAnalyser', { frequencyBinCount: 8, getByteFrequencyData: d => d.fill(0) });
+  s.get('_callVadLoop')();
+  assert.deepEqual(seen.at(-1), ['speaking', 0.5], 'the voice\'s level moves the mouth');
+  s.set('_callCurrentSrc', null);
+  speaking(s);
+  s.get('_callVadLoop')();
+  assert.equal(seen.at(-1)[0], 'listening');
+});

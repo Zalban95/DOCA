@@ -44,3 +44,10 @@ test('its computer is made once, reused by every mission, and kept by the sweep'
     assert.match(row.name, /Browser clerk's computer/);
   } finally { computers.create = real; }
 });
+
+test('the image is labelled with a hash of what it is built from, so an older build shows', () => {
+  const computers = require('../modules/computers');
+  const h = computers.sourceHash();
+  assert.match(h, /^[0-9a-f]{16}$/);
+  assert.equal(computers.sourceHash(), h, 'the same source, the same hash');
+});
