@@ -186,8 +186,22 @@ async function start(id) {
   const c = new McpClient(spec);
   _clients.set(id, c);
   await c.start();
+  rememberTools(id, c.tools);
   return c;
 }
+
+/**
+ * The tool names a server offered when it last ran, kept so the agent knows what a stopped one would give it (the
+ * environment block names them, and `mcp_connect` starts it). Names only — never schemas or results.
+ */
+const LAST_TOOLS = 'mcp-last-tools';
+function rememberTools(id, tools) {
+  try {
+    const store = require('../store');
+    store.writeJson(LAST_TOOLS, { ...store.readJson(LAST_TOOLS, {}), [id]: { names: (tools || []).map(t => t.name).slice(0, 400), at: new Date().toISOString() } });
+  } catch { /* a cache */ }
+}
+function lastTools(id) { try { return require('../store').readJson(LAST_TOOLS, {})[id] || null; } catch { return null; } }
 
 function stop(id) {
   const c = _clients.get(id);
@@ -352,6 +366,6 @@ module.exports = {
   MASK,
   PREFS_KEY,
   load, list, get, client, status, slug, normalize, normalizeOrigin, originDevice,
-  forDevice, updateFromDevice, wakeForDevice,
+  forDevice, updateFromDevice, wakeForDevice, lastTools,
   start, stop, restart, upsert, remove, startAutostart, stopAll, startWithDoca,
 };

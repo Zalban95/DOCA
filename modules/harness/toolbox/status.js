@@ -17,6 +17,23 @@ module.exports = [
     },
   },
   {
+    name: 'mcp_connect',
+    description: 'Connect to an MCP server a person already set up (the environment lists them), or disconnect one — '
+      + 'e.g. start a client\'s server to use its tools on that machine. It never adds or changes a server, and it cannot '
+      + 'reach a machine that is asleep or a client that is not running. Its tools appear on your next step.',
+    parameters: { type: 'object', properties: { server: { type: 'string', description: 'Its id, as the environment lists it.' },
+      action: { type: 'string', enum: ['start', 'stop'] } }, required: ['server', 'action'] },
+    run: async ({ server, action }) => {
+      const reg = require('../../mcp/registry');
+      if (!reg.get(String(server || ''))) return `Error: no MCP server "${server}". Configured: ${reg.list().map(s => s.id).join(', ') || 'none'}.`;
+      if (action === 'stop') { reg.stop(server); return `Disconnected ${server}.`; }
+      try {
+        const c = await reg.start(server);
+        return `Connected to ${server}: ${c.tools.length} tools, called mcp__${reg.slug ? reg.slug(server) : server}__<tool>, available from your next step.`;
+      } catch (e) { return `Error: could not connect to ${server}: ${e.message}`; }
+    },
+  },
+  {
     name: 'mcp_status',
     description: 'Read the configured MCP servers, their machines, DOCA connection state, backend observations '
       + 'and tool counts. This does not connect, start or stop anything. A stopped connection does not prove '

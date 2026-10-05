@@ -94,6 +94,25 @@ const KINDS = {
     needsPassword: id => !!require('./catalog').get(id)?.installCmd?.includes('sudo '),
   },
 
+  // A row of Settings → System → System tools (system-tools-catalog.js): its own command for this OS, never the agent's —
+  // an SDK, a JDK, Tailscale, ffmpeg… what the agent finds missing while working.
+  tool: {
+    label: 'System tool',
+    verb: 'Install',
+    validate: id => {
+      const c = require('../system-tools-catalog');
+      const t = c.SYSTEM_TOOLS.find(x => x.id === id);
+      if (!t) return `No system tool "${id}". The panel knows: ${c.SYSTEM_TOOLS.map(x => x.id).join(', ')}`;
+      return c.installFor(t) ? null : `${t.label} has no installer for this OS — it is installed by hand (${t.repo}).`;
+    },
+    describe: id => { const c = require('../system-tools-catalog'); const t = c.SYSTEM_TOOLS.find(x => x.id === id);
+      return t ? `Install ${t.label} (${t.for}) on this machine with: ${c.installFor(t)}` : `Install ${id}.`; },
+    handler: () => require('../system-tools').handleInstall,
+    request: id => ({ body: { id } }),
+    needsPassword: id => { const c = require('../system-tools-catalog'); const t = c.SYSTEM_TOOLS.find(x => x.id === id);
+      return process.platform !== 'win32' && !!t && (!!t.needsSudo || String(c.installFor(t) || '').includes('sudo ')); },
+  },
+
   // An MCP server from the panel's catalogue (mcp/catalog.js): added, not started — its command is the catalogue's.
   mcp: {
     label: 'MCP server',
