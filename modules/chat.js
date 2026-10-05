@@ -271,6 +271,12 @@ async function handleTranscribe(req, res) {
   }
 }
 
+/** GET /api/chat/voices — the speech service's voices, for a screen to pick from */
+async function handleVoices(_req, res) {
+  const vs = loadVoiceServices();
+  res.json({ voices: await require('./tts-voices').list(vs), hive: vs.ttsVoice });
+}
+
 /** POST /api/chat/synthesize — proxy text to configured TTS service, return audio */
 async function handleSynthesize(req, res) {
   const { text, voice } = req.body;
@@ -279,13 +285,15 @@ async function handleSynthesize(req, res) {
   const mine = require('./screens').voiceOf(req);   // this screen's own voice, when it chose one, over the hive's
 
   try {
+    const chosen = await require('./tts-voices').resolve(voice || mine.ttsVoice, vs);   // "Heart" → af_heart; unknown → the hive's
+    if (chosen.fellBack) res.setHeader('X-Doca-Voice-Fallback', `${voice || mine.ttsVoice} -> ${chosen.voice}`);
     const resp = await fetch(`${vs.ttsUrl}/v1/audio/speech`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: vs.ttsModel,
         input: text,
-        voice: voice || mine.ttsVoice || vs.ttsVoice,
+        voice: chosen.voice,
         response_format: 'mp3',
         speed: Number(mine.ttsSpeed) > 0 ? Number(mine.ttsSpeed) : vs.ttsSpeed,
       }),
@@ -301,6 +309,6 @@ async function handleSynthesize(req, res) {
 
 module.exports = {
   handleStatus, handleHistory, handleClear, handleChat,
-  handleCallStatus, handleTranscribe, handleSynthesize,
+  handleCallStatus, handleTranscribe, handleSynthesize, handleVoices,
   loadGatewayChatConfig, loadVoiceServices, transcribeAudio,
 };

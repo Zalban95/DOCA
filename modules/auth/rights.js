@@ -84,7 +84,7 @@ const TABLE = [
   R(ANY, '/api/harness/(chat|sessions|memory|missions)(/.*)?', 'chat'),
 
   // ── The floating chat and attachments ──
-  R(GET, '/api/chat/(history|status|call-status)', 'read'),
+  R(GET, '/api/chat/(history|status|call-status|voices)', 'read'),
   R(ANY, '/api/chat(/.*)?', 'chat'),
   R(GET, '/api/attachments(/.*)?', 'read'),
   R(ANY, '/api/attachments', 'chat'),

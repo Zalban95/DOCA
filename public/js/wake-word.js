@@ -41,7 +41,8 @@ function wakeWordPause() {
 }
 
 async function _wakeWanted() {
-  if (typeof faceCornerOn !== 'function' || !faceCornerOn() || document.hidden) return null;
+  const faceShown = (typeof faceCornerOn === 'function' && faceCornerOn()) || (typeof assistantIsOpen === 'function' && assistantIsOpen());
+  if (!faceShown || document.hidden) return null;
   if ((typeof _callActive !== 'undefined' && _callActive) || (typeof _rt !== 'undefined' && _rt)) return null;
   const s = await screenLoad();
   const c = s.settings?.call || {};
@@ -93,12 +94,8 @@ async function _wakeHear(w, blob) {
     const m = wakeMatch(text, w.word);
     if (!m.heard || _wake !== w) return;
     wakeWordPause();
-    const started = await chatToggleCall();
-    if (!started) return wakeWordApply();
-    // Without the face following the call, the chat shows it is on; with it, the face does (tap it for the chat).
-    const s = await screenLoad();
-    if (!s.experiments?.faceVoice && typeof chatOpen !== 'undefined' && !chatOpen) toggleChat(true);
-    if (m.rest) _callAnswer(m.rest);
+    await assistantOpen(m.rest);   // the name opens assistant mode: the face, talking (face/assistant.js)
+    if (!_assistantInCall()) wakeWordApply();
   } catch (e) { console.warn('wake word:', e.message); }
   finally { w.busy = false; }
 }

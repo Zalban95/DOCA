@@ -30,16 +30,20 @@ let _callThreshold = 15;
 // A recording is sent only with this much audio over the threshold in it: a click, a cough or a door is shorter, and
 // Whisper turns such a blip into "Thank you." (the hub screens those phrases too: modules/stt-filter.js).
 const CALL_MIN_VOICED_MS = 300;
-let _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending = 0, _callTtsWarned = false;
+let _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending = 0, _callTtsWarned = false, _callLastActive = 0;
+/** How long nobody has spoken and nothing has been said or worked on (assistant mode's idle timer). */
+const _callIdleMs = () => (_callActive && _callLastActive ? performance.now() - _callLastActive : 0);
 
 function _callSetStatus(text, state) {
   const el = document.getElementById('chat-call-status');
   const mic = document.getElementById('chat-call-mic-icon');
   if (el) el.textContent = text;
+  if (typeof _assistantSay === 'function' && typeof assistantIsOpen === 'function' && assistantIsOpen() && _callActive) _assistantSay(text);
   if (mic) mic.className = `chat-call-mic-icon ${state || ''}`;
 }
 
-async function chatToggleCall() {
+/** `assistant`: started from the face (face/assistant.js) — the face follows the call's voice whatever faceVoice says. */
+async function chatToggleCall({ assistant = false } = {}) {
   if (_callActive) {
     _callStop();
     return;
@@ -68,8 +72,8 @@ async function chatToggleCall() {
     return giveUp();
   }
 
-  try { const ex = (await screenLoad(true)).experiments || {}; _callBargeIn = !!ex.bargeIn; _callFaceVoice = !!ex.faceVoice; }
-  catch { _callBargeIn = false; _callFaceVoice = false; }
+  try { const ex = (await screenLoad(true)).experiments || {}; _callBargeIn = !!ex.bargeIn; _callFaceVoice = !!ex.faceVoice || assistant; }
+  catch { _callBargeIn = false; _callFaceVoice = assistant; }
   if (typeof wakeWordPause === 'function') wakeWordPause();   // the call has the microphone now
   _callStats = { at: Date.now(), bargeIns: 0, dropped: 0 };
   try { const c = (await screenPrefs()).call || {}; _callSilenceMs = c.silenceMs >= 300 ? c.silenceMs : 2000; _callThreshold= c.sensitivity >= 1 ? c.sensitivity : 15; }
@@ -90,7 +94,7 @@ async function chatToggleCall() {
   document.getElementById('chat-input-row').style.display = 'none';
   document.getElementById('chat-call-bar').style.display = 'flex';
 
-  _callTtsWarned = false; _callSynthPending = 0;
+  _callTtsWarned = false; _callSynthPending = 0; _callLastActive = performance.now();
   const source = _callAudioCtx.createMediaStreamSource(_callStream);
   _callAnalyser = _callAudioCtx.createAnalyser();
   _callAnalyser.fftSize = 512;
@@ -145,6 +149,7 @@ function _callVadLoop() {
   const energy = data.reduce((a, b) => a + b, 0) / data.length;
   const now = performance.now(), dt = _callLastFrame ? Math.min(100, now - _callLastFrame) : 0;
   _callLastFrame = now;
+  if (energy > _callThreshold || _callCurrentSrc || _callProcessing || _callSynthPending || _callSpeaking) _callLastActive = now;
   if (_callFaceVoice && typeof faceCornerVoice === 'function') {
     if (_callCurrentSrc && _callOutAnalyser) {
       const out = new Uint8Array(_callOutAnalyser.frequencyBinCount);
