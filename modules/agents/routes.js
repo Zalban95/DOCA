@@ -80,6 +80,20 @@ function mount(app) {
   app.get('/api/harness/skills/sources', (req, res) => {
     try { res.json({ sources: require('../harness/skill-sources').detect({ project: projectOf(req.query.project) }) }); } catch (e) { fail(res, e); }
   });
+  // The learning loop (harness/learn.js): a draft from a conversation, then the person's edited version saved.
+  app.post('/api/harness/skills/draft', async (req, res) => {
+    try {
+      require('../harness/session-access').check(require('../harness/turn/client').dashboardClient(req).user, req.body?.sessionId);
+      res.json(await require('../harness/learn').draftSkill(String(req.body?.sessionId || '')));
+    } catch (e) { fail(res, e); }
+  });
+  app.post('/api/harness/skills', (req, res) => {
+    try {
+      const { name, description, body, overwrite } = req.body || {};
+      if (!overwrite && skills.list().some(s => s.name === name && s.source === 'local')) throw Object.assign(new Error(`A skill "${name}" exists here; choose another name or overwrite.`), { status: 409 });
+      res.json(skills.write(name, { description, body }));
+    } catch (e) { fail(res, e); }
+  });
   app.get('/api/harness/skills/:name', (req, res) => { try { res.json(skills.read(req.params.name)); } catch (e) { fail(res, e); } });
   // Written for another harness? What, where, and the mechanical rewrite (harness/skill-audit.js).
   const audit = require('../harness/skill-audit');

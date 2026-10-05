@@ -46,6 +46,7 @@ function _hcBuiltinHtml(h) {
         <div class="hc-side-head" style="margin-top:10px">
           Recipes
           <button class="btn btn-xs" onclick="hcRecipeKeep()" title="Keep what this conversation's last turn did, as a recipe">＋ last turn</button>
+          <button class="btn btn-xs" onclick="hcSkillDraft()" title="Draft a skill from this conversation — when to use it, what worked — for you to read and save">＋ skill</button>
         </div>
         <div id="hc-recipes" class="hc-agents"><div class="placeholder">Loading…</div></div>
 
