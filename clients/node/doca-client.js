@@ -11,6 +11,7 @@
  *   doca-client pair 'doca://pair?code=641598&host=hub:4242'      or the pairing link itself, in one step
  *   doca-client run [--grant files,shell] [--bind 100.x.y.z] [--port 18766]
  *   doca-client find                                            the hubs on this machine's tailnet
+ *   doca-client update                                          the hub's copy of this client, checked, when it differs
  *   doca-client status | forget
  *
  * Trust: a self-signed hub's certificate is pinned at pairing and is then the only one trusted (tlsFor), so it is
@@ -243,7 +244,37 @@ async function run({ grant = null, bind = null, port = 18766, root = null, signa
   return { server, url, cfg, stop };
 }
 
-module.exports = { pair, fromLink, run, serve, load, request, TOOLS, FAMILIES, tailnetAddress, configFile };
+/**
+ * Update from the hub this client is paired with (TODO H6.5; api-v1/client-files.js): its manifest lists each file
+ * with a sha256; what differs here is fetched as bytes over the pinned connection, checked against that sha256, and
+ * only then written — the previous copy kept in the config folder. Returns what changed.
+ */
+async function update({ dir = __dirname } = {}) {
+  const cfg = load();
+  if (!cfg) throw new Error('Not paired: pair first, then update from that hub.');
+  const m = await request(cfg, 'GET', '/api/v1/clients/node');
+  if (m.status !== 200) throw new Error(`The hub has no client channel (${m.status}); it may be older than 2.191.0.`);
+  const sha = b => crypto.createHash('sha256').update(b).digest('hex');
+  const fetched = [];
+  for (const f of m.body.files) {
+    const here = path.join(dir, f.name);
+    if (fs.existsSync(here) && sha(fs.readFileSync(here)) === f.sha256) continue;
+    const res = await request(cfg, 'GET', `/api/v1/clients/node/${encodeURIComponent(f.name)}`, undefined, { stream: true });
+    const bytes = Buffer.concat(await new Promise((resolve, reject) => { const parts = []; res.on('data', d => parts.push(d)); res.on('end', () => resolve(parts)); res.on('error', reject); }));
+    if (res.statusCode !== 200 || sha(bytes) !== f.sha256) throw new Error(`${f.name} did not arrive intact; nothing was replaced.`);
+    fetched.push({ name: f.name, bytes });
+  }
+  const keep = path.join(configDir(), 'previous');
+  for (const f of fetched) {
+    const here = path.join(dir, f.name);
+    if (fs.existsSync(here)) { fs.mkdirSync(keep, { recursive: true }); fs.copyFileSync(here, path.join(keep, f.name)); }
+    fs.writeFileSync(`${here}.new`, f.bytes);
+    fs.renameSync(`${here}.new`, here);
+  }
+  return { version: m.body.version, changed: fetched.map(f => f.name) };
+}
+
+module.exports = { pair, fromLink, update, run, serve, load, request, TOOLS, FAMILIES, tailnetAddress, configFile };
 
 if (require.main === module) {
   const [verb, ...rest] = process.argv.slice(2);
@@ -257,8 +288,9 @@ if (require.main === module) {
       else if (!hubs.length) say('No DOCA hub answers on the tailnet.');
       else for (const h of hubs) say(`${h.product} at ${h.url}${h.self ? ' (this machine)' : ''} — pair: doca-client pair ${h.url} <code from its Settings → API Keys>`);
     }
+    else if (verb === 'update') { const u = await update(); say(u.changed.length ? `✓ Updated to the hub's ${u.version}: ${u.changed.join(', ')}. Restart run to use it.` : `✓ Already the hub's ${u.version}.`); }
     else if (verb === 'status') { const c = load(); say(c ? JSON.stringify({ hub: c.hub, deviceId: c.deviceId, name: c.name, grants: c.grants, revoked: c.revoked || [] }, null, 2) : 'Not paired.'); }
     else if (verb === 'forget') { fs.rmSync(configFile(), { force: true }); say('Forgotten. (The hub still lists this device until you revoke it there.)'); }
-    else say('usage: doca-client find | pair <hub> <code> [--name N] | pair <doca://pair link> | run [--grant files,shell] [--bind IP] [--port N] | status | forget');
+    else say('usage: doca-client find | update | pair <hub> <code> [--name N] | pair <doca://pair link> | run [--grant files,shell] [--bind IP] [--port N] | status | forget');
   })().catch(e => { console.error(`✗ ${e.message}`); process.exit(1); });
 }

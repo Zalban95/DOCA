@@ -33,6 +33,19 @@ test('it pairs with a code made in the panel, and keeps the token to itself', as
   assert.equal(require('../modules/api-v1/devices').get(deviceId).userId, H.owner.user.id, 'the machine is the person\'s who paired it');
 });
 
+test('it updates from its own hub: what differs is fetched, checked and replaced; the old copy kept', async () => {
+  const there = path.join(dir, 'installed'); fs.mkdirSync(there);
+  fs.writeFileSync(path.join(there, 'doca-client.js'), '// an old copy\n');
+  fs.copyFileSync(path.join(__dirname, '..', 'clients', 'node', 'families.js'), path.join(there, 'families.js'));
+  const u = await client.update({ dir: there });
+  assert.equal(u.version, require('../package.json').version);
+  assert.deepEqual(u.changed.sort(), ['README.md', 'discover.js', 'doca-client.js'], 'the unchanged families.js is left alone');
+  for (const f of ['doca-client.js', 'discover.js', 'README.md'])
+    assert.ok(fs.readFileSync(path.join(there, f)).equals(fs.readFileSync(path.join(__dirname, '..', 'clients', 'node', f))), `${f} byte for byte`);
+  assert.equal(fs.readFileSync(path.join(process.env.DOCA_CLIENT_DIR, 'previous', 'doca-client.js'), 'utf8'), '// an old copy\n');
+  assert.deepEqual((await client.update({ dir: there })).changed, [], 'nothing twice');
+});
+
 test('it lends what was granted; once its offer is accepted the agent works on that machine', async () => {
   lending = await client.run({ grant: ['files', 'shell'], bind: '127.0.0.1', port: 0, root, signal: ctrl.signal });
   const { url } = lending;

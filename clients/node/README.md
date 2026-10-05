@@ -21,4 +21,6 @@ notifications `notify-send` — a missing one is named in the answer, never gues
 at once; `run` again re-offers after a restart. A hub's self-signed certificate is pinned at pairing and is the
 only one trusted afterwards; the listener binds to your tailnet address and answers only with its secret.
 
-`status` shows what it lends; `forget` removes its config (revoke the device in the hub too).
+`update` brings it to the copy its hub ships (each file checked against the hub's sha256 before it replaces anything;
+the old copy kept in the config folder). `status` shows what it lends; `forget` removes its config (revoke the device
+in the hub too).
