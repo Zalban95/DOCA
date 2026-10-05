@@ -127,6 +127,10 @@ Since hub 2.187.0 `POST /agui` (scope `harness:chat`) is the hub as an AG-UI age
 device (answer it through `/prompts`) and `doca.note` for input the hub does not use (the front end's own `tools`,
 `state`). A `threadId` that is one of the person's conversation ids is that conversation; any other maps to one of its
 own, the same one every time. It is the same turn `POST /harness/messages` starts; closing the stream does not stop it.
+Since hub 2.189.0 `POST /a2a` (scope `harness:chat`) is the hub as an A2A agent (JSON-RPC 2.0, protocol 0.3):
+`message/send` (text parts; the Task comes back `completed` with the answer, `failed` or `canceled`, or `working` with
+`configuration.blocking: false`), `tasks/get`, `tasks/cancel`; a `contextId` is a conversation, as a `threadId` is for
+AG-UI. The agent card is public at `https://<hub>/.well-known/agent-card.json`.
 
 **Rotation.** `POST /devices/me/rotate` returns a new token; the old one stays
 valid for 60 s (`previousValidUntil`) so a client can swap atomically.

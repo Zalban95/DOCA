@@ -43,6 +43,7 @@ const TABLE = [
   // A service's sign-in sends the browser back here from its own site, so the SameSite=Strict cookie stays behind;
   // what guards it is OAuth's state: one-time, ten minutes, minted only by a host's Connect (connectors/oauth.js).
   R(GET, '/api/connectors/callback', 'public'),
+  R(GET, '/\\.well-known/agent(-card)?\\.json', 'public'),   // the A2A agent card: who the hive is and where to talk (api-v1/a2a.js)
   R(GET, '/api/auth/host-check', 'host'),                 // asked before opening a terminal socket
   R(ANY, '/api/auth/(me|logout|password|step-up|sessions)', 'signed'),
   R(ANY, '/api/auth/grants(/.*)?', 'signed'),              // exceptions: users or delegate, checked in users-routes.js
