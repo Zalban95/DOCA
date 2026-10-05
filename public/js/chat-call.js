@@ -27,6 +27,10 @@ let _callFaceVoice = false, _callOutAnalyser = null;
 // How a call listens is this screen's (the setting `call`; Settings → Voice → Live call), read when a call starts.
 let _callSilenceMs = 2000;
 let _callThreshold = 15;
+// A recording is sent only with this much audio over the threshold in it: a click, a cough or a door is shorter, and
+// Whisper turns such a blip into "Thank you." (the hub screens those phrases too: modules/stt-filter.js).
+const CALL_MIN_VOICED_MS = 300;
+let _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending = 0, _callTtsWarned = false;
 
 function _callSetStatus(text, state) {
   const el = document.getElementById('chat-call-status');
@@ -40,8 +44,14 @@ async function chatToggleCall() {
     _callStop();
     return;
   }
+  // Both audio contexts are made here, inside the tap, before anything is awaited: a context made later is no longer
+  // the tap's, and a phone's WebView keeps it suspended — the answer is synthesized and never heard.
+  _callAudioCtx = new AudioContext();
+  _callPlayCtx = new AudioContext();
+  _callAudioCtx.resume().catch(() => {}); _callPlayCtx.resume().catch(() => {});
+  const giveUp = () => { _callAudioCtx.close().catch(() => {}); _callPlayCtx.close().catch(() => {}); _callAudioCtx = _callPlayCtx = null; };
   // A realtime speech model, when the owner set one up (chat-realtime.js; experiments.realtimeVoice).
-  if (typeof realtimeAvailable === 'function' && await realtimeAvailable()) return realtimeStart();
+  if (typeof realtimeAvailable === 'function' && await realtimeAvailable()) { giveUp(); return realtimeStart(); }
 
   _callSetStatus('Checking services…', '');
   try {
@@ -51,11 +61,11 @@ async function chatToggleCall() {
       if (!status.stt) missing.push(`STT (${status.sttUrl})`);
       if (!status.tts) missing.push(`TTS (${status.ttsUrl})`);
       chatAppendMsg('system', `Voice services unreachable: ${missing.join(', ')}. Configure in Settings → Voice Services.`);
-      return;
+      return giveUp();
     }
   } catch (e) {
     chatAppendMsg('system', `Cannot check voice services: ${e.message}`);
-    return;
+    return giveUp();
   }
 
   try { const ex = (await apiFetch('/api/experiments')).experiments; _callBargeIn = !!ex.find(x => x.id === 'bargeIn')?.on; _callFaceVoice = !!ex.find(x => x.id === 'faceVoice')?.on; }
@@ -68,7 +78,7 @@ async function chatToggleCall() {
     _callStream = await micOpen({ echoCancellation: true, noiseSuppression: true });
   } catch (e) {
     chatAppendMsg('system', `The microphone did not open: ${e.message}`);
-    return;
+    return giveUp();
   }
 
   _callActive = true;
@@ -79,13 +89,12 @@ async function chatToggleCall() {
   document.getElementById('chat-input-row').style.display = 'none';
   document.getElementById('chat-call-bar').style.display = 'flex';
 
-  _callAudioCtx = new AudioContext();
+  _callTtsWarned = false; _callSynthPending = 0;
   const source = _callAudioCtx.createMediaStreamSource(_callStream);
   _callAnalyser = _callAudioCtx.createAnalyser();
   _callAnalyser.fftSize = 512;
   source.connect(_callAnalyser);
 
-  _callPlayCtx = new AudioContext();
   if (_callFaceVoice) { _callOutAnalyser = _callPlayCtx.createAnalyser(); _callOutAnalyser.fftSize = 256; _callOutAnalyser.connect(_callPlayCtx.destination); }
 
   _callSetStatus('Listening…', 'listening');
@@ -131,6 +140,8 @@ function _callVadLoop() {
   const data = new Uint8Array(_callAnalyser.frequencyBinCount);
   _callAnalyser.getByteFrequencyData(data);
   const energy = data.reduce((a, b) => a + b, 0) / data.length;
+  const now = performance.now(), dt = _callLastFrame ? Math.min(100, now - _callLastFrame) : 0;
+  _callLastFrame = now;
   if (_callFaceVoice && typeof faceCornerVoice === 'function') {
     if (_callCurrentSrc && _callOutAnalyser) {
       const out = new Uint8Array(_callOutAnalyser.frequencyBinCount);
@@ -149,9 +160,11 @@ function _callVadLoop() {
 
     if (!_callSpeaking && (!_callProcessing || _callBargeIn)) {
       _callSpeaking = true;
+      _callVoicedMs = 0;
       _callStartRecording();
       _callSetStatus('Listening…', 'listening');
     }
+    if (_callSpeaking) _callVoicedMs += dt;
 
     clearTimeout(_callSilenceTimer);
     _callSilenceTimer = null;
@@ -178,6 +191,7 @@ function _callStartRecording() {
   _callRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
   _callRecorder.onstop = () => {
     _callRecorder = null;
+    if (_callVoicedMs < CALL_MIN_VOICED_MS) return;   // a blip, not speech: nothing is sent
     if (chunks.length && _callActive) {
       const blob = new Blob(chunks, { type: mimeType });
       _callProcessAudio(blob);
@@ -251,8 +265,6 @@ async function _callProcessAudio(audioBlob) {
         if (sentence.length > 1) _callEnqueueSynth(sentence);
       },
     });
-    _callSetStatus('Speaking…', 'speaking');
-
     const chatRes = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -296,7 +308,7 @@ async function _callProcessAudio(audioBlob) {
   } finally {
     agentWorkingClose(document.getElementById('chat-messages'));
     _callProcessing = Math.max(0, _callProcessing - 1);
-    if (_callActive && !_callCurrentSrc && _callPlayQueue.length === 0) {
+    if (_callActive && !_callCurrentSrc && _callPlayQueue.length === 0 && !_callSynthPending) {
       _callSetStatus('Listening…', 'listening');
     }
   }
@@ -305,6 +317,7 @@ async function _callProcessAudio(audioBlob) {
 async function _callEnqueueSynth(text) {
   if (!_callActive) return;
   const epoch = _callEpoch;   // said before an interruption: dropped when it arrives after one (barge-in)
+  _callSynthPending++;
   try {
     const res = await fetch('/api/chat/synthesize', {
       method: 'POST',
@@ -312,15 +325,22 @@ async function _callEnqueueSynth(text) {
       body: JSON.stringify({ text }),
       signal: _callAbort?.signal,
     });
-    if (!res.ok) return;
+    if (!res.ok) throw new Error(`speech service answered ${res.status}${await res.text().then(t => `: ${t.slice(0, 120)}`).catch(() => '')}`);
 
     const arrayBuf = await res.arrayBuffer();
     if (!_callActive || !_callPlayCtx) return;
+    if (_callPlayCtx.state === 'suspended') await _callPlayCtx.resume().catch(() => {});
     const audioBuf = await _callPlayCtx.decodeAudioData(arrayBuf);
     if (epoch !== _callEpoch) { _callStats && _callStats.dropped++; return; }
     _callPlayQueue.push(audioBuf);
     if (!_callCurrentSrc) _callPlayNext();
-  } catch {}
+  } catch (e) {
+    // Once per call: a voice that fails silently reads as a call that answers only in text.
+    if (e.name !== 'AbortError' && _callActive && !_callTtsWarned) { _callTtsWarned = true; chatAppendMsg('system', `The answer could not be spoken: ${e.message}`); }
+  } finally {
+    _callSynthPending = Math.max(0, _callSynthPending - 1);
+    if (_callActive && !_callSynthPending && !_callCurrentSrc && !_callPlayQueue.length && !_callProcessing) _callSetStatus('Listening…', 'listening');
+  }
 }
 
 function _callPlayNext() {

@@ -13,7 +13,7 @@ const path = require('node:path');
 function load() {
   let started = 0, resolveDecode;
   const sandbox = {
-    console, setTimeout, clearTimeout, Math, Date, Uint8Array,
+    console, setTimeout, clearTimeout, Math, Date, Uint8Array, performance,
     document: { getElementById: () => null },
     requestAnimationFrame: () => 1, cancelAnimationFrame: () => {},
     MediaRecorder: Object.assign(function MediaRecorder() { started++; this.state = 'recording'; this.start = () => {}; this.stop = () => {}; }, { isTypeSupported: () => true }),
@@ -73,4 +73,35 @@ test('with faceVoice on, the face speaks with the voice and listens to the perso
   speaking(s);
   s.get('_callVadLoop')();
   assert.equal(seen.at(-1)[0], 'listening');
+});
+
+test('a blip over the threshold is not sent; a word is', () => {
+  for (const [ms, sent] of [[120, false], [600, true]]) {
+    const { s, sandbox } = load();
+    let processed = 0;
+    s.set('_callActive', true); s.set('_callStream', {});
+    s.set('_callProcessAudio', () => { processed++; });
+    sandbox.Blob = function Blob() {};
+    let t = 1000;
+    sandbox.performance = { now: () => t };
+    vm.runInContext('performance = globalThis.performance', sandbox);
+    speaking(s);
+    for (let i = 0; i <= ms / 20; i++) { s.get('_callVadLoop')(); t += 20; }
+    const rec = s.get('_callRecorder');
+    rec.ondataavailable({ data: { size: 10 } });
+    rec.onstop();
+    assert.equal(processed, sent ? 1 : 0, `${ms} ms of sound`);
+  }
+});
+
+test('a speech service that fails says so once per call, not silently', async () => {
+  const { s, sandbox } = load();
+  const said = [];
+  sandbox.chatAppendMsg = (_k, t) => said.push(t);
+  sandbox.fetch = async () => ({ ok: false, status: 502, text: async () => 'kokoro down' });
+  s.set('_callActive', true);
+  await s.get('_callEnqueueSynth')('One.');
+  await s.get('_callEnqueueSynth')('Two.');
+  assert.equal(said.length, 1);
+  assert.match(said[0], /could not be spoken.*502.*kokoro down/);
 });
