@@ -26,6 +26,12 @@ async function packsLoad() {
       ${group('skills', 'Skills', c.skills)}${group('specialists', 'Specialists', c.specialists)}${group('recipes', 'Recipes', c.recipes)}${group('mcp', 'MCP servers', c.mcp)}
       <div style="margin-bottom:10px;font-size:12px"><label><input type="checkbox" id="pack-memory"> Memory</label>
         <label style="margin-left:12px"><input type="checkbox" id="pack-rules"> Memory rules (as AGENTS.md)</label></div>
+      <div style="margin-bottom:10px;font-size:12px"><div class="input-label">As an edition — what makes it feel like its own product (edition.json)</div>
+        <label><input type="checkbox" id="pack-ed-branding"> Names (branding)</label>
+        <label style="margin-left:12px"><input type="checkbox" id="pack-ed-look"> How screens start out (theme, hidden tabs, sidebar)</label>
+        <label style="margin-left:12px"><input type="checkbox" id="pack-ed-face"> The face</label>
+        <label style="margin-left:12px">Level <select class="input" id="pack-ed-level" style="width:auto"><option value="">none</option>
+          ${(c.levels || []).map(l => `<option value="${escHtml(l.id)}">${escHtml(l.label)}</option>`).join('')}</select></label></div>
       <button class="btn btn-sm btn-blue" onclick="packsExport()">⬇ Download the pack</button></div>
     <div class="card">
       <div class="card-title">Bring one in</div>
@@ -39,7 +45,9 @@ async function packsLoad() {
 async function packsExport() {
   const pick = kind => [...document.querySelectorAll(`#sp-packs input[data-pack="${kind}"]:checked`)].map(i => i.value);
   const body = { name: document.getElementById('pack-name').value.trim() || 'pack', skills: pick('skills'), specialists: pick('specialists'),
-    recipes: pick('recipes'), mcp: pick('mcp'), memory: document.getElementById('pack-memory').checked, rules: document.getElementById('pack-rules').checked };
+    recipes: pick('recipes'), mcp: pick('mcp'), memory: document.getElementById('pack-memory').checked, rules: document.getElementById('pack-rules').checked,
+    edition: { branding: document.getElementById('pack-ed-branding').checked, look: document.getElementById('pack-ed-look').checked,
+      face: document.getElementById('pack-ed-face').checked && (await faceSpec()), level: document.getElementById('pack-ed-level').value || null } };
   const res = await fetch('/api/packs/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) return appAlert((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
   const name = (/filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '') || [])[1] || 'pack.dpack';
@@ -56,7 +64,7 @@ async function packsPlan(file) {
   const p = await res.json().catch(() => ({}));
   if (!res.ok) { out.innerHTML = `<div style="color:var(--red);font-size:12px">${escHtml(p.error || `HTTP ${res.status}`)}</div>`; return; }
   const rows = p.items.map(i => `<label class="disk-row" style="cursor:pointer"><span class="disk-label"><input type="checkbox" data-key="${escHtml(i.key)}" ${i.overwrites ? '' : 'checked'}>
-      ${escHtml(i.kind)} · ${escHtml(i.id)}</span><span class="disk-path">${escHtml(i.command || i.path || '')}${i.steps ? ` · ${i.steps} steps` : ''}${i.count !== undefined ? ` · ${i.count}` : ''}</span>
+      ${escHtml(i.kind)} · ${escHtml(i.id)}</span><span class="disk-path">${escHtml(i.command || i.path || '')}${i.steps ? ` · ${i.steps} steps` : ''}${i.count !== undefined ? ` · ${i.count}` : ''}${i.parts ? escHtml(i.parts) : ''}</span>
       <span class="disk-free" style="color:${i.overwrites ? 'var(--amber)' : 'var(--green)'}">${i.overwrites ? 'exists here' : 'new'}</span></label>`).join('');
   const needs = [...(p.needs.secrets || []).map(s => `fill in ${s}`), ...(p.needs.missingTools || []).map(t => `a tool this hive lacks: ${t}`), ...(p.needs.doca ? [p.needs.doca] : [])];
   out.innerHTML = `<div style="font-size:12px;margin-bottom:6px"><b>${escHtml(p.name || file.name)}</b>${p.native ? ' — another tool\'s files, read as they are' : ''}${p.description ? ` — ${escHtml(p.description)}` : ''}</div>

@@ -15,6 +15,7 @@ function mount(app) {
     specialists: require('../agents/registry').list().filter(a => !a.broken).map(a => ({ id: a.id, label: a.label })),
     recipes: require('../recipes/store').list().map(r => ({ id: r.id, label: r.title })),
     mcp: require('../mcp/registry').load().filter(s => s.origin?.kind !== 'client').map(s => ({ id: s.id, label: s.label })),
+    levels: require('../auth/levels').list().filter(l => !l.builtin).map(l => ({ id: l.id, label: l.name })),   // for an edition (edition.js)
   })));
   app.post('/api/packs/export', async (req, res) => {
     try {
@@ -28,7 +29,7 @@ function mount(app) {
     let only = null;
     try { only = req.body?.only ? JSON.parse(req.body.only) : null; } catch { throw Object.assign(new Error('only is a JSON list of keys from the plan.'), { status: 400 }); }
     return require('./import').apply(file(req), { only, overwrite: req.body?.overwrite === 'true' || req.body?.overwrite === true,
-      person: require('../harness/turn/client').dashboardClient(req).user });
+      person: require('../harness/turn/client').dashboardClient(req).user, actorLevel: req.auth?.role || null });
   }));
 }
 

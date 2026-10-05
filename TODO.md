@@ -259,7 +259,9 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [ ] H11.3 Every new capability lands in `/api/v1` first.
 
 **H12 · Editions** (§6): an edition is a pack (level, skills, recipes, visible parts, face), built
-on branding + levels + hidden tabs.
+on branding + levels + hidden tabs. **Done (2.184.0):** `edition.json` in a pack — names, how screens start out, the
+face (now a screen-home setting), a level of your own — imported through the packs dry run within the importer's
+ceiling. **Left:** a shipped example edition, and choosing which agents' tools an edition's level allows from a list.
 
 **Decide (from 2026-10-04)**
 - Durable memory is shared by everyone (per-user memory is auth phase 3); editing it from

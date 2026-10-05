@@ -12,6 +12,7 @@
  *   mcp.json                        { mcpServers: … } — what Claude Desktop, Cursor and Claude Code read
  *   memory.jsonl                    memory entries, one JSON object a line
  *   AGENTS.md                       the memory rules, as the instructions file every coding agent reads
+ *   edition.json                    an edition (TODO H12): names, how screens start out, a face, a level (edition.js)
  *
  * Nothing secret travels: an MCP server's env and header values whose names say key/token/secret/password are
  * emptied and listed under `needs.secrets`, for whoever imports it to fill in.
@@ -36,7 +37,7 @@ function skillFiles(name) {
   return out;
 }
 
-/** @param {{ name?, description?, skills?: string[], specialists?: string[], recipes?: string[], mcp?: string[], memory?: boolean, rules?: boolean }} sel */
+/** @param {{ name?, description?, skills?: string[], specialists?: string[], recipes?: string[], mcp?: string[], memory?: boolean, rules?: boolean, edition?: object }} sel */
 function build(sel = {}) {
   const files = [];
   const contents = [];
@@ -90,6 +91,8 @@ function build(sel = {}) {
     files.push({ name: 'AGENTS.md', data: `# Rules\n\n${(r.rules || []).map((x, i) => `${i + 1}. ${typeof x === 'string' ? x : x.text || JSON.stringify(x)}`).join('\n')}\n` });
     contents.push({ kind: 'rules', count: (r.rules || []).length, path: 'AGENTS.md' });
   }
+  const edition = require('./edition').part(sel.edition);
+  if (edition) { files.push(edition.file); contents.push(edition.content); }
   if (!contents.length) throw Object.assign(new Error('Choose at least one thing to put in the pack.'), { status: 400 });
   const manifest = { format: 'dpack', version: VERSION, name: String(sel.name || 'pack').slice(0, 80), description: String(sel.description || '').slice(0, 500),
     createdAt: new Date().toISOString(), from: { doca: require('../../package.json').version }, contents,

@@ -30,7 +30,8 @@ function items(files) {
     if (f.name === 'pack.json' || inSkill(f.name)) continue;
     const base = f.name.split('/').pop();
     try {
-      if (/^agents\/[^/]+\.md$/.test(f.name)) out.push({ kind: 'specialist', id: base.replace(/\.md$/, ''), data: text(f), path: f.name });
+      if (require('./edition').isFile(f.name)) out.push(require('./edition').item(JSON.parse(text(f))));
+      else if (/^agents\/[^/]+\.md$/.test(f.name)) out.push({ kind: 'specialist', id: base.replace(/\.md$/, ''), data: text(f), path: f.name });
       else if (/\.recipe\.json$/.test(base)) { const r = JSON.parse(text(f)); out.push({ kind: 'recipe', id: r.id || base.replace(/\.recipe\.json$/, ''), data: r, path: f.name }); }
       else if (/\.json$/.test(base) && /mcpServers/.test(text(f))) {
         for (const [id, e] of Object.entries(JSON.parse(text(f)).mcpServers || {})) out.push({ kind: 'mcp', id, data: e, path: f.name });
@@ -56,6 +57,7 @@ function exists(it) {
   if (it.kind === 'specialist') return !!require('../agents/registry').get(it.id);
   if (it.kind === 'recipe') return !!require('../recipes/store').get(it.id);
   if (it.kind === 'mcp') return !!require('../mcp/registry').get(it.id);
+  if (it.kind === 'edition') return require('./edition').exists(it);
   return false;
 }
 
@@ -71,17 +73,21 @@ function plan(buffer) {
   for (const it of list.filter(i => i.kind === 'mcp')) for (const f of ['env', 'headers']) for (const [k, v] of Object.entries(it.data[f] || {})) if (v === '') needs.secrets.push(`mcp.${it.id}.${f}.${k}`);
   const view = it => ({ key: `${it.kind}:${it.id}`, kind: it.kind, id: it.id, path: it.path || it.root, overwrites: exists(it),
     ...(it.kind === 'mcp' ? { command: it.data.url || [it.data.command, ...(it.data.args || [])].join(' ') } : {}),
-    ...(it.kind === 'rules' ? { count: it.data.length } : {}), ...(it.kind === 'recipe' ? { steps: (it.data.steps || []).length } : {}) });
+    ...(it.kind === 'rules' ? { count: it.data.length } : {}), ...(it.kind === 'edition' ? { parts: require('./edition').describe(it) } : {}), ...(it.kind === 'recipe' ? { steps: (it.data.steps || []).length } : {}) });
   return { name: manifest?.name || null, description: manifest?.description || '', native: !manifest, items: list.map(view), needs: { ...needs, secrets: [...new Set(needs.secrets)] }, skipped };
 }
 
 /** Write what was chosen (`only`: keys from the plan; all when absent). Returns what happened to each. */
-function apply(buffer, { only = null, overwrite = false, person = null } = {}) {
+function apply(buffer, { only = null, overwrite = false, person = null, actorLevel = null } = {}) {
   const { items: list } = items(zip.read(buffer));
   const done = [];
   for (const it of list) {
     const key = `${it.kind}:${it.id}`;
     if (only && !only.includes(key)) continue;
+    if (it.kind === 'edition') {   // its parts are the hive's defaults; only its level is "something that exists"
+      try { done.push({ key, ok: true, note: require('./edition').apply(it, { overwrite, actorLevel }) }); } catch (e) { done.push({ key, error: e.message }); }
+      continue;
+    }
     if (exists(it) && !overwrite) { done.push({ key, skipped: 'exists here (choose overwrite to replace it)' }); continue; }
     try {
       if (it.kind === 'skill') {

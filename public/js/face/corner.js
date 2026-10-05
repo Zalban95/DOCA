@@ -4,7 +4,7 @@ let _faceCorner = null;
 
 function faceCornerOn() { try { return localStorage.getItem('doca.face.corner') === '1'; } catch { return false; } }
 
-function faceCornerApply() {
+async function faceCornerApply() {
   const fab = document.getElementById('chat-fab');
   if (!fab) return;
   if (!faceCornerOn()) {
@@ -14,12 +14,13 @@ function faceCornerApply() {
     return;
   }
   if (_faceCorner) return;
+  _faceCorner = { face: { stop() {} }, close() {} };   // claimed before the await, so two calls make one face
+  const spec = await faceSpec();
+  if (!faceCornerOn()) { _faceCorner = null; return; }   // switched off while it loaded
   fab.textContent = '';
   fab.classList.add('chat-fab-face');
   const canvas = document.createElement('canvas');
   fab.appendChild(canvas);
-  let spec = {};
-  try { spec = JSON.parse(localStorage.getItem('doca.face.spec') || '{}'); } catch { /* the default */ }
   const face = faceMount(canvas, { ...spec, dots: 90, hud: false, grain: false });
   _faceCorner = { face, close: faceFeed(s => face.set(s.state, s.detail)) };
 }
