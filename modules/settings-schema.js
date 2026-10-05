@@ -54,7 +54,12 @@ const SCHEMA = {
   // Experiments (hive.md §8): off by default, each written up in docs/experiments/<id>.md. The owner's switch alone —
   // never proposable: an agent switching on its own experiments would be grading its own homework.
   experiments:      { is: 'travels', home: 'hive', note: 'experiments switched on (docs/experiments)',
-    keys: { recipeRepair: { type: 'boolean', default: false, hint: 'When a recipe fails, the agent investigates and proposes a repaired revision for a person to accept.' } } },
+    keys: { recipeRepair: { type: 'boolean', default: false, hint: 'When a recipe fails, the agent investigates and proposes a repaired revision for a person to accept.' },
+      retrieval: { type: 'boolean', default: false, hint: 'memory_search and recall_conversations also search by meaning, with the embedding model under retrieval.' } } },
+  retrieval:        { is: 'travels', home: 'hive', note: 'the embedding model retrieval uses (retrieval/; the switch is experiments.retrieval)',
+    propose: p('Retrieval', 'Which embedding model searches memory and conversations by meaning'),
+    keys: { provider: { type: 'string', default: 'ollama', hint: 'The provider that serves the embedding model (Settings → API Keys); ollama by default.' },
+      model: { type: 'string', default: '', hint: 'An embedding model, e.g. nomic-embed-text or bge-m3 on Ollama. Empty: retrieval stays off.' } } },
   migrations:       { is: 'travels', home: 'hive', note: 'which prefs migrations this file has had, and what they changed (migrations.js) — the record travels with the file' },
   usagePrices:      { is: 'travels', home: 'hive', note: 'the owner\'s price list for the usage window (harness/prices.js)' },
   providerContracts: { is: 'mixed', home: 'hive', note: 'the owner\'s corrections to what a provider accepts (harness/contracts.js): about a remote provider they travel, about a server on this machine they are local' },

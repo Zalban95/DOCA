@@ -68,6 +68,13 @@ const STEPS = [
     'CREATE INDEX IF NOT EXISTS runs_session ON runs (tenant_id, session_id, started_at)',
     'CREATE INDEX IF NOT EXISTS runs_mission ON runs (tenant_id, mission_id)',
   ] },
+  // A vector is base64 of its float32 bytes: one TEXT column both databases take; pgvector can replace it later.
+  { id: 7, what: 'retrieval: embedded chunks of memory and conversations (retrieval/)', sql: [
+    `CREATE TABLE IF NOT EXISTS embeddings (
+       tenant_id TEXT NOT NULL DEFAULT 'local', source TEXT NOT NULL, ref TEXT NOT NULL, chunk INTEGER NOT NULL,
+       hash TEXT NOT NULL, text TEXT NOT NULL, model TEXT NOT NULL, dims INTEGER NOT NULL, vec TEXT NOT NULL, updated_at TEXT NOT NULL,
+       PRIMARY KEY (tenant_id, source, model, ref, chunk))`,
+  ] },
 ];
 
 /** The same steps on a synchronous SQLite handle (node:sqlite), for the stores that must stay synchronous. */
