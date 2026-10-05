@@ -185,7 +185,7 @@ function readable() {
   // long being a number nobody could reach.
   // Declared leaves of proposable sections, with their effective values (settings-schema.js).
   for (const l of require('../settings-schema').leaves(prefs))
-    if (sectionFor(l.path)) out.push({ path: l.path, value: l.value, section: sectionFor(l.path).label, detail: l.hint });
+    if (sectionFor(l.path) && !FORBIDDEN.test(l.path)) out.push({ path: l.path, value: l.value, section: sectionFor(l.path).label, detail: l.hint });   // a secret is neither proposed nor read
 
   try {
     const { McpClient } = require('../mcp/client');

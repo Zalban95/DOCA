@@ -172,6 +172,15 @@ const SYSTEM_TOOLS = [
     detect: { any: [{ bin: 'hf', args: ['version'] }, { bin: 'huggingface-cli', args: ['version'] }, { bin: 'python3', args: ['-c', 'import huggingface_hub; print(huggingface_hub.__version__)'] }] },
     note: 'Downloads models and datasets for the Models tab.', repo: 'https://pypi.org/project/huggingface-hub/', repoLabel: 'pip: huggingface-hub',
     install: { linux: 'python3 -m pip install --user --break-system-packages -U "huggingface_hub[cli]"', darwin: brew('huggingface-cli'), win32: 'py -m pip install --user -U "huggingface_hub[cli]"' } },
+  { id: 'tesseract', label: 'Tesseract OCR', category: 'optional', for: 'reading a computer\'s screen',
+    detect: { bin: 'tesseract', args: ['--version'] }, note: 'Reads the words on a screen and where they are, with no model (computer_look, text).',
+    repo: 'https://github.com/tesseract-ocr/tesseract', repoLabel: 'tesseract-ocr',
+    install: { linux: pkg({ apt: 'tesseract-ocr', dnf: 'tesseract', pacman: 'tesseract tesseract-data-eng' }), darwin: brew('tesseract'), win32: winget('UB-Mannheim.TesseractOCR') } },
+  { id: 'opencv', label: 'OpenCV (Python)', category: 'optional', for: 'reading a computer\'s screen',
+    detect: { any: [{ bin: 'python3', args: ['-c', 'import cv2; print(cv2.__version__)'] }, { bin: 'python', args: ['-c', 'import cv2; print(cv2.__version__)'] }] },
+    note: 'Finds a picture of an element anywhere on a screen, with no model (computer_look, template).',
+    repo: 'https://pypi.org/project/opencv-python-headless/', repoLabel: 'pip: opencv-python-headless',
+    install: { linux: 'python3 -m pip install --user --break-system-packages -U opencv-python-headless', darwin: 'python3 -m pip install --user -U opencv-python-headless', win32: 'py -m pip install --user -U opencv-python-headless' } },
   { id: 'openclaw', label: 'OpenClaw', category: 'optional', for: 'the OpenClaw harness',
     // COMPOSE_DIR, not a hardcoded ~/openclaw: a machine that overrides it is still found. A stack that is not a git
     // checkout reads "installed" rather than offering to clone over it.

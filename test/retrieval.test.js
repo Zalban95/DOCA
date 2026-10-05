@@ -60,7 +60,7 @@ test('off by default: memory_search is keyword only and asks no model', async ()
   assert.match(await run('memory_search', { query: 'filament spool' }), /Nothing in memory matches/);
   assert.deepEqual(calls, []);
   // Switched on without a model is still off: nothing is guessed.
-  require('../modules/experiments').set('retrieval', true);
+  require('../modules/experiments').setDeveloper(true); require('../modules/experiments').set('retrieval', true);
   assert.equal(require('../modules/retrieval').on(), false);
 });
 

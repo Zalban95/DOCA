@@ -61,7 +61,16 @@ const drop = at => ({ describe: `${at} removed`, run(p) {
 } });
 
 // Newest last. An id is never reused or edited once released: a file that has it recorded will not run it again.
-const MIGRATIONS = [];
+const MIGRATIONS = [
+  // 2.212: experiments take effect only in developer mode. An install that already switched one on is a developer's.
+  { id: '2.212-developer-mode', note: 'experiments now need developer mode; an install with one on keeps them on', steps: [{
+    describe: 'developer.mode on (an experiment was on)',
+    run(p) {
+      if (p.developer?.mode !== undefined || !Object.values(p.experiments || {}).some(v => v === true)) return false;
+      p.developer = { ...(p.developer || {}), mode: true };
+      return true;
+    } }] },
+];
 
 const appliedIn = p => new Set(Array.isArray(p?.migrations?.applied) ? p.migrations.applied : []);
 

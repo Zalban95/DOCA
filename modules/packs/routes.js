@@ -40,7 +40,7 @@ function mount(app) {
   app.post('/api/packs/library/:id/send', h(req => require('./send').send(String(req.body?.hub || ''), req.params.id)));
   app.post('/api/packs/hubs', h(req => require('./send').add(req.body || {})));
   // The registry (experiments.packRegistry): publishing from this library, browsing and fetching from another hub's.
-  const reg = () => { if (!require('../experiments').on('packRegistry')) throw Object.assign(new Error('The pack registry is an experiment that is off (Settings → Experiments).'), { status: 409 }); };
+  const reg = () => { if (!require('../experiments').on('packRegistry')) throw Object.assign(new Error('The pack registry is an experiment that is off (Settings → Developer).'), { status: 409 }); };
   app.post('/api/packs/library/:id/publish', h(req => { reg(); return lib().publish(req.params.id, req.body?.on !== false); }));
   app.get('/api/packs/hubs/:id/published', h(req => { reg(); return require('./send').browse(req.params.id); }));
   app.post('/api/packs/hubs/:id/fetch', h(req => { reg(); return require('./send').fetchPack(req.params.id, String(req.body?.pack || '')); }));

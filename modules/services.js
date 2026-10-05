@@ -9,7 +9,7 @@ const { sseHeaders, loadPrefs, savePrefs, loadModelsPrefs } = require('./utils')
 
 // Where each answers once it is really up: `docker run` returns as soon as the container exists, minutes before the
 // application inside answers (AGENTS.md: "a start is not a service").
-const READY = { whisper: '/v1/models', kokoro: '/v1/audio/voices', vllm: '/v1/models', sdwebui: '/sdapi/v1/sd-models', comfyui: '/system_stats' };
+const READY = { roboflow: '/info', whisper: '/v1/models', kokoro: '/v1/audio/voices', vllm: '/v1/models', sdwebui: '/sdapi/v1/sd-models', comfyui: '/system_stats' };
 const READY_SEC = { vllm: 900, sdwebui: 900, comfyui: 600 };
 
 /** What a crash says, in a sentence a person can act on. */
@@ -60,6 +60,9 @@ const INFERENCE_SERVICES = [
     description: 'Stable Diffusion AUTOMATIC1111 WebUI with REST API (ai-dock)' },
   { id: 'comfyui',  label: 'ComfyUI',         image: 'mmartial/comfyui-nvidia-docker:latest', port: 8188, internalPort: 8188, apiPath: '', multiGpu: false,
     description: 'Node-based Stable Diffusion workflow runner with ComfyUI-Manager' },
+  { id: 'roboflow', label: 'Roboflow Inference', image: 'roboflow/roboflow-inference-server-gpu:latest', cpuImage: 'roboflow/roboflow-inference-server-cpu:latest',
+    port: 9001, internalPort: 9001, apiPath: '', multiGpu: false,
+    description: 'Open-source object detection server (any Roboflow Universe model, or your own) — a computer_look reader (vision.detectorModel)' },
 ];
 
 /** Pick the image for a service given the GPU selection (CPU fallback image). */

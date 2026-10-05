@@ -1,7 +1,7 @@
-# Experiment: look at a computer's screen with a vision model
+# Experiment: look at a computer's screen
 
-**Flag:** `experiments.visionPass` (Settings → Experiments), off by default, and inert until a vision model is set
-(`vision.model`). **TODO:** H5.6. **Since:** 2.197.0.
+**Flag:** `experiments.visionPass` (Settings → Developer), off by default, and inert until a reader is set up
+(Settings → Harness → Vision). **TODO:** H5.6. **Since:** 2.197.0.
 
 ## Hypothesis
 
@@ -9,6 +9,21 @@ A computer's browser is read as numbered elements (`browser_snapshot`), which is
 a canvas app, a game, a remote desktop, a picture of a form, a desktop program. Then the agent clicks blind or gives
 up. A vision model asked one question about the screen ("where is the Start button?") gives a position to
 `desktop_click` and a description to act on, at the cost of one image request when the tree is not enough.
+
+## Readers (since 2.212.0)
+
+A better reader will come; the reader is a setting, not the code (`modules/vision`). Each answers the same shape — what
+is there and where, as x,y — so the agent's side does not change when the owner changes reader:
+
+| Reader | What it is | Good at | Blind to |
+|---|---|---|---|
+| `model` | a vision model, any OpenAI-compatible endpoint (Ollama's qwen2.5vl, a hosted one) | any question, in words | slow; can be a few pixels off |
+| `detector` | Roboflow Inference — open source, run here (Settings → Services) or Roboflow's hosted API — with any detection model from Roboflow Universe or trained by the owner | fast, exact boxes for what it was trained on | everything else |
+| `text` | Tesseract OCR (System tools) | finding written words, locally, deterministically | icons, pictures |
+| `template` | OpenCV template matching (Python + opencv, System tools) | finding a picture of an element again (an icon cropped earlier) | anything that looks different |
+
+`vision.backend` is the default; the agent may pick another per call (`how`). Adding a reader is a row in
+`modules/vision/index.js` with `ready()` and `read()`.
 
 ## What happens when it is on
 

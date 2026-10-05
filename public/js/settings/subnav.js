@@ -17,7 +17,7 @@ const _SETTINGS_SUBTABS = [
   { id: 'backups',   label: 'Backups',   init: 'backupsLoad' },
   { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit', find: 'live call speech microphone barge-in interrupt tts stt' },
   { id: 'system',    label: 'System',    init: '_subtabSystemInit' },
-  { id: 'experiments', label: 'Experiments', init: 'experimentsLoad', find: 'experiment flag try measure' },
+  { id: 'experiments', label: 'Developer', init: 'experimentsLoad', host: true, find: 'developer mode experiment flag try measure' },
   // ── Harnesses: one section, a group each ──
   { id: 'harness',   label: 'Harness',   init: '_settingsHarnessRender', group: 'doca', find: 'skills memory rules approvals parameters guards' },
   { id: 'evals',     label: 'Evaluations', init: 'evalsLoad',    group: 'doca', find: 'evaluation eval test regression promptfoo judge' },
@@ -56,7 +56,9 @@ function _settingsSubnavRender() {
   const nav = document.getElementById('settings-subnav');
   if (!nav) return;
   const pill = t => `<button class="settings-subnav-btn" data-subtab="${t.id}" onclick="settingsSubNav('${t.id}')">${t.label}</button>`;
-  nav.innerHTML = _SETTINGS_SUBTABS.filter(t => !t.group).map(pill).join('')
+  // Developer (developer mode and the experiments) is for an owner or a tester: a host's, never drawn for anyone else.
+  const mine = t => !t.host || typeof authHasRight !== 'function' || authHasRight('host');
+  nav.innerHTML = _SETTINGS_SUBTABS.filter(t => !t.group && mine(t)).map(pill).join('')
     + '<button class="settings-subnav-btn" data-subtab="harnesses" onclick="settingsSubNav(\'harness\')" title="DOCA\'s own agent, and each other harness installed here">Harnesses</button>';
   // The second row: the harnesses, a group each.
   let row = document.getElementById('settings-subnav2');
@@ -112,6 +114,7 @@ function _settingsHarnessRender() {
   guardsCardRender(panel); // guards (settings/guards.js)
   searchCardRender(panel); // web search (settings/search.js)
   retrievalCardRender(panel); // retrieval: the embedding model (settings/retrieval.js)
+  visionCardRender(panel);    // vision: the screen readers (settings/vision.js)
 }
 /** Settings → Harness → ⚙: the built-in agent's parameters are edited on Controls, beside its row. */
 async function settingsOpenHarnessParams() {

@@ -3,7 +3,7 @@
 /**
  * Settings → Harness → Retrieval: which embedding model (`retrieval.provider` / `.model`), what the index holds,
  * a try against memory, and emptying the index (it is rebuilt on the next search). The switch itself is
- * Settings → Experiments (`experiments.retrieval`).
+ * Settings → Developer (`experiments.retrieval`).
  */
 const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
 

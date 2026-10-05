@@ -1,6 +1,6 @@
 /* Settings → Harness → Retrieval (modules/retrieval; TODO H10.2, an experiment): the embedding model that lets
    memory_search and recall_conversations find by meaning, what the index holds, and a try. The switch is
-   Settings → Experiments. */
+   Settings → Developer. */
 async function retrievalCardRender(panel) {
   let r;
   try { r = await apiFetch('/api/retrieval'); } catch { return; }
