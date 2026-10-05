@@ -28,7 +28,7 @@ async function scoutCardRender(panel) {
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Looks daily at Hugging Face's trending models for each function DOCA uses, the releases of
       what it runs on and your news feeds; every ${s.everyDays} days — or at once when something grows fast — the agent reads the promising ones and
       suggests what could do a function better or add a new one. Nothing changes until you accept: an accepted suggestion becomes a line in
-      <code>${escHtml(v.repo || '(no repository)')}/TODO.md</code>, and "Start the work" hands it to ${escHtml(s.implementer === 'doca' ? 'DOCA\'s agent' : s.implementer)}.
+      <code style="overflow-wrap:anywhere">${escHtml(v.repo || '(no repository)')}/TODO.md</code>, and "Start the work" hands it to ${escHtml(s.implementer === 'doca' ? 'DOCA\'s agent' : s.implementer)}.
       Last look: ${escHtml(st.lastLookAt || 'never')} · last brief: ${escHtml(st.lastBriefAt || 'never')}${st.lastBriefWhy ? ` (${escHtml(st.lastBriefWhy)})` : ''}</p>
     <div class="toolbar" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">
       <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="scoutEnable(this.checked)"> The routine (daily look, briefs)</label>
