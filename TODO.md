@@ -130,7 +130,12 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   hub always asks about a confirmed one; password and card fields are a person's, through Take over. And (2.197.0) a
   credentials vault: `computer_login` fills a stored login on its own site, the password typed by the hub, never seen
   by the agent.
-- [ ] H5.5 The person's own browser through a desktop client (extension or CDP), consent per site.
+- [x] H5.5 (2.202.0) The person's own browser through a desktop client (extension or CDP), consent per site. An
+  extension (`clients/browser`, Manifest V3: Chromium and Firefox) chosen over CDP — it needs no debugging port on the
+  person's everyday browser and asks per site in the browser's own words. It lends its tabs over a new MCP transport,
+  a socket the device opens to the hub (`mcp/socket-hosts.js`; PROTOCOL §22.2), which any undialable client can use.
+  The computer's rules apply (no credentials typed or read; pay/sign-in/submit always asked). **Left:** a signed
+  build for the stores (AMO, Chrome Web Store), a run in Firefox, and the logins vault filling here as on computers.
 - [x] H5.6 (2.197.0, experiment `visionPass`) A vision pass on screenshots where the accessibility tree is not enough. [X]
   `computer_look` asks a vision model about a computer's screen; docs/experiments/vision-pass.md with a measurement that
   draws known buttons. **Left:** measuring it with a vision model.

@@ -89,6 +89,8 @@ const PRESETS = {
   hub:      ['packs:send'],
   // Another hub that fetches what this one publishes (a registry; TODO H4.6, experiments.packRegistry).
   registry: ['packs:read'],
+  // DOCA in a browser (clients/browser, TODO H5.5): it lends its tabs as an MCP server over its own socket, and nothing else.
+  extension: ['mcp:self'],
 };
 
 module.exports = { FAMILIES, PRESETS, normalize, normalizeAll, hasScope, filterByScope, matches };

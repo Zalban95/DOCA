@@ -59,7 +59,7 @@ function available() {
         origin:      onClient ? 'client' : 'server',
         originLabel: originName,
         tool:        t.name,
-        trusted:     ownDevice && !String(t.name).includes('__'),
+        trusted:     ownDevice && !String(t.name).includes('__') && !t.openWorld,   // a page a browser read is other people's words
         description: t.description,
         schema:      t.inputSchema,
         readOnly:    t.readOnly,

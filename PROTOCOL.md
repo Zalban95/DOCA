@@ -1111,7 +1111,26 @@ A paired client can offer the harness the same **tool families** the host has �
   first load (as DocaMobile does); it is served only to that device's session or
   its owner, so the id in the path grants nothing.
 
-## 23. Talking to the agent
+### 22.2 Lending tools over the device's own socket (since hub 2.202.0)
+
+A device the hub cannot dial — a browser extension, a phone off the tailnet, anything behind NAT — can still host
+an MCP server: it **dials the hub**. Open a WebSocket to `wss://<hub>/api/v1/mcp/host` with the token
+(`Authorization: Bearer …`, or `?access_token=` where a socket cannot carry headers; scope `mcp:self`) and be an MCP
+server on it: the hub sends JSON-RPC requests (`initialize`, `tools/list`, `tools/call`, …), one JSON message per
+text frame, and you answer each by its `id`. One socket per device; a newer one replaces the older (close code 4000).
+
+- Offer it like any hosted server, without an address: `POST /mcp/offer {transport: "socket", label, tools}`. A
+  person accepts it in the MCP tab; until then nothing runs. While the socket is open the server runs; when it
+  closes its tools are gone, and they come back when the device dials again.
+- Mark a tool that reads the open world (a web page, a mailbox) with MCP's `annotations.openWorldHint: true`: its
+  results reach the agent framed as other people's words. A device's other own tools stay trusted like the host's.
+- A message every 20–30 s (a notification such as `{"jsonrpc":"2.0","method":"notifications/keepalive"}`) keeps
+  intermediaries — and a browser's service worker — from closing an idle socket.
+- `browser_click` / `browser_type` with `confirm: true`, from any device, is always asked of a person (as for an
+  agent's computer).
+
+The DOCA browser extension (`clients/browser`, preset `extension` = `mcp:self` only) is the first such client.
+
 
 Every client is an input and an output to one agent. A watch, a phone and a
 kiosk are not three assistants; they are three ways into the same conversation.

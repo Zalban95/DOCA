@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DOCA</title>
+<style>
+  :root { --bg: #0b0c0e; --fg: #e8e8e8; --muted: #8a8f98; --accent: #57c9c2; --line: #2a2d33; }
+  @media (prefers-color-scheme: light) { :root { --bg: #fff; --fg: #15171a; --muted: #5d636b; --line: #dcdfe3; } }
+  body { margin: 0; width: 320px; padding: 14px; background: var(--bg); color: var(--fg); font: 13px system-ui, sans-serif; }
+  h1 { font-size: 14px; margin: 0 0 8px; letter-spacing: .04em; }
+  p { color: var(--muted); font-size: 12px; margin: 6px 0; }
+  input { width: 100%; box-sizing: border-box; margin: 4px 0; padding: 6px 8px; background: transparent; color: var(--fg); border: 1px solid var(--line); border-radius: 4px; }
+  button { margin: 6px 6px 0 0; padding: 6px 10px; border: 1px solid var(--line); background: transparent; color: var(--fg); border-radius: 4px; cursor: pointer; }
+  button.main { background: var(--accent); color: #050507; border-color: var(--accent); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; }
+  .dot.on { background: var(--accent); }
+  .err { color: #e5534b; }
+  ul { list-style: none; padding: 0; margin: 4px 0; max-height: 140px; overflow: auto; }
+  li { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 2px 0; }
+</style>
+</head>
+<body>
+<h1>DOCA in this browser</h1>
+<div id="unpaired" hidden>
+  <p>In DOCA: Settings → API Keys → pair a device with the <b>browser</b> preset. Paste the link, or the hub's address and the code.</p>
+  <input id="hub" placeholder="doca://pair?… or https://your-hub:4242">
+  <input id="code" placeholder="code (123-456)">
+  <input id="name" placeholder="name for this browser">
+  <button class="main" id="pair">Pair</button>
+  <p id="pair-err" class="err"></p>
+</div>
+<div id="paired" hidden>
+  <p><span id="dot" class="dot"></span><span id="state"></span></p>
+  <p id="err" class="err"></p>
+  <div class="row"><span id="site">This site</span><button id="allow"></button></div>
+  <p>DOCA can use only the sites you allow here, with your sign-ins. It never types a password or card number, and asks you before it pays, signs in or submits.</p>
+  <div class="row"><span>Allowed sites</span></div>
+  <ul id="sites"></ul>
+  <div class="row"><label><input type="checkbox" id="pause" style="width:auto"> Pause DOCA in this browser</label></div>
+  <button id="forget">Forget this hub</button>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>

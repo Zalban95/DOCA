@@ -338,7 +338,8 @@
                       "phone",
                       "viewer",
                       "hub",
-                      "registry"
+                      "registry",
+                      "extension"
                     ],
                     "default": "watch"
                   },
@@ -542,7 +543,8 @@
                       "phone",
                       "viewer",
                       "hub",
-                      "registry"
+                      "registry",
+                      "extension"
                     ]
                   },
                   "scopes": {
@@ -1102,6 +1104,38 @@
                       "properties": {}
                     }
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clients/browser.zip": {
+      "get": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "The DOCA browser extension as this hub ships it (a zip)",
+        "operationId": "clientBrowserZip",
+        "description": "Chrome, Edge, Brave: load the unzipped folder unpacked; Firefox: as a temporary add-on. It pairs with the extension preset and lends the person's allowed tabs over /api/v1/mcp/host. Any token.",
+        "responses": {
+          "200": {
+            "description": "The extension",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }
@@ -10493,6 +10527,9 @@
       ],
       "registry": [
         "packs:read"
+      ],
+      "extension": [
+        "mcp:self"
       ]
     }
   },

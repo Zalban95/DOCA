@@ -54,8 +54,9 @@ function find(id) {
  * stale one in the list would just be two cards where the older is wrong.
  */
 function offer(deviceId, deviceName, input = {}) {
-  const url = String(input.url || '').trim();
-  if (!/^https?:\/\//.test(url))
+  const socket = input.transport === 'socket';   // it dials the hub itself (mcp/socket-hosts.js): no address to offer
+  const url = socket ? '' : String(input.url || '').trim();
+  if (!socket && !/^https?:\/\//.test(url))
     throw Object.assign(new Error('url must start with http:// or https://'), { status: 400 });
 
   const headers = input.headers && typeof input.headers === 'object' && !Array.isArray(input.headers)
@@ -79,6 +80,7 @@ function offer(deviceId, deviceName, input = {}) {
     deviceName: String(deviceName || deviceId).slice(0, 64),
     label: String(input.label || deviceName || deviceId).trim().slice(0, 64),
     url,
+    ...(socket ? { transport: 'socket' } : {}),
     headers,
     // Advertised, not verified — the host has not spoken to it yet. Shown so the
     // person clicking Accept knows roughly what they are letting in.
@@ -110,7 +112,7 @@ function accept(id) {
 
   const server = require('./registry').upsert({
     label:     o.label,
-    transport: 'http',
+    transport: o.transport === 'socket' ? 'socket' : 'http',
     url:       o.url,
     headers:   o.headers,
     origin:    { kind: 'client', deviceId: o.deviceId },
