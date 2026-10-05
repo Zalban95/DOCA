@@ -51,6 +51,7 @@ async function liveCallRender() {
       <div style="font-size:11px;color:var(--muted)">Experiments (developer mode) — for every screen; what each measures and costs is on Settings → Developer.</div>
       ${ex.map(x => `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" ${x.on ? 'checked' : ''}
         onchange="liveCallExperiment(${jsArg(x.id)}, this.checked)"> ${escHtml(x.label)}</label>`).join('')}</div>` : ''}
+    ${await liveCallAssistantHtml()}
     ${liveCallRealtimeHtml(rt, !!ex)}`;
   panel.append(card);
   liveCallMark();
@@ -146,4 +147,31 @@ function liveCallStop() {
   if (b) b.textContent = '🎤 Test the microphone';
   const bar = document.getElementById('lc-level');
   if (bar) bar.style.width = '0';
+}
+
+/** Assistant mode (a call from the face): how it speaks, how hard it thinks, and an optional quicker model. The owner's. */
+async function liveCallAssistantHtml() {
+  let a;
+  try { a = await apiFetch('/api/assistant'); } catch { return ''; }
+  const owner = typeof authHasRight !== 'function' || authHasRight('host');
+  const lv = ['off', 'low', 'medium', 'high', 'default'];
+  return `<div style="margin-top:14px;border-top:1px solid var(--border2);padding-top:10px;display:flex;flex-direction:column;gap:8px">
+    <div style="font-size:12px;font-weight:600">Assistant mode — when you talk to the face</div>
+    <div style="font-size:11px;color:var(--muted)">Same conversation as the chat, answered quicker and shorter. You can also just say "think harder" or "quick answers" — that changes the conversation's effort.</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">Thinking effort</label>
+      <select class="input" id="as-effort" style="width:auto" ${owner ? '' : 'disabled'}>${lv.map(x => `<option value="${x}" ${a.effort === x ? 'selected' : ''}>${x === 'default' ? 'the model\'s default' : x}</option>`).join('')}</select></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">A quicker model (optional)</label>
+      <input class="input" id="as-provider" value="${escHtml(a.provider || '')}" placeholder="provider" style="width:120px" ${owner ? '' : 'disabled'}>
+      <input class="input" id="as-model" value="${escHtml(a.model || '')}" placeholder="model — empty: the chat's" style="width:200px" ${owner ? '' : 'disabled'}></div>
+    <label style="font-size:11px;color:var(--muted)">How it speaks<textarea class="input" id="as-style" rows="4" style="width:100%;margin-top:4px" ${owner ? '' : 'disabled'}>${escHtml(a.style || '')}</textarea></label>
+    ${owner ? `<div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantSave()">Save assistant mode</button>
+      <button class="btn btn-sm" onclick="liveCallAssistantSave(true)">Default style</button></div>` : ''}
+  </div>`;
+}
+
+async function liveCallAssistantSave(resetStyle) {
+  const g = id => document.getElementById(id).value;
+  try { await apiFetch('/api/assistant', { method: 'POST', body: { effort: g('as-effort'), provider: g('as-provider').trim(), model: g('as-model').trim(), style: resetStyle ? null : g('as-style') } }); }
+  catch (e) { return appAlert(e.message); }
+  liveCallRender();
 }

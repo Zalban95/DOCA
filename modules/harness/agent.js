@@ -125,7 +125,11 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     try { emit(evt); } catch {}
     try { events.emit('event', { sessionId, ...evt }); } catch {}
   };
-  const p = await require('./turn/ceiling').check(require('./turn/choice').apply(turnParams(profile), sessionId));   // the chat's model choice; a day's token ceiling refuses to start
+  let p = await require('./turn/ceiling').check(require('./turn/choice').apply(turnParams(profile), sessionId));   // the chat's model choice; a day's token ceiling refuses to start
+  // Assistant mode (a call from the face) may have a quicker model of its own, and every turn knows its thinking effort.
+  if (client?.mode === 'assistant' && require('../settings-schema').value('assistant.model'))
+    p = { ...p, provider: require('../settings-schema').value('assistant.provider') || p.provider, model: require('../settings-schema').value('assistant.model') };
+  client = client && { ...client, effort: require('./turn/effort').levelFor({ session: memory.getSession(sessionId), client, p }) };
   const ep  = providers.endpoint(p.provider);
   if (!p.model)
     throw Object.assign(new Error(
@@ -164,6 +168,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     // rather than the turn failing.
     stream_options: { include_usage: true },
     ...(Number(p.maxTokens) > 0 ? { max_tokens: Number(p.maxTokens) } : {}),
+    ...require('./turn/effort').fields(client?.effort?.level, ep, p.model),   // how hard it thinks (turn/effort.js)
   };
 
   const maxSteps = Math.max(1, Number(p.maxSteps) || 1);

@@ -86,6 +86,13 @@ function handleClear(req, res) {
  * modules/harness/agent.js; otherwise it is the OpenClaw Gateway, falling back
  * to the `claude` CLI.
  */
+/** A live call says so (chat-call.js `voice`): assistant mode — the face — answers in its own style and effort. */
+function voiceClient(client, voice) {
+  if (voice === 'assistant') return { ...client, mode: 'assistant', name: 'Assistant mode (the face, spoken)' };
+  if (voice === 'call') return { ...client, mode: 'call', name: `${client.name || 'The panel'} — live call` };
+  return client;
+}
+
 async function handleChat(req, res) {
   const { message, attachments: attached } = req.body;
   if (!message) return res.status(400).json({ error: 'No message' });
@@ -104,7 +111,7 @@ async function handleChat(req, res) {
     try {
       // Busy (a turn in the console, say): it waits and is read mid-turn, or starts the next (send-stream.js).
       const r = await require('./harness/send-stream').sendStreamed({
-        message, sessionId: require('./harness/memory').mainSession().id, client: require('./harness/turn/client').dashboardClient(req),
+        message, sessionId: require('./harness/memory').mainSession().id, client: voiceClient(require('./harness/turn/client').dashboardClient(req), req.body.voice),
         // Only the built-in harness understands attachments: the gateway and the claude CLI get the message alone.
         attachments: attached,
         emit: evt => {

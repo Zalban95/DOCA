@@ -161,7 +161,7 @@ function askAsDevice(device, sessionId) {
       else reject(new Error(env.payload.state === 'cancelled' ? 'it was stopped' : env.payload.error?.message || 'the turn failed'));
     };
     bus.emitter.on('event', hear);
-    try { ({ turnId } = harness.post({ message: request, sessionId }, device)); }
+    try { ({ turnId } = harness.post({ message: request, sessionId, voice: device.kind === 'watch' ? 'assistant' : 'call' }, device)); }   // spoken: a watch is assistant mode
     catch (e) { clearTimeout(timer); bus.emitter.off('event', hear); reject(e); }
   });
 }

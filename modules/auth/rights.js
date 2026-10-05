@@ -124,6 +124,8 @@ const TABLE = [
   R(ANY, '/api/harness/opendots(/.*)?', 'host'),             // its folder, address and Compose project: the machine's
   R(GET, '/api/realtime', 'chat'),                           // what a live call would use (realtime/routes.js; the call is /ws/realtime)
   R(ANY, '/api/realtime', 'host'),                           // the owner chooses the realtime voice service
+  R(GET, '/api/assistant', 'read'),                          // assistant mode's style, effort and model (harness/assistant-routes.js)
+  R(ANY, '/api/assistant', 'host'),
   R(ANY, '/api/scout(/.*)?', 'host'),                         // the model scout: suggestions, accepting into TODO, starting the work (scout/routes.js)
   R(GET, '/api/vision', 'read'),                             // which screen readers are set up (vision/routes.js)
   R(ANY, '/api/vision(/.*)?', 'host'),                        // choosing them, trying one

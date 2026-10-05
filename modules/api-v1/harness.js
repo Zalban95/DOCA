@@ -75,6 +75,9 @@ function toOne(deviceId, type, payload) {
  * own capability document, so a client tags itself once at pairing and never has
  * to repeat it per message — and cannot claim to be a desktop on Tuesday.
  */
+/** A spoken call (realtime/pipeline, /api/v1/call) says so, as the panel's does (chat.js voiceClient). */
+function voiced(client, voice) { return voice === 'assistant' || voice === 'call' ? { ...client, mode: voice } : client; }
+
 function clientOf(device) {
   const caps = device.caps || {};
   return {
@@ -217,7 +220,7 @@ function post(body, device) {
     const ctrl = new AbortController();
     _running.set(session.id, { turnId, ctrl, by: device.id, startedAt: new Date().toISOString() });
     fanout('agent.turn', { turnId, sessionId: session.id, state: 'started', by: device.id, message: brief(message, 200) });
-    return run({ turnId, message, session, device, ctrl, attached });   // deliberately not awaited
+    return run({ turnId, message, session, device, ctrl, attached, voice: body.voice });   // deliberately not awaited
   };
   // A conversation that is working is not a refusal any more (hub 2.148.0, harness/inbox.js): the message
   // waits, and the running turn reads it before its next step — this turnId then goes started → done
@@ -226,7 +229,7 @@ function post(body, device) {
   const busy = _running.has(session.id) || (agent.isRunning(session.id) && !agent.isAuto(session.id));
   if (busy) {
     let q;
-    try { q = require('../harness/inbox').put(session.id, { message, client: clientOf(device), attachments: attached, start: begin,
+    try { q = require('../harness/inbox').put(session.id, { message, client: voiced(clientOf(device), body.voice), attachments: attached, start: begin,
       onRead: () => fanout('agent.turn', { turnId, sessionId: session.id, state: 'started', by: device.id, message: brief(message, 200) }),
       onAnswer: r => fanout('agent.turn', { turnId, sessionId: session.id, state: 'done', by: device.id, text: brief(r.text, MAX_REPLY) || '', steps: r.steps }) }); }
     catch (e) { throw new ApiError(429, 'too_many_waiting', e.message); }
@@ -236,7 +239,7 @@ function post(body, device) {
   return { turnId, sessionId: session.id };
 }
 
-async function run({ turnId, message, session, device, ctrl, attached }) {
+async function run({ turnId, message, session, device, ctrl, attached, voice }) {
   const sessionId = session.id;
   const proposals = [];
   const images = [];
@@ -296,7 +299,7 @@ async function run({ turnId, message, session, device, ctrl, attached }) {
 
   try {
     const r = await agent.turn({ message, sessionId, emit, signal: ctrl.signal,
-      client: clientOf(device), attachments: attached });
+      client: voiced(clientOf(device), voice), attachments: attached });
     flush();
     fanout('agent.turn', {
       turnId, sessionId: r.sessionId, state: 'done', by: device.id,
