@@ -21,7 +21,7 @@ function load() {
     chatAppendMsg: () => {},
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'chat-call.js'), 'utf8')}
+  vm.runInContext(`${['chat-call.js', 'chat-call-voice.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8')).join('\n')}
     ;globalThis.__ = { get: n => eval(n), set: (n, v) => eval(n + ' = v') };`, sandbox);
   const s = sandbox.__;
   s.set('_callPlayCtx', { decodeAudioData: () => new Promise(r => { resolveDecode = r; }), createBufferSource: () => ({ connect() {}, start() {}, stop() {} }), destination: {} });
