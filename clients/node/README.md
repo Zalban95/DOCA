@@ -21,6 +21,11 @@ notifications `notify-send` — a missing one is named in the answer, never gues
 at once; `run` again re-offers after a restart. A hub's self-signed certificate is pinned at pairing and is the
 only one trusted afterwards; the listener binds to your tailnet address and answers only with its secret.
 
+On a server, a Pi or a desktop nobody sits at: run it once by hand (so you decide what it lends), then
+`doca-client enable` starts `run` by itself — a systemd user unit on Linux (`sudo loginctl enable-linger <you>` to
+run with nobody logged in), a launchd agent on macOS, a Task Scheduler entry at sign-in on Windows. Without a terminal
+it asks nothing: what you have not decided stays not lent. `disable` and `boot-status` undo and check it.
+
 `update` brings it to the copy its hub ships (each file checked against the hub's sha256 before it replaces anything;
 the old copy kept in the config folder). `status` shows what it lends; `forget` removes its config (revoke the device
 in the hub too).

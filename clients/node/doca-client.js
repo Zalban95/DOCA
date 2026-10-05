@@ -12,6 +12,7 @@
  *   doca-client run [--grant files,shell] [--bind 100.x.y.z] [--port 18766]
  *   doca-client find                                            the hubs on this machine's tailnet
  *   doca-client update                                          the hub's copy of this client, checked, when it differs
+ *   doca-client enable | disable | boot-status                     run by itself at boot (systemd user unit, launchd, Task Scheduler)
  *   doca-client status | forget
  *
  * Trust: a self-signed hub's certificate is pinned at pairing and is then the only one trusted (tlsFor), so it is
@@ -211,7 +212,10 @@ async function control(cfg, env) {
   let detail = '';
   if (action === 'revoke' && family) { cfg.revoked = [...new Set([...(cfg.revoked || []), family])]; detail = `${family} withdrawn`; }
   if (action === 'restore' && family) { cfg.revoked = (cfg.revoked || []).filter(f => f !== family); detail = `${family} lent again`; }
-  if (action === 'ask' && family && FAMILIES.includes(family)) { cfg.grants[family] = await ask(`The hub asks again: lend this machine's ${family} to its agents?`); detail = cfg.grants[family] ? 'granted' : 'refused'; }
+  if (action === 'ask' && family && FAMILIES.includes(family)) {
+    if (process.stdin.isTTY) { cfg.grants[family] = await ask(`The hub asks again: lend this machine's ${family} to its agents?`); detail = cfg.grants[family] ? 'granted' : 'refused'; }
+    else detail = 'nobody at this machine to ask; unchanged';
+  }
   if (action === 'refresh' || action === 'ask') await request(cfg, 'PUT', '/api/v1/devices/self/grants', { grants: cfg.grants });
   save(cfg);
   await request(cfg, 'POST', `/api/v1/devices/self/control/${encodeURIComponent(id)}/ack`, { ok: true, detail });
@@ -223,7 +227,8 @@ async function run({ grant = null, bind = null, port = 18766, root = null, signa
   if (root) cfg.root = root;
   for (const f of FAMILIES) {
     if (grant) cfg.grants[f] = grant.includes(f);
-    else if (typeof cfg.grants[f] !== 'boolean') cfg.grants[f] = await ask(`Lend this machine's ${f} to the hive's agents?`);
+    // With nobody at a terminal (at boot) an undecided family stays undecided — not lent, and asked next time someone is.
+    else if (typeof cfg.grants[f] !== 'boolean' && process.stdin.isTTY) cfg.grants[f] = await ask(`Lend this machine's ${f} to the hive's agents?`);
   }
   save(cfg);
   const g = await request(cfg, 'PUT', '/api/v1/devices/self/grants', { grants: Object.fromEntries(FAMILIES.map(f => [f, cfg.grants[f] === true])) });
@@ -289,8 +294,13 @@ if (require.main === module) {
       else for (const h of hubs) say(`${h.product} at ${h.url}${h.self ? ' (this machine)' : ''} — pair: doca-client pair ${h.url} <code from its Settings → API Keys>`);
     }
     else if (verb === 'update') { const u = await update(); say(u.changed.length ? `✓ Updated to the hub's ${u.version}: ${u.changed.join(', ')}. Restart run to use it.` : `✓ Already the hub's ${u.version}.`); }
+    else if (['enable', 'disable', 'boot-status'].includes(verb)) {
+      if (verb === 'enable' && !load()?.grants) throw new Error('Run it once by hand first (doca-client run), so its person can say what it lends; at boot it asks nothing.');
+      const r = require('./boot').boot(verb === 'boot-status' ? 'status' : verb);
+      say(`${r.ok ? '✓' : '✗'} ${r.method}: ${verb === 'enable' ? (r.ok ? 'doca-client run will start by itself' : r.out) : verb === 'disable' ? 'no longer starts by itself' : r.ok ? 'starts by itself' : 'does not start by itself'}${r.note ? `\n  ${r.note}` : ''}`);
+    }
     else if (verb === 'status') { const c = load(); say(c ? JSON.stringify({ hub: c.hub, deviceId: c.deviceId, name: c.name, grants: c.grants, revoked: c.revoked || [] }, null, 2) : 'Not paired.'); }
     else if (verb === 'forget') { fs.rmSync(configFile(), { force: true }); say('Forgotten. (The hub still lists this device until you revoke it there.)'); }
-    else say('usage: doca-client find | update | pair <hub> <code> [--name N] | pair <doca://pair link> | run [--grant files,shell] [--bind IP] [--port N] | status | forget');
+    else say('usage: doca-client find | update | enable | disable | boot-status | pair <hub> <code> [--name N] | pair <doca://pair link> | run [--grant files,shell] [--bind IP] [--port N] | status | forget');
   })().catch(e => { console.error(`✗ ${e.message}`); process.exit(1); });
 }
