@@ -56,7 +56,8 @@ function gate(req, res, next) {
   if (PUBLIC_FILES.test(p)) return next();
 
   const method = req.method === 'HEAD' ? 'GET' : req.method;
-  const right = isApi(p) ? rights.rightFor(method, p) : 'read';   // the app's own pages and scripts: signed in
+  // The app's own pages and scripts: signed in. /.well-known/ is for other software (the A2A agent card) and has rows.
+  const right = isApi(p) || p.startsWith('/.well-known/') ? rights.rightFor(method, p) : 'read';
 
   if (right === 'public') return next();
 

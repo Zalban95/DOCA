@@ -1045,6 +1045,76 @@
         }
       }
     },
+    "/a2a": {
+      "post": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "DOCA as an A2A agent (JSON-RPC: message/send, tasks/get, tasks/cancel)",
+        "operationId": "a2a",
+        "x-scope": "harness:chat",
+        "description": "Agent2Agent over JSON-RPC 2.0. message/send runs the message's text parts as a turn of this device and answers with the Task (completed with the answer as message and artifact, failed or canceled; configuration.blocking false answers at once with the Task working). contextId is a conversation. The agent card is public at /.well-known/agent-card.json. Text only, no streaming.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "method": {
+                    "type": "string"
+                  },
+                  "params": {
+                    "type": "object",
+                    "properties": {}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "jsonrpc": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "result": {
+                      "type": "object",
+                      "properties": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/agui": {
       "post": {
         "tags": [

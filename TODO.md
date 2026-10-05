@@ -233,9 +233,10 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   shared core (`channels/links|bind|converse|deliver`) and Matrix (2.179.0; unencrypted direct rooms — E2EE would need
   Olm and kept device keys), Slack (2.180.0; Socket Mode, DMs only). **Left:** mail (IMAP/SMTP), WhatsApp (needs
   Meta's Cloud API and a public webhook, which a tailnet hub lacks).
-- [x] H9.2 (2.168.0, 2.187.0; A2A left) DOCA as an MCP server; AG-UI events so AG-UI front ends are clients; A2A. Done:
-  the MCP server (`POST /api/v1/mcp`: chat, conversations, recipes, by the token's scopes) and AG-UI (`POST /api/v1/agui`:
-  RunAgentInput in, AG-UI's SSE events out, a thread per conversation). **Left:** A2A; the front end's own tools.
+- [x] H9.2 (2.168.0, 2.187.0, 2.189.0) DOCA as an MCP server; AG-UI events so AG-UI front ends are clients; A2A. The
+  MCP server (`POST /api/v1/mcp`), AG-UI (`POST /api/v1/agui`: RunAgentInput in, SSE events out) and A2A (the public
+  agent card, `POST /api/v1/a2a`: message/send, tasks/get, tasks/cancel). **Left:** A2A streaming and files; an AG-UI
+  front end's own tools; DOCA calling other A2A agents.
 - [x] H9.3 (2.188.0) OAuth connectors (Google, GitHub, calendars, mail) with a vault, scoped per agent/level. The
   owner's own OAuth app per service (GitHub, Google, Microsoft 365, any OAuth 2.0), PKCE, refresh; tokens in a 0600
   vault; each connection the tool `connector_<id>` (levels, grants, kits, approvals by name), host-only unless opened.
