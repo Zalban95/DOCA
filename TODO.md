@@ -171,17 +171,17 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   holding `computer` — depth one). Computers a mission made are stopped when it ends and removed after a
   retention period unless pinned; a level caps how many run at once. Done with one hive-wide cap
   (`computers.maxRunning`); **left:** a cap per level (levels have no numeric limits yet).
-- [x] H13.3 (2.166.0, in part) **The computer as OpenDots' "Dot computer"**: persistent per specialist type (the same profile,
+- [x] H13.3 (2.166.0, 2.185.0) **The computer as OpenDots' "Dot computer"**: persistent per specialist type (the same profile,
   logins and files next time, opt-in), a person's take-over with hand-back that the agent notices (it pauses
   while a person drives), and downloads/uploads between the computer and attachments. Done: take-over and
-  hand-back the agent notices, files both ways. **Left:** persistence per specialist type (the same computer next
-  time, opt-in) — a pinned computer passed by id does it by hand today.
+  hand-back the agent notices, files both ways; persistence per specialist type (2.185.0: `computer: own` in a
+  definition — the same computer, profile, logins and files every mission, never swept).
 
 **H14 · OpenDots parity — checked feature by feature** (2026-10-05; hive.md §3)
 Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] Specialists with name, role, instructions, per-agent tools — DOCA's specialists (kits, NEVER, levels).
 - [x] A computer per agent with browser, files, terminal, take-over — 2.153 (H7.2, H13).
-- [ ] Persistent browser profile per agent (logins kept) — H13.3.
+- [x] Persistent browser profile per agent (logins kept) — H13.3 (2.185.0, `computer: own`).
 - [x] **Telegram** (2.157.0) — a message there is a turn, the answer goes back there, approvals and questions
   answered with inline buttons; each linked chat a device of kind `channel` (H9.1); a bot token, chats linked by a
   one-time code to people, voice notes through the existing STT, photos/files as attachments. **Left:** Slack, mail,

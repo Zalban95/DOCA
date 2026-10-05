@@ -36,7 +36,8 @@ module.exports = [
         context: { type: 'string', description: 'Anything from this conversation it needs. It sees nothing else.' },
         computer: { type: 'string', description: 'Optional: the id of a computer (from the computer tool) the mission works in — '
           + 'a Linux desktop in a container. The specialist gets that computer\'s tools and no other\'s. For testing something risky, '
-          + 'browsing as a person would, or recording a demo: send the tester.' },
+          + 'browsing as a person would, or recording a demo: send the tester. A specialist whose definition keeps a computer of its '
+          + 'own gets that one without this (the same logins and files every time).' },
         plan: {
           type: 'array',
           description: 'Optional. The errand broken into steps, so a phone or a watch can draw how far along it '
@@ -54,7 +55,10 @@ module.exports = [
       },
       required: ['agent', 'task'],
     },
-    run: ({ agent, task, context, plan, computer }, ctx = {}) => {
+    run: async ({ agent, task, context, plan, computer }, ctx = {}) => {
+      // A specialist that keeps a computer of its own works in it, unless a computer is named (computers.ownFor).
+      const def = require('../../agents/registry').get(agent);
+      if (!computer && def?.computer === 'own') computer = await require('../../computers').ownFor(def);
       const m = require('../../agents/missions').dispatch({ agentId: agent, task, context, plan, computer, by: ctx.sessionId });
       // A plan is what lets every client draw progress instead of "STEP 0"
       // until the mission is already over — see missions.setPlan().
