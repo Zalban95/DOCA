@@ -48,6 +48,7 @@ async function _subtabVoiceInit() {
     _voiceSettingsLoad(prefs);
   } catch {}
   screenVoiceRender();   // this screen's own voice (settings/screen-voice.js)
+  liveCallRender();      // how a live call listens, and its experiments (settings/live-call.js)
 }
 
 function _settingsRender() {

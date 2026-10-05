@@ -29,6 +29,11 @@ const SCHEMA = {
   sidebarSections:  { is: 'travels', home: 'device', on: 'screen', note: 'which sidebar sections are open', propose: p('Sidebar sections') },
   favorites:        { is: 'travels', home: 'device', on: 'screen', note: 'favourite config files, by registry id', propose: p('Config favourites') },
   voice:            { is: 'travels', home: 'device', on: 'screen', note: 'the voice this screen is answered in: ttsVoice and ttsSpeed, over voiceServices (chat.js handleSynthesize)' },
+  call:             { is: 'travels', home: 'device', on: 'screen', note: 'how a live call listens on this screen — its microphone is its own (chat-call.js; Settings → Voice → Live call)',
+    keys: {
+      silenceMs:   { type: 'integer', min: 300, default: 2000, hint: 'How long a pause, in milliseconds, ends what you said and sends it.' },
+      sensitivity: { type: 'integer', min: 1, default: 15, hint: 'The microphone level that counts as speech; lower hears quieter voices and more of the room.' },
+    } },
   face:             { is: 'travels', home: 'device', on: 'screen', note: 'the face: its look, a spec over the default (face/face.js); an edition carries one' },
   hiddenBuiltins:   { is: 'travels', home: 'device', on: 'screen', note: 'built-in config entries hidden from the list', propose: p('Hidden built-ins') },
 

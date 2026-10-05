@@ -16,7 +16,7 @@ const _SETTINGS_SUBTABS = [
   { id: 'packs',     label: 'Packs',     init: 'packsLoad',      find: 'export import dpack share skills recipes mcp' },
   { id: 'backups',   label: 'Backups',   init: 'backupsLoad' },
   { id: 'harness',   label: 'Harness',   init: '_settingsHarnessRender', find: 'skills memory rules approvals parameters guards' },
-  { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit' },
+  { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit', find: 'live call speech microphone barge-in interrupt tts stt' },
   { id: 'system',    label: 'System',    init: '_subtabSystemInit' },
   { id: 'experiments', label: 'Experiments', init: 'experimentsLoad', find: 'experiment flag try measure' },
   { id: 'evals',     label: 'Evaluations', init: 'evalsLoad',    find: 'evaluation eval test regression promptfoo judge' },
