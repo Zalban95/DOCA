@@ -43,7 +43,7 @@ models seen per function, how many are growing fast, new releases and news, fail
 
 | Date | Functions | Models seen | Growing fast | New releases / news | Seconds |
 |---|---|---|---|---|---|
-| — | — | — | — | — | — |
+| 2026-10-05 | 10 | 180 | first look (no baseline yet) | 0 / 0 (first look) | 7.4 |
 
 What decides whether it graduates is the suggestions themselves: of those filed in a month, how many a person accepted,
 and how many of those shipped.
