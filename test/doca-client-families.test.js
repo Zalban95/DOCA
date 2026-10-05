@@ -57,3 +57,8 @@ test('a picture reaches the hub as MCP image content', async () => {
     assert.deepEqual(JSON.parse(result.content[1].text), { note: 'x' });
   } finally { server.close(); delete T.test_picture; }
 });
+
+test('pairing takes the panel\'s link in one step', () => {
+  assert.deepEqual(client.fromLink('doca://pair?code=641598&host=hub.tail1234.ts.net:4242'), { hub: 'https://hub.tail1234.ts.net:4242', code: '641-598' });
+  assert.deepEqual(client.fromLink('https://hub:4242', '641-598'), { hub: 'https://hub:4242', code: '641-598' }, 'the address and code still work');
+});

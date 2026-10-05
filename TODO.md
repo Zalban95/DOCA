@@ -129,7 +129,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   input, apps, browser, camera, mic, sensors), for every client. Done in `clients/node`: files, shell, and (2.191.0)
   screen (capture), processes (list, stop), apps (open), device (info, notify, clipboard) — DocaDesk has its own.
   **Left:** input (mouse and keys), browser, camera, mic, sensors.
-- [ ] H6.3 Pairing in one step (QR/link) bound to the person; consent per family on the device.
+- [x] H6.3 (2.191.0) Pairing in one step (QR/link) bound to the person; consent per family on the device. A paired
+  device belongs to whoever made the code (since auth phase 1); the panel's link/QR `doca://pair?code=…&host=…` pairs
+  `doca-client` in one paste; it asks its person once per family. DocaMobile scans the QR.
 - [ ] H6.4 Discovery on the tailnet / mDNS.
 - [ ] H6.5 Clients update from the hub's release channel.
 - [x] H6.6 (2.177.0, in part) A Linux desktop client; a macOS one; iOS later; a browser-only client. Done: `doca-client`

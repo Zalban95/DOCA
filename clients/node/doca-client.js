@@ -8,6 +8,7 @@
  * hub connects to (PROTOCOL.md §22, §22.1). Keep families.js beside this file.
  *
  *   doca-client pair https://hub:4242 641-598 [--name desk]     with a code from Settings → API Keys → Pair a device
+ *   doca-client pair 'doca://pair?code=641598&host=hub:4242'      or the pairing link itself, in one step
  *   doca-client run [--grant files,shell] [--bind 100.x.y.z] [--port 18766]
  *   doca-client status | forget
  *
@@ -71,7 +72,18 @@ function request(cfg, method, p, body, { stream = false, signal, first = false }
   });
 }
 
-async function pair(hub, code, { name = os.hostname() } = {}) {
+/** The hub and code from the panel's pairing link (`doca://pair?code=641598&host=hub:4242`, its QR), or as given. */
+function fromLink(hub, code) {
+  const m = /^doca:\/\/pair\?(.+)$/.exec(String(hub || ''));
+  if (!m) return { hub, code };
+  const q = new URLSearchParams(m[1]);
+  const digits = String(q.get('code') || '');
+  return { hub: `https://${q.get('host')}`, code: digits.length === 6 ? `${digits.slice(0, 3)}-${digits.slice(3)}` : digits };
+}
+
+async function pair(hubOrLink, codeArg, { name = os.hostname() } = {}) {
+  const { hub, code } = fromLink(hubOrLink, codeArg);
+  if (!hub || !code) throw new Error('Pair with the link from the hub (doca://pair?…), or with its address and the code.');
   const cfg = { hub: hub.replace(/\/+$/, '') };
   const r = await request(cfg, 'POST', '/api/v1/devices/pair/complete', { code, name,
     caps: { formFactor: 'desktop', input: { text: true }, exec: ['shell'], ext: { client: 'doca-client', os: process.platform } } }, { first: true });
@@ -230,7 +242,7 @@ async function run({ grant = null, bind = null, port = 18766, root = null, signa
   return { server, url, cfg, stop };
 }
 
-module.exports = { pair, run, serve, load, request, TOOLS, FAMILIES, tailnetAddress, configFile };
+module.exports = { pair, fromLink, run, serve, load, request, TOOLS, FAMILIES, tailnetAddress, configFile };
 
 if (require.main === module) {
   const [verb, ...rest] = process.argv.slice(2);
