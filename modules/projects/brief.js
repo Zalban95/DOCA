@@ -12,11 +12,12 @@
  */
 const projects = require('./store');
 
-const _cache = new Map();   // projectId -> { at, text }
+const _cache = new Map();   // projectId (and worktree root) -> { at, text }
+const keyOf = p => (p.worktree ? `${p.id}@${p.root}` : p.id);
 const TTL = 60e3;
 
 async function text(p) {
-  const hit = _cache.get(p.id);
+  const hit = _cache.get(keyOf(p));
   if (hit && Date.now() - hit.at < TTL) return hit.text;
   const { info, commands } = await require('./run').commands(p);
   const git = require('./git');
@@ -26,6 +27,7 @@ async function text(p) {
   const lines = [
     `# Project: ${p.name}`,
     `You work in ${p.root}: your shell and relative paths start there.`,
+    ...(p.worktree ? [`This is this conversation's own git worktree of ${p.mainRoot}, on branch ${p.worktree.branch} — other conversations may be changing the main folder at the same time. Commit here; merging ${p.worktree.branch} into the main branch is the person's call (project worktree status says how far it is).`] : []),
     `Kind: ${info.kinds.map(k => k.label).join(', ') || 'no build system recognised'}.`
       + (g ? ` Git: branch ${g.branch}${g.ahead ? `, ${g.ahead} ahead` : ''}${g.behind ? `, ${g.behind} behind` : ''}, ${g.files.length} changed file(s).` : ' Not a git repository.'),
     commands.length
@@ -39,7 +41,7 @@ async function text(p) {
       + 'your word: the project\'s tests are run and every plan step must be done (or blocked, with why); a '
       + 'failed check comes back to you — run the tests yourself first.',
   ].filter(Boolean).join('\n');
-  _cache.set(p.id, { at: Date.now(), text: lines });
+  _cache.set(keyOf(p), { at: Date.now(), text: lines });
   return lines;
 }
 
@@ -50,6 +52,6 @@ async function forSession(sessionId) {
   try { return await text(p); } catch { return `# Project: ${p.name}\nYou work in ${p.root}.`; }
 }
 
-function forget(projectId) { _cache.delete(projectId); }
+function forget(projectId) { for (const k of [..._cache.keys()]) if (k === projectId || k.startsWith(`${projectId}@`)) _cache.delete(k); }
 
 module.exports = { forSession, text, forget };

@@ -120,7 +120,11 @@ function mount(app) {
   app.post('/api/projects/:id/chat', h(req => ({ sessionId: projects.workChat(req.params.id).id })));
   // Its chat tabs: every conversation working here, sub-agents included, and a new one.
   app.get('/api/projects/:id/chats', h(req => ({ chats: projects.chats(req.params.id, { all: req.query.all === '1' }) })));
-  app.post('/api/projects/:id/chats', h(req => ({ chat: projects.newChat(req.params.id, req.body || {}) })));
+  app.post('/api/projects/:id/chats', h(async req => {   // { worktree: true }: a tab working in its own git worktree (worktrees.js)
+    const chat = projects.newChat(req.params.id, req.body || {});
+    if (req.body?.worktree) chat.worktree = await require('./worktrees').create(chat.id);
+    return { chat };
+  }));
 }
 
 module.exports = { mount, detail };

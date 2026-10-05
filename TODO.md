@@ -143,7 +143,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   minutes); ✓ H7.2d (2.155.0) computer tools hidden from the Orchestrator's own turns, and from every conversation but the one that holds the computer; ✓ H7.2e (2.154.0) the
   window manager's stray message window (fbsetbg finding no wallpaper setter). Also done on the way: **an MCP tool's pictures and files are kept as
   attachments** (they arrived as the word "[image]").
-- [ ] H7.3 Parallel work chats on one repo, each in its own git worktree.
+- [x] H7.3 (2.171.0) Parallel work chats on one repo, each in its own git worktree (＋⑂ on the Projects tabs, the
+  `project` tool's worktree actions). **Left:** a merge-back step in the panel (today a git action), and a work chat
+  created by the Orchestrator asking for a worktree by itself when the project already has one running.
 
 **H13 · Agents' computers, everywhere they help** (asked 2026-10-05)
 - [x] H13.1 (2.154.0) **A coherent view of the agents' computers**: a "Computers" side tab (or a strip in the Harness

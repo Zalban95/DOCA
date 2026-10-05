@@ -128,16 +128,19 @@ module.exports = [
       + 'with shell_job. Checkpoints undo a run: one is taken before each of your turns in a project (when '
       + 'files changed); checkpoint takes one now, checkpoints lists them, changes shows what differs since '
       + 'one, restore puts the project back as it was then (after taking a checkpoint of now, so a restore '
-      + 'is undoable) — then try again another way.',
+      + 'is undoable) — then try again another way. worktree: work in your own git worktree of the project (a second '
+      + 'folder on its own branch), so another conversation can change the main folder at the same time; '
+      + 'worktree_status says how far it is, worktree_remove ends it (the branch stays).',
     parameters: {
       type: 'object',
       properties: {
-        action:  { type: 'string', enum: ['info', 'list', 'open', 'bind', 'run', 'checkpoint', 'checkpoints', 'changes', 'restore'] },
+        action:  { type: 'string', enum: ['info', 'list', 'open', 'bind', 'run', 'checkpoint', 'checkpoints', 'changes', 'restore', 'worktree', 'worktree_status', 'worktree_remove'] },
         checkpoint: { type: 'string', description: 'For changes and restore: a checkpoint id (cp_…).' },
         label:   { type: 'string', description: 'For checkpoint: what this moment is.' },
         id:      { type: 'string', description: 'A project id; default: this conversation\'s project.' },
         root:    { type: 'string', description: 'For open: the folder.' },
-        name:    { type: 'string', description: 'For open: a name.' },
+        name:    { type: 'string', description: 'For open: a name. For worktree: the branch (default doca/<conversation>).' },
+        force:   { type: 'boolean', description: 'For worktree_remove: drop uncommitted changes.' },
         command: { type: 'string', description: 'For run: the command\'s name.' },
         waitSec: { type: 'integer', description: 'For run: how long to wait for it. Default 60.' },
       },
@@ -169,6 +172,19 @@ module.exports = [
           const r = await require('../../projects/run').run(pick().id, a.command, { waitSec: a.waitSec ?? 60, sessionId: ctx.sessionId || null });
           if (r.job.state === 'running') return `${r.command.run} is still running as background job ${r.job.id}; follow it with shell_job.`;
           return clip(`${r.command.run} — ${r.job.state}${r.job.code != null ? ` (exit ${r.job.code})` : ''}\n${r.output || '(no output)'}`);
+        }
+        case 'worktree': {   // this conversation in its own git worktree (projects/worktrees.js)
+          if (!ctx.sessionId) throw new Error('No conversation.');
+          const w = await require('../../projects/worktrees').create(ctx.sessionId, { branch: a.name });
+          return `This conversation now works in its own worktree: ${w.path}, branch ${w.branch} (from ${w.base.slice(0, 8)}). Your tools start there; the main folder is left to the others. Commit here; merging back is the person's call.`;
+        }
+        case 'worktree_status': {
+          const st = ctx.sessionId && await require('../../projects/worktrees').status(ctx.sessionId);
+          return st ? (st.gone ? `The worktree ${st.path} is gone.` : `Worktree ${st.path}, branch ${st.branch}: ${st.commits} commit(s) since it started, ${st.uncommitted} uncommitted change(s).`) : 'This conversation works in the main folder.';
+        }
+        case 'worktree_remove': {
+          const r = await require('../../projects/worktrees').remove(ctx.sessionId, { force: a.force === true });
+          return `Removed ${r.removed}. Branch ${r.branch} stays with its ${r.commits} commit(s).`;
         }
         case 'checkpoint': {
           const c = await require('../../projects/checkpoints').take(pick(), { label: a.label || 'checkpoint by the agent', sessionId: ctx.sessionId || null, by: 'agent' });
