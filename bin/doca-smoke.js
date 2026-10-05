@@ -106,8 +106,10 @@ async function main() {
     proc.kill();
     child.kill('SIGKILL');
     await sleep(500);
-    if (data) fs.rmSync(data, { recursive: true, force: true, maxRetries: 5 });   // the killed panel's throwaway data
-    fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5 });
+    // The killed panel's throwaway data. Best effort: on Windows its database can still be locked for a moment,
+    // and a folder left in the temp directory is not a reason to fail a smoke that passed.
+    try { if (data) fs.rmSync(data, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 }); } catch (e) { console.log(`  · left ${data} behind (${e.code})`); }
+    try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 }); } catch { /* the browser's profile, still locked: the OS cleans temp */ }
   }
 }
 
