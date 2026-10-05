@@ -49,3 +49,7 @@
 /* Settings → System → System tools: what each is for, as a tag; notes read whole */
 .tool-for     { display: inline-block; padding: 0 5px; margin-right: 4px; border: 1px solid var(--border2); border-radius: 3px; color: var(--fg); opacity: .8; }
 #sysdeps-list .tool-note { white-space: normal; }   /* the notes say what each is for: read whole, not cut */
+
+/* Settings → Harnesses: the second row of pills, a group per harness (settings/subnav.js) */
+.settings-subnav2 { padding-top: 0; margin-top: -4px; }
+.settings-subnav2 .settings-subnav-group:first-child { margin-left: 0; padding-left: 0; border-left: none; }

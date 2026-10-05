@@ -117,6 +117,7 @@ const TABLE = [
   R(ANY, '/api/evals(/.*)?', 'host'),
   R(ANY, '/api/connectors(/.*)?', 'host'),                    // the keys to the owner's accounts (connectors/routes.js)                         // evaluation sets: a run spends tokens, results hold answers (evals/routes.js)
   R(GET, '/api/clients/browser.zip', 'read'),
+  R(GET, '/api/clients/apps/[a-z]+/apk/[A-Za-z0-9_-]{32}', 'public'),   // a 10-minute download link: its token is the permission (client-apps/routes.js)
   R(GET, '/api/clients/apps(/.*)?', 'read'),                 // DOCA's Android apps: what is kept, and the APK (client-apps/)
   R(ANY, '/api/clients/apps(/.*)?', 'host'),                 // uploading, building and the signing key are a host's               // the DOCA browser extension, to install (api-v1/client-files.js)
   R(GET, '/api/harness/opendots/state', 'read'),            // whether OpenDots is installed, set up and answering (harness/opendots.js)

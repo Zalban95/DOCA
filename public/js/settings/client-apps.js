@@ -18,6 +18,7 @@ async function clientAppsRender() {
           <button class="btn btn-xs" onclick="clientAppsRepo('${id}')">Save</button>` : ''}</span>
       <span class="tool-actions" style="flex-wrap:wrap;gap:4px">
         ${l ? `<a class="btn btn-xs btn-teal" href="/api/clients/apps/${id}/apk" download>⬇ APK</a>` : ''}
+        ${l && host ? `<button class="btn btn-xs" onclick="clientAppsLink('${id}')" title="A link that needs no sign-in, for 10 minutes — to open on a phone">🔗 Link</button>` : ''}
         ${host ? `<button class="btn btn-xs" ${a.repo ? '' : 'disabled title="Say where its repository is"'} onclick="clientAppsBuild('${id}', true)" title="git pull, build, keep">⟳ Pull &amp; build</button>
           <label class="btn btn-xs" title="Keep an APK built elsewhere">⬆ Upload<input type="file" accept=".apk" hidden onchange="clientAppsUpload('${id}', this.files[0])"></label>` : ''}
       </span></div>`;
@@ -55,4 +56,12 @@ async function clientAppsUpload(id, file) {
     if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
   } catch (e) { return appAlert(e.message); }
   clientAppsRender();
+}
+
+/** A ten-minute link that needs no sign-in, to open in a phone's browser (or send it). */
+async function clientAppsLink(id) {
+  let l;
+  try { l = await apiFetch(`/api/clients/apps/${id}/link`, { method: 'POST', body: {} }); } catch (e) { return appAlert(e.message); }
+  try { await navigator.clipboard.writeText(l.url); } catch { /* not allowed here */ }
+  appAlert(`For 10 minutes, this opens the download without signing in (copied if the browser allowed it):\n\n${l.url}`);
 }
