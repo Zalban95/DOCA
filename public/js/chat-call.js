@@ -68,8 +68,9 @@ async function chatToggleCall() {
     return giveUp();
   }
 
-  try { const ex = (await apiFetch('/api/experiments')).experiments; _callBargeIn = !!ex.find(x => x.id === 'bargeIn')?.on; _callFaceVoice = !!ex.find(x => x.id === 'faceVoice')?.on; }
+  try { const ex = (await screenLoad(true)).experiments || {}; _callBargeIn = !!ex.bargeIn; _callFaceVoice = !!ex.faceVoice; }
   catch { _callBargeIn = false; _callFaceVoice = false; }
+  if (typeof wakeWordPause === 'function') wakeWordPause();   // the call has the microphone now
   _callStats = { at: Date.now(), bargeIns: 0, dropped: 0 };
   try { const c = (await screenPrefs()).call || {}; _callSilenceMs = c.silenceMs >= 300 ? c.silenceMs : 2000; _callThreshold= c.sensitivity >= 1 ? c.sensitivity : 15; }
   catch { /* the defaults */ }
@@ -99,6 +100,7 @@ async function chatToggleCall() {
 
   _callSetStatus('Listening…', 'listening');
   _callVadLoop();
+  return true;
 }
 
 function _callStop() {
@@ -132,6 +134,7 @@ function _callStop() {
   document.getElementById('chat-call-toggle').classList.remove('active');
   document.getElementById('chat-input-row').style.display = 'flex';
   document.getElementById('chat-call-bar').style.display = 'none';
+  if (typeof wakeWordApply === 'function') wakeWordApply();   // the face listens for its name again
 }
 
 function _callVadLoop() {
@@ -226,7 +229,20 @@ async function _callProcessAudio(audioBlob) {
       return;   // the finally below counts it done
     }
 
-    const userText = transcribeData.text.trim();
+    await _callAnswer(transcribeData.text.trim());
+  } catch (e) {
+    if (e.name !== 'AbortError') chatAppendMsg('system', `Voice error: ${e.message}`);
+  } finally {
+    _callProcessing = Math.max(0, _callProcessing - 1);
+    if (_callActive && !_callCurrentSrc && _callPlayQueue.length === 0 && !_callSynthPending) _callSetStatus('Listening…', 'listening');
+  }
+}
+
+/** What was said, sent as a turn and spoken back — from the microphone, or the words after a wake word (wake-word.js). */
+async function _callAnswer(userText) {
+  if (!_callActive) return;
+  _callProcessing++;
+  try {
     chatAppendMsg('user', userText);
 
     // 2. Send to chat and stream response

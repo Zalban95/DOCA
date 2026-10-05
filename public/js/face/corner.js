@@ -49,6 +49,7 @@ async function faceCornerApply() {
 function faceCornerToggle(on) {
   try { localStorage.setItem('doca.face.corner', on ? '1' : '0'); } catch { /* a private window: this session only */ }
   faceCornerApply();
+  if (typeof wakeWordApply === 'function') wakeWordApply();
 }
 
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('DOMContentLoaded', faceCornerApply);

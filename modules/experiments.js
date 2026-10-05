@@ -16,6 +16,7 @@ const EXPERIMENTS = [
   { id: 'realtimeVoice', label: 'Live calls with a realtime speech model', doc: 'realtime-voice.md', todo: 'H8.3' },
   { id: 'faceVoice', label: 'The face follows a voice call', doc: 'face-voice.md', todo: 'H8.2' },
   { id: 'packRegistry', label: 'Publish packs for other hubs, and fetch theirs', doc: 'pack-registry.md', todo: 'H4.6' },
+  { id: 'wakeWord', label: 'Start a call by saying the hive\'s name', doc: 'wake-word.md', todo: 'H8.2' },
   { id: 'visionPass', label: 'Look at a computer\'s screen with a vision model', doc: 'vision-pass.md', todo: 'H5.6' },
 ];
 

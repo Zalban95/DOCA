@@ -13,7 +13,7 @@ async function liveCallRender() {
   try { s = await screenLoad(true); } catch { return; }
   const c = s.settings?.call || {}, mine = s.from?.call === 'device';
   let ex = null;
-  try { ex = (await apiFetch('/api/experiments')).experiments.filter(x => ['realtimeVoice', 'bargeIn', 'faceVoice'].includes(x.id)); } catch { /* not the owner: no switches */ }
+  try { ex = (await apiFetch('/api/experiments')).experiments.filter(x => ['realtimeVoice', 'bargeIn', 'faceVoice', 'wakeWord'].includes(x.id)); } catch { /* not the owner: no switches */ }
   let rt = null;
   try { rt = await apiFetch('/api/realtime'); } catch { /* without chat */ }
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'live-call-card' });
@@ -28,6 +28,10 @@ async function liveCallRender() {
       ${row('Microphone threshold', `<input type="range" id="lc-sens" min="1" max="60" step="1" value="${c.sensitivity || 15}" style="width:180px"
           oninput="document.getElementById('lc-sens-val').textContent=this.value"><span id="lc-sens-val" style="font-size:11px;min-width:22px">${c.sensitivity || 15}</span>`,
         'Lower hears quieter voices — and more of the room.')}
+      ${row('Call by name', `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="lc-listen" ${c.listenWithFace ? 'checked' : ''}>
+          while the corner face shows, listen for</label><input class="input" id="lc-word" value="${escHtml(c.wakeWord || '')}" placeholder="${escHtml((typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA')}" style="width:120px">`,
+        `Say it to start a call — "${escHtml(c.wakeWord || (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA')}, what's on today?" sends the rest as your first message. ${s.experiments?.wakeWord ? '' : '<b>Needs the experiment "Start a call by saying the hive\'s name".</b> '}
+         While it listens, whatever is said near this screen goes to your speech-to-text service.`)}
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-sm" id="lc-test" onclick="liveCallMeter()">🎤 Test the microphone</button>
         <div style="position:relative;width:240px;height:10px;background:var(--raised);border:1px solid var(--border2)">
@@ -88,15 +92,20 @@ function liveCallMark() {
 
 async function liveCallSave(reset = false) {
   const secs = parseFloat(document.getElementById('lc-silence').value), sens = parseInt(document.getElementById('lc-sens').value, 10);
-  const value = reset ? null : { ...(secs >= 0.3 ? { silenceMs: Math.round(secs * 1000) } : {}), ...(sens >= 1 ? { sensitivity: sens } : {}) };
+  const value = reset ? null : { ...(secs >= 0.3 ? { silenceMs: Math.round(secs * 1000) } : {}), ...(sens >= 1 ? { sensitivity: sens } : {}),
+    listenWithFace: document.getElementById('lc-listen').checked, wakeWord: document.getElementById('lc-word').value.trim() };
   try { await screenSave({ call: value }); } catch (e) { return appAlert(e.message); }
   liveCallStop();
+  await screenLoad(true);
+  if (typeof wakeWordApply === 'function') wakeWordApply();
   liveCallRender();
 }
 
 async function liveCallExperiment(id, on) {
   try { await apiFetch(`/api/experiments/${encodeURIComponent(id)}`, { method: 'POST', body: { on } }); } catch (e) { appAlert(e.message); }
   if (typeof _subtabInited !== 'undefined') delete _subtabInited.experiments;   // Settings → Experiments redraws when next opened
+  await screenLoad(true);
+  if (typeof wakeWordApply === 'function') wakeWordApply();
   liveCallRender();
 }
 

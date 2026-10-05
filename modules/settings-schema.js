@@ -33,6 +33,8 @@ const SCHEMA = {
     keys: {
       silenceMs:   { type: 'integer', min: 300, default: 2000, hint: 'How long a pause, in milliseconds, ends what you said and sends it.' },
       sensitivity: { type: 'integer', min: 1, default: 15, hint: 'The microphone level that counts as speech; lower hears quieter voices and more of the room.' },
+      listenWithFace: { type: 'boolean', default: false, hint: 'While the corner face shows, listen for the wake word and start a call when it is said (experiments.wakeWord).' },
+      wakeWord: { type: 'string', default: '', hint: 'The word that starts a call. Empty: the product\'s name (branding).' },
     } },
   face:             { is: 'travels', home: 'device', on: 'screen', note: 'the face: its look, a spec over the default (face/face.js); an edition carries one' },
   hiddenBuiltins:   { is: 'travels', home: 'device', on: 'screen', note: 'built-in config entries hidden from the list', propose: p('Hidden built-ins') },
@@ -66,6 +68,7 @@ const SCHEMA = {
       bargeIn: { type: 'boolean', default: false, hint: 'In a voice call, speaking while the agent works or talks is sent at once, and what it was about to say is dropped.' },
       realtimeVoice: { type: 'boolean', default: false, hint: 'A live call speaks with a realtime speech model (realtime.*) in place of speech-to-text, a turn and text-to-speech; the model hands real work to the hive.' },
       faceVoice: { type: 'boolean', default: false, hint: 'In a voice call, the corner face moves its mouth with the agent\'s voice and listens when you speak.' },
+      wakeWord: { type: 'boolean', default: false, hint: 'A screen showing the corner face listens for the wake word (call.wakeWord) and starts a call when it hears it.' },
       packRegistry: { type: 'boolean', default: false, hint: 'This hub lists the packs a host published to hubs holding a registry token, and can fetch from other hubs\' registries.' },
       visionPass: { type: 'boolean', default: false, hint: 'Agents may look at a computer\'s screen with the vision model under vision.' } } },
   vision:           { is: 'travels', home: 'hive', note: 'the vision model a computer\'s screen is read with (computers/look.js; the switch is experiments.visionPass)',
