@@ -59,7 +59,8 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [x] H1.6 (2.169.0, in part) Containers: Podman, Docker Desktop, Colima/OrbStack; WSL2-aware paths. Done: one
   resolver (docker, else podman) at every call site. **Left:** a run on a real Podman host; WSL2 path translation
   for bind mounts when the panel runs on Windows and Docker in WSL without Docker Desktop.
-- [ ] H1.7 VMs: Hyper-V, UTM/Parallels beside libvirt/VirtualBox.
+- [x] H1.7 (2.175.0) VMs: Hyper-V, UTM/Parallels beside libvirt/VirtualBox — listed and started/stopped/killed/resumed.
+  **Left:** a run on each (none here), their displays (Hyper-V's vmconnect, Parallels' VNC), creating machines.
 - [x] H1.8 (2.174.0) An installer per OS (Node, panel, boot entry, certificate, pairing QR): `scripts/install.sh`
   and `install.ps1`, run in CI on all three. **Left:** trusting the certificate on the machine, a pairing QR printed at
   the end, and a release download for when the repository is public (today: git clone with credentials).

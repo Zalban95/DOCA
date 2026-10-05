@@ -23,8 +23,8 @@ const PREFS_KEY = 'vms';
 /** `virsh` talks about "shut off"; the panel only cares about three states. */
 function normalizeState(raw) {
   const s = (raw || '').toLowerCase();
-  if (s.includes('running') || s === 'up')                 return 'running';
-  if (s.includes('paused')  || s.includes('suspend'))      return 'paused';
+  if (s.includes('running') || s === 'up' || s === 'started') return 'running';   // UTM says started
+  if (s.includes('paused')  || s.includes('suspend') || s === 'saved') return 'paused';   // Hyper-V's Saved is a suspended VM
   if (s.includes('shut')    || s.includes('off') || s.includes('poweroff')) return 'stopped';
   return s || 'unknown';
 }
@@ -168,11 +168,14 @@ async function vboxList() {
 const HYPERVISORS = {
   libvirt:    { label: 'libvirt / KVM', bin: 'virsh',      list: libvirtList, actions: LIBVIRT_ACTIONS, flags: virshFlags },
   virtualbox: { label: 'VirtualBox',    bin: 'VBoxManage', list: vboxList,    actions: VBOX_ACTIONS,    flags: () => [] },
+  // Hyper-V, UTM, Parallels (vms-desktop.js): each knows how it is found and how an action is invoked.
+  ...require('./vms-desktop').hypervisors(normalizeState),
 };
 
-/** Is the CLI on PATH? `--version` is the cheapest question every one answers. */
-async function present(bin) {
-  try { await run(bin, ['--version']); return true; } catch { return false; }
+/** Is the CLI on PATH? `--version` is the cheapest question every one answers; a desktop row asks its own way. */
+async function present(hvOrBin) {
+  if (typeof hvOrBin === 'object' && hvOrBin.present) return hvOrBin.present().catch(() => false);
+  try { await run(typeof hvOrBin === 'object' ? hvOrBin.bin : hvOrBin, ['--version']); return true; } catch { return false; }
 }
 
 /**
@@ -182,8 +185,9 @@ async function present(bin) {
  * connection (a libvirtd the user cannot reach) does not hide the other's VMs.
  */
 async function handleList(_req, res) {
-  const out = await Promise.all(Object.entries(HYPERVISORS).map(async ([id, hv]) => {
-    if (!await present(hv.bin))
+  // A hypervisor that cannot exist on this OS (Hyper-V off Windows, UTM off a Mac) is left out, not reported missing.
+  const out = await Promise.all(Object.entries(HYPERVISORS).filter(([, hv]) => !hv.os || hv.os.includes(process.platform)).map(async ([id, hv]) => {
+    if (!await present(hv))
       return { id, label: hv.label, bin: hv.bin, available: false, vms: [], error: `${hv.bin} not found` };
     try {
       return { id, label: hv.label, bin: hv.bin, available: true, vms: await hv.list(), error: null };
@@ -207,8 +211,7 @@ async function handleAction(req, res) {
     const known = (await hv.list()).some(vm => vm.name === name);
     if (!known) return res.status(404).json({ error: `No such VM: ${name}` });
 
-    const args = [...hv.flags(), ...hv.actions[action](name)];
-    const out  = await run(hv.bin, args);
+    const out = hv.act ? await hv.act(action, name) : await run(hv.bin, [...hv.flags(), ...hv.actions[action](name)]);
     res.json({ ok: true, output: out.trim() || `${action} sent to ${name}` });
   } catch (e) {
     res.status(500).json({ error: e.stderr?.trim() || e.message });
