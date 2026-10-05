@@ -208,8 +208,8 @@ async function _silentUpdateBadgeCheck() {
 
 /* ── System Tools (sysdeps) ──────────────────────────── */
 
-const SYSDEP_CATEGORY_LABEL = { required: 'Required', recommended: 'Recommended', optional: 'Optional' };
-const SYSDEP_CATEGORY_COLOR = { required: 'var(--red)', recommended: 'var(--amber)', optional: 'var(--muted)' };
+const SYSDEP_CATEGORY_LABEL = { required: 'Required', recommended: 'Recommended', optional: 'Optional — for the features that use them', clients: 'For building DOCA\'s apps (not needed to run DOCA)' };
+const SYSDEP_CATEGORY_COLOR = { required: 'var(--red)', recommended: 'var(--amber)', optional: 'var(--muted)', clients: 'var(--teal, var(--muted))' };
 
 let _sysdepsInstalling = null; // tool id currently installing
 let _sysdepsTools      = [];   // cached list from last fetch (used by sysdepsInstall)
@@ -238,7 +238,7 @@ function _sysdepsRender(tools) {
   if (!list) return;
 
   // Group by category
-  const cats = ['required', 'recommended', 'optional'];
+  const cats = ['required', 'recommended', 'optional', 'clients'];
   let html = '';
 
   cats.forEach(cat => {
@@ -250,12 +250,14 @@ function _sysdepsRender(tools) {
       id:             `sysdep-${t.id}`,
       label:          t.label,
       note:           t.note,
+      for:            t.for,
+      command:        t.installCmd,
       detected:       t.detected,
       version:        t.version,
       canInstall:     t.canInstall,
       installing:     _sysdepsInstalling === t.id,
       installOnclick: `sysdepsInstall('${t.id}')`,
-      updateOnclick:  t.canInstall ? `sysdepsUpdate('${t.id}')` : '',
+      updateOnclick:  t.canUpdate ? `sysdepsUpdate('${t.id}')` : '',
       repo:           t.repo,
       repoLabel:      t.repoLabel,
     })).join('');

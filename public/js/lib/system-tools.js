@@ -27,7 +27,7 @@ function toolRowHtml(t) {
     ? `<span class="tool-version">${escHtml(t.version)}</span>` : '';
 
   const installBtn = !t.detected && t.canInstall && t.installOnclick
-    ? `<button class="btn btn-xs btn-teal" onclick="${t.installOnclick}" ${t.installing ? 'disabled' : ''}>
+    ? `<button class="btn btn-xs btn-teal" onclick="${t.installOnclick}" ${t.installing ? 'disabled' : ''}${t.command ? ` title="Runs: ${escHtml(t.command)}"` : ''}>
          ${t.installing ? '⏳ Installing…' : '⬇ Install'}
        </button>`
     : '';
@@ -37,7 +37,7 @@ function toolRowHtml(t) {
   // pull). Opt-in per caller: not every tool list wants the extra button.
   const updateBtn = t.detected && t.updateOnclick
     ? `<button class="btn btn-xs" onclick="${t.updateOnclick}" ${t.installing ? 'disabled' : ''}
-               title="Re-run the installer to update to the latest version">
+               title="${t.command ? `Re-runs: ${escHtml(t.command)}` : 'Re-run the installer to update to the latest version'}">
          ${t.installing ? '⏳ Updating…' : '↻ Update'}
        </button>`
     : '';
@@ -58,7 +58,7 @@ function toolRowHtml(t) {
     <span class="tool-status">${statusIcon}</span>
     <span class="tool-label">${escHtml(t.label)}</span>
     ${versionStr}
-    <span class="tool-note">${escHtml(t.note || '')}</span>
+    <span class="tool-note">${t.for ? `<span class="tool-for">${escHtml(t.for)}</span> ` : ''}${escHtml(t.note || '')}</span>
     <span class="tool-actions">${t.extraActions || ''}${installBtn}${updateBtn}${repoLink}${manualNote}${gearBtn}</span>
   </div>`;
 }
