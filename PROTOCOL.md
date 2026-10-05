@@ -1142,6 +1142,11 @@ POST /api/v1/harness/messages          → 202 { turnId, sessionId }
 { "message": "how many containers are up?", "sessionId": "s_…" }   // sessionId optional
 ```
 
+`voice` (since hub 2.217.0, optional): `"call"` when the message was spoken in a live call — the answer is shaped to be
+heard (short sentences, no markdown, questions asked aloud) — or `"assistant"` when the call came from a face: quicker
+and shorter still, in the owner's `assistant.style` and at `assistant.effort` (turn/effort.js). The hub's own call
+engine (§23.1.1) sets it: `"assistant"` for a watch, `"call"` for anything else.
+
 Omitting `sessionId` addresses the persistent Orchestrator, independently of
 which conversation is selected in the Harness. An explicit `sessionId` still
 addresses that conversation. The dashboard's floating chat uses the same

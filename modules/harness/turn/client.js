@@ -23,9 +23,13 @@ const SHAPE = {
   tv:      'Very few words in large blocks. No tables, no code.',
   channel: 'A chat message (Telegram, Matrix, Slack, mail), read on a phone as often as a desktop: a few short paragraphs of plain text. No markdown — it is shown as typed — no tables, code only when asked for.',
   headless:'Complete and machine-readable. Do not shorten for a human, and do not decorate.',
+  call:    'Spoken aloud in a live call, a sentence at a time: a few short sentences, no markdown, no lists, no tables, no links or code read out — offer to put those in the chat.',
 };
 
 function shapeFor(client) {
+  // Assistant mode (a call from the face) speaks in the owner's chosen style (assistant.style); a chat call is spoken.
+  if (client.mode === 'assistant') return require('../../settings-schema').value('assistant.style') || SHAPE.call;
+  if (client.mode === 'call') return SHAPE.call;
   if (client.kind === 'channel') return SHAPE.channel;
   if (client.kind === 'agent' || client.formFactor === 'headless') return SHAPE.headless;
   const named = SHAPE[client.formFactor];
@@ -61,6 +65,9 @@ function clientBlock(client) {
     ...(client.user?.onBehalf ? personLines(client) : client.user ? [`Signed in as ${client.user.name || client.user.email}${client.user.name && client.user.email ? ` <${client.user.email}>` : ''}`
       + `${client.user.role ? `, ${client.user.role} of this panel` : ''}. What changes on this machine in this turn is logged as theirs.`] : []),
     `Shape the answer for it: ${shapeFor(client)}`,
+    ...(client.mode === 'call' || client.mode === 'assistant' ? ['They are listening: ask any question out loud, one at a time — not with `ask_device`. '
+      + 'An earlier answer of yours that ends in "—" was cut off there: they talked over it and did not hear the rest.'] : []),
+    ...(client.effort ? [require('./effort').line(client.effort)] : []),
     'Other devices of the same user may be reading this conversation too, so do not describe this one as if it were the only one.',
   ].join('\n');
 }

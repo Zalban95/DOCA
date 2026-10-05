@@ -88,8 +88,10 @@ function faceMount(canvas, specIn = {}) {
       for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
         const d = Math.hypot(x + 0.5 - h2, y + 0.5 - h2) / h2;
         if (d >= 1) continue;
-        const core = Math.exp(-Math.pow(d / 0.07, 2)), halo = 0.36 * Math.exp(-d / 0.3) * (1 - d * d);
-        const a = Math.min(1, core + halo), white = core / Math.max(a, 1e-6) * 0.75;   // the peak whitens, the glow keeps the colour
+        // A firefly with a contour (asked 2026-10-06): a flat-topped core with a crisp edge, then a dim close bloom and
+        // a faint wide glow — the light around a point must never be bright enough to swallow its edge.
+        const core = Math.exp(-Math.pow(d / 0.048, 4)), bloom = 0.13 * Math.exp(-Math.pow(d / 0.19, 2)), halo = 0.2 * Math.exp(-d / 0.3) * (1 - d * d);
+        const a = Math.min(1, core + bloom + halo), white = core / Math.max(a, 1e-6) * 0.75;   // the peak whitens, the glow keeps the colour
         const o = (y * S + x) * 4;
         px[o] = r + (255 - r) * white; px[o + 1] = g + (255 - g) * white; px[o + 2] = b + (255 - b) * white; px[o + 3] = a * 255;
       }

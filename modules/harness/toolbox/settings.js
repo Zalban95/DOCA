@@ -14,6 +14,22 @@ const audit = (ctx, action, id) => { try { require('../../auth/store').audit({ a
 
 module.exports = [
   {
+    name: 'effort',
+    description: 'Set how hard you think in this conversation when the person asks — "think harder", "take your time" (high), '
+      + '"quick answers" (low), "no thinking" (off), "as usual" (default). It changes only this conversation, from the next step; '
+      + 'say so in a few words.',
+    parameters: { type: 'object', properties: {
+      level: { type: 'string', enum: ['off', 'low', 'medium', 'high', 'default'] },
+    }, required: ['level'] },
+    run: ({ level }, ctx = {}) => {
+      const memory = require('../memory');
+      if (!ctx.sessionId || !memory.getSession(ctx.sessionId)) return 'Error: no conversation to set it for.';
+      if (!['off', 'low', 'medium', 'high', 'default'].includes(level)) return 'Error: level is off, low, medium, high or default.';
+      memory.updateSession(ctx.sessionId, { effort: level === 'default' ? null : level });
+      return level === 'default' ? 'Thinking effort is back to the usual for this conversation.' : `Thinking effort is ${level} in this conversation from the next step.`;
+    },
+  },
+  {
     name: 'settings_read',
     description: 'Read this panel\'s settings — every one you are allowed to suggest a change to, with its '
       + 'current value. Do this before proposing anything, so you change what is actually set rather than what '

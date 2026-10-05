@@ -41,6 +41,11 @@ async function post(ep, body, signal, p) {
       r = await send({ ...rest, max_completion_tokens: max_tokens });
       if (r.ok) contracts.learn(ep.id, body.model, { tokenField: 'max_completion_tokens' }, { perModel: true });
 
+    // A thinking effort in a dialect this server does not take (turn/effort.js): once without it, and remembered.
+    } else if (require('./effort').without(body, detail)) {
+      r = await send(require('./effort').without(body, detail));
+      if (r.ok) contracts.learn(ep.id, body.model, { effortField: 'none' }, { perModel: true });
+
     // Asking for a usage frame is how the token ledger gets measured numbers
     // instead of estimates, but it is a newer field and a strict or older
     // OpenAI-compatible server may reject the whole request for it — some of
@@ -346,4 +351,4 @@ async function ask({ system, user, temperature = 0.1, signal, provider, model })
   return text;
 }
 
-module.exports = { ask, complete };
+module.exports = { ask, complete, post };

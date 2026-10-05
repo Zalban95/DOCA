@@ -43,6 +43,7 @@ function _callSetStatus(text, state) {
 }
 
 /** `assistant`: started from the face (face/assistant.js) — the face follows the call's voice whatever faceVoice says. */
+let _callAssistant = false;   // this call came from the face (assistant mode): quicker, shorter, its own style
 async function chatToggleCall({ assistant = false } = {}) {
   if (_callActive) {
     _callStop();
@@ -72,8 +73,8 @@ async function chatToggleCall({ assistant = false } = {}) {
     return giveUp();
   }
 
-  try { const ex = (await screenLoad(true)).experiments || {}; _callBargeIn = !!ex.bargeIn; _callFaceVoice = !!ex.faceVoice || assistant; }
-  catch { _callBargeIn = false; _callFaceVoice = assistant; }
+  try { const ex = (await screenLoad(true)).experiments || {}; _callBargeIn = !!ex.bargeIn; _callFaceVoice = !!ex.faceVoice || assistant; _callAssistant = assistant; }
+  catch { _callBargeIn = false; _callFaceVoice = assistant; _callAssistant = assistant; }
   if (typeof wakeWordPause === 'function') wakeWordPause();   // the call has the microphone now
   _callStats = { at: Date.now(), bargeIns: 0, dropped: 0 };
   try { const c = (await screenPrefs()).call || {}; _callSilenceMs = c.silenceMs >= 300 ? c.silenceMs : 2000; _callThreshold= c.sensitivity >= 1 ? c.sensitivity : 15; }
@@ -291,7 +292,7 @@ async function _callAnswer(userText) {
     const chatRes = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userText }),
+      body: JSON.stringify({ message: userText, voice: _callAssistant ? 'assistant' : 'call' }),   // the hub shapes a spoken answer
       signal: _callAbort?.signal,
     });
 

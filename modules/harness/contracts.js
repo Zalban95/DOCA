@@ -12,6 +12,7 @@
  *
  *   tokenField   'max_tokens' | 'max_completion_tokens'   per provider, and per model
  *   streamUsage  true | false   whether `stream_options.include_usage` may be sent
+ *   effortField  reasoning_effort | reasoning | thinking | enable_thinking | none   how it hears a thinking effort (turn/effort.js)
  *
  * Three layers, the later winning:
  *   1. learned   what a 400-and-retry proved, kept in the data folder (`harness/contracts`),
@@ -28,7 +29,7 @@ const store = require('../store');
 const { loadPrefs } = require('../utils');
 
 const DOC = 'harness/contracts';
-const FIELDS = ['tokenField', 'streamUsage'];
+const FIELDS = ['tokenField', 'streamUsage', 'effortField'];   // effortField: turn/effort.js
 
 const learned = () => store.readJson(DOC, { providers: {} });
 

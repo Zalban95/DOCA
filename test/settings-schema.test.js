@@ -23,7 +23,7 @@ test('every key says what it is, whether it travels and where it lives', () => {
 
 test('what the agent may propose is built from the schema, and is the same list it always was', () => {
   const prefixes = require('../modules/harness/settings').SETTABLE.map(s => s.prefix).sort();
-  assert.deepEqual(prefixes, ['agents.enabled', 'computers', 'customTheme', 'favorites', 'fmFavorites', 'harness.config', 'harness.default',
+  assert.deepEqual(prefixes, ['agents.enabled', 'assistant', 'computers', 'customTheme', 'favorites', 'fmFavorites', 'harness.config', 'harness.default',
     'hiddenBuiltins', 'hiddenTabs', 'mcpSettings', 'models', 'paths', 'retrieval', 'scout', 'search', 'serviceSettings', 'sidebarSections', 'sidebarStats',
     'snapshotSettings', 'theme', 'toolNotes', 'vision', 'vms', 'voiceServices']);
   for (const k of ['mcpServers', 'channels', 'network', 'backup', 'branding', 'experiments', 'migrations']) assert.ok(!schema.SCHEMA[k].propose, `${k} is never proposable`);
