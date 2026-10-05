@@ -63,12 +63,14 @@ test('the state words each hypervisor uses collapse to the three the UI draws', 
   assert.equal(vms.normalizeState(''), 'unknown');
 });
 
-test('the panel reports both hypervisors, including any that are missing', async () => {
+test('the panel reports every hypervisor this OS can have, including any that are missing', async () => {
   const { status, body } = await H.api(null, 'GET', '/api/vms');
   assert.equal(status, 200);
 
+  // libvirt and VirtualBox everywhere; Hyper-V on Windows, UTM and Parallels on a Mac (vms-desktop.js).
   const ids = body.hypervisors.map(h => h.id);
-  assert.deepEqual(ids, ['libvirt', 'virtualbox']);
+  const expected = { win32: ['libvirt', 'virtualbox', 'hyperv'], darwin: ['libvirt', 'virtualbox', 'utm', 'parallels'] }[process.platform] || ['libvirt', 'virtualbox'];
+  assert.deepEqual(ids, expected);
 
   for (const hv of body.hypervisors) {
     assert.ok(Array.isArray(hv.vms));
