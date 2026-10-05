@@ -41,6 +41,7 @@ async function computersLoad() {
       <div class="card-title" style="margin-bottom:0">Computers</div>
       ${data.image.ready ? '<button class="btn btn-sm btn-blue" onclick="computersNew()">＋ New</button>'
         : '<button class="btn btn-sm btn-amber" onclick="computersBuild()">Build the image</button>'}
+      ${data.image.ready && data.image.current === false ? '<button class="btn btn-sm btn-amber" onclick="computersBuild()" title="Its tools changed since this image was built; computers made after the rebuild get them">Rebuild the image</button>' : ''}
       <button class="btn btn-sm" onclick="computersLoad()">↺</button>
       <span class="status-line">${data.computers.length ? `${running} running of ${data.computers.length}` : ''}</span></div>
     <div class="input-label" style="margin-bottom:10px">The agents' computers: a Linux desktop in a container — shell, files, a real Chromium,

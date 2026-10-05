@@ -6,7 +6,7 @@ const computers = require('./index');
 const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
 
 function mount(app) {
-  app.get('/api/computers', h(async () => ({ computers: await computers.detailed(), image: { name: computers.IMAGE, ready: await computers.imageReady() } })));
+  app.get('/api/computers', h(async () => ({ computers: await computers.detailed(), image: await computers.imageState() })));
   app.post('/api/computers/image', async (req, res) => {
     const { sseHeaders } = require('../utils');
     sseHeaders(res);

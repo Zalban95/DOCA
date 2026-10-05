@@ -55,10 +55,25 @@ function freePort() {
 
 async function imageReady() { try { await docker(['image', 'inspect', IMAGE]); return true; } catch { return false; } }
 
+/** What the image is built from (clients/computer), as a hash: a label on the image, so an older build shows. */
+function sourceHash() {
+  const h = crypto.createHash('sha256');
+  for (const f of fs.readdirSync(CONTEXT).sort()) if (fs.statSync(path.join(CONTEXT, f)).isFile()) h.update(f).update(fs.readFileSync(path.join(CONTEXT, f)));
+  return h.digest('hex').slice(0, 16);
+}
+
+/** Built, and built from this DOCA's clients/computer (an image from before its tools changed is `current: false`). */
+async function imageState() {
+  try {
+    const label = await docker(['image', 'inspect', '--format', '{{ index .Config.Labels "doca.computer.source" }}', IMAGE]);
+    return { name: IMAGE, ready: true, current: label === sourceHash() };
+  } catch { return { name: IMAGE, ready: false, current: false }; }
+}
+
 /** Build the image from clients/computer (minutes the first time: Chromium, a desktop, ffmpeg). */
 function build(onLine = () => {}) {
   return new Promise((resolve, reject) => {
-    const child = require('child_process').spawn(require('../containers').cli(), ['build', '-t', IMAGE, CONTEXT], { windowsHide: true });
+    const child = require('child_process').spawn(require('../containers').cli(), ['build', '-t', IMAGE, '--label', `doca.computer.source=${sourceHash()}`, CONTEXT], { windowsHide: true });
     const feed = d => String(d).split('\n').filter(Boolean).forEach(onLine);
     child.stdout.on('data', feed); child.stderr.on('data', feed);
     child.on('close', code => (code === 0 ? resolve({ image: IMAGE }) : reject(bad(`docker build exited ${code}`, 500))));
@@ -227,4 +242,4 @@ async function list() {
   return rows().map(c => view(c, states[container(c)] || 'missing'));
 }
 
-module.exports = { IMAGE, imageReady, build, create, start, stop, remove, pin, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, fetchFile };
+module.exports = { IMAGE, imageReady, imageState, sourceHash, build, create, start, stop, remove, pin, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, fetchFile };

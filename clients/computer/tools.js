@@ -59,6 +59,28 @@ const SNAPSHOT = `(() => {
   return 'title: ' + document.title + '\\nurl: ' + location.href + '\\n\\n' + lines.join('\\n') + '\\n\\n--- text ---\\n' + (document.body ? document.body.innerText : '').slice(0, 12000);
 })()`;
 
+/**
+ * What a control is, before it is clicked or typed into (TODO H5.4): 'secret' for a password or card field — the agent
+ * never types those: a person signs in through Take over — or 'decision' for a control that pays, buys, signs in,
+ * confirms or submits a form holding a secret, which needs confirm: true, which the hub always asks a person about
+ * (harness/approval.js). Runs in the page; kept a plain function so it can be tested off it.
+ */
+function sensitive(el) {
+  if (!el) return null;
+  const ac = String(el.getAttribute && el.getAttribute('autocomplete') || '').toLowerCase();
+  if (el.type === 'password' || /cc-|one-time-code|current-password|new-password/.test(ac)) return { kind: 'secret' };
+  const label = String((el.getAttribute && el.getAttribute('aria-label')) || el.innerText || el.value || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+  const form = el.form || (el.closest && el.closest('form'));
+  const holdsSecret = !!(form && form.querySelector && form.querySelector('input[type=password],[autocomplete^="cc-"]'));
+  const submits = el.type === 'submit' || el.tagName === 'BUTTON';
+  if (/\b(pay|buy|purchase|order|checkout|subscribe|donate|transfer|send money|sign in|log ?in|confirm|delete)\b/i.test(label) || (submits && holdsSecret))
+    return { kind: 'decision', label: label || el.tagName.toLowerCase() };
+  return null;
+}
+const sensitiveAt = ref => cdp.evaluate(`(${sensitive.toString()})(document.querySelector('[data-doca-ref="${Number(ref)}"]'))`);
+const TAKE_OVER = 'is a password or card field. A person types credentials: ask them to take over this computer (Computers → Take over) and sign in; carry on after they hand it back.';
+const confirmFirst = (ref, s) => `[${ref}] is "${s.label}" — it pays, buys, signs in, confirms or submits. A person decides this one: call again with confirm: true and they will be asked.`;
+
 async function centerOf(ref) {
   const r = await cdp.evaluate(`(() => { const el = document.querySelector('[data-doca-ref="${Number(ref)}"]'); if (!el) return null;
     el.scrollIntoView({ block: 'center', inline: 'center' }); const b = el.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; })()`);
@@ -116,12 +138,21 @@ const TOOLS = [
       return text(`Opened ${await cdp.evaluate('location.href')} — "${await cdp.evaluate('document.title')}".`); } },
   { name: 'browser_snapshot', description: 'Read the page: its title, URL, every visible link, button and field numbered [n], and its text. Click or type by those numbers.',
     inputSchema: { type: 'object', properties: {} }, run: async () => { await cdp.connect(); return text(clip(await cdp.evaluate(SNAPSHOT))); } },
-  { name: 'browser_click', description: 'Click element [ref] from the last browser_snapshot, with a real mouse event.', inputSchema: { type: 'object', properties: { ref: { type: 'number' } }, required: ['ref'] },
-    run: async a => { await cdp.connect(); const p = await centerOf(a.ref); await click(p.x, p.y); await new Promise(r => setTimeout(r, 600));
+  { name: 'browser_click', description: 'Click element [ref] from the last browser_snapshot, with a real mouse event. A control that pays, buys, signs in or submits needs confirm: true (a person is asked).',
+    inputSchema: { type: 'object', properties: { ref: { type: 'number' }, confirm: { type: 'boolean' } }, required: ['ref'] },
+    run: async a => { await cdp.connect(); const p = await centerOf(a.ref);
+      const s = await sensitiveAt(a.ref);
+      if (s?.kind === 'decision' && a.confirm !== true) return fail(confirmFirst(a.ref, s)); await click(p.x, p.y); await new Promise(r => setTimeout(r, 600));
       return text(`Clicked [${a.ref}]. Now at ${await cdp.evaluate('location.href')}.`); } },
-  { name: 'browser_type', description: 'Type into field [ref] from the last browser_snapshot; submit presses Enter after.',
-    inputSchema: { type: 'object', properties: { ref: { type: 'number' }, text: { type: 'string' }, submit: { type: 'boolean' } }, required: ['ref', 'text'] },
-    run: async a => { await cdp.connect(); const p = await centerOf(a.ref); await click(p.x, p.y); await cdp.send('Input.insertText', { text: a.text });
+  { name: 'browser_type', description: 'Type into field [ref] from the last browser_snapshot; submit presses Enter after. Never a password or card field: a person signs in through Take over.',
+    inputSchema: { type: 'object', properties: { ref: { type: 'number' }, text: { type: 'string' }, submit: { type: 'boolean' }, confirm: { type: 'boolean' } }, required: ['ref', 'text'] },
+    run: async a => { await cdp.connect(); const p = await centerOf(a.ref);
+      const s = await sensitiveAt(a.ref);
+      if (s?.kind === 'secret') return fail(`[${a.ref}] ${TAKE_OVER}`);
+      if (a.submit && a.confirm !== true) {
+        const f = await cdp.evaluate(`(() => { const el = document.querySelector('[data-doca-ref="${Number(a.ref)}"]'); const form = el && (el.form || el.closest('form')); return !!(form && form.querySelector('input[type=password],[autocomplete^="cc-"]')); })()`);
+        if (f) return fail(confirmFirst(a.ref, { label: 'a form with a password or card field' }));
+      } await click(p.x, p.y); await cdp.send('Input.insertText', { text: a.text });
       if (a.submit) for (const type of ['keyDown', 'keyUp']) await cdp.send('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, ...(type === 'keyDown' ? { text: '\r' } : {}) });
       await new Promise(r => setTimeout(r, 400)); return text(`Typed into [${a.ref}]${a.submit ? ' and pressed Enter' : ''}.`); } },
   { name: 'browser_screenshot', description: 'A picture of the page as the browser draws it.', inputSchema: { type: 'object', properties: {} },
@@ -130,4 +161,4 @@ const TOOLS = [
     run: async () => { await cdp.connect(); await cdp.evaluate('history.back()'); await new Promise(r => setTimeout(r, 800)); return text(`Now at ${await cdp.evaluate('location.href')}.`); } },
 ];
 
-module.exports = { TOOLS };
+module.exports = { TOOLS, sensitive };

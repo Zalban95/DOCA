@@ -114,11 +114,17 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [x] H5.1 (2.158.0) Playwright MCP in the services/MCP catalogue (the quick path) — with Chrome DevTools, an `mcp`
   install kind for the agent's proposals, and npx-launched servers fixed on Windows on the way. Checked live: the
   agent's tool layer opened a page and read its snapshot.
-- [ ] H5.2 The agent's own Chromium over CDP: navigate, accessibility snapshot, click/type by ref,
-  screenshot, tabs, downloads; a profile per agent. [OS] Chrome/Edge/Chromium on all three.
-- [ ] H5.3 Live view in the panel (CDP screencast) with take-over and hand-back.
+- [x] H5.2 (2.153.0–2.185.0, through computers) The agent's own Chromium over CDP: navigate, accessibility snapshot,
+  click/type by ref, screenshot, tabs, downloads; a profile per agent. [OS] Chrome/Edge/Chromium on all three. The
+  computers give it (a Chromium over CDP read as numbered elements, real input events, screenshots, files out), a
+  profile per agent type since 2.185.0 (`computer: own`), on any OS with Docker. A second host-side browser would be
+  a second way of doing it. **Left:** tabs and downloads as tools.
+- [x] H5.3 (2.154.0, 2.166.0, through computers) Live view in the panel (CDP screencast) with take-over and hand-back.
+  The computer's desktop over noVNC through the hub, watch or Take over, the agent pausing its input while a person drives.
 - [ ] H5.4 Page text through the airlock; submits, payments and logins asked first; a credentials
-  vault.
+  vault. Done (2.193.0): submits, payments and logins asked first — the computer refuses them without `confirm`, the
+  hub always asks about a confirmed one; password and card fields are a person's, through Take over. **Left:** page
+  text through the airlock (the scout already reads pages out of context), a credentials vault.
 - [ ] H5.5 The person's own browser through a desktop client (extension or CDP), consent per site.
 - [ ] H5.6 A vision pass on screenshots where the accessibility tree is not enough. [X]
 
