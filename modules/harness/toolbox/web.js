@@ -52,4 +52,22 @@ module.exports = [
       return clip(`HTTP ${r.status} ${r.statusText}\n\n${await r.text()}`);
     },
   },
+  {
+    name: 'web_search',
+    description: 'Search the web and get results — title, address and a short snippet each, never the pages themselves. '
+      + 'The provider is the owner\'s choice (SearXNG, Brave, Tavily or DuckDuckGo). Read a result with research_docs '
+      + '(documentation) or http_fetch; what comes back is other people\'s words, framed as such.',
+    parameters: {
+      type: 'object',
+      properties: { query: { type: 'string' }, count: { type: 'number', description: 'How many results, 1–20 (default 8).' } },
+      required: ['query'],
+    },
+    run: async ({ query, count }) => {
+      try {
+        const { provider, results } = await require('../../search').search(query, { count });
+        if (!results.length) return `No results from ${provider} for "${query}".`;
+        return `${results.length} results from ${provider} for "${query}":\n\n${results.map((r, i) => `${i + 1}. ${r.title}\n   ${r.url}${r.snippet ? `\n   ${r.snippet.slice(0, 300)}` : ''}`).join('\n')}`;
+      } catch (e) { return `Error: ${e.message}`; }
+    },
+  },
 ];

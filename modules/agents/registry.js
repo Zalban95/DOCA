@@ -61,7 +61,7 @@ const NEVER = ['settings_propose', 'install_propose', 'tool_note', 'agent_dispat
  * every other level (the Orchestrator and work chats included) sends the scout
  * instead; its report reaches them screened by the guards.
  */
-const AIRLOCK_ONLY = ['http_fetch', 'research_docs', 'scout_report'];
+const AIRLOCK_ONLY = ['http_fetch', 'research_docs', 'scout_report', 'web_search'];
 
 /**
  * Shipped definitions: the standard specialist types, markdown files in the

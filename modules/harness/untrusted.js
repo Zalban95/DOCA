@@ -22,6 +22,7 @@ const CLOSE = '⟦end of external content⟧';
 function sourceOf(name, args = {}, isMcp = false) {
   if (isMcp) return `the MCP tool ${name}`;
   if (name === 'http_fetch') return `http_fetch ${String(args.url || '').slice(0, 200)}`;
+  if (name === 'web_search') return `web search results for "${String(args.query || '').slice(0, 120)}"`;
   if (name === 'read_file') return `the file ${String(args.path || '').slice(0, 200)}`;
   return null;
 }
