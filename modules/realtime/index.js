@@ -40,6 +40,19 @@ function status() {
     audio: { format: 'pcm16', rate: 24000, channels: 1 }, protocols: Object.keys(ADAPTERS) };
 }
 
+/**
+ * A device's live call (`/api/v1/call`, docs/design/watch-call.md): the realtime model when one is on, else the hive's
+ * own speech-to-text, turn and text-to-speech (pipeline.js) — one wire either way, so a client is written once.
+ */
+async function callStatus() {
+  if (on()) return { available: true, engine: 'realtime', protocol: settings().protocol, audio: { format: 'pcm16', rate: 24000, channels: 1 } };
+  const vs = require('../chat').loadVoiceServices();
+  const up = async url => { try { return (await fetch(`${url}/v1/models`, { signal: AbortSignal.timeout(3000) })).ok; } catch { return false; } };
+  const [stt, tts] = await Promise.all([up(vs.sttUrl), up(vs.ttsUrl)]);
+  return { available: stt && tts, engine: 'pipeline', stt, tts, audio: { format: 'pcm16', rate: 24000, channels: 1 },
+    ...(stt && tts ? {} : { reason: `The hive's ${[!stt && 'speech-to-text', !tts && 'text-to-speech'].filter(Boolean).join(' and ')} did not answer (Settings → Voice).` }) };
+}
+
 /** The address and key: the setting's URL, else derived from the provider (Settings → API Keys holds the key). */
 function target(s = settings()) {
   let ep = null;
@@ -67,14 +80,17 @@ function recent(sessionId) {
  * One call. `ws` is the client's socket; `ask(text)` starts a turn as the caller and resolves with its answer text
  * (a rejection is said as a failure); `sessionId` is the conversation it lands in.
  */
-function serve(ws, { ask, sessionId, onEnd = () => {} }) {
+function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime' }) {
   const s = settings();
   const tell = o => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
-  if (!on()) { tell({ type: 'error', message: 'Realtime voice is off: switch on the experiment and set realtime.model (Settings → Voice → Live call).' }); ws.close(); return; }
+  const pipeline = engine === 'auto' && !on();   // a device's call: the hive's own voice when no realtime model is on
+  if (!pipeline && !on()) { tell({ type: 'error', message: 'Realtime voice is off: switch on the experiment and set realtime.model (Settings → Voice → Live call).' }); ws.close(); return; }
   let t;
-  try { t = target(s); } catch (e) { tell({ type: 'error', message: e.message }); ws.close(); return; }
+  if (!pipeline) { try { t = target(s); } catch (e) { tell({ type: 'error', message: e.message }); ws.close(); return; } }
   const stats = { at: Date.now(), firstAudioMs: null, spokeAt: null, tools: 0, background: 0, interrupted: 0 };
-  const model = ADAPTERS[s.protocol].connect({ ...t, model: s.model, voice: s.voice, dialect: s.dialect, instructions: INSTRUCTIONS + recent(sessionId), tools: [TOOL] });
+  const model = pipeline ? require('./pipeline').connect({})
+    : ADAPTERS[s.protocol].connect({ ...t, model: s.model, voice: s.voice, dialect: s.dialect, instructions: INSTRUCTIONS + recent(sessionId), tools: [TOOL] });
+  if (pipeline) s.protocol = 'pipeline';
   let ended = false;
   const end = why => {
     if (ended) return; ended = true;
@@ -107,8 +123,10 @@ function serve(ws, { ask, sessionId, onEnd = () => {} }) {
     Promise.race([answer, wait]).then(first => {
       if (first !== null && !late) return model.toolResult(id, first);
       stats.background++;
-      model.toolResult(id, 'Still working on it in the background. Tell the person it is under way and that you will say when it is done.');
-      answer.then(text => { if (!ended) model.say(`The earlier request finished ("${request.slice(0, 200)}"). DOCA's answer: ${text}`); });
+      // A model is told what to say; the pipeline says what it is given, so its words are for the listener.
+      model.toolResult(id, model.literal ? 'That will take a while. I will tell you when it is done.'
+        : 'Still working on it in the background. Tell the person it is under way and that you will say when it is done.');
+      answer.then(text => { if (!ended) model.say(model.literal ? text : `The earlier request finished ("${request.slice(0, 200)}"). DOCA's answer: ${text}`); });
     });
   });
 
@@ -148,4 +166,4 @@ function askAsDevice(device, sessionId) {
   });
 }
 
-module.exports = { ADAPTERS, TOOL, INSTRUCTIONS, settings, on, status, target, serve, askAsPanel, askAsDevice };
+module.exports = { ADAPTERS, TOOL, INSTRUCTIONS, settings, on, status, callStatus, target, serve, askAsPanel, askAsDevice };

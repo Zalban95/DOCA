@@ -9,6 +9,9 @@
  *   GET  /api/v1/realtime       the same status for a paired device (harness:chat)
  *   WS   /api/v1/realtime       a device's call, with its bearer token (header, or ?access_token= where a client
  *                               cannot set one) — its person, level and approvals, as harness.post() gives every device
+ *   GET  /api/v1/call           a device's live call by whichever engine this hub has (harness:chat)
+ *   WS   /api/v1/call           the same wire as /api/v1/realtime: the realtime model when one is on, else the hive's own
+ *                               STT, turn and TTS (pipeline.js) — what a watch's call reaches through its phone
  */
 const rt = require('./index');
 
@@ -38,6 +41,10 @@ function mountDevice(router) {
     if (!require('../api-v1/auth').can(req, 'harness:chat')) return res.status(403).json({ error: { code: 'scope_required', message: 'This device\'s token lacks harness:chat.' } });
     res.json(rt.status());
   });
+  router.get('/call', async (req, res) => {
+    if (!require('../api-v1/auth').can(req, 'harness:chat')) return res.status(403).json({ error: { code: 'scope_required', message: 'This device\'s token lacks harness:chat.' } });
+    res.json(await rt.callStatus());
+  });
 }
 
 let _wss = null;
@@ -59,7 +66,7 @@ function upgradePanel(req, socket, head) {
 }
 
 /** A device's socket: its bearer token, harness:chat, its person's conversation. */
-function upgradeDevice(req, socket, head) {
+function upgradeDevice(req, socket, head, engine = 'realtime') {
   const devices = require('../api-v1/devices'), { hasScope } = require('../api-v1/scopes');
   const u = new URL(req.url, 'http://x');
   const token = (/^Bearer\s+(.+)$/i.exec(req.headers.authorization || '') || [])[1] || u.searchParams.get('access_token');
@@ -73,7 +80,7 @@ function upgradeDevice(req, socket, head) {
     if (sessionId) harness.requireSession(sessionId, device);
     else sessionId = harness.createSession('Live call', { activate: false, device }).id;
   } catch { return refuse(socket, 404, 'Not Found'); }
-  wss().handleUpgrade(req, socket, head, ws => rt.serve(ws, { sessionId, ask: rt.askAsDevice(devices.get(device.id) || device, sessionId) }));
+  wss().handleUpgrade(req, socket, head, ws => rt.serve(ws, { sessionId, engine, ask: rt.askAsDevice(devices.get(device.id) || device, sessionId) }));
 }
 
 module.exports = { mount, mountDevice, upgradePanel, upgradeDevice };
