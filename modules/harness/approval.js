@@ -164,6 +164,8 @@ function gate(name, args, ctx = {}) {
     summary: `${cp.path} — ${cp.what}. Writing it always asks you first, whatever the approval mode.` };
   // A computer's browser on a control that pays, buys, signs in or submits (the computer refuses it without confirm:
   // computers' clients/computer/tools.js sensitive()): always a person's decision, every mode, never "always" (TODO H5.4).
+  if (name === 'computer_login') return { tool: name, keys: null, forced: true,
+    summary: `Sign in on computer ${args?.computer} with the stored login "${args?.login}" — the hub types its password; the agent never sees it. Always asked.` };
   if (/^mcp__computer-[a-f0-9]+__browser_(click|type)$/.test(name) && args?.confirm === true)
     return { tool: name, keys: null, forced: true, summary: `${summarize(name, args)} — on a control that pays, buys, signs in or submits in the computer's browser. Always asked, whatever the approval mode.` };
   const { mode: panelMode, always, recheckOutside } = settings();

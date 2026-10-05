@@ -46,4 +46,26 @@ module.exports = [
       return 'Error: action is list, create, start, stop, remove, put or get.';
     },
   },
+  {
+    name: 'computer_login',
+    get description() {
+      let names = '';
+      try { names = require('../../logins').list().map(l => `${l.label} (${l.site})`).join(', '); } catch { /* none */ }
+      return 'Sign in on a computer\'s browser with a login the owner keeps (Settings → Connectors → Logins), without seeing its password: '
+        + 'the hub checks the page is on that login\'s own site, types the username into userRef and the password into passRef itself. '
+        + 'Take a browser_snapshot first for the refs; then click sign-in with confirm: true. Asked about every time. '
+        + `Logins: ${names || 'none yet — ask the owner to add one'}.`;
+    },
+    parameters: {
+      type: 'object',
+      properties: {
+        computer: { type: 'string', description: 'The computer\'s id.' },
+        login: { type: 'string', description: 'The login\'s name (or id).' },
+        userRef: { type: 'number', description: 'The [n] of the username or email field (omit when the page asks only for the password).' },
+        passRef: { type: 'number', description: 'The [n] of the password field.' },
+      },
+      required: ['computer', 'login', 'passRef'],
+    },
+    run: a => require('../../logins').fill(a),
+  },
 ];

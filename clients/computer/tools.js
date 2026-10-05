@@ -52,7 +52,9 @@ async function grab() {
 const SNAPSHOT = `(() => {
   const vis = el => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
   const els = [...document.querySelectorAll('a[href],button,input,textarea,select,[role=button],[role=link],[role=checkbox],[onclick],[contenteditable=true]')].filter(vis);
-  const label = el => (el.getAttribute('aria-label') || el.innerText || el.value || el.placeholder || el.title || el.name || el.alt || '').trim().replace(/\\s+/g, ' ').slice(0, 80);
+  // A password or card field's value is never read back: the hub fills it from the vault, the agent never sees it (logins.js).
+  const secret = el => el.type === 'password' || /cc-|one-time-code|password/.test((el.getAttribute('autocomplete') || '').toLowerCase());
+  const label = el => (el.getAttribute('aria-label') || el.innerText || (secret(el) ? (el.value ? '(filled)' : '') : el.value) || el.placeholder || el.title || el.name || el.alt || '').trim().replace(/\\s+/g, ' ').slice(0, 80);
   const lines = els.slice(0, 300).map((el, i) => { el.setAttribute('data-doca-ref', String(i + 1));
     const t = el.tagName.toLowerCase() + (el.type ? ':' + el.type : '') + (el.getAttribute('role') ? '[' + el.getAttribute('role') + ']' : '');
     return '[' + (i + 1) + '] ' + t + ' "' + label(el) + '"' + (el.href ? ' -> ' + el.href : ''); });
@@ -155,6 +157,14 @@ const TOOLS = [
       } await click(p.x, p.y); await cdp.send('Input.insertText', { text: a.text });
       if (a.submit) for (const type of ['keyDown', 'keyUp']) await cdp.send('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, ...(type === 'keyDown' ? { text: '\r' } : {}) });
       await new Promise(r => setTimeout(r, 400)); return text(`Typed into [${a.ref}]${a.submit ? ' and pressed Enter' : ''}.`); } },
+  // The hub fills a password from its vault here (modules/logins.js computer_login): it holds FILL_KEY, the agent does
+  // not, and the value never passes through the agent. Hidden from tools/list (agent.js).
+  { name: 'browser_fill_secret', hidden: true, description: 'The hub types a stored secret into field [ref].',
+    inputSchema: { type: 'object', properties: { ref: { type: 'number' }, value: { type: 'string' }, key: { type: 'string' } }, required: ['ref', 'value', 'key'] },
+    run: async a => { if (!process.env.FILL_KEY || a.key !== process.env.FILL_KEY) return fail('Not the hub.');
+      await cdp.connect(); const p = await centerOf(a.ref); await click(p.x, p.y);
+      await cdp.evaluate(`(() => { const el = document.querySelector('[data-doca-ref="${Number(a.ref)}"]'); if (el) el.value = ''; })()`);
+      await cdp.send('Input.insertText', { text: a.value }); return text(`Filled [${a.ref}].`); } },
   { name: 'browser_screenshot', description: 'A picture of the page as the browser draws it.', inputSchema: { type: 'object', properties: {} },
     run: async () => { await cdp.connect(); return { content: [{ type: 'image', mimeType: 'image/png', data: (await cdp.send('Page.captureScreenshot', { format: 'png' })).data }] }; } },
   { name: 'browser_back', description: 'Go back one page.', inputSchema: { type: 'object', properties: {} },

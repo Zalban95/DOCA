@@ -125,8 +125,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   The computer's desktop over noVNC through the hub, watch or Take over, the agent pausing its input while a person drives.
 - [ ] H5.4 Page text through the airlock; submits, payments and logins asked first; a credentials
   vault. Done (2.193.0): submits, payments and logins asked first — the computer refuses them without `confirm`, the
-  hub always asks about a confirmed one; password and card fields are a person's, through Take over. **Left:** page
-  text through the airlock (the scout already reads pages out of context), a credentials vault.
+  hub always asks about a confirmed one; password and card fields are a person's, through Take over. And (2.197.0) a
+  credentials vault: `computer_login` fills a stored login on its own site, the password typed by the hub, never seen
+  by the agent. **Left:** page text through the airlock (the scout already reads pages out of context).
 - [ ] H5.5 The person's own browser through a desktop client (extension or CDP), consent per site.
 - [ ] H5.6 A vision pass on screenshots where the accessibility tree is not enough. [X]
 

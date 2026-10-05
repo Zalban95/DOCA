@@ -49,6 +49,10 @@ function mount(app) {
     try { const r = await oauth.finish(req.query.state, req.query.code); page('Connected', `${r.label}${r.account ? ` as ${r.account}` : ''} is connected to DOCA.`); }
     catch (e) { res.status(e.status || 500); page('Not connected', e.message); }
   });
+  // Logins for the agents' computers (logins.js): the vault — never a password back.
+  app.get('/api/connectors/logins/all', h(() => ({ logins: require('../logins').list() })));
+  app.post('/api/connectors/logins/all', h(req => ({ login: require('../logins').save(req.body || {}) })));
+  app.delete('/api/connectors/logins/:id', h(req => require('../logins').remove(req.params.id)));
   app.delete('/api/connectors/:id', h(req => {
     if (req.query.all === '1') vault.forget(req.params.id);
     else vault.forget(req.params.id, ['accessToken', 'refreshToken', 'expiresAt', 'account', 'connectedAt']);

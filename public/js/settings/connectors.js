@@ -31,7 +31,9 @@ async function connectorsLoad() {
         <button class="btn btn-sm" onclick="connectorsSave(${jsArg(c.id)})">Save</button>
         <button class="btn btn-sm btn-blue" onclick="connectorsConnect(${jsArg(c.id)})" ${c.configured ? '' : 'disabled'}>${c.connected ? 'Reconnect' : 'Connect'}</button>
         ${c.connected ? `<button class="btn btn-sm btn-red" onclick="connectorsDisconnect(${jsArg(c.id)})">Disconnect</button>` : ''}</div></div>`).join('')}
-    <div class="card"><button class="btn btn-sm" onclick="connectorsAdd()">＋ Another OAuth 2.0 service</button></div>`;
+    <div class="card"><button class="btn btn-sm" onclick="connectorsAdd()">＋ Another OAuth 2.0 service</button></div>
+    <div class="card" id="logins-card"></div>`;
+  loginsRender();
   for (const c of d.connectors) { const el = panel.querySelector(`[data-conn="${CSS.escape(c.id)}"] [data-f="clientId"]`); if (el && c.configured) el.placeholder = 'client id saved — type to replace'; }
 }
 
@@ -66,6 +68,39 @@ function connectorsAdd() {
     if (!id) return;
     try { await apiFetch(`/api/connectors/${encodeURIComponent(id.trim().toLowerCase())}`, { method: 'POST', body: { label: id.trim() } }); } catch (e) { return appAlert(e.message); }
     connectorsLoad();
+  });
+}
+
+/* Logins for the agents' computers (modules/logins.js): the agent signs in with one without seeing its password. */
+async function loginsRender() {
+  const el = document.getElementById('logins-card');
+  if (!el) return;
+  let d;
+  try { d = await apiFetch('/api/connectors/logins/all'); } catch (e) { el.innerHTML = `<div class="placeholder">${escHtml(e.message)}</div>`; return; }
+  el.innerHTML = `<div class="card-title">Logins for the agents' computers</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">An agent signs in with one on a computer's browser (<code>computer_login</code>, asked every time): the hub checks the page is on
+      the login's own site and types the password itself — the agent never sees it, and a look-alike site gets nothing.</p>
+    ${d.logins.map(l => `<div class="disk-row"><span class="disk-label">${escHtml(l.label)}</span><span class="disk-path">${escHtml(l.username)} · ${escHtml(l.site)}</span>
+      <span class="disk-free"><button class="btn btn-xs btn-red" onclick="loginsRemove(${jsArg(l.id)})">✕</button></span></div>`).join('') || '<div class="placeholder">None yet.</div>'}
+    <div class="toolbar" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+      <input class="input" id="lg-site" placeholder="site (https://github.com)" style="flex:1;min-width:170px">
+      <input class="input" id="lg-user" placeholder="username or email" style="flex:1;min-width:150px">
+      <input class="input" id="lg-pass" type="password" autocomplete="new-password" placeholder="password" style="flex:1;min-width:140px">
+      <input class="input" id="lg-label" placeholder="name (optional)" style="width:130px">
+      <button class="btn btn-sm" onclick="loginsAdd()">Add</button></div>`;
+}
+
+async function loginsAdd() {
+  const v = id => document.getElementById(id).value.trim();
+  try { await apiFetch('/api/connectors/logins/all', { method: 'POST', body: { site: v('lg-site'), username: v('lg-user'), password: document.getElementById('lg-pass').value, label: v('lg-label') } }); }
+  catch (e) { return appAlert(e.message); }
+  loginsRender();
+}
+
+function loginsRemove(id) {
+  appConfirm('Forget this login here? (Its password is not changed at the site.)', async () => {
+    try { await apiFetch(`/api/connectors/logins/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
+    loginsRender();
   });
 }
 
