@@ -1248,6 +1248,17 @@ The call is a **WebSocket on the same path**, `wss://<hub>/api/v1/realtime`, wit
   device as a prompt, §12). A request longer than the owner's `realtime.waitSec` keeps running and is spoken when done.
 - The provider's key stays on the hub: a client needs no account with the speech service.
 
+#### 23.1.1 A call by whichever engine the hub has (since hub 2.211.0)
+
+`GET /call` (scope `harness:chat`) and the WebSocket `wss://<hub>/api/v1/call` are §23.1 with the engine chosen by
+the hub: `engine: "realtime"` while a realtime model is on, else `engine: "pipeline"` — the hive's own speech-to-text,
+a turn and text-to-speech (Settings → Voice). **The wire is identical**: the same PCM16 24 kHz frames both ways, the
+same JSON frames, `ready.protocol` `"pipeline"`. With the pipeline every utterance is a request to the conversation
+(`user`, then `working`), the answer is spoken a sentence at a time (`agent` carries each sentence), speech over it
+sends `interrupted`, and a recording with under 300 ms of speech is dropped. `available` is `false` with a `reason`
+when the voice services do not answer. A client that wants a call writes it once against `/call`; this is what a
+watch reaches through its phone (DocaWear, docs/design/watch-call.md).
+
 ### 23.2 What a person has in the hive (since hub 2.201.0)
 
 The device's person's recipes, schedules and face, answered as that person exactly as the panel answers them:
