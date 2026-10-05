@@ -139,7 +139,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   **Left:** DocaDesk, DocaMobile and DocaWear, which ship through their own stores and installers.
 - [x] H6.6 (2.177.0, in part) A Linux desktop client; a macOS one; iOS later; a browser-only client. Done: `doca-client`
   (Node, headless) for Linux, macOS and Windows. **Left:** a tray app around it, iOS, a browser-only client.
-- [ ] H6.7 Headless clients (a server, a Pi) and channel adapters as clients.
+- [x] H6.7 (2.191.0) Headless clients (a server, a Pi) and channel adapters as clients. `doca-client` is headless;
+  `doca-client enable` runs it at boot (systemd user unit, launchd, Task Scheduler) and, with no terminal, never records
+  a refusal nobody gave. Channel adapters are clients since 2.157.0 (kind `channel`: Telegram, Matrix, Slack).
 
 **H7 · Work that runs by itself**
 - [x] H7.1 (2.162.0) Schedules (recurring) and triggers (file, webhook, device event, mail) starting a recipe
@@ -232,7 +234,9 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   for the spec and faces as packs (H4); DocaDesk's overlay and the watch face (their TODOs); listening/speaking
   from the voice call's audio levels (H8.2); quiet hours from the device profile.
 - [ ] H8.2 The face reacting to the voice call's audio. [X]
-- [ ] H8.3 Realtime speech-to-speech with barge-in, work continuing in the background.
+- [ ] H8.3 Realtime speech-to-speech with barge-in, work continuing in the background. Done (2.192.0, experiment
+  `bargeIn`): talking over a working agent is heard and read by the running turn, stale sentences dropped. **Left:**
+  measuring it in real calls; a realtime speech-to-speech model (OpenAI Realtime or a local one) in place of STT → turn → TTS.
 
 **H9 · Reach and protocols**
 - [ ] H9.1 Channels: Slack, Telegram, mail, WhatsApp, Matrix — each a client kind. Done: Telegram (2.157.0), the

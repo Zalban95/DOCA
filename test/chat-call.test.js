@@ -1,0 +1,59 @@
+'use strict';
+
+// Barge-in in a voice call (public/js/chat-call.js; docs/experiments/barge-in.md): with the flag on, speech while a
+// turn works is recorded, and a sentence that comes back from the speech service after an interruption is dropped.
+// The script runs in a sandbox with stand-ins for the audio APIs; a real call is the experiment's own measure.
+
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const fs = require('node:fs');
+const path = require('node:path');
+
+function load() {
+  let started = 0, resolveDecode;
+  const sandbox = {
+    console, setTimeout, clearTimeout, Math, Date, Uint8Array,
+    document: { getElementById: () => null },
+    requestAnimationFrame: () => 1, cancelAnimationFrame: () => {},
+    MediaRecorder: Object.assign(function MediaRecorder() { started++; this.state = 'recording'; this.start = () => {}; this.stop = () => {}; }, { isTypeSupported: () => true }),
+    fetch: async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(4) }),
+    chatAppendMsg: () => {},
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(`${fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'chat-call.js'), 'utf8')}
+    ;globalThis.__ = { get: n => eval(n), set: (n, v) => eval(n + ' = v') };`, sandbox);
+  const s = sandbox.__;
+  s.set('_callPlayCtx', { decodeAudioData: () => new Promise(r => { resolveDecode = r; }), createBufferSource: () => ({ connect() {}, start() {}, stop() {} }), destination: {} });
+  return { s, sandbox, started: () => started, decoded: buf => resolveDecode(buf || {}) };
+}
+
+const speaking = s => s.set('_callAnalyser', { frequencyBinCount: 8, getByteFrequencyData: d => d.fill(200) });
+
+test('with barge-in on, speech while a turn works is recorded; off, it waits as before', () => {
+  for (const [on, expected] of [[true, 1], [false, 0]]) {
+    const { s, started } = load();
+    s.set('_callActive', true); s.set('_callBargeIn', on); s.set('_callProcessing', 1); s.set('_callStream', {});
+    s.set('_callStats', { at: Date.now(), bargeIns: 0, dropped: 0 });
+    speaking(s);
+    s.get('_callVadLoop')();
+    assert.equal(started(), expected, `bargeIn ${on}`);
+  }
+});
+
+test('an interruption drops what the agent was about to say, and counts it', async () => {
+  const { s, decoded } = load();
+  s.set('_callActive', true); s.set('_callBargeIn', true); s.set('_callStream', {});
+  s.set('_callStats', { at: Date.now(), bargeIns: 0, dropped: 0 });
+  const pending = s.get('_callEnqueueSynth')('A sentence from before.');
+  await new Promise(r => setImmediate(r));
+  // The person speaks while it is still playing something: the voice stops and the epoch moves on.
+  s.set('_callCurrentSrc', { stop() {} });
+  speaking(s);
+  s.get('_callVadLoop')();
+  assert.equal(s.get('_callStats').bargeIns, 1);
+  decoded();
+  await pending;
+  assert.equal(s.get('_callPlayQueue').length, 0, 'the stale sentence is not queued');
+  assert.equal(s.get('_callStats').dropped, 1);
+});

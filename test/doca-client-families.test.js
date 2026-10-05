@@ -81,3 +81,19 @@ test('find: every online tailnet peer that answers as a DOCA hub, by name', asyn
     assert.equal(await discover.find({ peers: async () => null }), null, 'no Tailscale: said, not an empty list');
   } finally { srv.close(); delete process.env.DOCA_PORT; }
 });
+
+test('at boot: a systemd user unit, a launchd agent or a Task Scheduler entry, each running `run`', () => {
+  const b = require('../clients/node/boot');
+  const script = require('node:path').join(__dirname, '..', 'clients', 'node', 'doca-client.js');
+  const unit = b.unit({ DOCA_CLIENT_DIR: '/srv/doca-client' });
+  assert.match(unit, new RegExp(`^ExecStart=${process.execPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} ${script.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} run$`, 'm'));
+  assert.match(unit, /^Restart=on-failure$/m);
+  assert.match(unit, /^Environment=DOCA_CLIENT_DIR=\/srv\/doca-client$/m);
+  assert.match(unit, /^WantedBy=default\.target$/m);
+  const plist = b.plist();
+  assert.match(plist, /<key>Label<\/key><string>tech\.doca\.client<\/string>/);
+  assert.ok(plist.includes(`<string>${script}</string><string>run</string>`));
+  const args = b.schtasks();
+  assert.deepEqual(args.slice(0, 6), ['/Create', '/TN', 'DOCA client', '/SC', 'ONLOGON', '/RL']);
+  assert.equal(args.at(-1), `"${process.execPath}" "${script}" run`);
+});
