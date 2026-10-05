@@ -4,7 +4,8 @@
 /**
  * doca-client — this machine joins the hive (docs/design/hive.md §4; TODO H6.2, H6.6). Linux, macOS and Windows,
  * Node 22, no dependency. It pairs with a hub, asks its person once per tool family, and lends the granted ones —
- * `files` and `shell` — to the hub's agents as an MCP server the hub connects to (PROTOCOL.md §22, §22.1).
+ * `files`, `shell`, and screen, processes, apps and device (families.js) — to the hub's agents as an MCP server the
+ * hub connects to (PROTOCOL.md §22, §22.1). Keep families.js beside this file.
  *
  *   doca-client pair https://hub:4242 641-598 [--name desk]     with a code from Settings → API Keys → Pair a device
  *   doca-client run [--grant files,shell] [--bind 100.x.y.z] [--port 18766]
@@ -23,7 +24,7 @@ const https = require('https');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 
-const FAMILIES = ['files', 'shell'];
+const FAMILIES = ['files', 'shell', 'screen', 'processes', 'apps', 'device'];
 const configDir = () => process.env.DOCA_CLIENT_DIR || (process.platform === 'win32' ? path.join(process.env.APPDATA || os.homedir(), 'doca-client') : path.join(os.homedir(), '.config', 'doca-client'));
 const configFile = () => path.join(configDir(), 'config.json');
 const load = () => { try { return JSON.parse(fs.readFileSync(configFile(), 'utf8')); } catch { return null; } };
@@ -113,6 +114,7 @@ const TOOLS = {
       child.on('error', e => { clearTimeout(t); resolve({ code: -1, stdout, stderr: e.message }); });
     }) },
 };
+Object.assign(TOOLS, require('./families')({ within }));   // screen, processes, apps, device (families.js)
 const lent = cfg => Object.entries(TOOLS).filter(([, t]) => cfg.grants?.[t.family] === true && !(cfg.revoked || []).includes(t.family));
 
 /** The MCP server the hub connects to: JSON-RPC over POST, the bearer secret required. */
@@ -132,7 +134,10 @@ function serve(cfg, { bind, port }) {
       if (m.method === 'tools/call') {
         const hit = lent(cfg).find(([name]) => name === m.params?.name);
         if (!hit) return ok({ content: [{ type: 'text', text: `${m.params?.name} is not lent by this machine (not granted, or revoked).` }], isError: true });
-        try { return ok({ content: [{ type: 'text', text: JSON.stringify(await hit[1].run(cfg, m.params.arguments || {})) }] }); }
+        try {
+          const { image, ...rest } = (await hit[1].run(cfg, m.params.arguments || {})) || {};   // a picture is MCP image content
+          return ok({ content: [...(image ? [{ type: 'image', data: image.data, mimeType: image.mimeType }] : []), { type: 'text', text: JSON.stringify(rest) }] });
+        }
         catch (e) { return ok({ content: [{ type: 'text', text: e.message }], isError: true }); }
       }
       return reply(200, { jsonrpc: '2.0', id: m.id, error: { code: -32601, message: `Unknown method ${m.method}` } });

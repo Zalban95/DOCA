@@ -8,8 +8,14 @@ node doca-client.js run                                            # asks once p
 ```
 
 Then accept its offer once in the hub (MCP tab). From then on the hub's agents can use this machine's **files**
-(`files_list/read/write/mkdir/move/copy/delete`, inside your home folder only) and **shell** (`shell_run`) — only
-what you granted, and the hub's Files tab browses it. Revoking a family in the hub (its row in API Keys) stops it
+(`files_list/read/write/mkdir/move/copy/delete`, inside your home folder only), **shell** (`shell_run`), **screen**
+(`screen_capture`), **processes** (`processes_list`, `processes_stop`), **apps** (`apps_open`: a web address, or a file
+in your home folder) and **device** (`device_info`, `device_notify`, `device_clipboard_read/_write`) — only what you
+granted, and the hub's Files tab browses it. Keep `families.js` beside `doca-client.js`.
+
+Each family uses what the OS already has. macOS and Windows need nothing more; on Linux the screen wants `grim`
+(Wayland) or ImageMagick's `import` / `scrot` / `gnome-screenshot` (X11), the clipboard `wl-clipboard` or `xclip`,
+notifications `notify-send` — a missing one is named in the answer, never guessed around. Revoking a family in the hub (its row in API Keys) stops it
 at once; `run` again re-offers after a restart. A hub's self-signed certificate is pinned at pairing and is the
 only one trusted afterwards; the listener binds to your tailnet address and answers only with its secret.
 
