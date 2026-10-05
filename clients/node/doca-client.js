@@ -10,6 +10,7 @@
  *   doca-client pair https://hub:4242 641-598 [--name desk]     with a code from Settings → API Keys → Pair a device
  *   doca-client pair 'doca://pair?code=641598&host=hub:4242'      or the pairing link itself, in one step
  *   doca-client run [--grant files,shell] [--bind 100.x.y.z] [--port 18766]
+ *   doca-client find                                            the hubs on this machine's tailnet
  *   doca-client status | forget
  *
  * Trust: a self-signed hub's certificate is pinned at pairing and is then the only one trusted (tlsFor), so it is
@@ -250,8 +251,14 @@ if (require.main === module) {
   (async () => {
     if (verb === 'pair') { const c = await pair(rest[0], rest[1], { name: flag('name') || os.hostname() }); say(`✓ Paired with ${c.hub} as ${c.name} (${c.deviceId}). Next: doca-client run`); }
     else if (verb === 'run') { await run({ grant: flag('grant') ? flag('grant').split(',') : null, bind: flag('bind'), port: Number(flag('port')) || 18766 }); }
+    else if (verb === 'find') {
+      const hubs = await require('./discover').find();
+      if (!hubs) say('Tailscale is not running here (or not installed), so there is no tailnet to look on. Pair with the hub\'s address instead.');
+      else if (!hubs.length) say('No DOCA hub answers on the tailnet.');
+      else for (const h of hubs) say(`${h.product} at ${h.url}${h.self ? ' (this machine)' : ''} — pair: doca-client pair ${h.url} <code from its Settings → API Keys>`);
+    }
     else if (verb === 'status') { const c = load(); say(c ? JSON.stringify({ hub: c.hub, deviceId: c.deviceId, name: c.name, grants: c.grants, revoked: c.revoked || [] }, null, 2) : 'Not paired.'); }
     else if (verb === 'forget') { fs.rmSync(configFile(), { force: true }); say('Forgotten. (The hub still lists this device until you revoke it there.)'); }
-    else say('usage: doca-client pair <hub> <code> [--name N] | run [--grant files,shell] [--bind IP] [--port N] | status | forget');
+    else say('usage: doca-client find | pair <hub> <code> [--name N] | pair <doca://pair link> | run [--grant files,shell] [--bind IP] [--port N] | status | forget');
   })().catch(e => { console.error(`✗ ${e.message}`); process.exit(1); });
 }

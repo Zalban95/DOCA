@@ -62,3 +62,22 @@ test('pairing takes the panel\'s link in one step', () => {
   assert.deepEqual(client.fromLink('doca://pair?code=641598&host=hub.tail1234.ts.net:4242'), { hub: 'https://hub.tail1234.ts.net:4242', code: '641-598' });
   assert.deepEqual(client.fromLink('https://hub:4242', '641-598'), { hub: 'https://hub:4242', code: '641-598' }, 'the address and code still work');
 });
+
+test('find: every online tailnet peer that answers as a DOCA hub, by name', async () => {
+  const https = require('node:https');
+  const { generate } = require('selfsigned');
+  const pems = await Promise.resolve(generate([{ name: 'commonName', value: 'localhost' }], { days: 1, keySize: 2048 }));
+  const srv = https.createServer({ key: pems.private, cert: pems.cert }, (req, res) => {
+    res.writeHead(req.url === '/api/branding' ? 200 : 404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ product: 'Acme Desk', panel: 'Acme Panel' }));
+  });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r));
+  process.env.DOCA_PORT = String(srv.address().port);
+  delete require.cache[require.resolve('../clients/node/discover')];
+  const discover = require('../clients/node/discover');
+  try {
+    const hubs = await discover.find({ peers: async () => [{ name: 'desk.tail.ts.net', ip: '127.0.0.1', online: true, self: false }, { name: 'nothing-here', ip: '127.0.0.2', online: true, self: false }] });
+    assert.deepEqual(hubs, [{ name: 'desk.tail.ts.net', ip: '127.0.0.1', self: false, url: `https://desk.tail.ts.net:${srv.address().port}`, product: 'Acme Desk' }]);
+    assert.equal(await discover.find({ peers: async () => null }), null, 'no Tailscale: said, not an empty list');
+  } finally { srv.close(); delete process.env.DOCA_PORT; }
+});

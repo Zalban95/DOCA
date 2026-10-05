@@ -132,7 +132,8 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [x] H6.3 (2.191.0) Pairing in one step (QR/link) bound to the person; consent per family on the device. A paired
   device belongs to whoever made the code (since auth phase 1); the panel's link/QR `doca://pair?code=…&host=…` pairs
   `doca-client` in one paste; it asks its person once per family. DocaMobile scans the QR.
-- [ ] H6.4 Discovery on the tailnet / mDNS.
+- [x] H6.4 (2.191.0, tailnet) Discovery on the tailnet / mDNS. `doca-client find` asks Tailscale for the online peers and
+  knocks on each one's `/api/branding` (the hub's one public route). **Left:** mDNS for a hub on a plain LAN.
 - [ ] H6.5 Clients update from the hub's release channel.
 - [x] H6.6 (2.177.0, in part) A Linux desktop client; a macOS one; iOS later; a browser-only client. Done: `doca-client`
   (Node, headless) for Linux, macOS and Windows. **Left:** a tray app around it, iOS, a browser-only client.
