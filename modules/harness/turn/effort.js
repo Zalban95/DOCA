@@ -44,8 +44,10 @@ function fields(level, ep, model) {
   const d = dialect(ep, model);
   if (d === 'none') return {};
   if (d === 'reasoning') return { reasoning: level === 'off' ? { enabled: false } : { effort: level } };
-  if (d === 'thinking') return { thinking: { type: level === 'off' ? 'disabled' : 'enabled' } };
-  if (d === 'enable_thinking') return { chat_template_kwargs: { enable_thinking: level !== 'off' } };
+  // On/off dialects: low is meant to be quick, so it is off there too; medium and high think.
+  const thinks = level === 'medium' || level === 'high';
+  if (d === 'thinking') return { thinking: { type: thinks ? 'enabled' : 'disabled' } };
+  if (d === 'enable_thinking') return { chat_template_kwargs: { enable_thinking: thinks } };
   return { reasoning_effort: level === 'off' ? 'minimal' : level };
 }
 

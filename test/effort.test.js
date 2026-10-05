@@ -35,6 +35,8 @@ test('each provider hears it in its own dialect', () => {
   assert.deepEqual(e.fields('low', { id: 'openai', baseUrl: 'https://api.openai.com/v1' }), { reasoning_effort: 'low' });
   assert.deepEqual(e.fields('off', { id: 'openai', baseUrl: 'https://api.openai.com/v1' }), { reasoning_effort: 'minimal' });
   assert.deepEqual(e.fields('off', { id: 'deepseek', baseUrl: 'https://api.deepseek.com' }), { thinking: { type: 'disabled' } });
+  assert.deepEqual(e.fields('low', { id: 'deepseek', baseUrl: 'https://api.deepseek.com' }), { thinking: { type: 'disabled' } }, 'on/off: low is quick');
+  assert.deepEqual(e.fields('high', { id: 'deepseek', baseUrl: 'https://api.deepseek.com' }), { thinking: { type: 'enabled' } });
   assert.deepEqual(e.fields('high', { id: 'or', baseUrl: 'https://openrouter.ai/api/v1' }), { reasoning: { effort: 'high' } });
   assert.deepEqual(e.fields('off', { id: 'vllm', baseUrl: 'http://gpu:8000/v1' }), { chat_template_kwargs: { enable_thinking: false } });
   assert.deepEqual(e.fields(null, { id: 'openai' }), {});
