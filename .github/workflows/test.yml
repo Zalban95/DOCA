@@ -20,3 +20,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run smoke   # the panel in the runner's Chrome: every tab, no page error (bin/doca-smoke.js)

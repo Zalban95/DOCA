@@ -41,6 +41,7 @@ test('a project chat is told about the project tools', () => {
   const prompt = require('../modules/harness/agent').preview({ message: 'x', sessionId: s.id });
   for (const n of ['project', 'git', 'search_files', 'replace_in_files', 'repo_rules'])
     assert.match(prompt, new RegExp(`\\n  ${n}: `), `${n} named to a project chat`);
+  fs.rmSync(root, { recursive: true, force: true });
 });
 
 test('the panel lists what a type holds and why — the same set its turns get', async () => {

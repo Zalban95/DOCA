@@ -24,7 +24,9 @@ const { loadPrefs, savePrefs, loadModelsPrefs, saveModelsPrefs } = require('../m
 before(H.start);
 after(H.stop);
 
-const tmpdir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'doca-models-'));
+const made = [];
+process.on('exit', () => { for (const d of made) try { fs.rmSync(d, { recursive: true, force: true }); } catch { /* in use */ } });
+const tmpdir = () => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-models-')); made.push(d); return d; };
 
 test('a fresh install has no llama.cpp instances, and asking does not invent one', async () => {
   // It used to seed `/media/al/NewVolume/models/nemotron-cascade-2/…` — one
