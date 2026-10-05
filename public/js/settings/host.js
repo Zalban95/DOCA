@@ -27,4 +27,18 @@ async function hostCapsLoad(fresh = false) {
       return `<div class="disk-row"><span class="disk-label">${r.available ? '●' : '○'} ${escHtml(label)}</span>
         <span class="disk-path" title="${escHtml(r.via || '')}">${escHtml(r.via || '')}</span>
         <span class="disk-free" style="${r.available ? '' : 'color:var(--muted)'}">${escHtml(r.note || (r.available ? 'available' : 'absent'))}</span></div>`; }).join('')}`;
+  hostMigrationsDraw(card);
+}
+
+/* What an update changed in the prefs file: renamed or moved keys (GET /api/settings/migrations, migrations.js). */
+async function hostMigrationsDraw(card) {
+  let m;
+  try { m = (await apiFetch('/api/settings/migrations')).migrations || []; } catch { return; }
+  if (!m.length) return;
+  const el = document.createElement('details');
+  el.style.cssText = 'margin-top:10px;font-size:11px';
+  el.innerHTML = `<summary style="cursor:pointer;color:var(--muted)">Settings migrations · ${m.filter(x => x.applied).length} of ${m.length} applied</summary>
+    ${m.map(x => `<div style="margin:6px 0 0 12px"><b>${escHtml(x.id)}</b> ${x.applied ? '✓' : '…'} ${escHtml(x.note || '')}
+      <div style="color:var(--muted)">${escHtml((x.changed.length ? x.changed : x.steps).join(' · '))}${x.changed.length ? ` — here, ${escHtml(new Date(x.at).toLocaleString())}` : ''}</div></div>`).join('')}`;
+  card.appendChild(el);
 }

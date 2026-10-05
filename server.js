@@ -305,11 +305,11 @@ app.post('/api/services/stop',     services.handleStop);
 
 return app;
 }
-
 module.exports = { createApp };
 
 // ─── Server (HTTPS with HTTP fallback) + WebSocket Terminals ─────────────────
 if (require.main === module) {
+require('./modules/migrations').apply();   // the prefs file brought forward before anything reads it (migrations.js)
 const app = createApp();
 // Who may connect: loopback + tailnet unless told otherwise. See modules/listen.js.
 const LISTEN_MODE = listen.mode(require('./modules/utils').loadPrefs());

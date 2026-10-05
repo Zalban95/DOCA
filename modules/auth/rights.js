@@ -87,6 +87,7 @@ const TABLE = [
   // ── Looking ──
   R(GET, '/api/(status|stats/defs|update-check|versions|startup|prefs|paths)', 'read'),
   R(GET, '/api/host/capabilities', 'read'),                 // what this host can do, per OS (host-capabilities.js)
+  R(GET, '/api/settings/migrations', 'read'),               // prefs migrations: key names and code defaults, never a stored value
   R(GET, '/api/(services|services/status|vms|system/tools|mcp|skills|skills/search|skills/[^/]+)', 'read'),
   R(GET, '/api/docker/(containers|images|presets)', 'read'),
   R(GET, '/api/models(/(disk|settings|tools|hf/(list|search|settings|status)|local/(list|search|settings)|llamacpp/(list|status)|ollama/(list|running|search|status)))?', 'read'),
