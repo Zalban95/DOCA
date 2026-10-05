@@ -367,7 +367,7 @@ function memoryList() {
 }
 
 module.exports = {
-  sessions, createSession, activate, removeSession, transcript,
+  sessions, createSession, activate, removeSession, transcript, requireSession,
   post, running, cancel, memoryList,
   MAX_MESSAGE,
 };

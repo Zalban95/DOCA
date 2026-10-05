@@ -1045,6 +1045,91 @@
         }
       }
     },
+    "/agui": {
+      "post": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "DOCA as an AG-UI agent: RunAgentInput in, the AG-UI event stream out (SSE)",
+        "operationId": "agui",
+        "x-scope": "harness:chat",
+        "description": "The last user message of `messages` becomes a turn as this device (harness.post), in the conversation `threadId` names (one of the person's conversation ids, or a thread mapped to a conversation of its own). Events: RUN_STARTED, TEXT_MESSAGE_START/CONTENT/END, TOOL_CALL_START/ARGS/END, TOOL_CALL_RESULT, RUN_FINISHED or RUN_ERROR, CUSTOM doca.prompt (a question for this device) and doca.note. The front end's own tools and state are not used. Closing the stream does not stop the turn.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "threadId": {
+                    "type": "string"
+                  },
+                  "runId": {
+                    "type": "string"
+                  },
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string"
+                        },
+                        "content": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AG-UI events as server-sent events",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input — `error.message` says which field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/devices/{id}/profile": {
       "parameters": [
         {
