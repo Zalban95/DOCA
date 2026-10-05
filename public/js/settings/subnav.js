@@ -22,7 +22,7 @@ const _SETTINGS_SUBTABS = [
   { id: 'evals',     label: 'Evaluations', init: 'evalsLoad',    find: 'evaluation eval test regression promptfoo judge' },
   { id: 'skills',    label: 'Skills',    init: 'loadSkills',    group: 'openclaw' },
   { id: 'snapshots', label: 'Snapshots', init: 'loadSnapshots', group: 'openclaw' },
-  { id: 'setup',     label: 'Setup',     init: 'loadScripts',   group: 'openclaw' },
+  { id: 'setup',     label: 'Stack',     init: '_subtabStackInit', group: 'openclaw', find: 'compose start stop restart update rebuild setup scripts' },
   { id: 'config',    label: 'Config',    init: 'initConfig',    group: 'openclaw' },
 ];
 
