@@ -27,7 +27,7 @@ const has = () => require('../modules/harness/tools').schemas().some(t => t.func
 
 test('the tool exists only with the experiment on and a vision model set', async () => {
   assert.equal(has(), false);
-  require('../modules/experiments').set('visionPass', true);
+  require('../modules/experiments').setDeveloper(true); require('../modules/experiments').set('visionPass', true);
   assert.equal(has(), false, 'on, but no model: still absent');
   const u = require('../modules/utils'); u.savePrefs({ ...u.loadPrefs(), vision: { provider: 'vis', model: 'qwen2.5vl' } });
   assert.equal(has(), true);

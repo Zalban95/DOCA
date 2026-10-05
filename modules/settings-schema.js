@@ -60,6 +60,11 @@ const SCHEMA = {
     propose: p('Web search', 'Which provider web_search uses'),
     keys: { provider: { type: 'string', default: 'duckduckgo', hint: 'searxng, brave, tavily or duckduckgo (no key, the fallback).' },
       url: { type: 'string', default: '', hint: 'The SearXNG instance, when that is the provider (its JSON format must be enabled).' } } },
+  // Developer mode: whether this install offers experiments at all. An owner's or a tester's copy turns it on; a
+  // customer's install never sees it (admin is for the repository's owners and independent testers). Not proposable,
+  // and local: a pack or an edition never carries it.
+  developer:        { is: 'local', home: 'device', on: 'host', note: 'developer mode: experiments offered and in effect (experiments.js)',
+    keys: { mode: { type: 'boolean', default: false, hint: 'Offer the experiments (Settings → Developer) and let the ones switched on take effect.' } } },
   // Experiments (hive.md §8): off by default, each written up in docs/experiments/<id>.md. The owner's switch alone —
   // never proposable: an agent switching on its own experiments would be grading its own homework.
   experiments:      { is: 'travels', home: 'hive', note: 'experiments switched on (docs/experiments)',

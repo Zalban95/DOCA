@@ -56,6 +56,30 @@ test('off: a failed recipe just stops — no repair turn', async () => {
   assert.equal(calls, 0, 'the model is not asked');
 });
 
+test('without developer mode no experiment can be switched on or takes effect; an owner turns it on', async () => {
+  const r = await H.api(null, 'GET', '/api/experiments');
+  assert.equal(r.body.developer, false, 'a fresh install is not a developer\'s');
+  assert.equal((await H.api(null, 'POST', '/api/experiments/recipeRepair', { on: true })).status, 409);
+  const member = await H.signIn('member', 'dev-member@test.local');
+  assert.equal((await H.api(null, 'POST', '/api/experiments/developer', { on: true }, { Cookie: member.cookie })).status, 403, 'an owner\'s switch');
+  assert.equal((await H.api(null, 'POST', '/api/experiments/developer', { on: true })).body.developer, true);
+  assert.notEqual(require('../modules/harness/settings').refuse('developer.mode', true), null, 'not proposable');
+  // A flag left on stops taking effect the moment developer mode goes off.
+  require('../modules/experiments').set('bargeIn', true);
+  require('../modules/experiments').setDeveloper(false);
+  assert.equal(require('../modules/experiments').on('bargeIn'), false);
+  require('../modules/experiments').setDeveloper(true);
+  assert.equal(require('../modules/experiments').on('bargeIn'), true);
+  require('../modules/experiments').set('bargeIn', false);
+});
+
+test('an install that had an experiment on keeps it: the migration turns developer mode on', () => {
+  const { run } = require('../modules/migrations');
+  assert.equal(run({ experiments: { bargeIn: true } }).prefs.developer.mode, true);
+  assert.equal(run({ experiments: { bargeIn: false } }).prefs.developer, undefined);
+  assert.equal(run({ experiments: { bargeIn: true }, developer: { mode: false } }).prefs.developer.mode, false, 'an owner who chose off stays off');
+});
+
 test('on: the agent proposes a repaired revision; a person accepts it; the next run passes', async () => {
   assert.equal((await H.api(null, 'POST', '/api/experiments/recipeRepair', { on: true })).body.on, true);
   const store = require('../modules/recipes/store');

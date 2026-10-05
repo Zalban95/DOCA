@@ -31,7 +31,7 @@ async function ask(png, question, { provider, model } = settings()) {
 }
 
 async function look({ computer, question }) {
-  if (!on()) return 'Error: the vision pass is an experiment that is off, or has no vision model (Settings → Experiments; vision.model).';
+  if (!on()) return 'Error: the vision pass is an experiment that is off, or has no vision model (Settings → Developer; vision.model).';
   if (!String(question || '').trim()) return 'Error: say what to look for.';
   const png = await require('./index').screen(String(computer || ''));
   return ask(png, question);

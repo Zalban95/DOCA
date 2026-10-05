@@ -78,7 +78,7 @@ test('a registry (experiment): published packs only, to a registry token, fetche
   const token = issued.body.token;
   const get = p => fetch(`${H.base}/api/v1${p}`, { headers: { Authorization: `Bearer ${token}` } });
   assert.equal((await get('/packs/published')).status, 404, 'off: there is no registry');
-  require('../modules/experiments').set('packRegistry', true);
+  require('../modules/experiments').setDeveloper(true); require('../modules/experiments').set('packRegistry', true);
   assert.deepEqual((await (await get('/packs/published')).json()).packs, [], 'nothing published yet');
   const lib = (await H.api(null, 'GET', '/api/packs/library')).body.packs;
   const pk = lib.find(p => p.origin === 'agent');

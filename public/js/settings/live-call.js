@@ -1,7 +1,7 @@
 /* Settings → Voice → Live call (TODO H8.3): everything about the 🎙 Live call in one place. How it listens is this
    screen's (the setting `call`, read by chat-call.js when a call starts) — a phone's microphone and a desk's hear a
    room differently; the experiments that change a call (barge-in, the face) are the owner's switches, shown here
-   beside them as on Settings → Experiments; and the realtime speech model a call uses when one is set (the owner's form,
+   beside them as on Settings → Developer; and the realtime speech model a call uses when one is set (the owner's form,
    modules/realtime). A test meter shows the microphone against the threshold. */
 let _liveCallMeter = null;
 
@@ -13,7 +13,8 @@ async function liveCallRender() {
   try { s = await screenLoad(true); } catch { return; }
   const c = s.settings?.call || {}, mine = s.from?.call === 'device';
   let ex = null;
-  try { ex = (await apiFetch('/api/experiments')).experiments.filter(x => ['realtimeVoice', 'bargeIn', 'faceVoice', 'wakeWord'].includes(x.id)); } catch { /* not the owner: no switches */ }
+  try { const d = await apiFetch('/api/experiments'); ex = d.developer ? d.experiments.filter(x => ['realtimeVoice', 'bargeIn', 'faceVoice', 'wakeWord'].includes(x.id)) : null; }
+  catch { /* not the owner: no switches */ }
   let rt = null;
   try { rt = await apiFetch('/api/realtime'); } catch { /* without chat */ }
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'live-call-card' });
@@ -30,7 +31,7 @@ async function liveCallRender() {
         'Lower hears quieter voices — and more of the room.')}
       ${row('Call by name', `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="lc-listen" ${c.listenWithFace ? 'checked' : ''}>
           while the corner face shows, listen for</label><input class="input" id="lc-word" value="${escHtml(c.wakeWord || '')}" placeholder="${escHtml((typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA')}" style="width:120px">`,
-        `Say it to start a call — "${escHtml(c.wakeWord || (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA')}, what's on today?" sends the rest as your first message. ${s.experiments?.wakeWord ? '' : '<b>Needs the experiment "Start a call by saying the hive\'s name".</b> '}
+        `Say it to start a call — "${escHtml(c.wakeWord || (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA')}, what's on today?" sends the rest as your first message. ${s.experiments?.wakeWord ? '' : '<b>Needs the experiment "Start a call by saying the hive\'s name" (developer mode).</b> '}
          While it listens, whatever is said near this screen goes to your speech-to-text service.`)}
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-sm" id="lc-test" onclick="liveCallMeter()">🎤 Test the microphone</button>
@@ -45,7 +46,7 @@ async function liveCallRender() {
       </div>
     </div>
     ${ex ? `<div style="margin-top:14px;border-top:1px solid var(--border2);padding-top:10px;display:flex;flex-direction:column;gap:6px">
-      <div style="font-size:11px;color:var(--muted)">Experiments — for every screen; what each measures and costs is on Settings → Experiments.</div>
+      <div style="font-size:11px;color:var(--muted)">Experiments (developer mode) — for every screen; what each measures and costs is on Settings → Developer.</div>
       ${ex.map(x => `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" ${x.on ? 'checked' : ''}
         onchange="liveCallExperiment(${jsArg(x.id)}, this.checked)"> ${escHtml(x.label)}</label>`).join('')}</div>` : ''}
     ${liveCallRealtimeHtml(rt, !!ex)}`;
@@ -103,7 +104,7 @@ async function liveCallSave(reset = false) {
 
 async function liveCallExperiment(id, on) {
   try { await apiFetch(`/api/experiments/${encodeURIComponent(id)}`, { method: 'POST', body: { on } }); } catch (e) { appAlert(e.message); }
-  if (typeof _subtabInited !== 'undefined') delete _subtabInited.experiments;   // Settings → Experiments redraws when next opened
+  if (typeof _subtabInited !== 'undefined') delete _subtabInited.experiments;   // Settings → Developer redraws when next opened
   await screenLoad(true);
   if (typeof wakeWordApply === 'function') wakeWordApply();
   liveCallRender();

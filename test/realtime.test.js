@@ -95,7 +95,7 @@ test('off until the experiment is on and a model is set; the owner chooses the s
   assert.match(got.json[0].message, /Realtime voice is off/);
   assert.equal((await set({ protocol: 'skype' })).status, 400);
   assert.equal((await set({ url: 'http://not-a-socket' })).status, 400);
-  await H.api(null, 'POST', '/api/experiments/realtimeVoice', { on: true });
+  await H.api(null, 'POST', '/api/experiments/developer', { on: true }); await H.api(null, 'POST', '/api/experiments/realtimeVoice', { on: true });
   const r = await set({ protocol: 'openai', provider: 'rtlocal', model: 'stub-rt', waitSec: 3 });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.available, true);
