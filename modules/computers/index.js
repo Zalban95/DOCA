@@ -135,7 +135,8 @@ function view(c, state = null) {
     auto: !!c.auto, pinned: !!c.pinned, stoppedAt: c.stoppedAt || null, by: c.by || null,
     server: serverId(c), tools: `mcp__${serverId(c)}__*`,
     // Through the hub, so any signed-in host's browser can watch — the phone on the tailnet included (vnc.js).
-    vnc: { url: require('./vnc').watchUrl(c), local: `http://127.0.0.1:${c.vncPort}/vnc.html`, password: c.vncPassword } };
+    vnc: { url: require('./vnc').watchUrl(c), drive: require('./vnc').driveUrl(c), local: `http://127.0.0.1:${c.vncPort}/vnc.html`, password: c.vncPassword },
+    driving: require('./vnc').driving(c.id) };
 }
 
 /** A mission is lent this computer (agents/missions dispatch): remembered, so the view can say who works in it. */
@@ -174,6 +175,37 @@ async function detailed() {
   });
 }
 
+/**
+ * Files between a computer and the attachments (TODO H13.3), by `docker cp`: put an attachment into the
+ * computer's work folder, or keep a file from the computer as an attachment (show it, read it, send it on).
+ */
+const WORK = '/home/agent/work';
+async function put(id, attachmentName, dest = '') {
+  const c = need(id);
+  const a = require('../attachments').get(attachmentName);
+  if (!a) throw bad(`No attachment "${attachmentName}".`, 404);
+  const rel = String(dest || a.name).replace(/^\/+/, '');
+  if (rel.split('/').includes('..')) throw bad('The destination stays inside the work folder.');
+  const target = require('path').posix.join(WORK, rel.endsWith('/') ? `${rel}${a.name}` : rel);
+  await docker(['exec', container(c), 'mkdir', '-p', require('path').posix.dirname(target)]);
+  await docker(['cp', a.path, `${container(c)}:${target}`]);
+  await docker(['exec', '-u', '0', container(c), 'chown', 'agent:agent', target]).catch(() => {});
+  return { path: target, bytes: a.bytes };
+}
+
+async function fetchFile(id, src) {
+  const c = need(id);
+  const from = String(src || '').startsWith('/') ? String(src) : require('path').posix.join(WORK, String(src || ''));
+  const fs = require('fs'), os = require('os'), path = require('path');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-cp-'));
+  try {
+    const local = path.join(tmp, path.posix.basename(from) || 'file');
+    await docker(['cp', `${container(c)}:${from}`, local]);
+    if (!fs.statSync(local).isFile()) throw bad(`${from} is a folder; name a file.`);
+    return require('../attachments').save(fs.readFileSync(local), path.basename(local), { from: `mcp:${serverId(c)}` });
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+
 async function list() {
   let states = {};
   try {
@@ -183,4 +215,4 @@ async function list() {
   return rows().map(c => view(c, states[container(c)] || 'missing'));
 }
 
-module.exports = { IMAGE, imageReady, build, create, start, stop, remove, pin, list, detailed, screen, lend, get, all, madeBy, need };
+module.exports = { IMAGE, imageReady, build, create, start, stop, remove, pin, list, detailed, screen, lend, get, all, madeBy, need, put, fetchFile };

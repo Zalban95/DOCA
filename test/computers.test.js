@@ -76,3 +76,43 @@ test('the Computers view says who works in each and what it produced; a stopped 
     assert.equal((await H.api(null, 'GET', '/api/computers/nope/screen')).status, 404);
   } finally { store.writeJson('computers', { computers: before }); }
 });
+
+test('while a person drives a computer, the agent\'s input waits; after the hand-back it is told to look again', async () => {
+  const vnc = require('../modules/computers/vnc');
+  const takeover = require('../modules/computers/takeover');
+  const { EventEmitter } = require('node:events');
+  const store = require('../modules/store');
+  const before = store.readJson('computers', { computers: [] }).computers;
+  store.writeJson('computers', { computers: [...before, { id: 'dd0000aa', name: 'drive', token: 't', vncPassword: 'p', mcpPort: 1, vncPort: 9, createdAt: new Date().toISOString() }] });
+  try {
+    const socket = Object.assign(new EventEmitter(), { end() {}, destroy() { this.emit('close'); }, write() {}, pipe() {} });
+    vnc.upgrade({ url: '/ws/computer/dd0000aa?drive=1', headers: {} }, socket, null);
+    assert.equal(vnc.driving('dd0000aa'), true);
+    assert.match(takeover.before('mcp__computer-dd0000aa__desktop_click'), /a person is driving/);
+    assert.equal(takeover.before('mcp__computer-dd0000aa__screenshot'), null, 'looking carries on');
+    assert.equal(takeover.before('mcp__computer-dd0000aa__shell'), null);
+    socket.emit('close');
+    assert.equal(vnc.driving('dd0000aa'), false);
+    assert.match(takeover.after('mcp__computer-dd0000aa__screenshot', 'ok'), /^\[A person drove this computer until .+ and handed it back/);
+    assert.equal(takeover.after('mcp__computer-dd0000aa__screenshot', 'ok'), 'ok', 'said once');
+    const watcher = Object.assign(new EventEmitter(), { end() {}, destroy() {}, write() {}, pipe() {} });
+    vnc.upgrade({ url: '/ws/computer/dd0000aa', headers: {} }, watcher, null);
+    assert.equal(vnc.driving('dd0000aa'), false, 'watching is not driving');
+    watcher.emit('close');
+  } finally { store.writeJson('computers', { computers: before }); }
+});
+
+test('files go into a computer and come out as attachments', { timeout: 120000 }, async t => {
+  if (!ready) return t.skip('no Docker image doca/computer:1 here');
+  const c = await computers.create({ name: 'files', purpose: 'the suite' });
+  try {
+    const a = require('../modules/attachments').save(Buffer.from('hello from the hub'), 'note.txt', { from: 'test' });
+    const put = await computers.put(c.id, a.name, 'inbox/');
+    assert.equal(put.path, `/home/agent/work/inbox/${a.name}`);
+    const tools = require('../modules/harness/tools');
+    assert.match(await tools.call(`mcp__computer-${c.id}__shell`, { command: `cat ${put.path} && echo made-here > /home/agent/work/out.txt` }), /hello from the hub/);
+    const back = await computers.fetchFile(c.id, 'out.txt');
+    assert.equal(fs.readFileSync(back.path, 'utf8').trim(), 'made-here');
+    await assert.rejects(computers.put(c.id, a.name, '../../etc/x'), /inside the work folder/);
+  } finally { await computers.remove(c.id); }
+});
