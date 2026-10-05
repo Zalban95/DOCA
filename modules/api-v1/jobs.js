@@ -24,10 +24,26 @@ function newJob(commandId, deviceId, params) {
   };
   _jobs.set(job.id, job);
   if (_jobs.size > MAX_JOBS) _jobs.delete(_jobs.keys().next().value);
+  // One record of it with the other runs (harness/runs.js, TODO H11.2), so it outlives a restart and the memory cap.
+  require('../harness/runs').begin({ id: job.id, kind: 'job', personId: require('./devices').get(deviceId)?.userId || null, detail: { commandId, deviceId, params } });
   return job;
 }
 
-function get(id) { return _jobs.get(id) || null; }
+/** A job: live from memory while this process has it, else its run (after a restart, or past the cap). */
+function get(id) {
+  if (_jobs.has(id)) return _jobs.get(id);
+  const r = require('../harness/runs').get(id);
+  if (!r || r.kind !== 'job') return null;
+  const d = r.detail || {};
+  return { id: r.id, commandId: d.commandId, deviceId: d.deviceId, params: d.params, status: r.state === 'running' ? 'running' : r.state === 'done' ? 'done' : 'failed',
+    startedAt: r.startedAt, endedAt: r.endedAt, output: d.outputTail || [], result: d.result ?? null, error: r.state === 'done' ? null : r.outcome || null };
+}
+
+/** The job's run, closed with what it came to. */
+function record(job) {
+  require('../harness/runs').end(job.id, { state: job.status === 'done' ? 'done' : 'failed', outcome: job.error || 'done',
+    detail: { commandId: job.commandId, deviceId: job.deviceId, params: job.params, outputTail: job.output.slice(-20), result: job.result } });
+}
 
 function publicView(job) {
   if (!job) return null;
@@ -106,9 +122,11 @@ function runAsJob(commandId, deviceId, handler, reqShape, params) {
     job.endedAt = new Date().toISOString();
     job.result = body || null;
     if (!ok) job.error = (body && body.error) || job.output.slice(-3).join('').trim().slice(0, 500) || 'command failed';
+    record(job);
     bus.publish(deviceId, 'job.done', { jobId: job.id, commandId, status: job.status, error: job.error, result: job.result, outputTail: job.output.slice(-10) });
   }).catch(e => {
     job.status = 'failed'; job.endedAt = new Date().toISOString(); job.error = e.message;
+    record(job);
     bus.publish(deviceId, 'job.done', { jobId: job.id, commandId, status: 'failed', error: e.message });
   });
   return job;

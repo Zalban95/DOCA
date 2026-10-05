@@ -82,6 +82,10 @@ const STEPS = [
        PRIMARY KEY (tenant_id, run_id, seq))`,
     'CREATE INDEX IF NOT EXISTS trace_spans_at ON trace_spans (tenant_id, at)',
   ] },
+  // A run that is not a turn (a device's command job, api-v1/jobs.js) keeps what it was in `detail` (JSON).
+  { id: 9, what: 'runs: a detail column, so command jobs are runs too (TODO H11.2)', sql: [
+    'ALTER TABLE runs ADD COLUMN detail TEXT',
+  ] },
 ];
 
 /** The same steps on a synchronous SQLite handle (node:sqlite), for the stores that must stay synchronous. */

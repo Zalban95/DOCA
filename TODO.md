@@ -282,7 +282,9 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 **H11 · Coherence along the way** (§2.2)
 - [ ] H11.1 One chat component in three sizes; retire the floating chat's gateway/CLI paths if no
   non-built-in default harness is still a real case.
-- [ ] H11.2 Fold `jobs.js` into the `runs` table.
+- [x] H11.2 (2.195.0) Fold `jobs.js` into the `runs` table. A device's command job (`api-v1/jobs.js`) is a run of kind
+  `job` (schema step 9 adds `detail`): recorded at start and end, read back from the table once memory lets it go, and
+  marked interrupted when a restart cut it off. The harness's shell jobs stay processes of their own (`harness/jobs.js`).
 - [ ] H11.3 Every new capability lands in `/api/v1` first.
 
 **H12 · Editions** (§6): an edition is a pack (level, skills, recipes, visible parts, face), built
