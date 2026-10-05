@@ -90,8 +90,13 @@ async function main() {
     const [name, value] = cookie.split('=');
     await cdp.send('Network.setCookie', { name, value, url: base });
     await cdp.send('Page.navigate', { url: `${base}/` });
-    await sleep(2500);
-    const tabs = (await cdp.send('Runtime.evaluate', { expression: 'JSON.stringify(NAV_TABS)', returnByValue: true })).result.value;
+    // Until the panel's scripts have run — seconds on a cold Windows runner — not a fixed wait.
+    let tabs = null;
+    for (let i = 0; i < 60 && !tabs; i++) {
+      await sleep(500);
+      tabs = (await cdp.send('Runtime.evaluate', { expression: "typeof NAV_TABS !== 'undefined' && document.readyState === 'complete' ? JSON.stringify(NAV_TABS) : ''", returnByValue: true })).result.value || null;
+    }
+    await sleep(1000);
     if (!tabs) throw new Error('The panel did not load (no NAV_TABS).');
     for (const t of JSON.parse(tabs)) { await cdp.send('Runtime.evaluate', { expression: `nav(${JSON.stringify(t)})` }); await sleep(500); }
     for (const sub of ['general', 'channels', 'packs', 'system']) { await cdp.send('Runtime.evaluate', { expression: `nav('settings'); settingsSubNav(${JSON.stringify(sub)})` }); await sleep(500); }
