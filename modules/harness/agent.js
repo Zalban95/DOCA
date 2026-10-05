@@ -57,6 +57,7 @@ async function turn(options) {
   if (options.signal?.aborted) ctrl.abort();
   // One record of how this turn goes (runs.js): the mission and the conversation read the same row.
   const runId = require('./runs').begin({ sessionId: id, missionId: options.profile?.missionId || null, personId: options.client?.user?.id || null });
+  require('./trace').start(runId, id);   // and what it did, step by step (trace.js)
   try {
     const profile = profileForTurn(session, options.profile);
     memory.updateSession(id, { state: 'running', lastError: null });
@@ -86,6 +87,7 @@ async function turn(options) {
     require('./runs').end(runId, { state, outcome: e.message });
     throw e;
   } finally {
+    require('./trace').finish(id);
     running.delete(id);
     changed(id, ctrl);
     options.signal?.removeEventListener('abort', abort);
@@ -243,6 +245,10 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     });
     const spend = budget.report(led, p);
     say({ type: 'usage', step, ...spend });
+    // What this step sent and what came back, as numbers and names: the trace's model span (trace.js).
+    say({ type: 'step', step, provider: reply.provider || ep.id, model: reply.model || p.model, ms: stepMs, finish: reply.finish || null, usage: reply.usage || null,
+      cached: budget.cachedOf(reply.usage), estimate: promptEstimate, messages: messages.length, tools: schemas.length,
+      system: require('./trace').fingerprint(messages[0]?.content), calls: reply.tool_calls.map(c => c.function?.name).filter(Boolean) });
 
     memory.append(session.id, {
       role: 'assistant',

@@ -63,6 +63,18 @@ function mount(app) {
     try { own({ ...req, params: { id: String(req.query.sessionId || '') } }); } catch (e) { return res.status(e.status).json({ error: e.message }); }
     res.json({ runs: require('./runs').forSession(String(req.query.sessionId || ''), Math.min(100, Number(req.query.limit) || 20)) });
   });
+  // What one turn did, step by step (trace.js); ?format=otlp for OpenTelemetry tools (trace-otlp.js).
+  app.get('/api/harness/runs/:id/trace', (req, res) => {
+    const run = require('./runs').get(req.params.id);
+    try { if (!run) throw Object.assign(new Error('No such run.'), { status: 404 }); own({ ...req, params: { id: run.sessionId } }); }
+    catch (e) { return res.status(e.status || 404).json({ error: e.status === 404 || !e.status ? 'No such run.' : e.message }); }
+    const spans = require('./trace').spans(run.id);
+    if (req.query.format === 'otlp') {
+      res.setHeader('Content-Disposition', `attachment; filename="${run.id}.otlp.json"`);
+      return res.json(require('./trace-otlp').otlp(run, spans));
+    }
+    res.json({ run, spans });
+  });
   // What a restart would cut off, and whether one is waiting for it (drain.js).
   app.get('/api/harness/busy', (_req, res) => {
     const drain = require('./drain');
