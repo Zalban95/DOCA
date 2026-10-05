@@ -23,6 +23,8 @@ const FAMILIES = {
   // There is deliberately no target that lets a device define what the agent may
   // run: `harness:memory` reads, and applying a settings proposal stays a click.
   harness:   'Converse with the built-in harness: chat, sessions (own conversations), memory (read)',
+  // Another hub sending what it made: it lands in the library and waits for a host's dry run (packs/library.js).
+  packs:     'Send packs to this hub\'s library (send); nothing is applied until a host brings one in',
 };
 
 /** Scopes that are a bare family with no target (e.g. `interact`). */
@@ -83,6 +85,8 @@ const PRESETS = {
   // can do nothing with it.
   phone:    ['read:*', 'command:*', 'interact', 'profile:*', 'vars:self', 'sensors:report', 'media:upload', 'artifacts:self', 'devices:admin', 'mcp:self', 'harness:chat', 'harness:sessions'],
   viewer:   ['read:*'],
+  // Another DOCA hub, to send this one packs (TODO H4.5) and nothing else.
+  hub:      ['packs:send'],
 };
 
 module.exports = { FAMILIES, PRESETS, normalize, normalizeAll, hasScope, filterByScope, matches };
