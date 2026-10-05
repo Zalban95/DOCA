@@ -48,6 +48,7 @@ function adapterFor(row) {
 function whyNot(row) {
   if (!row) return 'No harness is the default.';
   if (row.id === 'openclaw') return 'OpenClaw answers here through its gateway: enable gateway.http.endpoints.chatCompletions in openclaw.json.';
+  if (row.id === 'opendots') return 'OpenDots answers in its own page (Controls → OpenDots → Open); talking to it from here needs its Intelligence SDK and is not built yet.';
   return `${row.label} has no one-question mode DOCA knows of: open it on the Harness tab, where it runs in its own terminal — or make the DOCA Harness the default.`;
 }
 

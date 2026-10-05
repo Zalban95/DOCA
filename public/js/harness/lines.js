@@ -52,6 +52,7 @@ function _harnessRender() {
 
   list.innerHTML = shown.map(_harnessRowHtml).join('')
     || '<div class="placeholder">No harness detected — use ⬇ Install a harness.</div>';
+  if (shown.some(h => h.surface === 'web')) webStackRefresh();
 
   if (_harnessOpenCfg && shown.some(h => h.id === _harnessOpenCfg)) harnessConfigToggle(_harnessOpenCfg, true);
 }
@@ -67,7 +68,8 @@ function _harnessRowHtml(h) {
     h.isDefault
       ? '<span class="badge badge-green" style="font-size:9px">default</span>'
       : `<button class="btn btn-xs" onclick="harnessSetDefault(${arg})" title="Make this the harness DOCA talks to">Use</button>`,
-    h.detected
+    h.detected && h.surface === 'web' ? webStackActions(h)   // a web app: its own page, its own project (harness/web-stack.js)
+      : h.detected
       ? `<button class="btn btn-xs btn-green" onclick="harnessOpen(${arg})" title="Open it on the Harness tab">▶ Open</button>`
       : '',
     !h.detected && h.canInstall
@@ -90,6 +92,7 @@ function _harnessRowHtml(h) {
       ${badge}
       <span class="harness-note">${escHtml(h.note || h.cmd || '')}</span>
       <span class="tool-actions">${actions}</span>
+      ${h.surface === 'web' && h.detected ? `<span class="web-state" data-web-state="${escHtml(id)}">…</span>` : ''}
     </div>
     <div class="tool-config-strip harness-cfg" id="harness-cfg-${escHtml(id)}" style="display:none"></div>`;
 }

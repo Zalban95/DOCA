@@ -34,12 +34,21 @@ const KNOWN = [
   },
   {
     id: 'openclaw', label: 'OpenClaw', vendor: 'OpenClaw', kind: 'stack',
-    note: 'Docker Compose agent stack — driven from Service Control below',
+    note: 'Docker Compose agent stack — started and updated in Settings → OpenClaw → Stack',
     url: 'https://github.com/openclaw/openclaw',
     // Falls back to "installed" so a stack that is not a git checkout still
     // reports as present instead of offering to clone over it.
     detect: { file: path.join(COMPOSE_DIR, 'docker-compose.yml'), gitRev: true },
     installCmd: `if [ -d "${COMPOSE_DIR}" ]; then cd "${COMPOSE_DIR}" && git pull; else git clone https://github.com/openclaw/openclaw.git "${COMPOSE_DIR}"; fi && cd "${COMPOSE_DIR}" && docker compose pull && docker compose up -d`,
+  },
+  {
+    // A web app with its own Compose project and data (harness/opendots.js; docs/design/opendots-integration.md). Its
+    // folder is a setting, so what it looks for and how it installs are read when the list is.
+    id: 'opendots', label: 'OpenDots', vendor: 'CopilotKit', kind: 'stack', surface: 'web',
+    note: 'Dots, Spaces and pages in its own web app — its own data and keys; Open goes to its page',
+    url: 'https://github.com/CopilotKit/OpenDots',
+    get detect() { return { file: path.join(require('./opendots').settings().dir, 'compose.yml'), gitRev: true }; },
+    get installCmd() { return require('./opendots').installCmd(); },
   },
   {
     id: 'claude', label: 'Claude Code', vendor: 'Anthropic', kind: 'cli', cmd: 'claude',

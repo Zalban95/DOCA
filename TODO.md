@@ -228,11 +228,14 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] Web search as a provider choice (OpenDots: Parallel by default, or the browser) — `web_search` (2.170.0):
   SearXNG, Brave, Tavily or DuckDuckGo, airlock-only while specialists are on. Parallel itself is left (a key-based
   provider like Tavily; one function in `modules/search`).
-- [ ] **OpenDots as a peer harness** — a catalog row like Claude Code's: install/connect, setup checks, Use, Open,
-  converse and stop through the same Controls, Harness tab and Logs; its own data, never a prerequisite. The plan from
-  the portal PC (2026-10-04) is [docs/design/opendots-integration.md](docs/design/opendots-integration.md) §3–§4 (its
-  baseline is 2.116.2). OpenDots is built on CopilotKit, which speaks AG-UI: DOCA as an AG-UI *client* is the likely
-  adapter, the mirror of `api-v1/agui.js`.
+- [x] **OpenDots as a peer harness** (2.208.0, `harness/opendots.js`; the plan from the portal PC, 2026-10-04, is
+  [docs/design/opendots-integration.md](docs/design/opendots-integration.md)). Done, from §3: a Controls row of kind
+  `stack` with a web surface — installed by cloning the pinned commit with its `.env` from the example (never filled by
+  DOCA), its states told apart (not installed, setup required, stopped, answering), Start/Stop of its own Compose project
+  `opendots` (never `down -v`, never OpenClaw's), Open to its own page in a new tab, and the floating chat saying it
+  answers there. **Left, needing a running instance with a CopilotKit Intelligence key:** §4's conversation adapter
+  (prove its transport first — DOCA as an AG-UI client is the likely shape), devices talking to it, and update/backup
+  per §3.
 - What DOCA has that OpenDots does not: accounts with levels and grants, devices and wearables, the airlock,
   checkpoints, plans before work, export/import, multi-OS hosts.
 
