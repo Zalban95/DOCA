@@ -27,22 +27,27 @@ Web-based control panel for managing the **OpenClaw** AI agent stack.
 
 ## Quick Start
 
+**Install** — one command per OS; it checks Node 22, fetches DOCA (the repository is private: your git
+credentials), installs its dependencies, adds start-at-boot and starts it:
+
 ```bash
-./run.sh
+bash scripts/install.sh            # Linux (systemd) and macOS (launchd);  --dir, --no-boot, --from <checkout>
+```
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install.ps1    # Windows (Task Scheduler at sign-in); -Dir, -NoBoot, -From
 ```
 
-`run.sh` installs dependencies on first run, loads a `.env` file if you have one, and starts the
-panel — on **https://localhost:4242** by default. Accept the self-signed certificate
-in your browser, or use `curl -ksS https://localhost:4242/api/v1/` from a shell.
-Plain HTTP is only a boot-time fallback if certificate setup fails; it is not a
-second listener or redirect. `-sS` keeps curl quiet while still showing connection errors.
+Then open **https://localhost:4242** on that machine to create the owner (no code needed there; from another
+device the first sign-up asks for the setup code in `.setup-code`). Accept the self-signed certificate once.
+CI runs both installers on Linux, Windows and macOS on every push.
 
-On Windows, or anywhere without a POSIX shell, use `npm install` then `npm start` instead: that is
-all `run.sh` ultimately does. Note that the panel manages Docker, systemd and a set of Unix CLIs,
-so Windows is a fine place to develop it but not to run it in earnest.
+**From a checkout** — `./run.sh` installs dependencies on first run, loads a `.env` file if you have one, and
+starts the panel — on **https://localhost:4242** by default; on Windows, `npm install` then `npm start`.
+`curl -ksS https://localhost:4242/api/v1/` answers from a shell. Plain HTTP is only a boot-time fallback if
+certificate setup fails.
 
-To have it come back after a reboot, either tick **Settings → General → Start at Boot** in the
-dashboard or run `./run.sh enable` on the host; both install the same systemd unit.
+To have it come back after a reboot, tick **Settings → General → Start at Boot** in the dashboard, or run
+`./run.sh enable` (Linux) / `node bin/doca-launch.js enable` (any OS): systemd, Task Scheduler or launchd.
 
 ## Linking the Chat to OpenClaw Agent
 

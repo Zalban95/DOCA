@@ -21,3 +21,18 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run smoke   # the panel in the runner's Chrome: every tab, no page error (bin/doca-smoke.js)
+      # The installer on each OS, from this checkout into a temp folder, no boot entry: it must end with a panel answering.
+      - name: install (Linux, macOS)
+        if: runner.os != 'Windows'
+        env: { PORT: '4343' }
+        run: |
+          bash scripts/install.sh --from . --dir "$RUNNER_TEMP/doca-install" --no-boot
+          curl -ksf -o /dev/null https://127.0.0.1:4343/login && echo "the installed panel answers"
+      - name: install (Windows)
+        if: runner.os == 'Windows'
+        env: { PORT: '4343' }
+        shell: pwsh
+        run: |
+          ./scripts/install.ps1 -From . -Dir "$env:RUNNER_TEMP\doca-install" -NoBoot
+          $r = Invoke-WebRequest -Uri https://127.0.0.1:4343/login -SkipCertificateCheck -UseBasicParsing
+          if ($r.StatusCode -ne 200) { throw "the installed panel answered $($r.StatusCode)" } else { "the installed panel answers" }

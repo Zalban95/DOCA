@@ -60,7 +60,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   resolver (docker, else podman) at every call site. **Left:** a run on a real Podman host; WSL2 path translation
   for bind mounts when the panel runs on Windows and Docker in WSL without Docker Desktop.
 - [ ] H1.7 VMs: Hyper-V, UTM/Parallels beside libvirt/VirtualBox.
-- [ ] H1.8 An installer per OS (Node, panel, boot entry, certificate, pairing QR).
+- [x] H1.8 (2.174.0) An installer per OS (Node, panel, boot entry, certificate, pairing QR): `scripts/install.sh`
+  and `install.ps1`, run in CI on all three. **Left:** trusting the certificate on the machine, a pairing QR printed at
+  the end, and a release download for when the repository is public (today: git clone with credentials).
 - [ ] H1.9 Run the whole panel once on macOS and record what breaks. In part: the browser smoke boots it and opens
   every tab on macOS and Windows runners on every push; a real Mac/Windows host (boot entry, version switch) is left.
 
