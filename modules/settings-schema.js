@@ -75,7 +75,18 @@ const SCHEMA = {
       faceVoice: { type: 'boolean', default: false, hint: 'In a voice call, the corner face moves its mouth with the agent\'s voice and listens when you speak.' },
       wakeWord: { type: 'boolean', default: false, hint: 'A screen showing the corner face listens for the wake word (call.wakeWord) and starts a call when it hears it.' },
       packRegistry: { type: 'boolean', default: false, hint: 'This hub lists the packs a host published to hubs holding a registry token, and can fetch from other hubs\' registries.' },
+      modelScout: { type: 'boolean', default: false, hint: 'The model scout: looks for better and new models, files suggestions a person accepts into TODO and hands to an implementer.' },
       visionPass: { type: 'boolean', default: false, hint: 'Agents may look at a computer\'s screen with the vision model under vision.' } } },
+  scout:            { is: 'travels', home: 'hive', note: 'the model scout: what it watches, how often, where accepted suggestions go and who works on them (modules/scout; the switch is experiments.modelScout)',
+    propose: p('Model scout', 'What the scout watches and how often; switching it on is a proposal too'),
+    keys: { enabled: { type: 'boolean', default: false, hint: 'Look daily for better or new models and brief every everyDays (a turn of the agent). Off by default.' },
+      everyDays: { type: 'number', min: 1, default: 7, hint: 'Days between briefs; a look that finds something notable briefs at once.' },
+      growthLikes: { type: 'integer', min: 1, default: 300, hint: 'Likes a model must gain on Hugging Face between two looks to count as growing fast.' },
+      watch: { type: 'array', default: ['ggml-org/llama.cpp', 'ollama/ollama', 'remsky/Kokoro-FastAPI', 'fedirz/faster-whisper-server', 'roboflow/inference', 'huggingface/transformers.js'],
+        hint: 'GitHub repositories (owner/repo) whose releases the scout follows: what DOCA runs on.' },
+      feeds: { type: 'array', default: ['https://huggingface.co/blog/feed.xml'], hint: 'News feeds (RSS or Atom) the scout reads titles from.' },
+      repo: { type: 'string', default: '', hint: 'The repository whose TODO.md takes accepted suggestions. Empty: this install\'s own checkout.' },
+      implementer: { type: 'string', default: 'doca', hint: 'Who works on an accepted suggestion: doca (a conversation of DOCA\'s agent) or a CLI harness id (claude, codex…).' } } },
   vision:           { is: 'travels', home: 'hive', note: 'how a computer\'s screen is read: a vision model, a detector, OCR or OpenCV (modules/vision; the switch is experiments.visionPass)',
     propose: p('Vision', 'Which reader looks at a computer\'s screen when there is nothing to number, and its model'),
     keys: { backend: { type: 'string', default: 'model', hint: 'The reader computer_look uses unless the agent picks one: model, detector, text or template.' },
@@ -155,6 +166,7 @@ function valid(spec, v) {
     return Number.isFinite(n) && (spec.type !== 'integer' || Number.isInteger(n)) && (spec.min === undefined || n >= spec.min) && (spec.max === undefined || n <= spec.max);
   }
   if (spec.type === 'string') return typeof v === 'string';
+  if (spec.type === 'array') return Array.isArray(v) && v.every(x => typeof x === 'string');
   return true;
 }
 

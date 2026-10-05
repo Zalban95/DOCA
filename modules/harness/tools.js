@@ -26,6 +26,7 @@ const TOOLS = [
   ...require('./toolbox/memory'),
   ...require('./toolbox/settings'),
   ...require('./toolbox/agents'),
+  ...require('./toolbox/scout'),
   ...require('./toolbox/status'),
   ...require('./toolbox/devices'),
   ...require('./toolbox/web'),
@@ -62,7 +63,8 @@ function schemas(disabled = []) {
   let off = require('../agents/registry').enabled()
     ? disabled
     : [...disabled, 'agent_dispatch', 'agent_results', 'agent_resume'];
-  if (!require('../computers/look').on()) off = [...off, 'computer_look'];   // an experiment: absent while off (computers/look.js)
+  if (!require('../computers/look').on()) off = [...off, 'computer_look'];
+  if (!require('../scout').on()) off = [...off, 'scout'];   // an experiment (modules/scout)   // an experiment: absent while off (computers/look.js)
   // Each tool's accepted note from this install is added to its description (tool-notes.js).
   return require('./tool-notes').annotate([
     ...TOOLS

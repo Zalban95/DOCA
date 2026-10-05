@@ -14,7 +14,7 @@ test('every key says what it is, whether it travels and where it lives', () => {
     if (d.home === 'device') assert.ok(['host', 'screen'].includes(d.on), `${k}: a device key says whether it is the host's or a screen's`);
     assert.ok(d.note?.length > 5, `${k}.note`);
     for (const [leaf, s] of Object.entries(d.keys || {})) {
-      assert.ok(['boolean', 'integer', 'number', 'string'].includes(s.type), `${k}.${leaf}.type`);
+      assert.ok(['boolean', 'integer', 'number', 'string', 'array'].includes(s.type), `${k}.${leaf}.type`);
       assert.ok(s.hint?.length > 10, `${k}.${leaf} has a hint`);
       assert.equal(schema.value(`${k}.${leaf}`, {}), s.default, `${k}.${leaf}: nothing set reads the default`);
     }
@@ -24,7 +24,7 @@ test('every key says what it is, whether it travels and where it lives', () => {
 test('what the agent may propose is built from the schema, and is the same list it always was', () => {
   const prefixes = require('../modules/harness/settings').SETTABLE.map(s => s.prefix).sort();
   assert.deepEqual(prefixes, ['agents.enabled', 'computers', 'customTheme', 'favorites', 'fmFavorites', 'harness.config', 'harness.default',
-    'hiddenBuiltins', 'hiddenTabs', 'mcpSettings', 'models', 'paths', 'retrieval', 'search', 'serviceSettings', 'sidebarSections', 'sidebarStats',
+    'hiddenBuiltins', 'hiddenTabs', 'mcpSettings', 'models', 'paths', 'retrieval', 'scout', 'search', 'serviceSettings', 'sidebarSections', 'sidebarStats',
     'snapshotSettings', 'theme', 'toolNotes', 'vision', 'vms', 'voiceServices']);
   for (const k of ['mcpServers', 'channels', 'network', 'backup', 'branding', 'experiments', 'migrations']) assert.ok(!schema.SCHEMA[k].propose, `${k} is never proposable`);
   assert.equal(require('../modules/harness/settings').SETTABLE.find(s => s.prefix === 'agents.enabled').exact, true);
