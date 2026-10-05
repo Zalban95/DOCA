@@ -87,6 +87,7 @@ function _settingsHarnessRender() {
   skillsCardRender(panel); // skills (settings/skills.js)
   guardsCardRender(panel); // guards (settings/guards.js)
   searchCardRender(panel); // web search (settings/search.js)
+  retrievalCardRender(panel); // retrieval: the embedding model (settings/retrieval.js)
 }
 /** Settings → Harness → ⚙: the built-in agent's parameters are edited on Controls, beside its row. */
 async function settingsOpenHarnessParams() {

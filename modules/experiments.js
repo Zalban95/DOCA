@@ -11,6 +11,7 @@ const path = require('path');
 
 const EXPERIMENTS = [
   { id: 'recipeRepair', label: 'Recipes repair themselves', doc: 'recipe-repair.md', todo: 'H3.4' },
+  { id: 'retrieval', label: 'Search memory and conversations by meaning', doc: 'retrieval.md', todo: 'H10.2' },
 ];
 
 const on = id => require('./settings-schema').value(`experiments.${id}`) === true;

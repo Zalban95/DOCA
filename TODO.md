@@ -240,7 +240,10 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 
 **H10 · Quality**
 - [ ] H10.1 Evaluation sets and tracing per turn (hive.md §3.11; "Where this harness stands" §4).
-- [ ] H10.2 Retrieval (embeddings; pgvector with PostgreSQL).
+- [x] H10.2 (2.181.0, experiment) Retrieval (embeddings; pgvector with PostgreSQL). Behind `experiments.retrieval` with
+  `retrieval.model`: memory_search and recall_conversations merge keyword and meaning; vectors in doca.db, only changed
+  pieces embedded; docs/experiments/retrieval.md. **Left:** measuring it with a real embedding model (`npm run
+  experiment -- retrieval`; none is pulled on the machines here), pgvector once on PostgreSQL, project files as a source.
 - [x] H10.3 (2.172.0) Learning loop: "this conversation becomes a skill or a recipe", reviewed — a drafted skill a host
   edits and saves ("＋ skill"), beside the recipe from the last turn. **Left:** the agent offering it by itself after a
   long turn that worked (a suggestion, never a write).

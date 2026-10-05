@@ -110,8 +110,8 @@ module.exports = [
   },
   {
     name: 'memory_search',
-    description: 'Search your durable memory by keyword. Do this before answering a question that depends on '
-      + 'something you were told in an earlier conversation.',
+    description: 'Search your durable memory by keyword (and by meaning, when retrieval is switched on). Do this before '
+      + 'answering a question that depends on something you were told in an earlier conversation.',
     parameters: {
       type: 'object',
       properties: {
@@ -120,11 +120,13 @@ module.exports = [
       },
       required: ['query'],
     },
-    run: ({ query, limit }) => {
-      const hits = memory.memSearch(query, Math.min(Number(limit) || 8, 30));
+    run: async ({ query, limit }) => {
+      const n = Math.min(Number(limit) || 8, 30);
+      // Retrieval (an experiment, retrieval/): keyword and meaning merged, over the same entries.
+      const { hits, note } = require('../../retrieval').on() ? await require('../../retrieval/sources').memory(query, n) : { hits: memory.memSearch(query, n), note: null };
       memory.memTouch(hits);
-      if (!hits.length) return `Nothing in memory matches "${query}".`;
-      return clip(hits.map(e => `- ${e.key}: ${e.value}`).join('\n'));
+      if (!hits.length) return `Nothing in memory matches "${query}".${note ? ` ${note}` : ''}`;
+      return clip(hits.map(e => `- ${e.key}: ${e.value}`).join('\n') + (note ? `\n${note}` : ''));
     },
   },
   {
@@ -206,7 +208,7 @@ module.exports = [
         limit:  { type: 'integer', description: 'search: how many conversations, up to 12 (default 6).' },
       },
     },
-    run: ({ action = 'search', query, id, limit }, ctx = {}) => {
+    run: async ({ action = 'search', query, id, limit }, ctx = {}) => {
       const recall = require('../recall');
       if (action === 'read') {
         const c = recall.read(String(id || ''), { person: ctx.user });
@@ -216,13 +218,14 @@ module.exports = [
           '', `Last ${c.messages.length} messages:`, ...c.messages.map(m => `[${m.role} ${m.at || ''}] ${m.text}`)].filter(x => x !== '').join('\n'));
       }
       if (!recall.terms(query).length) return 'Error: say what to look for in query.';
-      const hits = recall.search(query, { limit: Math.min(12, Math.max(1, Number(limit) || 6)), exclude: ctx.sessionId, person: ctx.user });
-      if (!hits.length) return `No earlier conversation mentions "${query}".`;
+      const opts = { limit: Math.min(12, Math.max(1, Number(limit) || 6)), exclude: ctx.sessionId, person: ctx.user };
+      const { hits, note } = require('../../retrieval').on() ? await require('../../retrieval/sources').conversations(query, opts) : { hits: recall.search(query, opts), note: null };
+      if (!hits.length) return `No earlier conversation mentions "${query}".${note ? ` ${note}` : ''}`;
       return clip(hits.map(h => [`- ${h.title} — id ${h.id}, ${h.kind}${h.archived ? ', archived' : ''}, last active ${h.updatedAt}`,
         h.topics.length ? `  topics: ${h.topics.join(', ')}` : '',
         h.summary ? `  summary: ${h.summary}` : '',
         ...h.matches.map(m => `  ${m.role} said: ${m.text}`)].filter(Boolean).join('\n')).join('\n')
-        + '\n\nread one with action read and its id.');
+        + `\n\nread one with action read and its id.${note ? `\n${note}` : ''}`);
     },
   },
 ];
