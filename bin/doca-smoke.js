@@ -76,12 +76,15 @@ async function main() {
   const proc = spawn(browserPath, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check',
     '--disable-gpu', '--window-size=1300,900', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
   const errors = [];
+  const absent = new Set();
   try {
     const cdp = await connect(await devtools(profile));
     cdp.on(m => {
       if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);
-      if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error' && !/favicon/.test(`${m.params.entry.text} ${m.params.entry.url || ''}`))
-        errors.push(`console: ${m.params.entry.text}${m.params.entry.url ? ` — ${m.params.entry.url}` : ''}`);
+      if (m.method !== 'Log.entryAdded' || m.params.entry.level !== 'error' || /favicon/.test(m.params.entry.url || '')) return;
+      // 502/503/504: an optional backend this machine lacks (Ollama, Docker…), a state the panel draws — noted, not failed.
+      if (/status of 50[234]\b/.test(m.params.entry.text)) absent.add(new URL(m.params.entry.url || base).pathname);
+      else errors.push(`console: ${m.params.entry.text}${m.params.entry.url ? ` — ${m.params.entry.url}` : ''}`);
     });
     await cdp.send('Runtime.enable'); await cdp.send('Log.enable'); await cdp.send('Network.enable');
     const [name, value] = cookie.split('=');
@@ -96,6 +99,7 @@ async function main() {
     await sleep(1500);
     console.log(`smoke: ${process.platform}, ${path.basename(browserPath)}, ${JSON.parse(tabs).length} tabs visited, /face opened — ${errors.length} page error${errors.length === 1 ? '' : 's'}`);
     for (const e of errors) console.log(`  ✗ ${String(e).split('\n')[0]}`);
+    if (absent.size) console.log(`  · not on this machine (answered 50x, drawn as such): ${[...absent].join(', ')}`);
     cdp.close();
     return errors.length ? 1 : 0;
   } finally {
