@@ -75,6 +75,10 @@ the end, and in the sections as "built in …" notes.
    is visible here, and a Linux client (Avalonia over `DocaDesk.Core`).
 
 **Build — later**
+- **OpenDots as a peer harness, and the ideas worth bringing into DOCA**
+  (requested 2026-10-04; implementation sequence proposed, not built).
+  → *OpenDots: one more harness, a stronger DOCA* below and
+  [the coding-agent handoff](docs/design/opendots-integration.md).
 - Retry with backoff on a rate limit (429). → *Where this harness stands…* §8.
 - A usage page with prices. → *Memory, limits and context*.
 - Provider quirks as data (a provider contract). → *Wanted next: many agents*.
@@ -134,6 +138,136 @@ console* for the files, what is built and what is open.
   fixed there, a re-pair kept the old cursor and `since=<old seq>` acked the new
   device's first queue.)
 - The clients version themselves (PROTOCOL §2). → *Version and identity*.
+
+## OpenDots: one more harness, a stronger DOCA
+
+**Requested 2026-10-04; research and plan only.** Integrate
+[CopilotKit/OpenDots](https://github.com/CopilotKit/OpenDots) through the same
+Controls catalogue, configuration, selection, Harness workspace and Logs logic
+as the other runtimes. Improve the built-in harness where OpenDots supplies a
+useful example. These are two related deliverables: installing OpenDots must
+not become a prerequisite for using DOCA's own tools or organisation.
+
+The [coding-agent handoff](docs/design/opendots-integration.md) records pinned
+sources, actual extension points, ownership and transport contracts, checks,
+and delivery order. Research baseline: DOCA `ae6e053` / `2.116.2`, OpenDots
+`c2569bb6a13a22e565cf3eb791c62267d06babb1` / `0.1.0`. Upstream was inspected,
+not deployed or verified against live services. All checkboxes below are open.
+
+### Keep the philosophy; repair the seams
+
+- **One hub, several peer runtimes.** DOCA remains the default on a fresh
+  install. OpenDots has its own installation, configuration, data and resource
+  ownership. Selecting it does not repoint `COMPOSE_DIR`, move DOCA's memory,
+  install OpenClaw, or give an external agent the hub's settings and keys.
+- **The same interaction, with honest capabilities.** Install/connect → check
+  setup → Use → Open → converse/watch/stop → revisit the result. The row says
+  whether the service is installed, reachable and ready for conversation;
+  missing Intelligence, a model, voice or computer service is named separately.
+  A link to OpenDots is useful during bring-up, but is not the finished chat
+  integration. Unsupported actions are explained, not silently discarded.
+- **Three levels still mean three levels.** The Orchestrator remains the
+  person's contact; work chats own plans, context and results; specialists do
+  bounded work. An external Dot is not automatically a new superior. Context
+  crosses a boundary as an explicit brief and result references, not a copied
+  transcript. The Orchestrator and work chats keep all their kits; delegation
+  remains judgement, not an artificial loss of tools.
+- **Authority follows the existing rules.** Human decisions govern installs,
+  settings, permissions and publishing learned procedures. The code charter,
+  airlock, device consent, control-plane checks and real execution boundaries
+  remain distinct. A remote OpenDots turn does not run through DOCA's charter
+  or approval gate merely because DOCA displays it; the UI must say whose
+  permissions apply. Project work follows the newer *Projects: an IDE…*
+  requirement: routine progress stays in the project; reporting upward is
+  explicit, rather than every edit waking the Orchestrator.
+
+### Integration — proposed order and completion gates
+
+- [ ] **OD-0 — prove the transport and pin the contract.** OpenDots requires
+  Node 24 and CopilotKit Intelligence for conversations. Its model adapter uses
+  OpenAI-compatible completions, but its application chat does not expose that
+  API. Exercise its actual `IntelligenceAgent`/thread path, including history,
+  reattachment, stop and a pending page review. Record service versions and
+  distinguish fixtures from a live run. A setup failure must send no message
+  to another harness.
+- [ ] **OD-1 — catalogue and lifecycle parity.** Add `opendots` as a web-backed
+  stack in the existing catalogue; give each stack its own root/Compose project,
+  lifecycle actions and log source. Support connecting an existing deployment
+  and an explicitly managed install. Use the existing install-proposal tray;
+  keep credentials server-side and installation separate from readiness.
+  Updating or stopping OpenDots must leave OpenClaw and DOCA untouched and keep
+  pages, conversations and computer volumes. Docker/Node absent is a setup
+  state. Check Windows/Docker Desktop and Linux separately.
+- [ ] **OD-2 — one selected runtime, one durable conversation binding.** Route
+  OpenDots explicitly from the Harness console and floating chat. Today the
+  external console assumes a PTY, `chat.js` sends non-built-in chat through
+  OpenClaw/Claude, and `/api/v1/harness` is built-in-only: a catalogue row alone
+  cannot deliver this. Persist the instance/Dot/thread binding, translate
+  upstream events into the existing transcript, and implement history, stop,
+  disconnect/reconnect and review receipts. Changing the default affects new
+  conversations, never moves a running one. Preserve old device behaviour;
+  add capability-negotiated external sessions before advertising device parity.
+- [ ] **OD-3 — finish the workspace flow.** Show the permitted Dots, Spaces,
+  page links and background-task state inside the existing Harness workspace.
+  Reuse transcript media/document surfaces and proposal conventions. Ship
+  review/save with revision and duplicate-submit protection. Verify panel,
+  DocaDesk and phone; a watch gets a bounded outcome or decision, not an editor.
+  Optional computer/voice/channel controls appear only with a verified adapter;
+  linking to the native workspace is labelled as a handoff.
+
+### Strongest ideas to bring into the built-in harness
+
+- [ ] **H-OD-1 — durable work products with conversation context.** OpenDots'
+  Spaces/Pages make the result something the person can return to and edit.
+  Extend DOCA's Projects, document previews and revisioned plans with an
+  artifact reference (owner, project, conversation, revision and source).
+  Reject stale saves and retain the unsaved draft. Build on *A plan is shown…*
+  and *Projects: an IDE…*; do not replace our UI with a second React workspace
+  or merge executable canvases into trusted document content.
+- [ ] **H-OD-2 — durable ownership of work, not another agent loop.** Adapt
+  OpenDots' transactional job claims and stale-worker checks to DOCA's existing
+  supervisor, missions and database. Keep one writer per conversation; persist
+  attempt identity, dispatch/result receipts and wake delivery state. On a
+  restart, reconcile remote work before retrying. A timeout can mean the action
+  completed: retry safe reads, verify writes, escalate an unknown outcome.
+  Preserve cancellation, user pre-emption and the existing autonomy budgets.
+- [ ] **H-OD-3 — tools that leave evidence beside the work.** Use typed, bounded
+  receipts for artifacts, research sources, commands and browser actions,
+  linked by run/tool-call id and machine. Render from the same stored record
+  live and after reload. Remote output stays untrusted. Add optional public-web
+  search/extraction to the scout/research path using the existing MCP and
+  airlock; Parallel is an example provider, not a new mandatory dependency or
+  silently enabled data destination.
+- [ ] **H-OD-4 — a computer is a place with revocable capabilities.** Learn from
+  per-Dot persistent browser/files/shell and human takeover. Fit an optional
+  isolated computer into *Devices as hands* and existing origin labels. Revoke
+  at execution time; take a fresh snapshot after handback; never fall back to
+  the hub's shell. Docker alone is not a complete sandbox or an egress policy.
+  Reuse the pinned OpenBot service where appropriate rather than writing a
+  second browser controller.
+- [ ] **H-OD-5 — learning that can be inspected and rolled back.** Extend the
+  existing skills/tool-notes workflow with source evidence, validation,
+  versioned candidates and an explicit publication decision. Keep manifest
+  first, load bodies on demand. External learning ingestion and skill delivery
+  are separate opt-ins; disabling one must not pretend to disable the other.
+  Follow *Two layers of learned knowledge…* for exact-byte review before any
+  export. No automatic upload of private transcripts, new governing rules, or
+  permission grants hidden in an imported skill.
+- [ ] **H-OD-6 — prove improvement.** Extend the existing tests/proof and guard
+  evaluation paths with a small workflow corpus: research → draft → review →
+  save/read-back, resume after restart, failed/unknown remote action, revoked
+  access, and project work that stays out of the main chat. Record outcome,
+  duplicate effects, latency, model/tool calls and measured usage against the
+  current harness. Missing external usage is unknown, never zero. This extends
+  *Where this harness stands…* §4 rather than creating another tracing platform.
+
+**Delivery boundary.** OD-0 → OD-1 → OD-2 → OD-3 makes OpenDots a coherent peer.
+H-OD-1/2/3/6 are the first built-in improvements; H-OD-4/5 build on their own
+permission and evidence contracts. All reuse the existing backlog rather than
+superseding it. Full multi-user OpenDots sharing, automatic memory/identity
+sync, a new workflow/DAG engine, a general proxy, and replacing DOCA's native
+voice stack are not part of this integration. Slack and Realtime voice remain
+optional follow-ons requiring explicit configuration and live verification.
 
 ## To discuss next (asked for 2026-09-26, not decided)
 
