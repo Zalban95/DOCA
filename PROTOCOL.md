@@ -133,6 +133,9 @@ Since hub 2.189.0 `POST /a2a` (scope `harness:chat`) is the hub as an A2A agent 
 AG-UI. The agent card is public at `https://<hub>/.well-known/agent-card.json`.
 Since hub 2.191.0 `GET /clients/node` (any token) is the hub's release channel for `doca-client`: each file with its
 sha256, and `GET /clients/node/:file` the bytes — a client compares, fetches what differs, and checks before replacing.
+Since hub 2.194.0 the scope family `packs` (`packs:send`; the `hub` preset holds it and nothing else) lets another hub
+send this one packs: `GET /packs` says who it is, `POST /packs` (the `.dpack` as multipart `file`) puts it in the
+library for a host to bring in — nothing is applied on arrival.
 
 **Rotation.** `POST /devices/me/rotate` returns a new token; the old one stays
 valid for 60 s (`previousValidUntil`) so a client can swap atomically.

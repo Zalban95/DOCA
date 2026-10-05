@@ -107,7 +107,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   a dry run listing what it adds, needs and overwrites.
 - [x] H4.4 (2.163.0) Round-trip tests per converter, with fixtures from the other tools (`test/packs.test.js`, a
   zip made by Python's zipfile). More fixtures as more converters arrive.
-- [ ] H4.5 The library in Settings; hub-to-hub send; whatever the agent saves is a pack.
+- [x] H4.5 (2.194.0) The library in Settings; hub-to-hub send; whatever the agent saves is a pack. The library keeps
+  packs made here, by the agent (`pack` tool) or received; another hub sends with a `hub`-preset token (`packs:send`),
+  pinned on first contact; bringing one in is the dry run.
 - [ ] H4.6 A registry to publish and fetch packs. [X]
 
 **H5 · Browser control** (§3.1)

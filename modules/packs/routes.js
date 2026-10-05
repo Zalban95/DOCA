@@ -25,6 +25,21 @@ function mount(app) {
     } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
   app.post('/api/packs/plan', upload, h(req => require('./import').plan(file(req))));
+  // The library (library.js): what this hive keeps — made here, by the agent, or received — and other hubs to send to (send.js).
+  const lib = () => require('./library');
+  app.get('/api/packs/library', h(() => ({ packs: lib().list(), hubs: require('./send').list() })));
+  app.post('/api/packs/library', h(req => lib().save(require('./export').build(req.body || {}).buffer, { origin: 'made', from: req.auth?.user?.name || req.auth?.user?.email || null })));
+  app.get('/api/packs/library/:id', (req, res) => {
+    try { const { meta, buffer } = lib().get(req.params.id); res.set('Content-Disposition', `attachment; filename="${meta.name.replace(/[^\w.-]+/g, '-') || 'pack'}.dpack"`).type('application/zip').send(buffer); }
+    catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  });
+  app.delete('/api/packs/library/:id', h(req => lib().remove(req.params.id)));
+  app.post('/api/packs/library/:id/plan', h(req => require('./import').plan(lib().get(req.params.id).buffer)));
+  app.post('/api/packs/library/:id/import', h(req => require('./import').apply(lib().get(req.params.id).buffer, { only: Array.isArray(req.body?.only) ? req.body.only : null,
+    overwrite: req.body?.overwrite === true, person: require('../harness/turn/client').dashboardClient(req).user, actorLevel: req.auth?.role || null })));
+  app.post('/api/packs/library/:id/send', h(req => require('./send').send(String(req.body?.hub || ''), req.params.id)));
+  app.post('/api/packs/hubs', h(req => require('./send').add(req.body || {})));
+  app.delete('/api/packs/hubs/:id', h(req => require('./send').remove(req.params.id)));
   app.post('/api/packs/import', upload, h(req => {
     let only = null;
     try { only = req.body?.only ? JSON.parse(req.body.only) : null; } catch { throw Object.assign(new Error('only is a JSON list of keys from the plan.'), { status: 400 }); }
