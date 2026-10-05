@@ -90,7 +90,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   "＋ last turn" in the Harness side panel). Left: the button on the turn itself in the transcript.
 - [x] H3.3 (2.159.0) `recipe_run` and a Run button: no model, the same gate/permits/approvals per step (through
   `runToolCalls` itself). Left: filling parameters from a sentence with the cheapest model.
-- [ ] H3.4 A failed step goes to the agent with the log; it proposes the repaired revision. [X]
+- [x] H3.4 (2.176.0, experiment) A failed step goes to the agent with the log; it proposes the repaired revision. [X]
+  Behind `experiments.recipeRepair`, written up in docs/experiments/recipe-repair.md; the framework (Settings →
+  Experiments, `npm run experiment`) came with it. **Left:** measuring it with a real model (costs tokens: the owner's call).
 - [x] H3.5 (2.173.0, in part) Skills link their recipes; device macros and install proposals become recipes. Done:
   skills name their recipes (listed when read, carried in packs). **Left:** device macros and install proposals as recipes.
 

@@ -71,6 +71,29 @@ function save(input) {
   return r;
 }
 
+/**
+ * A proposed revision (the recipe-repair experiment, docs/experiments/recipe-repair.md): kept beside the recipe,
+ * never run, until a person accepts it (it becomes the next revision) or discards it.
+ */
+const proposedFile = id => path.join(store.dir(`${SUB}/proposed`), `${slug(id)}.json`);
+function proposed(id) { try { return JSON.parse(fs.readFileSync(proposedFile(id), 'utf8')); } catch { return null; } }
+function propose(input) {
+  const existing = get(input.id);
+  if (!existing) throw bad(`No recipe "${input.id}" to propose a revision of.`, 404);
+  const r = { ...normalize({ ...existing, ...input }, existing), proposedAt: new Date().toISOString(), why: String(input.why || '').slice(0, 1000) };
+  fs.writeFileSync(proposedFile(r.id), JSON.stringify(r, null, 2));
+  return r;
+}
+function accept(id) {
+  const p = proposed(id);
+  if (!p) throw bad(`No proposed revision of "${id}".`, 404);
+  const { proposedAt, why, revision, createdAt, updatedAt, ...input } = p;
+  const r = save({ ...input, id });
+  fs.rmSync(proposedFile(id), { force: true });
+  return r;
+}
+function discard(id) { if (!proposed(id)) throw bad(`No proposed revision of "${id}".`, 404); fs.rmSync(proposedFile(id), { force: true }); return { discarded: id }; }
+
 function remove(id) {
   const r = get(id);
   if (!r) throw bad(`No recipe "${id}".`, 404);
@@ -110,4 +133,4 @@ function lift(value, params) {
   return value;
 }
 
-module.exports = { list, get, save, remove, fromTurn, normalize, slug };
+module.exports = { list, get, save, remove, fromTurn, normalize, slug, proposed, propose, accept, discard };
