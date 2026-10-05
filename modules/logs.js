@@ -219,7 +219,7 @@ function composeFile() {
 }
 
 function openStack(src, tail, onLine) {
-  const child = spawn('docker', ['compose', 'logs', '--follow', '--tail', String(tail)], { cwd: COMPOSE_DIR });
+  const child = spawn(require('./containers').cli(), ['compose', 'logs', '--follow', '--tail', String(tail)], { cwd: COMPOSE_DIR });
   const feed = (chunk, forced) => String(chunk).split('\n').forEach(t => {
     if (t.trim()) onLine(line(src, forced || levelOf(t), t));
   });

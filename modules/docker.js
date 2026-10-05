@@ -14,7 +14,7 @@ const { sseHeaders, loadPrefs, savePrefs } = require('./utils');
  * passes the argument vector straight to the process, so the braces need no
  * quoting anywhere.
  */
-const dockerJson = (args, done) => execFile('docker', args, { maxBuffer: 8 * 1024 * 1024 }, done);
+const dockerJson = (args, done) => execFile(require('./containers').cli(), args, { maxBuffer: 8 * 1024 * 1024 }, done);
 
 const textOf = err => String((err && (err.message || err.stderr)) || '');
 
@@ -95,7 +95,7 @@ function handleContainerLogs(req, res) {
   sseHeaders(res);
   const id    = req.params.id;
   const tail  = req.query.tail || '200';
-  const child = spawn('docker', ['logs', '-f', '--tail', tail, id]);
+  const child = spawn(require('./containers').cli(), ['logs', '-f', '--tail', tail, id]);
 
   const send = d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`);
   child.stdout.on('data', send);
@@ -121,7 +121,7 @@ function handleImagePull(req, res) {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'No image name' });
   sseHeaders(res);
-  const child = spawn('docker', ['pull', name]);
+  const child = spawn(require('./containers').cli(), ['pull', name]);
   child.stdout.on('data', d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`));
   child.stderr.on('data', d => res.write(`data: ${JSON.stringify(d.toString())}\n\n`));
   child.on('error', err => { res.write(`data: ${JSON.stringify(`[error: ${err.message}]`)}\n\n`); res.end(); });
@@ -132,7 +132,7 @@ function handleImagePull(req, res) {
 /** DELETE /api/docker/images/:id */
 function handleImageDelete(req, res) {
   const id = decodeURIComponent(req.params.id);
-  exec(`docker rmi ${id}`, (err, stdout, stderr) => {
+  exec(`${require('./containers').cli()} rmi ${id}`, (err, stdout, stderr) => {
     if (err) return res.status(500).json({ error: stderr || err.message });
     res.json({ ok: true });
   });
@@ -165,7 +165,7 @@ function handleRun(req, res) {
   const cmdDisplay = `docker ${args.join(' ')}`;
   sseWrite({ status: `$ ${cmdDisplay}\n` });
 
-  const child = spawn('docker', args);
+  const child = spawn(require('./containers').cli(), args);
   child.stdout.on('data', d => sseWrite({ status: d.toString() }));
   child.stderr.on('data', d => sseWrite({ status: d.toString() }));
   child.on('close', (code) => {

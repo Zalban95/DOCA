@@ -53,7 +53,7 @@ function handleSettings(req, res) {
 
 /** GET /api/services/status — running containers + local image presence */
 function handleStatus(req, res) {
-  exec(`docker ps -a --filter "name=doca-" --format '{{json .}}'`, (err, stdout) => {
+  exec(`${require('./containers').cli()} ps -a --filter "name=doca-" --format '{{json .}}'`, (err, stdout) => {
     const running = {};
     (stdout || '').trim().split('\n').filter(Boolean).forEach(line => {
       try {
@@ -63,7 +63,7 @@ function handleStatus(req, res) {
       } catch {}
     });
 
-    exec(`docker images --format '{{.Repository}}:{{.Tag}}'`, { timeout: 5000 }, (imgErr, imgOut) => {
+    exec(`${require('./containers').cli()} images --format '{{.Repository}}:{{.Tag}}'`, { timeout: 5000 }, (imgErr, imgOut) => {
       const local  = new Set((imgOut || '').trim().split('\n').filter(Boolean));
       const images = {};
       INFERENCE_SERVICES.forEach(s => {
@@ -148,7 +148,7 @@ function handleStart(req, res) {
   const cmdDisplay = `docker ${dockerArgs.join(' ')}`;
   sseWrite({ status: `Starting ${svc.label}…\n$ ${cmdDisplay}\n` });
 
-  const child = spawn('docker', dockerArgs, { cwd: home });
+  const child = spawn(require('./containers').cli(), dockerArgs, { cwd: home });
   child.stdout.on('data', d => sseWrite({ status: d.toString() }));
   child.stderr.on('data', d => sseWrite({ status: d.toString() }));
   child.on('close', (code, signal) => {
@@ -167,7 +167,7 @@ function handleStop(req, res) {
   const { id } = req.body;
   const svc = INFERENCE_SERVICES.find(s => s.id === id);
   if (!svc) return res.status(400).json({ error: 'Unknown service' });
-  exec(`docker stop doca-${id} && docker rm doca-${id}`, (err, stdout, stderr) => {
+  exec(`${require('./containers').cli()} stop doca-${id} && ${require('./containers').cli()} rm doca-${id}`, (err, stdout, stderr) => {
     if (err) return res.status(500).json({ error: stderr || err.message });
     res.json({ ok: true });
   });
