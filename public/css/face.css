@@ -2,8 +2,9 @@
 .face-corner { position: fixed; bottom: 18px; right: 84px; width: 64px; height: 64px; border-radius: 50%; z-index: 500;
   background: #050507; overflow: hidden; display: block; border: 0; padding: 0; cursor: pointer;
   /* No ring: the dark disc fades into the page, so the dots look like they float there */
-  -webkit-mask-image: radial-gradient(circle, #000 48%, rgba(0,0,0,.6) 60%, transparent 71%);
-  mask-image: radial-gradient(circle, #000 48%, rgba(0,0,0,.6) 60%, transparent 71%);
+  /* closest-side: 100% is the button's edge. Solid to 62%, then an eased fade to the edge, so it has no rim */
+  -webkit-mask-image: radial-gradient(circle closest-side, #000 62%, rgba(0,0,0,.8) 70%, rgba(0,0,0,.5) 79%, rgba(0,0,0,.22) 88%, rgba(0,0,0,.06) 95%, transparent 100%);
+  mask-image: radial-gradient(circle closest-side, #000 62%, rgba(0,0,0,.8) 70%, rgba(0,0,0,.5) 79%, rgba(0,0,0,.22) 88%, rgba(0,0,0,.06) 95%, transparent 100%);
   transition: transform .6s cubic-bezier(.22, 1, .36, 1); }
 .face-corner:hover { transform: scale(1.1); }
 .face-corner canvas { width: 100%; height: 100%; display: block; border-radius: 50%; }

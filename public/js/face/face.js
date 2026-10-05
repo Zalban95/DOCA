@@ -88,8 +88,9 @@ function faceMount(canvas, specIn = {}) {
       for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
         const d = Math.hypot(x + 0.5 - h2, y + 0.5 - h2) / h2;
         if (d >= 1) continue;
-        const core = Math.exp(-Math.pow(d / 0.07, 2)), halo = 0.36 * Math.exp(-d / 0.3) * (1 - d * d);
-        const a = Math.min(1, core + halo), white = core / Math.max(a, 1e-6) * 0.75;   // the peak whitens, the glow keeps the colour
+        // a firefly: the core, a bright close bloom around it, and the faint wide glow (asked 2026-10-06)
+        const core = Math.exp(-Math.pow(d / 0.07, 2)), bloom = 0.42 * Math.exp(-Math.pow(d / 0.2, 2)), halo = 0.3 * Math.exp(-d / 0.32) * (1 - d * d);
+        const a = Math.min(1, core + bloom + halo), white = core / Math.max(a, 1e-6) * 0.75;   // the peak whitens, the glow keeps the colour
         const o = (y * S + x) * 4;
         px[o] = r + (255 - r) * white; px[o + 1] = g + (255 - g) * white; px[o + 2] = b + (255 - b) * white; px[o + 3] = a * 255;
       }
