@@ -81,7 +81,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   look, tabs and sections as the device's own, notifications (asked here, haptics, quiet hours), lent tool families.
   **Left:** voice and the face per device on the server (both per browser today), the watch's console moving from
   Wearables to its page, a link to each device's page from its row in the Devices list.
-- [ ] H2.5 Migrations for prefs keys (rename, move, default) — the upgradability gap.
+- [x] H2.5 (2.178.0) Migrations for prefs keys (rename, move, default) — the upgradability gap. `modules/migrations.js`:
+  rows of `move` / `defaultChanged` / `drop`, run once per prefs file at start with a copy kept, recorded in the file;
+  a new file is born having had them all; listed in Settings → System. None has been needed yet: the list is empty.
 
 **H3 · Recipes — repeat it without the thinking** (§2.3)
 - [x] H3.1 (2.159.0) Recipe format (parameters, steps = tool calls, checks), stored per hive. [IO] runnable
