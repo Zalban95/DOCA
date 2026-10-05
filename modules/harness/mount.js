@@ -23,6 +23,7 @@ function mount(app) {
   require('../recipes/routes').mount(app);   // recipes: what worked, run again without the thinking (recipes/)
   require('../channels/telegram/routes').mount(app);   // Telegram as a channel (channels/telegram)
   require('../channels/matrix/routes').mount(app);     // Matrix likewise (channels/matrix)
+  require('../channels/slack/routes').mount(app);      // and Slack (channels/slack)
   require('../computers/routes').mount(app);   // computers for agents (computers/)           // a conversation as a chat tab: title, mode, approval, its queue
   require('./guard/routes').mount(app);         // the guards that screen what the airlock lets in (guard/)
   // The context Ollama really serves a model with (ollama-context.js; H-20).
