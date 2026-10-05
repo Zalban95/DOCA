@@ -39,7 +39,7 @@ async function waitReady(svc, say) {
     restarts = Number(count) || 0;
     if (state === 'gone' || state === 'exited' || state === 'dead' || restarts >= 2) {
       const log = await new Promise(r => exec(`${cli} logs --tail 15 ${name}`, { maxBuffer: 1 << 20 }, (e, out, err) => r(`${out || ''}${err || ''}`.replace(/\x1b\[[0-9;]*m/g, ''))));
-      exec(`${cli} rm -f ${name}`, () => {});
+      await new Promise(r => exec(`${cli} rm -f ${name}`, () => r()));   // gone before the answer says so
       return { ok: false, log, why: diagnose(log) || `The container ${state === 'gone' ? 'is gone' : `stopped (${state}, restarted ${restarts}×)`} before ${svc.label} answered.` };
     }
     if (Date.now() - said > 15000) { say(`… waiting for ${svc.label} to answer on :${svc.port} (${state})\n`); said = Date.now(); }
