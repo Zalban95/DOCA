@@ -56,7 +56,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [x] H1.4 (2.167.0) GPU readings beyond nvidia-smi: AMD (rocm-smi), Intel, Apple (unified memory). **Left:** checking
   the AMD and Apple parsers on real hardware; Intel utilisation (intel_gpu_top needs root); temperatures on Apple.
 - [x] H1.5 (2.152.1) File roots per OS (Linux /media /mnt /tmp; macOS /Volumes /tmp; Windows the other drive letters) plus the OS's temp folder; real paths by the OS's resolver. Left: default *paths* (workspace, attachments) per OS.
-- [ ] H1.6 Containers: Podman, Docker Desktop, Colima/OrbStack; WSL2-aware paths.
+- [x] H1.6 (2.169.0, in part) Containers: Podman, Docker Desktop, Colima/OrbStack; WSL2-aware paths. Done: one
+  resolver (docker, else podman) at every call site. **Left:** a run on a real Podman host; WSL2 path translation
+  for bind mounts when the panel runs on Windows and Docker in WSL without Docker Desktop.
 - [ ] H1.7 VMs: Hyper-V, UTM/Parallels beside libvirt/VirtualBox.
 - [ ] H1.8 An installer per OS (Node, panel, boot entry, certificate, pairing QR).
 - [ ] H1.9 Run the whole panel once on macOS and record what breaks. In part: the browser smoke boots it and opens

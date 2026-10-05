@@ -29,7 +29,7 @@ const bad = (m, status = 400) => Object.assign(new Error(m), { status });
 
 function docker(args, { timeout = 120000 } = {}) {
   return new Promise((resolve, reject) => {
-    execFile('docker', args, { timeout, maxBuffer: 8 << 20, windowsHide: true }, (err, stdout, stderr) => {
+    execFile(require('../containers').cli(), args, { timeout, maxBuffer: 8 << 20, windowsHide: true }, (err, stdout, stderr) => {
       if (err) return reject(Object.assign(new Error(String(stderr || err.message).trim().split('\n').pop()), { status: 500 }));
       resolve(String(stdout).trim());
     });
@@ -58,7 +58,7 @@ async function imageReady() { try { await docker(['image', 'inspect', IMAGE]); r
 /** Build the image from clients/computer (minutes the first time: Chromium, a desktop, ffmpeg). */
 function build(onLine = () => {}) {
   return new Promise((resolve, reject) => {
-    const child = require('child_process').spawn('docker', ['build', '-t', IMAGE, CONTEXT], { windowsHide: true });
+    const child = require('child_process').spawn(require('../containers').cli(), ['build', '-t', IMAGE, CONTEXT], { windowsHide: true });
     const feed = d => String(d).split('\n').filter(Boolean).forEach(onLine);
     child.stdout.on('data', feed); child.stderr.on('data', feed);
     child.on('close', code => (code === 0 ? resolve({ image: IMAGE }) : reject(bad(`docker build exited ${code}`, 500))));

@@ -75,7 +75,7 @@ async function collectStatus() {
 
   const [dockerResult, gpuResult, ollamaTagsResult, ollamaPsResult, cpuSample, extStats] = await Promise.all([
     Promise.allSettled([
-      run(`docker ps --format '{{json .}}'`),
+      run(`${require('./containers').cli()} ps --format '{{json .}}'`),
       require('./gpu').read(),   // NVIDIA, AMD, Apple, Intel, Windows adapters (gpu.js)
       run(`curl -s ${ollamaUrl}/api/tags`),
       run(`curl -s ${ollamaUrl}/api/ps`),
@@ -185,10 +185,11 @@ function handleStackInfo(_req, res) {
 
 async function handleAction(req, res) {
   const { action } = req.body;
+  const c = require('./containers').cli();   // docker, or podman (containers.js)
   const cmds = {
-    start:   'docker compose up -d',
-    stop:    'docker compose down',
-    restart: 'docker compose down && docker compose up -d',
+    start:   `${c} compose up -d`,
+    stop:    `${c} compose down`,
+    restart: `${c} compose down && ${c} compose up -d`,
   };
   if (!cmds[action]) return res.status(400).json({ error: 'Unknown action' });
   try {
@@ -221,10 +222,11 @@ function handleStackUpdate(_req, res) {
     return res.end();
   }
 
+  const c = require('./containers').cli();
   const cmd = [
     'if [ -d .git ]; then echo "── Updating stack definition ──"; git pull; else echo "── Not a git checkout — keeping the current compose file ──"; fi',
-    'echo; echo "── Pulling images ──"; docker compose pull',
-    'echo; echo "── Recreating containers ──"; docker compose up -d',
+    `echo; echo "── Pulling images ──"; ${c} compose pull`,
+    `echo; echo "── Recreating containers ──"; ${c} compose up -d`,
   ].join(' && ');
 
   streamCmd(res, cmd, { cwd: COMPOSE_DIR });
