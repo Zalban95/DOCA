@@ -100,6 +100,8 @@ const TABLE = [
   R(ANY, '/api/packs(/.*)?', 'host'),                          // packs carry MCP commands, tool lists and memory (packs/routes.js)
   R(ANY, '/api/schedules(/.*)?', 'chat'),                     // one's own schedules; a host's, every one (schedules/routes.js)
   R(GET, '/api/face/stream', 'chat'),                          // the face's feed, scoped to what the viewer may open (face/state.js)
+  R(ANY, '/api/experiments(/.*)?', 'host'),                     // the owner's switches for experiments (experiments.js)
+  R('POST', '/api/recipes/[^/]+/(accept|discard)', 'host'),     // a repaired revision becomes automation: a host's call
   R('DELETE', '/api/recipes/[^/]+', 'host'),                   // a recipe the hive shares (recipes/routes.js)
   R(ANY, '/api/recipes(/.*)?', 'chat'),                       // reading, saving and running one: as the signed-in person
   R('POST', '/api/channels/telegram', 'host'),               // the bot's token and switch: it answers as the hive

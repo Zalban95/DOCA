@@ -15,7 +15,7 @@ async function hcRecipesLoad() {
   box.innerHTML = _hcRecipes.map(r => `
     <div class="hc-agent" title="${escHtml(r.description || '')}">
       <span class="hc-agent-id">${escHtml(r.title)}</span>
-      <span class="hc-agent-note">${r.steps.length} step${r.steps.length === 1 ? '' : 's'}${r.params.length ? ` · ${escHtml(r.params.map(p => p.name).join(', '))}` : ''} · r${r.revision}</span>
+      <span class="hc-agent-note">${r.steps.length} step${r.steps.length === 1 ? '' : 's'}${r.params.length ? ` · ${escHtml(r.params.map(p => p.name).join(', '))}` : ''} · r${r.revision}${r.proposed ? ` · <a href="#" onclick="hcRecipeReview(${jsArg(r.id)});return false" style="color:var(--amber)">r${r.proposed.revision} proposed</a>` : ''}</span>
       <button class="btn btn-xs btn-blue" onclick="hcRecipeRun(${jsArg(r.id)})" title="Run it">▶</button>
       <button class="btn btn-xs" onclick="hcScheduleNew(${jsArg(r.id)})" title="Run it on a timetable">⏰</button>
       <button class="btn btn-xs" onclick="hcRecipeExport(${jsArg(r.id)})" title="Export: JSON, or a script">⬇</button>
@@ -51,6 +51,18 @@ function hcRecipeRun(id) {
     } catch (e) { appAlert(e.message); }
   });
   ask(0);
+}
+
+/** A repaired revision the agent proposed (the recipe-repair experiment): read its steps, then accept or discard it. */
+function hcRecipeReview(id) {
+  const r = _hcRecipes.find(x => x.id === id);
+  if (!r?.proposed) return;
+  const steps = s => s.map((x, n) => `${n + 1}. ${x.tool} ${JSON.stringify(x.args).slice(0, 140)}`).join('\n');
+  appChoose(`Revision ${r.proposed.revision} of "${r.title}", proposed after a failed run.\n\n${r.proposed.why || '(no reason given)'}\n\nNow:\n${steps(r.steps)}\n\nProposed:\n${steps(r.proposed.steps)}`,
+    [{ label: 'Discard', value: 'discard', cls: 'btn-red' }, { label: 'Accept', value: 'accept', cls: 'btn-blue' }], async how => {
+      try { await apiFetch(`/api/recipes/${encodeURIComponent(id)}/${how}`, { method: 'POST' }); } catch (e) { appAlert(e.message); }
+      hcRecipesLoad();
+    });
 }
 
 function hcRecipeExport(id) {

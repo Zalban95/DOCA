@@ -16,13 +16,15 @@ module.exports = [
         + 'that worked (lift the values that vary with params [{name, value, description}]); save takes explicit steps '
         + '[{tool, args, check?: {contains|matches}}]; run executes one with params, through the same approvals as your own '
         + 'calls, and stops at the first failed check (then read its conversation, repair the steps and save a new revision '
-        + 'with the same id). In shell steps write {name} bare: the value is quoted for you. list and show read them.'
+        + 'with the same id). propose offers a repaired revision for a person to accept instead of saving it (what a repair after a '
+        + 'failed run does). In shell steps write {name} bare: the value is quoted for you. list and show read them.'
         + (saved ? ` Saved: ${saved}.` : ' None saved yet.');
     },
     parameters: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['list', 'show', 'run', 'save', 'save_last'] },
+        action: { type: 'string', enum: ['list', 'show', 'run', 'save', 'save_last', 'propose'] },
+        why: { type: 'string', description: 'propose: what changed, and what the repair does.' },
         id: { type: 'string', description: 'show / run: the recipe; save: an existing id to revise it.' },
         title: { type: 'string', description: 'save / save_last: a short name.' },
         description: { type: 'string', description: 'save / save_last: when to reach for it, in a sentence or two.' },
@@ -32,7 +34,7 @@ module.exports = [
       },
       required: ['action'],
     },
-    run: async ({ action, id, title, description, params, steps, values }, ctx = {}) => {
+    run: async ({ action, id, title, description, params, steps, values, why }, ctx = {}) => {
       const store = require('../../recipes/store');
       const line = r => `- ${r.id} (r${r.revision}, ${r.steps.length} steps${r.params.length ? `; params ${r.params.map(p => p.name).join(', ')}` : ''}): ${r.title}${r.description ? ` — ${r.description}` : ''}`;
       if (action === 'list') { const l = store.list(); return l.length ? l.map(line).join('\n') : 'No recipes yet. save_last keeps what your last turn did.'; }
@@ -42,6 +44,10 @@ module.exports = [
         const r = store.save({ id, title, description, params: lifted ? lifted.params : params, steps: lifted ? lifted.steps : steps,
           by: ctx.user?.id || null, from: ctx.sessionId ? { sessionId: ctx.sessionId } : undefined });
         return `Saved recipe ${r.id} revision ${r.revision}:\n${line(r)}\n${r.steps.map((s, i) => `  ${i + 1}. ${s.tool} ${JSON.stringify(s.args).slice(0, 160)}`).join('\n')}`;
+      }
+      if (action === 'propose') {
+        const r = store.propose({ id, title, description, params, steps, why });
+        return `Proposed revision ${r.revision} of ${r.id}; a person accepts or discards it in Harness → Recipes. Runs keep the current revision until then.`;
       }
       if (action === 'run') {
         const r = store.get(id);

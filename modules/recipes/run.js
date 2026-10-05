@@ -90,10 +90,33 @@ async function run(recipe, { params = {}, person = null, client = null, parentId
       : `Recipe stopped at step ${out.failedAt} (${recipe.steps[out.failedAt - 1].tool}): ${out.steps.at(-1).why}.`;
     memory.append(session.id, { role: 'assistant', content: end });
     out.summary = end;
+    if (!out.ok) setImmediate(() => repair(recipe, out, who));   // after this run lets go of its conversation
     return out;
   } finally {
     if (lifecycle.running.get(session.id) === ctrl) lifecycle.running.delete(session.id);
   }
 }
 
-module.exports = { run, fill, passed, resolveParams };
+/**
+ * The recipe-repair experiment (docs/experiments/recipe-repair.md; off unless experiments.recipeRepair): the failed
+ * run's own conversation gets one more turn, as the person the run acted for, to find what changed and *propose* a
+ * repaired revision — never to save one. Once per revision, so a recipe that keeps failing on a schedule costs one
+ * repair, not one per run.
+ */
+const _repairing = new Set();
+function repair(recipe, out, who) {
+  if (!require('../experiments').on('recipeRepair')) return;
+  const key = `${recipe.id}@${recipe.revision}`;
+  if (_repairing.has(key) || require('./store').proposed(recipe.id)) return;
+  _repairing.add(key);
+  const failed = out.steps[out.failedAt - 1];
+  const message = `The recipe "${recipe.title}" (id ${recipe.id}, revision ${recipe.revision}) just failed at step ${out.failedAt} (${failed.tool}): ${failed.why}.\n`
+    + `Its steps: ${JSON.stringify(recipe.steps)}\nThat step's result: ${failed.result}\n\n`
+    + 'Find out what changed — look before you change anything — and, if the steps can be repaired, propose the repaired revision with '
+    + `recipe { action: "propose", id: "${recipe.id}", steps, params, why }. Do not use save: a person reviews the proposal before it runs. `
+    + 'If it cannot be repaired from here, say why in one paragraph.';
+  // send() answers at once (an object) when the conversation is busy, a promise when it starts a turn.
+  Promise.resolve().then(() => require('../harness/agent').send({ message, sessionId: out.sessionId, client: who })).catch(() => {});
+}
+
+module.exports = { run, fill, passed, resolveParams, repair };

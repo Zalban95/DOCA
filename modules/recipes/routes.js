@@ -11,7 +11,7 @@ const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e)
 const person = req => require('../harness/turn/client').dashboardClient(req).user;
 
 function mount(app) {
-  app.get('/api/recipes', h(() => ({ recipes: store.list() })));
+  app.get('/api/recipes', h(() => ({ recipes: store.list().map(r => { const p = store.proposed(r.id); return p ? { ...r, proposed: { revision: p.revision, proposedAt: p.proposedAt, why: p.why, steps: p.steps } } : r; }) })));
   app.post('/api/recipes', h(req => store.save({ ...(req.body || {}), by: req.auth?.user?.id || null })));
   app.post('/api/recipes/from-session', h(req => {
     const { sessionId, title, description, params } = req.body || {};
@@ -39,6 +39,9 @@ function mount(app) {
     } catch (e) { if (!res.headersSent) res.status(e.status || 500).json({ error: e.message }); }
   });
   app.delete('/api/recipes/:id', h(req => store.remove(req.params.id)));
+  // A proposed revision (the recipe-repair experiment): a person accepts it as the next revision, or discards it.
+  app.post('/api/recipes/:id/accept', h(req => store.accept(req.params.id)));
+  app.post('/api/recipes/:id/discard', h(req => store.discard(req.params.id)));
 }
 
 module.exports = { mount };
