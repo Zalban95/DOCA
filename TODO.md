@@ -302,7 +302,10 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] H11.2 (2.195.0) Fold `jobs.js` into the `runs` table. A device's command job (`api-v1/jobs.js`) is a run of kind
   `job` (schema step 9 adds `detail`): recorded at start and end, read back from the table once memory lets it go, and
   marked interrupted when a restart cut it off. The harness's shell jobs stay processes of their own (`harness/jobs.js`).
-- [ ] H11.3 Every new capability lands in `/api/v1` first.
+- [x] H11.3 (2.201.0) Every new capability lands in `/api/v1` first. Made a check, not a sentence: `api-v1/coverage.js`
+  gives every group of panel routes its `/api/v1` home or the reason it is the panel's, and `test/api-coverage.test.js`
+  fails on a new group without a row. The gaps it found for clients are filled (`api-v1/yours.js`): recipes (list,
+  run), schedules (list, on/pause — never on for an agent), the face (now, and a stream for watch faces and overlays).
 
 **H12 · Editions** (§6): an edition is a pack (level, skills, recipes, visible parts, face), built
 on branding + levels + hidden tabs. **Done (2.184.0):** `edition.json` in a pack — names, how screens start out, the
