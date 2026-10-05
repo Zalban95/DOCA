@@ -76,13 +76,14 @@ const SCHEMA = {
   backup:           { is: 'local', home: 'device', on: 'host', note: 'the backup schedule of this machine' },
   network:          { is: 'local', home: 'device', on: 'host', note: 'how this machine listens' },
   vms:              { is: 'local', home: 'device', on: 'host', note: 'the libvirt connection URI of this machine', propose: p('Virtual machines', 'The libvirt connection URI') },
-  channels:         { is: 'local', home: 'device', on: 'host', note: 'channel bots (Telegram, Matrix): a token and a switch for this hub',
+  channels:         { is: 'local', home: 'device', on: 'host', note: 'channel bots (Telegram, Matrix, Slack): tokens and a switch for this hub',
     keys: {
       'telegram.enabled': { type: 'boolean', default: false, hint: 'Whether the Telegram bot is polled.' },
       'telegram.pollSec': { type: 'number', min: 0, max: 50, default: 25, hint: 'How long one getUpdates call waits for a message.' },
       'matrix.enabled':   { type: 'boolean', default: false, hint: 'Whether the Matrix bot account is synced.' },
       'matrix.homeserver': { type: 'string', default: '', hint: 'The bot account\'s homeserver, e.g. https://matrix.org.' },
       'matrix.pollSec':   { type: 'number', min: 0, max: 50, default: 25, hint: 'How long one /sync waits for a message.' },
+      'slack.enabled':    { type: 'boolean', default: false, hint: 'Whether the Slack app\'s Socket Mode connection is opened.' },
     } },
 };
 

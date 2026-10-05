@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════
    Settings → Channels (modules/channels; TODO H14, H9.1): talking to the hive
-   from Telegram or Matrix. A host gives each bot's token and switches it on;
+   from Telegram, Matrix or Slack. A host gives each bot's token and switches it on;
    anyone who may chat links their own chat with a one-time code, and sees and
    unlinks their own chats (a host sees every one).
    ═══════════════════════════════════════════════════════ */
@@ -8,8 +8,8 @@
 async function channelsLoad() {
   const panel = document.getElementById('sp-channels');
   if (!panel) return;
-  let t, mx;
-  try { [t, mx] = await Promise.all([apiFetch('/api/channels/telegram'), apiFetch('/api/channels/matrix')]); }
+  let t, mx, sl;
+  try { [t, mx, sl] = await Promise.all(['telegram', 'matrix', 'slack'].map(c => apiFetch(`/api/channels/${c}`))); }
   catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
   const host = !document.body.classList.contains('no-host');
   const chats = (t.chats || []).map(c => `<div class="disk-row">
@@ -33,7 +33,7 @@ async function channelsLoad() {
     ${chats || '<div class="placeholder">None yet.</div>'}
     <div class="toolbar" style="margin-top:10px;gap:6px">
       <button class="btn btn-sm" onclick="channelsLink()" ${t.running ? '' : 'disabled title="The bot is not running"'}>Link a Telegram chat</button>
-      <span id="tg-code" style="font-size:12px"></span></div></div>${channelsMatrixCard(mx, host, state)}`;
+      <span id="tg-code" style="font-size:12px"></span></div></div>${channelsMatrixCard(mx, host, state)}${channelsSlackCard(sl, host, state)}`;
 }
 
 /* Matrix (modules/channels/matrix): a bot account on any homeserver, synced from here; direct rooms only, unencrypted. */
@@ -58,6 +58,47 @@ function channelsMatrixCard(m, host, state) {
     <div class="toolbar" style="margin-top:10px;gap:6px">
       <button class="btn btn-sm" onclick="channelsMatrixLink()" ${m.running ? '' : 'disabled title="The bot is not running"'}>Link a Matrix chat</button>
       <span id="mx-code" style="font-size:12px"></span></div></div>`;
+}
+
+/* Slack (modules/channels/slack): an app in Socket Mode, so no request URL; direct messages only. */
+function channelsSlackCard(m, host, state) {
+  const dms = (m.chats || []).map(c => `<div class="disk-row">
+      <span class="disk-label">${escHtml(c.name)}</span>
+      <span class="disk-path">speaks as ${escHtml(c.person || '?')} · linked ${escHtml(String(c.linkedAt || '').slice(0, 10))}</span>
+      <span class="disk-free"><button class="btn btn-xs btn-red" onclick="channelsUnlink(${jsArg(c.chatId)}, 'slack')">Unlink</button></span></div>`).join('');
+  return `<div class="card">
+    <div class="card-title">Slack</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">The same from a Slack workspace, in direct messages with the app (never in shared channels). Make an app at api.slack.com/apps:
+      switch on Socket Mode (an app-level token with <code>connections:write</code>), subscribe to the bot event <code>message.im</code>, give the bot
+      <code>chat:write</code>, <code>im:history</code>, <code>files:read</code>, <code>files:write</code> and <code>users:read</code>, allow messages in the App Home, and install it.</p>
+    <div style="margin-bottom:10px">${state(m)}${m.bot?.team ? ` <span style="color:var(--muted);font-size:11px">· ${escHtml(m.bot.team)}</span>` : ''}${m.error ? ` — <span style="color:var(--red)">${escHtml(m.error)}</span>` : ''}</div>
+    ${host ? `<div class="input-label">App-level token (xapp-…) and bot token (xoxb-…)</div>
+      <div class="toolbar" style="gap:6px;margin-bottom:10px">
+        <input class="input" id="sl-app" type="password" autocomplete="off" placeholder="${m.hasAppToken ? 'saved — paste to replace' : 'xapp-…'}" style="flex:1;min-width:160px">
+        <input class="input" id="sl-bot" type="password" autocomplete="off" placeholder="${m.hasBotToken ? 'saved — paste to replace' : 'xoxb-…'}" style="flex:1;min-width:160px">
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="sl-on" ${m.enabled ? 'checked' : ''}> on</label>
+        <button class="btn btn-sm btn-blue" onclick="channelsSlackSave()">Save</button></div>` : ''}
+    <div class="card-title" style="font-size:12px;margin-top:6px">${host ? 'Linked direct messages' : 'Your linked direct messages'}</div>
+    ${dms || '<div class="placeholder">None yet.</div>'}
+    <div class="toolbar" style="margin-top:10px;gap:6px">
+      <button class="btn btn-sm" onclick="channelsSlackLink()" ${m.running ? '' : 'disabled title="The app is not connected"'}>Link a Slack chat</button>
+      <span id="sl-code" style="font-size:12px"></span></div></div>`;
+}
+
+async function channelsSlackSave() {
+  const app = document.getElementById('sl-app').value.trim(), bot = document.getElementById('sl-bot').value.trim();
+  try {
+    await apiFetch('/api/channels/slack', { method: 'POST', body: { enabled: document.getElementById('sl-on').checked, ...(app ? { appToken: app } : {}), ...(bot ? { botToken: bot } : {}) } });
+  } catch (e) { appAlert(e.message); }
+  channelsLoad();
+}
+
+async function channelsSlackLink() {
+  const out = document.getElementById('sl-code');
+  try {
+    const r = await apiFetch('/api/channels/slack/link', { method: 'POST' });
+    out.innerHTML = `Open the app's Messages tab in Slack and send <code>!link ${escHtml(r.code)}</code> — within 15 minutes.`;
+  } catch (e) { out.textContent = e.message; }
 }
 
 async function channelsMatrixSave() {

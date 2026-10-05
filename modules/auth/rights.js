@@ -109,6 +109,8 @@ const TABLE = [
   R(ANY, '/api/channels/telegram(/.*)?', 'chat'),             // a link code, and one's own linked chats (channels/telegram/routes.js)
   R('POST', '/api/channels/matrix', 'host'),                 // the homeserver, the bot's token and switch
   R(ANY, '/api/channels/matrix(/.*)?', 'chat'),               // a link code, and one's own linked rooms (channels/matrix/routes.js)
+  R('POST', '/api/channels/slack', 'host'),                  // the Slack app's two tokens and the switch
+  R(ANY, '/api/channels/slack(/.*)?', 'chat'),                // a link code, and one's own linked DMs (channels/routes.js)
   R(GET, '/computers/[a-f0-9]+/vnc(/.*)?', 'host'),         // a computer's screen, proxied (computers/vnc.js)                  // computers for agents: containers on this machine (computers/)                   // a project is files and a shell
   R(ANY, '/api/harness/(agent-import|identity|skills/import)', 'host'),
   R('POST', '/api/harness/skills(/draft)?', 'host'),             // a skill is instructions the agent follows: drafted, read and saved by a host (harness/learn.js)
