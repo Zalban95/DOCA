@@ -18,7 +18,8 @@ function mount(app) {
   require('../search/routes').mount(app);
   require('../retrieval/routes').mount(app);
   require('../realtime/routes').mount(app);
-  require('../api-v1/client-files').mountPanel(app);   // the browser extension, to download (clients/browser)   // realtime voice: what a live call uses (realtime/)
+  require('../api-v1/client-files').mountPanel(app);
+  require('../client-apps/routes').mount(app);   // DOCA's Android apps: kept, built here, offered to devices (client-apps/)   // the browser extension, to download (clients/browser)   // realtime voice: what a live call uses (realtime/)
   require('../evals/routes').mount(app);
   require('../connectors/routes').mount(app);
   require('../api-v1/a2a').mountCard(app);   // the A2A agent card, public at /.well-known (api-v1/a2a.js)   // OAuth connectors: the owner's accounts as tools (connectors/)   // evaluation sets: run, results, import and export (evals/)   // retrieval: the embedding model, a try, the index (retrieval/)   // web search: the provider and its key (search/)

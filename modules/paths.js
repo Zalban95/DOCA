@@ -103,7 +103,11 @@ const CONNECTOR_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOM
 const HUB_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'hubs.json');
 // Logins the agents' computers sign in with (modules/logins.js): passwords the agent never sees.
 const LOGIN_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'logins.json');
-const PROTECTED_FILES = [BACKUP_PASSWORD_FILE, PROVIDER_KEYS_FILE, DEVICE_CONSOLE_FILE, SEARCH_KEYS_FILE, CONNECTOR_KEYS_FILE, HUB_KEYS_FILE, LOGIN_KEYS_FILE];
+// The key DOCA's own Android apps are signed with when the hub builds them (modules/client-apps): an update installs only
+// over an app signed with the same key, so every machine that builds them signs with this one.
+const ANDROID_SIGNING_STORE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'android-signing.keystore');
+const ANDROID_SIGNING_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'android-signing.json');
+const PROTECTED_FILES = [BACKUP_PASSWORD_FILE, PROVIDER_KEYS_FILE, DEVICE_CONSOLE_FILE, SEARCH_KEYS_FILE, CONNECTOR_KEYS_FILE, HUB_KEYS_FILE, LOGIN_KEYS_FILE, ANDROID_SIGNING_STORE, ANDROID_SIGNING_FILE];
 
 // Setup scripts the UI may read/write/run — the Setup panel's list, and the
 // whole of it.
@@ -230,7 +234,7 @@ module.exports = {
   HOME_DIR,
   BACKUP_DIR,
   BACKUP_PASSWORD_FILE,
-  PROTECTED_FILES, CONNECTOR_KEYS_FILE, HUB_KEYS_FILE, LOGIN_KEYS_FILE,
+  PROTECTED_FILES, CONNECTOR_KEYS_FILE, HUB_KEYS_FILE, LOGIN_KEYS_FILE, ANDROID_SIGNING_STORE, ANDROID_SIGNING_FILE,
   PROVIDER_KEYS_FILE,
   SEARCH_KEYS_FILE,
   ALLOWED_SCRIPTS,

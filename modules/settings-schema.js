@@ -105,6 +105,7 @@ const SCHEMA = {
   snapshotSettings: { is: 'local', home: 'device', on: 'host', note: 'where snapshots of this machine go', propose: p('Snapshot settings') },
   mcpServers:       { is: 'local', home: 'device', on: 'host', note: 'spawnable commands and URLs — never proposed, never exported' },
   dockerPresets:    { is: 'local', home: 'device', on: 'host', note: 'compose presets for this machine\'s Docker' },
+  clientApps:       { is: 'local', home: 'device', on: 'host', note: 'where DOCA\'s Android apps\' repositories are on this machine, to build them (client-apps/)' },
   backup:           { is: 'local', home: 'device', on: 'host', note: 'the backup schedule of this machine' },
   network:          { is: 'local', home: 'device', on: 'host', note: 'how this machine listens' },
   vms:              { is: 'local', home: 'device', on: 'host', note: 'the libvirt connection URI of this machine', propose: p('Virtual machines', 'The libvirt connection URI') },

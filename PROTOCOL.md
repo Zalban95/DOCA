@@ -1316,6 +1316,7 @@ The device's person's recipes, schedules and face, answered as that person exact
 | GET | `/schedules` | `harness:sessions` | the person's schedules (§23.2) |
 | POST | `/schedules/:id/state` | `harness:chat` | on / paused; never on for an `agent` device |
 | GET | `/face`, `/face/stream` | `harness:sessions` | what the hive is doing (§23.2) |
+| GET | `/clients/android/:app`, `/clients/android/:app/apk` | any | the newest build of DocaMobile or DocaWear this hub keeps: `versionCode`, `versionName`, `sha256`, `bytes`, `url`; update when `versionCode` is higher than yours, and check the download's sha256 |
 | GET | `/agent/devices` | `agent` | devices with effective profiles |
 | POST / GET / DELETE | `/agent/prompts[/:id]` | `agent` | raise / list / cancel |
 | POST | `/agent/prompts/:id/outcome` | `agent` | resolve a pending selection |

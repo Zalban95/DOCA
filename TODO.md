@@ -141,6 +141,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   draws known buttons. **Left:** measuring it with a vision model.
 
 **H6 · The client core and joining the hive** (§4)
+- [x] H6.7 (2.206.0; DocaMobile 1.0.2) The apps update from their hub. The hub keeps each app's newest APK — built there
+  from its repo with one signing key, or uploaded — and DocaMobile checks, downloads (sha256-checked) and installs it
+  through PackageInstaller, automatically from Android 12 once allowed. **Left:** DocaWear through the phone.
 - [ ] H6.1 One client core per platform: protocol, pairing, push, presence, offline queue, device
   page, face.
 - [x] H6.2 (2.177.0, 2.191.0, in part) Tool families a device lends the hive, hosted as an MCP server (files, shell, screen,
