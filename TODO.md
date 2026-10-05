@@ -245,12 +245,15 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   existing events, editable as a pack, canvas 2D; in the panel's corner, `/face` kiosk, DocaDesk
   overlay, watch. Done in the hub: the state feed, the renderer, `/face`, the corner per screen. **Left:** an editor
   for the spec and faces as packs (H4); DocaDesk's overlay and the watch face (their TODOs); listening/speaking
-  from the voice call's audio levels (H8.2); quiet hours from the device profile.
+  from the voice call's audio levels (H8.2); quiet hours from the device profile. Since 2.199.0 the corner face is its
+  own circle beside the chat button (opening `/face`): drawn inside the button, it hid the chat's open/close.
 - [x] H8.2 (2.193.0, experiment `faceVoice`) The face reacting to the voice call's audio. [X] The corner face speaks with
   the agent's voice level and listens to the microphone's; docs/experiments/face-voice.md. **Left:** measuring it.
 - [ ] H8.3 Realtime speech-to-speech with barge-in, work continuing in the background. Done (2.192.0, experiment
   `bargeIn`): talking over a working agent is heard and read by the running turn, stale sentences dropped. **Left:**
   measuring it in real calls; a realtime speech-to-speech model (OpenAI Realtime or a local one) in place of STT → turn → TTS.
+  Since 2.199.0 the call's settings have one place, Settings → Voice → Live call: the pause and microphone threshold
+  per screen (setting `call`, with a test meter), and the owner's barge-in and face switches; the model's row waits there.
 
 **H9 · Reach and protocols**
 - [x] H9.1 (WhatsApp left) Channels: Slack, Telegram, mail, WhatsApp, Matrix — each a client kind. Done: Telegram (2.157.0), the

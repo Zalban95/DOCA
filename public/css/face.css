@@ -1,4 +1,10 @@
-/* The face in place of the ⬡ (js/face/corner.js) */
-.chat-fab.chat-fab-face { background: #050507; padding: 0; overflow: hidden; box-shadow: 0 0 0 1px rgba(87,201,194,.35), 0 4px 16px rgba(87,201,194,.25); }
-.chat-fab.chat-fab-face canvas { width: 100%; height: 100%; display: block; border-radius: 50%; }
-.chat-fab.chat-fab-face.active { transform: scale(1.08); }
+/* The face beside the chat button (js/face/corner.js): its own circle, left of the ⬡, never on it */
+.face-corner { position: fixed; bottom: 24px; right: 88px; width: 52px; height: 52px; border-radius: 50%; z-index: 500;
+  background: #050507; overflow: hidden; display: block; box-shadow: 0 0 0 1px rgba(87,201,194,.35), 0 4px 16px rgba(87,201,194,.25);
+  transition: transform var(--t-fast); }
+.face-corner:hover { transform: scale(1.08); }
+.face-corner canvas { width: 100%; height: 100%; display: block; border-radius: 50%; }
+body.harness-tab .face-corner, body:has(.pj-chat.open) .face-corner { display: none; }
+@media (max-width: 768px) { .face-corner { bottom: calc(var(--mobile-nav-h) + 12px); } }
+/* A phone's chat is a full sheet: the face would sit on its composer */
+@media (max-width: 480px) { .face-corner { width: 44px; height: 44px; right: 64px; } body:has(.chat-panel.open) .face-corner { display: none; } }

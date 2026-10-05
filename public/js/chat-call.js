@@ -24,8 +24,9 @@ let _callBargeIn = false, _callEpoch = 0, _callStats = null;
 // its mouth, yours makes it listen — levels read from the two analysers the call already has, once a frame.
 let _callFaceVoice = false, _callOutAnalyser = null;
 
-const CALL_SILENCE_MS     = 2000;
-const CALL_ENERGY_THRESH  = 15;
+// How a call listens is this screen's (the setting `call`; Settings → Voice → Live call), read when a call starts.
+let _callSilenceMs = 2000;
+let _callThreshold = 15;
 
 function _callSetStatus(text, state) {
   const el = document.getElementById('chat-call-status');
@@ -58,6 +59,8 @@ async function chatToggleCall() {
   try { const ex = (await apiFetch('/api/experiments')).experiments; _callBargeIn = !!ex.find(x => x.id === 'bargeIn')?.on; _callFaceVoice = !!ex.find(x => x.id === 'faceVoice')?.on; }
   catch { _callBargeIn = false; _callFaceVoice = false; }
   _callStats = { at: Date.now(), bargeIns: 0, dropped: 0 };
+  try { const c = (await screenPrefs()).call || {}; _callSilenceMs = c.silenceMs >= 300 ? c.silenceMs : 2000; _callThreshold= c.sensitivity >= 1 ? c.sensitivity : 15; }
+  catch { /* the defaults */ }
   try {
     // Echo cancellation keeps the agent's own voice from reading as yours — which matters most with barge-in on.
     _callStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
@@ -130,10 +133,10 @@ function _callVadLoop() {
       const out = new Uint8Array(_callOutAnalyser.frequencyBinCount);
       _callOutAnalyser.getByteFrequencyData(out);
       faceCornerVoice('speaking', out.reduce((a, b) => a + b, 0) / out.length / 80);
-    } else if (energy > CALL_ENERGY_THRESH) faceCornerVoice('listening', energy / 80);
+    } else if (energy > _callThreshold) faceCornerVoice('listening', energy / 80);
   }
 
-  if (energy > CALL_ENERGY_THRESH) {
+  if (energy > _callThreshold) {
     // Speech detected
     if (_callCurrentSrc) {
       _callStopPlayback();
@@ -154,7 +157,7 @@ function _callVadLoop() {
       _callSpeaking = false;
       _callSilenceTimer = null;
       _callStopRecording();
-    }, CALL_SILENCE_MS);
+    }, _callSilenceMs);
   }
 
   _callVadRafId = requestAnimationFrame(_callVadLoop);

@@ -1,11 +1,13 @@
 /* ═══════════════════════════════════════════════════════
-   DOCA PANEL — CONTROLS  (service control + all containers)
+   DOCA PANEL — CONTROLS  (all containers) and OpenClaw's stack card, which lives in
+   Settings → OpenClaw → Stack: it is OpenClaw's compose, drawn only where OpenClaw is
+   installed, beside OpenClaw's setup scripts
    ═══════════════════════════════════════════════════════ */
 
 async function action(act) {
   const st = document.getElementById('action-status');
   setStatus(st, `Running: ${act}…`, 'info');
-  const btns = document.querySelectorAll('#tab-controls .btn');
+  const btns = document.querySelectorAll('#stack-card .btn');
   btns.forEach(b => b.disabled = true);
   try {
     await apiFetch('/api/action', { method: 'POST', body: { action: act } });
@@ -33,7 +35,7 @@ function stackUpdate() {
 async function _stackRunUpdate() {
   const st   = document.getElementById('action-status');
   const out  = document.getElementById('stack-update-out');
-  const btns = document.querySelectorAll('#tab-controls .btn');
+  const btns = document.querySelectorAll('#stack-card .btn');
 
   setStatus(st, 'Updating stack…', 'info');
   btns.forEach(b => b.disabled = true);
@@ -59,7 +61,12 @@ async function _stackRunUpdate() {
 function controlsInit() {
   harnessLoad();
   controlsRefreshContainers();
+}
+
+/** Settings → OpenClaw → Stack: the compose card, then the setup scripts. */
+function _subtabStackInit() {
   controlsStackCard();
+  loadScripts();
 }
 
 /** The Start/Stop card runs docker compose in the stack folder: named for that, and shown only when there is one. */
