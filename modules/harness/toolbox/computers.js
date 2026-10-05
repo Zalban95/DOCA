@@ -68,4 +68,15 @@ module.exports = [
     },
     run: a => require('../../logins').fill(a),
   },
+  {
+    name: 'computer_look',
+    description: 'Look at a computer\'s screen with a vision model when browser_snapshot finds nothing to number (a canvas, a game, a remote '
+      + 'desktop, an image): ask what is visible and where — positions come back as x,y pixels for desktop_click. An experiment; the '
+      + 'answer is a model\'s reading of the screen, framed as outside words.',
+    parameters: { type: 'object', properties: {
+      computer: { type: 'string', description: 'The computer\'s id.' },
+      question: { type: 'string', description: 'What to find or read, e.g. "where is the Start button?".' },
+    }, required: ['computer', 'question'] },
+    run: a => require('../../computers/look').look(a),
+  },
 ];

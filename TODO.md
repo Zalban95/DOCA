@@ -130,7 +130,9 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   credentials vault: `computer_login` fills a stored login on its own site, the password typed by the hub, never seen
   by the agent.
 - [ ] H5.5 The person's own browser through a desktop client (extension or CDP), consent per site.
-- [ ] H5.6 A vision pass on screenshots where the accessibility tree is not enough. [X]
+- [x] H5.6 (2.197.0, experiment `visionPass`) A vision pass on screenshots where the accessibility tree is not enough. [X]
+  `computer_look` asks a vision model about a computer's screen; docs/experiments/vision-pass.md with a measurement that
+  draws known buttons. **Left:** measuring it with a vision model.
 
 **H6 · The client core and joining the hive** (§4)
 - [ ] H6.1 One client core per platform: protocol, pairing, push, presence, offline queue, device

@@ -59,9 +59,10 @@ function describe() {
  * rather than a release.
  */
 function schemas(disabled = []) {
-  const off = require('../agents/registry').enabled()
+  let off = require('../agents/registry').enabled()
     ? disabled
     : [...disabled, 'agent_dispatch', 'agent_results', 'agent_resume'];
+  if (!require('../computers/look').on()) off = [...off, 'computer_look'];   // an experiment: absent while off (computers/look.js)
   // Each tool's accepted note from this install is added to its description (tool-notes.js).
   return require('./tool-notes').annotate([
     ...TOOLS
