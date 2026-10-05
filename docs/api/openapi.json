@@ -337,7 +337,8 @@
                       "watch",
                       "phone",
                       "viewer",
-                      "hub"
+                      "hub",
+                      "registry"
                     ],
                     "default": "watch"
                   },
@@ -540,7 +541,8 @@
                       "watch",
                       "phone",
                       "viewer",
-                      "hub"
+                      "hub",
+                      "registry"
                     ]
                   },
                   "scopes": {
@@ -1344,6 +1346,143 @@
           },
           "403": {
             "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/packs/published": {
+      "get": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "What this hub publishes (a pack registry; an experiment)",
+        "operationId": "packsPublished",
+        "x-scope": "packs:read",
+        "description": "404 unless experiments.packRegistry is on here. Only packs a host published.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hub": {
+                      "type": "string"
+                    },
+                    "packs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/packs/published/{id}": {
+      "get": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "One published pack (.dpack)",
+        "operationId": "packsPublishedOne",
+        "x-scope": "packs:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The .dpack",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9813,7 +9952,7 @@
       "devices": "Device administration: pair, list, revoke, rotate (admin)",
       "agent": "Agent-facing API: raise prompts/alerts, request sensors, deliver outcomes and artifacts",
       "harness": "Converse with the built-in harness: chat, sessions (own conversations), memory (read)",
-      "packs": "Send packs to this hub's library (send); nothing is applied until a host brings one in"
+      "packs": "Send packs to this hub's library (send); nothing is applied until a host brings one in. Browse and fetch what it publishes (read)"
     },
     "presets": {
       "admin": [
@@ -9857,6 +9996,9 @@
       ],
       "hub": [
         "packs:send"
+      ],
+      "registry": [
+        "packs:read"
       ]
     }
   },

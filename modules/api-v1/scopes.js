@@ -24,7 +24,7 @@ const FAMILIES = {
   // run: `harness:memory` reads, and applying a settings proposal stays a click.
   harness:   'Converse with the built-in harness: chat, sessions (own conversations), memory (read)',
   // Another hub sending what it made: it lands in the library and waits for a host's dry run (packs/library.js).
-  packs:     'Send packs to this hub\'s library (send); nothing is applied until a host brings one in',
+  packs:     'Send packs to this hub\'s library (send); nothing is applied until a host brings one in. Browse and fetch what it publishes (read)',
 };
 
 /** Scopes that are a bare family with no target (e.g. `interact`). */
@@ -87,6 +87,8 @@ const PRESETS = {
   viewer:   ['read:*'],
   // Another DOCA hub, to send this one packs (TODO H4.5) and nothing else.
   hub:      ['packs:send'],
+  // Another hub that fetches what this one publishes (a registry; TODO H4.6, experiments.packRegistry).
+  registry: ['packs:read'],
 };
 
 module.exports = { FAMILIES, PRESETS, normalize, normalizeAll, hasScope, filterByScope, matches };

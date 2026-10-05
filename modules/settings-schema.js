@@ -60,6 +60,7 @@ const SCHEMA = {
       retrieval: { type: 'boolean', default: false, hint: 'memory_search and recall_conversations also search by meaning, with the embedding model under retrieval.' },
       bargeIn: { type: 'boolean', default: false, hint: 'In a voice call, speaking while the agent works or talks is sent at once, and what it was about to say is dropped.' },
       faceVoice: { type: 'boolean', default: false, hint: 'In a voice call, the corner face moves its mouth with the agent\'s voice and listens when you speak.' },
+      packRegistry: { type: 'boolean', default: false, hint: 'This hub lists the packs a host published to hubs holding a registry token, and can fetch from other hubs\' registries.' },
       visionPass: { type: 'boolean', default: false, hint: 'Agents may look at a computer\'s screen with the vision model under vision.' } } },
   vision:           { is: 'travels', home: 'hive', note: 'the vision model a computer\'s screen is read with (computers/look.js; the switch is experiments.visionPass)',
     propose: p('Vision model', 'Which model reads a computer\'s screen when there is nothing to number'),

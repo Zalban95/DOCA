@@ -40,10 +40,19 @@ function get(id) {
   return { meta: JSON.parse(fs.readFileSync(path.join(dir(), `${id}.json`), 'utf8')), buffer: fs.readFileSync(f) };
 }
 
+/** Publish a pack to hubs holding packs:read (the registry, experiments.packRegistry), or take it back. */
+function publish(id, on = true) {
+  const { meta } = get(id);
+  meta.published = !!on;
+  fs.writeFileSync(path.join(dir(), `${id}.json`), JSON.stringify(meta, null, 2));
+  return meta;
+}
+const published = () => list().filter(p => p.published);
+
 function remove(id) {
   get(id);
   for (const ext of ['dpack', 'json']) fs.rmSync(path.join(dir(), `${id}.${ext}`), { force: true });
   return { removed: id };
 }
 
-module.exports = { save, list, get, remove };
+module.exports = { save, list, get, remove, publish, published };
