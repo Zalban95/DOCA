@@ -18,23 +18,23 @@ const crypto = require('crypto');
 const raw = () => require('../db').syncHandle();   // null with PostgreSQL: runs are not recorded there yet
 const now = () => new Date().toISOString();
 
-function begin({ kind = 'turn', sessionId = null, missionId = null, personId = null } = {}) {
+function begin({ id = null, kind = 'turn', sessionId = null, missionId = null, personId = null, detail = null } = {}) {
   const r = raw();
   if (!r) return null;
-  const id = `run_${crypto.randomBytes(6).toString('hex')}`;
+  id = id || `run_${crypto.randomBytes(6).toString('hex')}`;
   try {
-    r.prepare("INSERT INTO runs (id, kind, session_id, mission_id, person_id, state, started_at) VALUES (?,?,?,?,?,'running',?)")
-      .run(id, kind, sessionId, missionId, personId, now());
+    r.prepare("INSERT INTO runs (id, kind, session_id, mission_id, person_id, state, started_at, detail) VALUES (?,?,?,?,?,'running',?,?)")
+      .run(id, kind, sessionId, missionId, personId, now(), detail ? JSON.stringify(detail) : null);
     return id;
   } catch { return null; }   // a record must never stop the work it records
 }
 
 /** How it ended: 'done', 'cancelled' or 'failed'. */
-function end(id, { state, outcome = '', steps = null, tokens = null } = {}) {
+function end(id, { state, outcome = '', steps = null, tokens = null, detail } = {}) {
   if (!id) return;
   try {
-    raw()?.prepare("UPDATE runs SET state = ?, outcome = ?, steps = ?, tokens = ?, ended_at = ? WHERE tenant_id = 'local' AND id = ?")
-      .run(state, String(outcome || '').slice(0, 600), steps, tokens, now(), id);
+    raw()?.prepare("UPDATE runs SET state = ?, outcome = ?, steps = ?, tokens = ?, ended_at = ?, detail = COALESCE(?, detail) WHERE tenant_id = 'local' AND id = ?")
+      .run(state, String(outcome || '').slice(0, 600), steps, tokens, now(), detail === undefined ? null : JSON.stringify(detail), id);
   } catch { /* see begin */ }
 }
 
@@ -46,7 +46,12 @@ function person(id, personId) {
 
 const view = r => r && ({ id: r.id, kind: r.kind, sessionId: r.session_id, missionId: r.mission_id, personId: r.person_id, state: r.state,
   outcome: r.outcome || '', steps: r.steps, tokens: r.tokens, planCheck: r.plan_check ? JSON.parse(r.plan_check) : null,
-  startedAt: r.started_at, endedAt: r.ended_at });
+  startedAt: r.started_at, endedAt: r.ended_at, detail: r.detail ? JSON.parse(r.detail) : null });
+
+/** After a restart: a command job that was running is not any more — its process went with the old one. */
+function recoverJobs() {
+  try { raw()?.prepare("UPDATE runs SET state = 'failed', outcome = 'interrupted by a restart of the hub', ended_at = ? WHERE tenant_id = 'local' AND kind = 'job' AND state = 'running'").run(now()); } catch { /* see begin */ }
+}
 
 function get(id) { return view(raw()?.prepare("SELECT * FROM runs WHERE tenant_id = 'local' AND id = ?").get(String(id))); }
 
@@ -82,4 +87,4 @@ function checkPlan(id) {
   } catch { return null; }
 }
 
-module.exports = { begin, end, person, get, forSession, checkPlan, openItems };
+module.exports = { begin, end, person, get, forSession, checkPlan, openItems, recoverJobs };
