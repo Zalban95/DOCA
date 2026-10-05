@@ -25,9 +25,12 @@ const winget = id => `winget install --id ${id} -e --silent --accept-package-agr
 
 // The Android SDK's command-line tools, unpacked where Android Studio puts the SDK, then what the apps compile against.
 // The SDK's licence is accepted on the person's behalf when they press Install (the row's note says so).
-// Newer platforms are named with their minor version (android-37.0). The newest tools are Google's "Android CLI", which
-// collects usage data unless told --no-metrics: it is told whenever it understands the flag.
+// Newer platforms are named with their minor version (android-37.0). The newest command-line tools are Google's
+// "Android CLI" (`bin/android`; sdkmanager is a wrapper around it), which uploads usage data on every run unless that run
+// says --no-metrics — and sdkmanager does not take the flag. So the CLI is called directly, with it, and sdkmanager
+// only where the tools predate the CLI (found live, 2026-10-05: the first install had uploaded once).
 const ANDROID_PKGS = '"platform-tools" "platforms;android-35" "platforms;android-37.0" "build-tools;35.0.0"';
+const ANDROID_CLI_PKGS = ANDROID_PKGS.replace(/;/g, '/');
 const androidPosix = plat => [
   `SDK="\${ANDROID_HOME:-$HOME/${plat === 'mac' ? 'Library/Android/sdk' : 'Android/Sdk'}}"`,
   'mkdir -p "$SDK/cmdline-tools" && cd "$SDK"',
@@ -36,9 +39,8 @@ const androidPosix = plat => [
   'echo "Downloading $ZIP…" && curl -fsSLo cl.zip "https://dl.google.com/android/repository/$ZIP"',
   'rm -rf cmdline-tools/latest cmdline-tools/cmdline-tools',
   '(unzip -q cl.zip -d cmdline-tools 2>/dev/null || python3 -m zipfile -e cl.zip cmdline-tools) && mv cmdline-tools/cmdline-tools cmdline-tools/latest && rm cl.zip && chmod +x cmdline-tools/latest/bin/*',
-  'SM=cmdline-tools/latest/bin/sdkmanager; NM=$($SM --help 2>&1 | grep -q -- --no-metrics && echo --no-metrics)',
-  'yes | $SM $NM --licenses >/dev/null',
-  `$SM $NM ${ANDROID_PKGS}`,
+  `if [ -x cmdline-tools/latest/bin/android ]; then cmdline-tools/latest/bin/android --no-metrics sdk install ${ANDROID_CLI_PKGS} </dev/null; `
+    + `else yes | cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null && cmdline-tools/latest/bin/sdkmanager ${ANDROID_PKGS}; fi`,
   'echo "✓ Android SDK in $SDK — builds find it through ANDROID_HOME=$SDK (or sdk.dir in local.properties)."',
 ].join(' && ');
 const androidWin = [
@@ -48,14 +50,15 @@ const androidWin = [
   'Invoke-WebRequest -UseBasicParsing "https://dl.google.com/android/repository/$zip" -OutFile "$sdk\\cl.zip"',
   'Remove-Item -Recurse -Force "$sdk\\cmdline-tools\\latest" -ErrorAction SilentlyContinue',
   'Expand-Archive -Force "$sdk\\cl.zip" "$sdk\\cmdline-tools"; Rename-Item "$sdk\\cmdline-tools\\cmdline-tools" latest; Remove-Item "$sdk\\cl.zip"',
-  '$sm = "$sdk\\cmdline-tools\\latest\\bin\\sdkmanager.bat"; $nm = @(); if ((& $sm --help 2>&1 | Out-String) -match "--no-metrics") { $nm = @("--no-metrics") }',
-  '1..20 | ForEach-Object { "y" } | & $sm @nm --licenses | Out-Null',
-  `& $sm @nm ${ANDROID_PKGS}`,
+  '$bin = "$sdk\\cmdline-tools\\latest\\bin"',
+  `if (Test-Path "$bin\\android.bat") { & "$bin\\android.bat" --no-metrics sdk install ${ANDROID_CLI_PKGS} } elseif (Test-Path "$bin\\android.exe") { & "$bin\\android.exe" --no-metrics sdk install ${ANDROID_CLI_PKGS} } `
+    + `else { 1..20 | ForEach-Object { "y" } | & "$bin\\sdkmanager.bat" --licenses | Out-Null; & "$bin\\sdkmanager.bat" ${ANDROID_PKGS} }`,
   '[Environment]::SetEnvironmentVariable("ANDROID_HOME", $sdk, "User"); "Android SDK in $sdk (ANDROID_HOME set for this user)"',
 ].join('; ');
 const androidHome = process.env.ANDROID_HOME || (process.platform === 'darwin' ? path.join(HOME, 'Library/Android/sdk')
   : process.platform === 'win32' ? path.join(process.env.LOCALAPPDATA || HOME, 'Android', 'Sdk') : path.join(HOME, 'Android/Sdk'));
 const sdkmanager = path.join(androidHome, 'cmdline-tools', 'latest', 'bin', process.platform === 'win32' ? 'sdkmanager.bat' : 'sdkmanager');
+const androidCli = path.join(androidHome, 'cmdline-tools', 'latest', 'bin', process.platform === 'win32' ? 'android.bat' : 'android');
 
 const DOTNET_POSIX = 'curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 9.0 --install-dir "$HOME/.dotnet" && echo "✓ .NET 9 SDK in ~/.dotnet — add it to PATH: export PATH=\\"$HOME/.dotnet:$PATH\\""';
 
@@ -171,7 +174,8 @@ const SYSTEM_TOOLS = [
     note: 'Gradle runs on it to build the Android apps.', repo: 'https://adoptium.net', repoLabel: 'adoptium.net',
     install: { linux: pkg({ apt: 'openjdk-21-jdk', dnf: 'java-21-openjdk-devel', pacman: 'jdk21-openjdk' }), darwin: brew('openjdk@21'), win32: winget('Microsoft.OpenJDK.21') } },
   { id: 'android-sdk', label: 'Android SDK', category: 'clients', for: 'DocaMobile, DocaWear',
-    detect: { any: [{ bin: sdkmanager, args: ['--version'] }, { bin: 'sdkmanager', args: ['--version'] }] },
+    // The Android CLI first, told not to report usage: this check runs every time the section is opened.
+    detect: { any: [{ bin: androidCli, args: ['--no-metrics', '--version'] }, { bin: sdkmanager, args: ['--version'] }, { bin: 'sdkmanager', args: ['--version'] }] },
     note: 'The command-line tools, platform tools and the platforms the apps compile against (35, 37) — about 1 GB, no Android Studio. Installing accepts the Android SDK licence (developer.android.com/studio/terms) for you, and turns off the tools\' usage reporting.',
     repo: 'https://developer.android.com/studio#command-line-tools-only', repoLabel: 'developer.android.com',
     install: { linux: androidPosix('linux'), darwin: androidPosix('mac'), win32: androidWin } },

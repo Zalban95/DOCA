@@ -31,6 +31,7 @@ test('each OS gets its own command: no apt on a Mac, no bash on Windows', () => 
   assert.match(installFor(SYSTEM_TOOLS.find(t => t.id === 'git'), 'linux'), /apt-get.*elif command -v dnf.*elif command -v pacman/, 'whichever package manager the machine has');
   assert.match(installFor(SYSTEM_TOOLS.find(t => t.id === 'dotnet'), 'win32'), /winget install --id Microsoft\.DotNet\.SDK\.9/);
   assert.match(installFor(SYSTEM_TOOLS.find(t => t.id === 'android-sdk'), 'linux'), /sdkmanager.*platforms;android-35/);
+  assert.match(installFor(SYSTEM_TOOLS.find(t => t.id === 'android-sdk'), 'linux'), /android --no-metrics sdk install .*platforms\/android-37\.0/, 'the Android CLI is told not to report usage');
   assert.equal(installFor(SYSTEM_TOOLS.find(t => t.id === 'node'), 'linux'), null, 'the runtime the panel runs on is not replaced from inside it');
 });
 
