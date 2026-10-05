@@ -13,8 +13,8 @@ function globalSearchPlaces(q) {
   const pages = [...document.querySelectorAll('nav .nav-tab[data-tab]')]
     .map(b => ({ label: b.textContent.trim(), where: 'Page', go: () => nav(b.dataset.tab) }));
   const sections = (typeof _SETTINGS_SUBTABS !== 'undefined' ? _SETTINGS_SUBTABS : [])
-    .filter(s => !s.group || _openclawInstalled)
-    .map(s => ({ label: s.label, words: s.find, where: 'Settings',
+    .filter(s => !s.group || (typeof _harnessesInstalled !== 'undefined' && _harnessesInstalled[s.group]))
+    .map(s => ({ label: s.group ? `${(_HARNESS_GROUPS[s.group] || '')} · ${s.label}` : s.label, words: s.find, where: s.group ? 'Settings → Harnesses' : 'Settings',
       go: () => { _settingsActiveSubtab = s.id; nav('settings'); settingsSubNav(s.id); } }));
   return [...pages, ...sections].filter(p => `${p.label} ${p.words || ''}`.toLowerCase().includes(t));
 }

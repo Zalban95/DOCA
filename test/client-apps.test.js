@@ -59,3 +59,16 @@ test('the signing key is kept, never read back, and signs what the hub builds', 
   assert.match(text, /"ok":true/, text.slice(-400));
   assert.deepEqual([require('../modules/client-apps').latest('docamobile').from, require('../modules/client-apps').latest('docamobile').versionCode], ['build', 102]);
 });
+
+test('a ten-minute download link needs no sign-in — what a phone\'s browser opens to save the APK', async () => {
+  const link = await H.api(null, 'POST', '/api/clients/apps/docamobile/link', {});
+  assert.equal(link.status, 200, JSON.stringify(link.body));
+  assert.match(link.body.path, /^\/api\/clients\/apps\/docamobile\/apk\/[A-Za-z0-9_-]{32}$/);
+  const r = await fetch(`${H.base}${link.body.path}`);   // no cookie, no token
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get('content-type'), 'application/vnd.android.package-archive');
+  assert.match(r.headers.get('content-disposition'), /docamobile-.*\.apk/);
+  assert.equal((await fetch(`${H.base}/api/clients/apps/docamobile/apk/${'x'.repeat(32)}`)).status, 404, 'a made-up link');
+  const member = await H.signIn('member');
+  assert.equal((await H.api(null, 'POST', '/api/clients/apps/docamobile/link', {}, { Cookie: member.cookie })).status, 403, 'making one is a host\'s');
+});

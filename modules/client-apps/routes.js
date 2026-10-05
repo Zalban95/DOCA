@@ -10,6 +10,9 @@
  *   POST /api/clients/apps/:app/repo             where its source is ({repo}) (host)
  *   POST /api/clients/apps/:app/build            build it here and keep it ({pull}); SSE (host)
  *   POST /api/clients/apps/signing               the signing keystore (raw body; ?alias, storePassword, keyPassword) (host)
+ *   POST /api/clients/apps/:app/link             a download link that needs no sign-in, for 10 minutes (host) — what a
+ *                                                phone's browser opens (DocaMobile's apps_open) to save the APK
+ *   GET  /api/clients/apps/:app/apk/:token       that link (public: the token is the permission)
  *   GET  /api/v1/clients/android/:app            for a device: versionCode, versionName, sha256, bytes, where (any token)
  *   GET  /api/v1/clients/android/:app/apk        the APK (any token)
  */
@@ -26,7 +29,27 @@ const sendApk = (req, res) => {
   } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
 };
 
+// One-time download links: a random token per link, kept in memory for ten minutes. A browser may ask twice (a HEAD,
+// a resumed download), so a link is good for its ten minutes rather than for one request.
+const _links = new Map();
+const LINK_MS = 10 * 60 * 1000;
+function makeLink(app, req) {
+  apps.known(app);
+  if (!apps.latest(app)) throw Object.assign(new Error('No build of it is kept yet.'), { status: 404 });
+  for (const [t, l] of _links) if (l.until < Date.now()) _links.delete(t);
+  const token = require('crypto').randomBytes(24).toString('base64url');
+  _links.set(token, { app, until: Date.now() + LINK_MS });
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  return { url: `https://${host}/api/clients/apps/${app}/apk/${token}`, path: `/api/clients/apps/${app}/apk/${token}`, expiresAt: new Date(Date.now() + LINK_MS).toISOString() };
+}
+
 function mount(app) {
+  app.post('/api/clients/apps/:app/link', express.json(), h(req => makeLink(req.params.app, req)));
+  app.get('/api/clients/apps/:app/apk/:token', (req, res) => {
+    const l = _links.get(req.params.token);
+    if (!l || l.app !== req.params.app || l.until < Date.now()) return res.status(404).json({ error: 'This link has expired or never existed.' });
+    sendApk(req, res);
+  });
   app.get('/api/clients/apps', h(() => apps.settings()));
   app.get('/api/clients/apps/:app/apk', sendApk);
   app.post('/api/clients/apps/signing', raw, h(req => apps.setSigning(req.body, { alias: req.query.alias || undefined, storePassword: req.query.storePassword || undefined, keyPassword: req.query.keyPassword || undefined })));
