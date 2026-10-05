@@ -120,7 +120,9 @@ function mount(app) {
   app.post('/api/projects/:id/chat', h(req => ({ sessionId: projects.workChat(req.params.id).id })));
   // Its chat tabs: every conversation working here, sub-agents included, and a new one.
   app.get('/api/projects/:id/chats', h(req => ({ chats: projects.chats(req.params.id, { all: req.query.all === '1' }) })));
-  app.post('/api/projects/:id/chats', h(async req => {   // { worktree: true }: a tab working in its own git worktree (worktrees.js)
+  // A page: a markdown file beginning with its title (pages.js).
+  app.post('/api/projects/:id/pages', h(req => require('./pages').newPage(req.params.id, req.body?.title)));
+  app.post('/api/projects/:id/chats', h(async req => {   // { worktree: true }: its own git worktree (worktrees.js); { page }: about one page (pages.js)
     const chat = projects.newChat(req.params.id, req.body || {});
     if (req.body?.worktree) chat.worktree = await require('./worktrees').create(chat.id);
     return { chat };

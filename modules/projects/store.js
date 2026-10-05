@@ -124,15 +124,18 @@ function chats(id, { all = false } = {}) {
   const memory = require('../harness/memory'), org = require('../harness/organization');
   return memory.listSessions().sessions
     .filter(s => (all || !s.archivedAt) && s.kind !== 'orchestrator' && forSession(s.id)?.id === id)
-    .map(s => ({ ...org.view(s), sub: !memory.getSession(s.id)?.projectId, running: require('../harness/agent').isRunning(s.id), worktree: memory.getSession(s.id)?.worktree?.branch || null }))
+    .map(s => ({ ...org.view(s), sub: !memory.getSession(s.id)?.projectId, running: require('../harness/agent').isRunning(s.id), worktree: memory.getSession(s.id)?.worktree?.branch || null,
+      page: memory.getSession(s.id)?.page || null }))
     .sort((a, b) => Number(a.sub) - Number(b.sub) || String(a.updatedAt).localeCompare(String(b.updatedAt)));
 }
 
 /** A new chat in this project: a work chat bound to it, as the first one is. */
-function newChat(id, { title } = {}) {
+function newChat(id, { title, page } = {}) {
   const p = need(id);
-  const s = require('../harness/organization').create({ title: String(title || '').trim() || `${p.name} chat` });
+  const about = page ? require('./pages').check(p, page) : null;   // a chat about one page (pages.js)
+  const s = require('../harness/organization').create({ title: String(title || '').trim() || (about ? `📄 ${path.basename(about.rel, '.md')}` : `${p.name} chat`) });
   bind(p.id, s.id);
+  if (about) require('../harness/memory').updateSession(s.id, { page: about.rel });
   return require('../harness/memory').getSession(s.id);
 }
 
