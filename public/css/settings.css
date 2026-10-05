@@ -41,3 +41,11 @@
 .dev-fam.revoked { border-color: var(--red); color: var(--red); text-decoration: line-through; }
 .dev-acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 4px; }
 .dev-off { font-size: 10px; color: var(--amber); }
+
+/* Only the config editor fills the space left; every other panel is as tall as what it holds — shrunk, its content
+   spilled past its own box and the room left under the page for the chat button landed inside it. */
+.settings-panel:not(#sp-config) { flex: 1 0 auto; }
+
+/* Settings → System → System tools: what each is for, as a tag; notes read whole */
+.tool-for     { display: inline-block; padding: 0 5px; margin-right: 4px; border: 1px solid var(--border2); border-radius: 3px; color: var(--fg); opacity: .8; }
+#sysdeps-list .tool-note { white-space: normal; }   /* the notes say what each is for: read whole, not cut */
