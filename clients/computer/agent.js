@@ -28,7 +28,8 @@ async function handle(msg) {
     return ok({ protocolVersion: msg.params?.protocolVersion || '2025-06-18', capabilities: { tools: {} },
       serverInfo: { name: 'doca-computer', version: '1.0.0' } });
   }
-  if (msg.method === 'tools/list') return ok({ tools: TOOLS.map(({ run, ...t }) => t) });
+  // A hidden tool (the hub's own, for a login from its vault) is not offered to the agent's tool list.
+  if (msg.method === 'tools/list') return ok({ tools: TOOLS.filter(t => !t.hidden).map(({ run, hidden, ...t }) => t) });
   if (msg.method === 'tools/call') {
     const t = TOOLS.find(x => x.name === msg.params?.name);
     if (!t) return err(-32602, `No tool ${msg.params?.name}`);

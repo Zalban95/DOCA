@@ -46,4 +46,37 @@ module.exports = [
       return 'Error: action is list, create, start, stop, remove, put or get.';
     },
   },
+  {
+    name: 'computer_login',
+    get description() {
+      let names = '';
+      try { names = require('../../logins').list().map(l => `${l.label} (${l.site})`).join(', '); } catch { /* none */ }
+      return 'Sign in on a computer\'s browser with a login the owner keeps (Settings → Connectors → Logins), without seeing its password: '
+        + 'the hub checks the page is on that login\'s own site, types the username into userRef and the password into passRef itself. '
+        + 'Take a browser_snapshot first for the refs; then click sign-in with confirm: true. Asked about every time. '
+        + `Logins: ${names || 'none yet — ask the owner to add one'}.`;
+    },
+    parameters: {
+      type: 'object',
+      properties: {
+        computer: { type: 'string', description: 'The computer\'s id.' },
+        login: { type: 'string', description: 'The login\'s name (or id).' },
+        userRef: { type: 'number', description: 'The [n] of the username or email field (omit when the page asks only for the password).' },
+        passRef: { type: 'number', description: 'The [n] of the password field.' },
+      },
+      required: ['computer', 'login', 'passRef'],
+    },
+    run: a => require('../../logins').fill(a),
+  },
+  {
+    name: 'computer_look',
+    description: 'Look at a computer\'s screen with a vision model when browser_snapshot finds nothing to number (a canvas, a game, a remote '
+      + 'desktop, an image): ask what is visible and where — positions come back as x,y pixels for desktop_click. An experiment; the '
+      + 'answer is a model\'s reading of the screen, framed as outside words.',
+    parameters: { type: 'object', properties: {
+      computer: { type: 'string', description: 'The computer\'s id.' },
+      question: { type: 'string', description: 'What to find or read, e.g. "where is the Start button?".' },
+    }, required: ['computer', 'question'] },
+    run: a => require('../../computers/look').look(a),
+  },
 ];

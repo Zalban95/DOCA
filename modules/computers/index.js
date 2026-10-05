@@ -101,10 +101,11 @@ async function create({ name, purpose = '', missionId = null, by = null, auto = 
   await require('./lifecycle').roomForOne();
   const c = { id: crypto.randomBytes(4).toString('hex'), name: String(name || 'computer').replace(/[^\w .-]/g, '').slice(0, 40) || 'computer',
     purpose: String(purpose).slice(0, 300), missionId, by, auto: !!auto, pinned: false, ...(agentType ? { agentType } : {}), token: crypto.randomBytes(24).toString('hex'),
+    fillKey: crypto.randomBytes(24).toString('hex'),   // the hub's alone: it unlocks browser_fill_secret (logins.js)
     vncPassword: crypto.randomBytes(6).toString('hex'), mcpPort: await freePort(), vncPort: await freePort(), createdAt: new Date().toISOString() };
   await docker(['run', '-d', '--name', container(c), '--shm-size=1g', '--label', 'doca.computer=1',
     '-p', `127.0.0.1:${c.mcpPort}:8765`, '-p', `127.0.0.1:${c.vncPort}:6080`,
-    '-e', `TOKEN=${c.token}`, '-e', `VNC_PASSWORD=${c.vncPassword}`,
+    '-e', `TOKEN=${c.token}`, '-e', `VNC_PASSWORD=${c.vncPassword}`, '-e', `FILL_KEY=${c.fillKey}`,
     '-v', `${container(c)}:/home/agent`, IMAGE]);
   save([...rows(), c]);
   await connect(c);
