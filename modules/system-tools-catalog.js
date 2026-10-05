@@ -26,7 +26,7 @@ const winget = id => `winget install --id ${id} -e --silent --accept-package-agr
 // The Android SDK's command-line tools, unpacked where Android Studio puts the SDK, then what the apps compile against.
 // The SDK's licence is accepted on the person's behalf when they press Install (the row's note says so).
 // Newer platforms are named with their minor version (android-37.0). The newest command-line tools are Google's
-// "Android CLI" (`bin/android`; sdkmanager is a wrapper around it), which uploads usage data on every run unless that run
+// "Android CLI" (`bin/android`; its device profiles are small_phone, medium_phone, … — and it exits 0 on some errors; sdkmanager is a wrapper around it), which uploads usage data on every run unless that run
 // says --no-metrics — and sdkmanager does not take the flag. So the CLI is called directly, with it, and sdkmanager
 // only where the tools predate the CLI (found live, 2026-10-05: the first install had uploaded once).
 const ANDROID_PKGS = '"platform-tools" "platforms;android-35" "platforms;android-37.0" "build-tools;35.0.0"';
@@ -184,8 +184,8 @@ const SYSTEM_TOOLS = [
     version: /version ([\d.]+)/,
     note: 'A phone on this machine, made by the Android CLI (its system image, about 2 GB) — to run the app against this hub without a real phone. Needs the Android SDK above, and hardware virtualisation (KVM on Linux).',
     repo: 'https://developer.android.com/studio/run/emulator', repoLabel: 'developer.android.com',
-    install: { all: `B="\${ANDROID_HOME:-$HOME/${process.platform === 'darwin' ? 'Library/Android/sdk' : 'Android/Sdk'}}/cmdline-tools/latest/bin"; [ -x "$B/android" ] || { echo "Install the Android SDK first (the row above)."; exit 1; }; "$B/android" --no-metrics emulator create phone </dev/null && "$B/android" --no-metrics emulator list`,
-      win32: `$b = "$(if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { "$env:LOCALAPPDATA\\Android\\Sdk" })\\cmdline-tools\\latest\\bin"; & "$b\\android.bat" --no-metrics emulator create phone; & "$b\\android.bat" --no-metrics emulator list` } },
+    install: { all: `B="\${ANDROID_HOME:-$HOME/${process.platform === 'darwin' ? 'Library/Android/sdk' : 'Android/Sdk'}}/cmdline-tools/latest/bin"; [ -x "$B/android" ] || { echo "Install the Android SDK first (the row above)."; exit 1; }; "$B/android" --no-metrics emulator create medium_phone </dev/null; L=$("$B/android" --no-metrics emulator list 2>&1); echo "$L"; echo "$L" | grep -qiv "no .*device\\|^$" || { echo "✗ No virtual device was made (see above): the Android CLI reports some errors with a success code."; exit 1; }`,
+      win32: `$b = "$(if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { "$env:LOCALAPPDATA\\Android\\Sdk" })\\cmdline-tools\\latest\\bin"; & "$b\\android.bat" --no-metrics emulator create medium_phone; & "$b\\android.bat" --no-metrics emulator list` } },
   { id: 'dotnet', label: '.NET 9 SDK', category: 'clients', for: 'DocaDesk',
     detect: { any: [{ bin: 'dotnet', args: ['--version'] }, { bin: path.join(HOME, '.dotnet', process.platform === 'win32' ? 'dotnet.exe' : 'dotnet'), args: ['--version'] }] },
     note: 'Builds DocaDesk. Its WinUI app builds on Windows only; on Linux and macOS its Core and MCP libraries do.',
