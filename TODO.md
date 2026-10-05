@@ -123,11 +123,12 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   a second way of doing it. **Left:** tabs and downloads as tools.
 - [x] H5.3 (2.154.0, 2.166.0, through computers) Live view in the panel (CDP screencast) with take-over and hand-back.
   The computer's desktop over noVNC through the hub, watch or Take over, the agent pausing its input while a person drives.
-- [ ] H5.4 Page text through the airlock; submits, payments and logins asked first; a credentials
-  vault. Done (2.193.0): submits, payments and logins asked first — the computer refuses them without `confirm`, the
+- [x] H5.4 (2.193.0, 2.197.0) Page text through the airlock; submits, payments and logins asked first; a credentials
+  vault. Page text: a computer's tools are not a paired device's, so everything they return (snapshots, page text) is
+  framed as outside words and the next action after it is asked again (harness/untrusted.js). Done (2.193.0): submits, payments and logins asked first — the computer refuses them without `confirm`, the
   hub always asks about a confirmed one; password and card fields are a person's, through Take over. And (2.197.0) a
   credentials vault: `computer_login` fills a stored login on its own site, the password typed by the hub, never seen
-  by the agent. **Left:** page text through the airlock (the scout already reads pages out of context).
+  by the agent.
 - [ ] H5.5 The person's own browser through a desktop client (extension or CDP), consent per site.
 - [ ] H5.6 A vision pass on screenshots where the accessibility tree is not enough. [X]
 
