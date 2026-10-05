@@ -17,6 +17,7 @@
  * a stopped computer keeps its files until it is removed.
  */
 const crypto = require('crypto');
+const fs = require('fs');
 const net = require('net');
 const path = require('path');
 const { execFile } = require('child_process');
@@ -65,8 +66,9 @@ function sourceHash() {
 /** Built, and built from this DOCA's clients/computer (an image from before its tools changed is `current: false`). */
 async function imageState() {
   try {
-    const label = await docker(['image', 'inspect', '--format', '{{ index .Config.Labels "doca.computer.source" }}', IMAGE]);
-    return { name: IMAGE, ready: true, current: label === sourceHash() };
+    // `index` fails on an image with no labels at all (one built before they existed), so read them whole.
+    const labels = JSON.parse(await docker(['image', 'inspect', '--format', '{{ json .Config.Labels }}', IMAGE]) || 'null') || {};
+    return { name: IMAGE, ready: true, current: labels['doca.computer.source'] === sourceHash() };
   } catch { return { name: IMAGE, ready: false, current: false }; }
 }
 
