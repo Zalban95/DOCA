@@ -215,7 +215,8 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 
 **H9 · Reach and protocols**
 - [ ] H9.1 Channels: Slack, Telegram, mail, WhatsApp, Matrix — each a client kind.
-- [ ] H9.2 DOCA as an MCP server; AG-UI events so AG-UI front ends are clients; A2A.
+- [x] H9.2 (2.168.0, in part) DOCA as an MCP server; AG-UI events so AG-UI front ends are clients; A2A. Done: the MCP
+  server (`POST /api/v1/mcp`: chat, conversations, recipes, by the token's scopes). **Left:** AG-UI, A2A.
 - [ ] H9.3 OAuth connectors (Google, GitHub, calendars, mail) with a vault, scoped per agent/level.
 - [ ] H9.4 Pages: markdown documents with a chat beside each.
 

@@ -57,7 +57,7 @@ router.post('/devices/pair/complete', wrap(pairComplete));   // unauthenticated,
 // ─── Everything below requires a token ──────────────────────────────────────
 
 router.use((req, res, next) => authenticate({ allowQuery: req.path === '/events' })(req, res, next));
-router.use((req, _res, next) => { devices.touchPersist(); next(); }); require('../devices-control').mount(router); require('./usage-route').mount(router); require('./wake').start(); require('../device-console').mountDevice(router);   // device.control acks, grants (after auth)
+router.use((req, _res, next) => { devices.touchPersist(); next(); }); require('../devices-control').mount(router); require('./usage-route').mount(router); require('./wake').start(); require('../device-console').mountDevice(router); require('./mcp-server').mount(router);   // device.control acks, grants, DOCA as an MCP server (after auth)
 
 router.get('/capabilities', wrap(async (req, res) => res.json(await capabilities.build(req.device))));
 router.get('/settings/effective', (req, res) => res.json({ deviceId: req.device.id, ...require('../screens').effective(req.device.id, req.device.userId) }));   // this device's layer over the hive's (screens/)

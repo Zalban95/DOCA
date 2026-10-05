@@ -361,7 +361,7 @@ function paths() {
     },
     '/devices/{id}/rotate': { parameters: [deviceIdParam], post: { tags: ['Devices'], summary: 'Rotate the token (old one valid for a grace period)', operationId: 'rotateToken', ...scopeDoc('self | devices:admin'),
       responses: { 200: json(obj({ token: str(), device: ref('Device'), previousValidUntil: iso() })), ...std(401, 403, 404) } } },
-
+    '/mcp': { post: { tags: ['Discovery'], summary: 'DOCA as an MCP server (streamable HTTP, JSON-RPC)', operationId: 'mcp', description: 'initialize, tools/list, tools/call. Tools: doca_chat (harness:chat) sends a message and waits for the answer, doca_conversations (harness:sessions), doca_recipes list/run (harness:chat); tools/list offers only what this token\'s scopes allow. A notification (no id) is 202.', requestBody: body(obj({ jsonrpc: str(), id: str(), method: str(), params: obj({}) })), responses: { 200: json(obj({ jsonrpc: str(), id: str(), result: obj({}) })), 202: { description: 'A notification, accepted' }, ...std(401) } }, get: { tags: ['Discovery'], summary: 'Not used: POST JSON-RPC instead', operationId: 'mcpGet', responses: { 405: { description: 'POST JSON-RPC here' }, ...std(401) } } },
     '/devices/{id}/profile': {
       parameters: [deviceIdParam],
       get: { tags: ['Profiles'], summary: 'Effective profile (ETag; 304 on If-None-Match)', operationId: 'getProfile', ...scopeDoc('self | profile:* | agent'),
