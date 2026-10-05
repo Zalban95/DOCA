@@ -33,6 +33,7 @@ const SCHEMA = {
     keys: {
       silenceMs:   { type: 'integer', min: 300, default: 2000, hint: 'How long a pause, in milliseconds, ends what you said and sends it.' },
       sensitivity: { type: 'integer', min: 1, default: 15, hint: 'The microphone level that counts as speech; lower hears quieter voices and more of the room.' },
+      assistantIdleSec: { type: 'integer', min: 5, default: 20, hint: 'In assistant mode (the face tapped), seconds of quiet before it goes back to waiting for the wake word, where the screen listens for one.' },
       listenWithFace: { type: 'boolean', default: false, hint: 'While the corner face shows, listen for the wake word and start a call when it is said (experiments.wakeWord).' },
       wakeWord: { type: 'string', default: '', hint: 'The word that starts a call. Empty: the product\'s name (branding).' },
     } },

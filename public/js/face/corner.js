@@ -1,24 +1,26 @@
 /* The face in the panel's corner (TODO H8.1), for screens that switch it on (Settings → General → Appearance; per
    screen, kept in this browser). Its own circle beside the chat button, which keeps its ⬡ and its ✕ — drawn inside
-   the button it covered the one control that opens and closes the chat. A tap starts a voice call; during one it shows
-   or hides the chat. It used to open /face, which in a phone app's WebView replaced the panel and ended the call —
+   the button it covered the one control that opens and closes the chat. A tap opens assistant mode (the face full
+   screen, talking — face/assistant.js); during a call started from the chat it shows or hides the chat. It used to open /face, which in a phone app's WebView replaced the panel and ended the call —
    the full-screen face is in Settings → General → Appearance. */
 let _faceCorner = null;
 let _faceVoiceUntil = 0;   // while a call drives the face (faceCornerVoice), the hive's own feed waits
 
 /** A voice call drives the corner face for a moment: its state and how loud (experiments.faceVoice, chat-call.js). */
 function faceCornerVoice(state, level) {
-  if (!_faceCorner?.face?.level) return;
   _faceVoiceUntil = Date.now() + 1500;
+  if (typeof assistantVoice === 'function') assistantVoice(state, Math.max(0, Math.min(1, level)));
+  if (!_faceCorner?.face?.level) return;
   _faceCorner.face.set(state);
   _faceCorner.face.level(Math.max(0, Math.min(1, level)));
 }
 
-/** A tap: a call when there is none (made inside the tap, so its audio may play), else the chat shown or hidden. */
+/** A tap: assistant mode when no call is on (face/assistant.js — the call is made inside the tap, so its audio may
+    play); during a call started from the chat, the chat shown or hidden. */
 function faceCornerTap() {
   const inCall = (typeof _callActive !== 'undefined' && _callActive) || (typeof _rt !== 'undefined' && _rt);
-  if (!inCall && typeof chatToggleCall === 'function') chatToggleCall();
-  if (typeof toggleChat === 'function' && (inCall || !chatOpen)) toggleChat(true);
+  if (!inCall && typeof assistantOpen === 'function') return assistantOpen();
+  if (typeof toggleChat === 'function') toggleChat(true);
 }
 
 function faceCornerOn() { try { return localStorage.getItem('doca.face.corner') === '1'; } catch { return false; } }

@@ -10,7 +10,9 @@ const H = require('./helpers');
 
 let tts, heard = [];
 before(async () => {
-  tts = http.createServer((req, res) => { let raw = ''; req.on('data', d => { raw += d; }); req.on('end', () => { heard.push(JSON.parse(raw)); res.writeHead(200, { 'Content-Type': 'audio/mpeg' }); res.end(Buffer.from('ID3')); }); });
+  tts = http.createServer((req, res) => { let raw = ''; req.on('data', d => { raw += d; }); req.on('end', () => {
+    if (req.url === '/v1/audio/voices') return res.end(JSON.stringify({ voices: ['af_heart', 'bf_emma', 'am_echo'] }));
+    heard.push(JSON.parse(raw)); res.writeHead(200, { 'Content-Type': 'audio/mpeg' }); res.end(Buffer.from('ID3')); }); });
   await new Promise(r => tts.listen(0, '127.0.0.1', r));
   await H.start();
   const u = require('../modules/utils');
@@ -29,6 +31,19 @@ test('answers are read in this screen\'s voice when it chose one, the hive\'s ot
   await H.api(null, 'POST', '/api/screen/settings', { voice: null });
   await H.api(null, 'POST', '/api/chat/synthesize', { text: 'hello' });
   assert.equal(heard.at(-1).voice, 'af_heart', 'back to the hive\'s');
+});
+
+test('a voice named as a person says it is matched to the service\'s; one it lacks falls back to the hive\'s', async () => {
+  await H.api(null, 'POST', '/api/screen/settings', { voice: { ttsVoice: 'Heart' } });
+  assert.equal((await H.api(null, 'POST', '/api/chat/synthesize', { text: 'hi' })).status, 200);
+  assert.equal(heard.at(-1).voice, 'af_heart', '"Heart" was refused by the service on every sentence (2026-10-05)');
+  await H.api(null, 'POST', '/api/screen/settings', { voice: { ttsVoice: 'Nobody' } });
+  const r = await fetch(`${H.base}/api/chat/synthesize`, { method: 'POST', headers: { Cookie: H.owner.cookie, 'Content-Type': 'application/json', 'Sec-Fetch-Site': 'same-origin' }, body: JSON.stringify({ text: 'hi' }) });
+  assert.equal(r.status, 200);
+  assert.equal(heard.at(-1).voice, 'af_heart');
+  assert.equal(r.headers.get('x-doca-voice-fallback'), 'Nobody -> af_heart');
+  assert.deepEqual((await H.api(null, 'GET', '/api/chat/voices')).body, { voices: ['af_heart', 'bf_emma', 'am_echo'], hive: 'af_heart' });
+  await H.api(null, 'POST', '/api/screen/settings', { voice: null });
 });
 
 test('the Devices list says which devices are this person\'s, whose pages they may open', async () => {

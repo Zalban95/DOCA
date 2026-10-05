@@ -4,8 +4,9 @@ async function screenVoiceRender() {
   const panel = document.getElementById('sp-voice');
   if (!panel) return;
   document.getElementById('screen-voice-card')?.remove();
-  let s;
+  let s, list = { voices: [], hive: '' };
   try { s = await screenLoad(); } catch { return; }
+  try { list = await apiFetch('/api/chat/voices'); } catch { /* the service does not list them: type one */ }
   const v = s.settings?.voice || {};
   const mine = s.from?.voice === 'device';
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'screen-voice-card' });
@@ -13,7 +14,10 @@ async function screenVoiceRender() {
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">How answers are read aloud on <b>${escHtml(s.name || 'this screen')}</b> — a phone can speak faster than the kitchen tablet.
       Empty uses the voice above. ${mine ? 'Set here.' : "Now: the hive's."}</p>
     <div class="toolbar" style="gap:6px;flex-wrap:wrap">
-      <input class="input" id="sv-voice" placeholder="voice (e.g. af_heart)" value="${escHtml(v.ttsVoice || '')}" style="width:200px">
+      ${list.voices.length ? `<select class="input" id="sv-voice" style="width:auto"><option value="">the hive's (${escHtml(list.hive)})</option>${
+        list.voices.map(x => `<option value="${escHtml(x)}" ${x === v.ttsVoice ? 'selected' : ''}>${escHtml(x)}</option>`).join('')}${
+        v.ttsVoice && !list.voices.includes(v.ttsVoice) ? `<option value="${escHtml(v.ttsVoice)}" selected>${escHtml(v.ttsVoice)} — not a voice of the service</option>` : ''}</select>`
+        : `<input class="input" id="sv-voice" placeholder="voice (e.g. af_heart)" value="${escHtml(v.ttsVoice || '')}" style="width:200px">`}
       <input class="input" id="sv-speed" type="number" min="0.5" max="2" step="0.1" placeholder="speed" value="${escHtml(v.ttsSpeed ?? '')}" style="width:100px">
       <button class="btn btn-sm btn-blue" onclick="screenVoiceSave()">Save for this screen</button>
       ${mine ? '<button class="btn btn-sm" onclick="screenVoiceSave(true)">Back to the hive\'s</button>' : ''}</div>`;

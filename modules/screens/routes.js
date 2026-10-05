@@ -9,6 +9,8 @@
 const screens = require('./index');
 
 function mount(app) {
+  // The speech service's voices, for a screen to pick its own from (Settings → Voice → This screen's voice).
+  app.get('/api/chat/voices', require('../chat').handleVoices);
   app.get('/api/screen', (req, res) => {
     try {
       const d = screens.ensure(req, res, req.query.device || null);
