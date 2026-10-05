@@ -18,6 +18,7 @@ const _SETTINGS_SUBTABS = [
   { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit' },
   { id: 'system',    label: 'System',    init: '_subtabSystemInit' },
   { id: 'experiments', label: 'Experiments', init: 'experimentsLoad', find: 'experiment flag try measure' },
+  { id: 'evals',     label: 'Evaluations', init: 'evalsLoad',    find: 'evaluation eval test regression promptfoo judge' },
   { id: 'skills',    label: 'Skills',    init: 'loadSkills',    group: 'openclaw' },
   { id: 'snapshots', label: 'Snapshots', init: 'loadSnapshots', group: 'openclaw' },
   { id: 'setup',     label: 'Setup',     init: 'loadScripts',   group: 'openclaw' },
