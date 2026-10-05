@@ -119,6 +119,8 @@ const TABLE = [
   R(GET, '/api/clients/browser.zip', 'read'),
   R(GET, '/api/clients/apps(/.*)?', 'read'),                 // DOCA's Android apps: what is kept, and the APK (client-apps/)
   R(ANY, '/api/clients/apps(/.*)?', 'host'),                 // uploading, building and the signing key are a host's               // the DOCA browser extension, to install (api-v1/client-files.js)
+  R(GET, '/api/harness/opendots/state', 'read'),            // whether OpenDots is installed, set up and answering (harness/opendots.js)
+  R(ANY, '/api/harness/opendots(/.*)?', 'host'),             // its folder, address and Compose project: the machine's
   R(GET, '/api/realtime', 'chat'),                           // what a live call would use (realtime/routes.js; the call is /ws/realtime)
   R(ANY, '/api/realtime', 'host'),                           // the owner chooses the realtime voice service
   R(GET, '/api/retrieval', 'read'),                          // the embedding model and what the index holds (retrieval/routes.js)

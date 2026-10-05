@@ -5,6 +5,8 @@
 > checks OpenDots feature by feature, and computers, recipes, pages, the face, realtime calls and learning were built
 > (2.153–2.200). What this document still drives is **OpenDots as a peer harness** (§3–§4), open as H14's last item.
 > Line numbers and seams named below are from 2.116.2; re-read the code before acting on them.
+> **2.208.0** built the §3 part that needs no live instance (`modules/harness/opendots.js`): install at the pin, the
+> states, its own Compose project, Open. §4 (conversations) waits for a running OpenDots with an Intelligence key.
 
 Planning only, 2026-10-04. The requested outcome is an OpenDots peer in DOCA's
 existing harness panel, plus concrete improvements to DOCA's own logic, work
