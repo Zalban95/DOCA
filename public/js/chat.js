@@ -4,7 +4,7 @@
 
 let chatLoaded = false;
 
-function toggleChat() {
+function toggleChat(keepCall) {
   chatOpen = !chatOpen;
   document.getElementById('chat-panel').classList.toggle('open', chatOpen);
   document.getElementById('chat-fab').classList.toggle('active', chatOpen);
@@ -13,7 +13,7 @@ function toggleChat() {
     chatLoadHistory();
   }
   if (chatOpen) { chatRestoreGeom(); document.getElementById('chat-input').focus(); }
-  if (!chatOpen && _callActive) _callStop();
+  if (!chatOpen && _callActive && keepCall !== true) _callStop();   // the face hides the chat and keeps the call
 }
 
 /* ── Moving and resizing the window ─────────────────────
