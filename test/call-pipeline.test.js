@@ -69,7 +69,10 @@ test('speech over the answer interrupts it and drops the rest', async () => {
   const ev = []; p.on('interrupted', () => ev.push('interrupted')); p.on('agent', t => ev.push(t.trim()));
   p.say('One long sentence. Two.');
   await new Promise(r => setTimeout(r, 10));
-  p.audio(tone(200));
+  p.audio(tone(60));
+  await new Promise(r => setTimeout(r, 5));
+  assert.equal(ev.includes('interrupted'), false, 'a 60 ms click does not interrupt');
+  p.audio(tone(400));
   release();
   await new Promise(r => setTimeout(r, 10));
   assert.deepEqual(ev, ['One long sentence.', 'interrupted'], 'the second sentence is not spoken');

@@ -42,15 +42,19 @@ test('with barge-in on, speech while a turn works is recorded; off, it waits as 
 });
 
 test('an interruption drops what the agent was about to say, and counts it', async () => {
-  const { s, decoded } = load();
+  const { s, decoded, sandbox } = load();
   s.set('_callActive', true); s.set('_callBargeIn', true); s.set('_callStream', {});
   s.set('_callStats', { at: Date.now(), bargeIns: 0, dropped: 0 });
   const pending = s.get('_callEnqueueSynth')('A sentence from before.');
   await new Promise(r => setImmediate(r));
-  // The person speaks while it is still playing something: the voice stops and the epoch moves on.
+  // The person speaks while it is still playing something: a blip does not stop it, a sustained voice does.
   s.set('_callCurrentSrc', { stop() {} });
   speaking(s);
-  s.get('_callVadLoop')();
+  let t = 1000; sandbox.performance = { now: () => t };
+  vm.runInContext('performance = globalThis.performance', sandbox);
+  s.get('_callVadLoop')(); t += 50; s.get('_callVadLoop')();
+  assert.equal(s.get('_callStats').bargeIns, 0, 'a 50 ms sound is not a person talking over the answer');
+  for (let i = 0; i < 8; i++) { t += 50; s.get('_callVadLoop')(); }
   assert.equal(s.get('_callStats').bargeIns, 1);
   decoded();
   await pending;
@@ -104,4 +108,18 @@ test('a speech service that fails says so once per call, not silently', async ()
   await s.get('_callEnqueueSynth')('Two.');
   assert.equal(said.length, 1);
   assert.match(said[0], /could not be spoken.*502.*kokoro down/);
+});
+
+test('without barge-in, nothing the microphone hears stops the answer', () => {
+  const { s, sandbox } = load();
+  let stopped = 0;
+  s.set('_callActive', true); s.set('_callBargeIn', false); s.set('_callStream', {});
+  s.set('_callStats', { at: Date.now(), bargeIns: 0, dropped: 0 });
+  s.set('_callCurrentSrc', { stop() { stopped++; } });
+  speaking(s);
+  let t = 1000; sandbox.performance = { now: () => t };
+  vm.runInContext('performance = globalThis.performance', sandbox);
+  for (let i = 0; i < 40; i++) { t += 50; s.get('_callVadLoop')(); }
+  assert.equal(stopped, 0);
+  assert.ok(s.get('_callCurrentSrc'), 'still speaking');
 });

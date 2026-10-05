@@ -30,7 +30,7 @@ let _callThreshold = 15;
 // A recording is sent only with this much audio over the threshold in it: a click, a cough or a door is shorter, and
 // Whisper turns such a blip into "Thank you." (the hub screens those phrases too: modules/stt-filter.js).
 const CALL_MIN_VOICED_MS = 300;
-let _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending = 0, _callTtsWarned = false, _callLastActive = 0;
+let _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending = 0, _callTtsWarned = false, _callLastActive = 0, _callOverMs = 0;
 /** How long nobody has spoken and nothing has been said or worked on (assistant mode's idle timer). */
 const _callIdleMs = () => (_callActive && _callLastActive ? performance.now() - _callLastActive : 0);
 
@@ -149,7 +149,8 @@ function _callVadLoop() {
   const energy = data.reduce((a, b) => a + b, 0) / data.length;
   const now = performance.now(), dt = _callLastFrame ? Math.min(100, now - _callLastFrame) : 0;
   _callLastFrame = now;
-  if (energy > _callThreshold || _callCurrentSrc || _callProcessing || _callSynthPending || _callSpeaking) _callLastActive = now;
+  // Activity is an exchange — something sent, worked on or spoken — never mere sound, or a noisy room keeps it awake.
+  if (_callCurrentSrc || _callProcessing || _callSynthPending || (_callSpeaking && _callVoicedMs >= CALL_MIN_VOICED_MS)) _callLastActive = now;
   if (_callFaceVoice && typeof faceCornerVoice === 'function') {
     if (_callCurrentSrc && _callOutAnalyser) {
       const out = new Uint8Array(_callOutAnalyser.frequencyBinCount);
@@ -158,11 +159,16 @@ function _callVadLoop() {
     } else if (energy > _callThreshold) faceCornerVoice('listening', energy / 80);
   }
 
-  if (energy > _callThreshold) {
+  // While the voice plays it keeps the floor: a cough, a door or the room is not a person talking over it. Only with
+  // barge-in on does a sustained sound well over the threshold (≈0.35 s) interrupt it.
+  const playing = !!_callCurrentSrc;
+  _callOverMs = playing && energy > _callThreshold * 1.6 + 5 ? _callOverMs + dt : 0;
+  if (playing && !(_callBargeIn && _callOverMs >= 350)) { /* the answer goes on */ }
+  else if (energy > _callThreshold) {
     // Speech detected
-    if (_callCurrentSrc) {
+    if (playing) {
       _callStopPlayback();
-      if (_callBargeIn) { _callEpoch++; _callStats.bargeIns++; }   // what it was about to say is no longer an answer
+      _callEpoch++; _callStats.bargeIns++;   // what it was about to say is no longer an answer
       _callSetStatus('Listening…', 'listening');
     }
 

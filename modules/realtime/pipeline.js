@@ -50,7 +50,7 @@ function connect({ silenceMs = 900, synth, transcribe } = {}) {
     if (!r.ok) throw new Error(`text-to-speech answered ${r.status}`);
     return Buffer.from(await r.arrayBuffer());
   });
-  let closed = false, rest = Buffer.alloc(0), floor = 300, utter = null, quietMs = 0, epoch = 0, speakingUntil = 0, ids = 0;
+  let closed = false, rest = Buffer.alloc(0), floor = 300, utter = null, quietMs = 0, epoch = 0, speakingUntil = 0, ids = 0, overMs = 0;
   let speech = Promise.resolve();
 
   const utterance = async pcm => {
@@ -64,7 +64,9 @@ function connect({ silenceMs = 900, synth, transcribe } = {}) {
   const frame = f => {
     const level = rms(f), voiced = level > Math.max(400, floor * 3);
     if (!voiced) floor = floor * 0.98 + level * 0.02;   // the room, learned while nobody speaks
-    if (voiced && Date.now() < speakingUntil) { epoch++; speakingUntil = 0; em.emit('interrupted'); }
+    // While it talks, only ~0.3 s of steady speech is a person talking over it; a click or a cough is not.
+    overMs = voiced && Date.now() < speakingUntil ? overMs + 20 : 0;
+    if (overMs >= 300) { epoch++; speakingUntil = 0; overMs = 0; em.emit('interrupted'); }
     if (voiced && !utter) utter = { chunks: [], voicedMs: 0, ms: 0 };
     if (!utter) return;
     utter.chunks.push(f); utter.ms += 20;
