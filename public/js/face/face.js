@@ -22,7 +22,7 @@ const FACE_DEFAULT = {
   eyes: { y: -0.16, gap: 0.40, r: 0.10 },
   mouth: { y: 0.30, w: 0.46, curve: 0.06 },
   hud: true,
-  grain: true,
+  grain: false,   // scanlines read as low resolution on a dense screen; a spec may still ask for them
   states: {},
 };
 
@@ -80,11 +80,20 @@ function faceMount(canvas, specIn = {}) {
     const key = `${r >> 3},${g >> 3},${b >> 3}`;
     let s = sprites.get(key);
     if (!s) {
-      s = document.createElement('canvas'); s.width = s.height = 32;
-      const c = s.getContext('2d'), gr = c.createRadialGradient(16, 16, 0, 16, 16, 16);
-      gr.addColorStop(0, `rgba(${Math.min(255, r + 70)},${Math.min(255, g + 70)},${Math.min(255, b + 70)},1)`);
-      gr.addColorStop(0.18, `rgba(${r},${g},${b},0.85)`); gr.addColorStop(0.45, `rgba(${r},${g},${b},0.22)`); gr.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      c.fillStyle = gr; c.fillRect(0, 0, 32, 32);
+      // A mountain, not a hill (asked 2026-10-06): a small, intense, nearly white core that falls off steeply, over a
+      // faint glow as wide as before — drawn pixel by pixel at 128 px, so it stays sharp at any screen's density.
+      const S = 128, h2 = S / 2;
+      s = document.createElement('canvas'); s.width = s.height = S;
+      const c = s.getContext('2d'), img = c.createImageData(S, S), px = img.data;
+      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+        const d = Math.hypot(x + 0.5 - h2, y + 0.5 - h2) / h2;
+        if (d >= 1) continue;
+        const core = Math.exp(-Math.pow(d / 0.07, 2)), halo = 0.36 * Math.exp(-d / 0.3) * (1 - d * d);
+        const a = Math.min(1, core + halo), white = core / Math.max(a, 1e-6) * 0.75;   // the peak whitens, the glow keeps the colour
+        const o = (y * S + x) * 4;
+        px[o] = r + (255 - r) * white; px[o + 1] = g + (255 - g) * white; px[o + 2] = b + (255 - b) * white; px[o + 3] = a * 255;
+      }
+      c.putImageData(img, 0, 0);
       if (sprites.size > 64) sprites.clear();
       sprites.set(key, s);
     }
@@ -93,7 +102,7 @@ function faceMount(canvas, specIn = {}) {
   const hex = c => { const m = /^#?([0-9a-f]{6})$/i.exec(c || ''); const v = m ? parseInt(m[1], 16) : 0xffffff; return [v >> 16, (v >> 8) & 255, v & 255]; };
 
   function resize() {
-    dpr = Math.min(2, window.devicePixelRatio || 1);
+    dpr = Math.min(3, window.devicePixelRatio || 1);   // a phone is 2.6–3.5: drawn at its own density, not upscaled
     const r = canvas.getBoundingClientRect();
     w = Math.max(1, r.width); h = Math.max(1, r.height);
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
@@ -128,6 +137,7 @@ function faceMount(canvas, specIn = {}) {
     const [r, g, b] = cur.colorRGB.map(Math.round);
     const spr = sprite(r, g, b), fieldSpr = sprite(...hex(P.field || P.ink));
     ctx.globalCompositeOperation = 'lighter';   // points of light add up where they cross
+    ctx.imageSmoothingQuality = 'high';
     const dotR = Math.max(0.8, unit * 0.011);
     const spin = t * cur.spin;
     const ax = w / 2 / unit, ay = h / 2 / unit;

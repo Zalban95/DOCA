@@ -61,7 +61,7 @@ function faceConceptSay(text, sec = 2) {
   if (!c) return null;
   const pts = faceGlyphPoints(c.glyph);
   if (!pts) return null;
-  const ms = Math.max(1300, Math.min(2800, sec * 850));
+  const ms = Math.max(2600, Math.min(4500, sec * 1200));   // long enough for the image to land (asked 2026-10-06)
   if (typeof _faceCorner !== 'undefined') _faceCorner?.face?.shape?.(pts, c.color, ms);
   if (typeof _assistant !== 'undefined') _assistant?.face?.shape?.(pts, c.color, ms);
   return c;
