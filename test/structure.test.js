@@ -29,7 +29,7 @@ const CEILING = 400;
 const OVER = {
   'public/index.html': 1577,  // + the split scripts' <script> tags; ES modules take them back out
   'public/css/components.css': 1154,
-  'public/js/chat.js': 900,
+  'public/js/chat.js': 579,
   'public/js/files.js':            676,
   'modules/harness/memory.js':     463,
   'modules/api-v1/router.js':      589,
