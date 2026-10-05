@@ -11,6 +11,8 @@ const path = require('path');
 const http = require('http');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-test-'));
+// Gone when the test process ends: every run used to leave its folder behind (12,000 of them by 2026-10-05).
+process.on('exit', () => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* still in use on Windows: the OS's temp cleaner */ } });
 // Home too, unless a test set its own: setup codes, backups and release state live there,
 // and a test must never write them into the checkout.
 process.env.DOCA_HOME = process.env.DOCA_HOME || tmp;

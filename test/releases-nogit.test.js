@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 
 process.env.DOCA_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-nogit-'));
+process.on('exit', () => { try { fs.rmSync(process.env.DOCA_HOME, { recursive: true, force: true }); } catch { /* in use */ } });
 require('./helpers');
 const releases = require('../modules/releases');
 
