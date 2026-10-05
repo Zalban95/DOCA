@@ -123,12 +123,14 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 **H6 · The client core and joining the hive** (§4)
 - [ ] H6.1 One client core per platform: protocol, pairing, push, presence, offline queue, device
   page, face.
-- [ ] H6.2 Tool families a device lends the hive, hosted as an MCP server (files, shell, screen,
-  input, apps, browser, camera, mic, sensors), for every client.
+- [x] H6.2 (2.177.0, in part) Tool families a device lends the hive, hosted as an MCP server (files, shell, screen,
+  input, apps, browser, camera, mic, sensors), for every client. Done: files and shell in `clients/node` (and DocaDesk's
+  own). **Left:** screen, input, apps, browser, camera, mic, sensors.
 - [ ] H6.3 Pairing in one step (QR/link) bound to the person; consent per family on the device.
 - [ ] H6.4 Discovery on the tailnet / mDNS.
 - [ ] H6.5 Clients update from the hub's release channel.
-- [ ] H6.6 A Linux desktop client; a macOS one; iOS later; a browser-only client.
+- [x] H6.6 (2.177.0, in part) A Linux desktop client; a macOS one; iOS later; a browser-only client. Done: `doca-client`
+  (Node, headless) for Linux, macOS and Windows. **Left:** a tray app around it, iOS, a browser-only client.
 - [ ] H6.7 Headless clients (a server, a Pi) and channel adapters as clients.
 
 **H7 · Work that runs by itself**
