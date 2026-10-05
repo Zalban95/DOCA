@@ -41,7 +41,14 @@ function build(sel = {}) {
   const files = [];
   const contents = [];
   const needs = { doca: `>=${require('../../package.json').version}`, tools: new Set(), secrets: [] };
-  for (const name of sel.skills || []) { files.push(...skillFiles(name)); contents.push({ kind: 'skill', id: name, path: `skills/${name}/` }); }
+  const recipes = new Set(sel.recipes || []);
+  for (const name of sel.skills || []) {
+    files.push(...skillFiles(name)); contents.push({ kind: 'skill', id: name, path: `skills/${name}/` });
+    // The recipes a skill names travel with it (skills.recipesNote): without them its "exactly how" is gone.
+    const md = files.find(f => f.name === `skills/${name}/SKILL.md`);
+    const { meta } = require('../agents/markdown').split(md ? md.data.toString() : '');
+    for (const id of Array.isArray(meta.recipes) ? meta.recipes : require('../agents/markdown').parseList(meta.recipes)) if (require('../recipes/store').get(id)) recipes.add(id);
+  }
   for (const id of sel.specialists || []) {
     const def = require('../agents/registry').get(id);
     if (!def || def.broken) throw Object.assign(new Error(`No readable specialist "${id}".`), { status: 404 });
@@ -49,7 +56,7 @@ function build(sel = {}) {
     for (const t of def.tools || []) needs.tools.add(t);
     contents.push({ kind: 'specialist', id, path: `agents/${id}.md` });
   }
-  for (const id of sel.recipes || []) {
+  for (const id of recipes) {
     const r = require('../recipes/store').get(id);
     if (!r) throw Object.assign(new Error(`No recipe "${id}".`), { status: 404 });
     const ex = require('../recipes/export');

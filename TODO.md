@@ -88,7 +88,8 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [x] H3.3 (2.159.0) `recipe_run` and a Run button: no model, the same gate/permits/approvals per step (through
   `runToolCalls` itself). Left: filling parameters from a sentence with the cheapest model.
 - [ ] H3.4 A failed step goes to the agent with the log; it proposes the repaired revision. [X]
-- [ ] H3.5 Skills link their recipes; device macros and install proposals become recipes.
+- [x] H3.5 (2.173.0, in part) Skills link their recipes; device macros and install proposals become recipes. Done:
+  skills name their recipes (listed when read, carried in packs). **Left:** device macros and install proposals as recipes.
 
 **H4 · Packs — portable everything** (§2.4, §9)
 - [x] H4.1 (2.163.0) `.dpack` envelope + `pack.json` (requirements incl. OS); native formats inside. (OS requirements left.)

@@ -21,7 +21,7 @@
 const fs   = require('fs');
 const path = require('path');
 const store = require('../store');
-const { split } = require('../agents/markdown');
+const { split, parseList } = require('../agents/markdown');
 
 const SHIPPED = path.join(__dirname, '..', '..', 'skills');
 const local = () => store.dir('skills');
@@ -74,7 +74,23 @@ function read(name) {
   walk(s.dir);
   // Not adapted yet: a note above the body says how to translate it (skill-audit.js).
   const note = s.harness ? require('./skill-audit').readingNote(require('./skill-audit').audit(name)) : '';
-  return { ...s, body: (note + body).slice(0, MAX_BODY), files };
+  return { ...s, body: (note + body + recipesNote(s.dir)).slice(0, MAX_BODY), files };
+}
+
+/**
+ * The recipes a skill names in its front matter (`recipes: [id, …]`; TODO H3.5): the skill says when and why,
+ * the recipe exactly how — so the agent runs it instead of reasoning the steps out again. A recipe that does
+ * not exist (yet) is listed as missing rather than dropped.
+ */
+function recipesNote(dir) {
+  const { meta } = split(fs.readFileSync(path.join(dir, 'SKILL.md'), 'utf8'));
+  const ids = Array.isArray(meta.recipes) ? meta.recipes : parseList(meta.recipes);
+  if (!ids.length) return '';
+  const store = require('../recipes/store');
+  return `\n\n---\nRecipes for this skill — run one with recipe { action: "run", id, values } rather than redoing its steps:\n${ids.map(id => {
+    const r = store.get(id);
+    return r ? `- ${r.id}: ${r.title}${r.params.length ? ` (values: ${r.params.map(p => p.name).join(', ')})` : ''}` : `- ${id}: not saved here yet`;
+  }).join('\n')}\n`;
 }
 
 /** One of a skill's own files (a script, a template), inside its folder only. */
