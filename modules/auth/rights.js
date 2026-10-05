@@ -107,6 +107,8 @@ const TABLE = [
   R(ANY, '/api/recipes(/.*)?', 'chat'),                       // reading, saving and running one: as the signed-in person
   R('POST', '/api/channels/telegram', 'host'),               // the bot's token and switch: it answers as the hive
   R(ANY, '/api/channels/telegram(/.*)?', 'chat'),             // a link code, and one's own linked chats (channels/telegram/routes.js)
+  R('POST', '/api/channels/matrix', 'host'),                 // the homeserver, the bot's token and switch
+  R(ANY, '/api/channels/matrix(/.*)?', 'chat'),               // a link code, and one's own linked rooms (channels/matrix/routes.js)
   R(GET, '/computers/[a-f0-9]+/vnc(/.*)?', 'host'),         // a computer's screen, proxied (computers/vnc.js)                  // computers for agents: containers on this machine (computers/)                   // a project is files and a shell
   R(ANY, '/api/harness/(agent-import|identity|skills/import)', 'host'),
   R('POST', '/api/harness/skills(/draft)?', 'host'),             // a skill is instructions the agent follows: drafted, read and saved by a host (harness/learn.js)

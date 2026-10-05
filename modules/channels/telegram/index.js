@@ -12,60 +12,26 @@
 const api = require('./api');
 const links = require('./links');
 
-const SCOPES = ['interact', 'harness:chat', 'harness:sessions'];
 const CAPS = { formFactor: 'other', input: { text: true, voice: true, camera: true, touch: true }, render: ['text', 'image'], ext: { channel: 'telegram' } };
 
-const state = { running: false, bot: null, lastPollAt: null, error: null, ctrl: null, subs: new Map(), queues: new Map() };
+const state = { running: false, bot: null, lastPollAt: null, error: null, ctrl: null };
 const schema = () => require('../../settings-schema');
 const pollSec = () => schema().value('channels.telegram.pollSec');
 const enabled = () => schema().value('channels.telegram.enabled') === true && !!api.token();
-
-/** One chat's events in order: a reply never overtakes the question before it. */
-function queue(chatId, job) {
-  const next = (state.queues.get(chatId) || Promise.resolve()).then(job).catch(e => { state.error = e.message; });
-  state.queues.set(chatId, next);
-  return next;
-}
-
-function attach(chatId) {
-  const c = links.chat(chatId);
-  if (!c || state.subs.has(String(chatId))) return;
-  const bus = require('../../api-v1/bus');
-  const handle = env => queue(String(chatId), async () => {
-    await require('./outbound').onEvent(Number(chatId), c.deviceId, env);
-    if (env.ack) bus.ackUpTo(c.deviceId, env.seq);
-  });
-  const sub = bus.subscribe(c.deviceId, 0, { send: handle });
-  for (const env of sub.replay) handle(env);
-  state.subs.set(String(chatId), sub);
-}
-
-function detach(chatId) { state.subs.get(String(chatId))?.unsubscribe(); state.subs.delete(String(chatId)); }
+const bind = require('../bind').binder({ label: 'Telegram', links, caps: CAPS,
+  onEvent: (chatId, deviceId, env) => require('./outbound').onEvent(Number(chatId), deviceId, env), onError: e => { state.error = e.message; } });
+const { queue, attach } = bind;
 
 /** Bind a chat to a person: a `channel` device in their name, and a conversation of its own. */
-async function link(tgChat, userId) {
-  const devices = require('../../api-v1/devices');
-  const old = links.chat(tgChat.id);
-  if (old) { detach(tgChat.id); try { devices.revoke(old.deviceId); } catch { /* gone */ } }
+function link(tgChat, userId) {
   const who = [tgChat.first_name, tgChat.last_name].filter(Boolean).join(' ') || tgChat.username || String(tgChat.id);
-  const { device } = devices.create({ name: `Telegram · ${who}`.slice(0, 60), kind: 'channel', scopes: SCOPES, caps: CAPS });
-  devices.update(device.id, { userId });
-  const full = devices.get(device.id);
-  const session = require('../../api-v1/harness').createSession('Telegram', { activate: false, device: full });
-  const person = require('../../auth/store').userById(userId);
-  const c = links.saveChat(tgChat.id, { deviceId: device.id, userId, sessionId: session.id, name: who, username: tgChat.username || null,
-    personName: person?.name || person?.email || 'you', linkedAt: new Date().toISOString() });
-  attach(tgChat.id);
-  return c;
+  return bind.link(tgChat.id, { who, username: tgChat.username || null }, userId);
 }
 
 /** Unlink: the device is revoked (so nothing more reaches the chat) and the chat forgotten. */
 function unlink(chatId) {
-  const c = links.removeChat(chatId);
-  if (!c) return null;
-  detach(chatId);
-  try { require('../../api-v1/devices').revoke(c.deviceId); } catch { /* gone */ }
-  api.call('sendMessage', { chat_id: Number(chatId), text: 'This chat was unlinked from DOCA.' }).catch(() => {});
+  const c = bind.unlink(chatId);
+  if (c) api.call('sendMessage', { chat_id: Number(chatId), text: 'This chat was unlinked from DOCA.' }).catch(() => {});
   return c;
 }
 
@@ -100,7 +66,7 @@ async function start() {
   try { state.bot = await api.call('getMe'); state.error = null; }
   catch (e) { state.error = e.message; state.ctrl = null; return status(); }
   state.running = true;
-  for (const id of Object.keys(links.chats())) attach(id);
+  bind.attachAll();
   poll(ctrl.signal).finally(() => { if (state.ctrl === ctrl) state.running = false; });
   return status();
 }
@@ -109,7 +75,7 @@ function stop() {
   state.ctrl?.abort();
   state.ctrl = null;
   state.running = false;
-  for (const id of [...state.subs.keys()]) detach(id);
+  bind.detachAll();
 }
 
 function status() {
@@ -118,4 +84,4 @@ function status() {
     bot: state.bot && { id: state.bot.id, username: state.bot.username, name: state.bot.first_name } };
 }
 
-module.exports = { start, stop, status, link, unlink, attach, SCOPES };
+module.exports = { start, stop, status, link, unlink, attach, bind };
