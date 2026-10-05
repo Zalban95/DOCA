@@ -106,6 +106,7 @@ const TABLE = [
   R(ANY, '/api/channels/telegram(/.*)?', 'chat'),             // a link code, and one's own linked chats (channels/telegram/routes.js)
   R(GET, '/computers/[a-f0-9]+/vnc(/.*)?', 'host'),         // a computer's screen, proxied (computers/vnc.js)                  // computers for agents: containers on this machine (computers/)                   // a project is files and a shell
   R(ANY, '/api/harness/(agent-import|identity|skills/import)', 'host'),
+  R('POST', '/api/harness/skills(/draft)?', 'host'),             // a skill is instructions the agent follows: drafted, read and saved by a host (harness/learn.js)
   R(ANY, '/api/harness/skills/[^/]+/(adapt|restore)', 'host'),  // rewriting a skill is rewriting instructions the agent follows  // who the agents are: persona.md, human.md, definitions
   R(ANY, '/api/(docker|vms|models|services|mcp|skills|system|paths|prefs|startup)(/.*)?', 'host'),
 ];

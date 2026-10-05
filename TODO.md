@@ -182,7 +182,7 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] Schedules ("recurring instructions") with pause/retry — H7.1 (2.162.0; retry left).
 - [ ] Spaces and Pages (docs with an editor and a chat per page) — H9.4.
 - [x] Human-in-the-loop approval cards — DOCA's approvals, on every device, with levels.
-- [ ] Automatic Learning (conversations → reviewed skills) — H10.3, and recipes (H3).
+- [x] Automatic Learning (conversations → reviewed skills) — H10.3 (2.172.0), and recipes (H3, 2.159.0).
 - [x] Any OpenAI-compatible model; self-hosted — DOCA's providers and fallback chain.
 - [ ] AG-UI so an AG-UI front end can be a client — H9.2.
 - [x] Mobile and web — the panel, DocaMobile, DocaWear (OpenDots has no watch).
@@ -228,7 +228,9 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 **H10 · Quality**
 - [ ] H10.1 Evaluation sets and tracing per turn (hive.md §3.11; "Where this harness stands" §4).
 - [ ] H10.2 Retrieval (embeddings; pgvector with PostgreSQL).
-- [ ] H10.3 Learning loop: "this conversation becomes a skill or a recipe", reviewed.
+- [x] H10.3 (2.172.0) Learning loop: "this conversation becomes a skill or a recipe", reviewed — a drafted skill a host
+  edits and saves ("＋ skill"), beside the recipe from the last turn. **Left:** the agent offering it by itself after a
+  long turn that worked (a suggestion, never a write).
 
 **H11 · Coherence along the way** (§2.2)
 - [ ] H11.1 One chat component in three sizes; retire the floating chat's gateway/CLI paths if no
