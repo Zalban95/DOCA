@@ -47,6 +47,7 @@ async function _subtabVoiceInit() {
     const prefs = await apiFetch('/api/prefs');
     _voiceSettingsLoad(prefs);
   } catch {}
+  screenVoiceRender();   // this screen's own voice (settings/screen-voice.js)
 }
 
 function _settingsRender() {
