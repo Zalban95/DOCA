@@ -97,7 +97,9 @@ const PROVIDER_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME
 const DEVICE_CONSOLE_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'device-console.json');
 // A web search provider's key (modules/search): a secret, like the model providers'.
 const SEARCH_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'search.json');
-const PROTECTED_FILES = [BACKUP_PASSWORD_FILE, PROVIDER_KEYS_FILE, DEVICE_CONSOLE_FILE, SEARCH_KEYS_FILE];
+// Connectors' OAuth apps and tokens (modules/connectors/vault.js): the keys to the owner's accounts.
+const CONNECTOR_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'connectors.json');
+const PROTECTED_FILES = [BACKUP_PASSWORD_FILE, PROVIDER_KEYS_FILE, DEVICE_CONSOLE_FILE, SEARCH_KEYS_FILE, CONNECTOR_KEYS_FILE];
 
 // Setup scripts the UI may read/write/run — the Setup panel's list, and the
 // whole of it.
@@ -224,7 +226,7 @@ module.exports = {
   HOME_DIR,
   BACKUP_DIR,
   BACKUP_PASSWORD_FILE,
-  PROTECTED_FILES,
+  PROTECTED_FILES, CONNECTOR_KEYS_FILE,
   PROVIDER_KEYS_FILE,
   SEARCH_KEYS_FILE,
   ALLOWED_SCRIPTS,

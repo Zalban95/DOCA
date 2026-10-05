@@ -17,7 +17,8 @@ function mount(app) {
   require('../migrations').mount(app);   // which prefs migrations this install has had (migrations.js)   // experiments behind flags, each with its write-up (experiments.js)
   require('../search/routes').mount(app);
   require('../retrieval/routes').mount(app);
-  require('../evals/routes').mount(app);   // evaluation sets: run, results, import and export (evals/)   // retrieval: the embedding model, a try, the index (retrieval/)   // web search: the provider and its key (search/)
+  require('../evals/routes').mount(app);
+  require('../connectors/routes').mount(app);   // OAuth connectors: the owner's accounts as tools (connectors/)   // evaluation sets: run, results, import and export (evals/)   // retrieval: the embedding model, a try, the index (retrieval/)   // web search: the provider and its key (search/)
   require('../screens/routes').mount(app);   // a browser is a device: this screen's settings (screens/)
   require('../packs/routes').mount(app);   // packs: export and import in other tools' formats (packs/)
   require('../schedules/routes').mount(app);   // turns and recipes on a timetable (schedules/)

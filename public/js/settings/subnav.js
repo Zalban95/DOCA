@@ -12,6 +12,7 @@ const _SETTINGS_SUBTABS = [
   { id: 'users',     label: 'Users',     init: 'usersLoad',      find: 'people accounts levels permissions roles' },
   { id: 'wearables', label: 'Wearables', init: 'wearablesLoad',  find: 'watch DocaWear console macros joystick' },
   { id: 'channels',  label: 'Channels',  init: 'channelsLoad',   find: 'telegram matrix element slack bot chat messaging' },
+  { id: 'connectors', label: 'Connectors', init: 'connectorsLoad', find: 'oauth github google gmail calendar microsoft outlook accounts' },
   { id: 'packs',     label: 'Packs',     init: 'packsLoad',      find: 'export import dpack share skills recipes mcp' },
   { id: 'backups',   label: 'Backups',   init: 'backupsLoad' },
   { id: 'harness',   label: 'Harness',   init: '_settingsHarnessRender', find: 'skills memory rules approvals parameters guards' },

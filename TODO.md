@@ -236,7 +236,11 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] H9.2 (2.168.0, 2.187.0; A2A left) DOCA as an MCP server; AG-UI events so AG-UI front ends are clients; A2A. Done:
   the MCP server (`POST /api/v1/mcp`: chat, conversations, recipes, by the token's scopes) and AG-UI (`POST /api/v1/agui`:
   RunAgentInput in, AG-UI's SSE events out, a thread per conversation). **Left:** A2A; the front end's own tools.
-- [ ] H9.3 OAuth connectors (Google, GitHub, calendars, mail) with a vault, scoped per agent/level.
+- [x] H9.3 (2.188.0) OAuth connectors (Google, GitHub, calendars, mail) with a vault, scoped per agent/level. The
+  owner's own OAuth app per service (GitHub, Google, Microsoft 365, any OAuth 2.0), PKCE, refresh; tokens in a 0600
+  vault; each connection the tool `connector_<id>` (levels, grants, kits, approvals by name), host-only unless opened.
+  **Left:** typed helpers per service (a calendar's next events without knowing its API), revoking at the service on
+  disconnect, connecting on behalf of a person rather than the hive.
 - [x] H9.4 (2.186.0) Pages: markdown documents with a chat beside each. On Projects: a project is the space, its .md
   files the pages; a chat tab about one page is given the page's current text every turn. **Left:** a page's
   history view (git covers it in a repository), sharing one page read-only by link.
