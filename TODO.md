@@ -239,7 +239,9 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [ ] H9.4 Pages: markdown documents with a chat beside each.
 
 **H10 · Quality**
-- [ ] H10.1 Evaluation sets and tracing per turn (hive.md §3.11; "Where this harness stands" §4).
+- [ ] H10.1 Evaluation sets and tracing per turn (hive.md §3.11; "Where this harness stands" §4). Done: tracing (2.182.0) —
+  a span per model request and tool call in doca.db, names and numbers only, ⏱ on the conversation bar, OTLP/JSON export.
+  **Left:** evaluation sets.
 - [x] H10.2 (2.181.0, experiment) Retrieval (embeddings; pgvector with PostgreSQL). Behind `experiments.retrieval` with
   `retrieval.model`: memory_search and recall_conversations merge keyword and meaning; vectors in doca.db, only changed
   pieces embedded; docs/experiments/retrieval.md. **Left:** measuring it with a real embedding model (`npm run

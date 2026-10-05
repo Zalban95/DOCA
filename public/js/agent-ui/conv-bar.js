@@ -21,7 +21,8 @@ async function agentConvBar(host, sessionId, view = null, { model = true } = {})
       <option value="" ${approval ? '' : 'selected'}>Approvals: panel's</option>
       <option value="auto" ${approval === 'auto' ? 'selected' : ''}>Approvals: auto</option>
       <option value="manual" ${approval === 'manual' ? 'selected' : ''}>Approvals: ask me</option></select>
-    ${model ? '<span class="chat-model-host conv-model"></span>' : ''}`;
+    ${model ? '<span class="chat-model-host conv-model"></span>' : ''}
+    <button class="btn btn-xs conv-trace" title="How this conversation's turns went: each step, tool and wait, with times and tokens">⏱</button>`;
   const save = async body => {
     try { await apiFetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/settings`, { method: 'POST', body }); }
     catch (e) { appAlert(e.message); }
@@ -29,6 +30,7 @@ async function agentConvBar(host, sessionId, view = null, { model = true } = {})
   };
   host.querySelector('.conv-mode').onchange = e => save({ mode: e.target.value });
   host.querySelector('.conv-approval').onchange = e => save({ approval: e.target.value || null });
+  host.querySelector('.conv-trace').onclick = () => traceOpen(sessionId);
   if (model) chatModelPicker(host.querySelector('.conv-model'), sessionId);
 }
 

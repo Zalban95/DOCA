@@ -75,6 +75,13 @@ const STEPS = [
        hash TEXT NOT NULL, text TEXT NOT NULL, model TEXT NOT NULL, dims INTEGER NOT NULL, vec TEXT NOT NULL, updated_at TEXT NOT NULL,
        PRIMARY KEY (tenant_id, source, model, ref, chunk))`,
   ] },
+  { id: 8, what: 'traces: what each turn did, step by step (harness/trace.js)', sql: [
+    `CREATE TABLE IF NOT EXISTS trace_spans (
+       tenant_id TEXT NOT NULL DEFAULT 'local', run_id TEXT NOT NULL, seq INTEGER NOT NULL, at TEXT NOT NULL,
+       kind TEXT NOT NULL, name TEXT, step INTEGER, ms INTEGER, data TEXT,
+       PRIMARY KEY (tenant_id, run_id, seq))`,
+    'CREATE INDEX IF NOT EXISTS trace_spans_at ON trace_spans (tenant_id, at)',
+  ] },
 ];
 
 /** The same steps on a synchronous SQLite handle (node:sqlite), for the stores that must stay synchronous. */

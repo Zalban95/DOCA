@@ -18,6 +18,7 @@ function afterListen({ certs = null, mode } = {}) {
   require('./channels/matrix').start().catch(() => {});     // the Matrix bot account, likewise
   require('./channels/slack').start().catch(() => {});      // and the Slack app
   require('./schedules').start();                     // turns and recipes on a timetable, as their person
+  require('./harness/trace').prune(); setInterval(() => require('./harness/trace').prune(), 86400000).unref();   // traces past tracing.retainDays
   const devices = require('./api-v1/devices');         // audit 2026-09-26 §4f, N5: tidy the device registry
   devices.repairNames();
   require('./api-v1/bus').collectOrphans(devices.list().map(d => d.id));
