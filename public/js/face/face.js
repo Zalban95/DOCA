@@ -17,7 +17,8 @@
 const FACE_DEFAULT = {
   name: 'Protolab',
   palette: { bg: '#050507', ink: '#e8edf2', dim: '#707a85', accent: '#57c9c2', steel: '#6f8aa3', ask: '#e8a020', error: '#e85050', field: '#a6bfd6' },
-  dots: 380,
+  dots: 760,
+  form: 'poly',   // a polyhedron of light (face/poly.js); 'face' is the earlier eyes and mouth
   eyes: { y: -0.16, gap: 0.40, r: 0.10 },
   mouth: { y: 0.30, w: 0.46, curve: 0.06 },
   hud: true,
@@ -25,16 +26,17 @@ const FACE_DEFAULT = {
   states: {},
 };
 
-/** How each state draws: coherence (0 noise … 1 face), eye openness, mouth motion, ring spin, colour, drift speed. */
+/** How each state draws: coherence (0 noise … 1 form), eye openness and mouth motion (the 'face' form), spin, colour,
+ *  drift speed; for the polyhedron, breath (how much it swells and shrinks) and scale. */
 const FACE_STATES = {
-  idle:     { c: 0.42, eye: 1.0, mouth: 0.0, spin: 0.00, color: 'accent', drift: 0.25, blink: true },
-  thinking: { c: 0.80, eye: 0.55, mouth: 0.0, spin: 0.15, color: 'accent', drift: 0.35, orbit: true },
-  working:  { c: 0.72, eye: 0.8, mouth: 0.0, spin: 0.9, color: 'steel', drift: 0.3 },
-  speaking: { c: 0.92, eye: 1.0, mouth: 1.0, spin: 0.0, color: 'accent', drift: 0.2 },
-  asking:   { c: 0.95, eye: 1.25, mouth: 0.0, spin: 0.0, color: 'ask', drift: 0.15, lookUp: true },
-  listening:{ c: 0.95, eye: 1.0, mouth: 0.0, spin: 0.0, color: 'accent', drift: 0.15, pulse: true },
-  error:    { c: 0.30, eye: 0.6, mouth: 0.0, spin: 0.0, color: 'error', drift: 0.9, flicker: true },
-  quiet:    { c: 0.35, eye: 0.3, mouth: 0.0, spin: 0.0, color: 'dim', drift: 0.05 },
+  idle:     { c: 0.55, eye: 1.0, mouth: 0.0, spin: 0.00, color: 'accent', drift: 0.25, blink: true, breath: 0.09, scale: 1 },
+  thinking: { c: 0.85, eye: 0.55, mouth: 0.0, spin: 0.55, color: 'accent', drift: 0.35, orbit: true, breath: 0.04, scale: 0.92 },
+  working:  { c: 0.78, eye: 0.8, mouth: 0.0, spin: 0.9, color: 'steel', drift: 0.3, breath: 0.03, scale: 0.95 },
+  speaking: { c: 0.95, eye: 1.0, mouth: 1.0, spin: 0.1, color: 'accent', drift: 0.2, breath: 0.05, scale: 1.04 },
+  asking:   { c: 0.95, eye: 1.25, mouth: 0.0, spin: 0.05, color: 'ask', drift: 0.15, lookUp: true, breath: 0.12, scale: 1.06 },
+  listening:{ c: 0.95, eye: 1.0, mouth: 0.0, spin: 0.05, color: 'accent', drift: 0.15, pulse: true, breath: 0.06, scale: 1.08 },
+  error:    { c: 0.35, eye: 0.6, mouth: 0.0, spin: 0.2, color: 'error', drift: 0.9, flicker: true, breath: 0.02, scale: 0.9 },
+  quiet:    { c: 0.4, eye: 0.3, mouth: 0.0, spin: 0.0, color: 'dim', drift: 0.05, breath: 0.04, scale: 0.85 },
 };
 
 function _faceRand(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
@@ -53,11 +55,14 @@ function faceMount(canvas, specIn = {}) {
 
   // Dots: a role (left eye, right eye, mouth, field), a seat in the face and a wandering point in the noise.
   const rnd = _faceRand(7);
-  const n = Math.max(40, Math.min(600, spec.dots | 0));
+  const n = Math.max(40, Math.min(1200, spec.dots | 0));
   const eyeN = Math.round(n * 0.16), mouthN = Math.round(n * 0.14);
+  const poly = spec.form !== 'face' && typeof facePolyForm === 'function';
+  const formN = Math.round(n * 0.62);
+  const form = poly ? facePolyForm(formN, _faceRand(11)) : null;
   const dots = Array.from({ length: n }, (_, i) => ({ i, ...seat(i) }));
   function seat(i) {
-    const role = i < eyeN ? 'le' : i < eyeN * 2 ? 're' : i < eyeN * 2 + mouthN ? 'm' : 'f';
+    const role = poly ? (i < formN ? 'p' : 'f') : i < eyeN ? 'le' : i < eyeN * 2 ? 're' : i < eyeN * 2 + mouthN ? 'm' : 'f';
     const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd());
     let fx, fy;
     if (role === 'le' || role === 're') { fx = Math.cos(a) * r * spec.eyes.r; fy = Math.sin(a) * r * spec.eyes.r; }
@@ -104,7 +109,8 @@ function faceMount(canvas, specIn = {}) {
     raf = requestAnimationFrame(frame);
     const t = now / 1000;
     const k = reduced ? 1 : 0.06;
-    for (const key of ['c', 'eye', 'mouth', 'spin', 'drift']) cur[key] += (target[key] - cur[key]) * k;
+    for (const key of ['c', 'eye', 'mouth', 'spin', 'drift', 'breath', 'scale']) cur[key] += ((target[key] ?? 0) - (cur[key] ?? 0)) * k;
+    form?.frame(t, { spin: cur.spin, breath: cur.breath, scale: cur.scale, level: target.mouth || target.pulse ? level : 0 });
     if (shapeOn && now > shapeOn.until) shapeOn = null;
     shapeMix += ((shapeOn ? 1 : 0) - shapeMix) * (reduced ? 1 : 0.05);
     const want = shapeOn ? shapeOn.rgb : hex(spec.palette[target.color] || spec.palette.accent);
@@ -133,8 +139,9 @@ function faceMount(canvas, specIn = {}) {
       const nx = d.nx * sx + Math.sin(t * 0.21 * d.sp + d.ph) * 0.35 * dr * 2;
       const ny = d.ny * sy + Math.cos(t * 0.17 * d.sp + d.ph * 1.3) * 0.35 * dr * 2;
       // The face.
-      let fx = d.fx, fy = d.fy;
-      if (d.role === 'le' || d.role === 're') {
+      let fx = d.fx, fy = d.fy, depth = 0.5;
+      if (d.role === 'p') [fx, fy, depth] = form.at(d.i);
+      else if (d.role === 'le' || d.role === 're') {
         fx += (d.role === 'le' ? -1 : 1) * spec.eyes.gap / 2; fy = spec.eyes.y + d.fy * eyeOpen + (target.lookUp ? -0.04 : 0);
       } else if (d.role === 'm') {
         const curve = spec.mouth.curve * (1 - Math.pow(d.t * 2 - 1, 2));
@@ -160,8 +167,10 @@ function faceMount(canvas, specIn = {}) {
         d.x += d.vx; d.y += d.vy;
       }
       const lit = d.role !== 'f' || shapeMix > 0.3;
-      ctx.globalAlpha = Math.min(1, (lit ? 0.95 : 0.5) * d.glow * flicker);
-      const sz = dotR * d.size * (lit ? 5.2 : 4.2);
+      // A form's near side is brighter and larger than its far side: depth reads without lines.
+      const near = d.role === 'p' ? 0.45 + depth * 0.75 : 1;
+      ctx.globalAlpha = Math.min(1, (lit ? 0.95 : 0.5) * (d.role === 'p' ? 0.9 : d.glow) * near * flicker);
+      const sz = dotR * (d.role === 'p' ? 0.8 + depth * 1.1 : d.size * 0.8) * (lit ? 4.6 : 4.2);
       ctx.drawImage(lit ? spr : fieldSpr, d.x - sz / 2, d.y - sz / 2, sz, sz);
     }
     ctx.globalAlpha = 1;

@@ -44,7 +44,7 @@ async function faceCornerApply() {
   const canvas = document.createElement('canvas');
   el.appendChild(canvas);
   document.body.appendChild(el);
-  const face = faceMount(canvas, { ...spec, dots: 140, hud: false, grain: false });
+  const face = faceMount(canvas, { ...spec, dots: 200, hud: false, grain: false });
   _faceCorner = { el, face, close: faceFeed(s => { if (Date.now() > _faceVoiceUntil) face.set(s.state, s.detail); }) };
 }
 
