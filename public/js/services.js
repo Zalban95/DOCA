@@ -107,6 +107,15 @@ function _updateServicesBadges() {
       if (urlEl)    urlEl.style.display    = '';
       if (startBtn) startBtn.style.display = 'none';
       if (stopBtn)  stopBtn.style.display  = '';
+    } else if (info) {
+      // A container that exists but is not running — restarting in a loop, or exited — is not "stopped": it can be
+      // removed (Stop), and it says what it is doing.
+      badge.textContent = info.state === 'restarting' ? '⟳ restarting' : `○ ${info.state || 'stopped'}`;
+      badge.className   = info.state === 'restarting' ? 'badge badge-amber' : 'badge badge-grey';
+      badge.title       = info.status || '';
+      if (urlEl)    urlEl.style.display    = 'none';
+      if (startBtn) startBtn.style.display = '';
+      if (stopBtn)  stopBtn.style.display  = '';
     } else {
       badge.textContent = '○ stopped';
       badge.className   = 'badge badge-grey';
@@ -172,7 +181,7 @@ async function serviceStart(id) {
   const startBtn = document.getElementById(`svc-start-${id}`);
   const apiNote  = document.getElementById(`svc-api-note-${id}`);
 
-  showStream(out, `Starting ${svc.label}…\n`);
+  showStream(out, '');   // the stream says what it runs
   if (startBtn)  startBtn.disabled = true;
   if (apiNote)   apiNote.style.display = 'none';
 

@@ -25,7 +25,9 @@ const winget = id => `winget install --id ${id} -e --silent --accept-package-agr
 
 // The Android SDK's command-line tools, unpacked where Android Studio puts the SDK, then what the apps compile against.
 // The SDK's licence is accepted on the person's behalf when they press Install (the row's note says so).
-const ANDROID_PKGS = '"platform-tools" "platforms;android-35" "platforms;android-37" "build-tools;35.0.0"';
+// Newer platforms are named with their minor version (android-37.0). The newest tools are Google's "Android CLI", which
+// collects usage data unless told --no-metrics: it is told whenever it understands the flag.
+const ANDROID_PKGS = '"platform-tools" "platforms;android-35" "platforms;android-37.0" "build-tools;35.0.0"';
 const androidPosix = plat => [
   `SDK="\${ANDROID_HOME:-$HOME/${plat === 'mac' ? 'Library/Android/sdk' : 'Android/Sdk'}}"`,
   'mkdir -p "$SDK/cmdline-tools" && cd "$SDK"',
@@ -34,8 +36,9 @@ const androidPosix = plat => [
   'echo "Downloading $ZIP…" && curl -fsSLo cl.zip "https://dl.google.com/android/repository/$ZIP"',
   'rm -rf cmdline-tools/latest cmdline-tools/cmdline-tools',
   '(unzip -q cl.zip -d cmdline-tools 2>/dev/null || python3 -m zipfile -e cl.zip cmdline-tools) && mv cmdline-tools/cmdline-tools cmdline-tools/latest && rm cl.zip && chmod +x cmdline-tools/latest/bin/*',
-  'yes | cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null',
-  `cmdline-tools/latest/bin/sdkmanager ${ANDROID_PKGS}`,
+  'SM=cmdline-tools/latest/bin/sdkmanager; NM=$($SM --help 2>&1 | grep -q -- --no-metrics && echo --no-metrics)',
+  'yes | $SM $NM --licenses >/dev/null',
+  `$SM $NM ${ANDROID_PKGS}`,
   'echo "✓ Android SDK in $SDK — builds find it through ANDROID_HOME=$SDK (or sdk.dir in local.properties)."',
 ].join(' && ');
 const androidWin = [
@@ -45,8 +48,9 @@ const androidWin = [
   'Invoke-WebRequest -UseBasicParsing "https://dl.google.com/android/repository/$zip" -OutFile "$sdk\\cl.zip"',
   'Remove-Item -Recurse -Force "$sdk\\cmdline-tools\\latest" -ErrorAction SilentlyContinue',
   'Expand-Archive -Force "$sdk\\cl.zip" "$sdk\\cmdline-tools"; Rename-Item "$sdk\\cmdline-tools\\cmdline-tools" latest; Remove-Item "$sdk\\cl.zip"',
-  '1..20 | ForEach-Object { "y" } | & "$sdk\\cmdline-tools\\latest\\bin\\sdkmanager.bat" --licenses | Out-Null',
-  `& "$sdk\\cmdline-tools\\latest\\bin\\sdkmanager.bat" ${ANDROID_PKGS}`,
+  '$sm = "$sdk\\cmdline-tools\\latest\\bin\\sdkmanager.bat"; $nm = @(); if ((& $sm --help 2>&1 | Out-String) -match "--no-metrics") { $nm = @("--no-metrics") }',
+  '1..20 | ForEach-Object { "y" } | & $sm @nm --licenses | Out-Null',
+  `& $sm @nm ${ANDROID_PKGS}`,
   '[Environment]::SetEnvironmentVariable("ANDROID_HOME", $sdk, "User"); "Android SDK in $sdk (ANDROID_HOME set for this user)"',
 ].join('; ');
 const androidHome = process.env.ANDROID_HOME || (process.platform === 'darwin' ? path.join(HOME, 'Library/Android/sdk')
@@ -168,7 +172,7 @@ const SYSTEM_TOOLS = [
     install: { linux: pkg({ apt: 'openjdk-21-jdk', dnf: 'java-21-openjdk-devel', pacman: 'jdk21-openjdk' }), darwin: brew('openjdk@21'), win32: winget('Microsoft.OpenJDK.21') } },
   { id: 'android-sdk', label: 'Android SDK', category: 'clients', for: 'DocaMobile, DocaWear',
     detect: { any: [{ bin: sdkmanager, args: ['--version'] }, { bin: 'sdkmanager', args: ['--version'] }] },
-    note: 'The command-line tools, platform tools and the platforms the apps compile against (35, 37) — about 1 GB, no Android Studio. Installing accepts the Android SDK licence (developer.android.com/studio/terms) for you.',
+    note: 'The command-line tools, platform tools and the platforms the apps compile against (35, 37) — about 1 GB, no Android Studio. Installing accepts the Android SDK licence (developer.android.com/studio/terms) for you, and turns off the tools\' usage reporting.',
     repo: 'https://developer.android.com/studio#command-line-tools-only', repoLabel: 'developer.android.com',
     install: { linux: androidPosix('linux'), darwin: androidPosix('mac'), win32: androidWin } },
   { id: 'dotnet', label: '.NET 9 SDK', category: 'clients', for: 'DocaDesk',
