@@ -88,11 +88,13 @@ function forSession(sessionId) {
   const memory = require('../harness/memory');
   const seen = new Set();
   let id = sessionId;
+  let wt = null;   // the nearest conversation up the chain working in its own worktree (projects/worktrees.js)
   while (id && !seen.has(id)) {
     seen.add(id);
     const s = memory.getSession(id);
     if (!s) break;
-    if (s.projectId) return get(s.projectId);
+    if (!wt && s.worktree?.path && require('fs').existsSync(s.worktree.path)) wt = s.worktree;
+    if (s.projectId) { const p = get(s.projectId); return p && wt ? { ...p, root: wt.path, mainRoot: p.root, worktree: wt } : p; }
     const mission = require('../agents/missions').forSession(id);
     id = s.parentId || mission?.by || null;
   }
@@ -122,7 +124,7 @@ function chats(id, { all = false } = {}) {
   const memory = require('../harness/memory'), org = require('../harness/organization');
   return memory.listSessions().sessions
     .filter(s => (all || !s.archivedAt) && s.kind !== 'orchestrator' && forSession(s.id)?.id === id)
-    .map(s => ({ ...org.view(s), sub: !memory.getSession(s.id)?.projectId, running: require('../harness/agent').isRunning(s.id) }))
+    .map(s => ({ ...org.view(s), sub: !memory.getSession(s.id)?.projectId, running: require('../harness/agent').isRunning(s.id), worktree: memory.getSession(s.id)?.worktree?.branch || null }))
     .sort((a, b) => Number(a.sub) - Number(b.sub) || String(a.updatedAt).localeCompare(String(b.updatedAt)));
 }
 

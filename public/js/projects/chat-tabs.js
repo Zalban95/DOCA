@@ -54,9 +54,10 @@ function pjTabsRender() {
     const working = t?.busy || c.running || c.state === 'running';
     return `<div class="pj-tab-chat ${id === PJC.active ? 'active' : ''} ${c.sub ? 'sub' : ''}" role="tab" aria-selected="${id === PJC.active}"
         data-id="${escHtml(id)}" title="${escHtml(`${c.title || ''}${c.mode && c.mode !== 'agent' ? ` · ${c.mode}` : ''}${c.waiting ? ` · ${c.waiting} queued` : ''}`)}">
-      ${working ? '<span class="pj-tab-dot" aria-label="working"></span>' : ''}${c.sub ? '↳ ' : ''}<span class="pj-tab-name">${escHtml(c.title || 'Chat')}</span>
+      ${working ? '<span class="pj-tab-dot" aria-label="working"></span>' : ''}${c.sub ? '↳ ' : ''}${c.worktree ? `<span title="Its own git worktree, branch ${escHtml(c.worktree)}">⑂ </span>` : ''}<span class="pj-tab-name">${escHtml(c.title || 'Chat')}</span>
       <button class="pj-tab-x" title="Close the tab (the conversation stays)" data-close="${escHtml(id)}">✕</button></div>`;
   }).join('') + `<button class="btn btn-xs" onclick="pjTabNew()" title="A new conversation in this project">＋</button>
+    <button class="btn btn-xs" onclick="pjTabNew(true)" title="A new conversation in its own git worktree: a second folder on its own branch, so it and the others can change the project at the same time">＋⑂</button>
     <button class="btn btn-xs" onclick="pjTabMenu(this)" title="Every conversation in this project">▾</button>
     <span class="pj-spacer"></span><button class="btn btn-xs" onclick="pjChatOpenInHarness()" title="This conversation, in the Harness tab">↗</button>`;
   strip.querySelectorAll('.pj-tab-chat').forEach(el => {
@@ -66,9 +67,9 @@ function pjTabsRender() {
   strip.querySelectorAll('[data-close]').forEach(b => { b.onclick = e => { e.stopPropagation(); pjTabClose(b.dataset.close); }; });
 }
 
-async function pjTabNew() {
+async function pjTabNew(worktree = false) {
   try {
-    const { chat } = await apiFetch(`/api/projects/${encodeURIComponent(PJ.project.project.id)}/chats`, { method: 'POST', body: {} });
+    const { chat } = await apiFetch(`/api/projects/${encodeURIComponent(PJ.project.project.id)}/chats`, { method: 'POST', body: worktree ? { worktree: true } : {} });
     PJC.seen.add(chat.id);
     PJC.open.push(chat.id);
     await pjTabsSync({ quiet: true });

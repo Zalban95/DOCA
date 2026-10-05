@@ -25,7 +25,9 @@ async function commands(p) {
 }
 
 async function run(projectId, name, { waitSec = 0, sessionId = null } = {}) {
-  const p = projects.need(projectId);
+  // The conversation's view of the project: its worktree's folder when it works in one (store.forSession).
+  const mine = sessionId ? projects.forSession(sessionId) : null;
+  const p = mine?.id === projectId ? mine : projects.need(projectId);
   const { commands: list } = await commands(p);
   const c = list.find(x => x.name === name);
   if (!c) throw bad(`"${name}" is not a command of ${p.name}. It has: ${list.map(x => x.name).join(', ') || 'none detected'}.`, 404);

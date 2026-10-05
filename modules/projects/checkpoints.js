@@ -33,7 +33,8 @@ const { SKIP_DIRS } = require('./search');
 
 const KEEP = 60;   // checkpoints kept per project; older ones are dropped from the list (git gc reclaims them)
 
-function shadowDir(p) { return path.join(store.dir('checkpoints'), `${p.id}.git`); }
+// A worktree is another working folder of the same repository: its checkpoints are its own (projects/worktrees.js).
+function shadowDir(p) { return path.join(store.dir('checkpoints'), `${p.id}${p.worktree ? `-${p.worktree.branch.replace(/[^\w-]/g, '_')}` : ''}.git`); }
 
 function git(p, args, { timeout = 120000, input } = {}) {
   const bin = shell.which('git');
