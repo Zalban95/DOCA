@@ -190,6 +190,14 @@ function _pjTabsRender() {
     eye.onclick = pjTogglePreview;
     bar.appendChild(eye);
   }
+  // A markdown file is a page: a chat about it opens beside it (projects/pages.js, pjPageChat in chat-tabs.js).
+  if (active?.model && !active.diff && /\.md$/i.test(active.path || '')) {
+    const talk = Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: '💬 Chat about this page',
+      title: 'A conversation about this page: every turn is told which page it is and given its text, so "tighten the second section" needs no pointing' });
+    talk.style.cssText = `margin:3px 6px 3px ${pjRenderedKind(active.path) ? '0' : 'auto'};flex-shrink:0`;
+    talk.onclick = () => pjPageChat(active.path);
+    bar.appendChild(talk);
+  }
 }
 
 function pjClose(key) {

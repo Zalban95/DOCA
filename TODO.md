@@ -190,7 +190,7 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [ ] Voice calls with work continuing in the background — DOCA's call mode exists; realtime speech and
   barge-in left (H8.3).
 - [x] Schedules ("recurring instructions") with pause/retry — H7.1 (2.162.0; retry left).
-- [ ] Spaces and Pages (docs with an editor and a chat per page) — H9.4.
+- [x] Spaces and Pages (docs with an editor and a chat per page) — H9.4 (2.186.0, on Projects).
 - [x] Human-in-the-loop approval cards — DOCA's approvals, on every device, with levels.
 - [x] Automatic Learning (conversations → reviewed skills) — H10.3 (2.172.0), and recipes (H3, 2.159.0).
 - [x] Any OpenAI-compatible model; self-hosted — DOCA's providers and fallback chain.
@@ -236,7 +236,9 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] H9.2 (2.168.0, in part) DOCA as an MCP server; AG-UI events so AG-UI front ends are clients; A2A. Done: the MCP
   server (`POST /api/v1/mcp`: chat, conversations, recipes, by the token's scopes). **Left:** AG-UI, A2A.
 - [ ] H9.3 OAuth connectors (Google, GitHub, calendars, mail) with a vault, scoped per agent/level.
-- [ ] H9.4 Pages: markdown documents with a chat beside each.
+- [x] H9.4 (2.186.0) Pages: markdown documents with a chat beside each. On Projects: a project is the space, its .md
+  files the pages; a chat tab about one page is given the page's current text every turn. **Left:** a page's
+  history view (git covers it in a repository), sharing one page read-only by link.
 
 **H10 · Quality**
 - [x] H10.1 Evaluation sets and tracing per turn (hive.md §3.11; "Where this harness stands" §4). Tracing (2.182.0): a span

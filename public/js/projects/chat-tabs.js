@@ -57,6 +57,7 @@ function pjTabsRender() {
       ${working ? '<span class="pj-tab-dot" aria-label="working"></span>' : ''}${c.sub ? '↳ ' : ''}${c.worktree ? `<span title="Its own git worktree, branch ${escHtml(c.worktree)}">⑂ </span>` : ''}<span class="pj-tab-name">${escHtml(c.title || 'Chat')}</span>
       <button class="pj-tab-x" title="Close the tab (the conversation stays)" data-close="${escHtml(id)}">✕</button></div>`;
   }).join('') + `<button class="btn btn-xs" onclick="pjTabNew()" title="A new conversation in this project">＋</button>
+    <button class="btn btn-xs" onclick="pjPageNew()" title="A new page: a markdown document in this project, with a chat about it beside it">＋📄</button>
     <button class="btn btn-xs" onclick="pjTabNew(true)" title="A new conversation in its own git worktree: a second folder on its own branch, so it and the others can change the project at the same time">＋⑂</button>
     <button class="btn btn-xs" onclick="pjTabMenu(this)" title="Every conversation in this project">▾</button>
     <span class="pj-spacer"></span><button class="btn btn-xs" onclick="pjChatOpenInHarness()" title="This conversation, in the Harness tab">↗</button>`;
@@ -67,9 +68,38 @@ function pjTabsRender() {
   strip.querySelectorAll('[data-close]').forEach(b => { b.onclick = e => { e.stopPropagation(); pjTabClose(b.dataset.close); }; });
 }
 
-async function pjTabNew(worktree = false) {
+/** A chat about one page (projects/pages.js): `abs` is the file's path; the server keeps it relative to the project. */
+async function pjPageChat(abs) {
+  const pane = document.getElementById('pj-chat');
+  if (pane && !pane.classList.contains('open')) {   // the chat pane opens with it
+    pane.classList.add('open');
+    document.getElementById('pj-chat-toggle')?.classList.add('btn-teal');
+    await pjChatLoad();
+  }
+  const root = PJ.project.project.root || '';
+  const rel = abs.startsWith(root) ? abs.slice(root.length).replace(/^[\\/]+/, '') : abs;
+  const have = PJC.chats?.find(c => c.page === rel.replace(/\\/g, '/'));
+  if (have) { if (!PJC.open.includes(have.id)) PJC.open.push(have.id); return pjChatActivate(have.id).then(_pjTabsSave); }
+  return pjTabNew(false, { page: rel });
+}
+
+/** A new page: a markdown file beginning with its title, opened, with a chat about it beside it. */
+function pjPageNew() {
+  appPrompt('Title of the new page:', async title => {
+    if (!title) return;
+    try {
+      const page = await apiFetch(`/api/projects/${encodeURIComponent(PJ.project.project.id)}/pages`, { method: 'POST', body: { title } });
+      const sep = (PJ.project.project.root || '').includes('\\') ? '\\' : '/';
+      const abs = `${PJ.project.project.root}${sep}${page.path}`;
+      await pjOpenFile(abs);
+      await pjPageChat(abs);
+    } catch (e) { appAlert(e.message); }
+  });
+}
+
+async function pjTabNew(worktree = false, extra = {}) {
   try {
-    const { chat } = await apiFetch(`/api/projects/${encodeURIComponent(PJ.project.project.id)}/chats`, { method: 'POST', body: worktree ? { worktree: true } : {} });
+    const { chat } = await apiFetch(`/api/projects/${encodeURIComponent(PJ.project.project.id)}/chats`, { method: 'POST', body: { ...(worktree ? { worktree: true } : {}), ...extra } });
     PJC.seen.add(chat.id);
     PJC.open.push(chat.id);
     await pjTabsSync({ quiet: true });
