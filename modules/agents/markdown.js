@@ -119,4 +119,4 @@ function format(def) {
   return lines.join('\n');
 }
 
-module.exports = { parse, format, split, CLAUDE_TOOLS };
+module.exports = { parse, format, split, parseList, CLAUDE_TOOLS };

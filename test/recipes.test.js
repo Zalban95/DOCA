@@ -129,3 +129,14 @@ test('the agent saves its last turn and runs a recipe; a specialist never holds 
   assert.equal((await H.api(null, 'DELETE', '/api/recipes/mixed', undefined, { Cookie: member.cookie })).status, 403);
   assert.equal((await H.api(null, 'DELETE', '/api/recipes/mixed')).status, 200);
 });
+
+test('a skill that names its recipes lists them when it is read', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const dir = path.join(require('../modules/store').dir('skills'), 'greeting');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'SKILL.md'), '---\nname: greeting\ndescription: Greeting people.\nrecipes: [greet-someone, not-yet]\n---\n\nGreet them warmly.\n');
+  const body = require('../modules/harness/skills').read('greeting').body;
+  assert.match(body, /Greet them warmly\./);
+  assert.match(body, /- greet-someone: Greet someone \(values: who\)/);
+  assert.match(body, /- not-yet: not saved here yet/);
+});

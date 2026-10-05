@@ -100,3 +100,12 @@ test('an entry that would land outside the pack\'s folder refuses the whole pack
   const member = await H.signIn('member', 'pack-member@test.local');
   assert.equal((await H.api(null, 'GET', '/api/packs/contents', undefined, { Cookie: member.cookie })).status, 403);
 });
+
+test('a skill travels with the recipes it names', async () => {
+  const dir = path.join(require('../modules/store').dir('skills'), 'echoing');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'SKILL.md'), '---\nname: echoing\ndescription: Echo.\nrecipes: [pack-echo]\n---\n\nEcho things.\n');
+  if (!require('../modules/recipes/store').get('pack-echo')) require('../modules/recipes/store').save({ title: 'Pack echo', steps: [{ tool: 'shell', args: { command: 'echo hi' } }] });
+  const { manifest } = require('../modules/packs/export').build({ skills: ['echoing'] });
+  assert.deepEqual(manifest.contents.map(c => `${c.kind}:${c.id}`).sort(), ['recipe:pack-echo', 'skill:echoing']);
+});
