@@ -64,6 +64,8 @@ test('a ten-minute download link needs no sign-in — what a phone\'s browser op
   const link = await H.api(null, 'POST', '/api/clients/apps/docamobile/link', {});
   assert.equal(link.status, 200, JSON.stringify(link.body));
   assert.match(link.body.path, /^\/api\/clients\/apps\/docamobile\/apk\/[A-Za-z0-9_-]{32}$/);
+  const fqdn = require('../modules/https-cert').getTailscaleFqdn();
+  if (fqdn) assert.equal(new URL(link.body.url).hostname, fqdn, 'a link made from this machine is for a phone: never 127.0.0.1');
   const r = await fetch(`${H.base}${link.body.path}`);   // no cookie, no token
   assert.equal(r.status, 200);
   assert.equal(r.headers.get('content-type'), 'application/vnd.android.package-archive');

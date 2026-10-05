@@ -153,4 +153,4 @@ async function generateSelfSigned(fqdn) {
   return { key: pems.private, cert: pems.cert, tailscale: null };
 }
 
-module.exports = { ensureCerts };
+module.exports = { ensureCerts, getTailscaleFqdn };
