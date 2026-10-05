@@ -74,7 +74,7 @@ async function viaGateway(a, { history, signal, onText }) {
 }
 
 /** A CLI's own non-interactive mode, by argv. */
-function viaArgv(a, { message, signal, onText, onErr }) {
+function viaArgv(a, { message, signal, onText = () => {}, onErr = () => {}, cwd, timeoutMs }) {
   const shell = require('../shell');
   const bin = shell.which(a.cmd);
   if (!bin) return Promise.resolve({ text: '', code: 127, error: `${a.cmd} is not installed (or not on PATH).` });
@@ -84,8 +84,8 @@ function viaArgv(a, { message, signal, onText, onErr }) {
   const spec = require('../mcp/spawn-spec').spawnSpec(bin, args);
   return new Promise(resolve => {
     let out = '';
-    const child = spawn(spec.file, spec.args, { ...spec.opts, cwd: require('../paths').WORKSPACE_DIR, env: { ...process.env, TERM: 'dumb', NO_COLOR: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
-    const timer = setTimeout(() => child.kill(), TIMEOUT_MS);
+    const child = spawn(spec.file, spec.args, { ...spec.opts, cwd: cwd || require('../paths').WORKSPACE_DIR, env: { ...process.env, TERM: 'dumb', NO_COLOR: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const timer = setTimeout(() => child.kill(), timeoutMs || TIMEOUT_MS);
     signal?.addEventListener('abort', () => child.kill());
     child.on('error', e => { clearTimeout(timer); resolve({ text: out, code: 1, error: `${a.cmd}: ${e.message}` }); });
     child.stdout.on('data', d => { const t = d.toString(); out += t; onText(t); });

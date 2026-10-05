@@ -306,6 +306,11 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] H10.3 (2.172.0) Learning loop: "this conversation becomes a skill or a recipe", reviewed — a drafted skill a host
   edits and saves ("＋ skill"), beside the recipe from the last turn. **Left:** the agent offering it by itself after a
   long turn that worked (a suggestion, never a write).
+- [x] H10.4 (2.213.0, experiment `modelScout`) A scout for better and new models (asked 2026-10-05): a daily look with no
+  model (Hugging Face trending per function with growth, watched releases, news feeds), a brief by the agent when due or
+  when something moved, suggestions a person accepts into TODO.md ("## Scout suggestions") and hands to an implementer —
+  DOCA's agent or a CLI harness — through skills/doca-dev-cycle. Routine off by default. **Left:** measure a month of
+  briefs (accepted / shipped); a Hugging Face "watch this repo" signal for named repos.
 
 **H11 · Coherence along the way** (§2.2)
 - [x] H11.1 (2.201.0) One chat component in three sizes; retire the floating chat's gateway/CLI paths if no
