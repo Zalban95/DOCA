@@ -65,9 +65,9 @@ async function chatToggleCall() {
   catch { /* the defaults */ }
   try {
     // Echo cancellation keeps the agent's own voice from reading as yours — which matters most with barge-in on.
-    _callStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    _callStream = await micOpen({ echoCancellation: true, noiseSuppression: true });
   } catch (e) {
-    chatAppendMsg('system', `Microphone access denied: ${e.message}`);
+    chatAppendMsg('system', `The microphone did not open: ${e.message}`);
     return;
   }
 
