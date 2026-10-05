@@ -43,60 +43,71 @@ const KNOWN = [
   },
   {
     id: 'claude', label: 'Claude Code', vendor: 'Anthropic', kind: 'cli', cmd: 'claude',
+    oneShot: ['-p', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'npm install -g @anthropic-ai/claude-code',
     url: 'https://github.com/anthropics/claude-code',
     configPathHint: '~/.claude/settings.json',
   },
   {
     id: 'codex', label: 'Codex CLI', vendor: 'OpenAI', kind: 'cli', cmd: 'codex',
+    oneShot: ['exec', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'npm install -g @openai/codex',
     url: 'https://github.com/openai/codex',
     configPathHint: '~/.codex/config.toml',
   },
   {
     id: 'gemini', label: 'Gemini CLI', vendor: 'Google', kind: 'cli', cmd: 'gemini',
+    oneShot: ['-p', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'npm install -g @google/gemini-cli',
     url: 'https://github.com/google-gemini/gemini-cli',
     configPathHint: '~/.gemini/settings.json',
   },
   {
     id: 'copilot', label: 'Copilot CLI', vendor: 'GitHub', kind: 'cli', cmd: 'copilot',
+    oneShot: ['-p', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'npm install -g @github/copilot',
     url: 'https://github.com/features/copilot/cli',
   },
   {
     id: 'cursor-agent', label: 'Cursor CLI', vendor: 'Cursor', kind: 'cli', cmd: 'cursor-agent',
+    oneShot: ['-p', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'curl https://cursor.com/install -fsS | bash',
     url: 'https://cursor.com/cli',
   },
   {
     id: 'amp', label: 'Amp', vendor: 'Sourcegraph', kind: 'cli', cmd: 'amp',
+    oneShot: ['-x', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'curl -fsSL https://ampcode.com/install.sh | bash',
     url: 'https://ampcode.com',
   },
   {
     id: 'qwen', label: 'Qwen Code', vendor: 'Alibaba', kind: 'cli', cmd: 'qwen',
+    oneShot: ['-p', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'npm install -g @qwen-code/qwen-code',
     url: 'https://github.com/QwenLM/qwen-code',
   },
   {
     id: 'opencode', label: 'OpenCode', vendor: 'SST', kind: 'cli', cmd: 'opencode',
+    oneShot: ['run', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'curl -fsSL https://opencode.ai/install | bash',
     url: 'https://github.com/sst/opencode',
     configPathHint: '~/.config/opencode/opencode.json',
   },
   {
     id: 'crush', label: 'Crush', vendor: 'Charm', kind: 'cli', cmd: 'crush',
+    oneShot: ['run', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'npm install -g @charmland/crush',
     url: 'https://github.com/charmbracelet/crush',
   },
   {
     id: 'goose', label: 'Goose', vendor: 'Block', kind: 'cli', cmd: 'goose',
+    oneShot: ['run', '-t', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash',
     url: 'https://block.github.io/goose/docs/getting-started/installation/',
   },
   {
     id: 'continue', label: 'Continue', vendor: 'Continue', kind: 'cli', cmd: 'cn',
+    oneShot: ['-p', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'npm install -g @continuedev/cli',
     url: 'https://docs.continue.dev/cli/quickstart',
     configPathHint: '~/.continue/config.yaml',

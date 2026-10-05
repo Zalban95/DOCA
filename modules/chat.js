@@ -1,48 +1,14 @@
 'use strict';
 
-const fs = require('fs');
-const { spawn } = require('child_process');
-
-const { CONFIG_PATH, WORKSPACE_DIR } = require('./paths');
-const { sseHeaders, loadPrefs, resolveEnvVars } = require('./utils');
+const { CONFIG_PATH } = require('./paths');
+const { sseHeaders, loadPrefs } = require('./utils');
 const catalog = require('./harness/catalog');
 const agent   = require('./harness/agent');
 
 // Module-scoped state
 const chatHistory = [];
 
-/** Parse openclaw.json tolerantly (strip control chars and trailing commas) */
-function parseOpenclawConfig() {
-  const raw = fs.readFileSync(CONFIG_PATH, 'utf8')
-    .replace(/[\x00-\x1F\x7F]/g, ' ')
-    .replace(/,(\s*[}\]])/g, '$1');
-  return JSON.parse(raw);
-}
-
-/** Load gateway URL + auth from openclaw.json for chat completions */
-function loadGatewayChatConfig() {
-  try {
-    const cfg = parseOpenclawConfig();
-    const gw = cfg?.gateway || {};
-    const http = gw?.http || {};
-    const endpoints = http?.endpoints || {};
-    const chatEp = endpoints?.chatCompletions || {};
-    if (!chatEp.enabled) return null;
-
-    let url;
-    const envUrl = process.env.OPENCLAW_GATEWAY_URL;
-    if (envUrl) {
-      url = envUrl.replace(/\/$/, '') + '/v1/chat/completions';
-    } else {
-      const port = process.env.OPENCLAW_GATEWAY_PORT || gw?.port || 18789;
-      const host = '127.0.0.1';
-      url = `http://${host}:${port}/v1/chat/completions`;
-    }
-
-    const token = resolveEnvVars(gw?.auth?.token || gw?.auth?.password || '');
-    return { url, token: token || null };
-  } catch { return null; }
-}
+const { parseOpenclawConfig, gatewayConfig: loadGatewayChatConfig } = require('./harness/one-shot');
 
 /** GET /api/chat/status */
 function handleStatus(req, res) {
@@ -54,16 +20,18 @@ function handleStatus(req, res) {
 
   const cfg     = loadGatewayChatConfig();
   const harness = catalog.get(catalog.defaultId());
+  const adapter = harness?.kind === 'builtin' ? null : require('./harness/one-shot').adapterFor(harness);
   res.json({
     harness: harness && { id: harness.id, label: harness.label, kind: harness.kind },
     gateway: !!cfg,
-    chatEnabled: !!cfg || harness?.kind === 'builtin',
+    via: harness?.kind === 'builtin' ? 'builtin' : adapter?.kind || null,
+    chatEnabled: harness?.kind === 'builtin' || !!adapter,
     parseError,
     gatewayCfg,
     configPath: CONFIG_PATH,
-    hint: harness?.kind === 'builtin'
-      ? `Using the ${harness.label}`
-      : cfg ? 'Using OpenClaw Gateway' : 'Enable gateway.http.endpoints.chatCompletions in openclaw.json'
+    hint: harness?.kind === 'builtin' ? `Using the ${harness.label}`
+      : adapter ? `Using ${harness.label} (${adapter.kind === 'gateway' ? 'its gateway' : 'one question at a time, no tools of DOCA\'s'})`
+      : require('./harness/one-shot').whyNot(harness),
   });
 }
 
@@ -185,116 +153,31 @@ async function handleChat(req, res) {
     return res.end();
   }
 
-  const gw = loadGatewayChatConfig();
+  // Another harness is the default (TODO H11.1): asked the way it says it can be (harness/one-shot.js) — its gateway,
+  // or its own one-question mode by argv. Someone else's agent acting on this machine: a host's chat only.
   sseHeaders(res);
-
-  if (gw?.url) {
-    const messages = chatHistory
-      .filter(m => m.role === 'user' || m.role === 'assistant')
-      .map(m => ({ role: m.role, content: m.content }));
-
-    try {
-      const controller = new AbortController();
-      res.on('close', () => controller.abort());
-
-      const headers = {
-        'Content-Type': 'application/json',
-        'x-openclaw-agent-id': 'main'
-      };
-      if (gw.token) headers['Authorization'] = `Bearer ${gw.token}`;
-
-      const resp = await fetch(gw.url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          model: 'openclaw',
-          stream: true,
-          messages
-        }),
-        signal: controller.signal
-      });
-
-      if (!resp.ok) {
-        const err = await resp.text();
-        throw new Error(`Gateway ${resp.status}: ${err.slice(0, 200)}`);
-      }
-
-      let response = '';
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop() || '';
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-            try {
-              const obj = JSON.parse(data);
-              const content = obj?.choices?.[0]?.delta?.content;
-              if (content) {
-                response += content;
-                res.write(`data: ${JSON.stringify({ type: 'text', text: content })}\n\n`);
-              }
-            } catch {}
-          }
-        }
-      }
-
-      if (response) chatHistory.push({ role: 'assistant', content: response, time: new Date().toISOString() });
-      res.write(`data: ${JSON.stringify({ type: 'done', code: 0 })}\n\n`);
-      res.end();
-      return;
-    } catch (e) {
-      console.error('[chat] gateway error:', e.message);
-      res.write(`data: ${JSON.stringify({ type: 'stderr', text: `Gateway error: ${e.message}\nFalling back to claude CLI…\n` })}\n\n`);
-    }
-  } else {
-    console.warn('[chat] gateway chat not configured or chatCompletions not enabled');
+  const say = o => res.write(`data: ${JSON.stringify(o)}\n\n`);
+  const row = catalog.get(catalog.defaultId());
+  const shot = require('./harness/one-shot');
+  const adapter = shot.adapterFor(row);
+  if (!adapter || !require('./auth/rights').can(req.auth?.role, 'host')) {
+    say({ type: 'stderr', text: adapter ? `${row.label} is an agent acting on this machine with its own permissions: only a host can chat with it here. Ask the host, or use the DOCA Harness.` : shot.whyNot(row) });
+    say({ type: 'done', code: 1 });
+    return res.end();
   }
-
-  /* Fallback: claude CLI */
-  let clauDeAvailable = false;
+  const ctrl = new AbortController();
+  res.on('close', () => ctrl.abort());
   try {
-    const test = spawn('which', ['claude']);
-    await new Promise(resolve => test.on('close', code => { clauDeAvailable = code === 0; resolve(); }));
-  } catch {}
-
-  if (!clauDeAvailable) {
-    res.write(`data: ${JSON.stringify({ type: 'stderr', text: 'Chat not available: Gateway unreachable and claude CLI not installed.\nCheck gateway config or install claude CLI.' })}\n\n`);
-    res.write(`data: ${JSON.stringify({ type: 'done', code: 1 })}\n\n`);
-    res.end();
-    return;
+    const history = chatHistory.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content }));
+    const r = await shot.ask(adapter, { message, history, signal: ctrl.signal, onText: text => say({ type: 'text', text }), onErr: text => say({ type: 'stderr', text }) });
+    if (r.error) say({ type: 'stderr', text: r.error });
+    if (r.text) chatHistory.push({ role: 'assistant', content: r.text, time: new Date().toISOString() });
+    say({ type: 'done', code: r.code });
+  } catch (e) {
+    if (e.name !== 'AbortError') say({ type: 'stderr', text: `${row.label}: ${e.message}` });
+    say({ type: 'done', code: 1 });
   }
-
-  const child = spawn('claude', ['-p', message], {
-    cwd: WORKSPACE_DIR,
-    env: { ...process.env, TERM: 'dumb' }
-  });
-  let response = '';
-  child.on('error', err => {
-    console.error('[chat] claude spawn error:', err.message);
-    res.write(`data: ${JSON.stringify({ type: 'stderr', text: `claude CLI error: ${err.message}` })}\n\n`);
-    res.write(`data: ${JSON.stringify({ type: 'done', code: 1 })}\n\n`);
-    res.end();
-  });
-  child.stdout.on('data', d => {
-    const text = d.toString();
-    response += text;
-    res.write(`data: ${JSON.stringify({ type: 'text', text })}\n\n`);
-  });
-  child.stderr.on('data', d => res.write(`data: ${JSON.stringify({ type: 'stderr', text: d.toString() })}\n\n`));
-  child.on('close', code => {
-    if (response) chatHistory.push({ role: 'assistant', content: response, time: new Date().toISOString() });
-    res.write(`data: ${JSON.stringify({ type: 'done', code })}\n\n`);
-    res.end();
-  });
-  req.on('close', () => child.kill());
+  res.end();
 }
 
 /* ── Voice call helpers ───────────────────────────────── */

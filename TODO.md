@@ -292,8 +292,13 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   long turn that worked (a suggestion, never a write).
 
 **H11 · Coherence along the way** (§2.2)
-- [ ] H11.1 One chat component in three sizes; retire the floating chat's gateway/CLI paths if no
-  non-built-in default harness is still a real case.
+- [x] H11.1 (2.201.0) One chat component in three sizes; retire the floating chat's gateway/CLI paths if no
+  non-built-in default harness is still a real case. Decided (2026-10-05, "open, interchangeable, cross-compatible"):
+  not retired but made adapters — `harness/one-shot.js` asks the default harness the way its catalog row says it can
+  be asked (OpenClaw's gateway, or a CLI's one-question mode by argv: claude, codex, gemini, copilot, cursor-agent,
+  amp, qwen, opencode, crush, goose, continue); one with neither says where it runs instead of `claude -p` answering
+  for it; a host's chat only. The three chats already share their parts (agent-ui: event-sink, conv-bar, side-fold,
+  media, queued-send). **Left:** a `oneShot` field for custom harnesses, and OpenHands' and Aider's headless modes.
 - [x] H11.2 (2.195.0) Fold `jobs.js` into the `runs` table. A device's command job (`api-v1/jobs.js`) is a run of kind
   `job` (schema step 9 adds `detail`): recorded at start and end, read back from the table once memory lets it go, and
   marked interrupted when a restart cut it off. The harness's shell jobs stay processes of their own (`harness/jobs.js`).
