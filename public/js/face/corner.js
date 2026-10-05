@@ -1,5 +1,6 @@
-/* The face in the panel's corner (TODO H8.1): in place of the ⬡ on the chat button, for screens that switch it
-   on (Settings → General → Appearance; per screen, kept in this browser). The button still opens the chat. */
+/* The face in the panel's corner (TODO H8.1), for screens that switch it on (Settings → General → Appearance; per
+   screen, kept in this browser). Its own circle beside the chat button, which keeps its ⬡ and its ✕ — drawn inside
+   the button it covered the one control that opens and closes the chat. A click opens the face full screen. */
 let _faceCorner = null;
 let _faceVoiceUntil = 0;   // while a call drives the face (faceCornerVoice), the hive's own feed waits
 
@@ -14,24 +15,27 @@ function faceCornerVoice(state, level) {
 function faceCornerOn() { try { return localStorage.getItem('doca.face.corner') === '1'; } catch { return false; } }
 
 async function faceCornerApply() {
-  const fab = document.getElementById('chat-fab');
-  if (!fab) return;
+  if (!document.getElementById('chat-fab')) return;
   if (!faceCornerOn()) {
-    if (_faceCorner) { _faceCorner.face.stop(); _faceCorner.close(); _faceCorner = null; }
-    fab.classList.remove('chat-fab-face');
-    if (!fab.textContent.trim()) fab.textContent = '⬡';
+    if (_faceCorner) { _faceCorner.face.stop(); _faceCorner.close(); _faceCorner.el?.remove(); _faceCorner = null; }
     return;
   }
   if (_faceCorner) return;
   _faceCorner = { face: { stop() {} }, close() {} };   // claimed before the await, so two calls make one face
   const spec = await faceSpec();
   if (!faceCornerOn()) { _faceCorner = null; return; }   // switched off while it loaded
-  fab.textContent = '';
-  fab.classList.add('chat-fab-face');
+  const el = document.createElement('a');
+  el.id = 'face-corner';
+  el.className = 'face-corner';
+  el.href = '/face';
+  el.target = '_blank';
+  el.rel = 'noopener';
+  el.title = 'The hive\'s face — open it full screen';
   const canvas = document.createElement('canvas');
-  fab.appendChild(canvas);
+  el.appendChild(canvas);
+  document.body.appendChild(el);
   const face = faceMount(canvas, { ...spec, dots: 90, hud: false, grain: false });
-  _faceCorner = { face, close: faceFeed(s => { if (Date.now() > _faceVoiceUntil) face.set(s.state, s.detail); }) };
+  _faceCorner = { el, face, close: faceFeed(s => { if (Date.now() > _faceVoiceUntil) face.set(s.state, s.detail); }) };
 }
 
 function faceCornerToggle(on) {
