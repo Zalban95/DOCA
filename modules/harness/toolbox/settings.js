@@ -79,7 +79,9 @@ module.exports = [
     description: 'Ask the user to install something this panel already knows how to install: an Ollama model '
       + '(kind "ollama-model", id is the model name), one of its inference services (kind "service", id is '
       + 'whisper / kokoro / vllm / sdwebui / comfyui), an agent harness (kind "harness"), or an MCP server from the '
-      + 'panel\'s catalogue (kind "mcp": playwright — a browser you drive — or chrome-devtools). This does NOT '
+      + 'panel\'s catalogue (kind "mcp": playwright — a browser you drive — or chrome-devtools), or a program from '
+      + 'Settings → System → System tools (kind "tool": e.g. android-sdk, android-emulator, jdk21, dotnet, ffmpeg, tailscale, '
+      + 'nvidia-ctk — each installed with its own command for this OS). This does NOT '
       + 'install it — the user sees what it is and clicks, and the panel then runs its own installer with the '
       + 'right image, ports and flags. Use it instead of stopping at "I cannot do that": when the thing in your '
       + 'way is a missing tool, say which one and offer to fetch it. Do not install anything with `shell` '
@@ -88,7 +90,7 @@ module.exports = [
     parameters: {
       type: 'object',
       properties: {
-        kind:   { type: 'string', enum: ['ollama-model', 'service', 'harness', 'mcp'], description: 'What sort of thing.' },
+        kind:   { type: 'string', enum: ['ollama-model', 'service', 'harness', 'mcp', 'tool'], description: 'What sort of thing.' },
         id:     { type: 'string', description: 'Which one, e.g. "qwen2.5vl:7b" or "comfyui".' },
         reason: { type: 'string', description: 'Why, in one line, in the user\'s terms.' },
       },

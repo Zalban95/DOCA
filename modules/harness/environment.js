@@ -53,6 +53,13 @@ function duration(seconds) {
  * a token, and this text goes to a model that may not be running on this
  * machine. The MCP tab shows the whole definition to the person who typed it.
  */
+/** Tool names in a line: families by their prefix (files_* ×7), so a 40-tool server costs one line of the prompt. */
+function toolSummary(names) {
+  const groups = new Map();
+  for (const n of names) { const k = n.includes('__') ? `${n.split('__')[0]}__*` : /_/.test(n) ? `${n.split('_')[0]}_*` : n; groups.set(k, (groups.get(k) || 0) + 1); }
+  return [...groups].map(([k, c]) => (c > 1 ? `${k} ×${c}` : k.endsWith('*') ? names.find(n => n.startsWith(k.slice(0, -1))) : k)).join(', ');
+}
+
 function mcpServers() {
   try {
     return require('../mcp/registry').list().map(s => ({
@@ -62,6 +69,7 @@ function mcpServers() {
       // paths from, and an agent that cannot tell them apart will confuse the
       // two the first time both offer a `read_file`.
       origin: s.origin?.kind === 'client' ? 'client' : 'server',
+      last: s.state === 'running' ? null : require('../mcp/registry').lastTools(s.id)?.names || null,
       originLabel: s.originLabel || null,
     }));
   } catch { return []; }
@@ -182,7 +190,8 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
       out.push(`- ${m.id}: ${m.state}${m.state === 'running' ? `, ${m.tools} tools (called mcp__${m.id}__*)` : ''}`
         + (m.origin === 'client'
           ? `, hosted by ${m.originLabel} — a separate machine; its tools act there`
-          : ', on this host — the same machine as your shell'));
+          : ', on this host — the same machine as your shell')
+        + (m.state === 'running' ? '' : `${m.last ? `; when connected it offered ${toolSummary(m.last)}` : ''} — \`mcp_connect\` starts it`));
 
     if (s.mcp.some(m => m.state === 'running'))
       out.push('When a running server\'s tools are unfamiliar, learn it from its own documentation with '
@@ -197,7 +206,7 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
         '',
         'Two kinds of MCP server, and the difference decides where your work lands:',
         '- On this host: same filesystem, same processes and same `localhost` as your `shell`, `read_file` and `system_status`. You can verify what it did by other means.',
-        '- Hosted by a client: another machine over the network. Its paths, its screen, its programs, and **its** `localhost` — a port a client\'s tool talks to is a port on that machine, not here, and nothing you run with `shell` can see it. You have no other way in: if that server is stopped or its host is asleep, those tools are simply gone, and the person to ask is whoever is at that machine.',
+        '- Hosted by a client: another machine over the network. Its paths, its screen, its programs, and **its** `localhost` — a port a client\'s tool talks to is a port on that machine, not here, and nothing you run with `shell` can see it. You have no other way in: if that server is stopped, `mcp_connect` starts it (a person set it up); if its machine is asleep or its client is not running, its tools are gone, and the person to ask is whoever is at that machine.',
         '- A tool name with two segments after the server id (`mcp__<client>__<their-server>__<tool>`) is a server that machine hosts in turn, so it runs there and is subject to that machine\'s consent switches as well.');
   }
 
