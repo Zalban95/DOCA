@@ -20,3 +20,6 @@ body.harness-tab .face-corner, body:has(.pj-chat.open) .face-corner { display: n
 .face-assistant-status { padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); text-align: center; color: #9fb3b1; font-size: 15px; min-height: 1.4em; }
 .face-assistant-close { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 14px; width: 44px; height: 44px; border-radius: 50%;
   border: 1px solid rgba(87,201,194,.35); background: rgba(5,5,7,.6); color: #cfe; font-size: 18px; cursor: pointer; }
+.face-assistant-close { transition: opacity .8s ease; }
+.face-assistant.calm .face-assistant-close { opacity: 0; pointer-events: none; }
+.face-assistant.calm .face-assistant-status { opacity: .55; transition: opacity .8s ease; }
