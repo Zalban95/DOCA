@@ -120,6 +120,13 @@ with no scopes and no token of its own (it reaches the hub by its sign-in sessio
 browser out. `GET /settings/effective` answers any token with that device's settings over the hive's.
 Since hub 2.168.0 `POST /mcp` is the hub as an MCP server (JSON-RPC: initialize, tools/list, tools/call), for
 any MCP client holding a device token; its tools follow the token's scopes.
+Since hub 2.187.0 `POST /agui` (scope `harness:chat`) is the hub as an AG-UI agent: AG-UI's RunAgentInput in
+(`threadId`, `runId`, `messages`; the last user message is the turn), AG-UI's event stream out as SSE — `RUN_STARTED`,
+`TEXT_MESSAGE_START`/`_CONTENT`/`_END`, `TOOL_CALL_START`/`_ARGS`/`_END`, `TOOL_CALL_RESULT`, then `RUN_FINISHED`
+(`result.conversation` is the conversation id) or `RUN_ERROR`, with `CUSTOM` `doca.prompt` for a question asked of this
+device (answer it through `/prompts`) and `doca.note` for input the hub does not use (the front end's own `tools`,
+`state`). A `threadId` that is one of the person's conversation ids is that conversation; any other maps to one of its
+own, the same one every time. It is the same turn `POST /harness/messages` starts; closing the stream does not stop it.
 
 **Rotation.** `POST /devices/me/rotate` returns a new token; the old one stays
 valid for 60 s (`previousValidUntil`) so a client can swap atomically.

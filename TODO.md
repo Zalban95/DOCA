@@ -194,7 +194,7 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] Human-in-the-loop approval cards — DOCA's approvals, on every device, with levels.
 - [x] Automatic Learning (conversations → reviewed skills) — H10.3 (2.172.0), and recipes (H3, 2.159.0).
 - [x] Any OpenAI-compatible model; self-hosted — DOCA's providers and fallback chain.
-- [ ] AG-UI so an AG-UI front end can be a client — H9.2.
+- [x] AG-UI so an AG-UI front end can be a client — H9.2 (2.187.0, `POST /api/v1/agui`).
 - [x] Mobile and web — the panel, DocaMobile, DocaWear (OpenDots has no watch).
 - [x] Web search as a provider choice (OpenDots: Parallel by default, or the browser) — `web_search` (2.170.0):
   SearXNG, Brave, Tavily or DuckDuckGo, airlock-only while specialists are on. Parallel itself is left (a key-based
@@ -233,8 +233,9 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   shared core (`channels/links|bind|converse|deliver`) and Matrix (2.179.0; unencrypted direct rooms — E2EE would need
   Olm and kept device keys), Slack (2.180.0; Socket Mode, DMs only). **Left:** mail (IMAP/SMTP), WhatsApp (needs
   Meta's Cloud API and a public webhook, which a tailnet hub lacks).
-- [x] H9.2 (2.168.0, in part) DOCA as an MCP server; AG-UI events so AG-UI front ends are clients; A2A. Done: the MCP
-  server (`POST /api/v1/mcp`: chat, conversations, recipes, by the token's scopes). **Left:** AG-UI, A2A.
+- [x] H9.2 (2.168.0, 2.187.0; A2A left) DOCA as an MCP server; AG-UI events so AG-UI front ends are clients; A2A. Done:
+  the MCP server (`POST /api/v1/mcp`: chat, conversations, recipes, by the token's scopes) and AG-UI (`POST /api/v1/agui`:
+  RunAgentInput in, AG-UI's SSE events out, a thread per conversation). **Left:** A2A; the front end's own tools.
 - [ ] H9.3 OAuth connectors (Google, GitHub, calendars, mail) with a vault, scoped per agent/level.
 - [x] H9.4 (2.186.0) Pages: markdown documents with a chat beside each. On Projects: a project is the space, its .md
   files the pages; a chat tab about one page is given the page's current text every turn. **Left:** a page's
