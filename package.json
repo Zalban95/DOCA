@@ -12,6 +12,7 @@
     "prove": "node bin/doca-prove.js",
     "guard-eval": "node bin/doca-guard-eval.js",
     "db-bench": "node bin/doca-db-bench.js",
+    "smoke": "node bin/doca-smoke.js",
     "test": "node --test --test-timeout=30000 \"test/**/*.test.js\"",
     "openapi": "node -e \"process.stdout.write(JSON.stringify(require('./modules/api-v1/openapi').build(), null, 2) + '\\n')\"",
     "openapi:write": "node -e \"require('fs').writeFileSync('docs/api/openapi.json', JSON.stringify(require('./modules/api-v1/openapi').build(), null, 2) + '\\n')\"",

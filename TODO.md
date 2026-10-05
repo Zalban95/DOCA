@@ -49,7 +49,7 @@ Linux-only; **[X]** experiments behind a flag with their drawbacks written and m
 releasable step; ✓ marks done. Order: the workstreams run in parallel, top items first.
 
 **H1 · Host on every OS** (§7)
-- [x] H1.1 (2.152.1) CI matrix: `npm test` on ubuntu, windows and macos for every branch push (`.github/workflows/test.yml`). The first run failed 1 / 61 / 61: Linux-only file roots, short and `/private` paths, and a protected-file bypass on macOS/Windows — all fixed. Left: a headless browser smoke in CI.
+- [x] H1.1 (2.152.1) CI matrix: `npm test` on ubuntu, windows and macos for every branch push (`.github/workflows/test.yml`). The first run failed 1 / 61 / 61: Linux-only file roots, short and `/private` paths, and a protected-file bypass on macOS/Windows — all fixed. ✓ A headless browser smoke in CI (`npm run smoke`, every tab on all three OSes, 2026-10-05).
 - [x] H1.2 (2.152.0) `GET /api/host/capabilities`: what this host can do (shell, boot, GPU, containers, VMs,
   browser, inference), drawn by the panel so absent things grey out with a reason.
 - [x] H1.3 (2.152.0) Start at boot on Windows (Task Scheduler at sign-in) and macOS (launchd agent), beside the systemd unit — through a Node launcher (`bin/doca-launch.js`) that replaced run.sh's bash start, so version switches restart on every OS. Not yet run on Windows or macOS: H1.9.
@@ -58,7 +58,8 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 - [ ] H1.6 Containers: Podman, Docker Desktop, Colima/OrbStack; WSL2-aware paths.
 - [ ] H1.7 VMs: Hyper-V, UTM/Parallels beside libvirt/VirtualBox.
 - [ ] H1.8 An installer per OS (Node, panel, boot entry, certificate, pairing QR).
-- [ ] H1.9 Run the whole panel once on macOS and record what breaks.
+- [ ] H1.9 Run the whole panel once on macOS and record what breaks. In part: the browser smoke boots it and opens
+  every tab on macOS and Windows runners on every push; a real Mac/Windows host (boot entry, version switch) is left.
 
 **H2 · Settings per device** (§1)
 - [x] H2.1 (2.160.0) `settings-schema.js`: every key's home (device | hive | person), type, default, hint,
