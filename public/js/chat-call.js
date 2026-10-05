@@ -40,6 +40,8 @@ async function chatToggleCall() {
     _callStop();
     return;
   }
+  // A realtime speech model, when the owner set one up (chat-realtime.js; experiments.realtimeVoice).
+  if (typeof realtimeAvailable === 'function' && await realtimeAvailable()) return realtimeStart();
 
   _callSetStatus('Checking services…', '');
   try {
@@ -91,6 +93,7 @@ async function chatToggleCall() {
 }
 
 function _callStop() {
+  if (typeof _rt !== 'undefined' && _rt) return realtimeStop();   // a realtime call (chat-realtime.js)
   _callActive = false;
   // With barge-in on, the call says how it went — the experiment's measure (docs/experiments/barge-in.md).
   if (_callBargeIn && _callStats) chatAppendMsg('system', `Call: ${Math.max(1, Math.round((Date.now() - _callStats.at) / 60000))} min, interrupted ${_callStats.bargeIns}×, ${_callStats.dropped} stale sentence${_callStats.dropped === 1 ? '' : 's'} not spoken.`);

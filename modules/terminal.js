@@ -82,6 +82,9 @@ function setup(httpServer) {
   // Route WS upgrades; strip permessage-deflate to avoid RSV1 frame errors with ws@8
   httpServer.on('upgrade', (req, socket, head) => {
     delete req.headers['sec-websocket-extensions'];
+    // A live call is not a shell: the person's own right to chat, or a device's token (realtime/routes.js).
+    if (req.url.startsWith('/ws/realtime')) return require('./realtime/routes').upgradePanel(req, socket, head);
+    if (req.url.startsWith('/api/v1/realtime')) return require('./realtime/routes').upgradeDevice(req, socket, head);
     // Both sockets are a shell on this machine: the "host" right, a recent
     // sign-in, and this panel's own page (modules/auth/gate.js).
     if (!require('./auth/gate').upgradeAllowed(req, 'host')) {

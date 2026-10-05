@@ -1208,7 +1208,27 @@ Rules a client can rely on:
 > message carrying `mediaId` is refused with `400 unsupported` rather than
 > silently answered as text.
 
-## 24. Server operations
+### 23.1 A live call (since hub 2.200.0; an experiment)
+
+`GET /realtime` (scope `harness:chat`) says whether the hub can hold a live call with a realtime speech model
+(`available`, which needs the owner's `experiments.realtimeVoice` and `realtime.model`), which protocol it relays
+to (`openai` or `gemini`) and the audio it takes: `{format: "pcm16", rate: 24000, channels: 1}`.
+
+The call is a **WebSocket on the same path**, `wss://<hub>/api/v1/realtime`, with the device's token —
+`Authorization: Bearer …`, or `?access_token=` for a client that cannot set headers on a socket — and optionally
+`?session=<id>` for one of the person's conversations (otherwise the call gets a new conversation of its own).
+
+- **Binary frames are audio, both ways**: PCM16 little-endian, mono, 24 kHz. Send the microphone in frames of
+  about 100 ms; play what comes back in order.
+- **Text frames are JSON.** From the hub: `ready` (`protocol`, `model`, `sessionId`), `user` (what the person was
+  heard to say), `agent` (the voice's words as they are spoken, deltas), `interrupted` (the person talked over the
+  answer: **drop audio queued to play**), `working` (`text`: a request handed to the hive), `done` (an answer
+  finished), `error` (`message`), `closed` (`reason`, `stats`). From the client: `{"type": "stop"}`.
+- The voice holds no power of its own: anything real it hands to the conversation as an ordinary turn of this
+  device (`agent.turn` on the bus as usual, its person's level and approvals; a question for the person reaches the
+  device as a prompt, §12). A request longer than the owner's `realtime.waitSec` keeps running and is spoken when done.
+- The provider's key stays on the hub: a client needs no account with the speech service.
+
 
 - Data directory: `DOCA_DATA_DIR` (default `<repo>/.doca`, gitignored): `devices.json`, `prompts.json`, `profiles/`, `outbox/`, `media/`, `artifacts/`. Atomic writes; safe to back up.
 - Tokens: `npm run token -- issue|list|rotate|revoke|grant|scopes`. A token carries the scopes it was minted with, so a device paired before a scope family existed needs `grant <deviceId> --preset <p>` (or `--add harness:chat`) to reach the new routes; its token keeps working.

@@ -249,11 +249,15 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   own circle beside the chat button (opening `/face`): drawn inside the button, it hid the chat's open/close.
 - [x] H8.2 (2.193.0, experiment `faceVoice`) The face reacting to the voice call's audio. [X] The corner face speaks with
   the agent's voice level and listens to the microphone's; docs/experiments/face-voice.md. **Left:** measuring it.
-- [ ] H8.3 Realtime speech-to-speech with barge-in, work continuing in the background. Done (2.192.0, experiment
+- [x] H8.3 (2.200.0, experiments `bargeIn`, `realtimeVoice`) Realtime speech-to-speech with barge-in, work continuing in the background. Done (2.192.0, experiment
   `bargeIn`): talking over a working agent is heard and read by the running turn, stale sentences dropped. **Left:**
   measuring it in real calls; a realtime speech-to-speech model (OpenAI Realtime or a local one) in place of STT → turn → TTS.
   Since 2.199.0 the call's settings have one place, Settings → Voice → Live call: the pause and microphone threshold
-  per screen (setting `call`, with a test meter), and the owner's barge-in and face switches; the model's row waits there.
+  per screen (setting `call`, with a test meter), and the owner's barge-in and face switches.
+  Since 2.200.0 (experiment `realtimeVoice`) the realtime model is there: the hub relays the call to the OpenAI Realtime
+  protocol (OpenAI, Azure, local speech-to-speech servers) or Gemini Live, chosen in the panel; the voice's one tool
+  hands real work to the conversation and long work is spoken when done; devices call it at `/api/v1/realtime`.
+  **Left:** measuring it (the owner's key or a local server); the clients' side in DocaMobile.
 
 **H9 · Reach and protocols**
 - [x] H9.1 (WhatsApp left) Channels: Slack, Telegram, mail, WhatsApp, Matrix — each a client kind. Done: Telegram (2.157.0), the

@@ -1,7 +1,8 @@
 /* Settings → Voice → Live call (TODO H8.3): everything about the 🎙 Live call in one place. How it listens is this
    screen's (the setting `call`, read by chat-call.js when a call starts) — a phone's microphone and a desk's hear a
    room differently; the experiments that change a call (barge-in, the face) are the owner's switches, shown here
-   beside them as on Settings → Experiments. A test meter shows the microphone against the threshold. */
+   beside them as on Settings → Experiments; and the realtime speech model a call uses when one is set (the owner's form,
+   modules/realtime). A test meter shows the microphone against the threshold. */
 let _liveCallMeter = null;
 
 async function liveCallRender() {
@@ -12,7 +13,9 @@ async function liveCallRender() {
   try { s = await screenLoad(true); } catch { return; }
   const c = s.settings?.call || {}, mine = s.from?.call === 'device';
   let ex = null;
-  try { ex = (await apiFetch('/api/experiments')).experiments.filter(x => ['bargeIn', 'faceVoice'].includes(x.id)); } catch { /* not the owner: no switches */ }
+  try { ex = (await apiFetch('/api/experiments')).experiments.filter(x => ['realtimeVoice', 'bargeIn', 'faceVoice'].includes(x.id)); } catch { /* not the owner: no switches */ }
+  let rt = null;
+  try { rt = await apiFetch('/api/realtime'); } catch { /* without chat */ }
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'live-call-card' });
   const row = (label, input, hint) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <label style="font-size:11px;color:var(--muted);width:150px;flex-shrink:0">${label}</label>${input}<span style="font-size:11px;color:var(--muted)">${hint}</span></div>`;
@@ -41,10 +44,40 @@ async function liveCallRender() {
       <div style="font-size:11px;color:var(--muted)">Experiments — for every screen; what each measures and costs is on Settings → Experiments.</div>
       ${ex.map(x => `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" ${x.on ? 'checked' : ''}
         onchange="liveCallExperiment(${jsArg(x.id)}, this.checked)"> ${escHtml(x.label)}</label>`).join('')}</div>` : ''}
-    <p style="font-size:11px;color:var(--muted);margin-top:12px">A realtime speech model (one that hears and speaks without the text in between) is not here yet: which provider — a hosted one or a local model — is still open (TODO H8.3).</p>`;
+    ${liveCallRealtimeHtml(rt, !!ex)}`;
   panel.append(card);
   liveCallMark();
   document.getElementById('lc-sens').addEventListener('input', liveCallMark);
+}
+
+/** The realtime speech model: what a call uses when one is set (modules/realtime). The form is the owner's. */
+function liveCallRealtimeHtml(rt, owner) {
+  if (!rt) return '';
+  const s = rt.settings || {}, v = k => escHtml(s[k] ?? '');
+  const state = rt.available ? `<span style="color:var(--green)">On: ${escHtml(rt.protocol)} · ${escHtml(rt.model)}. The 🎙 Live button uses it.</span>`
+    : `<span style="color:var(--muted)">Off${rt.experiment ? ': set a model' : ': switch on "Live calls with a realtime speech model" above'} — calls use the speech services above.</span>`;
+  const f = (id, label, input) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px;flex-shrink:0">${label}</label>${input}</div>`;
+  return `<div style="margin-top:14px;border-top:1px solid var(--border2);padding-top:10px;display:flex;flex-direction:column;gap:8px">
+    <div style="font-size:12px;font-weight:600">Realtime speech model</div>
+    <div style="font-size:11px;color:var(--muted)">A model that hears and speaks directly, without text in between — quicker, and you can talk over it. It is a voice in front of the hive:
+      anything real it hands to your conversation as an ordinary turn, with your approvals. The hub holds the key. ${state}</div>
+    ${owner ? `${f('rt-protocol', 'Protocol', `<select class="input" id="rt-protocol" style="width:auto">${['openai', 'gemini'].map(p => `<option value="${p}" ${s.protocol === p ? 'selected' : ''}>${p === 'openai' ? 'OpenAI Realtime (OpenAI, Azure, local servers)' : 'Gemini Live (Google)'}</option>`).join('')}</select>`)}
+    ${f('rt-provider', 'Provider (its key)', `<input class="input" id="rt-provider" value="${v('provider')}" placeholder="openai, google, or one from API Keys" style="width:240px">`)}
+    ${f('rt-model', 'Model', `<input class="input" id="rt-model" value="${v('model')}" placeholder="gpt-realtime / a Gemini Live model" style="width:240px">`)}
+    ${f('rt-voice', 'Voice', `<input class="input" id="rt-voice" value="${v('voice')}" placeholder="the service's default" style="width:160px">`)}
+    ${f('rt-url', 'Address (optional)', `<input class="input" id="rt-url" value="${v('url')}" placeholder="wss://… — Azure, or a local server such as ws://127.0.0.1:8765/v1/realtime" style="flex:1;min-width:220px">`)}
+    ${f('rt-dialect', 'OpenAI session shape', `<select class="input" id="rt-dialect" style="width:auto"><option value="ga" ${s.dialect !== 'beta' ? 'selected' : ''}>current</option><option value="beta" ${s.dialect === 'beta' ? 'selected' : ''}>beta (older servers)</option></select>`)}
+    ${f('rt-wait', 'Wait for the hive', `<input class="input" id="rt-wait" type="number" min="3" max="120" value="${v('waitSec') || 20}" style="width:80px"> s, then it carries on in the background`)}
+    <div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallRealtimeSave()">Save the realtime model</button><span class="status-line" id="rt-status"></span></div>` : ''}
+  </div>`;
+}
+
+async function liveCallRealtimeSave() {
+  const g = id => document.getElementById(id).value.trim();
+  try {
+    await apiFetch('/api/realtime', { method: 'POST', body: { protocol: g('rt-protocol'), provider: g('rt-provider'), model: g('rt-model'), voice: g('rt-voice'), url: g('rt-url'), dialect: g('rt-dialect'), waitSec: Number(g('rt-wait')) || 20 } });
+  } catch (e) { return appAlert(e.message); }
+  liveCallRender();
 }
 
 /** The threshold's place on the meter: the level the call loop compares is 0–~80 (chat-call.js). */
@@ -64,6 +97,7 @@ async function liveCallSave(reset = false) {
 async function liveCallExperiment(id, on) {
   try { await apiFetch(`/api/experiments/${encodeURIComponent(id)}`, { method: 'POST', body: { on } }); } catch (e) { appAlert(e.message); }
   if (typeof _subtabInited !== 'undefined') delete _subtabInited.experiments;   // Settings → Experiments redraws when next opened
+  liveCallRender();
 }
 
 /** The microphone's level as the call loop measures it, for ten seconds. */

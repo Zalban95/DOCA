@@ -115,6 +115,8 @@ const TABLE = [
   R(ANY, '/api/channels/matrix(/.*)?', 'chat'),               // a link code, and one's own linked rooms (channels/matrix/routes.js)
   R(ANY, '/api/evals(/.*)?', 'host'),
   R(ANY, '/api/connectors(/.*)?', 'host'),                    // the keys to the owner's accounts (connectors/routes.js)                         // evaluation sets: a run spends tokens, results hold answers (evals/routes.js)
+  R(GET, '/api/realtime', 'chat'),                           // what a live call would use (realtime/routes.js; the call is /ws/realtime)
+  R(ANY, '/api/realtime', 'host'),                           // the owner chooses the realtime voice service
   R(GET, '/api/retrieval', 'read'),                          // the embedding model and what the index holds (retrieval/routes.js)
   R(ANY, '/api/retrieval(/.*)?', 'host'),                     // choosing the model, trying it, emptying the index
   R('POST', '/api/channels/mail', 'host'),                   // the mailbox and its password

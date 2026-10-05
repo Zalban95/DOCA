@@ -174,4 +174,4 @@ const PHONE_CAPS = { formFactor: 'phone', screen: { w: 1080, h: 2400 }, input: {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-module.exports = { start, stop, api, sse, signIn, get owner() { return owner; }, mkDevice, WATCH_CAPS, PHONE_CAPS, sleep, tmp, get base() { return base; } };
+module.exports = { server: () => server, start, stop, api, sse, signIn, get owner() { return owner; }, mkDevice, WATCH_CAPS, PHONE_CAPS, sleep, tmp, get base() { return base; } };
