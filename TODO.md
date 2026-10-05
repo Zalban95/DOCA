@@ -233,7 +233,8 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   overlay, watch. Done in the hub: the state feed, the renderer, `/face`, the corner per screen. **Left:** an editor
   for the spec and faces as packs (H4); DocaDesk's overlay and the watch face (their TODOs); listening/speaking
   from the voice call's audio levels (H8.2); quiet hours from the device profile.
-- [ ] H8.2 The face reacting to the voice call's audio. [X]
+- [x] H8.2 (2.193.0, experiment `faceVoice`) The face reacting to the voice call's audio. [X] The corner face speaks with
+  the agent's voice level and listens to the microphone's; docs/experiments/face-voice.md. **Left:** measuring it.
 - [ ] H8.3 Realtime speech-to-speech with barge-in, work continuing in the background. Done (2.192.0, experiment
   `bargeIn`): talking over a working agent is heard and read by the running turn, stale sentences dropped. **Left:**
   measuring it in real calls; a realtime speech-to-speech model (OpenAI Realtime or a local one) in place of STT → turn → TTS.
