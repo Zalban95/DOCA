@@ -125,12 +125,18 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
 **H6 · The client core and joining the hive** (§4)
 - [ ] H6.1 One client core per platform: protocol, pairing, push, presence, offline queue, device
   page, face.
-- [x] H6.2 (2.177.0, in part) Tool families a device lends the hive, hosted as an MCP server (files, shell, screen,
-  input, apps, browser, camera, mic, sensors), for every client. Done: files and shell in `clients/node` (and DocaDesk's
-  own). **Left:** screen, input, apps, browser, camera, mic, sensors.
-- [ ] H6.3 Pairing in one step (QR/link) bound to the person; consent per family on the device.
-- [ ] H6.4 Discovery on the tailnet / mDNS.
-- [ ] H6.5 Clients update from the hub's release channel.
+- [x] H6.2 (2.177.0, 2.191.0, in part) Tool families a device lends the hive, hosted as an MCP server (files, shell, screen,
+  input, apps, browser, camera, mic, sensors), for every client. Done in `clients/node`: files, shell, and (2.191.0)
+  screen (capture), processes (list, stop), apps (open), device (info, notify, clipboard) — DocaDesk has its own.
+  **Left:** input (mouse and keys), browser, camera, mic, sensors.
+- [x] H6.3 (2.191.0) Pairing in one step (QR/link) bound to the person; consent per family on the device. A paired
+  device belongs to whoever made the code (since auth phase 1); the panel's link/QR `doca://pair?code=…&host=…` pairs
+  `doca-client` in one paste; it asks its person once per family. DocaMobile scans the QR.
+- [x] H6.4 (2.191.0, tailnet) Discovery on the tailnet / mDNS. `doca-client find` asks Tailscale for the online peers and
+  knocks on each one's `/api/branding` (the hub's one public route). **Left:** mDNS for a hub on a plain LAN.
+- [x] H6.5 (2.191.0, doca-client) Clients update from the hub's release channel. `GET /api/v1/clients/node` lists the
+  hub's copy with sha256s; `doca-client update` fetches what differs over the pinned connection, checks it, replaces it.
+  **Left:** DocaDesk, DocaMobile and DocaWear, which ship through their own stores and installers.
 - [x] H6.6 (2.177.0, in part) A Linux desktop client; a macOS one; iOS later; a browser-only client. Done: `doca-client`
   (Node, headless) for Linux, macOS and Windows. **Left:** a tray app around it, iOS, a browser-only client.
 - [ ] H6.7 Headless clients (a server, a Pi) and channel adapters as clients.

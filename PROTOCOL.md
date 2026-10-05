@@ -131,6 +131,8 @@ Since hub 2.189.0 `POST /a2a` (scope `harness:chat`) is the hub as an A2A agent 
 `message/send` (text parts; the Task comes back `completed` with the answer, `failed` or `canceled`, or `working` with
 `configuration.blocking: false`), `tasks/get`, `tasks/cancel`; a `contextId` is a conversation, as a `threadId` is for
 AG-UI. The agent card is public at `https://<hub>/.well-known/agent-card.json`.
+Since hub 2.191.0 `GET /clients/node` (any token) is the hub's release channel for `doca-client`: each file with its
+sha256, and `GET /clients/node/:file` the bytes — a client compares, fetches what differs, and checks before replacing.
 
 **Rotation.** `POST /devices/me/rotate` returns a new token; the old one stays
 valid for 60 s (`previousValidUntil`) so a client can swap atomically.

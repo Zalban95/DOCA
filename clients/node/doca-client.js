@@ -4,10 +4,14 @@
 /**
  * doca-client — this machine joins the hive (docs/design/hive.md §4; TODO H6.2, H6.6). Linux, macOS and Windows,
  * Node 22, no dependency. It pairs with a hub, asks its person once per tool family, and lends the granted ones —
- * `files` and `shell` — to the hub's agents as an MCP server the hub connects to (PROTOCOL.md §22, §22.1).
+ * `files`, `shell`, and screen, processes, apps and device (families.js) — to the hub's agents as an MCP server the
+ * hub connects to (PROTOCOL.md §22, §22.1). Keep families.js beside this file.
  *
  *   doca-client pair https://hub:4242 641-598 [--name desk]     with a code from Settings → API Keys → Pair a device
+ *   doca-client pair 'doca://pair?code=641598&host=hub:4242'      or the pairing link itself, in one step
  *   doca-client run [--grant files,shell] [--bind 100.x.y.z] [--port 18766]
+ *   doca-client find                                            the hubs on this machine's tailnet
+ *   doca-client update                                          the hub's copy of this client, checked, when it differs
  *   doca-client status | forget
  *
  * Trust: a self-signed hub's certificate is pinned at pairing and is then the only one trusted (tlsFor), so it is
@@ -23,7 +27,7 @@ const https = require('https');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 
-const FAMILIES = ['files', 'shell'];
+const FAMILIES = ['files', 'shell', 'screen', 'processes', 'apps', 'device'];
 const configDir = () => process.env.DOCA_CLIENT_DIR || (process.platform === 'win32' ? path.join(process.env.APPDATA || os.homedir(), 'doca-client') : path.join(os.homedir(), '.config', 'doca-client'));
 const configFile = () => path.join(configDir(), 'config.json');
 const load = () => { try { return JSON.parse(fs.readFileSync(configFile(), 'utf8')); } catch { return null; } };
@@ -70,7 +74,18 @@ function request(cfg, method, p, body, { stream = false, signal, first = false }
   });
 }
 
-async function pair(hub, code, { name = os.hostname() } = {}) {
+/** The hub and code from the panel's pairing link (`doca://pair?code=641598&host=hub:4242`, its QR), or as given. */
+function fromLink(hub, code) {
+  const m = /^doca:\/\/pair\?(.+)$/.exec(String(hub || ''));
+  if (!m) return { hub, code };
+  const q = new URLSearchParams(m[1]);
+  const digits = String(q.get('code') || '');
+  return { hub: `https://${q.get('host')}`, code: digits.length === 6 ? `${digits.slice(0, 3)}-${digits.slice(3)}` : digits };
+}
+
+async function pair(hubOrLink, codeArg, { name = os.hostname() } = {}) {
+  const { hub, code } = fromLink(hubOrLink, codeArg);
+  if (!hub || !code) throw new Error('Pair with the link from the hub (doca://pair?…), or with its address and the code.');
   const cfg = { hub: hub.replace(/\/+$/, '') };
   const r = await request(cfg, 'POST', '/api/v1/devices/pair/complete', { code, name,
     caps: { formFactor: 'desktop', input: { text: true }, exec: ['shell'], ext: { client: 'doca-client', os: process.platform } } }, { first: true });
@@ -113,6 +128,7 @@ const TOOLS = {
       child.on('error', e => { clearTimeout(t); resolve({ code: -1, stdout, stderr: e.message }); });
     }) },
 };
+Object.assign(TOOLS, require('./families')({ within }));   // screen, processes, apps, device (families.js)
 const lent = cfg => Object.entries(TOOLS).filter(([, t]) => cfg.grants?.[t.family] === true && !(cfg.revoked || []).includes(t.family));
 
 /** The MCP server the hub connects to: JSON-RPC over POST, the bearer secret required. */
@@ -132,7 +148,10 @@ function serve(cfg, { bind, port }) {
       if (m.method === 'tools/call') {
         const hit = lent(cfg).find(([name]) => name === m.params?.name);
         if (!hit) return ok({ content: [{ type: 'text', text: `${m.params?.name} is not lent by this machine (not granted, or revoked).` }], isError: true });
-        try { return ok({ content: [{ type: 'text', text: JSON.stringify(await hit[1].run(cfg, m.params.arguments || {})) }] }); }
+        try {
+          const { image, ...rest } = (await hit[1].run(cfg, m.params.arguments || {})) || {};   // a picture is MCP image content
+          return ok({ content: [...(image ? [{ type: 'image', data: image.data, mimeType: image.mimeType }] : []), { type: 'text', text: JSON.stringify(rest) }] });
+        }
         catch (e) { return ok({ content: [{ type: 'text', text: e.message }], isError: true }); }
       }
       return reply(200, { jsonrpc: '2.0', id: m.id, error: { code: -32601, message: `Unknown method ${m.method}` } });
@@ -225,7 +244,37 @@ async function run({ grant = null, bind = null, port = 18766, root = null, signa
   return { server, url, cfg, stop };
 }
 
-module.exports = { pair, run, serve, load, request, TOOLS, FAMILIES, tailnetAddress, configFile };
+/**
+ * Update from the hub this client is paired with (TODO H6.5; api-v1/client-files.js): its manifest lists each file
+ * with a sha256; what differs here is fetched as bytes over the pinned connection, checked against that sha256, and
+ * only then written — the previous copy kept in the config folder. Returns what changed.
+ */
+async function update({ dir = __dirname } = {}) {
+  const cfg = load();
+  if (!cfg) throw new Error('Not paired: pair first, then update from that hub.');
+  const m = await request(cfg, 'GET', '/api/v1/clients/node');
+  if (m.status !== 200) throw new Error(`The hub has no client channel (${m.status}); it may be older than 2.191.0.`);
+  const sha = b => crypto.createHash('sha256').update(b).digest('hex');
+  const fetched = [];
+  for (const f of m.body.files) {
+    const here = path.join(dir, f.name);
+    if (fs.existsSync(here) && sha(fs.readFileSync(here)) === f.sha256) continue;
+    const res = await request(cfg, 'GET', `/api/v1/clients/node/${encodeURIComponent(f.name)}`, undefined, { stream: true });
+    const bytes = Buffer.concat(await new Promise((resolve, reject) => { const parts = []; res.on('data', d => parts.push(d)); res.on('end', () => resolve(parts)); res.on('error', reject); }));
+    if (res.statusCode !== 200 || sha(bytes) !== f.sha256) throw new Error(`${f.name} did not arrive intact; nothing was replaced.`);
+    fetched.push({ name: f.name, bytes });
+  }
+  const keep = path.join(configDir(), 'previous');
+  for (const f of fetched) {
+    const here = path.join(dir, f.name);
+    if (fs.existsSync(here)) { fs.mkdirSync(keep, { recursive: true }); fs.copyFileSync(here, path.join(keep, f.name)); }
+    fs.writeFileSync(`${here}.new`, f.bytes);
+    fs.renameSync(`${here}.new`, here);
+  }
+  return { version: m.body.version, changed: fetched.map(f => f.name) };
+}
+
+module.exports = { pair, fromLink, update, run, serve, load, request, TOOLS, FAMILIES, tailnetAddress, configFile };
 
 if (require.main === module) {
   const [verb, ...rest] = process.argv.slice(2);
@@ -233,8 +282,15 @@ if (require.main === module) {
   (async () => {
     if (verb === 'pair') { const c = await pair(rest[0], rest[1], { name: flag('name') || os.hostname() }); say(`✓ Paired with ${c.hub} as ${c.name} (${c.deviceId}). Next: doca-client run`); }
     else if (verb === 'run') { await run({ grant: flag('grant') ? flag('grant').split(',') : null, bind: flag('bind'), port: Number(flag('port')) || 18766 }); }
+    else if (verb === 'find') {
+      const hubs = await require('./discover').find();
+      if (!hubs) say('Tailscale is not running here (or not installed), so there is no tailnet to look on. Pair with the hub\'s address instead.');
+      else if (!hubs.length) say('No DOCA hub answers on the tailnet.');
+      else for (const h of hubs) say(`${h.product} at ${h.url}${h.self ? ' (this machine)' : ''} — pair: doca-client pair ${h.url} <code from its Settings → API Keys>`);
+    }
+    else if (verb === 'update') { const u = await update(); say(u.changed.length ? `✓ Updated to the hub's ${u.version}: ${u.changed.join(', ')}. Restart run to use it.` : `✓ Already the hub's ${u.version}.`); }
     else if (verb === 'status') { const c = load(); say(c ? JSON.stringify({ hub: c.hub, deviceId: c.deviceId, name: c.name, grants: c.grants, revoked: c.revoked || [] }, null, 2) : 'Not paired.'); }
     else if (verb === 'forget') { fs.rmSync(configFile(), { force: true }); say('Forgotten. (The hub still lists this device until you revoke it there.)'); }
-    else say('usage: doca-client pair <hub> <code> [--name N] | run [--grant files,shell] [--bind IP] [--port N] | status | forget');
+    else say('usage: doca-client find | update | pair <hub> <code> [--name N] | pair <doca://pair link> | run [--grant files,shell] [--bind IP] [--port N] | status | forget');
   })().catch(e => { console.error(`✗ ${e.message}`); process.exit(1); });
 }
