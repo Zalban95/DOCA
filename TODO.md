@@ -248,10 +248,10 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   measuring it in real calls; a realtime speech-to-speech model (OpenAI Realtime or a local one) in place of STT → turn → TTS.
 
 **H9 · Reach and protocols**
-- [ ] H9.1 Channels: Slack, Telegram, mail, WhatsApp, Matrix — each a client kind. Done: Telegram (2.157.0), the
+- [x] H9.1 (WhatsApp left) Channels: Slack, Telegram, mail, WhatsApp, Matrix — each a client kind. Done: Telegram (2.157.0), the
   shared core (`channels/links|bind|converse|deliver`) and Matrix (2.179.0; unencrypted direct rooms — E2EE would need
-  Olm and kept device keys), Slack (2.180.0; Socket Mode, DMs only). **Left:** mail (IMAP/SMTP), WhatsApp (needs
-  Meta's Cloud API and a public webhook, which a tailnet hub lacks).
+  Olm and kept device keys), Slack (2.180.0; Socket Mode, DMs only), mail (2.196.0; IMAP/SMTP, only senders their
+  server vouched for). **Left:** WhatsApp (needs Meta's Cloud API and a public webhook, which a tailnet hub lacks).
 - [x] H9.2 (2.168.0, 2.187.0, 2.189.0) DOCA as an MCP server; AG-UI events so AG-UI front ends are clients; A2A. The
   MCP server (`POST /api/v1/mcp`), AG-UI (`POST /api/v1/agui`: RunAgentInput in, SSE events out) and A2A (the public
   agent card, `POST /api/v1/a2a`: message/send, tasks/get, tasks/cancel). **Left:** A2A streaming and files; an AG-UI
