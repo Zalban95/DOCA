@@ -104,8 +104,8 @@ async function liveCallExperiment(id, on) {
 async function liveCallMeter() {
   if (_liveCallMeter) return liveCallStop();
   let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
-  catch (e) { return appAlert(`The microphone: ${e.message}`); }
+  try { stream = await micOpen({ echoCancellation: true, noiseSuppression: true }); }
+  catch (e) { return appAlert(`The microphone did not open: ${e.message}`); }
   const ctx = new AudioContext(), an = ctx.createAnalyser();
   an.fftSize = 512;
   ctx.createMediaStreamSource(stream).connect(an);

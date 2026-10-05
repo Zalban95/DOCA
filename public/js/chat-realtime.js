@@ -22,8 +22,8 @@ const _rtLevel = f => { let s = 0; for (let i = 0; i < f.length; i++) s += f[i] 
 
 async function realtimeStart() {
   let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
-  catch (e) { chatAppendMsg('system', `Microphone access denied: ${e.message}`); return; }
+  try { stream = await micOpen({ echoCancellation: true, noiseSuppression: true, autoGainControl: true }); }
+  catch (e) { chatAppendMsg('system', `The microphone did not open: ${e.message}`); return; }
   const ctx = new AudioContext({ sampleRate: 24000 });
   await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([_RT_WORKLET], { type: 'application/javascript' })));
   const mic = new AudioWorkletNode(ctx, 'doca-mic');

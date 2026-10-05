@@ -339,7 +339,7 @@ async function chatVoiceNote() {
   if (_chatRec) return _chatVoiceStop();
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await micOpen(true);
     // webm/opus is what every browser that has MediaRecorder can write, and
     // what the STT service is already fed by call mode.
     const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
@@ -352,7 +352,7 @@ async function chatVoiceNote() {
     _chatRec = { recorder, stream };
     if (btn) { btn.classList.add('btn-red'); btn.textContent = '■'; btn.title = 'Stop and send'; }
   } catch (e) {
-    appAlert(`No microphone: ${e.message}`);
+    appAlert(`The microphone did not open: ${e.message}`);
   }
 }
 
