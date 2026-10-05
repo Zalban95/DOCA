@@ -7,6 +7,47 @@ const { exec, execSync, spawn } = require('child_process');
 
 const { sseHeaders, loadPrefs, savePrefs, loadModelsPrefs } = require('./utils');
 
+// Where each answers once it is really up: `docker run` returns as soon as the container exists, minutes before the
+// application inside answers (AGENTS.md: "a start is not a service").
+const READY = { whisper: '/v1/models', kokoro: '/v1/audio/voices', vllm: '/v1/models', sdwebui: '/sdapi/v1/sd-models', comfyui: '/system_stats' };
+const READY_SEC = { vllm: 900, sdwebui: 900, comfyui: 600 };
+
+/** What a crash says, in a sentence a person can act on. */
+function diagnose(log) {
+  if (/no kernel image is available|sm_\d+ is not compatible|CUDA capability sm_\d+/i.test(log))
+    return 'This image\'s PyTorch was not built for this GPU (it is newer than the image). Pick "No GPU (CPU)" where the service has a CPU image, or wait for a newer image.';
+  if (/CUDA out of memory|OutOfMemoryError/i.test(log)) return 'The GPU ran out of memory: pick the other GPU, or stop what is using it.';
+  if (/could not select device driver|nvidia-container|--gpus/i.test(log)) return 'Docker cannot reach the GPU: install the NVIDIA Container Toolkit (Settings → System → System tools).';
+  if (/address already in use|port is already allocated/i.test(log)) return 'Its port is taken by another container or program: stop that one first.';
+  return null;
+}
+
+/**
+ * After `docker run`: wait until the service answers, or until its container keeps failing — then say why from its
+ * log, and remove it, so a crash loop is not left restarting forever behind a "started".
+ */
+async function waitReady(svc, say) {
+  const cli = require('./containers').cli();
+  const name = `doca-${svc.id}`;
+  const url = `http://127.0.0.1:${svc.port}${READY[svc.id] || '/'}`;
+  const until = Date.now() + (READY_SEC[svc.id] || 300) * 1000;
+  let restarts = 0, said = 0;
+  while (Date.now() < until) {
+    try { const r = await fetch(url, { signal: AbortSignal.timeout(3000) }); if (r.status < 500) return { ok: true }; } catch { /* not yet */ }
+    const st = await new Promise(r => exec(`${cli} inspect ${name} --format '{{.State.Status}} {{.RestartCount}}'`, (e, out) => r(e ? 'gone 0' : String(out).trim())));
+    const [state, count] = st.split(' ');
+    restarts = Number(count) || 0;
+    if (state === 'gone' || state === 'exited' || state === 'dead' || restarts >= 2) {
+      const log = await new Promise(r => exec(`${cli} logs --tail 15 ${name}`, { maxBuffer: 1 << 20 }, (e, out, err) => r(`${out || ''}${err || ''}`.replace(/\x1b\[[0-9;]*m/g, ''))));
+      exec(`${cli} rm -f ${name}`, () => {});
+      return { ok: false, log, why: diagnose(log) || `The container ${state === 'gone' ? 'is gone' : `stopped (${state}, restarted ${restarts}×)`} before ${svc.label} answered.` };
+    }
+    if (Date.now() - said > 15000) { say(`… waiting for ${svc.label} to answer on :${svc.port} (${state})\n`); said = Date.now(); }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  return { ok: false, why: `${svc.label} did not answer on :${svc.port} within ${Math.round((READY_SEC[svc.id] || 300) / 60)} minutes; it may still be starting (see its logs in the Docker tab).` };
+}
+
 const INFERENCE_SERVICES = [
   { id: 'whisper',  label: 'Whisper STT',     image: 'fedirz/faster-whisper-server:latest-cuda', port: 8000, internalPort: 8000, apiPath: '/v1', multiGpu: false,
     description: 'OpenAI-compatible speech-to-text API (faster-whisper, CUDA)' },
@@ -151,16 +192,18 @@ function handleStart(req, res) {
   const child = spawn(require('./containers').cli(), dockerArgs, { cwd: home });
   child.stdout.on('data', d => sseWrite({ status: d.toString() }));
   child.stderr.on('data', d => sseWrite({ status: d.toString() }));
-  child.on('close', (code, signal) => {
-    const ok  = code === 0;
-    const msg = ok ? `✓ ${svc.label} started on http://localhost:${svc.port}`
-      : code !== null ? `✗ Exit ${code}` : `✗ Killed (${signal || 'unknown'})`;
-    sseWrite({ done: true, ok, status: msg });
+  child.on('close', async (code, signal) => {
+    if (code !== 0) { sseWrite({ done: true, ok: false, status: code !== null ? `✗ Exit ${code}` : `✗ Killed (${signal || 'unknown'})` }); return res.end(); }
+    sseWrite({ status: `Container up; waiting for ${svc.label} to answer…\n` });
+    const r = await waitReady(svc, status => sseWrite({ status }));
+    if (r.ok) sseWrite({ done: true, ok: true, status: `✓ ${svc.label} answers on http://localhost:${svc.port}` });
+    else sseWrite({ done: true, ok: false, status: `${r.log ? `--- its last log lines ---\n${r.log.trim()}\n---\n` : ''}✗ ${r.why}${r.log ? ' The container was removed so it does not restart in a loop.' : ''}` });
     res.end();
   });
   child.on('error', e => { sseWrite({ done: true, ok: false, status: `Error: ${e.message}` }); res.end(); });
   res.on('close', () => { if (!child.killed) child.kill(); });
 }
+
 
 /** POST /api/services/stop */
 function handleStop(req, res) {
@@ -180,4 +223,5 @@ module.exports = {
   handleStatus,
   handleStart,
   handleStop,
+  diagnose,
 };
