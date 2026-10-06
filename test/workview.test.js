@@ -70,3 +70,31 @@ test('the orchestrator itself and specialists are not duplicated as work chats',
   const ids = workview.workChats().map(s => s.id);
   assert.equal(ids.includes(memory.mainSession().id), false);
 });
+
+test('a stopped or dropped work chat is cancelled, not done; archiving one is quiet and carries archivedAt (audit 2026-10-06)', () => {
+  const s = memory.createSession('Stopped job', { activate: false, kind: 'work', parentId: memory.mainSession().id });
+  const at = st => workview.payloadOf({ ...memory.getSession(s.id), state: 'idle', job: { state: st, stoppedWhy: 'Stopped from the missions bar' } });
+  assert.equal(at('stopped').state, 'cancelled');
+  assert.match(at('stopped').error, /missions bar.*restart it or drop it/);
+  assert.equal(at('dropped').state, 'cancelled');
+  assert.equal(at('working').state, 'done');
+
+  memory.updateSession(s.id, { state: 'idle' });
+  require('../modules/harness/organization').archive(s.id, true);
+  const p = lastMission(s.id);
+  assert.equal(p.quiet, true);
+  assert.ok(p.archivedAt);
+});
+
+test('every field an agent.mission carries is in the OpenAPI event schema', () => {
+  const doc = require('../modules/api-v1/openapi').document();
+  const find = o => (o && typeof o === 'object' ? (o['agent.mission'] || Object.values(o).map(find).find(Boolean)) : null);
+  const schema = find(doc);
+  const props = Object.keys(schema.payload?.properties || schema.properties || {});
+  assert.ok(props.length > 5, 'found the schema');
+  const ids = [];
+  for (const e of bus.drain(watch.device.id, 0).events || []) if (e.type === 'agent.mission') ids.push(...Object.keys(e.payload));
+  const work = workview.payloadOf({ id: 'x', title: 't', state: 'idle', createdAt: '', updatedAt: '', archivedAt: 'z', job: { state: 'stopped' } });
+  const missing = [...new Set([...ids, ...Object.keys(work), 'plan', 'progress', 'archivedAt', 'quiet'])].filter(k => !props.includes(k));
+  assert.deepEqual(missing, []);
+});

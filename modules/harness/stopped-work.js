@@ -36,6 +36,7 @@ function decide(id, go, ctx = {}) {
   const at = new Date().toISOString();
   if (!go) {
     memory().updateSession(id, { job: { ...s.job, state: 'dropped', droppedAt: at } });
+    require('./workview').announce(id, { quiet: true });   // the person's own decision: devices update, nothing buzzes
     return { sessionId: id, state: 'dropped', note: 'Dropped. Its transcript stays; nothing more runs.' };
   }
   const { stoppedWhy, ...job } = s.job;
