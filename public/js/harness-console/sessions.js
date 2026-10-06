@@ -160,6 +160,7 @@ async function hcOpenSession(id, skipReload) {
     // A reopened conversation reads the way it looked when its last turn ended,
     // rather than as every step of every turn laid out again.
     collapseFoldRuns(box);
+    if (typeof _liveHc === 'function') _liveHc();   // what another screen's turn has streamed so far, drawn again (live-pages.js)
     document.querySelectorAll('#hc-sessions .hc-session').forEach(el =>
       el.classList.toggle('active', el.dataset.session === id));
   } catch (e) { box.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; }
