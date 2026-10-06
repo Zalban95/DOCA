@@ -41,6 +41,7 @@ function mount(app) {
   require('../agents/stopping').mount(app);
   require('./stopped-work').mount(app);   // restart or drop work a person stopped (stopped-work.js)   // a visible Stop for missions and automatic turns (agents/stopping.js, H10.14)
   require('../model-servers').mount(app);
+  require('../model-roles').mount(app);   // which model does what (C4)
   require('../wakeword/routes').mount(app);   // wake words trained here, kept like models (wakeword/, H8.4)   // every local model server and who it works for (model-servers.js, H10.13)
   require('../ambient').mount(app);   // the ambient screen: weather, the day's plan, notices (ambient/)
   require('../face/routes').mount(app);   // the face: what the hive is doing, on any screen (face/)
