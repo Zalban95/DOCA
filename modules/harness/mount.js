@@ -14,6 +14,7 @@ function mount(app) {
   app.get('/api/host/capabilities', (req, res) => res.json(require('../host-capabilities').capabilities({ fresh: req.query.fresh === '1' })));
   require('./tab-routes').mount(app);
   require('../experiments').mount(app);
+  require('../releasing').mount(app);   // who may release DOCA unasked: the admin's setting (CONSTITUTION W2)
   require('../migrations').mount(app);   // which prefs migrations this install has had (migrations.js)   // experiments behind flags, each with its write-up (experiments.js)
   require('../search/routes').mount(app);
   require('../retrieval/routes').mount(app);

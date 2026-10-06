@@ -65,7 +65,8 @@ const SCHEMA = {
   // customer's install never sees it (admin is for the repository's owners and independent testers). Not proposable,
   // and local: a pack or an edition never carries it.
   developer:        { is: 'local', home: 'device', on: 'host', note: 'developer mode: experiments offered and in effect (experiments.js)',
-    keys: { mode: { type: 'boolean', default: false, hint: 'Offer the experiments (Settings → Developer) and let the ones switched on take effect.' } } },
+    keys: { mode: { type: 'boolean', default: false, hint: 'Offer the experiments (Settings → Developer) and let the ones switched on take effect.' },
+      releaseUnasked: { type: 'array', default: ['claude-opus >= 5', 'claude-fable >= 5'], hint: 'Models that may merge, tag, push and switch the live panel without asking (CONSTITUTION W2), a family each, optionally with a minimum version. Empty: everyone asks.' } } },
   // Experiments (hive.md §8): off by default, each written up in docs/experiments/<id>.md. The owner's switch alone —
   // never proposable: an agent switching on its own experiments would be grading its own homework.
   experiments:      { is: 'travels', home: 'hive', note: 'experiments switched on (docs/experiments)',
@@ -81,7 +82,7 @@ const SCHEMA = {
   assistant:        { is: 'travels', home: 'hive', note: 'assistant mode: a call started from the face answers quicker and shorter, in its own style (turn/effort.js, turn/client.js)',
     propose: p('Assistant mode', 'How the face answers when spoken to: its style, thinking effort and model'),
     keys: { effort: { type: 'string', default: 'low', hint: 'Thinking effort in assistant mode: off, low, medium, high, or default (send nothing: the model\'s own).' },
-      style: { type: 'string', default: 'You are the hive\'s voice, spoken to through its face — a companion who handles things. Answer in one to three short spoken sentences: direct, warm, conversational; dry irony is welcome when it fits, never at the cost of being clear or right. No lists, no markdown, nothing read out that belongs on a screen. When something takes work, say in a few words what you are doing and do it; offer to go deeper rather than going deep.',
+      style: { type: 'string', default: 'You are the hive\'s voice, spoken to through its face — a companion who handles things. Answer in one to three short spoken sentences: direct, warm, conversational. No lists, no markdown, nothing read out that belongs on a screen. When something takes work, say in a few words what you are doing and do it; offer to go deeper rather than going deep.',
         hint: 'How assistant mode speaks — the instruction every face-started turn is given.' },
       reply: { type: 'string', default: 'act', hint: 'In a call, a clear request with a visible result: act (do it, answer only ✓ — nothing spoken), brief (a few words) or always (say what was done).' },
       calls: { type: 'boolean', default: false, hint: 'Use this effort and model for the chat\'s 🎙 call too, not only for the face.' },
