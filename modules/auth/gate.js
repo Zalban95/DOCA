@@ -87,6 +87,9 @@ function gate(req, res, next) {
     authStore.audit({ orgId: who.orgId, actorId: who.user.id, action: 'denied', detail: `${method} ${p} (needs ${right})` });
     return deny(req, res, 403, 'forbidden', `Your role (${who.role}) cannot do this; it needs the "${right}" right.`);
   }
+  // From the local network (or anywhere, under `all`), managing the machine is off unless the admin allows it (network.js).
+  if (require('../network').limited(req, right))
+    return deny(req, res, 403, 'outside_tailnet', 'From the local network, managing this machine is off: use Tailscale or the machine itself — or an admin allows it in Settings → System → Network.');
   // A session a device opened stops at what the device's scopes allow; the
   // person's password lifts it to their role (routes.js, step-up).
   if (right !== 'signed' && who.session.cap && !who.session.cap.includes(right))
@@ -112,6 +115,7 @@ function upgradeAllowed(req, right) {
   if (authStore.userCount() === 0) return null;
   const who = credentials.resolve(req);
   if (!who || !rights.can(who.role, right)) return null;
+  if (require('../network').limited(req, right)) return null;   // the machine's administration, from outside the tailnet (network.js)
   if (who.session.cap && !who.session.cap.includes(right)) return null;
   if (rights.STEP_UP.has(right) && !credentials.steppedUp(who.session)) return null;
   // A socket opened from another site would carry the cookie; SameSite=Strict

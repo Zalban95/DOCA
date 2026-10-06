@@ -32,7 +32,7 @@ const COVERAGE = {
   auth: { panel: 'a person signing in to the panel; a device pairs instead (/devices)' },
   // The machine and DOCA itself.
   ...Object.fromEntries(['status', 'action', 'stack', 'logs', 'stats', 'configs', 'prefs', 'config-favorites', 'fm-favorites', 'paths', 'keys', 'skills',
-    'setup', 'snapshots', 'files', 'host', 'experiments', 'developer', 'screens', 'workstream', 'machines', 'settings', 'search', 'retrieval', 'vision', 'scout', 'assistant', 'evals', 'connectors', 'channels', 'computers', 'models',
+    'setup', 'snapshots', 'files', 'host', 'experiments', 'developer', 'screens', 'workstream', 'machines', 'network', 'hub', 'settings', 'search', 'retrieval', 'vision', 'scout', 'assistant', 'evals', 'connectors', 'channels', 'computers', 'models',
     'system', 'update-check', 'update', 'restart', 'deps', 'versions', 'backups', 'startup', 'docker', 'mcp', 'vms', 'services'].map(g => [g, { panel: HOST }])),
 };
 

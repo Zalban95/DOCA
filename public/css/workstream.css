@@ -70,3 +70,13 @@
 .model3d-full { position: fixed; inset: 0; z-index: 3500; background: radial-gradient(circle at 50% 40%, #2a2d33, #0a0a0c); display: flex; flex-direction: column; }
 .model3d-bar { display: flex; gap: 8px; align-items: center; padding: 10px 14px; color: #eee; font-size: 12px; }
 .model3d-stage { flex: 1; min-height: 0; }
+
+/* The hub's addresses as QR codes, and the app offered on a phone's browser (js/settings/network.js). */
+.hub-links-body { flex: 1; overflow: auto; padding: 10px 18px; color: #eee; display: flex; flex-wrap: wrap; gap: 18px; align-content: flex-start; }
+.hub-link { display: flex; gap: 12px; align-items: center; font-size: 12px; }
+.hub-qr { width: 200px; height: 200px; background: #fff; padding: 6px; }
+.hub-qr svg { width: 100%; height: 100%; }
+.hub-links-note { width: 100%; font-size: 12px; color: #aaa; }
+.hub-app-banner { position: fixed; left: 8px; right: 8px; bottom: calc(var(--mobile-nav-h, 54px) + 8px); z-index: 1250; display: flex; gap: 8px; align-items: center;
+  padding: 10px 12px; background: var(--surface); border: 1px solid var(--accent); box-shadow: 0 8px 24px rgba(0,0,0,.4); font-size: 12px; }
+.hub-app-banner span { flex: 1; }

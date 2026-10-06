@@ -18,10 +18,13 @@
  *
  * Modes, from `DOCA_LISTEN` or prefs `network.listen`:
  *   tailnet  loopback + Tailscale (100.64.0.0/10, fd7a:115c:a1e0::/48) — the default
+ *   lan      tailnet + the local network (10/8, 172.16/12, 192.168/16, 169.254/16, fc00::/7, fe80::/10), both ends
+ *            private: a phone on the home Wi-Fi pairs without Tailscale; managing the machine from there stays off
+ *            unless the admin allows it (network.lanAdmin, auth/gate.js)
  *   local    loopback only; reach it through `tailscale serve` or an SSH tunnel
  *   all      every interface, as before; an explicit, logged opt-in
  */
-const MODES = ['tailnet', 'local', 'all'];
+const MODES = ['tailnet', 'lan', 'local', 'all'];
 const DEFAULT = 'tailnet';
 
 /** `::ffff:1.2.3.4` is an IPv4 client on a dual-stack socket. */
@@ -41,6 +44,17 @@ function isTailnet(addr) {
   return a.startsWith('fd7a:115c:a1e0:');
 }
 
+/** A private, local-network address: RFC 1918, link-local, and IPv6 unique-local and link-local. */
+function isPrivate(addr) {
+  const a = plain(addr).toLowerCase().replace(/%.*$/, '');
+  const v4 = a.match(/^(\d+)\.(\d+)\.\d+\.\d+$/);
+  if (v4) { const [x, y] = [Number(v4[1]), Number(v4[2])]; return x === 10 || (x === 172 && y >= 16 && y <= 31) || (x === 192 && y === 168) || (x === 169 && y === 254); }
+  return /^f[cd][0-9a-f]{2}:/.test(a) || /^fe[89ab][0-9a-f]:/.test(a);
+}
+
+/** Whether a peer is outside loopback and the tailnet (the local network, or anywhere under `all`). */
+const outside = addr => !isLoopback(addr) && !isTailnet(addr);
+
 /**
  * Whether one connection may proceed. Both ends are checked: the address it
  * reached must be loopback or tailnet, and the peer must be on the same side of
@@ -50,7 +64,8 @@ function isTailnet(addr) {
 function allowed(mode, localAddress, remoteAddress) {
   if (mode === 'all') return true;
   if (isLoopback(localAddress)) return isLoopback(remoteAddress);
-  if (mode === 'tailnet' && isTailnet(localAddress)) return isTailnet(remoteAddress);
+  if ((mode === 'tailnet' || mode === 'lan') && isTailnet(localAddress)) return isTailnet(remoteAddress);
+  if (mode === 'lan' && isPrivate(localAddress)) return isPrivate(remoteAddress);
   return false;
 }
 
@@ -119,4 +134,4 @@ function start(server, { port, mode: m, name, announce }) {
   server.listen(port, '0.0.0.0');
 }
 
-module.exports = { MODES, DEFAULT, mode, allowed, guard, start, isLoopback, isTailnet };
+module.exports = { MODES, DEFAULT, mode, allowed, guard, start, isLoopback, isTailnet, isPrivate, outside };
