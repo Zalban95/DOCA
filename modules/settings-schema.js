@@ -135,7 +135,7 @@ const SCHEMA = {
   harness:          { is: 'mixed', home: 'hive', note: 'config (model, limits, fallback chain, prompts), the guards\' settings and approval mode travel (the guard model files are local, in the data folder); the always-allowed list names commands of this machine and is local. Provider keys are not here: they live in the data folder (keys/).',
     propose: [p('Harness parameters', 'Includes this agent\'s own model and behaviour', { prefix: 'harness.config' }),
       p('Default harness', 'Which runtime the chat panel talks to', { prefix: 'harness.default' })] },
-  models:           { is: 'mixed', home: 'hive', note: 'preferences travel; models.hf.token is a secret and local, and runtime URLs name this machine',
+  models:           { is: 'mixed', home: 'hive', note: 'preferences travel; runtime URLs name this machine. The Hugging Face token is in the protected keys (hf-token.js), never here',
     propose: p('Model manager', 'Ollama URL, download directories') },
 
   // ── The machine DOCA runs on ──
@@ -151,7 +151,8 @@ const SCHEMA = {
   backup:           { is: 'local', home: 'device', on: 'host', note: 'the backup schedule of this machine' },
   network:          { is: 'local', home: 'device', on: 'host', note: 'how this machine listens, and what may be done from outside the tailnet (network.js)',
     keys: { listen: { type: 'string', default: 'tailnet', hint: 'tailnet (Tailscale and this machine), lan (also the local network), local (this machine only), all (every interface). From the next start.' },
-      lanAdmin: { type: 'boolean', default: false, hint: 'Allow managing the machine (admin rights) from outside Tailscale. Off: from the local network a person reads and chats.' } } },
+      lanAdmin: { type: 'boolean', default: false, hint: 'Allow managing the machine (admin rights) from outside Tailscale. Off: from the local network a person reads and chats.' },
+      services: { type: 'string', default: 'local', hint: 'Where the inference services this hub starts (Whisper, Kokoro, ComfyUI…) can be reached: local (this machine only — the hub reaches them here), tailnet (also its Tailscale address), all (every interface, the local network included, with no sign-in). From each service\'s next start.' } } },
   vms:              { is: 'local', home: 'device', on: 'host', note: 'the libvirt connection URI of this machine', propose: p('Virtual machines', 'The libvirt connection URI') },
   channels:         { is: 'local', home: 'device', on: 'host', note: 'channel bots (Telegram, Matrix, Slack, mail): tokens and a switch for this hub',
     keys: {

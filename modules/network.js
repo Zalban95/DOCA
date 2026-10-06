@@ -33,10 +33,12 @@ const rightsFrom = (req, rights) => (outside(req) && !lanAdmin() ? rights.filter
 function state() {
   const prefs = require('./utils').loadPrefs();
   return { listen: listen.mode(prefs), saved: prefs.network?.listen || listen.DEFAULT, env: process.env.DOCA_LISTEN || null,
-    lanAdmin: lanAdmin(), modes: listen.MODES };
+    lanAdmin: lanAdmin(), services: schema().value('network.services'), modes: listen.MODES };
 }
 
-function save({ listen: m, lanAdmin: la }) {
+const SERVICE_REACH = ['local', 'tailnet', 'all'];
+
+function save({ listen: m, lanAdmin: la, services: sv }) {
   const { loadPrefs, savePrefs } = require('./utils');
   const prefs = loadPrefs();
   const next = { ...(prefs.network || {}) };
@@ -45,8 +47,25 @@ function save({ listen: m, lanAdmin: la }) {
     next.listen = m;
   }
   if (la !== undefined) next.lanAdmin = la === true;
+  if (sv !== undefined) {
+    if (!SERVICE_REACH.includes(sv)) throw Object.assign(new Error(`services: one of ${SERVICE_REACH.join(', ')}.`), { status: 400 });
+    next.services = sv;
+  }
   savePrefs({ ...prefs, network: next });
   return { ...state(), restartNeeded: m !== undefined && m !== listen.mode(prefs) };
+}
+
+/** The `-p` values for a service's port (services.js), by `network.services`: this machine only by default — a
+ *  container's port opened on every interface is reachable from the local network with no sign-in, around the
+ *  hub's own listen rule (audit 2026-10-06). */
+function publish(port, internal) {
+  const mode = schema().value('network.services');
+  if (mode === 'all') return [`${port}:${internal}`];
+  const out = [`127.0.0.1:${port}:${internal}`];
+  if (mode === 'tailnet')
+    for (const addrs of Object.values(os.networkInterfaces())) for (const a of addrs || [])
+      if (a.family === 'IPv4' && listen.isTailnet(a.address)) out.push(`${a.address}:${port}:${internal}`);
+  return out;
 }
 
 /** The addresses a phone can open this hub at, best first, each with a QR code. */
@@ -103,4 +122,4 @@ function mountDevice(router) {
   });
 }
 
-module.exports = { MACHINE, outside, limited, rightsFrom, state, save, links, mount, mountDevice };
+module.exports = { MACHINE, outside, limited, rightsFrom, state, save, links, publish, mount, mountDevice };

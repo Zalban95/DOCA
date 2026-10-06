@@ -70,6 +70,16 @@ const MIGRATIONS = [
       p.developer = { ...(p.developer || {}), mode: true };
       return true;
     } }] },
+  // 2.240: the Hugging Face token moves out of prefs into the protected keys (hf-token.js; audit 2026-10-06, S4).
+  { id: '2.240-hf-token', note: 'the Hugging Face token now lives in the protected keys, not the settings file', steps: [{
+    describe: 'models.hf.token → keys/huggingface.json',
+    run(p) {
+      const t = p.models?.hf?.token;
+      if (t === undefined) return false;
+      if (t) require('./hf-token').adopt(t);
+      delete p.models.hf.token;
+      return true;
+    } }] },
 ];
 
 const appliedIn = p => new Set(Array.isArray(p?.migrations?.applied) ? p.migrations.applied : []);

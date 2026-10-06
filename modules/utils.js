@@ -122,13 +122,17 @@ function saveConfig(cfg) {
 
 /** Load the models sub-object from prefs. */
 function loadModelsPrefs() {
-  return loadPrefs().models || {};
+  const models = loadPrefs().models || {};
+  const token = require('./hf-token').get();   // the token lives in the protected keys (hf-token.js), not in prefs
+  return token ? { ...models, hf: { ...(models.hf || {}), token } } : models;
 }
 
-/** Save the models sub-object into prefs. */
+/** Save the models sub-object into prefs — its Hugging Face token into the protected keys instead. */
 function saveModelsPrefs(models) {
   const prefs = loadPrefs();
-  prefs.models = models;
+  const { token, ...hf } = models?.hf || {};
+  if (models?.hf) require('./hf-token').set(token);
+  prefs.models = models?.hf ? { ...models, hf } : models;
   savePrefs(prefs);
 }
 

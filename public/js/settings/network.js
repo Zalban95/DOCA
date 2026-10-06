@@ -17,6 +17,10 @@ async function networkCard() {
     ${opt('all', 'Every network', 'Every interface, the internet included if the machine is exposed. Only behind a firewall or proxy you control.')}
     <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:10px"><input type="checkbox" id="net-lanadmin" ${s.lanAdmin ? 'checked' : ''}>
       Allow managing the machine from outside Tailscale <span style="color:var(--muted);font-size:11px">(off: from the local network people read and chat; admin work stays on Tailscale or this machine)</span></label>
+    <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:10px">Inference services (Whisper, Kokoro, ComfyUI…) answer on
+      <select class="input" id="net-services" style="width:auto">${[['local', 'this machine only'], ['tailnet', 'this machine and Tailscale'], ['all', 'every network — no sign-in']]
+        .map(([v, l]) => `<option value="${v}" ${s.services === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <span style="color:var(--muted);font-size:11px">from each one's next start; the hub reaches them on this machine either way</span></label>
     <div class="toolbar" style="margin-top:8px"><button class="btn btn-sm btn-blue" onclick="networkSave()">Save</button>
       <span class="status-line" id="net-status">Now: ${escHtml(s.listen)}</span></div>`;
 }
@@ -24,9 +28,10 @@ async function networkCard() {
 async function networkSave() {
   const listen = document.querySelector('input[name="net-listen"]:checked')?.value;
   const lanAdmin = document.getElementById('net-lanadmin').checked;
+  const services = document.getElementById('net-services')?.value;
   const go = async () => {
     let r;
-    try { r = await apiFetch('/api/network', { method: 'POST', body: { listen, lanAdmin } }); } catch (e) { return appAlert(e.message); }
+    try { r = await apiFetch('/api/network', { method: 'POST', body: { listen, lanAdmin, services } }); } catch (e) { return appAlert(e.message); }
     setStatus(document.getElementById('net-status'), r.restartNeeded ? `Saved — ${r.saved} from the next start (Settings → General → Restart).` : '✓ Saved', 'ok', { clear: 0 });
   };
   if (listen === 'all') appConfirm('Every network: anyone who can reach this machine can try to sign in. Only do this behind a firewall or a proxy you control.', go);

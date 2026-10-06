@@ -364,7 +364,7 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   placeholder, the code or the tests' sample data (test/no-leftovers.test.js); every font through the theme's
   variables (--font-ui, --font-mono, --font-text, --font-display; test/fonts.test.js), the faces used are the ones
   loaded.
-- [ ] H10.16 Reach and secrets (audit 2026-10-06). Inference services publish their ports on every interface
+- [x] H10.16 Reach and secrets (audit 2026-10-06). **Done (2.240.0):** `network.services` (local by default; Settings → System → Network), the token in keys/huggingface.json with a migration. Running containers keep their old ports until their next start. Inference services publish their ports on every interface
   (`services.js` `-p port:port`: ComfyUI, Whisper, Kokoro reachable from the LAN with no sign-in): bind to 127.0.0.1
   unless asked. The Hugging Face token lives in prefs (`models.hf.token`, masked): move it to the protected keys.
 - [ ] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06). Risk-tiered approval inside

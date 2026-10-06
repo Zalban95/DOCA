@@ -37,3 +37,16 @@ test('from outside the tailnet the machine\'s rights are refused unless the admi
   const member = await H.signIn('member', 'net-member@test.local');
   assert.equal((await H.api(null, 'POST', '/api/network', { listen: 'all' }, { Cookie: member.cookie })).status, 403);
 });
+
+test('an inference service answers on this machine only unless the admin opens it wider', async () => {
+  assert.deepEqual(network.publish(8000, 8000), ['127.0.0.1:8000:8000'], 'the default: loopback, the hub reaches it there');
+  let r = await H.api(null, 'POST', '/api/network', { services: 'all' });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.services, 'all');
+  assert.deepEqual(network.publish(8880, 8880), ['8880:8880'], 'every interface, as before');
+  r = await H.api(null, 'POST', '/api/network', { services: 'tailnet' });
+  assert.ok(network.publish(8188, 8188)[0] === '127.0.0.1:8188:8188');
+  assert.ok(network.publish(8188, 8188).slice(1).every(p => /^100\./.test(p)), 'and the tailnet address, if this machine has one');
+  assert.equal((await H.api(null, 'POST', '/api/network', { services: 'internet' })).status, 400);
+  await H.api(null, 'POST', '/api/network', { services: 'local' });
+});

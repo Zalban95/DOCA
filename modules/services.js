@@ -151,7 +151,7 @@ function handleStart(req, res) {
     'run', '-d',
     '--name', `doca-${id}`,
     '--restart', 'unless-stopped',
-    '-p', `${svc.port}:${svc.internalPort}`,
+    ...require('./network').publish(svc.port, svc.internalPort).flatMap(p => ['-p', p]),   // this machine only unless network.services says more
   ];
   if      (gpu === 'all') dockerArgs.push('--gpus', 'all');
   else if (gpu === '0')   dockerArgs.push('--gpus', 'device=0');
