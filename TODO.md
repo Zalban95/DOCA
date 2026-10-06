@@ -76,11 +76,11 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 - [x] B3 **The roster equals what a turn holds** — *2.247.0: `turn/tool-shape.js` read by `disabledFor()` and the roster, each with why; a test per type, specialists off and on* (aw 4, 15; coh F6–F7): switch-driven removals in `disabledFor()` with
   reasons; `mission_plan`/`scout_report` only on missions; `show_image` an alias in `call()` only; the `computer` tool
   says who works inside a computer; `computer_login` only with computer tools; `computer` in the Computer kit.
-- [ ] B4 **Descriptions a weaker model chooses by** (aw 16–20, 23, 29; coh F8): first sentence "<verb> … — use when
-  …", ≤150 characters, never cut (a stricter test); every parameter described with its actions; a rendered "Reaching
-  outside" block; `install_propose` built from the catalogs; `doca_clients` says which devices lend hands; a test
-  that every reference a held tool makes is present in that profile's prompt; `test/skill-references.test.js` and the
-  five broken references (jdk21, catt, doca-client's tool names, make-a-specialist's kits, the dev-cycle's routes).
+- [x] B4 **Descriptions a weaker model chooses by** (aw 16–17, 20, 23; coh F8) — *2.248.0: `turn/tool-leads.js` (26 tools, "— use it when …", ≤150 characters, never cut; a stricter test); `install_propose` built from its catalogs; `doca_clients` names each device's hands; `test/skill-references.test.js` and the broken references fixed (doca-client's tools, catt now a System tools row, make-a-specialist's kits and path, the dev-cycle's Versions page; jdk21 was a row)*
+- [ ] B4b **The rest of B4** (aw 18–19, 29): every parameter of the many-action tools described with its actions, the
+  hottest paths split (`work_chat_start`, `project_run`), missing action-specific fields rejected by name; a rendered
+  "Reaching outside" block (after A2 decides the airlock); a test per profile that every tool a rendered prompt names
+  is held (the charter's own mentions wait for B8).
 - [ ] B5 **Skills and recipes found by the request** (aw 21–22, 30; coh F18): skill and recipe titles matched against
   the person's words each turn ("Likely fits: …" in the readings, after the history); a "# Recipes you have" and a
   "# What you have" readings block (keys, logins, computers) instead of tool-description inventories; "save as recipe"
