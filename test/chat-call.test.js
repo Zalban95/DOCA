@@ -48,6 +48,10 @@ test('talking over the voice pauses it; words stop it where the person stopped l
       decodeAudioData: async () => ({}), createBufferSource: () => ({ connect() {}, start() {}, stop() {} }), destination: {} };
     let stopped = 0, posted = null;
     sandbox.Blob = function Blob() {}; sandbox.FormData = function FormData() { this.append = () => {}; };
+    let sentAfter = null;
+    s.set('_callAudioCtx', { sampleRate: 48000 });
+    s.set('_callRing', [new Float32Array(48000)]);   // the second before the trigger: its word is in the decision
+    s.set('_callProcessAudio', (blob, name) => { sentAfter = name; });
     sandbox.fetch = async () => ({ ok: true, json: async () => ({ text: said }) });
     sandbox.apiFetch = async (url, o) => { posted = [url, o.body]; return { cut: true }; };
     s.set('_callPlayCtx', ctx);
@@ -64,11 +68,14 @@ test('talking over the voice pauses it; words stop it where the person stopped l
     for (let i = 0; i < 8; i++) { t += 50; s.get('_callVadLoop')(); }
     assert.equal(ctx.state, 'suspended', 'a sustained one pauses the voice — it does not stop it');
     assert.equal(stopped, 0);
-    await s.get('_callHoldDecide')({});
+    assert.equal(s.get('_callHold').pcm.reduce((n, c) => n + c.length, 0), 48000, 'the pre-roll is in the hold');
+    await s.get('_callHoldDecide')();
     if (stops) {
       assert.equal(stopped, 1);
       assert.equal(s.get('_callStats').bargeIns, 1);
       assert.equal(JSON.stringify(posted), JSON.stringify(['/api/chat/heard', { heard: 'It will snow tomorrow. Take the red' }]));
+      for (let i = 0; i < 40; i++) s.get('_callHoldQuiet')(50, false);
+      assert.equal(sentAfter, 'speech.wav', 'after a pause, what was said from the trigger is the next message');
     } else {
       assert.equal(stopped, 0, 'no words: it goes on');
       assert.equal(posted, null);

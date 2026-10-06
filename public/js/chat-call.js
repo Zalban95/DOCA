@@ -30,6 +30,7 @@ let _callThreshold = 15;
 // A recording is sent only with this much audio over the threshold in it: a click, a cough or a door is shorter, and
 // Whisper turns such a blip into "Thank you." (the hub screens those phrases too: modules/stt-filter.js).
 const CALL_MIN_VOICED_MS = 300;
+let _callAnswerCtrl = null;   // the answer being made: aborted when the person talks over it
 let _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending = 0, _callTtsWarned = false, _callLastActive = 0, _callOverMs = 0, _callAnswering = 0;
 /** How long nobody has spoken and nothing has been said or worked on (assistant mode's idle timer). */
 const _callIdleMs = () => (_callActive && _callLastActive ? performance.now() - _callLastActive : 0);
@@ -100,6 +101,7 @@ async function chatToggleCall({ assistant = false } = {}) {
   _callAnalyser = _callAudioCtx.createAnalyser();
   _callAnalyser.fftSize = 512;
   source.connect(_callAnalyser);
+  _callTapStart(source);   // raw samples, so talking over an answer is heard from its first word (chat-call-hold.js)
 
   if (_callFaceVoice) { _callOutAnalyser = _callPlayCtx.createAnalyser(); _callOutAnalyser.fftSize = 256; _callOutAnalyser.connect(_callPlayCtx.destination); }
 
@@ -127,6 +129,7 @@ function _callStop() {
   if (_callAudioCtx) { _callAudioCtx.close().catch(() => {}); _callAudioCtx = null; }
   _callAnalyser = null;
 
+  _callTapStop(); _callHold = null;
   _callStopPlayback();
   if (_callPlayCtx) { _callPlayCtx.close().catch(() => {}); _callPlayCtx = null; }
   _callOutAnalyser = null;
@@ -162,12 +165,14 @@ function _callVadLoop() {
 
   // While the voice plays it keeps the floor: a cough, a door or the room is not a person talking over it. Only with
   // barge-in on does a sustained sound well over the threshold (≈0.35 s) interrupt it.
-  const playing = !!_callCurrentSrc && !_callHold;
-  _callOverMs = playing && energy > _callThreshold * 1.6 + 5 ? _callOverMs + dt : 0;
+  // Talking over it counts while a sentence plays and in the gaps between sentences still to come.
+  const playing = (!!_callCurrentSrc || _callPlayQueue.length > 0 || _callSynthPending > 0) && !_callHold;
+  _callOverMs = playing && energy > _callThreshold * 1.3 + 3 ? _callOverMs + dt : 0;
+  if (_callHold) _callHoldQuiet(dt, energy > _callThreshold);
   if (playing) { if (_callOverMs >= 350) _callHoldStart(); }   // paused, then decided by the first words (chat-call-hold.js)
   else if (energy > _callThreshold) {
     // Speech detected
-    if (!_callSpeaking && (!_callProcessing || _callBargeIn || _callHold)) {
+    if (!_callSpeaking && !_callHold && (!_callProcessing || _callBargeIn)) {   // a hold records for itself
       _callSpeaking = true;
       _callVoicedMs = 0;
       _callStartRecording();
@@ -201,7 +206,6 @@ function _callStartRecording() {
   _callRecorder.onstop = () => {
     _callRecorder = null;
     if (_callVoicedMs < CALL_MIN_VOICED_MS) return;   // a blip, not speech: nothing is sent
-    if (_callHoldDiscard && Date.now() - _callHoldDiscard < 8000) { _callHoldDiscard = 0; return; }   // a hold heard no words in it
     if (chunks.length && _callActive) {
       const blob = new Blob(chunks, { type: mimeType });
       _callProcessAudio(blob);
@@ -216,7 +220,7 @@ function _callStopRecording() {
   }
 }
 
-async function _callProcessAudio(audioBlob) {
+async function _callProcessAudio(audioBlob, name = 'recording.webm') {
   if (!_callActive) return;
   _callProcessing++;
   _callSetStatus('Transcribing…', 'processing');
@@ -224,7 +228,7 @@ async function _callProcessAudio(audioBlob) {
   try {
     // 1. Transcribe audio → text
     const form = new FormData();
-    form.append('audio', audioBlob, 'recording.webm');
+    form.append('audio', audioBlob, name);
     const transcribeRes = await fetch('/api/chat/transcribe', {
       method: 'POST',
       body: form,
@@ -294,7 +298,8 @@ async function _callAnswer(userText) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: userText, voice: _callAssistant ? 'assistant' : 'call' }),   // the hub shapes a spoken answer
-      signal: _callAbort?.signal,
+      // Its own stop as well as the call's: words spoken over it end this answer and its turn (chat-call-hold.js).
+      signal: (_callAnswerCtrl = new AbortController(), AbortSignal.any ? AbortSignal.any([_callAbort.signal, _callAnswerCtrl.signal]) : _callAbort?.signal),
     });
 
     const reader  = chatRes.body.getReader();
