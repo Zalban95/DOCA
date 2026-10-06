@@ -25,8 +25,10 @@ keep how — so the next time is a recipe, not a round of thinking.
    Spotify address, a `netflix.com/watch/…` link, a file in the shared home.
    - On a computer with doca-client: its `apps_open` tool with the address.
    - On the agents' computer or the person's browser extension: open it in the browser.
-   - On the phone (DocaMobile) when it lends its apps: open the app and, to put it on a TV, press its **cast** button
-     and choose the TV — the app's own way, so it keeps working when the person picks it up.
+   - On the phone (DocaMobile, once its person allowed apps, screen and input in its Settings → Hands): `apps_open`
+     with the link, then `screen_read` — the screen as numbered elements — and `screen_press` the **cast** button and
+     the TV's name; the app's own way, so it keeps working when the person picks it up. `media_control` pauses,
+     resumes, skips and changes the volume of whatever plays there. Read again after each press: the screen changes.
 3. **From the hub**: play a file or a stream on the hub's own screen or speakers, or cast an address to a Chromecast
    on the network with a casting tool the hub has (`catt cast <url>` — propose installing it through System tools if
    it is missing; never with `shell` on your own).

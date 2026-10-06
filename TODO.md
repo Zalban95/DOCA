@@ -344,7 +344,7 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   a quick button or the wake word: the rest dims, the dots rise into the call's form; after `call.assistantIdleSec` of
   quiet they go back down and the screen listens for its name again (`ambient.listen`, experiment wakeWord). The
   shipped skill `play-and-cast` routes "put X on the TV" by what works (Home Assistant's media players, the device's
-  own app and its cast button, the hub), asks once and keeps a recipe. **Left (DocaMobile, docs/design/ambient.md):**
+  own app and its cast button, the hub), asks once and keeps a recipe. **Done (DocaMobile 1.0.7, hub 2.238.0):** the app shortcuts, the screen saver, screen_read/press and media_control, every hub address kept. **Was left (docs/design/ambient.md):**
   the `window.DocaDevice` bridge (the most used apps as shortcuts; open one), ambient as what the phone shows when
   docked or charging, and the device lent as an MCP family over the socket transport (open an app at a link, its
   screen read and tapped by accessibility, cast) — so "play it here" runs on the phone while the call stays.

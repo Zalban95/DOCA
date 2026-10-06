@@ -52,6 +52,15 @@ https://<host>:4242/api/v1
 - Send `X-Doca-Client: <name>/<version>` on every request. It is logged
   with the device and helps support.
 
+### 2.2 One hub, several addresses
+
+A hub may answer at its Tailscale name, its tailnet address and — when it listens on the local network (hub 2.233,
+`network.listen: lan`) — its LAN addresses. `GET /api/v1/hub/links` (any token) lists them best first as
+`{links: [{url, label}], mode}`. A client keeps them all with the one it paired at, and when a request to the
+current one cannot connect, tries the others in order and prefers the one that answered. The certificate is the same
+at every address, so a pinned certificate holds; the device token is the same too. A device that is outside the
+tailnet and the LAN still has no route — this lists addresses, it does not open any.
+
 ## 3. Versioning
 
 | Where | Meaning |
