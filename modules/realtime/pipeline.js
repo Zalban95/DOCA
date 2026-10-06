@@ -80,6 +80,7 @@ function connect({ silenceMs = 900, synth, transcribe } = {}) {
   /** Each sentence spoken in order, as soon as it is synthesized; an interruption drops what is left. */
   const speak = text => {
     const mine = epoch;
+    if (String(text).trim() === '✓') { em.emit('agent', '✓'); em.emit('turn'); return; }   // an action done, not narrated: shown, not spoken
     for (const s of sentences(text)) {
       const pcm = synth(s).catch(e => { em.emit('error', e.message); return null; });   // all start at once, play in order
       speech = speech.then(async () => {

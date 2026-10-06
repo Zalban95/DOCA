@@ -6,9 +6,9 @@
  * Settings → Voice → Live call draws them.
  */
 const sc = () => require('../settings-schema');
-const view = () => ({ calls: sc().value('assistant.calls'), effort: sc().value('assistant.effort'), style: sc().value('assistant.style'), provider: sc().value('assistant.provider'),
+const view = () => ({ reply: sc().value('assistant.reply'), calls: sc().value('assistant.calls'), effort: sc().value('assistant.effort'), style: sc().value('assistant.style'), provider: sc().value('assistant.provider'),
   model: sc().value('assistant.model'), defaults: { style: sc().leaf('assistant.style')?.default } });
-const KEYS = { effort: /^(off|low|medium|high|default)$/, provider: /^[\w.-]{0,60}$/, model: /^[\w.:/@-]{0,120}$/ };
+const KEYS = { reply: /^(act|brief|always)$/, effort: /^(off|low|medium|high|default)$/, provider: /^[\w.-]{0,60}$/, model: /^[\w.:/@-]{0,120}$/ };
 
 function mount(app) {
   app.get('/api/assistant', (_req, res) => res.json(view()));

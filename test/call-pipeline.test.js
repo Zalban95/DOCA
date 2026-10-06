@@ -105,3 +105,14 @@ test('/api/v1/call: the hive\'s own voice when no realtime model is on — same 
   const sid = got.json[0].sessionId;
   assert.ok(require('../modules/harness/memory').messages(sid).some(m => m.role === 'user' && m.content === 'Turn on the lights.'), 'a turn of the device\'s conversation');
 });
+
+test('an answer that is only "✓" is shown, not spoken', async () => {
+  const said = [], ev = [];
+  const p = pipeline.connect({ silenceMs: 200, transcribe: async () => '', synth: async s => { said.push(s); return Buffer.alloc(4800); } });
+  p.on('agent', t => ev.push(t)); p.on('turn', () => ev.push('turn'));
+  p.toolResult('p1', '✓');
+  await new Promise(r => setTimeout(r, 10));
+  assert.deepEqual(said, []);
+  assert.deepEqual(ev, ['✓', 'turn']);
+  p.close();
+});

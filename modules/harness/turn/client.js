@@ -26,6 +26,19 @@ const SHAPE = {
   call:    'Spoken aloud in a live call, a sentence at a time: a few short sentences, no markdown, no lists, no tables, no links or code read out — offer to put those in the chat.',
 };
 
+/** How a spoken turn answers (asked 2026-10-06): a clear action is done, not narrated; right before quick; hard work goes to agents. */
+function spokenRules() {
+  const reply = require('../../settings-schema').value('assistant.reply');
+  const act = reply === 'always' ? 'say in a few words what you did'
+    : reply === 'brief' ? 'confirm in two or three words'
+    : 'answer with only "✓" — it is not spoken; the face shows it';
+  return `A clear request with a result they will see or hear (a light, the TV, music, a blind): do it, then ${act}. `
+    + 'Answer in words when they asked a question, when something failed or could not be checked, or when the result is not visible to them. '
+    + 'Being right comes before being quick: when unsure of a name or a state, check it before acting, and never say something was done unless the tool said so. '
+    + 'A hard request (research, building, many steps): say in one sentence that you are on it, raise your effort with the `effort` tool and hand the work to '
+    + 'specialists or a work chat; its progress shows on their screens. You stay in the call.';
+}
+
 function shapeFor(client) {
   // Assistant mode (a call from the face) speaks in the owner's chosen style (assistant.style); a chat call is spoken.
   if (client.mode === 'assistant') return require('../../settings-schema').value('assistant.style') || SHAPE.call;
@@ -66,7 +79,7 @@ function clientBlock(client) {
       + `${client.user.role ? `, ${client.user.role} of this panel` : ''}. What changes on this machine in this turn is logged as theirs.`] : []),
     `Shape the answer for it: ${shapeFor(client)}`,
     ...(client.mode === 'call' || client.mode === 'assistant' ? ['They are listening: ask any question out loud, one at a time — not with `ask_device`. '
-      + 'An earlier answer of yours that ends in "—" was cut off there: they talked over it and did not hear the rest.'] : []),
+      + 'An earlier answer of yours that ends in "—" was cut off there: they talked over it and did not hear the rest.', spokenRules()] : []),
     ...(client.effort ? [require('./effort').line(client.effort)] : []),
     'Other devices of the same user may be reading this conversation too, so do not describe this one as if it were the only one.',
   ].join('\n');

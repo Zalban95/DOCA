@@ -312,6 +312,11 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   DOCA's agent or a CLI harness — through skills/doca-dev-cycle. Routine off by default. **Left:** measure a month of
   briefs (accepted / shipped); a Hugging Face "watch this repo" signal for named repos.
 
+- [ ] H10.5 Every page live on every screen (asked 2026-10-06): a page open on another device — Projects, Harness,
+  missions, the Files tab — updates at every change the agent or a person makes, without a reload, so work started by
+  voice is watched on whichever screen is near. The hub already pushes turn, mission and work-chat events; what is
+  missing is a per-page change feed (what changed, by whom) and each page redrawing the part that changed.
+
 **H11 · Coherence along the way** (§2.2)
 - [x] H11.1 (2.201.0) One chat component in three sizes; retire the floating chat's gateway/CLI paths if no
   non-built-in default harness is still a real case. Decided (2026-10-05, "open, interchangeable, cross-compatible"):
