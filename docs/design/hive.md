@@ -5,7 +5,7 @@ it becomes part of the hive** — its screen, its tools, its sensors and its per
 agents, governed by the same levels and approvals, and configured from one place. The platform lets a
 person do anything an agent can do anywhere else; the product sold later is a narrower edition of it
 (a lower level, chosen skills, chosen visible parts), and for now every capability other harnesses have
-is wanted here.
+is wanted here. The values and rules this design answers to are `CONSTITUTION.md`'s.
 
 This document is the plan to get there: where settings live (§1), the coherence review every part is
 held to (§2), what is missing against the other harnesses (§3), what "joining the hive" takes (§4), a

@@ -317,6 +317,17 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   voice is watched on whichever screen is near. The hub already pushes turn, mission and work-chat events; what is
   missing is a per-page change feed (what changed, by whom) and each page redrawing the part that changed.
 
+- [ ] H10.6 Limits that follow the work (asked 2026-10-06, CONSTITUTION P20): today a turn gets `maxSteps` 8 and the
+  model's thinking budget whatever it asks. Instead, before a turn a cheap triage (rules first, the assistant's quick
+  model when unsure) rates difficulty and urgency and sets that turn's effort and step budget; a turn reaching its
+  steps while still advancing (tools succeeding, plan steps closing) is extended up to a ceiling, and the trace says
+  so. Measured with the evaluation sets (cases tagged by difficulty): success, tokens and time against today's fixed
+  limits. An experiment first (`adaptiveLimits`).
+- [ ] H10.7 Retiring an old way (asked 2026-10-06, CONSTITUTION W14): count the use of each alternative path
+  (backends, readers, adapters) beside its replacement; once unused for 30 days and 50 runs of the replacement it is a
+  candidate, and the maintenance routine gives the admin a list (usage, a recommendation; keep / archive / delete).
+  Archive = removed from main, kept on an `archive/<name>` tag listed in `docs/archive.md`.
+
 **H11 · Coherence along the way** (§2.2)
 - [x] H11.1 (2.201.0) One chat component in three sizes; retire the floating chat's gateway/CLI paths if no
   non-built-in default harness is still a real case. Decided (2026-10-05, "open, interchangeable, cross-compatible"):
@@ -470,6 +481,8 @@ console* for the files, what is built and what is open.
 - Rename, licence and CLA — **deferred (2026-10-05): the repos are private; the MIT `LICENSE` was removed
   and `package.json` says `UNLICENSED` + `private` until the product is cooked enough to decide the name
   and the licence together.** → *One rename*, *Licence and per-customer builds*.
+  Open with it (2026-10-06, CONSTITUTION S5): whether a licensed reseller gets admin to personalise the dashboard
+  for their own customers (editions are the likely way); a customer's install never meets developer mode.
 - Export skills and specialists / send them to DOCA. → *To discuss next*.
 - Hosted DOCA (a machine per tenant, billing). → *Settled 2026-09-25*.
 

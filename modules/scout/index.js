@@ -111,9 +111,9 @@ function decline(id, reason, who) {
 
 const workMessage = (s, root) => `Implement scout suggestion ${s.id} in the repository at ${root} (its line in TODO.md: ${s.todo || s.title}).\n\n`
   + `What: ${s.title}. Function: ${s.role}${s.replaces ? `, replacing ${s.replaces}` : ''}. Candidate: ${s.candidate || '—'}.\nWhy: ${s.why}\nHow to try it: ${s.tryWith || '—'}\n\n`
-  + 'Follow the doca-dev-cycle skill (read it first) and the repository\'s AGENTS.md: a branch of its own, the change behind a setting or a '
+  + 'Follow the doca-dev-cycle skill (read it first), the repository\'s CONSTITUTION.md and AGENTS.md: a branch of its own, the change behind a setting or a '
   + 'catalog row so the old way stays available (interchangeable, local or remote), tests, the panel checked, one logical change per commit. '
-  + 'Ask the owner before merging, tagging or pushing. When done, tick its line in TODO.md and say what you ran and what it printed.';
+  + 'Ask before merging, tagging or pushing unless CONSTITUTION.md W2 lets your model release. When done, tick its line in TODO.md and say what you ran and what it printed.';
 
 /** Hand an accepted suggestion to the implementer: DOCA's own agent, or a CLI harness asked once in the repository. */
 async function work(id, person) {
