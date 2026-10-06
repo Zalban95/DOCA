@@ -34,6 +34,14 @@ test('MCP inventory reports the owning machine without credentials or starting a
   assert.match(await tools.call('mcp_status', {}, ['mcp_status']), /switched off/);
 });
 
+test('doca_clients says which device lends tools, and what kind (audit 2026-10-06, aw 20)', async () => {
+  const { device } = H.mkDevice('Pocket', 'phone', H.PHONE_CAPS);
+  const made = mcp.upsert({ label: 'Pocket hands', transport: 'http', url: 'https://example.invalid/mcp', origin: { kind: 'client', deviceId: device.id } });
+  store.writeJson('mcp-last-tools', { ...store.readJson('mcp-last-tools', {}), [made.id]: { names: ['screen_read', 'screen_press', 'apps_open'] } });
+  const out = await tools.call('doca_clients', {});
+  assert.match(out, new RegExp(`Pocket.*hands=${made.id} \\(stopped: screen, apps — mcp_connect starts it\\)`));
+});
+
 test('memory inventory filters and pages keys without touching their values or usage counters', async () => {
   memory.memWrite({ key: 'gpu', value: 'GPU first line\nHidden second line', category: 'Machine', pinned: true, locked: true });
   memory.memDispute('gpu', { note: 'Hardware changed' });

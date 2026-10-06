@@ -111,17 +111,23 @@ module.exports = [
   },
   {
     name: 'install_propose',
-    description: 'Ask the user to install something this panel already knows how to install: an Ollama model '
-      + '(kind "ollama-model", id is the model name), one of its inference services (kind "service", id is '
-      + 'whisper / kokoro / vllm / sdwebui / comfyui), an agent harness (kind "harness"), or an MCP server from the '
-      + 'panel\'s catalogue (kind "mcp": playwright — a browser you drive — or chrome-devtools), or a program from '
-      + 'Settings → System → System tools (kind "tool": e.g. android-sdk, android-emulator, jdk21, dotnet, ffmpeg, tailscale, '
-      + 'nvidia-ctk — each installed with its own command for this OS). This does NOT '
-      + 'install it — the user sees what it is and clicks, and the panel then runs its own installer with the '
-      + 'right image, ports and flags. Use it instead of stopping at "I cannot do that": when the thing in your '
-      + 'way is a missing tool, say which one and offer to fetch it. Do not install anything with `shell` '
-      + 'instead — a hand-written docker run gets the GPU flags and cache mounts wrong and leaves something that '
-      + 'looks installed and is not. Propose once, say what you proposed, then carry on without it.',
+    // Built from the catalogs it validates against, so it can never name what is missing or miss what was added
+    // (audit 2026-10-06, coh F8: roboflow and home-assistant were absent while the smart-home skill proposed one).
+    get description() {
+      const ids = fn => { try { return fn().join(', '); } catch { return ''; } };
+      return 'Ask the user to install something this panel already knows how to install: an Ollama model (kind "ollama-model", '
+        + 'id is the model name); an inference service (kind "service": '
+        + ids(() => require('../../services').INFERENCE_SERVICES.map(x => x.id)) + '); an agent harness (kind "harness": '
+        + ids(() => require('../catalog').KNOWN.filter(x => x.installCmd).map(x => x.id)) + '); an MCP server from the panel\'s '
+        + 'catalogue (kind "mcp": ' + ids(() => require('../../mcp/catalog').list().map(x => x.id)) + '); or a program from '
+        + 'Settings → System → System tools (kind "tool": ' + ids(() => require('../../system-tools-catalog').SYSTEM_TOOLS.map(x => x.id))
+        + ' — each installed with its own command for this OS). This does NOT '
+        + 'install it — the user sees what it is and clicks, and the panel then runs its own installer with the '
+        + 'right image, ports and flags. Use it instead of stopping at "I cannot do that": when the thing in your '
+        + 'way is a missing tool, say which one and offer to fetch it. Do not install anything with `shell` '
+        + 'instead — a hand-written docker run gets the GPU flags and cache mounts wrong and leaves something that '
+        + 'looks installed and is not. Propose once, say what you proposed, then carry on without it.';
+    },
     parameters: {
       type: 'object',
       properties: {
