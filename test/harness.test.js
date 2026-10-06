@@ -1145,7 +1145,8 @@ test('show_image puts a picture in the chat, keeps it with the transcript, and n
   assert.match(served.headers.get('content-security-policy'), /sandbox/, 'an SVG opened in its own tab must not run');
 
   const t = await get(`/api/harness/sessions/${session.id}`);
-  const row = t.body.messages.find(m => m.role === 'tool' && m.name === 'show_image');
+  // The old name runs as show_media (tools.ALIASES), and the row carries the name that ran.
+  const row = t.body.messages.find(m => m.role === 'tool' && m.name === 'show_media');
   assert.equal(row.images[0].name, image.image.name, 'a reloaded transcript draws it again');
 
   // The model reads the result line and nothing else about the picture.

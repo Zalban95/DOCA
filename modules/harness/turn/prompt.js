@@ -219,11 +219,10 @@ function disabledFor(profile, p, sessionId = null) {
   const own = Array.isArray(p.disabledTools) ? p.disabledTools : [];
   // The airlock (docs/design/airlock.md): while specialists are on, only an airlock definition reads the web.
   const registry = require('../../agents/registry');
-  const off = profile?.airlock || !registry.enabled() ? own : [...new Set([...own, ...registry.AIRLOCK_ONLY])];
-  // No profile (a work chat): every tool, minus the owner's switches and the airlock's. The
-  // Orchestrator's profile holds every kit, so it lands in the same place.
-  const all = tools.describe().map(t => t.name);
-  const notMine = othersComputers(all, profile, sessionId);
+  const all = tools.describe().map(t => t.name), notMine = othersComputers(all, profile, sessionId);
+  // No profile (a work chat): every tool, minus the owner's switches, the airlock's and the turn's shape (tool-shape.js).
+  const shaped = require('./tool-shape').off(profile, all, notMine).map(x => x.name);
+  const off = [...new Set([...own, ...shaped, ...(profile?.airlock || !registry.enabled() ? [] : registry.AIRLOCK_ONLY)])];
   if (!profile || (!Array.isArray(profile.tools) && !profile.kits)) return [...new Set([...off, ...notMine])];
   // By agent type: its kits (harness/kits.js) plus single tools. A tool added
   // to a kit later reaches every type holding the kit.

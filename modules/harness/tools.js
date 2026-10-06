@@ -59,12 +59,12 @@ function describe() {
  * nothing. That is also what makes rolling the feature back a settings change
  * rather than a release.
  */
+/** Old names that still run as their new ones, never offered (turn/tool-shape.js). */
+const ALIASES = { show_image: 'show_media' };
+
 function schemas(disabled = []) {
-  let off = require('../agents/registry').enabled()
-    ? disabled
-    : [...disabled, 'agent_dispatch', 'agent_results', 'agent_resume'];
-  if (!require('../computers/look').on()) off = [...off, 'computer_look'];
-  if (!require('../scout').on()) off = [...off, 'scout'];   // an experiment (modules/scout)   // an experiment: absent while off (computers/look.js)
+  // What a switch has off is off for every caller, with or without a profile (turn/tool-shape.js says why).
+  const off = [...disabled, ...require('./turn/tool-shape').switches().map(x => x.name)];
   // Each tool's accepted note from this install is added to its description (tool-notes.js).
   return require('./tool-notes').annotate([
     ...TOOLS
@@ -81,6 +81,7 @@ function schemas(disabled = []) {
  * @returns {Promise<string>}
  */
 async function call(name, args, disabled = [], ctx = {}) {
+  name = ALIASES[name] || name;   // an old name: old transcripts and recipes still run
   if (disabled.includes(name)) return `Error: the "${name}" tool is switched off for this harness.`;
   if (ctx.signal?.aborted) return 'Not run: the turn was stopped before this call.';
   const isMcp = mcp.isMcpTool(name);
@@ -133,4 +134,4 @@ function audit(name, args, ctx, out) {
   } catch { /* the audit is a record, not a gate */ }
 }
 
-module.exports = { TOOLS, describe, schemas, call, clip, READS, isRead };
+module.exports = { ALIASES, TOOLS, describe, schemas, call, clip, READS, isRead };

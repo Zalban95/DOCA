@@ -8,15 +8,21 @@
 module.exports = [
   {
     name: 'computer',
-    description: 'Make a computer whenever the work needs a real environment: testing something risky, using a site as a person '
-      + 'would, building or running what should not touch this machine, or recording a demo. A computer is a Linux desktop in a '
-      + 'container with a shell, files, a screen, a real Chromium and screen recording. create returns an id: its tools '
-      + '(mcp__computer-<id>__*) are yours from your next step, or pass it as computer: to agent_dispatch (the tester is made for '
-      + 'this). It stops by itself a few minutes after the mission it was lent to ends, and one you made is removed some days after '
-      + 'it stopped unless a person pins it; stop it yourself when you are done with it. list shows them; stop keeps its files, '
-      + 'remove deletes it with its files. put copies an attachment into its work folder (attachment, path); get keeps a file '
-      + 'from it as an attachment (path), to show or send on. A person watches or takes over from the Computers tab; while '
-      + 'they drive, your mouse, keys and browser clicks wait.',
+    // Built from the switches (audit 2026-10-06, aw 4): who works inside one, and the dispatch clause only while
+    // specialists are on — the Orchestrator holds no computer's tools (turn/prompt.js othersComputers).
+    get description() {
+      const dispatch = require('../../agents/registry').enabled();
+      return 'Make a computer whenever the work needs a real environment: testing something risky, using a site as a person '
+        + 'would, building or running what should not touch this machine, or recording a demo. A computer is a Linux desktop in a '
+        + 'container with a shell, files, a screen, a real Chromium and screen recording. Work chats and specialists work inside one: '
+        + 'create returns an id, and its tools (mcp__computer-<id>__*) are the maker\'s from its next step'
+        + (dispatch ? ', or pass it as computer: to agent_dispatch (the tester is made for this)' : '') + '; the Orchestrator makes one only '
+        + 'to hand on. It stops by itself a few minutes after the mission it was lent to ends, and one you made is removed some days after '
+        + 'it stopped unless a person pins it; stop it yourself when you are done with it. list shows them; stop keeps its files, '
+        + 'remove deletes it with its files. put copies an attachment into its work folder (attachment, path); get keeps a file '
+        + 'from it as an attachment (path), to show or send on. A person watches or takes over from the Computers tab; while '
+        + 'they drive, your mouse, keys and browser clicks wait.';
+    },
     parameters: {
       type: 'object',
       properties: {
@@ -35,7 +41,8 @@ module.exports = [
       if (action === 'list') { const l = await computers.list(); return l.length ? l.map(line).join('\n') : 'No computers. create makes one.'; }
       if (action === 'create') {
         const c = await computers.create({ name, purpose, by: ctx.sessionId || null, auto: true });
-        return `Computer ${c.id} "${c.name}" is up. Its tools (mcp__computer-${c.id}__*) are yours from your next step; or send a specialist with agent_dispatch { agent: "tester", computer: "${c.id}", task: … }.\n${line(c)}`;
+        const send = require('../../agents/registry').enabled() ? `; or send a specialist with agent_dispatch { agent: "tester", computer: "${c.id}", task: … }` : '';
+        return `Computer ${c.id} "${c.name}" is up. Its tools (mcp__computer-${c.id}__*) are yours from your next step${send}.\n${line(c)}`;
       }
       if (!id) return 'Error: say which computer (id).';
       if (action === 'start') return `Started.\n${line(await computers.start(id))}`;

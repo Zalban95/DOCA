@@ -19,7 +19,7 @@ const failures = require('./failures');
  */
 async function runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced }) {
   for (const tc of reply.tool_calls) {
-    const name = tc.function?.name || '(unnamed)';
+    const name = require('../tools').ALIASES[tc.function?.name] || tc.function?.name || '(unnamed)';   // an old name runs as its new one
     // Stop means the next call too: the rest of this step's calls get a result row (so no call is
     // left without its answer) and do not run (audit 2026-10-04).
     if (signal?.aborted) {
