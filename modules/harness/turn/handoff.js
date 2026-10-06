@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * The Orchestrator stays free for the person, by code (decided with Al
+ * The Orchestrator stays free for the person, by code (decided with the owner
  * 2026-10-04: "a few work steps, then the rest to a work chat"). Its prompt
  * has long said to hand long jobs to a work chat, and twice in the record it
  * did a 10–28-step job in its own turn while the person waited; a rule the

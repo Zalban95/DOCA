@@ -7,7 +7,7 @@
  *   1. The rules — charter, protected files, NEVER tools — are checked by their
  *      own modules before this is asked, and nothing here can override them.
  *   2. The ceiling: the person's level. An agent acts with the level of the
- *      person it acts for (decided with Al 2026-10-04: "agents inherit the
+ *      person it acts for (decided with the owner 2026-10-04: "agents inherit the
  *      permissions from the user's level"); a specialist is that, narrowed by
  *      its definition (which tools it is offered at all).
  *   3. Exceptions: a grant for the person, the specialist type, its mission or

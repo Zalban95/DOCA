@@ -24,7 +24,7 @@ async function hcSkillDraft() {
   document.getElementById('hc-learn-body').innerHTML = `
     <div class="input-label">Name</div><input class="input" id="hc-learn-name" value="${escHtml(d.name)}">
     <div class="input-label" style="margin-top:8px">When to use it</div><input class="input" id="hc-learn-desc" value="${escHtml(d.description)}">
-    <div class="input-label" style="margin-top:8px">Instructions</div><textarea class="input" id="hc-learn-text" rows="16" style="font-family:var(--mono, monospace);font-size:12px">${escHtml(d.body)}</textarea>
+    <div class="input-label" style="margin-top:8px">Instructions</div><textarea class="input" id="hc-learn-text" rows="16" style="font-family:var(--font-mono);font-size:12px">${escHtml(d.body)}</textarea>
     <div class="toolbar" style="margin-top:10px;gap:8px"><button class="btn btn-sm btn-blue" onclick="hcSkillSave()">Save the skill</button><span class="status-line" id="hc-learn-status"></span></div>`;
 }
 

@@ -2,7 +2,7 @@
 
 /**
  * A message to a conversation that is working is never refused (decided with
- * Al 2026-10-04: "I don't have to wait for a running process to be able to
+ * the owner 2026-10-04: "I don't have to wait for a running process to be able to
  * communicate with the orchestrator").
  *
  * It waits here instead, and goes in one of two ways:

@@ -14,7 +14,7 @@ const { CONFIG_PATH } = require('../modules/paths');
 
 let imap, smtp, modelServer, script = [], uid = 0;
 const box = [], sent = [];
-const mail = ({ from = 'Al <al@home.test>', subject = 'hello', body = 'hi', auth = 'mx.hive.test; dmarc=pass header.from=home.test', extra = '' }) => {
+const mail = ({ from = 'Sam <sam@home.test>', subject = 'hello', body = 'hi', auth = 'mx.hive.test; dmarc=pass header.from=home.test', extra = '' }) => {
   box.push({ uid: ++uid, seen: false, raw: `${auth ? `Authentication-Results: ${auth}\r\n` : ''}${extra}From: ${from}\r\nTo: doca@hive.test\r\nSubject: ${subject}\r\nMessage-ID: <m${uid}@home.test>\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}\r\n` });
 };
 const lastSent = () => sent.at(-1);
@@ -98,7 +98,7 @@ test('a mail its server did not vouch for is not answered — a forged From is n
   const code = (await H.api(null, 'POST', '/api/channels/mail/link')).body.code;
   mail({ subject: `link ${code}`, auth: null });
   mail({ subject: `link ${code}`, auth: 'evil.example; dmarc=pass header.from=home.test' });   // a header the sender wrote itself
-  mail({ from: 'Al <al@home.test>', subject: `link ${code}`, auth: 'mx.hive.test; dkim=pass header.d=other.test; dmarc=fail' });
+  mail({ from: 'Sam <sam@home.test>', subject: `link ${code}`, auth: 'mx.hive.test; dkim=pass header.d=other.test; dmarc=fail' });
   await poll();
   assert.equal(sent.length, 0);
   assert.match(require('../modules/channels/mail').status().error, /did not vouch/);
@@ -110,11 +110,11 @@ test('a vouched mail with the code links the address; a mail is then a turn, ans
   mail({ subject: `link ${code}`, body: '' });
   await poll();
   const linked = await waitSent(1);
-  assert.equal(linked.rcpt, 'al@home.test');
+  assert.equal(linked.rcpt, 'sam@home.test');
   assert.match(textOf(linked.raw), /^Linked to owner/);
   let prompt = '';
   script = [{ text: 'Four containers are running.', seen: b => { prompt = b.messages.find(m => m.role === 'system').content; } }];
-  mail({ subject: 'Containers?', body: 'How many containers are running?\n\nOn Mon, Al wrote:\n> an older question' });
+  mail({ subject: 'Containers?', body: 'How many containers are running?\n\nOn Mon, Sam wrote:\n> an older question' });
   await poll();
   const answer = await waitSent(2);
   assert.equal(textOf(answer.raw), 'Four containers are running.');
@@ -122,7 +122,7 @@ test('a vouched mail with the code links the address; a mail is then a turn, ans
   assert.match(answer.raw, /^In-Reply-To: <m\d+@home\.test>$/m, 'in the thread');
   assert.match(answer.raw, /^Auto-Submitted: auto-replied$/m);
   assert.match(prompt, /mail/, 'the agent is told it is a mail');
-  const turnText = JSON.stringify(require('../modules/harness/memory').messages(require('../modules/channels/mail').links.chat('al@home.test').sessionId));
+  const turnText = JSON.stringify(require('../modules/harness/memory').messages(require('../modules/channels/mail').links.chat('sam@home.test').sessionId));
   assert.ok(!turnText.includes('an older question'), 'the quoted history is not part of the message');
 });
 

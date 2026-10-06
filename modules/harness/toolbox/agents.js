@@ -92,7 +92,7 @@ module.exports = [
     },
   },
   {
-    // Decided with Al 2026-10-04: users and higher agents may give a specialist more than its definition,
+    // Decided with the owner 2026-10-04: users and higher agents may give a specialist more than its definition,
     // within their own permissions (auth/permits.js mayGrant), recorded in grants and revocable.
     name: 'permission_grant',
     description: 'Give a mission you dispatched one permission, for that mission only: a tool beyond its definition '

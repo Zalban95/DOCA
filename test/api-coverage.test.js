@@ -47,7 +47,7 @@ test('recipes: listed and run by a device as its person', async () => {
   const list = await v1(phone.token, 'GET', '/recipes');
   assert.equal(list.status, 200);
   assert.ok(list.body.recipes.some(r => r.id === 'say-hi'));
-  const run = await v1(phone.token, 'POST', '/recipes/say-hi/run', { values: { who: 'Al' } });
+  const run = await v1(phone.token, 'POST', '/recipes/say-hi/run', { values: { who: 'Sam' } });
   assert.equal(run.status, 200, JSON.stringify(run.body));
   assert.equal(typeof run.body.ok, 'boolean');
   assert.equal((await v1(phone.token, 'POST', '/recipes/nope/run', {})).status, 404);

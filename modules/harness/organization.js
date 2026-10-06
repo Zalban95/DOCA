@@ -182,7 +182,7 @@ function start(id, message, from) {
 }
 
 /**
- * Approving a plan is the go-ahead, and starts the work (decided with Al
+ * Approving a plan is the go-ahead, and starts the work (decided with the owner
  * 2026-10-04, replacing "approval records a decision, never launches work"
  * from 2026-09-26): the conversation that proposed it is sent "carry it out"
  * as the person who clicked. A conversation already busy with a turn of its

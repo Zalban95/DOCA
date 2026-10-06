@@ -9,7 +9,7 @@ async function releasingCard(panel) {
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Models that may release DOCA without asking — merge, tag, push and switch this panel to the new
       version — whether they work through DOCA's own agent, the model scout or a coding tool on this repository. Any other model asks first.
       One family per line, optionally with a minimum version. Empty: everyone asks.</p>
-    <textarea class="input" id="rel-rules" rows="4" style="width:100%;font-family:var(--mono)">${escHtml(r.rules.join('\n'))}</textarea>
+    <textarea class="input" id="rel-rules" rows="4" style="width:100%;font-family:var(--font-mono)">${escHtml(r.rules.join('\n'))}</textarea>
     <div class="toolbar" style="gap:6px;margin-top:6px;flex-wrap:wrap">
       <button class="btn btn-sm btn-blue" onclick="releasingSave()">Save</button>
       <input class="input" id="rel-try" placeholder="a model id, e.g. claude-opus-5-5" style="width:240px">

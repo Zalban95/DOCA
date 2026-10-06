@@ -61,7 +61,7 @@ test('who counts as "at the machine": loopback, a loopback host, and nothing for
   assert.equal(at('::1', '[::1]:4242'), true);
   assert.equal(at('::ffff:127.0.0.1', 'localhost:4242'), true);
   assert.equal(at('100.102.108.110', '100.115.89.4:4242'), false, 'a tailnet device');
-  assert.equal(at('127.0.0.1', 'al-office-desk.tail08f157.ts.net'), false, 'tailscale serve: loopback, but asked for the ts.net name');
+  assert.equal(at('127.0.0.1', 'hub.example-tailnet.ts.net'), false, 'tailscale serve: loopback, but asked for the ts.net name');
   assert.equal(at('127.0.0.1', 'localhost:4242', { 'x-forwarded-for': '100.1.2.3' }), false, 'forwarded by a proxy');
   assert.equal(at('127.0.0.1', 'localhost:4242', { 'tailscale-user-login': 'x@y' }), false);
 });

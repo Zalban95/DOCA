@@ -78,7 +78,7 @@ header {
 .nav-tabs::-webkit-scrollbar { display: none; }
 
 .nav-tab {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-ui);
   font-size: 10px; font-weight: 500;
   letter-spacing: 0.12em; text-transform: uppercase;
   padding: 0 14px; border: none; background: transparent;
@@ -285,7 +285,7 @@ header {
 .nav-group.open > .nav-group-btn::after { content: ' ›'; }
 .nav-group-menu { position: fixed; bottom: calc(var(--mobile-nav-h, 54px) + 6px); z-index: 1200; display: flex; flex-direction: column;
   background: var(--surface, #111); border: 1px solid var(--border2); box-shadow: 0 8px 24px rgba(0,0,0,.4); min-width: 150px; }
-.nav-group-menu button { font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: left; padding: 12px 14px; border: none;
+.nav-group-menu button { font-family: var(--font-ui); font-size: 12px; text-align: left; padding: 12px 14px; border: none;
   background: transparent; color: var(--text); cursor: pointer; }
 .nav-group-menu button.active { color: var(--accent); }
 
@@ -295,14 +295,14 @@ body.solo .app-body { padding-bottom: 0; }
 .solo-bar { position: fixed; top: 10px; right: 12px; z-index: 1300; display: flex; gap: 6px; align-items: center; padding: 6px 8px;
   background: color-mix(in srgb, var(--surface) 85%, transparent); border: 1px solid var(--border2); opacity: 0; transition: opacity .4s; pointer-events: none; }
 .solo-bar.awake { opacity: 1; pointer-events: auto; }
-.solo-bar span { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.solo-bar span { font-family: var(--font-ui); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .solo-open { flex-shrink: 0; }
 
 /* A <select>'s choices on a phone, drawn by the panel (js/lib/select-sheet.js). */
 .select-sheet { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
 .select-sheet-box { width: 100%; max-width: 560px; max-height: 70vh; overflow-y: auto; background: var(--surface); border-top: 1px solid var(--border2);
   padding: 6px 0 calc(10px + env(safe-area-inset-bottom, 0px)); }
-.select-sheet-title, .select-sheet-group { padding: 10px 16px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.select-sheet-title, .select-sheet-group { padding: 10px 16px 6px; font-family: var(--font-ui); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .select-sheet-item { display: block; width: 100%; text-align: left; padding: 13px 16px; border: none; background: transparent; color: var(--text);
   font: inherit; font-size: 14px; white-space: normal; line-height: 1.35; cursor: pointer; }
 .select-sheet-item.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }

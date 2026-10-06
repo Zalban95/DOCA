@@ -3,7 +3,7 @@
 /**
  * The guards: small models (and rules) that read what comes in from outside,
  * and what the scout reports back, and say whether it tries to instruct an AI.
- * docs/design/airlock.md; decided with Al 2026-09-27.
+ * docs/design/airlock.md; decided with the owner 2026-09-27.
  *
  * Several run at once and a piece of text is **clean only if every enabled
  * guard says so**: blocked when any guard scores it at or above its `blockAt`,
