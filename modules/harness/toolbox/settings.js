@@ -145,4 +145,31 @@ module.exports = [
         + 'Tell them what you proposed and why, then carry on without it.';
     },
   },
+  {
+    name: 'mcp_draft',
+    description: 'Prepare an MCP server that is not in the catalogue, for a person to add: its name, how it runs (a command with its '
+      + 'arguments, or an http address), the names of the secrets it needs, and which machine it belongs on. Nothing starts and nothing is '
+      + 'saved as a server: the draft waits in the MCP tab, where "Open in the form" fills the add-server form for them to read, paste the '
+      + 'secrets and Save. Find how the server runs first (research_docs on its own page); for one in the catalogue use install_propose.',
+    parameters: { type: 'object', properties: {
+      name: { type: 'string', description: 'A short name, e.g. "fusion360".' },
+      transport: { type: 'string', enum: ['stdio', 'http'], description: 'stdio: a command DOCA runs; http: an address the server listens on.' },
+      command: { type: 'string', description: 'For stdio: the program, e.g. npx, uvx, python.' },
+      args: { type: 'array', items: { type: 'string' }, description: 'For stdio: its arguments, one per item.' },
+      url: { type: 'string', description: 'For http: the address, e.g. http://localhost:8123/mcp.' },
+      env: { type: 'object', description: 'Environment it needs: a secret by name with an empty value (the person fills it), a setting with its value.' },
+      headers: { type: 'array', items: { type: 'string' }, description: 'For http: header names it needs (Authorization …); never their values.' },
+      where: { type: 'string', description: 'Which machine it belongs on: "this hub", or a paired device by name when it drives a program there (Fusion 360 on a desktop).' },
+      why: { type: 'string', description: 'One sentence: what it gives the agents.' },
+      docs: { type: 'string', description: 'The page it is documented on.' },
+    }, required: ['name', 'why'] },
+    run: (args, ctx = {}) => {
+      let d;
+      try { d = require('../../mcp/drafts').draft(args || {}, { sessionId: ctx.sessionId }); } catch (e) { return `Error: ${e.message}`; }
+      const secrets = [...Object.entries(d.env).filter(([, v]) => v === '').map(([k]) => k), ...d.headers];
+      return `Drafted "${d.name}" (${d.transport === 'http' ? d.url : [d.command, ...d.args].join(' ')}) for ${d.where}. It waits in the MCP tab under `
+        + `"Prepared by the agent": the person opens it in the form, ${secrets.length ? `fills ${secrets.join(', ')}, ` : ''}and saves — nothing runs before that. `
+        + 'Tell them where it is and what to paste.';
+    },
+  },
 ];

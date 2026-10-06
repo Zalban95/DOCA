@@ -21,6 +21,7 @@ async function mcpLoad() {
         : '<div class="placeholder">No MCP servers yet — add one below.</div>');
     _mcpExportRender(servers.length);
     mcpCatalogRender();   // the servers the panel knows how to add (mcp-catalog.js)
+    if (typeof mcpDraftsRender === 'function') mcpDraftsRender();   // and the ones the agent prepared (mcp-drafts.js)
     if (_mcpOpenLog) mcpShowLog(_mcpOpenLog, true);
   } catch (e) {
     list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;

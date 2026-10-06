@@ -32,7 +32,9 @@ async function connectorsLoad() {
         <button class="btn btn-sm btn-blue" onclick="connectorsConnect(${jsArg(c.id)})" ${c.configured ? '' : 'disabled'}>${c.connected ? 'Reconnect' : 'Connect'}</button>
         ${c.connected ? `<button class="btn btn-sm btn-red" onclick="connectorsDisconnect(${jsArg(c.id)})">Disconnect</button>` : ''}</div></div>`).join('')}
     <div class="card"><button class="btn btn-sm" onclick="connectorsAdd()">＋ Another OAuth 2.0 service</button></div>
+    <div class="card" id="service-keys-card"></div>
     <div class="card" id="logins-card"></div>`;
+  if (typeof serviceKeysRender === 'function') serviceKeysRender();
   loginsRender();
   for (const c of d.connectors) { const el = panel.querySelector(`[data-conn="${CSS.escape(c.id)}"] [data-f="clientId"]`); if (el && c.configured) el.placeholder = 'client id saved — type to replace'; }
 }

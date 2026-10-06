@@ -30,26 +30,40 @@ module.exports = [
   },
   {
     name: 'http_fetch',
-    description: 'Fetch a URL and return the response body as text. Use it for APIs, health checks and endpoints '
-      + 'you control. For documentation written by other people prefer research_docs, which reads it out of '
-      + 'context so it cannot address you.',
+    get description() {
+      return 'Fetch a URL and return the response body as text. Use it for APIs, health checks and endpoints '
+        + 'you control. For documentation written by other people prefer research_docs, which reads it out of '
+        + 'context so it cannot address you. A service that needs a key: name the key and the hub adds it — only to that key\'s own address.'
+        + require('../../service-keys').line();
+    },
     parameters: {
       type: 'object',
       properties: {
-        url:    { type: 'string', description: 'The absolute URL to fetch.' },
-        method: { type: 'string', description: 'HTTP method (default GET).' },
-        body:   { type: 'string', description: 'Optional request body.' },
+        url:     { type: 'string', description: 'The absolute URL to fetch.' },
+        method:  { type: 'string', description: 'HTTP method (default GET).' },
+        body:    { type: 'string', description: 'Optional request body (sent as JSON unless headers say otherwise).' },
+        headers: { type: 'object', description: 'Optional extra headers (never a key: name it with key instead).' },
+        key:     { type: 'string', description: 'The name of a key for this service (Settings → Connectors → Keys for services).' },
       },
       required: ['url'],
     },
-    run: async ({ url, method, body }) => {
+    run: async ({ url, method, body, headers, key }, ctx = {}) => {
+      let h = { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(headers && typeof headers === 'object' ? headers : {}) };
+      let secret = null;
+      if (key) {
+        // No person on the turn (a test, a pre-accounts call) is not narrowed, as everywhere (auth/permits.js).
+        const host = !ctx.user?.id || require('../../auth/rights').can(ctx.user.role, 'host');
+        try { ({ url, headers: h, key: secret } = require('../../service-keys').apply(key, url, h, { host })); }
+        catch (e) { return `Error: ${e.message}`; }
+      }
       const r = await fetch(url, {
         method:  (method || 'GET').toUpperCase(),
         body:    body || undefined,
-        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        headers: h,
         signal:  AbortSignal.timeout(20000),
       });
-      return clip(`HTTP ${r.status} ${r.statusText}\n\n${await r.text()}`);
+      const out = `HTTP ${r.status} ${r.statusText}\n\n${await r.text()}`;
+      return clip(secret ? require('../../service-keys').scrub(out, secret) : out);
     },
   },
   {
