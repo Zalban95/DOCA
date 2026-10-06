@@ -357,7 +357,7 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   job DOCA did not make reads as not DOCA's. Seen: one 10-minute job (19:52, 2.9k-token prompt) no DOCA run matches.
   **Done (2.241.0):** model-servers.js + harness/inflight.js; the sidebar's ◆ Model servers. Found on the way: the
   `vllm` provider's preset address (127.0.0.1:8000) is the Whisper server here — it shows as answering with 611 models.
-- [ ] H10.14 Stop means stop, visibly (audit 2026-10-06). A visible Stop on every running thing (a specialist, a work
+- [x] H10.14 Stop means stop, visibly (audit 2026-10-06). **Done (2.242.0):** ■ Stop on missions and on automatic turns (listed with why), a stopped specialist leaves its work chat waiting, a stopped work chat stops its specialists, archiving is quiet. A visible Stop on every running thing (a specialist, a work
   chat, an automatic turn); stopping a specialist stops its line of work — the work chat that sent it is told and
   waits, it is not woken to carry on (`supervisor.missionEnded` wakes it today). Closing or archiving finished work
   triggers nothing: no "finished" re-sent to devices (`missions.archive` → `announce` today), no computer timer
