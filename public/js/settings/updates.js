@@ -255,6 +255,7 @@ async function versionsLoad() {
       <label class="input-label" for="versions-select" style="display:block">Version</label>
       <div style="display:flex;gap:8px;align-items:center">
         <select class="input flex1" id="versions-select" style="min-width:0">${opts}</select>
+        <button class="btn btn-xs" onclick="versionsNotes()" title="What the selected version added or fixed">ⓘ</button>
         <button class="btn btn-xs btn-teal" id="versions-use-btn" onclick="versionsUse()" title="Switch to the selected version">Switch</button>
       </div>
     </div>

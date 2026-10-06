@@ -19,8 +19,8 @@ async function hostCapsLoad(fresh = false) {
   }
   let c;
   try { c = await apiFetch(`/api/host/capabilities${fresh ? '?fresh=1' : ''}`); }
-  catch (e) { card.innerHTML = `<div class="card-title">This host</div><div class="placeholder">${escHtml(e.message)}</div>`; return; }
-  card.innerHTML = `<div class="card-title" style="display:flex;align-items:center;gap:8px">This host
+  catch (e) { card.innerHTML = `<div class="card-title">The hub</div><div class="placeholder">${escHtml(e.message)}</div>`; return; }
+  card.innerHTML = `<div class="card-title" style="display:flex;align-items:center;gap:8px">The hub — this machine
       <button class="btn btn-xs" onclick="hostCapsLoad(true)" title="Look again">↺</button></div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">${escHtml(`${c.os.name} ${c.os.release} · ${c.os.arch} · ${c.os.cpus} CPUs · ${c.os.memoryGB} GB · Node ${c.node}`)}</p>
     ${_HOST_ROWS.map(([k, label]) => { const r = c[k] || {};

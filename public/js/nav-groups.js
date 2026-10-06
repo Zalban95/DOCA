@@ -8,7 +8,7 @@ const NAV_GROUPS = [
   { id: 'controls', label: 'Controls', icon: '▶', tabs: ['controls'] },
   { id: 'agents', label: 'Agents', icon: '⬡', tabs: ['harness', 'workstream', 'projects', 'archive'] },
   { id: 'machines', label: 'Machines', icon: '🖵', tabs: ['live', 'computers', 'vms', 'docker'] },
-  { id: 'host', label: 'This host', short: 'Host', icon: '⌨', tabs: ['files', 'terminal', 'logs'] },
+  { id: 'host', label: 'Hub', icon: '⌨', tabs: ['files', 'terminal', 'logs'] },
   { id: 'intelligence', label: 'Models & tools', short: 'Models', icon: '◆', tabs: ['models', 'mcp'] },
   { id: 'settings', label: 'Settings', icon: '⚙', tabs: ['settings'] },
 ];

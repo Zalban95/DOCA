@@ -52,3 +52,20 @@ function settingsWaitForIdle(el, onGone) {
   };
   tick();
 }
+
+/** ⓘ beside the versions: what the selected one added or fixed, from its own commits (modules/release-notes.js). */
+async function versionsNotes() {
+  const tag = document.getElementById('versions-select')?.value;
+  if (!tag || !/^v\d/.test(tag)) return appAlert('Pick a released version to read what it changed.');
+  const overlay = document.getElementById('agent-doc-overlay'), body = document.getElementById('agent-doc-body');
+  if (!overlay || !body) return;
+  document.getElementById('agent-doc-title').textContent = `What ${tag} added or fixed`;
+  if (typeof _agentDocActions === 'function') _agentDocActions({});
+  overlay.dataset.name = `notes:${tag}`;
+  overlay.style.display = 'flex';
+  overlay._release?.();
+  overlay._release = overlayBack(() => { overlay._release = null; overlay.style.display = 'none'; });
+  body.textContent = 'Reading…';
+  try { const n = await apiFetch(`/api/versions/${encodeURIComponent(tag)}/notes`); body.textContent = ''; mdInto(body, n.markdown || 'Nothing recorded.'); }
+  catch (e) { body.textContent = e.message; }
+}
