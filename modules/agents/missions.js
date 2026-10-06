@@ -85,7 +85,7 @@ function archive(id, { on = true } = {}) {
       + 'restart the panel, which pauses it.'), { status: 409 });
 
   const next = patch(id, { archivedAt: on ? new Date().toISOString() : null });
-  announce(next);
+  announce(next, { quiet: true });   // finished work put away triggers nothing: no "finished" again, no computer timer
   return next;
 }
 
@@ -204,9 +204,9 @@ function setPlan(id, { set, tick } = {}) {
  * `ephemeral` for the step ticks, durable for the state changes, so the queue a
  * sleeping watch drains holds "started" and "done" and not four hundred steps.
  */
-function announce(row, { ephemeral = false } = {}) {
+function announce(row, { ephemeral = false, quiet = false } = {}) {   // quiet: put away — lists update, nobody is notified
   if (!row) return;
-  if (!ephemeral && row.state !== 'running') require('../computers/lifecycle').missionEnded(row.id);   // its computer stops (H13.2)
+  if (!ephemeral && !quiet && row.state !== 'running') require('../computers/lifecycle').missionEnded(row.id);   // its computer stops (H13.2)
   require('../live').changed('missions', row.id, row.state, { sessionId: row.sessionId || null });   // every screen showing missions redraws (H10.5)
   try {
     const devices = require('../api-v1/devices');
@@ -229,7 +229,7 @@ function announce(row, { ephemeral = false } = {}) {
     const access = require('../harness/session-access');
     for (const d of devices.list()) {
       if (!access.hears(d, row.sessionId || row.by)) continue;   // the mission's person, and hosts
-      bus.publish(d.id, 'agent.mission', ephemeral ? payload : { ...payload, ...require('../presence').quietFlag(d.userId) }, ephemeral ? { cls: 'ephemeral' } : undefined);   // its owner at the panel: update, do not notify
+      bus.publish(d.id, 'agent.mission', ephemeral ? payload : { ...payload, ...(quiet ? { quiet: true } : require('../presence').quietFlag(d.userId)) }, ephemeral ? { cls: 'ephemeral' } : undefined);   // its owner at the panel: update, do not notify
     }
   } catch { /* a mission's bookkeeping must never break the mission */ }
 }

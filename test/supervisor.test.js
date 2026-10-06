@@ -301,3 +301,46 @@ test('a mission recorded after its turn ended still wakes its lead — once (aud
   assert.equal(supervisor.missionEnded(org.session(spec.id)), 'already woken', 'a second path does not wake it twice');
   store.writeJson('agents/missions', { missions: [] });
 });
+
+test('stop means stop: a specialist a person stopped leaves its work chat waiting, and the Orchestrator is not woken after its own Stop', async () => {
+  fresh();
+  const id = job('Lead stopped');
+  const spec = memory.createSession('Specialist', { activate: false, kind: 'specialist', parentId: id });
+  store.writeJson('agents/missions', { missions: [{ id: 'msn_s', agentId: 'blender', label: 'Blender', by: id, state: 'cancelled', sessionId: spec.id }] });
+  assert.equal(supervisor.decide(spec.id, { stopped: true, steps: 1 }), 'stopped');
+  assert.equal(jobOf(id).state, 'stopped', 'its work chat waits for the person');
+  assert.match(jobOf(id).stoppedWhy, /Blender was stopped by a person/);
+  await settle();
+  assert.equal(woken.length, 0, 'nothing carried on');
+  org.report(job('Done job'), 'done', 'all done');
+  assert.equal(supervisor.decide(ceo(), { stopped: true }), 'stopped', 'the Orchestrator\'s Stop is not followed by a wake for its reports');
+  await settle();
+  assert.equal(woken.length, 0);
+  store.writeJson('agents/missions', { missions: [] });
+});
+
+test('a work chat a person stopped stops the specialists it sent', async () => {
+  fresh();
+  const id = job('Stops its line');
+  const spec = memory.createSession('Specialist', { activate: false, kind: 'specialist', parentId: id });
+  store.writeJson('agents/missions', { missions: [{ id: 'msn_r', agentId: 'qwen', label: 'Qwen', by: id, state: 'running', sessionId: spec.id }] });
+  const ctrl = new AbortController();
+  lifecycle.running.set(spec.id, ctrl);
+  supervisor.decide(id, { stopped: true });
+  assert.equal(ctrl.signal.aborted, true, 'its specialist was stopped too');
+  lifecycle.running.delete(spec.id);
+  store.writeJson('agents/missions', { missions: [] });
+});
+
+test('putting finished work away notifies nobody and starts nothing', async () => {
+  const missions = require('../modules/agents/missions');
+  store.writeJson('agents/missions', { missions: [{ id: 'msn_f', agentId: 'qwen', label: 'Qwen', by: ceo(), state: 'done', sessionId: null, endedAt: new Date().toISOString() }] });
+  const { device } = H.mkDevice('Phone', 'phone', H.PHONE_CAPS);
+  const sent = [];
+  const pub = bus.publish;
+  bus.publish = (id, type, payload, o) => { if (id === device.id) sent.push({ type, payload }); return pub.call(bus, id, type, payload, o); };
+  try { missions.archive('msn_f'); } finally { bus.publish = pub; }
+  assert.ok(sent.length >= 1, 'the device hears it, to take the row off its list');
+  assert.ok(sent.every(e => e.payload.quiet === true && e.payload.archivedAt), 'without a notification');
+  store.writeJson('agents/missions', { missions: [] });
+});

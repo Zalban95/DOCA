@@ -51,7 +51,7 @@ function _liveConversation(c) {
   if (c.what === 'thinking') { _liveThinking.add(c.id); c = { ...c, what: 'text' }; }   // drawn where the text will stream
   else if (c.what === 'text') { _liveThinking.delete(c.id); _liveBuf.set(c.id, (_liveBuf.get(c.id) || '') + c.delta); }
   else if (c.what !== 'tool') { _liveBuf.delete(c.id); _liveThinking.delete(c.id); }   // a turn began, a row was written, the turn ended: what streamed is in the transcript now
-  if (c.what === 'started' || c.what === 'ended') _liveHcList();
+  if (c.what === 'started' || c.what === 'ended') { _liveHcList(); _liveMissions(); }   // an automatic turn shows in the bar with its Stop
   if (c.id === _hcSession && !_hcBusy) {
     if (c.what === 'text') _liveHc();
     else if (c.what !== 'tool') _liveHcReload();

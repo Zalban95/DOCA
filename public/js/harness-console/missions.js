@@ -75,10 +75,12 @@ async function hcAgentsEnable(on) {
 async function _hcLoadMissions() {
   const bar = document.getElementById('hc-missions');
   if (!bar) return;
-  let rows = [];
+  let rows = [], auto = [];
   try { rows = (await apiFetch('/api/harness/missions?limit=8')).missions || []; } catch { /* leave the bar as it was */ }
+  // What works on its own right now, and why (agents/stopping.js) — each with a Stop, so nothing runs out of sight.
+  try { auto = (await apiFetch('/api/harness/working')).auto || []; } catch { /* an older hub */ }
 
-  if (!rows.length) { bar.style.display = 'none'; bar.innerHTML = ''; }
+  if (!rows.length && !auto.length) { bar.style.display = 'none'; bar.innerHTML = ''; }
   else {
     bar.style.display = '';
     bar.innerHTML = rows.map(m => `
@@ -90,18 +92,36 @@ async function _hcLoadMissions() {
         ${m.sessionId ? `<button class="btn btn-xs" onclick="hcOpenSession(${jsArg(m.sessionId)})">Chat</button>` : ''}
         <button class="btn btn-xs" onclick="hcMissionLog(${jsArg(m.id)})"
                 title="Its whole log, which stays open and can be copied">log</button>
-        ${m.state === 'running' ? '' : `
+        ${m.state === 'running' ? `<button class="btn btn-xs btn-red" onclick="hcMissionStop(${jsArg(m.id)})"
+                title="Stop it at its next step. What sent it waits for you instead of carrying on.">■ Stop</button>` : `
         <button class="btn btn-xs" onclick="hcMissionArchive(${jsArg(m.id)})"
                 title="Put it away. The mission and its log are kept — this list is what is live, not everything that ever ran.">✕</button>`}
+      </span>`).join('') + auto.map(a => `
+      <span class="hc-mission running" title="Working on its own: ${escHtml(a.why)}">
+        <span class="hc-mission-dot"></span>${escHtml(String(a.title).slice(0, 40))} <em>${escHtml(a.why)}</em>
+        <button class="btn btn-xs" onclick="hcOpenSession(${jsArg(a.sessionId)})">Chat</button>
+        <button class="btn btn-xs btn-red" onclick="hcAutoStop(${jsArg(a.sessionId)})" title="Stop this turn; nothing is woken to carry on">■ Stop</button>
       </span>`).join('');
   }
 
   // Poll only while something is actually running, and stop when it is not:
   // a timer that outlives the thing it was watching is how a quiet panel ends
   // up making a request a second for the rest of the day.
-  const busy = rows.some(m => m.state === 'running');
+  const busy = rows.some(m => m.state === 'running') || auto.length > 0;
   if (busy && !_hcMissionPoll) _hcMissionPoll = setInterval(_hcLoadMissions, 3000);
   if (!busy && _hcMissionPoll) { clearInterval(_hcMissionPoll); _hcMissionPoll = null; }
+}
+
+/** ■ Stop on a running specialist: at its next step, and what sent it waits instead of carrying on. */
+async function hcMissionStop(id) {
+  try { await apiFetch(`/api/harness/missions/${encodeURIComponent(id)}/stop`, { method: 'POST', body: {} }); } catch (e) { return appAlert(e.message); }
+  setTimeout(_hcLoadMissions, 600);
+}
+
+/** ■ Stop on a conversation working on its own (an automatic turn). */
+async function hcAutoStop(sessionId) {
+  try { await apiFetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/stop`, { method: 'POST', body: {} }); } catch (e) { return appAlert(e.message); }
+  setTimeout(_hcLoadMissions, 600);
 }
 
 /**
