@@ -362,8 +362,8 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   waits, it is not woken to carry on (`supervisor.missionEnded` wakes it today). Closing or archiving finished work
   triggers nothing: no "finished" re-sent to devices (`missions.archive` → `announce` today), no computer timer
   restarted. Automatic turns are listed with why they started.
-- [x] H10.15 Names and fonts (audit 2026-10-06). **Done (2.239.0):** no owner's name, home folder or machine in a
-  placeholder, the code or the tests' sample data (test/no-leftovers.test.js); every font through the theme's
+- [x] H10.15 Names and fonts (audit 2026-10-06). **Done (2.239.0):** the names were made generic, then put back on
+  the owner's word (2.243.0: "they can go back"); every font through the theme's
   variables (--font-ui, --font-mono, --font-text, --font-display; test/fonts.test.js), the faces used are the ones
   loaded.
 - [x] H10.16 Reach and secrets (audit 2026-10-06). **Done (2.240.0):** `network.services` (local by default; Settings → System → Network), the token in keys/huggingface.json with a migration. Running containers keep their old ports until their next start. Inference services publish their ports on every interface
