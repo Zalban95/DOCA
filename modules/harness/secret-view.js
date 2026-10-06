@@ -23,16 +23,19 @@ const secretName = k => mask({ [k]: 'x' })[k] === MASK;
 /** 'json', 'checkpoint', 'env' or null: how `abs` holds secrets, if it is one of these files. */
 function kindOf(abs) {
   const paths = require('../paths');
+  const { realOf } = require('../utils');
+  const real = p => { try { return realOf(path.resolve(p)); } catch { return path.resolve(p); } };
+  // Both sides by their real paths too: on macOS /var is /private/var (CI, 2026-10-06), as in control-plane.js.
+  const at = [path.resolve(abs), real(abs)];
+  const isAt = f => [path.resolve(f), real(f)].some(x => at.some(y => same(x, y)));
+  const under = d => [path.resolve(d), real(d)].some(x => at.some(y => inside(y, x)));
   const data = require('../store').DATA_DIR;
-  abs = path.resolve(abs);
-  let real = abs;
-  try { real = require('../utils').realOf(abs); } catch { /* not there yet */ }
-  const base = path.basename(real).replace(/\.bak$/, '');
-  const named = [paths.PREFS_FILE, paths.CONFIG_PATH].map(f => path.resolve(f));
-  if (named.some(f => [f, `${f}.bak`].some(p => same(p, abs) || same(p, real)))) return 'json';
-  if (inside(real, path.join(data, 'checkpoints'))) return 'checkpoint';
-  if (inside(real, path.join(data, 'migrations')) && /^prefs-.*\.json$/.test(base)) return 'json';
-  if (inside(real, path.join(data, 'harness', 'backups')) && named.some(f => same(path.basename(f), base))) return 'json';
+  const base = path.basename(at[1]).replace(/\.bak$/, '');
+  const named = [paths.PREFS_FILE, paths.CONFIG_PATH];
+  if (named.some(f => isAt(f) || isAt(`${f}.bak`))) return 'json';
+  if (under(path.join(data, 'checkpoints'))) return 'checkpoint';
+  if (under(path.join(data, 'migrations')) && /^prefs-.*\.json$/.test(base)) return 'json';
+  if (under(path.join(data, 'harness', 'backups')) && named.some(f => same(path.basename(f), base))) return 'json';
   if (/^\.env(\..+)?$/.test(base) && !/\.(example|sample|template)$/.test(base)) return 'env';
   return null;
 }
