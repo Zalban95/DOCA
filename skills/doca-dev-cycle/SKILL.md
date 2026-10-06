@@ -32,7 +32,7 @@ app's `AGENTS.md` when you touch one. This is the cycle every change follows, in
    testDebugUnitTest assembleDebug`), checking the exit code, never only a filtered log.
 5. **Commit**: one logical change per commit, the message says why. A move and a behaviour change are two commits.
 6. **The release** — ask before each of these, through an approval or a plain question, unless your model is one the
-   admin lets release unasked (Settings → Developer → Releasing; `GET /api/developer/releasing?model=<your model id>`;
+   admin lets release unasked (your environment's "releasing DOCA" line says which you are; Settings → Developer → Releasing;
    CONSTITUTION W2):
    - the version in `package.json` (patch for a fix, minor for behaviour), `npm run openapi:write`, a commit
      `[X.Y.Z] …`;
