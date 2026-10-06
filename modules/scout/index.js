@@ -8,7 +8,7 @@
  *   1. Look (signals.js, no model): Hugging Face's trending models for each task DOCA uses (roles.js), growth since the
  *      last look, new releases of the projects DOCA runs on, the owner's news feeds. Daily, while switched on.
  *   2. Brief (a turn, in the conversation "Model scout", as the person who switched it on): the agent reads the
- *      signals through the `scout` tool (framed as outside words), sends the scout specialist to read what deserves
+ *      signals through the `model_scout` tool (framed as outside words), sends the scout specialist to read what deserves
  *      reading, and files suggestions — a candidate, the function it would replace or the capability it would add, why,
  *      the evidence, how to try it in DOCA. Every `scout.everyDays`, or at once when a look finds something notable.
  *   3. Decide (a person, Settings → Harness → Scout): accept — the suggestion becomes a line in TODO.md of the
@@ -46,7 +46,7 @@ const saveList = xs => write('suggestions.json', xs);
 const get = id => list().find(s => s.id === id);
 const patch = (id, p) => { const xs = list().map(s => (s.id === id ? { ...s, ...p } : s)); saveList(xs); return xs.find(s => s.id === id); };
 
-/** Filed by the agent (the `scout` tool). The same candidate for the same function is the first one, not a second card. */
+/** Filed by the agent (the `model_scout` tool). The same candidate for the same function is the first one, not a second card. */
 function suggest(a) {
   const title = String(a.title || '').trim().slice(0, 160);
   if (!title) throw bad('A suggestion needs a title.');
@@ -148,11 +148,11 @@ async function work(id, person) {
 
 // ── The routine ─────────────────────────────────────────────────────────────
 
-const BRIEF = 'Model scout run (docs/experiments/model-scout.md). 1) Call `scout` with action "signals" — the latest look: trending '
+const BRIEF = 'Model scout run (docs/experiments/model-scout.md). 1) Call `model_scout` with action "signals" — the latest look: trending '
   + 'models for each function DOCA uses, with growth, and new releases and news; and action "list" for what was suggested and decided '
   + 'before (do not suggest again what was declined, and read why). 2) Pick what could do one of DOCA\'s functions clearly better (quality, '
   + 'speed, size, licence, runs locally) or adds a capability DOCA lacks. For each worth it, find out what it needs and how it runs (send the '
-  + 'scout specialist when specialists are on; a model card and its benchmarks, not a headline). 3) File each that holds up with `scout` '
+  + 'scout specialist when specialists are on; a model card and its benchmarks, not a headline). 3) File each that holds up with `model_scout` '
   + 'action "suggest" — at most five, best first — saying the function, what it replaces, why, the evidence, and how it would be tried in '
   + 'DOCA without breaking the current way: a model name for a setting, a Services or System tools row, a new reader, a new function. '
   + 'Prefer what is open, runs on any OS, locally or remotely, and can be swapped out again. 4) Answer in one line: how many filed. Change '
