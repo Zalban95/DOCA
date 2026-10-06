@@ -7,10 +7,11 @@
 /* The answer's text as it streams, per conversation, since its last written row: kept here rather than only on the
    page, so a redraw (the turn started, a row was written) draws it again instead of losing it. */
 const _liveBuf = new Map();
+const _liveThinking = new Set();   // conversations whose model thinks before it answers: said, until text comes
 
 /** What has streamed into `sid` so far, drawn plain at the end of `box` until its row is written. */
 function _liveShow(box, sid, make) {
-  const text = _liveBuf.get(sid);
+  const text = _liveBuf.get(sid) || (_liveThinking.has(sid) ? 'Thinking…' : '');
   if (!box || !text) return;
   let el = box.querySelector('.live-stream');   // a working block may hold it
   if (!el) { el = make(); if (!el) return; el.classList.add('live-stream'); }
@@ -20,7 +21,7 @@ function _liveShow(box, sid, make) {
 
 /* ── The Harness console: the conversation open, and the list beside it ── */
 const _liveHc = () => _liveShow(document.getElementById('hc-messages'), _hcSession, () => _hcAppend('assistant', '', null, { plain: true }));
-const _liveHcReload = liveDebounce(async () => { if (_hcSession && !_hcBusy) { await hcOpenSession(_hcSession, true); _liveHc(); } }, 300);
+const _liveHcReload = liveDebounce(() => { if (_hcSession && !_hcBusy) hcOpenSession(_hcSession, true); }, 300);   // which draws the streamed text again
 const _liveHcList = liveDebounce(() => { if (document.getElementById('hc-sessions')) _hcLoadSessions(true); }, 800);
 const _liveMissions = liveDebounce(() => { if (document.getElementById('hc-missions')) _hcLoadMissions(); }, 500);
 
@@ -46,9 +47,10 @@ function _livePjTab(c) {
 }
 
 function _liveConversation(c) {
-  if (c.what === 'resync') { _liveBuf.clear(); _liveHcReload(); _liveChatReload(); return; }
-  if (c.what === 'text') _liveBuf.set(c.id, (_liveBuf.get(c.id) || '') + c.delta);
-  else if (c.what !== 'tool') _liveBuf.delete(c.id);   // a turn began, a row was written, the turn ended: what streamed is in the transcript now
+  if (c.what === 'resync') { _liveBuf.clear(); _liveThinking.clear(); _liveHcReload(); _liveChatReload(); return; }
+  if (c.what === 'thinking') { _liveThinking.add(c.id); c = { ...c, what: 'text' }; }   // drawn where the text will stream
+  else if (c.what === 'text') { _liveThinking.delete(c.id); _liveBuf.set(c.id, (_liveBuf.get(c.id) || '') + c.delta); }
+  else if (c.what !== 'tool') { _liveBuf.delete(c.id); _liveThinking.delete(c.id); }   // a turn began, a row was written, the turn ended: what streamed is in the transcript now
   if (c.what === 'started' || c.what === 'ended') _liveHcList();
   if (c.id === _hcSession && !_hcBusy) {
     if (c.what === 'text') _liveHc();

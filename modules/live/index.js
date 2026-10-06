@@ -7,7 +7,8 @@
  *
  * One feed of changes, `{n, topic, id, what, at, …}`, made from what already happens:
  *   conversation   a turn started or ended, a row was written (a tool's result, a message read from the inbox), a
- *                  tool was called, and the answer's text as it streams (`delta`) — from agent.events and
+ *                  tool was called, that the model is thinking (every 2 s at most), and the answer's text as it
+ *                  streams (`delta`) — from agent.events and
  *                  lifecycle.changed()
  *   missions       a specialist's mission started, stepped or ended — from missions.announce()
  *   files          something changed in a folder a screen is looking at — live/watch.js, only the folders asked for
@@ -27,8 +28,16 @@ function changed(topic, id = null, what = 'changed', extra = {}) {
 
 /** A turn's events, as conversation changes: rows and tool names, and the text while it streams. */
 const ROW = new Set(['tool_result', 'user_added', 'image', 'compacted', 'handoff', 'proposal']);
+const THINKING_EVERY_MS = 2000;
+const _thought = new Map();   // sessionId → when `thinking` was last said: that it thinks, not what, and not per token
 function onTurnEvent(evt) {
   if (!evt?.sessionId) return;
+  if (evt.type === 'thinking') {
+    if (Date.now() - (_thought.get(evt.sessionId) || 0) < THINKING_EVERY_MS) return;
+    _thought.set(evt.sessionId, Date.now());
+    return changed('conversation', evt.sessionId, 'thinking');
+  }
+  _thought.delete(evt.sessionId);
   if (evt.type === 'text' && evt.text) return changed('conversation', evt.sessionId, 'text', { delta: String(evt.text) });
   if (evt.type === 'tool_call') return changed('conversation', evt.sessionId, 'tool', { tool: evt.name || null });
   if (ROW.has(evt.type)) changed('conversation', evt.sessionId, 'row');

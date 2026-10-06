@@ -62,10 +62,12 @@ test('a turn\'s changes reach every screen that may open the conversation, and n
     live.onTurnEvent({ sessionId: theirs.id, type: 'tool_call', name: 'shell' });
     live.onTurnEvent({ sessionId: theirs.id, type: 'tool_result', name: 'shell' });
     live.onTurnEvent({ sessionId: theirs.id, type: 'usage' });   // not a change anyone draws
-    assert.ok(await until(() => a.got.length >= 4 && m.got.length >= 2));
+    live.onTurnEvent({ sessionId: hosts.id, type: 'thinking', text: 'a' });
+    live.onTurnEvent({ sessionId: hosts.id, type: 'thinking', text: 'b' });   // within two seconds: not said again
+    assert.ok(await until(() => a.got.length >= 5 && m.got.length >= 2));
     await H.sleep(100);
     assert.deepEqual(a.got.map(c => [c.id === hosts.id ? 'host' : 'member', c.what]),
-      [['host', 'started'], ['host', 'text'], ['member', 'tool'], ['member', 'row']], 'a host hears every conversation');
+      [['host', 'started'], ['host', 'text'], ['member', 'tool'], ['member', 'row'], ['host', 'thinking']], 'a host hears every conversation');
     assert.equal(a.got[1].delta, 'Hel', 'the answer as it streams');
     assert.deepEqual(m.got.map(c => [c.id, c.what]), [[theirs.id, 'tool'], [theirs.id, 'row']], 'a member only their own');
   } finally { await a.close(); await m.close(); }
