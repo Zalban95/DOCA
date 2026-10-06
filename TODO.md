@@ -252,7 +252,7 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   draws known buttons. **Left:** measuring it with a vision model.
 
 **H6 · The client core and joining the hive** (§4)
-- [x] H6.7 (2.206.0; DocaMobile 1.0.2) The apps update from their hub. The hub keeps each app's newest APK — built there
+- [x] H6.8 (2.206.0; DocaMobile 1.0.2; was a second H6.7) The apps update from their hub. The hub keeps each app's newest APK — built there
   from its repo with one signing key, or uploaded — and DocaMobile checks, downloads (sha256-checked) and installs it
   through PackageInstaller, automatically from Android 12 once allowed. **Left:** DocaWear through the phone.
 - [ ] H6.1 One client core per platform: protocol, pairing, push, presence, offline queue, device
@@ -327,8 +327,8 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   one-time code to people, voice notes through the existing STT, photos/files as attachments. **Left:** Slack, mail,
   WhatsApp on the same shape; mission start/finish notices to a chat; markdown rendered as Telegram HTML; a
   voice answer (TTS → sendVoice) to a voice note; group chats with per-member binding.
-- [ ] Voice calls with work continuing in the background — DOCA's call mode exists; realtime speech and
-  barge-in left (H8.3).
+- [x] Voice calls with work continuing in the background — DOCA's call mode, and as experiments barge-in (2.192.0)
+  and realtime speech (2.200.0), H8.3; graduating them is their write-ups' measurements.
 - [x] Schedules ("recurring instructions") with pause/retry — H7.1 (2.162.0; retry left).
 - [x] Spaces and Pages (docs with an editor and a chat per page) — H9.4 (2.186.0, on Projects).
 - [x] Human-in-the-loop approval cards — DOCA's approvals, on every device, with levels.
