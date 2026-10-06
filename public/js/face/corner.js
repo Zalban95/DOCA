@@ -48,6 +48,12 @@ async function faceCornerApply() {
   _faceCorner = { el, face, close: faceFeed(s => { if (Date.now() > _faceVoiceUntil) face.set(s.state, s.detail); }) };
 }
 
+/** Draw the corner face again with the screen's current spec (after the face editor saves). */
+function faceCornerReload() {
+  if (_faceCorner) { _faceCorner.face.stop(); _faceCorner.close(); _faceCorner.el?.remove(); _faceCorner = null; }
+  faceCornerApply();
+}
+
 function faceCornerToggle(on) {
   try { localStorage.setItem('doca.face.corner', on ? '1' : '0'); } catch { /* a private window: this session only */ }
   faceCornerApply();

@@ -8,7 +8,7 @@ let _liveCallMeter = null;
 async function liveCallRender() {
   const panel = document.getElementById('sp-voice');
   if (!panel) return;
-  document.getElementById('live-call-card')?.remove();
+  for (const id of ['live-call-card', 'assistant-card', 'face-editor-card', 'realtime-card', 'call-experiments-card']) document.getElementById(id)?.remove();
   let s;
   try { s = await screenLoad(true); } catch { return; }
   const c = s.settings?.call || {}, mine = s.from?.call === 'device';
@@ -18,23 +18,15 @@ async function liveCallRender() {
   let rt = null;
   try { rt = await apiFetch('/api/realtime'); } catch { /* without chat */ }
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'live-call-card' });
-  const row = (label, input, hint) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <label style="font-size:11px;color:var(--muted);width:150px;flex-shrink:0">${label}</label>${input}<span style="font-size:11px;color:var(--muted)">${hint}</span></div>`;
-  card.innerHTML = `<div class="card-title">Live call</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">How the 🎙 Live call in the chat listens on <b>${escHtml(s.name || 'this screen')}</b>.
-      ${mine ? 'Set here.' : "Now: the hive's."} It uses the speech services above, and takes effect from the next call.</p>
+  card.innerHTML = `<div class="card-title">Live call — how it listens on this screen</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">For the 🎙 in the chat and for assistant mode on <b>${escHtml(s.name || 'this screen')}</b>:
+      a phone's microphone and a desk's hear a room differently. ${mine ? 'Set here.' : "Now: the hive's."} From the next call.</p>
     <div style="display:flex;flex-direction:column;gap:10px">
-      ${row('Pause before sending', `<input class="input" id="lc-silence" type="number" min="0.3" max="10" step="0.1" value="${(c.silenceMs || 2000) / 1000}" style="width:90px"> s`,
+      ${liveCallRow('Pause before sending', `<input class="input" id="lc-silence" type="number" min="0.3" max="10" step="0.1" value="${(c.silenceMs || 2000) / 1000}" style="width:90px"> s`,
         'Shorter answers sooner; longer lets you think mid-sentence.')}
-      ${row('Microphone threshold', `<input type="range" id="lc-sens" min="1" max="60" step="1" value="${c.sensitivity || 15}" style="width:180px"
+      ${liveCallRow('Microphone threshold', `<input type="range" id="lc-sens" min="1" max="60" step="1" value="${c.sensitivity || 15}" style="width:180px"
           oninput="document.getElementById('lc-sens-val').textContent=this.value"><span id="lc-sens-val" style="font-size:11px;min-width:22px">${c.sensitivity || 15}</span>`,
         'Lower hears quieter voices — and more of the room.')}
-      ${row('Assistant mode', `<input class="input" id="lc-idle" type="number" min="5" max="600" value="${c.assistantIdleSec || 12}" style="width:80px"> s`,
-        'Tapping the face opens it: the face full screen, talking. After this long with nobody speaking it waits for the name again (where it listens for one); otherwise it keeps listening.')}
-      ${row('Call by name', `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="lc-listen" ${c.listenWithFace ? 'checked' : ''}>
-          while the corner face shows, listen for</label><input class="input" id="lc-word" value="${escHtml(c.wakeWord || '')}" placeholder="${escHtml((typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA')}" style="width:120px">`,
-        `Say it to start a call — "${escHtml(c.wakeWord || (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA')}, what's on today?" sends the rest as your first message. ${s.experiments?.wakeWord ? '' : '<b>Needs the experiment "Start a call by saying the hive\'s name" (developer mode).</b> '}
-         While it listens, whatever is said near this screen goes to your speech-to-text service.`)}
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-sm" id="lc-test" onclick="liveCallMeter()">🎤 Test the microphone</button>
         <div style="position:relative;width:240px;height:10px;background:var(--raised);border:1px solid var(--border2)">
@@ -46,17 +38,23 @@ async function liveCallRender() {
         <button class="btn btn-sm btn-blue" onclick="liveCallSave()">Save for this screen</button>
         ${mine ? '<button class="btn btn-sm" onclick="liveCallSave(true)">Back to the hive\'s</button>' : ''}
       </div>
-    </div>
-    ${ex ? `<div style="margin-top:14px;border-top:1px solid var(--border2);padding-top:10px;display:flex;flex-direction:column;gap:6px">
-      <div style="font-size:11px;color:var(--muted)">Experiments (developer mode) — for every screen; what each measures and costs is on Settings → Developer.</div>
-      ${ex.map(x => `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" ${x.on ? 'checked' : ''}
-        onchange="liveCallExperiment(${jsArg(x.id)}, this.checked)"> ${escHtml(x.label)}</label>`).join('')}</div>` : ''}
-    ${await liveCallAssistantHtml()}
-    ${liveCallRealtimeHtml(rt, !!ex)}`;
+    </div>`;
   panel.append(card);
   liveCallMark();
   document.getElementById('lc-sens').addEventListener('input', liveCallMark);
+  // The rest, a card each, in the order a person meets them: talking to the face, how the face looks, the owner's realtime model, the experiments.
+  await liveCallAssistantCard(panel, s);
+  if (typeof faceEditorRender === 'function') await faceEditorRender(panel);
+  const rtHtml = liveCallRealtimeHtml(rt, !!ex);
+  if (rtHtml) panel.append(Object.assign(document.createElement('div'), { className: 'card', id: 'realtime-card', innerHTML: rtHtml }));
+  if (ex) panel.append(Object.assign(document.createElement('div'), { className: 'card', id: 'call-experiments-card', innerHTML: `<div class="card-title">Call experiments</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Developer mode — for every screen; what each measures and costs is on Settings → Developer.</div>
+    ${ex.map(x => `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" ${x.on ? 'checked' : ''}
+      onchange="liveCallExperiment(${jsArg(x.id)}, this.checked)"> ${escHtml(x.label)}</label>`).join('')}` }));
 }
+
+const liveCallRow = (label, input, hint) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <label style="font-size:11px;color:var(--muted);width:150px;flex-shrink:0">${label}</label>${input}<span style="font-size:11px;color:var(--muted)">${hint}</span></div>`;
 
 /** The realtime speech model: what a call uses when one is set (modules/realtime). The form is the owner's. */
 function liveCallRealtimeHtml(rt, owner) {
@@ -65,8 +63,8 @@ function liveCallRealtimeHtml(rt, owner) {
   const state = rt.available ? `<span style="color:var(--green)">On: ${escHtml(rt.protocol)} · ${escHtml(rt.model)}. The 🎙 Live button uses it.</span>`
     : `<span style="color:var(--muted)">Off${rt.experiment ? ': set a model' : ': switch on "Live calls with a realtime speech model" above'} — calls use the speech services above.</span>`;
   const f = (id, label, input) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px;flex-shrink:0">${label}</label>${input}</div>`;
-  return `<div style="margin-top:14px;border-top:1px solid var(--border2);padding-top:10px;display:flex;flex-direction:column;gap:8px">
-    <div style="font-size:12px;font-weight:600">Realtime speech model</div>
+  return `<div style="display:flex;flex-direction:column;gap:8px">
+    <div class="card-title">Realtime speech model</div>
     <div style="font-size:11px;color:var(--muted)">A model that hears and speaks directly, without text in between — quicker, and you can talk over it. It is a voice in front of the hive:
       anything real it hands to your conversation as an ordinary turn, with your approvals. The hub holds the key. ${state}</div>
     ${owner ? `${f('rt-protocol', 'Protocol', `<select class="input" id="rt-protocol" style="width:auto">${['openai', 'gemini'].map(p => `<option value="${p}" ${s.protocol === p ? 'selected' : ''}>${p === 'openai' ? 'OpenAI Realtime (OpenAI, Azure, local servers)' : 'Gemini Live (Google)'}</option>`).join('')}</select>`)}
@@ -96,9 +94,8 @@ function liveCallMark() {
 
 async function liveCallSave(reset = false) {
   const secs = parseFloat(document.getElementById('lc-silence').value), sens = parseInt(document.getElementById('lc-sens').value, 10);
-  const value = reset ? null : { ...(secs >= 0.3 ? { silenceMs: Math.round(secs * 1000) } : {}), ...(sens >= 1 ? { sensitivity: sens } : {}),
-    listenWithFace: document.getElementById('lc-listen').checked, wakeWord: document.getElementById('lc-word').value.trim(),
-    ...(parseInt(document.getElementById('lc-idle').value, 10) >= 5 ? { assistantIdleSec: parseInt(document.getElementById('lc-idle').value, 10) } : {}) };
+  const cur = (await screenLoad(true)).settings?.call || {};   // the other card's fields stay as they are
+  const value = reset ? null : { ...cur, ...(secs >= 0.3 ? { silenceMs: Math.round(secs * 1000) } : {}), ...(sens >= 1 ? { sensitivity: sens } : {}) };
   try { await screenSave({ call: value }); } catch (e) { return appAlert(e.message); }
   liveCallStop();
   await screenLoad(true);
@@ -147,31 +144,4 @@ function liveCallStop() {
   if (b) b.textContent = '🎤 Test the microphone';
   const bar = document.getElementById('lc-level');
   if (bar) bar.style.width = '0';
-}
-
-/** Assistant mode (a call from the face): how it speaks, how hard it thinks, and an optional quicker model. The owner's. */
-async function liveCallAssistantHtml() {
-  let a;
-  try { a = await apiFetch('/api/assistant'); } catch { return ''; }
-  const owner = typeof authHasRight !== 'function' || authHasRight('host');
-  const lv = ['off', 'low', 'medium', 'high', 'default'];
-  return `<div style="margin-top:14px;border-top:1px solid var(--border2);padding-top:10px;display:flex;flex-direction:column;gap:8px">
-    <div style="font-size:12px;font-weight:600">Assistant mode — when you talk to the face</div>
-    <div style="font-size:11px;color:var(--muted)">Same conversation as the chat, answered quicker and shorter. You can also just say "think harder" or "quick answers" — that changes the conversation's effort.</div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">Thinking effort</label>
-      <select class="input" id="as-effort" style="width:auto" ${owner ? '' : 'disabled'}>${lv.map(x => `<option value="${x}" ${a.effort === x ? 'selected' : ''}>${x === 'default' ? 'the model\'s default' : x}</option>`).join('')}</select></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">A quicker model (optional)</label>
-      <input class="input" id="as-provider" value="${escHtml(a.provider || '')}" placeholder="provider" style="width:120px" ${owner ? '' : 'disabled'}>
-      <input class="input" id="as-model" value="${escHtml(a.model || '')}" placeholder="model — empty: the chat's" style="width:200px" ${owner ? '' : 'disabled'}></div>
-    <label style="font-size:11px;color:var(--muted)">How it speaks<textarea class="input" id="as-style" rows="4" style="width:100%;margin-top:4px" ${owner ? '' : 'disabled'}>${escHtml(a.style || '')}</textarea></label>
-    ${owner ? `<div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantSave()">Save assistant mode</button>
-      <button class="btn btn-sm" onclick="liveCallAssistantSave(true)">Default style</button></div>` : ''}
-  </div>`;
-}
-
-async function liveCallAssistantSave(resetStyle) {
-  const g = id => document.getElementById(id).value;
-  try { await apiFetch('/api/assistant', { method: 'POST', body: { effort: g('as-effort'), provider: g('as-provider').trim(), model: g('as-model').trim(), style: resetStyle ? null : g('as-style') } }); }
-  catch (e) { return appAlert(e.message); }
-  liveCallRender();
 }
