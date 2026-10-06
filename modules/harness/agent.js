@@ -127,7 +127,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   };
   let p = await require('./turn/ceiling').check(require('./turn/choice').apply(turnParams(profile), sessionId));   // the chat's model choice; a day's token ceiling refuses to start
   // Assistant mode (a call from the face) may have a quicker model of its own, and every turn knows its thinking effort.
-  if (client?.mode === 'assistant' && require('../settings-schema').value('assistant.model'))
+  if (require('./turn/effort').spokenProfile(client) && require('../settings-schema').value('assistant.model'))
     p = { ...p, provider: require('../settings-schema').value('assistant.provider') || p.provider, model: require('../settings-schema').value('assistant.model') };
   client = client && { ...client, effort: require('./turn/effort').levelFor({ session: memory.getSession(sessionId), client, p }) };
   const ep  = providers.endpoint(p.provider);

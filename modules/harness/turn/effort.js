@@ -16,12 +16,15 @@
 const LEVELS = ['off', 'low', 'medium', 'high'];
 const norm = v => (LEVELS.includes(v) ? v : null);   // 'default' (and anything else): send nothing
 
+/** Whether a turn takes assistant mode's effort and model: a call from the face, or any call when the owner says so. */
+const spokenProfile = client => client?.mode === 'assistant' || (client?.mode === 'call' && require('../../settings-schema').value('assistant.calls') === true);
+
 /** The level for this turn, and which setting it came from (for the prompt and the trace). */
 function levelFor({ session, client, p } = {}) {
   if (norm(session?.effort)) return { level: session.effort, from: 'this conversation' };
-  if (client?.mode === 'assistant') {
+  if (spokenProfile(client)) {
     const v = norm(require('../../settings-schema').value('assistant.effort'));
-    if (v) return { level: v, from: 'assistant mode (assistant.effort)' };
+    if (v) return { level: v, from: client.mode === 'assistant' ? 'assistant mode (assistant.effort)' : 'live calls (assistant.effort, assistant.calls)' };
   }
   if (norm(p?.effort)) return { level: p.effort, from: 'harness.config.doca.effort' };
   return { level: null, from: null };
@@ -70,4 +73,4 @@ function line({ level, from }) {
     + 'take your time, or be quick, set it with the `effort` tool (this conversation only) and say so in a few words.';
 }
 
-module.exports = { LEVELS, levelFor, dialect, fields, without, KEYS, line };
+module.exports = { LEVELS, spokenProfile, levelFor, dialect, fields, without, KEYS, line };

@@ -5,6 +5,7 @@ async function retrievalCardRender(panel) {
   let r;
   try { r = await apiFetch('/api/retrieval'); } catch { return; }
   document.getElementById('retrieval-card')?.remove();
+  if (!r.experiment && !r.on) return;   // its experiment is off (Settings → Developer): nothing to set yet
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'retrieval-card' });
   const idx = (r.index || []).map(x => `${escHtml(x.source)}: ${x.refs} (${x.chunks} pieces, ${escHtml(x.model)})`).join(' · ') || 'empty';
   card.innerHTML = `<div class="card-title">Retrieval <span style="font-size:10px;color:var(--muted)">experiment</span></div>

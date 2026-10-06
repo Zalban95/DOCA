@@ -27,6 +27,9 @@ test('the conversation\'s level wins, then assistant mode\'s, then the harness\'
   assert.deepEqual(e.levelFor({ session: { effort: 'high' }, client: { mode: 'assistant' } }), { level: 'high', from: 'this conversation' });
   assert.equal(e.levelFor({ session: {}, client: { mode: 'assistant' } }).level, 'low', 'assistant mode is quick by default');
   assert.equal(e.levelFor({ session: {}, client: { mode: 'call' }, p: {} }).level, null);
+  const u = require('../modules/utils'); u.savePrefs({ ...u.loadPrefs(), assistant: { ...(u.loadPrefs().assistant || {}), calls: true } });
+  assert.equal(e.levelFor({ session: {}, client: { mode: 'call' }, p: {} }).level, 'low', 'the owner may give the chat call the same profile');
+  u.savePrefs({ ...u.loadPrefs(), assistant: { ...(u.loadPrefs().assistant || {}), calls: false } });
   assert.equal(e.levelFor({ session: { effort: 'default' }, client: {}, p: { effort: 'medium' } }).level, 'medium');
 });
 

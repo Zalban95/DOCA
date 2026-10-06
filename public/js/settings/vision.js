@@ -5,6 +5,7 @@ async function visionCardRender(panel) {
   let v;
   try { v = await apiFetch('/api/vision'); } catch { return; }
   document.getElementById('vision-card')?.remove();
+  if (!v.experiment) return;   // its experiment is off (Settings → Developer): nothing to set yet
   const s = v.settings, has = id => v.available.includes(id);
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'vision-card' });
   const f = (label, input) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px;flex-shrink:0">${label}</label>${input}</div>`;

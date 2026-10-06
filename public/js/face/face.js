@@ -19,7 +19,7 @@ const FACE_DEFAULT = {
   palette: { bg: '#050507', ink: '#e8edf2', dim: '#707a85', accent: '#57c9c2', steel: '#6f8aa3', ask: '#e8a020', error: '#e85050', field: '#a6bfd6' },
   dots: 760,
   form: 'poly',
-  point: 1, glow: 1, speed: 1, concepts: true,   // tunable in Settings → Voice → The face (settings/face-editor.js)   // a polyhedron of light (face/poly.js); 'face' is the earlier eyes and mouth
+  point: 1, glow: 1, glowRadius: 1, speed: 1, concepts: true,   // tunable in Settings → Voice → The face (settings/face-editor.js)   // a polyhedron of light (face/poly.js); 'face' is the earlier eyes and mouth
   eyes: { y: -0.16, gap: 0.40, r: 0.10 },
   mouth: { y: 0.30, w: 0.46, curve: 0.06 },
   hud: true,
@@ -77,6 +77,7 @@ function faceMount(canvas, specIn = {}) {
 
   // A point of light, not a disc: a soft radial sprite per colour (quantised, so a colour that eases makes a few).
   const sprites = new Map();
+  const glowR = Math.max(0.5, Math.min(5, Number(spec.glowRadius) || 1));   // how far a point's light reaches
   const sprite = (r, g, b) => {
     const key = `${r >> 3},${g >> 3},${b >> 3}`;
     let s = sprites.get(key);
@@ -91,8 +92,10 @@ function faceMount(canvas, specIn = {}) {
         if (d >= 1) continue;
         // A firefly with a contour (asked 2026-10-06): a flat-topped core with a crisp edge, then a dim close bloom and
         // a faint wide glow — the light around a point must never be bright enough to swallow its edge.
-        const P = Math.max(0.3, Number(spec.point) || 1), G = Math.max(0, Number(spec.glow ?? 1));
-        const core = Math.exp(-Math.pow(d / (0.048 * P), 4)), bloom = 0.13 * G * Math.exp(-Math.pow(d / 0.19, 2)), halo = 0.2 * G * Math.exp(-d / 0.3) * (1 - d * d);
+        // Point size, glow intensity and glow radius are three settings (asked 2026-10-06): the sprite grows with the
+        // radius while the core keeps its size, and the glow falls from the intensity at the centre to 0 at the edge.
+        const P = Math.max(0.3, Number(spec.point) || 1), G = Math.max(0, Number(spec.glow ?? 1)), R = glowR;
+        const core = Math.exp(-Math.pow(d * R / (0.048 * P), 4)), bloom = 0.13 * G * Math.exp(-Math.pow(d * R / 0.19, 2)), halo = 0.24 * G * Math.pow(1 - d, 2.2);
         const a = Math.min(1, core + bloom + halo), white = core / Math.max(a, 1e-6) * 0.75;   // the peak whitens, the glow keeps the colour
         const o = (y * S + x) * 4;
         px[o] = r + (255 - r) * white; px[o + 1] = g + (255 - g) * white; px[o + 2] = b + (255 - b) * white; px[o + 3] = a * 255;
@@ -184,7 +187,7 @@ function faceMount(canvas, specIn = {}) {
       // A form's near side is brighter and larger than its far side: depth reads without lines.
       const near = d.role === 'p' ? 0.45 + depth * 0.75 : 1;
       ctx.globalAlpha = Math.min(1, (lit ? 0.95 : 0.5) * (d.role === 'p' ? 0.9 : d.glow) * near * flicker);
-      const sz = dotR * (d.role === 'p' ? 0.8 + depth * 1.1 : d.size * 0.8) * (lit ? 4.6 : 4.2);
+      const sz = dotR * (d.role === 'p' ? 0.8 + depth * 1.1 : d.size * 0.8) * (lit ? 4.6 : 4.2) * glowR;
       ctx.drawImage(lit ? spr : fieldSpr, d.x - sz / 2, d.y - sz / 2, sz, sz);
     }
     ctx.globalAlpha = 1;
