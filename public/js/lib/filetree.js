@@ -242,6 +242,7 @@ function fmMediaType(name) {
   if (FM_IMG_EXTS.has(ext))   return 'image';
   if (FM_VIDEO_EXTS.has(ext)) return 'video';
   if (FM_AUDIO_EXTS.has(ext)) return 'audio';
+  if (typeof MODEL3D_EXTS !== 'undefined' && MODEL3D_EXTS.includes(ext)) return 'model';
   return null;
 }
 

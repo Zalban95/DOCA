@@ -6,6 +6,16 @@
 
 const { clip } = require('./common');
 
+/** A file the agent names: a path (absolute, or in the work folder) or an attachment's name. */
+function fileOf(ref, ctx) {
+  const fs = require('fs'), path = require('path');
+  const at = require('../../attachments');
+  let local = null;
+  try { local = require('./common').resolvePath(String(ref), ctx); } catch { /* outside what may be read */ }
+  for (const p of [local, path.join(at.dir(), path.basename(String(ref)))].filter(Boolean)) { try { if (fs.statSync(p).isFile()) return path.resolve(p); } catch { /* not this one */ } }
+  return null;
+}
+
 module.exports = [
   {
     name: 'research_docs',
@@ -40,30 +50,55 @@ module.exports = [
       type: 'object',
       properties: {
         url:     { type: 'string', description: 'The absolute URL to fetch.' },
-        method:  { type: 'string', description: 'HTTP method (default GET).' },
+        method:  { type: 'string', description: 'HTTP method (default GET; POST when there is a form or files).' },
         body:    { type: 'string', description: 'Optional request body (sent as JSON unless headers say otherwise).' },
         headers: { type: 'object', description: 'Optional extra headers (never a key: name it with key instead).' },
         key:     { type: 'string', description: 'The name of a key for this service (Settings → Connectors → Keys for services).' },
+        form:    { type: 'object', description: 'Fields of a multipart form (an upload), name → text value.' },
+        files:   { type: 'object', description: 'Files of a multipart form, field name → a file path or an attachment name (e.g. {"images": "chair.png"}). Up to 50 MB each.' },
+        save_as: { type: 'string', description: 'Keep what comes back as a file in the attachments under this name (a model, an image, a zip) instead of reading it as text; show_media shows it.' },
       },
       required: ['url'],
     },
-    run: async ({ url, method, body, headers, key }, ctx = {}) => {
+    run: async ({ url, method, body, headers, key, form, files, save_as }, ctx = {}) => {
+      const keys = require('../../service-keys');
       let h = { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(headers && typeof headers === 'object' ? headers : {}) };
-      let secret = null;
+      let secret = null, exchange = null, token = null;
       if (key) {
         // No person on the turn (a test, a pre-accounts call) is not narrowed, as everywhere (auth/permits.js).
         const host = !ctx.user?.id || require('../../auth/rights').can(ctx.user.role, 'host');
-        try { ({ url, headers: h, key: secret } = require('../../service-keys').apply(key, url, h, { host })); }
+        try { ({ url, headers: h, key: secret, exchange } = keys.apply(key, url, h, { host })); }
         catch (e) { return `Error: ${e.message}`; }
       }
-      const r = await fetch(url, {
-        method:  (method || 'GET').toUpperCase(),
-        body:    body || undefined,
-        headers: h,
-        signal:  AbortSignal.timeout(20000),
-      });
+      let payload = body || undefined;
+      if (form || files) {
+        const fd = new FormData();
+        for (const [k, v] of Object.entries(form || {})) fd.append(k, String(v));
+        for (const [k, ref] of Object.entries(files || {})) {
+          const abs = fileOf(ref, ctx);
+          if (!abs) return `Error: no file "${ref}" (a path, or the name of an attachment).`;
+          const st = require('fs').statSync(abs);
+          if (st.size > 50 * 1024 * 1024) return `Error: ${ref} is over 50 MB.`;
+          fd.append(k, new Blob([require('fs').readFileSync(abs)], { type: require('../../attachments').mimeFor(abs) }), require('path').basename(abs));
+        }
+        payload = fd;
+        delete h['Content-Type'];   // the form sets its own boundary
+      }
+      const send = async () => {
+        if (exchange) { token = await keys.token(exchange, { fresh: !!token }); h = { ...h, Authorization: `Bearer ${token}` }; }
+        return fetch(url, { method: (method || (payload instanceof FormData ? 'POST' : 'GET')).toUpperCase(), body: payload, headers: h, signal: AbortSignal.timeout(save_as ? 300000 : 60000) });
+      };
+      let r;
+      try { r = await send(); if (exchange && r.status === 401) r = await send(); }   // a token that ran out: one more, fresh
+      catch (e) { return `Error: ${keys.scrub(e.message, secret, token)}`; }
+      if (save_as && r.ok) {
+        const bytes = Buffer.from(await r.arrayBuffer());
+        const at = require('../../attachments');
+        const rec = at.save(bytes, String(save_as).replace(/[\\/]/g, '_').slice(0, 120), { from: 'agent', ...(/^(application\/octet-stream|binary\/)/.test(r.headers.get('content-type') || 'application/octet-stream') ? {} : { mime: r.headers.get('content-type') }) });
+        return `HTTP ${r.status}: saved ${at.humanBytes(bytes.length)} as ${rec.name} (${rec.path}). show_media shows it${at.playableKind(at.mimeFor(rec.name)) === 'model' ? ' as a 3D model' : ''}.`;
+      }
       const out = `HTTP ${r.status} ${r.statusText}\n\n${await r.text()}`;
-      return clip(secret ? require('../../service-keys').scrub(out, secret) : out);
+      return clip(secret || token ? keys.scrub(out, secret, token) : out);
     },
   },
   {

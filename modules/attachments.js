@@ -54,6 +54,8 @@ const MIME = {
   '.mp4': 'video/mp4', '.mkv': 'video/x-matroska', '.webm': 'video/webm', '.mov': 'video/quicktime',
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.stl': 'model/stl', '.obj': 'model/obj', '.fbx': 'model/x-fbx',
+  '.ply': 'model/x-ply', '.3mf': 'model/3mf', '.usdz': 'model/vnd.usdz+zip',
 };
 
 /**
@@ -86,12 +88,16 @@ const VIDEO_MIME = new Set(['video/mp4', 'video/webm', 'video/ogg', 'video/quick
  */
 const DOC_MIME = new Set(['text/markdown', 'text/plain']);
 
+/** A 3D model the panel draws with its viewer (public/js/lib/model3d.js): orbit, zoom, full screen. */
+const MODEL_MIME = new Set(['model/gltf-binary', 'model/gltf+json', 'model/stl', 'model/obj', 'model/x-fbx', 'model/x-ply', 'model/3mf', 'model/vnd.usdz+zip']);
+
 /** What a chat does with it: draw it, play it, open it — or none of the three. */
 function playableKind(mime) {
   if (IMAGE_MIME.has(mime)) return 'image';
   if (AUDIO_MIME.has(mime)) return 'audio';
   if (VIDEO_MIME.has(mime)) return 'video';
   if (DOC_MIME.has(mime))   return 'doc';
+  if (MODEL_MIME.has(mime)) return 'model';
   return null;
 }
 

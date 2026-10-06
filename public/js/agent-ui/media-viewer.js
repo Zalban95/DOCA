@@ -35,6 +35,7 @@ let _mediaViewer = null;
 
 /** @param {{ src: string, kind?: 'image'|'video'|'audio', name?: string, download?: string }} m */
 function mediaViewerOpen(m) {
+  if (arguments[0]?.kind === 'model' && typeof model3dFull === 'function') return model3dFull(arguments[0].src, arguments[0].name);   // 3D: the shared viewer (lib/model3d.js)
   mediaViewerClose();
   const kind = m.kind || 'image';
   const ov = document.createElement('div');
