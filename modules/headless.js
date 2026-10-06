@@ -22,7 +22,19 @@ function findBrowser() {
   for (const c of CANDIDATES[process.platform] || []) {
     if (path.isAbsolute(c)) { if (fs.existsSync(c)) return c; } else { const w = which(c); if (w) return w; }
   }
-  return null;
+  return playwrights()[0] || null;
+}
+
+/** A Chromium Playwright downloaded (its cache, per OS), newest first: many machines that build software have one. */
+function playwrights() {
+  const home = require('os').homedir();
+  const cache = process.env.PLAYWRIGHT_BROWSERS_PATH || (process.platform === 'darwin' ? path.join(home, 'Library', 'Caches', 'ms-playwright')
+    : process.platform === 'win32' ? path.join(process.env.LOCALAPPDATA || home, 'ms-playwright') : path.join(home, '.cache', 'ms-playwright'));
+  const exe = { linux: ['chrome-linux64/chrome', 'chrome-linux/chrome'], darwin: ['chrome-mac/Chromium.app/Contents/MacOS/Chromium', 'chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium'],
+    win32: ['chrome-win64\\chrome.exe', 'chrome-win\\chrome.exe'] }[process.platform] || [];
+  let dirs = [];
+  try { dirs = fs.readdirSync(cache).filter(d => /^chromium-\d+$/.test(d)).sort((a, b) => Number(b.split('-')[1]) - Number(a.split('-')[1])); } catch { return []; }
+  return dirs.flatMap(d => exe.map(e => path.join(cache, d, e))).filter(p => fs.existsSync(p));
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
