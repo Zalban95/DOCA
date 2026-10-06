@@ -9,8 +9,19 @@ those rules are carried out in the code.
 ### What this is
 OpenClaw Dashboard — a single Node.js/Express web app (`server.js` + `modules/*`) that serves a static frontend (`public/`) and a JSON/SSE API for managing an external "OpenClaw" Docker/AI stack. There is one service; no database.
 
+### Words that mean one thing here (audit 2026-10-06, coh F24)
+- **job** — a work chat's task, in `session.job` (the supervisor carries it to its end); not a device's command job
+  (`api-v1/jobs.js`, `job_` ids), a background shell job (`shell_job`) or the panel's install jobs (`jobs.js`).
+  Prompts say "task" for the first where the others are near.
+- **scout** — the airlock specialist that reads the web (`specialists/scout`); the experiment that looks for better
+  models is the **model scout** (`modules/scout`, tool `scout`).
+- **browser** — a device record of kind `browser` (a signed-in screen, `modules/screens`); the person's own browser
+  lending tabs is the **browser extension** (`clients/browser`, preset `extension`).
+- **Hub** is the machine DOCA runs on and the nav group of its pages (id `host`); **Field** is the group of models, MCP,
+  connectors and keys (id `intelligence`). The ids stay: they are in people's saved layouts.
+
 ### The other repos in this workspace
-DOCA is the hub. Three first-party clients sit beside it — `../../DocaDesk`, `../../DocaMobile`, `../../DocaWear` — each its own git repo with its own `AGENTS.md`, each speaking `/api/v1`, for all of which `PROTOCOL.md` *here* is normative.
+DOCA is the hub. Three first-party clients sit beside it — `../DocaDesk`, `../DocaMobile`, `../DocaWear` — each its own git repo with its own `AGENTS.md`, each speaking `/api/v1`, for all of which `PROTOCOL.md` *here* is normative.
 
 | Repo | What it is | Which direction it talks |
 |---|---|---|
