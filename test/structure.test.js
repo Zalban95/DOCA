@@ -33,7 +33,7 @@ const OVER = {
   'public/js/files.js':            676,
   'modules/harness/memory.js':     463,
   'modules/api-v1/router.js':      589,
-  'modules/api-v1/openapi.js':     583,
+  'modules/api-v1/openapi.js':     579,
   'modules/agents/missions.js':    496,
   'modules/api-v1/prompts.js':     467,
   'public/js/markdown.js':         462,

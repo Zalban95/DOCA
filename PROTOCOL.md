@@ -514,7 +514,7 @@ data: {"reason":"revoked"}
 | `agent.turn` | durable | `{ turnId, sessionId, state: started\|done\|failed, by, message?, text?, steps?, proposals[]?, error?, quiet? }` — one conversation turn (§23) |
 | `agent.text` | ephemeral | `{ turnId, sessionId, delta }` — reply text as produced; **only to the device that posted the message** |
 | `agent.tool` | ephemeral | `{ turnId, sessionId, name, phase: call\|result, step, args?, ok?, preview? }` |
-| `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|paused\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error?, quiet? }` — a specialist agent's work, to every device with `harness:chat` whose owner may open the conversation (§23). `paused` means a restart cut it off; the agent asks the user whether to continue on the next turn from any device. `GET /harness/missions` is the same picture for a client that has just woken up. |
+| `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|paused\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error?, plan?, progress?, archivedAt?, quiet? }` — a specialist agent's work, to every device with `harness:chat` whose owner may open the conversation (§23). `paused` means a restart cut it off; the agent asks the user whether to continue on the next turn from any device. `plan` is the specialist's own checklist (`[{ title, state: done\|running\|queued\|failed }]`, at most 12) and `progress` `{ done, total, percent }` from it — draw the bar from these, else from `steps`. `archivedAt` (hub 2.228) means the mission was put away: **take its row off and notify nothing** — it always comes with `quiet: true`. A `paused` mission is waiting for its person (continue or drop), not finished. A work chat arrives in the same shape with `kind: "work"` and `agentId: "work"`; one a person stopped or dropped is `cancelled` (why in `error`) — nothing finished, so nothing is announced as done. `GET /harness/missions` is the same picture for a client that has just woken up. |
 | `artifact.deliver` | durable | `{ artifact, inline?, inlineEncoding?: utf8|base64, message, ext }` |
 | `sensor.request` | durable (ttl = duration + 30 s) | `{ request: { id, sensors: [{ id, mode, rateHz, durationSec, unit }], reason, ext, expiresAt } }` |
 | `sensor.stop` | durable | `{ requestId, reason }` |
@@ -539,6 +539,11 @@ chat starting or finishing — **and the owner is reading the panel right now**
 asked for. Absent means notify as before; a client that ignores the field (§3)
 only notifies once more than it needs to. A quiet event does not trigger a
 `device.wake` for a watch.
+
+Since hub 2.242 a mission **put away** (`archivedAt` set) is also sent with `quiet: true`,
+whoever is at the panel: finished work being tidied must never buzz a wrist again.
+The rule for a client is the same either way — `quiet` present means no notification,
+no haptic, no sound; `archivedAt` present means remove the row.
 
 ## 12. Prompts — the interaction protocol
 

@@ -214,6 +214,7 @@ function archive(id, on = true) {
   const result = memory.updateSession(id, { archivedAt: on ? new Date().toISOString() : null,
     ...(!on && session(id).kind === 'orchestrator' ? { kind: 'work', parentId: memory.mainSession().id } : {}) });
   report(id, on ? 'archived' : 'recalled', result.title, 'user');
+  try { require('./workview').announce(id, { quiet: true }); } catch { /* bookkeeping never blocks an archive */ }   // a device takes the row off (or back); nothing buzzes
   return result;
 }
 

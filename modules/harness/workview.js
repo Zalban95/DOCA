@@ -18,15 +18,21 @@
  *   paused   → failed    "Stopped by a panel restart" — a turn a restart cut
  *              off, which no longer runs and would otherwise stay "running" on
  *              a watch until the event expired
+ *   a job a person stopped (2.242) or dropped (2.243) → cancelled, never
+ *              "done": nothing finished, and a client raises nothing for it
  * No client update is needed: DocaWear and DocaMobile already render this shape.
  */
 const memory = require('./memory');
 
 const RESTARTED = 'Stopped by a panel restart. Open it in the Harness to continue.';
+const WAITING   = 'Waiting for you: restart it or drop it.';
+const DROPPED   = 'Dropped by a person.';
 
 function payloadOf(s) {
   const map = { running: 'running', idle: 'done', failed: 'failed', cancelled: 'cancelled', paused: 'failed' };
-  const state = map[s.state] || 'done';
+  const job = s.job?.state;
+  const halted = s.state !== 'running' && (job === 'stopped' || job === 'dropped');
+  const state = halted ? 'cancelled' : (map[s.state] || 'done');
   return {
     missionId: s.id, agentId: 'work', label: s.title || 'Work chat', kind: 'work',
     task: String(s.title || '').slice(0, 200),
@@ -34,7 +40,8 @@ function payloadOf(s) {
     startedAt: s.createdAt,
     endedAt: state === 'running' ? undefined : s.updatedAt,
     result: state === 'done' && s.brief ? String(s.brief).slice(0, 600) : undefined,
-    error: s.state === 'paused' ? RESTARTED : state === 'failed' ? (s.lastError || undefined) : undefined,
+    error: halted ? (job === 'dropped' ? DROPPED : `${s.job.stoppedWhy || 'Stopped by a person'}. ${WAITING}`)
+      : s.state === 'paused' ? RESTARTED : state === 'failed' ? (s.lastError || undefined) : undefined,
     archivedAt: s.archivedAt || undefined,
   };
 }
@@ -69,8 +76,8 @@ function forDevices(query = {}, device = null) {
   return { enabled: enabled || rows.length > 0, missions: rows };
 }
 
-/** Tell every device that follows the harness where one work chat stands. */
-function announce(sessionId) {
+/** Tell every device that follows the harness where one work chat stands. `quiet`: put away — lists update, nobody is notified. */
+function announce(sessionId, { quiet = false } = {}) {
   let s;
   try { s = require('./organization').session(sessionId); } catch { return; }
   if (s.kind !== 'work') return;
@@ -78,7 +85,7 @@ function announce(sessionId) {
   const devices = require('../api-v1/devices');
   const payload = payloadOf(s);
   bus.publishWhere(devices.list(), d => require('./session-access').hears(d, sessionId), 'agent.mission',
-    d => ({ ...payload, ...require('../presence').quietFlag(d.userId) }));
+    d => ({ ...payload, ...(quiet ? { quiet: true } : require('../presence').quietFlag(d.userId)) }));
 }
 
 /**
