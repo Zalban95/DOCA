@@ -74,3 +74,10 @@ test('a ten-minute download link needs no sign-in — what a phone\'s browser op
   const member = await H.signIn('member');
   assert.equal((await H.api(null, 'POST', '/api/clients/apps/docamobile/link', {}, { Cookie: member.cookie })).status, 403, 'making one is a host\'s');
 });
+
+test('a device reads every address the hub answers at, without the QR codes', async () => {
+  const r = await (await fetch(`${H.base}/api/v1/hub/links`, { headers: { Authorization: `Bearer ${phone.token}` } })).json();
+  assert.ok(Array.isArray(r.links) && r.mode, 'a list and how the hub listens');
+  for (const l of r.links) { assert.match(l.url, /^https?:\/\//); assert.equal(l.qr, undefined, 'no QR for a device'); }
+  assert.equal((await fetch(`${H.base}/api/v1/hub/links`)).status, 401, 'a token is needed');
+});

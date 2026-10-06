@@ -50,7 +50,7 @@ function save({ listen: m, lanAdmin: la }) {
 }
 
 /** The addresses a phone can open this hub at, best first, each with a QR code. */
-async function links(req) {
+async function links(req, { qr = true } = {}) {
   const port = Number(process.env.PORT) || 4242;
   const proto = req.secure || req.socket?.encrypted ? 'https' : 'http';
   const out = [], seen = new Set();
@@ -67,6 +67,7 @@ async function links(req) {
   if (dns && m !== 'local') out.unshift({ url: `${proto}://${dns}:${port}/`, label: 'Tailscale name' });
   const here = String(req.headers.host || '').replace(/:\d+$/, '');
   if (here && !/^(localhost|127\.|\[?::1)/.test(here)) add(here, 'as you opened it');
+  if (!qr) return { links: out, mode: m };
   const qrcode = (() => { try { return require('qrcode'); } catch { return null; } })();
   for (const l of out) {
     try { l.qr = qrcode ? await qrcode.toString(l.url, { type: 'svg', errorCorrectionLevel: 'M', margin: 1, width: 240, color: { dark: '#000000', light: '#ffffff' } }) : null; } catch { l.qr = null; }
@@ -94,4 +95,12 @@ function mount(app) {
   app.get('/api/hub/links', h(req => links(req)));
 }
 
-module.exports = { MACHINE, outside, limited, rightsFrom, state, save, links, mount };
+/** A device's copy (any token): every address this hub answers at, best first, so an app paired on the home Wi-Fi
+ *  keeps the Tailscale ones and tries the next when one stops answering (DocaMobile, PROTOCOL.md §2.2). */
+function mountDevice(router) {
+  router.get('/hub/links', async (req, res) => {
+    try { res.json(await links(req, { qr: false })); } catch (e) { res.status(500).json({ error: { code: 'internal', message: e.message } }); }
+  });
+}
+
+module.exports = { MACHINE, outside, limited, rightsFrom, state, save, links, mount, mountDevice };
