@@ -15,8 +15,10 @@ const path = require('path');
 const crypto = require('crypto');
 
 const APPS = {
-  docamobile: { label: 'DocaMobile', package: 'tech.honlab.doca', task: ':app:assembleDebug', apk: 'app/build/outputs/apk/debug/app-debug.apk', java: null },
-  docawear: { label: 'DocaWear', package: 'tech.honlab.doca', task: ':app:assembleDebug', apk: 'app/build/outputs/apk/debug/app-debug.apk', java: 21 },
+  // Both apps share one package name, so the watch mark (`uses-feature android.hardware.type.watch`) is what tells
+  // them apart: a phone APK kept as DocaWear would be installed on the wrist (audit 2026-10-06, cl 14).
+  docamobile: { label: 'DocaMobile', package: 'tech.honlab.doca', watch: false, task: ':app:assembleDebug', apk: 'app/build/outputs/apk/debug/app-debug.apk', java: null },
+  docawear: { label: 'DocaWear', package: 'tech.honlab.doca', watch: true, task: ':app:assembleDebug', apk: 'app/build/outputs/apk/debug/app-debug.apk', java: 21 },
 };
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
 const dataDir = () => require('../store').DATA_DIR;
@@ -40,17 +42,18 @@ function aapt2() {
   return null;
 }
 
-/** package, versionCode and versionName from the APK itself (aapt2), else from what the uploader said. */
+/** package, versionCode, versionName and the watch mark from the APK itself (aapt2), else from what the uploader said. */
 function identify(file, given = {}) {
   const tool = aapt2();
   if (tool) {
     const r = require('child_process').spawnSync(tool, ['dump', 'badging', file], { encoding: 'utf8', timeout: 60000 });
     const m = /package: name='([^']+)' versionCode='(\d+)' versionName='([^']*)'/.exec(r.stdout || '');
-    if (m) return { package: m[1], versionCode: Number(m[2]), versionName: m[3] };
+    if (m) return { package: m[1], versionCode: Number(m[2]), versionName: m[3],
+      watch: /uses-feature: name='android\.hardware\.type\.watch'/.test(r.stdout) };
   }
   const versionCode = Number(given.versionCode);
   if (!Number.isInteger(versionCode) || versionCode < 1) throw bad('Say its versionCode (no Android SDK here to read it from the APK).');
-  return { package: String(given.package || ''), versionCode, versionName: String(given.versionName || versionCode) };
+  return { package: String(given.package || ''), versionCode, versionName: String(given.versionName || versionCode), watch: null };   // null: nobody could tell
 }
 
 /** Keep an APK as the app's latest. Refuses another package, and an older versionCode unless `force`. */
@@ -63,6 +66,8 @@ function keep(app, buffer, { from = 'upload', given = {}, force = false } = {}) 
   try {
     const id = identify(tmp, given);
     if (id.package && id.package !== a.package) throw bad(`That APK is ${id.package}, not ${a.label} (${a.package}).`);
+    if (id.watch !== null && id.watch !== a.watch)
+      throw bad(id.watch ? `That APK is a watch app (DocaWear), not ${a.label}.` : `That APK is not a watch app, so it is not ${a.label} — DocaMobile shares its package name.`);
     const prev = latest(app);
     if (prev && id.versionCode < prev.versionCode && !force) throw bad(`It is older (${id.versionCode}) than the one kept (${prev.versionCode}).`, 409);
     fs.renameSync(tmp, apkFile(app));

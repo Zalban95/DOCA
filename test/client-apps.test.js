@@ -81,3 +81,22 @@ test('a device reads every address the hub answers at, without the QR codes', as
   for (const l of r.links) { assert.match(l.url, /^https?:\/\//); assert.equal(l.qr, undefined, 'no QR for a device'); }
   assert.equal((await fetch(`${H.base}/api/v1/hub/links`)).status, 401, 'a token is needed');
 });
+
+test('DocaWear keeps only a watch app and DocaMobile never one — they share a package name (audit 2026-10-06, cl 14)', { skip: !posix && 'a POSIX fake aapt2' }, () => {
+  const apps = require('../modules/client-apps');
+  const sdk = path.join(H.tmp, 'FakeSdk'), tool = path.join(sdk, 'build-tools', '99.0.0', 'aapt2');
+  fs.mkdirSync(path.dirname(tool), { recursive: true });
+  const badging = watch => fs.writeFileSync(tool, `#!/bin/sh\necho "package: name='tech.honlab.doca' versionCode='500' versionName='5.0'"\n`
+    + (watch ? `echo "feature-group: label=''"\necho "  uses-feature: name='android.hardware.type.watch'"\n` : '') + '', { mode: 0o755 });
+  const was = process.env.ANDROID_HOME;
+  process.env.ANDROID_HOME = sdk;
+  try {
+    badging(false);
+    assert.throws(() => apps.keep('docawear', fakeApk('phone')), /not a watch app/);
+    assert.equal(apps.identify(tool).watch, false);
+    badging(true);
+    assert.throws(() => apps.keep('docamobile', fakeApk('watch'), { force: true }), /is a watch app/);
+    const kept = apps.keep('docawear', fakeApk('watch'));
+    assert.deepEqual([kept.versionCode, kept.watch], [500, true]);
+  } finally { if (was === undefined) delete process.env.ANDROID_HOME; else process.env.ANDROID_HOME = was; }
+});
