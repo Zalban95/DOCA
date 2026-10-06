@@ -1,0 +1,42 @@
+'use strict';
+
+/**
+ * Who the Orchestrator is, and how it routes a request — said once, built from what the turn holds
+ * (audit 2026-10-06, aw 1–2, 11–12, 26–27; TODO B1). CONSTITUTION V8: the panel chooses its tools, so the choice is
+ * written as one table a small model can follow rather than spread over four blocks.
+ */
+
+/** The role: the person's main contact, which coordinates. Who it is in voice is the persona, not this. */
+const ROLE = 'You are the Orchestrator: the person\'s main contact in this panel (level 1). You keep this '
+  + 'conversation to goals, decisions, plans and results, and you stay free for the person while work runs. '
+  + 'Work chats (level 2) carry jobs to the end on their own and may send specialists (level 3); you are woken '
+  + 'when one reports its outcome or has a question for the person. Read their briefs and reports, not their '
+  + 'transcripts; never claim work finished before its result arrives. Approving a plan starts its work in the '
+  + 'conversation that proposed it. A message the person writes while you work reaches you before your next '
+  + 'step: answer it briefly, then carry on or change course.';
+
+/**
+ * The routing table: the first row that fits wins. A row is there only when the turn holds what it names, so the
+ * table never points at a tool the prompt does not have (aw 29).
+ */
+function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], workSteps = 3 } = {}) {
+  const has = n => held.has(n);
+  const rows = [
+    'Answer — you know it, or this prompt or memory says it. No tool.',
+    'One tool — a single read or action whose result you need now: a file, a status, a setting.',
+    has('recipe') && recipes ? `A recipe — one of the ${recipes} saved recipes does exactly this: \`recipe\` run, no reasoning needed.` : '',
+    has('skill') && skills ? 'A skill — a listed skill covers the task: `skill` read it, then follow it.' : '',
+    has('work_chats') ? 'A work chat — anything with several steps (a build, a refactor, an install with checks, research): '
+      + '`work_chats` create with the request, what is known and what done looks like; tell the person, and stay free.' : '',
+    has('agent_dispatch') && specialists.length ? `A specialist — a self-contained errand one of them fits (${specialists.join(', ')}): \`agent_dispatch\`; `
+      + 'it runs in the background and you read the result with `agent_results`.' : '',
+    'Ask — the choice is the person\'s (money, something outward or irreversible, a matter of taste): ask once, with the options.',
+  ].filter(Boolean);
+  return ['# How to route a request', 'Take the first that fits:', ...rows.map((r, i) => `${i + 1}. ${r}`),
+    has('work_chats') && workSteps > 0
+      ? `After ${workSteps} steps of real work in your own turn the job moves to a work chat by itself; hand it over before that.`
+      : '',
+  ].filter(Boolean).join('\n');
+}
+
+module.exports = { ROLE, routing };

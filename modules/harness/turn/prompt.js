@@ -94,9 +94,9 @@ function rulesBlock() {
  */
 function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile, projectBrief = '', sessionId = null }) {
   // What this turn is offered, described (turn/tools-section.js).
-  const toolList = require('./tools-section').toolsSection(tools.schemas(disabledFor(profile, p, sessionId)));
+  const schemas = tools.schemas(disabledFor(profile, p, sessionId)), toolList = require('./tools-section').toolsSection(schemas);
   const identity = require('../identity');
-  if (profile?.level === 'orchestrator') return require('./orchestrator-prompt').orchestratorPrompt({ p, userText, summary, toolCount, client, profile, toolList });
+  if (profile?.level === 'orchestrator') return require('./orchestrator-prompt').orchestratorPrompt({ p, userText, summary, toolCount, client, profile, toolList, schemas });
   // A specialist's prompt is mostly what is left out of it. The charter is not
   // one of those things: it goes first here exactly as it does for the
   // orchestrator, and a definition has no way to drop it.
