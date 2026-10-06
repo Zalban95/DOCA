@@ -52,6 +52,14 @@ https://<host>:4242/api/v1
 - Send `X-Doca-Client: <name>/<version>` on every request. It is logged
   with the device and helps support.
 
+### 2.3 Wake-word models
+
+`GET /api/v1/wakeword` (any token) lists the wake-word models the hub trained and keeps (openWakeWord ONNX, one per
+word, each with its sha256) and the runtime's two shared models; a device downloads them from the URLs given and runs
+the chain itself: 16 kHz mono → every 1280 samples a mel spectrogram of the last 1760 (÷10 + 2) → a speech embedding of
+the last 76 mel frames → the word's model over the last 16 embeddings → a score; the word is heard at `frame.threshold`.
+Nothing leaves the device until it is heard. A model for a word not kept answers 404.
+
 ### 2.2 One hub, several addresses
 
 A hub may answer at its Tailscale name, its tailnet address and — when it listens on the local network (hub 2.233,

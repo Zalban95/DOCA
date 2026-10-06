@@ -35,4 +35,28 @@ function mount(app) {
   });
 }
 
-module.exports = { mount };
+/** A device's copy (any token; approved 2026-10-06): the kept models with their checksums and the runtime's two
+ *  shared models, so an app can listen for its word itself — DocaMobile's screen saver, a watch, a desk app. */
+function mountDevice(router) {
+  const v1 = req => `/api/v1/wakeword`;
+  router.get('/wakeword', (req, res) => {
+    const ready = !!ww.runtimeFile('melspectrogram.onnx') && !!ww.runtimeFile('embedding_model.onnx');
+    res.json({
+      models: ww.models().map(m => ({ word: m.word, name: m.name, sha256: m.sha256, bytes: m.bytes, at: m.at, url: `${v1(req)}/models/${encodeURIComponent(m.name)}/model.onnx` })),
+      runtime: ready ? ['melspectrogram.onnx', 'embedding_model.onnx'].map(f => ({ name: f, url: `${v1(req)}/runtime/${f}` })) : [],
+      frame: { rate: 16000, samples: 1280, embeddingWindow: 76, features: 16, threshold: 0.5 },
+    });
+  });
+  router.get('/wakeword/models/:name/model.onnx', (req, res) => {
+    const f = ww.modelFile(req.params.name);
+    if (!require('fs').existsSync(f)) return res.status(404).json({ error: { code: 'not_found', message: 'No model for that word.' } });
+    res.type('application/octet-stream').sendFile(f);
+  });
+  router.get('/wakeword/runtime/:file', (req, res) => {
+    const f = ww.runtimeFile(req.params.file);
+    if (!f) return res.status(404).json({ error: { code: 'not_found', message: 'Not part of the runtime here.' } });
+    res.type('application/octet-stream').sendFile(f);
+  });
+}
+
+module.exports = { mount, mountDevice };

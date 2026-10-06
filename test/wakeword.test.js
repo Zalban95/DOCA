@@ -44,3 +44,17 @@ test('a kept model is listed with its scores and served to any signed-in screen;
   assert.equal((await fetch(`${H.base}/api/wakeword/runtime/passwd`, { headers: { Cookie: viewer.cookie } })).status, 404, 'only the runtime\'s two models');
   assert.equal((await H.api(null, 'DELETE', '/api/wakeword/models/doca')).body.removed, 'doca');
 });
+
+test('a device lists the kept models and fetches one with its token', async () => {
+  const ww = require('../modules/wakeword');
+  const tmp = require('node:path').join(ww.dir(), 'tmp2.onnx');
+  require('node:fs').writeFileSync(tmp, Buffer.from('m2'));
+  ww.keep('Doca', tmp, {});
+  const { token } = H.mkDevice('Phone', 'phone', H.PHONE_CAPS);
+  const list = await (await fetch(`${H.base}/api/v1/wakeword`, { headers: { Authorization: `Bearer ${token}` } })).json();
+  assert.equal(list.models[0].name, 'doca');
+  assert.equal(list.frame.samples, 1280);
+  const got = await fetch(`${H.base}${list.models[0].url}`, { headers: { Authorization: `Bearer ${token}` } });
+  assert.equal(Buffer.from(await got.arrayBuffer()).toString(), 'm2');
+  assert.equal((await fetch(`${H.base}/api/v1/wakeword`)).status, 401);
+});
