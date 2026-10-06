@@ -348,13 +348,15 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   the `window.DocaDevice` bridge (the most used apps as shortcuts; open one), ambient as what the phone shows when
   docked or charging, and the device lent as an MCP family over the socket transport (open an app at a link, its
   screen read and tapped by accessibility, cast) — so "play it here" runs on the phone while the call stays.
-- [ ] H10.13 Every GPU job visible and attributable (audit 2026-10-06: "I see the GPUs running something but the
+- [x] H10.13 Every GPU job visible and attributable (audit 2026-10-06: "I see the GPUs running something but the
   models don't show on, and no specialists working"). The model on the GPUs is served by a llama.cpp router (a systemd
   user service, port 8080, loads on demand, sleeps after 120 s) that DOCA does not know; Models and the sidebar know
   Ollama and DOCA's own llama-servers only, and DOCA's entry for the same model (port 11435) was never running. Show
   any OpenAI-compatible model server the harness uses — its models loaded or sleeping (llama.cpp router `/models`,
   `/slots`, Ollama `ps`) — and tag DOCA's own requests with what made them (turn, mission, summary, guard, reader), so a
   job DOCA did not make reads as not DOCA's. Seen: one 10-minute job (19:52, 2.9k-token prompt) no DOCA run matches.
+  **Done (2.241.0):** model-servers.js + harness/inflight.js; the sidebar's ◆ Model servers. Found on the way: the
+  `vllm` provider's preset address (127.0.0.1:8000) is the Whisper server here — it shows as answering with 611 models.
 - [ ] H10.14 Stop means stop, visibly (audit 2026-10-06). A visible Stop on every running thing (a specialist, a work
   chat, an automatic turn); stopping a specialist stops its line of work — the work chat that sent it is told and
   waits, it is not woken to carry on (`supervisor.missionEnded` wakes it today). Closing or archiving finished work
