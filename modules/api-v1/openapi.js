@@ -86,7 +86,7 @@ function schemas() {
     }, { description: 'Self-declared device capabilities. Every section is optional; nothing here is a platform identifier.' }),
 
     Device: obj({
-      id: str({ examples: ['dev_9f4bf9ba62b1'] }), name: str(), kind: str({ enum: ['device', 'agent'] }), scopes: arr(ref('Scope')), caps: ref('Caps'),
+      id: str({ examples: ['dev_9f4bf9ba62b1'] }), name: str(), kind: str({ enum: require('./devices').KINDS }), scopes: arr(ref('Scope')), caps: ref('Caps'),
       vars: obj({}, { additionalProperties: true }), varsVersion: int(), createdAt: iso(), lastSeenAt: nullable(iso()), expiresAt: nullable(iso()), revokedAt: nullable(iso()),
     }),
 
@@ -135,7 +135,7 @@ function schemas() {
       status: str({ enum: ['pending', 'accepted', 'rejected'] }), decidedAt: nullable(iso()), serverId: nullable(str()),
     }, { description: 'A client\'s offer of the MCP server it hosts, waiting on a dashboard click. `pending` means recorded and doing nothing.' }),
 
-    HarnessImage: obj({ name: str(), mime: str({ description: 'An image, audio or video type the panel can show: png, jpeg, webp, gif, avif, svg; mp4, webm, quicktime, matroska; mpeg, wav, ogg, mp4, flac, aac.' }), kind: str({ enum: ['image', 'audio', 'video', 'doc'], description: 'Draw it, play it, or open it. Decided by the hub so a client does not parse mime types. A doc is markdown or plain text - a plan, a brief, a report - and is meant to be opened in a window rather than drawn in the transcript; a watch should not try.' }), bytes: int(), caption: str({ description: 'One line under it, when the agent gave one.' }), url: str({ description: 'Fetch with the device token; `GET /harness/images/{name}`.' }) }, { required: ['name', 'mime', 'kind', 'bytes', 'url'] }),
+    HarnessImage: obj({ name: str(), mime: str({ description: 'An image, audio or video type the panel can show: png, jpeg, webp, gif, avif, svg; mp4, webm, quicktime, matroska; mpeg, wav, ogg, mp4, flac, aac.' }), kind: str({ enum: require('../attachments').PLAYABLE_KINDS, description: 'Draw it, play it, or open it (a model: a 3D model, drawn by a viewer or offered as a download). Decided by the hub so a client does not parse mime types. A doc is markdown or plain text - a plan, a brief, a report - and is meant to be opened in a window rather than drawn in the transcript; a watch should not try.' }), bytes: int(), caption: str({ description: 'One line under it, when the agent gave one.' }), url: str({ description: 'Fetch with the device token; `GET /harness/images/{name}`.' }) }, { required: ['name', 'mime', 'kind', 'bytes', 'url'] }),
     HarnessSession: obj({
       id: str({ examples: ['s_mt0z3rfa'] }), title: str(), createdAt: iso(), updatedAt: iso(), count: int({ description: 'Messages in the transcript.' }),
       summary: str({ description: 'Rolling summary of the folded-away part of the conversation.' }),

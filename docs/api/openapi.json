@@ -8031,7 +8031,9 @@
             "type": "string",
             "enum": [
               "device",
-              "agent"
+              "agent",
+              "browser",
+              "channel"
             ]
           },
           "scopes": {
@@ -8693,9 +8695,10 @@
               "image",
               "audio",
               "video",
-              "doc"
+              "doc",
+              "model"
             ],
-            "description": "Draw it, play it, or open it. Decided by the hub so a client does not parse mime types. A doc is markdown or plain text - a plan, a brief, a report - and is meant to be opened in a window rather than drawn in the transcript; a watch should not try."
+            "description": "Draw it, play it, or open it (a model: a 3D model, drawn by a viewer or offered as a download). Decided by the hub so a client does not parse mime types. A doc is markdown or plain text - a plan, a brief, a report - and is meant to be opened in a window rather than drawn in the transcript; a watch should not try."
           },
           "bytes": {
             "type": "integer"

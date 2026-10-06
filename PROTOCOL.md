@@ -52,14 +52,6 @@ https://<host>:4242/api/v1
 - Send `X-Doca-Client: <name>/<version>` on every request. It is logged
   with the device and helps support.
 
-### 2.3 Wake-word models
-
-`GET /api/v1/wakeword` (any token) lists the wake-word models the hub trained and keeps (openWakeWord ONNX, one per
-word, each with its sha256) and the runtime's two shared models; a device downloads them from the URLs given and runs
-the chain itself: 16 kHz mono → every 1280 samples a mel spectrogram of the last 1760 (÷10 + 2) → a speech embedding of
-the last 76 mel frames → the word's model over the last 16 embeddings → a score; the word is heard at `frame.threshold`.
-Nothing leaves the device until it is heard. A model for a word not kept answers 404.
-
 ### 2.2 One hub, several addresses
 
 A hub may answer at its Tailscale name, its tailnet address and — when it listens on the local network (hub 2.233,
@@ -68,6 +60,14 @@ A hub may answer at its Tailscale name, its tailnet address and — when it list
 current one cannot connect, tries the others in order and prefers the one that answered. The certificate is the same
 at every address, so a pinned certificate holds; the device token is the same too. A device that is outside the
 tailnet and the LAN still has no route — this lists addresses, it does not open any.
+
+### 2.3 Wake-word models
+
+`GET /api/v1/wakeword` (any token) lists the wake-word models the hub trained and keeps (openWakeWord ONNX, one per
+word, each with its sha256) and the runtime's two shared models; a device downloads them from the URLs given and runs
+the chain itself: 16 kHz mono → every 1280 samples a mel spectrogram of the last 1760 (÷10 + 2) → a speech embedding of
+the last 76 mel frames → the word's model over the last 16 embeddings → a score; the word is heard at `frame.threshold`.
+Nothing leaves the device until it is heard. A model for a word not kept answers 404.
 
 ## 3. Versioning
 
@@ -1153,6 +1153,7 @@ text frame, and you answer each by its `id`. One socket per device; a newer one 
 
 The DOCA browser extension (`clients/browser`, preset `extension` = `mcp:self` only) is the first such client.
 
+## 23. Talking to the agent (`/harness`)
 
 Every client is an input and an output to one agent. A watch, a phone and a
 kiosk are not three assistants; they are three ways into the same conversation.
@@ -1248,11 +1249,11 @@ Rules a client can rely on:
 - **Unknown event types and payload fields must be ignored** (§3), which is how
   thinking traces and multimodal turns will arrive without breaking you.
 
-> **FUTURE.** Images and audio in a turn (`mediaId` from §17, transcribed before
-> the model), voice out, and an `agent.thinking` event are specified in
-> `docs/proposals/hub-any-client-any-mcp.md` §3.1 and are **not implemented**: a
-> message carrying `mediaId` is refused with `400 unsupported` rather than
-> silently answered as text.
+**Files in a turn.** A message may carry `mediaId` (one id or a list, uploaded first with §17) or `attachments`
+(names of files already in the hub's attachments): the hub copies each into its attachments and the agent is given
+its path, as for a file dropped into the panel — it reads, converts or shows it with its tools. An id the hub does not
+know, or one that expired, is `404 not_found`, never silently dropped. Voice out and an `agent.thinking` event are not
+part of this protocol (a live call, §23.1, is how a device speaks with the agent).
 
 ### 23.1 A live call (since hub 2.200.0; an experiment)
 
