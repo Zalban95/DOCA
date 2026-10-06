@@ -152,7 +152,12 @@ async function handlePairStart(req, res) {
     userId: req.auth?.user.id || null, orgId: req.auth?.orgId || null,
   });
 
-  const host = req.headers.host || '';
+  // The address the phone will dial: the one this page was opened at, unless that is this machine's own loopback,
+  // which a phone cannot reach — then the hub's best reachable one (its Tailscale name, else a tailnet or LAN address).
+  let host = req.headers.host || '';
+  if (/^(localhost|127\.|\[::1\])/i.test(host)) {
+    try { const best = (await require('./network').links(req)).links[0]; if (best) host = new URL(best.url).host; } catch { /* keep it */ }
+  }
   const url  = `doca://pair?code=${p.code.replace('-', '')}&host=${host}`;
 
   let qr = null;
