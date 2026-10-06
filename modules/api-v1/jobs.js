@@ -132,6 +132,9 @@ function runAsJob(commandId, deviceId, handler, reqShape, params) {
   return job;
 }
 
+/** The device commands still running, for drain.busy(). */
+const running = () => [..._jobs.values()].filter(j => j.status === 'running');
+
 function _reset() { _jobs.clear(); }
 
-module.exports = { newJob, get, publicView, invokeHandler, runAsJob, _reset };
+module.exports = { running, newJob, get, publicView, invokeHandler, runAsJob, _reset };

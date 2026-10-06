@@ -41,7 +41,7 @@ async function liveCallAssistantHtml() {
   const owner = typeof authHasRight !== 'function' || authHasRight('host');
   const lv = ['off', 'low', 'medium', 'high', 'default'];
   return `<div style="border-top:1px solid var(--border2);padding-top:10px;display:flex;flex-direction:column;gap:8px">
-    <div style="font-size:11px;font-weight:600">For every screen${owner ? '' : ' (the owner sets these)'}</div>
+    <div style="font-size:11px;font-weight:600">For every screen${owner ? '' : ' (an admin sets these)'}</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">Thinking effort</label>
       <select class="input" id="as-effort" style="width:auto" ${owner ? '' : 'disabled'}>${lv.map(x => `<option value="${x}" ${a.effort === x ? 'selected' : ''}>${x === 'default' ? 'the model\'s default' : x}</option>`).join('')}</select></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">A quicker model (optional)</label>

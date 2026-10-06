@@ -220,7 +220,7 @@ async function ask({ to, question, choices, note, timeoutSec, signal, svg, layou
       const atPanel = _open.get(prompt.id)?.answer;
       if (atPanel) {
         try { prompts.cancel(prompt.id, AGENT); } catch { /* already gone */ }
-        return { status: 'answered', device: { name: 'the owner at the panel', kind: 'dashboard' }, ...atPanel,
+        return { status: 'answered', device: { name: 'the person at the panel', kind: 'dashboard' }, ...atPanel,
           waitedSec: Math.round((Date.now() - (deadline - waitSec * 1000)) / 1000), targets };
       }
       const found = answerOf(cur, targets);

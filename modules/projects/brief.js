@@ -32,7 +32,7 @@ async function text(p) {
       + (g ? ` Git: branch ${g.branch}${g.ahead ? `, ${g.ahead} ahead` : ''}${g.behind ? `, ${g.behind} behind` : ''}, ${g.files.length} changed file(s).` : ' Not a git repository.'),
     commands.length
       ? `Commands (project action run): ${commands.map(c => `${c.name}${c.missing.length ? ' [missing ' + c.missing.join('+') + ']' : ''}`).join(', ')}.`
-      : 'No build or test commands were recognised; ask the owner how it builds.',
+      : 'No build or test commands were recognised; ask the person how it builds.',
     missing.length ? `Not installed here: ${missing.join(', ')} — say so rather than working around it.` : '',
     require('./env').briefLine(p),
     'How to work here: find code with search_files (not shell grep), change many files with replace_in_files '

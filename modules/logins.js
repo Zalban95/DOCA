@@ -50,8 +50,8 @@ async function computerCall(c, name, args) {
 async function fill({ computer, login, userRef, passRef }) {
   const c = require('./computers').need(String(computer || ''));
   const l = all()[String(login || '')] || Object.values(all()).find(x => x.label.toLowerCase() === String(login || '').toLowerCase());
-  if (!l) throw bad(`No login "${login}". The owner keeps them in Settings → Connectors → Logins: ${list().map(x => x.label).join(', ') || 'none yet'}.`, 404);
-  if (!c.fillKey) throw bad('This computer was made before logins existed: make a new one (or ask the owner to).', 409);
+  if (!l) throw bad(`No login "${login}". An admin keeps them in Settings → Connectors → Logins: ${list().map(x => x.label).join(', ') || 'none yet'}.`, 404);
+  if (!c.fillKey) throw bad('This computer was made before logins existed: make a new one (or ask an admin to).', 409);
   const page = await computerCall(c, 'browser_snapshot', {});
   const at = (/^url: (\S+)/m.exec(page) || [])[1] || '';
   let origin = '';

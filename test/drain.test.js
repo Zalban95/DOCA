@@ -75,3 +75,22 @@ test('the routes: what is running, a restart that waits, and calling it off', as
   assert.equal((await H.api(null, 'GET', '/api/harness/busy')).body.pending, null);
   lifecycle.running.delete(s.id);
 });
+
+test('waiting is the default: a restart asked with nothing goes ahead only when nothing runs, and calls and device commands count', async () => {
+  assert.equal(drain.waits({}), false, 'nothing running: no wait');
+  const s = memory.createSession('Still working', { activate: false });
+  lifecycle.running.set(s.id, new AbortController());
+  assert.equal(drain.waits({}), true, 'no flag: it waits');
+  assert.equal(drain.waits({ now: true }), false, 'now: it does not');
+  assert.equal(drain.waits({ whenIdle: false }), false, "the panel's older 'go ahead now'");
+  const r = await H.api(null, 'POST', '/api/restart', {});
+  assert.equal(r.status, 202, 'a bare restart waits');
+  drain.cancel();
+  lifecycle.running.delete(s.id);
+
+  const jobs = require('../modules/api-v1/jobs');
+  const job = jobs.newJob('build', 'dev_x', {});
+  assert.deepEqual(drain.busy().map(t => t.kind), ['job']);
+  job.status = 'done';
+  assert.equal(drain.busy().length, 0);
+});

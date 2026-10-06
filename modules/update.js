@@ -310,11 +310,11 @@ function supervisorName() {
  *  listenWithRetry() in server.js. Its output goes to a log file because a
  *  detached process has nowhere else to report a failed boot. */
 function handleRestart(req, res) {
-  // Running turns are not cut off unless asked: { whenIdle: true } waits for
-  // them (harness/drain.js), { cancel: true } calls a waiting restart off.
+  // Running work is not cut off unless asked: while anything runs the restart
+  // waits for it (harness/drain.js) unless { now: true }; { cancel: true } calls a waiting restart off.
   const drain = require('./harness/drain');
   if (req.body?.cancel) return res.json({ ok: true, cancelled: drain.cancel() });
-  if (req.body?.whenIdle && drain.busy().length) {
+  if (drain.waits(req.body)) {
     const waiting = drain.whenIdle(() => restartNow(), { label: 'restart' });
     return res.status(202).json({ ok: true, waiting });
   }

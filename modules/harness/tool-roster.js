@@ -35,7 +35,7 @@ function reasonHeld(name, profile) {
 
 function reasonRefused(name, profile, p) {
   const registry = require('../agents/registry');
-  if ((p.disabledTools || []).includes(name)) return 'switched off by the owner (⚙ tools)';
+  if ((p.disabledTools || []).includes(name)) return 'switched off by an admin (⚙ tools)';
   if (registry.AIRLOCK_ONLY.includes(name) && registry.enabled() && !profile?.airlock) return 'the airlock: only an airlock specialist reads the web';
   if (profile && profile.level !== 'orchestrator' && registry.NEVER.includes(name)) return 'never a specialist\'s (registry NEVER)';
   if (/^mcp__computer-/.test(name)) return 'another conversation\'s computer';

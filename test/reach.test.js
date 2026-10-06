@@ -163,7 +163,7 @@ test('the same question is open at the panel, and a choice there answers it and 
   const r = await h.api(null, 'POST', `/api/harness/questions/${q.id}`, { choiceId: q.choices[1].id });
   assert.equal(r.status, 200);
   const out = await asking;
-  assert.match(out, /the owner at the panel \(dashboard\) answered: "Tomorrow"/);
+  assert.match(out, /the person at the panel \(dashboard\) answered: "Tomorrow"/);
   const onWatch = await h.api(watch.token, 'GET', '/api/v1/prompts');
   assert.equal(onWatch.body.prompts.length, 0, 'the watch is no longer offering it');
   assert.equal((await h.api(null, 'GET', '/api/harness/questions')).body.questions.some(x => x.id === q.id), false);

@@ -310,16 +310,16 @@ async function handleList(_req, res) {
   catch (e) { res.status(500).json({ error: e.message }); }
 }
 
-/** POST /api/versions/use { version, force } — streamed, then the panel restarts. */
+/** POST /api/versions/use { version, force, now } — streamed, then the panel restarts (when idle, unless now). */
 async function handleUse(req, res) {
   const { sseHeaders } = require('./utils');
   sseHeaders(res);
   const send = d => { try { res.write(`data: ${JSON.stringify(d)}\n\n`); } catch {} };
   const say = status => send({ status });
   try {
-    // { whenIdle: true }: switch now, restart into it once running turns end (harness/drain.js).
+    // While anything runs, switch now and restart into it once it ends (harness/drain.js); { now: true } does not wait.
     const drain = require('./harness/drain');
-    const wait = req.body?.whenIdle === true && drain.busy().length > 0;
+    const wait = drain.waits(req.body);
     const r = await use(String(req.body?.version || ''), { force: req.body?.force === true, by: 'ui', say, restart: !wait });
     if (wait && r.from !== r.to) {
       const waiting = drain.whenIdle(() => restartSelf(), { label: `switch to ${r.to}` });

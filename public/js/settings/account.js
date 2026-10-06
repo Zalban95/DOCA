@@ -26,7 +26,7 @@ async function accountLoad() {
     <div class="snap-item" style="margin:0">
       <div style="min-width:0">
         <div class="snap-name">${escHtml(me.name || me.email)}</div>
-        <div class="snap-date">${escHtml(me.email)} · ${escHtml(me.role)}</div>
+        <div class="snap-date">${escHtml(me.email)} · ${escHtml(me.levelName || me.role)}</div>
       </div>
     </div>
     <span class="status-line" id="account-status"></span>`;

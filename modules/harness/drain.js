@@ -9,13 +9,15 @@
  * halfway through a shell command or an edit is not the same as one that
  * finished. So the panel first says what is running, and can wait:
  *
- *   busy()            the turns running now
+ *   busy()            what is running now: turns, live voice calls, devices' commands
  *   whenIdle(fn)      run fn once nothing is running — or after maxWaitMs,
  *                     whichever is first; while it waits the panel starts no
  *                     automatic turns (supervisor.wake), or it might never be idle
  *   pending()/cancel  what is waiting, and calling it off
  *
- * Only one action waits at a time; asking again replaces it.
+ * Only one action waits at a time; asking again replaces it. Waiting is the
+ * default (CONSTITUTION.md: nothing restarts while something runs): a restart
+ * or a switch goes ahead at once only when the caller says `now`.
  */
 const POLL_MS = 2000;
 const MAX_WAIT_MS = 30 * 60e3;
@@ -25,11 +27,17 @@ let _pending = null;   // { label, since, deadline, fn, timer }
 function busy() {
   const { running } = require('./turn/lifecycle');
   const memory = require('./memory');
-  return [...running.entries()].map(([sessionId, ctrl]) => {
+  const turns = [...running.entries()].map(([sessionId, ctrl]) => {
     const s = memory.getSession(sessionId);
     return { sessionId, title: s?.title || sessionId, kind: s?.kind || 'work', auto: !!ctrl?.auto };
   });
+  const calls = require('../realtime').live().map(c => ({ sessionId: c.sessionId || null, title: 'A voice call', kind: 'call', auto: false }));
+  const jobs = require('../api-v1/jobs').running().map(j => ({ sessionId: null, title: `A device's command: ${j.commandId}`, kind: 'job', auto: false }));
+  return [...turns, ...calls, ...jobs];
 }
+
+/** Whether a restart asked with this body waits: unless it says now (or the panel's older whenIdle: false). */
+const waits = (body = {}) => body.now !== true && body.whenIdle !== false && busy().length > 0;
 
 function pending() {
   if (!_pending) return null;
@@ -62,4 +70,4 @@ function cancel() {
   return true;
 }
 
-module.exports = { busy, pending, whenIdle, cancel, MAX_WAIT_MS };
+module.exports = { busy, waits, pending, whenIdle, cancel, MAX_WAIT_MS };

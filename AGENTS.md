@@ -1,5 +1,9 @@
 # AGENTS.md
 
+**Read `CONSTITUTION.md` first.** It is the project's base rules — what DOCA is for, its values, who may release,
+what is always asked, what needs a snapshot first — and it wins over this file when they disagree. This file is how
+those rules are carried out in the code.
+
 ## Cursor Cloud specific instructions
 
 ### What this is
@@ -29,14 +33,16 @@ fresh round of reasoning), **portable** (exportable and importable as a pack). P
 the device's page; new capabilities land in `/api/v1` first so a client can have them.
 
 ### Working on this repository
-The harness gives its agent eight rules for working on any repository (charter rules 16–23 in `modules/harness/providers.js`). This repository holds itself to the same ones, whoever is editing it:
+The harness gives its agent eight rules for working on any repository (charter rules 16–23 in `modules/harness/providers.js`). This repository holds itself to the same ones, whoever is editing it, with `CONSTITUTION.md` §4–§5 on top:
 
 - **Read the rules first** — this file, and the `AGENTS.md` of any sibling repo you touch (`DocaDesk`, `DocaMobile`, `DocaWear`); their contracts break in silence from here.
 - **Leave other people's uncommitted work alone.** `git status` before you start; what is already modified or untracked (an `audit.md`, say) is not yours to stash, reset or commit.
-- **A branch per task.** Merging to `main`, tagging and pushing are the owner's call — ask. A release is a commit prefixed `[X.Y.Z]` plus an annotated tag `vX.Y.Z` (see version discipline below).
+- **A branch per task.** Merging to `main`, tagging and pushing are asked for, except by a Claude Opus or Fable model of version 5 or later, which may release unasked (CONSTITUTION W2) — and still stops for what W3 lists. A release is a commit prefixed `[X.Y.Z]` plus an annotated tag `vX.Y.Z` (see version discipline below).
+- **The way back first.** Before a risky step (rewriting git history, deleting or migrating files or data, a machine's state) make a snapshot and say where it is (CONSTITUTION S9). Never restore a backup onto the live panel — a sandbox only. A restart or a version switch waits for running turns, calls and device commands (`harness/drain.js`, the default since 2.222.0); `now: true` is a person's choice, not a script's.
+- **Some files ask first** (CONSTITUTION S11): a change that widens what an agent may do or weakens a guard — the charter, `modules/auth/**`, approval, `settings.js`'s lists, secrets masking and `PROTECTED_FILES`, `NEVER`/`AIRLOCK_ONLY`, `/api/v1` scopes, keys — waits for a yes, even inside a loop.
 - **One logical change per commit, and the message says why.** A pure move and a behaviour change go in separate commits, so the move can be reviewed as a move.
 - **Done means checked:** `npm test` green, and for a front-end change the page actually loaded with every tab visited and no page error. Report what you ran and what it printed, and what you did not check.
-- **Shape:** one idea per file; `test/structure.test.js` holds files under 400 lines (the oversized ones listed there may only shrink) and front-end globals unique. Split along seams instead of raising a number.
+- **Shape:** one idea per file, new files aiming at 250 lines; `test/structure.test.js` holds files under 400 lines (the oversized ones listed there may only shrink) and front-end globals unique. Split along seams instead of raising a number.
 - **Leave the tree clean:** no stray files, logs or `.bak`s (`write_file` now keeps its backups under `.doca/harness/backups/`), no lockfile churn you did not mean.
 - **The agent proposes, a person decides** — the rule every feature here follows (`settings_propose`, `install_propose`, `work_plan`). A new feature that lets the agent change what governs it without a click is a bug, not a shortcut (`ISSUES.md` H-19).
 
