@@ -18,3 +18,4 @@ node_modules/
 /backups/
 /.backup-password
 .aider*
+__pycache__/
