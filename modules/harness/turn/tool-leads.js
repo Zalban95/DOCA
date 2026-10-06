@@ -1,0 +1,38 @@
+'use strict';
+
+/**
+ * The line "Your tools" shows for a tool whose description's first sentence cannot serve: too long (it was cut at
+ * 150 characters mid-word, 21 of them), or not saying when to use it ("Manage the three-level workspace.").
+ * Audit 2026-10-06, aw 16–17 (TODO B4): a weaker model chooses by these lines, so each says what it does and when,
+ * in one sentence of at most 150 characters. The schema still carries the whole description.
+ */
+const LEADS = {
+  work_chats: 'Start, brief, read and stop level-2 work chats — use it to hand a job with several steps to a work chat and stay free.',
+  work_plan: 'Read, draft or propose a durable plan — use it when a job needs the person\'s approval before work starts.',
+  shell_job: 'Check, read or stop a command started with shell background: true — use it for builds and servers that outlive a step.',
+  read_file: 'Read a text file on the host, whole or a slice — use it before editing a file or answering from one.',
+  repo_rules: 'Read a git repository\'s rules, branch and uncommitted changes — call it before your first change in that repository.',
+  effort: 'Set how hard you think in this conversation — use it when the person asks you to think harder or answer quickly.',
+  form_fill: 'Fill a form on the person\'s screen as a draft they save — use it when they ask for help filling a named form.',
+  settings_propose: 'Suggest a settings change the person accepts or declines — use it instead of editing settings any other way.',
+  install_propose: 'Ask the person to install a model, service, harness, MCP server or system tool the panel knows — never install by hand.',
+  mcp_draft: 'Prepare an MCP server that is not in the catalogue for a person to add — use it when a task needs a server nobody set up.',
+  service_draft: 'Prepare a web API that needs a key for a person to switch on — use it when a task needs a service with no key stored.',
+  permission_grant: 'Give a mission you dispatched one more permission — use it when a specialist reports a refusal for a step it needs.',
+  mcp_connect: 'Start or stop an MCP server a person already set up — use it when you need the tools of a server that is stopped.',
+  doca_clients: 'List the paired devices, who is online and what each may do — use it before reaching the person on a device.',
+  canvas: 'Open a page beside the chat (a tool, a table, a diagram, a report) — use it when a result reads better laid out than as text.',
+  search_files: 'Search the text of files under a folder — use it instead of grep in the shell to find where something is.',
+  git: 'Status, log, diff, show, branches, stage, commit and switch in a repository — use it for git work; it never pushes or resets.',
+  project: 'A project\'s commands, info and worktrees — use it to run a project\'s build or test, or to work in a worktree of its own.',
+  tool_note: 'Propose a note about a tool that this install taught you — use it when a tool has a quirk its description does not say.',
+  skill: 'Read, list or write a skill (a procedure for a kind of task) — read one when the task matches a skill in your prompt.',
+  computer: 'Make or manage a Linux desktop in a container — use it for risky tests, sites used as a person would, or recording a demo.',
+  computer_login: 'Sign in on a computer\'s browser with a login the owner keeps, without seeing its password — use it at a sign-in page.',
+  computer_look: 'Ask what is on a computer\'s screen and where — use it when browser_snapshot finds nothing to number.',
+  recipe: 'Run a saved sequence of tool calls again, or save one — run a recipe when one does exactly what is asked.',
+  pack: 'Keep skills, recipes and specialists you made as one pack in the library — use it when the owner wants to share them.',
+  schedule: 'Propose a message or recipe on a timetable, which the person switches on — use it when asked to do something regularly.',
+};
+
+module.exports = { LEADS };

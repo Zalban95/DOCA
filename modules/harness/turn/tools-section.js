@@ -9,16 +9,21 @@
  * added since (canvas, the project tools…) was named in no prompt at all. This
  * is the list the turn really has — after kits, the level's rules and the
  * owner's switches — so a tool added to a kit in a later release is described
- * by construction. Each line is the tool's own description's first sentence,
- * which is written beside the tool.
+ * by construction. Each line is the tool's written lead (tool-leads.js) or its description's first
+ * sentence: what it does and when to use it, at most 150 characters.
  */
 const { KITS, kitOf } = require('../kits');
 
 function firstSentence(text, max = 150) {
   const s = String(text || '').replace(/\s+/g, ' ').trim();
-  const cut = s.search(/\.(\s|$)/);
+  const cut = s.search(/(?<!\b(?:e\.g|i\.e|etc))\.(\s|$)/);   // "e.g." is not the end of a sentence
   const one = cut > 0 ? s.slice(0, cut + 1) : s;
   return one.length > max ? `${one.slice(0, max - 1)}…` : one;
+}
+
+/** The one line a tool gets in "Your tools": its written lead (tool-leads.js), else its first sentence. */
+function lineFor(name, description) {
+  return require('./tool-leads').LEADS[name] || firstSentence(description);
 }
 
 /**
@@ -31,7 +36,7 @@ function toolsSection(schemas) {
     const name = s.function?.name;
     const kit = kitOf(name) || 'other';
     if (!byKit.has(kit)) byKit.set(kit, []);
-    byKit.get(kit).push({ name, what: firstSentence(s.function?.description) });
+    byKit.get(kit).push({ name, what: lineFor(name, s.function?.description) });
   }
   const order = [...Object.keys(KITS), 'other'];
   const lines = [`# Your tools — ${schemas.length}, by kit`,
@@ -53,4 +58,4 @@ function toolsSection(schemas) {
   return lines.join('\n');
 }
 
-module.exports = { toolsSection, firstSentence };
+module.exports = { toolsSection, firstSentence, lineFor };

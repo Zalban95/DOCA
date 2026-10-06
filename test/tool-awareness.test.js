@@ -14,12 +14,16 @@ const H      = require('./helpers');
 test.before(() => H.start());
 test.after(() => H.stop());
 
-test('every built-in tool says what it is for in its first sentence — that sentence is all "Your tools" shows', () => {
-  const { firstSentence } = require('../modules/harness/turn/tools-section');
-  const vague = require('../modules/harness/tools').TOOLS
-    .map(t => [t.name, firstSentence(t.description)])
-    .filter(([, s]) => s.length < 25);
-  assert.deepEqual(vague, [], 'give these tools a first sentence that says what they are for');
+test('every built-in tool\'s line in "Your tools" says what it is for, whole, in at most 150 characters (audit 2026-10-06, aw 16)', () => {
+  const { lineFor } = require('../modules/harness/turn/tools-section');
+  const { LEADS } = require('../modules/harness/turn/tool-leads');
+  const TOOLS = require('../modules/harness/tools').TOOLS;
+  const lines = TOOLS.map(t => [t.name, lineFor(t.name, t.description)]);
+  assert.deepEqual(lines.filter(([, s]) => s.length < 25), [], 'give these tools a line that says what they are for');
+  assert.deepEqual(lines.filter(([, s]) => s.length > 150 || s.endsWith('…') || !/[.!?]$/.test(s) || /\b(e\.g|i\.e)\.$/.test(s)), [],
+    'cut mid-sentence: write a lead for it in turn/tool-leads.js');
+  for (const n of Object.keys(LEADS)) assert.ok(TOOLS.some(t => t.name === n), `a lead for ${n}, which is no tool`);
+  for (const n of ['work_chats', 'project', 'schedule', 'recipe', 'shell_job']) assert.match(LEADS[n], / — /, `${n} says when to use it`);
 });
 
 test('shipped specialists name only tools and kits that exist, and each holds something', () => {

@@ -9,7 +9,7 @@
 const tools = require('./tools');
 const { KITS, kitOf } = require('./kits');
 const { disabledFor, ALWAYS_FOR_SPECIALISTS, COMES_WITH } = require('./turn/prompt');
-const { firstSentence } = require('./turn/tools-section');
+const { lineFor } = require('./turn/tools-section');
 
 function profileFor(type) {
   if (type === 'orchestrator') return require('./organization').profileFor({ kind: 'orchestrator' });
@@ -53,7 +53,7 @@ function roster(type) {
   const held = [], refused = [];
   const wanted = n => !profile || profile.kits === '*' || (profile.tools || []).includes(n) || (profile.kits || []).includes(kitOf(n));
   for (const t of all) {
-    const row = { name: t.name, kit: kitOf(t.name) || 'other', what: firstSentence(t.description) };
+    const row = { name: t.name, kit: kitOf(t.name) || 'other', what: lineFor(t.name, t.description) };
     if (!off.has(t.name)) held.push({ ...row, why: reasonHeld(t.name, profile) });
     else if (wanted(t.name) || require('./turn/tool-shape').switches().some(x => x.name === t.name)) refused.push({ ...row, why: reasonRefused(t.name, profile, p) || 'not held' });
   }
