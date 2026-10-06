@@ -55,14 +55,10 @@ module.exports = [
   },
   {
     name: 'computer_login',
-    get description() {
-      let names = '';
-      try { names = require('../../logins').list().map(l => `${l.label} (${l.site})`).join(', '); } catch { /* none */ }
-      return 'Sign in on a computer\'s browser with a login the owner keeps (Field → Connectors → Logins), without seeing its password: '
-        + 'the hub checks the page is on that login\'s own site, types the username into userRef and the password into passRef itself. '
-        + 'Take a browser_snapshot first for the refs; then click sign-in with confirm: true. Asked about every time. '
-        + `Logins: ${names || 'none yet — ask the owner to add one'}.`;
-    },
+    description: 'Sign in on a computer\'s browser with a login the owner keeps (Field → Connectors → Logins), without seeing its password: '
+      + 'the hub checks the page is on that login\'s own site, types the username into userRef and the password into passRef itself. '
+      + 'Take a browser_snapshot first for the refs; then click sign-in with confirm: true. Asked about every time. '
+      + 'The logins are listed under "What you have" in the readings.',   // out of the description: turn/fits.js
     parameters: {
       type: 'object',
       properties: {

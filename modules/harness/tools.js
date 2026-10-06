@@ -29,6 +29,7 @@ const TOOLS = [
   ...require('./toolbox/scout'),
   ...require('./toolbox/status'),
   ...require('./toolbox/devices'),
+  ...require('./toolbox/day'),
   ...require('./toolbox/web'),
   ...require('./toolbox/canvas'),
   ...require('./toolbox/project'),

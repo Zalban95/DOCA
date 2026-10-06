@@ -41,7 +41,8 @@ test('the owner keeps a login; its password never reads back, and the file is th
   assert.ok(paths.PROTECTED_FILES.includes(paths.LOGIN_KEYS_FILE));
   if (process.platform !== 'win32') assert.equal(fs.statSync(paths.LOGIN_KEYS_FILE).mode & 0o777, 0o600);
   assert.equal((await H.api(null, 'POST', '/api/connectors/logins/all', { site: 'nope', password: 'x' })).status, 400);
-  assert.match(require('../modules/harness/tools').schemas().find(t => t.function.name === 'computer_login').function.description, /Logins: GitHub \(https:\/\/github\.com\)/, 'the agent reads which logins exist, never their secrets');
+  // In the readings since 2.250.0 (turn/fits.js), not the tool's description.
+  assert.match(require('../modules/harness/turn/fits').inventory(new Set(['computer_login'])), /Logins for computer_login: GitHub \(https:\/\/github\.com\)/, 'the agent reads which logins exist, never their secrets');
 });
 
 test('signing in: the hub types the password with its key; the agent\'s answer never holds it', async () => {

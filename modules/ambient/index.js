@@ -35,13 +35,18 @@ function notices(p) {
   return out.slice(0, 12);
 }
 
-async function view(req) {
-  const p = person(req), q = req.query || {};
+/** The day for one person: the weather at `place`, today's plan from their calendar, their notices. */
+async function today(p, { place = '', units = 'metric' } = {}) {
   const [w, cal] = await Promise.all([
-    weather.forecast(String(q.place || ''), q.units === 'imperial' ? 'imperial' : 'metric').catch(e => ({ error: e.message })),
+    weather.forecast(String(place || ''), units === 'imperial' ? 'imperial' : 'metric').catch(e => ({ error: e.message })),
     calendar.today(p).catch(e => ({ events: [], errors: [e.message] })),
   ]);
   return { weather: w, calendar: cal, notices: notices(p), at: new Date().toISOString() };
+}
+
+async function view(req) {
+  const q = req.query || {};
+  return today(person(req), { place: q.place, units: q.units });
 }
 
 function mount(app) {
@@ -51,4 +56,4 @@ function mount(app) {
   });
 }
 
-module.exports = { view, notices, mount };
+module.exports = { view, today, notices, mount };

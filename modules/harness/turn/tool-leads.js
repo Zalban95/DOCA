@@ -32,6 +32,8 @@ const LEADS = {
   computer_look: 'Ask what is on a computer\'s screen and where — use it when browser_snapshot finds nothing to number.',
   recipe: 'Run a saved sequence of tool calls again, or save one — run a recipe when one does exactly what is asked.',
   pack: 'Keep skills, recipes and specialists you made as one pack in the library — use it when the owner wants to share them.',
+  system_status: 'CPU, RAM, GPU, disks, containers and every local model server with who it works for — use it to see what the machine is doing.',
+  today: 'The weather, today\'s calendar and what is waiting for the person — use it for "what\'s my day" or a morning brief.',
   schedule: 'Propose a message or recipe on a timetable, which the person switches on — use it when asked to do something regularly.',
 };
 

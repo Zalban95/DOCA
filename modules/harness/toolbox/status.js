@@ -25,11 +25,20 @@ function hands(deviceId) {
 module.exports = [
   {
     name: 'system_status',
-    description: 'Current state of the machine: CPU, RAM, GPU, disks, running containers and local models.',
+    description: 'Current state of the machine: CPU, RAM, GPU, disks, running containers, and every local model server with what it has '
+      + 'loaded and who it is working for — DOCA (which conversation) or something else on this machine.',
     parameters: { type: 'object', properties: {} },
     run: async () => {
       const s = await require('../../controls').collectStatus();
-      return clip(JSON.stringify(s, null, 1), 6000);
+      // Model servers, whoever started them (model-servers.js, the sidebar's ◆): a busy GPU with none of DOCA's
+      // requests in flight reads "for something else" (audit 2026-10-06, aw 9).
+      let models = [];
+      try {
+        models = (await require('../../model-servers').status()).servers.map(v => ({
+          server: v.label, url: v.url, models: (v.models || []).map(m => `${m.id || m.name}${m.state ? ` (${m.state})` : ''}`),
+          forDoca: v.doca.map(d => d.text), forSomethingElse: v.foreign || undefined }));
+      } catch { /* none answering */ }
+      return clip(`${models.length ? `Model servers: ${JSON.stringify(models)}\n` : ''}${JSON.stringify(s, null, 1)}`, 7000);
     },
   },
   {
