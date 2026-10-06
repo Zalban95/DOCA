@@ -35,13 +35,14 @@ function stream(req, res) {
   const on = change => {
     if (change.topic === 'files') { if (host && mine.has(change.id)) send(change); return; }
     if (change.topic === 'screen') { if (own && change.id === own) send(change); return; }
+    if (change.topic === 'workstream') { if (host && require('../workstream').holds(screen)) send(change); return; }   // only pages holding it
     if (visible(change, person, host)) send(change);
   };
   live.feed.on('change', on);
   const beat = setInterval(() => { try { res.write(': beat\n\n'); } catch { /* gone */ } }, 20000);
   send({ hello: true, screen, host });
   _folders.set(screen, mine);
-  res.on('close', () => { live.feed.off('change', on); clearInterval(beat); watch.release(screen); _open.delete(screen); _folders.delete(screen); });
+  res.on('close', () => { live.feed.off('change', on); clearInterval(beat); watch.release(screen); _open.delete(screen); _folders.delete(screen); live.feed.emit('screen-closed', screen); });
 }
 
 function setWatch(req, res) {
@@ -60,4 +61,7 @@ function mount(app) {
   app.post('/api/live/watch', setWatch);
 }
 
-module.exports = { mount, visible };
+/** Whether `screen` is a live stream this request's person opened (so only they act for it). */
+const owns = (req, screen) => _open.has(screen) && _open.get(screen) === (require('../harness/turn/client').dashboardClient(req).user?.id || null);
+
+module.exports = { mount, visible, owns };
