@@ -29,7 +29,7 @@ process.on('exit', () => { for (const d of made) try { fs.rmSync(d, { recursive:
 const tmpdir = () => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-models-')); made.push(d); return d; };
 
 test('a fresh install has no llama.cpp instances, and asking does not invent one', async () => {
-  // It used to seed a path on one machine's own disk — one
+  // It used to seed `/media/al/NewVolume/models/nemotron-cascade-2/…` — one
   // machine's gguf — whenever the list came back empty, and a plain GET wrote
   // prefs to put it there. Every other install got a phantom instance
   // pointing at a path it does not have.

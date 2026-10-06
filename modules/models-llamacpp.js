@@ -29,7 +29,7 @@ const _procs = {};
 /**
  * The configured instances, and nothing invented.
  *
- * This used to seed one hardcoded instance — a 30B gguf under one person's own disk —
+ * This used to seed one hardcoded instance — a 30B gguf under `/media/al/…` —
  * whenever the list was empty, which meant every fresh install acquired a
  * phantom instance pointing at a path that does not exist on it, and a plain
  * GET of the list wrote to prefs to put it there. The panel already draws "No

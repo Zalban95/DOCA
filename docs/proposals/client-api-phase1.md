@@ -83,7 +83,7 @@ Response outline (fully annotated in Phase 3):
 {
   "protocol": { "version": "1.0", "minClient": "1.0" },
   "server":   { "name": "doca", "version": "2.3.5", "time": "…" },
-  "device":   { "id": "dev_7f3a", "name": "Kitchen tablet", "scopes": ["read:*", "command:compose.restart", "interact", "profile:self"] },
+  "device":   { "id": "dev_7f3a", "name": "Al's watch", "scopes": ["read:*", "command:compose.restart", "interact", "profile:self"] },
   "surfaces": [ { "id": "system.cpu", "title": "CPU", "metrics": [ …typed metric defs… ], "refreshHintSec": 5 } ],
   "commands": [ { "id": "compose.restart", "title": "Restart stack", "params": {}, "confirm": true, "longRunning": true } ],
   "push":     { "url": "/api/v1/events", "heartbeatSec": 25, "retainedEvents": 500, "retainedHours": 24 },

@@ -953,7 +953,7 @@ test('the floating chat panel forwards tool calls as structured events', async (
     { text: 'Done.' },
   ];
   // Seed a memory entry so the tool succeeds without depending on prior turns.
-  await H.api(null, 'POST', '/api/harness/memory', { key: 'owner', value: 'Sam' });
+  await H.api(null, 'POST', '/api/harness/memory', { key: 'owner', value: 'Al' });
   const events = await stream('/api/chat', { message: 'who owns this?' });
   const call = events.find(e => e.type === 'tool_call');
   assert.ok(call, `expected tool_call in ${events.map(e => e.type)}`);

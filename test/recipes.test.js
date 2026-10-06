@@ -50,11 +50,11 @@ test('a turn that worked becomes a recipe: its calls in order, the failed one le
 
 test('a run needs no model, goes step by step through the tool layer, and leaves a transcript', async () => {
   script = [];   // nothing for the model to say: a run must not ask it
-  const r = await H.api(null, 'POST', '/api/recipes/greet-someone/run', { values: { who: 'Sam' } });
+  const r = await H.api(null, 'POST', '/api/recipes/greet-someone/run', { values: { who: 'Al' } });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.ok, true);
   assert.equal(r.body.steps.length, 2);
-  assert.match(r.body.steps[0].result, /hello-Sam|hello-'Sam'/);
+  assert.match(r.body.steps[0].result, /hello-Al|hello-'Al'/);
   const rows = require('../modules/harness/memory').messages(r.body.sessionId);
   assert.equal(rows.filter(x => x.role === 'tool').length, 2);
   assert.match(rows.at(-1).content, /every check passed/);
