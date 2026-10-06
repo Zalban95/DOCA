@@ -77,6 +77,7 @@ module.exports = [
         for (const [k, ref] of Object.entries(files || {})) {
           const abs = fileOf(ref, ctx);
           if (!abs) return `Error: no file "${ref}" (a path, or the name of an attachment).`;
+          if (require('../secret-view').kindOf(abs)) return `Error: ${ref} holds secrets beside settings and is never uploaded.`;
           const st = require('fs').statSync(abs);
           if (st.size > 50 * 1024 * 1024) return `Error: ${ref} is over 50 MB.`;
           fd.append(k, new Blob([require('fs').readFileSync(abs)], { type: require('../../attachments').mimeFor(abs) }), require('path').basename(abs));

@@ -49,7 +49,7 @@ here where they overlap, in waves; each item one branch and release unless noted
 S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 
 ### Wave 1 — safety and things that are wrong now
-- [ ] A1 **Secrets in the settings file are readable by `read_file`** (coh F1): channel tokens and MCP env/header
+- [x] A1 **Secrets in the settings file are readable by `read_file`** — *2.245.2: masked on read (`harness/secret-view.js`), left out of search, never uploaded, mask never written back* (coh F1): channel tokens and MCP env/header
   values move to protected keys files with migrations (as the Hugging Face token did), or `read_file`/`search_files`
   mask secret-named keys in the settings file; a test reading it through the tool. (Strengthens a guard.)
 - [ ] A2 **Split reading the web from calling APIs** (coh F2–F3, aw 3): a GET-only `http_fetch` stays the airlock's;

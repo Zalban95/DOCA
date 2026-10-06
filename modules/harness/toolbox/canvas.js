@@ -9,7 +9,7 @@ const { resolvePath } = require('./common');
 
 function htmlFrom({ html, path: p }, ctx = {}) {
   if (html != null && String(html).trim()) return String(html);
-  if (p) return require('fs').readFileSync(resolvePath(p, ctx), 'utf8');
+  if (p) { const abs = resolvePath(p, ctx); return require('../secret-view').view(abs, require('fs').readFileSync(abs, 'utf8')); }
   throw new Error('Give the page as `html`, or a `path` to an .html file.');
 }
 
