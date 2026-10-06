@@ -1,6 +1,6 @@
 # Experiment: live calls with a realtime speech model
 
-**Flag:** `experiments.realtimeVoice` (Settings → Experiments, or Settings → Voice → Live call), off by default.
+**Flag:** `experiments.realtimeVoice` (Settings → Developer, or Settings → Voice → Live call), off by default.
 **Settings:** `realtime.*` (Settings → Voice → Live call → Realtime speech model). **TODO:** H8.3. **Since:** 2.200.0.
 
 ## Hypothesis

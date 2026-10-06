@@ -18,7 +18,7 @@ is there and where, as x,y — so the agent's side does not change when the owne
 | Reader | What it is | Good at | Blind to |
 |---|---|---|---|
 | `model` | a vision model, any OpenAI-compatible endpoint (Ollama's qwen2.5vl, a hosted one) | any question, in words | slow; can be a few pixels off |
-| `detector` | Roboflow Inference — open source, run here (Settings → Services) or Roboflow's hosted API — with any detection model from Roboflow Universe or trained by the owner | fast, exact boxes for what it was trained on | everything else |
+| `detector` | Roboflow Inference — open source, run here (Field → Models → Inference Services) or Roboflow's hosted API — with any detection model from Roboflow Universe or trained by the owner | fast, exact boxes for what it was trained on | everything else |
 | `text` | Tesseract OCR (System tools) | finding written words, locally, deterministically | icons, pictures |
 | `template` | OpenCV template matching (Python + opencv, System tools) | finding a picture of an element again (an icon cropped earlier) | anything that looks different |
 

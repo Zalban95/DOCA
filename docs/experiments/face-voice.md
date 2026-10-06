@@ -1,6 +1,6 @@
 # Experiment: the face follows a voice call
 
-**Flag:** `experiments.faceVoice` (Settings → Experiments), off by default. **TODO:** H8.2. **Since:** 2.193.0.
+**Flag:** `experiments.faceVoice` (Settings → Developer), off by default. **TODO:** H8.2. **Since:** 2.193.0.
 
 ## Hypothesis
 

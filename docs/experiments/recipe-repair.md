@@ -1,6 +1,6 @@
 # Experiment: the agent repairs a recipe that failed
 
-**Flag:** `experiments.recipeRepair` (Settings → Experiments), off by default. **TODO:** H3.4. **Since:** 2.176.0.
+**Flag:** `experiments.recipeRepair` (Settings → Developer), off by default. **TODO:** H3.4. **Since:** 2.176.0.
 
 ## Hypothesis
 

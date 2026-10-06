@@ -1,6 +1,6 @@
 # Experiment: publish packs for other hubs, and fetch theirs
 
-**Flag:** `experiments.packRegistry` (Settings → Experiments), off by default. **TODO:** H4.6. **Since:** 2.198.0.
+**Flag:** `experiments.packRegistry` (Settings → Developer), off by default. **TODO:** H4.6. **Since:** 2.198.0.
 
 ## Hypothesis
 
