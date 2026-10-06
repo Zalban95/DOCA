@@ -125,9 +125,11 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   /api/v1/harness/missions/{id}/stop`, `/harness/work/{id}/restart|drop`, `/harness/sessions/{id}/archive`,
   `/missions/{id}/archive`, `state: 'stopped'` on work rows; `GET /api/v1/ambient`; speech synthesize/transcribe with
   the device's voice; the face for watches (scope). **Ask first** (W3, and S11 for the scope).
-- [ ] D2 **Contracts tested on both sides** (cl 21–22, 27, 31): `npm run fixtures` writing real frames for the apps'
-  parser tests; coverage checked by capability, not path prefix; a canonical family → tool-name table (PROTOCOL
-  §22.1); `test/client-contracts.test.js` (pair offer, `window.DocaDevice`, the phone's MCP shape).
+- [x] D2 **Contracts tested on both sides** (cl 21, 27) — *2.254.0: `npm run fixtures` writes real frames (a mission running, done and put away, a stopped work chat, a question asked and withdrawn, a notice) to `docs/api/fixtures/`, checked against the OpenAPI event schemas; PROTOCOL §22.1's family → tool-name table, with a test that skills and doca-client use its names*
+- [ ] D2b **The rest of D2** (cl 22, 31): the apps load `docs/api/fixtures/` in their parser tests (a copy in each
+  app's test resources, compared by the hub when the siblings are checked out); coverage checked by capability, not
+  path prefix (per panel group, its actions with a v1 operationId or a reason); the pair offer, `window.DocaDevice` and
+  the phone's MCP server shape pinned on the hub's side.
 - [ ] D3 **The apps' own items**, written into their TODO.md (cl 3–4, 9–13, 15, 23–26, 28–30): DocaMobile — screenshots
   as MCP image content, answering questions from notifications, real caps, failover for the watch's relay and call,
   Back closes the viewer, "queued", the socket transport, prompt.closed and mcp.listener, sensors, the 6-hour service

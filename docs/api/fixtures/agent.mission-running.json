@@ -1,0 +1,29 @@
+{
+  "type": "agent.mission",
+  "class": "durable",
+  "payload": {
+    "missionId": "msn_fixture",
+    "agentId": "researcher",
+    "label": "Researcher",
+    "task": "Find the release notes of llama.cpp b6000",
+    "state": "running",
+    "steps": 2,
+    "tokens": 8400,
+    "startedAt": "2026-10-06T18:00:00.000Z",
+    "plan": [
+      {
+        "title": "Search",
+        "state": "done"
+      },
+      {
+        "title": "Read the notes",
+        "state": "running"
+      }
+    ],
+    "progress": {
+      "done": 1,
+      "total": 2,
+      "percent": 50
+    }
+  }
+}
