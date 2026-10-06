@@ -78,5 +78,5 @@ test('§4g: a fallback entry whose provider is gone is announced, not dropped in
   await complete({ ep: { id: 'nowhere', baseUrl: 'http://127.0.0.1:9/v1', apiKey: '' }, p, onSkip: s => skips.push(s),
     body: { model: 'm', messages: [{ role: 'user', content: 'hi' }] } }).catch(() => {});
   assert.equal(skips.length, 1);
-  assert.match(skips[0].text, /Fallback entry 1 \(deleted-provider \/ m\) is skipped: that provider is no longer in Settings → API Keys/);
+  assert.match(skips[0].text, /Fallback entry 1 \(deleted-provider \/ m\) is skipped: that provider is no longer in Field → API keys/);
 });

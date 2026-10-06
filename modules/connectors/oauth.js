@@ -54,7 +54,7 @@ async function exchange(s, rec, params) {
 async function finish(state, code) {
   const p = pending.get(String(state || ''));
   pending.delete(String(state || ''));
-  if (!p || Date.now() - p.at > TTL) throw bad('This sign-in link is unknown or has expired: start it again from Settings → Connectors.');
+  if (!p || Date.now() - p.at > TTL) throw bad('This sign-in link is unknown or has expired: start it again from Field → Connectors.');
   if (!code) throw bad('The service sent no code back (was access refused?).');
   const s = spec(p.id), rec = vault.get(p.id);
   const tokens = await exchange(s, rec, { grant_type: 'authorization_code', code, redirect_uri: p.redirectUri, code_verifier: p.verifier });
@@ -75,7 +75,7 @@ async function token(id) {
   const rec = vault.get(id);
   if (!rec?.accessToken) throw bad(`${spec(id).label} is not connected.`, 409);
   if (rec.expiresAt && Date.parse(rec.expiresAt) - Date.now() < 60000) {
-    if (!rec.refreshToken) throw bad(`${spec(id).label}'s sign-in expired and gave no refresh token: connect it again in Settings → Connectors.`, 401);
+    if (!rec.refreshToken) throw bad(`${spec(id).label}'s sign-in expired and gave no refresh token: connect it again in Field → Connectors.`, 401);
     const fresh = await exchange(spec(id), rec, { grant_type: 'refresh_token', refresh_token: rec.refreshToken });
     vault.patch(id, fresh);
     return fresh.accessToken;

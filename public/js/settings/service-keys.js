@@ -1,4 +1,4 @@
-/* Settings → Connectors → Keys for services (modules/service-keys.js): an API that takes a key is set up by pasting
+/* Field → Connectors → Keys for services (modules/service-keys.js): an API that takes a key is set up by pasting
    it here once, tied to the service's own address. The agent calls the service with http_fetch naming the key, and the
    hub adds it only to that address — the agent never sees it. */
 async function serviceKeysRender() {

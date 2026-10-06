@@ -63,7 +63,7 @@ async function packsLibraryRender() {
         ${d.hubs.length ? `<select class="input" style="width:auto;font-size:11px" onchange="if (this.value) packsSend(${jsArg(p.id)}, this.value); this.value=''"><option value="">Send to…</option>${hubOpts}</select>` : ''}
         <button class="btn btn-xs btn-red" onclick="packsDelete(${jsArg(p.id)})">✕</button></span></div>`).join('') || '<div class="placeholder">Empty.</div>'}
     <div class="card-title" style="font-size:12px;margin-top:10px">Other hubs to send to</div>
-    <p style="font-size:11px;color:var(--muted)">On the other DOCA: Settings → API Keys → a token with the <b>hub</b> preset (it can only send packs)${d.registry ? ', or <b>registry</b> (to browse and fetch what it publishes)' : ''}. Its certificate is pinned when you add it.</p>
+    <p style="font-size:11px;color:var(--muted)">On the other DOCA: Field → API keys → a token with the <b>hub</b> preset (it can only send packs)${d.registry ? ', or <b>registry</b> (to browse and fetch what it publishes)' : ''}. Its certificate is pinned when you add it.</p>
     ${d.hubs.map(h => `<div class="disk-row"><span class="disk-label">${escHtml(h.label)}</span><span class="disk-path">${escHtml(h.url)}${h.pinned ? ' · pinned' : ''} · ${[h.send && 'send', h.read && 'browse'].filter(Boolean).join(', ')}</span>
       <span class="disk-free" style="display:flex;gap:4px">${d.registry && h.read ? `<button class="btn btn-xs" onclick="packsBrowse(${jsArg(h.id)})">Browse</button>` : ''}<button class="btn btn-xs btn-red" onclick="packsHubRemove(${jsArg(h.id)})">✕</button></span></div>`).join('')}
     <div id="pack-browse"></div>

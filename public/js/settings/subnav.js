@@ -8,11 +8,11 @@
 // OpenClaw's Skills are OpenClaw's (clawhub, ~/.openclaw/workspace/skills); DOCA's own skills are in Harness → Skills.
 const _SETTINGS_SUBTABS = [
   { id: 'general',   label: 'General',   init: '_subtabGeneralInit' },
-  { id: 'keys',      label: 'API Keys',  init: 'loadKeys',       find: 'tokens devices pairing apps apk update' },
+  { id: 'keys',      label: 'API Keys',  init: 'loadKeys',       find: 'tokens devices pairing apps apk update', page: 'apikeys' },   // page: lives in Field (field-pages.js)
   { id: 'users',     label: 'Users',     init: 'usersLoad',      find: 'people accounts levels permissions roles' },
   { id: 'wearables', label: 'Wearables', init: 'wearablesLoad',  find: 'watch DocaWear console macros joystick' },
   { id: 'channels',  label: 'Channels',  init: 'channelsLoad',   find: 'telegram matrix element slack mail email imap bot chat messaging' },
-  { id: 'connectors', label: 'Connectors', init: 'connectorsLoad', find: 'oauth github google gmail calendar microsoft outlook accounts' },
+  { id: 'connectors', label: 'Connectors', init: 'connectorsLoad', find: 'oauth github google gmail calendar microsoft outlook accounts keys services', page: 'connectors' },
   { id: 'packs',     label: 'Packs',     init: 'packsLoad',      find: 'export import dpack share skills recipes mcp' },
   { id: 'backups',   label: 'Backups',   init: 'backupsLoad' },
   { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit', find: 'live call speech microphone barge-in interrupt tts stt' },
@@ -58,7 +58,7 @@ function _settingsSubnavRender() {
   const pill = t => `<button class="settings-subnav-btn" data-subtab="${t.id}" onclick="settingsSubNav('${t.id}')">${t.label}</button>`;
   // Developer (developer mode and the experiments) is for an owner or a tester: a host's, never drawn for anyone else.
   const mine = t => !t.host || typeof authHasRight !== 'function' || authHasRight('host');
-  nav.innerHTML = _SETTINGS_SUBTABS.filter(t => !t.group && mine(t)).map(pill).join('')
+  nav.innerHTML = _SETTINGS_SUBTABS.filter(t => !t.group && !t.page && mine(t)).map(pill).join('')
     + '<button class="settings-subnav-btn" data-subtab="harnesses" onclick="settingsSubNav(\'harness\')" title="DOCA\'s own agent, and each other harness installed here">Harnesses</button>';
   // The second row: the harnesses, a group each.
   let row = document.getElementById('settings-subnav2');
@@ -69,6 +69,9 @@ function _settingsSubnavRender() {
 }
 
 function settingsSubNav(panelId) {
+  // A section that is a page of its own now (Field → Connectors, API keys): every old link lands there.
+  const moved = _SETTINGS_SUBTABS.find(t => t.id === panelId && t.page);
+  if (moved && typeof nav === 'function') return nav(moved.page);
   _settingsActiveSubtab = panelId;
   const cli = panelId.startsWith('cli-') ? panelId.slice(4) : null;   // a CLI harness: one panel, that harness
 

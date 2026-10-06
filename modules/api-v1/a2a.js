@@ -31,7 +31,7 @@ function card(req) {
     provider: { organization: b.name('vendor'), url: `${req.protocol}://${req.get('host')}/` },
     capabilities: { streaming: false, pushNotifications: false, stateTransitionHistory: false },
     defaultInputModes: ['text/plain'], defaultOutputModes: ['text/plain'],
-    securitySchemes: { bearer: { type: 'http', scheme: 'bearer', description: 'A DOCA device token holding harness:chat (Settings → API Keys, or pair a device).' } },
+    securitySchemes: { bearer: { type: 'http', scheme: 'bearer', description: 'A DOCA device token holding harness:chat (Field → API keys, or pair a device).' } },
     security: [{ bearer: [] }],
     skills: [{ id: 'chat', name: 'Ask the hive', description: 'Anything its agents can do: research, run work on its machines, use its tools and memory, ask its person on a device.', tags: ['assistant', 'tools', 'memory'], examples: ['What is running on the server?', 'Summarise the open issues in the project.'] }] };
 }

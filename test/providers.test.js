@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Model providers: the known-endpoint presets behind Settings → API Keys and
+ * Model providers: the known-endpoint presets behind Field → API keys and
  * the built-in harness's provider dropdown.
  *
  * `test/helpers.js` points CONFIG_PATH at a temp file, so these write real

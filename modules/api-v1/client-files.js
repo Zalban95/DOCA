@@ -31,7 +31,7 @@ function browserZip() {
 }
 const sendZip = (_req, res) => res.type('application/zip').attachment(`doca-browser-${require('../../package.json').version}.zip`).send(browserZip());
 
-/** The panel's own download link (Settings → API Keys, preset "extension"). */
+/** The panel's own download link (Field → API keys, preset "extension"). */
 function mountPanel(app) { app.get('/api/clients/browser.zip', sendZip); }
 
 function mount(router) {

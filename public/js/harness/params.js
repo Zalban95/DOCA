@@ -84,7 +84,7 @@ function _harnessProviderOpts(selected) {
     `<option value="${escHtml(p.id)}" ${p.id === selected ? 'selected' : ''}>` +
     `${escHtml(p.label)}${p.hasKey ? '' : ' — no key'}</option>`).join('');
 
-  // A provider that has since been deleted from Settings → API Keys is still
+  // A provider that has since been deleted from Field → API keys is still
   // what this box says. Without this the dropdown would fall back to the first
   // entry, and the next Save would quietly rewrite the chain to a provider the
   // user never chose — the same silent edit the text box was replaced to stop.

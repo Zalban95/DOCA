@@ -7,7 +7,7 @@
  * The agent reads the service's own documentation (research_docs), then drafts everything but the secret: how the key
  * is sent (`service-keys.js`: a header, a parameter, or id:secret traded for a token), the service's address, what it
  * is for, and a skill — the steps an agent follows to use it (submit, wait, keep, show), in plain markdown. The draft
- * waits in Settings → Connectors → "Prepared by the agent": the person reads it, pastes the key, and one Save writes
+ * waits in Field → Connectors → "Prepared by the agent": the person reads it, pastes the key, and one Save writes
  * the key (to the protected keys file) and the skill. Nothing is used before that, the agent never holds the secret,
  * and no code is written — an MCP server is drafted the same way by mcp/drafts.js.
  */

@@ -449,7 +449,7 @@ test('a provider refusal says which limit it was and who set it', async () => {
   assert.match(rate, /not a DOCA setting/);
 
   const auth = budget.explain({ status: 401, detail: 'invalid api key', ep, p });
-  assert.match(auth, /API Keys/);
+  assert.match(auth, /API keys/);
 });
 
 test('the ledger counts what the provider reports, and says when it guessed', () => {
@@ -751,7 +751,7 @@ test('the fallback rungs read back exactly what the form is showing', () => {
   assert.equal(read(...'abcdef'.split('').map(c => rung(c, 'm'))).length, 5);
 
   // The other half of the round trip: the box has to still *say* the provider
-  // that was saved. A rung on a provider deleted from Settings → API Keys since
+  // that was saved. A rung on a provider deleted from Field → API keys since
   // would otherwise fall back to the dropdown's first entry, and the next Save
   // would write that instead — the chain changed by opening ⚙ and pressing Save.
   const optsFor = new Function(

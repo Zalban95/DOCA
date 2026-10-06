@@ -2,7 +2,7 @@
    DOCA PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','logs','files','projects','harness','workstream','archive','computers','live','terminal','models','docker','vms','mcp','settings'];
+const NAV_TABS = ['controls','logs','files','projects','harness','workstream','archive','computers','live','terminal','models','docker','vms','mcp','connectors','apikeys','settings'];
 /** Tabs that are the machine itself: left out for a person without host (settings.js). */
 const HOST_TABS = ['logs', 'files', 'projects', 'terminal', 'computers'];
 
@@ -37,6 +37,7 @@ function nav(name) {
   if (name === 'docker')   dockerInit();
   if (name === 'vms')      vmsInit();
   if (name === 'mcp')      mcpInit();
+  if (typeof FIELD_PAGES !== 'undefined' && FIELD_PAGES[name]) fieldPageShow(name);   // Connectors, API keys (field-pages.js)
   if (name === 'settings') settingsInit();
 
   closeSidebar();

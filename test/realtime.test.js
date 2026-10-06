@@ -109,7 +109,7 @@ test('OpenAI protocol: the key stays on the hub, the voice hands the request to 
   oaiSeen.length = 0;
   script = [{ text: 'Four containers are running.' }];
   const got = await call('/ws/realtime', cookie(), g => g.json.some(x => x.type === 'done'));
-  assert.equal(oaiSeen[0].auth, 'Bearer rt-key', 'the provider key from Settings → API Keys, sent by the hub');
+  assert.equal(oaiSeen[0].auth, 'Bearer rt-key', 'the provider key from Field → API keys, sent by the hub');
   assert.match(oaiSeen[0].url, /^\/v1\/realtime\?model=stub-rt$/);
   const upd = oaiSeen.find(m => m.type === 'session.update');
   assert.equal(upd.session.audio.input.format.rate, 24000);

@@ -11,7 +11,7 @@ model. It runs on the person's own credits. Everything here is DOCA's ordinary t
 ## Connecting it (once, with the person)
 
 The person creates an API client on hi3d.ai (its developer page) and gets a **client id** and a **client secret**.
-They add them in **Settings → Connectors → Keys for services**:
+They add them in **Field → Connectors → Keys for services**:
 
 - name `hi3d`, address `https://api.hitem3d.ai`
 - where it goes: **id:secret, traded for a token**; token address `https://api.hitem3d.ai/open-api/v1/auth/token`

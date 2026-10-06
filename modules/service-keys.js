@@ -10,7 +10,7 @@
  * service's token address itself (HTTP Basic), keeps the token it gets back until it expires or is refused, and sends that. The agent never sees the key: it is not in the
  * prompt, the transcript or the result, which is scrubbed of it in case a service echoes it back. Used on a turn of
  * someone holding host unless the admin opens a key to everyone (`who`), like a connector. Kept in
- * DATA_DIR/keys/services.json (0600, PROTECTED_FILES); Settings → Connectors → Keys for services.
+ * DATA_DIR/keys/services.json (0600, PROTECTED_FILES); Field → Connectors → Keys for services.
  */
 const fs = require('fs');
 const path = require('path');
@@ -65,7 +65,7 @@ async function token(k, { fresh = false } = {}) {
   try { j = JSON.parse(text); } catch { /* said in words */ }
   const pick = o => o && (o.accessToken || o.access_token || o.token);
   const t = pick(j) || pick(j.data);
-  if (!r.ok || !t) throw bad(`${k.name}: the service did not give a token (HTTP ${r.status}${j.msg || j.message || j.error ? `: ${j.msg || j.message || j.error_description || j.error}` : ''}) — check the id and secret in Settings → Connectors → Keys for services.`, 502);
+  if (!r.ok || !t) throw bad(`${k.name}: the service did not give a token (HTTP ${r.status}${j.msg || j.message || j.error ? `: ${j.msg || j.message || j.error_description || j.error}` : ''}) — check the id and secret in Field → Connectors → Keys for services.`, 502);
   const secs = Number(j.expires_in || j.data?.expires_in || j.expiresIn || j.data?.expiresIn) || 3600;
   _tokens.set(k.name, { token: t, until: Date.now() + Math.max(60, secs - 60) * 1000 });
   return t;
@@ -77,8 +77,8 @@ async function token(k, { fresh = false } = {}) {
  */
 function apply(name, url, headers, { host = true } = {}) {
   const k = all()[String(name || '').trim().toLowerCase()];
-  if (!k) throw bad(`No key named "${name}". Keys for services: ${list().map(x => `${x.name} (${x.origin})`).join(', ') || 'none yet'} — an admin adds one in Settings → Connectors → Keys for services.`, 404);
-  if (k.who !== 'everyone' && !host) throw bad(`The key "${k.name}" is used only on an admin's turns; an admin can open it to everyone in Settings → Connectors.`, 403);
+  if (!k) throw bad(`No key named "${name}". Keys for services: ${list().map(x => `${x.name} (${x.origin})`).join(', ') || 'none yet'} — an admin adds one in Field → Connectors → Keys for services.`, 404);
+  if (k.who !== 'everyone' && !host) throw bad(`The key "${k.name}" is used only on an admin's turns; an admin can open it to everyone in Field → Connectors.`, 403);
   let u;
   try { u = new URL(url); } catch { throw bad('The url is not an address.'); }
   if (u.origin !== k.origin) throw bad(`The key "${k.name}" is sent only to ${k.origin}, not to ${u.origin}.`, 403);

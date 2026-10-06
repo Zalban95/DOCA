@@ -34,6 +34,27 @@ and since 2025 it is an MCP server. Once it is connected, every device the owner
   sequence that worked as a recipe (`recipe save_last`) — "good night" then runs without thinking.
 - **It is off or unreachable**: say so plainly (the address, the token, Home Assistant down), do not guess states.
 
+## Devices that live in Google Home or Alexa
+
+Neither Google Home nor Alexa lets another program control their devices directly. Bring each device into Home
+Assistant instead — it stays in Google Home or Alexa too — and DOCA reaches it through Home Assistant like any other:
+
+1. **Matter devices** (most made since 2023; the Matter logo on the box or in the app): share them. In **Google Home**:
+   the device → Settings → *Linked Matter apps & services* → link an app, which shows a pairing code. In **Alexa**: the
+   device → Settings → *Other Assistants and Apps* → *Add Another*, an 11-digit code valid for 15 minutes. In Home
+   Assistant: Settings → Devices → Add → Matter → "it is already in use by another controller" → the code. Home
+   Assistant needs its Matter add-on (and a Thread border router for Thread devices — a Nest Hub or an Echo 4th gen
+   already is one).
+2. **Brand clouds** Home Assistant integrates directly: Philips Hue, TP-Link Kasa/Tapo, Shelly, Tuya/Smart Life,
+   Meross, IKEA, Sonos, Ecobee… Add the integration with the brand's own account; no Google or Alexa involved.
+3. **Nest** (cameras, thermostats, doorbells): Home Assistant's Nest integration through Google's Device Access
+   (a one-time developer registration and fee, Google's).
+4. **Alexa-only devices** with no Matter and no other integration cannot be reached cleanly — there is no official way
+   to control Alexa's devices from outside. Say so plainly; replacing or re-pairing such a device over Matter is the
+   way out. (An unofficial "Alexa Media Player" integration exists for Echo speakers; it breaks when Amazon changes.)
+
+Ask which app the device is in, look for Matter first, and walk the person through the codes one device at a time.
+
 ## Without Home Assistant
 
 - **MQTT** (Zigbee2MQTT, Tasmota, ESPHome, Shelly): with a broker on the network, `mosquitto_pub -h <broker> -t

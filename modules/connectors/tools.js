@@ -36,7 +36,7 @@ async function call(name, { method = 'GET', path = '', query, body } = {}, ctx =
   // The owner's account: only a person holding host uses it through the agent, unless the owner opened it to everyone.
   // No person on the turn (a test, a pre-accounts call) is not narrowed, as everywhere (auth/permits.js).
   if (ctx.user?.id && vault.get(id)?.who !== 'everyone' && !require('../auth/rights').can(ctx.user.role, 'host'))
-    return `Error: ${s.label} is connected as an admin's account, for people who hold host; ask an admin to open it to everyone in Settings → Connectors.`;
+    return `Error: ${s.label} is connected as an admin's account, for people who hold host; ask an admin to open it to everyone in Field → Connectors.`;
   const url = new URL(/^https?:\/\//.test(path) ? path : `${s.api[0]}${path.startsWith('/') ? '' : '/'}${path}`);
   if (!s.api.some(a => url.origin === new URL(a).origin)) return `Error: ${s.label}'s token goes only to ${s.api.join(', ')} — not ${url.origin}.`;
   for (const [k, v] of Object.entries(query || {})) url.searchParams.set(k, String(v));

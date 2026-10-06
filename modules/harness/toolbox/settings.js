@@ -176,7 +176,7 @@ module.exports = [
     name: 'service_draft',
     description: 'Prepare a web service (an API with a key) for a person to switch on in one step: how its key is sent, its address, '
       + 'what it is for, and a skill with the steps to use it. Read its documentation first (research_docs); then the draft waits in '
-      + 'Settings → Connectors, the person pastes the key and saves, and from then on http_fetch with key: "<name>" reaches it. For a '
+      + 'Field → Connectors, the person pastes the key and saves, and from then on http_fetch with key: "<name>" reaches it. For a '
       + 'service with an MCP server use mcp_draft; for one in the catalogue, install_propose.',
     parameters: { type: 'object', properties: {
       name: { type: 'string', description: 'The key\'s short name, e.g. "hi3d" — what http_fetch names.' },
@@ -192,7 +192,7 @@ module.exports = [
       let d;
       try { d = require('../../service-drafts').draft(args || {}, { sessionId: ctx.sessionId }); } catch (e) { return `Error: ${e.message}`; }
       return `Prepared "${d.name}" (${d.origin}, key ${d.place === 'exchange' ? 'id:secret traded for a token' : `in the ${d.place}`})${d.skill ? ` with the skill "${d.skill.name}"` : ''}. `
-        + 'It waits in Settings → Connectors under "Prepared by the agent": the person pastes the key and saves. Tell them where to get the key '
+        + 'It waits in Field → Connectors under "Prepared by the agent": the person pastes the key and saves. Tell them where to get the key '
         + '(the service\'s developer page) — never ask them to paste it in the chat.';
     },
   },
