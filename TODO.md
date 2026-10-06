@@ -357,18 +357,23 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   job DOCA did not make reads as not DOCA's. Seen: one 10-minute job (19:52, 2.9k-token prompt) no DOCA run matches.
   **Done (2.241.0):** model-servers.js + harness/inflight.js; the sidebar's ◆ Model servers. Found on the way: the
   `vllm` provider's preset address (127.0.0.1:8000) is the Whisper server here — it shows as answering with 611 models.
-- [x] H10.14 Stop means stop, visibly (audit 2026-10-06). **Done (2.242.0):** ■ Stop on missions and on automatic turns (listed with why), a stopped specialist leaves its work chat waiting, a stopped work chat stops its specialists, archiving is quiet. A visible Stop on every running thing (a specialist, a work
+- [x] H10.14 Stop means stop, visibly (audit 2026-10-06). **And (2.243.0):** stopped work waits for its person — the Orchestrator asks once whether to restart or drop it, and the Harness offers ↻ Restart and Drop. **Done (2.242.0):** ■ Stop on missions and on automatic turns (listed with why), a stopped specialist leaves its work chat waiting, a stopped work chat stops its specialists, archiving is quiet. A visible Stop on every running thing (a specialist, a work
   chat, an automatic turn); stopping a specialist stops its line of work — the work chat that sent it is told and
   waits, it is not woken to carry on (`supervisor.missionEnded` wakes it today). Closing or archiving finished work
   triggers nothing: no "finished" re-sent to devices (`missions.archive` → `announce` today), no computer timer
   restarted. Automatic turns are listed with why they started.
-- [x] H10.15 Names and fonts (audit 2026-10-06). **Done (2.239.0):** no owner's name, home folder or machine in a
-  placeholder, the code or the tests' sample data (test/no-leftovers.test.js); every font through the theme's
+- [x] H10.15 Names and fonts (audit 2026-10-06). **Done (2.239.0):** the names were made generic, then put back on
+  the owner's word (2.243.0: "they can go back"); every font through the theme's
   variables (--font-ui, --font-mono, --font-text, --font-display; test/fonts.test.js), the faces used are the ones
   loaded.
 - [x] H10.16 Reach and secrets (audit 2026-10-06). **Done (2.240.0):** `network.services` (local by default; Settings → System → Network), the token in keys/huggingface.json with a migration. Running containers keep their old ports until their next start. Inference services publish their ports on every interface
   (`services.js` `-p port:port`: ComfyUI, Whisper, Kokoro reachable from the LAN with no sign-in): bind to 127.0.0.1
   unless asked. The Hugging Face token lives in prefs (`models.hf.token`, masked): move it to the protected keys.
+- [ ] H10.17 The ambient screen on a tablet (asked 2026-10-06 with a screenshot). **Done (2.243.0):** a settings page
+  (margins, what shows, the place or this device's position), the call's sparse dots, the galaxy's heart faster and the
+  whole turning the other way, the call no longer dropped while it opens, the name as the transcriber's hint, and
+  what the wake word heard on screen. **Left:** DocaMobile's WebView allows no geolocation yet (1.0.8); the
+  wake word on the person's own tablet is unverified — the page now says what it heard, which is the next clue.
 - [ ] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06). Risk-tiered approval inside
   Auto: each tool call classified — reads and lookups run; reversible writes run after an automatic checkpoint
   (projects' shadow git, prefs checkpoints, a computer instead of the host for anything untested); irreversible or

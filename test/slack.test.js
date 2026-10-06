@@ -46,7 +46,7 @@ before(async () => {
       if (tok !== 'Bearer xoxb-test') { res.writeHead(200); return res.end(JSON.stringify({ ok: false, error: 'invalid_auth' })); }
       const body = (req.headers['content-type'] || '').includes('json') ? JSON.parse(Buffer.concat(raw).toString() || '{}') : Object.fromEntries(new URLSearchParams(Buffer.concat(raw).toString()));
       if (method === 'auth.test') return ok({ user_id: 'UBOT', team: 'Test team' });
-      if (method === 'users.info') return ok({ user: { name: 'sam', profile: { real_name: 'Sam' } } });
+      if (method === 'users.info') return ok({ user: { name: 'al', profile: { real_name: 'Al' } } });
       if (method === 'files.getUploadURLExternal') return ok({ upload_url: `http://127.0.0.1:${api.address().port}/upload-here`, file_id: 'F1' });
       record({ method, body });
       return ok({ ts: `${Date.now()}.0001`, channel: body.channel });
@@ -112,7 +112,7 @@ test('every envelope is acknowledged; a stranger gets instructions; a code links
   assert.equal(answer.body.mrkdwn, false, 'shown as typed');
   assert.match(prompt, /Slack/);
   const devices = require('../modules/api-v1/devices');
-  const dev = devices.list().find(d => d.kind === 'channel' && /Slack · Sam/.test(d.name));
+  const dev = devices.list().find(d => d.kind === 'channel' && /Slack · Al/.test(d.name));
   assert.equal(devices.get(dev.id).userId, H.owner.user.id);
 });
 

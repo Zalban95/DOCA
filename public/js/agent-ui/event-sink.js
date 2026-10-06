@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════
    One turn's events, into whichever chat is showing it: the floating chat,
-   the harness console, the Projects chat (decided with the owner 2026-10-04).
+   the harness console, the Projects chat (decided with Al 2026-10-04).
 
    The three chats each kept their own copy of this state machine — the open
    tool fold, the "waiting" row rewritten in place, failovers, warnings,

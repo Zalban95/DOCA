@@ -16,6 +16,7 @@ const _SETTINGS_SUBTABS = [
   { id: 'packs',     label: 'Packs',     init: 'packsLoad',      find: 'export import dpack share skills recipes mcp' },
   { id: 'backups',   label: 'Backups',   init: 'backupsLoad' },
   { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit', find: 'live call speech microphone barge-in interrupt tts stt' },
+  { id: 'ambient',   label: 'Ambient',   init: 'ambientSettingsInit', find: 'screen saver nest resting clock weather calendar margins galaxy wake' },
   { id: 'system',    label: 'System',    init: '_subtabSystemInit' },
   { id: 'experiments', label: 'Developer', init: 'experimentsLoad', host: true, find: 'developer mode experiment flag try measure' },
   // ── Harnesses: one section, a group each ──

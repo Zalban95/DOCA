@@ -66,7 +66,7 @@ test('an explicit scope list is honoured over presets', async () => {
 });
 
 test('pairing hands out a short-lived code and a QR, never a token', async () => {
-  const r = await h.api(null, 'POST', '/api/devices/pair', { name: "Sam's watch", preset: 'watch' });
+  const r = await h.api(null, 'POST', '/api/devices/pair', { name: "Al's watch", preset: 'watch' });
   assert.equal(r.status, 201);
   assert.match(r.body.code, /^\d{3}-\d{3}$/);
   assert.match(r.body.url, /^doca:\/\/pair\?code=\d{6}&host=/);

@@ -1,7 +1,7 @@
 'use strict';
 
 // Nobody waits for a working conversation (harness/inbox.js), and the Orchestrator stays free by code
-// (harness/turn/handoff.js) — decided with the owner 2026-10-04.
+// (harness/turn/handoff.js) — decided with Al 2026-10-04.
 
 const { test, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');

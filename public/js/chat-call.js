@@ -46,11 +46,22 @@ function _callSetStatus(text, state) {
 
 /** `assistant`: started from the face (face/assistant.js) — the face follows the call's voice whatever faceVoice says. */
 let _callAssistant = false;   // this call came from the face (assistant mode): quicker, shorter, its own style
+let _callStarting = false;   // between the tap and the microphone: nothing else may take the microphone then (wake-word.js)
 async function chatToggleCall({ assistant = false } = {}) {
   if (_callActive) {
     _callStop();
     return;
   }
+  // _callStart's first part runs now, inside the tap (its audio contexts must), and the flag holds until it settles.
+  _callStarting = true;
+  try { return await _callStart({ assistant }); } finally { _callStarting = false; }
+}
+
+/** The name a person calls the hive by, as the transcriber's spelling hint: Whisper has never heard an invented name
+ *  ("Doca" came back as "Madoka" inside calls, 2026-10-06). */
+let _callHint = '';
+
+async function _callStart({ assistant }) {
   // Both audio contexts are made here, inside the tap, before anything is awaited: a context made later is no longer
   // the tap's, and a phone's WebView keeps it suspended — the answer is synthesized and never heard.
   _callAudioCtx = new AudioContext();
@@ -79,7 +90,7 @@ async function chatToggleCall({ assistant = false } = {}) {
   catch { _callBargeIn = false; _callFaceVoice = assistant; _callAssistant = assistant; }
   if (typeof wakeWordPause === 'function') wakeWordPause();   // the call has the microphone now
   _callStats = { at: Date.now(), bargeIns: 0, dropped: 0 };
-  try { const c = (await screenPrefs()).call || {}; _callSilenceMs = c.silenceMs >= 300 ? c.silenceMs : 2000; _callThreshold= c.sensitivity >= 1 ? c.sensitivity : 15; }
+  try { const c = (await screenPrefs()).call || {}; _callHint = String(c.wakeWord || '').trim() || (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA'; _callSilenceMs = c.silenceMs >= 300 ? c.silenceMs : 2000; _callThreshold= c.sensitivity >= 1 ? c.sensitivity : 15; }
   catch { /* the defaults */ }
   try {
     // Echo cancellation keeps the agent's own voice from reading as yours — which matters most with barge-in on.
@@ -230,12 +241,16 @@ async function _callProcessAudio(audioBlob, name = 'recording.webm') {
     // 1. Transcribe audio → text
     const form = new FormData();
     form.append('audio', audioBlob, name);
+    if (_callHint) form.append('prompt', _callHint);
     const transcribeRes = await fetch('/api/chat/transcribe', {
       method: 'POST',
       body: form,
       signal: _callAbort?.signal,
     });
     const transcribeData = await transcribeRes.json();
+    // The hint alone is what a transcriber can make of a breath when it was told the name: not something said.
+    const bare = t => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    if (_callHint && bare(transcribeData.text) === bare(_callHint)) transcribeData.text = '';
     if (!transcribeData.text || !transcribeData.text.trim()) {
       _callSetStatus('Listening…', 'listening');
       return;   // the finally below counts it done

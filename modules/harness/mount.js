@@ -38,7 +38,8 @@ function mount(app) {
   require('../workstream/routes').mount(app);
   require('../machines').mount(app);
   require('../network').mount(app);   // how the hub listens, what may be done from outside the tailnet, its addresses as QR codes   // the agents' machines live, and the pages they serve (machines/)   // the agents' work as it happens: files edited, thinking, commands   // what was put away, in one place (archive.js)   // what each screen shows, and sending a page to one   // every page live on every screen: one change feed (live/, H10.5)
-  require('../agents/stopping').mount(app);   // a visible Stop for missions and automatic turns (agents/stopping.js, H10.14)
+  require('../agents/stopping').mount(app);
+  require('./stopped-work').mount(app);   // restart or drop work a person stopped (stopped-work.js)   // a visible Stop for missions and automatic turns (agents/stopping.js, H10.14)
   require('../model-servers').mount(app);   // every local model server and who it works for (model-servers.js, H10.13)
   require('../ambient').mount(app);   // the ambient screen: weather, the day's plan, notices (ambient/)
   require('../face/routes').mount(app);   // the face: what the hive is doing, on any screen (face/)

@@ -12,16 +12,18 @@ module.exports = [
       + 'The Orchestrator creates work chats (planning:true for detailed planning), optionally starting a task with message. '
       + 'Send gives a subordinate a task in the background; it returns immediately, and the work chat carries it to the end on its own. '
       + 'Report records your brief and informs superiors; with outcome done, failed, blocked or question it ends your job and wakes the Orchestrator, '
-      + 'without an outcome it is progress and wakes nobody. List shows every job\'s state. Archive retains transcripts; recall reopens them.',
+      + 'without an outcome it is progress and wakes nobody. List shows every job\'s state. Archive retains transcripts; recall reopens them. '
+      + 'Restart or drop a work chat a person STOPPED (Stopped work in your prompt) — only with their answer.',
     parameters: { type: 'object', properties: {
-      action: { type: 'string', enum: ['list', 'read', 'create', 'send', 'stop', 'report', 'archive', 'recall'] },
+      action: { type: 'string', enum: ['list', 'read', 'create', 'send', 'stop', 'report', 'archive', 'recall', 'restart', 'drop'] },
       sessionId: { type: 'string' }, title: { type: 'string' }, message: { type: 'string' },
       planning: { type: 'boolean' }, all: { type: 'boolean', description: 'Include archives in list.' },
       outcome: { type: 'string', enum: ['done', 'failed', 'blocked', 'question'],
         description: 'With report, from a work chat: the job is over (done/failed), cannot go on without a decision from above (blocked), or needs the owner (question).' },
       transcript: { type: 'boolean' }, offset: { type: 'integer' }, limit: { type: 'integer' },
     }, required: ['action'] },
-    run: async (args, ctx) => JSON.stringify(await require('../organization').tool(args, ctx)),
+    run: async (args, ctx) => JSON.stringify(['restart', 'drop'].includes(args.action)
+      ? require('../stopped-work').decide(args.sessionId, args.action === 'restart', ctx) : await require('../organization').tool(args, ctx)),
   },
   {
     name: 'work_plan',

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   Writing to a conversation that is working (decided with the owner 2026-10-04:
+   Writing to a conversation that is working (decided with Al 2026-10-04:
    nobody waits for the agent). The server keeps the message in the
    conversation's inbox (modules/harness/inbox.js) and this stream says what
    became of it: "queued", then "read" — the running turn took it before its

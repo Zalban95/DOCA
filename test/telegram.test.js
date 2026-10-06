@@ -25,7 +25,7 @@ const waitSent = (test, ms = 8000) => {
     setTimeout(() => reject(new Error(`nothing sent matching in ${ms} ms; sent: ${JSON.stringify(sent.map(s => [s.method, s.body.text]))}`)), ms).unref();
   });
 };
-const userSays = (chat, message) => updates.push({ update_id: updateId++, message: { message_id: msgId++, chat: { id: chat, type: 'private', first_name: 'Sam' }, from: { id: chat, is_bot: false }, ...message } });
+const userSays = (chat, message) => updates.push({ update_id: updateId++, message: { message_id: msgId++, chat: { id: chat, type: 'private', first_name: 'Al' }, from: { id: chat, is_bot: false }, ...message } });
 const sse = frames => res => { res.writeHead(200, { 'Content-Type': 'text/event-stream' }); for (const f of frames) res.write(`data: ${JSON.stringify(f)}\n\n`); res.end('data: [DONE]\n\n'); };
 
 before(async () => {
