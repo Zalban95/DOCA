@@ -96,7 +96,7 @@ const TABLE = [
   R(GET, '/api/settings/migrations', 'read'),               // prefs migrations: key names and code defaults, never a stored value
   R(GET, '/api/(services|services/status|vms|system/tools|mcp|skills|skills/search|skills/[^/]+)', 'read'),
   R(GET, '/api/docker/(containers|images|presets)', 'read'),
-  R(GET, '/api/models(/(disk|settings|tools|hf/(list|search|settings|status)|local/(list|search|settings)|llamacpp/(list|status)|ollama/(list|running|search|status)))?', 'read'),
+  R(GET, '/api/models(/(disk|settings|tools|servers|hf/(list|search|settings|status)|local/(list|search|settings)|llamacpp/(list|status)|ollama/(list|running|search|status)))?', 'read'),
 
   // ── Everything else is the machine ──
   R(ANY, '/api/(files|fm-favorites|configs|config-favorites|keys|logs|setup|snapshots|stack|action)(/.*)?', 'host'),

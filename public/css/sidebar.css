@@ -126,3 +126,9 @@
 .quicklink-icon { font-size: 12px; flex-shrink: 0; width: 14px; text-align: center; }
 .quicklink-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .quicklink-badge { font-size: 9px; color: var(--muted); flex-shrink: 0; }
+
+/* Model servers (model-servers.js): a model working for DOCA, or for something else on this machine. */
+.model-state-working { color: var(--green); }
+.model-state-sleeping, .model-state-unloaded { opacity: .6; }
+.model-who { font-size: 10px; color: var(--muted); margin: -2px 0 6px 8px; }
+.model-who.foreign { color: var(--amber); }
