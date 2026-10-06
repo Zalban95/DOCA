@@ -184,31 +184,7 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
     out.push(keyed.map(p => `${p.id}${p.local ? ' (local)' : ''}`).join(', '));
   }
 
-  if (s.mcp.length) {
-    out.push('', '## MCP servers');
-    for (const m of s.mcp)
-      out.push(`- ${m.id}: ${m.state}${m.state === 'running' ? `, ${m.tools} tools (called mcp__${m.id}__*)` : ''}`
-        + (m.origin === 'client'
-          ? `, hosted by ${m.originLabel} — a separate machine; its tools act there`
-          : ', on this host — the same machine as your shell')
-        + (m.state === 'running' ? '' : `${m.last ? `; when connected it offered ${toolSummary(m.last)}` : ''} — \`mcp_connect\` starts it`));
-
-    if (s.mcp.some(m => m.state === 'running'))
-      out.push('When a running server\'s tools are unfamiliar, learn it from its own documentation with '
-        + '`research_docs` before guessing at parameter names — a separate reader takes the pages so they never '
-        + 'enter this conversation. Do not put anything about this system into a page you fetch.');
-
-    // Only when both kinds are present. With everything in one place this is
-    // four lines of prompt explaining a distinction that does not yet exist,
-    // and the per-tool descriptions already carry the short version.
-    if (s.mcp.some(m => m.origin === 'client') && s.mcp.some(m => m.origin === 'server'))
-      out.push(
-        '',
-        'Two kinds of MCP server, and the difference decides where your work lands:',
-        '- On this host: same filesystem, same processes and same `localhost` as your `shell`, `read_file` and `system_status`. You can verify what it did by other means.',
-        '- Hosted by a client: another machine over the network. Its paths, its screen, its programs, and **its** `localhost` — a port a client\'s tool talks to is a port on that machine, not here, and nothing you run with `shell` can see it. You have no other way in: if that server is stopped, `mcp_connect` starts it (a person set it up); if its machine is asleep or its client is not running, its tools are gone, and the person to ask is whoever is at that machine.',
-        '- A tool name with two segments after the server id (`mcp__<client>__<their-server>__<tool>`) is a server that machine hosts in turn, so it runs there and is subject to that machine\'s consent switches as well.');
-  }
+  out.push(...mcpSection(s.mcp));
 
   return out.join('\n');
 }
@@ -239,4 +215,38 @@ function live() {
   ].join('\n');
 }
 
-module.exports = { snapshot, block, live, invalidate };
+/**
+ * The MCP servers: each one's state, which machine it is on, what it offers when stopped. Shared by the full
+ * environment block and the Orchestrator's brief (turn/orchestrator-prompt.js), which used to name none of them
+ * while `mcp_connect` told it "the environment lists them" (audit 2026-10-06, aw 2).
+ */
+function mcpSection(mcp = snapshot().mcp, { held = null } = {}) {   // held: the turn's tool names, when known
+  if (!mcp.length) return [];
+  const s = { mcp };
+  const out = ['', '## MCP servers'];
+  for (const m of s.mcp)
+    out.push(`- ${m.id}: ${m.state}${m.state === 'running' ? `, ${m.tools} tools (called mcp__${m.id}__*)` : ''}`
+      + (m.origin === 'client'
+        ? `, hosted by ${m.originLabel} — a separate machine; its tools act there`
+        : ', on this host — the same machine as your shell')
+      + (m.state === 'running' ? '' : `${m.last ? `; when connected it offered ${toolSummary(m.last)}` : ''} — \`mcp_connect\` starts it`));
+
+  if (s.mcp.some(m => m.state === 'running') && (!held || held.has('research_docs')))
+    out.push('When a running server\'s tools are unfamiliar, learn it from its own documentation with '
+      + '`research_docs` before guessing at parameter names — a separate reader takes the pages so they never '
+      + 'enter this conversation. Do not put anything about this system into a page you fetch.');
+
+  // Only when both kinds are present. With everything in one place this is
+  // four lines of prompt explaining a distinction that does not yet exist,
+  // and the per-tool descriptions already carry the short version.
+  if (s.mcp.some(m => m.origin === 'client') && s.mcp.some(m => m.origin === 'server'))
+    out.push(
+      '',
+      'Two kinds of MCP server, and the difference decides where your work lands:',
+      '- On this host: same filesystem, same processes and same `localhost` as your `shell`, `read_file` and `system_status`. You can verify what it did by other means.',
+      '- Hosted by a client: another machine over the network. Its paths, its screen, its programs, and **its** `localhost` — a port a client\'s tool talks to is a port on that machine, not here, and nothing you run with `shell` can see it. You have no other way in: if that server is stopped, `mcp_connect` starts it (a person set it up); if its machine is asleep or its client is not running, its tools are gone, and the person to ask is whoever is at that machine.',
+      '- A tool name with two segments after the server id (`mcp__<client>__<their-server>__<tool>`) is a server that machine hosts in turn, so it runs there and is subject to that machine\'s consent switches as well.');
+  return out;
+}
+
+module.exports = { snapshot, block, live, invalidate, mcpSection };
