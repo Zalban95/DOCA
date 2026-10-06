@@ -15,8 +15,10 @@ const SHOT_MS = 4000, IDLE_MS = 60000, MAX_PAGES = 8;
 let _proc = null, _port = null, _profile = null, _starting = null, _idle = null, _gen = 0;   // _gen: a close() since a tab began opening ends it
 const _tabs = new Map();    // key → { url, cdp, timer }
 const _shots = new Map();   // key → PNG buffer
+const _opening = new Set();  // keys whose tab is being opened: asked again meanwhile, not opened twice
 
-const browser = () => { const p = require('../headless').findBrowser(); return p ? { found: true } : { found: false, why: 'No Chrome, Edge or Chromium on this machine: install one (Settings → System → System tools) to see the pages agents serve.' }; };
+let _lastError = null;   // why the last picture could not be taken, for the page and the tests
+const browser = () => { const p = require('../headless').findBrowser(); return p ? { found: true, error: _lastError } : { found: false, why: 'No Chrome, Edge or Chromium on this machine: install one (Settings → System → System tools) to see the pages agents serve.' }; };
 
 async function launch() {
   if (_port) return _port;
@@ -42,15 +44,16 @@ async function openTab(key, url) {
   const t = await (await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(url)}`, { method: 'PUT' })).json();
   if (gen !== _gen) return;
   const ws = new WebSocket(t.webSocketDebuggerUrl);
-  await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = () => reject(new Error('cdp')); });
+  await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = () => reject(new Error(`cannot reach the tab over CDP (${t.webSocketDebuggerUrl || JSON.stringify(t).slice(0, 120)})`)); });
   let seq = 0;
   const pending = new Map();
   ws.onmessage = ev => { const m = JSON.parse(String(ev.data)); if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); } };
   const send = (method, params = {}) => new Promise(r => { const id = ++seq; pending.set(id, r); ws.send(JSON.stringify({ id, method, params })); });
   const tab = { url, id: t.id, send, ws, timer: null };
   const take = async () => {
-    const r = await send('Page.captureScreenshot', { format: 'png' }).catch(() => null);
+    const r = await send('Page.captureScreenshot', { format: 'png' }).catch(e => ({ error: { message: e.message } }));
     if (r?.result?.data) _shots.set(key, Buffer.from(r.result.data, 'base64'));
+    else _lastError = `screenshot: ${r?.error?.message || 'no picture'}`;
   };
   tab.timer = setInterval(take, SHOT_MS);
   tab.timer.unref?.();
@@ -75,7 +78,10 @@ function want(pages) {
   if (!browser().found) return;
   const keys = new Set(pages.slice(0, MAX_PAGES).map(p => p.key));
   for (const k of [..._tabs.keys()]) if (!keys.has(k)) closeTab(k);
-  for (const p of pages.slice(0, MAX_PAGES)) if (!_tabs.has(p.key)) openTab(p.key, p.url).catch(() => {});
+  for (const p of pages.slice(0, MAX_PAGES)) if (!_tabs.has(p.key) && !_opening.has(p.key)) {
+    _opening.add(p.key);
+    openTab(p.key, p.url).then(() => { _lastError = null; }, e => { _lastError = e.message; }).finally(() => _opening.delete(p.key));
+  }
 }
 
 function close() {

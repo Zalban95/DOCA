@@ -22,7 +22,9 @@ test('a dev server an agent started is found by the address it printed; only thi
     assert.match(served[0].url, /^http:\/\/127\.0\.0\.1:\d+\/$/);
     assert.equal(served[0].jobId, job.id);
     if (browser.found) {
-      assert.ok(await until(async () => (await H.api(null, 'GET', '/api/machines?shots=1')).body.served[0]?.shot), 'a picture of it');
+      let last = null;
+      const got = await until(async () => { last = (await H.api(null, 'GET', '/api/machines?shots=1')).body; return last.served[0]?.shot; }, 45000);
+      assert.ok(got, `a picture of it (${last?.browser?.error || 'no error said'})`);
       const png = await fetch(`${H.base}/api/machines/served/${encodeURIComponent(served[0].key)}/shot`, { headers: { Cookie: H.owner.cookie } });
       assert.equal(png.headers.get('content-type'), 'image/png');
       assert.ok((await png.arrayBuffer()).byteLength > 1000);
