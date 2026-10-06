@@ -53,6 +53,10 @@ function mount(app) {
   app.get('/api/connectors/logins/all', h(() => ({ logins: require('../logins').list() })));
   app.post('/api/connectors/logins/all', h(req => ({ login: require('../logins').save(req.body || {}) })));
   app.delete('/api/connectors/logins/:id', h(req => require('../logins').remove(req.params.id)));
+  // Keys for services (service-keys.js): pasted once, added by the hub to that service's own address — never a key back.
+  app.get('/api/connectors/keys/all', h(() => ({ keys: require('../service-keys').list() })));
+  app.post('/api/connectors/keys/all', h(req => ({ key: require('../service-keys').save(req.body || {}) })));
+  app.delete('/api/connectors/keys/:name', h(req => require('../service-keys').remove(req.params.name)));
   app.delete('/api/connectors/:id', h(req => {
     if (req.query.all === '1') vault.forget(req.params.id);
     else vault.forget(req.params.id, ['accessToken', 'refreshToken', 'expiresAt', 'account', 'connectedAt']);
