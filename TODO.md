@@ -62,7 +62,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 - [ ] A4 **The phone's screen tools get the computer's rules** (cl 5–6): DocaMobile classifies the target (password
   fields refused, pay/sign-in/submit need `confirm: true`) and marks screen/files reads `openWorldHint` (DocaDesk too);
   the hub forces a question for any device tool called with `confirm: true`. **Ask first** (approval).
-- [ ] A5 **DocaWear refuses a phone APK** (cl 14): the hub checks the watch mark (aapt2 `type.watch`) before keeping a
+- [x] A5 **DocaWear refuses a phone APK** — *2.245.4 (the hub reads the watch mark with aapt2), DocaWear 1.2.3* (cl 14): the hub checks the watch mark (aapt2 `type.watch`) before keeping a
   DocaWear build; the watch refuses an APK without it.
 
 ### Wave 2 — the agent knows and reaches what DOCA has (V8, P13–P14)
