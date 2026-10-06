@@ -9,19 +9,30 @@
 const fs = require('fs');
 const path = require('path');
 
+// since: the release that added it; measure: 'script' (bin/experiments/<doc's name>.js, `npm run experiment -- <name>`)
+// or 'manual' (its write-up says how a person measures it). Its last measurement is the newest date in its write-up's
+// results table, so measuring is writing the row, and an experiment nobody measured for STALE_DAYS says so
+// (audit 2026-10-06, coh F20; TODO C6).
 const EXPERIMENTS = [
-  { id: 'recipeRepair', label: 'Recipes repair themselves', doc: 'recipe-repair.md', todo: 'H3.4' },
-  { id: 'retrieval', label: 'Search memory and conversations by meaning', doc: 'retrieval.md', todo: 'H10.2' },
-  { id: 'bargeIn', label: 'Talk over the agent in a voice call', doc: 'barge-in.md', todo: 'H8.3' },
-  { id: 'realtimeVoice', label: 'Live calls with a realtime speech model', doc: 'realtime-voice.md', todo: 'H8.3' },
-  { id: 'faceVoice', label: 'The face follows a voice call', doc: 'face-voice.md', todo: 'H8.2' },
-  { id: 'packRegistry', label: 'Publish packs for other hubs, and fetch theirs', doc: 'pack-registry.md', todo: 'H4.6' },
-  { id: 'wakeWord', label: 'Start a call by saying the hive\'s name', doc: 'wake-word.md', todo: 'H8.2' },
-  { id: 'wakeModel', label: 'Hear the wake word with a model trained for it, on the screen', doc: 'wake-model.md', todo: 'H8.4' },
-  { id: 'modelScout', label: 'A scout for better and new models', doc: 'model-scout.md', todo: 'H10.4' },
-  { id: 'visionPass', label: 'Look at a computer\'s screen with a vision model', doc: 'vision-pass.md', todo: 'H5.6' },
-  { id: 'toolTiers', label: 'Send the core tools in full, the rest by name', doc: 'tool-tiers.md', todo: 'B2' },
+  { id: 'recipeRepair', label: 'Recipes repair themselves', doc: 'recipe-repair.md', todo: 'H3.4', since: '2.176.0', measure: 'script' },
+  { id: 'retrieval', label: 'Search memory and conversations by meaning', doc: 'retrieval.md', todo: 'H10.2', since: '2.181.0', measure: 'script' },
+  { id: 'bargeIn', label: 'Talk over the agent in a voice call', doc: 'barge-in.md', todo: 'H8.3', since: '2.192.0', measure: 'manual' },
+  { id: 'realtimeVoice', label: 'Live calls with a realtime speech model', doc: 'realtime-voice.md', todo: 'H8.3', since: '2.200.0', measure: 'script' },
+  { id: 'faceVoice', label: 'The face follows a voice call', doc: 'face-voice.md', todo: 'H8.2', since: '2.193.0', measure: 'manual' },
+  { id: 'packRegistry', label: 'Publish packs for other hubs, and fetch theirs', doc: 'pack-registry.md', todo: 'H4.6', since: '2.198.0', measure: 'manual' },
+  { id: 'wakeWord', label: 'Start a call by saying the hive\'s name', doc: 'wake-word.md', todo: 'H8.2', since: '2.210.0', measure: 'script' },
+  { id: 'wakeModel', label: 'Hear the wake word with a model trained for it, on the screen', doc: 'wake-model.md', todo: 'H8.4', since: '2.244.0', measure: 'manual' },
+  { id: 'modelScout', label: 'A scout for better and new models', doc: 'model-scout.md', todo: 'H10.4', since: '2.213.0', measure: 'script' },
+  { id: 'visionPass', label: 'Look at a computer\'s screen with a vision model', doc: 'vision-pass.md', todo: 'H5.6', since: '2.197.0', measure: 'script' },
+  { id: 'toolTiers', label: 'Send the core tools in full, the rest by name', doc: 'tool-tiers.md', todo: 'B2', since: '2.249.0', measure: 'script' },
 ];
+const STALE_DAYS = 60;
+
+/** The newest YYYY-MM-DD at the start of a table row in a write-up: when it was last measured, or null. */
+function lastMeasured(docText) {
+  const dates = [...String(docText || '').matchAll(/^\|\s*(\d{4}-\d{2}-\d{2})\b/gm)].map(m => m[1]).sort();
+  return dates.length ? dates[dates.length - 1] : null;
+}
 
 /** Developer mode (`developer.mode`, the owner's): without it no experiment is offered or in effect, whatever its flag. */
 const developer = () => require('./settings-schema').value('developer.mode') === true;
@@ -32,7 +43,9 @@ function list() {
   return EXPERIMENTS.map(e => {
     let doc = '';
     try { doc = fs.readFileSync(path.join(__dirname, '..', 'docs', 'experiments', e.doc), 'utf8'); } catch { doc = '(its write-up is missing)'; }
-    return { ...e, on: on(e.id), flagged: flagged(e.id), docText: doc };
+    const measured = lastMeasured(doc);
+    const stale = !measured || (Date.now() - Date.parse(measured)) / 86400000 > STALE_DAYS;
+    return { ...e, on: on(e.id), flagged: flagged(e.id), docText: doc, measured, stale };
   });
 }
 
@@ -60,4 +73,4 @@ function mount(app) {
   });
 }
 
-module.exports = { EXPERIMENTS, on, developer, list, set, setDeveloper, mount };
+module.exports = { lastMeasured, STALE_DAYS, EXPERIMENTS, on, developer, list, set, setDeveloper, mount };

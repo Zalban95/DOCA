@@ -65,7 +65,9 @@ module.exports = [
       if (!rows.length) return `No settings match "${filter}".`;
       const body = rows.map(r =>
         `${r.path} = ${JSON.stringify(r.value)}${r.detail ? `   # ${r.detail}` : ''}`).join('\n');
-      return clip(`${rows.length} settings you may propose changes to:\n${body}`);
+      // Which model does what (model-roles.js): the answer to "what runs my speech / my screen reading", in one list.
+      const models = !q || /model|voice|harness|vision|retrieval|realtime|assistant/.test(q) ? `\n\nModels in use:\n${require('../../model-roles').lines().join('\n')}` : '';
+      return clip(`${rows.length} settings you may propose changes to:\n${body}${models}`);
     },
   },
   {

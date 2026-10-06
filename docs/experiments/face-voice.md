@@ -26,6 +26,12 @@ Measure in the browser's Performance panel during a call with the flag on and of
 frame is the cost (two `getByteFrequencyData` calls of 128–256 bins and a canvas update the face draws anyway); the lag
 is judged by eye against the voice.
 
+## Assistant mode (decided 2026-10-06, audit coh F20)
+
+Assistant mode — the face full screen, answering aloud — always drives the face by the call's voice, whatever this flag
+says: there the face *is* the conversation, and a face that does not move with the voice it speaks in reads as broken.
+The flag governs the corner face during a plain call (the chat's 🎙), which is what is being measured here.
+
 ## Cost
 
 One AnalyserNode in the playback path, read once a frame while a call is open; nothing outside a call.

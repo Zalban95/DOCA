@@ -78,7 +78,7 @@ async function _callStart({ assistant }) {
       const missing = [];
       if (!status.stt) missing.push(`STT (${status.sttUrl})`);
       if (!status.tts) missing.push(`TTS (${status.ttsUrl})`);
-      chatAppendMsg('system', `Voice services unreachable: ${missing.join(', ')}. Configure in Settings → Voice Services.`);
+      chatAppendMsg('system', `Voice services unreachable: ${missing.join(', ')}. Set them up in Settings → Voice.`);
       return giveUp();
     }
   } catch (e) {
@@ -86,6 +86,7 @@ async function _callStart({ assistant }) {
     return giveUp();
   }
 
+  // Assistant mode always drives the face by voice: there the face is the conversation (docs/experiments/face-voice.md).
   try { const ex = (await screenLoad(true)).experiments || {}; _callBargeIn = !!ex.bargeIn; _callFaceVoice = !!ex.faceVoice || assistant; _callAssistant = assistant; }
   catch { _callBargeIn = false; _callFaceVoice = assistant; _callAssistant = assistant; }
   if (typeof wakeWordPause === 'function') wakeWordPause();   // the call has the microphone now
