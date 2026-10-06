@@ -35,6 +35,7 @@ function _pjFrame() {
     <div class="pj-top">
       <select class="input pj-picker" id="pj-picker" onchange="pjOpen(this.value)" title="Project"></select>
       <button class="btn btn-sm" onclick="pjNew()" title="Open a folder as a project">+ Open folder</button>
+      <button class="btn btn-sm" onclick="PJ.project && archiveSet('project', PJ.project.project.id, true)" title="Put this project away (its folder is untouched); back from Agents → Archive">🗄</button>
       <span class="pj-meta" id="pj-meta"></span>
       <span class="pj-spacer"></span>
       <button class="btn btn-sm" id="pj-chat-toggle" onclick="pjChatToggle()" title="The project's conversation">⬡ Chat</button>

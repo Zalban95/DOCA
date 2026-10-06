@@ -33,7 +33,8 @@ function mount(app) {
   require('../packs/routes').mount(app);   // packs: export and import in other tools' formats (packs/)
   require('../schedules/routes').mount(app);   // turns and recipes on a timetable (schedules/)
   require('../live/routes').mount(app);
-  require('../screens/showing').mount(app);   // what each screen shows, and sending a page to one   // every page live on every screen: one change feed (live/, H10.5)
+  require('../screens/showing').mount(app);
+  require('../archive').mount(app);   // what was put away, in one place (archive.js)   // what each screen shows, and sending a page to one   // every page live on every screen: one change feed (live/, H10.5)
   require('../face/routes').mount(app);   // the face: what the hive is doing, on any screen (face/)
   require('../recipes/routes').mount(app);   // recipes: what worked, run again without the thinking (recipes/)
   require('../channels/telegram/routes').mount(app);   // Telegram as a channel (channels/telegram)

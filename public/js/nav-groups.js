@@ -6,13 +6,13 @@
    group with none left is not drawn). */
 const NAV_GROUPS = [
   { id: 'controls', label: 'Controls', icon: '▶', tabs: ['controls'] },
-  { id: 'agents', label: 'Agents', icon: '⬡', tabs: ['harness', 'projects'] },
+  { id: 'agents', label: 'Agents', icon: '⬡', tabs: ['harness', 'projects', 'archive'] },
   { id: 'machines', label: 'Machines', icon: '🖵', tabs: ['computers', 'vms', 'docker'] },
   { id: 'host', label: 'This host', short: 'Host', icon: '⌨', tabs: ['files', 'terminal', 'logs'] },
   { id: 'intelligence', label: 'Models & tools', short: 'Models', icon: '◆', tabs: ['models', 'mcp'] },
   { id: 'settings', label: 'Settings', icon: '⚙', tabs: ['settings'] },
 ];
-const NAV_LABELS = { controls: 'Controls', harness: 'Harness', projects: 'Projects', computers: 'Computers', vms: 'VMs', docker: 'Docker',
+const NAV_LABELS = { controls: 'Controls', harness: 'Harness', projects: 'Projects', archive: 'Archive', computers: 'Computers', vms: 'VMs', docker: 'Docker',
   files: 'Files', terminal: 'Terminal', logs: 'Logs', models: 'Models', mcp: 'MCP', settings: 'Settings' };
 
 const navGroupOf = tab => NAV_GROUPS.find(g => g.tabs.includes(tab)) || NAV_GROUPS[0];
