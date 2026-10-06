@@ -44,6 +44,7 @@ function navGroupsMark(tab) {
   document.querySelectorAll('.nav-tab[data-tab], .mobile-nav-item[data-group]').forEach(el =>
     el.classList.toggle('active', el.dataset.tab ? el.dataset.tab === tab : el.dataset.group === g.id));
   document.getElementById('nav-group-menu')?.remove();
+  if (typeof presenceNow === 'function') presenceNow();   // what this screen shows (Devices)
 }
 
 /** A group: the page last used in it, else its first shown one. */

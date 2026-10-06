@@ -13,6 +13,7 @@ async function devicesLoad() {
   try {
     const data = await apiFetch('/api/devices');
     _devData = data;
+    _devShowing = (await apiFetch('/api/screens/showing').catch(() => ({}))).screens || {};   // what each screen shows now (screens/showing.js)
     devPopulatePresets();
 
     const pairBtn  = document.getElementById('dev-pair-btn');
@@ -223,13 +224,31 @@ function devSessionCardHtml(d, dead) {
           <span class="provider-badge ${dead ? 'no' : 'ok'}">${dead ? 'REVOKED' : what}</span>
         </div>
         <div class="provider-models"><code>${escHtml(d.id)}</code> · ${d.kind === 'browser' ? 'its own look, tabs and sections; signed in by password' : 'a linked chat'}
-          · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}</div>
+          · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}${_devShowingHtml(d, dead)}</div>
         <div class="toolbar-right">
           ${dead ? `<button class="btn btn-xs btn-red" onclick="devForget(${jsArg(d.id)},${jsArg(d.name)})" title="Remove this row and its settings">🗑 Forget</button>`
             : `<button class="btn btn-xs btn-red" onclick="devRevoke(${jsArg(d.id)},${jsArg(d.name)})" title="${d.kind === 'browser' ? 'Sign this browser out now' : 'Stop this chat reaching the hive'}">✕ ${d.kind === 'browser' ? 'Sign out' : 'Unlink'}</button>`}
         </div>
         <div class="status-line" id="dev-status-${escHtml(d.id)}"></div>
       </div>`;
+}
+
+let _devShowing = {};
+/** A screen: the page it shows now, and a page sent to it — alone, for a screen given to one thing (solo.js). */
+function _devShowingHtml(d, dead) {
+  if (d.kind !== 'browser' || dead) return '';
+  const s = _devShowing[d.id], label = t => (typeof NAV_LABELS !== 'undefined' && NAV_LABELS[t]) || t;
+  const pages = typeof NAV_TABS !== 'undefined' ? NAV_TABS : [];
+  return `<br>${s ? `showing <b>${escHtml(label(s.page || '?'))}</b>${s.solo ? ' alone' : ''}${s.visible ? '' : ' (hidden)'}` : 'not open now'}
+    · show here <select class="input" id="dev-show-${escHtml(d.id)}" style="width:auto;padding:2px 4px">${pages.map(t => `<option value="${t}">${escHtml(label(t))}</option>`).join('')}</select>
+    <label style="font-size:11px"><input type="checkbox" id="dev-solo-${escHtml(d.id)}" checked> alone</label>
+    <button class="btn btn-xs" onclick="devShowHere(${jsArg(d.id)})">Show</button>`;
+}
+
+async function devShowHere(id) {
+  const page = document.getElementById(`dev-show-${id}`)?.value, solo = !!document.getElementById(`dev-solo-${id}`)?.checked;
+  try { const r = await apiFetch(`/api/screens/${encodeURIComponent(id)}/show`, { method: 'POST', body: { page, solo } }); setStatus(document.getElementById(`dev-status-${id}`), `Sent — ${r.showing}.`, 'ok'); }
+  catch (e) { devFailed(id, e); }
 }
 
 /* ── Rotate / revoke ──────────────────────────────────── */
