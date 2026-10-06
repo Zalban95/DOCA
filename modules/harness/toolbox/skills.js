@@ -3,6 +3,27 @@
 /** Skills (harness/skills.js): load a procedure when the task matches it; keep one learned. */
 module.exports = [
   {
+    // Experiment toolTiers (turn/tool-tiers.js): absent while it is off (turn/tool-shape.js).
+    name: 'tools_more',
+    description: 'Load tools you hold that are not loaded yet (listed under "More tools" in Your tools) — use it before you need one of them. '
+      + 'names: tool names, or mcp:<server> for all of a server\'s tools. They stay loaded for this conversation from your next step.',
+    parameters: {
+      type: 'object',
+      properties: { names: { type: 'array', items: { type: 'string' }, description: 'Tool names, or mcp:<server id>.' } },
+      required: ['names'],
+    },
+    run: ({ names = [] }, ctx = {}) => {
+      const tiers = require('../turn/tool-tiers');
+      const held = new Set(require('../tools').schemas().map(x => x.function.name));
+      const ok = (Array.isArray(names) ? names : [names]).map(String).filter(n => held.has(n)
+        || (n.startsWith('mcp:') && [...held].some(h => tiers.serverOf(h) === n.slice(4))));
+      const unknown = (Array.isArray(names) ? names : [names]).map(String).filter(n => !ok.includes(n));
+      const fresh = tiers.attach(ctx.sessionId, ok);
+      return (ok.length ? `Loaded from your next step: ${ok.join(', ')}${fresh.length < ok.length ? ' (some were already loaded)' : ''}.` : 'Nothing loaded.')
+        + (unknown.length ? ` Not tools you hold: ${unknown.join(', ')}.` : '');
+    },
+  },
+  {
     name: 'tool_note',
     description: 'Propose a note about one of your tools — something this install taught you about it that its description does not say '
       + '(a quirk, a limit, the retry that works). The person accepts it with a click, like a setting; then it is added to that '

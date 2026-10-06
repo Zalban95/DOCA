@@ -202,7 +202,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     // is an in-process registry read, so the honest path is now also the cheap
     // one.
     const stepDisabled = disabledFor(profile, p, session.id);
-    const schemas = tools.schemas(stepDisabled);
+    // Sent by tier when the toolTiers experiment is on (turn/tool-tiers.js): what is held is unchanged.
+    const schemas = require('./turn/tool-tiers').split(tools.schemas(stepDisabled), { sessionId: session.id, profile, text: message }).offered;
     if (toolCount !== null && schemas.length !== toolCount)
       say({ type: 'tools', count: schemas.length, was: toolCount, step });
     toolCount = schemas.length;

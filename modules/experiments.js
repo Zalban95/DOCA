@@ -20,6 +20,7 @@ const EXPERIMENTS = [
   { id: 'wakeModel', label: 'Hear the wake word with a model trained for it, on the screen', doc: 'wake-model.md', todo: 'H8.4' },
   { id: 'modelScout', label: 'A scout for better and new models', doc: 'model-scout.md', todo: 'H10.4' },
   { id: 'visionPass', label: 'Look at a computer\'s screen with a vision model', doc: 'vision-pass.md', todo: 'H5.6' },
+  { id: 'toolTiers', label: 'Send the core tools in full, the rest by name', doc: 'tool-tiers.md', todo: 'B2' },
 ];
 
 /** Developer mode (`developer.mode`, the owner's): without it no experiment is offered or in effect, whatever its flag. */

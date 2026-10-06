@@ -14,6 +14,7 @@ function switches() {
       out.push({ name, why: 'specialists are switched off (Settings → Harness)' });
   if (!require('../../computers/look').on()) out.push({ name: 'computer_look', why: 'the vision pass is off, or no vision model is set' });
   if (!require('../../scout').on()) out.push({ name: 'scout', why: 'the model scout experiment is off' });
+  if (!require('../../experiments').on('toolTiers')) out.push({ name: 'tools_more', why: 'the tool tiers experiment is off' });
   // An old name kept so old transcripts and recipes still run (tools.call maps it); never offered.
   out.push({ name: 'show_image', why: 'an old name for show_media' });
   return out;
