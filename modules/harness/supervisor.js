@@ -80,11 +80,32 @@ function wake(sessionId, message, { retry } = {}) {
     return 'limited';
   }
   recent.push(Date.now());
+  _why.set(sessionId, { why: whyOf(message), since: new Date().toISOString() });
   Promise.resolve()
     .then(() => _turn(sessionId, message))
     .then(r => afterOrchestrator(sessionId, r))
     .catch(() => { /* the turn records its own failure; afterTurn decides from there */ });
   return 'woken';
+}
+
+/** Why an automatic turn started, in words a person reads beside its Stop (autoNow). */
+const _why = new Map();   // sessionId → {why, since}, while its automatic turn runs
+function whyOf(message) {
+  if (message === RESULTS) return 'its specialists finished: reading their results';
+  if (message === CONTINUE) return 'carrying on with its job';
+  if (message === CUT_OFF) return 'its last answer was cut off: finishing it';
+  if (message === RESTARTED) return 'the panel restarted mid-turn: picking up';
+  if (String(message).startsWith('[panel] Work reported back')) return 'work chats reported back: telling you what matters';
+  return 'trying again on a stronger model';
+}
+
+/** Conversations working on their own right now, and why — what the Harness draws with a Stop each. */
+function autoNow() {
+  const lifecycle = require('./turn/lifecycle');
+  return [..._why.entries()].filter(([id]) => lifecycle.isRunning(id) && lifecycle.isAuto(id)).map(([id, w]) => {
+    const s = memory.getSession(id) || {};
+    return { sessionId: id, title: s.title || id, kind: s.kind || null, ...w };
+  });
 }
 
 /** An Orchestrator's automatic reply is for the owner: to their devices too, not only the chat. */
@@ -111,6 +132,7 @@ function specialistsRunning(id) {
 
 /** Called by turn/lifecycle.changed when a turn ends. Deferred, so a mission's own bookkeeping lands first. */
 function afterTurn(sessionId, info = {}) {
+  _why.delete(sessionId);
   setImmediate(() => { try { decide(sessionId, info); } catch (e) { console.warn(`[supervisor] ${sessionId}: ${e.message}`); } });
 }
 
@@ -120,13 +142,17 @@ function decide(id, info = {}) {
   const org = require('./organization');
   let s;
   try { s = org.session(id); } catch { return 'gone'; }
-  if (s.kind === 'orchestrator') return deliver(id);
-  if (s.kind === 'specialist') return missionEnded(s);
+  // A person's Stop is the end of that line of work (audit 2026-10-06: "stop means stop"): nothing is woken to carry on.
+  if (s.kind === 'orchestrator') return info.stopped ? 'stopped' : deliver(id);
+  if (s.kind === 'specialist') return info.stopped ? missionStopped(s) : missionEnded(s);
   if (s.kind !== 'work' || s.archivedAt || !s.job) return 'not a job';   // chats from before jobs existed are left alone
 
   const job = s.job;
   if (info.stopped) {
     if (!org.FINAL.includes(job.state)) setJob(id, { ...job, state: 'stopped' });
+    // Its line of work stops with it: the specialists it sent are stopped too, rather than finishing and waking nobody.
+    for (const m of require('../agents/missions').list({ state: 'running', limit: 200 }).filter(x => x.by === id && x.sessionId))
+      require('./agent').cancel(m.sessionId);
     return 'stopped';
   }
   if (org.FINAL.includes(job.state) || job.state === 'stalled') return deliver(s.parentId);
@@ -202,6 +228,17 @@ function missionEnded(s) {
   return how;
 }
 
+/** A specialist a person stopped: the work chat that sent it waits for that person instead of carrying on. */
+function missionStopped(s) {
+  const m = require('../agents/missions').forSession(s.id);
+  const org = require('./organization');
+  let lead;
+  try { lead = org.session(m?.by); } catch { return 'stopped'; }
+  if (lead.kind === 'work' && lead.job && !org.FINAL.includes(lead.job.state))
+    setJob(lead.id, { ...lead.job, state: 'stopped', stoppedWhy: `${m.label || m.agentId} was stopped by a person` });
+  return 'stopped';
+}
+
 /**
  * Wake the Orchestrator for the final reports it has not been woken for yet —
  * only its own work chats' done, failed, blocked and questions. It says what
@@ -255,4 +292,4 @@ function recover() {
   return done;
 }
 
-module.exports = { afterTurn, decide, deliver, missionEnded, recover, wake, limits, _setTurn, _setEnabled, CONTINUE, RESULTS, RESTARTED, CUT_OFF, IDLE_TURNS_MAX };
+module.exports = { afterTurn, decide, deliver, missionEnded, missionStopped, autoNow, recover, wake, limits, _setTurn, _setEnabled, CONTINUE, RESULTS, RESTARTED, CUT_OFF, IDLE_TURNS_MAX };
