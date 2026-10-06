@@ -11563,6 +11563,13 @@
             "type": "string",
             "description": "The specialist's name."
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "work"
+            ],
+            "description": "`work` for a work chat (the Orchestrator's, `agentId: work`, `missionId` its conversation); absent for a specialist's mission. A work chat a person stopped or dropped is `cancelled` with why in `error`."
+          },
           "task": {
             "type": "string",
             "description": "What it was asked to do, truncated."
@@ -11607,9 +11614,50 @@
           "error": {
             "type": "string"
           },
+          "plan": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "done",
+                    "running",
+                    "queued",
+                    "failed"
+                  ]
+                }
+              }
+            },
+            "description": "The specialist's own checklist, at most 12 items; absent when it made none."
+          },
+          "progress": {
+            "type": "object",
+            "properties": {
+              "done": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "percent": {
+                "type": "integer"
+              }
+            },
+            "description": "Counted from `plan`; absent without one — draw from `steps` then."
+          },
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The mission was put away: take its row off the list. Always sent with `quiet: true`."
+          },
           "quiet": {
             "type": "boolean",
-            "description": "Present and true when the owner is reading the panel right now: update what you show, raise no notification."
+            "description": "Present and true: update what you show, raise no notification, no haptic. Set when the owner is reading the panel right now, and always when a mission is put away."
           }
         }
       },
