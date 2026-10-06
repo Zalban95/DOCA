@@ -8,6 +8,7 @@
  *   { contains: 'x' } / { notContains: 'x' }   in the answer, ignoring case
  *   { matches: 'regex' }                        the answer, case-insensitive
  *   { tool: 'name' } / { noTool: 'name' }       called, or never called (a tool name or an mcp__server__ prefix)
+ *   { anyTool: ['a', 'b'] }                     at least one of them called (more than one right way)
  *   { maxSteps: n } / { maxTokens: n }          what the turn took
  *   { judge: 'rubric' }                         one model call with no tools judges the answer against the rubric
  *
@@ -33,6 +34,7 @@ async function one(c, prompt, o) {
     catch (e) { return { pass: false, why: `bad pattern: ${e.message}` }; }
   }
   if (c.tool !== undefined) return { pass: named(o.tools, c.tool), why: `called ${c.tool}` };
+  if (c.anyTool !== undefined) return { pass: [].concat(c.anyTool).some(n => named(o.tools, n)), why: `called one of ${[].concat(c.anyTool).join(', ')}` };
   if (c.noTool !== undefined) return { pass: !named(o.tools, c.noTool), why: `never called ${c.noTool}` };
   if (c.maxSteps !== undefined) return { pass: (o.steps ?? Infinity) <= c.maxSteps, why: `${o.steps ?? '?'} steps ≤ ${c.maxSteps}` };
   if (c.maxTokens !== undefined) return { pass: (o.tokens ?? Infinity) <= c.maxTokens, why: `${o.tokens ?? '?'} tokens ≤ ${c.maxTokens}` };
