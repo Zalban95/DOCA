@@ -1,0 +1,42 @@
+/* Agents → Workstream (js/workstream.js): the file being edited on the stage, its diff in green and red, and the agents'
+   thinking and commands lower right, white on black, fading into the file behind. */
+#tab-workstream.active { display: flex; flex-direction: column; position: relative; overflow: hidden; }
+.ws-bar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--border2); flex-shrink: 0; }
+.ws-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.ws-status { font-size: 11px; color: var(--muted); margin-right: auto; }
+.ws-chips { display: flex; gap: 6px; padding: 8px 14px; overflow-x: auto; flex-shrink: 0; scrollbar-width: thin; }
+.ws-chip { font-family: 'IBM Plex Mono', monospace; font-size: 11px; white-space: nowrap; padding: 4px 8px; border: 1px solid var(--border2);
+  background: var(--raised); color: var(--text); cursor: pointer; }
+.ws-chip.active { border-color: var(--accent); }
+.ws-add { color: #3fb950; font-weight: 600; }
+.ws-del { color: #f85149; font-weight: 600; }
+.ws-stage { flex: 1; overflow: auto; padding: 0 14px 14px; min-height: 0; }
+.ws-file-head { position: sticky; top: 0; z-index: 1; display: flex; gap: 10px; align-items: baseline; padding: 8px 0; background: var(--bg);
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; transition: color 1.5s; }
+.ws-file-head.flash .ws-path { color: var(--accent); }
+.ws-note { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.ws-when { margin-left: auto; font-size: 10px; color: var(--muted); }
+.ws-code-box { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.55; }
+.ws-line { display: flex; white-space: pre; }
+.ws-line.add { background: rgba(46, 160, 67, .18); }
+.ws-line.del { background: rgba(248, 81, 73, .16); }
+.ws-line.del .ws-code { text-decoration: line-through; text-decoration-color: rgba(248, 81, 73, .5); }
+.ws-n { width: 46px; flex-shrink: 0; text-align: right; padding-right: 10px; color: var(--muted); opacity: .6; user-select: none; }
+.ws-op { width: 14px; flex-shrink: 0; color: var(--muted); }
+.ws-line.add .ws-op { color: #3fb950; } .ws-line.del .ws-op { color: #f85149; }
+.ws-gap { color: var(--muted); padding: 2px 0 2px 60px; }
+/* The console: white on black in every theme, fading at its top and left edges into the file behind it. */
+.ws-console { position: absolute; right: 0; bottom: 0; width: min(560px, 55%); height: min(46%, 420px); overflow-y: auto; padding: 60px 14px 12px 70px;
+  background: #000; color: #eee;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 70px), linear-gradient(to right, transparent 0, #000 90px);
+  -webkit-mask-composite: source-in; mask-image: linear-gradient(to bottom, transparent 0, #000 70px), linear-gradient(to right, transparent 0, #000 90px); mask-composite: intersect;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11.5px; line-height: 1.5; scrollbar-width: none; pointer-events: auto; }
+.ws-console::-webkit-scrollbar { display: none; }
+.ws-act { white-space: pre-wrap; word-break: break-word; margin-bottom: 3px; }
+.ws-who { color: #888; margin-right: 8px; font-size: 10px; }
+.ws-act.thinking { color: #aaa; font-style: italic; }
+.ws-act.command { color: #fff; font-weight: 600; }
+.ws-act.result { color: #7ee787; }
+.ws-act.result.failed { color: #ff7b72; }
+.ws-act.text { color: #e6e6e6; }
+@media (max-width: 768px) { .ws-console { width: 100%; height: 40%; padding-left: 14px; } }

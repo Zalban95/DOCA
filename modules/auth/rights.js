@@ -108,7 +108,8 @@ const TABLE = [
   R(GET, '/api/live/stream', 'read'),                           // every page live: changes this viewer may open (live/routes.js)
   R(ANY, '/api/live/watch', 'host'),
   R(ANY, '/api/screens/.*', 'host'),
-  R(ANY, '/api/archive(/.*)?', 'chat'),                          // what was put away: each person's own; projects and computers a host's (archive.js)                             // what each screen shows, and sending it a page (screens/showing.js)                            // which folders this page shows: Files and Projects are a host's
+  R(ANY, '/api/archive(/.*)?', 'chat'),
+  R(ANY, '/api/workstream(/.*)?', 'host'),                       // the agents' work as it happens: the machine's files, every conversation (workstream/)                          // what was put away: each person's own; projects and computers a host's (archive.js)                             // what each screen shows, and sending it a page (screens/showing.js)                            // which folders this page shows: Files and Projects are a host's
   R(GET, '/api/face/stream', 'chat'),                          // the face's feed, scoped to what the viewer may open (face/state.js)
   R(ANY, '/api/developer(/.*)?', 'host'),                        // who may release unasked (releasing.js): the admin's
   R(ANY, '/api/experiments(/.*)?', 'host'),                     // the owner's switches for experiments (experiments.js)
