@@ -40,6 +40,10 @@ the hub's speech service is down, and miss less for the person it was checked ag
 | The trainer's false starts per hour of other audio | — | 1.8 | ≤ 0.1 |
 | Audio sent to the hub while waiting | every burst | none | none |
 
+| Date | Model | Calls heard | Others woken | Held-out clips | Near words woken |
+|---|---|---|---|---|---|
+| 2026-10-06 | "doca" v2 | 9/15 | 0/21 | 54 % | 4 % |
+
 The first model (the trainer's default weighting) heard 29 % of held-out clips and 0 false starts; v2 (negative weight
 300, a 64-wide layer, 50,000 steps) 54 %. In the browser (ONNX Runtime Web) it keeps up in real time and scores as
 Python does (a call the Python run hears at 0.99 woke the page at 0.85; an other phrase stayed at 0.001).
