@@ -23,7 +23,7 @@ const assert = require('node:assert/strict');
 const fs   = require('node:fs');
 const path = require('node:path');
 
-const SRC = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'chat.js'), 'utf8');
+const SRC = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'chat-window.js'), 'utf8');
 
 /** The constants and the geometry helpers, with `window`/`localStorage` supplied. */
 function geom({ innerWidth = 1400, innerHeight = 900, store = null } = {}) {
@@ -128,7 +128,7 @@ test('a press on a button in the header is a press on that button', () => {
   // only drag handle. If the gesture started on a control, the panel would move
   // out from under a button that was being pressed — and preventDefault() on
   // that pointerdown would be reaching into a click that was never a drag.
-  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'chat.js'), 'utf8');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'chat-window.js'), 'utf8');
   const body = src.match(/function chatDragStart\([\s\S]*?\n\}/)[0];
 
   assert.match(body, /ev\.target\.closest\('button/, 'the guard is what keeps the buttons clickable');
