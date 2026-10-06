@@ -10,12 +10,13 @@ model. It runs on the person's own credits. Everything here is DOCA's ordinary t
 
 ## Connecting it (once, with the person)
 
-The person creates an API client on hi3d.ai (its developer page) and gets a **client id** and a **client secret**.
-They add them in **Field → Connectors → Keys for services**:
+The person creates an API key on hi3d.ai (its developer page) and gets two values — the page calls them
+**Access Key** and **Secret Key** (the API's own docs say client id and client secret: the same two). Both are
+needed, joined into one. They add them in **Field → Connectors → Keys for services**:
 
 - name `hi3d`, address `https://api.hitem3d.ai`
 - where it goes: **id:secret, traded for a token**; token address `https://api.hitem3d.ai/open-api/v1/auth/token`
-- the key: `client_id:client_secret` (joined by a colon)
+- the key: `AccessKey:SecretKey` — the Access Key, a colon, the Secret Key, no spaces
 
 The hub trades them for a token itself and renews it; you never see either. If `http_fetch` with `key: "hi3d"`
 says there is no such key, tell the person these four lines — never ask them to paste the secret into the chat.
