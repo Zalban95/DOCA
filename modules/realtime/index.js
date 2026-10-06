@@ -80,6 +80,11 @@ function recent(sessionId) {
  * One call. `ws` is the client's socket; `ask(text)` starts a turn as the caller and resolves with its answer text
  * (a rejection is said as a failure); `sessionId` is the conversation it lands in.
  */
+const _live = new Map();   // the calls being served now: a restart waits for them (harness/drain.js)
+let _liveN = 0;
+/** The calls in progress, for drain.busy(). */
+const live = () => [..._live.values()];
+
 function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime' }) {
   const s = settings();
   const tell = o => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
@@ -92,8 +97,11 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime' }) {
     : ADAPTERS[s.protocol].connect({ ...t, model: s.model, voice: s.voice, dialect: s.dialect, instructions: INSTRUCTIONS + recent(sessionId), tools: [TOOL] });
   if (pipeline) s.protocol = 'pipeline';
   let ended = false;
+  const callId = ++_liveN;
+  _live.set(callId, { sessionId, since: stats.at });
   const end = why => {
     if (ended) return; ended = true;
+    _live.delete(callId);
     model.close();
     tell({ type: 'closed', reason: why, stats: { ...stats, minutes: Math.round((Date.now() - stats.at) / 6000) / 10 } });
     try { ws.close(); } catch { /* gone */ }
@@ -166,4 +174,4 @@ function askAsDevice(device, sessionId) {
   });
 }
 
-module.exports = { ADAPTERS, TOOL, INSTRUCTIONS, settings, on, status, callStatus, target, serve, askAsPanel, askAsDevice };
+module.exports = { live, ADAPTERS, TOOL, INSTRUCTIONS, settings, on, status, callStatus, target, serve, askAsPanel, askAsDevice };
