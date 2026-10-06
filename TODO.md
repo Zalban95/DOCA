@@ -85,11 +85,13 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   the person's words each turn ("Likely fits: …" in the readings, after the history); a "# Recipes you have" and a
   "# What you have" readings block (keys, logins, computers) instead of tool-description inventories; "save as recipe"
   offered after a multi-step turn that succeeded.
-- [ ] B6 **Reach what the hub can do** (aw 5–10; coh F9–F10): `hub_command` over the `/api/v1` command registry
-  (confirm asked, never "always"); `service_control {id, start|stop}` for installed services; a FREE `today` (weather,
-  calendar, notices) and a morning-brief recipe; one-off `remind`; `screen {list | show | propose}`; model servers in
-  `system_status` (and `model-servers.js` the only discovery); decisions per feature for wake-word training, evals,
-  Workstream, served pages, logs and traces.
+- [x] B6 **Reach what the hub can do** (aw 6, 9; coh F10) — *2.250.0: `system_status` names every local model server and who it works for (model-servers.js); `today` gives the person's weather, calendar and notices (ambient.today)*
+- [ ] B6b **The rest of B6** (aw 5, 7–8, 10; coh F9): `hub_command` over the `/api/v1` command registry and
+  `service_control {id, start|stop}` (both act on the machine: asked like `shell`, a `confirm` command never "always" —
+  an approval rule, **ask first**); one-off `remind` (a reminder the person asked for, delivered by `tell_device` — fires
+  without a click, **ask first**); `screen {list | show | propose}`; retire `models-llamacpp-external.js` for
+  model-servers.js (W14: keep/archive/delete); per feature, tool / recipe / a person's alone for wake-word training,
+  evals, Workstream, served pages, logs and traces.
 - [ ] B7 **Task skills and routing evals** (aw 24, 27; coh F19): skills for calendar and mail, a morning brief, web
   research with sources, reminders, "what is my machine doing", photos and attachments, a service that won't start;
   eval sets for tools, delegation, skills-recipes and assistant behaviour, with `--models a,b` to compare a small local
