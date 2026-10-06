@@ -27,7 +27,7 @@ function slug(s) {
  * `server` is this host — a stdio child of the panel, or a URL the panel
  * happens to reach. `client` is a paired device hosting its own MCP server on
  * the tailnet, and it names that device so revoking the device is visible here
- * and so the agent can tell "a tool on my host" from "a tool on Al's PC".
+ * and so the agent can tell "a tool on my host" from "a tool on a person's PC".
  *
  * A client can only be reached over HTTP: there is no stdio to a machine the
  * panel is not running on. And the deviceId has to be one we know, otherwise
@@ -283,7 +283,7 @@ function status(spec) {
     env:     maskValues(spec.env),
     headers: maskValues(spec.headers),
     origin,
-    // Resolved here so a row can say "on Al's PC" without the page fetching the
+    // Resolved here so a row can say "on a person's PC" without the page fetching the
     // device list per server. A revoked or deleted device leaves the id visible
     // rather than silently reading as if it were still paired.
     originLabel: origin.kind === 'client'

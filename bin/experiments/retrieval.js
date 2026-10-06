@@ -11,7 +11,7 @@ const ENTRIES = [
   ['tomatoes', 'Water the tomatoes twice a day in July; the drip timer is in the shed.'],
   ['blender-bridge', 'The Blender MCP bridge listens on 9876 on the office desk, not on this host.'],
   ['vpn-exit', 'Traffic to the bank must leave through the Zurich exit node.'],
-  ['al-coffee', 'Al takes coffee black, no sugar, and never after 4 pm.'],
+  ['owner-coffee', 'The owner takes coffee black, no sugar, and never after 4 pm.'],
   ['car-service', 'The Golf is due for service at 60,000 km; the garage is on Via Roma.'],
   ['gpu-split', 'GPU 0 runs ComfyUI, GPU 1 runs the language model; do not move them.'],
   ['invoice-day', 'Invoices go out on the first working day of the month, as PDF by email.'],
@@ -22,7 +22,7 @@ const ENTRIES = [
 const QUESTIONS = [
   ['what address is the 3D printer on', 'prusa-mk4'], ['when do the nightly backups of the file server run', 'nas-snapshots'],
   ['how often should the plants be watered in summer', 'tomatoes'], ['which machine is the 3D modelling app running on', 'blender-bridge'],
-  ['how should online banking be routed', 'vpn-exit'], ['how does he like his drinks', 'al-coffee'],
+  ['how should online banking be routed', 'vpn-exit'], ['how does he like his drinks', 'owner-coffee'],
   ['when does the car need maintenance', 'car-service'], ['which graphics card does image generation use', 'gpu-split'],
   ['when do we bill customers', 'invoice-day'], ['what time do I collect the children', 'kid-school'],
   ['when does the website name expire', 'domain-renewal'], ['where is the secret for getting the archive back', 'backup-key'],

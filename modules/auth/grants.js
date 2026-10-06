@@ -10,7 +10,7 @@
  *   setting:<prefix>                    a settings prefix the subject may change or apply
  *   path:<absolute real path>           a folder (and below) the subject's tools may reach
  *
- * Who may give one — decided with Al 2026-10-04:
+ * Who may give one — decided with the owner 2026-10-04:
  *   - a person whose level holds `delegate` (admin and owner do), to a person
  *     of their own level or below, or to a specialist;
  *   - an agent (the Orchestrator, a work chat) to the specialist or mission it

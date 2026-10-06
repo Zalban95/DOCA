@@ -167,7 +167,7 @@ function _vmCreateHtml() {
   return `<div class="vm-create" id="vm-create" style="display:none">
     <div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end">
       <div class="field"><div class="input-label">Name</div><input class="input" id="vmc-name" style="width:150px" placeholder="dev-box"></div>
-      <div class="field" style="flex:1;min-width:220px"><div class="input-label">ISO on this machine</div><input class="input" id="vmc-iso" placeholder="/home/al/Downloads/ubuntu-24.04.iso"></div>
+      <div class="field" style="flex:1;min-width:220px"><div class="input-label">ISO on this machine</div><input class="input" id="vmc-iso" placeholder="the full path of an .iso file on this machine"></div>
       <div class="field"><div class="input-label">RAM (MB)</div><input class="input" type="number" id="vmc-mem" value="4096" min="512" step="512" style="width:100px"></div>
       <div class="field"><div class="input-label">CPUs</div><input class="input" type="number" id="vmc-cpu" value="2" min="1" style="width:70px"></div>
       <div class="field"><div class="input-label">Disk (GB)</div><input class="input" type="number" id="vmc-disk" value="40" min="4" style="width:80px"></div>

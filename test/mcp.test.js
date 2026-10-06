@@ -151,7 +151,7 @@ test('a server says which machine it runs on, and defaults to this one', async (
   assert.deepEqual(stub.origin, { kind: 'server', deviceId: null });
   assert.equal(stub.originLabel, 'DOCA host');
 
-  const { device } = H.mkDevice('Al\'s PC', 'admin', { ...H.PHONE_CAPS, formFactor: 'other' });
+  const { device } = H.mkDevice('Sam\'s PC', 'admin', { ...H.PHONE_CAPS, formFactor: 'other' });
   const saved = await post('/api/mcp', {
     label: 'Desk Tools', transport: 'http', url: 'https://desk.example/mcp',
     origin: { kind: 'client', deviceId: device.id },
@@ -159,14 +159,14 @@ test('a server says which machine it runs on, and defaults to this one', async (
   assert.equal(saved.status, 200);
   assert.deepEqual(saved.body.server.origin, { kind: 'client', deviceId: device.id });
   // Resolved server-side so a row can say where without fetching the device list.
-  assert.equal(saved.body.server.originLabel, 'Al\'s PC');
+  assert.equal(saved.body.server.originLabel, 'Sam\'s PC');
 
   // The agent is told too, otherwise it cannot tell a file on the host from a
   // file on somebody's desktop.
   const env = require('../modules/harness/environment');
   env.invalidate();
   assert.match(env.block(), /desk-tools/);
-  assert.match(env.block(), /hosted by Al's PC — a separate machine; its tools act there/);
+  assert.match(env.block(), /hosted by Sam's PC — a separate machine; its tools act there/);
 
   assert.equal((await H.api(null, 'DELETE', '/api/mcp/desk-tools')).status, 200);
 });
@@ -206,7 +206,7 @@ test('origin is DOCA\'s own bookkeeping and stays out of exported configs', () =
     label: 'Exported', transport: 'http', url: 'https://desk.example/mcp',
   });
   assert.deepEqual(
-    exporter.entry({ ...spec, origin: { kind: 'client', deviceId: 'dev_1' }, originLabel: 'Al\'s PC' }),
+    exporter.entry({ ...spec, origin: { kind: 'client', deviceId: 'dev_1' }, originLabel: 'Sam\'s PC' }),
     { url: 'https://desk.example/mcp' });
 });
 
@@ -309,7 +309,7 @@ test('a client-hosted server can also answer in SSE framing, since both are real
 });
 
 test('a device can correct the address of the server it hosts, and nothing else', async () => {
-  const { device, token } = H.mkDevice('Al\'s Desk', 'phone', { ...H.PHONE_CAPS, formFactor: 'desktop' });
+  const { device, token } = H.mkDevice('Sam\'s Desk', 'phone', { ...H.PHONE_CAPS, formFactor: 'desktop' });
   const dev = (m, p, b) => H.api(token, m, p, b);
 
   // Nothing points at it yet, and it cannot create that itself — only a human

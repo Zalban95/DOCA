@@ -32,7 +32,7 @@ before(async () => {
 after(async () => { await H.stop(); await new Promise(r => ctl.close(r)); });
 
 test('the owner keeps a login; its password never reads back, and the file is the owner\'s alone', async () => {
-  const r = await H.api(null, 'POST', '/api/connectors/logins/all', { label: 'GitHub', site: 'https://github.com/login', username: 'al', password: 'hunter2-real' });
+  const r = await H.api(null, 'POST', '/api/connectors/logins/all', { label: 'GitHub', site: 'https://github.com/login', username: 'sam', password: 'hunter2-real' });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.login.site, 'https://github.com', 'the site is an origin');
   const list = await H.api(null, 'GET', '/api/connectors/logins/all');
@@ -47,10 +47,10 @@ test('the owner keeps a login; its password never reads back, and the file is th
 test('signing in: the hub types the password with its key; the agent\'s answer never holds it', async () => {
   calls.length = 0;
   const out = await require('../modules/harness/tools').call('computer_login', { computer: 'c0ffee01', login: 'GitHub', userRef: 1, passRef: 2 });
-  assert.match(out, /Filled the sign-in for GitHub as al/);
+  assert.match(out, /Filled the sign-in for GitHub as sam/);
   assert.ok(!out.includes('hunter2'));
   assert.deepEqual(calls.map(c => c.name), ['browser_snapshot', 'browser_type', 'browser_fill_secret']);
-  assert.deepEqual(calls[1].args, { ref: 1, text: 'al' });
+  assert.deepEqual(calls[1].args, { ref: 1, text: 'sam' });
   assert.deepEqual(calls[2].args, { ref: 2, value: 'hunter2-real', key: 'fk-secret' }, 'only the hub\'s call carries the secret and the key');
   assert.ok(calls.every(c => c.auth === 'Bearer tok'));
 });
