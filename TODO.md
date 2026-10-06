@@ -348,6 +348,25 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   the `window.DocaDevice` bridge (the most used apps as shortcuts; open one), ambient as what the phone shows when
   docked or charging, and the device lent as an MCP family over the socket transport (open an app at a link, its
   screen read and tapped by accessibility, cast) — so "play it here" runs on the phone while the call stays.
+- [ ] H10.13 Every GPU job visible and attributable (audit 2026-10-06: "I see the GPUs running something but the
+  models don't show on, and no specialists working"). The model on the GPUs is served by a llama.cpp router (a systemd
+  user service, port 8080, loads on demand, sleeps after 120 s) that DOCA does not know; Models and the sidebar know
+  Ollama and DOCA's own llama-servers only, and DOCA's entry for the same model (port 11435) was never running. Show
+  any OpenAI-compatible model server the harness uses — its models loaded or sleeping (llama.cpp router `/models`,
+  `/slots`, Ollama `ps`) — and tag DOCA's own requests with what made them (turn, mission, summary, guard, reader), so a
+  job DOCA did not make reads as not DOCA's. Seen: one 10-minute job (19:52, 2.9k-token prompt) no DOCA run matches.
+- [ ] H10.14 Stop means stop, visibly (audit 2026-10-06). A visible Stop on every running thing (a specialist, a work
+  chat, an automatic turn); stopping a specialist stops its line of work — the work chat that sent it is told and
+  waits, it is not woken to carry on (`supervisor.missionEnded` wakes it today). Closing or archiving finished work
+  triggers nothing: no "finished" re-sent to devices (`missions.archive` → `announce` today), no computer timer
+  restarted. Automatic turns are listed with why they started.
+- [x] H10.15 Names and fonts (audit 2026-10-06). **Done (2.239.0):** no owner's name, home folder or machine in a
+  placeholder, the code or the tests' sample data (test/no-leftovers.test.js); every font through the theme's
+  variables (--font-ui, --font-mono, --font-text, --font-display; test/fonts.test.js), the faces used are the ones
+  loaded.
+- [ ] H10.16 Reach and secrets (audit 2026-10-06). Inference services publish their ports on every interface
+  (`services.js` `-p port:port`: ComfyUI, Whisper, Kokoro reachable from the LAN with no sign-in): bind to 127.0.0.1
+  unless asked. The Hugging Face token lives in prefs (`models.hf.token`, masked): move it to the protected keys.
 - [ ] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06). Risk-tiered approval inside
   Auto: each tool call classified — reads and lookups run; reversible writes run after an automatic checkpoint
   (projects' shadow git, prefs checkpoints, a computer instead of the host for anything untested); irreversible or
