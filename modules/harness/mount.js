@@ -31,6 +31,7 @@ function mount(app) {
   require('../screens/routes').mount(app);   // a browser is a device: this screen's settings (screens/)
   require('../packs/routes').mount(app);   // packs: export and import in other tools' formats (packs/)
   require('../schedules/routes').mount(app);   // turns and recipes on a timetable (schedules/)
+  require('../live/routes').mount(app);   // every page live on every screen: one change feed (live/, H10.5)
   require('../face/routes').mount(app);   // the face: what the hive is doing, on any screen (face/)
   require('../recipes/routes').mount(app);   // recipes: what worked, run again without the thinking (recipes/)
   require('../channels/telegram/routes').mount(app);   // Telegram as a channel (channels/telegram)

@@ -58,6 +58,7 @@ async function claim(id, ctrl, auto = false) {
  */
 function changed(sessionId, ctrl = null) {
   try { require('../workview').announce(sessionId); } catch { /* bookkeeping never breaks a turn */ }
+  require('../../live').changed('conversation', sessionId, ctrl ? 'ended' : 'started');   // every screen showing it (H10.5)
   if (ctrl) try {
     require('../supervisor').afterTurn(sessionId, {
       auto: !!ctrl.auto, preempted: !!ctrl.preempted, steps: ctrl.steps ?? null, truncated: !!ctrl.truncated,
