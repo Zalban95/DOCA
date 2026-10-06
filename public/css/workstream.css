@@ -80,3 +80,4 @@
 .hub-app-banner { position: fixed; left: 8px; right: 8px; bottom: calc(var(--mobile-nav-h, 54px) + 8px); z-index: 1250; display: flex; gap: 8px; align-items: center;
   padding: 10px 12px; background: var(--surface); border: 1px solid var(--accent); box-shadow: 0 8px 24px rgba(0,0,0,.4); font-size: 12px; }
 .hub-app-banner span { flex: 1; }
+.hub-pair { width: 100%; display: flex; gap: 12px; align-items: center; font-size: 12px; color: #ccc; flex-wrap: wrap; }

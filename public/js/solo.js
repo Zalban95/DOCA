@@ -28,7 +28,16 @@ function soloFull() {
 }
 
 /** ⧉ in the header: the page in use, by itself, in a new tab or window. */
-function soloOpen() { window.open(`/?view=${encodeURIComponent(currentTab)}`, '_blank', 'noopener'); }
+function soloOpen(page = currentTab) {
+  // Inside an app's web view (DocaMobile, DocaDesk) or on a phone there is no second window: window.open would load the
+  // page over this one and cut off whatever it was doing — a conversation's answer included (found 2026-10-06). There
+  // the page opens here; on a desk, in a window of its own.
+  if (/DocaMobile\/|DocaDesk\//.test(navigator.userAgent) || window.matchMedia('(max-width: 768px)').matches) {
+    if (typeof chatOpen !== 'undefined' && chatOpen) toggleChat(true);
+    return nav(page);
+  }
+  if (!window.open(`/?view=${encodeURIComponent(page)}`, `doca-${page}`, 'popup,width=1200,height=800')) nav(page);   // a blocked popup: here
+}
 
 /** A page an admin sent to this screen (Devices → Show here). */
 function _soloShow(c) {
