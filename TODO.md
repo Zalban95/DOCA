@@ -115,12 +115,10 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   routes; a test that every panel route is used or listed API-only.
 - [ ] C6 **Experiments measured and dated** (coh F20): start and last-measured dates, stale ones in the W14 list, a
   script or a "manual" note each; decide face-voice for assistant mode (it bypasses its flag today).
-- [ ] C7 **Documents that match the code** (coh F21–F28, F31; cl 20): PROTOCOL's media note, §23 heading, §2 order;
-  OpenAPI enums from the registries; navigation paths from one helper with a test (the browser extension's "preset
-  browser" is `extension`); group names; a glossary (job, scout, browser; rename the model scout's tool); TODO.md
-  cleanup (finished sections to the Done log, unique ids tested); `audit.md`/`CAMPAIGN.md`/`TODO-CAMPAIGN.md` to
-  `docs/history/` (W14); the OpenClaw "Skills directory" label; one home for the Home Assistant token; AGENTS.md's
-  sibling paths are `../`.
+- [x] C7 **Documents that match the code** (coh F21–F27, F31; cl 20) — *2.251.0: PROTOCOL's files-in-a-turn note, §23 heading, §2 order; OpenAPI's device and media kinds from `devices.KINDS`/`attachments.PLAYABLE_KINDS`; `test/doc-paths.test.js` holds every "Group → Page" in the docs to the panel's navigation (eleven fixed, the extension's preset among them); a glossary in AGENTS.md (job, scout, browser, Hub/Field); the model scout's tool is `model_scout`; `test/todo.test.js` holds item ids unique (H6.7 twice → H6.8); the old plans in `docs/history/`; OpenClaw's skills folder labelled; AGENTS.md's sibling paths*
+- [ ] C7b **The rest of C7** (coh F25, F28): TODO.md's finished sections to the Done log and narratives to checkboxes;
+  one home for the Home Assistant token (a service key `homeassistant` that the MCP header and a future Home page both
+  read) — moving a secret between protected stores, done as a migration.
 
 ### Wave 4 — the apps reach it too (`/api/v1` parity)
 - [ ] D1 **Stop, restart/drop, archive and "what is working" for devices** (cl 7–8, 17–19): `POST
