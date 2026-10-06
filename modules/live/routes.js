@@ -31,8 +31,10 @@ function stream(req, res) {
   _open.set(screen, person?.id || null);
   const send = o => { try { res.write(`data: ${JSON.stringify(o)}\n\n`); } catch { /* gone */ } };
   const mine = new Set();   // this screen's folders, as watch.set() last held them
+  const own = req.auth?.session?.screen || null;   // this browser's screen: a page sent to it is for it alone
   const on = change => {
     if (change.topic === 'files') { if (host && mine.has(change.id)) send(change); return; }
+    if (change.topic === 'screen') { if (own && change.id === own) send(change); return; }
     if (visible(change, person, host)) send(change);
   };
   live.feed.on('change', on);

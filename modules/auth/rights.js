@@ -106,7 +106,8 @@ const TABLE = [
   R(ANY, '/api/packs(/.*)?', 'host'),                          // packs carry MCP commands, tool lists and memory (packs/routes.js)
   R(ANY, '/api/schedules(/.*)?', 'chat'),                     // one's own schedules; a host's, every one (schedules/routes.js)
   R(GET, '/api/live/stream', 'read'),                           // every page live: changes this viewer may open (live/routes.js)
-  R(ANY, '/api/live/watch', 'host'),                            // which folders this page shows: Files and Projects are a host's
+  R(ANY, '/api/live/watch', 'host'),
+  R(ANY, '/api/screens/.*', 'host'),                             // what each screen shows, and sending it a page (screens/showing.js)                            // which folders this page shows: Files and Projects are a host's
   R(GET, '/api/face/stream', 'chat'),                          // the face's feed, scoped to what the viewer may open (face/state.js)
   R(ANY, '/api/developer(/.*)?', 'host'),                        // who may release unasked (releasing.js): the admin's
   R(ANY, '/api/experiments(/.*)?', 'host'),                     // the owner's switches for experiments (experiments.js)

@@ -32,7 +32,8 @@ function mount(app) {
   require('../screens/routes').mount(app);   // a browser is a device: this screen's settings (screens/)
   require('../packs/routes').mount(app);   // packs: export and import in other tools' formats (packs/)
   require('../schedules/routes').mount(app);   // turns and recipes on a timetable (schedules/)
-  require('../live/routes').mount(app);   // every page live on every screen: one change feed (live/, H10.5)
+  require('../live/routes').mount(app);
+  require('../screens/showing').mount(app);   // what each screen shows, and sending a page to one   // every page live on every screen: one change feed (live/, H10.5)
   require('../face/routes').mount(app);   // the face: what the hive is doing, on any screen (face/)
   require('../recipes/routes').mount(app);   // recipes: what worked, run again without the thinking (recipes/)
   require('../channels/telegram/routes').mount(app);   // Telegram as a channel (channels/telegram)
@@ -70,6 +71,10 @@ function mount(app) {
   // The panel saying its page is visible (presence.js): read by the agent's per-step readings.
   app.post('/api/presence', (req, res) => {
     require('../presence').beat(req.auth?.user, req.body?.visible !== false);
+    // Which page this screen shows (Devices). Its record is bound here when the first beat comes before /api/screen.
+    let screen = req.auth?.session?.screen || null;
+    if (!screen && !req.auth?.session?.deviceId) try { screen = require('../screens').ensure(req, res).id; } catch { /* not a person's browser */ }
+    require('../screens/showing').beat(screen, req.body || {});
     res.json({ ok: true });
   });
   // How each turn of a conversation went: the one record (runs.js).

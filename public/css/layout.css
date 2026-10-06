@@ -288,3 +288,12 @@ header {
 .nav-group-menu button { font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: left; padding: 12px 14px; border: none;
   background: transparent; color: var(--text); cursor: pointer; }
 .nav-group-menu button.active { color: var(--accent); }
+
+/* A page served alone (js/solo.js): the page and nothing else. */
+body.solo header, body.solo .sidebar, body.solo .mobile-nav, body.solo #chat-fab, body.solo .face-corner { display: none !important; }
+body.solo .app-body { padding-bottom: 0; }
+.solo-bar { position: fixed; top: 10px; right: 12px; z-index: 1300; display: flex; gap: 6px; align-items: center; padding: 6px 8px;
+  background: color-mix(in srgb, var(--surface) 85%, transparent); border: 1px solid var(--border2); opacity: 0; transition: opacity .4s; pointer-events: none; }
+.solo-bar.awake { opacity: 1; pointer-events: auto; }
+.solo-bar span { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.solo-open { flex-shrink: 0; }
