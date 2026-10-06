@@ -33,6 +33,20 @@ task left undoable, because what is *held* does not change.
 | 2026-10-06 | Orchestrator | on | 29 / 46 | 5746 | 6837 | 12583 |
 | 2026-10-06 | work chat | on | 29 / 46 | 5520 | 6837 | 12357 |
 
+**With a model** (`npm run eval -- routing --models llamacpp/qwen3.8-27b --flag toolTiers`, the local Qwen 3.8 27B with
+a 40,960-token context; the first seven of the eleven routing cases — the run ended during the eighth, see below):
+
+| date | model | flag | passed | tokens per case (1 · 2 · 4 · 5, passed both ways) | failures |
+|---|---|---|---|---|---|
+| 2026-10-06 | llamacpp / qwen3.8-27b | off | 4/7 | 19.1k · 88.5k · 58.4k · 126.8k | grep through shell; two turns over the 40,960 context (43,262 tokens) |
+| 2026-10-07 | llamacpp / qwen3.8-27b | on | 5/7 | 13.7k · 69.8k · 58.1k · 62.3k | grep through shell; "get whisper running" by hand in 12 steps (255k tokens), never install_propose |
+
+On a local model with a 40k window the flag decides whether a turn fits at all: off, two of seven turns were refused by
+the server; on, none was. Where both passed it cost 4–51 % fewer tokens. Two habits survive either way — grep through
+`shell`, and installing by hand — and are for the prompt and the routing table, not the tool list. The run ended
+cleanly during case 8 ("build and install the Android app"): no result was saved and the sandbox was gone, so what the
+turn did is unknown — TODO B7b.
+
 Not measured yet, and what decides it: whether a model finds and loads what it needs (an evaluation set of tasks that
 need a rare tool — B7 — run with the flag off and on, on a small local model and a frontier one), and how often a
 loaded tool breaks the provider's prefix cache (once per load, by design).
