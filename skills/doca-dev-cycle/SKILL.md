@@ -38,6 +38,6 @@ app's `AGENTS.md` when you touch one. This is the cycle every change follows, in
      `[X.Y.Z] …`;
    - push the branch and wait for CI on Linux, Windows and macOS (`gh run watch`);
    - merge into the default branch, an annotated tag `git tag -a vX.Y.Z -m "…"`, push both;
-   - the live panel switched to the tag (Settings → System → Versions) — the switch waits for running turns and
+   - the live panel switched to the tag (Settings → General → Updates) — the switch waits for running turns and
      calls; never force it over someone's work — and the change looked at there.
 7. **Close the loop**: check the change's logic against the rest of the project and the docs that describe it, tick the TODO line, and say what you ran, what it printed, and what you did not check.

@@ -184,6 +184,11 @@ const SYSTEM_TOOLS = [
     note: 'Finds a picture of an element anywhere on a screen, with no model (computer_look, template).',
     repo: 'https://pypi.org/project/opencv-python-headless/', repoLabel: 'pip: opencv-python-headless',
     install: { linux: 'python3 -m pip install --user --break-system-packages -U opencv-python-headless', darwin: 'python3 -m pip install --user -U opencv-python-headless', win32: 'py -m pip install --user -U opencv-python-headless' } },
+  // The play-and-cast skill casts an address to a Chromecast with it (audit 2026-10-06, aw 23: it named a row that did not exist).
+  { id: 'catt', label: 'catt (Cast All The Things)', category: 'optional', for: 'casting to a Chromecast',
+    detect: { bin: 'catt', args: ['--version'] }, note: 'Casts a video, a sound or a page address to a Chromecast on the network (skill play-and-cast).',
+    repo: 'https://github.com/skorokithakis/catt', repoLabel: 'pip: catt',
+    install: { linux: 'python3 -m pip install --user --break-system-packages -U catt', darwin: 'python3 -m pip install --user -U catt', win32: 'py -m pip install --user -U catt' } },
   { id: 'openclaw', label: 'OpenClaw', category: 'optional', for: 'the OpenClaw harness',
     // COMPOSE_DIR, not a hardcoded ~/openclaw: a machine that overrides it is still found. A stack that is not a git
     // checkout reads "installed" rather than offering to clone over it.

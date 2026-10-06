@@ -5,7 +5,7 @@ description: Work on one of the person's other computers through its DOCA client
 
 # Working on another of the person's machines
 
-A computer with DocaDesk or `doca-client` is an MCP server DOCA can reach: the environment lists it under **MCP servers** as "hosted by <device> — a separate machine". Its `shell`, `files_*`, `screen_*`, `input_*` tools act **there**: its paths, its programs, its `localhost`.
+A computer with DocaDesk or `doca-client` is an MCP server DOCA can reach: the environment lists it under **MCP servers** as "hosted by <device> — a separate machine". Its tools act **there**: its paths, its programs, its `localhost`. DocaDesk lends `shell`, `shell_job`, `files_*`, `screen_capture`/`screen_windows`, `input_click`/`input_type`/`input_keys`/`input_move`, `processes_*` and `apps_open`; `doca-client` lends `shell_run`, `files_*`, `screen_capture`, `processes_*`, `apps_open` and `device_*` — no mouse or keys.
 
 1. **Connect.** A stopped one: `mcp_connect {server, action: "start"}` (a person set it up; you never add one). If it fails, the client is not running or the machine sleeps — ask the person at that machine. When done, `mcp_connect … "stop"` if it was stopped before.
 2. **Know the shell.** DocaDesk is Windows PowerShell 5.1: `;` between commands, `$env:USERPROFILE`, `Get-ChildItem`, `D:\…` paths. git writes progress to stderr, which PowerShell prints as red errors — read the result, not the colour (`2>$null` quiets it).

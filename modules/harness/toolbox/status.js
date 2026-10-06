@@ -6,6 +6,22 @@
 
 const { clip } = require('./common');
 
+/**
+ * Which MCP server a device hosts, so the agent knows it lends hands (audit 2026-10-06, aw 20): its id, state and the
+ * families its tools fall in — `hands=docamobile-pixel (running: screen, apps, media ×3…)`. Empty when it hosts none.
+ */
+function hands(deviceId) {
+  try {
+    const reg = require('../../mcp/registry');
+    const mine = reg.list().filter(srv => srv.origin?.kind === 'client' && srv.origin.deviceId === deviceId);
+    return mine.map(srv => {
+      const names = reg.lastTools(srv.id)?.names || [];
+      const fams = [...new Set(names.map(n => String(n).split('_')[0]))].slice(0, 8).join(', ');
+      return `hands=${srv.id} (${srv.state}${fams ? `: ${fams}` : ''}${srv.state === 'running' ? '' : ' — mcp_connect starts it'})`;
+    }).join('  ');
+  } catch { return ''; }
+}
+
 module.exports = [
   {
     name: 'system_status',
@@ -51,7 +67,7 @@ module.exports = [
   },
   {
     name: 'doca_clients',
-    description: 'The devices paired with this hub and which of them are reachable right now: form factor, online state, queued events, last seen, and what each is allowed to do. Use it before deciding where to reach the user — asking a watch that is offline gets queued, asking one that cannot chat gets nothing.',
+    description: 'The devices paired with this hub and which of them are reachable right now: form factor, online state, queued events, last seen, what each is allowed to do, and which lend you tools (hands=…: their MCP server, to act on that device). Use it before deciding where to reach the user — asking a watch that is offline gets queued, asking one that cannot chat gets nothing.',
     parameters: { type: 'object', properties: {} },
     run: () => {
       // Required here rather than at the top: this is the harness reaching into
@@ -85,6 +101,7 @@ module.exports = [
           `can=${can}`,
           // That it has a console and where it goes; what it streams never reaches a model.
           require('../../device-console').summary(d.id, id => devices.get(id)?.name || id),
+          hands(d.id),
         ].filter(Boolean).join('  ');
       });
 
