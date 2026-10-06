@@ -174,7 +174,11 @@ function handleLogout(req, res) {
   res.json({ ok: true });
 }
 
-function handleMe(req, res) { res.json(me(req.auth)); }
+function handleMe(req, res) {
+  const m = me(req.auth);
+  // From outside loopback and the tailnet the machine's rights are not offered (network.js): the panel leaves out what it would refuse.
+  res.json({ ...m, rights: require('../network').rightsFrom(req, m.rights), outside: require('../network').outside(req) });
+}
 
 /** POST { current, password } — and every other session of this user ends. */
 async function handlePassword(req, res) {

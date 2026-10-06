@@ -142,7 +142,9 @@ const SCHEMA = {
   dockerPresets:    { is: 'local', home: 'device', on: 'host', note: 'compose presets for this machine\'s Docker' },
   clientApps:       { is: 'local', home: 'device', on: 'host', note: 'where DOCA\'s Android apps\' repositories are on this machine, to build them (client-apps/)' },
   backup:           { is: 'local', home: 'device', on: 'host', note: 'the backup schedule of this machine' },
-  network:          { is: 'local', home: 'device', on: 'host', note: 'how this machine listens' },
+  network:          { is: 'local', home: 'device', on: 'host', note: 'how this machine listens, and what may be done from outside the tailnet (network.js)',
+    keys: { listen: { type: 'string', default: 'tailnet', hint: 'tailnet (Tailscale and this machine), lan (also the local network), local (this machine only), all (every interface). From the next start.' },
+      lanAdmin: { type: 'boolean', default: false, hint: 'Allow managing the machine (admin rights) from outside Tailscale. Off: from the local network a person reads and chats.' } } },
   vms:              { is: 'local', home: 'device', on: 'host', note: 'the libvirt connection URI of this machine', propose: p('Virtual machines', 'The libvirt connection URI') },
   channels:         { is: 'local', home: 'device', on: 'host', note: 'channel bots (Telegram, Matrix, Slack, mail): tokens and a switch for this hub',
     keys: {

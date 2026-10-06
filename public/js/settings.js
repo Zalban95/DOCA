@@ -38,6 +38,7 @@ async function _subtabGeneralInit() {
 
 function _subtabSystemInit() {
   hostCapsLoad();
+  if (typeof networkCard === 'function') networkCard();   // who can reach the hub (settings/network.js)
   pathsLoad();
   sysdepsLoad();
   checkpointsRender();   // settings checkpoints (settings/checkpoints.js)
