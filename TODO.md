@@ -40,6 +40,115 @@ loose search; provider contracts; Projects previews for every format, markdown a
 documents, environments (venvs), git buttons, editable checkpoints; and the three-agent
 audit's fixes (2.137.1 security, 2.137.2 robustness, 2.137.3 front end).
 
+## Audit 2026-10-06 — coherence, what the agents know, the apps, the look (the work queue)
+
+Four read-only reviews asked for on 2026-10-06, against the vision now in CONSTITUTION §1 (almost Jarvis on any open
+model; V8 the panel chooses its tools; V9 harvest and refine; P21 show the work). The full findings, with evidence, are
+in `docs/audits/2026-10-06-{coherence,agent-awareness,clients,design}.md` (cited as coh, aw, cl, des + number). Merged
+here where they overlap, in waves; each item one branch and release unless noted. **Ask first** marks CONSTITUTION
+S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
+
+### Wave 1 — safety and things that are wrong now
+- [ ] A1 **Secrets in the settings file are readable by `read_file`** (coh F1): channel tokens and MCP env/header
+  values move to protected keys files with migrations (as the Hugging Face token did), or `read_file`/`search_files`
+  mask secret-named keys in the settings file; a test reading it through the tool. (Strengthens a guard.)
+- [ ] A2 **Split reading the web from calling APIs** (coh F2–F3, aw 3): a GET-only `http_fetch` stays the airlock's;
+  `api_call {key|connector, url, method, form, files, save_as}` for origins with a stored key or a connector, held by
+  the acting agents and never airlocked; hi3d, service drafts and smart-home move to it; quarantine of the open web
+  holds even with specialists off (an internal reader), or S6 and airlock.md say otherwise. **Ask first** (guards).
+- [ ] A3 **Phone and watch honour `quiet` and `archivedAt`** (cl 1–2, 16): PROTOCOL and OpenAPI document `archivedAt`,
+  `kind`, `plan`, `progress` and "quiet + archivedAt = remove, never notify"; DocaMobile and DocaWear parse them (their
+  TODOs); Wear treats `paused` as waiting, not finished.
+- [ ] A4 **The phone's screen tools get the computer's rules** (cl 5–6): DocaMobile classifies the target (password
+  fields refused, pay/sign-in/submit need `confirm: true`) and marks screen/files reads `openWorldHint` (DocaDesk too);
+  the hub forces a question for any device tool called with `confirm: true`. **Ask first** (approval).
+- [ ] A5 **DocaWear refuses a phone APK** (cl 14): the hub checks the watch mark (aapt2 `type.watch`) before keeping a
+  DocaWear build; the watch refuses an APK without it.
+
+### Wave 2 — the agent knows and reaches what DOCA has (V8, P13–P14)
+- [ ] B1 **The Orchestrator's prompt, rebuilt** (aw 1–2, 11–12, 26–27; coh F29): the specialists roster when they are
+  on; MCP servers with machine and tool summary, and `placeBlock`; built from the switches; who it is said once (a
+  coordinator default prompt); a lean default kit with "hand it to a work chat"; one decision table (answer · one tool
+  · a recipe · a skill · a work chat · a specialist · ask) with an example each.
+- [ ] B2 **Tools chosen for the request** (aw 25, 28; coh F4–F5): core tools always, the rest named in one line and
+  attached when named or called by a skill or recipe (kit triage); a compact profile for small windows; the prompt
+  breakdown measured from `systemPrompt()`'s own parts and shown; AGENTS.md's "~4k" corrected (≈17.9k today).
+- [ ] B3 **The roster equals what a turn holds** (aw 4, 15; coh F6–F7): switch-driven removals in `disabledFor()` with
+  reasons; `mission_plan`/`scout_report` only on missions; `show_image` an alias in `call()` only; the `computer` tool
+  says who works inside a computer; `computer_login` only with computer tools; `computer` in the Computer kit.
+- [ ] B4 **Descriptions a weaker model chooses by** (aw 16–20, 23, 29; coh F8): first sentence "<verb> … — use when
+  …", ≤150 characters, never cut (a stricter test); every parameter described with its actions; a rendered "Reaching
+  outside" block; `install_propose` built from the catalogs; `doca_clients` says which devices lend hands; a test
+  that every reference a held tool makes is present in that profile's prompt; `test/skill-references.test.js` and the
+  five broken references (jdk21, catt, doca-client's tool names, make-a-specialist's kits, the dev-cycle's routes).
+- [ ] B5 **Skills and recipes found by the request** (aw 21–22, 30; coh F18): skill and recipe titles matched against
+  the person's words each turn ("Likely fits: …" in the readings, after the history); a "# Recipes you have" and a
+  "# What you have" readings block (keys, logins, computers) instead of tool-description inventories; "save as recipe"
+  offered after a multi-step turn that succeeded.
+- [ ] B6 **Reach what the hub can do** (aw 5–10; coh F9–F10): `hub_command` over the `/api/v1` command registry
+  (confirm asked, never "always"); `service_control {id, start|stop}` for installed services; a FREE `today` (weather,
+  calendar, notices) and a morning-brief recipe; one-off `remind`; `screen {list | show | propose}`; model servers in
+  `system_status` (and `model-servers.js` the only discovery); decisions per feature for wake-word training, evals,
+  Workstream, served pages, logs and traces.
+- [ ] B7 **Task skills and routing evals** (aw 24, 27; coh F19): skills for calendar and mail, a morning brief, web
+  research with sources, reminders, "what is my machine doing", photos and attachments, a service that won't start;
+  eval sets for tools, delegation, skills-recipes and assistant behaviour, with `--models a,b` to compare a small local
+  model against a frontier one.
+- [ ] B8 **The charter rendered for who reads it, and risk tiers** (aw 13; coh F30): tool-specific sentences only with
+  the tool held, the repository rules only with the Code kit; rule 25 follows H10.11's tiers (reversible with a
+  checkpoint goes ahead; irreversible or outward asks). **Ask first** (charter).
+
+### Wave 3 — one place for each thing
+- [ ] C1 **One list of decisions waiting for a person** (coh F12): installs, settings proposals, MCP and service
+  drafts, recipe proposals, proposed schedules, scout suggestions, plans — `/api/decisions` (and `/api/v1`, **ask
+  first**) for the ambient screen, a header badge and a watch summary.
+- [ ] C2 **Proposals for a screen** (coh F13): a `screen` target applied through `screens`; `call`, `voice`, `ambient`,
+  `face` proposable.
+- [ ] C3 **Settings declared with their hints** (coh F14–F15): harness parameters typed with hints in the schema,
+  `defaultParams()` and `HARNESS_PARAMS` derived; one env-vs-saved rule, "overridden by ENV" shown.
+- [ ] C4 **Which model does what, in one registry** (coh F11): `model-roles.js` read by the scout, a "Models in use"
+  card and `settings_read`.
+- [ ] C5 **Reachable by those it is for** (coh F16–F17): the release rule for the turn's own model in the environment
+  block; the dev-cycle skill's paths; panel UI for the signing key, vision try, provider contracts — or remove dead
+  routes; a test that every panel route is used or listed API-only.
+- [ ] C6 **Experiments measured and dated** (coh F20): start and last-measured dates, stale ones in the W14 list, a
+  script or a "manual" note each; decide face-voice for assistant mode (it bypasses its flag today).
+- [ ] C7 **Documents that match the code** (coh F21–F28, F31; cl 20): PROTOCOL's media note, §23 heading, §2 order;
+  OpenAPI enums from the registries; navigation paths from one helper with a test (the browser extension's "preset
+  browser" is `extension`); group names; a glossary (job, scout, browser; rename the model scout's tool); TODO.md
+  cleanup (finished sections to the Done log, unique ids tested); `audit.md`/`CAMPAIGN.md`/`TODO-CAMPAIGN.md` to
+  `docs/history/` (W14); the OpenClaw "Skills directory" label; one home for the Home Assistant token; AGENTS.md's
+  sibling paths are `../`.
+
+### Wave 4 — the apps reach it too (`/api/v1` parity)
+- [ ] D1 **Stop, restart/drop, archive and "what is working" for devices** (cl 7–8, 17–19): `POST
+  /api/v1/harness/missions/{id}/stop`, `/harness/work/{id}/restart|drop`, `/harness/sessions/{id}/archive`,
+  `/missions/{id}/archive`, `state: 'stopped'` on work rows; `GET /api/v1/ambient`; speech synthesize/transcribe with
+  the device's voice; the face for watches (scope). **Ask first** (W3, and S11 for the scope).
+- [ ] D2 **Contracts tested on both sides** (cl 21–22, 27, 31): `npm run fixtures` writing real frames for the apps'
+  parser tests; coverage checked by capability, not path prefix; a canonical family → tool-name table (PROTOCOL
+  §22.1); `test/client-contracts.test.js` (pair offer, `window.DocaDevice`, the phone's MCP shape).
+- [ ] D3 **The apps' own items**, written into their TODO.md (cl 3–4, 9–13, 15, 23–26, 28–30): DocaMobile — screenshots
+  as MCP image content, answering questions from notifications, real caps, failover for the watch's relay and call,
+  Back closes the viewer, "queued", the socket transport, prompt.closed and mcp.listener, sensors, the 6-hour service
+  limit, protocol range; DocaWear — "queued", the LAN port; DocaDesk — screenshots as image content, re-reporting caps,
+  battery through vars, `prompt.outcome`/`progress`, the socket transport.
+
+### Wave 5 — the look (U1–U8)
+- [ ] E1 **Layout bugs** (des 1–4, 11–14, 20, 29): Docker on a phone; the chat button padding every page and following
+  the theme; the idle Workstream block; the Harness header overlap; the Ambient tab filling its space with the chat
+  button hidden on Ambient and `/face`; the phone header; Modern's drawer shadow; form rows stacking on a phone; Field
+  pages' inset; API keys on a phone.
+- [ ] E2 **One style system** (des 5–10, 18, 21–23, 27, 30): one button vocabulary and container-action component;
+  native controls styled from tokens; one toggle; uppercase for labels only; one page header; one empty state (and a
+  greeting in a new chat); two heading levels; `--fs-input`; the UI font in Modern's search; neutral destructive row
+  actions; disabled contrast ≥3:1 with a reason; one monochrome icon set.
+- [ ] E3 **Details** (des 15–17, 19, 24–26, 28, 32): "PROTOLAB" on `/face` → the product's name; the repeated group
+  name in the header; sidebar stats; the Developer and Backups rows; Logs chips; MCP ADD alignment; the chat header
+  and its red open state; Ambient's controls hidden when idle (U3); `settingsSubNav` going to Settings first.
+- [ ] E4 **Delight, cheaply** (des 31): status dots as the face's points (core, glow, breathing when running); the
+  dot-of-light glyph in empty states; new rows fading in.
+
 ## The hive — the backlog (asked 2026-10-04; plan in `docs/design/hive.md`)
 
 All of it is wanted ("I'd tackle all of it"). Three rules run through every item:
@@ -374,7 +483,7 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   whole turning the other way, the call no longer dropped while it opens, the name as the transcriber's hint, and
   what the wake word heard on screen. **Left:** DocaMobile's WebView allows no geolocation yet (1.0.8); the
   wake word on the person's own tablet is unverified — the page now says what it heard, which is the next clue.
-- [ ] H8.4 A small model trained for the hive's name **Built (2.244.0):** Field → Models → Wake words, the trainer, the in-page runtime behind `wakeModel`; the first "doca" model hears 9/15 calls and 6/8 of the person's clips, 0/21 false — not yet better than the transcript match (wake-model.md). **Left:** more of the person's voice, a phrase instead of a two-syllable word, DocaMobile's copy (an `/api/v1` route, waiting for a yes). (asked 2026-10-06; docs/experiments/wake-model.md). The hub trains
+- [ ] H8.4 A small model trained for the hive's name **Built (2.244.0):** Field → Models → Wake words, the trainer, the in-page runtime behind `wakeModel`; the first "doca" model hears 9/15 calls and 6/8 of the person's clips, 0/21 false — not yet better than the transcript match (wake-model.md). **Since (2.245.0):** `GET /api/v1/wakeword` for devices (approved 2026-10-06). **Left:** more of the person's voice, a phrase instead of a two-syllable word, DocaMobile hearing it natively (its TODO). (asked 2026-10-06; docs/experiments/wake-model.md). The hub trains
   an openWakeWord model for the wake word (synthetic voices, ~1 h of GPU), the person's own voice messages are its test
   set, the panel and DocaMobile run it on the screen (nothing sent until the word), behind `experiments.wakeModel`.
   Later: DocaMobile as the default assistant, for listening without the microphone indicator.
