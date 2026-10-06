@@ -5,14 +5,14 @@
    how they are drawn changed, so links, search and hidden tabs work as before (hidden pages leave their group, and a
    group with none left is not drawn). */
 const NAV_GROUPS = [
-  { id: 'controls', label: 'Controls', icon: '▶', tabs: ['controls'] },
+  { id: 'controls', label: 'Controls', icon: '▶', tabs: ['controls', 'ambient'] },
   { id: 'agents', label: 'Agents', icon: '⬡', tabs: ['harness', 'workstream', 'projects', 'archive'] },
   { id: 'machines', label: 'Machines', icon: '🖵', tabs: ['live', 'computers', 'vms', 'docker'] },
   { id: 'host', label: 'Hub', icon: '⌨', tabs: ['files', 'terminal', 'logs'] },
   { id: 'intelligence', label: 'Field', icon: '◆', tabs: ['models', 'mcp', 'connectors', 'apikeys'] },
   { id: 'settings', label: 'Settings', icon: '⚙', tabs: ['settings'] },
 ];
-const NAV_LABELS = { controls: 'Controls', harness: 'Harness', workstream: 'Workstream', projects: 'Projects', archive: 'Archive', computers: 'Computers', live: 'Live', vms: 'VMs', docker: 'Docker',
+const NAV_LABELS = { controls: 'Controls', ambient: 'Ambient', harness: 'Harness', workstream: 'Workstream', projects: 'Projects', archive: 'Archive', computers: 'Computers', live: 'Live', vms: 'VMs', docker: 'Docker',
   files: 'Files', terminal: 'Terminal', logs: 'Logs', models: 'Models', mcp: 'MCP', connectors: 'Connectors', apikeys: 'API keys', settings: 'Settings' };
 
 const navGroupOf = tab => NAV_GROUPS.find(g => g.tabs.includes(tab)) || NAV_GROUPS[0];

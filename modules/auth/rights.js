@@ -114,6 +114,7 @@ const TABLE = [
   R(ANY, '/api/machines(/.*)?', 'host'),
   R(GET, '/api/hub/links', 'read'),                              // the hub's addresses, as QR codes a phone scans (network.js)
   R(ANY, '/api/network', 'org'),                                 // how the hub listens: the machine's front door (network.js)                         // the agents' machines and the pages they serve (machines/)                       // the agents' work as it happens: the machine's files, every conversation (workstream/)                          // what was put away: each person's own; projects and computers a host's (archive.js)                             // what each screen shows, and sending it a page (screens/showing.js)                            // which folders this page shows: Files and Projects are a host's
+  R(GET, '/api/ambient(/.*)?', 'read'),                        // the ambient screen: weather, the day's plan and notices, each the viewer's own (ambient/)
   R(GET, '/api/face/stream', 'chat'),                          // the face's feed, scoped to what the viewer may open (face/state.js)
   R(ANY, '/api/developer(/.*)?', 'host'),                        // who may release unasked (releasing.js): the admin's
   R(ANY, '/api/experiments(/.*)?', 'host'),                     // the owner's switches for experiments (experiments.js)

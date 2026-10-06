@@ -59,8 +59,12 @@ function faceMount(canvas, specIn = {}) {
   const n = Math.max(40, Math.min(1200, spec.dots | 0));
   const eyeN = Math.round(n * 0.16), mouthN = Math.round(n * 0.14);
   const poly = spec.form !== 'face' && typeof facePolyForm === 'function';
-  const formN = Math.round(n * 0.62);
-  const form = poly ? facePolyForm(formN, _faceRand(11)) : null;
+  // A form of light: the polyhedron, or on an ambient screen the galaxy that rises into it (face/galaxy.js).
+  const makeForm = spec.form === 'ambient' && typeof faceAmbientForm === 'function' ? faceAmbientForm
+    : spec.form === 'galaxy' && typeof faceGalaxyForm === 'function' ? faceGalaxyForm : facePolyForm;
+  const formN = spec.field === false ? n : Math.round(n * 0.62);   // no field: every point is the form
+  const form = poly ? makeForm(formN, _faceRand(11)) : null;
+  let rise = 0, riseTo = 0;
   const dots = Array.from({ length: n }, (_, i) => ({ i, ...seat(i) }));
   function seat(i) {
     const role = poly ? (i < formN ? 'p' : 'f') : i < eyeN ? 'le' : i < eyeN * 2 ? 're' : i < eyeN * 2 + mouthN ? 'm' : 'f';
@@ -126,7 +130,8 @@ function faceMount(canvas, specIn = {}) {
     const t = now / 1000 * Math.max(0.1, Number(spec.speed) || 1);
     const k = reduced ? 1 : 0.06;
     for (const key of ['c', 'eye', 'mouth', 'spin', 'drift', 'breath', 'scale']) cur[key] += ((target[key] ?? 0) - (cur[key] ?? 0)) * k;
-    form?.frame(t, { spin: cur.spin, breath: cur.breath, scale: cur.scale, level: target.mouth || target.pulse ? level : 0 });
+    rise += (riseTo - rise) * (reduced ? 1 : 0.025);
+    form?.frame(t, { spin: cur.spin, breath: cur.breath, scale: cur.scale, level: target.mouth || target.pulse ? level : 0, ax: w / 2 / unit, ay: h / 2 / unit, rise });
     if (shapeOn && now > shapeOn.until) shapeOn = null;
     shapeMix += ((shapeOn ? 1 : 0) - shapeMix) * (reduced ? 1 : 0.05);
     const want = shapeOn ? shapeOn.rgb : hex(spec.palette[target.color] || spec.palette.accent);
@@ -140,10 +145,17 @@ function faceMount(canvas, specIn = {}) {
     const P = spec.palette;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = P.bg; ctx.fillRect(0, 0, w, h);
+    if (spec.clear) ctx.clearRect(0, 0, w, h); else { ctx.fillStyle = P.bg; ctx.fillRect(0, 0, w, h); }
     const [r, g, b] = cur.colorRGB.map(Math.round);
     const spr = sprite(r, g, b), fieldSpr = sprite(...hex(P.field || P.ink));
     ctx.globalCompositeOperation = 'lighter';   // points of light add up where they cross
+    if (form?.halo && form.halo.a > 0.005) {   // a form's own soft light, under its points (the galaxy's heart)
+      const H = form.halo, hx = cx + H.x * unit, hy = cy + H.y * unit;
+      ctx.save(); ctx.translate(hx, hy); ctx.scale(1, H.ry / H.rx);
+      const hg = ctx.createRadialGradient(0, 0, 0, 0, 0, H.rx * unit);
+      hg.addColorStop(0, `rgba(${r},${g},${b},${H.a})`); hg.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = hg; ctx.fillRect(-H.rx * unit, -H.rx * unit, H.rx * unit * 2, H.rx * unit * 2); ctx.restore();
+    }
     ctx.imageSmoothingQuality = 'high';
     const dotR = Math.max(0.8, unit * 0.011);
     const spin = t * cur.spin;
@@ -157,7 +169,8 @@ function faceMount(canvas, specIn = {}) {
       const ny = d.ny * sy + Math.cos(t * 0.17 * d.sp + d.ph * 1.3) * 0.35 * dr * 2;
       // The face.
       let fx = d.fx, fy = d.fy, depth = 0.5;
-      if (d.role === 'p') [fx, fy, depth] = form.at(d.i);
+      let pSize = 1;
+      if (d.role === 'p') [fx, fy, depth, pSize = 1] = form.at(d.i);
       else if (d.role === 'le' || d.role === 're') {
         fx += (d.role === 'le' ? -1 : 1) * spec.eyes.gap / 2; fy = spec.eyes.y + d.fy * eyeOpen + (target.lookUp ? -0.04 : 0);
       } else if (d.role === 'm') {
@@ -187,15 +200,17 @@ function faceMount(canvas, specIn = {}) {
       // A form's near side is brighter and larger than its far side: depth reads without lines.
       const near = d.role === 'p' ? 0.45 + depth * 0.75 : 1;
       ctx.globalAlpha = Math.min(1, (lit ? 0.95 : 0.5) * (d.role === 'p' ? 0.9 : d.glow) * near * flicker);
-      const sz = dotR * (d.role === 'p' ? 0.8 + depth * 1.1 : d.size * 0.8) * (lit ? 4.6 : 4.2) * glowR;
+      const sz = dotR * (d.role === 'p' ? (0.8 + depth * 1.1) * pSize : d.size * 0.8) * (lit ? 4.6 : 4.2) * glowR;
       ctx.drawImage(lit ? spr : fieldSpr, d.x - sz / 2, d.y - sz / 2, sz, sz);
     }
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
     // Vignette and scanlines.
-    const vg = ctx.createRadialGradient(cx, h / 2, unit * 0.6, cx, h / 2, Math.max(w, h) * 0.75);
-    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)');
-    ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
+    if (spec.vignette !== false) {
+      const vg = ctx.createRadialGradient(cx, h / 2, unit * 0.6, cx, h / 2, Math.max(w, h) * 0.75);
+      vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)');
+      ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
+    }
     if (grainTile && w > 120) { ctx.fillStyle = ctx.createPattern(grainTile, 'repeat'); ctx.fillRect(0, 0, w, h); }
     if (spec.hud && w > 220) {
       const m = Math.max(10, Math.round(unit * 0.07));
@@ -207,7 +222,7 @@ function faceMount(canvas, specIn = {}) {
       ctx.fillText(spec.name.toUpperCase(), w - m, m); ctx.textAlign = 'left';
     }
     // Long idle on a quiet screen: settle further toward noise.
-    if (state === 'idle' && now - lastEvent > 120000) target = { ...states.idle, c: 0.3 };
+    if (state === 'idle' && spec.settle !== false && now - lastEvent > 120000) target = { ...states.idle, c: 0.3 };
   }
 
   function set(next, info = '') {
@@ -224,7 +239,7 @@ function faceMount(canvas, specIn = {}) {
   raf = requestAnimationFrame(frame);
   /** Gather into `pts` ([x, y] in face units, about -1…1) in `color` for `ms`, then flow back. */
   const shape = (pts, color, ms = 1800) => { if (pts?.length) shapeOn = { pts, rgb: hex(color || spec.palette.accent), until: performance.now() + ms }; };
-  return { set, shape, level: v => { level = Math.max(0, Math.min(1, Number(v) || 0)); }, resize, stop: () => { stopped = true; cancelAnimationFrame(raf); ro?.disconnect(); }, spec, get state() { return state; } };
+  return { set, shape, rise: v => { riseTo = Math.max(0, Math.min(1, Number(v) || 0)); }, level: v => { level = Math.max(0, Math.min(1, Number(v) || 0)); }, resize, stop: () => { stopped = true; cancelAnimationFrame(raf); ro?.disconnect(); }, spec, get state() { return state; } };
 }
 
 /** The hive's state for this viewer, from /api/face/stream; calls back with {state, detail}. Returns a closer. */

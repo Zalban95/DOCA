@@ -2,7 +2,7 @@
    DOCA PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','logs','files','projects','harness','workstream','archive','computers','live','terminal','models','docker','vms','mcp','connectors','apikeys','settings'];
+const NAV_TABS = ['controls','ambient','logs','files','projects','harness','workstream','archive','computers','live','terminal','models','docker','vms','mcp','connectors','apikeys','settings'];
 /** Tabs that are the machine itself: left out for a person without host (settings.js). */
 const HOST_TABS = ['logs', 'files', 'projects', 'terminal', 'computers'];
 
@@ -31,6 +31,7 @@ function nav(name) {
   if (name === 'archive')  archiveInit();
   computersTab(name === 'computers');
   if (typeof workstreamTab === 'function') workstreamTab(name === 'workstream');
+  if (typeof ambientTab === 'function') ambientTab(name === 'ambient');
   if (typeof liveMachinesTab === 'function') liveMachinesTab(name === 'live');   // refreshes only while shown   // holds the hub's sentinel while shown   // starts and stops its thumbnails' timer
   if (name === 'terminal') termInit();
   if (name === 'models')   modelsInit();

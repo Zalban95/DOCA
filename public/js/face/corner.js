@@ -10,6 +10,7 @@ let _faceVoiceUntil = 0;   // while a call drives the face (faceCornerVoice), th
 function faceCornerVoice(state, level) {
   _faceVoiceUntil = Date.now() + 1500;
   if (typeof assistantVoice === 'function') assistantVoice(state, Math.max(0, Math.min(1, level)));
+  if (typeof ambientVoice === 'function') ambientVoice(state, Math.max(0, Math.min(1, level)));
   if (!_faceCorner?.face?.level) return;
   _faceCorner.face.set(state);
   _faceCorner.face.level(Math.max(0, Math.min(1, level)));

@@ -44,11 +44,12 @@ async function _wakeWanted() {
   // Only while assistant mode is open (resting, waiting for its name): the panel itself never holds the microphone
   // — it is used in a call, a recording, or here (asked 2026-10-06: "the microphone is always in use").
   const faceShown = typeof assistantIsOpen === 'function' && assistantIsOpen();
-  if (!faceShown || document.hidden) return null;
+  const ambient = typeof ambientIsOpen === 'function' && ambientIsOpen();   // an ambient screen resting (ambient.js)
+  if (!(faceShown || ambient) || document.hidden) return null;
   if ((typeof _callActive !== 'undefined' && _callActive) || (typeof _rt !== 'undefined' && _rt)) return null;
   const s = await screenLoad();
   const c = s.settings?.call || {};
-  if (!s.experiments?.wakeWord || !c.listenWithFace) return null;
+  if (!s.experiments?.wakeWord || !(ambient ? s.settings?.ambient?.listen !== false : c.listenWithFace)) return null;
   let word = String(c.wakeWord || '').trim();
   if (!word) word = (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA';
   return { word, thr: c.sensitivity >= 1 ? c.sensitivity : 15 };
@@ -96,7 +97,8 @@ async function _wakeHear(w, blob) {
     const m = wakeMatch(text, w.word);
     if (!m.heard || _wake !== w) return;
     wakeWordPause();
-    await assistantOpen(m.rest);   // the name opens assistant mode: the face, talking (face/assistant.js)
+    if (typeof ambientIsOpen === 'function' && ambientIsOpen()) await ambientTalk(m.rest);   // the galaxy rises and listens
+    else await assistantOpen(m.rest);   // the name opens assistant mode: the face, talking (face/assistant.js)
     if (!_assistantInCall()) wakeWordApply();
   } catch (e) { console.warn('wake word:', e.message); }
   finally { w.busy = false; }
