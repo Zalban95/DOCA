@@ -66,7 +66,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   DocaWear build; the watch refuses an APK without it.
 
 ### Wave 2 — the agent knows and reaches what DOCA has (V8, P13–P14)
-- [ ] B1 **The Orchestrator's prompt, rebuilt** (aw 1–2, 11–12, 26–27; coh F29): the specialists roster when they are
+- [x] B1 **The Orchestrator's prompt, rebuilt** — *2.246.0: `harness/coordinator.js` (role once, routing table from what it holds), roster when specialists are on, MCP servers + placeBlock; kits stay '*' (2026-09-26), narrowing is B2* (aw 1–2, 11–12, 26–27; coh F29): the specialists roster when they are
   on; MCP servers with machine and tool summary, and `placeBlock`; built from the switches; who it is said once (a
   coordinator default prompt); a lean default kit with "hand it to a work chat"; one decision table (answer · one tool
   · a recipe · a skill · a work chat · a specialist · ask) with an example each.
