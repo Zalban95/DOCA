@@ -344,3 +344,23 @@ test('putting finished work away notifies nobody and starts nothing', async () =
   assert.ok(sent.every(e => e.payload.quiet === true && e.payload.archivedAt), 'without a notification');
   store.writeJson('agents/missions', { missions: [] });
 });
+
+test('stopped work waits: the Orchestrator is told and asks; restart carries on, drop ends it', async () => {
+  fresh();
+  const stopped = require('../modules/harness/stopped-work');
+  const id = job('Paused by a person');
+  supervisor.decide(id, { stopped: true });
+  const main = memory.getSession(ceo());
+  assert.match(stopped.block(main), /# Stopped work[\s\S]*Paused by a person[\s\S]*restart it or drop it/);
+  assert.equal(stopped.block(memory.getSession(id)), '', 'only the Orchestrator is asked');
+  const r = stopped.decide(id, true, { sessionId: ceo() });
+  assert.equal(r.state, 'working');
+  await settle();
+  assert.deepEqual(woken.map(w => [w.sessionId, w.message]), [[id, stopped.RESUMED]]);
+  const other = job('Dropped');
+  supervisor.decide(other, { stopped: true });
+  assert.equal(stopped.decide(other, false).state, 'dropped');
+  assert.equal(supervisor.decide(other, { steps: 1 }), 'dropped', 'nothing wakes a dropped job');
+  assert.doesNotMatch(stopped.block(main), /Dropped/);
+  assert.equal((await H.api(null, 'POST', `/api/harness/work/${other}/restart`)).body.state, 'dropped', 'decided already: nothing to do');
+});

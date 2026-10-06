@@ -281,7 +281,7 @@ function isMissionProfile(profile) {
 function missionsFor(sessionId) {
   const session = sessionId ? require('../organization').session(sessionId) : null;
   if (!session || isMissionProfile(require('../organization').profileFor(session))) return '';
-  return missions.block({ sessionId: session.id });
+  return [missions.block({ sessionId: session.id }), require('../stopped-work').block(session)].filter(Boolean).join('\n\n');   // and work a person stopped (stopped-work.js)
 }
 
 function liveBlock(p, ledger) {

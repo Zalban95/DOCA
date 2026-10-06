@@ -96,6 +96,7 @@ function whyOf(message) {
   if (message === CUT_OFF) return 'its last answer was cut off: finishing it';
   if (message === RESTARTED) return 'the panel restarted mid-turn: picking up';
   if (String(message).startsWith('[panel] Work reported back')) return 'work chats reported back: telling you what matters';
+  if (String(message).startsWith('[panel] The person asked you to carry on')) return 'restarted by a person';
   return 'trying again on a stronger model';
 }
 
@@ -156,7 +157,7 @@ function decide(id, info = {}) {
     return 'stopped';
   }
   if (org.FINAL.includes(job.state) || job.state === 'stalled') return deliver(s.parentId);
-  if (job.state === 'stopped') return 'stopped';
+  if (job.state === 'stopped' || job.state === 'dropped') return job.state;
 
   if (specialistsRunning(id)) { setJob(id, { ...job, state: 'waiting' }); return 'waiting'; }
   // Only results of what this chat dispatched: notices() also lists old missions with no dispatcher.
@@ -218,7 +219,7 @@ function missionEnded(s) {
   let lead;
   try { lead = org.session(m.by); } catch { return 'no lead'; }
   if (lead.kind !== 'work' || !lead.job || org.FINAL.includes(lead.job.state)
-      || lead.job.state === 'stopped' || lead.job.state === 'stalled') return 'lead not working';
+      || lead.job.state === 'stopped' || lead.job.state === 'dropped' || lead.job.state === 'stalled') return 'lead not working';
   if (require('./agent').isRunning(lead.id)) return 'lead busy';   // its own turn end picks the result up
   if (specialistsRunning(lead.id)) return 'others still running';  // woken by the last one
   if (m.leadWokenAt) return 'already woken';   // the turn's end and the mission's record can both get here

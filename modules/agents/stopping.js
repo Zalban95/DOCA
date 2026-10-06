@@ -21,7 +21,9 @@ function working(req) {
   const auto = require('../harness/supervisor').autoNow().filter(a => mayUse(req, a.sessionId));
   const missions = require('./missions').running().filter(m => mayUse(req, m.sessionId))
     .map(m => ({ id: m.id, label: m.label || m.agentId, sessionId: m.sessionId, steps: m.steps || 0, startedAt: m.startedAt }));
-  return { missions, auto };
+  const stopped = require('../harness/stopped-work').stopped().filter(s => mayUse(req, s.id))
+    .map(s => ({ sessionId: s.id, title: s.title || s.id, why: s.job.stoppedWhy || 'stopped by a person' }));
+  return { missions, auto, stopped };
 }
 
 function mount(app) {

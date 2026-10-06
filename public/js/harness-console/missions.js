@@ -75,12 +75,12 @@ async function hcAgentsEnable(on) {
 async function _hcLoadMissions() {
   const bar = document.getElementById('hc-missions');
   if (!bar) return;
-  let rows = [], auto = [];
+  let rows = [], auto = [], stopped = [];
   try { rows = (await apiFetch('/api/harness/missions?limit=8')).missions || []; } catch { /* leave the bar as it was */ }
   // What works on its own right now, and why (agents/stopping.js) — each with a Stop, so nothing runs out of sight.
-  try { auto = (await apiFetch('/api/harness/working')).auto || []; } catch { /* an older hub */ }
+  try { ({ auto = [], stopped = [] } = await apiFetch('/api/harness/working')); } catch { /* an older hub */ }
 
-  if (!rows.length && !auto.length) { bar.style.display = 'none'; bar.innerHTML = ''; }
+  if (!rows.length && !auto.length && !stopped.length) { bar.style.display = 'none'; bar.innerHTML = ''; }
   else {
     bar.style.display = '';
     bar.innerHTML = rows.map(m => `
@@ -101,6 +101,11 @@ async function _hcLoadMissions() {
         <span class="hc-mission-dot"></span>${escHtml(String(a.title).slice(0, 40))} <em>${escHtml(a.why)}</em>
         <button class="btn btn-xs" onclick="hcOpenSession(${jsArg(a.sessionId)})">Chat</button>
         <button class="btn btn-xs btn-red" onclick="hcAutoStop(${jsArg(a.sessionId)})" title="Stop this turn; nothing is woken to carry on">■ Stop</button>
+      </span>`).join('') + stopped.map(w => `
+      <span class="hc-mission cancelled" title="${escHtml(w.why)}">
+        <span class="hc-mission-dot"></span>${escHtml(String(w.title).slice(0, 40))} <em>stopped — ${escHtml(w.why)}</em>
+        <button class="btn btn-xs" onclick="hcWorkDecide(${jsArg(w.sessionId)}, true)" title="It carries on where it stood">↻ Restart</button>
+        <button class="btn btn-xs" onclick="hcWorkDecide(${jsArg(w.sessionId)}, false)" title="End it here; its transcript stays">Drop</button>
       </span>`).join('');
   }
 
@@ -115,6 +120,12 @@ async function _hcLoadMissions() {
 /** ■ Stop on a running specialist: at its next step, and what sent it waits instead of carrying on. */
 async function hcMissionStop(id) {
   try { await apiFetch(`/api/harness/missions/${encodeURIComponent(id)}/stop`, { method: 'POST', body: {} }); } catch (e) { return appAlert(e.message); }
+  setTimeout(_hcLoadMissions, 600);
+}
+
+/** Work a person stopped: carry it on, or drop it (harness/stopped-work.js). */
+async function hcWorkDecide(sessionId, go) {
+  try { await apiFetch(`/api/harness/work/${encodeURIComponent(sessionId)}/${go ? 'restart' : 'drop'}`, { method: 'POST', body: {} }); } catch (e) { return appAlert(e.message); }
   setTimeout(_hcLoadMissions, 600);
 }
 
