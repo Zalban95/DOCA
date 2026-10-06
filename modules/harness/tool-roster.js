@@ -35,6 +35,8 @@ function reasonHeld(name, profile) {
 
 function reasonRefused(name, profile, p) {
   const registry = require('../agents/registry');
+  const shaped = require('./turn/tool-shape').off(profile, tools.describe().map(t => t.name)).find(x => x.name === name);
+  if (shaped && !(p.disabledTools || []).includes(name)) return shaped.why;
   if ((p.disabledTools || []).includes(name)) return 'switched off by an admin (⚙ tools)';
   if (registry.AIRLOCK_ONLY.includes(name) && registry.enabled() && !profile?.airlock) return 'the airlock: only an airlock specialist reads the web';
   if (profile && profile.level !== 'orchestrator' && registry.NEVER.includes(name)) return 'never a specialist\'s (registry NEVER)';
@@ -53,7 +55,7 @@ function roster(type) {
   for (const t of all) {
     const row = { name: t.name, kit: kitOf(t.name) || 'other', what: firstSentence(t.description) };
     if (!off.has(t.name)) held.push({ ...row, why: reasonHeld(t.name, profile) });
-    else if (wanted(t.name)) refused.push({ ...row, why: reasonRefused(t.name, profile, p) || 'not held' });
+    else if (wanted(t.name) || require('./turn/tool-shape').switches().some(x => x.name === t.name)) refused.push({ ...row, why: reasonRefused(t.name, profile, p) || 'not held' });
   }
   return { type, label: profile?.label || 'Work chat', kits: profile ? profile.kits : '*', held, refused,
     kitLabels: Object.fromEntries(Object.entries(KITS).map(([k, v]) => [k, v.label])) };
