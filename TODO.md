@@ -56,7 +56,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   `api_call {key|connector, url, method, form, files, save_as}` for origins with a stored key or a connector, held by
   the acting agents and never airlocked; hi3d, service drafts and smart-home move to it; quarantine of the open web
   holds even with specialists off (an internal reader), or S6 and airlock.md say otherwise. **Ask first** (guards).
-- [ ] A3 **Phone and watch honour `quiet` and `archivedAt`** (cl 1–2, 16): PROTOCOL and OpenAPI document `archivedAt`,
+- [x] A3 **Phone and watch honour `quiet` and `archivedAt`** — *2.245.3 (documented; work chats stopped/dropped are `cancelled`, archiving one is quiet), DocaMobile 1.0.9, DocaWear 1.2.2* (cl 1–2, 16): PROTOCOL and OpenAPI document `archivedAt`,
   `kind`, `plan`, `progress` and "quiet + archivedAt = remove, never notify"; DocaMobile and DocaWear parse them (their
   TODOs); Wear treats `paused` as waiting, not finished.
 - [ ] A4 **The phone's screen tools get the computer's rules** (cl 5–6): DocaMobile classifies the target (password
