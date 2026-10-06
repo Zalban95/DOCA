@@ -337,6 +337,17 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   Devices in Google Home or Alexa come in through HA (Matter sharing, brand integrations, Nest via Device Access —
   skills/smart-home). Later, DocaMobile could lend Google's **Home APIs** (Android, the person's explicit permission)
   as a device family, for homes that keep Google Home as their hub; Alexa has no equivalent control API.
+- [ ] H10.12 The ambient screen — a screen that behaves like a Google Nest (asked 2026-10-06). **Done (2.237.0):**
+  Controls → Ambient (`/?view=ambient`): the time, the weather and five days (Open-Meteo, no key — the screen's
+  `ambient.place`), the day's plan from Google or Microsoft 365 when connected, what needs you (questions, proposals,
+  missions), quick buttons that say something to the agent, and the galaxy turning in the bottom fifth. Hold it, tap ◉,
+  a quick button or the wake word: the rest dims, the dots rise into the call's form; after `call.assistantIdleSec` of
+  quiet they go back down and the screen listens for its name again (`ambient.listen`, experiment wakeWord). The
+  shipped skill `play-and-cast` routes "put X on the TV" by what works (Home Assistant's media players, the device's
+  own app and its cast button, the hub), asks once and keeps a recipe. **Left (DocaMobile, docs/design/ambient.md):**
+  the `window.DocaDevice` bridge (the most used apps as shortcuts; open one), ambient as what the phone shows when
+  docked or charging, and the device lent as an MCP family over the socket transport (open an app at a link, its
+  screen read and tapped by accessibility, cast) — so "play it here" runs on the phone while the call stays.
 - [ ] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06). Risk-tiered approval inside
   Auto: each tool call classified — reads and lookups run; reversible writes run after an automatic checkpoint
   (projects' shadow git, prefs checkpoints, a computer instead of the host for anything untested); irreversible or

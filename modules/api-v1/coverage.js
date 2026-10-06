@@ -28,6 +28,7 @@ const COVERAGE = {
   live: { v1: ['/events'], note: 'a device already hears turns, missions and work chats change on its event stream; watching a folder is the machine\'s' },
   packs: { v1: ['/packs'], note: 'between hubs; making and bringing in packs is a host\'s' },
   presence: { v1: ['/events'], note: 'the panel saying it is looked at; a device\'s presence is its event stream' },
+  ambient: { panel: 'the ambient screen\'s page: a device draws its own home with /face, /harness and its own sensors' },
   branding: { panel: 'public, and read by clients as it is (GET /api/branding)' },
   auth: { panel: 'a person signing in to the panel; a device pairs instead (/devices)' },
   // The machine and DOCA itself.

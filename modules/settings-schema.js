@@ -37,6 +37,13 @@ const SCHEMA = {
       listenWithFace: { type: 'boolean', default: false, hint: 'While the corner face shows, listen for the wake word and start a call when it is said (experiments.wakeWord).' },
       wakeWord: { type: 'string', default: '', hint: 'The word that starts a call. Empty: the product\'s name (branding).' },
     } },
+  ambient:          { is: 'travels', home: 'device', on: 'screen', note: 'the ambient screen (public/js/ambient.js): where it is for the weather, its quick buttons, whether it listens for its name — `buttons` is a list of {label, say} (what the button says to the agent)',
+    keys: {
+      place:  { type: 'string', default: '', hint: 'Where this screen is, for the weather: a town, or "lat,lon". Empty: no weather.' },
+      units:  { type: 'string', default: 'metric', hint: 'metric (°C, km/h) or imperial (°F, mph).' },
+      listen: { type: 'boolean', default: true, hint: 'While the ambient screen rests, listen for the wake word (experiments.wakeWord); a call or a recording takes the microphone when it needs it.' },
+      clock24: { type: 'boolean', default: true, hint: 'A 24-hour clock.' },
+    } },
   face:             { is: 'travels', home: 'device', on: 'screen', note: 'the face: its look, a spec over the default (face/face.js); an edition carries one' },
   hiddenBuiltins:   { is: 'travels', home: 'device', on: 'screen', note: 'built-in config entries hidden from the list', propose: p('Hidden built-ins') },
 

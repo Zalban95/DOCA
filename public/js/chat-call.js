@@ -40,6 +40,7 @@ function _callSetStatus(text, state) {
   const mic = document.getElementById('chat-call-mic-icon');
   if (el) el.textContent = text;
   if (typeof _assistantSay === 'function' && typeof assistantIsOpen === 'function' && assistantIsOpen() && _callActive) _assistantSay(text);
+  if (typeof ambientSay === 'function' && _callActive) ambientSay(text, state);   // the ambient screen's own line (ambient.js)
   if (mic) mic.className = `chat-call-mic-icon ${state || ''}`;
 }
 

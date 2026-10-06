@@ -1,0 +1,66 @@
+/* The ambient screen (js/ambient.js): black, quiet type, the galaxy in the bottom fifth; in a call the rest dims. */
+#tab-ambient.active { padding: 0 !important; }
+.amb { position: relative; height: calc(100dvh - 120px); min-height: 420px; background: #050507; color: #e8edf2; overflow: hidden;
+  font-family: 'Space Grotesk', 'IBM Plex Sans', system-ui, sans-serif; border-radius: 10px; }
+body.solo .amb { height: 100dvh; border-radius: 0; }
+.amb-info { position: absolute; inset: 0 0 20% 0; padding: 4vmin 5vmin 1vmin; display: grid; grid-template-columns: 1.15fr 1fr;
+  grid-template-rows: auto minmax(0, 1fr) auto; gap: 2.5vmin 5vmin; transition: opacity .9s ease, filter .9s ease; }
+.amb.calling .amb-info { opacity: .18; filter: blur(3px) saturate(.5); pointer-events: none; }
+.amb h3 { margin: 0 0 1.2vmin; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: .16em; text-transform: uppercase; color: #707a85; }
+.amb-time { font-size: clamp(48px, 13vmin, 150px); font-weight: 400; line-height: .95; letter-spacing: -.02em; }
+.amb-date { margin-top: 1vmin; font-size: clamp(14px, 2.6vmin, 26px); color: #a6bfd6; text-transform: capitalize; }
+.amb-weather { justify-self: end; text-align: right; }
+.amb-now { display: flex; align-items: center; gap: 2vmin; justify-content: flex-end; }
+.amb-icon { font-size: clamp(32px, 8vmin, 84px); }
+.amb-temp { font-size: clamp(36px, 9vmin, 96px); line-height: 1; }
+.amb-what { text-align: left; font-size: clamp(13px, 2.1vmin, 20px); color: #a6bfd6; text-transform: capitalize; }
+.amb-what small, .amb small { color: #707a85; text-transform: none; }
+.amb-place { margin-top: .6vmin; font-size: 12px; color: #707a85; }
+.amb-days { display: flex; gap: 2.2vmin; justify-content: flex-end; margin-top: 1.6vmin; }
+.amb-day { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: clamp(11px, 1.8vmin, 16px); }
+.amb-day b { font-weight: 500; color: #a6bfd6; text-transform: capitalize; }
+.amb-plan, .amb-notices { min-height: 0; overflow: auto; scrollbar-width: none; }
+.amb-event { display: flex; gap: 1.6vmin; padding: .7vmin 0; font-size: clamp(13px, 2.2vmin, 20px); border-bottom: 1px solid rgba(255,255,255,.05); }
+.amb-when { min-width: 5.5em; color: #57c9c2; font-family: 'JetBrains Mono', monospace; font-size: .85em; padding-top: .1em; }
+.amb-notice { display: flex; gap: 1.2vmin; width: 100%; text-align: left; background: none; border: 0; color: inherit; padding: .7vmin 0; cursor: pointer;
+  font: inherit; font-size: clamp(12px, 2vmin, 18px); border-bottom: 1px solid rgba(255,255,255,.05); }
+.amb-notice span { width: 1.2em; color: #57c9c2; flex-shrink: 0; }
+.amb-notice.ask span, .amb-notice.propose span { color: #e8a020; }
+.amb-notice.failed span { color: #e85050; }
+.amb-muted { color: #707a85; font-size: clamp(12px, 1.9vmin, 17px); }
+.amb-muted a { color: #57c9c2; }
+.amb-quick { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 1.6vmin; align-items: center; justify-content: space-between; }
+.amb-buttons, .amb-apps { display: flex; flex-wrap: wrap; gap: 1.2vmin; }
+.amb-button { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.10); color: #e8edf2; border-radius: 999px;
+  padding: 1vmin 2.2vmin; font: inherit; font-size: clamp(12px, 1.9vmin, 17px); cursor: pointer; }
+.amb-button:active { background: rgba(87,201,194,.25); }
+.amb-app { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 9vmin; min-width: 52px; background: none; border: 0; color: #a6bfd6; cursor: pointer; }
+.amb-app img, .amb-app span { width: 6vmin; height: 6vmin; min-width: 36px; min-height: 36px; border-radius: 22%; }
+.amb-app small { font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.amb-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.amb-band { position: absolute; left: 0; right: 0; bottom: 0; height: 20%; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent; }
+.amb-band.holding { background: radial-gradient(ellipse at 50% 55%, rgba(87,201,194,.10), transparent 65%); transition: background .45s; }
+.amb.calling .amb-band { height: 100%; }   /* in a call, a hold anywhere ends it */
+.amb-status { position: absolute; left: 0; right: 0; bottom: 9%; text-align: center; font: 500 13px 'JetBrains Mono', monospace; letter-spacing: .08em; color: #a6bfd6; pointer-events: none; }
+.amb-talk { position: absolute; right: 3.2vmin; bottom: 3.2vmin; width: 52px; height: 52px; border-radius: 50%; border: 0; background: #000; color: #57c9c2;
+  font-size: 22px; cursor: pointer; box-shadow: 0 0 18px rgba(87,201,194,.35); }
+.amb.calling .amb-talk { color: #e85050; box-shadow: 0 0 18px rgba(232,80,80,.35); }
+.amb-edit, .amb-alone { position: absolute; top: 1.6vmin; right: 1.6vmin; opacity: .25; transition: opacity .3s; }
+.amb-edit { background: none; border: 0; color: #a6bfd6; font-size: 16px; cursor: pointer; }
+.amb-alone { right: 5.5vmin; }
+.amb:hover .amb-edit, .amb:hover .amb-alone { opacity: .9; }
+.amb-arrange { position: absolute; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 5; padding: 16px; }
+.amb-arrange-card { width: min(520px, 100%); display: flex; flex-direction: column; gap: 10px; max-height: 100%; overflow: auto; }
+.amb-arrange-card label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.amb-arrange-card .amb-check { flex-direction: row; align-items: center; gap: 8px; }
+.amb-arrange-row { display: flex; gap: 8px; justify-content: flex-end; }
+/* A phone upright: one column, the plan and the notices share the middle. */
+@media (max-width: 700px), (orientation: portrait) {
+  .amb { height: calc(100dvh - 140px); }
+  .amb-info { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto minmax(0, 1fr) auto; gap: 2.4vmin; padding: 16px 16px 4px; }
+  .amb-plan, .amb-notices { max-height: 26vh; }
+  .amb-quick { grid-row: 6; }
+  .amb-weather { justify-self: start; text-align: left; }
+  .amb-now, .amb-days { justify-content: flex-start; }
+  .amb-time { font-size: clamp(48px, 18vw, 96px); }
+}
