@@ -33,6 +33,8 @@ module.exports = [
       required: ['action'],
     },
     run: async ({ action, id, title, description, params, steps, values, why }, ctx = {}) => {
+      const missing = require('./common').needs('recipe', { action, id, title, steps }, { show: ['id'], run: ['id'], propose: ['id'], save: ['title', 'steps'], save_last: ['title'] });
+      if (missing) return missing;
       const store = require('../../recipes/store');
       const line = r => `- ${r.id} (r${r.revision}, ${r.steps.length} steps${r.params.length ? `; params ${r.params.map(p => p.name).join(', ')}` : ''}): ${r.title}${r.description ? ` — ${r.description}` : ''}`;
       if (action === 'list') { const l = store.list(); return l.length ? l.map(line).join('\n') : 'No recipes yet. save_last keeps what your last turn did.'; }

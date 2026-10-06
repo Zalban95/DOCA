@@ -163,6 +163,8 @@ module.exports = [
     },
     danger: true,
     run: async (a, ctx = {}) => {
+      const missing = require('./common').needs('project', a, { open: ['root'], run: ['command'], changes: ['checkpoint'], restore: ['checkpoint'] });
+      if (missing) return missing;
       const projects = require('../../projects/store');
       const pick = () => {
         const p = a.id ? projects.need(a.id) : projects.forSession(ctx.sessionId);

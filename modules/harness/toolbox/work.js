@@ -5,6 +5,9 @@
  */
 
 
+const WORK_NEEDS = { create: ['title'], send: ['sessionId', 'message'], report: ['message'], stop: ['sessionId'],
+  archive: ['sessionId'], recall: ['sessionId'], restart: ['sessionId'], drop: ['sessionId'] };
+
 module.exports = [
   {
     name: 'work_chats',
@@ -16,13 +19,17 @@ module.exports = [
       + 'Restart or drop a work chat a person STOPPED (Stopped work in your prompt) — only with their answer.',
     parameters: { type: 'object', properties: {
       action: { type: 'string', enum: ['list', 'read', 'create', 'send', 'stop', 'report', 'archive', 'recall', 'restart', 'drop'] },
-      sessionId: { type: 'string' }, title: { type: 'string' }, message: { type: 'string' },
-      planning: { type: 'boolean' }, all: { type: 'boolean', description: 'Include archives in list.' },
+      sessionId: { type: 'string', description: 'The work chat: needed by send, stop, archive, recall, restart and drop; for read, default your own.' },
+      title: { type: 'string', description: 'create: the job in a few words.' },
+      message: { type: 'string', description: 'create: the task to start with (what is known, what done looks like); send: the task; report: your brief.' },
+      planning: { type: 'boolean', description: 'create: a work chat that plans and proposes, not one that carries out.' },
+      all: { type: 'boolean', description: 'Include archives in list.' },
       outcome: { type: 'string', enum: ['done', 'failed', 'blocked', 'question'],
         description: 'With report, from a work chat: the job is over (done/failed), cannot go on without a decision from above (blocked), or needs the owner (question).' },
-      transcript: { type: 'boolean' }, offset: { type: 'integer' }, limit: { type: 'integer' },
+      transcript: { type: 'boolean', description: 'read: include the messages, not only briefs and reports.' },
+      offset: { type: 'integer', description: 'read: where to start (reports or messages).' }, limit: { type: 'integer', description: 'list: how many.' },
     }, required: ['action'] },
-    run: async (args, ctx) => JSON.stringify(['restart', 'drop'].includes(args.action)
+    run: async (args, ctx) => require('./common').needs('work_chats', args, WORK_NEEDS) || JSON.stringify(['restart', 'drop'].includes(args.action)
       ? require('../stopped-work').decide(args.sessionId, args.action === 'restart', ctx) : await require('../organization').tool(args, ctx)),
   },
   {

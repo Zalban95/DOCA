@@ -77,4 +77,15 @@ function resolvePath(p, ctx = {}) {
   return abs;
 }
 
-module.exports = { MAX_OUT, SHELL_MS, clip, cwd, resolvePath };
+/**
+ * What an action of a many-action tool needs, said by name before it runs (audit 2026-10-06, aw 18; TODO B4b): a
+ * smaller model that leaves out `sessionId` on send is told "send needs sessionId", not an error from three calls deep.
+ * `table` maps an action to the fields it needs; returns null when nothing is missing.
+ */
+function needs(tool, args = {}, table = {}) {
+  const want = table[args.action] || [];
+  const missing = want.filter(k => args[k] === undefined || args[k] === null || args[k] === '');
+  return missing.length ? `Error: ${tool} ${args.action} needs ${missing.join(' and ')}.` : null;
+}
+
+module.exports = { MAX_OUT, SHELL_MS, clip, cwd, resolvePath, needs };
