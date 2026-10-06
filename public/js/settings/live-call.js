@@ -45,7 +45,7 @@ async function liveCallRender() {
   // The rest, a card each, in the order a person meets them: talking to the face, how the face looks, the owner's realtime model, the experiments.
   await liveCallAssistantCard(panel, s);
   if (typeof faceEditorRender === 'function') await faceEditorRender(panel);
-  const rtHtml = liveCallRealtimeHtml(rt, !!ex);
+  const rtHtml = rt?.experiment ? liveCallRealtimeHtml(rt, !!ex) : '';   // only once its experiment is on
   if (rtHtml) panel.append(Object.assign(document.createElement('div'), { className: 'card', id: 'realtime-card', innerHTML: rtHtml }));
   if (ex) panel.append(Object.assign(document.createElement('div'), { className: 'card', id: 'call-experiments-card', innerHTML: `<div class="card-title">Call experiments</div>
     <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Developer mode — for every screen; what each measures and costs is on Settings → Developer.</div>

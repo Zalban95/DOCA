@@ -41,7 +41,9 @@ function wakeWordPause() {
 }
 
 async function _wakeWanted() {
-  const faceShown = (typeof faceCornerOn === 'function' && faceCornerOn()) || (typeof assistantIsOpen === 'function' && assistantIsOpen());
+  // Only while assistant mode is open (resting, waiting for its name): the panel itself never holds the microphone
+  // — it is used in a call, a recording, or here (asked 2026-10-06: "the microphone is always in use").
+  const faceShown = typeof assistantIsOpen === 'function' && assistantIsOpen();
   if (!faceShown || document.hidden) return null;
   if ((typeof _callActive !== 'undefined' && _callActive) || (typeof _rt !== 'undefined' && _rt)) return null;
   const s = await screenLoad();

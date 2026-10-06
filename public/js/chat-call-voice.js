@@ -1,10 +1,22 @@
 /* The live call's voice (chat-call.js): each sentence of an answer synthesized, queued and played in order; an
    interruption drops what was queued. Split from chat-call.js along its seam: the microphone half stays there. */
 
+// At most two sentences are synthesized at once: a browser holds six connections to the hub, and a long answer's
+// sentences all fetched together left none for the transcription that decides whether the person talked over it.
+let _callSynthSlots = 2;
+const _callSynthWaiting = [];
+const _callSynthSlot = () => (_callSynthSlots > 0 ? (_callSynthSlots--, Promise.resolve()) : new Promise(r => _callSynthWaiting.push(r)));
+const _callSynthFree = () => { const next = _callSynthWaiting.shift(); if (next) next(); else _callSynthSlots++; };
+let _callSynthSeq = 0, _callSynthNext = 0;
+const _callSynthReady = new Map();
+
 async function _callEnqueueSynth(text) {
   if (!_callActive) return;
   const epoch = _callEpoch;   // said before an interruption: dropped when it arrives after one (barge-in)
   _callSynthPending++;
+  const seq = _callSynthSeq++;   // played in the order said, whichever synthesis finishes first
+  let ready = null;
+  await _callSynthSlot();
   try {
     const res = await fetch('/api/chat/synthesize', {
       method: 'POST',
@@ -20,12 +32,18 @@ async function _callEnqueueSynth(text) {
     const audioBuf = await _callPlayCtx.decodeAudioData(arrayBuf);
     if (epoch !== _callEpoch) { _callStats && _callStats.dropped++; return; }
     audioBuf._docaText = text;   // what it says: the face shows a concept it names (face/concept-engine.js)
-    _callPlayQueue.push(audioBuf);
-    if (!_callCurrentSrc) _callPlayNext();
+    ready = audioBuf;
   } catch (e) {
     // Once per call: a voice that fails silently reads as a call that answers only in text.
     if (e.name !== 'AbortError' && _callActive && !_callTtsWarned) { _callTtsWarned = true; chatAppendMsg('system', `The answer could not be spoken: ${e.message}`); }
   } finally {
+    _callSynthFree();
+    _callSynthReady.set(seq, ready);
+    while (_callSynthReady.has(_callSynthNext)) {
+      const b = _callSynthReady.get(_callSynthNext);
+      _callSynthReady.delete(_callSynthNext++);
+      if (b && _callActive) { _callPlayQueue.push(b); if (!_callCurrentSrc && !_callHold) _callPlayNext(); }
+    }
     _callSynthPending = Math.max(0, _callSynthPending - 1);
     if (_callActive && !_callSynthPending && !_callCurrentSrc && !_callPlayQueue.length && !_callProcessing) _callSetStatus('Listening…', 'listening');
   }

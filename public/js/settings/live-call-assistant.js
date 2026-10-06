@@ -12,10 +12,10 @@ async function liveCallAssistantCard(panel, s) {
       <div style="font-size:11px;font-weight:600">On this screen</div>
       ${liveCallRow('Quiet before resting', `<input class="input" id="lc-idle" type="number" min="5" max="600" value="${c.assistantIdleSec || 12}" style="width:80px"> s`,
         'After this long with no words heard and nothing being said, it rests and waits for its name (when it listens for one); otherwise it keeps listening.')}
-      ${liveCallRow('Call by name', `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="lc-listen" ${c.listenWithFace ? 'checked' : ''}>
+      ${s.experiments?.wakeWord ? liveCallRow('Call by name', `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="lc-listen" ${c.listenWithFace ? 'checked' : ''}>
           while the face shows, listen for</label><input class="input" id="lc-word" value="${escHtml(c.wakeWord || '')}" placeholder="${escHtml(word)}" style="width:120px">`,
-        `"${escHtml(word)}, what's on today?" starts it and sends the rest. ${s.experiments?.wakeWord ? '' : '<b>Needs the experiment "Start a call by saying the hive\'s name" (developer mode).</b> '}
-         While it listens, what is said near this screen goes to your speech-to-text.`)}
+        `"${escHtml(word)}, what's on today?" starts it and sends the rest. 
+         While it listens, what is said near this screen goes to your speech-to-text.`) : ''}
       <div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantScreenSave()">Save for this screen</button></div>
       ${await liveCallAssistantHtml()}
     </div>`;
@@ -26,7 +26,8 @@ async function liveCallAssistantScreenSave() {
   const idle = parseInt(document.getElementById('lc-idle').value, 10);
   const cur = (await screenLoad(true)).settings?.call || {};
   try {
-    await screenSave({ call: { ...cur, listenWithFace: document.getElementById('lc-listen').checked, wakeWord: document.getElementById('lc-word').value.trim(), ...(idle >= 5 ? { assistantIdleSec: idle } : {}) } });
+    const listen = document.getElementById('lc-listen'), word = document.getElementById('lc-word');   // absent while the experiment is off
+    await screenSave({ call: { ...cur, ...(listen ? { listenWithFace: listen.checked, wakeWord: word.value.trim() } : {}), ...(idle >= 5 ? { assistantIdleSec: idle } : {}) } });
   } catch (e) { return appAlert(e.message); }
   await screenLoad(true);
   if (typeof wakeWordApply === 'function') wakeWordApply();
@@ -46,6 +47,8 @@ async function liveCallAssistantHtml() {
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">A quicker model (optional)</label>
       <input class="input" id="as-provider" value="${escHtml(a.provider || '')}" placeholder="provider" style="width:120px" ${owner ? '' : 'disabled'}>
       <input class="input" id="as-model" value="${escHtml(a.model || '')}" placeholder="model — empty: the chat's" style="width:200px" ${owner ? '' : 'disabled'}></div>
+    <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-calls" ${a.calls ? 'checked' : ''} ${owner ? '' : 'disabled'}>
+      Use this effort and model for the chat's 🎙 call too (its answers are always spoken-length)</label>
     <label style="font-size:11px;color:var(--muted)">How it speaks<textarea class="input" id="as-style" rows="4" style="width:100%;margin-top:4px" ${owner ? '' : 'disabled'}>${escHtml(a.style || '')}</textarea></label>
     ${owner ? `<div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantSave()">Save assistant mode</button>
       <button class="btn btn-sm" onclick="liveCallAssistantSave(true)">Default style</button></div>` : ''}
@@ -54,7 +57,7 @@ async function liveCallAssistantHtml() {
 
 async function liveCallAssistantSave(resetStyle) {
   const g = id => document.getElementById(id).value;
-  try { await apiFetch('/api/assistant', { method: 'POST', body: { effort: g('as-effort'), provider: g('as-provider').trim(), model: g('as-model').trim(), style: resetStyle ? null : g('as-style') } }); }
+  try { await apiFetch('/api/assistant', { method: 'POST', body: { calls: document.getElementById('as-calls').checked, effort: g('as-effort'), provider: g('as-provider').trim(), model: g('as-model').trim(), style: resetStyle ? null : g('as-style') } }); }
   catch (e) { return appAlert(e.message); }
   liveCallRender();
 }

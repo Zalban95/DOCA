@@ -83,6 +83,7 @@ const SCHEMA = {
     keys: { effort: { type: 'string', default: 'low', hint: 'Thinking effort in assistant mode: off, low, medium, high, or default (send nothing: the model\'s own).' },
       style: { type: 'string', default: 'You are the hive\'s voice, spoken to through its face — a companion who handles things. Answer in one to three short spoken sentences: direct, warm, conversational; a dry touch of irony only when it helps. No lists, no markdown, nothing read out that belongs on a screen. When something takes work, say in a few words what you are doing and do it; offer to go deeper rather than going deep.',
         hint: 'How assistant mode speaks — the instruction every face-started turn is given.' },
+      calls: { type: 'boolean', default: false, hint: 'Use this effort and model for the chat\'s 🎙 call too, not only for the face.' },
       provider: { type: 'string', default: '', hint: 'A provider for assistant mode\'s own model. Empty: the conversation\'s.' },
       model: { type: 'string', default: '', hint: 'A quicker model for assistant mode (e.g. a small local one). Empty: the conversation\'s model.' } } },
   scout:            { is: 'travels', home: 'hive', note: 'the model scout: what it watches, how often, where accepted suggestions go and who works on them (modules/scout; the switch is experiments.modelScout)',
