@@ -1,0 +1,8 @@
+{
+  "type": "prompt.closed",
+  "class": "durable",
+  "payload": {
+    "promptId": "prm_149c79ab8d468464",
+    "reason": "cancelled"
+  }
+}

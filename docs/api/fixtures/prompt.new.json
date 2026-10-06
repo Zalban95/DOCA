@@ -1,0 +1,51 @@
+{
+  "type": "prompt.new",
+  "class": "durable",
+  "payload": {
+    "prompt": {
+      "id": "prm_149c79ab8d468464",
+      "createdAt": "2026-10-06T22:32:58.654Z",
+      "expiresAt": "2026-10-06T22:33:58.654Z",
+      "priority": "high",
+      "title": "Restart the speech service?",
+      "body": [],
+      "choices": [
+        {
+          "id": "c1",
+          "type": "option",
+          "label": "Restart",
+          "outcome": {
+            "summary": "Restart",
+            "blocks": [],
+            "confirmLabel": "Confirm",
+            "backLabel": "Back"
+          }
+        },
+        {
+          "id": "c2",
+          "type": "option",
+          "label": "Leave it",
+          "outcome": {
+            "summary": "Leave it",
+            "blocks": [],
+            "confirmLabel": "Confirm",
+            "backLabel": "Back"
+          }
+        },
+        {
+          "id": "not_now",
+          "type": "dismiss",
+          "label": "Not now"
+        }
+      ],
+      "resolver": "server",
+      "state": "open",
+      "selectionId": null,
+      "choiceId": null,
+      "stage": null,
+      "outcome": null,
+      "error": null,
+      "haptic": true
+    }
+  }
+}

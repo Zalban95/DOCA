@@ -1133,6 +1133,24 @@ A paired client can offer the harness the same **tool families** the host has �
   first load (as DocaMobile does); it is served only to that device's session or
   its owner, so the id in the path grants nothing.
 
+- **One name per action, per family** (audit 2026-10-06, cl 27). A skill names a tool once for every client, so a
+  client lending a family uses these names; a client still on an older name is marked, to be aligned in its next
+  release. **Canonical** first; what each first-party client lends today:
+
+  | Family | Canonical tools | DocaDesk | DocaMobile | doca-client |
+  |---|---|---|---|---|
+  | `shell` | `shell`, `shell_job` | as canonical | — | `shell_run` → `shell` |
+  | `files` | `files_list`, `files_read`, `files_write`, `files_mkdir`, `files_move`, `files_copy`, `files_delete` | as canonical | as canonical | as canonical |
+  | `screen` | `screen_capture` (an MCP `image`), `screen_read` (the accessibility tree), `screen_press`, `screen_windows` | `screen_capture`, `screen_windows` | `screen_capture`, `screen_read`, `screen_press` | `screen_capture` |
+  | `input` | `input_click`, `input_type`, `input_keys`, `input_move`, `input_swipe` | `input_click`, `input_type`, `input_keys`, `input_move` | `input_tap` → `input_click`, `input_key` → `input_keys`, `input_type`, `input_swipe` | — |
+  | `apps` | `apps_list`, `apps_open` | `apps_open` | `apps_list`, `apps_open` | `apps_open` |
+  | `processes` | `processes_list`, `processes_start`, `processes_stop` | as canonical | — | `processes_list`, `processes_stop` |
+  | `device` | `device_info`, `device_notify`, `device_clipboard_read`, `device_clipboard_write`, `device_camera`, `device_location`, `device_sensors` | — | `device_notify`, `device_camera`, `device_location`, `device_sensors` | `device_info`, `device_notify`, `device_clipboard_read`, `device_clipboard_write` |
+  | `media` | `media_control` | — | as canonical | — |
+
+  A tool that acts on what a person sees or types (`screen_press`, `input_*`) follows the computer's rules: a password
+  field is never typed into, and a control that pays, buys, signs in or submits needs `confirm: true` (§22.2).
+
 ### 22.2 Lending tools over the device's own socket (since hub 2.202.0)
 
 A device the hub cannot dial — a browser extension, a phone off the tailnet, anything behind NAT — can still host

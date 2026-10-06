@@ -1,0 +1,31 @@
+{
+  "type": "agent.mission",
+  "class": "durable",
+  "payload": {
+    "missionId": "msn_fixture",
+    "agentId": "researcher",
+    "label": "Researcher",
+    "task": "Find the release notes of llama.cpp b6000",
+    "state": "done",
+    "steps": 5,
+    "tokens": 21000,
+    "startedAt": "2026-10-06T18:00:00.000Z",
+    "endedAt": "2026-10-06T18:04:00.000Z",
+    "result": "b6000 adds the router mode.",
+    "plan": [
+      {
+        "title": "Search",
+        "state": "done"
+      },
+      {
+        "title": "Read the notes",
+        "state": "done"
+      }
+    ],
+    "progress": {
+      "done": 2,
+      "total": 2,
+      "percent": 100
+    }
+  }
+}
