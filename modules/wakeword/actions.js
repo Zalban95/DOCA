@@ -23,8 +23,10 @@ function setup() {
   const d = ww.dir(), py = ww.python();
   fs.mkdirSync(d, { recursive: true });
   const gpu = !!require('../shell').which('nvidia-smi');
-  const torch = process.platform === 'darwin' ? ['torch', 'torchaudio']
-    : ['torch', 'torchaudio', '--index-url', `https://download.pytorch.org/whl/${gpu ? 'cu128' : 'cpu'}`];
+  // 2.8: torchaudio 2.9 removed the file I/O openWakeWord's augmentation uses (torchaudio.info); 2.8's CUDA 12.8 build
+  // still knows RTX 50-series.
+  const pins = ['torch==2.8.*', 'torchaudio==2.8.*'];
+  const torch = process.platform === 'darwin' ? pins : [...pins, '--index-url', `https://download.pytorch.org/whl/${gpu ? 'cu128' : 'cpu'}`];
   const steps = [];
   if (!fs.existsSync(py)) steps.push({ label: 'Python environment', cmd: uv, args: ['venv', '--python', '3.11', path.join(d, 'env')], env: uvEnv() });
   steps.push({ label: `PyTorch (${process.platform === 'darwin' ? 'Mac' : gpu ? 'NVIDIA GPU' : 'CPU'})`, cmd: uv, args: ['pip', 'install', '--python', py, ...torch], env: uvEnv() });

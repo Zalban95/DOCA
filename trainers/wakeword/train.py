@@ -96,6 +96,10 @@ def main():
     ap.add_argument('--tts', default='', help='an OpenAI-compatible speech service whose voices also say the word')
     ap.add_argument('--samples', type=int, default=8000)
     ap.add_argument('--steps', type=int, default=30000)
+    ap.add_argument('--negative-weight', type=int, default=300, help='how hard false wakes are punished; higher hears less')
+    ap.add_argument('--false-per-hour', type=float, default=0.5, help='the false wakes per hour the best model may have')
+    ap.add_argument('--layer', type=int, default=64)
+    ap.add_argument('--keep-features', action='store_true', help='train again on the features already computed')
     a = ap.parse_args()
 
     name = ''.join(c for c in a.word.lower() if c.isalnum()) or 'word'
@@ -130,8 +134,8 @@ def main():
         'false_positive_validation_data_path': os.path.join(a.data, 'data', 'validation_set_features.npy'),
         'feature_data_files': {'ACAV100M_sample': os.path.join(a.data, 'data', 'openwakeword_features_ACAV100M_2000_hrs_16bit.npy')},
         'batch_n_per_class': {'ACAV100M_sample': 1024, 'adversarial_negative': 50, 'positive': 50},
-        'model_type': 'dnn', 'layer_size': 32, 'steps': a.steps, 'max_negative_weight': 1500,
-        'target_false_positives_per_hour': 0.2,
+        'model_type': 'dnn', 'layer_size': a.layer, 'steps': a.steps, 'max_negative_weight': a.negative_weight,
+        'target_false_positives_per_hour': a.false_per_hour,
     }
     cfg_path = os.path.join(work, 'config.yml')
     yaml.safe_dump(cfg, open(cfg_path, 'w'))
@@ -139,11 +143,16 @@ def main():
     import openwakeword
     trainer = os.path.join(os.path.dirname(openwakeword.__file__), 'train.py')
     env = {**os.environ, 'TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD': '1'}
-    print('@stage augmenting and computing features', flush=True)
-    subprocess.run([sys.executable, trainer, '--training_config', cfg_path, '--augment_clips'], check=True, env=env)
+    have = all(os.path.exists(os.path.join(work, name, f'{k}_features_{t}.npy')) for k in ('positive', 'negative') for t in ('train', 'test'))
+    if not (a.keep_features and have):
+      print('@stage augmenting and computing features', flush=True)
+      subprocess.run([sys.executable, trainer, '--training_config', cfg_path, '--augment_clips', '--overwrite'], check=True, env=env)   # a run cut short leaves half its features: always rebuilt
     print('@stage training', flush=True)
-    subprocess.run([sys.executable, trainer, '--training_config', cfg_path, '--train_model'], check=True, env=env)
+    # Its last step converts the model to TFLite as well, with onnx_tf, which DOCA does not use: a failure after the
+    # ONNX model is written is not a failed training.
+    done = subprocess.run([sys.executable, trainer, '--training_config', cfg_path, '--train_model'], env=env)
     model = os.path.join(work, f'{name}.onnx')
+    if done.returncode != 0 and not os.path.exists(model): raise SystemExit(f'training failed (exit {done.returncode})')
     if not os.path.exists(model): raise SystemExit(f'the trainer finished without {model}')
     print('@result ' + json.dumps({'word': a.word, 'model': model, 'near': near}), flush=True)
 
