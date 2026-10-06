@@ -81,7 +81,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   hottest paths split (`work_chat_start`, `project_run`), missing action-specific fields rejected by name; a rendered
   "Reaching outside" block (after A2 decides the airlock); a test per profile that every tool a rendered prompt names
   is held (the charter's own mentions wait for B8).
-- [ ] B5 **Skills and recipes found by the request** (aw 21–22, 30; coh F18): skill and recipe titles matched against
+- [x] B5 **Skills and recipes found by the request** — *2.250.0: `turn/fits.js` in the readings: "Likely fits" (skills and recipes matched on the request's words, how to use each), "What you have" (keys, logins, recipe count — out of the tool descriptions), and the offer to `recipe save_last` after three steps that worked; computers in "What you have" not yet (an async list)* (aw 21–22, 30; coh F18): skill and recipe titles matched against
   the person's words each turn ("Likely fits: …" in the readings, after the history); a "# Recipes you have" and a
   "# What you have" readings block (keys, logins, computers) instead of tool-description inventories; "save as recipe"
   offered after a multi-step turn that succeeded.

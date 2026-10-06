@@ -43,8 +43,8 @@ module.exports = [
     get description() {
       return 'Fetch a URL and return the response body as text. Use it for APIs, health checks and endpoints '
         + 'you control. For documentation written by other people prefer research_docs, which reads it out of '
-        + 'context so it cannot address you. A service that needs a key: name the key and the hub adds it — only to that key\'s own address.'
-        + require('../../service-keys').line();
+        + 'context so it cannot address you. A service that needs a key: name the key and the hub adds it — only to that key\'s own address. '
+        + 'The keys you can name are listed under "What you have" in the readings.';   // out of the description: turn/fits.js
     },
     parameters: {
       type: 'object',

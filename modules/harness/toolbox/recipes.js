@@ -8,18 +8,16 @@
 module.exports = [
   {
     name: 'recipe',
-    get description() {
-      let saved = '';
-      try { saved = require('../../recipes/store').list().map(r => r.id).slice(0, 30).join(', '); } catch { /* none */ }
-      return 'Recipes: run a saved sequence of tool calls again without reasoning through it, or save one — what you got working '
-        + 'once, as steps with {parameters} and checks, so next time is one call. save_last keeps your last turn\'s tool calls '
-        + 'that worked (lift the values that vary with params [{name, value, description}]); save takes explicit steps '
-        + '[{tool, args, check?: {contains|matches}}]; run executes one with params, through the same approvals as your own '
-        + 'calls, and stops at the first failed check (then read its conversation, repair the steps and save a new revision '
-        + 'with the same id). propose offers a repaired revision for a person to accept instead of saving it (what a repair after a '
-        + 'failed run does). In shell steps write {name} bare: the value is quoted for you. list and show read them.'
-        + (saved ? ` Saved: ${saved}.` : ' None saved yet.');
-    },
+    // Saved recipes are no longer listed here (a list in a description broke the cached prefix on every save and hid
+    // them at the end of a long text): the readings name the ones matching the request (turn/fits.js).
+    description: 'Recipes: run a saved sequence of tool calls again without reasoning through it, or save one — what you got working '
+      + 'once, as steps with {parameters} and checks, so next time is one call. save_last keeps your last turn\'s tool calls '
+      + 'that worked (lift the values that vary with params [{name, value, description}]); save takes explicit steps '
+      + '[{tool, args, check?: {contains|matches}}]; run executes one with params, through the same approvals as your own '
+      + 'calls, and stops at the first failed check (then read its conversation, repair the steps and save a new revision '
+      + 'with the same id). propose offers a repaired revision for a person to accept instead of saving it (what a repair after a '
+      + 'failed run does). In shell steps write {name} bare: the value is quoted for you. list and show read them; the ones '
+      + 'matching a request are listed under "Likely fits" in the readings.',
     parameters: {
       type: 'object',
       properties: {

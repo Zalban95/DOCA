@@ -26,7 +26,8 @@ test('the admin pastes a key; the agent names it; the hub adds it to that addres
   assert.equal(r.body.key.hasKey, true);
   assert.equal(JSON.stringify(r.body).includes('sk-SECRET'), false, 'never a key back');
   assert.equal(JSON.stringify((await H.api(null, 'GET', '/api/connectors/keys/all')).body).includes('sk-SECRET'), false);
-  assert.match(tools.schemas().find(t => t.function.name === 'http_fetch').function.description, /hyper3d → http:\/\/127\.0\.0\.1:\d+ \(3D models from text\)/, 'the agent knows its name and address');
+  // In the readings since 2.250.0 (turn/fits.js), not the tool's description.
+  assert.match(require('../modules/harness/turn/fits').inventory(new Set(['http_fetch'])), /hyper3d → http:\/\/127\.0\.0\.1:\d+ \(3D models from text\)/, 'the agent knows its name and address');
 
   const out = await fetchTool({ url: `${origin}/v1/generate`, key: 'hyper3d' });
   assert.match(out, /"auth":"Bearer \[key\]"/, 'sent as Bearer, and the echo is scrubbed');
