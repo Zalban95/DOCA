@@ -25,7 +25,7 @@ const BUILTIN = {
   viewer: { name: 'Viewer', rights: ['read'], settings: [], tools: { allow: [], deny: ['*'] }, approval: 'ask' },
   member: { name: 'Member', rights: ['read', 'chat'], settings: [], tools: { allow: ['*'], deny: [] }, approval: 'ask' },
   admin:  { name: 'Admin', rights: ['read', 'chat', 'propose', 'host', 'devices', 'users', 'delegate'], settings: ['*'], tools: { allow: ['*'], deny: [] }, approval: 'mode' },
-  owner:  { name: 'Owner', rights: ['read', 'chat', 'propose', 'host', 'devices', 'users', 'org', 'delegate'], settings: ['*'], tools: { allow: ['*'], deny: [] }, approval: 'mode' },
+  owner:  { name: 'Main admin', rights: ['read', 'chat', 'propose', 'host', 'devices', 'users', 'org', 'delegate'], settings: ['*'], tools: { allow: ['*'], deny: [] }, approval: 'mode' },
 };
 
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });

@@ -96,7 +96,7 @@ function me(auth) {
   const { user, role, orgId } = auth;
   // rights: so the panel can leave out what this person cannot use, rather than showing it and refusing.
   return { id: user.id, email: user.email, name: user.name, role, orgId, mustChangePassword: !!user.mustChangePassword,
-    rights: require('./levels').rightsOf(role) };
+    levelName: require('./levels').get(role)?.name || role, rights: require('./levels').rightsOf(role) };
 }
 
 /** GET — what the login page should show. */

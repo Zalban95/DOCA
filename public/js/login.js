@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   The login page: set up the owner, sign in, or replace a one-time password.
+   The login page: set up the admin, sign in, or replace a one-time password.
    Stands alone — none of the app's scripts load before someone is signed in.
    ═══════════════════════════════════════════════════════ */
 
@@ -55,7 +55,7 @@ async function start() {
 $('setup-form').addEventListener('submit', async e => {
   e.preventDefault();
   if ($('setup-password').value !== $('setup-password2').value) return say('The two passwords differ.', 'err');
-  say('Creating the owner…');
+  say('Creating the admin…');
   try {
     await post('/api/auth/setup', {
       code: $('setup-code').value.trim(), name: $('setup-name').value,
