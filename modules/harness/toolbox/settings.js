@@ -30,6 +30,25 @@ module.exports = [
     },
   },
   {
+    name: 'form_fill',
+    description: 'Fill fields of a form the person asked you to help with ("Help me fill …" names the form and its field ids): the values '
+      + 'land in that form on their screen as a draft they review and save — nothing is saved by you. Never a password, token, key or header.',
+    parameters: { type: 'object', properties: {
+      form: { type: 'string', description: 'The form id from their message, e.g. form3.' },
+      fields: { type: 'object', description: 'Field id → value, e.g. {"mcp-url": "http://homeassistant.local:8123/api/mcp"}.' },
+    }, required: ['form', 'fields'] },
+    run: ({ form, fields }, ctx = {}) => {
+      if (!/^form\d{1,4}$/.test(String(form || ''))) return 'Error: form is the id from the person\'s message (form1, form2, …).';
+      const SECRET = /pass|token|secret|api.?key|bearer|authori[sz]ation|header|credential|cookie/i;
+      const ok = Object.fromEntries(Object.entries(fields || {}).filter(([k, v]) => !SECRET.test(k) && /^[\w.-]{1,60}$/.test(k) && ['string', 'number', 'boolean'].includes(typeof v))
+        .map(([k, v]) => [k, typeof v === 'string' ? v.slice(0, 4000) : v]));
+      const refused = Object.keys(fields || {}).filter(k => !(k in ok));
+      if (typeof ctx.emit !== 'function') return 'Error: this conversation has no form on a screen to fill.';
+      ctx.emit({ type: 'form_fill', form, fields: ok });
+      return `Filled ${Object.keys(ok).length} field(s) of ${form} as a draft; the person reviews and saves.${refused.length ? ` Not filled: ${refused.join(', ')} (secret or not a field) — tell them where it comes from.` : ''}`;
+    },
+  },
+  {
     name: 'settings_read',
     description: 'Read this panel\'s settings — every one you are allowed to suggest a change to, with its '
       + 'current value. Do this before proposing anything, so you change what is actually set rather than what '

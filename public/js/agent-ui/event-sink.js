@@ -48,6 +48,7 @@ function agentEventSink(ui) {
       case 'usage': spend = evt; clearWait(); ui.context?.(evt); break;
       case 'approval': ui.approval(evt); break;
       case 'image': ui.image(evt.image); break;
+      case 'form_fill': if (typeof formHelpFill === 'function') formHelpFill(evt); break;   // a draft in a form on screen
       case 'error': settleCall(); ui.stream.finish(); ui.error(evt.text); break;
       case 'stderr': ui.stream.finish(); ui.error(evt.text); break;
       case 'proposal': ui.onProposal?.(evt); break;

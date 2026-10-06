@@ -20,6 +20,7 @@ function mount(app) {
   require('../vision/routes').mount(app);
   require('../scout/routes').mount(app);
   require('./assistant-routes').mount(app);
+  require('../checkpoints').mount(app);
   require('../realtime/routes').mount(app);
   require('../api-v1/client-files').mountPanel(app);
   require('../client-apps/routes').mount(app);
