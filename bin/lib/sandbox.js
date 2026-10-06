@@ -19,7 +19,10 @@ function sandbox(prefix = 'doca-sandbox-') {
   try { fs.copyFileSync(real.PROVIDER_KEYS_FILE, path.join(tmp, 'data', 'keys', 'providers.json')); } catch { /* keys may live in openclaw.json */ }
   for (const k of Object.keys(require.cache)) delete require.cache[k];
   Object.assign(process.env, { DOCA_DATA_DIR: path.join(tmp, 'data'), DOCA_PREFS_FILE: path.join(tmp, 'prefs.json'), DOCA_HOME: tmp, WORKSPACE_DIR: tmp, ATTACHMENTS_DIR: path.join(tmp, 'attachments') });
-  return { tmp, realDataDir, cleanup: () => fs.rmSync(tmp, { recursive: true, force: true }) };
+  // Retried, and never fatal: on Windows a file the run still holds open (its database) refuses to go for a moment,
+  // and a throw here turned a passing run's exit code into 1 (CI, 2026-10-07). A leftover temp folder is the OS's to clear.
+  const cleanup = () => { try { fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch { /* left in the temp folder */ } };
+  return { tmp, realDataDir, cleanup };
 }
 
 module.exports = { sandbox };

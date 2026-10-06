@@ -130,7 +130,7 @@ test('comparing: --flag runs the set with the experiment off and on, and prints 
   const cmp = lines.find(l => l.compare)?.compare;
   assert.ok(cmp, out + err);
   assert.deepEqual(cmp.map(x => [x.label, x.passed, x.total]), [['configured model · toolTiers off', 1, 1], ['configured model · toolTiers on', 1, 1]]);
-  assert.equal(code, 0);
+  assert.equal(code, 0, err.slice(-2000));
 });
 
 test('anyTool passes when one of several right tools was called', async () => {
