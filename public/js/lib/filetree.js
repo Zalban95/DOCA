@@ -98,6 +98,7 @@ function fileTree(container, opts = {}) {
   }
 
   async function level(box, dir, depth) {
+    t.watched?.();
     let entries = [];
     try { entries = (await apiFetch(`${api}/list?path=${encodeURIComponent(dir)}`)).entries || []; }
     catch (e) { box.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; return; }
@@ -156,6 +157,13 @@ function fileTree(container, opts = {}) {
     if (ev.key === 'Delete') { ev.preventDefault(); ev.stopPropagation(); act.remove(t.selected, t.selectedDir); }
   };
 
+  // Every page live (H10.5): the folders this tree shows are watched while it shows them, and a change in one redraws it.
+  if (api === '/api/files' && typeof liveOn === 'function') {
+    t.watched = () => liveFolders(container, container.isConnected ? [t.root, ...t.open] : []);
+    const redraw = liveDebounce(() => (container.isConnected ? level(tree, t.root, 0) : t.watched()), 500);
+    container._liveOff?.();
+    container._liveOff = liveOn('files', c => { if (c.what === 'resync' || c.id === t.root || t.open.has(c.id)) redraw(); });
+  }
   level(tree, t.root, 0);
   return { refresh: act.refresh, collapse: act.collapse, get root() { return t.root; }, get selected() { return t.selected; } };
 }

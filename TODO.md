@@ -312,10 +312,13 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   DOCA's agent or a CLI harness — through skills/doca-dev-cycle. Routine off by default. **Left:** measure a month of
   briefs (accepted / shipped); a Hugging Face "watch this repo" signal for named repos.
 
-- [ ] H10.5 Every page live on every screen (asked 2026-10-06): a page open on another device — Projects, Harness,
+- [x] H10.5 (2.223.0) Every page live on every screen (asked 2026-10-06): a page open on another device — Projects, Harness,
   missions, the Files tab — updates at every change the agent or a person makes, without a reload, so work started by
   voice is watched on whichever screen is near. The hub already pushes turn, mission and work-chat events; what is
   missing is a per-page change feed (what changed, by whom) and each page redrawing the part that changed.
+  Built: `modules/live` (a feed from agent.events, the turn lifecycle, missions and per-folder watches; `/api/live/stream`)
+  and `live-pages.js` (console, floating chat, Projects tabs and editors, Files, missions). **Left:** Settings pages (a
+  setting changed on another screen redraws only when the form holds no edit), the Computers and Devices tabs.
 
 - [ ] H10.6 Limits that follow the work (asked 2026-10-06, CONSTITUTION P20): today a turn gets `maxSteps` 8 and the
   model's thinking budget whatever it asks. Instead, before a turn a cheap triage (rules first, the assistant's quick

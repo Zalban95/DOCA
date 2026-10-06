@@ -187,8 +187,7 @@ function fmUpdateBookmarkActive() {
 /* ── Navigate ────────────────────────────────────────── */
 async function fmNavigate(path) {
   fm.cwd      = path;
-  fm.selected = new Set();
-  fm.renaming = null;
+  fm.selected = new Set(); fm.renaming = null;
   fmUpdateBookmarkActive();
   fmRenderBreadcrumb();
   document.getElementById('fm-path-input').value = path;
@@ -206,6 +205,7 @@ async function fmRefresh() {
     list.innerHTML = `<div class="placeholder" style="padding:16px;color:var(--red)">${escHtml(e.message)}</div>`;
   }
   fmUpdateStatus();
+  if (typeof liveFilesTab === 'function') liveFilesTab();   // other screens' changes to it redraw it (live-pages.js)
 }
 
 /* ── Breadcrumb ──────────────────────────────────────── */

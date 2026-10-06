@@ -164,6 +164,7 @@ function pjTogglePreview() {
 }
 
 function _pjTabsRender() {
+  if (typeof liveProjectFiles === 'function') liveProjectFiles();   // the open files' folders are watched (live-pages.js)
   const bar = document.getElementById('pj-tabs');
   if (!bar) return;
   bar.innerHTML = '';
@@ -254,7 +255,7 @@ async function pjEditorsReloadClean() {
     if (!t.path || !t.model || t.model.getAlternativeVersionId() !== t.saved) continue;
     try {
       const { content } = await apiFetch(`/api/files/read?path=${encodeURIComponent(t.path)}`);
-      if (content !== t.model.getValue()) { t.model.setValue(content); t.saved = t.model.getAlternativeVersionId(); }
+      if (content !== t.model.getValue()) { t.model.setValue(content); t.saved = t.model.getAlternativeVersionId(); _pjTabsRender(); }   // drawn again once saved: setValue drew it as edited
     } catch { /* deleted: the tab stays until closed */ }
     if (t.preview && PJE.active === t.key) pjActivate(t.key);
   }

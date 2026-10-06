@@ -66,7 +66,7 @@ function handleHistory(req, res) {
     // a window to report: the gateway and the CLI harnesses own their own and
     // tell us nothing, so there the ring is absent rather than drawn against a
     // number we invented.
-    return res.json({ messages, context: agent.contextOf(memory.mainSession().id) });
+    return res.json({ messages, sessionId: memory.mainSession().id, context: agent.contextOf(memory.mainSession().id) });   // sessionId: other screens' changes to it (H10.5)
   }
   res.json({ messages: chatHistory });
 }

@@ -207,6 +207,7 @@ function setPlan(id, { set, tick } = {}) {
 function announce(row, { ephemeral = false } = {}) {
   if (!row) return;
   if (!ephemeral && row.state !== 'running') require('../computers/lifecycle').missionEnded(row.id);   // its computer stops (H13.2)
+  require('../live').changed('missions', row.id, row.state, { sessionId: row.sessionId || null });   // every screen showing missions redraws (H10.5)
   try {
     const devices = require('../api-v1/devices');
     const bus     = require('../api-v1/bus');
@@ -244,8 +245,7 @@ function profileOf(def) {
     tools: def.tools, kits: def.kits || [], skills: def.skills || [],
     memory: def.memory, airlock: !!def.airlock,
     environment: def.environment,
-    provider: def.provider,
-    model: def.model,
+    provider: def.provider, model: def.model,
     maxSteps: def.maxSteps,
     maxTokens: def.maxTokens,
     contextWindow: def.contextWindow,
