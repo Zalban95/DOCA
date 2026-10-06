@@ -93,6 +93,7 @@ function _applyHiddenTabs(hiddenTabs) {
     if (tab === 'settings') return;
     btn.style.display = hiddenTabs.includes(tab) ? 'none' : '';
   });
+  if (typeof navGroupsVisibility === 'function') navGroupsVisibility();
 }
 
 /* Called on app startup to apply persisted hidden tabs + sidebar sections */

@@ -6,41 +6,13 @@ const NAV_TABS = ['controls','logs','files','projects','harness','computers','te
 /** Tabs that are the machine itself: left out for a person without host (settings.js). */
 const HOST_TABS = ['logs', 'files', 'projects', 'terminal', 'computers'];
 
-/** Single source for the mobile bottom bar (icon + short label per tab). */
-const NAV_TAB_DEFS = [
-  { id: 'controls', label: 'Ctrl',   icon: '▶' },
-  { id: 'logs',     label: 'Logs',   icon: '≣' },
-  { id: 'files',    label: 'Files',  icon: '🗀' },
-  { id: 'projects', label: 'Code',   icon: '⟨⟩' },
-  { id: 'harness',  label: 'Agent',  icon: '⬡' },
-  { id: 'computers', label: 'PCs',   icon: '🖵' },
-  { id: 'terminal', label: 'Term',   icon: '⌨' },
-  { id: 'models',   label: 'Models', icon: '◆' },
-  { id: 'docker',   label: 'Docker', icon: '◧' },
-  { id: 'vms',      label: 'VMs',    icon: '▤' },
-  { id: 'mcp',      label: 'MCP',    icon: '⇄' },
-  { id: 'settings', label: 'Set',    icon: '⚙' },
-];
-
-/** Render the mobile bottom tab bar (visible ≤768px via CSS). */
-function mobileNavRender() {
-  const bar = document.getElementById('mobile-nav');
-  if (!bar) return;
-  bar.innerHTML = NAV_TAB_DEFS.map(t => `
-    <button class="mobile-nav-item ${currentTab === t.id ? 'active' : ''}" data-tab="${t.id}"
-            onclick="nav('${t.id}')" aria-label="${t.label}">
-      <span class="mobile-nav-icon">${t.icon}</span>
-      <span class="mobile-nav-label">${t.label}</span>
-    </button>
-  `).join('');
-}
+/** The header and the phone's bar are drawn by group (nav-groups.js). */
+function mobileNavRender() { navGroupsRender(); }
 
 function nav(name) {
   currentTab = name;
 
-  document.querySelectorAll('.nav-tab, .mobile-nav-item').forEach(t => {
-    t.classList.toggle('active', t.dataset.tab === name);
-  });
+  navGroupsMark(name);   // its group opens, and remembers it (nav-groups.js)
 
   document.querySelectorAll('.tab-page').forEach(el => {
     el.classList.toggle('active', el.id === `tab-${name}`);

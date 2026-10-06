@@ -276,3 +276,15 @@ header {
 .vm-snap span { flex: 1; } .vm-snap em { color: var(--accent); font-style: normal; }
 .vm-snap-new { display: flex; gap: 6px; margin-top: 6px; } .vm-snap-new .input { flex: 1; max-width: 260px; }
 .vm-create { padding: 8px 0 12px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+
+/* Pages in groups (js/nav-groups.js): a folded group is its name; the open one shows its pages beside it. */
+.nav-group { display: flex; align-items: stretch; flex-shrink: 0; }
+.nav-group:not(.open) > .nav-tab[data-tab] { display: none; }
+.nav-group.open { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.nav-group.open > .nav-group-btn { color: var(--accent); opacity: .65; padding-right: 6px; border-bottom-color: transparent; }
+.nav-group.open > .nav-group-btn::after { content: ' ›'; }
+.nav-group-menu { position: fixed; bottom: calc(var(--mobile-nav-h, 54px) + 6px); z-index: 1200; display: flex; flex-direction: column;
+  background: var(--surface, #111); border: 1px solid var(--border2); box-shadow: 0 8px 24px rgba(0,0,0,.4); min-width: 150px; }
+.nav-group-menu button { font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: left; padding: 12px 14px; border: none;
+  background: transparent; color: var(--text); cursor: pointer; }
+.nav-group-menu button.active { color: var(--accent); }
