@@ -123,6 +123,8 @@ async function handleChat(req, res) {
             res.write(`data: ${JSON.stringify({ type: 'tool_call', name: evt.name, args: evt.args })}\n\n`);
           if (evt.type === 'tool_result')
             res.write(`data: ${JSON.stringify({ type: 'tool_result', name: evt.name, result: evt.result })}\n\n`);
+          if (evt.type === 'form_fill')   // the agent filling a form on this screen as a draft (agent-ui/form-help.js)
+            res.write(`data: ${JSON.stringify({ type: 'form_fill', form: evt.form, fields: evt.fields })}\n\n`);
           if (evt.type === 'image') {
             images.push(evt.image);
             res.write(`data: ${JSON.stringify({ type: 'image', image: evt.image })}\n\n`);

@@ -216,6 +216,7 @@ function mcpRemove(id) {
   appConfirm(`Remove the "${id}" MCP server? It is stopped first if running.`, async () => {
     try {
       await apiFetch(`/api/mcp/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (document.getElementById('mcp-name').dataset.editing === id) mcpShowForm(false);   // its edit form goes with it
       mcpLoad();
     } catch (e) { setStatus(document.getElementById(`mcp-status-${id}`), `✗ ${e.message}`, 'err'); }
   });

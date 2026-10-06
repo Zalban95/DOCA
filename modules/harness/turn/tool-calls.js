@@ -73,7 +73,7 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
       ? `Error: could not parse the arguments as JSON: ${args._raw}`
       : !schemas.some(sc => sc.function.name === name)
         ? `Error: the "${name}" tool is switched off for this conversation.`
-        : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), sessionId: session.id, signal, approved: !!gate, user: client?.user, airlock: !!profile?.airlock }));
+        : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), emit: evt => say({ ...evt, step }), sessionId: session.id, signal, approved: !!gate, user: client?.user, airlock: !!profile?.airlock }));
     for (const image of shown) say({ type: 'image', image, step });
     say({ type: 'tool_result', name, result, step, ...failures.typed(result) });
 

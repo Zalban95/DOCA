@@ -40,6 +40,7 @@ function _subtabSystemInit() {
   hostCapsLoad();
   pathsLoad();
   sysdepsLoad();
+  checkpointsRender();   // settings checkpoints (settings/checkpoints.js)
 }
 
 async function _subtabVoiceInit() {

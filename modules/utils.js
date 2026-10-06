@@ -87,6 +87,7 @@ function savePrefs(data) {
   // DOCA_PREFS_FILE can point anywhere, including a directory nobody made yet.
   fs.mkdirSync(path.dirname(PREFS_FILE), { recursive: true });
   if (!fs.existsSync(PREFS_FILE)) data = require('./migrations').stamp(data);   // a new file has had every migration
+  else require('./checkpoints').keep(PREFS_FILE, data);   // what it replaces stays, to look at and restore (checkpoints.js)
   fs.writeFileSync(PREFS_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 

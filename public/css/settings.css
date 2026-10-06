@@ -53,3 +53,7 @@
 /* Settings → Harnesses: the second row of pills, a group per harness (settings/subnav.js) */
 .settings-subnav2 { padding-top: 0; margin-top: -4px; }
 .settings-subnav2 .settings-subnav-group:first-child { margin-left: 0; padding-left: 0; border-left: none; }
+/* ✨ Ask the agent (js/agent-ui/form-help.js): on every form, and the fields it filled as a draft */
+.form-help-btn { margin-left: auto; float: right; font-size: 10px; text-transform: none; letter-spacing: 0; opacity: .8; }
+.form-help-btn:hover { opacity: 1; }
+.form-help-filled { outline: 2px solid var(--accent); outline-offset: 1px; transition: outline-color 1s ease; }
