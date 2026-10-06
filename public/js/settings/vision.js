@@ -20,6 +20,8 @@ async function visionCardRender(panel) {
       ${f('Text (Tesseract)', `${inp('ocrLang', s.ocrLang, 'eng', '120px')} <span style="font-size:11px;color:var(--muted)">${has('text') ? 'installed' : 'install it in System → System tools'}</span>`)}
       ${f('Template (OpenCV)', `<span style="font-size:11px;color:var(--muted)">${has('template') ? 'installed' : 'install OpenCV (Python) in System → System tools'} — finds a picture of an element the agent gives</span>`)}
       <div class="toolbar"><button class="btn btn-sm btn-blue" onclick="visionSave()">Save</button></div>
+      ${f('Try it', `<input type="file" accept="image/png" id="vision-try-file" class="input" style="width:auto"> ${inp('try-q', '', 'a question: where is the Start button?')} <button class="btn btn-sm" onclick="visionTry()">Read</button>`)}
+      <div id="vision-try-out" style="font-size:12px;white-space:pre-wrap;color:var(--muted)"></div>
     </div>`;
   panel.append(card);
 }
@@ -29,4 +31,16 @@ async function visionSave() {
   try { await apiFetch('/api/vision', { method: 'POST', body: Object.fromEntries(['backend', 'provider', 'model', 'detectorUrl', 'detectorModel', 'apiKey', 'ocrLang'].map(k => [k, g(k)])) }); }
   catch (e) { return appAlert(e.message); }
   visionCardRender(document.getElementById('sp-harness'));
+}
+
+/** A screenshot and a question, through the saved reader (POST /api/vision/try): what an agent would be told. */
+async function visionTry() {
+  const out = document.getElementById('vision-try-out'), file = document.getElementById('vision-try-file').files?.[0];
+  if (!file) { out.textContent = 'Choose a PNG first — a screenshot of a screen with something to find.'; return; }
+  out.textContent = 'Reading…';
+  const png = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(',')[1] || ''); fr.readAsDataURL(file); });
+  try {
+    const r = await apiFetch('/api/vision/try', { method: 'POST', body: { png, question: document.getElementById('vision-try-q').value.trim() } });
+    out.textContent = `${r.answer}\n(${r.ms} ms)`;
+  } catch (e) { out.textContent = e.message; }
 }

@@ -1054,3 +1054,16 @@ test('a harness launch command is never proposable, and http_fetch that sends da
   assert.equal(tools.isRead('http_fetch', { url: 'https://x', method: 'post', body: 'notes' }), false);
   assert.equal(tools.isRead('read_file', {}), true);
 });
+
+test('the environment says whether this model may release DOCA unasked (audit 2026-10-06, coh F16)', () => {
+  const environment = require('../modules/harness/environment');
+  const { loadPrefs, savePrefs } = require('../modules/utils');
+  const was = loadPrefs();
+  savePrefs({ ...was, developer: { ...(was.developer || {}), releaseUnasked: ['claude-opus >= 5'] } });
+  try {
+    environment.invalidate();
+    assert.match(environment.block({ provider: 'anthropic', model: 'claude-opus-5-5' }), /releasing DOCA: this model may merge, tag, push .*rule "claude-opus >= 5"/);
+    environment.invalidate();
+    assert.match(environment.block({ provider: 'ollama', model: 'qwen3:8b' }), /releasing DOCA: this model asks a person/);
+  } finally { savePrefs(was); environment.invalidate(); }
+});

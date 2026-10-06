@@ -170,6 +170,14 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
     out.push(`you are running on: ${provider} / ${model || '(model unset)'}`
       + (toolCount ? `, ${toolCount} tools available${disabledCount ? `, ${disabledCount} switched off` : ''}` : ''));
   }
+  // Whether this model may release DOCA unasked (CONSTITUTION W2, modules/releasing.js): the agents it is for could not
+  // reach the route that says so (host, a person's session) — audit 2026-10-06, coh F16. A fact of the settings, so stable.
+  if (model) {
+    try {
+      const r = require('../releasing').check(model);
+      out.push(`releasing DOCA: ${r.unasked ? `this model may merge, tag, push and switch the live panel without asking (rule "${r.rule}")` : 'this model asks a person before merging, tagging, pushing or switching the live panel'} — the admin's setting, Settings → Developer → Releasing`);
+    } catch { /* no rules readable */ }
+  }
 
   out.push('', '## Paths this panel manages');
   for (const p of s.paths) {

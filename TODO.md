@@ -110,9 +110,9 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   `defaultParams()` and `HARNESS_PARAMS` derived; one env-vs-saved rule, "overridden by ENV" shown.
 - [x] C4 **Which model does what, in one registry** — *2.252.0: `modules/model-roles.js` (15 roles, each with its setting and where), read by the scout, `settings_read` ("Models in use") and Field → Models' card; a test per `*model` setting* (coh F11): `model-roles.js` read by the scout, a "Models in use"
   card and `settings_read`.
-- [ ] C5 **Reachable by those it is for** (coh F16–F17): the release rule for the turn's own model in the environment
-  block; the dev-cycle skill's paths; panel UI for the signing key, vision try, provider contracts — or remove dead
-  routes; a test that every panel route is used or listed API-only.
+- [x] C5 **Reachable by those it is for** (coh F16–F17) — *2.253.0: the environment says whether the turn's own model may release unasked; the dev-cycle skill points at it; `test/panel-routes.test.js` holds every panel route used or API-only with why; the prompt breakdown drawn from the Harness's context ring; Vision's "Try it"*
+- [ ] C5b **Two buttons left** (coh F17): the APK signing key upload in Field → API keys → DOCA apps (keys: **ask
+  first**), and the providers' learned contracts with Forget in the Harness ⚙ (`/api/harness/contracts`).
 - [x] C6 **Experiments measured and dated** — *2.252.0: `since` and `measure` per experiment, last measured read from its write-up's results table, "due" after 60 days in Settings → Developer; assistant mode always drives the face by voice (decided, written into face-voice.md)* (coh F20): start and last-measured dates, stale ones in the W14 list, a
   script or a "manual" note each; decide face-voice for assistant mode (it bypasses its flag today).
 - [x] C7 **Documents that match the code** (coh F21–F27, F31; cl 20) — *2.251.0: PROTOCOL's files-in-a-turn note, §23 heading, §2 order; OpenAPI's device and media kinds from `devices.KINDS`/`attachments.PLAYABLE_KINDS`; `test/doc-paths.test.js` holds every "Group → Page" in the docs to the panel's navigation (eleven fixed, the extension's preset among them); a glossary in AGENTS.md (job, scout, browser, Hub/Field); the model scout's tool is `model_scout`; `test/todo.test.js` holds item ids unique (H6.7 twice → H6.8); the old plans in `docs/history/`; OpenClaw's skills folder labelled; AGENTS.md's sibling paths*
