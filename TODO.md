@@ -89,10 +89,14 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   without a click, **ask first**); `screen {list | show | propose}`; retire `models-llamacpp-external.js` for
   model-servers.js (W14: keep/archive/delete); per feature, tool / recipe / a person's alone for wake-word training,
   evals, Workstream, served pages, logs and traces.
-- [ ] B7 **Task skills and routing evals** (aw 24, 27; coh F19): skills for calendar and mail, a morning brief, web
-  research with sources, reminders, "what is my machine doing", photos and attachments, a service that won't start;
-  eval sets for tools, delegation, skills-recipes and assistant behaviour, with `--models a,b` to compare a small local
-  model against a frontier one.
+- [x] B7 **Task skills and routing evals** (aw 24, 27; coh F19) — *2.256.0: six task skills (morning-brief, research-with-sources, what-is-my-machine-doing, service-wont-start, calendar-and-mail, photos-and-files), each found by Likely fits; `evals/routing.json` (eleven cases, three on the rare tools toolTiers sends by name); `anyTool` checks; `npm run eval -- <set> --models a/b,c/d --flag <experiment>[=on|off]`. First measurement in docs/experiments/tool-tiers.md*
+- [ ] T1 **`test/doca-client.test.js` fails in a full `npm test` now and then** (three times on 2026-10-06/07, and
+  `test/launcher.test.js` once, both under load) and passes alone: find the timing it depends on, rather than retry.
+- [ ] B7b **What routing measured** (2026-10-07, local Qwen 3.8 27B): grep through `shell` instead of `search_files`, and
+  "get whisper running" by hand instead of `install_propose`, with the flag off and on — the routing table and the
+  charter's install rule are not enough for this model; try a sentence in the table's rows, then measure again. The run
+  ended cleanly during case 8 (build and install the Android app) with nothing saved: find what that turn called (a
+  restart of "the panel" in the sandbox is the suspect) and keep the eval process from being ended by a tool.
 - [ ] B8 **The charter rendered for who reads it, and risk tiers** (aw 13; coh F30): tool-specific sentences only with
   the tool held, the repository rules only with the Code kit; rule 25 follows H10.11's tiers (reversible with a
   checkpoint goes ahead; irreversible or outward asks). **Ask first** (charter).
