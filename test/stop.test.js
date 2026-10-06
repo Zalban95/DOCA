@@ -43,6 +43,20 @@ test('the breakdown accounts for the prompt, the tools and the transcript separa
     'the breakdown has to say a fresh conversation carries no history, since that is the thing people assume');
 });
 
+test('the prompt\'s parts are the prompt: cut at its own headings, nothing left out (audit 2026-10-06, aw 28)', () => {
+  const { promptParts } = require('../modules/harness/turn/introspect');
+  const agent = require('../modules/harness/agent');
+  const memory = require('../modules/harness/memory');
+  const org = require('../modules/harness/organization');
+  for (const id of [memory.mainSession().id, org.create({ title: 'parts' }).id]) {
+    const text = agent.preview({ message: 'x', sessionId: id });
+    const parts = promptParts(text);
+    assert.equal(parts.map(([, t]) => t).join('\n\n'), text);
+    assert.equal(parts[0][0], 'safety charter');
+    assert.ok(parts.some(([n]) => n.startsWith('your tools')), 'Your tools is counted');
+  }
+});
+
 test('worst case is per-step spend times the step cap, not the context window', async () => {
   const { body: b } = await h.api(null, 'GET', '/api/harness/prompt');
   assert.equal(b.perStep, b.sections.reduce((n, s) => n + s.tokens, 0) + b.tools.tokens);
