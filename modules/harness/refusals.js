@@ -28,7 +28,7 @@ function explain({ status, detail, ep, p }) {
       + `provider is the only thing that changes it.${tail}`;
 
   if (status === 401 || status === 403 || AUTH_ERROR.test(body))
-    return `${head}: the key was rejected. Set it in Settings → API Keys; DOCA never stores it in prefs.${tail}`;
+    return `${head}: the key was rejected. Set it in Field → API keys; DOCA never stores it in prefs.${tail}`;
 
   if (CONTEXT_ERROR.test(body) || status === 413) {
     const window = require('./budget').windowFor(p);

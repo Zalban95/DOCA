@@ -4,7 +4,7 @@
  * "OpenClaw is a peer, not a prerequisite" (TODO.md), kept true: on a machine
  * with no OpenClaw stack, no ~/.openclaw and no config of its, the panel boots,
  * the built-in harness is the default, a turn runs against a provider added in
- * Settings → API Keys, every OpenClaw surface reports absence rather than
+ * Field → API keys, every OpenClaw surface reports absence rather than
  * failing — and nothing creates OpenClaw's files.
  */
 const test   = require('node:test');

@@ -9,7 +9,7 @@
  * covers all of them and local runtimes (Ollama, llama.cpp, vLLM) as well.
  *
  * Keys are not stored here. A provider is either declared in openclaw.json
- * (Settings → API Keys writes there, and the llama.cpp manager registers its
+ * (Field → API keys writes there, and the llama.cpp manager registers its
  * instances there) or picked up from the environment variable the vendor
  * documents.
  */
@@ -27,7 +27,7 @@ function isLocalUrl(url) {
  * Endpoints we know, so a key alone (or nothing at all, locally) is enough.
  *
  * The local runtimes are listed at the port each one ships with. Running one
- * somewhere else does not need a code change: declare it in Settings → API Keys
+ * somewhere else does not need a code change: declare it in Field → API keys
  * with the same id and the base URL saved there wins over the default below.
  */
 const PRESETS = {
@@ -188,7 +188,7 @@ function defaultParams() {
   };
 }
 
-/** Providers declared in Settings → API Keys (provider-keys.js: DOCA's own, over OpenClaw's). */
+/** Providers declared in Field → API keys (provider-keys.js: DOCA's own, over OpenClaw's). */
 function declared() {
   try { return require('../provider-keys').all(); } catch { return {}; }
 }
@@ -213,7 +213,7 @@ function endpoint(id) {
 
   if (!baseUrl)
     throw Object.assign(new Error(
-      `Provider "${id}" has no base URL — add it in Settings → API Keys`), { status: 400 });
+      `Provider "${id}" has no base URL — add it in Field → API keys`), { status: 400 });
 
   return {
     id,

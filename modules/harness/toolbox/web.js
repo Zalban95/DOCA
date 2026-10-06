@@ -53,7 +53,7 @@ module.exports = [
         method:  { type: 'string', description: 'HTTP method (default GET; POST when there is a form or files).' },
         body:    { type: 'string', description: 'Optional request body (sent as JSON unless headers say otherwise).' },
         headers: { type: 'object', description: 'Optional extra headers (never a key: name it with key instead).' },
-        key:     { type: 'string', description: 'The name of a key for this service (Settings → Connectors → Keys for services).' },
+        key:     { type: 'string', description: 'The name of a key for this service (Field → Connectors → Keys for services).' },
         form:    { type: 'object', description: 'Fields of a multipart form (an upload), name → text value.' },
         files:   { type: 'object', description: 'Files of a multipart form, field name → a file path or an attachment name (e.g. {"images": "chair.png"}). Up to 50 MB each.' },
         save_as: { type: 'string', description: 'Keep what comes back as a file in the attachments under this name (a model, an image, a zip) instead of reading it as text; show_media shows it.' },

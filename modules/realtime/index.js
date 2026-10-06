@@ -53,7 +53,7 @@ async function callStatus() {
     ...(stt && tts ? {} : { reason: `The hive's ${[!stt && 'speech-to-text', !tts && 'text-to-speech'].filter(Boolean).join(' and ')} did not answer (Settings → Voice).` }) };
 }
 
-/** The address and key: the setting's URL, else derived from the provider (Settings → API Keys holds the key). */
+/** The address and key: the setting's URL, else derived from the provider (Field → API keys holds the key). */
 function target(s = settings()) {
   let ep = null;
   try { ep = require('../harness/providers').endpoint(s.provider); } catch { /* a URL alone may be enough */ }

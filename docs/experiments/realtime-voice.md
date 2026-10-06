@@ -24,7 +24,7 @@ conversation — the call becomes quick to talk to without the voice gaining any
 Two protocols cover nearly everything: **OpenAI's Realtime surface** (spoken by OpenAI, Azure and the local
 open-source servers) and **Gemini Live** (far cheaper). Both are adapters behind one interface
 (`modules/realtime/openai.js`, `gemini.js`), chosen by `realtime.protocol`; a third protocol is a third file. The key
-and address come from a provider in Settings → API Keys (`realtime.provider`), or `realtime.url` for Azure or a local
+and address come from a provider in Field → API keys (`realtime.provider`), or `realtime.url` for Azure or a local
 server; `realtime.dialect: beta` sends the earlier session shape some compatible servers still expect.
 
 ## What happens when it is on

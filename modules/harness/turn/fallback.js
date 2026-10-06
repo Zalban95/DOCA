@@ -31,7 +31,7 @@ const providers   = require('../providers');
  *   rung is still in the list, so a model that came back becomes usable again
  *   without a restart. Blacklisting would make one bad afternoon permanent.
  * - **An entry naming a provider that no longer exists is skipped, not fatal.**
- *   Deleting a provider from Settings → API Keys should narrow the chain, not
+ *   Deleting a provider from Field → API keys should narrow the chain, not
  *   break every turn.
  */
 const DEGRADED_MS = 5 * 60 * 1000;

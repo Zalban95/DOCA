@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Settings → Connectors (TODO H9.3): the services, the owner's OAuth app for each, connecting (the service's sign-in
+ * Field → Connectors (TODO H9.3): the services, the owner's OAuth app for each, connecting (the service's sign-in
  * page, then back to `/api/connectors/callback`), who may use it, and disconnecting. All host: a connector is the
  * keys to the owner's accounts. No secret is ever returned — the vault's `view()` is all a browser sees.
  */

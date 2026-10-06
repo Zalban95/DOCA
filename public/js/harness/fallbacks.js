@@ -16,7 +16,7 @@ const HARNESS_MAX_FALLBACKS = 5;
  *
  * It was a textarea reading `provider/model`, one per line, which is fine for
  * whoever wrote the parser and wrong for everyone else — the provider has to
- * already exist in Settings → API Keys, and a typo silently dropped the entry
+ * already exist in Field → API keys, and a typo silently dropped the entry
  * rather than saying so. Configured like the model above it, a wrong provider
  * is not expressible: the dropdown only offers ones that are really there.
  *

@@ -152,7 +152,7 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
   const candidates = rungsFor({ ep, model: body.model, p });
   for (const m of candidates.missing || []) {
     onSkip?.({ provider: m.provider, model: m.model, text: `Fallback entry ${m.index + 1} (${m.provider} / ${m.model}) `
-      + `is skipped: that provider is no longer in Settings → API Keys (${m.reason}). The fallback chain is one entry shorter until it is fixed.` });
+      + `is skipped: that provider is no longer in Field → API keys (${m.reason}). The fallback chain is one entry shorter until it is fixed.` });
   }
   const skipped = [];
   const rungs = candidates.filter(rung => {

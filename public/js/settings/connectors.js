@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   Settings → Connectors (modules/connectors; TODO H9.3): the owner's accounts
+   Field → Connectors (modules/connectors; TODO H9.3): the owner's accounts
    — GitHub, Google, Microsoft, any OAuth 2.0 service — connected with the
    owner's own OAuth app, each then a tool the agents hold by name
    (connector_<id>), under levels, grants and approvals like any tool.

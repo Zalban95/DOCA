@@ -22,6 +22,6 @@ Work in the project (bind the conversation to it with `project bind`, or `projec
 - **An emulator with no screen:** `emulator -avd <name> -no-window -no-boot-anim -gpu swiftshader_indirect` as a background job; wait for `adb shell getprop sys.boot_completed` = 1. Drive it: `adb shell uiautomator dump /sdcard/ui.xml`, read the node's `bounds`, `adb shell input tap X Y`; `adb exec-out screencap -p > shot.png` and look at it with `show_media`. Text inside a WebView or a link inside a paragraph is not its own node — tap by position.
 - **The emulator reaches this machine as `10.0.2.2`.**
 - **A WebView's microphone** needs `MODIFY_AUDIO_SETTINGS` as well as `RECORD_AUDIO` (logcat: `Requires MODIFY_AUDIO_SETTINGS and RECORD_AUDIO`).
-- **Updates install only over the same signing key.** DOCA's own apps are built and handed out by the hub (panel: Settings → API Keys → DOCA apps, `POST /api/clients/apps/<app>/build`), signed with the key it keeps. Play Protect may ask to scan an app it has not seen — that is the person's choice.
+- **Updates install only over the same signing key.** DOCA's own apps are built and handed out by the hub (panel: Field → API keys → DOCA apps, `POST /api/clients/apps/<app>/build`), signed with the key it keeps. Play Protect may ask to scan an app it has not seen — that is the person's choice.
 
 Before reporting done: the build and unit tests passed (say what they printed), and if it was installed, that it launched. Never sign a release build or change signing config without the person.

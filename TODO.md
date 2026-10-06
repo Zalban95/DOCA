@@ -334,6 +334,9 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   changes, `call_service` to act — with the HA token as a key for services (`homeassistant`, header). Areas as cards in
   the theme, a tile per light, climate, cover, lock, sensor and camera snapshot, live on every screen (H10.5) and
   servable alone on a wall tablet (`/?view=home`). Lovelace stays available in HA for whoever prefers it.
+  Devices in Google Home or Alexa come in through HA (Matter sharing, brand integrations, Nest via Device Access —
+  skills/smart-home). Later, DocaMobile could lend Google's **Home APIs** (Android, the person's explicit permission)
+  as a device family, for homes that keep Google Home as their hub; Alexa has no equivalent control API.
 - [ ] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06). Risk-tiered approval inside
   Auto: each tool call classified — reads and lookups run; reversible writes run after an automatic checkpoint
   (projects' shadow git, prefs checkpoints, a computer instead of the host for anything untested); irreversible or

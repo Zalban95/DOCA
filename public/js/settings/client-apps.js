@@ -1,4 +1,4 @@
-/* Settings → API Keys → DOCA apps (modules/client-apps): the newest DocaMobile and DocaWear APKs this hub keeps — to
+/* Field → API keys → DOCA apps (modules/client-apps): the newest DocaMobile and DocaWear APKs this hub keeps — to
    download, to upload, or to build right here from their repositories — and the key they are signed with. A phone's
    DocaMobile checks /api/v1/clients/android/docamobile and offers (or installs) what is newer than itself. */
 async function clientAppsRender() {
