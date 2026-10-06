@@ -52,7 +52,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 - [x] A1 **Secrets in the settings file are readable by `read_file`** — *2.245.2: masked on read (`harness/secret-view.js`), left out of search, never uploaded, mask never written back* (coh F1): channel tokens and MCP env/header
   values move to protected keys files with migrations (as the Hugging Face token did), or `read_file`/`search_files`
   mask secret-named keys in the settings file; a test reading it through the tool. (Strengthens a guard.)
-- [ ] A2 **Split reading the web from calling APIs** (coh F2–F3, aw 3): a GET-only `http_fetch` stays the airlock's;
+- [ ] A2 **Split reading the web from calling APIs** (with it, a rendered "Reaching outside" block built from what the turn holds — aw 19) (coh F2–F3, aw 3): a GET-only `http_fetch` stays the airlock's;
   `api_call {key|connector, url, method, form, files, save_as}` for origins with a stored key or a connector, held by
   the acting agents and never airlocked; hi3d, service drafts and smart-home move to it; quarantine of the open web
   holds even with specialists off (an internal reader), or S6 and airlock.md say otherwise. **Ask first** (guards).
@@ -77,10 +77,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   reasons; `mission_plan`/`scout_report` only on missions; `show_image` an alias in `call()` only; the `computer` tool
   says who works inside a computer; `computer_login` only with computer tools; `computer` in the Computer kit.
 - [x] B4 **Descriptions a weaker model chooses by** (aw 16–17, 20, 23; coh F8) — *2.248.0: `turn/tool-leads.js` (26 tools, "— use it when …", ≤150 characters, never cut; a stricter test); `install_propose` built from its catalogs; `doca_clients` names each device's hands; `test/skill-references.test.js` and the broken references fixed (doca-client's tools, catt now a System tools row, make-a-specialist's kits and path, the dev-cycle's Versions page; jdk21 was a row)*
-- [ ] B4b **The rest of B4** (aw 18–19, 29): every parameter of the many-action tools described with its actions, the
-  hottest paths split (`work_chat_start`, `project_run`), missing action-specific fields rejected by name; a rendered
-  "Reaching outside" block (after A2 decides the airlock); a test per profile that every tool a rendered prompt names
-  is held (the charter's own mentions wait for B8).
+- [x] B4b **The rest of B4** (aw 18, 29) — *2.255.0: `work_chats`' every parameter described with its actions; `work_chats`, `recipe` and `project` name the field an action is missing (`toolbox/common.needs`); `test/prompt-coherence.test.js`: every backticked tool a rendered prompt names outside the charter is held (Orchestrator and work chat, specialists off and on). Not split into more tools: the leads and named-field errors do what the split was for without more schemas per step. The "Reaching outside" block moves to A2 (it follows the airlock's decision).*
 - [x] B5 **Skills and recipes found by the request** — *2.250.0: `turn/fits.js` in the readings: "Likely fits" (skills and recipes matched on the request's words, how to use each), "What you have" (keys, logins, recipe count — out of the tool descriptions), and the offer to `recipe save_last` after three steps that worked; computers in "What you have" not yet (an async list)* (aw 21–22, 30; coh F18): skill and recipe titles matched against
   the person's words each turn ("Likely fits: …" in the readings, after the history); a "# Recipes you have" and a
   "# What you have" readings block (keys, logins, computers) instead of tool-description inventories; "save as recipe"

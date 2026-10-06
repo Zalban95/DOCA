@@ -74,3 +74,12 @@ test('the panel lists what a type holds and why — the same set its turns get',
 
   assert.equal((await H.api(null, 'GET', '/api/harness/agents/nobody/tools')).status, 404);
 });
+
+test('a many-action tool names the field an action is missing (audit 2026-10-06, aw 18)', async () => {
+  const tools = require('../modules/harness/tools');
+  assert.equal(await tools.call('work_chats', { action: 'send' }), 'Error: work_chats send needs sessionId and message.');
+  assert.equal(await tools.call('recipe', { action: 'run' }), 'Error: recipe run needs id.');
+  assert.equal(await tools.call('project', { action: 'run' }), 'Error: project run needs command.');
+  const wc = tools.TOOLS.find(t => t.name === 'work_chats').parameters.properties;
+  for (const k of Object.keys(wc).filter(k => k !== 'action')) assert.ok(wc[k].description, `work_chats.${k} is described`);
+});
