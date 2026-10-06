@@ -374,7 +374,7 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   whole turning the other way, the call no longer dropped while it opens, the name as the transcriber's hint, and
   what the wake word heard on screen. **Left:** DocaMobile's WebView allows no geolocation yet (1.0.8); the
   wake word on the person's own tablet is unverified — the page now says what it heard, which is the next clue.
-- [ ] H8.4 A small model trained for the hive's name (asked 2026-10-06; docs/experiments/wake-model.md). The hub trains
+- [ ] H8.4 A small model trained for the hive's name **Built (2.244.0):** Field → Models → Wake words, the trainer, the in-page runtime behind `wakeModel`; the first "doca" model hears 9/15 calls and 6/8 of the person's clips, 0/21 false — not yet better than the transcript match (wake-model.md). **Left:** more of the person's voice, a phrase instead of a two-syllable word, DocaMobile's copy (an `/api/v1` route, waiting for a yes). (asked 2026-10-06; docs/experiments/wake-model.md). The hub trains
   an openWakeWord model for the wake word (synthetic voices, ~1 h of GPU), the person's own voice messages are its test
   set, the panel and DocaMobile run it on the screen (nothing sent until the word), behind `experiments.wakeModel`.
   Later: DocaMobile as the default assistant, for listening without the microphone indicator.

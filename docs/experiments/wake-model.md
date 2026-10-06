@@ -30,13 +30,24 @@ the hub's speech service is down, and miss less for the person it was checked ag
 
 ## Measured
 
-| Measure | Today (`wakeWord`) | Model | Target |
+| Measure | Today (`wakeWord`) | Model (2026-10-06, "doca" v2) | Target |
 |---|---|---|---|
-| Calls heard, synthetic and recorded | 15/15 (desk mic) | — | ≥ 95 % |
-| The person's own recordings heard | — | — | ≥ 90 % |
-| False starts on near words and room sound | 0/21 | — | ≤ 1 per 10 h of room audio |
-| Time from the end of the word to the call | 0.5–1 s | — | ≤ 0.3 s |
-| Audio sent to the hub while waiting | every burst | — | none |
+| The 15 call phrases (Kokoro, 3 voices) | 15/15 | 9/15 | ≥ 95 % |
+| The person's own "doca"s (8 clips from one voice message) | transcribed as "docker", "Dokar", "Doamne" for half | 6/8 (partly trained on — flattering) | ≥ 90 % held out |
+| Held-out synthetic clips of the word | — | 54 % (510/938) | — |
+| The 21 other phrases (dock, doctor, Docker, Dota…) | 0/21 | 0/21 | 0 |
+| Near words, synthetic (boca, docker, duca…) | — | 4 % (32/800) | ≤ 1 % |
+| The trainer's false starts per hour of other audio | — | 1.8 | ≤ 0.1 |
+| Audio sent to the hub while waiting | every burst | none | none |
+
+The first model (the trainer's default weighting) heard 29 % of held-out clips and 0 false starts; v2 (negative weight
+300, a 64-wide layer, 50,000 steps) 54 %. In the browser (ONNX Runtime Web) it keeps up in real time and scores as
+Python does (a call the Python run hears at 0.99 woke the page at 0.85; an other phrase stayed at 0.001).
+
+**Next:** more of the person's voice, recorded in the panel as the word and as other things, with a held-out half;
+more synthetic positives (30,000) and Piper's Italian voices; and a phrase rather than a bare two-syllable word
+("hey doca" / "ok doca"), which keyword spotters hear far more reliably. Until a model beats the transcript match on
+the person's own voice, the flag stays off.
 
 ## Cost
 
