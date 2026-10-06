@@ -31,6 +31,14 @@ async function wakeWordApply() {
     ctx.onstatechange();
     _wake = { stream, ctx, an, ...want, rec: null, voiced: 0, quietAt: 0, startedAt: 0, last: 0, busy: false };
     if (typeof ambientHearing === 'function') ambientHearing({ listening: true, word: want.word });
+    // A model trained for the word (experiments.wakeModel, lib/wake-model.js): heard on the screen, nothing sent. Without
+    // one, or if it cannot run here, the transcript match below as before.
+    const url = want.model && typeof wakeModelFor === 'function' ? await wakeModelFor(want.word) : '';
+    if (url) {
+      const w = _wake;
+      try { w.model = await wakeModelStart(stream, url, { onWake: () => _wakeModelHeard(w) }); return; }
+      catch (e) { console.warn('wake model: falling back to speech-to-text —', e.message); }
+    }
     _wakeLoop();
   } finally { _wakeApplying = false; }
 }
@@ -38,6 +46,7 @@ async function wakeWordApply() {
 /** Stop listening (a call took the microphone, the face went away, the page was hidden). */
 function wakeWordPause() {
   if (!_wake) return;
+  _wake.model?.stop();
   if (typeof ambientHearing === 'function') ambientHearing({ listening: false });
   cancelAnimationFrame(_wake.raf);
   if (_wake.rec && _wake.rec.state !== 'inactive') { _wake.rec.onstop = null; _wake.rec.stop(); }
@@ -59,7 +68,7 @@ async function _wakeWanted() {
   if (!s.experiments?.wakeWord || !(ambient ? s.settings?.ambient?.listen !== false : c.listenWithFace)) return null;
   let word = String(c.wakeWord || '').trim();
   if (!word) word = (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA';
-  return { word, thr: c.sensitivity >= 1 ? c.sensitivity : 15 };
+  return { word, thr: c.sensitivity >= 1 ? c.sensitivity : 15, model: !!s.experiments?.wakeModel };
 }
 
 function _wakeLoop() {
@@ -91,6 +100,16 @@ function _wakeRecord(w, now) {
   };
   w.rec = rec; w.startedAt = now; w.voiced = 0;
   rec.start();
+}
+
+/** The model heard the word: the call opens, as a matched transcript opens it (with no words after the name to pass). */
+async function _wakeModelHeard(w) {
+  if (_wake !== w) return;
+  if (typeof ambientHearing === 'function') ambientHearing({ heard: w.word, called: true, word: w.word });
+  wakeWordPause();
+  if (typeof ambientIsOpen === 'function' && ambientIsOpen()) await ambientTalk();
+  else await assistantOpen();
+  if (!_assistantInCall()) wakeWordApply();
 }
 
 async function _wakeHear(w, blob) {
