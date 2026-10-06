@@ -9,7 +9,7 @@
 Each part is skipped when it is already there, so a broken download resumes from where it stopped. Python and git
 only — no shell, no ffmpeg — so it runs the same on Linux, macOS and Windows. Prints `@stage …` lines for the panel.
 """
-import io, os, subprocess, sys, urllib.request, zipfile
+import io, json, os, subprocess, sys, urllib.request, zipfile
 
 import numpy as np
 import soundfile as sf
@@ -18,6 +18,8 @@ GEN_REPO = 'https://github.com/rhasspy/piper-sample-generator'
 GEN_MODEL = 'https://github.com/rhasspy/piper-sample-generator/releases/download/v2.0.0/en_US-libritts_r-medium.pt'
 FEATURES = 'https://huggingface.co/datasets/davidscripka/openwakeword_features/resolve/main/'
 ESC50 = 'https://github.com/karoldvl/ESC-50/archive/master.zip'
+RIR_LIST = 'https://huggingface.co/api/datasets/davidscripka/MIT_environmental_impulse_responses/tree/main/16khz'
+RIR_FILE = 'https://huggingface.co/datasets/davidscripka/MIT_environmental_impulse_responses/resolve/main/'
 RATE = 16000
 
 
@@ -69,7 +71,7 @@ def main(data):
 
     feats = os.path.join(data, 'data')
     os.makedirs(feats, exist_ok=True)
-    for name, size in [('validation_set_features.npy', 180 << 20), ('openwakeword_features_ACAV100M_2000_hrs_16bit.npy', 16 << 30)]:
+    for name, size in [('validation_set_features.npy', 150 << 20), ('openwakeword_features_ACAV100M_2000_hrs_16bit.npy', 16 << 30)]:
         path = os.path.join(feats, name)
         if os.path.exists(path) and os.path.getsize(path) >= size: continue
         stage(f'other audio: {name} ({size >> 20} MB)')
@@ -78,10 +80,14 @@ def main(data):
     rir = os.path.join(data, 'rir')
     if not os.path.isdir(rir) or len(os.listdir(rir)) < 200:
         stage('room echoes (MIT impulse responses)')
-        import datasets
         os.makedirs(rir, exist_ok=True)
-        for i, r in enumerate(datasets.load_dataset('davidscripka/MIT_environmental_impulse_responses', split='train', streaming=True)):
-            sf.write(os.path.join(rir, f'{i}.wav'), resample(np.asarray(r['audio']['array'], np.float32), r['audio']['sampling_rate']), RATE)
+        # Plain 16 kHz wavs in the dataset's repository: listed by the Hub's API and fetched as files (the datasets
+        # library would decode them only with torchcodec).
+        listing = json.load(urllib.request.urlopen(RIR_LIST, timeout=60))
+        for f in listing:
+            if f.get('type') == 'file' and f['path'].endswith('.wav'):
+                dest = os.path.join(rir, os.path.basename(f['path']))
+                if not os.path.exists(dest): download(RIR_FILE + f['path'], dest)
 
     noise = os.path.join(data, 'noise')
     if not os.path.isdir(noise) or len(os.listdir(noise)) < 1000:
