@@ -41,20 +41,7 @@
     </div>
   </a>
 
-  <nav class="nav-tabs">
-    <button class="nav-tab active" data-tab="controls" onclick="nav('controls')">Controls</button>
-    <button class="nav-tab"        data-tab="logs"     onclick="nav('logs')">Logs</button>
-    <button class="nav-tab"        data-tab="files"    onclick="nav('files')">Files</button>
-    <button class="nav-tab"        data-tab="projects" onclick="nav('projects')">Projects</button>
-    <button class="nav-tab"        data-tab="harness"   onclick="nav('harness')">Harness</button>
-    <button class="nav-tab"        data-tab="computers" onclick="nav('computers')">Computers</button>
-    <button class="nav-tab"        data-tab="terminal"  onclick="nav('terminal')">Terminal</button>
-    <button class="nav-tab"        data-tab="models"    onclick="nav('models')">Models</button>
-    <button class="nav-tab"        data-tab="docker"    onclick="nav('docker')">Docker</button>
-    <button class="nav-tab"        data-tab="vms"       onclick="nav('vms')">VMs</button>
-    <button class="nav-tab"        data-tab="mcp"       onclick="nav('mcp')">MCP</button>
-    <button class="nav-tab"        data-tab="settings"  onclick="nav('settings')">Settings</button>
-  </nav>
+  <nav class="nav-tabs"><!-- drawn by group: js/nav-groups.js --></nav>
 
   <div class="header-search" id="header-search">
     <input class="header-search-input" id="global-search" type="text"
@@ -1497,7 +1484,7 @@
 <script src="js/agent-ui/questions-dock.js"></script>
 <script src="js/branding.js"></script>
 <script src="js/fp.js"></script>
-<script src="js/nav.js"></script>
+<script src="js/nav.js"></script><script src="js/nav-groups.js"></script>
 <script src="js/sidebar.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/logs.js"></script>
