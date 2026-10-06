@@ -178,10 +178,11 @@ async function fmMachinesMount() {
   let devs = [];
   try { devs = ((await apiFetch('/api/devices')).devices || []).filter(d => !d.revokedAt && d.control?.usable?.includes('files')); } catch { /* host only */ }
   if (!devs.length) return;   // nothing to choose between
+  const hub = (await apiFetch('/api/auth/me').catch(() => null))?.hub;
   const group = Object.assign(document.createElement('div'), { className: 'fm-sidebar-group' });
   group.innerHTML = `<div class="fm-sidebar-label">🖥 Machine</div>
     <select class="input" id="fm-machine" style="width:100%">
-      <option value="">This host</option>${devs.map(d => `<option value="${escHtml(d.id)}">${escHtml(d.name)}</option>`).join('')}
+      <option value="">${escHtml(hub ? `${hub} · the hub` : 'The hub')}</option>${devs.map(d => `<option value="${escHtml(d.id)}">${escHtml(d.name)}</option>`).join('')}
     </select>`;
   side.prepend(group);
   document.getElementById('fm-machine').onchange = e => fmUseMachine(e.target.value || null);

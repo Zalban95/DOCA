@@ -336,6 +336,7 @@ async function handleUse(req, res) {
 
 function mount(app) {
   app.get ('/api/versions',     handleList);
+  require('./release-notes').mount(app);   // what each version added or fixed
   app.post('/api/versions/use', handleUse);
 }
 
@@ -352,4 +353,4 @@ async function latest({ fresh = false } = {}) {
   return out.split('\n').filter(t => TAG.test(t)).sort((a, b) => cmpVersion(b, a))[0] || null;
 }
 
-module.exports = { isCheckout, restartSelf, latest, list, install, use, refusal, current, running, history, prune, mount, cmpVersion, CHECKOUT, DIR, HOME, MENU_SINCE };
+module.exports = { git, isCheckout, restartSelf, latest, list, install, use, refusal, current, running, history, prune, mount, cmpVersion, CHECKOUT, DIR, HOME, MENU_SINCE };
