@@ -172,4 +172,28 @@ module.exports = [
         + 'Tell them where it is and what to paste.';
     },
   },
+  {
+    name: 'service_draft',
+    description: 'Prepare a web service (an API with a key) for a person to switch on in one step: how its key is sent, its address, '
+      + 'what it is for, and a skill with the steps to use it. Read its documentation first (research_docs); then the draft waits in '
+      + 'Settings → Connectors, the person pastes the key and saves, and from then on http_fetch with key: "<name>" reaches it. For a '
+      + 'service with an MCP server use mcp_draft; for one in the catalogue, install_propose.',
+    parameters: { type: 'object', properties: {
+      name: { type: 'string', description: 'The key\'s short name, e.g. "hi3d" — what http_fetch names.' },
+      origin: { type: 'string', description: 'The API\'s address, e.g. https://api.hitem3d.ai.' },
+      place: { type: 'string', enum: ['header', 'query', 'exchange'], description: 'header (Authorization: Bearer by default), query (a parameter), or exchange (id:secret traded for a token at field).' },
+      field: { type: 'string', description: 'The header or parameter name — or, for exchange, the token address.' },
+      prefix: { type: 'string', description: 'Before the key in a header, e.g. "Bearer " or "" (default Bearer for Authorization).' },
+      note: { type: 'string', description: 'One line: what it is for (agents read it).' },
+      docs: { type: 'string', description: 'Its documentation\'s address.' },
+      skill: { type: 'object', description: '{name, description, body}: the steps an agent follows to use it, in markdown — the requests, their fields, waiting for results, keeping files (save_as) and showing them.' },
+    }, required: ['name', 'origin', 'note'] },
+    run: (args, ctx = {}) => {
+      let d;
+      try { d = require('../../service-drafts').draft(args || {}, { sessionId: ctx.sessionId }); } catch (e) { return `Error: ${e.message}`; }
+      return `Prepared "${d.name}" (${d.origin}, key ${d.place === 'exchange' ? 'id:secret traded for a token' : `in the ${d.place}`})${d.skill ? ` with the skill "${d.skill.name}"` : ''}. `
+        + 'It waits in Settings → Connectors under "Prepared by the agent": the person pastes the key and saves. Tell them where to get the key '
+        + '(the service\'s developer page) — never ask them to paste it in the chat.';
+    },
+  },
 ];

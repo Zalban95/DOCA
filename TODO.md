@@ -328,6 +328,17 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] H10.9 The agents' work, live (asked 2026-10-06). **Done (2.229.0):** the Workstream — files edited popping up with
   their diffs, by a sentinel that runs while the page is open; thinking and commands lower right. **Done (2.230.0):** Machines → Live — the agents' computers'
   screens and the pages they serve for tests, pictured by the hub's headless browser, the working ones in front.
+- [ ] H10.10 The home in DOCA's own layout (asked 2026-10-06: "does Home Assistant let us use our layout, or do we build
+  from scratch?"). Neither: Home Assistant stays the device layer (thousands of brands, its areas, scenes and
+  automations), and DOCA draws its own **Home** page from HA's WebSocket API — `get_states`, `subscribe_events` for live
+  changes, `call_service` to act — with the HA token as a key for services (`homeassistant`, header). Areas as cards in
+  the theme, a tile per light, climate, cover, lock, sensor and camera snapshot, live on every screen (H10.5) and
+  servable alone on a wall tablet (`/?view=home`). Lovelace stays available in HA for whoever prefers it.
+- [ ] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06). Risk-tiered approval inside
+  Auto: each tool call classified — reads and lookups run; reversible writes run after an automatic checkpoint
+  (projects' shadow git, prefs checkpoints, a computer instead of the host for anything untested); irreversible or
+  outward ones (deleting outside a project, `git push --force`, sending a message or mail, paying, a submit on a
+  site) are asked even in Auto. The tier is named in the trace and the Workstream, so the way back is always visible.
 - [ ] H10.6 Limits that follow the work (asked 2026-10-06, CONSTITUTION P20): today a turn gets `maxSteps` 8 and the
   model's thinking budget whatever it asks. Instead, before a turn a cheap triage (rules first, the assistant's quick
   model when unsure) rates difficulty and urgency and sets that turn's effort and step budget; a turn reaching its
