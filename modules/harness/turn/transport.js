@@ -187,6 +187,8 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
       p: { ...p, firstTokenTimeoutMs: rung.timeoutMs }, signal, onWaiting,
     });
 
+    // In the ledger of DOCA's own requests while it runs (harness/inflight.js), so a busy model server is attributable.
+    const ended = require('../inflight').start({ ...meta, provider: rung.ep.id, url: rung.ep.baseUrl, model: rungBody.model });
     try {
       const reply = await streamOrRead({ ep: rung.ep, body: rungBody, guard, onText, onThinking, p });
       usage.record({ ...meta, provider: rung.ep.id, model: rungBody.model, usage: reply.usage, body: rungBody, reply });
@@ -230,6 +232,7 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
       continue;
     } finally {
       guard.done();
+      ended();
     }
   }
   throw stalled || new Error('No model to call.');
