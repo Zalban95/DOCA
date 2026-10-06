@@ -17,7 +17,7 @@
 
 /* ── Buttons ─────────────────────────────────────────── */
 .btn {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-ui);
   font-size: 11px; font-weight: 500;
   letter-spacing: 0.08em; text-transform: uppercase;
   padding: 7px 14px;
@@ -51,7 +51,7 @@
 
 /* ── Inputs ──────────────────────────────────────────── */
 .input {
-  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  font-family: var(--font-ui); font-size: 12px;
   background: var(--dim); border: 1px solid var(--border2);
   color: var(--text); padding: 7px 10px;
   outline: none; width: 100%;
@@ -69,7 +69,7 @@
 
 /* Textarea / code editor */
 .editor {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 12px; line-height: 1.75;
   background: #060708; border: 1px solid var(--border2);
   color: #8ab8d8; padding: 12px;
@@ -522,7 +522,7 @@ body.chat-resizing * { cursor: nwse-resize !important; }
 .md ul, .md ol { margin: 0 0 8px; padding-left: 20px; }
 .md li { margin: 2px 0; }
 .md code {
-  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  font-family: var(--font-mono); font-size: 11px;
   background: var(--raised); border: 1px solid var(--border2);
   padding: 0 4px; border-radius: 3px;
 }
@@ -659,7 +659,7 @@ body.chat-resizing * { cursor: nwse-resize !important; }
   background: var(--raised); flex-shrink: 0;
 }
 .chat-input {
-  flex: 1; font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  flex: 1; font-family: var(--font-ui); font-size: 12px;
   padding: 8px 10px; background: var(--dim); border: 1px solid var(--border2);
   color: var(--text); outline: none; resize: none;
   min-height: 36px; max-height: 100px;
@@ -875,7 +875,7 @@ body.chat-resizing * { cursor: nwse-resize !important; }
 .install-out {
   width: 100%; margin: 6px 0 0; padding: 8px;
   background: var(--bg); border: 1px solid var(--border2);
-  border-radius: 4px; font-size: 10px; font-family: monospace;
+  border-radius: 4px; font-size: 10px; font-family: var(--font-mono);
   color: var(--text); white-space: pre-wrap; max-height: min(45vh, 360px);
   overflow-y: auto;
 }

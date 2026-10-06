@@ -39,6 +39,11 @@
   /* Aliases */
   --text-muted: #505c68;
   --font-mono:  'IBM Plex Mono', 'Cascadia Code', 'Fira Code', monospace;
+  /* The panel's faces, set by the skin and the theme (themes.js, look.js); every rule names one of these, never a
+     family: the classic skin reads in its mono face, the modern one in a sans (skin-modern.css). */
+  --font-ui:    var(--font-mono);
+  --font-text:  'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-ui);
 
   /* Layout */
   --sidebar-w: 264px;

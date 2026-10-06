@@ -14,7 +14,7 @@ html, body { height: 100%; overflow: hidden; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-ui);
   font-size: 13px;
   display: flex;
   flex-direction: column;

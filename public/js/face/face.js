@@ -112,6 +112,9 @@ function faceMount(canvas, specIn = {}) {
   };
   const hex = c => { const m = /^#?([0-9a-f]{6})$/i.exec(c || ''); const v = m ? parseInt(m[1], 16) : 0xffffff; return [v >> 16, (v >> 8) & 255, v & 255]; };
 
+  // The HUD's face is the theme's mono face (variables.css), read once; a page without the variables gets a plain mono.
+  const hudFont = (typeof getComputedStyle === 'function' && getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim()) || 'ui-monospace, monospace';
+
   function resize() {
     dpr = Math.min(3, window.devicePixelRatio || 1);   // a phone is 2.6–3.5: drawn at its own density, not upscaled
     const r = canvas.getBoundingClientRect();
@@ -214,7 +217,7 @@ function faceMount(canvas, specIn = {}) {
     if (grainTile && w > 120) { ctx.fillStyle = ctx.createPattern(grainTile, 'repeat'); ctx.fillRect(0, 0, w, h); }
     if (spec.hud && w > 220) {
       const m = Math.max(10, Math.round(unit * 0.07));
-      ctx.font = `500 ${Math.max(10, Math.round(unit * 0.055))}px 'JetBrains Mono', ui-monospace, monospace`;
+      ctx.font = `500 ${Math.max(10, Math.round(unit * 0.055))}px ${hudFont}`;
       ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.textBaseline = 'top';
       ctx.fillText(`[ ${state.toUpperCase()} ]`, m, m);
       if (detail) { ctx.fillStyle = P.dim; ctx.textBaseline = 'bottom'; ctx.fillText(detail, m, h - m); }
