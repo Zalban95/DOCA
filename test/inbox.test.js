@@ -16,6 +16,8 @@ let server, script = [], seen = [];
 before(async () => {
   await H.start();
   server = http.createServer((req, res) => {
+    // system_status asks local model servers who they work for (GET /models, /slots): not a chat request.
+    if (req.method !== 'POST') { res.writeHead(404); res.end('{}'); return; }
     let raw = ''; req.on('data', c => { raw += c; }); req.on('end', async () => {
       const body = JSON.parse(raw);
       seen.push(body);

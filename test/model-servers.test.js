@@ -41,3 +41,12 @@ test('busy with one of DOCA\'s requests is DOCA\'s; busy with none of them is so
   done();
   assert.equal(inflight.list().length, 0, 'gone when the request ends');
 });
+
+test('system_status tells the agent who each model server works for (audit 2026-10-06, aw 9)', async () => {
+  const real = servers.status;
+  servers.status = async () => ({ servers: [{ label: 'llama.cpp', url: 'http://x', models: [{ id: 'big', state: 'working' }], doca: [], foreign: true }] });
+  try {
+    const out = await require('../modules/harness/tools').call('system_status', {});
+    assert.match(out, /Model servers: .*"models":\["big \(working\)"\].*"forSomethingElse":true/);
+  } finally { servers.status = real; }
+});

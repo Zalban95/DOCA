@@ -34,3 +34,15 @@ test('the inventories are readings; the offer to keep a turn follows three steps
   assert.equal(fits.keepHint([...ok, { role: 'tool', name: 'shell', content: 'Error: exit 1' }], ALL), '');
   assert.equal(fits.keepHint([...ok, { role: 'tool', name: 'recipe', content: 'ran' }], ALL), '', 'it already was one');
 });
+
+test('today gives the agent the person\'s day as the ambient screen has it (TODO B6)', async () => {
+  const ambient = require('../modules/ambient');
+  const real = ambient.today;
+  let asked = null;
+  ambient.today = async (p, o) => { asked = o; return { weather: { place: o.place }, calendar: { events: [] }, notices: [] }; };
+  try {
+    const out = await require('../modules/harness/tools').call('today', { place: 'Bologna' });
+    assert.match(out, /"place": "Bologna"/);
+    assert.equal(asked.units, 'metric');
+  } finally { ambient.today = real; }
+});
