@@ -38,8 +38,9 @@ function faceGalaxyForm(n, rnd) {
     },
     at(i) {
       const s = stars[i % n];
-      // Inner stars go round faster (a little differential turning on a rigid pattern, so the arms stay arms).
-      const a = s.a + angle * (1 + 0.6 / (0.35 + s.r * 3)) + Math.sin(this.t * 0.3 * s.w + s.ph) * 0.01;
+      // The heart turns fast and the edge slowly, the whole the other way round (asked 2026-10-06): about one turn in
+      // 25 s at the centre, one in two minutes at the rim.
+      const a = s.a - angle * (0.35 + 1.6 / (0.3 + s.r * 2.5)) + Math.sin(this.t * 0.3 * s.w + s.ph) * 0.01;
       const x = Math.cos(a) * s.r, z = Math.sin(a) * s.r;   // the disc's plane: x across, z towards the viewer
       const sy = -s.h * cosT + z * sinT, depth = (z * cosT + 1) / 2;
       const persp = 1 / (1 - z * cosT * 0.12);

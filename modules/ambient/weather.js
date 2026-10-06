@@ -7,6 +7,8 @@
  */
 const GEO = process.env.DOCA_GEOCODE_API || 'https://geocoding-api.open-meteo.com/v1/search';
 const API = process.env.DOCA_WEATHER_API || 'https://api.open-meteo.com/v1/forecast';
+// A device's own position (the ambient page asks the browser) named as a town: BigDataCloud's free client lookup, no key.
+const REVGEO = process.env.DOCA_REVGEO_API || 'https://api.bigdatacloud.net/data/reverse-geocode-client';
 const KEEP_MS = 15 * 60000;
 const _cache = new Map();   // key → {at, value}
 
@@ -27,7 +29,16 @@ async function getJson(url) {
 /** A place name or "lat,lon" → {name, lat, lon}. */
 async function locate(place) {
   const m = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/.exec(place);
-  if (m) return { name: place.trim(), lat: Number(m[1]), lon: Number(m[2]) };
+  if (m) {
+    const lat = Number(m[1]), lon = Number(m[2]);
+    let name = `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
+    try {
+      const r = await getJson(`${REVGEO}?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+      const town = r.city || r.locality || r.principalSubdivision;
+      if (town) name = [town, r.countryCode].filter(Boolean).join(', ');
+    } catch { /* the coordinates are a name too */ }
+    return { name, lat, lon, here: true };
+  }
   const j = await getJson(`${GEO}?name=${encodeURIComponent(place)}&count=1&format=json`);
   const p = j.results?.[0];
   if (!p) throw Object.assign(new Error(`No place called "${place}" was found.`), { status: 404 });
@@ -49,7 +60,7 @@ async function forecast(place, units = 'metric') {
   const j = await getJson(`${API}?${q}`);
   const c = j.current || {}, d = j.daily || {};
   const value = {
-    place: at.name, units: imp ? 'imperial' : 'metric', unit: imp ? '°F' : '°C', wind: imp ? 'mph' : 'km/h',
+    place: at.name, here: !!at.here, units: imp ? 'imperial' : 'metric', unit: imp ? '°F' : '°C', wind: imp ? 'mph' : 'km/h',
     now: { temp: c.temperature_2m, feels: c.apparent_temperature, humidity: c.relative_humidity_2m, windSpeed: c.wind_speed_10m,
       code: c.weather_code, text: word(c.weather_code)[0], icon: c.is_day === 0 && c.weather_code <= 1 ? '☾' : word(c.weather_code)[1] },
     days: (d.time || []).map((date, i) => ({ date, max: d.temperature_2m_max?.[i], min: d.temperature_2m_min?.[i], rain: d.precipitation_probability_max?.[i],

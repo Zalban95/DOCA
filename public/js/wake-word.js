@@ -23,9 +23,14 @@ async function wakeWordApply() {
     const ctx = new AudioContext(), an = ctx.createAnalyser();
     an.fftSize = 512;
     ctx.createMediaStreamSource(stream).connect(an);
-    // A page that nobody has touched yet gets a suspended context; the first touch anywhere wakes it.
-    if (ctx.state === 'suspended') document.addEventListener('pointerdown', () => ctx.resume().catch(() => {}), { once: true });
+    // A page that nobody has touched yet gets a suspended context, which hears nothing: every touch or key wakes it, and
+    // an ambient screen says it needs one (wakeWordState).
+    const wakeCtx = () => { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); };
+    ['pointerdown', 'keydown', 'touchend'].forEach(e => document.addEventListener(e, wakeCtx, { passive: true }));
+    ctx.onstatechange = () => { if (typeof ambientHearing === 'function') ambientHearing({ suspended: ctx.state === 'suspended' }); };
+    ctx.onstatechange();
     _wake = { stream, ctx, an, ...want, rec: null, voiced: 0, quietAt: 0, startedAt: 0, last: 0, busy: false };
+    if (typeof ambientHearing === 'function') ambientHearing({ listening: true, word: want.word });
     _wakeLoop();
   } finally { _wakeApplying = false; }
 }
@@ -33,6 +38,7 @@ async function wakeWordApply() {
 /** Stop listening (a call took the microphone, the face went away, the page was hidden). */
 function wakeWordPause() {
   if (!_wake) return;
+  if (typeof ambientHearing === 'function') ambientHearing({ listening: false });
   cancelAnimationFrame(_wake.raf);
   if (_wake.rec && _wake.rec.state !== 'inactive') { _wake.rec.onstop = null; _wake.rec.stop(); }
   _wake.stream.getTracks().forEach(t => t.stop());
@@ -47,6 +53,7 @@ async function _wakeWanted() {
   const ambient = typeof ambientIsOpen === 'function' && ambientIsOpen();   // an ambient screen resting (ambient.js)
   if (!(faceShown || ambient) || document.hidden) return null;
   if ((typeof _callActive !== 'undefined' && _callActive) || (typeof _rt !== 'undefined' && _rt)) return null;
+  if (typeof _callStarting !== 'undefined' && _callStarting) return null;   // a call is opening the microphone: leave it alone
   const s = await screenLoad();
   const c = s.settings?.call || {};
   if (!s.experiments?.wakeWord || !(ambient ? s.settings?.ambient?.listen !== false : c.listenWithFace)) return null;
@@ -95,6 +102,7 @@ async function _wakeHear(w, blob) {
     const r = await fetch('/api/chat/transcribe', { method: 'POST', body: form });
     const { text } = await r.json();
     const m = wakeMatch(text, w.word);
+    if (typeof ambientHearing === 'function') ambientHearing({ heard: text, called: m.heard, word: w.word });   // what it understood, on screen
     if (!m.heard || _wake !== w) return;
     wakeWordPause();
     if (typeof ambientIsOpen === 'function' && ambientIsOpen()) await ambientTalk(m.rest);   // the galaxy rises and listens

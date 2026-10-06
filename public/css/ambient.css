@@ -1,9 +1,10 @@
 /* The ambient screen (js/ambient.js): black, quiet type, the galaxy in the bottom fifth; in a call the rest dims. */
 #tab-ambient.active { padding: 0 !important; }
 .amb { position: relative; height: calc(100dvh - 120px); min-height: 420px; background: #050507; color: #e8edf2; overflow: hidden;
-  font-family: var(--font-display); border-radius: 10px; }
+  font-family: var(--font-text); border-radius: 10px; }
 body.solo .amb { height: 100dvh; border-radius: 0; }
-.amb-info { position: absolute; inset: 0 0 20% 0; padding: 4vmin 5vmin 1vmin; display: grid; grid-template-columns: 1.15fr 1fr;
+.amb-info { position: absolute; top: 0; bottom: 20%; left: 0; right: 0; max-width: 1800px; margin: 0 auto;
+  padding: var(--amb-my, 6%) var(--amb-mx, 7%) 1vmin; display: grid; grid-template-columns: 1.15fr 1fr;
   grid-template-rows: auto minmax(0, 1fr) auto; gap: 2.5vmin 5vmin; transition: opacity .9s ease, filter .9s ease; }
 .amb.calling .amb-info { opacity: .18; filter: blur(3px) saturate(.5); pointer-events: none; }
 .amb h3 { margin: 0 0 1.2vmin; font: 500 11px var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: #707a85; }
@@ -41,8 +42,18 @@ body.solo .amb { height: 100dvh; border-radius: 0; }
 .amb-band { position: absolute; left: 0; right: 0; bottom: 0; height: 20%; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent; }
 .amb-band.holding { background: radial-gradient(ellipse at 50% 55%, rgba(87,201,194,.10), transparent 65%); transition: background .45s; }
 .amb.calling .amb-band { height: 100%; }   /* in a call, a hold anywhere ends it */
+.amb-hint { position: absolute; left: 0; right: 0; bottom: 2.5%; text-align: center; font: 12px var(--font-mono); color: #707a85;
+  opacity: .75; pointer-events: none; transition: opacity .6s; }
+.amb.calling .amb-hint { opacity: 0; }
+/* What a screen chose not to show (Settings → Ambient). */
+.amb-no-clock .amb-clock, .amb-no-weather .amb-weather, .amb-no-plan .amb-plan, .amb-no-notices .amb-notices,
+.amb-no-buttons .amb-buttons, .amb-no-apps .amb-apps { display: none !important; }
+.amb-f-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.amb-f-row label { flex: 1; min-width: 160px; }
+.amb-f-show { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 2px 12px; }
+.amb-settings .amb-arrange-card { width: 100%; max-width: 640px; }
 .amb-status { position: absolute; left: 0; right: 0; bottom: 9%; text-align: center; font: 500 13px var(--font-mono); letter-spacing: .08em; color: #a6bfd6; pointer-events: none; }
-.amb-talk { position: absolute; right: 3.2vmin; bottom: 3.2vmin; width: 52px; height: 52px; border-radius: 50%; border: 0; background: #000; color: #57c9c2;
+.amb-talk { position: absolute; right: max(3.2vmin, calc(var(--amb-mx, 7%) / 2)); bottom: 3.2vmin; width: 52px; height: 52px; border-radius: 50%; border: 0; background: #000; color: #57c9c2;
   font-size: 22px; cursor: pointer; box-shadow: 0 0 18px rgba(87,201,194,.35); }
 .amb.calling .amb-talk { color: #e85050; box-shadow: 0 0 18px rgba(232,80,80,.35); }
 .amb-edit, .amb-alone { position: absolute; top: 1.6vmin; right: 1.6vmin; opacity: .25; transition: opacity .3s; }
@@ -57,7 +68,8 @@ body.solo .amb { height: 100dvh; border-radius: 0; }
 /* A phone upright: one column, the plan and the notices share the middle. */
 @media (max-width: 700px), (orientation: portrait) {
   .amb { height: calc(100dvh - 140px); }
-  .amb-info { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto minmax(0, 1fr) auto; gap: 2.4vmin; padding: 16px 16px 4px; }
+  .amb-info { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto minmax(0, 1fr) auto; gap: 2.4vmin;
+    padding: max(16px, var(--amb-my, 6%)) max(16px, var(--amb-mx, 7%)) 4px; }
   .amb-plan, .amb-notices { max-height: 26vh; }
   .amb-quick { grid-row: 6; }
   .amb-weather { justify-self: start; text-align: left; }

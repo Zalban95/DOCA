@@ -16,6 +16,7 @@ test.before(async () => {
     const u = new URL(req.url, 'http://x');
     asked.push(u.pathname);
     res.setHeader('Content-Type', 'application/json');
+    if (u.pathname === '/rev') return res.end(JSON.stringify({ city: 'Milan', countryCode: 'IT' }));
     if (u.pathname === '/geo') return res.end(JSON.stringify(u.searchParams.get('name') === 'Nowhere' ? {} : { results: [{ name: 'Milan', admin1: 'Lombardy', country_code: 'IT', latitude: 45.46, longitude: 9.19 }] }));
     res.end(JSON.stringify({ current: { temperature_2m: 21.4, apparent_temperature: 20.1, weather_code: 3, wind_speed_10m: 8, relative_humidity_2m: 70, is_day: 1 },
       daily: { time: ['2026-10-06', '2026-10-07'], weather_code: [3, 61], temperature_2m_max: [22, 19], temperature_2m_min: [14, 16], precipitation_probability_max: [5, 70] } }));
@@ -23,6 +24,7 @@ test.before(async () => {
   await new Promise(r => stub.listen(0, '127.0.0.1', r));
   process.env.DOCA_GEOCODE_API = `http://127.0.0.1:${stub.address().port}/geo`;
   process.env.DOCA_WEATHER_API = `http://127.0.0.1:${stub.address().port}/forecast`;
+  process.env.DOCA_REVGEO_API = `http://127.0.0.1:${stub.address().port}/rev`;
   await H.start();
 });
 test.after(async () => { await H.stop(); stub.close(); });
@@ -37,7 +39,10 @@ test('the weather where the screen says it is: geocoded once, now and the days, 
   const before = asked.length;
   await H.api(null, 'GET', '/api/ambient?place=Milan');
   assert.equal(asked.length, before, 'kept, not asked again');
-  assert.equal((await H.api(null, 'GET', '/api/ambient?place=45.4,9.1&units=imperial')).body.weather.unit, '°F', 'lat,lon needs no geocoding');
+  const here = (await H.api(null, 'GET', '/api/ambient?place=45.4,9.1&units=imperial')).body.weather;
+  assert.equal(here.unit, '°F');
+  assert.equal(here.place, 'Milan, IT', 'a device\'s own position, named as a town');
+  assert.equal(here.here, true);
   assert.match((await H.api(null, 'GET', '/api/ambient?place=Nowhere')).body.weather.error, /No place called/);
   assert.equal((await H.api(null, 'GET', '/api/ambient')).body.weather, null, 'no place, no weather');
 });
