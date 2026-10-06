@@ -80,3 +80,17 @@ test('Home Assistant is in the MCP catalogue as a server at an address, added of
   assert.equal(row.transport, 'http');
   assert.equal(row.autostart, false);
 });
+
+test('a spoken turn is told to act without narrating a visible result, to be right first, and to hand hard work to agents', async () => {
+  const client = require('../modules/harness/turn/client');
+  const b = client.clientBlock({ name: 'Assistant mode', mode: 'assistant' });
+  assert.match(b, /do it, then answer with only "✓"/);
+  assert.match(b, /Answer in words when they asked a question, when something failed/);
+  assert.match(b, /Being right comes before being quick/);
+  assert.match(b, /raise your effort with the `effort` tool and hand the work to specialists/);
+  await H.api(null, 'POST', '/api/assistant', { reply: 'brief' });
+  assert.match(client.clientBlock({ name: 'Call', mode: 'call' }), /do it, then confirm in two or three words/);
+  assert.equal((await H.api(null, 'POST', '/api/assistant', { reply: 'never' })).status, 400);
+  await H.api(null, 'POST', '/api/assistant', { reply: 'act' });
+  assert.doesNotMatch(client.clientBlock({ name: 'Desk', formFactor: 'desktop' }), /answer with only "✓"/, 'a typed turn answers as before');
+});

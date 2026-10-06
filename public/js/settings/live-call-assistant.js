@@ -47,6 +47,10 @@ async function liveCallAssistantHtml() {
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">A quicker model (optional)</label>
       <input class="input" id="as-provider" value="${escHtml(a.provider || '')}" placeholder="provider" style="width:120px" ${owner ? '' : 'disabled'}>
       <input class="input" id="as-model" value="${escHtml(a.model || '')}" placeholder="model — empty: the chat's" style="width:200px" ${owner ? '' : 'disabled'}></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">When it just acts</label>
+      <select class="input" id="as-reply" style="width:auto" ${owner ? '' : 'disabled'}>${[['act', 'Do it — no answer (✓ on the face)'], ['brief', 'Do it — two or three words'], ['always', 'Do it — say what was done']]
+        .map(([v, l]) => `<option value="${v}" ${a.reply === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <span style="font-size:11px;color:var(--muted)">Questions, failures and anything you cannot see are always answered.</span></div>
     <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-calls" ${a.calls ? 'checked' : ''} ${owner ? '' : 'disabled'}>
       Use this effort and model for the chat's 🎙 call too (its answers are always spoken-length)</label>
     <label style="font-size:11px;color:var(--muted)">How it speaks<textarea class="input" id="as-style" rows="4" style="width:100%;margin-top:4px" ${owner ? '' : 'disabled'}>${escHtml(a.style || '')}</textarea></label>
@@ -57,7 +61,7 @@ async function liveCallAssistantHtml() {
 
 async function liveCallAssistantSave(resetStyle) {
   const g = id => document.getElementById(id).value;
-  try { await apiFetch('/api/assistant', { method: 'POST', body: { calls: document.getElementById('as-calls').checked, effort: g('as-effort'), provider: g('as-provider').trim(), model: g('as-model').trim(), style: resetStyle ? null : g('as-style') } }); }
+  try { await apiFetch('/api/assistant', { method: 'POST', body: { reply: g('as-reply'), calls: document.getElementById('as-calls').checked, effort: g('as-effort'), provider: g('as-provider').trim(), model: g('as-model').trim(), style: resetStyle ? null : g('as-style') } }); }
   catch (e) { return appAlert(e.message); }
   liveCallRender();
 }

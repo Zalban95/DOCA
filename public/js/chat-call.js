@@ -261,7 +261,7 @@ async function _callAnswer(userText) {
     // 2. Send to chat and stream response
     _callSetStatus('Thinking…', 'processing');
     const container = document.getElementById('chat-messages');
-    let sentenceBuf  = '';
+    let sentenceBuf  = '', said = '';
     let inThinking   = false;
     agentWorkingOpen(container);
     const stream = createThinkStream({
@@ -284,7 +284,7 @@ async function _callAnswer(userText) {
           const remaining = chunk.slice(i);
           if (!inThinking && remaining.startsWith('<think>')) { inThinking = true; i += 6; continue; }
           if (inThinking && remaining.startsWith('</think>')) { inThinking = false; i += 7; continue; }
-          if (!inThinking) sentenceBuf += chunk[i];
+          if (!inThinking) { sentenceBuf += chunk[i]; said += chunk[i]; }
         }
         if (inThinking) return;
         const sentenceEnd = sentenceBuf.search(/[.!?;:\n]\s*/);
@@ -324,6 +324,8 @@ async function _callAnswer(userText) {
     }
 
     callSink.finish();
+    // "✓" alone: an action done, not narrated (assistant.reply) — nothing is spoken, the face shows the check.
+    if (said.trim() === '✓') { if (typeof faceConceptSay === 'function') faceConceptSay('completed', 1.6); _callSetStatus('Done ✓', 'listening'); }
     _callHeardRetry();   // an interruption came before this answer's row was written
     closeFolds(container);
 
