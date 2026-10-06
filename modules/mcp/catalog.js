@@ -33,7 +33,7 @@ const get = id => CATALOG.find(c => c.id === id) || null;
 function list() {
   const have = new Set(require('./registry').load().map(s => s.id));
   const { which } = require('../shell');
-  return CATALOG.map(c => ({ id: c.id, label: c.label, about: c.about, command: c.transport === 'http' ? c.url : [c.command, ...c.args].join(' '),
+  return CATALOG.map(c => ({ id: c.id, label: c.label, about: c.about, transport: c.transport || 'stdio', command: c.transport === 'http' ? c.url : [c.command, ...c.args].join(' '),
     added: have.has(c.id), missing: c.needs.filter(n => !which(n)) }));
 }
 
