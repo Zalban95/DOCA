@@ -41,10 +41,23 @@ async function hubLinksOpen() {
   ov.innerHTML = `<div class="model3d-bar"><b>Open DOCA on another device</b><span style="flex:1"></span><button class="btn btn-xs" type="button">✕</button></div>
     <div class="hub-links-body">${d.links.map(l => `<div class="hub-link"><div class="hub-qr">${l.qr || ''}</div><div><b>${escHtml(l.label)}</b><br><code>${escHtml(l.url)}</code></div></div>`).join('')
       || '<p>No address another device can reach: this hub listens to this machine only (Settings → System → Network).</p>'}
+      <div class="hub-pair"><button class="btn btn-sm btn-teal" type="button" onclick="hubPairPhone(this)">📱 Pair a phone</button>
+        <span>Three steps: scan the code above on the phone and sign in → install the app it offers → open the app and scan the pairing code that appears here.</span></div>
       <p class="hub-links-note">Scan with the phone's camera. On a phone the page offers the DOCA app; to pair it, Settings → API Keys → Pair a device.${d.mode === 'tailnet' ? ' The phone needs Tailscale — or allow the local network in Settings → System → Network.' : ''}</p></div>`;
   document.body.append(ov);
   const release = overlayBack(() => ov.remove());
   ov.querySelector('.model3d-bar button').onclick = () => { release(); ov.remove(); };
+}
+
+/** The pairing code for a phone, in the same window: one place from "open DOCA there" to "paired". */
+async function hubPairPhone(btn) {
+  let p;
+  try { p = await apiFetch('/api/devices/pair', { method: 'POST', body: { name: 'Phone', preset: 'phone' } }); }
+  catch (e) { return appAlert(`${e.message} (pairing is an admin's, from Tailscale or this machine)`); }
+  const box = btn.closest('.hub-pair');
+  box.innerHTML = `<div class="hub-link"><div class="hub-qr">${p.qr || ''}</div><div><b>In the DOCA app: Pair → scan this</b><br>
+    or type the code <code style="font-size:18px">${escHtml(p.code)}</code><br><span style="color:#aaa">Valid until ${escHtml(new Date(p.expiresAt).toLocaleTimeString())}.
+    The phone appears in Settings → API Keys once paired; rename it there.</span></div></div>`;
 }
 
 function hubAppBanner() {

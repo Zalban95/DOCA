@@ -23,3 +23,13 @@ body.harness-tab .face-corner, body:has(.pj-chat.open) .face-corner { display: n
 .face-assistant-close { transition: opacity .8s ease; }
 .face-assistant.calm .face-assistant-close { opacity: 0; pointer-events: none; }
 .face-assistant.calm .face-assistant-status { opacity: .55; transition: opacity .8s ease; }
+/* The chat button beside it, its sibling (asked 2026-10-06): the same black disc fading into the page, the colours
+   reversed — the ⬡ in the accent, glowing a little, on black — instead of a dark glyph on a solid accent circle. */
+.chat-fab { background: #050507; color: var(--accent); box-shadow: none; font-size: 24px; width: 60px; height: 60px; bottom: 20px; right: 20px;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 22px color-mix(in srgb, var(--accent) 35%, transparent);
+  -webkit-mask-image: radial-gradient(circle closest-side, #000 62%, rgba(0,0,0,.8) 70%, rgba(0,0,0,.5) 79%, rgba(0,0,0,.22) 88%, rgba(0,0,0,.06) 95%, transparent 100%);
+  mask-image: radial-gradient(circle closest-side, #000 62%, rgba(0,0,0,.8) 70%, rgba(0,0,0,.5) 79%, rgba(0,0,0,.22) 88%, rgba(0,0,0,.06) 95%, transparent 100%);
+  transition: transform .6s cubic-bezier(.22, 1, .36, 1); }
+.chat-fab:hover { transform: scale(1.1); }
+@media (max-width: 768px) { .chat-fab { bottom: calc(var(--mobile-nav-h) + 10px); } }
+.chat-fab[data-questions]:not([data-questions=""])::after { top: 9px; right: 9px; }   /* inside the fade, where it shows */
