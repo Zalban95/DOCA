@@ -27,7 +27,7 @@ function showMedia(p, caption, ctx = {}) {
   const kind = attachments.playableKind(mime);
   if (!kind)
     throw new Error(`${path.basename(abs)} is not something a chat can show (images: png, jpg, webp, gif, avif, `
-      + 'svg; video: mp4, webm, mov, mkv; audio: mp3, wav, ogg, m4a, flac, aac; documents: md, txt). Convert it '
+      + 'svg; video: mp4, webm, mov, mkv; audio: mp3, wav, ogg, m4a, flac, aac; documents: md, txt; 3D models: glb, gltf, stl, obj, fbx, ply, 3mf, usdz). Convert it '
       + 'first, for example: ffmpeg -i in.avi out.mp4');
 
   const cap = kind === 'image' ? SHOW_IMAGE_MAX : SHOW_MEDIA_MAX;

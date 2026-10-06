@@ -46,6 +46,18 @@ function agentImageEl(media, onLoad) {
     return fig;
   }
 
+  if (kind === 'model') {
+    // A 3D model (lib/model3d.js): drawn in the transcript, turning; ⤢ for the whole screen.
+    const box = document.createElement('div');
+    box.className = 'agent-model';
+    const full = Object.assign(document.createElement('button'), { type: 'button', className: 'btn btn-xs agent-model-full', textContent: '⤢', title: 'Full screen' });
+    full.addEventListener('click', () => model3dFull(url, media.caption || media.name));
+    fig.append(box, full);
+    if (media.caption) fig.append(Object.assign(document.createElement('figcaption'), { textContent: media.caption }));
+    requestAnimationFrame(() => model3dInto(box, url, media.name).then(() => onLoad?.()));
+    return fig;
+  }
+
   if (kind === 'doc') {
     // A document is a row that opens a window, not something drawn in the
     // transcript: a plan pasted into a conversation scrolls away, and a plan
@@ -121,6 +133,7 @@ function _mediaKindOf(mime, name = '') {
   if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif', 'svg'].includes(ext)) return 'image';
   if (['mp3', 'wav', 'ogg', 'm4a', 'opus', 'flac', 'aac', 'weba'].includes(ext)) return 'audio';
   if (['mp4', 'webm', 'mov', 'mkv', 'm4v'].includes(ext)) return 'video';
+  if (m.startsWith('model/') || (typeof model3dIs === 'function' && model3dIs(name))) return 'model';
   return null;
 }
 

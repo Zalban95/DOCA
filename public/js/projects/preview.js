@@ -20,7 +20,7 @@ const PJ_VIEW_EXT = {
   audio: ['mp3', 'wav', 'ogg', 'oga', 'm4a', 'opus', 'flac', 'aac', 'weba'],
   pdf:   ['pdf'],
   font:  ['ttf', 'otf', 'woff', 'woff2'],
-  model: ['glb', 'gltf'],
+  model: ['glb', 'gltf', 'stl', 'obj', 'fbx', 'ply', '3mf', 'usdz'],
 };
 const PJ_RENDERED_EXT = { md: 'markdown', markdown: 'markdown', html: 'html', htm: 'html', svg: 'svg', csv: 'csv', tsv: 'tsv', json: 'json' };
 
@@ -54,7 +54,7 @@ function pjDrawView(host, view) {
   else if (view.kind === 'audio') box.appendChild(_pjEl('audio', { src: url, controls: true, preload: 'metadata' }, 'width:min(560px,100%)'));
   else if (view.kind === 'pdf') { box.style.alignItems = 'stretch'; box.appendChild(_pjEl('iframe', { src: url, title: name }, 'width:100%;height:100%;border:0;background:#fff')); }
   else if (view.kind === 'font') _pjFontSpecimen(box, url, name);
-  else if (view.kind === 'model') _pjModelViewer(box, url, name);
+  else if (view.kind === 'model') model3dInto(box, url, name);   // the shared viewer (lib/model3d.js)
   else {
     const card = _pjEl('div', { className: 'card' }, 'max-width:420px');
     card.append(_pjEl('div', { className: 'card-title', textContent: name }),
@@ -79,25 +79,6 @@ async function _pjFontSpecimen(box, url, name) {
     box.appendChild(_pjEl('div', { textContent: px >= 44 ? 'Aa Bb Cc 0123' : 'The quick brown fox jumps over the lazy dog — 0123456789 àéîõü', contentEditable: 'true' },
       `font-family:${family};font-size:${px}px;line-height:1.3;margin:4px 0;outline:none`));
   }
-}
-
-let _pjModelViewerLoading = null;
-function _pjModelViewer(box, url, name) {
-  // Google's <model-viewer> (Apache-2.0), loaded the first time a 3D file is opened.
-  _pjModelViewerLoading ||= new Promise((resolve, reject) => {
-    const s = _pjEl('script', { type: 'module', src: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js' });
-    s.onload = resolve; s.onerror = () => reject(new Error('the 3D viewer could not be loaded (no connection to cdn.jsdelivr.net?)'));
-    document.head.appendChild(s);
-  });
-  box.textContent = 'Loading the 3D viewer…';
-  _pjModelViewerLoading.then(() => {
-    box.textContent = '';
-    const mv = document.createElement('model-viewer');
-    Object.assign(mv, { src: url, alt: name });
-    mv.setAttribute('camera-controls', ''); mv.setAttribute('auto-rotate', ''); mv.setAttribute('shadow-intensity', '1');
-    mv.style.cssText = 'width:100%;height:100%';
-    box.appendChild(mv);
-  }, e => { box.textContent = `${name}: ${e.message}`; });
 }
 
 /** Draw the rendered form of text (the editor's current value) into the view pane. */
