@@ -127,7 +127,8 @@ module.exports = [
       const abs = resolvePath(p, ctx);
       const st  = fs.statSync(abs);
       if (st.isDirectory()) throw new Error(`${abs} is a directory — use list_dir`);
-      return slice(fs.readFileSync(abs, 'utf8'), offset, maxLength);
+      // A file holding secrets beside settings reads with them masked (harness/secret-view.js).
+      return slice(require('../secret-view').view(abs, fs.readFileSync(abs, 'utf8')), offset, maxLength);
     },
   },
   {
@@ -145,6 +146,8 @@ module.exports = [
     run: ({ path: p, content }, ctx = {}) => {
       const abs = resolvePath(p, ctx);
       require('../control-plane').refuse(abs, ctx);   // what governs the agent: only with this call's yes (H-19)
+      const masked = require('../secret-view').maskedWrite(abs, content);   // dots read back would replace the secrets
+      if (masked) throw new Error(masked);
       // Charter rule 16, held here rather than only asked for: a repository's
       // own rules are read before the first change to it.
       const unread = repo.unreadRoot(ctx.sessionId, abs);

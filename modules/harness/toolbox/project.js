@@ -43,7 +43,22 @@ module.exports = [
       },
       required: ['query'],
     },
-    run: async (a, ctx = {}) => clip(fmtMatches(await require('../../projects/search').search(where(a.path, ctx), a))),
+    run: async (a, ctx = {}) => {
+      const root = where(a.path, ctx);
+      const r = await require('../../projects/search').search(root, a);
+      // Files holding secrets beside settings are left out (harness/secret-view.js); read_file shows them masked.
+      const sv = require('../secret-view'), path = require('path');
+      const isFile = (() => { try { return require('fs').statSync(root).isFile(); } catch { return false; } })();
+      const hidden = new Set();
+      r.matches = r.matches.filter(m => {
+        const abs = path.resolve(isFile ? path.dirname(root) : root, m.file);
+        if (!sv.kindOf(abs)) return true;
+        hidden.add(m.file);
+        return false;
+      });
+      if (hidden.size) r.files = Math.max(0, r.files - hidden.size);
+      return clip(fmtMatches(r) + (hidden.size ? `\n(left out: ${[...hidden].join(', ')} — they hold secrets; read_file shows them masked)` : ''));
+    },
   },
   {
     name: 'replace_in_files',
