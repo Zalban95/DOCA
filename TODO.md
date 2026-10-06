@@ -73,7 +73,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 - [ ] B2 **Tools chosen for the request** (aw 25, 28; coh F4–F5): core tools always, the rest named in one line and
   attached when named or called by a skill or recipe (kit triage); a compact profile for small windows; the prompt
   breakdown measured from `systemPrompt()`'s own parts and shown; AGENTS.md's "~4k" corrected (≈17.9k today).
-- [ ] B3 **The roster equals what a turn holds** (aw 4, 15; coh F6–F7): switch-driven removals in `disabledFor()` with
+- [x] B3 **The roster equals what a turn holds** — *2.247.0: `turn/tool-shape.js` read by `disabledFor()` and the roster, each with why; a test per type, specialists off and on* (aw 4, 15; coh F6–F7): switch-driven removals in `disabledFor()` with
   reasons; `mission_plan`/`scout_report` only on missions; `show_image` an alias in `call()` only; the `computer` tool
   says who works inside a computer; `computer_login` only with computer tools; `computer` in the Computer kit.
 - [ ] B4 **Descriptions a weaker model chooses by** (aw 16–20, 23, 29; coh F8): first sentence "<verb> … — use when
