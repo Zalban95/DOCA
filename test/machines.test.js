@@ -14,7 +14,10 @@ const until = async (fn, ms = 15000) => { for (const end = Date.now() + ms; Date
 test('a dev server an agent started is found by the address it printed; only this machine\'s addresses count', async () => {
   const script = "const s=require('http').createServer((q,r)=>r.end('<h1 style=\"font-size:80px\">served by the agent</h1>'));"
     + "s.listen(0,'127.0.0.1',()=>{console.log('  Local:   http://localhost:'+s.address().port+'/');console.log('docs at https://example.com:8443/x')});";
-  const job = jobs.start(`"${process.execPath}" -e "${script.replace(/"/g, '\\"')}"`, { sessionId: null });
+  // A file run by name: a command line that bash and PowerShell read the same (a quoted -e script is not).
+  const file = require('node:path').join(require('node:os').tmpdir(), `doca-served-${process.pid}.js`);
+  require('node:fs').writeFileSync(file, script);
+  const job = jobs.start(`node "${file}"`, { sessionId: null });
   try {
     assert.ok(await until(async () => (await H.api(null, 'GET', '/api/machines')).body.served.length > 0), 'found');
     const { served, browser } = (await H.api(null, 'GET', '/api/machines?shots=1')).body;
