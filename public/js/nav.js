@@ -32,6 +32,7 @@ function nav(name) {
   computersTab(name === 'computers');
   if (typeof workstreamTab === 'function') workstreamTab(name === 'workstream');
   if (typeof ambientTab === 'function') ambientTab(name === 'ambient');
+  if (name === 'models' && typeof wakewordTab === 'function') wakewordTab();
   if (typeof liveMachinesTab === 'function') liveMachinesTab(name === 'live');   // refreshes only while shown   // holds the hub's sentinel while shown   // starts and stops its thumbnails' timer
   if (name === 'terminal') termInit();
   if (name === 'models')   modelsInit();

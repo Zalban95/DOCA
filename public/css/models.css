@@ -135,3 +135,17 @@
   flex-wrap: wrap;
   margin-top: 8px;
 }
+
+/* Field → Models → Wake words (js/wakeword.js) */
+#ww-card { margin-top: 14px; }
+.ww-note { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+.ww-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 8px 0; font-size: 12px; }
+.ww-tick { color: var(--muted); } .ww-tick.ok { color: var(--green); }
+.ww-dir, .ww-dim { color: var(--muted); font-size: 11px; }
+.ww-job { font-size: 12px; margin: 8px 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; }
+.ww-job.failed { border-color: var(--red); } .ww-job.done { border-color: var(--green); }
+.ww-job pre { margin: 6px 0 0; font: 11px var(--font-mono); color: var(--muted); white-space: pre-wrap; max-height: 140px; overflow: auto; }
+.ww-model { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12px; padding: 6px 0; border-top: 1px solid var(--border); }
+.ww-pick { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
+.ww-pick .card { max-width: 520px; width: 100%; max-height: 80vh; overflow: auto; }
+.ww-pick-row { display: block; font-size: 12px; margin: 4px 0; }

@@ -29,6 +29,7 @@ const COVERAGE = {
   live: { v1: ['/events'], note: 'a device already hears turns, missions and work chats change on its event stream; watching a folder is the machine\'s' },
   packs: { v1: ['/packs'], note: 'between hubs; making and bringing in packs is a host\'s' },
   presence: { v1: ['/events'], note: 'the panel saying it is looked at; a device\'s presence is its event stream' },
+  wakeword: { panel: 'training is the hub\'s; a device\'s copy of a kept model waits for a yes on its /api/v1 route (CONSTITUTION W3)' },
   ambient: { panel: 'the ambient screen\'s page: a device draws its own home with /face, /harness and its own sensors' },
   branding: { panel: 'public, and read by clients as it is (GET /api/branding)' },
   auth: { panel: 'a person signing in to the panel; a device pairs instead (/devices)' },

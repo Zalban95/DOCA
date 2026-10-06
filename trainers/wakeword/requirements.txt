@@ -1,0 +1,21 @@
+# The wake-word trainer's own environment (modules/wakeword sets it up with uv, Python 3.11). Pinned where today's
+# releases broke the trainer: SciPy 1.15 removed sph_harm, which `acoustics` imports.
+openwakeword==0.6.0
+onnxruntime
+onnx
+scipy<1.15
+numpy<2
+tqdm
+pyyaml
+datasets
+audiomentations
+torch-audiomentations
+soundfile
+mutagen
+speechbrain
+torchinfo
+torchmetrics
+acoustics
+pronouncing
+webrtcvad
+piper-phonemize-cross
