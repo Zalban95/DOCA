@@ -131,6 +131,14 @@ async function stop(id) {
   return view(c);
 }
 
+/** Put away (modules/archive.js): stopped, its desktop and files kept, out of the Computers tab and the agents' list until restored. */
+async function archive(id, on = true) {
+  const c = need(id);
+  if (on) await stop(c.id).catch(() => {});
+  patch(c.id, { archivedAt: on ? new Date().toISOString() : null });
+  return view({ ...c, archivedAt: on ? 'now' : null });
+}
+
 /** Kept until a person unpins it: never stopped when its mission ends, never tidied away (lifecycle.js). */
 function pin(id, pinned = true) {
   const c = need(id);
@@ -150,7 +158,7 @@ async function remove(id) {
 /** What the panel and the agent see: never the token. The VNC password is for the person who opens the view. */
 function view(c, state = null) {
   return { id: c.id, name: c.name, purpose: c.purpose, missionId: c.missionId, createdAt: c.createdAt, state,
-    auto: !!c.auto, pinned: !!c.pinned, stoppedAt: c.stoppedAt || null, by: c.by || null, agentType: c.agentType || null,
+    auto: !!c.auto, pinned: !!c.pinned, stoppedAt: c.stoppedAt || null, archivedAt: c.archivedAt || null, by: c.by || null, agentType: c.agentType || null,
     server: serverId(c), tools: `mcp__${serverId(c)}__*`,
     // Through the hub, so any signed-in host's browser can watch — the phone on the tailnet included (vnc.js).
     vnc: { url: require('./vnc').watchUrl(c), drive: require('./vnc').driveUrl(c), local: `http://127.0.0.1:${c.vncPort}/vnc.html`, password: c.vncPassword },
@@ -172,7 +180,7 @@ async function ownFor(def) {
 
 function lend(id, missionId) {
   const c = need(id);
-  patch(c.id, { missionId, missions: [...(c.missions || []), missionId].slice(-20) });
+  patch(c.id, { missionId, missions: [...(c.missions || []), missionId].slice(-20), archivedAt: null });   // lent again: back from the archive
   list().then(l => { if (l.find(x => x.id === c.id)?.state !== 'running') start(c.id).catch(() => {}); });   // stopped since its last errand
   return c.id;
 }
@@ -236,13 +244,13 @@ async function fetchFile(id, src) {
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 
-async function list() {
+async function list({ all = false } = {}) {
   let states = {};
   try {
     const out = await docker(['ps', '-a', '--filter', 'label=doca.computer=1', '--format', '{{.Names}}\t{{.State}}']);
     states = Object.fromEntries(out.split('\n').filter(Boolean).map(l => l.split('\t')));
   } catch { /* docker absent: states unknown */ }
-  return rows().map(c => view(c, states[container(c)] || 'missing'));
+  return rows().filter(c => all || !c.archivedAt).map(c => view(c, states[container(c)] || 'missing'));
 }
 
-module.exports = { IMAGE, imageReady, imageState, sourceHash, build, create, start, stop, remove, pin, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, fetchFile };
+module.exports = { IMAGE, imageReady, imageState, sourceHash, build, create, start, stop, remove, pin, archive, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, fetchFile };

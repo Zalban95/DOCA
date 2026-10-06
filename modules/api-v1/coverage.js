@@ -24,6 +24,7 @@ const COVERAGE = {
   recipes: { v1: ['/recipes'] },
   schedules: { v1: ['/schedules'] },
   face: { v1: ['/face'] },
+  archive: { v1: ['/harness'], note: 'a device lists and archives its conversations and missions through /harness; projects and computers are the machine\'s', panel: HOST },
   live: { v1: ['/events'], note: 'a device already hears turns, missions and work chats change on its event stream; watching a folder is the machine\'s' },
   packs: { v1: ['/packs'], note: 'between hubs; making and bringing in packs is a host\'s' },
   presence: { v1: ['/events'], note: 'the panel saying it is looked at; a device\'s presence is its event stream' },

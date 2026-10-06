@@ -74,6 +74,7 @@ function computersCard(c) {
         : `<button class="btn btn-xs" onclick="computersAct('start', ${jsArg(c.id)})">Start</button>`}
       <button class="btn btn-xs ${c.pinned ? 'btn-amber' : ''}" onclick="computersPin(${jsArg(c.id)}, ${!c.pinned})"
         title="${c.pinned ? 'Pinned: kept as it is. Click to let it be tidied away.' : c.auto ? 'Made by an agent: it stops after its mission and is removed some days later. Pin to keep it.' : 'Pin to keep it running after its missions.'}">📌</button>
+      <button class="btn btn-xs" onclick="archiveSet('computer', ${jsArg(c.id)}, true)" title="Put it away: stopped, its desktop and files kept, back from Agents → Archive">🗄</button>
       <button class="btn btn-xs btn-red" onclick="computersAct('remove', ${jsArg(c.id)})" title="Remove it and its files">✕</button></div>
     ${who}${media ? `<div class="pc-files">${media}</div>` : ''}</div>`;
 }

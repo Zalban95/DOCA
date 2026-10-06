@@ -320,6 +320,11 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   and `live-pages.js` (console, floating chat, Projects tabs and editors, Files, missions). **Left:** Settings pages (a
   setting changed on another screen redraws only when the form holds no edit), the Computers and Devices tabs.
 
+- [x] H10.8 (2.224.0–2.228.0, asked 2026-10-06) Releasing is the admin's setting (Settings → Developer → Releasing);
+  keys for services and MCP servers the agent drafts (set a service up by pasting a key, no code); the pages in
+  groups (Controls · Agents · Machines · This host · Models & tools · Settings); every page served alone
+  (`/?view=<page>`, ⧉) and sent to a screen from Devices; one Archive for conversations, missions, projects and
+  computers. **Left:** an archive for Docker containers and VMs is theirs (they are other tools' state), not DOCA's.
 - [ ] H10.6 Limits that follow the work (asked 2026-10-06, CONSTITUTION P20): today a turn gets `maxSteps` 8 and the
   model's thinking budget whatever it asks. Instead, before a turn a cheap triage (rules first, the assistant's quick
   model when unsure) rates difficulty and urgency and sets that turn's effort and step budget; a turn reaching its

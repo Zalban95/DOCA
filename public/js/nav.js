@@ -2,7 +2,7 @@
    DOCA PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','logs','files','projects','harness','computers','terminal','models','docker','vms','mcp','settings'];
+const NAV_TABS = ['controls','logs','files','projects','harness','archive','computers','terminal','models','docker','vms','mcp','settings'];
 /** Tabs that are the machine itself: left out for a person without host (settings.js). */
 const HOST_TABS = ['logs', 'files', 'projects', 'terminal', 'computers'];
 
@@ -28,6 +28,7 @@ function nav(name) {
   if (name === 'files')    fmInit();
   if (name === 'projects') projectsInit();
   if (name === 'harness')  harnessTabInit();
+  if (name === 'archive')  archiveInit();
   computersTab(name === 'computers');   // starts and stops its thumbnails' timer
   if (name === 'terminal') termInit();
   if (name === 'models')   modelsInit();

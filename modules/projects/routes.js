@@ -22,7 +22,7 @@ async function detail(p) {
 }
 
 function mount(app) {
-  app.get('/api/projects', h(() => ({ projects: projects.list() })));
+  app.get('/api/projects', h(req => ({ projects: projects.list().filter(p => req.query.all === '1' || !p.archivedAt) })));   // archived ones: the Archive page
   app.post('/api/projects', h(req => ({ project: projects.create(req.body || {}) })));
   app.get('/api/projects/:id', h(async req => {
     const p = projects.update(req.params.id, { openedAt: new Date().toISOString() });
