@@ -10,7 +10,8 @@
  * `--json` prints one JSON line per case and the result last, for the panel.
  *
  * Comparing (TODO B7): `--models ollama/qwen3:8b,deepseek/deepseek-chat` runs the set once per model, and
- * `--flag toolTiers` once with that experiment off and once on (developer mode on, in the sandbox only); together,
+ * `--flag toolTiers` once with that experiment off and once on (`--flag toolTiers=on` only on), developer mode on in the
+ * sandbox only; together,
  * every model × off/on. Each run is saved as usual; a table of passes, tokens and steps per run is printed last.
  */
 const args = process.argv.slice(2);
@@ -32,7 +33,7 @@ const say = (o, line) => console.log(json ? JSON.stringify(o) : line);
 
 const opt = name => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : null; };
 const models = (opt('--models') || '').split(',').map(x => x.trim()).filter(Boolean);
-const flag = opt('--flag');
+const [flag, only] = String(opt('--flag') || '').split('=');   // --flag toolTiers, or toolTiers=on / =off for one run
 
 /** Point the sandbox's harness at one model (`provider/model`) and the flag on or off; returns its label. */
 function configure(model, on) {
@@ -51,7 +52,7 @@ function configure(model, on) {
 async function compare() {
   const rows = [];
   for (const model of models.length ? models : [null])
-    for (const on of flag ? [false, true] : [null]) {
+    for (const on of flag ? (only ? [only === 'on'] : [false, true]) : [null]) {
       const label = configure(model, on);
       say({ run: label }, `\n== ${label}`);
       const code = await once();
