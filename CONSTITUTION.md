@@ -24,6 +24,14 @@ take on "most of the bureaucracy, coding and designing". A person talks to it in
 minimal UI; it understands deeply, asks before it plans and acts, and grows toward an Alfred/Jarvis-like assistant
 — "not too soon, but eventually" (2026-10-04/05).
 
+**Almost Jarvis, on any open model** (2026-10-06). The aim is a panel a person talks to as they talk to a frontier
+assistant, running on whichever open-source state-of-the-art model they choose. Asking a frontier model to work and
+watching it is easy; DOCA's structure exists so that much less powerful models do the same work, or nearly, and
+quicker, because the tools are already there. That structure is the skeleton for every tool harvested in the field —
+an API, a model, a repository, a service — refined until its output has some dignity. It works like a brain: the
+person speaks, the Orchestrator directs, and the panel decides alone which skills, tools, specialists and devices to
+use; every part has its function and they work symbiotically.
+
 Installing a client makes a device part of the hive. DOCA runs fully locally, fully remotely or mixed; standalone
 or as a hive grown by adding devices; on Linux, Windows and macOS, on any network, on a server, a VM or a VPS
 serving it as a website. For now every capability other harnesses have is wanted; what is sold later is a narrower
@@ -47,6 +55,13 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
   click (§4). (2026-09-26/27)
 - **V6 Experience first, structure underneath.** What a person sees comes first; the structure is what makes the
   work fast and repeatable. (2026-10-05)
+- **V8 The panel chooses its tools.** The person says what they want, in their own words; picking the skill, recipe,
+  specialist, tool, model or device is the panel's job, by structure (descriptions, skills, routing, recipes) rather
+  than by the model's raw intelligence. Anything a person can do in the panel, the agent can reach too, within §4.
+  (2026-10-06)
+- **V9 Harvest and refine.** A new capability enters as a tool, a skill, a recipe or a service the agent can set up
+  itself (service drafts, MCP drafts, packs) — not as code written per service — and is refined until a weaker model
+  uses it right the first time. (2026-10-06)
 - **V7 Innovate, and find the drawbacks.** New approaches give DOCA its edge; each one has its drawbacks found
   before it counts — behind a flag, written up, measured (§5 W9). (2026-10-04)
 
@@ -99,6 +114,9 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
 - **P20 Limits that name themselves.** When something stops, say what stopped it, whose limit it is and how to
   change it — never a bare "timeout". Limits stay at their defaults today; the direction is limits that follow the
   difficulty and urgency of the work, measured rather than guessed (TODO H10.6). (2026-09-14/25; 2026-10-06)
+- **P21 Show the work.** What the agents are working on can be put in front of the person as a page of its own — a
+  served page, a project, a computer's screen, the Workstream, and, when asked, an external repository served as a
+  page or tab — on any screen, live (P18). (2026-10-06)
 
 ## 4. Safety and authority
 

@@ -378,6 +378,11 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   an openWakeWord model for the wake word (synthetic voices, ~1 h of GPU), the person's own voice messages are its test
   set, the panel and DocaMobile run it on the screen (nothing sent until the word), behind `experiments.wakeModel`.
   Later: DocaMobile as the default assistant, for listening without the microphone indicator.
+- [ ] H10.18 An external repository served as a page (asked 2026-10-06, CONSTITUTION P21). When asked ("show me what
+  that repo does", "run it so I can see"), the agent clones it into a project (or a computer, when untrusted), starts
+  it with the repository's own command as a job, and the address the job prints becomes a page: Machines → Live
+  pictures it, and the chat hands it over as its own tab or `/?view=` page on any screen — the way served test pages
+  are today. A recipe keeps the steps for that repository.
 - [ ] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06). Risk-tiered approval inside
   Auto: each tool call classified — reads and lookups run; reversible writes run after an automatic checkpoint
   (projects' shadow git, prefs checkpoints, a computer instead of the host for anything untested); irreversible or
