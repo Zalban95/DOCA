@@ -61,7 +61,7 @@ function describe() {
  * rather than a release.
  */
 /** Old names that still run as their new ones, never offered (turn/tool-shape.js). */
-const ALIASES = { show_image: 'show_media' };
+const ALIASES = { show_image: 'show_media', scout: 'model_scout' };
 
 function schemas(disabled = []) {
   // What a switch has off is off for every caller, with or without a profile (turn/tool-shape.js says why).

@@ -92,6 +92,9 @@ const DOC_MIME = new Set(['text/markdown', 'text/plain']);
 const MODEL_MIME = new Set(['model/gltf-binary', 'model/gltf+json', 'model/stl', 'model/obj', 'model/x-fbx', 'model/x-ply', 'model/3mf', 'model/vnd.usdz+zip']);
 
 /** What a chat does with it: draw it, play it, open it — or none of the three. */
+/** What playableKind() can say, in the order a client should know them (openapi.js reads it). */
+const PLAYABLE_KINDS = ['image', 'audio', 'video', 'doc', 'model'];
+
 function playableKind(mime) {
   if (IMAGE_MIME.has(mime)) return 'image';
   if (AUDIO_MIME.has(mime)) return 'audio';
@@ -295,6 +298,7 @@ function handleUpload(req, res) {
 }
 
 module.exports = {
+  PLAYABLE_KINDS,
   MAX_BYTES, MIME, IMAGE_MIME, AUDIO_MIME, VIDEO_MIME, DOC_MIME, playableKind,
   dir, ensureDir, safeName, uniqueName, mimeFor, humanBytes,
   save, get, list, resolve, note,

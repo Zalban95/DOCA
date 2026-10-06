@@ -1,6 +1,6 @@
 # Experiment: talk over the agent in a voice call
 
-**Flag:** `experiments.bargeIn` (Settings → Experiments), off by default. **TODO:** H8.3. **Since:** 2.192.0.
+**Flag:** `experiments.bargeIn` (Settings → Developer), off by default. **TODO:** H8.3. **Since:** 2.192.0.
 
 ## Hypothesis
 

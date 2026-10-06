@@ -1,7 +1,7 @@
 # Experiment: a scout for better and new models
 
 **Flag:** `experiments.modelScout` (Settings → Developer), off by default; the routine itself is `scout.enabled`, also off.
-**TODO:** H10.4. **Since:** 2.213.0. **Where:** Settings → Harness → Scout; `modules/scout`; the `scout` tool.
+**TODO:** H10.4. **Since:** 2.213.0. **Where:** Settings → Harness → Scout; `modules/scout`; the `model_scout` tool.
 
 ## Hypothesis
 
@@ -22,7 +22,7 @@ cycle every other change follows (skills/doca-dev-cycle).
    `scout.feeds`. Names, numbers and titles only.
 2. **A brief**, every `scout.everyDays` or at once when a look finds something notable (a model that gained
    `scout.growthLikes` likes and is not in use here, or a release of a watched project): a turn in the conversation
-   "Model scout", as the person who switched it on. The agent reads the look through the `scout` tool — framed as
+   "Model scout", as the person who switched it on. The agent reads the look through the `model_scout` tool — framed as
    outside words — sends the scout specialist to read model cards and benchmarks (the airlock), and files at most five
    suggestions with `scout suggest`: the function, the candidate, what it replaces, why, the evidence, how to try it
    without breaking the current way. It changes no setting and installs nothing.

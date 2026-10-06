@@ -2,7 +2,7 @@
 
 /**
  * What changed out there, with no model (docs/experiments/model-scout.md): the cheap half of the model scout, run
- * daily by the ticker and on demand by the `scout` tool.
+ * daily by the ticker and on demand by the `model_scout` tool.
  *
  *   trending   Hugging Face's trending models for each task DOCA uses (roles.js), with likes and downloads; each run's
  *              numbers are kept, so a model that gained `scout.growthLikes` likes since the last look is "growing fast".

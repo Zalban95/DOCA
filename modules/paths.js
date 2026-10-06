@@ -23,7 +23,7 @@ const SETTABLE = [
     note: 'Holds docker-compose.yml for the OpenClaw stack' },
   { key: 'CONFIG_PATH', label: 'OpenClaw config', kind: 'json', fallback: path.join(HOME, '.openclaw', 'openclaw.json'),
     note: 'Providers, API keys and gateway settings' },
-  { key: 'SKILLS_DIR', label: 'Skills directory', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace', 'skills'),
+  { key: 'SKILLS_DIR', label: 'OpenClaw skills directory', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace', 'skills'),
     note: 'One directory per installed skill' },
   { key: 'WORKSPACE_DIR', label: 'Workspace', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace'),
     note: 'Where the agent and the harness do their work' },

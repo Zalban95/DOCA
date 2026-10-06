@@ -115,12 +115,10 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   routes; a test that every panel route is used or listed API-only.
 - [ ] C6 **Experiments measured and dated** (coh F20): start and last-measured dates, stale ones in the W14 list, a
   script or a "manual" note each; decide face-voice for assistant mode (it bypasses its flag today).
-- [ ] C7 **Documents that match the code** (coh F21–F28, F31; cl 20): PROTOCOL's media note, §23 heading, §2 order;
-  OpenAPI enums from the registries; navigation paths from one helper with a test (the browser extension's "preset
-  browser" is `extension`); group names; a glossary (job, scout, browser; rename the model scout's tool); TODO.md
-  cleanup (finished sections to the Done log, unique ids tested); `audit.md`/`CAMPAIGN.md`/`TODO-CAMPAIGN.md` to
-  `docs/history/` (W14); the OpenClaw "Skills directory" label; one home for the Home Assistant token; AGENTS.md's
-  sibling paths are `../`.
+- [x] C7 **Documents that match the code** (coh F21–F27, F31; cl 20) — *2.251.0: PROTOCOL's files-in-a-turn note, §23 heading, §2 order; OpenAPI's device and media kinds from `devices.KINDS`/`attachments.PLAYABLE_KINDS`; `test/doc-paths.test.js` holds every "Group → Page" in the docs to the panel's navigation (eleven fixed, the extension's preset among them); a glossary in AGENTS.md (job, scout, browser, Hub/Field); the model scout's tool is `model_scout`; `test/todo.test.js` holds item ids unique (H6.7 twice → H6.8); the old plans in `docs/history/`; OpenClaw's skills folder labelled; AGENTS.md's sibling paths*
+- [ ] C7b **The rest of C7** (coh F25, F28): TODO.md's finished sections to the Done log and narratives to checkboxes;
+  one home for the Home Assistant token (a service key `homeassistant` that the MCP header and a future Home page both
+  read) — moving a secret between protected stores, done as a migration.
 
 ### Wave 4 — the apps reach it too (`/api/v1` parity)
 - [ ] D1 **Stop, restart/drop, archive and "what is working" for devices** (cl 7–8, 17–19): `POST
@@ -252,7 +250,7 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   draws known buttons. **Left:** measuring it with a vision model.
 
 **H6 · The client core and joining the hive** (§4)
-- [x] H6.7 (2.206.0; DocaMobile 1.0.2) The apps update from their hub. The hub keeps each app's newest APK — built there
+- [x] H6.8 (2.206.0; DocaMobile 1.0.2; was a second H6.7) The apps update from their hub. The hub keeps each app's newest APK — built there
   from its repo with one signing key, or uploaded — and DocaMobile checks, downloads (sha256-checked) and installs it
   through PackageInstaller, automatically from Android 12 once allowed. **Left:** DocaWear through the phone.
 - [ ] H6.1 One client core per platform: protocol, pairing, push, presence, offline queue, device
@@ -327,8 +325,8 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   one-time code to people, voice notes through the existing STT, photos/files as attachments. **Left:** Slack, mail,
   WhatsApp on the same shape; mission start/finish notices to a chat; markdown rendered as Telegram HTML; a
   voice answer (TTS → sendVoice) to a voice note; group chats with per-member binding.
-- [ ] Voice calls with work continuing in the background — DOCA's call mode exists; realtime speech and
-  barge-in left (H8.3).
+- [x] Voice calls with work continuing in the background — DOCA's call mode, and as experiments barge-in (2.192.0)
+  and realtime speech (2.200.0), H8.3; graduating them is their write-ups' measurements.
 - [x] Schedules ("recurring instructions") with pause/retry — H7.1 (2.162.0; retry left).
 - [x] Spaces and Pages (docs with an editor and a chat per page) — H9.4 (2.186.0, on Projects).
 - [x] Human-in-the-loop approval cards — DOCA's approvals, on every device, with levels.

@@ -81,3 +81,12 @@ test('GET /api/v1/openapi.json is public and discovery points at it', async () =
   assert.ok(r.body.paths['/capabilities'].get);
   assert.equal(r.body.paths['/openapi.json'].get.security.length, 0);
 });
+
+test('enums a client reads come from the registries that decide them (audit 2026-10-06, cl 20)', () => {
+  const doc = require('../modules/api-v1/openapi').document();
+  const s = doc.components.schemas;
+  assert.deepEqual(s.Device.properties.kind.enum, require('../modules/api-v1/devices').KINDS);
+  assert.ok(s.Device.properties.kind.enum.includes('channel') && s.Device.properties.kind.enum.includes('browser'));
+  assert.deepEqual(s.HarnessImage.properties.kind.enum, require('../modules/attachments').PLAYABLE_KINDS);
+  for (const kind of ['image', 'audio', 'video', 'doc', 'model']) assert.ok(s.HarnessImage.properties.kind.enum.includes(kind));
+});

@@ -24,7 +24,7 @@ function sourceOf(name, args = {}, isMcp = false) {
   if (name === 'http_fetch') return `http_fetch ${String(args.url || '').slice(0, 200)}`;
   if (name === 'web_search') return `web search results for "${String(args.query || '').slice(0, 120)}"`;
   if (name === 'read_file') return `the file ${String(args.path || '').slice(0, 200)}`;
-  if (name === 'scout' && (args.action || 'signals') === 'signals') return 'the model scout\'s look: model names, release and news titles others wrote';
+  if (name === 'model_scout' && (args.action || 'signals') === 'signals') return 'the model scout\'s look: model names, release and news titles others wrote';
   if (name === 'computer_look') return `a reading of computer ${String(args.computer || '').slice(0, 20)}'s screen`;
   if (/^connector_/.test(name)) return `${name.slice(10)}'s API, ${args.method || 'GET'} ${String(args.path || '').slice(0, 160)} (other people's words: mail, issues, files)`;
   return null;

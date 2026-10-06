@@ -52,7 +52,7 @@ To have it come back after a reboot, tick **Settings → General → Start at Bo
 ## Linking the Chat to OpenClaw Agent
 
 Out of the box the chat panel talks to the built-in DOCA Harness. Once you switch the default
-harness to OpenClaw (Controls → **Agent Harnesses**), the panel goes through OpenClaw instead.
+harness to OpenClaw (the **Agent Harnesses** card on Controls), the panel goes through OpenClaw instead.
 To have it use the OpenClaw Gateway API rather than the `claude` CLI, add this to
 `~/.openclaw/openclaw.json`:
 
@@ -145,7 +145,7 @@ Enabling the service does not steal the port from a panel you already started by
 takes over at the next boot, or immediately if you stop that process and
 `sudo systemctl start openclaw-panel`.
 
-`⟳ Restart` in **Settings → Updates** works by exiting the process, so it relies on
+`⟳ Restart` in **Settings → General → Updates** works by exiting the process, so it relies on
 `Restart=always` to bring the panel back — and so does the restart you do after applying an
 update. Without a supervisor DOCA detects that and spawns its own detached successor instead
 (its boot output goes to `.doca/restart.log`), but letting systemd own the lifecycle is more
@@ -200,7 +200,7 @@ attachments. Certificates are left out — they belong to the machine and are ma
 
 ### Rolling back to another version
 
-**Settings → Updates → Version** lists every release tag with the date it was released and the date
+**Settings → General → Updates → Version** lists every release tag with the date it was released and the date
 it was installed on this machine, plus the working copy. Pick one and **Switch**: DOCA installs that
 version beside the checkout and restarts into it. Every version reads the same data, prefs and
 certificates, because `run.sh` hands each of them the same `DOCA_HOME`.
@@ -255,7 +255,7 @@ The default on a fresh install, and the one harness that needs nothing installed
 agent loop over any **OpenAI-compatible** `/chat/completions` endpoint. The endpoints it already
 knows are Ollama, llama.cpp, vLLM and LM Studio locally, and OpenAI, Anthropic, Google, Groq,
 OpenRouter, Mistral, DeepSeek, xAI, Together and Cerebras hosted — but that list is a set of
-shortcuts for default URLs, not a restriction: **Settings → API Keys → + Add provider** takes any
+shortcuts for default URLs, not a restriction: **Field → API keys → + Add provider** takes any
 name and base URL, and running a known server on a different port is just a base URL saved there.
 Keys come from the same screen (or the matching env var; local servers need none), and the model
 dropdown is populated live from the provider.
@@ -458,7 +458,7 @@ next restart; clearing the field hands it back to the environment or the default
 | `DOCA_LISTEN` | `tailnet` | Who may connect: `tailnet` (loopback + Tailscale), `local` (loopback only — reach it through `tailscale serve` or an SSH tunnel), or `all` (every network, the pre-2.52 behaviour). Also prefs `network.listen`; the environment wins. The panel has no login yet, so this is what keeps the LAN out |
 | `DOCA_DATA_DIR` | `<repo>/.doca` | Durable state for the `/api/v1` client layer (devices, outboxes, profiles, media) and the harness (conversations, memory) |
 | `DOCA_PREFS_FILE` | `<repo>/.dashboard-prefs.json` | Runtime preferences (theme, visible tabs, harness selection and model parameters) |
-| `DOCA_LEGACY_TRUST` | `1` | Allow device pairing and token issuance from the dashboard (Settings → API Keys). Set to `0` to make `npm run token` the only way to mint tokens; the device list stays visible either way |
+| `DOCA_LEGACY_TRUST` | `1` | Allow device pairing and token issuance from the dashboard (Field → API keys). Set to `0` to make `npm run token` the only way to mint tokens; the device list stays visible either way |
 | `DOCA_STT_URL` / `DOCA_TTS_URL` | — | Override the voice service URLs saved in the dashboard settings |
 | `DOCA_FONT` | auto-detect | TTF used for text in server-rendered charts/figures |
 
@@ -475,7 +475,7 @@ graphics for devices without an SVG engine.
 - **Specification:** [PROTOCOL.md](PROTOCOL.md) (normative) and the OpenAPI 3.1 document at [docs/api/openapi.json](docs/api/openapi.json), also served live at `GET /api/v1/openapi.json`.
 - **Building a client:** [docs/client-briefs.md](docs/client-briefs.md) — the pattern used to brief coding agents on `DocaMobile` and `DocaWear`, and the starting point for the next client.
 
-**Enrolling devices from the dashboard.** Settings → **API Keys** → *This server — devices*
+**Enrolling devices from the dashboard.** Field → **API keys** → *This server — devices*
 lists every enrolled device with its scopes, and can pair a new one. **Pair a device** shows a
 QR and a six-digit code that the device scans or types; the code is single use, expires in five
 minutes, and the device mints its own token, so no long-lived secret is ever displayed in the
@@ -545,7 +545,7 @@ modules/                    Backend feature modules (one per concern)
   services.js               Inference service management (incl. image-presence check)
   update.js                 Self-update / restart
   backup/                   .dBac: archive.js (make/read/verify), restore.js (all-or-nothing), secret.js (password choice), routes.js
-  releases.js               Versions side by side: list, install as worktrees, switch (Settings → Updates → Version)
+  releases.js               Versions side by side: list, install as worktrees, switch (Settings → General → Updates → Version)
   listen.js                 Who may connect: loopback + tailnet by default (DOCA_LISTEN)
   startup.js                Start at boot — reports and drives run.sh enable/disable
   terminal.js               WebSocket PTY terminals

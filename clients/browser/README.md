@@ -5,7 +5,7 @@ A browser extension that lets your DOCA hive use **the sites you allow, in your 
 
 ## Install
 
-1. In DOCA: Settings → API Keys → pair a device, role **extension**, and download the extension from the link
+1. In DOCA: Field → API keys → pair a device, preset **extension**, and download the extension from the link
    beside it (or `GET /api/v1/clients/browser.zip`). Unzip it.
 2. Chrome / Edge / Brave: Extensions → Developer mode → **Load unpacked** → the `doca-browser` folder.
    Firefox: `about:debugging` → This Firefox → **Load Temporary Add-on** → `manifest.json` (a signed build is for later).

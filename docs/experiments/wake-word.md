@@ -1,6 +1,6 @@
 # Experiment: start a call by saying the hive's name
 
-**Flag:** `experiments.wakeWord` (Settings → Experiments, or Settings → Voice → Live call), off by default. **TODO:** H8.2.
+**Flag:** `experiments.wakeWord` (Settings → Developer, or Settings → Voice → Live call), off by default. **TODO:** H8.2.
 **Since:** 2.210.0. **Per screen:** `call.listenWithFace` and `call.wakeWord` (Settings → Voice → Live call).
 
 ## Hypothesis

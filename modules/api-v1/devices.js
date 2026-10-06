@@ -130,6 +130,12 @@ function cleanName(name, id) {
   return (!n || /^(null|undefined|nan)$/i.test(n) ? id : n).slice(0, 64);
 }
 
+/**
+ * Every kind of device record (PROTOCOL §5): a paired client, an agent acting on devices, a signed-in browser
+ * (screens/), a linked chat (channels/). openapi.js reads this list, so the document cannot fall behind it.
+ */
+const KINDS = ['device', 'agent', 'browser', 'channel'];
+
 function create({ name, scopes, caps, expiresAt, kind }) {
   const id = newId('dev');
   const secret = crypto.randomBytes(32).toString('base64url');
@@ -297,7 +303,7 @@ function repairNames() {
   return n;
 }
 
-module.exports = { repairNames, cleanName,
+module.exports = { KINDS, repairNames, cleanName,
   FORM_FACTORS, normalizeCaps, publicView,
   list, get, create, authenticate, rotate, revoke, remove, forget, update, patchVars, touchPersist,
   startPairing, completePairing, _reset,

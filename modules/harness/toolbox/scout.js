@@ -6,7 +6,7 @@
  */
 module.exports = [
   {
-    name: 'scout',
+    name: 'model_scout',   // 'scout' is the airlock specialist; this is the model scout (audit 2026-10-06, coh F24)
     description: 'Find better or new models for DOCA\'s functions and suggest them for a person to accept. Actions: signals (the latest look: '
       + 'trending models per function with growth, new releases and news — outside words), roles (what each function uses now), list (what '
       + 'was suggested and decided, with reasons), suggest (file one: title, role, candidate, replaces, why, evidence, tryWith). A suggestion '

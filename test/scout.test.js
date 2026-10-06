@@ -32,7 +32,7 @@ before(async () => {
 });
 after(async () => { delete process.env.DOCA_HF_API; await H.stop(); await new Promise(r => srv.close(r)); fs.rmSync(repo, { recursive: true, force: true }); });
 
-const has = () => require('../modules/harness/tools').schemas().some(t => t.function.name === 'scout');
+const has = () => require('../modules/harness/tools').schemas().some(t => t.function.name === 'model_scout');
 
 test('off: no tool, no card, no routine', async () => {
   assert.equal(has(), false);
@@ -61,11 +61,11 @@ test('on: the tool files suggestions once each; a person accepts one into TODO.m
   require('../modules/experiments').setDeveloper(true); require('../modules/experiments').set('modelScout', true);
   assert.equal(has(), true);
   const tools = require('../modules/harness/tools');
-  const out = await tools.call('scout', { action: 'suggest', title: 'A faster speech-to-text', role: 'stt', candidate: 'acme/whisper-next', replaces: 'whisper large-v3-turbo', why: 'Half the latency at the same word error rate.', evidence: ['https://example.com/card'], tryWith: 'voiceServices.sttModel' });
+  const out = await tools.call('model_scout', { action: 'suggest', title: 'A faster speech-to-text', role: 'stt', candidate: 'acme/whisper-next', replaces: 'whisper large-v3-turbo', why: 'Half the latency at the same word error rate.', evidence: ['https://example.com/card'], tryWith: 'voiceServices.sttModel' });
   assert.match(out, /Filed S1/);
-  assert.match(await tools.call('scout', { action: 'suggest', title: 'again', role: 'stt', candidate: 'ACME/whisper-next' }), /Filed S1/, 'the same candidate is the same card');
-  await tools.call('scout', { action: 'suggest', title: 'A video model', role: 'new', candidate: 'acme/video' });
-  assert.match(await tools.call('scout', { action: 'signals' }), /^⟦/, 'the look is outside words');
+  assert.match(await tools.call('model_scout', { action: 'suggest', title: 'again', role: 'stt', candidate: 'ACME/whisper-next' }), /Filed S1/, 'the same candidate is the same card');
+  await tools.call('model_scout', { action: 'suggest', title: 'A video model', role: 'new', candidate: 'acme/video' });
+  assert.match(await tools.call('model_scout', { action: 'signals' }), /^⟦/, 'the look is outside words');
 
   fs.writeFileSync(path.join(repo, 'TODO.md'), '# TODO\n\n## Other\n\n- [ ] something\n');
   const a = await H.api(null, 'POST', '/api/scout/S1/accept', {});
@@ -75,7 +75,7 @@ test('on: the tool files suggestions once each; a person accepts one into TODO.m
   assert.match(todo, /- \[ \] \*\*S1\*\* A faster speech-to-text — stt \(replaces whisper large-v3-turbo\); candidate: acme\/whisper-next\./);
   const d = await H.api(null, 'POST', '/api/scout/S2/decline', { reason: 'no GPU room for video' });
   assert.equal(d.body.state, 'declined');
-  assert.match(await tools.call('scout', { action: 'list' }), /S2 \[declined\] A video model .* — declined: no GPU room for video/);
+  assert.match(await tools.call('model_scout', { action: 'list' }), /S2 \[declined\] A video model .* — declined: no GPU room for video/);
   assert.equal((await H.api(null, 'POST', '/api/scout/S2/work', {})).status, 409, 'only accepted work starts');
   const member = await H.signIn('member', 'scout-member@test.local');
   assert.equal((await H.api(null, 'POST', '/api/scout/S1/accept', {}, { Cookie: member.cookie })).status, 403, 'a host\'s decisions');
@@ -88,7 +88,7 @@ test('a second accepted suggestion lands in the same section; a mission never ho
   const todo = fs.readFileSync(path.join(repo, 'TODO.md'), 'utf8');
   assert.equal(todo.match(/## Scout suggestions/g).length, 1);
   assert.ok(todo.indexOf('**S1**') < todo.indexOf(`**${s.id}**`));
-  assert.ok(require('../modules/agents/registry').NEVER.includes('scout'));
+  assert.ok(require('../modules/agents/registry').NEVER.includes('model_scout'));
 });
 
 test('the feed reader takes RSS and Atom', () => {

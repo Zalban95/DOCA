@@ -1,6 +1,6 @@
 # Experiment: search memory and conversations by meaning
 
-**Flag:** `experiments.retrieval` (Settings → Experiments), off by default, and inert until an embedding model is
+**Flag:** `experiments.retrieval` (Settings → Developer), off by default, and inert until an embedding model is
 set (`retrieval.model`, Settings → Harness → Retrieval). **TODO:** H10.2. **Since:** 2.181.0.
 
 ## Hypothesis
