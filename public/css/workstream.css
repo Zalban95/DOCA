@@ -40,3 +40,22 @@
 .ws-act.result.failed { color: #ff7b72; }
 .ws-act.text { color: #e6e6e6; }
 @media (max-width: 768px) { .ws-console { width: 100%; height: 40%; padding-left: 14px; } }
+
+/* Machines → Live (js/machines-live.js): working ones in front, large; the rest behind, small and dim. */
+#tab-live.active { display: block; overflow: auto; padding: 0 14px 80px; }
+.ml-head { display: flex; gap: 10px; align-items: baseline; padding: 10px 0; }
+.ml-front { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 14px; }
+.ml-back { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 18px; }
+.ml-tile { border: 1px solid var(--border2); background: var(--raised); cursor: pointer; transition: transform .3s, opacity .3s, border-color .3s; }
+.ml-back .ml-tile { opacity: .55; }
+.ml-back .ml-tile:hover { opacity: .9; }
+.ml-tile.working { border-color: var(--accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent), 0 8px 30px rgba(0,0,0,.35); }
+.ml-tile.working .ml-cap b::after { content: ' ●'; color: var(--accent); animation: ml-pulse 1.4s infinite; }
+@keyframes ml-pulse { 50% { opacity: .2; } }
+.ml-shot { position: relative; aspect-ratio: 16 / 10; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.ml-shot img { width: 100%; height: 100%; object-fit: contain; }
+.ml-empty { position: absolute; color: #888; font-size: 11px; padding: 10px; text-align: center; }
+.ml-cap { padding: 8px 10px; font-size: 12px; }
+.ml-who { float: right; font-size: 10px; color: var(--muted); }
+.ml-line { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
+@media (max-width: 768px) { .ml-front { grid-template-columns: 1fr; } }

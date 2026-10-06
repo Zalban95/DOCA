@@ -325,9 +325,9 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   groups (Controls · Agents · Machines · This host · Models & tools · Settings); every page served alone
   (`/?view=<page>`, ⧉) and sent to a screen from Devices; one Archive for conversations, missions, projects and
   computers. **Left:** an archive for Docker containers and VMs is theirs (they are other tools' state), not DOCA's.
-- [ ] H10.9 The agents' work, live (asked 2026-10-06). **Done (2.229.0):** the Workstream — files edited popping up with
-  their diffs, by a sentinel that runs while the page is open; thinking and commands lower right. **Next:** the agents'
-  machines live — their computers' screens, the busy ones in front, and the pages they serve for tests.
+- [x] H10.9 The agents' work, live (asked 2026-10-06). **Done (2.229.0):** the Workstream — files edited popping up with
+  their diffs, by a sentinel that runs while the page is open; thinking and commands lower right. **Done (2.230.0):** Machines → Live — the agents' computers'
+  screens and the pages they serve for tests, pictured by the hub's headless browser, the working ones in front.
 - [ ] H10.6 Limits that follow the work (asked 2026-10-06, CONSTITUTION P20): today a turn gets `maxSteps` 8 and the
   model's thinking budget whatever it asks. Instead, before a turn a cheap triage (rules first, the assistant's quick
   model when unsure) rates difficulty and urgency and sets that turn's effort and step budget; a turn reaching its

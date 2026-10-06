@@ -35,7 +35,8 @@ function mount(app) {
   require('../live/routes').mount(app);
   require('../screens/showing').mount(app);
   require('../archive').mount(app);
-  require('../workstream/routes').mount(app);   // the agents' work as it happens: files edited, thinking, commands   // what was put away, in one place (archive.js)   // what each screen shows, and sending a page to one   // every page live on every screen: one change feed (live/, H10.5)
+  require('../workstream/routes').mount(app);
+  require('../machines').mount(app);   // the agents' machines live, and the pages they serve (machines/)   // the agents' work as it happens: files edited, thinking, commands   // what was put away, in one place (archive.js)   // what each screen shows, and sending a page to one   // every page live on every screen: one change feed (live/, H10.5)
   require('../face/routes').mount(app);   // the face: what the hive is doing, on any screen (face/)
   require('../recipes/routes').mount(app);   // recipes: what worked, run again without the thinking (recipes/)
   require('../channels/telegram/routes').mount(app);   // Telegram as a channel (channels/telegram)
