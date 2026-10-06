@@ -48,8 +48,9 @@ async function _subtabVoiceInit() {
     const prefs = await apiFetch('/api/prefs');
     _voiceSettingsLoad(prefs);
   } catch {}
-  screenVoiceRender();   // this screen's own voice (settings/screen-voice.js)
-  liveCallRender();      // how a live call listens, and its experiments (settings/live-call.js)
+  // In order — the hive's services above, then this screen's voice, then the call's cards (settings/live-call.js).
+  await screenVoiceRender();
+  await liveCallRender();
 }
 
 function _settingsRender() {

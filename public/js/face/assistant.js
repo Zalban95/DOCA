@@ -16,6 +16,8 @@ async function assistantOpen(first) {
   const started = _assistantInCall() ? null : chatToggleCall({ assistant: true });
   if (!_assistant) _assistantBuild();
   _assistant.el.classList.remove('calm');
+  // Full screen, sleeker (asked 2026-10-06) — the browser allows it only inside a tap, so a wake word keeps the page.
+  if (!document.fullscreenElement) _assistant.el.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
   _assistantSay('Listening…');
   const ok = (started && await started) || _assistantInCall();
   if (!ok) { _assistantSay('The call did not start — the chat says why.'); return; }
@@ -85,6 +87,7 @@ function assistantClose(fromBack) {
   _assistant = null;
   clearInterval(a.timer); clearTimeout(a.calmTimer);
   if (_assistantInCall()) _callStop();
+  if (document.fullscreenElement === a.el) document.exitFullscreen?.().catch(() => {});
   a.face.stop(); a.closeFeed(); a.el.remove();
   if (!fromBack) a.back();
   if (typeof wakeWordApply === 'function') wakeWordApply();

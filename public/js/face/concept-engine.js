@@ -62,7 +62,8 @@ function faceConceptSay(text, sec = 2) {
   const pts = faceGlyphPoints(c.glyph);
   if (!pts) return null;
   const ms = Math.max(2600, Math.min(4500, sec * 1200));   // long enough for the image to land (asked 2026-10-06)
-  if (typeof _faceCorner !== 'undefined') _faceCorner?.face?.shape?.(pts, c.color, ms);
-  if (typeof _assistant !== 'undefined') _assistant?.face?.shape?.(pts, c.color, ms);
+  // A face whose spec switched concepts off (Settings → Voice → The face) stays itself.
+  for (const f of [typeof _faceCorner !== 'undefined' && _faceCorner?.face, typeof _assistant !== 'undefined' && _assistant?.face])
+    if (f?.shape && f.spec?.concepts !== false) f.shape(pts, c.color, ms);
   return c;
 }

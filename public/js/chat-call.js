@@ -30,7 +30,7 @@ let _callThreshold = 15;
 // A recording is sent only with this much audio over the threshold in it: a click, a cough or a door is shorter, and
 // Whisper turns such a blip into "Thank you." (the hub screens those phrases too: modules/stt-filter.js).
 const CALL_MIN_VOICED_MS = 300;
-let _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending = 0, _callTtsWarned = false, _callLastActive = 0, _callOverMs = 0;
+let _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending = 0, _callTtsWarned = false, _callLastActive = 0, _callOverMs = 0, _callAnswering = 0;
 /** How long nobody has spoken and nothing has been said or worked on (assistant mode's idle timer). */
 const _callIdleMs = () => (_callActive && _callLastActive ? performance.now() - _callLastActive : 0);
 
@@ -150,8 +150,8 @@ function _callVadLoop() {
   const energy = data.reduce((a, b) => a + b, 0) / data.length;
   const now = performance.now(), dt = _callLastFrame ? Math.min(100, now - _callLastFrame) : 0;
   _callLastFrame = now;
-  // Activity is an exchange — something sent, worked on or spoken — never mere sound, or a noisy room keeps it awake.
-  if (_callCurrentSrc || _callProcessing || _callSynthPending || (_callSpeaking && _callVoicedMs >= CALL_MIN_VOICED_MS)) _callLastActive = now;
+  // Activity is words: something heard as words, answered or spoken — never sound, or a noisy room never lets it rest.
+  if (_callCurrentSrc || _callAnswering || _callSynthPending) _callLastActive = now;
   if (_callFaceVoice && typeof faceCornerVoice === 'function') {
     if (_callCurrentSrc && _callOutAnalyser) {
       const out = new Uint8Array(_callOutAnalyser.frequencyBinCount);
@@ -236,6 +236,7 @@ async function _callProcessAudio(audioBlob) {
       return;   // the finally below counts it done
     }
 
+    _callLastActive = performance.now();   // words were heard
     await _callAnswer(transcribeData.text.trim());
   } catch (e) {
     if (e.name !== 'AbortError') chatAppendMsg('system', `Voice error: ${e.message}`);
@@ -248,7 +249,7 @@ async function _callProcessAudio(audioBlob) {
 /** What was said, sent as a turn and spoken back — from the microphone, or the words after a wake word (wake-word.js). */
 async function _callAnswer(userText) {
   if (!_callActive) return;
-  _callProcessing++;
+  _callProcessing++; _callAnswering++;
   _callHeardReset();
   try {
     chatAppendMsg('user', userText);
@@ -332,7 +333,7 @@ async function _callAnswer(userText) {
     }
   } finally {
     agentWorkingClose(document.getElementById('chat-messages'));
-    _callProcessing = Math.max(0, _callProcessing - 1);
+    _callAnswering = Math.max(0, _callAnswering - 1); _callProcessing = Math.max(0, _callProcessing - 1);
     if (_callActive && !_callCurrentSrc && _callPlayQueue.length === 0 && !_callSynthPending) {
       _callSetStatus('Listening…', 'listening');
     }

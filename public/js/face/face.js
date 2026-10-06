@@ -18,7 +18,8 @@ const FACE_DEFAULT = {
   name: 'Protolab',
   palette: { bg: '#050507', ink: '#e8edf2', dim: '#707a85', accent: '#57c9c2', steel: '#6f8aa3', ask: '#e8a020', error: '#e85050', field: '#a6bfd6' },
   dots: 760,
-  form: 'poly',   // a polyhedron of light (face/poly.js); 'face' is the earlier eyes and mouth
+  form: 'poly',
+  point: 1, glow: 1, speed: 1, concepts: true,   // tunable in Settings → Voice → The face (settings/face-editor.js)   // a polyhedron of light (face/poly.js); 'face' is the earlier eyes and mouth
   eyes: { y: -0.16, gap: 0.40, r: 0.10 },
   mouth: { y: 0.30, w: 0.46, curve: 0.06 },
   hud: true,
@@ -90,7 +91,8 @@ function faceMount(canvas, specIn = {}) {
         if (d >= 1) continue;
         // A firefly with a contour (asked 2026-10-06): a flat-topped core with a crisp edge, then a dim close bloom and
         // a faint wide glow — the light around a point must never be bright enough to swallow its edge.
-        const core = Math.exp(-Math.pow(d / 0.048, 4)), bloom = 0.13 * Math.exp(-Math.pow(d / 0.19, 2)), halo = 0.2 * Math.exp(-d / 0.3) * (1 - d * d);
+        const P = Math.max(0.3, Number(spec.point) || 1), G = Math.max(0, Number(spec.glow ?? 1));
+        const core = Math.exp(-Math.pow(d / (0.048 * P), 4)), bloom = 0.13 * G * Math.exp(-Math.pow(d / 0.19, 2)), halo = 0.2 * G * Math.exp(-d / 0.3) * (1 - d * d);
         const a = Math.min(1, core + bloom + halo), white = core / Math.max(a, 1e-6) * 0.75;   // the peak whitens, the glow keeps the colour
         const o = (y * S + x) * 4;
         px[o] = r + (255 - r) * white; px[o + 1] = g + (255 - g) * white; px[o + 2] = b + (255 - b) * white; px[o + 3] = a * 255;
@@ -118,7 +120,7 @@ function faceMount(canvas, specIn = {}) {
   function frame(now) {
     if (stopped) return;
     raf = requestAnimationFrame(frame);
-    const t = now / 1000;
+    const t = now / 1000 * Math.max(0.1, Number(spec.speed) || 1);
     const k = reduced ? 1 : 0.06;
     for (const key of ['c', 'eye', 'mouth', 'spin', 'drift', 'breath', 'scale']) cur[key] += ((target[key] ?? 0) - (cur[key] ?? 0)) * k;
     form?.frame(t, { spin: cur.spin, breath: cur.breath, scale: cur.scale, level: target.mouth || target.pulse ? level : 0 });
