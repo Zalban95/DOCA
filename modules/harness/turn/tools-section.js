@@ -29,7 +29,7 @@ function lineFor(name, description) {
 /**
  * @param {Array<{type:'function', function:{name, description}}>} schemas  the turn's tool declarations
  */
-function toolsSection(schemas) {
+function toolsSection(schemas, named = []) {
   if (!schemas?.length) return '';
   const byKit = new Map();
   for (const s of schemas) {
@@ -55,6 +55,8 @@ function toolsSection(schemas) {
     if (kit === 'mcp') lines.push(`  ${list.map(t => t.name).join(', ')}`);
     else for (const t of list) lines.push(`  ${t.name}: ${t.what}`);
   }
+  const more = require('./tool-tiers').namedLine(named);   // experiment toolTiers: held, not loaded yet
+  if (more) lines.push(more);
   return lines.join('\n');
 }
 

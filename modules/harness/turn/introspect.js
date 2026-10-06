@@ -41,13 +41,26 @@ function preview({ message = '', client = null, profile = null, sessionId = null
  * the tool schemas, which travel in the request body rather than the system
  * prompt and are re-sent every step like everything else, and the transcript.
  */
+/**
+ * The system prompt cut into its blocks, each named by its `# ` heading (the charter has its own): [[name, text]].
+ * Joined back with the blank line between blocks, the parts are the prompt.
+ */
+function promptParts(text) {
+  return String(text || '').split(/\n\n(?=# )/).map((part, i) => {
+    const h = /^# ([^\n—(]+)/.exec(part);
+    const name = h ? h[1].trim().replace(/:$/, '').toLowerCase() : i === 0 ? 'safety charter' : `part ${i + 1}`;
+    return [name === 'standing rules' ? 'safety charter' : name, part];   // the charter's own heading
+  });
+}
+
 function breakdown({ message = '', client = null, sessionId = null } = {}) {
   const org = require('../organization');
   const session = sessionId ? org.session(sessionId) : null;
   const profile = session ? org.profileFor(session) : null;
   const p = turnParams(profile);
   const disabled = disabledFor(profile, p, sessionId);
-  const schemas  = tools.schemas(disabled);
+  // What is sent, which with the toolTiers experiment is less than what is held (turn/tool-tiers.js).
+  const schemas  = require('./tool-tiers').split(tools.schemas(disabled), { sessionId, profile, text: message }).offered;
 
   const measure = (name, text, note) => ({
     name, note: note || null,
@@ -60,32 +73,20 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
   // `measure` drops an empty section, so a specialist needs no branch here.
   const missionsBlock = missionsFor(sessionId);
 
-  const sections = profile ? [
-    measure('conversation prompt', systemPrompt({ p, userText: message, summary: session.summary, client, profile, sessionId,
-      toolCount: schemas.length, disabledCount: disabled.length }), `${session.kind} profile; includes the safety charter`),
-    measure('organization', org.block(session.id, org.notices(session.id).slice(0, 10)), 'briefs and unread reports, after history'),
+  // The system prompt as `turn()` assembles it, cut at its own headings — so the parts sum to what is sent and a
+  // block added to the prompt is counted without a line here (audit 2026-10-06, aw 28 / coh F5: the hand-kept list
+  // left out ≈40% of a work chat's prompt — its tools, skills, specialists, permits, the person, installs, project).
+  const system = systemPrompt({ p, userText: message, summary: session?.summary, client, profile, sessionId,
+    toolCount: schemas.length, disabledCount: disabled.length });
+  const sections = [
+    ...promptParts(system).map(([name, text]) => measure(name, text, name === 'safety charter' ? 'ships in code, not editable — with any untitled text after it' : null)),
+    ...(session ? [measure('organization', org.block(session.id, org.notices(session.id).slice(0, 10)), 'briefs and unread reports, after history')] : []),
     measure('missions', missionsBlock, 'paused and finished missions, after history'),
     measure('limits', budget.block(p)),
-    measure('readings', environment.live()),
-  ] : [
-    measure('safety charter', providers.SAFETY_CHARTER, 'ships in code, not editable'),
-    measure('system prompt', p.systemPrompt || providers.DEFAULT_SYSTEM_PROMPT, 'harness.config.doca.systemPrompt'),
-    measure('environment', environment.block({
-      provider: p.provider, model: p.model, toolCount: schemas.length, disabledCount: disabled.length,
-    }), 'host, paths, providers, MCP servers'),
-    measure('client', clientBlock(client), 'who asked'),
-    measure('where tools land', placeBlock(client)),
-    measure('memory rules', rulesBlock(), 'how the agent keeps its memory'),
-    measure('memory entries', memoryBlock(message, Math.max(0, Number(p.memoryLimit) || 0)),
-      `pinned + best matches, up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`),
-    measure('limits', budget.block(p)),
-    measure('settings proposals', settings.block()),
-    measure('missions', missionsBlock, 'paused and finished missions, after history'),
-    // Sent after the history rather than in the system message, so it is
-    // measured here but ordered last in the request. Same cost either way: it
-    // is re-sent on every step. See liveBlock() and ISSUES.md H-9.
+    // Sent after the history rather than in the system message, so it is measured here but ordered last in the
+    // request. Same cost either way: it is re-sent on every step. See liveBlock() and ISSUES.md H-9.
     measure('readings', environment.live(), 'clock, load, uptime — after the history'),
-  ];
+  ].filter(x => x.chars);
 
   // Per server, because "the prompt is big" is not actionable and "the blender
   // server is 90k of it" is: that one can be switched off on the tools list.
@@ -186,4 +187,4 @@ async function status({ sessionId } = {}) {
   return out;
 }
 
-module.exports = { preview, breakdown, contextOf, status };
+module.exports = { preview, breakdown, contextOf, status, promptParts };

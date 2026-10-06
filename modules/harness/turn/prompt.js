@@ -94,7 +94,8 @@ function rulesBlock() {
  */
 function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile, projectBrief = '', sessionId = null }) {
   // What this turn is offered, described (turn/tools-section.js).
-  const schemas = tools.schemas(disabledFor(profile, p, sessionId)), toolList = require('./tools-section').toolsSection(schemas);
+  const tiers = require('./tool-tiers').split(tools.schemas(disabledFor(profile, p, sessionId)), { sessionId, profile, text: userText });
+  const schemas = tiers.offered, toolList = require('./tools-section').toolsSection(schemas, tiers.named);   // toolTiers: the rest named
   const identity = require('../identity');
   if (profile?.level === 'orchestrator') return require('./orchestrator-prompt').orchestratorPrompt({ p, userText, summary, toolCount, client, profile, toolList, schemas });
   // A specialist's prompt is mostly what is left out of it. The charter is not

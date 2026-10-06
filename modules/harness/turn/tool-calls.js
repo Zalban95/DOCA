@@ -67,13 +67,15 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     // event and is kept on the tool row, so a reloaded transcript draws it
     // again; the model only ever reads the result text.
     const shown = [];
+    const tiers = require('./tool-tiers');
     const result = failures.note(signal, name, args, refused !== null
       ? refused
       : args._raw !== undefined
       ? `Error: could not parse the arguments as JSON: ${args._raw}`
-      : !schemas.some(sc => sc.function.name === name)
+      : !schemas.some(sc => sc.function.name === name) && !tiers.heldNotSent(name, stepDisabled)
         ? `Error: the "${name}" tool is switched off for this conversation.`
         : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), emit: evt => say({ ...evt, step }), sessionId: session.id, signal, approved: !!gate, user: client?.user, airlock: !!profile?.airlock }));
+    tiers.afterCall(session.id, profile, name, result, stepDisabled);   // toolTiers: what was called or read about stays loaded
     for (const image of shown) say({ type: 'image', image, step });
     say({ type: 'tool_result', name, result, step, ...failures.typed(result) });
 
