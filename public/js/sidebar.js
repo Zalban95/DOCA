@@ -13,7 +13,11 @@ async function pollStatus() {
     renderContainers(data.containers || []);
     renderGPU(data.gpu || [], en);
     renderSystem(data.system || null, en);
-    renderModels(data.models || [], data.loadedModels || []);
+    // Every local model server and whom it works for (model-servers.js) — asked only while a panel shows it, never by
+    // the status a device's sampler reads, so nothing probes the servers in the background.
+    let servers = [];
+    if (!document.hidden) try { servers = (await apiFetch('/api/models/servers')).servers || []; } catch { /* the rest still draws */ }
+    renderModels(data.models || [], data.loadedModels || [], servers);
     renderHfModels(data.hfModels || []);
     pollLlamaCppStatus();
     pollServicesStatus();
@@ -283,16 +287,15 @@ function renderSystem(sys, en = {}) {
   </div>`;
 }
 
-function renderModels(models, loadedModels) {
+function renderModels(models, loadedModels, servers = []) {
   const el = document.getElementById('s-models');
+  const loadedNames = new Set(loadedModels.map(m => m.name));
+  // Every local model server, whoever started it (model-servers.js): what it holds, and whom it is working for.
+  let html = sidebarModelServers(servers.filter(sv => sv.kind !== 'Ollama'));
   if (!models.length && !loadedModels.length) {
-    el.innerHTML = '<div class="placeholder">No models installed</div>'; return;
+    el.innerHTML = html || '<div class="placeholder">No models installed</div>'; return;
   }
 
-  const loadedNames = new Set(loadedModels.map(m => m.name));
-
-  // Loaded models section (if any)
-  let html = '';
   if (loadedModels.length) {
     const totalVram = loadedModels.reduce((s, m) => s + (m.sizeVram || 0), 0);
     html += `<div class="models-loaded-header">● In memory (${loadedModels.length})</div>`;
@@ -311,7 +314,7 @@ function renderModels(models, loadedModels) {
   // Installed models (excluding already-loaded ones)
   const others = models.filter(m => !loadedNames.has(m.name));
   if (others.length) {
-    if (loadedModels.length) html += `<div class="models-loaded-header" style="margin-top:6px;opacity:.5">Installed</div>`;
+    if (loadedModels.length || html) html += `<div class="models-loaded-header" style="margin-top:6px;opacity:.5">Ollama — installed</div>`;
     html += others.map(m => {
       const name = m.name.replace(/:latest$/, '');
       const size = m.size ? fmtBytes(m.size) : '?';
@@ -325,6 +328,22 @@ function renderModels(models, loadedModels) {
   el.innerHTML = html;
 }
 
+
+/** Model servers this machine runs outside Ollama: a router's models loaded, sleeping or working, and for whom. */
+function sidebarModelServers(servers) {
+  const rows = [];
+  for (const sv of servers) {
+    const states = (sv.models || []).filter(m => m.state !== 'available');
+    if (!states.length) { rows.push(`<div class="model-item" title="${escHtml(sv.url)}"><span class="model-name">${escHtml(sv.label)} <span class="model-sz">:${escHtml(new URL(sv.url).port || '')}</span></span><span class="model-sz">answers · ${(sv.models || []).length} listed</span></div>`); continue; }
+    for (const m of states) {
+      const who = m.state !== 'working' ? '' : sv.doca.length ? `for DOCA: ${sv.doca.map(d => d.text).join('; ')}` : 'for something else on this machine — not DOCA';
+      rows.push(`<div class="model-item ${m.state === 'working' || m.state === 'loaded' ? 'loaded' : ''}" title="${escHtml(`${sv.kind} · ${sv.url}${who ? `\n${who}` : ''}`)}">
+        <span class="model-name ${m.state === 'working' || m.state === 'loaded' ? 'loaded-name' : ''}">${escHtml(m.id)}</span>
+        <span class="model-sz model-state-${escHtml(m.state)}">${escHtml(m.state)}</span></div>${who ? `<div class="model-who ${sv.foreign ? 'foreign' : ''}">${escHtml(who)}</div>` : ''}`);
+    }
+  }
+  return rows.length ? `<div class="models-loaded-header">◆ Model servers</div>${rows.join('')}` : '';
+}
 
 function renderHfModels(repos) {
   const el = document.getElementById('s-hf-models');
