@@ -136,19 +136,22 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
 - **S11 Files that ask first.** A change that widens what an agent may do, or weakens a guard, is proposed and
   waits for Al's yes — even inside a loop. A fix that keeps or tightens them does not need to ask. These are:
   this file; the charter (`SAFETY_CHARTER`); `modules/auth/**` (gate, rights, levels, permits, grants);
-  `modules/harness/approval.js` and the approval modes; `modules/settings.js` (`SETTABLE`, `FORBIDDEN`,
+  `modules/harness/approval.js` and the approval modes; `modules/harness/settings.js` (`SETTABLE`, `FORBIDDEN`,
   `NEVER_SETTABLE`); `modules/secrets-mask.js` and `PROTECTED_FILES`; `agents/registry.js` `NEVER`/`AIRLOCK_ONLY`;
-  `/api/v1` scopes and presets; signing keys, `.env` and anything under `keys/`. (2026-09-26, settled 2026-10-06)
+  `/api/v1` scopes and presets; who may release (`modules/releasing.js`); signing keys, `.env` and anything under `keys/`. (2026-09-26, settled 2026-10-06)
 
 ## 5. How work is done
 
 - **W1 The cycle.** Fetch first. A branch per task (siblings: from origin's default branch). Implement,
   troubleshoot, test; a TODO item is done only when tested. Then `[X.Y.Z]` commit, CI green on Linux, Windows and
   macOS, merge `--no-ff`, annotated tag, push, switch the live panel, check it. (2026-09-25, 10-04)
-- **W2 Who may release without asking.** Claude models of the Opus and Fable families, version 5 and later, may
-  run the whole cycle — merge, tag, push, switch the live panel — without asking, because their work is trusted and
-  any issue can be repaired. Every other model or harness, DOCA's own agent included unless it runs one of those
-  models, asks before merging, tagging or pushing. (settled 2026-10-06)
+- **W2 Who may release without asking is the admin's setting** — Settings → Developer → Releasing
+  (`developer.releaseUnasked`; `GET /api/developer/releasing?model=<id>` answers for one model). A model it lists
+  may run the whole cycle — merge, tag, push, switch the live panel — without asking; every other model or harness,
+  DOCA's own agent included unless it runs a listed model, asks before merging, tagging or pushing. The default
+  lists the Claude Opus and Fable families, version 5 and later, whose work Al trusts and repairs when needed; an
+  agent that cannot reach the hub uses the default. Only the admin edits it: no agent may propose it (S11).
+  (settled 2026-10-06)
 - **W3 What stops anyone.** Stop and ask for: a product choice the principles do not answer; a change to `/api/v1`,
   a scope or a caps field (three shipped apps depend on it); money, credentials or hardware only Al can provide;
   work only Al's other machines can do; a file in S11. Everything clear goes ahead. (2026-10-04)
@@ -220,8 +223,9 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
 - **A1 Two ways to talk.** A chat call is a conversation. The face's assistant mode is a direct, Jarvis-like
   assistant with the same context: quicker, much shorter, conversational; it drives devices and buildings.
   (2026-10-05)
-- **A2 Tone.** Assistant mode may use a dry irony freely when it fits; everywhere else the agent is ironic only
-  when the person is. Never at the cost of being clear or right. (settled 2026-10-06)
+- **A2 Tone comes from the context, not an instruction.** No prompt tells any agent to be ironic: a working
+  agent's context is spent on the work. Irony that comes naturally from the conversation is fine, in assistant mode
+  most of all. If a model one day exposes a tone control, it can become a setting. (settled 2026-10-06)
 - **A3 Act, don't answer.** A clear request with a visible result is done without a spoken reply; questions,
   failures and anything not visible are answered, briefly. Being right comes before being quick. (2026-10-06)
 - **A4 Hard requests escalate, and the call stays.** The assistant says so in a sentence, raises its own effort,

@@ -18,6 +18,7 @@ async function experimentsLoad() {
     <p style="font-size:11px;color:var(--muted);margin-top:6px">For the people who build and test DOCA. On, the experiments below are offered and the ones switched on
       take effect; off, none is — whatever their switches say — and the panel shows none of them. Each is off until switched on and undone by
       switching it off: read what it costs and what can go wrong first.</p></div>`;
+  if (typeof releasingCard === 'function') await releasingCard(panel);   // who may release unasked: shown with or without developer mode
   if (!dev) return;
   for (const x of list) {
     const card = Object.assign(document.createElement('div'), { className: 'card' });

@@ -1,6 +1,6 @@
 ---
 name: doca-dev-cycle
-description: Implement a change on DOCA or one of its apps (DocaDesk, DocaMobile, DocaWear) from a TODO line to a release — branch, build, test, commit, then merge, tag and push (asking first unless CONSTITUTION.md W2 lets your model release). Use for a scout suggestion or any TODO item.
+description: Implement a change on DOCA or one of its apps (DocaDesk, DocaMobile, DocaWear) from a TODO line to a release — branch, build, test, commit, then merge, tag and push (asking first unless the admin's Releasing setting lists your model). Use for a scout suggestion or any TODO item.
 ---
 
 # From a TODO line to a release
@@ -31,8 +31,9 @@ app's `AGENTS.md` when you touch one. This is the cycle every change follows, in
    Chromium if none is found) and the page looked at. An app: its Gradle build and unit tests (`sh gradlew
    testDebugUnitTest assembleDebug`), checking the exit code, never only a filtered log.
 5. **Commit**: one logical change per commit, the message says why. A move and a behaviour change are two commits.
-6. **The release** — ask before each of these, through an approval or a plain question, unless you are a Claude
-   Opus or Fable model of version 5 or later (CONSTITUTION W2), who may run them unasked:
+6. **The release** — ask before each of these, through an approval or a plain question, unless your model is one the
+   admin lets release unasked (Settings → Developer → Releasing; `GET /api/developer/releasing?model=<your model id>`;
+   CONSTITUTION W2):
    - the version in `package.json` (patch for a fix, minor for behaviour), `npm run openapi:write`, a commit
      `[X.Y.Z] …`;
    - push the branch and wait for CI on Linux, Windows and macOS (`gh run watch`);
