@@ -34,7 +34,16 @@ opened at a link (doca-client's `apps_open`, the browser, the phone), the app's 
 an address. Known routes are memory and recipes; the first time the agent asks once, does it, and keeps a recipe. In a
 call it says one sentence and stays: "pause", "louder", "stop" are one tool call each.
 
-## What the phone adds (DocaMobile, next)
+## What the phone adds (DocaMobile 1.0.7)
+
+Built: `window.DocaDevice` (apps by use, open one; only on the hub's pages), the ambient screen as Android's screen
+saver (`AmbientDream`, Settings → Ambient), and three tools on the phone's existing hands — `screen_read` (the
+screen as numbered elements, a password field never read), `screen_press` (by number), `media_control` (play,
+pause, next, volume of whatever plays). With `apps_open` and `screen_capture`, which were there, the agent opens an
+app at a link, presses its cast button and picks the TV. Still not built: casting through MediaRouter by the app
+itself (the app's own cast button covers it), and the phone keeping a call open while another app is in front.
+
+### As first planned
 
 1. **`window.DocaDevice`** in the WebView (a `@JavascriptInterface`, only on the hub's own origin):
    - `apps(limit)` → JSON `[{label, package, icon}]`, the most used launchable apps (UsageStatsManager with the
