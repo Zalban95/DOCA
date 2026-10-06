@@ -6,7 +6,7 @@
 /** How full this session's context window is, next to the model badge. */
 function _hcContext(u) {
   const el = document.getElementById('hc-context');
-  if (el) el.innerHTML = contextRingHtml(u);
+  if (el) { el.innerHTML = contextRingHtml(u); el.onclick = hcPromptOpen; el.style.cursor = 'pointer'; el.title = 'What one step costs'; }
 }
 
 /** Today's tokens, next to the model badge. */
