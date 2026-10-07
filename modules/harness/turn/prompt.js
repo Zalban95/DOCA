@@ -122,6 +122,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
         ? environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount })
         : environmentBrief(p, toolCount),
       toolList,
+      budget.block(p),
       projectBrief,
       // A specialist sees the skills its definition names, or all with the skills kit.
       profile.skills?.length ? require('../skills').manifestBlock(profile.skills) : (profile.kits || []).includes('skills') ? require('../skills').manifestBlock() : '',
@@ -137,6 +138,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
     toolList,
     clientBlock(client), require('../../auth/permits').describe({ person: client?.user, profile }),
     placeBlock(client),
+    budget.block(p),   // its limits by name and path (charter rule 12); stable per turn, so it sits in the cached prefix
     rulesBlock(),
     identity.humanBlock(),
     require('../skills').manifestBlock(),
