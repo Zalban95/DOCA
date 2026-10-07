@@ -52,6 +52,14 @@ policy); every injection scored ≥ 0.991, which is where its preset thresholds
 come from. The set is small; grow `test/fixtures/guard/` whenever a real page is
 misjudged, and re-run `npm run guard-eval`.
 
+## With specialists off (2.290.0, TODO A2)
+
+There is no scout to send, so the agents that work hold `http_fetch` themselves. S6 still holds: a page on the open
+web reaches them as the report of the toolless reader `research_docs` uses (`research.js`) — asked what the agent said
+it needs (`want`), screened by the guards when there are any — never as the page. The owner's own addresses (this
+machine, the LAN, the tailnet) are read as they are, framed as outside words like every tool result; a HEAD and a
+`save_as` download read no page. An airlock specialist still reads the page itself, behind the guards.
+
 ## Limits
 
 - A classifier misses things; the design does not rest on it — a missed

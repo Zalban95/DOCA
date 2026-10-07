@@ -35,7 +35,7 @@ const LEADS = {
   recipe: 'Run a saved sequence of tool calls again, or save one — run a recipe when one does exactly what is asked.',
   pack: 'Keep skills, recipes and specialists you made as one pack in the library — use it when the owner wants to share them.',
   system_status: 'CPU, RAM, GPU, disks, containers and every local model server with who it works for — use it to see what the machine is doing.',
-  http_fetch: 'Read a URL (GET or HEAD) as text, or keep a download — use it for a page or an API that needs no key.',
+  http_fetch: 'Read a URL (GET or HEAD) — the open web through a reader, your own addresses as they are; or keep a download.',
   api_call: 'Call a keyed service or one of the owner\'s own devices and servers — use it to send, upload or act on an API.',
   hub_command: 'Run the hub\'s own commands — start or stop a service, a container, a llama.cpp server, take a snapshot — instead of shell.',
   today: 'The weather, today\'s calendar and what is waiting for the person — use it for "what\'s my day" or a morning brief.',

@@ -99,7 +99,6 @@ the project's managers only if the owner allows sharing specialists and skills (
   what it cost, what failed) — the place unrendered work is seen afterwards.
 
 ### Everything still open, now urgent
-- A2 rest: the rendered "Reaching outside" block; quarantining the open web with specialists off.
 - B6b rest: `screen {list | show | propose}`; retire `models-llamacpp-external.js` for model-servers.js; per feature,
   tool / recipe / a person's alone (wake-word training, evals, Workstream, served pages, logs, traces).
 - B7c (2): a skill read and then not followed (the Android case) — the skill's steps as a checklist the turn reports
@@ -138,7 +137,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 - [x] A1 **Secrets in the settings file are readable by `read_file`** — *2.245.2: masked on read (`harness/secret-view.js`), left out of search, never uploaded, mask never written back* (coh F1): channel tokens and MCP env/header
   values move to protected keys files with migrations (as the Hugging Face token did), or `read_file`/`search_files`
   mask secret-named keys in the settings file; a test reading it through the tool. (Strengthens a guard.)
-- [~] A2 **Split reading the web from calling APIs** — *2.259.0 (approved 2026-10-07): `http_fetch` GET/HEAD, `api_call` for a key, the owner's own addresses or a `save_as` download (toolbox/http.js). Left: the rendered "Reaching outside" block, and quarantining the open web with specialists off.* (with it, a rendered "Reaching outside" block built from what the turn holds — aw 19) (coh F2–F3, aw 3): a GET-only `http_fetch` stays the airlock's;
+- [~] A2 **Split reading the web from calling APIs** — *2.259.0 (approved 2026-10-07): `http_fetch` GET/HEAD, `api_call` for a key, the owner's own addresses or a `save_as` download (toolbox/http.js). 2.290.0: "Reaching outside" (`turn/reaching-out.js`) from the ways held; with specialists off, an open-web page reaches the agent as the toolless reader's report (`http_fetch` → `research.js`, guards when set up), the owner's own addresses as they are.* (with it, a rendered "Reaching outside" block built from what the turn holds — aw 19) (coh F2–F3, aw 3): a GET-only `http_fetch` stays the airlock's;
   `api_call {key|connector, url, method, form, files, save_as}` for origins with a stored key or a connector, held by
   the acting agents and never airlocked; hi3d, service drafts and smart-home move to it; quarantine of the open web
   holds even with specialists off (an internal reader), or S6 and airlock.md say otherwise. **Ask first** (guards).
