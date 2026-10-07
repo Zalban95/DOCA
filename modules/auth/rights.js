@@ -105,6 +105,7 @@ const TABLE = [
   R(ANY, '/api/computers(/.*)?', 'host'),
   R(ANY, '/api/search/(settings|try)', 'host'),                // the web search provider and its key (search/routes.js)
   R(ANY, '/api/screen(/settings|/profile)?', 'read'),          // one's own screen or device: how it looks and when it is asked, never how the hive behaves (screens/)
+  R(ANY, '/api/sharing(/.*)?', 'host'),                        // the owner's answer and the owner's click (sharing.js)
   R(ANY, '/api/packs(/.*)?', 'host'),                          // packs carry MCP commands, tool lists and memory (packs/routes.js)
   R(ANY, '/api/schedules(/.*)?', 'chat'),                     // one's own schedules; a host's, every one (schedules/routes.js)
   R(GET, '/api/live/stream', 'read'),                           // every page live: changes this viewer may open (live/routes.js)

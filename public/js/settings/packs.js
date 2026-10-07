@@ -71,6 +71,7 @@ async function packsLibraryRender() {
       <input class="input" id="pack-hub-url" placeholder="https://other-hub:4242" style="flex:1;min-width:200px">
       <input class="input" id="pack-hub-token" type="password" autocomplete="off" placeholder="its hub token (doca_…)" style="flex:1;min-width:200px">
       <button class="btn btn-sm" onclick="packsHubAdd()">Add</button></div>`;
+  if (typeof sharingRender === 'function') sharingRender();   // the owner's sharing card, above the library
 }
 
 /* The registry (experiments.packRegistry): publish from this library; browse another hub's and fetch into this one. */

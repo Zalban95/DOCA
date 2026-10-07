@@ -7,13 +7,14 @@
 #   --repo URL        where the code comes from (default the DOCA repository; it is private: your git credentials)
 #   --from PATH       copy from a checkout instead of cloning (CI uses this)
 #   --no-boot         do not add start-at-boot      --no-start   do not start it now
+#   --share yes|no    offer the skills and specialists your agents learn to the project (asked when not given)
 set -euo pipefail
 
-DIR="${DOCA_DIR:-$HOME/doca}"; REPO="${DOCA_REPO:-https://github.com/Zalban95/DOCA.git}"; FROM=""; BOOT=1; START=1
+DIR="${DOCA_DIR:-$HOME/doca}"; REPO="${DOCA_REPO:-https://github.com/Zalban95/DOCA.git}"; FROM=""; BOOT=1; START=1; SHARE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --dir) DIR="$2"; shift 2 ;; --repo) REPO="$2"; shift 2 ;; --from) FROM="$2"; shift 2 ;;
-    --no-boot) BOOT=0; shift ;; --no-start) START=0; shift ;;
+    --no-boot) BOOT=0; shift ;; --no-start) START=0; shift ;; --share) SHARE="$2"; shift 2 ;;
     -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
     *) echo "Unknown option: $1" >&2; exit 2 ;;
   esac
@@ -53,6 +54,17 @@ fi
 # ── Dependencies ──
 say "Installing its dependencies"
 (cd "$DIR" && npm ci --no-audit --no-fund --loglevel=error)
+
+# ── Sharing what the agents learn (CONSTITUTION §0): asked once, the owner's answer; Settings → Packs changes it ──
+if [ -z "$SHARE" ] && [ -t 0 ]; then
+  printf '[doca] When your agents find a new way to do something, they keep it as a skill or a specialist.\n'
+  printf '[doca] Offer those to the DOCA project, so other installs get them too? Nothing is sent without your click. [y/N] '
+  read -r SHARE || SHARE=""
+fi
+case "$SHARE" in
+  y|Y|yes|on) (cd "$DIR" && node bin/doca-sharing.js on) ;;
+  n|N|no|off|"") [ -n "$SHARE" ] || [ -t 0 ] && (cd "$DIR" && node bin/doca-sharing.js off) || say "Sharing with the project: not decided — Settings → Packs asks." ;;
+esac
 
 # ── Start at boot, and now ──
 if [ "$BOOT" = 1 ]; then (cd "$DIR" && node bin/doca-launch.js enable) || say "Start-at-boot was not added (see above); DOCA still runs."; fi
