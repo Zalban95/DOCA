@@ -21,8 +21,8 @@ function sandbox(prefix = 'doca-sandbox-') {
   // owner's phone through mcp_connect, 2026-10-07). Servers on this machine stay — measuring is what they are for here.
   try {
     const f = path.join(tmp, 'prefs.json'), prefs = JSON.parse(fs.readFileSync(f, 'utf8'));
-    if (prefs.mcpServers && typeof prefs.mcpServers === 'object') {
-      for (const [id, d] of Object.entries(prefs.mcpServers)) if (d?.origin?.kind === 'client') delete prefs.mcpServers[id];
+    if (Array.isArray(prefs.mcpServers)) {   // a list (mcp/registry.js); a delete would leave nulls every turn trips on
+      prefs.mcpServers = prefs.mcpServers.filter(d => d?.origin?.kind !== 'client');
       fs.writeFileSync(f, JSON.stringify(prefs, null, 2));
     }
   } catch { /* prefs that do not parse are the measurement's problem, not this one's */ }
