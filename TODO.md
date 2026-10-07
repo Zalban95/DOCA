@@ -57,7 +57,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   recipes and specialists the agents made and that worked wait in a "To share" list the owner reviews, and are sent
   as a pack (secrets stripped, as packs already do) to the project's managers (`sharing.upstream`, the project's own
   registry hub by default, through the existing hub-to-hub `packs` route). Nothing leaves without the owner's click.
-- [ ] P0.4 **"Anyone, zero knowledge"**: a first conversation with no setup reaches a working answer (no model → the
+- [~] P0.4 **"Anyone, zero knowledge"** — *2.274.0: `evals/newcomer.json` 3/6 → 6/6 on the configured model (charter rules 5, 6, 15; skills `first-steps`, `talk-to-me`; docs/audits/2026-10-07-newcomer.md). Left: the no-model first run, and more cases (a request DOCA cannot do yet; a phone-only person).*: a first conversation with no setup reaches a working answer (no model → the
   panel says how in one step; a request DOCA cannot yet do → it says what it would need, then does it when given).
   Measured as an eval set of plain-language requests from someone who knows nothing about DOCA.
 
