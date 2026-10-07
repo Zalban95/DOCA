@@ -147,8 +147,9 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   client = client && { ...client, effort };
   const ep  = providers.endpoint(p.provider);
   if (!p.model)
-    throw Object.assign(new Error(
-      'No model chosen for the DOCA harness — pick one with ⚙ on the harness row in Controls.'), { status: 400 });
+    // The first thing a newcomer meets when they write before setting up: say where a model comes from.
+    throw Object.assign(new Error('No model chosen for the DOCA harness yet. Settings → Set-up suggests one this machine '
+      + 'can run, or takes an online provider\'s key; or pick one with ⚙ on the DOCA Harness row in Controls.'), { status: 400 });
 
   const session = sessionId ? memory.getSession(sessionId) : memory.activeSession();
   if (!session) throw Object.assign(new Error('Unknown session'), { status: 404 });

@@ -125,6 +125,9 @@ const TABLE = [
   R(ANY, '/api/network', 'org'),                                 // how the hub listens: the machine's front door (network.js)                         // the agents' machines and the pages they serve (machines/)                       // the agents' work as it happens: the machine's files, every conversation (workstream/)                          // what was put away: each person's own; projects and computers a host's (archive.js)                             // what each screen shows, and sending it a page (screens/showing.js)                            // which folders this page shows: Files and Projects are a host's
   R(GET, '/api/wakeword/(models/[^/]+/model\\.onnx|runtime/[^/]+)', 'read'),   // a screen listening for its name reads its model (wakeword/)
   R(ANY, '/api/wakeword(/.*)?', 'host'),                       // setting up, recording, training: downloads, GPU hours, a microphone's audio
+  R(ANY, '/api/home/call', 'chat'),                            // acting on the home: a light, a cover, a thermostat — each entity allotted (home/actions.js)
+  R(ANY, '/api/home/hold', 'chat'),                            // a Home page holding the connection to Home Assistant open while shown
+  R(GET, '/api/home(/.*)?', 'chat'),                           // the home as this person sees it, and a camera's still (home/): cameras and locks are private, not a viewer's
   R(GET, '/api/ambient(/.*)?', 'read'),                        // the ambient screen: weather, the day's plan and notices, each the viewer's own (ambient/)
   R(GET, '/api/face/stream', 'chat'),                          // the face's feed, scoped to what the viewer may open (face/state.js)
   R(ANY, '/api/developer(/.*)?', 'host'),                        // who may release unasked (releasing.js): the admin's

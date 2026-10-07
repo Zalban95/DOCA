@@ -35,6 +35,7 @@ function stream(req, res) {
   const on = change => {
     if (change.topic === 'files') { if (host && mine.has(change.id)) send(change); return; }
     if (change.topic === 'screen') { if (own && change.id === own) send(change); return; }
+    if (change.topic === 'home') { if (require('../home').hears(screen, person, change.id)) send(change); return; }   // pages holding Home, entities their person may see
     if (change.topic === 'workstream') { if (host && require('../workstream').holds(screen)) send(change); return; }   // only pages holding it
     if (visible(change, person, host)) send(change);
   };

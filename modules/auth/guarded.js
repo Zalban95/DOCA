@@ -89,6 +89,7 @@ const ROUTES = [
   [['POST'], /^\/api\/auth\/users\/[^/]+\/password$/, 'another person\'s password'],
   [W, /^\/api\/harness\/guards(?!\/test$)(\/.*)?$/, 'the guards'],
   [['POST'], /^\/api\/settings\/checkpoints\/[^/]+\/restore$/, 'restoring settings'],
+  [['POST'], /^\/api\/backups\/[^/]+\/restore$/, 'restoring a backup'],   // it replaces the settings, guarded switches included
   // A version is every guard at once: one from before 2.281.0 has no password question at all (review 2026-10-07).
   [['POST'], /^\/api\/versions\/use$/, 'which version of DOCA runs'],
   // Bringing a pack in can create or replace a level (an edition), specialists and their tools, and the memory rules.
@@ -99,6 +100,8 @@ const ROUTES = [
   // Secrets for devices (TODO P1.3): keeping or forgetting one — a person's own or the hub's — is the person's, typed.
   [W, /^\/api\/connectors\/sealed\/(all|mine(\/[^/]+)?|[^/]+)$/, 'secrets for devices'],
   [['POST'], /^\/api\/harness\/usage\/prices$/, 'the prices money budgets are counted in', () => moneyBudgets()],
+  // Opening the house from the Home page: a lock's unlock, an alarm's disarm (home/actions.js).
+  [['POST'], /^\/api\/home\/call$/, 'unlocking a door or disarming an alarm', req => require('../home/actions').guardedCall(req.body)],
   [['POST'], /^\/api\/prefs$/, null, req => prefsBody(req.body)],
   [['POST'], /^\/api\/harness\/proposals\/[^/]+\/apply$/, null, req => proposal(req.path.split('/')[4])],
 ];

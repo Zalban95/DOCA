@@ -115,6 +115,7 @@ async function startupLoad() {
     // just happened, so they are `clear: 0` — the card would otherwise lose the
     // reason its own toggle is greyed out three seconds after drawing it.
     if (!s.supported) return setStatus(st, s.reason, 'warn', { clear: 0 });
+    if (s.elsewhere) return setStatus(st, `${s.service} starts another DOCA, in ${s.elsewhere}. Turning this on points it at this one instead.`, 'warn', { clear: 0 });
 
     if (!s.enabled) return setStatus(st, 'DOCA will not come back on its own after a reboot.', '', { clear: 0 });
     setStatus(st, s.active

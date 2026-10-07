@@ -11,14 +11,17 @@
  * use a device lent this way as if it were their own). Who may use one:
  *   - anyone holding host (the machine's administrators), as before;
  *   - a level that lists it: `resources: { model: ['*' | '<provider>/<model>', …], provider: […], key: […],
- *     connector: […], login: […], computer: […] }` — a kind the level does not name keeps today's rule, so nothing changes for an
+ *     connector: […], login: […], computer: […], home: […] }` — a kind the level does not name keeps today's rule, so nothing changes for an
  *     install until an admin narrows a level;
  *   - a person or specialist with the grant `use:<kind>:<id>` (grants.js; '*' parts cover anything), given by an admin
  *     or by someone a level lets allot it (`delegates` on the level, permits.mayGrant);
  *   - for keys and connected accounts, also everyone when the owner opened that one to everyone (`who`).
  * No person on the turn (a test, a pre-accounts call) is not narrowed, as everywhere (permits.js).
+ *
+ * `home` is a Home Assistant entity on the Home page (home/, TODO H10.10), by its entity id (`light.kitchen`; `light.*`
+ * every light): the hive's home is everyone's to see and use until a level lists which of it its people have.
  */
-const KINDS = ['model', 'provider', 'key', 'connector', 'login', 'computer', 'service', 'device'];
+const KINDS = ['model', 'provider', 'key', 'connector', 'login', 'computer', 'service', 'device', 'home'];
 
 /**
  * Kinds that were an admin's alone before levels could list them: a level that names nothing gives none. Another
