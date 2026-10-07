@@ -101,6 +101,11 @@ const SCHEMA = {
       calls: { type: 'boolean', default: false, hint: 'Use this effort and model for the chat\'s 🎙 call too, not only for the face.' },
       provider: { type: 'string', default: '', hint: 'A provider for assistant mode\'s own model. Empty: the conversation\'s.' },
       model: { type: 'string', default: '', hint: 'A quicker model for assistant mode (e.g. a small local one). Empty: the conversation\'s model.' } } },
+  sharing:          { is: 'local', home: 'hive', note: 'whether what the agents learn (skills, recipes, specialists kept as packs) may be offered to the project, and to which hub — asked at installation, the owner\'s alone, never proposable (sharing.js; CONSTITUTION §0)',
+    keys: {
+      contribute: { type: 'boolean', default: false, hint: 'Offer the skills, recipes and specialists your agents learn to the project. Nothing is sent without your click.' },
+      upstream:   { type: 'string', default: '', hint: 'The project\'s hub that receives them: one of the hubs this hive sends packs to.' },
+    } },
   scout:            { is: 'travels', home: 'hive', note: 'the model scout: what it watches, how often, where accepted suggestions go and who works on them (modules/scout; the switch is experiments.modelScout)',
     propose: p('Model scout', 'What the scout watches and how often; switching it on is a proposal too'),
     keys: { enabled: { type: 'boolean', default: false, hint: 'Look daily for better or new models and brief every everyDays (a turn of the agent). Off by default.' },

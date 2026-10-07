@@ -48,11 +48,11 @@ the project's managers only if the owner allows sharing specialists and skills (
   setting or the edition, the project's as default; (c) a test that fails on owner-specific strings (paths, hosts,
   accounts) in shipped code, skills and defaults, with a short allowlist for identifiers (package ids) and attribution
   in comments; (d) review every declared default in `settings-schema.js` and the catalogues for one person's choice.
-- [ ] P0.2 **The premise's order in the agents' own words**: the charter and the Orchestrator's routing table say
+- [x] P0.2 **The premise's order in the agents' own words** — *2.271.0: charter rule 28; the routing table opens with "their way" and ends with keeping a new way (and `pack` it with sharing on); the routing set's `their-way` case.*: the charter and the Orchestrator's routing table say
   it as one ladder — the person's stated way → the proven way here (recipe, skill, specialist, the harness's
   suggestion) → find, make reliable, save (recipe, skill or specialist, offered when a novel task worked) — and the
   routing evals hold it (a case per rung).
-- [ ] P0.3 **Sharing what was learned, only if the owner allows**: `sharing.contribute` (off by default, never
+- [~] P0.3 **Sharing what was learned, only if the owner allows** — *2.271.0: `sharing.contribute`/`upstream`, the installers' question, Settings → Packs card, the owner's click sends an agent pack to the chosen hub. Left: the project's own registry hub to receive them (a public address and its token flow), so `upstream` has a default.*: `sharing.contribute` (off by default, never
   proposable), asked once at installation (`scripts/install.*`, first-run setup) and in Settings; when on, skills,
   recipes and specialists the agents made and that worked wait in a "To share" list the owner reviews, and are sent
   as a pack (secrets stripped, as packs already do) to the project's managers (`sharing.upstream`, the project's own

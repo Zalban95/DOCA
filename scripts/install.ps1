@@ -7,7 +7,8 @@ param(
   [string]$Repo = 'https://github.com/Zalban95/DOCA.git',
   [string]$From = '',
   [switch]$NoBoot,
-  [switch]$NoStart
+  [switch]$NoStart,
+  [string]$Share = ''   # yes|no: offer the skills and specialists your agents learn to the project (asked when not given)
 )
 $ErrorActionPreference = 'Stop'
 $port = if ($env:PORT) { $env:PORT } else { 4242 }
@@ -47,6 +48,16 @@ Push-Location $Dir
 try {
   & npm ci --no-audit --no-fund --loglevel=error
   if ($LASTEXITCODE -ne 0) { throw "npm ci failed ($LASTEXITCODE)" }
+
+  # ── Sharing what the agents learn (CONSTITUTION §0): asked once, the owner's answer; Settings → Packs changes it ──
+  if (-not $Share -and [Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
+    Write-Host 'When your agents find a new way to do something, they keep it as a skill or a specialist.'
+    $Share = Read-Host 'Offer those to the DOCA project, so other installs get them too? Nothing is sent without your click. [y/N]'
+    if (-not $Share) { $Share = 'no' }
+  }
+  if ($Share -match '^(y|yes|on)$') { & node bin/doca-sharing.js on }
+  elseif ($Share -match '^(n|no|off)$') { & node bin/doca-sharing.js off }
+  else { Write-Host 'Sharing with the project: not decided - Settings -> Packs asks.' }
 
   # ── Start at sign-in, and now ──
   if (-not $NoBoot) { & node bin/doca-launch.js enable; if ($LASTEXITCODE -ne 0) { Write-Host 'Start-at-sign-in was not added (see above); DOCA still runs.' } }
