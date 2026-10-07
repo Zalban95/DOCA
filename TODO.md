@@ -100,7 +100,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 - [ ] T1 **`test/doca-client.test.js` fails in a full `npm test` now and then** (three times on 2026-10-06/07, and
   `test/launcher.test.js` once, both under load) and passes alone: find the timing it depends on, rather than retry.
   Three full runs in a row with nothing else running passed (2026-10-07): it is load, not order.
-- [ ] B7b **What routing measured** (2026-10-07, local Qwen 3.8 27B): grep through `shell` instead of `search_files`, and
+- [x] B7b **What routing measured** — *2026-10-07, re-measured on the IQ3_S quantisation in fresh sandboxes: 11/11 with the flag off and on (35 % fewer tokens on), no grep through shell, install_propose used; the earlier "ended during case 8" was the eval's unref'd timer (fixed 2.257.1). docs/experiments/tool-tiers.md.* (2026-10-07, local Qwen 3.8 27B): grep through `shell` instead of `search_files`, and
   "get whisper running" by hand instead of `install_propose`, with the flag off and on — the routing table and the
   charter's install rule are not enough for this model; try a sentence in the table's rows, then measure again. The run
   ended cleanly during case 8 (build and install the Android app) with nothing saved: find what that turn called (a
