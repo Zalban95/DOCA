@@ -23,7 +23,7 @@ const RIGHTS = ['read', 'chat', 'propose', 'host', 'devices', 'users', 'org', 'd
 
 const BUILTIN = {
   viewer: { name: 'Viewer', rights: ['read'], settings: [], tools: { allow: [], deny: ['*'] }, approval: 'ask' },
-  member: { name: 'Member', rights: ['read', 'chat'], settings: [], tools: { allow: ['*'], deny: [] }, approval: 'ask' },
+  member: { name: 'Member', rights: ['read', 'chat'], settings: [], tools: { allow: ['*'], deny: [] }, approval: 'ask', reach: 'own-devices' },
   admin:  { name: 'Admin', rights: ['read', 'chat', 'propose', 'host', 'devices', 'users', 'delegate'], settings: ['*'], tools: { allow: ['*'], deny: [] }, approval: 'mode' },
   owner:  { name: 'Main admin', rights: ['read', 'chat', 'propose', 'host', 'devices', 'users', 'org', 'delegate'], settings: ['*'], tools: { allow: ['*'], deny: [] }, approval: 'mode' },
 };
@@ -70,8 +70,19 @@ function normalize(input, actorLevel) {
     settings: list(input.settings),
     tools: { allow: list(input.tools?.allow), deny: list(input.tools?.deny) },
     approval: input.approval === 'mode' ? 'mode' : 'ask',
+    ...(reachOf(input.reach, actorLevel) ? { reach: reachOf(input.reach, actorLevel) } : {}),
     ...(input.description ? { description: String(input.description).slice(0, 300) } : {}),
   };
+}
+
+/** A level's reach (auth/reach.js) — never further than the reach of the person making it. */
+function reachOf(value, actorLevel) {
+  if (value === undefined || value === null || value === '') return null;
+  const { RUNGS, rungOf } = require('./reach');
+  if (!RUNGS.includes(value)) throw bad(`Reach is one of ${RUNGS.join(', ')}.`);
+  const actor = typeof actorLevel === 'string' ? get(actorLevel) : actorLevel;
+  if (RUNGS.indexOf(value) > RUNGS.indexOf(rungOf(actor))) throw bad(`You cannot make a level that reaches further than you do (${rungOf(actor)}).`, 403);
+  return value;
 }
 
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);

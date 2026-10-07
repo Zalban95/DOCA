@@ -42,7 +42,8 @@ test('the level decides: allowed, refused with why, and whether it asks', () => 
   const rm = permits.tool({ person: git, name: 'shell', args: { command: 'rm -rf x' } });
   assert.equal(rm.allowed, false);
   assert.match(rm.why, /Git only, does not allow shell:rm/);
-  assert.equal(permits.tool({ person: person(member), name: 'shell', args: { command: 'ls' } }).ask, true, 'a member\'s calls are asked');
+  assert.equal(permits.tool({ person: person(member), name: 'write_file', args: { path: 'x' } }).ask, true, 'a member\'s calls are asked');
+  assert.equal(permits.tool({ person: person(member), name: 'shell', args: { command: 'ls' } }).allowed, false, 'and the hub\'s command line is beyond a member\'s reach (auth/reach.js)');
   assert.equal(permits.tool({ person: person(admin), name: 'shell', args: { command: 'ls' } }).ask, false, 'an admin follows the panel\'s mode');
   assert.equal(permits.tool({ person: null, name: 'shell', args: { command: 'rm x' } }).allowed, true, 'no person: not narrowed (as before accounts)');
 });
@@ -74,7 +75,8 @@ test('a member\'s turn is asked even in Auto mode, and the member answers their 
   approval.setMode('auto');
   const other = await H.signIn('member');
   const s = require('../modules/harness/memory').createSession('member turn', { activate: false });
-  script = [{ tool: 'shell', args: { command: 'echo from-a-member' } }, { text: 'done' }];
+  // write_file, not shell: a member's reach (own-devices, auth/reach.js) leaves the hub's command line to admins.
+  script = [{ tool: 'write_file', args: { path: 'from-a-member.txt', content: 'from-a-member' } }, { text: 'done' }];
   const events = [];
   const turn = require('../modules/harness/agent').turn({ message: 'go', sessionId: s.id, emit: e => events.push(e),
     client: { name: 'Dashboard console', kind: 'dashboard', user: person(member) } });
@@ -88,8 +90,8 @@ test('a member\'s turn is asked even in Auto mode, and the member answers their 
   assert.equal(own.status, 200, JSON.stringify(own.body));
   await turn;
   assert.match(events.find(e => e.type === 'tool_result').result, /from-a-member/);
-  assert.ok(!approval.settings().always.includes('shell:echo'), 'their "always" did not touch the panel\'s allowlist');
-  assert.ok(grants.list({ subjectKind: 'user', subjectId: member.user.id }).some(g => g.permission === 'approve:shell:echo'), 'it became their own grant');
+  assert.ok(!approval.settings().always.some(k => k.startsWith('write_file')), 'their "always" did not touch the panel\'s allowlist');
+  assert.ok(grants.list({ subjectKind: 'user', subjectId: member.user.id }).some(g => g.permission.startsWith('approve:write_file')), 'it became their own grant');
 });
 
 test('the Orchestrator grants its mission a tool; a specialist cannot grant; applying a proposal is bound to the level\'s settings', async () => {
