@@ -18,7 +18,8 @@ granted, and the hub's Files tab browses it. Keep `families.js` and `sealed.js` 
 Each family uses what the OS already has. macOS and Windows need nothing more; on Linux the screen wants `grim`
 (Wayland) or ImageMagick's `import` / `scrot` / `gnome-screenshot` (X11), the clipboard `wl-clipboard` or `xclip`,
 notifications `notify-send` — a missing one is named in the answer, never guessed around. Revoking a family in the hub (its row in API Keys) stops it
-at once; `run` again re-offers after a restart. A hub's self-signed certificate is pinned at pairing and is the
+at once; `run` again re-offers after a restart. Revoking the whole machine ends its lending: the hub removes the
+server it hosted, and the client stops serving and stays stopped (`run` says so) until you pair it again. A hub's self-signed certificate is pinned at pairing and is the
 only one trusted afterwards; the listener binds to your tailnet address and answers only with its secret.
 
 **Secrets, used and never read.** With `device` lent, the hub can hand this machine a password or a key for one

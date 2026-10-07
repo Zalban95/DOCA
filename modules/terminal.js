@@ -23,7 +23,7 @@ function getPty() {
 function shellSession(ws, rows) {
   const ptyMod = getPty();
   if (!ptyMod) {
-    ws.send(JSON.stringify({ type: 'output', data: '\r\nnode-pty is not installed.\r\nInstall it from Settings → System Tools, then reopen this terminal.\r\n' }));
+    ws.send(JSON.stringify({ type: 'output', data: '\r\nnode-pty is not installed.\r\nOn Linux it is built here, so it needs build tools (make, g++, python3): Settings → System → System tools has both rows. Then reopen this terminal.\r\n' }));
     ws.close();
     return;
   }

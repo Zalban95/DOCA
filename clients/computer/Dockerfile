@@ -5,8 +5,11 @@
 FROM node:22-bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
       chromium xvfb fluxbox x11vnc novnc websockify ffmpeg xdotool \
-      fonts-dejavu-core fonts-noto-color-emoji ca-certificates curl git python3 procps \
+      fonts-dejavu-core fonts-noto-color-emoji fonts-symbola fonts-droid-fallback \
+      ca-certificates curl git python3 procps \
     && rm -rf /var/lib/apt/lists/* \
+    # Every glyph the panel draws: Symbola has the symbols DejaVu lacks (⧉ ⏻ ⓘ ⛶ 🖵 …), Droid Sans Fallback the
+    # full-width ones (＋ on the skill and recipe buttons) — boxes in the agents' screenshots otherwise (self-test 2026-10-08)
     # fluxbox asks fbsetbg for a wallpaper and, finding no setter, leaves an xmessage window on the screen
     && ln -sf /bin/true /usr/bin/fbsetbg
 RUN useradd -m -s /bin/bash agent

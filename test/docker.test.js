@@ -44,14 +44,50 @@ function expectDocker(r, what) {
 
 const get = p => h.api(null, 'GET', p);
 
-test('listing containers never reports a server fault when docker is missing or stopped', async () => {
-  const r = await get('/api/docker/containers');
-  expectDocker(r, 'containers');
-  if (daemonUp) assert.ok(Array.isArray(r.body.containers));
+/**
+ * A list on a machine without docker, or with its daemon stopped, is an empty list and the reason — a 200, since
+ * "no containers here" is an answer (self-test 2026-10-08, #15: a fresh install's console was red with 503s).
+ */
+function expectList(r, what) {
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok(Array.isArray(r.body[what]));
+  if (daemonUp) return assert.equal(r.body.reason, undefined);
+  assert.deepEqual(r.body[what], []);
+  assert.equal(r.body.code, hasDocker ? 'docker_stopped' : 'docker_missing', 'the code travels so the UI can tell the difference');
+  assert.match(r.body.reason, hasDocker ? /daemon is not running/ : /not installed/);
+  assert.match(r.body.reason, new RegExp(what));
+  assert.ok(!/Command failed/.test(r.body.reason), 'the raw shell error is not the message');
+}
+
+test('listing containers on a machine without docker, or with it stopped, is an empty list and the reason', async () => {
+  expectList(await get('/api/docker/containers'), 'containers');
 });
 
-test('listing images never reports a server fault when docker is missing or stopped', async () => {
-  expectDocker(await get('/api/docker/images'), 'images');
+test('listing images likewise', async () => {
+  expectList(await get('/api/docker/images'), 'images');
+});
+
+test('with no container CLI at all, on any machine: an empty list and docker_missing', async () => {
+  const saved = process.env.DOCA_CONTAINER_CLI;
+  process.env.DOCA_CONTAINER_CLI = 'doca-no-such-container-cli';
+  try {
+    for (const what of ['containers', 'images']) {
+      const r = await get(`/api/docker/${what}`);
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      assert.deepEqual(r.body[what], []);
+      assert.equal(r.body.code, 'docker_missing');
+      assert.match(r.body.reason, /not installed/);
+    }
+  } finally { if (saved === undefined) delete process.env.DOCA_CONTAINER_CLI; else process.env.DOCA_CONTAINER_CLI = saved; }
+});
+
+test('a docker failure that is neither still answers an error', async () => {
+  const saved = process.env.DOCA_CONTAINER_CLI;
+  process.env.DOCA_CONTAINER_CLI = process.execPath;   // a program that answers `ps -a` with an error of its own
+  try {
+    const r = await get('/api/docker/containers');
+    assert.equal(r.status, 500, JSON.stringify(r.body));
+  } finally { if (saved === undefined) delete process.env.DOCA_CONTAINER_CLI; else process.env.DOCA_CONTAINER_CLI = saved; }
 });
 
 test('acting on a container says why docker is unavailable rather than failing obscurely', async () => {

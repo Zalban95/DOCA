@@ -114,6 +114,7 @@ const handleExport = wrap(async (req, res) => {
 });
 
 function mount(app) {
+  require('../devices-revoked').watch();   // a revoked device's stream and servers go with it
   app.get   ('/api/mcp',             handleList);
   app.post  ('/api/mcp',             handleUpsert);
   app.post  ('/api/mcp/export',      handleExport);

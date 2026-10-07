@@ -24,9 +24,9 @@ const textOf = err => String((err && (err.message || err.stderr)) || '');
  * The panel is useful without docker — Containers is one tab of many — and this
  * answered 500 with the raw shell error, which is the same mistake as the files
  * ENOENT 500 and the `keys.js` ENOENT bug: the user goes looking for what broke
- * in the panel when nothing did. A 503 says "this dependency is not here"
- * without saying the panel is unwell, and it is distinguishable in the UI
- * because the code travels with it.
+ * in the panel when nothing did. A list answers an empty list with the reason
+ * (dockerList), an action a 503 (dockerFailed) — neither says the panel is
+ * unwell, and the UI tells the two states apart because the code travels.
  */
 function dockerMissing(err) {
   return /not found|ENOENT|no such file/i.test(textOf(err));
@@ -46,24 +46,38 @@ function dockerStopped(err) {
     .test(textOf(err));
 }
 
-/** Shared by the routes: the same shape, and the same three answers. */
+/** Docker absent or stopped, said in words with its code; null when the failure is something else. */
+function dockerAbsent(err, what) {
+  if (dockerMissing(err)) return {
+    reason: `Docker is not installed on this host, so there are no ${what} to list.`, code: 'docker_missing' };
+  if (dockerStopped(err)) return {
+    reason: `Docker is installed but its daemon is not running, so there are no ${what} to list. `
+      + 'Start it (systemctl start docker, or open Docker Desktop) and refresh.', code: 'docker_stopped' };
+  return null;
+}
+
+/** Shared by the routes that act: the same shape, and the same three answers. */
 function dockerFailed(res, err, what) {
-  if (dockerMissing(err)) return res.status(503).json({
-    error: `Docker is not installed on this host, so there are no ${what} to list.`,
-    code: 'docker_missing',
-  });
-  if (dockerStopped(err)) return res.status(503).json({
-    error: `Docker is installed but its daemon is not running, so there are no ${what} to list. `
-      + 'Start it (systemctl start docker, or open Docker Desktop) and refresh.',
-    code: 'docker_stopped',
-  });
+  const absent = dockerAbsent(err, what);
+  if (absent) return res.status(503).json({ error: absent.reason, code: absent.code });
+  return res.status(500).json({ error: err.message });
+}
+
+/**
+ * The lists: an empty list and the reason, as a 200 (self-test 2026-10-08, #15). A machine without docker, or with
+ * its daemon stopped, has no containers — that is an answer, not a failure, and a fresh install's console was red
+ * with 503s for it. A real failure of docker itself stays a 500.
+ */
+function dockerList(res, err, what) {
+  const absent = dockerAbsent(err, what);
+  if (absent) return res.json({ [what]: [], ...absent });
   return res.status(500).json({ error: err.message });
 }
 
 /** GET /api/docker/containers */
 function handleContainers(req, res) {
   dockerJson(['ps', '-a', '--format', '{{json .}}'], (err, stdout) => {
-    if (err) return dockerFailed(res, err, 'containers');
+    if (err) return dockerList(res, err, 'containers');
     const containers = stdout.trim().split('\n').filter(Boolean).map(line => {
       try { return JSON.parse(line); } catch { return null; }
     }).filter(Boolean);
@@ -108,7 +122,7 @@ function handleContainerLogs(req, res) {
 /** GET /api/docker/images */
 function handleImages(req, res) {
   dockerJson(['images', '--format', '{{json .}}'], (err, stdout) => {
-    if (err) return dockerFailed(res, err, 'images');
+    if (err) return dockerList(res, err, 'images');
     const images = stdout.trim().split('\n').filter(Boolean).map(line => {
       try { return JSON.parse(line); } catch { return null; }
     }).filter(Boolean);

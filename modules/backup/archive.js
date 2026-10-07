@@ -50,8 +50,9 @@ function sections() {
 }
 
 /** Leftovers of a write in progress, and logs, are not state. */
-// The database's live side files: a backup carries a consistent copy of doca.db instead (create()).
-const SKIP = /(\.tmp$|^restart\.log$|^doca\.db-(wal|shm)$)/;
+// The database's live side files: a backup carries a consistent copy of doca.db instead (create()). panel.pid is
+// which process is listening now (panel-running.js), true of this moment only.
+const SKIP = /(\.tmp$|^restart\.log$|^doca\.db-(wal|shm)$|^panel\.pid$)/;
 
 function walk(dir, base = dir) {
   let out = [];

@@ -44,6 +44,7 @@ const DATA = {
   guards:                 { is: 'local',   note: 'the guard runtime and model files downloaded here' },
   mcp:                    { is: 'local',   note: 'MCP server state of this machine' },
   outbox:                 { is: 'local',   note: 'undelivered device messages' },
+  'panel.pid':            { is: 'local',   note: 'the listening panel\'s pid and port (panel-running.js), so the token CLI can say whether a panel reads this folder; never backed up' },
   features:               { is: 'local',   note: 'how often each path was used here (features/usage.js): names and counts' },
 };
 

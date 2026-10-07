@@ -7,6 +7,7 @@
  * child processes or publish to their devices, which is what the tests do.
  */
 function afterListen({ certs = null, mode } = {}) {
+  require('./panel-running').mark({ port: require('./paths').PORT });   // the token CLI asks whether a panel reads this data folder
   require('./agents/carry-on').carryOn(require('./agents/missions').recover());   // specialists a restart cut off: carried on (V10)
   require('./agents/after').listen();                 // errands waiting on other missions' results start when those are done
   require('./harness/workview').recover();            // work chats likewise, told to the devices

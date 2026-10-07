@@ -48,10 +48,13 @@ switch (cmd) {
     const scopes = opt('scopes') ? opt('scopes').split(',') : preset ? PRESETS[preset] : null;
     if (!name || !scopes) { usage(); process.exit(1); }
     const r = devices.create({ name, scopes, kind: opt('kind') || (preset === 'agent' ? 'agent' : 'device'), expiresAt: opt('expires') || null, caps: { formFactor: preset === 'agent' ? 'headless' : 'other' } });
-    if (args.includes('--json')) console.log(JSON.stringify(r, null, 2));
+    if (args.includes('--json')) console.log(JSON.stringify({ ...r, dataDir: DATA_DIR }, null, 2));
     else {
-      console.log(`\nDevice  ${r.device.id}  (${r.device.name})\nScopes  ${r.device.scopes.join(' ')}\n\nToken (shown once):\n\n  ${r.token}\n\nUse:  curl -k -H "Authorization: Bearer ${r.token}" https://<host>:4242/api/v1/capabilities\n`);
+      console.log(`\nDevice  ${r.device.id}  (${r.device.name})\nScopes  ${r.device.scopes.join(' ')}\nData    ${DATA_DIR}  (DOCA_DATA_DIR)\n\nToken (shown once):\n\n  ${r.token}\n\nUse:  curl -k -H "Authorization: Bearer ${r.token}" https://<host>:4242/api/v1/capabilities\n`);
     }
+    // A token is only as good as the folder it went into: say when no running panel reads that one (stderr, so --json stays JSON).
+    if (!require('../modules/panel-running').running())
+      console.error(`Warning: no running panel uses ${DATA_DIR}. This token works only for a panel started with that folder — run this with the panel's own DOCA_DATA_DIR (or from its install folder).`);
     break;
   }
   case 'list':

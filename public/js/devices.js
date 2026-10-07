@@ -145,6 +145,8 @@ function devRenderPairing(p) {
           <div class="input-label">Enter this code in the app</div>
           <div style="font-family:var(--font-mono);font-size:32px;letter-spacing:4px;color:var(--accent)">${escHtml(p.code)}</div>
           <div class="status-line info" id="dev-pair-countdown"></div>
+          <!-- The link as text too, for a machine with no camera: doca-client pairs from it in one step (self-test 2026-10-08). -->
+          ${p.url ? `<div class="input-label mt8">Or this link: <code style="user-select:all;word-break:break-all;text-transform:none">${escHtml(p.url)}</code></div>` : ''}
           <div class="input-label mt8">Scopes: <code>${escHtml((p.scopes || []).join(' '))}</code></div>
           <div class="toolbar-right mt8">
             <button class="btn btn-xs" onclick="devCopy(${jsArg(p.url)}, this)">Copy link</button>

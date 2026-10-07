@@ -24,6 +24,7 @@ npm run token -- issue --name laptop --preset admin
 ```
 Device  dev_2c1e7a9d40f3  (laptop)
 Scopes  *
+Data    /home/you/doca/.doca  (DOCA_DATA_DIR)
 
 Token (shown once):
 
@@ -31,6 +32,9 @@ Token (shown once):
 
 Use:  curl -ksS -H "Authorization: Bearer doca_…" https://<host>:4242/api/v1/capabilities
 ```
+
+Run it in the panel's install folder with the panel's own `DOCA_DATA_DIR` (if its `.env` sets one): the token is written into
+that data folder, and `Data` says which. When no running panel uses that folder it warns you, since such a token is refused (`invalid_token`).
 
 The plaintext is never stored; only its SHA-256 is. Put it in an environment variable for the rest of this page:
 
