@@ -67,6 +67,9 @@ function effective(deviceId, userId, prefs = require('../utils').loadPrefs()) {
     else if (person[k] !== undefined) { out[k] = person[k]; from[k] = 'person'; }
     else if (prefs[k] !== undefined) { out[k] = prefs[k]; from[k] = 'hive'; }
   }
+  // The panel's structure is layered field by field, not replaced whole: a screen that only enlarges its text keeps
+  // the groups and views its person made (panel-layout/layout.js).
+  if (out.panel !== undefined) out.panel = require('../panel-layout/layout').merge([prefs.panel, person.panel, mine.panel]);
   return { settings: out, from };
 }
 
@@ -79,17 +82,24 @@ function forRequest(req) {
 /** The voice the screen a request comes from chose (`voice`: ttsVoice, ttsSpeed), or {} for the hive's. */
 function voiceOf(req) { try { return forRequest(req).voice || {}; } catch { return {}; } }
 
-/** Change this device's layer: a value sets it, null puts it back to the hive's (or the person's). */
-function set(deviceId, patch = {}) {
+function write(doc, cur, patch) {
   const keys = screenKeys();
   const unknown = Object.keys(patch).filter(k => !keys.includes(k));
   if (unknown.length) throw bad(`Not a setting a screen keeps: ${unknown.join(', ')}. A screen keeps: ${keys.join(', ')}.`);
-  const cur = layer(deviceId);
   for (const [k, v] of Object.entries(patch)) { if (v === null) delete cur[k]; else cur[k] = v; }
   const size = JSON.stringify(cur).length;
   if (size > 200000) throw bad('That is more than a screen keeps (200 KB).', 413);
-  store.writeJson(layerDoc(deviceId), { settings: cur, updatedAt: new Date().toISOString() });
+  store.writeJson(doc, { settings: cur, updatedAt: new Date().toISOString() });
   return cur;
 }
 
-module.exports = { forRequest, voiceOf, ensure, effective, set, layer, screenKeys, nameOf, COOKIE };
+/** Change this device's layer: a value sets it, null puts it back to the hive's (or the person's). */
+const set = (deviceId, patch = {}) => write(layerDoc(deviceId), layer(deviceId), patch);
+
+/** Change a person's layer — theirs on every device of theirs (CONSTITUTION S13): null puts a key back to the hive's. */
+function setPerson(userId, patch = {}) {
+  if (!userId) throw bad('Sign in first.', 401);
+  return write(personDoc(userId), personLayer(userId), patch);
+}
+
+module.exports = { forRequest, voiceOf, ensure, effective, set, setPerson, layer, personLayer, screenKeys, nameOf, COOKIE };

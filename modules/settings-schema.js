@@ -48,6 +48,7 @@ const SCHEMA = {
       marginY: { type: 'integer', min: 0, max: 25, default: 6, hint: 'Top and bottom margins, % of the screen\'s height.' },
     } },
   face:             { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the face: its look, a spec over the default (face/face.js); an edition carries one' },
+  panel:            { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the panel\'s structure as data (modules/panel-layout): groups and their pages in order, hidden and renamed pages, a person\'s own views made of pages, and style (font scale, density, theme tokens) — layered install → person → screen, edited with the panel_layout tool' },
   hiddenBuiltins:   { is: 'travels', home: 'device', on: 'screen', note: 'built-in config entries hidden from the list', propose: p('Hidden built-ins') },
 
   // ── The hive: how its agents behave and what they may do ──
@@ -102,6 +103,9 @@ const SCHEMA = {
       calls: { type: 'boolean', default: false, hint: 'Use this effort and model for the chat\'s 🎙 call too, not only for the face.' },
       provider: { type: 'string', default: '', hint: 'A provider for assistant mode\'s own model. Empty: the conversation\'s.' },
       model: { type: 'string', default: '', hint: 'A quicker model for assistant mode (e.g. a small local one). Empty: the conversation\'s model.' } } },
+  setup:            { is: 'local', home: 'device', on: 'host', note: 'how this hub was set up and what shape it is (guided/plan.js; CONSTITUTION §1 "Two shapes, two set-ups") — the owner\'s, never proposable',
+    keys: { mode: { type: 'string', default: '', hint: 'guided or advanced: the owner\'s first-run choice. Empty: not chosen yet, so the panel offers it once.' },
+      shape: { type: 'string', default: '', hint: 'local (runs its own agent model) or preset (lives on providers\' keys), as the guided set-up found this machine.' } } },
   sharing:          { is: 'local', home: 'hive', note: 'whether what the agents learn (skills, recipes, specialists kept as packs) may be offered to the project, and to which hub — asked at installation, the owner\'s alone, never proposable (sharing.js; CONSTITUTION §0)',
     keys: {
       contribute: { type: 'boolean', default: false, hint: 'Offer the skills, recipes and specialists your agents learn to the project. Nothing is sent without your click.' },
