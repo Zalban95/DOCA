@@ -88,7 +88,7 @@ function _usersLevelsCard() {
     btn.onclick = () => usersLevelEdit(l.builtin ? { ...l, id: '', name: `${l.name} (copy)` } : l);
     const holders = _usersData.users.filter(u => u.level === l.id).length;
     row.append(btn, Object.assign(document.createElement('span'), { className: 'settings-tab-label',
-      textContent: `${l.name}${l.builtin ? ' (built in)' : ''} — ${l.rights.join(', ') || 'nothing'} · settings: ${l.settings.join(', ') || 'none'} · tools: ${l.tools.allow.join(', ') || 'none'}${l.tools.deny.length ? ` except ${l.tools.deny.join(', ')}` : ''} · ${l.approval === 'ask' ? 'always asks' : 'follows the panel\'s mode'}${l.reach ? ` · reaches: ${l.reach}` : ''} · ${holders} ${holders === 1 ? 'person' : 'people'}` }));
+      textContent: `${l.name}${l.builtin ? ' (built in)' : ''} — ${l.rights.join(', ') || 'nothing'} · settings: ${l.settings.join(', ') || 'none'} · tools: ${l.tools.allow.join(', ') || 'none'}${l.tools.deny.length ? ` except ${l.tools.deny.join(', ')}` : ''} · ${l.approval === 'ask' ? 'always asks' : 'follows the panel\'s mode'}${l.reach ? ` · reaches: ${l.reach}` : ''}${l.resources ? ` · uses: ${Object.entries(l.resources).map(([k, v]) => `${k} ${v.join(', ')}`).join('; ')}` : ''}${l.delegates ? ` · may give: ${l.delegates.join(', ')}` : ''} · ${holders} ${holders === 1 ? 'person' : 'people'}` }));
     card.appendChild(row);
   }
   return card;
@@ -159,6 +159,11 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
       <option value="create" ${l.reach === 'create' ? 'selected' : ''}>Create safely — files, pages, the web, the agents' own computers</option>
       <option value="own-devices" ${l.reach === 'own-devices' ? 'selected' : ''}>Create, and their own devices</option>
       <option value="anything" ${l.reach === 'anything' ? 'selected' : ''}>Anything — the hub machine and every device</option></select>
+    <div class="input-label" style="margin-top:8px">What its people's agents may use (comma-separated; * for all, deepseek/* a prefix; empty: as before — keys and accounts admins only)</div>
+    ${USERS_RESOURCE_KINDS.map(([k, label]) => `<div style="display:flex;gap:6px;align-items:center;margin-top:3px"><span class="harness-hint" style="width:110px">${label}</span>
+      <input class="input" data-resource="${k}" style="flex:1" value="${escHtml((l.resources?.[k] || []).join(', '))}"></div>`).join('')}
+    <div class="input-label" style="margin-top:8px">What its people may give others, with delegate (one per line, e.g. use:model:*, tool:shell:git; empty: anything they hold)</div>
+    <textarea class="input" id="lvl-delegates" rows="2" style="width:100%">${escHtml((l.delegates || []).join('\n'))}</textarea>
     <div class="toolbar-right mt8"><span class="status-line" id="lvl-status"></span>
       ${l.id ? '<button class="btn btn-xs btn-red" id="lvl-delete">Delete</button>' : ''}
       <button class="btn btn-xs btn-blue" id="lvl-save">Save</button><button class="btn btn-xs" id="lvl-close">Close</button></div>`;
@@ -167,7 +172,9 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
   const lines = id => m.querySelector(id).value.split('\n').map(s => s.trim()).filter(Boolean);
   m.querySelector('#lvl-save').onclick = async () => {
     const body = { name: m.querySelector('#lvl-name').value, rights: [...m.querySelectorAll('[data-right]:checked')].map(c => c.dataset.right),
-      settings: lines('#lvl-settings'), tools: { allow: lines('#lvl-allow'), deny: lines('#lvl-deny') }, approval: m.querySelector('#lvl-approval').value, reach: m.querySelector('#lvl-reach').value };
+      settings: lines('#lvl-settings'), tools: { allow: lines('#lvl-allow'), deny: lines('#lvl-deny') }, approval: m.querySelector('#lvl-approval').value, reach: m.querySelector('#lvl-reach').value,
+      resources: Object.fromEntries([...m.querySelectorAll('[data-resource]')].map(i => [i.dataset.resource, i.value.split(',').map(s => s.trim()).filter(Boolean)]).filter(([, v]) => v.length)),
+      delegates: lines('#lvl-delegates') };
     try {
       await apiFetch(l.id ? `/api/auth/levels/${encodeURIComponent(l.id)}` : '/api/auth/levels', { method: l.id ? 'PATCH' : 'POST', body });
       overlay.style.display = 'none'; usersLoad();
@@ -178,6 +185,9 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
     catch (e) { m.querySelector('#lvl-status').textContent = e.message; }
   }));
 }
+
+/** Resources a level allots (modules/auth/allot.js): kind and its label in the editor. */
+const USERS_RESOURCE_KINDS = [['model', 'Models'], ['provider', 'Providers'], ['key', 'Keys for services'], ['connector', 'Connected accounts'], ['computer', 'Agents\' computers']];
 
 // Its panel is made here rather than in index.html, which is at its line ceiling.
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('DOMContentLoaded', () =>

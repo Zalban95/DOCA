@@ -240,4 +240,20 @@ function mount(app) {
   app.delete('/api/auth/sessions', handleSessions);
 }
 
-module.exports = { mount, atTheMachine, setupCode, SETUP_FILE, _failures: failures };
+/**
+ * The password typed for one guarded switch (guarded.js; CONSTITUTION S14): checked against the person's own, under
+ * the same rate limit as signing in. Resolves an error to send, or null when it is right.
+ */
+async function confirmPassword(req, password) {
+  const keys = [`e:${req.auth.user.email}`];
+  const wait = limited(keys);
+  if (wait) return { status: 429, code: 'rate_limited', error: `Too many attempts. Try again in ${wait} s.` };
+  if (!await credentials.verifyPassword(String(password), req.auth.user.passwordHash)) {
+    failed(keys);
+    return { status: 403, code: 'bad_credentials', error: 'That password is not right.' };
+  }
+  succeeded(keys);
+  return null;
+}
+
+module.exports = { mount, atTheMachine, setupCode, SETUP_FILE, confirmPassword, _failures: failures };

@@ -33,7 +33,7 @@ async function request({ url, method, body, headers, key, form, files, save_as, 
       let secret = null, exchange = null, token = null;
       if (key) {
         // No person on the turn (a test, a pre-accounts call) is not narrowed, as everywhere (auth/permits.js).
-        const host = !ctx.user?.id || require('../../auth/rights').can(ctx.user.role, 'host');
+        const host = require('../../auth/allot').uses(ctx.user, 'key', key);   // an admin, or allotted to them (S13)
         try { ({ url, headers: h, key: secret, exchange } = keys.apply(key, url, h, { host })); }
         catch (e) { return `Error: ${e.message}`; }
       }
