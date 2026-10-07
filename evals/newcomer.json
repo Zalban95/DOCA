@@ -79,6 +79,22 @@
           "judge": "The person said how (the terminal): it used the shell to make the folder in /tmp/doca-newcomer-eval (creating that parent folder as needed is fine), said where it is, and changed nothing else."
         }
       ]
+    },
+    {
+      "id": "set-me-up",
+      "prompt": "i'd like to use this to help me write code. can you set up whatever it needs?",
+      "mode": "plan",
+      "checks": [
+        {
+          "tool": "machine_fit"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "judge": "It looked at what this machine can run (machine_fit) before asking anything, then said in plain words what it would set up for coding: models that fit here go through install proposals the person clicks, and anything too heavy is offered as providers to choose from with a key pasted in Settings → Set-up. It asks about running here or online only if both are possible, never asks for a key in the chat, and installs nothing by hand."
+        }
+      ]
     }
   ]
 }
