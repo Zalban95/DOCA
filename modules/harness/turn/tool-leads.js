@@ -14,6 +14,7 @@ const LEADS = {
   repo_rules: 'Read a git repository\'s rules, branch and uncommitted changes — call it before your first change in that repository.',
   effort: 'Set how hard you think in this conversation — use it when the person asks you to think harder or answer quickly.',
   form_fill: 'Fill a form on the person\'s screen as a draft they save — use it when they ask for help filling a named form.',
+  panel_layout: 'Change the panel\'s layout, pages and style for the person who asks — use it for "hide", "move", "bigger text", "a page with X and Y".',
   settings_propose: 'Suggest a settings change the person accepts or declines — use it instead of editing settings any other way.',
   install_propose: 'Ask the person to install a model, service, harness, MCP server or system tool the panel knows — never install by hand.',
   mcp_draft: 'Prepare an MCP server that is not in the catalogue for a person to add — use it when a task needs a server nobody set up.',

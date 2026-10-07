@@ -14,7 +14,7 @@
 const CLAIMS = [
   { what: 'a memory saved', says: /\b(saved|written|wrote|stored|noted|added|recorded|put)\b[^.\n]{0,40}\bmemor(y|ies)\b|\bI(?:'ll| will) remember\b|\bremembered (that|it)\b/i, by: ['memory_write', 'memory_rules_write'] },
   { what: 'a reminder or schedule set', says: /\b(reminder (is )?(set|created|scheduled)|I(?:'ll| will) remind you|scheduled (it|this|that|a)\b)/i, by: ['remind', 'schedule', 'recipe'] },
-  { what: 'a setting proposed or changed', says: /\b(proposed|suggested)\b[^.\n]{0,30}\b(setting|change)s?\b|\bsetting (is )?(now )?(changed|updated|set)\b/i, by: ['settings_propose', 'form_fill'] },
+  { what: 'a setting proposed or changed', says: /\b(proposed|suggested)\b[^.\n]{0,30}\b(setting|change)s?\b|\bsetting (is )?(now )?(changed|updated|set)\b/i, by: ['settings_propose', 'panel_layout', 'form_fill'] },
   { what: 'an install proposed', says: /\binstall(ation)? (is )?(proposed|queued|requested)\b|\bproposed (installing|an install)\b/i, by: ['install_propose', 'hub_command'] },
   { what: 'a commit or a push', says: /\b(I )?(committed|pushed)\b[^.\n]{0,30}\b(change|commit|branch|it|them)\b/i, by: ['git', 'shell', 'project'] },
   { what: 'a message sent to a device', says: /\b(sent|pushed|notified)\b[^.\n]{0,30}\b(your )?(phone|watch|device|notification)\b/i, by: ['tell_device', 'ask_device'] },
