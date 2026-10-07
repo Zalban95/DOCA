@@ -28,6 +28,7 @@ if (!set) { console.error(`No evaluation set "${id}". npm run eval -- --list`); 
 const valid = store.validate(set);
 const previous = store.results(id, 1)[0] || null;
 
+const ENV_BEFORE = { ...process.env };   // a comparison's children each make their own sandbox from the real settings
 const { realDataDir, cleanup } = require('./lib/sandbox').sandbox('doca-eval-');
 const say = (o, line) => console.log(json ? JSON.stringify(o) : line);
 
@@ -49,19 +50,45 @@ function configure(model, on) {
   return `${model || 'configured model'}${flag ? ` · ${flag} ${on ? 'on' : 'off'}` : ''}`;
 }
 
+/**
+ * Every combination in a child process of its own, so each starts from a fresh sandbox: run in one process, the second
+ * found what the first had left — a memory written, an install and a setting already proposed — and rightly did
+ * nothing, which read as failures (2026-10-07). One combination runs here.
+ */
 async function compare() {
-  const rows = [];
+  const combos = [];
   for (const model of models.length ? models : [null])
-    for (const on of flag ? (only ? [only === 'on'] : [false, true]) : [null]) {
-      const label = configure(model, on);
-      say({ run: label }, `\n== ${label}`);
-      const code = await once();
-      const r = last;
-      rows.push({ label, code, passed: r?.passed, total: r?.total, tokens: r?.tokens, steps: (r?.cases || []).reduce((n, c) => n + (c.steps || 0), 0) });
-    }
+    for (const on of flag ? (only ? [only === 'on'] : [false, true]) : [null]) combos.push({ model, on });
+  if (combos.length === 1) {
+    const label = configure(combos[0].model, combos[0].on);
+    say({ run: label }, `\n== ${label}`);
+    const code = await once();
+    say({ compare: [{ label, code, ...summary(last) }] }, '');
+    return code;
+  }
+  const rows = [];
+  for (const { model, on } of combos) {
+    const label = `${model || 'configured model'}${flag ? ` · ${flag} ${on ? 'on' : 'off'}` : ''}`;
+    say({ run: label }, `\n== ${label}`);
+    const argv = [__filename, id, '--json', ...(model ? ['--models', model] : []), ...(flag ? ['--flag', `${flag}=${on ? 'on' : 'off'}`] : [])];
+    const child = require('child_process').spawn(process.execPath, argv, { env: ENV_BEFORE, stdio: ['ignore', 'pipe', 'inherit'] });
+    let buf = '', row = null;
+    child.stdout.on('data', d => {
+      buf += d; const lines = buf.split('\n'); buf = lines.pop();
+      for (const l of lines) {
+        let o; try { o = JSON.parse(l); } catch { continue; }
+        if (o.compare) row = o.compare[0];
+        else if (o.case) say(o, `${o.pass ? 'PASS' : 'FAIL'} ${o.i}/${o.n} ${o.case} — ${o.steps ?? '?'} steps, ${o.tokens ?? '?'} tokens`);
+      }
+    });
+    const code = await new Promise(r => child.on('close', r));
+    rows.push({ ...(row || { label, passed: 0, total: 0, tokens: 0, steps: 0 }), label, code });
+  }
   say({ compare: rows }, `\n| run | passed | tokens | steps |\n|---|---|---|---|\n${rows.map(r => `| ${r.label} | ${r.passed}/${r.total} | ${r.tokens} | ${r.steps} |`).join('\n')}`);
   return rows.every(r => r.code === 0) ? 0 : 1;
 }
+
+const summary = r => ({ passed: r?.passed, total: r?.total, tokens: r?.tokens, steps: (r?.cases || []).reduce((n, c) => n + (c.steps || 0), 0) });
 
 let last = null;   // the result of the latest run, for the comparison
 const once = async () => {
