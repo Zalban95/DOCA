@@ -276,6 +276,7 @@ const mayDecide = (req, p) => {
   const person = proposalPerson(req);
   if (!person?.role || require('../auth/rights').can(person.role, 'propose')) return true;
   if (!p?.screen) return false;
+  if (p.screen.id === `person:${person.id}`) return true;   // their own layer, on every device (panel layout)
   const d = require('../api-v1/devices').get(p.screen.id);
   return !!d && d.userId === person.id;
 };
