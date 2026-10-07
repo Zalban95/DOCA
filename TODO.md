@@ -28,6 +28,8 @@ final product** are collected, decided or not, while solutions are prototyped on
 Nothing on `dev/troubleshoot` is merged. What works there is prototype evidence
 for these requirements, not a change to the product.
 
+Finished sections moved to docs/history/TODO-done.md on 2026-10-07 (C7b): Compaction folds earlier turns only, and that is deliberate, Settings consistency, Errors that surface as the wrong thing.
+
 ## Live — what is left (updated 2026-10-04)
 
 **Built 2026-10-04 (2.116.3 – 2.137.3)**, each with its note in its section: runTurn
@@ -129,7 +131,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 - [x] C6 **Experiments measured and dated** — *2.252.0: `since` and `measure` per experiment, last measured read from its write-up's results table, "due" after 60 days in Settings → Developer; assistant mode always drives the face by voice (decided, written into face-voice.md)* (coh F20): start and last-measured dates, stale ones in the W14 list, a
   script or a "manual" note each; decide face-voice for assistant mode (it bypasses its flag today).
 - [x] C7 **Documents that match the code** (coh F21–F27, F31; cl 20) — *2.251.0: PROTOCOL's files-in-a-turn note, §23 heading, §2 order; OpenAPI's device and media kinds from `devices.KINDS`/`attachments.PLAYABLE_KINDS`; `test/doc-paths.test.js` holds every "Group → Page" in the docs to the panel's navigation (eleven fixed, the extension's preset among them); a glossary in AGENTS.md (job, scout, browser, Hub/Field); the model scout's tool is `model_scout`; `test/todo.test.js` holds item ids unique (H6.7 twice → H6.8); the old plans in `docs/history/`; OpenClaw's skills folder labelled; AGENTS.md's sibling paths*
-- [ ] C7b **The rest of C7** (coh F25, F28): TODO.md's finished sections to the Done log and narratives to checkboxes;
+- [~] C7b **The rest of C7** — *2026-10-07: finished sections moved verbatim to docs/history/TODO-done.md. The Home Assistant token's one home is deferred: its only reader today is the MCP header, which works on the live hub; moving a live secret between protected stores for a Home page that does not exist yet fails hive.md's "necessary" — do it with that page.* (coh F25, F28): TODO.md's finished sections to the Done log and narratives to checkboxes;
   one home for the Home Assistant token (a service key `homeassistant` that the MCP header and a future Home page both
   read) — moving a secret between protected stores, done as a migration.
 
@@ -1088,36 +1090,6 @@ Two smaller things noticed while measuring, neither yet a decision:
   per session (a session id in the system prompt, a per-conversation timestamp)
   would cost every conversation its first step. Keep it that way deliberately.
 
-## Compaction folds earlier turns only, and that is deliberate
-
-Not a defect and not an open question — a decision that reads like a bug, which
-is exactly why it needs writing down. Found 2026-09-18 while testing compaction
-by lowering `compactTokens` and watching a turn run past it without folding.
-
-The first attempt looked like a failure: prompts reached 20,368 tokens against a
-threshold of 9,000 and nothing compacted. It was the guard working. Under token
-pressure `memory.pendingFold(…, { force: true })` folds **only turns that have
-already finished**, never the turn in progress:
-
-> folding "the older half" then meant summarising the turn in progress — the code
-> the agent is iterating on, clipped into 250 words — and doing it again on the
-> next step, because the fold barely shrank the prompt. Under pressure, fold only
-> earlier turns; when there are none, there is nothing to fold and no model call
-> is made.
-
-So in a **first** turn there is nothing to fold, however large the prompt gets,
-and no `compacted` event is emitted. That is correct, and it is worth knowing
-before someone reads a long single-turn session as a compaction bug — the fix
-would be to "make it fold" and the result would be worse than the problem.
-
-Confirmed working on a session with a prior turn: it fired exactly at the
-threshold, and the summary kept `HALCYON` and `8443` verbatim, which is what the
-summariser prompt asks for ("keep names, paths and numbers verbatim").
-
-Related: a fold rewrites the transcript, so the step after one always shows a
-cache collapse — measured at 16% on the step following, recovering to 77% and
-81% after. Expected, one-off, and not a regression; see the cache section above.
-
 ## Two layers of learned knowledge, and the road between them
 
 **Layer 2 built in 2.82.0** (`modules/harness/skills.js`): skills in the open
@@ -1798,27 +1770,6 @@ the projects logic as a guide, with higher priority to my requests."
   the ask is that routine progress stays down.
 - **Maybe: move project chats into their own section of the Harness**, apart from
   the orchestrator's conversations.
-
-## Settings consistency
-
-**All three done** (checked 2026-09-26; the entries had gone stale): status
-lines follow one rule in `setStatus()` — success fades, errors stay
-(`test/status-lines.test.js`); two restart phrases, "restart DOCA" and "restart
-OpenClaw", each meaning one thing; and the Config tab lists exactly the Setup
-panel's four scripts (`paths.SCRIPT_CONFIG`). **Changed in 2.65.1:** saving an
-API key said "restart OpenClaw to apply" to everyone, but DOCA's own harness
-reads the key on every call — it now says DOCA uses it at once, and mentions
-restarting OpenClaw only when OpenClaw is installed.
-
-## Errors that surface as the wrong thing
-
-- ~~**`modules/files.js:79`** a moved or deleted favourite answered 500.~~
-  Already fixed (`files.fsStatus`: ENOENT/ENOTDIR → 404, EACCES/EPERM → 403);
-  the entry was stale, checked 2026-09-26.
-
-- ~~**Device rotate/revoke and skill toggles report failures through
-  `appAlert()` only.**~~ Already done (checked 2026-09-26): both use the card's
-  status line, `appAlert` only as a fallback when there is none.
 
 ## Settings that exist only as environment variables
 
