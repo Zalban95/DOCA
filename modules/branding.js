@@ -41,6 +41,8 @@ const DEFAULTS = {
   agent: 'DOCA Agent',
   /** Whose product it is. */
   vendor: 'Protolab',
+  /** Where the logo leads: the vendor's site (an edition or a private label points it at its own). */
+  site: 'https://protolab.tech',
   /** One line, for an about box or a page title. */
   tagline: 'Local-first control panel',
 };

@@ -45,5 +45,11 @@ function brandingApply() {
     el.textContent = tpl.replace('{}', of(el.dataset.brandText));
   }
 
+  // A link to the vendor (the logo): data-brand-href names the key; only an http(s) address is taken.
+  for (const el of document.querySelectorAll('[data-brand-href]')) {
+    const v = of(el.dataset.brandHref);
+    if (/^https?:\/\//i.test(v)) el.href = v;
+  }
+
   if (BRAND.panel) document.title = BRAND.panel;
 }

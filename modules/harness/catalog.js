@@ -30,7 +30,7 @@ const KNOWN = [
   {
     id: BUILTIN_ID, label: 'DOCA Harness', vendor: 'DOCA', kind: 'builtin',
     note: 'Built in — structured memory, tool calling, any OpenAI-compatible model',
-    url: 'https://protolab.tech',
+    get url() { return require('../branding').name('site'); },   // the vendor's site, as the logo (branding.js)
   },
   {
     id: 'openclaw', label: 'OpenClaw', vendor: 'OpenClaw', kind: 'stack',
