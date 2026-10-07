@@ -53,6 +53,7 @@ function mount(app) {
   app.get('/api/connectors/logins/all', h(() => ({ logins: require('../logins').list() })));
   app.post('/api/connectors/logins/all', h(req => ({ login: require('../logins').save(req.body || {}) })));
   app.delete('/api/connectors/logins/:id', h(req => require('../logins').remove(req.params.id)));
+  require('../sealed/routes').mount(app);   // secrets for devices (sealed/): used on a device, never read — never a value back
   require('../service-drafts').mount(app);   // services the agent prepared: the key's details and a skill, waiting for the secret
   // Keys for services (service-keys.js): pasted once, added by the hub to that service's own address — never a key back.
   app.get('/api/connectors/keys/all', h(() => ({ keys: require('../service-keys').list() })));

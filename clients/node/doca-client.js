@@ -5,7 +5,7 @@
  * doca-client — this machine joins the hive (docs/design/hive.md §4; TODO H6.2, H6.6). Linux, macOS and Windows,
  * Node 22, no dependency. It pairs with a hub, asks its person once per tool family, and lends the granted ones —
  * `files`, `shell`, and screen, processes, apps and device (families.js) — to the hub's agents as an MCP server the
- * hub connects to (PROTOCOL.md §22, §22.1). Keep families.js beside this file.
+ * hub connects to (PROTOCOL.md §22, §22.1). Keep families.js and sealed.js beside this file.
  *
  *   doca-client pair https://hub:4242 641-598 [--name desk]     with a code from Settings → API Keys → Pair a device
  *   doca-client pair 'doca://pair?code=641598&host=hub:4242'      or the pairing link itself, in one step
@@ -130,6 +130,7 @@ const TOOLS = {
     }) },
 };
 Object.assign(TOOLS, require('./families')({ within }));   // screen, processes, apps, device (families.js)
+const sealed = require('./sealed');   // secrets the hub hands this machine for one use (PROTOCOL.md §22.3)
 const lent = cfg => Object.entries(TOOLS).filter(([, t]) => cfg.grants?.[t.family] === true && !(cfg.revoked || []).includes(t.family));
 
 /** The MCP server the hub connects to: JSON-RPC over POST, the bearer secret required. */
@@ -147,6 +148,10 @@ function serve(cfg, { bind, port }) {
       if (m.method === 'ping') return ok({});
       if (m.method === 'tools/list') return ok({ tools: lent(cfg).map(([name, t]) => ({ name, description: t.description, inputSchema: { type: 'object', properties: Object.fromEntries(Object.entries(t.input).map(([k, ty]) => [k, { type: ty }])) } })) });
       if (m.method === 'tools/call') {
+        // A secret the hub sealed for this machine (sealed.js, hidden from tools/list); and what waits while one is on the clipboard.
+        if (m.params?.name === 'secret_fill') { try { return ok({ content: [{ type: 'text', text: JSON.stringify(await sealed.fill(cfg, m.params.arguments || {})) }] }); } catch (e) { return ok({ content: [{ type: 'text', text: e.message }], isError: true }); } }
+        const held = sealed.blocks(m.params?.name);
+        if (held) return ok({ content: [{ type: 'text', text: held }], isError: true });
         const hit = lent(cfg).find(([name]) => name === m.params?.name);
         if (!hit) return ok({ content: [{ type: 'text', text: `${m.params?.name} is not lent by this machine (not granted, or revoked).` }], isError: true });
         try {
@@ -233,6 +238,9 @@ async function run({ grant = null, bind = null, port = 18766, root = null, signa
   save(cfg);
   const g = await request(cfg, 'PUT', '/api/v1/devices/self/grants', { grants: Object.fromEntries(FAMILIES.map(f => [f, cfg.grants[f] === true])) });
   if (g.status >= 400) throw new Error(`The hub refused the grants (${g.status}): ${JSON.stringify(g.body)}`);
+  // The key the hub seals secrets for this machine with (sealed.js); a hub older than sealed secrets has none.
+  const sk = await request(cfg, 'GET', '/api/v1/mcp/self/seal');
+  if (sk.status === 200 && sk.body?.key) { cfg.sealKey = sk.body.key; save(cfg); }
   const addr = bind || tailnetAddress();
   const server = await serve(cfg, { bind: addr, port });
   const url = `http://${addr}:${server.address().port}/mcp`;
@@ -245,7 +253,7 @@ async function run({ grant = null, bind = null, port = 18766, root = null, signa
   if (signal) signal.addEventListener('abort', () => stopped.abort(), { once: true });
   follow(cfg, { signal: stopped.signal });
   /** Stop lending: the hub's stream and this listener close. */
-  const stop = () => new Promise(resolve => { stopped.abort(); server.closeAllConnections?.(); server.close(() => resolve()); });
+  const stop = () => new Promise(resolve => { stopped.abort(); sealed.disarm(); server.closeAllConnections?.(); server.close(() => resolve()); });
   return { server, url, cfg, stop };
 }
 

@@ -42,7 +42,7 @@ const KIT_OF = {
   http_fetch: 'web', research_docs: 'web', web_search: 'web', api_call: 'connectors',
   memory_write: 'memory', memory_rules_write: 'memory', memory_search: 'memory', memory_list: 'memory',
   memory_forget: 'memory', memory_flag: 'memory', recall_conversations: 'memory',
-  ask_device: 'devices', tell_device: 'devices', doca_clients: 'devices', show_media: 'devices', show_image: 'devices', today: 'devices',
+  ask_device: 'devices', tell_device: 'devices', secret_use: 'devices', doca_clients: 'devices', show_media: 'devices', show_image: 'devices', today: 'devices',
   skill: 'skills', tools_more: 'skills', tool_note: 'skills', recipe: 'skills', pack: 'skills',
   settings_read: 'panel', effort: 'panel', form_fill: 'panel', settings_propose: 'panel', install_propose: 'panel', mcp_draft: 'panel', service_draft: 'panel', system_status: 'panel', hub_command: 'panel', mcp_status: 'panel', mcp_connect: 'panel', features: 'panel',
 };

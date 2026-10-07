@@ -333,6 +333,36 @@ The harness gives its agent eight rules for working on any repository (charter r
 - **Services the agent prepared** (since 2.235.0, `modules/service-drafts.js`, tool `service_draft`, kit panel, in `registry.NEVER`): for any API with a key the agent reads its docs and drafts everything but the secret — how the key is sent (header, query or exchange), the origin, a note, and a skill with the steps. Field → Connectors → "Prepared by the agent": the person pastes the key, and one Save writes the key (protected file) and the skill (never over a shipped one). Nothing is usable as a draft.
 - **MCP servers the agent prepared** (`modules/mcp/drafts.js`, tool `mcp_draft`, kit panel, in `registry.NEVER`): for a server not in the catalogue the agent drafts name, command and arguments or address, the secrets it needs by name (a secret's value is never kept), and which machine it belongs on. Nothing is added or started: MCP → "Prepared by the agent" → "Open in the form" fills the ordinary form, and only the person's Save makes it a server — the installs rule (the agent never supplies a command that runs) holds because a person saved it.
 
+### Secrets used on a device, never read (since 2.286.0, TODO P1.3, `modules/sealed`; CONSTITUTION S4; asked 2026-10-07)
+- **`secret_use {secret, device, ref?, tab?, mode?, uses?, seconds?}`** (kit devices, in `registry.NEVER`, a forced ask in
+  `forced-asks.js` — every mode, never "always"): a secret typed or pasted on one of the person's **own** devices
+  (`sealed/use.js`), for one use or a few clipboard pastes and a short time, then forgotten there. The secret is a
+  secret for devices (by name), `login:<name>` (a login's password) or `key:<name>` (a key for services); the hub's own
+  are used on a host's turn (a key opened to everyone: anyone's). The agent gets a sentence ("on its clipboard for
+  1 paste or 30 s"), never the value; what the device answers is scrubbed of it.
+- **Kept in doca.db, encrypted** (`sealed/vault.js`, schema step 10 `sealed_secrets`): AES-256-GCM, each row bound to
+  its name, the key in `keys/sealed.key` (0600, the protected keys folder) — the owner asked for "the SQL, in a safe
+  place", and a copy of the database alone (a PostgreSQL dump, an agent's `shell` on the file) reveals nothing.
+  `sealed_uses` records when, which, which device, into what, by whom and how it went — never a value. Field →
+  Connectors → "Secrets for your devices" (`/api/connectors/sealed/*`, host; `public/js/settings/sealed-secrets.js`)
+  keeps, lists, forgets and shows where each was used.
+- **Sealed for one device** (`sealed/seal.js`): each device takes a seal key once (`GET /api/v1/mcp/self/seal`, scope
+  `mcp:self`, kept in `keys/device-seals.json`); the hub calls the device's **hidden** MCP tool `secret_fill` (never in
+  `tools/list`, so the agent cannot call it — `mcp/tools.call` only dispatches listed tools) with `{sealed: {v, iv,
+  data}}`: AES-256-GCM over `{device, iat, nonce, how, value, ref, tab, origin, uses, ttlSec}`, additional data
+  `doca-seal:<deviceId>`. The device refuses another device's, a stale or a replayed one. PROTOCOL.md §22.3 is the
+  wire; `docs/api/sealed-secrets.md` is what DocaMobile and DocaDesk implement (not built there yet).
+- **doca-client** (`clients/node/sealed.js`, needs `device` lent): `type` (xdotool / wtype / ydotool, System Events,
+  SendKeys — the value on stdin or in the environment, never argv) or `clipboard` (xclip `-loops N` counts pastes on
+  X11, `wl-copy --paste-once` one on Wayland; macOS and Windows clear after the time, Windows outside clipboard
+  history); while it is on the clipboard the client refuses `device_clipboard_read` and `shell_run`. **The browser
+  extension** (1.1.0) fills `[ref]` only when the tab's origin is the secret's own (`mcp.js` HIDDEN, `page.js
+  fillSecret`), opening the seal with WebCrypto. The stated limits: a clipboard manager on the device may keep a copy
+  (typing avoids it), and a page's own scripts read a field filled on it — which is what signing in is.
+- `test/sealed-secrets.test.js` runs it end to end with a real doca-client (the OS typing stood in for): the forced ask,
+  the use count, the origin check, the device-key unlock and replay, and that after a real turn the value is in no
+  file of the hub's data folder (doca.db included), the transcript or the logs.
+
 ### 3D models, and services that trade a secret for a token (since 2.232.0; asked 2026-10-06 for hi3d.ai)
 - **A 3D model is a kind of media** (`attachments.playableKind` → `model`: GLB, GLTF, STL, OBJ, FBX, PLY, 3MF, USDZ), drawn by one viewer everywhere (`public/js/lib/model3d.js`): the chat (`show_media`, turning, ⤢ full screen), the Files preview (through `mediaViewerOpen`), the Projects editor. GLB/GLTF with `<model-viewer>`, the rest with three.js and its loaders (both from jsDelivr the first time, like Monaco), normals recomputed and the model framed; USDZ is a download (AR on Apple devices).
 - **Keys for services can be exchanged** (`place: 'exchange'`): the key is `id:secret`, the field the token address on the service's own origin; the hub posts it as HTTP Basic, keeps the token in memory until a minute before it expires (an hour if unsaid), renews it once on a 401, and scrubs both from results. **`api_call` uploads and keeps** (`http_fetch` until 2.259.0): `form` and `files` (a path or an attachment name, 50 MB each) make a multipart request; `save_as` keeps the answer as an attachment (a model, an image) instead of reading it as text. With them `skills/hi3d` is a service set up with no code: connect, submit, poll, keep, show.

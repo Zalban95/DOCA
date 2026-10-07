@@ -1171,6 +1171,42 @@ text frame, and you answer each by its `id`. One socket per device; a newer one 
 
 The DOCA browser extension (`clients/browser`, preset `extension` = `mcp:self` only) is the first such client.
 
+### 22.3 Sealed secrets: used on the device, never read by the agent (hub 2.286.0, TODO P1.3)
+
+An agent can have a password, a PIN or a key typed or pasted on one of its person's devices without ever seeing it
+(CONSTITUTION S4): it calls `secret_use {secret, device, …}`, a person is asked every time, and the hub hands the value
+to **that device alone, sealed for it**, for one use (or a few pastes) and a short time. The agent learns what was
+done ("filled field [2] on https://bank.example", "on its clipboard for 1 paste or 30 s"), never the value. A device
+that hosts an MCP server (§22, §22.2) takes part by doing three things:
+
+1. **Take its seal key.** `GET /mcp/self/seal` (scope `mcp:self`) → `{v: 1, alg: "A256GCM", key, aad}`: 32 random bytes
+   (base64) minted for this device the first time it asks, the same afterwards. Keep it where only the app reads it
+   (Android Keystore-wrapped preferences, Windows DPAPI, the extension's own storage). A hub without sealed secrets
+   answers 404: carry on without.
+2. **Answer the hidden tool `secret_fill`.** It is never listed in `tools/list` (so an agent cannot call it), and only
+   the hub calls it: `tools/call {name: "secret_fill", arguments: {sealed: {v: 1, iv, data}}}`. `iv` is 12 bytes and
+   `data` is the AES-256-GCM ciphertext followed by its 16-byte tag (what WebCrypto's `encrypt` writes), both base64;
+   the additional data is the UTF-8 of `aad` (`doca-seal:<your device id>`). Opened, it is JSON:
+
+   | field | |
+   |---|---|
+   | `device` | your device id — refuse anything else |
+   | `iat`, `nonce` | when it was sealed (ms) and a one-time id — refuse one older than 5 minutes or seen before |
+   | `how` | `field` (a field on a web page), `type` (typed into what has focus), `clipboard` |
+   | `value` | the secret — use it, never return, log or store it |
+   | `ref`, `tab`, `origin` | for `field`: the `[n]` from the last snapshot, the tab (null: in front), the only origin it may be filled on |
+   | `uses`, `ttlSec` | for `clipboard`: pastes before it is forgotten (1–10) and the most seconds it may stay (5–300) |
+
+   Use it as `how` says or refuse with `isError` and a sentence (never containing the value): a `field` only when the
+   tab's origin is exactly `origin` (a look-alike gets nothing); `clipboard` cleared after `uses` pastes where the OS
+   can count them, else after `ttlSec`, and kept out of clipboard history where the OS allows. While a secret is on
+   the clipboard, refuse your own clipboard reads and command lines. Answer
+   `{"done": "field"|"typed"|"clipboard", "uses": n, "counted": true|false, "seconds": s}` as text.
+3. **Forget it.** Nothing of the value stays after the use: not in a file, a log, a crash report or a notification.
+
+Clients: `clients/node` (doca-client: `type` and `clipboard`, with the `device` family lent) and `clients/browser` (the
+extension: `field`). What DocaMobile and DocaDesk implement is `docs/api/sealed-secrets.md`.
+
 ## 23. Talking to the agent (`/harness`)
 
 Every client is an input and an output to one agent. A watch, a phone and a
