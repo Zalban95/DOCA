@@ -27,12 +27,10 @@ function fileTree(container, opts = {}) {
   Object.assign(upload, { type: 'file', multiple: true });
   upload.style.display = 'none';
 
+  // One row of monochrome icon buttons (des 27): it used to wrap a lone ⬆ onto a second line.
+  const ib = (act, icon, title) => `<button type="button" class="icon-btn" data-act="${act}" title="${title}" aria-label="${title}">${typeof uiIcon === 'function' ? uiIcon(icon, 15) : title}</button>`;
   container.innerHTML = `<div class="pj-tree-tools">
-      <button class="btn btn-xs" data-act="refresh" title="Refresh">↺</button>
-      <button class="btn btn-xs" data-act="collapse" title="Collapse all">⊟</button>
-      <button class="btn btn-xs" data-act="file" title="New file in the selected folder">+ File</button>
-      <button class="btn btn-xs" data-act="folder" title="New folder in the selected folder">+ Folder</button>
-      <button class="btn btn-xs" data-act="upload" title="Upload into the selected folder">⬆</button>
+      ${ib('refresh', 'refresh', 'Refresh')}${ib('collapse', 'collapse', 'Collapse all')}${ib('file', 'file', 'New file in the selected folder')}${ib('folder', 'folder', 'New folder in the selected folder')}${ib('upload', 'upload', 'Upload into the selected folder')}
     </div><div class="pj-tree" tabindex="0"></div>`;
   container.appendChild(upload);
   const tree = container.querySelector('.pj-tree');

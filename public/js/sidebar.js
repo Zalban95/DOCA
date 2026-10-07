@@ -141,7 +141,7 @@ function renderGPU(gpus, en = {}) {
     const v = (x, unit) => (x == null || x === '' ? '—' : `${escHtml(String(x))}${unit}`);
     const mem = g.unified ? 'Memory (shared)' : 'VRAM';
     return `<div class="gpu-card">
-      <div class="gpu-name">GPU ${i} — ${escHtml(String(g.name || 'GPU'))}</div>
+      <div class="gpu-name" title="${escHtml(String(g.name || "GPU"))}">GPU ${i} — ${escHtml(String(g.name || "GPU"))}</div>
       <div class="gpu-grid">
         <div class="gm"><span class="gm-l">Temp</span><span class="gm-v">${v(g.temp, '°C')}</span></div>
         <div class="gm"><span class="gm-l">Util</span><span class="gm-v">${v(g.util, '%')}</span></div>
@@ -165,8 +165,8 @@ function renderSystem(sys, en = {}) {
   const barColor = (pct, warm = 'amber', cold = 'green') =>
     pct > 90 ? 'red' : pct > 70 ? warm : cold;
 
-  const metric = (label, value, cls = 'cpu') =>
-    `<div class="sys-metric"><span class="sys-label">${label}</span><span class="sys-value ${cls}">${value}</span></div>`;
+  const metric = (label, value, cls = 'cpu', wide = false) =>
+    `<div class="sys-metric${wide ? ' wide' : ''}"><span class="sys-label">${label}</span><span class="sys-value ${cls}" title="${escHtml(String(value))}">${value}</span></div>`;
 
   const cores = Array.isArray(sys.cores) ? sys.cores : [];
   let grid = '';
@@ -182,7 +182,7 @@ function renderSystem(sys, en = {}) {
   // ── Load / cores / freq ──
   if (en.load) {
     const l = v => (v || 0).toFixed(2);
-    grid += metric('Load 1/5/15', `${l(sys.load1)} · ${l(sys.load5)} · ${l(sys.load15)}`);
+    grid += metric('Load 1/5/15', `${l(sys.load1)} · ${l(sys.load5)} · ${l(sys.load15)}`, 'cpu', true);   // whole, across both columns (des 19)
   }
   if (en.cpuFreq && sys.cpuFreqMHz != null) {
     grid += metric('Freq', sys.cpuFreqMHz >= 1000 ? `${(sys.cpuFreqMHz / 1000).toFixed(2)} GHz` : `${sys.cpuFreqMHz} MHz`);
@@ -194,7 +194,7 @@ function renderSystem(sys, en = {}) {
   if (en.ram) {
     const ramPct = sys.ramTotal > 0 ? Math.round((sys.ramUsed / sys.ramTotal) * 100) : 0;
     grid += metric('RAM', `${ramPct}%`, 'ram');
-    grid += metric('Used', `${fmtBytes(sys.ramUsed * 1e6)} / ${fmtBytes(sys.ramTotal * 1e6)}`, 'ram');
+    grid += metric('Used', `${fmtBytes(sys.ramUsed * 1e6)} / ${fmtBytes(sys.ramTotal * 1e6)}`, 'ram', true);
     grid += `<div class="res-bar"><div class="res-bar-fill ${barColor(ramPct, 'amber', 'blue')}" style="width:${ramPct}%"></div></div>`;
   }
 

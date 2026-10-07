@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════ */
 
 const SETTINGS_TABS = [
-  { id: 'controls',  label: 'Controls' },
+  { id: 'controls',  label: 'Overview' },
   { id: 'logs',      label: 'Logs' },
   { id: 'files',     label: 'Files' },
   { id: 'projects',  label: 'Projects' },

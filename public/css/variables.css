@@ -36,6 +36,12 @@
   --bg2:       #0c0e10;
   --bg3:       #181c20;
 
+  /* Roles a theme may name (look-points.js) and otherwise borrows: text on the accent, a stopped state's point,
+     a figure's colour */
+  --on-accent: var(--bg);
+  --stopped:   var(--faint);
+  --field:     var(--cyan);
+
   /* Aliases */
   --text-muted: #505c68;
   --font-mono:  'IBM Plex Mono', 'Cascadia Code', 'Fira Code', monospace;
@@ -44,6 +50,9 @@
   --font-ui:    var(--font-mono);
   --font-text:  'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-display: var(--font-ui);
+
+  /* Type for what a person types: one size per skin, so an input is never larger than the text around it (des 21) */
+  --fs-input: 12px;
 
   /* Layout */
   --sidebar-w: 264px;

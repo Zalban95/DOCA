@@ -11,10 +11,14 @@ async function releasingCard(panel) {
       One family per line, optionally with a minimum version. Empty: everyone asks.</p>
     <textarea class="input" id="rel-rules" rows="4" style="width:100%;font-family:var(--font-mono)">${escHtml(r.rules.join('\n'))}</textarea>
     <div class="toolbar" style="gap:6px;margin-top:6px;flex-wrap:wrap">
-      <button class="btn btn-sm btn-blue" onclick="releasingSave()">Save</button>
-      <input class="input" id="rel-try" placeholder="a model id, e.g. claude-opus-5-5" style="width:240px">
-      <button class="btn btn-sm" onclick="releasingTry()">Would it ask?</button>
+      <button class="btn btn-sm btn-primary" onclick="releasingSave()">Save</button>
       <span class="status-line" id="rel-status"></span>
+    </div>
+    <div class="form-row" style="margin-top:12px">   <!-- "Would it ask?" is its own row with its answer beside it (des 24) -->
+      <label style="display:flex;flex-direction:column;gap:4px"><span class="input-label" style="margin:0">Would a model ask before releasing?</span>
+        <input class="input" id="rel-try" placeholder="a model id, e.g. claude-opus-5-5"></label>
+      <button class="btn btn-sm" onclick="releasingTry()">Check</button>
+      <span class="status-line" id="rel-try-result" style="flex:1 1 200px"></span>
     </div>`;
   panel.append(card);
 }
@@ -27,7 +31,7 @@ async function releasingSave() {
 }
 
 async function releasingTry() {
-  const model = document.getElementById('rel-try').value.trim(), st = document.getElementById('rel-status');
+  const model = document.getElementById('rel-try').value.trim(), st = document.getElementById('rel-try-result');
   if (!model) return;
   try {
     const r = await apiFetch(`/api/developer/releasing?model=${encodeURIComponent(model)}`);

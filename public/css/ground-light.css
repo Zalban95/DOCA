@@ -1,0 +1,25 @@
+/* ═══════════════════════════════════════════════════════
+   On a light theme (html[data-ground="light"], look-points.js): what was drawn on a black disc or slab takes the
+   theme's ground instead — the corner face's circle, assistant mode, the face editor's preview, the Ambient page and
+   its controls. The points themselves are recoloured by the renderer (face/face.js faceGround: ink for their white),
+   never moved or reshaped. Dark themes are untouched by everything here.
+   ═══════════════════════════════════════════════════════ */
+
+html[data-ground="light"] .face-corner { background: var(--bg); }
+html[data-ground="light"] .face-assistant { background: var(--bg); }
+html[data-ground="light"] .face-assistant-status { color: var(--muted); }
+html[data-ground="light"] .face-assistant-close { background: color-mix(in srgb, var(--surface) 80%, transparent); color: var(--bright);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+html[data-ground="light"] #face-edit-preview { background: var(--bg) !important; border: 1px solid var(--border); }
+
+/* The Ambient page on white: the ground, ink type, muted labels, the theme's accent for times and marks */
+html[data-ground="light"] .amb { background: var(--bg); color: var(--bright); }
+html[data-ground="light"] :is(.amb h3, .amb-what small, .amb small, .amb-place, .amb-muted, .amb-hint, .amb-status) { color: var(--muted); }
+html[data-ground="light"] :is(.amb-date, .amb-what, .amb-day b, .amb-app, .amb-edit) { color: var(--text); }
+html[data-ground="light"] :is(.amb-when, .amb-notice span, .amb-muted a) { color: var(--accent); }
+html[data-ground="light"] .amb-notice.ask span, html[data-ground="light"] .amb-notice.propose span { color: var(--amber); }
+html[data-ground="light"] :is(.amb-event, .amb-notice) { border-bottom-color: var(--border); }
+html[data-ground="light"] .amb-button { background: var(--surface); border-color: var(--border2); color: var(--bright); }
+html[data-ground="light"] .amb-talk { background: var(--surface); color: var(--accent); box-shadow: 0 0 0 1px var(--border2), 0 4px 18px rgba(0, 0, 0, .08); }
+html[data-ground="light"] .amb-band.holding { background: radial-gradient(ellipse at 50% 55%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 65%); }
+html[data-ground="light"] .amb-arrange { background: rgba(255, 255, 255, .6); }

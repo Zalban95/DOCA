@@ -240,9 +240,9 @@ function _devShowingHtml(d, dead) {
   const s = _devShowing[d.id], label = t => (typeof NAV_LABELS !== 'undefined' && NAV_LABELS[t]) || t;
   const pages = typeof NAV_TABS !== 'undefined' ? NAV_TABS : [];
   return `<br>${s ? `showing <b>${escHtml(label(s.page || '?'))}</b>${s.solo ? ' alone' : ''}${s.visible ? '' : ' (hidden)'}` : 'not open now'}
-    · show here <select class="input" id="dev-show-${escHtml(d.id)}" style="width:auto;padding:2px 4px">${pages.map(t => `<option value="${t}">${escHtml(label(t))}</option>`).join('')}</select>
+    <span class="dev-show">show here <select class="input" id="dev-show-${escHtml(d.id)}" style="width:auto;padding:2px 4px">${pages.map(t => `<option value="${t}">${escHtml(label(t))}</option>`).join('')}</select>
     <label style="font-size:11px"><input type="checkbox" id="dev-solo-${escHtml(d.id)}" checked> alone</label>
-    <button class="btn btn-xs" onclick="devShowHere(${jsArg(d.id)})">Show</button>`;
+    <button class="btn btn-xs" onclick="devShowHere(${jsArg(d.id)})">Show</button></span>`;   // one group, wrapping whole (des 29)
 }
 
 async function devShowHere(id) {

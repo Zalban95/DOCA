@@ -15,7 +15,7 @@
    ═══════════════════════════════════════════════════════ */
 
 const FACE_DEFAULT = {
-  name: 'Protolab',
+  name: '',   // the HUD's corner: the product's name (kiosk.js reads /api/branding), never the palette's source (des 16)
   palette: { bg: '#050507', ink: '#e8edf2', dim: '#707a85', accent: '#57c9c2', steel: '#6f8aa3', ask: '#e8a020', error: '#e85050', field: '#a6bfd6' },
   dots: 760,
   form: 'poly',
@@ -43,7 +43,10 @@ const FACE_STATES = {
 function _faceRand(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
 
 function faceMount(canvas, specIn = {}) {
-  const spec = { ...FACE_DEFAULT, ...specIn, palette: { ...FACE_DEFAULT.palette, ...(specIn.palette || {}) },
+  // On a light theme the ground is the theme's and the white of each point becomes ink (faceGround): colours only —
+  // the points, their shapes and their motion are the same on every ground. A screen's own face.spec colours still win.
+  const ground = faceGround();
+  const spec = { ...FACE_DEFAULT, ...specIn, palette: { ...FACE_DEFAULT.palette, ...(ground || {}), ...(specIn.palette || {}) },
     eyes: { ...FACE_DEFAULT.eyes, ...(specIn.eyes || {}) }, mouth: { ...FACE_DEFAULT.mouth, ...(specIn.mouth || {}) } };
   const states = Object.fromEntries(Object.entries(FACE_STATES).map(([k, v]) => [k, { ...v, ...(spec.states?.[k] || {}) }]));
   const ctx = canvas.getContext('2d');
@@ -102,7 +105,7 @@ function faceMount(canvas, specIn = {}) {
         const core = Math.exp(-Math.pow(d * R / (0.048 * P), 4)), bloom = 0.13 * G * Math.exp(-Math.pow(d * R / 0.19, 2)), halo = 0.24 * G * Math.pow(1 - d, 2.2);
         const a = Math.min(1, core + bloom + halo), white = core / Math.max(a, 1e-6) * 0.75;   // the peak whitens, the glow keeps the colour
         const o = (y * S + x) * 4;
-        px[o] = r + (255 - r) * white; px[o + 1] = g + (255 - g) * white; px[o + 2] = b + (255 - b) * white; px[o + 3] = a * 255;
+        px[o] = r + (peak[0] - r) * white; px[o + 1] = g + (peak[1] - g) * white; px[o + 2] = b + (peak[2] - b) * white; px[o + 3] = a * 255;
       }
       c.putImageData(img, 0, 0);
       if (sprites.size > 64) sprites.clear();
@@ -111,6 +114,7 @@ function faceMount(canvas, specIn = {}) {
     return s;
   };
   const hex = c => { const m = /^#?([0-9a-f]{6})$/i.exec(c || ''); const v = m ? parseInt(m[1], 16) : 0xffffff; return [v >> 16, (v >> 8) & 255, v & 255]; };
+  const peak = ground ? hex(spec.palette.ink) : [255, 255, 255];   // what a point's core turns to: white, or ink on white
 
   // The HUD's face is the theme's mono face (variables.css), read once; a page without the variables gets a plain mono.
   const hudFont = (typeof getComputedStyle === 'function' && getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim()) || 'ui-monospace, monospace';
@@ -151,7 +155,7 @@ function faceMount(canvas, specIn = {}) {
     if (spec.clear) ctx.clearRect(0, 0, w, h); else { ctx.fillStyle = P.bg; ctx.fillRect(0, 0, w, h); }
     const [r, g, b] = cur.colorRGB.map(Math.round);
     const spr = sprite(r, g, b), fieldSpr = sprite(...hex(P.field || P.ink));
-    ctx.globalCompositeOperation = 'lighter';   // points of light add up where they cross
+    ctx.globalCompositeOperation = ground ? 'source-over' : 'lighter';   // points of light add up where they cross; on white, adding is white
     if (form?.halo && form.halo.a > 0.005) {   // a form's own soft light, under its points (the galaxy's heart)
       const H = form.halo, hx = cx + H.x * unit, hy = cy + H.y * unit;
       ctx.save(); ctx.translate(hx, hy); ctx.scale(1, H.ry / H.rx);
@@ -209,7 +213,7 @@ function faceMount(canvas, specIn = {}) {
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
     // Vignette and scanlines.
-    if (spec.vignette !== false) {
+    if (spec.vignette !== false && !ground) {
       const vg = ctx.createRadialGradient(cx, h / 2, unit * 0.6, cx, h / 2, Math.max(w, h) * 0.75);
       vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)');
       ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
@@ -222,7 +226,8 @@ function faceMount(canvas, specIn = {}) {
       ctx.fillText(`[ ${state.toUpperCase()} ]`, m, m);
       if (detail) { ctx.fillStyle = P.dim; ctx.textBaseline = 'bottom'; ctx.fillText(detail, m, h - m); }
       ctx.fillStyle = P.dim; ctx.textBaseline = 'top'; ctx.textAlign = 'right';
-      ctx.fillText(spec.name.toUpperCase(), w - m, m); ctx.textAlign = 'left';
+      if (spec.name) ctx.fillText(String(spec.name).toUpperCase(), w - m, m);
+      ctx.textAlign = 'left';
     }
     // Long idle on a quiet screen: settle further toward noise.
     if (state === 'idle' && spec.settle !== false && now - lastEvent > 120000) target = { ...states.idle, c: 0.3 };
@@ -258,12 +263,37 @@ function faceFeed(onState) {
   return () => { closed = true; es?.close(); };
 }
 
+/** The theme's ground for the face: null on a dark theme (the face as it always was), else {bg, ink} — the theme's
+ *  own ground, and ink for the white of each point. In the panel the theme marks <html data-ground> (look-points.js);
+ *  on /face, which loads no themes, the screen's theme name read by faceSpec() says it. */
+const FACE_INK_ON_LIGHT = '#14181c';
+const FACE_LIGHT_GROUNDS = { daylight: '#f4f5f7', pointsDaylight: '#f4f5f6' };
+let _faceLook = null;   // {theme, customTheme}: the screen's, as faceSpec() last read it
+
+function faceGround() {
+  if (typeof document === 'undefined') return null;
+  const root = document.documentElement, six = c => /^#[0-9a-f]{6}$/i.test(c || '');
+  let bg = null;
+  if (root.dataset.ground) {
+    if (root.dataset.ground !== 'light') return null;
+    bg = getComputedStyle(root).getPropertyValue('--bg').trim();
+  } else if (_faceLook?.theme) {
+    bg = _faceLook.theme === 'custom' ? _faceLook.customTheme?.['--bg'] : FACE_LIGHT_GROUNDS[_faceLook.theme];
+    const v = six(bg) ? parseInt(bg.slice(1), 16) : 0;
+    if (!bg || (0.2126 * (v >> 16) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)) / 255 <= 0.5) return null;
+  } else return null;
+  return { bg: six(bg) ? bg : '#ffffff', ink: FACE_INK_ON_LIGHT };
+}
+
 /** This screen's face: the hive's or this screen's (`face.spec`, settings-schema.js — an edition carries one), under
  *  a spec kept in this browser (localStorage `doca.face.spec`), over the default. Fetched without the panel's helpers,
  *  since /face loads only this file. */
 async function faceSpec() {
   let shared = {}, local = {};
-  try { const r = await fetch('/api/screen', { credentials: 'same-origin' }); if (r.ok) shared = (await r.json()).settings?.face?.spec || {}; } catch { /* the default */ }
+  try {
+    const r = await fetch('/api/screen', { credentials: 'same-origin' });
+    if (r.ok) { const st = (await r.json()).settings || {}; shared = st.face?.spec || {}; _faceLook = { theme: st.theme, customTheme: st.customTheme }; }
+  } catch { /* the default */ }
   try { local = JSON.parse(localStorage.getItem('doca.face.spec') || '{}'); } catch { /* the default */ }
   return { ...shared, ...local };
 }

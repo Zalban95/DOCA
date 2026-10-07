@@ -138,22 +138,20 @@ async function dockerLoadContainers() {
       const statusClass = isRunning ? 'badge-green' : failed ? 'badge-red' : 'badge-amber';
       const ports = c.Ports || '';
 
-      return `<tr class="models-row" id="docker-container-${c.ID}">
-        <td class="models-name" style="font-size:11px">${escHtml(c.Names || c.ID.slice(0,12))}</td>
-        <td style="font-size:10px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis">${escHtml(c.Image || '—')}</td>
-        <td><span class="badge ${statusClass}" style="font-size:9px">${escHtml(c.Status || c.State || '—')}</span></td>
-        <td style="font-size:10px;color:var(--muted)">${escHtml(ports.slice(0,40) || '—')}</td>
-        <td style="white-space:nowrap;text-align:right">
-          <div style="display:flex;gap:4px;justify-content:flex-end">
-            ${isRunning
-              ? `<button class="btn btn-xs btn-red"   onclick="dockerAction(${jsArg(c.ID)},'stop')">■ Stop</button>
-                 <button class="btn btn-xs"           onclick="dockerAction(${jsArg(c.ID)},'restart')">↺</button>`
-              : `<button class="btn btn-xs btn-green" onclick="dockerAction(${jsArg(c.ID)},'start')">▶ Start</button>
-                 <button class="btn btn-xs btn-red"   onclick="dockerRemoveContainer(${jsArg(c.ID)},${jsArg(c.Names || '')})">✕</button>`
-            }
-            <button class="btn btn-xs" onclick="dockerToggleLog(${jsArg(c.ID)},${jsArg(c.Names || c.ID.slice(0,12))})">📋 Logs</button>
-          </div>
-        </td>
+      const id = jsArg(c.ID), name = jsArg(c.Names || c.ID.slice(0, 12));
+      // One row-action component (des 5): the same icons in the same order as Controls; Remove behind ⋯ (des 18).
+      const acts = rowActs([
+        { icon: 'logs', label: 'Logs', onclick: `dockerToggleLog(${id},${name})` },
+        isRunning && { icon: 'restart', label: 'Restart', onclick: `dockerAction(${id},'restart')` },
+        isRunning ? { icon: 'stop', label: 'Stop', onclick: `dockerAction(${id},'stop')` } : { icon: 'start', label: 'Start', onclick: `dockerAction(${id},'start')` },
+        !isRunning && { icon: 'remove', label: 'Remove', more: true, onclick: `dockerRemoveContainer(${id},${jsArg(c.Names || '')})` },
+      ]);
+      return `<tr class="models-row dk-row" id="docker-container-${c.ID}">
+        <td class="models-name dk-name">${escHtml(c.Names || c.ID.slice(0,12))}</td>
+        <td class="dk-image" title="${escHtml(c.Image || '')}">${escHtml(c.Image || '—')}</td>
+        <td class="dk-status"><span class="badge ${statusClass}">${escHtml(c.Status || c.State || '—')}</span></td>
+        <td class="dk-ports${ports ? "" : " dk-none"}">${escHtml(ports.slice(0,40) || "—")}</td>
+        <td class="dk-acts">${acts}</td>
       </tr>`;
     }).join('');
     _dockerRenderPresets();
@@ -238,15 +236,16 @@ async function dockerLoadImages() {
       const iso = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ([+-]\d{2})(\d{2})/.exec(img.CreatedAt || '');
       const created = iso ? `${fmtDate(`${iso[1]}T${iso[2]}${iso[3]}:${iso[4]}`)}${img.CreatedSince ? ` · ${img.CreatedSince}` : ''}` : (img.CreatedSince || '—');
       const fullId = img.ID || '';
-      return `<tr class="models-row">
-        <td class="models-name" style="font-size:11px">${escHtml(repo)}</td>
-        <td style="font-size:10px">${escHtml(tag)}</td>
-        <td style="font-size:10px;color:var(--muted)">${escHtml(size)}</td>
-        <td style="font-size:10px;color:var(--muted)">${escHtml(created)}</td>
-        <td style="text-align:right;white-space:nowrap">
-          <button class="btn btn-xs btn-green" onclick="dockerRunImage(${jsArg(repo)},${jsArg(tag)})">▶ Run</button>
-          <button class="btn btn-xs btn-red" onclick="dockerRemoveImage(${jsArg(fullId)},${jsArg(repo + ':' + tag)})">✕ Remove</button>
-        </td>
+      // How long ago, with the date in the title: a date and an age side by side wrapped into six lines on a phone (des 1).
+      return `<tr class="models-row dk-row">
+        <td class="models-name dk-name">${escHtml(repo)}</td>
+        <td class="dk-tag">${escHtml(tag)}</td>
+        <td class="dk-size">${escHtml(size)}</td>
+        <td class="dk-created" title="${escHtml(created)}">${escHtml(img.CreatedSince || created)}</td>
+        <td class="dk-acts">${rowActs([
+          { icon: 'start', label: 'Run', onclick: `dockerRunImage(${jsArg(repo)},${jsArg(tag)})` },
+          { icon: 'remove', label: 'Remove', more: true, onclick: `dockerRemoveImage(${jsArg(fullId)},${jsArg(repo + ':' + tag)})` },
+        ])}</td>
       </tr>`;
     }).join('');
   } catch (e) {

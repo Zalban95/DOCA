@@ -76,6 +76,8 @@ function settingsSubNav(panelId) {
   const moved = _SETTINGS_SUBTABS.find(t => t.id === panelId && t.page);
   if (moved && typeof nav === 'function') return nav(moved.page);
   _settingsActiveSubtab = panelId;
+  // From outside Settings, a section is reached by going there first (des 32): it used to change a hidden panel.
+  if (typeof pageShown === 'function' && typeof nav === 'function' && !pageShown('settings')) nav('settings');
   const cli = panelId.startsWith('cli-') ? panelId.slice(4) : null;   // a CLI harness: one panel, that harness
 
   const inHarnesses = !!cli || !!_SETTINGS_SUBTABS.find(t => t.id === panelId)?.group;

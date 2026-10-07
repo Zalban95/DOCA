@@ -1,0 +1,236 @@
+/* ═══════════════════════════════════════════════════════
+   One style system (wave E, TODO E1–E3; docs/audits/2026-10-06-design.md): what every skin shares, drawn from the
+   theme's tokens so Classic, Modern and Points each keep their own character and all gain the fixes.
+   Each rule names the audit item it answers ("des N"). The shared parts' markup is js/lib/ui-parts.js.
+   ═══════════════════════════════════════════════════════ */
+
+/* ── des 6: native controls drawn from the theme ── */
+:root { accent-color: var(--accent); }
+input[type="file"]::file-selector-button {
+  font: inherit; font-family: var(--font-ui); font-size: 12px; margin-right: 10px; padding: 5px 12px; cursor: pointer;
+  border: 1px solid var(--border2); background: var(--dim); color: var(--text); border-radius: var(--radius);
+}
+input[type="file"]::file-selector-button:hover { background: var(--raised); color: var(--bright); }
+input[type="range"] { accent-color: var(--accent); }
+
+/* ── des 21: one input size per skin (variables.css --fs-input; the skins set their own) ── */
+.input, select.input, textarea.input { font-size: var(--fs-input); }
+
+/* ── des 30: a disabled control stays readable (≥ 3:1) and says why in its title ── */
+.btn:disabled, .icon-btn:disabled {
+  opacity: 1; cursor: not-allowed; background: transparent;
+  color: color-mix(in srgb, var(--text) 58%, var(--bg));
+  border-style: dashed; border-color: color-mix(in srgb, var(--text) 30%, var(--bg));
+}
+
+/* ── des 5, 18: one button vocabulary. Neutral by default; .btn-primary is a card's one primary; a row's destructive
+   action is neutral at rest and red only on hover or focus — red stands in a confirmation, where the choice is made ── */
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: color-mix(in srgb, var(--accent) 86%, var(--bright)); border-color: var(--accent); }
+.btn-red:not(:hover):not(:focus-visible) { border-color: var(--border2); color: var(--text); }
+:is(.app-confirm-actions, .modal-actions) .btn-red, .btn-red.btn-confirm { background: var(--red); border-color: var(--red); color: #fff; }
+:is(.app-confirm-actions, .modal-actions) .btn-red:hover { background: color-mix(in srgb, var(--red) 85%, #000); }
+
+/* ── des 5: one row-action component (rowActs): icon buttons in one order, the rest behind ⋯ ── */
+.row-acts { display: flex; gap: 2px; align-items: center; justify-content: flex-end; flex-shrink: 0; }
+.icon-btn { width: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--radius); background: transparent; color: var(--text);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: none; transition: background var(--t-fast), color var(--t-fast); }
+.icon-btn:hover { background: color-mix(in srgb, var(--bright) 9%, transparent); color: var(--bright); }
+.icon-btn:focus-visible, .row-more-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.icon-btn:disabled { border: 1px dashed color-mix(in srgb, var(--text) 30%, var(--bg)); }
+.icon { display: block; flex: none; }
+.row-more { position: relative; display: inline-flex; }
+.row-more-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 650; min-width: 170px; padding: 4px;
+  display: flex; flex-direction: column; background: var(--raised); border: 1px solid var(--border2);
+  border-radius: max(var(--radius), 4px); box-shadow: 0 12px 32px rgba(0, 0, 0, .35); }
+.row-more-menu[hidden] { display: none; }
+.row-more-menu.up { top: auto; bottom: calc(100% + 4px); }
+.row-more-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 8px 10px; border: 0; border-radius: 4px;
+  background: transparent; color: var(--text); font: inherit; font-family: var(--font-ui); font-size: 13px; cursor: pointer; white-space: nowrap; }
+.row-more-item:hover { background: var(--dim); color: var(--bright); }
+@media (pointer: coarse) { .icon-btn { width: 40px; height: 40px; } }
+
+/* ── des 7: one toggle, for a setting that applies at once (a checkbox stays a checkbox in a form with a Save) ── */
+input[type="checkbox"].switch { appearance: none; -webkit-appearance: none; position: relative; flex: none; cursor: pointer;
+  width: 36px; height: 20px; min-width: 36px; min-height: 20px; margin: 0; border-radius: 10px;
+  background: var(--dim); border: 1px solid var(--border2); transition: background var(--t-fast), border-color var(--t-fast); }
+input[type="checkbox"].switch::before { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--muted); transition: transform var(--t-fast), background var(--t-fast); }
+input[type="checkbox"].switch:checked { background: var(--accent); border-color: var(--accent); }
+input[type="checkbox"].switch:checked::before { transform: translateX(16px); background: var(--on-accent); }
+input[type="checkbox"].switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 0; cursor: pointer; }
+.switch-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--bright); }
+.switch-text small { color: var(--muted); font-size: 11px; }
+
+/* ── des 9: one page header — title and one line on the left, actions on the right ── */
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 16px; margin-bottom: 4px; flex-shrink: 0; }
+.page-head-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 320px; }
+.page-title { margin: 0; font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--bright); letter-spacing: .02em; }
+.page-sub { margin: 0; font-family: var(--font-text); font-size: 12px; line-height: 1.5; color: var(--muted); max-width: 90ch; text-transform: none; letter-spacing: 0; }
+.page-head-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ── des 10, 31: one empty state — a point of light, a sentence, one action ── */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center;
+  padding: 40px 24px; border: 1px dashed var(--border2); border-radius: var(--radius-card, var(--radius)); }
+.empty-glyph { width: 12px; height: 12px; border-radius: 50%; background: var(--bright); margin-bottom: 6px;
+  box-shadow: 0 0 0 9px color-mix(in srgb, var(--accent) 7%, transparent), 0 0 26px 8px color-mix(in srgb, var(--accent) 38%, transparent);
+  animation: pt-breathe 3.2s ease-in-out infinite; }
+.empty-title { font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--bright); }
+.empty-text { margin: 0; max-width: 440px; font-family: var(--font-text); font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+
+/* ── E4: a point breathes only while something runs or asks ── */
+@keyframes pt-breathe { 0%, 100% { opacity: .55; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .empty-glyph, .pt-run { animation: none !important; } }
+
+/* ── des 13: a form row that stacks on a phone, label above field ── */
+.form-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; }
+.form-row > * { flex: 1 1 180px; min-width: 0; }
+.form-row > :is(.btn, button) { flex: 0 0 auto; }
+@media (max-width: 600px) { .form-row > :not(.btn):not(button) { flex-basis: 100%; } }
+
+/* ── des 8: a description is a sentence — capitals are for titles and labels ── */
+.desc, .input-label.desc { text-transform: none; letter-spacing: 0; font-family: var(--font-text); font-size: 12px; line-height: 1.5; color: var(--muted); }
+
+/* ── des 2: the chat button never sits on a page's last controls, and follows the theme ── */
+:root { --fab-bg: #050507; }
+html[data-ground="light"] { --fab-bg: var(--surface); }
+.tab-page:not(#tab-harness):not(#tab-terminal):not(#tab-projects):not(#tab-ambient):not(#tab-workstream):not(#tab-files):not(.field-page)::after {
+  content: ''; display: block; flex: 0 0 72px; height: 72px; }
+.chat-fab { background: var(--fab-bg); }
+html[data-ground="light"] .chat-fab { text-shadow: none; box-shadow: none; }
+/* des 28: open is the accent, not an alarm */
+.chat-fab.active { background: var(--fab-bg); color: var(--accent); transform: none; box-shadow: none; }
+
+/* ── des 3: the Workstream's console shows when there is something to read, fading in ── */
+.ws-console:empty { display: none; }
+.ws-console { animation: fadeIn .4s ease; }
+
+/* ── des 4: the Harness header — the model picker takes the width it has, the status a line of its own ── */
+.hc-head .chat-model-host { flex: 1 1 220px; min-width: 0; max-width: 360px; }
+.chat-model-host select.chat-model { min-width: 0; flex: 1 1 auto; width: 100%; text-overflow: ellipsis; }
+.chat-model-host > label, .chat-model-host > span { flex: none; white-space: nowrap; }
+.badge { white-space: nowrap; }
+
+/* ── des 14: the Ambient tab fills its page; the chat button leaves it to the talk button ── */
+#tab-ambient.active { display: flex; flex-direction: column; overflow: hidden; }
+body:not(.solo) #tab-ambient .amb { flex: 1 1 auto; height: auto; min-height: 420px; }
+body:has(#tab-ambient.active) .chat-fab { display: none; }
+
+/* ── des 20: Field pages sit where every other page sits ── */
+.field-page > .settings-panel { margin: 0; max-width: none; padding-top: 0; }
+
+/* ── des 32's sibling: Settings sections are reached from anywhere (settingsSubNav goes to Settings first) ── */
+
+@media (max-width: 768px) {
+  /* des 12: a closed drawer casts no shadow onto the page */
+  .sidebar { box-shadow: none; }
+  .sidebar.open { box-shadow: 4px 0 24px rgba(0, 0, 0, .45); }
+  /* des 11: the search is an icon that opens over the header; ⧉ and 📱 move to the ☰ drawer (js/phone-header.js) */
+  header .btn.solo-open { display: none !important; }
+  .header-search { flex: 0 0 auto; margin-left: auto; position: static; }
+  header .header-search-input, header .header-search-input:focus { width: 36px; }
+  .header-search-input { height: 34px; padding: 0 0 0 34px !important; color: transparent; cursor: pointer; background-position: 11px center; font-size: 14px !important; }
+  .header-search-input::placeholder { color: transparent; }
+  header .header-search-input:focus { position: absolute; left: 10px; right: 10px; top: calc((var(--header-h) - 36px) / 2); width: auto; height: 36px; z-index: 5;
+    color: var(--text); cursor: text; background-color: var(--bg); }
+  .header-search-input:focus::placeholder { color: var(--muted); }
+  .header-search-results { left: 8px; right: 8px; top: var(--header-h); min-width: 0; }
+  .phone-acts { display: flex; }
+  /* des 29: a long row of a card's controls wraps whole, label and control together */
+  .settings-panel .form-row { row-gap: 10px; }
+}
+.phone-acts { display: none; gap: 8px; flex-wrap: wrap; }
+.phone-acts .btn { flex: 1 1 auto; }
+
+/* ── des 1: Docker — the cards size to what they hold, and on a phone each container and image is a card of its own ── */
+.dk-table { width: 100%; }
+.dk-table :is(.dk-image, .dk-ports, .dk-tag, .dk-size, .dk-created) { font-size: 11px; color: var(--muted); }
+.dk-table .dk-name { font-size: 12px; }
+.dk-image { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dk-acts { width: 1%; white-space: nowrap; }
+@media (max-width: 600px) {
+  .dk-table thead { display: none; }
+  .dk-table, .dk-table tbody { display: block; }
+  .dk-table tr.dk-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 12px 12px 6px; margin-bottom: 10px;
+    border: 1px solid var(--border); border-radius: var(--radius-card, var(--radius)); background: var(--surface); }
+  .dk-table tr.dk-row > td { display: block; padding: 0 !important; border: 0 !important; min-width: 0; max-width: none; width: auto; }
+  .dk-table .dk-name { grid-column: 1; grid-row: 1; font-size: 14px; overflow-wrap: anywhere; }
+  .dk-table :is(.dk-status, .dk-size) { grid-column: 2; grid-row: 1; text-align: right; }
+  .dk-table :is(.dk-image, .dk-ports, .dk-tag, .dk-created) { grid-column: 1 / -1; }
+  .dk-table .dk-acts { grid-column: 1 / -1; }
+  .dk-table .dk-none { display: none !important; }
+  .dk-table .dk-acts .row-acts { justify-content: flex-start; margin-left: -8px; }
+}
+
+/* ── E4: a state is a point of light — a sharp core and a soft glow; it breathes only while running or asking ── */
+.pt { position: relative; display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; vertical-align: middle;
+  background: var(--pt, var(--stopped)); }
+.pt::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; background: inherit; opacity: .22; filter: blur(4px); }
+.pt-up { --pt: var(--green); }
+.pt-ask { --pt: var(--amber); }
+.pt-err { --pt: var(--red); }
+.pt-done { --pt: var(--green); }
+.pt-stopped { --pt: var(--stopped); }
+.pt-run { animation: pt-breathe 2.4s ease-in-out infinite; }
+
+/* ── des 28: the floating chat's header is one line (js/chat-head.js) ── */
+.chat-header { gap: 8px; }
+.chat-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+.chat-header .toolbar-right { flex-wrap: nowrap; gap: 4px; }
+.chat-more .icon-btn { width: 28px; height: 28px; }
+
+/* ── des 10: a new conversation opens on a greeting, not a blank panel (js/chat-head.js) ── */
+.chat-greeting { display: none; }
+.chat-panel.is-new:not(.call-active) #chat-messages { display: none; }
+.chat-panel.is-new:not(.call-active) .chat-greeting {
+  display: flex; flex: 1; min-height: 0; overflow-y: auto; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  padding: 24px 20px; text-align: center; animation: fadeIn .3s ease;
+  background-image: radial-gradient(color-mix(in srgb, var(--border2) 70%, transparent) 1px, transparent 1px); background-size: 20px 20px; }
+.chat-greeting-text h2 { margin: 0 0 6px; font-family: var(--font-display); font-size: 18px; font-weight: 600; color: var(--bright); text-transform: none; letter-spacing: 0; }
+.chat-greeting-text p { margin: 0; font-family: var(--font-text); font-size: 13px; line-height: 1.5; color: var(--muted); }
+.chat-greeting-asks { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.chat-greeting-ask { text-align: left; font-family: var(--font-text); font-size: 13px; color: var(--bright); cursor: pointer;
+  background: var(--raised); border: 1px solid var(--border); border-radius: max(var(--radius), 6px); padding: 11px 14px; }
+.chat-greeting-ask:hover, .chat-greeting-ask:focus-visible { border-color: var(--accent); outline: none; }
+/* A small constellation of points — the panel's own, not the face (which stays as it is, beside the button) */
+.chat-greeting-points { position: relative; width: 96px; height: 96px; flex: none; }
+.chat-greeting-points i { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--field);
+  box-shadow: 0 0 8px 2px color-mix(in srgb, var(--field) 35%, transparent); }
+.chat-greeting-points i:nth-child(1) { left: 45px; top: 6px; background: var(--accent); }
+.chat-greeting-points i:nth-child(2) { left: 11px; top: 29px; }
+.chat-greeting-points i:nth-child(3) { left: 80px; top: 32px; }
+.chat-greeting-points i:nth-child(4) { left: 42px; top: 42px; width: 11px; height: 11px; background: var(--bright);
+  box-shadow: 0 0 20px 6px color-mix(in srgb, var(--accent) 45%, transparent); animation: pt-breathe 3s ease-in-out infinite; }
+.chat-greeting-points i:nth-child(5) { left: 18px; top: 70px; background: var(--blue); }
+.chat-greeting-points i:nth-child(6) { left: 75px; top: 74px; background: var(--accent); }
+.chat-greeting-points i:nth-child(7) { left: 46px; top: 87px; width: 4px; height: 4px; background: var(--blue); box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .chat-greeting-points i { animation: none !important; } }
+.empty-state { grid-column: 1 / -1; }   /* inside a grid of cards, it spans the grid */
+.ml-head .page-head { flex: 1; }
+.pj-top.pj-top-none { display: none; }   /* Projects before the first: only the empty state (des 10) */
+.pj-none .empty-state { margin: 16px; }
+.disk-row.row3 { grid-template-columns: minmax(110px, auto) minmax(0, 1fr) auto; }   /* a label, what it is (cut with …), its action pinned right (des 26) */
+
+/* ── des 19: the sidebar's figures stay on one line, cut with … and whole in their title ── */
+.sys-metric, .gm { min-width: 0; }
+.sys-value, .gm-v { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+
+/* ── des 23: two heading levels — a card's title, and a quieter sub-heading inside it ── */
+.card-subtitle { font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--muted); margin: 12px 0 6px; text-transform: none; letter-spacing: .02em; }
+.pj-tree-tools .icon-btn { width: 28px; height: 28px; }
+
+/* ── des 29: API keys on a phone — the apps' Source folder stays (a full-width row), a device's "show here" group wraps whole ── */
+.dev-show { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; vertical-align: middle; }
+@media (max-width: 480px) { .tool-row .tool-note.ca-note { display: block; grid-column: 1 / -1; grid-row: auto; } .dev-show { display: flex; margin-top: 6px; } }
+.sys-metric.wide { grid-column: span 2; }
+@media (max-width: 600px) { .harness-add-row > .input { flex: 1 1 100%; } }   /* des 13: one field per line on a phone */
+
+/* des 7: the older toggle (.skill-toggle, a hidden checkbox and a track) is drawn as the one toggle too */
+.skill-toggle { width: 36px; height: 20px; }
+.skill-toggle-track { background: var(--dim); border: 1px solid var(--border2); border-radius: 10px; }
+.skill-toggle-track::before { width: 14px; height: 14px; left: 2px; bottom: 2px; }
+.skill-toggle input:checked + .skill-toggle-track { background: var(--accent); border-color: var(--accent); }
+.skill-toggle input:checked + .skill-toggle-track::before { transform: translateX(16px); background: var(--on-accent); }
+.skill-toggle input:focus-visible + .skill-toggle-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mobile-nav-svg { display: none; }

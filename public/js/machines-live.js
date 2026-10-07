@@ -55,8 +55,7 @@ async function _mlOpenServed(key) {
 function _mlDraw(page) {
   const tiles = _mlTiles(), front = tiles.filter(t => t.working), back = tiles.filter(t => !t.working);
   if (!page.querySelector('.ml-front')) {
-    page.innerHTML = `<div class="ml-head"><span class="ws-title">Agents' machines, live</span>
-      <span class="ws-status">computers and the pages agents serve for tests — whatever is working comes to the front</span></div>
+    page.innerHTML = `<div class="ml-head">${pageHeadHtml({ title: 'Live', sub: 'The agents\' computers and the pages they serve for tests — whatever is working comes to the front.' })}</div>
       <div class="ml-front"></div><div class="ml-back"></div>`;
   }
   const sync = (box, list, big) => {

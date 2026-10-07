@@ -54,3 +54,8 @@
    and had to stay true. */
 .log-out .ll.e { color: var(--red); }
 .log-out .ll.w { color: var(--amber); }
+.log-src-auto { --src: var(--accent); }
+.log-more { display: inline-block; }
+.log-more > summary { list-style: none; border-style: dashed; }
+.log-more > summary::-webkit-details-marker { display: none; }
+.log-more[open] > .log-src-row { margin-top: 4px; }

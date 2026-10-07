@@ -13,8 +13,8 @@ async function experimentsLoad() {
   try { ({ experiments: list, developer: dev } = await apiFetch('/api/experiments')); }
   catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
   panel.innerHTML = `<div class="card"><div class="card-title">Developer mode</div>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" ${dev ? 'checked' : ''} onchange="experimentsDeveloper(this.checked)">
-      Developer mode on this install</label>
+    <label class="switch-row" style="font-size:13px"><span class="switch-text">Developer mode on this install</span>
+      <input type="checkbox" class="switch" ${dev ? 'checked' : ''} onchange="experimentsDeveloper(this.checked)"></label>
     <p style="font-size:11px;color:var(--muted);margin-top:6px">For the people who build and test DOCA. On, the experiments below are offered and the ones switched on
       take effect; off, none is — whatever their switches say — and the panel shows none of them. Each is off until switched on and undone by
       switching it off: read what it costs and what can go wrong first.</p></div>`;

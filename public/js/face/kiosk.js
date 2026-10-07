@@ -2,7 +2,10 @@
    screen is kept awake where the browser allows it. The face spec is faceSpec()'s: this browser's, the screen's or the hive's. */
 (async function kiosk() {
   const spec = await faceSpec();
-  const face = faceMount(document.getElementById('face'), spec);
+  // The HUD names the product (its private label too), not the palette's source.
+  let name = '';
+  try { const r = await fetch('/api/branding', { credentials: 'same-origin' }); if (r.ok) name = (await r.json()).product || ''; } catch { /* no name */ }
+  const face = faceMount(document.getElementById('face'), { name, ...spec });
   addEventListener('resize', () => face.resize());
   faceFeed(s => face.set(s.state, s.detail));
   addEventListener('keydown', e => {

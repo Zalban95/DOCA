@@ -1,0 +1,165 @@
+/* ═══════════════════════════════════════════════════════
+   The Points style (look-points.js; wave E): the panel drawn with the face's points.
+
+   Shape and type only, like Modern — every colour comes from the theme, so Points works with any palette and is
+   drawn for its own two (Points, Points Daylight). Everything is scoped to html[data-skin="points"].
+   IBM Plex Sans for the interface; Plex Mono for labels (the only capitals) and figures; 6 px corners on controls,
+   10 on cards; one accent per card; state as a point of light. Code, logs and terminals keep the mono face.
+   The face itself (face/*, face.css) is untouched: Points restyles the panel around it.
+   ═══════════════════════════════════════════════════════ */
+
+html[data-skin="points"] {
+  --radius: 6px;
+  --radius-card: 10px;
+  --font-ui: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'IBM Plex Sans', system-ui, sans-serif;
+  --fs-input: 13.5px;
+  --header-h: 56px;
+}
+html[data-skin="points"] body { font-family: var(--font-ui); font-size: 14px; -webkit-font-smoothing: antialiased; }
+html[data-skin="points"] :is(code, pre, kbd, .editor, .terminal, .code-out, .xterm, .log-line, .logs-output, .theme-color-hex, .mono) {
+  font-family: var(--font-mono);
+}
+
+/* ── Labels: mono, small, the only capitals ── */
+html[data-skin="points"] :is(.sec-label, .card-title, .settings-subnav-group, .sys-card-title, .sys-label, .gm-l, .vm-state) {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+html[data-skin="points"] :is(.card-title, .sec-label)::after { background: var(--border); opacity: .6; }
+html[data-skin="points"] .input-label { font-family: var(--font-ui); font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--muted); margin-bottom: 6px; }   /* a field's label, and often a description: sentence case */
+/* Figures in the mono face, in their own colour */
+html[data-skin="points"] :is(.sys-val, .gm-v, .stat-v, .tok-rate) { font-family: var(--font-mono); }
+
+/* ── Controls take the UI face and drop the capitals ── */
+html[data-skin="points"] :is(.btn, .input, .nav-tab, .settings-subnav-btn, .skills-mode-btn, .mobile-nav-label, button, select, textarea:not(.editor)) {
+  font-family: var(--font-ui);
+}
+html[data-skin="points"] :is(.btn, .nav-tab, .settings-subnav-btn, .badge, .mobile-nav-label, .modal-title, .logo-ver, .chat-title) {
+  text-transform: none; letter-spacing: 0;
+}
+
+/* ── One button vocabulary: neutral, primary (the card's one), quiet; red only inside a confirmation ── */
+html[data-skin="points"] .btn {
+  border-radius: var(--radius); font-size: 13px; font-weight: 500; padding: 0 14px; min-height: 34px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: var(--raised); border: 1px solid var(--border2); color: var(--bright);
+}
+html[data-skin="points"] .btn:hover { background: color-mix(in srgb, var(--raised) 70%, var(--bright) 6%); border-color: var(--faint); }
+html[data-skin="points"] .btn-sm { font-size: 12.5px; padding: 0 11px; min-height: 30px; }
+html[data-skin="points"] .btn-xs { font-size: 12px; padding: 0 9px; min-height: 26px; border-radius: 5px; gap: 4px; }
+html[data-skin="points"] .btn-icon { padding: 0 8px; min-width: 32px; }
+html[data-skin="points"] :is(.btn-primary, .btn-amber.primary, .btn-accent) { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+html[data-skin="points"] :is(.btn-primary, .btn-accent):hover { background: color-mix(in srgb, var(--accent) 88%, var(--bright)); }
+/* The colour variants keep their meaning as a tint on the text, never a coloured frame */
+html[data-skin="points"] :is(.btn-green, .btn-blue, .btn-purple, .btn-teal, .btn-amber) { border-color: var(--border2); }
+html[data-skin="points"] .btn-green { color: var(--green); }
+html[data-skin="points"] .btn-amber { color: var(--accent); }
+html[data-skin="points"] :is(.btn-blue, .btn-purple, .btn-teal) { color: var(--bright); }
+html[data-skin="points"] .btn-red { border-color: var(--border2); color: var(--bright); }
+html[data-skin="points"] .btn-red:is(:hover, :focus-visible) { color: var(--red); border-color: color-mix(in srgb, var(--red) 55%, var(--border2)); background: var(--bg-red); }
+html[data-skin="points"] .btn-quiet { background: transparent; border-color: transparent; color: var(--text); }
+
+/* ── Inputs: the ground, one size ── */
+html[data-skin="points"] :is(.input, .header-search-input) { border-radius: var(--radius); }
+html[data-skin="points"] .input { background: var(--bg); border-color: var(--border2); color: var(--bright); padding: 7px 11px; min-height: 34px; }
+html[data-skin="points"] .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+html[data-skin="points"][data-ground="light"] .input { background: var(--surface); }
+
+/* ── Cards: surface, a quiet line, 10 px ── */
+html[data-skin="points"] .card { border-radius: var(--radius-card); border-color: var(--border); padding: 20px; }
+html[data-skin="points"] .card + .card { margin-top: 4px; }
+html[data-skin="points"] .card-title { margin-bottom: 14px; }
+html[data-skin="points"] .modal { border-radius: 12px; border-color: var(--border2); padding: 22px 24px; box-shadow: 0 24px 64px rgba(0, 0, 0, .45); }
+html[data-skin="points"] .modal-title { font-size: 16px; font-weight: 600; color: var(--bright); }
+html[data-skin="points"] .badge { border-radius: 999px; font-size: 12px; padding: 2px 9px; font-weight: 500; }
+html[data-skin="points"] :is(.snap-item, .script-item, .sys-card, .skill-card, .provider-card) { border-radius: 8px; }
+
+/* ── Header: the product's point, the groups as quiet pills, the open one in the accent ── */
+html[data-skin="points"] header { background: color-mix(in srgb, var(--bg) 70%, var(--surface)); border-bottom-color: var(--border); }
+html[data-skin="points"] .logo-hex { clip-path: none; width: 8px; height: 8px; border-radius: 50%; margin: 0 4px;
+  box-shadow: 0 0 10px 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+html[data-skin="points"] .logo:hover .logo-hex { transform: scale(1.3); }
+html[data-skin="points"] .logo-name { font-size: 15px; letter-spacing: .04em; }
+html[data-skin="points"] .logo-ver { font-family: var(--font-mono); font-size: 10px; letter-spacing: .04em; }
+html[data-skin="points"] .logo-beta { color: var(--on-accent); border-radius: 999px; }
+html[data-skin="points"] .nav-tabs { gap: 4px; align-items: center; }
+html[data-skin="points"] .nav-tab { font-size: 14px; font-weight: 400; color: var(--text); padding: 7px 12px; border-radius: var(--radius); border-bottom: 0; height: auto; }
+html[data-skin="points"] .nav-tab:hover { color: var(--bright); background: color-mix(in srgb, var(--bright) 5%, transparent); }
+html[data-skin="points"] .nav-group { align-items: center; gap: 2px; border-radius: 8px; }
+html[data-skin="points"] .nav-group.open { background: transparent; }
+html[data-skin="points"] .nav-group.open > .nav-group-btn { color: var(--on-accent); background: var(--accent); opacity: 1; padding-right: 12px; }
+html[data-skin="points"] .nav-group.open > .nav-group-btn::after { content: ''; }
+html[data-skin="points"] .nav-group.open > .nav-tab[data-tab] { font-size: 13px; color: var(--muted); }
+html[data-skin="points"] .nav-group.open > .nav-tab[data-tab].active { color: var(--bright); background: transparent; box-shadow: inset 0 -2px 0 var(--accent); border-radius: 0; }
+html[data-skin="points"] .header-search-input { font-family: var(--font-ui); font-size: 13px; padding: 7px 10px 7px 28px; background-color: var(--bg); }
+html[data-skin="points"] #clock { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0; }
+
+/* ── Sidebar: the hub's readings as figures ── */
+html[data-skin="points"] .sidebar { background: color-mix(in srgb, var(--bg) 60%, var(--surface)); border-right-color: var(--border); }
+html[data-skin="points"] .sidebar-section { border-bottom-color: var(--border); padding: 16px; }
+
+/* ── Settings sub-navigation: quiet pills, the open one in the accent ── */
+html[data-skin="points"] .settings-subnav { gap: 4px; border-bottom-color: var(--border); }
+html[data-skin="points"] .settings-subnav-btn { border-radius: var(--radius); font-size: 14px; padding: 7px 12px; border-color: transparent; color: var(--text); }
+html[data-skin="points"] .settings-subnav-btn:hover { color: var(--bright); background: color-mix(in srgb, var(--bright) 5%, transparent); border-color: transparent; }
+html[data-skin="points"] .settings-subnav-btn.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+html[data-skin="points"][data-ground="light"] .settings-subnav-btn.active { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--bright); border-color: transparent; }
+
+/* ── Mobile bottom bar ── */
+html[data-skin="points"] .mobile-nav { background: color-mix(in srgb, var(--bg) 70%, var(--surface)); border-top-color: var(--border); }
+html[data-skin="points"] .mobile-nav-item { border-top: 0; }
+html[data-skin="points"] .mobile-nav-label { font-size: 11px; letter-spacing: 0; }
+
+/* ── The floating chat: a surface with 14 px corners, the header one line ── */
+html[data-skin="points"] .chat-panel { border-radius: 14px; overflow: hidden; border-color: var(--border2); }
+html[data-skin="points"] .chat-header { background: var(--surface); border-bottom-color: var(--border); }
+html[data-skin="points"] .chat-title { font-size: 15px; font-weight: 600; color: var(--bright); }
+html[data-skin="points"] .chat-msg { font-size: 14px; line-height: 1.55; border-radius: 12px; }
+html[data-skin="points"] .chat-msg.user { border-radius: 12px 12px 4px 12px; }
+
+@media (max-width: 768px) {
+  html[data-skin="points"] .chat-panel { border-radius: 14px 14px 0 0; }
+}
+
+/* ── E4 in Points: every state is a point of light — a coloured bar down a row's edge becomes a point at its start,
+   and a ● glyph becomes the point it stood for; running breathes ── */
+html[data-skin="points"] .pt-up { --pt: var(--accent); }
+html[data-skin="points"] :is(.c-item, .harness-row, .mcp-card) { position: relative; border-left-width: 1px; border-left-color: var(--border); }
+html[data-skin="points"] .c-item { padding-left: 26px; border-radius: 8px; background: var(--surface); }
+html[data-skin="points"] :is(.c-item, .mcp-card)::before { content: ''; position: absolute; left: 11px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px;
+  border-radius: 50%; background: var(--stopped); }
+html[data-skin="points"] .mcp-card::before { top: 22px; margin-top: 0; }
+html[data-skin="points"] .mcp-card { padding-left: 28px; }
+html[data-skin="points"] :is(.c-item.running, .mcp-running)::before { background: var(--accent); animation: pt-breathe 2.4s ease-in-out infinite;
+  box-shadow: 0 0 9px 2px color-mix(in srgb, var(--accent) 45%, transparent); }
+html[data-skin="points"] :is(.c-item.exited, .mcp-error)::before { background: var(--red); box-shadow: 0 0 9px 2px color-mix(in srgb, var(--red) 35%, transparent); }
+html[data-skin="points"] .c-item .c-state { background: transparent !important; padding: 0; font-family: var(--font-mono); font-size: 11px; }
+html[data-skin="points"] .harness-row { border-radius: 8px; background: var(--surface); }
+html[data-skin="points"] .harness-row.harness-default { background: color-mix(in srgb, var(--accent) 7%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+html[data-skin="points"] :is(.harness-dot, .mcp-dot, .vm-dot) { font-size: 0; justify-self: center; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: currentColor; box-shadow: 0 0 9px 1px color-mix(in srgb, currentColor 40%, transparent); }
+html[data-skin="points"] :is(.harness-off .harness-dot, .mcp-dot, .vm-dot) { color: var(--stopped); box-shadow: none; }
+html[data-skin="points"] .harness-ok .harness-dot { color: var(--green); }
+html[data-skin="points"] .harness-default .harness-dot { color: var(--accent); }
+html[data-skin="points"] :is(.mcp-running .mcp-dot, .vm-running .vm-dot) { color: var(--accent); animation: pt-breathe 2.4s ease-in-out infinite;
+  box-shadow: 0 0 9px 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+html[data-skin="points"] .vm-paused .vm-dot { color: var(--amber); }
+html[data-skin="points"] .dot { width: 8px; height: 8px; position: relative; }
+html[data-skin="points"] .dot.on { background: var(--green); box-shadow: 0 0 10px 2px color-mix(in srgb, var(--green) 40%, transparent); }
+@media (prefers-reduced-motion: reduce) { html[data-skin="points"] :is(.c-item, .mcp-card)::before, html[data-skin="points"] :is(.mcp-dot, .vm-dot) { animation: none !important; } }
+
+/* ── The chat button in Points: a quiet circle holding one point of light (the face beside it is unchanged) ── */
+html[data-skin="points"] .chat-fab { font-size: 0; width: 56px; height: 56px; border: 1px solid var(--border2); background: var(--surface);
+  -webkit-mask-image: none; mask-image: none; text-shadow: none;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 6%, transparent), 0 8px 24px rgba(0, 0, 0, .35); }
+html[data-skin="points"] .chat-fab::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
+  box-shadow: 0 0 12px 3px color-mix(in srgb, var(--accent) 45%, transparent); animation: pt-breathe 2.4s ease-in-out infinite; }
+html[data-skin="points"] .chat-fab.active::before { animation: none; transform: scale(1.2); }
+html[data-skin="points"][data-ground="light"] .chat-fab { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 8%, transparent), 0 6px 18px rgba(0, 0, 0, .1); }
+@media (max-width: 480px) { html[data-skin="points"] .chat-fab { width: 48px; height: 48px; } }
+@media (prefers-reduced-motion: reduce) { html[data-skin="points"] .chat-fab::before { animation: none; } }
+html[data-skin="points"] .chat-fab[data-questions]:not([data-questions=""])::after { background: var(--amber); color: #050507; }   /* a person is asked: amber, not alarm */
+
+/* The phone bar in Points: the monochrome icon set in place of the glyphs (lib/icons.js) */
+html[data-skin="points"] .mobile-nav-icon { display: none; }
+html[data-skin="points"] .mobile-nav-svg { display: block; line-height: 0; }

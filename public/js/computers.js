@@ -37,21 +37,23 @@ async function computersLoad() {
   try { data = await apiFetch('/api/computers'); }
   catch (e) { tab.innerHTML = `<div class="card"><div class="card-title">Computers</div><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
   const running = data.computers.filter(c => c.state === 'running').length;
-  tab.innerHTML = `<div class="toolbar" style="margin-bottom:8px">
-      <div class="card-title" style="margin-bottom:0">Computers</div>
-      ${data.image.ready ? '<button class="btn btn-sm btn-blue" onclick="computersNew()">＋ New</button>'
-        : '<button class="btn btn-sm btn-amber" onclick="computersBuild()">Build the image</button>'}
-      ${data.image.ready && data.image.current === false ? '<button class="btn btn-sm btn-amber" onclick="computersBuild()" title="Its tools changed since this image was built; computers made after the rebuild get them">Rebuild the image</button>' : ''}
-      <button class="btn btn-sm" onclick="computersLoad()">↺</button>
-      <span class="status-line">${data.computers.length ? `${running} running of ${data.computers.length}` : ''}</span></div>
-    <div class="input-label" style="margin-bottom:10px">The agents' computers: a Linux desktop in a container — shell, files, a real Chromium,
+  // One page header (des 9): title and one line left, actions right; the long account below it in sentence case (des 8).
+  tab.innerHTML = pageHeadHtml({ title: 'Computers',
+    sub: `Desktops in containers where agents test, browse and run what should not touch this machine.${data.computers.length ? ` ${running} running of ${data.computers.length}.` : ''}`,
+    actions: `${data.image.ready && data.image.current === false ? '<button class="btn btn-sm" onclick="computersBuild()" title="Its tools changed since this image was built; computers made after the rebuild get them">Rebuild the image</button>' : ''}
+      <button class="icon-btn" onclick="computersLoad()" title="Refresh" aria-label="Refresh">${uiIcon('refresh')}</button>
+      ${data.image.ready ? '<button class="btn btn-sm btn-primary" onclick="computersNew()">＋ New</button>'
+        : '<button class="btn btn-sm btn-primary" onclick="computersBuild()">Build the image</button>'}` })
+    + `<div class="desc" style="margin-bottom:10px">The agents' computers: a Linux desktop in a container — shell, files, a real Chromium,
       screen recording — where a mission tries something risky, uses a site as a person would, or records a demo, without touching this
       machine. The Orchestrator and work chats make them with their <code>computer</code> tool and send a specialist (the <b>Tester</b>) to
       work in one. One an agent made stops after its mission and is removed some days later unless pinned (📌; the limits are
       under <code>computers</code> in settings). Click a screen to watch or take over.</div>
     <pre class="terminal" id="computers-out" style="display:none;max-height:240px;margin-bottom:8px"></pre>
     <div class="scroll-y" style="flex:1"><div class="pc-grid">${data.computers.map(computersCard).join('')
-      || `<div class="placeholder">${data.image.ready ? 'None yet — an agent makes one when it needs it, or ＋ New.' : 'Build the image once (several minutes: Chromium, a desktop, ffmpeg), then agents can make computers.'}</div>`}</div></div>`;
+      || emptyStateHtml(data.image.ready
+        ? { title: 'No computers yet', text: 'An agent makes one when the work needs it, or you can make one now.', action: { label: 'Make a computer', onclick: 'computersNew()' } }
+        : { title: 'No computers yet', text: 'The image is built once on this hub (several minutes: Chromium, a desktop, ffmpeg); then agents can make computers.', action: { label: 'Build the image', onclick: 'computersBuild()' } })}</div></div>`;
   computersStills();
 }
 

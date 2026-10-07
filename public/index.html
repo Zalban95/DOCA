@@ -6,7 +6,7 @@
 <title>DOCA Panel</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <!-- CSS modules -->
 <link rel="stylesheet" href="css/variables.css">
 <link rel="stylesheet" href="css/base.css">
@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="css/logs.css">
 <link rel="stylesheet" href="css/attachments.css">
 <link rel="stylesheet" href="css/harness.css">
-<link rel="stylesheet" href="css/computers.css"><link rel="stylesheet" href="css/face.css"><link rel="stylesheet" href="css/workstream.css"><link rel="stylesheet" href="css/chronicle.css"><link rel="stylesheet" href="css/ambient.css"><link rel="stylesheet" href="css/home.css"><link rel="stylesheet" href="css/guided.css"><link rel="stylesheet" href="css/panel-layout.css">
+<link rel="stylesheet" href="css/computers.css"><link rel="stylesheet" href="css/face.css"><link rel="stylesheet" href="css/workstream.css"><link rel="stylesheet" href="css/chronicle.css"><link rel="stylesheet" href="css/ambient.css"><link rel="stylesheet" href="css/home.css"><link rel="stylesheet" href="css/guided.css"><link rel="stylesheet" href="css/panel-layout.css"><link rel="stylesheet" href="css/system.css"><link rel="stylesheet" href="css/ground-light.css"><link rel="stylesheet" href="css/skin-points.css">
 <link rel="stylesheet" href="css/responsive.css">
 <!-- xterm.js -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
@@ -205,15 +205,15 @@
               <button class="btn btn-sm" onclick="fmNavigate(fm.cwd.substring(0, fm.cwd.lastIndexOf('/')) || '/')" title="Up">↑ Up</button>
               <button class="btn btn-sm" onclick="fmRefresh()" title="Refresh">↺</button>
               <div class="fm-toolbar-sep"></div>
-              <button class="btn btn-sm btn-blue"  onclick="fmNewFolder()">+ Folder</button>
+              <button class="btn btn-sm" onclick="fmNewFolder()">+ Folder</button>
               <button class="btn btn-sm"            onclick="fmNewFile()">+ File</button>
               <div class="fm-toolbar-sep"></div>
               <button class="btn btn-sm" onclick="fmCopy()" title="Copy (Ctrl+C)">⧉ Copy</button>
               <button class="btn btn-sm" onclick="fmCut()"  title="Cut (Ctrl+X)">✂ Cut</button>
-              <button class="btn btn-sm btn-amber" onclick="fmPaste()" title="Paste (Ctrl+V)">⬇ Paste</button>
+              <button class="btn btn-sm" onclick="fmPaste()" title="Paste (Ctrl+V)">⬇ Paste</button>
               <div class="fm-toolbar-sep"></div>
-              <button class="btn btn-sm btn-teal" onclick="fmUploadClick()" title="Upload files">⬆ Upload</button>
-              <button class="btn btn-sm btn-purple" onclick="fmDownloadSelected()" title="Download selected">⬇ Download</button>
+              <button class="btn btn-sm" onclick="fmUploadClick()" title="Upload files">⬆ Upload</button>
+              <button class="btn btn-sm" onclick="fmDownloadSelected()" title="Download selected">⬇ Download</button>
             </div>
             <input class="input fm-path-input" id="fm-path-input"
                    placeholder="/path/to/dir" onkeydown="fmGoPath(event)">
@@ -533,13 +533,13 @@
       </div>
 
       <!-- Containers card -->
-      <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+      <div class="card dk-card">
         <div class="toolbar">
           <div class="card-title" style="margin-bottom:0">Containers</div>
           <button class="btn btn-sm" onclick="dockerLoadContainers()">↺ Refresh</button>
         </div>
         <div style="overflow-x:auto;flex:1;overflow-y:auto">
-          <table class="models-table" style="min-width:600px">
+          <table class="models-table dk-table">
             <thead>
               <tr>
                 <th>Name</th>
@@ -577,7 +577,7 @@
         </div>
         <div id="docker-pull-out" class="terminal" style="display:none;max-height:min(45vh,360px);margin-top:6px"></div>
         <div style="overflow-x:auto;margin-top:8px">
-          <table class="models-table">
+          <table class="models-table dk-table">
             <thead>
               <tr><th>Repository</th><th>Tag</th><th>Size</th><th>Created</th><th></th></tr>
             </thead>
@@ -591,12 +591,9 @@
 
     <!-- ─── MCP SERVERS ─────────────────────────────────── -->
     <div id="tab-mcp" class="tab-page">
-      <div class="toolbar" style="margin-bottom:8px">
-        <div class="card-title" style="margin-bottom:0">MCP Servers</div>
-        <button class="btn btn-sm btn-blue" onclick="mcpNew()">+ Add server</button>
-        <button class="btn btn-sm" onclick="mcpLoad()">↺ Refresh</button>
-      </div>
-      <div class="input-label" style="margin-bottom:10px">
+      <div class="page-head"><div class="page-head-text"><h1 class="page-title">MCP servers</h1><p class="page-sub">Tools from other programs, offered to the DOCA harness while their server runs.</p></div>
+        <div class="page-head-acts"><button class="btn btn-sm" onclick="mcpLoad()">↺ Refresh</button><button class="btn btn-sm btn-primary" onclick="mcpNew()">+ Add server</button></div></div>
+      <div class="desc" style="margin-bottom:10px">
         Model Context Protocol servers. A running server's tools are offered to the
         <strong>DOCA harness</strong> alongside its built-in ones, named
         <code>mcp__server__tool</code>, and each can be switched off in the harness ⚙ panel.
@@ -695,12 +692,9 @@
 
     <!-- ─── VIRTUAL MACHINES ────────────────────────────── -->
     <div id="tab-vms" class="tab-page">
-      <div class="toolbar" style="margin-bottom:8px">
-        <div class="card-title" style="margin-bottom:0">Virtual Machines</div>
-        <button class="btn btn-sm" onclick="vmsLoad()">↺ Refresh</button>
-        <span class="status-line" id="vms-status"></span>
-      </div>
-      <div class="input-label" style="margin-bottom:10px">Guests on this machine, through whichever hypervisor CLI is installed — libvirt/KVM (<code>virsh</code>) and VirtualBox
+      <div class="page-head"><div class="page-head-text"><h1 class="page-title">Virtual machines</h1><p class="page-sub">Guests on this machine, through whichever hypervisor is installed. <span class="status-line" id="vms-status"></span></p></div>
+        <div class="page-head-acts"><button class="btn btn-sm" onclick="vmsLoad()">↺ Refresh</button></div></div>
+      <div class="desc" style="margin-bottom:10px">Through whichever hypervisor CLI is installed — libvirt/KVM (<code>virsh</code>) and VirtualBox
         (<code>VBoxManage</code>). Stop asks the guest to shut down; Force off does not. Copy a display address into your own VNC or RDP viewer. Agents' computers are under <a href="#" onclick="nav('computers');return false">Computers</a>.</div>
       <div class="scroll-y" style="flex:1">
         <div id="vms-list"><div class="placeholder pulse">Loading…</div></div>
@@ -964,7 +958,7 @@
           </div>
         </div>
         <div id="snap-out" class="terminal" style="display:none"></div>
-        <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+        <div class="card dk-card">
           <div class="toolbar">
             <div class="card-title" style="margin-bottom:0">Saved Snapshots</div>
             <button class="btn btn-sm" onclick="loadSnapshots()">↺ Refresh</button>
@@ -1452,7 +1446,7 @@
 <script src="js/lib/output.js"></script>
 <script src="js/lib/status.js"></script>
 <script src="js/lib/format.js"></script>
-<script src="js/lib/presence.js"></script><script src="js/lib/live.js"></script><script src="js/lib/select-sheet.js"></script><script src="js/lib/model3d.js"></script>
+<script src="js/lib/presence.js"></script><script src="js/lib/live.js"></script><script src="js/lib/select-sheet.js"></script><script src="js/lib/model3d.js"></script><script src="js/lib/icons.js"></script><script src="js/lib/ui-parts.js"></script>
 <script src="js/lib/debounce.js"></script>
 <script src="js/lib/dialogs.js"></script><script src="js/lib/mic.js"></script><script src="js/lib/screen.js"></script>
 <script src="js/lib/system-tools.js"></script>
@@ -1484,7 +1478,7 @@
 <script src="js/agent-ui/questions-dock.js"></script>
 <script src="js/branding.js"></script>
 <script src="js/fp.js"></script>
-<script src="js/nav.js"></script><script src="js/nav-groups.js"></script><script src="js/panel-layout.js"></script><script src="js/field-pages.js"></script><script src="js/solo.js"></script><script src="js/archive.js"></script><script src="js/chronicle.js"></script><script src="js/chronicle-story.js"></script><script src="js/workstream.js"></script><script src="js/ambient.js"></script><script src="js/home.js"></script><script src="js/ambient-settings.js"></script><script src="js/wakeword.js"></script><script src="js/models-roles.js"></script><script src="js/lib/wake-model.js"></script><script src="js/machines-live.js"></script>
+<script src="js/nav.js"></script><script src="js/nav-groups.js"></script><script src="js/panel-layout.js"></script><script src="js/field-pages.js"></script><script src="js/solo.js"></script><script src="js/phone-header.js"></script><script src="js/archive.js"></script><script src="js/chronicle.js"></script><script src="js/chronicle-story.js"></script><script src="js/workstream.js"></script><script src="js/ambient.js"></script><script src="js/home.js"></script><script src="js/ambient-settings.js"></script><script src="js/wakeword.js"></script><script src="js/models-roles.js"></script><script src="js/lib/wake-model.js"></script><script src="js/machines-live.js"></script>
 <script src="js/sidebar.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/logs.js"></script>
@@ -1518,7 +1512,7 @@
 <script src="js/harness-console/env.js"></script>
 <script src="js/harness-console/proposals.js"></script>
 <script src="js/harness-console/external.js"></script>
-<script src="js/chat.js"></script><script src="js/chat-window.js"></script><script src="js/live-pages.js"></script><script src="js/chat-call.js"></script><script src="js/chat-call-voice.js"></script><script src="js/chat-call-hold.js"></script><script src="js/lib/wake-match.js"></script><script src="js/wake-word.js"></script><script src="js/chat-realtime.js"></script>
+<script src="js/chat.js"></script><script src="js/chat-window.js"></script><script src="js/chat-head.js"></script><script src="js/live-pages.js"></script><script src="js/chat-call.js"></script><script src="js/chat-call-voice.js"></script><script src="js/chat-call-hold.js"></script><script src="js/lib/wake-match.js"></script><script src="js/wake-word.js"></script><script src="js/chat-realtime.js"></script>
 <script src="js/terminal.js"></script>
 <script src="js/models.js"></script>
 <script src="js/models-ai-tools.js"></script>
@@ -1531,7 +1525,7 @@
 <script src="js/mcp.js"></script><script src="js/mcp-catalog.js"></script><script src="js/mcp-drafts.js"></script>
 <script src="js/sudo.js"></script>
 <script src="js/themes.js"></script>
-<script src="js/look.js"></script>
+<script src="js/look.js"></script><script src="js/look-points.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/settings/updates.js"></script>
 <script src="js/settings/backups.js"></script>

@@ -33,8 +33,8 @@ function spendingPermitsRender(v) {
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">What the agents may spend, and on what. They ask every time unless a permission here covers it;
       a one-time permission is used by its first purchase, a kept one allows up to its amount each month. ${v.admin ? 'As an admin you may allow any amount, for anyone.'
         : most ? `Your level lets you allow up to ${most} ${escHtml(v.currency)} at a time.` : 'Your level does not let you allow spending yourself: an admin can.'}</p>
-    ${waiting ? `<div class="card-title" style="font-size:12px;color:var(--amber)">Waiting for your answer</div>${waiting}` : ''}
-    <div class="card-title" style="font-size:12px;margin-top:6px">Allowed</div>
+    ${waiting ? `<div class="card-subtitle" style="color:var(--amber)">Waiting for your answer</div>${waiting}` : ''}
+    <div class="card-subtitle" style="margin-top:6px">Allowed</div>
     ${active || '<div class="placeholder">Nothing allowed — nothing can be spent.</div>'}
     <div class="input-label" style="margin-top:10px">Allow spending</div>
     <div class="toolbar" style="gap:6px;flex-wrap:wrap">
@@ -44,7 +44,7 @@ function spendingPermitsRender(v) {
       <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="spp-keep"> every month</label>
       ${v.admin ? `<select class="input" id="spp-for" style="width:auto">${(v.people || []).map(p => `<option value="${escHtml(p.id)}" ${p.id === v.me.id ? 'selected' : ''}>for ${escHtml(p.name || p.email)}</option>`).join('')}</select>` : ''}
       <button class="btn btn-sm btn-blue" onclick="spendingPermitCreate()" ${v.admin || most ? '' : 'disabled'}>Allow</button></div>
-    ${past ? `<div class="card-title" style="font-size:12px;margin-top:10px">Earlier</div>${past}` : ''}</div>`;
+    ${past ? `<div class="card-subtitle" style="margin-top:10px">Earlier</div>${past}` : ''}</div>`;
 }
 
 async function _spPermitCall(path, method, body) {

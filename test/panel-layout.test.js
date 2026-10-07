@@ -131,7 +131,7 @@ test('undo puts back what a change replaced, reset is the default in one click, 
   assert.equal((await asMember('POST', '/api/screen/layout', { scope: 'install', ops: [{ op: 'hide', page: 'docker' }] })).status, 403);
   const bad = await asMember('POST', '/api/screen/layout', { scope: 'person', ops: [{ op: 'move', page: 'nowhere' }] });
   assert.equal(bad.status, 400);
-  assert.match(bad.body.error, /No page "nowhere"\. Pages: controls \(Controls\)/, 'a refusal lists what exists');
+  assert.match(bad.body.error, /No page "nowhere"\. Pages: controls \(Overview\)/, 'a refusal lists what exists');
   assert.match((await asMember('POST', '/api/screen/layout', { scope: 'person', ops: [{ op: 'hide', page: 'settings' }] })).body.error, /way back/);
 
   const inst = await H.api(null, 'POST', '/api/screen/layout', { scope: 'install', ops: [{ op: 'rename', group: 'machines', label: 'Boxes' }] });
