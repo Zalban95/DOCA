@@ -8,7 +8,7 @@
  *        one definition, or every *.md in a folder — e.g. ~/.claude/agents
  *   GET  /api/harness/agents/:id/export   the definition as a .md file
  *   GET/POST /api/harness/identity        { persona, human }
- *   POST /api/harness/missions            { agentId, task } — an errand for one specialist
+ *   POST /api/harness/missions            { agentId, task, computer? } — an errand for one specialist, in a computer
  */
 const fs   = require('fs');
 const path = require('path');
@@ -26,6 +26,18 @@ function importOne(text, fileName, { overwrite = true } = {}) {
   return { id: row.id, label: row.label, kits: row.kits, tools: row.tools, notes: imported, replaced: existed };
 }
 
+/**
+ * A computer the panel may lend to a mission it sends: the checks agent_dispatch's `computer` passes (it exists, it is
+ * allotted to the person and theirs or an admin's — computers/whose.js), and not put away in the Archive: a picker
+ * offers only the ones in use, so an archived id is a stale form, not a choice.
+ */
+function lendable(person, id) {
+  require('../computers/whose').check(person, id);
+  const c = require('../computers').need(id);
+  if (c.archivedAt) throw Object.assign(new Error(`Computer ${c.id} "${c.name}" is in the Archive. Bring it back there first.`), { status: 409 });
+  return c.id;
+}
+
 function mount(app) {
   // Send an errand to one specialist, chosen by the person rather than by the
   // Orchestrator (TODO.md "You cannot choose which specialist gets the errand").
@@ -34,7 +46,10 @@ function mount(app) {
     try {
       const agentId = String(req.body?.agentId || '');
       const def = require('./registry').get(agentId);
-      const computer = def?.computer === 'own' ? await require('../computers').ownFor(def, require('../harness/turn/client').personOf(req.auth)) : null;   // its own computer, per person (computers.ownFor)
+      const person = require('../harness/turn/client').personOf(req.auth);
+      // A computer the person chose (self-test 2026-10-08, #8), else the type's own one (computers.ownFor).
+      const computer = req.body?.computer ? lendable(person, String(req.body.computer))
+        : def?.computer === 'own' ? await require('../computers').ownFor(def, person) : null;
       const row = require('./missions').dispatch({ agentId, task: req.body?.task, context: req.body?.context, computer });
       // Marked before its turn reaches withPerson: dispatch starts the turn, which awaits its claim first.
       if (req.auth?.user) require('../harness/memory').updateSession(row.sessionId, { person: { id: req.auth.user.id, orgId: req.auth.orgId } });

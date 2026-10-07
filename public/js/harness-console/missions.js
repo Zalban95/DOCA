@@ -20,6 +20,7 @@ async function _hcLoadAgents() {
     box.innerHTML = (data.agents || []).map(a => _hcAgentHtml(a, data.enabled)).join('')
       || '<div class="placeholder">No specialists defined</div>';
     _hcToFill(data.enabled ? (data.agents || []).filter(a => !a.broken) : []);
+    _hcComputerFill();
     _hcLoadMissions();
   } catch (e) { box.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; }
 }
@@ -34,10 +35,30 @@ function _hcToFill(agents) {
   sel.style.display = agents.length ? '' : 'none';
 }
 
+/** Beside "to": which agents' computer a specialist is sent to work in — the ones not in the Archive (host only). */
+async function _hcComputerFill() {
+  const sel = document.getElementById('hc-computer');
+  if (!sel) return;
+  let list = [];
+  try { list = (await apiFetch('/api/computers')).computers || []; } catch { /* not a host: no picker */ }
+  const keep = sel.value;
+  sel.innerHTML = `<option value="">no computer</option>${list.map(c => `<option value="${escHtml(c.id)}">🖥 ${escHtml(c.name || c.id)} (${escHtml(c.id)})</option>`).join('')}`;
+  sel.value = list.some(c => c.id === keep) ? keep : '';
+  sel.dataset.count = String(list.length);
+  _hcComputerShow();
+}
+
+/** Shown only when the message goes to a specialist and there is a computer to choose. */
+function _hcComputerShow() {
+  const sel = document.getElementById('hc-computer');
+  if (sel) sel.style.display = document.getElementById('hc-to')?.value && Number(sel.dataset.count) ? '' : 'none';
+}
+
 /** Send the composer's text to one specialist as a mission, and open its log to watch it work. */
 async function hcSendMission(agentId, text) {
   try {
-    const { mission } = await apiFetch('/api/harness/missions', { method: 'POST', body: { agentId, task: text } });
+    const computer = document.getElementById('hc-computer')?.value || undefined;   // lent to the mission (self-test #8)
+    const { mission } = await apiFetch('/api/harness/missions', { method: 'POST', body: { agentId, task: text, computer } });
     _hcAppend('user', text);
     _hcAppend('assistant', `Sent to **${mission.label}** as mission \`${mission.id}\` — it reports back to the Orchestrator when it is done.`);
     _hcLoadMissions();
