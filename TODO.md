@@ -124,7 +124,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 - [x] C4 **Which model does what, in one registry** — *2.252.0: `modules/model-roles.js` (15 roles, each with its setting and where), read by the scout, `settings_read` ("Models in use") and Field → Models' card; a test per `*model` setting* (coh F11): `model-roles.js` read by the scout, a "Models in use"
   card and `settings_read`.
 - [x] C5 **Reachable by those it is for** (coh F16–F17) — *2.253.0: the environment says whether the turn's own model may release unasked; the dev-cycle skill points at it; `test/panel-routes.test.js` holds every panel route used or API-only with why; the prompt breakdown drawn from the Harness's context ring; Vision's "Try it"*
-- [ ] C5b **Two buttons left** (coh F17): the APK signing key upload in Field → API keys → DOCA apps (keys: **ask
+- [x] C5b **Two buttons left** — *2.263.0: the signing key's upload (passwords in headers; the replaced key kept under keys/android-signing.previous; the keys folder protected whole) and the providers' contracts with Forget in the Harness ⚙* (coh F17): the APK signing key upload in Field → API keys → DOCA apps (keys: **ask
   first**), and the providers' learned contracts with Forget in the Harness ⚙ (`/api/harness/contracts`).
 - [x] C6 **Experiments measured and dated** — *2.252.0: `since` and `measure` per experiment, last measured read from its write-up's results table, "due" after 60 days in Settings → Developer; assistant mode always drives the face by voice (decided, written into face-voice.md)* (coh F20): start and last-measured dates, stale ones in the W14 list, a
   script or a "manual" note each; decide face-voice for assistant mode (it bypasses its flag today).

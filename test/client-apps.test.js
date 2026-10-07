@@ -60,6 +60,21 @@ test('the signing key is kept, never read back, and signs what the hub builds', 
   assert.deepEqual([require('../modules/client-apps').latest('docamobile').from, require('../modules/client-apps').latest('docamobile').versionCode], ['build', 102]);
 });
 
+test('replacing the signing key keeps the old one, and the passwords come in headers, never the URL (C5b)', async () => {
+  const p = require('../modules/paths'), dir = path.join(path.dirname(p.ANDROID_SIGNING_STORE), 'android-signing.previous');
+  const send = (bytes, headers = {}) => fetch(`${H.base}/api/clients/apps/signing`, { method: 'POST', body: bytes, headers: { 'Sec-Fetch-Site': 'same-origin', Cookie: H.owner.cookie, ...headers } }).then(r => r.json());
+  await send(Buffer.alloc(64, 1));
+  const before = fs.existsSync(dir) ? fs.readdirSync(dir).length : 0;
+  const s = await send(Buffer.alloc(64, 2), { 'X-Signing-Alias': 'release', 'X-Signing-Store-Password': 's3cret-store', 'X-Signing-Key-Password': 's3cret-key' });
+  assert.equal(s.signing.alias, 'release');
+  assert.ok(!JSON.stringify(s).includes('s3cret'), 'never read back');
+  assert.equal(require('../modules/client-apps').signingEnv().DOCA_SIGNING_STORE_PASSWORD, 's3cret-store');
+  const kept = fs.readdirSync(dir).filter(f => f.endsWith('.keystore'));
+  assert.equal(fs.readdirSync(dir).length, before + 2, 'the replaced keystore and its file');
+  assert.ok(kept.some(f => fs.readFileSync(path.join(dir, f)).equals(Buffer.alloc(64, 1))), 'the old key is the one kept');
+  assert.equal(require('../modules/utils').fmSafe(path.join(dir, kept[0])), false, 'the file tools cannot read a kept key: the keys folder is protected whole');
+});
+
 test('a ten-minute download link needs no sign-in — what a phone\'s browser opens to save the APK', async () => {
   const link = await H.api(null, 'POST', '/api/clients/apps/docamobile/link', {});
   assert.equal(link.status, 200, JSON.stringify(link.body));

@@ -29,6 +29,7 @@ async function harnessConfigToggle(id, keepOpen) {
   _harnessLoadModels(id, h.config.provider, h.config.model);
   _harnessFallbacksMount(id, h.config.fallbackChain);
   _harnessEscalateMount(id, h.config.escalateTo);
+  harnessContractsMount(id);   // what providers were found to accept, with Forget (harness/contracts.js)
   harnessOllamaHint(id);   // the context Ollama really serves (harness/ollama-hint.js)
   harnessContextFind(id, { onlyIfUnknown: true });   // what the server reports, offered (harness/context-find.js)
   _harnessFoldHint(id, h.foldWarning);
