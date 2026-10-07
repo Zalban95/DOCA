@@ -70,6 +70,13 @@ the checks ignore; a case without one is counted as "untagged". Real model, real
 
 | date | model | set | flag | passed | tokens | steps | time | small / medium / large passed | notes |
 |---|---|---|---|---|---|---|---|---|---|
+| 2026-10-07 | DeepSeek4f / deepseek-flash | newcomer | off | 6/9 | 1,554,687 | 50 | 264.9 s | 2/2 / 3/4 / 0/1 | 2 untagged |
+| 2026-10-07 | DeepSeek4f / deepseek-flash | newcomer | on | 7/9 | 907,874 | 30 | 117.6 s | 1/2 / 4/4 / 1/1 | 2 untagged |
+
+One run each, so a hint rather than a verdict: with the flag on the same set passed one more case for 42% fewer
+tokens and 56% less time — the quick, low-effort turns were the saving, and the large case (`set-me-up`) passed with
+its budget raised. The small case lost (`what-can-you-do`, judged on wording) is the set's usual run-to-run variance
+(docs/audits/2026-10-07-newcomer.md). Next: the routing set, and a second run of both.
 
 ## Cost and risks
 
