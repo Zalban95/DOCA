@@ -22,7 +22,7 @@ module.exports = [
     settings: ['call.wakeWord'],
     use: 'A screen listening with the face starts a call when a transcript calls its name.', words: 'hey wake word hotword listen' },
   { id: 'wake-model', name: 'A wake word model trained here', page: 'models', flag: 'wakeModel', state: 'experiment', since: '2.244.0',
-    use: 'Train a model for any word on this hub and run it on the screen, sending nothing until the word.',
+    use: 'Train a model for any word on this hub from the person\'s own voice, and run it on the screen, sending nothing until the word.',
     routes: ['/api/wakeword*', '/api/v1/wakeword'], words: 'openwakeword train onnx' },
   { id: 'realtime-voice', name: 'Live calls with a realtime speech model', page: 'settings/voice', flag: 'realtimeVoice', state: 'experiment', since: '2.200.0',
     settings: ['realtime.model'], use: 'A speech-to-speech model relayed by the hub; its one tool hands the request to the conversation.',

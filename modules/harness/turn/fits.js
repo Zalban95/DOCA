@@ -72,10 +72,10 @@ function keepHint(rows, held) {
   return 'This turn\'s steps have all worked. If this will come back, offer once to keep it: `recipe` save_last.';
 }
 
-/** The three, for one step. */
+/** The four, for one step — with the steps of a skill this turn read (skill-steps.js). */
 function block({ message, schemas = [], rows = [] }) {
   const held = new Set(schemas.map(s => s.function?.name || s.name));
-  return [likely(message, held), inventory(held), keepHint(rows, held)].filter(Boolean).join('\n');
+  return [likely(message, held), inventory(held), require('./skill-steps').block(rows), keepHint(rows, held)].filter(Boolean).join('\n');
 }
 
 module.exports = { block, likely, inventory, keepHint };
