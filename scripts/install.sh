@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # DOCA on Linux or macOS in one command (TODO H1.8; docs/design/hive.md §7):
-#   curl -fsSL <raw url>/scripts/install.sh | bash            or            bash scripts/install.sh [options]
+#   curl -fsSL https://raw.githubusercontent.com/Zalban95/DOCA/main/scripts/install.sh | bash -s -- [options]   (or: bash scripts/install.sh [options])
 # Node 22 is checked (not installed for you: it is your system's), the code fetched (or copied from a checkout),
 # its dependencies installed, start-at-boot added (systemd on Linux, launchd on macOS) and the panel started.
 #   --dir PATH        where DOCA goes (default ~/doca)
-#   --repo URL        where the code comes from (default the DOCA repository; it is private: your git credentials)
+#   --repo URL        where the code comes from (default the DOCA repository on GitHub)
 #   --from PATH       copy from a checkout instead of cloning (CI uses this)
 #   --no-boot         do not add start-at-boot      --no-start   do not start it now
 #   --share yes|no    offer the skills and specialists your agents learn to the project (asked when not given)
