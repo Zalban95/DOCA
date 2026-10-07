@@ -146,12 +146,12 @@ function normalize(input, existing) {
     label:     String(input.label || input.id || id).trim(),
     transport,
     command:   String(input.command || '').trim(),
-    args,
+    args:      unmaskArgs(args, existing?.args),
     // A value that comes back as the mask is one the caller never saw, so it
     // means "leave it alone" rather than "set it to dots".
     env:       unmaskValues(env, existing?.env),
     cwd:       String(input.cwd || '').trim(),
-    url:       String(input.url || '').trim(),
+    url:       unmaskUrl(String(input.url || '').trim(), existing?.url),
     headers:   unmaskValues(input.headers && typeof input.headers === 'object' ? input.headers : {}, existing?.headers),
     autostart: !!input.autostart,
     // Absent on every definition written before this existed, which is exactly
@@ -252,6 +252,7 @@ function wakeForDevice(deviceId) {
  * `export.js` reads `load()` for the same reason.
  */
 const MASK = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
+const { maskUrl, unmaskUrl, maskArgs, unmaskArgs } = require('./masking');   // secrets in an address or on a command line
 
 function maskValues(obj) {
   if (!obj || typeof obj !== 'object') return {};
@@ -282,6 +283,8 @@ function status(spec) {
     ...spec,
     env:     maskValues(spec.env),
     headers: maskValues(spec.headers),
+    url:     maskUrl(spec.url || ''),
+    args:    maskArgs(spec.args || []),
     origin,
     // Resolved here so a row can say "on Al's PC" without the page fetching the
     // device list per server. A revoked or deleted device leaves the id visible
