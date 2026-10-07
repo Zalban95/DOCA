@@ -81,7 +81,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   allowed follows the level — its own safety design first.
 - [x] P1.9 **Reach by level (S2)** — *2.280.0: `auth/reach.js` rungs create · own-devices · anything; Member own-devices; a grant allots past it; the levels editor chooses it.*: each level says how far agents may reach into its people's devices and machines,
   a scale from "create safely with tools" to "anything"; the shipped levels get sensible rungs.
-- [ ] P1.10 **Resources allocated (S13)**: machines, devices, models, services, keys and budgets allocated to users
+- [~] P1.10 **Resources allocated (S13)** — *2.283.0: `auth/allot.js` — a level lists the models, providers, keys, accounts and computers its people use; a grant `use:<kind>:<id>` allots one; a team leader's level names what it may give (`delegates`). Left: budgets (with P1.6 spending), services and devices as allotted kinds, a per-person view of what they hold.*: machines, devices, models, services, keys and budgets allocated to users
   by the admin, with grantable "may allot" for team leaders; a personal panel change follows its person to all
   their devices.
 - [ ] P1.7 **Nothing coded is lost (W14)**: H10.7's tooling hides unused paths from the default instead of archiving

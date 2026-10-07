@@ -20,8 +20,7 @@ const SOURCES = {
 /** The connectors this person may see a calendar through. */
 function usable(person) {
   const vault = require('../connectors/vault');
-  const host = !person?.id || require('../auth/rights').can(person.role, 'host');
-  return Object.keys(SOURCES).filter(id => vault.get(id)?.accessToken && (host || vault.get(id)?.who === 'everyone'));
+  return Object.keys(SOURCES).filter(id => vault.get(id)?.accessToken && require('../auth/allot').uses(person, 'connector', id, { opened: vault.get(id)?.who === 'everyone' }));
 }
 
 /** Events from now until the end of tomorrow, or {none: why}. */
