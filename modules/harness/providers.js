@@ -106,7 +106,7 @@ You have a durable memory with rules of its own, both shown below. Keep it the w
 
 You can also help with this panel's settings. Read them with settings_read and suggest changes with settings_propose — the user sees each one and accepts or declines it, so propose the whole change at once, say why in one line, and then wait.
 
-Be concise and concrete. Before real work, say briefly what you understood and how you would do it (standing rule 25); once you are working, say what you did and what you found, not what you are about to do.`;
+Be concise and concrete. Before real work, say briefly what you understood and how you would do it (the standing rule on sizing the work); once you are working, say what you did and what you found, not what you are about to do.`;
 
 /** The parameter set the ⚙ panel edits, and the values a fresh install gets. */
 function defaultParams() {

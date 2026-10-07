@@ -61,7 +61,7 @@ module.exports = [
     description: 'Call an API: a service with a key the owner stored (name the key; the hub adds it only for that service\'s '
       + 'address), or one of the owner\'s own devices and servers (this machine, the local network, the tailnet) — use it to '
       + 'send, upload or act. Any method; a form and files make an upload; save_as keeps the answer as an attachment (a GET with '
-      + 'save_as may fetch from any address). Other addresses without a key are refused: read the open web with http_fetch. The keys you can name are listed under '
+      + 'save_as may fetch a file — a model, a picture, an archive, never a page — from any address). Other addresses without a key are refused: reading the web is http_fetch\'s, or the scout\'s while specialists are on. The keys you can name are listed under '
       + '"What you have" in the readings.',
     parameters: {
       type: 'object',
@@ -79,12 +79,14 @@ module.exports = [
     },
     run: (a, ctx = {}) => {
       const http = require('./http');
-      // A download kept as a file (GET with save_as) reads nothing into the conversation, so any address may serve it
-      // — a model a keyed service left on a CDN, say. Everything else needs a key or one of the owner's addresses.
+      // A download kept as a file (GET with save_as) from any address — a model a keyed service left on a CDN, say — but
+      // only a file: text from a stranger's address would be the open web read around the airlock (http.js looksText).
+      // Everything else needs a key or one of the owner's addresses.
       const download = String(a.method || 'GET').toUpperCase() === 'GET' && a.save_as && !a.body && !a.form && !a.files;
-      if (!a.key && !download && !http.owned(a.url))
-        return `Error: ${String(a.url).slice(0, 120)} is neither one of the owner's own addresses (this machine, the LAN, the tailnet) nor a service with a stored key. Read it with http_fetch, or ask the owner to add a key (service_draft prepares one).`;
-      return http.request(a, ctx);
+      const owned = http.owned(a.url);
+      if (!a.key && !download && !owned)
+        return `Error: ${String(a.url).slice(0, 120)} is neither one of the owner's own addresses (this machine, the LAN, the tailnet) nor a service with a stored key. Reading a page is http_fetch's (the scout's while specialists are on); for a service, ask the owner to add a key (service_draft prepares one).`;
+      return http.request({ ...a, binaryOnly: !a.key && !owned }, ctx);
     },
   },
   {

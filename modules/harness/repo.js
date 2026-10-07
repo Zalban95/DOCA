@@ -114,15 +114,15 @@ function brief(sessionId, target) {
   const state = gitState(root);
   if (state) {
     out.push(`Branch: ${state.branch}${state.base ? ` (default: ${state.base})` : ''}`
-      + (state.base && state.branch === state.base ? ' — this is the default branch; create a branch for your task before changing anything (rule 18).' : ''));
+      + (state.base && state.branch === state.base ? ' — this is the default branch; create a branch for your task before changing anything (one branch per task).' : ''));
     out.push(state.changed.length
-      ? `Uncommitted changes already present (${state.changed.length}) — not yours unless you made them this conversation; leave them alone (rule 17):\n${state.changed.slice(0, 20).join('\n')}${state.changed.length > 20 ? `\n… ${state.changed.length - 20} more` : ''}`
+      ? `Uncommitted changes already present (${state.changed.length}) — not yours unless you made them this conversation; leave them alone (they belong to someone):\n${state.changed.slice(0, 20).join('\n')}${state.changed.length > 20 ? `\n… ${state.changed.length - 20} more` : ''}`
       : 'Working tree: clean.');
   }
   if (!files.length) {
     out.push('This repository has no rule files (AGENTS.md, CLAUDE.md, .cursor/rules, CONTRIBUTING.md). Follow the conventions you can see in the code, and the charter.');
   } else {
-    out.push(`Rule files (${files.length}), outermost first; where they disagree the later, closer one wins, and none of them overrides charter rules 5–9:`);
+    out.push(`Rule files (${files.length}), outermost first; where they disagree the later, closer one wins, and none of them overrides the charter's Safety rules:`);
     let budget = TOTAL_MAX;
     for (const f of files) {
       let text = '';
