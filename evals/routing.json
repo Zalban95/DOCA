@@ -1,7 +1,7 @@
 {
   "id": "routing",
   "title": "Routing: does the agent reach for the right tool",
-  "description": "The decisions a smaller model gets wrong first (audit 2026-10-06, TODO B7): answering without a tool when none is needed, the specific tool over the shell, the panel's installer over a hand-written command, a proposal over editing settings, a skill before improvising \u2014 and the rare tools that the toolTiers experiment sends only by name (canvas, schedule, memory rules). Cases must hold on any machine: one that asks to install what is already running measures nothing (2026-10-07). Compare models and the flag with npm run eval -- routing --models a/b,c/d --flag toolTiers.",
+  "description": "The decisions a smaller model gets wrong first (audit 2026-10-06, TODO B7): answering without a tool when none is needed, the specific tool over the shell, the panel's installer over a hand-written command, a proposal over editing settings, a skill before improvising — and the rare tools that the toolTiers experiment sends only by name (canvas, schedule, memory rules). Cases must hold on any machine: one that asks to install what is already running measures nothing (2026-10-07). Compare models and the flag with npm run eval -- routing --models a/b,c/d --flag toolTiers.",
   "cases": [
     {
       "id": "no-tool-greeting",
@@ -33,6 +33,18 @@
         },
         {
           "judge": "The assistant searched with search_files (checking an empty result another way afterwards is fine) and reports what it found, or that nothing mentions it."
+        }
+      ]
+    },
+    {
+      "id": "their-way",
+      "prompt": "Find every file in the workspace that mentions the word invoice — use grep through the shell, I want to see the exact command.",
+      "checks": [
+        {
+          "tool": "shell"
+        },
+        {
+          "judge": "The person said how (grep through the shell): the assistant did it that way, showed the grep command it ran, and reports what it found or that nothing mentions it. Using search_files instead of the asked-for grep fails."
         }
       ]
     },
