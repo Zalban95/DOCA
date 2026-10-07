@@ -14,7 +14,7 @@ module.exports = [
     name: 'hub_command',
     description: 'Run one of the hub\'s own commands — start or stop an inference service, a container, the stack or a llama.cpp '
       + 'server, enable a skill, take a snapshot — use it instead of shell for these. list shows each with its parameters and '
-      + 'whether a person is asked first (confirm). A long one returns a job; system_status shows what it started.',
+      + 'whether a person is asked first (confirm). A long one returns a job; system_status shows what it started. An MCP server is not one of these: mcp_connect starts and stops those.',
     parameters: {
       type: 'object',
       properties: {
