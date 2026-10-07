@@ -42,7 +42,7 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [~] P0.1 **No personal choices in the project** — *2.270.0: the constitution's rules name "the project's admin";
   one installation's machine notes moved to the gitignored `AGENTS.local.md`; the UI's personal placeholders, the
   shipped `reach-another-machine` skill's `portal/` branch names and examples made generic; `developer.releaseUnasked`
-  defaults to none (an existing install keeps its list by migration).* Left: (a) the face's default palette is one
+  defaults to none (an existing install keeps its list by migration). 2.273.0: (b) `updates.repo` names the repository an edition or fork updates from (the project's by default); (c) `test/product-not-personal.test.js` fails on one installation's paths, hosts, accounts or models in what ships; (d) every declared default and the harness's reviewed — none is one person's.* Left: (a) the face's default palette is one
   brand's (protolab.tech) — the product's own default, that palette as an owner's/edition's `face.spec` (with wave E);
   (b) the repository the update check and installers use (`modules/update.js` REPO, `scripts/install.*`) from a
   setting or the edition, the project's as default; (c) a test that fails on owner-specific strings (paths, hosts,
