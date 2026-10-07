@@ -17,6 +17,7 @@ const LEADS = {
   settings_propose: 'Suggest a settings change the person accepts or declines — use it instead of editing settings any other way.',
   install_propose: 'Ask the person to install a model, service, harness, MCP server or system tool the panel knows — never install by hand.',
   mcp_draft: 'Prepare an MCP server that is not in the catalogue for a person to add — use it when a task needs a server nobody set up.',
+  spend_propose: 'Ask the person to allow spending money on a service or purchase — use it whenever work would cost money.',
   service_draft: 'Prepare a web API that needs a key for a person to switch on — use it when a task needs a service with no key stored.',
   permission_grant: 'Give a mission you dispatched one more permission — use it when a specialist reports a refusal for a step it needs.',
   mcp_connect: 'Start or stop an MCP server a person already set up — use it when you need the tools of a server that is stopped.',

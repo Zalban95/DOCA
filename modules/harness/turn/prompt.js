@@ -281,6 +281,7 @@ function liveBlock(p, ledger) {
   return [
     environment.live(),
     budget.live(ledger, p),
+    p._spending || '',   // the person's budget and spending permissions, when they have any (spending/, turn/ceiling.js)
     // Last-position, like every other reading: the allowlist changes mid-turn
     // the moment the user answers "always allow", so it cannot sit in the
     // cached prefix ahead of the transcript (H-9).
