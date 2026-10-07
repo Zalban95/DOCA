@@ -62,7 +62,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   Measured as an eval set of plain-language requests from someone who knows nothing about DOCA.
 
 ### P1 — the vision of 2026-10-07 (CONSTITUTION §0–§2, §4; docs/design/experience.md), not yet built
-- [ ] P1.1 **A person's request is the decision (S1)**: a change a person asks for to their own installation —
+- [x] P1.1 **A person's request is the decision (S1)** — *2.276.0: `settings_propose {asked: true}` on a person's own turn, within their level, is applied with a checkpoint; charter rule 6 says so.*: a change a person asks for to their own installation —
   settings included — is applied with a checkpoint, not left as a proposal; the agent's own initiative stays a
   proposal; S11's list still asks.
 - [ ] P1.2 **The panel's structure as data**: pages, layouts, custom views and styles as layered data (edition →
