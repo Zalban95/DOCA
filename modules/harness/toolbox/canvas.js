@@ -38,12 +38,15 @@ module.exports = [
       + 'one; the page gets { doca: "opened", name, type, text | dataUrl }) — either can come back as '
       + '{ doca: "refused", reason }; listen with addEventListener("message"). `preview` shows a server running on this machine — a dev '
       + 'server, a served project — by its port: the user gets a button that opens it in the same window, from '
-      + 'any device on the tailnet, even when it listens on localhost only. Good for 12 hours.',
+      + 'any device on the tailnet, even when it listens on localhost only, and ↗ opens it in a tab of its own. With `computer` '
+      + 'instead of port it shows what an agents\' computer serves on its page port 8080 (listening on 0.0.0.0 there). '
+      + 'Good for 12 hours.',
     parameters: {
       type: 'object',
       properties: {
         action: { type: 'string', enum: ['open', 'write', 'read', 'list', 'preview'] },
         port:   { type: 'integer', description: 'For preview: the localhost port the server listens on.' },
+        computer: { type: 'string', description: 'For preview, instead of port: an agents\' computer whose page port (8080 inside it) to show.' },
         at:     { type: 'string', description: 'For preview: the path to open, e.g. /docs. Default /.' },
         id:     { type: 'string', description: 'The canvas, for write and read.' },
         title:  { type: 'string', description: 'For open (and optionally write): a few words.' },
@@ -81,10 +84,10 @@ module.exports = [
             : 'No canvases in this conversation yet.';
         }
         case 'preview': {
-          const p = require('../../canvas/previews').create({ port: args.port, title: args.title, sessionId: ctx.sessionId || null });
+          const p = require('../../canvas/previews').create({ port: args.port, computer: args.computer, title: args.title, sessionId: ctx.sessionId || null });
           const at = String(args.at || '/').startsWith('/') ? String(args.at || '/') : `/${args.at}`;
           if (typeof ctx.show === 'function') ctx.show({ kind: 'canvas', name: p.id, previewId: p.id, at, caption: p.title });
-          return `Preview ${p.id} of localhost:${p.port} is a button in the chat; it works for ${require('../../canvas/previews').TTL_H} hours.`;
+          return `Preview ${p.id} of ${p.where} is a button in the chat; it works for ${require('../../canvas/previews').TTL_H} hours.`;
         }
         default: throw new Error('action is one of open, write, read, list, preview.');
       }

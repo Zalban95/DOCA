@@ -1,10 +1,12 @@
 /* Machines → Live (modules/machines; TODO H10.9): where the agents are working, as pictures. The agents' computers'
    screens and the pages agents serve for their tests (a dev server a job started, seen through the hub's headless
    browser); whatever is working now — acted in the last moments, or held by a running mission — comes to the front,
-   large, and the rest waits behind, small and dim. A computer opens its live view; a served page opens in a tab. It
+   large, and the rest waits behind, small and dim. A computer opens its live view; a served page — on this machine, or
+   on a computer's page port (a repository an agent runs there, TODO H10.18) — opens through a preview (canvas origin),
+   so a phone reaches it even when it listens on localhost only, and ↗ there gives it a tab of its own. It
    refreshes every few seconds while shown, and asks for pictures of served pages only then. Made here: index.html is
    at its line ceiling. */
-const ML = { timer: null, data: null };
+const ML = { timer: null, data: null, previews: {} };   // previews: served key → preview id, made once per page
 const ML_MS = 3000;
 
 function liveMachinesTab(shown) {
@@ -29,11 +31,25 @@ function _mlTiles() {
     line: c.activity ? `${c.activity.what} · ${_mlAgo(c.activity.ago)}` : c.mission ? `${c.mission.label}: ${c.mission.state}` : c.purpose || '',
     who: c.mission ? c.mission.label : '', img: c.state === 'running' ? `/api/computers/${encodeURIComponent(c.id)}/screen` : null,
     empty: c.state === 'running' ? 'Waiting for its screen…' : `Stopped (${c.state})`, open: () => computersWatch(c.id) });
-  for (const s of d.served) tiles.push({ id: `s:${s.key}`, working: true, kind: '◉', title: `:${s.port}${new URL(s.url).pathname === '/' ? '' : new URL(s.url).pathname}`,
+  for (const s of d.served) tiles.push({ id: `s:${s.key}`, working: true, kind: '◉',
+    title: s.computer ? `${s.who} :${s.inside}` : `:${s.port}${new URL(s.url).pathname === '/' ? '' : new URL(s.url).pathname}`,
     line: `$ ${s.command.slice(0, 90)}`, who: s.who || '', img: s.shot ? `/api/machines/served/${encodeURIComponent(s.key)}/shot` : null,
     empty: d.browser.found ? 'Taking its picture…' : d.browser.why, tail: s.tail,
-    open: () => window.open(`${location.protocol === 'https:' ? 'http:' : location.protocol}//${location.hostname}:${s.port}${new URL(s.url).pathname}`, '_blank', 'noopener') });
+    open: () => _mlOpenServed(s.key) });
   return tiles;
+}
+
+/** A served page through a preview (canvas/previews.js): reachable from any screen, whatever address it listens on. */
+async function _mlOpenServed(key) {
+  const s = ML.data?.served.find(x => x.key === key);
+  if (!s) return;
+  try {
+    if (!ML.previews[key]) {
+      const r = await apiFetch('/api/harness/previews', { method: 'POST', body: s.computer ? { computer: s.computer, title: s.who } : { port: s.port, title: s.who || `:${s.port}` } });
+      ML.previews[key] = r.preview.id;
+    }
+    await canvasPreviewOpen(ML.previews[key], s.computer ? '/' : new URL(s.url).pathname);
+  } catch (e) { delete ML.previews[key]; appAlert(`Could not open it: ${e.message}`); }
 }
 
 function _mlDraw(page) {

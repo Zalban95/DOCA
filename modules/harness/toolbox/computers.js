@@ -20,7 +20,8 @@ module.exports = [
         + 'to hand on. It stops by itself a few minutes after the mission it was lent to ends, and one you made is removed some days after '
         + 'it stopped unless a person pins it; stop it yourself when you are done with it. list shows them; stop keeps its files, '
         + 'remove deletes it with its files. put copies an attachment into its work folder (attachment, path); get keeps a file '
-        + 'from it as an attachment (path), to show or send on. A person watches or takes over from the Computers tab; while '
+        + 'from it as an attachment (path), to show or send on. A server you run inside it on port 8080, listening on 0.0.0.0, is a '
+        + 'page the person can open: canvas preview with computer: <id>. A person watches or takes over from the Computers tab; while '
         + 'they drive, your mouse, keys and browser clicks wait.';
     },
     parameters: {

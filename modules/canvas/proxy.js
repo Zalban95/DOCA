@@ -67,7 +67,7 @@ function forward(req, res) {
   up.on('error', e => {
     if (res.headersSent) return res.destroy();
     res.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end(`Nothing answered on localhost:${p.port} (${e.code || e.message}). Is the server running?`);
+    res.end(`Nothing answered on ${p.where || `localhost:${p.port}`} (${e.code || e.message}). Is the server running${p.computer ? ', listening on 0.0.0.0' : ''}?`);
   });
   req.pipe(up);
   return true;

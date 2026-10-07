@@ -13,14 +13,14 @@ function mount(app) {
   const previews = require('./previews');
   app.post('/api/harness/previews', (req, res) => {
     try {
-      const p = previews.create({ port: req.body?.port, title: req.body?.title });
-      res.json({ preview: { id: p.id, port: p.port, title: p.title, expiresAt: p.expiresAt } });
+      const p = previews.create({ port: req.body?.port, computer: req.body?.computer, title: req.body?.title });   // a port here, or a computer's page port
+      res.json({ preview: { id: p.id, port: p.port, title: p.title, where: p.where, expiresAt: p.expiresAt } });
     } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
   app.get('/api/harness/previews/:id', (req, res) => {
     const p = previews.get(req.params.id);
     if (!p) return res.status(404).json({ error: 'No such preview, or it has expired.' });
-    res.json({ preview: { id: p.id, port: p.port, title: p.title, expiresAt: p.expiresAt }, canvasPort: CANVAS_PORT, path: `/p/${p.token}` });
+    res.json({ preview: { id: p.id, port: p.port, title: p.title, where: p.where || `localhost:${p.port}`, expiresAt: p.expiresAt }, canvasPort: CANVAS_PORT, path: `/p/${p.token}` });
   });
 
   app.get('/api/harness/canvases', (req, res) =>
