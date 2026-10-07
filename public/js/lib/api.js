@@ -57,11 +57,13 @@ if (_rawFetch) window.fetch = async (input, init) => {
   const res = await _rawFetch(input, init);
   if (res.status !== 401 && res.status !== 403) return res;
   const url = typeof input === 'string' ? input : input?.url || '';
-  if (!url.startsWith('/') || url.startsWith('/api/auth/')) return res;
+  if (!url.startsWith('/')) return res;
   const d = await res.clone().json().catch(() => ({}));
+  // A switch asks for the password wherever it is — levels, grants and accounts are under /api/auth/ too.
+  if (d.code === 'password_required') return (await _confirmSwitch(input, init, d)) || res;
+  if (url.startsWith('/api/auth/')) return res;
   if (d.code === 'unauthenticated' || d.code === 'setup_required' || d.code === 'password_change_required') return _toLogin();
   if (d.code === 'step_up_required' && await _renewSignIn(d.error)) return window.fetch(input, init);
-  if (d.code === 'password_required') return (await _confirmSwitch(input, init, d)) || res;
   return res;
 };
 
