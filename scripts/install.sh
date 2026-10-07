@@ -77,11 +77,18 @@ if [ "$START" = 1 ]; then
     # Detached from this script's terminal and pipes: the subshell's own output is the log, and node replaces it.
     (cd "$DIR" && exec nohup node bin/doca-launch.js start > "$DIR/doca.log" 2>&1 < /dev/null) &
   fi
-  for _ in $(seq 1 60); do curl -ks -o /dev/null "https://127.0.0.1:${PORT:-4242}/login" && break; sleep 1; done
+  UP=0
+  for _ in $(seq 1 60); do curl -ks -o /dev/null "https://127.0.0.1:${PORT:-4242}/login" && { UP=1; break; }; sleep 1; done
 fi
 
 say ""
 say "✓ DOCA is in $DIR."
+if [ "$START" = 1 ] && [ "$UP" = 0 ]; then
+  # Said rather than left to a browser that cannot connect: where to look is the useful part.
+  say "  ✗ It did not answer on port ${PORT:-4242} within a minute. Its output is in $([ -f "$DIR/doca.log" ] && echo "$DIR/doca.log" || echo "journalctl -u openclaw-panel")."
+fi
 [ "$START" = 1 ] && say "  Open https://localhost:${PORT:-4242} on this machine to create its owner — no code is needed there."
-say "  From another device on your tailnet, the first sign-up asks for the setup code: $DIR/.setup-code (or ./run.sh setup-code)."
+say "  From another device on your tailnet: open the panel there, and the setup code it asks for is then in"
+say "  $DIR/.setup-code (or ./run.sh setup-code) and in the panel's log."
 say "  The certificate is self-signed: your browser will ask once."
+say "  Then Settings → Set-up (offered at the first sign-in) gives DOCA's agent a model: one this machine runs, or a provider's key."
