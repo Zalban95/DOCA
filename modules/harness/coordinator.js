@@ -29,7 +29,7 @@ function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], 
     has('work_chats') ? 'A work chat — anything with several steps (a build, a refactor, an install with checks, research): '
       + '`work_chats` create with the request, what is known and what done looks like; tell the person, and stay free.' : '',
     has('agent_dispatch') && specialists.length ? `A specialist — a self-contained errand one of them fits (${specialists.join(', ')}): \`agent_dispatch\`; `
-      + 'it runs in the background and you read the result with `agent_results`.' : '',
+      + 'it runs in the background and you read the result with `agent_results`. Send independent errands in parallel; one that needs another\'s result waits for it with `after`.' : '',
     'Ask — the choice is the person\'s (money, something outward or irreversible, a matter of taste): ask once, with the options.',
   ].filter(Boolean);
   // The premise's ladder (CONSTITUTION §0; TODO P0.2): the person's way, then the proven way, then a way found and kept.

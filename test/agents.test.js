@@ -531,3 +531,29 @@ test('a mission a restart cut off carries on by itself; one that cannot stays pa
   assert.match(missions.block(), /msn_stuck .*PAUSED[\s\S]*could not carry on by itself/);
   missions.cancel?.('msn_go');
 });
+
+test('an errand that needs another mission\'s files waits for it, then starts with what it delivered (V10)', async () => {
+  const after = require('../modules/agents/after');
+  seed([row('msn_model', 'running', { label: 'Blender' })]);
+  registry.setEnabled(true);
+  const w = after.dispatchAfter({ agentId: 'archivist', task: 'Put the model in the website', by: null }, ['msn_model']);
+  assert.ok(w.waiting, 'held while the model is still being made');
+  assert.equal(after.list().length, 1);
+  const store = require('../modules/store');
+  const rows = store.readJson('agents/missions').missions;
+  Object.assign(rows.find(m => m.id === 'msn_model'), { state: 'done', result: 'chair.glb is in /site/models.' });
+  store.writeJson('agents/missions', { missions: rows });
+  require('../modules/live').changed('missions', 'msn_model', 'done');
+  assert.equal(after.list().length, 0, 'no longer waiting');
+  const started = missions.list({ limit: 50 }).find(m => m.task === 'Put the model in the website');
+  assert.ok(started, 'started once the model was done');
+
+  seed([row('msn_broken', 'running')]);
+  after.dispatchAfter({ agentId: 'archivist', task: 'Needs the broken one', by: null }, ['msn_broken']);
+  const rows2 = store.readJson('agents/missions').missions;
+  Object.assign(rows2.find(m => m.id === 'msn_broken'), { state: 'failed', error: 'Blender crashed' });
+  store.writeJson('agents/missions', { missions: rows2 });
+  require('../modules/live').changed('missions', 'msn_broken', 'failed');
+  assert.equal(after.list().length, 0);
+  assert.ok(!missions.list({ limit: 50 }).some(m => m.task === 'Needs the broken one'), 'what it needed failed: it does not start');
+});
