@@ -103,7 +103,9 @@ function output(id, bytes = TAIL) {
 function stop(id) {
   const j = get(id);
   if (j.state !== 'running') return j;
-  try { process.kill(shell.WIN ? j.pid : -j.pid, 'SIGTERM'); } catch {
+  // Windows has no process groups: the shell's tree (a dev server it started) goes with taskkill /T, or it outlives the job.
+  if (shell.WIN) try { require('child_process').execFileSync('taskkill', ['/PID', String(j.pid), '/T', '/F'], { stdio: 'ignore', timeout: 10000 }); } catch { /* already gone */ }
+  else try { process.kill(-j.pid, 'SIGTERM'); } catch {
     try { process.kill(j.pid, 'SIGTERM'); } catch { /* already gone */ }
   }
   update(id, { state: 'stopped', endedAt: new Date().toISOString() });
