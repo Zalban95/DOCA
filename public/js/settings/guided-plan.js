@@ -13,7 +13,9 @@ function guidedPlanRender(p, applied) {
   const el = document.getElementById('guided-plan');
   if (!el) return;
   _guidedLastPlan = p;
-  const rows = p.steps.map((s, i) => (s.type === 'install' ? _guidedInstallRow(s, i, applied) : _guidedKeyRow(s, i))).join('');
+  // The agent's model, whichever way this machine would get it, can also be one the person already runs elsewhere.
+  const rows = p.steps.map((s, i) => (s.type === 'have' ? _guidedHaveRow(s)
+    : (s.type === 'install' ? _guidedInstallRow(s, i, applied) : _guidedKeyRow(s, i)) + (s.role === 'chat' ? _guidedOwnRow(i) : ''))).join('');
   const devices = p.devices.length ? `<div class="guided-step"><div class="guided-step-title">Your devices</div>${p.devices.map(d =>
     `<div class="guided-muted">• ${escHtml(d.label)}: ${escHtml(d.how)}</div>`).join('')}</div>` : '';
   el.innerHTML = `<div class="card"><div class="card-title">${applied ? 'Waiting for you' : 'What it would set up'}</div>
@@ -33,6 +35,22 @@ function _guidedInstallRow(s, i, applied) {
     ? ` <button class="btn btn-xs" id="guided-use-${i}" style="display:${pr?.status === 'installed' ? '' : 'none'}" onclick="guidedUseModel('ollama', ${jsArg(s.id)}, ${i})">Use it for DOCA's agent</button>` : '';
   return `<div class="guided-step"><div class="guided-step-title">⬇ ${escHtml(s.label)} <span class="guided-muted">— ${escHtml(s.why)}</span></div>
     <div class="toolbar">${state}${use}<span class="status-line" id="guided-st-${i}"></span></div></div>`;
+}
+
+/** Already set up: the agent's model answers (whatever provider it is on). */
+function _guidedHaveRow(s) {
+  return `<div class="guided-step"><div class="guided-step-title">✓ ${escHtml(s.label)}: ${escHtml(s.model)} <span class="guided-muted">— on ${escHtml(s.provider)}, and it answers. Change it with ⚙ on the DOCA row in Controls.</span></div></div>`;
+}
+
+/** Or a model the person already runs (llama.cpp, vLLM, LM Studio, Ollama…) at an address: added as Field → API keys → + Add provider adds it. */
+function _guidedOwnRow(i) {
+  return `<div class="guided-step" id="guided-own-${i}"><div class="guided-step-title">🖧 Or a model you already run <span class="guided-muted">— llama.cpp, vLLM, LM Studio, Ollama or any OpenAI-compatible server, by its address</span></div>
+    <div class="toolbar guided-key">
+      <input class="input" autocomplete="off" placeholder="http://192.168.1.20:8080/v1" id="guided-own-url-${i}" title="Its address, usually ending in /v1">
+      <input class="input" type="password" autocomplete="off" placeholder="Key, if it needs one" id="guided-own-key-${i}">
+      <button class="btn btn-xs btn-blue" onclick="guidedOwnConnect(${i})">Connect and test</button>
+      <span class="status-line" id="guided-own-st-${i}"></span></div>
+    <div class="toolbar" id="guided-own-models-${i}"></div></div>`;
 }
 
 function _guidedKeyRow(s, i) {
@@ -97,9 +115,30 @@ async function guidedInstall(id, i, needsPassword) {
 
 /** The agent's own model: the same save as Controls → DOCA ⚙. */
 async function guidedUseModel(provider, model, i) {
-  const st = document.getElementById(`guided-st-${i}`);
+  const st = document.getElementById(String(i).startsWith('own-') ? `guided-own-st-${String(i).slice(4)}` : `guided-st-${i}`);
   try {
     await apiFetch('/api/harness/doca/config', { method: 'POST', body: { provider, model } });
     setStatus(st, `✓ DOCA's agent now uses ${model}`, 'ok');
+    setTimeout(() => { if (document.getElementById('guided-plan')) guidedLoad(); }, 1500);   // Set-up then says it has a model
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}
+
+/** A model the person runs: saved through the same route as Field → API keys → + Add provider, then its models listed. */
+async function guidedOwnConnect(i) {
+  const st = document.getElementById(`guided-own-st-${i}`);
+  const baseUrl = document.getElementById(`guided-own-url-${i}`).value.trim().replace(/\/+$/, ''), keyIn = document.getElementById(`guided-own-key-${i}`);
+  if (!/^https?:\/\/[^\s/]+/i.test(baseUrl)) return setStatus(st, '✗ Give its address, like http://192.168.1.20:8080/v1', 'err');
+  const host = baseUrl.replace(/^https?:\/\//i, '').split(/[/:]/)[0].toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const name = `own-${host || 'server'}`;   // a provider name of its own, never over a preset's
+  try {
+    setStatus(st, 'connecting…', 'info');
+    await apiFetch('/api/keys/add-provider', { method: 'POST', body: { name, baseUrl, apiKey: keyIn.value.trim() } });
+    keyIn.value = '';
+    const r = await apiFetch(`/api/harness/models?provider=${encodeURIComponent(name)}`);
+    if (r.error || !r.models?.length)
+      return setStatus(st, `✗ Saved as "${name}", but ${r.error ? `it did not answer (${r.error})` : 'it lists no models'}. Check the address (most end in /v1) and that the server is running.`, 'err');
+    setStatus(st, `✓ It answers — ${r.models.length} model${r.models.length === 1 ? '' : 's'}`, 'ok');
+    document.getElementById(`guided-own-models-${i}`).innerHTML = `<select class="input" id="guided-own-model-${i}">${r.models.map(m => `<option>${escHtml(m)}</option>`).join('')}</select>
+      <button class="btn btn-xs btn-green" onclick="guidedUseModel(${jsArg(name)}, document.getElementById('guided-own-model-${i}').value, 'own-${i}')">Use it for DOCA's agent</button>`;
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }

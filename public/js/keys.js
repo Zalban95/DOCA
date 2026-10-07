@@ -112,6 +112,12 @@ function deleteProvider(name) {
   });
 }
 
+/** A provider's row, from elsewhere (the harness ⚙ when its models did not load): its address field, in view. */
+function keysShowProvider(name) {
+  nav('apikeys');
+  setTimeout(() => { const el = document.getElementById(`url-${name}`); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }, 700);
+}
+
 function showAddProvider() { document.getElementById('add-provider-form').style.display = 'block'; }
 function hideAddProvider() { document.getElementById('add-provider-form').style.display = 'none'; }
 

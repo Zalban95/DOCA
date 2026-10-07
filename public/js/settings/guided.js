@@ -20,14 +20,18 @@ async function guidedLoad() {
     ? `<div class="guided-q"><div class="guided-q-title">2. Where should it run?</div>
         <label class="guided-choice"><input type="radio" name="guided-route" value="local"${a.route !== 'providers' ? ' checked' : ''}> On this machine where it fits — private, nothing to pay; providers only for what it cannot run</label>
         <label class="guided-choice"><input type="radio" name="guided-route" value="providers"${a.route === 'providers' ? ' checked' : ''}> Online providers for everything — you paste a key, they bill you, nothing big is installed here</label></div>`
-    : `<div class="guided-q"><div class="guided-q-title">2. Where it runs</div>
-        <p class="guided-muted">This machine cannot run the agent's model well, so DOCA will use an online provider: you paste a key below, and nothing heavy is installed here.</p></div>`;
+    : g.have?.chat
+      ? `<div class="guided-q"><div class="guided-q-title">2. Where it runs</div>
+        <p class="guided-muted">DOCA's agent already has a model — <b>${escHtml(g.have.chat.model)}</b> on ${escHtml(g.have.chat.provider)} — and it answers. Nothing heavy is installed here.</p></div>`
+      : `<div class="guided-q"><div class="guided-q-title">2. Where it runs</div>
+        <p class="guided-muted">This machine cannot run the agent's model well, so DOCA will use a model elsewhere: an online provider's (you paste a key below), or one you already run on another machine (its address below). Nothing heavy is installed here.</p></div>`;
   panel.innerHTML = `<div class="card guided">
     <div class="card-title">Set-up</div>
     <p class="guided-lead">Say what you want DOCA for. It looks at this machine, picks what fits, and sets up only that — every install waits for your click, every online service for your key.</p>
     <div class="guided-machine"><b>This machine:</b> ${escHtml(g.machine.summary)}<br>
       <span class="guided-muted">${g.shapeHere === 'local' ? 'It can run its own models.' : 'It is best used with online providers (a "preset" hub).'}
-      Suggestions: list v${escHtml(String(g.suggestions.version))}, ${escHtml(g.suggestions.source)}, ${escHtml(g.suggestions.updated)}.</span></div>
+      Suggestions: list v${escHtml(String(g.suggestions.version))}, ${escHtml(g.suggestions.source)}, ${escHtml(g.suggestions.updated)}.</span>
+      ${g.have?.chat ? `<br><span style="color:var(--green)">✓ DOCA has a model: ${escHtml(g.have.chat.model)} on ${escHtml(g.have.chat.provider)}, and it answers.</span>` : ''}</div>
     <div class="guided-q"><div class="guided-q-title">1. What do you want DOCA for?</div>
       ${g.uses.map(u => box('guided-use', u.id, u.label, uses.has(u.id))).join('')}
       <textarea id="guided-free" class="input guided-free" rows="2" placeholder="Anything else, in your own words (optional)">${escHtml(a.free || '')}</textarea></div>
@@ -42,7 +46,7 @@ async function guidedLoad() {
     </div>
     ${g.mode === 'advanced' ? '<p class="guided-muted">This hub was set up by hand (advanced). Nothing here changes that: it only adds what you choose.</p>' : ''}
   </div><div id="guided-plan"></div>`;
-  if (g.answers) guidedPreview();
+  if (g.answers || g.have?.chat) guidedPreview();
 }
 
 function guidedAnswers() {

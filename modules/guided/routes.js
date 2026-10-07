@@ -13,10 +13,24 @@ const machine = require('./assess');   // called through the module, so a test c
 const suggestions = require('./suggestions');
 const plan = require('./plan');
 
+/**
+ * What is already set up: the agent's model, when one is configured and answers (any provider — a hosted one, or an
+ * OpenAI-compatible server the person runs and added by address). Through the harness's own status, so Set-up and
+ * the chat cannot disagree about whether DOCA has a model.
+ */
+async function have() {
+  try {
+    const agent = require('../harness/agent');
+    if (!agent.params().model) return {};   // nothing chosen: nothing to ask
+    const s = await agent.status();
+    return s.ready && s.reachable ? { chat: { provider: s.provider, model: s.model } } : {};
+  } catch { return {}; }
+}
+
 const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
 
 async function overview() {
-  const a = await machine.assess();
+  const [a, got] = await Promise.all([machine.assess(), have()]);
   const doc = suggestions.load();
   const { pickAll, shapeOf } = require('./pick');
   return {
@@ -27,6 +41,7 @@ async function overview() {
     uses: Object.entries(plan.USES).map(([id, u]) => ({ id, label: u.label })),
     devices: Object.entries(plan.DEVICES).map(([id, d]) => ({ id, label: d.label })),
     answers: plan.get(),
+    have: got,
     suggestions: suggestions.about(),
   };
 }
@@ -39,9 +54,9 @@ function mount(app) {
     if (!['guided', 'advanced'].includes(mode)) throw Object.assign(new Error('mode is guided or advanced'), { status: 400 });
     return plan.setSetup({ mode });
   }));
-  app.post('/api/guided/plan', h(async req => plan.plan(req.body?.answers || {}, await machine.assess(), suggestions.load())));
+  app.post('/api/guided/plan', h(async req => plan.plan(req.body?.answers || {}, await machine.assess(), suggestions.load(), { have: await have() })));
   app.post('/api/guided/apply', h(async req => plan.apply(req.body?.answers || {}, await machine.assess(), suggestions.load(),
-    { by: req.auth?.user?.id || null })));
+    { by: req.auth?.user?.id || null, have: await have() })));
 }
 
-module.exports = { mount, overview };
+module.exports = { mount, overview, have };

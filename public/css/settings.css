@@ -62,3 +62,6 @@
 .mcp-busy { opacity: .7; cursor: progress; }
 .mcp-flash { animation: mcp-flash 1.6s ease-out; }
 @keyframes mcp-flash { 0% { box-shadow: 0 0 0 2px var(--accent); } 100% { box-shadow: 0 0 0 2px transparent; } }
+
+/* Under the harness ⚙'s model dropdown when its provider did not answer (js/harness/params.js) */
+.hcfg-model-hint { flex-basis: 100%; font-size: 11px; color: var(--amber); margin-top: 4px; white-space: normal; }

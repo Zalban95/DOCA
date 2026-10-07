@@ -209,9 +209,20 @@ async function _harnessLoadModels(id, provider, selected, scope) {
     if (!sel.isConnected) return;            // the rung was removed while we waited
     sel.innerHTML = `<option value="">${data.models?.length ? '— pick a model —' : (data.error ? 'unreachable' : 'none found')}</option>${opts.join('')}`;
     if (data.error) sel.title = data.error;
+    _harnessModelHint(sel, provider, data.models?.length ? null : data.error);
   } catch (e) {
     if (sel.isConnected) sel.innerHTML = `<option value="">${escHtml(e.message)}</option>`;
   }
+}
+
+/** Under a dropdown its provider could not fill: what to check, and a way to its row (self-test 2026-10-08). */
+function _harnessModelHint(sel, provider, error) {
+  const row = sel.parentElement;
+  let hint = row.querySelector(':scope > .hcfg-model-hint');
+  if (!error) { hint?.remove(); return; }
+  if (!hint) { hint = Object.assign(document.createElement('div'), { className: 'hcfg-model-hint' }); row.style.flexWrap = 'wrap'; row.append(hint); }   // a line of its own under the row
+  hint.innerHTML = `${escHtml(provider)} did not answer (${escHtml(error)}). Check its address and that its server is running.
+    <a href="#" onclick="keysShowProvider(${jsArg(provider)});return false">Its row in Field → API keys</a>`;
 }
 
 /**

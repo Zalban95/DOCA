@@ -56,15 +56,17 @@ function rolesFor(a) {
 /**
  * What the answers set up on this machine. `askRoute` is true only when it is a real choice: something fits here.
  * Steps, in order: the runtimes a local pick needs (a System tools row), the picks themselves, then the keys.
+ * `have.chat` is the agent's model when one is configured and answers — any provider, a hosted one or a server the
+ * person runs (self-test 2026-10-08: Set-up said "no model" with one connected): then the agent's role is done.
  */
-function plan(answers, assessment, doc) {
+function plan(answers, assessment, doc, { have = {} } = {}) {
   const { pickAll, shapeOf } = require('./pick');
   const a = clean(answers);
   const shape = shapeOf(assessment, doc);
-  const picks = pickAll(assessment, doc, rolesFor(a));
+  const picks = pickAll(assessment, doc, rolesFor(a)).filter(p => !(p.role === 'chat' && have.chat));
   const askRoute = picks.some(p => p.local);
   const useLocal = askRoute && a.route === 'local';
-  const steps = [];
+  const steps = have.chat ? [{ type: 'have', role: 'chat', label: 'The agent\'s model', provider: have.chat.provider, model: have.chat.model }] : [];
   const local = useLocal ? picks.filter(p => p.local) : [];
   // Speech has no hosted route yet, so it stays local even when the person prefers providers for the rest.
   if (!useLocal) for (const p of picks) if (p.local && !p.providers.length) local.push(p);
@@ -79,15 +81,15 @@ function plan(answers, assessment, doc) {
     steps.push({ type: 'key', role: p.role, label: p.label, providers: p.providers, note: p.providersNote,
       why: p.local ? 'you chose providers' : p.tooBig ? `too heavy for this machine: ${p.tooBig.label} ${p.tooBig.why}` : 'nothing suggested runs here' });
   }
-  return { answers: a, shape, askRoute, picks, steps, devices: a.devices.map(d => ({ id: d, ...DEVICES[d] })) };
+  return { answers: a, shape, askRoute, picks, steps, have, devices: a.devices.map(d => ({ id: d, ...DEVICES[d] })) };
 }
 
 /**
  * Keep the answers and put each install in front of the person as a proposal (one click each, from this page or
  * the Harness tray). Re-running proposes nothing twice: installs.propose returns a pending one it already has.
  */
-function apply(answers, assessment, doc, { by = null } = {}) {
-  const out = plan(answers, assessment, doc);
+function apply(answers, assessment, doc, { by = null, have = {} } = {}) {
+  const out = plan(answers, assessment, doc, { have });
   const installs = require('../harness/installs');
   for (const s of out.steps.filter(x => x.type === 'install')) {
     try { s.proposal = installs.propose({ kind: s.kind, id: s.id, reason: `Guided set-up: ${s.why}` }); }
