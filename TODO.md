@@ -555,7 +555,7 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] H10.9 The agents' work, live (asked 2026-10-06). **Done (2.229.0):** the Workstream — files edited popping up with
   their diffs, by a sentinel that runs while the page is open; thinking and commands lower right. **Done (2.230.0):** Machines → Live — the agents' computers'
   screens and the pages they serve for tests, pictured by the hub's headless browser, the working ones in front.
-- [ ] H10.10 The home in DOCA's own layout (asked 2026-10-06: "does Home Assistant let us use our layout, or do we build
+- [x] H10.10 The home in DOCA's own layout (asked 2026-10-06: "does Home Assistant let us use our layout, or do we build
   from scratch?"). Neither: Home Assistant stays the device layer (thousands of brands, its areas, scenes and
   automations), and DOCA draws its own **Home** page from HA's WebSocket API — `get_states`, `subscribe_events` for live
   changes, `call_service` to act — with the HA token as a key for services (`homeassistant`, header). Areas as cards in
@@ -564,6 +564,14 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   Devices in Google Home or Alexa come in through HA (Matter sharing, brand integrations, Nest via Device Access —
   skills/smart-home). Later, DocaMobile could lend Google's **Home APIs** (Android, the person's explicit permission)
   as a device family, for homes that keep Google Home as their hub; Alexa has no equivalent control API.
+  **Done (2.301.0):** Controls → Home (`/?view=home`): `modules/home` keeps one WebSocket to HA
+  per hub (the key `home-assistant`, server-side only; open while a Home page holds it, closed a minute after),
+  states cached, `state_changed` pushed on the live feed (`home`) as the entity's tile; areas from HA's registries, a
+  tile per light, switch, fan, cover, climate, lock, player, alarm, scene, sensor and camera (a still proxied by the
+  hub). Acting is a short allowlist (`home/actions.js`); unlock and disarm ask for the password (guarded.js). Members
+  see and use the home (a viewer does not; a script is an admin's); a level narrows it with the resource kind `home` (allot.js, grants
+  `use:home:<entity>`). No agent tool — the HA MCP server acts. Left: the `/api/v1` home for the apps (gap `home`),
+  and DocaMobile lending Google's Home APIs.
 - [x] H10.12 The ambient screen — a screen that behaves like a Google Nest (asked 2026-10-06). **Closed 2026-10-07:** the device bridge and the screen saver came with DocaMobile 1.0.7, the device's tools over its own socket with 1.1.0. **Done (2.237.0):**
   Controls → Ambient (`/?view=ambient`): the time, the weather and five days (Open-Meteo, no key — the screen's
   `ambient.place`), the day's plan from Google or Microsoft 365 when connected, what needs you (questions, proposals,

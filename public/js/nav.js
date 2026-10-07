@@ -2,7 +2,7 @@
    DOCA PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','ambient','logs','files','projects','harness','workstream','archive','chronicle','computers','live','terminal','models','docker','vms','mcp','connectors','apikeys','settings'];
+const NAV_TABS = ['controls','home','ambient','logs','files','projects','harness','workstream','archive','chronicle','computers','live','terminal','models','docker','vms','mcp','connectors','apikeys','settings'];
 /** Tabs that are the machine itself: left out for a person without host (settings.js). */
 const HOST_TABS = ['logs', 'files', 'projects', 'terminal', 'computers'];
 
@@ -40,6 +40,7 @@ function nav(name) {
   computersTab(on('computers'));
   if (typeof workstreamTab === 'function') workstreamTab(on('workstream'));   // holds the hub's sentinel while shown
   if (typeof chronicleTab === 'function') chronicleTab(on('chronicle'));   // hears turns and missions only while shown
+  if (typeof homeTab === 'function') homeTab(on('home'));   // holds the hub's connection to Home Assistant while shown
   if (typeof ambientTab === 'function') ambientTab(on('ambient'));
   if (on('models') && typeof wakewordTab === 'function') wakewordTab();
   if (on('models') && typeof modelsRolesCard === 'function') modelsRolesCard();

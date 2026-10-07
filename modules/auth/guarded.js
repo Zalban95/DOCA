@@ -98,6 +98,8 @@ const ROUTES = [
   // Spending (S12): budgets, permissions and their acceptance; declining a proposal never asks — saying no is free.
   [W, /^\/api\/spending\/(?!permissions\/[^/]+\/decline$).+$/, 'spending: budgets and permissions'],
   [['POST'], /^\/api\/harness\/usage\/prices$/, 'the prices money budgets are counted in', () => moneyBudgets()],
+  // Opening the house from the Home page: a lock's unlock, an alarm's disarm (home/actions.js).
+  [['POST'], /^\/api\/home\/call$/, 'unlocking a door or disarming an alarm', req => require('../home/actions').guardedCall(req.body)],
   [['POST'], /^\/api\/prefs$/, null, req => prefsBody(req.body)],
   [['POST'], /^\/api\/harness\/proposals\/[^/]+\/apply$/, null, req => proposal(req.path.split('/')[4])],
 ];
