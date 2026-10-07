@@ -3,7 +3,7 @@
 /**
  * Keys for services (asked 2026-10-06: "if I asked the chat to set up … and I just have to paste the API"). An API
  * that takes a key — a 3D generator, a home server, any REST service — is set up by pasting its key once, tied to the
- * service's own address: the agent calls it with `http_fetch {url, key: "<name>"}` and the hub adds the key to that
+ * service's own address: the agent calls it with `api_call {url, key: "<name>"}` and the hub adds the key to that
  * request only when the address is the key's own origin (a look-alike gets nothing), as a header (`Authorization:
  * Bearer …` by default, or any header and prefix), a query parameter, or — for a service that trades an id and a secret
  * for a short-lived token (hi3d.ai, many "client credentials" APIs) — `exchange`: the hub posts the id and secret to the
@@ -72,7 +72,7 @@ async function token(k, { fresh = false } = {}) {
 }
 
 /**
- * The request `http_fetch` makes with a named key: the URL and headers it carries, or an error to give the agent.
+ * The request `api_call` makes with a named key: the URL and headers it carries, or an error to give the agent.
  * `host`: whether the person the turn acts for holds host (no person on the turn counts as host, as elsewhere).
  */
 function apply(name, url, headers, { host = true } = {}) {

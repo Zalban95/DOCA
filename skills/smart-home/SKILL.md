@@ -60,6 +60,6 @@ Ask which app the device is in, look for Matter first, and walk the person throu
 - **MQTT** (Zigbee2MQTT, Tasmota, ESPHome, Shelly): with a broker on the network, `mosquitto_pub -h <broker> -t
   <topic> -m <payload>` through `shell` (System tools has `mosquitto-clients` on most Linux), reading the device's
   documented topic first. Propose installing Home Assistant when there are more than a few devices.
-- **A device with its own HTTP API** (a Shelly, a Hue bridge): `http_fetch` on the person's own network, after reading
+- **A device with its own HTTP API** (a Shelly, a Hue bridge): `api_call` on the person's own network, after reading
   its documentation with `research_docs`.
 - Never scan the network for devices without the person asking.

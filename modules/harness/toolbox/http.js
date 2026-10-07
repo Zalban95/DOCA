@@ -60,4 +60,21 @@ async function request({ url, method, body, headers, key, form, files, save_as }
       return clip(secret || token ? keys.scrub(out, secret, token) : out);
 }
 
-module.exports = { request, fileOf };
+/**
+ * Whether an address is the owner's own: this machine (loopback), the local network (private IPv4 ranges, fc00::/7,
+ * .local), the tailnet (100.64.0.0/10, .ts.net) or one of this hub's own names. api_call reaches these without a key;
+ * anything else needs a stored key for its origin (TODO A2, CONSTITUTION V4 and S6).
+ */
+function owned(url) {
+  let u;
+  try { u = new URL(url); } catch { return false; }
+  const h = u.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (h === 'localhost' || h === '::1' || /^127\./.test(h)) return true;
+  if (/^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h) || /^169\.254\./.test(h)) return true;
+  const m = /^100\.(\d+)\./.exec(h); if (m && Number(m[1]) >= 64 && Number(m[1]) <= 127) return true;   // the tailnet's CGNAT range
+  if (/^f[cd][0-9a-f]{2}:/.test(h) || h.endsWith('.local') || h.endsWith('.ts.net') || h.endsWith('.lan') || h.endsWith('.home.arpa')) return true;
+  try { if (h === require('os').hostname().toLowerCase()) return true; } catch { /* no name */ }
+  return false;
+}
+
+module.exports = { request, fileOf, owned };
