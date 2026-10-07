@@ -65,14 +65,17 @@ async function guidedPreview() {
   catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
 
-async function guidedApply() {
+async function guidedApply(btn) {
   const st = document.getElementById('guided-status');
-  setStatus(st, 'setting up…', '');
+  setStatus(st, 'setting up…', 'info');
+  if (btn) btn.disabled = true;
   try {
     const plan = await apiFetch('/api/guided/apply', { method: 'POST', body: { answers: guidedAnswers() } });
     guidedPlanRender(plan, true);
-    setStatus(st, '✓ Kept your answers. Below: what waits for your click or your key.', 'ok');
+    if (plan.changed === false) setStatus(st, 'Nothing changed — your set-up is as before. Below: what still waits for your click or your key.', 'info', { clear: 8000 });
+    else setStatus(st, '✓ Kept your answers. Below: what waits for your click or your key.', 'ok', { clear: 8000 });
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+  finally { if (btn) btn.disabled = false; }
 }
 
 /** The same request as a conversation: the agent follows the guided-setup skill. */

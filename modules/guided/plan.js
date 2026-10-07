@@ -91,11 +91,16 @@ function plan(answers, assessment, doc, { have = {} } = {}) {
 function apply(answers, assessment, doc, { by = null, have = {} } = {}) {
   const out = plan(answers, assessment, doc, { have });
   const installs = require('../harness/installs');
+  const at = new Date().toISOString(), prev = get();
+  let fresh = 0;
   for (const s of out.steps.filter(x => x.type === 'install')) {
-    try { s.proposal = installs.propose({ kind: s.kind, id: s.id, reason: `Guided set-up: ${s.why}` }); }
+    try { s.proposal = installs.propose({ kind: s.kind, id: s.id, reason: `Guided set-up: ${s.why}` }); if (s.proposal.createdAt >= at) fresh++; }
     catch (e) { s.error = e.message; }
   }
-  store.writeJson(DOC, { ...out.answers, at: new Date().toISOString(), by });
+  // The same answers again, and nothing new to propose: nothing changed, and the page says so (self-test 2026-10-08).
+  const same = !!prev && JSON.stringify(clean(prev)) === JSON.stringify(out.answers);
+  out.changed = !same || fresh > 0;
+  store.writeJson(DOC, { ...out.answers, at, by });
   setSetup({ mode: 'guided', shape: out.shape });
   return out;
 }

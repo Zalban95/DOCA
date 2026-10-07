@@ -109,6 +109,9 @@ test('the answers path: offered once, kept as data, installs proposed not run, t
   for (const s of r.body.steps.filter(x => x.type === 'install' && !x.error))
     assert.ok(pending.some(p => p.id === s.proposal.id), `${s.id} waits for a click`);
   assert.ok(require('../modules/harness/settings').refuse('setup.mode', 'guided'), 'never proposable');
+  assert.equal(r.body.changed, true, 'the first time changes something');
+  const again = await H.api(null, 'POST', '/api/guided/apply', { answers: { uses: ['talk', 'find'], route: 'local', devices: ['phone'], free: 'my recipes' } });
+  assert.equal(again.body.changed, false, 'the same answers again: nothing changed, and the page says so');
 
   const member = await H.signIn('member');
   assert.equal((await H.api(null, 'GET', '/api/guided', undefined, { Cookie: member.cookie })).status, 403, 'the owner\'s set-up');
