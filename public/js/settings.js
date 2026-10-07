@@ -42,6 +42,7 @@ function _subtabSystemInit() {
   pathsLoad();
   sysdepsLoad();
   checkpointsRender();   // settings checkpoints (settings/checkpoints.js)
+  logKeepCard();         // what is kept of what happened, and its bounds (settings/log-keep.js)
 }
 
 async function _subtabVoiceInit() {

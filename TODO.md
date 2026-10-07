@@ -92,7 +92,7 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [ ] P1.11 **Important and safety switches ask for the password (S14)**: approval modes, developer mode, sharing,
   spending, reach and levels, guards, experiments — the panel asks for the password again before the change, however
   recent the sign-in; the route checks it too.
-- [ ] P1.12 **Log settings**: what is kept, for how long and how much (per source: turns, tools, traces, devices,
+- [x] P1.12 **Log settings** — *(branch p1-12-chronicle, version at release): `modules/log-keep.js` lists every store of what happened with its bounds and what it holds (Settings → System → Logs); `logs.*` (harness, Workstream and MCP lines in memory, runs' days, background jobs, evaluation results) and `tracing.maxSpans` declared, not proposable, enforced at start, daily and on save; checkpoints, migration copies and device queues shown as fixed.*: what is kept, for how long and how much (per source: turns, tools, traces, devices,
   services), so logs never fill memory or disk needlessly; defaults sized for a small machine.
 - [ ] P1.13 **Chronicle — the log analyzer tab**: everything that happened, searchable and filtered by source,
   person, device, agent and time, with the story of a piece of work told from its logs and traces (what ran, why,

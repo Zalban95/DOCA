@@ -99,10 +99,18 @@ function spans(runId) {
   } catch { return []; }
 }
 
-/** Older than `tracing.retainDays`: gone. */
+/** Older than `tracing.retainDays`, and past `tracing.maxSpans` the oldest: gone. Returns how many rows went. */
 function prune() {
-  const days = schema().value('tracing.retainDays');
-  try { raw()?.prepare("DELETE FROM trace_spans WHERE tenant_id = 'local' AND at < ?").run(new Date(Date.now() - days * 86400000).toISOString()); } catch { /* next time */ }
+  const days = schema().value('tracing.retainDays'), max = schema().value('tracing.maxSpans');
+  let n = 0;
+  try {
+    const r = raw();
+    if (!r) return 0;
+    n += Number(r.prepare("DELETE FROM trace_spans WHERE tenant_id = 'local' AND at < ?").run(new Date(Date.now() - days * 86400000).toISOString()).changes || 0);
+    const over = Number(r.prepare("SELECT COUNT(*) AS n FROM trace_spans WHERE tenant_id = 'local'").get().n) - max;
+    if (over > 0) n += Number(r.prepare("DELETE FROM trace_spans WHERE rowid IN (SELECT rowid FROM trace_spans WHERE tenant_id = 'local' ORDER BY at, run_id, seq LIMIT ?)").run(over).changes || 0);
+  } catch { /* next time */ }
+  return n;
 }
 
 module.exports = { start, finish, spans, prune, fingerprint, onEvent };
