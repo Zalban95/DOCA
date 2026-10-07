@@ -102,6 +102,8 @@ const PERSON = [
   { id: 'device-files', does: 'browse and change a device\'s files', panel: ['POST /api/devices/:id/files/*'],
     only: 'the panel reaching into a device through the files family it lends; the device has its own files' },
   { id: 'sealed-use', does: 'use a sealed secret on a device', panel: [], v1: ['GET /mcp/self/seal'], note: 'keeping one is the owner\'s, at the panel (capability-map-host.js)' },
+  { id: 'sealed-own', does: 'keep or forget a secret of my own for my devices', panel: ['POST /api/connectors/sealed/mine', 'DELETE /api/connectors/sealed/mine/:name'],
+    only: 'a secret is typed in only where the password is asked again (CONSTITUTION S4, S14) — the panel, or a device opening /d/<id>/; never sent to a device to keep' },
   { id: 'channel-link', does: 'link or unlink a chat app (Telegram, Matrix, Slack, mail)', panel: ['POST /api/channels/:name/link', 'DELETE /api/channels/:name/chats/:chat'],
     gap: 15, why: 'the link code is made once; a linked chat is itself a device' },
 

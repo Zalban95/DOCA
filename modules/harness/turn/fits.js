@@ -38,7 +38,7 @@ function likely(message, held) {
 }
 
 /** "# What you have": keys for services, logins and secrets for devices by name (never a secret), and how many recipes are saved. */
-function inventory(held) {
+function inventory(held, person = null) {
   const out = [];
   if (held.has('api_call') || held.has('http_fetch')) {
     try { const l = require('../../service-keys').line().trim(); if (l) out.push(`- ${l}`); } catch { /* none */ }
@@ -51,8 +51,14 @@ function inventory(held) {
   }
   if (held.has('secret_use')) {
     try {
-      const ss = require('../../sealed/vault').namesSync();
-      out.push(`- Secrets for secret_use (by name; their values are never shown): ${ss.length ? ss.map(x => `${x.name}${x.origin ? ` (${x.origin})` : ''}`).join(', ') : 'none of its own yet'}; also login:<name> and key:<name>.`);
+      // Whose turn it is decides which: the hub's on an admin's turn (and their own), a person's own on theirs (P1.3).
+      const vault = require('../../sealed/vault');
+      const host = !person?.id || require('../../auth/rights').can(person.role, 'host');
+      const own = person?.id && !person.onBehalf ? vault.namesSync(person.id) : [];
+      const ss = [...(host ? vault.namesSync('') : []), ...own];
+      const names = ss.length ? ss.map(x => `${x.name}${x.origin ? ` (${x.origin})` : ''}`).join(', ') : 'none of its own yet';
+      out.push(host ? `- Secrets for secret_use (by name; their values are never shown): ${names}; also login:<name> and key:<name>.`
+        : `- ${person.name || 'Your person'}'s own secrets for secret_use, on their own devices (by name; their values are never shown): ${names}.`);
     } catch { /* none */ }
   }
   if (held.has('recipe')) {
@@ -73,9 +79,9 @@ function keepHint(rows, held) {
 }
 
 /** The four, for one step — with the steps of a skill this turn read (skill-steps.js). */
-function block({ message, schemas = [], rows = [] }) {
+function block({ message, schemas = [], rows = [], person = null }) {
   const held = new Set(schemas.map(s => s.function?.name || s.name));
-  return [likely(message, held), inventory(held), require('./skill-steps').block(rows), keepHint(rows, held)].filter(Boolean).join('\n');
+  return [likely(message, held), inventory(held, person), require('./skill-steps').block(rows), keepHint(rows, held)].filter(Boolean).join('\n');
 }
 
 module.exports = { block, likely, inventory, keepHint };

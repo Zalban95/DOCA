@@ -6,9 +6,10 @@
  * and the device; it never receives the value, only what happened ("filled", "on the clipboard for 1 paste or 30 s").
  *
  *   the ask      always a person's (forced-asks.js), every approval mode, never "always"; a mission cannot hold it
- *   the secret   one of the secrets for devices (sealed/vault.js), `login:<name>` (a login's password) or `key:<name>`
- *                (a key for services) — the hub's, so used on a host's turn; a key for services is the hub's to send
- *                (api_call), so it is never handed out to anyone else, whoever it was opened to
+ *   the secret   one of the hub's secrets for devices (sealed/vault.js), `login:<name>` (a login's password) or
+ *                `key:<name>` (a key for services) — the hub's, so used on a host's turn; a key for services is the hub's
+ *                to send (api_call), so it is never handed out to anyone else, whoever it was opened to. Or one of the
+ *                person's own secrets (TODO P1.3), used only on their own turn — never by anyone else, an admin included
  *   the device   the turn's person's own paired device, whose MCP server is running here; never someone else's
  *   the way      sealed for that device alone (sealed/seal.js) and given to its hidden `secret_fill`: a web page's
  *                field only on the secret's own site (the device checks the tab), else typed into what has focus or
@@ -25,7 +26,7 @@ const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
 const clamp = (n, lo, hi, d) => (Number.isFinite(Number(n)) && n !== null && n !== '' ? Math.min(hi, Math.max(lo, Math.round(Number(n)))) : d);
 
 /** Where the secret comes from, by what the agent wrote: { label, origin, value } or an error naming what exists. */
-async function sourceOf(ref, { host }) {
+async function sourceOf(ref, { host, person = null }) {
   const s = String(ref || '').trim();
   if (/^login:/i.test(s)) {
     if (!host) throw bad('Logins are an admin\'s: used on the turn of someone who holds host.', 403);
@@ -41,10 +42,16 @@ async function sourceOf(ref, { host }) {
     if (!host) throw bad(`The key "${k.label}" is the hub's to use (api_call), never handed to a device: only on an admin's turn, and only into its own site's field.`, 403);
     return { label: `key:${k.label}`, origin: k.origin, value: k.value };
   }
-  if (!host) throw bad('The secrets for devices are an admin\'s: used on the turn of someone who holds host.', 403);
-  const v = await vault.reveal(s);
-  if (!v) throw bad(`No secret "${s}". Secrets for devices: ${(await vault.list()).map(x => x.name).join(', ') || 'none yet'} — an admin adds one in Field → Connectors; `
-    + 'a login\'s password is login:<name>, a key for services key:<name>.', 404);
+  // A person's own secrets are theirs: used only on a turn that is theirs — not work done on their behalf, which they are
+  // not watching — and never on anyone else's, an admin's included (an admin's turn reaches the hub's, then their own).
+  const own = person?.id && !person.onBehalf ? person.id : null;
+  if (!host && !own) throw bad('Secrets for devices are used on the turn of the person they belong to: the hub\'s on an admin\'s turn, a person\'s own on theirs.', 403);
+  const v = (host ? await vault.reveal(s, '') : null) || (own ? await vault.reveal(s, own) : null);
+  if (!v) {
+    const names = [...(host ? await vault.list('') : []), ...(own ? await vault.list(own) : [])].map(x => x.name);
+    throw bad(`No secret "${s}". ${host ? 'Secrets for devices' : 'Your secrets for your devices'}: ${[...new Set(names)].join(', ') || 'none yet'} — `
+      + `${host ? 'an admin adds one' : 'the person adds their own'} in Field → Connectors${host ? '; a login\'s password is login:<name>, a key for services key:<name>' : ''}.`, 404);
+  }
   return v;
 }
 
@@ -81,7 +88,7 @@ async function use(a = {}, ctx = {}) {
   const person = ctx.user?.id ? ctx.user : null;
   const host = !person || require('../auth/rights').can(person.role, 'host');
   const d = deviceOf(a.device, person, host);
-  const src = await sourceOf(a.secret, { host });
+  const src = await sourceOf(a.secret, { host, person });
   const how = a.ref !== undefined && a.ref !== null ? 'field' : a.mode === 'type' ? 'type' : 'clipboard';
   if (how === 'field' && !src.origin) throw bad(`"${src.label}" has no site, and a secret is filled into a web page only on its own site: give it one in Field → Connectors.`);
   // A secret with a site goes only into that site's field: typed or pasted, any window (or a look-alike page) could take it.

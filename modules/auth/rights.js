@@ -137,6 +137,11 @@ const TABLE = [
   R('POST', '/api/channels/matrix', 'host'),                 // the homeserver, the bot's token and switch
   R(ANY, '/api/channels/matrix(/.*)?', 'chat'),               // a link code, and one's own linked rooms (channels/matrix/routes.js)
   R(ANY, '/api/evals(/.*)?', 'host'),
+  // A person's own secrets for their own devices: theirs alone (sealed/routes.js). Method by method, so a DELETE of
+  // ".../sealed/mine" (the hub's route for a secret named "mine") still needs host.
+  R(GET, '/api/connectors/sealed/mine', 'chat'),
+  R('POST', '/api/connectors/sealed/mine', 'chat'),
+  R('DELETE', '/api/connectors/sealed/mine/[^/]+', 'chat'),
   R(ANY, '/api/connectors(/.*)?', 'host'),                    // the keys to the owner's accounts (connectors/routes.js)                         // evaluation sets: a run spends tokens, results hold answers (evals/routes.js)
   R(GET, '/api/clients/browser.zip', 'read'),
   R(GET, '/api/clients/apps/[a-z]+/apk/[A-Za-z0-9_-]{32}', 'public'),   // a 10-minute download link: its token is the permission (client-apps/routes.js)
