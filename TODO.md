@@ -30,6 +30,53 @@ for these requirements, not a change to the product.
 
 Finished sections moved to docs/history/TODO-done.md on 2026-10-07 (C7b): Compaction folds earlier turns only, and that is deliberate, Settings consistency, Errors that surface as the wrong thing.
 
+## URGENT — set 2026-10-07 (the premise first; then everything still open)
+
+**The premise is above the constitution** (CONSTITUTION §0, 2026-10-07): DOCA is a product, not anyone's personal
+setup — a person's choices live in their install's settings, never in the code, defaults, shipped skills or pages.
+Anyone can ask for anything and it is done safely: their way when they say how; otherwise the proven way (recipe,
+skill, specialist, the harness's suggestion); otherwise find the best way, make it reliable, save it — and offer it to
+the project's managers only if the owner allows sharing specialists and skills (asked at installation, and a setting).
+
+### P0 — the premise in the product
+- [~] P0.1 **No personal choices in the project** — *2.270.0: the constitution's rules name "the project's admin";
+  one installation's machine notes moved to the gitignored `AGENTS.local.md`; the UI's personal placeholders, the
+  shipped `reach-another-machine` skill's `portal/` branch names and examples made generic; `developer.releaseUnasked`
+  defaults to none (an existing install keeps its list by migration).* Left: (a) the face's default palette is one
+  brand's (protolab.tech) — the product's own default, that palette as an owner's/edition's `face.spec` (with wave E);
+  (b) the repository the update check and installers use (`modules/update.js` REPO, `scripts/install.*`) from a
+  setting or the edition, the project's as default; (c) a test that fails on owner-specific strings (paths, hosts,
+  accounts) in shipped code, skills and defaults, with a short allowlist for identifiers (package ids) and attribution
+  in comments; (d) review every declared default in `settings-schema.js` and the catalogues for one person's choice.
+- [ ] P0.2 **The premise's order in the agents' own words**: the charter and the Orchestrator's routing table say
+  it as one ladder — the person's stated way → the proven way here (recipe, skill, specialist, the harness's
+  suggestion) → find, make reliable, save (recipe, skill or specialist, offered when a novel task worked) — and the
+  routing evals hold it (a case per rung).
+- [ ] P0.3 **Sharing what was learned, only if the owner allows**: `sharing.contribute` (off by default, never
+  proposable), asked once at installation (`scripts/install.*`, first-run setup) and in Settings; when on, skills,
+  recipes and specialists the agents made and that worked wait in a "To share" list the owner reviews, and are sent
+  as a pack (secrets stripped, as packs already do) to the project's managers (`sharing.upstream`, the project's own
+  registry hub by default, through the existing hub-to-hub `packs` route). Nothing leaves without the owner's click.
+- [ ] P0.4 **"Anyone, zero knowledge"**: a first conversation with no setup reaches a working answer (no model → the
+  panel says how in one step; a request DOCA cannot yet do → it says what it would need, then does it when given).
+  Measured as an eval set of plain-language requests from someone who knows nothing about DOCA.
+
+### Everything still open, now urgent
+- A2 rest: the rendered "Reaching outside" block; quarantining the open web with specialists off.
+- B6b rest: `screen {list | show | propose}`; retire `models-llamacpp-external.js` for model-servers.js; per feature,
+  tool / recipe / a person's alone (wake-word training, evals, Workstream, served pages, logs, traces).
+- B7c (2): a skill read and then not followed (the Android case) — the skill's steps as a checklist the turn reports
+  against, or a recipe it names.
+- C7b: done; D2b rest: API coverage by capability, not path prefix.
+- D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),
+  `mcp.listener stop`, `confirmPromptChoice`'s body (§12.6 `{selectionId, decision}`), the native wake word, the
+  watch's line in Settings → Updates; DocaWear: the LAN port; DocaDesk: the socket transport, `prompt.outcome`.
+- Real-hardware checks: DocaMobile 1.0.16's answer buttons, DocaWear 1.2.5's QUEUED, the watch call and updater.
+- T1: `test/doca-client.test.js` under load (not reproduced with 4× parallel runs and 24 busy cores).
+- Wave E (E1–E4) with the owner's brief: themes (keep dark and light, the current look kept, bold alternatives as
+  themes), edit-ability features, the clients included — started by the owner's `/design`.
+- The hive backlog's open H-items below stay as written; they are urgent in this order after the above.
+
 ## Live — what is left (updated 2026-10-04)
 
 **Built 2026-10-04 (2.116.3 – 2.137.3)**, each with its note in its section: runTurn
