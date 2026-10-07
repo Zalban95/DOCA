@@ -64,6 +64,9 @@ function tool({ person, profile, missionId, sessionId, name, args }) {
   const granted = keys.every(k => grants.holds(subjects, `tool:${k}`));
   if (!levelAllows(L, name, keys) && !granted)
     return { allowed: false, ask: false, level: L.name, why: `${person.name || 'this person'}'s level, ${L.name}, does not allow ${keys.join(', ')}` };
+  // And its reach (reach.js, CONSTITUTION S2): how far into machines and devices this level goes; a grant allots past it.
+  const beyond = granted ? null : require('./reach').refuse(L, person, name);
+  if (beyond) return { allowed: false, ask: false, level: L.name, why: beyond };
   const ask = L.approval === 'ask' && !keys.every(k => grants.holds(subjects, `approve:${k}`));
   return { allowed: true, ask, level: L.name };
 }

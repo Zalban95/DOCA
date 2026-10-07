@@ -79,7 +79,7 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [ ] P1.6 **Spending with permission (S12)**: a Spending settings page (budgets, a linked payment method, standing
   permissions), managed by the agent with the person's permission; a permission can be made permanent; what may be
   allowed follows the level — its own safety design first.
-- [ ] P1.9 **Reach by level (S2)**: each level says how far agents may reach into its people's devices and machines,
+- [x] P1.9 **Reach by level (S2)** — *2.280.0: `auth/reach.js` rungs create · own-devices · anything; Member own-devices; a grant allots past it; the levels editor chooses it.*: each level says how far agents may reach into its people's devices and machines,
   a scale from "create safely with tools" to "anything"; the shipped levels get sensible rungs.
 - [ ] P1.10 **Resources allocated (S13)**: machines, devices, models, services, keys and budgets allocated to users
   by the admin, with grantable "may allot" for team leaders; a personal panel change follows its person to all
@@ -100,7 +100,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   `mcp.listener stop`, `confirmPromptChoice`'s body (§12.6 `{selectionId, decision}`), the native wake word, the
   watch's line in Settings → Updates; DocaWear: the LAN port; DocaDesk: the socket transport, `prompt.outcome`.
 - Real-hardware checks: DocaMobile 1.0.16's answer buttons, DocaWear 1.2.5's QUEUED, the watch call and updater.
-- T1: `test/doca-client.test.js` under load (not reproduced with 4× parallel runs and 24 busy cores).
+- T1: `test/doca-client.test.js` under load (not reproduced with 4× parallel runs and 24 busy cores); the machines screenshot test ("a picture of it") failed once on Windows CI for 2.279.0, passed on re-run — likely two headless browsers at once (page-check's test and machines' shots) on a slow runner.
 - Wave E (E1–E4) with the owner's brief: themes (keep dark and light, the current look kept, bold alternatives as
   themes), edit-ability features, the clients included — started by the owner's `/design`.
 - The hive backlog's open H-items below stay as written; they are urgent in this order after the above.
