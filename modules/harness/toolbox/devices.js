@@ -143,4 +143,27 @@ module.exports = [
       return `Sent${r.imageBytes ? ` with a ${Math.round(r.imageBytes / 1024)} KB picture` : ''} to:\n${rows}`;
     },
   },
+  {
+    // CONSTITUTION S4 (TODO P1.3): the hub hands the value to the device sealed for it; the agent only ever names it.
+    name: 'secret_use',
+    description: 'Type or paste a password, PIN or key on one of the person\'s own devices without ever seeing it: '
+      + 'the hub hands it to that device sealed, for one use (or a few pastes) and a short time, then the device forgets it. '
+      + 'With ref (and tab), the person\'s browser fills that field from browser_snapshot — only on the secret\'s own site; '
+      + 'without, a desktop puts it on its clipboard for `uses` pastes or `seconds` (mode "clipboard", the default) or types it into what has focus (mode "type"). '
+      + 'Always asked of the person. The secrets are listed under "What you have" in the readings.',
+    parameters: {
+      type: 'object',
+      properties: {
+        secret:  { type: 'string', description: 'The secret\'s name; a login\'s password is login:<name>, a key for services key:<name>.' },
+        device:  { type: 'string', description: 'The device\'s id or name (doca_clients lists them).' },
+        ref:     { type: 'number', description: 'In the person\'s browser: the [n] of the field from browser_snapshot.' },
+        tab:     { type: 'number', description: 'In the person\'s browser: the tab id (omitted: the tab in front).' },
+        mode:    { type: 'string', enum: ['clipboard', 'type'], description: 'On a desktop: clipboard (default) or type into what has focus.' },
+        uses:    { type: 'integer', description: 'Clipboard pastes before it is forgotten: 1 (default) to 10.' },
+        seconds: { type: 'integer', description: 'How long the device may keep it: 30 by default, 5 to 300.' },
+      },
+      required: ['secret', 'device'],
+    },
+    run: (a, ctx = {}) => require('../../sealed/use').use(a, ctx),
+  },
 ];

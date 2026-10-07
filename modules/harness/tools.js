@@ -40,6 +40,7 @@ const TOOLS = [
   ...require('./toolbox/recipes'),
   ...require('./toolbox/packs'),
   ...require('./toolbox/schedules'),
+  ...require('./toolbox/features'),
 ];
 
 
@@ -84,6 +85,9 @@ function schemas(disabled = []) {
  * @returns {Promise<string>}
  */
 async function call(name, args, disabled = [], ctx = {}) {
+  // Counted by the name called, so an old alias's use shows (features/review.js); built-in names only — a computer's
+  // or a server's tools would add keys for every computer ever made.
+  if (ALIASES[name] || TOOLS.some(t => t.name === name)) require('../features/usage').count(`tool:${name}`);
   name = ALIASES[name] || name;   // an old name: old transcripts and recipes still run
   if (disabled.includes(name)) return `Error: the "${name}" tool is switched off for this harness.`;
   if (ctx.signal?.aborted) return 'Not run: the turn was stopped before this call.';

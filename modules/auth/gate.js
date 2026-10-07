@@ -103,7 +103,22 @@ function gate(req, res, next) {
         error: 'This route applies a change and expects a click in the dashboard. Open the panel in a browser and do it there.' });
     // Every change, attributable. The body is not logged: it can hold passwords and keys.
     res.on('finish', () => authStore.audit({ orgId: who.orgId, actorId: who.user.id, action: `${method} ${p}`, status: res.statusCode }));
+    // An important or safety switch: the password, for this change, however recent the sign-in (guarded.js; S14).
+    const sw = require('./guarded').switchOf(req, p);
+    if (sw) return confirmSwitch(req, res, next, sw);
   }
+  next();
+}
+
+async function confirmSwitch(req, res, next, what) {
+  const password = req.get('x-doca-password');
+  if (!password)
+    return res.status(401).json({ code: 'password_required', switch: what,
+      error: `Changing ${what} asks for your password, every time.` });
+  try {
+    const bad = await require('./routes').confirmPassword(req, password);
+    if (bad) return res.status(bad.status).json({ code: bad.code, switch: what, error: bad.error });
+  } catch (e) { return res.status(500).json({ error: e.message }); }
   next();
 }
 

@@ -5,6 +5,7 @@
      env.tabs() → [{id, title, url, active}]   env.tab(id) → tab | null        env.allowed(url) → was this site allowed?
      env.open(url) → tab                       env.page(tabId, fn, ...args) → what page.js's fn returned
      env.screenshot(tabId) → base64 PNG         env.back(tabId)
+     env.unseal(sealed) → the opened payload     env.deviceId() → this browser's device id   (sealed secrets)
 
    Every tool that touches a page works only on a site the person allowed in the extension (the browser's own
    per-site permission); a tool that reads a page says so (openWorldHint), and the hub frames what it returns as other
@@ -86,6 +87,34 @@
     },
   };
 
+  /* A secret the hub sealed for this browser (PROTOCOL.md §22.3; TODO P1.3): the hidden tool secret_fill, which tools/list
+     never offers. env.unseal opens it with the key only this browser holds (background.js); here it is checked — for this
+     browser, recent, never used before — and filled into one field, only when the tab is on the secret's own site. The
+     answer says what was done, never the value. */
+  const seen = new Map();
+  function checkSealed(p, deviceId) {
+    if (!p || p.device !== deviceId) return 'This was sealed for another device: refused.';
+    if (!(Math.abs(Date.now() - Number(p.iat)) < 5 * 60e3)) return 'This sealed secret is too old (or this computer\'s clock is minutes off): refused.';
+    for (const [n, until] of seen) if (until < Date.now()) seen.delete(n);
+    if (seen.has(p.nonce)) return 'This sealed secret was already used: refused.';
+    seen.set(p.nonce, Date.now() + 10 * 60e3);
+    return p.how === 'field' ? null : 'This browser fills a field on a web page: the hub must name the field (ref).';
+  }
+  const HIDDEN = {
+    async secret_fill(env, a) {
+      let p;
+      try { p = await env.unseal(a.sealed); } catch (e) { return fail(e && e.message || 'This was not sealed for this browser: refused.'); }
+      const why = checkSealed(p, await env.deviceId());
+      if (why) return fail(why);
+      const { tab, error } = await tabFor(env, { tab: p.tab });
+      if (error) return fail(error);
+      if (origin(tab.url) !== p.origin) return fail(`The tab is on ${origin(tab.url)}, not ${p.origin}: a secret is filled only on its own site.`);
+      await env.page(tab.id, 'mark', `filling field [${p.ref}] — a person approved it`);
+      const r = await env.page(tab.id, 'fillSecret', p.ref, String(p.value == null ? '' : p.value));
+      return r && r.ok ? text(JSON.stringify({ done: 'field', uses: 1, seconds: 0 })) : fail(r ? r.error : 'The page did not answer.');
+    },
+  };
+
   /** One JSON-RPC message from the hub → the answer to send back, or null for a notification. */
   async function handle(env, msg, paused = false) {
     if (!msg || msg.id === undefined) return null;
@@ -96,8 +125,9 @@
     if (msg.method === 'tools/call') {
       const name = msg.params && msg.params.name, args = (msg.params && msg.params.arguments) || {};
       if (paused) return ok(fail('The person paused DOCA in this browser.'));
-      if (!RUN[name]) return ok(fail(`No tool ${name}.`));
-      try { return ok(await RUN[name](env, args)); } catch (e) { return ok(fail(e && e.message || String(e))); }
+      const fn = RUN[name] || HIDDEN[name];
+      if (!fn) return ok(fail(`No tool ${name}.`));
+      try { return ok(await fn(env, args)); } catch (e) { return ok(fail(e && e.message || String(e))); }
     }
     return { jsonrpc: '2.0', id: msg.id, error: { code: -32601, message: `${msg.method} is not supported` } };
   }

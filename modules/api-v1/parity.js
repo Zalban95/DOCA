@@ -25,6 +25,8 @@ function mount(harnessApi, router) {
     mine(req.device, m.sessionId || m.by);
     return { mission: require('../agents/missions').archive(m.id, { on: req.body?.on !== false }) };
   }));
+  // Its person opened a finished result — a mission, or a work chat by its id: read means done (harness/seen.js).
+  harnessApi.post('/missions/:id/seen', requireScope('harness:chat'), wrap(req => require('../harness/seen').mark(req.params.id, owner(req.device))));
   // A work chat a person stopped: carry on, or end it without waking anyone (harness/stopped-work.js).
   for (const verb of ['restart', 'drop'])
     harnessApi.post(`/work/:id/${verb}`, requireScope('harness:chat'), wrap(req => {
@@ -53,6 +55,7 @@ function openapi({ obj, str, bool, arr, body, json, std }) {
   return {
     '/harness/missions/{id}/stop': post('Harness', 'Stop a specialist\'s mission at its next step', 'harnessMissionStop', 'harness:chat', 'What sent it waits for its person instead of being woken with the result (PROTOCOL §23).'),
     '/harness/missions/{id}/archive': post('Harness', 'Put a finished mission away, or back', 'harnessMissionArchive', 'harness:chat', 'Body {on}: false brings it back. Devices hear it as agent.mission with archivedAt and quiet: take the row off, notify nothing.', { requestBody: body(obj({ on: bool() }), { required: false }) }),
+    '/harness/missions/{id}/seen': post('Harness', 'Its person opened this finished result: read means done', 'harnessMissionSeen', 'harness:chat', 'A mission, or a work chat by its conversation id. Every device hears agent.mission with seenAt and quiet: clear the notice. Running work and another person\'s are left as they are; answers {seen, kind}.'),
     '/harness/work/{id}/restart': post('Harness', 'Carry on with a work chat a person stopped', 'harnessWorkRestart', 'harness:chat', 'It resumes where it stood. Only a work chat whose job is stopped; otherwise it says what it is.'),
     '/harness/work/{id}/drop': post('Harness', 'End a work chat a person stopped, waking nobody', 'harnessWorkDrop', 'harness:chat', 'Its transcript stays; nothing more runs. Devices hear it quietly, as cancelled.'),
     '/harness/sessions/{id}/archive': post('Harness', 'Put a conversation away, or back (not deleted)', 'harnessSessionArchive', 'harness:sessions', 'Body {on}: false brings it back. Its missions go with it. DELETE /harness/sessions/{id} still deletes for good.', { requestBody: body(obj({ on: bool() }), { required: false }) }),

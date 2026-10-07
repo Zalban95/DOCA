@@ -4,7 +4,7 @@
  * Evaluation sets and their results (TODO H10.1). A set is JSON — `{ id, title, description, cases: [{ id, prompt,
  * mode?, checks: [...] }] }` (checks: check.js) — shipped in the repository's `evals/` (read-only, so a fresh install
  * has them) or written under DATA_DIR/evals/sets, where a file of the same id wins. Results are one JSON file per run
- * under DATA_DIR/evals/results/<set>/, the last 30 kept, so a run can be compared with the one before it.
+ * under DATA_DIR/evals/results/<set>/, the last `logs.evalResultsKept` (30) kept, so a run can be compared with the one before it.
  */
 const fs = require('fs');
 const path = require('path');
@@ -61,8 +61,23 @@ function saveResult(r, base = dir()) {
   fs.mkdirSync(d, { recursive: true });
   const file = path.join(d, `${r.startedAt.replace(/[:.]/g, '-')}.json`);
   fs.writeFileSync(file, JSON.stringify(r, null, 2));
-  for (const old of fs.readdirSync(d).sort().slice(0, -30)) fs.rmSync(path.join(d, old), { force: true });
+  keepLast(d);
   return file;
+}
+
+/** The newest `logs.evalResultsKept` of one set's results; the rest go. Returns how many went. */
+function keepLast(d) {
+  const old = fs.readdirSync(d).sort().slice(0, -require('../log-keep').limit('logs.evalResultsKept'));
+  for (const f of old) fs.rmSync(path.join(d, f), { force: true });
+  return old.length;
+}
+
+/** Every set's results kept to the bound (log-keep.js prune). */
+function pruneAll(base = dir()) {
+  const r = path.join(base, 'results');
+  let n = 0;
+  try { for (const s of fs.readdirSync(r)) n += keepLast(path.join(r, s)); } catch { /* no results yet */ }
+  return n;
 }
 
 /** The newest results of a set, newest first. */
@@ -73,4 +88,4 @@ function results(setId, limit = 10) {
   catch { return []; }
 }
 
-module.exports = { list, get, validate, save, remove, saveResult, results };
+module.exports = { list, get, validate, save, remove, saveResult, results, pruneAll };

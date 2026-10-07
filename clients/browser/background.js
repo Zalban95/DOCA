@@ -33,7 +33,28 @@ const env = {
   },
   screenshot: async tabId => { const t = await ext.tabs.get(tabId); return (await ext.tabs.captureVisibleTab(t.windowId, { format: 'png' })).replace(/^data:image\/png;base64,/, ''); },
   back: tabId => ext.tabs.goBack(tabId),
+  deviceId: async () => (await load()).deviceId,
+  /** Open a secret the hub sealed for this browser alone (PROTOCOL.md §22.3): AES-GCM with the key taken at connect. */
+  unseal: async sealed => {
+    const s = await load();
+    if (!s.sealKey) throw new Error('This browser has not taken its seal key from the hub yet: reconnect it (the extension\'s button → Reconnect).');
+    const b64 = x => Uint8Array.from(atob(String(x || '')), c => c.charCodeAt(0));
+    try {
+      const key = await crypto.subtle.importKey('raw', b64(s.sealKey), 'AES-GCM', false, ['decrypt']);
+      const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(sealed && sealed.iv), additionalData: new TextEncoder().encode(`doca-seal:${s.deviceId}`) }, key, b64(sealed && sealed.data));
+      return JSON.parse(new TextDecoder().decode(plain));
+    } catch { throw new Error('This was not sealed for this browser: refused.'); }
+  },
 };
+
+/** The key the hub seals secrets for this browser with, taken once (a hub older than sealed secrets has none). */
+async function takeSealKey(s) {
+  if (s.sealKey) return;
+  try {
+    const r = await fetch(`${s.hub}/api/v1/mcp/self/seal`, { headers: { Authorization: `Bearer ${s.token}` } });
+    if (r.status === 200) { const j = await r.json(); if (j && j.key) await store({ sealKey: j.key }); }
+  } catch { /* asked again at the next connect */ }
+}
 
 async function connect() {
   const s = await load();
@@ -44,6 +65,7 @@ async function connect() {
     clearInterval(keep); keep = setInterval(() => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/keepalive' })); }, KEEPALIVE_MS);
     if (!s.offered) offer(s).catch(e => store({ lastError: `Offering it to the hub: ${e.message}` }));
     await store({ connected: true, lastError: null });
+    await takeSealKey(s);   // after the write above: two writes at once would drop one's fields
   };
   ws.onmessage = async ev => {
     let msg; try { msg = JSON.parse(ev.data); } catch { return; }

@@ -107,4 +107,7 @@ function adopt(name, { origin, key, note = '', field, prefix }) {
   return 'saved';
 }
 
-module.exports = { list, save, remove, apply, token, scrub, line, adopt };
+/** A key's value for sealed/use.js, which hands it to one device sealed for it — never to the agent. */
+function secretOf(name) { const k = all()[String(name || '').trim().toLowerCase()]; return k ? { label: k.name, origin: k.origin, value: k.key, who: k.who } : null; }
+
+module.exports = { list, save, remove, apply, token, scrub, line, adopt, secretOf };

@@ -71,6 +71,25 @@
     return { ok: true, text: `Typed into [${ref}]${submit ? ' and submitted' : ''}.` };
   }
 
+  /**
+   * Fill [ref] with a secret the hub sealed for this browser (mcp.js secret_fill; the tab is on the secret's own site,
+   * and a person approved it). A password field is the point here, unlike `type`; nothing is read back, and the answer
+   * never holds the value.
+   */
+  function fillSecret(ref, value, doc) {
+    const el = find(ref, doc);
+    if (!el) return NO_REF(ref);
+    const tag = String(el.tagName || '').toUpperCase();
+    if (!(tag === 'TEXTAREA' || (tag === 'INPUT' && !/^(hidden|file|checkbox|radio|submit|button|image|reset)$/i.test(el.type || 'text'))))
+      return { ok: false, error: `[${ref}] is not a field a secret goes into.` };
+    if (el.focus) el.focus();
+    const proto = Object.getPrototypeOf(el), setter = Object.getOwnPropertyDescriptor(proto, 'value');
+    if (setter && setter.set) setter.set.call(el, value); else el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return { ok: true, text: `Filled [${ref}].` };
+  }
+
   /** A strip at the top of the page while the agent uses it, so the person always sees it. */
   function mark(what) {
     let bar = document.getElementById('doca-agent-bar');
@@ -87,7 +106,7 @@
     return true;
   }
 
-  const api = { sensitive, snapshot, click, type, mark };
+  const api = { sensitive, snapshot, click, type, fillSecret, mark };
   root.__docaPage = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

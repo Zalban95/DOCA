@@ -86,6 +86,18 @@ const STEPS = [
   { id: 9, what: 'runs: a detail column, so command jobs are runs too (TODO H11.2)', sql: [
     'ALTER TABLE runs ADD COLUMN detail TEXT',
   ] },
+  // A secret handed to a device's input (modules/sealed, CONSTITUTION S4): the value only as AES-256-GCM ciphertext,
+  // whose key stays in DATA_DIR/keys — a copy of this database alone reveals nothing. Uses are a record, never a value.
+  { id: 10, what: 'sealed secrets for devices, and where each was used (sealed/)', sql: [
+    `CREATE TABLE IF NOT EXISTS sealed_secrets (
+       tenant_id TEXT NOT NULL DEFAULT 'local', name TEXT NOT NULL, origin TEXT, note TEXT, owner_id TEXT,
+       iv TEXT NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL,
+       PRIMARY KEY (tenant_id, name))`,
+    `CREATE TABLE IF NOT EXISTS sealed_uses (
+       id INTEGER PRIMARY KEY, tenant_id TEXT NOT NULL DEFAULT 'local', at TEXT NOT NULL, secret TEXT NOT NULL,
+       device_id TEXT, device_name TEXT, target TEXT, uses INTEGER, by_user TEXT, session_id TEXT, outcome TEXT)`,
+    'CREATE INDEX IF NOT EXISTS sealed_uses_at ON sealed_uses (tenant_id, at)',
+  ] },
 ];
 
 /** The same steps on a synchronous SQLite handle (node:sqlite), for the stores that must stay synchronous. */

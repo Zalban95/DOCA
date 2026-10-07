@@ -37,7 +37,7 @@ function likely(message, held) {
   return rows.length ? ['# Likely fits for this request (matched on its words; use one if it does exactly this)', ...rows].join('\n') : '';
 }
 
-/** "# What you have": keys for services and logins by name (never a secret), and how many recipes are saved. */
+/** "# What you have": keys for services, logins and secrets for devices by name (never a secret), and how many recipes are saved. */
 function inventory(held) {
   const out = [];
   if (held.has('api_call') || held.has('http_fetch')) {
@@ -47,6 +47,12 @@ function inventory(held) {
     try {
       const ls = require('../../logins').list();
       out.push(`- Logins for computer_login: ${ls.length ? ls.map(l => `${l.label} (${l.site})`).join(', ') : 'none yet — ask the owner to add one (Field → Connectors → Logins)'}.`);
+    } catch { /* none */ }
+  }
+  if (held.has('secret_use')) {
+    try {
+      const ss = require('../../sealed/vault').namesSync();
+      out.push(`- Secrets for secret_use (by name; their values are never shown): ${ss.length ? ss.map(x => `${x.name}${x.origin ? ` (${x.origin})` : ''}`).join(', ') : 'none of its own yet'}; also login:<name> and key:<name>.`);
     } catch { /* none */ }
   }
   if (held.has('recipe')) {

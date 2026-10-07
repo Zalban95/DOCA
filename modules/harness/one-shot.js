@@ -96,6 +96,7 @@ function viaArgv(a, { message, signal, onText = () => {}, onErr = () => {}, cwd,
 
 /** Ask the harness one question. Resolves {text, code, error?}. */
 function ask(adapter, opts) {
+  require('../features/usage').count(`oneshot:${adapter.kind}`);   // an alternative beside the built-in harness (features/review.js)
   return adapter.kind === 'gateway' ? viaGateway(adapter, opts) : viaArgv(adapter, opts);
 }
 

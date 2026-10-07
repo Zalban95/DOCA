@@ -106,7 +106,9 @@ module.exports = [
       const p = settings.propose({ changes, reason, sessionId: ctx.sessionId, screen: screen === 'this' ? ctx.screen || 'this' : screen || null, person: ctx.user });
       // The person asked for exactly this, on their own turn (CONSTITUTION S1, 2026-10-07): their request is the decision.
       // Within their level only (permits); the save keeps a checkpoint (checkpoints.js), so the way back is one click.
-      const own = asked === true && ctx.byPerson && ctx.user?.id
+      // An important or safety switch is never applied from a turn: its Accept asks for the password (auth/guarded.js; S14).
+      const guarded = !p.screen && require('../../auth/guarded').prefsTouched(p.changes);
+      const own = !guarded && asked === true && ctx.byPerson && ctx.user?.id
         && p.changes.every(c => p.screen || require('../../auth/permits').holds({ ...ctx.user, role: ctx.user.role }, `setting:${c.path}`));
       if (own) {
         settings.apply(p.id, { person: ctx.user });
@@ -115,13 +117,13 @@ module.exports = [
           + 'The settings before it are kept as a checkpoint (Settings → System → Checkpoints restores them). Say what changed in one line.';
       }
       // Unattended mode (approval.js): the owner chose not to be asked.
-      if (approval.isUnattended()) {
+      if (!guarded && approval.isUnattended()) {
         settings.apply(p.id);
         audit(ctx, 'unattended: settings applied', p.id);
         return `Applied at once — unattended mode is on, so nobody was asked:\n${p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`).join('\n')}`;
       }
       const lines = p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`);
-      return `Proposed (${p.id}) — waiting for the user to accept or decline:\n${lines.join('\n')}\n`
+      return `Proposed (${p.id}) — waiting for the user to accept or decline${guarded ? ` (${guarded} is changed only with their password, on Accept)` : ''}:\n${lines.join('\n')}\n`
         + 'Tell them what you proposed and why, then stop.';
     },
   },

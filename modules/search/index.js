@@ -84,6 +84,7 @@ async function search(query, { count = 8 } = {}) {
   if (!q) throw Object.assign(new Error('Say what to search for.'), { status: 400 });
   const n = Math.max(1, Math.min(20, Number(count) || 8));
   const p = provider();
+  require('../features/usage').count(`search:${p}`);   // which provider is still used (features/review.js)
   const results = await ({ searxng, brave, tavily, duckduckgo }[p])(q, n);
   return { provider: p, results };
 }

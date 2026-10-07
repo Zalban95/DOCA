@@ -50,7 +50,7 @@ const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const FREE = new Set([
   'memory_list', 'memory_search', 'recall_conversations', 'settings_read', 'system_status', 'effort', 'form_fill',
   'mcp_status', 'doca_clients', 'work_chats', 'agent_results',
-  'show_media', 'show_image',
+  'show_media', 'show_image', 'features',
 ]);
 
 /** Which argument carries the command line, per tool that has one. */
@@ -242,12 +242,11 @@ function ask(req, { sessionId, signal, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
  * that outlives the thing it was blocking is worse than no question at all
  * (the rule `reach.ask` already follows on timeout).
  *
- * The wrist gets three options rather than two. **Full auto** is there because
- * the realistic alternative on a small screen is a person tapping Approve
- * forty times, which teaches them to tap without reading — and because the
- * only party who may turn the leash off is the user, who is exactly who is
- * being asked. It is a real escalation and is written down as one: it changes
- * `harness.approval.mode` for the whole panel, not just this call.
+ * The wrist gets more than two options: Always (this kind of call) and Approve
+ * all, because the alternative on a small screen is a person tapping Approve
+ * forty times, which teaches them to tap without reading. It used to offer
+ * Full auto too; since 2.281.0 the mode is a safety switch changed only with
+ * the password (auth/guarded.js; CONSTITUTION S14), which a wrist cannot type.
  *
  * Returns the decision string, the same vocabulary `decide()` takes.
  */
@@ -258,7 +257,7 @@ function askAnywhere(req, { sessionId, signal, client } = {}) {
   // `kind: 'agent'` is a paired agent, not a person, and must never be asked
   // to approve on the user's behalf.
   const deviceId = client?.id && client.kind !== 'agent' && client.kind !== 'dashboard' ? client.id : null;
-  // Approving a tool call, and Full auto above all, are what the panel keeps to the `host` right
+  // Approving a tool call is what the panel keeps to the `host` right
   // (auth/rights.js). A device answers only for an owner whose role holds it; a member's or an
   // ownerless device's turn is answered at the panel (audit 2026-10-04).
   // …or for the person whose own turn this is, confirming their own call (an "ask" level, auth/permits.js).
@@ -276,13 +275,12 @@ function askAnywhere(req, { sessionId, signal, client } = {}) {
         to: [deviceId],
         question: `Allow ${req.tool}?`,
         note: req.summary,
-        // By what its owner may decide (approval-answer.js): Always, Approve all, and Full auto for a host only.
+        // By what its owner may decide (approval-answer.js): Always and Approve all; never the mode (S14).
         choices: require('./approval-answer').deviceChoices(req, client.user),
         timeoutSec: 240,
         signal: ctrl.signal,
       });
       if (r.status !== 'answered') return null;          // dismissed, timed out, withdrawn
-      if (r.choiceId === 'full_auto' && host) { setMode('auto'); return 'once'; }
       if (['always', 'approve_all'].includes(r.choiceId)) return r.choiceId;
       return r.choiceId === 'approve' ? 'once' : 'deny';
     } catch { return null; }                              // no such device, no prompts — the panel still has it

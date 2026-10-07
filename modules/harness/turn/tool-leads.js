@@ -30,6 +30,7 @@ const LEADS = {
   skill: 'Read, list or write a skill (a procedure for a kind of task) — read one when the task matches a skill in your prompt.',
   computer: 'Make or manage a Linux desktop in a container — use it for risky tests, sites used as a person would, or recording a demo.',
   computer_login: 'Sign in on a computer\'s browser with a login the owner keeps, without seeing its password — use it at a sign-in page.',
+  secret_use: 'Type or paste a password or key on the person\'s own device, never seeing it — use it when a device must enter a secret.',
   computer_look: 'Ask what is on a computer\'s screen and where — use it when browser_snapshot finds nothing to number.',
   recipe: 'Run a saved sequence of tool calls again, or save one — run a recipe when one does exactly what is asked.',
   pack: 'Keep skills, recipes and specialists you made as one pack in the library — use it when the owner wants to share them.',
@@ -39,6 +40,7 @@ const LEADS = {
   hub_command: 'Run the hub\'s own commands — start or stop a service, a container, a llama.cpp server, take a snapshot — instead of shell.',
   today: 'The weather, today\'s calendar and what is waiting for the person — use it for "what\'s my day" or a morning brief.',
   schedule: 'Propose a message or recipe on a timetable, which the person switches on — use it when asked to do something regularly.',
+  features: 'Look up what DOCA can do, where it is and how to switch it on — use it before saying something cannot be done.',
 };
 
 module.exports = { LEADS };

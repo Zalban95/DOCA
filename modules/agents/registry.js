@@ -51,9 +51,10 @@ const { loadPrefs, savePrefs } = require('../utils');
  * have one owner. `tell_device` is not blocked, but nothing grants it either:
  * a profile's tool list is an allowlist, so a specialist has it only if
  * somebody wrote it down. `recipe` runs its steps in a conversation of its own, asking for approval as a
- * person's turn does — which a mission, running unwatched, must never do; its leader runs recipes.
+ * person's turn does — which a mission, running unwatched, must never do; its leader runs recipes. `secret_use` hands a
+ * secret to a device and is always a person's question (forced-asks.js), which a mission cannot ask.
  */
-const NEVER = ['settings_propose', 'panel_layout', 'install_propose', 'tool_note', 'agent_dispatch', 'agent_results', 'agent_resume', 'ask_device', 'permission_grant', 'computer', 'recipe', 'schedule', 'pack', 'mcp_connect', 'hub_command', 'model_scout', 'mcp_draft', 'service_draft'];
+const NEVER = ['settings_propose', 'panel_layout', 'install_propose', 'tool_note', 'agent_dispatch', 'agent_results', 'agent_resume', 'ask_device', 'permission_grant', 'computer', 'recipe', 'schedule', 'pack', 'mcp_connect', 'hub_command', 'model_scout', 'mcp_draft', 'service_draft', 'secret_use'];
 
 /**
  * The airlock (docs/design/airlock.md): tools only an `airlock: true` definition

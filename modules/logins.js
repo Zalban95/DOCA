@@ -46,10 +46,15 @@ async function computerCall(c, name, args) {
   return text;
 }
 
+const find = ref => all()[String(ref || '')] || Object.values(all()).find(x => x.label.toLowerCase() === String(ref || '').toLowerCase()) || null;
+
+/** A login's password for sealed/use.js, which hands it to one device sealed for it — never to the agent. */
+function secretOf(ref) { const l = find(ref); return l ? { label: l.label, origin: l.site, value: l.password } : null; }
+
 /** Sign in on a computer with a stored login: its page must be on the login's site. Returns what to tell the agent. */
 async function fill({ computer, login, userRef, passRef }) {
   const c = require('./computers').need(String(computer || ''));
-  const l = all()[String(login || '')] || Object.values(all()).find(x => x.label.toLowerCase() === String(login || '').toLowerCase());
+  const l = find(login);
   if (!l) throw bad(`No login "${login}". An admin keeps them in Field → Connectors → Logins: ${list().map(x => x.label).join(', ') || 'none yet'}.`, 404);
   if (!c.fillKey) throw bad('This computer was made before logins existed: make a new one (or ask an admin to).', 409);
   const page = await computerCall(c, 'browser_snapshot', {});
@@ -63,4 +68,4 @@ async function fill({ computer, login, userRef, passRef }) {
     + 'Now click the sign-in button (browser_click with confirm: true — the person is asked).';
 }
 
-module.exports = { list, save, remove, fill };
+module.exports = { list, save, remove, fill, secretOf };
