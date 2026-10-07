@@ -59,15 +59,17 @@ module.exports = [
         filter: { type: 'string', description: 'Optional substring to match against the setting paths, e.g. "paths" or "harness".' },
       },
     },
-    run: ({ filter }) => {
+    run: ({ filter }, ctx = {}) => {
       const q    = String(filter || '').toLowerCase();
+      const screen = require('../screen-proposals').readable(ctx.screen, ctx.user).filter(l => !q || l.toLowerCase().includes(q));
       const rows = settings.readable().filter(r => !q || r.path.toLowerCase().includes(q));
       if (!rows.length) return `No settings match "${filter}".`;
       const body = rows.map(r =>
         `${r.path} = ${JSON.stringify(r.value)}${r.detail ? `   # ${r.detail}` : ''}`).join('\n');
       // Which model does what (model-roles.js): the answer to "what runs my speech / my screen reading", in one list.
       const models = !q || /model|voice|harness|vision|retrieval|realtime|assistant/.test(q) ? `\n\nModels in use:\n${require('../../model-roles').lines().join('\n')}` : '';
-      return clip(`${rows.length} settings you may propose changes to:\n${body}${models}`);
+      const own = screen.length ? `\n\nThis screen's own (settings_propose with screen "this"):\n${screen.join('\n')}` : '';
+      return clip(`${rows.length} settings you may propose changes to:\n${body}${own}${models}`);
     },
   },
   {
@@ -91,15 +93,16 @@ module.exports = [
             required: ['path', 'value'],
           },
         },
+        screen: { type: 'string', description: 'For how one screen looks and listens (call, voice, ambient, face — each screen keeps its own): "this" for the screen the person asked from, or a device id from doca_clients. Leave it out for the hive\'s settings.' },
       },
       required: ['reason', 'changes'],
     },
-    run: ({ reason, changes }, ctx = {}) => {
+    run: ({ reason, changes, screen }, ctx = {}) => {
       // Filed against the conversation that asked, so the card can be read
       // beside the transcript it came from. `propose()` always took a
       // sessionId; nothing passed one, so every proposal was anonymous and
       // several open conversations made the pending list ambiguous.
-      const p = settings.propose({ changes, reason, sessionId: ctx.sessionId });
+      const p = settings.propose({ changes, reason, sessionId: ctx.sessionId, screen: screen === 'this' ? ctx.screen || 'this' : screen || null, person: ctx.user });
       // Unattended mode (approval.js): the owner chose not to be asked.
       if (approval.isUnattended()) {
         settings.apply(p.id);

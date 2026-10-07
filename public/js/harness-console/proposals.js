@@ -98,7 +98,7 @@ function _hcProposalHtml(p) {
   return `
     <div class="hc-prop" id="hc-prop-${escHtml(p.id)}">
       <div class="hc-prop-head">
-        <span class="badge badge-amber" style="font-size:9px">SETTINGS CHANGE</span>
+        <span class="badge badge-amber" style="font-size:9px">${p.screen ? `ON ${escHtml(p.screen.name)}` : 'SETTINGS CHANGE'}</span>
         <span class="hc-prop-why">${escHtml(p.reason || 'The agent suggests this change.')}</span>
       </div>
       ${rows}

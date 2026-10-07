@@ -167,7 +167,7 @@ function deviceOwner(device) {
 function dashboardClient(req) {
   return { name: 'Dashboard console', kind: 'dashboard', formFactor: 'desktop',
     label: 'the dashboard in a desktop browser, next to every panel you can read',
-    input: { text: true, touch: false }, user: personOf(req?.auth) };
+    input: { text: true, touch: false }, user: personOf(req?.auth), screen: req?.auth?.session?.screen || null };
 }
 
 /** The person with this id as they are now, or null when gone or suspended. */

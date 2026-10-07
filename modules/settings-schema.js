@@ -28,8 +28,8 @@ const SCHEMA = {
   sidebarStats:     { is: 'travels', home: 'device', on: 'host', note: 'which stats the host collects for the sidebar (the collectors run here, for every screen)', propose: p('Sidebar stats', 'Which stats the sidebar shows') },
   sidebarSections:  { is: 'travels', home: 'device', on: 'screen', note: 'which sidebar sections are open', propose: p('Sidebar sections') },
   favorites:        { is: 'travels', home: 'device', on: 'screen', note: 'favourite config files, by registry id', propose: p('Config favourites') },
-  voice:            { is: 'travels', home: 'device', on: 'screen', note: 'the voice this screen is answered in: ttsVoice and ttsSpeed, over voiceServices (chat.js handleSynthesize)' },
-  call:             { is: 'travels', home: 'device', on: 'screen', note: 'how a live call listens on this screen — its microphone is its own (chat-call.js; Settings → Voice → Live call)',
+  voice:            { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the voice this screen is answered in: ttsVoice and ttsSpeed, over voiceServices (chat.js handleSynthesize)' },
+  call:             { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'how a live call listens on this screen — its microphone is its own (chat-call.js; Settings → Voice → Live call)',
     keys: {
       silenceMs:   { type: 'integer', min: 300, default: 2000, hint: 'How long a pause, in milliseconds, ends what you said and sends it.' },
       sensitivity: { type: 'integer', min: 1, default: 15, hint: 'The microphone level that counts as speech; lower hears quieter voices and more of the room.' },
@@ -37,7 +37,7 @@ const SCHEMA = {
       listenWithFace: { type: 'boolean', default: false, hint: 'While the corner face shows, listen for the wake word and start a call when it is said (experiments.wakeWord).' },
       wakeWord: { type: 'string', default: '', hint: 'The word that starts a call. Empty: the product\'s name (branding).' },
     } },
-  ambient:          { is: 'travels', home: 'device', on: 'screen', note: 'the ambient screen (public/js/ambient.js): where it is for the weather, its quick buttons, whether it listens for its name — `buttons` is a list of {label, say} (what the button says to the agent), `show` which parts are drawn (clock, weather, plan, notices, buttons, apps: false hides one)',
+  ambient:          { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the ambient screen (public/js/ambient.js): where it is for the weather, its quick buttons, whether it listens for its name — `buttons` is a list of {label, say} (what the button says to the agent), `show` which parts are drawn (clock, weather, plan, notices, buttons, apps: false hides one)',
     keys: {
       place:  { type: 'string', default: '', hint: 'Where this screen is, for the weather: a town, or "lat,lon". Empty: no weather.' },
       units:  { type: 'string', default: 'metric', hint: 'metric (°C, km/h) or imperial (°F, mph).' },
@@ -47,7 +47,7 @@ const SCHEMA = {
       margin:  { type: 'integer', min: 0, max: 25, default: 7, hint: 'Side margins, % of the screen\'s width.' },
       marginY: { type: 'integer', min: 0, max: 25, default: 6, hint: 'Top and bottom margins, % of the screen\'s height.' },
     } },
-  face:             { is: 'travels', home: 'device', on: 'screen', note: 'the face: its look, a spec over the default (face/face.js); an edition carries one' },
+  face:             { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the face: its look, a spec over the default (face/face.js); an edition carries one' },
   hiddenBuiltins:   { is: 'travels', home: 'device', on: 'screen', note: 'built-in config entries hidden from the list', propose: p('Hidden built-ins') },
 
   // ── The hive: how its agents behave and what they may do ──
@@ -180,6 +180,9 @@ function settable() {
     .map(x => ({ prefix: x.prefix || key, label: x.label, note: x.note || '', ...(x.exact ? { exact: true } : {}) })));
 }
 
+/** The screen keys the agent may propose for one screen (`screenPropose`; harness/screen-proposals.js, TODO C2). */
+function screenSettable() { return Object.entries(SCHEMA).filter(([, d]) => d.screenPropose && d.on === 'screen').map(([k]) => k); }
+
 /** The declaration of a leaf (`computers.maxRunning`), or null. */
 function leaf(dotted) {
   const [top, ...rest] = String(dotted).split('.');
@@ -220,4 +223,4 @@ function describe() {
     proposable: !!d.propose, keys: d.keys ? Object.fromEntries(Object.entries(d.keys).map(([n, s]) => [n, { type: s.type, default: s.default, hint: s.hint }])) : undefined }]));
 }
 
-module.exports = { SCHEMA, settable, leaf, value, leaves, describe };
+module.exports = { SCHEMA, settable, screenSettable, leaf, value, leaves, describe };
