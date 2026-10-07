@@ -91,9 +91,15 @@ async function modelsCheckOllama() {
     if (s.connected) {
       badge.textContent = `● Connected  v${s.version}`;
       badge.className   = 'badge badge-green';
+    } else if (s.code === 'ollama_unreachable') {
+      // Not installed or not running is a state of the machine, not a fault: said so, the address in the tooltip.
+      badge.textContent = '○ Not installed or not running';
+      badge.className   = 'badge badge-amber';
+      badge.title       = `${s.reason} (looked at ${s.url})`;
     } else {
       badge.textContent = `○ Unreachable`;
       badge.className   = 'badge badge-red';
+      badge.title       = `${s.error || ''} (${s.url})`;
     }
   } catch {
     modelsOllamaConnected = false;
@@ -132,8 +138,13 @@ async function modelsLoadList() {
       totalEl.textContent = models.length ? `· ${models.length} model${models.length > 1 ? 's' : ''} · ${fmtBytes(totalBytes)} on disk` : '';
     }
     if (!models.length) {
-      // Ollama not installed or not running is an empty list with its reason (a 200), drawn as a state.
-      tbody.innerHTML = `<tr><td colspan="4" class="placeholder" style="padding:12px">${escHtml(data.reason || 'No models installed')}</td></tr>`;
+      // Ollama not installed or not running is an empty list with its reason (a 200), drawn as a state in plain
+      // words, the way to System tools, and the address it looked at on a detail line (self-test 2026-10-08, #11).
+      tbody.innerHTML = data.reason
+        ? `<tr><td colspan="4" class="placeholder" style="padding:12px">Ollama is not installed or not running on this machine.
+            <button class="btn btn-xs" onclick="nav('settings');settingsSubNav('system')">Settings → System → System tools</button>
+            <div style="margin-top:4px;font-size:11px;color:var(--muted);word-break:break-all">Looked for it at ${escHtml(data.url || '')}</div></td></tr>`
+        : '<tr><td colspan="4" class="placeholder" style="padding:12px">No models installed</td></tr>';
       return;
     }
     tbody.innerHTML = models.map(m => {

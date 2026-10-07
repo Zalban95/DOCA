@@ -42,3 +42,15 @@ test('an Ollama that answers with an error is still an error', async () => {
   assert.equal(r.status, 502);
   assert.match(r.body.error, /HTTP 500/);
 });
+
+test('its status says it in plain words, with where to install it, and keeps the address', async () => {
+  useOllama(closed);
+  const s = (await H.api(null, 'GET', '/api/models/ollama/status')).body;
+  assert.equal(s.connected, false);
+  assert.equal(s.code, 'ollama_unreachable');
+  assert.match(s.reason, /Ollama is not installed or not running on this machine.*System tools/);
+  assert.equal(s.url, closed);
+  useOllama(`http://127.0.0.1:${stub.address().port}`);
+  const broken = (await H.api(null, 'GET', '/api/models/ollama/status')).body;
+  assert.equal(broken.code, undefined, 'an Ollama that answers wrongly is not "not installed"');
+});

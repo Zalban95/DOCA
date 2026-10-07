@@ -67,7 +67,7 @@ async function handleStatus(req, res) {
     const data = await r.json();
     res.json({ connected: true, version: data.version || 'unknown', url: base });
   } catch (e) {
-    res.json({ connected: false, error: e.message, url: base });
+    res.json({ connected: false, error: e.message, url: base, ...(unreachable(e) ? { reason: NOT_HERE, code: 'ollama_unreachable' } : {}) });
   }
 }
 
