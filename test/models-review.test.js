@@ -17,7 +17,7 @@ before(async () => {
   llama = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     if (req.url.startsWith('/props')) return res.end(JSON.stringify({ role: 'router', build_info: 'b1-test', default_generation_settings: { n_ctx: 0 } }));
-    if (req.url.startsWith('/v1/models')) return res.end(JSON.stringify({ data: [{ id: 'qwen-test', status: { value: 'sleeping', args: ['llama-server', '--ctx-size', '40960'] } }] }));
+    if (req.url.startsWith('/v1/models') || req.url.startsWith('/models')) return res.end(JSON.stringify({ data: [{ id: 'qwen-test', status: { value: 'sleeping', args: ['llama-server', '--ctx-size', '40960'] } }] }));
     res.end('{}');
   });
   await new Promise(r => llama.listen(0, '127.0.0.1', r));
@@ -36,11 +36,21 @@ test('Ollama and HuggingFace in one folder are one storage card, not the same si
 });
 
 test('a llama-server the panel did not start is listed, with its models and context, read-only', async () => {
-  const list = (await H.api(null, 'GET', '/api/models/llamacpp/list')).body;
-  const ext = list.external.find(e => e.build === 'b1-test');
+  const at = `http://127.0.0.1:${llama.address().port}`;
+  // Found as a model server (model-servers.js, the default since TODO B6b): its models, their state and context.
+  let list = (await H.api(null, 'GET', '/api/models/llamacpp/list')).body;
+  let ext = list.external.find(e => e.url.startsWith(at));
   assert.ok(ext, JSON.stringify(list.external));
   assert.equal(ext.router, true);
   assert.deepEqual(ext.models, [{ id: 'qwen-test', state: 'sleeping', ctx: 40960 }]);
+  // Found by its /props, the alternative kept beside it: its build too.
+  const prefs = (await H.api(null, 'GET', '/api/prefs')).body;
+  await H.api(null, 'POST', '/api/prefs', { llamacpp: { ...(prefs.llamacpp || {}), discovery: 'props' } });
+  list = (await H.api(null, 'GET', '/api/models/llamacpp/list')).body;
+  ext = list.external.find(e => e.build === 'b1-test');
+  assert.ok(ext, JSON.stringify(list.external));
+  assert.deepEqual(ext.models, [{ id: 'qwen-test', state: 'sleeping', ctx: 40960 }]);
+  await H.api(null, 'POST', '/api/prefs', { llamacpp: { ...(prefs.llamacpp || {}), discovery: 'servers' } });
 });
 
 test('Ollama\'s search page becomes names, descriptions and tags', () => {

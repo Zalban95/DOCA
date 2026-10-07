@@ -164,7 +164,8 @@ const SCHEMA = {
   // ── The machine DOCA runs on ──
   paths:            { is: 'local', home: 'device', on: 'host', note: 'folders and URLs of this machine (paths.js SETTABLE)', propose: p('Managed paths', 'Applies after a restart of the panel') },
   fmFavorites:      { is: 'local', home: 'device', on: 'host', note: 'favourite folders: paths of this machine', propose: p('File manager favourites') },
-  llamacpp:         { is: 'local', home: 'device', on: 'host', note: 'binary paths and server instances' },
+  llamacpp:         { is: 'local', home: 'device', on: 'host', note: 'binary paths and server instances',
+    keys: { discovery: { type: 'string', default: 'servers', hint: 'How the Models tab finds llama-servers DOCA did not start: servers (model-servers.js, the default) or props (each one\'s /props, kept beside it).' } } },
   serviceSettings:  { is: 'local', home: 'device', on: 'host', note: 'ports and URLs of services on this machine', propose: p('Inference services', 'GPU assignment, ports, images') },
   voiceServices:    { is: 'local', home: 'device', on: 'host', note: 'speech services on this machine or the tailnet', propose: p('Voice services') },
   snapshotSettings: { is: 'local', home: 'device', on: 'host', note: 'where snapshots of this machine go', propose: p('Snapshot settings') },

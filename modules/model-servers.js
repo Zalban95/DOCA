@@ -24,7 +24,8 @@ async function getJson(url, ms = 1500) {
   return r.json();
 }
 
-const portOf = args => { const i = (args || []).indexOf('--port'); return i >= 0 ? Number(args[i + 1]) : null; };
+const argOf = (args, ...names) => { const i = (args || []).findIndex(a => names.includes(a)); return i >= 0 ? Number(args[i + 1]) || null : null; };
+const portOf = args => argOf(args, '--port');
 const busySlots = slots => Array.isArray(slots) && slots.some(s => s.is_processing);
 
 /** What one provider's server says about itself, or {answering: false}. */
@@ -41,7 +42,8 @@ async function probe(ep) {
         const state = m.status?.value || 'unknown', port = portOf(m.status?.args);
         let working = false;
         if (state === 'loaded' && port) { try { working = busySlots(await getJson(`http://${host}:${port}/slots`, 800)); } catch { /* its own server is not saying */ } }
-        return { id: m.id, state: working ? 'working' : state };
+        const ctx = argOf(m.status?.args, '--ctx-size', '-c');   // the context it was started with, when the router says
+        return { id: m.id, state: working ? 'working' : state, ...(ctx ? { ctx } : {}) };
       }));
       return { answering: true, kind: 'llama.cpp router', models };
     }
