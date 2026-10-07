@@ -21,3 +21,11 @@ AGENTS.local.md
 /.backup-password
 .aider*
 __pycache__/
+
+# What an install writes beside the code (scripts/install.*, auth/routes.js) and other tools' scratch folders:
+# none of it is the project's, and an install made by git clone must stay clean for its updates.
+/doca.log
+/doca.err.log
+/.setup-code
+/.cursor/
+/.playwright-mcp/

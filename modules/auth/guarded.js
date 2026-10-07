@@ -89,6 +89,7 @@ const ROUTES = [
   [['POST'], /^\/api\/auth\/users\/[^/]+\/password$/, 'another person\'s password'],
   [W, /^\/api\/harness\/guards(?!\/test$)(\/.*)?$/, 'the guards'],
   [['POST'], /^\/api\/settings\/checkpoints\/[^/]+\/restore$/, 'restoring settings'],
+  [['POST'], /^\/api\/backups\/[^/]+\/restore$/, 'restoring a backup'],   // it replaces the settings, guarded switches included
   // A version is every guard at once: one from before 2.281.0 has no password question at all (review 2026-10-07).
   [['POST'], /^\/api\/versions\/use$/, 'which version of DOCA runs'],
   // Bringing a pack in can create or replace a level (an edition), specialists and their tools, and the memory rules.

@@ -171,9 +171,13 @@
   background: var(--dim); overflow: hidden;
 }
 .hc-head {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 4px;
   padding: 8px 10px; border-bottom: 1px solid var(--border);
 }
+/* A standing condition ("Pick a model…") gets a row of its own: squeezed beside the model picker it was drawn
+   over the picker's fallback switch, on the first screen a newcomer opens. */
+.hc-head .chat-model-host { flex-shrink: 0; }
+.hc-head #hc-status:not(:empty) { order: 10; flex-basis: 100%; }
 .hc-title { font-size: 12px; font-weight: 600; }
 .hc-usage { font-size: 10px; color: var(--muted); white-space: nowrap; }
 .hc-messages {

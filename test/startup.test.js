@@ -32,3 +32,11 @@ test('the boot service reports its state, or says why it cannot', async () => {
   assert.equal(post.status, 400);
   assert.match(post.body.error, /systemd/);
 });
+
+test('a boot unit that starts another DOCA is not reported as this one\'s', () => {
+  const { otherInstall } = require('../modules/startup');
+  const os = require('node:os');
+  assert.equal(otherInstall('', '/srv/doca'), null, 'no unit');
+  assert.equal(otherInstall(os.tmpdir(), os.tmpdir()), null, 'this install');
+  assert.equal(otherInstall('/srv/another-doca', os.tmpdir()), '/srv/another-doca');
+});

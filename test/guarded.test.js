@@ -47,6 +47,7 @@ test('a conversation\'s approval switch asks; its title does not', async () => {
   assert.match(switchOf(req({ approval: 'auto' })), /approval/);
   assert.equal(switchOf({ method: 'POST', path: '/api/harness/guards/test', body: {} }), null, 'testing a guard flips nothing');
   assert.match(switchOf({ method: 'DELETE', path: '/api/auth/grants/g1', body: {} }), /grants/);
+  assert.match(switchOf({ method: 'POST', path: '/api/backups/b1/restore', body: {} }), /backup/);
 });
 
 test('the agent never applies a guarded setting alone: asked, or in Unattended, it stays a proposal', async () => {
