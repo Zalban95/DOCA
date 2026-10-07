@@ -125,8 +125,8 @@ const TABLE = [
   R(GET, '/api/wakeword/(models/[^/]+/model\\.onnx|runtime/[^/]+)', 'read'),   // a screen listening for its name reads its model (wakeword/)
   R(ANY, '/api/wakeword(/.*)?', 'host'),                       // setting up, recording, training: downloads, GPU hours, a microphone's audio
   R(ANY, '/api/home/call', 'chat'),                            // acting on the home: a light, a cover, a thermostat — each entity allotted (home/actions.js)
-  R(ANY, '/api/home/hold', 'read'),                            // a Home page holding the connection to Home Assistant open while shown
-  R(GET, '/api/home(/.*)?', 'read'),                           // the home as this person sees it, and a camera's still (home/)
+  R(ANY, '/api/home/hold', 'chat'),                            // a Home page holding the connection to Home Assistant open while shown
+  R(GET, '/api/home(/.*)?', 'chat'),                           // the home as this person sees it, and a camera's still (home/): cameras and locks are private, not a viewer's
   R(GET, '/api/ambient(/.*)?', 'read'),                        // the ambient screen: weather, the day's plan and notices, each the viewer's own (ambient/)
   R(GET, '/api/face/stream', 'chat'),                          // the face's feed, scoped to what the viewer may open (face/state.js)
   R(ANY, '/api/developer(/.*)?', 'host'),                        // who may release unasked (releasing.js): the admin's

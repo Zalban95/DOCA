@@ -152,12 +152,21 @@ test('unlocking asks for the password; locking does not', async () => {
   assert.equal((await H.api(null, 'POST', '/api/home/call', { domain: 'lock', service: 'lock', entity_id: 'lock.front' }, { 'X-Doca-Password': '' })).status, 200);
 });
 
-test('who: a viewer sees but does not act; a level that lists lights sees and uses only lights', async () => {
+test('who: a viewer does not see the home (cameras, locks); a member does not run scripts; a level that lists lights sees and uses only lights', async () => {
   const viewer = await H.signIn('viewer');
-  assert.equal((await H.api(null, 'GET', '/api/home', undefined, { Cookie: viewer.cookie })).status, 200);
+  assert.equal((await H.api(null, 'GET', '/api/home', undefined, { Cookie: viewer.cookie })).status, 403);
   assert.equal((await H.api(null, 'POST', '/api/home/call', { domain: 'light', service: 'toggle', entity_id: 'light.kitchen' }, { Cookie: viewer.cookie })).status, 403);
   const member = await H.signIn('member');
   assert.equal((await H.api(null, 'POST', '/api/home/call', { domain: 'light', service: 'toggle', entity_id: 'light.kitchen' }, { Cookie: member.cookie })).status, 200, 'the hive\'s home is a member\'s to use');
+  {   // a script runs whatever its author wrote: an admin's (home/actions.js)
+    const home = require('../modules/home'), { stateOf, shown } = home;
+    home.stateOf = () => ({ state: 'off' }); home.shown = () => true;
+    try {
+      const actions = require('../modules/home/actions');
+      assert.throws(() => actions.check({ ...member.user, role: 'member' }, { domain: 'script', service: 'turn_on', entity_id: 'script.heat' }), e => e.status === 403 && /admin's/.test(e.message));
+      assert.ok(actions.check({ ...H.owner.user, role: 'owner' }, { domain: 'script', service: 'turn_on', entity_id: 'script.heat' }));
+    } finally { home.stateOf = stateOf; home.shown = shown; }
+  }
   const level = require('../modules/auth/levels').create({ name: 'Lights only', rights: ['read', 'chat'], resources: { home: ['light.*'] } }, { actorLevel: 'owner' });
   const lit = await H.signIn(level.id);
   const seen = (await H.api(null, 'GET', '/api/home', undefined, { Cookie: lit.cookie })).body.areas.flatMap(a => a.tiles.map(t => t.id));
