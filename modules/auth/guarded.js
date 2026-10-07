@@ -97,6 +97,8 @@ const ROUTES = [
   [['POST'], /^\/api\/packs\/(import|library\/[^/]+\/import)$/, 'bringing a pack in (it can carry a level, specialists and rules)'],
   // Spending (S12): budgets, permissions and their acceptance; declining a proposal never asks — saying no is free.
   [W, /^\/api\/spending\/(?!permissions\/[^/]+\/decline$).+$/, 'spending: budgets and permissions'],
+  // Secrets for devices (TODO P1.3): keeping or forgetting one — a person's own or the hub's — is the person's, typed.
+  [W, /^\/api\/connectors\/sealed\/(all|mine(\/[^/]+)?|[^/]+)$/, 'secrets for devices'],
   [['POST'], /^\/api\/harness\/usage\/prices$/, 'the prices money budgets are counted in', () => moneyBudgets()],
   // Opening the house from the Home page: a lock's unlock, an alarm's disarm (home/actions.js).
   [['POST'], /^\/api\/home\/call$/, 'unlocking a door or disarming an alarm', req => require('../home/actions').guardedCall(req.body)],

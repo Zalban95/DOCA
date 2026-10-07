@@ -46,6 +46,7 @@ const TABLE = [
   R(GET, '/\\.well-known/agent(-card)?\\.json', 'public'),   // the A2A agent card: who the hive is and where to talk (api-v1/a2a.js)
   R(GET, '/api/auth/host-check', 'host'),                 // asked before opening a terminal socket
   R(ANY, '/api/auth/(me|logout|password|step-up|sessions)', 'signed'),
+  R(GET, '/api/auth/holdings', 'signed'),                 // what you hold; someone else's needs users, checked in holdings.js
   R(ANY, '/api/auth/grants(/.*)?', 'signed'),              // exceptions: users or delegate, checked in users-routes.js
   R(ANY, '/api/auth/(users|levels)(/.*)?', 'users'),        // people and their permission levels (auth/users-routes.js)
   R(ANY, '/api/presence', 'signed'),                       // "this page is visible": a heartbeat, no data
@@ -140,6 +141,11 @@ const TABLE = [
   R('POST', '/api/channels/matrix', 'host'),                 // the homeserver, the bot's token and switch
   R(ANY, '/api/channels/matrix(/.*)?', 'chat'),               // a link code, and one's own linked rooms (channels/matrix/routes.js)
   R(ANY, '/api/evals(/.*)?', 'host'),
+  // A person's own secrets for their own devices: theirs alone (sealed/routes.js). Method by method, so a DELETE of
+  // ".../sealed/mine" (the hub's route for a secret named "mine") still needs host.
+  R(GET, '/api/connectors/sealed/mine', 'chat'),
+  R('POST', '/api/connectors/sealed/mine', 'chat'),
+  R('DELETE', '/api/connectors/sealed/mine/[^/]+', 'chat'),
   R(ANY, '/api/connectors(/.*)?', 'host'),                    // the keys to the owner's accounts (connectors/routes.js)                         // evaluation sets: a run spends tokens, results hold answers (evals/routes.js)
   R(GET, '/api/clients/browser.zip', 'read'),
   R(GET, '/api/clients/apps/[a-z]+/apk/[A-Za-z0-9_-]{32}', 'public'),   // a 10-minute download link: its token is the permission (client-apps/routes.js)

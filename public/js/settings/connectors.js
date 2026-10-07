@@ -8,6 +8,12 @@
 async function connectorsLoad() {
   const panel = document.getElementById('sp-connectors');
   if (!panel) return;
+  // Without host, the accounts, keys and logins are the owner's: a person sees only their own secrets for their devices.
+  if (typeof _settingsNoHost !== 'undefined' && _settingsNoHost) {
+    panel.innerHTML = '<div class="card" id="sealed-card"></div>';
+    if (typeof sealedRender === 'function') sealedRender();
+    return;
+  }
   let d;
   try { d = await apiFetch('/api/connectors'); } catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
   panel.innerHTML = `<div class="card"><div class="card-title">Connectors</div>

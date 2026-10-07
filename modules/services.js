@@ -54,7 +54,8 @@ const INFERENCE_SERVICES = [
   { id: 'kokoro',   label: 'Kokoro TTS',      image: 'ghcr.io/remsky/kokoro-fastapi-gpu:latest', cpuImage: 'ghcr.io/remsky/kokoro-fastapi-cpu:latest',
     port: 8880, internalPort: 8880, apiPath: '/v1', multiGpu: false,
     description: 'OpenAI-compatible text-to-speech API (Kokoro-82M) — matches the Voice tab default port' },
-  { id: 'vllm',     label: 'vLLM (LLM)',      image: 'vllm/vllm-openai:latest',      port: 8001, internalPort: 8000, apiPath: '/v1', multiGpu: true,
+  // `chat`: a service a turn's provider can be (auth/allot.js `service`: a provider at this machine's port is this service).
+  { id: 'vllm',     label: 'vLLM (LLM)',      image: 'vllm/vllm-openai:latest',      port: 8001, internalPort: 8000, apiPath: '/v1', multiGpu: true, chat: true,
     description: 'OpenAI-compatible LLM inference for HuggingFace models, multi-GPU' },
   { id: 'sdwebui',  label: 'Stable Diffusion',image: 'ghcr.io/ai-dock/stable-diffusion-webui:latest-cuda', port: 7860, internalPort: 7860, apiPath: '/sdapi/v1', multiGpu: false,
     description: 'Stable Diffusion AUTOMATIC1111 WebUI with REST API (ai-dock)' },

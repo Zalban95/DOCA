@@ -5,7 +5,10 @@
  * not everything is everyone's — and the admin can let others, team leaders, grant specific permissions"; TODO P1.10).
  *
  * A resource is something a person's agents use that is not a tool: a model, a provider, a key for a service, a
- * connected account, a login the owner keeps (computer_login), an agents' computer. Who may use one:
+ * connected account, a login the owner keeps (computer_login), an agents' computer, an inference service on the hub
+ * (`service`, by its id in services.js — counted when a turn's provider is one: its endpoint is this machine at the
+ * port of a service that serves chat), and another person's device (`device`, by its id — reach.js lets an `own-devices` level's agents
+ * use a device lent this way as if it were their own). Who may use one:
  *   - anyone holding host (the machine's administrators), as before;
  *   - a level that lists it: `resources: { model: ['*' | '<provider>/<model>', …], provider: […], key: […],
  *     connector: […], login: […], computer: […], home: […] }` — a kind the level does not name keeps today's rule, so nothing changes for an
@@ -18,10 +21,13 @@
  * `home` is a Home Assistant entity on the Home page (home/, TODO H10.10), by its entity id (`light.kitchen`; `light.*`
  * every light): the hive's home is everyone's to see and use until a level lists which of it its people have.
  */
-const KINDS = ['model', 'provider', 'key', 'connector', 'login', 'computer', 'home'];
+const KINDS = ['model', 'provider', 'key', 'connector', 'login', 'computer', 'service', 'device', 'home'];
 
-/** Kinds that were an admin's alone before levels could list them: a level that names nothing gives none. */
-const ADMIN_FIRST = new Set(['key', 'connector', 'login']);
+/**
+ * Kinds that were an admin's alone before levels could list them: a level that names nothing gives none. Another
+ * person's device was never anyone's to use, so it is one too; a service, like a model, was everyone's.
+ */
+const ADMIN_FIRST = new Set(['key', 'connector', 'login', 'device']);
 
 const host = person => require('./rights').can(person?.role, 'host');
 const match = (pattern, id) => pattern === '*' || pattern === id || (pattern.endsWith('*') && id.startsWith(pattern.slice(0, -1)));
@@ -44,8 +50,23 @@ const refusal = (person, kind, id) =>
  * A turn's model, narrowed to what its person may use: the chosen model if allotted, else the first allotted one down
  * the harness's order (said in `_allotted`); none allotted refuses the turn with who could allot one.
  */
-/** May the person's agents call this model — its provider and the model both allotted? */
-const allowsModel = (person, e) => uses(person, 'provider', e.provider) && uses(person, 'model', `${e.provider}/${e.model}`);
+const LOOPBACK = /^(127\.0\.0\.1|localhost|\[::1\]|0\.0\.0\.0)$/;
+
+/** The inference service (services.js) a provider is, when its endpoint is this machine at that service's port; else null. */
+function serviceOf(provider) {
+  try {
+    const e = require('../harness/providers').endpoint(provider);
+    const u = new URL(e.baseUrl);
+    if (!LOOPBACK.test(u.hostname)) return null;
+    const port = Number(u.port || (u.protocol === 'https:' ? 443 : 80));
+    // Only a service that serves chat: whisper's port is also where a hand-run vLLM is often found (providers.js PRESETS).
+    return require('../services').INFERENCE_SERVICES.find(s => s.chat && s.port === port)?.id || null;
+  } catch { return null; }
+}
+
+/** May the person's agents call this model — its provider, the model and (a local one) its service all allotted? */
+const allowsModel = (person, e) => uses(person, 'provider', e.provider) && uses(person, 'model', `${e.provider}/${e.model}`)
+  && (!person?.id || host(person) || !serviceOf(e.provider) || uses(person, 'service', serviceOf(e.provider)));
 
 function narrowModel(p, person) {
   if (!person?.id || host(person)) return p;
@@ -75,4 +96,4 @@ function normalize(input) {
   return Object.keys(out).length ? out : null;
 }
 
-module.exports = { KINDS, uses, allowsModel, narrowModel, refusal, normalize };
+module.exports = { KINDS, ADMIN_FIRST, uses, allowsModel, serviceOf, narrowModel, refusal, normalize };

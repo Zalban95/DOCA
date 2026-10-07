@@ -233,6 +233,7 @@ function handleSessions(req, res) {
 function mount(app) {
   app.get ('/login', (_req, res) => res.sendFile(path.join(__dirname, '..', '..', 'public', 'login.html')));
   require('./users-routes').mount(app);   // Settings → Users & levels (auth phase 2)
+  require('./holdings').mount(app);       // what a person holds: level, reach, resources, devices, budget (P1.10)
   app.get ('/api/auth/state',    handleState);
   app.post('/api/auth/setup',    handleSetup);
   app.post('/api/auth/login',    handleLogin);

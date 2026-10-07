@@ -52,7 +52,7 @@ function stepRequest({ p, ep, message, summary, client, profile, projectBrief, s
   const organization = require('../organization');
   const reports = organization.notices(session.id).slice(0, 10);
   const since = rows.length - [...rows].reverse().findIndex(r => r.role === 'user');   // this turn's own rows
-  const fits = require('./fits').block({ message, schemas, rows: since <= rows.length ? rows.slice(since) : [] });
+  const fits = require('./fits').block({ message, schemas, rows: since <= rows.length ? rows.slice(since) : [], person: client?.user });
   const live = [liveBlock(p, led), toolNews, fits, isMission ? '' : missions().block({ sessionId: session.id, completed }),
     organization.block(session.id, reports),
     ...contextSkips.values()].filter(Boolean).join('\n');

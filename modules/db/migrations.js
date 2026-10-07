@@ -104,6 +104,19 @@ const STEPS = [
   { id: 11, what: 'usage: the person each call was for', sql: [
     'ALTER TABLE usage ADD COLUMN person_id TEXT',
   ] },
+  // A person's own secrets for their own devices (TODO P1.3): a row is whose it is — '' the hub's, kept by its admins,
+  // else a person's id — and a name is unique per owner, so the key gains `person_id`. SQLite cannot change a primary
+  // key in place, so the table is rebuilt; every existing row is the hub's, as it was.
+  { id: 12, what: 'sealed secrets: whose each is (the hub\'s or a person\'s own)', sql: [
+    `CREATE TABLE IF NOT EXISTS sealed_secrets_v2 (
+       tenant_id TEXT NOT NULL DEFAULT 'local', person_id TEXT NOT NULL DEFAULT '', name TEXT NOT NULL, origin TEXT, note TEXT,
+       owner_id TEXT, iv TEXT NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL,
+       PRIMARY KEY (tenant_id, person_id, name))`,
+    `INSERT INTO sealed_secrets_v2 (tenant_id, person_id, name, origin, note, owner_id, iv, data, created_at)
+       SELECT tenant_id, '', name, origin, note, owner_id, iv, data, created_at FROM sealed_secrets`,
+    'DROP TABLE sealed_secrets',
+    'ALTER TABLE sealed_secrets_v2 RENAME TO sealed_secrets',
+  ] },
 ];
 
 /** The same steps on a synchronous SQLite handle (node:sqlite), for the stores that must stay synchronous. */

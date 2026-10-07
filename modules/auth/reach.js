@@ -10,7 +10,8 @@
  *   own-devices  create, plus the tools of the person's own devices (a phone, a desktop they paired)
  *   anything     everything the level's tool policy allows
  * A grant (`tool:<name>`) still reaches past a rung: that is how an admin or a team leader allots one device or
- * server to someone (S13). A level says its rung as `reach`; one that does not is ruled by its tool policy alone, as
+ * server to someone (S13). Another person's device can also be lent whole — `use:device:<id>` (allot.js) — and an
+ * `own-devices` level then reaches it as one of the person's own; a `create` level still does not. A level says its rung as `reach`; one that does not is ruled by its tool policy alone, as
  * before (an admin's "Git only" level that allows shell:git keeps it) — the built-ins: viewer (its policy denies every
  * tool), member own-devices, admin and main admin anything.
  */
@@ -34,7 +35,7 @@ function serverOf(name) {
   if (spec?.origin?.kind === 'client') {
     let device = null;
     try { device = require('../api-v1/devices').get(spec.origin.deviceId); } catch { /* gone */ }
-    return { server: id, kind: 'device', ownerId: device?.userId || null };
+    return { server: id, kind: 'device', ownerId: device?.userId || null, deviceId: spec.origin.deviceId || null };
   }
   return { server: id, kind: 'hub' };
 }
@@ -50,7 +51,8 @@ function refuse(level, person, name) {
   if (s.kind === 'hub') return `${s.server} runs on the hub machine, an admin's — beyond ${level.name || 'this level'}'s reach (${rung}); an admin can allot it`;
   if (rung === 'create') return `${s.server} is a device — beyond ${level.name || 'this level'}'s reach (create); an admin can allot it`;
   if (s.ownerId && s.ownerId === person?.id) return null;
-  return `${s.server} is on someone else's device — an admin or its owner can allot it`;
+  if (s.deviceId && require('./allot').uses(person, 'device', s.deviceId)) return null;   // lent to them (use:device:<id>)
+  return `${s.server} is on someone else's device — an admin can lend it (use:device:${s.deviceId || '<id>'} in Settings → Users)`;
 }
 
 module.exports = { RUNGS, HUB_MACHINE, rungOf, refuse };

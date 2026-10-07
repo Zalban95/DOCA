@@ -48,10 +48,13 @@ function sources(person, d = store.load()) {
   return out.filter(s => s.budget);
 }
 
-/** The tightest of each field: { <field>: { limit, from } }, or null when nothing limits this person. */
-function effective(person, d) {
+/**
+ * The tightest of each field: { <field>: { limit, from } }, or null when nothing limits this person. `without` leaves
+ * one source out — 'own', for a turn its person chose to take over their own budget (spending/over.js).
+ */
+function effective(person, d, { without = null } = {}) {
   const out = {};
-  for (const { from, budget } of sources(person, d))
+  for (const { from, budget } of sources(person, d).filter(s => s.from !== without))
     for (const [k, v] of Object.entries(budget)) if (!out[k] || v < out[k].limit) out[k] = { limit: v, from };
   return Object.keys(out).length ? out : null;
 }
@@ -70,8 +73,8 @@ function personFor({ person, sessionId }) {
  * This person's budget against what they spent: { budget, spent, over } — `over` the first field reached, or null.
  * Reads the ledger only when a budget exists, so a person without one costs nothing.
  */
-async function state(person, now = new Date()) {
-  const budget = effective(person);
+async function state(person, now = new Date(), opts = {}) {
+  const budget = effective(person, undefined, opts);
   if (!budget) return { budget: null, spent: null, over: null };
   const spent = await require('./spent').of(person.id, now);
   let over = null;
@@ -83,17 +86,17 @@ async function state(person, now = new Date()) {
 }
 
 /** Throws, saying which budget and who can raise it, when this person's is reached. */
-async function check(person, now = new Date()) {
-  const s = await state(person, now);
+async function check(person, now = new Date(), opts = {}) {
+  const s = await state(person, now, opts);
   if (!s.over) return s;
   const { field, limit, from, used } = s.over, f = FIELDS[field], cur = s.spent.currency;
   const raise = from === 'own' ? 'They can raise or clear it in Settings → Spending.'
     : from === 'level' ? `It is the default of the level "${person.role}"; an admin can change it in Settings → Spending.`
       : from === 'leader' ? 'Their team leader, or an admin, can raise it in Settings → Spending.'
       : 'An admin can raise it in Settings → Spending.';
-  throw Object.assign(new Error(`Not started: ${person.name || 'this person'}'s budget of ${fmt(f.unit, limit, cur)} ${f.what} `
-    + `(${FROM[from]}) is reached — ${fmt(f.unit, used, cur)} used ${f.period === 'today' ? 'today (UTC)' : 'this month'}. ${raise}`),
-  { status: 429, code: 'budget_reached' });
+  const what = `${fmt(f.unit, limit, cur)} ${f.what}`, spent = `${fmt(f.unit, used, cur)} used ${f.period === 'today' ? 'today (UTC)' : 'this month'}`;
+  throw Object.assign(new Error(`Not started: ${person.name || 'this person'}'s budget of ${what} (${FROM[from]}) is reached — ${spent}. ${raise}`),
+    { status: 429, code: 'budget_reached', over: { field, limit, from, used, what, spent }, personId: person.id });
 }
 
 /** The budget part of the agent's spending line, or ''. */
