@@ -118,7 +118,7 @@ module.exports = [
     use: 'Each signed-in browser is a device with its own theme, tabs, voice and face over the hive\'s.',
     tools: ['screen'], routes: ['/api/screen*'], words: 'per device settings theme tabs which page showing' },
   { id: 'appearance', name: 'Appearance', page: 'settings/general', settings: ['theme', 'skin', 'hiddenTabs'],
-    use: 'Theme, skin, hidden tabs, sidebar sections — per screen.', words: 'theme dark light colours tabs' },
+    use: 'Style (Classic, Modern, Points) and colours (Points, Points Daylight, Daylight and more), hidden tabs, sidebar sections — per screen.', words: 'theme skin style points daylight dark light colours tabs look' },
   { id: 'features', name: 'The feature index', page: 'settings/system', tools: ['features'],
     use: 'Every feature ever built, where it lives and how to switch it on; how much each kept alternative is used.',
     routes: ['/api/features*'], words: 'what can doca do capabilities alternatives unused' },

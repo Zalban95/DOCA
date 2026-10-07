@@ -12,6 +12,7 @@ const THEME_CSS_KEYS = [
   '--accent', '--green', '--red', '--blue', '--purple', '--teal', '--cyan', '--amber',
   '--bg-green', '--bg-red', '--bg-blue', '--bg-amber',
   '--bg2', '--bg3', '--font-mono', '--text-muted',
+  '--on-accent', '--stopped', '--field',   // a theme may name them (look-points.js); the others take variables.css's
 ];
 
 const THEME_CUSTOM_EDITOR_KEYS = [
@@ -312,10 +313,12 @@ function applyTheme(name) {
   if (!theme) return;
   _currentTheme = name;
   const root = document.documentElement;
+  THEME_CSS_KEYS.forEach(k => root.style.removeProperty(k));   // a key this theme does not name must not keep the last one's
   for (const [prop, val] of Object.entries(theme.colors)) {
     root.style.setProperty(prop, val);
   }
   _applyTerminalThemes();
+  if (typeof themeMarkGround === 'function') themeMarkGround();
 }
 
 /* ── Apply custom overrides ────────────────────────────── */
@@ -324,10 +327,12 @@ function applyCustomTheme(overrides) {
   _currentTheme = 'custom';
   _customThemeColors = { ...THEMES.default.colors, ...overrides };
   const root = document.documentElement;
+  THEME_CSS_KEYS.forEach(k => root.style.removeProperty(k));
   for (const [prop, val] of Object.entries(_customThemeColors)) {
     root.style.setProperty(prop, val);
   }
   _applyTerminalThemes();
+  if (typeof themeMarkGround === 'function') themeMarkGround();
 }
 
 /* ── Reset to CSS defaults (remove inline overrides) ───── */
@@ -337,6 +342,7 @@ function resetThemeToDefault() {
   const root = document.documentElement;
   THEME_CSS_KEYS.forEach(k => root.style.removeProperty(k));
   _applyTerminalThemes();
+  if (typeof themeMarkGround === 'function') themeMarkGround();
 }
 
 /* ── Get the xterm.js theme for the current palette ────── */
@@ -377,7 +383,7 @@ async function themeApplyOnLoad() {
     } else if (name !== 'default' && THEMES[name]) {
       applyTheme(name);
     } else {
-      _currentTheme = 'default';
+      resetThemeToDefault();   // and not the palette this browser drew first (look-points.js), if the screen's is the default
     }
   } catch {}
 }

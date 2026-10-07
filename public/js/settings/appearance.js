@@ -29,9 +29,11 @@ function _lookPickerRender(prefs) {
 
 async function _lookSelect(id) {
   const skin = lookApply(id);
+  const palette = typeof lookPointsPalette === 'function' ? lookPointsPalette(skin) : null;   // Points brings its palette
+  if (palette) { applyTheme(palette); _themePickerRender({ theme: palette }); }
   _lookPickerRender({ skin });
   try {
-    await screenSave({ skin });
+    await screenSave(palette ? { skin, theme: palette } : { skin });
     setStatus(document.getElementById('theme-status'), `✓ ${SKINS[skin].label} style`, 'ok');
   } catch (e) {
     setStatus(document.getElementById('theme-status'), `✗ ${e.message}`, 'err');
