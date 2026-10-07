@@ -194,6 +194,7 @@ async function tick(now = Date.now()) {
     if (!st.lastLookAt || now - Date.parse(st.lastLookAt) >= 20 * 3600e3) {
       const r = await require('./signals').look();
       notable = r.notable;
+      require('../activity').note({ from: 'scout', what: `looked for new models${notable.length ? ` — ${notable.length} notable` : ''}`, why: 'its daily look (experiments.modelScout)' });
       setState({ lastLookAt: r.at, lastNotable: notable });
     }
     const due = !st.lastBriefAt || now - Date.parse(st.lastBriefAt) >= s.everyDays * 86400e3;

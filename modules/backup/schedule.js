@@ -135,7 +135,10 @@ async function run({ now = Date.now() } = {}) {
 
 function tick() {
   const n = nextAt();
-  if (n && Date.now() >= n) run().catch(() => {});
+  if (n && Date.now() >= n) {
+    require('../activity').note({ from: 'backup', what: 'started a scheduled backup', why: 'its time came (Settings → Backups)' });
+    run().catch(e => require('../activity').note({ from: 'backup', what: `the scheduled backup failed: ${e.message}`, level: 'error' }));
+  }
 }
 
 let _timer = null;

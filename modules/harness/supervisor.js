@@ -81,6 +81,7 @@ function wake(sessionId, message, { retry } = {}) {
   }
   recent.push(Date.now());
   _why.set(sessionId, { why: whyOf(message), since: new Date().toISOString() });
+  require('../activity').note({ from: 'supervisor', what: `woke ${require('./memory').getSession(sessionId)?.title || sessionId}`, why: whyOf(message), sessionId });
   Promise.resolve()
     .then(() => _turn(sessionId, message))
     .then(r => afterOrchestrator(sessionId, r))

@@ -5,7 +5,8 @@
    System → Logs. Its page is made here: index.html is at its line ceiling. */
 const CHRON = { f: { q: '', source: '', person: '', device: '', agent: '', state: '', since: 'week' }, picked: null, off: null, data: null };
 const CHRON_SINCE = { hour: ['the last hour', 3600e3], day: ['the last day', 86400e3], week: ['the last week', 7 * 86400e3], month: ['the last 30 days', 30 * 86400e3], all: ['all kept', 0] };
-const CHRON_SOURCES = { turn: 'Turns', mission: 'Missions', job: 'Device jobs', log: 'Harness log (since the last start)' };
+const CHRON_SOURCES = { turn: 'Turns', mission: 'Missions', job: 'Device jobs', hub: 'What the hub did on its own', log: 'Harness log (since the last start)' };
+const chronLines = s => s === 'log' || s === 'hub';   // sources that are lines, not runs
 
 function chronicleTab(shown) {
   if (!shown) { CHRON.off?.(); CHRON.off = null; return; }
@@ -51,7 +52,7 @@ async function chronLoad() {
   CHRON.data = d;
   chronFiltersDraw(d.facets || {});
   const t = d.totals || {}, n = d.total || 0;
-  document.getElementById('chron-totals').textContent = CHRON.f.source === 'log'
+  document.getElementById('chron-totals').textContent = chronLines(CHRON.f.source)
     ? `${n} line${n === 1 ? '' : 's'}${n > d.rows.length ? `, the newest ${d.rows.length} shown` : ''}`
     : `${n} run${n === 1 ? '' : 's'}${n > d.rows.length ? `, the newest ${d.rows.length} shown` : ''} · ${(t.tokens || 0).toLocaleString()} tokens`
       + `${t.failed ? ` · ${t.failed} failed` : ''}${t.cancelled ? ` · ${t.cancelled} stopped` : ''}${t.running ? ` · ${t.running} running` : ''}`;
@@ -67,10 +68,10 @@ function chronFiltersDraw(fc) {
   const focused = document.activeElement?.id === 'chron-q';
   el.innerHTML = `<input class="input" id="chron-q" placeholder="Search titles, outcomes, agents, devices…" value="${escHtml(f.q)}" oninput="chronSearch(this.value)">
     ${sel('source', 'every source', (fc.sources || Object.keys(CHRON_SOURCES)).map(s => chronOpt(s, CHRON_SOURCES[s] || s, f.source)))}
-    ${f.source === 'log' ? '' : sel('person', 'everyone', (fc.people || []).map(p => chronOpt(p.id, p.name, f.person)))}
-    ${f.source === 'log' ? '' : sel('device', 'every device', (fc.devices || []).map(d => chronOpt(d.id, d.name, f.device)))}
-    ${f.source === 'log' ? '' : sel('agent', 'every agent', (fc.agents || []).map(a => chronOpt(a.id, a.label, f.agent)))}
-    ${sel('state', f.source === 'log' ? 'every level' : 'every outcome', (fc.states || []).map(s => chronOpt(s, s, f.state)))}
+    ${chronLines(f.source) ? '' : sel('person', 'everyone', (fc.people || []).map(p => chronOpt(p.id, p.name, f.person)))}
+    ${chronLines(f.source) ? '' : sel('device', 'every device', (fc.devices || []).map(d => chronOpt(d.id, d.name, f.device)))}
+    ${chronLines(f.source) ? '' : sel('agent', 'every agent', (fc.agents || []).map(a => chronOpt(a.id, a.label, f.agent)))}
+    ${sel('state', chronLines(f.source) ? 'every level' : 'every outcome', (fc.states || []).map(s => chronOpt(s, s, f.state)))}
     <select class="input" onchange="chronSet('since', this.value)">${Object.entries(CHRON_SINCE).map(([k, [l]]) => chronOpt(k, l, f.since)).join('')}</select>`;
   if (focused) { const q = document.getElementById('chron-q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
 }
@@ -88,7 +89,7 @@ const chronWhen = at => { const d = new Date(at); return d.toDateString() === ne
 function chronDur(ms) { if (ms == null) return ''; if (ms < 1000) return `${ms} ms`; if (ms < 60e3) return `${(ms / 1000).toFixed(1)} s`; return `${Math.round(ms / 60e3)} min`; }
 
 function chronRowHtml(r) {
-  if (r.source === 'log') return `<div class="chron-row" ${r.sessionId ? `onclick="chronStory({session: ${jsArg(r.sessionId)}}, this)"` : ''}>
+  if (chronLines(r.source)) return `<div class="chron-row" ${r.sessionId ? `onclick="chronStory({session: ${jsArg(r.sessionId)}}, this)"` : ''}>
       <span class="chron-when" title="${escHtml(new Date(r.at).toLocaleString())}">${escHtml(chronWhen(r.at))}</span>
       <span class="chron-what" style="white-space:normal">${escHtml(r.text)}</span><span class="chron-state ${escHtml(r.level)}">${escHtml(r.level)}</span></div>`;
   const icon = { turn: '💬', mission: '⬡', job: '⌁' }[r.source] || '·';

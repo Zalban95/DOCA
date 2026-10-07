@@ -42,6 +42,7 @@ function settle(row) {
   if (!deps.every(m => m.state === 'done')) return null;
   const handed = deps.map(m => `### From ${m.id} (${m.label})\n${String(m.result || '').slice(0, 6000)}${filesOf(m).length ? `\nFiles: ${filesOf(m).join(', ')}` : ''}`).join('\n\n');
   const m = missions.dispatch({ ...row.args, context: [row.args.context, `## What the missions you waited for delivered\n${handed}`].filter(Boolean).join('\n\n') });
+  require('../activity').note({ from: 'missions', what: `started ${row.args.agentId}'s errand (${m.id})`, why: `the missions it waited for finished: ${row.after.join(', ')}`, sessionId: row.args.by || null });
   return { started: m.id, after: row.after };
 }
 

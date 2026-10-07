@@ -189,6 +189,7 @@ const SCHEMA = {
       runsRetainDays:  { type: 'number', min: 1, max: 3650, default: 90, hint: 'Days the record of each turn, mission and device job is kept (Chronicle reads them); its trace goes with it.' },
       jobsKept:        { type: 'integer', min: 5, max: 1000, default: 50, hint: 'Background jobs (shell_job) kept with their output files; the oldest finished ones go first.' },
       evalResultsKept: { type: 'integer', min: 1, max: 500, default: 30, hint: 'Results kept per evaluation set, to compare a run with the one before.' },
+      activityDays:    { type: 'number', min: 1, max: 3650, default: 30, hint: 'Days the record of what the hub did on its own (a computer tidied away, a server resumed, a schedule fired) is kept (Chronicle → What the hub did).' },
     } },
   vms:              { is: 'local', home: 'device', on: 'host', note: 'the libvirt connection URI of this machine', propose: p('Virtual machines', 'The libvirt connection URI') },
   channels:         { is: 'local', home: 'device', on: 'host', note: 'channel bots (Telegram, Matrix, Slack, mail): tokens and a switch for this hub',
