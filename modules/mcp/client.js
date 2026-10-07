@@ -330,6 +330,7 @@ class McpClient {
       inputSchema: t.inputSchema || { type: 'object', properties: {} },
       // `readOnlyHint`: a tool only looks (absent, assume it can change something); `openWorldHint`: it reads the open world.
       readOnly:    !!t.annotations?.readOnlyHint, openWorld: !!t.annotations?.openWorldHint,
+      destructive: t.annotations?.destructiveHint === true,   // said outright only: the spec's default (true) would make every unannotated tool one
     }));
     return this.tools;
   }

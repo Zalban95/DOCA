@@ -25,6 +25,7 @@ const EXPERIMENTS = [
   { id: 'modelScout', label: 'A scout for better and new models', doc: 'model-scout.md', todo: 'H10.4', since: '2.213.0', measure: 'script' },
   { id: 'visionPass', label: 'Look at a computer\'s screen with a vision model', doc: 'vision-pass.md', todo: 'H5.6', since: '2.197.0', measure: 'script' },
   { id: 'toolTiers', label: 'Send the core tools in full, the rest by name', doc: 'tool-tiers.md', todo: 'B2', since: '2.249.0', measure: 'script' },
+  { id: 'riskTiers', label: 'Ask only about what cannot be undone, in every mode', doc: 'risk-tiers.md', todo: 'H10.11', since: '2.292.0', measure: 'script' },
   { id: 'claimCheck', label: 'Catch an answer that claims what the turn never did', doc: 'claim-check.md', todo: 'B7c', since: '2.264.0', measure: 'manual' },
 ];
 const STALE_DAYS = 60;
