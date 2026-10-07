@@ -26,6 +26,7 @@ const TOOLS = [
   ...require('./toolbox/memory'),
   ...require('./toolbox/settings'),
   ...require('./toolbox/panel'),
+  ...require('./toolbox/spending'),
   ...require('./toolbox/agents'),
   ...require('./toolbox/scout'),
   ...require('./toolbox/status'),

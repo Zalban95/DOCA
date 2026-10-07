@@ -14,6 +14,7 @@ const _SETTINGS_SUBTABS = [
   { id: 'wearables', label: 'Wearables', init: 'wearablesLoad',  find: 'watch DocaWear console macros joystick' },
   { id: 'channels',  label: 'Channels',  init: 'channelsLoad',   find: 'telegram matrix element slack mail email imap bot chat messaging' },
   { id: 'connectors', label: 'Connectors', init: 'connectorsLoad', find: 'oauth github google gmail calendar microsoft outlook accounts keys services', page: 'connectors' },
+  { id: 'spending',  label: 'Spending',  init: 'spendingLoad',   find: 'money budget cost tokens spend permission payment buy prices' },
   { id: 'packs',     label: 'Packs',     init: 'packsLoad',      find: 'export import dpack share skills recipes mcp' },
   { id: 'backups',   label: 'Backups',   init: 'backupsLoad' },
   { id: 'voice',     label: 'Voice',     init: '_subtabVoiceInit', find: 'live call speech microphone barge-in interrupt tts stt' },

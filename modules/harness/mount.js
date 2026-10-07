@@ -32,6 +32,7 @@ function mount(app) {
   require('../api-v1/a2a').mountCard(app);   // the A2A agent card, public at /.well-known (api-v1/a2a.js)   // OAuth connectors: the owner's accounts as tools (connectors/)   // evaluation sets: run, results, import and export (evals/)   // retrieval: the embedding model, a try, the index (retrieval/)   // web search: the provider and its key (search/)
   require('../screens/routes').mount(app);   // a browser is a device: this screen's settings (screens/)
   require('../guided/routes').mount(app);   // the set-up: what this machine bears, the questions, what they set up (guided/)
+  require('../spending/routes').mount(app);   // Settings → Spending: what was spent, budgets, spending permissions (CONSTITUTION S12)
   require('../sharing').mount(app);   // offering what was learned to the project, if the owner allows (CONSTITUTION §0)
   require('../packs/routes').mount(app);   // packs: export and import in other tools' formats (packs/)
   require('../schedules/routes').mount(app);   // turns and recipes on a timetable (schedules/)

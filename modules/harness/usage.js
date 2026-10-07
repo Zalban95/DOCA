@@ -92,4 +92,16 @@ async function summary({ days = 7, by = 'day', now = new Date() } = {}) {
   return { since, by, total, rows };
 }
 
-module.exports = { record, summary, fileFor };
+/**
+ * Totals between two instants per conversation, model and UTC day — what spending (spending/spent.js) attributes to
+ * the person whose conversation it is. `until` is exclusive.
+ */
+async function byConversation({ since, until }) {
+  await imported();
+  return (await db.all(`SELECT session_id AS session, coalesce(provider, '') || '/' || coalesce(model, '') AS key, substr(at, 1, 10) AS day,
+      count(*) AS calls, coalesce(sum(prompt), 0) AS prompt, coalesce(sum(completion), 0) AS completion, coalesce(sum(cached), 0) AS cached
+    FROM usage WHERE tenant_id = 'local' AND at >= ? AND at < ? GROUP BY session_id, provider, model, substr(at, 1, 10)`, [since, until]))
+    .map(r => ({ session: r.session || null, key: r.key, day: r.day, calls: Number(r.calls), prompt: Number(r.prompt), completion: Number(r.completion), cached: Number(r.cached) }));
+}
+
+module.exports = { record, summary, byConversation, fileFor };

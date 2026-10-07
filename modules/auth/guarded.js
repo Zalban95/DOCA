@@ -13,7 +13,9 @@
  *   PREFS   settings paths that are switches, wherever a write of them comes from: POST /api/prefs, applying a
  *           proposal, restoring a checkpoint — and never applied by an agent alone (settings_propose's `asked` and
  *           Unattended leave them a proposal: toolbox/settings.js)
- * Spending (S12) joins both lists when it exists.
+ * Spending (S12; docs/design/spending.md) is in ROUTES: its rules are not settings but a protected file
+ * (keys/spending.json), changed only by /api/spending/*; the price list money budgets are counted in is in both, once
+ * a money budget exists.
  */
 const W = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
@@ -27,7 +29,15 @@ const PREFS = [
   ['network', 'how the hub listens'],
   ['tracing', 'what is kept of each turn'],
   ['logs', 'what is kept of what happened'],
+  ['usagePrices', 'the prices money budgets are counted in', () => moneyBudgets()],
 ];
+
+/** Whether any money budget exists: only then do the prices decide whether a turn starts (spending/budgets.js). */
+function moneyBudgets() {
+  const d = require('../spending/store').load();
+  return [...Object.values(d.people).flatMap(p => [p.own, p.budget]), ...Object.values(d.levels).map(l => l.budget)]
+    .some(b => b && (b.moneyPerDay || b.moneyPerMonth));
+}
 
 const get = (o, dotted) => dotted.split('.').reduce((v, k) => (v == null ? undefined : v[k]), o);
 // Absent and empty are the same setting: a panel posting back `{}` for a section never written changes nothing.
@@ -38,7 +48,7 @@ const same = (a, b) => JSON.stringify(norm(a)) === JSON.stringify(norm(b));
 function prefsTouched(changes) {
   for (const { path, to, from } of changes) {
     if (same(to, from)) continue;
-    const hit = PREFS.find(([p]) => path === p || path.startsWith(`${p}.`) || p.startsWith(`${path}.`));
+    const hit = PREFS.find(([p, , when]) => (path === p || path.startsWith(`${p}.`) || p.startsWith(`${path}.`)) && (!when || when()));
     if (hit) return hit[1];
   }
   return null;
@@ -74,6 +84,9 @@ const ROUTES = [
   [['POST'], /^\/api\/auth\/users\/[^/]+\/password$/, 'another person\'s password'],
   [W, /^\/api\/harness\/guards(?!\/test$)(\/.*)?$/, 'the guards'],
   [['POST'], /^\/api\/settings\/checkpoints\/[^/]+\/restore$/, 'restoring settings'],
+  // Spending (S12): budgets, permissions and their acceptance; declining a proposal never asks — saying no is free.
+  [W, /^\/api\/spending\/(?!permissions\/[^/]+\/decline$).+$/, 'spending: budgets and permissions'],
+  [['POST'], /^\/api\/harness\/usage\/prices$/, 'the prices money budgets are counted in', () => moneyBudgets()],
   [['POST'], /^\/api\/prefs$/, null, req => prefsBody(req.body)],
   [['POST'], /^\/api\/harness\/proposals\/[^/]+\/apply$/, null, req => proposal(req.path.split('/')[4])],
 ];

@@ -76,8 +76,8 @@ outward or irreversible, taste) is asked once, with options; everything else is 
 system and for the person (the charter's Safety section; what cannot be undone is said in those words).
 Exists today: the ladder in the charter and routing table (2.271.0), recipes, skills, specialists, install and
 settings proposals, keys for services, `api_call`, the newcomer and routing evaluation sets. Missing: offering
-providers' options when the machine cannot bear a model; spending with a linked payment method (none is linked —
-needs its own safety design before anything is built).
+providers' options when the machine cannot bear a model; spending with a linked payment method (its safety design is docs/design/spending.md;
+budgets, spending permissions and the Spending page exist, linking a method does not yet).
 
 ## 3. A project, from request to done
 

@@ -77,7 +77,8 @@ const TABLE = [
   R(ANY, '/api/harness/guards(/.*)?', 'host'),             // what the agents may read (guard/)
   R(ANY, '/api/harness/questions/[^/]+', 'chat'),          // answering what the agent asked
   R(ANY, '/api/harness/canvases/[^/]+', 'chat'),           // deleting one (reading is a GET below)
-  R(ANY, '/api/harness/usage/prices', 'chat'),              // the owner's price list: display only, changes nothing the agent does
+  R(GET, '/api/harness/usage/prices', 'read'),
+  R(ANY, '/api/harness/usage/prices', 'host'),              // the owner's price list: money budgets are counted in it (spending/)
   R(GET, '/api/harness(/.*)?', 'read'),
   // The agent's durable memory is one for everybody until per-person memory (auth phase 3): a member
   // deleting or locking the owner's facts was found by the live test 2026-10-04. Reading is read, above.
@@ -106,6 +107,8 @@ const TABLE = [
   R(ANY, '/api/search/(settings|try)', 'host'),                // the web search provider and its key (search/routes.js)
   R(ANY, '/api/screen/layout(/undo)?', 'read'),                 // one's own panel layout and this screen's; the install's default is checked as host inside (panel-layout/routes.js)
   R(ANY, '/api/screen(/settings|/profile)?', 'read'),          // one's own screen or device: how it looks and when it is asked, never how the hive behaves (screens/)
+  R(GET, '/api/spending', 'read'),                              // what was spent: your own; everyone's for an admin (spending/routes.js)
+  R(ANY, '/api/spending(/.*)?', 'chat'),                        // your own budget and permissions within your level; others' are `users`, checked there
   R(ANY, '/api/sharing(/.*)?', 'host'),                        // the owner's answer and the owner's click (sharing.js)
   R(ANY, '/api/guided(/.*)?', 'host'),                         // setting up the machine: what it bears, what to install, which keys (guided/)
   R(ANY, '/api/packs(/.*)?', 'host'),                          // packs carry MCP commands, tool lists and memory (packs/routes.js)

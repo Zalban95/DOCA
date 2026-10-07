@@ -11,6 +11,9 @@
  * against every model call in the ledger over the last 24 hours: past it, the
  * turn is refused and says why. A turn already running is never cut off
  * mid-flight — the ceiling decides whether the next one starts.
+ *
+ * It is also where a person's spending budget is checked (spending/, CONSTITUTION S12): one place refuses a turn for
+ * what was spent, the harness's day first and then the budget of the conversation's person, which is opt-in.
  */
 const usage = require('../usage');
 
@@ -23,10 +26,16 @@ async function state(p, now = new Date()) {
   return { used, limit, over: used >= limit };
 }
 
-/** Returns `p` when a turn may start; throws, saying why, when the ceiling is reached. */
-async function check(p, now = new Date()) {
+/**
+ * Returns `p` when a turn may start — with `_spending`, the line its agent reads, when its person has a budget or a
+ * spending permission; throws, saying why, when the ceiling or the person's budget is reached.
+ */
+async function check(p, now = new Date(), { person = null, sessionId = null } = {}) {
   const s = await state(p, now);
-  if (!s.over) return p;
+  if (!s.over) {
+    const line = await require('../../spending').beforeTurn({ person, sessionId }, now);
+    return line ? { ...p, _spending: line } : p;
+  }
   throw Object.assign(new Error(`Not started: the model calls of the last 24 hours used ${s.used} tokens, and the `
     + `daily ceiling is ${s.limit} (harness setting "Tokens per day", harness.config.doca.tokensPerDay). `
     + 'Raise it or set it to 0 in the harness ⚙ panel, or wait for older calls to leave the 24-hour window.'),
