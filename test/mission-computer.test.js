@@ -32,6 +32,9 @@ test('a chosen computer is lent to the mission', async () => {
   const m = r.body.mission;
   assert.equal(require('../modules/harness/memory').getSession(m.sessionId).profile.computer, 'c0ffee11', 'its tools are the mission\'s');
   assert.equal(require('../modules/computers').get('c0ffee11').missionId, m.id);
+  const block = require('../modules/harness/organization').block(m.sessionId);
+  assert.match(block, /Your computer for this mission is c0ffee11: its tools are mcp__computer-c0ffee11__\*\. It is the only computer you hold/,
+    'the specialist is told its computer once, by id (#23)');
 });
 
 test('an unknown computer is a 404, one in the Archive a 409, and neither starts a mission', async () => {
