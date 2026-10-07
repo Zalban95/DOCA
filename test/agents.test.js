@@ -94,7 +94,8 @@ test('a specialist prompt is smaller than the orchestrator prompt, and keeps the
     },
   });
 
-  assert.ok(narrow.includes(providers.SAFETY_CHARTER),
+  // Everything up to the repository rules (which reach only a turn holding the code tools — charterFor, B8).
+  assert.ok(narrow.includes(providers.SAFETY_CHARTER.slice(0, providers.SAFETY_CHARTER.indexOf('## Working on a repository'))),
     'the charter is not something a definition may drop');
   assert.ok(narrow.length < full.length,
     `a specialist prompt (${narrow.length}) must be smaller than the orchestrator's (${full.length}) `

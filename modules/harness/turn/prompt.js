@@ -103,7 +103,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
   // orchestrator, and a definition has no way to drop it.
   if (profile) {
     return [
-      providers.SAFETY_CHARTER,
+      providers.charterFor(schemas.map(s => s.function.name)),
       profile.systemPrompt,
       clientBlock(client), require('../../auth/permits').describe({ person: client?.user, profile }),
       `You are "${profile.label || profile.id}", working on one errand handed to you by the agent the `
@@ -131,7 +131,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
   }
 
   return [
-    providers.SAFETY_CHARTER,
+    providers.charterFor(schemas.map(s => s.function.name)),
     p.systemPrompt || providers.DEFAULT_SYSTEM_PROMPT,
     environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount }),
     toolList,
