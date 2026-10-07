@@ -279,6 +279,8 @@ function block(id, pending = []) {
       + (s.job ? 'Your job ends only when you say so: work_chats report with outcome done, failed, blocked (you cannot go on without a decision from above) or question (one only the owner can answer). Until then the panel keeps you going: a turn that ends short of a final report is followed by another, and when your specialists finish you are woken with their results, so end your turn while they work instead of waiting. Progress reports are optional and wake nobody.'
         : 'This chat has no job from the Orchestrator: answer the person who writes here; nothing wakes you between turns.') : '',
     s.plan?.fulfilledAt && s.job ? 'Your plan is fulfilled — every step\'s contract holds: report done with what was delivered and where.' : '',
+    // Its computer, said once and by id: nothing else in a specialist's prompt names it (self-test 2026-10-08, #23).
+    s.kind === 'specialist' && s.profile?.computer ? `Your computer for this mission is ${s.profile.computer}: its tools are mcp__computer-${s.profile.computer}__*. It is the only computer you hold and it stays the same for the whole mission; another computer id in your errand or in files is not yours.` : '',
     s.kind === 'specialist' && !s.profile?.computer ? 'If the errand needs a real environment you were not given — a computer, to try something risky, use a site as a person would, or record a demo — say so in your report; your leader makes one and sends you back with it.' : '',
     s.plan ? `Your plan: ${s.plan.state} revision ${s.plan.revision}, ${short(s.plan.title, 140)}. Read its steps with work_plan.` : '',
     `${ordered.length} active conversations in view. The inventory and archives: work_chats list.`,

@@ -58,6 +58,17 @@ test('after an update, the next turn is told what changed in its tools — once'
   assert.equal(news.news('specialist:t', [schema('a', 'A, now better.'), schema('c', 'C.')]), '', 'said once');
 });
 
+test('another mission\'s computer is not news: a computer\'s id is the conversation\'s (self-test 2026-10-08, #23)', () => {
+  const news = require('../modules/harness/turn/tool-news');
+  const schema = (name, description) => ({ type: 'function', function: { name, description } });
+  const kit = id => [schema(`mcp__computer-${id}__shell`, `Run a command in computer-${id}.`), schema(`mcp__computer-${id}__files`, 'Files.')];
+  news.news('specialist:tester-x', kit('e8fd7864'));
+  assert.equal(news.news('specialist:tester-x', kit('4631d4f7')), '', 'lent another computer: nothing "changed"');
+  const n = news.news('specialist:tester-x', [...kit('4631d4f7'), schema('mcp__computer-4631d4f7__record_start', 'Record.')]);
+  assert.match(n, /New: mcp__computer-…__record_start/, 'a tool the image adds still is');
+  assert.doesNotMatch(n, /4631d4f7|e8fd7864|Gone/);
+});
+
 test('the control plane asks — in every mode, Unattended included, never "always" — and the tool writes only with that yes', async () => {
   const approval = require('../modules/harness/approval');
   const prefs = JSON.parse(fs.existsSync(paths.PREFS_FILE) ? fs.readFileSync(paths.PREFS_FILE, 'utf8') : '{}');

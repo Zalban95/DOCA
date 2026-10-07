@@ -82,7 +82,8 @@ function _hcBuiltinHtml(h) {
         <div class="agent-fold" id="hc-fold" hidden></div>
         <div class="hc-input-row">
           <span class="hc-caret">❯</span>
-          <select class="input hc-to" id="hc-to" style="display:none" title="Who this message goes to: the Orchestrator, or straight to one specialist as an errand"></select>
+          <select class="input hc-to" id="hc-to" style="display:none" onchange="_hcComputerShow()" title="Who this message goes to: the Orchestrator, or straight to one specialist as an errand"></select>
+          <select class="input hc-to" id="hc-computer" style="display:none" title="Which of the agents' computers the specialist works in"></select>
           <textarea class="input flex1 hc-input" id="hc-input" rows="1" placeholder="Message the harness…"
                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();hcSend();}"></textarea>
           <button class="btn btn-sm btn-amber" id="hc-send" onclick="hcSend()">Send</button>
