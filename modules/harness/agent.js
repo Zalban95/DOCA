@@ -175,6 +175,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   const led      = budget.ledger();
   let warned     = false;
   let text = '';
+  let claimAsked = false;   // turn/claims.js: once per turn
 
   // Proposals already waiting when the turn started are on screen already; only
   // the ones this turn creates need announcing.
@@ -282,6 +283,10 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       say({ type: 'warning', ...warn });
     }
 
+    // An answer claiming an action no call made gets one more step (experiment claimCheck, turn/claims.js).
+    const claim = !reply.tool_calls.length && step < maxSteps && require('./turn/claims').check({ text: reply.content, rows: memory.messages(session.id),
+      from, held: new Set(tools.schemas(stepDisabled).map(x => x.function?.name)), asked: claimAsked });
+    if (claim) { claimAsked = true; say({ type: 'warning', step, kind: 'claim', text: `The answer says ${claim.claim}; nothing this turn did it — asked to do it or say so.` }); memory.append(session.id, { role: 'user', content: claim.note, from: { id: null, name: 'DOCA', formFactor: 'hub' } }); continue; }
     if (!reply.tool_calls.length) {
       memory.updateSession(session.id, {
         tokens: (memory.getSession(session.id)?.tokens || 0) + spend.totalTokens,
