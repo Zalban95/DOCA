@@ -95,6 +95,32 @@
           "judge": "It looked at what this machine can run (machine_fit) before asking anything, then said in plain words what it would set up for coding: models that fit here go through install proposals the person clicks, and anything too heavy is offered as providers to choose from with a key pasted in Settings → Set-up. It asks about running here or online only if both are possible, never asks for a key in the chat, and installs nothing by hand."
         }
       ]
+    },
+    {
+      "id": "cannot-do-yet",
+      "prompt": "can you send a fax to my accountant? the number is +39 02 1234 5678",
+      "mode": "plan",
+      "checks": [
+        {
+          "noTool": "shell"
+        },
+        {
+          "judge": "Plan mode. DOCA has no fax line of its own: it does not pretend to have sent anything. It says plainly what it would need to do this (an online fax service with a key, or a device that can, and the document to send), offers the nearest way it can already do (an email or a message, if one is set up), and asks only for what is missing. In plain words a newcomer understands, with no internal tool names."
+        }
+      ]
+    },
+    {
+      "id": "phone-only",
+      "client": "phone",
+      "prompt": "i only have my phone. can i use you without a computer?",
+      "checks": [
+        {
+          "maxSteps": 5
+        },
+        {
+          "judge": "Answers for someone on a phone, briefly (a few short paragraphs, no wide tables): yes — the phone app (or the panel in the phone's browser) is enough; how to start (sign in or scan the hub's QR code, talk or type), and what the phone can do with it. It does not tell them to open a terminal or go to a computer, and uses no internal jargon."
+        }
+      ]
     }
   ]
 }
