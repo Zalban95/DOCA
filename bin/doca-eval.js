@@ -77,4 +77,8 @@ const once = async () => {
   return result.passed === result.total ? 0 : 1;
 };
 
-(models.length || flag ? compare() : once()).then(code => { cleanup(); process.exit(code); }, e => { say({ error: e.message }, `eval: ${e.message}`); cleanup(); process.exit(1); });
+// Held open while the set runs: a turn waiting on something with only an unref'd timer behind it (a background job's
+// wait) let the event loop run empty, and node exited 0 in the middle of a case with nothing saved — the panel never
+// sees it because its server keeps the loop busy (found 2026-10-07: the routing set always ended during case 8).
+const keepAlive = setInterval(() => {}, 1 << 30);
+(models.length || flag ? compare() : once()).finally(() => clearInterval(keepAlive)).then(code => { cleanup(); process.exit(code); }, e => { say({ error: e.message }, `eval: ${e.message}`); cleanup(); process.exit(1); });
