@@ -46,7 +46,7 @@ function _mcpOffersHtml(offers) {
         <div class="card-title" style="margin-bottom:0">${escHtml(o.deviceName)} is offering an MCP server</div>
         <span class="provider-badge warn">WAITING FOR YOU</span>
         <span style="flex:1"></span>
-        <button class="btn btn-xs btn-green" onclick="mcpOfferAccept(${arg})">✓ Accept</button>
+        <button class="btn btn-xs btn-green" onclick="mcpOfferAccept(${arg}, this)">✓ Accept</button>
         <button class="btn btn-xs btn-red" onclick="mcpOfferReject(${arg})">✕ Decline</button>
       </div>
       <div class="mcp-where"><code>${escHtml(o.url)}</code></div>
@@ -66,14 +66,14 @@ function _mcpOffersHtml(offers) {
   }).join('');
 }
 
-async function mcpOfferAccept(id) {
-  const status = document.getElementById(`mcp-offer-status-${id}`);
-  setStatus(status, 'accepting…', '');
+async function mcpOfferAccept(id, btn) {
+  const status = document.getElementById(`mcp-offer-status-${id}`), done = mcpBusy(btn, 'Accepting…');
+  setStatus(status, 'Accepting — adding it as a server…', 'info');
   try {
     const r = await apiFetch(`/api/mcp/offers/${encodeURIComponent(id)}/accept`, { method: 'POST' });
     await mcpLoad();
-    setStatus(document.getElementById(`mcp-status-${r.server.id}`), `✓ Added — Start it to see its tools`, 'ok');
-  } catch (e) { setStatus(status, `✗ ${e.message}`, 'err'); }
+    mcpShowResult(r.server.id, `✓ Added. ${r.server.transport === 'http' ? 'Connect' : 'Start'} it to see its tools.`, 'ok');
+  } catch (e) { done(); setStatus(status, `✗ ${e.message}`, 'err'); }
 }
 
 function mcpOfferReject(id) {
@@ -151,12 +151,12 @@ function _mcpCardHtml(s) {
         ${s.autostart ? '<span class="mcp-count">starts with DOCA</span>' : ''}
         <span style="flex:1"></span>
         ${running
-          ? `<button class="btn btn-xs" onclick="mcpAction(${arg}, 'restart')">↻ Restart</button>
-             <button class="btn btn-xs" onclick="mcpAction(${arg}, 'refresh')" title="Refresh tool discovery; this does not test the backend app">↺ Tools</button>
-             <button class="btn btn-xs" onclick="mcpAction(${arg}, 'stop')">${s.transport === 'http' ? 'Disconnect' : 'Stop'}</button>`
-          : `<button class="btn btn-xs btn-green" onclick="mcpAction(${arg}, 'start')">▶ ${s.transport === 'http' ? 'Connect' : 'Start'}</button>`}
+          ? `<button class="btn btn-xs" onclick="mcpAction(${arg}, 'restart', this)">↻ Restart</button>
+             <button class="btn btn-xs" onclick="mcpAction(${arg}, 'refresh', this)" title="Refresh tool discovery; this does not test the backend app">↺ Tools</button>
+             <button class="btn btn-xs" onclick="mcpAction(${arg}, 'stop', this)">${s.transport === 'http' ? 'Disconnect' : 'Stop'}</button>`
+          : `<button class="btn btn-xs btn-green" onclick="mcpAction(${arg}, 'start', this)">▶ ${s.transport === 'http' ? 'Connect' : 'Start'}</button>`}
         ${onClient
-          ? `<button class="btn btn-xs" onclick="mcpAction(${arg}, 'listener-start')"
+          ? `<button class="btn btn-xs" onclick="mcpAction(${arg}, 'listener-start', this)"
                      title="Push a request to that machine to bring its MCP server up. It can refuse.">✆ Ask to run</button>`
           : ''}
         <button class="btn btn-xs" onclick="mcpShowLog(${arg})" title="What the server printed">Log</button>
@@ -171,33 +171,32 @@ function _mcpCardHtml(s) {
     </div>`;
 }
 
-const MCP_ACTION_LABEL = {
-  'listener-start': 'asking it to run',
-  'listener-stop':  'asking it to stop',
-  refresh:          'refreshing tools',
+const MCP_ACTION_LABEL = {   // what the pressed button says while it works
+  start: 'Connecting…', restart: 'Restarting…', stop: 'Stopping…',
+  'listener-start': 'Asking…', 'listener-stop': 'Asking…', refresh: 'Refreshing…',
 };
 
-async function mcpAction(id, action) {
-  const status = document.getElementById(`mcp-status-${id}`);
-  setStatus(status, `${MCP_ACTION_LABEL[action] || action}…`, '');
+async function mcpAction(id, action, btn) {
+  const status = document.getElementById(`mcp-status-${id}`), done = mcpBusy(btn, MCP_ACTION_LABEL[action] || '…');
+  setStatus(status, `${MCP_ACTION_LABEL[action] || `${action}…`}`, 'info');
   try {
     const r = await apiFetch(`/api/mcp/${encodeURIComponent(id)}/action`, { method: 'POST', body: { action } });
     await mcpLoad();
+    const n = r.server?.state === 'running' && /start/.test(action) ? r.server.toolCount ?? 0 : null;   // connected: say so, with its tools
+    if (n !== null && r.ok !== false) mcpShowResult(id, `✓ Connected — ${n} tool${n === 1 ? '' : 's'} offered to the harness.`, 'ok');
     // Asking a client is not the same as it having happened: it may be offline,
     // or it may say no. Report what we actually know.
     if (r.asked) {
-      setStatus(document.getElementById(`mcp-status-${id}`), `${r.online ? '✓' : 'ℹ'} ${r.message}`, r.online ? 'ok' : 'warn');
+      mcpShowResult(id, `${r.online ? '✓' : 'ℹ'} ${r.message}`, r.online ? 'ok' : 'warn');
       return;
     }
     // A server that refuses to start answers 200 with the reason — its own log
     // is the useful part, so open it rather than making the user go looking.
     if (r.ok === false) {
-      setStatus(document.getElementById(`mcp-status-${id}`), `✗ ${r.error}`, 'err');
+      mcpShowResult(id, `✗ ${r.error}`, 'err');
       mcpShowLog(id, true);
     }
-  } catch (e) {
-    setStatus(document.getElementById(`mcp-status-${id}`) || status, `✗ ${e.message}`, 'err');
-  }
+  } catch (e) { done(); setStatus(document.getElementById(`mcp-status-${id}`) || status, `✗ ${e.message}`, 'err'); }
 }
 
 async function mcpShowLog(id, keepOpen) {

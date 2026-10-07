@@ -57,3 +57,8 @@
 .form-help-btn { margin-left: auto; float: right; font-size: 10px; text-transform: none; letter-spacing: 0; opacity: .8; }
 .form-help-btn:hover { opacity: 1; }
 .form-help-filled { outline: 2px solid var(--accent); outline-offset: 1px; transition: outline-color 1s ease; }
+
+/* What a click on the MCP page did (js/mcp-feedback.js): a busy button, and the row that changed lit once */
+.mcp-busy { opacity: .7; cursor: progress; }
+.mcp-flash { animation: mcp-flash 1.6s ease-out; }
+@keyframes mcp-flash { 0% { box-shadow: 0 0 0 2px var(--accent); } 100% { box-shadow: 0 0 0 2px transparent; } }
