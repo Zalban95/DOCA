@@ -38,6 +38,18 @@ test('a confirmed decision in a computer\'s browser is asked in every mode, neve
   await H.api(null, 'POST', '/api/harness/approval', { mode: 'auto' });
 });
 
+test('any device\'s tool called with confirm: true is asked in every mode, never "always" (TODO A4)', async () => {
+  const approval = require('../modules/harness/approval');
+  for (const mode of ['auto', 'unattended']) {
+    await H.api(null, 'POST', '/api/harness/approval', { mode, confirmUnattended: true });
+    const g = approval.gate('mcp__docamobile-pixel__screen_press', { n: 12, confirm: true });
+    assert.equal(g?.forced, true, mode);
+    assert.equal(g.keys, null);
+    assert.equal(approval.gate('mcp__docamobile-pixel__screen_press', { n: 12 }), null, `${mode}: an ordinary press runs`);
+  }
+  await H.api(null, 'POST', '/api/harness/approval', { mode: 'auto' });
+});
+
 test('what a computer\'s browser reads is framed as outside words, and the next action is asked again', () => {
   const untrusted = require('../modules/harness/untrusted');
   const name = 'mcp__computer-ab12cd34__browser_snapshot';
