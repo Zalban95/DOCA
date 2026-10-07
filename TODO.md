@@ -98,6 +98,19 @@ the project's managers only if the owner allows sharing specialists and skills (
   person, device, agent and time, with the story of a piece of work told from its logs and traces (what ran, why,
   what it cost, what failed) — the place unrendered work is seen afterwards.
 
+### Security review 2026-10-07
+- [x] Guards strengthened (branch `sec-misc`, `test/security-review-1007.test.js`): switching versions and every pack
+  import ask for the password (`auth/guarded.js` ROUTES); applying a proposal is checked against the live setting, not
+  its stored `from`; the switch password and the step-up count under `s:<user id>`, never the sign-in's counter; each
+  usage row keeps its person (`usage.person_id`, schema step 11), so deleting a conversation does not reset a budget;
+  `mayAllow` caps a person's kept plus this month's one-time permissions in all; with a money budget an unpriced model
+  refuses the turn (and leaves the fallback chain); the allotment narrows the fallback chain, assistant mode's model,
+  the triage's and the reader's model (`transport.ask {person}`) and the vision model; a refused call takes no project
+  checkpoint (`risk.keep` after the decision); an ownerless device marks nothing seen; a style value cannot fetch
+  (`image-set(`, `image(`, `cross-fade(`, `element(`, `//`). Not done: the guards' own screening model and the other
+  `agent.ask` callers (rules review, skill drafts, evals' judge) are panel actions of a host, not a person's turn; the
+  Terminal and the Files tab can still write the prefs file — inherent to host (AGENTS.md).
+
 ### Everything still open, now urgent
 - C7b: done; D2b: done — its gaps (`docs/api/capability-gaps.md`) are v1 routes to ask for, plan decisions first.
 - D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),

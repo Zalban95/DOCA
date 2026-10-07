@@ -18,11 +18,11 @@ async function ask(png, question, s) {
   return r.text;
 }
 
-async function look({ computer, question, how, template }) {
+async function look({ computer, question, how, template }, ctx = {}) {
   if (!on()) return 'Error: the vision pass is an experiment that is off, or no reader is set up (Settings → Developer; Settings → Harness → Vision).';
   if (!String(question || '').trim() && !template) return 'Error: say what to look for.';
   const png = await require('./index').screen(String(computer || ''));
-  try { return vision.say(await vision.read(png, question, { how: how || 'auto', template })); }
+  try { return vision.say(await vision.read(png, question, { how: how || 'auto', template, person: ctx.user })); }
   catch (e) { return `Error: ${e.message}`; }
 }
 

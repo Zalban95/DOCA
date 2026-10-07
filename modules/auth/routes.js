@@ -139,6 +139,13 @@ function claimDevices(orgId, userId) {
   return n;
 }
 
+/**
+ * A password typed by someone already signed in (a step-up, a guarded switch) counts under its own key, by account id
+ * — never the sign-in's `e:<email>`: whoever holds a session could otherwise fail it on purpose and lock the owner out
+ * of signing in (security review 2026-10-07).
+ */
+const sessionKeys = req => [`s:${req.auth.user.id}`];
+
 /** POST { email, password } */
 async function handleLogin(req, res) {
   const { email, password } = req.body || {};
@@ -198,7 +205,7 @@ async function handlePassword(req, res) {
 
 /** POST { password } — renew the recent sign-in that host, users and org actions need. */
 async function handleStepUp(req, res) {
-  const keys = [`e:${req.auth.user.email}`];
+  const keys = sessionKeys(req);
   const wait = limited(keys);
   if (wait) return fail(res, Object.assign(new Error(`Too many attempts. Try again in ${wait} s.`), { status: 429, code: 'rate_limited' }));
   if (!await credentials.verifyPassword(req.body?.password, req.auth.user.passwordHash)) {
@@ -242,10 +249,10 @@ function mount(app) {
 
 /**
  * The password typed for one guarded switch (guarded.js; CONSTITUTION S14): checked against the person's own, under
- * the same rate limit as signing in. Resolves an error to send, or null when it is right.
+ * a rate limit of its own (sessionKeys), not the sign-in's. Resolves an error to send, or null when it is right.
  */
 async function confirmPassword(req, password) {
-  const keys = [`e:${req.auth.user.email}`];
+  const keys = sessionKeys(req);
   const wait = limited(keys);
   if (wait) return { status: 429, code: 'rate_limited', error: `Too many attempts. Try again in ${wait} s.` };
   if (!await credentials.verifyPassword(String(password), req.auth.user.passwordHash)) {

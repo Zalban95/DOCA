@@ -63,7 +63,7 @@ module.exports = [
   row('harnesses', 'install, choose and configure harnesses', ['POST /api/harness/default', 'POST /api/harness/custom', 'DELETE /api/harness/custom/:id', 'POST /api/harness/:id/config',
     'POST /api/harness/:id/install', 'POST /api/harness/opendots/config', 'POST /api/harness/opendots/stack', 'DELETE /api/harness/contracts/:provider', 'POST /api/harness/usage/prices']),
   row('approval-mode', 'switch the approval mode, and forget an "always"', ['POST /api/harness/approval', 'DELETE /api/harness/approval/always/:key'],
-    { only: 'the agent\'s leash is the owner\'s at the panel; a watch answering full_auto to its own approval is the one way a device does it' }),
+    { only: 'the agent\'s leash is the owner\'s at the panel, with the password (a safety switch, CONSTITUTION S14); no device changes it — Full auto left the wrist in 2.281.0' }),
   row('installs', 'accept or decline an install the agent proposed', ['POST /api/harness/installs/:id/apply', 'POST /api/harness/installs/:id/reject'],
     { only: 'installing on this machine is a host\'s click (installs.js)' }),
   row('specialists', 'make, edit and switch on specialists, and the agents\' identity', ['POST /api/harness/agents', 'POST /api/harness/agents/enable', 'POST /api/harness/agents/:id',

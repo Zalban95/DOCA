@@ -22,4 +22,26 @@ async function beforeTurn({ person, sessionId }, now = new Date()) {
     + 'to spend money, propose a permission with spend_propose and say what it costs.'}`.trim();
 }
 
-module.exports = { beforeTurn };
+/**
+ * A money budget counts in the owner's prices, and a model without one would be spent outside it (security review
+ * 2026-10-07). So when the turn's person has a money budget, the model the turn will call must be priced: an unpriced
+ * one refuses the turn, saying an admin prices it in Harness → Usage — refusing is clearer than guessing a price — and
+ * unpriced rungs leave the fallback chain. Returns `p`, its chain narrowed when it had to be.
+ */
+function priced({ person, sessionId }, p) {
+  const who = budgets.personFor({ person, sessionId });
+  const b = who?.id ? budgets.effective(who) : null;
+  if (!b || !(b.moneyPerDay || b.moneyPerMonth)) return p;
+  const prices = require('../harness/prices'), list = prices.load();
+  const has = (provider, model) => prices.cost({ key: `${provider}/${model}`, prompt: 0, completion: 0, cached: 0 }, list) !== null;
+  if (!has(p.provider, p.model)) {
+    throw Object.assign(new Error(`Not started: ${who.name || 'this person'} has a money budget, and ${p.provider}/${p.model} has no price, `
+      + 'so what it costs could not be counted. An admin can price it in Harness → Usage (the "24h …" line beside the model), '
+      + 'or choose a priced model.'),
+    { status: 429, code: 'unpriced_model' });
+  }
+  const chain = (Array.isArray(p.fallbackChain) ? p.fallbackChain : []).filter(e => !e?.provider || has(e.provider, e.model || p.model));
+  return chain.length === (p.fallbackChain || []).length ? p : { ...p, fallbackChain: chain };
+}
+
+module.exports = { beforeTurn, priced };
