@@ -103,6 +103,9 @@ const SCHEMA = {
       calls: { type: 'boolean', default: false, hint: 'Use this effort and model for the chat\'s 🎙 call too, not only for the face.' },
       provider: { type: 'string', default: '', hint: 'A provider for assistant mode\'s own model. Empty: the conversation\'s.' },
       model: { type: 'string', default: '', hint: 'A quicker model for assistant mode (e.g. a small local one). Empty: the conversation\'s model.' } } },
+  setup:            { is: 'local', home: 'device', on: 'host', note: 'how this hub was set up and what shape it is (guided/plan.js; CONSTITUTION §1 "Two shapes, two set-ups") — the owner\'s, never proposable',
+    keys: { mode: { type: 'string', default: '', hint: 'guided or advanced: the owner\'s first-run choice. Empty: not chosen yet, so the panel offers it once.' },
+      shape: { type: 'string', default: '', hint: 'local (runs its own agent model) or preset (lives on providers\' keys), as the guided set-up found this machine.' } } },
   sharing:          { is: 'local', home: 'hive', note: 'whether what the agents learn (skills, recipes, specialists kept as packs) may be offered to the project, and to which hub — asked at installation, the owner\'s alone, never proposable (sharing.js; CONSTITUTION §0)',
     keys: {
       contribute: { type: 'boolean', default: false, hint: 'Offer the skills, recipes and specialists your agents learn to the project. Nothing is sent without your click.' },
