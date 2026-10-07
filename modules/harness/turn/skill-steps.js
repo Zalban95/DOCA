@@ -12,7 +12,7 @@ const MAX_STEPS = 12;
 /** The numbered steps of a skill's body: their bold titles, else their first sentence. */
 function stepsOf(body) {
   const out = [];
-  for (const line of String(body || '').split('\n')) {
+  for (const line of String(body || '').split(/\r?\n/)) {   // a skill written on Windows has CRLF lines
     const m = /^\s{0,2}(\d+)\.\s+(.*)$/.exec(line);
     if (!m) continue;
     const bold = /^\*\*(.+?)\*\*/.exec(m[2]);
@@ -28,7 +28,7 @@ function block(rows = []) {
   const seen = new Map();
   for (const r of rows) {
     if (r.role !== 'tool' || r.name !== 'skill') continue;
-    const m = /^# ([\w.-]+)\n([\s\S]*)$/.exec(String(r.content || ''));
+    const m = /^# ([\w.-]+)\r?\n([\s\S]*)$/.exec(String(r.content || ''));
     if (m && !seen.has(m[1])) seen.set(m[1], stepsOf(m[2]));
   }
   const out = [];

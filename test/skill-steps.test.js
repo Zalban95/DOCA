@@ -22,6 +22,8 @@ test('the steps of a skill this turn read are its checklist; other rows give non
     assert.equal(steps.block([{ role: 'tool', name: 'read_file', content: '# x\n1. **A** step' }]), '');
     assert.equal(steps.block([{ role: 'tool', name: 'skill', content: 'No skills yet.' }]), '', 'a list is not a read');
     assert.deepEqual(steps.stepsOf('1. **One** first.\n2. Two: then\n  3. Three.\nnot a step'), ['One', 'Two', 'Three']);
+    assert.deepEqual(steps.stepsOf('1. **One** first.\r\n2. Two.\r\n'), ['One', 'Two'], 'a skill written on Windows');
+    assert.match(steps.block([{ role: 'tool', name: 'skill', content: '# win\r\n1. **Build** it.\r\n' }]), /1\. Build/);
     const fits = require('../modules/harness/turn/fits').block({ message: 'build my app', schemas: [{ function: { name: 'skill' } }], rows });
     assert.match(fits, /# Following the skill android-app/);
   });
