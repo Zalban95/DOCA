@@ -28,6 +28,7 @@ const COVERAGE = {
   archive: { v1: ['/harness/sessions/{id}/archive', '/harness/missions/{id}/archive'], note: 'projects and computers are the machine\'s', panel: HOST },
   live: { v1: ['/events'], note: 'a device already hears turns, missions and work chats change on its event stream; watching a folder is the machine\'s' },
   packs: { v1: ['/packs'], note: 'between hubs; making and bringing in packs is a host\'s' },
+  spending: { panel: 'budgets and spending permissions change only with the password, at the panel (CONSTITUTION S12, S14); a device reads its tokens at /harness/usage and opens the panel (/d/<id>/) for the rest' },
   sharing: { panel: 'the owner\'s answer and click to offer what was learned to the project (CONSTITUTION §0); a host\'s alone' },
   presence: { v1: ['/events'], note: 'the panel saying it is looked at; a device\'s presence is its event stream' },
   wakeword: { v1: ['/wakeword'], note: 'a device downloads kept models and the runtime; training stays the hub\'s' },
