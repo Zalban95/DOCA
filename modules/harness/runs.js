@@ -53,6 +53,17 @@ function recoverJobs() {
   try { raw()?.prepare("UPDATE runs SET state = 'failed', outcome = 'interrupted by a restart of the hub', ended_at = ? WHERE tenant_id = 'local' AND kind = 'job' AND state = 'running'").run(now()); } catch { /* see begin */ }
 }
 
+/** Finished runs older than `days`, with their traces: gone (log-keep.js; `logs.runsRetainDays`). Returns how many. */
+function prune(days) {
+  const r = raw();
+  if (!r || !(days > 0)) return 0;
+  const before = new Date(Date.now() - days * 86400000).toISOString();
+  try {
+    r.prepare("DELETE FROM trace_spans WHERE tenant_id = 'local' AND run_id IN (SELECT id FROM runs WHERE tenant_id = 'local' AND state != 'running' AND started_at < ?)").run(before);
+    return Number(r.prepare("DELETE FROM runs WHERE tenant_id = 'local' AND state != 'running' AND started_at < ?").run(before).changes || 0);
+  } catch { return 0; }
+}
+
 function get(id) { return view(raw()?.prepare("SELECT * FROM runs WHERE tenant_id = 'local' AND id = ?").get(String(id))); }
 
 function forSession(sessionId, limit = 20) {
@@ -87,4 +98,4 @@ function checkPlan(id) {
   } catch { return null; }
 }
 
-module.exports = { begin, end, person, get, forSession, checkPlan, openItems, recoverJobs };
+module.exports = { begin, end, person, get, forSession, checkPlan, openItems, recoverJobs, prune };

@@ -1,0 +1,9 @@
+/* A page of the person's own (js/panel-layout.js): the panel's pages side by side, each working as it does alone. */
+.panel-view.active { display: flex; flex-direction: column; overflow: hidden; }
+.panel-view-head { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  font-family: var(--font-ui); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.panel-view-grid { flex: 1; min-height: 0; display: grid; gap: 10px;
+  grid-template-columns: repeat(var(--panel-view-cols, 2), minmax(0, 1fr)); grid-auto-rows: minmax(320px, 1fr); overflow-y: auto; }
+.panel-view-cell { position: relative; min-height: 0; display: flex; border: 1px solid var(--border2); background: var(--bg); overflow: hidden; }
+.panel-view-cell > .tab-page.active { display: flex; flex: 1; height: 100%; padding: 10px; }
+@media (max-width: 768px) { .panel-view-grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(70dvh, auto); } }

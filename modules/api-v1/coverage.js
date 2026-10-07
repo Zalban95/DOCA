@@ -34,11 +34,12 @@ const COVERAGE = {
   wakeword: { v1: ['/wakeword'], note: 'a device downloads kept models and the runtime; training stays the hub\'s' },
   ambient: { v1: ['/ambient'], note: 'the person\'s day; the screen itself is the panel\'s page' },
   decisions: { v1: ['/decisions'] },
+  chronicle: { v1: ['/harness', '/jobs/{id}'], note: 'a device reads its conversations, missions and jobs there; reading them all back as one story is the panel\'s page' },
   branding: { panel: 'public, and read by clients as it is (GET /api/branding)' },
   auth: { panel: 'a person signing in to the panel; a device pairs instead (/devices)' },
   // The machine and DOCA itself.
   ...Object.fromEntries(['status', 'action', 'stack', 'logs', 'stats', 'configs', 'prefs', 'config-favorites', 'fm-favorites', 'paths', 'keys', 'skills',
-    'setup', 'snapshots', 'files', 'host', 'experiments', 'developer', 'screens', 'workstream', 'machines', 'network', 'settings', 'search', 'retrieval', 'vision', 'scout', 'assistant', 'evals', 'connectors', 'channels', 'computers', 'models',
+    'setup', 'snapshots', 'files', 'host', 'experiments', 'features', 'developer', 'screens', 'workstream', 'machines', 'network', 'settings', 'search', 'retrieval', 'vision', 'scout', 'assistant', 'evals', 'connectors', 'channels', 'computers', 'models',
     'system', 'update-check', 'update', 'restart', 'deps', 'versions', 'backups', 'startup', 'docker', 'mcp', 'vms', 'services'].map(g => [g, { panel: HOST }])),
 };
 

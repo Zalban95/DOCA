@@ -14,6 +14,7 @@ function mount(app) {
   app.get('/api/host/capabilities', (req, res) => res.json(require('../host-capabilities').capabilities({ fresh: req.query.fresh === '1' })));
   require('./tab-routes').mount(app);
   require('../experiments').mount(app);
+  require('../features').mount(app);   // every feature ever built, and how much each kept alternative is used (features/)
   require('../releasing').mount(app);   // who may release DOCA unasked: the admin's setting (CONSTITUTION W2)
   require('../migrations').mount(app);   // which prefs migrations this install has had (migrations.js)   // experiments behind flags, each with its write-up (experiments.js)
   require('../search/routes').mount(app);
@@ -37,10 +38,13 @@ function mount(app) {
   require('../live/routes').mount(app);
   require('../screens/showing').mount(app);
   require('../archive').mount(app);
+  require('../log-keep').mount(app);    // what is kept of what happened, and its bounds (Settings → System → Logs)
+  require('../chronicle/routes').mount(app);   // Chronicle: everything that happened, and the story of a piece of work
   require('../workstream/routes').mount(app);
   require('../machines').mount(app);
   require('../network').mount(app);   // how the hub listens, what may be done from outside the tailnet, its addresses as QR codes   // the agents' machines live, and the pages they serve (machines/)   // the agents' work as it happens: files edited, thinking, commands   // what was put away, in one place (archive.js)   // what each screen shows, and sending a page to one   // every page live on every screen: one change feed (live/, H10.5)
   require('../agents/stopping').mount(app);
+  require('./seen').mount(app);           // read means done: a finished result its person opened (seen.js)
   require('./stopped-work').mount(app);   // restart or drop work a person stopped (stopped-work.js)   // a visible Stop for missions and automatic turns (agents/stopping.js, H10.14)
   require('../model-servers').mount(app);
   require('../model-roles').mount(app);   // which model does what (C4)

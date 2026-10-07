@@ -514,7 +514,7 @@ data: {"reason":"revoked"}
 | `agent.turn` | durable | `{ turnId, sessionId, state: started\|done\|failed, by, message?, text?, steps?, proposals[]?, error?, quiet? }` — one conversation turn (§23) |
 | `agent.text` | ephemeral | `{ turnId, sessionId, delta }` — reply text as produced; **only to the device that posted the message** |
 | `agent.tool` | ephemeral | `{ turnId, sessionId, name, phase: call\|result, step, args?, ok?, preview? }` |
-| `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|paused\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error?, plan?, progress?, archivedAt?, quiet? }` — a specialist agent's work, to every device with `harness:chat` whose owner may open the conversation (§23). `paused` means a restart cut it off; the agent asks the user whether to continue on the next turn from any device. `plan` is the specialist's own checklist (`[{ title, state: done\|running\|queued\|failed }]`, at most 12) and `progress` `{ done, total, percent }` from it — draw the bar from these, else from `steps`. `archivedAt` (hub 2.228) means the mission was put away: **take its row off and notify nothing** — it always comes with `quiet: true`. A `paused` mission is waiting for its person (continue or drop), not finished. A work chat arrives in the same shape with `kind: "work"` and `agentId: "work"`; one a person stopped or dropped is `cancelled` (why in `error`) — nothing finished, so nothing is announced as done. `GET /harness/missions` is the same picture for a client that has just woken up. |
+| `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|paused\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error?, plan?, progress?, archivedAt?, seenAt?, quiet? }` — a specialist agent's work, to every device with `harness:chat` whose owner may open the conversation (§23). `paused` means a restart cut it off; the agent asks the user whether to continue on the next turn from any device. `plan` is the specialist's own checklist (`[{ title, state: done\|running\|queued\|failed }]`, at most 12) and `progress` `{ done, total, percent }` from it — draw the bar from these, else from `steps`. `archivedAt` (hub 2.228) means the mission was put away: **take its row off and notify nothing** — it always comes with `quiet: true`. `seenAt` (hub 2.282) means its person opened the finished result — on the panel or a device (`POST /harness/missions/{id}/seen`): read means done, so **clear its notice everywhere** and notify nothing (`quiet: true`); it stays a finished row. A `paused` mission is waiting for its person (continue or drop), not finished. A work chat arrives in the same shape with `kind: "work"` and `agentId: "work"`; one a person stopped or dropped is `cancelled` (why in `error`) — nothing finished, so nothing is announced as done. `GET /harness/missions` is the same picture for a client that has just woken up. |
 | `artifact.deliver` | durable | `{ artifact, inline?, inlineEncoding?: utf8|base64, message, ext }` |
 | `sensor.request` | durable (ttl = duration + 30 s) | `{ request: { id, sensors: [{ id, mode, rateHz, durationSec, unit }], reason, ext, expiresAt } }` |
 | `sensor.stop` | durable | `{ requestId, reason }` |
@@ -1171,6 +1171,42 @@ text frame, and you answer each by its `id`. One socket per device; a newer one 
 
 The DOCA browser extension (`clients/browser`, preset `extension` = `mcp:self` only) is the first such client.
 
+### 22.3 Sealed secrets: used on the device, never read by the agent (hub 2.286.0, TODO P1.3)
+
+An agent can have a password, a PIN or a key typed or pasted on one of its person's devices without ever seeing it
+(CONSTITUTION S4): it calls `secret_use {secret, device, …}`, a person is asked every time, and the hub hands the value
+to **that device alone, sealed for it**, for one use (or a few pastes) and a short time. The agent learns what was
+done ("filled field [2] on https://bank.example", "on its clipboard for 1 paste or 30 s"), never the value. A device
+that hosts an MCP server (§22, §22.2) takes part by doing three things:
+
+1. **Take its seal key.** `GET /mcp/self/seal` (scope `mcp:self`) → `{v: 1, alg: "A256GCM", key, aad}`: 32 random bytes
+   (base64) minted for this device the first time it asks, the same afterwards. Keep it where only the app reads it
+   (Android Keystore-wrapped preferences, Windows DPAPI, the extension's own storage). A hub without sealed secrets
+   answers 404: carry on without.
+2. **Answer the hidden tool `secret_fill`.** It is never listed in `tools/list` (so an agent cannot call it), and only
+   the hub calls it: `tools/call {name: "secret_fill", arguments: {sealed: {v: 1, iv, data}}}`. `iv` is 12 bytes and
+   `data` is the AES-256-GCM ciphertext followed by its 16-byte tag (what WebCrypto's `encrypt` writes), both base64;
+   the additional data is the UTF-8 of `aad` (`doca-seal:<your device id>`). Opened, it is JSON:
+
+   | field | |
+   |---|---|
+   | `device` | your device id — refuse anything else |
+   | `iat`, `nonce` | when it was sealed (ms) and a one-time id — refuse one older than 5 minutes or seen before |
+   | `how` | `field` (a field on a web page), `type` (typed into what has focus), `clipboard` |
+   | `value` | the secret — use it, never return, log or store it |
+   | `ref`, `tab`, `origin` | for `field`: the `[n]` from the last snapshot, the tab (null: in front), the only origin it may be filled on |
+   | `uses`, `ttlSec` | for `clipboard`: pastes before it is forgotten (1–10) and the most seconds it may stay (5–300) |
+
+   Use it as `how` says or refuse with `isError` and a sentence (never containing the value): a `field` only when the
+   tab's origin is exactly `origin` (a look-alike gets nothing); `clipboard` cleared after `uses` pastes where the OS
+   can count them, else after `ttlSec`, and kept out of clipboard history where the OS allows. While a secret is on
+   the clipboard, refuse your own clipboard reads and command lines. Answer
+   `{"done": "field"|"typed"|"clipboard", "uses": n, "counted": true|false, "seconds": s}` as text.
+3. **Forget it.** Nothing of the value stays after the use: not in a file, a log, a crash report or a notification.
+
+Clients: `clients/node` (doca-client: `type` and `clipboard`, with the `device` family lent) and `clients/browser` (the
+extension: `field`). What DocaMobile and DocaDesk implement is `docs/api/sealed-secrets.md`.
+
 ## 23. Talking to the agent (`/harness`)
 
 Every client is an input and an output to one agent. A watch, a phone and a
@@ -1287,6 +1323,7 @@ decides, and anything else answers 404 as if absent:
 | `GET /harness/working` | `harness:chat` | `{missions, auto, stopped}`: what runs on its own now, with why, and what waits for restart or drop |
 | `GET /ambient?place=&units=` | `harness:chat` | the person's day: weather, today's calendar, notices — what the ambient screen shows |
 | `GET /decisions` | `harness:chat` | everything waiting for the person's decision, `{kind, id, title, at, page}` (a host's device also the hive's) |
+| `POST /harness/missions/{id}/seen` | `harness:chat` | its person opened this finished result (a mission, or a work chat by its conversation id) — read means done (hub 2.282). Call it when the person opens the notification or the result; every device then hears `agent.mission` with `seenAt` and `quiet`. Running work, and someone else's, is left as it is; answers `{seen, kind}` |
 
 Putting away is announced like any change: `agent.mission` with `archivedAt` and `quiet` — take the row off, notify
 nothing. Since 2.257.0 the `watch` preset holds `harness:sessions` (the face and schedules); a watch paired earlier

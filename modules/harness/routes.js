@@ -276,6 +276,7 @@ const mayDecide = (req, p) => {
   const person = proposalPerson(req);
   if (!person?.role || require('../auth/rights').can(person.role, 'propose')) return true;
   if (!p?.screen) return false;
+  if (p.screen.id === `person:${person.id}`) return true;   // their own layer, on every device (panel layout)
   const d = require('../api-v1/devices').get(p.screen.id);
   return !!d && d.userId === person.id;
 };
@@ -333,9 +334,13 @@ const handleAgentSave = wrap(async (req, res) => {
 const handleAgentDelete = wrap(async (req, res) =>
   res.json({ ok: true, agent: registry.remove(req.params.id) }));
 
-const handleMissions = wrap(async (req, res) =>
-  res.json({ missions: missions.list({ state: req.query.state, limit: Number(req.query.limit) || 50,
-    all: req.query.all === '1' }) }));
+// The person's own missions (a host's, every one); `live=1`: running, or finished and not yet opened (seen.js).
+const handleMissions = wrap(async (req, res) => {
+  const access = require('./session-access'), person = who(req);
+  const rows = missions.list({ state: req.query.state, limit: 200, all: req.query.all === '1' })
+    .filter(m => access.mayUse(person, m.sessionId || m.by) && (req.query.live !== '1' || m.state === 'running' || !m.seenAt));
+  res.json({ missions: rows.slice(0, Number(req.query.limit) || 50) });
+});
 
 /** POST /api/harness/missions/:id/archive - put a finished one away, or bring it back. */
 const handleMissionArchive = wrap(async (req, res) =>
@@ -343,7 +348,7 @@ const handleMissionArchive = wrap(async (req, res) =>
 
 const handleMission = wrap(async (req, res) => {
   const m = missions.get(req.params.id);
-  if (!m) return res.status(404).json({ error: `No mission called "${req.params.id}"` });
+  if (!m || !require('./session-access').mayUse(who(req), m.sessionId || m.by)) return res.status(404).json({ error: `No mission called "${req.params.id}"` });
   res.json({ mission: m, events: missions.events(req.params.id) });
 });
 

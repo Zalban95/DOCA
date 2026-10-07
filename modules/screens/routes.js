@@ -9,6 +9,7 @@
 const screens = require('./index');
 
 function mount(app) {
+  require('../panel-layout/routes').mount(app);   // the panel's structure as data, per person and per screen (TODO P1.2)
   // The speech service's voices, for a screen to pick its own from (Settings → Voice → This screen's voice).
   app.get('/api/chat/voices', require('../chat').handleVoices);
   // A spoken answer the person talked over: the floating chat's conversation keeps only what was heard (harness/heard.js).

@@ -221,9 +221,8 @@ function announce(row, { ephemeral = false, quiet = false } = {}) {   // quiet: 
       // Sent whenever there is one, so a client that has never seen this mission can still draw the bar
       // from a single event. A client without a plan falls back to the step count, exactly as before.
       plan: Array.isArray(row.plan) && row.plan.length ? row.plan : undefined,
-      // So a client that is showing this mission takes it off the list when it
-      // is put away here, rather than keeping a row the panel no longer draws.
-      archivedAt: row.archivedAt || undefined,
+      // So a client showing this mission takes it off the list when it is put away (archivedAt) or opened (seenAt, seen.js).
+      archivedAt: row.archivedAt || undefined, seenAt: row.seenAt || undefined,
       progress: planProgress(row.plan) || undefined,
     };
     const access = require('../harness/session-access');

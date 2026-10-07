@@ -65,15 +65,15 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [x] P1.1 **A person's request is the decision (S1)** — *2.276.0: `settings_propose {asked: true}` on a person's own turn, within their level, is applied with a checkpoint; charter rule 6 says so.*: a change a person asks for to their own installation —
   settings included — is applied with a checkpoint, not left as a proposal; the agent's own initiative stays a
   proposal; S11's list still asks.
-- [ ] P1.2 **The panel's structure as data**: pages, layouts, custom views and styles as layered data (edition →
+- [x] P1.2 **The panel's structure as data** — *2.287.0: `modules/panel-layout`: the screen-home setting `panel` (groups and their pages in order, hidden, renamed, a person's own views made of the panel's pages, style: text scale, density, theme tokens) layered install (an edition's or an admin's) → person (every device of theirs) → screen, normalised on every read and resolved with every page placed once, so an update's new page always appears; drawn at boot by `public/js/panel-layout.js` (a view moves the pages' own elements into its cells — no iframes); the agent's `panel_layout` tool applies a person's ask to their layer at once and proposes otherwise; Undo, Reset, text size, spacing, download and load in Settings → General → Your panel; an edition carries a layout. Left: `/?view=<a view>` solo, pages that time their refresh by `currentTab` inside a view, a layout as a pack part of its own.*: pages, layouts, custom views and styles as layered data (edition →
   install → person → screen) the agent edits when asked to "change the UI", surviving updates — never a repo change.
-- [ ] P1.3 **Secrets used, never read, on any device (S4)**: a sealed secret handed to a device's input for a set
+- [~] P1.3 **Secrets used, never read, on any device (S4)** — *2.286.0 (`modules/sealed`): `secret_use`, always asked, hands a secret for devices (kept in doca.db, AES-256-GCM, key in keys/), a login's password or a key for services to the person's own device sealed for it alone (a per-device seal key, `GET /api/v1/mcp/self/seal`; the hidden MCP tool `secret_fill`, PROTOCOL §22.3); doca-client types it or keeps it on the clipboard for N pastes / T seconds, the browser extension fills a field only on the secret's own site; Field → Connectors keeps them and lists where each was used. Left: DocaMobile and DocaDesk (`docs/api/sealed-secrets.md` says what to build); a person's own secrets for members (today an admin's, like logins).*: a sealed secret handed to a device's input for a set
   number of uses, then forgotten — `computer_login`'s fill, generalised to phones, desktops and the browser extension.
-- [~] P1.4 **Work persists until done (V10)** — *2.275.0: contracts in plans (`plan-contracts.js`): a step marked done is held to its check (file, file contains, an owned address); the plan reads fulfilled when all hold, and its work chat is told to report done; the plan document and side panel show each contract. 2.277.0: a mission a restart cut off carries on by itself, like work chats (`agents/carry-on.js`). 2.278.0: experts wait on each other — `agent_dispatch {after}` (`agents/after.js`). Left: "done" when the person opens the result (the notice's read state).*: each plan step carries a contract ("done when …", with a check the
+- [~] P1.4 **Work persists until done (V10)** — *2.275.0: contracts in plans (`plan-contracts.js`): a step marked done is held to its check (file, file contains, an owned address); the plan reads fulfilled when all hold, and its work chat is told to report done; the plan document and side panel show each contract. 2.277.0: a mission a restart cut off carries on by itself, like work chats (`agents/carry-on.js`). 2.278.0: experts wait on each other — `agent_dispatch {after}` (`agents/after.js`). 2.282.0: read means done — a finished result its person opened is `seenAt` (`harness/seen.js`, `POST /api/v1/harness/missions/{id}/seen`), off the live bar, devices clear the notice. Left for the apps: DocaMobile/DocaWear call `seen` when a notice or result is opened and clear it on `seenAt` (D3).*: each plan step carries a contract ("done when …", with a check the
   hub runs where one exists) and the plan is finished when all hold; experts that wait on each other's files (a
   dependency between missions/work chats); the Orchestrator resumes unfinished projects after a
   restart on its own unless the person archived, forgot or deleted them; one message where the person is.
-- [x] P1.5 **Guided set-up and the two shapes (§1)** — *2.283.0 (first slice): `guided/assess.js` reads what the machine bears (GPUs, memory, disk, runtimes; every OS); `guided/suggested-models.json` the project-tested models per role with their needs, refreshed from the project's hub only with sharing consent (the hub's route still to build); the picker takes the newest that fits or lists providers with their key pages; Settings → Set-up (and a first-run Guided / Advanced choice) asks what it is for, where it runs (only when that is a choice) and which devices, then proposes installs a click runs and waits for keys it tests; `setup.mode`/`setup.shape`; `machine_fit` + skill `guided-setup`. Not yet: other installs reporting what they measured, hosted speech, a hosted sign-in offering.*: a first conversation that asks what the person needs and sets
+- [x] P1.5 **Guided set-up and the two shapes (§1)** — *2.288.0 (first slice): `guided/assess.js` reads what the machine bears (GPUs, memory, disk, runtimes; every OS); `guided/suggested-models.json` the project-tested models per role with their needs, refreshed from the project's hub only with sharing consent (the hub's route still to build); the picker takes the newest that fits or lists providers with their key pages; Settings → Set-up (and a first-run Guided / Advanced choice) asks what it is for, where it runs (only when that is a choice) and which devices, then proposes installs a click runs and waits for keys it tests; `setup.mode`/`setup.shape`; `machine_fit` + skill `guided-setup`. Not yet: other installs reporting what they measured, hosted speech, a hosted sign-in offering.*: a first conversation that asks what the person needs and sets
   it up; a hub that picks models for its machine from what other installs tested (shared only with consent, like
   skills); providers' options offered when the machine cannot bear something.
 - [ ] P1.6 **Spending with permission (S12)**: a Spending settings page (budgets, a linked payment method, standing
@@ -81,20 +81,20 @@ the project's managers only if the owner allows sharing specialists and skills (
   allowed follows the level — its own safety design first.
 - [x] P1.9 **Reach by level (S2)** — *2.280.0: `auth/reach.js` rungs create · own-devices · anything; Member own-devices; a grant allots past it; the levels editor chooses it.*: each level says how far agents may reach into its people's devices and machines,
   a scale from "create safely with tools" to "anything"; the shipped levels get sensible rungs.
-- [ ] P1.10 **Resources allocated (S13)**: machines, devices, models, services, keys and budgets allocated to users
+- [~] P1.10 **Resources allocated (S13)** — *2.283.0: `auth/allot.js` — a level lists the models, providers, keys, accounts and computers its people use; a grant `use:<kind>:<id>` allots one; a team leader's level names what it may give (`delegates`). Left: budgets (with P1.6 spending), services and devices as allotted kinds, a per-person view of what they hold.*: machines, devices, models, services, keys and budgets allocated to users
   by the admin, with grantable "may allot" for team leaders; a personal panel change follows its person to all
   their devices.
-- [ ] P1.7 **Nothing coded is lost (W14)**: H10.7's tooling hides unused paths from the default instead of archiving
+- [x] P1.7 **Nothing coded is lost (W14)** — *2.284.0: `modules/features`: an index of every feature (data/*.js, ~130 entries: what, where, state, the alternative beside its replacement), held complete by `test/features.test.js` (every experiment, page, Settings section, tool and old tool name); the agent's free `features {find|id|unused}` tool; Settings → System → Features. Alternatives counted (`features/usage.js`) and reviewed (`features/review.js`): an unused one is hidden from the default by the admin, never archived.*: H10.7's tooling hides unused paths from the default instead of archiving
   them off main; an index of every feature the agents read so they know what exists.
 - [ ] P1.8 **Nothing runs unseen, but it can be unrendered (§1)**: every running thing (models, specialists,
   services, machines, file edits) is drawn by the panel in its existing, designated tab when that tab is open, and
   otherwise only logged — attributed either way; an audit that nothing runs outside both.
-- [ ] P1.11 **Important and safety switches ask for the password (S14)**: approval modes, developer mode, sharing,
+- [x] P1.11 **Important and safety switches ask for the password (S14)** — *2.281.0: `auth/guarded.js` lists the switch routes and settings; the gate asks 401 `password_required`, the panel asks and resends with the password; the agent never applies one alone; the wrist's Full auto withdrawn.*: approval modes, developer mode, sharing,
   spending, reach and levels, guards, experiments — the panel asks for the password again before the change, however
   recent the sign-in; the route checks it too.
-- [ ] P1.12 **Log settings**: what is kept, for how long and how much (per source: turns, tools, traces, devices,
+- [x] P1.12 **Log settings** — *2.285.0: `modules/log-keep.js` lists every store of what happened with its bounds and what it holds (Settings → System → Logs); `logs.*` (harness, Workstream and MCP lines in memory, runs' days, background jobs, evaluation results) and `tracing.maxSpans` declared, not proposable and asked with the password (S14), enforced at start, daily and on save; checkpoints, migration copies and device queues shown as fixed.*: what is kept, for how long and how much (per source: turns, tools, traces, devices,
   services), so logs never fill memory or disk needlessly; defaults sized for a small machine.
-- [ ] P1.13 **Chronicle — the log analyzer tab**: everything that happened, searchable and filtered by source,
+- [x] P1.13 **Chronicle — the log analyzer tab** — *2.285.0: Agents → Chronicle (`modules/chronicle`, `/api/chronicle`, right `read`, rows scoped by session-access): every run with its conversation, person, device (now kept on the run), agent, cost and outcome, filtered and searched, plus the harness log for a host; a story per run, conversation or mission from runs and traces — why, models, tools, failures, refusals, cost, what it started. The design comes later.*: everything that happened, searchable and filtered by source,
   person, device, agent and time, with the story of a piece of work told from its logs and traces (what ran, why,
   what it cost, what failed) — the place unrendered work is seen afterwards.
 
@@ -107,9 +107,9 @@ the project's managers only if the owner allows sharing specialists and skills (
 - C7b: done; D2b rest: API coverage by capability, not path prefix.
 - D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),
   `mcp.listener stop`, `confirmPromptChoice`'s body (§12.6 `{selectionId, decision}`), the native wake word, the
-  watch's line in Settings → Updates; DocaWear: the LAN port; DocaDesk: the socket transport, `prompt.outcome`.
+  watch's line in Settings → Updates, `seen` on opening a finished notice and clearing it on `seenAt` (PROTOCOL §11.4, hub 2.282); DocaWear: the LAN port, the same `seen`; DocaDesk: the socket transport, `prompt.outcome`.
 - Real-hardware checks: DocaMobile 1.0.16's answer buttons, DocaWear 1.2.5's QUEUED, the watch call and updater.
-- T1: `test/doca-client.test.js` under load (not reproduced with 4× parallel runs and 24 busy cores); the machines screenshot test ("a picture of it") failed once on Windows CI for 2.279.0, passed on re-run — likely two headless browsers at once (page-check's test and machines' shots) on a slow runner.
+- T1: `test/doca-client.test.js` under load (not reproduced with 4× parallel runs and 24 busy cores); the machines screenshot test ("a picture of it") failed once on Windows CI for 2.279.0, passed on re-run — likely two headless browsers at once (page-check's test and machines' shots) on a slow runner. 2.283.1: on Windows a stopped job now takes its whole tree with it (taskkill /T — a dev server outlived its job), the shots browser no longer holds the process open and a screenshot that never answers fails after 15 s; machines.test.js had timed out at 120 s on Windows for 2.282.0.
 - Wave E (E1–E4) with the owner's brief: themes (keep dark and light, the current look kept, bold alternatives as
   themes), edit-ability features, the clients included — started by the owner's `/design`.
 - The hive backlog's open H-items below stay as written; they are urgent in this order after the above.
@@ -604,10 +604,14 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   steps while still advancing (tools succeeding, plan steps closing) is extended up to a ceiling, and the trace says
   so. Measured with the evaluation sets (cases tagged by difficulty): success, tokens and time against today's fixed
   limits. An experiment first (`adaptiveLimits`).
-- [ ] H10.7 Retiring an old way (asked 2026-10-06, CONSTITUTION W14): count the use of each alternative path
-  (backends, readers, adapters) beside its replacement; once unused for 30 days and 50 runs of the replacement it is a
-  candidate, and the maintenance routine gives the admin a list (usage, a recommendation; keep / archive / delete).
-  Archive = removed from main, kept on an `archive/<name>` tag listed in `docs/archive.md`.
+- [~] H10.7 Retiring an old way (asked 2026-10-06, CONSTITUTION W14; reshaped 2026-10-07 by P1.7) — *counting and the list
+  are built (`features/usage.js`, `features/review.js`; `features {unused: true}`, Settings → System → Features); hiding
+  folds an alternative in the index and the panel's list. Left: a maintenance routine that brings the list to the admin
+  on its own, and the settings pickers (search provider, vision reader) putting hidden choices under "more".*: count the
+  use of each alternative path (backends, readers, adapters) beside its replacement; once unused for 30 days and 50 runs
+  of the replacement it is a candidate, and the maintenance routine gives the admin a list (usage, a recommendation).
+  The recommendation is to hide it from the default — it stays in main and keeps working; nothing is archived off
+  main, and taking a feature out of the product is only ever the admin's explicit decision (W14).
 
 **H11 · Coherence along the way** (§2.2)
 - [x] H11.1 (2.201.0) One chat component in three sizes; retire the floating chat's gateway/CLI paths if no

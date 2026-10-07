@@ -104,10 +104,10 @@ const MIGRATIONS = [
       p.developer = { ...(p.developer || {}), releaseUnasked: ['claude-opus >= 5', 'claude-fable >= 5'] };
       return true;
     } }] },
-  // 2.283: a new hub offers the guided or the advanced set-up once (guided/, TODO P1.5). One that was already set up
+  // 2.288: a new hub offers the guided or the advanced set-up once (guided/, TODO P1.5). One that was already set up
   // by hand has chosen: it is not asked.
-  { id: '2.283-setup-chosen', note: 'a hub set up before the guided set-up existed counts as set up by hand (advanced)', steps: [{
-    describe: 'setup.mode = advanced (set up before 2.283)',
+  { id: '2.288-setup-chosen', note: 'a hub set up before the guided set-up existed counts as set up by hand (advanced)', steps: [{
+    describe: 'setup.mode = advanced (set up before 2.288)',
     run(p) {
       if (p.setup?.mode) return false;
       p.setup = { ...(p.setup || {}), mode: 'advanced' };

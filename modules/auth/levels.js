@@ -13,6 +13,9 @@
  *   tools     { allow, deny } tool patterns for the agent acting for them:
  *             'shell', 'shell:git', 'mcp__*', '*' — deny wins
  *   approval  'mode' (follow the panel's Auto/Manual) or 'ask' (always ask)
+ *   resources what its people's agents may use beyond tools — models, providers, keys, accounts, computers (allot.js)
+ *   delegates with `delegate`: which permissions its holders may give (patterns, e.g. use:model:*); none listed = any
+ *             they hold — a team leader allots only what this names (permits.mayGrant)
  *
  * Built-ins live in code and cannot be edited or removed — every install has
  * them and the gate's meaning of "admin" must not drift. Custom levels are rows
@@ -71,6 +74,8 @@ function normalize(input, actorLevel) {
     tools: { allow: list(input.tools?.allow), deny: list(input.tools?.deny) },
     approval: input.approval === 'mode' ? 'mode' : 'ask',
     ...(reachOf(input.reach, actorLevel) ? { reach: reachOf(input.reach, actorLevel) } : {}),
+    ...(require('./allot').normalize(input.resources) ? { resources: require('./allot').normalize(input.resources) } : {}),
+    ...(list(input.delegates).length ? { delegates: list(input.delegates) } : {}),
     ...(input.description ? { description: String(input.description).slice(0, 300) } : {}),
   };
 }
