@@ -93,7 +93,12 @@ const SCHEMA = {
       modelScout: { type: 'boolean', default: false, hint: 'The model scout: looks for better and new models, files suggestions a person accepts into TODO and hands to an implementer.' },
       visionPass: { type: 'boolean', default: false, hint: 'Agents may look at a computer\'s screen with the vision model under vision.' },
       claimCheck: { type: 'boolean', default: false, hint: 'When an answer says it saved a memory, set a reminder, proposed, committed or sent something that no call this turn did, the turn gets one more step to do it or say it was not done.' },
-      toolTiers: { type: 'boolean', default: false, hint: 'The Orchestrator and work chats are sent their core tools in full and the rest by name, loaded when needed (tools_more).' } } },
+      toolTiers: { type: 'boolean', default: false, hint: 'The Orchestrator and work chats are sent their core tools in full and the rest by name, loaded when needed (tools_more).' },
+      adaptiveLimits: { type: 'boolean', default: false, hint: 'Before a turn, a triage rates the request and sets its thinking effort and step budget (never under Max tool steps); a turn still advancing at its last step is extended up to limits.maxStepsCeiling.' } } },
+  // The owner's ceiling on how far a turn's steps may follow the work (experiment adaptiveLimits, turn/triage.js). Not
+  // proposable: an agent raising the bound on its own turns would be writing its own limit (CONSTITUTION P20).
+  limits:           { is: 'travels', home: 'hive', note: 'the ceiling adaptive step budgets and extensions stay under (turn/triage.js, turn/extend.js; the switch is experiments.adaptiveLimits)',
+    keys: { maxStepsCeiling: { type: 'integer', min: 1, max: 1000, default: 64, hint: 'The most tool steps one turn may reach when its budget follows the work (experiment adaptiveLimits). Below Max tool steps it changes nothing: a budget is never under that.' } } },
   assistant:        { is: 'travels', home: 'hive', note: 'assistant mode: a call started from the face answers quicker and shorter, in its own style (turn/effort.js, turn/client.js)',
     propose: p('Assistant mode', 'How the face answers when spoken to: its style, thinking effort and model'),
     keys: { effort: { type: 'string', default: 'low', hint: 'Thinking effort in assistant mode: off, low, medium, high, or default (send nothing: the model\'s own).' },
