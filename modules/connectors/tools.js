@@ -33,9 +33,10 @@ const schemas = (off = []) => connected().map(def).filter(d => !off.includes(d.n
 
 async function call(name, { method = 'GET', path = '', query, body } = {}, ctx = {}) {
   const id = name.slice(PREFIX.length), s = oauth.spec(id);
-  // The owner's account: only a person holding host uses it through the agent, unless the owner opened it to everyone.
+  // The owner's account: only a person holding host uses it through the agent, unless the owner opened it to everyone
+  // or it is allotted to this person (auth/allot.js, S13).
   // No person on the turn (a test, a pre-accounts call) is not narrowed, as everywhere (auth/permits.js).
-  if (ctx.user?.id && vault.get(id)?.who !== 'everyone' && !require('../auth/rights').can(ctx.user.role, 'host'))
+  if (!require('../auth/allot').uses(ctx.user, 'connector', id, { opened: vault.get(id)?.who === 'everyone' }))
     return `Error: ${s.label} is connected as an admin's account, for people who hold host; ask an admin to open it to everyone in Field → Connectors.`;
   const url = new URL(/^https?:\/\//.test(path) ? path : `${s.api[0]}${path.startsWith('/') ? '' : '/'}${path}`);
   if (!s.api.some(a => url.origin === new URL(a).origin)) return `Error: ${s.label}'s token goes only to ${s.api.join(', ')} — not ${url.origin}.`;

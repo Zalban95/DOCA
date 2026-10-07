@@ -76,7 +76,7 @@ async function _hcLoadMissions() {
   const bar = document.getElementById('hc-missions');
   if (!bar) return;
   let rows = [], auto = [], stopped = [];
-  try { rows = (await apiFetch('/api/harness/missions?limit=8')).missions || []; } catch { /* leave the bar as it was */ }
+  try { rows = (await apiFetch('/api/harness/missions?limit=8&live=1')).missions || []; } catch { /* leave the bar as it was */ }
   // What works on its own right now, and why (agents/stopping.js) — each with a Stop, so nothing runs out of sight.
   try { ({ auto = [], stopped = [] } = await apiFetch('/api/harness/working')); } catch { /* an older hub */ }
 
@@ -89,8 +89,8 @@ async function _hcLoadMissions() {
         <span class="hc-mission-dot"></span>
         ${escHtml(m.label || m.agentId)}
         <em>${m.state === 'running' ? `step ${m.steps || 0}` : escHtml(m.state)}</em>
-        ${m.sessionId ? `<button class="btn btn-xs" onclick="hcOpenSession(${jsArg(m.sessionId)})">Chat</button>` : ''}
-        <button class="btn btn-xs" onclick="hcMissionLog(${jsArg(m.id)})"
+        ${m.sessionId ? `<button class="btn btn-xs" onclick="hcMarkSeen(${jsArg(m.id)}); hcOpenSession(${jsArg(m.sessionId)})">Chat</button>` : ''}
+        <button class="btn btn-xs" onclick="hcMarkSeen(${jsArg(m.id)}); hcMissionLog(${jsArg(m.id)})"
                 title="Its whole log, which stays open and can be copied">log</button>
         ${m.state === 'running' ? `<button class="btn btn-xs btn-red" onclick="hcMissionStop(${jsArg(m.id)})"
                 title="Stop it at its next step. What sent it waits for you instead of carrying on.">■ Stop</button>` : `
@@ -115,6 +115,14 @@ async function _hcLoadMissions() {
   const busy = rows.some(m => m.state === 'running') || auto.length > 0;
   if (busy && !_hcMissionPoll) _hcMissionPoll = setInterval(_hcLoadMissions, 3000);
   if (!busy && _hcMissionPoll) { clearInterval(_hcMissionPoll); _hcMissionPoll = null; }
+}
+
+/**
+ * Its person opened a finished result: read means done (modules/harness/seen.js) — it leaves this bar, every device
+ * clears its notice quietly, and its conversation stays. Running work and someone else's work are left as they are.
+ */
+async function hcMarkSeen(id) {
+  try { const r = await apiFetch(`/api/harness/seen/${encodeURIComponent(id)}`, { method: 'POST', body: {} }); if (r.seen) setTimeout(_hcLoadMissions, 400); } catch { /* an older hub */ }
 }
 
 /** ■ Stop on a running specialist: at its next step, and what sent it waits instead of carrying on. */

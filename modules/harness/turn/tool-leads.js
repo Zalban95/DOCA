@@ -38,6 +38,7 @@ const LEADS = {
   hub_command: 'Run the hub\'s own commands — start or stop a service, a container, a llama.cpp server, take a snapshot — instead of shell.',
   today: 'The weather, today\'s calendar and what is waiting for the person — use it for "what\'s my day" or a morning brief.',
   schedule: 'Propose a message or recipe on a timetable, which the person switches on — use it when asked to do something regularly.',
+  features: 'Look up what DOCA can do, where it is and how to switch it on — use it before saying something cannot be done.',
 };
 
 module.exports = { LEADS };

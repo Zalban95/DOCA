@@ -82,7 +82,7 @@ const TABLE = [
   // The agent's durable memory is one for everybody until per-person memory (auth phase 3): a member
   // deleting or locking the owner's facts was found by the live test 2026-10-04. Reading is read, above.
   R(ANY, '/api/harness/memory(/.*)?', 'host'),
-  R(ANY, '/api/harness/(chat|sessions|memory|missions|working|work)(/.*)?', 'chat'),
+  R(ANY, '/api/harness/(chat|sessions|memory|missions|working|work|seen)(/.*)?', 'chat'),   // seen: a person's own result opened (seen.js)
 
   // ── The floating chat and attachments ──
   R(GET, '/api/chat/(history|status|call-status|voices)', 'read'),
@@ -123,6 +123,7 @@ const TABLE = [
   R(GET, '/api/face/stream', 'chat'),                          // the face's feed, scoped to what the viewer may open (face/state.js)
   R(ANY, '/api/developer(/.*)?', 'host'),                        // who may release unasked (releasing.js): the admin's
   R(ANY, '/api/experiments(/.*)?', 'host'),                     // the owner's switches for experiments (experiments.js)
+  R(ANY, '/api/features(/.*)?', 'host'),                        // the feature index, usage, and hiding an unused alternative (features/)
   R('POST', '/api/recipes/[^/]+/(accept|discard)', 'host'),     // a repaired revision becomes automation: a host's call
   R('DELETE', '/api/recipes/[^/]+', 'host'),                   // a recipe the hive shares (recipes/routes.js)
   R(ANY, '/api/recipes(/.*)?', 'chat'),                       // reading, saving and running one: as the signed-in person
