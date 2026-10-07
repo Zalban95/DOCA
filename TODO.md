@@ -127,6 +127,15 @@ the project's managers only if the owner allows sharing specialists and skills (
   watch's call is assistant mode at last (it looked for a device kind no device has). DocaWear draws every state.
   Measured (sandbox hub, live whisper + kokoro, DeepSeek flash): end of speech → words 0.8 s, → first audio 2.7–4.2 s
   with the front (13.4k prompt tokens) vs 3.2–4.0 s without (25k). Not checked: a real call on the watch.
+- [x] Self-test 2026-10-08, the install/devices/server group (branch `selftest-server`): node-pty is an optional
+  dependency and `install.sh` names the build tools per distro, so a box without a C++ toolchain installs (#1);
+  revoking a device by any route closes its stream and removes the MCP servers it hosts, and doca-client stops
+  lending at its next 401 (`devices-revoked.js`, #2); the token CLI prints its data folder and warns when no running
+  panel uses it (`panel.pid`, #9); Docker's and Ollama's lists answer an empty list and the reason when absent (#15);
+  an /api path with no route answers 404 `not_found`, a route without a rights row still `no_rule` (#16); Models
+  says Ollama is not installed or not running (#11); the computer image has Symbola and Droid Sans Fallback (#26);
+  the pairing card shows its link as text — the code was already there, after "Show pairing code" (#10); the
+  computers' tidy-up removes containers no record names (`computers/strays.js`, #25).
 - Real-hardware checks: DocaMobile 1.0.16's answer buttons, DocaWear 1.2.5's QUEUED, the watch call and updater
   (and the call's states and ticks, DocaWear 1.4.0).
 - T1: `test/doca-client.test.js` under load — solved 2026-10-07 (the runner's stdout parsing, see T1 below); the machines screenshot test ("a picture of it") failed once on Windows CI for 2.279.0, passed on re-run — likely two headless browsers at once (page-check's test and machines' shots) on a slow runner. 2.283.1: on Windows a stopped job now takes its whole tree with it (taskkill /T — a dev server outlived its job), the shots browser no longer holds the process open and a screenshot that never answers fails after 15 s; machines.test.js had timed out at 120 s on Windows for 2.282.0. 2.286.1: the headless browser's DevTools port file is read again when Windows has it locked (EBUSY failed the smoke run on Windows for 2.285.0).
