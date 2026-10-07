@@ -91,3 +91,16 @@ Parameter-level things I would have to discover by trying:
 - **"## Your settings proposals"** — the two rejected `toolNotes` are quoted in full (with `fp` hashes, timestamps and the owner's whole reply sentence). The useful residue is two lines: "do not re-propose a `read_file` note", "do not re-propose a `replace_in_files` note".
 
 If I had to name three to fix first: the missing `http_fetch` front door (a tool that promises an address for what it drafts must exist), the `ask_device`-vs-rule-14 retry contradiction (it is the one that changes behaviour hour to hour), and replacing the standing rules' numeric cross-references with named ones — the panel asks me to do that in my own memory rules while doing the opposite in the text I cannot edit.
+## Round 2 — after 2.259–2.262 (the same live model, asked to review A2, A4/B6b, B8 and C2)
+
+Asked read-only what was still confusing, where it would pick the wrong tool, and what would help. It read
+`providers.js` from the running release itself. What it found, and what 2.263.1 did:
+
+| Finding | Verdict | Done |
+|---|---|---|
+| `api_call {save_as}` GETs any address: with specialists on, the Orchestrator holds no `http_fetch`, yet could keep a public page and read it — the airlock A2 closed, reopened | **Real hole** | A keyless download from an address that is not the owner's keeps binary content only; text (by type or by its bytes) is refused and pointed at `http_fetch` / the scout (`http.looksText`) |
+| `api_call`'s refusal says "read it with http_fetch", which this turn does not hold | Right | The refusal and description say "http_fetch's, or the scout's while specialists are on" |
+| The default prompt still says "(standing rule 25)" while memory rules forbid rule numbers | Right | Named by what it says; `repo_rules`' output likewise (rules 17, 18, "5–9") |
+| `hub_command`, `mcp_connect` and "never with shell": which object is which | Right | `hub_command` says an MCP server is `mcp_connect`'s |
+| "The charter is still numbered 1–27" | Partly: numbering stays (it orders the list); only cross-references were the problem | — |
+| Make the airlock visible in the tool list | Already there when the turn holds `agent_dispatch` ("Reading the web: … dispatch the scout") | — |
