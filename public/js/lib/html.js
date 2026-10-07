@@ -24,7 +24,7 @@ function escHtml(str) {
  * your own around it.
  *
  * escHtml() is not enough there. It leaves quotes alone, so a value containing
- * one ("Al's watch") ends the string literal early and the handler dies with a
+ * one ("Sam's watch") ends the string literal early and the handler dies with a
  * syntax error — a button that silently does nothing when clicked, with the
  * only clue in the console. JSON.stringify does the quoting and JS escaping;
  * the entity pass keeps the result intact inside a double-quoted attribute.

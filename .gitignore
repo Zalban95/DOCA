@@ -2,6 +2,8 @@ node_modules/
 .env
 .certs/
 .dashboard-prefs.json
+# One installation's notes about its machines (AGENTS.md: not the project's).
+AGENTS.local.md
 .doca/
 
 # Runtime artefacts that only appear here when a data path resolves against the

@@ -9,7 +9,7 @@
  *   description: Builds and renders Blender scenes. Dispatch for 3D modelling.
  *   kits: [files, shell, web]
  *   tools: [show_media]
- *   model: qwen3.8-27b
+ *   model: a-local-model
  *   provider: llamacpp
  *   memory: false
  *   maxSteps: 12
