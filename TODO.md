@@ -117,7 +117,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 - [x] C1 **One list of decisions waiting for a person** — *2.257.0: `modules/decisions.js`, `GET /api/decisions` and `/api/v1/decisions` (approved 2026-10-07); the header badge and the ambient screen drawing it are wave E* (coh F12): installs, settings proposals, MCP and service
   drafts, recipe proposals, proposed schedules, scout suggestions, plans — `/api/decisions` (and `/api/v1`, **ask
   first**) for the ambient screen, a header badge and a watch summary.
-- [ ] C2 **Proposals for a screen** (coh F13): a `screen` target applied through `screens`; `call`, `voice`, `ambient`,
+- [x] C2 **Proposals for a screen** — *2.262.0: `settings_propose {screen: "this" | id}` for `call`, `voice`, `ambient`, `face` (schema `screenPropose`), shown by `settings_read` as the turn's screen has them, applied to that screen's layer (`harness/screen-proposals.js`), never someone else's. Left: a member holds no `propose` right, so only an admin accepts one (auth, ask first).* (coh F13): a `screen` target applied through `screens`; `call`, `voice`, `ambient`,
   `face` proposable.
 - [~] C3 **Settings declared with their hints** — *2.258.0: `settings_read` carries every harness parameter's hint, read from the ⚙ form's own table (`harness/param-hints.js`); typed declarations in the schema and one env-vs-saved rule are left* (coh F14–F15): harness parameters typed with hints in the schema,
   `defaultParams()` and `HARNESS_PARAMS` derived; one env-vs-saved rule, "overridden by ENV" shown.
