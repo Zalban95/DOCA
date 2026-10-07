@@ -89,7 +89,7 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [ ] P1.8 **Nothing runs unseen, but it can be unrendered (§1)**: every running thing (models, specialists,
   services, machines, file edits) is drawn by the panel in its existing, designated tab when that tab is open, and
   otherwise only logged — attributed either way; an audit that nothing runs outside both.
-- [ ] P1.11 **Important and safety switches ask for the password (S14)**: approval modes, developer mode, sharing,
+- [x] P1.11 **Important and safety switches ask for the password (S14)** — *2.281.0: `auth/guarded.js` lists the switch routes and settings; the gate asks 401 `password_required`, the panel asks and resends with the password; the agent never applies one alone; the wrist's Full auto withdrawn.*: approval modes, developer mode, sharing,
   spending, reach and levels, guards, experiments — the panel asks for the password again before the change, however
   recent the sign-in; the route checks it too.
 - [ ] P1.12 **Log settings**: what is kept, for how long and how much (per source: turns, tools, traces, devices,

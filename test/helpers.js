@@ -84,10 +84,11 @@ async function stop() {
  * majority of these calls stand in for the dashboard and a browser would send
  * it. Two routes that apply a change require it (ISSUES.md H-7), and a test
  * that wants to prove they are guarded passes `{ 'Sec-Fetch-Site': '' }` to
- * strip it — which is what a tool call or a bare curl looks like.
+ * strip it — which is what a tool call or a bare curl looks like. The owner also types their password for the
+ * important switches (auth/guarded.js), as the panel asks them to; `{ 'X-Doca-Password': '' }` leaves it out.
  */
 async function api(token, method, p, body, headers = {}) {
-  const h = { 'Sec-Fetch-Site': 'same-origin', ...(token || !owner ? {} : { Cookie: owner.cookie }), ...headers };
+  const h = { 'Sec-Fetch-Site': 'same-origin', ...(token || !owner ? {} : { Cookie: owner.cookie, 'X-Doca-Password': owner.password }), ...headers };
   for (const [k, v] of Object.entries(h)) if (v === '') delete h[k];
   if (token) h.Authorization = `Bearer ${token}`;
   let payload;
