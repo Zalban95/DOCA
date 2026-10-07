@@ -34,6 +34,17 @@ within the limits of safety for the system and for that person. How:
 4. **And offer it onward, only if the owner allows.** What was learned is suggested to the project's managers only
    when the owner has allowed sharing specialists and skills — asked at installation, and a setting after.
 
+When it does not know the person's way, or the choice is truly theirs (money, something outward or irreversible, a
+matter of taste), it asks once — then acts, and keeps the answer so the next time needs no question.
+
+**Versatility is absolute.** One base is sold two ways: a general assistant that keeps everything it learns as skills
+and repurposes it quickly, and an edition tuned to one person's workflow and optimised for it — both carry the whole
+base; an edition is focused in what it shows and how it is tuned, never narrower in what it can reach. Every feature
+ever built stays in the product, and the agents know it is there and when to bring it back. A person's change to
+their own installation — the panel's own look and layout included — is done as they asked and kept as their data
+(settings, parameters), never as a change to the code; updates may add safety, never take versatility or
+functionality away. (2026-10-07)
+
 Whoever touches the code keeps this in mind first. A change that serves one person's setup instead of everyone's,
 or that leaves a capable request undone when a safe way exists, is wrong whatever else it gets right.
 
@@ -55,20 +66,36 @@ an API, a model, a repository, a service — refined until its output has some d
 person speaks, the Orchestrator directs, and the panel decides alone which skills, tools, specialists and devices to
 use; every part has its function and they work symbiotically.
 
-Installing a client makes a device part of the hive. DOCA runs fully locally, fully remotely or mixed; standalone
-or as a hive grown by adding devices; on Linux, Windows and macOS, on any network, on a server, a VM or a VPS
-serving it as a website. For now every capability other harnesses have is wanted; what is sold later is a narrower
-edition of it.
+**OpenClaw and OpenDots, with eyes** (2026-10-07). A UI that lets a person see everything that is happening, if
+they want to — seen as it happens, not narrated by the agent; nothing runs unseen or unattributed — and that links
+all their devices. What a person does today by texting an agent, with everything that counts in view as well.
 
-**Values, in order when they meet:** the person's experience; being right; reaching as far as possible while
-staying safe; openness and cross-compatibility; being future-proof; speed.
+**Every device, by any means.** Installing a client makes a device part of the hive, and DOCA reaches every device
+it can by any means possible — computers, phones, watches, the home's smart devices, desktops it navigates — so a
+person works on a project across devices, fetches a file from one, installs something on another, just by asking.
+It runs fully locally, fully remotely or mixed; standalone or as a hive; on Linux, Windows and macOS, on any network;
+on a server, a VM, a VPS, a mini PC or behind a website sign-in. (2026-10-07)
+
+**Two shapes, two set-ups** (2026-10-07). It ships as a ready machine with no models running inside that asks for
+the API keys it needs (a VPS, a mini PC, a website), or as a full install on a powerful machine that picks, from the
+models other installs tested and suggested to the project, the newest that fit and run well on that machine. It is
+set up by hand with every advanced setting, or by conversation: it asks what the person needs — at the first set-up
+and whenever something new is needed — sets it up, waits only for the keys when a service is remote, asks which route
+only when that is a real choice, and when the machine cannot bear something it says so and offers the providers'
+options to choose from.
+
+**Values.** The person's experience comes first. Then being right, reaching as far as possible while staying safe,
+openness and cross-compatibility, being future-proof — and speed, which is the point of the structure (quick and
+optimised, V3), never traded for a slow path. *(The order after the first is an agent's reading, not the admin's
+words.)*
 
 ## 2. Purpose
 
 - **V1 Understand, then ask, then act.** Work out what the person really wants; ask for details or permission
   before planning and executing anything that needs it. (2026-10-04)
 - **V2 The platform lets a person do anything.** Every capability other harnesses have belongs here (a real
-  browser, agents' own computers, …). Compare with similar projects — OpenDots first — and close the gaps. (2026-10-04)
+  browser, agents' own computers, …). Compare with similar projects — OpenDots first — and close the gaps, taking what others have only as their licences
+  allow. (2026-10-04)
 - **V3 Structure over raw intelligence.** A new method must make the next run cheaper: replicable, reliable, needing
   less research and reasoning each time. (2026-10-05)
 - **V4 Full power, as safe as possible.** Reach as far as possible and look for safe ways to reach further. Never
@@ -80,11 +107,20 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
   work fast and repeatable. (2026-10-05)
 - **V8 The panel chooses its tools.** The person says what they want, in their own words; picking the skill, recipe,
   specialist, tool, model or device is the panel's job, by structure (descriptions, skills, routing, recipes) rather
-  than by the model's raw intelligence. Anything a person can do in the panel, the agent can reach too, within §4.
-  (2026-10-06)
+  than by the model's raw intelligence — a model by the quality the task needs against how much speed matters. Anything
+  a person can do in the panel, the agent can reach too, within §4. (2026-10-06/07)
 - **V9 Harvest and refine.** A new capability enters as a tool, a skill, a recipe or a service the agent can set up
   itself (service drafts, MCP drafts, packs) — not as code written per service — and is refined until a weaker model
   uses it right the first time. (2026-10-06)
+- **V10 Work goes on until it is finished, or the person releases it.** The Orchestrator manages everything the
+  person asked for and keeps it going until it is done; only the person ends it early — archive, forget or delete.
+  Experts work in parallel; work that needs another's output waits for it, takes the files and carries on. When it is
+  done, one message reaches the person where they are — the open chat, the device that asked, or all of them. It is
+  done once that message is opened or read, unless it needs the person (publish it, delete it, change it): their
+  answer is the next instruction. Risky or visual work is tested on the agents' own temporary computers until the
+  requirements hold, and reported then. (2026-10-07)
+- **V11 Stop means stop, visibly.** A person's Stop ends that work and the control to do it is in view; closing
+  finished work sets nothing off; work that stopped for any reason is reported, with restart or drop. (2026-10-06)
 - **V7 Innovate, and find the drawbacks.** New approaches give DOCA its edge; each one has its drawbacks found
   before it counts — behind a flag, written up, measured (§5 W9). (2026-10-04)
 
@@ -112,7 +148,7 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
 - **P8 One brand file, no leftovers.** Every name a person reads comes from `modules/branding.js` (the wake word
   and "send to <product>" too); main carries no leftovers of side lines or stale names. (2026-09-25)
 - **P9 A setting for everything a person might want differently,** with a sensible default rather than the admin's
-  preference hard-coded. New routines are off by default. (2026-09-25/26, 10-05)
+  preference hard-coded. New routines are off by default *(generalised from the scout routine, 10-05)*. (2026-09-25/26, 10-05)
 - **P10 Settings live where they belong.** A device's settings on its own page; each feature its own section; a
   harness's settings only while it is installed, grouped under it; a setting that belongs to something switched off
   (developer mode, an experiment) stays hidden until it is on. (2026-09-25, 10-04, 10-06)
@@ -129,30 +165,43 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
 - **P16 Agents get the environment the work needs** — their own computer when the job is risky, needs a real
   browser, or is a demo. (2026-10-04)
 - **P17 A way back, always.** Every version can be switched back from the panel; backups restore across versions;
-  settings and agent edits have git-style checkpoints. (2026-09-25/26, 10-06)
+  settings and agent edits have git-style checkpoints. What a person puts away — conversations, missions, projects,
+  computers, served pages — goes to an archive they can bring it back from; deleting is a separate choice, and theirs.
+  (2026-09-25/26, 10-06)
 - **P18 Live everywhere.** A screen showing something (the Projects page on another device, a watch's mission
   list) updates as it changes. (2026-09-25, 10-06; TODO H10.5)
 - **P19 Improvement is a cycle DOCA runs itself.** The scout suggests, a person accepts into TODO, and code → test
   → tag → commit → sync runs — by DOCA's agent or any CLI harness. (2026-10-05)
-- **P20 Limits that name themselves.** When something stops, say what stopped it, whose limit it is and how to
-  change it — never a bare "timeout". Limits stay at their defaults today; the direction is limits that follow the
-  difficulty and urgency of the work, measured rather than guessed (TODO H10.6). (2026-09-14/25; 2026-10-06)
+- **P20 The mission over tokens; limits that name themselves.** Finishing what the person asked comes first; limits
+  and spend notices exist as settings for whoever cares about cost, and a limit never quietly ends a mission — it
+  names itself, says whose it is and how to change it, never a bare "timeout". The direction is limits that follow
+  the difficulty and urgency of the work, measured rather than guessed (TODO H10.6). (2026-09-14/25; 2026-10-06)
 - **P21 Show the work.** What the agents are working on can be put in front of the person as a page of its own — a
   served page, a project, a computer's screen, the Workstream, and, when asked, an external repository served as a
-  page or tab — on any screen, live (P18). (2026-10-06)
+  page or tab — on any screen, live (P18). Whatever the agents produce opens in the panel, close to seamlessly, in
+  any format. (2026-10-04/06)
+- **P22 Clients update themselves.** Updating a phone, watch or desktop client needs no developer steps — it
+  updates by itself, or with one tap; a hub change a client should follow is carried into that client in the same
+  piece of work, or filed in its repository. (2026-10-05/06)
 
 ## 4. Safety and authority
 
-- **S1 The agent proposes, a person decides** — for whatever governs the agent: settings, installs, plans,
-  schedules, form values (✨ fills a draft; only the person's Save writes). Scout suggestions reach TODO only when a
-  person accepts them. (2026-09-14, 10-06)
+- **S1 A person's request is the decision; the agent's own initiative is a proposal.** When a person asks — by
+  text, voice or any device — for a change to their own installation, it is done, with a git-style checkpoint as the
+  way back (P17): "hands off the wheel is fine". What the agent wants on its own initiative — settings, installs,
+  plans, schedules, form values (✨ fills a draft) — is proposed, and a person decides. Anything that widens what
+  agents may do is S11's. Scout suggestions reach TODO only when a person accepts them. (2026-09-14, 10-06/07)
 - **S2 An agent acts at its person's level.** Exceptions are grants from someone holding `delegate`, never beyond
   the giver's own rights (`docs/design/permissions.md`). (2026-10-04)
 - **S3 Bulk approval is explicit.** "Approve all" and "always" on a phone or watch are explicit permissions.
   (2026-10-04)
-- **S4 Secrets stay out of view and out of the repository.** An agent sees whether a secret field is filled, never
+- **S4 Secrets are used, never read.** An agent can use any secret its work needs — send it, type it, log in with it
+  — without ever seeing it: the hub puts it where it goes, and one handed out for a task is forgotten when the task
+  is done (the hub's keys, logins, and the like on any device). An agent sees whether a secret field is filled, never
   its value. Secrets move only when needed, into the hub's protected keys — never into a repo, a log or a message.
   Anything exposed in this private repo is rotated before it ever becomes public. (2026-10-04/06)
+- **S12 Spending is the person's, asked each time.** With a payment method linked, the product may buy a service the
+  work needs — after asking the person's permission for that spend; nothing is spent unasked. (2026-10-07)
 - **S5 Admin and developer mode are internal.** Experiments live under developer mode, which is an admin's;
   admin is for the repository's owners, independent testers and private copies. A customer's install never meets
   the experiments. Whether a licensed reseller gets admin to personalise the dashboard for their own customers is
@@ -189,15 +238,17 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
 - **W2 Who may release without asking is the admin's setting** — Settings → Developer → Releasing
   (`developer.releaseUnasked`; `GET /api/developer/releasing?model=<id>` answers for one model). A model it lists
   may run the whole cycle — merge, tag, push, switch the live panel — without asking; every other model or harness,
-  DOCA's own agent included unless it runs a listed model, asks before merging, tagging or pushing. The default
-  lists the Claude Opus and Fable families, version 5 and later, whose work the admin trusts and repairs when needed; an
-  agent that cannot reach the hub uses the default. Only the admin edits it: no agent may propose it (S11).
+  DOCA's own agent included unless it runs a listed model, asks before merging, tagging or pushing. A new install
+  lists none (§0); this project's own install lists the Claude Opus and Fable families, version 5 and later, whose
+  work the admin trusts and repairs when needed; an agent that cannot reach the hub asks. Only the admin edits it: no agent may propose it (S11).
   (settled 2026-10-06)
 - **W3 What stops anyone.** Stop and ask for: a product choice the principles do not answer; a change to `/api/v1`,
-  a scope or a caps field (three shipped apps depend on it); money, credentials or hardware only the admin can provide;
-  work only the admin's other machines can do; a file in S11. Everything clear goes ahead. (2026-10-04)
+  a scope or a caps field (three shipped apps depend on it); money, credentials or hardware only the admin can provide
+  for the development work (the product's own spending is S12); work only the admin's other machines can do; a
+  licence or the product's name (both still open); a file in S11. Everything clear goes ahead. (2026-10-04, 10-06)
 - **W4 Check coherence before release** — the change's logic against the rest of the project, and every surface
-  that says what it does (AGENTS.md, PROTOCOL.md, the skills, TODO). (2026-09-26)
+  that says what it does (AGENTS.md, PROTOCOL.md, the skills, TODO) — with the review and design skills available
+  to you. (2026-09-26, 10-06)
 - **W5 TODO.md is the plan of record.** New asks are filed there, structured; items are ticked when they close;
   what a sibling app needs goes in that app's own repository. (2026-10-04)
 - **W6 Everything pushed, everywhere in sync.** The admin works from several machines (computers and a phone),
@@ -208,7 +259,7 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
   surface (an agent starting from scratch is a normal step) before building on top of it. (2026-10-04)
 - **W9 Experiments: flagged, written up, measured.** A new approach ships behind a flag that is off by default and
   needs developer mode, with `docs/experiments/<id>.md` (hypothesis, cost, risks, rollback) and a measurement. It
-  graduates or it is removed. (2026-10-04)
+  graduates, or it stays an option behind its flag — taking it out is the admin's decision (W14). (2026-10-04, 10-07)
 - **W10 Diagnose before fixing.** Name the cause and quote the evidence before patching; stay read-only until
   then. When DOCA's agent is what is broken, investigate with the shell, not with that agent. If a diagnosis is all
   that was asked for, change nothing. (2026-09-11/14)
@@ -218,12 +269,12 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
   autocompact off and expects to be told. *Implicit* (2026-10-04)
 - **W13 Use judgment where the principles answer.** The admin wants to be the bottleneck only for real decisions. In
   doubt: what would a Jarvis-level assistant do? (2026-09-25/26)
-- **W14 Retiring an old way.** A path that has been replaced stays as an alternative while a person might choose
-  it. Once its replacement has run for a while and it has not been used (by default 30 days and 50 runs of the
-  replacement), it is a candidate: during maintenance the agent gives the admin a list — each candidate with its usage
-  and a recommendation — and the admin answers keep, archive or delete. Archived code leaves main and is kept on an
-  `archive/<name>` tag listed in `docs/archive.md`, so it can come back. Nothing is deleted on an agent's own
-  judgment. (settled 2026-10-06; tooling: TODO H10.7)
+- **W14 Nothing ever coded is lost.** A path replaced by a better one stays in the product as an alternative, and
+  the agents keep knowing it and bring it back when a task needs it. During maintenance the agent lists the unused
+  ones with their usage (by default 30 days and 50 runs of the replacement) and a recommendation; the admin may move
+  one off the default path. Taking a feature out of the product is only ever the admin's explicit decision, never an
+  agent's. (2026-10-06, revised 2026-10-07: "keep every feature ever coded within it and know about it"; tooling:
+  TODO H10.7)
 
 ## 6. Working with the project's admin
 
@@ -232,13 +283,17 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
 - **C2 Read for intent.** Most messages are written on a phone over a remote session; typos and speech-to-text
   slips are normal ("open clothes" = OpenClaw, "DACA" = DOCA). Ask only when two readings lead to different work.
   (2026-10-05)
-- **C3 Short, phone-readable answers with a recommendation.** Few numbered options, the recommended one first;
-  The admin usually answers by number. *Implicit*
+- **C3 Short, phone-readable answers; broad questions.** When a decision is the admin's, ask about the goal and the
+  experience — broad, even philosophical questions — not menus of implementation choices: the specifics follow from
+  the goals, derived in a flowchart of the experience (`docs/design/experience.md`). (2026-10-07)
 - **C4 The admin shares the need; you design.** Concrete suggestions (names, mechanisms) are examples of the need, not
   specifications — choose the names and structure that serve the agents best. (2026-09-26)
 - **C5 Warm, plain words.** Prefer human words to hierarchy-speak in what the product shows. The person who runs
   a hive is an **admin** in the UI; the built-in levels read Viewer, Member, Admin and Main admin, and their ids
   (`owner`, …) never change, since they are identifiers on existing installs. (2026-09-26, settled 2026-10-06)
+- **C7 Assume nothing beyond the admin's words.** Read them for intent (C2), carry them faithfully, and where they
+  do not cover a choice let these principles decide; what the principles do not decide is asked (C3). A rule here
+  that is an agent's reading says so. (2026-10-07)
 - **C6 Answer the question asked** — how many, which first, whether it is possible — before carrying on.
   *Implicit*
 
@@ -252,8 +307,12 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
   (2026-10-05)
 - **U4 Phones are first-class:** never a sacrificed layout; rotation adapts the layout; Back closes overlays.
   (2026-09-25, 10-04)
-- **U5 Nothing overlaps; one style everywhere,** dropdowns included. (2026-09-25, 10-05)
-- **U6 A new look is an option,** not a replacement, with its mobile form included. (2026-09-25)
+- **U5 Nothing overlaps; one style everywhere,** dropdowns included; every visual property comes from the theme or
+  the settings, never hard-coded in a page — fonts included. (2026-09-25, 10-05/06)
+- **U6 Two experiences on one base.** A base experience for people who are not technical, which should feel like
+  magic, and the advanced one being built now. Working comes first; branding comes later. Dark and light themes are
+  kept; bold redesigns are added as themes beside the current look, its mobile form included — don't omit,
+  reorganise. (2026-09-25, 10-06/07)
 - **U7 The UI matches the logic,** friendly to people and agents alike: tabs for parallel conversations, an
   IDE-grade code section, queued work beside the chat. (2026-09-25)
 - **U8 Delight is a goal** — worth building what makes people say "wow"; if it cannot be done well, leave it out.
@@ -265,8 +324,8 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
   assistant with the same context: quicker, much shorter, conversational; it drives devices and buildings.
   (2026-10-05)
 - **A2 Tone comes from the context, not an instruction.** No prompt tells any agent to be ironic: a working
-  agent's context is spent on the work. Irony that comes naturally from the conversation is fine, in assistant mode
-  most of all. If a model one day exposes a tone control, it can become a setting. (settled 2026-10-06)
+  agent's context is spent on the work. Irony is fine only where it comes naturally from the
+  conversation, in any mode. If a model one day exposes a tone control, it can become a setting. (settled 2026-10-06)
 - **A3 Act, don't answer.** A clear request with a visible result is done without a spoken reply; questions,
   failures and anything not visible are answered, briefly. Being right comes before being quick. (2026-10-06)
 - **A4 Hard requests escalate, and the call stays.** The assistant says so in a sentence, raises its own effort,
