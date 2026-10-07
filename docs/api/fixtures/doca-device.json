@@ -1,0 +1,16 @@
+{
+  "methods": {
+    "apps": {
+      "args": [
+        "limit: number"
+      ],
+      "returns": "a JSON string: [{package, label, icon?}]"
+    },
+    "open": {
+      "args": [
+        "package: string"
+      ],
+      "returns": "boolean"
+    }
+  }
+}

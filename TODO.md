@@ -141,7 +141,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   `/missions/{id}/archive`, `state: 'stopped'` on work rows; `GET /api/v1/ambient`; speech synthesize/transcribe with
   the device's voice; the face for watches (scope). **Ask first** (W3, and S11 for the scope).
 - [x] D2 **Contracts tested on both sides** (cl 21, 27) — *2.254.0: `npm run fixtures` writes real frames (a mission running, done and put away, a stopped work chat, a question asked and withdrawn, a notice) to `docs/api/fixtures/`, checked against the OpenAPI event schemas; PROTOCOL §22.1's family → tool-name table, with a test that skills and doca-client use its names*
-- [ ] D2b **The rest of D2** (cl 22, 31): the apps load `docs/api/fixtures/` in their parser tests (a copy in each
+- [~] D2b **The rest of D2** — *2.268.0: stable fixtures plus the pair link, `families` (`api-v1/families.js`, §22.1 held to it) and `doca-device`; the hub compares the apps' copies and reads their sources when they sit beside it (DocaMobile and DocaWear refreshed, Mobile parses the pair link). Left: coverage by capability rather than path prefix.* (cl 22, 31): the apps load `docs/api/fixtures/` in their parser tests (a copy in each
   app's test resources, compared by the hub when the siblings are checked out); coverage checked by capability, not
   path prefix (per panel group, its actions with a v1 operationId or a reason); the pair offer, `window.DocaDevice` and
   the phone's MCP server shape pinned on the hub's side.

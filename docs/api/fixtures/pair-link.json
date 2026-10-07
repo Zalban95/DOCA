@@ -1,0 +1,7 @@
+{
+  "example": "doca://pair?code=ABCD1234&host=hub.example.ts.net:4242",
+  "params": {
+    "code": "the pairing code without its dash (8 characters)",
+    "host": "host[:port] the phone dials, https"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "canonical": {
+    "shell": [
+      "shell",
+      "shell_job"
+    ],
+    "files": [
+      "files_list",
+      "files_read",
+      "files_write",
+      "files_mkdir",
+      "files_move",
+      "files_copy",
+      "files_delete"
+    ],
+    "screen": [
+      "screen_capture",
+      "screen_read",
+      "screen_press",
+      "screen_windows"
+    ],
+    "input": [
+      "input_click",
+      "input_type",
+      "input_keys",
+      "input_move",
+      "input_swipe"
+    ],
+    "apps": [
+      "apps_list",
+      "apps_open"
+    ],
+    "processes": [
+      "processes_list",
+      "processes_start",
+      "processes_stop"
+    ],
+    "device": [
+      "device_info",
+      "device_notify",
+      "device_clipboard_read",
+      "device_clipboard_write",
+      "device_camera",
+      "device_location",
+      "device_sensors"
+    ],
+    "media": [
+      "media_control"
+    ]
+  },
+  "decides": [
+    "screen_press",
+    "input_click",
+    "input_type",
+    "input_keys",
+    "input_swipe"
+  ]
+}
