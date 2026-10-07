@@ -68,7 +68,8 @@ function deviceChoices(req, person) {
     ...(!onceOnly({ req }) ? [{ id: 'always', label: `Always ${req.keys?.length === 1 ? req.keys[0].split(':').pop() : req.tool}` }] : []),
     ...(approval.pending().length > 1 ? [{ id: 'approve_all', label: 'Approve all' }] : []),
     { id: 'deny', label: 'Deny' },
-    ...(host ? [{ id: 'full_auto', label: 'Full auto' }] : []),
+    // No "Full auto" any more (2.281.0): the approval mode is a safety switch, changed only with the password
+    // (auth/guarded.js; CONSTITUTION S14), which a wrist cannot type. Approve all is the quick answer.
   ];
 }
 

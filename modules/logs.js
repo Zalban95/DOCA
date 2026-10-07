@@ -38,8 +38,8 @@ const { sseHeaders }  = require('./utils');
 /** Longest a single line may be. A tool result can be a whole directory. */
 const MAX_TEXT = 400;
 
-/** Lines kept from before anyone opened the tab. */
-const RING = 500;
+/** Lines kept from before anyone opened the tab: `logs.harnessLines` (log-keep.js; Settings → System → Logs). */
+const ringMax = () => require('./log-keep').limit('logs.harnessLines');
 
 /* ── Line shape ───────────────────────────────────────── */
 
@@ -191,11 +191,13 @@ const ring = [];
 
 function remember(l) {
   ring.push(l);
-  if (ring.length > RING) ring.shift();
+  const max = ringMax();
+  if (ring.length > max) ring.splice(0, ring.length - max);
 }
 
 agent.events.on('event', evt => {
-  try { const l = fromHarness(evt); if (l) remember(l); } catch { /* never break a turn */ }
+  // Whose turn it was rides on the kept line: Chronicle tells a conversation's story from it.
+  try { const l = fromHarness(evt); if (l) remember(evt.sessionId ? { ...l, sessionId: evt.sessionId } : l); } catch { /* never break a turn */ }
 });
 
 function openBuiltin(src, tail, onLine) {

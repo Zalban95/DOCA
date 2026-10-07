@@ -14,7 +14,7 @@ const path = require('path');
 const live = require('../live');
 const sentinel = require('./sentinel');
 
-const BACKLOG = 300;
+const BACKLOG = () => require('../log-keep').limit('logs.workstreamLines');   // activity lines kept (Settings → System → Logs)
 const FLUSH_MS = 300;
 const _holders = new Set();    // live-stream screens holding the Workstream open
 const _activity = [];          // the last activity lines
@@ -23,7 +23,7 @@ const _buf = new Map();        // `${sessionId}\t${kind}` → { text, timer }
 let _listening = false;
 
 const title = id => { try { return require('../harness/memory').getSession(id)?.title || id; } catch { return id; } };
-const keep = (list, row, n = BACKLOG) => { list.push(row); if (list.length > n) list.splice(0, list.length - n); };
+const keep = (list, row, n = BACKLOG()) => { list.push(row); if (list.length > n) list.splice(0, list.length - n); };
 
 function say(sessionId, kind, text, extra = {}) {
   const row = { at: Date.now(), sessionId, who: title(sessionId), kind, text: String(text).slice(0, 4000), ...extra };
@@ -89,4 +89,7 @@ function start() {
 const holds = screen => _holders.has(screen);
 const snapshot = () => ({ sentinel: sentinel.status(), files: _files.slice(-40), activity: _activity.slice(-150) });
 
-module.exports = { start, hold, holds, snapshot, onEvent, command, fileChanged };
+/** How much the activity holds now (log-keep.js usage). */
+const size = () => ({ lines: _activity.length, bytes: Buffer.byteLength(JSON.stringify(_activity)) });
+
+module.exports = { start, hold, holds, snapshot, onEvent, command, fileChanged, size };

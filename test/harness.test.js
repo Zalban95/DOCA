@@ -1953,8 +1953,8 @@ test('a turn from a watch is asked on the watch, with full auto as the third cho
     seen.add(p.id);
     assert.match(p.title, /Allow shell/);
     assert.deepEqual(p.choices.filter(c => c.type === 'option').map(c => c.id),
-      ['approve', 'always', 'deny', 'full_auto'],
-      'Always (this kind of call) and Full auto included, because the alternative on a wrist is tapping Approve forty times');
+      ['approve', 'always', 'deny'],
+      'Always (this kind of call) included; never Full auto: the mode asks for the password (S14, 2.281.0)');
     assert.ok(p.choices.some(c => c.type === 'dismiss'), 'and a way out, like every prompt');
 
     await H.api(watch.token, 'POST', `/api/v1/prompts/${p.id}/select`,
@@ -1969,12 +1969,6 @@ test('a turn from a watch is asked on the watch, with full auto as the third cho
   const allowed = await askOnWatch('approve');
   assert.match(allowed.find(e => e.type === 'tool_result').result, /from-the-wrist/);
   assert.equal(approval.settings().mode, 'manual', 'approving once does not unlatch the mode');
-
-  // Full auto is a real escalation and is meant to be: it is the user, on
-  // their own device, turning the leash off for the whole panel.
-  const auto = await askOnWatch('full_auto');
-  assert.match(auto.find(e => e.type === 'tool_result').result, /from-the-wrist/);
-  assert.equal(approval.settings().mode, 'auto', 'and the panel is in auto afterwards');
 
   approval.setMode('auto');
 });

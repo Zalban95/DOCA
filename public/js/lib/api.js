@@ -34,14 +34,36 @@ function _renewSignIn(why) {
   return _stepUp;
 }
 
+/**
+ * An important or safety switch asks for the password for that one change (modules/auth/guarded.js; CONSTITUTION
+ * S14): asked here, sent with the request again, kept nowhere. Resolves the answer, or null when the person cancels.
+ */
+async function _confirmSwitch(input, init, d) {
+  let ask = `${d.error || 'This switch asks for your password.'} Your password:`;
+  for (;;) {
+    const password = await new Promise(resolve => appPrompt(ask, v => resolve(v || null), '', { secret: true, onCancel: () => resolve(null) }));
+    if (!password) return null;
+    const headers = new Headers(init?.headers || {});
+    headers.set('X-Doca-Password', password);
+    const res = await _rawFetch(input, { ...(init || {}), headers });
+    if (res.status !== 403 && res.status !== 429) return res;
+    const e = await res.clone().json().catch(() => ({}));
+    if (e.code !== 'bad_credentials' && e.code !== 'rate_limited') return res;
+    ask = `${e.error} Your password:`;
+  }
+}
+
 if (_rawFetch) window.fetch = async (input, init) => {
   const res = await _rawFetch(input, init);
   if (res.status !== 401 && res.status !== 403) return res;
   const url = typeof input === 'string' ? input : input?.url || '';
-  if (!url.startsWith('/') || url.startsWith('/api/auth/')) return res;
+  if (!url.startsWith('/')) return res;
   const d = await res.clone().json().catch(() => ({}));
+  // A switch asks for the password wherever it is — levels, grants and accounts are under /api/auth/ too.
+  if (d.code === 'password_required') return (await _confirmSwitch(input, init, d)) || res;
+  if (url.startsWith('/api/auth/')) return res;
   if (d.code === 'unauthenticated' || d.code === 'setup_required' || d.code === 'password_change_required') return _toLogin();
-  if (d.code === 'step_up_required' && await _renewSignIn(d.error)) return _rawFetch(input, init);
+  if (d.code === 'step_up_required' && await _renewSignIn(d.error)) return window.fetch(input, init);
   return res;
 };
 

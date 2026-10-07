@@ -67,6 +67,9 @@ function tool({ person, profile, missionId, sessionId, name, args }) {
   // And its reach (reach.js, CONSTITUTION S2): how far into machines and devices this level goes; a grant allots past it.
   const beyond = granted ? null : require('./reach').refuse(L, person, name);
   if (beyond) return { allowed: false, ask: false, level: L.name, why: beyond };
+  // An agents' computer is a resource allotted like a model (allot.js, S13).
+  const pc = /^mcp__computer-([\w-]+?)__/.exec(name)?.[1];
+  if (pc && !require('./allot').uses(person, 'computer', pc)) return { allowed: false, ask: false, level: L.name, why: require('./allot').refusal(person, 'computer', pc) };
   const ask = L.approval === 'ask' && !keys.every(k => grants.holds(subjects, `approve:${k}`));
   return { allowed: true, ask, level: L.name };
 }
@@ -86,6 +89,7 @@ function holds(person, permission) {
   }
   if (kind === 'setting') return L.settings.includes('*') || L.settings.some(p => v === p || v.startsWith(`${p}.`)) || own;
   if (kind === 'path') return L.rights.includes('host') || own;
+  if (kind === 'use') { const [k, ...id] = v.split(':'); return require('./allot').uses(person, k, id.join(':')) || own; }
   return false;
 }
 
@@ -107,6 +111,9 @@ function mayGrant({ giver, subject, permission, store = require('./store') }) {
     if (!levels.within(m.role, giver.role)) return 'that person\'s level is above yours';
   }
   if (!holds(giver, permission)) return `you do not hold ${permission} yourself, so you cannot give it`;
+  // A team leader allots only what their level names (levels.js `delegates`; CONSTITUTION S13).
+  const may = !giver.agent && levels.get(giver.role)?.delegates;
+  if (may && !may.some(p => grants.covers(p, permission))) return `${levels.get(giver.role).name} may give only ${may.join(', ')}`;
   return null;
 }
 

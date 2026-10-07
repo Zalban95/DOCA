@@ -16,7 +16,7 @@
 const { spawn } = require('child_process');
 
 const PROTOCOL_VERSION = '2025-06-18';
-const LOG_LINES = 200;
+const LOG_LINES = () => require('../log-keep').limit('logs.mcpLines');   // lines of its output kept (Settings → System → Logs)
 // Only explicit connectivity failures reported by a tool count. A timeout may
 // just be a long render; initialize/tools/list say nothing about an app behind it.
 const BACKEND_UNREACHABLE = /\b(?:ECONNREFUSED|ENETUNREACH|EHOSTUNREACH|connection refused|network is unreachable|no route to host|cannot connect to|could not connect to)\b/i;
@@ -51,7 +51,7 @@ class McpClient {
     for (const l of String(line).split('\n')) {
       if (l.trim()) this.log.push(l.replace(/\s+$/, ''));
     }
-    if (this.log.length > LOG_LINES) this.log.splice(0, this.log.length - LOG_LINES);
+    if (this.log.length > LOG_LINES()) this.log.splice(0, this.log.length - LOG_LINES());
   }
 
   /* ── Transport ─────────────────────────────────────── */
