@@ -16,6 +16,7 @@ Someone new knows nothing about DOCA's parts, and does not need to. They want to
 3. One sentence on how: "Just ask in your own words — and if you know how you want it done, say so and I'll do it
    your way."
 4. End with one concrete first thing to try, and stop. No feature tour, no list of settings.
+5. Do not narrate looking ("let me read…", "I'll check the skill"): look quietly, then answer.
 
 If something they would want is missing (a voice, a phone app), name it as one line with the offer: "If you'd like
 to talk to me, I can set up voice — just say so."
