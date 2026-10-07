@@ -96,6 +96,7 @@ const TABLE = [
   R(GET, '/api/settings/migrations', 'read'),               // prefs migrations: key names and code defaults, never a stored value
   R(GET, '/api/(services|services/status|vms|system/tools|mcp|skills|skills/search|skills/[^/]+)', 'read'),
   R(GET, '/api/docker/(containers|images|presets)', 'read'),
+  R(GET, '/api/decisions', 'read'),   // each person's own decisions; a host's also the hive's (decisions.js)
   R(GET, '/api/models(/(disk|settings|tools|servers|roles|hf/(list|search|settings|status)|local/(list|search|settings)|llamacpp/(list|status)|ollama/(list|running|search|status)))?', 'read'),
 
   // ── Everything else is the machine ──

@@ -1273,6 +1273,25 @@ its path, as for a file dropped into the panel — it reads, converts or shows i
 know, or one that expired, is `404 not_found`, never silently dropped. Voice out and an `agent.thinking` event are not
 part of this protocol (a live call, §23.1, is how a device speaks with the agent).
 
+### 23.0 Stopping, putting away, and what waits for the person (hub 2.257.0)
+
+What the panel's Harness does to running work, a device does too, as its person — each conversation's access rule
+decides, and anything else answers 404 as if absent:
+
+| Route | Scope | Does |
+|---|---|---|
+| `POST /harness/missions/{id}/stop` | `harness:chat` | stops a specialist at its next step; what sent it waits for its person |
+| `POST /harness/work/{id}/restart` · `/drop` | `harness:chat` | carries on with, or ends, a work chat a person stopped |
+| `POST /harness/sessions/{id}/archive` `{on}` | `harness:sessions` | puts a conversation away (its missions with it) or back — not a delete |
+| `POST /harness/missions/{id}/archive` `{on}` | `harness:chat` | puts a finished mission away or back |
+| `GET /harness/working` | `harness:chat` | `{missions, auto, stopped}`: what runs on its own now, with why, and what waits for restart or drop |
+| `GET /ambient?place=&units=` | `harness:chat` | the person's day: weather, today's calendar, notices — what the ambient screen shows |
+| `GET /decisions` | `harness:chat` | everything waiting for the person's decision, `{kind, id, title, at, page}` (a host's device also the hive's) |
+
+Putting away is announced like any change: `agent.mission` with `archivedAt` and `quiet` — take the row off, notify
+nothing. Since 2.257.0 the `watch` preset holds `harness:sessions` (the face and schedules); a watch paired earlier
+gets it with `npm run token -- grant <deviceId> --preset watch` or the device's Re-apply preset.
+
 ### 23.1 A live call (since hub 2.200.0; an experiment)
 
 `GET /realtime` (scope `harness:chat`) says whether the hub can hold a live call with a realtime speech model

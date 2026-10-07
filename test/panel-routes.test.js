@@ -20,6 +20,7 @@ const API_ONLY = {
   'GET /api/chat/status': 'which harness the floating chat talks to and OpenClaw\'s gateway — for a script; the chat finds out by talking',
   'GET /api/models/ollama/running': 'what Ollama holds in memory, for a script; the panel draws it through /api/models/servers',
   'GET /api/ambient/place': 'a place looked up by name (weather.locate), for a client choosing a place; the panel\'s own form passes it to /api/ambient',
+  'GET /api/decisions': 'every decision waiting, in one list — for devices and the header badge wave E draws; each page shows its own today',
   // Wanted in the panel (TODO C5b): each is a feature a person can only reach with curl today.
   'POST /api/clients/apps/signing': 'TODO C5b: upload the APK signing key in Field → API keys → DOCA apps',
   'GET /api/harness/contracts': 'TODO C5b: show what each provider was learned to accept, in the Harness ⚙',
