@@ -6,7 +6,7 @@ const os   = require('os');
 const path = require('path');
 const shell = require('./shell');
 
-const { COMPOSE_DIR, CONFIG_PATH, PREFS_FILE, FM_ALLOWED_ROOTS, PROTECTED_FILES } = require('./paths');
+const { COMPOSE_DIR, CONFIG_PATH, PREFS_FILE, FM_ALLOWED_ROOTS, PROTECTED_FILES, PROTECTED_DIRS } = require('./paths');
 
 /** Run a shell command and return { stdout, stderr }. Rejects on non-zero exit. */
 function run(cmd, cwd) {
@@ -64,6 +64,8 @@ function fmSafe(p) {
   // macOS/Windows, 2026-10-04). Case-insensitively where the filesystem is.
   const same = (x, y) => (process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y);
   if (PROTECTED_FILES.some(f => { const r = path.resolve(f), rr = realOf(r); return [r, rr].some(p => same(p, abs) || same(p, real)); })) return false;
+  const under = (x, d) => same(x, d) || (process.platform === 'win32' ? x.toLowerCase().startsWith(d.toLowerCase() + path.sep) : x.startsWith(d + path.sep));
+  if ((PROTECTED_DIRS || []).some(d => { const r = path.resolve(d), rr = realOf(r); return [r, rr].some(p => under(abs, p) || under(real, p)); })) return false;
   // `root + '/'` was a Unix assumption, and the machine this is developed on is
   // Windows: every absolute path there is separated by `\`, so nothing but a root
   // itself ever passed and the file tools refused the whole disk. Compare with

@@ -101,6 +101,14 @@ function setSigning(buffer, { alias = 'androiddebugkey', storePassword = 'androi
   const p = require('../paths');
   if (buffer.length < 32) throw bad('That is not a keystore.');
   fs.mkdirSync(path.dirname(p.ANDROID_SIGNING_STORE), { recursive: true });
+  // The way back first (CONSTITUTION S9): every app signed with the key being replaced refuses updates signed with the
+  // new one, so the old keystore and how to open it are kept beside it, dated, never removed by this.
+  if (fs.existsSync(p.ANDROID_SIGNING_STORE)) {
+    const dir = path.join(path.dirname(p.ANDROID_SIGNING_STORE), 'android-signing.previous'), at = new Date().toISOString().replace(/[:.]/g, '-');
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    fs.copyFileSync(p.ANDROID_SIGNING_STORE, path.join(dir, `${at}.keystore`));
+    if (fs.existsSync(p.ANDROID_SIGNING_FILE)) fs.copyFileSync(p.ANDROID_SIGNING_FILE, path.join(dir, `${at}.json`));
+  }
   fs.writeFileSync(p.ANDROID_SIGNING_STORE, buffer, { mode: 0o600 });
   fs.writeFileSync(p.ANDROID_SIGNING_FILE, JSON.stringify({ alias, storePassword, keyPassword, at: new Date().toISOString(),
     sha256: crypto.createHash('sha256').update(buffer).digest('hex').slice(0, 16) }), { mode: 0o600 });

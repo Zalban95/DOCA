@@ -9,7 +9,7 @@
  *   POST /api/clients/apps/:app                  upload an APK as the latest (host)
  *   POST /api/clients/apps/:app/repo             where its source is ({repo}) (host)
  *   POST /api/clients/apps/:app/build            build it here and keep it ({pull}); SSE (host)
- *   POST /api/clients/apps/signing               the signing keystore (raw body; ?alias, storePassword, keyPassword) (host)
+ *   POST /api/clients/apps/signing               the signing keystore (raw body; X-Signing-Alias, -Store-Password, -Key-Password) (host)
  *   POST /api/clients/apps/:app/link             a download link that needs no sign-in, for 10 minutes (host) — what a
  *                                                phone's browser opens (DocaMobile's apps_open) to save the APK
  *   GET  /api/clients/apps/:app/apk/:token       that link (public: the token is the permission)
@@ -58,7 +58,10 @@ function mount(app) {
   });
   app.get('/api/clients/apps', h(() => apps.settings()));
   app.get('/api/clients/apps/:app/apk', sendApk);
-  app.post('/api/clients/apps/signing', raw, h(req => apps.setSigning(req.body, { alias: req.query.alias || undefined, storePassword: req.query.storePassword || undefined, keyPassword: req.query.keyPassword || undefined })));
+  // The passwords come in headers (the panel's button), or the query for an older script: a URL is what logs keep.
+  const pw = (req, h, q) => req.get(h) || req.query[q] || undefined;
+  app.post('/api/clients/apps/signing', raw, h(req => apps.setSigning(req.body, { alias: req.get('x-signing-alias') || req.query.alias || undefined,
+    storePassword: pw(req, 'x-signing-store-password', 'storePassword'), keyPassword: pw(req, 'x-signing-key-password', 'keyPassword') })));
   app.post('/api/clients/apps/:app/repo', express.json(), h(req => apps.setRepo(req.params.app, req.body?.repo)));
   app.post('/api/clients/apps/:app/build', express.json(), async (req, res) => {
     require('../utils').sseHeaders(res);
