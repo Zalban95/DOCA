@@ -11,8 +11,13 @@ async function hcSchedulesLoad() {
   try { list = (await apiFetch('/api/schedules')).schedules || []; }
   catch (e) { box.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`; return; }
   box.innerHTML = list.map(s => {
-    const mark = s.state === 'on' ? '●' : s.state === 'proposed' ? '◌' : '○';
+    const reminder = s.kind === 'reminder';   // once, then done (schedules/index.js)
+    const mark = reminder ? '⏰' : s.state === 'on' ? '●' : s.state === 'proposed' ? '◌' : '○';
     const last = s.last ? ` · last ${s.last.ok ? 'ok' : 'failed'}` : '';
+    if (reminder) return `<div class="hc-agent ${s.state === 'on' ? '' : 'off'}" title="${escHtml(s.text || '')}${s.last ? `\n\n${escHtml(s.last.summary)}` : ''}">
+      <span class="hc-agent-id">${mark} ${escHtml(s.title)}</span>
+      <span class="hc-agent-note">reminder · ${escHtml(s.whenText)}${s.state === 'done' ? ' · done' : ''}${last}</span>
+      <button class="btn btn-xs btn-red" onclick="hcScheduleDelete(${jsArg(s.id)})" title="Delete">✕</button></div>`;
     return `<div class="hc-agent ${s.state === 'on' ? '' : 'off'}" title="${escHtml(s.kind === 'turn' ? s.message : `recipe ${s.recipe}`)}${s.last ? `\n\nLast: ${escHtml(s.last.summary)}` : ''}">
       <span class="hc-agent-id">${mark} ${escHtml(s.title)}</span>
       <span class="hc-agent-note">${escHtml(s.whenText)}${s.state === 'proposed' ? ' · proposed by the agent' : ''}${last}</span>

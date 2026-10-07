@@ -45,4 +45,28 @@ module.exports = [
       return 'Error: action is list, propose, pause or delete.';
     },
   },
+  {
+    // Decided 2026-10-07: a reminder the person asked for in their own words fires without a click — once, as a
+    // notice to their own devices. A repeating schedule is still proposed and switched on by them.
+    name: 'remind',
+    description: 'Remind the person once, later, on their own devices — use it when they ask "remind me at 6 to call Marco" or "in 20 '
+      + 'minutes". It is set at once (they asked), fires once as a notice, and is listed with their schedules (Harness → Schedules), '
+      + 'where they can delete it. For something that repeats, propose a schedule instead.',
+    parameters: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'What to remind them of, as they would want to read it.' },
+        at: { type: 'string', description: 'When, as a date and time in the host\'s time (2026-10-07T18:00), or …' },
+        in: { type: 'number', description: '… in how many minutes from now.' },
+        device: { type: 'string', description: 'One of their devices by name or id; default all of theirs that take notices.' },
+      },
+      required: ['text'],
+    },
+    run: async (a, ctx = {}) => {
+      const at = a.at ? new Date(a.at) : Number(a.in) > 0 ? new Date(Date.now() + Number(a.in) * 60000) : null;
+      if (!at || Number.isNaN(at.getTime())) return 'Error: say when — at (a date and time) or in (minutes).';
+      const x = require('../../schedules').create({ kind: 'reminder', text: a.text, at: at.toISOString(), device: a.device }, { person: ctx.user || null, madeBy: 'agent' });
+      return `Reminder ${x.id} set for ${at.toLocaleString()}: "${x.text}". It reaches their devices once; they can delete it in Harness → Schedules.`;
+    },
+  },
 ];
