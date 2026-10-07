@@ -134,6 +134,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   // Assistant mode (a call from the face) may have a quicker model of its own, and every turn knows its thinking effort.
   if (require('./turn/effort').spokenProfile(client) && require('../settings-schema').value('assistant.model'))
     p = { ...p, provider: require('../settings-schema').value('assistant.provider') || p.provider, model: require('../settings-schema').value('assistant.model') };
+  p = require('../spending').priced({ person: client?.user, sessionId }, p);   // a money budget counts only priced models
   // Limits that follow the work (experiment adaptiveLimits, turn/triage.js): null when off, and then nothing changes.
   const verdict = await require('./turn/triage').verdict({ message, client, session: memory.getSession(sessionId), p });
   if (verdict) p = { ...p, maxSteps: verdict.steps, _adaptive: verdict };
@@ -236,7 +237,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     // after it belongs to the machine, not to the model's speed.
     const startedAt = Date.now();
     const reply = await complete({
-      ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id },
+      ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id, person: client?.user },
       body: { ...base, messages, ...(schemas.length ? { tools: schemas, tool_choice: 'auto' } : {}) },
       onText: t => { text += t; say({ type: 'text', text: t }); },
       onThinking: t => say({ type: 'thinking', text: t }),

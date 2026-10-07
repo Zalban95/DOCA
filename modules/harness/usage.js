@@ -48,8 +48,19 @@ function imported() {
   return _imported;
 }
 
+/**
+ * Who a call was for, kept on its row when it is written: the conversation's owner (the rule spending always read,
+ * session-access.ownerOf), else the person on the call. Read back first by spending (spending/spent.js), so a
+ * conversation deleted later still counts for its person.
+ */
+function personOf(person, sessionId) {
+  let owner = null;
+  if (sessionId) try { owner = require('./session-access').ownerOf(sessionId); } catch { /* removed meanwhile */ }
+  return owner || (person?.id ? String(person.id) : null);
+}
+
 /** Record one call. Never throws: accounting must not break the work it counts. */
-function record({ kind, sessionId, agent, provider, model, usage, body, reply }) {
+function record({ kind, sessionId, agent, provider, model, usage, body, reply, person }) {
   try {
     const p = Number(usage?.prompt_tokens);
     const c = Number(usage?.completion_tokens);
@@ -57,8 +68,8 @@ function record({ kind, sessionId, agent, provider, model, usage, body, reply })
     const row = [new Date().toISOString(), kind || null, provider || null, model || null, sessionId || null, agent || null,
       p > 0 ? p : budget.estimateMessages(body?.messages) + (body?.tools ? budget.estimate(JSON.stringify(body.tools)) : 0),
       Number.isFinite(c) && c >= 0 ? c : budget.estimate(reply?.content) + budget.estimate(JSON.stringify(reply?.tool_calls || [])),
-      budget.cachedOf(usage) || 0, measured ? 'provider' : 'estimated'];
-    imported().then(() => db.run('INSERT INTO usage (at, kind, provider, model, session_id, agent, prompt, completion, cached, source) VALUES (?,?,?,?,?,?,?,?,?,?)', row))
+      budget.cachedOf(usage) || 0, measured ? 'provider' : 'estimated', personOf(person, sessionId)];
+    imported().then(() => db.run('INSERT INTO usage (at, kind, provider, model, session_id, agent, prompt, completion, cached, source, person_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)', row))
       .catch(e => console.warn(`[usage] not recorded: ${e.message}`));
   } catch { /* see above */ }
 }
@@ -98,10 +109,10 @@ async function summary({ days = 7, by = 'day', now = new Date() } = {}) {
  */
 async function byConversation({ since, until }) {
   await imported();
-  return (await db.all(`SELECT session_id AS session, coalesce(provider, '') || '/' || coalesce(model, '') AS key, substr(at, 1, 10) AS day,
+  return (await db.all(`SELECT session_id AS session, person_id AS person, coalesce(provider, '') || '/' || coalesce(model, '') AS key, substr(at, 1, 10) AS day,
       count(*) AS calls, coalesce(sum(prompt), 0) AS prompt, coalesce(sum(completion), 0) AS completion, coalesce(sum(cached), 0) AS cached
-    FROM usage WHERE tenant_id = 'local' AND at >= ? AND at < ? GROUP BY session_id, provider, model, substr(at, 1, 10)`, [since, until]))
-    .map(r => ({ session: r.session || null, key: r.key, day: r.day, calls: Number(r.calls), prompt: Number(r.prompt), completion: Number(r.completion), cached: Number(r.cached) }));
+    FROM usage WHERE tenant_id = 'local' AND at >= ? AND at < ? GROUP BY session_id, person_id, provider, model, substr(at, 1, 10)`, [since, until]))
+    .map(r => ({ session: r.session || null, person: r.person || null, key: r.key, day: r.day, calls: Number(r.calls), prompt: Number(r.prompt), completion: Number(r.completion), cached: Number(r.cached) }));
 }
 
 module.exports = { record, summary, byConversation, fileFor };
