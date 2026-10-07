@@ -112,7 +112,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   first**) for the ambient screen, a header badge and a watch summary.
 - [ ] C2 **Proposals for a screen** (coh F13): a `screen` target applied through `screens`; `call`, `voice`, `ambient`,
   `face` proposable.
-- [ ] C3 **Settings declared with their hints** (coh F14–F15): harness parameters typed with hints in the schema,
+- [~] C3 **Settings declared with their hints** — *2.258.0: `settings_read` carries every harness parameter's hint, read from the ⚙ form's own table (`harness/param-hints.js`); typed declarations in the schema and one env-vs-saved rule are left* (coh F14–F15): harness parameters typed with hints in the schema,
   `defaultParams()` and `HARNESS_PARAMS` derived; one env-vs-saved rule, "overridden by ENV" shown.
 - [x] C4 **Which model does what, in one registry** — *2.252.0: `modules/model-roles.js` (15 roles, each with its setting and where), read by the scout, `settings_read` ("Models in use") and Field → Models' card; a test per `*model` setting* (coh F11): `model-roles.js` read by the scout, a "Models in use"
   card and `settings_read`.
