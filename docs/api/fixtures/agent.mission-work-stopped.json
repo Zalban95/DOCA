@@ -2,14 +2,14 @@
   "type": "agent.mission",
   "class": "durable",
   "payload": {
-    "missionId": "s_mux98j6lxj57uc",
+    "missionId": "s_fixture",
     "agentId": "work",
     "label": "Laya MCP server",
     "kind": "work",
     "task": "Laya MCP server",
     "state": "cancelled",
-    "startedAt": "2026-10-06T22:32:58.653Z",
-    "endedAt": "2026-10-06T22:32:58.653Z",
+    "startedAt": "2026-10-06T18:30:00.000Z",
+    "endedAt": "2026-10-06T18:30:00.000Z",
     "error": "Stopped from the missions bar. Waiting for you: restart it or drop it."
   }
 }

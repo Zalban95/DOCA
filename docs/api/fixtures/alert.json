@@ -2,7 +2,7 @@
   "type": "alert",
   "class": "durable",
   "payload": {
-    "id": "alt_341c32d1f56e",
+    "id": "alt_fixture",
     "title": "The render finished",
     "body": [
       {
