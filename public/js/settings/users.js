@@ -46,6 +46,7 @@ function _usersPeopleCard() {
       try { const r = await apiFetch(`/api/auth/users/${encodeURIComponent(p.id)}/password`, { method: 'POST' }); appAlert(`One-time password for ${p.email}:\n\n${r.oneTimePassword}\n\nShown once. They replace it when they sign in.`); usersLoad(); }
       catch (e) { appAlert(e.message); }
     }));
+    b('What they have', 'Their level, reach, what is allotted to them, budget and devices', () => holdingsOpen(p.id));
     if (p.sessions) b('Sign out', 'End every session they have', async () => { try { await apiFetch(`/api/auth/users/${encodeURIComponent(p.id)}/sessions`, { method: 'DELETE' }); usersLoad(); } catch (e) { appAlert(e.message); } });
     tr.append(who, lvl, status, sess, act);
     table.appendChild(tr);

@@ -46,6 +46,7 @@ const TABLE = [
   R(GET, '/\\.well-known/agent(-card)?\\.json', 'public'),   // the A2A agent card: who the hive is and where to talk (api-v1/a2a.js)
   R(GET, '/api/auth/host-check', 'host'),                 // asked before opening a terminal socket
   R(ANY, '/api/auth/(me|logout|password|step-up|sessions)', 'signed'),
+  R(GET, '/api/auth/holdings', 'signed'),                 // what you hold; someone else's needs users, checked in holdings.js
   R(ANY, '/api/auth/grants(/.*)?', 'signed'),              // exceptions: users or delegate, checked in users-routes.js
   R(ANY, '/api/auth/(users|levels)(/.*)?', 'users'),        // people and their permission levels (auth/users-routes.js)
   R(ANY, '/api/presence', 'signed'),                       // "this page is visible": a heartbeat, no data
