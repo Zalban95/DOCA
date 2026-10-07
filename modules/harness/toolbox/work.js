@@ -40,7 +40,7 @@ module.exports = [
       + 'you cannot approve it, so end your turn after proposing and wait for their decision. '
       + 'Their approval starts the work here, with a message telling you to carry it out. Progress marks a numbered step without changing the approved scope. '
       + 'Give each step its contract in contracts (same order: {done: "done when …", check}) so finished means every contract holds: marking a step done runs '
-      + 'its check first ({file}, {file, contains} or {url} on the owner\'s addresses; run tests yourself), and the plan reads fulfilled when all are done. '
+      + 'its check first ({file}, {file, contains}, {url}, {page, contains, selector, noErrors} — the page as rendered —, {absent} or {free: port}; run tests yourself), and the plan reads fulfilled when all are done. '
       + 'Use mission_plan for specialist mission progress.',
     parameters: { type: 'object', properties: {
       action: { type: 'string', enum: ['read', 'draft', 'propose', 'progress'] }, sessionId: { type: 'string' },
