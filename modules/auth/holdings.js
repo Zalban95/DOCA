@@ -34,7 +34,7 @@ function inUse(person, kind) {
       return quiet(() => Object.entries(vault.all()).filter(([id, r]) => r.accessToken && ok(id, r.who === 'everyone')).map(([id]) => id));
     }
     case 'login':    return quiet(() => require('../logins').list().filter(l => ok(l.id) || ok(l.label)).map(l => l.label));
-    case 'service':  return quiet(() => require('../services').INFERENCE_SERVICES.filter(s => ok(s.id)).map(s => s.id));
+    case 'service':  return quiet(() => require('../services').INFERENCE_SERVICES.filter(s => s.chat && ok(s.id)).map(s => s.id));   // those a turn can use
     case 'computer': return quiet(() => require('../computers').all().filter(c => !c.archivedAt && !require('../computers/whose').refuse(person, c.id)).map(c => c.id));
     default:         return [];   // models are patterns over every provider's list; devices are listed below
   }
@@ -88,7 +88,7 @@ function personFor(req) {
   const me = client.personOf(req.auth);
   if (!me?.id) throw bad('Sign in first.', 401);
   const id = req.query.person ? String(req.query.person) : me.id;
-  if (id === me.id) return me;
+  if (id === me.id) return { ...me, self: true };
   if (!require('./rights').can(me.role, 'users')) throw bad('What another person holds is for an admin (the users right) to see.', 403);
   const store = require('./store'), orgId = me.orgId || store.defaultOrg()?.id;
   const u = store.userById(id), m = u && orgId ? store.membership(orgId, id) : null;
@@ -98,7 +98,7 @@ function personFor(req) {
 
 function mount(app) {
   app.get('/api/auth/holdings', async (req, res) => {
-    try { res.json(await of(personFor(req))); } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+    try { const p = personFor(req); res.json({ ...(await of(p)), self: !!p.self }); } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
 }
 

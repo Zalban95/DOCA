@@ -45,7 +45,7 @@ test('a provider that is the hub\'s vLLM service is the service too: a level lis
     const h = await require('../modules/auth/holdings').of(p);
     assert.deepEqual(h.resources.service.granted, ['vllm']);
     assert.deepEqual(h.resources.service.level, ['comfyui']);
-    assert.deepEqual(h.resources.service.here.sort(), ['comfyui', 'vllm'], 'the services here that pass');
+    assert.deepEqual(h.resources.service.here, ['vllm'], 'the services here a turn can use, that pass');
   } finally { providers.endpoint = real; }
 });
 
@@ -67,6 +67,7 @@ test('GET /api/auth/holdings: your own; someone else\'s for an admin only; never
   const self = await H.api(null, 'GET', '/api/auth/holdings', undefined, { Cookie: member.cookie });
   assert.equal(self.status, 200, JSON.stringify(self.body));
   assert.equal(self.body.person.id, member.user.id);
+  assert.equal(self.body.self, true);
   assert.equal(self.body.level.name, 'Member');
   assert.equal(self.body.level.reach, 'own-devices');
   assert.deepEqual(self.body.devices.own.map(d => d.name), ['Member phone']);
@@ -78,6 +79,7 @@ test('GET /api/auth/holdings: your own; someone else\'s for an admin only; never
   assert.equal((await H.api(null, 'GET', `/api/auth/holdings?person=${other.user.id}`, undefined, { Cookie: member.cookie })).status, 403, 'not another\'s');
   const viewed = await H.api(null, 'GET', `/api/auth/holdings?person=${other.user.id}`);
   assert.equal(viewed.status, 200);
+  assert.equal(viewed.body.self, false);
   assert.deepEqual(viewed.body.devices.own.map(d => d.name), ['Other laptop']);
   assert.equal((await H.api(null, 'GET', '/api/auth/holdings?person=usr_nobody')).status, 404);
   const owner = await H.api(null, 'GET', '/api/auth/holdings');

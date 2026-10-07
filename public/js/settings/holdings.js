@@ -26,8 +26,9 @@ function _holdHtml(h) {
   const L = h.level, sp = h.spending, cur = sp.spent?.currency || '';
   const budget = typeof _spBudgetText === 'function' ? _spBudgetText(sp.budget, cur) : escHtml(JSON.stringify(sp.budget || 'none'));
   const dev = d => `${escHtml(d.name || d.id)}${d.kind ? ` <span style="color:var(--muted)">${escHtml(d.kind)}</span>` : ''}`;
-  return `<div class="card-title">What ${h.person.name ? escHtml(h.person.name) + ' has' : 'you have'}</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">What their agents may use, and how much — from their level and the grants given to them. An admin changes it in Settings → Users.</p>
+  const who = h.self ? 'your' : 'their';
+  return `<div class="card-title">What ${h.self || !h.person.name ? 'you have' : `${escHtml(h.person.name)} has`}</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">What ${who} agents may use, and how much — from ${who} level and the grants given to ${h.self ? 'you' : 'them'}. An admin changes it in Settings → Users.</p>
     <div class="disk-row"><span class="disk-label">Level</span><span class="disk-path"><b>${escHtml(L.name)}</b> · rights ${escHtml((L.rights || []).join(', ') || 'none')}
       · ${L.approval === 'ask' ? 'every tool call is asked first' : 'calls follow the panel\'s approval mode'}</span></div>
     <div class="disk-row"><span class="disk-label">Reach</span><span class="disk-path">${L.reach ? escHtml(_HOLD_REACH[L.reach] || L.reach) : 'as its tools allow'}</span></div>
