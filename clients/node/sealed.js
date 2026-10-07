@@ -13,8 +13,11 @@
  *              (-loops) and Wayland's wl-copy one (--paste-once); macOS and Windows cannot count, so the clipboard is
  *              cleared after the time (Windows keeps it out of clipboard history and the cloud clipboard)
  *
- * While a secret sits on the clipboard, this machine refuses the hub's clipboard reads and command lines — the two
- * ways an agent could read it back. Needs the `device` family lent (the one that already writes the clipboard).
+ * While a secret sits on the clipboard, and for READ_HOLD_MS after any use, this machine refuses the hub's read tools —
+ * command lines, file reads, screen captures, clipboard reads — the ways an agent could read back what was just typed
+ * or pasted (security review 2026-10-07). A secret that belongs to a site (one sealed with an `origin`) is never typed
+ * or pasted here: it goes only into that site's own field, which a desktop does not have. Needs the `device` family
+ * lent (the one that already writes the clipboard).
  */
 const crypto = require('crypto');
 const { spawn } = require('child_process');
@@ -23,6 +26,10 @@ const { run } = require('./families');
 const win = process.platform === 'win32', mac = process.platform === 'darwin';
 const seen = new Map();   // nonce → until: a sealed secret is used once
 let armed = null;         // { until, stop } while a secret sits on the clipboard
+let heldUntil = 0;        // the read tools wait until then after a use
+const READ_HOLD_MS = 60e3;
+/** What reads back what was typed or pasted: the shell, files, the screen and the clipboard (PROTOCOL.md §22.3). */
+const READS = ['shell', 'shell_run', 'shell_job', 'files_read', 'screen_capture', 'screen_read', 'device_clipboard_read'];
 
 /** Open a sealed payload with this machine's key; throws a sentence (never the value) when it is not for here. */
 function open(cfg, sealed) {
@@ -97,6 +104,8 @@ async function fill(cfg, args) {
   const value = String(p.value ?? '');
   const seconds = Math.min(300, Math.max(5, Number(p.ttlSec) || 30));
   if (p.how === 'field') throw new Error('This machine has no web page to fill: use the clipboard or typing.');
+  if (p.origin) throw new Error(`This secret belongs to ${p.origin} and goes only into that site's own field: it is not typed or pasted on a desktop.`);
+  heldUntil = Date.now() + READ_HOLD_MS;   // before the use: a read racing it waits too
   if (p.how === 'type') { await module.exports.adapter.type(value); return { done: 'typed', uses: 1, seconds: 0 }; }
   const uses = Math.min(10, Math.max(1, Number(p.uses) || 1));
   disarm();   // one secret on the clipboard at a time
@@ -108,10 +117,15 @@ async function fill(cfg, args) {
   return { done: 'clipboard', uses, counted: c.counted, seconds };
 }
 
-/** While a secret sits on the clipboard: what this machine refuses the hub (a sentence), or null. */
+/** While a secret sits on the clipboard or was just used: what this machine refuses the hub (a sentence), or null. */
 function blocks(name) {
-  if (!armed || !['device_clipboard_read', 'shell_run', 'shell'].includes(name)) return null;
-  return `A secret is on this machine's clipboard for ${Math.ceil((armed.until - Date.now()) / 1000)} s more; ${name} waits until it is gone.`;
+  if (!READS.includes(name)) return null;
+  if (armed) return `A secret is on this machine's clipboard for ${Math.ceil((armed.until - Date.now()) / 1000)} s more; ${name} waits until it is gone.`;
+  if (Date.now() < heldUntil) return `A secret was just used on this machine: ${name} waits ${Math.ceil((heldUntil - Date.now()) / 1000)} s more.`;
+  return null;
 }
 
-module.exports = { fill, open, blocks, disarm, adapter, armed: () => !!armed };
+/** Lifts the wait after a use (the tests; a person's own restart does the same). */
+const release = () => { heldUntil = 0; };
+
+module.exports = { fill, open, blocks, disarm, release, adapter, armed: () => !!armed, READS, READ_HOLD_MS };

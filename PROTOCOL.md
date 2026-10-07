@@ -1194,13 +1194,20 @@ that hosts an MCP server (§22, §22.2) takes part by doing three things:
    | `iat`, `nonce` | when it was sealed (ms) and a one-time id — refuse one older than 5 minutes or seen before |
    | `how` | `field` (a field on a web page), `type` (typed into what has focus), `clipboard` |
    | `value` | the secret — use it, never return, log or store it |
-   | `ref`, `tab`, `origin` | for `field`: the `[n]` from the last snapshot, the tab (null: in front), the only origin it may be filled on |
+   | `ref`, `tab` | for `field`: the `[n]` from the last snapshot, the tab (null: in front) |
+   | `origin` | the secret's own site, when it has one: the only origin it may be filled on — and a payload carrying it is **only ever** a `field` (security review 2026-10-07) |
    | `uses`, `ttlSec` | for `clipboard`: pastes before it is forgotten (1–10) and the most seconds it may stay (5–300) |
 
    Use it as `how` says or refuse with `isError` and a sentence (never containing the value): a `field` only when the
-   tab's origin is exactly `origin` (a look-alike gets nothing); `clipboard` cleared after `uses` pastes where the OS
-   can count them, else after `ttlSec`, and kept out of clipboard history where the OS allows. While a secret is on
-   the clipboard, refuse your own clipboard reads and command lines. Answer
+   tab's origin is exactly `origin` (a look-alike gets nothing), and only into a **credential field** — a password
+   field, or one whose autocomplete is `current-password`, `new-password` or `one-time-code`; never a plain text field,
+   whose value the next snapshot would read back. A field filled stays a secret until the page goes: never report its
+   value, even if the page turns it into a text field. Refuse `type` and `clipboard` when the payload has an `origin`.
+   `clipboard` is cleared after `uses` pastes where the OS can count them, else after `ttlSec`, and kept out of
+   clipboard history where the OS allows. **For 60 seconds after any use** (and while a secret is on the clipboard),
+   refuse your own read tools — command lines (`shell`, `shell_job`), `files_read`, `screen_capture`, `screen_read`,
+   `device_clipboard_read`, a browser's page reads — with a sentence: a value just typed, pasted or filled can be read
+   straight back (security review 2026-10-07; the hub holds the same window on its side, for clients older than this). Answer
    `{"done": "field"|"typed"|"clipboard", "uses": n, "counted": true|false, "seconds": s}` as text.
 3. **Forget it.** Nothing of the value stays after the use: not in a file, a log, a crash report or a notification.
 

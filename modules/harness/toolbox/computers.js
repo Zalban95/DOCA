@@ -39,13 +39,19 @@ module.exports = [
     run: async ({ action, id, name, purpose, attachment, path }, ctx = {}) => {
       const computers = require('../../computers');
       const line = c => `- ${c.id} "${c.name}" ${c.state || ''}${c.pinned ? ' pinned' : ''}${c.purpose ? ` — ${c.purpose}` : ''}; tools ${c.tools}`;
-      if (action === 'list') { const l = await computers.list(); return l.length ? l.map(line).join('\n') : 'No computers. create makes one.'; }
+      const whose = require('../../computers/whose');
+      if (action === 'list') {   // only the ones this person's agents may act on (computers/whose.js)
+        const l = (await computers.list()).filter(c => !whose.refuse(ctx.user, c.id));
+        return l.length ? l.map(line).join('\n') : 'No computers. create makes one.';
+      }
       if (action === 'create') {
         const c = await computers.create({ name, purpose, by: ctx.sessionId || null, auto: true });
         const send = require('../../agents/registry').enabled() ? `; or send a specialist with agent_dispatch { agent: "tester", computer: "${c.id}", task: … }` : '';
         return `Computer ${c.id} "${c.name}" is up. Its tools (mcp__computer-${c.id}__*) are yours from your next step${send}.\n${line(c)}`;
       }
       if (!id) return 'Error: say which computer (id).';
+      const no = whose.refuse(ctx.user, id);   // another person's computer holds their files and sign-ins (S13)
+      if (no) return `Error: ${no}`;
       if (action === 'start') return `Started.\n${line(await computers.start(id))}`;
       if (action === 'stop') { await computers.stop(id); return `Stopped ${id}; its files stay until it is removed.`; }
       if (action === 'remove') { await computers.remove(id); return `Removed ${id} and its files.`; }
@@ -70,7 +76,7 @@ module.exports = [
       },
       required: ['computer', 'login', 'passRef'],
     },
-    run: a => require('../../logins').fill(a),
+    run: (a, ctx = {}) => require('../../logins').fill(a, ctx),
   },
   {
     name: 'computer_look',
@@ -84,6 +90,6 @@ module.exports = [
       how: { type: 'string', enum: ['auto', 'model', 'text', 'detector', 'template'], description: 'Which reader; auto (the default) is the owner\'s choice.' },
       template: { type: 'string', description: 'For template: the path of a picture of the element (an attachment).' },
     }, required: ['computer'] },
-    run: (a, ctx) => require('../../computers/look').look(a, ctx),
+    run: async (a, ctx = {}) => { require('../../computers/whose').check(ctx.user, a.computer); return require('../../computers/look').look(a, ctx); },
   },
 ];
