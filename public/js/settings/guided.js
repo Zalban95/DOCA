@@ -72,7 +72,13 @@ async function guidedApply() {
 }
 
 /** The same request as a conversation: the agent follows the guided-setup skill. */
-function guidedAskAgent() {
+async function guidedAskAgent() {
+  // On a new hub the agent has no model yet — giving it one is what this page is for — and the chat would only
+  // answer with an error sending the person back here.
+  try {
+    if (!(await apiFetch('/api/harness/status')).ready)
+      return setStatus(document.getElementById('guided-status'), 'The agent has no model yet: that is what this page sets up. Press Set it up, or use a key below — then the agent can take over.', 'warn', { clear: 0 });
+  } catch { /* asking anyway: the chat says what is wrong */ }
   const a = guidedAnswers();
   const names = Object.fromEntries((_guided?.uses || []).map(u => [u.id, u.label.toLowerCase()]));
   const what = [...a.uses.map(u => names[u] || u), a.free].filter(Boolean).join('; ');
