@@ -127,8 +127,10 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     try { emit(evt); } catch {}
     try { events.emit('event', { sessionId, ...evt }); } catch {}
   };
-  // The chat's model choice; a day's token ceiling, or the person's spending budget, refuses to start (turn/ceiling.js).
-  let p = await require('./turn/ceiling').check(require('./turn/choice').apply(turnParams(profile), sessionId), new Date(), { person: client?.user, sessionId });
+  // The chat's model choice; a day's token ceiling, or the person's spending budget, refuses to start (turn/ceiling.js) —
+  // at their own budget, on their own turn, they are asked first whether to go over it this once (spending/over.js).
+  const overAsk = require('../spending/over').askable({ client, profile, sessionId }) && (e => require('../spending/over').ask(e, { client, sessionId, signal, say }));
+  let p = await require('./turn/ceiling').check(require('./turn/choice').apply(turnParams(profile), sessionId), new Date(), { person: client?.user, sessionId, ask: overAsk });
   p = require('../auth/allot').narrowModel(p, client?.user);   // only the models allotted to the person (S13)
   if (p._allotted) say({ type: 'warning', kind: 'allotted', text: p._allotted });
   // Assistant mode (a call from the face) may have a quicker model of its own, and every turn knows its thinking effort.
