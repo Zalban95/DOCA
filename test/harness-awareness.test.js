@@ -1037,7 +1037,7 @@ test('the charter asks the agent to understand, size and get a go-ahead before r
   const c = providers.SAFETY_CHARTER;
   assert.match(c, /## Understanding what is asked\n24\. Understand the request before you act on it/);
   assert.match(c, /25\. Size the work[\s\S]*get their go-ahead[\s\S]*`work_plan`[\s\S]*until then, look but do not change/);
-  assert.match(c, /26\. Ask for what is missing, not for what you can find out[\s\S]*at most three[\s\S]*on a device, one at a time \(rule 14\)/);
+  assert.match(c, /26\. Ask for what is missing, not for what you can find out[\s\S]*at most three[\s\S]*on a device, one at a time, once/);
   assert.match(c, /27\. Keep an approved plan true[\s\S]*already has its go-ahead/, 'a mission is not told to stop and ask');
   // Appended, so every rule cited by number elsewhere (12, 13, 16–23) keeps its number.
   assert.match(c, /\n12\. A limit is a fact/);
@@ -1088,4 +1088,15 @@ test('settings_read says what each harness parameter does, in the form\'s own wo
   const out = await require('../modules/harness/tools').call('settings_read', { filter: 'harness.config' });
   assert.match(out, /harness\.config\.doca\.temperature = [\d.]+ +# Temperature: How varied the answers are/);
   assert.match(out, /harness\.config\.doca\.contextWindow = \d+ +# Context window \(tokens\): How much the model can hold/);
+});
+
+test('the charter names rules by what they say, and the repository rules reach only a turn with code tools (B8)', () => {
+  const providers = require('../modules/harness/providers');
+  assert.doesNotMatch(providers.SAFETY_CHARTER, /\brules? \d/, 'no rule is referred to by its number');
+  assert.match(providers.SAFETY_CHARTER, /never before Safety/);
+  assert.match(providers.charterFor(['git', 'shell']), /## Working on a repository/);
+  assert.doesNotMatch(providers.charterFor(['memory_search', 'tell_device']), /\n## Working on a repository\n/);
+  assert.match(providers.charterFor(['shell']), /## Working on a repository/, 'shell can push as well as git can');
+  assert.match(providers.charterFor(['tell_device']), /## Safety[\s\S]*## Understanding what is asked/, 'everything else stays');
+  assert.match(providers.SAFETY_CHARTER, /25\. Size the work by what can be undone[\s\S]*reaches outside this hive/);
 });

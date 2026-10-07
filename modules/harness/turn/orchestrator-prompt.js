@@ -37,7 +37,7 @@ function orchestratorPrompt({ p, userText, summary, toolCount, client, profile, 
   });
   const brief = [environmentBrief(p, toolCount), ...environment.mcpSection(undefined, { held })].join('\n');
   return [
-    providers.SAFETY_CHARTER, profile.systemPrompt, identity.personaBlock(), identity.humanBlock(),
+    providers.charterFor([...held]), profile.systemPrompt, identity.personaBlock(), identity.humanBlock(),
     route, require('../skills').manifestBlock(), specialists.length ? registry.block() : '',
     ownerInstructions(p),
     brief, toolList, clientBlock(client), placeBlock(client), require('../../auth/permits').describe({ person: client?.user, profile }), rulesBlock(),
