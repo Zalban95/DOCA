@@ -476,7 +476,7 @@ function block({ sessionId, completed = notices(sessionId) } = {}) {
   // second device writing first in another conversation gets asked too. Record
   // an askedAt when that turns out to nag.
   if (rows.some(m => m.state === 'paused'))
-    out.push('A PAUSED mission was cut off by a restart and is waiting on the user. Before anything else in '
+    out.push('A PAUSED mission was cut off by a restart and could not carry on by itself, so it is waiting on the user. Before anything else in '
       + 'your reply, tell them in one line what it was doing and how far it got, and ask one short question: '
       + 'continue it? Then call agent_resume with their answer. Never resume without a yes, and if you have '
       + 'already asked in this conversation, do not ask again.');

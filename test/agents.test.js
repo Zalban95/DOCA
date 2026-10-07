@@ -520,3 +520,14 @@ test('the roster says how many tools each specialist is really offered, kits inc
   assert.equal(by('archivist').toolCount, 5, 'memory_search, recall_conversations and the three every specialist gets');
   assert.ok(by('coder').toolCount > 10, `the coder holds whole kits (code, files, shell), not "no tools": ${by('coder').toolCount}`);
 });
+
+test('a mission a restart cut off carries on by itself; one that cannot stays paused and is asked about (V10)', async () => {
+  seed([row('msn_go', 'running'), row('msn_stuck', 'running', { agentId: 'no-such-agent' })]);
+  registry.setEnabled(true);
+  require('../modules/agents/carry-on').carryOn(missions.recover(), { delayMs: 0 });
+  await new Promise(r => setTimeout(r, 50));
+  assert.equal(missions.get('msn_go').state === 'running' || !!missions.get('msn_go').resumedAt, true, 'resumed: a restart is not a decision');
+  assert.equal(missions.get('msn_stuck').state, 'paused', 'its specialist is gone: it waits for the person');
+  assert.match(missions.block(), /msn_stuck .*PAUSED[\s\S]*could not carry on by itself/);
+  missions.cancel?.('msn_go');
+});
