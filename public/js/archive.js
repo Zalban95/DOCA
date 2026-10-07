@@ -25,7 +25,7 @@ async function archiveInit() {
 async function archiveSet(kind, id, on) {
   try { await apiFetch(`/api/archive/${kind}/${encodeURIComponent(id)}`, { method: 'POST', body: { on } }); }
   catch (e) { return appAlert(e.message); }
-  if (currentTab === 'archive') archiveInit();
+  if (pageShown('archive')) archiveInit();
   if (kind === 'computer' && typeof computersLoad === 'function') computersLoad();
   if (kind === 'project' && on && typeof projectsInit === 'function') { if (typeof PJ !== 'undefined') PJ.inited = false; projectsInit(); }
 }

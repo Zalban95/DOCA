@@ -9,6 +9,9 @@ const HOST_TABS = ['logs', 'files', 'projects', 'terminal', 'computers'];
 /** The header and the phone's bar are drawn by group (nav-groups.js). */
 function mobileNavRender() { navGroupsRender(); }
 
+/** Whether a page is on screen: the open page, or one part of the person's own page that is open (panel-layout.js). */
+const pageShown = t => currentTab === t || (typeof panelViewParts === 'function' && panelViewParts(currentTab).includes(t));
+
 function nav(name) {
   currentTab = name;
 

@@ -48,8 +48,10 @@ function _soloShow(c) {
 }
 
 if (typeof document !== 'undefined' && typeof window !== 'undefined') {
-  window.addEventListener('load', () => {
+  window.addEventListener('load', async () => {
     if (!document.getElementById('chat-fab')) return;   // the panel only
+    // A person's own page (panel-layout.js) is a page once their layout has been read: wait for it before deciding.
+    if (String(SOLO_PAGE || '').startsWith('view-') && !soloOn() && typeof panelLayoutLoad === 'function') await panelLayoutLoad().catch(() => null);
     if (soloOn()) soloStart();
     else {
       // `/#<page>`, and `/#settings/<section>` for a Settings section (an agent's link to Settings → Set-up, say).

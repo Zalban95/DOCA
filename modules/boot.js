@@ -24,6 +24,7 @@ function afterListen({ certs = null, mode } = {}) {
     if (require('./settings-schema').value(`channels.${ch}.enabled`)) require('./activity').note({ from: 'channels', what: `${ch} is listening again`, why: 'a host switched it on; it resumes when DOCA starts' });
   require('./schedules').start();                     // turns and recipes on a timetable, as their person
   require('./scout').start();                         // the model scout, when switched on (an experiment)
+  require('./network').tailnetSuffix();             // this tailnet's name, cached before an agent's first owned() asks (toolbox/http.js)
   require('./log-keep').start();                      // what is kept of what happened, to its bounds: now and daily (logs.*, tracing.*)
   const devices = require('./api-v1/devices');         // audit 2026-09-26 §4f, N5: tidy the device registry
   devices.repairNames();
