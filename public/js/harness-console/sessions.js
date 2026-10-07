@@ -130,6 +130,8 @@ async function hcOpenSession(id, skipReload) {
     if (_hcSession !== id) return;
     const changed = _hcSelected?.id !== id;
     _hcSelected = data.session;
+    // A finished work chat opened by its person: read means done (modules/harness/seen.js).
+    if (data.session.kind === 'work' && data.session.state !== 'running' && !data.session.seenAt) hcMarkSeen(id);
     if (data.session.archivedAt && !_hcArchived) {
       _hcArchived = true;
       const toggle = document.querySelector('.hc-archive-switch input');

@@ -82,7 +82,7 @@ const TABLE = [
   // The agent's durable memory is one for everybody until per-person memory (auth phase 3): a member
   // deleting or locking the owner's facts was found by the live test 2026-10-04. Reading is read, above.
   R(ANY, '/api/harness/memory(/.*)?', 'host'),
-  R(ANY, '/api/harness/(chat|sessions|memory|missions|working|work)(/.*)?', 'chat'),
+  R(ANY, '/api/harness/(chat|sessions|memory|missions|working|work|seen)(/.*)?', 'chat'),   // seen: a person's own result opened (seen.js)
 
   // ── The floating chat and attachments ──
   R(GET, '/api/chat/(history|status|call-status|voices)', 'read'),

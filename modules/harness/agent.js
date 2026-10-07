@@ -61,7 +61,7 @@ async function turn(options) {
   require('../features/usage').count('turn:builtin');   // what the one-shot adapters stand beside (features/alternatives.js)
   try {
     const profile = profileForTurn(session, options.profile);
-    memory.updateSession(id, { state: 'running', lastError: null });
+    memory.updateSession(id, { state: 'running', lastError: null, seenAt: null });   // new work waits to be opened again (seen.js)
     changed(id);
     if (options.client && options.client.kind !== 'agent')
       organization.report(id, 'user intervention', options.message, options.client.name || 'user');
@@ -127,6 +127,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     try { events.emit('event', { sessionId, ...evt }); } catch {}
   };
   let p = await require('./turn/ceiling').check(require('./turn/choice').apply(turnParams(profile), sessionId));   // the chat's model choice; a day's token ceiling refuses to start
+  p = require('../auth/allot').narrowModel(p, client?.user);   // only the models allotted to the person (S13)
+  if (p._allotted) say({ type: 'warning', kind: 'allotted', text: p._allotted });
   // Assistant mode (a call from the face) may have a quicker model of its own, and every turn knows its thinking effort.
   if (require('./turn/effort').spokenProfile(client) && require('../settings-schema').value('assistant.model'))
     p = { ...p, provider: require('../settings-schema').value('assistant.provider') || p.provider, model: require('../settings-schema').value('assistant.model') };

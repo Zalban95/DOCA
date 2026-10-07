@@ -1,0 +1,90 @@
+'use strict';
+
+/**
+ * Important and safety switches ask for the password, every time (CONSTITUTION S14, 2026-10-07; TODO P1.11).
+ *
+ * A recent sign-in (the 12 h step-up) is not enough for these: whoever changes how much the agents may do, who may
+ * do what, or what is kept as evidence, types the password for that change. The panel sends it with the request
+ * (`X-Doca-Password`, over the panel's own HTTPS, never stored or logged); without it the gate answers 401
+ * `password_required` naming the switch, and the panel asks and sends the request again (public/js/lib/api.js).
+ *
+ * What is guarded is this file:
+ *   ROUTES  a route that is a switch, with a `when` for routes that are one only for some bodies
+ *   PREFS   settings paths that are switches, wherever a write of them comes from: POST /api/prefs, applying a
+ *           proposal, restoring a checkpoint — and never applied by an agent alone (settings_propose's `asked` and
+ *           Unattended leave them a proposal: toolbox/settings.js)
+ * Spending (S12) joins both lists when it exists.
+ */
+const W = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
+/** Settings that are switches. A path guards everything under it. */
+const PREFS = [
+  ['harness.approval', 'the approval mode'],
+  ['agents.enabled', 'the specialists switch'],
+  ['developer', 'developer mode and releasing'],
+  ['experiments', 'an experiment'],
+  ['sharing', 'sharing with the project'],
+  ['network', 'how the hub listens'],
+  ['tracing', 'what is kept of each turn'],
+];
+
+const get = (o, dotted) => dotted.split('.').reduce((v, k) => (v == null ? undefined : v[k]), o);
+// Absent and empty are the same setting: a panel posting back `{}` for a section never written changes nothing.
+const norm = v => (v && typeof v === 'object' && !Array.isArray(v) && !Object.keys(v).length ? null : v ?? null);
+const same = (a, b) => JSON.stringify(norm(a)) === JSON.stringify(norm(b));
+
+/** The first guarded setting a {path: value} list of changes touches, or null. */
+function prefsTouched(changes) {
+  for (const { path, to, from } of changes) {
+    if (same(to, from)) continue;
+    const hit = PREFS.find(([p]) => path === p || path.startsWith(`${p}.`) || p.startsWith(`${path}.`));
+    if (hit) return hit[1];
+  }
+  return null;
+}
+
+/** POST /api/prefs merges top-level keys: a guarded path whose value the body would change. */
+function prefsBody(body) {
+  if (!body || typeof body !== 'object') return null;
+  const stored = require('../utils').loadPrefs();
+  const changes = PREFS.filter(([p]) => p.split('.')[0] in body)
+    .map(([p]) => ({ path: p, from: get(stored, p), to: get(require('../secrets-mask').unmask(body, stored), p) }));
+  return prefsTouched(changes);
+}
+
+function proposal(id) {
+  const p = require('../harness/settings').find(id);
+  if (!p || p.screen) return null;   // a screen's own layer is not a switch
+  return prefsTouched(p.changes.map(c => ({ path: c.path, from: c.from, to: c.to })));
+}
+
+const ROUTES = [
+  [['POST'], /^\/api\/harness\/approval$/, 'the approval mode'],
+  [['DELETE'], /^\/api\/harness\/approval\/always\/.+$/, 'the always-allowed list'],
+  [['POST'], /^\/api\/harness\/sessions\/[^/]+\/settings$/, 'a conversation\'s approval switch', req => req.body?.approval !== undefined],
+  [['POST'], /^\/api\/harness\/agents\/enable$/, 'the specialists switch'],
+  [['POST'], /^\/api\/experiments\/.+$/, 'developer mode or an experiment'],
+  [['POST'], /^\/api\/developer\/releasing$/, 'who may release unasked'],
+  [['POST'], /^\/api\/sharing$/, 'sharing with the project'],
+  [['POST'], /^\/api\/network$/, 'how the hub listens'],
+  [W, /^\/api\/auth\/(levels|grants)(\/.*)?$/, 'levels, reach and grants'],
+  [W, /^\/api\/auth\/users(\/[^/]+)?$/, 'who has an account, and at what level'],
+  [['POST'], /^\/api\/auth\/users\/[^/]+\/password$/, 'another person\'s password'],
+  [W, /^\/api\/harness\/guards(?!\/test$)(\/.*)?$/, 'the guards'],
+  [['POST'], /^\/api\/settings\/checkpoints\/[^/]+\/restore$/, 'restoring settings'],
+  [['POST'], /^\/api\/prefs$/, null, req => prefsBody(req.body)],
+  [['POST'], /^\/api\/harness\/proposals\/[^/]+\/apply$/, null, req => proposal(req.path.split('/')[4])],
+];
+
+/** What switch this request flips — a phrase for the question — or null when it flips none. */
+function switchOf(req, p = req.path.toLowerCase().replace(/\/+$/, '')) {
+  for (const [methods, re, what, when] of ROUTES) {
+    if (!methods.includes(req.method) || !re.test(p)) continue;
+    if (!when) return what;
+    let hit; try { hit = when(req); } catch { hit = null; }
+    if (hit) return what || hit;
+  }
+  return null;
+}
+
+module.exports = { PREFS, ROUTES, switchOf, prefsTouched };

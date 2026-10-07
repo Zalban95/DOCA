@@ -7,9 +7,9 @@
  * @param {string} message
  * @param {Function} onSubmit - called with the entered string
  * @param {string} [defaultValue]
- * @param {{ allowEmpty?: boolean, secret?: boolean }} [opts] - `allowEmpty` for a prompt whose
+ * @param {{ allowEmpty?: boolean, secret?: boolean, onCancel?: Function }} [opts] - `allowEmpty` for a prompt whose
  *   answer is optional, where OK doing nothing would look broken; `secret` for a
- *   password: masked, not trimmed, and wiped from the field when the modal closes
+ *   password: masked, not trimmed, and wiped from the field when the modal closes; `onCancel` when it is closed without an answer
  */
 function appPrompt(message, onSubmit, defaultValue, opts = {}) {
   const modal = document.getElementById('app-prompt-modal');
@@ -17,7 +17,7 @@ function appPrompt(message, onSubmit, defaultValue, opts = {}) {
   const input = document.getElementById('app-prompt-input');
   const btnOk = document.getElementById('app-prompt-ok');
   const btnCan = document.getElementById('app-prompt-cancel');
-  if (!modal) { const v = prompt(message, defaultValue || ''); if (v !== null) onSubmit(v); return; }
+  if (!modal) { const v = prompt(message, defaultValue || ''); if (v !== null) onSubmit(v); else opts.onCancel?.(); return; }
 
   msgEl.textContent = message;
   input.type  = opts.secret ? 'password' : 'text';
@@ -41,10 +41,11 @@ function appPrompt(message, onSubmit, defaultValue, opts = {}) {
   };
 
   btnOk.onclick = submit;
-  btnCan.onclick = cleanup;
+  const cancel = () => { cleanup(); opts.onCancel?.(); };
+  btnCan.onclick = cancel;
   input.onkeydown = e => {
     if (e.key === 'Enter') { e.preventDefault(); submit(); }
-    if (e.key === 'Escape') cleanup();
+    if (e.key === 'Escape') cancel();
   };
 }
 

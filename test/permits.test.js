@@ -137,7 +137,7 @@ test('approvals by device and by panel: Always and Approve all, offered by what 
   const a = approval.ask(req, {}), b = approval.ask({ ...req, keys: ['shell:pwd'] }, {}), c = approval.ask({ ...req, personId: 'someone-else' }, {});
   const memberChoices = answer.deviceChoices(req, person(member)).map(x => x.id);
   assert.deepEqual(memberChoices, ['approve', 'always', 'approve_all', 'deny'], 'no Full auto without host');
-  assert.ok(answer.deviceChoices(req, { ...H.owner.user, role: 'owner' }).some(x => x.id === 'full_auto'));
+  assert.ok(!answer.deviceChoices(req, { ...H.owner.user, role: 'owner' }).some(x => x.id === 'full_auto'), 'nor for a host: the mode asks for the password (S14)');
   assert.ok(!answer.deviceChoices({ tool: 'write_file', keys: null, forced: true }, person(admin)).some(x => x.id === 'always'), 'a forced question has no Always');
   assert.equal(answer.answerAs({ id: a.id, decision: 'approve_all', person: person(member) }), true);
   assert.equal(await a.answer, 'once'); assert.equal(await b.answer, 'once');
