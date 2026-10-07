@@ -65,7 +65,8 @@ async function sweep(now = Date.now()) {
 let _sweeper = null;
 function start() {
   if (_sweeper) return;
-  _sweeper = setInterval(() => sweep().catch(() => {}), SWEEP_MS);
+  // And containers no record names (strays.js) — here, not in sweep(), so a test of the sweep never meets this machine's Docker.
+  _sweeper = setInterval(() => { sweep().catch(() => {}); require('./strays').sweep().catch(() => {}); }, SWEEP_MS);
   _sweeper.unref?.();
 }
 

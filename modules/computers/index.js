@@ -107,10 +107,17 @@ async function create({ name, purpose = '', missionId = null, by = null, auto = 
     purpose: String(purpose).slice(0, 300), missionId, by, auto: !!auto, pinned: false, ...(agentType ? { agentType } : {}), ...(keptFor ? { keptFor } : {}), token: crypto.randomBytes(24).toString('hex'),
     fillKey: crypto.randomBytes(24).toString('hex'),   // the hub's alone: it unlocks browser_fill_secret (logins.js)
     vncPassword: crypto.randomBytes(6).toString('hex'), mcpPort: await freePort(), vncPort: await freePort(), servePort: await freePort(), createdAt: new Date().toISOString() };
-  await docker(['run', '-d', '--name', container(c), '--shm-size=1g', '--label', 'doca.computer=1',
-    '-p', `127.0.0.1:${c.mcpPort}:8765`, '-p', `127.0.0.1:${c.vncPort}:6080`, '-p', `127.0.0.1:${c.servePort}:${SERVE}`,
-    '-e', `TOKEN=${c.token}`, '-e', `VNC_PASSWORD=${c.vncPassword}`, '-e', `FILL_KEY=${c.fillKey}`,
-    '-v', `${container(c)}:/home/agent`, IMAGE]);
+  try {
+    await docker(['run', '-d', '--name', container(c), '--shm-size=1g', '--label', 'doca.computer=1', '--label', `doca.install=${require('./strays').installId()}`,
+      '-p', `127.0.0.1:${c.mcpPort}:8765`, '-p', `127.0.0.1:${c.vncPort}:6080`, '-p', `127.0.0.1:${c.servePort}:${SERVE}`,
+      '-e', `TOKEN=${c.token}`, '-e', `VNC_PASSWORD=${c.vncPassword}`, '-e', `FILL_KEY=${c.fillKey}`,
+      '-v', `${container(c)}:/home/agent`, IMAGE]);
+  } catch (e) {
+    // Made but not started (a port taken, say): no record will name it, so it goes now rather than sit in "created" (strays.js).
+    await docker(['rm', '-f', container(c)]).catch(() => {});
+    await docker(['volume', 'rm', '-f', container(c)]).catch(() => {});
+    throw e;
+  }
   save([...rows(), c]);
   await connect(c);
   return view(c);
