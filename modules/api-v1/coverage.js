@@ -9,6 +9,9 @@
  *   v1     the /api/v1 path(s) that serve it to a device
  *   panel  why a device does not get its own route: mostly the machine's own administration, a host's at the panel
  *          (a device that needs it opens the panel itself, /d/<id>/, in its web view)
+ *
+ * A group answers for its reads; what a person DOES is checked one action at a time in capability-map.js (TODO D2b),
+ * where a group with a v1 home cannot hide an action that has none.
  */
 const HOST = 'the machine\'s own administration: a host\'s, at the panel';
 

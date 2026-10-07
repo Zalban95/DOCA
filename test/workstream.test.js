@@ -21,7 +21,10 @@ async function open() {
   for (let i = 0; i < 100 && !hello; i++) await H.sleep(20);
   return { got, hello, close: async () => { ctrl.abort(); await pump; } };
 }
-const until = async (fn, ms = 4000) => { for (const end = Date.now() + ms; Date.now() < end; await H.sleep(25)) if (fn()) return true; return false; };
+// macOS's FSEvents stream starts asynchronously and reports in batches: a write the instant the watch is made can be
+// missed, and a heard one can come a second later (TODO T1, a macOS CI failure for 2.289.0).
+const MAC = process.platform === 'darwin';
+const until = async (fn, ms = MAC ? 12000 : 4000) => { for (const end = Date.now() + ms; Date.now() < end; await H.sleep(25)) if (fn()) return true; return false; };
 
 test('while a page holds it, an edit in a project is heard with what it added and removed; letting go stops the sentinel', async () => {
   const root = fs.mkdtempSync(path.join(require('node:os').homedir(), '.doca-ws-test-'));
@@ -33,6 +36,7 @@ test('while a page holds it, an edit in a project is heard with what it added an
     assert.equal(r.body.sentinel.on, true);
     assert.ok(r.body.sentinel.roots.includes(path.resolve(root)));
     const file = path.join(root, 'src', 'app.js');
+    if (MAC) await H.sleep(1500);   // let the FSEvents stream start before the first write
     fs.writeFileSync(file, 'one\ntwo\nthree\n');
     assert.ok(await until(() => page.got.some(c => c.topic === 'workstream' && c.what === 'file' && c.path === file)), 'a new file is heard');
     const first = page.got.find(c => c.what === 'file' && c.path === file);

@@ -38,6 +38,46 @@ test('every group of the panel\'s routes says where its /api/v1 is, or why there
   }
 });
 
+// The same promise by capability (modules/api-v1/capability-map.js; TODO D2b): a prefix with a v1 home can hide an
+// action without one, so every route that changes something belongs to one thing a person does, and that thing names
+// its /api/v1 routes, its rank among the gaps, or why it is the panel's.
+test('every route that changes something belongs to one capability, and each capability says where a device does it', () => {
+  const cap = require('../modules/api-v1/capability-map');
+  const app = require('../server').createApp();
+  const routes = [];
+  for (const layer of app._router.stack) {
+    const p = layer.route && layer.route.path;
+    if (typeof p !== 'string' || !p.startsWith('/api/') || p.startsWith('/api/v1')) continue;
+    for (const m of Object.keys(layer.route.methods)) routes.push({ method: m.toUpperCase(), path: p });
+  }
+  const changing = routes.filter(r => cap.MUTATING.has(r.method));
+  assert.ok(changing.length > 200, 'the walk found the routes');
+  const unclaimed = changing.filter(r => !cap.claims(r.method, r.path).length).map(r => `${r.method} ${r.path}`);
+  assert.deepEqual(unclaimed, [], 'a route that changes something: give it a capability in api-v1/capability-map.js (v1, gap or only)');
+  const twice = changing.map(r => [`${r.method} ${r.path}`, cap.claims(r.method, r.path)]).filter(([, c]) => c.length > 1).map(([r, c]) => `${r}: ${c.join(', ')}`);
+  assert.deepEqual(twice, [], 'a route claimed by two capabilities');
+
+  const ids = cap.CAPABILITIES.map(c => c.id);
+  assert.equal(new Set(ids).size, ids.length, 'capability ids are unique');
+  const doc = require('../docs/api/openapi.json').paths;
+  for (const c of cap.CAPABILITIES) {
+    assert.equal([c.v1, c.gap, c.only].filter(Boolean).length, 1, `${c.id}: exactly one of v1, gap, only`);
+    if (c.gap) assert.ok(c.why, `${c.id}: a gap says what a device person would use it for`);
+    for (const pat of c.panel) {
+      const { method, re } = cap.parse(pat);
+      assert.ok(routes.some(r => r.method === method && re.test(r.path.replace(/:[^/]+/g, 'x'))), `${c.id}: ${pat} matches no route`);
+    }
+    for (const v of c.v1 || []) {
+      const [method, p] = v.split(' ');
+      assert.ok(doc[p]?.[method.toLowerCase()], `${c.id}: ${v} is not in the OpenAPI document`);
+    }
+  }
+  const ranks = cap.gaps().map(c => c.gap);
+  assert.deepEqual(ranks, ranks.map((_, i) => i + 1), 'gaps are ranked 1..n, each rank once');
+  const note = require('fs').readFileSync(require('path').join(__dirname, '..', 'docs', 'api', 'capability-gaps.md'), 'utf8');
+  for (const c of cap.gaps()) assert.ok(note.includes(`\`${c.id}\``), `docs/api/capability-gaps.md: ${c.id} is not listed`);
+});
+
 const v1 = (token, method, p, body) => fetch(`${H.base}/api/v1${p}`, { method, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
   .then(async r => ({ status: r.status, body: await r.json().catch(() => null) }));
 
