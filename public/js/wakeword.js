@@ -42,7 +42,7 @@ async function _wwLoad() {
       <pre>${escHtml((j.log || []).slice(-8).join('\n'))}</pre></div>` : ''}
     <div class="ww-models">${s.models.length ? s.models.map(_wwModel).join('') : '<div class="placeholder">No wake-word model yet.</div>'}</div>`;
   clearTimeout(WW.poll);
-  if (running && currentTab === 'models') WW.poll = setTimeout(_wwLoad, 3000);
+  if (running && pageShown('models')) WW.poll = setTimeout(_wwLoad, 3000);
 }
 
 function _wwModel(m) {

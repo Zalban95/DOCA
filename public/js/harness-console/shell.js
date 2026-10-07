@@ -42,7 +42,7 @@ function harnessTabInit() {
 function _harnessConsoleReset() {
   _hcRendered = null;
   _harnessTermClose();
-  if (currentTab === 'harness') _harnessConsoleBuild();
+  if (pageShown('harness')) _harnessConsoleBuild();
 }
 
 function _harnessConsoleBuild() {

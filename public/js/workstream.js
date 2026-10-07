@@ -48,7 +48,7 @@ function _wsStatus(s) {
 }
 
 function _wsChange(c) {
-  if (c.what === 'resync') { if (currentTab === 'workstream') _wsHold(true); return; }
+  if (c.what === 'resync') { if (pageShown('workstream')) _wsHold(true); return; }
   if (c.what === 'file') { _wsFile(c); _wsDraw(); }
   if (c.what === 'activity') _wsActivity(c);
 }
