@@ -54,7 +54,7 @@ const { loadPrefs, savePrefs } = require('../utils');
  * person's turn does — which a mission, running unwatched, must never do; its leader runs recipes. `secret_use` hands a
  * secret to a device and is always a person's question (forced-asks.js), which a mission cannot ask.
  */
-const NEVER = ['settings_propose', 'panel_layout', 'install_propose', 'tool_note', 'agent_dispatch', 'agent_results', 'agent_resume', 'ask_device', 'permission_grant', 'computer', 'recipe', 'schedule', 'pack', 'mcp_connect', 'hub_command', 'model_scout', 'mcp_draft', 'service_draft', 'spend_propose', 'secret_use'];
+const NEVER = ['settings_propose', 'panel_layout', 'install_propose', 'tool_note', 'agent_dispatch', 'agent_results', 'agent_resume', 'ask_device', 'permission_grant', 'computer', 'recipe', 'schedule', 'pack', 'mcp_connect', 'hub_command', 'model_scout', 'mcp_draft', 'service_draft', 'spend_propose', 'secret_use', 'screen'];
 
 /**
  * The airlock (docs/design/airlock.md): tools only an `airlock: true` definition

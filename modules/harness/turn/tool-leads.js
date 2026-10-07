@@ -38,6 +38,7 @@ const LEADS = {
   system_status: 'CPU, RAM, GPU, disks, containers and every local model server with who it works for — use it to see what the machine is doing.',
   http_fetch: 'Read a URL (GET or HEAD) — the open web through a reader, your own addresses as they are; or keep a download.',
   api_call: 'Call a keyed service or one of the owner\'s own devices and servers — use it to send, upload or act on an API.',
+  screen: 'List the screens and the page each shows, or put a page on one — use it for "what is on the tablet" or "show the Workstream on the wall".',
   hub_command: 'Run the hub\'s own commands — start or stop a service, a container, a llama.cpp server, take a snapshot — instead of shell.',
   today: 'The weather, today\'s calendar and what is waiting for the person — use it for "what\'s my day" or a morning brief.',
   schedule: 'Propose a message or recipe on a timetable, which the person switches on — use it when asked to do something regularly.',
