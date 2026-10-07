@@ -89,7 +89,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   model-servers.js (W14: keep/archive/delete); per feature, tool / recipe / a person's alone for wake-word training,
   evals, Workstream, served pages, logs and traces.
 - [x] B7 **Task skills and routing evals** (aw 24, 27; coh F19) — *2.256.0: six task skills (morning-brief, research-with-sources, what-is-my-machine-doing, service-wont-start, calendar-and-mail, photos-and-files), each found by Likely fits; `evals/routing.json` (eleven cases, three on the rare tools toolTiers sends by name); `anyTool` checks; `npm run eval -- <set> --models a/b,c/d --flag <experiment>[=on|off]`. First measurement in docs/experiments/tool-tiers.md*
-- [ ] B7c **What DeepSeek did on the routing set** (2026-10-07, fresh sandboxes): (1) it answered "Written to memory
+- [~] B7c **What DeepSeek did on the routing set** — *(1) 2.264.0, experiment `claimCheck` (turn/claims.js): an answer claiming a memory, reminder, proposal, install, commit or device message no call made gets one more step; not measured yet. (3) 2.258.0/2.259.1: the eval sandbox leaves out device-hosted MCP servers. (2) is left.* (2026-10-07, fresh sandboxes): (1) it answered "Written to memory
   as `router-ip`" without calling `memory_write` — a claimed action that never happened (charter: never claim a result
   you have not seen); a turn's answer that claims a memory, a commit, an install or a message the turn never made should
   be caught (a post-turn check of claims against the calls, said in the answer); (2) case 8 read the android-app skill

@@ -90,6 +90,7 @@ const SCHEMA = {
       packRegistry: { type: 'boolean', default: false, hint: 'This hub lists the packs a host published to hubs holding a registry token, and can fetch from other hubs\' registries.' },
       modelScout: { type: 'boolean', default: false, hint: 'The model scout: looks for better and new models, files suggestions a person accepts into TODO and hands to an implementer.' },
       visionPass: { type: 'boolean', default: false, hint: 'Agents may look at a computer\'s screen with the vision model under vision.' },
+      claimCheck: { type: 'boolean', default: false, hint: 'When an answer says it saved a memory, set a reminder, proposed, committed or sent something that no call this turn did, the turn gets one more step to do it or say it was not done.' },
       toolTiers: { type: 'boolean', default: false, hint: 'The Orchestrator and work chats are sent their core tools in full and the rest by name, loaded when needed (tools_more).' } } },
   assistant:        { is: 'travels', home: 'hive', note: 'assistant mode: a call started from the face answers quicker and shorter, in its own style (turn/effort.js, turn/client.js)',
     propose: p('Assistant mode', 'How the face answers when spoken to: its style, thinking effort and model'),

@@ -14,9 +14,9 @@ const assert = require('node:assert/strict');
 const os = require('node:os');
 const path = require('node:path');
 
+const H = require('./helpers');   // first: it points the settings at a temporary folder
 const shell = require('../modules/shell');
 const { detectBinary } = require('../modules/utils');
-const H = require('./helpers');
 
 // The route test boots the app; without this the process never exits.
 after(H.stop);
