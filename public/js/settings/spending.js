@@ -58,12 +58,14 @@ async function spendingLoad(month) {
     ${v.admin ? `<div class="card-title" style="font-size:12px;margin-top:12px">Everyone, this month</div>${people}` : ''}</div>
   ${_spBudgetsCard(v)}
   <div id="spending-permits"></div>
+  <div class="card" id="spending-holdings"></div>
   <div class="card"><div class="card-title">Payment method</div>
     <p style="font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">○ none linked</span></p>
     <p style="font-size:11px;color:var(--muted)">${escHtml(v.payment.note)} Linking one — a payment provider's own saved method, never a card number
       kept here — comes in a later release; the permissions above are what it will spend within.</p></div>`;
   if ((v.admin || v.lead) && v.people?.length) spendingPickPerson(v.people[0].id, false);
   if (typeof spendingPermitsRender === 'function') spendingPermitsRender(v);
+  if (typeof holdingsRender === 'function') holdingsRender('spending-holdings');   // what you have (settings/holdings.js)
 }
 
 function _spBudgetsCard(v) {

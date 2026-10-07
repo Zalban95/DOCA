@@ -46,6 +46,7 @@ function _usersPeopleCard() {
       try { const r = await apiFetch(`/api/auth/users/${encodeURIComponent(p.id)}/password`, { method: 'POST' }); appAlert(`One-time password for ${p.email}:\n\n${r.oneTimePassword}\n\nShown once. They replace it when they sign in.`); usersLoad(); }
       catch (e) { appAlert(e.message); }
     }));
+    b('What they have', 'Their level, reach, what is allotted to them, budget and devices', () => holdingsOpen(p.id));
     if (p.sessions) b('Sign out', 'End every session they have', async () => { try { await apiFetch(`/api/auth/users/${encodeURIComponent(p.id)}/sessions`, { method: 'DELETE' }); usersLoad(); } catch (e) { appAlert(e.message); } });
     tr.append(who, lvl, status, sess, act);
     table.appendChild(tr);
@@ -99,7 +100,8 @@ function _usersGrantsCard() {
   const card = Object.assign(document.createElement('div'), { className: 'card' });
   card.innerHTML = `<div class="card-title">Grants — exceptions to a level</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:10px">A grant gives one person, specialist or mission one thing their level does not:
-      a tool (tool:shell:git), a call without asking (approve:shell:git), a setting (setting:models) or a folder (path:/srv/x). Given by someone
+      a tool (tool:shell:git), a call without asking (approve:shell:git), a setting (setting:models), a folder (path:/srv/x) or a resource
+      (use:model:deepseek/*, use:service:vllm, use:device:&lt;id&gt; — another person's device, lent). Given by someone
       holding delegate, never beyond what they hold; the agent can give its own missions tool grants the same way. The rules — files that govern
       the agent, asking people — are never grantable.</p>`;
   const who = id => _usersData.users.find(u => u.id === id)?.email || id;
@@ -187,7 +189,8 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
 }
 
 /** Resources a level allots (modules/auth/allot.js): kind and its label in the editor. */
-const USERS_RESOURCE_KINDS = [['model', 'Models'], ['provider', 'Providers'], ['key', 'Keys for services'], ['connector', 'Connected accounts'], ['login', 'Logins'], ['computer', 'Agents\' computers']];
+const USERS_RESOURCE_KINDS = [['model', 'Models'], ['provider', 'Providers'], ['key', 'Keys for services'], ['connector', 'Connected accounts'], ['login', 'Logins'], ['computer', 'Agents\' computers'], ['service', 'Inference services'], ['device', 'Others\' devices'],
+  ['home', 'Home (light.*, climate.hall)']];
 
 // Its panel is made here rather than in index.html, which is at its line ceiling.
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('DOMContentLoaded', () =>

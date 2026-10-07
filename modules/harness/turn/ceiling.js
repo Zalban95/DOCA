@@ -27,13 +27,31 @@ async function state(p, now = new Date()) {
 }
 
 /**
- * Returns `p` when a turn may start — with `_spending`, the line its agent reads, when its person has a budget or a
- * spending permission; throws, saying why, when the ceiling or the person's budget is reached.
+ * The person's budget line, or a refusal. At their own budget, on a turn that is theirs (`ask`, from spending/over.js),
+ * they are asked once whether to go over it for this turn (TODO P1.6): any other budget reached still refuses, unasked.
  */
-async function check(p, now = new Date(), { person = null, sessionId = null } = {}) {
+async function budgetLine({ person, sessionId, ask }, now) {
+  const spending = require('../../spending');
+  try { return await spending.beforeTurn({ person, sessionId }, now); } catch (e) {
+    if (!ask || e.code !== 'budget_reached' || e.over?.from !== 'own' || e.personId !== person?.id) throw e;
+    await spending.beforeTurn({ person, sessionId, overOwn: true }, now);   // an admin's, a leader's or the level's: refused here
+    const over = require('../../spending/over');
+    const decision = await ask(e);
+    if (decision !== 'once') throw over.declined(e, decision);
+    over.record(e, person, sessionId);
+    return spending.beforeTurn({ person, sessionId, overOwn: true }, now);
+  }
+}
+
+/**
+ * Returns `p` when a turn may start — with `_spending`, the line its agent reads, when its person has a budget or a
+ * spending permission; throws, saying why, when the ceiling or the person's budget is reached (or, at their own
+ * budget, when they did not choose to go over it).
+ */
+async function check(p, now = new Date(), { person = null, sessionId = null, ask = null } = {}) {
   const s = await state(p, now);
   if (!s.over) {
-    const line = await require('../../spending').beforeTurn({ person, sessionId }, now);
+    const line = await budgetLine({ person, sessionId, ask }, now);
     return line ? { ...p, _spending: line } : p;
   }
   throw Object.assign(new Error(`Not started: the model calls of the last 24 hours used ${s.used} tokens, and the `

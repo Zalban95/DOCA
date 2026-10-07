@@ -40,4 +40,8 @@ module.exports = [
     use: 'The agent fills the form on screen as a draft the person saves — never a secret field.', words: 'form fill help' },
   { id: 'smart-home', name: 'Building control', since: '2.217.0',
     use: 'Home Assistant\'s MCP server from the catalogue, with the smart-home skill.', words: 'home assistant lights thermostat' },
+  // The page is the person's view; the agent acts on the home through Home Assistant's MCP server above, so no tool here.
+  { id: 'home', name: 'The Home page', page: 'home',
+    use: 'Home Assistant\'s areas drawn in the panel\'s own layout: lights, switches, covers, climate, locks, sensors and cameras, live.',
+    routes: ['/api/home*'], words: 'home assistant smart house lights heating thermostat cover blinds lock camera wall tablet dashboard lovelace' },
 ];

@@ -1,9 +1,12 @@
 'use strict';
 
 /**
- * Secrets for devices, the routes (TODO P1.3). The panel's under Field → Connectors (`/api/connectors/sealed/*`,
- * host — like the logins and the keys for services, these are the owner's secrets): list them and where they were
- * used, keep one, forget one; never a value back. The device's (`GET /api/v1/mcp/self/seal`, its own token, scope
+ * Secrets for devices, the routes (TODO P1.3). The panel's under Field → Connectors, never a value back:
+ *   /api/connectors/sealed/all, /:name   the hub's (host — like the logins and the keys for services): list them and
+ *                                        where they were used, keep one, forget one; the list also names every
+ *                                        person's own (whose, name, site — never a value), and ?person= forgets one
+ *   /api/connectors/sealed/mine[/:name]  a person's own, for their own devices (`chat`): their rows and their uses only
+ * Keeping or forgetting one asks for the password (auth/guarded.js). The device's (`GET /api/v1/mcp/self/seal`, its own token, scope
  * `mcp:self`, PROTOCOL.md §22.3): its seal key, minted the first time it asks, so the hub can hand it a secret sealed
  * for it alone.
  */
@@ -11,10 +14,21 @@ const vault = require('./vault');
 
 const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
 
+const me = req => {
+  const id = req.auth?.user?.id;
+  if (!id) throw Object.assign(new Error('Sign in first.'), { status: 401 });
+  return id;
+};
+
 function mount(app) {
-  app.get('/api/connectors/sealed/all', h(async () => ({ secrets: await vault.list(), uses: await vault.uses() })));
-  app.post('/api/connectors/sealed/all', h(async req => ({ secret: await vault.save(req.body || {}, req.auth?.user?.id || null) })));
-  app.delete('/api/connectors/sealed/:name', h(req => vault.remove(req.params.name)));
+  // A person's own: whose is always the signed-in person, whatever the body says — no route here reaches another's.
+  app.get('/api/connectors/sealed/mine', h(async req => ({ secrets: await vault.list(me(req)), uses: await vault.uses({ by: me(req) }) })));
+  app.post('/api/connectors/sealed/mine', h(async req => ({ secret: await vault.save(req.body || {}, me(req), me(req)) })));
+  app.delete('/api/connectors/sealed/mine/:name', h(req => vault.remove(req.params.name, me(req))));
+  // The hub's (host).
+  app.get('/api/connectors/sealed/all', h(async () => ({ secrets: await vault.list(''), people: (await vault.list('*')).filter(s => s.person), uses: await vault.uses() })));
+  app.post('/api/connectors/sealed/all', h(async req => ({ secret: await vault.save(req.body || {}, req.auth?.user?.id || null, '') })));
+  app.delete('/api/connectors/sealed/:name', h(req => vault.remove(req.params.name, req.query.person ? String(req.query.person) : '')));
 }
 
 function mountDevice(router) {

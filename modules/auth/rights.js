@@ -46,6 +46,7 @@ const TABLE = [
   R(GET, '/\\.well-known/agent(-card)?\\.json', 'public'),   // the A2A agent card: who the hive is and where to talk (api-v1/a2a.js)
   R(GET, '/api/auth/host-check', 'host'),                 // asked before opening a terminal socket
   R(ANY, '/api/auth/(me|logout|password|step-up|sessions)', 'signed'),
+  R(GET, '/api/auth/holdings', 'signed'),                 // what you hold; someone else's needs users, checked in holdings.js
   R(ANY, '/api/auth/grants(/.*)?', 'signed'),              // exceptions: users or delegate, checked in users-routes.js
   R(ANY, '/api/auth/(users|levels)(/.*)?', 'users'),        // people and their permission levels (auth/users-routes.js)
   R(ANY, '/api/presence', 'signed'),                       // "this page is visible": a heartbeat, no data
@@ -124,6 +125,9 @@ const TABLE = [
   R(ANY, '/api/network', 'org'),                                 // how the hub listens: the machine's front door (network.js)                         // the agents' machines and the pages they serve (machines/)                       // the agents' work as it happens: the machine's files, every conversation (workstream/)                          // what was put away: each person's own; projects and computers a host's (archive.js)                             // what each screen shows, and sending it a page (screens/showing.js)                            // which folders this page shows: Files and Projects are a host's
   R(GET, '/api/wakeword/(models/[^/]+/model\\.onnx|runtime/[^/]+)', 'read'),   // a screen listening for its name reads its model (wakeword/)
   R(ANY, '/api/wakeword(/.*)?', 'host'),                       // setting up, recording, training: downloads, GPU hours, a microphone's audio
+  R(ANY, '/api/home/call', 'chat'),                            // acting on the home: a light, a cover, a thermostat — each entity allotted (home/actions.js)
+  R(ANY, '/api/home/hold', 'chat'),                            // a Home page holding the connection to Home Assistant open while shown
+  R(GET, '/api/home(/.*)?', 'chat'),                           // the home as this person sees it, and a camera's still (home/): cameras and locks are private, not a viewer's
   R(GET, '/api/ambient(/.*)?', 'read'),                        // the ambient screen: weather, the day's plan and notices, each the viewer's own (ambient/)
   R(GET, '/api/face/stream', 'chat'),                          // the face's feed, scoped to what the viewer may open (face/state.js)
   R(ANY, '/api/developer(/.*)?', 'host'),                        // who may release unasked (releasing.js): the admin's
@@ -137,6 +141,11 @@ const TABLE = [
   R('POST', '/api/channels/matrix', 'host'),                 // the homeserver, the bot's token and switch
   R(ANY, '/api/channels/matrix(/.*)?', 'chat'),               // a link code, and one's own linked rooms (channels/matrix/routes.js)
   R(ANY, '/api/evals(/.*)?', 'host'),
+  // A person's own secrets for their own devices: theirs alone (sealed/routes.js). Method by method, so a DELETE of
+  // ".../sealed/mine" (the hub's route for a secret named "mine") still needs host.
+  R(GET, '/api/connectors/sealed/mine', 'chat'),
+  R('POST', '/api/connectors/sealed/mine', 'chat'),
+  R('DELETE', '/api/connectors/sealed/mine/[^/]+', 'chat'),
   R(ANY, '/api/connectors(/.*)?', 'host'),                    // the keys to the owner's accounts (connectors/routes.js)                         // evaluation sets: a run spends tokens, results hold answers (evals/routes.js)
   R(GET, '/api/clients/browser.zip', 'read'),
   R(GET, '/api/clients/apps/[a-z]+/apk/[A-Za-z0-9_-]{32}', 'public'),   // a 10-minute download link: its token is the permission (client-apps/routes.js)

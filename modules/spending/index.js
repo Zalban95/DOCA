@@ -12,11 +12,13 @@ const permissions = require('./permissions');
  * Before a turn: refuses it when its person's budget is reached (budgets.check), else returns the line its agent is
  * told — '' when the person has no budget and no permission, so nothing is added to a prompt otherwise.
  */
-async function beforeTurn({ person, sessionId }, now = new Date()) {
+async function beforeTurn({ person, sessionId, overOwn = false }, now = new Date()) {
   const who = budgets.personFor({ person, sessionId });
   if (!who?.id) return '';
-  const s = await budgets.check(who, now);
-  const parts = [budgets.describe(s), permissions.describe(who.id)].filter(Boolean);
+  // Over their own budget for this turn, as they chose (over.js): every other budget still counts.
+  const s = await budgets.check(who, now, overOwn ? { without: 'own' } : {});
+  const parts = [budgets.describe(s), overOwn ? 'their own budget is reached and they chose to go over it for this turn only' : '',
+    permissions.describe(who.id)].filter(Boolean);
   if (!parts.length) return '';
   return `spending (${who.name || 'your person'}'s, Settings → Spending): ${parts.join('; ')}. ${require('./pay').linked() ? '' : 'No payment method is linked, so nothing can be bought: '
     + 'to spend money, propose a permission with spend_propose and say what it costs.'}`.trim();
