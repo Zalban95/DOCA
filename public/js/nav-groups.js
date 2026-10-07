@@ -12,7 +12,7 @@ const NAV_GROUPS = [
   { id: 'intelligence', label: 'Field', icon: '◆', tabs: ['models', 'mcp', 'connectors', 'apikeys'] },
   { id: 'settings', label: 'Settings', icon: '⚙', tabs: ['settings'] },
 ];
-const NAV_LABELS = { controls: 'Controls', home: 'Home', ambient: 'Ambient', harness: 'Harness', workstream: 'Workstream', projects: 'Projects', archive: 'Archive', chronicle: 'Chronicle', computers: 'Computers', live: 'Live', vms: 'VMs', docker: 'Docker',
+const NAV_LABELS = { controls: 'Overview', home: 'Home', ambient: 'Ambient', harness: 'Harness', workstream: 'Workstream', projects: 'Projects', archive: 'Archive', chronicle: 'Chronicle', computers: 'Computers', live: 'Live', vms: 'VMs', docker: 'Docker',
   files: 'Files', terminal: 'Terminal', logs: 'Logs', models: 'Models', mcp: 'MCP', connectors: 'Connectors', apikeys: 'API keys', settings: 'Settings' };
 
 const navGroupOf = tab => NAV_GROUPS.find(g => g.tabs.includes(tab)) || NAV_GROUPS[0];
@@ -31,7 +31,7 @@ function navGroupsRender() {
         title="${g.tabs.map(t => NAV_LABELS[t]).join(', ')}">${g.label}</button>${g.tabs.map(tabBtn).join('')}</span>`)).join('');
   const bar = document.getElementById('mobile-nav');
   if (bar) bar.innerHTML = NAV_GROUPS.map(g => `<button class="mobile-nav-item" data-group="${g.id}" onclick="navGroupTap('${g.id}', this)" aria-label="${g.label}">
-      <span class="mobile-nav-icon">${g.icon}</span><span class="mobile-nav-label">${g.short || g.label}</span></button>`).join('');
+      <span class="mobile-nav-icon">${g.icon}</span><span class="mobile-nav-svg">${typeof uiIcon === 'function' ? uiIcon(NAV_GROUP_ICONS[g.id] || 'more', 18) : ''}</span><span class="mobile-nav-label">${g.short || g.label}</span></button>`).join('');
   navGroupsMark(currentTab);
 }
 

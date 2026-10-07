@@ -22,7 +22,7 @@ const GROUPS = [
   { id: 'settings', label: 'Settings', icon: '⚙', tabs: ['settings'] },
 ];
 
-const LABELS = { controls: 'Controls', home: 'Home', ambient: 'Ambient', harness: 'Harness', workstream: 'Workstream', projects: 'Projects', archive: 'Archive', chronicle: 'Chronicle',
+const LABELS = { controls: 'Overview', home: 'Home', ambient: 'Ambient', harness: 'Harness', workstream: 'Workstream', projects: 'Projects', archive: 'Archive', chronicle: 'Chronicle',
   computers: 'Computers', live: 'Live', vms: 'VMs', docker: 'Docker', files: 'Files', terminal: 'Terminal', logs: 'Logs', models: 'Models',
   mcp: 'MCP', connectors: 'Connectors', apikeys: 'API keys', settings: 'Settings' };
 
