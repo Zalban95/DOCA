@@ -40,6 +40,7 @@ function mount(app) {
   require('../machines').mount(app);
   require('../network').mount(app);   // how the hub listens, what may be done from outside the tailnet, its addresses as QR codes   // the agents' machines live, and the pages they serve (machines/)   // the agents' work as it happens: files edited, thinking, commands   // what was put away, in one place (archive.js)   // what each screen shows, and sending a page to one   // every page live on every screen: one change feed (live/, H10.5)
   require('../agents/stopping').mount(app);
+  require('./seen').mount(app);           // read means done: a finished result its person opened (seen.js)
   require('./stopped-work').mount(app);   // restart or drop work a person stopped (stopped-work.js)   // a visible Stop for missions and automatic turns (agents/stopping.js, H10.14)
   require('../model-servers').mount(app);
   require('../model-roles').mount(app);   // which model does what (C4)
