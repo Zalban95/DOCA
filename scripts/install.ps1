@@ -66,14 +66,17 @@ try {
     else { Start-Process -FilePath node -ArgumentList 'bin/doca-launch.js', 'start' -WorkingDirectory $Dir -WindowStyle Hidden -RedirectStandardOutput (Join-Path $Dir 'doca.log') -RedirectStandardError (Join-Path $Dir 'doca.err.log') }
     # The certificate is self-signed: PowerShell 7 skips the check by a switch, Windows PowerShell 5.1 by a callback.
     $skipCert = if ($PSVersionTable.PSVersion.Major -ge 6) { @{ SkipCertificateCheck = $true } } else { [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }; @{} }
+    $up = $false
     for ($i = 0; $i -lt 60; $i++) {
-      try { [void](Invoke-WebRequest -Uri "https://127.0.0.1:$port/login" -UseBasicParsing -TimeoutSec 2 @skipCert); break } catch { Start-Sleep -Seconds 1 }
+      try { [void](Invoke-WebRequest -Uri "https://127.0.0.1:$port/login" -UseBasicParsing -TimeoutSec 2 @skipCert); $up = $true; break } catch { Start-Sleep -Seconds 1 }
     }
   }
 } finally { Pop-Location }
 
 Write-Host ''
 Write-Host "✓ DOCA is in $Dir."
+if (-not $NoStart -and -not $up) { Write-Host "  ✗ It did not answer on port $port within a minute. Its output is in $Dir\doca.log and $Dir\doca.err.log." }
 if (-not $NoStart) { Write-Host "  Open https://localhost:$port on this machine to create its owner — no code is needed there." }
-Write-Host "  From another device on your tailnet, the first sign-up asks for the setup code: $Dir\.setup-code"
+Write-Host "  From another device on your tailnet: open the panel there, and the setup code it asks for is then in $Dir\.setup-code and in the panel's log."
 Write-Host '  The certificate is self-signed: your browser will ask once.'
+Write-Host "  Then Settings → Set-up (offered at the first sign-in) gives DOCA's agent a model: one this machine runs, or a provider's key."

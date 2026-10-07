@@ -8,6 +8,7 @@
  * module only reports the current state and streams the script's output back to the browser.
  */
 
+const fs   = require('fs');
 const path = require('path');
 const { run, streamCmd } = require('./utils');
 
@@ -15,6 +16,7 @@ const SERVICE = 'openclaw-panel.service';
 const SCRIPT  = path.join(__dirname, '..', 'run.sh');
 const LAUNCHER = path.join(__dirname, '..', 'bin', 'doca-launch.js');
 const shell = require('./shell');
+const { HOME_DIR } = require('./paths');
 
 /** Why the toggle cannot be used on this host, or null when it can. */
 async function unsupportedReason() {
@@ -49,10 +51,15 @@ async function state() {
   const ask = async cmd => {
     try { return (await run(cmd)).stdout.trim(); } catch (e) { return (e.stdout || '').trim(); }
   };
-  const [enabled, active] = await Promise.all([
+  const [enabled, active, unitDir] = await Promise.all([
     ask(`systemctl is-enabled ${SERVICE}`),
     ask(`systemctl is-active ${SERVICE}`),
+    ask(`systemctl show -p WorkingDirectory --value ${SERVICE}`),
   ]);
+  // The unit's name is fixed, so a second DOCA on this machine (a trial install beside the one in use) found the
+  // first one's unit and called it its own — and its toggle would have switched the other one's boot off.
+  const elsewhere = otherInstall(unitDir);
+  if (elsewhere) return { supported: true, service: SERVICE, enabled: false, active: false, elsewhere };
 
   return {
     supported: true,
@@ -63,6 +70,13 @@ async function state() {
     // *is* the service, rather than something started by hand.
     supervised: !!process.env.INVOCATION_ID,
   };
+}
+
+/** The folder of the DOCA the boot unit starts, when it is not this one; null when it is this one or there is none. */
+function otherInstall(unitDir, home = HOME_DIR) {
+  if (!unitDir) return null;
+  const real = p => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
+  return real(unitDir) === real(home) ? null : unitDir;
 }
 
 /** GET /api/startup */
@@ -86,4 +100,4 @@ async function handleSet(req, res) {
   streamCmd(res, process.platform === 'win32' ? `& ${cmd}` : cmd);
 }
 
-module.exports = { SERVICE, state, handleStatus, handleSet };
+module.exports = { SERVICE, state, handleStatus, handleSet, otherInstall };

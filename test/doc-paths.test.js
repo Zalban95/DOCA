@@ -30,7 +30,7 @@ function pages() {
 
 function docs() {
   const dir = d => fs.readdirSync(path.join(ROOT, d));
-  return ['README.md', 'AGENTS.md', 'PROTOCOL.md', 'clients/browser/README.md', 'clients/node/README.md',
+  return ['README.md', 'AGENTS.md', 'PROTOCOL.md', 'docs/production.md', 'docs/reference.md', 'clients/browser/README.md', 'clients/node/README.md',
     ...dir('skills').map(d => `skills/${d}/SKILL.md`), ...dir('docs/api').filter(f => f.endsWith('.md')).map(f => `docs/api/${f}`),
     ...dir('docs/experiments').map(f => `docs/experiments/${f}`)].filter(f => fs.existsSync(path.join(ROOT, f)));
 }
