@@ -103,7 +103,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   charter's install rule are not enough for this model; try a sentence in the table's rows, then measure again. The run
   ended cleanly during case 8 (build and install the Android app) with nothing saved: find what that turn called (a
   restart of "the panel" in the sandbox is the suspect) and keep the eval process from being ended by a tool.
-- [ ] B8 **The charter rendered for who reads it, and risk tiers** (aw 13; coh F30): tool-specific sentences only with
+- [x] B8 **The charter rendered for who reads it, and risk tiers** — *2.261.0: precedence once, no rule numbers, "that very thing", backups' place, rule 25 by what can be undone, `charterFor(held)` (repository rules only with code tools or shell)* (aw 13; coh F30): tool-specific sentences only with
   the tool held, the repository rules only with the Code kit; rule 25 follows H10.11's tiers (reversible with a
   checkpoint goes ahead; irreversible or outward asks). **Ask first** (charter).
   *The live model's own reading (DeepSeek, 2026-10-07, in Ask mode) adds to B8:* rules cross-reference each other by
