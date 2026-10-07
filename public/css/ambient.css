@@ -42,7 +42,7 @@ body.solo .amb { height: 100dvh; border-radius: 0; }
 .amb-band { position: absolute; left: 0; right: 0; bottom: 0; height: 20%; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent; }
 .amb-band.holding { background: radial-gradient(ellipse at 50% 55%, rgba(87,201,194,.10), transparent 65%); transition: background .45s; }
 .amb.calling .amb-band { height: 100%; }   /* in a call, a hold anywhere ends it */
-.amb-hint { position: absolute; left: 0; right: 0; bottom: 2.5%; text-align: center; font: 12px var(--font-mono); color: #707a85;
+.amb-hint { position: absolute; left: 0; right: 0; bottom: 2.5%; text-align: center; font: 13px var(--font-text); color: #707a85;
   opacity: .75; pointer-events: none; transition: opacity .6s; }
 .amb.calling .amb-hint { opacity: 0; }
 /* What a screen chose not to show (Settings → Ambient). */
@@ -56,10 +56,10 @@ body.solo .amb { height: 100dvh; border-radius: 0; }
 .amb-talk { position: absolute; right: max(3.2vmin, calc(var(--amb-mx, 7%) / 2)); bottom: 3.2vmin; width: 52px; height: 52px; border-radius: 50%; border: 0; background: #000; color: #57c9c2;
   font-size: 22px; cursor: pointer; box-shadow: 0 0 18px rgba(87,201,194,.35); }
 .amb.calling .amb-talk { color: #e85050; box-shadow: 0 0 18px rgba(232,80,80,.35); }
-.amb-edit, .amb-alone { position: absolute; top: 1.6vmin; right: 1.6vmin; opacity: .25; transition: opacity .3s; }
+.amb-edit, .amb-alone { position: absolute; top: 1.6vmin; right: 1.6vmin; opacity: 0; pointer-events: none; transition: opacity .3s; }
 .amb-edit { background: none; border: 0; color: #a6bfd6; font-size: 16px; cursor: pointer; }
 .amb-alone { right: 5.5vmin; }
-.amb:hover .amb-edit, .amb:hover .amb-alone { opacity: .9; }
+.amb.awake .amb-edit, .amb.awake .amb-alone, .amb-edit:focus-visible, .amb-alone:focus-visible { opacity: .95; pointer-events: auto; }   /* touched or the mouse moved (ambient.js) */
 .amb-arrange { position: absolute; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 5; padding: 16px; }
 .amb-arrange-card { width: min(520px, 100%); display: flex; flex-direction: column; gap: 10px; max-height: 100%; overflow: auto; }
 .amb-arrange-card label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }

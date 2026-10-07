@@ -29,7 +29,7 @@ async function faceEditorRender(panel) {
     : `<input type="range" data-face="${f.k}" min="${f.min}" max="${f.max}" step="${f.step}" value="${val(f)}" style="width:180px"><span class="face-edit-val" style="font-size:11px;min-width:36px">${val(f)}</span>`;
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'face-editor-card' });
   card.innerHTML = `<div class="card-title">The face</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">How the face looks on this screen — the corner, assistant mode and the face page. Open the editor to see it change as you set it.</p>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">How the face looks on this screen — the corner, assistant mode and the face page. Open the editor to see it change as you set it. Its palette is after protolab.tech.</p>
     <details id="face-edit-details"><summary style="cursor:pointer;font-size:12px">Edit, with a preview</summary>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px">
         <canvas id="face-edit-preview" style="width:min(320px,100%);height:260px;border-radius:12px;background:#050507"></canvas>

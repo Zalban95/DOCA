@@ -65,6 +65,10 @@ function _ambFrame() {
   band.addEventListener('pointerdown', () => { band.classList.add('holding'); AMB.hold = setTimeout(() => { cancel(); ambientTalk(); }, 450); });
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(e => band.addEventListener(e, cancel));
   document.getElementById('amb-talk').onclick = () => ambientTalk();
+  // Its own controls rest out of sight (U3) and come back for a moment when the screen is touched or the mouse moves.
+  const amb = document.getElementById('amb');
+  const wake = () => { amb.classList.add('awake'); clearTimeout(AMB.awake); AMB.awake = setTimeout(() => amb.classList.remove('awake'), 3500); };
+  amb.addEventListener('pointermove', wake); amb.addEventListener('pointerdown', wake);
 }
 
 /** Talk: the call starts inside the gesture (its audio may play), the dots rise. During a call: end it. */
