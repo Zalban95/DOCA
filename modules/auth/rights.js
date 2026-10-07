@@ -104,6 +104,7 @@ const TABLE = [
   R(ANY, '/api/projects(/.*)?', 'host'),
   R(ANY, '/api/computers(/.*)?', 'host'),
   R(ANY, '/api/search/(settings|try)', 'host'),                // the web search provider and its key (search/routes.js)
+  R(ANY, '/api/screen/layout(/undo)?', 'read'),                 // one's own panel layout and this screen's; the install's default is checked as host inside (panel-layout/routes.js)
   R(ANY, '/api/screen(/settings|/profile)?', 'read'),          // one's own screen or device: how it looks and when it is asked, never how the hive behaves (screens/)
   R(ANY, '/api/sharing(/.*)?', 'host'),                        // the owner's answer and the owner's click (sharing.js)
   R(ANY, '/api/packs(/.*)?', 'host'),                          // packs carry MCP commands, tool lists and memory (packs/routes.js)

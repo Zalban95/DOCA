@@ -48,6 +48,7 @@ const SCHEMA = {
       marginY: { type: 'integer', min: 0, max: 25, default: 6, hint: 'Top and bottom margins, % of the screen\'s height.' },
     } },
   face:             { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the face: its look, a spec over the default (face/face.js); an edition carries one' },
+  panel:            { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the panel\'s structure as data (modules/panel-layout): groups and their pages in order, hidden and renamed pages, a person\'s own views made of pages, and style (font scale, density, theme tokens) — layered install → person → screen, edited with the panel_layout tool' },
   hiddenBuiltins:   { is: 'travels', home: 'device', on: 'screen', note: 'built-in config entries hidden from the list', propose: p('Hidden built-ins') },
 
   // ── The hive: how its agents behave and what they may do ──

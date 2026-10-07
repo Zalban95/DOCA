@@ -4,14 +4,14 @@
  * An edition is a pack (docs/design/hive.md §6; TODO H12): beside the skills, specialists and recipes it chooses,
  * `edition.json` carries what makes a narrower DOCA feel like its own product — the names it wears (branding), how
  * every screen starts out (theme, skin, hidden tabs, sidebar sections: the hive's defaults, which each screen may
- * still change), its face, and a permission level for the people it is sold to. Built only on what exists:
+ * still change; and the panel's layout — groups, pages, views, style), its face, and a permission level for the people it is sold to. Built only on what exists:
  * `branding` prefs, the screen-home settings, `face`, and auth/levels.
  *
  * Importing one is the same dry run as any pack (a host's): the plan lists each part, and a level that exists here
  * is replaced only with "replace what exists". A level is created with the importer's own ceiling (levels.normalize
  * refuses rights they do not hold), so an edition can never hand out more than the person bringing it in has.
  */
-const LOOK = ['theme', 'skin', 'customTheme', 'hiddenTabs', 'sidebarSections'];
+const LOOK = ['theme', 'skin', 'customTheme', 'hiddenTabs', 'sidebarSections', 'panel'];   // panel: its layout as data (panel-layout/)
 const FILE = 'edition.json';
 
 /** `sel` = { branding?: true, look?: true, face?: true, level?: levelId }: the part, or null when nothing was chosen. */
@@ -46,7 +46,7 @@ const exists = it => !!(it.data.level && require('../auth/levels').get(it.data.l
 function describe(it) {
   const d = it.data, out = [];
   if (d.branding) out.push(`names: ${Object.entries(d.branding).map(([k, v]) => `${k} "${v}"`).join(', ') || 'the defaults'}`);
-  if (d.look) out.push(`look: ${Object.keys(d.look).join(', ') || 'nothing'}${d.look.hiddenTabs?.length ? ` (${d.look.hiddenTabs.length} tabs hidden)` : ''}`);
+  if (d.look) out.push(`look: ${Object.keys(d.look).join(', ') || 'nothing'}${d.look.hiddenTabs?.length ? ` (${d.look.hiddenTabs.length} tabs hidden)` : ''}${d.look.panel ? ` (a layout: ${require('../panel-layout').describe(d.look.panel).join('; ') || 'as shipped'})` : ''}`);
   if (d.face) out.push('a face');
   if (d.level) out.push(`level "${d.level.name}" (${(d.level.rights || []).join(', ') || 'no rights'})${exists(it) ? ' — exists here' : ''}`);
   return out.join(' · ');
@@ -58,7 +58,8 @@ function apply(it, { overwrite = false, actorLevel = null } = {}) {
   const { loadPrefs, savePrefs } = require('../utils');
   const prefs = loadPrefs();
   if (d.branding && typeof d.branding === 'object') prefs.branding = Object.fromEntries(Object.entries(d.branding).filter(([k, v]) => typeof v === 'string' && k in require('../branding').DEFAULTS).map(([k, v]) => [k, v.slice(0, 80)]));
-  if (d.look && typeof d.look === 'object') for (const k of LOOK) if (d.look[k] !== undefined) prefs[k] = d.look[k];
+  // A layout from elsewhere can only name pages, groups and tokens this panel has (panel-layout/layout.js normalize).
+  if (d.look && typeof d.look === 'object') for (const k of LOOK) if (d.look[k] !== undefined) prefs[k] = k === 'panel' ? require('../panel-layout/layout').normalize(d.look[k]) : d.look[k];
   if (d.face && typeof d.face === 'object') prefs.face = { ...(prefs.face || {}), spec: d.face };
   savePrefs(prefs);
   if (d.branding) notes.push('names');
