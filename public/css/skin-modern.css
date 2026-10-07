@@ -10,6 +10,7 @@
 html[data-skin="modern"] {
   --radius: 10px;
   --font-ui: 'Inter', 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fs-input: 13.5px;   /* one input size (des 21) */
 }
 
 html[data-skin="modern"] body {
@@ -17,6 +18,9 @@ html[data-skin="modern"] body {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
 }
+
+/* The header's search and clock read in the UI face too (des 22). */
+html[data-skin="modern"] :is(.header-search-input, #clock) { font-family: var(--font-ui); font-size: 12px; }
 
 /* The mono face stays where text lines up in columns. */
 html[data-skin="modern"] :is(code, pre, kbd, .editor, .terminal, .code-out, .xterm, .log-line, .logs-output, .theme-color-hex) {
@@ -111,6 +115,8 @@ html[data-skin="modern"] .theme-swatch { border-radius: 12px; overflow: hidden; 
 .look-tile-sample { font-size: 22px; color: var(--bright); width: 34px; text-align: center; }
 .look-tile-classic .look-tile-sample { font-family: var(--font-mono); }
 .look-tile-modern  .look-tile-sample { font-family: 'Inter', 'IBM Plex Sans', sans-serif; font-weight: 600; }
+.look-tile-points  .look-tile-sample { font-family: var(--font-text); font-weight: 600;
+  background: radial-gradient(color-mix(in srgb, var(--accent) 80%, transparent) 1.2px, transparent 1.8px) 0 0 / 8px 8px; border-radius: 6px; }
 .look-tile-text { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
 .look-tile .theme-swatch-label { text-align: left; padding: 0; }
 .look-tile-note { font-size: 11px; color: var(--muted); }

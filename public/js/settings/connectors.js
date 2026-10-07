@@ -35,7 +35,7 @@ async function connectorsLoad() {
         <input class="input" data-f="scopes" placeholder="scopes" value="${escHtml(c.scopes ?? c.defaultScopes)}" style="flex:2;min-width:220px">
         <select class="input" data-f="who" style="width:auto"><option value="host" ${c.who !== 'everyone' ? 'selected' : ''}>hosts only</option><option value="everyone" ${c.who === 'everyone' ? 'selected' : ''}>everyone</option></select>
         <button class="btn btn-sm" onclick="connectorsSave(${jsArg(c.id)})">Save</button>
-        <button class="btn btn-sm btn-blue" onclick="connectorsConnect(${jsArg(c.id)})" ${c.configured ? '' : 'disabled'}>${c.connected ? 'Reconnect' : 'Connect'}</button>
+        <button class="btn btn-sm btn-blue" onclick="connectorsConnect(${jsArg(c.id)})" ${c.configured ? '' : 'disabled title="Save its client id and secret first"'}>${c.connected ? 'Reconnect' : 'Connect'}</button>
         ${c.connected ? `<button class="btn btn-sm btn-red" onclick="connectorsDisconnect(${jsArg(c.id)})">Disconnect</button>` : ''}</div></div>`).join('')}
     <div class="card"><button class="btn btn-sm" onclick="connectorsAdd()">＋ Another OAuth 2.0 service</button></div>
     <div class="card" id="service-keys-card"></div>

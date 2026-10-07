@@ -32,18 +32,22 @@ function logsRenderPicker() {
   const box = document.getElementById('log-sources');
   if (!box) return;
   const auto = logSources.length === 0;
-  box.innerHTML = `
-    <label class="log-src ${auto ? 'on' : ''}" title="Follow whichever harness is selected in DOCA">
-      <input type="checkbox" ${auto ? 'checked' : ''} onchange="logsPick('auto', this.checked)">
-      <span>Auto</span>
-    </label>
-    ${logSourceMeta.map(s => `
+  // One chip style, Auto included; only the sources that can speak are shown, the rest behind "n more" (des 25).
+  const chip = s => `
       <label class="log-src src-${logHue(s.id)} ${logSources.includes(s.id) ? 'on' : ''} ${s.available ? '' : 'off'}"
              title="${escHtml(s.available ? (s.selected ? 'Selected harness' : s.kind) : s.reason)}">
         <input type="checkbox" ${logSources.includes(s.id) ? 'checked' : ''}
                ${s.available ? '' : 'disabled'} onchange="logsPick('${s.id}', this.checked)">
         <span>${escHtml(s.label)}</span>${s.available ? '' : '<em>—</em>'}
-      </label>`).join('')}`;
+      </label>`;
+  const off = logSourceMeta.filter(s => !s.available);
+  box.innerHTML = `
+    <label class="log-src log-src-auto ${auto ? 'on' : ''}" title="Follow whichever harness is selected in DOCA">
+      <input type="checkbox" ${auto ? 'checked' : ''} onchange="logsPick('auto', this.checked)">
+      <span>Auto</span>
+    </label>
+    ${logSourceMeta.filter(s => s.available).map(chip).join('')}
+    ${off.length ? `<details class="log-more"><summary class="log-src">${off.length} more</summary><div class="log-src-row">${off.map(chip).join('')}</div></details>` : ''}`;
 }
 
 function logsPick(id, on) {

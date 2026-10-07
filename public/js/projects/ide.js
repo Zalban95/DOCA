@@ -54,10 +54,8 @@ function _pjFrame() {
       </section>
       <aside class="pj-chat" id="pj-chat"></aside>
     </div>
-    <div class="pj-none" id="pj-none" style="display:none">
-      <p>No projects yet. A project is a folder: DOCA reads what it is, how it builds and tests, and its git history.</p>
-      <button class="btn btn-teal" onclick="pjNew()">+ Open a folder</button>
-    </div>`;
+    <div class="pj-none" id="pj-none" style="display:none">${emptyStateHtml({ title: 'No projects yet',
+      text: 'A project is a folder: DOCA reads what it is, how it builds and tests, and its git history.', action: { label: 'Open a folder', onclick: 'pjNew()' } })}</div>`;
   return page;
 }
 
@@ -70,6 +68,7 @@ async function projectsInit() {
   picker.innerHTML = list.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.name)}</option>`).join('');
   document.getElementById('pj-body').style.display = list.length ? '' : 'none';
   document.getElementById('pj-none').style.display = list.length ? 'none' : '';
+  document.querySelector('#tab-projects .pj-top')?.classList.toggle('pj-top-none', !list.length);   // no picker until a project exists (des 10)
   if (!list.length) return;
   const want = PJ.project?.project.id && list.some(p => p.id === PJ.project.project.id) ? PJ.project.project.id : list[0].id;
   picker.value = want;

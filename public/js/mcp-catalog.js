@@ -15,10 +15,10 @@ async function mcpCatalogRender() {
   if (!fresh.length) return;
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'mcp-catalog' });
   card.innerHTML = `<div class="card-title">From the catalogue</div>
-    ${fresh.map(s => `<div class="disk-row">
+    ${fresh.map(s => `<div class="disk-row row3">
       <span class="disk-label">${escHtml(s.label)}</span>
       <span class="disk-path" title="${escHtml(s.command)}">${escHtml(s.about)}${s.missing.length ? ` <b style="color:var(--amber)">Needs ${escHtml(s.missing.join(', '))} on this host.</b>` : ''}</span>
-      <span class="disk-free"><button class="btn btn-xs btn-blue" onclick="mcpCatalogAdd(${jsArg(s.id)}, ${jsArg(s.transport)})" title="${escHtml(s.command)}">Add</button></span></div>`).join('')}`;
+      <span class="disk-free"><button class="btn btn-xs" onclick="mcpCatalogAdd(${jsArg(s.id)}, ${jsArg(s.transport)})" title="${escHtml(s.command)}">Add</button></span></div>`).join('')}`;
   list.append(card);
 }
 

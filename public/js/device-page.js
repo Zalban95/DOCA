@@ -37,7 +37,7 @@ async function devNotifyRender() {
   let p;
   try { ({ profile: p } = await apiFetch(`/api/screen/profile?device=${encodeURIComponent(DOCA_DEVICE_ID)}`)); } catch { box.remove(); return; }
   const q = p.quietHours || {};
-  box.innerHTML = `<div class="card-title" style="font-size:12px">Notifications on this device</div>
+  box.innerHTML = `<div class="card-subtitle">Notifications on this device</div>
     <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px">
       <label><input type="checkbox" id="dn-receive" ${p.prompts?.receive !== false ? 'checked' : ''}> The agent may ask here</label>
       <label><input type="checkbox" id="dn-haptic" ${p.prompts?.haptic !== false ? 'checked' : ''}> Vibrate for urgent ones</label>

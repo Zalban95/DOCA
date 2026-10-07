@@ -90,7 +90,7 @@
 /* The shared tree (lib/filetree.js): a folder a node is dragged over, and the Files tab's sidebar copy. */
 .pj-node.drop { background: var(--dim); outline: 1px dashed var(--accent); }
 .pj-tree:focus { outline: none; }
-.fm-tree-group .pj-tree-tools { flex-wrap: wrap; }
+.fm-tree-group .pj-tree-tools { flex-wrap: nowrap; gap: 0; }
 .fm-tree-group .pj-tree { max-height: 45vh; overflow: auto; }
 /* The chat's model choice (chatModelPicker): a compact select and the fallback toggle. */
 .chat-model-host { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }

@@ -255,8 +255,7 @@ header {
   min-width: 0;
 }
 
-/* Room under the last card of a scrolling page, so the chat button never sits on its controls. */
-#tab-settings::after, #tab-controls::after, #tab-models::after, #tab-docker::after, #tab-vms::after, #tab-mcp::after, #tab-computers::after { content: ''; display: block; height: 64px; flex: 0 0 64px; }
+/* Room under the last card of a scrolling page, so the chat button never sits on its controls: system.css (des 2). */
 .tab-page {
   display: none;
   flex: 1;

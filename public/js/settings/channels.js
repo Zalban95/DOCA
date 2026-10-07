@@ -29,7 +29,7 @@ async function channelsLoad() {
         <input class="input" id="tg-token" type="password" autocomplete="off" placeholder="${_chPh(t, 'TELEGRAM_BOT_TOKEN', t.hasToken ? 'saved — paste a new one to replace it' : '123456:ABC…')}" style="flex:1;min-width:200px">
         <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="tg-on" ${t.enabled ? 'checked' : ''}> on</label>
         <button class="btn btn-sm btn-blue" onclick="channelsSave()">Save</button></div>` : ''}
-    <div class="card-title" style="font-size:12px;margin-top:6px">${host ? 'Linked chats' : 'Your linked chats'}</div>
+    <div class="card-subtitle" style="margin-top:6px">${host ? 'Linked chats' : 'Your linked chats'}</div>
     ${chats || '<div class="placeholder">None yet.</div>'}
     <div class="toolbar" style="margin-top:10px;gap:6px">
       <button class="btn btn-sm" onclick="channelsLink()" ${t.running ? '' : 'disabled title="The bot is not running"'}>Link a Telegram chat</button>
@@ -53,7 +53,7 @@ function channelsMatrixCard(m, host, state) {
         <input class="input" id="mx-token" type="password" autocomplete="off" placeholder="${_chPh(m, 'MATRIX_ACCESS_TOKEN', m.hasToken ? 'saved — paste a new one to replace it' : 'syt_…')}" style="flex:1;min-width:160px">
         <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="mx-on" ${m.enabled ? 'checked' : ''}> on</label>
         <button class="btn btn-sm btn-blue" onclick="channelsMatrixSave()">Save</button></div>` : ''}
-    <div class="card-title" style="font-size:12px;margin-top:6px">${host ? 'Linked rooms' : 'Your linked rooms'}</div>
+    <div class="card-subtitle" style="margin-top:6px">${host ? 'Linked rooms' : 'Your linked rooms'}</div>
     ${rooms || '<div class="placeholder">None yet.</div>'}
     <div class="toolbar" style="margin-top:10px;gap:6px">
       <button class="btn btn-sm" onclick="channelsMatrixLink()" ${m.running ? '' : 'disabled title="The bot is not running"'}>Link a Matrix chat</button>
@@ -78,7 +78,7 @@ function channelsSlackCard(m, host, state) {
         <input class="input" id="sl-bot" type="password" autocomplete="off" placeholder="${_chPh(m, 'SLACK_BOT_TOKEN', m.hasBotToken ? 'saved — paste to replace' : 'xoxb-…')}" style="flex:1;min-width:160px">
         <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="sl-on" ${m.enabled ? 'checked' : ''}> on</label>
         <button class="btn btn-sm btn-blue" onclick="channelsSlackSave()">Save</button></div>` : ''}
-    <div class="card-title" style="font-size:12px;margin-top:6px">${host ? 'Linked direct messages' : 'Your linked direct messages'}</div>
+    <div class="card-subtitle" style="margin-top:6px">${host ? 'Linked direct messages' : 'Your linked direct messages'}</div>
     ${dms || '<div class="placeholder">None yet.</div>'}
     <div class="toolbar" style="margin-top:10px;gap:6px">
       <button class="btn btn-sm" onclick="channelsSlackLink()" ${m.running ? '' : 'disabled title="The app is not connected"'}>Link a Slack chat</button>
@@ -106,7 +106,7 @@ function channelsMailCard(m, host, state) {
         <input class="input" id="ml-pass" type="password" autocomplete="off" placeholder="${_chPh(m, 'DOCA_MAIL_PASSWORD', m.hasPassword ? 'saved — paste to replace' : 'app password')}" style="flex:1;min-width:150px">
         <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="ml-on" ${m.enabled ? 'checked' : ''}> on</label>
         <button class="btn btn-sm btn-blue" onclick="channelsMailSave()">Save</button></div>` : ''}
-    <div class="card-title" style="font-size:12px;margin-top:6px">${host ? 'Linked addresses' : 'Your linked addresses'}</div>
+    <div class="card-subtitle" style="margin-top:6px">${host ? 'Linked addresses' : 'Your linked addresses'}</div>
     ${rows || '<div class="placeholder">None yet.</div>'}
     <div class="toolbar" style="margin-top:10px;gap:6px">
       <button class="btn btn-sm" onclick="channelsMailLink()" ${m.running ? '' : 'disabled title="The mailbox is not being read"'}>Link my address</button>

@@ -55,7 +55,7 @@ async function spendingLoad(month) {
       ${months.map(m => `<option ${m === v.month ? 'selected' : ''}>${m}</option>`).join('')}</select>
       <span style="font-size:12px">You: today <b>${_spTok(me.today?.tokens || 0)}</b> tokens, ${_spMoney(me.today, cur)} · this month <b>${_spTok(me.tokens)}</b> tokens, ${_spMoney(me, cur)}</span></div>
     ${days || '<div class="placeholder">Nothing spent this month.</div>'}
-    ${v.admin ? `<div class="card-title" style="font-size:12px;margin-top:12px">Everyone, this month</div>${people}` : ''}</div>
+    ${v.admin ? `<div class="card-subtitle" style="margin-top:12px">Everyone, this month</div>${people}` : ''}</div>
   ${_spBudgetsCard(v)}
   <div id="spending-permits"></div>
   <div class="card" id="spending-holdings"></div>
@@ -88,7 +88,7 @@ function _spBudgetsCard(v) {
       <div class="toolbar" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">
         <select class="input" id="sp-person" style="width:auto;align-self:flex-end" onchange="spendingPickPerson(this.value, false)">
           ${(v.people || []).map(p => `<option value="${escHtml(p.id)}">${escHtml(p.name || p.email)}</option>`).join('')}</select>
-        <span id="sp-person-inputs" class="toolbar" style="gap:6px;flex-wrap:wrap"></span>
+        <span id="sp-person-inputs" class="toolbar" style="gap:6px;flex-wrap:wrap;flex:1 1 260px;min-width:0"></span>
         <button class="btn btn-sm btn-blue" style="align-self:flex-end" onclick="spendingSavePerson()">Save</button></div>
       ${v.admin ? `<div class="input-label">Each level's default, and how much its people may allow themselves</div>${levels}` : ''}` : ''}</div>`;
 }

@@ -113,18 +113,17 @@ async function controlsRefreshContainers() {
       const image   = c.Image || '';
       const state   = (c.State || c.Status || '').toLowerCase();
       const isUp    = state.includes('running');
-      const stColor = isUp ? 'var(--green)' : 'var(--muted)';
-      const stDot   = isUp ? '●' : '○';
-
+      const q = jsArg(id);
+      // A point for its state (E4) and the same row actions as the Docker tab, in the same order (des 5).
       return `<div class="ctrl-container-row">
-        <span class="ctrl-cont-status" style="color:${stColor}" title="${state}">${stDot}</span>
-        <span class="ctrl-cont-name" title="${name}">${name}</span>
-        <span class="ctrl-cont-image">${image}</span>
-        <div class="ctrl-cont-actions">
-          <button class="btn btn-xs btn-green"  onclick="controlsContainerAction('${id}','start')"   ${isUp  ? 'disabled' : ''} title="Start">▶</button>
-          <button class="btn btn-xs btn-red"    onclick="controlsContainerAction('${id}','stop')"    ${!isUp ? 'disabled' : ''} title="Stop">■</button>
-          <button class="btn btn-xs btn-amber"  onclick="controlsContainerAction('${id}','restart')" ${!isUp ? 'disabled' : ''} title="Restart">↺</button>
-        </div>
+        <span class="ctrl-cont-status" title="${escHtml(state)}"><span class="pt ${isUp ? 'pt-up pt-run' : 'pt-stopped'}"></span></span>
+        <span class="ctrl-cont-name" title="${escHtml(name)}">${escHtml(name)}</span>
+        <span class="ctrl-cont-image" title="${escHtml(image)}">${escHtml(image)}</span>
+        <div class="ctrl-cont-actions">${rowActs([
+          { icon: 'logs', label: 'Logs', onclick: `nav('docker'); dockerToggleLog(${q},${jsArg(name)})` },
+          isUp && { icon: 'restart', label: 'Restart', onclick: `controlsContainerAction(${q},'restart')` },
+          isUp ? { icon: 'stop', label: 'Stop', onclick: `controlsContainerAction(${q},'stop')` } : { icon: 'start', label: 'Start', onclick: `controlsContainerAction(${q},'start')` },
+        ])}</div>
       </div>`;
     }).join('');
   } catch (e) {

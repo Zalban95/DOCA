@@ -44,7 +44,7 @@ async function evalsShow(id) {
   try { d = await apiFetch(`/api/evals/${encodeURIComponent(id)}`); } catch (e) { el.textContent = e.message; return; }
   const r = d.results[0];
   if (!r) { el.innerHTML = '<div class="placeholder">Not run yet.</div>'; return; }
-  el.innerHTML = `<div class="card-title" style="font-size:12px">${escHtml(d.set.title)} — ${r.passed}/${r.total} on ${escHtml(r.model)}, ${r.tokens} tokens · ${escHtml(new Date(r.startedAt).toLocaleString())}</div>
+  el.innerHTML = `<div class="card-subtitle">${escHtml(d.set.title)} — ${r.passed}/${r.total} on ${escHtml(r.model)}, ${r.tokens} tokens · ${escHtml(new Date(r.startedAt).toLocaleString())}</div>
     ${r.cases.map(c => `<details style="font-size:12px;margin:4px 0"><summary>${c.pass ? '✓' : '<span style="color:var(--red)">✗</span>'} <b>${escHtml(c.id)}</b>
         <span style="color:var(--muted)">${c.steps ?? '?'} steps · ${c.tokens ?? '?'} tokens${c.tools.length ? ` · ${escHtml(c.tools.join(' → '))}` : ''}</span></summary>
       <div style="margin:4px 0 0 16px"><div style="color:var(--muted)">${escHtml(c.prompt)}</div>
