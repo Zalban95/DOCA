@@ -20,9 +20,21 @@ let _mtime = 0;
 function diskMtime() {
   try { return require('fs').statSync(require('path').join(DATA_DIR, `${DOC}.json`)).mtimeMs; } catch { return 0; }
 }
+/**
+ * A revoked device is announced (`events`, 'revoked'), so what it was given goes with it: the MCP servers it hosts
+ * (devices-revoked.js). By any route — the panel, /api/v1, or `npm run token -- revoke` from another process, which this
+ * process sees when it next reads the file, so newly revoked ids are announced from the reload too.
+ */
+const events = new (require('events'))();
+const announce = id => setImmediate(() => events.emit('revoked', id));
+
 function db() {
   const m = diskMtime();
-  if (!_db || m !== _mtime) { _db = readJson(DOC, () => ({ devices: {} })); _mtime = m; }
+  if (!_db || m !== _mtime) {
+    const before = _db ? new Set(Object.values(_db.devices || {}).filter(d => d.revokedAt).map(d => d.id)) : null;
+    _db = readJson(DOC, () => ({ devices: {} })); _mtime = m;
+    if (before) for (const d of Object.values(_db.devices || {})) if (d.revokedAt && !before.has(d.id)) announce(d.id);
+  }
   if (!_db.devices) _db.devices = {};
   return _db;
 }
@@ -199,6 +211,7 @@ function revoke(id) {
   rec.tokenHash = 'revoked';
   delete rec.prevTokenHash;
   persist();
+  announce(id);
   return true;
 }
 
@@ -305,6 +318,6 @@ function repairNames() {
 
 module.exports = { KINDS, repairNames, cleanName,
   FORM_FACTORS, normalizeCaps, publicView,
-  list, get, create, authenticate, rotate, revoke, remove, forget, update, patchVars, touchPersist,
+  list, get, create, authenticate, rotate, revoke, remove, forget, update, patchVars, touchPersist, events,
   startPairing, completePairing, _reset,
 };

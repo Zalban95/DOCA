@@ -36,6 +36,7 @@ function available() {
     // Once per server, not once per tool: this runs on every step of every turn.
     const onClient   = spec.origin?.kind === 'client';
     const device     = onClient ? registry.originDevice(spec.origin) : null;
+    if (device?.revokedAt) continue;   // revoked: its servers are being removed (devices-revoked.js); none of its tools meanwhile
     const originName = onClient ? (device?.name || spec.origin.deviceId) : null;
     // Trust origin (docs/design/devices-as-hands.md §3): a paired device's own tools are
     // your machine talking, not outside text. A tool it forwards from another MCP server

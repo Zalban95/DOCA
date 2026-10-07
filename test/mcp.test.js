@@ -405,9 +405,9 @@ test('a client offers its server, and only a click lets it in', async () => {
   require('../modules/api-v1/devices').revoke(gone.id);
   const refused = await post(`/api/mcp/offers/${doomed.id}/accept`, {});
   assert.equal(refused.status, 409);
-  assert.match(refused.body.error, /no longer paired/);
-
-  await post(`/api/mcp/offers/${doomed.id}/reject`, { reason: 'not that one' });
+  // Revoking declines its pending offer at once (devices-revoked.js); accept re-checks the device as well.
+  assert.match(refused.body.error, /no longer paired|Already rejected/);
+  assert.equal(require('../modules/mcp/offers').find(doomed.id).status, 'rejected');
   assert.equal((await H.api(null, 'DELETE', '/api/mcp/offered-tools')).status, 200);
 });
 

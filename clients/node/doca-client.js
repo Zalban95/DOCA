@@ -182,12 +182,18 @@ async function ask(question) {
   return /^y(es)?$/i.test(a.trim());
 }
 
-/** Follow the hub's events for device.control (refresh, ask, revoke, restore, disconnect) and acknowledge each. */
-async function follow(cfg, { onEvent = () => {}, signal } = {}) {
+/**
+ * Follow the hub's events for device.control (refresh, ask, revoke, restore, disconnect) and acknowledge each. The
+ * hub revoking this machine — its `revoked` event, or a 401 when it next asks (the token no longer opens anything) —
+ * calls `onRevoked` and ends the loop: there is nothing to retry.
+ */
+async function follow(cfg, { onEvent = () => {}, onRevoked = () => {}, signal } = {}) {
   let since = 0;
   while (!signal?.aborted) {
     try {
       const res = await request(cfg, 'GET', `/api/v1/events?stream=1&since=${since}`, undefined, { stream: true, signal });
+      if (res.statusCode === 401) { res.resume(); return onRevoked(); }
+      let revoked = false;
       let buf = '';
       await new Promise(resolve => {
         signal?.addEventListener('abort', () => { res.destroy(); resolve(); }, { once: true });
@@ -200,12 +206,14 @@ async function follow(cfg, { onEvent = () => {}, signal } = {}) {
             if (!data) continue;
             let env; try { env = JSON.parse(data); } catch { continue; }
             if (env.seq) since = env.seq;
+            if (env.type === 'revoked') { revoked = true; res.destroy(); return resolve(); }
             await control(cfg, env).catch(() => {});
             onEvent(env);
           }
         });
-        res.on('end', resolve); res.on('error', resolve);
+        res.on('end', resolve); res.on('error', resolve); res.on('close', resolve);
       });
+      if (revoked) return onRevoked();
     } catch { /* the hub is restarting, or unreachable */ }
     if (!signal?.aborted) await new Promise(r => setTimeout(r, 3000));
   }
@@ -230,6 +238,7 @@ async function control(cfg, env) {
 async function run({ grant = null, bind = null, port = 18766, root = null, signal, log = say } = {}) {
   const cfg = load();
   if (!cfg?.token) throw new Error('Not paired. Run: doca-client pair <hub> <code>');
+  if (cfg.revokedAt) throw Object.assign(new Error(`The hub revoked this machine (${cfg.revokedAt}); it lends nothing. Pair again to rejoin: doca-client pair <hub> <code>`), { code: 'revoked' });
   if (root) cfg.root = root;
   for (const f of FAMILIES) {
     if (grant) cfg.grants[f] = grant.includes(f);
@@ -252,9 +261,11 @@ async function run({ grant = null, bind = null, port = 18766, root = null, signa
   log(`✓ ${cfg.name} serves ${lent(cfg).length} tool(s) at ${url}${mine.status === 200 ? '' : ' — accept its offer in the hub (MCP tab) once'}.`);
   const stopped = new AbortController();
   if (signal) signal.addEventListener('abort', () => stopped.abort(), { once: true });
-  follow(cfg, { signal: stopped.signal });
   /** Stop lending: the hub's stream and this listener close. */
   const stop = () => new Promise(resolve => { stopped.abort(); sealed.disarm(); server.closeAllConnections?.(); server.close(() => resolve()); });
+  // Revoked by the hub: stop lending at once, and remember it, so a restart (at boot) does not lend again either.
+  const onRevoked = () => { cfg.revokedAt = new Date().toISOString(); save(cfg); log(`✗ The hub revoked ${cfg.name}: it lends nothing now. Pair again to rejoin.`); return stop(); };
+  follow(cfg, { signal: stopped.signal, onRevoked });
   return { server, url, cfg, stop };
 }
 
@@ -295,7 +306,11 @@ if (require.main === module) {
   const flag = n => { const i = rest.indexOf(`--${n}`); return i >= 0 ? rest[i + 1] : null; };
   (async () => {
     if (verb === 'pair') { const c = await pair(rest[0], rest[1], { name: flag('name') || os.hostname() }); say(`✓ Paired with ${c.hub} as ${c.name} (${c.deviceId}). Next: doca-client run`); }
-    else if (verb === 'run') { await run({ grant: flag('grant') ? flag('grant').split(',') : null, bind: flag('bind'), port: Number(flag('port')) || 18766 }); }
+    else if (verb === 'run') {
+      // Revoked is a finished state, not a failure: exit 0, so a boot entry (Restart=on-failure) does not loop on it.
+      try { await run({ grant: flag('grant') ? flag('grant').split(',') : null, bind: flag('bind'), port: Number(flag('port')) || 18766 }); }
+      catch (e) { if (e.code !== 'revoked') throw e; say(`✗ ${e.message}`); }
+    }
     else if (verb === 'find') {
       const hubs = await require('./discover').find();
       if (!hubs) say('Tailscale is not running here (or not installed), so there is no tailnet to look on. Pair with the hub\'s address instead.');

@@ -2,7 +2,8 @@
 
 // doca-client (clients/node, TODO H6.2/H6.6): a machine pairs with a code, lends its files and shell with its
 // person's consent as an MCP server, the hub accepts the offer once, and its agents work on that machine — until
-// a family is revoked from the hub, which the client then refuses.
+// a family is revoked from the hub, which the client then refuses; and revoking the machine ends its lending on both
+// sides.
 
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -12,6 +13,7 @@ const path = require('node:path');
 const H = require('./helpers');
 
 let dir, root, ctrl, client, deviceId, serverId, lending;
+const said = [];
 before(async () => {
   await H.start();
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-client-'));
@@ -49,7 +51,6 @@ test('it updates from its own hub: what differs is fetched, checked and replaced
 test('it lends what was granted; once its offer is accepted the agent works on that machine', async () => {
   // Its line is kept, not printed: Node's test runner reads a test's stdout between its own framed messages, and a
   // line starting "✓" right behind one (pipe reads coalesce under load) is read as a frame — "Unable to deserialize".
-  const said = [];
   lending = await client.run({ grant: ['files', 'shell'], bind: '127.0.0.1', port: 0, root, signal: ctrl.signal, log: m => said.push(m) });
   const { url } = lending;
   assert.match(said.join('\n'), /serves 8 tool\(s\) .* accept its offer/, 'it tells its person what it lends and what to do next');
@@ -109,4 +110,43 @@ test('a hub over HTTPS is pinned at pairing: another certificate later is refuse
     const r = await client.request(client.load(), 'GET', '/api/v1/capabilities');
     assert.equal(r.status, 200, 'the pinned certificate is trusted');
   } finally { process.env.DOCA_CLIENT_DIR = saved; srv.closeAllConnections(); await new Promise(r => srv.close(r)); }
+});
+
+test('revoking the machine ends its lending: the hub drops its server and the client stops serving', async () => {
+  const reg = require('../modules/mcp/registry');
+  assert.equal(reg.client(serverId)?.state, 'running', 'lending before');
+  const r = await H.api(null, 'DELETE', `/api/devices/${deviceId}`);   // the panel's Revoke
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  let gone = false;
+  for (let i = 0; i < 100 && !gone; i++) { await H.sleep(20); gone = !reg.forDevice(deviceId); }
+  assert.ok(gone, 'the server the device hosted is removed with it');
+  assert.ok(!require('../modules/mcp/tools').available().some(t => t.server === serverId), 'none of its tools are offered');
+  assert.match(await require('../modules/harness/tools').call(`mcp__${serverId}__files_list`, { path: '' }), /no MCP tool/);
+  // The client: its event stream is closed, its next try is a 401, and it stops lending.
+  let stopped = false;
+  for (let i = 0; i < 200 && !stopped; i++) { await H.sleep(50); stopped = !lending.server.listening; }
+  assert.ok(stopped, 'the client stopped serving');
+  assert.match(said.join('\n'), /revoked laptop: it lends nothing now/);
+  assert.ok(client.load().revokedAt, 'and remembers it');
+  await assert.rejects(client.run({ grant: ['files'], bind: '127.0.0.1', port: 0, log: () => {} }), e => e.code === 'revoked', 'a restart does not lend again');
+  const lines = require('../modules/activity').list({ limit: 50 });
+  assert.ok(lines.some(l => l.from === 'mcp' && /removed .*hosted by laptop/.test(l.what)), 'the hub says what it stopped');
+});
+
+test('a revoke from another process (npm run token -- revoke) is seen when the file is next read', async () => {
+  const devices = require('../modules/api-v1/devices');
+  const reg = require('../modules/mcp/registry');
+  const { device } = devices.create({ name: 'other', scopes: ['mcp:self'] });
+  reg.upsert({ label: 'other (doca-client)', transport: 'http', url: 'http://127.0.0.1:9/mcp', origin: { kind: 'client', deviceId: device.id } });
+  assert.ok(reg.forDevice(device.id));
+  // What the CLI does: its own copy of the registry writes the file; this process has not read it since.
+  const file = path.join(require('../modules/api-v1/store').DATA_DIR, 'devices.json');
+  const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+  doc.devices[device.id].revokedAt = new Date().toISOString(); doc.devices[device.id].tokenHash = 'revoked';
+  await H.sleep(20);   // a later mtime
+  fs.writeFileSync(file, JSON.stringify(doc));
+  assert.ok(devices.get(device.id).revokedAt, 'read again, as any request or turn step reads it');
+  let gone = false;
+  for (let i = 0; i < 100 && !gone; i++) { await H.sleep(20); gone = !reg.forDevice(device.id); }
+  assert.ok(gone, 'and removed once the reload announces it');
 });
