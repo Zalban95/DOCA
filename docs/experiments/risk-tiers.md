@@ -1,7 +1,7 @@
 # Experiment: as much as possible, at the lowest risk
 
 Flag `experiments.riskTiers` (Settings → Developer), off by default, and like every experiment in effect only with
-developer mode. Since 2.292.0. Code: `modules/harness/risk/` (`rules.js` the table, `classify.js` reading it, `index.js` what a turn
+developer mode. Since 2.296.0. Code: `modules/harness/risk/` (`rules.js` the table, `classify.js` reading it, `index.js` what a turn
 does with the tier), called from `turn/tool-calls.js` and `approval.gate`. TODO H10.11, asked by the owner 2026-10-06.
 
 ## Hypothesis

@@ -14,6 +14,7 @@ uploads, code delivery.
 | build the app that runs **on a device** (watch, phone, glasses, browser, kiosk) | [Device app guide](device-app-guide.md) |
 | build the thing that **asks the user questions** (the agent, an alerting rule, a cron job) | [Agent guide](agent-guide.md) |
 | copy code in JavaScript, Kotlin, Swift or Python | [Cookbook](cookbook.md) |
+| know what the panel can do that a device cannot yet | [Capability gaps](capability-gaps.md) |
 | look up an exact request/response shape | [OpenAPI document](openapi.json) — also served live at `GET /api/v1/openapi.json` |
 | read the normative specification, section by section | [`PROTOCOL.md`](../../PROTOCOL.md) |
 | understand why it is designed this way | [Phase 1 survey and proposal](../proposals/client-api-phase1.md) |

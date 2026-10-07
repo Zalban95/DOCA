@@ -94,7 +94,12 @@ const SCHEMA = {
       visionPass: { type: 'boolean', default: false, hint: 'Agents may look at a computer\'s screen with the vision model under vision.' },
       claimCheck: { type: 'boolean', default: false, hint: 'When an answer says it saved a memory, set a reminder, proposed, committed or sent something that no call this turn did, the turn gets one more step to do it or say it was not done.' },
       toolTiers: { type: 'boolean', default: false, hint: 'The Orchestrator and work chats are sent their core tools in full and the rest by name, loaded when needed (tools_more).' },
-      riskTiers: { type: 'boolean', default: false, hint: 'Each tool call is read, reversible or outward: reversible changes in a project run after a checkpoint, and outward ones (deleting outside a project, a force-push, mail, a request sending data out) are asked in every mode, Unattended included.' } } },
+      riskTiers: { type: 'boolean', default: false, hint: 'Each tool call is read, reversible or outward: reversible changes in a project run after a checkpoint, and outward ones (deleting outside a project, a force-push, mail, a request sending data out) are asked in every mode, Unattended included.' },
+      adaptiveLimits: { type: 'boolean', default: false, hint: 'Before a turn, a triage rates the request and sets its thinking effort and step budget (never under Max tool steps); a turn still advancing at its last step is extended up to limits.maxStepsCeiling.' } } },
+  // The owner's ceiling on how far a turn's steps may follow the work (experiment adaptiveLimits, turn/triage.js). Not
+  // proposable: an agent raising the bound on its own turns would be writing its own limit (CONSTITUTION P20).
+  limits:           { is: 'travels', home: 'hive', note: 'the ceiling adaptive step budgets and extensions stay under (turn/triage.js, turn/extend.js; the switch is experiments.adaptiveLimits)',
+    keys: { maxStepsCeiling: { type: 'integer', min: 1, max: 1000, default: 64, hint: 'The most tool steps one turn may reach when its budget follows the work (experiment adaptiveLimits). Below Max tool steps it changes nothing: a budget is never under that.' } } },
   assistant:        { is: 'travels', home: 'hive', note: 'assistant mode: a call started from the face answers quicker and shorter, in its own style (turn/effort.js, turn/client.js)',
     propose: p('Assistant mode', 'How the face answers when spoken to: its style, thinking effort and model'),
     keys: { effort: { type: 'string', default: 'low', hint: 'Thinking effort in assistant mode: off, low, medium, high, or default (send nothing: the model\'s own).' },
@@ -165,7 +170,8 @@ const SCHEMA = {
   // ── The machine DOCA runs on ──
   paths:            { is: 'local', home: 'device', on: 'host', note: 'folders and URLs of this machine (paths.js SETTABLE)', propose: p('Managed paths', 'Applies after a restart of the panel') },
   fmFavorites:      { is: 'local', home: 'device', on: 'host', note: 'favourite folders: paths of this machine', propose: p('File manager favourites') },
-  llamacpp:         { is: 'local', home: 'device', on: 'host', note: 'binary paths and server instances' },
+  llamacpp:         { is: 'local', home: 'device', on: 'host', note: 'binary paths and server instances',
+    keys: { discovery: { type: 'string', default: 'servers', hint: 'How the Models tab finds llama-servers DOCA did not start: servers (model-servers.js, the default) or props (each one\'s /props, kept beside it).' } } },
   serviceSettings:  { is: 'local', home: 'device', on: 'host', note: 'ports and URLs of services on this machine', propose: p('Inference services', 'GPU assignment, ports, images') },
   voiceServices:    { is: 'local', home: 'device', on: 'host', note: 'speech services on this machine or the tailnet', propose: p('Voice services') },
   snapshotSettings: { is: 'local', home: 'device', on: 'host', note: 'where snapshots of this machine go', propose: p('Snapshot settings') },

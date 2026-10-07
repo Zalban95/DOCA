@@ -15,9 +15,10 @@ const which = process.argv[2];
 const known = fs.readdirSync(path.join(__dirname, 'experiments')).map(f => f.replace(/\.js$/, ''));
 if (!known.includes(which)) { console.error(`usage: npm run experiment -- ${known.join(' | ')}`); process.exit(2); }
 
-const { tmp, cleanup } = require('./lib/sandbox').sandbox('doca-experiment-');   // the real data is never written
+const { tmp, realDataDir, cleanup } = require('./lib/sandbox').sandbox('doca-experiment-');   // the real data is never written
 
-const main = () => require(`./experiments/${which}`).measure({ tmp });
+// The rest of the command line is the measurement's own (adaptive-limits takes a set and --models).
+const main = () => require(`./experiments/${which}`).measure({ tmp, realDataDir, args: process.argv.slice(3) });
 
 main().then(code => { cleanup(); process.exit(code); })
   .catch(e => { console.error(`experiment: ${e.message}`); cleanup(); process.exit(1); });

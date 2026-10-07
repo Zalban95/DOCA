@@ -317,7 +317,7 @@ function block(p) {
 
   out.push(
     `reply cap: ${Number(p.maxTokens) > 0 ? `${p.maxTokens} tokens` : 'none set'} (harness.config.doca.maxTokens)`,
-    `tool steps: ${p.maxSteps} per turn (harness.config.doca.maxSteps)`,
+    p._adaptive ? require('./turn/triage').limitsLine(p._adaptive) : `tool steps: ${p.maxSteps} per turn (harness.config.doca.maxSteps)`,
     `history kept verbatim: ${p.historyTurns} messages, older ones fold into the summary after `
       + `${p.summarizeAfter} messages or ${compactTokensFor(p) || '(unset)'} tokens of prompt `
       + `(harness.config.doca.historyTurns, .summarizeAfter, .compactTokens)`,

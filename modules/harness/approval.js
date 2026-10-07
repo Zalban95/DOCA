@@ -50,7 +50,7 @@ const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const FREE = new Set([
   'memory_list', 'memory_search', 'recall_conversations', 'settings_read', 'system_status', 'machine_fit', 'effort', 'form_fill',
   'mcp_status', 'doca_clients', 'work_chats', 'agent_results',
-  'show_media', 'show_image', 'features',
+  'show_media', 'show_image', 'features', 'chronicle',
 ]);
 
 /** Which argument carries the command line, per tool that has one. */

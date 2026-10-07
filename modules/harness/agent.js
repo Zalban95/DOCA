@@ -134,7 +134,11 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   // Assistant mode (a call from the face) may have a quicker model of its own, and every turn knows its thinking effort.
   if (require('./turn/effort').spokenProfile(client) && require('../settings-schema').value('assistant.model'))
     p = { ...p, provider: require('../settings-schema').value('assistant.provider') || p.provider, model: require('../settings-schema').value('assistant.model') };
-  client = client && { ...client, effort: require('./turn/effort').levelFor({ session: memory.getSession(sessionId), client, p }) };
+  // Limits that follow the work (experiment adaptiveLimits, turn/triage.js): null when off, and then nothing changes.
+  const verdict = await require('./turn/triage').verdict({ message, client, session: memory.getSession(sessionId), p });
+  if (verdict) p = { ...p, maxSteps: verdict.steps, _adaptive: verdict };
+  const effort = require('./turn/triage').effort(require('./turn/effort').levelFor({ session: memory.getSession(sessionId), client, p }), verdict);
+  client = client && { ...client, effort };
   const ep  = providers.endpoint(p.provider);
   if (!p.model)
     throw Object.assign(new Error(
@@ -143,6 +147,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   const session = sessionId ? memory.getSession(sessionId) : memory.activeSession();
   if (!session) throw Object.assign(new Error('Unknown session'), { status: 404 });
   say({ type: 'session', sessionId: session.id });
+  if (verdict) say({ type: 'triage', ...verdict });   // a span in the trace (trace.js)
 
   // Provenance stays on the row, not in the text: `toApiMessages` maps the
   // fields the API takes, so a client can render "you asked this from the watch"
@@ -173,10 +178,11 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     // rather than the turn failing.
     stream_options: { include_usage: true },
     ...(Number(p.maxTokens) > 0 ? { max_tokens: Number(p.maxTokens) } : {}),
-    ...require('./turn/effort').fields(client?.effort?.level, ep, p.model),   // how hard it thinks (turn/effort.js)
+    ...require('./turn/effort').fields(client ? client.effort?.level : verdict && effort.level, ep, p.model),   // how hard it thinks (turn/effort.js)
   };
 
-  const maxSteps = Math.max(1, Number(p.maxSteps) || 1);
+  let maxSteps = Math.max(1, Number(p.maxSteps) || 1);   // extended while the turn advances (turn/extend.js)
+  const planOpenAtStart = verdict ? require('./turn/triage').openPlanSteps(session) : 0;
   const led      = budget.ledger();
   let warned     = false;
   let text = '';
@@ -338,7 +344,9 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     }
 
     if (step === maxSteps) {
-      const note = stepLimitNote(profile, maxSteps);
+      const more = require('./turn/extend').atLimit({ v: verdict, step, budget: maxSteps, sessionId: session.id, from, signal, planOpenAtStart, say });
+      if (more) { maxSteps = more; continue; }
+      const note = stepLimitNote(profile, maxSteps, verdict);
       say({ type: 'text', text: `\n\n${note}` });
       memory.append(session.id, { role: 'assistant', content: note });
       text += `\n\n${note}`;
