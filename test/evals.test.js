@@ -143,13 +143,13 @@ test('the sandbox leaves out MCP servers a person\'s device hosts (B7c)', () => 
   const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sbx-'));
   const prefsFile = path.join(dir, 'p.json');
-  fs.writeFileSync(prefsFile, JSON.stringify({ mcpServers: { phone: { transport: 'http', url: 'http://x', origin: { kind: 'client', deviceId: 'd1' } }, local: { command: 'node' } } }));
+  fs.writeFileSync(prefsFile, JSON.stringify({ mcpServers: [{ id: 'phone', transport: 'http', url: 'http://x', origin: { kind: 'client', deviceId: 'd1' } }, { id: 'local', command: 'node' }] }));
   const was = { ...process.env };
   process.env.DOCA_PREFS_FILE = prefsFile;
   // Run the sandbox in a child: it forgets every module and rewrites the environment, which this test process must keep.
   const out = require('node:child_process').execFileSync(process.execPath, ['-e', `const s=require(${JSON.stringify(path.join(__dirname, '..', 'bin', 'lib', 'sandbox.js'))}).sandbox('t-'); console.log(require('fs').readFileSync(process.env.DOCA_PREFS_FILE,'utf8')); s.cleanup();`], { env: process.env, encoding: 'utf8' });
   Object.assign(process.env, was);
   const prefs = JSON.parse(out);
-  assert.deepEqual(Object.keys(prefs.mcpServers), ['local']);
+  assert.deepEqual(prefs.mcpServers.map(d => d.id), ['local']);   // the registry's own shape, no holes
   fs.rmSync(dir, { recursive: true, force: true });
 });
