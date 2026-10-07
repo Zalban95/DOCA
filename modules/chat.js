@@ -156,7 +156,7 @@ async function handleChat(req, res) {
       });
       res.write(`data: ${JSON.stringify({ type: 'done', code: 0 })}\n\n`);
     } catch (e) {
-      res.write(`data: ${JSON.stringify({ type: 'stderr', text: `Harness error: ${e.message}` })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: 'stderr', text: e.message })}\n\n`);
       res.write(`data: ${JSON.stringify({ type: 'done', code: 1 })}\n\n`);
     }
     return res.end();
