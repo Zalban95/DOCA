@@ -72,37 +72,46 @@ test('no path claims it needs a restart when nothing has been saved', async () =
   assert.deepEqual(stuck, [], 'a path is permanently pending, which means its default and its constant differ');
 });
 
-test('saving an override is remembered, flagged as needing a restart, and clearable', async () => {
+test('saving a path the environment also sets: remembered, but the environment wins and the row says so (C3)', async () => {
   const target = path.join(H.tmp, 'snaps-elsewhere');
 
   const saved = await post('/api/paths', { SNAPSHOT_DIR: target });
   assert.equal(saved.status, 200);
-  assert.equal(saved.body.restartRequired, true);
 
   let r = row(saved.body.settable, 'SNAPSHOT_DIR');
-  assert.equal(r.source, 'saved');
-  assert.equal(r.value, target);
-  assert.equal(r.exists, false);
-  // The constants were read at boot, so this process still uses the old path —
-  // the UI says so rather than pretending the change already took effect.
-  assert.equal(r.pending, true);
-  assert.notEqual(r.active, target);
+  assert.equal(r.source, 'env', 'the helper set SNAPSHOT_DIR in the environment, and the environment wins');
+  assert.equal(r.overridden, true);
+  assert.equal(r.value, process.env.SNAPSHOT_DIR);
+  assert.equal(r.pending, false, 'nothing changes at a restart while the environment says otherwise');
 
   // The snapshots panel edits the same stored value, not a second copy of it.
   const snap = await get('/api/snapshots/settings');
   assert.equal(snap.body.snapshotDir, target);
 
-  // Blank hands the path back to the environment or the default.
+  // Blank removes what was saved; the environment's stays, no longer overriding anything.
   const cleared = await post('/api/paths', { SNAPSHOT_DIR: '' });
   const restored = row(cleared.body.settable, 'SNAPSHOT_DIR');
   assert.equal(restored.source, 'env');
+  assert.equal(restored.overridden, false);
   assert.equal(restored.value, process.env.SNAPSHOT_DIR);
-  assert.equal(restored.pending, false);
 });
 
-test('a missing path can be created, and creating twice is not an error', async () => {
-  const dir = path.join(H.tmp, 'made-here', 'nested');
-  await post('/api/paths', { SKILLS_DIR: dir });
+test('with the environment silent, a saved path is used — from the next start', () => {
+  const { execFileSync } = require('node:child_process');
+  const prefs = path.join(H.tmp, 'saved-prefs.json'), target = path.join(H.tmp, 'snaps-saved');
+  fs.writeFileSync(prefs, JSON.stringify({ paths: { SNAPSHOT_DIR: target } }));
+  const r = JSON.parse(execFileSync(process.execPath, ['-e',
+    "process.stdout.write(JSON.stringify(require('./modules/paths').describe().find(r => r.key === 'SNAPSHOT_DIR')))"], {
+    cwd: path.join(__dirname, '..'), encoding: 'utf8', env: { ...process.env, SNAPSHOT_DIR: '', DOCA_PREFS_FILE: prefs } }));
+  assert.equal(r.source, 'saved');
+  assert.equal(r.overridden, false);
+  assert.equal(r.value, target);
+  assert.equal(r.active, target, 'read at boot, so in use at once in a new process');
+});
+
+test('a missing path can be created where it is in use, and creating twice is not an error', async () => {
+  const dir = row((await get('/api/paths')).body.settable, 'SKILLS_DIR').value;
+  fs.rmSync(dir, { recursive: true, force: true });
 
   const first = await post('/api/paths/create', { key: 'SKILLS_DIR' });
   assert.equal(first.status, 200);
@@ -116,18 +125,18 @@ test('a missing path can be created, and creating twice is not an error', async 
 });
 
 test('a script path is created executable with a shebang, a JSON path with an object', async () => {
-  const script = path.join(H.tmp, 'made-here', 'snapshot.sh');
-  await post('/api/paths', { SNAPSHOT_SCRIPT: script });
+  const script = row((await get('/api/paths')).body.settable, 'SNAPSHOT_SCRIPT').value;
+  fs.rmSync(script, { force: true });
   await post('/api/paths/create', { key: 'SNAPSHOT_SCRIPT' });
   assert.match(fs.readFileSync(script, 'utf8'), /^#!/);
 
-  // CONFIG_PATH is a JSON file; the temp one does not exist until something
-  // writes it, which is exactly the case that used to surface as ENOENT.
-  const cfg = path.join(H.tmp, 'made-here', 'openclaw.json');
-  await post('/api/paths', { CONFIG_PATH: cfg });
+  // CONFIG_PATH is a JSON file; one that does not exist yet is exactly the case that used to surface as ENOENT.
+  const cfg = row((await get('/api/paths')).body.settable, 'CONFIG_PATH').value;
+  const had = fs.existsSync(cfg) ? fs.readFileSync(cfg) : null;
+  fs.rmSync(cfg, { force: true });
   await post('/api/paths/create', { key: 'CONFIG_PATH' });
   assert.deepEqual(JSON.parse(fs.readFileSync(cfg, 'utf8')), {});
-  await post('/api/paths', { CONFIG_PATH: '' });
+  if (had) fs.writeFileSync(cfg, had);
 });
 
 test('only known paths can be set or created', async () => {

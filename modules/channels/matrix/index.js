@@ -116,7 +116,7 @@ function unlink(room) {
 
 function status() {
   const p = api.prefs();
-  return { enabled: p.enabled === true, homeserver: api.base() || null, hasToken: !!api.token(), running: state.running,
+  return { env: ['MATRIX_HOMESERVER', 'MATRIX_ACCESS_TOKEN'].filter(k => process.env[k]), enabled: p.enabled === true, homeserver: api.base() || null, hasToken: !!api.token(), running: state.running,
     error: state.error, lastPollAt: state.lastPollAt, bot: state.me ? { username: state.me } : null };
 }
 

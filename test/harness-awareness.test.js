@@ -209,12 +209,12 @@ test('a path change says it needs a restart, and applies through the paths regis
   assert.equal(applied.body.restartNeeded, true);
   assert.equal(loadPrefs().paths.WORKSPACE_DIR, `${H.tmp}/moved`);
 
-  // Settings → Paths reads the same value back, and knows this process is not
-  // using it yet.
+  // Settings → Paths reads it back as saved — and, the test's environment setting WORKSPACE_DIR, as overridden by it:
+  // the environment wins over a saved value, and the row says so (one rule, TODO C3).
   const row = require('../modules/paths').describe().find(x => x.key === 'WORKSPACE_DIR');
-  assert.equal(row.value, `${H.tmp}/moved`);
-  assert.equal(row.source, 'saved');
-  assert.equal(row.pending, true);
+  assert.equal(row.overridden, true);
+  assert.equal(row.source, 'env');
+  assert.equal(row.value, process.env.WORKSPACE_DIR);
 });
 
 test('a proposal cannot be smuggled past the allowlist by the browser either', async () => {
