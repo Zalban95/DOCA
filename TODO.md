@@ -73,7 +73,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   hub runs where one exists) and the plan is finished when all hold; experts that wait on each other's files (a
   dependency between missions/work chats); the Orchestrator resumes unfinished projects after a
   restart on its own unless the person archived, forgot or deleted them; one message where the person is.
-- [ ] P1.5 **Guided set-up and the two shapes (§1)**: a first conversation that asks what the person needs and sets
+- [x] P1.5 **Guided set-up and the two shapes (§1)** — *2.283.0 (first slice): `guided/assess.js` reads what the machine bears (GPUs, memory, disk, runtimes; every OS); `guided/suggested-models.json` the project-tested models per role with their needs, refreshed from the project's hub only with sharing consent (the hub's route still to build); the picker takes the newest that fits or lists providers with their key pages; Settings → Set-up (and a first-run Guided / Advanced choice) asks what it is for, where it runs (only when that is a choice) and which devices, then proposes installs a click runs and waits for keys it tests; `setup.mode`/`setup.shape`; `machine_fit` + skill `guided-setup`. Not yet: other installs reporting what they measured, hosted speech, a hosted sign-in offering.*: a first conversation that asks what the person needs and sets
   it up; a hub that picks models for its machine from what other installs tested (shared only with consent, like
   skills); providers' options offered when the machine cannot bear something.
 - [ ] P1.6 **Spending with permission (S12)**: a Spending settings page (budgets, a linked payment method, standing
