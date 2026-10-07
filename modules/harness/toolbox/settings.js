@@ -93,16 +93,27 @@ module.exports = [
             required: ['path', 'value'],
           },
         },
+        asked: { type: 'boolean', description: 'true only when the person asked for exactly this change in this conversation: on their own turn, within their level, it is applied at once with a checkpoint to undo it (CONSTITUTION S1). Leave it out for your own suggestion.' },
         screen: { type: 'string', description: 'For how one screen looks and listens (call, voice, ambient, face — each screen keeps its own): "this" for the screen the person asked from, or a device id from doca_clients. Leave it out for the hive\'s settings.' },
       },
       required: ['reason', 'changes'],
     },
-    run: ({ reason, changes, screen }, ctx = {}) => {
+    run: ({ reason, changes, screen, asked }, ctx = {}) => {
       // Filed against the conversation that asked, so the card can be read
       // beside the transcript it came from. `propose()` always took a
       // sessionId; nothing passed one, so every proposal was anonymous and
       // several open conversations made the pending list ambiguous.
       const p = settings.propose({ changes, reason, sessionId: ctx.sessionId, screen: screen === 'this' ? ctx.screen || 'this' : screen || null, person: ctx.user });
+      // The person asked for exactly this, on their own turn (CONSTITUTION S1, 2026-10-07): their request is the decision.
+      // Within their level only (permits); the save keeps a checkpoint (checkpoints.js), so the way back is one click.
+      const own = asked === true && ctx.byPerson && ctx.user?.id
+        && p.changes.every(c => p.screen || require('../../auth/permits').holds({ ...ctx.user, role: ctx.user.role }, `setting:${c.path}`));
+      if (own) {
+        settings.apply(p.id, { person: ctx.user });
+        audit(ctx, 'asked by the person: settings applied', p.id);
+        return `Applied, as they asked:\n${p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`).join('\n')}\n`
+          + 'The settings before it are kept as a checkpoint (Settings → System → Checkpoints restores them). Say what changed in one line.';
+      }
       // Unattended mode (approval.js): the owner chose not to be asked.
       if (approval.isUnattended()) {
         settings.apply(p.id);
