@@ -18,7 +18,16 @@ function fileOf(ref, ctx) {
   return null;
 }
 
-async function request({ url, method, body, headers, key, form, files, save_as }, ctx = {}) {
+/** Text by its type or by its bytes (no NUL and nearly all printable in the first 2 KB): a page, whatever it calls itself. */
+function looksText(type, bytes) {
+  if (/^(text\/|application\/(json|xml|xhtml|javascript|ecmascript|ld\+json|rss|atom)|[^;]*\+(json|xml)\b)/i.test(type || '')) return true;
+  const head = bytes.subarray(0, 2048);
+  if (!head.length || head.includes(0)) return false;
+  let ok = 0; for (const b of head) if (b === 9 || b === 10 || b === 13 || (b >= 32 && b < 127) || b >= 128) ok++;
+  return ok / head.length > 0.95;
+}
+
+async function request({ url, method, body, headers, key, form, files, save_as, binaryOnly = false }, ctx = {}) {
       const keys = require('../../service-keys');
       let h = { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(headers && typeof headers === 'object' ? headers : {}) };
       let secret = null, exchange = null, token = null;
@@ -52,6 +61,11 @@ async function request({ url, method, body, headers, key, form, files, save_as }
       catch (e) { return `Error: ${keys.scrub(e.message, secret, token)}`; }
       if (save_as && r.ok) {
         const bytes = Buffer.from(await r.arrayBuffer());
+        // A keyless download from an address that is not the owner's keeps a file, never a page: text is reading the
+        // web, which is the airlock's (scout, http_fetch) — kept and then read, it would go around it (found 2026-10-07
+        // by the live model reviewing A2).
+        if (binaryOnly && looksText(r.headers.get('content-type'), bytes))
+          return `Error: ${String(url).slice(0, 120)} answered with text (${r.headers.get('content-type') || 'no type'}), and a download without a key keeps only files such as a model, a picture or an archive. Reading a page is http_fetch's, or the scout's while specialists are on.`;
         const at = require('../../attachments');
         const rec = at.save(bytes, String(save_as).replace(/[\\/]/g, '_').slice(0, 120), { from: 'agent', ...(/^(application\/octet-stream|binary\/)/.test(r.headers.get('content-type') || 'application/octet-stream') ? {} : { mime: r.headers.get('content-type') }) });
         return `HTTP ${r.status}: saved ${at.humanBytes(bytes.length)} as ${rec.name} (${rec.path}). show_media shows it${at.playableKind(at.mimeFor(rec.name)) === 'model' ? ' as a 3D model' : ''}.`;
@@ -77,4 +91,4 @@ function owned(url) {
   return false;
 }
 
-module.exports = { request, fileOf, owned };
+module.exports = { request, fileOf, owned, looksText };
