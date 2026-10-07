@@ -56,7 +56,8 @@ async function traceShow(runId) {
   const what = s => {
     const d = s.data || {};
     if (s.kind === 'model') return `${escHtml(s.name)} · in ${d.prompt ?? `~${d.estimate ?? '?'}`}${d.cached ? ` (${d.cached} cached)` : ''} · out ${d.completion ?? '?'} · ${d.messages} msgs · ${d.tools} tools · sys ${escHtml(d.system || '')}${d.calls?.length ? ` → ${escHtml(d.calls.join(', '))}` : ''}${d.finish && d.finish !== 'stop' && d.finish !== 'tool_calls' ? ` · ${escHtml(d.finish)}` : ''}`;
-    if (s.kind === 'tool') return `${escHtml(s.name)}(${escHtml((d.args || []).join(', '))}) · ${d.chars} chars${d.failure ? ` · <span style="color:var(--red)">${escHtml(d.failure)}</span>` : ''}`;
+    if (s.kind === 'tool') return `${escHtml(s.name)}(${escHtml((d.args || []).join(', '))}) · ${d.chars} chars${d.failure ? ` · <span style="color:var(--red)">${escHtml(d.failure)}</span>` : ''}${d.tier ? ` · <span title="${escHtml(d.why || d.way || '')}">${escHtml(d.tier)}${d.way ? ` — way back: ${escHtml(d.way)}` : ''}</span>` : ''}`;
+    if (s.kind === 'triage') return `${escHtml(s.name || '')} → effort ${escHtml(d.effort || '?')}, ${d.steps ?? '?'} steps (by ${escHtml(d.by || '?')}: ${escHtml((d.reasons || []).join(', '))})`;
     return `${escHtml(s.name || '')} ${escHtml(JSON.stringify(s.data || {}).slice(0, 160))}`;
   };
   body.innerHTML = `<table class="data-table" style="width:100%;font-size:11px"><thead><tr><th>step</th><th>kind</th><th style="width:28%">time</th><th>what</th></tr></thead><tbody>

@@ -43,6 +43,8 @@ const TOOLS = [
   ...require('./toolbox/packs'),
   ...require('./toolbox/schedules'),
   ...require('./toolbox/features'),
+  ...require('./toolbox/screens'),
+  ...require('./toolbox/chronicle'),
 ];
 
 

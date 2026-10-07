@@ -2,9 +2,10 @@
 
 /**
  * Evaluation sets and their results (TODO H10.1). A set is JSON — `{ id, title, description, cases: [{ id, prompt,
- * mode?, checks: [...] }] }` (checks: check.js) — shipped in the repository's `evals/` (read-only, so a fresh install
- * has them) or written under DATA_DIR/evals/sets, where a file of the same id wins. Results are one JSON file per run
- * under DATA_DIR/evals/results/<set>/, the last `logs.evalResultsKept` (30) kept, so a run can be compared with the one before it.
+ * mode?, difficulty?, checks: [...] }] }` (checks: check.js; difficulty small | medium | large, a tag for measuring) —
+ * shipped in the repository's `evals/` (read-only, so a fresh install has them) or written under DATA_DIR/evals/sets,
+ * where a file of the same id wins. Results are one JSON file per run under DATA_DIR/evals/results/<set>/, the last
+ * `logs.evalResultsKept` (30) kept, so a run can be compared with the one before it.
  */
 const fs = require('fs');
 const path = require('path');
@@ -12,6 +13,7 @@ const path = require('path');
 const SHIPPED = path.join(__dirname, '..', '..', 'evals');
 const dir = (...p) => path.join(require('../store').DATA_DIR, 'evals', ...p);
 const ID = /^[a-z0-9][\w-]{0,60}$/i;
+const DIFFICULTY = ['small', 'medium', 'large'];
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
 
 function readDir(d, origin) {
@@ -38,8 +40,11 @@ function validate(set) {
     if (!String(c.prompt || '').trim()) throw bad(`Case ${c.id} has no prompt.`);
     if (!Array.isArray(c.checks) || !c.checks.length) throw bad(`Case ${c.id} has no checks.`);
     if (c.mode && !['agent', 'plan', 'ask', 'debug'].includes(c.mode)) throw bad(`Case ${c.id}: mode is agent, plan, ask or debug.`);
+    if (c.difficulty && !DIFFICULTY.includes(c.difficulty)) throw bad(`Case ${c.id}: difficulty is ${DIFFICULTY.join(', ')}.`);
   }
-  return { id: set.id, title: String(set.title || set.id), description: String(set.description || ''), cases: set.cases.map(c => ({ id: c.id, prompt: String(c.prompt), ...(c.mode ? { mode: c.mode } : {}), checks: c.checks })) };
+  // `difficulty` is a tag the checks ignore: measurements group by it (experiment adaptiveLimits).
+  return { id: set.id, title: String(set.title || set.id), description: String(set.description || ''), cases: set.cases.map(c => ({ id: c.id, prompt: String(c.prompt),
+    ...(c.mode ? { mode: c.mode } : {}), ...(c.difficulty ? { difficulty: c.difficulty } : {}), checks: c.checks })) };
 }
 
 function save(set) {

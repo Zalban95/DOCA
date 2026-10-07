@@ -4,7 +4,7 @@
   "description": "The decisions a smaller model gets wrong first (audit 2026-10-06, TODO B7): answering without a tool when none is needed, the specific tool over the shell, the panel's installer over a hand-written command, a proposal over editing settings, a skill before improvising — and the rare tools that the toolTiers experiment sends only by name (canvas, schedule, memory rules). Cases must hold on any machine: one that asks to install what is already running measures nothing (2026-10-07). Compare models and the flag with npm run eval -- routing --models a/b,c/d --flag toolTiers.",
   "cases": [
     {
-      "id": "no-tool-greeting",
+      "id": "no-tool-greeting", "difficulty": "small",
       "prompt": "Hi! Just say hello back, nothing else.",
       "checks": [
         {
@@ -16,7 +16,7 @@
       ]
     },
     {
-      "id": "machine-status",
+      "id": "machine-status", "difficulty": "small",
       "prompt": "Is the GPU busy right now, and with what?",
       "checks": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     {
-      "id": "search-not-grep",
+      "id": "search-not-grep", "difficulty": "medium",
       "prompt": "Find every file in the workspace that mentions the word invoice.",
       "checks": [
         {
@@ -37,7 +37,7 @@
       ]
     },
     {
-      "id": "their-way",
+      "id": "their-way", "difficulty": "medium",
       "prompt": "Find every file in the workspace that mentions the word invoice — use grep through the shell, I want to see the exact command.",
       "checks": [
         {
@@ -49,7 +49,7 @@
       ]
     },
     {
-      "id": "remember",
+      "id": "remember", "difficulty": "small",
       "prompt": "Remember that the office router is at 192.168.1.1.",
       "checks": [
         {
@@ -61,7 +61,7 @@
       ]
     },
     {
-      "id": "my-day",
+      "id": "my-day", "difficulty": "medium",
       "prompt": "What's on my calendar today, and will it rain?",
       "checks": [
         {
@@ -70,7 +70,7 @@
       ]
     },
     {
-      "id": "install-proposed",
+      "id": "install-proposed", "difficulty": "small",
       "prompt": "Download the Ollama model qwen3:0.6b to this machine for me.",
       "checks": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     {
-      "id": "settings-proposed",
+      "id": "settings-proposed", "difficulty": "small",
       "prompt": "Set your context window to 128000 tokens.",
       "checks": [
         {
@@ -94,7 +94,7 @@
       ]
     },
     {
-      "id": "skill-before-improvising",
+      "id": "skill-before-improvising", "difficulty": "large",
       "prompt": "Build the Android app in ~/DocaMobile and install it on my phone.",
       "checks": [
         {
@@ -109,7 +109,7 @@
       ]
     },
     {
-      "id": "rare-canvas",
+      "id": "rare-canvas", "difficulty": "medium",
       "prompt": "Lay out a sortable table of the eight planets and their diameters, in a page beside the chat.",
       "checks": [
         {
@@ -118,7 +118,7 @@
       ]
     },
     {
-      "id": "rare-schedule",
+      "id": "rare-schedule", "difficulty": "medium",
       "prompt": "Every weekday at 9 in the morning, send me a short summary of my day.",
       "checks": [
         {
@@ -127,7 +127,7 @@
       ]
     },
     {
-      "id": "rare-memory-rules",
+      "id": "rare-memory-rules", "difficulty": "medium",
       "prompt": "Change your memory rules: from now on every network address you remember goes under a category called network.",
       "checks": [
         {

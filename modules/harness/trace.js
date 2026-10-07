@@ -48,15 +48,21 @@ function onEvent(evt) {
     }
     case 'tool_result': {
       const started = (t.open.get(evt.name) || []).shift();
+      const risk = t.risks?.get(evt.name)?.shift();   // experiment riskTiers: the tier and its way back (fixed words, a checkpoint id)
       return write(t, 'tool', { name: evt.name, step: evt.step, ms: started ? Date.now() - started : null, data: {
-        args: t.args?.get(evt.name)?.shift() || [], chars: String(evt.result ?? '').length, failure: evt.failure?.kind || null } });
+        args: t.args?.get(evt.name)?.shift() || [], chars: String(evt.result ?? '').length, failure: evt.failure?.kind || null,
+        ...(risk ? { tier: risk.tier, way: risk.way || null, why: risk.why || null } : {}) } });
     }
     case 'approval':
       return write(t, 'approval', { name: evt.tool || null, step: evt.step, data: { state: evt.state, decision: evt.decision || null } });
     case 'failover':
       return write(t, 'failover', { step: evt.step, data: { from: evt.from || null, to: evt.to || null } });
     case 'warning':
-      return write(t, 'warning', { name: evt.kind || null, step: evt.step ?? null, data: evt.waitMs ? { waitMs: evt.waitMs } : null });
+      return write(t, 'warning', { name: evt.kind || null, step: evt.step ?? null,
+        data: evt.waitMs ? { waitMs: evt.waitMs } : evt.kind === 'extended' ? { to: evt.to, why: evt.why } : null });
+    case 'triage':   // the verdict that set this turn's effort and steps (turn/triage.js)
+      return write(t, 'triage', { name: `${evt.difficulty}${evt.urgency === 'quick' ? ' · quick' : ''}`, data: {
+        difficulty: evt.difficulty, urgency: evt.urgency, by: evt.by, reasons: evt.reasons, effort: evt.effort, steps: evt.steps, base: evt.base, ceiling: evt.ceiling } });
     case 'compacted':
       return write(t, 'compacted', { step: evt.at ?? null, data: { contextTokens: evt.contextTokens ?? null } });
     case 'error':
@@ -73,6 +79,8 @@ function remember(evt) {
   const list = t.args.get(evt.name) || [];
   list.push(argNames(evt.args));
   t.args.set(evt.name, list);
+  t.risks ||= new Map();
+  t.risks.set(evt.name, [...(t.risks.get(evt.name) || []), evt.risk || null]);
 }
 
 let subscribed = false;

@@ -90,7 +90,9 @@ function _wsActivity(a) {
   const near = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   const row = document.createElement('div');
   row.className = `ws-act ${a.kind}${a.failed ? ' failed' : ''}`;
-  row.innerHTML = `<span class="ws-who">${escHtml(a.who || '')}</span>${escHtml(a.text)}`;
+  // A call's risk tier (experiment riskTiers): read, reversible with its way back, or outward — asked.
+  const tier = a.tier ? `<span class="ws-tier ${escHtml(a.tier)}" title="${escHtml(a.way ? `Way back: ${a.way}` : a.why || '')}">${escHtml(a.tier)}</span>` : '';
+  row.innerHTML = `<span class="ws-who">${escHtml(a.who || '')}</span>${tier}${escHtml(a.text)}${a.way ? `<span class="ws-way"> ↩ ${escHtml(a.way)}</span>` : ''}`;
   box.append(row);
   if (++WS.lines > 400) { box.firstElementChild?.remove(); WS.lines--; }
   if (near) box.scrollTop = box.scrollHeight;

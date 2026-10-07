@@ -63,6 +63,7 @@ function available() {
         description: t.description,
         schema:      t.inputSchema,
         readOnly:    t.readOnly,
+        openWorld:   !!t.openWorld, destructive: !!t.destructive,   // its annotations, for the risk tiers (harness/risk)
       });
     }
   }

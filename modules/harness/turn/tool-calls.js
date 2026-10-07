@@ -32,7 +32,10 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     try { args = tc.function?.arguments ? JSON.parse(tc.function.arguments) : {}; }
     catch { args = { _raw: tc.function?.arguments }; }
 
-    say({ type: 'tool_call', name, args, step });
+    // Experiment riskTiers (harness/risk): the call's tier and its way back ride on its event — the trace and the
+    // Workstream name them — and a reversible change in a project gets a checkpoint first. Null while it is off.
+    const risk = args._raw === undefined ? await require('../risk').before(name, args, { sessionId: session.id }) : null;
+    say({ type: 'tool_call', name, args, step, ...(risk ? { risk } : {}) });
 
     // Manual approval, if it is on. The gate is here rather than inside
     // `tools.call` because this is where `say()` is — the question has to
@@ -46,7 +49,7 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     const permit = args._raw === undefined ? require('../../auth/permits').tool({ person: client?.user, profile, missionId, sessionId: session.id, name, args }) : { allowed: true };
     if (!permit.allowed && refused === null) refused = `Refused: ${permit.why}. An admin, or someone holding delegate, can grant it in Settings → Users`
       + `${isMission ? '; the agent that dispatched this mission can grant it for the mission with permission_grant' : ''}.`;
-    const gate = args._raw === undefined && refused === null ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission, forceAsk: permit.ask }) : null;
+    const gate = args._raw === undefined && refused === null ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission, forceAsk: permit.ask, risk }) : null;
     if (gate) {
       if (isMission) {
         refused = approval.missionRefusal(gate);

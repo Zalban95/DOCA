@@ -11,6 +11,11 @@
  * conversations and anything their tools wrote never land in the real data.
  */
 const CLIENT = { name: 'Evaluation', kind: 'browser', formFactor: 'desktop', screen: { w: 1440, h: 900 } };
+/** A case may ask from another kind of device (`client: "phone"` or `"watch"`), as a person with only that would. */
+const CLIENTS = {
+  phone: { name: 'Evaluation phone', kind: 'phone', formFactor: 'phone', screen: { w: 412, h: 915 }, input: { touch: true, voice: true, text: true, camera: true } },
+  watch: { name: 'Evaluation watch', kind: 'watch', formFactor: 'watch', screen: { w: 450, h: 450, shape: 'round' }, input: { touch: true, voice: true } },
+};
 
 /** What a turn did, from its conversation: the answer and the tools it called, in order. */
 function outcomeOf(sessionId, r, error) {
@@ -27,11 +32,11 @@ async function runCase(kase, setId) {
   const s = memory.createSession(`Eval · ${setId} · ${kase.id}`, { activate: false });
   if (kase.mode && kase.mode !== 'agent') memory.updateSession(s.id, { mode: kase.mode });
   let r = null, error = null;
-  try { r = await require('../harness/agent').turn({ message: kase.prompt, sessionId: s.id, client: CLIENT }); }
+  try { r = await require('../harness/agent').turn({ message: kase.prompt, sessionId: s.id, client: CLIENTS[kase.client] || CLIENT }); }
   catch (e) { error = e; }
   const o = outcomeOf(s.id, r, error);
   const checks = await require('./check').evaluate(kase, o);
-  return { id: kase.id, prompt: kase.prompt, ...o, text: String(o.text).slice(0, 4000), checks, pass: checks.every(c => c.pass) };
+  return { id: kase.id, prompt: kase.prompt, ...(kase.difficulty ? { difficulty: kase.difficulty } : {}), ...o, text: String(o.text).slice(0, 4000), checks, pass: checks.every(c => c.pass) };
 }
 
 /** Every case in order; `onCase(result, i, n)` after each. Returns the whole result, with regressions against `previous`. */

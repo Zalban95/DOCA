@@ -26,7 +26,7 @@ function otlp(run, spans, { service = 'doca' } = {}) {
         'gen_ai.usage.output_tokens': d.completion, 'gen_ai.response.finish_reasons': d.finish, 'doca.step': s.step, 'doca.messages': d.messages,
         'doca.tools': d.tools, 'doca.system_prompt_sha256': d.system, 'doca.cached_tokens': d.cached, 'doca.tool_calls': (d.calls || []).join(',') || null })
       : attrs({ 'gen_ai.operation.name': 'execute_tool', 'gen_ai.tool.name': s.name, 'doca.step': s.step, 'doca.args': (d.args || []).join(',') || null,
-        'doca.result_chars': d.chars, 'doca.failure': d.failure });
+        'doca.result_chars': d.chars, 'doca.failure': d.failure, 'doca.risk.tier': d.tier, 'doca.risk.way': d.way });
     return { traceId, spanId: hex(`${run.id}/${s.seq}`, 8), parentSpanId: rootId, name: s.kind === 'model' ? `chat ${d.model || ''}`.trim() : `execute_tool ${s.name}`,
       kind: s.kind === 'model' ? 3 : 1, startTimeUnixNano: `${startNs}`, endTimeUnixNano: `${endNs}`, attributes: a,
       status: s.kind === 'tool' && d.failure ? { code: 2, message: d.failure } : { code: 0 } };
