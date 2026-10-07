@@ -2,7 +2,7 @@
    DOCA PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','ambient','logs','files','projects','harness','workstream','archive','computers','live','terminal','models','docker','vms','mcp','connectors','apikeys','settings'];
+const NAV_TABS = ['controls','ambient','logs','files','projects','harness','workstream','archive','chronicle','computers','live','terminal','models','docker','vms','mcp','connectors','apikeys','settings'];
 /** Tabs that are the machine itself: left out for a person without host (settings.js). */
 const HOST_TABS = ['logs', 'files', 'projects', 'terminal', 'computers'];
 
@@ -31,6 +31,7 @@ function nav(name) {
   if (name === 'archive')  archiveInit();
   computersTab(name === 'computers');
   if (typeof workstreamTab === 'function') workstreamTab(name === 'workstream');
+  if (typeof chronicleTab === 'function') chronicleTab(name === 'chronicle');   // hears turns and missions only while shown
   if (typeof ambientTab === 'function') ambientTab(name === 'ambient');
   if (name === 'models' && typeof wakewordTab === 'function') wakewordTab();
   if (name === 'models' && typeof modelsRolesCard === 'function') modelsRolesCard();

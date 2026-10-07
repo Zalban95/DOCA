@@ -94,7 +94,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   recent the sign-in; the route checks it too.
 - [x] P1.12 **Log settings** — *(branch p1-12-chronicle, version at release): `modules/log-keep.js` lists every store of what happened with its bounds and what it holds (Settings → System → Logs); `logs.*` (harness, Workstream and MCP lines in memory, runs' days, background jobs, evaluation results) and `tracing.maxSpans` declared, not proposable, enforced at start, daily and on save; checkpoints, migration copies and device queues shown as fixed.*: what is kept, for how long and how much (per source: turns, tools, traces, devices,
   services), so logs never fill memory or disk needlessly; defaults sized for a small machine.
-- [ ] P1.13 **Chronicle — the log analyzer tab**: everything that happened, searchable and filtered by source,
+- [x] P1.13 **Chronicle — the log analyzer tab** — *(branch p1-12-chronicle): Agents → Chronicle (`modules/chronicle`, `/api/chronicle`, right `read`, rows scoped by session-access): every run with its conversation, person, device (now kept on the run), agent, cost and outcome, filtered and searched, plus the harness log for a host; a story per run, conversation or mission from runs and traces — why, models, tools, failures, refusals, cost, what it started. The design comes later.*: everything that happened, searchable and filtered by source,
   person, device, agent and time, with the story of a piece of work told from its logs and traces (what ran, why,
   what it cost, what failed) — the place unrendered work is seen afterwards.
 

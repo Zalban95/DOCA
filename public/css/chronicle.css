@@ -1,0 +1,46 @@
+/* Agents → Chronicle (js/chronicle.js, js/chronicle-story.js): everything that happened, filtered, beside the story of
+   the piece of work picked. Plain for now: the design comes later. */
+#tab-chronicle.active { display: flex; flex-direction: column; overflow: hidden; }
+.chron-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--border2); flex-shrink: 0; }
+.chron-title { font-family: var(--font-ui); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.chron-hint { font-size: 11px; color: var(--muted); margin-right: auto; }
+.chron-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px; flex-shrink: 0; }
+.chron-filters .input { width: auto; min-width: 0; font-size: 12px; }
+.chron-filters input.input { flex: 1 1 180px; }
+.chron-totals { font-size: 11px; color: var(--muted); padding: 0 14px 6px; flex-shrink: 0; }
+.chron-body { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); min-height: 0; border-top: 1px solid var(--border); }
+.chron-list, .chron-story { overflow: auto; min-height: 0; }
+.chron-list { border-right: 1px solid var(--border); }
+.chron-row { display: grid; grid-template-columns: 74px 1fr auto; gap: 4px 10px; padding: 7px 14px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12px; }
+.chron-row:hover { background: var(--raised); }
+.chron-row.active { background: var(--dim); box-shadow: inset 2px 0 0 var(--accent); }
+.chron-when { color: var(--muted); font-size: 11px; font-family: var(--font-mono); }
+.chron-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.chron-meta { grid-column: 2 / 4; color: var(--muted); font-size: 11px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chron-state { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.chron-state.done, .chron-state.info { color: var(--green); }
+.chron-state.failed, .chron-state.error { color: var(--red); }
+.chron-state.cancelled, .chron-state.warn { color: var(--amber); }
+.chron-state.running { color: var(--blue); }
+.chron-story { padding: 12px 16px; font-size: 12px; }
+.chron-story h3 { margin: 0 0 4px; font-size: 14px; color: var(--bright); }
+.chron-kv { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0; }
+.chron-kv span { color: var(--muted); } .chron-kv b { color: var(--text); font-weight: 500; }
+.chron-run { border: 1px solid var(--border2); background: var(--surface); padding: 8px 10px; margin: 8px 0; }
+.chron-run.failed { border-color: var(--red); }
+.chron-run-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.chron-why { color: var(--text); margin: 4px 0; }
+.chron-tools { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+.chron-tool { font-family: var(--font-mono); font-size: 11px; padding: 1px 6px; border: 1px solid var(--border2); background: var(--raised); }
+.chron-tool.bad { border-color: var(--red); color: var(--red); }
+.chron-bad { color: var(--red); }
+.chron-warn { color: var(--amber); }
+.chron-log { font-family: var(--font-mono); font-size: 11px; white-space: pre-wrap; color: var(--muted); max-height: 260px; overflow: auto; }
+.chron-empty { padding: 30px 16px; color: var(--muted); font-size: 12px; text-align: center; }
+@media (max-width: 800px) {
+  /* A phone scrolls the page as a whole: the list, then the story of the one picked. */
+  #tab-chronicle.active { overflow-y: auto; }
+  .chron-body { display: block; }
+  .chron-list { border-right: 0; max-height: 55vh; }
+  .chron-story { border-top: 1px solid var(--border2); overflow: visible; }
+}
