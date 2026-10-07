@@ -776,3 +776,21 @@ test('a picture a tool returns is kept as an attachment, and the agent is told w
   assert.equal(shown[0].name, path.basename(saved), 'shown as it is');
   assert.equal(fs.readdirSync(path.dirname(saved)).length, before, 'not stored a second time');
 });
+
+test('a secret in a server\'s address or command line reads as the mask, and a save puts it back (audit 2026-10-07)', async () => {
+  const reg = require('../modules/mcp/registry');
+  const secret = 'V0B9Al0DqO9713Qmsjv9aMEfWCGbxoNTZ6z';
+  reg.upsert({ id: 'hosted-secret', transport: 'http', url: `http://100.72.168.60:8742/mcp/${secret}?k=1` });
+  reg.upsert({ id: 'argv-secret', command: process.execPath, args: ['server.js', '--api-token', 'tok-123456', '--key=abcdef', '--port', '3000'] });
+  const listed = JSON.stringify(reg.list());
+  assert.ok(!listed.includes(secret) && !listed.includes('tok-123456') && !listed.includes('abcdef'), listed);
+  assert.match(listed, /mcp\/••••••••/);
+  assert.match(listed, /"--port","3000"/, 'what is not secret stays readable');
+  const shown = reg.list().find(s => s.id === 'hosted-secret');
+  reg.upsert({ ...shown, label: 'renamed' });
+  assert.equal(reg.get('hosted-secret').url, `http://100.72.168.60:8742/mcp/${secret}?k=1`, 'saving what was shown keeps the real address');
+  const argv = reg.list().find(s => s.id === 'argv-secret');
+  reg.upsert({ ...argv, label: 'x' });
+  assert.deepEqual(reg.get('argv-secret').args, ['server.js', '--api-token', 'tok-123456', '--key=abcdef', '--port', '3000']);
+  reg.remove('hosted-secret'); reg.remove('argv-secret');
+});
