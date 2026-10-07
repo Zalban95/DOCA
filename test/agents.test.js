@@ -176,8 +176,18 @@ test('a step count is the definition\'s business — nothing caps it', () => {
   // in the prompt, which is the wrong instrument aimed at the wrong thing.
   assert.equal(registry.normalize({ id: 'long', role: 'x', maxSteps: 40 }).maxSteps, 40);
   assert.equal(registry.normalize({ id: 'longer', role: 'x', maxSteps: 500 }).maxSteps, 500);
-  assert.equal(registry.normalize({ id: 'silent', role: 'x' }).maxSteps, 12, 'only the fallback applies');
-  assert.equal(registry.normalize({ id: 'zero', role: 'x', maxSteps: 0 }).maxSteps, 12);
+  assert.equal(registry.normalize({ id: 'silent', role: 'x' }).maxSteps, 30, 'only the fallback applies');
+  assert.equal(registry.normalize({ id: 'zero', role: 'x', maxSteps: 0 }).maxSteps, 30);
+});
+
+test('the shipped specialists have room for a real errand (self-test 2026-10-08, #6)', () => {
+  // Every Tester mission of the self-test hit 40 steps, most without a report. Never lowered: the owner's rule.
+  const steps = id => registry.get(id).maxSteps;
+  assert.ok(steps('tester') >= 120, 'a test errand: sign in, set up, sweep, prove, report');
+  assert.ok(steps('coder') >= 80);
+  assert.ok(steps('researcher') >= 40);
+  assert.ok(steps('scout') >= 30);
+  assert.ok(steps('archivist') >= 10);
 });
 
 test('when a specialist runs out of steps it names its own limit, not the panel\'s', () => {

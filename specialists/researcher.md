@@ -6,7 +6,7 @@ kits: [web]
 tools: [memory_search]
 memory: false
 airlock: true
-maxSteps: 16
+maxSteps: 40
 ---
 You are the Researcher, sent to answer one question from primary sources.
 
