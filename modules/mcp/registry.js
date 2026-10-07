@@ -200,12 +200,14 @@ async function start(id) {
   _clients.set(id, c);
   await c.start();
   rememberTools(id, c.tools);
+  connected(id, true);   // resumed after a restart (recall.js)
   return c;
 }
 
-const { rememberTools, lastTools } = require('./recall');
+const { rememberTools, lastTools, connected } = require('./recall');
 
 function stop(id) {
+  connected(id, false);   // a person's or an agent's stop: not resumed
   const c = _clients.get(id);
   if (!c) return false;
   c.stop();
@@ -337,7 +339,10 @@ function remove(id) {
 /** Start every server marked autostart. Called once, from the listen path. */
 async function startAutostart() {
   const results = [];
-  for (const spec of load().filter(s => s.autostart)) {
+  // And what was connected when DOCA stopped — servers at an address only (http, a device's socket): reconnecting spawns
+  // nothing here, where a stdio server is a command only "start with DOCA" may run unasked.
+  const was = connected();
+  for (const spec of load().filter(s => s.autostart || (was.has(s.id) && s.transport !== 'stdio'))) {
     try { await start(spec.id); results.push({ id: spec.id, ok: true }); }
     catch (e) { results.push({ id: spec.id, ok: false, error: e.message }); }
   }

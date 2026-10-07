@@ -17,4 +17,20 @@ function rememberTools(id, tools) {
 }
 function lastTools(id) { try { return require('../store').readJson(LAST_TOOLS, {})[id] || null; } catch { return null; } }
 
-module.exports = { rememberTools, lastTools };
+/**
+ * What was connected when DOCA last stopped (2.269.0): a version switch or a restart dropped every server that is not
+ * "start with DOCA", so a phone's tools vanished from the agent at each update until someone reconnected it. A start
+ * records the server and a stop by a person or an agent forgets it; shutting down does neither. `on` undefined reads.
+ */
+const CONNECTED = 'mcp-connected';
+function connected(id, on) {
+  try {
+    const store = require('../store'), ids = new Set(store.readJson(CONNECTED, { ids: [] }).ids);
+    if (on === undefined) return ids;
+    if (on) ids.add(id); else ids.delete(id);
+    store.writeJson(CONNECTED, { ids: [...ids] });
+  } catch { /* a record is a convenience, never a failure */ }
+  return new Set();
+}
+
+module.exports = { rememberTools, lastTools, connected };

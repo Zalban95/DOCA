@@ -794,3 +794,23 @@ test('a secret in a server\'s address or command line reads as the mask, and a s
   assert.deepEqual(reg.get('argv-secret').args, ['server.js', '--api-token', 'tok-123456', '--key=abcdef', '--port', '3000']);
   reg.remove('hosted-secret'); reg.remove('argv-secret');
 });
+
+test('what was connected is resumed after a restart; what a person stopped, or a command, is not (2.269.0)', async () => {
+  const registry = require('../modules/mcp/registry');
+  const httpStub = await httpServer.start();
+  test.after(() => httpStub.close());
+  registry.upsert({ id: 'resume-me', label: 'Resume me', transport: 'http', url: httpStub.url });
+  registry.upsert({ id: 'stopped-by-hand', label: 'Stopped by hand', transport: 'http', url: httpStub.url });
+  registry.upsert({ id: 'resume-cmd', label: 'A command', transport: 'stdio', command: process.execPath, args: [STUB] });
+  for (const id of ['resume-me', 'stopped-by-hand', 'resume-cmd']) await registry.start(id);
+  registry.stop('stopped-by-hand');
+
+  registry.stopAll();   // what shutting down does: nothing is forgotten
+  const results = await registry.startAutostart();
+  const ids = results.map(r => r.id);
+  assert.ok(ids.includes('resume-me'), 'reconnected after the restart');
+  assert.equal(registry.client('resume-me')?.state, 'running');
+  assert.ok(!ids.includes('stopped-by-hand'), 'a stop by a person is not undone');
+  assert.ok(!ids.includes('resume-cmd'), 'a command is spawned only by "start with DOCA"');
+  for (const id of ['resume-me', 'stopped-by-hand', 'resume-cmd']) { registry.stop(id); registry.remove(id); }
+});
