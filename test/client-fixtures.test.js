@@ -18,7 +18,7 @@ const bus = require('../modules/api-v1/bus');
 
 const DIR = path.join(__dirname, '..', 'docs', 'api', 'fixtures');
 const WRITE = process.env.DOCA_WRITE_FIXTURES === '1';
-const NAMES = ['agent.mission-running', 'agent.mission-done', 'agent.mission-archived', 'agent.mission-work-stopped',
+const NAMES = ['agent.mission-running', 'agent.mission-done', 'agent.mission-archived', 'agent.mission-seen', 'agent.mission-work-stopped',
   'prompt.new', 'prompt.closed', 'alert'];
 
 test.before(() => H.start());
@@ -35,6 +35,7 @@ async function frames() {
   const done = { ...row, state: 'done', steps: 5, tokens: 21000, endedAt: '2026-10-06T18:04:00.000Z', result: 'b6000 adds the router mode.', plan: row.plan.map(p => ({ ...p, state: 'done' })) };
   missions.announce(done); out['agent.mission-done'] = last('agent.mission');
   missions.announce({ ...done, archivedAt: '2026-10-06T19:00:00.000Z' }, { quiet: true }); out['agent.mission-archived'] = last('agent.mission');
+  missions.announce({ ...done, seenAt: '2026-10-06T18:30:00.000Z' }, { quiet: true }); out['agent.mission-seen'] = last('agent.mission');   // read means done (harness/seen.js)
 
   const memory = require('../modules/harness/memory');
   const w = memory.createSession('Laya MCP server', { activate: false, kind: 'work', parentId: memory.mainSession().id });
