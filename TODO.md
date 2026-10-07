@@ -59,7 +59,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 - [x] A3 **Phone and watch honour `quiet` and `archivedAt`** — *2.245.3 (documented; work chats stopped/dropped are `cancelled`, archiving one is quiet), DocaMobile 1.0.9, DocaWear 1.2.2* (cl 1–2, 16): PROTOCOL and OpenAPI document `archivedAt`,
   `kind`, `plan`, `progress` and "quiet + archivedAt = remove, never notify"; DocaMobile and DocaWear parse them (their
   TODOs); Wear treats `paused` as waiting, not finished.
-- [ ] A4 **The phone's screen tools get the computer's rules** (cl 5–6): DocaMobile classifies the target (password
+- [x] A4 **The phone's screen tools get the computer's rules** — *DocaMobile 1.0.15 (classifies, confirm, openWorldHint), DocaDesk master (openWorldHint), hub 2.260.0 (`forced-asks.js`: any `mcp__` tool with `confirm: true` is put to a person, every mode, no "always")* (cl 5–6): DocaMobile classifies the target (password
   fields refused, pay/sign-in/submit need `confirm: true`) and marks screen/files reads `openWorldHint` (DocaDesk too);
   the hub forces a question for any device tool called with `confirm: true`. **Ask first** (approval).
 - [x] A5 **DocaWear refuses a phone APK** — *2.245.4 (the hub reads the watch mark with aapt2), DocaWear 1.2.3* (cl 14): the hub checks the watch mark (aapt2 `type.watch`) before keeping a
@@ -83,7 +83,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   "# What you have" readings block (keys, logins, computers) instead of tool-description inventories; "save as recipe"
   offered after a multi-step turn that succeeded.
 - [x] B6 **Reach what the hub can do** (aw 6, 9; coh F10) — *2.250.0: `system_status` names every local model server and who it works for (model-servers.js); `today` gives the person's weather, calendar and notices (ambient.today)*
-- [ ] B6b **The rest of B6** (aw 5, 7–8, 10; coh F9): `hub_command` over the `/api/v1` command registry and
+- [~] B6b **The rest of B6** — *2.260.0: `hub_command {list|run}` over the command registry (services, containers, the stack, llama.cpp servers, skills, snapshots — so `service_control` is one of its commands, not a tool of its own); a `confirm` command always asked, never "always"; `panel.restart` left out; in `NEVER`.* (aw 5, 7–8, 10; coh F9): `hub_command` over the `/api/v1` command registry and
   `service_control {id, start|stop}` (both act on the machine: asked like `shell`, a `confirm` command never "always" —
   an approval rule, **ask first**); one-off `remind` — *done in 2.257.0 (approved 2026-10-07: fires without a click, once, on the person's own devices)*; `screen {list | show | propose}`; retire `models-llamacpp-external.js` for
   model-servers.js (W14: keep/archive/delete); per feature, tool / recipe / a person's alone for wake-word training,
