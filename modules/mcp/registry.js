@@ -204,7 +204,7 @@ async function start(id) {
   return c;
 }
 
-const { rememberTools, lastTools, connected } = require('./recall');
+const { rememberTools, lastTools, connected, stoppedOnPurpose } = require('./recall');
 
 function stop(id) {
   connected(id, false);   // a person's or an agent's stop: not resumed
@@ -227,9 +227,10 @@ async function restart(id) {
  * live client kept dialling the old one. Never throws; a failed connect shows in
  * the MCP tab as it always did.
  */
-function wakeForDevice(deviceId) {
+function wakeForDevice(deviceId, { resuming = false } = {}) {
   const spec = forDevice(deviceId);
   if (!spec) return;
+  if (resuming && stoppedOnPurpose(spec.id)) return;   // a device coming back does not undo a person's stop
   const c = _clients.get(spec.id);
   if (c?.state === 'running' && c.spec.url === spec.url) return;
   if (c) c.stop(true);
