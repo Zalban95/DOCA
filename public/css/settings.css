@@ -65,3 +65,9 @@
 
 /* Under the harness ⚙'s model dropdown when its provider did not answer (js/harness/params.js) */
 .hcfg-model-hint { flex-basis: 100%; font-size: 11px; color: var(--amber); margin-top: 4px; white-space: normal; }
+
+/* Appearance's other palettes, one fold away (js/settings/appearance.js) */
+.theme-more { grid-column: 1 / -1; margin-top: 4px; }
+.theme-more > summary { cursor: pointer; font-size: 12px; color: var(--text); padding: 6px 0; }
+.theme-more > summary span { color: var(--muted); }
+.theme-more > .theme-grid { margin-top: 8px; }

@@ -35,7 +35,7 @@ async function screenSettingsNote() {
   const own = Object.entries(s.from || {}).filter(([, f]) => f === 'device').map(([k]) => k);
   const note = Object.assign(document.createElement('div'), { id: 'screen-note' });
   note.style.cssText = 'font-size:11px;color:var(--muted);margin-top:10px';
-  note.innerHTML = `Style, colours, tabs and sidebar sections are this screen's own — <b>${escHtml(s.name || 'this browser')}</b> — so a phone and a desk can differ.
+  note.innerHTML = `The look, its colours, tabs and sidebar sections are this screen's own — <b>${escHtml(s.name || 'this browser')}</b> — so a phone and a desk can differ.
     ${own.length ? `<a href="#" onclick="screenReset();return false">Use the hive's again</a> (${escHtml(own.join(', '))})` : 'It follows the hive\'s for now.'}`;
   status.before(note);
 }
