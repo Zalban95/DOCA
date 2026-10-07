@@ -25,10 +25,7 @@ function showMedia(p, caption, ctx = {}) {
   const abs  = resolvePath(p, ctx);
   const mime = attachments.mimeFor(abs);
   const kind = attachments.playableKind(mime);
-  if (!kind)
-    throw new Error(`${path.basename(abs)} is not something a chat can show (images: png, jpg, webp, gif, avif, `
-      + 'svg; video: mp4, webm, mov, mkv; audio: mp3, wav, ogg, m4a, flac, aac; documents: md, txt; 3D models: glb, gltf, stl, obj, fbx, ply, 3mf, usdz). Convert it '
-      + 'first, for example: ffmpeg -i in.avi out.mp4');
+  if (!kind) throw unshowable(abs);
 
   const cap = kind === 'image' ? SHOW_IMAGE_MAX : SHOW_MEDIA_MAX;
   const bytes = fs.statSync(abs).size;
@@ -47,6 +44,28 @@ function showMedia(p, caption, ctx = {}) {
     + 'do not describe it again unless they ask.';
 }
 
+const unshowable = file => new Error(`${path.basename(file)} is not something a chat can show (images: png, jpg, webp, gif, avif, `
+  + 'svg; video: mp4, webm, mov, mkv; audio: mp3, wav, ogg, m4a, flac, aac; documents: md, txt; 3D models: glb, gltf, stl, obj, fbx, ply, 3mf, usdz). Convert it '
+  + 'first, for example: ffmpeg -i in.avi out.mp4');
+
+/**
+ * Show a file from inside a computer this conversation works in (self-test 2026-10-08: a Tester's screenshot was
+ * "outside the allowed roots", and a specialist has no `computer get`). Copied out the way `computer get` does —
+ * docker cp, kept as an attachment from mcp:computer-<id> — and only from the turn's own computer: a sandbox the
+ * agent already drives, never another conversation's.
+ */
+async function showFromComputer(id, p, caption, ctx = {}) {
+  const whose = require('../../computers/whose');
+  const mine = whose.ofConversation(ctx.sessionId);
+  if (!mine.includes(String(id)))
+    throw new Error(`Computer ${id} is not one this conversation works in (${mine.length ? `yours: ${mine.join(', ')}` : 'it has none'}); `
+      + 'show_media copies a file only out of your own computer.');
+  whose.check(ctx.user, id);
+  const attachments = require('../../attachments');
+  if (!attachments.playableKind(attachments.mimeFor(String(p || '')))) throw unshowable(String(p || 'that file'));
+  const kept = await require('../../computers').fetchFile(id, p);
+  return showMedia(kept.path, caption, ctx);
+}
 
 module.exports = [
   {
@@ -94,12 +113,13 @@ module.exports = [
     parameters: {
       type: 'object',
       properties: {
-        path:    { type: 'string', description: 'The media file. Absolute, or relative to the agent workspace.' },
+        path:    { type: 'string', description: 'The media file. Absolute, or relative to the agent workspace — or, with computer, to that computer\'s work folder.' },
         caption: { type: 'string', description: 'One short line under it: what it is.' },
+        computer: { type: 'string', description: 'The id of the computer you work in, when the file is inside it (a screenshot, a recording): it is copied out and shown.' },
       },
       required: ['path'],
     },
-    run: ({ path: p, caption }, ctx = {}) => showMedia(p, caption, ctx),
+    run: ({ path: p, caption, computer }, ctx = {}) => (computer ? showFromComputer(computer, p, caption, ctx) : showMedia(p, caption, ctx)),
   },
   {
     // The name this shipped under. A conversation that already contains
