@@ -253,19 +253,37 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   battery through vars, `prompt.outcome`/`progress`, the socket transport.
 
 ### Wave 5 — the look (U1–U8)
-- [ ] E1 **Layout bugs** (des 1–4, 11–14, 20, 29): Docker on a phone; the chat button padding every page and following
-  the theme; the idle Workstream block; the Harness header overlap; the Ambient tab filling its space with the chat
-  button hidden on Ambient and `/face`; the phone header; Modern's drawer shadow; form rows stacking on a phone; Field
-  pages' inset; API keys on a phone.
-- [ ] E2 **One style system** (des 5–10, 18, 21–23, 27, 30): one button vocabulary and container-action component;
-  native controls styled from tokens; one toggle; uppercase for labels only; one page header; one empty state (and a
-  greeting in a new chat); two heading levels; `--fs-input`; the UI font in Modern's search; neutral destructive row
-  actions; disabled contrast ≥3:1 with a reason; one monochrome icon set.
-- [ ] E3 **Details** (des 15–17, 19, 24–26, 28, 32): "PROTOLAB" on `/face` → the product's name; the repeated group
-  name in the header; sidebar stats; the Developer and Backups rows; Logs chips; MCP ADD alignment; the chat header
-  and its red open state; Ambient's controls hidden when idle (U3); `settingsSubNav` going to Settings first.
-- [ ] E4 **Delight, cheaply** (des 31): status dots as the face's points (core, glow, breathing when running); the
-  dot-of-light glyph in empty states; new rows fading in.
+- [x] (2.303.0) **Points** — a third style (`css/skin-points.css`, `js/look-points.js`) and its palettes Points and
+  Points Daylight, as approved (design board "DOCA panel — wave E"); Classic, Modern and every theme kept. On a light
+  theme the face's ground is the theme's and the white of its points is ink (#14181c) — colours only (`faceGround`).
+- [x] E1 **Layout bugs** (2.303.0, des 1–4, 11–14, 20, 29): Docker's cards size to what they hold and are a card per
+  container and image on a phone, ages relative; every scrolling page ends in room for the chat button, which follows
+  the theme and leaves Ambient; the Workstream console hidden until a line arrives; the Harness header's model picker
+  takes its width with an ellipsis; the Ambient tab fills its page; the phone header is the logo, a search icon that
+  opens over it and ☰ (⧉ and 📱 moved into the drawer); a closed drawer casts no shadow; `.form-row` stacks on a phone
+  (used by Backups' off-site card and Releasing; the harness add row stacks); Field pages sit where the others do; API
+  keys keeps the apps' Source folder on a phone and a device's "show here" group wraps whole. **Left:** `.form-row` on
+  the remaining forms as they are touched; `/face` has no chat button to hide.
+- [x] E2 **One style system** (2.303.0, des 5–10, 18, 21–23, 27, 30): `.btn-primary`, neutral `.btn-red` (red on
+  hover/focus and in a confirmation), `rowActs()` on Docker and Controls rows; native controls from `accent-color` and
+  a file button; `.switch` (and `.skill-toggle` drawn as it; Developer mode uses it); `.desc` for descriptions
+  (Computers, VMs, MCP); `pageHeadHtml()` on Computers, VMs, MCP, Archive and Live; `emptyStateHtml()` on Computers,
+  Archive and Projects (no picker until a project exists); a greeting with three suggestions in a new chat;
+  `.card-subtitle` in Channels, Packs, Spending, Evaluations and a device's page; `--fs-input` per skin; Modern's search
+  and clock in its UI face; disabled ≥3:1 with reasons on Connect and Pull & build; `uiIcon()` monochrome set (row
+  actions, the Files tree's toolbar, Points' phone bar). **Left:** the icon set in place of the header's and toolbars'
+  glyphs outside Points; `rowActs` on services and computers rows; more pages onto the shared header and empty state.
+- [x] E3 **Details** (2.303.0, des 15–17, 19, 24–26, 28, 32): `/face` names the product from `/api/branding`
+  (protolab.tech credited in Settings → Voice → The face); the Controls group's first page is Overview; the sidebar's
+  load and memory span both columns, cut with … and whole in a title; "Would it ask?" its own row with its answer;
+  "Send backups off-site"; Logs shows only sources that can speak, the rest behind "n more", Auto as a chip like the
+  others; MCP's catalogue rows pin Add right; the chat header one line with ⋯ and its open state in the accent;
+  Ambient's ✎ and "Use this screen" rest hidden and come back on touch or mouse move, its hint in the screen's face;
+  `settingsSubNav` goes to Settings first.
+- [x] E4 **Delight, cheaply** (2.303.0, des 31): `.pt` points (core, glow, breathing when running) on Controls'
+  containers in every skin; in Points every status bar and ● glyph (sidebar containers, harness rows, MCP, VMs, the
+  header's dot, the chat button) is a point; the point of light in empty states. **Left:** new rows fading in (lists
+  are redrawn on every poll, so it needs keyed rows first).
 
 ## The hive — the backlog (asked 2026-10-04; plan in `docs/design/hive.md`)
 
