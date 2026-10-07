@@ -19,7 +19,7 @@ const FIELDS = {
   moneyPerDay:    { what: 'a day',   unit: 'money',  period: 'today' },
   moneyPerMonth:  { what: 'a month', unit: 'money',  period: 'month' },
 };
-const FROM = { own: 'their own', admin: 'an admin\'s, for them', level: 'their level\'s' };
+const FROM = { own: 'their own', admin: 'an admin\'s, for them', leader: 'their team leader\'s', level: 'their level\'s' };
 
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
 
@@ -44,7 +44,7 @@ function sources(person, d = store.load()) {
   if (!person?.id) return [];
   const mine = d.people[person.id] || {};
   const out = [{ from: 'own', budget: mine.own }];
-  if (!isOwner(person)) out.push({ from: 'admin', budget: mine.budget }, { from: 'level', budget: d.levels[person.role]?.budget });
+  if (!isOwner(person)) out.push({ from: 'admin', budget: mine.budget }, { from: 'leader', budget: mine.leader }, { from: 'level', budget: d.levels[person.role]?.budget });
   return out.filter(s => s.budget);
 }
 
@@ -89,6 +89,7 @@ async function check(person, now = new Date()) {
   const { field, limit, from, used } = s.over, f = FIELDS[field], cur = s.spent.currency;
   const raise = from === 'own' ? 'They can raise or clear it in Settings → Spending.'
     : from === 'level' ? `It is the default of the level "${person.role}"; an admin can change it in Settings → Spending.`
+      : from === 'leader' ? 'Their team leader, or an admin, can raise it in Settings → Spending.'
       : 'An admin can raise it in Settings → Spending.';
   throw Object.assign(new Error(`Not started: ${person.name || 'this person'}'s budget of ${fmt(f.unit, limit, cur)} ${f.what} `
     + `(${FROM[from]}) is reached — ${fmt(f.unit, used, cur)} used ${f.period === 'today' ? 'today (UTC)' : 'this month'}. ${raise}`),
@@ -106,6 +107,22 @@ function describe(s) {
 }
 
 const holdsUsers = actor => require('../auth/rights').can(actor?.role, 'users');
+
+/**
+ * A team leader (CONSTITUTION S13: the admin "can let others grant specific permissions"): a person whose level holds
+ * `delegate` and whose `delegates` names `budget` (or names nothing, which is anything they hold) sets budgets for
+ * people of their level or below — never the owner, never themselves this way. Their budget is a slot of its own and
+ * the tightest wins, so a leader narrows what an admin set, and never loosens it.
+ */
+function leads(actor, personId) {
+  if (!actor?.id || !personId || personId === actor.id) return false;
+  const levels = require('../auth/levels'), L = levels.get(actor.role);
+  if (!L || !(L.rights || []).includes('delegate')) return false;
+  if (L.delegates && !L.delegates.some(p => p === '*' || p === 'budget')) return false;
+  const authStore = require('../auth/store'), orgId = actor.orgId || authStore.defaultOrg()?.id;
+  const role = orgId ? authStore.membership(orgId, personId)?.role : null;
+  return !!role && role !== 'owner' && levels.within(role, actor.role);
+}
 
 /**
  * Set a budget. For yourself it is your own; for another person, or a level's default (with what that level's people
@@ -127,13 +144,14 @@ function set(actor, { personId, levelId, budget, mayAllow } = {}) {
     });
   }
   const own = !personId || personId === actor.id;
-  if (!own && !holdsUsers(actor)) throw bad('Another person\'s budget is an admin\'s to set.', 403);
+  const slot = own ? 'own' : holdsUsers(actor) ? 'budget' : leads(actor, personId) ? 'leader' : null;
+  if (!slot) throw bad('Another person\'s budget is an admin\'s to set, or their team leader\'s.', 403);
   if (!own && !require('../auth/store').userById(personId)) throw bad('No such person.', 404);
   return store.change(d => {
     const P = d.people[own ? actor.id : personId] || (d.people[own ? actor.id : personId] = {});
-    P[own ? 'own' : 'budget'] = b;
+    P[slot] = b;
     return P;
   });
 }
 
-module.exports = { FIELDS, normalize, sources, effective, personFor, state, check, describe, set };
+module.exports = { FIELDS, normalize, sources, effective, personFor, state, check, describe, set, leads };

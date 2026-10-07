@@ -16,7 +16,7 @@ const _spMoney = (v, cur) => `${(v?.money || 0).toFixed(2)} ${escHtml(cur)}${v?.
 /** A budget in words: "200k tokens a day (their own), 5 USD a month (their level's)". */
 function _spBudgetText(b, cur) {
   if (!b) return '<span style="color:var(--muted)">none</span>';
-  const from = { own: 'own', admin: 'an admin\'s', level: 'the level\'s' };
+  const from = { own: 'own', admin: 'an admin\'s', leader: 'the team leader\'s', level: 'the level\'s' };
   return _SP_FIELDS.filter(([k]) => b[k]).map(([k, label]) => {
     const v = b[k].limit ?? b[k];
     return `${k.startsWith('tokens') ? _spTok(v) : `${v} ${escHtml(cur)}`} ${label.replace(/^(Tokens|Money) /, '')}${b[k].from ? ` <span style="color:var(--muted)">(${from[b[k].from]})</span>` : ''}`;
@@ -62,7 +62,7 @@ async function spendingLoad(month) {
     <p style="font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">○ none linked</span></p>
     <p style="font-size:11px;color:var(--muted)">${escHtml(v.payment.note)} Linking one — a payment provider's own saved method, never a card number
       kept here — comes in a later release; the permissions above are what it will spend within.</p></div>`;
-  if (v.admin && v.people?.length) spendingPickPerson(v.people[0].id, false);
+  if ((v.admin || v.lead) && v.people?.length) spendingPickPerson(v.people[0].id, false);
   if (typeof spendingPermitsRender === 'function') spendingPermitsRender(v);
 }
 
@@ -82,13 +82,13 @@ function _spBudgetsCard(v) {
     <div class="input-label">Your own budget (empty or 0 is none)</div>
     <div class="toolbar" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">${_spBudgetInputs('sp-own', me.own)}
       <button class="btn btn-sm btn-blue" style="align-self:flex-end" onclick="spendingSaveOwn()">Save</button></div>
-    ${v.admin ? `<div class="input-label">A person's budget, set by an admin</div>
+    ${v.admin || v.lead ? `<div class="input-label">${v.admin ? 'A person\'s budget, set by an admin' : 'Your team\'s budgets, as their team leader (an admin\'s and their level\'s still count: the tightest wins)'}</div>
       <div class="toolbar" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">
         <select class="input" id="sp-person" style="width:auto;align-self:flex-end" onchange="spendingPickPerson(this.value, false)">
           ${(v.people || []).map(p => `<option value="${escHtml(p.id)}">${escHtml(p.name || p.email)}</option>`).join('')}</select>
         <span id="sp-person-inputs" class="toolbar" style="gap:6px;flex-wrap:wrap"></span>
         <button class="btn btn-sm btn-blue" style="align-self:flex-end" onclick="spendingSavePerson()">Save</button></div>
-      <div class="input-label">Each level's default, and how much its people may allow themselves</div>${levels}` : ''}</div>`;
+      ${v.admin ? `<div class="input-label">Each level's default, and how much its people may allow themselves</div>${levels}` : ''}` : ''}</div>`;
 }
 
 function spendingPickPerson(id, scroll = true) {
