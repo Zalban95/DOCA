@@ -60,7 +60,7 @@ module.exports = [
       // A specialist that keeps a computer of its own works in it, unless a computer is named (computers.ownFor).
       const def = require('../../agents/registry').get(agent);
       if (computer) { const no = require('../../computers/whose').refuse(ctx.user, computer); if (no) return `Error: ${no}`; }   // lent only by its person (S13)
-      if (!computer && def?.computer === 'own') computer = await require('../../computers').ownFor(def);
+      if (!computer && def?.computer === 'own') computer = await require('../../computers').ownFor(def, ctx.user);
       // Waiting on other missions' results (agents/after.js): held until they are done, then started with what they made.
       if (Array.isArray(after) && after.length) {
         const w = require('../../agents/after').dispatchAfter({ agentId: agent, task, context, plan, computer, by: ctx.sessionId }, after);

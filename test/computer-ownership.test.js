@@ -46,14 +46,31 @@ test('looking, signing in, previewing and lending refuse another person\'s compu
   assert.match(await tool('agent_dispatch').run({ agent: 'tester', task: 'look around', computer: 'kept01' }, ctx), /^Error: Computer kept01/);
 });
 
-test('a computer lent to their mission is theirs to act on while it is lent', async () => {
+test('a computer lent to their mission is theirs to act on while it is lent — not an admin\'s kept one', async () => {
   const missions = require('../modules/agents/missions');
   const orig = missions.get;
   missions.get = id => (id === 'mis_member' ? { id, sessionId: own.id, by: own.id } : orig(id));
   try {
     const store = require('../modules/store');
-    const rows = store.readJson('computers', { computers: [] }).computers.map(c => (c.id === 'kept01' ? { ...c, missionId: 'mis_member' } : c));
+    const rows = store.readJson('computers', { computers: [] }).computers.map(c => (['kept01', 'owner01'].includes(c.id) ? { ...c, missionId: 'mis_member' } : c));
     store.writeJson('computers', { computers: rows });
-    assert.equal(require('../modules/computers/whose').refuse(user, 'kept01'), null);
+    assert.equal(require('../modules/computers/whose').refuse(user, 'owner01'), null, 'an ordinary computer lent to their mission');
+    assert.match(require('../modules/computers/whose').refuse(user, 'kept01') || '', /not .*'s/, 'never the admins\' kept desktop, even lent');
   } finally { missions.get = orig; }
+});
+
+test('a specialist\'s kept computer is kept per person: a member never gets an admin\'s desktop', async () => {
+  const computers = require('../modules/computers');
+  const real = computers.create, made = [];
+  computers.create = async o => { const c = { id: `pc${made.length + 1}`, ...o }; made.push(c); return c; };
+  const store = require('../modules/store');
+  try {
+    const def = { id: 'shopper', label: 'Shopper' };
+    const member = await H.signIn('member', 'kept-member@test.local');
+    await computers.ownFor(def, { ...H.owner.user, role: 'owner' });
+    await computers.ownFor(def, { ...member.user, role: 'member' });
+    assert.equal(made.length, 2, 'one kept for the admins, one for the member');
+    assert.equal(made[0].keptFor, undefined);
+    assert.equal(made[1].keptFor, member.user.id);
+  } finally { computers.create = real; }
 });

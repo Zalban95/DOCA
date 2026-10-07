@@ -81,7 +81,7 @@ async function fetchPage(url, signal) {
  * @param {{ subject: string, urls: string[], questions?: string[], signal?: AbortSignal }} opts
  * @returns {Promise<{ subject: string, pages: object[], report: string }>}
  */
-async function read({ subject, urls, questions, signal }) {
+async function read({ subject, urls, questions, signal, person }) {
   const list = (Array.isArray(urls) ? urls : [urls])
     .map(u => String(u || '').trim())
     .filter(Boolean)
@@ -118,7 +118,8 @@ async function read({ subject, urls, questions, signal }) {
     ...usable.flatMap(p => ['', `--- BEGIN UNTRUSTED PAGE: ${p.url} ---`, p.text, '--- END UNTRUSTED PAGE ---']),
   ].join('\n');
 
-  const report = await agent.ask({ system: READER_PROMPT, user: body, signal });
+  // On a person's turn the reader is a model allotted to them (transport.ask narrows; none allotted refuses).
+  const report = await agent.ask({ system: READER_PROMPT, user: body, signal, person });
   return { subject, pages, report: report.slice(0, MAX_REPORT) };
 }
 

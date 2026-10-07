@@ -33,8 +33,9 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     catch { args = { _raw: tc.function?.arguments }; }
 
     // Experiment riskTiers (harness/risk): the call's tier and its way back ride on its event — the trace and the
-    // Workstream name them — and a reversible change in a project gets a checkpoint first. Null while it is off.
-    const risk = args._raw === undefined ? await require('../risk').before(name, args, { sessionId: session.id }) : null;
+    // Workstream name them — and a reversible change in a project gets a checkpoint first, taken only once the call is
+    // allowed (below), so a refused call writes nothing. Null while it is off.
+    const risk = args._raw === undefined ? await require('../risk').before(name, args, { sessionId: session.id, checkpoint: false }) : null;
     say({ type: 'tool_call', name, args, step, ...(risk ? { risk } : {}) });
 
     // Manual approval, if it is on. The gate is here rather than inside
@@ -65,6 +66,8 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
           refused = approval.refusal(decision, gate);
       }
     }
+
+    if (refused === null && risk) await require('../risk').keep(risk);   // allowed: now its checkpoint
 
     // What a tool put in front of the user (show_image). It travels as its own
     // event and is kept on the tool row, so a reloaded transcript draws it

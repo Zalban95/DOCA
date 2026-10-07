@@ -63,10 +63,15 @@ function prefsBody(body) {
   return prefsTouched(changes);
 }
 
+/**
+ * Applying a proposal: each change's `to` against the LIVE setting, never the proposal's stored `from` — a stored file
+ * can be edited, and a `from` written equal to its `to` would read as "no change" (security review 2026-10-07).
+ */
 function proposal(id) {
   const p = require('../harness/settings').find(id);
   if (!p || p.screen) return null;   // a screen's own layer is not a switch
-  return prefsTouched(p.changes.map(c => ({ path: c.path, from: c.from, to: c.to })));
+  const live = require('../utils').loadPrefs();
+  return prefsTouched(p.changes.map(c => ({ path: c.path, from: get(live, c.path), to: c.to })));
 }
 
 const ROUTES = [
@@ -84,6 +89,11 @@ const ROUTES = [
   [['POST'], /^\/api\/auth\/users\/[^/]+\/password$/, 'another person\'s password'],
   [W, /^\/api\/harness\/guards(?!\/test$)(\/.*)?$/, 'the guards'],
   [['POST'], /^\/api\/settings\/checkpoints\/[^/]+\/restore$/, 'restoring settings'],
+  // A version is every guard at once: one from before 2.281.0 has no password question at all (review 2026-10-07).
+  [['POST'], /^\/api\/versions\/use$/, 'which version of DOCA runs'],
+  // Bringing a pack in can create or replace a level (an edition), specialists and their tools, and the memory rules.
+  // An upload cannot be read before the gate, so every import asks: the smallest rule that holds for both routes.
+  [['POST'], /^\/api\/packs\/(import|library\/[^/]+\/import)$/, 'bringing a pack in (it can carry a level, specialists and rules)'],
   // Spending (S12): budgets, permissions and their acceptance; declining a proposal never asks — saying no is free.
   [W, /^\/api\/spending\/(?!permissions\/[^/]+\/decline$).+$/, 'spending: budgets and permissions'],
   [['POST'], /^\/api\/harness\/usage\/prices$/, 'the prices money budgets are counted in', () => moneyBudgets()],

@@ -37,24 +37,38 @@ function of(name, args, { sessionId } = {}) {
   return classify(name, args, { root: projectOf(sessionId)?.root || null, mcp: /^mcp__/.test(name) ? annotations(name) : null });
 }
 
-/** The risk said on the call's event, after a checkpoint when one covers it. Never throws: a turn is not held up by it. */
-async function before(name, args, { sessionId } = {}) {
+/**
+ * The risk said on the call's event, after a checkpoint when one covers it. Never throws: a turn is not held up by it.
+ * `checkpoint: false` only reads the tier; the checkpoint then waits for keep(), which the turn calls once the call is
+ * allowed — nothing is written for a call the level, the mode or a person refuses (security review 2026-10-07).
+ */
+async function before(name, args, { sessionId, checkpoint = true } = {}) {
   if (!on()) return null;
   try {
     const p = projectOf(sessionId);
     const r = classify(name, args, { root: p?.root || null, mcp: /^mcp__/.test(name) ? annotations(name) : null });
     const risk = { tier: r.tier, why: r.why, way: r.way };
-    if (r.tier === 'reversible' && r.touches && p) {
-      const title = require('../memory').getSession(sessionId)?.title || sessionId;
-      const cp = await require('../../projects/checkpoints').take(p, { label: `before ${name} in "${String(title).slice(0, 60)}"`, sessionId, by: 'panel' });
-      if (cp?.id) {
-        const at = `checkpoint ${cp.id} (Projects → Checkpoints)`;
-        risk.checkpoint = cp.id;
-        risk.way = r.way === require('./rules').WAY.project ? at : `${r.way}; ${at}`;
-      }
-    }
-    return risk;
+    // Not enumerable: it never travels on an event.
+    if (r.tier === 'reversible' && r.touches && p) Object.defineProperty(risk, 'pending', { value: { p, name, sessionId, way: r.way }, writable: true });
+    return checkpoint ? await keep(risk) : risk;
   } catch { return null; }
+}
+
+/** The checkpoint a reversible call's risk is waiting for, taken now; the risk gains it as its way back. */
+async function keep(risk) {
+  const k = risk?.pending;
+  if (!k) return risk;
+  risk.pending = null;
+  try {
+    const title = require('../memory').getSession(k.sessionId)?.title || k.sessionId;
+    const cp = await require('../../projects/checkpoints').take(k.p, { label: `before ${k.name} in "${String(title).slice(0, 60)}"`, sessionId: k.sessionId, by: 'panel' });
+    if (cp?.id) {
+      const at = `checkpoint ${cp.id} (Projects → Checkpoints)`;
+      risk.checkpoint = cp.id;
+      risk.way = k.way === require('./rules').WAY.project ? at : `${k.way}; ${at}`;
+    }
+  } catch { /* the call still runs; its way back is what classify said */ }
+  return risk;
 }
 
 /** What approval.gate asks for an outward call, or null. */
@@ -74,4 +88,4 @@ function block() {
     + 'Do what can be undone; for something untested, prefer an agents\' computer to this machine where you hold one.'].join('\n');
 }
 
-module.exports = { on, of, before, ask, block };
+module.exports = { on, of, before, keep, ask, block };

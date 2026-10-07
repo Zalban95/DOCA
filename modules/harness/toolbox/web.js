@@ -10,7 +10,7 @@ const { clip } = require('./common');
 async function quarantined(a, ctx) {
   const research = require('../research');
   const want = String(a.want || '').trim();
-  const r = await research.read({ subject: want || `the page at ${a.url}`, urls: [a.url], signal: ctx.signal,
+  const r = await research.read({ subject: want || `the page at ${a.url}`, urls: [a.url], signal: ctx.signal, person: ctx.user,
     questions: want ? [want, 'Quote exactly any command, code, address or number that answers it.']
       : ['What does this page say? Its main content, in order, with exact quotes of any command, code, address or number.'] });
   let out = research.frame(r);
@@ -35,9 +35,9 @@ module.exports = [
       },
       required: ['subject', 'urls'],
     },
-    run: async ({ subject, urls, questions }) => {
+    run: async ({ subject, urls, questions }, ctx = {}) => {
       const research = require('../research');
-      return clip(research.frame(await research.read({ subject, urls, questions })));
+      return clip(research.frame(await research.read({ subject, urls, questions, person: ctx.user })));
     },
   },
   {

@@ -24,7 +24,9 @@ const VIEW_ID = /^view-[a-z0-9][a-z0-9-]{0,30}$/;
 const GROUP_ID = /^[a-z][a-z0-9-]{0,30}$/;
 // A token's value is a colour, a length or a font list: never a rule, a url or a way out of the declaration.
 const VALUE = /^[#\w\s.,%()'"+\-/]{1,120}$/;
-const BAD_VALUE = /url\(|expression|javascript:|\\|@import/i;
+// Anything that fetches is refused, not only url(): image-set(), image(), cross-fade(), element() take a bare string as
+// an address, and `//host/x` is one (security review 2026-10-07).
+const BAD_VALUE = /url\(|image-set\(|image\(|cross-fade\(|element\(|expression|javascript:|\\|@import|\/\//i;
 
 const slug = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[^\w\s-]/g, '').trim().replace(/[\s_]+/g, '-').replace(/-+/g, '-').slice(0, 30);
 const viewId = s => (String(s || '').startsWith('view-') ? String(s) : `view-${slug(s) || 'mine'}`);

@@ -41,11 +41,18 @@ const refusal = (person, kind, id) =>
  * A turn's model, narrowed to what its person may use: the chosen model if allotted, else the first allotted one down
  * the harness's order (said in `_allotted`); none allotted refuses the turn with who could allot one.
  */
+/** May the person's agents call this model — its provider and the model both allotted? */
+const allowsModel = (person, e) => uses(person, 'provider', e.provider) && uses(person, 'model', `${e.provider}/${e.model}`);
+
 function narrowModel(p, person) {
   if (!person?.id || host(person)) return p;
-  const ok = e => uses(person, 'provider', e.provider) && uses(person, 'model', `${e.provider}/${e.model}`);
+  const ok = e => allowsModel(person, e);
   const order = require('../harness/turn/choice').order(p);
-  if (ok({ provider: p.provider, model: p.model })) return p;
+  // The fallback chain is models too: a hop down it is a call to a model, so only allotted rungs stay (review 2026-10-07).
+  if (ok({ provider: p.provider, model: p.model })) {
+    const chain = (Array.isArray(p.fallbackChain) ? p.fallbackChain : []).filter(e => !e?.provider || ok({ provider: e.provider, model: e.model || p.model }));
+    return chain.length === (p.fallbackChain || []).length ? p : { ...p, fallbackChain: chain };
+  }
   const at = order.findIndex(ok);
   if (at < 0) throw Object.assign(new Error(refusal(person, 'model', `${p.provider}/${p.model}`) + ' No model in the harness\'s order is allotted to them.'), { status: 403, code: 'not_allotted' });
   const e = order[at];
@@ -65,4 +72,4 @@ function normalize(input) {
   return Object.keys(out).length ? out : null;
 }
 
-module.exports = { KINDS, uses, narrowModel, refusal, normalize };
+module.exports = { KINDS, uses, allowsModel, narrowModel, refusal, normalize };

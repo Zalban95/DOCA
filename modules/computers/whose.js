@@ -21,7 +21,10 @@ function refuse(person, id) {
   if (isHost(person)) return null;
   const access = require('../harness/session-access');
   if (c.by && access.ownerOf(c.by) === person.id) return null;
-  const m = c.missionId ? require('../agents/missions').get(c.missionId) : null;
+  if (c.keptFor === person.id) return null;   // a specialist's computer kept for this person (computers.ownFor)
+  // Lent to their mission — but a kept computer only when it is kept for them: an admin's specialist desktop holds the
+  // admin's sign-ins, and lending it once must not open it to everyone the type works for.
+  const m = c.missionId && !c.agentType ? require('../agents/missions').get(c.missionId) : null;
   if (m && (access.ownerOf(m.sessionId) === person.id || (m.by && access.ownerOf(m.by) === person.id))) return null;
   return `Computer ${c.id} "${c.name}" is not ${person.name || 'this person'}'s: an agent acts only on a computer its person made, `
     + 'or one lent to their mission (an admin\'s are an admin\'s). Make one with the computer tool.';
