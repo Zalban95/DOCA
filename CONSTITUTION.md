@@ -1,18 +1,41 @@
 # CONSTITUTION.md
 
 The base rules of DOCA: what it is for, what it values, and how anyone changing it works. It was drawn from
-everything Al (the project's admin) asked for, said or corrected between 2026-09-10 and 2026-10-06 — stated rules
-and the ones implied by a correction — and settled with Al on 2026-10-06.
+everything the project's admin asked for, said or corrected between 2026-09-10 and 2026-10-06 — stated rules
+and the ones implied by a correction — and settled with the admin on 2026-10-06.
 
 **Who reads this.** Every agent that changes this repository or its sibling apps (DocaDesk, DocaMobile, DocaWear) —
 Claude Code, DOCA's own agent working through `skills/doca-dev-cycle`, or any CLI harness the model scout hands work
 to — reads it before starting, with `AGENTS.md`. It is not in the hive's runtime prompt: the agent that *uses* DOCA
 is governed by the charter (`SAFETY_CHARTER` in `modules/harness/providers.js`), which this document must agree with.
 
-**Precedence.** This document, then `AGENTS.md`, then a skill or a design doc. When they disagree, this wins and
-the other file is fixed in the same change. Only Al changes this file; an agent proposes an edit and waits.
+**Precedence.** The premise (§0) above everything; then this document, then `AGENTS.md`, then a skill or a design doc.
+When they disagree, the higher wins and the other file is fixed in the same change. Only the project's admin changes
+this file; an agent proposes an edit and waits.
 
-Dates are when Al said it. *Implicit* means read from a correction rather than said as a rule.
+Dates are when the admin said it. *Implicit* means read from a correction rather than said as a rule.
+
+---
+
+## 0. The premise — above everything here (2026-10-07)
+
+**DOCA is a product, not anyone's personal setup.** What one person prefers — a model, a provider, a path, a
+machine, a device, a habit — is never in the project: not in its code, its defaults, its shipped skills or what its
+pages say. It lives in that installation's settings, which belong to its owner.
+
+**Anyone can ask for anything.** A person who knows nothing about the system asks for something, and it is done —
+within the limits of safety for the system and for that person. How:
+
+1. **Their way, when they said how.** If the person is specific about how to do it, it is done the way they said.
+2. **Otherwise the proven way.** The system knows its tools and goes with what is proven here — a recipe, a skill,
+   a specialist — or what the harness suggests.
+3. **Otherwise find it, and keep it.** If nothing exists but it can be done, find the best way that can become
+   reliable, and save it (a recipe, a skill, a specialist) so the next time is quick and needs no rethinking.
+4. **And offer it onward, only if the owner allows.** What was learned is suggested to the project's managers only
+   when the owner has allowed sharing specialists and skills — asked at installation, and a setting after.
+
+Whoever touches the code keeps this in mind first. A change that serves one person's setup instead of everyone's,
+or that leaves a capable request undone when a safe way exists, is wrong whatever else it gets right.
 
 ---
 
@@ -72,7 +95,7 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
   (2026-10-05)
 - **P2 Compare with the market, then choose.** When the principles already answer an open point, survey the
   options, pick the one that fits best, write the comparison down (the experiment doc or the design doc), and go
-  on. Do not wait for Al. (2026-10-05)
+  on. Do not wait for the admin. (2026-10-05)
 - **P3 Any OS.** Nothing ships Linux-only; CI runs Linux, Windows and macOS. A real Mac is tested when one is
   available. (2026-10-04/05)
 - **P4 Local, remote, standalone, hive.** Everything works fully local and/or fully remote, alone or as a hive,
@@ -88,7 +111,7 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
   2026-10-06)
 - **P8 One brand file, no leftovers.** Every name a person reads comes from `modules/branding.js` (the wake word
   and "send to <product>" too); main carries no leftovers of side lines or stale names. (2026-09-25)
-- **P9 A setting for everything a person might want differently,** with a sensible default rather than Al's
+- **P9 A setting for everything a person might want differently,** with a sensible default rather than the admin's
   preference hard-coded. New routines are off by default. (2026-09-25/26, 10-05)
 - **P10 Settings live where they belong.** A device's settings on its own page; each feature its own section; a
   harness's settings only while it is installed, grouped under it; a setting that belongs to something switched off
@@ -139,7 +162,7 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
 - **S7 Recovery belongs to the host machine**, not to reset buttons in the panel; the first user is created from
   the panel only while none exists. (2026-09-25)
 - **S8 Live data is sacred.** Never restore a backup onto the live panel — test restores in a sandbox. The test
-  account `claude-test@doca.local` stays active until Al suspends it. (2026-10-04)
+  account `claude-test@doca.local` stays active until the admin suspends it. (2026-10-04)
 - **S9 A snapshot before anything risky — mandatory.** Before a destructive or hard-to-reverse step, make the way
   back first and say where it is: (2026-10-06)
   - git history (reset, rebase, force-push, deleting a branch or tag): a `snapshot/<date>-<what>` tag or branch
@@ -152,7 +175,7 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
   calls and device commands (`harness/drain.js` — the default since 2.222.0); going now is a person's explicit
   choice. (2026-10-06)
 - **S11 Files that ask first.** A change that widens what an agent may do, or weakens a guard, is proposed and
-  waits for Al's yes — even inside a loop. A fix that keeps or tightens them does not need to ask. These are:
+  waits for the admin's yes — even inside a loop. A fix that keeps or tightens them does not need to ask. These are:
   this file; the charter (`SAFETY_CHARTER`); `modules/auth/**` (gate, rights, levels, permits, grants);
   `modules/harness/approval.js` and the approval modes; `modules/harness/settings.js` (`SETTABLE`, `FORBIDDEN`,
   `NEVER_SETTABLE`); `modules/secrets-mask.js` and `PROTECTED_FILES`; `agents/registry.js` `NEVER`/`AIRLOCK_ONLY`;
@@ -167,17 +190,17 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
   (`developer.releaseUnasked`; `GET /api/developer/releasing?model=<id>` answers for one model). A model it lists
   may run the whole cycle — merge, tag, push, switch the live panel — without asking; every other model or harness,
   DOCA's own agent included unless it runs a listed model, asks before merging, tagging or pushing. The default
-  lists the Claude Opus and Fable families, version 5 and later, whose work Al trusts and repairs when needed; an
+  lists the Claude Opus and Fable families, version 5 and later, whose work the admin trusts and repairs when needed; an
   agent that cannot reach the hub uses the default. Only the admin edits it: no agent may propose it (S11).
   (settled 2026-10-06)
 - **W3 What stops anyone.** Stop and ask for: a product choice the principles do not answer; a change to `/api/v1`,
-  a scope or a caps field (three shipped apps depend on it); money, credentials or hardware only Al can provide;
-  work only Al's other machines can do; a file in S11. Everything clear goes ahead. (2026-10-04)
+  a scope or a caps field (three shipped apps depend on it); money, credentials or hardware only the admin can provide;
+  work only the admin's other machines can do; a file in S11. Everything clear goes ahead. (2026-10-04)
 - **W4 Check coherence before release** — the change's logic against the rest of the project, and every surface
   that says what it does (AGENTS.md, PROTOCOL.md, the skills, TODO). (2026-09-26)
 - **W5 TODO.md is the plan of record.** New asks are filed there, structured; items are ticked when they close;
   what a sibling app needs goes in that app's own repository. (2026-10-04)
-- **W6 Everything pushed, everywhere in sync.** Al works from several machines (this one, the portal PC, a phone),
+- **W6 Everything pushed, everywhere in sync.** The admin works from several machines (computers and a phone),
   so every repository stays pushed and work done elsewhere comes back through the remote. (2026-10-04/05)
 - **W7 Use DOCA to build DOCA.** Installs, settings and device work go through the live panel and DOCA's own tools
   where they can; sweep the panel in a real browser after a release to catch what the tests do not. (2026-10-05)
@@ -191,27 +214,27 @@ staying safe; openness and cross-compatibility; being future-proof; speed.
   that was asked for, change nothing. (2026-09-11/14)
 - **W11 Look at a settled screen.** For visual work, screenshot after animations settle and judge the picture,
   not only the error count. *Implicit* (2026-10-05)
-- **W12 Spend the tokens the work needs; manage the context.** Suggest compacting at a clean point — Al keeps
+- **W12 Spend the tokens the work needs; manage the context.** Suggest compacting at a clean point — the admin keeps
   autocompact off and expects to be told. *Implicit* (2026-10-04)
-- **W13 Use judgment where the principles answer.** Al wants to be the bottleneck only for real decisions. In
+- **W13 Use judgment where the principles answer.** The admin wants to be the bottleneck only for real decisions. In
   doubt: what would a Jarvis-level assistant do? (2026-09-25/26)
 - **W14 Retiring an old way.** A path that has been replaced stays as an alternative while a person might choose
   it. Once its replacement has run for a while and it has not been used (by default 30 days and 50 runs of the
-  replacement), it is a candidate: during maintenance the agent gives Al a list — each candidate with its usage
-  and a recommendation — and Al answers keep, archive or delete. Archived code leaves main and is kept on an
+  replacement), it is a candidate: during maintenance the agent gives the admin a list — each candidate with its usage
+  and a recommendation — and the admin answers keep, archive or delete. Archived code leaves main and is kept on an
   `archive/<name>` tag listed in `docs/archive.md`, so it can come back. Nothing is deleted on an agent's own
   judgment. (settled 2026-10-06; tooling: TODO H10.7)
 
-## 6. Working with Al
+## 6. Working with the project's admin
 
-- **C1 Correct Al, and check names.** Correction is welcome. When a name Al gives may be a slip (a product, a
+- **C1 Correct the admin, and check names.** Correction is welcome. When a name the admin gives may be a slip (a product, a
   library), check it and confirm rather than build on it. (2026-10-05)
 - **C2 Read for intent.** Most messages are written on a phone over a remote session; typos and speech-to-text
   slips are normal ("open clothes" = OpenClaw, "DACA" = DOCA). Ask only when two readings lead to different work.
   (2026-10-05)
 - **C3 Short, phone-readable answers with a recommendation.** Few numbered options, the recommended one first;
-  Al usually answers by number. *Implicit*
-- **C4 Al shares the need; you design.** Concrete suggestions (names, mechanisms) are examples of the need, not
+  The admin usually answers by number. *Implicit*
+- **C4 The admin shares the need; you design.** Concrete suggestions (names, mechanisms) are examples of the need, not
   specifications — choose the names and structure that serve the agents best. (2026-09-26)
 - **C5 Warm, plain words.** Prefer human words to hierarchy-speak in what the product shows. The person who runs
   a hive is an **admin** in the UI; the built-in levels read Viewer, Member, Admin and Main admin, and their ids

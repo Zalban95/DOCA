@@ -11,8 +11,8 @@ A computer with DocaDesk or `doca-client` is an MCP server DOCA can reach: the e
 2. **Know the shell.** DocaDesk is Windows PowerShell 5.1: `;` between commands, `$env:USERPROFILE`, `Get-ChildItem`, `D:\…` paths. git writes progress to stderr, which PowerShell prints as red errors — read the result, not the colour (`2>$null` quiets it).
 3. **Look before touching.** For each repository: `git status --porcelain`, `git branch --show-current`, `git fetch origin`, `git for-each-ref --format="%(refname:short) %(upstream:short) %(upstream:track)" refs/heads`, `git stash list`.
 4. **Moving work between machines — never lose any:**
-   - Uncommitted work: `git switch -c portal/<what>-<date>` (the working files stay as they are), `git add -A`, commit saying where it came from, `git push -u origin <branch>`. The person's files on disk are unchanged; they are now on a branch.
-   - A branch ahead of its remote: push it. One that has diverged: push it under a new name (`git push origin main:refs/heads/portal/main`), never force.
+   - Uncommitted work: `git switch -c <this-machine>/<what>-<date>` (the working files stay as they are), `git add -A`, commit saying where it came from, `git push -u origin <branch>`. The person's files on disk are unchanged; they are now on a branch.
+   - A branch ahead of its remote: push it. One that has diverged: push it under a new name (`git push origin main:refs/heads/<this-machine>/main`), never force.
    - Then on this machine: fetch and merge those branches on a branch of your own; resolve conflicts keeping both sides' intent; build and test; merge and push.
    - Finally bring the other machine forward only where nothing would be lost: fast-forward (`git merge --ff-only`), and do not switch a checkout something may be running from (`git fetch origin main:main` updates a branch without checking it out).
 5. **Secrets stay where they are** unless the task needs them; if one must move (a signing key), put it in the hub's protected keys (a panel route), never in a repository or a message.

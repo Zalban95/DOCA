@@ -21,10 +21,15 @@ test('a rule is a model family with an optional minimum version', () => {
   assert.equal(releasing.parse('rm -rf >= x'), null);
 });
 
-test('the admin edits it in the panel; the default is Opus and Fable 5+; nobody else, and no agent, may', async () => {
+test('the admin edits it in the panel; a new install trusts no model; nobody else, and no agent, may', async () => {
+  // Whom to trust is the owner's choice (CONSTITUTION §0): a new install is born with none listed.
   let r = await H.api(null, 'GET', '/api/developer/releasing?model=claude-opus-5-5');
+  assert.deepEqual(r.body.rules, []);
+  assert.equal(r.body.unasked, false);
+  r = await H.api(null, 'POST', '/api/developer/releasing', { rules: ['claude-opus >= 5', 'claude-fable >= 5'] });
   assert.deepEqual(r.body.rules, ['claude-opus >= 5', 'claude-fable >= 5']);
-  assert.equal(r.body.unasked, true);
+  r = await H.api(null, 'GET', '/api/developer/releasing?model=claude-opus-5-5');
+  assert.equal(r.body.unasked, true, 'once the owner lists it');
   r = await H.api(null, 'POST', '/api/developer/releasing', { rules: ['nonsense rule !!'] });
   assert.equal(r.status, 400);
   r = await H.api(null, 'POST', '/api/developer/releasing', { rules: [] });
@@ -36,4 +41,11 @@ test('the admin edits it in the panel; the default is Opus and Fable 5+; nobody 
   assert.equal((await H.api(null, 'GET', '/api/developer/releasing', undefined, { Cookie: member.cookie })).status, 403);
   assert.ok(require('../modules/harness/settings').refuse('developer.releaseUnasked', ['x']), 'never proposable');
   await H.api(null, 'POST', '/api/developer/releasing', { rules: ['claude-opus >= 5', 'claude-fable >= 5'] });
+});
+
+test('an install that relied on the old default keeps it, written into its own settings (migration 2.270)', () => {
+  const { run, MIGRATIONS } = require('../modules/migrations');
+  const only = MIGRATIONS.filter(m => m.id === '2.270-release-unasked-owner');
+  assert.deepEqual(run({ developer: { mode: true } }, only).prefs.developer.releaseUnasked, ['claude-opus >= 5', 'claude-fable >= 5']);
+  assert.deepEqual(run({ developer: { releaseUnasked: [] } }, only).prefs.developer.releaseUnasked, [], 'an owner\'s own choice stays');
 });

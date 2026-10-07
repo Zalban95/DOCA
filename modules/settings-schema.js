@@ -76,7 +76,7 @@ const SCHEMA = {
   // and local: a pack or an edition never carries it.
   developer:        { is: 'local', home: 'device', on: 'host', note: 'developer mode: experiments offered and in effect (experiments.js)',
     keys: { mode: { type: 'boolean', default: false, hint: 'Offer the experiments (Settings → Developer) and let the ones switched on take effect.' },
-      releaseUnasked: { type: 'array', default: ['claude-opus >= 5', 'claude-fable >= 5'], hint: 'Models that may merge, tag, push and switch the live panel without asking (CONSTITUTION W2), a family each, optionally with a minimum version. Empty: everyone asks.' } } },
+      releaseUnasked: { type: 'array', default: [], hint: 'Empty on a new install: no model releases unasked until the owner lists one (CONSTITUTION §0 — whom to trust is the owner\'s choice). Models that may merge, tag, push and switch the live panel without asking (CONSTITUTION W2), a family each, optionally with a minimum version. Empty: everyone asks.' } } },
   // Experiments (hive.md §8): off by default, each written up in docs/experiments/<id>.md. The owner's switch alone —
   // never proposable: an agent switching on its own experiments would be grading its own homework.
   experiments:      { is: 'travels', home: 'hive', note: 'experiments switched on (docs/experiments)',
