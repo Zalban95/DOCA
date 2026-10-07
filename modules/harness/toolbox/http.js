@@ -52,13 +52,27 @@ async function request({ url, method, body, headers, key, form, files, save_as, 
         payload = fd;
         delete h['Content-Type'];   // the form sets its own boundary
       }
+      const verb = (method || (payload instanceof FormData ? 'POST' : 'GET')).toUpperCase();
       const send = async () => {
         if (exchange) { token = await keys.token(exchange, { fresh: !!token }); h = { ...h, Authorization: `Bearer ${token}` }; }
-        return fetch(url, { method: (method || (payload instanceof FormData ? 'POST' : 'GET')).toUpperCase(), body: payload, headers: h, signal: AbortSignal.timeout(save_as ? 300000 : 60000) });
+        return fetch(url, { method: verb, body: payload, headers: h, redirect: 'manual', signal: AbortSignal.timeout(save_as ? 300000 : 60000) });
       };
       let r;
       try { r = await send(); if (exchange && r.status === 401) r = await send(); }   // a token that ran out: one more, fresh
       catch (e) { return `Error: ${keys.scrub(e.message, secret, token)}`; }
+      // Redirects are followed here, each hop checked (security review 2026-10-07): a key never leaves its own origin,
+      // and an address read as the owner's own never hands over a page from the open web, which is the reader's.
+      const start = new URL(url), stayOwned = !ctx.airlock && owned(url);
+      for (let hop = 0; hop < 5 && [301, 302, 303, 307, 308].includes(r.status) && r.headers.get('location'); hop++) {
+        let next;
+        try { next = new URL(r.headers.get('location'), url); } catch { break; }
+        if (!/^https?:$/.test(next.protocol)) return `Error: ${String(url).slice(0, 120)} redirects to a ${next.protocol} address, which is not followed.`;
+        if ((secret || exchange || key) && next.origin !== start.origin) return `Error: ${String(url).slice(0, 120)} redirects to ${next.origin}; the key is sent only to ${start.origin}, so it was not followed.`;
+        if (stayOwned && !owned(next.href)) return `Error: ${String(url).slice(0, 120)} redirects outside the owner's addresses (${next.href.slice(0, 160)}). Read that page with http_fetch: the open web reaches you through its reader.`;
+        if (verb !== 'GET' && verb !== 'HEAD') break;   // a redirected write is answered as it is, never re-sent
+        url = next.href;
+        try { r = await send(); } catch (e) { return `Error: ${keys.scrub(e.message, secret, token)}`; }
+      }
       if (save_as && r.ok) {
         const bytes = Buffer.from(await r.arrayBuffer());
         // A keyless download from an address that is not the owner's keeps a file, never a page: text is reading the
@@ -82,13 +96,29 @@ async function request({ url, method, body, headers, key, form, files, save_as, 
 function owned(url) {
   let u;
   try { u = new URL(url); } catch { return false; }
-  const h = u.hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  if (h === 'localhost' || h === '::1' || /^127\./.test(h)) return true;
-  if (/^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h) || /^169\.254\./.test(h)) return true;
-  const m = /^100\.(\d+)\./.exec(h); if (m && Number(m[1]) >= 64 && Number(m[1]) <= 127) return true;   // the tailnet's CGNAT range
-  if (/^f[cd][0-9a-f]{2}:/.test(h) || h.endsWith('.local') || h.endsWith('.ts.net') || h.endsWith('.lan') || h.endsWith('.home.arpa')) return true;
+  const h = u.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase();
+  // Ranges apply to addresses written as addresses only: "10.evil.com" is a name that starts with digits (security
+  // review 2026-10-07), and a name is the owner's only when it is one of these, never because of how it begins.
+  const ip = require('net').isIP(h);
+  if (ip === 4) return privateV4(h);
+  if (ip === 6) {
+    const v4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(h);
+    if (v4) return privateV4(v4[1]);
+    return h === '::1' || /^f[cd][0-9a-f]{2}:/.test(h) || /^fe[89ab][0-9a-f]:/.test(h);   // loopback, unique local, link-local
+  }
+  if (h === 'localhost' || h.endsWith('.localhost')) return true;
+  if (h.endsWith('.local') || h.endsWith('.lan') || h.endsWith('.home.arpa')) return true;   // never resolved on the public internet
+  // The tailnet: this hub's own MagicDNS suffix — not any *.ts.net, which public Funnel names share.
+  const tail = require('../../network').tailnetSuffix();
+  if (tail && (h === tail || h.endsWith(`.${tail}`))) return true;
   try { if (h === require('os').hostname().toLowerCase()) return true; } catch { /* no name */ }
   return false;
+}
+
+/** 127/8, 10/8, 172.16/12, 192.168/16, 169.254/16 and the tailnet's 100.64/10 — for an address written as one. */
+function privateV4(h) {
+  const [a, b] = h.split('.').map(Number);
+  return a === 127 || a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || (a === 100 && b >= 64 && b <= 127);
 }
 
 module.exports = { request, fileOf, owned, looksText };

@@ -68,7 +68,9 @@ module.exports = [
       // (tools.js); anyone else — the Orchestrator and work chats while specialists are off — gets a reader's report.
       if (!ctx.airlock && method === 'GET' && !a.save_as && /^https?:\/\//i.test(String(a.url || '')) && !require('./http').owned(String(a.url)))
         return quarantined(a, ctx);
-      return require('./http').request({ url: a.url, method, headers: a.headers, save_as: a.save_as }, ctx);
+      // A download from the open web keeps a file, never a page to read later around the reader (security review 2026-10-07).
+      const outside = !ctx.airlock && !require('./http').owned(String(a.url || ''));
+      return require('./http').request({ url: a.url, method, headers: a.headers, save_as: a.save_as, binaryOnly: !!a.save_as && outside }, ctx);
     },
   },
   {

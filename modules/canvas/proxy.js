@@ -42,12 +42,18 @@ function enter(req, res) {
   return true;
 }
 
-/** Headers to the app: its own host, no panel or preview cookie of ours. */
+/**
+ * Headers to the app: its own host, and nothing of ours. A browser sends a host's cookies to every port of it, so the
+ * panel's sign-in (doca_session), its screen and this preview's cookie arrive here too — and the app behind a preview
+ * may be a stranger's repository in an agents' computer (security review 2026-10-07). Every doca_* cookie, any
+ * Authorization and any X-Doca-* header stay behind; the app's own cookies go through.
+ */
 function upstreamHeaders(req, port) {
   const h = { ...req.headers, host: `127.0.0.1:${port}` };
-  const rest = String(h.cookie || '').split(/;\s*/).filter(c => c && !c.startsWith(`${COOKIE}=`)).join('; ');
+  const rest = String(h.cookie || '').split(/;\s*/).filter(c => c && !/^doca[_-]/i.test(c.split('=')[0].trim()) && !c.startsWith(`${COOKIE}=`)).join('; ');
   if (rest) h.cookie = rest; else delete h.cookie;
-  delete h.origin; delete h.referer;
+  delete h.origin; delete h.referer; delete h.authorization;
+  for (const k of Object.keys(h)) if (/^x-doca-/i.test(k)) delete h[k];
   return h;
 }
 
@@ -88,4 +94,4 @@ function upgrade(req, socket, head) {
   socket.on('error', () => up.destroy());
 }
 
-module.exports = { enter, forward, upgrade, COOKIE };
+module.exports = { enter, forward, upgrade, upstreamHeaders, COOKIE };
