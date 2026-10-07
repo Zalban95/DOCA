@@ -10,8 +10,8 @@ function carryOn(stuck = [], { delayMs = 3000 } = {}) {
   if (!stuck.length) return;
   const t = setTimeout(() => {
     for (const m of stuck) {
-      try { require('./missions').resume(m.id, { go: true }); console.warn(`[agents] mission ${m.id} (${m.label}) carried on after the restart`); }
-      catch (e) { console.warn(`[agents] mission ${m.id} stays paused: ${e.message}`); }
+      try { require('./missions').resume(m.id, { go: true }); require('../activity').note({ from: 'missions', what: `carried on ${m.label} (${m.id})`, why: 'a restart had cut it off; work goes on until it is finished (V10)', sessionId: m.sessionId || null }); }
+      catch (e) { require('../activity').note({ from: 'missions', what: `${m.label} (${m.id}) stays paused: ${e.message}`, why: 'a restart had cut it off', level: 'warn', sessionId: m.sessionId || null }); }
     }
   }, delayMs);
   t.unref?.();
