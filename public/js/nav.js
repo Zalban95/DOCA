@@ -14,35 +14,41 @@ function nav(name) {
 
   navGroupsMark(name);   // its group opens, and remembers it (nav-groups.js)
 
-  document.querySelectorAll('.tab-page').forEach(el => {
-    el.classList.toggle('active', el.id === `tab-${name}`);
+  // A page of the person's own (panel-layout.js) shows several of the panel's pages at once: each is started as if
+  // it were open, then placed in the view. Any other page is just itself.
+  const shown = typeof panelViewParts === 'function' ? panelViewParts(name) : [name];
+  const on = t => shown.includes(t);
+  const activate = () => document.querySelectorAll('.tab-page').forEach(el => {
+    el.classList.toggle('active', el.id === `tab-${name}` || on(el.id.slice(4)));
   });
+  activate();
 
   // The Harness tab is a full-size conversation with the same agent the
   // floating panel talks to, so the panel steps aside while it is open.
   document.body.classList.toggle('harness-tab', name === 'harness');
   if (name === 'harness' && chatOpen) toggleChat();
 
-  if (name === 'controls') controlsInit();
-  if (name === 'logs'      && !logSource) startLogs();
-  if (name === 'files')    fmInit();
-  if (name === 'projects') projectsInit();
-  if (name === 'harness')  harnessTabInit();
-  if (name === 'archive')  archiveInit();
-  computersTab(name === 'computers');
-  if (typeof workstreamTab === 'function') workstreamTab(name === 'workstream');
-  if (typeof ambientTab === 'function') ambientTab(name === 'ambient');
-  if (name === 'models' && typeof wakewordTab === 'function') wakewordTab();
-  if (name === 'models' && typeof modelsRolesCard === 'function') modelsRolesCard();
-  if (typeof liveMachinesTab === 'function') liveMachinesTab(name === 'live');   // refreshes only while shown   // holds the hub's sentinel while shown   // starts and stops its thumbnails' timer
-  if (name === 'terminal') termInit();
-  if (name === 'models')   modelsInit();
-  if (name === 'docker')   dockerInit();
-  if (name === 'vms')      vmsInit();
-  if (name === 'mcp')      mcpInit();
-  if (typeof FIELD_PAGES !== 'undefined' && FIELD_PAGES[name]) fieldPageShow(name);   // Connectors, API keys (field-pages.js)
+  if (on('controls')) controlsInit();
+  if (on('logs')      && !logSource) startLogs();
+  if (on('files'))    fmInit();
+  if (on('projects')) projectsInit();
+  if (on('harness'))  harnessTabInit();
+  if (on('archive'))  archiveInit();
+  computersTab(on('computers'));
+  if (typeof workstreamTab === 'function') workstreamTab(on('workstream'));   // holds the hub's sentinel while shown
+  if (typeof ambientTab === 'function') ambientTab(on('ambient'));
+  if (on('models') && typeof wakewordTab === 'function') wakewordTab();
+  if (on('models') && typeof modelsRolesCard === 'function') modelsRolesCard();
+  if (typeof liveMachinesTab === 'function') liveMachinesTab(on('live'));   // refreshes only while shown; starts and stops its thumbnails' timer
+  if (on('terminal')) termInit();
+  if (on('models'))   modelsInit();
+  if (on('docker'))   dockerInit();
+  if (on('vms'))      vmsInit();
+  if (on('mcp'))      mcpInit();
+  for (const t of shown) if (typeof FIELD_PAGES !== 'undefined' && FIELD_PAGES[t]) fieldPageShow(t);   // Connectors, API keys (field-pages.js)
   if (name === 'settings') settingsInit();
 
+  if (typeof panelViewPlace === 'function') { panelViewPlace(name); activate(); }   // pages made by their init land in the view
   closeSidebar();
 }
 

@@ -27,6 +27,7 @@ async function _subtabGeneralInit() {
     _themePickerRender(prefs);
     faceSettingsRender();   // the face: in this screen's corner, or full screen (face/corner.js)
     screenSettingsNote();   // these are this screen's own (lib/screen.js)
+    if (typeof yourPanelCard === 'function') yourPanelCard();   // the panel's layout as the person's data (settings/your-panel.js)
     _statsSettingsRender(prefs);
   } catch (e) {
     const el = document.getElementById('settings-tabs-list');
@@ -88,7 +89,8 @@ async function settingsSave() {
   }
 }
 
-function _applyHiddenTabs(hiddenTabs) {
+function _applyHiddenTabs(list) {
+  const hiddenTabs = [...list, ...(typeof panelLayoutHidden === 'function' ? panelLayoutHidden() : [])];   // and the layout's (panel-layout.js)
   document.querySelectorAll('.nav-tab[data-tab], .mobile-nav-item[data-tab]').forEach(btn => {
     const tab = btn.dataset.tab;
     if (tab === 'settings') return;
@@ -97,16 +99,21 @@ function _applyHiddenTabs(hiddenTabs) {
   if (typeof navGroupsVisibility === 'function') navGroupsVisibility();
 }
 
+let _settingsNoHost = false;
+/** The hidden tabs again, after the nav was drawn anew (a layout change): Settings → General's, the layout's, the machine's. */
+function settingsHiddenApply() { _applyHiddenTabs(_settingsNoHost ? [...new Set([..._settingsHidden, ...HOST_TABS])] : _settingsHidden); }
+
 /* Called on app startup to apply persisted hidden tabs + sidebar sections */
 async function settingsApplyOnLoad() {
   try {
-    const prefs = await screenPrefs();
+    const [prefs] = await Promise.all([screenPrefs(), typeof panelLayoutLoad === 'function' ? panelLayoutLoad() : null]);
     _settingsHidden = prefs.hiddenTabs || [];
     // Without host, the tabs that are the machine are left out instead of drawn as refusals (live test 2026-10-04).
     const me = await apiFetch('/api/auth/me').catch(() => null);
     const noHost = !!me?.rights && !me.rights.includes('host');
     document.body.classList.toggle('no-host', noHost);
-    _applyHiddenTabs(noHost ? [...new Set([..._settingsHidden, ...HOST_TABS])] : _settingsHidden);
+    _settingsNoHost = noHost;
+    settingsHiddenApply();
     _sidebarSections = prefs.sidebarSections || {};
     applySidebarSections(_sidebarSections);
   } catch {}
