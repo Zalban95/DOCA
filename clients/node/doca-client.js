@@ -226,7 +226,8 @@ async function control(cfg, env) {
   await request(cfg, 'POST', `/api/v1/devices/self/control/${encodeURIComponent(id)}/ack`, { ok: true, detail });
 }
 
-async function run({ grant = null, bind = null, port = 18766, root = null, signal } = {}) {
+/** `log` is where its one line goes: the terminal for the command, a program's own logger when one embeds it. */
+async function run({ grant = null, bind = null, port = 18766, root = null, signal, log = say } = {}) {
   const cfg = load();
   if (!cfg?.token) throw new Error('Not paired. Run: doca-client pair <hub> <code>');
   if (root) cfg.root = root;
@@ -248,7 +249,7 @@ async function run({ grant = null, bind = null, port = 18766, root = null, signa
   const mine = await request(cfg, 'GET', '/api/v1/mcp/self');
   if (mine.status === 200) await request(cfg, 'PATCH', '/api/v1/mcp/self', { url, headers });
   else await request(cfg, 'POST', '/api/v1/mcp/offer', { label: `${cfg.name} (doca-client)`, url, headers, tools: lent(cfg).map(([n]) => n), note: `${process.platform} machine lending ${FAMILIES.filter(f => cfg.grants[f]).join(' and ') || 'nothing yet'}` });
-  say(`✓ ${cfg.name} serves ${lent(cfg).length} tool(s) at ${url}${mine.status === 200 ? '' : ' — accept its offer in the hub (MCP tab) once'}.`);
+  log(`✓ ${cfg.name} serves ${lent(cfg).length} tool(s) at ${url}${mine.status === 200 ? '' : ' — accept its offer in the hub (MCP tab) once'}.`);
   const stopped = new AbortController();
   if (signal) signal.addEventListener('abort', () => stopped.abort(), { once: true });
   follow(cfg, { signal: stopped.signal });

@@ -47,8 +47,12 @@ test('it updates from its own hub: what differs is fetched, checked and replaced
 });
 
 test('it lends what was granted; once its offer is accepted the agent works on that machine', async () => {
-  lending = await client.run({ grant: ['files', 'shell'], bind: '127.0.0.1', port: 0, root, signal: ctrl.signal });
+  // Its line is kept, not printed: Node's test runner reads a test's stdout between its own framed messages, and a
+  // line starting "✓" right behind one (pipe reads coalesce under load) is read as a frame — "Unable to deserialize".
+  const said = [];
+  lending = await client.run({ grant: ['files', 'shell'], bind: '127.0.0.1', port: 0, root, signal: ctrl.signal, log: m => said.push(m) });
   const { url } = lending;
+  assert.match(said.join('\n'), /serves 8 tool\(s\) .* accept its offer/, 'it tells its person what it lends and what to do next');
   assert.match(url, /^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
   const offers = (await H.api(null, 'GET', '/api/mcp')).body.offers || [];
   const offer = offers.find(o => o.deviceId === deviceId);
@@ -97,7 +101,7 @@ test('a hub over HTTPS is pinned at pairing: another certificate later is refuse
     srv.closeAllConnections(); await new Promise(r => srv.close(r));
     srv = https.createServer({ key: b.private, cert: b.cert }, answer);
     await new Promise(r => srv.listen(port, '127.0.0.1', r));
-    await assert.rejects(client.run({ grant: [], bind: '127.0.0.1', port: 0 }), /certificate changed/);
+    await assert.rejects(client.run({ grant: [], bind: '127.0.0.1', port: 0, log: () => {} }), /certificate changed/);
     // And the pinned one is accepted: back to certificate a.
     srv.closeAllConnections(); await new Promise(r => srv.close(r));
     srv = https.createServer({ key: a.private, cert: a.cert }, answer);
