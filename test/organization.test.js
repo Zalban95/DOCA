@@ -282,3 +282,35 @@ test('approving does not interrupt a conversation busy with its own turn: the ap
     assert.match(inbox.waiting(work.id)[0].message, /Approved revision 1/);
   } finally { running.delete(work.id); inbox.take(work.id); }
 });
+
+test('finished means every contract in the plan holds: a step is held to its check before it is done (V10)', async () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const work = org.create({ title: 'A site with a model' });
+  const page = path.join(H.tmp, 'site', 'index.html');
+  await tools.call('work_plan', { action: 'draft', title: 'Website with the Blender model', steps: ['Make the model', 'Build the page', 'Tidy up'],
+    contracts: [{ done: 'the .glb is in the site folder' }, { done: 'the page shows the model', check: { file: page, contains: '<model-viewer' } }, {}] }, [],
+    { sessionId: work.id });
+  let p = org.plan(work.id, { action: 'read' });
+  assert.deepEqual(p.steps, ['Make the model', 'Build the page', 'Tidy up'], 'steps stay sentences: every reader keeps working');
+  assert.equal(p.contracts[1].done, 'the page shows the model');
+  assert.equal(p.contracts[2], null);
+  assert.match(require('../modules/harness/plan-doc').render(p), /2\. Build the page\n {3}\*Done when\* the page shows the model/, 'the document the person approves shows each contract');
+
+  const step = (n, state = 'done') => tools.call('work_plan', { action: 'progress', step: n, state }, [], { sessionId: work.id });
+  await step(1);
+  const refused = JSON.parse(await step(2));
+  assert.equal(refused.done, false);
+  assert.match(refused.check, /index\.html is not there/);
+  assert.notEqual(org.plan(work.id, { action: 'read' }).progress[2], 'done', 'held open');
+
+  fs.mkdirSync(path.dirname(page), { recursive: true });
+  fs.writeFileSync(page, '<model-viewer src="chair.glb"></model-viewer>');
+  await step(2);
+  assert.equal(org.plan(work.id, { action: 'read' }).fulfilledAt, null, 'not until every step');
+  await step(3);
+  p = org.plan(work.id, { action: 'read' });
+  assert.ok(p.fulfilledAt, 'fulfilled: every contract holds');
+  await step(3, 'running');
+  assert.equal(org.plan(work.id, { action: 'read' }).fulfilledAt, null, 'a step reopened: no longer fulfilled');
+  await assert.rejects(async () => { org.plan(work.id, { action: 'draft', title: 'x', steps: ['a'], contracts: [{ check: { url: 'https://example.com' } }] }); }, /owner's own addresses/);
+});

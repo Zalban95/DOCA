@@ -17,14 +17,15 @@ function agentSideFold(host, sessionId) {
     const done = steps.filter((_, i) => plan.progress?.[i + 1] === 'done').length;
     if (!waiting.length && !plan) { host.innerHTML = ''; host.hidden = true; return; }
     host.hidden = false;
-    const parts = [waiting.length ? `Queued ${waiting.length}` : '', plan ? `Plan ${done}/${steps.length} · ${plan.state}` : ''].filter(Boolean);
+    const parts = [waiting.length ? `Queued ${waiting.length}` : '', plan ? `Plan ${done}/${steps.length} · ${plan.fulfilledAt ? 'fulfilled' : plan.state}` : ''].filter(Boolean);
     host.innerHTML = `<button class="agent-fold-head" aria-expanded="${open}">${open ? '▾' : '▸'} ${escHtml(parts.join(' · '))}</button>
       <div class="agent-fold-body" ${open ? '' : 'hidden'}>
         ${waiting.map(w => `<div class="agent-fold-q"><span>${escHtml(w.message)}</span>
           <button class="btn btn-xs" title="Withdraw it before it is read" data-q="${escHtml(w.id)}">✕</button></div>`).join('')}
         ${plan ? `<div class="agent-fold-plan"><div class="agent-fold-title">${escHtml(plan.title)}</div>
           ${steps.map((st, i) => { const s = plan.progress?.[i + 1] || 'queued';
-            return `<div class="agent-fold-step" data-state="${s}"><span>${AGENT_FOLD_STEP[s] || '○'}</span> ${escHtml(st)}</div>`; }).join('')}</div>` : ''}
+            const c = plan.contracts?.[i]?.done;   // the step's contract: finished means it holds
+            return `<div class="agent-fold-step" data-state="${s}"><span>${AGENT_FOLD_STEP[s] || '○'}</span> ${escHtml(st)}${c ? `<small style="display:block;color:var(--muted);margin-left:18px">done when ${escHtml(c)}</small>` : ''}</div>`; }).join('')}</div>` : ''}
       </div>`;
     host.querySelector('.agent-fold-head').onclick = () => {
       open = !open;
