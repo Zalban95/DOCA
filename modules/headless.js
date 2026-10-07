@@ -41,7 +41,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function devtools(profile) {
   const file = path.join(profile, 'DevToolsActivePort');
-  for (let i = 0; i < 400; i++) { if (fs.existsSync(file)) { const port = fs.readFileSync(file, 'utf8').split('\n')[0]; if (port) return Number(port); } await sleep(150); }
+  for (let i = 0; i < 400; i++) {
+    // Windows locks the file while the browser writes it (EBUSY): a read that fails is a read too early, tried again.
+    let port = '';
+    try { port = fs.readFileSync(file, 'utf8').split('\n')[0]; } catch { /* not there yet, or still being written */ }
+    if (port) return Number(port);
+    await sleep(150);
+  }
   throw new Error('The browser did not open its DevTools port.');
 }
 
