@@ -1081,3 +1081,11 @@ test('the environment names the owner\'s switched-off tools and folds unset defa
     assert.doesNotMatch(b, /\(default, MISSING\)/);
   } finally { catalog.saveConfig('doca', { disabledTools: was || [] }); environment.invalidate(); }
 });
+
+test('settings_read says what each harness parameter does, in the form\'s own words (audit 2026-10-06, coh F14)', async () => {
+  const hints = require('../modules/harness/param-hints').hints();
+  assert.ok(Object.keys(hints).length >= 15, 'the table was read');
+  const out = await require('../modules/harness/tools').call('settings_read', { filter: 'harness.config' });
+  assert.match(out, /harness\.config\.doca\.temperature = [\d.]+ +# Temperature: How varied the answers are/);
+  assert.match(out, /harness\.config\.doca\.contextWindow = \d+ +# Context window \(tokens\): How much the model can hold/);
+});

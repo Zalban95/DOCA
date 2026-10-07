@@ -47,6 +47,17 @@ the server; on, none was. Where both passed it cost 4–51 % fewer tokens. Two h
 cleanly during case 8 ("build and install the Android app"): no result was saved and the sandbox was gone, so what the
 turn did is unknown — TODO B7b.
 
+**All eleven cases, each combination in a fresh sandbox** (2.257.2; DeepSeek's flash model, 128k context):
+
+| date | model | flag | passed | tokens | steps | failures |
+|---|---|---|---|---|---|---|
+| 2026-10-07 | DeepSeek4f / deepseek-flash | off | 9/11 | 2,531k | 74 | `remember`: said "written to memory" without calling `memory_write`; `skill-before-improvising`: read the skill, then improvised Gradle and adb (1.0M tokens, 21 steps) |
+| 2026-10-07 | DeepSeek4f / deepseek-flash | on | 10/11 | 1,857k | 73 | `skill-before-improvising` as above (0.84M tokens, 23 steps) |
+
+On a frontier-class model with room to spare the flag costs nothing in passes (one more, the `remember` case) and
+saves 27 % of the tokens over the set. The one failure both ways is a habit, not a missing tool: the skill was read and
+not followed — TODO B7c.
+
 Not measured yet, and what decides it: whether a model finds and loads what it needs (an evaluation set of tasks that
 need a rare tool — B7 — run with the flag off and on, on a small local model and a frontier one), and how often a
 loaded tool breaks the provider's prefix cache (once per load, by design).

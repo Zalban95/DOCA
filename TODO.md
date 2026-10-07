@@ -89,8 +89,15 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   model-servers.js (W14: keep/archive/delete); per feature, tool / recipe / a person's alone for wake-word training,
   evals, Workstream, served pages, logs and traces.
 - [x] B7 **Task skills and routing evals** (aw 24, 27; coh F19) — *2.256.0: six task skills (morning-brief, research-with-sources, what-is-my-machine-doing, service-wont-start, calendar-and-mail, photos-and-files), each found by Likely fits; `evals/routing.json` (eleven cases, three on the rare tools toolTiers sends by name); `anyTool` checks; `npm run eval -- <set> --models a/b,c/d --flag <experiment>[=on|off]`. First measurement in docs/experiments/tool-tiers.md*
+- [ ] B7c **What DeepSeek did on the routing set** (2026-10-07, fresh sandboxes): (1) it answered "Written to memory
+  as `router-ip`" without calling `memory_write` — a claimed action that never happened (charter: never claim a result
+  you have not seen); a turn's answer that claims a memory, a commit, an install or a message the turn never made should
+  be caught (a post-turn check of claims against the calls, said in the answer); (2) case 8 read the android-app skill
+  and then improvised Gradle and adb anyway; (3) an eval's sandbox copies the MCP servers, so a case can call the real
+  phone's tools (it read `apps_list`) — evals should run with client-hosted servers stopped, or say they may not.
 - [ ] T1 **`test/doca-client.test.js` fails in a full `npm test` now and then** (three times on 2026-10-06/07, and
   `test/launcher.test.js` once, both under load) and passes alone: find the timing it depends on, rather than retry.
+  Three full runs in a row with nothing else running passed (2026-10-07): it is load, not order.
 - [ ] B7b **What routing measured** (2026-10-07, local Qwen 3.8 27B): grep through `shell` instead of `search_files`, and
   "get whisper running" by hand instead of `install_propose`, with the flag off and on — the routing table and the
   charter's install rule are not enough for this model; try a sentence in the table's rows, then measure again. The run
@@ -112,7 +119,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   first**) for the ambient screen, a header badge and a watch summary.
 - [ ] C2 **Proposals for a screen** (coh F13): a `screen` target applied through `screens`; `call`, `voice`, `ambient`,
   `face` proposable.
-- [ ] C3 **Settings declared with their hints** (coh F14–F15): harness parameters typed with hints in the schema,
+- [~] C3 **Settings declared with their hints** — *2.258.0: `settings_read` carries every harness parameter's hint, read from the ⚙ form's own table (`harness/param-hints.js`); typed declarations in the schema and one env-vs-saved rule are left* (coh F14–F15): harness parameters typed with hints in the schema,
   `defaultParams()` and `HARNESS_PARAMS` derived; one env-vs-saved rule, "overridden by ENV" shown.
 - [x] C4 **Which model does what, in one registry** — *2.252.0: `modules/model-roles.js` (15 roles, each with its setting and where), read by the scout, `settings_read` ("Models in use") and Field → Models' card; a test per `*model` setting* (coh F11): `model-roles.js` read by the scout, a "Models in use"
   card and `settings_read`.

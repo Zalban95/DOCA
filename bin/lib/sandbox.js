@@ -17,6 +17,15 @@ function sandbox(prefix = 'doca-sandbox-') {
   fs.mkdirSync(path.join(tmp, 'data', 'keys'), { recursive: true });
   try { fs.copyFileSync(process.env.DOCA_PREFS_FILE || path.join(real.HOME_DIR, '.dashboard-prefs.json'), path.join(tmp, 'prefs.json')); } catch { fs.writeFileSync(path.join(tmp, 'prefs.json'), '{}'); }
   try { fs.copyFileSync(real.PROVIDER_KEYS_FILE, path.join(tmp, 'data', 'keys', 'providers.json')); } catch { /* keys may live in openclaw.json */ }
+  // No MCP server a person's device hosts: a measurement must not reach the real phone or desk (an eval case read the
+  // owner's phone through mcp_connect, 2026-10-07). Servers on this machine stay — measuring is what they are for here.
+  try {
+    const f = path.join(tmp, 'prefs.json'), prefs = JSON.parse(fs.readFileSync(f, 'utf8'));
+    if (prefs.mcpServers && typeof prefs.mcpServers === 'object') {
+      for (const [id, d] of Object.entries(prefs.mcpServers)) if (d?.origin?.kind === 'client') delete prefs.mcpServers[id];
+      fs.writeFileSync(f, JSON.stringify(prefs, null, 2));
+    }
+  } catch { /* prefs that do not parse are the measurement's problem, not this one's */ }
   for (const k of Object.keys(require.cache)) delete require.cache[k];
   Object.assign(process.env, { DOCA_DATA_DIR: path.join(tmp, 'data'), DOCA_PREFS_FILE: path.join(tmp, 'prefs.json'), DOCA_HOME: tmp, WORKSPACE_DIR: tmp, ATTACHMENTS_DIR: path.join(tmp, 'attachments') });
   // Retried, and never fatal: on Windows a file the run still holds open (its database) refuses to go for a moment,
