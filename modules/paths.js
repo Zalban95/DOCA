@@ -55,12 +55,13 @@ function savedPaths() {
 const ENV_AT_BOOT = {};
 for (const { key } of SETTABLE) ENV_AT_BOOT[key] = process.env[key] || null;
 
-// A path saved in the dashboard beats the environment: it was set later, on
-// purpose, and can be cleared from the same screen. Writing it into process.env
-// means every module below reads one value without knowing prefs exist.
+// One rule for every setting the environment can also give (audit 2026-10-06, coh F15; TODO C3): the environment
+// wins — it is what whoever launched DOCA (a unit, a container, .env) asked for — and the panel says so beside the
+// field ("overridden by ENV"). Listen, the channels' tokens and mail already worked this way; paths used to let a
+// saved value win. A saved path is written into process.env so every module below reads one value.
 const SAVED = savedPaths();
 for (const { key } of SETTABLE) {
-  if (SAVED[key]) process.env[key] = SAVED[key];
+  if (SAVED[key] && !ENV_AT_BOOT[key]) process.env[key] = SAVED[key];
 }
 
 // All paths are env-overridable; defaults use os.homedir() for portability.
@@ -177,7 +178,7 @@ const VALUES = {
  *  The constants above cannot see those, so anything acting on a path — and the
  *  rows the user is looking at — has to resolve it again. */
 function currentValue(spec, saved = savedPaths()) {
-  return saved[spec.key] || ENV_AT_BOOT[spec.key] || spec.fallback;
+  return ENV_AT_BOOT[spec.key] || saved[spec.key] || spec.fallback;
 }
 
 /** Every settable path with its effective value, where that value came from,
@@ -193,7 +194,9 @@ function describe() {
       // after boot, which is exactly when the user needs to be told to restart.
       active:  VALUES[p.key],
       pending: value !== VALUES[p.key],
-      source:  saved[p.key] ? 'saved' : ENV_AT_BOOT[p.key] ? 'env' : 'default',
+      source:  ENV_AT_BOOT[p.key] ? 'env' : saved[p.key] ? 'saved' : 'default',
+      // Saved here and set in the environment: the environment's is used, and the row says so.
+      overridden: !!(saved[p.key] && ENV_AT_BOOT[p.key]),
       // A URL is not on disk; an optional path left empty is not missing.
       exists:  p.kind === 'url' || (p.optional && !value) ? null : fs.existsSync(value),
     };

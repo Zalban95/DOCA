@@ -26,7 +26,7 @@ async function channelsLoad() {
     <div style="margin-bottom:10px">${state({ ...t, bot: t.bot && { username: `@${t.bot.username}` } })}${t.error ? ` — <span style="color:var(--red)">${escHtml(t.error)}</span>` : ''}${t.lastPollAt ? ` <span style="color:var(--muted);font-size:11px">· last poll ${escHtml(new Date(t.lastPollAt).toLocaleTimeString())}</span>` : ''}</div>
     ${host ? `<div class="input-label">Bot token — make a bot with <b>@BotFather</b> in Telegram (/newbot) and paste the token it gives</div>
       <div class="toolbar" style="gap:6px;margin-bottom:10px">
-        <input class="input" id="tg-token" type="password" autocomplete="off" placeholder="${t.hasToken ? 'saved — paste a new one to replace it' : '123456:ABC…'}" style="flex:1;min-width:200px">
+        <input class="input" id="tg-token" type="password" autocomplete="off" placeholder="${_chPh(t, 'TELEGRAM_BOT_TOKEN', t.hasToken ? 'saved — paste a new one to replace it' : '123456:ABC…')}" style="flex:1;min-width:200px">
         <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="tg-on" ${t.enabled ? 'checked' : ''}> on</label>
         <button class="btn btn-sm btn-blue" onclick="channelsSave()">Save</button></div>` : ''}
     <div class="card-title" style="font-size:12px;margin-top:6px">${host ? 'Linked chats' : 'Your linked chats'}</div>
@@ -50,7 +50,7 @@ function channelsMatrixCard(m, host, state) {
     ${host ? `<div class="input-label">Homeserver and the bot account's access token (Element: Settings → Help &amp; About → Access token, signed in as the bot)</div>
       <div class="toolbar" style="gap:6px;margin-bottom:10px">
         <input class="input" id="mx-hs" placeholder="https://matrix.org" value="${escHtml(m.homeserver || '')}" style="flex:1;min-width:160px">
-        <input class="input" id="mx-token" type="password" autocomplete="off" placeholder="${m.hasToken ? 'saved — paste a new one to replace it' : 'syt_…'}" style="flex:1;min-width:160px">
+        <input class="input" id="mx-token" type="password" autocomplete="off" placeholder="${_chPh(m, 'MATRIX_ACCESS_TOKEN', m.hasToken ? 'saved — paste a new one to replace it' : 'syt_…')}" style="flex:1;min-width:160px">
         <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="mx-on" ${m.enabled ? 'checked' : ''}> on</label>
         <button class="btn btn-sm btn-blue" onclick="channelsMatrixSave()">Save</button></div>` : ''}
     <div class="card-title" style="font-size:12px;margin-top:6px">${host ? 'Linked rooms' : 'Your linked rooms'}</div>
@@ -74,8 +74,8 @@ function channelsSlackCard(m, host, state) {
     <div style="margin-bottom:10px">${state(m)}${m.bot?.team ? ` <span style="color:var(--muted);font-size:11px">· ${escHtml(m.bot.team)}</span>` : ''}${m.error ? ` — <span style="color:var(--red)">${escHtml(m.error)}</span>` : ''}</div>
     ${host ? `<div class="input-label">App-level token (xapp-…) and bot token (xoxb-…)</div>
       <div class="toolbar" style="gap:6px;margin-bottom:10px">
-        <input class="input" id="sl-app" type="password" autocomplete="off" placeholder="${m.hasAppToken ? 'saved — paste to replace' : 'xapp-…'}" style="flex:1;min-width:160px">
-        <input class="input" id="sl-bot" type="password" autocomplete="off" placeholder="${m.hasBotToken ? 'saved — paste to replace' : 'xoxb-…'}" style="flex:1;min-width:160px">
+        <input class="input" id="sl-app" type="password" autocomplete="off" placeholder="${_chPh(m, 'SLACK_APP_TOKEN', m.hasAppToken ? 'saved — paste to replace' : 'xapp-…')}" style="flex:1;min-width:160px">
+        <input class="input" id="sl-bot" type="password" autocomplete="off" placeholder="${_chPh(m, 'SLACK_BOT_TOKEN', m.hasBotToken ? 'saved — paste to replace' : 'xoxb-…')}" style="flex:1;min-width:160px">
         <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="sl-on" ${m.enabled ? 'checked' : ''}> on</label>
         <button class="btn btn-sm btn-blue" onclick="channelsSlackSave()">Save</button></div>` : ''}
     <div class="card-title" style="font-size:12px;margin-top:6px">${host ? 'Linked direct messages' : 'Your linked direct messages'}</div>
@@ -103,7 +103,7 @@ function channelsMailCard(m, host, state) {
         <input class="input" id="ml-auth" placeholder="its receiving server (mx.google.com)" value="${v('authservId')}" style="flex:1;min-width:170px"></div>
       <div class="toolbar" style="gap:6px;margin-bottom:10px;flex-wrap:wrap">
         <input class="input" id="ml-user" placeholder="mailbox (doca@example.com)" value="${v('user')}" style="flex:1;min-width:170px">
-        <input class="input" id="ml-pass" type="password" autocomplete="off" placeholder="${m.hasPassword ? 'saved — paste to replace' : 'app password'}" style="flex:1;min-width:150px">
+        <input class="input" id="ml-pass" type="password" autocomplete="off" placeholder="${_chPh(m, 'DOCA_MAIL_PASSWORD', m.hasPassword ? 'saved — paste to replace' : 'app password')}" style="flex:1;min-width:150px">
         <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="ml-on" ${m.enabled ? 'checked' : ''}> on</label>
         <button class="btn btn-sm btn-blue" onclick="channelsMailSave()">Save</button></div>` : ''}
     <div class="card-title" style="font-size:12px;margin-top:6px">${host ? 'Linked addresses' : 'Your linked addresses'}</div>
@@ -190,3 +190,6 @@ function channelsUnlink(chatId, channel = 'telegram') {
 // Its panel is made here rather than in index.html, which is at its line ceiling.
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('DOMContentLoaded', () =>
   document.getElementById('sp-backups')?.before(Object.assign(document.createElement('div'), { className: 'settings-panel', id: 'sp-channels' })));
+
+/** A secret field's placeholder: set in the environment, the environment's wins over anything saved here (one rule, C3). */
+const _chPh = (st, name, otherwise) => ((st?.env || []).includes(name) ? `overridden by ENV (${name}) — the environment wins` : otherwise);

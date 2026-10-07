@@ -32,7 +32,7 @@ function _pathRowHtml(p) {
   // Where the value in the box comes from, so a field that looks editable but is
   // really coming from systemd or Docker does not look like the user's own choice.
   const origin = p.source === 'saved' ? 'set here'
-    : p.source === 'env' ? `from ${p.key}`
+    : p.source === 'env' ? (p.overridden ? `overridden by ENV (${p.key}) — the environment wins over what is saved here` : `from ${p.key}`)
     : 'default';
 
   const state = p.exists === null

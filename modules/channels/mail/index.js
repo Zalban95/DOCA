@@ -84,7 +84,7 @@ function unlink(addr) {
 
 function status() {
   const p = prefs();
-  return { enabled: p.enabled === true, configured: !!(p.imapHost && p.user), hasPassword: !!(process.env.DOCA_MAIL_PASSWORD || p.password), running: state.running,
+  return { env: ['DOCA_MAIL_PASSWORD'].filter(k => process.env[k]), enabled: p.enabled === true, configured: !!(p.imapHost && p.user), hasPassword: !!(process.env.DOCA_MAIL_PASSWORD || p.password), running: state.running,
     error: state.error, lastPollAt: state.lastPollAt, bot: p.address || p.user ? { username: p.address || p.user } : null,
     imapHost: p.imapHost || null, smtpHost: p.smtpHost || null, user: p.user || null, authservId: p.authservId || null };
 }

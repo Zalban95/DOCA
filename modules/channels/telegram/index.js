@@ -80,7 +80,7 @@ function stop() {
 
 function status() {
   const p = api.prefs();
-  return { enabled: p.enabled === true, hasToken: !!api.token(), running: state.running, error: state.error, lastPollAt: state.lastPollAt,
+  return { env: ['TELEGRAM_BOT_TOKEN'].filter(k => process.env[k]), enabled: p.enabled === true, hasToken: !!api.token(), running: state.running, error: state.error, lastPollAt: state.lastPollAt,
     bot: state.bot && { id: state.bot.id, username: state.bot.username, name: state.bot.first_name } };
 }
 

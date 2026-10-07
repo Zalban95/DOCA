@@ -99,7 +99,7 @@ function unlink(ch) {
 
 function status() {
   const p = api.prefs();
-  return { enabled: p.enabled === true, hasAppToken: !!api.appToken(), hasBotToken: !!api.botToken(), running: state.running,
+  return { env: ['SLACK_APP_TOKEN', 'SLACK_BOT_TOKEN'].filter(k => process.env[k]), enabled: p.enabled === true, hasAppToken: !!api.appToken(), hasBotToken: !!api.botToken(), running: state.running,
     connected: !!state.ws && state.ws.readyState === 1, error: state.error, connectedAt: state.connectedAt,
     bot: state.me ? { username: state.me, team: state.team } : null };
 }
