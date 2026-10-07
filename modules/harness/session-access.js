@@ -63,7 +63,7 @@ function defaultFor(person) {
   if (!person?.id || isHost(person)) return memory.activeSession().id;
   const found = newestOwn(person);
   if (found) return found;
-  const s = require('./organization').create({ title: 'Chat' });
+  const s = require('./organization').create({ title: 'Chat', kind: 'chat' });
   claim(person, s.id);
   return s.id;
 }

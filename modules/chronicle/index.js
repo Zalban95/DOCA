@@ -35,6 +35,7 @@ function agentOf(run, s, m) {
   if (run.kind === 'job') return { id: 'job', label: 'Device job' };
   if (m) return { id: m.agentId, label: m.label || m.agentId };
   if (s?.kind === 'orchestrator') return { id: 'orchestrator', label: 'Orchestrator' };
+  if (s?.kind === 'chat') return { id: 'chat', label: 'Conversation' };   // one a person started
   return { id: 'work', label: s?.kind === 'specialist' ? 'Specialist' : 'Work chat' };
 }
 

@@ -149,18 +149,23 @@ function list({ all = false, offset = 0, limit = 40 } = {}, viewer = null) {
     }) };
 }
 
+// A level-2 conversation: a work chat (the Orchestrator's, with a job), or a conversation a person started (`chat`,
+// self-test 2026-10-08: it was made as a "Work chat"). Both lead what they start; only a work chat has a job.
+const leads = kind => kind === 'work' || kind === 'chat';
+
 function canManage(actor, target) {
   const s = session(actor);
   return actor === target || s.kind === 'orchestrator' ||
-    (s.kind === 'work' && ancestors(target).includes(actor));
+    (leads(s.kind) && ancestors(target).includes(actor));
 }
 
-function create({ title, planning = false } = {}) {
-  const s = memory.createSession(short(title, 100) || (planning ? 'Planning work' : 'Work chat'), {
-    activate: false, kind: 'work', parentId: memory.mainSession().id,
+function create({ title, planning = false, kind = 'work' } = {}) {
+  const chat = kind === 'chat' && !planning;
+  const s = memory.createSession(short(title, 100) || (chat ? 'New conversation' : planning ? 'Planning work' : 'Work chat'), {
+    activate: false, kind: chat ? 'chat' : 'work', parentId: memory.mainSession().id,
   });
   memory.updateSession(s.id, { planning: !!planning, titleLocked: !!title });
-  report(s.id, 'created', planning ? 'Planning work chat created' : 'Work chat created');
+  report(s.id, 'created', chat ? 'Conversation started' : planning ? 'Planning work chat created' : 'Work chat created');
   return session(s.id);
 }
 
@@ -273,6 +278,7 @@ function block(id, pending = []) {
   return [`# Organization — ${s.kind}, conversation ${id}`,
     s.parentId ? `Reports to ${s.parentId}. Use work_chats report for decisions, blockers and results.` : '',
     s.planning ? 'This is a planning work chat. Develop a plan and propose it; execution belongs in a separate work chat.' : '',
+    s.kind === 'chat' ? 'This is a conversation a person started (level 2): answer the person who writes here; nothing wakes you between turns. Delegate narrow errands with agent_dispatch when specialists are enabled.' : '',
     s.kind === 'work' ? 'You lead this work chat (level 2). Own its detailed work and plan. Delegate narrow errands with agent_dispatch when specialists are enabled. You cannot create another leader layer. '
       // The job contract only where there is a job: a chat opened by a person has none, and nothing re-prompts it
       // (supervisor.js) — telling it otherwise left it unsure whether to answer or report (its own feedback, 2026-10-07).
@@ -310,7 +316,7 @@ async function tool(args, ctx) {
   }
   if (args.action === 'create') {
     if (actor.kind !== 'orchestrator') throw error('Only the Orchestrator creates work leaders.', 403);
-    const s = create(args);
+    const s = create({ ...args, kind: 'work' });   // what the Orchestrator creates is a work chat, whatever else it passed
     if (args.message) start(s.id, args.message, actor.id);
     return view(s);
   }
@@ -340,5 +346,5 @@ async function tool(args, ctx) {
   throw error('Unknown work_chats action.', 400);
 }
 
-module.exports = { FINAL, session, ancestors, report, notices, acknowledge, view, list, create, start, carryOut,
+module.exports = { FINAL, leads, session, ancestors, report, notices, acknowledge, view, list, create, start, carryOut,
   archive, plan, profileFor, block, tool, canManage };

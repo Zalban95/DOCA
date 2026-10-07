@@ -154,7 +154,7 @@ module.exports = [
       if (!mayHandle(ctx, m)) return NOT_YOURS(mission);
       if (wait && m.state === 'running') {
         // Waiting is the work leader's: the Orchestrator stays available to the owner.
-        if (!ctx.sessionId || require('../organization').session(ctx.sessionId).kind !== 'work')
+        if (!ctx.sessionId || !require('../organization').leads(require('../organization').session(ctx.sessionId).kind))
           return 'Only the responsible work leader may wait. The Orchestrator should remain available to the user.';
         const deadline = Date.now() + 30000;
         while (m.state === 'running' && Date.now() < deadline) {

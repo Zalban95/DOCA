@@ -74,7 +74,7 @@ async function _hcLoadSessions(refreshOnly = false) {
     const draw = (s, depth = 0) => {
       if (drawn.has(s.id)) return '';
       drawn.add(s.id);
-      const role = s.kind === 'orchestrator' ? '1 · Orchestrator' : s.kind === 'specialist' ? '3 · Specialist' : '2 · Work leader';
+      const role = s.kind === 'orchestrator' ? '1 · Orchestrator' : s.kind === 'specialist' ? '3 · Specialist' : s.kind === 'chat' ? '2 · Conversation' : '2 · Work leader';
       return `<div class="hc-session ${s.id === _hcSession ? 'active' : ''}" data-session="${escHtml(s.id)}"
         style="margin-left:${Math.min(2, depth) * 12}px" onclick="hcOpenSession(${jsArg(s.id)})">
         <span class="hc-session-title"><small>${role}${s.archivedAt ? ' · archived' : ''}</small>${escHtml(s.title)}</span>
@@ -98,7 +98,7 @@ async function _hcLoadSessions(refreshOnly = false) {
 function hcNewSession(planning = false) {
   appPrompt(planning ? 'Name this planning chat' : 'Name this work chat', async title => {
     try {
-      const { session } = await apiFetch('/api/harness/sessions', { method: 'POST', body: { title, planning } });
+      const { session } = await apiFetch('/api/harness/sessions', { method: 'POST', body: { title, planning, kind: 'work' } });
       _hcSession = session.id;
       await _hcLoadSessions();
     } catch (e) { appAlert(e.message); }

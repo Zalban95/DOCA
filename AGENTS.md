@@ -13,6 +13,11 @@ OpenClaw Dashboard — a single Node.js/Express web app (`server.js` + `modules/
 - **job** — a work chat's task, in `session.job` (the supervisor carries it to its end); not a device's command job
   (`api-v1/jobs.js`, `job_` ids), a background shell job (`shell_job`) or the panel's install jobs (`jobs.js`).
   Prompts say "task" for the first where the others are near.
+- **conversation** and **work chat** — a conversation a person starts (a bare `POST /api/harness/sessions`, a device's
+  `POST /api/v1/harness/sessions`, a member's first) is kind `chat`; a **work chat** (kind `work`) is what the
+  Orchestrator creates or the panel's ＋ Work / ＋ Plan ask for (`kind: 'work'`), and only it carries a job. Both are
+  level 2 and lead what they start (`organization.leads`); a project's chats are its work chats (since the self-test of
+  2026-10-08; older conversations stay as they were).
 - **scout** — the airlock specialist that reads the web (`specialists/scout`); the experiment that looks for better
   models is the **model scout** (`modules/scout`, tool `model_scout`; `scout` still runs as it for old transcripts).
 - **browser** — a device record of kind `browser` (a signed-in screen, `modules/screens`); the person's own browser
