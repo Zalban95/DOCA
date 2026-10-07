@@ -657,7 +657,7 @@ function fmSetupDragDrop() {
 
 /* ── Keyboard shortcuts ──────────────────────────────── */
 document.addEventListener('keydown', e => {
-  if (currentTab !== 'files') return;
+  if (!pageShown('files')) return;
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   if ((e.ctrlKey || e.metaKey) && e.key === 'c') { e.preventDefault(); fmCopy(); }
   if ((e.ctrlKey || e.metaKey) && e.key === 'x') { e.preventDefault(); fmCut(); }

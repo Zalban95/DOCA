@@ -13,7 +13,7 @@ function chronicleTab(shown) {
   chronicleInit();
   // While shown, a turn starting or ending, or a mission moving, redraws the list — in a burst, once.
   if (!CHRON.off && typeof liveOn === 'function') {
-    const redraw = liveDebounce(() => { if (currentTab === 'chronicle') chronLoad(); }, 3000);
+    const redraw = liveDebounce(() => { if (pageShown('chronicle')) chronLoad(); }, 3000);
     const offs = [liveOn('conversation', e => { if (['started', 'ended', 'resync'].includes(e?.what)) redraw(); }), liveOn('missions', redraw)];
     CHRON.off = () => offs.forEach(o => o());
   }
