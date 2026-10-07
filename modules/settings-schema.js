@@ -107,6 +107,7 @@ const SCHEMA = {
         hint: 'How assistant mode speaks — the instruction every face-started turn is given.' },
       reply: { type: 'string', default: 'act', hint: 'In a call, a clear request with a visible result: act (do it, answer only ✓ — nothing spoken), brief (a few words) or always (say what was done).' },
       calls: { type: 'boolean', default: false, hint: 'Use this effort and model for the chat\'s 🎙 call too, not only for the face.' },
+      front: { type: 'boolean', default: true, hint: 'A call answers at once with a short kit of quick actions, and hands anything bigger — or anything you ask it to think harder about — to a work chat, whose outcome it says in the call. Off: a spoken turn holds every tool, as before.' },
       provider: { type: 'string', default: '', hint: 'A provider for assistant mode\'s own model. Empty: the conversation\'s.' },
       model: { type: 'string', default: '', hint: 'A quicker model for assistant mode (e.g. a small local one). Empty: the conversation\'s model.' } } },
   setup:            { is: 'local', home: 'device', on: 'host', note: 'how this hub was set up and what shape it is (guided/plan.js; CONSTITUTION §1 "Two shapes, two set-ups") — the owner\'s, never proposable',
