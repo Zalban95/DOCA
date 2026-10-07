@@ -95,7 +95,7 @@ function sectionFor(dotted) {
  * Is this a change the agent is allowed to suggest?
  * @returns {string|null} the reason it is not, or null when it is fine
  */
-function refuse(dotted, value) {
+function refuse(dotted, value, { screen = null } = {}) {
   if (!dotted || typeof dotted !== 'string')          return 'a settings path is required';
   if (dotted.length > 200)                            return `path is absurdly long: ${dotted.slice(0, 60)}…`;
   if (!/^[A-Za-z0-9_.\- ]+$/.test(dotted))            return `path has characters that cannot be a prefs key: ${dotted}`;
@@ -107,8 +107,8 @@ function refuse(dotted, value) {
     return `${dotted} is the approval mode that governs you — only the user changes it, in Harness → Approvals`;
   if (SPAWNED.test(dotted))
     return `${dotted} is a command, or what one runs with — only the user sets it, in the harness settings`;
-  if (!sectionFor(dotted))
-    return `${dotted} is not a setting the agent may change (allowed: ${SETTABLE.map(s => s.prefix).join(', ')})`;
+  if (screen ? !require('./screen-proposals').allowed(dotted) : !sectionFor(dotted))
+    return screen ? `${dotted} is not something the agent may propose for a screen (it may: ${require('./screen-proposals').keys().join(', ')})` : `${dotted} is not a setting the agent may change (allowed: ${SETTABLE.map(s => s.prefix).join(', ')})`;
 
   if (dotted.startsWith('toolNotes')) { const why = require('./tool-notes').refuseValue(dotted, value); if (why) return why; }
   if (dotted === 'agents.enabled' && typeof value !== 'boolean')
@@ -123,7 +123,7 @@ function refuse(dotted, value) {
 
   // Changing a number into an object is how a settings file stops loading. If
   // the key is already there, the shape it has is the shape it keeps.
-  const current = get(loadPrefs(), dotted);
+  const current = get(screen ? screen.settings : loadPrefs(), dotted);
   if (current !== undefined && value !== null) {
     const was = Array.isArray(current) ? 'array' : typeof current;
     const now = Array.isArray(value)   ? 'array' : typeof value;
@@ -248,23 +248,24 @@ function find(id) {
  * @param {{ changes: object[], reason?: string, sessionId?: string }} input
  * @returns {object} the stored proposal
  */
-function propose({ changes, reason, sessionId } = {}) {
+function propose({ changes, reason, sessionId, screen = null, person = null } = {}) {
   const rows = Array.isArray(changes) ? changes : [changes];
   if (!rows.length) throw Object.assign(new Error('changes are required'), { status: 400 });
   if (rows.length > 20) throw Object.assign(new Error('too many changes in one proposal'), { status: 400 });
 
-  const prefs = loadPrefs();
-  const effective = Object.fromEntries(readable().map(r => [r.path, r.value]));
+  const on = screen ? require('./screen-proposals').target(screen, person) : null;   // one screen's own layer (TODO C2)
+  const prefs = on ? on.settings : loadPrefs();
+  const effective = on ? {} : Object.fromEntries(readable().map(r => [r.path, r.value]));
   const prepared = [];
 
   for (const row of rows) {
     const dotted = String(row?.path ?? '').trim();
-    const why = refuse(dotted, row?.value);
+    const why = refuse(dotted, row?.value, { screen: on });
     if (why) throw Object.assign(new Error(why), { status: 400 });
-    const section = sectionFor(dotted);
+    const section = on ? { label: `This screen: ${on.name}` } : sectionFor(dotted);
     prepared.push({
       path: dotted,
-      from: dotted in effective ? effective[dotted] : get(prefs, dotted) ?? null,
+      from: dotted in effective ? effective[dotted] : get(prefs, dotted) ?? (on ? require('../settings-schema').leaf(dotted)?.default : null) ?? null,
       to:   row.value,
       section: section.label,
       note:    section.note || '',
@@ -278,6 +279,7 @@ function propose({ changes, reason, sessionId } = {}) {
     reason: String(reason || '').trim().slice(0, 600),
     sessionId: sessionId || null,
     changes: prepared,
+    ...(on ? { screen: { id: on.id, name: on.name } } : {}),
     status: 'pending',
   };
   doc.proposals.push(proposal);
@@ -290,19 +292,25 @@ function propose({ changes, reason, sessionId } = {}) {
  * passed it when proposed: this is a request coming from a browser, and the
  * only thing standing between it and the prefs file is this function.
  */
-function apply(id) {
+function apply(id, { person = null } = {}) {
   const doc = load();
   const p = doc.proposals.find(x => x.id === id);
   if (!p)                       throw Object.assign(new Error('Unknown proposal'), { status: 404 });
   if (p.status !== 'pending')   throw Object.assign(new Error(`Already ${p.status}`), { status: 409 });
 
-  const prefs = loadPrefs();
-  for (const c of p.changes) {
-    const why = refuse(c.path, c.to);
-    if (why) throw Object.assign(new Error(why), { status: 400 });
-    set(prefs, c.path, c.to);
+  if (p.screen) {
+    const sp = require('./screen-proposals'), on = sp.target(p.screen.id, person);
+    for (const c of p.changes) { const why = refuse(c.path, c.to, { screen: on }); if (why) throw Object.assign(new Error(why), { status: 400 }); }
+    sp.apply(p, person);
+  } else {
+    const prefs = loadPrefs();
+    for (const c of p.changes) {
+      const why = refuse(c.path, c.to);
+      if (why) throw Object.assign(new Error(why), { status: 400 });
+      set(prefs, c.path, c.to);
+    }
+    savePrefs(prefs);
   }
-  savePrefs(prefs);
 
   p.status     = 'applied';
   p.decidedAt  = new Date().toISOString();

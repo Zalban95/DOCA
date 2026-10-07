@@ -276,9 +276,10 @@ const handleProposalApply = wrap(async (req, res) => {
   // be within the applier's — or granted to them (setting:<prefix>).
   const p = settings.list().pending.find(x => x.id === req.params.id);
   const person = req.auth && { ...req.auth.user, role: req.auth.role };
-  const outside = (p?.changes || []).map(c => c.path).filter(path => person?.role && !require('../auth/permits').holds(person, `setting:${path}`));
+  // A screen's own settings are its person's to change at any level (/api/screen is `read`); whose screen it is decides.
+  const outside = p?.screen ? [] : (p?.changes || []).map(c => c.path).filter(path => person?.role && !require('../auth/permits').holds(person, `setting:${path}`));
   if (outside.length) return res.status(403).json({ error: `Your level does not cover ${outside.join(', ')}; someone whose level does can apply it.` });
-  res.json({ ok: true, ...settings.apply(req.params.id) });
+  res.json({ ok: true, ...settings.apply(req.params.id, { person: req.auth?.user ? person : null }) });
 });
 
 const handleProposalReject = wrap(async (req, res) =>
