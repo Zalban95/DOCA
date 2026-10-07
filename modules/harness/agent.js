@@ -237,6 +237,13 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     read.push(...require('./inbox').takeInto(session, { say, append: i => userRow(i.message, i.client, attachments.resolve(i.attachments || [])) }));
 
     const isMission = isMissionProfile(profile);
+    // A mission keeps its last step for its report (turn/mission-report.js) — unless, still advancing, it is extended.
+    const report = require('./turn/mission-report');
+    let reporting = report.due({ profile, step, maxSteps });
+    if (reporting) {
+      const more = require('./turn/extend').atLimit({ v: verdict, step, budget: maxSteps, sessionId: session.id, from, signal, planOpenAtStart, say });
+      if (more) { maxSteps = more; reporting = false; } else memory.append(session.id, report.row(profile, maxSteps, verdict));
+    }
     const { messages, acknowledge } = stepRequest({ p, ep, message, summary, client, profile, projectBrief,
       schemas, disabled, session, led, toolNews, contextSkips });
 
@@ -250,7 +257,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     const startedAt = Date.now();
     const reply = await complete({
       ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id, person: client?.user },
-      body: { ...base, messages, ...(schemas.length ? { tools: schemas, tool_choice: 'auto' } : {}) },
+      body: { ...base, messages, ...(schemas.length && !reporting ? { tools: schemas, tool_choice: 'auto' } : {}) },
       onText: t => { text += t; say({ type: 'text', text: t }); },
       onThinking: t => say({ type: 'thinking', text: t }),
       // Silence is a state worth drawing. Without this the console shows the
@@ -266,6 +273,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       onRetry: r => say({ type: 'warning', step, kind: 'rate-limit', text: r.text, waitMs: r.waitMs, attempt: r.attempt }),
     });
     const stepMs = Date.now() - startedAt;
+    if (reporting) reply.tool_calls = [];   // nothing was offered; a model that calls anyway still only reports
 
     acknowledge();
     budget.record(led, {
@@ -318,8 +326,9 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       // The ordinary way a turn ends, and the one the fallback field has to be
       // on: a turn that hopped and then answered lands here, not on the return
       // at the bottom of this function.
+      if (reporting) { const end = `\n\n${report.ending(profile, maxSteps, verdict)}`; say({ type: 'text', text: end }); memory.append(session.id, { role: 'assistant', content: end.trim() }); text += end; }
       return {
-        sessionId: session.id, text, steps: step, usage: spend,
+        sessionId: session.id, text, steps: step, usage: spend, ...(reporting ? { limited: true } : {}),
         ...(fallbacks.length ? { fallbacks } : {}), ...(reply.finish === 'length' ? { truncated: true } : {}),
       };
     }
