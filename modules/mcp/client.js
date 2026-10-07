@@ -190,7 +190,7 @@ class McpClient {
   }
 
   /** How long to wait (mcp/timeouts.js says where the number comes from). */
-  static timeoutFor(kind) { return require('./timeouts').timeoutFor(kind); }
+  static timeoutFor(kind, serverId) { return require('./timeouts').timeoutFor(kind, serverId); }
 
   async _httpRequest(method, params, timeoutMs) {
     const headers = {
@@ -219,7 +219,7 @@ class McpClient {
       if (e?.name === 'TimeoutError' || e?.name === 'AbortError')
         throw new Error(
           `${method} gave up after ${Math.round(timeoutMs / 1000)}s waiting for "${this.id}". `
-          + 'That is this panel\'s limit (settings mcpSettings.callTimeoutMs), not the server\'s — '
+          + `That is this panel's limit (settings ${require('./timeouts').settingFor(method, this.id)}), not the server's — `
           + 'and it stopped the waiting, not the work: whatever you asked for may have finished on that '
           + 'machine anyway. Check the result before asking for it again.');
       throw e;
@@ -244,7 +244,7 @@ class McpClient {
 
   /* ── Requests ──────────────────────────────────────── */
 
-  request(method, params, timeoutMs = McpClient.timeoutFor('call')) {
+  request(method, params, timeoutMs = McpClient.timeoutFor('call', this.id)) {
     if (this.transport === 'http') return this._httpRequest(method, params, timeoutMs);
 
     const id = this._nextId++;
@@ -253,7 +253,7 @@ class McpClient {
         this._pending.delete(id);
         reject(new Error(
           `${method} gave up after ${Math.round(timeoutMs / 1000)}s waiting for "${this.id}". `
-          + 'That is this panel\'s limit (settings mcpSettings.callTimeoutMs), not the server\'s — '
+          + `That is this panel's limit (settings ${require('./timeouts').settingFor(method, this.id)}), not the server's — `
           + 'and it stopped the waiting, not the work. Check the result before asking for it again.'));
       }, timeoutMs);
       const done = fn => v => { clearTimeout(timer); fn(v); };
@@ -330,7 +330,7 @@ class McpClient {
         this._backendFailureAt = failure ? Date.now() : null;
     };
     try {
-      const res = await this.request('tools/call', { name, arguments: args || {} }, McpClient.timeoutFor('call'));
+      const res = await this.request('tools/call', { name, arguments: args || {} }, McpClient.timeoutFor('call', this.id));
       const text = (res?.content || [])
         .map(c => (c.type === 'text' ? c.text : require('./content').keep(c, this.spec.id)))
         .join('\n')

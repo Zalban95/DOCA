@@ -68,6 +68,7 @@ const SCHEMA = {
       maxRunning:      { type: 'integer', min: 0, default: 4, hint: 'How many agents\' computers may run at once.' },
       idleStopMinutes: { type: 'number', min: 0, default: 10, hint: 'Minutes after its mission ends that a computer stops (its files stay).' },
       retainHours:     { type: 'number', min: 0, default: 72, hint: 'Hours a stopped computer an agent made is kept before it is removed with its files; a pinned one is kept.' },
+      callTimeoutMs:   { type: 'integer', min: 1000, default: 600000, hint: 'How long one call to a computer\'s tools may take before the agent stops waiting (the work goes on); longer than other MCP servers\' mcpSettings.callTimeoutMs, for installs, builds and sweeps.' },
     } },
   search:           { is: 'travels', home: 'hive', note: 'which web search provider web_search uses, and a SearXNG address (keys live in keys/search.json)',
     propose: p('Web search', 'Which provider web_search uses'),
