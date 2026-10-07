@@ -53,9 +53,13 @@ turn did is unknown — TODO B7b.
 |---|---|---|---|---|---|---|
 | 2026-10-07 | DeepSeek4f / deepseek-flash | off | 9/11 | 2,531k | 74 | `remember`: said "written to memory" without calling `memory_write`; `skill-before-improvising`: read the skill, then improvised Gradle and adb (1.0M tokens, 21 steps) |
 | 2026-10-07 | DeepSeek4f / deepseek-flash | on | 10/11 | 1,857k | 73 | `skill-before-improvising` as above (0.84M tokens, 23 steps) |
+| 2026-10-07 | llamacpp / qwen3.8-27b-gsq-rco-iq3s (40,960 context) | off | 11/11 | 1,780k | 68 | — (the Android case in 34 steps, 1.02M tokens) |
+| 2026-10-07 | llamacpp / qwen3.8-27b-gsq-rco-iq3s (40,960 context) | on | 11/11 | 1,153k | 59 | — (the Android case in 22 steps, 0.54M tokens) |
 
 On a frontier-class model with room to spare the flag costs nothing in passes (one more, the `remember` case) and
-saves 27 % of the tokens over the set. The one failure both ways is a habit, not a missing tool: the skill was read and
+saves 27 % of the tokens over the set. The local IQ3_S quantisation of Qwen 3.8 27B — the only local model now kept —
+passes all eleven both ways, with the flag 35 % fewer tokens and the Android build in 22 steps instead of 34; the grep
+and install-by-hand habits the Q6 run showed (B7b) did not appear. The one failure both ways is a habit, not a missing tool: the skill was read and
 not followed — TODO B7c.
 
 Not measured yet, and what decides it: whether a model finds and loads what it needs (an evaluation set of tasks that
