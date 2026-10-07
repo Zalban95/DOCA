@@ -22,7 +22,8 @@ const authRoutes  = require('../modules/auth/routes');
 const rights      = require('../modules/auth/rights');
 
 let base;
-const server = http.createServer(createApp());
+const app = createApp();
+const server = http.createServer(app);
 test.before(() => new Promise(r => server.listen(0, '127.0.0.1', () => { base = `http://127.0.0.1:${server.address().port}`; r(); })));
 test.after(() => { server.closeAllConnections(); return new Promise(r => server.close(r)); });
 
@@ -130,8 +131,19 @@ test('a role only reaches what its rights allow, and an unknown route is refused
   assert.equal((await call('GET', '/api/backups', { cookie: member.cookie })).status, 403);
   assert.notEqual((await call('GET', '/api/files/list?path=/tmp', { cookie: ownerCookie })).status, 403, 'the owner can');
 
-  const unknown = await call('GET', '/api/not-a-route-anyone-mapped', { cookie: ownerCookie });
-  assert.equal(unknown.body.code, 'no_rule', 'fails closed');
+  // A path the app has no route for, by any method, is not there (self-test 2026-10-08, #16) — not "a bug in the panel".
+  for (const m of ['GET', 'POST', 'DELETE']) {
+    const nowhere = await call(m, '/api/not-a-route-anyone-built', { cookie: ownerCookie, body: m === 'GET' ? undefined : {} });
+    assert.equal(nowhere.status, 404, `${m}: ${JSON.stringify(nowhere.body)}`);
+    assert.equal(nowhere.body.code, 'not_found');
+  }
+  assert.equal((await call('GET', '/api/health')).body.code, 'unauthenticated', 'to nobody it is still "sign in": nothing is enumerated');
+  // A route that exists but has no rights row is still refused, as before: fails closed.
+  app.get('/api/zz-a-route-nobody-mapped', (_req, res) => res.json({ reached: true }));
+  const unmapped = await call('GET', '/api/zz-a-route-nobody-mapped', { cookie: ownerCookie });
+  assert.equal(unmapped.status, 403);
+  assert.equal(unmapped.body.code, 'no_rule', 'fails closed');
+  assert.equal((await call('POST', '/api/zz-a-route-nobody-mapped', { cookie: ownerCookie, body: {} })).body.code, 'no_rule', 'another method of a path that exists: refused, not 404');
 });
 
 test('a route reached by another case or a trailing slash gets the same rule (audit 2026-10-04)', async () => {

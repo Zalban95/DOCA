@@ -48,6 +48,23 @@ function sameOrigin(req) {
 
 const CHANGES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+/**
+ * Whether the app has anything at this path, by any method: a route whose pattern matches it, or a router or
+ * middleware mounted under a path that covers it (whose own routes cannot be seen from here, so it counts as one).
+ * Root-level middleware (the body parser, this gate, the static files) matches every path and counts as nothing.
+ * Asked only for a path with no rights row, to tell a path nobody built (404) from a route nobody mapped (refused).
+ */
+function routed(req) {
+  for (const layer of req.app?._router?.stack || []) {
+    const re = layer.regexp;
+    if (!re) continue;
+    if (layer.route) { if (re.fast_star || re.fast_slash || re.test(req.path)) return true; continue; }
+    if (re.fast_slash) { if (layer.handle?.stack) return true; continue; }   // a router at the root may hold any route
+    if (re.fast_star || re.test(req.path)) return true;
+  }
+  return false;
+}
+
 function gate(req, res, next) {
   // As Express matches it: case-insensitively and ignoring a trailing slash. Matching the raw path let
   // /api/devices/x/Console/Buttons fall past its host rule to a weaker one, and /API/… not count as an
@@ -80,6 +97,10 @@ function gate(req, res, next) {
     return deny(req, res, 403, 'password_change_required', 'Choose a new password before anything else.');
 
   if (right === null) {
+    // A path the app has no route for, by any method, is not there: a 404, as Express would say for a page. Only for
+    // a signed-in person (an anonymous caller learned nothing above but "sign in"), and only when nothing is mounted
+    // there — a route without a rights row is still refused below (self-test 2026-10-08, #16).
+    if (!routed(req)) return res.status(404).json({ code: 'not_found', error: `There is no ${p} in this panel.` });
     authStore.audit({ orgId: who.orgId, actorId: who.user.id, action: 'denied', detail: `${method} ${p} (no rule)` });
     return deny(req, res, 403, 'no_rule', 'This route has no access rule, so it is refused. That is a bug in the panel, not in your account.');
   }
