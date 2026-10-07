@@ -53,7 +53,8 @@ const SNAPSHOT = `(() => {
   const vis = el => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
   const els = [...document.querySelectorAll('a[href],button,input,textarea,select,[role=button],[role=link],[role=checkbox],[onclick],[contenteditable=true]')].filter(vis);
   // A password or card field's value is never read back: the hub fills it from the vault, the agent never sees it (logins.js).
-  const secret = el => el.type === 'password' || /cc-|one-time-code|password/.test((el.getAttribute('autocomplete') || '').toLowerCase());
+  // So is a field the hub filled one into (browser_fill_secret), until the page goes — even if the page makes it a text field.
+  const secret = el => (window.__docaFilled && window.__docaFilled.has(el)) || el.type === 'password' || /cc-|one-time-code|password/.test((el.getAttribute('autocomplete') || '').toLowerCase());
   const label = el => (el.getAttribute('aria-label') || el.innerText || (secret(el) ? (el.value ? '(filled)' : '') : el.value) || el.placeholder || el.title || el.name || el.alt || '').trim().replace(/\\s+/g, ' ').slice(0, 80);
   const lines = els.slice(0, 300).map((el, i) => { el.setAttribute('data-doca-ref', String(i + 1));
     const t = el.tagName.toLowerCase() + (el.type ? ':' + el.type : '') + (el.getAttribute('role') ? '[' + el.getAttribute('role') + ']' : '');
@@ -162,8 +163,13 @@ const TOOLS = [
   { name: 'browser_fill_secret', hidden: true, description: 'The hub types a stored secret into field [ref].',
     inputSchema: { type: 'object', properties: { ref: { type: 'number' }, value: { type: 'string' }, key: { type: 'string' } }, required: ['ref', 'value', 'key'] },
     run: async a => { if (!process.env.FILL_KEY || a.key !== process.env.FILL_KEY) return fail('Not the hub.');
-      await cdp.connect(); const p = await centerOf(a.ref); await click(p.x, p.y);
-      await cdp.evaluate(`(() => { const el = document.querySelector('[data-doca-ref="${Number(a.ref)}"]'); if (el) el.value = ''; })()`);
+      await cdp.connect();
+      // Only a password field (or one marked for a password or one-time code): a text field would show it in the next snapshot.
+      const ok = await cdp.evaluate(`(() => { const el = document.querySelector('[data-doca-ref="${Number(a.ref)}"]');
+        if (!el || el.tagName !== 'INPUT' || !(el.type === 'password' || /\\b(current-password|new-password|one-time-code)\\b/.test((el.getAttribute('autocomplete') || '').toLowerCase()))) return false;
+        (window.__docaFilled = window.__docaFilled || new WeakSet()).add(el); el.value = ''; return true; })()`);
+      if (!ok) return fail(`[${a.ref}] is not a password field: a secret goes only into one.`);
+      const p = await centerOf(a.ref); await click(p.x, p.y);
       await cdp.send('Input.insertText', { text: a.value }); return text(`Filled [${a.ref}].`); } },
   { name: 'browser_screenshot', description: 'A picture of the page as the browser draws it.', inputSchema: { type: 'object', properties: {} },
     run: async () => { await cdp.connect(); return { content: [{ type: 'image', mimeType: 'image/png', data: (await cdp.send('Page.captureScreenshot', { format: 'png' })).data }] }; } },

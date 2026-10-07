@@ -7,11 +7,14 @@
  *
  *   the ask      always a person's (forced-asks.js), every approval mode, never "always"; a mission cannot hold it
  *   the secret   one of the secrets for devices (sealed/vault.js), `login:<name>` (a login's password) or `key:<name>`
- *                (a key for services) — the hub's, so used on a host's turn (a key opened to everyone: anyone's)
+ *                (a key for services) — the hub's, so used on a host's turn; a key for services is the hub's to send
+ *                (api_call), so it is never handed out to anyone else, whoever it was opened to
  *   the device   the turn's person's own paired device, whose MCP server is running here; never someone else's
  *   the way      sealed for that device alone (sealed/seal.js) and given to its hidden `secret_fill`: a web page's
  *                field only on the secret's own site (the device checks the tab), else typed into what has focus or
- *                put on the clipboard for N pastes or T seconds
+ *                put on the clipboard for N pastes or T seconds — but a secret that has a site (a login's password, a
+ *                key, a secret kept with its address) goes only into that site's field, never typed or pasted where any
+ *                window could take it; and for a minute after any use the device's read tools wait (hold.js)
  *   the trace    sealed_uses (when, which, where, by whom, how it went); the transcript, the logs and the trace carry
  *                the arguments the agent wrote, which never hold the value; what the device answers is scrubbed of it
  */
@@ -33,7 +36,9 @@ async function sourceOf(ref, { host }) {
   if (/^key:/i.test(s)) {
     const k = require('../service-keys').secretOf(s.slice(4));
     if (!k) throw bad(`No key for services named "${s.slice(4)}".`, 404);
-    if (k.who !== 'everyone' && !host) throw bad(`The key "${k.label}" is used only on an admin's turns.`, 403);
+    // A key for services is the hub's to send (api_call), not a person's to paste: opened to everyone means usable by
+    // everyone's agents through the hub, never handed to someone's device (security review 2026-10-07).
+    if (!host) throw bad(`The key "${k.label}" is the hub's to use (api_call), never handed to a device: only on an admin's turn, and only into its own site's field.`, 403);
     return { label: `key:${k.label}`, origin: k.origin, value: k.value };
   }
   if (!host) throw bad('The secrets for devices are an admin\'s: used on the turn of someone who holds host.', 403);
@@ -79,9 +84,13 @@ async function use(a = {}, ctx = {}) {
   const src = await sourceOf(a.secret, { host });
   const how = a.ref !== undefined && a.ref !== null ? 'field' : a.mode === 'type' ? 'type' : 'clipboard';
   if (how === 'field' && !src.origin) throw bad(`"${src.label}" has no site, and a secret is filled into a web page only on its own site: give it one in Field → Connectors.`);
+  // A secret with a site goes only into that site's field: typed or pasted, any window (or a look-alike page) could take it.
+  if (how !== 'field' && src.origin) throw bad(`"${src.label}" belongs to ${src.origin}: it is filled only into a field on that site (ref from browser_snapshot in the person's browser), never typed or pasted.`);
   const payload = { how, value: src.value, uses: how === 'clipboard' ? clamp(a.uses, 1, 10, 1) : 1, ttlSec: clamp(a.seconds, 5, 300, 30),
-    ...(how === 'field' ? { ref: Number(a.ref), tab: a.tab !== undefined && a.tab !== null ? Number(a.tab) : null, origin: src.origin } : {}) };
+    ...(how === 'field' ? { ref: Number(a.ref), tab: a.tab !== undefined && a.tab !== null ? Number(a.tab) : null } : {}),
+    ...(src.origin ? { origin: src.origin } : {}) };   // with a site, the device refuses anything but that site's field too
   const c = await clientOf(d);
+  require('./hold').mark(d.id);   // a minute without reads from this device: before the use, so a read racing it waits too
   const scrub = t => require('../service-keys').scrub(t, src.value);
   let out;
   try { out = scrub(await c.callTool('secret_fill', { sealed: seal.seal(d.id, payload) })); }

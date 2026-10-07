@@ -90,7 +90,12 @@
   /* A secret the hub sealed for this browser (PROTOCOL.md §22.3; TODO P1.3): the hidden tool secret_fill, which tools/list
      never offers. env.unseal opens it with the key only this browser holds (background.js); here it is checked — for this
      browser, recent, never used before — and filled into one field, only when the tab is on the secret's own site. The
-     answer says what was done, never the value. */
+     answer says what was done, never the value. For READ_HOLD_MS after a fill, this browser does not read pages for the
+     hub (browser_snapshot, browser_screenshot): a page's own script could show the value it was just given (PROTOCOL.md
+     §22.3; security review 2026-10-07). Clicking and typing carry on — the sign-in button is the next step. */
+  const READ_HOLD_MS = 60e3;
+  const READS = ['browser_snapshot', 'browser_screenshot'];
+  let heldUntil = 0;
   const seen = new Map();
   function checkSealed(p, deviceId) {
     if (!p || p.device !== deviceId) return 'This was sealed for another device: refused.';
@@ -111,6 +116,7 @@
       if (origin(tab.url) !== p.origin) return fail(`The tab is on ${origin(tab.url)}, not ${p.origin}: a secret is filled only on its own site.`);
       await env.page(tab.id, 'mark', `filling field [${p.ref}] — a person approved it`);
       const r = await env.page(tab.id, 'fillSecret', p.ref, String(p.value == null ? '' : p.value));
+      if (r && r.ok) heldUntil = Date.now() + READ_HOLD_MS;
       return r && r.ok ? text(JSON.stringify({ done: 'field', uses: 1, seconds: 0 })) : fail(r ? r.error : 'The page did not answer.');
     },
   };
@@ -125,6 +131,8 @@
     if (msg.method === 'tools/call') {
       const name = msg.params && msg.params.name, args = (msg.params && msg.params.arguments) || {};
       if (paused) return ok(fail('The person paused DOCA in this browser.'));
+      if (READS.includes(name) && Date.now() < heldUntil)
+        return ok(fail(`A secret was just filled on a page here: ${name} waits ${Math.ceil((heldUntil - Date.now()) / 1000)} s more. Clicking and typing work meanwhile.`));
       const fn = RUN[name] || HIDDEN[name];
       if (!fn) return ok(fail(`No tool ${name}.`));
       try { return ok(await fn(env, args)); } catch (e) { return ok(fail(e && e.message || String(e))); }
@@ -132,7 +140,7 @@
     return { jsonrpc: '2.0', id: msg.id, error: { code: -32601, message: `${msg.method} is not supported` } };
   }
 
-  const api = { TOOLS, handle, VERSION };
+  const api = { TOOLS, handle, VERSION, READ_HOLD_MS, release: () => { heldUntil = 0; } };
   root.__docaMcp = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
