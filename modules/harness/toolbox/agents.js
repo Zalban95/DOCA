@@ -34,6 +34,7 @@ module.exports = [
         agent:   { type: 'string', description: 'The specialist\'s id, from the list in your prompt.' },
         task:    { type: 'string', description: 'The errand, in full. Write it for somebody who was not in this conversation.' },
         context: { type: 'string', description: 'Anything from this conversation it needs. It sees nothing else.' },
+        after:   { type: 'array', items: { type: 'string' }, description: 'Optional: mission ids this errand needs the results of. It waits until they are done, then starts with what they delivered (results, files they wrote) — so experts work in parallel and the one that depends on another waits for it.' },
         computer: { type: 'string', description: 'Optional: the id of a computer (from the computer tool) the mission works in — '
           + 'a Linux desktop in a container. The specialist gets that computer\'s tools and no other\'s. For testing something risky, '
           + 'browsing as a person would, or recording a demo: send the tester. A specialist whose definition keeps a computer of its '
@@ -55,10 +56,17 @@ module.exports = [
       },
       required: ['agent', 'task'],
     },
-    run: async ({ agent, task, context, plan, computer }, ctx = {}) => {
+    run: async ({ agent, task, context, plan, computer, after }, ctx = {}) => {
       // A specialist that keeps a computer of its own works in it, unless a computer is named (computers.ownFor).
       const def = require('../../agents/registry').get(agent);
       if (!computer && def?.computer === 'own') computer = await require('../../computers').ownFor(def);
+      // Waiting on other missions' results (agents/after.js): held until they are done, then started with what they made.
+      if (Array.isArray(after) && after.length) {
+        const w = require('../../agents/after').dispatchAfter({ agentId: agent, task, context, plan, computer, by: ctx.sessionId }, after);
+        if (w.waiting) return `Waiting (${w.waiting}): ${agent} starts when ${w.after.join(', ')} ${w.after.length === 1 ? 'is' : 'are'} done, with their results and files as its context. Carry on.`;
+        if (w.dropped) return `Not started: ${w.why}`;
+        return `Mission ${w.started} started — what it waited for is already done, and its results are in its context.`;
+      }
       const m = require('../../agents/missions').dispatch({ agentId: agent, task, context, plan, computer, by: ctx.sessionId });
       // A plan is what lets every client draw progress instead of "STEP 0"
       // until the mission is already over — see missions.setPlan().
