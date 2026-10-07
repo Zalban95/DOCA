@@ -10,6 +10,16 @@ function ollamaBase() {
   return (mp.ollamaUrl || 'http://127.0.0.1:11434').replace(/\/$/, '');
 }
 
+/**
+ * Nothing answering at Ollama's address: not installed, or not running — a fact about the machine, not a fault
+ * (self-test 2026-10-08, #11, #15). Node's fetch says "fetch failed" with the socket's code underneath (a refused
+ * connection, no such host); a timeout is the same answer for a person. Anything else is a real failure.
+ */
+const unreachable = e => e?.name === 'TimeoutError' || e?.name === 'AbortError'
+  || /ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|EADDRNOTAVAIL|ECONNRESET/
+    .test([e?.code, e?.cause?.code, e?.cause?.message, ...(e?.cause?.errors || []).map(x => x?.code)].join(' '));
+const NOT_HERE = 'Ollama is not installed or not running on this machine. Settings → System → System tools has a row to install it; then start it and refresh.';
+
 /** GET /api/models/ollama/search */
 /** One search page of ollama.com into [{ name, description, tags }]: capabilities and sizes, as the page shows them. */
 function parseSearchPage(html) {
@@ -79,16 +89,21 @@ async function handleRunning(req, res) {
   }
 }
 
-/** GET /api/models/ollama/list */
+/** GET /api/models/ollama/list — an empty list with the reason when Ollama is not there; a real failure stays an error. */
 async function handleList(req, res) {
   const base = ollamaBase();
+  let r;
+  try { r = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(5000) }); }
+  catch (e) {
+    if (unreachable(e)) return res.json({ models: [], reason: NOT_HERE, code: 'ollama_unreachable', url: base });
+    return res.status(502).json({ error: `Ollama at ${base} failed: ${e.message}` });
+  }
   try {
-    const r = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(5000) });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
     res.json({ models: data.models || [] });
   } catch (e) {
-    res.status(503).json({ error: `Cannot reach Ollama at ${base}: ${e.message}` });
+    res.status(502).json({ error: `Ollama at ${base} answered, but not with its model list: ${e.message}` });
   }
 }
 

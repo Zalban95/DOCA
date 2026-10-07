@@ -127,7 +127,8 @@ async function dockerLoadContainers() {
     const data = await apiFetch('/api/docker/containers');
     _dockerContainers = data.containers || [];
     if (!_dockerContainers.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="placeholder" style="padding:12px">No containers found</td></tr>';
+      // Docker absent or stopped is an empty list with its reason (a 200), drawn as a state rather than an error.
+      tbody.innerHTML = `<tr><td colspan="5" class="placeholder" style="padding:12px">${escHtml(data.reason || 'No containers found')}</td></tr>`;
       _dockerRenderPresets();
       return;
     }
@@ -225,7 +226,7 @@ async function dockerLoadImages() {
     const data = await apiFetch('/api/docker/images');
     const images = data.images || [];
     if (!images.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="placeholder" style="padding:12px">No images found</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="5" class="placeholder" style="padding:12px">${escHtml(data.reason || 'No images found')}</td></tr>`;
       return;
     }
     tbody.innerHTML = images.map(img => {

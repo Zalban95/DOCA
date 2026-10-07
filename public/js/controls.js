@@ -92,7 +92,7 @@ async function controlsRefreshContainers() {
     const containers = data.containers || data || [];
 
     if (!containers.length) {
-      list.innerHTML = '<div class="placeholder">No containers found</div>';
+      list.innerHTML = `<div class="placeholder">${escHtml(data.reason || 'No containers found')}</div>`;
       if (countEl) countEl.textContent = '';
       return;
     }

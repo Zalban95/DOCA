@@ -132,7 +132,8 @@ async function modelsLoadList() {
       totalEl.textContent = models.length ? `· ${models.length} model${models.length > 1 ? 's' : ''} · ${fmtBytes(totalBytes)} on disk` : '';
     }
     if (!models.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="placeholder" style="padding:12px">No models installed</td></tr>';
+      // Ollama not installed or not running is an empty list with its reason (a 200), drawn as a state.
+      tbody.innerHTML = `<tr><td colspan="4" class="placeholder" style="padding:12px">${escHtml(data.reason || 'No models installed')}</td></tr>`;
       return;
     }
     tbody.innerHTML = models.map(m => {
