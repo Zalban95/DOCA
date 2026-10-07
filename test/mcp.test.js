@@ -814,3 +814,21 @@ test('what was connected is resumed after a restart; what a person stopped, or a
   assert.ok(!ids.includes('resume-cmd'), 'a command is spawned only by "start with DOCA"');
   for (const id of ['resume-me', 'stopped-by-hand', 'resume-cmd']) { registry.stop(id); registry.remove(id); }
 });
+
+test('a device coming back reconnects its server — unless a person stopped it on purpose (2.272.0)', async () => {
+  const registry = require('../modules/mcp/registry');
+  const httpStub = await httpServer.start();
+  test.after(() => httpStub.close());
+  const { device } = H.mkDevice('Back again', 'phone', H.PHONE_CAPS);
+  registry.upsert({ id: 'back-again', label: 'Back again', transport: 'http', url: httpStub.url, origin: { kind: 'client', deviceId: device.id } });
+  await registry.start('back-again');
+  registry.stopAll();
+  registry.wakeForDevice(device.id, { resuming: true });
+  await new Promise(r => setTimeout(r, 200));
+  assert.equal(registry.client('back-again')?.state, 'running', 'reconnected when the device reported in');
+  registry.stop('back-again');
+  registry.wakeForDevice(device.id, { resuming: true });
+  await new Promise(r => setTimeout(r, 200));
+  assert.notEqual(registry.client('back-again')?.state, 'running', 'stopped on purpose stays stopped');
+  registry.remove('back-again');
+});

@@ -25,12 +25,19 @@ function lastTools(id) { try { return require('../store').readJson(LAST_TOOLS, {
 const CONNECTED = 'mcp-connected';
 function connected(id, on) {
   try {
-    const store = require('../store'), ids = new Set(store.readJson(CONNECTED, { ids: [] }).ids);
+    const store = require('../store'), doc = store.readJson(CONNECTED, { ids: [] });
+    const ids = new Set(doc.ids), stopped = new Set(doc.stopped || []);
     if (on === undefined) return ids;
-    if (on) ids.add(id); else ids.delete(id);
-    store.writeJson(CONNECTED, { ids: [...ids] });
+    if (on) { ids.add(id); stopped.delete(id); } else { ids.delete(id); stopped.add(id); }
+    store.writeJson(CONNECTED, { ids: [...ids], stopped: [...stopped] });
   } catch { /* a record is a convenience, never a failure */ }
   return new Set();
 }
 
-module.exports = { rememberTools, lastTools, connected };
+/** Whether a person or an agent stopped this server on purpose (until it is started again): a device coming back
+ *  does not undo that. */
+function stoppedOnPurpose(id) {
+  try { return (require('../store').readJson(CONNECTED, { ids: [] }).stopped || []).includes(id); } catch { return false; }
+}
+
+module.exports = { rememberTools, lastTools, connected, stoppedOnPurpose };

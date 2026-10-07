@@ -103,7 +103,7 @@ function mount(router) {
   router.put('/devices/self/grants', (req, res) => {
     try {
       res.json(reportGrants(req.device.id, req.body?.grants || {}));
-      require('./mcp/registry').wakeForDevice(req.device.id);   // a device reports its grants when it (re)connects
+      require('./mcp/registry').wakeForDevice(req.device.id, { resuming: true });   // a device reports its grants when it (re)connects; a server stopped on purpose stays stopped
     }
     catch (e) { res.status(e.status || 500).json({ error: { code: 'bad_request', message: e.message } }); }
   });
