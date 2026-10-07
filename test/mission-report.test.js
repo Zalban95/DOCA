@@ -65,7 +65,8 @@ test('a mission at its limit writes its report on the step kept for it, and says
     assert.equal(m.state, 'done');
     assert.equal(m.limited, true);
     assert.match(m.result, /^Report: searched twice/, 'the leader gets the report');
-    assert.match(m.result, /ended on its step limit \(3, "maxSteps" in the searcher agent definition\)/);
+    assert.match(m.result, /ended on its step limit \(3, "maxSteps" in the searcher agent definition \(Agents → Harness → Specialists, ✎ beside it\)\)/,
+      'and where it is raised, so the leader need not go looking (#24)');
     assert.doesNotMatch(m.result, /Stopped after/, 'not the bare limit sentence');
   } finally { registry.setEnabled(false); }
 });

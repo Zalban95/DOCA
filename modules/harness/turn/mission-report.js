@@ -18,7 +18,7 @@ const due = ({ profile, step, maxSteps }) => isMissionProfile(profile) && maxSte
 /** Whose limit it is, by name and place (charter rule 12; turn/step-limit.js says the same for a turn). */
 const whose = (profile, verdict) => verdict
   ? `this turn's budget (experiment adaptiveLimits, up to limits.maxStepsCeiling, ${verdict.ceiling})`
-  : `"maxSteps" in the ${profile.id} agent definition`;
+  : `"maxSteps" in the ${profile.id} agent definition (Agents → Harness → Specialists, ✎ beside it)`;
 
 /** DOCA's row before the report step: no more tools, write the report now. */
 function row(profile, maxSteps, verdict = null) {

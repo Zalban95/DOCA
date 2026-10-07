@@ -196,6 +196,7 @@ test('when a specialist runs out of steps it names its own limit, not the panel\
   assert.match(stop, /this specialist's own/,
     'a mission that stops must not send the user to the panel setting, which would change nothing');
   assert.match(stop, /"maxSteps" in the archivist agent definition/);
+  assert.match(stop, /Agents → Harness → Specialists/, 'where it is edited: told less, an Orchestrator searched the files with shell (#24)');
   assert.doesNotMatch(stop, /harness\.config/);
   assert.match(stepLimitNote(null, 8), /harness\.config\.doca\.maxSteps/, 'the orchestrator still names its own setting');
 });
