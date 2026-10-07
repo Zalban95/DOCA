@@ -58,6 +58,7 @@ async function turn(options) {
   // One record of how this turn goes (runs.js): the mission and the conversation read the same row.
   const runId = require('./runs').begin({ sessionId: id, missionId: options.profile?.missionId || null, personId: options.client?.user?.id || null });
   require('./trace').start(runId, id);   // and what it did, step by step (trace.js)
+  require('../features/usage').count('turn:builtin');   // what the one-shot adapters stand beside (features/alternatives.js)
   try {
     const profile = profileForTurn(session, options.profile);
     memory.updateSession(id, { state: 'running', lastError: null, seenAt: null });   // new work waits to be opened again (seen.js)

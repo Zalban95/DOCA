@@ -107,6 +107,12 @@ const SCHEMA = {
       contribute: { type: 'boolean', default: false, hint: 'Offer the skills, recipes and specialists your agents learn to the project. Nothing is sent without your click.' },
       upstream:   { type: 'string', default: '', hint: 'The project\'s hub that receives them: one of the hubs this hive sends packs to.' },
     } },
+  features:         { is: 'travels', home: 'hive', note: 'the feature index (features/): which kept alternatives the admin hid from the default, and when one counts as unused — the admin\'s decision, never proposable (CONSTITUTION W14)',
+    keys: {
+      hidden:          { type: 'array', default: [], hint: 'Alternatives hidden from the default: they keep working and the agents still find them.' },
+      idleDays:        { type: 'number', min: 1, default: 30, hint: 'Days without a use before an alternative is listed as unused.' },
+      replacementRuns: { type: 'number', min: 1, default: 50, hint: 'Uses of the feature it stands beside, in that time, before it is listed as unused.' },
+    } },
   scout:            { is: 'travels', home: 'hive', note: 'the model scout: what it watches, how often, where accepted suggestions go and who works on them (modules/scout; the switch is experiments.modelScout)',
     propose: p('Model scout', 'What the scout watches and how often; switching it on is a proposal too'),
     keys: { enabled: { type: 'boolean', default: false, hint: 'Look daily for better or new models and brief every everyDays (a turn of the agent). Off by default.' },

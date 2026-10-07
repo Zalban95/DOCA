@@ -192,6 +192,7 @@ async function read(png, question, { how = 'auto', template: tpl } = {}) {
   const b = BACKENDS[how];
   if (!b) throw Object.assign(new Error(`No reader "${how}" — ${Object.keys(BACKENDS).join(', ')}, or none is set up (Settings → Harness → Vision).`), { status: 400 });
   if (how !== 'template' && !b.ready(s)) throw Object.assign(new Error(`${b.label} is not set up here (Settings → Harness → Vision).`), { status: 409 });
+  require('../features/usage').count(`vision:${how}`);   // which reader is still used (features/review.js)
   return { how, ...(await b.read(png, question, s, { template: tpl })) };
 }
 

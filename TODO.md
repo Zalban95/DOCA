@@ -84,7 +84,7 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [~] P1.10 **Resources allocated (S13)** — *2.283.0: `auth/allot.js` — a level lists the models, providers, keys, accounts and computers its people use; a grant `use:<kind>:<id>` allots one; a team leader's level names what it may give (`delegates`). Left: budgets (with P1.6 spending), services and devices as allotted kinds, a per-person view of what they hold.*: machines, devices, models, services, keys and budgets allocated to users
   by the admin, with grantable "may allot" for team leaders; a personal panel change follows its person to all
   their devices.
-- [ ] P1.7 **Nothing coded is lost (W14)**: H10.7's tooling hides unused paths from the default instead of archiving
+- [x] P1.7 **Nothing coded is lost (W14)** — *2.284.0: `modules/features`: an index of every feature (data/*.js, ~130 entries: what, where, state, the alternative beside its replacement), held complete by `test/features.test.js` (every experiment, page, Settings section, tool and old tool name); the agent's free `features {find|id|unused}` tool; Settings → System → Features. Alternatives counted (`features/usage.js`) and reviewed (`features/review.js`): an unused one is hidden from the default by the admin, never archived.*: H10.7's tooling hides unused paths from the default instead of archiving
   them off main; an index of every feature the agents read so they know what exists.
 - [ ] P1.8 **Nothing runs unseen, but it can be unrendered (§1)**: every running thing (models, specialists,
   services, machines, file edits) is drawn by the panel in its existing, designated tab when that tab is open, and
@@ -604,10 +604,14 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   steps while still advancing (tools succeeding, plan steps closing) is extended up to a ceiling, and the trace says
   so. Measured with the evaluation sets (cases tagged by difficulty): success, tokens and time against today's fixed
   limits. An experiment first (`adaptiveLimits`).
-- [ ] H10.7 Retiring an old way (asked 2026-10-06, CONSTITUTION W14): count the use of each alternative path
-  (backends, readers, adapters) beside its replacement; once unused for 30 days and 50 runs of the replacement it is a
-  candidate, and the maintenance routine gives the admin a list (usage, a recommendation; keep / archive / delete).
-  Archive = removed from main, kept on an `archive/<name>` tag listed in `docs/archive.md`.
+- [~] H10.7 Retiring an old way (asked 2026-10-06, CONSTITUTION W14; reshaped 2026-10-07 by P1.7) — *counting and the list
+  are built (`features/usage.js`, `features/review.js`; `features {unused: true}`, Settings → System → Features); hiding
+  folds an alternative in the index and the panel's list. Left: a maintenance routine that brings the list to the admin
+  on its own, and the settings pickers (search provider, vision reader) putting hidden choices under "more".*: count the
+  use of each alternative path (backends, readers, adapters) beside its replacement; once unused for 30 days and 50 runs
+  of the replacement it is a candidate, and the maintenance routine gives the admin a list (usage, a recommendation).
+  The recommendation is to hide it from the default — it stays in main and keeps working; nothing is archived off
+  main, and taking a feature out of the product is only ever the admin's explicit decision (W14).
 
 **H11 · Coherence along the way** (§2.2)
 - [x] H11.1 (2.201.0) One chat component in three sizes; retire the floating chat's gateway/CLI paths if no
