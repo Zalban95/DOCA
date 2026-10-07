@@ -37,6 +37,7 @@ const COVERAGE = {
   presence: { v1: ['/events'], note: 'the panel saying it is looked at; a device\'s presence is its event stream' },
   wakeword: { v1: ['/wakeword'], note: 'a device downloads kept models and the runtime; training stays the hub\'s' },
   ambient: { v1: ['/ambient'], note: 'the person\'s day; the screen itself is the panel\'s page' },
+  home: { panel: 'the Home page, drawn from Home Assistant by the hub (home/); a device\'s own /api/v1 home is a later step — capability-gaps.md, home' },
   decisions: { v1: ['/decisions'] },
   chronicle: { v1: ['/harness', '/jobs/{id}'], note: 'a device reads its conversations, missions and jobs there; reading them all back as one story is the panel\'s page' },
   branding: { panel: 'public, and read by clients as it is (GET /api/branding)' },
