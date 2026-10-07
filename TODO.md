@@ -57,7 +57,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   recipes and specialists the agents made and that worked wait in a "To share" list the owner reviews, and are sent
   as a pack (secrets stripped, as packs already do) to the project's managers (`sharing.upstream`, the project's own
   registry hub by default, through the existing hub-to-hub `packs` route). Nothing leaves without the owner's click.
-- [~] P0.4 **"Anyone, zero knowledge"** — *2.274.0: `evals/newcomer.json` 3/6 → 6/6 on the configured model (charter rules 5, 6, 15; skills `first-steps`, `talk-to-me`; docs/audits/2026-10-07-newcomer.md). 2.294.0: nine cases — `cannot-do-yet`, `phone-only` (a case may ask from a phone or watch, `client`), `set-me-up`; the shipped skill `on-my-phone`; 7/9 on the configured model, the rest wording that varies by run (docs/audits/2026-10-07-newcomer.md). The no-model first run is the guided set-up's (P1.5).*: a first conversation with no setup reaches a working answer (no model → the
+- [~] P0.4 **"Anyone, zero knowledge"** — *2.274.0: `evals/newcomer.json` 3/6 → 6/6 on the configured model (charter rules 5, 6, 15; skills `first-steps`, `talk-to-me`; docs/audits/2026-10-07-newcomer.md). 2.294.0: nine cases — `cannot-do-yet`, `phone-only` (a case may ask from a phone or watch, `client`), `set-me-up`; the shipped skill `on-my-phone`; 7/9 on the configured model, the rest wording that varies by run (docs/audits/2026-10-07-newcomer.md). The no-model first run is the guided set-up's (P1.5). 2026-10-07 (branch fresh-install): a real install in a sandbox walked as a newcomer — the no-model answer now names Settings → Set-up, Set-up's "Ask the agent instead" says the agent has no model yet, the installers say when the panel did not come up and when the setup code exists, Start at Boot no longer claims another install's unit, stray `.cursor`/`.playwright-mcp` files are out of the code; a short README for newcomers (the old one is docs/reference.md) and docs/production.md, the checklist for running it for real.*: a first conversation with no setup reaches a working answer (no model → the
   panel says how in one step; a request DOCA cannot yet do → it says what it would need, then does it when given).
   Measured as an eval set of plain-language requests from someone who knows nothing about DOCA.
 
@@ -875,7 +875,7 @@ The Harness exposes every level, upward intervention/result reports, revisioned
 plan review and progress, and archive/recall. `work_chats` and `work_plan` provide
 on-demand access without copying transcripts into the main prompt. Reports wait
 for the superior's next turn rather than starting paid model calls automatically.
-See [the Harness guide](README.md#the-built-in-doca-harness).
+See [the Harness guide](docs/reference.md#the-built-in-doca-harness).
 
 The requirements below are retained as design history and further direction:
 
