@@ -84,7 +84,7 @@ module.exports = [
             : 'No canvases in this conversation yet.';
         }
         case 'preview': {
-          const p = require('../../canvas/previews').create({ port: args.port, computer: args.computer, title: args.title, sessionId: ctx.sessionId || null });
+          const p = require('../../canvas/previews').create({ port: args.port, computer: args.computer, title: args.title, sessionId: ctx.sessionId || null, person: ctx.user || null });
           const at = String(args.at || '/').startsWith('/') ? String(args.at || '/') : `/${args.at}`;
           if (typeof ctx.show === 'function') ctx.show({ kind: 'canvas', name: p.id, previewId: p.id, at, caption: p.title });
           return `Preview ${p.id} of ${p.where} is a button in the chat; it works for ${require('../../canvas/previews').TTL_H} hours.`;

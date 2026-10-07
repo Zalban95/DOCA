@@ -5,20 +5,20 @@
  * not everything is everyone's — and the admin can let others, team leaders, grant specific permissions"; TODO P1.10).
  *
  * A resource is something a person's agents use that is not a tool: a model, a provider, a key for a service, a
- * connected account, an agents' computer. Who may use one:
+ * connected account, a login the owner keeps (computer_login), an agents' computer. Who may use one:
  *   - anyone holding host (the machine's administrators), as before;
  *   - a level that lists it: `resources: { model: ['*' | '<provider>/<model>', …], provider: […], key: […],
- *     connector: […], computer: […] }` — a kind the level does not name keeps today's rule, so nothing changes for an
+ *     connector: […], login: […], computer: […] }` — a kind the level does not name keeps today's rule, so nothing changes for an
  *     install until an admin narrows a level;
  *   - a person or specialist with the grant `use:<kind>:<id>` (grants.js; '*' parts cover anything), given by an admin
  *     or by someone a level lets allot it (`delegates` on the level, permits.mayGrant);
  *   - for keys and connected accounts, also everyone when the owner opened that one to everyone (`who`).
  * No person on the turn (a test, a pre-accounts call) is not narrowed, as everywhere (permits.js).
  */
-const KINDS = ['model', 'provider', 'key', 'connector', 'computer'];
+const KINDS = ['model', 'provider', 'key', 'connector', 'login', 'computer'];
 
 /** Kinds that were an admin's alone before levels could list them: a level that names nothing gives none. */
-const ADMIN_FIRST = new Set(['key', 'connector']);
+const ADMIN_FIRST = new Set(['key', 'connector', 'login']);
 
 const host = person => require('./rights').can(person?.role, 'host');
 const match = (pattern, id) => pattern === '*' || pattern === id || (pattern.endsWith('*') && id.startsWith(pattern.slice(0, -1)));

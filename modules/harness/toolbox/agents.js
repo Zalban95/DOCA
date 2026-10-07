@@ -59,6 +59,7 @@ module.exports = [
     run: async ({ agent, task, context, plan, computer, after }, ctx = {}) => {
       // A specialist that keeps a computer of its own works in it, unless a computer is named (computers.ownFor).
       const def = require('../../agents/registry').get(agent);
+      if (computer) { const no = require('../../computers/whose').refuse(ctx.user, computer); if (no) return `Error: ${no}`; }   // lent only by its person (S13)
       if (!computer && def?.computer === 'own') computer = await require('../../computers').ownFor(def);
       // Waiting on other missions' results (agents/after.js): held until they are done, then started with what they made.
       if (Array.isArray(after) && after.length) {

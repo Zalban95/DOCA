@@ -72,3 +72,28 @@ test('using a login is asked every time, in every mode, and never "always"', () 
   assert.equal(g.keys, null);
   assert.ok(!g.summary.includes('hunter2'));
 });
+
+test('the password goes only into a password field: a text field would show it in the next snapshot', async () => {
+  calls.length = 0;
+  const out = await require('../modules/harness/tools').call('computer_login', { computer: 'c0ffee01', login: 'GitHub', passRef: 1 });
+  assert.match(out, /\[1\] is not a password field/);
+  assert.ok(!calls.some(c => c.name === 'browser_fill_secret'));
+});
+
+test('a login is an admin\'s: a member\'s turn needs it allotted, on a computer of their own', async () => {
+  const tools = require('../modules/harness/tools'), memory = require('../modules/harness/memory');
+  const m = await H.signIn('member', 'logins-member@test.local');
+  const user = { ...m.user, role: 'member' };
+  const own = memory.createSession('member work', { activate: false });
+  require('../modules/harness/session-access').claim(user, own.id);
+  const store = require('../modules/store');
+  const rows = store.readJson('computers', { computers: [] }).computers;
+  store.writeJson('computers', { computers: [...rows, { ...rows[0], id: 'c0ffee03', name: 'theirs', by: own.id }] });
+  calls.length = 0;
+  assert.match(await tools.call('computer_login', { computer: 'c0ffee03', login: 'GitHub', passRef: 2 }, [], { user }), /does not have the login GitHub allotted/);
+  const id = require('../modules/logins').list().find(l => l.label === 'GitHub').id;
+  require('../modules/auth/grants').create({ subject: { kind: 'user', id: user.id }, permission: `use:login:${id}`, by: { kind: 'user', id: H.owner.user.id } });
+  assert.match(await tools.call('computer_login', { computer: 'c0ffee01', login: 'GitHub', passRef: 2 }, [], { user }), /not .*'s: an agent acts only on a computer its person made/, 'not on the owner\'s computer');
+  assert.ok(!calls.some(c => c.name === 'browser_fill_secret'));
+  assert.match(await tools.call('computer_login', { computer: 'c0ffee03', login: 'GitHub', passRef: 2 }, [], { user }), /Filled the sign-in for GitHub/, 'allotted, on their own computer');
+});
