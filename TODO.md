@@ -597,7 +597,11 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   (projects' shadow git, prefs checkpoints, a computer instead of the host for anything untested); irreversible or
   outward ones (deleting outside a project, `git push --force`, sending a message or mail, paying, a submit on a
   site) are asked even in Auto. The tier is named in the trace and the Workstream, so the way back is always visible.
-- [ ] H10.6 Limits that follow the work (asked 2026-10-06, CONSTITUTION P20): today a turn gets `maxSteps` 8 and the
+- [~] H10.6 Limits that follow the work (asked 2026-10-06, CONSTITUTION P20) — *built as the experiment `adaptiveLimits`
+  (`turn/triage.js`, `turn/extend.js`, docs/experiments/adaptive-limits.md): the rules' triage with assistant mode's quick
+  model when unsure, effort and steps per verdict (never under `maxSteps`, ceiling `limits.maxStepsCeiling`), extension while
+  advancing, `triage` and `extended` spans; the three shipped sets tagged by difficulty and `npm run experiment --
+  adaptive-limits`. Left: measuring it against a real model, then graduating or removing it.*: today a turn gets `maxSteps` 8 and the
   model's thinking budget whatever it asks. Instead, before a turn a cheap triage (rules first, the assistant's quick
   model when unsure) rates difficulty and urgency and sets that turn's effort and step budget; a turn reaching its
   steps while still advancing (tools succeeding, plan steps closing) is extended up to a ceiling, and the trace says
