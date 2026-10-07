@@ -210,9 +210,16 @@ function run(cmd, args, cwd, say) {
  * package-lock matches one already installed, node_modules is hard-linked from
  * there — the same bytes, no download, a second instead of a minute.
  */
+/**
+ * Whether a folder's dependencies are really there: npm writes node_modules/.package-lock.json at the end of an
+ * install, so an empty or half-made node_modules — a failed link, an interrupted install — does not count. It once
+ * did: an empty checkout node_modules was "linked" into v2.304.0, which then could not start (2026-10-08).
+ */
+const hasDeps = d => fs.existsSync(path.join(d, 'node_modules', '.package-lock.json'));
+
 async function install(tag, say = () => {}) {
   const dest = path.join(DIR, tag);
-  if (fs.existsSync(path.join(dest, 'server.js')) && fs.existsSync(path.join(dest, 'node_modules'))) {
+  if (fs.existsSync(path.join(dest, 'server.js')) && hasDeps(dest)) {
     say(`${tag} is already installed.\n`);
     return dest;
   }
@@ -222,9 +229,10 @@ async function install(tag, say = () => {}) {
     try { await git(['worktree', 'prune']); } catch {}
     await run('git', ['worktree', 'add', '--detach', '--force', dest, tag], HOME, say);
   }
+  fs.rmSync(path.join(dest, 'node_modules'), { recursive: true, force: true });   // whatever a failed attempt left
   const want = lockHash(dest);
   const donor = [HOME, ...fs.readdirSync(DIR).map(d => path.join(DIR, d))]
-    .find(d => d !== dest && want && lockHash(d) === want && fs.existsSync(path.join(d, 'node_modules')));
+    .find(d => d !== dest && want && lockHash(d) === want && hasDeps(d));
   if (donor) {
     say(`Dependencies are identical to ${path.relative(HOME, donor) || 'the checkout'}'s — linking them.\n`);
     try { await run('cp', ['-al', path.join(donor, 'node_modules'), path.join(dest, 'node_modules')], dest, say); return dest; }

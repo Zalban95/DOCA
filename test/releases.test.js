@@ -51,6 +51,7 @@ release('v1.2.0', { dataFormat: 1 });            // older than the data (format 
 release('v2.0.0');                                   // the checkout stays here: it answers
 fs.mkdirSync(path.join(HOME, 'node_modules', 'dep'), { recursive: true });
 fs.writeFileSync(path.join(HOME, 'node_modules', 'dep', 'index.js'), 'module.exports = 1;');
+fs.writeFileSync(path.join(HOME, 'node_modules', '.package-lock.json'), '{}');   // what npm writes when an install finished
 
 // The data here is format 2; v1.2.0's code writes format 1.
 fs.mkdirSync(process.env.DOCA_DATA_DIR, { recursive: true });
@@ -185,4 +186,15 @@ test('Update fetches past the throttle, and cannot fetch is not "the newest"', a
 
 test.after(() => {
   fs.rmSync(HOME, { recursive: true, force: true });
+});
+
+test('an empty or half-made node_modules is not an install: it is linked again or installed', async () => {
+  const releases = require('../modules/releases');
+  const dir = path.join(HOME, '.releases', 'v1.0.0');
+  fs.rmSync(path.join(dir, 'node_modules'), { recursive: true, force: true });
+  fs.mkdirSync(path.join(dir, 'node_modules'));   // what a failed link left on 2026-10-08
+  const said = [];
+  await releases.install('v1.0.0', s => said.push(s));
+  assert.ok(!said.join('').includes('already installed'), said.join(''));
+  assert.ok(fs.existsSync(path.join(dir, 'node_modules', 'dep', 'index.js')), 'its dependencies are there again');
 });
