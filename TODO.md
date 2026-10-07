@@ -588,7 +588,7 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   it with the repository's own command as a job, and the address the job prints becomes a page: Machines → Live
   pictures it, and the chat hands it over as its own tab or `/?view=` page on any screen — the way served test pages
   are today. A recipe keeps the steps for that repository.
-  **Done:** the shipped skill `serve-a-repository` (where it runs — a repository not the person's own runs in an agents'
+  **Done (2.297.0):** the shipped skill `serve-a-repository` (where it runs — a repository not the person's own runs in an agents'
   computer unless they say to run it here; the command read from its own files; started in the background; handed
   over with `canvas` preview; `recipe save_last`); a computer's page port (8080 inside, `servePort` on the hub) is
   previewed by naming the computer and pictured in Machines → Live when it answers; a preview never names a computer's
