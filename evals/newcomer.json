@@ -89,10 +89,7 @@
           "tool": "machine_fit"
         },
         {
-          "noTool": "shell"
-        },
-        {
-          "judge": "It looked at what this machine can run (machine_fit) before asking anything, then said in plain words what it would set up for coding: models that fit here go through install proposals the person clicks, and anything too heavy is offered as providers to choose from with a key pasted in Settings → Set-up. It asks about running here or online only if both are possible, never asks for a key in the chat, and installs nothing by hand."
+          "judge": "It looked at what this machine can run (machine_fit) before asking anything, then said in plain words what it would set up for coding: models that fit here go through install proposals the person clicks, and only what is too heavy for this machine (if anything) is offered as providers to choose from, with a key pasted in Settings → Set-up. It asks about running here or online only if both are possible, never asks for a key in the chat, and installs nothing by hand."
         }
       ]
     },
@@ -102,10 +99,7 @@
       "mode": "plan",
       "checks": [
         {
-          "noTool": "shell"
-        },
-        {
-          "judge": "Plan mode. DOCA has no fax line of its own: it does not pretend to have sent anything. It says plainly what it would need to do this (an online fax service with a key, or a device that can, and the document to send), offers the nearest way it can already do (an email or a message, if one is set up), and asks only for what is missing. In plain words a newcomer understands, with no internal tool names."
+          "judge": "Plan mode. DOCA has no fax line of its own: it does not pretend to have sent anything. It says plainly what it would need to do this (an online fax service with a key, or a device that can, and the document to send), offers the nearest way it can already do (an email or a message, if one is set up), and asks only for what is missing. In plain words a newcomer understands: naming a place in the panel to click (e.g. Field → Connectors) is fine; tool names, ports and code are not."
         }
       ]
     },
