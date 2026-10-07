@@ -85,8 +85,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 - [x] B6 **Reach what the hub can do** (aw 6, 9; coh F10) — *2.250.0: `system_status` names every local model server and who it works for (model-servers.js); `today` gives the person's weather, calendar and notices (ambient.today)*
 - [ ] B6b **The rest of B6** (aw 5, 7–8, 10; coh F9): `hub_command` over the `/api/v1` command registry and
   `service_control {id, start|stop}` (both act on the machine: asked like `shell`, a `confirm` command never "always" —
-  an approval rule, **ask first**); one-off `remind` (a reminder the person asked for, delivered by `tell_device` — fires
-  without a click, **ask first**); `screen {list | show | propose}`; retire `models-llamacpp-external.js` for
+  an approval rule, **ask first**); one-off `remind` — *done in 2.257.0 (approved 2026-10-07: fires without a click, once, on the person's own devices)*; `screen {list | show | propose}`; retire `models-llamacpp-external.js` for
   model-servers.js (W14: keep/archive/delete); per feature, tool / recipe / a person's alone for wake-word training,
   evals, Workstream, served pages, logs and traces.
 - [x] B7 **Task skills and routing evals** (aw 24, 27; coh F19) — *2.256.0: six task skills (morning-brief, research-with-sources, what-is-my-machine-doing, service-wont-start, calendar-and-mail, photos-and-files), each found by Likely fits; `evals/routing.json` (eleven cases, three on the rare tools toolTiers sends by name); `anyTool` checks; `npm run eval -- <set> --models a/b,c/d --flag <experiment>[=on|off]`. First measurement in docs/experiments/tool-tiers.md*
@@ -102,7 +101,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   checkpoint goes ahead; irreversible or outward asks). **Ask first** (charter).
 
 ### Wave 3 — one place for each thing
-- [ ] C1 **One list of decisions waiting for a person** (coh F12): installs, settings proposals, MCP and service
+- [x] C1 **One list of decisions waiting for a person** — *2.257.0: `modules/decisions.js`, `GET /api/decisions` and `/api/v1/decisions` (approved 2026-10-07); the header badge and the ambient screen drawing it are wave E* (coh F12): installs, settings proposals, MCP and service
   drafts, recipe proposals, proposed schedules, scout suggestions, plans — `/api/decisions` (and `/api/v1`, **ask
   first**) for the ambient screen, a header badge and a watch summary.
 - [ ] C2 **Proposals for a screen** (coh F13): a `screen` target applied through `screens`; `call`, `voice`, `ambient`,
@@ -122,7 +121,7 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   read) — moving a secret between protected stores, done as a migration.
 
 ### Wave 4 — the apps reach it too (`/api/v1` parity)
-- [ ] D1 **Stop, restart/drop, archive and "what is working" for devices** (cl 7–8, 17–19): `POST
+- [x] D1 **Stop, restart/drop, archive and "what is working" for devices** — *2.257.0 (approved 2026-10-07): `api-v1/parity.js`, PROTOCOL §23.0; the watch preset holds `harness:sessions`; speech with the device's voice (cl 18) is left* (cl 7–8, 17–19): `POST
   /api/v1/harness/missions/{id}/stop`, `/harness/work/{id}/restart|drop`, `/harness/sessions/{id}/archive`,
   `/missions/{id}/archive`, `state: 'stopped'` on work rows; `GET /api/v1/ambient`; speech synthesize/transcribe with
   the device's voice; the face for watches (scope). **Ask first** (W3, and S11 for the scope).
