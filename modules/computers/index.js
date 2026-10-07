@@ -13,7 +13,10 @@
  * macOS hosts alike; a VM backend (another OS, a kernel) is the next step.
  *
  * Ports are bound to 127.0.0.1 only; the control server needs a token the hub
- * made, and VNC a password the hub made. The home folder is a named volume, so
+ * made, and VNC a password the hub made. One more port is a page's: whatever the
+ * agent serves inside on SERVE (a repository it runs there, TODO H10.18) is
+ * reachable on the hub at `servePort`, and so through a canvas preview from any
+ * screen (canvas/previews.js) — never by a port of the computer's own choosing. The home folder is a named volume, so
  * a stopped computer keeps its files until it is removed.
  */
 const crypto = require('crypto');
@@ -24,6 +27,7 @@ const { execFile } = require('child_process');
 const store = require('../store');
 
 const IMAGE = 'doca/computer:1';
+const SERVE = 8080;   // the port inside a computer whose page the person can open (a server must listen on 0.0.0.0 there)
 const CONTEXT = path.join(__dirname, '..', '..', 'clients', 'computer');
 const DOC = 'computers';
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });
@@ -102,9 +106,9 @@ async function create({ name, purpose = '', missionId = null, by = null, auto = 
   const c = { id: crypto.randomBytes(4).toString('hex'), name: String(name || 'computer').replace(/[^\w .-]/g, '').slice(0, 40) || 'computer',
     purpose: String(purpose).slice(0, 300), missionId, by, auto: !!auto, pinned: false, ...(agentType ? { agentType } : {}), token: crypto.randomBytes(24).toString('hex'),
     fillKey: crypto.randomBytes(24).toString('hex'),   // the hub's alone: it unlocks browser_fill_secret (logins.js)
-    vncPassword: crypto.randomBytes(6).toString('hex'), mcpPort: await freePort(), vncPort: await freePort(), createdAt: new Date().toISOString() };
+    vncPassword: crypto.randomBytes(6).toString('hex'), mcpPort: await freePort(), vncPort: await freePort(), servePort: await freePort(), createdAt: new Date().toISOString() };
   await docker(['run', '-d', '--name', container(c), '--shm-size=1g', '--label', 'doca.computer=1',
-    '-p', `127.0.0.1:${c.mcpPort}:8765`, '-p', `127.0.0.1:${c.vncPort}:6080`,
+    '-p', `127.0.0.1:${c.mcpPort}:8765`, '-p', `127.0.0.1:${c.vncPort}:6080`, '-p', `127.0.0.1:${c.servePort}:${SERVE}`,
     '-e', `TOKEN=${c.token}`, '-e', `VNC_PASSWORD=${c.vncPassword}`, '-e', `FILL_KEY=${c.fillKey}`,
     '-v', `${container(c)}:/home/agent`, IMAGE]);
   save([...rows(), c]);
@@ -160,6 +164,7 @@ function view(c, state = null) {
   return { id: c.id, name: c.name, purpose: c.purpose, missionId: c.missionId, createdAt: c.createdAt, state,
     auto: !!c.auto, pinned: !!c.pinned, stoppedAt: c.stoppedAt || null, archivedAt: c.archivedAt || null, by: c.by || null, agentType: c.agentType || null,
     server: serverId(c), tools: `mcp__${serverId(c)}__*`,
+    serve: c.servePort ? { inside: SERVE, port: c.servePort } : null,   // a computer made before H10.18 has none: make a new one
     // Through the hub, so any signed-in host's browser can watch — the phone on the tailnet included (vnc.js).
     vnc: { url: require('./vnc').watchUrl(c), drive: require('./vnc').driveUrl(c), local: `http://127.0.0.1:${c.vncPort}/vnc.html`, password: c.vncPassword },
     driving: require('./vnc').driving(c.id) };
@@ -253,4 +258,4 @@ async function list({ all = false } = {}) {
   return rows().filter(c => all || !c.archivedAt).map(c => view(c, states[container(c)] || 'missing'));
 }
 
-module.exports = { IMAGE, imageReady, imageState, sourceHash, build, create, start, stop, remove, pin, archive, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, fetchFile };
+module.exports = { IMAGE, SERVE, imageReady, imageState, sourceHash, build, create, start, stop, remove, pin, archive, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, fetchFile };

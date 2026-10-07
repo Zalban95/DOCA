@@ -37,6 +37,20 @@ test('a computer is made, its tools reach the agent, a screenshot comes back as 
   assert.ok(!JSON.stringify(list).includes(require('../modules/computers').get(made.id).token), 'the token never leaves');
 });
 
+test('what a computer serves on its page port opens for the person, and Live lists it (TODO H10.18)', { timeout: 60000 }, async t => {
+  if (!ready || !made) return t.skip('no computer here');
+  const tools = require('../modules/harness/tools');
+  const prefix = `mcp__computer-${made.id}__`;
+  await tools.call(`${prefix}write_file`, { path: 'site/index.html', content: '<h1>served from the computer</h1>' });
+  await tools.call(`${prefix}shell`, { command: `cd ~/work/site && (nohup python3 -m http.server ${computers.SERVE} --bind 0.0.0.0 > ~/work/serve.log 2>&1 < /dev/null &)` });   // as the skill says
+  const c = (await computers.detailed()).find(x => x.id === made.id);
+  let pages = [];
+  for (let i = 0; i < 40 && !pages.length; i++) { pages = await require('../modules/machines').computerPages([c]); if (!pages.length) await H.sleep(250); }
+  assert.equal(pages[0]?.computer, made.id, 'Live lists the page');
+  const p = require('../modules/canvas/previews').create({ computer: made.id });
+  assert.match(await (await fetch(`http://127.0.0.1:${p.port}/`)).text(), /served from the computer/, 'the preview\'s port reaches it');
+});
+
 test('a specialist holds only the computer its mission was given', () => {
   const { disabledFor } = require('../modules/harness/turn/prompt');
   const p = require('../modules/harness/agent').params();

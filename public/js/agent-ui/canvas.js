@@ -51,7 +51,7 @@ async function canvasPreviewOpen(id, at = '/') {
   frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-modals allow-popups allow-downloads allow-same-origin');
   const url = `${location.protocol}//${location.hostname}:${info.canvasPort}${info.path}${at}`;
   _canvas = { id, base: null, frame };
-  document.getElementById('canvas-title').textContent = `${info.preview.title} · localhost:${info.preview.port}`;
+  document.getElementById('canvas-title').textContent = `${info.preview.title} · ${info.preview.where || `localhost:${info.preview.port}`}`;
   document.getElementById('canvas-rev').style.display = 'none';
   document.getElementById('canvas-delete').style.display = 'none';
   document.getElementById('canvas-newtab').href = url;

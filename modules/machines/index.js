@@ -8,7 +8,9 @@
  *              `mcp__computer-<id>__` name, or a tool naming it), and whether a running mission holds it
  *   served     the pages the agents serve for tests: an address a running job printed (a dev server's "Local:
  *              http://localhost:5173"), on this machine only — loopback, 0.0.0.0, this host's names — seen through the
- *              hub's headless browser while a Live page looks (shots.js)
+ *              hub's headless browser while a Live page looks (shots.js); and a page a running computer serves on its
+ *              page port (computers SERVE, published on the hub's 127.0.0.1 — a repository run there, TODO H10.18),
+ *              when something answers on it
  * "Working" is anything that acted in the last WORKING_MS; the page puts those in front.
  */
 const os = require('os');
@@ -54,6 +56,20 @@ function served() {
   return out;
 }
 
+/**
+ * Pages the running computers serve on their page port. Docker's port forward accepts a connection whether or not
+ * anything listens inside, so only an HTTP answer counts — asked briefly, all at once.
+ */
+async function computerPages(computers) {
+  const out = await Promise.all(computers.filter(c => c.state === 'running' && c.serve).map(async c => {
+    const url = `http://127.0.0.1:${c.serve.port}/`;
+    try { await fetch(url, { signal: AbortSignal.timeout(800), redirect: 'manual' }); } catch { return null; }
+    return { key: `computer-${c.id}`, url, port: c.serve.port, inside: c.serve.inside, computer: c.id, printed: null, jobId: null,
+      command: `in computer "${c.name}" on port ${c.serve.inside}`, sessionId: c.by || null, who: c.mission?.label || c.name, startedAt: null, tail: '' };
+  }));
+  return out.filter(Boolean);
+}
+
 async function picture({ shots = false } = {}) {
   const now = Date.now();
   let computers = [];
@@ -63,7 +79,7 @@ async function picture({ shots = false } = {}) {
     const busy = (a && now - a.at < WORKING_MS) || c.mission?.state === 'running';
     return { ...c, activity: a ? { ...a, ago: now - a.at } : null, working: !!busy };
   });
-  const pages = served();
+  const pages = [...served(), ...await computerPages(computers)];
   const shooter = require('./shots');
   if (shots) shooter.want(pages.map(p => ({ key: p.key, url: p.url })));
   return { computers, served: pages.map(p => ({ ...p, shot: shooter.has(p.key), working: true })), browser: shooter.browser(), workingMs: WORKING_MS };
@@ -80,4 +96,4 @@ function mount(app) {
   });
 }
 
-module.exports = { mount, picture, served, onEvent, WORKING_MS };
+module.exports = { mount, picture, served, computerPages, onEvent, WORKING_MS };
