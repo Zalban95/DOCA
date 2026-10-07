@@ -7,7 +7,11 @@
  * schedule makes the agent act unasked, again and again, and that is a person's decision (AGENTS.md, the
  * agent proposes). One a person makes in the panel starts on.
  *
- *   { id, title, kind: 'turn'|'recipe', message?, recipe?, values?, when: {every}|{cron}, state: 'on'|'paused'|'proposed',
+ * A reminder (kind `reminder`, when {at}) is the exception, decided 2026-10-07: the person asked for it in their own words,
+ * so it is on at once, fires once as a notice to that person's own devices, and is then `done`.
+ *
+ *   { id, title, kind: 'turn'|'recipe'|'reminder', message?, recipe?, values?, text?, device?, when: {every}|{cron}|{at},
+ *     state: 'on'|'paused'|'proposed'|'done',
  *     by, sessionId, nextAt, lastAt, last: {ok, summary, at}, runs, createdAt, madeBy: 'person'|'agent' }
  */
 const crypto = require('crypto');
@@ -23,6 +27,13 @@ const get = id => rows().find(s => s.id === id) || null;
 const patch = (id, fields) => { const list = rows().map(s => (s.id === id ? { ...s, ...fields } : s)); save(list); return list.find(s => s.id === id); };
 
 function normalize(input, by, madeBy) {
+  if (input.kind === 'reminder') {
+    const w = { at: new Date(input.at).toISOString() };
+    if (!when.next(w)) throw bad(`${input.at} is not ahead: a reminder is for later.`);
+    const text = String(input.text || '').trim().slice(0, 500);
+    if (!text) throw bad('A reminder needs what to remind of.');
+    return { title: text.slice(0, 100), kind: 'reminder', text, device: input.device ? String(input.device) : null, when: w, by, madeBy };
+  }
   const kind = input.kind === 'recipe' ? 'recipe' : 'turn';
   const w = input.cron ? { cron: String(input.cron).trim() } : { every: Number(input.every) };
   when.next(w);   // refuses a bad interval or expression with a sentence
@@ -36,9 +47,9 @@ function normalize(input, by, madeBy) {
 function create(input, { person, madeBy = 'person', sessionId = null } = {}) {
   if (!person?.id) throw bad('A schedule runs as somebody: sign in first.', 401);
   const s = { id: `sch_${crypto.randomBytes(5).toString('hex')}`, ...normalize(input, person.id, madeBy),
-    state: madeBy === 'agent' ? 'proposed' : 'on', sessionId: input.sessionId || sessionId || null,
+    state: madeBy === 'agent' && input.kind !== 'reminder' ? 'proposed' : 'on', sessionId: input.sessionId || sessionId || null,
     runs: 0, lastAt: null, last: null, createdAt: new Date().toISOString() };
-  s.nextAt = when.next(s.when).toISOString();
+  s.nextAt = when.next(s.when)?.toISOString() || null;
   save([...rows(), s]);
   return s;
 }
@@ -47,7 +58,7 @@ function setState(id, state) {
   const s = get(id);
   if (!s) throw bad('No such schedule.', 404);
   if (!['on', 'paused'].includes(state)) throw bad('state is on or paused');
-  return patch(id, { state, ...(state === 'on' ? { nextAt: when.next(s.when).toISOString() } : {}) });
+  return patch(id, { state, ...(state === 'on' ? { nextAt: when.next(s.when)?.toISOString() || null } : {}) });
 }
 
 function remove(id) { if (!get(id)) throw bad('No such schedule.', 404); save(rows().filter(s => s.id !== id)); return { removed: id }; }
@@ -62,6 +73,14 @@ async function runNow(id) {
   patch(id, { lastAt: new Date().toISOString(), runs: (s.runs || 0) + 1 });
   let last;
   try {
+    if (s.kind === 'reminder') {
+      // Only this person's own devices (or the one named), never everyone's: reach.tell would reach every device.
+      const mine = require('../api-v1/devices').list().filter(d => !d.revokedAt && d.userId === person.id && (!s.device || d.id === s.device || d.name === s.device));
+      const reached = [];
+      for (const d of mine) { try { require('../harness/reach').tell({ to: d.id, title: 'Reminder', text: s.text }); reached.push(d.name); } catch { /* declines notices */ } }
+      last = { ok: reached.length > 0, summary: reached.length ? `Reminded on ${reached.join(', ')}.` : 'None of this person\'s devices takes notices.' };
+      return patch(id, { state: 'done', nextAt: null, last: { ...last, at: new Date().toISOString() } });
+    }
     if (s.kind === 'recipe') {
       const r = await require('../recipes/run').run(require('../recipes/store').get(s.recipe), { params: s.values, person, client });
       last = { ok: r.ok, summary: r.summary, sessionId: r.sessionId };
@@ -86,7 +105,7 @@ const _inFlight = new Set();
 async function tick(now = new Date()) {
   const due = rows().filter(s => s.state === 'on' && s.nextAt && Date.parse(s.nextAt) <= now.getTime() && !_inFlight.has(s.id));
   for (const s of due) {
-    patch(s.id, { nextAt: when.next(s.when, now).toISOString() });   // a slow run never makes it fire twice
+    patch(s.id, { nextAt: when.next(s.when, now)?.toISOString() || null });   // a slow run never makes it fire twice
     _inFlight.add(s.id);
     runNow(s.id).catch(() => {}).finally(() => _inFlight.delete(s.id));
   }

@@ -94,3 +94,22 @@ test('a member sees and changes only their own schedules', async () => {
   assert.equal((await H.api(null, 'POST', `/api/schedules/${ownerOnes[0].id}/state`, { state: 'paused' }, { Cookie: member.cookie })).status, 404);
   assert.equal((await H.api(null, 'DELETE', `/api/schedules/${theirs.body.id}`, undefined, { Cookie: member.cookie })).status, 200);
 });
+
+test('a reminder the person asked for is on at once, fires once on their own devices, and is done (2026-10-07)', async () => {
+  const schedules = require('../modules/schedules');
+  const devices = require('../modules/api-v1/devices');
+  const bus = require('../modules/api-v1/bus');
+  const mine = H.mkDevice('Owner watch', 'watch', H.WATCH_CAPS).device;
+  devices.update(mine.id, { userId: H.owner.user.id });
+  const other = H.mkDevice('Someone else', 'watch', H.WATCH_CAPS).device;
+  const out = await require('../modules/harness/tools').call('remind', { text: 'Call Marco', in: 1 }, [], { user: { ...H.owner.user, role: 'owner' } });
+  assert.match(out, /Reminder sch_\w+ set for .*Call Marco/);
+  const r = schedules.listFor({ ...H.owner.user, role: 'owner' }).find(x => x.kind === 'reminder');
+  assert.equal(r.state, 'on', 'no click: they asked');
+  await schedules.runNow(r.id);
+  assert.equal(schedules.get(r.id).state, 'done');
+  const alerts = d => bus.drain(d.id, 0).events.filter(e => e.type === 'alert' && JSON.stringify(e.payload).includes('Call Marco'));
+  assert.equal(alerts(mine).length, 1);
+  assert.equal(alerts(other).length, 0, 'never another person\'s device');
+  assert.match(await require('../modules/harness/tools').call('remind', { text: 'x', at: '2001-01-01T00:00' }, [], { user: H.owner.user }), /not ahead/);
+});

@@ -283,18 +283,18 @@ test('conversations are listed, created, switched and read by a client that may 
   assert.equal((await H.api(phone.token, 'GET', `/api/v1/harness/sessions/${id}`)).status, 404);
 });
 
-test('a watch may ask, but not administer conversations or read memory', async () => {
+test('a watch may ask and list its person\'s conversations (harness:sessions since 2.257.0), but not read memory', async () => {
   // It holds harness:chat …
   script = [{ text: 'on it' }];
   const asked = await H.api(watch.token, 'POST', '/api/v1/harness/messages', { message: 'lights off' });
   assert.equal(asked.status, 202);
   const s = H.sse(watch.token); await s.ready; await settled(s, asked.body.turnId); s.close();
 
-  // … and nothing else from that family.
-  const sessions = await H.api(watch.token, 'GET', '/api/v1/harness/sessions');
-  assert.equal(sessions.status, 403);
-  assert.deepEqual(sessions.body.error.required, ['harness:sessions']);
-  assert.equal((await H.api(watch.token, 'GET', '/api/v1/harness/memory')).status, 403);
+  // … harness:sessions too since 2.257.0 (the face and schedules; approved 2026-10-07) — not memory.
+  assert.equal((await H.api(watch.token, 'GET', '/api/v1/harness/sessions')).status, 200);
+  const memory = await H.api(watch.token, 'GET', '/api/v1/harness/memory');
+  assert.equal(memory.status, 403);
+  assert.deepEqual(memory.body.error.required, ['harness:memory']);
 });
 
 test('a device with no harness scope can neither ask nor overhear', async () => {

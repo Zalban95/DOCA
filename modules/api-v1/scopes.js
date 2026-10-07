@@ -78,7 +78,7 @@ const PRESETS = {
   agent:    ['agent', 'read:*', 'artifacts:*', 'media:*', 'sensors:*', 'vars:*', 'profile:*'],
   // A watch asks the agent; it does not administer conversations on a screen
   // that small, so it gets `harness:chat` and nothing else from that family.
-  watch:    ['read:*', 'interact', 'profile:self', 'vars:self', 'sensors:report', 'media:upload', 'artifacts:self', 'harness:chat'],
+  watch:    ['read:*', 'interact', 'profile:self', 'vars:self', 'sensors:report', 'media:upload', 'artifacts:self', 'harness:chat', 'harness:sessions'],   // sessions: the face and schedules (approved 2026-10-07)
   // `mcp:self` is in `phone` because that is the preset a desktop client pairs
   // with, and it is self-limiting by construction: it reaches only the one
   // definition a human already pointed at this device. A device hosting nothing

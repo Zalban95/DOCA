@@ -44,6 +44,12 @@ function nextCron(expr, from = new Date()) {
 /** @param {{every?: number, cron?: string}} when */
 function next(when, from = new Date()) {
   if (when.cron) return nextCron(when.cron, from);
+  // Once, at a moment (a reminder): that moment while it is ahead; after it, nothing.
+  if (when.at !== undefined) {
+    const t = Date.parse(when.at);
+    if (!Number.isFinite(t)) throw new Error('at is a date and time, ISO 8601 (2026-10-07T18:00).');
+    return t > from.getTime() ? new Date(t) : null;
+  }
   const mins = Number(when.every);
   if (!Number.isFinite(mins) || mins < 1) throw new Error('every is a number of minutes, at least 1.');
   return new Date(from.getTime() + mins * 60000);
@@ -51,6 +57,7 @@ function next(when, from = new Date()) {
 
 function describe(when) {
   if (when.cron) return `cron ${when.cron}`;
+  if (when.at !== undefined) return `once, ${new Date(when.at).toLocaleString()}`;
   const m = Number(when.every);
   return m % 1440 === 0 ? `every ${m / 1440} day${m === 1440 ? '' : 's'}` : m % 60 === 0 ? `every ${m / 60} hour${m === 60 ? '' : 's'}` : `every ${m} minute${m === 1 ? '' : 's'}`;
 }
