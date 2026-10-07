@@ -9,8 +9,8 @@
  *   approve:<tool>[:<verb>]             a call of that kind runs without asking ("always" on an ask level)
  *   setting:<prefix>                    a settings prefix the subject may change or apply
  *   path:<absolute real path>           a folder (and below) the subject's tools may reach
- *   use:<kind>:<id>                     a resource allotted: a model (provider/model), provider, key, connector, login or
- *                                       computer (allot.js; CONSTITUTION S13)
+ *   use:<kind>:<id>                     a resource allotted: a model (provider/model), provider, key, connector, login,
+ *                                       computer, service or device (allot.js; CONSTITUTION S13)
  *
  * Who may give one — decided with Al 2026-10-04:
  *   - a person whose level holds `delegate` (admin and owner do), to a person
@@ -25,7 +25,7 @@ const crypto = require('crypto');
 
 const KINDS = ['user', 'specialist', 'mission', 'session'];
 const SCOPES = ['permanent', 'session', 'mission'];
-const PERM = /^(tool|approve):[\w.*-]+(:[\w.*\/-]+)?$|^setting:[\w.*-]+$|^path:.+$|^use:(model|provider|key|connector|login|computer):[\w.*\/:@-]+$/;
+const PERM = /^(tool|approve):[\w.*-]+(:[\w.*\/-]+)?$|^setting:[\w.*-]+$|^path:.+$|^use:(model|provider|key|connector|login|computer|service|device):[\w.*\/:@-]+$/;
 
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });
 const raw = () => require('../db').syncHandle();
@@ -85,7 +85,7 @@ function create({ subject, permission, scope = 'permanent', by, expiresAt = null
   const r = raw();
   if (!r) throw bad('Grants need the SQLite database; with PostgreSQL they are not available yet.', 501);
   if (!KINDS.includes(subject?.kind) || !subject.id) throw bad(`A grant is to a ${KINDS.join(', ')}, with its id.`);
-  if (!PERM.test(String(permission || ''))) throw bad('A permission is tool:<name>[:<verb>], approve:<tool>[:<verb>], setting:<prefix>, path:<folder> or use:<model|provider|key|connector|login|computer>:<id>.');
+  if (!PERM.test(String(permission || ''))) throw bad('A permission is tool:<name>[:<verb>], approve:<tool>[:<verb>], setting:<prefix>, path:<folder> or use:<model|provider|key|connector|login|computer|service|device>:<id>.');
   if (!SCOPES.includes(scope)) throw bad(`scope is ${SCOPES.join(', ')}.`);
   const g = { id: `grt_${crypto.randomBytes(6).toString('hex')}`, at: now() };
   r.prepare(`INSERT INTO grants (id, subject_kind, subject_id, permission, scope, by_kind, by_id, by_user, created_at, expires_at, note)
