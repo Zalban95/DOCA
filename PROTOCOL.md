@@ -1171,7 +1171,7 @@ text frame, and you answer each by its `id`. One socket per device; a newer one 
 
 The DOCA browser extension (`clients/browser`, preset `extension` = `mcp:self` only) is the first such client.
 
-### 22.3 Sealed secrets: used on the device, never read by the agent (TODO P1.3)
+### 22.3 Sealed secrets: used on the device, never read by the agent (hub 2.286.0, TODO P1.3)
 
 An agent can have a password, a PIN or a key typed or pasted on one of its person's devices without ever seeing it
 (CONSTITUTION S4): it calls `secret_use {secret, device, …}`, a person is asked every time, and the hub hands the value

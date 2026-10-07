@@ -333,7 +333,7 @@ The harness gives its agent eight rules for working on any repository (charter r
 - **Services the agent prepared** (since 2.235.0, `modules/service-drafts.js`, tool `service_draft`, kit panel, in `registry.NEVER`): for any API with a key the agent reads its docs and drafts everything but the secret — how the key is sent (header, query or exchange), the origin, a note, and a skill with the steps. Field → Connectors → "Prepared by the agent": the person pastes the key, and one Save writes the key (protected file) and the skill (never over a shipped one). Nothing is usable as a draft.
 - **MCP servers the agent prepared** (`modules/mcp/drafts.js`, tool `mcp_draft`, kit panel, in `registry.NEVER`): for a server not in the catalogue the agent drafts name, command and arguments or address, the secrets it needs by name (a secret's value is never kept), and which machine it belongs on. Nothing is added or started: MCP → "Prepared by the agent" → "Open in the form" fills the ordinary form, and only the person's Save makes it a server — the installs rule (the agent never supplies a command that runs) holds because a person saved it.
 
-### Secrets used on a device, never read (TODO P1.3, `modules/sealed`; CONSTITUTION S4; asked 2026-10-07)
+### Secrets used on a device, never read (since 2.286.0, TODO P1.3, `modules/sealed`; CONSTITUTION S4; asked 2026-10-07)
 - **`secret_use {secret, device, ref?, tab?, mode?, uses?, seconds?}`** (kit devices, in `registry.NEVER`, a forced ask in
   `forced-asks.js` — every mode, never "always"): a secret typed or pasted on one of the person's **own** devices
   (`sealed/use.js`), for one use or a few clipboard pastes and a short time, then forgotten there. The secret is a
