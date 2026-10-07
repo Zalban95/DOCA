@@ -269,12 +269,28 @@ const handlePromptSize = wrap(async (req, res) => {
 const handleSettingsRead = wrap(async (_req, res) =>
   res.json({ settings: settings.readable(), sections: settings.SETTABLE }));
 
-const handleProposals = wrap(async (_req, res) => res.json(settings.list()));
+// Who decides a proposal (approved 2026-10-07): the hive's settings are for a level holding `propose`; a proposal for one
+// screen is also its person's, whatever their level — they may change that screen themselves (/api/screen is `read`).
+const proposalPerson = req => req.auth?.user ? { ...req.auth.user, role: req.auth.role } : null;
+const mayDecide = (req, p) => {
+  const person = proposalPerson(req);
+  if (!person?.role || require('../auth/rights').can(person.role, 'propose')) return true;
+  if (!p?.screen) return false;
+  const d = require('../api-v1/devices').get(p.screen.id);
+  return !!d && d.userId === person.id;
+};
+const handleProposals = wrap(async (req, res) => {
+  const all = settings.list();
+  const person = proposalPerson(req);
+  if (!person?.role || require('../auth/rights').can(person.role, 'propose')) return res.json(all);
+  res.json({ pending: all.pending.filter(p => mayDecide(req, p)), decided: all.decided.filter(p => mayDecide(req, p)) });
+});
 
 const handleProposalApply = wrap(async (req, res) => {
   // A level is bound to the settings it may change (auth/levels.js): every path the proposal touches must
   // be within the applier's — or granted to them (setting:<prefix>).
   const p = settings.list().pending.find(x => x.id === req.params.id);
+  if (p && !mayDecide(req, p)) return res.status(403).json({ error: 'Only someone whose level holds "propose" decides the hive\'s settings; a proposal for one screen is its person\'s.' });
   const person = req.auth && { ...req.auth.user, role: req.auth.role };
   // A screen's own settings are its person's to change at any level (/api/screen is `read`); whose screen it is decides.
   const outside = p?.screen ? [] : (p?.changes || []).map(c => c.path).filter(path => person?.role && !require('../auth/permits').holds(person, `setting:${path}`));
@@ -282,8 +298,11 @@ const handleProposalApply = wrap(async (req, res) => {
   res.json({ ok: true, ...settings.apply(req.params.id, { person: req.auth?.user ? person : null }) });
 });
 
-const handleProposalReject = wrap(async (req, res) =>
-  res.json({ ok: true, proposal: settings.reject(req.params.id, req.body?.reason) }));
+const handleProposalReject = wrap(async (req, res) => {
+  const p = settings.list().pending.find(x => x.id === req.params.id);
+  if (p && !mayDecide(req, p)) return res.status(403).json({ error: 'Only someone whose level holds "propose" decides the hive\'s settings; a proposal for one screen is its person\'s.' });
+  res.json({ ok: true, proposal: settings.reject(req.params.id, req.body?.reason) });
+});
 
 /* ── Specialist agents and their missions ─────────────── */
 

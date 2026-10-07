@@ -61,3 +61,21 @@ test('a hive proposal is unchanged: it writes the prefs file', async () => {
   assert.equal((await H.api(null, 'POST', `/api/harness/proposals/${p.id}/apply`, {})).status, 200);
   assert.equal(loadPrefs().mcpSettings.callTimeoutMs, 90000);
 });
+
+test('a member decides a proposal for their own screen, and nothing else (approved 2026-10-07)', async () => {
+  const sp = require('../modules/harness/settings');
+  const memberPerson = { ...member.user, role: 'member' };
+  const mine = sp.propose({ changes: [{ path: 'ambient.place', value: 'Rome' }], reason: 'r', screen: theirs.device.id, person: memberPerson });
+  const others = sp.propose({ changes: [{ path: 'call.silenceMs', value: 2500 }], reason: 'r', screen: phone.device.id });
+  const hive = sp.propose({ changes: [{ path: 'mcpSettings.listTimeoutMs', value: 30000 }], reason: 'r' });
+  const as = (method, path, body) => H.api(null, method, path, body, { Cookie: member.cookie });
+
+  const list = (await as('GET', '/api/harness/proposals')).body.pending.map(p => p.id);
+  assert.deepEqual(list, [mine.id], 'a member sees only their own screens\' proposals');
+  assert.equal((await as('POST', `/api/harness/proposals/${hive.id}/apply`, {})).status, 403);
+  assert.equal((await as('POST', `/api/harness/proposals/${others.id}/reject`, {})).status, 403);
+  const r = await as('POST', `/api/harness/proposals/${mine.id}/apply`, {});
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(screens.layer(theirs.device.id).ambient.place, 'Rome');
+  assert.equal((await H.api(null, 'POST', `/api/harness/proposals/${hive.id}/reject`, {})).status, 200, 'the owner still decides the hive\'s');
+});
