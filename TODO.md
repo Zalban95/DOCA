@@ -69,7 +69,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   install → person → screen) the agent edits when asked to "change the UI", surviving updates — never a repo change.
 - [ ] P1.3 **Secrets used, never read, on any device (S4)**: a sealed secret handed to a device's input for a set
   number of uses, then forgotten — `computer_login`'s fill, generalised to phones, desktops and the browser extension.
-- [ ] P1.4 **Work persists until done (V10)**: each plan step carries a contract ("done when …", with a check the
+- [~] P1.4 **Work persists until done (V10)** — *2.275.0: contracts in plans (`plan-contracts.js`): a step marked done is held to its check (file, file contains, an owned address); the plan reads fulfilled when all hold, and its work chat is told to report done; the plan document and side panel show each contract. Left: experts waiting on each other's files; the Orchestrator resuming unfinished projects after a restart.*: each plan step carries a contract ("done when …", with a check the
   hub runs where one exists) and the plan is finished when all hold; experts that wait on each other's files (a
   dependency between missions/work chats); the Orchestrator resumes unfinished projects after a
   restart on its own unless the person archived, forgot or deleted them; one message where the person is.
