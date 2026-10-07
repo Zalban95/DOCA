@@ -66,12 +66,25 @@ function isPortTaken(port, excludeId) {
   );
 }
 
+/** The llama.cpp servers model-servers.js sees, minus the panel's own, in the shape the tab draws. */
+async function externalServers(ownPorts) {
+  const { servers } = await require('./model-servers').status();
+  return servers.filter(s => /^llama/.test(s.kind || '')).filter(s => { try { return !ownPorts.includes(Number(new URL(s.url).port)); } catch { return true; } })
+    .map(s => ({ provider: s.provider, label: s.label, url: s.url, router: s.kind === 'llama.cpp router', build: null, ctx: null,
+      models: (s.models || []).map(m => ({ id: m.id, state: m.state, ctx: m.ctx || null })), doca: (s.doca || []).length, foreign: !!s.foreign }));
+}
+
 /** GET /api/models/llamacpp/list */
 async function handleList(_req, res) {
   const instances = loadInstances();
-  // And the llama-servers running without the panel (models-llamacpp-external.js), so the tab shows what is there.
-  const external = await require('./models-llamacpp-external').find(instances.map(i => Number(i.port))).catch(() => []);
-  res.json({ instances: instances.map(instanceStatus), external });
+  // And the llama-servers running without the panel, so the tab shows what is there: found by model-servers.js, the
+  // one discovery the sidebar and system_status use too (audit 2026-10-06 coh F10), or by each one's /props
+  // (models-llamacpp-external.js), the older path kept beside it (CONSTITUTION W14; features/data/alternatives.js).
+  const own = instances.map(i => Number(i.port));
+  const via = require('./settings-schema').value('llamacpp.discovery') === 'props' ? 'props' : 'servers';
+  require('./features/usage').count(`llamacpp-external:${via}`);
+  const external = await (via === 'props' ? require('./models-llamacpp-external').find(own) : externalServers(own)).catch(() => []);
+  res.json({ instances: instances.map(instanceStatus), external, via });
 }
 
 /** GET /api/models/llamacpp/status */

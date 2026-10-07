@@ -36,24 +36,37 @@ async function llamaLoadList() {
   try {
     const data = await apiFetch('/api/models/llamacpp/list');
     _llamaInstances = data.instances || [];
-    _llamaRenderExternal(data.external || []);
+    _llamaRenderExternal(data.external || [], data.via || 'servers');
   } catch { _llamaInstances = []; }
   _renderLlamaGrid();
 }
 
 /** llama-servers running without the panel — found through the harness's local providers. Shown, not managed. */
-function _llamaRenderExternal(list) {
+function _llamaRenderExternal(list, via = 'servers') {
   const grid = document.getElementById('llamacpp-grid');
   if (!grid) return;
   let box = document.getElementById('llamacpp-external');
   if (!box) { box = document.createElement('div'); box.id = 'llamacpp-external'; grid.after(box); }
-  box.innerHTML = list.length ? `<div class="input-label" style="margin:12px 0 6px">Running outside the panel</div>` + list.map(s => `
+  // How they are found: the model servers' own discovery (the sidebar's), or each one's /props — kept beside it (W14).
+  const pick = `<select class="input" style="width:auto;margin-left:8px;font-size:11px;padding:1px 4px" title="How these are found" onchange="llamaSetDiscovery(this.value)">
+    <option value="servers"${via === 'servers' ? ' selected' : ''}>found as model servers</option>
+    <option value="props"${via === 'props' ? ' selected' : ''}>found by /props</option></select>`;
+  box.innerHTML = list.length ? `<div class="input-label" style="margin:12px 0 6px">Running outside the panel${pick}</div>` + list.map(s => `
     <div class="disk-row" title="${escHtml(s.build ? `llama.cpp ${s.build}` : 'llama.cpp')} — started outside DOCA, so it is shown here and managed where it was started">
-      <span class="disk-label">${escHtml(s.label)}${s.router ? ' · router' : ''}</span>
+      <span class="disk-label">${escHtml(s.label)}${s.router ? ' · router' : ''}${s.foreign ? ' · working for something else' : s.doca ? ' · working for DOCA' : ''}</span>
       <span class="disk-path">${escHtml(s.url)}</span>
       <span class="disk-free">${s.models.length ? s.models.map(m => `${escHtml(m.id)} (${escHtml(m.state || '?')}${m.ctx ? `, ${m.ctx.toLocaleString()} ctx` : ''})`).join(' · ')
         : s.ctx ? `${s.ctx.toLocaleString()} ctx` : ''}</span>
     </div>`).join('') : '';
+}
+
+/** Which way the tab finds them (llamacpp.discovery): the rest of the llamacpp prefs are kept as they are. */
+async function llamaSetDiscovery(via) {
+  try {
+    const cur = (await apiFetch('/api/prefs')).llamacpp || {};
+    await apiFetch('/api/prefs', { method: 'POST', body: { llamacpp: { ...cur, discovery: via } } });
+  } catch (e) { appAlert(`Could not save: ${e.message}`); }
+  llamaLoadList();
 }
 
 async function llamaLoadStatus() {
