@@ -1,6 +1,10 @@
-# OpenClaw Dashboard
+# DOCA in detail
 
-Web-based control panel for managing the **OpenClaw** AI agent stack.
+The long reference that used to be the README (until 2026-10-07): the panel's pages, the harnesses, the built-in
+agent, MCP servers, virtual machines, the environment variables and the project's structure. DOCA began as a
+control panel for the **OpenClaw** agent stack, and parts of this page still read that way; OpenClaw is now one
+harness among many. For installing and the first run see the [README](../README.md); for running it for real,
+[production.md](production.md); for what each part does today and why, [AGENTS.md](../AGENTS.md).
 
 ## Features
 
@@ -21,25 +25,14 @@ Web-based control panel for managing the **OpenClaw** AI agent stack.
 - **AI Tools** — Whisper / Faster-Whisper (STT), Kokoro / Piper (TTS), Stable Diffusion / ComfyUI (image) with auto-detection, one-click install (⬇) and per-tool config (⚙)
 - **Inference Services** — Docker-based Whisper STT, Kokoro TTS, vLLM, Stable Diffusion and ComfyUI backends with GPU assignment, image-presence check and one-click pull
 - **System Tools** — Auto-checks 15 dependencies (Node, Docker, Compose, Git, Python, pip, Ollama, ffmpeg, curl, nvidia-smi, huggingface-cli, llama-server…) with ⬇ Install for anything missing and ↻ Update to re-run the installer on anything already present
-- **Agent Chat** — Floating chat panel wired to the default harness; with an external harness selected it uses the OpenClaw Gateway API when enabled and falls back to the `claude` CLI. Full-screen sheet on phones
+- **Agent Chat** — Floating chat panel wired to the default harness; with another harness as the default it asks that harness the way it says it can be asked — OpenClaw through its gateway, a CLI through its own one-question mode — and never silently falls back to a different agent. Full-screen sheet on phones
 - **Start at Boot** — One toggle in Settings installs DOCA as a systemd service (`./run.sh enable` does the same from a shell), so the panel survives reboots and `⟳ Restart` is handled by a real supervisor
 - **Mobile** — Fully responsive: bottom tab bar on phones (respects tab visibility settings), safe-area/notch support, reflowed tool rows and settings grids, full-screen chat and modals, coarse-pointer touch targets
 
 ## Quick Start
 
-**Install** — one command per OS; it checks Node 22, fetches DOCA (the repository is private: your git
-credentials), installs its dependencies, adds start-at-boot and starts it:
-
-```bash
-bash scripts/install.sh            # Linux (systemd) and macOS (launchd);  --dir, --no-boot, --from <checkout>
-```
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\install.ps1    # Windows (Task Scheduler at sign-in); -Dir, -NoBoot, -From
-```
-
-Then open **https://localhost:4242** on that machine to create the owner (no code needed there; from another
-device the first sign-up asks for the setup code in `.setup-code`). Accept the self-signed certificate once.
-CI runs both installers on Linux, Windows and macOS on every push.
+**Install** — see the [README](../README.md#install): one installer per OS, CI runs both on Linux, Windows and
+macOS on every push.
 
 **From a checkout** — `./run.sh` installs dependencies on first run, loads a `.env` file if you have one, and
 starts the panel — on **https://localhost:4242** by default; on Windows, `npm install` then `npm start`.
@@ -53,7 +46,7 @@ To have it come back after a reboot, tick **Settings → General → Start at Bo
 
 Out of the box the chat panel talks to the built-in DOCA Harness. Once you switch the default
 harness to OpenClaw (the **Agent Harnesses** card on Controls), the panel goes through OpenClaw instead.
-To have it use the OpenClaw Gateway API rather than the `claude` CLI, add this to
+OpenClaw is asked through its Gateway API, which has to be switched on; add this to
 `~/.openclaw/openclaw.json`:
 
 ```json
@@ -68,7 +61,7 @@ To have it use the OpenClaw Gateway API rather than the `claude` CLI, add this t
 }
 ```
 
-If you use auth, ensure `gateway.auth.token` (or `gateway.auth.password`) is set. The dashboard reads the config and uses the Gateway’s `/v1/chat/completions` endpoint. If the Gateway is unavailable, it falls back to the `claude` CLI.
+If you use auth, ensure `gateway.auth.token` (or `gateway.auth.password`) is set. The dashboard reads the config and uses the Gateway’s `/v1/chat/completions` endpoint. If the Gateway is unavailable, the chat says so: it does not hand your message to another agent.
 
 ## Deployment Setups
 
@@ -471,9 +464,9 @@ the agent ↔ user prompt cycle (tap / voice / text / image), device profiles,
 on-demand sensors, media uploads, agent-shipped artifacts, and server-rendered
 graphics for devices without an SVG engine.
 
-- **Developer docs:** [docs/api/](docs/api/README.md) — [getting started](docs/api/getting-started.md), [device app guide](docs/api/device-app-guide.md), [agent guide](docs/api/agent-guide.md), [cookbook](docs/api/cookbook.md) (JS / Kotlin / Swift / Python).
-- **Specification:** [PROTOCOL.md](PROTOCOL.md) (normative) and the OpenAPI 3.1 document at [docs/api/openapi.json](docs/api/openapi.json), also served live at `GET /api/v1/openapi.json`.
-- **Building a client:** [docs/client-briefs.md](docs/client-briefs.md) — the pattern used to brief coding agents on `DocaMobile` and `DocaWear`, and the starting point for the next client.
+- **Developer docs:** [docs/api/](api/README.md) — [getting started](api/getting-started.md), [device app guide](api/device-app-guide.md), [agent guide](api/agent-guide.md), [cookbook](api/cookbook.md) (JS / Kotlin / Swift / Python).
+- **Specification:** [PROTOCOL.md](../PROTOCOL.md) (normative) and the OpenAPI 3.1 document at [docs/api/openapi.json](api/openapi.json), also served live at `GET /api/v1/openapi.json`.
+- **Building a client:** [docs/client-briefs.md](client-briefs.md) — the pattern used to brief coding agents on `DocaMobile` and `DocaWear`, and the starting point for the next client.
 
 **Enrolling devices from the dashboard.** Field → **API keys** → *This server — devices*
 lists every enrolled device with its scopes, and can pair a new one. **Pair a device** shows a
@@ -513,7 +506,7 @@ modules/                    Backend feature modules (one per concern)
   setup.js                  Setup script read / write
   snapshots.js              Snapshot create / restore / settings
   files.js                  File manager (list, read, write, upload, paste…)
-  chat.js                   Floating chat panel (default harness, Gateway API / claude CLI fallback)
+  chat.js                   Floating chat panel (the default harness; another harness through harness/one-shot.js)
   harness/                  Agent harnesses
     catalog.js              Built-in + 14 known + custom harnesses: detect, install, default, config
     providers.js            Provider presets, default params, and the standing safety charter
