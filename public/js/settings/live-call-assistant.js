@@ -53,6 +53,8 @@ async function liveCallAssistantHtml() {
       <span style="font-size:11px;color:var(--muted)">Questions, failures and anything you cannot see are always answered.</span></div>
     <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-calls" ${a.calls ? 'checked' : ''} ${owner ? '' : 'disabled'}>
       Use this effort and model for the chat's 🎙 call too (its answers are always spoken-length)</label>
+    <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-front" ${a.front !== false ? 'checked' : ''} ${owner ? '' : 'disabled'}>
+      Answer at once: quick actions in the call, anything bigger (or "think harder") to a work chat, its outcome said in the call</label>
     <label style="font-size:11px;color:var(--muted)">How it speaks<textarea class="input" id="as-style" rows="4" style="width:100%;margin-top:4px" ${owner ? '' : 'disabled'}>${escHtml(a.style || '')}</textarea></label>
     ${owner ? `<div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantSave()">Save assistant mode</button>
       <button class="btn btn-sm" onclick="liveCallAssistantSave(true)">Default style</button></div>` : ''}
@@ -61,7 +63,7 @@ async function liveCallAssistantHtml() {
 
 async function liveCallAssistantSave(resetStyle) {
   const g = id => document.getElementById(id).value;
-  try { await apiFetch('/api/assistant', { method: 'POST', body: { reply: g('as-reply'), calls: document.getElementById('as-calls').checked, effort: g('as-effort'), provider: g('as-provider').trim(), model: g('as-model').trim(), style: resetStyle ? null : g('as-style') } }); }
+  try { await apiFetch('/api/assistant', { method: 'POST', body: { reply: g('as-reply'), calls: document.getElementById('as-calls').checked, front: document.getElementById('as-front').checked, effort: g('as-effort'), provider: g('as-provider').trim(), model: g('as-model').trim(), style: resetStyle ? null : g('as-style') } }); }
   catch (e) { return appAlert(e.message); }
   liveCallRender();
 }

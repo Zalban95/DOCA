@@ -48,9 +48,10 @@ function doneSince(sessionId, from) {
  * calls have not run: each gets its result row, so no call is left unpaired.
  * @returns {string} the line the Orchestrator ends its turn with
  */
-function handOff({ session, message, from, reply, say, step }) {
+function handOff({ session, message, from, reply, say, step, person = null, spoken = false }) {
   const organization = require('../organization');
   const chat = organization.create({ title: short(message, 80) || 'Handed-off job' });
+  require('../session-access').claim(person, chat.id);   // the person's work, under their level — not the Orchestrator's owner's
   for (const tc of reply.tool_calls) {
     const name = tc.function?.name || '';
     const result = `Not run here: the job moved to the work chat "${chat.title}" (${chat.id}), which carries it on.`;
@@ -62,7 +63,8 @@ function handOff({ session, message, from, reply, say, step }) {
     + `It was about to: ${reply.tool_calls.map(callLine).join('; ')}\n\n`
     + 'Check what was done rather than trusting the summary, carry the job to the end, and report with work_chats.';
   organization.start(chat.id, task, session.id);
-  say({ type: 'handoff', step, sessionId: chat.id, title: chat.title });
+  say({ type: 'handoff', step, sessionId: chat.id, title: chat.title, from: session.id });   // `from`: a call open there follows it
+  if (spoken) return 'That is a longer job, so it carries on in a work chat. I will tell you when it is done.';
   return `This is turning into a longer job, so it carries on in the work chat **${chat.title}** — I'm free in the meantime, `
     + 'and I will tell you when it reports.';
 }

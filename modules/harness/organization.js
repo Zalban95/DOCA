@@ -89,6 +89,7 @@ function report(id, type, text, by = 'agent') {
   // One read and one write for the whole fan-out, rather than one of each per
   // ancestor — see `memory.updateSessions`.
   memory.updateSessions(ancestors(id), row => ({ reports: trimReports([...(row.reports || []), note]) }));
+  if (FINAL.includes(type)) require('../realtime/calls').reported(id, note);   // a call that handed it this work hears how it ended
   return note;
 }
 

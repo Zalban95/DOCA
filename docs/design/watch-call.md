@@ -84,6 +84,28 @@ headset. The microphone permission is asked on the first call, with the reason o
 
 A watch paired directly to a LAN hub downloads the APK itself, the same fallback the request relay has.
 
+## A call that feels alive (hub 2.304.0, DocaWear 1.4.0)
+
+Asked 2026-10-07 after the first calls on the wrist: "the call shows no feedback… the response can be immediate, so no
+thinking… if you ask it to focus or think harder or take its time, it can start thinking and delegate."
+
+- **Every state on the wrist.** The hub says `heard` the moment an utterance ends (before speech-to-text), then `user`,
+  `working`, `agent` while it speaks, `done`; `background` when work goes on outside the call, `report` when it comes
+  back and is said. The phone passes JSON frames through unchanged, so DocaMobile needed nothing. The watch draws
+  listening (its own microphone's level moves the points), heard (the words, a tick), thinking, speaking (the
+  playback level, a tick as it starts), interrupted, "still working, I'll tell you", and an error in words.
+- **Two speeds, one conversation.** The turn behind a call is the front (`turn/front.js`): a short kit, no triage,
+  assistant mode's effort and model, two steps of real work at most. A large request, or "think harder / take your
+  time / focus", goes to a work chat before any model is asked. A second model reading the call for actions was
+  considered and not built: it adds its latency to every request and a second place that decides what was meant.
+- **Results come back into the call** (`realtime/calls.js`): while it is open, what lands in its conversation is said
+  in it. A call with no conversation named goes where the device's typed messages go (the Orchestrator's for a
+  host), which is where a work chat's report is told.
+- **Latency.** The first sentence plays while the model writes the rest. Measured on a sandbox hub (this machine's
+  whisper large-v3-turbo and Kokoro, DeepSeek flash): the words reach the conversation ≈ 0.8 s after speech ends, the
+  first audio 2.7–4.2 s after it with the front (13.4k prompt tokens a step), 3.2–4.0 s without (25k). What is left is
+  the model's time to its first sentence; a quicker `assistant.model` is the lever.
+
 ## Order of work
 
 1. Hub: `/api/v1/call` and the pipeline engine — **done in 2.211.0**.

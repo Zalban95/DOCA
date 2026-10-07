@@ -9,7 +9,9 @@
  * `silenceMs` of quiet, and one with less than 300 ms of speech in it is dropped (a blip is what Whisper turns into
  * "Thank you."). It is transcribed (chat.transcribeAudio, which screens silence phrases), emitted as `user`, and handed
  * on as the `doca` tool call — this engine has no model of its own, so everything said is a request to the hive.
- * Out: each sentence of an answer synthesized as raw PCM (`response_format: pcm`, 24 kHz) and sent as it comes.
+ * `heard` is emitted the moment an utterance ends, before it is transcribed, so a client can say "heard you" at once.
+ * Out: each sentence of an answer synthesized as raw PCM (`response_format: pcm`, 24 kHz) and sent as it comes;
+ * `stream()` takes an answer while the model is still writing it, so its first sentence plays before the last exists.
  * Speech while it talks stops it (`interrupted`); the rest of that answer is dropped.
  */
 const { EventEmitter } = require('events');
@@ -35,6 +37,25 @@ function rms(frame) {
 function speakable(text) {
   return String(text || '').replace(/```[\s\S]*?```/g, ' (code shown in the chat) ').replace(/`([^`]*)`/g, '$1')
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/https?:\/\/\S+/g, 'a link').replace(/[*_~]+/g, '').replace(/[#>|]+/g, ' ').replace(/\s+/g, ' ').replace(/ ([.,!?;:])/g, '$1').trim();
+}
+
+/**
+ * Sentences out of text that arrives in pieces (a model's deltas): `push` returns the ones that are complete, `push(null)`
+ * says a piece ended (a tool call follows: what came before is a whole thing to say), `rest()` is what is left.
+ */
+function gatherer() {
+  let buf = '';
+  return {
+    push(delta) {
+      if (delta === null) { const all = buf.trim(); buf = ''; return all ? [all] : []; }
+      buf += delta;
+      const m = /^[\s\S]*[.!?;:](?=\s)/.exec(buf);   // up to the last sentence end followed by a space
+      if (!m || m[0].trim().length < 2) return [];
+      buf = buf.slice(m[0].length);
+      return [m[0].trim()];
+    },
+    rest() { const all = buf; buf = ''; return all; },
+  };
 }
 
 const sentences = text => (speakable(text).match(/[^.!?;:]+[.!?;:]*\s*/g) || []).map(s => s.trim()).filter(s => s.length > 1);
@@ -73,14 +94,17 @@ function connect({ silenceMs = 900, synth, transcribe } = {}) {
     if (voiced) { utter.voicedMs += 20; quietMs = 0; } else quietMs += 20;
     if (quietMs >= silenceMs || utter.ms >= MAX_UTTERANCE_MS) {
       const u = utter; utter = null; quietMs = 0;
-      if (u.voicedMs >= MIN_VOICED_MS) utterance(Buffer.concat(u.chunks));
+      if (u.voicedMs >= MIN_VOICED_MS) { em.emit('heard'); utterance(Buffer.concat(u.chunks)); }
     }
   };
 
-  /** Each sentence spoken in order, as soon as it is synthesized; an interruption drops what is left. */
-  const speak = text => {
-    const mine = epoch;
-    if (String(text).trim() === '✓') { em.emit('agent', '✓'); em.emit('turn'); return; }   // an action done, not narrated: shown, not spoken
+  /**
+   * Each sentence spoken in order, as soon as it is synthesized; an interruption drops what is left. `mine` is the
+   * epoch the answer began in (a part of an answer that arrives after the person talked over it is dropped too), and
+   * `end: false` is a part of an answer still being written: no `turn` after it.
+   */
+  const speak = (text, { mine = epoch, end = true } = {}) => {
+    if (end && String(text).trim() === '✓') { em.emit('agent', '✓'); em.emit('turn'); return; }   // an action done, not narrated: shown, not spoken
     for (const s of sentences(text)) {
       const pcm = synth(s).catch(e => { em.emit('error', e.message); return null; });   // all start at once, play in order
       speech = speech.then(async () => {
@@ -91,7 +115,7 @@ function connect({ silenceMs = 900, synth, transcribe } = {}) {
         for (let i = 0; i < audio.length; i += RATE / 5) em.emit('audio', audio.subarray(i, i + RATE / 5));   // 100 ms frames
       });
     }
-    speech = speech.then(() => { if (!closed && mine === epoch) em.emit('turn'); });
+    if (end) speech = speech.then(() => { if (!closed && mine === epoch) em.emit('turn'); });
   };
 
   em.literal = true;   // what it is handed is said as written: serve() words its notices for a listener, not a model
@@ -102,10 +126,12 @@ function connect({ silenceMs = 900, synth, transcribe } = {}) {
   };
   em.toolResult = (_id, text) => speak(text);
   em.say = text => speak(text);
+  /** One answer arriving in parts: `part` speaks what is written so far, `end` the rest and closes the answer. */
+  em.stream = () => { const mine = epoch; return { part: t => speak(t, { mine, end: false }), end: t => speak(t, { mine }) }; };
   em.userText = text => { em.emit('user', text); em.emit('tool', { id: `p${++ids}`, name: 'doca', args: { request: String(text) } }); };
   em.close = () => { if (closed) return; closed = true; em.emit('closed', { code: 1000, reason: '' }); };
   setImmediate(() => { if (!closed) em.emit('ready'); });
   return em;
 }
 
-module.exports = { connect, RATE, wav, rms, speakable, sentences };
+module.exports = { connect, RATE, wav, rms, speakable, sentences, gatherer };

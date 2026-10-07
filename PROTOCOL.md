@@ -1229,7 +1229,9 @@ POST /api/v1/harness/messages          → 202 { turnId, sessionId }
 `voice` (since hub 2.217.0, optional): `"call"` when the message was spoken in a live call — the answer is shaped to be
 heard (short sentences, no markdown, questions asked aloud) — or `"assistant"` when the call came from a face: quicker
 and shorter still, in the owner's `assistant.style` and at `assistant.effort` (turn/effort.js). The hub's own call
-engine (§23.1.1) sets it: `"assistant"` for a watch, `"call"` for anything else.
+engine (§23.1.1) sets it: `"assistant"` for a watch (a device whose paired `caps.formFactor` is `watch` — before
+2.304.0 it looked for a device kind no device has, so a watch's call was answered as `"call"`), `"call"` for anything
+else. Since 2.304.0 a spoken turn answers at once with a short kit and hands anything bigger to a work chat (§23.1.1).
 
 Omitting `sessionId` addresses the persistent Orchestrator, independently of
 which conversation is selected in the Harness. An explicit `sessionId` still
@@ -1344,7 +1346,9 @@ to (`openai` or `gemini`) and the audio it takes: `{format: "pcm16", rate: 24000
 
 The call is a **WebSocket on the same path**, `wss://<hub>/api/v1/realtime`, with the device's token —
 `Authorization: Bearer …`, or `?access_token=` for a client that cannot set headers on a socket — and optionally
-`?session=<id>` for one of the person's conversations (otherwise the call gets a new conversation of its own).
+`?session=<id>` for one of the person's conversations — otherwise, since 2.304.0, the one its typed messages go to
+(§23: the Orchestrator's for a host, the person's own for anyone else; before, a new conversation of its own), so what
+the hive answers there later reaches the call.
 
 - **Binary frames are audio, both ways**: PCM16 little-endian, mono, 24 kHz. Send the microphone in frames of
   about 100 ms; play what comes back in order.
@@ -1352,6 +1356,19 @@ The call is a **WebSocket on the same path**, `wss://<hub>/api/v1/realtime`, wit
   heard to say), `agent` (the voice's words as they are spoken, deltas), `interrupted` (the person talked over the
   answer: **drop audio queued to play**), `working` (`text`: a request handed to the hive), `done` (an answer
   finished), `error` (`message`), `closed` (`reason`, `stats`). From the client: `{"type": "stop"}`.
+- **Since 2.304.0, three more, so a client can show every state** (a client that does not know them ignores them):
+  `heard` — speech just ended and is being written down (the pipeline only; it comes before `user`, a good moment
+  for a haptic tick); `background` (`text`, `sessionId` when it is a work chat) — work goes on outside the call, a
+  request past `realtime.waitSec` or one handed to a work chat, and its outcome will be said in this call; `report`
+  (`text`: what came back) — something that went on outside the call came back and is said now (`agent` frames and
+  `done` follow). `closed.stats.replyMs` lists, per answer, the milliseconds from the end of an utterance to the
+  first audio of its answer.
+- **The call hears its conversation** (since 2.304.0): while it is open, what lands in its conversation without the
+  call asking — the Orchestrator telling what its work chats reported, a work chat the call handed work to, a
+  mission the conversation dispatched — is said in the call (`report`, then the words), and the same event's push
+  to this device is `quiet`. Never another person's conversation. After the call, it is a notification as before.
+- **docs/api/fixtures/call-frames.json** lists the frames and their fields, written from the hub's own table
+  (`modules/realtime/index.js` FRAMES).
 - The voice holds no power of its own: anything real it hands to the conversation as an ordinary turn of this
   device (`agent.turn` on the bus as usual, its person's level and approvals; a question for the person reaches the
   device as a prompt, §12). A request longer than the owner's `realtime.waitSec` keeps running and is spoken when done.
@@ -1363,8 +1380,16 @@ The call is a **WebSocket on the same path**, `wss://<hub>/api/v1/realtime`, wit
 the hub: `engine: "realtime"` while a realtime model is on, else `engine: "pipeline"` — the hive's own speech-to-text,
 a turn and text-to-speech (Settings → Voice). **The wire is identical**: the same PCM16 24 kHz frames both ways, the
 same JSON frames, `ready.protocol` `"pipeline"`. With the pipeline every utterance is a request to the conversation
-(`user`, then `working`), the answer is spoken a sentence at a time (`agent` carries each sentence), speech over it
-sends `interrupted`, and a recording with under 300 ms of speech is dropped. `available` is `false` with a `reason`
+(`heard`, `user`, then `working`), the answer is spoken a sentence at a time while the model is still writing it
+(`agent` carries each sentence; since 2.304.0 the first plays as soon as it is written), speech over it sends
+`interrupted`, and a recording with under 300 ms of speech is dropped.
+
+Since 2.304.0 the turn behind a call is **the front** (hub `turn/front.js`, the owner's `assistant.front`): it answers
+at once with a short kit — a reminder, memory, a device, a screen, a recipe, the day, a setting asked for, the MCP
+servers' tools — at assistant mode's effort and model, and is not triaged; after two steps of real work the rest
+moves to a work chat. A request its rules call large, or one where the person asks to think harder, take their time
+or focus, goes to a work chat at once (at high effort when asked to think) and the call says one line, sends
+`background`, and later says the outcome. `available` is `false` with a `reason`
 when the voice services do not answer. A client that wants a call writes it once against `/call`; this is what a
 watch reaches through its phone (DocaWear, docs/design/watch-call.md).
 

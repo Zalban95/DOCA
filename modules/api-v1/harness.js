@@ -107,6 +107,9 @@ const access = () => require('../harness/session-access');
 const ownerOf = device => require('../harness/turn/client').deviceOwner(device);
 const hostOrNobody = device => { const p = ownerOf(device); return !p?.id || access().isHost(p); };
 
+/** Where a device's message goes when it names no conversation: the Orchestrator's for a host, else the person's own. */
+const defaultSession = device => (hostOrNobody(device) ? memory.mainSession() : memory.getSession(access().defaultFor(ownerOf(device))));
+
 function sessions(device) {
   const { sessions: list, active } = memory.listSessions();
   if (hostOrNobody(device)) return { sessions: list, active };
@@ -210,8 +213,7 @@ function post(body, device) {
     }
   }
 
-  const session = body?.sessionId ? requireSession(body.sessionId, device)
-    : hostOrNobody(device) ? memory.mainSession() : memory.getSession(access().defaultFor(ownerOf(device)));
+  const session = body?.sessionId ? requireSession(body.sessionId, device) : defaultSession(device);
 
   if (session.archivedAt) throw new ApiError(409, 'session_archived', 'Recall this conversation in the Harness before continuing.');
 
@@ -370,7 +372,7 @@ function memoryList() {
 }
 
 module.exports = {
-  sessions, createSession, activate, removeSession, transcript, requireSession,
+  sessions, createSession, activate, removeSession, transcript, requireSession, defaultSession,
   post, running, cancel, memoryList,
   MAX_MESSAGE,
 };

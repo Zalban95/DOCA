@@ -116,7 +116,19 @@ the project's managers only if the owner allows sharing specialists and skills (
 - D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),
   `mcp.listener stop`, `confirmPromptChoice`'s body (§12.6 `{selectionId, decision}`), the native wake word, the
   watch's line in Settings → Updates, `seen` on opening a finished notice and clearing it on `seenAt` (PROTOCOL §11.4, hub 2.282); DocaWear: the LAN port, the same `seen`; DocaDesk: the socket transport, `prompt.outcome`.
-- Real-hardware checks: DocaMobile 1.0.16's answer buttons, DocaWear 1.2.5's QUEUED, the watch call and updater.
+- [x] A call that feels alive and quick (asked 2026-10-07 from the watch; hub 2.304.0, branch `watch-call-live`,
+  DocaWear `call-feedback`): the front (`turn/front.js`, `assistant.front`) — a spoken turn answers at once with a
+  short kit, untriaged, at assistant mode's effort; a large request or "think harder / take your time / focus" goes to
+  a work chat before any model is asked (high effort when asked to think), two steps of real work hand the rest on;
+  what lands in the call's conversation while it is open is said in it (`realtime/calls.js`: the Orchestrator's woken
+  reply, a work chat the call handed work to, a mission it dispatched — never another person's); the first sentence
+  plays while the model writes the rest; frames `heard`, `background`, `report` (PROTOCOL §23.1,
+  `docs/api/fixtures/call-frames.json`); a call without `?session=` goes where the device's typed messages go; a
+  watch's call is assistant mode at last (it looked for a device kind no device has). DocaWear draws every state.
+  Measured (sandbox hub, live whisper + kokoro, DeepSeek flash): end of speech → words 0.8 s, → first audio 2.7–4.2 s
+  with the front (13.4k prompt tokens) vs 3.2–4.0 s without (25k). Not checked: a real call on the watch.
+- Real-hardware checks: DocaMobile 1.0.16's answer buttons, DocaWear 1.2.5's QUEUED, the watch call and updater
+  (and the call's states and ticks, DocaWear 1.4.0).
 - T1: `test/doca-client.test.js` under load — solved 2026-10-07 (the runner's stdout parsing, see T1 below); the machines screenshot test ("a picture of it") failed once on Windows CI for 2.279.0, passed on re-run — likely two headless browsers at once (page-check's test and machines' shots) on a slow runner. 2.283.1: on Windows a stopped job now takes its whole tree with it (taskkill /T — a dev server outlived its job), the shots browser no longer holds the process open and a screenshot that never answers fails after 15 s; machines.test.js had timed out at 120 s on Windows for 2.282.0. 2.286.1: the headless browser's DevTools port file is read again when Windows has it locked (EBUSY failed the smoke run on Windows for 2.285.0).
 - Wave E (E1–E4) with the owner's brief: themes (keep dark and light, the current look kept, bold alternatives as
   themes), edit-ability features, the clients included — started by the owner's `/design`.

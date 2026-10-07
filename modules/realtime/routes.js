@@ -8,7 +8,8 @@
  *   WS   /ws/realtime           the panel's call, as the signed-in person (right chat, the panel's own page)
  *   GET  /api/v1/realtime       the same status for a paired device (harness:chat)
  *   WS   /api/v1/realtime       a device's call, with its bearer token (header, or ?access_token= where a client
- *                               cannot set one) — its person, level and approvals, as harness.post() gives every device
+ *                               cannot set one) — its person, level and approvals, as harness.post() gives every device;
+ *                               ?session= one of the person's conversations, else the one its typed messages go to
  *   GET  /api/v1/call           a device's live call by whichever engine this hub has (harness:chat)
  *   WS   /api/v1/call           the same wire as /api/v1/realtime: the realtime model when one is on, else the hive's own
  *                               STT, turn and TTS (pipeline.js) — what a watch's call reaches through its phone
@@ -62,7 +63,7 @@ function upgradePanel(req, socket, head) {
   if (asked) {
     try { access.check(client.user, asked); sessionId = asked; } catch { return refuse(socket, 404, 'Not Found'); }
   }
-  wss().handleUpgrade(req, socket, head, ws => rt.serve(ws, { sessionId, ask: rt.askAsPanel({ sessionId, client }) }));
+  wss().handleUpgrade(req, socket, head, ws => rt.serve(ws, { sessionId, person: client.user, ask: rt.askAsPanel({ sessionId, client }) }));
 }
 
 /** A device's socket: its bearer token, harness:chat, its person's conversation. */
@@ -76,11 +77,14 @@ function upgradeDevice(req, socket, head, engine = 'realtime') {
   if (!hasScope(device.scopes, 'harness:chat')) return refuse(socket, 403, 'Forbidden');
   const harness = require('../api-v1/harness');
   let sessionId = u.searchParams.get('session');
+  // A call with no conversation named goes where the device's typed messages go (the Orchestrator's, for a host): one
+  // conversation, so what the hive answers there later — a work chat's report, a mission — reaches the call (calls.js).
   try {
     if (sessionId) harness.requireSession(sessionId, device);
-    else sessionId = harness.createSession('Live call', { activate: false, device }).id;
+    else sessionId = harness.defaultSession(device).id;
   } catch { return refuse(socket, 404, 'Not Found'); }
-  wss().handleUpgrade(req, socket, head, ws => rt.serve(ws, { sessionId, engine, ask: rt.askAsDevice(devices.get(device.id) || device, sessionId) }));
+  const person = require('../harness/turn/client').deviceOwner(device);
+  wss().handleUpgrade(req, socket, head, ws => rt.serve(ws, { sessionId, engine, person, deviceId: device.id, ask: rt.askAsDevice(devices.get(device.id) || device, sessionId) }));
 }
 
 module.exports = { mount, mountDevice, upgradePanel, upgradeDevice };
