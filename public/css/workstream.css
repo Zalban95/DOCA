@@ -36,6 +36,10 @@
 .ws-who { color: #888; margin-right: 8px; font-size: 10px; }
 .ws-act.thinking { color: #aaa; font-style: italic; }
 .ws-act.command { color: #fff; font-weight: 600; }
+.ws-tier { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; border: 1px solid #555; border-radius: 3px; padding: 0 4px; margin-right: 6px; color: #aaa; }
+.ws-tier.reversible { color: #79c0ff; border-color: #1f6feb; }
+.ws-tier.outward { color: #ffa657; border-color: #bb5a00; }
+.ws-way { color: #888; font-weight: 400; font-size: 10px; }
 .ws-act.result { color: #7ee787; }
 .ws-act.result.failed { color: #ff7b72; }
 .ws-act.text { color: #e6e6e6; }

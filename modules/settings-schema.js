@@ -94,6 +94,7 @@ const SCHEMA = {
       visionPass: { type: 'boolean', default: false, hint: 'Agents may look at a computer\'s screen with the vision model under vision.' },
       claimCheck: { type: 'boolean', default: false, hint: 'When an answer says it saved a memory, set a reminder, proposed, committed or sent something that no call this turn did, the turn gets one more step to do it or say it was not done.' },
       toolTiers: { type: 'boolean', default: false, hint: 'The Orchestrator and work chats are sent their core tools in full and the rest by name, loaded when needed (tools_more).' },
+      riskTiers: { type: 'boolean', default: false, hint: 'Each tool call is read, reversible or outward: reversible changes in a project run after a checkpoint, and outward ones (deleting outside a project, a force-push, mail, a request sending data out) are asked in every mode, Unattended included.' },
       adaptiveLimits: { type: 'boolean', default: false, hint: 'Before a turn, a triage rates the request and sets its thinking effort and step budget (never under Max tool steps); a turn still advancing at its last step is extended up to limits.maxStepsCeiling.' } } },
   // The owner's ceiling on how far a turn's steps may follow the work (experiment adaptiveLimits, turn/triage.js). Not
   // proposable: an agent raising the bound on its own turns would be writing its own limit (CONSTITUTION P20).

@@ -164,6 +164,8 @@ function gate(name, args, ctx = {}) {
     summary: `${cp.path} — ${cp.what}. Writing it always asks you first, whatever the approval mode.` };
   const forced = require('./forced-asks').of(name, args, summarize);   // decisions a device or a browser marks: always asked
   if (forced) return forced;
+  const outward = require('./risk').ask(name, args, ctx, summarize);   // experiment riskTiers: what cannot be undone asks in every mode
+  if (outward) return outward;
   const { mode: panelMode, always, recheckOutside } = settings();
   const mode = require('./modes').approvalMode(ctx.sessionId, panelMode);   // a chat tab's own Auto/Manual
   // Outside text entered this turn (harness/untrusted.js): the first call after it that does something
@@ -352,6 +354,7 @@ function missionRefusal(req) {
   if (req.level) return `Not run: the level of the person this mission acts for asks before every tool call, and a mission has `
     + `nobody to ask. Report it; a grant approve:${what} for this mission (permission_grant, from the agent that dispatched it) or `
     + 'for the person (Settings → Users) lets it run.';
+  if (req.tier) return `Not run: ${req.summary} A mission has nobody to ask. Report what you meant to do; the person can do it from their own turn.`;
   if (req.recheck) return `Not run: ${req.summary} A mission has nobody to ask. Report what you read and what you meant to do.`;
   return `Not run: this harness is in manual approval mode and "${req.tool}" is not on the standing allowlist. `
     + 'A mission runs unwatched, so there is nobody to ask. Report this as the reason you stopped; the user can '
