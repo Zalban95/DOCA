@@ -122,6 +122,7 @@ const TABLE = [
   R(GET, '/api/face/stream', 'chat'),                          // the face's feed, scoped to what the viewer may open (face/state.js)
   R(ANY, '/api/developer(/.*)?', 'host'),                        // who may release unasked (releasing.js): the admin's
   R(ANY, '/api/experiments(/.*)?', 'host'),                     // the owner's switches for experiments (experiments.js)
+  R(ANY, '/api/features(/.*)?', 'host'),                        // the feature index, usage, and hiding an unused alternative (features/)
   R('POST', '/api/recipes/[^/]+/(accept|discard)', 'host'),     // a repaired revision becomes automation: a host's call
   R('DELETE', '/api/recipes/[^/]+', 'host'),                   // a recipe the hive shares (recipes/routes.js)
   R(ANY, '/api/recipes(/.*)?', 'chat'),                       // reading, saving and running one: as the signed-in person
