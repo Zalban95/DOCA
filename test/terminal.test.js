@@ -39,7 +39,8 @@ test('node-pty loads only for a terminal connection and retries if unavailable',
       ws.on('close', () => resolve(data));
     });
     assert.match(output, /node-pty is not installed/);
-    assert.match(output, /Settings → System Tools/);
+    assert.match(output, /Settings → System → System tools/);
+    assert.match(output, /build tools/, 'it says what it needs on Linux');
   }
   assert.equal(attempts, 2, 'a missing addon must be retried on the next connection');
 });

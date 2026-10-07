@@ -51,9 +51,31 @@ else
   say "Fetching DOCA into $DIR"; git clone --depth 1 "$REPO" "$DIR"
 fi
 
+# ── Build tools, for the Terminal tab alone ──
+# node-pty (the embedded terminals) is the one dependency with native code. macOS and Windows get it prebuilt; on
+# Linux it compiles, and without make, a C++ compiler and python3 it cannot. It is optional, so DOCA installs either
+# way: said here, before npm's own error scrolls past, so the person knows what the Terminal tab will need.
+BUILD_HINT=""
+if [ "$(uname -s)" = Linux ]; then
+  MISSING=""
+  for t in make g++ python3; do command -v "$t" >/dev/null 2>&1 || MISSING="$MISSING $t"; done
+  if [ -n "$MISSING" ]; then
+    if command -v apt-get >/dev/null 2>&1; then BUILD_HINT="sudo apt-get install -y build-essential python3"
+    elif command -v dnf >/dev/null 2>&1; then BUILD_HINT="sudo dnf install -y gcc-c++ make python3"
+    elif command -v pacman >/dev/null 2>&1; then BUILD_HINT="sudo pacman -S --needed base-devel python"
+    else BUILD_HINT="install make, a C++ compiler (g++) and python3 with your package manager"; fi
+    say "Build tools missing:$MISSING. DOCA installs without them, but its Terminal tab needs them:"
+    say "  $BUILD_HINT"
+  fi
+fi
+
 # ── Dependencies ──
 say "Installing its dependencies"
 (cd "$DIR" && npm ci --no-audit --no-fund --loglevel=error)
+if ! (cd "$DIR" && node -e "require('node-pty')" >/dev/null 2>&1); then
+  say "The Terminal tab is not available yet: node-pty could not be built.${BUILD_HINT:+ First:  $BUILD_HINT}"
+  say "  Then Settings → System → System tools → node-pty builds it, with no restart."
+fi
 
 # ── Sharing what the agents learn (CONSTITUTION §0): asked once, the owner's answer; Settings → Packs changes it ──
 if [ -z "$SHARE" ] && [ -t 0 ]; then

@@ -124,10 +124,11 @@ const SYSTEM_TOOLS = [
     // Self-healing: a clear message without a compiler; nothing to do when it loads; rebuild when a Node upgrade broke it.
     install: { all: [
       `node -e "require('node-pty')" 2>/dev/null && { echo "✓ node-pty already loads — nothing to do."; exit 0; }`,
-      'if [ -d node_modules/node-pty ]; then echo "Rebuilding node-pty for this Node…"; npm rebuild node-pty 2>&1 || npm install node-pty --force 2>&1; else npm install node-pty 2>&1; fi',
+      // --no-save: node-pty is an optional dependency, and a plain install would write it into package.json.
+      'if [ -d node_modules/node-pty ]; then echo "Rebuilding node-pty for this Node…"; npm rebuild node-pty 2>&1 || npm install --no-save node-pty --force 2>&1; else npm install --no-save node-pty 2>&1; fi',
       `node -e "require('node-pty')" 2>/dev/null || { echo "✗ node-pty does not load — it needs a C++ compiler: install Build tools from this list, then retry."; exit 1; }`,
       'echo "✓ node-pty built and loads."',
-    ].join('; '), win32: 'npm rebuild node-pty; if ($LASTEXITCODE) { npm install node-pty --force }; node -e "require(\'node-pty\')"; if ($LASTEXITCODE) { "node-pty does not load: install Visual Studio Build Tools (C++)" } else { "node-pty loads" }' },
+    ].join('; '), win32: 'npm rebuild node-pty; if ($LASTEXITCODE) { npm install --no-save node-pty --force }; node -e "require(\'node-pty\')"; if ($LASTEXITCODE) { "node-pty does not load: install Visual Studio Build Tools (C++)" } else { "node-pty loads" }' },
     installCwd: path.join(__dirname, '..') },
   { id: 'build-tools', label: 'Build tools', category: 'recommended', for: 'node-pty',
     detect: { any: [{ bin: 'g++', args: ['--version'] }, { bin: 'clang++', args: ['--version'] }, { bin: 'cl', args: [], stderr: true, match: /Version/ }] },

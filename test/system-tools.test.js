@@ -56,3 +56,15 @@ test('the list as the panel reads it: this OS\'s command, a sudo password only w
   }
   assert.equal((await H.api(null, 'POST', '/api/system/tools/install', { id: 'node' })).status, 400);
 });
+
+test('a machine without a C++ toolchain still installs: node-pty is optional, and the installer names the tools', () => {
+  const fs = require('fs'), path = require('path');
+  const pkg = require('../package.json');
+  assert.ok(!pkg.dependencies['node-pty'] && pkg.optionalDependencies['node-pty'], 'node-pty compiles on Linux; only the Terminal tab needs it');
+  const sh = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'install.sh'), 'utf8');
+  const check = sh.indexOf('for t in make g++ python3'), ci = sh.indexOf('npm ci');
+  assert.ok(check > 0 && check < ci, 'the build tools are checked before npm ci');
+  for (const pkgLine of ['build-essential python3', 'gcc-c++ make', 'base-devel']) assert.ok(sh.includes(pkgLine), pkgLine);
+  const row = SYSTEM_TOOLS.find(t => t.id === 'node-pty');
+  assert.ok(!/npm install node-pty/.test(installFor(row, 'linux')), 'installed with --no-save, so package.json is left alone');
+});

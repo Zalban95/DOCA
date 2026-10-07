@@ -9,7 +9,9 @@ anything that governs it waits for your click.
 
 ## Install
 
-You need **Node.js 22.5 or newer** (the installers check, and say how to get it). One command per system:
+You need **Node.js 22.5 or newer** (the installers check, and say how to get it). On Linux, the Terminal tab also
+needs build tools (`build-essential python3` on Debian/Ubuntu); DOCA installs without them and the installer says
+what to add. One command per system:
 
 ```bash
 # Linux (systemd) and macOS (launchd)
