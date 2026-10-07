@@ -35,8 +35,12 @@ test('http_fetch reads; sending, a key, a form or files are api_call\'s', async 
 test('api_call reaches the owner\'s own addresses and keyed services, and downloads; not the open web unkeyed', async () => {
   assert.match(await tools.call('api_call', { url: `${base}/x`, method: 'POST', body: '{}' }), /POST ok/);
   assert.match(await tools.call('api_call', { url: 'https://example.com/do', method: 'POST' }), /neither one of the owner's own addresses .* nor a service with a stored key/);
-  for (const u of ['http://localhost:1', 'http://192.168.1.40/rpc', 'http://10.0.0.2', 'http://100.72.168.60:8742', 'http://hub.tail1234.ts.net', 'http://shelly.local', 'http://[::1]:80'])
+  for (const u of ['http://localhost:1', 'http://192.168.1.40/rpc', 'http://10.0.0.2', 'http://100.72.168.60:8742', 'http://shelly.local', 'http://[::1]:80'])
     assert.equal(owned(u), true, u);
+  // The tailnet's names are this tailnet's own suffix, not any *.ts.net (public Funnel names share it).
+  process.env.DOCA_TAILNET = 'tail1234.ts.net';
+  try { assert.equal(owned('http://hub.tail1234.ts.net'), true); assert.equal(owned('https://x.tail9999.ts.net'), false); }
+  finally { delete process.env.DOCA_TAILNET; }
   for (const u of ['https://example.com', 'http://8.8.8.8', 'http://100.200.1.1', 'not a url']) assert.equal(owned(u), false, u);
 });
 

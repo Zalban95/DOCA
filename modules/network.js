@@ -107,6 +107,17 @@ async function tailnetName() {
   return _dns.name;
 }
 
+/**
+ * The tailnet's own suffix (e.g. tail1234.ts.net) from the cached MagicDNS name — '' until it is known. Synchronous
+ * for owned() (toolbox/http.js); asks tailscale in the background when the cache is old.
+ */
+function tailnetSuffix() {
+  if (process.env.DOCA_TAILNET) return String(process.env.DOCA_TAILNET).toLowerCase().replace(/^\.|\.$/g, '');   // a container with no tailscale CLI says it
+  if (Date.now() - _dns.at >= 600000) tailnetName().catch(() => {});
+  const n = String(_dns.name || '').toLowerCase(), i = n.indexOf('.');
+  return i > 0 ? n.slice(i + 1) : '';
+}
+
 function mount(app) {
   const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
   app.get('/api/network', h(() => state()));
@@ -122,4 +133,4 @@ function mountDevice(router) {
   });
 }
 
-module.exports = { MACHINE, outside, limited, rightsFrom, state, save, links, publish, mount, mountDevice };
+module.exports = { MACHINE, outside, limited, rightsFrom, state, save, links, publish, mount, mountDevice, tailnetSuffix };
