@@ -17,9 +17,9 @@ function lists() {
   const ctx = { localStorage: { getItem: () => null, setItem() {} } };
   try {
     vm.runInNewContext(`${js('nav.js')}\n${js('nav-groups.js')}\n${js('settings/subnav.js')}\n`
-      + 'this.out = { NAV_TABS, NAV_GROUPS, NAV_LABELS, SUB: _SETTINGS_SUBTABS.map(t => ({ id: t.id, label: t.label, page: t.page || null })) };', ctx);
+      + 'this.out = { NAV_TABS, HOST_TABS, NAV_GROUPS, NAV_LABELS, SUB: _SETTINGS_SUBTABS.map(t => ({ id: t.id, label: t.label, page: t.page || null })) };', ctx);
     _lists = JSON.parse(JSON.stringify(ctx.out));
-  } catch { _lists = { NAV_TABS: [], NAV_GROUPS: [], NAV_LABELS: {}, SUB: [] }; }   // labels fall back to ids
+  } catch { _lists = { NAV_TABS: [], HOST_TABS: [], NAV_GROUPS: [], NAV_LABELS: {}, SUB: [] }; }   // labels fall back to ids
   return _lists;
 }
 
