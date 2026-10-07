@@ -185,10 +185,15 @@ async function available() {
 const anyReady = () => { const s = settings(); return Object.values(BACKENDS).some(b => b.ready(s)); };
 
 /** Read `png` with `how` (a reader's id, or auto: the setting's choice, else the first ready one). */
-async function read(png, question, { how = 'auto', template: tpl } = {}) {
+async function read(png, question, { how = 'auto', template: tpl, person } = {}) {
   const s = settings();
+  // On a person's turn the vision model is a model like any (S13): used only when allotted to them. Not allotted, auto
+  // takes another reader (none of them is a model), and asking for the model by name is refused saying who allots it.
+  const allotted = !person?.id || require('../auth/allot').allowsModel(person, { provider: s.provider, model: s.model });
+  const usable = id => BACKENDS[id]?.ready(s) && (id !== 'model' || allotted);
   if (tpl && how === 'auto') how = 'template';
-  if (how === 'auto') how = BACKENDS[s.backend]?.ready(s) ? s.backend : (await available())[0];
+  if (how === 'auto') how = usable(s.backend) ? s.backend : (await available()).find(usable);
+  if (how === 'model' && !allotted) throw Object.assign(new Error(require('../auth/allot').refusal(person, 'model', `${s.provider}/${s.model}`)), { status: 403 });
   const b = BACKENDS[how];
   if (!b) throw Object.assign(new Error(`No reader "${how}" — ${Object.keys(BACKENDS).join(', ')}, or none is set up (Settings → Harness → Vision).`), { status: 400 });
   if (how !== 'template' && !b.ready(s)) throw Object.assign(new Error(`${b.label} is not set up here (Settings → Harness → Vision).`), { status: 409 });

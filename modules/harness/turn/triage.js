@@ -73,12 +73,13 @@ const MODEL_PROMPT = 'You sort requests to an AI agent that can use tools. Reply
   + 'files, research, many steps) — and whether the person wants it quick or normal. Example: "medium normal".';
 
 /** The assistant's quick model, asked once; null when none is set or it does not answer in time. */
-async function askModel(message) {
+async function askModel(message, person) {
   const model = schema().value('assistant.model');
   if (!model) return null;
   const provider = schema().value('assistant.provider') || require('./params').params().provider;
   try {
-    const reply = await require('./transport').ask({ system: MODEL_PROMPT, user: String(message).slice(0, 2000), provider, model,
+    // For a person, only if the quick model is allotted to them (ask refuses otherwise): the rules decide instead.
+    const reply = await require('./transport').ask({ system: MODEL_PROMPT, user: String(message).slice(0, 2000), provider, model, person,
       temperature: 0, signal: AbortSignal.timeout(20e3) });
     const v = parseModel(reply);
     return v && { ...v, model: `${provider} / ${model}` };
@@ -107,7 +108,7 @@ async function verdict({ message, client, session, p }) {
   const rules = rate({ message, client, session });
   let v = { ...rules, by: 'rules' };
   if (!rules.sure) {
-    const m = await askModel(message);
+    const m = await askModel(message, client?.user);
     if (m) v = { ...rules, difficulty: m.difficulty, urgency: rules.urgency === 'quick' ? 'quick' : m.urgency, by: `model (${m.model})` };
   }
   const ceiling = ceilingFor(base);

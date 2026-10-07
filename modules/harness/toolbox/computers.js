@@ -84,6 +84,6 @@ module.exports = [
       how: { type: 'string', enum: ['auto', 'model', 'text', 'detector', 'template'], description: 'Which reader; auto (the default) is the owner\'s choice.' },
       template: { type: 'string', description: 'For template: the path of a picture of the element (an attachment).' },
     }, required: ['computer'] },
-    run: a => require('../../computers/look').look(a),
+    run: (a, ctx) => require('../../computers/look').look(a, ctx),
   },
 ];
