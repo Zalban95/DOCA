@@ -79,7 +79,7 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [ ] P1.6 **Spending with permission (S12)**: a Spending settings page (budgets, a linked payment method, standing
   permissions), managed by the agent with the person's permission; a permission can be made permanent; what may be
   allowed follows the level — its own safety design first.
-- [ ] P1.9 **Reach by level (S2)**: each level says how far agents may reach into its people's devices and machines,
+- [x] P1.9 **Reach by level (S2)** — *2.280.0: `auth/reach.js` rungs create · own-devices · anything; Member own-devices; a grant allots past it; the levels editor chooses it.*: each level says how far agents may reach into its people's devices and machines,
   a scale from "create safely with tools" to "anything"; the shipped levels get sensible rungs.
 - [ ] P1.10 **Resources allocated (S13)**: machines, devices, models, services, keys and budgets allocated to users
   by the admin, with grantable "may allot" for team leaders; a personal panel change follows its person to all
