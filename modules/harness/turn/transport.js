@@ -321,9 +321,12 @@ async function streamOrRead({ ep, body, guard, onText, onThinking, p }) {
  * prompt to grow tools by accident, and the rules review depends on the same.
  * @returns {Promise<string>}
  */
-async function ask({ system, user, temperature = 0.1, signal, provider, model }) {
+async function ask({ system, user, temperature = 0.1, signal, provider, model, person }) {
   // A named provider/model (an endpoint guard) asks that model alone, without the harness's fallback chain.
-  const p = provider && model ? { ...params(), provider, model, fallbackChain: [] } : params();
+  let p = provider && model ? { ...params(), provider, model, fallbackChain: [] } : params();
+  // Asked for a person (the reader on their turn, the triage): only a model allotted to them (S13) — a named one that
+  // is not refuses (its caller skips the side model), the harness's own narrows down its order as a turn does.
+  if (person?.id) p = require('../../auth/allot').narrowModel(p, person);
   if (!p.model) throw Object.assign(new Error('No model chosen for the DOCA harness.'), { status: 400 });
   // Streamed, like a turn, and for the same reason: the first-token guard still
   // catches a provider that never answers, and once it answers — thinking

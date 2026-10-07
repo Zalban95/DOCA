@@ -98,6 +98,12 @@ const STEPS = [
        device_id TEXT, device_name TEXT, target TEXT, uses INTEGER, by_user TEXT, session_id TEXT, outcome TEXT)`,
     'CREATE INDEX IF NOT EXISTS sealed_uses_at ON sealed_uses (tenant_id, at)',
   ] },
+  // Spending is a person's (spending/spent.js): who a call was for is kept on its row when it is written, so deleting
+  // the conversation afterwards cannot make its spend nobody's (security review 2026-10-07). Older rows have none and
+  // are attributed through their conversation, as before.
+  { id: 11, what: 'usage: the person each call was for', sql: [
+    'ALTER TABLE usage ADD COLUMN person_id TEXT',
+  ] },
 ];
 
 /** The same steps on a synchronous SQLite handle (node:sqlite), for the stores that must stay synchronous. */

@@ -5,7 +5,14 @@
    the hub always asks a person about. Plain functions, so the tests can run them against a fake page. */
 (function (root) {
   const visible = el => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
-  const isSecret = el => el.type === 'password' || /cc-|one-time-code|current-password|new-password/.test(String(el.getAttribute && el.getAttribute('autocomplete') || '').toLowerCase());
+  const autocomplete = el => String(el.getAttribute && el.getAttribute('autocomplete') || '').toLowerCase();
+  // A field a sealed secret was filled into stays a secret until the page goes (navigation drops this isolated world's
+  // set): its value is never read back, even when the page later turns it into a text field (security review 2026-10-07).
+  const filled = root.__docaFilled = root.__docaFilled || new WeakSet();
+  const isSecret = el => filled.has(el) || el.type === 'password' || /cc-|one-time-code|current-password|new-password/.test(autocomplete(el));
+  /** Where a sealed secret may go: a password field, or one whose autocomplete names a credential. */
+  const takesCredential = el => String(el.tagName || '').toUpperCase() === 'INPUT'
+    && (String(el.type || '').toLowerCase() === 'password' || /\b(current-password|new-password|one-time-code)\b/.test(autocomplete(el)));
 
   /** What a control is before it is used: 'secret', 'decision' (with its label), or null. */
   function sensitive(el) {
@@ -73,15 +80,16 @@
 
   /**
    * Fill [ref] with a secret the hub sealed for this browser (mcp.js secret_fill; the tab is on the secret's own site,
-   * and a person approved it). A password field is the point here, unlike `type`; nothing is read back, and the answer
-   * never holds the value.
+   * and a person approved it). A password field is the point here, unlike `type` — and only a credential field: a secret
+   * put in a plain text field would be read back by the next snapshot. Nothing is read back, and the answer never holds
+   * the value; the field stays a secret (never labelled with its value) until the page goes.
    */
   function fillSecret(ref, value, doc) {
     const el = find(ref, doc);
     if (!el) return NO_REF(ref);
-    const tag = String(el.tagName || '').toUpperCase();
-    if (!(tag === 'TEXTAREA' || (tag === 'INPUT' && !/^(hidden|file|checkbox|radio|submit|button|image|reset)$/i.test(el.type || 'text'))))
-      return { ok: false, error: `[${ref}] is not a field a secret goes into.` };
+    if (!takesCredential(el))
+      return { ok: false, error: `[${ref}] is not a password field (or one marked for a password or a one-time code), so a secret does not go into it.` };
+    filled.add(el);
     if (el.focus) el.focus();
     const proto = Object.getPrototypeOf(el), setter = Object.getOwnPropertyDescriptor(proto, 'value');
     if (setter && setter.set) setter.set.call(el, value); else el.value = value;

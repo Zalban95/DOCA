@@ -51,17 +51,29 @@ const find = ref => all()[String(ref || '')] || Object.values(all()).find(x => x
 /** A login's password for sealed/use.js, which hands it to one device sealed for it — never to the agent. */
 function secretOf(ref) { const l = find(ref); return l ? { label: l.label, origin: l.site, value: l.password } : null; }
 
-/** Sign in on a computer with a stored login: its page must be on the login's site. Returns what to tell the agent. */
-async function fill({ computer, login, userRef, passRef }) {
+/**
+ * Sign in on a computer with a stored login: its page must be on the login's site, and the password goes only into a
+ * password field (a text field would show it in the next snapshot). A login is an admin's, like a key for services:
+ * used on the turn of someone holding host, or of a person it is allotted to (`use:login:<id>`, allot.js; S13) — on a
+ * computer that person may act on (computers/whose.js). Returns what to tell the agent.
+ */
+async function fill({ computer, login, userRef, passRef }, ctx = {}) {
+  const person = ctx.user?.id ? ctx.user : null;
   const c = require('./computers').need(String(computer || ''));
+  require('./computers/whose').check(person, c.id);
   const l = find(login);
   if (!l) throw bad(`No login "${login}". An admin keeps them in Field → Connectors → Logins: ${list().map(x => x.label).join(', ') || 'none yet'}.`, 404);
+  const allot = require('./auth/allot');
+  if (!allot.uses(person, 'login', l.id) && !allot.uses(person, 'login', l.label)) throw bad(allot.refusal(person, 'login', l.label), 403);
   if (!c.fillKey) throw bad('This computer was made before logins existed: make a new one (or ask an admin to).', 409);
   const page = await computerCall(c, 'browser_snapshot', {});
   const at = (/^url: (\S+)/m.exec(page) || [])[1] || '';
   let origin = '';
   try { origin = new URL(at).origin; } catch { /* no page */ }
   if (origin !== l.site) throw bad(`The computer's page is ${origin || 'not a web page'}, not ${l.site}: the login for ${l.label} is used only on its own site.`, 409);
+  // The snapshot's own line for passRef says what it is: `[n] input:password "…"` (clients/computer/tools.js SNAPSHOT).
+  if (!new RegExp(`^\\[${Number(passRef)}\\] input:password\\b`, 'm').test(page))
+    throw bad(`[${passRef}] is not a password field on this page, so the password does not go into it — a text field would show it in the next snapshot. Take a browser_snapshot and name the password field.`, 409);
   if (userRef !== undefined && userRef !== null && l.username) await computerCall(c, 'browser_type', { ref: Number(userRef), text: l.username });
   await computerCall(c, 'browser_fill_secret', { ref: Number(passRef), value: l.password, key: c.fillKey });
   return `Filled the sign-in for ${l.label} as ${l.username || '(no username)'} on ${l.site}; the password was typed by the hub and is not shown to you. `

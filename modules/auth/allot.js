@@ -5,20 +5,20 @@
  * not everything is everyone's — and the admin can let others, team leaders, grant specific permissions"; TODO P1.10).
  *
  * A resource is something a person's agents use that is not a tool: a model, a provider, a key for a service, a
- * connected account, an agents' computer. Who may use one:
+ * connected account, a login the owner keeps (computer_login), an agents' computer. Who may use one:
  *   - anyone holding host (the machine's administrators), as before;
  *   - a level that lists it: `resources: { model: ['*' | '<provider>/<model>', …], provider: […], key: […],
- *     connector: […], computer: […] }` — a kind the level does not name keeps today's rule, so nothing changes for an
+ *     connector: […], login: […], computer: […] }` — a kind the level does not name keeps today's rule, so nothing changes for an
  *     install until an admin narrows a level;
  *   - a person or specialist with the grant `use:<kind>:<id>` (grants.js; '*' parts cover anything), given by an admin
  *     or by someone a level lets allot it (`delegates` on the level, permits.mayGrant);
  *   - for keys and connected accounts, also everyone when the owner opened that one to everyone (`who`).
  * No person on the turn (a test, a pre-accounts call) is not narrowed, as everywhere (permits.js).
  */
-const KINDS = ['model', 'provider', 'key', 'connector', 'computer'];
+const KINDS = ['model', 'provider', 'key', 'connector', 'login', 'computer'];
 
 /** Kinds that were an admin's alone before levels could list them: a level that names nothing gives none. */
-const ADMIN_FIRST = new Set(['key', 'connector']);
+const ADMIN_FIRST = new Set(['key', 'connector', 'login']);
 
 const host = person => require('./rights').can(person?.role, 'host');
 const match = (pattern, id) => pattern === '*' || pattern === id || (pattern.endsWith('*') && id.startsWith(pattern.slice(0, -1)));
@@ -41,11 +41,18 @@ const refusal = (person, kind, id) =>
  * A turn's model, narrowed to what its person may use: the chosen model if allotted, else the first allotted one down
  * the harness's order (said in `_allotted`); none allotted refuses the turn with who could allot one.
  */
+/** May the person's agents call this model — its provider and the model both allotted? */
+const allowsModel = (person, e) => uses(person, 'provider', e.provider) && uses(person, 'model', `${e.provider}/${e.model}`);
+
 function narrowModel(p, person) {
   if (!person?.id || host(person)) return p;
-  const ok = e => uses(person, 'provider', e.provider) && uses(person, 'model', `${e.provider}/${e.model}`);
+  const ok = e => allowsModel(person, e);
   const order = require('../harness/turn/choice').order(p);
-  if (ok({ provider: p.provider, model: p.model })) return p;
+  // The fallback chain is models too: a hop down it is a call to a model, so only allotted rungs stay (review 2026-10-07).
+  if (ok({ provider: p.provider, model: p.model })) {
+    const chain = (Array.isArray(p.fallbackChain) ? p.fallbackChain : []).filter(e => !e?.provider || ok({ provider: e.provider, model: e.model || p.model }));
+    return chain.length === (p.fallbackChain || []).length ? p : { ...p, fallbackChain: chain };
+  }
   const at = order.findIndex(ok);
   if (at < 0) throw Object.assign(new Error(refusal(person, 'model', `${p.provider}/${p.model}`) + ' No model in the harness\'s order is allotted to them.'), { status: 403, code: 'not_allotted' });
   const e = order[at];
@@ -65,4 +72,4 @@ function normalize(input) {
   return Object.keys(out).length ? out : null;
 }
 
-module.exports = { KINDS, uses, narrowModel, refusal, normalize };
+module.exports = { KINDS, uses, allowsModel, narrowModel, refusal, normalize };

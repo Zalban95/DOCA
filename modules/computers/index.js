@@ -100,11 +100,11 @@ async function connect(c) {
 }
 
 /** `auto`: an agent made it, so it is tidied away after it stops (lifecycle.js) unless a person pins it. */
-async function create({ name, purpose = '', missionId = null, by = null, auto = false, agentType = null } = {}) {
+async function create({ name, purpose = '', missionId = null, by = null, auto = false, agentType = null, keptFor = null } = {}) {
   if (!(await imageReady())) throw bad('The computer image is not built yet: build it once (Computers → Build the image).', 409);
   await require('./lifecycle').roomForOne();
   const c = { id: crypto.randomBytes(4).toString('hex'), name: String(name || 'computer').replace(/[^\w .-]/g, '').slice(0, 40) || 'computer',
-    purpose: String(purpose).slice(0, 300), missionId, by, auto: !!auto, pinned: false, ...(agentType ? { agentType } : {}), token: crypto.randomBytes(24).toString('hex'),
+    purpose: String(purpose).slice(0, 300), missionId, by, auto: !!auto, pinned: false, ...(agentType ? { agentType } : {}), ...(keptFor ? { keptFor } : {}), token: crypto.randomBytes(24).toString('hex'),
     fillKey: crypto.randomBytes(24).toString('hex'),   // the hub's alone: it unlocks browser_fill_secret (logins.js)
     vncPassword: crypto.randomBytes(6).toString('hex'), mcpPort: await freePort(), vncPort: await freePort(), servePort: await freePort(), createdAt: new Date().toISOString() };
   await docker(['run', '-d', '--name', container(c), '--shm-size=1g', '--label', 'doca.computer=1',
@@ -162,7 +162,7 @@ async function remove(id) {
 /** What the panel and the agent see: never the token. The VNC password is for the person who opens the view. */
 function view(c, state = null) {
   return { id: c.id, name: c.name, purpose: c.purpose, missionId: c.missionId, createdAt: c.createdAt, state,
-    auto: !!c.auto, pinned: !!c.pinned, stoppedAt: c.stoppedAt || null, archivedAt: c.archivedAt || null, by: c.by || null, agentType: c.agentType || null,
+    auto: !!c.auto, pinned: !!c.pinned, stoppedAt: c.stoppedAt || null, archivedAt: c.archivedAt || null, by: c.by || null, agentType: c.agentType || null, keptFor: c.keptFor || null,
     server: serverId(c), tools: `mcp__${serverId(c)}__*`,
     serve: c.servePort ? { inside: SERVE, port: c.servePort } : null,   // a computer made before H10.18 has none: make a new one
     // Through the hub, so any signed-in host's browser can watch — the phone on the tailnet included (vnc.js).
@@ -177,10 +177,14 @@ function view(c, state = null) {
  * not `auto`, so the sweep never removes it; it stops when idle like any other and starts again when lent. Removing
  * it by hand gives the next mission a fresh one.
  */
-async function ownFor(def) {
-  const have = rows().find(c => c.agentType === def.id);
+async function ownFor(def, person = null) {
+  // An admin's missions share the type's kept computer; anyone else's specialist keeps one of its own for that person —
+  // a kept desktop holds sign-ins and files, and another person's are never lent to them (security review 2026-10-07).
+  const mine = person?.id && !require('../auth/rights').can(person.role, 'host') ? person.id : null;
+  const have = rows().find(c => c.agentType === def.id && (c.keptFor || null) === mine);
   if (have) return have.id;
-  return (await module.exports.create({ name: `${def.label}'s computer`.slice(0, 40), purpose: `Kept for ${def.label}: the same desktop, logins and files every mission.`, agentType: def.id })).id;
+  return (await module.exports.create({ name: `${def.label}'s computer`.slice(0, 40), purpose: `Kept for ${def.label}: the same desktop, logins and files every mission.`,
+    agentType: def.id, ...(mine ? { keptFor: mine } : {}) })).id;
 }
 
 function lend(id, missionId) {

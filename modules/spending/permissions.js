@@ -31,11 +31,23 @@ function normalize({ on, upTo, permanent, why } = {}) {
   return { on: { kind, id }, upTo: Math.round(amount * 100) / 100, permanent: !!permanent, why: String(why || '').slice(0, 300) };
 }
 
-/** The most a person may allow themselves in one permission: their level's `mayAllow`; any for someone holding host. */
+/** The most a person may allow themselves in all: their level's `mayAllow`; any for someone holding host. */
 function mayAllow(person, d = store.load()) {
   if (rights().can(person?.role, 'host')) return Infinity;
   const v = d.levels[person?.role]?.mayAllow;
   return Number.isFinite(Number(v)) && v !== null ? Number(v) : 0;
+}
+
+/**
+ * What a person has already allowed against their `mayAllow`: every kept permission still active (each renews monthly)
+ * plus this month's one-time ones, active or used. `mayAllow` caps the total, not each permission — capping each let
+ * ten permissions of the most a level allows add up to ten times it (security review 2026-10-07).
+ */
+function allowed(personId, d, now = new Date()) {
+  const month = monthOf(now);
+  return d.permissions.filter(p => p.personId === personId && (p.permanent ? p.state === 'active'
+    : ['active', 'used'].includes(p.state) && String(p.decidedAt || p.createdAt).slice(0, 7) === month))
+    .reduce((a, p) => a + p.upTo, 0);
 }
 
 /** Whether `actor` may make or accept this permission for `personId`: an admin always; the person within their level. */
@@ -43,8 +55,12 @@ function mayGive(actor, personId, upTo, d) {
   if (isAdmin(actor)) return;
   if (actor?.id !== personId) throw bad('Another person\'s spending is theirs, or an admin\'s, to allow.', 403);
   const most = mayAllow(actor, d);
-  if (upTo > most) throw bad(most ? `Your level lets you allow up to ${most} at a time; an admin can allow more in Settings → Spending.`
-    : 'Your level does not let you allow spending yourself; an admin can, in Settings → Spending.', 403);
+  if (!most) throw bad('Your level does not let you allow spending yourself; an admin can, in Settings → Spending.', 403);
+  const already = allowed(personId, d);
+  if (already + upTo > most) {
+    throw bad(`Your level lets you allow up to ${most} in all, and ${Math.round(already * 100) / 100} is already allowed `
+      + 'this month; an admin can allow more in Settings → Spending.', 403);
+  }
 }
 
 const who = actor => (actor?.id ? { id: actor.id, name: actor.name || '' } : null);
@@ -143,4 +159,4 @@ function describe(personId, d = store.load()) {
   return `spending permissions: ${each.join('; ') || 'none active'}${waiting ? `; ${waiting} proposal${waiting === 1 ? '' : 's'} waiting for the person` : ''}`;
 }
 
-module.exports = { KINDS, normalize, mayAllow, create, propose, accept, decline, revoke, left, covers, consume, list, describe };
+module.exports = { KINDS, normalize, mayAllow, allowed, create, propose, accept, decline, revoke, left, covers, consume, list, describe };

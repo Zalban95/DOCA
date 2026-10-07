@@ -61,7 +61,10 @@ test('a device says it was opened; a turn that starts again clears it', async ()
   const phone = H.mkDevice('Seen phone', 'phone', H.PHONE_CAPS);
   const s = memory().createSession('Device work', { activate: false, kind: 'work', parentId: memory().mainSession().id });
   memory().updateSession(s.id, { state: 'idle' });
-  const r = await H.api(phone.token, 'POST', `/api/v1/harness/missions/${s.id}/seen`, {});
+  let r = await H.api(phone.token, 'POST', `/api/v1/harness/missions/${s.id}/seen`, {});
+  assert.equal(r.status, 404, 'a device nobody owns marks nothing: seen is a person\'s (review 2026-10-07)');
+  require('../modules/api-v1/devices').update(phone.device.id, { userId: H.owner.user.id });
+  r = await H.api(phone.token, 'POST', `/api/v1/harness/missions/${s.id}/seen`, {});
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.seen, true);
   assert.ok(require('../modules/harness/workview').payloadOf(require('../modules/harness/organization').session(s.id)).seenAt);

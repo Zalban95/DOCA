@@ -33,9 +33,11 @@ test('a secret is kept encrypted in the database, its key in the protected keys 
   const r = await H.api(null, 'POST', '/api/connectors/sealed/all', { name: 'bank-pin', value: VALUE, origin: 'https://bank.example/login', note: 'the card PIN' });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.secret.origin, 'https://bank.example');
+  // One with no site: the only kind a desktop types or pastes (a secret with a site goes only into its own site's field).
+  assert.equal((await H.api(null, 'POST', '/api/connectors/sealed/all', { name: 'disk-pin', value: VALUE, note: 'the laptop\'s disk' })).status, 200);
   const list = await H.api(null, 'GET', '/api/connectors/sealed/all');
   assert.equal(list.status, 200);
-  assert.deepEqual(list.body.secrets.map(s => s.name), ['bank-pin']);
+  assert.deepEqual(list.body.secrets.map(s => s.name).sort(), ['bank-pin', 'disk-pin']);
   assert.ok(!JSON.stringify(list.body).includes(VALUE), 'never a value back');
   const vault = require('../modules/sealed/vault');
   const keyFile = path.join(vault.keysDir(), 'sealed.key');
@@ -83,21 +85,56 @@ test('a device takes its own seal key with its token; the agent cannot reach the
 });
 
 test('typed once into what has focus: the device got the value, the agent got a sentence', async () => {
-  const out = await require('../modules/harness/tools').call('secret_use', { secret: 'bank-pin', device: 'laptop', mode: 'type' });
-  assert.match(out, /Used "bank-pin" on laptop by typing it/);
+  const out = await require('../modules/harness/tools').call('secret_use', { secret: 'disk-pin', device: 'laptop', mode: 'type' });
+  assert.match(out, /Used "disk-pin" on laptop by typing it/);
   assert.ok(!out.includes(VALUE));
   assert.deepEqual(typed, [VALUE]);
 });
 
+test('for a minute after a use, nothing reads from the device: the hub holds its reads, and so does the device', async () => {
+  const tools = require('../modules/harness/tools'), hold = require('../modules/sealed/hold');
+  assert.match(await tools.call(`mcp__${serverId}__device_clipboard_read`, {}), /a secret was just used on this device, so device_clipboard_read waits/);
+  assert.equal(hold.blocks(deviceId, 'device_info'), null, 'what reads nothing back carries on');
+  hold.release(deviceId);   // an older client relies on the hub alone; this one holds the window itself too
+  for (const t of ['shell_run', 'files_read', 'screen_capture', 'device_clipboard_read'])
+    assert.match(sealed.blocks(t) || '', new RegExp(`just used on this machine: ${t} waits`), t);
+  assert.match(await tools.call(`mcp__${serverId}__device_clipboard_read`, {}), /just used on this machine/);
+  sealed.release();
+  assert.ok(!/waits/.test(await tools.call(`mcp__${serverId}__device_clipboard_read`, {})), 'read again once the minute is over');
+});
+
+test('a secret with a site is never typed or pasted: refused by the hub, and by the device on its own', async () => {
+  const use = require('../modules/sealed/use'), seal = require('../modules/sealed/seal');
+  typed.length = 0;
+  await assert.rejects(use.use({ secret: 'bank-pin', device: 'laptop', mode: 'type' }), /belongs to https:\/\/bank\.example: it is filled only into a field on that site/);
+  await assert.rejects(use.use({ secret: 'bank-pin', device: 'laptop' }), /never typed or pasted/);
+  await assert.rejects(sealed.fill(lending.cfg, { sealed: seal.seal(deviceId, { how: 'type', value: VALUE, origin: 'https://bank.example' }) }), /goes only into that site's own field/);
+  assert.deepEqual(typed, [], 'nothing typed');
+  sealed.release();
+});
+
+test('a key for services is the hub\'s to send, never handed out: a member is refused (even one opened to everyone), an admin only into its site\'s field', async () => {
+  require('../modules/service-keys').save({ name: 'weather', origin: 'https://api.weather.example', who: 'everyone', key: 'weather-key-2bd1' });
+  const use = require('../modules/sealed/use');
+  const m = await H.signIn('member', 'sealed-key@test.local');
+  await assert.rejects(use.use({ secret: 'key:weather', device: 'laptop' }, { user: { ...m.user, role: 'member' } }), e => e.status === 403);
+  const keyFor = await use.sourceOf('key:weather', { host: true });
+  assert.equal(keyFor.origin, 'https://api.weather.example');
+  await assert.rejects(use.use({ secret: 'key:weather', device: 'laptop' }), /never typed or pasted/, 'not on an admin\'s clipboard either');
+  require('../modules/sealed/hold').release();
+});
+
 test('on the clipboard for N pastes: the shell and clipboard reads wait until it is gone', async () => {
   const tools = require('../modules/harness/tools');
-  const out = await tools.call('secret_use', { secret: 'bank-pin', device: deviceId, uses: 3, seconds: 20 });
+  const out = await tools.call('secret_use', { secret: 'disk-pin', device: deviceId, uses: 3, seconds: 20 });
   assert.match(out, /on its clipboard\. It is forgotten after 3 pastes or 20 s/);
   assert.deepEqual(clipped.at(-1), { v: VALUE, uses: 3 });
   assert.equal(sealed.armed(), true);
+  require('../modules/sealed/hold').release(deviceId);
   assert.match(await tools.call(`mcp__${serverId}__device_clipboard_read`, {}), /A secret is on this machine's clipboard/);
   gone();   // the pastes were served
   assert.equal(sealed.armed(), false);
+  sealed.release();
   const uses = (await H.api(null, 'GET', '/api/connectors/sealed/all')).body.uses;
   assert.ok(uses.length >= 2 && uses.every(u => u.outcome === 'done' && u.device === 'laptop'));
   assert.match(uses[0].target, /clipboard, 3 pastes or 20 s/);
@@ -143,6 +180,11 @@ test('the browser extension fills a field only on the secret\'s own site, after 
   assert.ok(!r.isError, JSON.stringify(r));
   assert.deepEqual(filled, [[2, VALUE]]);
   assert.ok(!JSON.stringify(r).includes(VALUE));
+  // For a minute after, this browser reads no page for the hub: a page's script could show what it was just given.
+  const read = async name => (await mcp.handle(env, { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name, arguments: {} } })).result;
+  for (const t of ['browser_snapshot', 'browser_screenshot']) assert.match((await read(t)).content[0].text, /A secret was just filled on a page here/, t);
+  mcp.release();
+  assert.ok(!(await read('browser_snapshot')).isError, 'read again once the minute is over');
   env.tabUrl = 'https://bank.example.evil.test/login';
   const evil = await call(seal.seal(bid, { how: 'field', value: VALUE, ref: 2, tab: 1, origin: 'https://bank.example' }));
   assert.equal(evil.isError, true);
@@ -155,13 +197,32 @@ test('the browser extension fills a field only on the secret\'s own site, after 
   assert.equal(page.fillSecret(2, VALUE, { querySelector: () => ({ tagName: 'BUTTON' }) }).ok, false);
 });
 
+test('a secret goes only into a credential field, and a filled field is never read back — even when the page makes it text', () => {
+  const page = require('../clients/browser/page');
+  globalThis.getComputedStyle = () => ({ visibility: 'visible', display: 'block' });
+  const input = (type, attrs = {}) => ({ tagName: 'INPUT', type, value: '', attrs, getAttribute: k => attrs[k] ?? null, setAttribute(k, v) { attrs[k] = v; },
+    getBoundingClientRect: () => ({ width: 10, height: 10 }), dispatchEvent() {}, focus() {} });
+  const one = el => ({ querySelector: () => el });
+  for (const el of [input('text'), input('email'), input('search'), { ...input('text'), tagName: 'TEXTAREA' }, input('text', { autocomplete: 'username' })])
+    assert.match(page.fillSecret(1, VALUE, one(el)).error || '', /not a password field/, `${el.tagName}:${el.type}`);
+  assert.equal(page.fillSecret(1, VALUE, one(input('text', { autocomplete: 'one-time-code' }))).ok, true, 'a one-time code field');
+  const pw = input('password');
+  assert.equal(page.fillSecret(1, VALUE, one(pw)).ok, true);
+  pw.type = 'text';   // the page "shows the password"
+  const doc = { title: 'Bank', location: { href: 'https://bank.example/login' }, body: { innerText: '' }, querySelectorAll: () => [pw] };
+  const snap = page.snapshot(doc);
+  assert.match(snap, /\[1\] input:text "\(filled\)"/);
+  assert.ok(!snap.includes(VALUE), 'never its value');
+  assert.match(page.type(1, 'x', false, false, one(pw)).error, /password or card field/, 'nor typed over by the agent');
+});
+
 test('a real turn: asked, used, answered — and the value is nowhere in the hub\'s data, logs or transcript', async () => {
   const sse = frames => res => { res.writeHead(200, { 'Content-Type': 'text/event-stream' }); for (const f of frames) res.write(`data: ${JSON.stringify(f)}\n\n`); res.end('data: [DONE]\n\n'); };
   const server = http.createServer((req, res) => {
     let raw = ''; req.on('data', c => { raw += c; }); req.on('end', () => {
       const msgs = JSON.parse(raw || '{}').messages || [];
       if (msgs.some(m => m.role === 'tool')) return sse([{ choices: [{ delta: { content: 'Typed it on your laptop.' } }] }])(res);
-      return sse([{ choices: [{ delta: { tool_calls: [{ index: 0, id: 'c1', type: 'function', function: { name: 'secret_use', arguments: JSON.stringify({ secret: 'bank-pin', device: 'laptop', mode: 'type' }) } }] } }] }])(res);
+      return sse([{ choices: [{ delta: { tool_calls: [{ index: 0, id: 'c1', type: 'function', function: { name: 'secret_use', arguments: JSON.stringify({ secret: 'disk-pin', device: 'laptop', mode: 'type' }) } }] } }] }])(res);
     });
   });
   await new Promise(r => server.listen(0, '127.0.0.1', r));
@@ -179,7 +240,7 @@ test('a real turn: asked, used, answered — and the value is nowhere in the hub
     assert.match(r.text, /Typed it/);
     assert.deepEqual(typed, [VALUE], 'used once');
     const rows = JSON.stringify(memory.messages(s.id));
-    assert.match(rows, /Used \\"bank-pin\\" on laptop/);
+    assert.match(rows, /Used \\"disk-pin\\" on laptop/);
     assert.ok(!rows.includes(VALUE), 'not in the transcript');
     assert.ok(!JSON.stringify(require('../modules/logs')._ring).includes(VALUE), 'not in the logs');
     // Every file under the hub's data folder (doca.db and its journal included: traces, audit, the bus's queue).

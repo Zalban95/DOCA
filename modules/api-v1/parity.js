@@ -26,7 +26,12 @@ function mount(harnessApi, router) {
     return { mission: require('../agents/missions').archive(m.id, { on: req.body?.on !== false }) };
   }));
   // Its person opened a finished result — a mission, or a work chat by its id: read means done (harness/seen.js).
-  harnessApi.post('/missions/:id/seen', requireScope('harness:chat'), wrap(req => require('../harness/seen').mark(req.params.id, owner(req.device))));
+  // Seen is a person's: a device nobody owns marks nothing (it would be nobody, whom seen.js does not narrow).
+  harnessApi.post('/missions/:id/seen', requireScope('harness:chat'), wrap(req => {
+    const who = owner(req.device);
+    if (!who?.id) throw new ApiError(404, 'not_found', 'Unknown mission');
+    return require('../harness/seen').mark(req.params.id, who);
+  }));
   // A work chat a person stopped: carry on, or end it without waking anyone (harness/stopped-work.js).
   for (const verb of ['restart', 'drop'])
     harnessApi.post(`/work/:id/${verb}`, requireScope('harness:chat'), wrap(req => {

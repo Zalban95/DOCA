@@ -81,7 +81,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   allowed follows the level — its own safety design first.
 - [x] P1.9 **Reach by level (S2)** — *2.280.0: `auth/reach.js` rungs create · own-devices · anything; Member own-devices; a grant allots past it; the levels editor chooses it.*: each level says how far agents may reach into its people's devices and machines,
   a scale from "create safely with tools" to "anything"; the shipped levels get sensible rungs.
-- [~] P1.10 **Resources allocated (S13)** — *2.283.0: `auth/allot.js` — a level lists the models, providers, keys, accounts and computers its people use; a grant `use:<kind>:<id>` allots one; a team leader's level names what it may give (`delegates`). 2.298.0: team leaders set their people's budgets (a slot of its own, the tightest wins; spending/budgets.js leads). Left: services and devices as allotted kinds, a per-person view of what they hold.*: machines, devices, models, services, keys and budgets allocated to users
+- [~] P1.10 **Resources allocated (S13)** — *2.283.0: `auth/allot.js` — a level lists the models, providers, keys, accounts and computers its people use; a grant `use:<kind>:<id>` allots one; a team leader's level names what it may give (`delegates`). 2.298.0: team leaders set their people's budgets (a slot of its own, the tightest wins; spending/budgets.js leads). Security review 2026-10-07: logins are an allotted kind (`use:login:<id>`), and a computer is acted on only by its person (computers/whose.js). Left: services and devices as allotted kinds, a per-person view of what they hold.*: machines, devices, models, services, keys and budgets allocated to users
   by the admin, with grantable "may allot" for team leaders; a personal panel change follows its person to all
   their devices.
 - [x] P1.7 **Nothing coded is lost (W14)** — *2.284.0: `modules/features`: an index of every feature (data/*.js, ~130 entries: what, where, state, the alternative beside its replacement), held complete by `test/features.test.js` (every experiment, page, Settings section, tool and old tool name); the agent's free `features {find|id|unused}` tool; Settings → System → Features. Alternatives counted (`features/usage.js`) and reviewed (`features/review.js`): an unused one is hidden from the default by the admin, never archived.*: H10.7's tooling hides unused paths from the default instead of archiving
@@ -97,6 +97,19 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [x] P1.13 **Chronicle — the log analyzer tab** — *2.285.0: Agents → Chronicle (`modules/chronicle`, `/api/chronicle`, right `read`, rows scoped by session-access): every run with its conversation, person, device (now kept on the run), agent, cost and outcome, filtered and searched, plus the harness log for a host; a story per run, conversation or mission from runs and traces — why, models, tools, failures, refusals, cost, what it started. The design comes later.*: everything that happened, searchable and filtered by source,
   person, device, agent and time, with the story of a piece of work told from its logs and traces (what ran, why,
   what it cost, what failed) — the place unrendered work is seen afterwards.
+
+### Security review 2026-10-07
+- [x] Guards strengthened (branch `sec-misc`, `test/security-review-1007.test.js`): switching versions and every pack
+  import ask for the password (`auth/guarded.js` ROUTES); applying a proposal is checked against the live setting, not
+  its stored `from`; the switch password and the step-up count under `s:<user id>`, never the sign-in's counter; each
+  usage row keeps its person (`usage.person_id`, schema step 11), so deleting a conversation does not reset a budget;
+  `mayAllow` caps a person's kept plus this month's one-time permissions in all; with a money budget an unpriced model
+  refuses the turn (and leaves the fallback chain); the allotment narrows the fallback chain, assistant mode's model,
+  the triage's and the reader's model (`transport.ask {person}`) and the vision model; a refused call takes no project
+  checkpoint (`risk.keep` after the decision); an ownerless device marks nothing seen; a style value cannot fetch
+  (`image-set(`, `image(`, `cross-fade(`, `element(`, `//`). Not done: the guards' own screening model and the other
+  `agent.ask` callers (rules review, skill drafts, evals' judge) are panel actions of a host, not a person's turn; the
+  Terminal and the Files tab can still write the prefs file — inherent to host (AGENTS.md).
 
 ### Everything still open, now urgent
 - C7b: done; D2b: done — its gaps (`docs/api/capability-gaps.md`) are v1 routes to ask for, plan decisions first.

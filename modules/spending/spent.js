@@ -3,8 +3,10 @@
 /**
  * What was spent, per person (docs/design/spending.md §2): the usage ledger's rows, each given to the person whose
  * conversation it is (session-access.ownerOf, through the parent chain — a mission's calls are its person's), priced
- * with the owner's list when reading (harness/prices.js). Attribution is read, never stored, so history from before
- * spending existed counts too. Days and months are UTC.
+ * with the owner's list when reading (harness/prices.js). Each row carries the person it was for since it was written
+ * (usage.person_id, kept so that deleting a conversation cannot make its spend nobody's — security review 2026-10-07);
+ * an older row without one is attributed through its conversation, so history from before spending counts too. Days and
+ * months are UTC.
  */
 const NOBODY = '';   // calls of no conversation, or of one nobody owns (a one-off ask, a probe, before accounts)
 
@@ -42,7 +44,7 @@ async function month(m = monthOf()) {
   };
   const people = {};
   for (const r of rows) {
-    const who = ownerOf(r.session);
+    const who = r.person || ownerOf(r.session);
     const p = people[who] || (people[who] = { ...blank(), days: {} });
     const cost = prices.cost(r, list);
     add(p, r, cost);

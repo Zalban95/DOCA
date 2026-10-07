@@ -30,16 +30,17 @@ function rows() {
   return store.readJson('canvas/previews', { previews: [] }).previews.filter(p => Date.parse(p.expiresAt) > now);
 }
 
-/** The hub port of a computer's page (its SERVE port inside), or why there is none. */
-function computerPort(id) {
+/** The hub port of a computer's page (its SERVE port inside), or why there is none — a computer the person may act on. */
+function computerPort(id, person) {
   const computers = require('../computers');
   const c = computers.need(id);
+  require('../computers/whose').check(person, c.id);   // another person's computer is theirs (S13)
   if (!c.servePort) throw bad(`Computer ${c.id} was made before computers had a page port: make a new one to serve a page from it.`, 409);
   return { n: c.servePort, where: `port ${computers.SERVE} in computer ${c.id} "${c.name}"`, computer: c.id };
 }
 
-function create({ port, computer, title, sessionId = null }) {
-  const at = computer ? computerPort(computer) : null;
+function create({ port, computer, title, sessionId = null, person = null }) {
+  const at = computer ? computerPort(computer, person) : null;
   const n = at ? at.n : Number(port);
   if (!Number.isInteger(n) || n < 1 || n > 65535) throw bad('port is a number from 1 to 65535.');
   if (n === Number(PORT) || n === Number(CANVAS_PORT)) throw bad('The panel\'s own ports cannot be previewed.', 403);

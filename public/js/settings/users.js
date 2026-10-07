@@ -187,7 +187,7 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
 }
 
 /** Resources a level allots (modules/auth/allot.js): kind and its label in the editor. */
-const USERS_RESOURCE_KINDS = [['model', 'Models'], ['provider', 'Providers'], ['key', 'Keys for services'], ['connector', 'Connected accounts'], ['computer', 'Agents\' computers']];
+const USERS_RESOURCE_KINDS = [['model', 'Models'], ['provider', 'Providers'], ['key', 'Keys for services'], ['connector', 'Connected accounts'], ['login', 'Logins'], ['computer', 'Agents\' computers']];
 
 // Its panel is made here rather than in index.html, which is at its line ceiling.
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('DOMContentLoaded', () =>

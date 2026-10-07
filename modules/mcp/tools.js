@@ -166,6 +166,9 @@ async function call(name, args) {
   if (!t) return `Error: no MCP tool named "${name}" — its server may have stopped.`;
   const c = registry.client(t.server);
   if (c?.state !== 'running') return `Error: the "${t.serverLabel}" MCP server is not running.`;
+  // A minute after a secret was used on a device, nothing reads from it (sealed/hold.js; S4).
+  const held = t.origin === 'client' ? require('../sealed/hold').blocks(registry.get(t.server)?.origin?.deviceId, t.tool) : null;
+  if (held) return held;
   try {
     // A tool that answers with isError reports its failure as content, so the
     // annotation belongs on the result as much as on a thrown one.

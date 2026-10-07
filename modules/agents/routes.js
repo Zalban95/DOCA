@@ -34,7 +34,7 @@ function mount(app) {
     try {
       const agentId = String(req.body?.agentId || '');
       const def = require('./registry').get(agentId);
-      const computer = def?.computer === 'own' ? await require('../computers').ownFor(def) : null;   // its own computer (computers.ownFor)
+      const computer = def?.computer === 'own' ? await require('../computers').ownFor(def, require('../harness/turn/client').personOf(req.auth)) : null;   // its own computer, per person (computers.ownFor)
       const row = require('./missions').dispatch({ agentId, task: req.body?.task, context: req.body?.context, computer });
       // Marked before its turn reaches withPerson: dispatch starts the turn, which awaits its claim first.
       if (req.auth?.user) require('../harness/memory').updateSession(row.sessionId, { person: { id: req.auth.user.id, orgId: req.auth.orgId } });
