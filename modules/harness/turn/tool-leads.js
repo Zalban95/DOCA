@@ -33,6 +33,8 @@ const LEADS = {
   recipe: 'Run a saved sequence of tool calls again, or save one — run a recipe when one does exactly what is asked.',
   pack: 'Keep skills, recipes and specialists you made as one pack in the library — use it when the owner wants to share them.',
   system_status: 'CPU, RAM, GPU, disks, containers and every local model server with who it works for — use it to see what the machine is doing.',
+  http_fetch: 'Read a URL (GET or HEAD) as text, or keep a download — use it for a page or an API that needs no key.',
+  api_call: 'Call a keyed service or one of the owner\'s own devices and servers — use it to send, upload or act on an API.',
   today: 'The weather, today\'s calendar and what is waiting for the person — use it for "what\'s my day" or a morning brief.',
   schedule: 'Propose a message or recipe on a timetable, which the person switches on — use it when asked to do something regularly.',
 };

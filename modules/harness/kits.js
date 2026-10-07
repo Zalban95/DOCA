@@ -39,7 +39,7 @@ const KIT_OF = {
   read_file: 'files', write_file: 'files', list_dir: 'files',
   shell: 'shell', shell_job: 'shell',
   canvas: 'canvas',
-  http_fetch: 'web', research_docs: 'web', web_search: 'web',
+  http_fetch: 'web', research_docs: 'web', web_search: 'web', api_call: 'connectors',
   memory_write: 'memory', memory_rules_write: 'memory', memory_search: 'memory', memory_list: 'memory',
   memory_forget: 'memory', memory_flag: 'memory', recall_conversations: 'memory',
   ask_device: 'devices', tell_device: 'devices', doca_clients: 'devices', show_media: 'devices', show_image: 'devices', today: 'devices',

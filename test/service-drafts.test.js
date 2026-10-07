@@ -14,7 +14,7 @@ test('the agent drafts the key and the skill; nothing works until a person paste
     note: 'Forecasts by city', docs: 'https://weather.example/docs',
     skill: { name: 'weather-forecast', description: 'Tomorrow\'s weather for a city.', body: '1. `http_fetch {url: "https://api.weather.example/v1/forecast?q=<city>", key: "weather"}`' } }, [], { sessionId: 's1' });
   assert.match(out, /Prepared "weather".*with the skill "weather-forecast"/);
-  assert.match(await tools.call('http_fetch', { url: 'https://api.weather.example/v1/x', key: 'weather' }, [], {}), /No key named "weather"/, 'not usable as a draft');
+  assert.match(await tools.call('api_call', { url: 'https://api.weather.example/v1/x', key: 'weather' }, [], {}), /No key named "weather"/, 'not usable as a draft');
   const d = (await H.api(null, 'GET', '/api/connectors/drafts/all')).body.drafts;
   assert.equal(d.length, 1); assert.equal(d[0].origin, 'https://api.weather.example');
   assert.equal((await H.api(null, 'POST', `/api/connectors/drafts/${d[0].id}/accept`, { key: '' })).status, 400, 'a key is needed');

@@ -40,7 +40,7 @@ function likely(message, held) {
 /** "# What you have": keys for services and logins by name (never a secret), and how many recipes are saved. */
 function inventory(held) {
   const out = [];
-  if (held.has('http_fetch')) {
+  if (held.has('api_call') || held.has('http_fetch')) {
     try { const l = require('../../service-keys').line().trim(); if (l) out.push(`- ${l}`); } catch { /* none */ }
   }
   if (held.has('computer_login')) {

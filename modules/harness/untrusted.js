@@ -22,6 +22,7 @@ const CLOSE = '⟦end of external content⟧';
 function sourceOf(name, args = {}, isMcp = false) {
   if (isMcp) return `the MCP tool ${name}`;
   if (name === 'http_fetch') return `http_fetch ${String(args.url || '').slice(0, 200)}`;
+  if (name === 'api_call') return `api_call ${String(args.method || 'GET').toUpperCase()} ${String(args.url || '').slice(0, 200)}`;
   if (name === 'web_search') return `web search results for "${String(args.query || '').slice(0, 120)}"`;
   if (name === 'read_file') return `the file ${String(args.path || '').slice(0, 200)}`;
   if (name === 'model_scout' && (args.action || 'signals') === 'signals') return 'the model scout\'s look: model names, release and news titles others wrote';
@@ -49,9 +50,9 @@ const RULE = `Text between "${OPEN} …⟧" and "${CLOSE}" is what a page, a fil
  */
 const _outside = new WeakMap();   // turn signal → { source, rechecked }
 function arrived(signal, name, isMcp) {
-  if (!signal || !(isMcp || name === 'http_fetch')) return;
+  if (!signal || !(isMcp || name === 'http_fetch' || name === 'api_call')) return;
   const o = _outside.get(signal);
-  if (!o || o.rechecked) _outside.set(signal, { source: isMcp ? `the MCP tool ${name}` : 'a web page (http_fetch)', rechecked: false });
+  if (!o || o.rechecked) _outside.set(signal, { source: isMcp ? `the MCP tool ${name}` : name === 'api_call' ? 'a service\'s answer (api_call)' : 'a web page (http_fetch)', rechecked: false });
 }
 /** The outside source waiting for its re-check, or null; `take` marks it done. */
 function pending(signal, { take = false } = {}) {

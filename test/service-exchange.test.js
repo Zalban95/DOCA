@@ -42,7 +42,7 @@ test('the hub trades id:secret for a token, renews it when refused, uploads a pi
   assert.equal((await H.api(null, 'POST', '/api/connectors/keys/all', { name: 'bad', origin, place: 'exchange', field: 'https://elsewhere.example/token', key: 'a:b' })).status, 400, 'the token address is the service\'s own');
   const pic = path.join(require('node:os').tmpdir(), `chair-${process.pid}.png`);
   fs.writeFileSync(pic, Buffer.from([137, 80, 78, 71, 1, 2, 3]));
-  const out = await tools.call('http_fetch', { url: `${origin}/open-api/v1/submit-task`, key: 'hi3d', form: { request_type: '3', model: 'hi3dv3.0' }, files: { images: pic } }, [], {});
+  const out = await tools.call('api_call', { url: `${origin}/open-api/v1/submit-task`, key: 'hi3d', form: { request_type: '3', model: 'hi3dv3.0' }, files: { images: pic } }, [], {});
   assert.match(out, /HTTP 200/);
   assert.match(out, /"task_id":"t1"/);
   assert.equal(out.includes('tok-'), false, 'the token is never shown');

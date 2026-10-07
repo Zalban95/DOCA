@@ -18,7 +18,7 @@ test.before(async () => {
 });
 test.after(async () => { stub.close(); await H.stop(); });
 
-const fetchTool = (args, ctx = {}) => tools.call('http_fetch', args, [], ctx);
+const fetchTool = (args, ctx = {}) => tools.call('api_call', args, [], ctx);
 
 test('the admin pastes a key; the agent names it; the hub adds it to that address only and never shows it', async () => {
   let r = await H.api(null, 'POST', '/api/connectors/keys/all', { name: 'hyper3d', origin, key: 'sk-SECRET-123', note: '3D models from text' });

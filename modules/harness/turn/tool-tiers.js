@@ -16,7 +16,7 @@ const CORE = new Set([
   'memory_search', 'memory_write', 'recall_conversations', 'skill', 'recipe',
   'settings_read', 'settings_propose', 'install_propose', 'system_status', 'doca_clients',
   'ask_device', 'tell_device', 'show_media', 'form_fill', 'effort',
-  'http_fetch', 'web_search', 'research_docs', 'mcp_connect', 'tools_more',
+  'http_fetch', 'api_call', 'web_search', 'research_docs', 'mcp_connect', 'tools_more',
 ]);
 
 const on = () => require('../../experiments').on('toolTiers');
