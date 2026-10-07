@@ -28,11 +28,11 @@ function _mlTiles() {
   for (const c of d.computers) tiles.push({ id: `c:${c.id}`, working: c.working, kind: '🖵', title: c.name,
     line: c.activity ? `${c.activity.what} · ${_mlAgo(c.activity.ago)}` : c.mission ? `${c.mission.label}: ${c.mission.state}` : c.purpose || '',
     who: c.mission ? c.mission.label : '', img: c.state === 'running' ? `/api/computers/${encodeURIComponent(c.id)}/screen` : null,
-    empty: c.state === 'running' ? 'Waiting for its screen…' : `Stopped (${c.state})`, open: `computersWatch(${jsArg(c.id)})` });
+    empty: c.state === 'running' ? 'Waiting for its screen…' : `Stopped (${c.state})`, open: () => computersWatch(c.id) });
   for (const s of d.served) tiles.push({ id: `s:${s.key}`, working: true, kind: '◉', title: `:${s.port}${new URL(s.url).pathname === '/' ? '' : new URL(s.url).pathname}`,
     line: `$ ${s.command.slice(0, 90)}`, who: s.who || '', img: s.shot ? `/api/machines/served/${encodeURIComponent(s.key)}/shot` : null,
     empty: d.browser.found ? 'Taking its picture…' : d.browser.why, tail: s.tail,
-    open: `window.open(${jsArg(`${location.protocol === 'https:' ? 'http:' : location.protocol}//${location.hostname}:${s.port}${new URL(s.url).pathname}`)}, '_blank', 'noopener')` });
+    open: () => window.open(`${location.protocol === 'https:' ? 'http:' : location.protocol}//${location.hostname}:${s.port}${new URL(s.url).pathname}`, '_blank', 'noopener') });
   return tiles;
 }
 
@@ -51,7 +51,7 @@ function _mlDraw(page) {
       if (!el) { el = Object.assign(document.createElement('div'), { className: 'ml-tile' }); el.dataset.id = t.id; el.innerHTML = '<div class="ml-shot"><img alt=""><span class="ml-empty"></span></div><div class="ml-cap"></div>'; }
       el.classList.toggle('big', big);
       el.classList.toggle('working', !!t.working);
-      el.setAttribute('onclick', t.open);
+      el.onclick = t.open;   // a function: an onclick attribute would read jsArg's HTML escaping literally
       el.querySelector('.ml-cap').innerHTML = `<b>${t.kind} ${escHtml(t.title)}</b>${t.who ? `<span class="ml-who">${escHtml(t.who)}</span>` : ''}<div class="ml-line">${escHtml(t.line)}</div>`;
       el.querySelector('.ml-empty').textContent = t.img ? '' : t.empty;
       el.querySelector('.ml-empty').title = t.tail || '';
