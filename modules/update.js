@@ -7,7 +7,9 @@ const { exec, spawn } = require('child_process');
 
 const pkg = require(path.join(__dirname, '..', 'package.json'));
 const LOCAL_VERSION = pkg.version;
-const REPO = 'Zalban95/DOCA';
+// The project's repository, unless this install (an edition, a fork) names its own: `updates.repo` (CONSTITUTION §0).
+const PROJECT_REPO = 'Zalban95/DOCA';
+const repo = () => { try { return require('./settings-schema').value('updates.repo') || PROJECT_REPO; } catch { return PROJECT_REPO; } };
 // The checkout: what `git pull` updates and where run.sh lives — not the release
 // folder this code may be running from.
 const DASHBOARD_DIR = process.env.DOCA_HOME || path.join(__dirname, '..');
@@ -64,7 +66,7 @@ function fetchLatestTagFromGit() {
 
 function fetchLatestTagFromApi() {
   return new Promise((resolve) => {
-    const url = `https://api.github.com/repos/${REPO}/tags?per_page=100`;
+    const url = `https://api.github.com/repos/${repo()}/tags?per_page=100`;
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
     const req = https.get(url, {
       headers: {
@@ -134,7 +136,7 @@ async function handleUpdateCheck(req, res) {
         + 'need renewing) and the GitHub API returned nothing — for a private repo it answers 404 unless '
         + 'GITHUB_TOKEN is set in the environment. This is not a statement that you are up to date.',
     updateAvailable: found ? compareSemver(LOCAL_VERSION, found.version) < 0 : false,
-    repo: `https://github.com/${REPO}`,
+    repo: `https://github.com/${repo()}`,
     checkedAt: new Date().toISOString(),
   };
   cached   = result;
@@ -181,7 +183,7 @@ async function handleUpdate(req, res) {
     return res.end();
   }
 
-  sseWrite({ status: `Updating dashboard from ${REPO}…\n$ cd ${DASHBOARD_DIR}\n` });
+  sseWrite({ status: `Updating dashboard from ${repo()}…\n$ cd ${DASHBOARD_DIR}\n` });
 
   // Remember where we were so we can diff exactly what the pull brought in.
   const beforeHead = (await gitRun('git rev-parse HEAD')).stdout.trim();

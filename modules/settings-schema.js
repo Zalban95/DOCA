@@ -52,7 +52,8 @@ const SCHEMA = {
 
   // ── The hive: how its agents behave and what they may do ──
   branding:         { is: 'travels', home: 'hive', note: 'the name and look the panel wears' },
-  updates:          { is: 'travels', home: 'hive', note: 'how updates are offered' },
+  updates:          { is: 'travels', home: 'hive', note: 'how updates are offered',
+    keys: { repo: { type: 'string', default: '', hint: 'owner/name on GitHub that the update check reads when git cannot (an edition or a fork). Empty: the DOCA project.' } } },
   agents:           { is: 'travels', home: 'hive', note: 'whether specialists are switched on',
     propose: p('Specialist agents', 'Allow the orchestrator to dispatch specialists', { prefix: 'agents.enabled', exact: true }) },
   toolNotes:        { is: 'travels', home: 'hive', note: 'notes added to tool descriptions (fingerprinted per tool)',
