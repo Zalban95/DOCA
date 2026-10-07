@@ -19,6 +19,11 @@ function of(name, args, summarize) {
   // the agent's. Every mode, never "always".
   if (/^mcp__/.test(name) && args?.confirm === true)
     return { tool: name, keys: null, forced: true, summary: `${summarize(name, args)} — the device says this decides something (pays, buys, signs in, confirms or submits). Always asked, whatever the approval mode.` };
+  // A hub command the registry marks confirm (stopping a service, a snapshot): a person's, as on a phone (TODO B6b).
+  if (name === 'hub_command' && args?.action === 'run') {
+    const c = require('../api-v1/commands').describe(String(args.id || ''));
+    if (c?.confirm) return { tool: name, keys: null, forced: true, summary: `Run the hub command ${c.id} — ${c.title}${args.params ? ` ${JSON.stringify(args.params)}` : ''}. Always asked, whatever the approval mode.` };
+  }
   return null;
 }
 
