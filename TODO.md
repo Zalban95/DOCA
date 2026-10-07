@@ -592,7 +592,13 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   it with the repository's own command as a job, and the address the job prints becomes a page: Machines → Live
   pictures it, and the chat hands it over as its own tab or `/?view=` page on any screen — the way served test pages
   are today. A recipe keeps the steps for that repository.
-- [ ] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06). Risk-tiered approval inside
+- [x] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06) — *built as the experiment
+  `riskTiers` (2.292.0, `modules/harness/risk/`, docs/experiments/risk-tiers.md): a declarative classifier (read / reversible /
+  outward), a project checkpoint before a reversible change in a project, outward calls asked in every mode (Unattended
+  included, never "always", a mission refused), the tier in the trace, the Workstream and the approval card; measured
+  without a model (`npm run experiment -- risk-tiers`: 72 of 73 labelled calls, outward precision 1.00, recall 0.96).
+  Open: a week of real use with the flag on, and "prefer a computer for anything untested" is a prompt line, not yet a
+  choice the hub makes.* Risk-tiered approval inside
   Auto: each tool call classified — reads and lookups run; reversible writes run after an automatic checkpoint
   (projects' shadow git, prefs checkpoints, a computer instead of the host for anything untested); irreversible or
   outward ones (deleting outside a project, `git push --force`, sending a message or mail, paying, a submit on a
