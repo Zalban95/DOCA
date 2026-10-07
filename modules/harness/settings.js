@@ -171,12 +171,15 @@ function readable() {
     const trigger = require('./budget').compactionFor(config);
     for (const [k, v] of Object.entries(config))
       // The prompt is in the prompt already; repeating it here doubles it.
-      if (k !== 'systemPrompt')
-        out.push({ path: `harness.config.${catalog.BUILTIN_ID}.${k}`, value: v, section: 'Harness parameters',
-          ...(['compactTokens', 'compactAt'].includes(k) ? { detail: trigger
-            ? `Effective token trigger: ${trigger.at} (harness.config.${catalog.BUILTIN_ID}.${trigger.setting}); message-count folding also applies.`
-            : 'No token trigger is configured; message-count folding still applies.' } : {}),
-        });
+      if (k !== 'systemPrompt') {
+        // What the parameter does, in the words the ⚙ form shows beside its box (param-hints.js).
+        const h = require('./param-hints').hints()[k];
+        const trig = ['compactTokens', 'compactAt'].includes(k) ? (trigger
+          ? `Effective token trigger: ${trigger.at} (harness.config.${catalog.BUILTIN_ID}.${trigger.setting}); message-count folding also applies.`
+          : 'No token trigger is configured; message-count folding still applies.') : '';
+        const detail = [h ? `${h.label}${h.unit ? ` (${h.unit})` : ''}: ${h.hint}` : '', trig].filter(Boolean).join(' ');
+        out.push({ path: `harness.config.${catalog.BUILTIN_ID}.${k}`, value: v, section: 'Harness parameters', ...(detail ? { detail } : {}) });
+      }
   } catch { /* catalog unavailable — the rest of the list is still useful */ }
 
   // Effective values, like the paths and harness rows above: nothing is written
