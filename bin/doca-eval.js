@@ -84,11 +84,21 @@ async function compare() {
     const code = await new Promise(r => child.on('close', r));
     rows.push({ ...(row || { label, passed: 0, total: 0, tokens: 0, steps: 0 }), label, code });
   }
-  say({ compare: rows }, `\n| run | passed | tokens | steps |\n|---|---|---|---|\n${rows.map(r => `| ${r.label} | ${r.passed}/${r.total} | ${r.tokens} | ${r.steps} |`).join('\n')}`);
+  say({ compare: rows }, `\n| run | passed | tokens | steps | time |\n|---|---|---|---|---|\n${rows.map(r => `| ${r.label} | ${r.passed}/${r.total} | ${r.tokens} | ${r.steps} | ${((r.ms || 0) / 1000).toFixed(1)} s |`).join('\n')}`);
   return rows.every(r => r.code === 0) ? 0 : 1;
 }
 
-const summary = r => ({ passed: r?.passed, total: r?.total, tokens: r?.tokens, steps: (r?.cases || []).reduce((n, c) => n + (c.steps || 0), 0) });
+/** A run in numbers, whole and by the cases' `difficulty` tag (experiment adaptiveLimits reads `byDifficulty`). */
+function summary(r) {
+  const cases = r?.cases || [], byDifficulty = {};
+  for (const c of cases) {
+    const d = byDifficulty[c.difficulty || 'untagged'] ||= { passed: 0, total: 0, tokens: 0, steps: 0, ms: 0 };
+    d.total++; if (c.pass) d.passed++;
+    d.tokens += c.tokens || 0; d.steps += c.steps || 0; d.ms += c.ms || 0;
+  }
+  const sum = k => cases.reduce((n, c) => n + (c[k] || 0), 0);
+  return { passed: r?.passed, total: r?.total, tokens: r?.tokens, steps: sum('steps'), ms: sum('ms'), byDifficulty };
+}
 
 let last = null;   // the result of the latest run, for the comparison
 const once = async () => {

@@ -56,7 +56,11 @@ function onEvent(evt) {
     case 'failover':
       return write(t, 'failover', { step: evt.step, data: { from: evt.from || null, to: evt.to || null } });
     case 'warning':
-      return write(t, 'warning', { name: evt.kind || null, step: evt.step ?? null, data: evt.waitMs ? { waitMs: evt.waitMs } : null });
+      return write(t, 'warning', { name: evt.kind || null, step: evt.step ?? null,
+        data: evt.waitMs ? { waitMs: evt.waitMs } : evt.kind === 'extended' ? { to: evt.to, why: evt.why } : null });
+    case 'triage':   // the verdict that set this turn's effort and steps (turn/triage.js)
+      return write(t, 'triage', { name: `${evt.difficulty}${evt.urgency === 'quick' ? ' · quick' : ''}`, data: {
+        difficulty: evt.difficulty, urgency: evt.urgency, by: evt.by, reasons: evt.reasons, effort: evt.effort, steps: evt.steps, base: evt.base, ceiling: evt.ceiling } });
     case 'compacted':
       return write(t, 'compacted', { step: evt.at ?? null, data: { contextTokens: evt.contextTokens ?? null } });
     case 'error':

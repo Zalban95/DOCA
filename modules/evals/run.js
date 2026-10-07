@@ -36,7 +36,7 @@ async function runCase(kase, setId) {
   catch (e) { error = e; }
   const o = outcomeOf(s.id, r, error);
   const checks = await require('./check').evaluate(kase, o);
-  return { id: kase.id, prompt: kase.prompt, ...o, text: String(o.text).slice(0, 4000), checks, pass: checks.every(c => c.pass) };
+  return { id: kase.id, prompt: kase.prompt, ...(kase.difficulty ? { difficulty: kase.difficulty } : {}), ...o, text: String(o.text).slice(0, 4000), checks, pass: checks.every(c => c.pass) };
 }
 
 /** Every case in order; `onCase(result, i, n)` after each. Returns the whole result, with regressions against `previous`. */
