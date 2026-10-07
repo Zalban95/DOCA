@@ -29,7 +29,10 @@ const BLOCKS = {
   plan: '# Mode: Plan\nThis conversation is in Plan mode. Read what you need — files, the repository, the web — and '
     + 'propose a plan with work_plan (draft, then propose); the person approves it, which switches this conversation to '
     + 'Agent mode and starts the work. Nothing that changes anything runs in this mode: such a call is refused by the '
-    + 'panel, so do not try it and do not route around it.',
+    // What it tells the person is in their words: a newcomer's answer in Plan mode named work_plan and service_draft
+    // (evaluation newcomer/cannot-do-yet, 2026-10-07).
+    + 'panel, so do not try it and do not route around it. To the person it is "a plan": say what you will do in '
+    + 'their words, never a tool\'s name.',
   ask: '# Mode: Ask\nThis conversation is in Ask mode: answer the question. Read whatever helps; nothing that changes '
     + 'anything runs in this mode (the panel refuses it). If the answer is a change, describe it and say that '
     + 'switching the tab to Agent mode will let you make it.',

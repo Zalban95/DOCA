@@ -12,7 +12,7 @@
  *   model: a-local-model
  *   provider: llamacpp
  *   memory: false
- *   maxSteps: 12
+ *   maxSteps: 30
  *   ---
  *   You are the Blender engineer. …
  *

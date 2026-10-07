@@ -36,4 +36,16 @@ function check(person, id) {
   if (why) throw Object.assign(new Error(why), { status: 403 });
 }
 
-module.exports = { refuse, check };
+/**
+ * The computers a conversation works in, the rule turn/prompt.js othersComputers holds its tools by: a specialist the
+ * one its mission was lent, a work chat the ones it made, the Orchestrator none — it hands the work on.
+ */
+function ofConversation(sessionId) {
+  if (!sessionId) return [];
+  let s;
+  try { s = require('../harness/organization').session(sessionId); } catch { return []; }
+  if (s.kind === 'specialist') return s.profile?.computer ? [s.profile.computer] : [];
+  return s.kind === 'orchestrator' ? [] : require('./index').madeBy(sessionId);
+}
+
+module.exports = { refuse, check, ofConversation };

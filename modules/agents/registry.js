@@ -158,8 +158,9 @@ function normalize(def) {
     // No ceiling, deliberately: a specialist's step count is the definition's
     // business, and capping it here would be limiting the agent to fix a cost
     // problem that lives in the prompt. The fallback is only for a definition
-    // that never mentions it.
-    maxSteps:      Number(def.maxSteps)      > 0 ? Number(def.maxSteps)      : 12,
+    // that never mentions it — 30, room for a real errand: every self-test Tester ran out at 40 (2026-10-08, #6),
+    // and the owner's rule is that the mission comes before the token count.
+    maxSteps:      Number(def.maxSteps)      > 0 ? Number(def.maxSteps)      : 30,
     maxTokens:     Number(def.maxTokens)     > 0 ? Number(def.maxTokens)     : null,
     contextWindow: Number(def.contextWindow) > 0 ? Number(def.contextWindow) : null,
     builtin: !!def.builtin,

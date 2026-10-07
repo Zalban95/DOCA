@@ -189,25 +189,8 @@ class McpClient {
     this.child.stdin.write(`${JSON.stringify(obj)}\n`);
   }
 
-  /**
-   * How long to wait, and where that number comes from.
-   *
-   * These used to be literals at the two call sites, which made them the kind of
-   * limit that stops a turn without being able to say so: the agent hit one
-   * mid-render, went looking, found the `= 30000` default on `request()` and
-   * reported that as the cause. It was wrong — `callTool` passes its own value
-   * and always has — but it was a reasonable reading of code where the real
-   * number is written somewhere else entirely. Now there is one place, it has a
-   * name, and the name is in the timeout message.
-   */
-  static timeoutFor(kind) {
-    const fallback = kind === 'list' ? 20000 : 120000;
-    try {
-      const { loadPrefs } = require('../utils');
-      const n = Number(loadPrefs()?.mcpSettings?.[kind === 'list' ? 'listTimeoutMs' : 'callTimeoutMs']);
-      return Number.isFinite(n) && n >= 1000 ? Math.floor(n) : fallback;
-    } catch { return fallback; }
-  }
+  /** How long to wait (mcp/timeouts.js says where the number comes from). */
+  static timeoutFor(kind, serverId) { return require('./timeouts').timeoutFor(kind, serverId); }
 
   async _httpRequest(method, params, timeoutMs) {
     const headers = {
@@ -236,7 +219,7 @@ class McpClient {
       if (e?.name === 'TimeoutError' || e?.name === 'AbortError')
         throw new Error(
           `${method} gave up after ${Math.round(timeoutMs / 1000)}s waiting for "${this.id}". `
-          + 'That is this panel\'s limit (settings mcpSettings.callTimeoutMs), not the server\'s — '
+          + `That is this panel's limit (settings ${require('./timeouts').settingFor(method, this.id)}), not the server's — `
           + 'and it stopped the waiting, not the work: whatever you asked for may have finished on that '
           + 'machine anyway. Check the result before asking for it again.');
       throw e;
@@ -261,7 +244,7 @@ class McpClient {
 
   /* ── Requests ──────────────────────────────────────── */
 
-  request(method, params, timeoutMs = McpClient.timeoutFor('call')) {
+  request(method, params, timeoutMs = McpClient.timeoutFor('call', this.id)) {
     if (this.transport === 'http') return this._httpRequest(method, params, timeoutMs);
 
     const id = this._nextId++;
@@ -270,7 +253,7 @@ class McpClient {
         this._pending.delete(id);
         reject(new Error(
           `${method} gave up after ${Math.round(timeoutMs / 1000)}s waiting for "${this.id}". `
-          + 'That is this panel\'s limit (settings mcpSettings.callTimeoutMs), not the server\'s — '
+          + `That is this panel's limit (settings ${require('./timeouts').settingFor(method, this.id)}), not the server's — `
           + 'and it stopped the waiting, not the work. Check the result before asking for it again.'));
       }, timeoutMs);
       const done = fn => v => { clearTimeout(timer); fn(v); };
@@ -347,7 +330,7 @@ class McpClient {
         this._backendFailureAt = failure ? Date.now() : null;
     };
     try {
-      const res = await this.request('tools/call', { name, arguments: args || {} }, McpClient.timeoutFor('call'));
+      const res = await this.request('tools/call', { name, arguments: args || {} }, McpClient.timeoutFor('call', this.id));
       const text = (res?.content || [])
         .map(c => (c.type === 'text' ? c.text : require('./content').keep(c, this.spec.id)))
         .join('\n')

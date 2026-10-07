@@ -18,6 +18,14 @@ const store = require('../../store');
 
 const fp = s => crypto.createHash('sha1').update(String(s || '')).digest('hex').slice(0, 10);
 
+/**
+ * A computer's tools are the conversation's, not the type's: one Tester mission is lent computer 4631d4f7, the next
+ * e8fd7864, and comparing them by name told the second "Gone: mcp__computer-e8fd7864__*, New: mcp__computer-4631d4f7__*"
+ * — three of four self-test Testers then believed their computer had changed mid-mission (2026-10-08, #23). So a
+ * computer's id is left out of the comparison; a tool its image adds or rewrites is still news.
+ */
+const anyComputer = s => String(s || '').replace(/computer-[a-f0-9]+/g, 'computer-…');
+
 /** The key an agent type's catalogue is kept under. */
 function typeOf(session, profile) {
   if (profile?.level === 'orchestrator') return 'orchestrator';
@@ -32,7 +40,7 @@ function typeOf(session, profile) {
  */
 function news(type, schemas) {
   const doc = store.readJson('harness/tool-catalogue', { types: {} });
-  const now = Object.fromEntries(schemas.map(s => [s.function.name, fp(s.function.description)]));
+  const now = Object.fromEntries(schemas.map(s => [anyComputer(s.function.name), fp(anyComputer(s.function.description))]));
   const before = doc.types[type]?.tools;
   doc.types[type] = { tools: now, at: new Date().toISOString() };
   store.writeJson('harness/tool-catalogue', doc);

@@ -127,6 +127,15 @@ the project's managers only if the owner allows sharing specialists and skills (
   watch's call is assistant mode at last (it looked for a device kind no device has). DocaWear draws every state.
   Measured (sandbox hub, live whisper + kokoro, DeepSeek flash): end of speech → words 0.8 s, → first audio 2.7–4.2 s
   with the front (13.4k prompt tokens) vs 3.2–4.0 s without (25k). Not checked: a real call on the watch.
+- [x] Self-test 2026-10-08, the agents and missions group (branch `selftest-agents`): specialists' budgets fit a
+  real errand (Tester 120, Coder 80, Researcher 40, Scout 30, Archivist 10, unnamed 30; #6); a mission's last step is
+  its report, with a line telling its leader it ended on its limit and where that is raised (`turn/mission-report.js`;
+  #6, #24); an agents' computer's calls wait `computers.callTimeoutMs` (600 s; #6); "Send to a specialist" lends a
+  chosen computer (#8); a specialist is told its computer once, and tool news no longer reports another mission's
+  computer as "gone" (#23); `show_media {computer, path}` shows a file from the turn's own computer; newcomers are
+  never told a tool's name (first-steps, talk-to-me, Plan mode); basics/asks-when-unclear allows six steps.
+  Open for the owner (S11): #7, the computer browser's password and submit guard that every Tester routed around, and
+  charter rule 15's newcomer wording — both in the branch's report.
 - [x] Self-test 2026-10-08, the install/devices/server group (branch `selftest-server`): node-pty is an optional
   dependency and `install.sh` names the build tools per distro, so a box without a C++ toolchain installs (#1);
   revoking a device by any route closes its stream and removes the MCP servers it hosts, and doca-client stops
