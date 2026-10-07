@@ -61,6 +61,27 @@ the project's managers only if the owner allows sharing specialists and skills (
   panel says how in one step; a request DOCA cannot yet do → it says what it would need, then does it when given).
   Measured as an eval set of plain-language requests from someone who knows nothing about DOCA.
 
+### P1 — the vision of 2026-10-07 (CONSTITUTION §0–§2, §4; docs/design/experience.md), not yet built
+- [ ] P1.1 **A person's request is the decision (S1)**: a change a person asks for to their own installation —
+  settings included — is applied with a checkpoint, not left as a proposal; the agent's own initiative stays a
+  proposal; S11's list still asks.
+- [ ] P1.2 **The panel's structure as data**: pages, layouts, custom views and styles as layered data (edition →
+  install → person → screen) the agent edits when asked to "change the UI", surviving updates — never a repo change.
+- [ ] P1.3 **Secrets used, never read, on any device (S4)**: a sealed secret handed to a device's input for a set
+  number of uses, then forgotten — `computer_login`'s fill, generalised to phones, desktops and the browser extension.
+- [ ] P1.4 **Work persists until done (V10)**: experts that wait on each other's files (a dependency between
+  missions/work chats); "done" = delivered and opened/read; the Orchestrator resumes unfinished projects after a
+  restart on its own unless the person archived, forgot or deleted them; one message where the person is.
+- [ ] P1.5 **Guided set-up and the two shapes (§1)**: a first conversation that asks what the person needs and sets
+  it up; a hub that picks models for its machine from what other installs tested (shared only with consent, like
+  skills); providers' options offered when the machine cannot bear something.
+- [ ] P1.6 **Spending with permission (S12)**: a linked payment method, a spend asked each time — its own safety
+  design first.
+- [ ] P1.7 **Nothing coded is lost (W14)**: H10.7's tooling hides unused paths from the default instead of archiving
+  them off main; an index of every feature the agents read so they know what exists.
+- [ ] P1.8 **See everything, unnarrated (§1)**: an audit that every running thing (models, specialists, services,
+  machines, file edits) is visible and attributed in the panel.
+
 ### Everything still open, now urgent
 - A2 rest: the rendered "Reaching outside" block; quarantining the open web with specialists off.
 - B6b rest: `screen {list | show | propose}`; retire `models-llamacpp-external.js` for model-servers.js; per feature,
