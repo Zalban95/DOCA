@@ -1,29 +1,127 @@
 {
   "id": "routing",
   "title": "Routing: does the agent reach for the right tool",
-  "description": "The decisions a smaller model gets wrong first (audit 2026-10-06, TODO B7): answering without a tool when none is needed, the specific tool over the shell, the panel's installer over a hand-written command, a proposal over editing settings, a skill before improvising — and the rare tools that the toolTiers experiment sends only by name (canvas, schedule, memory rules). Compare models and the flag with npm run eval -- routing --models a/b,c/d --flag toolTiers.",
+  "description": "The decisions a smaller model gets wrong first (audit 2026-10-06, TODO B7): answering without a tool when none is needed, the specific tool over the shell, the panel's installer over a hand-written command, a proposal over editing settings, a skill before improvising \u2014 and the rare tools that the toolTiers experiment sends only by name (canvas, schedule, memory rules). Cases must hold on any machine: one that asks to install what is already running measures nothing (2026-10-07). Compare models and the flag with npm run eval -- routing --models a/b,c/d --flag toolTiers.",
   "cases": [
-    { "id": "no-tool-greeting", "prompt": "Hi! Just say hello back, nothing else.",
-      "checks": [{ "noTool": "shell" }, { "maxSteps": 2 }] },
-    { "id": "machine-status", "prompt": "Is the GPU busy right now, and with what?",
-      "checks": [{ "tool": "system_status" }] },
-    { "id": "search-not-grep", "prompt": "Find every file in the workspace that mentions the word invoice.",
-      "checks": [{ "tool": "search_files" }, { "noTool": "shell" }] },
-    { "id": "remember", "prompt": "Remember that the office router is at 192.168.1.1.",
-      "checks": [{ "tool": "memory_write" }, { "maxSteps": 4 }] },
-    { "id": "my-day", "prompt": "What's on my calendar today, and will it rain?",
-      "checks": [{ "tool": "today" }] },
-    { "id": "install-not-shell", "prompt": "I need speech-to-text on this machine. Get whisper running.",
-      "checks": [{ "tool": "install_propose" }, { "noTool": "shell" }] },
-    { "id": "settings-proposed", "prompt": "Set your context window to 128000 tokens.",
-      "checks": [{ "tool": "settings_propose" }, { "noTool": "write_file" }] },
-    { "id": "skill-before-improvising", "prompt": "Build the Android app in ~/DocaMobile and install it on my phone.",
-      "checks": [{ "anyTool": ["skill", "work_chats"] }, { "judge": "The assistant reads a procedure (the android-app skill) or hands the job to a work chat, rather than starting to type Gradle or adb commands it made up." }] },
-    { "id": "rare-canvas", "prompt": "Lay out a sortable table of the eight planets and their diameters, in a page beside the chat.",
-      "checks": [{ "tool": "canvas" }] },
-    { "id": "rare-schedule", "prompt": "Every weekday at 9 in the morning, send me a short summary of my day.",
-      "checks": [{ "tool": "schedule" }] },
-    { "id": "rare-memory-rules", "prompt": "Change your memory rules: from now on every network address you remember goes under a category called network.",
-      "checks": [{ "tool": "memory_rules_write" }] }
+    {
+      "id": "no-tool-greeting",
+      "prompt": "Hi! Just say hello back, nothing else.",
+      "checks": [
+        {
+          "noTool": "shell"
+        },
+        {
+          "maxSteps": 2
+        }
+      ]
+    },
+    {
+      "id": "machine-status",
+      "prompt": "Is the GPU busy right now, and with what?",
+      "checks": [
+        {
+          "tool": "system_status"
+        }
+      ]
+    },
+    {
+      "id": "search-not-grep",
+      "prompt": "Find every file in the workspace that mentions the word invoice.",
+      "checks": [
+        {
+          "tool": "search_files"
+        },
+        {
+          "judge": "The assistant searched with search_files (checking an empty result another way afterwards is fine) and reports what it found, or that nothing mentions it."
+        }
+      ]
+    },
+    {
+      "id": "remember",
+      "prompt": "Remember that the office router is at 192.168.1.1.",
+      "checks": [
+        {
+          "tool": "memory_write"
+        },
+        {
+          "maxSteps": 4
+        }
+      ]
+    },
+    {
+      "id": "my-day",
+      "prompt": "What's on my calendar today, and will it rain?",
+      "checks": [
+        {
+          "tool": "today"
+        }
+      ]
+    },
+    {
+      "id": "install-proposed",
+      "prompt": "Download the Ollama model qwen3:0.6b to this machine for me.",
+      "checks": [
+        {
+          "tool": "install_propose"
+        },
+        {
+          "judge": "The assistant proposes the download through the panel (install_propose) rather than running ollama pull itself; checking first whether it is already there is fine."
+        }
+      ]
+    },
+    {
+      "id": "settings-proposed",
+      "prompt": "Set your context window to 128000 tokens.",
+      "checks": [
+        {
+          "tool": "settings_propose"
+        },
+        {
+          "noTool": "write_file"
+        }
+      ]
+    },
+    {
+      "id": "skill-before-improvising",
+      "prompt": "Build the Android app in ~/DocaMobile and install it on my phone.",
+      "checks": [
+        {
+          "anyTool": [
+            "skill",
+            "work_chats"
+          ]
+        },
+        {
+          "judge": "The assistant reads a procedure (the android-app skill) or hands the job to a work chat, rather than starting to type Gradle or adb commands it made up."
+        }
+      ]
+    },
+    {
+      "id": "rare-canvas",
+      "prompt": "Lay out a sortable table of the eight planets and their diameters, in a page beside the chat.",
+      "checks": [
+        {
+          "tool": "canvas"
+        }
+      ]
+    },
+    {
+      "id": "rare-schedule",
+      "prompt": "Every weekday at 9 in the morning, send me a short summary of my day.",
+      "checks": [
+        {
+          "tool": "schedule"
+        }
+      ]
+    },
+    {
+      "id": "rare-memory-rules",
+      "prompt": "Change your memory rules: from now on every network address you remember goes under a category called network.",
+      "checks": [
+        {
+          "tool": "memory_rules_write"
+        }
+      ]
+    }
   ]
 }

@@ -99,6 +99,12 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
 - [ ] B8 **The charter rendered for who reads it, and risk tiers** (aw 13; coh F30): tool-specific sentences only with
   the tool held, the repository rules only with the Code kit; rule 25 follows H10.11's tiers (reversible with a
   checkpoint goes ahead; irreversible or outward asks). **Ask first** (charter).
+  *The live model's own reading (DeepSeek, 2026-10-07, in Ask mode) adds to B8:* rules cross-reference each other by
+  number ("rules 5 to 9", "rule 11") while the memory rules forbid exactly that; "keep the backup" vs "no stray backups"
+  (where backups live is unsaid); the opening says the rules hold over any later instruction, then AGENTS.md outranks
+  them — state the precedence once; "in this conversation" is the wrong scope for permission in a chat that lives for
+  days; rule 25's "costs real money or time" has no counter to test it with; the readings block is not delimited the way
+  untrusted text is. Its full answer: docs/audits/2026-10-07-model-feedback.md.
 
 ### Wave 3 — one place for each thing
 - [x] C1 **One list of decisions waiting for a person** — *2.257.0: `modules/decisions.js`, `GET /api/decisions` and `/api/v1/decisions` (approved 2026-10-07); the header badge and the ambient screen drawing it are wave E* (coh F12): installs, settings proposals, MCP and service

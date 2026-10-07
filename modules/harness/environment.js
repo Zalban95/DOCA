@@ -167,8 +167,11 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
   );
 
   if (provider) {
+    // The owner's switches by name: "9 switched off" said nothing a model could act on (its own feedback, 2026-10-07).
+    let off = [];
+    try { off = (require('./catalog').configFor('doca')?.disabledTools || []).filter(Boolean); } catch { /* none */ }
     out.push(`you are running on: ${provider} / ${model || '(model unset)'}`
-      + (toolCount ? `, ${toolCount} tools available${disabledCount ? `, ${disabledCount} switched off` : ''}` : ''));
+      + (toolCount ? `, ${toolCount} tools available` : '') + (off.length ? `; switched off by the owner: ${off.join(', ')}` : ''));
   }
   // Whether this model may release DOCA unasked (CONSTITUTION W2, modules/releasing.js): the agents it is for could not
   // reach the route that says so (host, a person's session) — audit 2026-10-06, coh F16. A fact of the settings, so stable.
@@ -180,11 +183,14 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
   }
 
   out.push('', '## Paths this panel manages');
-  for (const p of s.paths) {
+  // A default that was never set up is one name on one line, not a row saying "(default, MISSING)" (2026-10-07).
+  const unused = s.paths.filter(p => !p.exists && p.source === 'default' && !p.pending);
+  for (const p of s.paths.filter(x => !unused.includes(x))) {
     const flags = [p.source, p.exists ? 'present' : 'MISSING', p.pending ? 'saved since boot, needs a restart' : '']
       .filter(Boolean).join(', ');
     out.push(`- ${p.key} = ${p.value} (${flags})`);
   }
+  if (unused.length) out.push(`- not set up (defaults, nothing there yet): ${unused.map(p => p.key).join(', ')}`);
 
   const keyed = s.providers.filter(p => p.hasKey);
   if (keyed.length) {
