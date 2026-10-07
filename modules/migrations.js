@@ -95,6 +95,15 @@ const MIGRATIONS = [
       s.key = 'home-assistant';
       return true;
     } }] },
+  // 2.270: which models may release unasked is the owner's choice, not a product default (CONSTITUTION §0). An install
+  // that relied on the old default keeps it, written into its own settings; a new install starts with none.
+  { id: '2.270-release-unasked-owner', note: 'the models that may release unasked are now this install\'s own setting (the old default kept)', steps: [{
+    describe: 'developer.releaseUnasked written explicitly (was the default: claude-opus >= 5, claude-fable >= 5)',
+    run(p) {
+      if (p.developer?.releaseUnasked !== undefined) return false;
+      p.developer = { ...(p.developer || {}), releaseUnasked: ['claude-opus >= 5', 'claude-fable >= 5'] };
+      return true;
+    } }] },
 ];
 
 const appliedIn = p => new Set(Array.isArray(p?.migrations?.applied) ? p.migrations.applied : []);

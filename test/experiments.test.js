@@ -76,7 +76,7 @@ test('without developer mode no experiment can be switched on or takes effect; a
 test('an install that had an experiment on keeps it: the migration turns developer mode on', () => {
   const { run } = require('../modules/migrations');
   assert.equal(run({ experiments: { bargeIn: true } }).prefs.developer.mode, true);
-  assert.equal(run({ experiments: { bargeIn: false } }).prefs.developer, undefined);
+  assert.equal(run({ experiments: { bargeIn: false } }).prefs.developer?.mode, undefined, 'developer mode stays unset');
   assert.equal(run({ experiments: { bargeIn: true }, developer: { mode: false } }).prefs.developer.mode, false, 'an owner who chose off stays off');
 });
 
