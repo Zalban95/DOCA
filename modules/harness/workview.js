@@ -43,6 +43,7 @@ function payloadOf(s) {
     error: halted ? (job === 'dropped' ? DROPPED : `${s.job.stoppedWhy || 'Stopped by a person'}. ${WAITING}`)
       : s.state === 'paused' ? RESTARTED : state === 'failed' ? (s.lastError || undefined) : undefined,
     archivedAt: s.archivedAt || undefined,
+    seenAt: state !== 'running' && s.seenAt || undefined,   // its person opened the result: done (seen.js)
   };
 }
 

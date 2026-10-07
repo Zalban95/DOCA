@@ -69,7 +69,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   install → person → screen) the agent edits when asked to "change the UI", surviving updates — never a repo change.
 - [ ] P1.3 **Secrets used, never read, on any device (S4)**: a sealed secret handed to a device's input for a set
   number of uses, then forgotten — `computer_login`'s fill, generalised to phones, desktops and the browser extension.
-- [~] P1.4 **Work persists until done (V10)** — *2.275.0: contracts in plans (`plan-contracts.js`): a step marked done is held to its check (file, file contains, an owned address); the plan reads fulfilled when all hold, and its work chat is told to report done; the plan document and side panel show each contract. 2.277.0: a mission a restart cut off carries on by itself, like work chats (`agents/carry-on.js`). 2.278.0: experts wait on each other — `agent_dispatch {after}` (`agents/after.js`). Left: "done" when the person opens the result (the notice's read state).*: each plan step carries a contract ("done when …", with a check the
+- [~] P1.4 **Work persists until done (V10)** — *2.275.0: contracts in plans (`plan-contracts.js`): a step marked done is held to its check (file, file contains, an owned address); the plan reads fulfilled when all hold, and its work chat is told to report done; the plan document and side panel show each contract. 2.277.0: a mission a restart cut off carries on by itself, like work chats (`agents/carry-on.js`). 2.278.0: experts wait on each other — `agent_dispatch {after}` (`agents/after.js`). 2.282.0: read means done — a finished result its person opened is `seenAt` (`harness/seen.js`, `POST /api/v1/harness/missions/{id}/seen`), off the live bar, devices clear the notice. Left for the apps: DocaMobile/DocaWear call `seen` when a notice or result is opened and clear it on `seenAt` (D3).*: each plan step carries a contract ("done when …", with a check the
   hub runs where one exists) and the plan is finished when all hold; experts that wait on each other's files (a
   dependency between missions/work chats); the Orchestrator resumes unfinished projects after a
   restart on its own unless the person archived, forgot or deleted them; one message where the person is.
@@ -107,7 +107,7 @@ the project's managers only if the owner allows sharing specialists and skills (
 - C7b: done; D2b rest: API coverage by capability, not path prefix.
 - D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),
   `mcp.listener stop`, `confirmPromptChoice`'s body (§12.6 `{selectionId, decision}`), the native wake word, the
-  watch's line in Settings → Updates; DocaWear: the LAN port; DocaDesk: the socket transport, `prompt.outcome`.
+  watch's line in Settings → Updates, `seen` on opening a finished notice and clearing it on `seenAt` (PROTOCOL §11.4, hub 2.282); DocaWear: the LAN port, the same `seen`; DocaDesk: the socket transport, `prompt.outcome`.
 - Real-hardware checks: DocaMobile 1.0.16's answer buttons, DocaWear 1.2.5's QUEUED, the watch call and updater.
 - T1: `test/doca-client.test.js` under load (not reproduced with 4× parallel runs and 24 busy cores); the machines screenshot test ("a picture of it") failed once on Windows CI for 2.279.0, passed on re-run — likely two headless browsers at once (page-check's test and machines' shots) on a slow runner.
 - Wave E (E1–E4) with the owner's brief: themes (keep dark and light, the current look kept, bold alternatives as

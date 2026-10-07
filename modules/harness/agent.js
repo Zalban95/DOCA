@@ -60,7 +60,7 @@ async function turn(options) {
   require('./trace').start(runId, id);   // and what it did, step by step (trace.js)
   try {
     const profile = profileForTurn(session, options.profile);
-    memory.updateSession(id, { state: 'running', lastError: null });
+    memory.updateSession(id, { state: 'running', lastError: null, seenAt: null });   // new work waits to be opened again (seen.js)
     changed(id);
     if (options.client && options.client.kind !== 'agent')
       organization.report(id, 'user intervention', options.message, options.client.name || 'user');
