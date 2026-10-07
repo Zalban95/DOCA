@@ -27,7 +27,7 @@ module.exports = [
   { id: 'canvas', name: 'Canvas', tools: ['canvas'],
     use: 'A page beside the chat, and previews of local servers the agent started.', words: 'preview html page side' },
   { id: 'workstream', name: 'Workstream', page: 'workstream', since: '2.229.0',
-    use: 'The agents\' work as it happens: files they touch with live diffs, and what each conversation is doing.',
+    use: 'The agents\' work as it happens, for people to watch: files touched with live diffs, what each conversation does (screen show puts it on a screen).',
     routes: ['/api/workstream*'], words: 'diff live activity watch' },
   { id: 'archive', name: 'Archive', page: 'archive', since: '2.228.0',
     use: 'Conversations, missions, projects and computers put away rather than deleted, to restore.',

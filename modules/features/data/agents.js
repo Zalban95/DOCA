@@ -104,7 +104,7 @@ module.exports = [
     use: 'A waterfall of each turn\'s model requests and tool calls (⏱), exportable as OpenTelemetry.',
     routes: ['/api/harness/runs/*/trace'], words: 'otlp waterfall timing debug spans' },
   { id: 'evals', name: 'Evaluation sets', page: 'settings/evals', since: '2.183.0',
-    use: 'Run turns with checks on a throwaway copy of the settings to see whether the agent still behaves; compare runs.',
+    use: 'Turns with checks on a throwaway copy of the settings: does the agent still behave? Run by a person, never by the agent it grades.',
     routes: ['/api/evals*'], words: 'tests regression promptfoo judge' },
   { id: 'specialist-computer', name: 'A specialist keeps its own computer', since: '2.185.0',
     use: 'A specialist defined with computer: own works in the same computer every mission, logins and files kept.',
