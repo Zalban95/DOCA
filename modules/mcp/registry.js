@@ -154,6 +154,8 @@ function normalize(input, existing) {
     url:       unmaskUrl(String(input.url || '').trim(), existing?.url),
     headers:   unmaskValues(input.headers && typeof input.headers === 'object' ? input.headers : {}, existing?.headers),
     autostart: !!input.autostart,
+    // The name of a key for services the hub adds when it connects (withKey); '' takes it off.
+    ...(typeof input.key === 'string' ? { key: input.key.trim().toLowerCase() || undefined } : {}),
     // Absent on every definition written before this existed, which is exactly
     // what `server` means, so nothing has to be migrated.
     origin:    normalizeOrigin(input.origin !== undefined ? input.origin : existing?.origin, transport),
@@ -175,6 +177,17 @@ function client(id) {
   return _clients.get(id) || null;
 }
 
+/**
+ * A server that names a key for services (`key`; Home Assistant's token since 2.266.0, TODO C7b): the hub adds it as the
+ * client starts, only for the key's own address, so the secret has one home (service-keys.js) — the Home page and this
+ * connection read the same one — and never sits in the server's headers.
+ */
+function withKey(spec) {
+  const { url, headers, exchange } = require('../service-keys').apply(spec.key, spec.url, { ...(spec.headers || {}) });
+  if (exchange) throw Object.assign(new Error(`The key "${spec.key}" is exchanged for a token, which an MCP server cannot send: use a key sent in a header.`), { status: 400 });
+  return { ...spec, url, headers };
+}
+
 async function start(id) {
   const spec = get(id);
   if (!spec) throw Object.assign(new Error('Unknown MCP server'), { status: 404 });
@@ -183,7 +196,7 @@ async function start(id) {
   if (existing?.state === 'running') return existing;
   if (existing) existing.stop(true);
 
-  const c = new McpClient(spec);
+  const c = new McpClient(spec.key ? withKey(spec) : spec);
   _clients.set(id, c);
   await c.start();
   rememberTools(id, c.tools);

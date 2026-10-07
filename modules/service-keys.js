@@ -96,4 +96,15 @@ function line() {
   return ks.length ? ` Keys for services you can name with key (the hub adds them, you never see them): ${ks.map(k => `${k.name} → ${k.origin}${k.note ? ` (${k.note})` : ''}`).join('; ')}.` : '';
 }
 
-module.exports = { list, save, remove, apply, token, scrub, line };
+/**
+ * A secret moving here from another store (a migration): kept as `name` unless a key of that name is already here.
+ * Returns 'saved', 'same' (already here, the same secret) or 'differs' (a different one is here: nothing changed).
+ */
+function adopt(name, { origin, key, note = '', field, prefix }) {
+  const have = all()[name];
+  if (have) return have.key === key && have.origin === new URL(origin).origin ? 'same' : 'differs';
+  save({ name, origin, key, note, ...(field ? { field } : {}), ...(prefix !== undefined ? { prefix } : {}) });
+  return 'saved';
+}
+
+module.exports = { list, save, remove, apply, token, scrub, line, adopt };

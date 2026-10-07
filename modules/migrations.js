@@ -80,6 +80,21 @@ const MIGRATIONS = [
       delete p.models.hf.token;
       return true;
     } }] },
+  // 2.266: Home Assistant's token moves from its MCP server's header into the keys for services (TODO C7b, approved
+  // 2026-10-07): one home, read by the MCP connection (registry.withKey) and a future Home page alike.
+  { id: '2.266-ha-token', note: 'Home Assistant\'s token now lives in Keys for services (home-assistant), not in its MCP server\'s header', steps: [{
+    describe: 'mcpServers[home-assistant].headers.Authorization → keys/services.json (home-assistant)',
+    run(p) {
+      const s = (Array.isArray(p.mcpServers) ? p.mcpServers : []).find(x => x?.id === 'home-assistant' && x.transport === 'http' && x.origin?.kind !== 'client');
+      const auth = s?.headers?.Authorization;
+      const m = typeof auth === 'string' ? /^Bearer\s+(\S.*)$/.exec(auth.trim()) : null;
+      if (!m || s.key) return false;
+      const done = require('./service-keys').adopt('home-assistant', { origin: s.url, key: m[1].trim(), note: 'Home Assistant — its MCP server and the Home page' });
+      if (done === 'differs') return false;   // another token already has the name: leave both as they are
+      delete s.headers.Authorization;
+      s.key = 'home-assistant';
+      return true;
+    } }] },
 ];
 
 const appliedIn = p => new Set(Array.isArray(p?.migrations?.applied) ? p.migrations.applied : []);
