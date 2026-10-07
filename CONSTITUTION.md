@@ -71,7 +71,9 @@ use; every part has its function and they work symbiotically.
 
 **OpenClaw and OpenDots, with eyes** (2026-10-07). A UI that lets a person see everything that is happening, if
 they want to — seen as it happens, not narrated by the agent; nothing runs unseen or unattributed — and that links
-all their devices. What a person does today by texting an agent, with everything that counts in view as well.
+all their devices. Nothing runs unseen, but it can be unrendered: the show comes from the panel drawing the work in
+its existing, designated tabs, not from the models; when those tabs are not open, the work is only logged — and the
+log has its own settings, so it never fills memory or disk needlessly. What a person does today by texting an agent, with everything that counts in view as well.
 
 **Every device, by any means.** Installing a client makes a device part of the hive, and DOCA reaches every device
 it can by any means possible — computers, phones, watches, the home's smart devices, desktops it navigates — so a
@@ -217,6 +219,9 @@ words.)*
   after the person's permission. Spending has its own settings page, which the agent may also manage with the
   person's permission; a permission the person asks to make permanent stays permanent; what a person may allow
   follows their level. Nothing is spent unasked. (2026-10-07)
+- **S14 Important and safety switches ask for the password.** Turning on or off anything that governs safety or
+  what agents may do — approval modes, developer mode, sharing, spending, reach, levels, the guards — asks for the
+  person's password again, however recently they signed in. (2026-10-07)
 - **S5 Admin and developer mode are internal.** Experiments live under developer mode, which is an admin's;
   admin is for the repository's owners, independent testers and private copies. A customer's install never meets
   the experiments. Whether a licensed reseller gets admin to personalise the dashboard for their own customers is
