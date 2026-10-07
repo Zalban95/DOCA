@@ -69,14 +69,21 @@ the project's managers only if the owner allows sharing specialists and skills (
   install → person → screen) the agent edits when asked to "change the UI", surviving updates — never a repo change.
 - [ ] P1.3 **Secrets used, never read, on any device (S4)**: a sealed secret handed to a device's input for a set
   number of uses, then forgotten — `computer_login`'s fill, generalised to phones, desktops and the browser extension.
-- [ ] P1.4 **Work persists until done (V10)**: experts that wait on each other's files (a dependency between
-  missions/work chats); "done" = delivered and opened/read; the Orchestrator resumes unfinished projects after a
+- [ ] P1.4 **Work persists until done (V10)**: each plan step carries a contract ("done when …", with a check the
+  hub runs where one exists) and the plan is finished when all hold; experts that wait on each other's files (a
+  dependency between missions/work chats); the Orchestrator resumes unfinished projects after a
   restart on its own unless the person archived, forgot or deleted them; one message where the person is.
 - [ ] P1.5 **Guided set-up and the two shapes (§1)**: a first conversation that asks what the person needs and sets
   it up; a hub that picks models for its machine from what other installs tested (shared only with consent, like
   skills); providers' options offered when the machine cannot bear something.
-- [ ] P1.6 **Spending with permission (S12)**: a linked payment method, a spend asked each time — its own safety
-  design first.
+- [ ] P1.6 **Spending with permission (S12)**: a Spending settings page (budgets, a linked payment method, standing
+  permissions), managed by the agent with the person's permission; a permission can be made permanent; what may be
+  allowed follows the level — its own safety design first.
+- [ ] P1.9 **Reach by level (S2)**: each level says how far agents may reach into its people's devices and machines,
+  a scale from "create safely with tools" to "anything"; the shipped levels get sensible rungs.
+- [ ] P1.10 **Resources allocated (S13)**: machines, devices, models, services, keys and budgets allocated to users
+  by the admin, with grantable "may allot" for team leaders; a personal panel change follows its person to all
+  their devices.
 - [ ] P1.7 **Nothing coded is lost (W14)**: H10.7's tooling hides unused paths from the default instead of archiving
   them off main; an index of every feature the agents read so they know what exists.
 - [ ] P1.8 **See everything, unnarrated (§1)**: an audit that every running thing (models, specialists, services,

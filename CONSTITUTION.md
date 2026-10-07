@@ -45,6 +45,9 @@ their own installation — the panel's own look and layout included — is done 
 (settings, parameters), never as a change to the code; updates may add safety, never take versatility or
 functionality away. (2026-10-07)
 
+**Built first for the person who wants to see everything.** The foundation offers everything; a person who does
+not care to see or understand it gets the same work, unrendered — never a smaller product. (2026-10-07)
+
 Whoever touches the code keeps this in mind first. A change that serves one person's setup instead of everyone's,
 or that leaves a capable request undone when a safe way exists, is wrong whatever else it gets right.
 
@@ -115,9 +118,13 @@ words.)*
 - **V10 Work goes on until it is finished, or the person releases it.** The Orchestrator manages everything the
   person asked for and keeps it going until it is done; only the person ends it early — archive, forget or delete.
   Experts work in parallel; work that needs another's output waits for it, takes the files and carries on. When it is
-  done, one message reaches the person where they are — the open chat, the device that asked, or all of them. It is
-  done once that message is opened or read, unless it needs the person (publish it, delete it, change it): their
-  answer is the next instruction. Risky or visual work is tested on the agents' own temporary computers until the
+  done, one message reaches the person where they are — the open chat, the device that asked, or all of them.
+  **Finished means every contract in the plan is fulfilled**: each step of a plan carries its contract — a plain
+  "done when …" any model can write and read, with a check the hub can run where one exists (a test passes, a page
+  answers, a file is there) — and the work is reported finished when all of them hold. The person can ask for changes
+  at any time; a delivered result that needs them (publish it, delete it, change it) waits for their answer, which is
+  the next instruction. *(Contracts inside plans is the agents' choice for the broadest set of models; setups for
+  specific models may come later.)* Risky or visual work is tested on the agents' own temporary computers until the
   requirements hold, and reported then. (2026-10-07)
 - **V11 Stop means stop, visibly.** A person's Stop ends that work and the control to do it is in view; closing
   finished work sets nothing off; work that stopped for any reason is reported, with restart or drop. (2026-10-06)
@@ -191,8 +198,14 @@ words.)*
   way back (P17): "hands off the wheel is fine". What the agent wants on its own initiative — settings, installs,
   plans, schedules, form values (✨ fills a draft) — is proposed, and a person decides. Anything that widens what
   agents may do is S11's. Scout suggestions reach TODO only when a person accepts them. (2026-09-14, 10-06/07)
-- **S2 An agent acts at its person's level.** Exceptions are grants from someone holding `delegate`, never beyond
-  the giver's own rights (`docs/design/permissions.md`). (2026-10-04)
+- **S2 An agent acts at its person's level — and so does its reach.** What it may do on a person's devices and
+  machines follows that person's level, on a logical scale from creating safely with tools to doing anything.
+  Exceptions are grants from someone holding `delegate`, never beyond the giver's own rights
+  (`docs/design/permissions.md`). (2026-10-04, 10-07)
+- **S13 Resources are allocated, and changes are personal.** Not every resource is everyone's: the admin creates
+  users and levels, allocates resources (machines, devices, models, services, keys, budgets) to them, and can give
+  others the power to grant specific permissions — a team leader allots resources to their own people. A change a
+  person makes to their own panel is theirs, on every device of theirs; ten users, ten panels. (2026-10-07)
 - **S3 Bulk approval is explicit.** "Approve all" and "always" on a phone or watch are explicit permissions.
   (2026-10-04)
 - **S4 Secrets are used, never read.** An agent can use any secret its work needs — send it, type it, log in with it
@@ -200,8 +213,10 @@ words.)*
   is done (the hub's keys, logins, and the like on any device). An agent sees whether a secret field is filled, never
   its value. Secrets move only when needed, into the hub's protected keys — never into a repo, a log or a message.
   Anything exposed in this private repo is rotated before it ever becomes public. (2026-10-04/06)
-- **S12 Spending is the person's, asked each time.** With a payment method linked, the product may buy a service the
-  work needs — after asking the person's permission for that spend; nothing is spent unasked. (2026-10-07)
+- **S12 Spending is the person's.** With a payment method linked, the product may buy a service the work needs —
+  after the person's permission. Spending has its own settings page, which the agent may also manage with the
+  person's permission; a permission the person asks to make permanent stays permanent; what a person may allow
+  follows their level. Nothing is spent unasked. (2026-10-07)
 - **S5 Admin and developer mode are internal.** Experiments live under developer mode, which is an admin's;
   admin is for the repository's owners, independent testers and private copies. A customer's install never meets
   the experiments. Whether a licensed reseller gets admin to personalise the dashboard for their own customers is
