@@ -117,7 +117,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   `mcp.listener stop`, `confirmPromptChoice`'s body (§12.6 `{selectionId, decision}`), the native wake word, the
   watch's line in Settings → Updates, `seen` on opening a finished notice and clearing it on `seenAt` (PROTOCOL §11.4, hub 2.282); DocaWear: the LAN port, the same `seen`; DocaDesk: the socket transport, `prompt.outcome`.
 - Real-hardware checks: DocaMobile 1.0.16's answer buttons, DocaWear 1.2.5's QUEUED, the watch call and updater.
-- T1: `test/doca-client.test.js` under load (not reproduced with 4× parallel runs and 24 busy cores); the machines screenshot test ("a picture of it") failed once on Windows CI for 2.279.0, passed on re-run — likely two headless browsers at once (page-check's test and machines' shots) on a slow runner. 2.283.1: on Windows a stopped job now takes its whole tree with it (taskkill /T — a dev server outlived its job), the shots browser no longer holds the process open and a screenshot that never answers fails after 15 s; machines.test.js had timed out at 120 s on Windows for 2.282.0. 2.286.1: the headless browser's DevTools port file is read again when Windows has it locked (EBUSY failed the smoke run on Windows for 2.285.0).
+- T1: `test/doca-client.test.js` under load — solved 2026-10-07 (the runner's stdout parsing, see T1 below); the machines screenshot test ("a picture of it") failed once on Windows CI for 2.279.0, passed on re-run — likely two headless browsers at once (page-check's test and machines' shots) on a slow runner. 2.283.1: on Windows a stopped job now takes its whole tree with it (taskkill /T — a dev server outlived its job), the shots browser no longer holds the process open and a screenshot that never answers fails after 15 s; machines.test.js had timed out at 120 s on Windows for 2.282.0. 2.286.1: the headless browser's DevTools port file is read again when Windows has it locked (EBUSY failed the smoke run on Windows for 2.285.0).
 - Wave E (E1–E4) with the owner's brief: themes (keep dark and light, the current look kept, bold alternatives as
   themes), edit-ability features, the clients included — started by the owner's `/design`.
 - The hive backlog's open H-items below stay as written; they are urgent in this order after the above.
@@ -189,7 +189,16 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   be caught (a post-turn check of claims against the calls, said in the answer); (2) case 8 read the android-app skill
   and then improvised Gradle and adb anyway; (3) an eval's sandbox copies the MCP servers, so a case can call the real
   phone's tools (it read `apps_list`) — evals should run with client-hosted servers stopped, or say they may not.
-- [ ] T1 **`test/doca-client.test.js` fails in a full `npm test` now and then** (three times on 2026-10-06/07, and
+- [x] T1 **`test/doca-client.test.js` fails in a full `npm test` now and then** — *2026-10-07: not timing but Node's
+  test runner (22.22). It reads a test file's stdout as its own framed messages with plain text between them, and after
+  a message it reads the next bytes as a frame's length without checking for a frame's header: a line beginning "✓"
+  (third byte 0x93) arriving in the same pipe read right behind a frame gives a negative length and "Unable to
+  deserialize cloned data" — every recorded failure of this file was that crash. Pipe reads coalesce only when the
+  runner reads slowly, hence "under load". Reproduced at will by pausing the runner (SIGSTOP/CONT): 7 of 15 runs failed
+  before, 0 of 25 after (and 0 of 10 for sealed-secrets.test.js, which printed the same line); 48 more runs under 48
+  busy cores beside a full `npm test`, all green. Fix: `doca-client run()` takes `log` (the terminal by default) and
+  both tests keep its line instead of printing it — the doca-client test now asserts what it says. A test must not
+  print a line starting with a non-ASCII character to stdout (stderr is not parsed).* (three times on 2026-10-06/07, and
   `test/launcher.test.js` once, both under load) and passes alone: find the timing it depends on, rather than retry.
   Three full runs in a row with nothing else running passed (2026-10-07): it is load, not order.
 - [x] B7b **What routing measured** — *2026-10-07, re-measured on the IQ3_S quantisation in fresh sandboxes: 11/11 with the flag off and on (35 % fewer tokens on), no grep through shell, install_propose used; the earlier "ended during case 8" was the eval's unref'd timer (fixed 2.257.1). docs/experiments/tool-tiers.md.* (2026-10-07, local Qwen 3.8 27B): grep through `shell` instead of `search_files`, and

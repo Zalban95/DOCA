@@ -67,7 +67,7 @@ test('a device takes its own seal key with its token; the agent cannot reach the
   const start = await H.api(null, 'POST', '/api/devices/pair', { name: 'laptop', preset: 'phone' });
   const cfg = await client.pair(H.base, start.body.code, { name: 'laptop' });
   deviceId = cfg.deviceId;
-  lending = await client.run({ grant: ['device'], bind: '127.0.0.1', port: 0, root: dir });
+  lending = await client.run({ grant: ['device'], bind: '127.0.0.1', port: 0, root: dir, log: () => {} })   // not printed: see doca-client.test.js;
   assert.ok(lending.cfg.sealKey, 'taken at run');
   const again = await H.api(cfg.token, 'GET', '/api/v1/mcp/self/seal');
   assert.equal(again.body.key, lending.cfg.sealKey, 'the same key each time');
