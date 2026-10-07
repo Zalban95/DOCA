@@ -17,6 +17,18 @@ const failures = require('./failures');
  *           client?: object, profile?: object, isMission: boolean, step: number,
  *           say: (evt: object) => void, announced: Set<string> }} ctx
  */
+/**
+ * A person's own turn (CONSTITUTION S1: their request is the decision): a person on the turn, writing themselves — not
+ * a paired agent, a mission or a specialist, and not an automatic turn the supervisor started. The Orchestrator's and a
+ * work chat's profiles are the conversation a person writes in, so they count; it used to be "no profile at all",
+ * which the Orchestrator always has, so a request in the main chat was never applied at once (found 2026-10-07).
+ */
+function byPerson({ client, isMission, profile, sessionId }) {
+  if (!client?.user?.id || client.kind === 'agent' || isMission) return false;
+  if (profile && profile.level !== 'orchestrator' && profile.level !== 'work') return false;
+  return !require('./lifecycle').isAuto(sessionId);
+}
+
 async function runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced }) {
   for (const tc of reply.tool_calls) {
     const name = require('../tools').ALIASES[tc.function?.name] || tc.function?.name || '(unnamed)';   // an old name runs as its new one
@@ -82,7 +94,7 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
         ? `Error: the "${name}" tool is switched off for this conversation.`
         : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), emit: evt => say({ ...evt, step }), sessionId: session.id, signal, approved: !!gate, user: client?.user, screen: require('../screen-proposals').screenOf(client), airlock: !!profile?.airlock,
           // A person's own turn (S1: their request is the decision) — not an automatic turn, a mission or a specialist.
-          byPerson: !!client?.user?.id && client?.kind !== 'agent' && !isMission && !profile }));
+          byPerson: byPerson({ client, isMission, profile, sessionId: session.id }) }));
     tiers.afterCall(session.id, profile, name, result, stepDisabled);   // toolTiers: what was called or read about stays loaded
     for (const image of shown) say({ type: 'image', image, step });
     say({ type: 'tool_result', name, result, step, ...failures.typed(result) });
@@ -103,4 +115,4 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
   }
 }
 
-module.exports = { runToolCalls };
+module.exports = { byPerson, runToolCalls };
