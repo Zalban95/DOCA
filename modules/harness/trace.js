@@ -48,8 +48,10 @@ function onEvent(evt) {
     }
     case 'tool_result': {
       const started = (t.open.get(evt.name) || []).shift();
+      const risk = t.risks?.get(evt.name)?.shift();   // experiment riskTiers: the tier and its way back (fixed words, a checkpoint id)
       return write(t, 'tool', { name: evt.name, step: evt.step, ms: started ? Date.now() - started : null, data: {
-        args: t.args?.get(evt.name)?.shift() || [], chars: String(evt.result ?? '').length, failure: evt.failure?.kind || null } });
+        args: t.args?.get(evt.name)?.shift() || [], chars: String(evt.result ?? '').length, failure: evt.failure?.kind || null,
+        ...(risk ? { tier: risk.tier, way: risk.way || null, why: risk.why || null } : {}) } });
     }
     case 'approval':
       return write(t, 'approval', { name: evt.tool || null, step: evt.step, data: { state: evt.state, decision: evt.decision || null } });
@@ -73,6 +75,8 @@ function remember(evt) {
   const list = t.args.get(evt.name) || [];
   list.push(argNames(evt.args));
   t.args.set(evt.name, list);
+  t.risks ||= new Map();
+  t.risks.set(evt.name, [...(t.risks.get(evt.name) || []), evt.risk || null]);
 }
 
 let subscribed = false;

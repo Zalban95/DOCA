@@ -57,7 +57,9 @@ function onEvent(evt) {
     let args = evt.args;
     if (typeof args === 'string') { try { args = JSON.parse(args); } catch { args = {}; } }
     if ((evt.name === 'write_file' || /__(files?_)?write/.test(evt.name || '')) && args?.path) sentinel.include(path.dirname(String(args.path)));
-    return say(evt.sessionId, 'command', command(evt.name || 'tool', args || {}), { tool: evt.name || null });
+    // Experiment riskTiers: the call's tier and its way back, so what can be undone is seen as the work happens.
+    const risk = evt.risk ? { tier: evt.risk.tier, way: evt.risk.way || null, why: evt.risk.why || null } : {};
+    return say(evt.sessionId, 'command', command(evt.name || 'tool', args || {}), { tool: evt.name || null, ...risk });
   }
   if (evt.type === 'tool_result') {
     const first = String(evt.result ?? '').split('\n').find(l => l.trim()) || '(no output)';
