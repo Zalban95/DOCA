@@ -10,6 +10,12 @@ const os   = require('os');
 const path = require('path');
 const http = require('http');
 
+// modules/paths.js reads the prefs file's and OpenClaw config's places once, when it is first required. Loaded before
+// this file, it holds the REAL ones, and a test then writes the owner's settings (2026-10-07: a test that required a
+// module first set the live harness to its stub and overwrote ~/.openclaw/openclaw.json). Refuse rather than run.
+const early = Object.keys(require.cache).find(f => /[\\/]modules[\\/]paths\.js$/.test(f));
+if (early) throw new Error(`test/helpers.js must be required before any module: ${early} was loaded first and holds the real settings paths.`);
+
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-test-'));
 // Gone when the test process ends: every run used to leave its folder behind (12,000 of them by 2026-10-05).
 process.on('exit', () => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* still in use on Windows: the OS's temp cleaner */ } });

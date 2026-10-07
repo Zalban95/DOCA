@@ -3,6 +3,7 @@
 /** turn/claims.js (experiment claimCheck, TODO B7c): an answer claiming what no call made gets one more step. */
 const test   = require('node:test');
 const assert = require('node:assert/strict');
+const H      = require('./helpers');   // first: it points the settings at a temporary folder (see its top)
 const claims = require('../modules/harness/turn/claims');
 
 const held = new Set(['memory_write', 'remind', 'settings_propose', 'git', 'tell_device', 'install_propose']);
@@ -33,7 +34,7 @@ test('the check is off with the flag, once per turn, and its note names the tool
 });
 
 test('a real turn: the claim is caught, the next step makes the call, and only once', async () => {
-  const H = require('./helpers'), http = require('node:http'), fs = require('node:fs');
+  const http = require('node:http'), fs = require('node:fs');
   const experiments = require('../modules/experiments'), memory = require('../modules/harness/memory');
   await H.start();
   const sse = frames => res => { res.writeHead(200, { 'Content-Type': 'text/event-stream' }); for (const f of frames) res.write(`data: ${JSON.stringify(f)}\n\n`); res.end('data: [DONE]\n\n'); };
