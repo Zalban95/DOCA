@@ -17,8 +17,9 @@ and since 2025 it is an MCP server. Once it is connected, every device the owner
    for it in chat, never write it anywhere.
 3. In DOCA: MCP tab → From the catalogue → **Home Assistant** (or propose it: `install_propose {kind: "mcp", id:
    "home-assistant"}`). It is added off, with `http://homeassistant.local:8123/api/mcp`; the person edits the address
-   if theirs differs and puts the token after `Bearer ` in the Authorization header, then starts it (`mcp_connect`
-   once they have).
+   if theirs differs, and pastes the token once in Field → Connectors → Keys for services as the key
+   `home-assistant` for that address (the hub adds it when it connects; the Home page reads the same key), then starts
+   it (`mcp_connect` once they have).
 4. Check: `mcp_status` lists its tools — `HassTurnOn`, `HassTurnOff`, `HassLightSet`, `HassClimateSetTemperature`,
    `GetLiveContext` (what every exposed entity is doing now) and the scripts they exposed.
 

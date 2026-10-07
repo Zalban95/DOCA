@@ -73,12 +73,14 @@ test('assistant mode answers in its own style; the agent can change a conversati
   assert.equal((await H.api(null, 'POST', '/api/assistant', { effort: 'extreme' })).status, 400);
 });
 
-test('Home Assistant is in the MCP catalogue as a server at an address, added off with an empty token', async () => {
+test('Home Assistant is in the MCP catalogue as a server at an address, added off, its token a key for services', async () => {
   const cat = require('../modules/mcp/catalog');
   assert.equal(cat.list().find(c => c.id === 'home-assistant').command, 'http://homeassistant.local:8123/api/mcp');
   const row = await cat.add('home-assistant');
   assert.equal(row.transport, 'http');
   assert.equal(row.autostart, false);
+  assert.equal(row.key, 'home-assistant');
+  assert.deepEqual(row.headers, {}, 'no token in the server\'s headers');
 });
 
 test('a spoken turn is told to act without narrating a visible result, to be right first, and to hand hard work to agents', async () => {

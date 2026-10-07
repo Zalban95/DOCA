@@ -19,12 +19,14 @@ const CATALOG = [
       + 'record performance traces. Headless and isolated. Needs Node and an installed Chrome.',
     command: 'npx', args: ['-y', 'chrome-devtools-mcp@latest', '--headless', '--isolated'], needs: ['npx'] },
   // A server at an address rather than a command: the building's own (skills/smart-home). Added with its default address
-  // and an empty token, which the person fills in the MCP tab (headers are masked there and never proposable).
+  // and its token named as a key for services (`home-assistant`, since 2.266.0): the person pastes it once in Field →
+  // Connectors → Keys for services, where the Home page reads it too; the hub adds it when it connects (registry.withKey).
   { id: 'home-assistant', label: 'Home Assistant — the building: lights, climate, covers, sensors, scenes',
     about: 'Home Assistant\'s own MCP server (Settings → Devices & services → Add "Model Context Protocol Server" in Home Assistant): '
       + 'the entities you expose to Assist become tools — turn on and off, set lights and climate, read sensors, run scripts and scenes. '
-      + 'Fill in its address and a long-lived access token (your Home Assistant profile → Security) in the MCP tab.',
-    transport: 'http', url: 'http://homeassistant.local:8123/api/mcp', headers: { Authorization: 'Bearer ' }, needs: [] },
+      + 'Set its address in the MCP tab, and paste a long-lived access token (your Home Assistant profile → Security) as the key '
+      + '"home-assistant" for that address in Field → Connectors → Keys for services.',
+    transport: 'http', url: 'http://homeassistant.local:8123/api/mcp', headers: {}, key: 'home-assistant', needs: [] },
 ];
 
 const get = id => CATALOG.find(c => c.id === id) || null;
@@ -59,7 +61,7 @@ async function add(id) {
   if (!c) throw Object.assign(new Error(`No catalogue server "${id}". The catalogue has: ${CATALOG.map(x => x.id).join(', ')}`), { status: 404 });
   const done = await module.exports.setup(c);   // through exports, so a test can stand in for the download
   if (!done.ok) throw Object.assign(new Error(`Setting up ${c.label} failed (${(c.setup || []).join(' ')}):\n${done.log.trim().split('\n').slice(-6).join('\n')}`), { status: 500 });
-  if (c.transport === 'http') return require('./registry').upsert({ id: c.id, label: c.label, transport: 'http', url: c.url, headers: { ...c.headers }, autostart: false });
+  if (c.transport === 'http') return require('./registry').upsert({ id: c.id, label: c.label, transport: 'http', url: c.url, headers: { ...c.headers }, ...(c.key ? { key: c.key } : {}), autostart: false });
   return require('./registry').upsert({ id: c.id, label: c.label, transport: 'stdio', command: c.command, args: c.args, autostart: false });
 }
 
