@@ -28,6 +28,7 @@ const PREFS = [
   ['sharing', 'sharing with the project'],
   ['network', 'how the hub listens'],
   ['tracing', 'what is kept of each turn'],
+  ['logs', 'what is kept of what happened'],
   ['usagePrices', 'the prices money budgets are counted in', () => moneyBudgets()],
 ];
 
@@ -77,6 +78,7 @@ const ROUTES = [
   [['POST'], /^\/api\/developer\/releasing$/, 'who may release unasked'],
   [['POST'], /^\/api\/sharing$/, 'sharing with the project'],
   [['POST'], /^\/api\/network$/, 'how the hub listens'],
+  [['POST'], /^\/api\/logs\/keep$/, 'what is kept of what happened'],
   [W, /^\/api\/auth\/(levels|grants)(\/.*)?$/, 'levels, reach and grants'],
   [W, /^\/api\/auth\/users(\/[^/]+)?$/, 'who has an account, and at what level'],
   [['POST'], /^\/api\/auth\/users\/[^/]+\/password$/, 'another person\'s password'],

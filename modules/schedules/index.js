@@ -71,6 +71,7 @@ async function runNow(id) {
   if (!person) { patch(id, { state: 'paused', last: { ok: false, summary: 'Paused: the person it runs as is gone or suspended.', at: new Date().toISOString() } }); return get(id); }
   const client = { name: `Schedule · ${s.title}`, kind: 'schedule', user: person };
   patch(id, { lastAt: new Date().toISOString(), runs: (s.runs || 0) + 1 });
+  require('../activity').note({ from: 'schedules', what: `ran "${s.title}" (${s.kind || 'turn'})`, why: 'its time came', person });
   let last;
   try {
     if (s.kind === 'reminder') {

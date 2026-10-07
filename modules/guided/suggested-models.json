@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "updated": "2026-10-07",
+  "source": "project-tested",
+  "about": "Open models the project suggests per role, with what each needs at the quantization it is served in (GB of GPU memory to run it, GB of RAM, GB of disk). Ollama's tags; speech runs as the panel's own services in Docker. A newer list arrives from the project's hub only when the owner shares with the project (sharing.js) and replaces this one when its version is higher. Figures are the model's size at that quantization plus room for its context; installs that measure better numbers report them back the same way.",
+  "roles": {
+    "chat": { "label": "Talking and directing the work (the agent's own model)" },
+    "coding": { "label": "Writing and fixing code" },
+    "vision": { "label": "Reading pictures and screens" },
+    "embeddings": { "label": "Finding things by meaning" },
+    "stt": { "label": "Hearing you (speech to text)" },
+    "tts": { "label": "Speaking (text to speech)" }
+  },
+  "models": [
+    { "role": "chat", "id": "qwen3:4b", "label": "Qwen3 4B", "quant": "Q4_K_M", "released": "2025-04-29", "needs": { "vramGB": 3.5, "ramGB": 6, "diskGB": 2.6 }, "install": { "kind": "ollama-model", "id": "qwen3:4b" }, "runtime": "ollama" },
+    { "role": "chat", "id": "qwen3:8b", "label": "Qwen3 8B", "quant": "Q4_K_M", "released": "2025-04-29", "needs": { "vramGB": 6.5, "ramGB": 10, "diskGB": 5.2 }, "install": { "kind": "ollama-model", "id": "qwen3:8b" }, "runtime": "ollama" },
+    { "role": "chat", "id": "qwen3:14b", "label": "Qwen3 14B", "quant": "Q4_K_M", "released": "2025-04-29", "needs": { "vramGB": 11, "ramGB": 16, "diskGB": 9.3 }, "install": { "kind": "ollama-model", "id": "qwen3:14b" }, "runtime": "ollama" },
+    { "role": "chat", "id": "qwen3:30b", "label": "Qwen3 30B (A3B)", "quant": "Q4_K_M", "released": "2025-04-29", "needs": { "vramGB": 20, "ramGB": 24, "diskGB": 19 }, "install": { "kind": "ollama-model", "id": "qwen3:30b" }, "runtime": "ollama" },
+    { "role": "chat", "id": "gpt-oss:20b", "label": "gpt-oss 20B", "quant": "MXFP4", "released": "2025-08-05", "needs": { "vramGB": 14, "ramGB": 16, "diskGB": 14 }, "install": { "kind": "ollama-model", "id": "gpt-oss:20b" }, "runtime": "ollama" },
+    { "role": "chat", "id": "gpt-oss:120b", "label": "gpt-oss 120B", "quant": "MXFP4", "released": "2025-08-05", "needs": { "vramGB": 66, "ramGB": 80, "diskGB": 65 }, "install": { "kind": "ollama-model", "id": "gpt-oss:120b" }, "runtime": "ollama" },
+
+    { "role": "coding", "id": "qwen2.5-coder:7b", "label": "Qwen2.5 Coder 7B", "quant": "Q4_K_M", "released": "2024-11-12", "needs": { "vramGB": 6, "ramGB": 10, "diskGB": 4.7 }, "install": { "kind": "ollama-model", "id": "qwen2.5-coder:7b" }, "runtime": "ollama" },
+    { "role": "coding", "id": "qwen2.5-coder:14b", "label": "Qwen2.5 Coder 14B", "quant": "Q4_K_M", "released": "2024-11-12", "needs": { "vramGB": 11, "ramGB": 16, "diskGB": 9 }, "install": { "kind": "ollama-model", "id": "qwen2.5-coder:14b" }, "runtime": "ollama" },
+    { "role": "coding", "id": "qwen3-coder:30b", "label": "Qwen3 Coder 30B (A3B)", "quant": "Q4_K_M", "released": "2025-07-31", "needs": { "vramGB": 20, "ramGB": 24, "diskGB": 19 }, "install": { "kind": "ollama-model", "id": "qwen3-coder:30b" }, "runtime": "ollama" },
+
+    { "role": "vision", "id": "qwen2.5vl:3b", "label": "Qwen2.5-VL 3B", "quant": "Q4_K_M", "released": "2025-05-20", "needs": { "vramGB": 4, "ramGB": 8, "diskGB": 3.2 }, "install": { "kind": "ollama-model", "id": "qwen2.5vl:3b" }, "runtime": "ollama" },
+    { "role": "vision", "id": "qwen2.5vl:7b", "label": "Qwen2.5-VL 7B", "quant": "Q4_K_M", "released": "2025-05-20", "needs": { "vramGB": 7, "ramGB": 12, "diskGB": 6 }, "install": { "kind": "ollama-model", "id": "qwen2.5vl:7b" }, "runtime": "ollama" },
+    { "role": "vision", "id": "gemma3:12b", "label": "Gemma 3 12B", "quant": "Q4_K_M", "released": "2025-03-12", "needs": { "vramGB": 10, "ramGB": 16, "diskGB": 8.1 }, "install": { "kind": "ollama-model", "id": "gemma3:12b" }, "runtime": "ollama" },
+    { "role": "vision", "id": "qwen2.5vl:32b", "label": "Qwen2.5-VL 32B", "quant": "Q4_K_M", "released": "2025-05-20", "needs": { "vramGB": 24, "ramGB": 32, "diskGB": 21 }, "install": { "kind": "ollama-model", "id": "qwen2.5vl:32b" }, "runtime": "ollama" },
+
+    { "role": "embeddings", "id": "nomic-embed-text", "label": "Nomic Embed Text", "quant": "F16", "released": "2024-02-14", "cpuOk": true, "needs": { "vramGB": 0.5, "ramGB": 1, "diskGB": 0.3 }, "install": { "kind": "ollama-model", "id": "nomic-embed-text" }, "runtime": "ollama" },
+    { "role": "embeddings", "id": "embeddinggemma", "label": "EmbeddingGemma 300M", "quant": "BF16", "released": "2025-09-04", "cpuOk": true, "needs": { "vramGB": 1, "ramGB": 2, "diskGB": 0.7 }, "install": { "kind": "ollama-model", "id": "embeddinggemma" }, "runtime": "ollama" },
+
+    { "role": "stt", "id": "whisper", "label": "Whisper (faster-whisper)", "quant": "service", "released": "2024-10-01", "cpuOk": true, "needs": { "vramGB": 2, "ramGB": 3, "diskGB": 6 }, "install": { "kind": "service", "id": "whisper" }, "runtime": "docker" },
+    { "role": "tts", "id": "kokoro", "label": "Kokoro", "quant": "service", "released": "2025-01-10", "cpuOk": true, "needs": { "vramGB": 2, "ramGB": 3, "diskGB": 5 }, "install": { "kind": "service", "id": "kokoro" }, "runtime": "docker" }
+  ],
+  "hosted": {
+    "chat": ["deepseek", "openai", "anthropic", "google", "openrouter", "mistral", "groq", "xai", "together", "cerebras"],
+    "coding": ["deepseek", "anthropic", "openai", "google", "openrouter", "mistral"],
+    "vision": ["openai", "google", "anthropic", "openrouter", "mistral"],
+    "embeddings": ["openai", "google", "mistral", "together"],
+    "stt": [],
+    "tts": []
+  },
+  "hostedNote": {
+    "stt": "No hosted speech service is wired in yet: hearing you needs Docker on this machine (Whisper runs on the CPU too) or a speech server elsewhere on your network (Settings → Voice).",
+    "tts": "No hosted speech service is wired in yet: speaking needs Docker on this machine (Kokoro runs on the CPU too) or a speech server elsewhere on your network (Settings → Voice)."
+  },
+  "keyPages": {
+    "openai": "https://platform.openai.com/api-keys",
+    "anthropic": "https://console.anthropic.com/settings/keys",
+    "google": "https://aistudio.google.com/apikey",
+    "groq": "https://console.groq.com/keys",
+    "openrouter": "https://openrouter.ai/keys",
+    "mistral": "https://console.mistral.ai/api-keys",
+    "deepseek": "https://platform.deepseek.com/api_keys",
+    "xai": "https://console.x.ai",
+    "together": "https://api.together.xyz/settings/api-keys",
+    "cerebras": "https://cloud.cerebras.ai"
+  }
+}

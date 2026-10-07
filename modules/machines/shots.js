@@ -31,6 +31,7 @@ async function launch() {
     _proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${_profile}`, '--no-first-run', '--no-default-browser-check',
       '--disable-gpu', '--window-size=1280,800', '--mute-audio', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
     _proc.on('exit', () => close());
+    _proc.unref();   // a browser that is slow to go never holds the hub (or a test) open
     _port = await h.devtools(_profile);
     return _port;
   })().finally(() => { _starting = null; });
@@ -48,7 +49,9 @@ async function openTab(key, url) {
   let seq = 0;
   const pending = new Map();
   ws.onmessage = ev => { const m = JSON.parse(String(ev.data)); if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); } };
-  const send = (method, params = {}) => new Promise(r => { const id = ++seq; pending.set(id, r); ws.send(JSON.stringify({ id, method, params })); });
+  // A tab that never answers (a slow or hung page) fails the picture after 15 s instead of holding it forever.
+  const send = (method, params = {}) => new Promise(r => { const id = ++seq; pending.set(id, r); ws.send(JSON.stringify({ id, method, params }));
+    setTimeout(() => { if (pending.delete(id)) r({ error: { message: `${method} did not answer in 15 s` } }); }, 15000).unref?.(); });
   const tab = { url, id: t.id, send, ws, timer: null };
   const take = async () => {
     const r = await send('Page.captureScreenshot', { format: 'png' }).catch(e => ({ error: { message: e.message } }));

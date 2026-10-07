@@ -56,8 +56,10 @@ async function turn(options) {
   options.signal?.addEventListener('abort', abort, { once: true });
   if (options.signal?.aborted) ctrl.abort();
   // One record of how this turn goes (runs.js): the mission and the conversation read the same row.
-  const runId = require('./runs').begin({ sessionId: id, missionId: options.profile?.missionId || null, personId: options.client?.user?.id || null });
+  const runId = require('./runs').begin({ sessionId: id, missionId: options.profile?.missionId || null, personId: options.client?.user?.id || null,
+    detail: options.client ? { client: { id: options.client.id || null, kind: options.client.kind || null, name: options.client.name || null } } : null });   // which device asked (Chronicle)
   require('./trace').start(runId, id);   // and what it did, step by step (trace.js)
+  require('../features/usage').count('turn:builtin');   // what the one-shot adapters stand beside (features/alternatives.js)
   try {
     const profile = profileForTurn(session, options.profile);
     memory.updateSession(id, { state: 'running', lastError: null, seenAt: null });   // new work waits to be opened again (seen.js)

@@ -1,0 +1,47 @@
+'use strict';
+
+/**
+ * Settings → Set-up's routes (all a host's: setting up the machine is the owner's — auth/rights.js).
+ *
+ *   GET  /api/guided/state     whether the owner chose guided or advanced yet, and the hub's shape (cheap: no probing)
+ *   GET  /api/guided           the machine, the questions, the picks for every role, the answers kept
+ *   POST /api/guided/choose    {mode: guided|advanced} — the first-run choice; advanced changes nothing else
+ *   POST /api/guided/plan      {answers} — what they would set up, written nowhere
+ *   POST /api/guided/apply     {answers} — keep them, and put each install in front of the person as a proposal
+ */
+const machine = require('./assess');   // called through the module, so a test can stand in a made-up machine
+const suggestions = require('./suggestions');
+const plan = require('./plan');
+
+const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+
+async function overview() {
+  const a = await machine.assess();
+  const doc = suggestions.load();
+  const { pickAll, shapeOf } = require('./pick');
+  return {
+    ...plan.setup(),
+    machine: a,
+    shapeHere: shapeOf(a, doc),
+    picks: pickAll(a, doc),
+    uses: Object.entries(plan.USES).map(([id, u]) => ({ id, label: u.label })),
+    devices: Object.entries(plan.DEVICES).map(([id, d]) => ({ id, label: d.label })),
+    answers: plan.get(),
+    suggestions: suggestions.about(),
+  };
+}
+
+function mount(app) {
+  app.get('/api/guided/state', h(() => plan.setup()));
+  app.get('/api/guided', h(() => overview()));
+  app.post('/api/guided/choose', h(req => {
+    const mode = req.body?.mode;
+    if (!['guided', 'advanced'].includes(mode)) throw Object.assign(new Error('mode is guided or advanced'), { status: 400 });
+    return plan.setSetup({ mode });
+  }));
+  app.post('/api/guided/plan', h(async req => plan.plan(req.body?.answers || {}, await machine.assess(), suggestions.load())));
+  app.post('/api/guided/apply', h(async req => plan.apply(req.body?.answers || {}, await machine.assess(), suggestions.load(),
+    { by: req.auth?.user?.id || null })));
+}
+
+module.exports = { mount, overview };

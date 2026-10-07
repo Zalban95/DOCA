@@ -38,6 +38,7 @@ function missionEnded(missionId) {
       if (!now || now.pinned || now.missionId !== missionId) return;   // pinned, removed, or lent again
       if (require('../agents/missions').get(missionId)?.state === 'running') return;   // resumed
       computers.stop(c.id).catch(() => {});
+      require('../activity').note({ from: 'computers', what: `stopped ${c.name || c.id}`, why: `idle ${limit('idleStopMinutes')} min after its mission ${missionId} ended` });
     }, limit('idleStopMinutes') * 60000);
     t.unref?.();
     _timers.set(c.id, t);
@@ -53,7 +54,10 @@ async function sweep(now = Date.now()) {
     const row = computers.get(c.id);
     if (!row?.auto || row.pinned || c.state === 'running') continue;
     const since = Date.parse(row.stoppedAt || row.createdAt);
-    if (now - since > keep) { await computers.remove(c.id).catch(() => {}); gone.push(c.id); }
+    if (now - since > keep) {
+      await computers.remove(c.id).catch(() => {}); gone.push(c.id);
+      require('../activity').note({ from: 'computers', what: `removed ${c.name || c.id}, which an agent made`, why: `stopped more than ${limit('retainHours')} h and not pinned` });
+    }
   }
   return gone;
 }

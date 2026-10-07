@@ -14,6 +14,7 @@ function mount(app) {
   app.get('/api/host/capabilities', (req, res) => res.json(require('../host-capabilities').capabilities({ fresh: req.query.fresh === '1' })));
   require('./tab-routes').mount(app);
   require('../experiments').mount(app);
+  require('../features').mount(app);   // every feature ever built, and how much each kept alternative is used (features/)
   require('../releasing').mount(app);   // who may release DOCA unasked: the admin's setting (CONSTITUTION W2)
   require('../migrations').mount(app);   // which prefs migrations this install has had (migrations.js)   // experiments behind flags, each with its write-up (experiments.js)
   require('../search/routes').mount(app);
@@ -30,6 +31,7 @@ function mount(app) {
   require('../connectors/routes').mount(app);
   require('../api-v1/a2a').mountCard(app);   // the A2A agent card, public at /.well-known (api-v1/a2a.js)   // OAuth connectors: the owner's accounts as tools (connectors/)   // evaluation sets: run, results, import and export (evals/)   // retrieval: the embedding model, a try, the index (retrieval/)   // web search: the provider and its key (search/)
   require('../screens/routes').mount(app);   // a browser is a device: this screen's settings (screens/)
+  require('../guided/routes').mount(app);   // the set-up: what this machine bears, the questions, what they set up (guided/)
   require('../spending/routes').mount(app);   // Settings → Spending: what was spent, budgets, spending permissions (CONSTITUTION S12)
   require('../sharing').mount(app);   // offering what was learned to the project, if the owner allows (CONSTITUTION §0)
   require('../packs/routes').mount(app);   // packs: export and import in other tools' formats (packs/)
@@ -37,6 +39,8 @@ function mount(app) {
   require('../live/routes').mount(app);
   require('../screens/showing').mount(app);
   require('../archive').mount(app);
+  require('../log-keep').mount(app);    // what is kept of what happened, and its bounds (Settings → System → Logs)
+  require('../chronicle/routes').mount(app);   // Chronicle: everything that happened, and the story of a piece of work
   require('../workstream/routes').mount(app);
   require('../machines').mount(app);
   require('../network').mount(app);   // how the hub listens, what may be done from outside the tailnet, its addresses as QR codes   // the agents' machines live, and the pages they serve (machines/)   // the agents' work as it happens: files edited, thinking, commands   // what was put away, in one place (archive.js)   // what each screen shows, and sending a page to one   // every page live on every screen: one change feed (live/, H10.5)

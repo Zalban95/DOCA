@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "DOCA in this browser",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Lets your DOCA hive use the sites you allow in this browser, with your sign-ins — and ask you before it pays, signs in or submits.",
   "permissions": ["storage", "tabs", "scripting", "alarms"],
   "optional_host_permissions": ["https://*/*", "http://*/*"],

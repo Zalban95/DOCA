@@ -20,9 +20,11 @@ function afterListen({ certs = null, mode } = {}) {
   require('./channels/matrix').start().catch(() => {});     // the Matrix bot account, likewise
   require('./channels/slack').start().catch(() => {});      // and the Slack app
   require('./channels/mail').start().catch(() => {});       // and the mailbox
+  for (const ch of ['telegram', 'matrix', 'slack', 'mail'])  // what came back on with DOCA, written down (activity.js)
+    if (require('./settings-schema').value(`channels.${ch}.enabled`)) require('./activity').note({ from: 'channels', what: `${ch} is listening again`, why: 'a host switched it on; it resumes when DOCA starts' });
   require('./schedules').start();                     // turns and recipes on a timetable, as their person
   require('./scout').start();                         // the model scout, when switched on (an experiment)
-  require('./harness/trace').prune(); setInterval(() => require('./harness/trace').prune(), 86400000).unref();   // traces past tracing.retainDays
+  require('./log-keep').start();                      // what is kept of what happened, to its bounds: now and daily (logs.*, tracing.*)
   const devices = require('./api-v1/devices');         // audit 2026-09-26 §4f, N5: tidy the device registry
   devices.repairNames();
   require('./api-v1/bus').collectOrphans(devices.list().map(d => d.id));

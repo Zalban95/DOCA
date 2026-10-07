@@ -51,7 +51,11 @@ if (typeof document !== 'undefined' && typeof window !== 'undefined') {
   window.addEventListener('load', () => {
     if (!document.getElementById('chat-fab')) return;   // the panel only
     if (soloOn()) soloStart();
-    else if (/^#[a-z]+$/.test(location.hash) && NAV_TABS.includes(location.hash.slice(1))) nav(location.hash.slice(1));
+    else {
+      // `/#<page>`, and `/#settings/<section>` for a Settings section (an agent's link to Settings → Set-up, say).
+      const [, page, sub] = /^#([a-z]+)(?:\/([a-z-]+))?$/.exec(location.hash) || [];
+      if (page && NAV_TABS.includes(page)) { nav(page); if (sub && page === 'settings' && typeof settingsSubNav === 'function') settingsSubNav(sub); }
+    }
     const open = Object.assign(document.createElement('button'), { className: 'btn btn-xs solo-open', textContent: '⧉', title: 'Open this page by itself — for a screen of its own' });
     open.onclick = soloOpen;
     document.getElementById('header-search')?.before(open);

@@ -136,9 +136,10 @@ may add safety; it never removes something a person had.
 
 An agent uses a password, a token or a key without ever seeing it. Exists: provider keys and keys for services
 (the hub adds them to requests), logins typed into a computer's browser by a hidden tool, masking everywhere.
-Missing: the same on any device — a secret handed to a device's input for a set number of pastes and then forgotten,
-never readable by the agent (a "sealed clipboard"), as the general form of what `computer_login` does for one
-browser.
+Since P1.3: the same on any device — `secret_use` hands a secret to one of the person's own devices sealed for it,
+always asked, for one use or a set number of pastes and a short time, then forgotten there (doca-client types it or
+keeps it on the clipboard; the browser extension fills a field on the secret's own site). Missing: DocaMobile and
+DocaDesk (`docs/api/sealed-secrets.md`).
 
 ## Questions for the owner
 

@@ -105,16 +105,19 @@ const TABLE = [
   R(ANY, '/api/projects(/.*)?', 'host'),
   R(ANY, '/api/computers(/.*)?', 'host'),
   R(ANY, '/api/search/(settings|try)', 'host'),                // the web search provider and its key (search/routes.js)
+  R(ANY, '/api/screen/layout(/undo)?', 'read'),                 // one's own panel layout and this screen's; the install's default is checked as host inside (panel-layout/routes.js)
   R(ANY, '/api/screen(/settings|/profile)?', 'read'),          // one's own screen or device: how it looks and when it is asked, never how the hive behaves (screens/)
   R(GET, '/api/spending', 'read'),                              // what was spent: your own; everyone's for an admin (spending/routes.js)
   R(ANY, '/api/spending(/.*)?', 'chat'),                        // your own budget and permissions within your level; others' are `users`, checked there
   R(ANY, '/api/sharing(/.*)?', 'host'),                        // the owner's answer and the owner's click (sharing.js)
+  R(ANY, '/api/guided(/.*)?', 'host'),                         // setting up the machine: what it bears, what to install, which keys (guided/)
   R(ANY, '/api/packs(/.*)?', 'host'),                          // packs carry MCP commands, tool lists and memory (packs/routes.js)
   R(ANY, '/api/schedules(/.*)?', 'chat'),                     // one's own schedules; a host's, every one (schedules/routes.js)
   R(GET, '/api/live/stream', 'read'),                           // every page live: changes this viewer may open (live/routes.js)
   R(ANY, '/api/live/watch', 'host'),
   R(ANY, '/api/screens/.*', 'host'),
   R(ANY, '/api/archive(/.*)?', 'chat'),
+  R(GET, '/api/chronicle(/.*)?', 'read'),                      // what happened: each row the viewer's own unless host (chronicle/)
   R(ANY, '/api/workstream(/.*)?', 'host'),
   R(ANY, '/api/machines(/.*)?', 'host'),
   R(GET, '/api/hub/links', 'read'),                              // the hub's addresses, as QR codes a phone scans (network.js)
@@ -125,6 +128,7 @@ const TABLE = [
   R(GET, '/api/face/stream', 'chat'),                          // the face's feed, scoped to what the viewer may open (face/state.js)
   R(ANY, '/api/developer(/.*)?', 'host'),                        // who may release unasked (releasing.js): the admin's
   R(ANY, '/api/experiments(/.*)?', 'host'),                     // the owner's switches for experiments (experiments.js)
+  R(ANY, '/api/features(/.*)?', 'host'),                        // the feature index, usage, and hiding an unused alternative (features/)
   R('POST', '/api/recipes/[^/]+/(accept|discard)', 'host'),     // a repaired revision becomes automation: a host's call
   R('DELETE', '/api/recipes/[^/]+', 'host'),                   // a recipe the hive shares (recipes/routes.js)
   R(ANY, '/api/recipes(/.*)?', 'chat'),                       // reading, saving and running one: as the signed-in person

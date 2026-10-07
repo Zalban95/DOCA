@@ -13,13 +13,21 @@ Then accept its offer once in the hub (MCP tab). From then on the hub's agents c
 (`files_list/read/write/mkdir/move/copy/delete`, inside your home folder only), **shell** (`shell_run`), **screen**
 (`screen_capture`), **processes** (`processes_list`, `processes_stop`), **apps** (`apps_open`: a web address, or a file
 in your home folder) and **device** (`device_info`, `device_notify`, `device_clipboard_read/_write`) — only what you
-granted, and the hub's Files tab browses it. Keep `families.js` beside `doca-client.js`.
+granted, and the hub's Files tab browses it. Keep `families.js` and `sealed.js` beside `doca-client.js`.
 
 Each family uses what the OS already has. macOS and Windows need nothing more; on Linux the screen wants `grim`
 (Wayland) or ImageMagick's `import` / `scrot` / `gnome-screenshot` (X11), the clipboard `wl-clipboard` or `xclip`,
 notifications `notify-send` — a missing one is named in the answer, never guessed around. Revoking a family in the hub (its row in API Keys) stops it
 at once; `run` again re-offers after a restart. A hub's self-signed certificate is pinned at pairing and is the
 only one trusted afterwards; the listener binds to your tailnet address and answers only with its secret.
+
+**Secrets, used and never read.** With `device` lent, the hub can hand this machine a password or a key for one
+use — you are asked in DOCA every time — sealed with a key only this machine holds (taken from the hub at `run`). It
+is typed into what has focus (`xdotool`, `wtype` or `ydotool` on Linux; System Events on macOS; SendKeys on Windows) or
+put on the clipboard for a set number of pastes or seconds (`xclip` counts pastes on X11, `wl-copy` serves one on
+Wayland; macOS and Windows clear it after the time, Windows keeping it out of clipboard history), then forgotten.
+While it is on the clipboard this machine refuses the hub's clipboard reads and command lines. A clipboard manager
+of your own may still keep a copy: prefer typing, or turn the manager's history off for passwords.
 
 On a server, a Pi or a desktop nobody sits at: run it once by hand (so you decide what it lends), then
 `doca-client enable` starts `run` by itself — a systemd user unit on Linux (`sudo loginctl enable-linger <you>` to

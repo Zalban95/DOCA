@@ -344,8 +344,9 @@ async function startAutostart() {
   // nothing here, where a stdio server is a command only "start with DOCA" may run unasked.
   const was = connected();
   for (const spec of load().filter(s => s.autostart || (was.has(s.id) && s.transport !== 'stdio'))) {
-    try { await start(spec.id); results.push({ id: spec.id, ok: true }); }
-    catch (e) { results.push({ id: spec.id, ok: false, error: e.message }); }
+    const why = spec.autostart ? 'marked "start with DOCA"' : 'it was connected when DOCA last stopped';
+    try { await start(spec.id); results.push({ id: spec.id, ok: true }); require('../activity').note({ from: 'mcp', what: `started ${spec.name || spec.id}`, why }); }
+    catch (e) { results.push({ id: spec.id, ok: false, error: e.message }); require('../activity').note({ from: 'mcp', what: `could not start ${spec.name || spec.id}: ${e.message}`, why, level: 'warn' }); }
   }
   return results;
 }

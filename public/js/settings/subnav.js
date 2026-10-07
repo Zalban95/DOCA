@@ -8,6 +8,7 @@
 // OpenClaw's Skills are OpenClaw's (clawhub, ~/.openclaw/workspace/skills); DOCA's own skills are in Harness → Skills.
 const _SETTINGS_SUBTABS = [
   { id: 'general',   label: 'General',   init: '_subtabGeneralInit' },
+  { id: 'guided',    label: 'Set-up',    init: 'guidedLoad', host: true, find: 'guided setup first run wizard machine models providers keys what to install' },
   { id: 'keys',      label: 'API Keys',  init: 'loadKeys',       find: 'tokens devices pairing apps apk update', page: 'apikeys' },   // page: lives in Field (field-pages.js)
   { id: 'users',     label: 'Users',     init: 'usersLoad',      find: 'people accounts levels permissions roles' },
   { id: 'wearables', label: 'Wearables', init: 'wearablesLoad',  find: 'watch DocaWear console macros joystick' },

@@ -15,6 +15,15 @@ const allowed = dotted => keys().includes(String(dotted).split('.')[0]);
 
 /** The screen a proposal targets: a device record a person can see, with its effective settings. */
 function target(id, person = null) {
+  // A person's own layer (`person:<user id>`): theirs on every device (panel layout, TODO P1.2; CONSTITUTION S13).
+  if (String(id || '').startsWith('person:')) {
+    const userId = id.slice(7);
+    if (!userId || (person?.id && userId !== person.id && !require('./session-access').isHost(person))) throw bad('That is someone else\'s.', 403);
+    const prefs = require('../utils').loadPrefs(), own = require('../screens').personLayer(userId);
+    const settings = Object.fromEntries(keys().map(k => [k, own[k] ?? prefs[k]]).filter(([, v]) => v !== undefined));
+    if (settings.panel !== undefined) settings.panel = require('../panel-layout/layout').merge([prefs.panel, own.panel]);
+    return { id, name: 'every device of theirs', layer: 'person', userId, settings };
+  }
   if (id === 'this') throw bad('This turn did not come from a screen; name one from doca_clients.', 404);   // "this" with no screen behind it
   const d = id && require('../api-v1/devices').get(id);
   if (!d || d.revokedAt) throw bad(id ? `No screen ${id} — name one from doca_clients, or leave screen out for the hive's settings.` : 'This turn did not come from a screen; name one.', 404);
@@ -35,6 +44,10 @@ function apply(p, person = null) {
     o[rest.at(-1)] = c.to;
     patch[top] = base;
   }
+  // The layout goes through its own module, which keeps what it replaced for Undo and tells the screens showing it.
+  if (patch.panel !== undefined) { require('../panel-layout').write(t.layer || 'screen', { userId: t.userId, deviceId: t.id }, patch.panel); delete patch.panel; }
+  if (!Object.keys(patch).length) return t;
+  if (t.layer === 'person') { require('../screens').setPerson(t.userId, patch); return t; }
   require('../screens').set(t.id, patch);
   require('../live').changed?.('screen', t.id, 'settings');
   return t;

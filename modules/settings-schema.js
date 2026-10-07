@@ -48,6 +48,7 @@ const SCHEMA = {
       marginY: { type: 'integer', min: 0, max: 25, default: 6, hint: 'Top and bottom margins, % of the screen\'s height.' },
     } },
   face:             { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the face: its look, a spec over the default (face/face.js); an edition carries one' },
+  panel:            { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the panel\'s structure as data (modules/panel-layout): groups and their pages in order, hidden and renamed pages, a person\'s own views made of pages, and style (font scale, density, theme tokens) — layered install → person → screen, edited with the panel_layout tool' },
   hiddenBuiltins:   { is: 'travels', home: 'device', on: 'screen', note: 'built-in config entries hidden from the list', propose: p('Hidden built-ins') },
 
   // ── The hive: how its agents behave and what they may do ──
@@ -102,10 +103,19 @@ const SCHEMA = {
       calls: { type: 'boolean', default: false, hint: 'Use this effort and model for the chat\'s 🎙 call too, not only for the face.' },
       provider: { type: 'string', default: '', hint: 'A provider for assistant mode\'s own model. Empty: the conversation\'s.' },
       model: { type: 'string', default: '', hint: 'A quicker model for assistant mode (e.g. a small local one). Empty: the conversation\'s model.' } } },
+  setup:            { is: 'local', home: 'device', on: 'host', note: 'how this hub was set up and what shape it is (guided/plan.js; CONSTITUTION §1 "Two shapes, two set-ups") — the owner\'s, never proposable',
+    keys: { mode: { type: 'string', default: '', hint: 'guided or advanced: the owner\'s first-run choice. Empty: not chosen yet, so the panel offers it once.' },
+      shape: { type: 'string', default: '', hint: 'local (runs its own agent model) or preset (lives on providers\' keys), as the guided set-up found this machine.' } } },
   sharing:          { is: 'local', home: 'hive', note: 'whether what the agents learn (skills, recipes, specialists kept as packs) may be offered to the project, and to which hub — asked at installation, the owner\'s alone, never proposable (sharing.js; CONSTITUTION §0)',
     keys: {
       contribute: { type: 'boolean', default: false, hint: 'Offer the skills, recipes and specialists your agents learn to the project. Nothing is sent without your click.' },
       upstream:   { type: 'string', default: '', hint: 'The project\'s hub that receives them: one of the hubs this hive sends packs to.' },
+    } },
+  features:         { is: 'travels', home: 'hive', note: 'the feature index (features/): which kept alternatives the admin hid from the default, and when one counts as unused — the admin\'s decision, never proposable (CONSTITUTION W14)',
+    keys: {
+      hidden:          { type: 'array', default: [], hint: 'Alternatives hidden from the default: they keep working and the agents still find them.' },
+      idleDays:        { type: 'number', min: 1, default: 30, hint: 'Days without a use before an alternative is listed as unused.' },
+      replacementRuns: { type: 'number', min: 1, default: 50, hint: 'Uses of the feature it stands beside, in that time, before it is listed as unused.' },
     } },
   scout:            { is: 'travels', home: 'hive', note: 'the model scout: what it watches, how often, where accepted suggestions go and who works on them (modules/scout; the switch is experiments.modelScout)',
     propose: p('Model scout', 'What the scout watches and how often; switching it on is a proposal too'),
@@ -136,7 +146,8 @@ const SCHEMA = {
       waitSec: { type: 'number', min: 3, default: 20, hint: 'Seconds the voice waits for the hive before saying the work carries on in the background.' } } },
   tracing:          { is: 'travels', home: 'hive', note: 'traces of each turn: whether they are kept, and for how long (harness/trace.js)',
     keys: { enabled: { type: 'boolean', default: true, hint: 'Keep a trace of each turn: model requests, tool calls, waits — names and numbers, never content.' },
-      retainDays: { type: 'number', min: 1, max: 3650, default: 30, hint: 'Days a turn\'s trace is kept.' } } },
+      retainDays: { type: 'number', min: 1, max: 3650, default: 30, hint: 'Days a turn\'s trace is kept.' },
+      maxSpans: { type: 'integer', min: 1000, max: 10000000, default: 100000, hint: 'The most trace rows kept (a few hundred bytes each); past it the oldest go first.' } } },
   retrieval:        { is: 'travels', home: 'hive', note: 'the embedding model retrieval uses (retrieval/; the switch is experiments.retrieval)',
     propose: p('Retrieval', 'Which embedding model searches memory and conversations by meaning'),
     keys: { provider: { type: 'string', default: 'ollama', hint: 'The provider that serves the embedding model (Field → API keys); ollama by default.' },
@@ -167,6 +178,19 @@ const SCHEMA = {
     keys: { listen: { type: 'string', default: 'tailnet', hint: 'tailnet (Tailscale and this machine), lan (also the local network), local (this machine only), all (every interface). From the next start.' },
       lanAdmin: { type: 'boolean', default: false, hint: 'Allow managing the machine (admin rights) from outside Tailscale. Off: from the local network a person reads and chats.' },
       services: { type: 'string', default: 'local', hint: 'Where the inference services this hub starts (Whisper, Kokoro, ComfyUI…) can be reached: local (this machine only — the hub reaches them here), tailnet (also its Tailscale address), all (every interface, the local network included, with no sign-in). From each service\'s next start.' } } },
+  // What is kept of what happened (log-keep.js; Settings → System → Logs; CONSTITUTION §1: nothing unseen, but the log
+  // never fills memory or disk needlessly). Sized for a small machine. Never proposable: a retention an agent could
+  // shorten is one that could erase the record of what agents did.
+  logs:             { is: 'local', home: 'device', on: 'host', note: 'what the hub keeps of what happened, how much and for how long: the log lines in memory, run records, background jobs, evaluation results (log-keep.js)',
+    keys: {
+      harnessLines:    { type: 'integer', min: 50, max: 20000, default: 500, hint: 'Lines of the harness log (Hub → Logs) kept in memory since the last start.' },
+      workstreamLines: { type: 'integer', min: 50, max: 5000, default: 300, hint: 'Lines of the Workstream\'s activity kept in memory.' },
+      mcpLines:        { type: 'integer', min: 20, max: 5000, default: 200, hint: 'Lines of each MCP server\'s own output kept in memory.' },
+      runsRetainDays:  { type: 'number', min: 1, max: 3650, default: 90, hint: 'Days the record of each turn, mission and device job is kept (Chronicle reads them); its trace goes with it.' },
+      jobsKept:        { type: 'integer', min: 5, max: 1000, default: 50, hint: 'Background jobs (shell_job) kept with their output files; the oldest finished ones go first.' },
+      evalResultsKept: { type: 'integer', min: 1, max: 500, default: 30, hint: 'Results kept per evaluation set, to compare a run with the one before.' },
+      activityDays:    { type: 'number', min: 1, max: 3650, default: 30, hint: 'Days the record of what the hub did on its own (a computer tidied away, a server resumed, a schedule fired) is kept (Chronicle → What the hub did).' },
+    } },
   vms:              { is: 'local', home: 'device', on: 'host', note: 'the libvirt connection URI of this machine', propose: p('Virtual machines', 'The libvirt connection URI') },
   channels:         { is: 'local', home: 'device', on: 'host', note: 'channel bots (Telegram, Matrix, Slack, mail): tokens and a switch for this hub',
     keys: {

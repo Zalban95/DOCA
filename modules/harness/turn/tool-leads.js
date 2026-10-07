@@ -14,6 +14,7 @@ const LEADS = {
   repo_rules: 'Read a git repository\'s rules, branch and uncommitted changes — call it before your first change in that repository.',
   effort: 'Set how hard you think in this conversation — use it when the person asks you to think harder or answer quickly.',
   form_fill: 'Fill a form on the person\'s screen as a draft they save — use it when they ask for help filling a named form.',
+  panel_layout: 'Change the panel\'s layout, pages and style for the person who asks — use it for "hide", "move", "bigger text", "a page with X and Y".',
   settings_propose: 'Suggest a settings change the person accepts or declines — use it instead of editing settings any other way.',
   install_propose: 'Ask the person to install a model, service, harness, MCP server or system tool the panel knows — never install by hand.',
   mcp_draft: 'Prepare an MCP server that is not in the catalogue for a person to add — use it when a task needs a server nobody set up.',
@@ -30,6 +31,7 @@ const LEADS = {
   skill: 'Read, list or write a skill (a procedure for a kind of task) — read one when the task matches a skill in your prompt.',
   computer: 'Make or manage a Linux desktop in a container — use it for risky tests, sites used as a person would, or recording a demo.',
   computer_login: 'Sign in on a computer\'s browser with a login the owner keeps, without seeing its password — use it at a sign-in page.',
+  secret_use: 'Type or paste a password or key on the person\'s own device, never seeing it — use it when a device must enter a secret.',
   computer_look: 'Ask what is on a computer\'s screen and where — use it when browser_snapshot finds nothing to number.',
   recipe: 'Run a saved sequence of tool calls again, or save one — run a recipe when one does exactly what is asked.',
   pack: 'Keep skills, recipes and specialists you made as one pack in the library — use it when the owner wants to share them.',
@@ -39,6 +41,7 @@ const LEADS = {
   hub_command: 'Run the hub\'s own commands — start or stop a service, a container, a llama.cpp server, take a snapshot — instead of shell.',
   today: 'The weather, today\'s calendar and what is waiting for the person — use it for "what\'s my day" or a morning brief.',
   schedule: 'Propose a message or recipe on a timetable, which the person switches on — use it when asked to do something regularly.',
+  features: 'Look up what DOCA can do, where it is and how to switch it on — use it before saying something cannot be done.',
 };
 
 module.exports = { LEADS };
