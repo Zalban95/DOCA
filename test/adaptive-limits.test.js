@@ -2,12 +2,13 @@
 
 /**
  * Limits that follow the work (experiment adaptiveLimits, TODO H10.6): the triage's rules, the extension rule, a real
- * turn with the flag off (today's behaviour exactly) and on.
+ * turn with the flag off (today's behaviour exactly) and on, and the measurement script against a scripted model.
  */
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const fs = require('node:fs');
+const path = require('node:path');
 const H = require('./helpers');   // first: it points the settings at a temporary folder (see its top)
 const triage = require('../modules/harness/turn/triage');
 const extend = require('../modules/harness/turn/extend');
@@ -137,3 +138,21 @@ test('flag on: the verdict sets effort and steps, a turn still advancing is exte
   } finally { flag(false); }
 });
 
+test('the measurement: a tagged set off and on, by difficulty, against the scripted model', async () => {
+  require('../modules/evals/store').save({ id: 'adaptive-tiny', cases: [
+    { id: 'sum', difficulty: 'small', prompt: 'What is 17 × 23?', checks: [{ contains: '391' }] },
+    { id: 'notes', difficulty: 'large', prompt: 'Write three notes', checks: [{ tool: 'memory_write' }] }] });
+  assert.equal(require('../modules/evals/store').get('adaptive-tiny').cases[0].difficulty, 'small');
+  assert.throws(() => require('../modules/evals/store').validate({ id: 'x', cases: [{ id: 'a', prompt: 'p', difficulty: 'huge', checks: [{ contains: 'p' }] }] }), /difficulty is small, medium, large/);
+  const out = await new Promise((resolve, reject) => {
+    const child = require('node:child_process').spawn(process.execPath, [path.join(__dirname, '..', 'bin', 'doca-experiment.js'), 'adaptive-limits', 'adaptive-tiny'],
+      { env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+    let text = '';
+    child.stdout.on('data', d => { text += d; }); child.stderr.on('data', d => { text += d; });
+    child.on('close', code => (code === 0 ? resolve(text) : reject(new Error(`exit ${code}: ${text}`))));
+  });
+  if (process.env.SHOW_OUT) console.log(out);
+  assert.match(out, /\| \d{4}-\d{2}-\d{2} \| configured model \| adaptive-tiny \| off \| 2\/2 \|/);
+  assert.match(out, /\| adaptive-tiny \| on \| 2\/2 \| \d+ \| \d+ \| [\d.]+ s \| 1\/1 \/ — \/ 1\/1 \|/);
+  assert.match(out, /\| off \| large \| 1\/1 \|/);
+});
