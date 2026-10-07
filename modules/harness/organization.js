@@ -218,7 +218,7 @@ function archive(id, on = true) {
   return result;
 }
 
-function plan(id, { action = 'read', title, steps, note, revision, step, state } = {}, { user = false } = {}) {
+function plan(id, { action = 'read', title, steps, contracts, note, revision, step, state } = {}, { user = false } = {}) {
   const s = session(id), old = s.plan;
   if (action === 'read') return old || null;
   if (s.archivedAt) throw error('Recall this conversation before editing its plan.');
@@ -226,12 +226,17 @@ function plan(id, { action = 'read', title, steps, note, revision, step, state }
   if (action === 'draft') {
     if (!String(title || '').trim() || !Array.isArray(steps) || !steps.length)
       throw error('A plan needs a title and at least one step.', 400);
-    next = { title: short(title, 200), steps: steps.slice(0, 30).map(x => short(x, 300)).filter(Boolean),
+    // A step may carry its contract (plan-contracts.js): steps stay sentences, contracts[i] belongs to steps[i].
+    const parts = steps.slice(0, 30).map((x, i) => require('./plan-contracts').split(typeof x === 'string' && contracts?.[i] ? { title: x, ...contracts[i] } : x)).filter(x => x.title);
+    next = { title: short(title, 200), steps: parts.map(x => short(x.title, 300)),
+      ...(parts.some(x => x.contract) ? { contracts: parts.map(x => x.contract) } : {}),
       note: short(note, 2000), state: 'draft', revision: (old?.revision || 0) + 1 };
   } else if (action === 'progress') {
     if (!old || !Number.isInteger(step) || step < 1 || step > old.steps.length ||
       !['queued', 'running', 'done', 'blocked'].includes(state)) throw error('Progress needs a valid step number and state.', 400);
     next = { ...old, progress: { ...old.progress, [step]: state } };
+    // Finished means every contract in the plan holds (V10): the last step done stamps it, a step reopened clears it.
+    next.fulfilledAt = require('./plan-contracts').fulfilled(next) ? (old.fulfilledAt || new Date().toISOString()) : null;
   } else if (action === 'propose') {
     if (!old) throw error('Draft a plan first.');
     next = { ...old, state: 'proposed' };
@@ -272,6 +277,7 @@ function block(id, pending = []) {
       // (supervisor.js) — telling it otherwise left it unsure whether to answer or report (its own feedback, 2026-10-07).
       + (s.job ? 'Your job ends only when you say so: work_chats report with outcome done, failed, blocked (you cannot go on without a decision from above) or question (one only the owner can answer). Until then the panel keeps you going: a turn that ends short of a final report is followed by another, and when your specialists finish you are woken with their results, so end your turn while they work instead of waiting. Progress reports are optional and wake nobody.'
         : 'This chat has no job from the Orchestrator: answer the person who writes here; nothing wakes you between turns.') : '',
+    s.plan?.fulfilledAt && s.job ? 'Your plan is fulfilled — every step\'s contract holds: report done with what was delivered and where.' : '',
     s.kind === 'specialist' && !s.profile?.computer ? 'If the errand needs a real environment you were not given — a computer, to try something risky, use a site as a person would, or record a demo — say so in your report; your leader makes one and sends you back with it.' : '',
     s.plan ? `Your plan: ${s.plan.state} revision ${s.plan.revision}, ${short(s.plan.title, 140)}. Read its steps with work_plan.` : '',
     `${ordered.length} active conversations in view. The inventory and archives: work_chats list.`,

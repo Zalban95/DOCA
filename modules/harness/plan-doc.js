@@ -26,7 +26,8 @@ const MARK = { done: '✔', running: '…', blocked: '✖' };
 function render(plan) {
   const steps = (plan.steps || []).map((s, i) => {
     const state = plan.progress?.[i + 1];
-    return `${i + 1}. ${s}${state && state !== 'queued' ? ` ${MARK[state] || ''} *${state}*` : ''}`;
+    const c = plan.contracts?.[i];   // its contract (plan-contracts.js): finished means every one holds
+    return `${i + 1}. ${s}${state && state !== 'queued' ? ` ${MARK[state] || ''} *${state}*` : ''}${c?.done ? `\n   *Done when* ${c.done}` : ''}`;
   });
   return [
     `# ${plan.title}`,

@@ -39,16 +39,31 @@ module.exports = [
       + 'Propose opens it in a window in front of the user, with Approve and Reject, and offers it on their phone; '
       + 'you cannot approve it, so end your turn after proposing and wait for their decision. '
       + 'Their approval starts the work here, with a message telling you to carry it out. Progress marks a numbered step without changing the approved scope. '
+      + 'Give each step its contract in contracts (same order: {done: "done when …", check}) so finished means every contract holds: marking a step done runs '
+      + 'its check first ({file}, {file, contains} or {url} on the owner\'s addresses; run tests yourself), and the plan reads fulfilled when all are done. '
       + 'Use mission_plan for specialist mission progress.',
     parameters: { type: 'object', properties: {
       action: { type: 'string', enum: ['read', 'draft', 'propose', 'progress'] }, sessionId: { type: 'string' },
-      title: { type: 'string' }, steps: { type: 'array', items: { type: 'string' } }, note: { type: 'string' },
+      title: { type: 'string' }, note: { type: 'string' },
+      steps: { type: 'array', items: { type: 'string' } },
+      contracts: { type: 'array', description: 'draft: one per step, in order — {done: "done when …", check?: {file} | {file, contains} | {url}}; {} for a step without one.',
+        items: { type: 'object', properties: { done: { type: 'string' }, check: { type: 'object' } } } },
       step: { type: 'integer', description: 'One-based step number for progress.' },
       state: { type: 'string', enum: ['queued', 'running', 'done', 'blocked'] },
     }, required: ['action'] },
-    run: (args, ctx) => {
+    run: async (args, ctx) => {
       const org = require('../organization'), id = args.sessionId || ctx.sessionId;
       if (args.action !== 'read' && !org.canManage(ctx.sessionId, id)) throw new Error('You may edit only your own plan or a subordinate\'s.');
+      // A step marked done is held to its contract first (plan-contracts.js): a failing check keeps it open, with why.
+      if (args.action === 'progress' && args.state === 'done') {
+        const cur = org.plan(id, { action: 'read' }), contract = cur?.contracts?.[args.step - 1];
+        if (contract) {
+          let cwd; try { cwd = require('../../projects/store').forSession(id)?.root; } catch { /* no project */ }
+          const v = await require('../plan-contracts').verify(contract, { cwd });
+          if (!v.ok) return JSON.stringify({ step: args.step, done: false, contract: contract.done, check: v.why,
+            note: 'Not marked done: its contract does not hold yet. Finish the step, then mark it again — or revise the plan if the contract was wrong.' });
+        }
+      }
       const plan = org.plan(id, args);
       if (args.action !== 'propose') return JSON.stringify(plan);
       // A proposal is a question to a person, so it goes where people look (plan-doc.js).
