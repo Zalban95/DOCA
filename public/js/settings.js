@@ -42,6 +42,7 @@ function _subtabSystemInit() {
   pathsLoad();
   sysdepsLoad();
   checkpointsRender();   // settings checkpoints (settings/checkpoints.js)
+  featuresRender();      // every feature, and the kept alternatives' use (settings/features.js)
 }
 
 async function _subtabVoiceInit() {
