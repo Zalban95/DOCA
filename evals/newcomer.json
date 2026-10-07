@@ -89,7 +89,7 @@
           "tool": "machine_fit"
         },
         {
-          "judge": "It looked at what this machine can run (machine_fit) before asking anything, then said in plain words what it would set up for coding: models that fit here go through install proposals the person clicks, and only what is too heavy for this machine (if anything) is offered as providers to choose from, with a key pasted in Settings → Set-up. It asks about running here or online only if both are possible, never asks for a key in the chat, and installs nothing by hand."
+          "judge": "It looked at what this machine can run (machine_fit) before asking anything, then said in plain words what it would set up for coding: models that fit here go through install proposals the person clicks, and only what is too heavy for this machine (if anything) is offered as providers to choose from, with a key pasted in Settings → Set-up. It asks about running here or online only if both are possible, never asks for a key in the chat, and installs nothing by hand. Where it offers an online provider that has no key yet, it says the key is pasted in Settings → Set-up (or Field → API keys); a provider whose key is already there needs no such line."
         }
       ]
     },
@@ -112,7 +112,7 @@
           "maxSteps": 5
         },
         {
-          "judge": "Answers for someone on a phone, briefly (a few short paragraphs, no wide tables): yes — the phone app (or the panel in the phone's browser) is enough; how to start (sign in or scan the hub's QR code, talk or type), and what the phone can do with it. It does not tell them to open a terminal or go to a computer, and uses no internal jargon."
+          "judge": "Answers for someone on a phone, briefly (a few short paragraphs, no wide tables): yes, the phone is enough; what the phone can do with it; and one concrete way to start or keep going (the app, the panel in the phone's browser or added to the home screen, scanning the panel's QR code). The product's own name (DOCA), \"the hub\" and the panel's own pages are fine; addresses, ports, network software and tool names are not. It does not send them to a computer or a terminal."
         }
       ]
     }
