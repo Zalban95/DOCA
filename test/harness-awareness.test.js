@@ -37,12 +37,13 @@ test('the environment block states where the panel is and what it manages', asyn
   const block = environment.block({ provider: 'ollama', model: 'qwen3', toolCount: 12, disabledCount: 1 });
 
   assert.match(block, /# Environment/);
-  assert.match(block, /you are running on: ollama \/ qwen3, 12 tools available, 1 switched off/);
+  assert.match(block, /you are running on: ollama \/ qwen3, 12 tools available/);
   assert.match(block, /## Paths this panel manages/);
   // Every settable path is named with where its value came from, so the agent
   // cannot mistake a default for something the user chose.
+  // An unset default with nothing there is named on one line (2026-10-07); every other one with its value.
   for (const p of require('../modules/paths').describe())
-    assert.ok(block.includes(`${p.key} = ${p.value}`), `${p.key} missing from the environment block`);
+    assert.ok(block.includes(`${p.key} = ${p.value}`) || (!p.exists && p.source === 'default' && new RegExp(`not set up .*\\b${p.key}\\b`).test(block)), `${p.key} missing from the environment block`);
   assert.match(block, /\(env, present\)|\(default, present\)|\(saved, present\)/);
 
   // The panel's own version and data locations, which is what makes it able to
@@ -529,7 +530,7 @@ test('the environment block is entirely facts: two calls a second apart are iden
   assert.equal(a, b, 'nothing in this block may differ between steps');
   assert.equal(/## Right now/.test(a), false, 'the readings belong to live()');
   assert.match(a, /# Environment/);
-  assert.match(a, /you are running on: ollama \/ qwen3, 12 tools available, 1 switched off/);
+  assert.match(a, /you are running on: ollama \/ qwen3, 12 tools available/);
 });
 
 test('the readings are still sent — moved out of the block, not dropped', async () => {
@@ -1066,4 +1067,17 @@ test('the environment says whether this model may release DOCA unasked (audit 20
     environment.invalidate();
     assert.match(environment.block({ provider: 'ollama', model: 'qwen3:8b' }), /releasing DOCA: this model asks a person/);
   } finally { savePrefs(was); environment.invalidate(); }
+});
+
+test('the environment names the owner\'s switched-off tools and folds unset defaults into one line (model feedback, 2026-10-07)', () => {
+  const environment = require('../modules/harness/environment');
+  const catalog = require('../modules/harness/catalog');
+  const was = catalog.configFor('doca').disabledTools;
+  catalog.saveConfig('doca', { disabledTools: ['shell', 'git'] });
+  try {
+    environment.invalidate();
+    const b = environment.block({ provider: 'ollama', model: 'm', toolCount: 3 });
+    assert.match(b, /switched off by the owner: shell, git/);
+    assert.doesNotMatch(b, /\(default, MISSING\)/);
+  } finally { catalog.saveConfig('doca', { disabledTools: was || [] }); environment.invalidate(); }
 });

@@ -56,7 +56,7 @@ module.exports = [
       + 'whether to go ahead, which file they meant. The question appears as a prompt they tap, so it reaches a '
       + 'watch or a phone that is asleep. It blocks this step until they answer, so ask one thing at a time and '
       + 'keep the choices short enough to read on a wrist. If nobody answers in time the question is withdrawn '
-      + 'and you are told so — decide without it or ask again later. Use doca_clients first if you are unsure '
+      + 'and you are told so — decide without it, and do not ask the same question again (standing rules). Use doca_clients first if you are unsure '
       + 'which device to reach.',
     parameters: {
       type: 'object',

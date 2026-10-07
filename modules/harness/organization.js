@@ -268,7 +268,10 @@ function block(id, pending = []) {
     s.parentId ? `Reports to ${s.parentId}. Use work_chats report for decisions, blockers and results.` : '',
     s.planning ? 'This is a planning work chat. Develop a plan and propose it; execution belongs in a separate work chat.' : '',
     s.kind === 'work' ? 'You lead this work chat (level 2). Own its detailed work and plan. Delegate narrow errands with agent_dispatch when specialists are enabled. You cannot create another leader layer. '
-      + 'Your job ends only when you say so: work_chats report with outcome done, failed, blocked (you cannot go on without a decision from above) or question (one only the owner can answer). Until then the panel keeps you going: a turn that ends short of a final report is followed by another, and when your specialists finish you are woken with their results, so end your turn while they work instead of waiting. Progress reports are optional and wake nobody.' : '',
+      // The job contract only where there is a job: a chat opened by a person has none, and nothing re-prompts it
+      // (supervisor.js) — telling it otherwise left it unsure whether to answer or report (its own feedback, 2026-10-07).
+      + (s.job ? 'Your job ends only when you say so: work_chats report with outcome done, failed, blocked (you cannot go on without a decision from above) or question (one only the owner can answer). Until then the panel keeps you going: a turn that ends short of a final report is followed by another, and when your specialists finish you are woken with their results, so end your turn while they work instead of waiting. Progress reports are optional and wake nobody.'
+        : 'This chat has no job from the Orchestrator: answer the person who writes here; nothing wakes you between turns.') : '',
     s.kind === 'specialist' && !s.profile?.computer ? 'If the errand needs a real environment you were not given — a computer, to try something risky, use a site as a person would, or record a demo — say so in your report; your leader makes one and sends you back with it.' : '',
     s.plan ? `Your plan: ${s.plan.state} revision ${s.plan.revision}, ${short(s.plan.title, 140)}. Read its steps with work_plan.` : '',
     `${ordered.length} active conversations in view. The inventory and archives: work_chats list.`,

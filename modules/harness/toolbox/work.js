@@ -12,7 +12,7 @@ module.exports = [
   {
     name: 'work_chats',
     description: 'Manage the three-level workspace. List/read the conversations in your line and their archived work; read transcripts only on demand. '
-      + 'The Orchestrator creates work chats (planning:true for detailed planning), optionally starting a task with message. '
+      + 'Only the Orchestrator creates work chats (planning:true for detailed planning), optionally starting a task with message; a work chat cannot. '
       + 'Send gives a subordinate a task in the background; it returns immediately, and the work chat carries it to the end on its own. '
       + 'Report records your brief and informs superiors; with outcome done, failed, blocked or question it ends your job and wakes the Orchestrator, '
       + 'without an outcome it is progress and wakes nobody. List shows every job\'s state. Archive retains transcripts; recall reopens them. '
