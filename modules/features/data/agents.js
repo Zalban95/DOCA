@@ -100,7 +100,7 @@ module.exports = [
   { id: 'fallback-chain', name: 'Fallback models and escalation', page: 'harness', settings: ['harness.config.doca.fallbackChain', 'harness.config.doca.escalateTo'], since: '2.119.0',
     use: 'Another model when one fails, and one try on a stronger model for a stuck job.',
     words: 'failover stronger model stuck retry' },
-  { id: 'traces', name: 'Traces of each turn', page: 'harness', settings: ['tracing.enabled'], since: '2.182.0',
+  { id: 'traces', name: 'Traces of each turn', page: 'harness', tools: ['chronicle'], settings: ['tracing.enabled'], since: '2.182.0',
     use: 'A waterfall of each turn\'s model requests and tool calls (⏱), exportable as OpenTelemetry.',
     routes: ['/api/harness/runs/*/trace'], words: 'otlp waterfall timing debug spans' },
   { id: 'evals', name: 'Evaluation sets', page: 'settings/evals', since: '2.183.0',
