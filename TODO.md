@@ -100,7 +100,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   `mcp.listener stop`, `confirmPromptChoice`'s body (§12.6 `{selectionId, decision}`), the native wake word, the
   watch's line in Settings → Updates; DocaWear: the LAN port; DocaDesk: the socket transport, `prompt.outcome`.
 - Real-hardware checks: DocaMobile 1.0.16's answer buttons, DocaWear 1.2.5's QUEUED, the watch call and updater.
-- T1: `test/doca-client.test.js` under load (not reproduced with 4× parallel runs and 24 busy cores).
+- T1: `test/doca-client.test.js` under load (not reproduced with 4× parallel runs and 24 busy cores); the machines screenshot test ("a picture of it") failed once on Windows CI for 2.279.0, passed on re-run — likely two headless browsers at once (page-check's test and machines' shots) on a slow runner.
 - Wave E (E1–E4) with the owner's brief: themes (keep dark and light, the current look kept, bold alternatives as
   themes), edit-ability features, the clients included — started by the owner's `/design`.
 - The hive backlog's open H-items below stay as written; they are urgent in this order after the above.
