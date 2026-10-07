@@ -31,8 +31,19 @@ async function view(actor, month) {
   const mine = { id: actor.id, name: actor.name, role: actor.role, ...row(actor.id),
     budget: budgets.effective(actor, d), own: d.people[actor.id]?.own || null, mayAllow: finite(permissions.mayAllow(actor, d)) };
   const out = { month: m.month, currency: m.currency, me: mine, admin: isAdmin(actor), permissions: permissions.list(actor, d), payment: require('./pay').status() };
-  if (!out.admin) return out;
   const authStore = require('../auth/store'), orgId = actor.orgId || authStore.defaultOrg()?.id;
+  if (!out.admin) {
+    // A team leader sees the people they set budgets for, with what they spent and the budget they set (budgets.leads).
+    const team = authStore.listUsers().filter(u => budgets.leads(actor, u.id));
+    if (team.length) {
+      out.lead = true;
+      out.people = team.map(u => {
+        const person = { id: u.id, name: u.name || '', role: orgId ? authStore.membership(orgId, u.id)?.role : null };
+        return { ...person, ...row(u.id), budget: budgets.effective(person, d), set: d.people[u.id]?.leader || null };
+      });
+    }
+    return out;
+  }
   out.people = authStore.listUsers().map(u => {
     const role = orgId ? authStore.membership(orgId, u.id)?.role : null;
     const person = { id: u.id, name: u.name || '', role };
