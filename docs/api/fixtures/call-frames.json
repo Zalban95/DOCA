@@ -1,0 +1,75 @@
+{
+  "from": "the hub, as JSON text frames on /api/v1/call and /api/v1/realtime (PROTOCOL §23.1)",
+  "frames": {
+    "ready": {
+      "fields": [
+        "protocol",
+        "model",
+        "sessionId"
+      ],
+      "means": "the call is open: listening"
+    },
+    "heard": {
+      "fields": [],
+      "means": "speech just ended and is being written down (the pipeline only)"
+    },
+    "user": {
+      "fields": [
+        "text"
+      ],
+      "means": "what the person was heard to say"
+    },
+    "working": {
+      "fields": [
+        "text"
+      ],
+      "means": "a request handed to the hive; its answer is being made"
+    },
+    "agent": {
+      "fields": [
+        "text"
+      ],
+      "means": "words of the answer as they are spoken"
+    },
+    "done": {
+      "fields": [],
+      "means": "an answer finished: listening again"
+    },
+    "background": {
+      "fields": [
+        "text",
+        "sessionId"
+      ],
+      "means": "work goes on out of the call (a work chat, or a request past realtime.waitSec); it will be said here when it ends"
+    },
+    "report": {
+      "fields": [
+        "text"
+      ],
+      "means": "something that went on out of the call came back, and is said now (agent frames follow)"
+    },
+    "interrupted": {
+      "fields": [],
+      "means": "the person talked over the answer: drop audio queued to play"
+    },
+    "error": {
+      "fields": [
+        "message"
+      ],
+      "means": "something failed, in words"
+    },
+    "closed": {
+      "fields": [
+        "reason",
+        "stats"
+      ],
+      "means": "the call ended"
+    }
+  },
+  "client": {
+    "stop": {
+      "fields": [],
+      "means": "hang up"
+    }
+  }
+}

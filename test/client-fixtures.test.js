@@ -98,6 +98,7 @@ test(WRITE ? 'writes the fixtures from real frames' : 'the fixtures are present 
 //   pair-link    — the doca://pair link the panel's QR and POST /pair/code carry (DocaMobile's PairingQrParser reads it)
 //   families     — the tool names per family a client lends (PROTOCOL §22.1, modules/api-v1/families.js)
 //   doca-device  — what the panel calls on window.DocaDevice, where DocaMobile lends it (ambient.js)
+//   call-frames  — the JSON frames of a live call and what each carries (realtime/index.js FRAMES; DocaWear draws them)
 async function contracts() {
   const admin = H.mkDevice('Fixture admin', 'admin', {});
   const code = await H.api(admin.token, 'POST', '/api/v1/devices/pair/start', { name: 'Fixture phone', preset: 'phone' });
@@ -107,9 +108,11 @@ async function contracts() {
       params: { code: 'the pairing code without its dash (8 characters)', host: 'host[:port] the phone dials, https' } },
     families: { canonical: require('../modules/api-v1/families').CANONICAL, decides: require('../modules/api-v1/families').DECIDES },
     'doca-device': { methods: { apps: { args: ['limit: number'], returns: 'a JSON string: [{package, label, icon?}]' }, open: { args: ['package: string'], returns: 'boolean' } } },
+    'call-frames': { from: 'the hub, as JSON text frames on /api/v1/call and /api/v1/realtime (PROTOCOL §23.1)', frames: require('../modules/realtime').FRAMES,
+      client: { stop: { fields: [], means: 'hang up' } } },
   };
 }
-const CONTRACTS = ['pair-link', 'families', 'doca-device'];
+const CONTRACTS = ['pair-link', 'families', 'doca-device', 'call-frames'];
 
 test(WRITE ? 'writes the contracts' : 'the contracts are what the hub does now', async () => {
   const c = await contracts();

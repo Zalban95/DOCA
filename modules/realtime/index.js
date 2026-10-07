@@ -14,11 +14,29 @@
  * written into the conversation; what the tool asked and answered is, as the turn itself.
  *
  * The wire to the client: binary frames are PCM16 little-endian mono at 24 kHz, both ways; text frames are JSON —
- * from the hub {type: ready | user | agent | interrupted | working | done | error | closed}, from the client {type: 'stop'}.
+ * from the hub FRAMES below, from the client {type: 'stop'}.
  */
 const ADAPTERS = { openai: require('./openai'), gemini: require('./gemini') };
 
 const MAX_SAY = 4000;
+
+/**
+ * The JSON frames a call sends, and what each carries — the contract a client draws its states from (PROTOCOL.md
+ * §23.1; docs/api/fixtures/call-frames.json is written from this). `heard`, `background` and `report` since 2.304.0.
+ */
+const FRAMES = {
+  ready:       { fields: ['protocol', 'model', 'sessionId'], means: 'the call is open: listening' },
+  heard:       { fields: [], means: 'speech just ended and is being written down (the pipeline only)' },
+  user:        { fields: ['text'], means: 'what the person was heard to say' },
+  working:     { fields: ['text'], means: 'a request handed to the hive; its answer is being made' },
+  agent:       { fields: ['text'], means: 'words of the answer as they are spoken' },
+  done:        { fields: [], means: 'an answer finished: listening again' },
+  background:  { fields: ['text', 'sessionId'], means: 'work goes on out of the call (a work chat, or a request past realtime.waitSec); it will be said here when it ends' },
+  report:      { fields: ['text'], means: 'something that went on out of the call came back, and is said now (agent frames follow)' },
+  interrupted: { fields: [], means: 'the person talked over the answer: drop audio queued to play' },
+  error:       { fields: ['message'], means: 'something failed, in words' },
+  closed:      { fields: ['reason', 'stats'], means: 'the call ended' },
+};
 const TOOL = {
   name: 'doca',
   description: 'Ask the DOCA hive to answer or to do something: anything about the person\'s machine, files, devices, accounts, memory, '
@@ -85,23 +103,42 @@ let _liveN = 0;
 /** The calls in progress, for drain.busy(). */
 const live = () => [..._live.values()];
 
-function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime' }) {
+function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', person = null, deviceId = null }) {
   const s = settings();
   const tell = o => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
   const pipeline = engine === 'auto' && !on();   // a device's call: the hive's own voice when no realtime model is on
   if (!pipeline && !on()) { tell({ type: 'error', message: 'Realtime voice is off: switch on the experiment and set realtime.model (Settings → Voice → Live call).' }); ws.close(); return; }
   let t;
   if (!pipeline) { try { t = target(s); } catch (e) { tell({ type: 'error', message: e.message }); ws.close(); return; } }
-  const stats = { at: Date.now(), firstAudioMs: null, spokeAt: null, tools: 0, background: 0, interrupted: 0 };
+  const stats = { at: Date.now(), firstAudioMs: null, spokeAt: null, replyMs: [], tools: 0, background: 0, interrupted: 0, reports: 0 };
+  let heardAt = null;   // when the last utterance ended, until its answer's first audio: replyMs, end of speech → first audio
   const model = pipeline ? require('./pipeline').connect({})
     : ADAPTERS[s.protocol].connect({ ...t, model: s.model, voice: s.voice, dialect: s.dialect, instructions: INSTRUCTIONS + recent(sessionId), tools: [TOOL] });
   if (pipeline) s.protocol = 'pipeline';
   let ended = false;
   const callId = ++_liveN;
   _live.set(callId, { sessionId, since: stats.at });
+  // What lands in this conversation while the call is open is said here (calls.js), and work handed off is followed.
+  const notice = (text, title) => {
+    if (ended) return;
+    stats.reports++;
+    tell({ type: 'report', text: String(title || '').slice(0, 200) });
+    model.say(model.literal ? text : `Tell the person briefly, this just came back${title ? ` (${title})` : ''}: ${text}`);
+  };
+  const unregister = require('./calls').open(sessionId, { person, deviceId, notice });
+  const onTurnEvent = e => {
+    if (e.type !== 'handoff' || e.from !== sessionId) return;
+    stats.background++;
+    require('./calls').follow(sessionId, e.sessionId);
+    tell({ type: 'background', text: String(e.title || '').slice(0, 200), sessionId: e.sessionId });
+  };
+  const lifecycle = require('../harness/turn/lifecycle');
+  lifecycle.events.on('event', onTurnEvent);
   const end = why => {
     if (ended) return; ended = true;
     _live.delete(callId);
+    unregister();
+    lifecycle.events.off('event', onTurnEvent);
     model.close();
     tell({ type: 'closed', reason: why, stats: { ...stats, minutes: Math.round((Date.now() - stats.at) / 6000) / 10 } });
     try { ws.close(); } catch { /* gone */ }
@@ -111,12 +148,14 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime' }) {
   model.on('ready', () => tell({ type: 'ready', protocol: s.protocol, model: s.model, sessionId }));
   model.on('audio', pcm => {
     if (stats.spokeAt && stats.firstAudioMs === null) stats.firstAudioMs = Date.now() - stats.spokeAt;
+    if (heardAt) { stats.replyMs = [...stats.replyMs, Date.now() - heardAt].slice(-20); heardAt = null; }
     if (ws.readyState === 1) ws.send(pcm, { binary: true });
   });
+  model.on('heard', () => { heardAt = Date.now(); stats.spokeAt = stats.spokeAt || heardAt; tell({ type: 'heard' }); });
   model.on('user', text => { stats.spokeAt = stats.spokeAt || Date.now(); tell({ type: 'user', text }); });
   model.on('agent', text => tell({ type: 'agent', text }));
   model.on('turn', () => tell({ type: 'done' }));
-  model.on('interrupted', () => { stats.interrupted++; tell({ type: 'interrupted' }); });
+  model.on('interrupted', () => { stats.interrupted++; heardAt = null; tell({ type: 'interrupted' }); });
   model.on('error', message => tell({ type: 'error', message: `${s.protocol}: ${message}` }));
   model.on('closed', ({ code, reason }) => end(`the realtime service closed the call (${code}${reason ? `: ${reason}` : ''})`));
   model.on('tool', ({ id, name, args }) => {
@@ -125,16 +164,26 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime' }) {
     if (!request) return model.toolResult(id, 'Say what the person asked in the request.');
     stats.tools++;
     tell({ type: 'working', text: request });
-    const answer = Promise.resolve().then(() => ask(request)).then(a => String(a || '(no answer)').slice(0, MAX_SAY), e => `It failed: ${e.message}`);
-    let late = false;
-    const wait = new Promise(r => setTimeout(() => { late = true; r(null); }, Math.max(3, Number(s.waitSec) || 20) * 1000));
+    // The pipeline says the answer while the model is still writing it: its first sentence plays before the last exists.
+    const live = model.stream ? model.stream() : null, gather = live && require('./pipeline').gatherer();
+    let streamed = false, late = false;
+    const onText = live && (delta => { if (late || ended) return; for (const x of gather.push(delta)) { streamed = true; live.part(x); } });
+    const answer = Promise.resolve().then(() => ask(request, onText ? { onText } : undefined))
+      .then(a => ({ text: String(a || '(no answer)').slice(0, MAX_SAY) }), e => ({ text: `It failed: ${e.message}`, failed: true }));
+    let timer;
+    const wait = new Promise(r => { timer = setTimeout(() => r(null), Math.max(3, Number(s.waitSec) || 20) * 1000); });
+    answer.then(() => clearTimeout(timer));
     Promise.race([answer, wait]).then(first => {
-      if (first !== null && !late) return model.toolResult(id, first);
+      if (first || streamed) {   // answered in time, or already being said: finish saying it
+        return answer.then(a => (streamed ? live.end(`${gather.rest()}${a.failed ? ` ${a.text}` : ''}`) : model.toolResult(id, a.text)));
+      }
+      late = true;
       stats.background++;
+      tell({ type: 'background', text: request.slice(0, 200) });
       // A model is told what to say; the pipeline says what it is given, so its words are for the listener.
       model.toolResult(id, model.literal ? 'That will take a while. I will tell you when it is done.'
         : 'Still working on it in the background. Tell the person it is under way and that you will say when it is done.');
-      answer.then(text => { if (!ended) model.say(model.literal ? text : `The earlier request finished ("${request.slice(0, 200)}"). DOCA's answer: ${text}`); });
+      answer.then(a => { if (!ended) { tell({ type: 'report', text: request.slice(0, 200) }); model.say(model.literal ? a.text : `The earlier request finished ("${request.slice(0, 200)}"). DOCA's answer: ${a.text}`); } });
     });
   });
 
@@ -156,22 +205,39 @@ function askAsPanel({ sessionId, client }) {
   });
 }
 
-/** A turn as a paired device (api-v1/harness.post), answered with its text from the bus. */
+/**
+ * A turn as a paired device (api-v1/harness.post), answered with its text from the bus. `onText` hears the answer as it
+ * is written — the turn's own `text` events while it runs (the bus's `agent.text` is ephemeral and published only to a
+ * device listening on its stream, which a call is not) — and `null` where a tool call breaks it.
+ */
 function askAsDevice(device, sessionId) {
-  const bus = require('../api-v1/bus'), harness = require('../api-v1/harness');
-  return request => new Promise((resolve, reject) => {
-    let turnId = null;
-    const timer = setTimeout(() => { bus.emitter.off('event', hear); resolve('No answer after 10 minutes; the work may still be running in the conversation.'); }, 10 * 60 * 1000);
+  const bus = require('../api-v1/bus'), harness = require('../api-v1/harness'), turns = require('../harness/turn/lifecycle').events;
+  return (request, { onText } = {}) => new Promise((resolve, reject) => {
+    let turnId = null, writing = false;
+    const words = e => {
+      if (!writing || e.sessionId !== sessionId) return;
+      if (e.type === 'text') onText(String(e.text || ''));
+      else if (e.type === 'tool_call') onText(null);
+    };
+    const stop = () => { clearTimeout(timer); bus.emitter.off('event', hear); if (onText) turns.off('event', words); };
+    const timer = setTimeout(() => { stop(); resolve('No answer after 10 minutes; the work may still be running in the conversation.'); }, 10 * 60 * 1000);
     const hear = (deviceId, env) => {
-      if (deviceId !== device.id || env.type !== 'agent.turn' || env.payload?.turnId !== turnId || env.payload.state === 'started') return;
-      clearTimeout(timer); bus.emitter.off('event', hear);
+      if (deviceId !== device.id || env.type !== 'agent.turn' || env.payload?.turnId !== turnId) return;
+      if (env.payload.state === 'started') { writing = true; return; }   // ours now (or read by the turn running there)
+      stop();
       if (env.payload.state === 'done') resolve(env.payload.text);
       else reject(new Error(env.payload.state === 'cancelled' ? 'it was stopped' : env.payload.error?.message || 'the turn failed'));
     };
     bus.emitter.on('event', hear);
-    try { ({ turnId } = harness.post({ message: request, sessionId, voice: device.kind === 'watch' ? 'assistant' : 'call' }, device)); }   // spoken: a watch is assistant mode
-    catch (e) { clearTimeout(timer); bus.emitter.off('event', hear); reject(e); }
+    if (onText) turns.on('event', words);
+    // Spoken: a watch is assistant mode. A device's kind is never "watch" (devices.KINDS); its paired form factor says so.
+    const wrist = (device.caps?.formFactor || device.kind) === 'watch';
+    try {
+      const r = harness.post({ message: request, sessionId, voice: wrist ? 'assistant' : 'call' }, device);
+      turnId = r.turnId;
+      writing = !r.queued;   // started already (its "started" went out before the id came back); queued: when it is read
+    } catch (e) { stop(); reject(e); }
   });
 }
 
-module.exports = { live, ADAPTERS, TOOL, INSTRUCTIONS, settings, on, status, callStatus, target, serve, askAsPanel, askAsDevice };
+module.exports = { live, FRAMES, ADAPTERS, TOOL, INSTRUCTIONS, settings, on, status, callStatus, target, serve, askAsPanel, askAsDevice };

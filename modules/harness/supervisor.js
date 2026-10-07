@@ -84,7 +84,7 @@ function wake(sessionId, message, { retry } = {}) {
   require('../activity').note({ from: 'supervisor', what: `woke ${require('./memory').getSession(sessionId)?.title || sessionId}`, why: whyOf(message), sessionId });
   Promise.resolve()
     .then(() => _turn(sessionId, message))
-    .then(r => afterOrchestrator(sessionId, r))
+    .then(r => { require('../realtime/calls').landed(sessionId, r); afterOrchestrator(sessionId, r); })   // said in a call open there
     .catch(() => { /* the turn records its own failure; afterTurn decides from there */ });
   return 'woken';
 }
@@ -119,7 +119,8 @@ function afterOrchestrator(sessionId, r) {
     const turnId = `auto_${Date.now().toString(36)}`;
     bus.publishWhere(devices.list(), d => require('./session-access').hears(d, sessionId), 'agent.turn', d => ({
       turnId, sessionId, state: 'done', by: 'panel', text: short(r.text, 4000),
-      ...require('../presence').quietFlag(d.userId),
+      // A device on a call in this conversation just heard it said: update, do not notify (realtime/calls.js).
+      ...(require('../realtime/calls').inCall(d.id, sessionId) ? { quiet: true } : require('../presence').quietFlag(d.userId)),
     }));
   } catch { /* the chat has it either way */ }
 }
