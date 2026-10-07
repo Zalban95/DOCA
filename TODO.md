@@ -86,8 +86,17 @@ the project's managers only if the owner allows sharing specialists and skills (
   their devices.
 - [ ] P1.7 **Nothing coded is lost (W14)**: H10.7's tooling hides unused paths from the default instead of archiving
   them off main; an index of every feature the agents read so they know what exists.
-- [ ] P1.8 **See everything, unnarrated (§1)**: an audit that every running thing (models, specialists, services,
-  machines, file edits) is visible and attributed in the panel.
+- [ ] P1.8 **Nothing runs unseen, but it can be unrendered (§1)**: every running thing (models, specialists,
+  services, machines, file edits) is drawn by the panel in its existing, designated tab when that tab is open, and
+  otherwise only logged — attributed either way; an audit that nothing runs outside both.
+- [ ] P1.11 **Important and safety switches ask for the password (S14)**: approval modes, developer mode, sharing,
+  spending, reach and levels, guards, experiments — the panel asks for the password again before the change, however
+  recent the sign-in; the route checks it too.
+- [ ] P1.12 **Log settings**: what is kept, for how long and how much (per source: turns, tools, traces, devices,
+  services), so logs never fill memory or disk needlessly; defaults sized for a small machine.
+- [ ] P1.13 **Chronicle — the log analyzer tab**: everything that happened, searchable and filtered by source,
+  person, device, agent and time, with the story of a piece of work told from its logs and traces (what ran, why,
+  what it cost, what failed) — the place unrendered work is seen afterwards.
 
 ### Everything still open, now urgent
 - A2 rest: the rendered "Reaching outside" block; quarantining the open web with specialists off.
