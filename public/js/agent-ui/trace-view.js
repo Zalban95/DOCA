@@ -7,7 +7,7 @@
    Langfuse. Opened from ⏱ on the conversation bar.
    ═══════════════════════════════════════════════════════ */
 
-function traceOpen(sessionId) {
+function traceOpen(sessionId, runId) {   // runId: open on that run (Chronicle) rather than the latest
   let overlay = document.getElementById('trace-overlay');
   if (!overlay) {
     overlay = Object.assign(document.createElement('div'), { id: 'trace-overlay', className: 'modal-overlay' });
@@ -23,10 +23,10 @@ function traceOpen(sessionId) {
     overlay.querySelector('#trace-close').onclick = () => { overlay.style.display = 'none'; };
   }
   overlay.style.display = 'flex';
-  traceRuns(sessionId);
+  traceRuns(sessionId, runId);
 }
 
-async function traceRuns(sessionId) {
+async function traceRuns(sessionId, runId) {
   const runsEl = document.getElementById('trace-runs'), body = document.getElementById('trace-body');
   let runs = [];
   try { runs = (await apiFetch(`/api/harness/runs?sessionId=${encodeURIComponent(sessionId)}&limit=12`)).runs || []; }
@@ -35,7 +35,7 @@ async function traceRuns(sessionId) {
   runsEl.innerHTML = runs.map((r, i) => `<button class="btn btn-xs" data-run="${escHtml(r.id)}" title="${escHtml(r.state)}">${escHtml(new Date(r.startedAt).toLocaleTimeString())}
     · ${r.steps ?? '?'} steps${r.state === 'done' ? '' : ` · ${escHtml(r.state)}`}${i === 0 ? ' (latest)' : ''}</button>`).join('');
   runsEl.querySelectorAll('button').forEach(b => { b.onclick = () => traceShow(b.dataset.run); });
-  traceShow(runs[0].id);
+  traceShow(runId || runs[0].id);
 }
 
 async function traceShow(runId) {

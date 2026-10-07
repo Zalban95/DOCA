@@ -21,13 +21,13 @@ const store = require('../store');
 const shell = require('../shell');
 
 const MAX_RUNNING = 8;
-const KEEP = 50;             // job records kept; the oldest finished ones go, with their logs
+const KEEP = () => require('../log-keep').limit('logs.jobsKept');   // job records kept; the oldest finished ones go, with their logs
 const TAIL = 8000;           // output read back by default, from the end
 
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
 
 function rows() { return store.readJson('harness/jobs', { jobs: [] }).jobs; }
-function save(list) { store.writeJson('harness/jobs', { jobs: list.slice(-KEEP) }); }
+function save(list) { store.writeJson('harness/jobs', { jobs: list.slice(-Math.max(KEEP(), list.filter(j => j.state === 'running').length)) }); }
 function update(id, patch) { save(rows().map(j => (j.id === id ? { ...j, ...patch } : j))); }
 const logOf = id => path.join(store.dir('harness/jobs'), `${id}.log`);
 
@@ -65,10 +65,7 @@ function start(command, { cwd, sessionId = null, env } = {}) {
   const job = { id, command: String(command).slice(0, 2000), cwd: cwd || null, pid: child.pid || null,
     sessionId, state: 'running', startedAt: new Date().toISOString() };
   // Oldest finished jobs go first, and their logs with them.
-  const all = [...rows(), job];
-  const drop = all.length > KEEP ? all.filter(j => j.state !== 'running').slice(0, all.length - KEEP) : [];
-  for (const d of drop) fs.rmSync(logOf(d.id), { force: true });
-  save(all.filter(j => !drop.includes(j)));
+  trim([...rows(), job]);
 
   waiting.add(id);
   child.on('error', e => { update(id, { state: 'exited', code: -1, endedAt: new Date().toISOString(), error: e.message }); waiting.delete(id); });
@@ -79,6 +76,24 @@ function start(command, { cwd, sessionId = null, env } = {}) {
   });
   child.unref();
   return view(job);
+}
+
+/** Over `logs.jobsKept`: the oldest finished records go, with their output. Returns how many went. */
+function trim(all = rows()) {
+  const keep = KEEP();
+  const drop = all.length > keep ? all.filter(j => j.state !== 'running').slice(0, all.length - keep) : [];
+  for (const d of drop) fs.rmSync(logOf(d.id), { force: true });
+  save(all.filter(j => !drop.includes(j)));
+  return drop.length;
+}
+
+/** The bound applied now, and output files no record names (a record dropped before its file) removed. */
+function prune() {
+  const n = trim();
+  const known = new Set(rows().map(j => `${j.id}.log`));
+  let stray = 0;
+  try { for (const f of fs.readdirSync(store.dir('harness/jobs'))) if (f.endsWith('.log') && !known.has(f)) { fs.rmSync(logOf(f.slice(0, -4)), { force: true }); stray++; } } catch { /* none */ }
+  return n + stray;
 }
 
 function get(id) {
@@ -116,4 +131,4 @@ function list({ sessionId } = {}) {
   return rows().filter(j => !sessionId || j.sessionId === sessionId).map(view).reverse();
 }
 
-module.exports = { start, get, output, stop, list, MAX_RUNNING, KEEP };
+module.exports = { start, get, output, stop, list, prune, MAX_RUNNING, KEEP };

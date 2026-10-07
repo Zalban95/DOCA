@@ -112,6 +112,7 @@ const TABLE = [
   R(ANY, '/api/live/watch', 'host'),
   R(ANY, '/api/screens/.*', 'host'),
   R(ANY, '/api/archive(/.*)?', 'chat'),
+  R(GET, '/api/chronicle(/.*)?', 'read'),                      // what happened: each row the viewer's own unless host (chronicle/)
   R(ANY, '/api/workstream(/.*)?', 'host'),
   R(ANY, '/api/machines(/.*)?', 'host'),
   R(GET, '/api/hub/links', 'read'),                              // the hub's addresses, as QR codes a phone scans (network.js)

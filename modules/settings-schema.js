@@ -142,7 +142,8 @@ const SCHEMA = {
       waitSec: { type: 'number', min: 3, default: 20, hint: 'Seconds the voice waits for the hive before saying the work carries on in the background.' } } },
   tracing:          { is: 'travels', home: 'hive', note: 'traces of each turn: whether they are kept, and for how long (harness/trace.js)',
     keys: { enabled: { type: 'boolean', default: true, hint: 'Keep a trace of each turn: model requests, tool calls, waits — names and numbers, never content.' },
-      retainDays: { type: 'number', min: 1, max: 3650, default: 30, hint: 'Days a turn\'s trace is kept.' } } },
+      retainDays: { type: 'number', min: 1, max: 3650, default: 30, hint: 'Days a turn\'s trace is kept.' },
+      maxSpans: { type: 'integer', min: 1000, max: 10000000, default: 100000, hint: 'The most trace rows kept (a few hundred bytes each); past it the oldest go first.' } } },
   retrieval:        { is: 'travels', home: 'hive', note: 'the embedding model retrieval uses (retrieval/; the switch is experiments.retrieval)',
     propose: p('Retrieval', 'Which embedding model searches memory and conversations by meaning'),
     keys: { provider: { type: 'string', default: 'ollama', hint: 'The provider that serves the embedding model (Field → API keys); ollama by default.' },
@@ -173,6 +174,18 @@ const SCHEMA = {
     keys: { listen: { type: 'string', default: 'tailnet', hint: 'tailnet (Tailscale and this machine), lan (also the local network), local (this machine only), all (every interface). From the next start.' },
       lanAdmin: { type: 'boolean', default: false, hint: 'Allow managing the machine (admin rights) from outside Tailscale. Off: from the local network a person reads and chats.' },
       services: { type: 'string', default: 'local', hint: 'Where the inference services this hub starts (Whisper, Kokoro, ComfyUI…) can be reached: local (this machine only — the hub reaches them here), tailnet (also its Tailscale address), all (every interface, the local network included, with no sign-in). From each service\'s next start.' } } },
+  // What is kept of what happened (log-keep.js; Settings → System → Logs; CONSTITUTION §1: nothing unseen, but the log
+  // never fills memory or disk needlessly). Sized for a small machine. Never proposable: a retention an agent could
+  // shorten is one that could erase the record of what agents did.
+  logs:             { is: 'local', home: 'device', on: 'host', note: 'what the hub keeps of what happened, how much and for how long: the log lines in memory, run records, background jobs, evaluation results (log-keep.js)',
+    keys: {
+      harnessLines:    { type: 'integer', min: 50, max: 20000, default: 500, hint: 'Lines of the harness log (Hub → Logs) kept in memory since the last start.' },
+      workstreamLines: { type: 'integer', min: 50, max: 5000, default: 300, hint: 'Lines of the Workstream\'s activity kept in memory.' },
+      mcpLines:        { type: 'integer', min: 20, max: 5000, default: 200, hint: 'Lines of each MCP server\'s own output kept in memory.' },
+      runsRetainDays:  { type: 'number', min: 1, max: 3650, default: 90, hint: 'Days the record of each turn, mission and device job is kept (Chronicle reads them); its trace goes with it.' },
+      jobsKept:        { type: 'integer', min: 5, max: 1000, default: 50, hint: 'Background jobs (shell_job) kept with their output files; the oldest finished ones go first.' },
+      evalResultsKept: { type: 'integer', min: 1, max: 500, default: 30, hint: 'Results kept per evaluation set, to compare a run with the one before.' },
+    } },
   vms:              { is: 'local', home: 'device', on: 'host', note: 'the libvirt connection URI of this machine', propose: p('Virtual machines', 'The libvirt connection URI') },
   channels:         { is: 'local', home: 'device', on: 'host', note: 'channel bots (Telegram, Matrix, Slack, mail): tokens and a switch for this hub',
     keys: {
