@@ -42,11 +42,9 @@ function toolsSection(schemas, named = []) {
   const lines = [`# Your tools — ${schemas.length}, by kit`,
     'Prefer the specific tool to shell: search_files over grep, replace_in_files over sed, git and project run over typed commands, canvas for anything that reads better as a page.',
     require('../untrusted').RULE];
-  // The airlock: when the web tools are not this level's, say how the web is read instead.
-  const names = new Set(schemas.map(s => s.function?.name));
-  if (!names.has('http_fetch') && names.has('agent_dispatch'))
-    lines.push('Reading the web: you do not fetch pages yourself. Dispatch the scout (or the researcher, for documentation) '
-      + 'with what to find out; its report comes back after the guards have read it (docs/design/airlock.md).');
+  // Which way out, from the ways held — the airlock's "dispatch the scout" among them (reaching-out.js; aw 19).
+  const outside = require('./reaching-out').block(new Set([...schemas.map(s => s.function?.name), ...(named || []).map(n => (typeof n === 'string' ? n : n?.name))].filter(Boolean)));
+  if (outside) lines.push(outside);
   for (const kit of order) {
     const list = byKit.get(kit);
     if (!list) continue;
