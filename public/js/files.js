@@ -15,9 +15,6 @@ const fm = {
   favorites: [],
 };
 
-/* ── Bookmarks (populated at init from /api/paths) ──── */
-let FM_BOOKMARKS = [];
-
 /* ── Init ────────────────────────────────────────────── */
 async function fmInit() {
   if (document.getElementById('fm-bookmarks-list').children.length > 0) {
@@ -26,22 +23,11 @@ async function fmInit() {
 
   try {
     const paths = await apiFetch('/api/paths');
-    const h = paths.home || '/';
-    fm.cwd = h;
-    FM_BOOKMARKS = [
-      { id: 'home',      icon: '⌂', label: 'Home',       path: h },
-      { id: 'openclaw',  icon: '⚙', label: '.openclaw',   path: h + '/.openclaw' },
-      { id: 'workspace', icon: '📁', label: 'Workspace',   path: paths.workspaceDir || h + '/.openclaw/workspace' },
-      { id: 'skills',    icon: '🔌', label: 'Skills',      path: paths.skillsDir    || h + '/.openclaw/workspace/skills' },
-      { id: 'compose',   icon: '🐳', label: 'Docker dir',  path: paths.composeDir   || h + '/openclaw' },
-      { id: 'snapshots', icon: '📷', label: 'Snapshots',   path: paths.snapshotDir  || '/tmp' },
-      { id: 'root',      icon: '/', label: 'Root fs',      path: '/' },
-    ];
+    fm.cwd = paths.home || '/';
+    FM_BOOKMARKS = fmBookmarksFrom(paths);   // files-bookmarks.js: only what is there, or can be made
   } catch {
     fm.cwd = '/';
-    FM_BOOKMARKS = [
-      { id: 'root', icon: '/', label: 'Root fs', path: '/' },
-    ];
+    FM_BOOKMARKS = [{ id: 'root', icon: '/', label: 'Root fs', path: '/' }];
   }
 
   fmBuildBookmarks();
@@ -146,20 +132,6 @@ function fmMountIcon(fstype, device) {
   if (fstype === 'tmpfs') return '⏳';
   if (fstype === 'overlay') return '🧅';
   return '💿';
-}
-
-function fmBuildBookmarks() {
-  const ul = document.getElementById('fm-bookmarks-list');
-  FM_BOOKMARKS.forEach(b => {
-    const btn     = document.createElement('button');
-    btn.className = 'fm-bookmark';
-    btn.id        = `fmbk-${b.id}`;
-    btn.title     = b.path;
-    btn.innerHTML = `<span class="fm-bookmark-icon">${b.icon}</span>
-                     <span class="fm-bookmark-name">${b.label}</span>`;
-    btn.onclick   = () => { fmNavigate(b.path); fmTreeMount(b.path); };
-    ul.appendChild(btn);
-  });
 }
 
 /** The sidebar's tree (lib/filetree.js, the same one the Projects tab uses), rooted at the last bookmark. */

@@ -105,6 +105,13 @@ function handleGetPaths(_req, res) {
     snapshotDir:    SNAPSHOT_DIR,
     configRegistry: CONFIG_REGISTRY,
     settable:       paths.describe(),
+    // Which of Hub → Files' shortcuts lead somewhere: on a fresh install most of them answered 404, and "Root fs" 403,
+    // with nothing on the page (self-test round two, C10). The tab hides or offers to create what is not there.
+    shortcuts: {
+      openclawDir: fs.existsSync(require('path').dirname(CONFIG_PATH)), composeDir: fs.existsSync(COMPOSE_DIR),
+      workspaceDir: fs.existsSync(WORKSPACE_DIR), skillsDir: fs.existsSync(SKILLS_DIR), snapshotDir: fs.existsSync(SNAPSHOT_DIR),
+      root: require('./utils').fmSafe(require('path').parse(HOME).root),
+    },
   });
 }
 
