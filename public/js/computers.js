@@ -34,7 +34,7 @@ async function computersLoad() {
   const tab = document.getElementById('tab-computers');
   if (!tab) return;
   let data;
-  try { data = await apiFetch('/api/computers'); }
+  try { [data] = await Promise.all([apiFetch('/api/computers'), machineOriginsLoad()]); }   // + who started each (lib/machine-origin.js)
   catch (e) { tab.innerHTML = `<div class="card"><div class="card-title">Computers</div><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
   const running = data.computers.filter(c => c.state === 'running').length;
   // One page header (des 9): title and one line left, actions right; the long account below it in sentence case (des 8).
@@ -83,7 +83,7 @@ function computersCard(c) {
       <button class="btn btn-xs" onclick="archiveSet('computer', ${jsArg(c.id)}, true)" title="Put it away: stopped, its desktop and files kept, back from Agents → Archive">🗄</button>
       <button class="btn btn-xs btn-red" onclick="computersAct('remove', ${jsArg(c.id)})" title="Remove it and its files">✕</button></div>
     ${c.test ? '<div class="pc-test" title="Made for testing a site or an app: its browser takes the password an agent types and a sign-in click without asking you. Paying is still asked, and no saved login goes in. A computer from an image older than this keeps asking: rebuild the image and make a new one.">Test computer: sign-ins without asking</div>' : ''}
-    ${who}${media ? `<div class="pc-files">${media}</div>` : ''}</div>`;
+    ${who}${machineOriginHtml('computer', c.id)}${media ? `<div class="pc-files">${media}</div>` : ''}</div>`;
 }
 
 /** The live view inside the panel: the noVNC page through the hub (computers/vnc.js); Back or ✕ closes it. */
@@ -171,7 +171,7 @@ async function computersAct(action, id) {
     catch (e) { appAlert(e.message); }
     computersLoad();
   };
-  if (action === 'remove') appConfirm('Remove this computer and every file in it?', go); else go();
+  if (!machineAskFirst('computer', id, action, '', go, action === 'remove' ? 'Every file in it goes with it.' : '')) go();
 }
 
 async function computersBuild() {

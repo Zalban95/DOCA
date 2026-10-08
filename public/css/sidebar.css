@@ -28,6 +28,10 @@
 .m-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .m-main .c-name, .m-detail { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .m-detail { font-size: 10px; color: var(--muted); margin-top: 1px; }
+/* Who started a machine (lib/machine-origin.js): under its row here and in its tab; one nobody noted, in amber */
+.m-origin { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+.m-origin.outside, .m-detail.outside { color: var(--amber); }
+.services-label .m-origin, .vm-name .m-origin, .card-title .m-origin { display: block; font-weight: 400; text-transform: none; letter-spacing: normal; }
 .m-row .c-state { flex: none; }
 /* The same point in Live's captions: running breathes in Points, a plain dot elsewhere */
 .m-pt { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: 1px; }

@@ -12,7 +12,7 @@ async function mcpLoad() {
   const list = document.getElementById('mcp-list');
   if (!list) return;
   try {
-    const data   = await apiFetch('/api/mcp');
+    const [data] = await Promise.all([apiFetch('/api/mcp'), machineOriginsLoad()]);   // + who started each (lib/machine-origin.js)
     _mcpTargets  = data.targets || [];
     const servers = data.servers || [];
     list.innerHTML = _mcpOffersHtml(data.offers || [])
@@ -144,7 +144,7 @@ function _mcpCardHtml(s) {
     <div class="card mb8 mcp-card mcp-${escHtml(s.state)}">
       <div class="toolbar" style="margin-bottom:6px">
         <span class="mcp-dot">${running ? '●' : '○'}</span>
-        <div class="card-title" style="margin-bottom:0">${escHtml(s.label || s.id)}</div>
+        <div class="card-title" style="margin-bottom:0">${escHtml(s.label || s.id)}${machineOriginHtml('mcp', s.id)}</div>
         <span class="provider-badge ${badge}" title="DOCA's MCP connection; a disconnected remote listener may still be running">${escHtml(connection)}</span>
         <span class="provider-badge ${backendUnreachable ? 'warn' : ''}" title="${escHtml(backendNote)}">${backendUnreachable ? 'BACKEND REPORTED UNREACHABLE' : 'BACKEND UNKNOWN'}</span>
         ${running ? `<span class="mcp-count">${s.toolCount} tool${s.toolCount === 1 ? '' : 's'}</span>` : ''}
@@ -177,7 +177,8 @@ const MCP_ACTION_LABEL = {   // what the pressed button says while it works
   'listener-start': 'Asking…', 'listener-stop': 'Asking…', refresh: 'Refreshing…',
 };
 
-async function mcpAction(id, action, btn) {
+async function mcpAction(id, action, btn, asked) {
+  if (!asked && machineAskFirst('mcp', id, action, `the MCP server "${id}"`, () => mcpAction(id, action, btn, true))) return;   // lib/machine-ask.js
   const status = document.getElementById(`mcp-status-${id}`), done = mcpBusy(btn, MCP_ACTION_LABEL[action] || '…');
   setStatus(status, `${MCP_ACTION_LABEL[action] || `${action}…`}`, 'info');
   try {
@@ -214,13 +215,13 @@ async function mcpShowLog(id, keepOpen) {
 }
 
 function mcpRemove(id) {
-  appConfirm(`Remove the "${id}" MCP server? It is stopped first if running.`, async () => {
+  machineAsk('mcp', id, 'remove', `the "${id}" MCP server`, async () => {
     try {
       await apiFetch(`/api/mcp/${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (document.getElementById('mcp-name').dataset.editing === id) mcpShowForm(false);   // its edit form goes with it
       mcpLoad();
     } catch (e) { setStatus(document.getElementById(`mcp-status-${id}`), `✗ ${e.message}`, 'err'); }
-  });
+  }, 'It is stopped first if running.');
 }
 
 /* ── The add / edit form ─────────────────────────────── */

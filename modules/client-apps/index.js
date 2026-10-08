@@ -8,7 +8,7 @@
  *
  * An Android update installs only over an app signed with the same key, so the hub keeps one signing key
  * (keys/android-signing.keystore, protected) and signs what it builds with it; the phone's app must have been signed
- * with it too — the portal PC's debug key, today.
+ * with it too (until a key is uploaded, whichever machine's debug key built it).
  */
 const fs = require('fs');
 const path = require('path');

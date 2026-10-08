@@ -108,7 +108,7 @@ function streamOk(stream) {
  * Run a handler as a background job for `deviceId`. Returns the job record
  * immediately; progress and completion flow over the push channel.
  */
-function runAsJob(commandId, deviceId, handler, reqShape, params) {
+function runAsJob(commandId, deviceId, handler, reqShape, params, onDone = null) {
   const job = newJob(commandId, deviceId, params);
   const onChunk = (c) => {
     const text = chunkText(c);
@@ -124,10 +124,12 @@ function runAsJob(commandId, deviceId, handler, reqShape, params) {
     if (!ok) job.error = (body && body.error) || job.output.slice(-3).join('').trim().slice(0, 500) || 'command failed';
     record(job);
     bus.publish(deviceId, 'job.done', { jobId: job.id, commandId, status: job.status, error: job.error, result: job.result, outputTail: job.output.slice(-10) });
+    try { onDone?.(job); } catch { /* the record of it never fails the job */ }
   }).catch(e => {
     job.status = 'failed'; job.endedAt = new Date().toISOString(); job.error = e.message;
     record(job);
     bus.publish(deviceId, 'job.done', { jobId: job.id, commandId, status: 'failed', error: e.message });
+    try { onDone?.(job); } catch { /* as above */ }
   });
   return job;
 }

@@ -38,7 +38,7 @@ function missionEnded(missionId) {
       if (!now || now.pinned || now.missionId !== missionId) return;   // pinned, removed, or lent again
       if (require('../agents/missions').get(missionId)?.state === 'running') return;   // resumed
       computers.stop(c.id).catch(() => {});
-      require('../activity').note({ from: 'computers', what: `stopped ${c.name || c.id}`, why: `idle ${limit('idleStopMinutes')} min after its mission ${missionId} ended` });
+      require('../activity').note({ from: 'computers', what: `stopped ${c.name || c.id}`, why: `idle ${limit('idleStopMinutes')} min after its mission ${missionId} ended`, machine: { kind: 'computer', id: c.id, name: c.name }, act: 'stop', ok: true });
     }, limit('idleStopMinutes') * 60000);
     t.unref?.();
     _timers.set(c.id, t);
@@ -56,7 +56,7 @@ async function sweep(now = Date.now()) {
     const since = Date.parse(row.stoppedAt || row.createdAt);
     if (now - since > keep) {
       await computers.remove(c.id).catch(() => {}); gone.push(c.id);
-      require('../activity').note({ from: 'computers', what: `removed ${c.name || c.id}, which an agent made`, why: `stopped more than ${limit('retainHours')} h and not pinned` });
+      require('../activity').note({ from: 'computers', what: `removed ${c.name || c.id}, which an agent made`, why: `stopped more than ${limit('retainHours')} h and not pinned`, machine: { kind: 'computer', id: c.id, name: c.name }, act: 'remove', ok: true });
     }
   }
   return gone;

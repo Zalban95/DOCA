@@ -18,16 +18,17 @@ function page(answer) {
     apiFetch: async url => { assert.equal(url, '/api/machines/rows'); if (answer instanceof Error) throw answer; return answer; },
     nav: tab => went.push(['nav', tab]), liveFocus: id => went.push(['live', id]) };
   vm.createContext(ctx);
-  vm.runInContext(`${F.source('lib/html.js', 'machines-rows.js')}\n;this.machinesSidebar = machinesSidebar; this.machineGo = machineGo;`, ctx);
+  vm.runInContext(`${F.source('lib/html.js', 'lib/machine-origin.js', 'machines-rows.js')}\n;this.machinesSidebar = machinesSidebar; this.machineGo = machineGo;`, ctx);
   return { ctx, els, went };
 }
 
 const rows = [
-  { kind: 'container', id: 'a1', name: 'web', state: 'running', point: 'up', detail: 'nginx:1 · Up 2 hours', tab: 'docker', live: false },
+  { kind: 'container', id: 'a1', name: 'web', state: 'running', point: 'up', detail: 'nginx:1 · Up 2 hours', tab: 'docker', live: false, origin: { text: 'started outside DOCA', at: null, outside: true } },
   { kind: 'container', id: 'b2', name: 'batch', state: 'exited', point: 'down', detail: 'busybox', tab: 'docker', live: false },
   { kind: 'container', id: 'c3', name: 'broken', state: 'exited', point: 'error', detail: 'app · Exited (1)', tab: 'docker', live: false },
   { kind: 'computer', id: 'pc1', name: 'tester-pc', state: 'running', point: 'up', detail: 'Tester · running', tab: 'computers', live: true },
-  { kind: 'vm', id: 'libvirt:devbox', name: 'devbox', state: 'running', point: 'up', detail: 'libvirt / KVM · ubuntu 24.04', tab: 'vms', live: true },
+  { kind: 'vm', id: 'libvirt:devbox', name: 'devbox', state: 'running', point: 'up', detail: 'libvirt / KVM · ubuntu 24.04', tab: 'vms', live: true,
+    origin: { text: 'started by Rowan from the device Test Phone', at: new Date(Date.now() - 2 * 3600e3).toISOString() } },
   { kind: 'vm', id: 'libvirt:old', name: 'old', state: 'stopped', point: 'down', detail: 'libvirt / KVM', tab: 'vms', live: false },
 ];
 
@@ -38,6 +39,8 @@ test('a host sees containers, computers and VMs: running as rows with a point, s
   for (const label of ['Containers', 'Computers', 'VMs']) assert.match(html, new RegExp(`<span>${label}</span>`));
   assert.match(html, /c-item m-row running[\s\S]*web[\s\S]*nginx:1/);
   assert.match(html, /c-item m-row exited[\s\S]*broken/, 'one in trouble is shown, red');
+  assert.match(html, /<span class="m-detail">started by Rowan from the device Test Phone, 2 h ago<\/span>/, 'who started it (lib/machine-origin.js)');
+  assert.match(html, /<span class="m-detail outside">started outside DOCA<\/span>/);
   assert.doesNotMatch(html, />batch</, 'a stopped one is counted, not listed');
   assert.match(html, /nav\(&quot;docker&quot;\)[^>]*>1 stopped/);
   assert.match(html, /nav\(&quot;vms&quot;\)[^>]*>1 stopped/);

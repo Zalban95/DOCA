@@ -124,7 +124,7 @@ async function dockerLoadContainers() {
   const tbody = document.getElementById('docker-containers-body');
   tbody.innerHTML = '<tr><td colspan="5" class="placeholder pulse" style="padding:12px">Loading…</td></tr>';
   try {
-    const data = await apiFetch('/api/docker/containers');
+    const [data] = await Promise.all([apiFetch('/api/docker/containers'), machineOriginsLoad()]);   // + who started each (lib/machine-origin.js)
     _dockerContainers = data.containers || [];
     if (!_dockerContainers.length) {
       // Docker absent or stopped is an empty list with its reason (a 200), drawn as a state rather than an error.
@@ -148,7 +148,7 @@ async function dockerLoadContainers() {
         !isRunning && { icon: 'remove', label: 'Remove', more: true, onclick: `dockerRemoveContainer(${id},${jsArg(c.Names || '')})` },
       ]);
       return `<tr class="models-row dk-row" id="docker-container-${c.ID}">
-        <td class="models-name dk-name">${escHtml(c.Names || c.ID.slice(0,12))}</td>
+        <td class="models-name dk-name">${escHtml(c.Names || c.ID.slice(0,12))}${machineOriginHtml('container', c.Names || c.ID)}</td>
         <td class="dk-image" title="${escHtml(c.Image || '')}">${escHtml(c.Image || '—')}</td>
         <td class="dk-status"><span class="badge ${statusClass}">${escHtml(c.Status || c.State || '—')}</span></td>
         <td class="dk-ports${ports ? "" : " dk-none"}">${escHtml(ports.slice(0,40) || "—")}</td>
@@ -161,7 +161,8 @@ async function dockerLoadContainers() {
   }
 }
 
-async function dockerAction(id, action) {
+async function dockerAction(id, action, asked) {
+  if (!asked && machineAskFirst('container', id, action, `the container ${_dockerContainers.find(c => c.ID === id)?.Names || id.slice(0, 12)}`, () => dockerAction(id, action, true))) return;
   try {
     await apiFetch(`/api/docker/containers/${id}/action`, { method: 'POST', body: { action } });
     setTimeout(dockerLoadContainers, 800);
@@ -169,7 +170,7 @@ async function dockerAction(id, action) {
 }
 
 function dockerRemoveContainer(id, name) {
-  appConfirm(`Remove container "${name}"?`, async () => {
+  machineAsk('container', id, 'remove', `the container "${name}"`, async () => {
     try {
       await apiFetch(`/api/docker/containers/${id}/action`, { method: 'POST', body: { action: 'remove' } });
       setTimeout(dockerLoadContainers, 800);
