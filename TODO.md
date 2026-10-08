@@ -145,6 +145,17 @@ the project's managers only if the owner allows sharing specialists and skills (
   says Ollama is not installed or not running (#11); the computer image has Symbola and Droid Sans Fallback (#26);
   the pairing card shows its link as text — the code was already there, after "Show pairing code" (#10); the
   computers' tidy-up removes containers no record names (`computers/strays.js`, #25).
+- [x] Self-test round two 2026-10-08, the computers/devices/server group (branch `selftest2-server`): the pairing
+  card asks what is being paired, each role described (a computer running doca-client or DocaDesk is "phone"), and
+  doca-client says a refused offer in words — the scope it lacks and how to give it (B1); an HTTP MCP call is made
+  with node:http, so a computer's call waits its full `computers.callTimeoutMs` instead of undici's 300 s, and a
+  timeout says it timed out (`mcp/http-post.js`, B2); a computer's shell answers by its timeout, its process group
+  killed whole (B3); browser_click reproduced against a throwaway panel — a snapshot left old numbers on hidden
+  controls and the click went to 0,0 — now numbers are cleared, a hidden or covered element is said, and a click
+  that did not reach its element is said (B4); every unmatched /api path answers JSON `not_found`
+  (`api-not-found.js`, C12); evaluation checks say what happened on a fail (R2); the first-token deadline extends
+  while a local server says it is working, up to ten times the setting (`turn/busy-server.js`, C8). Not checked:
+  C8's "Send while busy left the text in the box".
 - [x] Self-test 2026-10-08, the panel group (branch `selftest-panel`): the open group's pages are a row under the
   header, the search giving way first, so Settings never scrolls out of a 1024–1920 px header in any look (#3);
   Accept and Connect on an MCP offer go busy and the changed row is lit and says what happened, an unreachable HTTP
