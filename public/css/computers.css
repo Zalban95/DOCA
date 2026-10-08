@@ -19,3 +19,4 @@
 .pc-driving { color: var(--amber); font-size: 12px; }
 .pc-live iframe { flex: 1; width: 100%; border: 0; background: #000; }
 @media (max-width: 768px) { .pc-grid { grid-template-columns: 1fr; } }
+.pc-test { margin: 0 10px 6px; font-size: 11px; color: var(--amber); }

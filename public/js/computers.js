@@ -76,8 +76,11 @@ function computersCard(c) {
         : `<button class="btn btn-xs" onclick="computersAct('start', ${jsArg(c.id)})">Start</button>`}
       <button class="btn btn-xs ${c.pinned ? 'btn-amber' : ''}" onclick="computersPin(${jsArg(c.id)}, ${!c.pinned})"
         title="${c.pinned ? 'Pinned: kept as it is. Click to let it be tidied away.' : c.auto ? 'Made by an agent: it stops after its mission and is removed some days later. Pin to keep it.' : 'Pin to keep it running after its missions.'}">📌</button>
+      ${c.agentType ? '' : `<button class="btn btn-xs ${c.test ? 'btn-amber' : ''}" onclick="computersTest(${jsArg(c.id)}, ${!c.test})"
+        title="${c.test ? 'A test computer: sign-ins without asking. Click to make it ask again.' : 'Make it a test computer: an agent signs in to what it tests without asking you (asks for your password). Paying is still asked.'}">🧪</button>`}
       <button class="btn btn-xs" onclick="archiveSet('computer', ${jsArg(c.id)}, true)" title="Put it away: stopped, its desktop and files kept, back from Agents → Archive">🗄</button>
       <button class="btn btn-xs btn-red" onclick="computersAct('remove', ${jsArg(c.id)})" title="Remove it and its files">✕</button></div>
+    ${c.test ? '<div class="pc-test" title="Made for testing a site or an app: its browser takes the password an agent types and a sign-in click without asking you. Paying is still asked, and no saved login goes in. A computer from an image older than this keeps asking: rebuild the image and make a new one.">Test computer: sign-ins without asking</div>' : ''}
     ${who}${media ? `<div class="pc-files">${media}</div>` : ''}</div>`;
 }
 
@@ -132,6 +135,20 @@ function computersFiles(id) {
 function computersMedia(name, mime) {
   mediaViewerOpen({ src: `/api/attachments/${encodeURIComponent(name)}`, name,
     kind: /^video\//.test(mime) ? 'video' : /^audio\//.test(mime) ? 'audio' : 'image' });
+}
+
+/** Mark or unmark a test computer (computers/test-mode.js): marking loosens its browser guard, so the hub asks for the password. */
+function computersTest(id, on) {
+  const go = async () => {
+    try {
+      const r = await apiFetch(`/api/computers/${id}/test`, { method: 'POST', body: { on } });
+      if (on && r.applied === false) appAlert('Marked. The computer did not answer now: it takes effect when it next starts. One made from an image older than this keeps asking.');
+    } catch (e) { appAlert(e.message); }
+    computersLoad();
+  };
+  if (!on) return go();
+  appConfirm('Make this a test computer? Its browser will take a password an agent types and a sign-in click without asking you. '
+    + 'Paying is still asked, and no saved login goes into it. Use it only for test accounts.', go);
 }
 
 async function computersPin(id, pinned) {

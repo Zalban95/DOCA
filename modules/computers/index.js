@@ -96,15 +96,20 @@ async function connect(c) {
     try { if ((await fetch(`http://127.0.0.1:${c.mcpPort}/health`)).ok) break; } catch { /* still starting */ }
     await new Promise(r => setTimeout(r, 500));
   }
-  return registry.start(serverId(c));
+  const started = await registry.start(serverId(c));
+  if (c.test) await require('./test-mode').apply(c);   // a restarted control server starts ordinary: told again
+  return started;
 }
 
-/** `auto`: an agent made it, so it is tidied away after it stops (lifecycle.js) unless a person pins it. */
-async function create({ name, purpose = '', missionId = null, by = null, auto = false, agentType = null, keptFor = null } = {}) {
+/**
+ * `auto`: an agent made it, so it is tidied away after it stops (lifecycle.js) unless a person pins it. `test`: made for
+ * testing a site or an app — sign-ins without asking (test-mode.js); never on a computer a specialist keeps.
+ */
+async function create({ name, purpose = '', missionId = null, by = null, auto = false, agentType = null, keptFor = null, test = false } = {}) {
   if (!(await imageReady())) throw bad('The computer image is not built yet: build it once (Computers → Build the image).', 409);
   await require('./lifecycle').roomForOne();
   const c = { id: crypto.randomBytes(4).toString('hex'), name: String(name || 'computer').replace(/[^\w .-]/g, '').slice(0, 40) || 'computer',
-    purpose: String(purpose).slice(0, 300), missionId, by, auto: !!auto, pinned: false, ...(agentType ? { agentType } : {}), ...(keptFor ? { keptFor } : {}), token: crypto.randomBytes(24).toString('hex'),
+    purpose: String(purpose).slice(0, 300), missionId, by, auto: !!auto, pinned: false, ...(agentType ? { agentType } : test === true ? { test: true } : {}), ...(keptFor ? { keptFor } : {}), token: crypto.randomBytes(24).toString('hex'),
     fillKey: crypto.randomBytes(24).toString('hex'),   // the hub's alone: it unlocks browser_fill_secret (logins.js)
     vncPassword: crypto.randomBytes(6).toString('hex'), mcpPort: await freePort(), vncPort: await freePort(), servePort: await freePort(), createdAt: new Date().toISOString() };
   try {
@@ -169,7 +174,7 @@ async function remove(id) {
 /** What the panel and the agent see: never the token. The VNC password is for the person who opens the view. */
 function view(c, state = null) {
   return { id: c.id, name: c.name, purpose: c.purpose, missionId: c.missionId, createdAt: c.createdAt, state,
-    auto: !!c.auto, pinned: !!c.pinned, stoppedAt: c.stoppedAt || null, archivedAt: c.archivedAt || null, by: c.by || null, agentType: c.agentType || null, keptFor: c.keptFor || null,
+    auto: !!c.auto, pinned: !!c.pinned, test: !!c.test, stoppedAt: c.stoppedAt || null, archivedAt: c.archivedAt || null, by: c.by || null, agentType: c.agentType || null, keptFor: c.keptFor || null,
     server: serverId(c), tools: `mcp__${serverId(c)}__*`,
     serve: c.servePort ? { inside: SERVE, port: c.servePort } : null,   // a computer made before H10.18 has none: make a new one
     // Through the hub, so any signed-in host's browser can watch — the phone on the tailnet included (vnc.js).
@@ -269,4 +274,4 @@ async function list({ all = false } = {}) {
   return rows().filter(c => all || !c.archivedAt).map(c => view(c, states[container(c)] || 'missing'));
 }
 
-module.exports = { IMAGE, SERVE, imageReady, imageState, sourceHash, build, create, start, stop, remove, pin, archive, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, fetchFile };
+module.exports = { IMAGE, SERVE, imageReady, imageState, sourceHash, build, create, start, stop, remove, pin, archive, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, fetchFile, patch, view, save, rows };
