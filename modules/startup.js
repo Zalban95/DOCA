@@ -14,9 +14,12 @@ const { run, streamCmd } = require('./utils');
 
 const SERVICE = 'openclaw-panel.service';
 const SCRIPT  = path.join(__dirname, '..', 'run.sh');
-const LAUNCHER = path.join(__dirname, '..', 'bin', 'doca-launch.js');
 const shell = require('./shell');
 const { HOME_DIR } = require('./paths');
+// The install's own launcher, not the running version's copy: a switched-to version runs from .releases/<tag>, and
+// an entry pointing at that copy would start the release folder as if it were the install (its own data, no .env).
+// A DOCA_HOME with no launcher in it (the tests' data folder) falls back to the one beside this module.
+const LAUNCHER = [path.join(HOME_DIR, 'bin', 'doca-launch.js'), path.join(__dirname, '..', 'bin', 'doca-launch.js')].find(f => fs.existsSync(f));
 
 /** Why the toggle cannot be used on this host, or null when it can. */
 async function unsupportedReason() {
@@ -38,7 +41,7 @@ function launcherState() {
   let st = {};
   try { st = JSON.parse(r.stdout); } catch {}
   return { supported: true, service: st.method === 'launchd' ? require(LAUNCHER).LABEL : require(LAUNCHER).TASK, method: st.method,
-    enabled: !!st.ok, active: true, supervised: false };
+    enabled: !!st.ok, active: true, supervised: false, ...(st.elsewhere ? { elsewhere: st.elsewhere } : {}) };
 }
 
 async function state() {

@@ -37,6 +37,20 @@ test('the paths say which shortcuts lead somewhere, and a missing one shows as o
     shortcuts: { openclawDir: true, composeDir: true, workspaceDir: true, skillsDir: true, snapshotDir: true, root: true } });
   assert.equal(full.find(b => b.id === 'openclaw').path, '/home/x/.openclaw');
   assert.equal(full.length, 7);
+  assert.equal(full.find(b => b.id === 'root').path, '/', 'an older hub says no rootPath: "/" as before');
+  // On Windows "/" is the root of the drive the panel started from; the shortcut goes to the home folder's drive (H1.9).
+  const win = bookmarks({ home: 'D:\\Users\\x', shortcuts: { root: true, rootPath: 'D:\\' } });
+  assert.deepEqual([win.find(b => b.id === 'root').path, win.find(b => b.id === 'root').label], ['D:\\', 'D:\\']);
+});
+
+test('without /proc/mounts the disks are the drive letters (Windows) or /Volumes (macOS)', () => {
+  const { mountsWithoutProc } = require('../modules/files');
+  const roots = ['C:\\Users\\x', 'D:\\', 'e:\\', 'C:\\Users\\x\\AppData\\Local\\Temp'];
+  assert.deepEqual(mountsWithoutProc('win32', { roots, exists: () => true }).map(m => [m.device, m.path]), [['D:', 'D:\\'], ['E:', 'e:\\']]);
+  assert.deepEqual(mountsWithoutProc('win32', { roots, exists: r => r !== 'D:\\' }).map(m => m.device), ['E:'], 'a drive that is gone is left out');
+  assert.deepEqual(mountsWithoutProc('darwin', { list: () => ['Macintosh HD', '.Trashes', 'Backup'] }).map(m => m.path), ['/Volumes/Macintosh HD', '/Volumes/Backup']);
+  assert.deepEqual(mountsWithoutProc('darwin', { list: () => { throw new Error('no /Volumes'); } }), []);
+  assert.deepEqual(mountsWithoutProc('freebsd'), []);
 });
 
 test('a folder that is not there says so in words', async () => {

@@ -387,7 +387,18 @@ releasable step; ✓ marks done. Order: the workstreams run in parallel, top ite
   and `install.ps1`, run in CI on all three. **Left:** trusting the certificate on the machine, a pairing QR printed at
   the end, and a release download for when the repository is public (today: git clone with credentials).
 - [ ] H1.9 Run the whole panel once on macOS and record what breaks. In part: the browser smoke boots it and opens
-  every tab on macOS and Windows runners on every push; a real Mac/Windows host (boot entry, version switch) is left.
+  every tab on macOS and Windows runners on every push. **Windows done on a real Windows 11 desk** (2026-10-08, branch
+  windows-host, in a sandbox folder): install.ps1 as a newcomer, first run, Set-up, every tab and Settings section, the
+  smoke in Chrome and Edge, the agent's shell in PowerShell 5.1, Files, the Terminal (node-pty), Logs, System tools,
+  Start at Boot (installer and toggle, not elevated), Restart, a version switch with both rollbacks (died, silent 90 s).
+  Fixed: install.ps1 did not run in Windows PowerShell 5.1 (ANSI read, quotes dropped, TLS callback) nor from an
+  administrator prompt (git ownership); the boot entry needed an administrator, stopped after 72 h, opened a window and
+  called any DOCA's entry its own; installing a version used `cp -al` and spawned npm without cmd.exe (macOS too);
+  Restart handed over to `bash run.sh` (WSL's bash.exe) and never came back; the restarted server opened a window;
+  headless Edge signed in to the person's Microsoft account and synced their extensions; Mounts and the root shortcut;
+  texts naming systemd and run.sh. **Left:** the same on a real Mac; a reboot of a Windows host to see the entry start
+  DOCA at sign-in (it was run by hand, not by a sign-in); a fresh Windows without Node or Git (winget path); a host
+  without Chrome, where Edge is DOCA's browser (flags checked, not a whole run).
 
 **H2 · Settings per device** (§1)
 - [x] H2.1 (2.160.0) `settings-schema.js`: every key's home (device | hive | person), type, default, hint,

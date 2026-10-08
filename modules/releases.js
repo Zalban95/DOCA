@@ -137,7 +137,7 @@ async function list() {
   // tags to list; say so instead of answering 500 "not a git repository".
   if (!isCheckout()) {
     return { running: running(), current: current(), version: pkg.version, dataFormat: store.dataFormat(),
-      launcher: !!process.env.DOCA_HOME, versions: [],
+      launcher: !!process.env.DOCA_HOME, platform: process.platform, versions: [],
       warning: 'This install is not a git checkout, so there are no other versions to switch to. Install DOCA with git clone to use this.' };
   }
   const warning = await fetchTags();
@@ -169,7 +169,8 @@ async function list() {
     current: cur === CHECKOUT, running: run === CHECKOUT, compatible: true, dataFormat: co,
     olderData: co < dataFormat, hasMenu: true });
 
-  return { running: run, current: cur, version: pkg.version, dataFormat, launcher: !!process.env.DOCA_HOME, warning, versions };
+  // platform: the host's, so the page names the way back that exists there (run.sh is Linux's) — H1.9.
+  return { running: run, current: cur, version: pkg.version, dataFormat, launcher: !!process.env.DOCA_HOME, platform: process.platform, warning, versions };
 }
 
 /** The data format the checkout's code writes — it can be older than the data too, after a pull of an old branch. */
@@ -197,7 +198,10 @@ const lockHash = dir => {
 
 function run(cmd, args, cwd, say) {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
+    // npm is npm.cmd on Windows, which Node starts only through cmd.exe: without this every install answered
+    // "spawn npm ENOENT" there (H1.9). git and the rest are spawned as they are.
+    const spec = require('./mcp/spawn-spec').spawnSpec(cmd, args);
+    const child = spawn(spec.file, spec.args, { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }, windowsHide: true, ...spec.opts });
     child.stdout.on('data', d => say(String(d)));
     child.stderr.on('data', d => say(String(d)));
     child.on('error', reject);
@@ -235,8 +239,14 @@ async function install(tag, say = () => {}) {
     .find(d => d !== dest && want && lockHash(d) === want && hasDeps(d));
   if (donor) {
     say(`Dependencies are identical to ${path.relative(HOME, donor) || 'the checkout'}'s — linking them.\n`);
-    try { await run('cp', ['-al', path.join(donor, 'node_modules'), path.join(dest, 'node_modules')], dest, say); return dest; }
-    catch (e) { say(`Linking failed (${e.message}); installing instead.\n`); }
+    try {
+      const { linked, copied } = require('./link-tree').linkTree(path.join(donor, 'node_modules'), path.join(dest, 'node_modules'));
+      if (copied) say(`${linked} files linked, ${copied} copied (no hard link possible there).\n`);
+      return dest;
+    } catch (e) {
+      say(`Linking failed (${e.message}); installing instead.\n`);
+      fs.rmSync(path.join(dest, 'node_modules'), { recursive: true, force: true });
+    }
   }
   say('$ npm ci --omit=dev\n');
   await run('npm', ['ci', '--omit=dev', '--no-audit', '--no-fund'], dest, say);
@@ -246,7 +256,7 @@ async function install(tag, say = () => {}) {
 /** Why a switch to `target` must not happen, or null. */
 async function refusal(target, { force = false } = {}) {
   if (!process.env.DOCA_HOME)
-    return 'This panel was not started by run.sh (or the boot service), so nothing would read the choice. Start it with ./run.sh and try again.';
+    return 'This panel was not started by DOCA\'s launcher (bin/doca-launch.js start, which run.sh, the installers and the boot entry use), so nothing would read the choice. Start it that way and try again.';
   if (target === CHECKOUT) {
     return checkoutFormat() < store.dataFormat() && !force
       ? `The working copy writes data format ${checkoutFormat()}, and your data is already format ${store.dataFormat()}. Update the checkout first, or switch with force if you accept the risk.`
@@ -292,9 +302,8 @@ async function use(target, { force = false, by = 'ui', say = () => {}, restart =
 function restartSelf() {
   const { supervisorName } = require('./update');
   if (!supervisorName()) {
-    const out = fs.openSync(path.join(DIR, 'restart.log'), 'a');
-    // The Node launcher, so a restart works on Windows and macOS as on Linux (bin/doca-launch.js).
-    spawn(process.execPath, [path.join(HOME, 'bin', 'doca-launch.js'), 'start'], { cwd: HOME, detached: true, stdio: ['ignore', out, out], env: process.env, windowsHide: true }).unref();
+    // The Node launcher, so a restart works on Windows and macOS as on Linux (bin/doca-launch.js), hidden on Windows.
+    require('./relaunch').relaunch({ log: path.join(DIR, 'restart.log'), home: HOME });
   }
   process.exit(0);
 }

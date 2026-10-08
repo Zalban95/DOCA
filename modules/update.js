@@ -337,16 +337,17 @@ function restartNow(res = null) {
       const out = fs.openSync(logPath, 'a');
       fs.writeSync(out, `\n── restart requested ${new Date().toISOString()} ──\n`);
 
-      // Started by run.sh, the successor is run.sh again: it is what reads
-      // .releases/current, so a restart after switching versions starts the
-      // version that was chosen rather than the one that is exiting.
-      const [cmd, args] = process.env.DOCA_HOME
-        ? ['bash', [path.join(DASHBOARD_DIR, 'run.sh'), 'start']]
-        : [process.execPath, [...process.execArgv, ...process.argv.slice(1)]];
-      const child = spawn(cmd, args, {
-        cwd: DASHBOARD_DIR, detached: true, stdio: ['ignore', out, out], env: process.env,
-      });
-      child.unref();
+      // Started by the launcher, the successor is the launcher again: it is what reads .releases/current, so a
+      // restart after switching versions starts the version that was chosen rather than the one that is exiting.
+      // It was `bash run.sh start`, which Windows cannot run (modules/relaunch.js).
+      let child;
+      if (process.env.DOCA_HOME) { fs.closeSync(out); child = require('./relaunch').relaunch({ log: logPath, home: DASHBOARD_DIR }); }
+      else {
+        child = spawn(process.execPath, [...process.execArgv, ...process.argv.slice(1)], {
+          cwd: DASHBOARD_DIR, detached: true, stdio: ['ignore', out, out], env: process.env, windowsHide: true,
+        });
+        child.unref();
+      }
       handoff = { pid: child.pid, log: logPath };
     } catch (e) {
       // Say so instead of exiting into a hole the user cannot see.

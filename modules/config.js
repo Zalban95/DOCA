@@ -111,6 +111,9 @@ function handleGetPaths(_req, res) {
       openclawDir: fs.existsSync(require('path').dirname(CONFIG_PATH)), composeDir: fs.existsSync(COMPOSE_DIR),
       workspaceDir: fs.existsSync(WORKSPACE_DIR), skillsDir: fs.existsSync(SKILLS_DIR), snapshotDir: fs.existsSync(SNAPSHOT_DIR),
       root: require('./utils').fmSafe(require('path').parse(HOME).root),
+      // The root it checked, which the shortcut opens: "/" on Windows is the root of whichever drive the panel was
+      // started from, not necessarily the home folder's (H1.9).
+      rootPath: require('path').parse(HOME).root,
     },
   });
 }

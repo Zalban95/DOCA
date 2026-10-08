@@ -753,7 +753,7 @@
             Start at Boot
             <button class="btn btn-xs" onclick="startupLoad()" title="Re-check the boot service">↺</button>
           </div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
+          <p id="startup-about" style="font-size:11px;color:var(--muted);margin-bottom:14px">
             Install DOCA as a systemd service so the panel comes back on its own after a reboot —
             and so <code>⟳ Restart</code> above is handled by a supervisor instead of a detached
             child process. Same thing as running <code>./run.sh enable</code> on the host.
