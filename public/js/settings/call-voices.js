@@ -2,7 +2,8 @@
    face's (the corner face, its name), Ambient's and a device's — the watch's, a phone's; the Deep call is the 🎙 from
    the chat. Each is `voice.quick` / `voice.deep` of this screen ({service, voice, speed}); unset, it is this screen's
    own voice above, else the hive's. An admin can make a choice the hive's: every screen without its own, and the
-   devices that have no screen of their own to set (a watch). The common choice is shown, the speed under Advanced. */
+   devices that have no screen of their own to set (a watch). The common choice is shown, the speed under Advanced
+   (advancedFold). */
 const CALL_VOICE_KINDS = [
   { id: 'quick', title: 'Quick call', who: 'the face, Ambient, the watch' },
   { id: 'deep', title: 'Deep call', who: 'from the chat' },
@@ -41,9 +42,8 @@ async function _callVoiceRow(k, mine, hive) {
       mine.voice && !list.voices.includes(mine.voice) ? `<option value="${escHtml(mine.voice)}" selected>${escHtml(mine.voice)} — not a voice of the service</option>` : ''}</select>`
     : `<input class="input" id="${id('voice')}" placeholder="voice (e.g. af_heart)" value="${escHtml(mine.voice || '')}" style="width:180px">`;
   const speed = `<label style="font-size:12px;display:flex;gap:6px;align-items:center">Speed <input class="input" id="${id('speed')}" type="number" min="0.5" max="2" step="0.1"
-    placeholder="as the voice" value="${escHtml(mine.speed ?? '')}" style="width:100px"></label>`;
-  const adv = typeof advancedFold === 'function' ? advancedFold(speed, { id: `call-voice-${k.id}` })
-    : `<details class="adv-fold"${mine.speed ? ' open' : ''}><summary style="cursor:pointer;font-size:12px">Advanced</summary><div style="margin-top:6px">${speed}</div></details>`;
+    data-default="" data-label="${escHtml(k.title)} speed" placeholder="as the voice" value="${escHtml(mine.speed ?? '')}" style="width:100px"></label>`;
+  const adv = advancedFold(speed, { id: `call-voice-${k.id}` });   // lib/ui-parts.js: marked when the speed is set
   const hiveNote = hive && (hive.service || hive.voice) ? `<span style="font-size:11px;color:var(--muted)">The hive's: ${escHtml(hive.voice || hive.service)}</span>` : '';
   const host = typeof authHasRight !== 'function' || authHasRight('host');
   return `<div class="call-voice-row" data-kind="${k.id}"><div style="font-size:12px;font-weight:600;margin-bottom:4px">${escHtml(k.title)} <span style="font-weight:400;color:var(--muted)">(${escHtml(k.who)})</span></div>

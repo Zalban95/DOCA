@@ -640,8 +640,8 @@ The harness gives its agent eight rules for working on any repository (charter r
   (`realtime/index.js serve`, the hub's own engine) speaks in `forDevice(id)` — the device's screen layer, its person's,
   the hive's Quick call voice — and its turns are told of the tags only when the hub speaks them (`HUB_SPOKEN`, a
   symbol `askAsDevice` sets, so no request body can; `api-v1/harness.js voiced`). Settings → Voice → "Quick and Deep
-  calls" (`settings/call-voices.js`): per kind the service and its voice, speed under Advanced (`advancedFold` when the
-  panel has it, else a plain `<details>`), "Save for this screen" and, for a host, "Make it the hive's" (prefs `voice`:
+  calls" (`settings/call-voices.js`): per kind the service and its voice, speed under Advanced (`advancedFold`,
+  marked when set), "Save for this screen" and, for a host, "Make it the hive's" (prefs `voice`:
   every screen without its own, and a watch, which has no screen to set). The screen's own voice card keeps the two
   slots when it saves. No hosted speech service is wired in yet: a `service` is the hive's or a Services row.
   `test/call-voices.test.js`.
