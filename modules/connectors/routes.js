@@ -33,7 +33,7 @@ function overview() {
   const wayView = x => {
     if (x.via === 'oauth') return { ...x, state: oauthOf[x.id] };
     if (x.via === 'key') { const k = services.KEYS[x.key]; return { ...x, how: k.how, link: k.link, origin: k.origin, note: k.note, state: keys[k.name] || null }; }
-    return { ...x, label: ways.get(x.via).label, preset: x.via === 'mail' ? presets.MAIL[x.provider] : x.via === 'dav' ? presets.DAV[x.provider] : undefined, state: vault.view(x.id) };
+    return { ...x, preset: x.via === 'mail' ? presets.MAIL[x.provider] : x.via === 'dav' ? presets.DAV[x.provider] : undefined, state: vault.view(x.id) };
   };
   const known = new Set(services.SERVICES.flatMap(s => s.ways.map(x => x.id)).filter(Boolean));
   const others = Object.entries(vault.all()).filter(([id, r]) => r.via && r.via !== 'oauth' && !known.has(id))

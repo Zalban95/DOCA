@@ -1,5 +1,5 @@
 /* Field → Connectors → Keys for services (modules/service-keys.js): an API that takes a key is set up by pasting
-   it here once, tied to the service's own address. The agent calls the service with http_fetch naming the key, and the
+   it here once, tied to the service's own address. The agent calls the service with api_call naming the key, and the
    hub adds it only to that address — the agent never sees it. */
 async function serviceKeysRender() {
   const el = document.getElementById('service-keys-card');
@@ -8,7 +8,7 @@ async function serviceKeysRender() {
   try { d = await apiFetch('/api/connectors/keys/all'); } catch (e) { el.innerHTML = `<div class="placeholder">${escHtml(e.message)}</div>`; return; }
   el.innerHTML = `<div class="card-title">Keys for services</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">A service with an API key — a 3D generator, a home server, anything with a REST API. Paste its key once: the agent
-      calls the service by the key's name (<code>http_fetch</code> with <code>key</code>), the hub adds the key only to requests for that address, and the agent never sees it.</p>
+      calls the service by the key's name (<code>api_call</code> with <code>key</code>), the hub adds the key only to requests for that address, and the agent never sees it.</p>
     ${d.keys.map(k => `<div class="disk-row"><span class="disk-label">${escHtml(k.name)}</span>
       <span class="disk-path">${escHtml(k.origin)} · ${k.place === 'query' ? `?${escHtml(k.field)}=…` : k.place === 'exchange' ? `token from ${escHtml(new URL(k.field).pathname)}` : `${escHtml(k.field)}: ${escHtml(k.prefix)}…`} · ${k.who === 'everyone' ? 'everyone' : 'admins'}${k.note ? ` · ${escHtml(k.note)}` : ''}</span>
       <span class="disk-free"><button class="btn btn-xs btn-red" onclick="serviceKeysRemove(${jsArg(k.name)})">✕</button></span></div>`).join('') || '<div class="placeholder">None yet.</div>'}

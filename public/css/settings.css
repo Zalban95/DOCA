@@ -77,3 +77,19 @@
 
 /* What a person holds (js/settings/holdings.js): every line whole — it wraps rather than being cut, on a phone too */
 .holdings .disk-path { white-space: normal; overflow-wrap: anywhere; }
+
+/* Field → Connectors: a service's ways to connect, each a row that opens (settings/connectors-ways.js) */
+.conn-help { font-size: 11px; color: var(--muted); margin: 0 0 8px; line-height: 1.5; }
+.conn-way { border-top: 1px solid var(--border); padding: 4px 0; }
+.conn-way > summary { cursor: pointer; display: flex; gap: 10px; align-items: center; list-style: none; padding: 5px 0; }
+.conn-way > summary::-webkit-details-marker { display: none; }
+.conn-way > summary::before { content: '▸'; color: var(--muted); width: 10px; flex: none; }
+.conn-way[open] > summary::before { content: '▾'; }
+.conn-way-label { font-size: 12px; font-weight: 600; flex: 1; min-width: 0; }
+.conn-chip { font-size: 11px; white-space: nowrap; }
+.conn-way-body { padding: 2px 0 8px 20px; }
+.conn-result { font-size: 11px; margin-top: 6px; color: var(--muted); }
+.conn-more { width: 100%; font-size: 11px; color: var(--muted); }
+.conn-more > summary { cursor: pointer; }
+@media (max-width: 600px) { .conn-way-body { padding-left: 0; } .conn-way > summary { flex-wrap: wrap; } }
+.conn-help code { word-break: break-all; }
