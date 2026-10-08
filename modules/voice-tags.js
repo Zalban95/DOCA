@@ -54,10 +54,27 @@ function forVoice(text, tags) {
   return asks.length ? { input, instructions: asks.join(' ') } : { input };
 }
 
+/**
+ * One sentence for a voice with tags of its own (hosted-voices/): each of ours written the voice's way — `map[id]` is
+ * its text ("[laughter]", "<emotion value=\"sad\"/>"), or absent to drop it — and the ones it has no spelling for
+ * returned in `unmapped`, for a voice that also takes a direction in words (Google's prompt).
+ */
+function rewrite(text, map = {}) {
+  const unmapped = [];
+  const input = String(text || '').replace(PATTERN, (all, w) => {
+    const id = WORD.get(w.toLowerCase());
+    if (!id) return all;
+    if (map[id]) return map[id];
+    if (!unmapped.includes(id)) unmapped.push(id);
+    return '';
+  }).replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+([.,!?;:])/g, '$1').trim();
+  return { input, unmapped };
+}
+
 /** The prompt's line for a voice that understands them (turn/client.js). */
 function line() {
   return `The voice speaking your answer can change its tone: put one of ${Object.keys(TAGS).map(t => `[${t}]`).join(' ')} at the start of a sentence `
     + '(a tag colours only its own sentence), sparingly — where a person would really whisper, laugh or light up. They are not shown or read out.';
 }
 
-module.exports = { TAGS, PATTERN, found, strip, forVoice, line };
+module.exports = { TAGS, PATTERN, found, strip, forVoice, rewrite, line };
