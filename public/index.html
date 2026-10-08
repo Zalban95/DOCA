@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="css/logs.css">
 <link rel="stylesheet" href="css/attachments.css">
 <link rel="stylesheet" href="css/harness.css">
-<link rel="stylesheet" href="css/computers.css"><link rel="stylesheet" href="css/face.css"><link rel="stylesheet" href="css/workstream.css"><link rel="stylesheet" href="css/vnc.css"><link rel="stylesheet" href="css/chronicle.css"><link rel="stylesheet" href="css/ambient.css"><link rel="stylesheet" href="css/home.css"><link rel="stylesheet" href="css/guided.css"><link rel="stylesheet" href="css/panel-layout.css"><link rel="stylesheet" href="css/system.css"><link rel="stylesheet" href="css/ground-light.css"><link rel="stylesheet" href="css/skin-points.css">
+<link rel="stylesheet" href="css/computers.css"><link rel="stylesheet" href="css/face.css"><link rel="stylesheet" href="css/mic-keep.css"><link rel="stylesheet" href="css/workstream.css"><link rel="stylesheet" href="css/vnc.css"><link rel="stylesheet" href="css/chronicle.css"><link rel="stylesheet" href="css/ambient.css"><link rel="stylesheet" href="css/home.css"><link rel="stylesheet" href="css/guided.css"><link rel="stylesheet" href="css/panel-layout.css"><link rel="stylesheet" href="css/system.css"><link rel="stylesheet" href="css/ground-light.css"><link rel="stylesheet" href="css/skin-points.css">
 <link rel="stylesheet" href="css/responsive.css">
 <!-- xterm.js -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
@@ -1299,7 +1299,7 @@
     <span class="ctx-slot" id="chat-context"></span>
     <div class="toolbar-right">
       <span id="chat-approval"></span>
-      <button class="btn btn-xs" id="chat-call-toggle" onclick="chatToggleCall()" title="Deep call: talk it through, answered aloud (talking to the face is the Live call)">🎙 Deep</button>
+      <button type="button" class="btn btn-xs mic-keep" data-mic-keep onclick="micKeepToggle(event)" aria-pressed="false"><span class="mic-dot off" aria-hidden="true"></span><span class="mic-keep-label">Mic</span></button><button class="btn btn-xs" id="chat-call-toggle" onclick="chatToggleCall()" title="Deep call: talk it through, answered aloud (talking to the face is the Live call)">🎙 Deep</button>
       <button class="btn btn-xs tool-gear" onclick="nav('settings'); settingsSubNav('voice'); toggleChat()" title="Voice settings (STT/TTS)">⚙</button>
       <button class="btn btn-xs" onclick="chatClear()" title="Clear history">Clear</button>
       <button class="btn btn-xs" onclick="toggleChat()" title="Close">✕</button>
@@ -1448,7 +1448,7 @@
 <script src="js/lib/format.js"></script>
 <script src="js/lib/presence.js"></script><script src="js/lib/live.js"></script><script src="js/lib/select-sheet.js"></script><script src="js/lib/model3d.js"></script><script src="js/lib/icons.js"></script><script src="js/lib/ui-parts.js"></script>
 <script src="js/lib/debounce.js"></script>
-<script src="js/lib/dialogs.js"></script><script src="js/lib/machine-ask.js"></script><script src="js/lib/machine-origin.js"></script><script src="js/lib/attention.js"></script><script src="js/lib/mic.js"></script><script src="js/lib/screen.js"></script>
+<script src="js/lib/dialogs.js"></script><script src="js/lib/machine-ask.js"></script><script src="js/lib/machine-origin.js"></script><script src="js/lib/attention.js"></script><script src="js/lib/mic.js"></script><script src="js/lib/mic-keep.js"></script><script src="js/lib/screen.js"></script>
 <script src="js/lib/system-tools.js"></script>
 <script src="js/lib/pty-banner.js"></script>
 <!-- The agent transcript, shared by the floating chat and the harness console. -->
@@ -1512,7 +1512,7 @@
 <script src="js/harness-console/env.js"></script>
 <script src="js/harness-console/proposals.js"></script>
 <script src="js/harness-console/external.js"></script>
-<script src="js/chat-stop.js"></script><script src="js/chat.js"></script><script src="js/chat-window.js"></script><script src="js/chat-head.js"></script><script src="js/live-pages.js"></script><script src="js/chat-call.js"></script><script src="js/chat-call-report.js"></script><script src="js/chat-call-hear.js"></script><script src="js/chat-call-voice.js"></script><script src="js/chat-call-hold.js"></script><script src="js/chat-call-mic.js"></script><script src="js/lib/wake-match.js"></script><script src="js/wake-word.js"></script><script src="js/chat-realtime.js"></script>
+<script src="js/chat-stop.js"></script><script src="js/chat.js"></script><script src="js/chat-window.js"></script><script src="js/chat-head.js"></script><script src="js/live-pages.js"></script><script src="js/chat-call.js"></script><script src="js/chat-call-report.js"></script><script src="js/chat-call-hear.js"></script><script src="js/chat-call-voice.js"></script><script src="js/chat-call-hold.js"></script><script src="js/chat-call-pause.js"></script><script src="js/mic-keep-ui.js"></script><script src="js/chat-call-mic.js"></script><script src="js/lib/wake-match.js"></script><script src="js/wake-word.js"></script><script src="js/chat-realtime.js"></script>
 <script src="js/terminal.js"></script>
 <script src="js/models.js"></script>
 <script src="js/models-ai-tools.js"></script>
