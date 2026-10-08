@@ -8,6 +8,19 @@
 const WORK_NEEDS = { create: ['title'], send: ['sessionId', 'message'], report: ['message'], stop: ['sessionId'],
   archive: ['sessionId'], recall: ['sessionId'], restart: ['sessionId'], drop: ['sessionId'] };
 
+/**
+ * A failed job is not tried again unasked (deep test B, C13): woken with "work reported back", the Orchestrator re-sent
+ * a research errand that had failed half an hour earlier, "Retry with a different route", inside a turn about something
+ * else. Whether failed work is worth another try is the person's call — said, and asked, not done.
+ */
+function retryUnasked(args) {
+  if (args.action !== 'send' || args.asked === true) return null;
+  const s = require('../memory').getSession(args.sessionId);
+  if (s?.job?.state !== 'failed') return null;
+  return 'Not sent: that work chat\'s job failed, and trying it again is the person\'s decision. Tell them what failed and ask '
+    + 'whether to try again (ask_device gives them the choice); send with asked: true only once they said yes.';
+}
+
 module.exports = [
   {
     name: 'work_chats',
@@ -28,8 +41,9 @@ module.exports = [
         description: 'With report, from a work chat: the job is over (done/failed), cannot go on without a decision from above (blocked), or needs the owner (question).' },
       transcript: { type: 'boolean', description: 'read: include the messages, not only briefs and reports.' },
       offset: { type: 'integer', description: 'read: where to start (reports or messages).' }, limit: { type: 'integer', description: 'list: how many.' },
+      asked: { type: 'boolean', description: 'send to a work chat whose job failed: true only when the person asked, in this conversation, to try it again.' },
     }, required: ['action'] },
-    run: async (args, ctx) => require('./common').needs('work_chats', args, WORK_NEEDS) || JSON.stringify(['restart', 'drop'].includes(args.action)
+    run: async (args, ctx) => require('./common').needs('work_chats', args, WORK_NEEDS) || retryUnasked(args) || JSON.stringify(['restart', 'drop'].includes(args.action)
       ? require('../stopped-work').decide(args.sessionId, args.action === 'restart', ctx) : await require('../organization').tool(args, ctx)),
   },
   {

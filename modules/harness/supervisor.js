@@ -260,7 +260,9 @@ function deliver(orchestratorId) {
   // short one, then one with the timings) is one outcome, the latest.
   const latest = [...new Map(due.map(n => [n.from, n])).values()];
   const lines = latest.map(n => `- ${short(memory.getSession(n.from)?.title, 80)} (${n.from}) — ${n.type}: ${short(n.text, 500)}`);
-  const how = wake(ceo.id, '[panel] Work reported back. Tell the owner what matters, in a few lines. '
+  // A failed job is reported, never retried on its own (deep test B, C13): trying again is the person's call.
+  const failed = latest.some(n => n.type === 'failed') ? 'Do not retry failed work or send it anything new: say what failed and ask whether to try again. ' : '';
+  const how = wake(ceo.id, '[panel] Work reported back. Tell the owner what matters, in a few lines. ' + failed
     + 'Where a decision is theirs, ask it with ask_device and give the choices — it reaches their phone, '
     + `their watch and the panel at once.\n${lines.join('\n')}`, { retry: () => deliver(ceo.id) });
   if (how === 'woken') {
