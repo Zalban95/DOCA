@@ -53,6 +53,8 @@ const PERSON = [
   { id: 'mission-send', does: 'send a specialist an errand', panel: ['POST /api/harness/missions'],
     gap: 5, why: 'choosing who does a job without asking the Orchestrator to pass it on' },
   { id: 'missions-read', does: 'see the missions', panel: ['GET /api/harness/missions'], v1: ['GET /harness/missions'] },
+  { id: 'missions-tidy', does: 'put finished missions away at once, or keep one out of the tidy-up', panel: ['POST /api/harness/missions/tidy', 'POST /api/harness/missions/:id/pin'],
+    gap: 19, why: 'a phone clears one mission at a time (archive); "put away finished" and 📌 keep are the panel\'s' },
   { id: 'work-decide', does: 'restart or drop work a person stopped', panel: ['POST /api/harness/work/:id/restart', 'POST /api/harness/work/:id/drop'],
     v1: ['POST /harness/work/{id}/restart', 'POST /harness/work/{id}/drop'] },
   { id: 'working', does: 'see what works on its own', panel: ['GET /api/harness/working'], v1: ['GET /harness/working'] },

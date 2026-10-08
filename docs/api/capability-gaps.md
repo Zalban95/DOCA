@@ -33,6 +33,7 @@ Ordered by how much a person on a phone or a watch misses it:
 | 16 | Set what a device's console buttons do | `device-console` | Set up on the watch it belongs to. |
 | 17 | Give or take back a grant — **ask** | `grants` | Delegating is S11's: the owner decides first. |
 | 18 | See the home and act on it (lights, covers, heating, cameras) | `home` | The Home page (H10.10) draws Home Assistant for the panel; an app would draw the same areas and tiles natively, hear `state_changed` on its event stream, and call the same short list of services (unlock and disarm asking the person). Until then a phone opens `/?view=home` in its web view. |
+| 19 | Put finished missions away at once, or keep one (📌) out of the tidy-up | `missions-tidy` | A phone archives one mission at a time; the hub puts the rest away by itself (agents/tidy.js). |
 
 What is deliberately the panel's, with the reason beside each, is in the same file (`only`): the machine's
 administration, the owner's secrets, budgets and spending (S12, S14), signing in, people and levels, the panel's own

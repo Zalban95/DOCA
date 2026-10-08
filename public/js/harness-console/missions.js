@@ -100,8 +100,11 @@ async function _hcLoadMissions() {
   try { rows = (await apiFetch('/api/harness/missions?limit=8&live=1')).missions || []; } catch { /* leave the bar as it was */ }
   // What works on its own right now, and why (agents/stopping.js) — each with a Stop, so nothing runs out of sight.
   try { ({ auto = [], stopped = [], machines = [] } = await apiFetch('/api/harness/working')); } catch { /* an older hub */ }
+  // Finished ones nobody needs any more go to the Archive by themselves (agents/tidy.js): how many did, today.
+  let putAway = 0;
+  try { ({ putAway = 0 } = await apiFetch('/api/harness/missions/tidy')); } catch { /* an older hub */ }
 
-  if (!rows.length && !auto.length && !stopped.length && !machines.length) { bar.style.display = 'none'; bar.innerHTML = ''; }
+  if (!rows.length && !auto.length && !stopped.length && !machines.length && !putAway) { bar.style.display = 'none'; bar.innerHTML = ''; }
   else {
     bar.style.display = '';
     bar.innerHTML = rows.map(m => `
@@ -113,6 +116,7 @@ async function _hcLoadMissions() {
         ${m.sessionId ? `<button class="btn btn-xs" onclick="hcMarkSeen(${jsArg(m.id)}); hcOpenSession(${jsArg(m.sessionId)})">Chat</button>` : ''}
         <button class="btn btn-xs" onclick="hcMarkSeen(${jsArg(m.id)}); hcMissionLog(${jsArg(m.id)})"
                 title="Its whole log, which stays open and can be copied">log</button>
+        ${m.state === 'running' ? '' : hcMissionPinHtml(m)}
         ${m.state === 'running' ? `<button class="btn btn-xs btn-red" onclick="hcMissionStop(${jsArg(m.id)})"
                 title="Stop it at its next step. What sent it waits for you instead of carrying on.">■ Stop</button>` : `
         <button class="btn btn-xs" onclick="hcMissionArchive(${jsArg(m.id)})"
@@ -131,7 +135,7 @@ async function _hcLoadMissions() {
       <span class="hc-mission running" title="Busy with no DOCA turn behind it: ${escHtml(m.who || '')}">
         <span class="hc-mission-dot"></span>${escHtml(String(m.name).slice(0, 40))} <em>${escHtml(m.text || 'busy')} — ${escHtml(m.who || '')}</em>
         <button class="btn btn-xs" onclick="machineGo(${jsArg(m.kind)}, ${jsArg(m.id)}, ${m.kind === 'container' ? 'false' : 'true'})" title="See it">${m.kind === 'container' ? 'Docker' : 'Live'}</button>
-      </span>`).join('');
+      </span>`).join('') + hcMissionsTidyHtml(rows, putAway);
   }
 
   // Poll only while something is actually running, and stop when it is not:

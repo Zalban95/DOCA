@@ -22,6 +22,7 @@ hub did on its own", kept `logs.activityDays`).
 | An inference service started or stopped | Field → Models / Services, Docker | the person's request (audit log); the agent's `hub_command` in its run | who asked |
 | An agents' computer working | Computers tab, Machines → Live | its mission's run (tool calls) | the mission |
 | A computer stopped when idle / removed by the tidy-up | Computers tab | **activity: computers stopped / removed X, why** | the routine (settings named) |
+| Finished missions put away by the tidy-up (agents/tidy.js) | Missions bar ("N put away"), Agents → Archive | **activity: missions put away N finished missions, why** | the routine (settings named) |
 | An MCP server started with DOCA / resumed | Field → MCP | **activity: mcp started X, why** (and failures, as warnings) | the routine; the person who marked it |
 | A channel bot listening again at start | Settings → Channels | **activity: channels X is listening again** | the host's switch |
 | The model scout's daily look | Settings → Harness → Scout | **activity: scout looked …**; its brief is a turn (runs) | the person who switched it on |
