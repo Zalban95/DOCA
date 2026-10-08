@@ -167,7 +167,7 @@ function appChoose(message, choices, onPick) {
  * the topmost open one, so each window's own close runs and one that does not close on its backdrop stays. A question
  * that must be answered is left alone: the approval popup (every button is a decision) and the first-run choice.
  */
-document.addEventListener('keydown', e => {
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || e.defaultPrevented) return;
   const open = [...document.querySelectorAll('.modal-overlay')]
     .filter(o => !o.matches('.approval-overlay, #guided-welcome') && getComputedStyle(o).display !== 'none');
