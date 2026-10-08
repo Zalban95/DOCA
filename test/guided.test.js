@@ -73,6 +73,8 @@ test('a preset hub asks only for keys; a local one installs on a click and asks 
   assert.equal(vps.shape, 'preset');
   assert.equal(vps.askRoute, false, 'no real choice: not asked');
   assert.deepEqual(vps.steps.map(s => s.type), ['key']);
+  assert.match(vps.steps[0].why, /^an online provider, or a model you run elsewhere — this machine cannot run one/, 'what does not fit is the reason, not an option');
+  assert.doesNotMatch(vps.steps[0].why, new RegExp(doc.models.map(m => m.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')), 'no local model named as if offered');
 
   const gpu = await machine({ gpus: [{ name: 'Mid', memTotal: 12 * 1024, vendor: 'nvidia' }] });
   const local = plan({ uses: ['voice', 'code'] }, gpu, doc);
