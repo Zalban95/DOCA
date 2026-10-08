@@ -70,6 +70,9 @@ const SCHEMA = {
       idleStopMinutes: { type: 'number', min: 0, default: 10, hint: 'Minutes after its mission ends that a computer stops (its files stay).' },
       retainHours:     { type: 'number', min: 0, default: 72, hint: 'Hours a stopped computer an agent made is kept before it is removed with its files; a pinned one is kept.' },
       callTimeoutMs:   { type: 'integer', min: 1000, default: 600000, hint: 'How long one call to a computer\'s tools may take before the agent stops waiting (the work goes on); longer than other MCP servers\' mcpSettings.callTimeoutMs, for installs, builds and sweeps.' },
+      // Never proposed: an agent choosing what is deleted of what no record names (computers/strays.js; the owner's, 2026-10-08).
+      strays:          { type: 'string', oneOf: ['leave', 'archive', 'delete'], default: 'leave', propose: false,
+        hint: 'What the tidy-up does with a stopped computer container no record names and no install labels: leave it (listed in the Computers tab), archive it, or delete it (its files kept in its volume).' },
     } },
   search:           { is: 'travels', home: 'hive', note: 'which web search provider web_search uses, and a SearXNG address (keys live in keys/search.json)',
     propose: p('Web search', 'Which provider web_search uses'),
@@ -237,9 +240,26 @@ function valid(spec, v) {
     const n = Number(v);
     return Number.isFinite(n) && (spec.type !== 'integer' || Number.isInteger(n)) && (spec.min === undefined || n >= spec.min) && (spec.max === undefined || n <= spec.max);
   }
-  if (spec.type === 'string') return typeof v === 'string';
+  if (spec.type === 'string') return typeof v === 'string' && (!spec.oneOf || spec.oneOf.includes(v));
   if (spec.type === 'array') return Array.isArray(v) && v.every(x => typeof x === 'string');
   return true;
+}
+
+/**
+ * A leaf the agent never proposes (`propose: false`) at this path, or inside the value given for it — `computers`
+ * set whole as {strays: …} is the same change as `computers.strays`. Its path, or null.
+ */
+function unproposable(dotted, value) {
+  const [top, ...rest] = String(dotted).split('.');
+  const at = rest.join('.');
+  for (const [k, spec] of Object.entries(SCHEMA[top]?.keys || {})) {
+    if (spec.propose !== false) continue;
+    if (k === at) return `${top}.${k}`;
+    if (at && !k.startsWith(`${at}.`)) continue;
+    const inside = (at ? k.slice(at.length + 1) : k).split('.').reduce((o, x) => (o == null || typeof o !== 'object' ? undefined : o[x]), value);
+    if (inside !== undefined) return `${top}.${k}`;
+  }
+  return null;
 }
 
 /** A declared leaf's value: what the prefs file holds when it is valid for the type, else the default. */
@@ -264,4 +284,4 @@ function describe() {
     proposable: !!d.propose, keys: d.keys ? Object.fromEntries(Object.entries(d.keys).map(([n, s]) => [n, { type: s.type, default: s.default, hint: s.hint }])) : undefined }]));
 }
 
-module.exports = { SCHEMA, settable, screenSettable, leaf, value, leaves, describe };
+module.exports = { SCHEMA, settable, screenSettable, leaf, value, leaves, describe, unproposable };

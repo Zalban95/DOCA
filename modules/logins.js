@@ -61,6 +61,9 @@ async function fill({ computer, login, userRef, passRef }, ctx = {}) {
   const person = ctx.user?.id ? ctx.user : null;
   const c = require('./computers').need(String(computer || ''));
   require('./computers/whose').check(person, c.id);
+  // A test computer types the agent's own test password without asking (computers/test-mode.js): a saved login, which
+  // is someone's real account, never goes into one (the owner's decision of 2026-10-08).
+  if (c.test) throw bad(`${c.name} is a test computer: a saved login is never filled into one. Sign in there with the test account's own password (browser_type), or use an ordinary computer.`, 409);
   const l = find(login);
   if (!l) throw bad(`No login "${login}". An admin keeps them in Field → Connectors → Logins: ${list().map(x => x.label).join(', ') || 'none yet'}.`, 404);
   const allot = require('./auth/allot');
@@ -80,4 +83,4 @@ async function fill({ computer, login, userRef, passRef }, ctx = {}) {
     + 'Now click the sign-in button (browser_click with confirm: true — the person is asked).';
 }
 
-module.exports = { list, save, remove, fill, secretOf };
+module.exports = { list, save, remove, fill, secretOf, computerCall };

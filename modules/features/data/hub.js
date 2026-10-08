@@ -49,7 +49,7 @@ module.exports = [
     words: 'run repo github clone demo try show me what it does serve page' },
   { id: 'computers', name: 'Computers for agents', page: 'computers', tools: ['computer'], since: '2.153.0',
     use: 'A Linux desktop in a container for risky work, a real browser or a demo; a person watches or takes over.',
-    routes: ['/api/computers*'], words: 'container desktop vnc sandbox take over browser' },
+    routes: ['/api/computers*'], words: 'container desktop vnc sandbox take over browser test computer sign-in sign-up password stray containers' },
   { id: 'sealed-secrets', name: 'Secrets used on a device, never read', page: 'connectors', tools: ['secret_use'], since: '2.286.0',
     use: 'Type or paste a password or key into a device (a computer with doca-client, the browser extension) for a set number of uses, always asked, never seen by the agent.',
     routes: ['/api/connectors/sealed*'], words: 'password clipboard paste type secret device sealed' },
