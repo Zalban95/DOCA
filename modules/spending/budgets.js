@@ -131,8 +131,27 @@ function leads(actor, personId) {
  * Set a budget. For yourself it is your own; for another person, or a level's default (with what that level's people
  * may allow themselves to be spent, permissions.js), it is an admin's (`users`).
  */
-function set(actor, { personId, levelId, budget, mayAllow } = {}) {
+/**
+ * The body's shape, said when it is wrong (deep test A, e2 C1): `{personId, tokensPerDay}` answered 200 and set no
+ * budget at all — a 200 with no limit is the wrong answer for a spending control.
+ */
+const SHAPE = 'Expected {personId?, levelId?, budget: {tokensPerDay?, tokensPerMonth?, moneyPerDay?, moneyPerMonth?}} — '
+  + 'the amounts go inside "budget" (null or {} clears it); a level also takes mayAllow.';
+function checkShape(body, { levelId, budget, mayAllow }) {
+  const flat = Object.keys(FIELDS).filter(k => body[k] !== undefined);
+  if (flat.length) throw bad(`${flat.join(', ')} must be inside "budget". ${SHAPE}`);
+  const extra = Object.keys(body).filter(k => !['personId', 'levelId', 'budget', 'mayAllow'].includes(k));
+  if (extra.length) throw bad(`Not a budget field: ${extra.join(', ')}. ${SHAPE}`);
+  if (budget === undefined && !(levelId && mayAllow !== undefined)) throw bad(`No "budget" in the request. ${SHAPE}`);
+  if (budget !== undefined && budget !== null && (typeof budget !== 'object' || Array.isArray(budget))) throw bad(`"budget" is an object or null. ${SHAPE}`);
+  const unknown = budget ? Object.keys(budget).filter(k => !FIELDS[k]) : [];
+  if (unknown.length) throw bad(`Not a budget amount: ${unknown.join(', ')}. ${SHAPE}`);
+}
+
+function set(actor, body = {}) {
+  const { personId, levelId, budget, mayAllow } = body;
   if (!actor?.id) throw bad('Sign in first.', 401);
+  checkShape(body, body);
   const b = normalize(budget);
   if (levelId) {
     if (!holdsUsers(actor)) throw bad('A level\'s budget is an admin\'s to set.', 403);
@@ -140,7 +159,7 @@ function set(actor, { personId, levelId, budget, mayAllow } = {}) {
     const allow = mayAllow === undefined ? undefined : mayAllow === null || mayAllow === '' ? null : Number(mayAllow);
     if (allow !== undefined && allow !== null && (!Number.isFinite(allow) || allow < 0)) throw bad('mayAllow is an amount, 0 or more, or empty for none.');
     return store.change(d => {
-      const L = { ...(d.levels[levelId] || {}), budget: b };
+      const L = { ...(d.levels[levelId] || {}), ...(budget !== undefined ? { budget: b } : {}) };   // mayAllow alone keeps the budget
       if (allow !== undefined) L.mayAllow = allow;
       d.levels[levelId] = L;
       return L;

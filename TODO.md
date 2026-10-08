@@ -174,6 +174,35 @@ the project's managers only if the owner allows sharing specialists and skills (
   a `shell` read of a path outside the roots right after a file tool refused it could be asked even when the verb is
   allowed (`shell:cat`) — that is approval code (`approval.gate`), so it waits for a yes.
 
+### Deep test A 2026-10-08 — the core and data safety (branch `deepa-core`)
+- [x] Deep test A #2: a tool call cut at the reply limit is asked once more with twice the room (`turn/think-retry.js`,
+  kind `cut-call-retry`); still cut, it is stored with `{}` and answered "cut off, not run" (`turn/cut-calls.js`), and a
+  stored unparseable call is sent whole, so a conversation broken before heals on its next request.
+- [x] Deep test A #28: verified on 2.335.0 — "think harder" on a template that refuses `high` is retried without the field
+  and learned (`effortField: none`); `test/thinking.test.js` pins the report's sequence.
+- [x] Deep test A #7: a local model added (+ Add provider) or chosen for the agent gets its own first-token wait and
+  reply limit from what its server reports (`harness/provider-pace.js`: llama.cpp `/props` n_ctx and slots, else its
+  window), in place of the harness's defaults (a value the person set still wins); said in Set-up, + Add provider and
+  the provider's row in Field → API keys.
+- [x] Deep test A #8: the computers' idle stop never comes under a live turn (`computers/lifecycle.js inUse`: a turn
+  running where it is held, or a call to its tools within `idleStopMinutes`).
+- [x] Deep test A #9: no speech service is a 503 "No speech service: set one up in Settings → Voice." (`chat.js`); a call
+  that cannot start says so on the face, on Ambient's line and in the chat, and reaches the call log (`_callRefuse`,
+  `panel-call.js` `refused`); a voice note's failure is in the chat.
+- [x] Deep test A #11: turns a restart cut off are closed at start, with their trace's tokens (`runs.recoverTurns`).
+- [x] Deep test A c B4: undoing a settings checkpoint puts back only the leaves that change changed, named first
+  (`checkpoints.js` `leaves`; older checkpoints work them out).
+- [x] Deep test A c B1: `POST /api/prefs` merges leaf by leaf, null deletes, `?replace=1` replaces whole keys
+  (`modules/prefs-merge.js`); the password guard reads the same merge.
+- [x] Deep test A e2 C1: `/api/spending/budget` in the wrong shape is a 400 naming the expected body.
+- [x] Deep test A #4: the computer's browser offers a fold's `<summary>` and hides what a closed fold holds
+  (`clients/computer/tools.js` SNAPSHOT; the image hash moves).
+- [x] Deep test A #33: `write_file`'s roots refusal says not to write it another way and whose rule it is.
+- [ ] Deep test A #6, **for the owner (S11)**: a member cannot pair a device of their own — every `/api/devices*` route
+  needs the `devices` right, though Member's reach is `own-devices`. Options: (a) pairing routes for one's own device
+  under `chat` (scoped to the person, a preset no wider than `phone`); (b) an admin pairs *for* a member (the device
+  recorded as theirs); (c) a level right `own-devices` distinct from `devices`. Each widens what a member may do.
+
 ### Everything still open, now urgent
 - C7b: done; D2b: done — its gaps (`docs/api/capability-gaps.md`) are v1 routes to ask for, plan decisions first.
 - D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),

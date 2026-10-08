@@ -86,3 +86,21 @@ test('a conversation holds only its own computers\' tools: a work chat what it m
     assert.ok(disabledFor(null, p).includes(names[0]), 'no conversation named: none');
   } finally { t.describe = real; }
 });
+
+test('the idle stop never comes under a live turn: one that used the computer lately, or one running where it is held (deep test A #8)', async () => {
+  setLimits({ idleStopMinutes: 0 });
+  store.writeJson('computers', { computers: [row('ff01', { missionId: 'msn_f' }), row('ff02', { missionId: 'msn_g', by: 'ses_live' }), row('ff03', { missionId: 'msn_h' })] });
+  // A message to the finished mission's conversation started a turn that used ff01's tools.
+  require('../modules/machines/index').onEvent({ type: 'tool_call', name: 'mcp__computer-ff01__screenshot', args: {}, sessionId: 'ses_after' });
+  // A turn is running in the conversation that made ff02.
+  const { running } = require('../modules/harness/turn/lifecycle');
+  running.set('ses_live', { turnId: 't', startedAt: Date.now() });
+  try {
+    for (const m of ['msn_f', 'msn_g', 'msn_h']) lifecycle.missionEnded(m);
+    await H.sleep(30);
+    assert.deepEqual(calls, [['stop', 'ff03']], 'only the one nothing uses');
+    assert.match(lifecycle.inUse(computers.get('ff01'), 'msn_f'), /an agent used it .* \(screenshot\)/);
+    assert.match(lifecycle.inUse(computers.get('ff02'), 'msn_g'), /a turn is running/);
+    assert.equal(lifecycle.inUse(computers.get('ff03'), 'msn_h'), null);
+  } finally { running.delete('ses_live'); }
+});

@@ -34,7 +34,7 @@ test('every saved change keeps what it replaced; a restore puts it back and is i
   u.savePrefs(u.loadPrefs());
   assert.equal(cp.list().length, before, 'a save that changes nothing keeps no checkpoint');
   const back = await H.api(null, 'POST', `/api/settings/checkpoints/${last.id}/restore`, {});
-  assert.deepEqual(back.body, { restored: last.id, changed: ['theme'] });
+  assert.deepEqual(back.body, { restored: last.id, changed: ['theme'], leaves: ['theme'] });
   assert.equal(u.loadPrefs().theme, 'sunset');
   assert.equal(cp.list()[0].changed[0], 'theme', 'the restore made a checkpoint of its own');
   const member = await H.signIn('member', 'cp-member@test.local');

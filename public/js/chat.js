@@ -285,9 +285,8 @@ async function _chatVoiceSend(recorded) {
     if (input) input.value = text;
     chatSend({ spoken: true });
   } catch (e) {
-    chip.classList.add('bad');
-    chip.title = e.message;
-    chip.querySelector('em').textContent = '✕';
+    chip.classList.add('bad'); chip.title = e.message; chip.querySelector('em').textContent = '✕';
+    chatAppendMsg('system', `Voice message failed: ${e.message}`);   // in the chat, where it was recorded (deep test A, #9)
     appAlert(`Voice message failed: ${e.message}`);
   }
 }

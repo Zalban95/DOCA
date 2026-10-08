@@ -20,7 +20,7 @@ async function assistantOpen(first) {
   if (!document.fullscreenElement) _assistant.el.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
   _assistantSay('Listening…');
   const ok = (started && await started) || _assistantInCall();
-  if (!ok) { _assistantSay('The call did not start — the chat says why.'); return; }
+  if (!ok) { _assistantSay(typeof _callNotStarted === 'string' && _callNotStarted ? _callNotStarted : 'The call did not start — the chat says why.'); return; }
   if (first && typeof _callAnswer === 'function') _callAnswer(first);
 }
 

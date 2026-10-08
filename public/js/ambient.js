@@ -86,8 +86,9 @@ async function ambientTalk(first) {
   let ok = false;
   try { ok = await started; } finally { AMB.starting = false; }
   if (!ok && !_assistantInCall()) {
-    const why = [...document.querySelectorAll('#chat-messages .chat-msg.system')].slice(before).pop()?.textContent;   // the chat's own reason, here
-    ambientSay(why ? `The call did not start: ${why}` : 'The call did not start.');
+    const why = (typeof _callNotStarted === 'string' && _callNotStarted)   // the call's own reason (chat-call-report.js), else the chat's
+      || [...document.querySelectorAll('#chat-messages .chat-msg.system')].slice(before).pop()?.textContent;
+    ambientSay(why ? (/did not start/.test(why) || /^No speech service/.test(why) ? why : `The call did not start: ${why}`) : 'The call did not start.');
     AMB.own = false; _ambCalling(false, true);
     return;
   }

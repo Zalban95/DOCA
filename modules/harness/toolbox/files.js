@@ -149,7 +149,7 @@ module.exports = [
     },
     danger: true,
     run: ({ path: p, content }, ctx = {}) => {
-      const abs = resolvePath(p, ctx);
+      const abs = resolvePath(p, ctx, { write: true });
       require('../control-plane').refuse(abs, ctx);   // what governs the agent: only with this call's yes (H-19)
       const masked = require('../secret-view').maskedWrite(abs, content);   // dots read back would replace the secrets
       if (masked) throw new Error(masked);

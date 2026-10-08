@@ -42,11 +42,10 @@ function handleGetPrefs(req, res) {
   res.json(require('./secrets-mask').mask(loadPrefs()));   // readable with `read`: no secrets in it
 }
 
-/** POST /api/prefs */
+/** POST /api/prefs — merged leaf by leaf; null deletes; `?replace=1` replaces whole top-level keys (prefs-merge.js). */
 function handlePostPrefs(req, res) {
   try {
-    const stored = loadPrefs();
-    savePrefs({ ...stored, ...require('./secrets-mask').unmask(req.body || {}, stored) });
+    savePrefs(require('./prefs-merge').merged(loadPrefs(), req.body, { replace: req.query?.replace === '1' }));
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }

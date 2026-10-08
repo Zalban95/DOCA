@@ -8,6 +8,7 @@
  */
 function afterListen({ certs = null, mode } = {}) {
   require('./panel-running').mark({ port: require('./paths').PORT });   // the token CLI asks whether a panel reads this data folder
+  require('./harness/runs').recoverTurns();           // turns the last process was running ended with it — closed first, before anything carries on
   require('./agents/carry-on').carryOn(require('./agents/missions').recover());   // specialists a restart cut off: carried on (V10)
   require('./agents/after').listen();                 // errands waiting on other missions' results start when those are done
   require('./harness/workview').recover();            // work chats likewise, told to the devices
