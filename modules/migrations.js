@@ -113,6 +113,18 @@ const MIGRATIONS = [
       p.setup = { ...(p.setup || {}), mode: 'advanced' };
       return true;
     } }] },
+  // 2.330: a save of the harness ⚙ (or Set-up's "Use it for DOCA's agent") wrote every default into the file, the system
+  // prompt included, so later defaults never reached the install (deep test B, C1). A stored value equal to today's
+  // default or a former one is lifted; what the owner chose stays (harness/old-defaults.js).
+  { id: '2.330-harness-defaults', note: 'the built-in harness keeps only the settings its owner changed, so new defaults reach it', steps: [{
+    describe: 'harness.config.doca: values equal to a shipped default removed',
+    run(p) {
+      const c = p.harness?.config?.doca;
+      if (!c || typeof c !== 'object') return false;
+      const stale = Object.keys(c).filter(k => require('./harness/old-defaults').stale(k, c[k]));
+      for (const k of stale) delete c[k];
+      return stale.length > 0;
+    } }] },
 ];
 
 const appliedIn = p => new Set(Array.isArray(p?.migrations?.applied) ? p.migrations.applied : []);

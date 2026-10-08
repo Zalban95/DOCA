@@ -19,7 +19,7 @@ const { clientBlock, placeBlock } = require('./client');
 /** What the owner wrote into the harness prompt, when it is not the shipped default (the worker's identity). */
 function ownerInstructions(p) {
   const t = String(p.coordinatorInstructions || '').trim();
-  if (!t || t === providers.DEFAULT_SYSTEM_PROMPT.trim()) return '';
+  if (!t || require('../old-defaults').isShippedPrompt(t)) return '';   // today's default or a former one: never the owner's words
   return `# Your owner's instructions\n${t}`;
 }
 

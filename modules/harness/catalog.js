@@ -150,7 +150,7 @@ function loadHarnessPrefs() {
   // approval mode and its allowlist, which used to be wiped by this first write
   // on an install where the mode was chosen before any harness was configured.
   const seeded = { ...(h || {}), default: BUILTIN_ID, custom: h?.custom || [],
-    config: { [BUILTIN_ID]: providers.defaultParams(), ...(h?.config || {}) } };
+    config: { ...(h?.config || {}) } };   // no copy of the defaults: configFor() merges today's (old-defaults.js)
   prefs.harness = seeded;
   try { savePrefs(prefs); } catch { /* read-only prefs: still serve the defaults */ }
   return seeded;
@@ -227,7 +227,10 @@ function configFor(id) {
 function saveConfig(id, patch) {
   if (!get(id)) throw Object.assign(new Error('Unknown harness'), { status: 404 });
   const hp = loadHarnessPrefs();
-  const next = { ...hp.config, [id]: { ...configFor(id), ...patch } };
+  // The built-in harness keeps only what differs from today's defaults, so a later release's default still reaches
+  // this install — a save used to freeze them all, the system prompt included (deep test B, C1; old-defaults.js).
+  const merged = get(id).kind === 'builtin' ? require('./old-defaults').own({ ...(hp.config[id] || {}), ...patch }) : { ...configFor(id), ...patch };
+  const next = { ...hp.config, [id]: merged };
   saveHarnessPrefs({ config: next });
   return configFor(id);
 }

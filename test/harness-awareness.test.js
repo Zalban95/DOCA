@@ -186,9 +186,9 @@ test('a declined proposal is remembered, with the reason, so it is not repeated'
   const r = await post(`/api/harness/proposals/${p.id}/reject`, { reason: 'I like it creative' });
   assert.equal(r.status, 200);
   assert.equal(r.body.proposal.status, 'rejected');
-  // Untouched — still whatever it was, which on a fresh install is the shipped
-  // default the catalog seeds.
-  assert.equal(loadPrefs().harness.config.doca.temperature,
+  // Untouched — still the shipped default, which the file does not hold a copy of (old-defaults.js).
+  assert.equal(loadPrefs().harness?.config?.doca?.temperature, undefined);
+  assert.equal(require('../modules/harness/catalog').configFor('doca').temperature,
     require('../modules/harness/providers').defaultParams().temperature);
 
   // And it is in the agent's context, verdict and reason both.
