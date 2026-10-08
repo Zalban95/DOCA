@@ -33,3 +33,12 @@ test('a host reads all of it; a member and a phone read the mode alone, and chan
   assert.equal(change.status, 401);
   assert.equal(change.body.code, 'step_up_required', 'changing it still asks');
 });
+
+test('the plural is the same read: a host gets all of it, a member the mode alone', async () => {
+  const owner = await H.api(null, 'GET', '/api/harness/approvals');
+  assert.equal(owner.status, 200);
+  assert.deepEqual(owner.body, (await H.api(null, 'GET', '/api/harness/approval')).body);
+  const member = await H.signIn('member');
+  const m = await H.api(null, 'GET', '/api/harness/approvals', undefined, { Cookie: member.cookie });
+  assert.deepEqual(Object.keys(m.body), ['mode']);
+});

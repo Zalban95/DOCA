@@ -166,7 +166,7 @@ app.post  ('/api/harness/custom',       harness.handleAddCustom);
 app.delete('/api/harness/custom/:id',   harness.handleRemoveCustom);
 
 // Built-in harness console: one agent turn, its sessions and its memory.
-app.get   ('/api/harness/approval',             harness.handleApproval);
+app.get   (['/api/harness/approval', '/api/harness/approvals'], harness.handleApproval);   // the plural too: the decide route's word
 // Answering a permission question, and changing the mode that asks them, need
 // the "host" right and a click from the panel's own page (modules/auth/gate.js).
 app.post  ('/api/harness/approval',             harness.handleApprovalMode);
