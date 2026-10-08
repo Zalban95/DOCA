@@ -21,11 +21,29 @@ const SKIP_FS_TYPES = new Set([
   'rpc_pipefs', 'binfmt_misc', 'nsfs', 'ramfs',
 ]);
 
+/**
+ * Where there is no /proc/mounts the disks are where the OS puts them, and they are already the file manager's roots
+ * (paths.defaultRoots): a drive letter on Windows, a folder of /Volumes on macOS. Without this the list read /proc
+ * alone, so on a Windows host (H1.9, 2026-10-08) it said "No mounts detected" beside D:, E: and G:.
+ */
+function mountsWithoutProc(platform = process.platform, { roots = FM_ALLOWED_ROOTS, exists = fs.existsSync, list = d => fs.readdirSync(d) } = {}) {
+  if (platform === 'win32') {
+    return roots.filter(r => /^[A-Za-z]:\\$/.test(r) && exists(r)).map(r => ({ device: r.slice(0, 2).toUpperCase(), path: r, type: 'drive' }));
+  }
+  if (platform === 'darwin') {
+    let names = [];
+    try { names = list('/Volumes'); } catch { return []; }
+    return names.filter(n => !n.startsWith('.')).map(n => ({ device: n, path: `/Volumes/${n}`, type: 'volume' }));
+  }
+  return [];
+}
+
 function handleMounts(req, res) {
   const procMounts = '/proc/mounts';
   try {
     if (!fs.existsSync(procMounts)) {
-      return res.json({ mounts: [] });
+      const mounts = mountsWithoutProc().filter(m => fmSafe(m.path)).sort((a, b) => a.path.localeCompare(b.path));
+      return res.json({ mounts });
     }
     const raw = fs.readFileSync(procMounts, 'utf8');
     const mounts = [];
@@ -320,6 +338,7 @@ function handleSearch(req, res) {
 module.exports = {
   handleRoots,
   handleMounts,
+  mountsWithoutProc,
   handleSearch,
   handleList,
   handleRead,
