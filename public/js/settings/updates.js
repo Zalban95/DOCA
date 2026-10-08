@@ -110,6 +110,7 @@ async function startupLoad() {
   const st  = document.getElementById('startup-status');
   try {
     const s = await apiFetch('/api/startup');
+    _startupMethod = s.method || null;
     if (box) { box.checked = !!s.enabled; box.disabled = !s.supported; }
     // These three describe the machine as it stands rather than something that
     // just happened, so they are `clear: 0` — the card would otherwise lose the
@@ -127,9 +128,11 @@ async function startupLoad() {
   }
 }
 
+let _startupMethod = null;   // Task Scheduler or launchd: this person's own entry, which needs no password
 function startupToggle(box) {
   const want = box.checked;
   box.checked = !want;   // stay on the real state until the service confirms it
+  if (_startupMethod) return _startupApply(want, null);
   sudoAsk(
     `${want ? 'Installing' : 'Removing'} the boot service requires elevated privileges.`,
     pw => { if (pw !== null) _startupApply(want, pw); },
