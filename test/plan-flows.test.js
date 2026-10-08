@@ -2,7 +2,8 @@
 
 /**
  * Plans from the person's side (deep test A, 2026-10-08): a rejected plan is said in the conversation and answered in
- * a line, never silence; the work stops there.
+ * a line, never silence; the work stops there. A chat carrying out an approved plan that a restart cut off goes on by
+ * itself, as a job does, and a device reads such work as paused, never failed.
  */
 const { test, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
@@ -59,4 +60,25 @@ test('rejecting a plan tells the conversation, which answers in a line; its job 
   assert.match(rows.at(-1).content, /Set aside/);
   assert.equal(memory.getSession(s.id).job.state, 'stopped', 'nothing carries on with a plan the person turned down');
   assert.equal(memory.getSession(s.id).job.stoppedWhy, 'its plan was rejected');
+});
+
+test('a chat carrying out an approved plan, paused by a restart, is carried on; a device reads it paused, not failed', async () => {
+  const supervisor = require('../modules/harness/supervisor');
+  const chat = proposed('chat');
+  org.plan(chat.id, { action: 'approve', revision: 1 }, { user: true });
+  const stopped = proposed('work');   // its person stopped it: left alone
+  org.plan(stopped.id, { action: 'approve', revision: 1 }, { user: true });
+  memory.updateSession(stopped.id, { job: { state: 'stopped' } });
+  for (const s of [chat, stopped]) memory.updateSession(s.id, { state: 'running' });   // a turn the restart cut off
+  assert.equal(org.session(chat.id).state, 'paused');
+  const work = memory.createSession('cut off', { activate: false, kind: 'work' });
+  memory.updateSession(work.id, { state: 'running' });
+  assert.deepEqual([require('../modules/harness/workview').payloadOf(org.session(work.id)).state], ['paused']);
+
+  script = ['Carrying on with the about page.'];
+  supervisor._setEnabled(true);
+  try { assert.deepEqual(supervisor.recover(), [chat.id]); } finally { supervisor._setEnabled(false); }
+  assert.ok(await answered(chat.id), 'it went on');
+  assert.match(memory.messages(chat.id).find(m => m.role === 'user').content, /restarted[\s\S]*approved plan "A small site": go on from the first step not done/);
+  assert.equal(memory.messages(stopped.id).length, 0, 'a job a person stopped is not woken');
 });

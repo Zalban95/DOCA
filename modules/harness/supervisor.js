@@ -98,6 +98,7 @@ function whyOf(message) {
   if (message === RESTARTED) return 'the panel restarted mid-turn: picking up';
   if (String(message).startsWith('[panel] Work reported back')) return 'work chats reported back: telling you what matters';
   if (String(message).startsWith('[panel] The person asked you to carry on')) return 'restarted by a person';
+  if (String(message).startsWith(RESTARTED)) return 'the panel restarted while it carried out an approved plan: going on';
   return 'trying again on a stronger model';
 }
 
@@ -285,6 +286,18 @@ function recover() {
     try { s = org.session(row.id); } catch { continue; }
     if (s.kind === 'work' && s.job && s.state === 'paused' && ['working', 'waiting'].includes(s.job.state)
         && wake(s.id, RESTARTED) === 'woken') done.push(s.id);
+  }
+  // A conversation carrying out a plan the person approved is work too (deep test A, 2026-10-08: such a chat, paused by
+  // a restart, was never carried on and nothing told the person to type). The approval was the go-ahead; a restart is
+  // not a decision (V10). Not one whose job a person stopped or dropped, nor a specialist's (carry-on.js has those).
+  for (const row of memory.listSessions().sessions) {
+    let s;
+    try { s = org.session(row.id); } catch { continue; }
+    if (done.includes(s.id) || s.state !== 'paused' || s.archivedAt || s.kind === 'specialist') continue;
+    if (s.plan?.state !== 'approved' || s.plan.fulfilledAt) continue;
+    if (s.job && (org.FINAL.includes(s.job.state) || ['stopped', 'dropped', 'stalled'].includes(s.job.state))) continue;
+    if (wake(s.id, `${RESTARTED} You were carrying out the approved plan "${short(s.plan.title, 200)}": go on from the first step `
+      + 'not done, and mark each with work_plan progress.') === 'woken') done.push(s.id);
   }
   for (const m of require('../agents/missions').list({ state: 'paused', limit: 200 })) {
     let lead;
