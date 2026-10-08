@@ -216,9 +216,11 @@ const handleSessionStop = own(async (req, res) => {
 const handlePlan = own(async (req, res) => {
   const plan = organization.plan(req.params.id, req.body || {}, { user: true });
   // Approve is the go-ahead: the work starts (organization.carryOut).
-  const started = req.body?.action === 'approve'
-    ? organization.carryOut(req.params.id, plan, require('./turn/client').dashboardClient(req)) : undefined;
-  res.json({ plan, ...(started ? { started } : {}) });
+  const client = require('./turn/client').dashboardClient(req);
+  const started = req.body?.action === 'approve' ? organization.carryOut(req.params.id, plan, client) : undefined;
+  // Reject is said in the conversation too, and answered in a line (organization.setAside).
+  const rejected = req.body?.action === 'reject' ? organization.setAside(req.params.id, plan, client, req.body?.note) : undefined;
+  res.json({ plan, ...(started ? { started } : {}), ...(rejected ? { rejected } : {}) });
 });
 
 const handleSessionActivate = own(async (req, res) =>

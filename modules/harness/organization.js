@@ -211,6 +211,24 @@ function carryOut(id, plan, client) {
   return { started: true };
 }
 
+/**
+ * Rejecting a plan is said in the conversation (deep test A, 2026-10-08: a rejection ended in silence — no turn, the
+ * plan document still "waiting for your decision"). The conversation is told, as the person who clicked, and answers
+ * in one line; a work chat's job stops there, so nothing carries on with a plan the person turned down — the
+ * Orchestrator asks once whether to restart or drop it (stopped-work.js).
+ */
+function setAside(id, plan, client, note = '') {
+  const s = session(id);
+  if (s.kind === 'work' && s.job && !FINAL.includes(s.job.state))
+    memory.updateSession(id, { job: { ...s.job, state: 'stopped', stoppedWhy: 'its plan was rejected' } });
+  const r = require('./agent').send({ sessionId: id, client, message: `Plan rejected — revision ${plan.revision} of "${short(plan.title, 200)}"`
+    + `${note ? `: ${short(note, 500)}` : ''}. Do not carry it out. Answer in one line: say it is set aside, and ask what to change if they `
+    + 'want another revision. (Sent by the panel when I clicked Reject.)' });
+  if (r.queued) return { told: false, queued: true };
+  r.catch(() => { /* the runner records failure */ });
+  return { told: true };
+}
+
 function archive(id, on = true) {
   if (id === memory.mainSession().id) throw error('The current Orchestrator stays available. Clear main chat to archive it.');
   // An earlier Orchestrator is not brought back as a work chat named "Orchestrator" (deep test B, C9: thirteen of them
@@ -350,5 +368,5 @@ async function tool(args, ctx) {
   throw error('Unknown work_chats action.', 400);
 }
 
-module.exports = { FINAL, leads, session, ancestors, report, notices, acknowledge, view, list, create, start, carryOut,
+module.exports = { FINAL, leads, session, ancestors, report, notices, acknowledge, view, list, create, start, carryOut, setAside,
   archive, plan, profileFor, block, tool, canManage };

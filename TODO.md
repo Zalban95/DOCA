@@ -186,6 +186,9 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [x] Deep test A 30: a guarded switch is drawn as it is after its password is cancelled or wrong — the control changed a
   moment before (checkbox, select or field) is put back in one place, `lib/api.js`, whoever drew it; a cancel says "Not
   changed: no password was given."; the specialists switch also redraws from the hub on any failure.
+- [x] Deep test A 31: rejecting a plan is said in the conversation ("Plan rejected — revision N of …", as the person who
+  clicked) and answered in one line; a work chat's job stops there (`organization.setAside`), so the Orchestrator asks
+  restart or drop once instead of the work carrying on.
 
 ### Everything still open, now urgent
 - C7b: done; D2b: done — its gaps (`docs/api/capability-gaps.md`) are v1 routes to ask for, plan decisions first.
