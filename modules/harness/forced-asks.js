@@ -7,7 +7,7 @@
  * browser or a device marks by refusing it without confirm: true (TODO H5.4, H5.5, A4). Moved out of approval.js,
  * which may only shrink.
  */
-function of(name, args, summarize) {
+function of(name, args, summarize, ctx = {}) {
   // A computer's browser on a control that pays, buys, signs in or submits (the computer refuses it without confirm:
   // computers' clients/computer/tools.js sensitive()): always a person's decision, every mode, never "always" (TODO H5.4).
   if (name === 'computer_login') return { tool: name, keys: null, forced: true,
@@ -28,6 +28,12 @@ function of(name, args, summarize) {
   // the agent's. Every mode, never "always".
   if (/^mcp__/.test(name) && args?.confirm === true)
     return { tool: name, keys: null, forced: true, summary: `${summarize(name, args)} — the device says this decides something (pays, buys, signs in, confirms or submits). Always asked, whatever the approval mode.` };
+  // Acting on another machine's screen when a specialist needs it (the owner, 2026-10-08: "if the agents need a machine
+  // to test something, they might ask for confirmation"): a person's yes each time, never "always". A person's own turn
+  // is under the ordinary approvals (toolbox/vnc.js).
+  if (name === 'vnc_input' && ctx.mission) return { tool: name, keys: null, forced: true,
+    summary: `${args?.action || 'Act'} on the VNC screen ${args?.target}${args?.action === 'type' ? ` (${String(args?.text || '').length} characters)` : args?.keys ? ` (${args.keys})` : args?.x != null ? ` at ${args.x},${args.y}` : ''} — another machine, for a specialist. Always asked.`,
+    inMission: 'A mission has nobody to ask: report what you meant to do on that screen; your leader or the person does it from their own turn.' };
   // A hub command the registry marks confirm (stopping a service, a snapshot): a person's, as on a phone (TODO B6b).
   if (name === 'hub_command' && args?.action === 'run') {
     const c = require('../api-v1/commands').describe(String(args.id || ''));
