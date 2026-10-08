@@ -11,6 +11,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const WebSocket = require('ws');
 const H = require('./helpers');
+process.env.DOCA_CALL_IDLE_MS = '7500';   // a call with nothing said ends after this (realtime/index.js): here 7.5 s, not 5 min
 const { CONFIG_PATH } = require('../modules/paths');
 const pipeline = require('../modules/realtime/pipeline');
 const callLog = require('../modules/realtime/call-log');
@@ -96,6 +97,15 @@ test('no words, a silence phrase, and a transcriber that fails: each says so to 
   blip.p.close();
 });
 
+test('a microphone that sends exact silence for ten seconds is said to be muted', async () => {
+  const { p, of } = listen({ transcribe: async () => 'x' });
+  p.audio(tone(200, 5));
+  p.audio(Buffer.alloc(48 * 10200));
+  await tick();
+  assert.match(of('notice')[0]?.text || '', /only silence for a while/);
+  p.close();
+});
+
 /** A device's call: frames gathered until `until` says enough. */
 function call(send, until, ms = 12000) {
   return new Promise((resolve, reject) => {
@@ -126,9 +136,12 @@ test('/api/v1/call: a recording with no words sends a notice, and the call\'s lo
   assert.ok(!lines.some(t => /lights/i.test(t)), 'never the words');
 });
 
-test('/api/v1/call: no audio at all is said after a few seconds', { timeout: 15000 }, async () => {
-  const got = await call(() => {}, g => g.some(f => f.type === 'notice'), 10000);
-  assert.match(got.find(f => f.type === 'notice').text, /No sound is reaching the hub/);
+test('/api/v1/call: no sound is said; nothing said ends the call (a watch that left its call screen held one for an hour)', { timeout: 20000 }, async () => {
+  const got = await call(() => {}, g => g.some(f => f.type === 'closed'), 15000);
+  const notices = got.filter(f => f.type === 'notice').map(f => f.text);
+  assert.match(notices[0], /No sound is reaching the hub/);
+  assert.match(notices[1], /Nothing was said for five minutes/);
+  assert.equal(got.find(f => f.type === 'closed').reason, 'nothing was said for five minutes');
 });
 
 test('the panel\'s call: the page opens a record, its transcriptions and turns are logged from the hub\'s side, a hang-up mid-answer is named', async () => {

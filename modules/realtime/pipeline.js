@@ -25,6 +25,7 @@ const { EventEmitter } = require('events');
 const RATE = 24000, FRAME = RATE / 50 * 2;   // 20 ms of PCM16
 const MIN_VOICED_MS = 300, MAX_UTTERANCE_MS = 30000;
 const MIN_LEVEL = 90;           // RMS of PCM16: about -51 dBFS
+const ZEROS_NOTICE_MS = 10000;  // exact digital silence this long: a muted microphone (a gate or Opus's own silence is briefer)
 const QUIET_NOTICE_MS = 400;    // this much sound over the room that never counted as speech is said, once a minute at most
 
 function wav(pcm) {
@@ -80,7 +81,7 @@ function connect({ silenceMs = 900, synth, transcribe } = {}) {
     return Buffer.from(await r.arrayBuffer());
   });
   let closed = false, rest = Buffer.alloc(0), floor = null, utter = null, quietMs = 0, epoch = 0, speakingUntil = 0, ids = 0, overMs = 0;
-  let speech = Promise.resolve(), nearMs = 0, toldQuietAt = 0;
+  let speech = Promise.resolve(), nearMs = 0, toldQuietAt = 0, zeroMs = 0, toldZeros = false;
   const stats = { frames: 0, peak: 0, floor: null };
 
   const utterance = async pcm => {
@@ -108,6 +109,13 @@ function connect({ silenceMs = 900, synth, transcribe } = {}) {
     const voiced = level > Math.max(MIN_LEVEL, floor * 3);
     if (!voiced) floor = floor * 0.98 + level * 0.02;   // the room, learned while nobody speaks
     stats.frames++; stats.floor = Math.round(floor); if (level > stats.peak) stats.peak = Math.round(level);
+    // A watch whose call left the screen keeps sending — zeros: Android silences a background app's microphone
+    // (seen 2026-10-08, a call recording "silenced" for an hour). Said once; the call's idle end follows (index.js).
+    zeroMs = level === 0 ? zeroMs + 20 : 0;
+    if (zeroMs >= ZEROS_NOTICE_MS && !toldZeros) {
+      toldZeros = true;
+      em.emit('notice', { stage: 'audio', text: 'The microphone has sent only silence for a while — if you are talking, the device has muted it: keep the call on screen.' });
+    } else if (level > 0) toldZeros = false;
     // Sound well over the room that never counts as speech: a microphone too far or too quiet. Said, not swallowed.
     if (!voiced) nearMs = level > Math.max(25, floor * 1.8) ? nearMs + 20 : Math.max(0, nearMs - 2);
     if (nearMs >= QUIET_NOTICE_MS && Date.now() - toldQuietAt > 60000) {

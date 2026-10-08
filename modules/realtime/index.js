@@ -19,6 +19,9 @@
 const ADAPTERS = { openai: require('./openai'), gemini: require('./gemini') };
 
 const MAX_SAY = 4000;
+/** A device's call with nothing said either way this long is ended: a watch that left its call screen keeps the socket
+ *  open, sending silence, and held a call (and so a restart, harness/drain.js) for an hour on 2026-10-08. */
+const idleEndMs = () => Number(process.env.DOCA_CALL_IDLE_MS) || 5 * 60 * 1000;   // the variable: tests
 
 /**
  * The JSON frames a call sends, and what each carries — the contract a client draws its states from (PROTOCOL.md
@@ -119,7 +122,7 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
   // Each stage of this call, kept (call-log.js): a call that fails is never only a quiet call.
   const log = require('./call-log').begin({ kind: 'device', label, sessionId, person, deviceId, engine: s.protocol });
   const notify = (stage, text) => { log.notice(stage, text); tell({ type: 'notice', stage, text }); };
-  let ended = false;
+  let ended = false, lastWords = Date.now(), answering = 0, idle = null;
   const callId = ++_liveN;
   _live.set(callId, { sessionId, since: stats.at });
   // What lands in this conversation while the call is open is said here (calls.js), and work handed off is followed.
@@ -144,6 +147,7 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
     unregister();
     lifecycle.events.off('event', onTurnEvent);
     model.close();
+    if (idle) clearInterval(idle);
     log.end(why);
     tell({ type: 'closed', reason: why, stats: { ...stats, minutes: Math.round((Date.now() - stats.at) / 6000) / 10 } });
     try { ws.close(); } catch { /* gone */ }
@@ -155,7 +159,13 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
     // No sound at all after a few seconds: the microphone never opened, or the phone is not passing it on.
     setTimeout(() => { if (!ended && !log.record.audio.bytes) notify('audio', 'No sound is reaching the hub from the microphone.'); }, 6000).unref?.();
   });
-  model.on('utterance', u => log.utterance(u));
+  model.on('utterance', u => { lastWords = Date.now(); log.utterance(u); });
+  idle = pipeline ? setInterval(() => {
+    if (ended || answering || Date.now() - lastWords < idleEndMs()) return;
+    notify('audio', 'Nothing was said for five minutes, so the call has ended.');
+    end('nothing was said for five minutes');
+  }, Math.min(15000, idleEndMs() / 3)) : null;
+  idle?.unref?.();
   model.on('dropped', why => log.dropped(why));
   model.on('stt', r => log.stt(r));
   model.on('notice', ({ stage, text }) => notify(stage, text));
@@ -166,7 +176,7 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
   });
   model.on('heard', () => { heardAt = Date.now(); stats.spokeAt = stats.spokeAt || heardAt; tell({ type: 'heard' }); });
   model.on('user', text => { stats.spokeAt = stats.spokeAt || Date.now(); tell({ type: 'user', text }); });
-  model.on('agent', text => { log.spoken(); tell({ type: 'agent', text }); });
+  model.on('agent', text => { lastWords = Date.now(); log.spoken(); tell({ type: 'agent', text }); });
   model.on('turn', () => tell({ type: 'done' }));
   model.on('interrupted', () => { stats.interrupted++; heardAt = null; tell({ type: 'interrupted' }); });
   model.on('error', message => { log.note(`error: ${String(message).slice(0, 200)}`, 'error'); tell({ type: 'error', message: `${s.protocol}: ${message}` }); });
@@ -175,7 +185,7 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
     if (name !== TOOL.name) return model.toolResult(id, `There is no tool named ${name}; use doca.`);
     const request = String(args.request || '').trim();
     if (!request) return model.toolResult(id, 'Say what the person asked in the request.');
-    stats.tools++;
+    stats.tools++; answering++;
     log.turn('started', `${request.split(/\s+/).length} words asked`);
     tell({ type: 'working', text: request });
     // The pipeline says the answer while the model is still writing it: its first sentence plays before the last exists.
@@ -186,6 +196,7 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
       .then(a => ({ text: String(a || '(no answer)').slice(0, MAX_SAY) }), e => ({ text: `It failed: ${e.message}`, failed: true, why: e.message }));
     // How the turn ended, kept; a turn cut short is said, so the call never just goes quiet on it.
     answer.then(a => {
+      answering = Math.max(0, answering - 1); lastWords = Date.now();
       if (!a.failed) return log.turn('done', `${a.text.length} characters`);
       const cut = /stopped|cancel|abort/i.test(a.why || '');
       log.turn(cut ? 'cut' : 'failed', a.why);
