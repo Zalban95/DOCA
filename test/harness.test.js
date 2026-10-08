@@ -1865,7 +1865,7 @@ test('manual approval stops the tool, and the answer decides whether it runs', a
   const approval = require('../modules/harness/approval');
   const memory   = require('../modules/harness/memory');
 
-  approval.setMode('manual');
+  approval.setMode('manual'); approval.setManualAsks('everything');   // Manual as it always was (approval-matters.test.js has the other)
   approval.settings().always.forEach(approval.forget);
   const session = memory.createSession({ label: 'approval' });
 
@@ -1923,7 +1923,7 @@ test('a turn from a watch is asked on the watch, with full auto as the third cho
   const approval = require('../modules/harness/approval');
   const memory   = require('../modules/harness/memory');
 
-  approval.setMode('manual');
+  approval.setMode('manual'); approval.setManualAsks('everything');   // Manual as it always was (approval-matters.test.js has the other)
   approval.settings().always.forEach(approval.forget);
   const watch = H.mkDevice('approval-watch', 'watch', H.WATCH_CAPS);
   // The owner's watch: only a device whose owner holds `host` may approve (audit 2026-10-04).

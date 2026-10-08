@@ -69,6 +69,24 @@ function _hcApprovalFill(list, a) {
   };
   list.appendChild(re);
 
+  // What Manual asks (modules/harness/approval-matters.js): everything that does something, or only what matters. A
+  // safety switch like the mode: the hub asks for the password (auth/guarded.js) and the fetch wrapper types it.
+  const asks = document.createElement('label');
+  asks.className = 'approval-recheck';
+  const matters = a.manualAsks !== 'everything';
+  asks.innerHTML = `<span><b>Manual asks</b> <select class="input" style="width:auto">
+      <option value="what-matters" ${matters ? 'selected' : ''}>what matters</option><option value="everything" ${matters ? '' : 'selected'}>everything</option></select>
+    — ${matters ? 'only what cannot be undone or leaves this machine: sending data out, posting, mail, pushing, paying, deleting outside a project, '
+      + 'a command it cannot read, a change outside a project, a tool on another machine. Reads and changes with a way back (project edits '
+      + 'with a checkpoint, settings you asked for, the panel\'s layout, memory, reminders) run without asking.'
+      : 'every tool call that does something, as Manual always did.'}</span>`;
+  asks.querySelector('select').onchange = async ev => {
+    try { await apiFetch('/api/harness/approval', { method: 'POST', body: { manualAsks: ev.target.value } }); }
+    catch (e) { appAlert(e.message); }
+    _hcLoadApproval();
+  };
+  list.appendChild(asks);
+
   // A mission's use of a machine is asked of its person (modules/harness/mission-asks.js): how long it is pressed on
   // their devices, and what no answer by then becomes — held open (the mission waits) or a no.
   const wait = document.createElement('label');

@@ -17,7 +17,8 @@ const settings = require('../modules/harness/settings');
 
 before(H.start);
 after(H.stop);
-beforeEach(() => { approval.setMode('auto'); approval.settings().always.forEach(approval.forget); });
+// Manual as it always was — asking everything; asking what matters has its own file (approval-matters.test.js).
+beforeEach(() => { approval.setMode('auto'); approval.setManualAsks('everything'); approval.settings().always.forEach(approval.forget); });
 
 test('auto is the default, so nothing changes for anyone until they ask for it', () => {
   assert.equal(approval.settings().mode, 'auto');

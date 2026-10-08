@@ -62,19 +62,25 @@ function settings() {
     mode:   MODES.includes(a.mode) ? a.mode : 'auto',
     always: Array.isArray(a.always) ? a.always.filter(k => typeof k === 'string' && k) : [],
     recheckOutside: a.recheckOutside !== false,   // on unless switched off in Approvals
+    manualAsks: require('./approval-matters').setting(),   // Manual asks everything, or what matters (approval-matters.js)
     ...(Number.isInteger(a.missionAskSec) ? { missionAskSec: a.missionAskSec } : {}), ...(['hold', 'deny'].includes(a.missionAskTimeout) ? { missionAskTimeout: a.missionAskTimeout } : {}),   // read through the schema (mission-asks.js)
   };
 }
 
-/** The "ask again after outside text" switch. */
+/** The "ask again after outside text" switch; what Manual asks: everything, or what matters (approval-matters.js). */
 function setRecheck(on) { return save({ recheckOutside: !!on }); }
+function setManualAsks(how) {
+  if (!require('./approval-matters').MODES.includes(how)) throw Object.assign(new Error('manualAsks is everything or what-matters.'), { status: 400 });
+  return save({ manualAsks: how });
+}
 /** How long a mission's machine question waits for its person (mission-asks.js), in seconds — and then: 'hold' or 'deny'. */
 const setMissionAskSec = sec => save({ missionAskSec: sec }), setMissionAskTimeout = how => save({ missionAskTimeout: how });
 
 function save(patch) {
   const prefs = loadPrefs();
   if (!prefs.harness) prefs.harness = {};
-  prefs.harness.approval = { ...settings(), ...patch };
+  const { manualAsks, ...rest } = settings(), kept = prefs.harness.approval?.manualAsks;   // the default is read, not written
+  prefs.harness.approval = { ...rest, ...(kept ? { manualAsks: kept } : {}), ...patch };
   savePrefs(prefs);
   return settings();
 }
@@ -146,13 +152,10 @@ function keysFor(name, args) {
 
 /** A one-line account of what is about to happen, for the card. */
 function summarize(name, args) {
-  const arg = VERB_ARG[name];
+  const arg = VERB_ARG[name], cut = t => (t.length > 400 ? `${t.slice(0, 400)}…` : t);
   const line = arg ? String(args?.[arg] || '') : '';
-  if (line) return line.length > 400 ? `${line.slice(0, 400)}…` : line;
-  try {
-    const json = JSON.stringify(args ?? {});
-    return json.length > 400 ? `${json.slice(0, 400)}…` : json;
-  } catch { return ''; }
+  if (line) return cut(line);
+  try { return cut(JSON.stringify(args ?? {})); } catch { return ''; }
 }
 
 /**
@@ -188,14 +191,11 @@ function gate(name, args, ctx = {}) {
 
   const keys = keysFor(name, args);
   if (keys && keys.every(k => always.includes(k))) return null;
-
-  return {
-    tool: name,
-    // What "always allow" would remember. Null means this call cannot be
-    // reduced to a type, so the card offers once-or-deny and nothing else.
-    keys,
-    summary: summarize(name, args),
-  };
+  // Manual that asks what matters (approval-matters.js): what can be undone and stays on this machine runs unasked.
+  const matters = settings().manualAsks === 'what-matters' ? require('./approval-matters').why(name, args, ctx) : undefined;
+  if (matters === null) return null;
+  // `keys`: what "always allow" would remember. Null means this call cannot be reduced to a type, so the card offers once-or-deny.
+  return { tool: name, keys, summary: matters ? `${summarize(name, args)} — asked because ${matters}.` : summarize(name, args) };
 }
 
 /* ── Pending questions ────────────────────────────────────
@@ -382,7 +382,7 @@ function entry(id) { return _pending.get(id) || null; }
 function block() {
   const { mode, always } = settings();
   if (mode !== 'manual') return '';
-  return ['# Approval', 'Manual approval is on: the user is asked before each tool call that does something, '
+  return ['# Approval', settings().manualAsks === 'what-matters' ? require('./approval-matters').block() : 'Manual approval is on: the user is asked before each tool call that does something, '
     + 'and may refuse. A refusal is about the action, not the wording — do not retry it another way.',
     always.length
       ? `Already allowed without asking: ${always.join(', ')}.`
@@ -392,6 +392,6 @@ function block() {
 }
 
 module.exports = {
-  MODES, FREE, settings, setMode, setRecheck, setMissionAskSec, setMissionAskTimeout, isUnattended, remember, forget, block,
+  MODES, FREE, settings, setMode, setRecheck, setManualAsks, setMissionAskSec, setMissionAskTimeout, isUnattended, remember, forget, block,
   verbsOf, keysFor, summarize, gate, ask, askAnywhere, decide, pending, refusal, missionRefusal, entry,
 };

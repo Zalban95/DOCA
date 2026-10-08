@@ -144,6 +144,7 @@ test('a question from the agent arrives as buttons, and a press answers it', asy
 
 test('in manual mode, a call from a Telegram turn is asked in that chat, and Approve there runs it', async () => {
   assert.equal((await H.api(null, 'POST', '/api/harness/approval', { mode: 'manual' })).status, 200);
+  require('../modules/harness/approval').setManualAsks('everything');   // Manual as it always was
   try {
     script = [{ tool: 'shell', args: { command: 'echo from-telegram' } }, { text: 'Done: from-telegram.' }];
     userSays(7001, { text: 'run the echo' });

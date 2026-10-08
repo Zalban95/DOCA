@@ -75,6 +75,12 @@ const TOOLS = {
   agent_dispatch: [{ tier: 'reversible', way: WAY.work }],
   agent_resume: [{ tier: 'reversible', way: WAY.work }],
   mcp_connect: [{ tier: 'reversible', way: 'the server is started or stopped again' }],
+  today: [{ tier: 'read' }],
+  web_search: [{ tier: 'read' }],
+  tools_more: [{ tier: 'read' }],
+  screen: reads(['list', 'propose'], { tier: 'reversible', way: 'a page on a screen; another can be shown' }),
+  mission_plan: [{ tier: 'reversible', way: WAY.work }],
+  scout_report: [{ tier: 'reversible', way: WAY.work }],
 };
 
 /** A connected account (connectors/tools.js): reading it is a read, anything else acts on the owner's account. */
