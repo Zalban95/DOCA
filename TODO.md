@@ -611,6 +611,14 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   vault; each connection the tool `connector_<id>` (levels, grants, kits, approvals by name), host-only unless opened.
   **Left:** typed helpers per service (a calendar's next events without knowing its API), revoking at the service on
   disconnect, connecting on behalf of a person rather than the hive.
+  *Branch connectors-more (asked 2026-10-08): ways without an OAuth app — a calendar by its secret address (an ICS
+  reader with RRULE and time zones, no dependency; read-only; feeds the ambient screen), mail by app password (search,
+  read, drafts; sending a forced ask), CalDAV/CardDAV for iCloud, Fastmail, Nextcloud (adding an event a forced ask),
+  keys pasted on a service's card (GitHub, Notion, Todoist, Linear, Slack); OAuth entries for Dropbox, Box, Notion,
+  Slack, Spotify, Todoist, Linear, Atlassian, Zoom, Discord, each read from its docs; Field → Connectors as services
+  with their ways simplest first, each tested on save. Left: a Sent copy for mail sent by SMTP (only Gmail keeps one
+  itself), STARTTLS tested against a real server (unit-tested only through the plain stubs), CalDAV event edits and
+  deletes, Atlassian's site-bound API token (Basic with the email), and checking each new OAuth entry with a real app.*
 - [x] H9.4 (2.186.0) Pages: markdown documents with a chat beside each. On Projects: a project is the space, its .md
   files the pages; a chat tab about one page is given the page's current text every turn. **Left:** a page's
   history view (git covers it in a repository), sharing one page read-only by link.
