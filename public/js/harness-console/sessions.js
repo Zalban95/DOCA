@@ -35,7 +35,7 @@ async function _hcStatus() {
   const badge = document.getElementById('hc-model-badge');
   chatModelPicker(document.getElementById('hc-model-pick'), sessionId);
   // Its mode and approval switch, and what is lined up for it (agent-ui/conv-bar.js, side-fold.js).
-  agentConvBar(document.getElementById('hc-conv'), sessionId, null, { model: false });
+  agentConvBar(document.getElementById('hc-conv'), sessionId, null, { model: false, think: document.getElementById('hc-think') });
   const fold = document.getElementById('hc-fold');
   if (fold && (!window._hcFold || window._hcFold.host !== fold)) window._hcFold = { host: fold, ...agentSideFold(fold, sessionId) };
   else window._hcFold?.setSession(sessionId);

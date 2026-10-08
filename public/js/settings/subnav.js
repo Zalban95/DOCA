@@ -118,6 +118,7 @@ function _settingsHarnessRender() {
     ${row('<button class="btn btn-sm" onclick="hcApprovalOpen()">Approvals</button>', 'What runs without asking: Ask, Auto, Unattended')}
   </div>`;
   identityRender(panel);   // persona.md and human.md (settings/identity.js)
+  thinkingCardRender(panel); // thinking per mode (settings/thinking.js)
   skillsCardRender(panel); // skills (settings/skills.js)
   guardsCardRender(panel); // guards (settings/guards.js)
   searchCardRender(panel); // web search (settings/search.js)

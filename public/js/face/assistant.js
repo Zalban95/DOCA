@@ -30,11 +30,14 @@ function _assistantBuild() {
   el.className = 'face-assistant';
   el.innerHTML = `<canvas></canvas><div class="face-assistant-status" id="face-assistant-status"></div>
     <button class="face-assistant-close" title="Close (ends the call)" aria-label="Close">✕</button>
-    ${typeof micKeepHtml === 'function' ? micKeepHtml() : ''}`;
+    ${typeof micKeepHtml === 'function' ? micKeepHtml() : ''}${typeof thinkToggleHtml === 'function' ? thinkToggleHtml('face-assistant-think', { call: true, size: 'xs' }) : ''}`;
   document.body.appendChild(el);
   const a = { el, face: { set() {}, level() {}, stop() {} }, closeFeed: () => {} };
   _assistant = a;
   if (typeof micKeepRefresh === 'function') micKeepRefresh();
+  if (typeof callThinkSet === 'function') callThinkSet(_callThinkState);   // this call's 💭, drawn as it stands, just left of the Mic
+  const mic = el.querySelector('.mic-keep'), think = el.querySelector('.think-toggle');
+  if (mic && think) think.style.right = `${78 + mic.offsetWidth}px`;
   el.querySelector('.face-assistant-close').onclick = e => { e.stopPropagation(); assistantClose(); };
   // Waiting for its name the screen is calm — no ✕. A first touch shows it again for a few seconds; a tap on the face
   // while it shows talks at once. A device whose main purpose is the face stays clean (asked 2026-10-06).
