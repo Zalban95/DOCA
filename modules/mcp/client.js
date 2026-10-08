@@ -204,11 +204,11 @@ class McpClient {
 
     let res;
     try {
-      res = await fetch(this.spec.url, {
-        method: 'POST',
+      // Not fetch: undici cuts the wait for headers at 300 s whatever this says (http-post.js).
+      res = await require('./http-post').post(this.spec.url, {
         headers,
         body: JSON.stringify({ jsonrpc: '2.0', id, method, params: params || {} }),
-        signal: AbortSignal.timeout(timeoutMs),
+        timeoutMs,
       });
     } catch (e) {
       // Node's own text for an aborted fetch is "The operation was aborted due
@@ -218,17 +218,17 @@ class McpClient {
       // still writes its file, so an agent that retries blindly does it twice.
       if (e?.name === 'TimeoutError' || e?.name === 'AbortError')
         throw new Error(
-          `${method} gave up after ${Math.round(timeoutMs / 1000)}s waiting for "${this.id}". `
+          `${method} timed out after ${Math.round(timeoutMs / 1000)}s waiting for "${this.id}". `
           + `That is this panel's limit (settings ${require('./timeouts').settingFor(method, this.id)}), not the server's — `
           + 'and it stopped the waiting, not the work: whatever you asked for may have finished on that '
           + 'machine anyway. Check the result before asking for it again.');
-      throw require('./reach-error')(e, this.id, this.spec.url);   // "fetch failed", said as which server, where, why
+      throw require('./reach-error')(e, this.id, this.spec.url);   // a refused or dropped connection, said as which server, where, why
     }
     const session = res.headers.get('mcp-session-id');
     if (session) this.sessionId = session;
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.text.slice(0, 200)}`);
 
-    const body = await res.text();
+    const body = res.text;
     let json;
     if (res.headers.get('content-type')?.includes('event-stream')) {
       // SSE framing: the reply is the frame carrying our id; a server may send
@@ -252,7 +252,7 @@ class McpClient {
       const timer = setTimeout(() => {
         this._pending.delete(id);
         reject(new Error(
-          `${method} gave up after ${Math.round(timeoutMs / 1000)}s waiting for "${this.id}". `
+          `${method} timed out after ${Math.round(timeoutMs / 1000)}s waiting for "${this.id}". `
           + `That is this panel's limit (settings ${require('./timeouts').settingFor(method, this.id)}), not the server's — `
           + 'and it stopped the waiting, not the work. Check the result before asking for it again.'));
       }, timeoutMs);
