@@ -31,6 +31,8 @@
 /* Who started a machine (lib/machine-origin.js): under its row here and in its tab; one nobody noted, in amber */
 .m-origin { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
 .m-origin.outside, .m-detail.outside { color: var(--amber); }
+.m-life { font-size: 10px; color: var(--muted); margin: 0 0 6px; }
+.m-life:empty { display: none; }
 /* Busy, whoever made it so (machines/busy.js): a point that breathes beside what runs, in every skin */
 .m-busy { color: var(--text); }
 .m-busy::before, .ml-tile.busy .ml-line::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; vertical-align: middle;
