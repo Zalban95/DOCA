@@ -77,6 +77,7 @@ async function llamaLoadStatus() {
   } catch { _llamaStatus = {}; }
   await machineOriginsLoad();   // who started each (lib/machine-origin.js)
   _updateLlamaBadges();
+  servicesLifeLoad();          // last used, and when it stops by itself (services-life.js)
 }
 
 /* ── Rendering ──────────────────────────────────────── */
@@ -110,6 +111,7 @@ function _renderLlamaGrid() {
            title="${inst.modelPath}">
         ${inst.modelPath ? inst.modelPath.split(/[\\/]/).pop() : '<em>no model set</em>'}${inst.source ? ` · from ${escHtml(inst.source.repo)}` : ''}${inst.mmprojPath ? ' · reads pictures' : ''}${inst.jinja ? ' · its own chat template (tool calls)' : ''}
       </div>
+      <div class="m-life" id="life-line-llamacpp-${inst.id}"></div>
       <div class="llamacpp-controls">
         <label class="services-ctrl-label">Model</label>
         <div style="display:flex;gap:4px;align-items:center;flex:1;min-width:200px">
@@ -145,6 +147,7 @@ function _renderLlamaGrid() {
                 style="margin-left:auto">✕</button>
         <span class="status-line" id="llama-status-${inst.id}"></span>
       </div>
+      <div id="life-adv-llamacpp-${inst.id}"></div>
       <pre class="install-out" id="llama-out-${inst.id}" style="display:none;max-height:180px;margin-top:6px"></pre>
     </div>`;
   }).join('');

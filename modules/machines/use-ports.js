@@ -56,32 +56,40 @@ function screensSpeaking(port) {
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-/** Why stopping whatever listens on `port` here would be felt, as sentences; `name` is how to call it. */
-function reasons(port, name) {
+/**
+ * Why stopping whatever listens on `port` here would be felt: [{ kind, text }], `name` is how to call it. The kind says
+ * whether it is set up to use it (`model`, `voice`, `stt`, `screens`) or using it now (`working`, `inflight`, `served`)
+ * — service-life/ lets a service that starts when needed go while only set up to be used.
+ */
+function needs(port, name) {
   if (!port) return [];
-  const out = [];
+  const list = [];
+  const out = { push: (text, kind) => list.push({ kind, text }) };
   const models = modelsInUse().filter(m => providerPort(m.provider) === port);
   const running = require('../harness/turn/lifecycle').running.size;
-  for (const m of models) out.push(`it runs ${m.role}${m.model ? ` (${m.model})` : ''}`);
-  if (models.some(m => m.role === 'the agent\'s model') && running) out.push(`${plural(running, 'conversation is', 'conversations are')} working on it now`);
+  for (const m of models) out.push(`it runs ${m.role}${m.model ? ` (${m.model})` : ''}`, 'model');
+  if (models.some(m => m.role === 'the agent\'s model') && running) out.push(`${plural(running, 'conversation is', 'conversations are')} working on it now`, 'working');
   let vs = {};
   try { vs = require('../chat').loadVoiceServices(); } catch { /* no voice */ }
   const screens = screensSpeaking(port);
-  if (portOf(vs.ttsUrl) === port) out.push(`${name} is the hive's voice${screens ? `; ${plural(screens, 'screen')} ${screens === 1 ? 'uses' : 'use'} it` : ''}`);
-  else if (screens) out.push(`${plural(screens, 'screen')} ${screens === 1 ? 'speaks' : 'speak'} with it`);
-  if (portOf(vs.sttUrl) === port) out.push(`${name} is the hive's speech-to-text: calls and voice messages are heard through it`);
+  if (portOf(vs.ttsUrl) === port) out.push(`${name} is the hive's voice${screens ? `; ${plural(screens, 'screen')} ${screens === 1 ? 'uses' : 'use'} it` : ''}`, 'voice');
+  else if (screens) out.push(`${plural(screens, 'screen')} ${screens === 1 ? 'speaks' : 'speak'} with it`, 'screens');
+  if (portOf(vs.sttUrl) === port) out.push(`${name} is the hive's speech-to-text: calls and voice messages are heard through it`, 'stt');
   const flying = require('../harness/inflight').list().filter(r => portOf(r.url) === port).length;
-  if (flying) out.push(`${plural(flying, 'model request')} from DOCA ${flying === 1 ? 'is' : 'are'} in flight to it now`);
+  if (flying) out.push(`${plural(flying, 'model request')} from DOCA ${flying === 1 ? 'is' : 'are'} in flight to it now`, 'inflight');
   try {
     for (const p of require('./index').served().filter(s => s.port === port))
-      out.push(`it serves ${p.url}${p.who ? `, which ${p.who}'s job printed` : ''}`);
+      out.push(`it serves ${p.url}${p.who ? `, which ${p.who}'s job printed` : ''}`, 'served');
   } catch { /* no jobs */ }
-  return out;
+  return list;
 }
+
+/** The same, as sentences: what a person's "are you sure" names. */
+const reasons = (port, name) => needs(port, name).map(n => n.text);
 
 /** The host ports a container publishes, from docker ps' Ports ("0.0.0.0:8880->8880/tcp, :::8880->8880/tcp"). */
 function published(ports) {
   return [...new Set([...String(ports || '').matchAll(/:(\d+)->/g)].map(m => Number(m[1])))];
 }
 
-module.exports = { reasons, portOf, published, modelsInUse, screensSpeaking };
+module.exports = { reasons, needs, portOf, published, modelsInUse, screensSpeaking };

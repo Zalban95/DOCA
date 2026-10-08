@@ -275,6 +275,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       // Announced, never quiet (turn/fallback.hopReporter says why).
       onHop: hopReporter({ fallbacks, say, step }),
       onRetry: r => say({ type: 'warning', step, kind: 'rate-limit', text: r.text, waitMs: r.waitMs, attempt: r.attempt }),
+      onStart: s => say({ type: 'warning', step, kind: 'starting', text: s.text }),   // a stopped model server started (service-life/)
     }), { body: { ...base, messages, ...(schemas.length && !reporting ? { tools: schemas, tool_choice: 'auto' } : {}) }, p, say, step, who: ep.label || ep.id });
     const held = tones?.rest();   // a "[" that never became a tag is words after all
     if (held) { text += held; say({ type: 'text', text: held, spoken: '' }); }

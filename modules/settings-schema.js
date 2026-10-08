@@ -211,6 +211,14 @@ const SCHEMA = {
     keys: { discovery: { type: 'string', default: 'servers', hint: 'How the Models tab finds llama-servers DOCA did not start: servers (model-servers.js, the default) or props (each one\'s /props, kept beside it).' },
       modelsDir: { type: 'string', default: '', hint: 'Where GGUF files from Hugging Face are kept (Field → Models → llama.cpp → From Hugging Face); empty is models/gguf in your home folder.' } } },
   serviceSettings:  { is: 'local', home: 'device', on: 'host', note: 'ports and URLs of services on this machine', propose: p('Inference services', 'GPU assignment, ports, images') },
+  // When the inference services and llama.cpp servers DOCA started are stopped by DOCA (modules/service-life). Never
+  // proposable: an agent switching services off under the person, or keeping them on, is the person's call. `each` holds
+  // one row's own choices by `<kind>:<id>` ({idleStopMinutes: null = the switch's, stopWithDoca, startWhenNeeded}).
+  services:         { is: 'local', home: 'device', on: 'host', note: 'when DOCA stops the services it started: after idle minutes, and when DOCA itself stops (service-life/)',
+    keys: {
+      idleStopMinutes: { type: 'number', min: 0, max: 10080, default: 0, hint: 'Stop a service DOCA started when nothing has used it for this many minutes, counted only while no page of the panel is open and no call is on (0: never).' },
+      stopWithDoca:    { type: 'boolean', default: false, hint: 'When DOCA itself stops (shut down, or stopped by its launcher or the system) — not a browser tab closing, not a restart or a version switch — stop the services it started that are ticked.' },
+    } },
   voiceServices:    { is: 'local', home: 'device', on: 'host', note: 'speech services on this machine or the tailnet', propose: p('Voice services') },
   snapshotSettings: { is: 'local', home: 'device', on: 'host', note: 'where snapshots of this machine go', propose: p('Snapshot settings') },
   mcpServers:       { is: 'local', home: 'device', on: 'host', note: 'spawnable commands and URLs — never proposed, never exported' },
