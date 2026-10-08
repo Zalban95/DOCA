@@ -29,14 +29,38 @@ const fail = t => ({ content: [{ type: 'text', text: String(t) }], isError: true
 const clip = s => (s.length > MAX_OUT ? `${s.slice(0, MAX_OUT)}\n… (${s.length - MAX_OUT} more characters)` : s);
 const abs = p => path.resolve(WORK, String(p || '.').replace(/^~(?=$|\/)/, process.env.HOME || '/home/agent'));
 
+/**
+ * Run a command and answer with its exit code and output — by its timeout at the latest, whatever it started.
+ *
+ * A command that backgrounds a process (`server &`, `nohup … &`) leaves that process holding the output pipes, so
+ * waiting for them to close waited for ever; and the timeout killed only bash, not what bash started (self-test round
+ * two, B3: a 120 s call answered after more than 5 minutes). So the command gets a process group of its own, and the
+ * answer comes when the command itself has exited (plus a moment for its last output), or at the timeout — when the
+ * whole group is killed. What was read so far is returned, with a line saying which of the two happened.
+ */
 function run(cmd, args, { timeoutSec = 120, input } = {}) {
   return new Promise(resolve => {
-    const child = spawn(cmd, args, { cwd: fs.existsSync(WORK) ? WORK : '/', env: { ...process.env, DISPLAY } });
-    let out = '';
+    const child = spawn(cmd, args, { cwd: fs.existsSync(WORK) ? WORK : '/', env: { ...process.env, DISPLAY }, detached: true });
+    let out = '', done = false, grace = null;
+    const finish = (code, note) => {
+      if (done) return;
+      done = true; clearTimeout(timer); clearTimeout(grace);
+      if (note) out += `\n${note}`;
+      child.stdout.destroy(); child.stderr.destroy();   // stop reading; what a background process writes is its own
+      resolve({ code, out });
+    };
     child.stdout.on('data', d => { out += d; });
     child.stderr.on('data', d => { out += d; });
-    const timer = setTimeout(() => { child.kill('SIGKILL'); out += `\n(stopped after ${timeoutSec} s)`; }, timeoutSec * 1000);
-    child.on('close', code => { clearTimeout(timer); resolve({ code, out }); });
+    const timer = setTimeout(() => {
+      try { process.kill(-child.pid, 'SIGKILL'); } catch { try { child.kill('SIGKILL'); } catch { /* gone */ } }
+      finish(null, `(stopped after ${timeoutSec} s: the command and everything it started were ended; the output above is what it wrote until then)`);
+    }, timeoutSec * 1000);
+    child.on('close', code => finish(code));
+    child.on('exit', code => {
+      grace = setTimeout(() => finish(code, '(the command ended, but a process it started is still running and holds its output open; '
+        + 'what that process writes from here is not read — send its output to a file, e.g. `cmd > log 2>&1 &`)'), 500);
+    });
+    child.on('error', e => finish(null, `(${e.message})`));
     if (input) child.stdin.end(input);
   });
 }
@@ -204,4 +228,4 @@ const TOOLS = [
     run: async () => { await cdp.connect(); await cdp.evaluate('history.back()'); await new Promise(r => setTimeout(r, 800)); return text(`Now at ${await cdp.evaluate('location.href')}.`); } },
 ];
 
-module.exports = { TOOLS, sensitive };
+module.exports = { TOOLS, sensitive, run };
