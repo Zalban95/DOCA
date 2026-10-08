@@ -27,7 +27,12 @@ function looksText(type, bytes) {
   return ok / head.length > 0.95;
 }
 
-async function request({ url, method, body, headers, key, form, files, save_as, binaryOnly = false }, ctx = {}) {
+/**
+ * The request itself, its key added and its redirects followed hop by hop: `{ r, url, secret, token }` (the answer and
+ * what to scrub from it), or `{ error }` — a sentence for the agent. `request` reads or keeps the answer; the API
+ * services (api-services/call.js) read it as JSON.
+ */
+async function send({ url, method, body, headers, key, form, files, save_as }, ctx = {}) {
       const keys = require('../../service-keys');
       let h = { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(headers && typeof headers === 'object' ? headers : {}) };
       let secret = null, exchange = null, token = null;
@@ -35,7 +40,7 @@ async function request({ url, method, body, headers, key, form, files, save_as, 
         // No person on the turn (a test, a pre-accounts call) is not narrowed, as everywhere (auth/permits.js).
         const host = require('../../auth/allot').uses(ctx.user, 'key', key);   // an admin, or allotted to them (S13)
         try { ({ url, headers: h, key: secret, exchange } = keys.apply(key, url, h, { host })); }
-        catch (e) { return `Error: ${e.message}`; }
+        catch (e) { return { error: `Error: ${e.message}` }; }
       }
       let payload = body || undefined;
       if (form || files) {
@@ -43,36 +48,45 @@ async function request({ url, method, body, headers, key, form, files, save_as, 
         for (const [k, v] of Object.entries(form || {})) fd.append(k, String(v));
         for (const [k, ref] of Object.entries(files || {})) {
           const abs = fileOf(ref, ctx);
-          if (!abs) return `Error: no file "${ref}" (a path, or the name of an attachment).`;
-          if (require('../secret-view').kindOf(abs)) return `Error: ${ref} holds secrets beside settings and is never uploaded.`;
+          if (!abs) return { error: `Error: no file "${ref}" (a path, or the name of an attachment).` };
+          if (require('../secret-view').kindOf(abs)) return { error: `Error: ${ref} holds secrets beside settings and is never uploaded.` };
           const st = require('fs').statSync(abs);
-          if (st.size > 50 * 1024 * 1024) return `Error: ${ref} is over 50 MB.`;
+          if (st.size > 50 * 1024 * 1024) return { error: `Error: ${ref} is over 50 MB.` };
           fd.append(k, new Blob([require('fs').readFileSync(abs)], { type: require('../../attachments').mimeFor(abs) }), require('path').basename(abs));
         }
         payload = fd;
         delete h['Content-Type'];   // the form sets its own boundary
       }
       const verb = (method || (payload instanceof FormData ? 'POST' : 'GET')).toUpperCase();
-      const send = async () => {
+      const go = async () => {
         if (exchange) { token = await keys.token(exchange, { fresh: !!token }); h = { ...h, Authorization: `Bearer ${token}` }; }
         return fetch(url, { method: verb, body: payload, headers: h, redirect: 'manual', signal: AbortSignal.timeout(save_as ? 300000 : 60000) });
       };
       let r;
-      try { r = await send(); if (exchange && r.status === 401) r = await send(); }   // a token that ran out: one more, fresh
-      catch (e) { return `Error: ${keys.scrub(e.message, secret, token)}`; }
+      try { r = await go(); if (exchange && r.status === 401) r = await go(); }   // a token that ran out: one more, fresh
+      catch (e) { return { error: `Error: ${keys.scrub(e.message, secret, token)}` }; }
       // Redirects are followed here, each hop checked (security review 2026-10-07): a key never leaves its own origin,
       // and an address read as the owner's own never hands over a page from the open web, which is the reader's.
       const start = new URL(url), stayOwned = !ctx.airlock && owned(url);
       for (let hop = 0; hop < 5 && [301, 302, 303, 307, 308].includes(r.status) && r.headers.get('location'); hop++) {
         let next;
         try { next = new URL(r.headers.get('location'), url); } catch { break; }
-        if (!/^https?:$/.test(next.protocol)) return `Error: ${String(url).slice(0, 120)} redirects to a ${next.protocol} address, which is not followed.`;
-        if ((secret || exchange || key) && next.origin !== start.origin) return `Error: ${String(url).slice(0, 120)} redirects to ${next.origin}; the key is sent only to ${start.origin}, so it was not followed.`;
-        if (stayOwned && !owned(next.href)) return `Error: ${String(url).slice(0, 120)} redirects outside the owner's addresses (${next.href.slice(0, 160)}). Read that page with http_fetch: the open web reaches you through its reader.`;
+        if (!/^https?:$/.test(next.protocol)) return { error: `Error: ${String(url).slice(0, 120)} redirects to a ${next.protocol} address, which is not followed.` };
+        if ((secret || exchange || key) && next.origin !== start.origin) return { error: `Error: ${String(url).slice(0, 120)} redirects to ${next.origin}; the key is sent only to ${start.origin}, so it was not followed.` };
+        if (stayOwned && !owned(next.href)) return { error: `Error: ${String(url).slice(0, 120)} redirects outside the owner's addresses (${next.href.slice(0, 160)}). Read that page with http_fetch: the open web reaches you through its reader.` };
         if (verb !== 'GET' && verb !== 'HEAD') break;   // a redirected write is answered as it is, never re-sent
         url = next.href;
-        try { r = await send(); } catch (e) { return `Error: ${keys.scrub(e.message, secret, token)}`; }
+        try { r = await go(); } catch (e) { return { error: `Error: ${keys.scrub(e.message, secret, token)}` }; }
       }
+      return { r, url, secret, token };
+}
+
+async function request({ url, save_as, binaryOnly = false, ...rest }, ctx = {}) {
+      const keys = require('../../service-keys');
+      const sent = await send({ url, save_as, ...rest }, ctx);
+      if (sent.error) return sent.error;
+      const { r, secret, token } = sent;
+      url = sent.url;
       if (save_as && r.ok) {
         const bytes = Buffer.from(await r.arrayBuffer());
         // A keyless download from an address that is not the owner's keeps a file, never a page: text is reading the
@@ -121,4 +135,4 @@ function privateV4(h) {
   return a === 127 || a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || (a === 100 && b >= 64 && b <= 127);
 }
 
-module.exports = { request, fileOf, owned, looksText };
+module.exports = { request, send, fileOf, owned, looksText };
