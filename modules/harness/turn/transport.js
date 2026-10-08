@@ -25,8 +25,9 @@ async function post(ep, body, signal, p) {
   const headers = { 'Content-Type': 'application/json' };
   if (ep.apiKey) headers.Authorization = `Bearer ${ep.apiKey}`;
 
-  const send = payload => fetch(`${ep.baseUrl}/chat/completions`, {
-    method: 'POST', headers, body: JSON.stringify(payload), signal,
+  // node:http, not fetch: fetch stops waiting for headers at 300 s whatever the signal says (http-request.js).
+  const send = payload => require('./http-request').post(`${ep.baseUrl}/chat/completions`, {
+    headers, body: JSON.stringify(payload), signal,
   });
 
   let r = await send(body);
