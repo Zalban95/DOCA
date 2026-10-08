@@ -154,22 +154,6 @@ function _chatAppendContent(content) {
 
 let chatPending = [];   // attachment records waiting to be sent with the message
 
-/* The turn in flight, if any. Stop hangs up on the stream, and the server stops the turn with it. The step
-   already in flight still finishes (the provider accepted it), so Stop ends the *next* step; the button says so. */
-let chatTurn = null;
-
-function _chatBusy(on) {
-  chatTurn = on ? chatTurn : null;
-  const stop = document.getElementById('chat-stop');
-  if (stop) stop.style.display = on ? '' : 'none';   // Send stays: a message mid-turn waits for the next step
-}
-
-function chatStop() {
-  if (!chatTurn) return;
-  chatTurn.abort();
-  _chatBusy(false);
-}
-
 function chatAttachPick() { document.getElementById('chat-file').click(); }
 
 async function chatAttachFiles(files) {
@@ -425,11 +409,10 @@ function _chatTurnUi(spoken) {
     // rather than a line the collapsing run swallows.
     const rate = tokenRateEl(sink.spend);
     if (rate) { container.appendChild(rate); _chatScroll(); }
-    if (turn.signal.aborted) chatAppendMsg('system', 'Stopped. The step already running finishes on its own.');
     // Spoken to, speak back — after the answer is on screen, so a TTS that is
     // not configured costs nothing but silence.
     if (spoken && !turn.signal.aborted) _chatSpeak(reply);
-    if (chatTurn === turn) _chatBusy(false);
+    if (chatTurn === turn && !turn.stopping) _chatBusy(false);   // a Stop clears it itself, once the hub says it ended (chat-stop.js)
   } };
 }
 
