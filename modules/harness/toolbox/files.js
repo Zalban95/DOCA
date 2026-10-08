@@ -8,7 +8,7 @@ const fs     = require('fs');
 const path   = require('path');
 const shell  = require('../../shell');
 const repo   = require('../repo');
-const { MAX_OUT, SHELL_MS, clip, cwd, resolvePath } = require('./common');
+const { MAX_OUT, SHELL_MS, clip, cwd, landed, resolvePath } = require('./common');
 
 /** How long one shell call may wait: the harness param `shellTimeoutSec` (60 s when unset). */
 function shellLimitSec() {
@@ -122,7 +122,7 @@ module.exports = [
     parameters: {
       type: 'object',
       properties: {
-        path:      { type: 'string', description: 'Absolute path, or relative to the agent workspace.' },
+        path:      { type: 'string', description: 'Absolute path, or relative to the conversation\'s project folder (else the agent workspace).' },
         offset:    { type: 'integer', description: 'Character to start at (default 0).' },
         maxLength: { type: 'integer', description: 'Characters to read at most (default 8000, at most 40000).' },
       },
@@ -133,7 +133,7 @@ module.exports = [
       const st  = fs.statSync(abs);
       if (st.isDirectory()) throw new Error(`${abs} is a directory — use list_dir`);
       // A file holding secrets beside settings reads with them masked (harness/secret-view.js).
-      return slice(require('../secret-view').view(abs, fs.readFileSync(abs, 'utf8')), offset, maxLength);
+      return slice(require('../secret-view').view(abs, fs.readFileSync(abs, 'utf8')), offset, maxLength) + landed(p, abs);
     },
   },
   {
@@ -142,7 +142,7 @@ module.exports = [
     parameters: {
       type: 'object',
       properties: {
-        path:    { type: 'string', description: 'Absolute path, or relative to the agent workspace.' },
+        path:    { type: 'string', description: 'Absolute path, or relative to the conversation\'s project folder (else the agent workspace).' },
         content: { type: 'string', description: 'The complete new contents of the file.' },
       },
       required: ['path', 'content'],
@@ -175,7 +175,7 @@ module.exports = [
     description: 'List the entries of a directory with their type and size.',
     parameters: {
       type: 'object',
-      properties: { path: { type: 'string', description: 'Absolute path, or relative to the agent workspace.' } },
+      properties: { path: { type: 'string', description: 'Absolute path, or relative to the conversation\'s project folder (else the agent workspace).' } },
       required: ['path'],
     },
     run: ({ path: p }, ctx = {}) => {

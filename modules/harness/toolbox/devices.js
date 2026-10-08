@@ -121,7 +121,7 @@ module.exports = [
     parameters: {
       type: 'object',
       properties: {
-        path:    { type: 'string', description: 'The media file. Absolute, or relative to the agent workspace — or, with computer, to that computer\'s work folder.' },
+        path:    { type: 'string', description: 'The media file. Absolute, or relative to the conversation\'s project folder (else the agent workspace) — or, with computer, to that computer\'s work folder.' },
         caption: { type: 'string', description: 'One short line under it: what it is.' },
         computer: { type: 'string', description: 'The id of the computer you work in, when the file is inside it (a screenshot, a recording): it is copied out and shown.' },
       },
@@ -138,7 +138,7 @@ module.exports = [
     parameters: {
       type: 'object',
       properties: {
-        path:    { type: 'string', description: 'The image file. Absolute, or relative to the agent workspace.' },
+        path:    { type: 'string', description: 'The image file. Absolute, or relative to the conversation\'s project folder (else the agent workspace).' },
         caption: { type: 'string', description: 'One short line under the picture: what it is.' },
       },
       required: ['path'],
@@ -160,7 +160,7 @@ module.exports = [
         text:      { type: 'string', description: 'Optional detail under the headline.' },
         files:     { type: 'array', description: `Optional files on this host to send with it, at most ${MAX_FILES}: audio, video, documents, pictures. A watch takes pictures only.`,
           items: { type: 'object', properties: {
-            path:    { type: 'string', description: 'The file. Absolute, or relative to the agent workspace.' },
+            path:    { type: 'string', description: 'The file. Absolute, or relative to the conversation\'s project folder (else the agent workspace).' },
             caption: { type: 'string', description: 'One line about it, shown with the file.' },
           }, required: ['path'] } },
         imagePath: { type: 'string', description: 'Optional path to one picture to show with it (the same as one entry of files).' },
