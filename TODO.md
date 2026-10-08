@@ -183,6 +183,9 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [x] Deep test A 16: the header search finds settings too (`GET /api/settings/find`, the rows the agent is told);
   choosing one opens its page — or the ⚙ form on Controls — and marks the field or card, its Advanced folds opened
   (`global-search.js settingJump`). `test/header-search-settings.test.js` in a real browser (`test/panel-browser.js`).
+- [x] Deep test A 30: a guarded switch is drawn as it is after its password is cancelled or wrong — the control changed a
+  moment before (checkbox, select or field) is put back in one place, `lib/api.js`, whoever drew it; a cancel says "Not
+  changed: no password was given."; the specialists switch also redraws from the hub on any failure.
 
 ### Everything still open, now urgent
 - C7b: done; D2b: done — its gaps (`docs/api/capability-gaps.md`) are v1 routes to ask for, plan decisions first.
