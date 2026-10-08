@@ -61,6 +61,15 @@ try {
   elseif ($Share -match '^(n|no|off)$') { & node bin/doca-sharing.js off }
   else { Write-Host 'Sharing with the project: not decided - Settings -> Packs asks.' }
 
+  # -- Whose it is --
+  # From "Run as administrator" every file is owned by the Administrators group, and DOCA started at sign-in runs as
+  # the person, without elevation: git then refuses the checkout ("dubious ownership"), so versions and updates fail.
+  $me = [Security.Principal.WindowsIdentity]::GetCurrent()
+  if ((New-Object Security.Principal.WindowsPrincipal $me).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "Giving $Dir to $($me.Name), who DOCA runs as"
+    & icacls $Dir /setowner $me.Name /T /C /Q | Out-Null
+  }
+
   # -- Start at sign-in, and now --
   if (-not $NoBoot) { & node bin/doca-launch.js enable; if ($LASTEXITCODE -ne 0) { Write-Host 'Start-at-sign-in was not added (see above); DOCA still runs.' } }
   if (-not $NoStart) {
