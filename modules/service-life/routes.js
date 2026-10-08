@@ -19,7 +19,8 @@ async function rows(now = Date.now()) {
       startedByDoca: !!u.startedByDoca, lastUsedAt: u.lastUsedAt || null, own: policy.own(t.key),
       idleMinutes: policy.idleMinutes(t.key), stopsWithDoca: policy.stopsWithDoca(t.key), startsWhenNeeded: comes,
       starting: require('./demand').starting(t.key),
-      text: s ? s.text : `${u.lastUsedAt ? `last used ${idle.ago(now - u.lastUsedAt)} ago · ` : ''}${comes ? 'starts when needed' : 'stopped'}` };
+      // Stopped: the badge says so; the line says only what it adds.
+      text: s ? s.text : [u.lastUsedAt && `last used ${idle.ago(now - u.lastUsedAt)} ago`, comes && 'starts when needed'].filter(Boolean).join(' · ') };
   });
 }
 
