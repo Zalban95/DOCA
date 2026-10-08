@@ -43,19 +43,21 @@ async function liveCallAssistantHtml() {
   return `<div style="border-top:1px solid var(--border2);padding-top:10px;display:flex;flex-direction:column;gap:8px">
     <div style="font-size:11px;font-weight:600">For every screen${owner ? '' : ' (an admin sets these)'}</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">Thinking effort</label>
-      <select class="input" id="as-effort" style="width:auto" ${owner ? '' : 'disabled'}>${lv.map(x => `<option value="${x}" ${a.effort === x ? 'selected' : ''}>${x === 'default' ? 'the model\'s default' : x}</option>`).join('')}</select></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">A quicker model (optional)</label>
-      <input class="input" id="as-provider" value="${escHtml(a.provider || '')}" placeholder="provider" style="width:120px" ${owner ? '' : 'disabled'}>
-      <input class="input" id="as-model" value="${escHtml(a.model || '')}" placeholder="model — empty: the chat's" style="width:200px" ${owner ? '' : 'disabled'}></div>
+      <select class="input" id="as-effort" data-default="low" data-label="Thinking effort" style="width:auto" ${owner ? '' : 'disabled'}>${lv.map(x => `<option value="${x}" ${a.effort === x ? 'selected' : ''}>${x === 'default' ? 'the model\'s default' : x}</option>`).join('')}</select></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">When it just acts</label>
       <select class="input" id="as-reply" style="width:auto" ${owner ? '' : 'disabled'}>${[['act', 'Do it — no answer (✓ on the face)'], ['brief', 'Do it — two or three words'], ['always', 'Do it — say what was done']]
         .map(([v, l]) => `<option value="${v}" ${a.reply === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
       <span style="font-size:11px;color:var(--muted)">Questions, failures and anything you cannot see are always answered.</span></div>
-    <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-calls" ${a.calls ? 'checked' : ''} ${owner ? '' : 'disabled'}>
+    ${advancedFold(`<div style="display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">A quicker model (optional)</label>
+      <input class="input" id="as-provider" data-default="" data-label="Quicker model's provider" value="${escHtml(a.provider || '')}" placeholder="provider" style="width:120px" ${owner ? '' : 'disabled'}>
+      <input class="input" id="as-model" data-default="" data-label="Quicker model" value="${escHtml(a.model || '')}" placeholder="model — empty: the chat's" style="width:200px" ${owner ? '' : 'disabled'}></div>
+    <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-calls" data-default="false" data-label="For the Deep call too" ${a.calls ? 'checked' : ''} ${owner ? '' : 'disabled'}>
       Use this effort and model for the Deep call (the chat's 🎙) too — its answers are always spoken-length</label>
-    <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-front" ${a.front !== false ? 'checked' : ''} ${owner ? '' : 'disabled'}>
+    <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-front" data-default="true" data-label="Answer at once" ${a.front !== false ? 'checked' : ''} ${owner ? '' : 'disabled'}>
       Answer at once: quick actions in the call, anything bigger (or "think harder") to a work chat, its outcome said in the call</label>
-    <label style="font-size:11px;color:var(--muted)">How it speaks<textarea class="input" id="as-style" rows="4" style="width:100%;margin-top:4px" ${owner ? '' : 'disabled'}>${escHtml(a.style || '')}</textarea></label>
+    <label style="font-size:11px;color:var(--muted)">How it speaks<textarea class="input" id="as-style" rows="4" style="width:100%;margin-top:4px" data-label="How it speaks"${a.defaults?.style != null ? ` data-default="${escHtml(a.defaults.style)}"` : ''} ${owner ? '' : 'disabled'}>${escHtml(a.style || '')}</textarea></label>
+    </div>`, { id: 'assistant-hive', label: 'Advanced — a quicker model, the Deep call, how it speaks' })}
     ${owner ? `<div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantSave()">Save the Quick call</button>
       <button class="btn btn-sm" onclick="liveCallAssistantSave(true)">Default style</button></div>` : ''}
   </div>`;

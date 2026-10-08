@@ -26,7 +26,7 @@ function _spBudgetText(b, cur) {
 /** Four inputs for a budget, ids prefixed. */
 function _spBudgetInputs(prefix, b) {
   return _SP_FIELDS.map(([k, label]) => `<label style="font-size:11px;display:flex;flex-direction:column;gap:2px">${label}
-    <input class="input" id="${prefix}-${k}" type="number" min="0" step="any" style="width:110px" value="${b?.[k] ?? ''}" placeholder="none"></label>`).join('');
+    <input class="input" id="${prefix}-${k}" type="number" min="0" step="any" style="width:110px" value="${b?.[k] ?? ''}" placeholder="none" data-default="" data-label="${label}"></label>`).join('');
 }
 const _spBudgetRead = prefix => Object.fromEntries(_SP_FIELDS.map(([k]) => [k, document.getElementById(`${prefix}-${k}`)?.value || 0]));
 
@@ -74,7 +74,7 @@ function _spBudgetsCard(v) {
       <span class="disk-label">${escHtml(L.name)}</span>
       <div class="toolbar" style="gap:6px;flex-wrap:wrap">${_spBudgetInputs(`sp-lv-${L.id}`, L.budget)}
         <label style="font-size:11px;display:flex;flex-direction:column;gap:2px" title="The most one person of this level may allow themselves to be spent, per permission">May allow (${escHtml(cur)})
-          <input class="input" id="sp-lv-${L.id}-allow" type="number" min="0" step="any" style="width:110px" value="${L.mayAllow ?? ''}" placeholder="${L.holdsHost ? 'any' : 'nothing'}"></label>
+          <input class="input" id="sp-lv-${L.id}-allow" type="number" min="0" step="any" style="width:110px" data-default="" data-label="May allow" value="${L.mayAllow ?? ''}" placeholder="${L.holdsHost ? 'any' : 'nothing'}"></label>
         <button class="btn btn-xs btn-blue" style="align-self:flex-end" onclick="spendingSaveLevel(${jsArg(L.id)})">Save</button></div></div>`).join('') : '';
   return `<div class="card">
     <div class="card-title">Budgets</div>
@@ -84,13 +84,14 @@ function _spBudgetsCard(v) {
     <div class="input-label">Your own budget (empty or 0 is none)</div>
     <div class="toolbar" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">${_spBudgetInputs('sp-own', me.own)}
       <button class="btn btn-sm btn-blue" style="align-self:flex-end" onclick="spendingSaveOwn()">Save</button></div>
-    ${v.admin || v.lead ? `<div class="input-label">${v.admin ? 'A person\'s budget, set by an admin' : 'Your team\'s budgets, as their team leader (an admin\'s and their level\'s still count: the tightest wins)'}</div>
+    ${v.admin || v.lead ? advancedFold(`<div class="input-label">${v.admin ? 'A person\'s budget, set by an admin' : 'Your team\'s budgets, as their team leader (an admin\'s and their level\'s still count: the tightest wins)'}</div>
       <div class="toolbar" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">
         <select class="input" id="sp-person" style="width:auto;align-self:flex-end" onchange="spendingPickPerson(this.value, false)">
           ${(v.people || []).map(p => `<option value="${escHtml(p.id)}">${escHtml(p.name || p.email)}</option>`).join('')}</select>
         <span id="sp-person-inputs" class="toolbar" style="gap:6px;flex-wrap:wrap;flex:1 1 260px;min-width:0"></span>
         <button class="btn btn-sm btn-blue" style="align-self:flex-end" onclick="spendingSavePerson()">Save</button></div>
-      ${v.admin ? `<div class="input-label">Each level's default, and how much its people may allow themselves</div>${levels}` : ''}` : ''}</div>`;
+      ${v.admin ? `<div class="input-label">Each level's default, and how much its people may allow themselves</div>${levels}` : ''}`,
+      { id: 'spending-others', label: v.admin ? 'Others\' budgets — a person\'s, each level\'s default' : 'Your team\'s budgets' }) : ''}</div>`;
 }
 
 function spendingPickPerson(id, scroll = true) {
@@ -98,7 +99,7 @@ function spendingPickPerson(id, scroll = true) {
   if (sel && sel.value !== id) sel.value = id;
   const p = (_spendingView?.people || []).find(x => x.id === id);
   const box = document.getElementById('sp-person-inputs');
-  if (box) box.innerHTML = _spBudgetInputs('sp-pp', p?.set);
+  if (box) { box.innerHTML = _spBudgetInputs('sp-pp', p?.set); advancedFoldRefresh(box); }
   if (scroll) sel?.scrollIntoView?.({ block: 'nearest' });
 }
 

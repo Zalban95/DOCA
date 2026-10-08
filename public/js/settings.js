@@ -61,17 +61,17 @@ async function _subtabVoiceInit() {
 function _settingsRender() {
   const list = document.getElementById('settings-tabs-list');
   if (!list) return;
-  list.innerHTML = SETTINGS_TABS.map(t => `
+  list.innerHTML = advancedFold(SETTINGS_TABS.map(t => `
     <div class="settings-tab-row">
       <label class="skill-toggle">
-        <input type="checkbox" id="settings-show-${t.id}"
+        <input type="checkbox" id="settings-show-${t.id}" data-default="true" data-label="${escHtml(t.label)}"
                ${!_settingsHidden.includes(t.id) ? 'checked' : ''}
                onchange="settingsSave()">
         <span class="skill-toggle-track"></span>
       </label>
       <span class="settings-tab-label">${t.label}</span>
     </div>
-  `).join('');
+  `).join(''), { id: 'general-tabs', label: 'Which pages show' });   // every page shows until hidden: a hidden one marks the fold
 }
 
 /** Saves on every toggle, like the sidebar stats next to it — a checkbox that
@@ -154,10 +154,10 @@ async function _statsSettingsRender(prefs) {
     const enabled = data.enabled || {};
     const sections = prefs?.sidebarSections || _sidebarSections || {};
 
-    const toggleRow = (idAttr, checked, label, onchange) => `
+    const toggleRow = (idAttr, checked, label, onchange, byDefault = true) => `
       <div class="settings-tab-row">
         <label class="skill-toggle">
-          <input type="checkbox" id="${idAttr}" ${checked ? 'checked' : ''} onchange="${onchange}">
+          <input type="checkbox" id="${idAttr}" ${checked ? 'checked' : ''} data-default="${byDefault !== false}" data-label="${label}" onchange="${onchange}">
           <span class="skill-toggle-track"></span>
         </label>
         <span class="settings-tab-label">${label}</span>
@@ -166,19 +166,19 @@ async function _statsSettingsRender(prefs) {
     let html = '<div class="tool-group-label">System stats</div>';
     html += _statsDefs.filter(d => d.group === 'system').map(d =>
       toggleRow(`stat-toggle-${d.id}`, enabled[d.id], escHtml(d.label),
-        `statsToggleChange('${d.id}', this.checked)`)).join('');
+        `statsToggleChange('${d.id}', this.checked)`, d.default)).join('');
 
     html += '<div class="tool-group-label" style="margin-top:12px">GPU stats</div>';
     html += _statsDefs.filter(d => d.group === 'gpu').map(d =>
       toggleRow(`stat-toggle-${d.id}`, enabled[d.id], escHtml(d.label),
-        `statsToggleChange('${d.id}', this.checked)`)).join('');
+        `statsToggleChange('${d.id}', this.checked)`, d.default)).join('');
 
     html += '<div class="tool-group-label" style="margin-top:12px">Sidebar sections</div>';
     html += SIDEBAR_SECTIONS.map(s =>
       toggleRow(`section-toggle-${s.id}`, sections[s.id] !== false, escHtml(s.label),
         `sectionToggleChange('${s.id}', this.checked)`)).join('');
 
-    list.innerHTML = html;
+    list.innerHTML = advancedFold(html, { id: 'general-stats', label: 'Which stats and sections show' });
   } catch (e) {
     list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }

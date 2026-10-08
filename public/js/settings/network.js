@@ -15,12 +15,13 @@ async function networkCard() {
     ${opt('lan', 'Tailscale and the local network', 'Also phones and computers on the same Wi-Fi or LAN — pairing works without Tailscale. Managing the machine from there stays off unless allowed below.')}
     ${opt('local', 'This machine only', 'Reach it through tailscale serve or an SSH tunnel.')}
     ${opt('all', 'Every network', 'Every interface, the internet included if the machine is exposed. Only behind a firewall or proxy you control.')}
-    <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:10px"><input type="checkbox" id="net-lanadmin" ${s.lanAdmin ? 'checked' : ''}>
+    ${advancedFold(`<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:4px"><input type="checkbox" id="net-lanadmin" data-default="false" data-label="Managing from outside Tailscale" ${s.lanAdmin ? 'checked' : ''}>
       Allow managing the machine from outside Tailscale <span style="color:var(--muted);font-size:11px">(off: from the local network people read and chat; admin work stays on Tailscale or this machine)</span></label>
     <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:10px">Inference services (Whisper, Kokoro, ComfyUI…) answer on
-      <select class="input" id="net-services" style="width:auto">${[['local', 'this machine only'], ['tailnet', 'this machine and Tailscale'], ['all', 'every network — no sign-in']]
+      <select class="input" id="net-services" data-default="local" data-label="Inference services answer on" style="width:auto">${[['local', 'this machine only'], ['tailnet', 'this machine and Tailscale'], ['all', 'every network — no sign-in']]
         .map(([v, l]) => `<option value="${v}" ${s.services === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <span style="color:var(--muted);font-size:11px">from each one's next start; the hub reaches them on this machine either way</span></label>
+      <span style="color:var(--muted);font-size:11px">from each one's next start; the hub reaches them on this machine either way</span></label>`,
+      { id: 'network', label: 'Advanced — managing from outside, inference services' })}
     <div class="toolbar" style="margin-top:8px"><button class="btn btn-sm btn-blue" onclick="networkSave()">Save</button>
       <span class="status-line" id="net-status">Now: ${escHtml(s.listen)}</span></div>`;
 }

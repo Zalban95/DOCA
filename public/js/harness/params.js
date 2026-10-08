@@ -110,13 +110,14 @@ function _harnessParamsHtml(h, meta) {
       <span>${escHtml(t.label || t.name)}</span>${t.danger ? '<em title="Can change the system">!</em>' : ''}
     </label>`).join('');
 
+  const shipped = meta.defaults || {};   // the shipped parameters: what an advanced field is marked against
   const num = key => {
     const f = HARNESS_PARAMS.find(x => x.key === key);
     return `
       <label for="hcfg-${key}-${h.id}">${f.label}${f.unit ? ` <em style="opacity:.55;font-style:normal">(${f.unit})</em>` : ''}</label>
       <div>
         <input class="input" type="number" id="hcfg-${key}-${h.id}" value="${escHtml(c[key])}" ${f.attrs}
-               style="width:100%">
+               ${shipped[key] != null ? `data-default="${escHtml(shipped[key])}"` : ''} data-label="${escHtml(f.label)}" style="width:100%">
         <small class="harness-hint">${escHtml(f.hint)}</small>
       </div>`;
   };
@@ -135,7 +136,7 @@ function _harnessParamsHtml(h, meta) {
         </select>
         <input class="input flex1" id="hcfg-model-${h.id}" value="${escHtml(c.model || '')}" placeholder="model id">
       </div>
-      ${HARNESS_PARAMS.map(f => num(f.key)).join('')}
+      ${HARNESS_PARAMS.filter(f => f.common).map(f => num(f.key)).join('')}
       <label for="hcfg-systemPrompt-${h.id}">System prompt</label>
       <div>
         <textarea class="input harness-prompt" id="hcfg-systemPrompt-${h.id}" rows="5"
@@ -149,6 +150,8 @@ function _harnessParamsHtml(h, meta) {
         <small class="harness-hint">What the agent is allowed to use. Unticking one hides it — it is a way to keep
           the agent focused, not a security boundary.</small>
       </div>
+      ${advancedFold(`<div class="harness-cfg-grid">
+      ${HARNESS_PARAMS.filter(f => !f.common).map(f => num(f.key)).join('')}
       <label>Fallback chain</label>
       <div>
         <div class="hcfg-fallbacks" id="hcfg-fallbacks-${h.id}"></div>
@@ -176,7 +179,7 @@ function _harnessParamsHtml(h, meta) {
           model picker shows the switch and the Orchestrator is told. <strong>None is the default:</strong> a
           stronger model usually costs more, so this only happens if you choose one.
         </small>
-      </div>
+      </div></div>`, { id: 'harness-params', label: 'Advanced — limits, timing, summaries, fallbacks', changed: (c.fallbackChain || []).length + (c.escalateTo ? 1 : 0) })}
     </div>
     <div class="harness-cfg-actions">
       <button class="btn btn-xs btn-quiet harness-cfg-reset" onclick="harnessResetParams(${jsArg(h.id)})"

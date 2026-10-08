@@ -16,12 +16,15 @@
  * a million-token window those are not limits, they are typos waiting to clamp
  * somebody's saved value back down to the maximum.
  *
+ * `common: true` is one of the few a newcomer sets (provider and model aside); the rest are drawn under Advanced —
+ * still there, marked when one is not the shipped value (advancedFold, js/lib/ui-parts.js).
+ *
  * When you add a parameter to `defaultParams()` in modules/harness/providers.js,
  * add it here too — otherwise it exists, does something, and has no way to be
  * set. That is exactly how `contextWindow` shipped without a box to type it in.
  */
 const HARNESS_PARAMS = [
-  { key: 'temperature', label: 'Temperature', attrs: 'min="0" max="2" step="0.05"',
+  { key: 'temperature', common: true, label: 'Temperature', attrs: 'min="0" max="2" step="0.05"',
     hint: 'How varied the answers are. Around 0.2 for work that should come out the same way twice; '
         + '0.7–1.0 for drafting, naming and ideas.' },
 
@@ -29,7 +32,7 @@ const HARNESS_PARAMS = [
     hint: 'A second, blunter variety control. Leave it at 1 and use Temperature — changing both at once '
         + 'makes the effect of either hard to judge.' },
 
-  { key: 'contextWindow', label: 'Context window', unit: 'tokens', attrs: 'min="0" step="1000"',
+  { key: 'contextWindow', common: true, label: 'Context window', unit: 'tokens', attrs: 'min="0" step="1000"',
     hint: 'How much the model can hold at once: these instructions, the conversation so far and everything '
         + 'its tools returned, tool descriptions and room for the reply. Use the served model\'s actual limit; '
         + 'local servers may be configured below the model\'s maximum. Requests estimated to exceed this '
@@ -79,7 +82,7 @@ const HARNESS_PARAMS = [
     hint: 'How long one shell command may run before it is stopped. Longer work — a build, an install, a '
         + 'download — the agent runs in the background instead and checks on it, so this is not a cap on those.' },
 
-  { key: 'maxSteps', label: 'Max tool steps', attrs: 'min="1" max="1000" step="1"',
+  { key: 'maxSteps', common: true, label: 'Max tool steps', attrs: 'min="1" max="1000" step="1"',
     hint: 'How many times the agent may use a tool and think again before it has to answer. Each step '
         + 're-sends the whole conversation, so this is the setting that decides what one answer can cost.' },
 

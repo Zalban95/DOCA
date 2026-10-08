@@ -88,17 +88,19 @@ function _backupRemoteCard() {
     <div class="row form-row" style="flex-wrap:wrap;gap:10px;align-items:flex-end">
       <div class="field" style="flex:2;min-width:220px"><div class="input-label">Endpoint</div>
         <input class="input" id="bremote-endpoint" placeholder="https://s3.eu-central-1.amazonaws.com"></div>
-      <div class="field"><div class="input-label">Region</div><input class="input" id="bremote-region" style="width:130px"></div>
       <div class="field"><div class="input-label">Bucket</div><input class="input" id="bremote-bucket" style="width:160px"></div>
-      <div class="field"><div class="input-label">Folder</div><input class="input" id="bremote-prefix" style="width:110px"></div>
-      <div class="field"><div class="input-label">Keep the last</div>
-        <input class="input" type="number" id="bremote-keep" min="1" max="365" step="1" style="width:90px"></div>
     </div>
+    ${advancedFold(`<div class="row form-row" style="flex-wrap:wrap;gap:10px;align-items:flex-end">
+      <div class="field"><div class="input-label">Region</div><input class="input" id="bremote-region" data-default="us-east-1" data-label="Region" style="width:130px"></div>
+      <div class="field"><div class="input-label">Folder</div><input class="input" id="bremote-prefix" data-default="doca/" data-label="Folder" style="width:110px"></div>
+      <div class="field"><div class="input-label">Keep the last</div>
+        <input class="input" type="number" id="bremote-keep" data-default="14" data-label="Keep the last" min="1" max="365" step="1" style="width:90px"></div>
+      <label class="input-label" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="bremote-enc" data-default="true" data-label="Only password-protected backups"> only password-protected backups</label></div>`,
+      { id: 'backup-remote', label: 'Advanced — region, folder, how many, which backups' })}
     <div class="row form-row" style="flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:8px">
       <div class="field"><div class="input-label">Access key id</div><input class="input" id="bremote-akid" autocomplete="off" style="width:200px"></div>
       <div class="field"><div class="input-label">Secret</div><input class="input" type="password" id="bremote-secret" autocomplete="new-password" style="width:220px"></div>
-      <label class="input-label" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0">
-        <input type="checkbox" id="bremote-enc"> only password-protected backups</label>
       <label class="input-label" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0">
         <input type="checkbox" id="bremote-on"> Send backups off-site</label>
       <div class="field"><button class="btn btn-sm btn-blue" onclick="backupRemoteSave()">Save</button></div>
@@ -119,6 +121,7 @@ async function backupRemoteRender(sch) {
   set('bremote-prefix', r.prefix); set('bremote-keep', r.keep);
   document.getElementById('bremote-enc').checked = !!r.encryptedOnly;
   document.getElementById('bremote-on').checked = !!r.enabled;
+  advancedFoldRefresh(document.getElementById('backup-remote-card'));   // filled here, not typed: read the marks again
   document.getElementById('bremote-akid').placeholder = r.hasKeys ? 'saved — type to replace' : '';
   document.getElementById('bremote-secret').placeholder = r.hasKeys ? 'saved' : '';
   const info = document.getElementById('bremote-info');
