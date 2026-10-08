@@ -197,7 +197,10 @@ const lockHash = dir => {
 
 function run(cmd, args, cwd, say) {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
+    // npm is npm.cmd on Windows, which Node starts only through cmd.exe: without this every install answered
+    // "spawn npm ENOENT" there (H1.9). git and the rest are spawned as they are.
+    const spec = require('./mcp/spawn-spec').spawnSpec(cmd, args);
+    const child = spawn(spec.file, spec.args, { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }, windowsHide: true, ...spec.opts });
     child.stdout.on('data', d => say(String(d)));
     child.stderr.on('data', d => say(String(d)));
     child.on('error', reject);
@@ -235,8 +238,14 @@ async function install(tag, say = () => {}) {
     .find(d => d !== dest && want && lockHash(d) === want && hasDeps(d));
   if (donor) {
     say(`Dependencies are identical to ${path.relative(HOME, donor) || 'the checkout'}'s — linking them.\n`);
-    try { await run('cp', ['-al', path.join(donor, 'node_modules'), path.join(dest, 'node_modules')], dest, say); return dest; }
-    catch (e) { say(`Linking failed (${e.message}); installing instead.\n`); }
+    try {
+      const { linked, copied } = require('./link-tree').linkTree(path.join(donor, 'node_modules'), path.join(dest, 'node_modules'));
+      if (copied) say(`${linked} files linked, ${copied} copied (no hard link possible there).\n`);
+      return dest;
+    } catch (e) {
+      say(`Linking failed (${e.message}); installing instead.\n`);
+      fs.rmSync(path.join(dest, 'node_modules'), { recursive: true, force: true });
+    }
   }
   say('$ npm ci --omit=dev\n');
   await run('npm', ['ci', '--omit=dev', '--no-audit', '--no-fund'], dest, say);
