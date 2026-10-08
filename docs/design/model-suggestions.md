@@ -13,8 +13,10 @@ fits, and it was not on the list. The list had been written from memory once and
   context cache at `context.at` tokens (16k for chat) and about 0.3 for the runtime — the picker adds 15% on top;
   `ramGB` and `diskGB` likewise;
 - how it installs, through what the panel already has (`install`, an `installs.KINDS` row): an Ollama library tag, or
-  `hf.co/<repo>:<quant>` for a GGUF on Hugging Face, which Ollama pulls from Hugging Face's registry. `gguf` names the
-  file for someone running llama.cpp themselves;
+  `hf.co/<repo>:<quant>` for a GGUF on Hugging Face, which Ollama pulls from Hugging Face's registry, or
+  `llamacpp-hf` (`<repo>:<quant>`) for a GGUF Ollama cannot run: downloaded and made a llama.cpp server with `--jinja`,
+  so the GGUF's own chat template is used (`modules/llamacpp-hf/`). `gguf` names the file for someone running llama.cpp
+  themselves;
 - `rank`: its quality against the others, from the evidence. The same model at a quantization measured lossless keeps
   the same rank;
 - `alsoFor`: the other roles the same model serves (a vision-language agent model is also the coder and the reader);
@@ -45,8 +47,10 @@ each linked from its entry. What decided the less obvious ones:
   the Q4_K_M.
 - **Through Ollama, a GGUF's template matters.** A Hugging Face repository can ship an Ollama chat template; when it
   does not, Ollama uses its built-in renderer for the architecture. That was checked on 2026-10-08 with a Qwen3.5 GGUF
-  in an isolated Ollama: tool calls came back. Ornith 1.5 9B, strong on paper, ships a template without tools — so it
-  is under `watching`, not a pick.
+  in an isolated Ollama: tool calls came back. Ornith 1.5 9B, strong on paper, ships an Ollama template without tools,
+  so it is suggested as a llama.cpp install instead: with `--jinja` llama.cpp uses the GGUF's own template, which has
+  tools — checked 2026-10-08 with that exact template on Qwen3.5 2B (the same architecture): a tool call and the turn
+  after its result both came back right.
 - **A dense model on a processor** is not what someone meets first; a mixture of experts with 3B active parameters
   (Qwen3.6 35B-A3B) is usable on 32 GB of memory and is the one chat pick without a card.
 
