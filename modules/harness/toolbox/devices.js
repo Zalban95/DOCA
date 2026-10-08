@@ -15,6 +15,14 @@ const { resolvePath } = require('./common');
  */
 const SHOW_IMAGE_MAX = 20 * 1024 * 1024;
 const SHOW_MEDIA_MAX = 200 * 1024 * 1024;
+const { MAX_FILES } = require('../reach-files');
+
+/** A file the agent may send to a device: inside the allowed roots, and never one holding secrets beside settings. */
+function sendable(p, ctx) {
+  const abs = resolvePath(p, ctx);
+  if (require('../secret-view').kindOf(abs)) throw new Error(`${path.basename(abs)} holds secrets beside settings and is never sent.`);
+  return abs;
+}
 
 /**
  * Copy a file into attachments and put it in the chat. One implementation
@@ -139,28 +147,38 @@ module.exports = [
   },
   {
     name: 'tell_device',
-    description: 'Send a notice to one of the user\'s devices — work finished, something needs their eyes, a step '
-      + 'done — optionally with a picture. It does not wait for a reply and it is durable, so a watch that is '
-      + 'asleep gets it on waking. Use `imagePath` to show a rendered image, a screenshot or a chart you have '
-      + 'just produced; the file has to be on this host and a picture too large to send says so rather than '
-      + 'failing quietly. For anything you need an answer to, use ask_device instead.',
+    description: 'Send a notice to one of the person\'s own devices or linked chats (phone, watch, desk, Telegram, Matrix, '
+      + 'Slack, mail) — work finished, something needs their eyes — optionally with files: audio, video, documents, '
+      + 'pictures, each with a caption. It does not wait for a reply and it is durable, so a device that is asleep gets '
+      + 'it on waking. The hub uploads files the chat\'s own way (a Telegram audio track, a Matrix file, a mail '
+      + 'attachment); never send to a chat any other way. A file a device cannot take is refused with its limit before '
+      + 'anything is sent. For anything you need an answer to, use ask_device instead.',
     parameters: {
       type: 'object',
       properties: {
         title:     { type: 'string', description: 'The headline, short enough for a watch.' },
         text:      { type: 'string', description: 'Optional detail under the headline.' },
-        imagePath: { type: 'string', description: 'Optional path to a png, jpg, webp or gif on this host to show with it.' },
+        files:     { type: 'array', description: `Optional files on this host to send with it, at most ${MAX_FILES}: audio, video, documents, pictures. A watch takes pictures only.`,
+          items: { type: 'object', properties: {
+            path:    { type: 'string', description: 'The file. Absolute, or relative to the agent workspace.' },
+            caption: { type: 'string', description: 'One line about it, shown with the file.' },
+          }, required: ['path'] } },
+        imagePath: { type: 'string', description: 'Optional path to one picture to show with it (the same as one entry of files).' },
         svg:       { type: 'string', description: 'Optional drawing instead of a file: one <svg> with a viewBox, drawn at the screen size of the device.' },
-        to:        { type: 'string', description: 'Which device: an id, a form factor ("watch", "phone"), or a name. Omit to tell every device that receives notices.' },
+        to:        { type: 'string', description: 'Which device or chat: an id, a form factor ("watch", "phone"), or a name ("Telegram"). Omit to tell every device of the person that receives notices.' },
         urgent:    { type: 'boolean', description: 'True only if it should break through quiet hours.' },
       },
       required: ['title'],
     },
-    run: ({ title, text, imagePath, svg, to, urgent }) => {
+    run: ({ title, text, imagePath, files, svg, to, urgent }, ctx = {}) => {
       const reach = require('../reach');
-      const r = reach.tell({ to, title, text, urgent, svg, imagePath: imagePath ? resolvePath(imagePath) : undefined });
-      const rows = r.delivered.map(d => `${reach.label(d.device)} — ${d.note}`).join('\n');
-      return `Sent${r.imageBytes ? ` with a ${Math.round(r.imageBytes / 1024)} KB picture` : ''} to:\n${rows}`;
+      const list = [...(imagePath ? [{ path: imagePath }] : []), ...(Array.isArray(files) ? files : files ? [files] : [])]
+        .map(f => (typeof f === 'string' ? { path: f } : f || {}))
+        .map(f => ({ path: sendable(f.path, ctx), caption: f.caption }));
+      const r = reach.tell({ to, title, text, urgent, svg, files: list, personId: ctx.user?.id || null });
+      const rows = r.delivered.map(d => `${reach.label(d.device)} — ${d.note}${d.files ? `\n  ${d.files}` : ''}`).join('\n');
+      const what = r.files.length ? ` with ${r.files.length === 1 ? r.files[0].name : `${r.files.length} files`} (${require('../../channels/limits').human(r.imageBytes)})` : '';
+      return `Sent${what} to:\n${rows}`;
     },
   },
   {
