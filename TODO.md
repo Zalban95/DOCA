@@ -174,6 +174,13 @@ the project's managers only if the owner allows sharing specialists and skills (
   a `shell` read of a path outside the roots right after a file tool refused it could be asked even when the verb is
   allowed (`shell:cat`) — that is approval code (`approval.gate`), so it waits for a yes.
 
+### Deep test A 2026-10-08 — findability and flows (branch `deepa-flows`)
+- [x] Deep test A 11, 12, 2c: a setting is found by the words people use (`modules/settings-find`: a row per thing people
+  call a setting, with its page, card and what to click, plus every proposable leaf; a few synonyms). `settings_read`
+  and `features` answer with where it is and the one way to change it — `settings_propose … asked: true`, for one screen
+  (the theme is now proposable per screen), or the person's own switch with their password and where to click. The
+  features index's approvals, modes, limits and proposals name the pages they are on. Three `basics` cases.
+
 ### Everything still open, now urgent
 - C7b: done; D2b: done — its gaps (`docs/api/capability-gaps.md`) are v1 routes to ask for, plan decisions first.
 - D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),

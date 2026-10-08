@@ -53,7 +53,7 @@ test('each check reads the outcome it names', async () => {
 
 test('the shipped set is valid; a set of your own is saved, wins over nothing shipped, and is deleted', () => {
   const store = require('../modules/evals/store');
-  assert.equal(store.validate(store.get('basics')).cases.length, 6);
+  assert.equal(store.validate(store.get('basics')).cases.length, 9);
   assert.throws(() => store.validate({ id: 'x', cases: [{ id: 'a', prompt: 'p', checks: [] }] }), /no checks/);
   assert.throws(() => store.validate({ id: '../x', cases: [] }), /needs an id/);
   store.save({ id: 'mine', cases: [{ id: 'a', prompt: 'hi', checks: [{ contains: 'hi' }] }] });

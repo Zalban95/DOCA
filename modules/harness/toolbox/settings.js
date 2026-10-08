@@ -52,41 +52,56 @@ module.exports = [
     name: 'settings_read',
     description: 'Read this panel\'s settings — every one you are allowed to suggest a change to, with its '
       + 'current value, grouped by section. Do this before proposing anything, so you change what is actually set rather than what '
-      + 'you assumed. Give section to read one section, filter to search paths, sections and what each is for.',
+      + 'you assumed. Give section to read one section, filter to find one by the words people use ("light theme", "manual approval"): '
+      + 'the answer says where it is and the one way to change it, the person\'s own switches included — do that, without searching again.',
     parameters: {
       type: 'object',
       properties: {
         section: { type: 'string', description: 'Optional: one section, by its name or its path ("MCP timeouts", "computers", "theme").' },
-        filter: { type: 'string', description: 'Optional: words to match against each setting\'s path, section and description, e.g. "timeout" or "workspace".' },
+        filter: { type: 'string', description: 'Optional: words for the setting, as the person said them, e.g. "dark theme", "timeout" or "developer mode".' },
       },
     },
     run: ({ filter, section }, ctx = {}) => {
       const q    = String(filter || '').toLowerCase();
       const sec  = String(section || '').toLowerCase();
       const all  = settings.readable();
+      const find = require('../../settings-find');
+      // Each word on its own, not only the whole filter: "max tool steps" used to find nothing. Synonyms are left to
+      // find() below — here they would match every auto* and light* path.
+      const want = q ? find.words(q).base : [];
+      const has = text => !q || text.includes(q) || want.some(w => text.includes(w));
       const inSection = r => !sec || r.section.toLowerCase().includes(sec) || r.path.toLowerCase() === sec || r.path.toLowerCase().startsWith(`${sec}.`);
-      const matches = r => !q || [r.path, r.section, r.detail || ''].some(x => x.toLowerCase().includes(q));
-      const screen = sec ? [] : require('../screen-proposals').readable(ctx.screen, ctx.user).filter(l => !q || l.toLowerCase().includes(q));
+      const matches = r => has([r.path, r.section, r.detail || ''].join(' ').toLowerCase());
+      const screen = sec ? [] : require('../screen-proposals').readable(ctx.screen, ctx.user).filter(l => has(l.toLowerCase()));
       const rows = all.filter(r => inSection(r) && matches(r));
+      // Where each matching setting is and the one way to change it — the person's own switches too, which no proposal
+      // reaches: asked for "manual approval" or "developer mode", the agent searched until it ran out of steps (deep test A).
+      const host = !ctx.user || require('../session-access').isHost(ctx.user);
+      const places = q && !sec ? find.find(q, { host, limit: 4 }) : [];
+      const how = places.length ? `\n\nWhere and how (do this, no more searching):\n${places.map(find.describe).join('\n')}` : '';
       // A screen's own settings count too: "ambient" or "place" used to answer "no settings match" (2026-10-08) while
       // the screen's ambient.place sat in the list below, unread.
       if (!rows.length && !screen.length) {
+        if (how) return clip(how.trim());
         const names = [...new Set(all.map(r => r.section))].join(', ');
         // Why something is missing, so the agent stops looking: these are the person's, never proposed.
         return `No settings match${filter ? ` "${filter}"` : ''}${section ? ` in "${section}"` : ''}. The sections are: ${names}. `
-          + 'Not here on purpose — only the person changes them: the approval mode and what runs without asking (Harness → Approvals), '
-          + 'developer mode and experiments, how the hub listens, what is kept of logs and traces, sharing, and keys or secrets.';
+          + 'Not here on purpose — only the person changes them, with their password: the approval mode (the Auto / Manual switch on '
+          + 'Agents → Harness; Approvals beside it), developer mode and experiments (Settings → Developer), how the hub listens and what is '
+          + 'kept of logs (Settings → System), sharing (Settings → Packs), and keys or secrets. Tell them where; do not search again.';
       }
       const bySection = new Map();
       for (const r of rows) { if (!bySection.has(r.section)) bySection.set(r.section, []); bySection.get(r.section).push(r); }
+      const guard = p => (find.howOf(p) === 'guarded' ? '   [a proposal they accept with their password]' : '');
       const body = [...bySection].map(([name, list]) => `## ${name}\n${list.map(r =>
-        `${r.path} = ${JSON.stringify(r.value)}${r.detail ? `   # ${r.detail}` : ''}`).join('\n')}`).join('\n');
+        `${r.path} = ${JSON.stringify(r.value)}${r.detail ? `   # ${r.detail}` : ''}${guard(r.path)}`).join('\n')}`).join('\n');
       // Which model does what (model-roles.js): the answer to "what runs my speech / my screen reading", in one list.
       const models = !q && !sec || /model|voice|harness|vision|retrieval|realtime|assistant/.test(q + sec) ? `\n\nModels in use:\n${require('../../model-roles').lines().join('\n')}` : '';
       const own = screen.length ? `\n\nThis screen's own (settings_propose with screen "this"):\n${screen.join('\n')}` : '';
-      const hive = rows.length ? `${rows.length} settings you may propose changes to, in ${bySection.size} section${bySection.size === 1 ? '' : 's'}:\n${body}`
+      const hive = rows.length ? `${rows.length} settings you may propose changes to, in ${bySection.size} section${bySection.size === 1 ? '' : 's'} — `
+        + `when the person asked for exactly the change, settings_propose {changes: [{path, value}], asked: true} applies it at once:\n${body}`
         : `No hive setting matches "${filter}".`;
-      return clip(`${hive}${own}${models}`);
+      return clip(`${how ? `${how.trim()}\n\n` : ''}${hive}${own}${models}`);
     },
   },
   {

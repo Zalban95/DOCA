@@ -98,5 +98,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
   // A change made anywhere — the agent, another screen of theirs, Undo — is drawn here at once.
   if (typeof liveOn === 'function') liveOn('screen', c => {
     if (c.what === 'layout') panelLayoutLoad().then(() => { if (typeof settingsHiddenApply === 'function') settingsHiddenApply(); });
+    // A proposal accepted for this screen (harness/screen-proposals.js) — its colours among them: drawn at once.
+    if (c.what === 'settings' && typeof screenLoad === 'function') screenLoad(true).then(() => { if (typeof themeApplyOnLoad === 'function') themeApplyOnLoad(); });
   });
 });

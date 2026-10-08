@@ -20,7 +20,9 @@ const p = (label, note = '', extra = {}) => ({ label, note, ...extra });
 
 const SCHEMA = {
   // ── How one screen shows the panel ──
-  theme:            { is: 'travels', home: 'device', on: 'screen', note: 'colour theme', propose: p('Theme') },
+  // Proposable for one screen too (deep test A, 2026-10-08): a screen that ever picked its colours keeps its own, so a
+  // hive proposal of "light" changed nothing the person could see. A look, never a guard.
+  theme:            { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'colour theme', propose: p('Theme') },
   customTheme:      { is: 'travels', home: 'device', on: 'screen', note: 'a theme the person made', propose: p('Custom theme colours') },
   skin:             { is: 'travels', home: 'device', on: 'screen', note: 'the panel skin' },
   lookThemes:       { is: 'travels', home: 'device', on: 'screen', note: 'the colours last chosen for each look, {skin: theme}, put back when the look is chosen again (settings/appearance.js)' },
