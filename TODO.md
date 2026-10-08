@@ -196,6 +196,9 @@ the project's managers only if the owner allows sharing specialists and skills (
   Projects tabs' mode: it plans, Approve switches it to Agent and carries the plan out in the same chat. Chosen over
   renaming it "＋ Planning chat": the planning work chat was a prompt note whose plan was meant for another chat that
   nothing made, while Plan mode refuses work by code and Approve already starts it.
+- [x] Deep test A 10: every question waiting for a person is listed for them — `GET /api/harness/approval` carries
+  `mine` (their level's card, their own budget's; without host also as `pending`); the Approvals window draws them for
+  someone without host (it threw before), and the questions dock draws any no chat on the page shows.
 
 ### Everything still open, now urgent
 - C7b: done; D2b: done — its gaps (`docs/api/capability-gaps.md`) are v1 routes to ask for, plan decisions first.

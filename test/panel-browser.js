@@ -59,8 +59,8 @@ function killBrowser() {
   } catch { try { proc.kill('SIGKILL'); } catch { /* gone */ } }
 }
 
-/** `setup(H)` runs after the hub starts and before the page opens (prefs, stubs). */
-async function start({ setup = null, width = 1300, height = 900 } = {}) {
+/** `setup(H)` runs after the hub starts and before the page opens (prefs, stubs); `as(H)` signs someone else in. */
+async function start({ setup = null, width = 1300, height = 900, as = null } = {}) {
   if (!exe) return;
   base = await H.start();
   if (setup) await setup(H);
@@ -75,7 +75,7 @@ async function start({ setup = null, width = 1300, height = 900 } = {}) {
   page.on(m => { if (m.method === 'Network.loadingFailed' && !m.params.canceled && ['Document', 'Script', 'Stylesheet'].includes(m.params.type)) failedLoads++; });
   page.on(m => { if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text); });
   await page.send('Runtime.enable'); await page.send('Network.enable');
-  const [name, value] = H.owner.cookie.split('=');
+  const [name, value] = (as ? (await as(H)).cookie : H.owner.cookie).split('=');
   await page.send('Network.setCookie', { name, value, url: base });
   await open();
 }

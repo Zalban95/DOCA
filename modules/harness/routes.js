@@ -101,12 +101,12 @@ const handleUsage = wrap(async (req, res) => {
 const handleApproval = wrap(async (req, res) => {
   const cap = req.auth?.session?.cap;
   const host = !req.auth || (require('../auth/rights').can(req.auth.role, 'host') && (!cap || cap.includes('host')));
-  // `asks`: the missions' machine questions for this person (mission-asks.js), so a page opened later still pops them.
-  const me = req.auth?.user?.id || null;
-  const asks = approval.pending().filter(p => p.machine && (p.personId ? p.personId === me : host));
-  if (!host) return res.json({ mode: approval.settings().mode, asks });
-  const ma = require('./mission-asks');
-  res.json({ ...approval.settings(), missionAskSec: ma.waitSec(), missionAskTimeout: ma.onTimeout(), pending: approval.pending(), asks, free: [...approval.FREE] });
+  // `asks`: the missions' machine questions for this person (mission-asks.js), so a page opened later still pops them;
+  // `mine`: every other one waiting for them — their level's card, their own budget's (deep test A: listed nowhere).
+  const me = req.auth?.user?.id || null, all = approval.pending();
+  const asks = all.filter(p => p.machine && (p.personId ? p.personId === me : host)), mine = all.filter(p => !p.machine && me && p.personId === me);
+  if (!host) return res.json({ mode: approval.settings().mode, asks, mine, pending: [...asks, ...mine] });
+  const ma = require('./mission-asks'); res.json({ ...approval.settings(), missionAskSec: ma.waitSec(), missionAskTimeout: ma.onTimeout(), pending: all, asks, mine, free: [...approval.FREE] });
 });
 
 /** POST /api/harness/approval — set the mode. Only ever from a click. */
