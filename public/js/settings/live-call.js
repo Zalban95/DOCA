@@ -27,6 +27,8 @@ async function liveCallRender() {
       ${liveCallRow('Microphone threshold', `<input type="range" id="lc-sens" min="1" max="60" step="1" value="${c.sensitivity || 15}" style="width:180px"
           oninput="document.getElementById('lc-sens-val').textContent=this.value"><span id="lc-sens-val" style="font-size:11px;min-width:22px">${c.sensitivity || 15}</span>`,
         'Lower hears quieter voices — and more of the room.')}
+      ${liveCallRow('Language you speak', `<select class="input" id="lc-lang" style="width:auto">${LIVE_CALL_LANGS.map(([k, l]) => `<option value="${k}" ${String(c.language || '') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`,
+        'Told to the transcriber, which otherwise guesses — and on a short phrase in a noisy room can guess wrong.')}
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-sm" id="lc-test" onclick="liveCallMeter()">🎤 Test the microphone</button>
         <div style="position:relative;width:240px;height:10px;background:var(--raised);border:1px solid var(--border2)">
@@ -52,6 +54,11 @@ async function liveCallRender() {
     ${ex.map(x => `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" ${x.on ? 'checked' : ''}
       onchange="liveCallExperiment(${jsArg(x.id)}, this.checked)"> ${escHtml(x.label)}</label>`).join('')}` }));
 }
+
+// The language a call's words are in (`call.language`, modules/call-language.js): empty is the person's usual one.
+const LIVE_CALL_LANGS = [['', 'Mine as usual (from what I write and say)'], ['en', 'English'], ['it', 'Italiano'], ['es', 'Español'], ['fr', 'Français'],
+  ['de', 'Deutsch'], ['pt', 'Português'], ['nl', 'Nederlands'], ['pl', 'Polski'], ['ru', 'Русский'], ['uk', 'Українська'], ['tr', 'Türkçe'],
+  ['ar', 'العربية'], ['hi', 'हिन्दी'], ['zh', '中文'], ['ja', '日本語'], ['ko', '한국어']];
 
 const liveCallRow = (label, input, hint) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <label style="font-size:11px;color:var(--muted);width:150px;flex-shrink:0">${label}</label>${input}<span style="font-size:11px;color:var(--muted)">${hint}</span></div>`;
@@ -96,7 +103,8 @@ function liveCallMark() {
 async function liveCallSave(reset = false) {
   const secs = parseFloat(document.getElementById('lc-silence').value), sens = parseInt(document.getElementById('lc-sens').value, 10);
   const cur = (await screenLoad(true)).settings?.call || {};   // the other card's fields stay as they are
-  const value = reset ? null : { ...cur, ...(secs >= 0.3 ? { silenceMs: Math.round(secs * 1000) } : {}), ...(sens >= 1 ? { sensitivity: sens } : {}) };
+  const lang = document.getElementById('lc-lang')?.value || '';
+  const value = reset ? null : { ...cur, ...(secs >= 0.3 ? { silenceMs: Math.round(secs * 1000) } : {}), ...(sens >= 1 ? { sensitivity: sens } : {}), language: lang };
   try { await screenSave({ call: value }); } catch (e) { return appAlert(e.message); }
   liveCallStop();
   await screenLoad(true);

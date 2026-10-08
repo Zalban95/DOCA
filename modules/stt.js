@@ -23,8 +23,30 @@ async function transcribeAudio(buffer, mimetype, filename, opts = {}) {
   return (await transcribeHeard(buffer, mimetype, filename, opts)).text;
 }
 
-/** The same, saying why it came back empty: `filtered` is the silence phrase screened out (stt-filter.js), if one was. */
-async function transcribeHeard(buffer, mimetype, filename, { prompt } = {}) {
+/**
+ * The same, saying why it came back empty (`filtered`: the silence phrase screened out, stt-filter.js) and in which
+ * language (`language`, guessed from the words — lang-guess.js). `language` given: the transcriber is told it and does
+ * not guess (a screen's `call.language`). `usual` given instead (the person's usual language, call-language.js): a
+ * short transcript that came back in another language is asked for once more in the usual one — whisper's own guess
+ * on a second or two of a noisy room is the weakest thing in a call (2026-10-08: "Что это?") — and kept when that
+ * finds words; `heardAs` then says what the first answer was in.
+ */
+async function transcribeHeard(buffer, mimetype, filename, { prompt, language = null, usual = null } = {}) {
+  const lang = require('./lang-guess');
+  const first = await once(buffer, mimetype, filename, { prompt, language });
+  const out = { ...first, language: language || lang.guess(first.text) };
+  if (language || !usual || !first.text || !out.language || out.language === usual) return out;
+  if (first.text.split(/\s+/).length > SHORT_WORDS) return out;   // a sentence long enough is whisper's to judge
+  const again = await once(buffer, mimetype, filename, { prompt, language: usual }).catch(() => null);
+  if (!again?.text) return out;   // nothing in the usual language: what it heard stands, and the agent is told to check it
+  return { ...again, language: usual, heardAs: out.language };
+}
+
+// A transcript this short in another language than the person's is checked again in theirs.
+const SHORT_WORDS = 5;
+
+/** One request to the speech service. */
+async function once(buffer, mimetype, filename, { prompt, language } = {}) {
   const vs = require('./chat').loadVoiceServices();
   const screened = text => (require('./stt-filter').isHallucination(text) ? { text: '', filtered: text || null } : { text, filtered: null });
   const ask = vad => {
@@ -32,6 +54,7 @@ async function transcribeHeard(buffer, mimetype, filename, { prompt } = {}) {
     formData.append('file', new Blob([buffer], { type: mimetype || 'audio/webm' }), filename || 'audio.webm');
     formData.append('model', vs.sttModel);
     if (prompt) formData.append('prompt', String(prompt).slice(0, 200));
+    if (language) formData.append('language', language);   // whisper's ISO 639-1 code: it then does not guess
     if (vad) formData.append('vad_filter', 'true');
     return fetch(`${vs.sttUrl}/v1/audio/transcriptions`, { method: 'POST', body: formData, signal: AbortSignal.timeout(30000) });
   };

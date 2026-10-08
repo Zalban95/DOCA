@@ -232,9 +232,11 @@ async function handleTranscribe(req, res) {
   if (!req.file) return res.status(400).json({ error: 'No audio file' });
   try {
     const t0 = Date.now();
-    const got = await transcribeHeard(req.file.buffer, req.file.mimetype, req.file.originalname, { prompt: req.body?.prompt });   // prompt: a wake word's spelling
+    // prompt: a wake word's spelling; the language this screen chose, else the person's usual one (call-language.js)
+    const { language, usual } = require('./call-language').forRequest(req);
+    const got = await transcribeHeard(req.file.buffer, req.file.mimetype, req.file.originalname, { prompt: req.body?.prompt, language, usual });
     require('./realtime/panel-call').heard(req, { ...got, ms: Date.now() - t0 });   // a live call's recording, in its call log
-    res.json({ text: got.text, ...(got.filtered ? { screened: true } : {}) });
+    res.json({ text: got.text, ...(got.filtered ? { screened: true } : {}), ...(got.language ? { language: got.language } : {}) });
   } catch (e) {
     require('./realtime/panel-call').heard(req, { error: e.message });
     res.status(e.status && e.status >= 400 ? e.status : 500).json({ error: e.status ? e.message : `STT request failed: ${e.message}` });

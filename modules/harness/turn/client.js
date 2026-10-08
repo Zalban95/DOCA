@@ -80,6 +80,7 @@ function clientBlock(client) {
     `Shape the answer for it: ${shapeFor(client)}`,
     ...(client.mode === 'call' || client.mode === 'assistant' ? ['They are listening: ask any question out loud, one at a time — not with `ask_device`. '
       + 'An earlier answer of yours that ends in "—" was cut off there: they talked over it and did not hear the rest.', spokenRules(),
+      require('../../call-language').spokenLine(require('../../call-language').forClient(client)),
       ...(client.voiceTags ? [require('../../voice-tags').line()] : [])] : []),
     ...(client.front ? [require('./front').LINE] : []),   // a call's quick turn (turn/front.js)
     ...(client.effort ? [require('./effort').line(client.effort)] : []),
