@@ -73,6 +73,23 @@ test('a turn\'s changes reach every screen that may open the conversation, and n
   } finally { await a.close(); await m.close(); }
 });
 
+test('a new reminder is heard by its person\'s pages, so Schedules shows it without a reload', async () => {
+  const member = await H.signIn('member', 'live-sched@test.local');
+  const other = await H.signIn('member', 'live-sched-other@test.local');
+  const m = await open(member.cookie), o = await open(other.cookie), a = await open(H.owner.cookie);
+  try {
+    const schedules = require('../modules/schedules');
+    const s = schedules.create({ kind: 'reminder', text: 'Call the dentist', at: new Date(Date.now() + 3600e3).toISOString() },
+      { person: { id: member.user.id, role: 'member' }, madeBy: 'agent' });
+    assert.ok(await until(() => m.got.some(c => c.topic === 'schedules' && c.id === s.id)), 'its person hears it');
+    assert.ok(await until(() => a.got.some(c => c.topic === 'schedules' && c.id === s.id)), 'a host hears every one');
+    schedules.remove(s.id);
+    assert.ok(await until(() => m.got.filter(c => c.topic === 'schedules').length === 2), 'and its removal');
+    await H.sleep(100);
+    assert.equal(o.got.filter(c => c.topic === 'schedules').length, 0, 'nobody else');
+  } finally { await m.close(); await o.close(); await a.close(); }
+});
+
 test('missions changes are heard with the conversation they belong to', async () => {
   const a = await open(H.owner.cookie);
   try {

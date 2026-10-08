@@ -286,6 +286,7 @@ The harness gives its agent eight rules for working on any repository (charter r
 
 ### Schedules (since 2.162.0, `modules/schedules`)
 - **A turn or a recipe on a timetable, as its person** — `every` N minutes or a five-field cron expression in host time (`schedules/when.js`; Sunday is 0 or 7). A due schedule's `nextAt` moves on before it runs, so a slow run never fires twice; a turn goes through `agent.send()` into the schedule's own conversation (claimed by the person, so it is theirs and their devices hear it), a recipe through `recipes/run.js`. Both act with the person's level and approvals; a person gone or suspended pauses it. The ticker starts in `boot.afterListen`.
+- **Schedules are live** (self-test round two): every create, change and removal is the live feed's topic `schedules` (with `by`, heard by that person's pages and a host's), so Harness → Schedules shows a reminder the agent just made without a reload.
 - **A reminder the person asked for fires without a click** (since 2.257.0, decided 2026-10-07): the `remind` tool makes a schedule of kind `reminder` (`when {at}`), on at once, that fires once as a notice to that person's own devices and then reads `done`.
 - **The agent proposes, a person switches on.** The `schedule` tool creates schedules in state `proposed`, which never fire; only the panel (`POST /api/schedules/:id/state`, Harness → Schedules ▶) turns one on. The tool may list, pause and delete, never resume. It is in `registry.NEVER`. A person sees and changes their own schedules, a host every one.
 

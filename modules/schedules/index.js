@@ -22,9 +22,11 @@ const DOC = 'schedules';
 const TICK_MS = 20000;
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });
 const rows = () => store.readJson(DOC, { schedules: [] }).schedules;
-const save = list => store.writeJson(DOC, { schedules: list });
+// Every change is heard on the live feed (topic `schedules`, the person it runs as): a reminder the agent just made
+// showed in Harness → Schedules only after a reload (self-test round two, C2).
+const save = (list, s) => { store.writeJson(DOC, { schedules: list }); if (s) require('../live').changed('schedules', s.id, 'changed', { by: s.by }); };
 const get = id => rows().find(s => s.id === id) || null;
-const patch = (id, fields) => { const list = rows().map(s => (s.id === id ? { ...s, ...fields } : s)); save(list); return list.find(s => s.id === id); };
+const patch = (id, fields) => { const list = rows().map(s => (s.id === id ? { ...s, ...fields } : s)); const s = list.find(x => x.id === id); save(list, s); return s; };
 
 function normalize(input, by, madeBy) {
   if (input.kind === 'reminder') {
@@ -50,7 +52,7 @@ function create(input, { person, madeBy = 'person', sessionId = null } = {}) {
     state: madeBy === 'agent' && input.kind !== 'reminder' ? 'proposed' : 'on', sessionId: input.sessionId || sessionId || null,
     runs: 0, lastAt: null, last: null, createdAt: new Date().toISOString() };
   s.nextAt = when.next(s.when)?.toISOString() || null;
-  save([...rows(), s]);
+  save([...rows(), s], s);
   return s;
 }
 
@@ -61,7 +63,7 @@ function setState(id, state) {
   return patch(id, { state, ...(state === 'on' ? { nextAt: when.next(s.when)?.toISOString() || null } : {}) });
 }
 
-function remove(id) { if (!get(id)) throw bad('No such schedule.', 404); save(rows().filter(s => s.id !== id)); return { removed: id }; }
+function remove(id) { const s = get(id); if (!s) throw bad('No such schedule.', 404); save(rows().filter(x => x.id !== id), s); return { removed: id }; }
 
 /** Run one now: a turn into its conversation (a new one the first time), or a recipe; the outcome is kept on it. */
 async function runNow(id) {
