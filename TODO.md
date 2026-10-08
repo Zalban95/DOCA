@@ -675,6 +675,13 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   get a picture from `virsh screenshot` / `VBoxManage screenshotpng` (made small on node:zlib) and open their VNC
   console through the hub (noVNC, `/ws/vm/`); the VMs tab gains Console. **Left:** Hyper-V, UTM and Parallels have no
   picture (no CLI screenshot); plain containers get no Live tile by design.
+  **Done (2026-10-08, asked: "a vnc section in machines, same logic, showing the running and connected ones on the live
+  and so on"):** Machines → VNC — targets by address with a password in `keys/vnc.json` (never returned), DOCA's own RFB
+  client (DES written out: Node has none), rows `connected`/`reachable`/`unreachable` in the status column, Live
+  pictures, a console where the hub signs in and a watching socket cannot act, a VNC button on VM rows that saves one in
+  a click, and the agent's `vnc_look`/`vnc_input` (a person's turn: ordinary approvals; a specialist: lent, every input
+  asked; allotment kind `vnc`). **Left:** a mission's `vnc_input` is refused rather than asked (a mission has nobody to
+  ask); VeNCrypt/TLS servers are named, not spoken; Tight/ZRLE encodings for slow links.
 - [x] H10.10 The home in DOCA's own layout (asked 2026-10-06: "does Home Assistant let us use our layout, or do we build
   from scratch?"). Neither: Home Assistant stays the device layer (thousands of brands, its areas, scenes and
   automations), and DOCA draws its own **Home** page from HA's WebSocket API — `get_states`, `subscribe_events` for live

@@ -7,7 +7,9 @@
    refreshes every few seconds while shown, and asks for pictures of served pages only then. Made here: index.html is
    at its line ceiling. The running VMs are here too (2026-10-08), pictured by their own hypervisor, behind the agents'
    work unless a row of the status column brought them forward (liveFocus); a VM opens its console through the hub.
-   Plain containers get no tile: one that serves a page an agent started is already a served page. */
+   Plain containers get no tile: one that serves a page an agent started is already a served page. The VNC targets that
+   answer are here too (vnc.js), pictured by the hub's own RFB client; one someone is watching or driving comes to the
+   front, and "VMs and VNC in front" keeps them all there. A target that is a running VM's display is that VM's one tile. */
 const ML = { timer: null, data: null, previews: {}, focus: null,
   // "VMs in front": how this screen arranges Live, so it is kept in this browser (asked 2026-10-08).
   vmsFront: (() => { try { return localStorage.getItem('doca.live.vmsFront') === '1'; } catch { return false; } })() };   // previews: served key → preview id, made once per page
@@ -41,14 +43,18 @@ function _mlTiles() {
     empty: d.browser.found ? 'Taking its picture…' : d.browser.why, tail: s.tail,
     open: () => _mlOpenServed(s.key) });
   for (const v of d.vms || []) tiles.push({ id: `v:${v.key}`, working: false, kind: '▣', title: v.name, point: 'up',
-    line: [v.label, v.os].filter(Boolean).join(' · '), who: v.console.how === 'hub' ? 'console' : '',
+    line: [v.label, v.os].filter(Boolean).join(' · '), who: v.console.how === 'hub' ? 'VNC' : '',
     img: v.shot ? `/api/machines/vms/${encodeURIComponent(v.hypervisor)}/${encodeURIComponent(v.name)}/shot` : null,
     empty: v.why || 'Taking its picture…', open: () => vmConsoleOpen(v.hypervisor, v.name) });
-  for (const t of tiles) if (t.id === ML.focus || (ML.vmsFront && t.id.startsWith('v:'))) t.working = true;
+  for (const n of d.vnc || []) tiles.push({ id: `n:${n.id}`, working: n.state === 'connected', kind: '◫', title: n.name, point: 'up',
+    line: [`${n.host}:${n.port}`, n.same && `${n.same.kind === 'vm' ? 'VM' : 'computer'} ${n.same.name}`].filter(Boolean).join(' · '),
+    who: n.state === 'connected' ? (n.driving ? 'someone is driving it' : 'someone is watching it') : 'VNC',
+    img: n.shot ? `/api/machines/vnc/${encodeURIComponent(n.id)}/shot` : null, empty: n.why || 'Taking its picture…', open: () => vncConsoleOpen(n.id) });
+  for (const t of tiles) if (t.id === ML.focus || (ML.vmsFront && /^[vn]:/.test(t.id))) t.working = true;
   return tiles;
 }
 
-/** Keep the running VMs in the front row (on) or let them sit behind what is working (off); this screen's choice. */
+/** Keep the running VMs and the VNC screens in the front row (on) or let them sit behind what is working (off); this screen's choice. */
 function liveVmsFront(on) {
   ML.vmsFront = !!on;
   try { localStorage.setItem('doca.live.vmsFront', on ? '1' : '0'); } catch { /* a private window: for this visit */ }
@@ -79,8 +85,8 @@ async function _mlOpenServed(key) {
 function _mlDraw(page) {
   const tiles = _mlTiles(), front = tiles.filter(t => t.working), back = tiles.filter(t => !t.working);
   if (!page.querySelector('.ml-front')) {
-    const toggle = `<label class="ml-vms-front" title="Running VMs stay large, beside what is working"><input type="checkbox" class="switch"${ML.vmsFront ? ' checked' : ''} onchange="liveVmsFront(this.checked)"> VMs in front</label>`;
-    page.innerHTML = `<div class="ml-head">${pageHeadHtml({ title: 'Live', sub: 'The agents\' computers, the pages they serve for tests, and the running VMs — whatever is working comes to the front.', actions: toggle })}</div>
+    const toggle = `<label class="ml-vms-front" title="Running VMs and VNC screens stay large, beside what is working"><input type="checkbox" class="switch"${ML.vmsFront ? ' checked' : ''} onchange="liveVmsFront(this.checked)"> VMs and VNC in front</label>`;
+    page.innerHTML = `<div class="ml-head">${pageHeadHtml({ title: 'Live', sub: 'The agents\' computers, the pages they serve for tests, the running VMs and the VNC screens — whatever is working, or being watched, comes to the front.', actions: toggle })}</div>
       <div class="ml-front"></div><div class="ml-back"></div>`;
   }
   const sync = (box, list, big) => {
@@ -104,7 +110,7 @@ function _mlDraw(page) {
   };
   sync(page.querySelector('.ml-front'), front, true);
   sync(page.querySelector('.ml-back'), back, false);
-  if (!tiles.length) page.querySelector('.ml-front').innerHTML = '<div class="placeholder">No agent machine, served page or running VM yet. Agents make computers for risky or browser work; a dev server an agent starts shows up here with its page; a VM you start shows its screen.</div>';
+  if (!tiles.length) page.querySelector('.ml-front').innerHTML = '<div class="placeholder">No agent machine, served page, running VM or VNC screen yet. Agents make computers for risky or browser work; a dev server an agent starts shows up here with its page; a VM you start shows its screen; a screen added under Machines → VNC shows when it answers.</div>';
   else page.querySelector('.ml-front > .placeholder')?.remove();
 }
 
