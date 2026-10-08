@@ -9719,6 +9719,32 @@
               "alt": {
                 "type": "string"
               },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "image",
+                  "audio",
+                  "video",
+                  "doc",
+                  "model",
+                  "file"
+                ],
+                "description": "A file the hub sent (tell_device): draw it, play it, open it, or `file` — offer to open or save it. Absent on older blocks: treat as an image."
+              },
+              "mime": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string",
+                "description": "The file's name, for saving it."
+              },
+              "bytes": {
+                "type": "integer"
+              },
+              "caption": {
+                "type": "string",
+                "description": "One line about it, from the agent."
+              },
               "ext": {
                 "type": "object",
                 "properties": {},

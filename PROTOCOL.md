@@ -911,10 +911,14 @@ device without the runtime they degrade to a text block with the `alt`.
 | `metric` | `metric: <metricId>`, `label?` | client shows the live value from its snapshot |
 | `figure` | `id`, `alt`, `representation` (device view) — authored as `svg?`, `motion?`, `image?`, `text?`, `sizeHint?` | §19.4 |
 | `image` | `url`, `alt`, `w?`, `h?` | fetch with your token |
-| `media` | `mediaId`, `url`, `alt` | §17 |
+| `media` | `mediaId`, `url`, `alt`, and for a file the hub sent: `kind?` (`image`·`audio`·`video`·`doc`·`model`·`file`), `mime?`, `name?`, `bytes?`, `caption?` | §17. Draw an image, play audio or video, open a doc; offer a `file` to open or save. No `kind`: an image. The file is the device's own media (24 h) |
 | `artifact` | `artifactId`, `runtime`, `url`, `contentUrl`, `alt` | §18 |
 | `list` | `items: string[≤20]` | |
 | `kv` | `items: [{ k ≤48, v ≤120 }]` | |
+
+A notice the agent sends with files (`tell_device`, `alert` with `media` blocks — see
+`docs/api/fixtures/alert-files.json`) carries one `media` block per file, each stored as the receiving device's
+own media, so only that device may fetch it. A watch is sent pictures only.
 
 Any block may carry `ext`. Unknown block types are dropped at authoring time;
 clients must still skip types they do not know.
