@@ -100,6 +100,7 @@
 .fm-list {
   flex: 1; overflow-y: auto;
   min-height: 0;
+  padding-bottom: 72px;   /* the last rows' actions scroll clear of the chat button (css/system.css) */
 }
 
 /* Column headers */
