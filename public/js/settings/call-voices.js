@@ -81,7 +81,8 @@ async function callVoiceSave(kind, where = 'screen') {
       const prefs = await apiFetch('/api/prefs');
       const cur = { ...(prefs.voice || {}) };
       if (slot) cur[kind] = slot; else delete cur[kind];
-      await apiFetch('/api/prefs', { method: 'POST', body: { voice: cur } });
+      // The whole section as built here, cleared fields included (/api/prefs merges leaf by leaf unless asked to replace).
+      await apiFetch('/api/prefs?replace=1', { method: 'POST', body: { voice: cur } });
     } else {
       const cur = { ...((await screenLoad(true)).settings?.voice || {}) };   // the voice above is kept as it is
       if (slot) cur[kind] = slot; else delete cur[kind];
