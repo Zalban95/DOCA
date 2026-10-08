@@ -14,9 +14,9 @@ const prefsOf = () => require('../../utils').loadPrefs().channels?.mail || {};
 async function say(addr, text, { subject, inReplyTo } = {}) {
   const p = prefsOf(), c = links().chat(addr) || {};
   const from = p.address || p.user;
-  const raw = require('./mime').reply({ from, to: addr, subject: subject || c.lastSubject || 'DOCA', inReplyTo: inReplyTo || c.lastMessageId, text,
+  const raw = require('../../mail/mime').reply({ from, to: addr, subject: subject || c.lastSubject || 'DOCA', inReplyTo: inReplyTo || c.lastMessageId, text,
     domain: String(from || '').split('@')[1] || 'doca.local' });
-  await require('./smtp').send(require('./index').server('smtp'), { from, to: addr, raw });
+  await require('../../mail/smtp').send(require('./index').server('smtp'), { from, to: addr, raw });
 }
 
 const channel = {

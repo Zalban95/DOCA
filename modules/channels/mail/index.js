@@ -11,7 +11,7 @@
  * `channels.mail.pollSec`; off until a host saves the mailbox and switches it on.
  */
 const links = require('../links').forChannel('mail');
-const mime = require('./mime');
+const mime = require('../../mail/mime');
 
 const CAPS = { formFactor: 'other', input: { text: true }, render: ['text'], ext: { channel: 'mail' } };
 const state = { running: false, timer: null, lastPollAt: null, error: null, busy: false };
@@ -48,7 +48,7 @@ async function poll() {
   state.busy = true;
   let c;
   try {
-    c = await require('./imap').connect(server('imap'));
+    c = await require('../../mail/imap').connect(server('imap'));
     await c.login(server('imap').user, server('imap').pass);
     await c.select('INBOX');
     for (const uid of await c.unseen()) {
