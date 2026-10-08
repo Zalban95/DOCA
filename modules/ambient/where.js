@@ -36,9 +36,9 @@ function reported(deviceId) {
  * {place, from, name?}: `place` is what weather.forecast takes ('' for none); `from` is asked | screen | device | hive
  * | null; `name` is the town a kept position was named as.
  */
-function resolve({ place = '', screen = null, userId = null } = {}) {
+function resolve({ place = '', screen = null, userId = null, here = false } = {}) {
   const asked = String(place || '').trim();
-  if (asked) return { place: asked, from: 'asked' };
+  if (asked) return { place: asked, from: here ? 'device' : 'asked' };   // `here`: the page's own position, just found
   const s = settingsOf(screen, userId);
   if (String(s.place || '').trim()) return { place: s.place.trim(), from: 'screen' };
   if (s.auto !== false) {

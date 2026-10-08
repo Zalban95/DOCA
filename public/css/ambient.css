@@ -33,7 +33,7 @@ body.solo .amb { height: 100dvh; border-radius: 0; }
 /* No place yet: the two ways to give one (ambient-where.js). */
 .amb-where { display: flex; flex-direction: column; align-items: flex-end; gap: 1.2vmin; }
 .amb-town { display: flex; gap: 1vmin; }
-.amb-town-in { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: #e8edf2; border-radius: 999px;
+.amb .amb-town-in { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: #e8edf2; border-radius: 999px;
   padding: 1vmin 2vmin; font: inherit; font-size: clamp(12px, 1.9vmin, 17px); width: 13em; max-width: 50vw; }
 .amb-where-why:empty { display: none; }
 .amb-quick { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 1.6vmin; align-items: center; justify-content: space-between; }

@@ -153,7 +153,8 @@ function _ambClock() {
 
 async function _ambLoad() {
   try {
-    const q = new URLSearchParams({ place: await ambientWhere(AMB.s), units: AMB.s.units || 'metric' });
+    const place = await ambientWhere(AMB.s);
+    const q = new URLSearchParams({ place, units: AMB.s.units || 'metric', ...(place && !AMB.s.place ? { here: '1' } : {}) });
     AMB.data = await apiFetch(`/api/ambient?${q}`);
     AMB.s = await ambientRemember(AMB.s, AMB.data.weather);   // a fresh position, kept as this screen's (ambient-where.js)
   } catch (e) { AMB.data = { error: e.message }; }
