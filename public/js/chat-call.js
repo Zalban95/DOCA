@@ -57,15 +57,18 @@ async function chatToggleCall({ assistant = false } = {}) {
     return;
   }
   // _callStart's first part runs now, inside the tap (its audio contexts must), and the flag holds until it settles.
-  _callStarting = true;
+  _callStarting = true; _callNotStarted = '';
   try { return await _callStart({ assistant }); }
   catch (e) {
     // Never a call that just does not happen: until 2026-10-08 a throw here (the wake word letting go) left "Checking
     // services…" on screen, nothing on the hub, and Ambient's galaxy falling back a second after it rose.
-    if (_callActive) { try { _callStop('the call could not start'); } catch { /* as far as it got */ } }
-    else { try { _callAudioCtx?.close().catch(() => {}); _callPlayCtx?.close().catch(() => {}); } catch { /* gone */ } _callAudioCtx = _callPlayCtx = null; }
-    chatAppendMsg('system', `The call did not start: ${e.message}`);
-    _callSetStatus(`The call did not start: ${e.message}`, '');
+    if (_callActive) {
+      try { _callStop('the call could not start'); } catch { /* as far as it got */ }
+      chatAppendMsg('system', `The call did not start: ${e.message}`); _callSetStatus(`The call did not start: ${e.message}`, '');
+    } else {
+      try { _callAudioCtx?.close().catch(() => {}); _callPlayCtx?.close().catch(() => {}); } catch { /* gone */ } _callAudioCtx = _callPlayCtx = null;
+      _callRefuse(`The call did not start: ${e.message}`, assistant);   // said where the person looks, and logged (chat-call-report.js)
+    }
     return false;
   } finally { _callStarting = false; }
 }
@@ -89,13 +92,13 @@ async function _callStart({ assistant }) {
     const status = await apiFetch('/api/chat/call-status');
     if (!status.stt || !status.tts) {
       const missing = [];
-      if (!status.stt) missing.push(`STT (${status.sttUrl})`);
-      if (!status.tts) missing.push(`TTS (${status.ttsUrl})`);
-      chatAppendMsg('system', `Voice services unreachable: ${missing.join(', ')}. Set them up in Settings → Voice.`);
+      if (!status.stt) missing.push(`speech-to-text at ${status.sttUrl}`);
+      if (!status.tts) missing.push(`text-to-speech at ${status.ttsUrl}`);
+      _callRefuse(`No speech service: set one up in Settings → Voice. (${missing.join(' and ')} ${missing.length > 1 ? 'do' : 'does'} not answer.)`, assistant);
       return giveUp();
     }
   } catch (e) {
-    chatAppendMsg('system', `Cannot check voice services: ${e.message}`);
+    _callRefuse(`Cannot check the speech services: ${e.message}`, assistant);
     return giveUp();
   }
 
@@ -110,7 +113,7 @@ async function _callStart({ assistant }) {
     // Echo cancellation keeps the agent's own voice from reading as yours — which matters most with barge-in on.
     _callStream = await micOpen(MIC_SPEECH);
   } catch (e) {
-    chatAppendMsg('system', `The microphone did not open: ${e.message}`);
+    _callRefuse(`The microphone did not open: ${e.message}`, assistant);
     return giveUp();
   }
 
