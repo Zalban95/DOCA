@@ -7,7 +7,8 @@
  * adapters), shell.which for programs, fs.statfs for the disk — so it answers the same on Linux, Windows and macOS.
  *
  * `assess(readings)` takes any reading already known (tests pass them all; nothing is run for one given), and
- * returns the numbers the picker needs: `gpuGB` (the largest single GPU's memory a model can use), `ramGB`, `diskGB`.
+ * returns the numbers the picker needs: `gpuGB` (the largest single GPU's memory a model can use), `gpuTotalGB`
+ * (the cards of that maker together, which a model split over them can use), `ramGB`, `diskGB`.
  * A reading nothing gave is null, never 0, and the summary says so instead of guessing.
  */
 const os = require('os');
@@ -55,12 +56,18 @@ async function assess(readings = {}) {
   const gpus = gpusOf(r.gpus, r.totalBytes).filter(g => g.vendor !== 'intel' || g.vramGB);   // integrated Intel: no memory of its own
   // The largest single card: a model split over two cards runs, but slower — "fits" means runs well on one.
   const gpuGB = gpus.reduce((m, g) => Math.max(m, g.vramGB || 0), 0) || 0;
+  // All the cards of one maker together: Ollama and llama.cpp split a model's layers over them (slower, but it runs).
+  // A shared-memory GPU is the machine's memory, so it is never added to anything.
+  const top = gpus.find(g => g.vramGB === gpuGB);
+  const same = gpus.filter(g => top && !g.unified && g.vendor === top.vendor && g.vramGB);
+  const gpuTotalGB = same.length > 1 ? round(same.reduce((n, g) => n + g.vramGB, 0)) : gpuGB;
   const out = {
     os: { platform: r.platform, name: { linux: 'Linux', win32: 'Windows', darwin: 'macOS' }[r.platform] || r.platform, arch: r.arch },
     cpu: { model: r.cpuModel, cores: r.cores },
     ramGB: round(r.totalBytes / GB),
     gpus,
     gpuGB,
+    gpuTotalGB,
     diskGB: r.diskFreeBytes == null ? null : round(r.diskFreeBytes / GB),
     runtimes: r.runtimes,
   };

@@ -8,6 +8,9 @@
  *   POST /api/guided/choose    {mode: guided|advanced} — the first-run choice; advanced changes nothing else
  *   POST /api/guided/plan      {answers} — what they would set up, written nowhere
  *   POST /api/guided/apply     {answers} — keep them, and put each install in front of the person as a proposal
+ *   GET  /api/guided/suggestions          the suggested models in use: which list, the day checked, what was accepted here
+ *   POST /api/guided/suggestions/check    ask the model scout to look for newer ones now (its experiment on), else say how
+ *   POST /api/guided/suggestions/forget   {role, id} — take back one accepted here (docs/design/model-suggestions.md)
  */
 const machine = require('./assess');   // called through the module, so a test can stand in a made-up machine
 const suggestions = require('./suggestions');
@@ -55,6 +58,9 @@ function mount(app) {
     return plan.setSetup({ mode });
   }));
   app.post('/api/guided/plan', h(async req => plan.plan(req.body?.answers || {}, await machine.assess(), suggestions.load(), { have: await have() })));
+  app.get('/api/guided/suggestions', h(() => ({ ...suggestions.about(), accepted: require('./overlay').list(), watching: suggestions.load().watching || [] })));
+  app.post('/api/guided/suggestions/check', h(() => require('../scout/model-suggestion').check()));
+  app.post('/api/guided/suggestions/forget', h(req => require('./overlay').forget(String(req.body?.role || ''), String(req.body?.id || ''))));
   app.post('/api/guided/apply', h(async req => plan.apply(req.body?.answers || {}, await machine.assess(), suggestions.load(),
     { by: req.auth?.user?.id || null, have: await have() })));
 }

@@ -16,7 +16,7 @@ function render(p, a) {
     else out.push(`- key for ${s.label} (${s.why}): ${s.providers.length ? s.providers.map(x => `${x.label}${x.hasKey ? ' (key already here)' : x.keyPage ? ` — key at ${x.keyPage}` : ''}`).join('; ') : s.note || 'no provider serves it yet'}`);
   }
   for (const d of p.devices) out.push(`- device ${d.label}: ${d.how}`);
-  out.push(`Suggestions list v${a.suggestions.version} (${a.suggestions.source}, ${a.suggestions.updated}). Keys are pasted and tested in Settings → Set-up (link: /#settings/guided) or Field → API keys — never in the chat.`);
+  out.push(`Suggestions list v${a.suggestions.version} (${a.suggestions.source}, checked ${a.suggestions.checked}${a.suggestions.local ? `, ${a.suggestions.local} accepted here from the model scout` : ''}). Keys are pasted and tested in Settings → Set-up (link: /#settings/guided) or Field → API keys — never in the chat.`);
   return out.join('\n');
 }
 
@@ -24,7 +24,7 @@ module.exports = [
   {
     name: 'machine_fit',
     description: 'What this machine can run and what to set up for a need: the suggested models that fit it, or providers where none does. '
-      + 'It reads memory, graphics cards and disk, picks the newest suggested model per role (chat, coding, vision, embeddings, speech) that fits, '
+      + 'It reads memory, graphics cards and disk, picks the best suggested model per role (chat, coding, vision, embeddings, speech) that fits, '
       + 'and lists the providers to choose from where nothing fits. It reads only; installing is install_propose '
       + '(the person clicks), keys are pasted in Settings → Set-up. Use it when someone asks to be set up for something, or asks what this machine can run.',
     parameters: { type: 'object', properties: {
