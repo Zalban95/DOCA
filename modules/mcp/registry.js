@@ -307,6 +307,8 @@ function status(spec) {
     pid:        c?.child?.pid || null,
     tools:      (c?.tools || []).map(t => ({ name: t.name, description: t.description })),
     toolCount:  c?.tools?.length || 0,
+    // A device's families taken back here (devices-control.js): why its server may offer no tools (deep test B).
+    revokedHere: device ? (() => { try { return require('../devices-control').state(device.id).revoked; } catch { return []; } })() : [],
   };
 }
 

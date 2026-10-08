@@ -32,6 +32,12 @@ test('actions reach the device as device.control, and the device answers; revoke
   assert.equal((await H.api(null, 'POST', `/api/devices/${device.id}/control`, { action: 'revoke' })).status, 400, 'revoke needs a family');
   await H.api(null, 'POST', `/api/devices/${device.id}/control`, { action: 'revoke', family: 'shell' });
   assert.deepEqual(control.state(device.id).usable, ['files'], 'a revoked family is not offered');
+  // Its MCP server's card can say why it offers no tools (deep test B: "0 tools" with no reason).
+  const registry = require('../modules/mcp/registry');
+  registry.upsert({ id: 'portal-mcp', transport: 'http', url: 'http://127.0.0.1:9/mcp', origin: { kind: 'client', deviceId: device.id } });
+  const card = (await H.api(null, 'GET', '/api/mcp')).body.servers.find(x => x.id === 'portal-mcp');
+  assert.deepEqual(card.revokedHere, ['shell']);
+  registry.remove('portal-mcp');
   await H.api(null, 'POST', `/api/devices/${device.id}/control`, { action: 'restore', family: 'shell' });
   assert.deepEqual(control.state(device.id).usable, ['files', 'shell']);
   const list = await H.api(null, 'GET', '/api/devices');

@@ -137,7 +137,9 @@ function _mcpCardHtml(s) {
     ? `<div class="mcp-tools">${s.tools.map(t =>
         `<span class="mcp-tool" title="${escHtml(t.description || '')}">${escHtml(t.name)}</span>`).join('')}</div>`
     : running
-      ? '<div class="mcp-tools mcp-none">This server offers no tools.</div>'
+      ? `<div class="mcp-tools mcp-none">${s.revokedHere?.length
+        ? `No tools: ${escHtml(s.revokedHere.map(f => (typeof DEV_FAMILY_LABEL !== 'undefined' && DEV_FAMILY_LABEL[f]) || f).join(', '))} ${s.revokedHere.length === 1 ? 'was' : 'were'} revoked here for ${escHtml(s.originLabel)} — Field → API keys gives ${s.revokedHere.length === 1 ? 'it' : 'them'} back.`
+        : 'This server offers no tools.'}</div>`
       : '';
 
   return `

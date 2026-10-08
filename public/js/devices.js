@@ -361,7 +361,7 @@ function devHandsHtml(d) {
     const cls = revoked ? 'dev-fam revoked' : granted ? 'dev-fam on' : 'dev-fam';
     const act = revoked ? 'restore' : granted ? 'revoke' : 'ask';
     const tip = revoked ? 'Revoked here — click to allow again' : granted ? 'Granted on the device — click to take it back from here' : 'Click to ask the device for it';
-    return `<button class="${cls}" title="${escHtml(`${DEV_FAMILY_LABEL[f]}: ${state}. ${tip}`)}" onclick="devControl(${id}, '${act}', '${f}')">${escHtml(DEV_FAMILY_LABEL[f])}</button>`;
+    return `<button class="${cls}" title="${escHtml(`${DEV_FAMILY_LABEL[f]}: ${state}. ${tip}`)}" onclick="devControl(${id}, '${act}', '${f}', ${jsArg(d.name || d.id)})">${escHtml(DEV_FAMILY_LABEL[f])}</button>`;
   }).join('');
   const last = c.history?.[0];
   const lastLine = last ? `Last: ${escHtml(last.action)}${last.family ? ` ${escHtml(last.family)}` : ''} ${escHtml(new Date(last.at).toLocaleTimeString())} —
@@ -378,7 +378,12 @@ function devHandsHtml(d) {
     </div>`;
 }
 
-async function devControl(id, action, family) {
+/** What stops when a family is taken back, in words (deep test B: one click on a chip revoked it, unasked). */
+const DEV_FAMILY_STOPS = { files: 'reading and changing its files', shell: 'running commands on it', processes: 'seeing and ending its programs',
+  screen: 'seeing its screen', input: 'typing and clicking on it', apps: 'opening and listing its apps', device: 'its notifications, clipboard and battery readings',
+  elevated: 'anything that needs its administrator rights', mcp: 'the MCP servers it hosts' };
+
+async function devControl(id, action, family, name = 'this device') {
   const go = async () => {
     try {
       await apiFetch(`/api/devices/${encodeURIComponent(id)}/control`, { method: 'POST', body: { action, ...(family ? { family } : {}) } });
@@ -387,5 +392,6 @@ async function devControl(id, action, family) {
     } catch (e) { setStatus(document.getElementById(`dev-status-${id}`), `✗ ${e.message}`, 'err'); }
   };
   if (action === 'disconnect') appConfirm('Disconnect this device? Its sessions end and its services stop until it is opened again. It stays paired.', go);
+  else if (action === 'revoke' && family) appConfirm(`Take ${DEV_FAMILY_LABEL[family] || family} back from ${name}?\n\nThe agents stop ${DEV_FAMILY_STOPS[family] || 'using it'}: its MCP server no longer offers those tools, a conversation using them included. Pressing the chip again gives it back.`, go);
   else go();
 }
