@@ -88,9 +88,9 @@ html[data-skin="points"] .nav-tab:hover { color: var(--bright); background: colo
 html[data-skin="points"] .nav-group { align-items: center; gap: 2px; border-radius: 8px; }
 html[data-skin="points"] .nav-group.open { background: transparent; }
 html[data-skin="points"] .nav-group.open > .nav-group-btn { color: var(--on-accent); background: var(--accent); opacity: 1; padding-right: 12px; }
-html[data-skin="points"] .nav-group.open > .nav-group-btn::after { content: ''; }
-html[data-skin="points"] .nav-group.open > .nav-tab[data-tab] { font-size: 13px; color: var(--muted); }
-html[data-skin="points"] .nav-group.open > .nav-tab[data-tab].active { color: var(--bright); background: transparent; box-shadow: inset 0 -2px 0 var(--accent); border-radius: 0; }
+html[data-skin="points"] .nav-pages { height: auto; padding: 6px 20px; gap: 4px; background: color-mix(in srgb, var(--bg) 85%, var(--surface)); border-bottom-color: var(--border); }
+html[data-skin="points"] .nav-pages .nav-tab { font-size: 13px; color: var(--muted); padding: 6px 10px; }
+html[data-skin="points"] .nav-pages .nav-tab.active { color: var(--bright); background: transparent; box-shadow: inset 0 -2px 0 var(--accent); border-radius: 0; }
 html[data-skin="points"] .header-search-input { font-family: var(--font-ui); font-size: 13px; padding: 7px 10px 7px 28px; background-color: var(--bg); }
 html[data-skin="points"] #clock { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0; }
 

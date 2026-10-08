@@ -12,6 +12,11 @@
   }
 }
 
+/* ── A narrow desk (769–960px): the clock gives its room to the groups, which never scroll out of sight ── */
+@media (min-width: 769px) and (max-width: 960px) {
+  #clock { display: none; }
+}
+
 /* ── Small screens (≤ 768px) ─────────────────────────── */
 @media (max-width: 768px) {
   /* Wider drawer so the stats card breathes */
@@ -19,7 +24,7 @@
 
   /* Bottom tab bar replaces the header tabs */
   .mobile-nav { display: flex; }
-  header .nav-tabs { display: none; }
+  header .nav-tabs, .nav-pages.shown { display: none; }
 
   /* Reserve space above the bottom bar */
   .app-body { padding-bottom: var(--mobile-nav-h); }
@@ -220,9 +225,12 @@
 
   /* Config file list horizontal scroll */
   .config-files { flex-direction: row; max-height: 42px; overflow-x: auto; overflow-y: hidden; }
-  .config-file-group { border-right: 1px solid var(--border); border-bottom: none; }
-  .config-file-group-label { display: none; }
-  .config-file-item { padding: 0 12px; height: 42px; flex-direction: row; align-items: center; white-space: nowrap; }
+  /* a group's files side by side in the strip, not stacked down under the editor (self-test 2026-10-08) */
+  #config-file-list { display: flex; flex-shrink: 0; }
+  .config-file-group { display: flex; flex-shrink: 0; border-right: 1px solid var(--border); border-bottom: none; }
+  .config-file-group > div { flex-shrink: 0; }
+  .config-file-group-label { display: none !important; }   /* config.js draws it with an inline display */
+  .config-file-item { padding: 0 12px; height: 42px; flex-direction: row; align-items: center; white-space: nowrap; width: auto; }
   .config-file-path { display: none; }
 
   /* Modals near-full-screen */

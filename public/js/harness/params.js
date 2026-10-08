@@ -67,8 +67,8 @@ function _harnessExternalCfgHtml(h) {
       <textarea class="input" id="hcfg-env-${h.id}" rows="2" placeholder="KEY=VALUE (one per line) — exported before launch">${escHtml(c.env || '')}</textarea>
     </div>
     <div class="harness-cfg-actions">
-      <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
       <span class="status-line" id="hcfg-status-${h.id}"></span>
+      <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
     </div>`;
 }
 
@@ -179,11 +179,11 @@ function _harnessParamsHtml(h, meta) {
       </div>
     </div>
     <div class="harness-cfg-actions">
-      <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
-      <button class="btn btn-xs" onclick="harnessResetParams(${jsArg(h.id)})"
-              title="Throw away these parameters and go back to the shipped ones">Reset</button>
+      <button class="btn btn-xs btn-quiet harness-cfg-reset" onclick="harnessResetParams(${jsArg(h.id)})"
+              title="Throw away these parameters and go back to the shipped ones">↺ Reset to the shipped parameters</button>
       <span class="status-line" id="hcfg-status-${h.id}"></span>
-    </div>`;
+      <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
+    </div>`;   // Reset far from Save, quiet, on the left (self-test 2026-10-08: side by side, one slip from the other)
 }
 
 /**
@@ -209,9 +209,20 @@ async function _harnessLoadModels(id, provider, selected, scope) {
     if (!sel.isConnected) return;            // the rung was removed while we waited
     sel.innerHTML = `<option value="">${data.models?.length ? '— pick a model —' : (data.error ? 'unreachable' : 'none found')}</option>${opts.join('')}`;
     if (data.error) sel.title = data.error;
+    _harnessModelHint(sel, provider, data.models?.length ? null : data.error);
   } catch (e) {
     if (sel.isConnected) sel.innerHTML = `<option value="">${escHtml(e.message)}</option>`;
   }
+}
+
+/** Under a dropdown its provider could not fill: what to check, and a way to its row (self-test 2026-10-08). */
+function _harnessModelHint(sel, provider, error) {
+  const row = sel.parentElement;
+  let hint = row.querySelector(':scope > .hcfg-model-hint');
+  if (!error) { hint?.remove(); return; }
+  if (!hint) { hint = Object.assign(document.createElement('div'), { className: 'hcfg-model-hint' }); row.style.flexWrap = 'wrap'; row.append(hint); }   // a line of its own under the row
+  hint.innerHTML = `${escHtml(provider)} did not answer (${escHtml(error)}). Check its address and that its server is running.
+    <a href="#" onclick="keysShowProvider(${jsArg(provider)});return false">Its row in Field → API keys</a>`;
 }
 
 /**

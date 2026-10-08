@@ -98,6 +98,9 @@ html[data-ground="light"] { --fab-bg: var(--surface); }
 .tab-page:not(#tab-harness):not(#tab-terminal):not(#tab-projects):not(#tab-ambient):not(#tab-workstream):not(#tab-files):not(.field-page)::after {
   content: ''; display: block; flex: 0 0 72px; height: 72px; }
 .chat-fab { background: var(--fab-bg); }
+/* … and steps aside from a control under it where the page is scrolled now (js/lib/fab-aside.js): a sliver at the edge */
+body.fab-aside .chat-fab:not(:hover):not(:focus-visible):not(.active) { transform: translateX(calc(100% + var(--fab-right, 24px) - 14px)); opacity: .8; }
+@media (max-width: 768px) { .chat-fab { --fab-right: 12px; } }
 html[data-ground="light"] .chat-fab { text-shadow: none; box-shadow: none; }
 /* des 28: open is the accent, not an alarm */
 .chat-fab.active { background: var(--fab-bg); color: var(--accent); transform: none; box-shadow: none; }

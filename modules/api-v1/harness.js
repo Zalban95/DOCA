@@ -117,7 +117,7 @@ function sessions(device) {
 }
 
 function createSession(title, { activate = true, device } = {}) {
-  const session = memory.createSession(typeof title === 'string' ? title.slice(0, 120) : undefined);
+  const session = memory.createSession(typeof title === 'string' ? title.slice(0, 120) : undefined, { kind: 'chat' });   // a person's, not a work chat
   access().claim(ownerOf(device), session.id);
   if (activate && hostOrNobody(device)) memory.setActive(session.id);
   return session;

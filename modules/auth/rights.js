@@ -67,6 +67,7 @@ const TABLE = [
   // ── The harness: what lets the agent act on the machine is host ──
   R(ANY, '/api/harness/approvals/[^/]+', 'chat'),          // answering a tool call: a host, or the person whose turn it is (routes.js)
   R(GET, '/api/harness/approval', 'chat'),                   // the mode, for the chat's pill; the rest of it only to a host (routes.js)
+  R(GET, '/api/harness/approvals', 'chat'),                  // the same read under the plural the answer route uses (self-test 2026-10-08)
   R(ANY, '/api/harness/approval(/.*)?', 'host'),           // Auto/Manual, and the always-allowed list
   R(ANY, '/api/harness/agents(/.*)?', 'host'),             // a specialist's definition is its tool list
   R(ANY, '/api/harness/installs/[^/]+/(apply|reject)', 'host'),

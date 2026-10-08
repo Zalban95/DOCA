@@ -45,6 +45,7 @@ function _holdHtml(h) {
 async function holdingsRender(elId, personId) {
   const el = document.getElementById(elId);
   if (!el) return;
+  el.classList.add('holdings');   // its lines are read, not skimmed: they wrap rather than cut (css/settings.css)
   try { el.innerHTML = _holdHtml(await apiFetch(`/api/auth/holdings${personId ? `?person=${encodeURIComponent(personId)}` : ''}`)); }
   catch (e) { el.innerHTML = `<div class="placeholder">${escHtml(e.message)}</div>`; }
 }

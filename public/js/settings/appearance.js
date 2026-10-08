@@ -1,6 +1,25 @@
 /* ═══════════════════════════════════════════════════════
-   Settings → General → Appearance: the style (look.js) and the colour theme.
+   Settings → General → Appearance: the look (look.js — the shape of things), then colours for it.
+
+   One choice, then its colours (self-test 2026-10-08: two lists, STYLE and COLOURS, both had "Points", so "a theme"
+   was not one choice). The colours that belong with the look in use come first, named within it ("Dark",
+   "Daylight" under Points); every other palette stays one fold away under "More colours", Custom with them. The
+   saved keys are as before: `skin` for the look, `theme` for the colours.
    ═══════════════════════════════════════════════════════ */
+
+/** The palettes made for each look, its own first; any palette works with any look. */
+const LOOK_PALETTES = {
+  classic: ['default', 'dracula', 'nord', 'solarized', 'monokai', 'catppuccin', 'gruvbox', 'tokyoNight', 'oneDark', 'cyberpunk'],
+  modern: ['daylight', 'default'],
+  points: ['points', 'pointsDaylight'],
+};
+
+/** A palette's name under its own look: the look's name left off ("Points Daylight" → "Daylight", "Points" → "Dark"). */
+function _lookPaletteLabel(id, skin) {
+  const label = THEMES[id]?.label || id, look = SKINS[skin]?.label || '';
+  if (!LOOK_PALETTES[skin]?.includes(id) || !look || !label.startsWith(look)) return label;
+  return label.slice(look.length).trim() || 'Dark';
+}
 
 /* ── Style ───────────────────────────────────────────── */
 
@@ -16,11 +35,12 @@ function _lookPickerRender(prefs) {
     grid.before(row);
     const label = document.createElement('div');
     label.className = 'input-label';
-    label.textContent = 'Colours';
+    label.id = 'look-colours-label';
     grid.before(label);
   }
   const active = document.documentElement.dataset.skin || prefs?.skin || 'classic';
-  row.innerHTML = `<div class="input-label">Style</div><div class="look-tiles">${Object.entries(SKINS).map(([id, s]) => `
+  document.getElementById('look-colours-label').textContent = `Colours for ${SKINS[active]?.label || 'this look'}`;
+  row.innerHTML = `<div class="input-label">Look</div><div class="look-tiles">${Object.entries(SKINS).map(([id, s]) => `
     <button type="button" class="theme-swatch look-tile look-tile-${id}${id === active ? ' active' : ''}" onclick="_lookSelect('${id}')">
       <span class="look-tile-sample">Aa</span>
       <span class="look-tile-text"><span class="theme-swatch-label">${s.label}</span><span class="look-tile-note">${s.note}</span></span>
@@ -30,11 +50,12 @@ function _lookPickerRender(prefs) {
 async function _lookSelect(id) {
   const skin = lookApply(id);
   const palette = typeof lookPointsPalette === 'function' ? lookPointsPalette(skin) : null;   // Points brings its palette
-  if (palette) { applyTheme(palette); _themePickerRender({ theme: palette }); }
+  if (palette) applyTheme(palette);
   _lookPickerRender({ skin });
+  _themePickerRender({ theme: palette || _currentTheme });   // its own colours first
   try {
     await screenSave(palette ? { skin, theme: palette } : { skin });
-    setStatus(document.getElementById('theme-status'), `✓ ${SKINS[skin].label} style`, 'ok');
+    setStatus(document.getElementById('theme-status'), `✓ ${SKINS[skin].label} look`, 'ok');
   } catch (e) {
     setStatus(document.getElementById('theme-status'), `✗ ${e.message}`, 'err');
   }
@@ -49,11 +70,11 @@ function _themePickerRender(prefs) {
   const active = prefs?.theme || _currentTheme || 'default';
   const customColors = prefs?.customTheme || _customThemeColors || {};
 
-  let html = '';
-  for (const [id, theme] of Object.entries(THEMES)) {
-    const c = theme.colors;
-    const isActive = active === id;
-    html += `<div class="theme-swatch${isActive ? ' active' : ''}" onclick="_themeSelect('${id}')" title="${theme.label}">
+  const skin = document.documentElement.dataset.skin || 'classic';
+  const own = (LOOK_PALETTES[skin] || []).filter(id => THEMES[id]);
+  const swatch = id => {
+    const theme = THEMES[id], c = theme.colors, isActive = active === id;
+    return `<div class="theme-swatch${isActive ? ' active' : ''}" data-theme="${id}" onclick="_themeSelect('${id}')" title="${theme.label}">
       <div class="theme-swatch-preview">
         <div class="theme-swatch-bar" style="background:${c['--bg']}">
           <span class="theme-swatch-dot" style="background:${c['--accent']}"></span>
@@ -66,12 +87,13 @@ function _themePickerRender(prefs) {
           <div class="theme-swatch-accent-bar" style="background:${c['--accent']}"></div>
         </div>
       </div>
-      <div class="theme-swatch-label">${theme.label}</div>
+      <div class="theme-swatch-label">${escHtml(_lookPaletteLabel(id, skin))}</div>
     </div>`;
-  }
+  };
 
   const isCustom = active === 'custom';
-  html += `<div class="theme-swatch${isCustom ? ' active' : ''}" onclick="_themeSelectCustom()" title="Custom">
+  const others = Object.keys(THEMES).filter(id => !own.includes(id));
+  const custom = `<div class="theme-swatch${isCustom ? ' active' : ''}" data-theme="custom" onclick="_themeSelectCustom()" title="Custom">
     <div class="theme-swatch-preview theme-swatch-custom-icon">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10"/>
@@ -84,7 +106,10 @@ function _themePickerRender(prefs) {
     <div class="theme-swatch-label">Custom</div>
   </div>`;
 
-  grid.innerHTML = html;
+  // Open when the colours in use are among the others, so the chosen one is never hidden.
+  grid.innerHTML = own.map(swatch).join('') + `<details class="theme-more"${!own.includes(active) ? ' open' : ''}>
+    <summary>More colours <span>— made for another look, or your own; any of them works with this one</span></summary>
+    <div class="theme-grid">${others.map(swatch).join('')}${custom}</div></details>`;
 
   if (isCustom) {
     _themeCustomEditorRender(customColors);
@@ -95,14 +120,7 @@ async function _themeSelect(name) {
   const status = document.getElementById('theme-status');
   applyTheme(name);
 
-  document.querySelectorAll('#theme-picker-grid .theme-swatch').forEach(el => el.classList.remove('active'));
-  const grid = document.getElementById('theme-picker-grid');
-  if (grid) {
-    const swatches = grid.querySelectorAll('.theme-swatch');
-    const keys = [...Object.keys(THEMES)];
-    const idx = keys.indexOf(name);
-    if (idx >= 0 && swatches[idx]) swatches[idx].classList.add('active');
-  }
+  document.querySelectorAll('#theme-picker-grid .theme-swatch').forEach(el => el.classList.toggle('active', el.dataset.theme === name));
 
   document.getElementById('theme-custom-editor').style.display = 'none';
 
@@ -115,12 +133,7 @@ async function _themeSelect(name) {
 }
 
 function _themeSelectCustom() {
-  document.querySelectorAll('#theme-picker-grid .theme-swatch').forEach(el => el.classList.remove('active'));
-  const grid = document.getElementById('theme-picker-grid');
-  if (grid) {
-    const swatches = grid.querySelectorAll('.theme-swatch');
-    swatches[swatches.length - 1]?.classList.add('active');
-  }
+  document.querySelectorAll('#theme-picker-grid .theme-swatch').forEach(el => el.classList.toggle('active', el.dataset.theme === 'custom'));
 
   const base = _currentTheme !== 'custom' && THEMES[_currentTheme]
     ? THEMES[_currentTheme].colors

@@ -222,7 +222,7 @@ class McpClient {
           + `That is this panel's limit (settings ${require('./timeouts').settingFor(method, this.id)}), not the server's — `
           + 'and it stopped the waiting, not the work: whatever you asked for may have finished on that '
           + 'machine anyway. Check the result before asking for it again.');
-      throw e;
+      throw require('./reach-error')(e, this.id, this.spec.url);   // "fetch failed", said as which server, where, why
     }
     const session = res.headers.get('mcp-session-id');
     if (session) this.sessionId = session;

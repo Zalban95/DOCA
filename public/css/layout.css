@@ -61,7 +61,7 @@ header {
 /* Nav tabs */
 .nav-tabs {
   display: flex;
-  flex: 1;
+  flex: 1 0.01 auto;   /* sized by its groups; a short header takes its room from the search first (below) */
   min-width: 0;
   /* `safe center` keeps the leading tabs reachable when the row overflows;
      older browsers drop the second declaration and get flex-start. */
@@ -82,7 +82,7 @@ header {
   font-size: 10px; font-weight: 500;
   letter-spacing: 0.12em; text-transform: uppercase;
   padding: 0 14px; border: none; background: transparent;
-  color: var(--muted); cursor: pointer;
+  color: color-mix(in srgb, var(--muted) 45%, var(--text)); cursor: pointer;   /* --muted alone read 2.75:1 on the header */
   border-bottom: 2px solid transparent;
   transition: color var(--t-fast), border-color var(--t-fast);
   white-space: nowrap;
@@ -94,10 +94,12 @@ header {
 /* Header search */
 .header-search {
   position: relative;
-  flex-shrink: 0;
+  flex: 0 100 auto;   /* the first to give way when the header is short of room: down to its icon */
+  min-width: 36px;
   display: flex;
   align-items: center;
 }
+.header-search:focus-within { flex-shrink: 0; }
 .header-search-input {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -107,6 +109,7 @@ header {
   border-radius: 3px;
   padding: 4px 10px 4px 24px;
   width: 180px;
+  max-width: 100%;
   outline: none;
   transition: border-color var(--t-fast), width var(--t-fast);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
@@ -118,6 +121,7 @@ header {
 .header-search-input:focus {
   border-color: var(--accent);
   width: 260px;
+  max-width: none;
 }
 .header-search-results {
   display: none;
@@ -276,12 +280,17 @@ header {
 .vm-snap-new { display: flex; gap: 6px; margin-top: 6px; } .vm-snap-new .input { flex: 1; max-width: 260px; }
 .vm-create { padding: 8px 0 12px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
 
-/* Pages in groups (js/nav-groups.js): a folded group is its name; the open one shows its pages beside it. */
+/* Pages in groups (js/nav-groups.js): the header holds the groups; the open one's pages are a row of their own under
+   it, so the header never runs out of room for Settings however many pages a group has. */
 .nav-group { display: flex; align-items: stretch; flex-shrink: 0; }
-.nav-group:not(.open) > .nav-tab[data-tab] { display: none; }
-.nav-group.open { background: color-mix(in srgb, var(--accent) 6%, transparent); }
-.nav-group.open > .nav-group-btn { color: var(--accent); opacity: .65; padding-right: 6px; border-bottom-color: transparent; }
-.nav-group.open > .nav-group-btn::after { content: ' ›'; }
+.nav-group.open > .nav-group-btn { color: var(--accent); border-bottom-color: var(--accent); }
+.nav-pages { display: none; flex-shrink: 0; height: 34px; padding: 0 16px; gap: 2px; background: var(--surface);
+  border-bottom: 1px solid var(--border2); overflow-x: auto; scrollbar-width: none; }
+.nav-pages::-webkit-scrollbar { display: none; }
+.nav-pages.shown { display: flex; }
+.nav-pages-group { display: none; align-items: stretch; gap: 2px; }
+.nav-pages-group.open { display: flex; }
+body.solo .nav-pages { display: none; }
 .nav-group-menu { position: fixed; bottom: calc(var(--mobile-nav-h, 54px) + 6px); z-index: 1200; display: flex; flex-direction: column;
   background: var(--surface, #111); border: 1px solid var(--border2); box-shadow: 0 8px 24px rgba(0,0,0,.4); min-width: 150px; }
 .nav-group-menu button { font-family: var(--font-ui); font-size: 12px; text-align: left; padding: 12px 14px; border: none;

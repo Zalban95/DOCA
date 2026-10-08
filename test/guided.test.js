@@ -109,6 +109,9 @@ test('the answers path: offered once, kept as data, installs proposed not run, t
   for (const s of r.body.steps.filter(x => x.type === 'install' && !x.error))
     assert.ok(pending.some(p => p.id === s.proposal.id), `${s.id} waits for a click`);
   assert.ok(require('../modules/harness/settings').refuse('setup.mode', 'guided'), 'never proposable');
+  assert.equal(r.body.changed, true, 'the first time changes something');
+  const again = await H.api(null, 'POST', '/api/guided/apply', { answers: { uses: ['talk', 'find'], route: 'local', devices: ['phone'], free: 'my recipes' } });
+  assert.equal(again.body.changed, false, 'the same answers again: nothing changed, and the page says so');
 
   const member = await H.signIn('member');
   assert.equal((await H.api(null, 'GET', '/api/guided', undefined, { Cookie: member.cookie })).status, 403, 'the owner\'s set-up');
@@ -138,4 +141,23 @@ test('machine_fit reads only, and names the click and the key', async () => {
   assert.match(out, /^Machine: /);
   assert.match(out, /Settings → Set-up/);
   assert.ok(require('../modules/harness/approval').FREE.has('machine_fit'));
+});
+
+test('a model the person runs, added by address, counts as the agent\'s model once it answers', async () => {
+  const http = require('node:http');
+  const srv = http.createServer((req, res) => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ data: [{ id: 'my-local-model' }] })); });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r));
+  try {
+    const baseUrl = `http://127.0.0.1:${srv.address().port}/v1`;
+    assert.equal((await H.api(null, 'POST', '/api/keys/add-provider', { name: 'own-test', baseUrl })).status, 200, 'the + Add provider route');
+    assert.equal((await H.api(null, 'POST', '/api/harness/doca/config', { provider: 'own-test', model: 'my-local-model' })).status, 200);
+    const view = (await H.api(null, 'GET', '/api/guided')).body;
+    assert.deepEqual(view.have.chat, { provider: 'own-test', model: 'my-local-model' });
+    const p = (await H.api(null, 'POST', '/api/guided/plan', { answers: { uses: ['talk'], route: 'providers' } })).body;
+    assert.equal(p.steps[0].type, 'have');
+    assert.ok(!p.steps.some(s => s.role === 'chat' && s.type !== 'have'), 'no key or install for a role that is done');
+  } finally {
+    await H.api(null, 'POST', '/api/harness/doca/config', { provider: 'ollama', model: '' });
+    srv.close();
+  }
 });
