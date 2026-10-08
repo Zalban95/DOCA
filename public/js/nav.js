@@ -44,6 +44,8 @@ function nav(name) {
   if (typeof ambientTab === 'function') ambientTab(on('ambient'));
   if (on('models') && typeof decisionModelsTab === 'function') decisionModelsTab();
   if (on('models') && typeof wakewordTab === 'function') wakewordTab();
+  if (on('models') && typeof libraryTab === 'function') libraryTab();
+  if (on('files') && typeof libraryFilesMount === 'function') libraryFilesMount();
   if (on('models') && typeof modelsRolesCard === 'function') modelsRolesCard();
   if (typeof liveMachinesTab === 'function') liveMachinesTab(on('live'));   // refreshes only while shown; starts and stops its thumbnails' timer
   if (on('terminal')) termInit();
