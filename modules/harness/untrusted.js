@@ -24,6 +24,7 @@ function sourceOf(name, args = {}, isMcp = false) {
   if (name === 'http_fetch') return `http_fetch ${String(args.url || '').slice(0, 200)}`;
   if (name === 'api_call') return `api_call ${String(args.method || 'GET').toUpperCase()} ${String(args.url || '').slice(0, 200)}`;
   if (name === 'web_search') return `web search results for "${String(args.query || '').slice(0, 120)}"`;
+  if (name === 'library_search') return `the Library: the person's own files found by meaning (their words and names)`;
   if (name === 'read_file') return `the file ${String(args.path || '').slice(0, 200)}`;
   if (name === 'model_scout' && (args.action || 'signals') === 'signals') return 'the model scout\'s look: model names, release and news titles others wrote';
   if (name === 'vnc_look' && String(args.question || '').trim()) return `a reading of VNC target ${String(args.target || '').slice(0, 40)}'s screen`;

@@ -77,4 +77,8 @@ module.exports = [
   { id: 'vision-pass', name: 'Looking at a computer\'s screen', page: 'settings/harness', tools: ['computer_look'], flag: 'visionPass', state: 'experiment',
     settings: ['vision.backend', 'vision.model'], since: '2.197.0', uses: 'tool:computer_look',
     use: 'A vision model answers a question about a computer\'s screen with what is visible and where to click.', words: 'vision screenshot ocr see' },
+  { id: 'library', name: 'Library: your files searched by meaning', page: 'models', tools: ['library_search'], flag: 'library', state: 'experiment',
+    settings: ['library.model', 'library.folders', 'library.when', 'library.captions'], routes: ['/api/library*'], uses: 'tool:library_search',
+    use: 'Your chosen folders indexed by meaning: a recording found by what is said in it, a picture or video by what it shows, a document by its sense.',
+    words: 'search files audio video photo picture index embeddings embeddinggemma multimodal tags similar duplicate transcript' },
 ];

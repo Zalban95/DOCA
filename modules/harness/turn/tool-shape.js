@@ -17,6 +17,7 @@ function switches() {
   if (!require('../../vnc-targets').any())
     for (const name of ['vnc_look', 'vnc_input']) out.push({ name, why: 'no VNC screen is added (Machines → VNC)' });
   if (!require('../../scout').on()) out.push({ name: 'model_scout', why: 'the model scout experiment is off' });
+  if (!require('../../library/indexer').on()) out.push({ name: 'library_search', why: 'the Library experiment is off, or no embedding model is set for it' });
   if (!require('../../experiments').on('toolTiers')) out.push({ name: 'tools_more', why: 'the tool tiers experiment is off' });
   // An old name kept so old transcripts and recipes still run (tools.call maps it); never offered.
   out.push({ name: 'show_image', why: 'an old name for show_media' });
