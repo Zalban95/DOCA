@@ -139,6 +139,16 @@ the project's managers only if the owner allows sharing specialists and skills (
   (`voice-tags.js`), sent as the speech API's `instructions`, dropped for a voice without them, never shown or kept;
   the sentence's language is named (`speech-language.js`). Not done: a device's own spoken turns are not told of the
   tags (their voice is the hive's, which strips them), and nobody has listened on a real call yet.
+- [x] A voice per kind of call (asked 2026-10-08: "keep the expressive model for the ambient and the quick calls on the
+  watch, and the dots-themed call. That is the quick one, inside of the one that starts from the chat. That is the Deep
+  one."; branch `voice-per-call`): `voice.quick` (the face, Ambient, a device's call) and `voice.deep` (the chat's 🎙),
+  each `{service, voice, speed}` on the screen, its person or the hive, falling back to the screen's voice and then
+  the hive's — the shipped default is today's (`call-voices.js`). The panel's call names its kind per sentence; a
+  device's call speaks in its Quick call voice through the hub's engine, and its turn is now told of tone tags when that
+  voice takes them; tags are offered only to a call whose voice understands them. Settings → Voice → "Quick and Deep
+  calls" (speed under Advanced, "Make it the hive's" for a host); the UI says "Quick call" and "Deep call" (🎙 Deep).
+  `test/call-voices.test.js`. Not done: a hosted speech service as a `service` (only the hive's and Services rows);
+  nobody has heard the two voices on a real call or a watch yet.
 - [x] Self-test 2026-10-08, the agents and missions group (branch `selftest-agents`): specialists' budgets fit a
   real errand (Tester 120, Coder 80, Researcher 40, Scout 30, Archivist 10, unnamed 30; #6); a mission's last step is
   its report, with a line telling its leader it ended on its limit and where that is raised (`turn/mission-report.js`;
@@ -698,6 +708,11 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   conversation — their own devices (`reach.ask` to exact ids) and open pages (live topic `ask`, the approval popup) —
   allowed once or denied, no "always", denied after `harness.approval.missionAskSec` (300 s) with a line for its
   leader; paying and every other forced ask stay refused (`harness/mission-asks.js`, `test/mission-asks.test.js`).
+  ✓ *(branch voice-per-call)* the timeout is a setting, `harness.approval.missionAskTimeout` — **hold** (default: the
+  question stays open in Harness → Approvals, the device copy is withdrawn after the wait, the mission waits without
+  steps or tokens, its row says so; a late Allow runs it; a Stop withdraws it; a restart keeps a note the resumed
+  mission reads — `harness/mission-asks-held.js`) or **deny** (as before); beside the seconds in Approvals, not
+  proposable (`test/mission-asks-hold.test.js`).
   **Left:** VeNCrypt/TLS servers are named, not spoken; Tight/ZRLE encodings for slow links.
 - [x] H10.10 The home in DOCA's own layout (asked 2026-10-06: "does Home Assistant let us use our layout, or do we build
   from scratch?"). Neither: Home Assistant stays the device layer (thousands of brands, its areas, scenes and
