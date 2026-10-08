@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # fluxbox asks fbsetbg for a wallpaper and, finding no setter, leaves an xmessage window on the screen
     && ln -sf /bin/true /usr/bin/fbsetbg
 RUN useradd -m -s /bin/bash agent
-COPY agent.js tools.js cdp.js start.sh /opt/doca-computer/
+COPY agent.js tools.js cdp.js procs.js start.sh /opt/doca-computer/
 RUN chmod +x /opt/doca-computer/start.sh
 USER agent
 WORKDIR /home/agent

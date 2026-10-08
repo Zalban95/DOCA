@@ -261,6 +261,10 @@ const TOOLS = [
       const s = await cdp.evaluate(`(() => { const el = document.querySelector('[data-doca-ref="${Number(a.ref)}"]'); if (!el) return null;
         const s = (${sensitive.toString()})(el); return { kind: s ? s.kind : null, label: (s && s.label) || '', signIn: (${signInOnly.toString()})(el) }; })()`);
       return s ? text(JSON.stringify(s)) : fail(`[${a.ref}] is not on the page now.`); } },
+  // The hub reads what runs here (procs.js; modules/machines/busy.js) to show a computer busy whoever made it so. Only
+  // reads: ids, parents, CPU ticks, start times and command lines — never the environment. Never the agent's.
+  { name: 'processes', hidden: true, description: 'The hub reads what runs in this computer.', inputSchema: { type: 'object', properties: {} },
+    run: async () => text(JSON.stringify(require('./procs').read())) },
   { name: 'browser_screenshot', description: 'A picture of the page as the browser draws it.', inputSchema: { type: 'object', properties: {} },
     run: async () => { await cdp.connect(); return { content: [{ type: 'image', mimeType: 'image/png', data: (await cdp.send('Page.captureScreenshot', { format: 'png' })).data }] }; } },
   { name: 'browser_back', description: 'Go back one page.', inputSchema: { type: 'object', properties: {} },
