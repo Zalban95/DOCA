@@ -11,8 +11,16 @@
  */
 async function sendStreamed(opts, { res, emit }) {
   const agent = require('./agent');
-  let settle;
-  const settled = new Promise(r => { settle = r; });
+  // Settled once: by the sender going away, by another turn reading it, or by the turn it starts. A failure after the
+  // sender left is logged, never handed to a promise nobody awaits — an unhandled rejection exits the whole process
+  // (deep test A, 2026-10-08: a queued message whose sender had gone, then a budget refusal, took DOCA down).
+  let done = false, resolve, reject;
+  const settled = new Promise((y, n) => { resolve = y; reject = n; });
+  const settle = v => { if (!done) { done = true; resolve(v); } };
+  const fail = e => {
+    if (!done) { done = true; reject(e); return; }
+    console.error(`[harness] a queued message's turn failed after its sender left: ${e?.message || e}`);   // the turn records its own failure too
+  };
   res.on('close', () => settle(null));
   const r = agent.send(opts, {
     onRead: () => { emit({ type: 'queued_read', id: r.id }); settle(null); },
@@ -21,7 +29,7 @@ async function sendStreamed(opts, { res, emit }) {
       const own = new AbortController();
       if (!res.destroyed) res.on('close', () => own.abort());
       // A sender that went away is not a reason to drop what they wrote: the turn runs without a listener.
-      return agent.turn({ ...opts, signal: own.signal }).then(settle, e => { settle(Promise.reject(e)); });
+      return agent.turn({ ...opts, signal: own.signal }).then(settle, fail);
     },
   });
   if (!r.queued) return r;
