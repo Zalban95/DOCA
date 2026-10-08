@@ -13,13 +13,23 @@ async function liveCallAssistantCard(panel, s) {
       ${liveCallRow('Quiet before resting', `<input class="input" id="lc-idle" type="number" min="5" max="600" value="${c.assistantIdleSec || 12}" style="width:80px"> s`,
         'After this long with no words heard and nothing being said, it rests and waits for its name (when it listens for one); otherwise it keeps listening.')}
       ${s.experiments?.wakeWord ? liveCallRow('Call by name', `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="lc-listen" ${c.listenWithFace ? 'checked' : ''}>
-          while the face shows, listen for</label><input class="input" id="lc-word" value="${escHtml(c.wakeWord || '')}" placeholder="${escHtml(word)}" style="width:120px">`,
+          while the face shows, listen for</label>${choiceInput({ id: 'lc-word', value: c.wakeWord || '', placeholder: word, width: '160px', source: 'this hub', load: liveCallWakeWords })}`,
         `"${escHtml(word)}, what's on today?" starts it and sends the rest. 
          While it listens, what is said near this screen goes to your speech-to-text.`) : ''}
       <div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantScreenSave()">Save for this screen</button></div>
       ${await liveCallAssistantHtml()}
     </div>`;
   panel.append(card);
+}
+
+/** The names a screen can listen for: the product's, and each word a wake-word model was trained for here (an admin's list). */
+async function liveCallWakeWords() {
+  const product = (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA';
+  const items = [{ value: product, where: 'its name' }];
+  try {
+    for (const m of (await apiFetch('/api/wakeword')).models || []) if (m.word && !items.some(i => i.value.toLowerCase() === m.word.toLowerCase())) items.push({ value: m.word, where: 'a model trained here' });
+  } catch { /* not an admin: the product's name, or what is typed */ }
+  return items;
 }
 
 async function liveCallAssistantScreenSave() {

@@ -1,25 +1,22 @@
-/* Settings → Voice → This screen's voice: a voice from a service (modules/hosted-voices — ElevenLabs, OpenAI, Cartesia,
+/* Settings → Voice → Voice (voice-card.js): a voice from a service (modules/hosted-voices — ElevenLabs, OpenAI, Cartesia,
    Google), set up when asked and never pushed. Two parts drawn into the screen voice card:
-   - while a service's voice is the chosen engine, its fields: the model and the voice (the few that matter), and the
-     rest folded under Advanced (a direction in words, stability, the language);
+   - while a service's voice is the chosen engine, its fields: the model (its voice is the card's own box, typed or
+     picked by name), and the rest folded under Advanced (a direction in words, stability, the language);
    - folded at the bottom, "A voice from a service": each service, whether its key is kept, the page that makes one and,
      for an admin, a box to paste it — saved as a key for services (protected, the hub's; it never comes back here). */
 
-/** The fields for a chosen service voice (engine `hosted:<id>`): model, voice, and Advanced folded. */
+/** The fields for a chosen service voice (engine `hosted:<id>`): its model, and Advanced folded. */
 function hostedVoiceFields(list, v) {
   const h = (list.hosted || []).find(x => x.id === list.engine);
   if (!h) return '';
   const o = (v.engine === h.id && v.hosted) || {};
-  const names = list.names || {};
-  const voiceVal = v.engine === h.id ? v.ttsVoice || '' : '';
   const adv = h.advanced || [];
   const field = (id, label, input) => `<label class="input-label" style="display:block;margin-top:6px">${label}</label>${input}`;
   return `<div id="hv-fields" style="margin-top:8px">
     <div class="toolbar" style="gap:6px;flex-wrap:wrap;justify-content:flex-start">
       <select class="input" id="hv-model" style="width:auto" title="Which of ${escHtml(h.label)}'s models">${h.models.map(m =>
         `<option value="${escHtml(m.id)}" ${m.id === (o.model || h.model) ? 'selected' : ''}>${escHtml(m.label)}</option>`).join('')}</select>
-      <select class="input" id="sv-voice" style="width:auto">${list.voices.length ? '' : '<option value="">no voices listed — is the key right?</option>'}${
-        list.voices.map(id => `<option value="${escHtml(id)}" ${id === voiceVal ? 'selected' : ''}>${escHtml(names[id] || id)}</option>`).join('')}</select>
+      ${list.voices.length ? '' : '<span style="font-size:11px;color:var(--muted)">No voices listed — is the key right?</span>'}
     </div>
     ${adv.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px">Advanced</summary>
       ${adv.includes('style') ? field('hv-style', 'A direction in words, for every sentence', `<input class="input" id="hv-style" value="${escHtml(o.style || '')}" placeholder="warm and unhurried, a little playful" style="width:100%">`) : ''}
@@ -69,5 +66,5 @@ async function hostedVoiceKeySave(provider) {
       who: document.getElementById(`hv-who-${provider}`)?.checked ? 'everyone' : 'host', note: `${h.label} voices (Settings → Voice)` } });
   } catch (e) { return appAlert(`Could not keep the key: ${e.message}`); }
   input.value = '';
-  screenVoiceRender(h.id);
+  voiceCardRender({ scope: _vc.scope, engine: h.id });
 }

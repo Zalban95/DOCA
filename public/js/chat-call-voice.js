@@ -49,8 +49,8 @@ async function _callEnqueueSynth(text) {
     if (gen !== _callSynthGen) return;
     const AS = typeof AbortSignal !== 'undefined' ? AbortSignal : {};
     const signal = () => { const limit = AS.timeout ? AS.timeout(CALL_SYNTH_TIMEOUT_MS) : null; return limit && AS.any && _callAbort ? AS.any([_callAbort.signal, limit]) : (_callAbort?.signal || limit || undefined); };
-    // The Live call's voice (the face, Ambient) or the Deep call's (the chat's 🎙); a stopped one starts, said once.
-    const res = await synthFetch({ text, call: _callAssistant ? 'quick' : 'deep' }, { signal, onNotice: n => _callNotice('tts', n) });
+    // The Live call's voice (the face), Ambient's assistant's, or the Deep call's (the chat's 🎙); a stopped one starts, said once.
+    const res = await synthFetch({ text, call: _callAssistant ? (_callAmbient ? 'ambient' : 'quick') : 'deep' }, { signal, onNotice: n => _callNotice('tts', n) });
     if (!res.ok) throw new Error(`speech service answered ${res.status}${await res.text().then(t => `: ${t.slice(0, 120)}`).catch(() => '')}`);
     if (res.status === 204) return;   // only a tone tag: nothing to say
 

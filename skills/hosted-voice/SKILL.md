@@ -15,11 +15,11 @@ instead, on one screen: the hub calls the service with a key it keeps, and the s
 2. **The key — never in the chat.** Name the page where the key is made: ElevenLabs
    https://elevenlabs.io/app/settings/api-keys, OpenAI https://platform.openai.com/api-keys, Cartesia
    https://play.cartesia.ai/keys, Google https://console.cloud.google.com/apis/credentials (an API key restricted to
-   the Cloud Text-to-Speech API). Send them to **Settings → Voice** (link `/#settings/voice`) → This screen's voice →
+   the Cloud Text-to-Speech API). Send them to **Settings → Voice** (link `/#settings/voice`) → the Voice card →
    "A voice from a service" to paste it (an admin keeps it; they can let everyone's screens use it). If they paste a
    key in the chat anyway, do not repeat it, and tell them to paste it there instead.
-3. **Choose the voice.** Once the key is kept, the service is in the screen's voice list: they pick it, a model and a
-   voice, and Save. You may propose it for them with `settings_propose {screen: "this"}` on `voice` —
+3. **Choose the voice.** Once the key is kept, the service is in the Voice card's list: they pick it, a model and a
+   voice (typed or picked by name), ▶ to hear it, and Save. You may propose it for them with `settings_propose {screen: "this"}` on `voice` —
    `{engine: "hosted:<elevenlabs|openai|cartesia|google>", ttsVoice: "<voice id>", hosted: {model: "<model>"}}` — and
    they accept it; never write the key into a setting.
 4. **Tone.** With a voice that takes a tone, a live call lets you put [whispers], [laughs], [sighs], [excited],

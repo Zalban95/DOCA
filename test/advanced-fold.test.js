@@ -30,9 +30,20 @@ const until = async (expression, ms = 15000) => {
   for (let t = 0; t < ms; t += 200) { if (await evaluate(expression)) return true; await headless.sleep(200); }
   return false;
 };
+// Chromium drops every load in flight when this machine's network changes (net::ERR_NETWORK_CHANGED — another test
+// making a Docker network does it), which left the panel without half its scripts now and then under a full run: a
+// load that lost a file is loaded again, and the page errors it caused are not this page's.
+let failedLoads = 0;
 const open = async () => {
-  await page.send('Page.navigate', { url: `${base}/` });
-  assert.ok(await until("typeof NAV_TABS !== 'undefined' && typeof advancedFold === 'function' && document.readyState === 'complete'", 30000), 'the panel loaded');
+  for (let attempt = 1; ; attempt++) {
+    failedLoads = 0;
+    const seen = errors.length;
+    await page.send('Page.navigate', { url: `${base}/` });
+    const loaded = await until("typeof NAV_TABS !== 'undefined' && typeof advancedFold === 'function' && document.readyState === 'complete'", 30000);
+    if ((!loaded || failedLoads) && attempt < 3) { errors.splice(seen); continue; }
+    assert.ok(loaded, 'the panel loaded');
+    break;
+  }
   await headless.sleep(800);
 };
 
@@ -48,6 +59,7 @@ before(async () => {
   process.once('exit', killBrowser);
   for (const sig of ['SIGTERM', 'SIGINT']) process.once(sig, () => { killBrowser(); process.exit(1); });
   page = await headless.connect(await headless.devtools(profile));
+  page.on(m => { if (m.method === 'Network.loadingFailed' && !m.params.canceled && ['Document', 'Script', 'Stylesheet'].includes(m.params.type)) failedLoads++; });
   page.on(m => { if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text); });
   await page.send('Runtime.enable'); await page.send('Network.enable');
   const [name, value] = H.owner.cookie.split('=');

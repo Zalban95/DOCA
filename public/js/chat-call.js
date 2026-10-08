@@ -50,15 +50,16 @@ function _callSetStatus(text, state) {
 
 /** `assistant`: started from the face (face/assistant.js) — the face follows the call's voice whatever faceVoice says. */
 let _callAssistant = false;   // this call came from the face (assistant mode): quicker, shorter, its own style
+let _callAmbient = false;     // …from the Ambient page: Ambient's assistant, spoken in its own voice (call-voices.js `ambient`)
 let _callStarting = false;   // between the tap and the microphone: nothing else may take the microphone then (wake-word.js)
-async function chatToggleCall({ assistant = false } = {}) {
+async function chatToggleCall({ assistant = false, ambient = false } = {}) {
   if (_callActive) {
     _callStop('the person ended the call');
     return;
   }
   // _callStart's first part runs now, inside the tap (its audio contexts must), and the flag holds until it settles.
   _callStarting = true;
-  try { return await _callStart({ assistant }); }
+  try { return await _callStart({ assistant, ambient }); }
   catch (e) {
     // Never a call that just does not happen: until 2026-10-08 a throw here (the wake word letting go) left "Checking
     // services…" on screen, nothing on the hub, and Ambient's galaxy falling back a second after it rose.
@@ -74,7 +75,7 @@ async function chatToggleCall({ assistant = false } = {}) {
  *  ("Doca" came back as "Madoka" inside calls, 2026-10-06). */
 let _callHint = '';
 
-async function _callStart({ assistant }) {
+async function _callStart({ assistant, ambient = false }) {
   // Both audio contexts are made here, inside the tap, before anything is awaited: a context made later is no longer
   // the tap's, and a phone's WebView keeps it suspended — the answer is synthesized and never heard.
   _callAudioCtx = new AudioContext();
@@ -102,6 +103,8 @@ async function _callStart({ assistant }) {
   // Assistant mode always drives the face by voice: there the face is the conversation (docs/experiments/face-voice.md).
   try { const ex = (await screenLoad(true)).experiments || {}; _callBargeIn = !!ex.bargeIn; _callFaceVoice = !!ex.faceVoice || assistant; _callAssistant = assistant; }
   catch { _callBargeIn = false; _callFaceVoice = assistant; _callAssistant = assistant; }
+  // Ambient's: started by its page, or by the wake word while the Ambient page shows.
+  _callAmbient = assistant && (ambient || (typeof currentTab !== 'undefined' && currentTab === 'ambient'));
   if (typeof wakeWordPause === 'function') wakeWordPause();   // the call has the microphone now: its stream is handed over (lib/mic.js)
   _callStats = { at: Date.now(), bargeIns: 0, dropped: 0 };
   try { const c = (await screenPrefs()).call || {}; _callHint = String(c.wakeWord || '').trim() || (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA'; _callSilenceMs = c.silenceMs >= 300 ? c.silenceMs : 2000; _callThreshold= c.sensitivity >= 1 ? c.sensitivity : 15; }
@@ -318,7 +321,7 @@ async function _callAnswer(userText) {
     const chatRes = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userText, voice: _callAssistant ? 'assistant' : 'call', call: _callLogId, ...(typeof callThinkBody === 'function' ? callThinkBody(_callAssistant) : {}) }),   // the hub shapes a spoken answer, and logs the turn
+      body: JSON.stringify({ message: userText, voice: _callAssistant ? 'assistant' : 'call', ...(_callAmbient ? { speaks: 'ambient' } : {}), call: _callLogId, ...(typeof callThinkBody === 'function' ? callThinkBody(_callAssistant) : {}) }),   // the hub shapes a spoken answer, and logs the turn
       // Its own stop as well as the call's: words spoken over it end this answer and its turn (chat-call-hold.js).
       signal: (_callAnswerCtrl = new AbortController(), AbortSignal.any ? AbortSignal.any([_callAbort.signal, _callAnswerCtrl.signal]) : _callAbort?.signal),
     });

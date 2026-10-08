@@ -45,6 +45,14 @@ async function locate(place) {
   return { name: [p.name, p.admin1, p.country_code].filter(Boolean).join(', '), lat: p.latitude, lon: p.longitude };
 }
 
+/** Places whose name starts with `q`, for a screen to pick from (Settings → Ambient's place; lib/choice-input.js). */
+async function places(q, count = 6) {
+  q = String(q || '').trim();
+  if (q.length < 2) return [];
+  const j = await getJson(`${GEO}?name=${encodeURIComponent(q)}&count=${count}&format=json`);
+  return (j.results || []).map(p => ({ value: [p.name, p.admin1, p.country_code].filter(Boolean).join(', '), where: `${p.latitude.toFixed(2)}, ${p.longitude.toFixed(2)}` }));
+}
+
 /** Now and the next days at `place`, in `units` (metric | imperial). */
 async function forecast(place, units = 'metric') {
   place = String(place || '').trim();
@@ -72,4 +80,4 @@ async function forecast(place, units = 'metric') {
   return value;
 }
 
-module.exports = { forecast, locate, word };
+module.exports = { forecast, locate, places, word };

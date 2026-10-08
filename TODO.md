@@ -247,6 +247,23 @@ the project's managers only if the owner allows sharing specialists and skills (
   calls" (speed under Advanced, "Make it the hive's" for a host); the UI says "Quick call" and "Deep call" (🎙 Deep).
   `test/call-voices.test.js`. Not done: a hosted speech service as a `service` (only the hive's and Services rows);
   nobody has heard the two voices on a real call or a watch yet.
+- [x] One Voice card, and type or pick (asked 2026-10-08: "one mask to set up the voice, and one flag to check and
+  enable different voices for different calls. That also manages which models are switched on", and "we can manually
+  edit and type from scratch where we can select … or use a drop-down menu"; branch `voice-one-card`). Settings →
+  Voice opens on **one Voice card** (`settings/voice-card*.js`) replacing "This screen's voice" and the calls' card:
+  service, voice (typed or picked) and speed (Advanced), for this screen or the hive; **"Different voices for each
+  call"** shows the Live call, the Deep call and **Ambient's assistant** — a new slot `voice.ambient` that falls back to
+  the Live call's (`call-voices.js FALLS_TO`; Ambient's page and its wake word now ask for it) — each with ▶ that speaks
+  a sample before saving (`/api/chat/synthesize {engine}`). Beside each chosen service whether it runs and **Start
+  it** (the Services route); a voice service running unused is listed with a Stop asked first (`machineAsk`); `GET
+  /api/services/voices`. **`choiceInput`** (`lib/choice-input.js`): a box that keeps what is typed, ▾ for what the
+  service offers with where ("served here", "at …"), loaded when opened, ↻, keyboard, a sheet on a phone, "not offered
+  by … — kept as typed". Used for the voices, the speech services' addresses and models (`GET
+  /api/services/choices`), the agent's model, a provider's address, the wake word and Ambient's place (`GET
+  /api/ambient/places`). Tests: `choice-input`, `voice-card` (both in a browser, `test/panel-browser.js`),
+  `voice-services`, `call-voices`. Not done: the fallback rungs' models and the escalation rung keep their own select
+  (only the primary model box is a choiceInput); the hive's speech service a call row names is the hive's address, not
+  a Services row by id; nobody has heard Ambient's own voice on a real tablet yet.
 - [x] Calls, round two (2026-10-08, from the call log; branch `calls-round-two`): **the wedge** — the wake word resting
   without a trained model threw on letting go (`false?.stop()`), so every call from a resting screen, Ambient's hold
   included, died before the microphone and nothing reached the hub; fixed, and a call that cannot open now says why.
