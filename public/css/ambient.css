@@ -30,6 +30,12 @@ body.solo .amb { height: 100dvh; border-radius: 0; }
 .amb-notice.failed span { color: #e85050; }
 .amb-muted { color: #707a85; font-size: clamp(12px, 1.9vmin, 17px); }
 .amb-muted a { color: #57c9c2; }
+/* No place yet: the two ways to give one (ambient-where.js). */
+.amb-where { display: flex; flex-direction: column; align-items: flex-end; gap: 1.2vmin; }
+.amb-town { display: flex; gap: 1vmin; }
+.amb-town-in { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: #e8edf2; border-radius: 999px;
+  padding: 1vmin 2vmin; font: inherit; font-size: clamp(12px, 1.9vmin, 17px); width: 13em; max-width: 50vw; }
+.amb-where-why:empty { display: none; }
 .amb-quick { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 1.6vmin; align-items: center; justify-content: space-between; }
 .amb-buttons, .amb-apps { display: flex; flex-wrap: wrap; gap: 1.2vmin; }
 .amb-button { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.10); color: #e8edf2; border-radius: 999px;
@@ -74,6 +80,7 @@ body.solo .amb { height: 100dvh; border-radius: 0; }
   .amb-plan, .amb-notices { max-height: 26vh; }
   .amb-quick { grid-row: 6; }
   .amb-weather { justify-self: start; text-align: left; }
+  .amb-where { align-items: flex-start; }
   .amb-now, .amb-days { justify-content: flex-start; }
   .amb-time { font-size: clamp(48px, 18vw, 96px); }
 }

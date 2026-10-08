@@ -6,7 +6,7 @@
    the dots go back down and turn again, and the screen listens for its name (wakeWord, `ambient.listen`) — the
    microphone is given up whenever a call or a recording needs it. Best by itself: /?view=ambient. Its page is made
    here (index.html is at its line ceiling); the server's half is modules/ambient. */
-const AMB = { on: false, face: null, closeFeed: null, clock: null, data: null, tick: null, s: {}, calling: false, own: false, starting: false, hold: null, refresh: null, coords: null, hear: {} };
+const AMB = { on: false, face: null, closeFeed: null, clock: null, data: null, tick: null, s: {}, calling: false, own: false, starting: false, hold: null, refresh: null, hear: {} };
 
 function ambientIsOpen() { return AMB.on && !document.hidden; }
 
@@ -142,16 +142,6 @@ function _ambLayout() {
   for (const k of ['clock', 'weather', 'plan', 'notices', 'buttons', 'apps']) amb.classList.toggle(`amb-no-${k}`, !ambShown(s, k));
 }
 
-/** Where this screen is for the weather: the town named, else this device's own position (asked once, kept 30 min). */
-function _ambWhere() {
-  if (AMB.s.place) return Promise.resolve(AMB.s.place);
-  if (AMB.s.auto === false || !navigator.geolocation) return Promise.resolve('');
-  if (AMB.coords && Date.now() - AMB.coords.at < 1800000) return Promise.resolve(AMB.coords.q);
-  return new Promise(resolve => navigator.geolocation.getCurrentPosition(p => {
-    AMB.coords = { at: Date.now(), q: `${p.coords.latitude.toFixed(2)},${p.coords.longitude.toFixed(2)}` };
-    resolve(AMB.coords.q);
-  }, () => resolve(''), { timeout: 8000, maximumAge: 1800000 }));
-}
 function ambientVoice(state, level) { if (AMB.face && AMB.calling) { AMB.face.set(state); AMB.face.level(level); } }
 
 function _ambClock() {
@@ -163,8 +153,9 @@ function _ambClock() {
 
 async function _ambLoad() {
   try {
-    const q = new URLSearchParams({ place: await _ambWhere(), units: AMB.s.units || 'metric' });
+    const q = new URLSearchParams({ place: await ambientWhere(AMB.s), units: AMB.s.units || 'metric' });
     AMB.data = await apiFetch(`/api/ambient?${q}`);
+    AMB.s = await ambientRemember(AMB.s, AMB.data.weather);   // a fresh position, kept as this screen's (ambient-where.js)
   } catch (e) { AMB.data = { error: e.message }; }
   _ambDraw();
 }
@@ -175,11 +166,11 @@ const _ambDay = iso => new Date(`${iso}T12:00:00`).toLocaleDateString([], { week
 function _ambDraw() {
   const d = AMB.data || {}, w = d.weather, wEl = document.getElementById('amb-weather');
   if (!wEl) return;
-  wEl.innerHTML = !w ? `<div class="amb-muted">No location: <a href="#" onclick="ambientArrange();return false">name a town</a>, or allow this device's location.</div>`
+  wEl.innerHTML = !w ? ambientWhereChoices()
     : w.error ? `<div class="amb-muted">Weather: ${escHtml(w.error)}</div>`
       : `<div class="amb-now"><span class="amb-icon">${w.now.icon}</span><span class="amb-temp">${Math.round(w.now.temp)}${w.unit}</span>
           <span class="amb-what">${escHtml(w.now.text)}<br><small>feels ${Math.round(w.now.feels)}° · ${Math.round(w.now.windSpeed)} ${w.wind}</small></span></div>
-        <div class="amb-place">${w.here ? '◎ ' : ''}${escHtml(w.place)}</div>
+        <div class="amb-place" title="${escHtml(d.where?.said || '')}">${w.here ? '◎ ' : ''}${escHtml(w.place)}</div>
         <div class="amb-days">${w.days.slice(1, 6).map(x => `<div class="amb-day"><b>${_ambDay(x.date)}</b><span>${x.icon}</span>
           <span>${Math.round(x.max)}° <small>${Math.round(x.min)}°</small></span>${x.rain ? `<small>${x.rain}%</small>` : ''}</div>`).join('')}</div>`;
   const cal = d.calendar || {};
@@ -222,7 +213,7 @@ function ambientArrange() {
 async function ambientArrangeSave(btn) {
   const next = ambientFormRead(btn.closest('.amb-arrange-card'), AMB.s);
   btn.disabled = true;
-  try { await screenSave({ ambient: next }); AMB.s = next; AMB.coords = null; btn.closest('.amb-arrange').remove(); _ambLayout(); _ambClock(); _ambLoad(); if (typeof wakeWordApply === 'function') wakeWordApply(); }
+  try { await screenSave({ ambient: next }); AMB.s = next; AMB_WHERE.coords = null; btn.closest('.amb-arrange').remove(); _ambLayout(); _ambClock(); _ambLoad(); if (typeof wakeWordApply === 'function') wakeWordApply(); }
   catch (e) { btn.disabled = false; btn.textContent = `Not saved: ${e.message}`; }
 }
 

@@ -35,18 +35,24 @@ function notices(p) {
   return out.slice(0, 12);
 }
 
-/** The day for one person: the weather at `place`, today's plan from their calendar, their notices. */
-async function today(p, { place = '', units = 'metric' } = {}) {
+/**
+ * The day for one person: the weather where the screen is (where.js: the place asked for, the screen's place, its own
+ * device's position, the hive's), today's plan from their calendar, their notices. `where` says which place was used.
+ */
+async function today(p, { place = '', units = 'metric', screen = null } = {}) {
+  const at = require('./where').resolve({ place, screen, userId: p?.id || null });
   const [w, cal] = await Promise.all([
-    weather.forecast(String(place || ''), units === 'imperial' ? 'imperial' : 'metric').catch(e => ({ error: e.message })),
+    weather.forecast(at.place, units === 'imperial' ? 'imperial' : 'metric').catch(e => ({ error: e.message })),
     calendar.today(p).catch(e => ({ events: [], errors: [e.message] })),
   ]);
-  return { weather: w, calendar: cal, notices: notices(p), at: new Date().toISOString() };
+  return { weather: w, where: { from: at.from, ...(at.from ? { said: require('./where').said(at.from) } : {}) },
+    calendar: cal, notices: notices(p), at: new Date().toISOString() };
 }
 
 async function view(req) {
   const q = req.query || {};
-  return today(person(req), { place: q.place, units: q.units });
+  const screen = req.auth?.session?.screen || req.auth?.session?.deviceId || null;
+  return today(person(req), { place: q.place, units: q.units, screen });
 }
 
 function mount(app) {

@@ -41,9 +41,9 @@ const SCHEMA = {
       // own switch beside the chats, never proposable: an agent keeping a microphone open is not a look to suggest.
       micAlways: { type: 'boolean', default: false, propose: false, hint: 'Let the microphone stay open with the app in the background: the wake word keeps listening and a call keeps going. Off: it opens only for a call or a recording, and closes when the page is hidden.' },
     } },
-  ambient:          { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the ambient screen (public/js/ambient.js): where it is for the weather, its quick buttons, whether it listens for its name — `buttons` is a list of {label, say} (what the button says to the agent), `show` which parts are drawn (clock, weather, plan, notices, buttons, apps: false hides one)',
+  ambient:          { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the ambient screen (public/js/ambient.js): where it is for the weather, its quick buttons, whether it listens for its name — `buttons` is a list of {label, say} (what the button says to the agent), `show` which parts are drawn (clock, weather, plan, notices, buttons, apps: false hides one), `here` the device\'s own position the page last found ({lat, lon, name, at}; ambient-where.js), used when no place is named',
     keys: {
-      place:  { type: 'string', default: '', hint: 'Where this screen is, for the weather: a town, or "lat,lon". Empty: no weather.' },
+      place:  { type: 'string', default: '', hint: 'Where this screen is, for the weather: a town, or "lat,lon". Empty: this device\'s own location (with auto), else no weather.' },
       units:  { type: 'string', default: 'metric', hint: 'metric (°C, km/h) or imperial (°F, mph).' },
       listen: { type: 'boolean', default: true, hint: 'While the ambient screen rests, listen for the wake word (experiments.wakeWord); a call or a recording takes the microphone when it needs it.' },
       clock24: { type: 'boolean', default: true, hint: 'A 24-hour clock.' },
