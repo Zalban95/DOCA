@@ -63,6 +63,10 @@ rfb.addEventListener('credentialsrequired', () => { const password = prompt('Its
 </script></body></html>`;
 }
 
+/** Consoles open through the hub, per VM (`hypervisor:name`): a stop or a power cut would close them (use.js). */
+const _open = new Map();
+const consoles = key => _open.get(key) || 0;
+
 /** Pipe an authorised upgrade to the VM's VNC port: binary WebSocket messages one way, TCP bytes the other. */
 async function upgrade(req, socket, head) {
   const m = /^\/ws\/vm\/([\w-]+)\/([^/?]+)/.exec(req.url);
@@ -72,8 +76,13 @@ async function upgrade(req, socket, head) {
   const { WebSocketServer } = require('ws');
   const wss = new WebSocketServer({ noServer: true, handleProtocols: p => (p.has('binary') ? 'binary' : [...p][0] || false) });
   wss.handleUpgrade(req, socket, head, ws => {
-    const tcp = net.connect(at.port, at.host);
-    const close = () => { try { ws.close(); } catch { /* closed */ } tcp.destroy(); };
+    const tcp = net.connect(at.port, at.host), key = `${vm.hypervisor}:${vm.name}`;
+    let counted = true;
+    _open.set(key, consoles(key) + 1);
+    const close = () => {
+      if (counted) { counted = false; const n = consoles(key) - 1; if (n > 0) _open.set(key, n); else _open.delete(key); }
+      try { ws.close(); } catch { /* closed */ } tcp.destroy();
+    };
     tcp.on('data', d => { if (ws.readyState === 1) ws.send(d); });
     tcp.on('error', close); tcp.on('close', close);
     ws.on('message', d => tcp.write(Buffer.isBuffer(d) ? d : Buffer.from(d)));
@@ -91,4 +100,4 @@ function mount(app) {
   });
 }
 
-module.exports = { mount, upgrade, where, ownAddress, pageFor };
+module.exports = { mount, upgrade, where, ownAddress, pageFor, consoles };

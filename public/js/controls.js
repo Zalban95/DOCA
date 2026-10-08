@@ -4,7 +4,8 @@
    installed, beside OpenClaw's setup scripts
    ═══════════════════════════════════════════════════════ */
 
-async function action(act) {
+async function action(act, asked) {
+  if (!asked && machineAskFirst('stack', 'stack', act, 'the stack', () => action(act, true), act === 'restart' ? 'Every container in it stops and starts again.' : 'Every container in it stops.')) return;
   const st = document.getElementById('action-status');
   setStatus(st, `Running: ${act}…`, 'info');
   const btns = document.querySelectorAll('#stack-card .btn');
@@ -25,11 +26,8 @@ async function action(act) {
  *  Streamed rather than awaited like action() — pulling images is slow enough
  *  that a spinner with no output looks like a hang. */
 function stackUpdate() {
-  appConfirm(
-    'Update the stack? This pulls the newest images and recreates the containers, ' +
-    'so services will restart. Running work may be interrupted.',
-    _stackRunUpdate,
-  );
+  machineAsk('stack', 'stack', 'update', 'the stack', _stackRunUpdate,
+    'This pulls the newest images and recreates the containers, so services will restart. Running work may be interrupted.');
 }
 
 async function _stackRunUpdate() {
@@ -131,7 +129,8 @@ async function controlsRefreshContainers() {
   }
 }
 
-async function controlsContainerAction(id, act) {
+async function controlsContainerAction(id, act, asked) {
+  if (!asked && machineAskFirst('container', id, act, '', () => controlsContainerAction(id, act, true))) return;
   const st = document.getElementById('controls-container-status');
   if (st) setStatus(st, `${act} ${id.slice(0, 8)}…`, 'info');
   try {

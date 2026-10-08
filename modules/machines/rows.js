@@ -25,7 +25,7 @@ function containerRow(c) {
   const point = state === 'running' ? 'up' : state === 'paused' ? 'paused'
     : state === 'restarting' || state === 'dead' || (state === 'exited' && code && code !== '0' && code !== '137' && code !== '143') ? 'error' : 'down';
   return { kind: 'container', id: c.ID || c.Id || c.Names, name: String(c.Names || c.Name || '').replace(/^\//, '').split(',')[0],
-    state, point, detail: [c.Image, c.Status].filter(Boolean).join(' · '), tab: 'docker',
+    state, point, detail: [c.Image, c.Status].filter(Boolean).join(' · '), tab: 'docker', project: require('./use').projectOf(c),
     actions: state === 'running' ? ['stop', 'restart'] : ['start'], live: false };
 }
 
@@ -68,12 +68,38 @@ async function read() {
     ...vms.vms.map(vmRow),
     ...vnc.targets.map(vncRow),
   ];
+  // Who started each (origin.js): "started by …" or "started outside DOCA"; a stopped one, who stopped it.
+  const origin = require('./origin');
+  for (const r of rows) {
+    const c = r.kind === 'computer' ? computers.list.find(x => x.id === r.id) : null;
+    r.origin = r.kind === 'vnc' ? null : origin.of(r.kind, r.kind === 'container' ? r.name : r.id,
+      { up: r.point === 'up' || r.point === 'paused', name: r.name, project: r.project, fallback: c && origin.computerFallback(c) });
+  }
   const count = kind => {
     const of = rows.filter(r => r.kind === kind);
     return { total: of.length, running: of.filter(r => r.point === 'up').length, stopped: of.filter(r => r.point === 'down').length };
   };
-  return { at: Date.now(), rows, counts: { container: count('container'), computer: count('computer'), vm: count('vm'), vnc: count('vnc') },
+  return { at: Date.now(), rows, origins: others(rows), counts: { container: count('container'), computer: count('computer'), vm: count('vm'), vnc: count('vnc') },
     errors: { container: containers.error || null, computer: computers.error || null } };
+}
+
+/** The same line for what is not a row but has a tab of its own: inference services, llama.cpp servers, MCP servers. */
+function others(rows) {
+  const origin = require('./origin'), out = {};
+  for (const s of require('../services').INFERENCE_SERVICES) {
+    const r = rows.find(x => x.kind === 'container' && x.name === `doca-${s.id}`);
+    const o = origin.of('service', s.id, { up: r?.point === 'up' });
+    if (o) out[`service:${s.id}`] = o;
+  }
+  try {
+    const running = new Set(require('../models-llamacpp').getRunningInstances().map(i => i.id));
+    for (const i of require('../models-llamacpp').loadInstances()) { const o = origin.of('llamacpp', i.id, { up: running.has(i.id), fallback: 'started by DOCA' }); if (o) out[`llamacpp:${i.id}`] = o; }
+  } catch { /* none */ }
+  try {
+    // Only DOCA connects an MCP server, so one with no line was connected by DOCA itself (at start, or a device's offer).
+    for (const m of require('../mcp/registry').list()) { const o = origin.of('mcp', m.id, { up: m.state === 'running', fallback: 'started by DOCA' }); if (o) out[`mcp:${m.id}`] = o; }
+  } catch { /* none */ }
+  return out;
 }
 
 /** Every machine as a row, at most TTL_MS old. `fresh` reads again (after an action changed one). */
@@ -84,4 +110,7 @@ function rows({ fresh = false } = {}) {
   return _pending;
 }
 
-module.exports = { rows, containerRow, computerRow, vmRow, vncRow, TTL_MS, _reset: () => { _cache = null; } };
+/** The rows last read, without reading (acts.js names a container from them); null before the first read. */
+const cached = () => _cache;
+
+module.exports = { rows, cached, containerRow, computerRow, vmRow, vncRow, TTL_MS, _reset: () => { _cache = null; } };

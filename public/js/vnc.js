@@ -105,9 +105,9 @@ async function vncSave() {
 
 function vncRemove(id) {
   const t = VNC.data?.targets.find(x => x.id === id);
-  appConfirm(`Remove "${t?.name || id}"? Its kept password goes with it.`, async () => {
+  machineAsk('vnc', id, 'remove', `"${t?.name || id}"`, async () => {
     try { await apiFetch(`/api/machines/vnc/${encodeURIComponent(id)}`, { method: 'DELETE' }); vncLoad(); } catch (e) { appAlert(e.message); }
-  });
+  }, 'Its kept password goes with it.');
 }
 
 /** Test one now: a fresh look, signing in with the kept password. */

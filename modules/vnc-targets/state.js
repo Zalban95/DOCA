@@ -42,6 +42,7 @@ function opened(id, drive) {
 
 const connected = id => !!_socks.get(id);
 const driving = id => (_socks.get(id)?.driving || 0) > 0;
+const sockets = id => ({ watching: 0, driving: 0, ...(_socks.get(id) || {}) });   // who is on it now (machines/use.js)
 const handedBack = id => _handedBack.get(id) || null;
 const clearHandBack = id => _handedBack.delete(id);
 
@@ -51,4 +52,4 @@ async function stateOf(t) {
   return (await probe(t)) ? 'reachable' : 'unreachable';
 }
 
-module.exports = { probe, opened, connected, driving, handedBack, clearHandBack, stateOf, PROBE_MS, _reset: () => { _probes.clear(); _socks.clear(); _handedBack.clear(); } };
+module.exports = { probe, opened, connected, driving, sockets, handedBack, clearHandBack, stateOf, PROBE_MS, _reset: () => { _probes.clear(); _socks.clear(); _handedBack.clear(); } };

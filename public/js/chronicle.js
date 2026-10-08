@@ -68,7 +68,7 @@ function chronFiltersDraw(fc) {
   const focused = document.activeElement?.id === 'chron-q';
   el.innerHTML = `<input class="input" id="chron-q" placeholder="Search titles, outcomes, agents, devices…" value="${escHtml(f.q)}" oninput="chronSearch(this.value)">
     ${sel('source', 'every source', (fc.sources || Object.keys(CHRON_SOURCES)).map(s => chronOpt(s, CHRON_SOURCES[s] || s, f.source)))}
-    ${chronLines(f.source) ? '' : sel('person', 'everyone', (fc.people || []).map(p => chronOpt(p.id, p.name, f.person)))}
+    ${chronLines(f.source) && f.source !== 'hub' ? '' : sel('person', 'everyone', (fc.people || []).map(p => chronOpt(p.id, p.name, f.person)))}
     ${chronLines(f.source) ? '' : sel('device', 'every device', (fc.devices || []).map(d => chronOpt(d.id, d.name, f.device)))}
     ${chronLines(f.source) ? '' : sel('agent', 'every agent', (fc.agents || []).map(a => chronOpt(a.id, a.label, f.agent)))}
     ${sel('state', chronLines(f.source) ? 'every level' : 'every outcome', (fc.states || []).map(s => chronOpt(s, s, f.state)))}

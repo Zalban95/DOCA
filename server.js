@@ -62,7 +62,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(require('./modules/auth/gate').gate);
 require('./modules/auth/routes').mount(app);
 app.use(express.static(path.join(__dirname, 'public')));
-
+app.use(require('./modules/machines/acts').middleware);   // who started, stopped or removed a machine, written down (machines/acts.js)
 const uploadMw = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 // ─── Routes: Controls ─────────────────────────────────────────────────────────

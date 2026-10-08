@@ -21,13 +21,18 @@ const day = (t = new Date()) => t.toISOString().slice(0, 10);
 /**
  * One act of the hub's own. `from`: the part of the hub (computers, mcp, schedules, scout, channels, log-keep, backup…);
  * `what`: what it did, a phrase; `why`: the reason it did it now; `person`: on whose behalf, when someone's.
+ * A machine's act (machines/acts.js) also says which machine (`machine` {kind, id, name}), the act (start, stop…),
+ * where it was asked from (`via`: a screen's or a device's name, or a conversation) and whether it worked (`ok`), so a
+ * machine row can say who started it (machines/origin.js).
  */
-function note({ from, what, why = '', person = null, level = 'info', sessionId = null } = {}) {
+function note({ from, what, why = '', person = null, level = 'info', sessionId = null, machine = null, act = null, via = null, ok = null } = {}) {
   try {
     const row = { at: new Date().toISOString(), from: String(from || 'hub').slice(0, 40), what: String(what || '').slice(0, 300),
       why: String(why || '').slice(0, 300), level: ['info', 'warn', 'error'].includes(level) ? level : 'info',
       ...(person?.id ? { person: { id: person.id, name: person.name || person.email || person.id } } : {}),
-      ...(sessionId ? { sessionId } : {}) };
+      ...(sessionId ? { sessionId } : {}),
+      ...(machine?.kind && machine.id ? { machine: { kind: String(machine.kind), id: String(machine.id), ...(machine.name ? { name: String(machine.name).slice(0, 120) } : {}) } } : {}),
+      ...(act ? { act: String(act).slice(0, 30) } : {}), ...(via ? { via: String(via).slice(0, 120) } : {}), ...(ok === null ? {} : { ok: !!ok }) };
     require('./store').appendJsonl(path.join(dir(), `${day()}.jsonl`), row);
     require('./live').changed('activity', row.from, row.what);
     return row;
