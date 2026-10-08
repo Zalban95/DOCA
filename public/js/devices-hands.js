@@ -40,6 +40,13 @@ const DEV_FAMILY_STOPS = { files: 'reading and changing its files', shell: 'runn
   screen: 'seeing its screen', input: 'typing and clicking on it', apps: 'opening and listing its apps', device: 'its notifications, clipboard and battery readings',
   elevated: 'anything that needs its administrator rights', mcp: 'the MCP servers it hosts' };
 
+/** Why a device's MCP server offers no tools, when families were taken back here (its card in MCP; '' otherwise). */
+function devRevokedNote(s) {
+  const r = s.revokedHere || [];
+  if (!r.length) return '';
+  return `No tools: ${escHtml(r.map(f => DEV_FAMILY_LABEL[f] || f).join(', '))} ${r.length === 1 ? 'was' : 'were'} revoked here for ${escHtml(s.originLabel)} — Field → API keys gives ${r.length === 1 ? 'it' : 'them'} back.`;
+}
+
 async function devControl(id, action, family, name = 'this device') {
   const go = async () => {
     try {
