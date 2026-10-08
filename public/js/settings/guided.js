@@ -30,7 +30,11 @@ async function guidedLoad() {
     <p class="guided-lead">Say what you want DOCA for. It looks at this machine, picks what fits, and sets up only that — every install waits for your click, every online service for your key.</p>
     <div class="guided-machine"><b>This machine:</b> ${escHtml(g.machine.summary)}<br>
       <span class="guided-muted" title="${escHtml(`Models it suggests come from a list tested by the DOCA project (version ${g.suggestions.version}, ${g.suggestions.updated}).`)}">${g.shapeHere === 'local' ? 'It can run its own models.' : 'It cannot run the agent\'s model well, so the model will come from elsewhere: an online provider, or one you run on another machine.'}</span>
-      ${g.have?.chat ? `<br><span style="color:var(--green)">✓ DOCA has a model: ${escHtml(g.have.chat.model)} on ${escHtml(g.have.chat.provider)}, and it answers.</span>` : ''}</div>
+      ${g.have?.chat ? `<br><span style="color:var(--green)">✓ DOCA has a model: ${escHtml(g.have.chat.model)} on ${escHtml(g.have.chat.provider)}, and it answers.</span>` : ''}
+      <br><span class="guided-muted">The suggested models were checked on <b>${escHtml(g.suggestions.checked || g.suggestions.updated || '—')}</b>${g.suggestions.local ? ` (${g.suggestions.local} added here from the model scout)` : ''}.</span>
+      <button class="btn btn-xs" onclick="guidedCheckModels(this)" title="Ask the model scout to look for newer models now">Check for newer models</button>
+      <span class="status-line" id="guided-models-status"></span>
+      ${g.suggestions.local ? '<div id="guided-accepted"></div>' : ''}</div>
     <div class="guided-q"><div class="guided-q-title">1. What do you want DOCA for?</div>
       ${g.uses.map(u => box('guided-use', u.id, u.label, uses.has(u.id))).join('')}
       <textarea id="guided-free" class="input guided-free" rows="2" placeholder="Anything else, in your own words (optional)">${escHtml(a.free || '')}</textarea></div>
@@ -45,6 +49,7 @@ async function guidedLoad() {
     </div>
     ${g.mode === 'advanced' ? '<p class="guided-muted">This hub was set up by hand (advanced). Nothing here changes that: it only adds what you choose.</p>' : ''}
   </div><div id="guided-plan"></div>`;
+  if (g.suggestions.local) guidedAcceptedDraw();
   // Always drawn (a preview writes nothing): "a model you already run" sits in the plan, and was found only by pressing
   // "Only show what it would do" (self-test round two, C4).
   guidedPreview();
@@ -77,6 +82,32 @@ async function guidedApply(btn) {
     else setStatus(st, '✓ Kept your answers. Below: what waits for your click or your key.', 'ok', { clear: 8000 });
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
   finally { if (btn) btn.disabled = false; }
+}
+
+/** Newer models: the model scout looks now (its experiment on); otherwise the answer says how. Nothing changes until accepted. */
+async function guidedCheckModels(btn) {
+  const st = document.getElementById('guided-models-status');
+  if (btn) btn.disabled = true;
+  try {
+    const r = await apiFetch('/api/guided/suggestions/check', { method: 'POST', body: {} });
+    setStatus(st, r.started ? r.said : r.how, r.started ? 'ok' : 'info', { clear: 0 });
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+  finally { if (btn) btn.disabled = false; }
+}
+
+/** The models a person accepted here from the model scout, each with a way back (docs/design/model-suggestions.md). */
+async function guidedAcceptedDraw() {
+  const box = document.getElementById('guided-accepted');
+  if (!box) return;
+  let v;
+  try { v = await apiFetch('/api/guided/suggestions'); } catch { return; }
+  box.innerHTML = (v.accepted || []).map(e => `<div class="guided-muted">Added here: <b>${escHtml(e.label)}</b> for ${escHtml(e.role)}${e.from ? ` (scout ${escHtml(e.from)})` : ''}
+    <button class="btn btn-xs" onclick="guidedForgetModel(${jsArg(e.role)}, ${jsArg(e.id)})">Forget</button></div>`).join('');
+}
+
+async function guidedForgetModel(role, id) {
+  try { await apiFetch('/api/guided/suggestions/forget', { method: 'POST', body: { role, id } }); } catch (e) { return appAlert(e.message); }
+  guidedLoad();
 }
 
 /** The same request as a conversation: the agent follows the guided-setup skill. */

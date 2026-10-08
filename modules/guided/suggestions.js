@@ -9,8 +9,14 @@
  * project, and has chosen the project's hub, asks for it — `refresh({ fetch })` checks both before anything leaves.
  * The transport is passed in: the project hub's route for it does not exist yet, so nothing here reaches the network
  * by itself, and a test drives it with a stub.
+ *
+ * Over whichever list is in use lies this install's own overlay (overlay.js): entries a person accepted from the model
+ * scout. And every list is read the same way (`expand`): an entry's `alsoFor` roles become entries of their own, and a
+ * field an older list lacks reads as its default (rank 0, no sources), so a version-1 list still loads.
+ * docs/design/model-suggestions.md says where the entries come from and who decides.
  */
 const store = require('../store');
+const overlay = require('./overlay');
 
 const DOC = 'guided/suggestions';
 const SHIPPED = require('./suggested-models.json');
@@ -23,16 +29,32 @@ function valid(doc) {
     && m.needs && Number.isFinite(m.needs.vramGB) && Number.isFinite(m.needs.ramGB));
 }
 
-/** The newest list this hive has: a received one when it is newer than the shipped one. */
-function load() {
-  const got = store.readJson(DOC, null);
-  if (valid(got) && got.version > SHIPPED.version) return { ...SHIPPED, ...got, hosted: { ...SHIPPED.hosted, ...got.hosted }, keyPages: { ...SHIPPED.keyPages, ...got.keyPages } };
-  return SHIPPED;
+/** One entry per role: `alsoFor` read out, and the read-side defaults of fields older lists do not have. */
+function expand(models) {
+  return models.flatMap(m => [m, ...(Array.isArray(m.alsoFor) ? m.alsoFor : []).map(role => ({ ...m, role, alsoOf: m.role }))])
+    .map(({ alsoFor, ...m }) => ({ rank: 0, sources: [], ...m }));
 }
 
+/** The list in use before the overlay: a received one when it is newer than the shipped one. */
+function base() {
+  const got = store.readJson(DOC, null);
+  if (valid(got) && got.version > SHIPPED.version) return { ...SHIPPED, ...got, hosted: { ...SHIPPED.hosted, ...got.hosted }, keyPages: { ...SHIPPED.keyPages, ...got.keyPages }, received: true };
+  return { ...SHIPPED, received: false };
+}
+
+/** The list this hive picks from: the newest list, with what a person accepted here laid over it. */
+function load() {
+  const b = base(), local = expand(overlay.list().map(e => ({ ...e, local: true })));
+  const key = m => `${m.role}\u0000${m.id}`;
+  const mine = new Set(local.map(key));
+  const checked = [b.checked || b.updated, overlay.checked()].filter(Boolean).sort().pop() || null;
+  return { ...b, checked, models: [...expand(b.models).filter(m => !mine.has(key(m))), ...local], localCount: overlay.list().length };
+}
+
+/** What Set-up says about the list: which, from where, and the day it was last checked. */
 function about() {
   const d = load();
-  return { version: d.version, updated: d.updated, source: d.source, received: d !== SHIPPED };
+  return { version: d.version, updated: d.updated, checked: d.checked, source: d.source, received: d.received, local: d.localCount };
 }
 
 /**
@@ -52,4 +74,4 @@ async function refresh({ fetch } = {}) {
   return { ok: true, version: doc.version };
 }
 
-module.exports = { load, about, refresh, valid, SHIPPED };
+module.exports = { load, base, about, refresh, valid, expand, SHIPPED };

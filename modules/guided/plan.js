@@ -34,6 +34,8 @@ const DEVICES = {
 
 const ROUTES = ['local', 'providers'];
 
+const WHERE = { gpu: 'on the graphics card', gpus: 'split over the graphics cards', cpu: 'on the processor' };
+
 function clean(answers = {}) {
   const uses = (Array.isArray(answers.uses) ? answers.uses : []).filter(u => USES[u]);
   const devices = (Array.isArray(answers.devices) ? answers.devices : []).filter(d => DEVICES[d]);
@@ -75,7 +77,7 @@ function plan(answers, assessment, doc, { have = {} } = {}) {
   if (needs.has('docker') && !assessment.runtimes.docker) steps.push({ type: 'install', kind: 'tool', id: 'docker', label: 'Docker', why: 'runs the speech services' });
   for (const p of local) {
     steps.push({ type: 'install', kind: p.local.install.kind, id: p.local.install.id, role: p.role, label: p.local.label,
-      why: `${p.label} — fits here (${p.local.where === 'gpu' ? 'on the graphics card' : 'on the processor'})` });
+      why: `${p.label} — fits here (${WHERE[p.local.where] || 'on the processor'})` });
   }
   for (const p of picks.filter(x => !local.includes(x))) {
     steps.push({ type: 'key', role: p.role, label: p.label, providers: p.providers, note: p.providersNote,

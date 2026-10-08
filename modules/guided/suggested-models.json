@@ -1,8 +1,9 @@
 {
-  "version": 1,
-  "updated": "2026-10-07",
+  "version": 2,
+  "updated": "2026-10-08",
+  "checked": "2026-10-08",
   "source": "project-tested",
-  "about": "Open models the project suggests per role, with what each needs at the quantization it is served in (GB of GPU memory to run it, GB of RAM, GB of disk). Ollama's tags; speech runs as the panel's own services in Docker. A newer list arrives from the project's hub only when the owner shares with the project (sharing.js) and replaces this one when its version is higher. Figures are the model's size at that quantization plus room for its context; installs that measure better numbers report them back the same way.",
+  "about": "Open models the project suggests per role, with what each needs at the quantization it is served in, in GiB as the panel reads a machine: vramGB is the model file plus its vision projector, its context cache at context.at tokens and about 0.3 for the runtime; the picker adds 15% on top. rank orders them by quality (a higher rank is better; the same model at a lossless quantization has the same rank, and then the one on a single card wins). alsoFor lists the other roles the same model serves. Every entry names its sources and the day they were checked (docs/design/model-suggestions.md). Each installs through Ollama — a library tag, or hf.co/<repo>:<quant> for a GGUF on Hugging Face (its own file is under gguf, for llama.cpp); speech runs as the panel's own services in Docker. A newer list arrives from the project's hub only when the owner shares with the project (sharing.js); a person can also accept a model scout suggestion into this install's own overlay.",
   "roles": {
     "chat": { "label": "Talking and directing the work (the agent's own model)" },
     "coding": { "label": "Writing and fixing code" },
@@ -12,27 +13,112 @@
     "tts": { "label": "Speaking (text to speech)" }
   },
   "models": [
-    { "role": "chat", "id": "qwen3:4b", "label": "Qwen3 4B", "quant": "Q4_K_M", "released": "2025-04-29", "needs": { "vramGB": 3.5, "ramGB": 6, "diskGB": 2.6 }, "install": { "kind": "ollama-model", "id": "qwen3:4b" }, "runtime": "ollama" },
-    { "role": "chat", "id": "qwen3:8b", "label": "Qwen3 8B", "quant": "Q4_K_M", "released": "2025-04-29", "needs": { "vramGB": 6.5, "ramGB": 10, "diskGB": 5.2 }, "install": { "kind": "ollama-model", "id": "qwen3:8b" }, "runtime": "ollama" },
-    { "role": "chat", "id": "qwen3:14b", "label": "Qwen3 14B", "quant": "Q4_K_M", "released": "2025-04-29", "needs": { "vramGB": 11, "ramGB": 16, "diskGB": 9.3 }, "install": { "kind": "ollama-model", "id": "qwen3:14b" }, "runtime": "ollama" },
-    { "role": "chat", "id": "qwen3:30b", "label": "Qwen3 30B (A3B)", "quant": "Q4_K_M", "released": "2025-04-29", "needs": { "vramGB": 20, "ramGB": 24, "diskGB": 19 }, "install": { "kind": "ollama-model", "id": "qwen3:30b" }, "runtime": "ollama" },
-    { "role": "chat", "id": "gpt-oss:20b", "label": "gpt-oss 20B", "quant": "MXFP4", "released": "2025-08-05", "needs": { "vramGB": 14, "ramGB": 16, "diskGB": 14 }, "install": { "kind": "ollama-model", "id": "gpt-oss:20b" }, "runtime": "ollama" },
-    { "role": "chat", "id": "gpt-oss:120b", "label": "gpt-oss 120B", "quant": "MXFP4", "released": "2025-08-05", "needs": { "vramGB": 66, "ramGB": 80, "diskGB": 65 }, "install": { "kind": "ollama-model", "id": "gpt-oss:120b" }, "runtime": "ollama" },
+    { "role": "chat", "alsoFor": ["coding", "vision"], "id": "qwen3.8-27b-q8", "label": "Qwen3.8 27B (Q8_0)", "quant": "Q8_0", "released": "2026-08-05", "rank": 92,
+      "needs": { "vramGB": 29.2, "ramGB": 32, "diskGB": 27.9 }, "context": { "native": 262144, "at": 16384 },
+      "install": { "kind": "ollama-model", "id": "qwen3.8:27b-q8_0" }, "runtime": "ollama", "licence": "apache-2.0",
+      "toolCalling": "The strongest open model of its size for agent work in October 2026: Terminal Bench 2.1 73.0, SWE-bench Pro 61.7, CoWorkBench 70.7 (model card).",
+      "sources": [
+        { "url": "https://huggingface.co/Qwen/Qwen3.8-27B", "checked": "2026-10-08" },
+        { "url": "https://ollama.com/library/qwen3.8/tags", "checked": "2026-10-08" }
+      ] },
+    { "role": "chat", "alsoFor": ["coding", "vision"], "id": "qwen3.8:27b", "label": "Qwen3.8 27B", "quant": "Q4_K_M", "released": "2026-08-05", "rank": 90,
+      "needs": { "vramGB": 18.1, "ramGB": 24, "diskGB": 16.8 }, "context": { "native": 262144, "at": 16384 },
+      "install": { "kind": "ollama-model", "id": "qwen3.8:27b" }, "runtime": "ollama", "licence": "apache-2.0",
+      "toolCalling": "Qwen3.8 27B: Terminal Bench 2.1 73.0, SWE-bench Pro 61.7, CoWorkBench 70.7, ahead of Qwen3.6 27B on every agent benchmark on its card; Ollama marks the tag with tools.",
+      "sources": [
+        { "url": "https://huggingface.co/Qwen/Qwen3.8-27B", "checked": "2026-10-08" },
+        { "url": "https://ollama.com/library/qwen3.8/tags", "checked": "2026-10-08" },
+        { "url": "https://www.promptquorum.com/local-llms", "checked": "2026-10-08" }
+      ] },
+    { "role": "chat", "alsoFor": ["coding", "vision"], "id": "qwen3.8-27b-gsq-rco-iq3s", "label": "Qwen3.8 27B GSQ-RCO (IQ3_S)", "quant": "IQ3_S (GSQ-RCO, 3.5 bits)", "released": "2026-08-28", "rank": 90,
+      "needs": { "vramGB": 13.1, "ramGB": 16, "diskGB": 11.8 }, "context": { "native": 262144, "at": 16384 },
+      "install": { "kind": "ollama-model", "id": "hf.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF:IQ3_S" }, "runtime": "ollama",
+      "gguf": { "repo": "ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF", "file": "Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf", "mmproj": "mmproj-Qwen3.8-27B-BF16.gguf" }, "licence": "apache-2.0",
+      "toolCalling": "Qwen3.8 27B quantized by IST Austria's DASLab with GSQ and RCO: task-lossless against BF16 (AIME25 100.0 and LiveCodeBench v6 85.71 as BF16, GPQA-Diamond within 0.51) at 11.8 GB, so it runs on one 16 GB card. Its Hugging Face registry entry carries no chat template of its own, so Ollama uses its built-in Qwen renderer and tool calls work (checked 2026-10-08 on the same architecture).",
+      "sources": [
+        { "url": "https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF", "checked": "2026-10-08" },
+        { "url": "https://arxiv.org/abs/2604.18556", "checked": "2026-10-08" },
+        { "url": "https://arxiv.org/abs/2605.00649", "checked": "2026-10-08" },
+        { "url": "https://contextstudios.ai/blog/16-gb-is-enough-the-qwen3-8-27b-gguf-measurement-table-11-8-gb-40-tok-s", "checked": "2026-10-08" }
+      ] },
+    { "role": "chat", "alsoFor": ["coding"], "id": "qwen3.6:35b-a3b", "label": "Qwen3.6 35B-A3B (mixture of experts)", "quant": "Q4_K_M", "released": "2026-04-15", "rank": 72, "cpuOk": true,
+      "needs": { "vramGB": 23.2, "ramGB": 24, "diskGB": 22.4 }, "context": { "native": 262144, "at": 16384 },
+      "install": { "kind": "ollama-model", "id": "qwen3.6:35b-a3b" }, "runtime": "ollama", "licence": "apache-2.0",
+      "toolCalling": "SWE-bench Verified 73.4, TAU3-Bench 67.2, MCPMark 37.0 (model card). Only 3B parameters work per token, so it answers at a usable speed on a processor with 32 GB of memory — the one chat model suggested without a graphics card.",
+      "sources": [
+        { "url": "https://huggingface.co/Qwen/Qwen3.6-35B-A3B", "checked": "2026-10-08" },
+        { "url": "https://ollama.com/library/qwen3.6/tags", "checked": "2026-10-08" },
+        { "url": "https://insiderllm.com/guides/function-calling-local-llms/", "checked": "2026-10-08" }
+      ] },
+    { "role": "chat", "alsoFor": ["coding", "vision"], "id": "qwen3.8-27b-gsq-rco-iq2xs", "label": "Qwen3.8 27B GSQ-RCO (IQ2_XS)", "quant": "IQ2_XS (GSQ-RCO, 2.5 bits)", "released": "2026-08-28", "rank": 70,
+      "needs": { "vramGB": 10.0, "ramGB": 16, "diskGB": 8.7 }, "context": { "native": 262144, "at": 16384 },
+      "install": { "kind": "ollama-model", "id": "hf.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF:IQ2_XS" }, "runtime": "ollama",
+      "gguf": { "repo": "ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF", "file": "Qwen3.8-27B-GSQ-RCO-IQ2_XS.gguf", "mmproj": "mmproj-Qwen3.8-27B-BF16.gguf" }, "licence": "apache-2.0",
+      "toolCalling": "The 27B at 2.5 bits fits a 12 GB card: GPQA-Diamond 84.85, LiveCodeBench v6 76.57, above Gemma 4 12B (78.8, 72.0). Tool calls are not yet measured at this size, so Gemma 4 12B stays beside it as the alternative.",
+      "sources": [
+        { "url": "https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF", "checked": "2026-10-08" },
+        { "url": "https://huggingface.co/google/gemma-4-31B-it", "checked": "2026-10-08" }
+      ] },
+    { "role": "chat", "alsoFor": ["coding", "vision"], "id": "gemma4:12b", "label": "Gemma 4 12B", "quant": "Q4_K_M", "released": "2026-05-23", "rank": 60,
+      "needs": { "vramGB": 8.4, "ramGB": 16, "diskGB": 7.5 }, "context": { "native": 262144, "at": 16384 },
+      "install": { "kind": "ollama-model", "id": "gemma4:12b" }, "runtime": "ollama", "licence": "apache-2.0",
+      "toolCalling": "Tau2 69.0, LiveCodeBench v6 72.0, GPQA-Diamond 78.8 (Gemma 4 card); holds up better than Qwen3.5 9B on chained tool calls.",
+      "sources": [
+        { "url": "https://huggingface.co/google/gemma-4-31B-it", "checked": "2026-10-08" },
+        { "url": "https://ollama.com/library/gemma4/tags", "checked": "2026-10-08" },
+        { "url": "https://www.betterclaw.io/blog/gemma-4-12b-vs-qwen-3-5-9b", "checked": "2026-10-08" }
+      ] },
+    { "role": "chat", "alsoFor": ["coding", "vision"], "id": "qwen3.5-9b-iq4xs", "label": "Qwen3.5 9B (IQ4_XS)", "quant": "IQ4_XS", "released": "2026-02-27", "rank": 55,
+      "needs": { "vramGB": 6.5, "ramGB": 12, "diskGB": 5.7 }, "context": { "native": 262144, "at": 16384 },
+      "install": { "kind": "ollama-model", "id": "hf.co/unsloth/Qwen3.5-9B-GGUF:IQ4_XS" }, "runtime": "ollama",
+      "gguf": { "repo": "unsloth/Qwen3.5-9B-GGUF", "file": "Qwen3.5-9B-IQ4_XS.gguf" }, "licence": "apache-2.0",
+      "toolCalling": "BFCL-V4 66.1 (model card), the usual pick for tool calls on an 8 GB card; at IQ4_XS it leaves room for its context on one.",
+      "sources": [
+        { "url": "https://huggingface.co/Qwen/Qwen3.5-9B", "checked": "2026-10-08" },
+        { "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF", "checked": "2026-10-08" },
+        { "url": "https://insiderllm.com/guides/function-calling-local-llms/", "checked": "2026-10-08" }
+      ] },
+    { "role": "chat", "id": "gpt-oss:20b", "label": "gpt-oss 20B", "quant": "MXFP4", "released": "2025-08-05", "rank": 50,
+      "needs": { "vramGB": 13.8, "ramGB": 16, "diskGB": 13 }, "context": { "native": 131072, "at": 16384 },
+      "install": { "kind": "ollama-model", "id": "gpt-oss:20b" }, "runtime": "ollama", "licence": "apache-2.0",
+      "toolCalling": "Native tool calls; an alternative from another family, below the Qwen3.8 27B builds that fit the same cards.",
+      "sources": [ { "url": "https://huggingface.co/openai/gpt-oss-20b", "checked": "2026-10-08" } ] },
+    { "role": "chat", "alsoFor": ["coding", "vision"], "id": "qwen3.5:4b", "label": "Qwen3.5 4B", "quant": "Q4_K_M", "released": "2026-02-27", "rank": 40,
+      "needs": { "vramGB": 3.8, "ramGB": 8, "diskGB": 3.2 }, "context": { "native": 262144, "at": 16384 },
+      "install": { "kind": "ollama-model", "id": "qwen3.5:4b" }, "runtime": "ollama", "licence": "apache-2.0",
+      "toolCalling": "BFCL-V4 50.3 (model card): enough for simple tool calls on a small card.",
+      "sources": [
+        { "url": "https://huggingface.co/Qwen/Qwen3.5-4B", "checked": "2026-10-08" },
+        { "url": "https://ollama.com/library/qwen3.5/tags", "checked": "2026-10-08" }
+      ] },
 
-    { "role": "coding", "id": "qwen2.5-coder:7b", "label": "Qwen2.5 Coder 7B", "quant": "Q4_K_M", "released": "2024-11-12", "needs": { "vramGB": 6, "ramGB": 10, "diskGB": 4.7 }, "install": { "kind": "ollama-model", "id": "qwen2.5-coder:7b" }, "runtime": "ollama" },
-    { "role": "coding", "id": "qwen2.5-coder:14b", "label": "Qwen2.5 Coder 14B", "quant": "Q4_K_M", "released": "2024-11-12", "needs": { "vramGB": 11, "ramGB": 16, "diskGB": 9 }, "install": { "kind": "ollama-model", "id": "qwen2.5-coder:14b" }, "runtime": "ollama" },
-    { "role": "coding", "id": "qwen3-coder:30b", "label": "Qwen3 Coder 30B (A3B)", "quant": "Q4_K_M", "released": "2025-07-31", "needs": { "vramGB": 20, "ramGB": 24, "diskGB": 19 }, "install": { "kind": "ollama-model", "id": "qwen3-coder:30b" }, "runtime": "ollama" },
+    { "role": "embeddings", "id": "qwen3-embedding:0.6b", "label": "Qwen3 Embedding 0.6B", "quant": "Q8_0", "released": "2025-06-03", "rank": 60, "cpuOk": true,
+      "needs": { "vramGB": 1, "ramGB": 1.5, "diskGB": 0.6 }, "context": { "native": 32768, "at": 8192 },
+      "install": { "kind": "ollama-model", "id": "qwen3-embedding:0.6b" }, "runtime": "ollama", "licence": "apache-2.0",
+      "sources": [
+        { "url": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B", "checked": "2026-10-08" },
+        { "url": "https://ollama.com/library/qwen3-embedding/tags", "checked": "2026-10-08" }
+      ] },
+    { "role": "embeddings", "id": "embeddinggemma-2", "label": "EmbeddingGemma 2 (740M, text and images)", "quant": "Q8_0", "released": "2026-09-14", "rank": 55, "cpuOk": true,
+      "needs": { "vramGB": 1.6, "ramGB": 2, "diskGB": 1.3 }, "context": { "native": 262144, "at": 8192 },
+      "install": { "kind": "ollama-model", "id": "embeddinggemma-2" }, "runtime": "ollama", "licence": "apache-2.0",
+      "sources": [
+        { "url": "https://huggingface.co/google/embeddinggemma-2", "checked": "2026-10-08" },
+        { "url": "https://ollama.com/library/embeddinggemma-2/tags", "checked": "2026-10-08" }
+      ] },
 
-    { "role": "vision", "id": "qwen2.5vl:3b", "label": "Qwen2.5-VL 3B", "quant": "Q4_K_M", "released": "2025-05-20", "needs": { "vramGB": 4, "ramGB": 8, "diskGB": 3.2 }, "install": { "kind": "ollama-model", "id": "qwen2.5vl:3b" }, "runtime": "ollama" },
-    { "role": "vision", "id": "qwen2.5vl:7b", "label": "Qwen2.5-VL 7B", "quant": "Q4_K_M", "released": "2025-05-20", "needs": { "vramGB": 7, "ramGB": 12, "diskGB": 6 }, "install": { "kind": "ollama-model", "id": "qwen2.5vl:7b" }, "runtime": "ollama" },
-    { "role": "vision", "id": "gemma3:12b", "label": "Gemma 3 12B", "quant": "Q4_K_M", "released": "2025-03-12", "needs": { "vramGB": 10, "ramGB": 16, "diskGB": 8.1 }, "install": { "kind": "ollama-model", "id": "gemma3:12b" }, "runtime": "ollama" },
-    { "role": "vision", "id": "qwen2.5vl:32b", "label": "Qwen2.5-VL 32B", "quant": "Q4_K_M", "released": "2025-05-20", "needs": { "vramGB": 24, "ramGB": 32, "diskGB": 21 }, "install": { "kind": "ollama-model", "id": "qwen2.5vl:32b" }, "runtime": "ollama" },
-
-    { "role": "embeddings", "id": "nomic-embed-text", "label": "Nomic Embed Text", "quant": "F16", "released": "2024-02-14", "cpuOk": true, "needs": { "vramGB": 0.5, "ramGB": 1, "diskGB": 0.3 }, "install": { "kind": "ollama-model", "id": "nomic-embed-text" }, "runtime": "ollama" },
-    { "role": "embeddings", "id": "embeddinggemma", "label": "EmbeddingGemma 300M", "quant": "BF16", "released": "2025-09-04", "cpuOk": true, "needs": { "vramGB": 1, "ramGB": 2, "diskGB": 0.7 }, "install": { "kind": "ollama-model", "id": "embeddinggemma" }, "runtime": "ollama" },
-
-    { "role": "stt", "id": "whisper", "label": "Whisper (faster-whisper)", "quant": "service", "released": "2024-10-01", "cpuOk": true, "needs": { "vramGB": 2, "ramGB": 3, "diskGB": 6 }, "install": { "kind": "service", "id": "whisper" }, "runtime": "docker" },
-    { "role": "tts", "id": "kokoro", "label": "Kokoro", "quant": "service", "released": "2025-01-10", "cpuOk": true, "needs": { "vramGB": 2, "ramGB": 3, "diskGB": 5 }, "install": { "kind": "service", "id": "kokoro" }, "runtime": "docker" }
+    { "role": "stt", "id": "whisper", "label": "Whisper (faster-whisper)", "quant": "service", "released": "2024-10-01", "rank": 50, "cpuOk": true,
+      "needs": { "vramGB": 2, "ramGB": 3, "diskGB": 6 }, "install": { "kind": "service", "id": "whisper" }, "runtime": "docker", "licence": "mit",
+      "sources": [ { "url": "https://huggingface.co/openai/whisper-large-v3-turbo", "checked": "2026-10-08" } ] },
+    { "role": "tts", "id": "kokoro", "label": "Kokoro", "quant": "service", "released": "2025-01-10", "rank": 50, "cpuOk": true,
+      "needs": { "vramGB": 2, "ramGB": 3, "diskGB": 5 }, "install": { "kind": "service", "id": "kokoro" }, "runtime": "docker", "licence": "apache-2.0",
+      "sources": [ { "url": "https://huggingface.co/hexgrad/Kokoro-82M", "checked": "2026-10-08" } ] }
+  ],
+  "watching": [
+    { "role": "chat", "id": "ornith-ai/Ornith-1.5-9B-GGUF", "checked": "2026-10-08", "why": "Strong for its size (SWE-bench Verified 70.6, MCP-Atlas 54.2 against Qwen3.5 9B's 53.2 and 46.8), but its Hugging Face registry entry gives Ollama a chat template without tools, so DOCA's agent could not call tools through it. Through llama.cpp with its own template it would; DOCA installs through Ollama today.", "sources": ["https://huggingface.co/ornith-ai/Ornith-1.5-9B-GGUF"] },
+    { "role": "chat", "id": "ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF", "checked": "2026-10-08", "why": "Qwen3.8 Flash Next (125B, 6B active) at 2.5 to 3.5 bits, for machines with 64 GB or more: its files are split in two, which Ollama's Hugging Face pull does not take, and its licence is Qwen's community licence.", "sources": ["https://huggingface.co/ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF", "https://huggingface.co/Qwen/Qwen3.8-Flash-Next"] },
+    { "role": "stt", "id": "nvidia/parakeet-tdt-0.6b-v3", "checked": "2026-10-08", "why": "Faster than Whisper for European languages; needs a speech service row of its own before it can be suggested.", "sources": ["https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3"] },
+    { "role": "stt", "id": "Qwen/Qwen3-ASR-1.7B", "checked": "2026-10-08", "why": "52 languages, streaming; needs a speech service row of its own.", "sources": ["https://huggingface.co/Qwen/Qwen3-ASR-1.7B"] }
   ],
   "hosted": {
     "chat": ["deepseek", "openai", "anthropic", "google", "openrouter", "mistral", "groq", "xai", "together", "cerebras"],
