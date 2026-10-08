@@ -14,5 +14,11 @@
   });
   const awake = () => navigator.wakeLock?.request('screen').catch(() => {});
   awake();
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') awake(); });
+  // "Being looked at", as the panel says it (lib/presence.js): a face on a wall keeps the voice warm for a quick answer
+  // (modules/service-life holds the services DOCA started on while a page is open).
+  const beat = visible => fetch('/api/presence', { method: 'POST', keepalive: true, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ visible, page: 'face', solo: true }) }).catch(() => {});
+  setInterval(() => { if (document.visibilityState === 'visible') beat(true); }, 30000);
+  beat(document.visibilityState === 'visible');
+  document.addEventListener('visibilitychange', () => { beat(document.visibilityState === 'visible'); if (document.visibilityState === 'visible') awake(); });
 }());

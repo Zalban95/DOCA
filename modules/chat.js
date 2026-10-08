@@ -280,18 +280,21 @@ async function handleSynthesize(req, res) {
   const vs = mine.engine;                             // the hive's speech service, or the speech service it chose
 
   try {
+    // A voice DOCA stopped for being idle starts again; the page says so and asks once more (service-life/demand.js).
+    const up = vs.hosted ? { state: 'off' } : await require('./service-life').ensure(vs.ttsUrl, { wait: false, role: 'speech' });
+    if (up.state === 'starting') { res.setHeader('Retry-After', '3'); return res.status(503).json({ starting: true, notice: up.notice, error: up.notice }); }
     const host = require('./auth/rights').can(req.auth?.role, 'host');
     const chosen = await require('./tts-voices').resolve(voice || mine.voice, vs, { host });   // "Heart" → af_heart; unknown → the engine's own
     if (chosen.fellBack) res.setHeader('X-Doca-Voice-Fallback', `${voice || mine.voice} -> ${chosen.voice}`);
     if (vs.hosted) return sendHosted(res, vs, text, { voice: chosen.voice, speed: mine.speed, host });
     const sent = engines.body(vs, text, { voice: chosen.voice, speed: mine.speed });   // tags as words, or dropped
     if (!sent.input) return res.status(204).end();   // nothing but tags: nothing to say
-    const resp = await fetch(`${vs.ttsUrl}/v1/audio/speech`, {
+    const resp = await require('./service-life').use(vs.ttsUrl, () => fetch(`${vs.ttsUrl}/v1/audio/speech`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(sent),
       signal: AbortSignal.timeout(30000),
-    });
+    }));
     if (!resp.ok) return res.status(resp.status).json({ error: `TTS error ${resp.status}: ${(await resp.text()).slice(0, 300)}` });
     res.setHeader('Content-Type', resp.headers.get('content-type') || 'audio/mpeg');
     res.send(Buffer.from(await resp.arrayBuffer()));

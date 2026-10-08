@@ -320,6 +320,7 @@ async function handleHealth(req, res) {
 }
 
 function registerEndpoint(inst) {
+  require('./service-life/usage').started(`llamacpp:${inst.id}`);   // its idle clock starts (service-life/)
   try {
     require('./provider-keys').set(`llamacpp-${inst.id}`, {
       baseUrl: `http://${advertiseHost()}:${inst.port}/v1`,

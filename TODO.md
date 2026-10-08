@@ -884,6 +884,23 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   mission reads — `harness/mission-asks-held.js`) or **deny** (as before); beside the seconds in Approvals, not
   proposable (`test/mission-asks-hold.test.js`).
   **Left:** VeNCrypt/TLS servers are named, not spoken; Tight/ZRLE encodings for slow links.
+- [x] Services that stop when nothing uses them (asked 2026-10-08: "if the service has been started from something
+  else, the panel doesn't switch it off automatically if it doesn't use it, or if the panel goes off"; and "while the
+  panel is live, they can stay on, because we would like a quick response"). **Done (branch services-lifecycle,
+  `modules/service-life/`):** every request the hub sends to a service on this machine (speech, transcription, a model
+  call through `harness/inflight.js`) marks its last use, by port; Settings → System → Services has one switch, "Stop
+  services nothing has used for… minutes" (`services.idleStopMinutes`, 0 = off by default), and a sweep every 5 min
+  stops a service or llama.cpp server DOCA started (or a person adopted with "Let DOCA manage it", written down) once no
+  page of the hub is visible, no call is on, nothing is in flight and nothing `machines/use.js` reads needs it — the
+  idle clock starts when the last page closes. `services.stopWithDoca` (off) stops the ticked ones on SIGTERM/SIGINT,
+  never on a restart or a version switch (`.releases/pending`). "Start when needed" (on for what DOCA started before)
+  starts a stopped one on the request that needs it and says so ("Starting the voice (…), a few seconds…": the panel's
+  call and read-back retry on 503 `starting`, a device call hears a notice, a turn shows a `starting` warning). Each row
+  says "last used 12 min ago · idle for 12 min, stops at 30" / "kept on while the panel is open", with its own choices
+  under Advanced; every stop and start is a line in the activity log and the machines' log. `test/service-life.test.js`.
+  **Left:** a `systemctl restart` by hand is a SIGTERM like a stop (stops the ticked ones, then they start on demand);
+  on Windows a launcher's stop ends the process with no signal, so nothing is stopped there; the panel's own call waits
+  silently while the transcriber starts (no notice before its first answer).
 - [x] H10.10 The home in DOCA's own layout (asked 2026-10-06: "does Home Assistant let us use our layout, or do we build
   from scratch?"). Neither: Home Assistant stays the device layer (thousands of brands, its areas, scenes and
   automations), and DOCA draws its own **Home** page from HA's WebSocket API — `get_states`, `subscribe_events` for live

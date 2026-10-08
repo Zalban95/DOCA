@@ -108,7 +108,7 @@ module.exports = [
   { id: 'effort', name: 'Thinking effort', tools: ['effort'], settings: ['assistant.effort'], since: '2.217.0',
     use: 'Set how hard the model thinks in this conversation — "think harder" or "quick answers".',
     words: 'reasoning think harder quick' },
-  { id: 'thinking-modes', name: 'Thinking per mode, and 💭', page: 'settings/harness', settings: ['thinking'], since: '2.334.0',
+  { id: 'thinking-modes', name: 'Thinking per mode, and 💭', page: 'settings/harness', settings: ['thinking'], since: '2.335.0',
     use: 'Whether each kind of conversation thinks — chat, work chats, specialists, the Live and Deep calls, Ambient, device calls: auto, off or on at a level; 💭 beside Send or in a call changes it there.',
     routes: ['/api/harness/thinking'], words: 'reasoning thinking off no think toggle mode call watch ambient' },
   { id: 'budget', name: 'Limits that name themselves', page: 'harness',

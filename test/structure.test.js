@@ -29,7 +29,7 @@ const CEILING = 400;
 const OVER = {
   'public/index.html': 1558,  // + the split scripts' <script> tags; ES modules take them back out
   'public/css/components.css': 1154,
-  'public/js/chat.js': 427,
+  'public/js/chat.js': 424,
   'public/js/files.js':            648,
   'modules/harness/memory.js':     463,
   'modules/api-v1/router.js':      589,
@@ -37,7 +37,7 @@ const OVER = {
   'modules/agents/missions.js':    495,
   'modules/api-v1/prompts.js':     467,
   'public/js/markdown.js':         462,
-  'server.js': 338,
+  'server.js': 335,
 };
 
 function walk(dir) {

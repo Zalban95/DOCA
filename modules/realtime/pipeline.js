@@ -77,12 +77,18 @@ function connect({ silenceMs = 900, synth, transcribe, voice = null, language = 
   const em = new EventEmitter();
   const chat = require('../chat');
   // `language`: {language, usual} for the device's screen and person (call-language.js).
-  transcribe = transcribe || (buf => chat.transcribeHeard(buf, 'audio/wav', 'call.wav', { language: language.language || null, usual: language.usual || null }));
+  // A speech service DOCA stopped for being idle starts again, and the caller is told (service-life/demand.js).
+  const ready = (url, role, stage) => require('../service-life').ensure(url, { role, onStarting: text => em.emit('notice', { stage, text }) });
+  transcribe = transcribe || (async buf => {
+    await ready(chat.loadVoiceServices().sttUrl, 'stt', 'stt');
+    return chat.transcribeHeard(buf, 'audio/wav', 'call.wav', { language: language.language || null, usual: language.usual || null });
+  });
   synth = synth || (async text => {
     const engines = require('../tts-engines'), vs = voice?.engine || engines.hive();   // a tone tag becomes words for a voice that takes them, else goes
+    if (!vs.hosted) await ready(vs.ttsUrl, 'speech', 'tts');
     const name = voice?.voice ? (await require('../tts-voices').resolve(voice.voice, vs)).voice : undefined;   // "Ryan" → ryan
-    const r = await fetch(`${vs.ttsUrl}/v1/audio/speech`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(engines.body(vs, text, { format: 'pcm', voice: name, speed: voice?.speed })), signal: AbortSignal.timeout(30000) });
+    const r = await require('../service-life').use(vs.ttsUrl, () => fetch(`${vs.ttsUrl}/v1/audio/speech`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(engines.body(vs, text, { format: 'pcm', voice: name, speed: voice?.speed })), signal: AbortSignal.timeout(30000) }));
     if (!r.ok) throw new Error(`text-to-speech answered ${r.status}`);
     return Buffer.from(await r.arrayBuffer());
   });

@@ -25,6 +25,7 @@ async function servicesLoadStatus() {
   } catch { _servicesStatus = {}; _servicesImages = {}; }
   await machineOriginsLoad();   // who started each (lib/machine-origin.js)
   _updateServicesBadges();
+  servicesLifeLoad();          // last used, and when it stops by itself (services-life.js)
 }
 
 /* ── Rendering ──────────────────────────────────────── */
@@ -55,6 +56,7 @@ function _renderServicesGrid() {
                 onclick="svcToggleConfig('${svc.id}')">⚙</button>
       </div>
       <div style="font-size:10px;color:var(--muted);margin:2px 0 6px">${svc.description}</div>
+      <div class="m-life" id="life-line-service-${svc.id}"></div>
       <div class="services-controls" id="svc-config-${svc.id}" style="display:none">
         <label class="services-ctrl-label">GPU</label>
         <select class="input services-select" id="svc-gpu-${svc.id}" style="width:130px"
@@ -74,6 +76,7 @@ function _renderServicesGrid() {
         <button class="btn btn-sm btn-red"    id="svc-stop-${svc.id}"  onclick="serviceStop('${svc.id}')"  style="display:none">■ Stop</button>
         <button class="btn btn-sm btn-purple" id="svc-pull-${svc.id}"  onclick="servicePullImage('${svc.id}')" style="display:none">⬇ Pull image</button>
       </div>
+      <div id="life-adv-service-${svc.id}"></div>
       <pre class="install-out" id="svc-out-${svc.id}" style="display:none;max-height:160px;margin-top:6px"></pre>
       <div id="svc-api-note-${svc.id}" style="display:none;font-size:10px;color:var(--green);margin-top:4px">
         ✓ Registered in Tool APIs → <strong>${svc.id}</strong>

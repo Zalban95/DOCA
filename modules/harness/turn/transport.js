@@ -158,7 +158,7 @@ function unavailable(e) {
   return st >= 500 && /overload|high demand|busy|capacity|temporarily unavailable/i.test(String(e?.message || ''));
 }
 
-async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, meta = { kind: 'ask' }, onHop, onSkip, onRetry }) {
+async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, meta = { kind: 'ask' }, onHop, onSkip, onRetry, onStart }) {
   signal?.throwIfAborted();
   const candidates = rungsFor({ ep, model: body.model, p });
   for (const m of candidates.missing || []) {
@@ -200,6 +200,8 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
       p: { ...p, firstTokenTimeoutMs: rung.timeoutMs }, signal, onWaiting, ep: rung.last ? rung.ep : null,
     });
 
+    // A model server DOCA stopped for being idle (a llama.cpp server, vLLM) starts again first, said (service-life/).
+    await require('../../service-life').ensure(rung.ep.baseUrl, { role: 'model', onStarting: text => onStart?.({ text }) });
     // In the ledger of DOCA's own requests while it runs (harness/inflight.js), so a busy model server is attributable.
     const ended = require('../inflight').start({ ...meta, provider: rung.ep.id, url: rung.ep.baseUrl, model: rungBody.model });
     try {

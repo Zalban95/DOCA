@@ -268,9 +268,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id, person: client?.user }, body,
       onText: t => { const shown = tones ? tones.push(t) : t; text += shown; say({ type: 'text', text: shown, ...(tones ? { spoken: t } : {}) }); },
       onThinking: t => say({ type: 'thinking', text: t }),
-      // Silence is a state worth drawing. Without this the console shows the
-      // session line and then nothing at all, which reads as a broken panel
-      // rather than as a provider that has not started answering.
+      // Silence is a state worth drawing: without it the console shows the session line and then nothing,
+      // which reads as a broken panel rather than a provider that has not started answering.
       onWaiting: w => say({ type: 'waiting', step, provider: ep.label || ep.id, ...w }),
       onSkip: skipped => {
         contextSkips.set(`${skipped.provider}/${skipped.model}`, skipped.text);
@@ -279,6 +278,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       // Announced, never quiet (turn/fallback.hopReporter says why).
       onHop: hopReporter({ fallbacks, say, step }),
       onRetry: r => say({ type: 'warning', step, kind: 'rate-limit', text: r.text, waitMs: r.waitMs, attempt: r.attempt }),
+      onStart: s => say({ type: 'warning', step, kind: 'starting', text: s.text }),   // a stopped model server started (service-life/)
     }), { body: { ...base, ...require('./turn/effort').fields(effort.level, ep, p.model), messages, ...(schemas.length && !reporting ? { tools: schemas, tool_choice: 'auto' } : {}) }, p, say, step, who: ep.label || ep.id });
     const held = tones?.rest();   // a "[" that never became a tag is words after all
     if (held) { text += held; say({ type: 'text', text: held, spoken: '' }); }
