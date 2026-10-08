@@ -32,6 +32,8 @@ const STAGES = {
   played:   (l, b) => { l.spoken(num(b.n) || 1); return b.audio && b.audio !== 'running' ? `a sentence began while the page's audio was ${word(b.audio)} — it may not have been heard` : null; },
   notice:   (l, b) => { l.notice(word(b.where) || 'call', word(b.text)); return null; },
   error:    (_l, b) => `the page: ${word(b.text)}`,
+  ask:      (_l, b) => `asked in the call: may ${word(b.tool)} run? — said aloud, waiting for a yes or a no`,   // chat-call-ask.js
+  answered: (_l, b) => `answered by voice: ${b.decision === 'once' ? 'allowed once' : 'denied'} (${word(b.tool)})`,
 };
 
 /** The record of a call this person began, or null. */
@@ -65,11 +67,11 @@ function handleEvent(req, res) {
 }
 
 /** A transcription for a call: what came of it, from the hub's side. */
-function heard(req, { text = '', filtered = null, error = null, ms = null } = {}) {
+function heard(req, { text = '', filtered = null, error = null, ms = null, language = null, heardAs = null } = {}) {
   const h = own(req, req.body?.call);
   if (!h) return;
   const t = String(text || '').trim();
-  h.stt({ words: t ? t.split(/\s+/).length : 0, filtered, error, ms });
+  h.stt({ words: t ? t.split(/\s+/).length : 0, filtered, error, ms, language, heardAs });
 }
 
 /**

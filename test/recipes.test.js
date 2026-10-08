@@ -100,6 +100,7 @@ test('a failed check stops the run at that step and says why', async () => {
 
 test('in manual mode a step is asked like the agent\'s own call; a denial stops the run', async () => {
   await H.api(null, 'POST', '/api/harness/approval', { mode: 'manual' });
+  require('../modules/harness/approval').setManualAsks('everything');   // Manual as it always was
   try {
     const running = H.api(null, 'POST', '/api/recipes/greet-someone/run', { values: { who: 'gate' } });
     const approval = require('../modules/harness/approval');

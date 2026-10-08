@@ -113,10 +113,19 @@ const MIGRATIONS = [
       p.setup = { ...(p.setup || {}), mode: 'advanced' };
       return true;
     } }] },
-  // 2.330: a save of the harness ⚙ (or Set-up's "Use it for DOCA's agent") wrote every default into the file, the system
+  // 2.331: Manual can ask only what matters (harness/approval-matters.js), and a new install does. An install from
+  // before keeps Manual as it knew it — asking everything — until its owner chooses (a guard is never loosened by an update).
+  { id: '2.331-manual-asks', note: 'Manual approval keeps asking everything here; asking only what matters is the owner\'s choice (Settings → Harness → Approvals)', steps: [{
+    describe: 'harness.approval.manualAsks = everything (Manual as it was)',
+    run(p) {
+      if (p.harness?.approval?.manualAsks !== undefined) return false;
+      p.harness = { ...(p.harness || {}), approval: { ...(p.harness?.approval || {}), manualAsks: 'everything' } };
+      return true;
+    } }] },
+  // 2.332: a save of the harness ⚙ (or Set-up's "Use it for DOCA's agent") wrote every default into the file, the system
   // prompt included, so later defaults never reached the install (deep test B, C1). A stored value equal to today's
   // default or a former one is lifted; what the owner chose stays (harness/old-defaults.js).
-  { id: '2.330-harness-defaults', note: 'the built-in harness keeps only the settings its owner changed, so new defaults reach it', steps: [{
+  { id: '2.332-harness-defaults', note: 'the built-in harness keeps only the settings its owner changed, so new defaults reach it', steps: [{
     describe: 'harness.config.doca: values equal to a shipped default removed',
     run(p) {
       const c = p.harness?.config?.doca;

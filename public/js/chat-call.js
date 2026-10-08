@@ -144,7 +144,7 @@ function _callStop(why = 'the person ended the call') {
   // Hanging up stops the answer being made, as Stop does — said, so it does not read as a call that broke.
   if (_callAnswering) chatAppendMsg('system', 'The call ended while the answer was being made, so it was stopped.');
   _callReportEnd(_callAnswering ? `${why}, while an answer was being made` : why);
-  _callActive = false;
+  _callActive = false; if (typeof callAskReset === 'function') callAskReset();
   // With barge-in on, the call says how it went — the experiment's measure (docs/experiments/barge-in.md).
   if (_callBargeIn && _callStats) chatAppendMsg('system', `Call: ${Math.max(1, Math.round((Date.now() - _callStats.at) / 60000))} min, interrupted ${_callStats.bargeIns}×, ${_callStats.dropped} stale sentence${_callStats.dropped === 1 ? '' : 's'} not spoken.`);
   _callStats = null;
@@ -211,7 +211,7 @@ function _callVadLoop() {
   _callMicWatchFrame();
   if (loud) {
     // Speech: a recording starts when nothing is playing (over the voice, a hold records for itself).
-    if (!playing && !_callSpeaking && !_callHold && (!_callProcessing || _callBargeIn)) {
+    if (!playing && !_callSpeaking && !_callHold && (!_callProcessing || _callBargeIn || (typeof callAskWaiting === 'function' && callAskWaiting()))) {   // a question waits: its answer is heard
       _callSpeaking = true;
       _callVoicedMs = 0; _callRecPeak = 0;
       _callStartRecording();
@@ -297,7 +297,7 @@ async function _callAnswer(userText) {
       fold: (kind, body, name, opts) => _chatAppendFold(kind, body, name, opts),
       note: (kind, text) => chatAppendMsg(kind === 'waiting' ? 'waiting' : 'failover', text),
       image: img => _chatAppendImage(img),
-      approval: evt => _chatApproval(evt, container),
+      approval: evt => { _chatApproval(evt, container); if (typeof callAskEvent === 'function') callAskEvent(evt); },   // said in the call too (chat-call-ask.js)
       error: msg => chatAppendMsg('system', `Error: ${msg}`),
       onText: chunk => {
         for (let i = 0; i < chunk.length; i++) {

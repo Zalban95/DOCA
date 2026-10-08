@@ -135,7 +135,7 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [x] Deep test B B2: `recipe save_last` keeps the turn before, never its own recipe call (`recipes/store.js`).
 - [x] Deep test B B3: The model is asked over node:http (`turn/http-request.js`): a wait past 300 s is the setting's, not undici's.
 - [x] Deep test B C1: The built-in harness stores only what its owner changed (`harness/old-defaults.js`), migration
-  `2.330-harness-defaults` lifts stored defaults (former prompts by hash), no shipped prompt is "the owner's".
+  `2.332-harness-defaults` lifts stored defaults (former prompts by hash), no shipped prompt is "the owner's".
 - [x] Deep test B C2: A reply that was all thinking is asked once more with twice the room (`turn/think-retry.js`); default
   `maxTokens` 2048 → 8192, with a 2048 floor kept for small declared windows and the cap fitted to what is left.
 - [x] Deep test B r15: A queued request read by an automatic turn stays its person's (`tool-calls.js askerOf`).
@@ -217,6 +217,17 @@ the project's managers only if the owner allows sharing specialists and skills (
   Deep call (the chat's 🎙), Ambient's assistant. Reproduced and checked headless (phone size, mobile UA, the wake word
   on). Not done: why the 10:53 call on the owner's phone heard exact zeros is not proven (the hand-off and the watch now
   cover it, and the log will say which it was); nobody has heard it on the phone yet.
+- [x] The owner's Live calls of 2026-10-08, 14:38–14:43 (branch `ambient-place-language`): **no weather because no
+  place** — Ambient and `today` take the asking screen's place, else its device's own position (the page's geolocation,
+  kept as the screen's `ambient.here` and named; a paired device's `location` sample), else the hive's, and say which;
+  with none the page offers "Use this device's location" or "Type a town" (`ambient/where.js`, `ambient-where.js`);
+  `settings_read "place"` finds the screen's `ambient.place`. **The reply in Russian** (run_798be61c7bd0): whisper
+  guessed a two-word, 1.6 s utterance as Russian ("Что это?"; the call log then held only "transcribed 2 words"; the
+  same morning's "КОНЕЦ" and subtitle credit were the same guessing on room noise). Now `call.language` per screen,
+  else the person's usual language checks short transcripts in another (asked again in theirs), the call log names the
+  language, and spoken turns treat a lone foreign transcript as a mishearing (`call-language.js`, `stt.js`).
+  `test/ambient-where.test.js`, `test/call-language.test.js`. Not done: DocaMobile does not yet send `location` samples
+  on its own (it answers the WebView's geolocation and the `device_location` tool); nobody has tried it on the phone.
 - [x] Self-test 2026-10-08, the agents and missions group (branch `selftest-agents`): specialists' budgets fit a
   real errand (Tester 120, Coder 80, Researcher 40, Scout 30, Archivist 10, unnamed 30; #6); a mission's last step is
   its report, with a line telling its leader it ended on its limit and where that is raised (`turn/mission-report.js`;
@@ -243,6 +254,19 @@ the project's managers only if the owner allows sharing specialists and skills (
   open for a person, one kept with 📌 or one a person brought back from the Archive; a sweep every 30 min from
   `boot.afterListen` writes one activity line; the missions bar has 📌, "Put away finished" and a quiet "N put away —
   Archive"; Settings → Harness → Finished missions (one switch, the numbers under Advanced). Capability gap 19.
+- [x] Manual that asks what matters, and approvals in a call (2026-10-08, from Live calls in Manual: the read-only
+  `today` was asked, Ambient's place set at the person's own request waited behind the call screen until it timed out;
+  S11, approved as built; branch `asks-what-matters`): `harness.approval.manualAsks` — `everything` (Manual as it was)
+  or `what-matters` (`harness/approval-matters.js`: the risk classifier's outward tier, a push, a delete outside a
+  project, a shell line it cannot reduce or that changes the machine outside a project or runs an unknown verb, a
+  tool on another machine, a change with no way back — the rest runs, a project change after its checkpoint, even
+  with riskTiers off); guarded by the password with the mode, never proposable, Harness → Approvals; a new install
+  asks what matters, an older one keeps everything (migration `2.331-manual-asks`) until its owner chooses. In a call
+  the card is drawn above the face and inside whatever is full screen; the question is said in the call's voice
+  (`call-answer.js sentence`), a spoken yes or no answers it (allow once / deny, confirmed aloud, no "always"),
+  anything else goes on as a message; a device's call is told and answered the same way (`realtime/call-asks.js`),
+  and the call log keeps the question's tool and the voice answer. Not yet: the sentence is English whatever the
+  person speaks (the yes/no words are English, Italian, Spanish, French, German).
 - [x] Self-test 2026-10-08, the install/devices/server group (branch `selftest-server`): node-pty is an optional
   dependency and `install.sh` names the build tools per distro, so a box without a C++ toolchain installs (#1);
   revoking a device by any route closes its stream and removes the MCP servers it hosts, and doca-client stops

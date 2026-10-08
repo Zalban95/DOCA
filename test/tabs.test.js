@@ -79,11 +79,16 @@ test('Plan mode runs nothing that changes anything, and says why; approving its 
 
 test('a conversation\'s own approval switch wins over the panel\'s', () => {
   const approval = require('../modules/harness/approval');
-  approval.setMode('auto');
+  approval.setMode('auto'); approval.setManualAsks('everything');   // Manual as it always was, first
   const s = memory.createSession('asks', { activate: false });
   memory.updateSession(s.id, { approval: 'manual' });
   assert.ok(approval.gate('shell', { command: 'ls -la' }, { sessionId: s.id }), 'asked in a Manual tab');
   assert.equal(approval.gate('shell', { command: 'ls -la' }, { sessionId: memory.createSession('free', { activate: false }).id }), null);
+  // A tab's Manual asks what matters when the panel's setting says so (approval-matters.js): a read runs, a delete asks.
+  approval.setManualAsks('what-matters');
+  assert.equal(approval.gate('shell', { command: 'ls -la' }, { sessionId: s.id }), null);
+  assert.match(approval.gate('shell', { command: 'rm -rf ~/old' }, { sessionId: s.id }).summary, /outward: deletes files/);
+  approval.setManualAsks('everything');
 });
 
 test('what waits for a conversation is listed, and can be withdrawn', async () => {

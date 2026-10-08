@@ -31,6 +31,7 @@ async function _callProcessAudio(audioBlob, name = 'recording.webm') {
     }
 
     _callLastActive = performance.now();   // words were heard
+    if (typeof callAskAnswer === 'function' && await callAskAnswer(transcribeData.text.trim())) return;   // a yes or a no to the question waiting (chat-call-ask.js)
     await _callAnswer(transcribeData.text.trim());
   } catch (e) {
     if (e.name !== 'AbortError') notice('stt', `Voice error: ${e.message}`);

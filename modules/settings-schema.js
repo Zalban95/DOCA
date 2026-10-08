@@ -37,13 +37,14 @@ const SCHEMA = {
       assistantIdleSec: { type: 'integer', min: 5, default: 12, hint: 'In the Live call (the face tapped) and Ambient\'s assistant, seconds of quiet before it goes back to waiting for the wake word, where the screen listens for one.' },
       listenWithFace: { type: 'boolean', default: false, hint: 'While the corner face shows, listen for the wake word and start a call when it is said (experiments.wakeWord).' },
       wakeWord: { type: 'string', default: '', hint: 'The word that starts a call. Empty: the product\'s name (branding).' },
+      language: { type: 'string', default: '', hint: 'The language spoken in a call on this screen, as a two-letter code (en, it…): the transcriber is told it instead of guessing. Empty: the person\'s usual language, from what they write and say.' },
       // Whether the microphone may stay open with the page in the background (public/js/lib/mic-keep.js). The person's
       // own switch beside the chats, never proposable: an agent keeping a microphone open is not a look to suggest.
       micAlways: { type: 'boolean', default: false, propose: false, hint: 'Let the microphone stay open with the app in the background: the wake word keeps listening and a call keeps going. Off: it opens only for a call or a recording, and closes when the page is hidden.' },
     } },
-  ambient:          { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the ambient screen (public/js/ambient.js): where it is for the weather, its quick buttons, whether it listens for its name — `buttons` is a list of {label, say} (what the button says to the agent), `show` which parts are drawn (clock, weather, plan, notices, buttons, apps: false hides one)',
+  ambient:          { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the ambient screen (public/js/ambient.js): where it is for the weather, its quick buttons, whether it listens for its name — `buttons` is a list of {label, say} (what the button says to the agent), `show` which parts are drawn (clock, weather, plan, notices, buttons, apps: false hides one), `here` the device\'s own position the page last found ({lat, lon, name, at}; ambient-where.js), used when no place is named',
     keys: {
-      place:  { type: 'string', default: '', hint: 'Where this screen is, for the weather: a town, or "lat,lon". Empty: no weather.' },
+      place:  { type: 'string', default: '', hint: 'Where this screen is, for the weather: a town, or "lat,lon". Empty: this device\'s own location (with auto), else no weather.' },
       units:  { type: 'string', default: 'metric', hint: 'metric (°C, km/h) or imperial (°F, mph).' },
       listen: { type: 'boolean', default: true, hint: 'While the ambient screen rests, listen for the wake word (experiments.wakeWord); a call or a recording takes the microphone when it needs it.' },
       clock24: { type: 'boolean', default: true, hint: 'A 24-hour clock.' },
@@ -185,6 +186,10 @@ const SCHEMA = {
       // Never proposed: how long a person is given to answer for a mission's use of a machine (harness/mission-asks.js).
       'approval.missionAskSec': { type: 'integer', min: 10, max: 900, default: 300, propose: false,
         hint: 'Seconds a mission\'s question to use a machine (a VNC screen, a sign-in on its computer) is pressed on its person\'s devices; then it is held or denied (missionAskTimeout).' },
+      // Never proposed: what Manual asks (harness/approval-matters.js). A safety switch — guarded by the password with the
+      // mode (auth/guarded.js). A new install asks what matters; an install from before keeps everything (migration 2.331-manual-asks).
+      'approval.manualAsks': { type: 'string', oneOf: ['everything', 'what-matters'], default: 'what-matters', propose: false,
+        hint: 'What Manual approval asks about: everything that does something, or only what matters — what cannot be undone or leaves this machine (sending data out, posting, mail, pushing, paying, deleting outside a project, a command it cannot read).' },
       // Never proposed either: what an unanswered machine question becomes — hold (it stays open, the mission waits) or deny.
       'approval.missionAskTimeout': { type: 'string', oneOf: ['hold', 'deny'], default: 'hold', propose: false,
         hint: 'When nobody answers a mission\'s machine question in time: hold — the question stays open in Harness → Approvals and the mission waits, paused, until someone answers — or deny.' },

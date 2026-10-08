@@ -6,7 +6,7 @@
  * Every save of the ⚙ — and Set-up's "Use it for DOCA's agent", which sends only a provider and a model — used to
  * write every default into the prefs file, the whole system prompt included, so a later release's better default
  * never reached that install, and the Orchestrator was handed the frozen copy as "Your owner's instructions". Now a
- * save keeps only what differs from today's default (`own`), and migration `2.330-harness-defaults` lifts a stored
+ * save keeps only what differs from today's default (`own`), and migration `2.332-harness-defaults` lifts a stored
  * value that equals today's default or a former one (`stale`), so the install follows the defaults again.
  *
  * A former system prompt is known by the sha256 of its trimmed text: every version DEFAULT_SYSTEM_PROMPT has had in

@@ -79,7 +79,7 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     const permit = args._raw === undefined ? require('../../auth/permits').tool({ person: client?.user, profile, missionId, sessionId: session.id, name, args }) : { allowed: true };
     if (!permit.allowed && refused === null) refused = `Refused: ${permit.why}. An admin, or someone holding delegate, can grant it in Settings → Users`
       + `${isMission ? '; the agent that dispatched this mission can grant it for the mission with permission_grant' : ''}.`;
-    const gate = args._raw === undefined && refused === null ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission, forceAsk: permit.ask, risk }) : null;
+    const gate = args._raw === undefined && refused === null ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission, forceAsk: permit.ask, risk, person: client?.user }) : null;
     if (gate) {
       // A mission has nobody watching, so it is refused — except a machine lent to it, asked of its person (mission-asks.js).
       const use = isMission && gate.forced ? await require('../mission-asks').machineUse(name, args, { profile }) : null;
@@ -91,7 +91,7 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
         say({ type: 'approval', step, state: 'refused', tool: name, ...gate });
       } else {
         const { id, answer } = approval.askAnywhere({ ...gate, personId: client?.user?.id || null }, { sessionId: session.id, signal, client });
-        say({ type: 'approval', step, state: 'asked', id, ...gate });
+        say({ type: 'approval', step, state: 'asked', id, ...gate, spoken: require('../call-answer').sentence(name, args) });   // a call says it (call-answer.js)
         const decision = await answer;
         say({ type: 'approval', step, state: 'answered', id, decision, tool: name });
         // Anything that is not one of the three yeses — a denial, a timeout,

@@ -37,7 +37,7 @@ test('the migration lifts stored defaults, today\'s and former ones, and keeps w
   const former = 'You are the DOCA harness, as it was once shipped.';
   old.FORMER_PROMPTS.add(crypto.createHash('sha256').update(former).digest('hex'));
   const m = require('../modules/migrations');
-  const run = doca => m.run({ harness: { config: { doca } } }, m.MIGRATIONS.filter(x => x.id === '2.330-harness-defaults')).prefs.harness.config.doca;
+  const run = doca => m.run({ harness: { config: { doca } } }, m.MIGRATIONS.filter(x => x.id === '2.332-harness-defaults')).prefs.harness.config.doca;
   assert.deepEqual(run({ ...providers.defaultParams(), provider: 'my-box', model: 'm' }), { provider: 'my-box', model: 'm' });
   assert.deepEqual(run({ systemPrompt: `${former}\n`, maxSteps: 12 }), { maxSteps: 12 });
   assert.deepEqual(run({ systemPrompt: 'Always answer in Italian.' }), { systemPrompt: 'Always answer in Italian.' });
