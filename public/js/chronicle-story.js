@@ -75,6 +75,7 @@ function chronRunHtml(r) {
     <div class="chron-why"><b>Why:</b> ${escHtml(r.why || '')}</div>
     ${models ? `<div style="color:var(--muted)">Answered by ${escHtml(models)} · model ${chronDur(x.modelMs) || '—'}, tools ${chronDur(x.toolMs) || '—'}</div>` : ''}
     ${tools ? `<div class="chron-tools">${tools}</div>` : ''}
+    ${(x.thinking || []).length ? `<div style="color:var(--muted)">Thinking: ${x.thinking.map(k => `${escHtml(k.level || 'the model\'s default')}${k.from ? ` (${escHtml(k.from)})` : ''}${k.step ? ` from step ${k.step}` : ''}`).join(' → ')}</div>` : ''}
     ${trouble.length ? `<div style="display:flex;flex-direction:column;gap:2px;margin:4px 0">${trouble.join('')}</div>` : ''}
     ${r.outcome ? `<div style="color:var(--muted)">${r.state === 'failed' ? 'Failed: ' : 'Ended: '}${escHtml(r.outcome)}</div>` : ''}
   </div>`;

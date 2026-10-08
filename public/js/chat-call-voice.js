@@ -19,6 +19,24 @@ function _callSynthReset() {
   _callSynthReady.clear();
 }
 
+/**
+ * /api/chat/synthesize, waiting for a voice DOCA stopped for being idle: the hub answers 503 {starting, notice} at once
+ * and starts it (modules/service-life/demand.js); the page says so once and asks again until it answers. `signal` is a
+ * function, so each attempt gets its own timeout. The call's chat (chat.js) reads answers aloud through it too.
+ */
+async function synthFetch(body, { signal = () => undefined, onNotice = null, waitMs = 120000 } = {}) {
+  const until = Date.now() + waitMs;
+  let told = false;
+  for (;;) {
+    const res = await fetch('/api/chat/synthesize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: signal() });
+    if (res.status !== 503 || Date.now() > until) return res;
+    const info = await res.clone().json().catch(() => null);
+    if (!info?.starting) return res;
+    if (!told && onNotice) { told = true; onNotice(info.notice); }
+    await new Promise(r => setTimeout(r, (Number(res.headers.get('Retry-After')) || 3) * 1000));
+  }
+}
+
 async function _callEnqueueSynth(text) {
   if (!_callActive) return;
   const epoch = _callEpoch;   // said before an interruption: dropped when it arrives after one (barge-in)
@@ -30,13 +48,9 @@ async function _callEnqueueSynth(text) {
   try {
     if (gen !== _callSynthGen) return;
     const AS = typeof AbortSignal !== 'undefined' ? AbortSignal : {};
-    const limit = AS.timeout ? AS.timeout(CALL_SYNTH_TIMEOUT_MS) : null;
-    const res = await fetch('/api/chat/synthesize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, call: _callAssistant ? (_callAmbient ? 'ambient' : 'quick') : 'deep' }),   // the Live call's voice (the face), Ambient's assistant's, or the Deep call's (the chat's 🎙)
-      signal: limit && AS.any && _callAbort ? AS.any([_callAbort.signal, limit]) : (_callAbort?.signal || limit || undefined),
-    });
+    const signal = () => { const limit = AS.timeout ? AS.timeout(CALL_SYNTH_TIMEOUT_MS) : null; return limit && AS.any && _callAbort ? AS.any([_callAbort.signal, limit]) : (_callAbort?.signal || limit || undefined); };
+    // The Live call's voice (the face), Ambient's assistant's, or the Deep call's (the chat's 🎙); a stopped one starts, said once.
+    const res = await synthFetch({ text, call: _callAssistant ? (_callAmbient ? 'ambient' : 'quick') : 'deep' }, { signal, onNotice: n => _callNotice('tts', n) });
     if (!res.ok) throw new Error(`speech service answered ${res.status}${await res.text().then(t => `: ${t.slice(0, 120)}`).catch(() => '')}`);
     if (res.status === 204) return;   // only a tone tag: nothing to say
 

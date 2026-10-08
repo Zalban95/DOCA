@@ -204,6 +204,17 @@ the project's managers only if the owner allows sharing specialists and skills (
   media block by `kind` (DocaMobile TODO, branch `media-file-kind`); charter rule 15 still says "`tell_device` carries
   a picture" (ask-first, S11: waits for the owner's yes); the live memory `telegram-channel-send` is now wrong and
   should be forgotten.
+- [x] Thinking per mode, and within the mode (asked 2026-10-08: "enable or disable thinking in specific modes, and,
+  where it doesn't look too bad, even within the mode itself"; branch `thinking-per-mode`): `thinking.<mode>` for chat,
+  work chats, specialists, the Live and Deep calls, Ambient and device calls — auto (as before), off, or on at a level —
+  in one card, Settings → Harness → Thinking, provider notes under Advanced; 💭 beside Send in the floating chat, the
+  Harness console and a project's chat (the conversation's own, `session.effort`), and in the Deep and Live calls next
+  to Mic (that call only); "think harder" still wins for its message and the `effort` tool for the conversation
+  (`turn/thinking.js`). Off is `none` in the reasoning_effort dialect except OpenAI's gpt-5 (`minimal` made llama.cpp's
+  Qwen template answer 500 — found probing the local server); a refused word or field is tried once another way and
+  remembered; `no_think` is an owner-named dialect. The level and why are an `effort` event: a trace span, a log line,
+  the `usage` event, Chronicle's story. Not checked: Ollama's and the hosted providers' real answers to `none` (a
+  stub stood in), and the apps (none of them shows a toggle; the device setting covers the watch).
 - [x] A call that feels alive and quick (asked 2026-10-07 from the watch; hub 2.304.0, branch `watch-call-live`,
   DocaWear `call-feedback`): the front (`turn/front.js`, `assistant.front`) — a spoken turn answers at once with a
   short kit, untriaged, at assistant mode's effort; a large request or "think harder / take your time / focus" goes to
@@ -890,6 +901,23 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   mission reads — `harness/mission-asks-held.js`) or **deny** (as before); beside the seconds in Approvals, not
   proposable (`test/mission-asks-hold.test.js`).
   **Left:** VeNCrypt/TLS servers are named, not spoken; Tight/ZRLE encodings for slow links.
+- [x] Services that stop when nothing uses them (asked 2026-10-08: "if the service has been started from something
+  else, the panel doesn't switch it off automatically if it doesn't use it, or if the panel goes off"; and "while the
+  panel is live, they can stay on, because we would like a quick response"). **Done (branch services-lifecycle,
+  `modules/service-life/`):** every request the hub sends to a service on this machine (speech, transcription, a model
+  call through `harness/inflight.js`) marks its last use, by port; Settings → System → Services has one switch, "Stop
+  services nothing has used for… minutes" (`services.idleStopMinutes`, 0 = off by default), and a sweep every 5 min
+  stops a service or llama.cpp server DOCA started (or a person adopted with "Let DOCA manage it", written down) once no
+  page of the hub is visible, no call is on, nothing is in flight and nothing `machines/use.js` reads needs it — the
+  idle clock starts when the last page closes. `services.stopWithDoca` (off) stops the ticked ones on SIGTERM/SIGINT,
+  never on a restart or a version switch (`.releases/pending`). "Start when needed" (on for what DOCA started before)
+  starts a stopped one on the request that needs it and says so ("Starting the voice (…), a few seconds…": the panel's
+  call and read-back retry on 503 `starting`, a device call hears a notice, a turn shows a `starting` warning). Each row
+  says "last used 12 min ago · idle for 12 min, stops at 30" / "kept on while the panel is open", with its own choices
+  under Advanced; every stop and start is a line in the activity log and the machines' log. `test/service-life.test.js`.
+  **Left:** a `systemctl restart` by hand is a SIGTERM like a stop (stops the ticked ones, then they start on demand);
+  on Windows a launcher's stop ends the process with no signal, so nothing is stopped there; the panel's own call waits
+  silently while the transcriber starts (no notice before its first answer).
 - [x] H10.10 The home in DOCA's own layout (asked 2026-10-06: "does Home Assistant let us use our layout, or do we build
   from scratch?"). Neither: Home Assistant stays the device layer (thousands of brands, its areas, scenes and
   automations), and DOCA draws its own **Home** page from HA's WebSocket API — `get_states`, `subscribe_events` for live

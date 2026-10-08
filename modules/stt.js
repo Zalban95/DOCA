@@ -45,9 +45,15 @@ async function transcribeHeard(buffer, mimetype, filename, { prompt, language = 
 // A transcript this short in another language than the person's is checked again in theirs.
 const SHORT_WORDS = 5;
 
-/** One request to the speech service. */
-async function once(buffer, mimetype, filename, { prompt, language } = {}) {
+/** One request to the speech service — started first when it is stopped and starts when needed (service-life/). */
+async function once(buffer, mimetype, filename, opts = {}) {
   const vs = require('./chat').loadVoiceServices();
+  const life = require('./service-life');
+  await life.ensure(vs.sttUrl, { role: 'stt' });
+  return life.use(vs.sttUrl, () => ask1(vs, buffer, mimetype, filename, opts));
+}
+
+async function ask1(vs, buffer, mimetype, filename, { prompt, language } = {}) {
   const screened = text => (require('./stt-filter').isHallucination(text) ? { text: '', filtered: text || null } : { text, filtered: null });
   const ask = vad => {
     const formData = new FormData();

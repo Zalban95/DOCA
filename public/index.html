@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="css/logs.css">
 <link rel="stylesheet" href="css/attachments.css">
 <link rel="stylesheet" href="css/harness.css">
-<link rel="stylesheet" href="css/computers.css"><link rel="stylesheet" href="css/face.css"><link rel="stylesheet" href="css/mic-keep.css"><link rel="stylesheet" href="css/workstream.css"><link rel="stylesheet" href="css/vnc.css"><link rel="stylesheet" href="css/chronicle.css"><link rel="stylesheet" href="css/ambient.css"><link rel="stylesheet" href="css/home.css"><link rel="stylesheet" href="css/guided.css"><link rel="stylesheet" href="css/panel-layout.css"><link rel="stylesheet" href="css/system.css"><link rel="stylesheet" href="css/ground-light.css"><link rel="stylesheet" href="css/skin-points.css">
+<link rel="stylesheet" href="css/computers.css"><link rel="stylesheet" href="css/face.css"><link rel="stylesheet" href="css/mic-keep.css"><link rel="stylesheet" href="css/workstream.css"><link rel="stylesheet" href="css/vnc.css"><link rel="stylesheet" href="css/chronicle.css"><link rel="stylesheet" href="css/ambient.css"><link rel="stylesheet" href="css/home.css"><link rel="stylesheet" href="css/guided.css"><link rel="stylesheet" href="css/panel-layout.css"><link rel="stylesheet" href="css/system.css"><link rel="stylesheet" href="css/ground-light.css"><link rel="stylesheet" href="css/skin-points.css"><link rel="stylesheet" href="css/think.css">
 <link rel="stylesheet" href="css/responsive.css">
 <!-- xterm.js -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
@@ -1325,7 +1325,7 @@
     <textarea class="chat-input" id="chat-input" placeholder="Message…" rows="1"
               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend();}"
               onpaste="if(event.clipboardData.files.length){event.preventDefault();chatAttachFiles(event.clipboardData.files);}"></textarea>
-    <button class="btn btn-sm btn-amber" id="chat-send" onclick="chatSend()">Send</button>
+    <button type="button" class="btn btn-sm think-toggle" id="chat-think" data-think="auto" hidden onclick="thinkToggleClick(this, event)" aria-label="Thinking: auto" title="Thinking: auto"><span class="think-ico" aria-hidden="true">💭</span><span class="think-word">auto</span></button><button class="btn btn-sm btn-amber" id="chat-send" onclick="chatSend()">Send</button>
     <button class="btn btn-sm btn-red" id="chat-stop" style="display:none" onclick="chatStop()"
             title="Stop this turn. The step already running finishes; nothing after it starts.">■ Stop</button>
   </div>
@@ -1334,7 +1334,7 @@
       <span class="chat-call-mic-icon" id="chat-call-mic-icon"></span>
       <span class="chat-call-status" id="chat-call-status">Connecting…</span>
     </div>
-    <button class="btn btn-xs btn-red" onclick="chatToggleCall()" title="End call">End</button>
+    <button type="button" class="btn btn-xs think-toggle" id="chat-call-think" data-think="auto" data-think-call="1" onclick="thinkToggleClick(this, event)" aria-label="Thinking: auto" title="Thinking in this call: auto"><span class="think-ico" aria-hidden="true">💭</span><span class="think-word">auto</span></button><button class="btn btn-xs btn-red" onclick="chatToggleCall()" title="End call">End</button>
   </div>
   <!-- Desktop only: the resize grip. Hidden below the mobile breakpoint, where
        the panel is a full-screen sheet and the stylesheet owns its geometry. -->
@@ -1512,14 +1512,14 @@
 <script src="js/harness-console/env.js"></script>
 <script src="js/harness-console/proposals.js"></script>
 <script src="js/harness-console/external.js"></script>
-<script src="js/chat-stop.js"></script><script src="js/chat.js"></script><script src="js/chat-window.js"></script><script src="js/chat-head.js"></script><script src="js/live-pages.js"></script><script src="js/chat-call.js"></script><script src="js/chat-call-report.js"></script><script src="js/chat-call-hear.js"></script><script src="js/chat-call-ask.js"></script><script src="js/chat-call-voice.js"></script><script src="js/chat-call-hold.js"></script><script src="js/chat-call-pause.js"></script><script src="js/mic-keep-ui.js"></script><script src="js/chat-call-mic.js"></script><script src="js/lib/wake-match.js"></script><script src="js/wake-word.js"></script><script src="js/chat-realtime.js"></script>
+<script src="js/chat-stop.js"></script><script src="js/chat.js"></script><script src="js/chat-window.js"></script><script src="js/chat-head.js"></script><script src="js/live-pages.js"></script><script src="js/chat-call.js"></script><script src="js/chat-call-report.js"></script><script src="js/chat-call-hear.js"></script><script src="js/chat-call-ask.js"></script><script src="js/chat-call-voice.js"></script><script src="js/chat-call-hold.js"></script><script src="js/chat-call-pause.js"></script><script src="js/mic-keep-ui.js"></script><script src="js/chat-call-mic.js"></script><script src="js/agent-ui/think-toggle.js"></script><script src="js/lib/wake-match.js"></script><script src="js/wake-word.js"></script><script src="js/chat-realtime.js"></script>
 <script src="js/terminal.js"></script>
 <script src="js/models.js"></script>
 <script src="js/models-ai-tools.js"></script>
 <script src="js/models-local.js"></script>
 <script src="js/models-hf.js"></script>
 <script src="js/llamacpp.js"></script><script src="js/llamacpp-hf.js"></script>
-<script src="js/services.js"></script>
+<script src="js/services.js"></script><script src="js/services-life.js"></script>
 <script src="js/docker.js"></script>
 <script src="js/vms.js"></script><script src="js/vnc.js"></script><script src="js/computers.js"></script><script src="js/computers-strays.js"></script>
 <script src="js/mcp.js"></script><script src="js/mcp-feedback.js"></script><script src="js/mcp-catalog.js"></script><script src="js/mcp-drafts.js"></script><script src="js/static-folds.js"></script>
@@ -1533,13 +1533,13 @@
 <script src="js/settings/deps.js"></script>
 <script src="js/settings/identity.js"></script>
 <script src="js/settings/skills.js"></script><script src="js/settings/host.js"></script>
-<script src="js/settings/users.js"></script><script src="js/settings/log-keep.js"></script><script src="js/settings/missions-tidy.js"></script><script src="js/settings/channels.js"></script><script src="js/settings/packs.js"></script><script src="js/settings/sharing.js"></script><script src="js/settings/spending.js"></script><script src="js/settings/spending-permits.js"></script><script src="js/settings/holdings.js"></script><script src="js/settings/guided.js"></script><script src="js/settings/guided-plan.js"></script><script src="js/settings/search.js"></script><script src="js/settings/retrieval.js"></script><script src="js/settings/vision.js"></script><script src="js/settings/checkpoints.js"></script><script src="js/settings/features.js"></script><script src="js/settings/scout.js"></script><script src="js/settings/experiments.js"></script><script src="js/settings/evals.js"></script><script src="js/settings/connectors.js"></script><script src="js/settings/service-keys.js"></script><script src="js/settings/sealed-secrets.js"></script><script src="js/settings/voice-card.js"></script><script src="js/settings/voice-card-calls.js"></script><script src="js/settings/voice-card-machines.js"></script><script src="js/settings/hosted-voice.js"></script><script src="js/settings/live-call.js"></script><script src="js/settings/live-call-assistant.js"></script><script src="js/settings/face-editor.js"></script><script src="js/settings/client-apps.js"></script><script src="js/settings/harnesses.js"></script><script src="js/face/face.js"></script><script src="js/face/poly.js"></script><script src="js/face/galaxy.js"></script><script src="js/face/concepts/index.js"></script><script src="js/face/concepts/animals.js"></script><script src="js/face/concepts/feelings.js"></script><script src="js/face/concepts/food.js"></script><script src="js/face/concepts/home.js"></script><script src="js/face/concepts/music-art.js"></script><script src="js/face/concepts/nature.js"></script><script src="js/face/concepts/people.js"></script><script src="js/face/concepts/sport-health.js"></script><script src="js/face/concepts/symbols.js"></script><script src="js/face/concepts/tech.js"></script><script src="js/face/concepts/time.js"></script><script src="js/face/concepts/travel.js"></script><script src="js/face/concepts/weather.js"></script><script src="js/face/concepts/work.js"></script><script src="js/face/concept-engine.js"></script><script src="js/face/corner.js"></script><script src="js/face/assistant.js"></script>
+<script src="js/settings/users.js"></script><script src="js/settings/log-keep.js"></script><script src="js/settings/missions-tidy.js"></script><script src="js/settings/channels.js"></script><script src="js/settings/packs.js"></script><script src="js/settings/sharing.js"></script><script src="js/settings/spending.js"></script><script src="js/settings/spending-permits.js"></script><script src="js/settings/holdings.js"></script><script src="js/settings/guided.js"></script><script src="js/settings/guided-plan.js"></script><script src="js/settings/search.js"></script><script src="js/settings/thinking.js"></script><script src="js/settings/retrieval.js"></script><script src="js/settings/vision.js"></script><script src="js/settings/checkpoints.js"></script><script src="js/settings/features.js"></script><script src="js/settings/scout.js"></script><script src="js/settings/experiments.js"></script><script src="js/settings/evals.js"></script><script src="js/settings/connectors.js"></script><script src="js/settings/service-keys.js"></script><script src="js/settings/sealed-secrets.js"></script><script src="js/settings/voice-card.js"></script><script src="js/settings/voice-card-calls.js"></script><script src="js/settings/voice-card-machines.js"></script><script src="js/settings/hosted-voice.js"></script><script src="js/settings/live-call.js"></script><script src="js/settings/live-call-assistant.js"></script><script src="js/settings/face-editor.js"></script><script src="js/settings/client-apps.js"></script><script src="js/settings/harnesses.js"></script><script src="js/face/face.js"></script><script src="js/face/poly.js"></script><script src="js/face/galaxy.js"></script><script src="js/face/concepts/index.js"></script><script src="js/face/concepts/animals.js"></script><script src="js/face/concepts/feelings.js"></script><script src="js/face/concepts/food.js"></script><script src="js/face/concepts/home.js"></script><script src="js/face/concepts/music-art.js"></script><script src="js/face/concepts/nature.js"></script><script src="js/face/concepts/people.js"></script><script src="js/face/concepts/sport-health.js"></script><script src="js/face/concepts/symbols.js"></script><script src="js/face/concepts/tech.js"></script><script src="js/face/concepts/time.js"></script><script src="js/face/concepts/travel.js"></script><script src="js/face/concepts/weather.js"></script><script src="js/face/concepts/work.js"></script><script src="js/face/concept-engine.js"></script><script src="js/face/corner.js"></script><script src="js/face/assistant.js"></script>
 <script src="js/settings/skill-audit.js"></script>
 <script src="js/settings/guards.js"></script>
 <script src="js/settings/subnav.js"></script>
 <script src="js/settings/account.js"></script>
 <script src="js/settings/appearance.js"></script><script src="js/settings/your-panel.js"></script>
-<script src="js/settings/busy.js"></script><script src="js/settings/releasing.js"></script><script src="js/settings/network.js"></script>
+<script src="js/settings/busy.js"></script><script src="js/settings/releasing.js"></script><script src="js/settings/network.js"></script><script src="js/settings/services-life.js"></script>
 <script src="js/paths.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {

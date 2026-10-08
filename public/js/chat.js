@@ -47,7 +47,7 @@ async function chatLoadHistory() {
     // How full the window already is, before this panel sends anything. Absent
     // for a harness that does not report one, which is what '' draws.
     _chatContext(data.context);
-    _chatLoadApproval();
+    _chatLoadApproval(); thinkToggleBind(document.getElementById('chat-think'), data.sessionId || null);   // 💭: the Orchestrator's (think-toggle.js)
   } catch {}
 }
 
@@ -297,10 +297,7 @@ async function _chatSpeak(text) {
   const say = String(text || '').trim();
   if (!say) return;
   try {
-    const res = await fetch('/api/chat/synthesize', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: say.slice(0, 4000) }),
-    });
+    const res = await synthFetch({ text: say.slice(0, 4000) });   // a voice stopped for being idle starts first (chat-call-voice.js)
     if (!res.ok || res.status === 204) return; // no TTS configured is not an error worth a modal; 204: nothing to say
     const url = URL.createObjectURL(await res.blob());
     const el = new Audio(url);

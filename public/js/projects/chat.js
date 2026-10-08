@@ -41,6 +41,7 @@ async function pjChatLoad() {
     <div class="pj-chat-input">
       <textarea class="input" id="pj-chat-in" rows="2" placeholder="Ask about this project, or give it a job…"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();pjChatSend()}"></textarea>
+      ${typeof thinkToggleHtml === 'function' ? thinkToggleHtml('pj-chat-think') : ''}
       <button class="btn btn-sm btn-teal" id="pj-chat-send" onclick="pjChatSend()">Send</button>
       <button class="btn btn-sm btn-red" id="pj-chat-stop" onclick="pjChatStop()" style="display:none" title="Stop this tab's turn">■</button>
     </div>`;
@@ -70,7 +71,7 @@ async function pjChatActivate(id) {
   pjTabsRender();
   _pjButtons();
   const view = PJC.chats.find(c => c.id === id) || null;
-  agentConvBar(document.getElementById('pj-chat-bar'), id, view);
+  agentConvBar(document.getElementById('pj-chat-bar'), id, view, { think: document.getElementById('pj-chat-think') });
   PJC.fold?.setSession(id);
   if (!t.loaded) {
     t.loaded = true;

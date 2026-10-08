@@ -132,6 +132,13 @@ const SCHEMA = {
       front: { type: 'boolean', default: true, hint: 'A call answers at once with a short kit of quick actions, and hands anything bigger — or anything you ask it to think harder about — to a work chat, whose outcome it says in the call. Off: a spoken turn holds every tool, as before.' },
       provider: { type: 'string', default: '', hint: 'A provider for assistant mode\'s own model. Empty: the conversation\'s.' },
       model: { type: 'string', default: '', hint: 'A quicker model for assistant mode (e.g. a small local one). Empty: the conversation\'s model.' } } },
+  // Whether each kind of conversation thinks (turn/thinking.js; Settings → Harness → Thinking). A preference, not a guard.
+  thinking:         { is: 'travels', home: 'hive', note: 'thinking per mode: auto, off, or a level (turn/thinking.js); a conversation\'s 💭 toggle and "think harder" still win',
+    propose: p('Thinking', 'Whether each kind of conversation thinks before it answers: chat, work chats, specialists, the calls, Ambient, devices'),
+    keys: Object.fromEntries([['chat', 'The Orchestrator and the conversations you start'], ['work', 'Work chats (and a project\'s tabs)'], ['specialist', 'Specialists\' missions'],
+      ['liveCall', 'The Live call (the face; auto: assistant.effort)'], ['deepCall', 'The Deep call (the chat\'s 🎙)'], ['ambient', 'Talking to the ambient screen'],
+      ['device', 'A paired device\'s call (the watch)']].map(([k, what]) => [k, { type: 'string', oneOf: ['auto', 'off', 'low', 'medium', 'high'], default: 'auto',
+      hint: `${what}: auto (as before — the triage, assistant mode's effort, the harness's), off (no thinking), or on at low, medium or high.` }])) },
   setup:            { is: 'local', home: 'device', on: 'host', note: 'how this hub was set up and what shape it is (guided/plan.js; CONSTITUTION §1 "Two shapes, two set-ups") — the owner\'s, never proposable',
     keys: { mode: { type: 'string', default: '', hint: 'guided or advanced: the owner\'s first-run choice. Empty: not chosen yet, so the panel offers it once.' },
       shape: { type: 'string', default: '', hint: 'local (runs its own agent model) or preset (lives on providers\' keys), as the guided set-up found this machine.' } } },
@@ -211,6 +218,14 @@ const SCHEMA = {
     keys: { discovery: { type: 'string', default: 'servers', hint: 'How the Models tab finds llama-servers DOCA did not start: servers (model-servers.js, the default) or props (each one\'s /props, kept beside it).' },
       modelsDir: { type: 'string', default: '', hint: 'Where GGUF files from Hugging Face are kept (Field → Models → llama.cpp → From Hugging Face); empty is models/gguf in your home folder.' } } },
   serviceSettings:  { is: 'local', home: 'device', on: 'host', note: 'ports and URLs of services on this machine', propose: p('Inference services', 'GPU assignment, ports, images') },
+  // When the inference services and llama.cpp servers DOCA started are stopped by DOCA (modules/service-life). Never
+  // proposable: an agent switching services off under the person, or keeping them on, is the person's call. `each` holds
+  // one row's own choices by `<kind>:<id>` ({idleStopMinutes: null = the switch's, stopWithDoca, startWhenNeeded}).
+  services:         { is: 'local', home: 'device', on: 'host', note: 'when DOCA stops the services it started: after idle minutes, and when DOCA itself stops (service-life/)',
+    keys: {
+      idleStopMinutes: { type: 'number', min: 0, max: 10080, default: 0, hint: 'Stop a service DOCA started when nothing has used it for this many minutes, counted only while no page of the panel is open and no call is on (0: never).' },
+      stopWithDoca:    { type: 'boolean', default: false, hint: 'When DOCA itself stops (shut down, or stopped by its launcher or the system) — not a browser tab closing, not a restart or a version switch — stop the services it started that are ticked.' },
+    } },
   voiceServices:    { is: 'local', home: 'device', on: 'host', note: 'speech services on this machine or the tailnet', propose: p('Voice services') },
   snapshotSettings: { is: 'local', home: 'device', on: 'host', note: 'where snapshots of this machine go', propose: p('Snapshot settings') },
   mcpServers:       { is: 'local', home: 'device', on: 'host', note: 'spawnable commands and URLs — never proposed, never exported' },

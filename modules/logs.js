@@ -126,6 +126,9 @@ function fromHarness(evt) {
         + `(${evt.promptTokens} in, ${evt.completionTokens} out, ${evt.source}${cache})${ctx}`);
     }
 
+    case 'effort':   // how hard the turn thinks, and why (turn/thinking.js)
+      return line(SELF, 'info', `thinking: ${evt.level || 'the model\'s default'}${evt.from ? ` — ${evt.from}` : ''}${evt.step ? ` from step ${evt.step}` : ''}`);
+
     case 'warning':
       return line(SELF, 'warn', evt.text || `${evt.kind} warning`);
 

@@ -148,6 +148,7 @@ function _callStop(why = 'the person ended the call') {
   if (_callAnswering) chatAppendMsg('system', 'The call ended while the answer was being made, so it was stopped.');
   _callReportEnd(_callAnswering ? `${why}, while an answer was being made` : why);
   _callActive = false; if (typeof callAskReset === 'function') callAskReset();
+  if (typeof callThinkSet === 'function') callThinkSet('auto');   // the call's 💭 lasts the call (agent-ui/think-toggle.js)
   // With barge-in on, the call says how it went — the experiment's measure (docs/experiments/barge-in.md).
   if (_callBargeIn && _callStats) chatAppendMsg('system', `Call: ${Math.max(1, Math.round((Date.now() - _callStats.at) / 60000))} min, interrupted ${_callStats.bargeIns}×, ${_callStats.dropped} stale sentence${_callStats.dropped === 1 ? '' : 's'} not spoken.`);
   _callStats = null;
@@ -320,7 +321,7 @@ async function _callAnswer(userText) {
     const chatRes = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userText, voice: _callAssistant ? 'assistant' : 'call', ...(_callAmbient ? { speaks: 'ambient' } : {}), call: _callLogId }),   // the hub shapes a spoken answer, and logs the turn
+      body: JSON.stringify({ message: userText, voice: _callAssistant ? 'assistant' : 'call', ...(_callAmbient ? { speaks: 'ambient' } : {}), call: _callLogId, ...(typeof callThinkBody === 'function' ? callThinkBody(_callAssistant) : {}) }),   // the hub shapes a spoken answer, and logs the turn
       // Its own stop as well as the call's: words spoken over it end this answer and its turn (chat-call-hold.js).
       signal: (_callAnswerCtrl = new AbortController(), AbortSignal.any ? AbortSignal.any([_callAbort.signal, _callAnswerCtrl.signal]) : _callAbort?.signal),
     });
