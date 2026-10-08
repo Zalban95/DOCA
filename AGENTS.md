@@ -486,8 +486,8 @@ The harness gives its agent eight rules for working on any repository (charter r
 - **A connected service is the tool `connector_<id>`** (`tools.js`), present only while connected, so a level's tool policy, a grant, a specialist's tool list (kit `connectors`) and the approval gate apply by name. One request per call, only to that service's own API origins; the answer is framed as other people's words (`untrusted.sourceOf`). The owner's account is used only on a turn of someone holding host unless the owner opens it to everyone (`who`). Field → Connectors. `test/connectors.test.js` runs a stub service that checks PKCE and expires tokens.
 
 ### Setting up a service by pasting a key (since 2.225.0; asked 2026-10-06: "without having to change parts of the code")
-- **Keys for services** (`modules/service-keys.js`, Field → Connectors → Keys for services, `/api/connectors/keys/*`, host): a key pasted once with its service's origin, where it goes (a header with a prefix, `Authorization: Bearer` by default, or a query parameter) and who may use it (admins' turns unless opened to everyone, like a connector). `api_call {url, key}` (since 2.259.0; `http_fetch` only reads, GET/HEAD) has the hub add it only when the URL's origin is the key's; the result is scrubbed of the key; the tool's description lists the keys by name, address and note, never the key. `DATA_DIR/keys/services.json`, 0600, `PROTECTED_FILES`.
-- **Services the agent prepared** (since 2.235.0, `modules/service-drafts.js`, tool `service_draft`, kit panel, in `registry.NEVER`): for any API with a key the agent reads its docs and drafts everything but the secret — how the key is sent (header, query or exchange), the origin, a note, and a skill with the steps. Field → Connectors → "Prepared by the agent": the person pastes the key, and one Save writes the key (protected file) and the skill (never over a shipped one). Nothing is usable as a draft.
+- **Keys for services** (`modules/service-keys.js`, Field → Connectors → API services — the card was "Keys for services", its form and `/api/connectors/keys/*` unchanged, host): a key pasted once with its service's origin, where it goes (a header with a prefix, `Authorization: Bearer` by default, a query parameter, or since 2026-10-08 `basic`, user:password as HTTP Basic) and who may use it (admins' turns unless opened to everyone, like a connector). `api_call {url, key}` (since 2.259.0; `http_fetch` only reads, GET/HEAD) has the hub add it only when the URL's origin is the key's; the result is scrubbed of the key; the tool's description lists the keys by name, address and note, never the key. `DATA_DIR/keys/services.json`, 0600, `PROTECTED_FILES`.
+- **Services the agent prepared** (since 2.235.0, `modules/service-drafts.js`, tool `service_draft`, kit panel, in `registry.NEVER`): for any API with a key the agent reads its docs and drafts everything but the secret — how the key is sent (header, query, basic or exchange), the origin, a note, its actions (`openapi`, or `openapi_url` read when opened) and a skill. Field → Connectors → API services → "Prepared by the agent" → Open in the form: the person checks it, pastes the key, and one Save writes the key (protected file), the service and the skill (never over a shipped one). Nothing is usable as a draft.
 - **MCP servers the agent prepared** (`modules/mcp/drafts.js`, tool `mcp_draft`, kit panel, in `registry.NEVER`): for a server not in the catalogue the agent drafts name, command and arguments or address, the secrets it needs by name (a secret's value is never kept), and which machine it belongs on. Nothing is added or started: MCP → "Prepared by the agent" → "Open in the form" fills the ordinary form, and only the person's Save makes it a server — the installs rule (the agent never supplies a command that runs) holds because a person saved it.
 - **A voice from a service, on request** (`modules/hosted-voices/`, one file per provider; Settings → Voice → This
   screen's voice, `public/js/settings/hosted-voice.js`; skill `hosted-voice`): ElevenLabs (Eleven v4/v3 read our tags
@@ -551,6 +551,45 @@ The harness gives its agent eight rules for working on any repository (charter r
 - `test/sealed-secrets.test.js` runs it end to end with a real doca-client (the OS typing stood in for): the forced ask,
   the use count, the origin check, the device-key unlock and replay, and that after a real turn the value is in no
   file of the hub's data folder (doca.db included), the transcript or the logs.
+
+### API services: a keyed service described by OpenAPI (2026-10-08, `modules/api-services/`; asked: "the future proof mask that is compatible")
+- **The format is OpenAPI** (3.x read, Swagger 2.0 too; 3.1 written): `openapi.js` reads a document into the definition
+  DOCA keeps — the server, how the key goes (securitySchemes: `apiKey` header/query, `http` bearer/basic, `oauth2`
+  clientCredentials = an exchange key, `none` only for an address of the owner's own), and each operation as an action
+  (method, path, parameters, a JSON, form or multipart body with file fields; `$ref`s and `allOf` resolved) — and writes
+  it back out unchanged (a test round-trips it). DOCA's own words are extensions: `x-doca-job` on an operation (an
+  asynchronous job: where its id is in the answer, which action asks after it and with which parameter, the status path,
+  done/failed values, where the result's addresses are, `every`, `giveUp`), `x-doca-token-body: json` (hi3d's token
+  request; OAuth's form otherwise — `service-keys` `grant`), `x-doca-prefix`, `x-doca-skill`, `x-doca-key-hint`.
+  `yaml.js` reads the YAML OpenAPI files are written in (no dependency; checked against PyYAML on eleven published specs,
+  GitHub's 10 MB one among them).
+- **Definitions live beside the keys**: `keys/api-services.json` (`paths.API_SERVICES_FILE`, inside the protected keys
+  folder); the key stays in `keys/services.json` under the same name, so older keys keep working and list as services
+  with no actions. `store.check` refuses anything that would send a key elsewhere: a token address off the service's
+  origin, a definition whose origin is not its key's (unless the person pastes the key again), a keyless stranger. **The
+  agent cannot change one**: no tool writes it; `service_draft` now also takes `openapi` or `openapi_url`, and only the
+  person's Save keeps it (with its skill).
+- **The tool `service {list | describe | call}`** (`toolbox/services.js`, kit connectors beside `api_call`, absent while
+  no service exists — `tool-shape.js`): it sends through `api_call`'s own request (`toolbox/http.js send`: the key added
+  for its origin only, redirects hop by hop, answers scrubbed), its answers and the provider's descriptions framed as
+  outside words, a header parameter can never set the key's header; risk tiers read the action's own method and address
+  (`risk/classify.js serviceArgs`). A job (`jobs.js`) is followed by the hub every `every` s — no model steps — its
+  result files fetched (the service's own address with the key, any other only as a file, never text) and kept as
+  attachments, an activity line written (`from: services`), and the conversation told: in the call when it ends within
+  `wait` (≤ 60 s), else an automatic turn (`supervisor.wake`) or a message read before its next step (`inbox.js`); a
+  finished specialist's goes to the work chat that sent it. Not followed across a restart: `recover()` says which, and
+  `follow` with the service's id takes one up again.
+- **The panel** (`public/js/settings/service-keys.js`, `service-rows.js`): the form is the Keys for services form as it
+  was, and one Advanced fold holds how the key is sent, who may use it, the actions (OpenAPI text, "Read the actions")
+  and the linked skill (`skills.servicesNote` lists a service's actions under any skill it names, or that names it
+  `services: […]`); "✨ Ask the agent to write one" opens the chat with a request the person sends. Above it one box,
+  "Service name, address or docs link": a name offers the shipped templates (`api-services/templates/*.openapi.json`,
+  each checked against its provider's docs on the day `x-doca-checked` says — hi3d.ai first), an address makes the hub
+  look for the spec (`discover.js`: the link, the usual places, the docs page's links; GET only, parsed as data) and
+  fill everything but the key; nothing found offers "✨ Ask the agent to prepare it". Rows: Edit (the same form), Try (a
+  GET action that is not a job), the OpenAPI document, Remove. Routes `/api/connectors/services/*`, host by the
+  `/api/connectors` row. A pack carries `services/<name>.openapi.json` without the key (`needs.secrets`
+  `service.<name>.key`, `packs/services.js`). `test/api-services*.test.js`.
 
 ### 3D models, and services that trade a secret for a token (since 2.232.0; asked 2026-10-06 for hi3d.ai)
 - **A 3D model is a kind of media** (`attachments.playableKind` → `model`: GLB, GLTF, STL, OBJ, FBX, PLY, 3MF, USDZ), drawn by one viewer everywhere (`public/js/lib/model3d.js`): the chat (`show_media`, turning, ⤢ full screen), the Files preview (through `mediaViewerOpen`), the Projects editor. GLB/GLTF with `<model-viewer>`, the rest with three.js and its loaders (both from jsDelivr the first time, like Monaco), normals recomputed and the model framed; USDZ is a download (AR on Apple devices).
