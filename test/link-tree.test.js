@@ -33,6 +33,6 @@ test('where a link cannot be made the file is copied, and a symbolic link stays 
   const r = linkTree(src, dest, { link: () => { throw Object.assign(new Error('cross-device link'), { code: 'EXDEV' }); } });
   assert.equal(r.copied, 1);
   assert.equal(fs.readFileSync(path.join(dest, 'x.js'), 'utf8'), 'x');
-  if (canSymlink) assert.equal(fs.readlinkSync(path.join(dest, 'bin', 'x')), '../x.js');
+  if (canSymlink) assert.equal(path.normalize(fs.readlinkSync(path.join(dest, 'bin', 'x'))), path.normalize('../x.js'), 'Windows gives it back with its own separator');
   fs.rmSync(root, { recursive: true, force: true });
 });
