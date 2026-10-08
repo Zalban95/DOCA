@@ -32,8 +32,9 @@ function _callTapStart(source) {
 
 function _callTapStop() { try { _callTap?.disconnect(); } catch { /* gone */ } _callTap = null; _callRing = []; _callRingLen = 0; }
 
-function _callHoldStart() {
+function _callHoldStart(overMs = 0) {
   if (_callHold || !_callPlayCtx || !_callAudioCtx) return;
+  _callReport('hold', { ms: overMs });
   _callPlayCtx.suspend().catch(() => {});   // paused exactly where it is: currentTime stops too
   const rate = _callAudioCtx.sampleRate, pre = [];
   let need = rate * 0.8;   // the word that started it
@@ -63,9 +64,14 @@ async function _callHoldDecide() {
     words = String((await (await fetch('/api/chat/transcribe', { method: 'POST', body: form, signal: _callAbort?.signal })).json()).text || '').trim();
   } catch { /* undecided reads as noise: the answer goes on */ }
   if (_callHold !== h || !_callActive || !_callPlayCtx) return;
-  if (/[\p{L}\p{N}]/u.test(words)) {   // a person said something: the answer ends where they stopped listening
+  // The voice heard back through the microphone (a phone's speaker, an echo canceller that let it through) is not the
+  // person: words that are the answer's own words resume it.
+  const echo = _callIsEcho(words);
+  if (/[\p{L}\p{N}]/u.test(words) && !echo) {   // a person said something: the answer ends where they stopped listening
     h.words = true;
     const heard = _callHeardText();
+    _callCutWhy = heard ? 'told' : 'talked over before any of it was heard';
+    _callReport('cut', { why: 'the person talked over it' });
     _callAnswerCtrl?.abort();   // its turn stops too: what it would still say is not an answer any more
     _callStopPlayback();
     _callEpoch++; if (_callStats) _callStats.bargeIns++;
@@ -74,10 +80,19 @@ async function _callHoldDecide() {
     _callSendHeard(heard);
   } else {
     _callHold = null;
+    _callReport('resumed', { why: echo ? 'its own voice, heard back' : 'no words in it' });
     _callPlayCtx.resume().catch(() => {});
     if (!_callCurrentSrc && _callPlayQueue.length) _callPlayNext();   // a sentence that arrived during the pause
     _callSetStatus('Speaking…', 'speaking');
   }
+}
+
+/** Whether words heard over the voice are mostly the voice's own (≥ 60 % of them in what it is saying or about to). */
+function _callIsEcho(words) {
+  const toks = t => String(t || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 1);
+  const said = new Set(toks([..._callHeard.map(x => x.text), ..._callPlayQueue.map(b => b._docaText)].join(' ')));
+  const w = toks(words);
+  return w.length > 0 && said.size > 0 && w.filter(x => said.has(x)).length / w.length >= 0.6;
 }
 
 /** Float32 chunks → a 16-bit mono WAV blob. */
@@ -104,7 +119,7 @@ function _callHeardText() {
 
 async function _callSendHeard(heard) {
   if (!heard) return;
-  chatAppendMsg('system', `Interrupted after “…${heard.split(/\s+/).slice(-6).join(' ')}” — the rest was not heard.`);
+  chatAppendMsg('system', `Interrupted after “…${heard.split(/\s+/).slice(-6).join(' ')}” — the rest was not heard. Go on, I\u2019m listening.`);
   try { if (!(await apiFetch('/api/chat/heard', { method: 'POST', body: { heard } })).cut) _callHeardPending = heard; }
   catch { /* the transcript keeps the whole answer */ }
 }
