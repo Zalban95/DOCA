@@ -52,9 +52,9 @@ async function _subtabVoiceInit() {
     const prefs = await apiFetch('/api/prefs');
     _voiceSettingsLoad(prefs);
   } catch {}
-  // In order — the hive's services above, then this screen's voice, then the call's cards (settings/live-call.js).
-  await screenVoiceRender();
-  await callVoicesRender();   // a voice per kind of call: Live and Deep (settings/call-voices.js)
+  // In order — the Voice card first (how answers are spoken, each call's voice, which services run;
+  // settings/voice-card.js), the hive's speech services, then the call's cards (settings/live-call.js).
+  await voiceCardRender();
   await liveCallRender();
 }
 

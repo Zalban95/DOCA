@@ -291,3 +291,9 @@ html[data-skin="points"] .adv-fold-label { font-family: var(--font-mono); font-s
 .choice-keep { color: var(--muted); border-top: 1px solid var(--border); }
 @media (pointer: coarse) { .choice-open { width: 36px; } .choice-item { padding: 11px 12px; } }
 
+/* Settings → Voice → Voice (js/settings/voice-card*.js): whether a chosen voice service runs. */
+.vc-state { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; color: var(--muted); margin-top: 6px; }
+.vc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); border: 1px solid var(--border2, var(--border)); flex: none; }
+.vc-dot.on { background: var(--green); border-color: var(--green); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--green) 50%, transparent); }
+.vc-needs { flex-basis: 100%; padding-left: 15px; font-size: 10.5px; }
+.vc-call { padding-left: 10px; border-left: 2px solid var(--border); }
