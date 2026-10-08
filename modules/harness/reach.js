@@ -188,12 +188,13 @@ function figureBlock(svg, alt) {
   return { type: 'figure', svg: s, alt: String(alt || 'drawing').slice(0, 200) };
 }
 
-async function ask({ to, question, choices, note, timeoutSec, signal, svg, layout } = {}) {
+async function ask({ to, question, choices, note, timeoutSec, signal, svg, layout, personId } = {}) {
   const { prompts } = api();
   const text = String(question || '').trim();
   if (!text) throw new Error('A question needs to be asked in words.');
 
-  const targets = resolveTargets(to);
+  // The person's own devices only, as for a notice (ownTargets): never a question on someone else's wrist.
+  const targets = ownTargets(to, personId);
   const built = buildChoices(choices);
   const quadrants = layout === 'quadrants';
   if (quadrants && (!svg || built.filter(c => c.type === 'option').length > 4))
@@ -258,7 +259,7 @@ async function ask({ to, question, choices, note, timeoutSec, signal, svg, layou
 
 /**
  * Only the person's own devices, when the turn has a person: a device paired in someone else's name is never told
- * — nor sent their files (2026-10-08). A device with no person (paired before accounts) is the hive's and stays in.
+ * — nor asked, nor sent their files (2026-10-08). A device with no person (paired before accounts) is the hive's and stays in.
  * Naming another person's device is refused in so many words rather than matched to nothing.
  */
 function ownTargets(to, personId) {
@@ -268,7 +269,7 @@ function ownTargets(to, personId) {
   if (!mine.length) {
     const want = String(to || '').trim();
     throw new Error(want && !['all', 'any'].includes(want.toLowerCase())
-      ? `${all.map(label).join(', ')} ${all.length === 1 ? 'is' : 'are'} someone else's: a notice or a file goes only to the person's own devices and chats.`
+      ? `${all.map(label).join(', ')} ${all.length === 1 ? 'is' : 'are'} someone else's: a question, a notice or a file goes only to the person's own devices and chats.`
       : 'None of the paired devices is this person\'s own, so there is nobody to tell.');
   }
   return mine;

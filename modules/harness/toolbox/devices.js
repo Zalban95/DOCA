@@ -98,9 +98,9 @@ module.exports = [
       },
       required: ['question', 'choices'],
     },
-    run: async ({ question, choices, to, note, timeoutSec, svg, layout }) => {
+    run: async ({ question, choices, to, note, timeoutSec, svg, layout }, ctx = {}) => {
       const reach = require('../reach');
-      const r = await reach.ask({ to, question, choices, note, timeoutSec, svg, layout });
+      const r = await reach.ask({ to, question, choices, note, timeoutSec, svg, layout, personId: ctx.user?.id || null });
       const who = r.targets.map(reach.label).join(', ');
       switch (r.status) {
         case 'answered':  return `${reach.label(r.device)} answered: "${r.label}" (choice ${r.choiceId}).`;

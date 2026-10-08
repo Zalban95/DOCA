@@ -123,9 +123,10 @@ the project's managers only if the owner allows sharing specialists and skills (
   each recipient's own media and carried as `media` blocks with `kind`/`mime`/`name`/`bytes`/`caption` (PROTOCOL
   §19.1, fixture `alert-files`); a channel uploads them its own way (Telegram by type, Matrix, Slack, mail
   attachments — `channels/deliver.js` `file`/`notice`), refused before anything is stored with the channel's limit
-  (`channels/limits.js`); the person's own devices only. Left: DocaMobile playing/opening a media block by `kind`;
-  `ask_device` narrowed to the person's own devices like `tell_device`; charter rule 15 still says "`tell_device`
-  carries a picture" (ask-first, S11); the live memory `telegram-channel-send` is now wrong and should be forgotten.
+  (`channels/limits.js`); the person's own devices only, for `ask_device` too. Left: DocaMobile playing/opening a
+  media block by `kind` (DocaMobile TODO, branch `media-file-kind`); charter rule 15 still says "`tell_device` carries
+  a picture" (ask-first, S11: waits for the owner's yes); the live memory `telegram-channel-send` is now wrong and
+  should be forgotten.
 - [x] A call that feels alive and quick (asked 2026-10-07 from the watch; hub 2.304.0, branch `watch-call-live`,
   DocaWear `call-feedback`): the front (`turn/front.js`, `assistant.front`) — a spoken turn answers at once with a
   short kit, untriaged, at assistant mode's effort; a large request or "think harder / take your time / focus" goes to

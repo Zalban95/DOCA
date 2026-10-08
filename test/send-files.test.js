@@ -139,11 +139,30 @@ test('another person\'s device is refused; a person reaches their own', async ()
   const devices = require('../modules/api-v1/devices');
   const theirs = H.mkDevice('Member phone', 'phone', H.PHONE_CAPS);
   devices.update(theirs.device.id, { userId: member.user.id });
-  await refused({ to: 'Member phone', title: 'Hi', files: [file('x.mp3')] }, /someone else's: a notice or a file goes only to the person's own/);
+  await refused({ to: 'Member phone', title: 'Hi', files: [file('x.mp3')] }, /someone else's: a question, a notice or a file goes only to the person's own/);
   const out = await tellDevice({ to: 'Member phone', title: 'Hi', files: [file('y.mp3')] }, { ...member.user, role: 'member' });
   assert.match(out, /Member phone/);
   const all = await tellDevice({ title: 'To everyone' }, { ...member.user, role: 'member' });
   assert.ok(!/Telegram · Al/.test(all), 'the owner\'s chat is not the member\'s');
+});
+
+test('ask_device asks only the person\'s own devices: another person\'s is refused by name', async () => {
+  const member = await H.signIn('member');
+  const theirs = H.mkDevice('Member watch', 'watch', H.WATCH_CAPS);
+  require('../modules/api-v1/devices').update(theirs.device.id, { userId: member.user.id });
+  const ask = (args, user) => require('../modules/harness/tools').call('ask_device', { question: 'Go?', choices: ['Yes', 'No'], timeoutSec: 5, ...args }, [], { user });
+  assert.match(await ask({ to: 'Member watch' }, owner()), /^Error: [\s\S]*Member watch \(watch\) is someone else's: a question/);
+  // Their own turn reaches it; the owner's chat is not asked on the member's turn.
+  const reach = require('../modules/harness/reach');
+  const asked = ask({}, { ...member.user, role: 'member' });
+  let open;
+  for (let i = 0; i < 100 && !open; i++) { open = reach.openQuestions().find(x => x.question === 'Go?'); if (!open) await H.sleep(20); }
+  assert.ok(open, 'the question was asked');
+  const targets = require('../modules/api-v1/prompts').get(open.id).targets;
+  assert.ok(targets.includes(theirs.device.id), 'their own watch is asked');
+  assert.ok(!targets.includes(require('../modules/api-v1/devices').list().find(d => d.kind === 'channel').id), 'the owner\'s chat is not');
+  require('../modules/harness/reach').answerAtPanel(open.id, { choiceId: 'c1' });
+  assert.match(await asked, /answered: "Yes"/);
 });
 
 test('a mail carries the files as attachments', () => {
