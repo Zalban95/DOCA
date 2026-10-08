@@ -96,4 +96,17 @@ async function key(k) {
   await headless.sleep(120);
 }
 
-module.exports = { start, stop, open, evaluate, until, key, errors, sleep: headless.sleep, skip: !exe && 'no browser here' };
+/** A picture of the page as it is now, to a file — for a person to look at, never checked. */
+async function shot(file) {
+  await headless.sleep(700);   // a smooth scroll lands first
+  const { data } = await page.send('Page.captureScreenshot', { format: 'png' });
+  fs.writeFileSync(file, Buffer.from(data, 'base64'));
+}
+
+/** `setup` for a page under test: past the first-run question (Guided or Advanced), which covers every page. */
+const pastFirstRun = () => {
+  const { loadPrefs, savePrefs } = require('../modules/utils');
+  savePrefs({ ...loadPrefs(), setup: { ...(loadPrefs().setup || {}), mode: 'advanced' } });
+};
+
+module.exports = { start, stop, open, evaluate, until, key, shot, pastFirstRun, errors, sleep: headless.sleep, skip: !exe && 'no browser here' };

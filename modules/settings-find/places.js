@@ -78,8 +78,8 @@ module.exports = [
     control: 'the Budgets card', words: 'budget budgets money cost spend spending limit tokens per day month' },
   { id: 'users', label: 'People, levels and grants', paths: [], page: 'settings/users', how: 'password',
     control: 'Settings → Users', words: 'users people accounts account level levels member admin grant grants invite password', host: true },
-  { id: 'computers', label: 'Agents\' computers: how many, when they stop', paths: ['computers'], page: 'computers', field: '#computers-settings',
+  { id: 'computers', label: 'Agents\' computers: how many, when they stop', paths: ['computers'], page: 'computers', field: '[data-leaf="computers.maxRunning"]',
     control: 'the Advanced fold on Computers', words: 'computers computer container desktop idle stop remove', host: true },
-  { id: 'mcp-timeouts', label: 'MCP timeouts', paths: ['mcpSettings'], page: 'mcp', field: '#mcp-settings',
+  { id: 'mcp-timeouts', label: 'MCP timeouts', paths: ['mcpSettings'], page: 'mcp', field: '[data-leaf="mcpSettings.callTimeoutMs"]',
     control: 'the Advanced fold on MCP', words: 'mcp timeout tool server wait', host: true },
 ];
