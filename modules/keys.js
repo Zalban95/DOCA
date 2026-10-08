@@ -92,7 +92,7 @@ async function probe(baseUrl, apiKey = '', { timeoutMs = 8000, fetchImpl = fetch
     const why = e.name === 'TimeoutError' || e.name === 'AbortError' ? `it did not answer within ${Math.round(timeoutMs / 1000)} s`
       : /ECONNREFUSED/.test(String(e.cause?.code || e.message)) ? 'nothing is listening there'
       : /ENOTFOUND|EAI_AGAIN/.test(String(e.cause?.code || e.message)) ? 'that name is not found'
-      : `it could not be reached (${e.cause?.code || e.message})`;
+      : `it could not be reached (${e.cause?.code || e.cause?.message || e.message})`;
     return { models: [], error: why };
   }
 }

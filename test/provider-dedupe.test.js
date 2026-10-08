@@ -53,9 +53,9 @@ test('testing an address saves nothing, finds /v1, and names the provider alread
   assert.equal(r.body.existing, null);
   assert.equal(Object.keys(keys.all()).length, before, 'nothing saved by a test');
   // An address nothing listens on: a sentence, not Node's own words.
-  r = await H.api(null, 'POST', '/api/keys/test-provider', { baseUrl: 'http://127.0.0.1:9/v1' });
+  r = await H.api(null, 'POST', '/api/keys/test-provider', { baseUrl: 'http://127.0.0.1:59999/v1' });
   assert.equal(r.body.ok, false);
-  assert.match(r.body.error, /nothing is listening|could not be reached/);
+  assert.match(r.body.error, /nothing is listening/);
   keys.set('Mine', { baseUrl: `${stubUrl}/v1`, apiKey: '', models: [] });
   r = await H.api(null, 'POST', '/api/keys/test-provider', { baseUrl: `${stubUrl}/v1/` });
   assert.equal(r.body.existing, 'Mine');
