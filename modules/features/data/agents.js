@@ -31,7 +31,7 @@ module.exports = [
     routes: ['/api/auth/grants*'], words: 'permission exception delegate allow' },
   { id: 'modes', name: 'Conversation modes', page: ['harness', 'projects'], since: '2.149.0',
     use: 'Agent, Plan, Ask or Debug per conversation: Plan and Ask refuse work by code until a plan is approved.',
-    words: 'plan mode ask mode debug mode read only' },
+    words: 'plan mode ask mode debug mode read only + plan planning chat' },
   { id: 'approvals', name: 'Approvals (auto, manual, unattended)', page: ['harness', 'settings/harness'], settings: ['harness.approval.mode', 'harness.approval.manualAsks', 'harness.approval.missionAskSec', 'harness.approval.missionAskTimeout'],
     use: 'Whether each tool call that does something is asked first — the person\'s switch, with their password: Auto / Manual above the conversation, Approvals beside it.',
     routes: ['/api/harness/approval*'], words: 'allow deny always allowlist approve popup mission machine confirmation' },

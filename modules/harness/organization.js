@@ -160,13 +160,20 @@ function canManage(actor, target) {
     (leads(s.kind) && ancestors(target).includes(actor));
 }
 
-function create({ title, planning = false, kind = 'work' } = {}) {
+/**
+ * A new conversation. `mode` starts it in a conversation mode (modes.js) — the Harness's "＋ Plan" opens a work chat in
+ * Plan mode (deep test A, 2026-10-08): it plans, the person approves, and Approve switches it to Agent and carries the
+ * plan out in the same chat, as a Projects tab in Plan mode does. `planning` is the older note-only planning work chat
+ * the Orchestrator may still ask for (work_chats create {planning}), whose plan was meant for another chat.
+ */
+function create({ title, planning = false, kind = 'work', mode = null } = {}) {
   const chat = kind === 'chat' && !planning;
-  const s = memory.createSession(short(title, 100) || (chat ? 'New conversation' : planning ? 'Planning work' : 'Work chat'), {
+  const s = memory.createSession(short(title, 100) || (chat ? 'New conversation' : planning || mode === 'plan' ? 'Planning work' : 'Work chat'), {
     activate: false, kind: chat ? 'chat' : 'work', parentId: memory.mainSession().id,
   });
   memory.updateSession(s.id, { planning: !!planning, titleLocked: !!title });
-  report(s.id, 'created', chat ? 'Conversation started' : planning ? 'Planning work chat created' : 'Work chat created');
+  if (mode && mode !== 'agent') require('./modes').set(s.id, mode);
+  report(s.id, 'created', chat ? 'Conversation started' : planning ? 'Planning work chat created' : mode === 'plan' ? 'Work chat created in Plan mode' : 'Work chat created');
   return session(s.id);
 }
 

@@ -3,7 +3,7 @@
 /**
  * Plans from the person's side (deep test A, 2026-10-08): a rejected plan is said in the conversation and answered in
  * a line, never silence; the work stops there. A chat carrying out an approved plan that a restart cut off goes on by
- * itself, as a job does, and a device reads such work as paused, never failed.
+ * itself, as a job does, and a device reads such work as paused, never failed. "＋ Plan" is a work chat in Plan mode.
  */
 const { test, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
@@ -81,4 +81,20 @@ test('a chat carrying out an approved plan, paused by a restart, is carried on; 
   assert.ok(await answered(chat.id), 'it went on');
   assert.match(memory.messages(chat.id).find(m => m.role === 'user').content, /restarted[\s\S]*approved plan "A small site": go on from the first step not done/);
   assert.equal(memory.messages(stopped.id).length, 0, 'a job a person stopped is not woken');
+});
+
+test('"＋ Plan" opens a work chat in Plan mode, and approving its plan carries it out there', async () => {
+  const r = await H.api(null, 'POST', '/api/harness/sessions', { title: 'Plan the site', kind: 'work', mode: 'plan' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const id = r.body.session.id;
+  assert.deepEqual([r.body.session.kind, require('../modules/harness/modes').of(id)], ['work', 'plan']);
+  assert.equal((await H.api(null, 'POST', '/api/harness/sessions', { kind: 'work', mode: 'yolo' })).status, 400);
+  org.plan(id, { action: 'draft', title: 'The site', steps: ['index'] });
+  org.plan(id, { action: 'propose' });
+  script = ['On it.'];
+  const a = await H.api(null, 'POST', `/api/harness/sessions/${id}/plan`, { action: 'approve', revision: 1 });
+  assert.equal(a.body.started.started, true);
+  assert.equal(require('../modules/harness/modes').of(id), 'agent', 'Approve is the go-ahead: Agent mode, in the same chat');
+  assert.equal(memory.getSession(id).job.state, 'working');
+  assert.ok(await answered(id));
 });

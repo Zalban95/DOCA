@@ -193,8 +193,8 @@ const handleSessions = wrap(async (req, res) => {
 });
 
 const handleSessionNew = wrap(async (req, res) => {
-  // A person's new conversation unless the panel asks for a work chat (＋ Work, ＋ Plan send kind: 'work').
-  const b = req.body || {}, session = organization.create({ title: b.title, planning: b.planning, kind: b.kind === 'work' || b.planning ? 'work' : 'chat' });
+  // A person's new conversation unless the panel asks for a work chat (＋ Work; ＋ Plan in Plan mode: kind 'work', mode 'plan').
+  const b = req.body || {}, session = organization.create({ title: b.title, planning: b.planning, kind: b.kind === 'work' || b.planning ? 'work' : 'chat', mode: b.mode || null });
   access.claim(who(req), session.id);
   if (access.mayUse(who(req), memory.mainSession().id)) memory.setActive(session.id);   // the active pointer is the host's
   res.json({ session });

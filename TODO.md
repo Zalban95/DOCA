@@ -192,6 +192,10 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [x] Deep test A 32: a conversation carrying out an approved plan that a restart cut off is carried on by itself
   (`supervisor.recover`, as jobs and missions are; not one whose job a person stopped or dropped), and a work chat a
   restart cut off reaches devices as `paused`, never `failed` (`workview.js`; PROTOCOL §11.4 already had the state).
+- [x] Deep test A 14: "＋ Plan" on Agents → Harness opens a work chat in Plan mode (`organization.create {mode}`), the
+  Projects tabs' mode: it plans, Approve switches it to Agent and carries the plan out in the same chat. Chosen over
+  renaming it "＋ Planning chat": the planning work chat was a prompt note whose plan was meant for another chat that
+  nothing made, while Plan mode refuses work by code and Approve already starts it.
 
 ### Everything still open, now urgent
 - C7b: done; D2b: done — its gaps (`docs/api/capability-gaps.md`) are v1 routes to ask for, plan decisions first.
