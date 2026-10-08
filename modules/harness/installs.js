@@ -125,6 +125,18 @@ const KINDS = {
   },
 };
 
+// A GGUF on Hugging Face run by a managed llama.cpp server (llamacpp-hf/): `org/repo:<quant or file>`, resolved from
+// the repository's own listing when installed — the agent names a model, never an address. Off until started.
+KINDS['llamacpp-hf'] = {
+  label: 'llama.cpp model from Hugging Face',
+  verb: 'Download',
+  validate: id => require('../llamacpp-hf/hub').parse(id).error || null,
+  describe: id => `Download ${id} from Hugging Face into the models folder (a split set whole, its vision projector when it has one) `
+    + 'and make a llama.cpp server for it with --jinja (its own chat template, for tool calls) — off until started.',
+  handler: () => require('../llamacpp-hf/install').handleInstall,
+  request: (id, params) => ({ body: { id, ...(params?.vision === false ? { vision: false } : {}) } }),
+};
+
 /** What the agent is told it may ask for. */
 function kinds() {
   return Object.entries(KINDS).map(([kind, k]) => ({ kind, label: k.label, verb: k.verb }));

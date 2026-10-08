@@ -104,18 +104,24 @@ function handleStatus(_req, res) {
 
 /** POST /api/models/llamacpp/config — create or update an instance */
 function handleConfig(req, res) {
-  const { id, name, modelPath, port, nGpuLayers, ctxSize } = req.body;
+  const { id, name, modelPath, port, nGpuLayers, ctxSize, mmprojPath, jinja } = req.body;
   if (!id) return res.status(400).json({ error: 'id required' });
 
   const instances = loadInstances();
   const idx = instances.findIndex(i => i.id === id);
+  // What the form does not show (the vision projector, --jinja, where a Hugging Face install came from) is kept as it
+  // was unless the request names it: a save from the form used to rebuild the entry from its five fields.
+  const was = idx >= 0 ? instances[idx] : {};
   const entry = {
+    ...was,
     id,
     name:        name       || id,
     modelPath:   modelPath  || '',
     port:        parseInt(port)        || 11435,
-    nGpuLayers:  Number.isFinite(parseInt(nGpuLayers)) ? parseInt(nGpuLayers) : 999,
+    nGpuLayers:  nGpuLayers === 'auto' ? 'auto' : Number.isFinite(parseInt(nGpuLayers)) ? parseInt(nGpuLayers) : 999,
     ctxSize:     parseInt(ctxSize)    || 8192,
+    ...(mmprojPath !== undefined ? { mmprojPath: String(mmprojPath || '') } : {}),
+    ...(jinja !== undefined ? { jinja: !!jinja } : {}),
   };
 
   if (idx >= 0) {
@@ -138,6 +144,21 @@ function handleDelete(req, res) {
   const instances = loadInstances().filter(i => i.id !== id);
   saveInstances(instances);
   res.json({ ok: true });
+}
+
+/** The llama-server command line for an instance, by argv (never a shell string). */
+function argsFor(inst) {
+  return [
+    '-m', inst.modelPath,
+    '--host', BIND_HOST,
+    '--port', String(inst.port),
+    // `auto`: no -ngl, so llama.cpp fits the layers itself (its default); a number is the person's.
+    ...(inst.nGpuLayers === 'auto' ? [] : ['-ngl', String(inst.nGpuLayers ?? 999)]),
+    '-c', String(inst.ctxSize || 8192),
+    // --jinja: the GGUF's own chat template, which is what makes tool calls work (llamacpp-hf/ sets it).
+    ...(inst.jinja ? ['--jinja'] : []),
+    ...(inst.mmprojPath && fs.existsSync(inst.mmprojPath) ? ['--mmproj', inst.mmprojPath] : []),
+  ];
 }
 
 /** POST /api/models/llamacpp/start — start a llama-server instance (SSE) */
@@ -164,13 +185,7 @@ function handleStart(req, res) {
   sseHeaders(res);
   const sseWrite = d => { try { res.write(`data: ${JSON.stringify(d)}\n\n`); } catch {} };
 
-  const args = [
-    '-m', inst.modelPath,
-    '--host', BIND_HOST,
-    '--port', String(inst.port),
-    '-ngl', String(inst.nGpuLayers ?? 999),
-    '-c', String(inst.ctxSize || 8192),
-  ];
+  const args = argsFor(inst);
 
   const cmdDisplay = `llama-server ${args.join(' ')}`;
   sseWrite({ status: `Starting llama-server…\n$ ${cmdDisplay}\n` });
@@ -328,7 +343,16 @@ function getRunningInstances() {
     }));
 }
 
+/** Add or replace one instance (llamacpp-hf/install.js): a free id and port are the caller's to choose. */
+function saveInstance(entry) {
+  const list = loadInstances().filter(i => i.id !== entry.id);
+  saveInstances([...list, entry]);
+  return instanceStatus(entry);
+}
+
 module.exports = {
+  saveInstance,
+  argsFor,
   handleList,
   handleStatus,
   handleConfig,

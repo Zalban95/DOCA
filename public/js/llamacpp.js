@@ -10,6 +10,7 @@ let _llamaStatus    = {};
 async function llamaInit() {
   await llamaLoadList();
   _llamaServerBadge();
+  llamaHfCard();   // From Hugging Face (llamacpp-hf.js)
 }
 
 /** Detect the llama-server binary (shared system-tools check) and badge it. */
@@ -106,7 +107,7 @@ function _renderLlamaGrid() {
       </div>
       <div style="font-size:10px;color:var(--muted);margin:2px 0 4px;word-break:break-all"
            title="${inst.modelPath}">
-        ${inst.modelPath ? inst.modelPath.split('/').pop() : '<em>no model set</em>'}
+        ${inst.modelPath ? inst.modelPath.split(/[\\/]/).pop() : '<em>no model set</em>'}${inst.source ? ` · from ${escHtml(inst.source.repo)}` : ''}${inst.mmprojPath ? ' · reads pictures' : ''}${inst.jinja ? ' · its own chat template (tool calls)' : ''}
       </div>
       <div class="llamacpp-controls">
         <label class="services-ctrl-label">Model</label>
@@ -119,8 +120,8 @@ function _renderLlamaGrid() {
         <input class="input" id="llama-port-${inst.id}" value="${inst.port}" type="number"
                style="width:70px" min="1024" max="65535">
         <label class="services-ctrl-label">GPU Layers</label>
-        <input class="input" id="llama-ngl-${inst.id}" value="${inst.nGpuLayers ?? 999}" type="number"
-               style="width:60px" min="0">
+        <input class="input" id="llama-ngl-${inst.id}" value="${inst.nGpuLayers ?? 999}" title="A number, or auto: llama.cpp places them"
+               style="width:60px" inputmode="numeric">
         <label class="services-ctrl-label">Ctx Size</label>
         <input class="input" id="llama-ctx-${inst.id}" value="${inst.ctxSize || 8192}" type="number"
                style="width:70px" min="128" step="128">
