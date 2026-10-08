@@ -15,9 +15,11 @@
  */
 const FRESH_MS = 75e3;   // two missed heartbeats and a margin
 const seen = new Map();  // userId → { at, visible, name }
+let _lastVisibleAt = 0;  // the last moment any page was seen visible: a visible beat, or a page hidden that was visible
 
 function beat(user, visible) {
   if (!user?.id) return;
+  if (visible || seen.get(user.id)?.visible) _lastVisibleAt = Date.now();
   seen.set(user.id, { at: Date.now(), visible: !!visible, name: user.name || user.email || 'someone' });
 }
 
@@ -50,6 +52,9 @@ function line(now = Date.now()) {
  */
 function quietFlag(userId, now = Date.now()) { return userId && state(now, userId).atPanel ? { quiet: true } : {}; }
 
-function _reset() { seen.clear(); }
+/** When a page of the hub was last seen visible, by anyone (service-life/: the idle clock starts after it); 0 when never. */
+const lastVisibleAt = () => _lastVisibleAt;
 
-module.exports = { beat, state, line, quietFlag, FRESH_MS, _reset };
+function _reset() { seen.clear(); _lastVisibleAt = 0; }
+
+module.exports = { beat, state, line, quietFlag, lastVisibleAt, FRESH_MS, _reset };
