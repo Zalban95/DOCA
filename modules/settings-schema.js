@@ -34,7 +34,7 @@ const SCHEMA = {
     keys: {
       silenceMs:   { type: 'integer', min: 300, default: 2000, hint: 'How long a pause, in milliseconds, ends what you said and sends it.' },
       sensitivity: { type: 'integer', min: 1, default: 15, hint: 'The microphone level that counts as speech; lower hears quieter voices and more of the room.' },
-      assistantIdleSec: { type: 'integer', min: 5, default: 12, hint: 'In assistant mode (the face tapped), seconds of quiet before it goes back to waiting for the wake word, where the screen listens for one.' },
+      assistantIdleSec: { type: 'integer', min: 5, default: 12, hint: 'In the Live call (the face tapped) and Ambient\'s assistant, seconds of quiet before it goes back to waiting for the wake word, where the screen listens for one.' },
       listenWithFace: { type: 'boolean', default: false, hint: 'While the corner face shows, listen for the wake word and start a call when it is said (experiments.wakeWord).' },
       wakeWord: { type: 'string', default: '', hint: 'The word that starts a call. Empty: the product\'s name (branding).' },
     } },
@@ -107,7 +107,7 @@ const SCHEMA = {
   limits:           { is: 'travels', home: 'hive', note: 'the ceiling adaptive step budgets and extensions stay under (turn/triage.js, turn/extend.js; the switch is experiments.adaptiveLimits)',
     keys: { maxStepsCeiling: { type: 'integer', min: 1, max: 1000, default: 64, hint: 'The most tool steps one turn may reach when its budget follows the work (experiment adaptiveLimits). Below Max tool steps it changes nothing: a budget is never under that.' } } },
   assistant:        { is: 'travels', home: 'hive', note: 'assistant mode: a call started from the face answers quicker and shorter, in its own style (turn/effort.js, turn/client.js)',
-    propose: p('Assistant mode', 'How the face answers when spoken to: its style, thinking effort and model'),
+    propose: p('Live call', 'How the face (and Ambient\'s assistant) answers when spoken to: its style, thinking effort and model'),
     keys: { effort: { type: 'string', default: 'low', hint: 'Thinking effort in assistant mode: off, low, medium, high, or default (send nothing: the model\'s own).' },
       style: { type: 'string', default: 'You are the hive\'s voice, spoken to through its face — a companion who handles things. Answer in one to three short spoken sentences: direct, warm, conversational. No lists, no markdown, nothing read out that belongs on a screen. When something takes work, say in a few words what you are doing and do it; offer to go deeper rather than going deep.',
         hint: 'How assistant mode speaks — the instruction every face-started turn is given.' },

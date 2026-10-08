@@ -173,6 +173,16 @@ the project's managers only if the owner allows sharing specialists and skills (
   calls" (speed under Advanced, "Make it the hive's" for a host); the UI says "Quick call" and "Deep call" (🎙 Deep).
   `test/call-voices.test.js`. Not done: a hosted speech service as a `service` (only the hive's and Services rows);
   nobody has heard the two voices on a real call or a watch yet.
+- [x] Calls, round two (2026-10-08, from the call log; branch `calls-round-two`): **the wedge** — the wake word resting
+  without a trained model threw on letting go (`false?.stop()`), so every call from a resting screen, Ambient's hold
+  included, died before the microphone and nothing reached the hub; fixed, and a call that cannot open now says why.
+  The microphone is handed over between the wake word and a call (`lib/mic.js micHandOff`), a call watches for a
+  microphone that gives pure silence (reopened once, then said: `chat-call-mic.js`), a paused voice waits at most 4 s,
+  an unspoken sentence is shown on the face or Ambient. Tone tags kept apart at the source: clean text everywhere a
+  person reads, `spoken` beside it for the voices. Whisper's subtitle credits screened. Names: Live call (the face),
+  Deep call (the chat's 🎙), Ambient's assistant. Reproduced and checked headless (phone size, mobile UA, the wake word
+  on). Not done: why the 10:53 call on the owner's phone heard exact zeros is not proven (the hand-off and the watch now
+  cover it, and the log will say which it was); nobody has heard it on the phone yet.
 - [x] Self-test 2026-10-08, the agents and missions group (branch `selftest-agents`): specialists' budgets fit a
   real errand (Tester 120, Coder 80, Researcher 40, Scout 30, Archivist 10, unnamed 30; #6); a mission's last step is
   its report, with a line telling its leader it ended on its limit and where that is raised (`turn/mission-report.js`;

@@ -78,7 +78,7 @@ function toOne(deviceId, type, payload) {
 /**
  * A spoken call (realtime/pipeline, /api/v1/call) says so, as the panel's does (chat.js voiceClient). When the hub's
  * own voice speaks it (`HUB_SPOKEN`, set only by realtime/index.js askAsDevice — a symbol, so no request body can) and
- * that voice — the device's Quick call voice (call-voices.js) — takes a tone, the agent is told it may write tags.
+ * that voice — the device's Live call voice (call-voices.js) — takes a tone, the agent is told it may write tags.
  */
 const HUB_SPOKEN = Symbol('spoken by the hub');
 function voiced(client, voice, hub = false) {

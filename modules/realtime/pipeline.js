@@ -70,7 +70,7 @@ function gatherer() {
 const sentences = text => (speakable(text).match(/[^.!?;:]+[.!?;:]*\s*/g) || []).map(s => s.trim()).filter(s => s.length > 1);
 
 /**
- * `voice` is the call's voice (call-voices.js pick: `{engine, voice, speed}` — a device's Quick call voice); without
+ * `voice` is the call's voice (call-voices.js pick: `{engine, voice, speed}` — a device's Live call voice); without
  * one, the hive's speech service as it is.
  */
 function connect({ silenceMs = 900, synth, transcribe, voice = null } = {}) {
