@@ -19,18 +19,17 @@
 const AGENT_QUEUED_MINE = new Set();
 
 async function agentQueuedSend(url, body, ui) {
-  let sink = null, starting = null;
+  let sink = null, starting = null, queued = false;
   const early = [];
-  const feed = e => (sink ? sink.onEvent(e) : early.push(e));
+  // The conversation was free after all (its turn ended while this was being typed): the server started a turn at
+  // once, with no "queued" first, and it is drawn like one this page started.
+  const begin = () => { starting = ui.startTurn().then(s => { sink = s; early.splice(0).forEach(x => s.onEvent(x)); }); };
+  const feed = e => { if (!sink && !starting && !queued) { ui.mark('started'); begin(); } return sink ? sink.onEvent(e) : early.push(e); };
   await sseStream(url, body, {
     onEvent: e => {
-      if (e.type === 'queued') { AGENT_QUEUED_MINE.add(e.id); return ui.mark('queued'); }
+      if (e.type === 'queued') { queued = true; AGENT_QUEUED_MINE.add(e.id); return ui.mark('queued'); }
       if (e.type === 'queued_read') return ui.mark('read');
-      if (e.type === 'queued_started') {
-        ui.mark('started');
-        starting = ui.startTurn().then(s => { sink = s; early.splice(0).forEach(x => s.onEvent(x)); });
-        return;
-      }
+      if (e.type === 'queued_started') { ui.mark('started'); if (!starting) begin(); return; }
       feed(e);
     },
     onError: e => (sink ? sink.onError(e) : ui.mark('error', e.message)),
