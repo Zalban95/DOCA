@@ -55,7 +55,7 @@ test('its retention is a log setting, shown with what it holds, and asks for the
 
 test('every routine the audit lists writes its line where it acts', () => {
   const routines = ['computers/lifecycle.js', 'mcp/registry.js', 'schedules/index.js', 'scout/index.js', 'backup/schedule.js',
-    'log-keep.js', 'agents/carry-on.js', 'agents/after.js', 'harness/supervisor.js', 'boot.js'];
+    'log-keep.js', 'agents/tidy.js', 'agents/carry-on.js', 'agents/after.js', 'harness/supervisor.js', 'boot.js'];
   for (const f of routines) {
     const src = fs.readFileSync(path.join(__dirname, '..', 'modules', f), 'utf8');
     assert.match(src, /activity'\)\.note\(\{ from: '/, `${f} acts on its own and should say so (activity.note)`);
