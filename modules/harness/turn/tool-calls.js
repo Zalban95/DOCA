@@ -74,7 +74,7 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
         say({ type: 'approval', step, state: 'refused', tool: name, ...gate });
       } else {
         const { id, answer } = approval.askAnywhere({ ...gate, personId: client?.user?.id || null }, { sessionId: session.id, signal, client });
-        say({ type: 'approval', step, state: 'asked', id, ...gate });
+        say({ type: 'approval', step, state: 'asked', id, ...gate, spoken: require('../call-answer').sentence(name, args) });   // a call says it (call-answer.js)
         const decision = await answer;
         say({ type: 'approval', step, state: 'answered', id, decision, tool: name });
         // Anything that is not one of the three yeses — a denial, a timeout,

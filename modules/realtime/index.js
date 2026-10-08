@@ -134,6 +134,7 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
     model.say(model.literal ? text : `Tell the person briefly, this just came back${title ? ` (${title})` : ''}: ${text}`);
   };
   const unregister = require('./calls').open(sessionId, { person, deviceId, notice });
+  const asks = require('./call-asks').attach({ sessionId, model, log, person });   // an approval is said here, and a yes or no answers it
   const onTurnEvent = e => {
     if (e.type !== 'handoff' || e.from !== sessionId) return;
     stats.background++;
@@ -145,7 +146,7 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
   const end = why => {
     if (ended) return; ended = true;
     _live.delete(callId);
-    unregister();
+    unregister(); asks.off();
     lifecycle.events.off('event', onTurnEvent);
     model.close();
     if (idle) clearInterval(idle);
@@ -186,6 +187,8 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
     if (name !== TOOL.name) return model.toolResult(id, `There is no tool named ${name}; use doca.`);
     const request = String(args.request || '').trim();
     if (!request) return model.toolResult(id, 'Say what the person asked in the request.');
+    const answered = asks.take(request);   // a plain yes or no to the question waiting (call-asks.js); anything else goes on
+    if (answered !== null) return model.toolResult(id, answered);
     stats.tools++; answering++;
     log.turn('started', `${request.split(/\s+/).length} words asked`);
     tell({ type: 'working', text: request });

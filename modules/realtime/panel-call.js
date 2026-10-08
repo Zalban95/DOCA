@@ -32,6 +32,8 @@ const STAGES = {
   played:   (l, b) => { l.spoken(num(b.n) || 1); return b.audio && b.audio !== 'running' ? `a sentence began while the page's audio was ${word(b.audio)} — it may not have been heard` : null; },
   notice:   (l, b) => { l.notice(word(b.where) || 'call', word(b.text)); return null; },
   error:    (_l, b) => `the page: ${word(b.text)}`,
+  ask:      (_l, b) => `asked in the call: may ${word(b.tool)} run? — said aloud, waiting for a yes or a no`,   // chat-call-ask.js
+  answered: (_l, b) => `answered by voice: ${b.decision === 'once' ? 'allowed once' : 'denied'} (${word(b.tool)})`,
 };
 
 /** The record of a call this person began, or null. */

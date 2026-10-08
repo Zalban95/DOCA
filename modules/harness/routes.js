@@ -137,8 +137,8 @@ const handleApprovalMode = wrap(async (req, res) => {
 const handleApprovalDecide = wrap(async (req, res) => {
   // Who may answer, and what "always" and "approve all" mean for them: approval-answer.js.
   const person = req.auth && { ...req.auth.user, role: req.auth.role };
-  let ok;
-  try { ok = require('./approval-answer').answerAs({ id: req.params.id, decision: req.body?.decision, person }); }
+  let ok;   // `heard`: words spoken in a call, decided by call-answer.js — {decision: null} when they are not a yes or a no
+  try { if (req.body?.heard !== undefined) return res.json(require('./call-answer').answer({ id: req.params.id, text: req.body.heard, person })); ok = require('./approval-answer').answerAs({ id: req.params.id, decision: req.body?.decision, person }); }
   catch (e) { return res.status(e.status || 500).json({ error: e.message }); }
   // Gone rather than never-there: a question withdraws itself on timeout and
   // when the turn is stopped, so a click landing late is ordinary, not an error
