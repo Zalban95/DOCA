@@ -300,12 +300,18 @@ async function use(target, { force = false, by = 'ui', say = () => {}, restart =
 
 /** Exit into the launcher: the supervisor starts run.sh again, or a detached run.sh takes over. */
 function restartSelf() {
-  const { supervisorName } = require('./update');
-  if (!supervisorName()) {
-    // The Node launcher, so a restart works on Windows and macOS as on Linux (bin/doca-launch.js), hidden on Windows.
-    require('./relaunch').relaunch({ log: path.join(DIR, 'restart.log'), home: HOME });
-  }
-  process.exit(0);
+  const plan = require('./self-restart').decide();
+  // A unit that would stop a successor with us and never restart: stay up rather than vanish (the switch is recorded).
+  if (plan.refuse) { console.warn(`[restart] ${plan.refuse}`); return; }
+  if (plan.name) return process.exit(0);
+  // The Node launcher, so a restart works on Windows and macOS as on Linux (bin/doca-launch.js), hidden on Windows.
+  const log = path.join(DIR, 'restart.log');
+  const child = require('./relaunch').relaunch({ log, home: HOME });
+  // One that stops at once would leave nothing behind us: stay up and say so.
+  setTimeout(() => {
+    if (child.exitCode === null && child.signalCode === null) return process.exit(0);
+    console.warn(`[restart] the process that would take over stopped at once — see ${log}. DOCA is still running.`);
+  }, 700);
 }
 
 /** Keep the newest KEEP installed versions, plus the ones switched between. */

@@ -291,16 +291,8 @@ async function handleUpdate(req, res) {
   res.on('close', () => { if (!child.killed) child.kill(); });
 }
 
-/** The supervisor that will start us again after we exit, or null if we are on
- *  our own. Inside a container we must report one either way: if node is PID 1
- *  a detached child dies with the container, so only the restart policy can
- *  bring the panel back. */
-function supervisorName() {
-  if (process.env.INVOCATION_ID) return 'systemd';   // set by systemd >= 232 per unit
-  if (process.env.pm_id)         return 'pm2';
-  try { if (fs.existsSync('/.dockerenv')) return 'container'; } catch {}
-  return null;
-}
+/** The supervisor that will start us again after we exit, or null if we are on our own: modules/self-restart.js. */
+const { supervisorName } = require('./self-restart');
 
 /** POST /api/restart — exit, having made sure something will start us again.
  *
@@ -325,7 +317,10 @@ function handleRestart(req, res) {
 
 function restartNow(res = null) {
   const reply = (status, body) => { if (res) res.status(status).json(body); else if (!body.ok) console.warn(`[restart] ${body.error}`); };
-  const supervisor  = supervisorName();
+  const plan = require('./self-restart').decide();
+  // Nothing would start us again and a successor would be stopped with us: say so rather than exit for good.
+  if (plan.refuse) return reply(409, { ok: false, error: plan.refuse });
+  const supervisor  = plan.name || null;
   const selfRespawn = !supervisor;
   let handoff = null;
 
@@ -348,7 +343,7 @@ function restartNow(res = null) {
         });
         child.unref();
       }
-      handoff = { pid: child.pid, log: logPath };
+      handoff = { pid: child.pid, log: logPath, child };
     } catch (e) {
       // Say so instead of exiting into a hole the user cannot see.
       return reply(500, {
@@ -358,8 +353,16 @@ function restartNow(res = null) {
     }
   }
 
-  reply(200, { ok: true, message: 'Server restarting…', supervisor, selfRespawn, handoff });
-  setTimeout(() => process.exit(0), 500);
+  const go = () => {
+    reply(200, { ok: true, message: 'Server restarting…', supervisor, selfRespawn, handoff });
+    setTimeout(() => process.exit(0), 500);
+  };
+  if (!handoff) return go();
+  // A successor that dies at once (a broken install, a missing node) would leave nothing behind us: look before leaving.
+  setTimeout(() => {
+    if (handoff.child.exitCode === null && handoff.child.signalCode === null) { delete handoff.child; return go(); }
+    reply(500, { ok: false, error: `The process that would take over stopped at once (exit ${handoff.child.exitCode ?? handoff.child.signalCode}) — see ${handoff.log}. DOCA is still running.` });
+  }, 700);
 }
 
 /** The panel's own lifecycle routes: update, restart, versions, backups. */
