@@ -222,8 +222,9 @@ function ollamaModelsDir(mp, home) {
       if (env) return env.slice(14);
     }
   } catch { /* not Linux, or not ours to read */ }
-  try {
-    const out = require('child_process').execFileSync('systemctl', ['show', '-p', 'Environment', 'ollama'], { encoding: 'utf8', timeout: 3000 });
+  // Only where systemd runs (systemd.js), and its complaints kept out of doca.log: execFileSync passes stderr through.
+  if (require('./systemd').running()) try {
+    const out = require('child_process').execFileSync('systemctl', ['show', '-p', 'Environment', 'ollama'], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] });
     const m = /OLLAMA_MODELS=(\S+)/.exec(out);
     if (m) return m[1];
   } catch { /* no systemd unit */ }
