@@ -111,6 +111,7 @@ async function startupLoad() {
   try {
     const s = await apiFetch('/api/startup');
     _startupMethod = s.method || null;
+    _startupDescribe(_startupMethod);
     if (box) { box.checked = !!s.enabled; box.disabled = !s.supported; }
     // These three describe the machine as it stands rather than something that
     // just happened, so they are `clear: 0` — the card would otherwise lose the
@@ -129,6 +130,15 @@ async function startupLoad() {
 }
 
 let _startupMethod = null;   // Task Scheduler or launchd: this person's own entry, which needs no password
+
+/** What the switch does on this host: the card's text was systemd's on every OS (H1.9). */
+function _startupDescribe(method) {
+  const p = document.getElementById('startup-about');
+  if (!p || !method) return;   // Linux: the text in the page is systemd's, and right
+  p.textContent = method === 'launchd'
+    ? 'Add a launchd agent so DOCA starts when you log in to this Mac. Same as running node bin/doca-launch.js enable in DOCA\'s folder.'
+    : 'Add an entry to the Task Scheduler so DOCA starts, with no window, when you sign in to Windows. Same as running node bin\\doca-launch.js enable in DOCA\'s folder.';
+}
 function startupToggle(box) {
   const want = box.checked;
   box.checked = !want;   // stay on the real state until the service confirms it
@@ -266,7 +276,7 @@ async function versionsLoad() {
     <span class="status-line" id="versions-status"></span>
     <p style="font-size:11px;color:var(--muted);margin:0">
       Every version reads the same data. A version that does not answer within 90 s after a switch is
-      switched back on its own. If the dashboard will not load at all: <code>./run.sh use &lt;version&gt;</code> on the host.
+      switched back on its own. If the dashboard will not load at all: ${_versionsRescue(_versions.platform)}
     </p>`;
   const st = document.getElementById('versions-status');
   if (!_versions.versions.length) {
@@ -274,10 +284,24 @@ async function versionsLoad() {
     setStatus(st, _versions.warning || 'No versions to switch to.', 'warn', { clear: 0 });
   } else if (!_versions.launcher) {
     document.getElementById('versions-use-btn').disabled = true;
-    setStatus(st, 'Started without run.sh — switching versions needs the launcher (./run.sh or the boot service).', 'warn', { clear: 0 });
+    setStatus(st, 'Started without DOCA\'s launcher — switching versions needs it (bin/doca-launch.js start, which run.sh, the installers and the boot entry use).', 'warn', { clear: 0 });
   } else if (_versions.warning) {
     setStatus(st, _versions.warning, 'warn', { clear: 0 });
   }
+}
+
+/**
+ * The way back when the panel will not load, as it exists on the host: run.sh is Linux's (and the host's, not the
+ * browser's — a phone may be looking at a Windows hub). Elsewhere the launcher starts the working copy when
+ * .releases/current is gone (bin/doca-launch.js).
+ */
+function _versionsRescue(platform, plain = false) {
+  const code = t => (plain ? t : `<code>${escHtml(t)}</code>`);
+  if (platform === 'win32' || platform === 'darwin') {
+    const file = platform === 'win32' ? '.releases\\current' : '.releases/current';
+    return `delete ${code(file)} in DOCA's folder on the host and start DOCA again (sign out and in${platform === 'win32' ? ' to Windows' : ''}, or ${code('node bin/doca-launch.js start')}): it starts the working copy.`;
+  }
+  return `${code('./run.sh use <version>')} on the host.`;
 }
 
 /** Switch to the version in the dropdown, then wait for the panel to come back on it. */
@@ -287,7 +311,7 @@ function versionsUse() {
   if (!v || v.current) return;
   const lines = [`Switch DOCA from ${_versions.current} to ${tag}? The panel restarts.`,
     `If ${tag} does not answer within 90 seconds, it switches back to ${_versions.current} on its own.`];
-  if (!v.hasMenu) lines.push(`${tag} predates this menu. To leave it, run ./run.sh use <version> on the host.`);
+  if (!v.hasMenu) lines.push(`${tag} predates this menu. To leave it: ${_versionsRescue(_versions.platform, true)}`);
   if (v.olderData) lines.push(`${tag} writes an older data format than yours. Running it risks the data — make a backup first.`);
   const go = async whenIdle => {
     const log = document.getElementById('update-log');

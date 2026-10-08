@@ -137,7 +137,7 @@ async function list() {
   // tags to list; say so instead of answering 500 "not a git repository".
   if (!isCheckout()) {
     return { running: running(), current: current(), version: pkg.version, dataFormat: store.dataFormat(),
-      launcher: !!process.env.DOCA_HOME, versions: [],
+      launcher: !!process.env.DOCA_HOME, platform: process.platform, versions: [],
       warning: 'This install is not a git checkout, so there are no other versions to switch to. Install DOCA with git clone to use this.' };
   }
   const warning = await fetchTags();
@@ -169,7 +169,8 @@ async function list() {
     current: cur === CHECKOUT, running: run === CHECKOUT, compatible: true, dataFormat: co,
     olderData: co < dataFormat, hasMenu: true });
 
-  return { running: run, current: cur, version: pkg.version, dataFormat, launcher: !!process.env.DOCA_HOME, warning, versions };
+  // platform: the host's, so the page names the way back that exists there (run.sh is Linux's) — H1.9.
+  return { running: run, current: cur, version: pkg.version, dataFormat, launcher: !!process.env.DOCA_HOME, platform: process.platform, warning, versions };
 }
 
 /** The data format the checkout's code writes — it can be older than the data too, after a pull of an old branch. */
@@ -255,7 +256,7 @@ async function install(tag, say = () => {}) {
 /** Why a switch to `target` must not happen, or null. */
 async function refusal(target, { force = false } = {}) {
   if (!process.env.DOCA_HOME)
-    return 'This panel was not started by run.sh (or the boot service), so nothing would read the choice. Start it with ./run.sh and try again.';
+    return 'This panel was not started by DOCA\'s launcher (bin/doca-launch.js start, which run.sh, the installers and the boot entry use), so nothing would read the choice. Start it that way and try again.';
   if (target === CHECKOUT) {
     return checkoutFormat() < store.dataFormat() && !force
       ? `The working copy writes data format ${checkoutFormat()}, and your data is already format ${store.dataFormat()}. Update the checkout first, or switch with force if you accept the risk.`
