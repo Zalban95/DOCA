@@ -1363,6 +1363,16 @@ the hive answers there later reaches the call.
   (`text`: what came back) — something that went on outside the call came back and is said now (`agent` frames and
   `done` follow). `closed.stats.replyMs` lists, per answer, the milliseconds from the end of an utterance to the
   first audio of its answer.
+- **Since 2.314.0, `notice`** (`stage`, `text`): a stage of the call did not go as it should, said in words to show
+  — so a call never just goes quiet. `stage` is `audio` (no sound reaches the hub six seconds after `ready`, sound
+  that never rises above the room enough to be speech, or ten seconds of exact digital silence — a microphone the
+  device muted, as Android does to an app that left the foreground), `stt` (no words were found in what was said, or the
+  transcriber did not answer), `turn` (the answer was cut short or failed: the call is still listening), `tts` (an
+  answer could not be spoken: it is in the conversation). Show it, briefly; a client that does not know the frame
+  ignores it. A call by the pipeline in which nothing is said either way for five minutes is ended by the hub
+  (`notice`, then `closed` with `reason: "nothing was said for five minutes"`). Each stage of each call is also kept on the hub (Hub → Logs, source `call`; Chronicle → Live calls), in
+  names and numbers. Since 2.314.0 the pipeline counts speech from about -51 dBFS (RMS 90 of PCM16) or three times the
+  room's level, whichever is higher — before, -38 dBFS (400), which a watch held at arm's length did not reach.
 - **The call hears its conversation** (since 2.304.0): while it is open, what lands in its conversation without the
   call asking — the Orchestrator telling what its work chats reported, a work chat the call handed work to, a
   mission the conversation dispatched — is said in the call (`report`, then the words), and the same event's push

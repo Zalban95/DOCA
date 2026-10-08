@@ -18,16 +18,19 @@
  *   - for keys and connected accounts, also everyone when the owner opened that one to everyone (`who`).
  * No person on the turn (a test, a pre-accounts call) is not narrowed, as everywhere (permits.js).
  *
+ * `vnc` is a VNC target (Machines → VNC, vnc-targets/), by its id or name: another machine's screen, an admin's until
+ * allotted, like a login (2026-10-08).
+ *
  * `home` is a Home Assistant entity on the Home page (home/, TODO H10.10), by its entity id (`light.kitchen`; `light.*`
  * every light): the hive's home is everyone's to see and use until a level lists which of it its people have.
  */
-const KINDS = ['model', 'provider', 'key', 'connector', 'login', 'computer', 'service', 'device', 'home'];
+const KINDS = ['model', 'provider', 'key', 'connector', 'login', 'computer', 'service', 'device', 'home', 'vnc'];
 
 /**
  * Kinds that were an admin's alone before levels could list them: a level that names nothing gives none. Another
  * person's device was never anyone's to use, so it is one too; a service, like a model, was everyone's.
  */
-const ADMIN_FIRST = new Set(['key', 'connector', 'login', 'device']);
+const ADMIN_FIRST = new Set(['key', 'connector', 'login', 'device', 'vnc']);
 
 const host = person => require('./rights').can(person?.role, 'host');
 const match = (pattern, id) => pattern === '*' || pattern === id || (pattern.endsWith('*') && id.startsWith(pattern.slice(0, -1)));

@@ -31,7 +31,9 @@ let _callThreshold = 15;
 // Whisper turns such a blip into "Thank you." (the hub screens those phrases too: modules/stt-filter.js).
 const CALL_MIN_VOICED_MS = 300;
 let _callAnswerCtrl = null;   // the answer being made: aborted when the person talks over it
-let _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending = 0, _callTtsWarned = false, _callLastActive = 0, _callOverMs = 0, _callAnswering = 0;
+let _callCutWhy = '';         // why the answer in flight was cut, said once it stops (chat-call-hold.js sets it)
+let _callPlayQuietMs = 0;     // quiet since the voice began: talking over it counts only after a pause (chat-call-hold.js)
+let _callRecPeak = 0, _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending = 0, _callTtsWarned = false, _callLastActive = 0, _callOverMs = 0, _callAnswering = 0;
 /** How long nobody has spoken and nothing has been said or worked on (assistant mode's idle timer). */
 const _callIdleMs = () => (_callActive && _callLastActive ? performance.now() - _callLastActive : 0);
 
@@ -49,7 +51,7 @@ let _callAssistant = false;   // this call came from the face (assistant mode): 
 let _callStarting = false;   // between the tap and the microphone: nothing else may take the microphone then (wake-word.js)
 async function chatToggleCall({ assistant = false } = {}) {
   if (_callActive) {
-    _callStop();
+    _callStop('the person ended the call');
     return;
   }
   // _callStart's first part runs now, inside the tap (its audio contexts must), and the flag holds until it settles.
@@ -103,6 +105,8 @@ async function _callStart({ assistant }) {
 
   _callActive = true;
   _callAbort = new AbortController();
+  _callSynthReset();   // nothing of an earlier call's voice is still counted as playing (chat-call-voice.js)
+  _callReportStart(assistant);   // the hub keeps each stage of this call (chat-call-report.js)
 
   document.getElementById('chat-panel').classList.add('call-active');
   document.getElementById('chat-call-toggle').classList.add('active');
@@ -123,8 +127,11 @@ async function _callStart({ assistant }) {
   return true;
 }
 
-function _callStop() {
+function _callStop(why = 'the person ended the call') {
   if (typeof _rt !== 'undefined' && _rt) return realtimeStop();   // a realtime call (chat-realtime.js)
+  // Hanging up stops the answer being made, as Stop does — said, so it does not read as a call that broke.
+  if (_callAnswering) chatAppendMsg('system', 'The call ended while the answer was being made, so it was stopped.');
+  _callReportEnd(_callAnswering ? `${why}, while an answer was being made` : why);
   _callActive = false;
   // With barge-in on, the call says how it went — the experiment's measure (docs/experiments/barge-in.md).
   if (_callBargeIn && _callStats) chatAppendMsg('system', `Call: ${Math.max(1, Math.round((Date.now() - _callStats.at) / 60000))} min, interrupted ${_callStats.bargeIns}×, ${_callStats.dropped} stale sentence${_callStats.dropped === 1 ? '' : 's'} not spoken.`);
@@ -176,26 +183,32 @@ function _callVadLoop() {
     } else if (energy > _callThreshold) faceCornerVoice('listening', energy / 80);
   }
 
-  // While the voice plays it keeps the floor: a cough, a door or the room is not a person talking over it. Only with
-  // barge-in on does a sustained sound well over the threshold (≈0.35 s) interrupt it.
-  // Talking over it counts while a sentence plays and in the gaps between sentences still to come.
+  // While the voice plays it keeps the floor: a cough, a door or the room is not a person talking over it, and neither
+  // are the person's own last words running on as the answer begins, nor the voice heard back through the microphone
+  // (2026-10-08: a call's answer cut by them, and the call silent after). Only sound that starts after a pause in what
+  // was heard, and goes on well over the threshold (≈0.35 s), pauses the voice to listen (chat-call-hold.js).
   const playing = (!!_callCurrentSrc || _callPlayQueue.length > 0 || _callSynthPending > 0) && !_callHold;
+  const loud = energy > _callThreshold;
+  _callPlayQuietMs = !playing ? 0 : loud ? _callPlayQuietMs : _callPlayQuietMs + dt;
   _callOverMs = playing && energy > _callThreshold * 1.3 + 3 ? _callOverMs + dt : 0;
-  if (_callHold) _callHoldQuiet(dt, energy > _callThreshold);
-  if (playing) { if (_callOverMs >= 350) _callHoldStart(); }   // paused, then decided by the first words (chat-call-hold.js)
-  else if (energy > _callThreshold) {
-    // Speech detected
-    if (!_callSpeaking && !_callHold && (!_callProcessing || _callBargeIn)) {   // a hold records for itself
+  if (_callHold) _callHoldQuiet(dt, loud);
+  if (playing && !_callSpeaking && _callPlayQuietMs >= 250 && _callOverMs >= 350) _callHoldStart(_callOverMs);
+  _callReportLevel(energy);
+  if (loud) {
+    // Speech: a recording starts when nothing is playing (over the voice, a hold records for itself).
+    if (!playing && !_callSpeaking && !_callHold && (!_callProcessing || _callBargeIn)) {
       _callSpeaking = true;
-      _callVoicedMs = 0;
+      _callVoicedMs = 0; _callRecPeak = 0;
       _callStartRecording();
-      _callSetStatus('Listening…', 'listening');
+      _callSetStatus('Hearing you…', 'listening');
+      _callReport('speech', { level: energy });
     }
-    if (_callSpeaking) _callVoicedMs += dt;
-
+    if (_callSpeaking) { _callVoicedMs += dt; _callRecPeak = Math.max(_callRecPeak, energy); }
     clearTimeout(_callSilenceTimer);
     _callSilenceTimer = null;
   } else if (_callSpeaking && !_callSilenceTimer) {
+    // The pause that ends what was said — counted while the voice plays too, or a recording begun just before an
+    // answer would run on through all of it.
     _callSilenceTimer = setTimeout(() => {
       _callSpeaking = false;
       _callSilenceTimer = null;
@@ -216,12 +229,18 @@ function _callStartRecording() {
   _callRecorder = new MediaRecorder(_callStream, { mimeType });
   const chunks = [];
   _callRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+  const startedAt = performance.now();
   _callRecorder.onstop = () => {
     _callRecorder = null;
-    if (_callVoicedMs < CALL_MIN_VOICED_MS) return;   // a blip, not speech: nothing is sent
+    const ms = Math.round(performance.now() - startedAt), voicedMs = Math.round(_callVoicedMs);
+    if (voicedMs < CALL_MIN_VOICED_MS) {   // a blip, not speech: nothing is sent
+      _callReport('dropped', { why: `${voicedMs} ms of speech, under ${CALL_MIN_VOICED_MS} ms` });
+      if (_callActive && !_callProcessing && !_callCurrentSrc) _callSetStatus('Listening…', 'listening');
+      return;
+    }
     if (chunks.length && _callActive) {
-      const blob = new Blob(chunks, { type: mimeType });
-      _callProcessAudio(blob);
+      _callReport('sent', { ms, voicedMs, peak: _callRecPeak });
+      _callProcessAudio(new Blob(chunks, { type: mimeType }));   // chat-call-hear.js
     }
   };
   _callRecorder.start();
@@ -233,45 +252,12 @@ function _callStopRecording() {
   }
 }
 
-async function _callProcessAudio(audioBlob, name = 'recording.webm') {
-  if (!_callActive) return;
-  _callProcessing++;
-  _callSetStatus('Transcribing…', 'processing');
-
-  try {
-    // 1. Transcribe audio → text
-    const form = new FormData();
-    form.append('audio', audioBlob, name);
-    if (_callHint) form.append('prompt', _callHint);
-    const transcribeRes = await fetch('/api/chat/transcribe', {
-      method: 'POST',
-      body: form,
-      signal: _callAbort?.signal,
-    });
-    const transcribeData = await transcribeRes.json();
-    // The hint alone is what a transcriber can make of a breath when it was told the name: not something said.
-    const bare = t => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
-    if (_callHint && bare(transcribeData.text) === bare(_callHint)) transcribeData.text = '';
-    if (!transcribeData.text || !transcribeData.text.trim()) {
-      _callSetStatus('Listening…', 'listening');
-      return;   // the finally below counts it done
-    }
-
-    _callLastActive = performance.now();   // words were heard
-    await _callAnswer(transcribeData.text.trim());
-  } catch (e) {
-    if (e.name !== 'AbortError') chatAppendMsg('system', `Voice error: ${e.message}`);
-  } finally {
-    _callProcessing = Math.max(0, _callProcessing - 1);
-    if (_callActive && !_callCurrentSrc && _callPlayQueue.length === 0 && !_callSynthPending) _callSetStatus('Listening…', 'listening');
-  }
-}
-
 /** What was said, sent as a turn and spoken back — from the microphone, or the words after a wake word (wake-word.js). */
 async function _callAnswer(userText) {
   if (!_callActive) return;
   _callProcessing++; _callAnswering++;
-  _callHeardReset();
+  _callHeardReset(); _callCutWhy = '';
+  let finished = false;
   try {
     chatAppendMsg('user', userText);
 
@@ -314,7 +300,7 @@ async function _callAnswer(userText) {
     const chatRes = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userText, voice: _callAssistant ? 'assistant' : 'call' }),   // the hub shapes a spoken answer
+      body: JSON.stringify({ message: userText, voice: _callAssistant ? 'assistant' : 'call', call: _callLogId }),   // the hub shapes a spoken answer, and logs the turn
       // Its own stop as well as the call's: words spoken over it end this answer and its turn (chat-call-hold.js).
       signal: (_callAnswerCtrl = new AbortController(), AbortSignal.any ? AbortSignal.any([_callAbort.signal, _callAnswerCtrl.signal]) : _callAbort?.signal),
     });
@@ -334,13 +320,17 @@ async function _callAnswer(userText) {
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         try {
-          callSink.onEvent(JSON.parse(line.slice(6)));   // what it means: agent-ui/event-sink.js; speaking: onText above
+          const evt = JSON.parse(line.slice(6));
+          if (evt.type === 'done') finished = true;
+          callSink.onEvent(evt);   // what it means: agent-ui/event-sink.js; speaking: onText above
         } catch {}
       }
       _chatScroll();
     }
 
     callSink.finish();
+    // The stream ended without the hub's "done": the connection dropped mid-answer. Said, and the call listens on.
+    if (!finished && _callActive) _callNotice('turn', 'The answer stopped before it finished — the connection dropped. Say it again?');
     // "✓" alone: an action done, not narrated (assistant.reply) — nothing is spoken, the face shows the check.
     if (said.trim() === '✓') { if (typeof faceConceptSay === 'function') faceConceptSay('completed', 1.6); _callSetStatus('Done ✓', 'listening'); }
     _callHeardRetry();   // an interruption came before this answer's row was written
@@ -352,9 +342,9 @@ async function _callAnswer(userText) {
     }
 
   } catch (e) {
-    if (e.name !== 'AbortError') {
-      chatAppendMsg('system', `Voice error: ${e.message}`);
-    }
+    if (e.name !== 'AbortError') _callNotice('turn', `The answer failed: ${e.message}`);
+    // Cut by the call itself (the person talked over it): say so and listen. A hang-up says so in _callStop.
+    else if (_callActive && _callCutWhy && _callCutWhy !== 'told') _callNotice('turn', 'The answer was cut — go on, I\u2019m listening.');
   } finally {
     agentWorkingClose(document.getElementById('chat-messages'));
     _callAnswering = Math.max(0, _callAnswering - 1); _callProcessing = Math.max(0, _callProcessing - 1);

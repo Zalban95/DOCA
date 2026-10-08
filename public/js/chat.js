@@ -13,7 +13,7 @@ function toggleChat(keepCall) {
     chatLoadHistory();
   }
   if (chatOpen) { chatRestoreGeom(); document.getElementById('chat-input').focus(); }
-  if (!chatOpen && _callActive && keepCall !== true) _callStop();   // the face hides the chat and keeps the call
+  if (!chatOpen && _callActive && keepCall !== true) _callStop('the chat was closed');   // the face hides the chat and keeps the call
 }
 
 async function chatLoadHistory() {

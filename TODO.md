@@ -608,6 +608,13 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   protocol (OpenAI, Azure, local speech-to-speech servers) or Gemini Live, chosen in the panel; the voice's one tool
   hands real work to the conversation and long work is spoken when done; devices call it at `/api/v1/realtime`.
   **Left:** measuring it (the owner's key or a local server); the clients' side in DocaMobile.
+- [x] Calls that fail say so (2026-10-08, branch `call-debug`; the owner: "the live call … fails silently, in the panel
+  and on the watch"). Every stage of a call is kept on the hub (`realtime/call-log.js`: Hub → Logs source `call`,
+  Chronicle → Live calls), in names and numbers; a device's call sends `notice` frames (PROTOCOL §23.1) and the panel's
+  call says each failure in the chat. Fixed: the person's trailing words (and the voice's own echo) no longer pause and
+  cut an answer; the pipeline hears speech from -51 dBFS (it needed -38, which a watch at arm's length did not reach);
+  a stale synthesis no longer reads as "playing" in the next call. **Left:** a real call from the phone and the watch
+  with the logs read (DocaWear's and DocaMobile's `call-debug` branches log the microphone and the relay).
 
 **H9 · Reach and protocols**
 - [x] H9.1 (WhatsApp left) Channels: Slack, Telegram, mail, WhatsApp, Matrix — each a client kind. Done: Telegram (2.157.0), the
@@ -669,6 +676,13 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   get a picture from `virsh screenshot` / `VBoxManage screenshotpng` (made small on node:zlib) and open their VNC
   console through the hub (noVNC, `/ws/vm/`); the VMs tab gains Console. **Left:** Hyper-V, UTM and Parallels have no
   picture (no CLI screenshot); plain containers get no Live tile by design.
+  **Done (2026-10-08, asked: "a vnc section in machines, same logic, showing the running and connected ones on the live
+  and so on"):** Machines → VNC — targets by address with a password in `keys/vnc.json` (never returned), DOCA's own RFB
+  client (DES written out: Node has none), rows `connected`/`reachable`/`unreachable` in the status column, Live
+  pictures, a console where the hub signs in and a watching socket cannot act, a VNC button on VM rows that saves one in
+  a click, and the agent's `vnc_look`/`vnc_input` (a person's turn: ordinary approvals; a specialist: lent, every input
+  asked; allotment kind `vnc`). **Left:** a mission's `vnc_input` is refused rather than asked (a mission has nobody to
+  ask); VeNCrypt/TLS servers are named, not spoken; Tight/ZRLE encodings for slow links.
 - [x] H10.10 The home in DOCA's own layout (asked 2026-10-06: "does Home Assistant let us use our layout, or do we build
   from scratch?"). Neither: Home Assistant stays the device layer (thousands of brands, its areas, scenes and
   automations), and DOCA draws its own **Home** page from HA's WebSocket API — `get_states`, `subscribe_events` for live
@@ -738,6 +752,17 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   previewed by naming the computer and pictured in Machines → Live when it answers; a preview never names a computer's
   control or screen port; Live's served tiles open through a preview, so a phone reaches a localhost-only dev server.
   Not run against a real computer image here (no Docker on the test bench): the port mapping is new on `docker run`.
+- [ ] H10.19 A System 1 decision model for bounded decisions (asked 2026-10-08: "LAYA would be way better for navigating
+  and using the VMs, computers, vnc connections"; Jev considered too) — *built as the experiment `systemOne`
+  (2.315.0, `modules/system-one`, docs/experiments/system-one.md)*: Laya (open) run on this hub as a managed Python
+  process on 127.0.0.1 behind a per-start secret, or TypeSafe Jev with a key for services — set up in Field → Models →
+  Decision models (install, start/stop, state, test, the model-roles row); with the flag on it decides, when its top
+  probability reaches `systemOne.threshold`, the triage's size where the rules are unsure, a call's answer-now or
+  hand-on, and proposes a computer page's next element (`computer_next`, the turn's own computer, it only proposes).
+  Measured (`npm run experiment -- system-one`, 83 labelled cases): 12–66 ms per decision on a GPU; a call's route
+  56% → 76% over the rules; the page 52% against 97% for one model step. Open: a week of calls with the flag on;
+  fine-tuning Laya on DOCA's own decisions (the cases and the traces); Jev measured once a key is had; the person's own
+  browser (the extension's snapshot) and a desktop's accessibility tree as text states.
 - [x] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06) — *built as the experiment
   `riskTiers` (2.296.0, `modules/harness/risk/`, docs/experiments/risk-tiers.md): a declarative classifier (read / reversible /
   outward), a project checkpoint before a reversible change in a project, outward calls asked in every mode (Unattended

@@ -34,6 +34,7 @@ function inUse(person, kind) {
       return quiet(() => Object.entries(vault.all()).filter(([id, r]) => r.accessToken && ok(id, r.who === 'everyone')).map(([id]) => id));
     }
     case 'login':    return quiet(() => require('../logins').list().filter(l => ok(l.id) || ok(l.label)).map(l => l.label));
+    case 'vnc':      return quiet(() => require('../vnc-targets/store').list().filter(t => ok(t.id) || ok(t.name)).map(t => t.name));
     case 'service':  return quiet(() => require('../services').INFERENCE_SERVICES.filter(s => s.chat && ok(s.id)).map(s => s.id));   // those a turn can use
     case 'computer': return quiet(() => require('../computers').all().filter(c => !c.archivedAt && !require('../computers/whose').refuse(person, c.id)).map(c => c.id));
     default:         return [];   // models are patterns over every provider's list; devices are listed below

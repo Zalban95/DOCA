@@ -36,10 +36,19 @@ function roles() {
     { id: 'detector', label: 'Finding things on a screen', scout: true, tasks: ['object-detection'], current: val('vision.detectorModel'), setting: 'vision.detectorModel', where: 'Settings → Harness → Vision; Field → Models → Inference Services (Roboflow)' },
     { id: 'embeddings', label: 'Finding by meaning', scout: true, tasks: ['feature-extraction', 'sentence-similarity'], current: val('retrieval.model'), setting: 'retrieval.model', where: 'Settings → Harness → Retrieval' },
     { id: 'guards', label: 'Screening outside text', scout: true, tasks: ['text-classification'], current: guards, setting: 'guards', where: 'Settings → Harness → Guards' },
+    { id: 'system-one', label: 'Bounded decisions (System 1: a request\'s size, a call\'s route, a page\'s next element)', scout: true, tasks: ['text-classification', 'zero-shot-classification'], current: systemOne(val), setting: 'systemOne.provider', where: 'Field → Models → Decision models (experiment systemOne)' },
     { id: 'wakeword', label: 'Hearing the wake word', tasks: [], current: wake || null, setting: 'wakeword', where: 'Field → Models → Wake words' },
     { id: 'images', label: 'Making images', scout: true, tasks: ['text-to-image'], current: null, setting: null, where: 'Field → Models → Inference Services (ComfyUI, Stable Diffusion)' },
     { id: 'new', label: 'Anything new (a capability DOCA does not have)', scout: true, tasks: ['any'], current: null, setting: null, where: 'a new function: a TODO item' },
   ];
+}
+
+/** The System 1 model chosen — Laya's checkpoint on this hub, or Jev's model — and whether DOCA uses it now. */
+function systemOne(val) {
+  let on = false;
+  try { on = require('./experiments').on('systemOne'); } catch { /* off */ }
+  const m = val('systemOne.provider') === 'jev' ? `TypeSafe ${val('systemOne.jevVersion') || 'jev-latest'}` : `Laya (${val('systemOne.checkpoint') || 'english'}, on this hub)`;
+  return on ? m : `${m} — not in use (experiment systemOne is off)`;
 }
 
 /** The roles as lines, for the agent: what is set, and where to change it. */
