@@ -34,8 +34,10 @@ test('a section is read by its name or its path, grouped under its heading', asy
 });
 
 test('nothing found: the sections, and what is the person\'s alone', async () => {
-  const out = await tools.call('settings_read', { filter: 'approv' }, []);
-  assert.match(out, /No settings match "approv"/);
+  const out = await tools.call('settings_read', { filter: 'zqxv' }, []);
+  assert.match(out, /No settings match "zqxv"/);
   assert.match(out, /The sections are: .*MCP timeouts/);
-  assert.match(out, /approval mode .*Harness → Approvals/);
+  assert.match(out, /approval mode \(the Auto \/ Manual switch on Agents → Harness; Approvals beside it\)/);
+  // A switch of the person's own is found by its words, with where it is (settings-find.test.js has the rest).
+  assert.match(await tools.call('settings_read', { filter: 'approv' }, []), /Approval mode[\s\S]*Theirs to switch, with their password/);
 });

@@ -28,7 +28,7 @@ test('a work chat is published in the shape a device already draws, state by sta
   assert.deepEqual([map('idle').state, map('idle').result], ['done', 'It works.']);
   assert.deepEqual([map('failed').state, map('failed').error], ['failed', 'boom']);
   assert.equal(map('cancelled').state, 'cancelled');
-  assert.deepEqual([map('paused').state, map('paused').error], ['failed', workview.RESTARTED]);
+  assert.deepEqual([map('paused').state, map('paused').error], ['paused', workview.RESTARTED], 'paused by a restart, not failed (deep test A)');
   assert.equal(map('idle').agentId, 'work');
   assert.equal(map('idle').label, 'Laya MCP server');
 });
@@ -57,12 +57,12 @@ test('a turn in a work chat is announced when it starts and when it ends', async
   assert.deepEqual([lastMission(s.id).state, lastMission(s.id).result], ['done', 'lantern']);
 });
 
-test('after a restart, a work chat left "running" is told to the devices as stopped', () => {
+test('after a restart, a work chat left "running" is told to the devices as paused, not failed', () => {
   const s = memory.createSession('Cut off', { activate: false, kind: 'work', parentId: memory.mainSession().id });
   memory.updateSession(s.id, { state: 'running' });   // stored as running, but nothing runs it: a restart
   assert.ok(workview.recover().includes(s.id));
   const p = lastMission(s.id);
-  assert.equal(p.state, 'failed');
+  assert.equal(p.state, 'paused');
   assert.equal(p.error, workview.RESTARTED);
 });
 

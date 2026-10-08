@@ -1,7 +1,9 @@
 /* ═══════════════════════════════════════════════════════
-   HEADER SEARCH: pages and Settings sections first, then files.
-   It sits on every page, so it finds places as well as files;
-   places are matched here, with no request, and come first.
+   HEADER SEARCH: pages and Settings sections first, then settings,
+   then files. It sits on every page, so it finds places as well as
+   files; places are matched here, with no request, and come first.
+   Settings come from the hub (GET /api/settings/find, the same rows
+   the agent is told), and one opens its page with the field marked.
    ═══════════════════════════════════════════════════════ */
 
 let _searchActiveIdx = -1;
@@ -42,16 +44,28 @@ const globalSearchDebounced = debounce(async () => {
   }
 
   _searchPlaces = globalSearchPlaces(q);
-  const places = _searchPlaces.map((p, i) => `<div class="header-search-item" data-idx="${i}"
+  const item = (p, i) => `<div class="header-search-item" data-idx="${i}"
                    onclick="globalSearchPlace(${i})" onmouseenter="globalSearchHover(${i})">
-        <span class="header-search-item-icon">${p.where === 'Page' ? '▸' : '⚙'}</span>
+        <span class="header-search-item-icon">${p.where === 'Page' ? '▸' : p.setting ? '✎' : '⚙'}</span>
         <span class="header-search-item-name">${escHtml(p.label)}</span>
-        <span class="header-search-item-path">${p.where}</span>
-      </div>`).join('');
+        <span class="header-search-item-path" title="${escHtml(p.title || p.where)}">${escHtml(p.where)}</span>
+      </div>`;
+  let places = _searchPlaces.map(item).join('');
   // Places at once; a search of home can take seconds, and they need no request.
   _searchActiveIdx = -1;
-  results.innerHTML = places + '<div class="header-search-empty">Searching files…</div>';
+  results.innerHTML = places + '<div class="header-search-empty">Searching settings and files…</div>';
   results.classList.add('open');
+
+  // Settings by the words people use — "theme", "approval", "voice" (deep test A: 15 of 22 newcomer words found nothing).
+  try {
+    const found = (await apiFetch(`/api/settings/find?q=${encodeURIComponent(q)}`)).results || [];
+    if (input.value.trim() !== q) return;
+    const settings = found.map(r => ({ label: r.label, where: r.where || 'Setting', title: [r.where, r.control].filter(Boolean).join(' → '),
+      setting: true, go: () => settingJump(r) }));
+    _searchPlaces = [..._searchPlaces, ...settings];
+    places = _searchPlaces.map(item).join('');
+    results.innerHTML = places + '<div class="header-search-empty">Searching files…</div>';
+  } catch { /* an older hub: pages and files still answer */ }
 
   // Where the Files tab is, else nothing: the server then searches home. '/' is refused on Windows.
   const root = (typeof fm !== 'undefined' && fm.cwd) || '';
@@ -143,3 +157,39 @@ document.addEventListener('click', (e) => {
     document.getElementById('global-search-results').classList.remove('open');
   }
 });
+
+/**
+ * Open a setting where it is edited and mark it: its page (or Settings section), a panel action first when the form is
+ * closed (the ⚙ on Controls), then the field or card — every Advanced fold around it opened, scrolled into view and
+ * outlined for a moment. Pages draw themselves after nav(), so the element is waited for, briefly.
+ */
+async function settingJump(r) {
+  const [top, sub] = String(r.page || '').split('/');
+  if (top === 'settings' && sub) { if (typeof _settingsActiveSubtab !== 'undefined') _settingsActiveSubtab = sub; nav('settings'); settingsSubNav(sub); }
+  else if (top) nav(top);
+  if (r.open === 'harnessParams' && typeof settingsOpenHarnessParams === 'function') { try { await settingsOpenHarnessParams(); } catch { /* the page still opened */ } }
+  // On the page in view: drawn, or folded inside an Advanced fold that is itself drawn (its summary shows).
+  const shown = el => {
+    if (!el) return false;
+    if (el.getClientRects().length) return true;
+    let outer = null;
+    for (let d = el.closest('details:not([open])'); d; d = d.parentElement?.closest('details:not([open])')) outer = d;
+    return !!outer && outer.getClientRects().length > 0;
+  };
+  const byCard = () => r.card && [...document.querySelectorAll('.card-title')]
+    .find(t => t.textContent.trim().toLowerCase().startsWith(r.card.toLowerCase()) && shown(t))?.closest('.card');
+  let el = null;
+  for (let i = 0; i < 40 && !el; i++) {
+    let f = null; try { f = r.field ? document.querySelector(r.field) : null; } catch { /* not a selector */ }
+    el = (shown(f) && f) || byCard() || null;
+    if (!el) await new Promise(res => setTimeout(res, 100));
+  }
+  if (!el) return;
+  for (let d = el.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
+  if (el.tagName === 'DETAILS') el.open = true;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  el.classList.remove('setting-found');
+  void el.offsetWidth;   // restart the mark when the same setting is opened twice
+  el.classList.add('setting-found');
+  setTimeout(() => el.classList.remove('setting-found'), 2600);
+}

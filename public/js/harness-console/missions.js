@@ -90,7 +90,7 @@ async function hcAgentsEnable(on) {
   try {
     await apiFetch('/api/harness/agents/enable', { method: 'POST', body: { enabled: !!on } });
     _hcLoadAgents();
-  } catch (e) { appAlert(e.message); }
+  } catch (e) { appAlert(e.message); _hcLoadAgents(); }   // refused or cancelled: drawn as the server has it, never left on
 }
 
 async function _hcLoadMissions() {

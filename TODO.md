@@ -202,6 +202,31 @@ the project's managers only if the owner allows sharing specialists and skills (
   needs the `devices` right, though Member's reach is `own-devices`. Options: (a) pairing routes for one's own device
   under `chat` (scoped to the person, a preset no wider than `phone`); (b) an admin pairs *for* a member (the device
   recorded as theirs); (c) a level right `own-devices` distinct from `devices`. Each widens what a member may do.
+### Deep test A 2026-10-08 — findability and flows (branch `deepa-flows`)
+- [x] Deep test A 11, 12, 2c: a setting is found by the words people use (`modules/settings-find`: a row per thing people
+  call a setting, with its page, card and what to click, plus every proposable leaf; a few synonyms). `settings_read`
+  and `features` answer with where it is and the one way to change it — `settings_propose … asked: true`, for one screen
+  (the theme is now proposable per screen), or the person's own switch with their password and where to click. The
+  features index's approvals, modes, limits and proposals name the pages they are on. Three `basics` cases.
+- [x] Deep test A 16: the header search finds settings too (`GET /api/settings/find`, the rows the agent is told);
+  choosing one opens its page — or the ⚙ form on Controls — and marks the field or card, its Advanced folds opened
+  (`global-search.js settingJump`). `test/header-search-settings.test.js` in a real browser (`test/panel-browser.js`).
+- [x] Deep test A 30: a guarded switch is drawn as it is after its password is cancelled or wrong — the control changed a
+  moment before (checkbox, select or field) is put back in one place, `lib/api.js`, whoever drew it; a cancel says "Not
+  changed: no password was given."; the specialists switch also redraws from the hub on any failure.
+- [x] Deep test A 31: rejecting a plan is said in the conversation ("Plan rejected — revision N of …", as the person who
+  clicked) and answered in one line; a work chat's job stops there (`organization.setAside`), so the Orchestrator asks
+  restart or drop once instead of the work carrying on.
+- [x] Deep test A 32: a conversation carrying out an approved plan that a restart cut off is carried on by itself
+  (`supervisor.recover`, as jobs and missions are; not one whose job a person stopped or dropped), and a work chat a
+  restart cut off reaches devices as `paused`, never `failed` (`workview.js`; PROTOCOL §11.4 already had the state).
+- [x] Deep test A 14: "＋ Plan" on Agents → Harness opens a work chat in Plan mode (`organization.create {mode}`), the
+  Projects tabs' mode: it plans, Approve switches it to Agent and carries the plan out in the same chat. Chosen over
+  renaming it "＋ Planning chat": the planning work chat was a prompt note whose plan was meant for another chat that
+  nothing made, while Plan mode refuses work by code and Approve already starts it.
+- [x] Deep test A 10: every question waiting for a person is listed for them — `GET /api/harness/approval` carries
+  `mine` (their level's card, their own budget's; without host also as `pending`); the Approvals window draws them for
+  someone without host (it threw before), and the questions dock draws any no chat on the page shows.
 
 ### Everything still open, now urgent
 - C7b: done; D2b: done — its gaps (`docs/api/capability-gaps.md`) are v1 routes to ask for, plan decisions first.

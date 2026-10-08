@@ -15,7 +15,7 @@ function _hcBuiltinHtml(h) {
         <div class="hc-side-head">
           Workspace
           <button class="btn btn-xs btn-blue" onclick="hcNewSession()">+ Work</button>
-          <button class="btn btn-xs" onclick="hcNewSession(true)">+ Plan</button>
+          <button class="btn btn-xs" onclick="hcNewSession(true)" title="A work chat in Plan mode: it reads and proposes a plan, changes nothing until you approve it, then carries it out">+ Plan</button>
         </div>
         <label class="hc-archive-switch"><input type="checkbox" onchange="_hcArchived=this.checked;_hcLoadSessions()"> Show archived chats</label>
         <div id="hc-sessions" class="hc-sessions"><div class="placeholder">Loading…</div></div>

@@ -84,7 +84,7 @@ module.exports = [
   { id: 'install-proposals', name: 'Install proposals', tools: ['install_propose'],
     use: 'Ask the person to install a model, service, harness, MCP server or system tool the panel knows, with a click.',
     words: 'install download setup' },
-  { id: 'settings-proposals', name: 'Settings and proposals', page: 'settings/general', tools: ['settings_read', 'settings_propose'],
+  { id: 'settings-proposals', name: 'Settings and proposals', page: ['harness', 'settings/system'], tools: ['settings_read', 'settings_propose'],
     use: 'Read the settings and propose a change the person accepts; what the person asked for exactly is applied at once.',
     routes: ['/api/harness/proposals*'], words: 'configure preference change setting' },
   { id: 'checkpoints', name: 'Settings checkpoints', page: 'settings/system', since: '2.218.0',
