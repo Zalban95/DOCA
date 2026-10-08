@@ -157,3 +157,20 @@ test('the rules live in the protected keys folder, out of the agent\'s file tool
   const file = require('../modules/spending/store').file();
   assert.ok(require('../modules/paths').PROTECTED_DIRS.some(d => file.startsWith(d + require('path').sep)));
 });
+
+test('a budget in the wrong shape is a 400 saying what was expected, never a 200 that sets nothing (deep test A, e2 C1)', async () => {
+  const m = await H.signIn('member', 'shape-member@test.local');
+  const flat = await H.api(null, 'POST', '/api/spending/budget', { personId: m.user.id, tokensPerDay: 20000 });
+  assert.equal(flat.status, 400);
+  assert.match(flat.body.error, /^tokensPerDay must be inside "budget"\. Expected \{personId\?, levelId\?, budget: \{tokensPerDay\?/);
+  assert.equal((await H.api(null, 'POST', '/api/spending/budget', { personId: m.user.id })).status, 400, 'no budget at all');
+  assert.match((await H.api(null, 'POST', '/api/spending/budget', { personId: m.user.id, budget: { tokensDay: 5 } })).body.error, /Not a budget amount: tokensDay/);
+  assert.equal((await H.api(null, 'POST', '/api/spending/budget', { personId: m.user.id, budget: 5 })).status, 400);
+  assert.equal(require('../modules/spending/store').load().people[m.user.id], undefined, 'nothing was set by any of them');
+  // The right shape still works, and a level's mayAllow alone leaves its budget as it is.
+  assert.equal((await H.api(null, 'POST', '/api/spending/budget', { personId: m.user.id, budget: { tokensPerDay: 20000 } })).status, 200);
+  await H.api(null, 'POST', '/api/spending/budget', { levelId: 'member', budget: { tokensPerMonth: 900 } });
+  await H.api(null, 'POST', '/api/spending/budget', { levelId: 'member', mayAllow: 3 });
+  assert.equal(require('../modules/spending/store').load().levels.member.budget.tokensPerMonth, 900);
+  await H.api(null, 'POST', '/api/spending/budget', { levelId: 'member', budget: null, mayAllow: '' });
+});
