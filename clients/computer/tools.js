@@ -253,6 +253,14 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: { on: { type: 'boolean' }, key: { type: 'string' } }, required: ['on', 'key'] },
     run: async a => { if (!process.env.FILL_KEY || a.key !== process.env.FILL_KEY) return fail('Not the hub.');
       testMode = a.on === true; return text(testMode ? 'A test computer: sign-ins without asking.' : 'An ordinary computer.'); } },
+  // The hub asks what [ref] is before it asks a person for a mission's sign-in (modules/harness/mission-asks.js): a
+  // sign-in may be asked of them, what pays, buys, confirms or deletes stays refused. It only reads; never the agent's.
+  { name: 'browser_classify', hidden: true, description: 'The hub asks what control [ref] is.',
+    inputSchema: { type: 'object', properties: { ref: { type: 'number' } }, required: ['ref'] },
+    run: async a => { await cdp.connect();
+      const s = await cdp.evaluate(`(() => { const el = document.querySelector('[data-doca-ref="${Number(a.ref)}"]'); if (!el) return null;
+        const s = (${sensitive.toString()})(el); return { kind: s ? s.kind : null, label: (s && s.label) || '', signIn: (${signInOnly.toString()})(el) }; })()`);
+      return s ? text(JSON.stringify(s)) : fail(`[${a.ref}] is not on the page now.`); } },
   { name: 'browser_screenshot', description: 'A picture of the page as the browser draws it.', inputSchema: { type: 'object', properties: {} },
     run: async () => { await cdp.connect(); return { content: [{ type: 'image', mimeType: 'image/png', data: (await cdp.send('Page.captureScreenshot', { format: 'png' })).data }] }; } },
   { name: 'browser_back', description: 'Go back one page.', inputSchema: { type: 'object', properties: {} },
