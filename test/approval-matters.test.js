@@ -90,10 +90,10 @@ test('what matters: the day, a screen setting asked for, a project edit, a memor
   const p = projects.create({ root, name: 'Matters' });
   const s = require('../modules/harness/memory').createSession('matters project', { activate: false });
   projects.bind(p.id, s.id);
-  const edit = await call('shell', { command: 'mkdir build && touch build/out.txt' }, { sessionId: s.id });
+  const edit = await call('shell', { command: 'mkdir build' }, { sessionId: s.id });   // one verb both shells know (bash, PowerShell)
   assert.equal(edit.asked, undefined, 'a project edit runs');
   assert.match(edit.call.risk?.checkpoint || '', /^cp_/, 'after a checkpoint, its way back');
-  assert.ok(fs.existsSync(path.join(root, 'build', 'out.txt')));
+  assert.ok(fs.existsSync(path.join(root, 'build')));
 
   const mem = await call('memory_write', { key: 'matters.test', value: 'kept', category: 'fact' });
   assert.equal(mem.asked, undefined, 'memory keeps its last values');
