@@ -28,6 +28,7 @@ const STAGES = {
   hold:     (_l, b) => `sound over the answer for ${num(b.ms)} ms: the voice paused to hear it`,
   resumed:  (_l, b) => `the voice went on (${word(b.why) || 'no words in it'})`,
   cut:      (_l, b) => `the answer was cut: ${word(b.why)}`,
+  paused:   (_l, b) => `the call gave the microphone up for now: ${word(b.why)}`,   // a phone call (chat-call-pause.js)
   played:   (l, b) => { l.spoken(num(b.n) || 1); return null; },
   notice:   (l, b) => { l.notice(word(b.where) || 'call', word(b.text)); return null; },
   error:    (_l, b) => `the page: ${word(b.text)}`,
