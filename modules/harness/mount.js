@@ -93,6 +93,7 @@ function mount(app) {
   // The panel saying its page is visible (presence.js): read by the agent's per-step readings.
   app.post('/api/presence', (req, res) => {
     require('../presence').beat(req.auth?.user, req.body?.visible !== false);
+    require('../timezones').report(req.auth?.user?.id, req.body?.tz);   // whose clock a time is read on (timezones.js)
     // Which page this screen shows (Devices). Its record is bound here when the first beat comes before /api/screen.
     let screen = req.auth?.session?.screen || null;
     if (!screen && !req.auth?.session?.deviceId) try { screen = require('../screens').ensure(req, res).id; } catch { /* not a person's browser */ }

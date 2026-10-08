@@ -9,7 +9,7 @@ module.exports = [
   {
     name: 'schedule',
     description: 'Schedules: propose that a message is sent to a conversation, or a recipe run, on a timetable — every N minutes or a '
-      + 'cron expression ("0 9 * * 1-5" is 09:00 on weekdays, host time). It runs as the person you are working for, with '
+      + 'cron expression ("0 9 * * 1-5" is 09:00 on weekdays, on the person\'s clock when their screen has said its zone, else the hub\'s). It runs as the person you are working for, with '
       + 'their level and approvals, and only after they switch it on in the panel (Harness → Schedules). list shows them; '
       + 'pause and delete act at once.',
     parameters: {
@@ -30,7 +30,8 @@ module.exports = [
     run: async (a, ctx = {}) => {
       const s = require('../../schedules');
       const person = ctx.user || null;
-      const line = x => `- ${x.id} [${x.state}] ${x.title} — ${x.whenText}${x.nextAt && x.state === 'on' ? `, next ${x.nextAt}` : ''}${x.last ? `; last: ${x.last.ok ? 'ok' : 'failed'} ${x.last.summary.slice(0, 80)}` : ''}`;
+      const zones = require('../../timezones'), tz = zones.of(person?.id) || zones.hostZone();
+      const line = x => `- ${x.id} [${x.state}] ${x.title} — ${x.whenText}${x.nextAt && x.state === 'on' ? `, next ${zones.iso(new Date(x.nextAt), tz)}` : ''}${x.last ? `; last: ${x.last.ok ? 'ok' : 'failed'} ${x.last.summary.slice(0, 80)}` : ''}`;
       if (a.action === 'list') { const l = s.listFor(person); return l.length ? l.map(line).join('\n') : 'No schedules.'; }
       if (a.action === 'propose') {
         const x = s.create({ title: a.title, kind: a.recipe ? 'recipe' : 'turn', message: a.message, recipe: a.recipe, values: a.values,
@@ -56,17 +57,19 @@ module.exports = [
       type: 'object',
       properties: {
         text: { type: 'string', description: 'What to remind them of, as they would want to read it.' },
-        at: { type: 'string', description: 'When, as a date and time in the host\'s time (2026-10-07T18:00), or …' },
+        at: { type: 'string', description: 'When, as a date and time on the person\'s own clock (2026-10-07T18:00), or …' },
         in: { type: 'number', description: '… in how many minutes from now.' },
         device: { type: 'string', description: 'One of their devices by name or id; default all of theirs that take notices.' },
       },
       required: ['text'],
     },
     run: async (a, ctx = {}) => {
-      const at = a.at ? new Date(a.at) : Number(a.in) > 0 ? new Date(Date.now() + Number(a.in) * 60000) : null;
+      // A time without an offset is on the person's clock (the zone their screens report), not the hub's (deep test B, C10).
+      const zones = require('../../timezones'), tz = zones.of(ctx.user?.id) || zones.hostZone();
+      const at = a.at ? zones.parseLocal(a.at, tz) : Number(a.in) > 0 ? new Date(Date.now() + Number(a.in) * 60000) : null;
       if (!at || Number.isNaN(at.getTime())) return 'Error: say when — at (a date and time) or in (minutes).';
       const x = require('../../schedules').create({ kind: 'reminder', text: a.text, at: at.toISOString(), device: a.device }, { person: ctx.user || null, madeBy: 'agent' });
-      return `Reminder ${x.id} set for ${at.toLocaleString()}: "${x.text}". It reaches their devices once; they can delete it in Harness → Schedules.`;
+      return `Reminder ${x.id} set for ${zones.human(at, tz)}, ${zones.iso(at, tz)}${zones.of(ctx.user?.id) ? '' : ' — the hub\'s clock: none of their screens has said its zone yet'}: "${x.text}". It reaches their devices once; they can delete it in Harness → Schedules.`;
     },
   },
 ];
