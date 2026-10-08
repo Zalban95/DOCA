@@ -170,7 +170,12 @@ const SCHEMA = {
   providerContracts: { is: 'mixed', home: 'hive', note: 'the owner\'s corrections to what a provider accepts (harness/contracts.js): about a remote provider they travel, about a server on this machine they are local' },
   harness:          { is: 'mixed', home: 'hive', note: 'config (model, limits, fallback chain, prompts), the guards\' settings and approval mode travel (the guard model files are local, in the data folder); the always-allowed list names commands of this machine and is local. Provider keys are not here: they live in the data folder (keys/).',
     propose: [p('Harness parameters', 'Includes this agent\'s own model and behaviour', { prefix: 'harness.config' }),
-      p('Default harness', 'Which runtime the chat panel talks to', { prefix: 'harness.default' })] },
+      p('Default harness', 'Which runtime the chat panel talks to', { prefix: 'harness.default' })],
+    keys: {
+      // Never proposed: how long a person is given to answer for a mission's use of a machine (harness/mission-asks.js).
+      'approval.missionAskSec': { type: 'integer', min: 10, max: 900, default: 300, propose: false,
+        hint: 'Seconds a mission waits for its person to allow its use of a machine (a VNC screen, a sign-in on its computer) before it is denied.' },
+    } },
   models:           { is: 'mixed', home: 'hive', note: 'preferences travel; runtime URLs name this machine. The Hugging Face token is in the protected keys (hf-token.js), never here',
     propose: p('Model manager', 'Ollama URL, download directories') },
 

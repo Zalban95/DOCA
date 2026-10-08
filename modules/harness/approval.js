@@ -62,11 +62,14 @@ function settings() {
     mode:   MODES.includes(a.mode) ? a.mode : 'auto',
     always: Array.isArray(a.always) ? a.always.filter(k => typeof k === 'string' && k) : [],
     recheckOutside: a.recheckOutside !== false,   // on unless switched off in Approvals
+    ...(Number.isInteger(a.missionAskSec) ? { missionAskSec: a.missionAskSec } : {}),   // read through the schema (mission-asks.js)
   };
 }
 
 /** The "ask again after outside text" switch. */
 function setRecheck(on) { return save({ recheckOutside: !!on }); }
+/** How long a mission's machine question waits for its person (mission-asks.js), in seconds. */
+const setMissionAskSec = sec => save({ missionAskSec: sec });
 
 function save(patch) {
   const prefs = loadPrefs();
@@ -344,7 +347,7 @@ function refusal(decision, req) {
  * A mission runs unwatched — `ask_device` is in `registry.NEVER` for exactly
  * this reason — so there is no one to put a card in front of. Denying is the
  * conservative half of that: the allowlist still applies, so a specialist can
- * be given the verbs it needs in advance, on purpose.
+ * be given the verbs it needs in advance, on purpose. Machine use is the exception, asked of its person (mission-asks.js).
  */
 function missionRefusal(req) {
   const what = req.keys?.length ? req.keys.join(' or ') : req.tool;
@@ -389,6 +392,6 @@ function block() {
 }
 
 module.exports = {
-  MODES, FREE, settings, setMode, setRecheck, isUnattended, remember, forget, block,
+  MODES, FREE, settings, setMode, setRecheck, setMissionAskSec, isUnattended, remember, forget, block,
   verbsOf, keysFor, summarize, gate, ask, askAnywhere, decide, pending, refusal, missionRefusal, entry,
 };

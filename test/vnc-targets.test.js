@@ -121,7 +121,7 @@ test('VNC targets: kept apart, rows, Live, the console through the hub, the agen
   assert.ok(!approval.FREE.has('vnc_input') && !approval.FREE.has('vnc_look'), 'asked in Manual, as any tool that acts');
   const asked = approval.gate('vnc_input', { target: 'desk', action: 'click', x: 1, y: 1 }, { mission: true });
   assert.deepEqual([asked.forced, asked.keys], [true, null], 'a specialist\'s every vnc_input is a person\'s decision, never "always"');
-  assert.match(approval.missionRefusal(asked), /report what you meant to do on that screen/);
+  assert.match(approval.missionRefusal(asked), /not lent to this mission: report what you meant to do on it/);
   assert.match(await tools.call('vnc_input', { target: 'desk', action: 'click', x: 1, y: 1 }), /a person is driving desk/);
   drive.ws.close();
   await new Promise(r => setTimeout(r, 200));

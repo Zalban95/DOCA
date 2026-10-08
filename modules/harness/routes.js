@@ -101,8 +101,11 @@ const handleUsage = wrap(async (req, res) => {
 const handleApproval = wrap(async (req, res) => {
   const cap = req.auth?.session?.cap;
   const host = !req.auth || (require('../auth/rights').can(req.auth.role, 'host') && (!cap || cap.includes('host')));
-  if (!host) return res.json({ mode: approval.settings().mode });
-  res.json({ ...approval.settings(), pending: approval.pending(), free: [...approval.FREE] });
+  // `asks`: the missions' machine questions for this person (mission-asks.js), so a page opened later still pops them.
+  const me = req.auth?.user?.id || null;
+  const asks = approval.pending().filter(p => p.machine && (p.personId ? p.personId === me : host));
+  if (!host) return res.json({ mode: approval.settings().mode, asks });
+  res.json({ ...approval.settings(), missionAskSec: require('./mission-asks').waitSec(), pending: approval.pending(), asks, free: [...approval.FREE] });
 });
 
 /** POST /api/harness/approval — set the mode. Only ever from a click. */
@@ -112,6 +115,13 @@ const handleApprovalMode = wrap(async (req, res) => {
     approval.setRecheck(req.body.recheckOutside);
     audit(`approval: ask again after outside text ${req.body.recheckOutside ? 'on' : 'off'}`);
     if (!req.body.mode) return res.json(approval.settings());
+  }
+  if (req.body?.missionAskSec !== undefined) {   // how long a mission's machine question waits (a declared setting)
+    const sec = Number(req.body.missionAskSec);
+    if (!Number.isInteger(sec) || sec < 10 || sec > 900) return res.status(400).json({ error: 'missionAskSec is whole seconds, 10 to 900.' });
+    approval.setMissionAskSec(sec);
+    audit(`approval: a mission's machine question waits ${sec} s`);
+    if (!req.body.mode) return res.json({ ...approval.settings(), missionAskSec: sec });
   }
   const r = approval.setMode(req.body?.mode, { role: req.auth?.role || 'owner', confirm: req.body?.confirm });
   audit(`approval mode: ${r.mode}`);

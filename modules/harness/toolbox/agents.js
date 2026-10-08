@@ -39,7 +39,7 @@ module.exports = [
           + 'a Linux desktop in a container. The specialist gets that computer\'s tools and no other\'s. For testing something risky, '
           + 'browsing as a person would, or recording a demo: send the tester. A specialist whose definition keeps a computer of its '
           + 'own gets that one without this (the same logins and files every time).' },
-        vnc: { type: 'string', description: 'Optional: a VNC screen (name or id, Machines → VNC) lent to the mission — the specialist gets vnc_look and vnc_input for that screen alone, and every vnc_input of its is a person\'s decision.' },
+        vnc: { type: 'string', description: 'Optional: a VNC screen (name or id, Machines → VNC) lent to the mission — the specialist gets vnc_look and vnc_input for that screen alone, and every vnc_input of its is asked of the person the mission works for.' },
         plan: {
           type: 'array',
           description: 'Optional. The errand broken into steps, so a phone or a watch can draw how far along it '
