@@ -32,7 +32,7 @@ async function releasingSave() {
 
 async function releasingTry() {
   const model = document.getElementById('rel-try').value.trim(), st = document.getElementById('rel-try-result');
-  if (!model) return;
+  if (!model) return askFor(document.getElementById('rel-try'), 'Type a model id to check, e.g. claude-opus-5-5.');
   try {
     const r = await apiFetch(`/api/developer/releasing?model=${encodeURIComponent(model)}`);
     setStatus(st, r.unasked ? `Releases without asking (${r.rule})` : 'Asks before releasing', r.unasked ? 'ok' : '');

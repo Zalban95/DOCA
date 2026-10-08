@@ -30,6 +30,20 @@ const STATUS_TIMERS = new WeakMap();
  * @param {string} [cls] - 'ok' | 'err' | 'info' | 'warn'
  * @param {{clear?: number}} [opts]
  */
+/**
+ * A button pressed with what it needs left empty: say so at the field, in the browser's own bubble, and put the cursor
+ * there. Deep test B (R4) found such buttons doing nothing at all. Returns false, so a caller can `return askFor(…)`.
+ */
+function askFor(input, sentence) {
+  if (!input?.setCustomValidity) { appAlert(sentence); return false; }
+  input.focus();
+  input.setCustomValidity(sentence);
+  input.reportValidity();
+  input.addEventListener('input', () => input.setCustomValidity(''), { once: true });
+  setTimeout(() => input.setCustomValidity(''), 4000);
+  return false;
+}
+
 function setStatus(el, msg, cls, opts = {}) {
   if (!el) return;
 

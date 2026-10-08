@@ -21,7 +21,8 @@ async function _hcLoadMemory() {
 async function hcMemWrite() {
   const key = document.getElementById('hc-mem-key');
   const val = document.getElementById('hc-mem-value');
-  if (!key?.value.trim() || !val?.value.trim()) return;
+  if (!key?.value.trim()) return askFor(key, 'Give it a key: a short name it is found by (e.g. favourite-colour).');
+  if (!val?.value.trim()) return askFor(val, 'Write what it should remember.');
   try {
     await apiFetch('/api/harness/memory', { method: 'POST', body: { key: key.value.trim(), value: val.value.trim() } });
     key.value = val.value = '';

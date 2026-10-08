@@ -107,5 +107,9 @@ async function aiToolInstall(id) {
 
 /** Scroll to the Inference Services card (services start the API tools). */
 function aiToolGoService() {
-  document.getElementById('services-grid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const grid = document.getElementById('services-grid');
+  // Without Docker the services cannot start, and scrolling to them said nothing (deep test B, R4).
+  if (!grid || /docker|not found|ENOENT|unavailable/i.test(grid.textContent) && !grid.querySelector('button'))
+    return appAlert('This runs as an inference service, which needs Docker (or Podman) on this machine. Settings → System → System tools installs it; then ▶ Start it under Inference Services below.');
+  grid.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }

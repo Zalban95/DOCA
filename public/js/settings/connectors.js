@@ -34,7 +34,8 @@ async function connectorsLoad() {
         <input class="input" data-f="clientSecret" type="password" autocomplete="off" placeholder="${c.hasSecret ? 'secret saved — paste to replace' : 'client secret'}" style="flex:1;min-width:160px">
         <button class="btn btn-sm" onclick="connectorsSave(${jsArg(c.id)})">Save</button>
         <button class="btn btn-sm btn-blue" onclick="connectorsConnect(${jsArg(c.id)})" ${c.configured ? '' : 'disabled title="Save its client id and secret first"'}>${c.connected ? 'Reconnect' : 'Connect'}</button>
-        ${c.connected ? `<button class="btn btn-sm btn-red" onclick="connectorsDisconnect(${jsArg(c.id)})">Disconnect</button>` : ''}</div>
+        ${c.connected ? `<button class="btn btn-sm btn-red" onclick="connectorsDisconnect(${jsArg(c.id)})">Disconnect</button>` : ''}
+        <span class="status-line" data-f="status"></span></div>
       ${advancedFold(`<div class="toolbar" style="gap:6px;flex-wrap:wrap">
         <input class="input" data-f="scopes" placeholder="scopes" data-default="${escHtml(c.defaultScopes ?? '')}" data-label="Scopes" value="${escHtml(c.scopes ?? c.defaultScopes)}" style="flex:2;min-width:220px">
         <select class="input" data-f="who" data-default="host" data-label="Who may use it" style="width:auto"><option value="host" ${c.who !== 'everyone' ? 'selected' : ''}>hosts only</option><option value="everyone" ${c.who === 'everyone' ? 'selected' : ''}>everyone</option></select></div>`,
@@ -52,12 +53,17 @@ async function connectorsLoad() {
 async function connectorsSave(id) {
   const card = document.querySelector(`#sp-connectors [data-conn="${CSS.escape(id)}"]`);
   const f = k => card.querySelector(`[data-f="${k}"]`)?.value.trim();
+  // Nothing typed into an app that has none saved: say what is missing (deep test B, R4: Save did nothing visible).
+  const idIn = card.querySelector('[data-f="clientId"]');
+  if (!f('clientId') && !f('clientSecret') && !/saved/.test(idIn?.placeholder || ''))
+    return askFor(idIn, 'Paste the client id and secret of the OAuth app you made in its console first.');
   const body = { scopes: f('scopes'), who: f('who') };
   if (f('clientId')) body.clientId = f('clientId');
   if (f('clientSecret')) body.clientSecret = f('clientSecret');
   if (card.querySelector('[data-f="authorize"]')) body.urls = { authorize: f('authorize'), token: f('token'), api: f('api').split(',').map(s => s.trim()).filter(Boolean) };
   try { await apiFetch(`/api/connectors/${encodeURIComponent(id)}`, { method: 'POST', body }); } catch (e) { return appAlert(e.message); }
-  connectorsLoad();
+  await connectorsLoad();
+  setStatus(document.querySelector(`#sp-connectors [data-conn="${CSS.escape(id)}"] [data-f="status"]`), '✓ Saved', 'ok');
 }
 
 async function connectorsConnect(id) {

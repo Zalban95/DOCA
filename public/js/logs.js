@@ -112,7 +112,12 @@ function logLevelOf(text) {
   return 'info';
 }
 
-function clearLogs() { document.getElementById('log-out').innerHTML = ''; }
+function clearLogs() {
+  const out = document.getElementById('log-out');
+  if (!out) return;
+  const had = [...out.children].some(c => !c.classList.contains('placeholder'));
+  out.innerHTML = `<div class="placeholder">${had ? 'Cleared from this view — new lines appear here as they come. The record itself is kept (Settings → System → Logs).' : 'Nothing to clear: no lines yet.'}</div>`;
+}
 
 function toggleScroll() {
   autoScroll = !autoScroll;

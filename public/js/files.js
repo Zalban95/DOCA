@@ -344,7 +344,7 @@ function fmCut() {
 }
 
 async function fmPaste() {
-  if (!fm.clipboard?.paths.length) return;
+  if (!fm.clipboard?.paths.length) return appAlert('Nothing to paste yet: choose files, then ⧉ Copy or ✂ Cut, open the folder they go to and paste.');
   const { op, paths } = fm.clipboard;
   try {
     await apiFetch(`${fmApi()}/paste`, {
