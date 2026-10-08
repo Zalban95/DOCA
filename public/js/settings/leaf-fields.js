@@ -19,10 +19,10 @@ async function leafFieldsDraw(el, paths, { label = 'Advanced', id = '' } = {}) {
   if (!leaves.length) { el.innerHTML = ''; return; }
   const box = l => {
     const name = l.path.split('.').pop().replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()).replace(/ Ms$/, ' (ms)');
-    const common = `class="input" data-leaf="${escHtml(l.path)}" data-type="${escHtml(l.type)}" data-default="${escHtml(String(l.default ?? ''))}" data-label="${escHtml(name)}"`;
-    const input = l.oneOf ? `<select ${common}>${l.oneOf.map(o => `<option${o === l.value ? ' selected' : ''}>${escHtml(o)}</option>`).join('')}</select>`
-      : l.type === 'boolean' ? `<input type="checkbox" ${common.replace('class="input" ', '')}${l.value ? ' checked' : ''}>`
-      : `<input ${common} ${['number', 'integer'].includes(l.type) ? `type="number"${l.min != null ? ` min="${l.min}"` : ''}${l.max != null ? ` max="${l.max}"` : ''}${l.type === 'integer' ? ' step="1"' : ''}` : 'type="text"'} value="${escHtml(String(l.value ?? ''))}" style="width:${['number', 'integer'].includes(l.type) ? '120px' : '260px'}">`;
+    const common = `data-leaf="${escHtml(l.path)}" data-type="${escHtml(l.type)}" data-default="${escHtml(String(l.default ?? ''))}" data-label="${escHtml(name)}"`;
+    const input = l.oneOf ? `<select class="input" ${common}>${l.oneOf.map(o => `<option${o === l.value ? ' selected' : ''}>${escHtml(o)}</option>`).join('')}</select>`
+      : l.type === 'boolean' ? `<input type="checkbox" ${common}${l.value ? ' checked' : ''}>`
+      : `<input class="input" ${common} ${['number', 'integer'].includes(l.type) ? `type="number"${l.min != null ? ` min="${l.min}"` : ''}${l.max != null ? ` max="${l.max}"` : ''}${l.type === 'integer' ? ' step="1"' : ''}` : 'type="text"'} value="${escHtml(String(l.value ?? ''))}" style="width:${['number', 'integer'].includes(l.type) ? '120px' : '260px'}">`;
     return `<div class="field" title="${escHtml(l.path)}"><div class="input-label">${escHtml(name)}</div>${input}
       <div class="input-label" style="text-transform:none;letter-spacing:0;max-width:360px">${escHtml(l.hint)} <span style="opacity:.7">(default ${escHtml(JSON.stringify(l.default))})</span></div></div>`;
   };
