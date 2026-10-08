@@ -53,13 +53,11 @@ function _mcpOffersHtml(offers) {
       ${o.note ? `<div class="input-label" style="margin:6px 0 0">${escHtml(o.note)}</div>` : ''}
       ${o.tools?.length
         ? `<div class="mcp-tools">${o.tools.map(t => `<span class="mcp-tool">${escHtml(t)}</span>`).join('')}</div>
-           <div class="input-label" style="margin:4px 0 0;opacity:.6">
-             Tools it says it has — not checked yet, since nothing has connected to it.
-           </div>`
+           <div class="input-label" style="margin:4px 0 0;opacity:.6">Tools it says it has — not checked yet, since nothing has connected to it.</div>`
         : ''}
       <div class="input-label" style="margin:6px 0 0;opacity:.6">
-        Accepting adds it as an http server acting on <strong>${escHtml(o.deviceName)}</strong>. Nothing is
-        connected to DOCA until you connect it.
+        Accepting adds it as a server acting on <strong>${escHtml(o.deviceName)}</strong> and connects to it,
+        so its tools reach the agent. Nothing happens until you accept.
       </div>
       <div class="status-line mt4" id="mcp-offer-status-${escHtml(o.id)}"></div>
     </div>`;
@@ -72,7 +70,10 @@ async function mcpOfferAccept(id, btn) {
   try {
     const r = await apiFetch(`/api/mcp/offers/${encodeURIComponent(id)}/accept`, { method: 'POST' });
     await mcpLoad();
-    mcpShowResult(r.server.id, `✓ Added. ${r.server.transport === 'http' ? 'Connect' : 'Start'} it to see its tools.`, 'ok');
+    const c = r.connect || {}, n = r.server?.toolCount ?? 0;
+    if (c.state === 'running') mcpShowResult(r.server.id, `✓ Accepted and connected — ${n} tool${n === 1 ? '' : 's'} offered to the agent.`, 'ok');
+    else if (c.state === 'connecting') mcpShowResult(r.server.id, 'ℹ Accepted — still connecting. Its tools appear when it answers.', 'warn');
+    else mcpShowResult(r.server.id, `⚠ Accepted, but it did not answer yet (why: just above). Once it runs on ${r.offer?.deviceName || 'that machine'}, press ▶ Connect.`, 'warn');
   } catch (e) { done(); setStatus(status, `✗ ${e.message}`, 'err'); }
 }
 

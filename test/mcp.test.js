@@ -389,6 +389,8 @@ test('a client offers its server, and only a click lets it in', async () => {
   assert.equal(accepted.status, 200);
   assert.equal(accepted.body.server.transport, 'http', 'an offer can only ever become an http server');
   assert.deepEqual(accepted.body.server.origin, { kind: 'client', deviceId: device.id });
+  // It tries to connect at once; an address nobody answers on says so, rather than reading as connected.
+  assert.notEqual(accepted.body.connect.state, 'running');
   assert.equal((await get('/api/mcp')).body.offers.length, 0, 'and leaves the queue');
 
   // Deciding twice is a conflict, not a second write.
