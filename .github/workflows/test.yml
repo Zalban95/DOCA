@@ -31,8 +31,10 @@ jobs:
       - name: install (Windows)
         if: runner.os == 'Windows'
         env: { PORT: '4343' }
-        shell: pwsh
+        # Windows PowerShell 5.1, not pwsh: it is the one every Windows has, and the installer broke there alone (H1.9).
+        shell: powershell
         run: |
-          ./scripts/install.ps1 -From . -Dir "$env:RUNNER_TEMP\doca-install" -NoBoot
-          $r = Invoke-WebRequest -Uri https://127.0.0.1:4343/login -SkipCertificateCheck -UseBasicParsing
-          if ($r.StatusCode -ne 200) { throw "the installed panel answered $($r.StatusCode)" } else { "the installed panel answers" }
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1 -From . -Dir "$env:RUNNER_TEMP\doca-install" -NoBoot -Share no
+          if ($LASTEXITCODE -ne 0) { throw "the installer failed ($LASTEXITCODE)" }
+          $code = curl.exe -sk -o NUL -w '%{http_code}' https://127.0.0.1:4343/login
+          if ($code -ne '200') { throw "the installed panel answered $code" } else { "the installed panel answers" }
