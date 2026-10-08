@@ -49,7 +49,7 @@ function handleList(req, res) {
   const dirPath = req.query.path;
   if (!dirPath || !fmSafe(dirPath)) return res.status(403).json({ error: 'Path not allowed' });
   try {
-    if (!fs.existsSync(dirPath)) return res.status(404).json({ error: 'Not found' });
+    if (!fs.existsSync(dirPath)) return res.status(404).json({ error: `There is no folder at ${dirPath} yet.` });
     const stat = fs.statSync(dirPath);
     if (!stat.isDirectory()) return res.status(400).json({ error: 'Not a directory' });
 

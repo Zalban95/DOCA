@@ -944,7 +944,7 @@ test('the floating chat panel answers through the default harness', async () => 
   const status = await get('/api/chat/status');
   assert.equal(status.body.harness.id, 'doca');
   assert.equal(status.body.chatEnabled, true);
-  assert.match(status.body.hint, /DOCA Harness/);
+  assert.match(status.body.hint, /DOCA's own agent/);
 });
 
 test('the floating chat panel forwards tool calls as structured events', async () => {

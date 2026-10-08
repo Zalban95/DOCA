@@ -23,6 +23,7 @@ const SCHEMA = {
   theme:            { is: 'travels', home: 'device', on: 'screen', note: 'colour theme', propose: p('Theme') },
   customTheme:      { is: 'travels', home: 'device', on: 'screen', note: 'a theme the person made', propose: p('Custom theme colours') },
   skin:             { is: 'travels', home: 'device', on: 'screen', note: 'the panel skin' },
+  lookThemes:       { is: 'travels', home: 'device', on: 'screen', note: 'the colours last chosen for each look, {skin: theme}, put back when the look is chosen again (settings/appearance.js)' },
   hiddenTabs:       { is: 'travels', home: 'device', on: 'screen', note: 'which tabs are hidden', propose: p('Navigation visibility') },
   codeExpanded:     { is: 'travels', home: 'device', on: 'screen', note: 'a UI fold state' },
   sidebarStats:     { is: 'travels', home: 'device', on: 'host', note: 'which stats the host collects for the sidebar (the collectors run here, for every screen)', propose: p('Sidebar stats', 'Which stats the sidebar shows') },

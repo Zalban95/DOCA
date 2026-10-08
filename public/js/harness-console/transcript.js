@@ -43,6 +43,7 @@ function _hcAppend(kind, text, label, opts = {}) {
   // else here is the literal text it is — a tool result, an error, a step
   // count — and re-typesetting those would be inventing structure.
   if (kind === 'assistant' && !opts.plain) mdInto(body, text);
+  else if (kind === 'user' && typeof formHelpTextInto === 'function') formHelpTextInto(body, text);   // a form's details, folded
   else body.textContent = text;
   el.appendChild(body);
   // What the agent says mid-turn is part of the working and joins the block;

@@ -294,3 +294,8 @@
   width: 420px;
   max-width: 100%;
 }
+
+/* A DOCA folder not made yet (files-bookmarks.js): greyed, with the way to make it */
+.fm-bookmark-missing { opacity: .6; }
+.fm-bookmark-missing:hover { opacity: 1; }
+.fm-bookmark-make { font-size: 9px; color: var(--accent); margin-left: 4px; }

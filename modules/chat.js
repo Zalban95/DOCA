@@ -29,7 +29,7 @@ function handleStatus(req, res) {
     parseError,
     gatewayCfg,
     configPath: CONFIG_PATH,
-    hint: harness?.kind === 'builtin' ? `Using the ${harness.label}`
+    hint: harness?.kind === 'builtin' ? `Using ${harness.label}`
       : adapter ? `Using ${harness.label} (${adapter.kind === 'gateway' ? 'its gateway' : 'one question at a time, no tools of DOCA\'s'})`
       : require('./harness/one-shot').whyNot(harness),
   });
@@ -170,7 +170,7 @@ async function handleChat(req, res) {
   const shot = require('./harness/one-shot');
   const adapter = shot.adapterFor(row);
   if (!adapter || !require('./auth/rights').can(req.auth?.role, 'host')) {
-    say({ type: 'stderr', text: adapter ? `${row.label} is an agent acting on this machine with its own permissions: only a host can chat with it here. Ask the host, or use the DOCA Harness.` : shot.whyNot(row) });
+    say({ type: 'stderr', text: adapter ? `${row.label} is an agent acting on this machine with its own permissions: only a host can chat with it here. Ask the host, or use DOCA's own agent.` : shot.whyNot(row) });
     say({ type: 'done', code: 1 });
     return res.end();
   }

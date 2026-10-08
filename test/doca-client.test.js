@@ -61,8 +61,10 @@ test('it lends what was granted; once its offer is accepted the agent works on t
   assert.deepEqual(offer.tools.sort(), ['files_copy', 'files_delete', 'files_list', 'files_mkdir', 'files_move', 'files_read', 'files_write', 'shell_run']);
   const acc = await H.api(null, 'POST', `/api/mcp/offers/${offer.id}/accept`);
   assert.equal(acc.status, 200, JSON.stringify(acc.body));
+  assert.equal(acc.body.connect.state, 'running', 'accepting connects it — the client says to accept once, and once is enough');
   const reg = require('../modules/mcp/registry');
   serverId = reg.forDevice(deviceId).id;
+  assert.equal(reg.client(serverId)?.state, 'running');
   if (reg.client(serverId)?.state !== 'running') await reg.start(serverId);
   const tools = require('../modules/harness/tools');
   const listing = await tools.call(`mcp__${serverId}__files_list`, { path: '' });

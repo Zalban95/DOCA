@@ -79,7 +79,10 @@ function plan(answers, assessment, doc, { have = {} } = {}) {
   }
   for (const p of picks.filter(x => !local.includes(x))) {
     steps.push({ type: 'key', role: p.role, label: p.label, providers: p.providers, note: p.providersNote,
-      why: p.local ? 'you chose providers' : p.tooBig ? `too heavy for this machine: ${p.tooBig.label} ${p.tooBig.why}` : 'nothing suggested runs here' });
+      // What does not fit is never put as an option: said once, as the reason, after where the model comes from
+      // instead (self-test round two, C5 — "too heavy: Qwen3 4B needs…" read as an offer under "cannot run models").
+      why: p.local ? 'you chose providers' : p.tooBig ? `an online provider, or a model you run elsewhere — this machine cannot run one (even the smallest suggested ${p.tooBig.why})`
+        : 'an online provider, or a model you run elsewhere — nothing suggested runs on this machine' });
   }
   return { answers: a, shape, askRoute, picks, steps, have, devices: a.devices.map(d => ({ id: d, ...DEVICES[d] })) };
 }

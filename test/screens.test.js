@@ -52,6 +52,10 @@ test('a member changes their own screen, though the hive\'s prefs are not theirs
   const r = await call(member.cookie, 'POST', '/api/screen/settings', { theme: 'nord' });
   assert.equal(r.status, 200);
   assert.equal(r.body.settings.theme, 'nord');
+  // Each look keeps the colours last chosen for it (self-test round two, C9): Classic + Nord survives a trip to Modern.
+  const kept = await call(member.cookie, 'POST', '/api/screen/settings', { skin: 'modern', theme: 'daylight', lookThemes: { classic: 'nord', modern: 'daylight' } });
+  assert.equal(kept.status, 200);
+  assert.deepEqual((await call(member.cookie, 'GET', '/api/screen')).body.settings.lookThemes, { classic: 'nord', modern: 'daylight' });
 });
 
 test('revoking a browser signs it out', async () => {

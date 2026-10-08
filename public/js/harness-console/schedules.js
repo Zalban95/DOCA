@@ -65,3 +65,8 @@ function hcScheduleDelete(id) {
     hcSchedulesLoad();
   });
 }
+
+// A schedule made or changed anywhere — the agent's `remind` or `schedule`, another screen — redraws the list.
+if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', () => {
+  if (typeof liveOn === 'function') liveOn('schedules', liveDebounce(() => { if (document.getElementById('hc-schedules')) hcSchedulesLoad(); }, 300));
+});

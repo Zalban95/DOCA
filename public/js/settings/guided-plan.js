@@ -48,6 +48,7 @@ function _guidedOwnRow(i) {
     <div class="toolbar guided-key">
       <input class="input" autocomplete="off" placeholder="http://192.168.1.20:8080/v1" id="guided-own-url-${i}" title="Its address, usually ending in /v1">
       <input class="input" type="password" autocomplete="off" placeholder="Key, if it needs one" id="guided-own-key-${i}">
+      <input class="input" autocomplete="off" placeholder="Its name (optional) — e.g. My model at the office" id="guided-own-name-${i}" title="What DOCA calls it in your lists">
       <button class="btn btn-xs btn-blue" onclick="guidedOwnConnect(${i})">Connect and test</button>
       <span class="status-line" id="guided-own-st-${i}"></span></div>
     <div class="toolbar" id="guided-own-models-${i}"></div></div>`;
@@ -128,8 +129,9 @@ async function guidedOwnConnect(i) {
   const st = document.getElementById(`guided-own-st-${i}`);
   const baseUrl = document.getElementById(`guided-own-url-${i}`).value.trim().replace(/\/+$/, ''), keyIn = document.getElementById(`guided-own-key-${i}`);
   if (!/^https?:\/\/[^\s/]+/i.test(baseUrl)) return setStatus(st, '✗ Give its address, like http://192.168.1.20:8080/v1', 'err');
-  const host = baseUrl.replace(/^https?:\/\//i, '').split(/[/:]/)[0].toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const name = `own-${host || 'server'}`;   // a provider name of its own, never over a preset's
+  const known = await apiFetch('/api/keys').catch(() => ({}));
+  const taken = [...(known.presets || []).map(p => p.id), ...Object.entries(known.providers || {}).filter(([, p]) => p.baseUrl.replace(/\/+$/, '') !== baseUrl).map(([id]) => id)];
+  const name = guidedOwnName(baseUrl, document.getElementById(`guided-own-name-${i}`)?.value, taken);
   try {
     setStatus(st, 'connecting…', 'info');
     await apiFetch('/api/keys/add-provider', { method: 'POST', body: { name, baseUrl, apiKey: keyIn.value.trim() } });
@@ -141,4 +143,21 @@ async function guidedOwnConnect(i) {
     document.getElementById(`guided-own-models-${i}`).innerHTML = `<select class="input" id="guided-own-model-${i}">${r.models.map(m => `<option>${escHtml(m)}</option>`).join('')}</select>
       <button class="btn btn-xs btn-green" onclick="guidedUseModel(${jsArg(name)}, document.getElementById('guided-own-model-${i}').value, 'own-${i}')">Use it for DOCA's agent</button>`;
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}
+
+/**
+ * The name a person's own model is listed under: theirs if they gave one, else "My model at <host>" — it was
+ * `own-172-17-0-1`, and a newcomer asked "who is own-172-17-0-1?" (self-test round two, C6). No slash or colon, which
+ * separate a provider from its model and a grant's parts; never a name already taken (a preset's, another provider's),
+ * so it cannot replace one.
+ */
+function guidedOwnName(baseUrl, typed, taken = []) {
+  const where = String(baseUrl || '').replace(/^https?:\/\//i, '').split('/')[0];
+  const host = where.startsWith('[') ? where.slice(1, where.indexOf(']')) : where.replace(/:\d+$/, '');   // [::1]:8080, or name:port
+  const local = /^(localhost|127\.\d+\.\d+\.\d+|::1)$/i.test(host);
+  let name = String(typed || '').trim() || (local ? 'My model on this machine' : `My model at ${host || 'another machine'}`);
+  name = name.replace(/[/:\\]+/g, '-').replace(/\s+/g, ' ').slice(0, 60).trim();
+  const lower = new Set(['ollama', ...taken].map(x => String(x).toLowerCase()));
+  for (let n = 2, base = name; lower.has(name.toLowerCase()); n++) name = `${base} (${n})`;
+  return name;
 }

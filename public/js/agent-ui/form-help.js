@@ -1,5 +1,5 @@
 /* ✨ Ask the agent, on every form (asked 2026-10-06). A settings card or an edit form with fields to fill gets the
-   button; it opens the chat with that form's own question and what its fields hold — the name and label of each, the
+   button; it opens the chat ready to ask about that form, with what its fields hold — the name and label of each, the
    value of each, except that a password, token, key or header is only "filled" or "empty". The agent answers as in
    any conversation and may fill fields with `form_fill`: the values land in this form as a draft, marked, and nothing
    is saved until the person presses the form's own Save. Its tool never touches a secret field. */
@@ -35,7 +35,15 @@ function _formHelpLabel(el) {
 
 const _formHelpIsSecret = el => el.type === 'password' || FORM_HELP_SECRET.test(`${el.id} ${el.name} ${_formHelpLabel(el)}`);
 
-/** Open the chat with this form's question and its fields (no secret's value), as an ordinary message. */
+/* What the person sees and what the agent reads are kept apart (self-test round two, C3): "✨ Ask the agent" used to
+   type a long message the person never wrote into the chat and send it — "who wrote that?". Now the chat opens with
+   "Help with: <form>" in the box, theirs to change, focused and not sent, and a chip saying the form's details go
+   with it. On Send the details travel after a marker line; every place a person reads their own message folds them
+   into a closed "Form details the panel attached" (formHelpTextInto). */
+const FORM_HELP_MARK = '\n\n[Form details attached by the panel — not the person\'s words]\n';
+let _formHelpPending = null;   // { title, context } until the next Send, or the chip's ×
+
+/** Open the chat ready to ask about this form: a short message of the person's own, the form's details as context. */
 function formHelpAsk(id) {
   const box = _formHelpForms.get(id);
   if (!box) return;
@@ -49,14 +57,60 @@ function formHelpAsk(id) {
       : el.tagName === 'SELECT' ? `${v} (choices: ${[...el.options].map(o => o.value).slice(0, 12).join(', ')})` : JSON.stringify(String(v).slice(0, 300));
     return `- ${_formHelpLabel(el) || el.dataset.helpField} [${el.dataset.helpField}${el.disabled ? ', locked' : ''}]: ${shown}`;
   });
-  const message = `Help me fill "${title}"${where ? ` (${where})` : ''}: what each field means, what to put here for my setup, and what is still missing.\n\n`
-    + `The form (id ${id}) has these fields — secrets show only whether they are filled:\n${lines.join('\n')}\n\n`
-    + 'You may fill fields as a draft with form_fill (form and field ids above); I review and save. Never a secret field — tell me where to get it instead.';
+  const context = `The person is looking at the form "${title}"${where ? ` (${where})` : ''} and wants help with it: what each field means, `
+    + 'what to put there for their set-up, and what is still missing.\n'
+    + `The form (id ${id}) has these fields — secrets show only whether they are filled:\n${lines.join('\n')}\n`
+    + 'You may fill fields as a draft with form_fill (form and field ids above); the person reviews and saves. Never a secret field — say where to get it instead.';
+  _formHelpPending = { title, context };
   if (typeof chatOpen !== 'undefined' && !chatOpen) toggleChat();
   const input = document.getElementById('chat-input');
-  if (!input || typeof chatSend !== 'function') return;
-  input.value = message;
-  chatSend();
+  if (!input) return;
+  input.value = `Help with: ${title}`;
+  _formHelpChip(title);
+  input.focus();
+  input.setSelectionRange?.(input.value.length, input.value.length);
+}
+
+/** The chip above the composer: which form goes with the message; × keeps the message and drops the form. */
+function _formHelpChip(title) {
+  const row = document.getElementById('chat-attachments');
+  if (!row) return;
+  row.querySelector('.form-help-chip')?.remove();
+  const el = document.createElement('span');
+  el.className = 'chat-chip form-help-chip';
+  el.title = 'The form\'s fields go with your message so the agent can see them — never a password or token';
+  const label = Object.assign(document.createElement('span'), { textContent: `📋 ${title} · its fields go with your message` });
+  const drop = Object.assign(document.createElement('em'), { textContent: '×', title: 'Send without the form' });
+  drop.onclick = () => { _formHelpPending = null; el.remove(); if (!row.children.length) row.style.display = 'none'; };
+  el.append(label, drop);
+  row.appendChild(el);
+  row.style.display = '';
+}
+
+/** On Send: the message as the agent reads it — the person's words, then the form's details after the marker. */
+function formHelpAttach(message) {
+  const p = _formHelpPending;
+  _formHelpPending = null;
+  if (!p) return message;
+  const box = document.getElementById('chat-messages');
+  const mine = [...(box?.querySelectorAll('.chat-msg.user') || [])].pop();
+  if (mine) formHelpTextInto(mine, mine.textContent + FORM_HELP_MARK + p.context);
+  return message + FORM_HELP_MARK + p.context;
+}
+
+/** A person's message drawn as text, any form details the panel attached folded away under it. */
+function formHelpTextInto(el, text) {
+  const at = String(text).indexOf(FORM_HELP_MARK);
+  if (at < 0) { el.textContent = text; return; }
+  el.textContent = text.slice(0, at);
+  const d = document.createElement('details');
+  d.className = 'form-help-context';
+  const sum = document.createElement('summary');
+  sum.textContent = 'Form details the panel attached';
+  const pre = document.createElement('div');
+  pre.textContent = text.slice(at + FORM_HELP_MARK.length);
+  d.append(sum, pre);
+  el.appendChild(d);
 }
 
 /** The agent's form_fill: values into the form as a draft, marked; secrets and locked fields refused. */

@@ -88,7 +88,7 @@ function chatAppendMsg(role, text, opts = {}) {
   el.className = `chat-msg ${role}`;
   // The agent's words are markdown, rendered; everything else (the user's words, status, errors) is literal: `plain`.
   if (role === 'assistant' && !opts.plain) mdInto(el, text);
-  else el.textContent = text;
+  else if (role === 'user' && typeof formHelpTextInto === 'function') formHelpTextInto(el, text); else el.textContent = text;
   if (role === 'user') container.appendChild(el);
   else agentWorkingMount(container, el);
   container.scrollTop = container.scrollHeight;
@@ -153,22 +153,6 @@ function _chatAppendContent(content) {
    code, and the model opens whichever of them it can make sense of. */
 
 let chatPending = [];   // attachment records waiting to be sent with the message
-
-/* The turn in flight, if any. Stop hangs up on the stream, and the server stops the turn with it. The step
-   already in flight still finishes (the provider accepted it), so Stop ends the *next* step; the button says so. */
-let chatTurn = null;
-
-function _chatBusy(on) {
-  chatTurn = on ? chatTurn : null;
-  const stop = document.getElementById('chat-stop');
-  if (stop) stop.style.display = on ? '' : 'none';   // Send stays: a message mid-turn waits for the next step
-}
-
-function chatStop() {
-  if (!chatTurn) return;
-  chatTurn.abort();
-  _chatBusy(false);
-}
 
 function chatAttachPick() { document.getElementById('chat-file').click(); }
 
@@ -371,11 +355,11 @@ function chatSend({ spoken = false } = {}) {
 
   // The agent is told how this arrived: "answer out loud" is a fact about the request, not a setting. The panel
   // does the speaking; this stops a spoken question being answered with three screens of prose.
-  const sent = spoken
+  const sent = (typeof formHelpAttach === 'function' ? formHelpAttach : m => m)(spoken
     ? `${message}\n\n[Sent as a voice message; the text above is its transcript, and the recording is attached. `
       + 'Answer as if speaking: a few sentences, no markdown, no lists, no code — unless the message itself asks '
       + 'for something else. Your answer is read aloud as well as shown.]'
-    : message;
+    : message);
 
   // Working already: it waits and is read at the next step, or starts the next turn (agent-ui/queued-send.js).
   if (chatTurn) {
@@ -425,11 +409,10 @@ function _chatTurnUi(spoken) {
     // rather than a line the collapsing run swallows.
     const rate = tokenRateEl(sink.spend);
     if (rate) { container.appendChild(rate); _chatScroll(); }
-    if (turn.signal.aborted) chatAppendMsg('system', 'Stopped. The step already running finishes on its own.');
     // Spoken to, speak back — after the answer is on screen, so a TTS that is
     // not configured costs nothing but silence.
     if (spoken && !turn.signal.aborted) _chatSpeak(reply);
-    if (chatTurn === turn) _chatBusy(false);
+    if (chatTurn === turn && !turn.stopping) _chatBusy(false);   // a Stop clears it itself, once the hub says it ended (chat-stop.js)
   } };
 }
 

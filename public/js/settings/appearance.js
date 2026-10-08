@@ -47,14 +47,23 @@ function _lookPickerRender(prefs) {
     </button>`).join('')}</div>`;
 }
 
+/* The colours chosen for a look are its own: Classic + Nord, then Modern, then Classic again brought back Nord's
+   neighbour, not Nord (self-test round two, C9). Each look remembers its last palette (screen setting `lookThemes`). */
+async function _lookThemes() {
+  try { return { ...((await screenLoad())?.settings?.lookThemes || {}) }; } catch { return {}; }
+}
+
 async function _lookSelect(id) {
+  const was = document.documentElement.dataset.skin || 'classic', themes = await _lookThemes();
+  themes[was] ||= _currentTheme;   // the look being left keeps what it showed, even if never chosen here
   const skin = lookApply(id);
-  const palette = typeof lookPointsPalette === 'function' ? lookPointsPalette(skin) : null;   // Points brings its palette
-  if (palette) applyTheme(palette);
+  const kept = themes[skin] === 'custom' || THEMES[themes[skin]] ? themes[skin] : null;
+  const palette = kept || (typeof lookPointsPalette === 'function' ? lookPointsPalette(skin) : null);   // Points brings its palette
+  if (palette === 'custom') applyCustomTheme({ ...THEMES.default.colors, ..._customThemeColors }); else if (palette) applyTheme(palette);
   _lookPickerRender({ skin });
   _themePickerRender({ theme: palette || _currentTheme });   // its own colours first
   try {
-    await screenSave(palette ? { skin, theme: palette } : { skin });
+    await screenSave({ skin, lookThemes: themes, ...(palette ? { theme: palette } : {}) });
     setStatus(document.getElementById('theme-status'), `✓ ${SKINS[skin].label} look`, 'ok');
   } catch (e) {
     setStatus(document.getElementById('theme-status'), `✗ ${e.message}`, 'err');
@@ -125,7 +134,8 @@ async function _themeSelect(name) {
   document.getElementById('theme-custom-editor').style.display = 'none';
 
   try {
-    await screenSave({ theme: name });
+    const skin = document.documentElement.dataset.skin || 'classic';
+    await screenSave({ theme: name, lookThemes: { ...(await _lookThemes()), [skin]: name } });
     setStatus(status, '✓ Theme applied', 'ok');
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
@@ -180,7 +190,7 @@ function _themeCustomChange(input) {
 async function _themeCustomSave(colors) {
   const status = document.getElementById('theme-status');
   try {
-    await screenSave({ theme: 'custom', customTheme: colors });
+    await screenSave({ theme: 'custom', customTheme: colors, lookThemes: { ...(await _lookThemes()), [document.documentElement.dataset.skin || 'classic']: 'custom' } });
     setStatus(status, '✓ Custom theme saved', 'ok');
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');

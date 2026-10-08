@@ -21,9 +21,23 @@ const handleList = wrap(async (_req, res) => {
   res.json({ servers: registry.list(), targets: exporter.describeTargets(), offers: offers.list().pending });
 });
 
-/** POST /api/mcp/offers/:id/accept — the click that turns an offer into a definition */
+/**
+ * POST /api/mcp/offers/:id/accept — the click that turns an offer into a definition, and connects it.
+ *
+ * The client tells its person to accept "once" (doca-client), and a row left "disconnected" after that click needed a
+ * second one nobody was told about (self-test 2026-10-08, round one's #4). Accepting is the person saying yes to this
+ * device's server, so connecting it is what they asked for. The wait is bounded: a device that is slow to answer
+ * keeps connecting in the background, and one that does not answer is said so, with Connect beside it.
+ */
+const ACCEPT_WAIT_MS = 8000;
 const handleOfferAccept = wrap(async (req, res) => {
-  res.json({ ok: true, ...offers.accept(req.params.id) });
+  const out = offers.accept(req.params.id);
+  const id = out.server.id;
+  const started = registry.start(id).then(() => 'running', e => e);
+  const settled = await Promise.race([started, new Promise(r => setTimeout(() => r('connecting'), ACCEPT_WAIT_MS).unref())]);
+  const connect = settled instanceof Error ? { state: 'error', error: settled.message }
+    : { state: settled };
+  res.json({ ok: true, ...out, server: registry.status(registry.get(id)), connect });
 });
 
 /** POST /api/mcp/offers/:id/reject */

@@ -20,7 +20,7 @@ function mcpShowResult(id, msg, cls) {
   const line = document.getElementById(`mcp-status-${id}`);
   const card = line?.closest('.mcp-card');
   if (!line) return false;
-  setStatus(line, msg, cls, cls === 'err' ? {} : { clear: 8000 });
+  setStatus(line, msg, cls, cls === 'err' || cls === 'warn' ? { clear: 0 } : { clear: 8000 });   // what still needs a click stays
   if (card) {
     card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     card.classList.remove('mcp-flash'); void card.offsetWidth; card.classList.add('mcp-flash');

@@ -192,8 +192,12 @@ const handleSession = own(async (req, res) => {
 
 const handleSessionArchive = own(async (req, res) =>
   res.json({ session: organization.archive(req.params.id, req.body?.on !== false) }));
-const handleSessionStop = own(async (req, res) =>
-  res.json({ stopped: agent.cancel(req.params.id) }));
+// Stop answers when the turn has ended (or after 10 s, `ended: false`), so a chat can say "Stopped" rather than guess.
+const handleSessionStop = own(async (req, res) => {
+  const stopped = agent.cancel(req.params.id);
+  for (let i = 0; stopped && i < 100 && agent.isRunning(req.params.id); i++) await new Promise(r => setTimeout(r, 100));
+  res.json({ stopped, ended: !agent.isRunning(req.params.id) });
+});
 const handlePlan = own(async (req, res) => {
   const plan = organization.plan(req.params.id, req.body || {}, { user: true });
   // Approve is the go-ahead: the work starts (organization.carryOut).

@@ -21,8 +21,11 @@ async function _hcLoadUsage() {
     const fmt = n => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(n);
     // Never empty: it is also the way into the usage window, where prices are set before the first call.
     el.textContent = total.calls
-      ? `24h ${fmt(tok)}${tokensPerDay ? ` / ${fmt(tokensPerDay)}` : ''} tok · ${total.calls} calls${total.cached ? ` · ${Math.round(total.cached / total.prompt * 100)}% cached` : ''}${total.estimated ? ' · ~est' : ''}`
+      ? `24h ${fmt(tok)}${tokensPerDay ? ` / ${fmt(tokensPerDay)}` : ''} tokens · ${total.calls} calls${total.cached ? ` · ${Math.round(total.cached / total.prompt * 100)}% re-sent` : ''}${total.estimated ? ' · ~est' : ''}`
       : 'usage';
+    // "Is 341k tok costing me money?" (self-test round two): said where the number is.
+    el.title = 'Tokens are the pieces of text the model read and wrote in the last 24 hours. An online provider bills by them '
+      + '(re-sent text at a fraction); a model on your own machine costs nothing. Click for each model, and to set prices.';
   } catch { el.textContent = ''; }
 }
 

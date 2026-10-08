@@ -20,6 +20,7 @@ function visible(change, person, host) {
   const access = require('../harness/session-access');
   if (change.topic === 'conversation') return access.mayUse(person, change.id);
   if (change.topic === 'missions') return !!change.sessionId && access.mayUse(person, change.sessionId);
+  if (change.topic === 'schedules') return !!person?.id && change.by === person.id;   // their own schedules
   return false;
 }
 

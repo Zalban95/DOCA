@@ -18,9 +18,9 @@ async function agentConvBar(host, sessionId, view = null, { model = true } = {})
   host.innerHTML = `<select class="input conv-mode" title="${escHtml(CONV_MODES.find(m => m[0] === mode)?.[2] || '')}">
       ${CONV_MODES.map(([k, l, t]) => `<option value="${k}" title="${escHtml(t)}" ${k === mode ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <select class="input conv-approval host-only" title="Whether this conversation asks before it acts">
-      <option value="" ${approval ? '' : 'selected'}>Approvals: panel's</option>
-      <option value="auto" ${approval === 'auto' ? 'selected' : ''}>Approvals: auto</option>
-      <option value="manual" ${approval === 'manual' ? 'selected' : ''}>Approvals: ask me</option></select>
+      <option value="" ${approval ? '' : 'selected'}>Asks first: as in Settings</option>
+      <option value="auto" ${approval === 'auto' ? 'selected' : ''}>Acts without asking</option>
+      <option value="manual" ${approval === 'manual' ? 'selected' : ''}>Asks me before acting</option></select>
     ${model ? '<span class="chat-model-host conv-model"></span>' : ''}
     <button class="btn btn-xs conv-trace" title="How this conversation's turns went: each step, tool and wait, with times and tokens">⏱</button>`;
   const save = async body => {

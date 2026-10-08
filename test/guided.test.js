@@ -73,6 +73,8 @@ test('a preset hub asks only for keys; a local one installs on a click and asks 
   assert.equal(vps.shape, 'preset');
   assert.equal(vps.askRoute, false, 'no real choice: not asked');
   assert.deepEqual(vps.steps.map(s => s.type), ['key']);
+  assert.match(vps.steps[0].why, /^an online provider, or a model you run elsewhere — this machine cannot run one/, 'what does not fit is the reason, not an option');
+  assert.doesNotMatch(vps.steps[0].why, new RegExp(doc.models.map(m => m.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')), 'no local model named as if offered');
 
   const gpu = await machine({ gpus: [{ name: 'Mid', memTotal: 12 * 1024, vendor: 'nvidia' }] });
   const local = plan({ uses: ['voice', 'code'] }, gpu, doc);
@@ -149,10 +151,13 @@ test('a model the person runs, added by address, counts as the agent\'s model on
   await new Promise(r => srv.listen(0, '127.0.0.1', r));
   try {
     const baseUrl = `http://127.0.0.1:${srv.address().port}/v1`;
-    assert.equal((await H.api(null, 'POST', '/api/keys/add-provider', { name: 'own-test', baseUrl })).status, 200, 'the + Add provider route');
-    assert.equal((await H.api(null, 'POST', '/api/harness/doca/config', { provider: 'own-test', model: 'my-local-model' })).status, 200);
+    // Named as a person would read it (self-test round two: "who is own-172-17-0-1?"), spaces and dots and all.
+    const name = 'My model on this machine';
+    assert.equal((await H.api(null, 'POST', '/api/keys/add-provider', { name, baseUrl })).status, 200, 'the + Add provider route');
+    assert.deepEqual((await H.api(null, 'GET', `/api/harness/models?provider=${encodeURIComponent(name)}`)).body.models, ['my-local-model']);
+    assert.equal((await H.api(null, 'POST', '/api/harness/doca/config', { provider: name, model: 'my-local-model' })).status, 200);
     const view = (await H.api(null, 'GET', '/api/guided')).body;
-    assert.deepEqual(view.have.chat, { provider: 'own-test', model: 'my-local-model' });
+    assert.deepEqual(view.have.chat, { provider: name, model: 'my-local-model' });
     const p = (await H.api(null, 'POST', '/api/guided/plan', { answers: { uses: ['talk'], route: 'providers' } })).body;
     assert.equal(p.steps[0].type, 'have');
     assert.ok(!p.steps.some(s => s.role === 'chat' && s.type !== 'have'), 'no key or install for a role that is done');
@@ -160,4 +165,19 @@ test('a model the person runs, added by address, counts as the agent\'s model on
     await H.api(null, 'POST', '/api/harness/doca/config', { provider: 'ollama', model: '' });
     srv.close();
   }
+});
+
+test('a model the person runs gets a name a person reads, never an id, and never one already taken', () => {
+  const vm = require('node:vm'), fs = require('node:fs'), path = require('node:path');
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'settings', 'guided-plan.js'), 'utf8'), ctx);
+  const name = (...a) => vm.runInContext(`guidedOwnName(...${JSON.stringify(a)})`, ctx);
+  assert.equal(name('http://172.17.0.1:18080/v1', ''), 'My model at 172.17.0.1');
+  assert.equal(name('http://localhost:8080/v1'), 'My model on this machine');
+  assert.equal(name('http://[::1]:8080/v1'), 'My model on this machine');
+  assert.equal(name('http://gpu-box.local:8080/v1', '  The big one  '), 'The big one', 'theirs when they gave one');
+  assert.equal(name('http://x/v1', 'office/gpu: 2'), 'office-gpu- 2', 'no slash or colon, which split a provider from its model');
+  assert.equal(name('http://x/v1', 'deepseek', ['deepseek']), 'deepseek (2)', 'never over a preset');
+  assert.equal(name('http://x/v1', 'Ollama'), 'Ollama (2)');
 });

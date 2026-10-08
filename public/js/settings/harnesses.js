@@ -64,7 +64,7 @@ async function otherHarnessesLoad(only) {
         <button class="btn btn-sm" onclick="harnessOpen(${jsArg(h.id)})" title="Its terminal on the Harness tab">▶ Open</button>
         <span class="status-line" id="sh-status-${id}"></span></div>
     </div>`;
-  }).join('') || '<div class="card"><div class="placeholder">No CLI harness is installed here (Controls → Install a harness).</div></div>';
+  }).join('') || '<div class="card"><div class="placeholder">No CLI harness is installed here (Controls → Add another agent).</div></div>';
 }
 
 async function otherHarnessSave(id) {
