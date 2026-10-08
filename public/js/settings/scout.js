@@ -15,13 +15,14 @@ async function scoutCardRender(panel) {
         <span style="font-size:11px;color:var(--muted)">${escHtml(x.role)}${x.candidate ? ` · ${escHtml(x.candidate)}` : ''}${x.replaces ? ` · replaces ${escHtml(x.replaces)}` : ''}</span></div>
       <div style="font-size:12px;white-space:pre-wrap">${escHtml(x.why)}</div>
       ${x.tryWith ? `<div style="font-size:11px;color:var(--muted)">Try: ${escHtml(x.tryWith)}</div>` : ''}
+      ${x.kind === 'suggested-model' && x.entry ? `<div style="font-size:11px;color:var(--muted)">For Set-up's suggested models${x.class ? ` · the pick for ${escHtml(x.class)}` : ''}: ${escHtml(x.entry.label)} (${escHtml(x.entry.quant || '')}) · needs ${x.entry.needs.vramGB} GB of graphics memory, ${x.entry.needs.ramGB} GB of memory · installs as ${escHtml(x.entry.install.id)}${x.appliedTo ? ' · <b>in the list</b> (Settings → Set-up)' : ''}</div>` : ''}
       ${x.evidence?.length ? `<div style="font-size:11px">${x.evidence.map(e => /^https?:\/\//.test(e) ? `<a href="${escHtml(e)}" target="_blank" rel="noopener noreferrer">${escHtml(e)}</a>` : escHtml(e)).join(' · ')}</div>` : ''}
       ${x.reason ? `<div style="font-size:11px;color:var(--muted)">Declined: ${escHtml(x.reason)}</div>` : ''}
       ${x.error ? `<div style="font-size:11px;color:var(--red)">${escHtml(x.error)}</div>` : ''}
       <div class="toolbar" style="gap:6px">
-        ${x.state === 'pending' ? `<button class="btn btn-xs btn-teal" onclick="scoutDecide('${x.id}','accept')">Accept → TODO</button>
+        ${x.state === 'pending' ? `<button class="btn btn-xs btn-teal" onclick="scoutDecide('${x.id}','accept')">${x.kind === 'suggested-model' ? 'Accept → suggested models' : 'Accept → TODO'}</button>
           <button class="btn btn-xs" onclick="scoutDecide('${x.id}','decline')">Decline…</button>` : ''}
-        ${['accepted', 'failed'].includes(x.state) ? `<button class="btn btn-xs btn-blue" onclick="scoutDecide('${x.id}','work')">Start the work (${escHtml(s.implementer)})</button>` : ''}
+        ${['accepted', 'failed'].includes(x.state) && x.kind !== 'suggested-model' ? `<button class="btn btn-xs btn-blue" onclick="scoutDecide('${x.id}','work')">Start the work (${escHtml(s.implementer)})</button>` : ''}
         ${x.sessionId ? `<button class="btn btn-xs" onclick="nav('harness'); hcOpenSession(${jsArg(x.sessionId)})">Open its conversation</button>` : ''}
       </div></div>`;
   card.innerHTML = `<div class="card-title">Model scout <span style="font-size:10px;color:var(--muted)">experiment</span></div>

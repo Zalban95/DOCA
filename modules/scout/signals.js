@@ -28,9 +28,13 @@ const get = async (url, as = 'json') => {
   return as === 'json' ? r.json() : r.text();
 };
 
-/** Trending models for one Hugging Face task. */
+/**
+ * Trending models for one Hugging Face task. `gguf` is not a task but a format: the quantized releases people run
+ * locally (a GSQ or Unsloth build of a new model trends there before anything else says it fits a 16 GB card).
+ */
 async function trending(task, limit = 15) {
-  const rows = await get(`${HF()}/models?${task === 'any' ? '' : `pipeline_tag=${encodeURIComponent(task)}&`}sort=trendingScore&direction=-1&limit=${limit}`);
+  const filter = task === 'any' ? '' : task === 'gguf' ? 'library=gguf&' : `pipeline_tag=${encodeURIComponent(task)}&`;
+  const rows = await get(`${HF()}/models?${filter}sort=trendingScore&direction=-1&limit=${limit}`);
   return (Array.isArray(rows) ? rows : []).map(m => ({ id: m.id || m.modelId, likes: m.likes || 0, downloads: m.downloads || 0, task, created: m.createdAt || null, lastModified: m.lastModified || null }));
 }
 

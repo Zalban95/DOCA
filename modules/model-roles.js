@@ -24,7 +24,7 @@ function roles() {
   let guards = null;
   try { guards = require('./harness/guard').list().filter(g => g.enabled !== false && g.model).map(g => g.model).join(', ') || null; } catch { /* none */ }
   return [
-    { id: 'harness', label: 'The agent\'s model', scout: true, tasks: ['text-generation'], current: pm(c.provider, c.model), setting: 'harness.config.doca.model', where: 'Controls → DOCA ⚙' },
+    { id: 'harness', label: 'The agent\'s model', scout: true, tasks: ['text-generation', 'image-text-to-text', 'gguf'], current: pm(c.provider, c.model), setting: 'harness.config.doca.model', where: 'Controls → DOCA ⚙' },
     { id: 'fallback', label: 'When the agent\'s model goes quiet', tasks: ['text-generation'], current: chain || null, setting: 'harness.config.doca.fallbackChain', where: 'Controls → DOCA ⚙ → Fallback' },
     { id: 'escalate', label: 'A stronger model for a stuck job', tasks: ['text-generation'], current: esc, setting: 'harness.config.doca.escalateTo', where: 'Controls → DOCA ⚙ → Escalate' },
     { id: 'assistant', label: 'Assistant mode (the face, spoken to)', tasks: ['text-generation'], current: pm(val('assistant.provider'), val('assistant.model')), setting: 'assistant.model', where: 'Settings → Voice → Assistant mode' },
