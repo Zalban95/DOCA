@@ -12,6 +12,10 @@ function mount(app) {
   require('../panel-layout/routes').mount(app);   // the panel's structure as data, per person and per screen (TODO P1.2)
   // The speech service's voices, for a screen to pick its own from (Settings → Voice → This screen's voice).
   app.get('/api/chat/voices', require('../chat').handleVoices);
+  // Which voice services run and what uses each (Settings → Voice's card), and what a typed setting could be — the
+  // addresses and models found on this machine (lib/choice-input.js). Both under /api/services, so an admin's.
+  require('../voice-services').mount(app);
+  require('../service-choices').mount(app);
   // A spoken answer the person talked over: the floating chat's conversation keeps only what was heard (harness/heard.js).
   app.post('/api/chat/heard', (req, res) => {
     const row = require('../harness/heard').cut(require('../harness/memory').mainSession().id, req.body?.heard);
