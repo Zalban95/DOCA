@@ -51,6 +51,9 @@ async function grab() {
 /** Number the page's visible interactive elements and describe the page. */
 const SNAPSHOT = `(() => {
   const vis = el => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
+  // Numbers from an earlier snapshot are taken off first: a control numbered then and hidden since kept its number, came
+  // first in the page, and a click by that number went to it — at 0,0 — and "worked" (self-test round two, B4).
+  document.querySelectorAll('[data-doca-ref]').forEach(el => el.removeAttribute('data-doca-ref'));
   const els = [...document.querySelectorAll('a[href],button,input,textarea,select,[role=button],[role=link],[role=checkbox],[onclick],[contenteditable=true]')].filter(vis);
   // A password or card field's value is never read back: the hub fills it from the vault, the agent never sees it (logins.js).
   // So is a field the hub filled one into (browser_fill_secret), until the page goes — even if the page makes it a text field.
@@ -84,16 +87,37 @@ const sensitiveAt = ref => cdp.evaluate(`(${sensitive.toString()})(document.quer
 const TAKE_OVER = 'is a password or card field. A person types credentials: ask them to take over this computer (Computers → Take over) and sign in; carry on after they hand it back.';
 const confirmFirst = (ref, s) => `[${ref}] is "${s.label}" — it pays, buys, signs in, confirms or submits. A person decides this one: call again with confirm: true and they will be asked.`;
 
+/**
+ * Where to click [ref]: its centre once scrolled into view — or why not. A hidden element (gone since the snapshot)
+ * and one under another (a dialog, an overlay) are said, not clicked: either click lands on something else, and the
+ * tool used to report it as done.
+ */
 async function centerOf(ref) {
   const r = await cdp.evaluate(`(() => { const el = document.querySelector('[data-doca-ref="${Number(ref)}"]'); if (!el) return null;
-    el.scrollIntoView({ block: 'center', inline: 'center' }); const b = el.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; })()`);
+    el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' }); const b = el.getBoundingClientRect();
+    if (!b.width || !b.height) return { hidden: true };
+    const x = b.x + b.width / 2, y = b.y + b.height / 2, at = document.elementFromPoint(x, y);
+    const name = n => n.tagName.toLowerCase() + (n.id ? '#' + n.id : '') + ' "' + (n.getAttribute('aria-label') || n.innerText || n.title || '').trim().replace(/\\s+/g, ' ').slice(0, 60) + '"';
+    return { x, y, covered: !at ? 'nothing (outside the window)' : at === el || el.contains(at) ? null : name(at) }; })()`);
   if (!r) throw new Error(`No element [${ref}] — take a browser_snapshot first; the numbers change when the page does.`);
+  if (r.hidden) throw new Error(`[${ref}] is not shown on the page now (hidden, or changed since the snapshot) — take a browser_snapshot and use its numbers.`);
+  if (r.covered) throw new Error(`[${ref}] is covered: at its centre is ${r.covered}, which would take the click. Close or answer that first, then take a browser_snapshot.`);
   return r;
 }
 
+/** A real mouse: moved there, pressed, released (a page's hover handlers see it as a person's). */
 async function click(x, y) {
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
   for (const type of ['mousePressed', 'mouseReleased']) await cdp.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
 }
+
+/** Listen, in the page, for where the next click lands — so a click nothing received is said rather than reported done. */
+const watchClick = ref => cdp.evaluate(`(() => { window.__docaClicked = null; const el = document.querySelector('[data-doca-ref="${Number(ref)}"]');
+  if (window.__docaClickL) removeEventListener('click', window.__docaClickL, true);
+  window.__docaClickL = e => { window.__docaClicked = el && el.contains(e.target) ? 'it' : e.target.tagName.toLowerCase(); };
+  addEventListener('click', window.__docaClickL, { capture: true, once: true }); })()`);
+/** What the click did: 'it', another element's tag, null (nothing received it), or undefined (a new page: it navigated). */
+const clicked = () => cdp.evaluate('window.__docaClicked').catch(() => undefined);
 
 const TOOLS = [
   { name: 'shell', description: 'Run a bash command in this computer (a Linux container), in its work folder. Returns the exit code and output.',
@@ -145,7 +169,10 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: { ref: { type: 'number' }, confirm: { type: 'boolean' } }, required: ['ref'] },
     run: async a => { await cdp.connect(); const p = await centerOf(a.ref);
       const s = await sensitiveAt(a.ref);
-      if (s?.kind === 'decision' && a.confirm !== true) return fail(confirmFirst(a.ref, s)); await click(p.x, p.y); await new Promise(r => setTimeout(r, 600));
+      if (s?.kind === 'decision' && a.confirm !== true) return fail(confirmFirst(a.ref, s));
+      await watchClick(a.ref); await click(p.x, p.y); const got = await clicked(); await new Promise(r => setTimeout(r, 600));
+      if (got === null) return fail(`Nothing at [${a.ref}]'s centre (${Math.round(p.x)},${Math.round(p.y)}) received the click. Take a browser_snapshot: the page may have changed.`);
+      if (got && got !== 'it') return fail(`The click at [${a.ref}]'s centre landed on a ${got}, not on [${a.ref}]. Take a browser_snapshot and try again.`);
       return text(`Clicked [${a.ref}]. Now at ${await cdp.evaluate('location.href')}.`); } },
   { name: 'browser_type', description: 'Type into field [ref] from the last browser_snapshot; submit presses Enter after. Never a password or card field: a person signs in through Take over.',
     inputSchema: { type: 'object', properties: { ref: { type: 'number' }, text: { type: 'string' }, submit: { type: 'boolean' }, confirm: { type: 'boolean' } }, required: ['ref', 'text'] },
