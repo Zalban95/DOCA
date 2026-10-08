@@ -34,7 +34,7 @@ async function main() {
   const proc = spawn(browserPath, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...ALONE,
     '--disable-gpu', '--window-size=1300,900', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
   const errors = [];
-  const absent = new Set();
+  const absent = new Set(), osBusy = new Set(), retried = new Set();
   try {
     const cdp = await connect(await devtools(profile));
     cdp.on(m => {
@@ -42,6 +42,9 @@ async function main() {
       if (m.method !== 'Log.entryAdded' || m.params.entry.level !== 'error' || /favicon/.test(m.params.entry.url || '')) return;
       // 502/503/504: an optional backend this machine lacks (Ollama, Docker…), a state the panel draws — noted, not failed.
       if (/status of 50[234]\b/.test(m.params.entry.text)) absent.add(new URL(m.params.entry.url || base).pathname);
+      // The machine running out of sockets or buffers (Windows runners: WSAENOBUFS) is not the page failing:
+      // asked again at the end, it fails only if the file really does not load (2026-10-08, twice on CI).
+      else if (/ERR_NO_BUFFER_SPACE|ERR_INSUFFICIENT_RESOURCES/.test(m.params.entry.text) && m.params.entry.url) osBusy.add(m.params.entry.url);
       else errors.push(`console: ${m.params.entry.text}${m.params.entry.url ? ` — ${m.params.entry.url}` : ''}`);
     });
     await cdp.send('Runtime.enable'); await cdp.send('Log.enable'); await cdp.send('Network.enable');
@@ -60,8 +63,13 @@ async function main() {
     for (const sub of ['general', 'guided', 'channels', 'packs', 'spending', 'harness', 'system', 'experiments']) { await cdp.send('Runtime.evaluate', { expression: `nav('settings'); settingsSubNav(${JSON.stringify(sub)})` }); await sleep(500); }
     const face = await cdp.send('Page.navigate', { url: `${base}/face` }); void face;
     await sleep(1500);
+    for (const url of osBusy) {   // the loads the machine itself refused (above): really there?
+      const r = await fetch(url, { headers: { Cookie: cookie } }).catch(e => ({ ok: false, status: e.message }));
+      if (r.ok) retried.add(new URL(url).pathname); else errors.push(`load: ${url} — ${r.status} (also when asked again)`);
+    }
     console.log(`smoke: ${process.platform}, ${path.basename(browserPath)}, ${JSON.parse(tabs).length} tabs visited, /face opened — ${errors.length} page error${errors.length === 1 ? '' : 's'}`);
     for (const e of errors) console.log(`  ✗ ${String(e).split('\n')[0]}`);
+    if (retried.size) console.log(`  · the machine ran out of network buffers for ${[...retried].join(', ')}; asked again, each loaded`);
     if (absent.size) console.log(`  · not on this machine (answered 50x, drawn as such): ${[...absent].join(', ')}`);
     cdp.close();
     return errors.length ? 1 : 0;
