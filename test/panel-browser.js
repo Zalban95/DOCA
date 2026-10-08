@@ -31,10 +31,22 @@ async function until(expression, ms = 15000) {
   return false;
 }
 
-/** The panel loaded afresh at `hash` (e.g. '#settings/voice'). */
+/**
+ * The panel loaded afresh at `hash` (e.g. '#settings/voice'). Chromium drops every load in flight when the machine's
+ * network changes (net::ERR_NETWORK_CHANGED: another test making a Docker network), so a load that lost a file is
+ * loaded again, and the page errors it caused are dropped with it.
+ */
+let failedLoads = 0;
 async function open(hash = '') {
-  await page.send('Page.navigate', { url: `${base}/?t=${Date.now()}${hash}` });
-  if (!await until("typeof NAV_TABS !== 'undefined' && typeof choiceInput === 'function' && document.readyState === 'complete'", 30000)) throw new Error('the panel did not load');
+  for (let attempt = 1; ; attempt++) {
+    failedLoads = 0;
+    const seen = errors.length;
+    await page.send('Page.navigate', { url: `${base}/?t=${Date.now()}${hash}` });
+    const loaded = await until("typeof NAV_TABS !== 'undefined' && typeof choiceInput === 'function' && document.readyState === 'complete'", 30000);
+    if ((!loaded || failedLoads) && attempt < 3) { errors.splice(seen); continue; }
+    if (!loaded) throw new Error('the panel did not load');
+    break;
+  }
   await headless.sleep(800);
 }
 
@@ -60,6 +72,7 @@ async function start({ setup = null, width = 1300, height = 900 } = {}) {
   process.once('exit', killBrowser);
   for (const sig of ['SIGTERM', 'SIGINT']) process.once(sig, () => { killBrowser(); process.exit(1); });
   page = await headless.connect(await headless.devtools(profile));
+  page.on(m => { if (m.method === 'Network.loadingFailed' && !m.params.canceled && ['Document', 'Script', 'Stylesheet'].includes(m.params.type)) failedLoads++; });
   page.on(m => { if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text); });
   await page.send('Runtime.enable'); await page.send('Network.enable');
   const [name, value] = H.owner.cookie.split('=');
