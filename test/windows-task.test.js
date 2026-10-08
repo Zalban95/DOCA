@@ -23,6 +23,7 @@ test('the entry: at this account\'s sign-in, not elevated, no time limit, no win
 });
 
 test('an entry is known by the launcher it starts', () => {
+  assert.equal(W.TASK, require('../bin/doca-launch').TASK, 'one name, in the launcher and the entry');
   assert.equal(W.launcherOf(W.taskXml(entry)), entry.script, 'its own XML, as schtasks /Query /XML gives it back');
   assert.equal(W.launcherOf('<Arguments>"C:\\node.exe" "E:\\other\\bin\\doca-launch.js" start</Arguments>'), 'E:\\other\\bin\\doca-launch.js', 'an entry the old schtasks /TR made');
   assert.equal(W.launcherOf('<Arguments>something else</Arguments>'), null);

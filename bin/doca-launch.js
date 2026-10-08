@@ -31,8 +31,8 @@ const { spawn, spawnSync } = require('child_process');
 const DIR = path.resolve(process.env.DOCA_LAUNCH_DIR || path.join(__dirname, '..'));
 const RELEASES = path.join(DIR, '.releases');
 const WATCH_SECONDS = Number(process.env.DOCA_LAUNCH_WATCH_SECONDS) || 90;
-const winTask = require('./lib/windows-task'); // Windows Task Scheduler entry
-const TASK = winTask.TASK;
+const TASK = 'DOCA';                         // Windows Task Scheduler entry (bin/lib/windows-task.js, loaded when used:
+                                             // starting DOCA needs nothing but this file)
 const LABEL = 'tech.doca.panel';             // macOS launchd label
 const say = (...a) => console.log(...a);
 
@@ -183,7 +183,7 @@ function boot(verb) {
     return { method: 'systemd', ok: r.status === 0 };
   }
   if (process.platform === 'win32') {
-    const [node, script] = launchCommand(), entry = { node, script, dir: DIR };
+    const winTask = require('./lib/windows-task'), [node, script] = launchCommand(), entry = { node, script, dir: DIR };
     if (verb === 'enable') { const r = winTask.enable(entry); say(r.ok ? `✓ DOCA will start when you sign in to Windows (Task Scheduler: ${TASK}).` : r.out); return { method: 'Task Scheduler', ...r }; }
     if (verb === 'disable') { const r = winTask.disable(entry); say(r.ok ? '✓ DOCA will no longer start at sign-in.' : r.out); return { method: 'Task Scheduler', ...r }; }
     return { method: 'Task Scheduler', ...winTask.status(entry) };
