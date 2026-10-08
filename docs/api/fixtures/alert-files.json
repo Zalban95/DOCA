@@ -1,0 +1,34 @@
+{
+  "type": "alert",
+  "class": "durable",
+  "payload": {
+    "id": "alt_fixture",
+    "title": "Voice samples",
+    "body": [
+      {
+        "type": "media",
+        "mediaId": "med_fixture",
+        "alt": "Italian — whisper",
+        "kind": "audio",
+        "mime": "audio/mpeg",
+        "name": "whisper.mp3",
+        "bytes": 1024,
+        "caption": "Italian — whisper",
+        "url": "/api/v1/media/med_fixture"
+      },
+      {
+        "type": "media",
+        "mediaId": "med_fixture",
+        "alt": "notes.pdf",
+        "kind": "file",
+        "mime": "application/pdf",
+        "name": "notes.pdf",
+        "bytes": 1024,
+        "url": "/api/v1/media/med_fixture"
+      }
+    ],
+    "priority": "high",
+    "haptic": true,
+    "from": "harness"
+  }
+}

@@ -76,7 +76,21 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [x] P1.5 **Guided set-up and the two shapes (§1)** — *2.288.0 (first slice): `guided/assess.js` reads what the machine bears (GPUs, memory, disk, runtimes; every OS); `guided/suggested-models.json` the project-tested models per role with their needs, refreshed from the project's hub only with sharing consent (the hub's route still to build); the picker takes the newest that fits or lists providers with their key pages; Settings → Set-up (and a first-run Guided / Advanced choice) asks what it is for, where it runs (only when that is a choice) and which devices, then proposes installs a click runs and waits for keys it tests; `setup.mode`/`setup.shape`; `machine_fit` + skill `guided-setup`. Not yet: other installs reporting what they measured, hosted speech, a hosted sign-in offering.*: a first conversation that asks what the person needs and sets
   it up; a hub that picks models for its machine from what other installs tested (shared only with consent, like
   skills); providers' options offered when the machine cannot bear something.
-- [x] P1.5c **Suggested models kept current (asked 2026-10-08: "a better, specific search needs to be performed")** — *branch suggestions-current: `guided/suggested-models.json` v2 searched per role and size class (Qwen3.8 27B GSQ-RCO IQ3_S on one 16 GB card — the owner's build — Q4_K_M at 24 GB, Q8_0 at 48 GB; Qwen3.5 9B at 8 GB; Gemma 4 12B on a 16 GB Mac; Qwen3.6 35B-A3B without a card), every entry with rank, sources and the day checked; the picker ranks by quality and splits over two cards; the model scout files `suggested-model` suggestions a host accepts into this install's overlay; Set-up shows the day checked and "Check for newer models"; docs/design/model-suggestions.md. Not yet: a llama.cpp install kind from a Hugging Face file (asks first: it widens install proposals), the project hub's route for newer lists.*
+- [x] P1.5c **Suggested models kept current (asked 2026-10-08: "a better, specific search needs to be performed")** — *branch suggestions-current: `guided/suggested-models.json` v2 searched per role and size class (Qwen3.8 27B GSQ-RCO IQ3_S on one 16 GB card — the owner's build — Q4_K_M at 24 GB, Q8_0 at 48 GB; Qwen3.5 9B at 8 GB; Gemma 4 12B on a 16 GB Mac; Qwen3.6 35B-A3B without a card), every entry with rank, sources and the day checked; the picker ranks by quality and splits over two cards; the model scout files `suggested-model` suggestions a host accepts into this install's overlay; Set-up shows the day checked and "Check for newer models"; docs/design/model-suggestions.md. Not yet: the project hub's route for newer lists. (The llama.cpp install kind: P1.5d.)*
+- [x] P1.5d **llama.cpp from a Hugging Face GGUF, and hosted voices on request (owner-approved 2026-10-08)** — *branch
+  `hf-gguf-and-voices`: install kind `llamacpp-hf` (`org/repo:<quant or file>`, resolved from the repository's own
+  listing — never an address the agent types; `modules/llamacpp-hf/`): the GGUF downloaded in Node into
+  `llamacpp.modelsDir` (a split set whole, sha256-checked, carried on after a cut, the token only to the Hub), the
+  vision projector when pictures are wanted, and a managed llama.cpp instance made off with `--jinja`, context from the
+  model capped by memory and layers to fit (`auto` leaves them to llama.cpp's `--fit`). Field → Models → "llama.cpp —
+  From Hugging Face": search, each quantization with size and fit, Advanced folded. Ornith 1.5 9B became a suggestion
+  (tool calls checked through llama.cpp with its own template on Qwen3.5 2B, same architecture); Qwen3.8 Flash Next
+  stays watched (installs now; qwen4exp needs a newer llama.cpp and nothing here can hold it). Hosted voices
+  (`modules/hosted-voices/`): ElevenLabs (v4/v3, tags passed through), OpenAI (gpt-4o-mini-tts, `instructions`),
+  Cartesia (Sonic 3, `<emotion>`/`[laughter]`), Google (Gemini-TTS, markup tags and `prompt`) — Settings → Voice → This
+  screen's voice, the key a key for services (the hub calls; a member only when opened to everyone); skill
+  `hosted-voice`. Not done: device calls (`/api/v1/call`, the realtime pipeline) still speak with the hive's voice; no
+  real key was tried against the four services (stubs shaped from their docs).*
 - [~] P1.6 **Spending with permission (S12)** — *2.291.0: docs/design/spending.md (threat model, linking designed); Settings → Spending — what was spent per person, day and month from the usage ledger and prices; opt-in budgets (own, an admin's, a level's; the owner only their own) refused at a turn's start in `turn/ceiling.js`; spending permissions (once or kept per month, within the level's `mayAllow`), proposed by the agent with `spend_propose` and accepted with the password; the rules in protected `keys/spending.json`; `/api/spending/*` in `auth/guarded.js`; one line in the agent's readings. Team leaders set budgets since 2.298.0. 2.302.0: at a person's own budget their own turn is asked once ("go over it for this turn?", the panel's card and the device that started it, `spending/over.js`) — yes is this turn only and audited (`spending.over`); an admin's, a leader's or a level's budget, automatic turns and missions still refuse. Left: linking a payment method (`spending/pay.js` is a stub), the agent proposing a budget.*: a Spending settings page (budgets, a linked payment method, standing
   permissions), managed by the agent with the person's permission; a permission can be made permanent; what may be
   allowed follows the level — its own safety design first.
@@ -117,6 +131,16 @@ the project's managers only if the owner allows sharing specialists and skills (
 - D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),
   `mcp.listener stop`, `confirmPromptChoice`'s body (§12.6 `{selectionId, decision}`), the native wake word, the
   watch's line in Settings → Updates, `seen` on opening a finished notice and clearing it on `seenAt` (PROTOCOL §11.4, hub 2.282); DocaWear: the LAN port, the same `seen`; DocaDesk: the socket transport, `prompt.outcome`.
+- [x] Files sent to the person's phone or chat (found 2026-10-08: asked to send nine voice samples to Telegram, the
+  Orchestrator had no tool and sent them with a script that loaded the channel's module and its bot token; branch
+  `send-media`): `tell_device {files: [{path, caption}]}` — audio, video, documents, pictures, at most 10 — stored as
+  each recipient's own media and carried as `media` blocks with `kind`/`mime`/`name`/`bytes`/`caption` (PROTOCOL
+  §19.1, fixture `alert-files`); a channel uploads them its own way (Telegram by type, Matrix, Slack, mail
+  attachments — `channels/deliver.js` `file`/`notice`), refused before anything is stored with the channel's limit
+  (`channels/limits.js`); the person's own devices only, for `ask_device` too. Left: DocaMobile playing/opening a
+  media block by `kind` (DocaMobile TODO, branch `media-file-kind`); charter rule 15 still says "`tell_device` carries
+  a picture" (ask-first, S11: waits for the owner's yes); the live memory `telegram-channel-send` is now wrong and
+  should be forgotten.
 - [x] A call that feels alive and quick (asked 2026-10-07 from the watch; hub 2.304.0, branch `watch-call-live`,
   DocaWear `call-feedback`): the front (`turn/front.js`, `assistant.front`) — a spoken turn answers at once with a
   short kit, untriaged, at assistant mode's effort; a large request or "think harder / take your time / focus" goes to

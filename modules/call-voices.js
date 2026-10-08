@@ -59,8 +59,9 @@ function pick(kind, { deviceId = null, userId = null, mine = null } = {}) {
   // The slot names its service, or keeps the screen's. A voice name belongs to its service: the screen's is kept only
   // when the service is the same one.
   const service = slot.service === 'hive' ? '' : slot.service !== undefined && slot.service !== null ? String(slot.service) : (screen.engine || '');
-  const engine = engines.forVoice({ engine: service });
   const same = service === (screen.engine || '');
+  // A voice from a service carries its model and options (hosted-voices/): the slot's own, else the screen's when it is the same service.
+  const engine = engines.forVoice({ engine: service, hosted: slot.hosted || (same ? screen.hosted : undefined) });
   const voice = slot.voice || (same ? screen.ttsVoice : '') || '';
   const speed = Number(slot.speed) > 0 ? Number(slot.speed) : same && Number(screen.ttsSpeed) > 0 ? Number(screen.ttsSpeed) : null;
   return { engine, voice, speed, tags: !!engine.tags, kind, from };

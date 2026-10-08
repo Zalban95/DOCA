@@ -45,8 +45,15 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
  * on a real Windows 11 host (H1.9, 2026-10-08) eighteen of the person's extensions arrived in a throwaway profile
  * within twenty seconds. msImplicitSignin off keeps the account out; sync off keeps their data out whatever signs in.
  * Chrome and Chromium take --disable-sync too and ignore a feature they do not know.
+ *
+ * And no system keyring: on Linux, Chromium encrypts its cookie store through the person's keyring (GNOME Keyring,
+ * KWallet) over D-Bus, and when that keyring is locked or does not answer — a server, a session nobody signed in to
+ * with a password, a keyring daemon stuck — every cookie write waits forever. The sign-in cookie DOCA's own page needs
+ * never lands, so the smoke, Machines → Live's pictures and the agent's page checks hang (found 2026-10-08: every
+ * Network.setCookie timed out on the hub). A throwaway profile has nothing to protect, so it keeps its cookies in the
+ * profile itself (`basic`); `--use-mock-keychain` is the same on macOS, where the login keychain can prompt.
  */
-const ALONE = ['--disable-sync', '--disable-features=msImplicitSignin'];
+const ALONE = ['--disable-sync', '--disable-features=msImplicitSignin', '--password-store=basic', '--use-mock-keychain'];
 
 async function devtools(profile) {
   const file = path.join(profile, 'DevToolsActivePort');

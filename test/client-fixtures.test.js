@@ -19,7 +19,7 @@ const bus = require('../modules/api-v1/bus');
 const DIR = path.join(__dirname, '..', 'docs', 'api', 'fixtures');
 const WRITE = process.env.DOCA_WRITE_FIXTURES === '1';
 const NAMES = ['agent.mission-running', 'agent.mission-done', 'agent.mission-archived', 'agent.mission-seen', 'agent.mission-work-stopped',
-  'prompt.new', 'prompt.closed', 'alert'];
+  'prompt.new', 'prompt.closed', 'alert', 'alert-files'];
 
 test.before(() => H.start());
 test.after(() => H.stop());
@@ -51,6 +51,10 @@ async function frames() {
   out['prompt.closed'] = last('prompt.closed');
   reach.tell({ to: phone.id, title: 'The render finished', text: 'turbine-front.png is in the chat.' });
   out.alert = last('alert');
+  // A notice with files (tell_device `files`): each a media block saying what it is, the phone's own copy.
+  const at = n => { const p = path.join(H.tmp, n); fs.writeFileSync(p, Buffer.alloc(1024, 1)); return p; };
+  reach.tell({ to: phone.id, title: 'Voice samples', files: [{ path: at('whisper.mp3'), caption: 'Italian — whisper' }, { path: at('notes.pdf') }] });
+  out['alert-files'] = last('alert');
   return out;
 }
 
@@ -65,6 +69,7 @@ function stable(frame) {
     if (Array.isArray(v)) return v.map(x => map(x, key));
     if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, map(x, k)]));
     if (typeof v !== 'string') return v;
+    if (/^\/api\/v1\/media\/med_/.test(v)) return '/api/v1/media/med_fixture';
     if (ISO.test(v) && !FIXED.test(v)) return new Date(base + (Date.parse(v) - from)).toISOString();
     if (/(^id$|Id$)/.test(key) && /^[a-z]+_[A-Za-z0-9]{6,}$/.test(v) && !/fixture/.test(v)) return `${v.split('_')[0]}_fixture`;
     return v;

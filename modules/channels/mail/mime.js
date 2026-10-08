@@ -80,13 +80,21 @@ function trusted(mail, authservId) {
   return mine.some(h => /\bdmarc=pass\b/i.test(h) || new RegExp(`\\bdkim=pass\\b[^;]*header\\.(d|i)=@?([\\w.-]*\\.)?${domain.replace(/\./g, '\\.')}\\b`, 'i').test(h));
 }
 
-/** A plain-text reply, threaded to the message it answers. */
-function reply({ from, to, subject, inReplyTo, text, domain = 'doca.local' }) {
+/** A plain-text reply, threaded to the message it answers; with `files` ({name, mime, buffer}), multipart/mixed. */
+function reply({ from, to, subject, inReplyTo, text, files = [], domain = 'doca.local' }) {
   const enc = s => (/^[\x20-\x7e]*$/.test(s) ? s : `=?utf-8?B?${Buffer.from(s).toString('base64')}?=`);
-  return [`From: ${from}`, `To: ${to}`, `Subject: ${enc(/^re:/i.test(subject) ? subject : `Re: ${subject || 'DOCA'}`)}`, `Date: ${new Date().toUTCString()}`,
+  const b64 = buf => buf.toString('base64').replace(/.{76}/g, '$&\r\n');
+  const head = [`From: ${from}`, `To: ${to}`, `Subject: ${enc(/^re:/i.test(subject) ? subject : `Re: ${subject || 'DOCA'}`)}`, `Date: ${new Date().toUTCString()}`,
     `Message-ID: <${crypto.randomUUID()}@${domain}>`, ...(inReplyTo ? [`In-Reply-To: ${inReplyTo}`, `References: ${inReplyTo}`] : []),
-    'Auto-Submitted: auto-replied', 'MIME-Version: 1.0', 'Content-Type: text/plain; charset=utf-8', 'Content-Transfer-Encoding: base64', '',
-    Buffer.from(String(text)).toString('base64').replace(/.{76}/g, '$&\r\n')].join('\r\n');
+    'Auto-Submitted: auto-replied', 'MIME-Version: 1.0'];
+  const plain = ['Content-Type: text/plain; charset=utf-8', 'Content-Transfer-Encoding: base64', '', b64(Buffer.from(String(text)))];
+  if (!files.length) return [...head, ...plain].join('\r\n');
+  const boundary = `doca-${crypto.randomUUID()}`;
+  // A name in quotes, its quotes and line breaks dropped; RFC 2231's filename* for anything outside ASCII.
+  const named = n => { const safe = String(n).replace(/["\r\n\\]/g, ''); return /^[\x20-\x7e]*$/.test(safe) ? `filename="${safe}"` : `filename*=utf-8''${encodeURIComponent(safe)}`; };
+  const parts = files.map(f => [`--${boundary}`, `Content-Type: ${f.mime || 'application/octet-stream'}`, 'Content-Transfer-Encoding: base64',
+    `Content-Disposition: attachment; ${named(f.name)}`, '', b64(f.buffer)].join('\r\n'));
+  return [...head, `Content-Type: multipart/mixed; boundary="${boundary}"`, '', `--${boundary}`, ...plain, ...parts, `--${boundary}--`, ''].join('\r\n');
 }
 
 module.exports = { parse, trusted, reply, ownText, addressOf };

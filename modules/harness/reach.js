@@ -35,9 +35,6 @@
  * by exactly that device, with the 24 h expiry and the 0600 mode media already
  * has, and needs no new scope, no new route and no sharing table.
  */
-const fs   = require('fs');
-const path = require('path');
-
 /**
  * Who the prompt says it is from. Not a device — the harness is the hub, not a
  * client of it — but the prompt system publishes its author's copies of an
@@ -45,8 +42,6 @@ const path = require('path');
  */
 const AGENT_ID = 'harness';
 const AGENT = { id: AGENT_ID, scopes: ['*'] };
-
-const MIME_BY_EXT = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
 
 const ASK_DEFAULT_SEC = 120;
 const ASK_MAX_SEC     = 900;
@@ -193,12 +188,13 @@ function figureBlock(svg, alt) {
   return { type: 'figure', svg: s, alt: String(alt || 'drawing').slice(0, 200) };
 }
 
-async function ask({ to, question, choices, note, timeoutSec, signal, svg, layout } = {}) {
+async function ask({ to, question, choices, note, timeoutSec, signal, svg, layout, personId } = {}) {
   const { prompts } = api();
   const text = String(question || '').trim();
   if (!text) throw new Error('A question needs to be asked in words.');
 
-  const targets = resolveTargets(to);
+  // The person's own devices only, as for a notice (ownTargets): never a question on someone else's wrist.
+  const targets = ownTargets(to, personId);
   const built = buildChoices(choices);
   const quadrants = layout === 'quadrants';
   if (quadrants && (!svg || built.filter(c => c.type === 'option').length > 4))
@@ -261,38 +257,41 @@ async function ask({ to, question, choices, note, timeoutSec, signal, svg, layou
 
 /* ── Telling ──────────────────────────────────────────── */
 
-/** Read a picture from disk and store one copy per recipient. */
-function attachImage(imagePath, targets) {
-  const { media } = api();
-  const abs = path.resolve(imagePath);
-  const mime = MIME_BY_EXT[path.extname(abs).toLowerCase()];
-  if (!mime) throw new Error(`${path.basename(abs)} is not an image this can send (png, jpg, webp or gif).`);
-  if (!fs.existsSync(abs)) throw new Error(`No such file: ${abs}`);
-  const buf = fs.readFileSync(abs);
-  const saved = targets.map(d => {
-    try { return { deviceId: d.id, id: media.save(buf, mime, d.id, { source: 'agent', name: path.basename(abs) }).id }; }
-    catch (e) {
-      // The size limit is media's, and naming it beats "failed": the agent can
-      // scale the image down, which is the fix a person would apply too.
-      throw new Error(`${path.basename(abs)} could not be sent: ${e.message}`);
-    }
-  });
-  return { bytes: buf.length, byDevice: new Map(saved.map(s => [s.deviceId, s.id])) };
+/**
+ * Only the person's own devices, when the turn has a person: a device paired in someone else's name is never told
+ * — nor asked, nor sent their files (2026-10-08). A device with no person (paired before accounts) is the hive's and stays in.
+ * Naming another person's device is refused in so many words rather than matched to nothing.
+ */
+function ownTargets(to, personId) {
+  const all = resolveTargets(to);
+  if (!personId) return all;
+  const mine = all.filter(d => !d.userId || d.userId === personId);
+  if (!mine.length) {
+    const want = String(to || '').trim();
+    throw new Error(want && !['all', 'any'].includes(want.toLowerCase())
+      ? `${all.map(label).join(', ')} ${all.length === 1 ? 'is' : 'are'} someone else's: a question, a notice or a file goes only to the person's own devices and chats.`
+      : 'None of the paired devices is this person\'s own, so there is nobody to tell.');
+  }
+  return mine;
 }
 
 /**
  * Tell, without waiting. One durable `alert` per device, high priority, so it
- * survives a watch being asleep and arrives when it wakes.
+ * survives a watch being asleep and arrives when it wakes. `files` (reach-files.js
+ * `read`) go with it, each stored as the recipient's own media; `imagePath` is the
+ * one-picture form it shipped with.
  */
-function tell({ to, title, text, imagePath, svg, urgent } = {}) {
+function tell({ to, title, text, imagePath, files, svg, urgent, personId } = {}) {
   const { bus, media, profiles, motion } = { ...api(), motion: require('../api-v1/motion') };
-  const head = String(title || text || '').trim();
+  const sending = require('./reach-files');
+  const list = sending.read([...(imagePath ? [{ path: imagePath }] : []), ...(Array.isArray(files) ? files : [])]);
+  const head = String(title || text || '').trim() || (list.length ? (list.length === 1 ? list[0].name : `${list.length} files`) : '');
   if (!head) throw new Error('A notice needs something to say.');
 
-  const targets = resolveTargets(to).filter(d => profiles.get(d.id).prompts?.receive !== false);
+  const targets = ownTargets(to, personId).filter(d => profiles.get(d.id).prompts?.receive !== false);
   if (!targets.length) throw new Error('Every matching device declines notices in its profile (prompts.receive is false).');
 
-  const image = imagePath ? attachImage(imagePath, targets) : null;
+  const blocks = list.length ? sending.attach(list, targets) : new Map();
   const figure = figureBlock(svg, head);
   const priority = urgent ? 'urgent' : 'high';
   const id = `alt_${require('crypto').randomBytes(6).toString('hex')}`;
@@ -300,14 +299,15 @@ function tell({ to, title, text, imagePath, svg, urgent } = {}) {
   const delivered = targets.map(d => {
     const body = [];
     if (title && text) body.push({ type: 'text', text: String(text).slice(0, 2000) });
-    if (image) body.push({ type: 'media', mediaId: image.byDevice.get(d.id), alt: path.basename(imagePath) });
+    body.push(...(blocks.get(d.id) || []));
     if (figure) body.push(figure);
     const payload = { id, title: head.slice(0, 120), body: motion.tailorBlocks(motion.normalizeBlocks(body), d.caps), priority, haptic: true, from: AGENT_ID };
     bus.publish(d.id, 'alert', payload, { priority, ttlSec: 6 * 3600 });
-    return { device: d, note: reachNote(d) };
+    return { device: d, note: reachNote(d), files: sending.noteFor(d, list) };
   });
   media.purgeExpired?.();
-  return { alertId: id, delivered, imageBytes: image?.bytes || 0 };
+  return { alertId: id, delivered, files: list.map(f => ({ name: f.name, kind: f.kind, bytes: f.bytes })),
+    imageBytes: list.reduce((n, f) => n + f.bytes, 0) };
 }
 
-module.exports = { openQuestions, answerAtPanel, ask, tell, resolveTargets, reachNote, label, AGENT_ID, ASK_DEFAULT_SEC, ASK_MAX_SEC };
+module.exports = { openQuestions, answerAtPanel, ask, tell, resolveTargets, ownTargets, reachNote, label, AGENT_ID, ASK_DEFAULT_SEC, ASK_MAX_SEC };

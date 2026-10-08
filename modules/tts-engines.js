@@ -43,6 +43,8 @@ function all() {
 /** The engine a screen's voice setting names, else the hive's — never a row that does not exist. */
 function forVoice(mine = {}) {
   if (!mine.engine) return hive();
+  const hosted = require('./hosted-voices').engine(mine);   // a voice from a service (hosted-voices/), when it chose one
+  if (hosted) return hosted;
   const svc = rows().find(s => s.id === mine.engine);
   return svc ? fromRow(svc, hive()) : hive();
 }
@@ -52,11 +54,15 @@ async function answers(engine) {
   try { return (await fetch(`${engine.ttsUrl}/v1/audio/voices`, { signal: AbortSignal.timeout(2500) })).ok; } catch { return false; }
 }
 
-/** What a screen can choose from: the hive's always, a speech service while it answers. */
-async function available() {
+/**
+ * What a screen can choose from: the hive's always, a speech service while it answers, and a voice from a service
+ * whose key is kept and that this person may use (`host`: they hold host, or the admin opened the key to everyone).
+ */
+async function available({ host = true } = {}) {
   const list = all();
   const up = await Promise.all(list.map(e => (e.id ? answers(e) : true)));
-  return list.filter((_, i) => up[i]).map(e => ({ id: e.id, label: e.label, tags: !!e.tags }));
+  const hosted = require('./hosted-voices').list({ host }).filter(h => h.usable).map(h => ({ id: h.id, label: `${h.label} (a service)`, tags: true, hosted: true }));
+  return [...list.filter((_, i) => up[i]).map(e => ({ id: e.id, label: e.label, tags: !!e.tags })), ...hosted];
 }
 
 /**

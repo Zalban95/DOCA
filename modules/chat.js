@@ -301,9 +301,22 @@ async function handleTranscribe(req, res) {
  */
 async function handleVoices(req, res) {
   const engines = require('./tts-engines');
+  const host = require('./auth/rights').can(req.auth?.role, 'host');
   const engine = engines.forVoice({ engine: String(req.query?.engine || '') });
-  res.json({ voices: await require('./tts-voices').list(engine), hive: loadVoiceServices().ttsVoice, engine: engine.id,
-    default: engine.ttsVoice, engines: await engines.available() });
+  // A voice from a service lists its voices by name too; and every service is offered, with how to set it up (hosted-voices/).
+  const named = engine.hosted ? await require('./tts-voices').named(engine, { host }) : null;
+  res.json({ voices: named ? named.map(v => v.id) : await require('./tts-voices').list(engine), ...(named ? { names: Object.fromEntries(named.map(v => [v.id, v.name])) } : {}),
+    hive: loadVoiceServices().ttsVoice, engine: engine.id, default: engine.ttsVoice, engines: await engines.available({ host }),
+    hosted: require('./hosted-voices').list({ host }), host });
+}
+
+/** A voice from a service (hosted-voices/): the hub calls it with the kept key, the screen gets only the audio. */
+async function sendHosted(res, engine, text, opts) {
+  const out = await require('./hosted-voices').speak(engine, text, opts).catch(e => ({ error: e }));
+  if (out.error) return res.status(out.error.status >= 400 && out.error.status < 600 ? out.error.status : 502).json({ error: out.error.message });
+  if (out.empty) return res.status(204).end();
+  res.setHeader('Content-Type', out.type);
+  res.send(out.buf);
 }
 
 /** POST /api/chat/synthesize — proxy text to configured TTS service, return audio */
@@ -317,8 +330,10 @@ async function handleSynthesize(req, res) {
   const vs = mine.engine;                             // the hive's speech service, or the speech service it chose
 
   try {
-    const chosen = await require('./tts-voices').resolve(voice || mine.voice, vs);   // "Heart" → af_heart; unknown → the engine's own
+    const host = require('./auth/rights').can(req.auth?.role, 'host');
+    const chosen = await require('./tts-voices').resolve(voice || mine.voice, vs, { host });   // "Heart" → af_heart; unknown → the engine's own
     if (chosen.fellBack) res.setHeader('X-Doca-Voice-Fallback', `${voice || mine.voice} -> ${chosen.voice}`);
+    if (vs.hosted) return sendHosted(res, vs, text, { voice: chosen.voice, speed: mine.speed, host });
     const sent = engines.body(vs, text, { voice: chosen.voice, speed: mine.speed });   // tags as words, or dropped
     if (!sent.input) return res.status(204).end();   // nothing but tags: nothing to say
     const resp = await fetch(`${vs.ttsUrl}/v1/audio/speech`, {

@@ -22,6 +22,7 @@ const LEADS = {
   service_draft: 'Prepare a web API that needs a key for a person to switch on — use it when a task needs a service with no key stored.',
   permission_grant: 'Give a mission you dispatched one more permission — use it when a specialist reports a refusal for a step it needs.',
   mcp_connect: 'Start or stop an MCP server a person already set up — use it when you need the tools of a server that is stopped.',
+  tell_device: 'Send a notice or files (audio, video, documents, pictures) to the person\'s phone, watch or chat — Telegram, Matrix, Slack, mail.',
   doca_clients: 'List the paired devices, who is online and what each may do — use it before reaching the person on a device.',
   canvas: 'Open a page beside the chat (a tool, a table, a diagram, a report) — use it when a result reads better laid out than as text.',
   search_files: 'Search the text of files under a folder — use it instead of grep in the shell to find where something is.',
