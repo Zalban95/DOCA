@@ -79,6 +79,8 @@ module.exports = [
   row('tuning', 'set up search, retrieval, vision, the realtime model and assistant mode', ['POST /api/search/*', 'POST /api/retrieval', 'POST /api/retrieval/try', 'DELETE /api/retrieval/index',
     'POST /api/vision', 'POST /api/vision/try', 'POST /api/realtime', 'POST /api/assistant']),
   row('scout', 'run the model scout and decide its suggestions', ['POST /api/scout/*']),
+  row('library', 'choose the Library\'s folders and model, index them and empty the index', ['POST /api/library', 'POST /api/library/run', 'POST /api/library/stop', 'DELETE /api/library/index'],
+    { only: 'which folders of this machine are read: a host\'s, at the panel (a device searches through library_search)' }),
   row('evals', 'write and run evaluation sets', ['POST /api/evals/*', 'PUT /api/evals/:id', 'DELETE /api/evals/:id'], { only: 'a run spends tokens and its results hold answers: a host\'s' }),
 
   // ── Projects: folders and git on this machine ──

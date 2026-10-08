@@ -20,6 +20,7 @@ function mount(app) {
   require('../migrations').mount(app);   // which prefs migrations this install has had (migrations.js)   // experiments behind flags, each with its write-up (experiments.js)
   require('../search/routes').mount(app);
   require('../retrieval/routes').mount(app);
+  require('../library/routes').mount(app);   // the Library: files of this machine searched by meaning (library/, experiment)
   require('../vision/routes').mount(app);
   require('../scout/routes').mount(app);
   require('./assistant-routes').mount(app);

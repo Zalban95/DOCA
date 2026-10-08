@@ -41,6 +41,7 @@ const COVERAGE = {
   notices: { v1: ['/events'], note: 'a device gets a notice as an `alert` on its event stream; this is the panel\'s own list of them' },
   home: { panel: 'the Home page, drawn from Home Assistant by the hub (home/); a device\'s own /api/v1 home is a later step — capability-gaps.md, home' },
   decisions: { v1: ['/decisions'] },
+  library: { v1: ['/harness'], note: 'a device searches its person\'s Library through the agent (library_search); choosing folders and indexing are the machine\'s', panel: HOST },
   chronicle: { v1: ['/harness', '/jobs/{id}'], note: 'a device reads its conversations, missions and jobs there; reading them all back as one story is the panel\'s page' },
   branding: { panel: 'public, and read by clients as it is (GET /api/branding)' },
   auth: { panel: 'a person signing in to the panel; a device pairs instead (/devices)' },

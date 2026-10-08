@@ -166,7 +166,9 @@ const TABLE = [
   R(GET, '/api/vision', 'read'),                             // which screen readers are set up (vision/routes.js)
   R(ANY, '/api/vision(/.*)?', 'host'),                        // choosing them, trying one
   R(GET, '/api/retrieval', 'read'),                          // the embedding model and what the index holds (retrieval/routes.js)
-  R(ANY, '/api/retrieval(/.*)?', 'host'),                     // choosing the model, trying it, emptying the index
+  R(ANY, '/api/retrieval(/.*)?', 'host'),
+  R(GET, '/api/library/(search|similar|file)', 'chat'),       // searching the Library: each person only the folders opened to them (library/search.js)
+  R(ANY, '/api/library(/.*)?', 'host'),                       // which folders of this machine are read, indexing, emptying the index                     // choosing the model, trying it, emptying the index
   R('POST', '/api/channels/mail', 'host'),                   // the mailbox and its password
   R(ANY, '/api/channels/mail(/.*)?', 'chat'),                 // a link code, and one's own linked addresses
   R('POST', '/api/channels/slack', 'host'),                  // the Slack app's two tokens and the switch

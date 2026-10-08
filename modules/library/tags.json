@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "note": "The Library's tag vocabulary (library/tags.js): each tag is compared with a file's pictures or sound in the embedding model's space and kept when it stands out. `for` says which pieces it is compared with (picture: images and video frames; sound: audio windows; text: document pieces). `say` is the phrase embedded. Extend it here or with library.tags; never anything about a particular person.",
+  "groups": [
+    { "id": "scene", "for": ["picture"], "tags": [
+      { "tag": "beach", "say": "a photo of a beach and the sea" },
+      { "tag": "mountains", "say": "a photo of mountains" },
+      { "tag": "city", "say": "a photo of a city street with buildings" },
+      { "tag": "forest", "say": "a photo of trees in a forest" },
+      { "tag": "garden", "say": "a photo of a garden with plants and flowers" },
+      { "tag": "indoors", "say": "a photo taken inside a room" },
+      { "tag": "kitchen", "say": "a photo of a kitchen" },
+      { "tag": "office", "say": "a photo of an office with desks and computers" },
+      { "tag": "night", "say": "a photo taken at night, dark sky and lights" },
+      { "tag": "snow", "say": "a photo of snow" },
+      { "tag": "sky", "say": "a photo of the sky and clouds" },
+      { "tag": "food", "say": "a photo of food on a plate" },
+      { "tag": "party", "say": "a photo of a party or celebration" },
+      { "tag": "sport", "say": "a photo of people playing sport" }
+    ] },
+    { "id": "subject", "for": ["picture"], "tags": [
+      { "tag": "people", "say": "a photo of people" },
+      { "tag": "portrait", "say": "a close-up portrait of a person's face" },
+      { "tag": "child", "say": "a photo of a child" },
+      { "tag": "dog", "say": "a photo of a dog" },
+      { "tag": "cat", "say": "a photo of a cat" },
+      { "tag": "bird", "say": "a photo of a bird" },
+      { "tag": "car", "say": "a photo of a car" },
+      { "tag": "bicycle", "say": "a photo of a bicycle" },
+      { "tag": "house", "say": "a photo of a house" },
+      { "tag": "flower", "say": "a photo of a flower" },
+      { "tag": "computer", "say": "a photo of a computer or a laptop" },
+      { "tag": "tool", "say": "a photo of tools or a machine part" }
+    ] },
+    { "id": "kind", "for": ["picture", "text"], "tags": [
+      { "tag": "screenshot", "say": "a screenshot of a computer screen or an app" },
+      { "tag": "document", "say": "a scanned page of a document with text" },
+      { "tag": "receipt", "say": "a receipt or an invoice with prices and a total" },
+      { "tag": "chart", "say": "a chart or a graph with numbers" },
+      { "tag": "drawing", "say": "a drawing, a diagram or a simple illustration" },
+      { "tag": "map", "say": "a map" },
+      { "tag": "text", "say": "an image of written words" },
+      { "tag": "code", "say": "source code of a computer program" },
+      { "tag": "letter", "say": "a letter or an email to someone" },
+      { "tag": "notes", "say": "personal notes and a to-do list" }
+    ] },
+    { "id": "sound", "for": ["sound"], "tags": [
+      { "tag": "speech", "say": "a person speaking" },
+      { "tag": "conversation", "say": "several people talking to each other" },
+      { "tag": "music", "say": "music playing" },
+      { "tag": "singing", "say": "someone singing a song" },
+      { "tag": "noise", "say": "background noise with no voice" },
+      { "tag": "silence", "say": "silence" },
+      { "tag": "nature", "say": "birds and wind outdoors" },
+      { "tag": "traffic", "say": "traffic and cars on a street" },
+      { "tag": "beep", "say": "an electronic beep or a tone" }
+    ] }
+  ]
+}
