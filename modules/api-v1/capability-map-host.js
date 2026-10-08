@@ -54,7 +54,7 @@ module.exports = [
 
   // ── The owner's accounts and secrets ──
   row('keys', 'keep API keys for providers', ['POST /api/keys', 'POST /api/keys/add-provider', 'DELETE /api/keys/:name'], { only: SECRET }),
-  row('connectors', 'connect accounts, keep keys for services, logins and sealed secrets', ['POST /api/connectors/:id', 'DELETE /api/connectors/:id', 'POST /api/connectors/:id/connect',
+  row('connectors', 'connect accounts, keep keys for services, logins and sealed secrets', ['POST /api/connectors/:id', 'DELETE /api/connectors/:id', 'POST /api/connectors/:id/connect', 'POST /api/connectors/:id/test', 'POST /api/connectors/keys/preset/:service',
     'POST /api/connectors/keys/all', 'DELETE /api/connectors/keys/:name', 'POST /api/connectors/logins/all', 'DELETE /api/connectors/logins/:id', 'POST /api/connectors/sealed/all',
     'DELETE /api/connectors/sealed/:name', 'POST /api/connectors/drafts/:id/accept', 'DELETE /api/connectors/drafts/:id'], { only: SECRET }),
   row('channels', 'switch a chat app on and give it its token', ['POST /api/channels/telegram', 'POST /api/channels/matrix', 'POST /api/channels/slack', 'POST /api/channels/mail'], { only: SECRET }),

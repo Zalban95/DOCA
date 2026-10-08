@@ -74,8 +74,12 @@ const TOOLS = {
   mcp_connect: [{ tier: 'reversible', way: 'the server is started or stopped again' }],
 };
 
-/** A connected account (connectors/tools.js): reading it is a read, anything else acts on the owner's account. */
-const CONNECTOR = [{ when: { method: NOT_GET }, tier: 'outward', why: 'acts on the owner\'s account at an outside service' }, { tier: 'read' }];
+/** A connected account (connectors/tools.js): reading it is a read, anything else acts on the owner's account; a
+ * mailbox's draft stays in it. */
+const CONNECTOR = [
+  { when: { action: ['send', 'create_event'] }, tier: 'outward', why: 'sends mail or adds an event in the owner\'s name' },
+  { when: { action: ['draft'] }, tier: 'reversible', way: 'a draft in the mailbox\'s Drafts folder: nothing is sent, and it is deleted there' },
+  { when: { method: NOT_GET }, tier: 'outward', why: 'acts on the owner\'s account at an outside service' }, { tier: 'read' }];
 
 /** A device's or a server's tool named for one of these does something nobody takes back (when it gives no annotations). */
 const MCP_OUTWARD_NAME = /(^|_)(send|delete|remove|erase|wipe|format|pay|payment|purchase|buy|order|checkout|post|publish|submit|transfer|email|mail|message|sms|tweet|share|uninstall|drop|destroy)(_|$)/i;

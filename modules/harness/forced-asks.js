@@ -4,7 +4,8 @@
  * The calls that are always a person's decision, in every approval mode, Unattended included, and never "always
  * allowed" — besides what governs the agent (control-plane.js), which approval.gate checks first: signing in with a
  * stored login, and a control that pays, buys, signs in, confirms or submits, which a computer's browser, the person's
- * browser or a device marks by refusing it without confirm: true (TODO H5.4, H5.5, A4). Moved out of approval.js,
+ * browser or a device marks by refusing it without confirm: true (TODO H5.4, H5.5, A4), and a connected mailbox's send or
+ * calendar's new event (connectors/ways/). Moved out of approval.js,
  * which may only shrink.
  */
 function of(name, args, summarize) {
@@ -28,6 +29,14 @@ function of(name, args, summarize) {
   // the agent's. Every mode, never "always".
   if (/^mcp__/.test(name) && args?.confirm === true)
     return { tool: name, keys: null, forced: true, summary: `${summarize(name, args)} — the device says this decides something (pays, buys, signs in, confirms or submits). Always asked, whatever the approval mode.` };
+  // A connected mailbox sending mail, or a connected calendar adding an event (connectors/ways/: app password, CalDAV):
+  // it leaves the hive in the owner's name — a person's yes each time, naming who it goes to. Every mode, never "always".
+  if (/^connector_/.test(name) && (args?.action === 'send' || args?.action === 'create_event')) {
+    const who = [].concat(args.to || [], args.cc || []).join(', ');
+    return { tool: name, keys: null, forced: true, summary: args.action === 'send'
+      ? `Send mail from ${name.slice(10)} to ${who || '(nobody named)'}: "${String(args.subject || '').slice(0, 120)}". Always asked, whatever the approval mode.`
+      : `Add "${String(args.title || '').slice(0, 120)}" (${args.from || '?'}) to ${name.slice(10)}'s calendar${args.calendar ? ` ${args.calendar}` : ''}. Always asked, whatever the approval mode.` };
+  }
   // A hub command the registry marks confirm (stopping a service, a snapshot): a person's, as on a phone (TODO B6b).
   if (name === 'hub_command' && args?.action === 'run') {
     const c = require('../api-v1/commands').describe(String(args.id || ''));

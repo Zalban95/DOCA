@@ -31,7 +31,7 @@ function inUse(person, kind) {
     case 'key':      return quiet(() => require('../service-keys').list().filter(k => ok(k.name, k.who === 'everyone')).map(k => k.name));
     case 'connector': {
       const vault = require('../connectors/vault');
-      return quiet(() => Object.entries(vault.all()).filter(([id, r]) => r.accessToken && ok(id, r.who === 'everyone')).map(([id]) => id));
+      return quiet(() => Object.entries(vault.all()).filter(([id, r]) => vault.isConnected(r) && ok(id, r.who === 'everyone')).map(([id]) => id));
     }
     case 'login':    return quiet(() => require('../logins').list().filter(l => ok(l.id) || ok(l.label)).map(l => l.label));
     case 'service':  return quiet(() => require('../services').INFERENCE_SERVICES.filter(s => s.chat && ok(s.id)).map(s => s.id));   // those a turn can use
