@@ -67,11 +67,11 @@ function handleEvent(req, res) {
 }
 
 /** A transcription for a call: what came of it, from the hub's side. */
-function heard(req, { text = '', filtered = null, error = null, ms = null } = {}) {
+function heard(req, { text = '', filtered = null, error = null, ms = null, language = null, heardAs = null } = {}) {
   const h = own(req, req.body?.call);
   if (!h) return;
   const t = String(text || '').trim();
-  h.stt({ words: t ? t.split(/\s+/).length : 0, filtered, error, ms });
+  h.stt({ words: t ? t.split(/\s+/).length : 0, filtered, error, ms, language, heardAs });
 }
 
 /**

@@ -198,6 +198,17 @@ the project's managers only if the owner allows sharing specialists and skills (
   Deep call (the chat's 🎙), Ambient's assistant. Reproduced and checked headless (phone size, mobile UA, the wake word
   on). Not done: why the 10:53 call on the owner's phone heard exact zeros is not proven (the hand-off and the watch now
   cover it, and the log will say which it was); nobody has heard it on the phone yet.
+- [x] The owner's Live calls of 2026-10-08, 14:38–14:43 (branch `ambient-place-language`): **no weather because no
+  place** — Ambient and `today` take the asking screen's place, else its device's own position (the page's geolocation,
+  kept as the screen's `ambient.here` and named; a paired device's `location` sample), else the hive's, and say which;
+  with none the page offers "Use this device's location" or "Type a town" (`ambient/where.js`, `ambient-where.js`);
+  `settings_read "place"` finds the screen's `ambient.place`. **The reply in Russian** (run_798be61c7bd0): whisper
+  guessed a two-word, 1.6 s utterance as Russian ("Что это?"; the call log then held only "transcribed 2 words"; the
+  same morning's "КОНЕЦ" and subtitle credit were the same guessing on room noise). Now `call.language` per screen,
+  else the person's usual language checks short transcripts in another (asked again in theirs), the call log names the
+  language, and spoken turns treat a lone foreign transcript as a mishearing (`call-language.js`, `stt.js`).
+  `test/ambient-where.test.js`, `test/call-language.test.js`. Not done: DocaMobile does not yet send `location` samples
+  on its own (it answers the WebView's geolocation and the `device_location` tool); nobody has tried it on the phone.
 - [x] Self-test 2026-10-08, the agents and missions group (branch `selftest-agents`): specialists' budgets fit a
   real errand (Tester 120, Coder 80, Researcher 40, Scout 30, Archivist 10, unnamed 30; #6); a mission's last step is
   its report, with a line telling its leader it ended on its limit and where that is raised (`turn/mission-report.js`;

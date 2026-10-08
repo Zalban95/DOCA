@@ -66,14 +66,16 @@ function handle(rec) {
     utterance({ ms, voicedMs, peak }) { rec.utterances++; push(rec, 'info', `speech found: ${ms} ms, ${voicedMs} ms of it voiced, peak ${Math.round(peak || 0)}`); },
     dropped(why) { rec.dropped++; push(rec, 'info', `sound dropped: ${why}`); },
     /** What the transcriber made of an utterance: `words` counted, `filtered` the silence phrase it was, `error` why it failed. */
-    stt({ words = 0, ms = null, filtered = null, error = null } = {}) {
+    stt({ words = 0, ms = null, filtered = null, error = null, language = null, heardAs = null } = {}) {
       rec.stt.asked++;
       const took = ms != null ? ` in ${ms} ms` : '';
       if (error) { rec.stt.failed++; return push(rec, 'error', `transcriber failed${took}: ${String(error).slice(0, 200)}`); }
       if (filtered) { rec.stt.filtered++; return push(rec, 'warn', `transcriber heard only "${String(filtered).slice(0, 60)}"${took} — a silence phrase, dropped`); }
       if (!words) { rec.stt.empty++; return push(rec, 'warn', `transcriber found no words${took}`); }
       rec.stt.words++;
-      return push(rec, 'info', `transcribed ${words} word${words === 1 ? '' : 's'}${took}`);
+      // The language, as a code (never the words): a call answered in the wrong one is found here (2026-10-08).
+      const lang = language ? `, in ${String(language).slice(0, 8)}${heardAs ? ` (first heard as ${String(heardAs).slice(0, 8)}, asked again in ${String(language).slice(0, 8)})` : ''}` : '';
+      return push(rec, 'info', `transcribed ${words} word${words === 1 ? '' : 's'}${took}${lang}`);
     },
     turn(state, detail = '') {
       if (state === 'started') rec.turns.started++;

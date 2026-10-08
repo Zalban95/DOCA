@@ -19,7 +19,7 @@ html[data-ground="light"] :is(.amb-date, .amb-what, .amb-day b, .amb-app, .amb-e
 html[data-ground="light"] :is(.amb-when, .amb-notice span, .amb-muted a) { color: var(--accent); }
 html[data-ground="light"] .amb-notice.ask span, html[data-ground="light"] .amb-notice.propose span { color: var(--amber); }
 html[data-ground="light"] :is(.amb-event, .amb-notice) { border-bottom-color: var(--border); }
-html[data-ground="light"] .amb-button { background: var(--surface); border-color: var(--border2); color: var(--bright); }
+html[data-ground="light"] :is(.amb-button, .amb .amb-town-in) { background: var(--surface); border-color: var(--border2); color: var(--bright); }
 html[data-ground="light"] .amb-talk { background: var(--surface); color: var(--accent); box-shadow: 0 0 0 1px var(--border2), 0 4px 18px rgba(0, 0, 0, .08); }
 html[data-ground="light"] .amb-band.holding { background: radial-gradient(ellipse at 50% 55%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 65%); }
 html[data-ground="light"] .amb-arrange { background: rgba(255, 255, 255, .6); }

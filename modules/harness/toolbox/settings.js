@@ -63,13 +63,16 @@ module.exports = [
       const q    = String(filter || '').toLowerCase();
       const screen = require('../screen-proposals').readable(ctx.screen, ctx.user).filter(l => !q || l.toLowerCase().includes(q));
       const rows = settings.readable().filter(r => !q || r.path.toLowerCase().includes(q));
-      if (!rows.length) return `No settings match "${filter}".`;
+      // A screen's own settings count too: "ambient" or "place" used to answer "no settings match" (2026-10-08) while
+      // the screen's ambient.place sat in the list below, unread.
+      if (!rows.length && !screen.length) return `No settings match "${filter}".`;
       const body = rows.map(r =>
         `${r.path} = ${JSON.stringify(r.value)}${r.detail ? `   # ${r.detail}` : ''}`).join('\n');
       // Which model does what (model-roles.js): the answer to "what runs my speech / my screen reading", in one list.
       const models = !q || /model|voice|harness|vision|retrieval|realtime|assistant/.test(q) ? `\n\nModels in use:\n${require('../../model-roles').lines().join('\n')}` : '';
       const own = screen.length ? `\n\nThis screen's own (settings_propose with screen "this"):\n${screen.join('\n')}` : '';
-      return clip(`${rows.length} settings you may propose changes to:\n${body}${own}${models}`);
+      const hive = rows.length ? `${rows.length} settings you may propose changes to:\n${body}` : `No hive setting matches "${filter}".`;
+      return clip(`${hive}${own}${models}`);
     },
   },
   {

@@ -117,7 +117,7 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
   const stats = { at: Date.now(), firstAudioMs: null, spokeAt: null, replyMs: [], tools: 0, background: 0, interrupted: 0, reports: 0 };
   let heardAt = null;   // when the last utterance ended, until its answer's first audio: replyMs, end of speech → first audio
   // The hub's own voice speaks a device's call in its Live call voice (call-voices.js): the device's screen's, its person's, the hive's.
-  const model = pipeline ? require('./pipeline').connect({ voice: require('../call-voices').forDevice(deviceId) })
+  const model = pipeline ? require('./pipeline').connect({ voice: require('../call-voices').forDevice(deviceId), language: require('../call-language').forDevice(deviceId) })
     : ADAPTERS[s.protocol].connect({ ...t, model: s.model, voice: s.voice, dialect: s.dialect, instructions: INSTRUCTIONS + recent(sessionId), tools: [TOOL] });
   if (pipeline) s.protocol = 'pipeline';
   // Each stage of this call, kept (call-log.js): a call that fails is never only a quiet call.
