@@ -145,6 +145,19 @@ the project's managers only if the owner allows sharing specialists and skills (
   says Ollama is not installed or not running (#11); the computer image has Symbola and Droid Sans Fallback (#26);
   the pairing card shows its link as text — the code was already there, after "Show pairing code" (#10); the
   computers' tidy-up removes containers no record names (`computers/strays.js`, #25).
+- [x] Self-test 2026-10-08, the panel group (branch `selftest-panel`): the open group's pages are a row under the
+  header, the search giving way first, so Settings never scrolls out of a 1024–1920 px header in any look (#3);
+  Accept and Connect on an MCP offer go busy and the changed row is lit and says what happened, an unreachable HTTP
+  server said in words (`mcp/reach-error.js`) — real mouse clicks land in headless Chromium, nothing covers them
+  (#4); Set-up offers "a model you already run" by address through the + Add provider route and counts any answering
+  provider as DOCA's model, and the ⚙'s "unreachable" says what to check with a link to the row (#5); Appearance is a
+  Look, then Colours for it, the rest under "More colours" (#12); a bare `POST /api/harness/sessions`, a device's new
+  conversation and a member's first are kind `chat`, ＋ Work asks for `work` (#13); the chat button steps aside from a
+  control under it, Config's phone strip lays its files side by side, the Files list ends in 72 px; Models'
+  "overlaps" were inputs in a closed `<details>` (#14); "Nothing changed" on Set it up again (#18); Reset away from
+  Save (#19); xterm's width probe hidden, a person's holdings wrap, the Harness side panel scrolls — every other cut
+  line had an ellipsis and a title (#20); Points Daylight's 1.59:1 and the phone's bottom bar were probe errors,
+  Classic's nav labels 2.75 → 6.4:1 (#21, #22); `GET /api/harness/approvals` is the singular's read (#17).
 - Real-hardware checks: DocaMobile 1.0.16's answer buttons, DocaWear 1.2.5's QUEUED, the watch call and updater
   (and the call's states and ticks, DocaWear 1.4.0).
 - T1: `test/doca-client.test.js` under load — solved 2026-10-07 (the runner's stdout parsing, see T1 below); the machines screenshot test ("a picture of it") failed once on Windows CI for 2.279.0, passed on re-run — likely two headless browsers at once (page-check's test and machines' shots) on a slow runner. 2.283.1: on Windows a stopped job now takes its whole tree with it (taskkill /T — a dev server outlived its job), the shots browser no longer holds the process open and a screenshot that never answers fails after 15 s; machines.test.js had timed out at 120 s on Windows for 2.282.0. 2.286.1: the headless browser's DevTools port file is read again when Windows has it locked (EBUSY failed the smoke run on Windows for 2.285.0).
