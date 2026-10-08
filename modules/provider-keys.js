@@ -90,6 +90,7 @@ function set(id, patch) {
   const entry = { models: [], ...(all()[id] || {}), ...doc.providers[id], ...patch };
   doc.providers[id] = entry;
   doc.removed = doc.removed.filter(x => x !== id);
+  if (doc.aliases?.[id]) delete doc.aliases[id];
   writeOwn(doc);
   mirror(id, entry);
   return entry;
@@ -105,4 +106,18 @@ function remove(id) {
   return true;
 }
 
-module.exports = { all, get, set, remove, openclawInstalled, FILE: PROVIDER_KEYS_FILE };
+/** A provider merged into another (provider-dedupe.js): the old name still finds the one kept. */
+function alias(from, to) {
+  const doc = own();
+  doc.aliases = { ...(doc.aliases || {}), [from]: to };
+  writeOwn(doc);
+}
+
+/** The provider an id means: itself while it exists, else what it was merged into. */
+function resolve(id) {
+  if (!id || all()[id]) return id;
+  const to = own().aliases?.[id];
+  return to && all()[to] ? to : id;
+}
+
+module.exports = { all, get, set, remove, alias, resolve, openclawInstalled, FILE: PROVIDER_KEYS_FILE };

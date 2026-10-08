@@ -79,6 +79,45 @@ function handleAddProvider(req, res) {
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
+/** The models an OpenAI-compatible server at `baseUrl` lists, or why not — in words, never Node's own. */
+async function probe(baseUrl, apiKey = '', { timeoutMs = 8000, fetchImpl = fetch } = {}) {
+  const headers = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
+  try {
+    const r = await fetchImpl(`${baseUrl}/models`, { headers, signal: AbortSignal.timeout(timeoutMs) });
+    if (!r.ok) return { models: [], status: r.status, error: r.status === 401 || r.status === 403 ? 'it asks for a key' : `it answered HTTP ${r.status}` };
+    const body = await r.json().catch(() => null);
+    const models = (body?.data || body?.models || []).map(m => m.id || m.name).filter(Boolean);
+    return models.length ? { models, error: null } : { models: [], error: 'it lists no models' };
+  } catch (e) {
+    const why = e.name === 'TimeoutError' || e.name === 'AbortError' ? `it did not answer within ${Math.round(timeoutMs / 1000)} s`
+      : /ECONNREFUSED/.test(String(e.cause?.code || e.message)) ? 'nothing is listening there'
+      : /ENOTFOUND|EAI_AGAIN/.test(String(e.cause?.code || e.message)) ? 'that name is not found'
+      : `it could not be reached (${e.cause?.code || e.message})`;
+    return { models: [], error: why };
+  }
+}
+
+/**
+ * POST /api/keys/test-provider {baseUrl, apiKey?} — does a server answer there, and with which models? Nothing is
+ * saved: Set-up's "Connect and test" saved first and added a provider on every try (deep test B, C3). A server that
+ * answers only under /v1 is found there too, and the address to use is returned.
+ */
+async function handleTestProvider(req, res) {
+  const baseUrl = String(req.body?.baseUrl || '').trim().replace(/\/+$/, '');
+  if (!/^https?:\/\/[^\s/]+/i.test(baseUrl)) return res.status(400).json({ error: 'Give its address, like http://192.168.1.20:8080/v1' });
+  const apiKey = String(req.body?.apiKey || '').trim();
+  let r = await probe(baseUrl, apiKey);
+  let url = baseUrl;
+  if (r.error && r.status === 404 && !/\/v1$/i.test(baseUrl)) {
+    const v1 = await probe(`${baseUrl}/v1`, apiKey);
+    if (!v1.error) { r = v1; url = `${baseUrl}/v1`; }
+  }
+  // The provider already kept at this address, so the panel reuses it rather than adding a copy.
+  let same = null;
+  try { same = Object.entries(keys.all()).find(([, p]) => String(p.baseUrl || '').replace(/\/+$/, '').toLowerCase() === url.toLowerCase()); } catch {}
+  res.json({ ok: !r.error, baseUrl: url, models: r.models, error: r.error, existing: same ? same[0] : null });
+}
+
 /** DELETE /api/keys/:name */
 function handleDeleteProvider(req, res) {
   try {
@@ -87,9 +126,18 @@ function handleDeleteProvider(req, res) {
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
+/** The provider routes beyond the plain list (server.js keeps GET/POST/DELETE /api/keys beside the others). */
+function mount(app) {
+  app.post('/api/keys/add-provider', handleAddProvider);
+  app.post('/api/keys/test-provider', handleTestProvider);
+}
+
 module.exports = {
+  mount,
   handleGetKeys,
   handlePostKeys,
   handleAddProvider,
+  handleTestProvider,
   handleDeleteProvider,
+  probe,
 };

@@ -124,23 +124,34 @@ async function guidedUseModel(provider, model, i) {
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
 
-/** A model the person runs: saved through the same route as Field → API keys → + Add provider, then its models listed. */
+/**
+ * A model the person runs: tested first (POST /api/keys/test-provider saves nothing), and only a server that answers is
+ * kept — under the provider already at that address when there is one, else a new one through the same route as
+ * Field → API keys → + Add provider. Saving first added a provider on every try (deep test B, C3).
+ */
 async function guidedOwnConnect(i) {
   const st = document.getElementById(`guided-own-st-${i}`);
-  const baseUrl = document.getElementById(`guided-own-url-${i}`).value.trim().replace(/\/+$/, ''), keyIn = document.getElementById(`guided-own-key-${i}`);
-  if (!/^https?:\/\/[^\s/]+/i.test(baseUrl)) return setStatus(st, '✗ Give its address, like http://192.168.1.20:8080/v1', 'err');
-  const known = await apiFetch('/api/keys').catch(() => ({}));
-  const taken = [...(known.presets || []).map(p => p.id), ...Object.entries(known.providers || {}).filter(([, p]) => p.baseUrl.replace(/\/+$/, '') !== baseUrl).map(([id]) => id)];
-  const name = guidedOwnName(baseUrl, document.getElementById(`guided-own-name-${i}`)?.value, taken);
+  const typedUrl = document.getElementById(`guided-own-url-${i}`).value.trim().replace(/\/+$/, ''), keyIn = document.getElementById(`guided-own-key-${i}`);
+  if (!/^https?:\/\/[^\s/]+/i.test(typedUrl)) return setStatus(st, '✗ Give its address, like http://192.168.1.20:8080/v1', 'err');
+  const apiKey = keyIn.value.trim();
   try {
-    setStatus(st, 'connecting…', 'info');
-    await apiFetch('/api/keys/add-provider', { method: 'POST', body: { name, baseUrl, apiKey: keyIn.value.trim() } });
+    setStatus(st, 'testing…', 'info');
+    const t = await apiFetch('/api/keys/test-provider', { method: 'POST', body: { baseUrl: typedUrl, apiKey } });
+    if (!t.ok) return setStatus(st, `✗ Not saved: ${t.error}. Check the address (most end in /v1) and that the server is running.`, 'err');
+    const baseUrl = t.baseUrl;
+    let name = t.existing;
+    if (name) {
+      if (apiKey) await apiFetch('/api/keys', { method: 'POST', body: { provider: name, apiKey } });
+    } else {
+      const known = await apiFetch('/api/keys').catch(() => ({}));
+      const taken = [...(known.presets || []).map(p => p.id), ...Object.keys(known.providers || {})];
+      name = guidedOwnName(baseUrl, document.getElementById(`guided-own-name-${i}`)?.value, taken);
+      await apiFetch('/api/keys/add-provider', { method: 'POST', body: { name, baseUrl, apiKey } });
+    }
     keyIn.value = '';
-    const r = await apiFetch(`/api/harness/models?provider=${encodeURIComponent(name)}`);
-    if (r.error || !r.models?.length)
-      return setStatus(st, `✗ Saved as "${name}", but ${r.error ? `it did not answer (${r.error})` : 'it lists no models'}. Check the address (most end in /v1) and that the server is running.`, 'err');
-    setStatus(st, `✓ It answers — ${r.models.length} model${r.models.length === 1 ? '' : 's'}`, 'ok');
-    document.getElementById(`guided-own-models-${i}`).innerHTML = `<select class="input" id="guided-own-model-${i}">${r.models.map(m => `<option>${escHtml(m)}</option>`).join('')}</select>
+    const moved = baseUrl !== typedUrl ? ` (at ${baseUrl})` : '';
+    setStatus(st, `✓ It answers${moved} — ${t.models.length} model${t.models.length === 1 ? '' : 's'}${t.existing ? `, kept as "${name}" as before` : `, saved as "${name}"`}`, 'ok');
+    document.getElementById(`guided-own-models-${i}`).innerHTML = `<select class="input" id="guided-own-model-${i}">${t.models.map(m => `<option>${escHtml(m)}</option>`).join('')}</select>
       <button class="btn btn-xs btn-green" onclick="guidedUseModel(${jsArg(name)}, document.getElementById('guided-own-model-${i}').value, 'own-${i}')">Use it for DOCA's agent</button>`;
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }

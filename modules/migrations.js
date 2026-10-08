@@ -113,6 +113,11 @@ const MIGRATIONS = [
       p.setup = { ...(p.setup || {}), mode: 'advanced' };
       return true;
     } }] },
+  // 2.329: Set-up's "Connect and test" saved a provider on every try (deep test B, C3). Copies at one address with no
+  // key become one, keeping every model choice (provider-dedupe.js; the old names stay as aliases).
+  { id: '2.329-providers-merged', note: 'providers at the same address with no key are merged into one; the settings point at the one kept', steps: [{
+    describe: 'duplicate key-less providers merged (keys/providers.json), settings repointed',
+    run(p) { return require('./provider-dedupe').merge(p); } }] },
 ];
 
 const appliedIn = p => new Set(Array.isArray(p?.migrations?.applied) ? p.migrations.applied : []);
