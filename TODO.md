@@ -373,6 +373,15 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   containers in every skin; in Points every status bar and ● glyph (sidebar containers, harness rows, MCP, VMs, the
   header's dot, the chat button) is a point; the point of light in empty states. **Left:** new rows fading in (lists
   are redrawn on every poll, so it needs keyed rows first).
+- [x] E5 **Organized: the common few, the rest under Advanced** (asked 2026-10-08: "the most versatile UI ever, but
+  very organized"): one disclosure, `advancedFold()` (ui-parts.js, system.css) — closed by default, remembered per
+  browser, counting what it holds and marked when a setting inside is not its default — swept over every card with many
+  tweaks: the DOCA ⚙ parameters, the level editor, System (paths, network, logs), General, Spending, Developer, Voice
+  (assistant, realtime, the face editor), Ambient, Packs, Backups, Channels, Set-up's own-model route, Vision, the
+  scout, MCP's add form, Connectors, keys for services, the apps' signing key, a llama.cpp instance. The list per page
+  is in AGENTS.md; `test/advanced-fold.test.js` holds it. **Left:** the older `<details>` on General's "More colours"
+  and the face editor's "Edit, with a preview" keep their own style; Field → Models' and Settings → Voice's new forms
+  (another branch) fold the same way once they land.
 
 ## The hive — the backlog (asked 2026-10-04; plan in `docs/design/hive.md`)
 
