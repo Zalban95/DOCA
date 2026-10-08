@@ -153,13 +153,14 @@ async function vboxList() {
   const up = new Set(parseVboxList(running).map(v => v.name));
 
   return Promise.all(parseVboxList(all).map(async vm => {
-    let display = null, stateRaw = up.has(vm.name) ? 'running' : 'poweroff';
+    let display = null, os = null, stateRaw = up.has(vm.name) ? 'running' : 'poweroff';
     try {
       const info = await run('VBoxManage', ['showvminfo', vm.name, '--machinereadable']);
       stateRaw = info.match(/^VMState="(.*)"$/m)?.[1] || stateRaw;
+      os = info.match(/^ostype="(.*)"$/m)?.[1] || null;
       if (up.has(vm.name)) display = parseVboxDisplay(info);
     } catch { /* a VM mid-registration can fail to describe itself */ }
-    return { ...vm, hypervisor: 'virtualbox', state: normalizeState(stateRaw), stateRaw, display };
+    return { ...vm, hypervisor: 'virtualbox', state: normalizeState(stateRaw), stateRaw, display, os };
   }));
 }
 
@@ -179,14 +180,14 @@ async function present(hvOrBin) {
 }
 
 /**
- * GET /api/vms
+ * GET /api/vms (and the machines' rows, machines/vm-list.js)
  *
  * Reports every hypervisor separately, each with its own error, so one broken
  * connection (a libvirtd the user cannot reach) does not hide the other's VMs.
  */
-async function handleList(_req, res) {
+async function listAll() {
   // A hypervisor that cannot exist on this OS (Hyper-V off Windows, UTM off a Mac) is left out, not reported missing.
-  const out = await Promise.all(Object.entries(HYPERVISORS).filter(([, hv]) => !hv.os || hv.os.includes(process.platform)).map(async ([id, hv]) => {
+  return Promise.all(Object.entries(HYPERVISORS).filter(([, hv]) => !hv.os || hv.os.includes(process.platform)).map(async ([id, hv]) => {
     if (!await present(hv))
       return { id, label: hv.label, bin: hv.bin, available: false, vms: [], error: `${hv.bin} not found` };
     try {
@@ -195,7 +196,13 @@ async function handleList(_req, res) {
       return { id, label: hv.label, bin: hv.bin, available: true, vms: [], error: e.stderr?.trim() || e.message };
     }
   }));
-  res.json({ hypervisors: out, libvirtUri: libvirtUri() });
+}
+
+async function handleList(_req, res) {
+  // Each running VM says whether its console opens through the hub (machines/vm-console.js), as it does in Live.
+  const { where } = require('./machines/vm-console');
+  const hypervisors = (await listAll()).map(hv => ({ ...hv, vms: hv.vms.map(vm => ({ ...vm, console: where({ ...vm, hypervisor: hv.id }) })) }));
+  res.json({ hypervisors, libvirtUri: libvirtUri() });
 }
 
 /** POST /api/vms/:hypervisor/action — { name, action } */
@@ -248,6 +255,8 @@ module.exports = {
   handleList,
   handleAction,
   handleSettings,
+  listAll,
+  virshFlags,
   // exported for tests
   parseVirshList,
   parseVboxList,

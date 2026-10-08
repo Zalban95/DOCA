@@ -99,6 +99,8 @@ function setup(httpServer) {
       harnessWss.handleUpgrade(req, socket, head, ws => harnessWss.emit('connection', ws, req));
     } else if (req.url.startsWith('/ws/computer/')) {
       require('./computers/vnc').upgrade(req, socket, head);   // a computer's screen (computers/vnc.js)
+    } else if (req.url.startsWith('/ws/vm/')) {
+      require('./machines/vm-console').upgrade(req, socket, head);   // a VM's VNC console (machines/vm-console.js)
     } else if (req.url.startsWith('/ws/lsp')) {
       require('./projects/lsp').upgrade(req, socket, head);   // a language server, for the Projects editor
     } else {
