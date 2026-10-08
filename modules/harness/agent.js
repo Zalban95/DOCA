@@ -350,7 +350,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     }
     if (working) workSteps++;
 
-    await runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced });
+    await runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced, read });
 
     // Token pressure folds the conversation early, before the message count
     // would have. `compactTokens` is the honest trigger — a window nobody
