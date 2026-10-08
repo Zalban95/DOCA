@@ -18,7 +18,7 @@ async function machinesSidebar(statusContainers) {
   if (!el) return;
   if (!_machinesNoRows && !(typeof _settingsNoHost !== 'undefined' && _settingsNoHost)) {
     if (document.hidden) return;
-    try { return machinesSidebarDraw(await apiFetch('/api/machines/rows')); }
+    try { const d = await apiFetch('/api/machines/rows'); machineOriginsKeep(d); return machinesSidebarDraw(d); }   // the tabs read who started what from it too
     catch (e) { if (/403|forbidden|right/i.test(e.message || '')) _machinesNoRows = true; else return; }
   }
   // Without the host right: the running containers, in the same rows.
@@ -29,9 +29,10 @@ async function machinesSidebar(statusContainers) {
 
 function machineRowHtml(r) {
   const cls = { up: 'running', error: 'exited', paused: 'paused', down: 'stopped' }[r.point] || 'stopped';
-  return `<div class="c-item m-row ${cls}" role="button" tabindex="0" title="${escHtml(`${r.name} — ${r.detail || r.state}`)}"
+  const by = machineOriginText(r.origin);   // who started it (lib/machine-origin.js)
+  return `<div class="c-item m-row ${cls}" role="button" tabindex="0" title="${escHtml(`${r.name} — ${r.detail || r.state}${by ? `\n${by}` : ''}`)}"
       onclick="machineGo(${jsArg(r.kind)}, ${jsArg(r.id)}, ${r.live ? 'true' : 'false'})" onkeydown="if(event.key==='Enter')this.click()">
-    <span class="m-main"><span class="c-name">${escHtml(r.name)}</span>${r.detail ? `<span class="m-detail">${escHtml(r.detail)}</span>` : ''}</span>
+    <span class="m-main"><span class="c-name">${escHtml(r.name)}</span>${r.detail ? `<span class="m-detail">${escHtml(r.detail)}</span>` : ''}${by ? `<span class="m-detail${r.origin.outside ? ' outside' : ''}">${escHtml(by)}</span>` : ''}</span>
     <span class="c-state">${escHtml(r.state)}</span></div>`;
 }
 

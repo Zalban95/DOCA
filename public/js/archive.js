@@ -23,7 +23,9 @@ async function archiveInit() {
 }
 
 /** Put one away, or bring it back; the page it lives on redraws (it is live: lib/live.js). */
-async function archiveSet(kind, id, on) {
+async function archiveSet(kind, id, on, asked) {
+  // Putting a computer away stops it: asked like any stop, naming what uses it (lib/machine-ask.js).
+  if (kind === 'computer' && on && !asked) return machineAsk('computer', id, 'stop', '', () => archiveSet(kind, id, on, true), 'It is put away: stopped, its desktop and files kept, back from Agents → Archive.');
   try { await apiFetch(`/api/archive/${kind}/${encodeURIComponent(id)}`, { method: 'POST', body: { on } }); }
   catch (e) { return appAlert(e.message); }
   if (pageShown('archive')) archiveInit();

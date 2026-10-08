@@ -8,7 +8,7 @@ async function vmsLoad() {
   const list = document.getElementById('vms-list');
   if (!list) return;
   try {
-    const data = await apiFetch('/api/vms');
+    const [data] = await Promise.all([apiFetch('/api/vms'), machineOriginsLoad()]);   // + who started each (lib/machine-origin.js)
     list.innerHTML = (data.hypervisors || []).map(hv => _vmHypervisorHtml(hv, data)).join('');
   } catch (e) {
     list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
@@ -73,7 +73,7 @@ function _vmRowHtml(hvId, vm) {
   return `
     <div class="vm-row vm-${escHtml(vm.state)}">
       <span class="vm-dot" title="${escHtml(vm.stateRaw || vm.state)}">${vm.state === 'running' ? '●' : '○'}</span>
-      <span class="vm-name">${escHtml(vm.name)}</span>
+      <span class="vm-name">${escHtml(vm.name)}${machineOriginHtml('vm', `${hvId}:${vm.name}`)}</span>
       <span class="vm-state">${escHtml(vm.stateRaw || vm.state)}</span>
       ${display}
       <span class="vm-acts">${vm.console?.how === 'hub' ? `<button class="btn btn-xs" title="Its VNC console, through the hub" onclick="vmConsoleOpen(${jsArg(hvId)}, ${arg})">VNC</button>` : ''}${actions.join('')}${hvId === 'libvirt' ? `<button class="btn btn-xs" title="Details, autostart and snapshots" onclick="vmDetails(${arg}, this)">⋯</button>` : ''}</span>
@@ -130,8 +130,8 @@ function vmAction(hypervisor, name, action) {
       setStatus(status, `✗ ${e.message}`, 'err');
     }
   };
-  if (action === 'kill') appConfirm(`Cut the power to "${name}"? The guest is not asked to shut down.`, go);
-  else go();
+  // Every way of stopping it asks, naming what uses it (lib/machine-ask.js); starting and resuming do not.
+  if (!machineAskFirst('vm', `${hypervisor}:${name}`, action, `"${name}"`, go, action === 'kill' ? 'The guest is not asked to shut down.' : '')) go();
 }
 
 async function vmsSaveUri() {

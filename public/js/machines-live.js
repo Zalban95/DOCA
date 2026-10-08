@@ -36,7 +36,7 @@ function _mlTiles() {
   for (const c of d.computers) tiles.push({ id: `c:${c.id}`, working: c.working, kind: '🖵', title: c.name, point: c.state === 'running' ? 'up' : c.state === 'missing' ? 'error' : 'down',
     line: c.activity ? `${c.activity.what} · ${_mlAgo(c.activity.ago)}` : c.mission ? `${c.mission.label}: ${c.mission.state}` : c.purpose || 'no mission yet',
     who: c.mission ? c.mission.label : '', img: c.state === 'running' ? `/api/computers/${encodeURIComponent(c.id)}/screen` : null,
-    empty: c.state === 'running' ? 'Waiting for its screen…' : `Stopped (${c.state})`, open: () => computersWatch(c.id) });
+    empty: c.state === 'running' ? 'Waiting for its screen…' : `Stopped (${c.state})`, open: () => computersWatch(c.id), by: c.origin });
   for (const s of d.served) tiles.push({ id: `s:${s.key}`, working: true, kind: '◉',
     title: s.computer ? `${s.who} :${s.inside}` : `:${s.port}${new URL(s.url).pathname === '/' ? '' : new URL(s.url).pathname}`,
     line: `$ ${s.command.slice(0, 90)}`, who: s.who || '', img: s.shot ? `/api/machines/served/${encodeURIComponent(s.key)}/shot` : null,
@@ -45,7 +45,7 @@ function _mlTiles() {
   for (const v of d.vms || []) tiles.push({ id: `v:${v.key}`, working: false, kind: '▣', title: v.name, point: 'up',
     line: [v.label, v.os].filter(Boolean).join(' · '), who: v.console.how === 'hub' ? 'VNC' : '',
     img: v.shot ? `/api/machines/vms/${encodeURIComponent(v.hypervisor)}/${encodeURIComponent(v.name)}/shot` : null,
-    empty: v.why || 'Taking its picture…', open: () => vmConsoleOpen(v.hypervisor, v.name) });
+    empty: v.why || 'Taking its picture…', open: () => vmConsoleOpen(v.hypervisor, v.name), by: v.origin });
   for (const n of d.vnc || []) tiles.push({ id: `n:${n.id}`, working: n.state === 'connected', kind: '◫', title: n.name, point: 'up',
     line: [`${n.host}:${n.port}`, n.same && `${n.same.kind === 'vm' ? 'VM' : 'computer'} ${n.same.name}`].filter(Boolean).join(' · '),
     who: n.state === 'connected' ? (n.driving ? 'someone is driving it' : 'someone is watching it') : 'VNC',
@@ -99,7 +99,7 @@ function _mlDraw(page) {
       el.classList.toggle('working', !!t.working);
       el.onclick = t.open;   // a function: an onclick attribute would read jsArg's HTML escaping literally
       el.classList.toggle('focused', t.id === ML.focus);
-      el.querySelector('.ml-cap').innerHTML = `<b>${t.point ? `<span class="m-pt ${t.point}"></span>` : ''}${t.kind} ${escHtml(t.title)}</b>${t.who ? `<span class="ml-who">${escHtml(t.who)}</span>` : ''}<div class="ml-line">${escHtml(t.line)}</div>`;
+      el.querySelector('.ml-cap').innerHTML = `<b>${t.point ? `<span class="m-pt ${t.point}"></span>` : ''}${t.kind} ${escHtml(t.title)}</b>${t.who ? `<span class="ml-who">${escHtml(t.who)}</span>` : ''}<div class="ml-line">${escHtml(t.line)}</div>${t.by ? machineOriginHtml(null, null, t.by) : ''}`;   // who started it (lib/machine-origin.js)
       el.querySelector('.ml-empty').textContent = t.img ? '' : t.empty;
       el.querySelector('.ml-empty').title = t.tail || '';
       const img = el.querySelector('img');
