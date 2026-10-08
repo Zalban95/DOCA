@@ -769,7 +769,7 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   is seen busy whoever made it so (`machines/busy.js`, `busy-read.js`, `busy-log.js`): while Live, the Workstream or the
   status column is shown, every 10 s, `docker stats` for containers and computers, `virsh domstats` for libvirt VMs and
   each computer's own process list (the hidden read-only tool `processes`, `clients/computer/procs.js`: /proc, never the
-  environment); busy over 10% CPU for two looks or at once for a process started outside DOCA's tools, idle after two
+  environment); busy over 25% of one core for two looks or at once for a process started outside DOCA's tools, idle after two
   quiet looks, named "a DOCA mission", "an agent's tools", "a process started outside DOCA's tools" or its own load. Shown
   in Live (in front, "npm test · 74% CPU"), the status column (a breathing point), the Workstream (a line per change),
   the Harness's working list (busy with no DOCA turn behind it) and the machines' log (Hub → Logs and Chronicle, source

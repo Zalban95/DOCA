@@ -115,7 +115,8 @@ esac`);
   assert.ok(logged().some(l => /deepB-tester: node server\.js --token •+ started/.test(l)));
   assert.ok(!logged().some(l => /xdotool/.test(l)), 'what DOCA\'s own tools start is in the agent\'s own lines, not here');
   assert.ok(!JSON.stringify([logged(), ws()]).includes('sekrit'), 'no secret in any line');
-  assert.ok(ws().includes('deepB-tester busy: sh -c while :; do :; done · 74% CPU (a process started outside DOCA\'s tools)'), ws().join('\n'));
+  assert.ok(ws().includes('busy: sh -c while :; do :; done · 74% CPU (a process started outside DOCA\'s tools)'), ws().join('\n'));
+  assert.ok(ws().includes('sh -c while :; do :; done started (outside DOCA\'s tools)'), 'the Workstream names the machine as who, not twice');
   const noted = require('../modules/activity').list({ limit: 20 }).find(l => l.from === 'machines');
   assert.deepEqual([noted.what, noted.why, noted.machine.id, noted.act], ['deepB-tester busy: sh -c while :; do :; done · 74% CPU', 'a process started outside DOCA\'s tools', 't1', undefined]);
 

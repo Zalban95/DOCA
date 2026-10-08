@@ -21,7 +21,7 @@ const read = require('./busy-read');
 const log = require('./busy-log');
 
 const T = { lookMs: 10000, wantMs: 30000 };
-const BUSY_CPU = 10;
+const BUSY_CPU = 25;   // % of one core: an idle computer's desktop and browser read up to ~10%, so less would flap
 const _m = new Map();   // `${kind}:${id}` → what was seen of it
 let _asked = 0, _timer = null, _running = false, _lastLook = 0, _first = true, _looks = 0;
 
@@ -94,7 +94,9 @@ function whoOf(x, st, pr) {
 function say(x, level, text, { note = null } = {}) {
   const machine = { kind: x.kind, id: x.id, name: x.name };
   log.push(level, text, machine);
-  try { require('../workstream').machine(x.name, text, { machine }); } catch { /* the Workstream is not loaded */ }
+  // The Workstream shows the machine as the line's `who`, so its text does not say the name again.
+  const own = text.startsWith(x.name) ? text.slice(x.name.length).replace(/^:?\s*/, '') : text;
+  try { require('../workstream').machine(x.name, own, { machine }); } catch { /* the Workstream is not loaded */ }
   if (note) require('../activity').note({ from: 'machines', what: note.what, why: note.why, machine });
 }
 

@@ -51,7 +51,7 @@
 .ml-head { display: flex; gap: 10px; align-items: baseline; padding: 10px 0; }
 .ml-front { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 14px; }
 .ml-back { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 18px; }
-.ml-tile { border: 1px solid var(--border2); background: var(--raised); cursor: pointer; transition: transform .3s, opacity .3s, border-color .3s; }
+.ml-tile { min-width: 0; border: 1px solid var(--border2); background: var(--raised); cursor: pointer; transition: transform .3s, opacity .3s, border-color .3s; }
 .ml-back .ml-tile { opacity: .55; }
 .ml-back .ml-tile:hover { opacity: .9; }
 .ml-tile.working { border-color: var(--accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent), 0 8px 30px rgba(0,0,0,.35); }
@@ -64,7 +64,7 @@
 .ml-cap { padding: 8px 10px; font-size: 12px; }
 .ml-who { float: right; font-size: 10px; color: var(--muted); }
 .ml-line { font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
-@media (max-width: 768px) { .ml-front { grid-template-columns: 1fr; } }
+@media (max-width: 768px) { .ml-front { grid-template-columns: minmax(0, 1fr); } }   /* minmax: a long line never widens the tile past the screen */
 
 /* 3D models (js/lib/model3d.js): in the chat, and full screen. */
 .agent-model { width: min(420px, 100%); height: 300px; background: radial-gradient(circle at 50% 40%, #2a2d33, #111); border: 1px solid var(--border2); }
