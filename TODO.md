@@ -242,7 +242,7 @@ the project's managers only if the owner allows sharing specialists and skills (
   project, a shell line it cannot reduce or that changes the machine outside a project or runs an unknown verb, a
   tool on another machine, a change with no way back — the rest runs, a project change after its checkpoint, even
   with riskTiers off); guarded by the password with the mode, never proposable, Harness → Approvals; a new install
-  asks what matters, an older one keeps everything (migration `2.330-manual-asks`) until its owner chooses. In a call
+  asks what matters, an older one keeps everything (migration `2.331-manual-asks`) until its owner chooses. In a call
   the card is drawn above the face and inside whatever is full screen; the question is said in the call's voice
   (`call-answer.js sentence`), a spoken yes or no answers it (allow once / deny, confirmed aloud, no "always"),
   anything else goes on as a message; a device's call is told and answered the same way (`realtime/call-asks.js`),

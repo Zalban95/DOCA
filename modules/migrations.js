@@ -115,7 +115,7 @@ const MIGRATIONS = [
     } }] },
   // 2.330: Manual can ask only what matters (harness/approval-matters.js), and a new install does. An install from
   // before keeps Manual as it knew it — asking everything — until its owner chooses (a guard is never loosened by an update).
-  { id: '2.330-manual-asks', note: 'Manual approval keeps asking everything here; asking only what matters is the owner\'s choice (Settings → Harness → Approvals)', steps: [{
+  { id: '2.331-manual-asks', note: 'Manual approval keeps asking everything here; asking only what matters is the owner\'s choice (Settings → Harness → Approvals)', steps: [{
     describe: 'harness.approval.manualAsks = everything (Manual as it was)',
     run(p) {
       if (p.harness?.approval?.manualAsks !== undefined) return false;
