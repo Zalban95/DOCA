@@ -8,7 +8,8 @@
  * the panel and nothing could start it at logon.
  *
  *   node bin/doca-launch.js start     start the panel (the version in .releases/current, else the checkout);
- *                                     --log <file> appends its output there (the Windows entry has no console)
+ *                                     --log <file> appends its output there (the Windows entry has no console);
+ *                                     --detach starts it in a session of its own and returns (the installers)
  *   node bin/doca-launch.js enable    start DOCA at boot/logon  (systemd on Linux via run.sh,
  *                                     Task Scheduler on Windows, launchd on macOS)
  *   node bin/doca-launch.js disable   stop starting at boot/logon; a running panel is left alone
@@ -213,12 +214,28 @@ function boot(verb) {
   return { method: null, ok: false, out: `no boot manager known for ${process.platform}` };
 }
 
-module.exports = { parseEnv, releaseDir, launchdPlist, launchCommand, TASK, LABEL };
+/**
+ * `start --detach --log <file>`: the launcher again, in a session of its own (setsid on POSIX, no console on Windows),
+ * and this one returns. The installers' "start it now" was `nohup node …`, and Node resets an ignored SIGHUP to the
+ * default at startup, so a terminal that closed when the installer ended (ssh -t, docker exec -t, script -c) took DOCA
+ * with it (deep test B, B5). A process in another session has no terminal to hang up.
+ */
+function detach(log) {
+  const child = spawn(process.execPath, [__filename, 'start', '--log', log],
+    { cwd: DIR, detached: true, stdio: 'ignore', env: process.env, windowsHide: true });
+  child.unref();
+  say(`DOCA started (pid ${child.pid}); its output is in ${log}.`);
+  return child.pid;
+}
+
+module.exports = { parseEnv, releaseDir, launchdPlist, launchCommand, detach, TASK, LABEL };
 
 if (require.main === module) {
   const verb = process.argv[2] || 'start';
   const at = process.argv.indexOf('--log');
-  if (verb === 'start' && at > 0 && process.argv[at + 1]) logTo(process.argv[at + 1]);
+  const log = at > 0 && process.argv[at + 1];
+  if (verb === 'start' && process.argv.includes('--detach')) { detach(path.resolve(log || path.join(DIR, 'doca.log'))); process.exit(0); }
+  if (verb === 'start' && log) logTo(log);
   if (verb === 'start') start().catch(e => { console.error(`✗ ${e.message}`); process.exit(1); });
   else if (['enable', 'disable'].includes(verb)) process.exit(boot(verb).ok ? 0 : 1);
   else if (verb === 'status') { console.log(JSON.stringify(boot('status'))); }

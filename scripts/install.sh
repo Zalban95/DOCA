@@ -96,8 +96,9 @@ if [ "$START" = 1 ]; then
   elif [ "$BOOT" = 1 ] && [ "$(uname -s)" = Darwin ]; then
     :   # launchd started it when the agent was loaded (RunAtLoad)
   else
-    # Detached from this script's terminal and pipes: the subshell's own output is the log, and node replaces it.
-    (cd "$DIR" && exec nohup node bin/doca-launch.js start > "$DIR/doca.log" 2>&1 < /dev/null) &
+    # In a session of its own (the launcher's --detach), so closing this terminal does not stop it: nohup cannot
+    # do that for node, which resets an ignored SIGHUP at startup.
+    (cd "$DIR" && node bin/doca-launch.js start --detach --log "$DIR/doca.log" < /dev/null)
   fi
   UP=0
   for _ in $(seq 1 60); do curl -ks -o /dev/null "https://127.0.0.1:${PORT:-4242}/login" && { UP=1; break; }; sleep 1; done
