@@ -113,6 +113,20 @@ test('Ambient\'s assistant speaks as the Live call until it has a voice of its o
   prefs({ voice: undefined });
 });
 
+test('a voice is tried before it is saved: synthesize with an engine speaks through it', async () => {
+  const n = heard.expressive.length;
+  const r = await H.api(null, 'POST', '/api/chat/synthesize', { text: 'Hello there.', engine: 'qwentts', voice: 'Serena', speed: 1.3 });
+  assert.equal(r.status, 200);
+  assert.equal(heard.expressive.length, n + 1);
+  assert.deepEqual([heard.expressive.at(-1).voice, heard.expressive.at(-1).speed], ['serena', 1.3]);
+  const hive = await H.api(null, 'POST', '/api/chat/synthesize', { text: 'Hello there.', engine: '', voice: 'if_sara' });
+  assert.equal(hive.status, 200);
+  assert.equal(heard.hive.at(-1).voice, 'if_sara', 'the hive\'s own service');
+  const nope = await H.api(null, 'POST', '/api/chat/synthesize', { text: 'Hello there.', engine: 'no-such-engine', voice: 'af_heart' });
+  assert.equal(nope.status, 200, 'an engine that does not exist is the hive\'s, as a screen setting naming one is');
+  assert.equal(heard.hive.at(-1).voice, 'af_heart');
+});
+
 test('tone tags are offered only in a call whose voice understands them', async () => {
   const chat = require('../modules/chat');
   const screen = (await H.api(null, 'GET', '/api/screen')).body;
