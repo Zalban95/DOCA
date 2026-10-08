@@ -138,3 +138,8 @@
   gap: 8px;
   margin-top: 6px;
 }
+
+/* xterm.js measures character widths in a box of its own appended to <body>: 50 000 px wide, 50 000 px above the
+   page, holding "$$$$…" (its WidthCache). It is a probe, not part of the page: hidden from view and from the pointer,
+   which still lets it measure (a hidden box keeps its size). Matched by its own inline position, as it has no class. */
+body > div[style*="top: -50000px"] { visibility: hidden; pointer-events: none; }

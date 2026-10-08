@@ -130,6 +130,7 @@
 /* Sidebar: conversations + memory */
 .hc-side {
   display: flex; flex-direction: column; min-height: 0;
+  overflow-y: auto;   /* its last parts (recipes, schedules) scroll into view rather than being cut by the page */
   border: 1px solid var(--border2); border-radius: var(--radius);
   background: var(--dim); padding: 8px;
 }
