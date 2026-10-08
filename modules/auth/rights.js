@@ -97,6 +97,7 @@ const TABLE = [
   R(GET, '/api/(status|stats/defs|update-check|versions|startup|prefs|paths)', 'read'),
   R(GET, '/api/host/capabilities', 'read'),                 // what this host can do, per OS (host-capabilities.js)
   R(GET, '/api/settings/migrations', 'read'),               // prefs migrations: key names and code defaults, never a stored value
+  R(GET, '/api/settings/leaves', 'host'),                   // declared settings' values, for the boxes a page draws (settings-leaves.js)
   R(GET, '/api/(services|services/status|vms|system/tools|mcp|skills|skills/search|skills/[^/]+)', 'read'),
   R(GET, '/api/docker/(containers|images|presets)', 'read'),
   R(GET, '/api/decisions', 'read'),   // each person's own decisions; a host's also the hive's (decisions.js)

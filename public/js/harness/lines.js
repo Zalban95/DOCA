@@ -111,8 +111,11 @@ function harnessInstall(id) {
   const h = _harnesses.find(x => x.id === id) || _harnessCatalogFind(id);
   if (!h) return;
   const run = pw => _harnessRunInstall(id, pw);
-  if (h.needsSudo) sudoAsk(`Installing "${h.label}" requires elevated privileges.`, pw => { if (pw !== null) run(pw); });
-  else run(null);
+  // What it downloads first (lib/install-ask.js): one click used to clone OpenClaw into the home folder unasked.
+  installAsk('harness', id, h.label, () => {
+    if (h.needsSudo) sudoAsk(`Installing "${h.label}" requires elevated privileges.`, pw => { if (pw !== null) run(pw); });
+    else run(null);
+  }, { size: installSize('harness', id, h.kind === 'cli' ? INSTALL_SIZE_CLI : null), verb: h.detected ? 'Update' : 'Install' });
 }
 
 async function _harnessRunInstall(id, password) {

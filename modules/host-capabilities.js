@@ -25,7 +25,7 @@ const firstBin = names => names.find(n => shell.which(n)) || null;
 const firstFile = files => files.find(f => { try { return fs.existsSync(f); } catch { return false; } }) || null;
 
 function boot() {
-  if (process.platform === 'linux') return shell.which('systemctl') ? found('systemd') : absent('no systemd on this host');
+  if (process.platform === 'linux') return shell.which('systemctl') && require('./systemd').running() ? found('systemd') : absent('no systemd on this host');
   if (process.platform === 'win32') return found('Task Scheduler', { note: 'an entry at sign-in (bin/doca-launch.js enable)' });
   if (process.platform === 'darwin') return found('launchd', { note: 'a launch agent (bin/doca-launch.js enable)' });
   return absent(`no known boot manager on ${process.platform}`);

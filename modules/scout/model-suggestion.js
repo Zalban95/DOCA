@@ -62,8 +62,11 @@ async function view() {
 function check() {
   const scout = require('./index');
   if (!scout.on()) {
-    return { started: false, how: 'The model scout looks for newer models, and it is an experiment: turn on developer mode and the model scout '
-      + 'in Settings → Developer, then press this again. What it finds waits in Settings → Harness → Scout for you to accept.' };
+    // Experiments are for the repository's owners and testers, never a newcomer (AGENTS.md, Experiments): only a
+    // developer's install is told where the switch is.
+    return { started: false, how: require('../experiments').developer()
+      ? 'The model scout is off. It looks for newer models every few days and files what it finds in Settings → Harness → Scout for you to accept; switch it on in Settings → Developer, then press this again.'
+      : 'The suggested models come from a list the DOCA project tests, and a newer list arrives with DOCA\'s updates — there is nothing to do here.' };
   }
   scout.brief('suggestions', CHECK).catch(() => { /* no owner to run as: the scout card says so */ });
   return { started: true, sessionId: scout.state().sessionId || null,

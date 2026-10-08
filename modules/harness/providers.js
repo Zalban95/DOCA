@@ -209,6 +209,8 @@ function endpoint(id) {
   if (!id || id === 'ollama')
     return { id: 'ollama', label: 'Ollama (local)', baseUrl: `${ollamaBase()}/v1`, apiKey: '', local: true };
 
+  // A provider merged into another at the same address answers to its old name (provider-dedupe.js).
+  if (!declared()[id] && !PRESETS[id]) { try { id = require('../provider-keys').resolve(id); } catch {} }
   const cfg    = declared()[id] || null;
   const preset = PRESETS[id]    || null;
   const baseUrl = (resolveEnvVars(cfg?.baseUrl) || preset?.baseUrl || '').replace(/\/+$/, '');

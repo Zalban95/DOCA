@@ -177,11 +177,14 @@ function _hcSessionInfo(s) {
   if (!el) return;
   if (title) title.textContent = s.title;
   const isMain = s.id === _hcMainSession;
-  const readonly = s.archivedAt || s.state === 'running';
+  // Working is not read-only: a message waits in its inbox and is read at the next step (harness/inbox.js), as the
+  // floating chat already did — the console refused with "stop it before intervening" (deep test B, C5).
+  const readonly = s.archivedAt;
+  _hcSessionRunning = s.state === 'running';
   const input = document.getElementById('hc-input');
   if (input) {
     input.disabled = !!readonly;
-    input.placeholder = s.archivedAt ? 'Recall this chat to continue' : s.state === 'running' ? 'Working — stop it before intervening' : isMain ? 'Message your Orchestrator…' : 'Message directly — superiors will be informed…';
+    input.placeholder = s.archivedAt ? 'Recall this chat to continue' : s.state === 'running' ? 'Working — your message waits for its next step…' : isMain ? 'Message your Orchestrator…' : 'Message directly — superiors will be informed…';
   }
   document.getElementById('hc-send').disabled = !!readonly;
   const p = s.plan;

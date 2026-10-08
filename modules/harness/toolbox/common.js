@@ -55,6 +55,16 @@ function clip(text, limit = MAX_OUT) {
 }
 
 /**
+ * The agent's workspace, made the first time it is needed. On a fresh install nothing had made it, and every relative
+ * path fell back to the home folder while the agent was told about the workspace (deep test B, C4: `notes/today.md`
+ * landed in ~/notes). The home folder is left only when the workspace cannot be made.
+ */
+function workspace(dir = WORKSPACE_DIR) {
+  if (fs.existsSync(dir)) return dir;
+  try { fs.mkdirSync(dir, { recursive: true }); return dir; } catch { return os.homedir(); }
+}
+
+/**
  * Working directory for shell + relative paths: the project root when this
  * conversation (or the one that dispatched it) is bound to a project
  * (projects/store.forSession), else the agent's workspace.
@@ -66,7 +76,12 @@ function cwd(ctx = {}) {
       if (p && fs.existsSync(p.root)) return p.root;
     } catch { /* not in a project */ }
   }
-  return fs.existsSync(WORKSPACE_DIR) ? WORKSPACE_DIR : os.homedir();
+  return workspace();
+}
+
+/** For a result: where a relative path landed, so the agent and the person read the folder it really is in. */
+function landed(p, abs) {
+  return path.isAbsolute(String(p || '').replace(/^~(?=$|[/\\])/, os.homedir())) ? '' : `\n[${p} is ${abs}]`;
 }
 
 function resolvePath(p, ctx = {}) {
@@ -92,4 +107,4 @@ function needs(tool, args = {}, table = {}) {
   return missing.length ? `Error: ${tool} ${args.action} needs ${missing.join(' and ')}.` : null;
 }
 
-module.exports = { MAX_OUT, SHELL_MS, clip, cwd, resolvePath, needs };
+module.exports = { MAX_OUT, SHELL_MS, clip, cwd, workspace, landed, resolvePath, needs };

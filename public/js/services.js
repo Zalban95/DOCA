@@ -146,9 +146,10 @@ function _updateServicesBadges() {
 }
 
 /** Pull the Docker image for a service (streams progress into the row output). */
-async function servicePullImage(id) {
+async function servicePullImage(id, asked = false) {
   const svc = _servicesDefs.find(s => s.id === id);
   if (!svc) return;
+  if (!asked) return installAsk('service', id, `${svc.label}'s image`, () => servicePullImage(id, true), { verb: 'Download' });
   const gpu   = document.getElementById(`svc-gpu-${id}`)?.value ?? (svc.savedGpu || 'all');
   const image = gpu === '' && svc.cpuImage ? svc.cpuImage : svc.image;
   const out     = document.getElementById(`svc-out-${id}`);
@@ -174,9 +175,12 @@ async function _svcSaveSettings(id) {
 
 /* ── Actions ────────────────────────────────────────── */
 
-async function serviceStart(id) {
+async function serviceStart(id, asked = false) {
   const svc     = _servicesDefs.find(s => s.id === id);
   if (!svc) return;
+  // An image not here yet is pulled first, often several GB: said and asked (lib/install-ask.js).
+  if (!asked && _servicesImages[id] && !_servicesImages[id].present)
+    return installAsk('service', id, svc.label, () => serviceStart(id, true), { verb: 'Start', note: 'Its image is not on this machine yet, so it is downloaded first.' });
   const gpu     = document.getElementById(`svc-gpu-${id}`)?.value   || '0';
   const modelId = document.getElementById(`svc-model-${id}`)?.value || '';
   const out     = document.getElementById(`svc-out-${id}`);

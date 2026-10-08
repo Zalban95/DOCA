@@ -46,6 +46,9 @@ async function overview() {
     answers: plan.get(),
     have: got,
     suggestions: suggestions.about(),
+    // Whether "Check for newer models" can do anything: the model scout is an experiment, and an install that is not a
+    // developer's never meets experiments (deep test B, C11: a newcomer was told to turn on developer mode).
+    scout: { on: require('../scout').on(), developer: require('../experiments').developer() },
   };
 }
 

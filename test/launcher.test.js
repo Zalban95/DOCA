@@ -56,3 +56,33 @@ test('a switched-to version that does not answer is put back, and the previous o
   assert.ok(!fs.existsSync(path.join(dir, '.releases', 'pending')));
   assert.match(fs.readFileSync(path.join(dir, '.releases', 'log.jsonl'), 'utf8'), /"event":"revert","to":"v1","from":"v2"/);
 });
+
+// Deep test B (B5): the installers' "start it now" died with the terminal it ran in — `nohup node` is undone by Node,
+// which resets an ignored SIGHUP. `start --detach` puts the launcher in a session of its own; a hang-up sent to the
+// whole group of the shell that ran it (what a closing terminal does) must leave DOCA running.
+test('start --detach outlives a hang-up of the shell that started it', { skip: process.platform === 'win32' && 'POSIX sessions' }, async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'launch-'));
+  fs.mkdirSync(path.join(dir, 'node_modules'));
+  const pidFile = path.join(dir, 'server.pid');
+  fs.writeFileSync(path.join(dir, 'server.js'), `require('fs').writeFileSync(${JSON.stringify(pidFile)}, process.pid + ' ' + process.ppid); setInterval(() => {}, 1000);`);
+  const launcher = path.join(__dirname, '..', 'bin', 'doca-launch.js');
+  const shell = spawn('/bin/sh', ['-c', `"${process.execPath}" "${launcher}" start --detach --log "${path.join(dir, 'doca.log')}"; sleep 30`],
+    { env: { ...process.env, DOCA_LAUNCH_DIR: dir }, detached: true, stdio: 'ignore' });
+  let pids = null;
+  for (let i = 0; i < 100 && !pids; i++) {
+    await new Promise(r => setTimeout(r, 100));
+    try { pids = fs.readFileSync(pidFile, 'utf8').split(' ').map(Number); } catch {}
+  }
+  assert.ok(pids, 'the server started');
+  process.kill(-shell.pid, 'SIGHUP');
+  await new Promise(r => setTimeout(r, 800));
+  const alive = pid => { try { process.kill(pid, 0); return true; } catch { return false; } };
+  const [server, launch] = pids;
+  try {
+    assert.ok(alive(server), 'the server survived the hang-up');
+    assert.ok(alive(launch), 'the launcher survived the hang-up');
+  } finally {
+    for (const p of [launch, server]) { try { process.kill(p, 'SIGTERM'); } catch {} }
+    try { process.kill(-shell.pid, 'SIGKILL'); } catch {}
+  }
+});

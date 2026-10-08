@@ -280,7 +280,11 @@ function _sysdepsRender(tools) {
   list.innerHTML = html;
 }
 
-function sysdepsInstall(id) { _sysdepsStart(id, 'Installing'); }
+/** Install asks first, saying how much it downloads (lib/install-ask.js; deep test B, R5). */
+function sysdepsInstall(id) {
+  const tool = _sysdepsTools.find(t => t.id === id);
+  installAsk('tool', id, tool ? tool.label : id, () => _sysdepsStart(id, 'Installing'), { note: tool?.note || '' });
+}
 
 /** Updating is re-running the installer: apt reinstalls the current release,
  *  vendor scripts fetch the latest, git-backed stacks pull. Confirmed first —

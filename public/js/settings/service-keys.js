@@ -28,6 +28,9 @@ async function serviceKeysRender() {
 
 async function serviceKeysAdd() {
   const v = id => document.getElementById(id).value.trim(), how = v('sk-place');
+  const need = [['sk-name', 'Give the key a name the agent will use, e.g. hyper3d.'], ['sk-origin', 'Give the service\'s address, e.g. https://api.example.com — the key is sent only there.'],
+    ['sk-key', 'Paste the key itself.']].find(([id]) => !document.getElementById(id).value.trim());
+  if (need) return askFor(document.getElementById(need[0]), need[1]);
   const body = { name: v('sk-name'), origin: v('sk-origin'), key: document.getElementById('sk-key').value, who: v('sk-who'), note: v('sk-note'),
     place: how === 'bearer' ? 'header' : how, ...(how === 'bearer' ? {} : { field: v('sk-field') || undefined, prefix: '' }) };
   try { await apiFetch('/api/connectors/keys/all', { method: 'POST', body }); } catch (e) { return appAlert(e.message); }

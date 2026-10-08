@@ -12,7 +12,7 @@ async function mcpLoad() {
   const list = document.getElementById('mcp-list');
   if (!list) return;
   try {
-    const [data] = await Promise.all([apiFetch('/api/mcp'), machineOriginsLoad()]);   // + who started each (lib/machine-origin.js)
+    const [data] = await Promise.all([apiFetch('/api/mcp'), machineOriginsLoad(), leafFieldsDraw(leafFieldsSlot('mcp-export', 'mcp-settings'), ['mcpSettings.callTimeoutMs', 'mcpSettings.listTimeoutMs'], { label: 'Advanced — how long to wait for a server', id: 'mcp-timeouts' })]);   // + who started each (lib/machine-origin.js), and the timeouts' boxes
     _mcpTargets  = data.targets || [];
     const servers = data.servers || [];
     list.innerHTML = _mcpOffersHtml(data.offers || [])
@@ -137,7 +137,7 @@ function _mcpCardHtml(s) {
     ? `<div class="mcp-tools">${s.tools.map(t =>
         `<span class="mcp-tool" title="${escHtml(t.description || '')}">${escHtml(t.name)}</span>`).join('')}</div>`
     : running
-      ? '<div class="mcp-tools mcp-none">This server offers no tools.</div>'
+      ? `<div class="mcp-tools mcp-none">${(typeof devRevokedNote === 'function' && devRevokedNote(s)) || 'This server offers no tools.'}</div>`
       : '';
 
   return `

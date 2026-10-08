@@ -28,6 +28,8 @@ async function unsupportedReason() {
   if (process.platform === 'win32') return shell.which('schtasks') ? null : 'schtasks not found — this Windows has no Task Scheduler CLI.';
   if (process.platform === 'darwin') return shell.which('launchctl') ? null : 'launchctl not found.';
   if (process.platform !== 'linux') return `No boot manager is known for ${process.platform}. Add DOCA to this host's own startup manager instead.`;
+  // systemctl can be installed where systemd does not run (a container): every call then fails into doca.log.
+  if (!require('./systemd').running()) return 'systemd is not running on this machine (a container, or another init), so DOCA cannot add a boot service here. Start DOCA with whatever starts this machine\'s programs.';
   try {
     const { stdout } = await run('command -v systemctl');
     if (stdout.trim()) return null;

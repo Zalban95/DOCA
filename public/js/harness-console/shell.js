@@ -22,6 +22,7 @@ let _hcArchived = false;
 let _hcOrgPoll = null;
 let _hcSelected = null;
 let _hcBusy     = false;
+let _hcSessionRunning = false;   // the open conversation works, a turn this page may not be drawing (sessions.js)
 let _hcRendered = null;   // harness id the shell is currently built for
 
 /**

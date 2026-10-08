@@ -133,6 +133,10 @@ async function backupRemoteRender(sch) {
 async function backupRemoteSave() {
   const st = document.getElementById('bremote-status');
   const v = id => document.getElementById(id).value.trim();
+  // Switching it on, or giving keys, needs somewhere to send to; an empty form with the switch off just saves "off".
+  const using = document.getElementById('bremote-on').checked || v('bremote-akid') || v('bremote-secret');
+  if (using && !v('bremote-endpoint')) return askFor(document.getElementById('bremote-endpoint'), 'Give the store\'s address first, e.g. https://s3.eu-central-1.amazonaws.com.');
+  if (using && !v('bremote-bucket')) return askFor(document.getElementById('bremote-bucket'), 'Give the bucket\'s name.');
   const body = { endpoint: v('bremote-endpoint'), region: v('bremote-region'), bucket: v('bremote-bucket'), prefix: v('bremote-prefix'),
     keep: parseInt(v('bremote-keep'), 10), encryptedOnly: document.getElementById('bremote-enc').checked, enabled: document.getElementById('bremote-on').checked };
   if (v('bremote-akid') || v('bremote-secret')) { body.accessKeyId = v('bremote-akid'); body.secretAccessKey = document.getElementById('bremote-secret').value; }

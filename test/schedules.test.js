@@ -49,7 +49,9 @@ test('every and cron say when next, the way cron does', () => {
   assert.throws(() => next({ cron: '61 * * * *' }), /outside 0–59/);
   assert.throws(() => next({ every: 0 }), /at least 1/);
   assert.equal(describe({ every: 1440 }), 'every 1 day');
-  assert.equal(describe({ cron: '0 9 * * 1-5' }), 'cron 0 9 * * 1-5');
+  // Which clock it is read on is said: the hub's when the schedule has no zone (timezones.js).
+  assert.match(describe({ cron: '0 9 * * 1-5' }), /^cron 0 9 \* \* 1-5 \(.*the hub's time\)$/);
+  assert.equal(describe({ cron: '0 9 * * 1-5', tz: 'Europe/Rome' }), 'cron 0 9 * * 1-5 (Europe/Rome)');
 });
 
 test('a person\'s schedule is on; when due it starts a turn as them, in a conversation of its own', async () => {

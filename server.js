@@ -111,7 +111,7 @@ app.post('/api/paths/create',      config.handleCreatePath);
 // ─── Routes: API Keys & Tool Providers ────────────────────────────────────────
 app.get   ('/api/keys',                      keys.handleGetKeys);
 app.post  ('/api/keys',                      keys.handlePostKeys);
-app.post  ('/api/keys/add-provider',         keys.handleAddProvider);
+keys.mount(app);                             // POST /api/keys/add-provider, /api/keys/test-provider
 app.delete('/api/keys/:name',                keys.handleDeleteProvider);
 
 // ─── Routes: Doca device tokens (the /api/v1 registry, managed from the panel) ─

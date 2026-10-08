@@ -867,8 +867,8 @@ body.chat-resizing * { cursor: nwse-resize !important; }
   font-size: 13px; line-height: 1.5; color: var(--text);
   white-space: pre-wrap;
 }
-.app-confirm-actions {
-  display: flex; justify-content: flex-end; gap: 8px;
+.app-confirm-actions {   /* wraps: four answers and Cancel are wider than the box, and the first were cut off */
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px;
 }
 
 /* Streamed installer output, inline under a service / instance row */

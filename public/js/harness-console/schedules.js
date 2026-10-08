@@ -4,6 +4,19 @@
    approvals. One the agent proposed waits here until you switch it on.
    ═══════════════════════════════════════════════════════ */
 
+/** A moment as this screen's own clock reads it (the hub's may be UTC: deep test B, C10). */
+function hcLocalTime(iso) {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+/** When it runs, in words, its times on this screen's clock. */
+function hcScheduleWhen(s) {
+  if (s.when?.at) return `once, ${hcLocalTime(s.when.at)}`;
+  const next = s.state === 'on' && s.nextAt ? ` · next ${hcLocalTime(s.nextAt)}` : '';
+  return `${s.whenText}${next}`;
+}
+
 async function hcSchedulesLoad() {
   const box = document.getElementById('hc-schedules');
   if (!box) return;
@@ -16,11 +29,11 @@ async function hcSchedulesLoad() {
     const last = s.last ? ` · last ${s.last.ok ? 'ok' : 'failed'}` : '';
     if (reminder) return `<div class="hc-agent ${s.state === 'on' ? '' : 'off'}" title="${escHtml(s.text || '')}${s.last ? `\n\n${escHtml(s.last.summary)}` : ''}">
       <span class="hc-agent-id">${mark} ${escHtml(s.title)}</span>
-      <span class="hc-agent-note">reminder · ${escHtml(s.whenText)}${s.state === 'done' ? ' · done' : ''}${last}</span>
+      <span class="hc-agent-note">reminder · ${escHtml(hcScheduleWhen(s))}${s.state === 'done' ? ' · done' : ''}${last}</span>
       <button class="btn btn-xs btn-red" onclick="hcScheduleDelete(${jsArg(s.id)})" title="Delete">✕</button></div>`;
     return `<div class="hc-agent ${s.state === 'on' ? '' : 'off'}" title="${escHtml(s.kind === 'turn' ? s.message : `recipe ${s.recipe}`)}${s.last ? `\n\nLast: ${escHtml(s.last.summary)}` : ''}">
       <span class="hc-agent-id">${mark} ${escHtml(s.title)}</span>
-      <span class="hc-agent-note">${escHtml(s.whenText)}${s.state === 'proposed' ? ' · proposed by the agent' : ''}${last}</span>
+      <span class="hc-agent-note">${escHtml(hcScheduleWhen(s))}${s.state === 'proposed' ? ' · proposed by the agent' : ''}${last}</span>
       ${s.state === 'on' ? `<button class="btn btn-xs" onclick="hcScheduleState(${jsArg(s.id)}, 'paused')" title="Pause">⏸</button>`
         : `<button class="btn btn-xs ${s.state === 'proposed' ? 'btn-blue' : ''}" onclick="hcScheduleState(${jsArg(s.id)}, 'on')" title="${s.state === 'proposed' ? 'Switch it on: it runs as you' : 'Resume'}">▶</button>`}
       <button class="btn btn-xs" onclick="hcScheduleRun(${jsArg(s.id)})" title="Run it now">↻</button>
@@ -36,11 +49,13 @@ function hcScheduleNew(recipeId) {
     { label: 'Every hour', value: { every: 60 } }, { label: 'Daily 09:00', value: { cron: '0 9 * * *' } },
     { label: 'Weekdays 09:00', value: { cron: '0 9 * * 1-5' } }, { label: 'Custom…', value: 'custom' }], async w => {
     const go = async timing => {
-      try { await apiFetch('/api/schedules', { method: 'POST', body: { ...body, ...timing } }); } catch (e) { appAlert(e.message); }
+      // Its hours are this screen's clock, not the hub's.
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      try { await apiFetch('/api/schedules', { method: 'POST', body: { ...body, ...timing, tz } }); } catch (e) { appAlert(e.message); }
       hcSchedulesLoad();
     };
     if (w !== 'custom') return go(w);
-    appPrompt('Every how many minutes — or a cron expression (minute hour day month weekday, host time):', v => go(/^\d+$/.test(v.trim()) ? { every: Number(v) } : { cron: v.trim() }), '0 9 * * 1');
+    appPrompt('Every how many minutes — or a cron expression (minute hour day month weekday, on your clock):', v => go(/^\d+$/.test(v.trim()) ? { every: Number(v) } : { cron: v.trim() }), '0 9 * * 1');
   });
   if (recipeId) return when({ kind: 'recipe', recipe: recipeId, title: `Recipe ${recipeId}` });
   appPrompt('What should be sent each time? (as an instruction — it starts a turn in a conversation of its own)', message => {

@@ -101,7 +101,7 @@ async function hcSend() {
   input.value = '';
   const row = _hcAppend('user', text);
   // Working already: the message waits and is read at its next step, or starts the next turn (agent-ui/queued-send.js).
-  if (_hcBusy) {
+  if (_hcBusy || _hcSessionRunning) {
     const tag = agentQueuedTag(row?.parentElement || row);
     const mark = (s, d) => { tag(s, d); window._hcFold?.refresh(); };
     await agentQueuedSend('/api/harness/chat', { message: text, sessionId: _hcSession }, {

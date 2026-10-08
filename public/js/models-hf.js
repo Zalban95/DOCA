@@ -62,7 +62,7 @@ function hfInstallCli() {
 
 async function hfSearch() {
   const q = document.getElementById('hf-search-input')?.value.trim();
-  if (!q) return;
+  if (!q) return askFor(document.getElementById('hf-search-input'), 'Type what to look for, e.g. whisper or llama.');
   const box = document.getElementById('hf-search-results');
   if (box) { box.style.display = 'block'; box.innerHTML = '<div class="placeholder pulse" style="padding:8px">Searching…</div>'; }
   try {

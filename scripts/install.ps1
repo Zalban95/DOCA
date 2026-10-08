@@ -74,7 +74,9 @@ try {
   if (-not $NoBoot) { & node bin/doca-launch.js enable; if ($LASTEXITCODE -ne 0) { Write-Host 'Start-at-sign-in was not added (see above); DOCA still runs.' } }
   if (-not $NoStart) {
     if (-not $NoBoot -and (schtasks /Query /TN DOCA 2>$null)) { schtasks /Run /TN DOCA | Out-Null }
-    else { Start-Process -FilePath node -ArgumentList 'bin/doca-launch.js', 'start' -WorkingDirectory $Dir -WindowStyle Hidden -RedirectStandardOutput (Join-Path $Dir 'doca.log') -RedirectStandardError (Join-Path $Dir 'doca.err.log') }
+    # The launcher's --detach: no console of its own and none shared with this window, so closing it does not stop DOCA
+    # (the same detached, hidden start a restart uses, modules/relaunch.js).
+    else { & node bin/doca-launch.js start --detach --log (Join-Path $Dir 'doca.log') }
     # Asked through node, not Invoke-WebRequest: in Windows PowerShell 5.1 a certificate callback is a scriptblock,
     # which cannot run on the thread doing the TLS handshake ("no Runspace available"), so a self-signed panel never
     # answered there. The script uses single quotes only: 5.1 drops double quotes inside a native argument.
@@ -90,7 +92,7 @@ try {
 
 Write-Host ''
 Write-Host "OK: DOCA is in $Dir."
-if (-not $NoStart -and -not $up) { Write-Host "  FAILED: it did not answer on port $port within 90 seconds. Its output is in $Dir\doca.log and $Dir\doca.err.log." }
+if (-not $NoStart -and -not $up) { Write-Host "  FAILED: it did not answer on port $port within 90 seconds. Its output is in $Dir\doca.log." }
 if (-not $NoStart) { Write-Host "  Open https://localhost:$port on this machine to create its owner - no code is needed there." }
 Write-Host "  From another device on your tailnet: open the panel there, and the setup code it asks for is then in $Dir\.setup-code and in the panel's log."
 Write-Host '  The certificate is self-signed: your browser will ask once.'

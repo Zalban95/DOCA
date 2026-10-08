@@ -37,7 +37,9 @@ function normalize(input, by, madeBy) {
     return { title: text.slice(0, 100), kind: 'reminder', text, device: input.device ? String(input.device) : null, when: w, by, madeBy };
   }
   const kind = input.kind === 'recipe' ? 'recipe' : 'turn';
-  const w = input.cron ? { cron: String(input.cron).trim() } : { every: Number(input.every) };
+  // A cron's hours are the person's: the zone the panel sends, else the one their screens report (timezones.js).
+  const tz = require('../timezones').valid(input.tz) || require('../timezones').of(by);
+  const w = input.cron ? { cron: String(input.cron).trim(), ...(tz ? { tz } : {}) } : { every: Number(input.every) };
   when.next(w);   // refuses a bad interval or expression with a sentence
   if (kind === 'turn' && !String(input.message || '').trim()) throw bad('A scheduled turn needs the message it sends.');
   if (kind === 'recipe' && !require('../recipes/store').get(input.recipe)) throw bad(`No recipe "${input.recipe}".`, 404);
@@ -121,7 +123,7 @@ function start() { if (_timer) return; _timer = setInterval(() => tick().catch((
 /** What a person sees: their own, or every one for a host. */
 function listFor(person) {
   const host = require('../harness/session-access').isHost(person);
-  return rows().filter(s => host || s.by === person?.id).map(s => ({ ...s, whenText: when.describe(s.when) }));
+  return rows().filter(s => host || s.by === person?.id).map(s => ({ ...s, whenText: when.describe(s.when, require('../timezones').of(s.by)) }));
 }
 
 module.exports = { create, setState, remove, runNow, tick, start, listFor, get };
