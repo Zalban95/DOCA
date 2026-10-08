@@ -39,8 +39,9 @@ test('a turn leaves a span per model request and per tool call, with names and n
   const r = await require('../modules/harness/agent').turn({ message: `remember ${secret}`, sessionId: s.id });
   const { status, body } = await H.api(null, 'GET', `/api/harness/runs/${r.runId}/trace`);
   assert.equal(status, 200, JSON.stringify(body));
-  assert.deepEqual(body.spans.map(x => x.kind), ['model', 'tool', 'model']);
-  const [m1, tool, m2] = body.spans;
+  assert.deepEqual(body.spans.map(x => x.kind), ['thinking', 'model', 'tool', 'model']);   // thinking: how hard, and why (turn/thinking.js)
+  const [think, m1, tool, m2] = body.spans;
+  assert.equal(think.name, 'default', 'nothing said how hard: the model\'s own');
   assert.equal(m1.name, 'tstub / m1');
   assert.equal(m1.step, 1);
   assert.equal(m1.data.prompt, 1200);

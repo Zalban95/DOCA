@@ -92,6 +92,8 @@ function mount(app) {
   // What each provider was found to accept (contracts.js): read, and a lesson forgotten.
   app.get('/api/harness/contracts', (_req, res) => res.json({ learned: require('./contracts').all() }));
   app.delete('/api/harness/contracts/:provider', (req, res) => { require('./contracts').forget(req.params.provider); res.json({ ok: true }); });
+  // Thinking per mode (turn/thinking.js): each mode's setting and how each provider hears it — Settings → Harness → Thinking.
+  app.get('/api/harness/thinking', (_req, res) => { try { res.json(require('./turn/thinking').view()); } catch (e) { res.status(500).json({ error: e.message }); } });
   // The panel saying its page is visible (presence.js): read by the agent's per-step readings.
   app.post('/api/presence', (req, res) => {
     require('../presence').beat(req.auth?.user, req.body?.visible !== false);

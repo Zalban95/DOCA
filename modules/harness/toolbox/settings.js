@@ -25,7 +25,7 @@ module.exports = [
       const memory = require('../memory');
       if (!ctx.sessionId || !memory.getSession(ctx.sessionId)) return 'Error: no conversation to set it for.';
       if (!['off', 'low', 'medium', 'high', 'default'].includes(level)) return 'Error: level is off, low, medium, high or default.';
-      memory.updateSession(ctx.sessionId, { effort: level === 'default' ? null : level });
+      memory.updateSession(ctx.sessionId, { effort: level === 'default' ? null : level, effortBy: level === 'default' ? null : 'agent' });
       return level === 'default' ? 'Thinking effort is back to the usual for this conversation.' : `Thinking effort is ${level} in this conversation from the next step.`;
     },
   },
