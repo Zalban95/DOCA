@@ -66,7 +66,7 @@ module.exports = [
       const at = a.at ? new Date(a.at) : Number(a.in) > 0 ? new Date(Date.now() + Number(a.in) * 60000) : null;
       if (!at || Number.isNaN(at.getTime())) return 'Error: say when — at (a date and time) or in (minutes).';
       const x = require('../../schedules').create({ kind: 'reminder', text: a.text, at: at.toISOString(), device: a.device }, { person: ctx.user || null, madeBy: 'agent' });
-      return `Reminder ${x.id} set for ${at.toLocaleString()}: "${x.text}". It reaches their devices once; they can delete it in Harness → Schedules.`;
+      return `Reminder ${x.id} set for ${at.toLocaleString()}: "${x.text}". It will show once, ${require('../reach-notice').where(ctx.user?.id || null, a.device || undefined)}; they can delete it in Harness → Schedules.`;
     },
   },
 ];

@@ -86,6 +86,7 @@ const PERSON = [
     gap: 14, ask: true, why: 'the shared memory is a host\'s to write until per-person memory; harness:memory only reads' },
   { id: 'face', does: 'watch the face', panel: ['GET /api/face/stream'], v1: ['GET /face', 'GET /face/stream'] },
   { id: 'ambient', does: 'see my day', panel: ['GET /api/ambient'], v1: ['GET /ambient'] },
+  { id: 'notices', does: 'see and dismiss the notices sent to me', panel: ['GET /api/notices', 'POST /api/notices/:id/seen'], v1: ['GET /events', 'POST /events/ack'], note: 'a device\'s notices are `alert` events, acknowledged on its event stream' },
   { id: 'home', does: 'see my home and switch a light, open a cover, set the heating', panel: ['GET /api/home', 'GET /api/home/camera/:entity', 'POST /api/home/call'],
     gap: 18, why: 'the lights and the heating from the phone in a pocket or the watch, drawn by the app; until then the Home page in its web view' },
   { id: 'home-hold', does: 'keep the Home page live while it is shown', panel: ['POST /api/home/hold'],

@@ -64,29 +64,36 @@ function clearAgentOutbox() {
 }
 
 const label = d => `${d.name} (${d.caps?.formFactor || d.kind || 'device'})`;
+const shows = require('./reach-shows');
 
 /**
- * Resolve what the model said into devices that can actually receive this.
+ * Resolve what the model said into devices that may receive this (they hold `interact`).
  *
  * `to` may be a device id, a form factor, a name or part of one, or nothing at
  * all — which means every device that can be interacted with, the same audience
  * an external agent gets when it omits `targets`. A miss lists what does exist,
  * because a dead end with no directions is how a model starts guessing ids.
+ * Whether one can SHOW it is the next filter (ownTargets, reach-shows.js).
  */
 function resolveTargets(to) {
   const { devices, scopes } = api();
   const live = devices.list().filter(d => !d.revokedAt && scopes.hasScope(d.scopes, 'interact'));
   if (!live.length) {
-    const any = devices.list().filter(d => !d.revokedAt).length;
-    throw new Error(any
+    const any = devices.list().filter(d => !d.revokedAt && d.kind !== 'browser').length;
+    // `unshown`: nothing here can show it, so the panel is where it goes (ask: the questions dock; a notice: notices/).
+    throw Object.assign(new Error(any
       ? `None of the ${any} paired devices can receive a question or a notice — that needs the "interact" scope. Check doca_clients; a viewer-preset device is read-only on purpose.`
-      : 'No devices are paired with this hub, so there is nobody to reach. Pairing happens in the dashboard (Devices).');
+      : 'No device or linked chat is paired with this hub, so only the panel can show it. Pairing happens in Field → API keys.'), { unshown: [] });
   }
   // A list is device ids, exactly (a mission's machine question: its person's own devices, never a name that merely
   // contains one — harness/mission-asks.js).
   if (Array.isArray(to)) {
     const hit = live.filter(d => to.includes(d.id));
-    if (!hit.length) throw new Error('None of those devices can receive a question.');
+    if (!hit.length) {
+      const named = devices.list().filter(d => !d.revokedAt && to.includes(d.id));
+      throw Object.assign(new Error(named.length ? `None of those devices can show a question or a notice: ${shows.explain(named)}.`
+        : 'None of those devices can receive a question.'), { unshown: named });
+    }
     return hit;
   }
   const want = String(to || '').trim().toLowerCase();
@@ -97,7 +104,7 @@ function resolveTargets(to) {
     String(d.caps?.formFactor || '').toLowerCase() === want ||
     d.name.toLowerCase() === want ||
     d.name.toLowerCase().includes(want));
-  if (!hit.length) throw new Error(`No device matches "${to}". These can be reached: ${live.map(label).join(', ')}.`);
+  if (!hit.length) throw new Error(`No device matches "${to}". These can be reached: ${live.filter(shows.shows).map(label).join(', ') || 'none that can show it'}.`);
   return hit;
 }
 
@@ -193,8 +200,12 @@ async function ask({ to, question, choices, note, timeoutSec, signal, svg, layou
   const text = String(question || '').trim();
   if (!text) throw new Error('A question needs to be asked in words.');
 
-  // The person's own devices only, as for a notice (ownTargets): never a question on someone else's wrist.
-  const targets = ownTargets(to, personId);
+  // The person's own devices only, as for a notice (ownTargets): never a question on someone else's wrist. When none
+  // of theirs can show it, the agent's own question is still open at the panel (the questions dock), and the answer
+  // says so; a caller naming device ids (an approval asked on the device that started the turn) has its own card.
+  let targets, unshown = null;
+  try { targets = ownTargets(to, personId); }
+  catch (e) { if (!e.unshown || Array.isArray(to)) throw e; targets = []; unshown = e.message; }
   const built = buildChoices(choices);
   const quadrants = layout === 'quadrants';
   if (quadrants && (!svg || built.filter(c => c.type === 'option').length > 4))
@@ -202,7 +213,7 @@ async function ask({ to, question, choices, note, timeoutSec, signal, svg, layou
   const figure = figureBlock(svg, text);
   const waitSec = Math.min(ASK_MAX_SEC, Math.max(5, Number(timeoutSec) || ASK_DEFAULT_SEC));
 
-  const { prompt } = prompts.create({
+  const { prompt } = !targets.length ? { prompt: { id: `pq_${require('crypto').randomBytes(6).toString('hex')}`, state: 'open', choices: built } } : prompts.create({
     title: text.slice(0, 120),
     body: [...(note ? [{ type: 'text', text: String(note).slice(0, 800) }] : []), ...(figure ? [figure] : [])],
     choices: built,
@@ -219,12 +230,12 @@ async function ask({ to, question, choices, note, timeoutSec, signal, svg, layou
     choices: built.filter(c => c.type === 'option').map(c => ({ id: c.id, label: c.label })), at: new Date().toISOString() });
   try {
     for (;;) {
-      const cur = prompts.get(prompt.id) || prompt;
+      const cur = (targets.length && prompts.get(prompt.id)) || prompt;
       const atPanel = _open.get(prompt.id)?.answer;
       if (atPanel) {
         try { prompts.cancel(prompt.id, AGENT); } catch { /* already gone */ }
         return { status: 'answered', device: { name: 'the person at the panel', kind: 'dashboard' }, ...atPanel,
-          waitedSec: Math.round((Date.now() - (deadline - waitSec * 1000)) / 1000), targets };
+          waitedSec: Math.round((Date.now() - (deadline - waitSec * 1000)) / 1000), targets, unshown };
       }
       const found = answerOf(cur, targets);
       if (found) {
@@ -245,7 +256,7 @@ async function ask({ to, question, choices, note, timeoutSec, signal, svg, layou
       }
       if (Date.now() >= deadline) {
         try { prompts.cancel(prompt.id, AGENT); } catch { /* already gone */ }
-        return { status: 'timeout', waitedSec: waitSec, targets };
+        return { status: 'timeout', waitedSec: waitSec, targets, unshown };
       }
       await new Promise(r => setTimeout(r, POLL_MS));
     }
@@ -264,15 +275,18 @@ async function ask({ to, question, choices, note, timeoutSec, signal, svg, layou
  */
 function ownTargets(to, personId) {
   const all = resolveTargets(to);
-  if (!personId) return all;
-  const mine = all.filter(d => !d.userId || d.userId === personId);
+  const mine = personId ? all.filter(d => !d.userId || d.userId === personId) : all;
   if (!mine.length) {
     const want = String(to || '').trim();
     throw new Error(want && !['all', 'any'].includes(want.toLowerCase())
       ? `${all.map(label).join(', ')} ${all.length === 1 ? 'is' : 'are'} someone else's: a question, a notice or a file goes only to the person's own devices and chats.`
       : 'None of the paired devices is this person\'s own, so there is nobody to tell.');
   }
-  return mine;
+  // Only what can show it (reach-shows.js): a notice "sent" to a client that draws nothing reached nobody. The
+  // error carries `unshown`, so a caller can say who could not show it and fall back to the panel.
+  const showing = mine.filter(shows.shows);
+  if (!showing.length) throw Object.assign(new Error(`No device of theirs could show it: ${shows.explain(mine)}.`), { unshown: mine });
+  return showing;
 }
 
 /**
@@ -289,7 +303,7 @@ function tell({ to, title, text, imagePath, files, svg, urgent, personId } = {})
   if (!head) throw new Error('A notice needs something to say.');
 
   const targets = ownTargets(to, personId).filter(d => profiles.get(d.id).prompts?.receive !== false);
-  if (!targets.length) throw new Error('Every matching device declines notices in its profile (prompts.receive is false).');
+  if (!targets.length) throw Object.assign(new Error('Every matching device declines notices in its profile (prompts.receive is false).'), { unshown: [] });
 
   const blocks = list.length ? sending.attach(list, targets) : new Map();
   const figure = figureBlock(svg, head);
