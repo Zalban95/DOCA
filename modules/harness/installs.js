@@ -227,12 +227,13 @@ async function apply(id, { password } = {}) {
   if (password) shape.body.password = password;
 
   const out = await invokeHandler(k.handler(), shape);
-  const ok = out.body ? (out.status < 400 && !out.body.error) : true;
+  // A streamed installer says how it ended in its last frame; reading only the JSON body counted every stream a success.
+  const ok = out.body ? (out.status < 400 && !out.body.error) : require('../api-v1/jobs').streamOk(out.stream || []);
 
   row.status = ok ? 'installed' : 'failed';
   row.decidedAt = new Date().toISOString();
   row.output = (out.stream || []).slice(-20);
-  if (!ok) row.error = out.body?.error || 'the installer reported a failure';
+  if (!ok) row.error = out.body?.error || [...(out.stream || [])].reverse().find(c => c && c.error)?.error || 'the installer reported a failure';
   save(doc.installs);
   return row;
 }

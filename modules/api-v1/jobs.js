@@ -137,4 +137,4 @@ const running = () => [..._jobs.values()].filter(j => j.status === 'running');
 
 function _reset() { _jobs.clear(); }
 
-module.exports = { running, newJob, get, publicView, invokeHandler, runAsJob, _reset };
+module.exports = { running, newJob, get, publicView, invokeHandler, streamOk, runAsJob, _reset };
