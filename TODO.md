@@ -669,6 +669,15 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   cut an answer; the pipeline hears speech from -51 dBFS (it needed -38, which a watch at arm's length did not reach);
   a stale synthesis no longer reads as "playing" in the next call. **Left:** a real call from the phone and the watch
   with the logs read (DocaWear's and DocaMobile's `call-debug` branches log the microphone and the relay).
+- [x] The microphone switch beside the chats (2026-10-08, branch `mic-toggle`; the owner: "when the app is in background I
+  can use the microphone for other apps … if a phone call comes through, the microphone has to be freed"). "Mic" in the
+  floating chat's header, the Harness console's composer and the face's call: the screen-home setting `call.micAlways`
+  (off by default, never proposable), its point saying what holds the microphone now. Off, a hidden page gives it up at
+  once (the call ends, a voice note is sent, the wake word stops); on, the wake word and a call go on in the background
+  (a hidden page ticks from a worker: no frames there). DocaMobile 1.3.0 holds it with a microphone foreground service
+  ("DOCA is listening", Stop listening), and a phone call — or another app taking the microphone — pauses the panel's
+  call and the watch's call relayed by the phone, which carry on when it ends (`lib/mic-keep.js`, `chat-call-pause.js`).
+  **Left:** a real phone: a call in the background, a ringing phone, another recording app, the watch's call.
 
 **H9 · Reach and protocols**
 - [x] H9.1 (WhatsApp left) Channels: Slack, Telegram, mail, WhatsApp, Matrix — each a client kind. Done: Telegram (2.157.0), the

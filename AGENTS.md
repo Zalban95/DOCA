@@ -281,6 +281,24 @@ The harness gives its agent eight rules for working on any repository (charter r
 - **The phone's half** (DocaMobile 1.0.7): `window.DocaDevice` gives the page the phone's most used apps, the page is Android's screen saver while charging or docked, and the phone's hands add `screen_read` / `screen_press` / `media_control`. A device keeps every address of the hub (`GET /api/v1/hub/links`, PROTOCOL.md §2.2) and fails over to the next when one cannot be reached.
 - **Playing and casting** is the shipped skill `play-and-cast`: the quickest route that already works (Home Assistant's media players, the device's app at a link and its own cast button, the hub), asked once and kept as memory and a recipe.
 
+### The microphone beside the chats (2026-10-08, `public/js/lib/mic-keep.js`, `mic-keep-ui.js`, `chat-call-pause.js`)
+- **"Mic" is one switch per screen** — the screen-home setting `call.micAlways`, off by default and `propose: false` (an
+  agent keeping a microphone open is not a look to suggest) — drawn in the floating chat's header, the Harness console's
+  composer and the face's call, its point saying what holds the microphone now (a call or a recording, the wake word,
+  paused, nothing). **Off:** a page that goes to the background gives the microphone up at once — the call ends and says
+  why, a voice note is sent as it stands, the wake word stops (`_wakeWanted`). **On:** the wake word and a call go on with
+  the page hidden; a hidden page gets no animation frames, so the call's and the wake word's loops tick from a small
+  worker (`micFrame`) there. In a plain browser whether a hidden page keeps the microphone is the browser's, and the
+  switch says so.
+- **In DocaMobile (≥ 1.3.0) the app holds it**: `window.DocaDevice.micAlways(on)` / `micState()` start or stop a
+  foreground service of type microphone ("DOCA is listening", with Stop listening — which turns the switch off here too),
+  and the app's `doca-mic` window event tells the page when the app left the screen (off: let go) or a phone call rang
+  (`paused: 'phone-call'`, or `'another-app'` when Android silenced the recording). A paused call keeps being a call: its
+  microphone is stopped, the voice held where it was (a hold that decides nothing — `chat-call-voice.js` plays only
+  without one), and when the phone call ends it opens the microphone again and carries on. A watch's call relayed by the
+  phone pauses too, with `notice` frames. Edits to the call files are two lines in `chat-call.js` and three in
+  `wake-word.js` (the loops' frame and the hidden-page rule); the rest is in the new files.
+
 ### The home in DOCA's own layout (`modules/home`, `public/js/home.js`; Controls → Home; TODO H10.10)
 - **Home Assistant stays the device layer; the Home page is DOCA's drawing of it.** The hub keeps **one** WebSocket to HA (`home/link.js`, HA's `/api/websocket`: `auth`, `get_config`, `get_states`, the area/device/entity registries, `subscribe_events state_changed` and the registries' `*_registry_updated`), signed in with the key for services **`home-assistant`** (its origin is HA's address; the same key the MCP server uses since migration 2.266) — read server-side through `service-keys.secretOf`, never sent to a browser. It is open only while a Home page holds it (`POST /api/home/hold {screen, on}`, through the page's live stream, released on `screen-closed`) or a request uses it, and closes a minute after the last (`sweep`); a changed or removed key starts it again or closes it. States are cached; a `state_changed` goes out on the live feed as topic `home` with the entity's new **tile** (`home/tiles.js`: state plus a short list of attributes — never `entity_picture` or `access_token`, which carry HA tokens), only to screens holding the page whose person may see that entity (`home.hears`, in `live/routes.js`).
 - **Areas are HA's**: an entity's own area, else its device's; entities HA hides, disables or files as config/diagnostic stay off; things in no area are "Elsewhere". Kinds drawn: light (brightness), switch, fan (speed), cover (▲ ■ ▼), climate (target ±), lock, media player, alarm panel, scene, script, camera (a still the hub fetches from `camera_proxy` with the token, kept 5 s for every screen; JPEG/PNG/WebP/GIF only), sensor and binary sensor (worded by device class).
