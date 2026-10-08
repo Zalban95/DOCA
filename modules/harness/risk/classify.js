@@ -119,11 +119,26 @@ function classify(name, args = {}, where = {}) {
   if (name === 'shell') return shell(args.command, { root: where.root || null, cwd: args.cwd ? path.resolve(where.root || '.', args.cwd) : (where.cwd || where.root || null) });
   if (/^mcp__/.test(name)) return mcp(name, args, where.mcp);
   if (/^connector_/.test(name)) return fromRows(R.CONNECTOR, args);
+  if (name === 'service') return fromRows(R.TOOLS.service, serviceArgs(args));
   if (R.TOOLS[name]) return fromRows(R.TOOLS[name], args);
   try {
     if (require('../approval').FREE.has(name) || require('../tools').isRead(name, args)) return { tier: 'read', why: null, way: null, touches: false };
   } catch { /* the table alone */ }
   return { tier: 'reversible', why: null, way: R.WAY.none, touches: false };
+}
+
+/**
+ * A `service` call said as the table reads it: what it does, and the action's method and address from the service's own
+ * definition (the one read this module makes — a definition is the owner's, and the call names only the action). An
+ * action it cannot find reads as a POST to the service, so it is never taken for less than it may be.
+ */
+function serviceArgs(args) {
+  const does = args.action || (args.operation ? 'call' : args.service ? 'describe' : 'list');
+  if (does !== 'call') return { _do: does };
+  let def = null;
+  try { def = require('../../api-services/store').get(args.service); } catch { /* no definitions: as a POST */ }
+  const a = def?.actions.find(x => x.name === args.operation);
+  return { _do: does, _method: args.follow ? 'GET' : a?.method || 'POST', _url: `${def?.server || 'https://unknown.invalid'}${a?.path || ''}` };
 }
 
 /** An MCP tool: an agents' computer is disposable; any other by the server's annotations, else by the tool's name. */

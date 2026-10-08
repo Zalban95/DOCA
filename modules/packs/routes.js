@@ -15,6 +15,7 @@ function mount(app) {
     specialists: require('../agents/registry').list().filter(a => !a.broken).map(a => ({ id: a.id, label: a.label })),
     recipes: require('../recipes/store').list().map(r => ({ id: r.id, label: r.title })),
     mcp: require('../mcp/registry').load().filter(s => s.origin?.kind !== 'client').map(s => ({ id: s.id, label: s.label })),
+    services: require('../api-services/store').list().filter(s => s.actions.length).map(s => ({ id: s.name, label: s.title })),   // API services, without keys
     levels: require('../auth/levels').list().filter(l => !l.builtin).map(l => ({ id: l.id, label: l.name })),   // for an edition (edition.js)
   })));
   app.post('/api/packs/export', async (req, res) => {

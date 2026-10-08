@@ -1,0 +1,86 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "hi3d.ai (Hitem3D)",
+    "version": "1",
+    "summary": "3D models from one picture or up to four views: GLB, STL, OBJ, FBX, USDZ, 3MF. Runs on the person's credits.",
+    "x-doca-name": "hi3d",
+    "x-doca-skill": "hi3d",
+    "x-doca-key-hint": "The Access Key and the Secret Key from hi3d.ai's developer page, joined by a colon: AccessKey:SecretKey",
+    "x-doca-checked": "2026-10-08, docs.hi3d.ai/en/api/api-reference/list/ (Get Token, Create Task, Query Task, Query balance)"
+  },
+  "externalDocs": { "url": "https://docs.hi3d.ai/en/api/api-reference/overview" },
+  "servers": [{ "url": "https://api.hitem3d.ai/open-api/v1" }],
+  "components": {
+    "securitySchemes": {
+      "key": {
+        "type": "oauth2",
+        "flows": { "clientCredentials": { "tokenUrl": "https://api.hitem3d.ai/open-api/v1/auth/token", "scopes": {} } },
+        "x-doca-token-body": "json"
+      }
+    }
+  },
+  "security": [{ "key": [] }],
+  "paths": {
+    "/submit-task": {
+      "post": {
+        "operationId": "submitTask",
+        "summary": "Make a 3D model from a picture (images) or up to four views (multi_images, front first). Takes minutes and spends credits.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["request_type", "model"],
+                "properties": {
+                  "request_type": { "type": "integer", "enum": [1, 2, 3], "default": 3, "description": "1 geometry only, 2 texture on an existing mesh, 3 both" },
+                  "model": { "type": "string", "enum": ["hi3dv3.0", "hitem3dv2.1", "hitem3dv2.0", "hitem3dv1.5", "scene-portraitv2.1", "scene-portraitv2.0", "scene-portraitv1.5"], "default": "hi3dv3.0", "description": "The model version; scene-portrait for people" },
+                  "images": { "type": "string", "format": "binary", "description": "One picture: PNG, JPEG or WEBP, under 20 MB" },
+                  "multi_images": { "type": "array", "items": { "type": "string", "format": "binary" }, "description": "Up to four views instead of images: front, back, left, right" },
+                  "multi_images_bit": { "type": "string", "description": "Which views multi_images holds, four 0/1 digits: 1010 is front and left" },
+                  "resolution": { "type": "string", "description": "v3.0: 2048quality (default) or 2048master; v2.1: 1536fast or 1536pro" },
+                  "format": { "type": "integer", "enum": [1, 2, 3, 4, 5, 6], "default": 2, "description": "1 obj, 2 glb (to look at it here), 3 stl, 4 fbx, 5 usdz, 6 3mf (stl or 3mf to print)" },
+                  "face": { "type": "integer", "description": "Polygons, 100000–5000000 (2048master: 5000000)" },
+                  "pbr": { "type": "integer", "enum": [0, 1], "description": "PBR textures, v2.0 and later (default 1)" },
+                  "rmbg": { "type": "integer", "enum": [0, 1], "description": "Remove the picture's background (default 1)" },
+                  "shading": { "type": "number", "description": "De-shading strength 0.0–1.0 (default 0.5)" },
+                  "mesh": { "type": "string", "format": "binary", "description": "For request_type 2: the GLB to texture" },
+                  "mesh_url": { "type": "string", "description": "For request_type 2: the GLB's address instead of mesh" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "The task's id at data.task_id" } },
+        "x-doca-job": {
+          "id": "data.task_id",
+          "poll": { "operation": "queryTask", "param": "task_id" },
+          "status": "data.state",
+          "done": ["success"],
+          "failed": ["failed"],
+          "result": ["data.url", "data.cover_url"],
+          "message": "msg",
+          "ok": { "path": "code", "values": [200] },
+          "every": 20,
+          "giveUp": 3600
+        }
+      }
+    },
+    "/query-task": {
+      "get": {
+        "operationId": "queryTask",
+        "summary": "A task's state (created, queueing, processing, success, failed); on success url is the model and cover_url a preview, each valid for one hour",
+        "parameters": [{ "name": "task_id", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "data.state, data.url, data.cover_url" } }
+      }
+    },
+    "/balance": {
+      "get": {
+        "operationId": "getBalance",
+        "summary": "The credits left, at data.totalBalance — ask before a large batch",
+        "responses": { "200": { "description": "data.totalBalance" } }
+      }
+    }
+  }
+}

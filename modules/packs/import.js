@@ -30,7 +30,8 @@ function items(files) {
     if (f.name === 'pack.json' || inSkill(f.name)) continue;
     const base = f.name.split('/').pop();
     try {
-      if (require('./edition').isFile(f.name)) out.push(require('./edition').item(JSON.parse(text(f))));
+      if (require('./services').isFile(f.name)) out.push(require('./services').item(f.name, text(f)));
+      else if (require('./edition').isFile(f.name)) out.push(require('./edition').item(JSON.parse(text(f))));
       else if (/^agents\/[^/]+\.md$/.test(f.name)) out.push({ kind: 'specialist', id: base.replace(/\.md$/, ''), data: text(f), path: f.name });
       else if (/\.recipe\.json$/.test(base)) { const r = JSON.parse(text(f)); out.push({ kind: 'recipe', id: r.id || base.replace(/\.recipe\.json$/, ''), data: r, path: f.name }); }
       else if (/\.json$/.test(base) && /mcpServers/.test(text(f))) {
@@ -58,6 +59,7 @@ function exists(it) {
   if (it.kind === 'recipe') return !!require('../recipes/store').get(it.id);
   if (it.kind === 'mcp') return !!require('../mcp/registry').get(it.id);
   if (it.kind === 'edition') return require('./edition').exists(it);
+  if (it.kind === 'service') return require('./services').exists(it);
   return false;
 }
 
@@ -73,7 +75,7 @@ function plan(buffer) {
   for (const it of list.filter(i => i.kind === 'mcp')) for (const f of ['env', 'headers']) for (const [k, v] of Object.entries(it.data[f] || {})) if (v === '') needs.secrets.push(`mcp.${it.id}.${f}.${k}`);
   const view = it => ({ key: `${it.kind}:${it.id}`, kind: it.kind, id: it.id, path: it.path || it.root, overwrites: exists(it),
     ...(it.kind === 'mcp' ? { command: it.data.url || [it.data.command, ...(it.data.args || [])].join(' ') } : {}),
-    ...(it.kind === 'rules' ? { count: it.data.length } : {}), ...(it.kind === 'edition' ? { parts: require('./edition').describe(it) } : {}), ...(it.kind === 'recipe' ? { steps: (it.data.steps || []).length } : {}) });
+    ...(it.kind === 'rules' ? { count: it.data.length } : {}), ...(it.kind === 'edition' ? { parts: require('./edition').describe(it) } : {}), ...(it.kind === 'recipe' ? { steps: (it.data.steps || []).length } : {}), ...(it.kind === 'service' ? require('./services').view(it) : {}) });
   return { name: manifest?.name || null, description: manifest?.description || '', native: !manifest, items: list.map(view), needs: { ...needs, secrets: [...new Set(needs.secrets)] }, skipped };
 }
 
@@ -111,6 +113,8 @@ function apply(buffer, { only = null, overwrite = false, person = null, actorLev
         require('../mcp/registry').upsert({ id: it.id, label: it.id, transport: e.url ? 'http' : 'stdio', url: e.url, headers: e.headers,
           command: e.command, args: e.args, env: e.env, autostart: false });
         done.push({ key, ok: true, note: 'added, not started' });
+      } else if (it.kind === 'service') {
+        done.push({ key, ok: true, note: require('./services').apply(it) });
       } else if (it.kind === 'memory') {
         const memory = require('../harness/memory');
         let n = 0;

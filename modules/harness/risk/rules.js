@@ -57,6 +57,13 @@ const TOOLS = {
     { when: { method: NOT_GET, url: u => !owned(u) }, tier: 'outward', why: 'sends data to a service the owner does not run' },
     { when: { method: NOT_GET }, tier: 'reversible', way: 'an address the owner owns', },
     { tier: 'read' }],
+  // An API service's action (api-services/): as api_call, by the action's own method and the service's address, which
+  // classify.js reads from the definition (`_do`, `_method`, `_url`) — the agent names neither.
+  service: [
+    { when: { _do: ['list', 'describe'] }, tier: 'read' },
+    { when: { _method: NOT_GET, _url: u => !owned(u) }, tier: 'outward', why: 'sends data to a service the owner does not run' },
+    { when: { _method: NOT_GET }, tier: 'reversible', way: 'an address the owner owns' },
+    { tier: 'read' }],
   http_fetch: [{ when: { method: NOT_GET }, tier: 'outward', why: 'sends data out' }, { tier: 'read' }],
   secret_use: [{ tier: 'outward', why: 'hands a secret to a device' }],
   computer_login: [{ tier: 'outward', why: 'signs in on a site with a stored login' }],

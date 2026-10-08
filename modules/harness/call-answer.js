@@ -70,7 +70,8 @@ function sentence(name, args = {}) {
   else if (name === 'api_call' || name === 'http_fetch') {
     let host = ''; try { host = new URL(String(args.url)).host; } catch { /* no address */ }
     q = `Shall I send a ${String(args.method || 'GET').toUpperCase()} request${host ? ` to ${host}` : ''}?`;
-  } else if (name === 'write_file') q = `Shall I write ${String(args.path || 'a file').split(/[\\/]/).pop()}?`;
+  } else if (name === 'service') q = `Shall I use ${String(args.service || 'the service')}${args.operation ? ` to ${String(args.operation).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' ').toLowerCase()}` : ''}?`;
+  else if (name === 'write_file') q = `Shall I write ${String(args.path || 'a file').split(/[\\/]/).pop()}?`;
   else q = `Shall I use ${String(name).split('__').pop().replace(/_/g, ' ')}?`;
   return `${q} Say yes or no.`;
 }

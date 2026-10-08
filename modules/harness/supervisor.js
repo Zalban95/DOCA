@@ -97,6 +97,7 @@ function whyOf(message) {
   if (message === CUT_OFF) return 'its last answer was cut off: finishing it';
   if (message === RESTARTED) return 'the panel restarted mid-turn: picking up';
   if (String(message).startsWith('[panel] Work reported back')) return 'work chats reported back: telling you what matters';
+  if (String(message).startsWith('[panel] Service job')) return 'a service job it started ended: telling what came of it';
   if (String(message).startsWith('[panel] The person asked you to carry on')) return 'restarted by a person';
   if (String(message).startsWith(RESTARTED)) return 'the panel restarted while it carried out an approved plan: going on';
   return 'trying again on a stronger model';

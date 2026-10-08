@@ -22,16 +22,18 @@ function write(d) { fs.mkdirSync(path.dirname(file()), { recursive: true }); fs.
 
 const NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
 // field: a header's or a parameter's name, or for an exchange the token address
-const view = k => ({ name: k.name, origin: k.origin, place: k.place, field: k.field, prefix: k.prefix, who: k.who, note: k.note || '', hasKey: !!k.key, savedAt: k.savedAt });
+const view = k => ({ name: k.name, origin: k.origin, place: k.place, field: k.field, prefix: k.prefix, who: k.who, note: k.note || '', hasKey: !!k.key, savedAt: k.savedAt,
+  ...(k.grant ? { grant: k.grant } : {}) });
 const list = () => Object.values(all()).map(view);
 
-function save({ name, origin, place = 'header', field, prefix, who = 'host', note = '', key }) {
+function save({ name, origin, place = 'header', field, prefix, who = 'host', note = '', key, grant }) {
   name = String(name || '').trim().toLowerCase();
   if (!NAME.test(name)) throw bad('A key\'s name is short, lowercase letters, digits and dashes: hyper3d, home-assistant.');
   let o;
   try { o = new URL(String(origin || '')).origin; } catch { throw bad('The address is the service\'s, like https://api.example.com.'); }
   if (!/^https?:/.test(o)) throw bad('The address is an http(s) one.');
-  if (!['header', 'query', 'exchange'].includes(place)) throw bad('A key goes in a header, in the query, or is exchanged for a token.');
+  // basic: user:password as HTTP Basic (OpenAPI's http basic); exchange: id:secret traded for a token (oauth2 clientCredentials)
+  if (!['header', 'query', 'exchange', 'basic'].includes(place)) throw bad('A key goes in a header, in the query, as a user and password (basic), or is exchanged for a token.');
   let tokenUrl = null;
   if (place === 'exchange') {
     try { tokenUrl = new URL(String(field || '')).toString(); } catch { throw bad('For an exchange, give the token address, like https://api.example.com/oauth/token.'); }
@@ -42,10 +44,14 @@ function save({ name, origin, place = 'header', field, prefix, who = 'host', not
   const given = typeof key === 'string' && key.trim() && key !== MASK ? key.trim() : d[name]?.key || '';
   if (!given) throw bad('Paste the key itself.');
   if (place === 'exchange' && !/^[^:]+:.+$/.test(given)) throw bad('For an exchange, the key is the id and the secret joined by a colon: id:secret.');
+  if (place === 'basic' && !/^[^:]+:/.test(given)) throw bad('For basic, the key is the user and the password joined by a colon: user:password.');
   _tokens.delete(name);
   d[name] = { name, origin: o, place, field: place === 'exchange' ? tokenUrl : String(field || (place === 'header' ? 'Authorization' : 'api_key')).slice(0, 300),
     prefix: prefix === undefined || prefix === null ? (place === 'header' && !field ? 'Bearer ' : '') : String(prefix).slice(0, 30),
-    who: who === 'everyone' ? 'everyone' : 'host', note: String(note || '').slice(0, 200), key: given, savedAt: new Date().toISOString() };
+    who: who === 'everyone' ? 'everyone' : 'host', note: String(note || '').slice(0, 200), key: given, savedAt: new Date().toISOString(),
+    // how the token is asked for: absent is the first way (Basic and an empty JSON body, hi3d's); client_credentials is OAuth 2.0's form
+    ...(place === 'exchange' && grant === 'client_credentials' ? { grant } : {}) };
+  if (place === 'basic') { d[name].field = 'Authorization'; d[name].prefix = 'Basic '; }
   write(d);
   return view(d[name]);
 }
@@ -58,8 +64,10 @@ const _tokens = new Map();   // name → { token, until } for keys exchanged for
 async function token(k, { fresh = false } = {}) {
   const cached = _tokens.get(k.name);
   if (!fresh && cached && cached.until > Date.now()) return cached.token;
+  const form = k.grant === 'client_credentials';
   const r = await fetch(k.field, { method: 'POST', signal: AbortSignal.timeout(20000),
-    headers: { Authorization: `Basic ${Buffer.from(k.key).toString('base64')}`, 'Content-Type': 'application/json', Accept: 'application/json' }, body: '{}' });
+    headers: { Authorization: `Basic ${Buffer.from(k.key).toString('base64')}`, 'Content-Type': form ? 'application/x-www-form-urlencoded' : 'application/json', Accept: 'application/json' },
+    body: form ? 'grant_type=client_credentials' : '{}' });
   const text = await r.text();
   let j = {};
   try { j = JSON.parse(text); } catch { /* said in words */ }
@@ -84,6 +92,7 @@ function apply(name, url, headers, { host = true } = {}) {
   if (u.origin !== k.origin) throw bad(`The key "${k.name}" is sent only to ${k.origin}, not to ${u.origin}.`, 403);
   if (k.place === 'query') { u.searchParams.set(k.field, k.key); return { url: u.toString(), headers, key: k.key }; }
   if (k.place === 'exchange') return { url: u.toString(), headers, key: k.key, exchange: k };   // the caller asks token() (async)
+  if (k.place === 'basic') return { url: u.toString(), headers: { ...headers, Authorization: `Basic ${Buffer.from(k.key).toString('base64')}` }, key: k.key };
   return { url: u.toString(), headers: { ...headers, [k.field]: `${k.prefix}${k.key}` }, key: k.key };
 }
 

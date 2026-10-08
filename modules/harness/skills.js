@@ -74,7 +74,7 @@ function read(name) {
   walk(s.dir);
   // Not adapted yet: a note above the body says how to translate it (skill-audit.js).
   const note = s.harness ? require('./skill-audit').readingNote(require('./skill-audit').audit(name)) : '';
-  return { ...s, body: (note + body + recipesNote(s.dir)).slice(0, MAX_BODY), files };
+  return { ...s, body: (note + body + recipesNote(s.dir) + servicesNote(s)).slice(0, MAX_BODY), files };
 }
 
 /**
@@ -91,6 +91,22 @@ function recipesNote(dir) {
     const r = store.get(id);
     return r ? `- ${r.id}: ${r.title}${r.params.length ? ` (values: ${r.params.map(p => p.name).join(', ')})` : ''}` : `- ${id}: not saved here yet`;
   }).join('\n')}\n`;
+}
+
+/**
+ * The API services a skill goes with (api-services/): those naming it as their skill, and those its front matter names
+ * (`services: [id, …]`) — the skill says when and why, the service's actions exactly what is sent. Linked from the
+ * service's side, so a shipped skill needs no edit to be linked to a service a person set up.
+ */
+function servicesNote(s) {
+  let defs = [];
+  try { defs = require('../api-services/store').list(); } catch { return ''; }
+  const { meta } = split(fs.readFileSync(path.join(s.dir, 'SKILL.md'), 'utf8'));
+  const named = Array.isArray(meta.services) ? meta.services : parseList(meta.services);
+  const mine = defs.filter(d => d.skill === s.name || named.includes(d.name));
+  if (!mine.length) return '';
+  return `\n\n---\nAPI services for this skill — use their actions with service { action: "call", service, operation, params } (describe lists them):\n${mine.map(d =>
+    `- ${d.name}: ${d.actions.map(a => a.name).join(', ') || 'no actions yet'}${d.needsKey ? ' (its key is not pasted yet)' : ''}`).join('\n')}\n`;
 }
 
 /** One of a skill's own files (a script, a template), inside its folder only. */

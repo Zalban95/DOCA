@@ -40,6 +40,12 @@ function likely(message, held) {
 /** "# What you have": keys for services, logins and secrets for devices by name (never a secret), and how many recipes are saved. */
 function inventory(held, person = null) {
   const out = [];
+  if (held.has('service')) {
+    try {
+      const ss = require('../../api-services/store').list().filter(s => s.actions.length);
+      if (ss.length) out.push(`- API services with actions (\`service\` describe <name>): ${ss.map(s => `${s.name} (${s.actions.slice(0, 6).map(a => a.name).join(', ')}${s.actions.length > 6 ? ', …' : ''})`).join('; ')}.`);
+    } catch { /* none */ }
+  }
   if (held.has('api_call') || held.has('http_fetch')) {
     try { const l = require('../../service-keys').line().trim(); if (l) out.push(`- ${l}`); } catch { /* none */ }
   }

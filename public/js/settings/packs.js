@@ -23,7 +23,7 @@ async function packsLoad() {
         Agent Skills folders, specialists are subagent markdown, MCP servers are the mcpServers JSON Claude Desktop and Cursor read, a shell-only
         recipe comes with a bash and a PowerShell script. Secrets never travel: they are left empty and listed for whoever imports it.</p>
       <div class="toolbar" style="gap:6px;margin-bottom:10px"><input class="input" id="pack-name" placeholder="Pack name" style="flex:1;max-width:280px"></div>
-      ${group('skills', 'Skills', c.skills)}${group('specialists', 'Specialists', c.specialists)}${group('recipes', 'Recipes', c.recipes)}${group('mcp', 'MCP servers', c.mcp)}
+      ${group('skills', 'Skills', c.skills)}${group('specialists', 'Specialists', c.specialists)}${group('recipes', 'Recipes', c.recipes)}${group('mcp', 'MCP servers', c.mcp)}${group('services', 'API services (without keys)', c.services || [])}
       <div style="margin-bottom:10px;font-size:12px"><label><input type="checkbox" id="pack-memory"> Memory</label>
         <label style="margin-left:12px"><input type="checkbox" id="pack-rules"> Memory rules (as AGENTS.md)</label></div>
       ${advancedFold(`<div style="margin-bottom:10px;font-size:12px"><div class="input-label">As an edition — what makes it feel like its own product (edition.json)</div>
@@ -109,7 +109,7 @@ function packsHubRemove(id) { appConfirm('Stop sending to this hub? (Revoke its 
 async function packsExport(keep = false) {
   const pick = kind => [...document.querySelectorAll(`#sp-packs input[data-pack="${kind}"]:checked`)].map(i => i.value);
   const body = { name: document.getElementById('pack-name').value.trim() || 'pack', skills: pick('skills'), specialists: pick('specialists'),
-    recipes: pick('recipes'), mcp: pick('mcp'), memory: document.getElementById('pack-memory').checked, rules: document.getElementById('pack-rules').checked,
+    recipes: pick('recipes'), mcp: pick('mcp'), services: pick('services'), memory: document.getElementById('pack-memory').checked, rules: document.getElementById('pack-rules').checked,
     edition: { branding: document.getElementById('pack-ed-branding').checked, look: document.getElementById('pack-ed-look').checked,
       face: document.getElementById('pack-ed-face').checked && (await faceSpec()), level: document.getElementById('pack-ed-level').value || null } };
   if (keep) {
