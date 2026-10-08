@@ -88,7 +88,7 @@ function chatAppendMsg(role, text, opts = {}) {
   el.className = `chat-msg ${role}`;
   // The agent's words are markdown, rendered; everything else (the user's words, status, errors) is literal: `plain`.
   if (role === 'assistant' && !opts.plain) mdInto(el, text);
-  else el.textContent = text;
+  else if (role === 'user' && typeof formHelpTextInto === 'function') formHelpTextInto(el, text); else el.textContent = text;
   if (role === 'user') container.appendChild(el);
   else agentWorkingMount(container, el);
   container.scrollTop = container.scrollHeight;
@@ -355,11 +355,11 @@ function chatSend({ spoken = false } = {}) {
 
   // The agent is told how this arrived: "answer out loud" is a fact about the request, not a setting. The panel
   // does the speaking; this stops a spoken question being answered with three screens of prose.
-  const sent = spoken
+  const sent = (typeof formHelpAttach === 'function' ? formHelpAttach : m => m)(spoken
     ? `${message}\n\n[Sent as a voice message; the text above is its transcript, and the recording is attached. `
       + 'Answer as if speaking: a few sentences, no markdown, no lists, no code — unless the message itself asks '
       + 'for something else. Your answer is read aloud as well as shown.]'
-    : message;
+    : message);
 
   // Working already: it waits and is read at the next step, or starts the next turn (agent-ui/queued-send.js).
   if (chatTurn) {

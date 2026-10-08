@@ -40,3 +40,44 @@ test('every saved change keeps what it replaced; a restore puts it back and is i
   const member = await H.signIn('member', 'cp-member@test.local');
   assert.equal((await H.api(null, 'GET', '/api/settings/checkpoints', undefined, { Cookie: member.cookie })).status, 403);
 });
+
+test('✨ Ask the agent opens the chat with a short message of the person\'s, not sent, the form attached as context', () => {
+  const vm = require('node:vm'), fs = require('node:fs'), path = require('node:path');
+  const mk = (tag, props = {}) => {
+    const el = { tagName: tag.toUpperCase(), children: [], dataset: {}, style: {}, className: '', textContent: '',
+      appendChild(c) { this.children.push(c); return c; }, append(...cs) { cs.forEach(c => this.children.push(c)); },
+      remove() { this.removed = true; }, closest: () => null, getAttribute: () => null, focus() { this.focused = true; },
+      querySelector: () => null, querySelectorAll: () => [], ...props };
+    return el;
+  };
+  const field = mk('input', { type: 'text', id: 'hc-cmd', value: 'claude', labels: [{ textContent: 'Launch command' }] });
+  const secret = mk('input', { type: 'password', id: 'hc-key', value: 'sk-real', labels: [{ textContent: 'API key' }] });
+  const box = mk('div', { querySelectorAll: () => [field, secret], querySelector: s => (s === '.card-title' ? { firstChild: { textContent: 'Agent Harnesses' } } : null) });
+  const input = mk('textarea', { value: '' });
+  const chips = mk('div', { querySelector: () => null });
+  const msgs = mk('div');
+  let sent = 0, opened = 0;
+  const ctx = {
+    document: { getElementById: id => ({ 'chat-input': input, 'chat-attachments': chips, 'chat-messages': msgs })[id] || null, querySelector: () => null, createElement: mk },
+    chatOpen: false, toggleChat: () => { opened++; }, chatSend: () => { sent++; },
+  };
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'agent-ui', 'form-help.js'), 'utf8'), ctx);
+  vm.runInContext('_formHelpForms.set("form1", box)', Object.assign(ctx, { box }));
+  vm.runInContext('formHelpAsk("form1")', ctx);
+  assert.equal(input.value, 'Help with: Agent Harnesses', 'a short message, theirs to change');
+  assert.equal(sent, 0, 'nothing is sent by itself');
+  assert.equal(opened, 1);
+  assert.ok(input.focused, 'the box is focused');
+  assert.match(chips.children[0].children[0]?.textContent || '', /Agent Harnesses · its fields go with your message/, 'a chip says the form goes with it');
+  const out = vm.runInContext('formHelpAttach("Help with: Agent Harnesses")', ctx);
+  assert.match(out, /^Help with: Agent Harnesses\n\n\[Form details attached by the panel — not the person's words\]\n/);
+  assert.match(out, /Launch command \[hc-cmd\]: "claude"/);
+  assert.match(out, /API key \[hc-key\]: \(filled — not shown\)/);
+  assert.doesNotMatch(out, /sk-real/, 'never a secret\'s value');
+  assert.equal(vm.runInContext('formHelpAttach("next")', ctx), 'next', 'once: the next message goes alone');
+  const bubble = mk('div');
+  vm.runInContext('formHelpTextInto(bubble, out)', Object.assign(ctx, { bubble, out }));
+  assert.equal(bubble.textContent, 'Help with: Agent Harnesses', 'the person reads their own words');
+  assert.equal(bubble.children[0].className, 'form-help-context', 'and the form folded under them');
+});
