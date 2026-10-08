@@ -30,7 +30,8 @@ async function keysLoadProviders() {
   }
 }
 
-/** A local server needs no key, so it is "ready", not "NO KEY". */
+/** A local server needs no key, so it is "ready", not "NO KEY". Its address is typed or picked from the model servers
+ *  and services on this machine (lib/choice-input.js, GET /api/services/choices). */
 function _providerCardHtml(name, p) {
   const ready = p.hasKey || p.local;
   const badge = p.hasKey ? 'KEY SET' : p.local ? 'LOCAL' : 'NO KEY';
@@ -42,8 +43,8 @@ function _providerCardHtml(name, p) {
       </div>
       ${p.models?.length ? `<div class="provider-models">Models: ${escHtml(p.models.slice(0,4).join(', '))}${p.models.length>4?' …':''}</div>` : ''}
       <div class="provider-key-row">
-        <input class="input" id="url-${escHtml(name)}" value="${escHtml(p.baseUrl || '')}"
-               placeholder="https://…/v1" title="Base URL">
+        ${choiceInput({ id: `url-${name}`, value: p.baseUrl || '', placeholder: 'https://…/v1', attrs: 'title="Base URL"', source: 'this machine',
+          load: () => apiFetch(`/api/services/choices?what=provider-url&provider=${encodeURIComponent(name)}`) })}
         <input class="input" type="password" id="key-${escHtml(name)}"
                placeholder="${escHtml(p.apiKeyMasked || (p.local ? 'no key needed' : 'Enter API key…'))}">
         <button class="btn btn-sm btn-green" onclick="saveKey(${jsArg(name)})">Save</button>

@@ -352,6 +352,22 @@ function _voiceSettingsLoad(prefs) {
   set('voice-tts-speed', speed, '1.0');
   const lbl = document.getElementById('voice-tts-speed-val');
   if (lbl) lbl.textContent = speed;
+  _voiceServicesChoices();
+}
+
+/** Type or pick (lib/choice-input.js): the speech services on this machine, and the models and voices each lists. */
+function _voiceServicesChoices() {
+  const el = id => document.getElementById(id);
+  const ask = (what, urlBox) => async () => apiFetch(`/api/services/choices?what=${what}${urlBox ? `&url=${encodeURIComponent(el(urlBox)?.value.trim() || '')}` : ''}`);
+  choiceInputAttach(el('voice-stt-url'), { source: 'this machine', load: ask('stt-url') });
+  choiceInputAttach(el('voice-stt-model'), { source: 'the speech-to-text service', load: ask('stt-model', 'voice-stt-url') });
+  choiceInputAttach(el('voice-tts-url'), { source: 'this machine', load: ask('tts-url') });
+  choiceInputAttach(el('voice-tts-model'), { source: 'the speech service', load: ask('tts-model', 'voice-tts-url') });
+  choiceInputAttach(el('voice-tts-voice'), { source: 'the speech service', load: async () => ({ items: (await apiFetch('/api/chat/voices')).voices || [] }) });
+  // The service's own default voice and speed: what a screen with no voice of its own hears. The Voice card above is
+  // where a voice is chosen, so these two are the few most people never touch.
+  const rows = ['voice-tts-voice', 'voice-tts-speed'].map(id => el(id)?.closest('.choice')?.parentElement?.closest('div') || el(id)?.parentElement);
+  if (rows[0] && !rows[0].closest('details.adv-fold')) advancedFold(rows, { id: 'voice-services-default', label: 'Its default voice' });
 }
 
 async function voiceSettingsSave() {

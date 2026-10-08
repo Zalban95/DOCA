@@ -213,6 +213,13 @@ async function _harnessLoadModels(id, provider, selected, scope) {
     sel.innerHTML = `<option value="">${data.models?.length ? '— pick a model —' : (data.error ? 'unreachable' : 'none found')}</option>${opts.join('')}`;
     if (data.error) sel.title = data.error;
     _harnessModelHint(sel, provider, data.models?.length ? null : data.error);
+    // Type or pick (lib/choice-input.js): the box keeps any id typed, ▾ lists what the provider serves; the select
+    // stays, hidden, for the code that reads it.
+    if (box && typeof choiceInputAttach === 'function') {
+      choiceInputAttach(box, { items: data.models || [], source: provider,
+        load: async () => (await apiFetch(`/api/harness/models?provider=${encodeURIComponent(provider)}`)).models || [] });
+      sel.style.display = 'none';
+    }
   } catch (e) {
     if (sel.isConnected) sel.innerHTML = `<option value="">${escHtml(e.message)}</option>`;
   }
