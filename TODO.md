@@ -216,6 +216,14 @@ the project's managers only if the owner allows sharing specialists and skills (
   panel to click; **stray computer containers** (#25) are left by default and listed under Computers → Not DOCA's
   records with Archive (adopted into the Archive) and Delete (volume kept unless asked), and `computers.strays`
   (leave · archive · delete, never proposable) says what the tidy-up does with unlabelled stopped ones.
+- [x] Finished missions put away by themselves (asked 2026-10-08, looking at eight "Tester done" rows: "the done ones
+  not relevant can be archived automatically"; branch `missions-tidy`): `agents/tidy.js` — a finished mission seen more
+  than `missions.archiveSeenAfterMin` (30) ago, or finished more than `missions.archiveAfterHours` (24) ago, goes to the
+  Archive quietly (0: never by that rule; both proposable, housekeeping like `computers.idleStopMinutes`), never one its
+  leader has not read (`announcedToAgentAt`, while that leader is still there), one with a question, plan or proposal
+  open for a person, one kept with 📌 or one a person brought back from the Archive; a sweep every 30 min from
+  `boot.afterListen` writes one activity line; the missions bar has 📌, "Put away finished" and a quiet "N put away —
+  Archive"; Settings → Harness → Finished missions (one switch, the numbers under Advanced). Capability gap 19.
 - [x] Self-test 2026-10-08, the install/devices/server group (branch `selftest-server`): node-pty is an optional
   dependency and `install.sh` names the build tools per distro, so a box without a C++ toolchain installs (#1);
   revoking a device by any route closes its stream and removes the MCP servers it hosts, and doca-client stops
