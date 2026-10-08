@@ -25,19 +25,25 @@ async function judge(rubric, prompt, outcome) {
   return { pass: /^\W*pass\b/i.test(reply), why: reply.replace(/^\W*(pass|fail)\b[:.\s-]*/i, '').slice(0, 300) };
 }
 
+/** A check's line says what happened, pass or fail: one `why` for both read "never called shell" when shell was called. */
+const said = (pass, yes, no) => ({ pass, why: pass ? yes : no });
+const calledList = tools => tools.length ? `it called ${[...new Set(tools)].join(', ')}` : 'it called no tool';
+
 async function one(c, prompt, o) {
   const text = String(o.text || '');
-  if (c.contains !== undefined) return { pass: text.toLowerCase().includes(String(c.contains).toLowerCase()), why: `answer contains "${c.contains}"` };
-  if (c.notContains !== undefined) return { pass: !text.toLowerCase().includes(String(c.notContains).toLowerCase()), why: `answer does not contain "${c.notContains}"` };
+  const tools = o.tools || [];
+  const has = s => text.toLowerCase().includes(String(s).toLowerCase());
+  if (c.contains !== undefined) return said(has(c.contains), `answer contains "${c.contains}"`, `answer does not contain "${c.contains}"`);
+  if (c.notContains !== undefined) return said(!has(c.notContains), `answer does not contain "${c.notContains}"`, `answer contains "${c.notContains}", which it should not`);
   if (c.matches !== undefined) {
-    try { return { pass: new RegExp(c.matches, 'i').test(text), why: `answer matches /${c.matches}/` }; }
+    try { return said(new RegExp(c.matches, 'i').test(text), `answer matches /${c.matches}/`, `answer does not match /${c.matches}/`); }
     catch (e) { return { pass: false, why: `bad pattern: ${e.message}` }; }
   }
-  if (c.tool !== undefined) return { pass: named(o.tools, c.tool), why: `called ${c.tool}` };
-  if (c.anyTool !== undefined) return { pass: [].concat(c.anyTool).some(n => named(o.tools, n)), why: `called one of ${[].concat(c.anyTool).join(', ')}` };
-  if (c.noTool !== undefined) return { pass: !named(o.tools, c.noTool), why: `never called ${c.noTool}` };
-  if (c.maxSteps !== undefined) return { pass: (o.steps ?? Infinity) <= c.maxSteps, why: `${o.steps ?? '?'} steps ≤ ${c.maxSteps}` };
-  if (c.maxTokens !== undefined) return { pass: (o.tokens ?? Infinity) <= c.maxTokens, why: `${o.tokens ?? '?'} tokens ≤ ${c.maxTokens}` };
+  if (c.tool !== undefined) return said(named(tools, c.tool), `called ${c.tool}`, `never called ${c.tool} (${calledList(tools)})`);
+  if (c.anyTool !== undefined) { const any = [].concat(c.anyTool); return said(any.some(n => named(tools, n)), `called one of ${any.join(', ')}`, `called none of ${any.join(', ')} (${calledList(tools)})`); }
+  if (c.noTool !== undefined) return said(!named(tools, c.noTool), `never called ${c.noTool}`, `called ${c.noTool}, which it should not (${tools.filter(t => named([t], c.noTool)).length}×)`);
+  if (c.maxSteps !== undefined) return said((o.steps ?? Infinity) <= c.maxSteps, `${o.steps ?? '?'} steps ≤ ${c.maxSteps}`, `${o.steps ?? '?'} steps, more than ${c.maxSteps}`);
+  if (c.maxTokens !== undefined) return said((o.tokens ?? Infinity) <= c.maxTokens, `${o.tokens ?? '?'} tokens ≤ ${c.maxTokens}`, `${o.tokens ?? '?'} tokens, more than ${c.maxTokens}`);
   if (c.judge !== undefined) {
     try { const j = await judge(c.judge, prompt, o); return { pass: j.pass, why: `judge: ${j.why}` }; }
     catch (e) { return { pass: false, why: `judge could not answer: ${e.message}` }; }
