@@ -89,6 +89,44 @@ test('fallbacks: the screen\'s slot, then its person\'s, then the hive\'s', asyn
   prefs({ voice: undefined });
 });
 
+test('Ambient\'s assistant speaks as the Live call until it has a voice of its own', async () => {
+  prefs({ voice: { quick: { service: 'qwentts', voice: 'ryan' } } });
+  const live = await say('ambient');
+  assert.deepEqual([live.who, live.sent.voice], ['expressive', 'ryan'], 'no Ambient voice anywhere: the Live call\'s');
+  // Its own on the hive wins over the Live call's on this screen: a kind's own slot first, then the one it follows.
+  prefs({ voice: { ambient: { service: 'hive', voice: 'if_sara' } } });
+  await H.api(null, 'POST', '/api/screen/settings', { voice: { quick: { service: 'qwentts', voice: 'ryan' } } });
+  const own = await say('ambient');
+  assert.deepEqual([own.who, own.sent.voice], ['hive', 'if_sara']);
+  assert.equal((await say('quick')).who, 'expressive', 'the Live call keeps its own');
+  const pick = require('../modules/call-voices').pick('ambient', {});
+  assert.equal(pick.from, 'hive');
+
+  // The agent is told of tone tags by the voice that will speak: Ambient's (Kokoro here), not the Live call's.
+  const chat = require('../modules/chat');
+  const screen = (await H.api(null, 'GET', '/api/screen')).body;
+  const req = speaks => ({ auth: { user: H.owner.user, session: { screen: screen.id } }, body: { speaks } });
+  const amb = chat.voiceClient({ name: 'The panel' }, 'assistant', req('ambient'));
+  assert.deepEqual([amb.mode, amb.voiceTags, amb.name], ['assistant', undefined, 'Ambient’s assistant (spoken)']);
+  assert.equal(chat.voiceClient({ name: 'The panel' }, 'assistant', req()).voiceTags, true, 'the face\'s call: the expressive voice');
+  await H.api(null, 'POST', '/api/screen/settings', { voice: null });
+  prefs({ voice: undefined });
+});
+
+test('a voice is tried before it is saved: synthesize with an engine speaks through it', async () => {
+  const n = heard.expressive.length;
+  const r = await H.api(null, 'POST', '/api/chat/synthesize', { text: 'Hello there.', engine: 'qwentts', voice: 'Serena', speed: 1.3 });
+  assert.equal(r.status, 200);
+  assert.equal(heard.expressive.length, n + 1);
+  assert.deepEqual([heard.expressive.at(-1).voice, heard.expressive.at(-1).speed], ['serena', 1.3]);
+  const hive = await H.api(null, 'POST', '/api/chat/synthesize', { text: 'Hello there.', engine: '', voice: 'if_sara' });
+  assert.equal(hive.status, 200);
+  assert.equal(heard.hive.at(-1).voice, 'if_sara', 'the hive\'s own service');
+  const nope = await H.api(null, 'POST', '/api/chat/synthesize', { text: 'Hello there.', engine: 'no-such-engine', voice: 'af_heart' });
+  assert.equal(nope.status, 200, 'an engine that does not exist is the hive\'s, as a screen setting naming one is');
+  assert.equal(heard.hive.at(-1).voice, 'af_heart');
+});
+
 test('tone tags are offered only in a call whose voice understands them', async () => {
   const chat = require('../modules/chat');
   const screen = (await H.api(null, 'GET', '/api/screen')).body;
@@ -135,7 +173,7 @@ test('a device\'s call speaks in the Quick call voice of its screen, or the hive
   prefs({ voice: undefined });
 });
 
-test('the panel\'s call asks for the Quick voice from the face and the Deep voice from the chat', async () => {
+test('the panel\'s call asks for the Live call\'s voice from the face, Ambient\'s from its page and the Deep call\'s from the chat', async () => {
   const bodies = [];
   const sandbox = {
     console, setTimeout, clearTimeout, Math, Date, Uint8Array, performance,
@@ -149,8 +187,9 @@ test('the panel\'s call asks for the Quick voice from the face and the Deep voic
   const s = sandbox.__;
   s.set('_callPlayCtx', { state: 'running', decodeAudioData: async () => ({}), createBufferSource: () => ({ connect() {}, start() {}, stop() {} }), destination: {} });
   s.set('_callActive', true);
-  for (const [assistant, call] of [[true, 'quick'], [false, 'deep']]) {
+  for (const [assistant, call, ambient] of [[true, 'quick', false], [false, 'deep', false], [true, 'ambient', true]]) {
     s.set('_callAssistant', assistant);
+    s.set('_callAmbient', ambient);   // a call Ambient's page started (ambient.js: chatToggleCall({assistant, ambient}))
     await s.get('_callEnqueueSynth')('Hello.');
     assert.equal(bodies.at(-1).call, call);
   }

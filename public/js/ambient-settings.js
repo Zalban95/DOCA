@@ -10,7 +10,10 @@ function ambientFormHtml(s = {}) {
   const lines = (s.buttons || []).map(b => `${b.label} | ${b.say}`).join('\n');
   const range = (id, label, v, d) => `<label>${label} <span id="${id}-v">${v ?? d}%</span>
     <input type="range" id="${id}" min="0" max="25" data-default="${d}" data-label="${label}" value="${v ?? d}" oninput="document.getElementById('${id}-v').textContent=this.value+'%'"></label>`;
-  return `<label>Where it is, for the weather<input class="input" id="amb-f-place" value="${escHtml(s.place || '')}" placeholder="empty: this device's own location${s.here?.name ? ` — now ${escHtml(s.here.name)}` : ''}"></label>
+  // The place is typed or picked from the places of that name (lib/choice-input.js; Open-Meteo's geocoder, no key).
+  return `<label>Where it is, for the weather${choiceInput({ id: 'amb-f-place', value: s.place || '', source: 'Open-Meteo', search: true,
+      placeholder: `empty: this device's own location${s.here?.name ? ` — now ${s.here.name}` : ''}`,
+      load: async (_force, q) => (q && q.length >= 2 ? apiFetch(`/api/ambient/places?q=${encodeURIComponent(q)}`) : { items: [] }) })}</label>
     <div class="amb-f-show">${AMB_SHOW.map(([k, l]) => `<label class="amb-check"><input type="checkbox" data-show="${k}" ${ambShown(s, k) ? 'checked' : ''}> ${l}</label>`).join('')}</div>
     <label>Quick buttons — one per line: <i>label | what it says to the agent</i>
       <textarea class="input" id="amb-f-buttons" rows="4" placeholder="Good night | Turn off the lights downstairs and set the heating to 18°">${escHtml(lines)}</textarea></label>

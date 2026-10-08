@@ -62,6 +62,10 @@ function mount(app) {
   app.get('/api/ambient/place', async (req, res) => {
     try { res.json(await weather.locate(String(req.query.q || ''))); } catch (e) { res.status(e.status || 502).json({ error: e.message }); }
   });
+  // Places by name, to pick one from or keep what is typed (Settings → Ambient; Open-Meteo's geocoder, no key).
+  app.get('/api/ambient/places', async (req, res) => {
+    try { res.json({ source: 'Open-Meteo', items: await weather.places(req.query.q) }); } catch (e) { res.status(e.status || 502).json({ error: e.message }); }
+  });
 }
 
 module.exports = { view, today, notices, mount };
