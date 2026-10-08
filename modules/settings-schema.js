@@ -77,6 +77,13 @@ const SCHEMA = {
       strays:          { type: 'string', oneOf: ['leave', 'archive', 'delete'], default: 'leave', propose: false,
         hint: 'What the tidy-up does with a stopped computer container no record names and no install labels: leave it (listed in the Computers tab), archive it, or delete it (its files kept in its volume).' },
     } },
+  // Housekeeping, not a guard: proposable like computers.idleStopMinutes (agents/tidy.js). 0 turns a rule off.
+  missions:         { is: 'travels', home: 'hive', note: 'when finished specialists\' missions are put away in the Archive by themselves',
+    propose: p('Finished missions', 'When finished missions are put away in the Archive by themselves'),
+    keys: {
+      archiveSeenAfterMin: { type: 'number', min: 0, default: 30, hint: 'Minutes after its person opened a finished mission that it is put away in the Archive (0: never by this rule).' },
+      archiveAfterHours:   { type: 'number', min: 0, default: 24, hint: 'Hours after a mission finished that it is put away, seen or not (0: never by this rule). One its leader has not read, one waiting for a person, or one kept with 📌 stays.' },
+    } },
   search:           { is: 'travels', home: 'hive', note: 'which web search provider web_search uses, and a SearXNG address (keys live in keys/search.json)',
     propose: p('Web search', 'Which provider web_search uses'),
     keys: { provider: { type: 'string', default: 'duckduckgo', hint: 'searxng, brave, tavily or duckduckgo (no key, the fallback).' },

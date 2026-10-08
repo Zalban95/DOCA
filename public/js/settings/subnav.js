@@ -124,6 +124,7 @@ function _settingsHarnessRender() {
   retrievalCardRender(panel); // retrieval: the embedding model (settings/retrieval.js)
   visionCardRender(panel);    // vision: the screen readers (settings/vision.js)
   scoutCardRender(panel);     // the model scout, in developer mode (settings/scout.js)
+  missionsTidyCardRender(panel); // finished missions put away by themselves (settings/missions-tidy.js)
 }
 /** Settings → Harness → ⚙: the built-in agent's parameters are edited on Controls, beside its row. */
 async function settingsOpenHarnessParams() {
