@@ -5,7 +5,7 @@ async function liveCallAssistantCard(panel, s) {
   const c = s.settings?.call || {};
   const word = c.wakeWord || (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA';
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'assistant-card' });
-  card.innerHTML = `<div class="card-title">Quick call — when you talk to the face</div>
+  card.innerHTML = `<div class="card-title">Live call — when you talk to the face (and Ambient’s assistant)</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Tap the face (or say its name): it fills the screen and talks — the same conversation as the chat,
       answered quicker and shorter. "Think harder" or "quick answers" changes the effort for the conversation.</p>
     <div style="display:flex;flex-direction:column;gap:10px">
@@ -58,7 +58,7 @@ async function liveCallAssistantHtml() {
       Answer at once: quick actions in the call, anything bigger (or "think harder") to a work chat, its outcome said in the call</label>
     <label style="font-size:11px;color:var(--muted)">How it speaks<textarea class="input" id="as-style" rows="4" style="width:100%;margin-top:4px" data-label="How it speaks"${a.defaults?.style != null ? ` data-default="${escHtml(a.defaults.style)}"` : ''} ${owner ? '' : 'disabled'}>${escHtml(a.style || '')}</textarea></label>
     </div>`, { id: 'assistant-hive', label: 'Advanced — a quicker model, the Deep call, how it speaks' })}
-    ${owner ? `<div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantSave()">Save the Quick call</button>
+    ${owner ? `<div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantSave()">Save the Live call</button>
       <button class="btn btn-sm" onclick="liveCallAssistantSave(true)">Default style</button></div>` : ''}
   </div>`;
 }

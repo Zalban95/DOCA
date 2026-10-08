@@ -87,7 +87,7 @@ function usage() {
       entries: ws?.lines ?? null, bytes: ws?.bytes ?? null, settings: [setting('logs.workstreamLines')] },
     { id: 'mcp', label: 'MCP servers\' output', where: 'memory', what: 'what each server printed, per server (Field → MCP)',
       entries: mcp?.lines ?? null, bytes: mcp?.bytes ?? null, settings: [setting('logs.mcpLines')] },
-    { id: 'calls', label: 'Live calls', where: 'memory', what: 'each stage of each live call: audio heard, transcripts (counted, never the words), turns, answers spoken (Hub → Logs)',
+    { id: 'calls', label: 'Calls', where: 'memory', what: 'each stage of each call (Live, Deep, Ambient’s assistant, a device’s): audio heard, transcripts (counted, never the words), turns, answers spoken (Hub → Logs)',
       entries: call?.lines ?? null, bytes: call?.bytes ?? null, settings: [setting('logs.callLines')] },
     { id: 'runs', label: 'Runs', where: 'disk', what: 'one record per turn, mission and device job: who, how it ended, what it cost (Chronicle)',
       entries: db(runs?.n), bytes: db(runs?.b), approx: true, settings: [setting('logs.runsRetainDays')] },

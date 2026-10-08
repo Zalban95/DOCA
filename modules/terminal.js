@@ -89,10 +89,12 @@ function setup(httpServer) {
     if (req.url.startsWith('/api/v1/mcp/host')) return require('./mcp/socket-hosts').upgrade(req, socket, head);   // a device lending tools over its own socket
     // Both sockets are a shell on this machine: the "host" right, a recent
     // sign-in, and this panel's own page (modules/auth/gate.js).
-    if (!require('./auth/gate').upgradeAllowed(req, 'host')) {
+    const who = require('./auth/gate').upgradeAllowed(req, 'host');
+    if (!who) {
       socket.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
       return;
     }
+    try { require('./machines/acts').upgrade(req, who); } catch { /* a take-over is written down (machines/acts.js); never in its way */ }
     if (req.url === '/ws/terminal') {
       termWss.handleUpgrade(req, socket, head, ws => termWss.emit('connection', ws, req));
     } else if (req.url.startsWith('/ws/harness')) {

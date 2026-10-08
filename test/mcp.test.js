@@ -132,7 +132,7 @@ test('HTTP MCP tool errors are backend evidence, transport failures are not', as
 test('MCP cards label connection separately from reported backend failures', () => {
   const vm = require('node:vm');
   const source = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'mcp.js'), 'utf8');
-  const context = vm.createContext({ escHtml: String, jsArg: JSON.stringify });
+  const context = vm.createContext({ escHtml: String, jsArg: JSON.stringify, machineOriginHtml: () => '' });   // who started it: lib/machine-origin.js
   const card = vm.runInContext(source + '\n;_mcpCardHtml', context);
   const server = { id: 'blender', transport: 'http', state: 'running', tools: [], toolCount: 0, backend: 'unknown' };
   assert.match(card(server), /MCP CONNECTED/);

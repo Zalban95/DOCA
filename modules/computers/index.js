@@ -202,7 +202,8 @@ async function ownFor(def, person = null) {
 function lend(id, missionId) {
   const c = need(id);
   patch(c.id, { missionId, missions: [...(c.missions || []), missionId].slice(-20), archivedAt: null });   // lent again: back from the archive
-  list().then(l => { if (l.find(x => x.id === c.id)?.state !== 'running') start(c.id).catch(() => {}); });   // stopped since its last errand
+  list().then(l => { if (l.find(x => x.id === c.id)?.state !== 'running') start(c.id).then(() => require('../activity').note({ from: 'computers', what: `started ${c.name}`,   // stopped since its last errand
+    why: `lent to the mission ${missionId}`, machine: { kind: 'computer', id: c.id, name: c.name }, act: 'start', ok: true })).catch(() => {}); });
   return c.id;
 }
 

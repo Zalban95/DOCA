@@ -75,6 +75,7 @@ async function llamaLoadStatus() {
     const data = await apiFetch('/api/models/llamacpp/status');
     _llamaStatus = data.status || {};
   } catch { _llamaStatus = {}; }
+  await machineOriginsLoad();   // who started each (lib/machine-origin.js)
   _updateLlamaBadges();
 }
 
@@ -97,7 +98,7 @@ function _renderLlamaGrid() {
         <span class="badge ${running ? 'badge-green' : 'badge-grey'}" id="llama-badge-${inst.id}">
           ${running ? '● running' : '○ stopped'}
         </span>
-        <span class="services-label">${inst.name}</span>
+        <span class="services-label">${inst.name}<span class="m-origin" id="llama-origin-${inst.id}"></span></span>
         <span style="flex:1"></span>
         <a id="llama-url-${inst.id}" class="services-url"
            style="display:${running ? '' : 'none'}"
@@ -153,6 +154,7 @@ function _updateLlamaBadges() {
   for (const inst of _llamaInstances) {
     const info    = _llamaStatus[inst.id];
     const running = info?.running === true;
+    machineOriginFill(document.getElementById(`llama-origin-${inst.id}`), 'llamacpp', inst.id);
     const badge   = document.getElementById(`llama-badge-${inst.id}`);
     const urlEl   = document.getElementById(`llama-url-${inst.id}`);
     const startBtn   = document.getElementById(`llama-start-${inst.id}`);
@@ -214,7 +216,7 @@ function llamaAddInstance() {
 }
 
 function llamaDelete(id) {
-  appConfirm(`Delete llama.cpp instance "${id}"?`, async () => {
+  machineAsk('llamacpp', id, 'delete', `the llama.cpp instance "${id}"`, async () => {
     try {
       await apiFetch(`/api/models/llamacpp/${id}`, { method: 'DELETE' });
       llamaLoadList();
@@ -245,7 +247,8 @@ async function llamaStart(id) {
   if (startBtn) startBtn.disabled = false;
 }
 
-async function llamaStop(id) {
+async function llamaStop(id, asked) {
+  if (!asked) return machineAsk('llamacpp', id, 'stop', '', () => llamaStop(id, true));   // names what uses it (lib/machine-ask.js)
   const stopBtn = document.getElementById(`llama-stop-${id}`);
   if (stopBtn) stopBtn.disabled = true;
   try {
@@ -258,7 +261,8 @@ async function llamaStop(id) {
   setTimeout(llamaLoadStatus, 500);
 }
 
-async function llamaRestart(id) {
+async function llamaRestart(id, asked) {
+  if (!asked) return machineAsk('llamacpp', id, 'restart', '', () => llamaRestart(id, true), 'It stops while the model loads again.');
   const out = document.getElementById(`llama-out-${id}`);
   const restartBtn = document.getElementById(`llama-restart-${id}`);
 

@@ -28,7 +28,7 @@ function agentEventSink(ui) {
     switch (evt.type) {
       case 'session': ui.onSession?.(evt.sessionId); break;
       case 'thinking': settleCall(); clearWait(); ui.stream.feedThinking?.(evt.text); break;
-      case 'text': settleCall(); clearWait(); ui.onText?.(evt.text); ui.stream.feed(evt.text); break;
+      case 'text': settleCall(); clearWait(); ui.onText?.(evt.spoken ?? evt.text); ui.stream.feed(evt.text); break;   // what speaks hears the tone tags (`spoken`); what shows never does
       // The provider has the request and has not started answering: one row, rewritten in place.
       case 'waiting': {
         const text = `${evt.provider} has not sent a token yet — ${evt.seconds}s`

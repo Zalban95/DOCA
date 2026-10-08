@@ -6,53 +6,65 @@
 
 const WAKE_SILENCE_MS = 700, WAKE_MAX_MS = 5000, WAKE_MIN_VOICED_MS = 300;
 let _wake = null;           // {stream, ctx, an, raf, word, thr, rec, voiced, quietAt, startedAt, busy}
-let _wakeApplying = false;
+let _wakeApplying = false, _wakeAgain = false;
+const WAKE_TOUCH = ['pointerdown', 'keydown', 'touchend'];
 
 /** Listen when this screen wants it, stop when it does not: called at load, on the face's switch, after a call. */
 async function wakeWordApply() {
-  if (_wakeApplying) return;
+  if (_wakeApplying) { _wakeAgain = true; return; }   // asked again while deciding: decided again after, never dropped
   _wakeApplying = true;
   try {
     const want = await _wakeWanted();
     if (!want) return wakeWordPause();
     if (_wake) { Object.assign(_wake, want); return; }
     let stream;
-    try { stream = await micOpen({ echoCancellation: true, noiseSuppression: true }); }
+    try { stream = await micOpen(MIC_SPEECH); }   // a call's stream, handed over as it ended (lib/mic.js)
     catch (e) { console.warn('wake word: the microphone did not open —', e.message); return; }
-    if (!(await _wakeWanted())) { stream.getTracks().forEach(t => t.stop()); return; }   // a call began meanwhile
+    if (!(await _wakeWanted())) { micHandOff(stream); return; }   // a call began meanwhile: it may take this stream
     const ctx = new AudioContext(), an = ctx.createAnalyser();
     an.fftSize = 512;
     ctx.createMediaStreamSource(stream).connect(an);
     // A page that nobody has touched yet gets a suspended context, which hears nothing: every touch or key wakes it, and
     // an ambient screen says it needs one (wakeWordState).
     const wakeCtx = () => { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); };
-    ['pointerdown', 'keydown', 'touchend'].forEach(e => document.addEventListener(e, wakeCtx, { passive: true }));
+    WAKE_TOUCH.forEach(e => document.addEventListener(e, wakeCtx, { passive: true }));
     ctx.onstatechange = () => { if (typeof ambientHearing === 'function') ambientHearing({ suspended: ctx.state === 'suspended' }); };
     ctx.onstatechange();
-    _wake = { stream, ctx, an, ...want, rec: null, voiced: 0, quietAt: 0, startedAt: 0, last: 0, busy: false };
+    _wake = { stream, ctx, an, wakeCtx, ...want, model: null, rec: null, voiced: 0, quietAt: 0, startedAt: 0, last: 0, busy: false };
     if (typeof ambientHearing === 'function') ambientHearing({ listening: true, word: want.word });
     // A model trained for the word (experiments.wakeModel, lib/wake-model.js): heard on the screen, nothing sent. Without
     // one, or if it cannot run here, the transcript match below as before.
-    const url = want.model && typeof wakeModelFor === 'function' ? await wakeModelFor(want.word) : '';
+    const url = want.useModel && typeof wakeModelFor === 'function' ? await wakeModelFor(want.word) : '';
     if (url) {
       const w = _wake;
-      try { w.model = await wakeModelStart(stream, url, { onWake: () => _wakeModelHeard(w) }); return; }
+      try { const m = await wakeModelStart(stream, url, { onWake: () => _wakeModelHeard(w) }); if (_wake === w) w.model = m; else m?.stop?.(); return; }
       catch (e) { console.warn('wake model: falling back to speech-to-text —', e.message); }
     }
     _wakeLoop();
-  } finally { _wakeApplying = false; }
+  } finally {
+    _wakeApplying = false;
+    if (_wakeAgain) { _wakeAgain = false; wakeWordApply(); }
+  }
 }
 
-/** Stop listening (a call took the microphone, the face went away, the page was hidden). */
+/**
+ * Stop listening (a call took the microphone, the face went away, the page was hidden). It never throws: until
+ * 2026-10-08 a resting screen without a trained model kept `model: false` here, `false?.stop()` threw, and every call
+ * from then on died before it opened the microphone — Ambient's galaxy rose and fell, and nothing reached the hub.
+ * The stream is handed over (lib/mic.js), so a call opening now takes it live instead of reopening the microphone.
+ */
 function wakeWordPause() {
-  if (!_wake) return;
-  _wake.model?.stop();
-  if (typeof ambientHearing === 'function') ambientHearing({ listening: false });
-  (typeof micFrameCancel === 'function' ? micFrameCancel : cancelAnimationFrame)(_wake.raf);
-  if (_wake.rec && _wake.rec.state !== 'inactive') { _wake.rec.onstop = null; _wake.rec.stop(); }
-  _wake.stream.getTracks().forEach(t => t.stop());
-  _wake.ctx.close().catch(() => {});
+  const w = _wake;
+  if (!w) return;
   _wake = null;
+  const quietly = fn => { try { fn(); } catch (e) { console.warn('wake word: letting go —', e.message); } };
+  quietly(() => { if (typeof w.model?.stop === 'function') w.model.stop(); });
+  quietly(() => { if (typeof ambientHearing === 'function') ambientHearing({ listening: false }); });
+  quietly(() => (typeof micFrameCancel === 'function' ? micFrameCancel : cancelAnimationFrame)(w.raf));   // a background tick too (lib/mic-keep.js)
+  quietly(() => { if (w.rec && w.rec.state !== 'inactive') { w.rec.onstop = null; w.rec.stop(); } });
+  quietly(() => micHandOff(w.stream));
+  quietly(() => WAKE_TOUCH.forEach(e => document.removeEventListener(e, w.wakeCtx)));
+  quietly(() => w.ctx.close().catch(() => {}));
 }
 
 async function _wakeWanted() {
@@ -72,7 +84,7 @@ async function _wakeWanted() {
   if (!s.experiments?.wakeWord || !(ambient ? s.settings?.ambient?.listen !== false : c.listenWithFace)) return null;
   let word = String(c.wakeWord || '').trim();
   if (!word) word = (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA';
-  return { word, thr: c.sensitivity >= 1 ? c.sensitivity : 15, model: !!s.experiments?.wakeModel };
+  return { word, thr: c.sensitivity >= 1 ? c.sensitivity : 15, useModel: !!s.experiments?.wakeModel };   // not `model`: that is the running model, and a re-apply merges this in
 }
 
 function _wakeLoop() {

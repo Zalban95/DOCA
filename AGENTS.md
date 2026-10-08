@@ -541,6 +541,11 @@ The harness gives its agent eight rules for working on any repository (charter r
 ### Nothing runs unseen (since 2.289.0, `modules/activity.js`; CONSTITUTION §1, TODO P1.8; docs/audits/2026-10-07-nothing-unseen.md)
 - **What the hub does on its own is a line.** A turn, a mission and a device job are runs (Chronicle tells them); the rest — a computer stopped or removed by the tidy-up, an MCP server started or resumed at boot, a schedule firing, a mission carried on after a restart, an errand started after the missions it waited for, a supervisor wake, the scout's look, a scheduled backup, the log keeper pruning, a channel bot listening again — writes `activity.note({from, what, why, person?})` where it acts: a file per day under `DATA_DIR/activity` (kept `logs.activityDays`, 30), the live feed's `activity` topic (hosts), and Chronicle's source `hub` (a host every line, a person the lines done for them). The audit lists every kind of running thing with the tab that draws it and the log that keeps it; a new routine writes its line, and `test/activity.test.js` holds the listed ones to it.
 
+### A machine is closed only when asked, and every act on one is a line (since 2026-10-08, `modules/machines/use.js`, `acts.js`, `acts-agent.js`, `origin.js`)
+- **Every button that stops, restarts, kills or removes a machine asks first** — a container, an inference service, a llama.cpp server, a VM, an agents' computer (putting one away too), a VNC screen, the stack, an MCP server — through one helper, `machineAsk(kind, id, verb, name, go, extra)` / `machineAskFirst` (`public/js/lib/machine-ask.js`, over `appConfirm`), so they all ask the same way. The question names what uses it right now, from `GET /api/machines/use?kind=&id=` (host, with the rest of `/api/machines`): `machineUse(kind, id)` → `{name, reasons}`, made from what exists — the port of a service, a llama.cpp instance or a container's published ports against the providers in use (`use-ports.js`: the agent's model, its fallbacks and escalation, assistant mode, vision, retrieval, specialists), `voiceServices` and the screens heard lately whose voice resolves there (`tts-engines.forVoice`), `harness/inflight`, a served page; a computer's running mission (`profile.computer`), its driver, an agent's last act on it; a VM's consoles open through the hub (`vm-console.consoles`) and its VNC screen's sockets; the conversations running while an MCP server is up, and its last call. A new kind of machine gets a row in `use.js KIND`. Starting and opening do not ask, and the agent's `hub_command` keeps its own forced asks.
+- **Who acted is written down**: `activity.note` takes `machine {kind, id, name}`, `act`, `via` and `ok` beside the old fields. A person's act from the panel is one middleware after the gate (`acts.middleware`, a table of the acting routes — a new acting route gets a row in `acts.ROUTES`), a device's command is noted by `api-v1/commands.execute` (a job when it ends), an agent's from its turn's `tool_call`/`tool_result` events (`acts-agent.js`: `hub_command run`, `mcp_connect`, `computer`, with the conversation as `via` and its `sessionId`), a take-over when the drive socket of a computer or a VNC screen opens (`terminal.js` → `acts.upgrade`). The hub's own (a computer lent and started, tidied away; an MCP server resumed) carry `machine` too. Names come only from records — the person's account, the screen's or device's record — never a literal. A container is kept by its name (its id changes when remade). Chronicle's `hub` source lists them with a person filter.
+- **A row says who started it** (`origin.js`, over the last 30 days of lines): `origin {text, at, outside}` on every `/api/machines/rows` row and Live tile, and `origins` for services, llama.cpp and MCP servers; the panel draws it with `lib/machine-origin.js` — "started by <person> from <screen or device>, 2 h ago", "started by an agent … in the conversation …", "started by DOCA (…)", a stopped one "stopped by …", and in amber "started outside DOCA" for one running that no line started (a VM started with virt-manager). A container named `doca-<service>` reads its service's lines, one of the stack's compose project the stack's. `test/machine-confirms.test.js`.
+
 ### MCP servers (`/api/mcp/*`)
 - `modules/mcp/` is self-contained: `client.js` is a hand-rolled JSON-RPC 2.0 client (newline-delimited JSON over a child process's stdio, or POST for an HTTP server), `registry.js` holds the definitions in prefs under `mcpServers` plus the live clients, `tools.js` presents running servers' tools to the harness, `export.js` writes them into other agents' config files. **Do not add the official MCP SDK** — it is ESM and this project is CommonJS with seven dependencies that all pull their weight.
 - **The Hugging Face token is in the protected keys** (since 2.240.0, `modules/hf-token.js`, `DATA_DIR/keys/huggingface.json`, 0600, PROTECTED_FILES): `loadModelsPrefs()` puts it back into `models.hf.token` for its readers and `saveModelsPrefs()` takes it out; migration `2.240-hf-token` moves an older file's.
@@ -680,6 +685,33 @@ The harness gives its agent eight rules for working on any repository (charter r
   Whisper in English and Italian; the image is 33 GB on disk. Why this one: Higgs Audio v3, Voxtral TTS, Fish Audio S2
   Pro and Breeze TTS 2 rank higher in blind tests but their weights are non-commercial; Chatterbox Multilingual (MIT,
   Italian) has an intensity knob but no kind of tone; Chatterbox Turbo has real `[laugh]` tags but English only.
+- **The calls' names** (asked 2026-10-08, round two): the dots call — the face, assistant mode — is the **Live call**;
+  the chat's 🎙 is the **Deep call**; Ambient's spoken helper is **Ambient's assistant**. Only the visible words changed:
+  the slot `voice.quick`, `call.*`, `assistant.*`, the `assistant`/`call` modes and every API field keep their names
+  (the "Quick" below is `voice.quick`). The call log names each (`panel-call.js`: the page sends `ambient`), and its
+  source is "Calls" — Live, Deep, Ambient's and a device's.
+- **The microphone is handed over, never dropped and reopened** (`public/js/lib/mic.js micHandOff`; 2026-10-08: on a
+  phone a call opened six seconds after another heard a level of 0 for 54 s). Whoever lets go of it — a call ending,
+  the wake word pausing for a call — hands its stream over for `MIC_HANDOFF_MS` (1.5 s), and the next `micOpen` with
+  the same constraints (`MIC_SPEECH`) takes it live; nobody taking it, it is stopped. **`wakeWordPause` never throws**:
+  a screen resting without a trained model kept `model: false` and `false?.stop()` threw, so every call from a resting
+  screen died before it opened the microphone — Ambient's galaxy rose and fell at once, and nothing reached the hub (the
+  flag is `useModel` now, apart from the running model). `chatToggleCall` catches whatever throws while a call opens and
+  says "The call did not start: …" in the chat and on the face or Ambient (stopping a half-started call), and
+  `wakeWordApply` asked while deciding decides again after. **A call watches its microphone** (`chat-call-mic.js`): its
+  samples exactly zero, its track muted or ended, or its audio held for a touch, for 4 s from the start, it wakes its
+  audio and opens the microphone once more, then says "The microphone gives nothing — another app or a call may hold
+  it" (both in the call log); any touch during a call resumes its audio contexts (a hold or a wake word has no gesture
+  of its own). A paused voice waits at most 4 s for the decision (`CALL_HOLD_DECIDE_MS`); a sentence played while the
+  page's audio is not running is logged as a warning; a sentence the voice cannot say is written on the face's or
+  Ambient's line when the chat is not on screen. `test/call-handoff.test.js` runs the scripts in a sandbox.
+- **Tone tags are kept apart at the source** (`voice-tags.stream`, `harness/agent.js`; a watch showed "[calm] Perfect —"
+  on 2026-10-08): a spoken turn (`voice-tags.spokenTurn`: `voiceTags`, or mode `call`/`assistant`) keeps and returns
+  clean text, so the stored row, `agent.turn`/`agent.text` to every device, Telegram, the live feed and the Workstream
+  never carry them; each `text` event also has `spoken`, the piece as written, which `/api/chat` forwards and only what
+  speaks reads (`agent-ui/event-sink.js` hands `spoken` to `onText`; `realtime/index.js askAsDevice`). Whisper's
+  subtitle credits ("КОНЕЦ", "Субтитры сделал …", "Sottotitoli creati …") are screened like its other silence phrases
+  (`stt-filter.js CREDITS`). `test/voice-tags-source.test.js`.
 - **A voice per kind of call: Quick and Deep** (`modules/call-voices.js`; asked 2026-10-08: "keep the expressive model
   for the ambient and the quick calls on the watch, and the dots-themed call. That is the quick one, inside of the one
   that starts from the chat. That is the Deep one."). The **Quick call** is the face's (assistant mode: the corner

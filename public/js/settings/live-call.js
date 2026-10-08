@@ -19,7 +19,7 @@ async function liveCallRender() {
   try { rt = await apiFetch('/api/realtime'); } catch { /* without chat */ }
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'live-call-card' });
   card.innerHTML = `<div class="card-title">Calls — how they listen on this screen</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">For the Deep call (🎙 in the chat) and the Quick call (the face, Ambient) on <b>${escHtml(s.name || 'this screen')}</b>:
+    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">For the Deep call (🎙 in the chat), the Live call (the face) and Ambient's assistant on <b>${escHtml(s.name || 'this screen')}</b>:
       a phone's microphone and a desk's hear a room differently. ${mine ? 'Set here.' : "Now: the hive's."} From the next call.</p>
     <div style="display:flex;flex-direction:column;gap:10px">
       ${liveCallRow('Pause before sending', `<input class="input" id="lc-silence" type="number" min="0.3" max="10" step="0.1" value="${(c.silenceMs || 2000) / 1000}" style="width:90px"> s`,

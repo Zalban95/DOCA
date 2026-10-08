@@ -38,11 +38,13 @@ let _callRecPeak = 0, _callVoicedMs = 0, _callLastFrame = 0, _callSynthPending =
 const _callIdleMs = () => (_callActive && _callLastActive ? performance.now() - _callLastActive : 0);
 
 function _callSetStatus(text, state) {
+  // A notice just said stays a few seconds: "Listening…" changes only the microphone's look meanwhile (chat-call-report.js).
+  if (text === 'Listening…' && typeof _callNoticeUntil !== 'undefined' && performance.now() < _callNoticeUntil) text = null;
   const el = document.getElementById('chat-call-status');
   const mic = document.getElementById('chat-call-mic-icon');
-  if (el) el.textContent = text;
-  if (typeof _assistantSay === 'function' && typeof assistantIsOpen === 'function' && assistantIsOpen() && _callActive) _assistantSay(text);
-  if (typeof ambientSay === 'function' && _callActive) ambientSay(text, state);   // the ambient screen's own line (ambient.js)
+  if (el && text !== null) el.textContent = text;
+  if (text !== null && typeof _assistantSay === 'function' && typeof assistantIsOpen === 'function' && assistantIsOpen() && _callActive) _assistantSay(text);
+  if (text !== null && typeof ambientSay === 'function' && _callActive) ambientSay(text, state);   // the ambient screen's own line (ambient.js)
   if (mic) mic.className = `chat-call-mic-icon ${state || ''}`;
 }
 
@@ -56,7 +58,16 @@ async function chatToggleCall({ assistant = false } = {}) {
   }
   // _callStart's first part runs now, inside the tap (its audio contexts must), and the flag holds until it settles.
   _callStarting = true;
-  try { return await _callStart({ assistant }); } finally { _callStarting = false; }
+  try { return await _callStart({ assistant }); }
+  catch (e) {
+    // Never a call that just does not happen: until 2026-10-08 a throw here (the wake word letting go) left "Checking
+    // services…" on screen, nothing on the hub, and Ambient's galaxy falling back a second after it rose.
+    if (_callActive) { try { _callStop('the call could not start'); } catch { /* as far as it got */ } }
+    else { try { _callAudioCtx?.close().catch(() => {}); _callPlayCtx?.close().catch(() => {}); } catch { /* gone */ } _callAudioCtx = _callPlayCtx = null; }
+    chatAppendMsg('system', `The call did not start: ${e.message}`);
+    _callSetStatus(`The call did not start: ${e.message}`, '');
+    return false;
+  } finally { _callStarting = false; }
 }
 
 /** The name a person calls the hive by, as the transcriber's spelling hint: Whisper has never heard an invented name
@@ -91,13 +102,13 @@ async function _callStart({ assistant }) {
   // Assistant mode always drives the face by voice: there the face is the conversation (docs/experiments/face-voice.md).
   try { const ex = (await screenLoad(true)).experiments || {}; _callBargeIn = !!ex.bargeIn; _callFaceVoice = !!ex.faceVoice || assistant; _callAssistant = assistant; }
   catch { _callBargeIn = false; _callFaceVoice = assistant; _callAssistant = assistant; }
-  if (typeof wakeWordPause === 'function') wakeWordPause();   // the call has the microphone now
+  if (typeof wakeWordPause === 'function') wakeWordPause();   // the call has the microphone now: its stream is handed over (lib/mic.js)
   _callStats = { at: Date.now(), bargeIns: 0, dropped: 0 };
   try { const c = (await screenPrefs()).call || {}; _callHint = String(c.wakeWord || '').trim() || (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA'; _callSilenceMs = c.silenceMs >= 300 ? c.silenceMs : 2000; _callThreshold= c.sensitivity >= 1 ? c.sensitivity : 15; }
   catch { /* the defaults */ }
   try {
     // Echo cancellation keeps the agent's own voice from reading as yours — which matters most with barge-in on.
-    _callStream = await micOpen({ echoCancellation: true, noiseSuppression: true });
+    _callStream = await micOpen(MIC_SPEECH);
   } catch (e) {
     chatAppendMsg('system', `The microphone did not open: ${e.message}`);
     return giveUp();
@@ -123,6 +134,7 @@ async function _callStart({ assistant }) {
   if (_callFaceVoice) { _callOutAnalyser = _callPlayCtx.createAnalyser(); _callOutAnalyser.fftSize = 256; _callOutAnalyser.connect(_callPlayCtx.destination); }
 
   _callSetStatus('Listening…', 'listening');
+  _callMicWatchStart(); _callMicTouchWake(true);   // the first seconds watched: a microphone that gives nothing is said (chat-call-mic.js)
   _callVadLoop();
   return true;
 }
@@ -145,7 +157,9 @@ function _callStop(why = 'the person ended the call') {
   if (_callRecorder && _callRecorder.state !== 'inactive') _callRecorder.stop();
   _callRecorder = null;
 
-  if (_callStream) { _callStream.getTracks().forEach(t => t.stop()); _callStream = null; }
+  _callMicWatchStop(); _callMicTouchWake(false);
+  // Handed over, not stopped: the wake word resting after this call, or the next call, takes it live (lib/mic.js).
+  if (_callStream) { micHandOff(_callStream, MIC_SPEECH); _callStream = null; }
   if (_callAudioCtx) { _callAudioCtx.close().catch(() => {}); _callAudioCtx = null; }
   _callAnalyser = null;
 
@@ -194,6 +208,7 @@ function _callVadLoop() {
   if (_callHold) _callHoldQuiet(dt, loud);
   if (playing && !_callSpeaking && _callPlayQuietMs >= 250 && _callOverMs >= 350) _callHoldStart(_callOverMs);
   _callReportLevel(energy);
+  _callMicWatchFrame();
   if (loud) {
     // Speech: a recording starts when nothing is playing (over the voice, a hold records for itself).
     if (!playing && !_callSpeaking && !_callHold && (!_callProcessing || _callBargeIn)) {
@@ -257,7 +272,7 @@ function _callStopRecording() {
 async function _callAnswer(userText) {
   if (!_callActive) return;
   _callProcessing++; _callAnswering++;
-  _callHeardReset(); _callCutWhy = '';
+  _callHeardReset(); _callCutWhy = ''; _callUnspoken = '';
   let finished = false;
   try {
     chatAppendMsg('user', userText);

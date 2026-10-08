@@ -131,6 +131,21 @@ the project's managers only if the owner allows sharing specialists and skills (
 - D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),
   `mcp.listener stop`, `confirmPromptChoice`'s body (§12.6 `{selectionId, decision}`), the native wake word, the
   watch's line in Settings → Updates, `seen` on opening a finished notice and clearing it on `seenAt` (PROTOCOL §11.4, hub 2.282); DocaWear: the LAN port, the same `seen`; DocaDesk: the socket transport, `prompt.outcome`.
+- [x] Asked before a machine is closed, and who acted on it written down (asked 2026-10-08: "add a confirmation when
+  a machine or a docker container's closing button is pressed … so we do not close a service in use"; "I started the
+  VMs manually, log the actions so there is no confusion"; branch `machine-confirms`): every stop, restart, kill or
+  remove of a container, inference service, llama.cpp server, VM, computer (archiving one too), VNC screen, the stack
+  or an MCP server asks through `machineAsk` (`public/js/lib/machine-ask.js`), naming what uses it now —
+  `machines/use.js` + `use-ports.js`, `GET /api/machines/use`: a provider on its port (the agent's model, fallbacks,
+  assistant mode, vision, retrieval, a specialist), the hive's voice or speech-to-text and the screens speaking with
+  it, DOCA's requests in flight, a served page, a mission it is lent to, a person driving it, an open VM console,
+  conversations holding an MCP server's tools. Starting does not ask; `hub_command`'s own asks are unchanged. Every
+  act a person takes from the panel (one middleware, `machines/acts.js`), a device (`api-v1/commands.js`), or an
+  agent (`acts-agent.js`, with its conversation), and a take-over socket, is an `activity.note` with the machine, the
+  act, who, from which screen or device, and whether it worked; Chronicle's `hub` source filters it by person; each
+  row (status column, Live, Docker, VMs, Computers, Services, llama.cpp, MCP) says "started by … from …, 2 h ago", or
+  "started outside DOCA" when nothing noted started it (`machines/origin.js`). Left: the VNC rows (added, not
+  started) carry no line; a container started by the stack's compose before this release reads "outside".
 - [x] Files sent to the person's phone or chat (found 2026-10-08: asked to send nine voice samples to Telegram, the
   Orchestrator had no tool and sent them with a script that loaded the channel's module and its bot token; branch
   `send-media`): `tell_device {files: [{path, caption}]}` — audio, video, documents, pictures, at most 10 — stored as
@@ -173,6 +188,16 @@ the project's managers only if the owner allows sharing specialists and skills (
   calls" (speed under Advanced, "Make it the hive's" for a host); the UI says "Quick call" and "Deep call" (🎙 Deep).
   `test/call-voices.test.js`. Not done: a hosted speech service as a `service` (only the hive's and Services rows);
   nobody has heard the two voices on a real call or a watch yet.
+- [x] Calls, round two (2026-10-08, from the call log; branch `calls-round-two`): **the wedge** — the wake word resting
+  without a trained model threw on letting go (`false?.stop()`), so every call from a resting screen, Ambient's hold
+  included, died before the microphone and nothing reached the hub; fixed, and a call that cannot open now says why.
+  The microphone is handed over between the wake word and a call (`lib/mic.js micHandOff`), a call watches for a
+  microphone that gives pure silence (reopened once, then said: `chat-call-mic.js`), a paused voice waits at most 4 s,
+  an unspoken sentence is shown on the face or Ambient. Tone tags kept apart at the source: clean text everywhere a
+  person reads, `spoken` beside it for the voices. Whisper's subtitle credits screened. Names: Live call (the face),
+  Deep call (the chat's 🎙), Ambient's assistant. Reproduced and checked headless (phone size, mobile UA, the wake word
+  on). Not done: why the 10:53 call on the owner's phone heard exact zeros is not proven (the hand-off and the watch now
+  cover it, and the log will say which it was); nobody has heard it on the phone yet.
 - [x] Self-test 2026-10-08, the agents and missions group (branch `selftest-agents`): specialists' budgets fit a
   real errand (Tester 120, Coder 80, Researcher 40, Scout 30, Archivist 10, unnamed 30; #6); a mission's last step is
   its report, with a line telling its leader it ended on its limit and where that is raised (`turn/mission-report.js`;

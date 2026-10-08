@@ -87,15 +87,19 @@ function validateParams(id, params) {
  *   { kind: 'result', status, result }  for short commands
  *   { kind: 'job', job }                for long-running ones
  */
+const acts = () => require('../machines/acts');
+
 async function execute(id, rawParams, deviceId) {
   const c = COMMANDS[id];
   if (!c) throw new ApiError(404, 'unknown_command', `No command '${id}'`);
   const params = validateParams(id, rawParams);
   if (c.longRunning) {
-    const job = jobs.runAsJob(id, deviceId, c.handler, c.shape(params), params);
+    // Which person on which device started, stopped or restarted which machine (machines/acts.js), once it is known how it went.
+    const job = jobs.runAsJob(id, deviceId, c.handler, c.shape(params), params, j => acts().command(id, params, deviceId, { ok: j.status === 'done', error: j.error }).catch(() => {}));
     return { kind: 'job', job };
   }
   const { status, body } = await c.run(params);
+  acts().command(id, params, deviceId, { ok: status < 400 && !body?.error, error: body?.error || null }).catch(() => {});
   if (status >= 400 || (body && body.error)) {
     throw new ApiError(status >= 400 ? status : 500, 'command_failed', (body && (body.error || body.stderr)) || 'Command failed', { commandId: id });
   }

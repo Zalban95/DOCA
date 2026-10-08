@@ -24,7 +24,7 @@ const ringMax = () => { try { return require('../log-keep').limit('logs.callLine
 const listeners = new Set();
 
 function push(rec, level, text) {
-  const l = { ts: new Date().toISOString(), source: 'call', label: 'Live calls', level, text: `${rec.label} · ${text}`,
+  const l = { ts: new Date().toISOString(), source: 'call', label: 'Calls', level, text: `${rec.label} · ${text}`,
     sessionId: rec.sessionId || null, callId: rec.id, personId: rec.personId || null };
   ring.push(l);
   const max = ringMax();
@@ -106,7 +106,7 @@ function lines({ person = null, host = true } = {}) {
 /** For logs.js: the kept lines, then each new one as it comes. Returns the function that stops it. */
 function open(tail, onLine) {
   for (const l of ring.slice(-tail)) onLine(l);
-  if (!ring.length) onLine({ ts: new Date().toISOString(), source: 'call', label: 'Live calls', level: 'info', text: 'No call since the last start. Each live call writes here, stage by stage.' });
+  if (!ring.length) onLine({ ts: new Date().toISOString(), source: 'call', label: 'Calls', level: 'info', text: 'No call since the last start. Each live call writes here, stage by stage.' });
   listeners.add(onLine);
   return () => listeners.delete(onLine);
 }

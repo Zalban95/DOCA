@@ -34,7 +34,7 @@ async function _callEnqueueSynth(text) {
     const res = await fetch('/api/chat/synthesize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, call: _callAssistant ? 'quick' : 'deep' }),   // the Quick call's voice (the face, Ambient) or the Deep call's (the chat's 🎙)
+      body: JSON.stringify({ text, call: _callAssistant ? 'quick' : 'deep' }),   // the Live call's voice (the face, Ambient) or the Deep call's (the chat's 🎙)
       signal: limit && AS.any && _callAbort ? AS.any([_callAbort.signal, limit]) : (_callAbort?.signal || limit || undefined),
     });
     if (!res.ok) throw new Error(`speech service answered ${res.status}${await res.text().then(t => `: ${t.slice(0, 120)}`).catch(() => '')}`);
@@ -50,7 +50,7 @@ async function _callEnqueueSynth(text) {
   } catch (e) {
     // Once per call: a voice that fails silently reads as a call that answers only in text.
     const lost = e.name === 'TimeoutError' || (e.name !== 'AbortError' && gen === _callSynthGen);
-    if (lost && _callActive && !_callTtsWarned) { _callTtsWarned = true; _callNotice('tts', `The answer could not be spoken (${e.name === 'TimeoutError' ? 'the speech service did not answer' : e.message}) — it is in the chat.`); }
+    if (lost && _callActive) _callUnspokenSay(text, e.name === 'TimeoutError' ? 'the speech service did not answer' : e.message);
   } finally {
     _callSynthFree();
     if (gen !== _callSynthGen) return;   // an earlier call's sentence: nothing here counts it any more
@@ -63,6 +63,21 @@ async function _callEnqueueSynth(text) {
     _callSynthPending = Math.max(0, _callSynthPending - 1);
     if (_callActive && !_callSynthPending && !_callCurrentSrc && !_callPlayQueue.length && !_callProcessing) _callSetStatus('Listening…', 'listening');
   }
+}
+
+/** A sentence the voice could not say is still the answer: the chat has it — and where the chat is not on screen (the
+ *  face, Ambient), the answer is written where the call shows its state. */
+let _callUnspoken = '';
+function _callUnspokenSay(text, why) {
+  const chatShown = typeof chatOpen !== 'undefined' && chatOpen && !(typeof assistantIsOpen === 'function' && assistantIsOpen()) && !(typeof ambientIsOpen === 'function' && ambientIsOpen());
+  if (chatShown) {
+    if (!_callTtsWarned) { _callTtsWarned = true; _callNotice('tts', `The answer could not be spoken (${why}) — it is in the chat.`); }
+    return;
+  }
+  _callUnspoken = `${_callUnspoken} ${typeof voiceTagsStrip === 'function' ? voiceTagsStrip(text) : text}`.trim();
+  const shown = _callUnspoken.length > 280 ? `…${_callUnspoken.slice(-280)}` : _callUnspoken;
+  if (!_callTtsWarned) { _callTtsWarned = true; _callReport('notice', { where: 'tts', text: `the answer could not be spoken (${why}); it is shown instead` }); }
+  _callNotice('tts', `Not spoken (${why}): ${shown}`, { quiet: true });
 }
 
 function _callPlayNext() {
@@ -83,7 +98,10 @@ function _callPlayNext() {
   _callCurrentSrc = src;
   _callSetStatus('Speaking…', 'speaking');
   src.start();
-  _callReport('played', { n: 1 });
+  // The voice's audio held (a phone may suspend it when the call's microphone opens): woken, and the log says so —
+  // a sentence "played" into audio that is not running is one nobody heard (2026-10-08).
+  if (_callPlayCtx.state !== 'running') _callPlayCtx.resume?.().catch(() => {});
+  _callReport('played', { n: 1, audio: _callPlayCtx.state });
   _callHeardMark(buf);   // what is heard, for a cut (chat-call-hold.js)
   if (typeof faceConceptSay === 'function') faceConceptSay(buf._docaText, buf.duration);
 }

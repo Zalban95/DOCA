@@ -44,6 +44,31 @@ function strip(text) {
 }
 
 /**
+ * For an answer arriving in pieces (a turn's text, as the model writes it): `push(piece)` gives what a person may be
+ * shown — the tags gone, with the space after each — holding back a "[whisp" that may still become one; `rest()` is
+ * what was held when the answer ends. The turn keeps and shows only this (harness/agent.js); the pieces as written,
+ * tags and all, ride beside it as `spoken`, for whatever speaks them.
+ */
+function stream() {
+  let held = '';
+  const drop = s => s.replace(/\[\s*([a-z]+)\s*\](?!\() ?/gi, (all, w) => (WORD.has(w.toLowerCase()) ? '' : all));
+  return {
+    push(piece) {
+      const s = held + String(piece || '');
+      const open = s.lastIndexOf('[');
+      const tail = open >= 0 ? s.slice(open) : '';
+      if (tail && !tail.includes(']') && /^\[\s*[a-z]{0,12}$/i.test(tail)) { held = tail; return drop(s.slice(0, open)); }
+      held = '';
+      return drop(s);
+    },
+    rest() { const r = held; held = ''; return r; },
+  };
+}
+
+/** Whether a turn's answer is spoken by a voice: its tone tags are then kept apart from the words (harness/agent.js). */
+const spokenTurn = client => !!(client && (client.voiceTags || client.mode === 'call' || client.mode === 'assistant'));
+
+/**
  * One sentence as a voice is sent it: `{input, instructions}` — tags turned into words for a voice that takes
  * instructions, dropped for any other (`tags` null).
  */
@@ -77,4 +102,4 @@ function line() {
     + '(a tag colours only its own sentence), sparingly — where a person would really whisper, laugh or light up. They are not shown or read out.';
 }
 
-module.exports = { TAGS, PATTERN, found, strip, forVoice, rewrite, line };
+module.exports = { TAGS, PATTERN, found, strip, stream, spokenTurn, forVoice, rewrite, line };

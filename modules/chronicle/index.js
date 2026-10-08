@@ -120,17 +120,21 @@ function logLines(person, f, limit) {
 }
 
 /**
- * What the hub did on its own (activity.js: a computer tidied away, a server resumed, a schedule fired), newest first —
- * a host every line, anyone else the lines done on their behalf.
+ * What the hub did on its own (activity.js: a computer tidied away, a server resumed, a schedule fired) and what people
+ * and agents did to its machines (machines/acts.js: started, stopped, removed — by whom, from where), newest first — a
+ * host every line, anyone else the lines done on their behalf; `person` keeps one person's.
  */
 function hubLines(person, f, limit) {
   const q = String(f.q || '').trim().toLowerCase(), host = isHost(person);
-  const lines = require('../activity').list({ since: f.from || null, until: f.to || null, limit: 5000 })
-    .filter(l => (host || l.person?.id === person.id) && (!f.state || l.level === f.state)
-      && (!q || `${l.from} ${l.what} ${l.why}`.toLowerCase().includes(q)));
-  return { rows: lines.slice(0, limit).map(l => ({ source: 'hub', at: l.at, level: l.level, sessionId: l.sessionId || null,
-    text: `${l.from} — ${l.what}${l.why ? ` (${l.why})` : ''}${l.person ? ` · for ${l.person.name}` : ''}` })),
-  total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', ...(host ? ['log'] : [])], states: ['info', 'warn', 'error'] } };
+  const mine = require('../activity').list({ since: f.from || null, until: f.to || null, limit: 5000 }).filter(l => host || l.person?.id === person.id);
+  const lines = mine.filter(l => (!f.state || l.level === f.state) && (!f.person || l.person?.id === f.person)
+      && (!q || `${l.from} ${l.what} ${l.why} ${l.via || ''} ${l.person?.name || ''}`.toLowerCase().includes(q)));
+  const by = l => (l.from === 'person' ? `${l.person?.name || 'a person'} — ` : l.from === 'agent' ? 'agent — ' : `${l.from} — `);
+  return { rows: lines.slice(0, limit).map(l => ({ source: 'hub', at: l.at, level: l.level, sessionId: l.sessionId || null, person: l.person || null,
+    ...(l.machine ? { machine: l.machine, act: l.act, ok: l.ok ?? null } : {}),
+    text: `${by(l)}${l.what}${l.why ? ` (${l.why})` : ''}${l.person && l.from !== 'person' ? ` · for ${l.person.name}` : ''}` })),
+  total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', ...(host ? ['log'] : [])], states: ['info', 'warn', 'error'],
+    people: [...new Map(mine.filter(l => l.person?.id).map(l => [l.person.id, l.person])).values()] } };
 }
 
 /** Each live call's stages (realtime/call-log.js), newest first — a host every call, anyone else their own. */

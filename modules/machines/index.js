@@ -20,9 +20,12 @@ const os = require('os');
 
 const WORKING_MS = 45000;
 const _acts = new Map();   // computer id → { at, what, sessionId }
+const _mcpCalls = new Map();   // MCP server slug → { at, sessionId }: what a stop would cut off (use.js)
 
 function onEvent(evt) {
   if (evt?.type !== 'tool_call' || !evt.name) return;
+  const server = /^mcp__(.+?)__/.exec(evt.name)?.[1];
+  if (server) _mcpCalls.set(server, { at: Date.now(), sessionId: evt.sessionId || null });
   let args = evt.args;
   if (typeof args === 'string') { try { args = JSON.parse(args); } catch { args = {}; } }
   const m = /^mcp__computer-([\w-]+?)__(.+)$/.exec(evt.name);
@@ -80,7 +83,9 @@ async function picture({ shots = false } = {}) {
   computers = computers.map(c => {
     const a = _acts.get(c.id);
     const busy = (a && now - a.at < WORKING_MS) || c.mission?.state === 'running';
-    return { ...c, activity: a ? { ...a, ago: now - a.at } : null, working: !!busy };
+    const origin = require('./origin');   // who started it (origin.js), the same line as its row
+    return { ...c, activity: a ? { ...a, ago: now - a.at } : null, working: !!busy,
+      origin: origin.of('computer', c.id, { up: c.state === 'running', fallback: origin.computerFallback(c) }) };
   });
   const pages = [...served(), ...await computerPages(computers)];
   const shooter = require('./shots'), vmShooter = require('./vm-shots');
@@ -95,7 +100,8 @@ async function picture({ shots = false } = {}) {
   const vms = running.filter(v => !shownAsVnc.has(vmShooter.keyOf(v))).map(v => {
     const key = vmShooter.keyOf(v);
     return { key, name: v.name, hypervisor: v.hypervisor, label: v.label, os: v.os || null, state: v.state,
-      shot: vmShooter.has(key), why: vmShooter.cannot(v) || vmShooter.error(key), console: require('./vm-console').where(v) };
+      shot: vmShooter.has(key), why: vmShooter.cannot(v) || vmShooter.error(key), console: require('./vm-console').where(v),
+      origin: require('./origin').of('vm', key, { up: true }) };
   });
   return { computers, served: pages.map(p => ({ ...p, shot: shooter.has(p.key), working: true })), vms,
     vnc: vnc.map(t => ({ ...t, shot: vncShooter.has(t.id), why: vncShooter.error(t.id) })), browser: shooter.browser(), workingMs: WORKING_MS };
@@ -104,6 +110,8 @@ async function picture({ shots = false } = {}) {
 let _listening = false;
 function mount(app) {
   if (!_listening) { _listening = true; require('../harness/agent').events.on('event', e => { try { onEvent(e); } catch { /* never the work's problem */ } }); }
+  require('./acts-agent').listen();   // the agents' machine acts, with their conversation (acts-agent.js)
+  require('./use').mount(app);         // what uses a machine, for the "are you sure" (use.js)
   app.get('/api/machines', async (req, res) => { try { res.json(await picture({ shots: req.query.shots === '1' })); } catch (e) { res.status(500).json({ error: e.message }); } });
   // Every machine as one row (rows.js): the status column asks while it is shown.
   app.get('/api/machines/rows', async (req, res) => { try { res.json(await require('./rows').rows()); } catch (e) { res.status(500).json({ error: e.message }); } });
@@ -121,4 +129,8 @@ function mount(app) {
   });
 }
 
-module.exports = { mount, picture, served, computerPages, onEvent, WORKING_MS };
+/** What an agent last did on a computer, and when its last call to an MCP server was (use.js). */
+const actOf = id => _acts.get(id) || null;
+const mcpCallOf = slug => _mcpCalls.get(slug) || null;
+
+module.exports = { mount, picture, served, computerPages, onEvent, actOf, mcpCallOf, WORKING_MS };

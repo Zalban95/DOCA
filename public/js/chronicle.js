@@ -5,7 +5,7 @@
    System → Logs. Its page is made here: index.html is at its line ceiling. */
 const CHRON = { f: { q: '', source: '', person: '', device: '', agent: '', state: '', since: 'week' }, picked: null, off: null, data: null };
 const CHRON_SINCE = { hour: ['the last hour', 3600e3], day: ['the last day', 86400e3], week: ['the last week', 7 * 86400e3], month: ['the last 30 days', 30 * 86400e3], all: ['all kept', 0] };
-const CHRON_SOURCES = { turn: 'Turns', mission: 'Missions', job: 'Device jobs', hub: 'What the hub did on its own', call: 'Live calls, stage by stage', log: 'Harness log (since the last start)' };
+const CHRON_SOURCES = { turn: 'Turns', mission: 'Missions', job: 'Device jobs', hub: 'What the hub did on its own', call: 'Calls, stage by stage', log: 'Harness log (since the last start)' };
 const chronLines = s => s === 'log' || s === 'hub' || s === 'call';   // sources that are lines, not runs
 
 function chronicleTab(shown) {
@@ -68,7 +68,7 @@ function chronFiltersDraw(fc) {
   const focused = document.activeElement?.id === 'chron-q';
   el.innerHTML = `<input class="input" id="chron-q" placeholder="Search titles, outcomes, agents, devices…" value="${escHtml(f.q)}" oninput="chronSearch(this.value)">
     ${sel('source', 'every source', (fc.sources || Object.keys(CHRON_SOURCES)).map(s => chronOpt(s, CHRON_SOURCES[s] || s, f.source)))}
-    ${chronLines(f.source) ? '' : sel('person', 'everyone', (fc.people || []).map(p => chronOpt(p.id, p.name, f.person)))}
+    ${chronLines(f.source) && f.source !== 'hub' ? '' : sel('person', 'everyone', (fc.people || []).map(p => chronOpt(p.id, p.name, f.person)))}
     ${chronLines(f.source) ? '' : sel('device', 'every device', (fc.devices || []).map(d => chronOpt(d.id, d.name, f.device)))}
     ${chronLines(f.source) ? '' : sel('agent', 'every agent', (fc.agents || []).map(a => chronOpt(a.id, a.label, f.agent)))}
     ${sel('state', chronLines(f.source) ? 'every level' : 'every outcome', (fc.states || []).map(s => chronOpt(s, s, f.state)))}

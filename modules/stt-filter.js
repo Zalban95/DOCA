@@ -12,13 +12,18 @@ const HALLUCINATIONS = [
   'thank you', 'thank you very much', 'thanks', 'thanks for watching', 'thank you for watching', 'thanks for watching and see you next time',
   'you', 'bye', 'bye bye', 'okay', 'oh', 'hmm', 'mm', 'uh', 'so', 'yeah',
   'subtitles by the amara org community', 'please subscribe', 'like and subscribe', 'see you next time', 'grazie', 'grazie a tutti',
+  // The same in the languages of the subtitled videos it learned from (2026-10-08: a phone's room noise in a call came
+  // back as "КОНЕЦ" ("the end") and a Russian subtitle credit, and both were sent to the agent as things the person said).
+  'конец', 'продолжение следует', 'спасибо', 'спасибо за просмотр', 'sottotitoli e revisione a cura di qtss',
 ];
+// A line crediting whoever made the subtitles, in any of the ways those videos end — never something said to the hive.
+const CREDITS = /^(subtitles?|captions|sottotitoli|untertitel|sous titres|subtitulos|subtitulado|ondertiteling|napisy|субтитры|редактор субтитров)\s(.*\s)?(by|made|created|creati|a cura|von|par|por|door|сделал|создавал|подготовил|делал)(\s|$)/u;
 const norm = t => String(t || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
 
 /** A transcript that is nothing but a silence phrase (or punctuation). */
 function isHallucination(text) {
   const n = norm(text);
-  return !n || HALLUCINATIONS.includes(n);
+  return !n || HALLUCINATIONS.includes(n) || CREDITS.test(n);
 }
 
 module.exports = { isHallucination, HALLUCINATIONS, norm };

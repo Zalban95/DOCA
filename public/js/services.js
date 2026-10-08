@@ -23,6 +23,7 @@ async function servicesLoadStatus() {
     _servicesStatus = data.running || {};
     _servicesImages = data.images  || {};
   } catch { _servicesStatus = {}; _servicesImages = {}; }
+  await machineOriginsLoad();   // who started each (lib/machine-origin.js)
   _updateServicesBadges();
 }
 
@@ -42,7 +43,7 @@ function _renderServicesGrid() {
     <div class="services-row" id="svc-row-${svc.id}">
       <div class="services-header">
         <span class="badge badge-grey" id="svc-badge-${svc.id}">○ stopped</span>
-        <span class="services-label">${svc.label}</span>
+        <span class="services-label">${svc.label}<span class="m-origin" id="svc-origin-${svc.id}"></span></span>
         <span class="services-image">${svc.image}</span>
         <span class="badge" id="svc-img-badge-${svc.id}" style="display:none;font-size:9px"></span>
         <span style="flex:1"></span>
@@ -92,6 +93,7 @@ function _updateServicesBadges() {
   _servicesDefs.forEach(svc => {
     const info     = _servicesStatus[svc.id];
     const running  = info?.state === 'running';
+    machineOriginFill(document.getElementById(`svc-origin-${svc.id}`), 'service', svc.id);
     const badge    = document.getElementById(`svc-badge-${svc.id}`);
     const urlEl    = document.getElementById(`svc-url-${svc.id}`);
     const startBtn = document.getElementById(`svc-start-${svc.id}`);
@@ -198,7 +200,8 @@ async function serviceStart(id) {
   if (startBtn) startBtn.disabled = false;
 }
 
-async function serviceStop(id) {
+async function serviceStop(id, asked) {
+  if (!asked) return machineAsk('service', id, 'stop', '', () => serviceStop(id, true));   // names what uses it (lib/machine-ask.js)
   const stopBtn = document.getElementById(`svc-stop-${id}`);
   if (stopBtn) stopBtn.disabled = true;
   try {
