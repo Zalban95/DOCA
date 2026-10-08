@@ -26,10 +26,8 @@ test('the version to start: .releases/current when installed, else the checkout'
   assert.equal(L.releaseDir(dir), path.join(dir, '.releases', 'v9'));
 });
 
-test('the boot entries: Task Scheduler at logon, a launchd agent at login, both running the launcher', () => {
-  const args = L.schtasksCreateArgs();
-  assert.deepEqual(args.slice(0, 6), ['/Create', '/TN', 'DOCA', '/SC', 'ONLOGON', '/RL']);
-  assert.match(args.at(-1), /doca-launch\.js" start$/);
+test('the boot entries: Task Scheduler at logon (test/windows-task.test.js), a launchd agent at login, both running the launcher', () => {
+  assert.equal(L.TASK, 'DOCA');
   const plist = L.launchdPlist();
   assert.match(plist, /<key>Label<\/key><string>tech\.doca\.panel<\/string>/);
   assert.match(plist, /<key>RunAtLoad<\/key><true\/>/);

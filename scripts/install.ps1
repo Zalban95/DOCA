@@ -1,4 +1,4 @@
-# DOCA on Windows in one command (TODO H1.8; docs/design/hive.md §7):
+# DOCA on Windows in one command (TODO H1.8; docs/design/hive.md section 7):
 #   powershell -ExecutionPolicy Bypass -File scripts\install.ps1 [-Dir C:\doca] [-From <checkout>] [-NoBoot] [-NoStart]
 # Node 22 is checked (winget install OpenJS.NodeJS.LTS if it is missing), the code fetched (or copied from a checkout),
 # its dependencies installed, a Task Scheduler entry added for sign-in, and the panel started.
@@ -13,17 +13,19 @@ param(
 $ErrorActionPreference = 'Stop'
 $port = if ($env:PORT) { $env:PORT } else { 4242 }
 
-# ── Node 22 ──
+# -- Node 22 --
 $node = Get-Command node -ErrorAction SilentlyContinue
 $ok = $false
-if ($node) { & node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a===22&&b>=5)?0:1)'; $ok = ($LASTEXITCODE -eq 0) }
+# Compared here, not in `node -e`: Windows PowerShell 5.1 drops the double quotes inside an argument it passes to a
+# native program, so a script with a quoted string in it reached node broken and every Node read as too old.
+if ($node) { try { $ok = ([version](& node -p 'process.versions.node')) -ge [version]'22.5' } catch { $ok = $false } }
 if (-not $ok) {
   Write-Host "DOCA needs Node.js 22.5 or newer$(if ($node) { " (this machine has $(& node -v))" })."
   Write-Host '  Install it with:  winget install OpenJS.NodeJS.LTS   (or from https://nodejs.org), then open a new terminal and run this again.'
   exit 1
 }
 
-# ── The code ──
+# -- The code --
 New-Item -ItemType Directory -Force -Path $Dir | Out-Null
 if ($From) {
   Write-Host "Copying DOCA from $From to $Dir"
@@ -42,14 +44,14 @@ if ($From) {
   Write-Host "Fetching DOCA into $Dir"; git clone --depth 1 $Repo $Dir
 }
 
-# ── Dependencies ──
+# -- Dependencies --
 Write-Host 'Installing its dependencies'
 Push-Location $Dir
 try {
   & npm ci --no-audit --no-fund --loglevel=error
   if ($LASTEXITCODE -ne 0) { throw "npm ci failed ($LASTEXITCODE)" }
 
-  # ── Sharing what the agents learn (CONSTITUTION §0): asked once, the owner's answer; Settings → Packs changes it ──
+  # -- Sharing what the agents learn (CONSTITUTION section 0): asked once, the owner's answer; Settings -> Packs changes it --
   if (-not $Share -and [Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
     Write-Host 'When your agents find a new way to do something, they keep it as a skill or a specialist.'
     $Share = Read-Host 'Offer those to the DOCA project, so other installs get them too? Nothing is sent without your click. [y/N]'
@@ -59,24 +61,37 @@ try {
   elseif ($Share -match '^(n|no|off)$') { & node bin/doca-sharing.js off }
   else { Write-Host 'Sharing with the project: not decided - Settings -> Packs asks.' }
 
-  # ── Start at sign-in, and now ──
+  # -- Whose it is --
+  # From "Run as administrator" every file is owned by the Administrators group, and DOCA started at sign-in runs as
+  # the person, without elevation: git then refuses the checkout ("dubious ownership"), so versions and updates fail.
+  $me = [Security.Principal.WindowsIdentity]::GetCurrent()
+  if ((New-Object Security.Principal.WindowsPrincipal $me).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "Giving $Dir to $($me.Name), who DOCA runs as"
+    & icacls $Dir /setowner $me.Name /T /C /Q | Out-Null
+  }
+
+  # -- Start at sign-in, and now --
   if (-not $NoBoot) { & node bin/doca-launch.js enable; if ($LASTEXITCODE -ne 0) { Write-Host 'Start-at-sign-in was not added (see above); DOCA still runs.' } }
   if (-not $NoStart) {
     if (-not $NoBoot -and (schtasks /Query /TN DOCA 2>$null)) { schtasks /Run /TN DOCA | Out-Null }
     else { Start-Process -FilePath node -ArgumentList 'bin/doca-launch.js', 'start' -WorkingDirectory $Dir -WindowStyle Hidden -RedirectStandardOutput (Join-Path $Dir 'doca.log') -RedirectStandardError (Join-Path $Dir 'doca.err.log') }
-    # The certificate is self-signed: PowerShell 7 skips the check by a switch, Windows PowerShell 5.1 by a callback.
-    $skipCert = if ($PSVersionTable.PSVersion.Major -ge 6) { @{ SkipCertificateCheck = $true } } else { [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }; @{} }
+    # Asked through node, not Invoke-WebRequest: in Windows PowerShell 5.1 a certificate callback is a scriptblock,
+    # which cannot run on the thread doing the TLS handshake ("no Runspace available"), so a self-signed panel never
+    # answered there. The script uses single quotes only: 5.1 drops double quotes inside a native argument.
+    $probe = "require('https').get({host:'127.0.0.1',port:$port,path:'/login',rejectUnauthorized:false,timeout:2000},r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1)).on('timeout',()=>process.exit(1))"
     $up = $false
-    for ($i = 0; $i -lt 60; $i++) {
-      try { [void](Invoke-WebRequest -Uri "https://127.0.0.1:$port/login" -UseBasicParsing -TimeoutSec 2 @skipCert); $up = $true; break } catch { Start-Sleep -Seconds 1 }
+    for ($i = 0; $i -lt 90; $i++) {
+      & node -e $probe 2>$null
+      if ($LASTEXITCODE -eq 0) { $up = $true; break }
+      Start-Sleep -Seconds 1
     }
   }
 } finally { Pop-Location }
 
 Write-Host ''
-Write-Host "✓ DOCA is in $Dir."
-if (-not $NoStart -and -not $up) { Write-Host "  ✗ It did not answer on port $port within a minute. Its output is in $Dir\doca.log and $Dir\doca.err.log." }
-if (-not $NoStart) { Write-Host "  Open https://localhost:$port on this machine to create its owner — no code is needed there." }
+Write-Host "OK: DOCA is in $Dir."
+if (-not $NoStart -and -not $up) { Write-Host "  FAILED: it did not answer on port $port within 90 seconds. Its output is in $Dir\doca.log and $Dir\doca.err.log." }
+if (-not $NoStart) { Write-Host "  Open https://localhost:$port on this machine to create its owner - no code is needed there." }
 Write-Host "  From another device on your tailnet: open the panel there, and the setup code it asks for is then in $Dir\.setup-code and in the panel's log."
 Write-Host '  The certificate is self-signed: your browser will ask once.'
-Write-Host "  Then Settings → Set-up (offered at the first sign-in) gives DOCA's agent a model: one this machine runs, or a provider's key."
+Write-Host "  Then Settings -> Set-up (offered at the first sign-in) gives DOCA's agent a model: one this machine runs, or a provider's key."

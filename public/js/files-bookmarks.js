@@ -21,7 +21,7 @@ function fmBookmarksFrom(paths) {
     { id: 'skills', icon: '🔌', label: 'Skills', path: paths.skillsDir, key: 'SKILLS_DIR', missing: !known('skillsDir') },
     known('composeDir') && { id: 'compose', icon: '🐳', label: 'Docker dir', path: paths.composeDir },
     { id: 'snapshots', icon: '📷', label: 'Snapshots', path: paths.snapshotDir, key: 'SNAPSHOT_DIR', missing: !known('snapshotDir') },
-    known('root') && { id: 'root', icon: '/', label: 'Root fs', path: '/' },
+    known('root') && { id: 'root', icon: '/', label: !here.rootPath || here.rootPath === '/' ? 'Root fs' : here.rootPath, path: here.rootPath || '/' },
   ].filter(b => b && b.path);
 }
 

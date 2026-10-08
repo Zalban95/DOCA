@@ -32,10 +32,12 @@ function firstLine(s) { return String(s || '').split('\n').map(l => l.trim()).fi
 
 function runBin(file, args, { cwd, timeout = TIMEOUT } = {}) {
   // Node refuses a .cmd/.bat without a shell (EINVAL), and npm, pnpm and yarn
-  // are .cmd on Windows. Safe: args come from the specs in code, never a request.
-  const bat = process.platform === 'win32' && /\.(cmd|bat)$/i.test(file);
+  // are .cmd on Windows: run through cmd.exe by mcp/spawn-spec.js, quoted for it. It was
+  // `shell: true` with an argument list, which Node 24 warns about (DEP0190) on every
+  // System tools visit (H1.9).
+  const spec = require('./mcp/spawn-spec').spawnSpec(file, args);
   return new Promise(resolve => {
-    execFile(bat ? `"${file}"` : file, args, { cwd, timeout, windowsHide: true, maxBuffer: 1 << 20, shell: bat },
+    execFile(spec.file, spec.args, { cwd, timeout, windowsHide: true, maxBuffer: 1 << 20, ...spec.opts },
       (err, stdout, stderr) => resolve({ ok: !err, stdout: String(stdout || ''), stderr: String(stderr || '') }));
   });
 }

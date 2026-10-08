@@ -28,7 +28,7 @@ async function launch() {
     const exe = h.findBrowser();
     if (!exe) throw new Error('no browser');
     _profile = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-shots-'));
-    _proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${_profile}`, '--no-first-run', '--no-default-browser-check',
+    _proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${_profile}`, '--no-first-run', '--no-default-browser-check', ...h.ALONE,
       '--disable-gpu', '--window-size=1280,800', '--mute-audio', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
     _proc.on('exit', () => close());
     _proc.unref();   // a browser that is slow to go never holds the hub (or a test) open

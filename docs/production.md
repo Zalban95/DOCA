@@ -58,21 +58,23 @@ own. Plain HTTP happens only if no certificate can be made at all.
   owner (the `org` right) updates, switches versions or restarts.
 - [ ] **Switching versions** asks for your password, every time. Every release is in the list; a version is
   installed beside the code (`.releases/vX.Y.Z`) and every version reads the same data. One that does not answer
-  within 90 seconds is put back by the launcher. From a shell: `./run.sh versions`, `./run.sh use vX.Y.Z`,
-  `./run.sh use checkout`.
+  within 90 seconds is put back by the launcher. From a shell on Linux: `./run.sh versions`, `./run.sh use vX.Y.Z`,
+  `./run.sh use checkout`. On Windows and macOS, where there is no run.sh, the way back when the panel will not load
+  is to delete `.releases/current` in the install folder and start DOCA again: it starts the working copy.
 - [ ] **Nothing is cut off.** A restart or a switch waits until no turn, voice call or device command is running
   (at most 30 minutes) unless the person asking chooses *now*.
 - [ ] **Started by the launcher.** Switching needs DOCA started by the installer, `./run.sh`, the boot entry or
   `node bin/doca-launch.js start` — not `npm start`.
 - [ ] **Start at boot.** Settings → General → Start at Boot, or `node bin/doca-launch.js enable|disable|status`:
   a systemd unit (`openclaw-panel.service`) on Linux, a Task Scheduler entry at sign-in on Windows, a launchd agent
-  on macOS. One machine has one such entry; the page says when it starts a different DOCA folder.
+  on macOS. One machine has one such entry; the page says when it starts a different DOCA folder. On Windows the
+  entry is the person's own (no administrator needed), has no time limit and opens no window.
 
 ## Logs and what is kept
 
 - [ ] **The panel's own output**: `journalctl -u openclaw-panel` under systemd; `restart.log` in the install
-  folder under launchd on macOS; `doca.log` in the install folder when the installer started it itself (Linux
-  with `--no-boot`, and Windows). A restart without a supervisor writes its successor's start to `restart.log`.
+  folder under launchd on macOS and the Task Scheduler entry on Windows; `doca.log` in the install folder when the
+  installer started it itself (with `--no-boot`). A restart without a supervisor writes its successor's start to `restart.log`.
 - [ ] **What is kept of what happened** (Settings → System → Logs): the log lines held in memory (500 for the
   harness, 300 for the Workstream, 200 per MCP server), the record of each turn, mission and device job (90 days),
   the hub's own activity (30 days), background jobs (the last 50) and evaluation results (30 per set). Each turn's
