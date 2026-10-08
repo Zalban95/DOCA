@@ -64,7 +64,12 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
       + `${isMission ? '; the agent that dispatched this mission can grant it for the mission with permission_grant' : ''}.`;
     const gate = args._raw === undefined && refused === null ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission, forceAsk: permit.ask, risk }) : null;
     if (gate) {
-      if (isMission) {
+      // A mission has nobody watching, so it is refused — except a machine lent to it, asked of its person (mission-asks.js).
+      const use = isMission && gate.forced ? await require('../mission-asks').machineUse(name, args, { profile }) : null;
+      if (use) {
+        const decision = await require('../mission-asks').ask(gate, use, { sessionId: session.id, missionId, profile, signal, say, step });
+        if (decision !== 'once') refused = require('../mission-asks').refusal(decision, use);
+      } else if (isMission) {
         refused = approval.missionRefusal(gate);
         say({ type: 'approval', step, state: 'refused', tool: name, ...gate });
       } else {

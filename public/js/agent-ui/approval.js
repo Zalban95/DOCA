@@ -41,8 +41,9 @@ function approvalCardEl(evt, done) {
 
   const choices = [
     { decision: 'once', label: 'Allow once', cls: 'btn-green' },
-    // This and every other request waiting that you may answer (approval-answer.js), once each.
-    { decision: 'approve_all', label: 'Approve all waiting', cls: '' },
+    // This and every other request waiting that you may answer (approval-answer.js), once each — never a mission's
+    // machine question, which is answered alone (mission-asks.js).
+    ...(evt.machine ? [] : [{ decision: 'approve_all', label: 'Approve all waiting', cls: '' }]),
     ...(evt.keys?.length
       ? [{ decision: 'always', label: `Always allow ${evt.keys.join(', ')}`, cls: '' }]
       : []),
@@ -118,7 +119,7 @@ function approvalPopup(evt, done) {
 
   const title = document.createElement('div');
   title.className = 'modal-title';
-  title.textContent = 'The agent is asking to do something';
+  title.textContent = evt.machine ? `${evt.mission?.agent || 'A specialist'} is asking to use a machine` : 'The agent is asking to do something';
   modal.appendChild(title);
 
   const card = approvalCardEl(evt, decision => {
@@ -129,7 +130,9 @@ function approvalPopup(evt, done) {
 
   const note = document.createElement('p');
   note.className = 'approval-note';
-  note.textContent = evt.keys?.length
+  note.textContent = evt.machine
+    ? 'A mission asks to use a machine. A machine is asked each time it is used: allow it this once, or deny it.'
+    : evt.keys?.length
     ? 'Always allow remembers the command type, not this exact command. Take it back in Harness → Approvals.'
     : 'This command builds itself as it runs, so there is no type to remember — it can only be allowed this once.';
   modal.appendChild(note);

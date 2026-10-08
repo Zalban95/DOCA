@@ -39,7 +39,13 @@ In order, first answer wins:
    that mission.
 4. **Approval.** Allowed is not unasked: a level with approval `ask` (every
    level without `host`, by default) has its tool calls asked whatever the
-   panel's mode; an answer of "always" becomes a grant.
+   panel's mode; an answer of "always" becomes a grant. A mission has nobody
+   watching, so what would be asked is refused in it — except its use of a
+   machine lent to it (`vnc_input` on its VNC screen, a sign-in on its
+   ordinary computer), which is asked of the person owning its conversation,
+   on their devices and open pages, allowed once or denied, and denied when
+   nobody answers in `harness.approval.missionAskSec`
+   (`harness/mission-asks.js`; the owner, 2026-10-08).
 
 Paths are compared by their **real** path (symlinks resolved) against the
 level's and the grants' paths.

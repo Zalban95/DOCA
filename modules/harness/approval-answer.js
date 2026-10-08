@@ -14,7 +14,9 @@
  *   - "approve all": this request and every other one waiting that the same
  *     person may answer;
  *   - a request that must be asked every time (a protected file, a re-ask
- *     after outside text, a computed command) is only ever allowed once.
+ *     after outside text, a computed command) is only ever allowed once;
+ *   - a mission's machine question (mission-asks.js) is answered alone:
+ *     "approve all" never sweeps it up.
  */
 const approval = require('./approval');
 
@@ -28,6 +30,8 @@ function answerAs({ id, decision, person }) {
   const e = approval.entry(id);
   if (!e) return false;
   if (!mayAnswer(e, person)) throw bad('This request belongs to someone else\'s turn; it is theirs, or a host\'s, to answer.', 403);
+  // A mission's machine question (mission-asks.js) is answered on its own, once: never swept up by "approve all".
+  if (decision === 'approve_all' && e.req.machine) throw bad('A machine is asked each time it is used: allow this one once, or deny it.', 400);
   if (decision === 'approve_all') return approveAll({ person, first: id }) > 0;
   if ((decision === 'always' || decision === 'always_tool') && onceOnly(e)) throw bad('This request can only be allowed once.', 400);
   const forOther = e.req.level && e.req.personId && e.req.personId !== person?.id;
@@ -55,7 +59,7 @@ function approveAll({ person, first = null }) {
   const ids = approval.pending().map(p => p.id);
   for (const id of first ? [first, ...ids.filter(x => x !== first)] : ids) {
     const e = approval.entry(id);
-    if (e && mayAnswer(e, person) && approval.decide(id, 'once')) n++;
+    if (e && !e.req.machine && mayAnswer(e, person) && approval.decide(id, 'once')) n++;
   }
   return n;
 }

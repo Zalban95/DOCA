@@ -69,6 +69,18 @@ function _hcApprovalFill(list, a) {
   };
   list.appendChild(re);
 
+  // A mission's use of a machine is asked of its person (modules/harness/mission-asks.js); this is how long it waits.
+  const wait = document.createElement('label');
+  wait.className = 'approval-recheck';
+  wait.innerHTML = `<span><b>A mission's machine question waits</b> <input class="input" type="number" min="10" max="900" step="10" style="width:5em"
+    value="${Number(a.missionAskSec) || 300}"> seconds — a specialist asking to use the VNC screen or computer it was lent
+    is asked of its person, on their devices and open pages; no answer by then is a no.</span>`;
+  wait.querySelector('input').onchange = async ev => {
+    try { await apiFetch('/api/harness/approval', { method: 'POST', body: { missionAskSec: Number(ev.target.value) } }); _hcLoadApproval(); }
+    catch (e) { appAlert(e.message); }
+  };
+  list.appendChild(wait);
+
   // Questions raised elsewhere — a turn a phone started, or one in a chat that
   // is not open. Without this they block until they time out with nothing on
   // screen anywhere, because the card only ever appears in the transcript that

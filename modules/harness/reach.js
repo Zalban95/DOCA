@@ -87,6 +87,13 @@ function resolveTargets(to) {
       ? `None of the ${any} paired devices can receive a question or a notice — that needs the "interact" scope. Check doca_clients; a viewer-preset device is read-only on purpose.`
       : 'No devices are paired with this hub, so there is nobody to reach. Pairing happens in the dashboard (Devices).');
   }
+  // A list is device ids, exactly (a mission's machine question: its person's own devices, never a name that merely
+  // contains one — harness/mission-asks.js).
+  if (Array.isArray(to)) {
+    const hit = live.filter(d => to.includes(d.id));
+    if (!hit.length) throw new Error('None of those devices can receive a question.');
+    return hit;
+  }
   const want = String(to || '').trim().toLowerCase();
   if (!want || want === 'all' || want === 'any') return live;
 
