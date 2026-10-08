@@ -107,6 +107,8 @@ function refuse(dotted, value, { screen = null } = {}) {
     return `${dotted} is the approval mode that governs you — only the user changes it, in Harness → Approvals`;
   if (SPAWNED.test(dotted))
     return `${dotted} is a command, or what one runs with — only the user sets it, in the harness settings`;
+  const owners = require('../settings-schema').unproposable(dotted, value);
+  if (owners) return `${owners} is the owner's alone — not something the agent proposes`;
   if (screen ? !require('./screen-proposals').allowed(dotted) : !sectionFor(dotted))
     return screen ? `${dotted} is not something the agent may propose for a screen (it may: ${require('./screen-proposals').keys().join(', ')})` : `${dotted} is not a setting the agent may change (allowed: ${SETTABLE.map(s => s.prefix).join(', ')})`;
 
@@ -188,7 +190,7 @@ function readable() {
   // long being a number nobody could reach.
   // Declared leaves of proposable sections, with their effective values (settings-schema.js).
   for (const l of require('../settings-schema').leaves(prefs))
-    if (sectionFor(l.path) && !FORBIDDEN.test(l.path)) out.push({ path: l.path, value: l.value, section: sectionFor(l.path).label, detail: l.hint });   // a secret is neither proposed nor read
+    if (sectionFor(l.path) && !FORBIDDEN.test(l.path) && !require('../settings-schema').unproposable(l.path)) out.push({ path: l.path, value: l.value, section: sectionFor(l.path).label, detail: l.hint });   // a secret is neither proposed nor read
 
   try {
     const { McpClient } = require('../mcp/client');
@@ -206,7 +208,7 @@ function readable() {
     const current = get(prefs, s.prefix);
     if (current === undefined) continue;
     for (const [dotted, value] of Object.entries(flatten(current, s.prefix, {}))) {
-      if (FORBIDDEN.test(dotted) || NEVER_SETTABLE.test(dotted) || seen.has(dotted)) continue;
+      if (FORBIDDEN.test(dotted) || NEVER_SETTABLE.test(dotted) || seen.has(dotted) || require('../settings-schema').unproposable(dotted)) continue;
       out.push({ path: dotted, value, section: s.label });
     }
   }

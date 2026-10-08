@@ -20,3 +20,6 @@
 .pc-live iframe { flex: 1; width: 100%; border: 0; background: #000; }
 @media (max-width: 768px) { .pc-grid { grid-template-columns: 1fr; } }
 .pc-test { margin: 0 10px 6px; font-size: 11px; color: var(--amber); }
+.pc-strays { margin-top: 12px; }
+.pc-stray { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; }
+.pc-stray-policy { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }

@@ -53,8 +53,10 @@ async function computersLoad() {
     <div class="scroll-y" style="flex:1"><div class="pc-grid">${data.computers.map(computersCard).join('')
       || emptyStateHtml(data.image.ready
         ? { title: 'No computers yet', text: 'An agent makes one when the work needs it, or you can make one now.', action: { label: 'Make a computer', onclick: 'computersNew()' } }
-        : { title: 'No computers yet', text: 'The image is built once on this hub (several minutes: Chromium, a desktop, ffmpeg); then agents can make computers.', action: { label: 'Build the image', onclick: 'computersBuild()' } })}</div></div>`;
+        : { title: 'No computers yet', text: 'The image is built once on this hub (several minutes: Chromium, a desktop, ffmpeg); then agents can make computers.', action: { label: 'Build the image', onclick: 'computersBuild()' } })}</div>
+    <div id="computers-strays"></div></div>`;
   computersStills();
+  computersStraysLoad();
 }
 
 function computersCard(c) {
