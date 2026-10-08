@@ -27,7 +27,10 @@ let _pending = null;   // { label, since, deadline, fn, timer }
 function busy() {
   const { running } = require('./turn/lifecycle');
   const memory = require('./memory');
-  const turns = [...running.entries()].map(([sessionId, ctrl]) => {
+  // A mission waiting on its person's answer to a machine question is not working, and its question outlives a
+  // restart (mission-asks-held.js): a restart need not wait the half hour for it.
+  const held = new Set(require('./mission-asks-held').list().map(q => q.sessionId));
+  const turns = [...running.entries()].filter(([sessionId]) => !held.has(sessionId)).map(([sessionId, ctrl]) => {
     const s = memory.getSession(sessionId);
     return { sessionId, title: s?.title || sessionId, kind: s?.kind || 'work', auto: !!ctrl?.auto };
   });

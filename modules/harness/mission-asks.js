@@ -15,8 +15,13 @@
  * that take questions (one reach.ask to all of them) and, through the live feed's `ask` topic, in the approval popup of
  * any page of theirs that is open; never another person's. First answer wins, allowed once or denied — no "always", and
  * not "approve all": a machine is asked each time it is used. Nobody answering within `harness.approval.missionAskSec`
- * is a denial, with a sentence the mission reports to its leader. The specialist's other limits (registry.NEVER) are
- * untouched, and a person driving the machine still makes the call wait (toolbox/vnc.js, computers/takeover.js).
+ * is what `harness.approval.missionAskTimeout` says (asked 2026-10-08: "the timeout counts as hold instead of no, or
+ * even better a setting"): **hold** (the default) — the question stays open in Harness → Approvals and the popup, the
+ * copy on the person's devices is withdrawn to keep a wrist clean, and the mission waits, paused inside its step (no
+ * model request, no tokens), until someone answers or a person stops it; a restart keeps it as a note the resumed
+ * mission reads (mission-asks-held.js) — or **deny**, with a sentence the mission reports to its leader. The
+ * specialist's other limits (registry.NEVER) are untouched, and a person driving the machine still makes the call wait
+ * (toolbox/vnc.js, computers/takeover.js).
  */
 const DEFAULT_SEC = 300;
 const COMPUTER_TOOL = /^mcp__computer-([a-f0-9]+)__browser_(click|type)$/;
@@ -24,6 +29,11 @@ const COMPUTER_TOOL = /^mcp__computer-([a-f0-9]+)__browser_(click|type)$/;
 /** How long a mission's machine question waits for its person, in seconds (a declared setting, never proposable). */
 function waitSec() {
   try { return require('../settings-schema').value('harness.approval.missionAskSec'); } catch { return DEFAULT_SEC; }
+}
+
+/** What an unanswered machine question becomes: 'hold' (it stays open, the mission waits) or 'deny'. Never proposable. */
+function onTimeout() {
+  try { return require('../settings-schema').value('harness.approval.missionAskTimeout') === 'deny' ? 'deny' : 'hold'; } catch { return 'hold'; }
 }
 
 /**
@@ -75,10 +85,13 @@ async function ask(gate, use, { sessionId, missionId, profile, signal, say = () 
   const who = profile?.label || profile?.id || 'a specialist';
   const req = { tool: gate.tool, keys: null, forced: true, machine: true, personId, mission: { id: missionId, agent: who },
     summary: `The mission ${missionId || ''} (${who}) asks to ${use.what} on ${use.machine}. Allow it this once? A machine is asked each time it is used.` };
-  const sec = module.exports.waitSec();
-  const { id, answer } = approval.ask(req, { sessionId, signal, timeoutMs: sec * 1000 });
+  const sec = module.exports.waitSec(), hold = module.exports.onTimeout() === 'hold';
+  if (hold) Object.assign(req, { held: true, summary: `${req.summary} The mission waits, paused, until you answer.` });   // nobody answering is not a no
+  const { id, answer } = approval.ask(req, { sessionId, signal, timeoutMs: hold ? null : sec * 1000 });
   say({ type: 'approval', step, state: 'asked', id, ...req });
   live.changed('ask', id, 'asked', { personId, req: { id, ...req } });   // the popup on the person's open pages
+  const held = require('./mission-asks-held');
+  held.asking(missionId, { id, sessionId, tool: gate.tool, what: use.what, machine: use.machine });   // the bar says it waits; a restart keeps it
 
   const ctrl = new AbortController();
   const mine = devicesOf(personId);
@@ -92,6 +105,7 @@ async function ask(gate, use, { sessionId, missionId, profile, signal, say = () 
     })
     .catch(() => { /* none takes questions now: the panel still has it */ });
   const decision = await answer;
+  held.answered(missionId);
   ctrl.abort();   // first answer wins: the other copies are withdrawn
   live.changed('ask', id, 'answered', { personId, decision });
   say({ type: 'approval', step, state: 'answered', id, decision, tool: gate.tool });
@@ -106,4 +120,4 @@ function refusal(decision, use) {
     + 'step was not done — what you meant to do there and why; do not reach the same end another way.';
 }
 
-module.exports = { machineUse, ask, refusal, waitSec, devicesOf, computerCall: (...a) => require('../logins').computerCall(...a) };
+module.exports = { machineUse, ask, refusal, waitSec, onTimeout, devicesOf, computerCall: (...a) => require('../logins').computerCall(...a) };

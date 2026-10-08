@@ -62,14 +62,14 @@ function settings() {
     mode:   MODES.includes(a.mode) ? a.mode : 'auto',
     always: Array.isArray(a.always) ? a.always.filter(k => typeof k === 'string' && k) : [],
     recheckOutside: a.recheckOutside !== false,   // on unless switched off in Approvals
-    ...(Number.isInteger(a.missionAskSec) ? { missionAskSec: a.missionAskSec } : {}),   // read through the schema (mission-asks.js)
+    ...(Number.isInteger(a.missionAskSec) ? { missionAskSec: a.missionAskSec } : {}), ...(['hold', 'deny'].includes(a.missionAskTimeout) ? { missionAskTimeout: a.missionAskTimeout } : {}),   // read through the schema (mission-asks.js)
   };
 }
 
 /** The "ask again after outside text" switch. */
 function setRecheck(on) { return save({ recheckOutside: !!on }); }
-/** How long a mission's machine question waits for its person (mission-asks.js), in seconds. */
-const setMissionAskSec = sec => save({ missionAskSec: sec });
+/** How long a mission's machine question waits for its person (mission-asks.js), in seconds — and then: 'hold' or 'deny'. */
+const setMissionAskSec = sec => save({ missionAskSec: sec }), setMissionAskTimeout = how => save({ missionAskTimeout: how });
 
 function save(patch) {
   const prefs = loadPrefs();
@@ -227,8 +227,8 @@ function ask(req, { sessionId, signal, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
         resolve(decision);
       };
       const onAbort = () => done('cancelled');
-      const timer = setTimeout(() => done('timeout'), timeoutMs);
-      if (timer.unref) timer.unref();
+      const timer = timeoutMs ? setTimeout(() => done('timeout'), timeoutMs) : null;   // none: held until answered or stopped (mission-asks.js)
+      if (timer?.unref) timer.unref();
       _pending.set(id, { id, req, resolve: done, timer, sessionId, at: new Date().toISOString() });
       if (signal?.aborted) return done('cancelled');
       signal?.addEventListener?.('abort', onAbort, { once: true });
@@ -392,6 +392,6 @@ function block() {
 }
 
 module.exports = {
-  MODES, FREE, settings, setMode, setRecheck, setMissionAskSec, isUnattended, remember, forget, block,
+  MODES, FREE, settings, setMode, setRecheck, setMissionAskSec, setMissionAskTimeout, isUnattended, remember, forget, block,
   verbsOf, keysFor, summarize, gate, ask, askAnywhere, decide, pending, refusal, missionRefusal, entry,
 };

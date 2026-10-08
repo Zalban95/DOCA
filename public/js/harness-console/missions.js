@@ -109,7 +109,7 @@ async function _hcLoadMissions() {
             onmouseenter="hcMissionPeek(${jsArg(m.id)}, this)" onmouseleave="hcMissionPeekHide()">
         <span class="hc-mission-dot"></span>
         ${escHtml(m.label || m.agentId)}
-        <em>${m.state === 'running' ? `step ${m.steps || 0}` : escHtml(m.state)}</em>
+        <em>${m.state === 'running' ? (m.asking ? `waits for you: ${escHtml(m.asking.what || 'a machine')}` : `step ${m.steps || 0}`) : escHtml(m.state)}</em>
         ${m.sessionId ? `<button class="btn btn-xs" onclick="hcMarkSeen(${jsArg(m.id)}); hcOpenSession(${jsArg(m.sessionId)})">Chat</button>` : ''}
         <button class="btn btn-xs" onclick="hcMarkSeen(${jsArg(m.id)}); hcMissionLog(${jsArg(m.id)})"
                 title="Its whole log, which stays open and can be copied">log</button>

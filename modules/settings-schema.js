@@ -174,7 +174,10 @@ const SCHEMA = {
     keys: {
       // Never proposed: how long a person is given to answer for a mission's use of a machine (harness/mission-asks.js).
       'approval.missionAskSec': { type: 'integer', min: 10, max: 900, default: 300, propose: false,
-        hint: 'Seconds a mission waits for its person to allow its use of a machine (a VNC screen, a sign-in on its computer) before it is denied.' },
+        hint: 'Seconds a mission\'s question to use a machine (a VNC screen, a sign-in on its computer) is pressed on its person\'s devices; then it is held or denied (missionAskTimeout).' },
+      // Never proposed either: what an unanswered machine question becomes — hold (it stays open, the mission waits) or deny.
+      'approval.missionAskTimeout': { type: 'string', oneOf: ['hold', 'deny'], default: 'hold', propose: false,
+        hint: 'When nobody answers a mission\'s machine question in time: hold — the question stays open in Harness → Approvals and the mission waits, paused, until someone answers — or deny.' },
     } },
   models:           { is: 'mixed', home: 'hive', note: 'preferences travel; runtime URLs name this machine. The Hugging Face token is in the protected keys (hf-token.js), never here',
     propose: p('Model manager', 'Ollama URL, download directories') },

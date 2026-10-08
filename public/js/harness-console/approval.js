@@ -69,16 +69,23 @@ function _hcApprovalFill(list, a) {
   };
   list.appendChild(re);
 
-  // A mission's use of a machine is asked of its person (modules/harness/mission-asks.js); this is how long it waits.
+  // A mission's use of a machine is asked of its person (modules/harness/mission-asks.js): how long it is pressed on
+  // their devices, and what no answer by then becomes — held open (the mission waits) or a no.
   const wait = document.createElement('label');
   wait.className = 'approval-recheck';
+  const hold = a.missionAskTimeout !== 'deny';
   wait.innerHTML = `<span><b>A mission's machine question waits</b> <input class="input" type="number" min="10" max="900" step="10" style="width:5em"
-    value="${Number(a.missionAskSec) || 300}"> seconds — a specialist asking to use the VNC screen or computer it was lent
-    is asked of its person, on their devices and open pages; no answer by then is a no.</span>`;
-  wait.querySelector('input').onchange = async ev => {
-    try { await apiFetch('/api/harness/approval', { method: 'POST', body: { missionAskSec: Number(ev.target.value) } }); _hcLoadApproval(); }
+    value="${Number(a.missionAskSec) || 300}"> seconds, then <select class="input" style="width:auto">
+      <option value="hold" ${hold ? 'selected' : ''}>stays open</option><option value="deny" ${hold ? '' : 'selected'}>is a no</option></select>
+    — a specialist asking to use the VNC screen or computer it was lent is asked of its person, on their devices and open pages.
+    ${hold ? 'Unanswered, it leaves their devices but stays here, and the mission waits (no steps, no tokens) until someone answers or stops it.'
+      : 'Unanswered, it is denied and the mission reports why.'}</span>`;
+  const post = async body => {
+    try { await apiFetch('/api/harness/approval', { method: 'POST', body }); _hcLoadApproval(); }
     catch (e) { appAlert(e.message); }
   };
+  wait.querySelector('input').onchange = ev => post({ missionAskSec: Number(ev.target.value) });
+  wait.querySelector('select').onchange = ev => post({ missionAskTimeout: ev.target.value });
   list.appendChild(wait);
 
   // Questions raised elsewhere — a turn a phone started, or one in a chat that
