@@ -190,7 +190,7 @@ function handleStart(req, res) {
     dockerArgs.push(image);
   }
 
-  const cmdDisplay = `docker ${dockerArgs.join(' ')}`;
+  const cmdDisplay = `docker ${dockerArgs.join(' ')}`.split(hfToken || '\0').join('••••');   // the command is shown, the token never
   sseWrite({ status: `Starting ${svc.label}…\n$ ${cmdDisplay}\n` });
 
   const child = spawn(require('./containers').cli(), dockerArgs, { cwd: home });
