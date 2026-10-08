@@ -113,6 +113,35 @@ the project's managers only if the owner allows sharing specialists and skills (
   person, device, agent and time, with the story of a piece of work told from its logs and traces (what ran, why,
   what it cost, what failed) — the place unrendered work is seen afterwards.
 
+### Deep test B 2026-10-08 — install, server and panel (branch `deepb-install-panel`)
+- [x] Deep test B B4: Restart asks what will really bring DOCA back (`modules/self-restart.js`): a container only when
+  node is PID 1 or a shim's one child, systemd only as the unit's main process with a restarting policy (else refused
+  with how), pm2, `DOCA_SUPERVISOR`; anything else hands off to the launcher, and a successor that dies at once leaves
+  DOCA up and says so.
+- [x] Deep test B B5: the installers start DOCA with `bin/doca-launch.js start --detach` (a session of its own), so a
+  closing terminal does not take it; install.ps1 uses the same; `test/launcher.test.js` hangs up the starting shell.
+- [x] Deep test B C3: "Connect and test" tests first (`POST /api/keys/test-provider`, nothing saved), reuses the provider
+  at that address; migration `2.329-providers-merged` merges older copies (`modules/provider-dedupe.js`, old names kept
+  as aliases).
+- [x] Deep test B C4: the workspace is made the first time a tool needs it; a relative path is the conversation's
+  project, else the workspace, and `read_file` says where it read. Not done: the default workspace is still
+  `~/.openclaw/workspace` (moving it is a migration and a decision for the owner).
+- [x] Deep test B C5: the Harness console queues a message to a working conversation (`agentQueuedSend`).
+- [x] Deep test B C6: every dialog has Cancel and Escape; Escape closes the panel's windows by their backdrop.
+- [x] Deep test B C8: the ⬆ badge opens Settings → General → Updates, never the vendor's site.
+- [x] Deep test B C10: times are the person's clock (`modules/timezones.js`: each screen reports its zone; cron
+  schedules keep theirs; `remind` reads and answers in it; the panel draws times with the browser's clock).
+- [x] Deep test B C11: Set-up never points a newcomer at developer mode; "Check for newer models" only while the scout is on.
+- [x] Deep test B R4: buttons pressed with nothing to act on say so (`askFor` at the field, or a sentence).
+- [x] Deep test B R5: every install that downloads says how much and asks first (`lib/install-ask.js`).
+- [x] Deep test B: a device's family is taken back only after a question naming what stops; an MCP card with no tools
+  says which families were revoked.
+- [x] Deep test B R8: where systemd does not run, DOCA says so once and stops calling systemctl (`modules/systemd.js`).
+- [x] Deep test B R13: `settings_read` lists every proposable section (unset ones whole), reads one by `section`, and
+  says what is the person's alone when nothing matches.
+- [x] Deep test B R14: settings with no control get a box on their page, folded under Advanced (`settings/leaf-fields.js`,
+  `GET /api/settings/leaves`); `toolNotes` and `providerContracts` have none on purpose (the schema says why).
+
 ### Security review 2026-10-07
 - [x] Guards strengthened (branch `sec-misc`, `test/security-review-1007.test.js`): switching versions and every pack
   import ask for the password (`auth/guarded.js` ROUTES); applying a proposal is checked against the live setting, not
