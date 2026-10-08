@@ -64,6 +64,7 @@ body.solo .amb { height: 100dvh; border-radius: 0; }
 .amb-arrange-card { width: min(520px, 100%); display: flex; flex-direction: column; gap: 10px; max-height: 100%; overflow: auto; }
 .amb-arrange-card label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
 .amb-arrange-card .amb-check { flex-direction: row; align-items: center; gap: 8px; }
+.amb-arrange-adv { display: flex; flex-direction: column; gap: 10px; }   /* the form's Advanced fold (ambient-settings.js) */
 .amb-arrange-row { display: flex; gap: 8px; justify-content: flex-end; }
 /* A phone upright: one column, the plan and the notices share the middle. */
 @media (max-width: 700px), (orientation: portrait) {

@@ -29,13 +29,13 @@ async function clientAppsRender() {
       An update installs only over an app signed with the same key: ${s.signing.kept ? `the hub signs with its key (${escHtml(s.signing.alias || '')}, ${escHtml(s.signing.sha256 || '')}).`
         : '<b>the hub holds no signing key yet</b> — builds here use this machine\'s debug key.'}</p>
     ${Object.entries(s.apps).map(([id, a]) => row(id, a)).join('')}
-    ${host ? `<div class="tool-row" style="grid-template-columns:auto 1fr auto;align-items:center">
+    ${host ? advancedFold(`<div class="tool-row" style="grid-template-columns:auto 1fr auto;align-items:center">
       <span class="tool-label">Signing key</span>
       <span class="tool-note" style="white-space:normal;display:flex;flex-wrap:wrap;gap:4px">
         <input class="input" id="ca-sign-alias" placeholder="alias (androiddebugkey)" style="width:150px" autocomplete="off">
         <input class="input" id="ca-sign-store" type="password" placeholder="keystore password" style="width:150px" autocomplete="new-password">
         <input class="input" id="ca-sign-key" type="password" placeholder="key password" style="width:150px" autocomplete="new-password"></span>
-      <span class="tool-actions"><label class="btn btn-xs" title="The keystore every build here is signed with (.jks or .keystore)">⬆ ${s.signing.kept ? 'Replace' : 'Upload'} key<input type="file" accept=".jks,.keystore,.p12" hidden onchange="clientAppsSigning(this.files[0], ${s.signing.kept})"></label></span></div>` : ''}
+      <span class="tool-actions"><label class="btn btn-xs" title="The keystore every build here is signed with (.jks or .keystore)">⬆ ${s.signing.kept ? 'Replace' : 'Upload'} key<input type="file" accept=".jks,.keystore,.p12" hidden onchange="clientAppsSigning(this.files[0], ${s.signing.kept})"></label></span></div>`, { id: 'client-apps-signing', label: 'Advanced — the signing key', changed: s.signing.kept ? 1 : 0 }) : ''}
     <pre id="client-apps-out" class="terminal" style="display:none;margin-top:8px;max-height:min(45vh,360px)"></pre>`;
 }
 

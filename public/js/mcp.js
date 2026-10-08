@@ -264,7 +264,7 @@ async function _mcpLoadDevices(selected) {
 function mcpShowForm(show) {
   document.getElementById('mcp-form').style.display = show ? 'block' : 'none';
   if (!show) return;
-  mcpTransportChange();
+  mcpTransportChange(); advancedFoldRefresh(document.getElementById('mcp-form'));   // an edit's env, folder or headers: marked under Advanced
   document.getElementById('mcp-name').focus();
 }
 
