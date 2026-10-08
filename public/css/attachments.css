@@ -105,6 +105,9 @@
 }
 
 .hc-mission em { font-style: normal; color: var(--muted); }
+/* The tidy-up's end of the bar (agents/tidy.js): quiet, pushed right. */
+.hc-missions-tidy { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 10px; color: var(--muted); }
+.hc-missions-tidy a { color: var(--muted); }
 
 .hc-mission-dot {
   width: 6px;
