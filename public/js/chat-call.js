@@ -138,7 +138,7 @@ function _callStop(why = 'the person ended the call') {
   _callStats = null;
 
   if (_callAbort) { _callAbort.abort(); _callAbort = null; }
-  if (_callVadRafId) { cancelAnimationFrame(_callVadRafId); _callVadRafId = null; }
+  if (_callVadRafId) { (typeof micFrameCancel === 'function' ? micFrameCancel : cancelAnimationFrame)(_callVadRafId); _callVadRafId = null; }
   clearTimeout(_callSilenceTimer);
   _callSilenceTimer = null;
 
@@ -216,7 +216,8 @@ function _callVadLoop() {
     }, _callSilenceMs);
   }
 
-  _callVadRafId = requestAnimationFrame(_callVadLoop);
+  // A frame while the page shows; a worker's tick while it is hidden, so a call kept in the background goes on (lib/mic-keep.js).
+  _callVadRafId = typeof micFrame === 'function' ? micFrame(_callVadLoop) : requestAnimationFrame(_callVadLoop);
 }
 
 function _callStartRecording() {

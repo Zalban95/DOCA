@@ -87,6 +87,7 @@ function _hcBuiltinHtml(h) {
           <select class="input hc-to" id="hc-computer" style="display:none" title="Which of the agents' computers the specialist works in"></select>
           <textarea class="input flex1 hc-input" id="hc-input" rows="1" placeholder="Message the harness…"
                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();hcSend();}"></textarea>
+          ${typeof micKeepHtml === 'function' ? micKeepHtml('hc-mic-keep') : ''}
           <button class="btn btn-sm btn-amber" id="hc-send" onclick="hcSend()">Send</button>
           <button class="btn btn-sm btn-red" id="hc-stop" style="display:none" onclick="hcStop()"
                   title="Stop this turn. The step already running finishes; nothing after it starts.">■ Stop</button>

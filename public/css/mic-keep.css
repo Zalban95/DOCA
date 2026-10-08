@@ -1,0 +1,11 @@
+/* The microphone switch beside the chats (public/js/mic-keep-ui.js): a point that says what the microphone is doing. */
+.mic-keep { display: inline-flex; align-items: center; gap: 5px; }
+.mic-keep.on { border-color: var(--green); color: var(--bright); }
+.mic-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--muted); opacity: .6; }
+.mic-dot.call { background: var(--green); opacity: 1; animation: callPulse 1.2s ease-in-out infinite; }
+.mic-dot.listening { background: var(--amber); opacity: 1; }
+.mic-dot.paused { background: var(--blue); opacity: 1; }
+.chat-call-mic-icon.paused { background: var(--blue); animation: none; }
+/* On the face's call: beside its ✕, and quiet with it while the face waits for its name. */
+.face-assistant .mic-keep { position: absolute; top: calc(18px + env(safe-area-inset-top)); right: 70px; transition: opacity .8s ease; }
+.face-assistant.calm .mic-keep { opacity: 0; pointer-events: none; }

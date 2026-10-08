@@ -37,6 +37,9 @@ const SCHEMA = {
       assistantIdleSec: { type: 'integer', min: 5, default: 12, hint: 'In assistant mode (the face tapped), seconds of quiet before it goes back to waiting for the wake word, where the screen listens for one.' },
       listenWithFace: { type: 'boolean', default: false, hint: 'While the corner face shows, listen for the wake word and start a call when it is said (experiments.wakeWord).' },
       wakeWord: { type: 'string', default: '', hint: 'The word that starts a call. Empty: the product\'s name (branding).' },
+      // Whether the microphone may stay open with the page in the background (public/js/lib/mic-keep.js). The person's
+      // own switch beside the chats, never proposable: an agent keeping a microphone open is not a look to suggest.
+      micAlways: { type: 'boolean', default: false, propose: false, hint: 'Let the microphone stay open with the app in the background: the wake word keeps listening and a call keeps going. Off: it opens only for a call or a recording, and closes when the page is hidden.' },
     } },
   ambient:          { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the ambient screen (public/js/ambient.js): where it is for the weather, its quick buttons, whether it listens for its name — `buttons` is a list of {label, say} (what the button says to the agent), `show` which parts are drawn (clock, weather, plan, notices, buttons, apps: false hides one)',
     keys: {

@@ -48,7 +48,7 @@ function wakeWordPause() {
   if (!_wake) return;
   _wake.model?.stop();
   if (typeof ambientHearing === 'function') ambientHearing({ listening: false });
-  cancelAnimationFrame(_wake.raf);
+  (typeof micFrameCancel === 'function' ? micFrameCancel : cancelAnimationFrame)(_wake.raf);
   if (_wake.rec && _wake.rec.state !== 'inactive') { _wake.rec.onstop = null; _wake.rec.stop(); }
   _wake.stream.getTracks().forEach(t => t.stop());
   _wake.ctx.close().catch(() => {});
@@ -60,7 +60,11 @@ async function _wakeWanted() {
   // — it is used in a call, a recording, or here (asked 2026-10-06: "the microphone is always in use").
   const faceShown = typeof assistantIsOpen === 'function' && assistantIsOpen();
   const ambient = typeof ambientIsOpen === 'function' && ambientIsOpen();   // an ambient screen resting (ambient.js)
-  if (!(faceShown || ambient) || document.hidden) return null;
+  // A hidden page listens only when this screen lets the microphone stay on in the background (call.micAlways, the
+  // switch beside the chats), and nothing listens while a phone call has the microphone (lib/mic-keep.js).
+  const keep = typeof micAlwaysOn === 'function' && micAlwaysOn();
+  if (!(faceShown || ambient) || (document.hidden && !keep)) return null;
+  if (typeof micKeepPaused === 'function' && micKeepPaused()) return null;
   if ((typeof _callActive !== 'undefined' && _callActive) || (typeof _rt !== 'undefined' && _rt)) return null;
   if (typeof _callStarting !== 'undefined' && _callStarting) return null;   // a call is opening the microphone: leave it alone
   const s = await screenLoad();
@@ -86,7 +90,7 @@ function _wakeLoop() {
     if (typeof faceCornerVoice === 'function') faceCornerVoice('listening', energy / 80);
   } else if (w.rec && !w.quietAt) w.quietAt = now;
   if (w.rec && ((w.quietAt && now - w.quietAt > WAKE_SILENCE_MS) || now - w.startedAt > WAKE_MAX_MS)) w.rec.stop();
-  w.raf = requestAnimationFrame(_wakeLoop);
+  w.raf = typeof micFrame === 'function' ? micFrame(_wakeLoop) : requestAnimationFrame(_wakeLoop);   // ticks on while hidden (lib/mic-keep.js)
 }
 
 function _wakeRecord(w, now) {
