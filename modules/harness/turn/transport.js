@@ -30,23 +30,26 @@ async function post(ep, body, signal, p) {
     headers, body: JSON.stringify(payload), signal,
   });
 
+  body = require('./effort').dress(body);   // a `no_think` request says so in its prompt (turn/effort.js)
   let r = await send(body);
 
   // Two blind retries, both cheaper than asking every user to know which
-  // dialect their endpoint speaks.
-  if (r.status === 400) {
+  // dialect their endpoint speaks. A 500 is looked at only for a thinking
+  // effort, which a local server hands to the model's chat template.
+  if (r.status === 400 || r.status === 500) {
     const detail = await r.text();
+    const effortRetry = require('./effort').retry(body, detail, r.status);
 
     // Newer OpenAI models reject max_tokens and want max_completion_tokens.
-    if (body.max_tokens && detail.includes('max_completion_tokens')) {
+    if (r.status === 400 && body.max_tokens && detail.includes('max_completion_tokens')) {
       const { max_tokens, ...rest } = body;
       r = await send({ ...rest, max_completion_tokens: max_tokens });
       if (r.ok) contracts.learn(ep.id, body.model, { tokenField: 'max_completion_tokens' }, { perModel: true });
 
-    // A thinking effort in a dialect this server does not take (turn/effort.js): once without it, and remembered.
-    } else if (require('./effort').without(body, detail)) {
-      r = await send(require('./effort').without(body, detail));
-      if (r.ok) contracts.learn(ep.id, body.model, { effortField: 'none' }, { perModel: true });
+    // A thinking effort in a word or dialect this server does not take (turn/effort.js): once another way, and remembered.
+    } else if (effortRetry) {
+      r = await send(effortRetry.body);
+      if (r.ok) contracts.learn(ep.id, body.model, effortRetry.lesson, { perModel: true });
 
     // Asking for a usage frame is how the token ledger gets measured numbers
     // instead of estimates, but it is a newer field and a strict or older
@@ -54,13 +57,13 @@ async function post(ep, body, signal, p) {
     // them without saying which field they disliked. So any 400 costs one retry
     // without it: counting tokens is worth a round trip, and is never worth a
     // failed turn. If the second attempt fails too, that error is the real one.
-    } else if (body.stream_options) {
+    } else if (r.status === 400 && body.stream_options) {
       const { stream_options, ...rest } = body;
       r = await send(rest);
       if (r.ok) contracts.learn(ep.id, body.model, { streamUsage: false });
 
     } else {
-      throw Object.assign(new Error(budget.explain({ status: 400, detail, ep, p })), { status: 400 });
+      throw Object.assign(new Error(budget.explain({ status: r.status, detail, ep, p })), { status: r.status, retryAfterMs: rateLimit.retryAfterMs(r.headers) });
     }
   }
   if (!r.ok) throw Object.assign(new Error(budget.explain({ status: r.status, detail: await r.text(), ep, p })),
