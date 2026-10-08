@@ -63,8 +63,9 @@ Android, DocaWear on Wear OS, DocaDesk on Windows, and `clients/node` for any Li
 
 **Settings → General → Updates** says whether a newer version exists and installs it; the version list there
 switches to any release and back, and a version that does not come up is put back by itself. A switch waits for
-work in progress to finish unless you say *now*, and asks for your password. From a shell: `./run.sh versions` and
-`./run.sh use vX.Y.Z`. Versions need an install made with `git clone` (the installers' default).
+work in progress to finish unless you say *now*, and asks for your password. From a shell on Linux: `./run.sh versions`
+and `./run.sh use vX.Y.Z`; on Windows and macOS, deleting `.releases/current` and starting DOCA again goes back to the
+working copy. Versions need an install made with `git clone` (the installers' default).
 
 ## Backing up
 
