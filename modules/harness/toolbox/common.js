@@ -84,9 +84,17 @@ function landed(p, abs) {
   return path.isAbsolute(String(p || '').replace(/^~(?=$|[/\\])/, os.homedir())) ? '' : `\n[${p} is ${abs}]`;
 }
 
-function resolvePath(p, ctx = {}) {
+function resolvePath(p, ctx = {}, { write = false } = {}) {
   const expanded = String(p || '').replace(/^~(?=$|[/\\])/, os.homedir());
   const abs = path.resolve(cwd(ctx), expanded);
+  if (!fmSafe(abs) && write)
+    // A write, said the same way (deep test A, #33): refused here, the agent said "I'll create the files there with
+    // the shell instead" and did — the person had named the place, and nothing asked them.
+    throw new Error(`Path is outside the allowed roots (${FM_ALLOWED_ROOTS.join(', ')}): ${abs}. The file tools write only inside `
+      + 'the home folder, other disks and the temp folder — a rule of DOCA\'s own, which no setting widens; only the person '
+      + 'decides an exception. Do not write it another way (shell, a script, a copy or a move) on your own, even where the person '
+      + 'named the place: tell them it is outside where you may write and ask — they can choose a folder inside, or say plainly '
+      + 'that you may write it there with the shell.');
   if (!fmSafe(abs))
     // Said as a rule, not an obstacle (deep test B, C12): refused here, the agent read the file with `shell` instead,
     // unasked, and a person reading "allowed roots" believes it is a boundary.
