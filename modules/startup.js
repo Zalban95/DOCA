@@ -18,7 +18,8 @@ const shell = require('./shell');
 const { HOME_DIR } = require('./paths');
 // The install's own launcher, not the running version's copy: a switched-to version runs from .releases/<tag>, and
 // an entry pointing at that copy would start the release folder as if it were the install (its own data, no .env).
-const LAUNCHER = path.join(HOME_DIR, 'bin', 'doca-launch.js');
+// A DOCA_HOME with no launcher in it (the tests' data folder) falls back to the one beside this module.
+const LAUNCHER = [path.join(HOME_DIR, 'bin', 'doca-launch.js'), path.join(__dirname, '..', 'bin', 'doca-launch.js')].find(f => fs.existsSync(f));
 
 /** Why the toggle cannot be used on this host, or null when it can. */
 async function unsupportedReason() {
