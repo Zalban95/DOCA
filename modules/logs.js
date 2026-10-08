@@ -259,7 +259,7 @@ function sources() {
     }
     row.reason = CLI_REASON;
     return row;
-  }).concat([{ id: 'call', label: 'Live calls', kind: 'calls', selected: false, available: true, reason: null }]);   // each call's stages (realtime/call-log.js)
+  }).concat([{ id: 'call', label: 'Calls', kind: 'calls', selected: false, available: true, reason: null }]);   // each call's stages (realtime/call-log.js)
 }
 
 /** Resolve what the client asked for. `auto` is whichever harness is selected. */

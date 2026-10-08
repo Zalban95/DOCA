@@ -42,7 +42,7 @@ async function screenVoiceSave(reset = false) {
   const engine = document.getElementById('sv-engine')?.value || '';
   const voice = (document.getElementById('sv-voice')?.value || '').trim(), speed = parseFloat(document.getElementById('sv-speed').value);
   const hosted = engine.startsWith('hosted:') ? hostedVoiceValue() : null;   // the service's model and Advanced (hosted-voice.js)
-  // The Quick and Deep calls' own voices (settings/call-voices.js) live beside these and are kept as they are.
+  // The Live and Deep calls' own voices (settings/call-voices.js) live beside these and are kept as they are.
   const cur = (await screenLoad(true)).settings?.voice || {};
   const calls = Object.fromEntries(['quick', 'deep'].filter(k => cur[k]).map(k => [k, cur[k]]));
   const value = reset || (!engine && !voice && !speed) ? (Object.keys(calls).length && !reset ? calls : null)

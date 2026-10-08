@@ -667,6 +667,33 @@ The harness gives its agent eight rules for working on any repository (charter r
   Whisper in English and Italian; the image is 33 GB on disk. Why this one: Higgs Audio v3, Voxtral TTS, Fish Audio S2
   Pro and Breeze TTS 2 rank higher in blind tests but their weights are non-commercial; Chatterbox Multilingual (MIT,
   Italian) has an intensity knob but no kind of tone; Chatterbox Turbo has real `[laugh]` tags but English only.
+- **The calls' names** (asked 2026-10-08, round two): the dots call — the face, assistant mode — is the **Live call**;
+  the chat's 🎙 is the **Deep call**; Ambient's spoken helper is **Ambient's assistant**. Only the visible words changed:
+  the slot `voice.quick`, `call.*`, `assistant.*`, the `assistant`/`call` modes and every API field keep their names
+  (the "Quick" below is `voice.quick`). The call log names each (`panel-call.js`: the page sends `ambient`), and its
+  source is "Calls" — Live, Deep, Ambient's and a device's.
+- **The microphone is handed over, never dropped and reopened** (`public/js/lib/mic.js micHandOff`; 2026-10-08: on a
+  phone a call opened six seconds after another heard a level of 0 for 54 s). Whoever lets go of it — a call ending,
+  the wake word pausing for a call — hands its stream over for `MIC_HANDOFF_MS` (1.5 s), and the next `micOpen` with
+  the same constraints (`MIC_SPEECH`) takes it live; nobody taking it, it is stopped. **`wakeWordPause` never throws**:
+  a screen resting without a trained model kept `model: false` and `false?.stop()` threw, so every call from a resting
+  screen died before it opened the microphone — Ambient's galaxy rose and fell at once, and nothing reached the hub (the
+  flag is `useModel` now, apart from the running model). `chatToggleCall` catches whatever throws while a call opens and
+  says "The call did not start: …" in the chat and on the face or Ambient (stopping a half-started call), and
+  `wakeWordApply` asked while deciding decides again after. **A call watches its microphone** (`chat-call-mic.js`): its
+  samples exactly zero, its track muted or ended, or its audio held for a touch, for 4 s from the start, it wakes its
+  audio and opens the microphone once more, then says "The microphone gives nothing — another app or a call may hold
+  it" (both in the call log); any touch during a call resumes its audio contexts (a hold or a wake word has no gesture
+  of its own). A paused voice waits at most 4 s for the decision (`CALL_HOLD_DECIDE_MS`); a sentence played while the
+  page's audio is not running is logged as a warning; a sentence the voice cannot say is written on the face's or
+  Ambient's line when the chat is not on screen. `test/call-handoff.test.js` runs the scripts in a sandbox.
+- **Tone tags are kept apart at the source** (`voice-tags.stream`, `harness/agent.js`; a watch showed "[calm] Perfect —"
+  on 2026-10-08): a spoken turn (`voice-tags.spokenTurn`: `voiceTags`, or mode `call`/`assistant`) keeps and returns
+  clean text, so the stored row, `agent.turn`/`agent.text` to every device, Telegram, the live feed and the Workstream
+  never carry them; each `text` event also has `spoken`, the piece as written, which `/api/chat` forwards and only what
+  speaks reads (`agent-ui/event-sink.js` hands `spoken` to `onText`; `realtime/index.js askAsDevice`). Whisper's
+  subtitle credits ("КОНЕЦ", "Субтитры сделал …", "Sottotitoli creati …") are screened like its other silence phrases
+  (`stt-filter.js CREDITS`). `test/voice-tags-source.test.js`.
 - **A voice per kind of call: Quick and Deep** (`modules/call-voices.js`; asked 2026-10-08: "keep the expressive model
   for the ambient and the quick calls on the watch, and the dots-themed call. That is the quick one, inside of the one
   that starts from the chat. That is the Deep one."). The **Quick call** is the face's (assistant mode: the corner

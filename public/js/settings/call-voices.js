@@ -1,11 +1,11 @@
-/* Settings → Voice → Quick and Deep calls (modules/call-voices.js): a voice per kind of call. The Quick call is the
+/* Settings → Voice → Live and Deep calls (modules/call-voices.js): a voice per kind of call. The Live call is the
    face's (the corner face, its name), Ambient's and a device's — the watch's, a phone's; the Deep call is the 🎙 from
    the chat. Each is `voice.quick` / `voice.deep` of this screen ({service, voice, speed}); unset, it is this screen's
    own voice above, else the hive's. An admin can make a choice the hive's: every screen without its own, and the
    devices that have no screen of their own to set (a watch). The common choice is shown, the speed under Advanced
    (advancedFold). */
 const CALL_VOICE_KINDS = [
-  { id: 'quick', title: 'Quick call', who: 'the face, Ambient, the watch' },
+  { id: 'quick', title: 'Live call', who: 'the face, Ambient’s assistant, the watch' },
   { id: 'deep', title: 'Deep call', who: 'from the chat' },
 ];
 
@@ -20,7 +20,7 @@ async function callVoicesRender() {
   const rows = await Promise.all(CALL_VOICE_KINDS.map(k => _callVoiceRow(k, v[k.id] || {}, prefs.voice?.[k.id])));
   const old = document.getElementById('call-voices-card');
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'call-voices-card' });
-  card.innerHTML = `<div class="card-title">Quick and Deep calls</div>
+  card.innerHTML = `<div class="card-title">Each call’s voice: Live and Deep</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">A voice for each kind of call on <b>${escHtml(s.name || 'this screen')}</b>.
       "Same as this screen" uses the voice above. An expressive voice may whisper, laugh or light up where it fits — the agent is told of that only in a call it speaks.</p>
     <div style="display:flex;flex-direction:column;gap:12px">${rows.join('')}</div>`;

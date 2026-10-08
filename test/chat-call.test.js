@@ -22,7 +22,7 @@ function load() {
     apiFetch: async () => ({}),
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${['chat-call.js', 'chat-call-report.js', 'chat-call-hear.js', 'chat-call-voice.js', 'chat-call-hold.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8')).join('\n')}
+  vm.runInContext(`${['lib/mic.js', 'chat-call.js', 'chat-call-report.js', 'chat-call-hear.js', 'chat-call-voice.js', 'chat-call-hold.js', 'chat-call-mic.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8')).join('\n')}
     ;globalThis.__ = { get: n => eval(n), set: (n, v) => eval(n + ' = v') };`, sandbox);
   const s = sandbox.__;
   s.set('_callPlayCtx', { decodeAudioData: () => new Promise(r => { resolveDecode = r; }), createBufferSource: () => ({ connect() {}, start() {}, stop() {} }), destination: {} });
@@ -129,6 +129,7 @@ test('a speech service that fails says so once per call, not silently', async ()
   const said = [];
   sandbox.chatAppendMsg = (_k, t) => said.push(t);
   sandbox.fetch = async () => ({ ok: false, status: 502, text: async () => 'kokoro down' });
+  sandbox.chatOpen = true;   // the chat is on screen: the answer is there (where it is not, see call-handoff.test.js)
   s.set('_callActive', true);
   await s.get('_callEnqueueSynth')('One.');
   await s.get('_callEnqueueSynth')('Two.');

@@ -116,7 +116,7 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
   if (!pipeline) { try { t = target(s); } catch (e) { tell({ type: 'error', message: e.message }); ws.close(); return; } }
   const stats = { at: Date.now(), firstAudioMs: null, spokeAt: null, replyMs: [], tools: 0, background: 0, interrupted: 0, reports: 0 };
   let heardAt = null;   // when the last utterance ended, until its answer's first audio: replyMs, end of speech → first audio
-  // The hub's own voice speaks a device's call in its Quick call voice (call-voices.js): the device's screen's, its person's, the hive's.
+  // The hub's own voice speaks a device's call in its Live call voice (call-voices.js): the device's screen's, its person's, the hive's.
   const model = pipeline ? require('./pipeline').connect({ voice: require('../call-voices').forDevice(deviceId) })
     : ADAPTERS[s.protocol].connect({ ...t, model: s.model, voice: s.voice, dialect: s.dialect, instructions: INSTRUCTIONS + recent(sessionId), tools: [TOOL] });
   if (pipeline) s.protocol = 'pipeline';
@@ -253,7 +253,7 @@ function askAsDevice(device, sessionId) {
     let turnId = null, writing = false;
     const words = e => {
       if (!writing || e.sessionId !== sessionId) return;
-      if (e.type === 'text') onText(String(e.text || ''));
+      if (e.type === 'text') onText(String(e.spoken ?? e.text ?? ''));   // with its tone tags: this is for the voice
       else if (e.type === 'tool_call') onText(null);
     };
     const stop = () => { clearTimeout(timer); bus.emitter.off('event', hear); if (onText) turns.off('event', words); };

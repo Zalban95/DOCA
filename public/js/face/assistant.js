@@ -86,7 +86,7 @@ function assistantClose(fromBack) {
   if (!a) return;
   _assistant = null;
   clearInterval(a.timer); clearTimeout(a.calmTimer);
-  if (_assistantInCall()) _callStop(fromBack ? 'Back closed assistant mode' : 'assistant mode was closed');
+  if (_assistantInCall()) _callStop(fromBack ? 'Back closed the Live call' : 'the Live call was closed');
   if (document.fullscreenElement === a.el) document.exitFullscreen?.().catch(() => {});
   a.face.stop(); a.closeFeed(); a.el.remove();
   if (!fromBack) a.back();
