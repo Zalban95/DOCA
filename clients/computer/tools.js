@@ -75,20 +75,28 @@ async function grab() {
   return fs.readFileSync(file).toString('base64');
 }
 
-/** Number the page's visible interactive elements and describe the page. */
+/**
+ * Number the page's visible interactive elements and describe the page. A fold's <summary> is a control (it is the only
+ * way to open a <details>), and what sits inside a closed fold is hidden, not offered (deep test A, #4): the box test
+ * passed for those fields, so the agent was offered them, could not click them, and never saw the summary to open.
+ */
 const SNAPSHOT = `(() => {
-  const vis = el => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
+  // Inside a closed <details>, only its own <summary> shows; looked up through every fold it sits in.
+  const folded = el => { for (let d = el.closest('details:not([open])'); d; d = d.parentElement && d.parentElement.closest('details:not([open])')) {
+    const sum = el.closest('summary'); if (!(sum && sum.parentElement === d)) return true; } return false; };
+  const vis = el => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && !folded(el); };
   // Numbers from an earlier snapshot are taken off first: a control numbered then and hidden since kept its number, came
   // first in the page, and a click by that number went to it — at 0,0 — and "worked" (self-test round two, B4).
   document.querySelectorAll('[data-doca-ref]').forEach(el => el.removeAttribute('data-doca-ref'));
-  const els = [...document.querySelectorAll('a[href],button,input,textarea,select,[role=button],[role=link],[role=checkbox],[onclick],[contenteditable=true]')].filter(vis);
+  const els = [...document.querySelectorAll('a[href],button,input,textarea,select,summary,[role=button],[role=link],[role=checkbox],[onclick],[contenteditable=true]')].filter(vis);
   // A password or card field's value is never read back: the hub fills it from the vault, the agent never sees it (logins.js).
   // So is a field the hub filled one into (browser_fill_secret), until the page goes — even if the page makes it a text field.
   const secret = el => (window.__docaFilled && window.__docaFilled.has(el)) || el.type === 'password' || /cc-|one-time-code|password/.test((el.getAttribute('autocomplete') || '').toLowerCase());
   const label = el => (el.getAttribute('aria-label') || el.innerText || (secret(el) ? (el.value ? '(filled)' : '') : el.value) || el.placeholder || el.title || el.name || el.alt || '').trim().replace(/\\s+/g, ' ').slice(0, 80);
   const lines = els.slice(0, 300).map((el, i) => { el.setAttribute('data-doca-ref', String(i + 1));
     const t = el.tagName.toLowerCase() + (el.type ? ':' + el.type : '') + (el.getAttribute('role') ? '[' + el.getAttribute('role') + ']' : '');
-    return '[' + (i + 1) + '] ' + t + ' "' + label(el) + '"' + (el.href ? ' -> ' + el.href : ''); });
+    const fold = el.tagName === 'SUMMARY' && el.parentElement && el.parentElement.tagName === 'DETAILS' ? (el.parentElement.open ? ' (open fold)' : ' (closed fold: click to open)') : '';
+    return '[' + (i + 1) + '] ' + t + ' "' + label(el) + '"' + fold + (el.href ? ' -> ' + el.href : ''); });
   return 'title: ' + document.title + '\\nurl: ' + location.href + '\\n\\n' + lines.join('\\n') + '\\n\\n--- text ---\\n' + (document.body ? document.body.innerText : '').slice(0, 12000);
 })()`;
 

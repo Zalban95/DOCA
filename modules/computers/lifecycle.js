@@ -5,7 +5,7 @@
  * environment, so nobody is expected to tidy up after them.
  *
  * - When the mission it was lent to ends, it stops `idleStopMinutes` later — unless it was lent again,
- *   or a person pinned it. Stopped, it keeps its files.
+ *   a person pinned it, or a turn still uses it (`inUse`). Stopped, it keeps its files.
  * - One an agent made and nobody pinned is removed, files and all, `retainHours` after it stopped.
  * - At most `maxRunning` run at once; making one more is refused with the setting's name.
  *
@@ -27,22 +27,42 @@ async function roomForOne() {
 
 const _timers = new Map();
 
-/** A mission ended (agents/missions announce): its computer stops a little later, if nothing took it over. */
+/**
+ * Why a computer is still in use although its mission ended, or null (deep test A, #8): a message to the finished
+ * mission's conversation started a turn there that used the computer, and the sweep stopped it under that turn, 2 s
+ * after its last call. In use: a turn running in a conversation that holds it (the mission's, the one that made it,
+ * the one that last used it), or any turn that called its tools within `idleStopMinutes` (machines/index.js actOf).
+ */
+function inUse(c, missionId) {
+  const running = id => !!id && require('../harness/turn/lifecycle').isRunning(id);
+  const act = require('../machines/index').actOf(c.id);
+  const holders = [require('../agents/missions').get(missionId)?.sessionId, c.by, act?.sessionId];
+  if (holders.some(running)) return 'a turn is running in a conversation that holds it';
+  if (act && Date.now() - act.at < Math.max(1, limit('idleStopMinutes')) * 60000)
+    return `an agent used it ${Math.round((Date.now() - act.at) / 1000)} s ago (${act.what})`;
+  return null;
+}
+
+/** A mission ended (agents/missions announce): its computer stops a little later, if nothing took it over or uses it. */
 function missionEnded(missionId) {
+  for (const c of require('./index').all().filter(x => x.missionId === missionId && !x.pinned)) arm(c, missionId, limit('idleStopMinutes') * 60000);
+}
+
+function arm(c, missionId, ms) {
   const computers = require('./index');
-  for (const c of require('./index').all().filter(x => x.missionId === missionId && !x.pinned)) {
-    clearTimeout(_timers.get(c.id));
-    const t = setTimeout(() => {
-      _timers.delete(c.id);
-      const now = computers.get(c.id);
-      if (!now || now.pinned || now.missionId !== missionId) return;   // pinned, removed, or lent again
-      if (require('../agents/missions').get(missionId)?.state === 'running') return;   // resumed
-      computers.stop(c.id).catch(() => {});
-      require('../activity').note({ from: 'computers', what: `stopped ${c.name || c.id}`, why: `idle ${limit('idleStopMinutes')} min after its mission ${missionId} ended`, machine: { kind: 'computer', id: c.id, name: c.name }, act: 'stop', ok: true });
-    }, limit('idleStopMinutes') * 60000);
-    t.unref?.();
-    _timers.set(c.id, t);
-  }
+  clearTimeout(_timers.get(c.id));
+  const t = setTimeout(() => {
+    _timers.delete(c.id);
+    const now = computers.get(c.id);
+    if (!now || now.pinned || now.missionId !== missionId) return;   // pinned, removed, or lent again
+    if (require('../agents/missions').get(missionId)?.state === 'running') return;   // resumed
+    // Never under a live turn: looked at again a period later (at least a minute, so a 0 does not spin).
+    if (inUse(now, missionId)) return arm(now, missionId, Math.max(1, limit('idleStopMinutes')) * 60000);
+    computers.stop(c.id).catch(() => {});
+    require('../activity').note({ from: 'computers', what: `stopped ${c.name || c.id}`, why: `idle ${limit('idleStopMinutes')} min after its mission ${missionId} ended`, machine: { kind: 'computer', id: c.id, name: c.name }, act: 'stop', ok: true });
+  }, ms);
+  t.unref?.();
+  _timers.set(c.id, t);
 }
 
 /** Remove what agents made, nobody pinned, and has been stopped longer than `retainHours`. */
@@ -70,4 +90,4 @@ function start() {
   _sweeper.unref?.();
 }
 
-module.exports = { limit, roomForOne, missionEnded, sweep, start };
+module.exports = { limit, roomForOne, missionEnded, inUse, sweep, start };

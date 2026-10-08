@@ -142,7 +142,7 @@ async function voiceCardSave(reset = false) {
   const value = reset ? null : voiceCardValue();
   const empty = !value || !Object.keys(value).length;
   try {
-    if (_vc.scope === 'hive') await apiFetch('/api/prefs', { method: 'POST', body: { voice: empty ? {} : value } });
+    if (_vc.scope === 'hive') await apiFetch('/api/prefs?replace=1', { method: 'POST', body: { voice: empty ? {} : value } });   // the whole voice section, as built here: a cleared slot goes
     else await screenSave({ voice: empty ? null : value });
   } catch (e) { return setStatus(status, `✗ ${e.message}`, 'err'); }
   await voiceCardRender({ scope: _vc.scope });

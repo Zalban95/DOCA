@@ -231,6 +231,20 @@ async function handleCallStatus(req, res) {
 // Speech → text lives in stt.js; chat.transcribeAudio and chat.transcribeHeard stay the names callers use.
 const { transcribeAudio, transcribeHeard } = require('./stt');
 
+/**
+ * A speech service that is not there, in words a person can act on (deep test A, #9): a voice note answered a bare
+ * 500 "TTS request failed: fetch failed", and nothing in the chat. Nothing answering at the address is a 503 that
+ * says where to set one up; any other failure keeps its own words.
+ */
+const NOT_THERE = /fetch failed|ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|EAI_AGAIN|ETIMEDOUT|timed? ?out|aborted due to timeout/i;
+const NO_SPEECH = 'No speech service: set one up in Settings → Voice.';
+function speechDown(res, e, what, url) {
+  const code = String(e?.cause?.code || '');
+  if (!NOT_THERE.test(`${e?.message || ''} ${code}`)) return false;
+  res.status(503).json({ error: `${NO_SPEECH} (${what} at ${url} does not answer.)`, code: 'no_speech_service' });
+  return true;
+}
+
 /** POST /api/chat/transcribe — proxy audio to configured STT service */
 async function handleTranscribe(req, res) {
   if (!req.file) return res.status(400).json({ error: 'No audio file' });
@@ -243,6 +257,7 @@ async function handleTranscribe(req, res) {
     res.json({ text: got.text, ...(got.filtered ? { screened: true } : {}), ...(got.language ? { language: got.language } : {}) });
   } catch (e) {
     require('./realtime/panel-call').heard(req, { error: e.message });
+    if (!e.status && speechDown(res, e, 'speech-to-text', loadVoiceServices().sttUrl)) return;
     res.status(e.status && e.status >= 400 ? e.status : 500).json({ error: e.status ? e.message : `STT request failed: ${e.message}` });
   }
 }
@@ -312,6 +327,7 @@ async function handleSynthesize(req, res) {
     res.setHeader('Content-Type', resp.headers.get('content-type') || 'audio/mpeg');
     res.send(Buffer.from(await resp.arrayBuffer()));
   } catch (e) {
+    if (speechDown(res, e, 'text-to-speech', vs.ttsUrl || 'its address')) return;
     res.status(500).json({ error: `TTS request failed: ${e.message}` });
   }
 }
@@ -319,5 +335,5 @@ async function handleSynthesize(req, res) {
 module.exports = {
   handleStatus, handleHistory, handleClear, handleChat,
   handleCallStatus, handleTranscribe, handleSynthesize, handleVoices,
-  loadGatewayChatConfig, loadVoiceServices, transcribeAudio, transcribeHeard, voiceClient,
+  loadGatewayChatConfig, loadVoiceServices, transcribeAudio, transcribeHeard, voiceClient, NO_SPEECH,
 };
