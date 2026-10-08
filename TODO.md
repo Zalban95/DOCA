@@ -136,6 +136,15 @@ the project's managers only if the owner allows sharing specialists and skills (
   never told a tool's name (first-steps, talk-to-me, Plan mode); basics/asks-when-unclear allows six steps.
   Open for the owner (S11): #7, the computer browser's password and submit guard that every Tester routed around, and
   charter rule 15's newcomer wording — both in the branch's report.
+- [x] The owner's three answers of 2026-10-08 (S11; branch `owner-decisions`): **test computers** (#7, option b) — a
+  computer marked `test` (made so by the `computer` tool's `test: true`, or by a person with the password; never a
+  kept one, never inherited, never by the agent afterwards) takes the agent's own test password and a sign-in click
+  without asking, while paying, cards, one-time codes, confirms and deletes stay a person's and `computer_login`
+  refuses it (`computers/test-mode.js`, `clients/computer/tools.js signInOnly`); **charter rule 15** names what is
+  never said to a person unasked (a tool, a skill, a protocol, a port, a path or a setting) and allows a place in the
+  panel to click; **stray computer containers** (#25) are left by default and listed under Computers → Not DOCA's
+  records with Archive (adopted into the Archive) and Delete (volume kept unless asked), and `computers.strays`
+  (leave · archive · delete, never proposable) says what the tidy-up does with unlabelled stopped ones.
 - [x] Self-test 2026-10-08, the install/devices/server group (branch `selftest-server`): node-pty is an optional
   dependency and `install.sh` names the build tools per distro, so a box without a C++ toolchain installs (#1);
   revoking a device by any route closes its stream and removes the MCP servers it hosts, and doca-client stops
@@ -652,6 +661,13 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] H10.9 The agents' work, live (asked 2026-10-06). **Done (2.229.0):** the Workstream — files edited popping up with
   their diffs, by a sentinel that runs while the page is open; thinking and commands lower right. **Done (2.230.0):** Machines → Live — the agents' computers'
   screens and the pages they serve for tests, pictured by the hub's headless browser, the working ones in front.
+  **Done (2026-10-08, asked: "show running VMs and computers on the side status column as we do with containers, as
+  well as in Live with the preview… all coherently"):** one row shape for containers, computers and VMs
+  (`machines/rows.js`, `GET /api/machines/rows`, host; cached so the poll starts no hypervisor CLI) drawn by the status
+  column's **Machines** (running as rows with their point, stopped counted with a link) and by Live, where running VMs
+  get a picture from `virsh screenshot` / `VBoxManage screenshotpng` (made small on node:zlib) and open their VNC
+  console through the hub (noVNC, `/ws/vm/`); the VMs tab gains Console. **Left:** Hyper-V, UTM and Parallels have no
+  picture (no CLI screenshot); plain containers get no Live tile by design.
 - [x] H10.10 The home in DOCA's own layout (asked 2026-10-06: "does Home Assistant let us use our layout, or do we build
   from scratch?"). Neither: Home Assistant stays the device layer (thousands of brands, its areas, scenes and
   automations), and DOCA draws its own **Home** page from HA's WebSocket API — `get_states`, `subscribe_events` for live

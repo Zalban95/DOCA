@@ -76,14 +76,7 @@ function dockerList(res, err, what) {
 
 /** GET /api/docker/containers */
 function handleContainers(req, res) {
-  dockerJson(['ps', '-a', '--format', '{{json .}}'], (err, stdout) => {
-    if (err) return dockerList(res, err, 'containers');
-    const containers = stdout.trim().split('\n').filter(Boolean).map(line => {
-      try { return JSON.parse(line); } catch { return null; }
-    }).filter(Boolean);
-
-    res.json({ containers });
-  });
+  require('./containers').ps({ all: true }).then(containers => res.json({ containers }), err => dockerList(res, err, 'containers'));
 }
 
 /** POST /api/docker/containers/:id/action */

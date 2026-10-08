@@ -75,7 +75,7 @@ async function collectStatus() {
 
   const [dockerResult, gpuResult, ollamaTagsResult, ollamaPsResult, cpuSample, extStats] = await Promise.all([
     Promise.allSettled([
-      run(`${require('./containers').cli()} ps --format '{{json .}}'`),
+      require('./containers').ps(),   // running ones only: the sidebar draws those (containers.js)
       require('./gpu').read(),   // NVIDIA, AMD, Apple, Intel, Windows adapters (gpu.js)
       run(`curl -s ${ollamaUrl}/api/tags`),
       run(`curl -s ${ollamaUrl}/api/ps`),
@@ -84,13 +84,7 @@ async function collectStatus() {
     collectExtendedStats(statsCfg),
   ]).then(([settled, sample, ext]) => [...settled, sample, ext]);
 
-  let containers = [];
-  if (dockerResult.status === 'fulfilled') {
-    containers = dockerResult.value.stdout.trim().split('\n')
-      .filter(Boolean)
-      .map(l => { try { return JSON.parse(l); } catch { return null; } })
-      .filter(Boolean);
-  }
+  const containers = dockerResult.status === 'fulfilled' ? dockerResult.value : [];
 
   const gpu = gpuResult.status === 'fulfilled' ? gpuResult.value : null;
 

@@ -125,7 +125,7 @@ async function settingsApplyOnLoad() {
 /* ── Sidebar sections + system stats toggles ─────────── */
 
 const SIDEBAR_SECTIONS = [
-  { id: 'containers', label: 'Containers' },
+  { id: 'containers', label: 'Machines' },   // the id predates computers and VMs in it; people's saved choices use it
   { id: 'gpu',        label: 'GPU' },
   { id: 'system',     label: 'System' },
   { id: 'models',     label: 'Ollama Models' },

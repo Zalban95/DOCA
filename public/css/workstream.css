@@ -56,6 +56,7 @@
 .ml-tile.working { border-color: var(--accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent), 0 8px 30px rgba(0,0,0,.35); }
 .ml-tile.working .ml-cap b::after { content: ' ●'; color: var(--accent); animation: ml-pulse 1.4s infinite; }
 @keyframes ml-pulse { 50% { opacity: .2; } }
+.ml-tile.focused { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ml-shot { position: relative; aspect-ratio: 16 / 10; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .ml-shot img { width: 100%; height: 100%; object-fit: contain; }
 .ml-empty { position: absolute; color: #888; font-size: 11px; padding: 10px; text-align: center; }
@@ -88,3 +89,4 @@
 .service-drafts { margin-top: 12px; border-top: 1px solid var(--border2); padding-top: 8px; }
 .service-draft { border: 1px solid var(--accent); padding: 10px; margin: 8px 0; font-size: 12px; display: flex; flex-direction: column; gap: 8px; }
 .service-draft-skill { font-size: 12px; max-height: 260px; overflow: auto; padding: 6px 10px; background: var(--raised); }
+.ml-vms-front { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; white-space: nowrap; }

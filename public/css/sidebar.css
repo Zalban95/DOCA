@@ -16,6 +16,24 @@
 .c-state { font-size: 10px; padding: 2px 7px; background: var(--faint); color: var(--muted); }
 .c-item.running .c-state { background: var(--bg-green); color: var(--green); }
 .c-item.exited  .c-state { background: var(--bg-red);   color: var(--red); }
+.c-item.paused  { border-left-color: var(--amber); }
+
+/* ── Machines (js/machines-rows.js): a kind's heading with its stopped count, rows of two lines ── */
+.m-sub { display: flex; justify-content: space-between; align-items: baseline; font-size: 10px; color: var(--muted); margin: 6px 0 3px; }
+.m-sub:first-child { margin-top: 0; }
+.m-sub a { color: var(--muted); text-decoration: none; }
+.m-sub a:hover { color: var(--accent); }
+.m-row { cursor: pointer; gap: 8px; }
+.m-row:hover { border-color: var(--accent); }
+.m-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.m-main .c-name, .m-detail { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-detail { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.m-row .c-state { flex: none; }
+/* The same point in Live's captions: running breathes in Points, a plain dot elsewhere */
+.m-pt { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: 1px; }
+.m-pt.up { background: var(--green); }
+.m-pt.paused { background: var(--amber); }
+.m-pt.error { background: var(--red); }
 
 /* ── GPU card ────────────────────────────────────────── */
 .gpu-card {
