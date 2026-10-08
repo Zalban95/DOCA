@@ -4,7 +4,7 @@ Make this machine part of the hive: Linux, macOS or Windows, Node 22, no depende
 
 ```bash
 node doca-client.js find                                           # the hubs on this machine's tailnet, by name
-node doca-client.js pair https://<hub>:4242 641-598 --name desk   # the code: hub → Field → API keys → Pair a device
+node doca-client.js pair https://<hub>:4242 641-598 --name desk   # the code: hub → Field → API keys → Pair a device, Role "phone"
 node doca-client.js pair 'doca://pair?code=641598&host=<hub>:4242' # or the pairing link (its QR) in one step
 node doca-client.js run                                            # asks once per family; --grant files,shell to skip asking
 ```
