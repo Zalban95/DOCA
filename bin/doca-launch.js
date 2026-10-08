@@ -7,7 +7,8 @@
  * Windows host does not have — so there a version switch could not restart
  * the panel and nothing could start it at logon.
  *
- *   node bin/doca-launch.js start     start the panel (the version in .releases/current, else the checkout)
+ *   node bin/doca-launch.js start     start the panel (the version in .releases/current, else the checkout);
+ *                                     --log <file> appends its output there (the Windows entry has no console)
  *   node bin/doca-launch.js enable    start DOCA at boot/logon  (systemd on Linux via run.sh,
  *                                     Task Scheduler on Windows, launchd on macOS)
  *   node bin/doca-launch.js disable   stop starting at boot/logon; a running panel is left alone
@@ -30,7 +31,8 @@ const { spawn, spawnSync } = require('child_process');
 const DIR = path.resolve(process.env.DOCA_LAUNCH_DIR || path.join(__dirname, '..'));
 const RELEASES = path.join(DIR, '.releases');
 const WATCH_SECONDS = Number(process.env.DOCA_LAUNCH_WATCH_SECONDS) || 90;
-const TASK = 'DOCA';                         // Windows Task Scheduler entry
+const winTask = require('./lib/windows-task'); // Windows Task Scheduler entry
+const TASK = winTask.TASK;
 const LABEL = 'tech.doca.panel';             // macOS launchd label
 const say = (...a) => console.log(...a);
 
@@ -83,13 +85,23 @@ function installDeps(app) {
   if (fs.existsSync(path.join(app, 'node_modules'))) return;
   say(`Installing dependencies in ${app}…`);
   // npm is npm.cmd on Windows, which only a shell runs.
-  const r = spawnSync('npm', ['install', '--omit=dev'], { cwd: app, stdio: 'inherit', shell: process.platform === 'win32' });
+  const r = spawnSync('npm', ['install', '--omit=dev'], { cwd: app, stdio: logFd === null ? 'inherit' : ['ignore', logFd, logFd], shell: process.platform === 'win32' });
   if (r.status !== 0) throw new Error(`npm install failed in ${app}`);
+}
+
+/**
+ * `start --log <file>`: the launcher's and the panel's output appended to a file. The Task Scheduler entry starts DOCA
+ * with no console anyone sees (bin/lib/windows-task.js), so without it what DOCA said at sign-in went nowhere.
+ */
+let logFd = null;
+function logTo(file) {
+  logFd = fs.openSync(file, 'a');
+  for (const k of ['log', 'error']) console[k] = (...a) => fs.writeSync(logFd, `${a.join(' ')}\n`);
 }
 
 /** Run server.js in `app`; resolves with its exit code. Stops are passed on, never orphaning it. */
 function runServer(app, { onStop } = {}) {
-  const child = spawn(process.execPath, ['server.js'], { cwd: app, stdio: 'inherit', env: process.env });
+  const child = spawn(process.execPath, ['server.js'], { cwd: app, stdio: logFd === null ? 'inherit' : ['ignore', logFd, logFd], env: process.env });
   const stop = () => { onStop?.(); child.kill('SIGTERM'); };
   process.on('SIGTERM', stop);
   process.on('SIGINT', stop);
@@ -137,11 +149,6 @@ async function start() {
 
 function launchCommand() { return [process.execPath, path.join(DIR, 'bin', 'doca-launch.js'), 'start']; }
 
-/** The Task Scheduler arguments (Windows): at logon, as this user, with no window. */
-function schtasksCreateArgs() {
-  const [node, script] = launchCommand();
-  return ['/Create', '/TN', TASK, '/SC', 'ONLOGON', '/RL', 'LIMITED', '/F', '/TR', `"${node}" "${script}" start`];
-}
 
 /** The launchd agent (macOS): started at login, output to restart.log, in the checkout. */
 function launchdPlist() {
@@ -176,9 +183,10 @@ function boot(verb) {
     return { method: 'systemd', ok: r.status === 0 };
   }
   if (process.platform === 'win32') {
-    if (verb === 'enable') { const r = sh('schtasks', schtasksCreateArgs()); say(r.ok ? `✓ DOCA will start when you sign in to Windows (Task Scheduler: ${TASK}).` : r.out); return { method: 'Task Scheduler', ...r }; }
-    if (verb === 'disable') { const r = sh('schtasks', ['/Delete', '/TN', TASK, '/F']); say(r.ok ? '✓ DOCA will no longer start at sign-in.' : r.out); return { method: 'Task Scheduler', ...r }; }
-    return { method: 'Task Scheduler', ...sh('schtasks', ['/Query', '/TN', TASK]) };
+    const [node, script] = launchCommand(), entry = { node, script, dir: DIR };
+    if (verb === 'enable') { const r = winTask.enable(entry); say(r.ok ? `✓ DOCA will start when you sign in to Windows (Task Scheduler: ${TASK}).` : r.out); return { method: 'Task Scheduler', ...r }; }
+    if (verb === 'disable') { const r = winTask.disable(entry); say(r.ok ? '✓ DOCA will no longer start at sign-in.' : r.out); return { method: 'Task Scheduler', ...r }; }
+    return { method: 'Task Scheduler', ...winTask.status(entry) };
   }
   if (process.platform === 'darwin') {
     const p = plistPath();
@@ -200,10 +208,12 @@ function boot(verb) {
   return { method: null, ok: false, out: `no boot manager known for ${process.platform}` };
 }
 
-module.exports = { parseEnv, releaseDir, schtasksCreateArgs, launchdPlist, launchCommand, TASK, LABEL };
+module.exports = { parseEnv, releaseDir, launchdPlist, launchCommand, TASK, LABEL };
 
 if (require.main === module) {
   const verb = process.argv[2] || 'start';
+  const at = process.argv.indexOf('--log');
+  if (verb === 'start' && at > 0 && process.argv[at + 1]) logTo(process.argv[at + 1]);
   if (verb === 'start') start().catch(e => { console.error(`✗ ${e.message}`); process.exit(1); });
   else if (['enable', 'disable'].includes(verb)) process.exit(boot(verb).ok ? 0 : 1);
   else if (verb === 'status') { console.log(JSON.stringify(boot('status'))); }
