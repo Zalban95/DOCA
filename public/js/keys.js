@@ -4,7 +4,7 @@
 
 async function loadKeys() {
   devicesLoad();        // this server's /api/v1 device tokens
-  keysLoadProviders();  // third-party LLM providers
+  if (!(typeof _settingsNoHost !== 'undefined' && _settingsNoHost)) keysLoadProviders();  // third-party LLM providers: the machine's keys
   clientAppsRender();   // DOCA's Android apps: the newest builds, built here (settings/client-apps.js)
 }
 

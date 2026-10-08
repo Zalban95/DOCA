@@ -777,12 +777,12 @@
           <!-- ── This server: Doca device tokens ── -->
           <div class="card">
             <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              This server — devices
+              <span id="dev-card-title">This server — devices</span>
               <button class="btn btn-xs btn-teal" id="dev-pair-btn"  onclick="devShowForm('pair')"  title="Show a pairing code a phone or watch can scan">⧉ Pair a device</button>
               <button class="btn btn-xs"          id="dev-issue-btn" onclick="devShowForm('issue')" title="Mint a token directly (advanced)">+ Issue token</button>
               <button class="btn btn-xs"          onclick="devicesLoad()" title="Refresh">↺</button>
             </div>
-            <div class="input-label" style="margin-bottom:8px">
+            <div class="input-label" id="dev-card-about" style="margin-bottom:8px">
               Tokens for phones, watches and agents that talk to this server's <code>/api/v1</code>.
               Each device gets its own scopes and can be revoked on its own.
             </div>
@@ -793,7 +793,7 @@
                 <div class="card-title">Pair a device</div>
                 <div class="row">
                   <div class="field flex1"><div class="input-label">Device name</div><input id="dev-pair-name" class="input" placeholder="My phone"></div>
-                  <div class="field flex1"><div class="input-label">Role</div><select id="dev-pair-preset" class="input"></select></div>
+                  <div class="field flex1"><div class="input-label">Role</div><select id="dev-pair-preset" class="input"></select></div><div class="field flex1" id="dev-pair-for-field" style="display:none"><div class="input-label">Whose</div><select id="dev-pair-for" class="input"></select></div>
                 </div>
                 <div class="input-label" id="dev-pair-scopes" style="margin-bottom:8px"></div>
                 <div class="toolbar-right">
@@ -832,7 +832,7 @@
           </div>
 
           <!-- ── External services: third-party API keys ── -->
-          <div class="card mt8">
+          <div class="card mt8 host-only">
             <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               External providers
               <button class="btn btn-xs btn-blue" onclick="showAddProvider()">+ Add provider</button>
@@ -1483,7 +1483,7 @@
 <script src="js/controls.js"></script>
 <script src="js/logs.js"></script>
 <script src="js/keys.js"></script>
-<script src="js/devices.js"></script><script src="js/devices-hands.js"></script><script src="js/device-page.js"></script><script src="js/wearables.js"></script>
+<script src="js/devices.js"></script><script src="js/devices-own.js"></script><script src="js/devices-hands.js"></script><script src="js/device-page.js"></script><script src="js/wearables.js"></script>
 <script src="js/skills.js"></script>
 <script src="js/snapshots.js"></script>
 <script src="js/setup.js"></script>
