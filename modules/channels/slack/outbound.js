@@ -18,16 +18,14 @@ async function say(channel, text, extra = {}) {
   return last;
 }
 
-async function picture(channel, image) {
-  const a = deliver.attachmentOf(image);
-  if (a) await api.upload(channel, a);
-}
+/** A file — a picture shown, or one sent (tell_device) — uploaded into the DM, its caption as the comment. */
+const file = (channel, f) => api.upload(channel, f);
 
 const plain = text => ({ type: 'section', text: { type: 'plain_text', text: String(text).slice(0, 2900) } });
 
 const channel = {
   say: (c, t) => say(c, t),
-  picture,
+  file,
   async ask(c, q, text) {
     const choices = deliver.choicesOf(q);
     if (!choices.length) return void await say(c, text);

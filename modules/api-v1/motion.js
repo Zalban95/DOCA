@@ -89,6 +89,22 @@ function normalizeFigure(b) {
   return fig;
 }
 
+/**
+ * A media block. Beyond the id and `alt`, a file the hub sends (tell_device `files`) says what it is — `kind`
+ * (image, audio, video, doc, model, or file: open or save it), `mime`, `name`, `bytes` and a `caption` — so a client
+ * knows whether to draw it, play it or offer it before fetching the bytes. All optional: older clients ignore them.
+ */
+const MEDIA_KINDS = ['image', 'audio', 'video', 'doc', 'model', 'file'];
+function mediaBlock(b) {
+  const m = { type: 'media', mediaId: String(b.mediaId).slice(0, 64), alt: str(b.alt, 200) };
+  if (MEDIA_KINDS.includes(b.kind)) m.kind = b.kind;
+  if (typeof b.mime === 'string') m.mime = b.mime.slice(0, 100);
+  if (typeof b.name === 'string') m.name = b.name.slice(0, 200);
+  if (Number.isFinite(b.bytes)) m.bytes = Math.max(0, Math.round(b.bytes));
+  if (typeof b.caption === 'string' && b.caption) m.caption = b.caption.slice(0, 1000);
+  return m;
+}
+
 /** Normalise a whole block list (agent input → stored form). */
 function normalizeBlocks(blocks) {
   const out = [];
@@ -99,7 +115,7 @@ function normalizeBlocks(blocks) {
       case 'metric':   if (typeof b.metric === 'string') out.push({ type: 'metric', metric: b.metric.slice(0, 64), label: str(b.label, 48) }); break;
       case 'figure':   { const f = normalizeFigure(b); if (f) out.push(f); break; }
       case 'image':    if (b.url) out.push({ type: 'image', url: String(b.url).slice(0, 512), alt: str(b.alt, 200), w: clamp(b.w, 1, 4096, undefined), h: clamp(b.h, 1, 4096, undefined) }); break;
-      case 'media':    if (b.mediaId) out.push({ type: 'media', mediaId: String(b.mediaId).slice(0, 64), alt: str(b.alt, 200) }); break;
+      case 'media':    if (b.mediaId) out.push(mediaBlock(b)); break;
       case 'artifact': if (b.artifactId) out.push({ type: 'artifact', artifactId: String(b.artifactId).slice(0, 64), runtime: str(b.runtime, 32), alt: str(b.alt, 200) }); break;
       case 'list':     if (Array.isArray(b.items)) out.push({ type: 'list', items: b.items.slice(0, 20).map(i => String(i).slice(0, 200)) }); break;
       case 'kv':       if (Array.isArray(b.items)) out.push({ type: 'kv', items: b.items.slice(0, 20).filter(i => i && typeof i === 'object').map(i => ({ k: String(i.k ?? '').slice(0, 48), v: String(i.v ?? '').slice(0, 120) })) }); break;
@@ -168,4 +184,4 @@ function tailorBlocks(blocks, caps, opts = {}) {
   return out;
 }
 
-module.exports = { MOTION_VOCAB, EASINGS, COLOR_ROLES, BLOCK_TYPES, normalizeScene, normalizeBlocks, normalizeFigure, registerFigure, getFigure, pickRepresentation, tailorBlocks, hasSmil };
+module.exports = { MEDIA_KINDS, MOTION_VOCAB, EASINGS, COLOR_ROLES, BLOCK_TYPES, normalizeScene, normalizeBlocks, normalizeFigure, registerFigure, getFigure, pickRepresentation, tailorBlocks, hasSmil };

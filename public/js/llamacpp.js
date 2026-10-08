@@ -119,13 +119,15 @@ function _renderLlamaGrid() {
         <label class="services-ctrl-label">Port</label>
         <input class="input" id="llama-port-${inst.id}" value="${inst.port}" type="number"
                style="width:70px" min="1024" max="65535">
+      </div>
+      ${advancedFold(`<div class="llamacpp-controls">
         <label class="services-ctrl-label">GPU Layers</label>
         <input class="input" id="llama-ngl-${inst.id}" value="${inst.nGpuLayers ?? 999}" title="A number, or auto: llama.cpp places them"
-               style="width:60px" inputmode="numeric">
+               data-default="999" data-label="GPU layers" style="width:60px" inputmode="numeric">
         <label class="services-ctrl-label">Ctx Size</label>
-        <input class="input" id="llama-ctx-${inst.id}" value="${inst.ctxSize || 8192}" type="number"
+        <input class="input" id="llama-ctx-${inst.id}" value="${inst.ctxSize || 8192}" type="number" data-default="8192" data-label="Context size"
                style="width:70px" min="128" step="128">
-      </div>
+      </div>`, { id: 'llamacpp-instance', label: 'Advanced — GPU layers, context size' })}
       <div class="llamacpp-actions">
         <button class="btn btn-sm btn-blue" onclick="llamaSaveConfig('${inst.id}')">💾 Save</button>
         <button class="btn btn-sm btn-teal" id="llama-start-${inst.id}"

@@ -131,6 +131,16 @@ the project's managers only if the owner allows sharing specialists and skills (
 - D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),
   `mcp.listener stop`, `confirmPromptChoice`'s body (§12.6 `{selectionId, decision}`), the native wake word, the
   watch's line in Settings → Updates, `seen` on opening a finished notice and clearing it on `seenAt` (PROTOCOL §11.4, hub 2.282); DocaWear: the LAN port, the same `seen`; DocaDesk: the socket transport, `prompt.outcome`.
+- [x] Files sent to the person's phone or chat (found 2026-10-08: asked to send nine voice samples to Telegram, the
+  Orchestrator had no tool and sent them with a script that loaded the channel's module and its bot token; branch
+  `send-media`): `tell_device {files: [{path, caption}]}` — audio, video, documents, pictures, at most 10 — stored as
+  each recipient's own media and carried as `media` blocks with `kind`/`mime`/`name`/`bytes`/`caption` (PROTOCOL
+  §19.1, fixture `alert-files`); a channel uploads them its own way (Telegram by type, Matrix, Slack, mail
+  attachments — `channels/deliver.js` `file`/`notice`), refused before anything is stored with the channel's limit
+  (`channels/limits.js`); the person's own devices only, for `ask_device` too. Left: DocaMobile playing/opening a
+  media block by `kind` (DocaMobile TODO, branch `media-file-kind`); charter rule 15 still says "`tell_device` carries
+  a picture" (ask-first, S11: waits for the owner's yes); the live memory `telegram-channel-send` is now wrong and
+  should be forgotten.
 - [x] A call that feels alive and quick (asked 2026-10-07 from the watch; hub 2.304.0, branch `watch-call-live`,
   DocaWear `call-feedback`): the front (`turn/front.js`, `assistant.front`) — a spoken turn answers at once with a
   short kit, untriaged, at assistant mode's effort; a large request or "think harder / take your time / focus" goes to
@@ -387,6 +397,15 @@ S11 (charter, auth, approval, guards, scopes) or W3 (`/api/v1`) changes.
   containers in every skin; in Points every status bar and ● glyph (sidebar containers, harness rows, MCP, VMs, the
   header's dot, the chat button) is a point; the point of light in empty states. **Left:** new rows fading in (lists
   are redrawn on every poll, so it needs keyed rows first).
+- [x] E5 **Organized: the common few, the rest under Advanced** (asked 2026-10-08: "the most versatile UI ever, but
+  very organized"): one disclosure, `advancedFold()` (ui-parts.js, system.css) — closed by default, remembered per
+  browser, counting what it holds and marked when a setting inside is not its default — swept over every card with many
+  tweaks: the DOCA ⚙ parameters, the level editor, System (paths, network, logs), General, Spending, Developer, Voice
+  (assistant, realtime, the face editor), Ambient, Packs, Backups, Channels, Set-up's own-model route, Vision, the
+  scout, MCP's add form, Connectors, keys for services, the apps' signing key, a llama.cpp instance. The list per page
+  is in AGENTS.md; `test/advanced-fold.test.js` holds it. **Left:** the older `<details>` on General's "More colours"
+  and the face editor's "Edit, with a preview" keep their own style; Field → Models' and Settings → Voice's new forms
+  (another branch) fold the same way once they land.
 
 ## The hive — the backlog (asked 2026-10-04; plan in `docs/design/hive.md`)
 

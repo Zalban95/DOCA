@@ -43,15 +43,15 @@ function _guidedHaveRow(s) {
 }
 
 /** Or a model the person already runs (llama.cpp, vLLM, LM Studio, Ollama…) at an address: added as Field → API keys → + Add provider adds it. */
-function _guidedOwnRow(i) {
-  return `<div class="guided-step" id="guided-own-${i}"><div class="guided-step-title">🖧 Or a model you already run <span class="guided-muted">— llama.cpp, vLLM, LM Studio, Ollama or any OpenAI-compatible server, by its address</span></div>
+function _guidedOwnRow(i) {   // the advanced route: folded, so the common way (a key) is what a newcomer meets first
+  return advancedFold(`<div class="guided-step" id="guided-own-${i}"><div class="guided-step-title">🖧 Or a model you already run <span class="guided-muted">— llama.cpp, vLLM, LM Studio, Ollama or any OpenAI-compatible server, by its address</span></div>
     <div class="toolbar guided-key">
       <input class="input" autocomplete="off" placeholder="http://192.168.1.20:8080/v1" id="guided-own-url-${i}" title="Its address, usually ending in /v1">
       <input class="input" type="password" autocomplete="off" placeholder="Key, if it needs one" id="guided-own-key-${i}">
       <input class="input" autocomplete="off" placeholder="Its name (optional) — e.g. My model at the office" id="guided-own-name-${i}" title="What DOCA calls it in your lists">
       <button class="btn btn-xs btn-blue" onclick="guidedOwnConnect(${i})">Connect and test</button>
       <span class="status-line" id="guided-own-st-${i}"></span></div>
-    <div class="toolbar" id="guided-own-models-${i}"></div></div>`;
+    <div class="toolbar" id="guided-own-models-${i}"></div></div>`, { id: 'guided-own', label: 'Advanced — a model you already run, by its address' });
 }
 
 function _guidedKeyRow(s, i) {

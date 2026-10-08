@@ -148,11 +148,6 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
     <label class="harness-hint">Name</label><input class="input" id="lvl-name" value="${escHtml(l.name)}" style="width:100%">
     <label class="harness-hint" style="margin-top:8px;display:block">Rights</label><div>${boxes}</div>
     <small class="harness-hint">host is the machine itself (shell, files, Docker); delegate lets them make exceptions for others of their level or below.</small>
-    <label class="harness-hint" style="margin-top:8px;display:block">Settings they may change (prefixes, one per line; * for all)</label>
-    <textarea class="input" id="lvl-settings" rows="3" style="width:100%">${escHtml(l.settings.join('\n'))}</textarea>
-    <label class="harness-hint" style="margin-top:8px;display:block">Tools the agent may use for them — allowed / denied (one per line: shell, shell:git, read_file, mcp__*, *)</label>
-    <div style="display:flex;gap:6px"><textarea class="input" id="lvl-allow" rows="4" style="flex:1">${escHtml(l.tools.allow.join('\n'))}</textarea>
-      <textarea class="input" id="lvl-deny" rows="4" style="flex:1">${escHtml(l.tools.deny.join('\n'))}</textarea></div>
     <label class="harness-hint" style="margin-top:8px;display:block">Approval</label>
     <select class="input" id="lvl-approval"><option value="ask" ${l.approval === 'ask' ? 'selected' : ''}>Always ask before a tool call</option>
       <option value="mode" ${l.approval === 'mode' ? 'selected' : ''}>Follow the panel's Auto / Manual mode</option></select>
@@ -161,11 +156,17 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
       <option value="create" ${l.reach === 'create' ? 'selected' : ''}>Create safely — files, pages, the web, the agents' own computers</option>
       <option value="own-devices" ${l.reach === 'own-devices' ? 'selected' : ''}>Create, and their own devices</option>
       <option value="anything" ${l.reach === 'anything' ? 'selected' : ''}>Anything — the hub machine and every device</option></select>
+    ${advancedFold(`<label class="harness-hint" style="margin-top:4px;display:block">Settings they may change (prefixes, one per line; * for all)</label>
+    <textarea class="input" id="lvl-settings" rows="3" style="width:100%" data-default="" data-label="Settings">${escHtml(l.settings.join('\n'))}</textarea>
+    <label class="harness-hint" style="margin-top:8px;display:block">Tools the agent may use for them — allowed / denied (one per line: shell, shell:git, read_file, mcp__*, *)</label>
+    <div style="display:flex;gap:6px"><textarea class="input" id="lvl-allow" rows="4" style="flex:1" data-default="*" data-label="Tools allowed">${escHtml(l.tools.allow.join('\n'))}</textarea>
+      <textarea class="input" id="lvl-deny" rows="4" style="flex:1" data-default="" data-label="Tools denied">${escHtml(l.tools.deny.join('\n'))}</textarea></div>
     <div class="input-label" style="margin-top:8px">What its people's agents may use (comma-separated; * for all, deepseek/* a prefix; empty: as before — keys and accounts admins only)</div>
     ${USERS_RESOURCE_KINDS.map(([k, label]) => `<div style="display:flex;gap:6px;align-items:center;margin-top:3px"><span class="harness-hint" style="width:110px">${label}</span>
-      <input class="input" data-resource="${k}" style="flex:1" value="${escHtml((l.resources?.[k] || []).join(', '))}"></div>`).join('')}
+      <input class="input" data-resource="${k}" data-default="" data-label="${escHtml(label)}" style="flex:1" value="${escHtml((l.resources?.[k] || []).join(', '))}"></div>`).join('')}
     <div class="input-label" style="margin-top:8px">What its people may give others, with delegate (one per line, e.g. use:model:*, tool:shell:git; empty: anything they hold)</div>
-    <textarea class="input" id="lvl-delegates" rows="2" style="width:100%">${escHtml((l.delegates || []).join('\n'))}</textarea>
+    <textarea class="input" id="lvl-delegates" rows="2" style="width:100%" data-default="" data-label="May give others">${escHtml((l.delegates || []).join('\n'))}</textarea>`,
+    { id: 'users-level', label: 'Advanced — settings, tools, resources, what they may give' })}
     <div class="toolbar-right mt8"><span class="status-line" id="lvl-status"></span>
       ${l.id ? '<button class="btn btn-xs btn-red" id="lvl-delete">Delete</button>' : ''}
       <button class="btn btn-xs btn-blue" id="lvl-save">Save</button><button class="btn btn-xs" id="lvl-close">Close</button></div>`;

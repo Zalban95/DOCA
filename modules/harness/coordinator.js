@@ -23,7 +23,9 @@ function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], 
   const has = n => held.has(n);
   const rows = [
     'Answer — you know it, or this prompt or memory says it. No tool.',
-    'One tool — a single read or action whose result you need now: a file, a status, a setting.',
+    'One tool — a single read or action whose result you need now: a file, a status, a setting'
+      // 2026-10-08: asked to send files to Telegram, the agent wrote a script around the channel; this is the tool.
+      + (has('tell_device') ? '. Files or a notice for their phone, watch or chat (Telegram, Matrix, Slack, mail) go with `tell_device`, never a script.' : '.'),
     has('recipe') && recipes ? `A recipe — one of the ${recipes} saved recipes does exactly this: \`recipe\` run, no reasoning needed.` : '',
     has('skill') && skills ? 'A skill — a listed skill covers the task: `skill` read it, then follow it.' : '',
     has('work_chats') ? 'A work chat — anything with several steps (a build, a refactor, an install with checks, research): '

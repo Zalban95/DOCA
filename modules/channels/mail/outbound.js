@@ -3,7 +3,7 @@
 /**
  * How the hive's messages look by mail (the events and their order are every channel's: ../deliver.js): a plain-text
  * reply in the thread the person last wrote in, a question as a numbered list answered by replying with the number
- * (the open question lives on the address's link, as in Matrix), and a picture named rather than attached.
+ * (the open question lives on the address's link, as in Matrix), and pictures and files attached to the reply.
  */
 const crypto = require('crypto');
 const deliver = require('../deliver');
@@ -11,17 +11,19 @@ const deliver = require('../deliver');
 const links = () => require('./index').links;
 const prefsOf = () => require('../../utils').loadPrefs().channels?.mail || {};
 
-async function say(addr, text, { subject, inReplyTo } = {}) {
+async function say(addr, text, { subject, inReplyTo, files } = {}) {
   const p = prefsOf(), c = links().chat(addr) || {};
   const from = p.address || p.user;
-  const raw = require('./mime').reply({ from, to: addr, subject: subject || c.lastSubject || 'DOCA', inReplyTo: inReplyTo || c.lastMessageId, text,
+  const raw = require('./mime').reply({ from, to: addr, subject: subject || c.lastSubject || 'DOCA', inReplyTo: inReplyTo || c.lastMessageId, text, files,
     domain: String(from || '').split('@')[1] || 'doca.local' });
   await require('./smtp').send(require('./index').server('smtp'), { from, to: addr, raw });
 }
 
 const channel = {
   say: (addr, t) => say(addr, t),
-  picture: async (addr, image) => say(addr, `(The agent showed a picture, ${image.name}: open the conversation in DOCA to see it.)`),
+  // A file in a mail of its own (a picture with an answer); a notice's text and files go as one mail.
+  file: (addr, f) => say(addr, f.caption || f.name, { files: [f] }),
+  notice: (addr, text, files) => say(addr, [text, ...files.filter(f => f.caption).map(f => `${f.name}: ${f.caption}`)].join('\n\n'), { files }),
   async ask(addr, q, text) {
     const choices = deliver.choicesOf(q).map(c => ({ id: c.id, label: String(c.label || c.id) }));
     if (!choices.length) return void await say(addr, text);

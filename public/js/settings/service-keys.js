@@ -16,11 +16,13 @@ async function serviceKeysRender() {
       <input class="input" id="sk-name" placeholder="name (hyper3d)" style="width:130px">
       <input class="input" id="sk-origin" placeholder="address (https://api.example.com)" style="flex:1;min-width:190px">
       <input class="input" id="sk-key" type="password" autocomplete="new-password" placeholder="the key" style="flex:1;min-width:150px">
-      <select class="input" id="sk-place" style="width:auto"><option value="bearer">Authorization: Bearer</option><option value="header">another header</option><option value="query">in the address (?param=)</option><option value="exchange">id:secret, traded for a token</option></select>
-      <input class="input" id="sk-field" placeholder="header or parameter name — or the token address" style="width:230px">
-      <select class="input" id="sk-who" style="width:auto"><option value="host">admins' turns</option><option value="everyone">everyone</option></select>
       <input class="input" id="sk-note" placeholder="what it is for (the agent reads this)" style="flex:1;min-width:180px">
-      <button class="btn btn-sm" onclick="serviceKeysAdd()">Add</button></div>`;
+      <button class="btn btn-sm" onclick="serviceKeysAdd()">Add</button></div>
+    ${advancedFold(`<div class="toolbar" style="gap:6px;flex-wrap:wrap">
+      <select class="input" id="sk-place" data-default="bearer" data-label="How the key is sent" style="width:auto"><option value="bearer">Authorization: Bearer</option><option value="header">another header</option><option value="query">in the address (?param=)</option><option value="exchange">id:secret, traded for a token</option></select>
+      <input class="input" id="sk-field" data-default="" data-label="Header or parameter" placeholder="header or parameter name — or the token address" style="width:230px">
+      <select class="input" id="sk-who" data-default="host" data-label="Who may use it" style="width:auto"><option value="host">admins' turns</option><option value="everyone">everyone</option></select></div>`,
+      { id: 'service-keys', label: 'Advanced — how the key is sent, who may use it' })}`;
   serviceDraftsRender();
 }
 

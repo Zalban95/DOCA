@@ -28,17 +28,43 @@ const ALLOWED = {
   'text/plain': { ext: 'txt', kind: 'other' },
 };
 
+/**
+ * What the hub may store when it sends a file to a device (tell_device's `files`), beyond what a device may upload:
+ * every file is saved as its recipient's own media, so only that device reads it. Types a browser would run (HTML,
+ * SVG) are left out — they go as `application/octet-stream`, a download. A file the hub sends may be larger than an
+ * upload: the cap is the attachments' own (50 MB).
+ */
+const OUTBOUND = {
+  'image/gif': 'gif', 'image/avif': 'avif', 'audio/aac': 'aac',
+  'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov', 'video/x-matroska': 'mkv',
+  'application/pdf': 'pdf', 'application/zip': 'zip', 'text/markdown': 'md', 'text/csv': 'csv',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'model/gltf-binary': 'glb', 'model/stl': 'stl',
+};
+const OUTBOUND_BYTES = 50 * 1024 * 1024;
+
+/** The stored type and how a client should treat it, for a file the hub sends. */
+function outboundSpec(mime) {
+  const kind = require('../attachments').playableKind(mime) || 'file';
+  if (ALLOWED[mime]) return { ext: ALLOWED[mime].ext, kind: ALLOWED[mime].kind === 'other' ? kind : ALLOWED[mime].kind };
+  if (OUTBOUND[mime]) return { ext: OUTBOUND[mime], kind };
+  return null;
+}
+
 let _index = null;
 function index() { if (!_index) _index = store.readJson('media', {}); return _index; }
 function persist() { store.writeJson('media', index()); }
 
 function normalizeMime(m) { return String(m || 'application/octet-stream').split(';')[0].trim().toLowerCase(); }
 
+/** `meta.outbound`: a file the hub sends to `ownerDeviceId` (OUTBOUND above), not a device's upload. */
 function save(buffer, mimeRaw, ownerDeviceId, meta = {}) {
-  const mime = normalizeMime(mimeRaw);
-  const spec = ALLOWED[mime];
+  let mime = normalizeMime(mimeRaw);
+  if (meta.outbound && !outboundSpec(mime)) mime = 'application/octet-stream';
+  const spec = meta.outbound ? outboundSpec(mime) : ALLOWED[mime];
   if (!spec) throw Object.assign(new Error(`Unsupported media type ${mime}`), { code: 'unsupported_media', status: 415 });
-  const max = spec.kind === 'audio' ? L.AUDIO_BYTES : L.MEDIA_BYTES;
+  const max = meta.outbound ? OUTBOUND_BYTES : spec.kind === 'audio' ? L.AUDIO_BYTES : L.MEDIA_BYTES;
   if (buffer.length > max) throw Object.assign(new Error(`Media exceeds ${max} bytes`), { code: 'payload_too_large', status: 413 });
   const id = `med_${crypto.randomBytes(8).toString('hex')}`;
   const file = path.join(store.dir('media'), `${id}.${spec.ext}`);
@@ -59,6 +85,7 @@ function save(buffer, mimeRaw, ownerDeviceId, meta = {}) {
 function pickMeta(m) {
   const out = {};
   for (const k of ['w', 'h', 'durationMs', 'capturedAt', 'source', 'label']) if (m[k] != null) out[k] = m[k];
+  if (m.name != null) out.name = String(m.name).slice(0, 200);
   if (m.ext && typeof m.ext === 'object' && JSON.stringify(m.ext).length <= L.EXT_BYTES) out.ext = m.ext;
   return out;
 }
@@ -97,4 +124,4 @@ function purgeExpired() {
 
 function _reset() { _index = null; }
 
-module.exports = { ALLOWED, save, get, readBuffer, remove, purgeExpired, publicView, normalizeMime, _reset };
+module.exports = { ALLOWED, OUTBOUND_BYTES, save, get, readBuffer, remove, purgeExpired, publicView, normalizeMime, _reset };

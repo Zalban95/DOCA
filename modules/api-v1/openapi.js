@@ -154,7 +154,7 @@ function schemas() {
         obj({ type: str({ const: 'metric' }), metric: str(), label: str(), ext: ext() }, { required: ['type', 'metric'] }),
         obj({ type: str({ const: 'figure' }), id: str(), alt: str(), svg: str({ description: 'Authoring only (≤ 64 KB).' }), motion: ref('MotionScene'), image: obj({ url: str(), w: int(), h: int() }), text: str(), sizeHint: obj({ w: int(), h: int() }), representation: ref('FigureRepresentation'), ext: ext() }, { required: ['type'] }),
         obj({ type: str({ const: 'image' }), url: str(), alt: str(), w: int(), h: int(), ext: ext() }, { required: ['type', 'url'] }),
-        obj({ type: str({ const: 'media' }), mediaId: str(), url: str(), alt: str(), ext: ext() }, { required: ['type', 'mediaId'] }),
+        obj({ type: str({ const: 'media' }), mediaId: str(), url: str(), alt: str(), kind: str({ enum: motion.MEDIA_KINDS, description: 'A file the hub sent (tell_device): draw it, play it, open it, or `file` — offer to open or save it. Absent on older blocks: treat as an image.' }), mime: str(), name: str({ description: 'The file\'s name, for saving it.' }), bytes: int(), caption: str({ description: 'One line about it, from the agent.' }), ext: ext() }, { required: ['type', 'mediaId'] }),
         obj({ type: str({ const: 'artifact' }), artifactId: str(), runtime: str(), url: str(), contentUrl: str(), alt: str(), ext: ext() }, { required: ['type', 'artifactId'] }),
         obj({ type: str({ const: 'list' }), items: arr(str(), { maxItems: 20 }), ext: ext() }, { required: ['type', 'items'] }),
         obj({ type: str({ const: 'kv' }), items: arr(obj({ k: str({ maxLength: 48 }), v: str({ maxLength: 120 }) })), ext: ext() }, { required: ['type', 'items'] }),

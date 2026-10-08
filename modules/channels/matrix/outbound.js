@@ -17,18 +17,17 @@ async function say(room, text) {
   for (const part of deliver.split(text, MAX)) await api.send(room, { msgtype: 'm.text', body: part });
 }
 
-async function picture(room, image) {
-  const a = deliver.attachmentOf(image);
-  if (!a) return;
-  const url = await api.upload(a.buffer, a.name, a.mime);
-  const msgtype = { image: 'm.image', video: 'm.video', audio: 'm.audio' }[a.kind] || 'm.file';
-  await api.send(room, { msgtype, body: a.name, url, info: { mimetype: a.mime, size: a.buffer.length } });
+/** A file — a picture shown, or one sent (tell_device) — in the media repository; the caption is the body (spec v1.10). */
+async function file(room, f) {
+  const url = await api.upload(f.buffer, f.name, f.mime);
+  const msgtype = { image: 'm.image', video: 'm.video', audio: 'm.audio' }[f.kind] || 'm.file';
+  await api.send(room, { msgtype, body: f.caption || f.name, ...(f.caption ? { filename: f.name } : {}), url, info: { mimetype: f.mime, size: f.buffer.length } });
 }
 
 const channel = {
   say,
   typing: room => (require('./index').me() ? api.typing(room, require('./index').me()) : null),
-  picture,
+  file,
   async ask(room, q, text) {
     const choices = deliver.choicesOf(q).map(c => ({ id: c.id, label: String(c.label || c.id) }));
     if (!choices.length) return void await say(room, text);
