@@ -118,8 +118,9 @@ async function guidedInstall(id, i, needsPassword) {
 async function guidedUseModel(provider, model, i) {
   const st = document.getElementById(String(i).startsWith('own-') ? `guided-own-st-${String(i).slice(4)}` : `guided-st-${i}`);
   try {
-    await apiFetch('/api/harness/doca/config', { method: 'POST', body: { provider, model } });
-    setStatus(st, `✓ DOCA's agent now uses ${model}`, 'ok');
+    const r = await apiFetch('/api/harness/doca/config', { method: 'POST', body: { provider, model } });
+    // A local model's own pace (harness/provider-pace.js): said here, where it was chosen.
+    setStatus(st, `✓ DOCA's agent now uses ${model}${r.paceText ? ` — it ${r.paceText}` : ''}`, 'ok');
     setTimeout(() => { if (document.getElementById('guided-plan')) guidedLoad(); }, 1500);   // Set-up then says it has a model
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }

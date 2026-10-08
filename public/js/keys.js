@@ -41,6 +41,7 @@ function _providerCardHtml(name, p) {
         <span class="provider-badge ${ready ? 'ok' : 'no'}">${badge}</span>
       </div>
       ${p.models?.length ? `<div class="provider-models">Models: ${escHtml(p.models.slice(0,4).join(', '))}${p.models.length>4?' …':''}</div>` : ''}
+      ${p.pace ? `<div class="provider-models" title="Its own first-token wait and reply limit, used when larger than the harness's settings">Pace: ${escHtml(p.pace)}</div>` : ''}
       <div class="provider-key-row">
         <input class="input" id="url-${escHtml(name)}" value="${escHtml(p.baseUrl || '')}"
                placeholder="https://…/v1" title="Base URL">
@@ -128,8 +129,8 @@ async function addProvider() {
   const status  = document.getElementById('np-status');
   if (!name || !baseUrl) { setStatus(status, 'Name and URL required', 'err'); return; }
   try {
-    await apiFetch('/api/keys/add-provider', { method: 'POST', body: { name, baseUrl, apiKey } });
-    setStatus(status, `✓ Added ${name}`, 'ok');
+    const r = await apiFetch('/api/keys/add-provider', { method: 'POST', body: { name, baseUrl, apiKey } });
+    setStatus(status, `✓ Added ${name}${r.paceText ? ` — it ${r.paceText}` : ''}`, 'ok', r.paceText ? { clear: 0 } : undefined);
     hideAddProvider();
     setTimeout(keysLoadProviders, 500);
   } catch (e) {

@@ -35,7 +35,8 @@ function turnParams(profile) {
     p.historyTurns = Math.min(20, Number(defaults.historyTurns) || 20);
     p.summarizeAfter = Math.min(p.historyTurns, Number(defaults.summarizeAfter) || 20);
   }
-  return p;
+  // A local model's own first-token wait and reply limit, in place of the defaults (harness/provider-pace.js).
+  return require('../provider-pace').apply(p);
 }
 
 /**

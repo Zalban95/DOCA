@@ -20,6 +20,7 @@ before(async () => {
     let raw = ''; req.on('data', d => { raw += d; });
     req.on('end', () => {
       const body = JSON.parse(raw || '{}');
+      if (!body.messages) { res.writeHead(404); return res.end(); }   // /props and the like: not llama.cpp
       seen.push(body);
       for (const m of body.messages || []) for (const c of m.tool_calls || []) {
         try { JSON.parse(c.function.arguments || '{}'); } catch {
