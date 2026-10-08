@@ -123,12 +123,17 @@ test('the overlay: what a person accepted here wins over the list, and forgettin
 test('the scout files a model for the list; a person accepts it into Set-up, never silently', async () => {
   const ex = require('../modules/experiments');
   const scout = require('../modules/scout');
-  // Off: Set-up's check says how, and nothing is looked for.
+  // Off on an install that is not a developer's: nothing is looked for, and a newcomer is never pointed at developer
+  // mode or an experiment (deep test B, C11); Set-up draws no button.
   const off = (await H.api(null, 'POST', '/api/guided/suggestions/check', {})).body;
   assert.equal(off.started, false);
-  assert.match(off.how, /Settings → Developer/);
+  assert.doesNotMatch(off.how, /developer|experiment/i);
+  assert.deepEqual((await H.api(null, 'GET', '/api/guided')).body.scout, { on: false, developer: false });
+  // A developer's install is told where the switch is.
+  ex.setDeveloper(true);
+  assert.match((await H.api(null, 'POST', '/api/guided/suggestions/check', {})).body.how, /Settings → Developer/);
 
-  ex.setDeveloper(true); ex.set('modelScout', true);
+  ex.set('modelScout', true);
   const briefs = [];
   const real = scout.brief;
   scout.brief = async (why, message) => { briefs.push({ why, message }); };   // a stub: no turn, no network
