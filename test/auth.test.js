@@ -138,6 +138,13 @@ test('a role only reaches what its rights allow, and an unknown route is refused
     assert.equal(nowhere.body.code, 'not_found');
   }
   assert.equal((await call('GET', '/api/health')).body.code, 'unauthenticated', 'to nobody it is still "sign in": nothing is enumerated');
+  // Under a prefix that is mounted, a path with no route of its own: the panel's JSON 404, not Express's HTML page
+  // (self-test round two, C12).
+  for (const [m, url] of [['GET', '/api/harness/agents/tester/nothing-here'], ['GET', '/api/files/zz-none'], ['DELETE', '/api/devices/x/zz/none']]) {
+    const under = await call(m, url, { cookie: ownerCookie });
+    assert.equal(under.status, 404, `${m} ${url}: ${under.status} ${JSON.stringify(under.body)}`);
+    assert.equal(under.body.code, 'not_found', `${m} ${url} answers JSON`);
+  }
   // A route that exists but has no rights row is still refused, as before: fails closed.
   app.get('/api/zz-a-route-nobody-mapped', (_req, res) => res.json({ reached: true }));
   const unmapped = await call('GET', '/api/zz-a-route-nobody-mapped', { cookie: ownerCookie });
