@@ -85,7 +85,7 @@ function installDeps(app) {
   if (fs.existsSync(path.join(app, 'node_modules'))) return;
   say(`Installing dependencies in ${app}…`);
   // npm is npm.cmd on Windows, which only a shell runs.
-  const r = spawnSync('npm', ['install', '--omit=dev'], { cwd: app, stdio: logFd === null ? 'inherit' : ['ignore', logFd, logFd], shell: process.platform === 'win32' });
+  const r = spawnSync('npm', ['install', '--omit=dev'], { cwd: app, stdio: logFd === null ? 'inherit' : ['ignore', logFd, logFd], shell: process.platform === 'win32', windowsHide: true });
   if (r.status !== 0) throw new Error(`npm install failed in ${app}`);
 }
 
@@ -101,7 +101,9 @@ function logTo(file) {
 
 /** Run server.js in `app`; resolves with its exit code. Stops are passed on, never orphaning it. */
 function runServer(app, { onStop } = {}) {
-  const child = spawn(process.execPath, ['server.js'], { cwd: app, stdio: logFd === null ? 'inherit' : ['ignore', logFd, logFd], env: process.env });
+  // windowsHide: started from a launcher with no console (a restart, a switch), the server would get a console of its
+  // own, which Windows Terminal shows as a window that stops DOCA when closed (H1.9). Hidden, it has one nobody sees.
+  const child = spawn(process.execPath, ['server.js'], { cwd: app, stdio: logFd === null ? 'inherit' : ['ignore', logFd, logFd], env: process.env, windowsHide: true });
   const stop = () => { onStop?.(); child.kill('SIGTERM'); };
   process.on('SIGTERM', stop);
   process.on('SIGINT', stop);
