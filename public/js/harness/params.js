@@ -67,8 +67,8 @@ function _harnessExternalCfgHtml(h) {
       <textarea class="input" id="hcfg-env-${h.id}" rows="2" placeholder="KEY=VALUE (one per line) — exported before launch">${escHtml(c.env || '')}</textarea>
     </div>
     <div class="harness-cfg-actions">
-      <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
       <span class="status-line" id="hcfg-status-${h.id}"></span>
+      <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
     </div>`;
 }
 
@@ -179,11 +179,11 @@ function _harnessParamsHtml(h, meta) {
       </div>
     </div>
     <div class="harness-cfg-actions">
-      <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
-      <button class="btn btn-xs" onclick="harnessResetParams(${jsArg(h.id)})"
-              title="Throw away these parameters and go back to the shipped ones">Reset</button>
+      <button class="btn btn-xs btn-quiet harness-cfg-reset" onclick="harnessResetParams(${jsArg(h.id)})"
+              title="Throw away these parameters and go back to the shipped ones">↺ Reset to the shipped parameters</button>
       <span class="status-line" id="hcfg-status-${h.id}"></span>
-    </div>`;
+      <button class="btn btn-xs btn-blue" onclick="harnessConfigSave(${jsArg(h.id)})">Save</button>
+    </div>`;   // Reset far from Save, quiet, on the left (self-test 2026-10-08: side by side, one slip from the other)
 }
 
 /**

@@ -62,7 +62,10 @@
 }
 .harness-cfg-grid textarea.input { resize: vertical; font-size: 11px; }
 .harness-prompt { min-height: 72px; font-family: var(--font-mono); }
-.harness-cfg-actions { display: flex; align-items: center; gap: 8px; }
+.harness-cfg-actions { display: flex; align-items: center; gap: 8px; align-self: stretch; }
+.harness-cfg-actions .status-line { flex: 1; margin: 0; text-align: right; }
+.harness-cfg-reset { background: transparent; border-color: transparent; color: var(--muted); }
+.harness-cfg-reset:hover { color: var(--text); border-color: var(--border2); }
 .harness-tools { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 
 /* ── Fallback rungs ─────────────────────────────────── */
