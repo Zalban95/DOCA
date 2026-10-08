@@ -9,7 +9,9 @@
    work unless a row of the status column brought them forward (liveFocus); a VM opens its console through the hub.
    Plain containers get no tile: one that serves a page an agent started is already a served page. The VNC targets that
    answer are here too (vnc.js), pictured by the hub's own RFB client; one someone is watching or driving comes to the
-   front, and "VMs and VNC in front" keeps them all there. A target that is a running VM's display is that VM's one tile. */
+   front, and "VMs and VNC in front" keeps them all there. A target that is a running VM's display is that VM's one tile.
+   A computer or VM the hub sees busy — its CPU, a process started outside DOCA's tools (machines/busy.js) — comes to the
+   front too, saying what runs ("npm test · 74% CPU") and, when it is so, that it is outside DOCA's tools. */
 const ML = { timer: null, data: null, previews: {}, focus: null,
   // "VMs in front": how this screen arranges Live, so it is kept in this browser (asked 2026-10-08).
   vmsFront: (() => { try { return localStorage.getItem('doca.live.vmsFront') === '1'; } catch { return false; } })() };   // previews: served key → preview id, made once per page
@@ -34,16 +36,16 @@ const _mlAgo = ms => (ms < 60000 ? `${Math.round(ms / 1000)} s ago` : `${Math.ro
 function _mlTiles() {
   const d = ML.data, tiles = [];
   for (const c of d.computers) tiles.push({ id: `c:${c.id}`, working: c.working, kind: '🖵', title: c.name, point: c.state === 'running' ? 'up' : c.state === 'missing' ? 'error' : 'down',
-    line: c.activity ? `${c.activity.what} · ${_mlAgo(c.activity.ago)}` : c.mission ? `${c.mission.label}: ${c.mission.state}` : c.purpose || 'no mission yet',
-    who: c.mission ? c.mission.label : '', img: c.state === 'running' ? `/api/computers/${encodeURIComponent(c.id)}/screen` : null,
+    line: c.busy?.busy && c.busy.by !== 'doca' ? `busy: ${c.busy.text || 'working'}` : c.activity ? `${c.activity.what} · ${_mlAgo(c.activity.ago)}` : c.busy?.busy ? `busy: ${c.busy.text}` : c.mission ? `${c.mission.label}: ${c.mission.state}` : c.purpose || 'no mission yet',
+    who: c.busy?.busy && c.busy.by === 'outside' ? 'outside DOCA\'s tools' : c.mission ? c.mission.label : '', busy: c.busy?.busy, img: c.state === 'running' ? `/api/computers/${encodeURIComponent(c.id)}/screen` : null,
     empty: c.state === 'running' ? 'Waiting for its screen…' : `Stopped (${c.state})`, open: () => computersWatch(c.id), by: c.origin });
   for (const s of d.served) tiles.push({ id: `s:${s.key}`, working: true, kind: '◉',
     title: s.computer ? `${s.who} :${s.inside}` : `:${s.port}${new URL(s.url).pathname === '/' ? '' : new URL(s.url).pathname}`,
     line: `$ ${s.command.slice(0, 90)}`, who: s.who || '', img: s.shot ? `/api/machines/served/${encodeURIComponent(s.key)}/shot` : null,
     empty: d.browser.found ? 'Taking its picture…' : d.browser.why, tail: s.tail,
     open: () => _mlOpenServed(s.key) });
-  for (const v of d.vms || []) tiles.push({ id: `v:${v.key}`, working: false, kind: '▣', title: v.name, point: 'up',
-    line: [v.label, v.os].filter(Boolean).join(' · '), who: v.console.how === 'hub' ? 'VNC' : '',
+  for (const v of d.vms || []) tiles.push({ id: `v:${v.key}`, working: !!v.busy?.busy, busy: v.busy?.busy, kind: '▣', title: v.name, point: 'up',
+    line: v.busy?.busy ? `busy: ${v.busy.text}` : [v.label, v.os].filter(Boolean).join(' · '), who: v.console.how === 'hub' ? 'VNC' : '',
     img: v.shot ? `/api/machines/vms/${encodeURIComponent(v.hypervisor)}/${encodeURIComponent(v.name)}/shot` : null,
     empty: v.why || 'Taking its picture…', open: () => vmConsoleOpen(v.hypervisor, v.name), by: v.origin });
   for (const n of d.vnc || []) tiles.push({ id: `n:${n.id}`, working: n.state === 'connected', kind: '◫', title: n.name, point: 'up',
@@ -97,6 +99,7 @@ function _mlDraw(page) {
       if (!el) { el = Object.assign(document.createElement('div'), { className: 'ml-tile' }); el.dataset.id = t.id; el.innerHTML = '<div class="ml-shot"><img alt=""><span class="ml-empty"></span></div><div class="ml-cap"></div>'; }
       el.classList.toggle('big', big);
       el.classList.toggle('working', !!t.working);
+      el.classList.toggle('busy', !!t.busy);   // busy whoever made it so (machines/busy.js)
       el.onclick = t.open;   // a function: an onclick attribute would read jsArg's HTML escaping literally
       el.classList.toggle('focused', t.id === ML.focus);
       el.querySelector('.ml-cap').innerHTML = `<b>${t.point ? `<span class="m-pt ${t.point}"></span>` : ''}${t.kind} ${escHtml(t.title)}</b>${t.who ? `<span class="ml-who">${escHtml(t.who)}</span>` : ''}<div class="ml-line">${escHtml(t.line)}</div>${t.by ? machineOriginHtml(null, null, t.by) : ''}`;   // who started it (lib/machine-origin.js)

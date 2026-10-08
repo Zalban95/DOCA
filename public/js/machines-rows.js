@@ -30,9 +30,10 @@ async function machinesSidebar(statusContainers) {
 function machineRowHtml(r) {
   const cls = { up: 'running', error: 'exited', paused: 'paused', down: 'stopped' }[r.point] || 'stopped';
   const by = machineOriginText(r.origin);   // who started it (lib/machine-origin.js)
-  return `<div class="c-item m-row ${cls}" role="button" tabindex="0" title="${escHtml(`${r.name} — ${r.detail || r.state}${by ? `\n${by}` : ''}`)}"
+  const busy = r.busy?.busy ? `busy: ${r.busy.text || 'working'}${r.busy.by === 'outside' ? ' — outside DOCA\'s tools' : ''}` : '';   // machines/busy.js
+  return `<div class="c-item m-row ${cls}${busy ? ' busy' : ''}" role="button" tabindex="0" title="${escHtml(`${r.name} — ${r.detail || r.state}${busy ? `\n${busy}` : ''}${by ? `\n${by}` : ''}`)}"
       onclick="machineGo(${jsArg(r.kind)}, ${jsArg(r.id)}, ${r.live ? 'true' : 'false'})" onkeydown="if(event.key==='Enter')this.click()">
-    <span class="m-main"><span class="c-name">${escHtml(r.name)}</span>${r.detail ? `<span class="m-detail">${escHtml(r.detail)}</span>` : ''}${by ? `<span class="m-detail${r.origin.outside ? ' outside' : ''}">${escHtml(by)}</span>` : ''}</span>
+    <span class="m-main"><span class="c-name">${escHtml(r.name)}</span>${busy ? `<span class="m-detail m-busy">${escHtml(busy)}</span>` : ''}${r.detail ? `<span class="m-detail">${escHtml(r.detail)}</span>` : ''}${by ? `<span class="m-detail${r.origin.outside ? ' outside' : ''}">${escHtml(by)}</span>` : ''}</span>
     <span class="c-state">${escHtml(r.state)}</span></div>`;
 }
 

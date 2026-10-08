@@ -14,7 +14,8 @@
  *   vms        the running virtual machines, each with a picture its hypervisor takes (vm-shots.js) and how its
  *              console opens (vm-console.js) — asked 2026-10-08, with the status column's rows (rows.js)
  *   vnc        the VNC targets that answer, each pictured by DOCA's own RFB client (vnc-targets/), a connected one in front
- * "Working" is anything that acted in the last WORKING_MS; the page puts those in front.
+ * "Working" is anything that acted in the last WORKING_MS, or that busy.js sees busy whoever made it so (its CPU, its
+ * processes: a `docker exec`, a person at its desktop); the page puts those in front.
  */
 const os = require('os');
 
@@ -82,9 +83,10 @@ async function picture({ shots = false } = {}) {
   try { computers = await require('../computers').detailed(); } catch { /* no computers */ }
   computers = computers.map(c => {
     const a = _acts.get(c.id);
-    const busy = (a && now - a.at < WORKING_MS) || c.mission?.state === 'running';
+    const seen = require('./busy').of('computer', c.id);   // busy whoever made it so: its CPU and processes (busy.js)
+    const busy = (a && now - a.at < WORKING_MS) || c.mission?.state === 'running' || !!seen?.busy;
     const origin = require('./origin');   // who started it (origin.js), the same line as its row
-    return { ...c, activity: a ? { ...a, ago: now - a.at } : null, working: !!busy,
+    return { ...c, activity: a ? { ...a, ago: now - a.at } : null, working: !!busy, busy: seen,
       origin: origin.of('computer', c.id, { up: c.state === 'running', fallback: origin.computerFallback(c) }) };
   });
   const pages = [...served(), ...await computerPages(computers)];
@@ -100,7 +102,7 @@ async function picture({ shots = false } = {}) {
   const vms = running.filter(v => !shownAsVnc.has(vmShooter.keyOf(v))).map(v => {
     const key = vmShooter.keyOf(v);
     return { key, name: v.name, hypervisor: v.hypervisor, label: v.label, os: v.os || null, state: v.state,
-      shot: vmShooter.has(key), why: vmShooter.cannot(v) || vmShooter.error(key), console: require('./vm-console').where(v),
+      shot: vmShooter.has(key), why: vmShooter.cannot(v) || vmShooter.error(key), console: require('./vm-console').where(v), busy: require('./busy').of('vm', key),
       origin: require('./origin').of('vm', key, { up: true }) };
   });
   return { computers, served: pages.map(p => ({ ...p, shot: shooter.has(p.key), working: true })), vms,
@@ -112,9 +114,10 @@ function mount(app) {
   if (!_listening) { _listening = true; require('../harness/agent').events.on('event', e => { try { onEvent(e); } catch { /* never the work's problem */ } }); }
   require('./acts-agent').listen();   // the agents' machine acts, with their conversation (acts-agent.js)
   require('./use').mount(app);         // what uses a machine, for the "are you sure" (use.js)
-  app.get('/api/machines', async (req, res) => { try { res.json(await picture({ shots: req.query.shots === '1' })); } catch (e) { res.status(500).json({ error: e.message }); } });
+  // Shown, so looked at: Live and the status column keep busy.js reading the machines while they ask (nothing otherwise).
+  app.get('/api/machines', async (req, res) => { require('./busy').want(); try { res.json(await picture({ shots: req.query.shots === '1' })); } catch (e) { res.status(500).json({ error: e.message }); } });
   // Every machine as one row (rows.js): the status column asks while it is shown.
-  app.get('/api/machines/rows', async (req, res) => { try { res.json(await require('./rows').rows()); } catch (e) { res.status(500).json({ error: e.message }); } });
+  app.get('/api/machines/rows', async (req, res) => { require('./busy').want(); try { res.json(await require('./rows').rows()); } catch (e) { res.status(500).json({ error: e.message }); } });
   app.get('/api/machines/vms/:hypervisor/:name/shot', (req, res) => {
     const png = require('./vm-shots').get(`${req.params.hypervisor}:${req.params.name}`);
     if (!png) return res.status(404).json({ error: 'No picture of it yet.' });

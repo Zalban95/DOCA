@@ -74,6 +74,7 @@ function usage() {
   const ws = read(() => require('./workstream').size());
   const mcp = read(mcpLines);
   const call = read(() => require('./realtime/call-log').size());
+  const machines = read(() => require('./machines/busy-log').size());
   const runs = table("SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(COALESCE(outcome,'')) + LENGTH(COALESCE(detail,'')) + 200), 0) AS b FROM runs WHERE tenant_id = 'local'");
   const spans = table("SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(COALESCE(data,'')) + 80), 0) AS b FROM trace_spans WHERE tenant_id = 'local'");
   const jobs = read(() => folder(path.join(dataDir(), 'harness', 'jobs')));
@@ -89,6 +90,8 @@ function usage() {
       entries: mcp?.lines ?? null, bytes: mcp?.bytes ?? null, settings: [setting('logs.mcpLines')] },
     { id: 'calls', label: 'Calls', where: 'memory', what: 'each stage of each call (Live, Deep, Ambient’s assistant, a device’s): audio heard, transcripts (counted, never the words), turns, answers spoken (Hub → Logs)',
       entries: call?.lines ?? null, bytes: call?.bytes ?? null, settings: [setting('logs.callLines')] },
+    { id: 'machines', label: 'Machines', where: 'memory', what: 'what was seen of the machines while a page looked: started, stopped, busy and idle again, a process started outside DOCA\'s tools (Hub → Logs; busy and idle also on disk with what the hub did)',
+      entries: machines?.lines ?? null, bytes: machines?.bytes ?? null, settings: [setting('logs.machinesLines')] },
     { id: 'runs', label: 'Runs', where: 'disk', what: 'one record per turn, mission and device job: who, how it ended, what it cost (Chronicle)',
       entries: db(runs?.n), bytes: db(runs?.b), approx: true, settings: [setting('logs.runsRetainDays')] },
     { id: 'traces', label: 'Traces', where: 'disk', what: 'each run step by step: model requests, tool calls, waits — names and numbers, never content',
@@ -137,7 +140,7 @@ function start() {
 /* ── Changing them (Settings → System → Logs) ─────────── */
 
 // tracing.enabled is shown, not switched here: whether runs are traced at all is evidence of what agents did (S14).
-const EDITABLE = ['logs.harnessLines', 'logs.workstreamLines', 'logs.mcpLines', 'logs.callLines', 'logs.runsRetainDays', 'logs.jobsKept', 'logs.evalResultsKept', 'logs.activityDays',
+const EDITABLE = ['logs.harnessLines', 'logs.workstreamLines', 'logs.mcpLines', 'logs.callLines', 'logs.machinesLines', 'logs.runsRetainDays', 'logs.jobsKept', 'logs.evalResultsKept', 'logs.activityDays',
   'tracing.retainDays', 'tracing.maxSpans'];
 
 /** Write the given values, each checked against its declaration; then apply them. */

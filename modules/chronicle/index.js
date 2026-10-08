@@ -84,6 +84,7 @@ function query(person, f = {}) {
   if (f.source === 'log') return logLines(person, f, limit);
   if (f.source === 'hub') return hubLines(person, f, limit);
   if (f.source === 'call') return callLines(person, f, limit);
+  if (f.source === 'machines') return machineLines(person, f, limit);
   const where = ["tenant_id = 'local'"], args = [];
   if (f.from) { where.push('started_at >= ?'); args.push(String(f.from)); }
   if (f.to) { where.push('started_at <= ?'); args.push(String(f.to)); }
@@ -103,7 +104,7 @@ function query(person, f = {}) {
     facets: {
       people: uniq(seen.map(r => r.person), 'id'), devices: uniq(seen.map(r => r.device?.id && r.device), 'id'),
       agents: uniq(seen.map(r => r.agent), 'id'), states: [...new Set(seen.map(r => r.state))],
-      sources: ['turn', 'mission', 'job', 'hub', 'call', ...(isHost(person) ? ['log'] : [])],
+      sources: ['turn', 'mission', 'job', 'hub', 'call', ...(isHost(person) ? ['machines', 'log'] : [])],
     },
   };
 }
@@ -116,7 +117,7 @@ function logLines(person, f, limit) {
   const lines = require('../logs')._ring.filter(l => (!f.from || l.ts >= f.from) && (!f.to || l.ts <= f.to)
     && (!f.state || l.level === f.state) && (!q || String(l.text).toLowerCase().includes(q))).slice().reverse();
   return { rows: lines.slice(0, limit).map(l => ({ source: 'log', at: l.ts, level: l.level, text: l.text, sessionId: l.sessionId || null })),
-    total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', 'log'], states: ['info', 'warn', 'error'] } };
+    total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', 'machines', 'log'], states: ['info', 'warn', 'error'] } };
 }
 
 /**
@@ -133,7 +134,7 @@ function hubLines(person, f, limit) {
   return { rows: lines.slice(0, limit).map(l => ({ source: 'hub', at: l.at, level: l.level, sessionId: l.sessionId || null, person: l.person || null,
     ...(l.machine ? { machine: l.machine, act: l.act, ok: l.ok ?? null } : {}),
     text: `${by(l)}${l.what}${l.why ? ` (${l.why})` : ''}${l.person && l.from !== 'person' ? ` · for ${l.person.name}` : ''}` })),
-  total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', ...(host ? ['log'] : [])], states: ['info', 'warn', 'error'],
+  total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', ...(host ? ['machines', 'log'] : [])], states: ['info', 'warn', 'error'],
     people: [...new Map(mine.filter(l => l.person?.id).map(l => [l.person.id, l.person])).values()] } };
 }
 
@@ -143,7 +144,17 @@ function callLines(person, f, limit) {
   const lines = require('../realtime/call-log').lines({ person, host }).filter(l => (!f.from || l.ts >= f.from) && (!f.to || l.ts <= f.to)
     && (!f.state || l.level === f.state) && (!q || l.text.toLowerCase().includes(q))).reverse();
   return { rows: lines.slice(0, limit).map(l => ({ source: 'call', at: l.ts, level: l.level, text: l.text, sessionId: l.sessionId })),
-    total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', ...(host ? ['log'] : [])], states: ['info', 'warn', 'error'] } };
+    total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', ...(host ? ['machines', 'log'] : [])], states: ['info', 'warn', 'error'] } };
 }
 
-module.exports = { query, hubLines, callLines, row, view, lookups, maySee, isHost, SCAN };
+/** What was seen of the machines (machines/busy-log.js: busy, idle, a process started outside DOCA's tools), newest first: a host's. */
+function machineLines(person, f, limit) {
+  if (!isHost(person)) return { rows: [], total: 0, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call'] }, note: 'The machines\' log is an admin\'s.' };
+  const q = String(f.q || '').trim().toLowerCase();
+  const lines = require('../machines/busy-log').lines().filter(l => (!f.from || l.ts >= f.from) && (!f.to || l.ts <= f.to)
+    && (!f.state || l.level === f.state) && (!q || l.text.toLowerCase().includes(q))).reverse();
+  return { rows: lines.slice(0, limit).map(l => ({ source: 'machines', at: l.ts, level: l.level, text: l.text, machine: l.machine || null })),
+    total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', 'machines', 'log'], states: ['info', 'warn', 'error'] } };
+}
+
+module.exports = { query, hubLines, callLines, machineLines, row, view, lookups, maySee, isHost, SCAN };
