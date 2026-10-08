@@ -30,7 +30,7 @@ const _mlAgo = ms => (ms < 60000 ? `${Math.round(ms / 1000)} s ago` : `${Math.ro
 function _mlTiles() {
   const d = ML.data, tiles = [];
   for (const c of d.computers) tiles.push({ id: `c:${c.id}`, working: c.working, kind: '🖵', title: c.name, point: c.state === 'running' ? 'up' : c.state === 'missing' ? 'error' : 'down',
-    line: c.activity ? `${c.activity.what} · ${_mlAgo(c.activity.ago)}` : c.mission ? `${c.mission.label}: ${c.mission.state}` : c.purpose || '',
+    line: c.activity ? `${c.activity.what} · ${_mlAgo(c.activity.ago)}` : c.mission ? `${c.mission.label}: ${c.mission.state}` : c.purpose || 'no mission yet',
     who: c.mission ? c.mission.label : '', img: c.state === 'running' ? `/api/computers/${encodeURIComponent(c.id)}/screen` : null,
     empty: c.state === 'running' ? 'Waiting for its screen…' : `Stopped (${c.state})`, open: () => computersWatch(c.id) });
   for (const s of d.served) tiles.push({ id: `s:${s.key}`, working: true, kind: '◉',
