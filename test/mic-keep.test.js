@@ -16,8 +16,10 @@ const JS = f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), '
 function load({ bridge = null } = {}) {
   const notes = [], saved = [], listeners = {};
   const el = () => ({ classList: { add() {}, remove() {} }, style: {} });
-  const doc = { hidden: false, getElementById: el, querySelectorAll: () => [], addEventListener: (e, f) => { listeners[e] = f; } };
-  const track = () => ({ stopped: false, stop() { this.stopped = true; } });
+  const doc = { hidden: false, getElementById: el, querySelectorAll: () => [], addEventListener: (e, f) => { listeners[e] = f; }, removeEventListener: () => {} };
+  // A live track, as a real one is: the hand-off (lib/mic.js micHandOff) keeps only a live stream for the next call.
+  const track = () => ({ stopped: false, readyState: 'live', muted: false, enabled: true, stop() { this.stopped = true; this.readyState = 'ended'; } });
+  const stream = () => ({ tracks: [track()], getTracks() { return this.tracks; }, getAudioTracks() { return this.tracks; } });
   const sandbox = {
     console, setTimeout, clearTimeout, Math, Date, Uint8Array, Float32Array, performance, JSON, Map, Promise,
     document: doc,
@@ -30,11 +32,11 @@ function load({ bridge = null } = {}) {
     appAlert: t => notes.push(t),
     screenLoad: async () => ({ settings: { call: { micAlways: sandbox.__on || false, silenceMs: 900 } } }),
     screenSave: async patch => { saved.push(patch); return {}; },
-    micOpen: async () => ({ tracks: [track()], getTracks() { return this.tracks; } }),
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${['chat-call.js', 'chat-call-report.js', 'chat-call-hear.js', 'chat-call-voice.js', 'chat-call-hold.js', 'chat-call-pause.js', 'lib/mic-keep.js', 'mic-keep-ui.js'].map(JS).join('\n')}
+  vm.runInContext(`${['lib/mic.js', 'chat-call.js', 'chat-call-mic.js', 'chat-call-report.js', 'chat-call-hear.js', 'chat-call-voice.js', 'chat-call-hold.js', 'chat-call-pause.js', 'lib/mic-keep.js', 'mic-keep-ui.js'].map(JS).join('\n')}
     ;globalThis.__ = { get: n => eval(n), set: (n, v) => eval(n + ' = v') };`, sandbox);
+  sandbox.__.set('micOpen', async () => stream());   // no getUserMedia here: a fresh live stream
   return { s: sandbox.__, sandbox, doc, notes, saved, listeners, track };
 }
 
@@ -44,7 +46,7 @@ const ctx = () => { const c = { state: 'running', resume() { this.state = 'runni
 
 /** A call in progress, its microphone open. */
 function inCall(s, track) {
-  const stream = { t: track(), getTracks() { return [this.t]; } };
+  const stream = { t: track(), getTracks() { return [this.t]; }, getAudioTracks() { return [this.t]; } };
   s.set('_callActive', true); s.set('_callStream', stream); s.set('_callAudioCtx', ctx()); s.set('_callPlayCtx', ctx());
   s.set('_callAnalyser', {});
   return stream;
@@ -76,6 +78,18 @@ test('off: the page going to the background ends a call and gives the microphone
   assert.ok(notes.some(n => /background/.test(n)), 'the chat says why the call ended');
 });
 
+test('a call the person ends hands its stream over (lib/mic.js); one ended for the background stops it at once', async () => {
+  for (const [hidden, stoppedNow] of [[false, false], [true, true]]) {
+    const { s, doc, track } = load();
+    const stream = inCall(s, track);
+    doc.hidden = hidden;
+    if (hidden) await s.get('micKeepCheck')(); else s.get('_callStop')('the person ended the call');
+    assert.equal(s.get('_callActive'), false);
+    assert.equal(stream.t.stopped, stoppedNow, hidden ? 'background: no hand-off' : 'between calls: kept a moment for the next');
+    s.get('micDrop')();
+  }
+});
+
 test('on: the page in the background keeps the call and its microphone', async () => {
   const { s, doc, track } = load();
   s.set('_micKeep', { on: true, loaded: true, paused: '', app: null });
@@ -96,6 +110,8 @@ test('a phone call from the app pauses the call (microphone freed, voice held); 
   assert.equal(stream.t.stopped, true, 'the phone call has the microphone');
   assert.equal(s.get('_callStream'), null);
   assert.ok(s.get('_callHold')?.paused, 'the voice waits');
+  assert.equal(s.get('_callMicWatch'), null, 'the silence watch does not reopen a microphone released on purpose');
+  assert.equal(s.get('_micKept'), null, 'nothing handed over: the phone call has the microphone');
   assert.equal(s.get('micHeldNow')(), 'paused');
   await s.get('micKeepFromApp')({ paused: '' });
   assert.ok(s.get('_callStream'), 'the microphone is open again');

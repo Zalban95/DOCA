@@ -75,13 +75,20 @@ async function micKeepCheck() {
   const held = micHeldNow();
   const plan = micKeepPlan({ hidden: typeof document !== 'undefined' && document.hidden, on: _micKeep.on, paused: _micKeep.paused, held });
   if (plan === 'release') micKeepRelease('the page went to the background');
+  // Hidden with the switch off: nothing is kept for a next call either — a stream handed over a moment ago (lib/mic.js
+  // micHandOff, by whatever let go first) is stopped now, not 1.5 s later.
+  else if (plan === 'none' && typeof document !== 'undefined' && document.hidden && !_micKeep.on) _micKeepDrop();
   else if (plan === 'pause') _micKeepPause(MIC_PAUSE_WORDS[_micKeep.paused] || 'Paused');
   else if (plan === 'resume' && typeof _callResume === 'function') await _callResume();
   if (typeof wakeWordApply === 'function') wakeWordApply();
   if (typeof micKeepRefresh === 'function') micKeepRefresh();
 }
 
-/** Give the microphone up: the call ends, a voice note is sent as it stands, the wake word stops. */
+/** The hand-off between calls keeps a released stream live for a moment; a release for the background or a phone call
+ *  must not, so whatever was handed over is stopped at once. */
+function _micKeepDrop() { if (typeof micDrop === 'function') micDrop(); }
+
+/** Give the microphone up: the call ends, a voice note is sent as it stands, the wake word stops — and nothing is kept. */
 function micKeepRelease(why) {
   if (typeof _callActive !== 'undefined' && _callActive) {
     _callStop(why);
@@ -90,6 +97,7 @@ function micKeepRelease(why) {
   if (typeof _rt !== 'undefined' && _rt && typeof realtimeStop === 'function') realtimeStop();
   if (typeof _chatRec !== 'undefined' && _chatRec && typeof _chatVoiceStop === 'function') _chatVoiceStop();
   if (typeof wakeWordPause === 'function') wakeWordPause();
+  _micKeepDrop();
 }
 
 /** A phone call (or another app recording): a call pauses and gives the microphone up; the rest stops. */
@@ -101,6 +109,7 @@ function _micKeepPause(words) {
   }
   if (typeof _chatRec !== 'undefined' && _chatRec && typeof _chatVoiceStop === 'function') _chatVoiceStop();
   if (typeof wakeWordPause === 'function') wakeWordPause();
+  _micKeepDrop();   // the phone call has to have it now, not after the hand-off's moment
 }
 
 /** What the app says (DocaMobile's `doca-mic` event): {paused, background, on, service, why}. */

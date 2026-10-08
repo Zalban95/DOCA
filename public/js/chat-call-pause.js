@@ -12,6 +12,8 @@ function _callPause(words = 'Paused') {
   if (!_callActive || _callIsPaused()) return;
   _callPausedFor = words;
   _callReport('paused', { why: words });
+  // Released on purpose: the silence watch must not take the stopped track for a dead microphone and reopen it.
+  if (typeof _callMicWatchStop === 'function') _callMicWatchStop();
   if (_callVadRafId) { (typeof micFrameCancel === 'function' ? micFrameCancel : cancelAnimationFrame)(_callVadRafId); _callVadRafId = null; }
   clearTimeout(_callSilenceTimer); _callSilenceTimer = null; _callSpeaking = false;
   // What was being said by the person is dropped (half a sentence is not a message); nothing is sent.
@@ -24,7 +26,8 @@ function _callPause(words = 'Paused') {
   _callHold = { pcm: [], words: false, quietMs: 0, paused: true };
   if (_callCurrentSrc) { try { _callCurrentSrc.onended = null; _callCurrentSrc.stop(); } catch { /* ended */ } _callCurrentSrc = null; }
   _callPlayCtx?.suspend().catch(() => {});
-  _callStream.getTracks().forEach(t => t.stop());
+  _callStream.getTracks().forEach(t => t.stop());   // stopped, never handed over (lib/mic.js): the phone call has it
+  if (typeof micDrop === 'function') micDrop();
   _callStream = null; _callAnalyser = null;
   _callSetStatus(`${words} — the call goes on when it ends.`, 'paused');
 }
@@ -33,7 +36,7 @@ function _callPause(words = 'Paused') {
 async function _callResume() {
   if (!_callIsPaused()) { _callPausedFor = ''; return; }
   let stream;
-  try { stream = await micOpen({ echoCancellation: true, noiseSuppression: true }); }
+  try { stream = await micOpen(typeof MIC_SPEECH !== 'undefined' ? MIC_SPEECH : { echoCancellation: true, noiseSuppression: true }); }
   catch (e) {
     _callPausedFor = '';
     chatAppendMsg('system', `The call could not go on after the pause — the microphone did not open: ${e.message}`);
@@ -52,6 +55,7 @@ async function _callResume() {
   _callHold = null;
   await _callPlayCtx?.resume().catch(() => {});
   _callLastActive = performance.now();
+  if (typeof _callMicWatchStart === 'function') _callMicWatchStart();   // the reopened microphone is watched like a new call's
   if (_callPlayQueue.length && !_callCurrentSrc) _callPlayNext();
   else _callSetStatus('Listening…', 'listening');
   _callVadLoop();

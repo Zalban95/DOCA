@@ -296,7 +296,10 @@ The harness gives its agent eight rules for working on any repository (charter r
   (`paused: 'phone-call'`, or `'another-app'` when Android silenced the recording). A paused call keeps being a call: its
   microphone is stopped, the voice held where it was (a hold that decides nothing — `chat-call-voice.js` plays only
   without one), and when the phone call ends it opens the microphone again and carries on. A watch's call relayed by the
-  phone pauses too, with `notice` frames. Edits to the call files are two lines in `chat-call.js` and three in
+  phone pauses too, with `notice` frames. A release for the background or a phone call is a hard one: it never leaves the
+  stream to 2.326.0's hand-off between calls (`lib/mic.js micHandOff` keeps a released stream live 1.5 s for the next
+  call) — `micDrop()` stops it at once — and a paused call stops its silence watch (`chat-call-mic.js`), which would
+  otherwise take the stopped track for a dead microphone and reopen it. Edits to the call files are two lines in `chat-call.js` and three in
   `wake-word.js` (the loops' frame and the hidden-page rule); the rest is in the new files.
 
 ### The home in DOCA's own layout (`modules/home`, `public/js/home.js`; Controls → Home; TODO H10.10)
