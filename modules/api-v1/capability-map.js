@@ -100,7 +100,7 @@ const PERSON = [
     only: 'how the panel\'s own pages are arranged on a screen; an app draws its own' },
   { id: 'presence', does: 'say I am looking', panel: ['POST /api/presence'], v1: ['GET /events'], note: 'a device\'s presence is its event stream' },
   { id: 'device-pair', does: 'pair a device or issue its token', panel: ['POST /api/devices/pair', 'POST /api/devices'], v1: ['POST /devices/pair/start', 'POST /devices'] },
-  { id: 'device-revoke', does: 'revoke a device, rotate its token or change its scopes', panel: ['DELETE /api/devices/:id', 'POST /api/devices/:id/rotate', 'POST /api/devices/:id/scopes'],
+  { id: 'device-revoke', does: 'revoke, rename or rotate a device, or change its scopes', panel: ['DELETE /api/devices/:id', 'PATCH /api/devices/:id', 'POST /api/devices/:id/rotate', 'POST /api/devices/:id/scopes'],
     v1: ['DELETE /devices/{id}', 'POST /devices/{id}/rotate', 'PATCH /devices/{id}'] },
   { id: 'device-control', does: 'turn a device\'s family off or on, ask it again, or refresh it', panel: ['POST /api/devices/:id/control'],
     gap: 11, why: 'a person away from the desk revoking what a lost or misbehaving device lends' },

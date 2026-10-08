@@ -17,7 +17,8 @@
  *   host    anything that is the machine: shell, terminal, files, Docker, VMs,
  *           models, MCP servers, keys, logs — and anything that lets the agent
  *           do those (approving its tool calls, Auto mode, a specialist's tools)
- *   devices pair, rotate and revoke devices
+ *   devices pair, rotate and revoke every device, mint tokens and grant scopes (one's own
+ *           devices are chat, narrowed by devices-own.js)
  *   org     replace everyone's data or code: backups, versions, update, restart
  *   delegate make exceptions (grants) for people of your level or below
  * A role is a permission level (auth/levels.js): these four are the built-ins,
@@ -59,9 +60,17 @@ const TABLE = [
   R(GET, '/api/deps', 'org'),                              // runs npm against the registry
 
   // ── Devices ──
-  R(GET, '/api/devices', 'devices'),
   R(ANY, '/api/devices/[^/]+/files(/.*)?', 'host'),         // a device's disk is the machine, like the host's files
   R(ANY, '/api/devices/[^/]+/console/buttons', 'host'),     // a button's `run` is a command on this machine
+  // A person's own devices (owner, 2026-10-08): listing, pairing, renaming, rotating and revoking them is chat, and
+  // devices-own.js narrows each request — a level that reaches own devices touches only its person's, with the
+  // presets no wider than a phone's; the devices right (an admin) every device and preset. Minting a token by hand,
+  // granting scopes, a device's console and its families stay `devices`, below.
+  R(GET, '/api/devices', 'chat'),
+  R('POST', '/api/devices/pair', 'chat'),
+  R('POST', '/api/devices/[^/]+/rotate', 'chat'),
+  R('PATCH', '/api/devices/[^/]+', 'chat'),
+  R('DELETE', '/api/devices/[^/]+', 'chat'),
   R(ANY, '/api/devices(/.*)?', 'devices'),
 
   // ── The harness: what lets the agent act on the machine is host ──
