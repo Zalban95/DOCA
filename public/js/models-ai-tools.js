@@ -95,7 +95,8 @@ async function aiToolConfigSave(id) {
   } catch (e) { appAlert(`Save error: ${e.message}`); }
 }
 
-async function aiToolInstall(id) {
+async function aiToolInstall(id, asked = false) {
+  if (!asked) return installAsk('model-tool', id, id, () => aiToolInstall(id, true));   // its size first (lib/install-ask.js)
   const out = document.getElementById('ai-tools-out');
   showStream(out, `Installing ${id}…\n`);
   await sseStream(`/api/models/tools/${id}/install`, { id }, {
