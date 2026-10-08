@@ -185,8 +185,12 @@ function hopReporter({ fallbacks, say, step }) {
  * shown as the reply, and a work chat whose turn ended that way was counted as
  * idle and could be reported "stalled". The same wording as ask()'s.
  */
-function truncationNotice({ step, p, provider }) {
-  const cap = Number(p.maxTokens) || 0;
+function truncationNotice({ step, p, provider, thinkingOnly = false, cap: tried = 0 }) {
+  const cap = Number(tried) || Number(p.maxTokens) || 0;
+  // All thinking and no answer, even after the retry with more room (turn/think-retry.js): say which setting.
+  if (thinkingOnly) return { type: 'warning', step, kind: 'truncated',
+    text: `${provider} spent its whole reply${cap ? ` (${cap} tokens)` : ''} thinking and wrote no answer. Raise "Longest reply" in the `
+      + 'harness settings (harness.config.doca.maxTokens), or ask for less thinking ("quick answers").' };
   return {
     type: 'warning', step, kind: 'truncated',
     text: `${provider} stopped because the reply reached its length limit`

@@ -79,11 +79,11 @@ async function runNow(id) {
   let last;
   try {
     if (s.kind === 'reminder') {
-      // Only this person's own devices (or the one named), never everyone's: reach.tell would reach every device.
-      const mine = require('../api-v1/devices').list().filter(d => !d.revokedAt && d.userId === person.id && (!s.device || d.id === s.device || d.name === s.device));
-      const reached = [];
-      for (const d of mine) { try { require('../harness/reach').tell({ to: d.id, title: 'Reminder', text: s.text }); reached.push(d.name); } catch { /* declines notices */ } }
-      last = { ok: reached.length > 0, summary: reached.length ? `Reminded on ${reached.join(', ')}.` : 'None of this person\'s devices takes notices.' };
+      // Only this person's own devices that can show it (or the one named), and their pages on the panel: the record
+      // names exactly who got it, or says nobody could and why (harness/reach-notice.js).
+      const notice = require('../harness/reach-notice');
+      const out = notice.deliver({ personId: person.id, title: 'Reminder', text: s.text, to: notice.ownIds(person.id, s.device), panel: 'always', from: 'reminder' });
+      last = { ok: !!(out.sent?.delivered.length || out.onPanel), summary: out.summary };
       return patch(id, { state: 'done', nextAt: null, last: { ...last, at: new Date().toISOString() } });
     }
     if (s.kind === 'recipe') {

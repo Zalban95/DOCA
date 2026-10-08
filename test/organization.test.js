@@ -155,14 +155,16 @@ test('archive and recall preserve transcript, plans and specialist permissions',
   assert.throws(() => org.archive(memory.mainSession().id), /Orchestrator stays available/);
 });
 
-test('resetting main retains ownership and unread reports; recalled old main is a work chat', () => {
+test('resetting main retains ownership and unread reports; an old main is not restored as a second one', () => {
   const old = memory.mainSession(), work = org.create({ title: 'Still owned' });
   const notice = org.report(work.id, 'report', 'Waiting on a decision');
   const next = memory.resetMain();
   assert.equal(org.session(work.id).parentId, next.id);
   assert.ok(org.notices(next.id).some(n => n.id === notice.id));
-  org.archive(old.id, false);
-  assert.equal(org.session(old.id).kind, 'work');
+  // Deep test B, C9: it came back as a work chat named "Orchestrator". It stays put away, as what it was, and says why.
+  assert.throws(() => org.archive(old.id, false), /earlier Orchestrator\. There is one Orchestrator at a time.*Show archived chats/);
+  assert.equal(org.session(old.id).kind, 'orchestrator');
+  assert.ok(memory.getSession(old.id).archivedAt);
   assert.equal(memory.mainSession().id, next.id);
 });
 

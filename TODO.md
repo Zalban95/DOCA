@@ -121,7 +121,7 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [x] Deep test B B5: the installers start DOCA with `bin/doca-launch.js start --detach` (a session of its own), so a
   closing terminal does not take it; install.ps1 uses the same; `test/launcher.test.js` hangs up the starting shell.
 - [x] Deep test B C3: "Connect and test" tests first (`POST /api/keys/test-provider`, nothing saved), reuses the provider
-  at that address; migration `2.329-providers-merged` merges older copies (`modules/provider-dedupe.js`, old names kept
+  at that address; migration `2.333-providers-merged` merges older copies (`modules/provider-dedupe.js`, old names kept
   as aliases).
 - [x] Deep test B C4: the workspace is made the first time a tool needs it; a relative path is the conversation's
   project, else the workspace, and `read_file` says where it read. Not done: the default workspace is still
@@ -154,6 +154,25 @@ the project's managers only if the owner allows sharing specialists and skills (
   (`image-set(`, `image(`, `cross-fade(`, `element(`, `//`). Not done: the guards' own screening model and the other
   `agent.ask` callers (rules review, skill drafts, evals' judge) are panel actions of a host, not a person's turn; the
   Terminal and the Files tab can still write the prefs file — inherent to host (AGENTS.md).
+
+### Deep test B 2026-10-08 — the agent core (branch `deepb-core`)
+- [x] Deep test B B1: A notice reaches someone who can see it: only a device that shows `alert`/`prompt.new` is a target
+  (`harness/reach-shows.js`: never a browser record, an agent, a headless device or a doca-client — decided: not a
+  target rather than a log line); a reminder also goes to the panel's own notices (`modules/notices`, live topic
+  `notice`, a card in the questions dock, the ambient "For you"); `tell_device` falls back there and `ask_device` asks
+  at the panel alone when no device of theirs can show it; the record names who got it or why nobody could.
+- [x] Deep test B B2: `recipe save_last` keeps the turn before, never its own recipe call (`recipes/store.js`).
+- [x] Deep test B B3: The model is asked over node:http (`turn/http-request.js`): a wait past 300 s is the setting's, not undici's.
+- [x] Deep test B C1: The built-in harness stores only what its owner changed (`harness/old-defaults.js`), migration
+  `2.332-harness-defaults` lifts stored defaults (former prompts by hash), no shipped prompt is "the owner's".
+- [x] Deep test B C2: A reply that was all thinking is asked once more with twice the room (`turn/think-retry.js`); default
+  `maxTokens` 2048 → 8192, with a 2048 floor kept for small declared windows and the cap fitted to what is left.
+- [x] Deep test B r15: A queued request read by an automatic turn stays its person's (`tool-calls.js askerOf`).
+- [x] Deep test B C13: Failed work is not tried again unasked (the wake says ask; `work_chats send` needs `asked: true`).
+- [x] Deep test B C9: An earlier Orchestrator stays in the Archive, refused with why, instead of returning as a work chat.
+- [x] Deep test B C12: The roots refusal names the rule and says to ask, not go around. **Open, for the owner (S11):** in Manual,
+  a `shell` read of a path outside the roots right after a file tool refused it could be asked even when the verb is
+  allowed (`shell:cat`) — that is approval code (`approval.gate`), so it waits for a yes.
 
 ### Everything still open, now urgent
 - C7b: done; D2b: done — its gaps (`docs/api/capability-gaps.md`) are v1 routes to ask for, plan decisions first.
@@ -264,6 +283,19 @@ the project's managers only if the owner allows sharing specialists and skills (
   open for a person, one kept with 📌 or one a person brought back from the Archive; a sweep every 30 min from
   `boot.afterListen` writes one activity line; the missions bar has 📌, "Put away finished" and a quiet "N put away —
   Archive"; Settings → Harness → Finished missions (one switch, the numbers under Advanced). Capability gap 19.
+- [x] Manual that asks what matters, and approvals in a call (2026-10-08, from Live calls in Manual: the read-only
+  `today` was asked, Ambient's place set at the person's own request waited behind the call screen until it timed out;
+  S11, approved as built; branch `asks-what-matters`): `harness.approval.manualAsks` — `everything` (Manual as it was)
+  or `what-matters` (`harness/approval-matters.js`: the risk classifier's outward tier, a push, a delete outside a
+  project, a shell line it cannot reduce or that changes the machine outside a project or runs an unknown verb, a
+  tool on another machine, a change with no way back — the rest runs, a project change after its checkpoint, even
+  with riskTiers off); guarded by the password with the mode, never proposable, Harness → Approvals; a new install
+  asks what matters, an older one keeps everything (migration `2.331-manual-asks`) until its owner chooses. In a call
+  the card is drawn above the face and inside whatever is full screen; the question is said in the call's voice
+  (`call-answer.js sentence`), a spoken yes or no answers it (allow once / deny, confirmed aloud, no "always"),
+  anything else goes on as a message; a device's call is told and answered the same way (`realtime/call-asks.js`),
+  and the call log keeps the question's tool and the voice answer. Not yet: the sentence is English whatever the
+  person speaks (the yes/no words are English, Italian, Spanish, French, German).
 - [x] Self-test 2026-10-08, the install/devices/server group (branch `selftest-server`): node-pty is an optional
   dependency and `install.sh` names the build tools per distro, so a box without a C++ toolchain installs (#1);
   revoking a device by any route closes its stream and removes the MCP servers it hosts, and doca-client stops

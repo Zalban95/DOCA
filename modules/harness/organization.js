@@ -212,13 +212,16 @@ function carryOut(id, plan, client) {
 
 function archive(id, on = true) {
   if (id === memory.mainSession().id) throw error('The current Orchestrator stays available. Clear main chat to archive it.');
+  // An earlier Orchestrator is not brought back as a work chat named "Orchestrator" (deep test B, C9: thirteen of them
+  // beside the real one). There is one at a time, so it stays put away, its whole conversation readable.
+  if (!on && session(id).kind === 'orchestrator')
+    throw error('This is an earlier Orchestrator. There is one Orchestrator at a time, so it stays in the Archive with its whole conversation — Harness → "Show archived chats" reads it.', 409);
   if (require('./agent').isRunning(id) || memory.listSessions().sessions.some(s =>
     require('./agent').isRunning(s.id) && ancestors(s.id).includes(id)))
     throw error('Stop or finish this conversation and its running specialists before archiving.');
   const mission = require('../agents/missions').forSession(id);
   if (mission) require('../agents/missions').archive(mission.id, { on });
-  const result = memory.updateSession(id, { archivedAt: on ? new Date().toISOString() : null,
-    ...(!on && session(id).kind === 'orchestrator' ? { kind: 'work', parentId: memory.mainSession().id } : {}) });
+  const result = memory.updateSession(id, { archivedAt: on ? new Date().toISOString() : null });
   report(id, on ? 'archived' : 'recalled', result.title, 'user');
   try { require('./workview').announce(id, { quiet: true }); } catch { /* bookkeeping never blocks an archive */ }   // a device takes the row off (or back); nothing buzzes
   return result;

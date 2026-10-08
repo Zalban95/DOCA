@@ -101,11 +101,12 @@ module.exports = [
     run: async ({ question, choices, to, note, timeoutSec, svg, layout }, ctx = {}) => {
       const reach = require('../reach');
       const r = await reach.ask({ to, question, choices, note, timeoutSec, svg, layout, personId: ctx.user?.id || null });
-      const who = r.targets.map(reach.label).join(', ');
+      const who = r.targets.length ? r.targets.map(reach.label).join(', ') : 'the panel';
+      const only = r.unshown ? ` It was asked at the panel only: ${r.unshown}` : '';
       switch (r.status) {
-        case 'answered':  return `${reach.label(r.device)} answered: "${r.label}" (choice ${r.choiceId}).`;
+        case 'answered':  return `${reach.label(r.device)} answered: "${r.label}" (choice ${r.choiceId}).${only}`;
         case 'dismissed': return `${reach.label(r.device)} chose not to answer right now. Carry on without a decision, or do the part that does not need one.`;
-        case 'timeout':   return `Nobody answered within ${r.waitedSec}s, so the question was withdrawn — it is no longer on ${who}, and nothing is waiting on it. Decide without it, say what you need, or ask again later.`;
+        case 'timeout':   return `Nobody answered within ${r.waitedSec}s, so the question was withdrawn — it is no longer on ${who}, and nothing is waiting on it. Decide without it, say what you need, or ask again later.${only}`;
         default:          return `The question closed before it was answered (${r.reason}). It was asked of ${who}.`;
       }
     },
@@ -175,7 +176,11 @@ module.exports = [
       const list = [...(imagePath ? [{ path: imagePath }] : []), ...(Array.isArray(files) ? files : files ? [files] : [])]
         .map(f => (typeof f === 'string' ? { path: f } : f || {}))
         .map(f => ({ path: sendable(f.path, ctx), caption: f.caption }));
-      const r = reach.tell({ to, title, text, urgent, svg, files: list, personId: ctx.user?.id || null });
+      // No device of theirs that can show it (reach-shows.js): the notice goes on their pages in the panel instead,
+      // and the answer says so — never "sent" to a client that draws nothing.
+      const out = require('../reach-notice').deliver({ to, title, text, urgent, svg, files: list, personId: ctx.user?.id || null, strict: true, from: 'agent' });
+      const r = out.sent;
+      if (!r) return `${out.summary}${list.length || svg ? ' The panel\'s notice carries the words only, not the files or the drawing.' : ''}`;
       const rows = r.delivered.map(d => `${reach.label(d.device)} — ${d.note}${d.files ? `\n  ${d.files}` : ''}`).join('\n');
       const what = r.files.length ? ` with ${r.files.length === 1 ? r.files[0].name : `${r.files.length} files`} (${require('../../channels/limits').human(r.imageBytes)})` : '';
       return `Sent${what} to:\n${rows}`;

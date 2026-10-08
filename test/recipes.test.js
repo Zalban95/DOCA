@@ -48,6 +48,30 @@ test('a turn that worked becomes a recipe: its calls in order, the failed one le
   assert.deepEqual(r.body.params, [{ name: 'who', description: 'whom to greet', default: 'world' }]);
 });
 
+test('save_last called by the agent keeps the turn before, never its own recipe call (deep test B2)', () => {
+  const memory = require('../modules/harness/memory');
+  const store = require('../modules/recipes/store');
+  const s = memory.createSession('save last', { activate: false });
+  const tc = (id, name, args) => ({ id, type: 'function', function: { name, arguments: JSON.stringify(args) } });
+  // u a(shell) t a u a(recipe) — the recipe call's result is not written yet, as when the tool itself asks
+  memory.append(s.id, { role: 'user', content: 'run uname -a' });
+  memory.append(s.id, { role: 'assistant', content: '', tool_calls: [tc('c1', 'shell', { command: 'uname -a' })] });
+  memory.append(s.id, { role: 'tool', tool_call_id: 'c1', content: 'Linux box' });
+  memory.append(s.id, { role: 'assistant', content: 'Done.' });
+  memory.append(s.id, { role: 'user', content: 'save what you just did as a recipe' });
+  memory.append(s.id, { role: 'assistant', content: '', tool_calls: [tc('c2', 'recipe', { action: 'save_last', title: 'x' })] });
+  const got = store.fromTurn(s.id);
+  assert.deepEqual(got.steps.map(x => x.tool), ['shell']);
+  assert.equal(got.steps[0].args.command, 'uname -a');
+  // "run it and keep it" in one turn: that turn's own calls, still without the recipe call
+  memory.append(s.id, { role: 'tool', tool_call_id: 'c2', content: 'Saved.' });
+  memory.append(s.id, { role: 'user', content: 'run df and keep it' });
+  memory.append(s.id, { role: 'assistant', content: '', tool_calls: [tc('c3', 'shell', { command: 'df -h /' })] });
+  memory.append(s.id, { role: 'tool', tool_call_id: 'c3', content: '/dev/sda1' });
+  memory.append(s.id, { role: 'assistant', content: '', tool_calls: [tc('c4', 'recipe', { action: 'save_last', title: 'y' })] });
+  assert.deepEqual(store.fromTurn(s.id).steps.map(x => x.args.command), ['df -h /']);
+});
+
 test('a run needs no model, goes step by step through the tool layer, and leaves a transcript', async () => {
   script = [];   // nothing for the model to say: a run must not ask it
   const r = await H.api(null, 'POST', '/api/recipes/greet-someone/run', { values: { who: 'Al' } });
@@ -76,6 +100,7 @@ test('a failed check stops the run at that step and says why', async () => {
 
 test('in manual mode a step is asked like the agent\'s own call; a denial stops the run', async () => {
   await H.api(null, 'POST', '/api/harness/approval', { mode: 'manual' });
+  require('../modules/harness/approval').setManualAsks('everything');   // Manual as it always was
   try {
     const running = H.api(null, 'POST', '/api/recipes/greet-someone/run', { values: { who: 'gate' } });
     const approval = require('../modules/harness/approval');

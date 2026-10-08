@@ -11,7 +11,8 @@
  *                                    "always" (keys null), refused in a mission
  *   block()                          one line in the prompt, so the agent plans for the question
  *
- * Off — the flag or developer mode — every function returns null or '' and nothing about a call changes.
+ * Off — the flag or developer mode — every function returns null or '' and nothing about a call changes, except that
+ * Manual asking what matters (approval-matters.js) takes the same checkpoint before a project change it lets run.
  */
 const fs = require('fs');
 const { classify } = require('./classify');
@@ -43,7 +44,7 @@ function of(name, args, { sessionId } = {}) {
  * allowed — nothing is written for a call the level, the mode or a person refuses (security review 2026-10-07).
  */
 async function before(name, args, { sessionId, checkpoint = true } = {}) {
-  if (!on()) return null;
+  if (!on() && !require('../approval-matters').active(sessionId)) return null;   // what-matters: a project change it runs unasked keeps its way back
   try {
     const p = projectOf(sessionId);
     const r = classify(name, args, { root: p?.root || null, mcp: /^mcp__/.test(name) ? annotations(name) : null });
@@ -88,4 +89,4 @@ function block() {
     + 'Do what can be undone; for something untested, prefer an agents\' computer to this machine where you hold one.'].join('\n');
 }
 
-module.exports = { on, of, before, keep, ask, block };
+module.exports = { on, of, before, keep, ask, block, projectOf };

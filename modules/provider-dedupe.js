@@ -4,7 +4,7 @@
  * One provider per address. Set-up's "Connect and test" saved before it tested, and every try added a provider —
  * deep test B left four for one server and the sidebar listed the same model three times (C3). The panel now tests
  * first and reuses a provider at the same address (settings/guided-plan.js); this is the clean-up for installs that
- * already have the copies, run once as migration 2.329-providers-merged.
+ * already have the copies, run once as migration 2.333-providers-merged.
  *
  * Only providers with no key are merged: a key makes two entries different accounts at one address, which a person
  * may well want. The one kept is the one the settings name most (the agent's own model first), else the first; the

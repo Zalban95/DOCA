@@ -2,7 +2,7 @@
 
 /**
  * One provider per address (deep test B, C3): "Connect and test" tests before it saves, and the copies older tries
- * left behind are merged once (migration 2.329-providers-merged, modules/provider-dedupe.js).
+ * left behind are merged once (migration 2.333-providers-merged, modules/provider-dedupe.js).
  */
 const test   = require('node:test');
 const assert = require('node:assert/strict');
@@ -65,7 +65,7 @@ test('testing an address saves nothing, finds /v1, and names the provider alread
 test('the migration merges copies in the keys file, repoints the settings, and the old name still resolves', () => {
   keys.set('Copy one', { baseUrl: `${stubUrl}/v1`, apiKey: '', models: ['qwen-a'] });
   keys.set('Copy two', { baseUrl: `${stubUrl}/v1`, apiKey: '', models: ['qwen-b'] });
-  const m = migrations.MIGRATIONS.find(x => x.id === '2.329-providers-merged');
+  const m = migrations.MIGRATIONS.find(x => x.id === '2.333-providers-merged');
   const { prefs, ran } = migrations.run({ assistant: { provider: 'Copy two' } }, [m]);
   assert.deepEqual(ran[0].changed.length, 1);
   const left = Object.keys(keys.all()).filter(id => id.startsWith('Copy'));

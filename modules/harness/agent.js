@@ -259,9 +259,9 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     // about. Measured around the call and nothing else: the tool that runs
     // after it belongs to the machine, not to the model's speed.
     const startedAt = Date.now();
-    const reply = await complete({
-      ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id, person: client?.user },
-      body: { ...base, messages, ...(schemas.length && !reporting ? { tools: schemas, tool_choice: 'auto' } : {}) },
+    // A reply that was all thinking is asked once more with room to answer (turn/think-retry.js).
+    const reply = await require('./turn/think-retry').withRoom(body => complete({
+      ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id, person: client?.user }, body,
       onText: t => { const shown = tones ? tones.push(t) : t; text += shown; say({ type: 'text', text: shown, ...(tones ? { spoken: t } : {}) }); },
       onThinking: t => say({ type: 'thinking', text: t }),
       // Silence is a state worth drawing. Without this the console shows the
@@ -275,7 +275,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       // Announced, never quiet (turn/fallback.hopReporter says why).
       onHop: hopReporter({ fallbacks, say, step }),
       onRetry: r => say({ type: 'warning', step, kind: 'rate-limit', text: r.text, waitMs: r.waitMs, attempt: r.attempt }),
-    });
+    }), { body: { ...base, messages, ...(schemas.length && !reporting ? { tools: schemas, tool_choice: 'auto' } : {}) }, p, say, step, who: ep.label || ep.id });
     const held = tones?.rest();   // a "[" that never became a tag is words after all
     if (held) { text += held; say({ type: 'text', text: held, spoken: '' }); }
     const stepMs = Date.now() - startedAt;
@@ -311,7 +311,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       ...(reply.finish === 'length' ? { truncated: true } : {}),
     });
     // Cut off at the reply cap: said, marked, and never passed off as the whole answer (turn/fallback.js).
-    if (reply.finish === 'length') say(truncationNotice({ step, p, provider: reply.provider || ep.id }));
+    if (reply.finish === 'length') say(truncationNotice({ step, p, provider: reply.provider || ep.id, thinkingOnly: reply.thinkingOnly, cap: reply.tried }));
 
     // Advisory, once per turn, to the user and to the agent. The hard stop
     // belongs to the provider; this is the part that arrives before it.
@@ -350,7 +350,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     }
     if (working) workSteps++;
 
-    await runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced });
+    await runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced, read });
 
     // Token pressure folds the conversation early, before the message count
     // would have. `compactTokens` is the honest trigger — a window nobody

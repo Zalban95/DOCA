@@ -13,6 +13,7 @@ const watch = require('./watch');
 
 const _open = new Map();      // screen → the person it streams for (so only they set its folders)
 const _folders = new Map();   // screen → the folders its stream passes `files` changes for
+const _hosts = new Set();     // screens whose person holds host (a notice for nobody in particular is theirs)
 
 function visible(change, person, host) {
   if (change.topic === 'files') return false;   // only through the screen's own folders, below
@@ -30,6 +31,7 @@ function stream(req, res) {
   const host = !person?.id || require('../harness/session-access').isHost(person);
   const screen = crypto.randomBytes(9).toString('base64url');
   _open.set(screen, person?.id || null);
+  if (host) _hosts.add(screen);
   const send = o => { try { res.write(`data: ${JSON.stringify(o)}\n\n`); } catch { /* gone */ } };
   const mine = new Set();   // this screen's folders, as watch.set() last held them
   const own = req.auth?.session?.screen || null;   // this browser's screen: a page sent to it is for it alone
@@ -39,6 +41,7 @@ function stream(req, res) {
     if (change.topic === 'home') { if (require('../home').hears(screen, person, change.id)) send(change); return; }   // pages holding Home, entities their person may see
     // A mission's machine question (harness/mission-asks.js): only its person's pages — a host's when it has no person.
     if (change.topic === 'ask') { if (change.personId ? person?.id === change.personId : host) send(change); return; }
+    if (change.topic === 'notice') { if (change.personId ? person?.id === change.personId : host) send(change); return; }   // notices/: theirs alone
     if (change.topic === 'workstream') { if (host && require('../workstream').holds(screen)) send(change); return; }   // only pages holding it
     if (visible(change, person, host)) send(change);
   };
@@ -46,7 +49,7 @@ function stream(req, res) {
   const beat = setInterval(() => { try { res.write(': beat\n\n'); } catch { /* gone */ } }, 20000);
   send({ hello: true, screen, host });
   _folders.set(screen, mine);
-  res.on('close', () => { live.feed.off('change', on); clearInterval(beat); watch.release(screen); _open.delete(screen); _folders.delete(screen); live.feed.emit('screen-closed', screen); });
+  res.on('close', () => { live.feed.off('change', on); clearInterval(beat); watch.release(screen); _open.delete(screen); _hosts.delete(screen); _folders.delete(screen); live.feed.emit('screen-closed', screen); });
 }
 
 function setWatch(req, res) {
@@ -68,4 +71,7 @@ function mount(app) {
 /** Whether `screen` is a live stream this request's person opened (so only they act for it). */
 const owns = (req, screen) => _open.has(screen) && _open.get(screen) === (require('../harness/turn/client').dashboardClient(req).user?.id || null);
 
-module.exports = { mount, visible, owns };
+/** How many pages this person has open now (null: pages of someone holding host) — what a notice reached. */
+const pagesOf = personId => (personId ? [..._open.values()].filter(v => v === personId).length : _hosts.size);
+
+module.exports = { mount, visible, owns, pagesOf };

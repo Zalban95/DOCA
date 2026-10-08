@@ -55,4 +55,4 @@ function refuse(level, person, name) {
   return `${s.server} is on someone else's device — an admin can lend it (use:device:${s.deviceId || '<id>'} in Settings → Users)`;
 }
 
-module.exports = { RUNGS, HUB_MACHINE, rungOf, refuse };
+module.exports = { RUNGS, HUB_MACHINE, rungOf, refuse, serverOf };

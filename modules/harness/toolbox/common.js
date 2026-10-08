@@ -88,7 +88,11 @@ function resolvePath(p, ctx = {}) {
   const expanded = String(p || '').replace(/^~(?=$|[/\\])/, os.homedir());
   const abs = path.resolve(cwd(ctx), expanded);
   if (!fmSafe(abs))
-    throw new Error(`Path is outside the allowed roots (${FM_ALLOWED_ROOTS.join(', ')}): ${abs}`);
+    // Said as a rule, not an obstacle (deep test B, C12): refused here, the agent read the file with `shell` instead,
+    // unasked, and a person reading "allowed roots" believes it is a boundary.
+    throw new Error(`Path is outside the allowed roots (${FM_ALLOWED_ROOTS.join(', ')}): ${abs}. The file tools reach only `
+      + 'the home folder, other disks and the temp folder; no setting widens them. Do not reach it another way '
+      + '(shell, a script, a copy) on your own: tell the person where it is and ask — they can copy it into the workspace, or say you may read it.');
   return abs;
 }
 

@@ -29,7 +29,24 @@ function byPerson({ client, isMission, profile, sessionId }) {
   return !require('./lifecycle').isAuto(sessionId);
 }
 
-async function runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced }) {
+/**
+ * The person whose message an automatic turn read (deep test B, r15): a message queued for a working conversation is
+ * read by whatever turn runs next, and when that was the supervisor's — no person on it — "make Chronicle first" became
+ * a proposal although the person asked for exactly that. A queued message carries its author (inbox.js `client`), so
+ * the settings and the panel layout they asked for (`asked: true`) are still theirs to decide: those two tools run as
+ * that person, within that person's level and every guard they check. Never for a mission or a specialist, and only
+ * after their message was read in this turn.
+ */
+const ASKED_TOOLS = new Set(['settings_propose', 'panel_layout']);
+function askerOf(read, { client, isMission, profile }) {
+  if (isMission || client?.user?.id) return null;
+  if (profile && profile.level !== 'orchestrator' && profile.level !== 'work') return null;
+  const i = [...(read || [])].reverse().find(x => x.client?.user?.id && x.client.kind !== 'agent');
+  return i ? i.client.user : null;
+}
+
+async function runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced, read = [] }) {
+  const asker = askerOf(read, { client, isMission, profile });
   for (const tc of reply.tool_calls) {
     const name = require('../tools').ALIASES[tc.function?.name] || tc.function?.name || '(unnamed)';   // an old name runs as its new one
     // Stop means the next call too: the rest of this step's calls get a result row (so no call is
@@ -62,7 +79,7 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     const permit = args._raw === undefined ? require('../../auth/permits').tool({ person: client?.user, profile, missionId, sessionId: session.id, name, args }) : { allowed: true };
     if (!permit.allowed && refused === null) refused = `Refused: ${permit.why}. An admin, or someone holding delegate, can grant it in Settings → Users`
       + `${isMission ? '; the agent that dispatched this mission can grant it for the mission with permission_grant' : ''}.`;
-    const gate = args._raw === undefined && refused === null ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission, forceAsk: permit.ask, risk }) : null;
+    const gate = args._raw === undefined && refused === null ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission, forceAsk: permit.ask, risk, person: client?.user }) : null;
     if (gate) {
       // A mission has nobody watching, so it is refused — except a machine lent to it, asked of its person (mission-asks.js).
       const use = isMission && gate.forced ? await require('../mission-asks').machineUse(name, args, { profile }) : null;
@@ -74,7 +91,7 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
         say({ type: 'approval', step, state: 'refused', tool: name, ...gate });
       } else {
         const { id, answer } = approval.askAnywhere({ ...gate, personId: client?.user?.id || null }, { sessionId: session.id, signal, client });
-        say({ type: 'approval', step, state: 'asked', id, ...gate });
+        say({ type: 'approval', step, state: 'asked', id, ...gate, spoken: require('../call-answer').sentence(name, args) });   // a call says it (call-answer.js)
         const decision = await answer;
         say({ type: 'approval', step, state: 'answered', id, decision, tool: name });
         // Anything that is not one of the three yeses — a denial, a timeout,
@@ -97,9 +114,11 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
       ? `Error: could not parse the arguments as JSON: ${args._raw}`
       : !schemas.some(sc => sc.function.name === name) && !tiers.heldNotSent(name, stepDisabled)
         ? `Error: the "${name}" tool is switched off for this conversation.`
-        : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), emit: evt => say({ ...evt, step }), sessionId: session.id, signal, approved: !!gate, user: client?.user, screen: require('../screen-proposals').screenOf(client), airlock: !!profile?.airlock,
-          // A person's own turn (S1: their request is the decision) — not an automatic turn, a mission or a specialist.
-          byPerson: byPerson({ client, isMission, profile, sessionId: session.id }) }));
+        : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), emit: evt => say({ ...evt, step }), sessionId: session.id, signal, approved: !!gate, screen: require('../screen-proposals').screenOf(client), airlock: !!profile?.airlock,
+          // A person's own turn (S1: their request is the decision) — not an automatic turn, a mission or a specialist;
+          // or an automatic turn that read their queued message, for what they asked (askerOf, above).
+          ...(asker && ASKED_TOOLS.has(name) ? { user: asker, byPerson: true }
+            : { user: client?.user, byPerson: byPerson({ client, isMission, profile, sessionId: session.id }) }) }));
     tiers.afterCall(session.id, profile, name, result, stepDisabled);   // toolTiers: what was called or read about stays loaded
     for (const image of shown) say({ type: 'image', image, step });
     say({ type: 'tool_result', name, result, step, ...failures.typed(result) });
@@ -120,4 +139,4 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
   }
 }
 
-module.exports = { byPerson, runToolCalls };
+module.exports = { byPerson, askerOf, runToolCalls };
