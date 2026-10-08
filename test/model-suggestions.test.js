@@ -28,6 +28,7 @@ test('the shipped list: versioned, dated, every entry installable, measured and 
     for (const r of m.alsoFor || []) assert.ok(doc.roles[r] && r !== m.role, `${where}: alsoFor ${r}`);
     assert.ok(KINDS[m.install.kind], `${where}: an install kind the panel has`);
     if (m.install.kind === 'ollama-model') assert.equal(KINDS['ollama-model'].validate(m.install.id), null, `${where}: a pullable name`);
+    if (m.install.kind === 'llamacpp-hf') assert.equal(KINDS['llamacpp-hf'].validate(m.install.id), null, `${where}: org/repo:quant`);
     for (const k of ['vramGB', 'ramGB', 'diskGB']) assert.ok(Number.isFinite(m.needs[k]) && m.needs[k] > 0, `${where}: needs.${k}`);
     assert.ok(Number.isInteger(m.rank) && m.rank > 0 && m.rank <= 100, `${where}: a rank`);
     assert.ok(DAY.test(m.released), `${where}: released`);
@@ -161,4 +162,20 @@ test('the scout files a model for the list; a person accepts it into Set-up, nev
   assert.equal((await H.api(null, 'GET', '/api/guided')).body.suggestions.local, 1, 'Set-up says one was added here');
   require('../modules/guided/overlay').forget('chat', entry().id);
   ex.set('modelScout', false); ex.setDeveloper(false);
+});
+
+test('the suggested list can name a llama.cpp install, and the set-up proposes it with the runtime first', () => {
+  const doc = require('../modules/guided/suggested-models.json');
+  const { KINDS } = require('../modules/harness/installs');
+  const ornith = doc.models.find(m => m.install.kind === 'llamacpp-hf');
+  assert.ok(ornith && KINDS['llamacpp-hf'].validate(ornith.install.id) === null, 'a resolvable shape');
+  assert.equal(ornith.runtime, 'llama.cpp');
+  const { plan } = require('../modules/guided/plan');
+  const machine = { gpuGB: 9.5, gpuTotalGB: 9.5, ramGB: 32, diskGB: 500, gpus: [], runtimes: { ollama: true, docker: true, llamacpp: false } };
+  const only = { ...doc, models: doc.models.filter(m => m === ornith || m.role !== 'chat') };
+  const out = plan({ uses: ['talk'], route: 'local' }, machine, { ...only, models: require('../modules/guided/suggestions').expand(only.models) });
+  const steps = out.steps.filter(s => s.type === 'install');
+  const at = id => steps.findIndex(s => s.id === id);
+  assert.ok(at('llama-server') >= 0 && at('llama-server') < at(ornith.install.id), JSON.stringify(steps));
+  assert.deepEqual(steps.find(s => s.id === ornith.install.id).params, { vision: false }, 'no projector for someone who did not ask for pictures');
 });

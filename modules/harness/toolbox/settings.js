@@ -139,7 +139,9 @@ module.exports = [
         + ids(() => require('../catalog').KNOWN.filter(x => x.installCmd).map(x => x.id)) + '); an MCP server from the panel\'s '
         + 'catalogue (kind "mcp": ' + ids(() => require('../../mcp/catalog').list().map(x => x.id)) + '); or a program from '
         + 'Settings → System → System tools (kind "tool": ' + ids(() => require('../../system-tools-catalog').SYSTEM_TOOLS.map(x => x.id))
-        + ' — each installed with its own command for this OS). This does NOT '
+        + ' — each installed with its own command for this OS); or a GGUF from Hugging Face run by a llama.cpp server (kind '
+        + '"llamacpp-hf", id "org/repo:QUANT" or "org/repo:file.gguf" — a quantization the repository lists; a split set '
+        + 'comes whole, its vision projector unless vision is false). This does NOT '
         + 'install it — the user sees what it is and clicks, and the panel then runs its own installer with the '
         + 'right image, ports and flags. Use it instead of stopping at "I cannot do that": when the thing in your '
         + 'way is a missing tool, say which one and offer to fetch it. Do not install anything with `shell` '
@@ -149,15 +151,16 @@ module.exports = [
     parameters: {
       type: 'object',
       properties: {
-        kind:   { type: 'string', enum: ['ollama-model', 'service', 'harness', 'mcp', 'tool'], description: 'What sort of thing.' },
-        id:     { type: 'string', description: 'Which one, e.g. "qwen2.5vl:7b" or "comfyui".' },
+        kind:   { type: 'string', enum: ['ollama-model', 'service', 'harness', 'mcp', 'tool', 'llamacpp-hf'], description: 'What sort of thing.' },
+        id:     { type: 'string', description: 'Which one, e.g. "qwen2.5vl:7b", "comfyui" or "ornith-ai/Ornith-1.5-9B-GGUF:Q4_K_M".' },
         reason: { type: 'string', description: 'Why, in one line, in the user\'s terms.' },
+        vision: { type: 'boolean', description: 'llamacpp-hf only: false leaves out the vision projector (pictures are not read).' },
       },
       required: ['kind', 'id', 'reason'],
     },
-    run: async ({ kind, id, reason }, ctx = {}) => {
+    run: async ({ kind, id, reason, vision }, ctx = {}) => {
       // Filed against the conversation that asked — see settings_propose.
-      const row = installs.propose({ kind, id, reason, sessionId: ctx.sessionId });
+      const row = installs.propose({ kind, id, reason, sessionId: ctx.sessionId, ...(vision === false ? { params: { vision: false } } : {}) });
       if (row.status !== 'pending') return `Already ${row.status}: ${row.kind} "${row.target}".`;
       if (approval.isUnattended()) {
         audit(ctx, 'unattended: install applied', row.id);

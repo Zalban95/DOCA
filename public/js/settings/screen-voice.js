@@ -10,6 +10,8 @@ async function screenVoiceRender(engineAsked) {
   const v = s.settings?.voice || {};
   const engine = engineAsked ?? v.engine ?? '';
   try { list = await apiFetch(`/api/chat/voices${engine ? `?engine=${encodeURIComponent(engine)}` : ''}`); } catch { /* the service does not list them: type one */ }
+  window._hvList = list;   // hosted-voice.js: the services, their keys' state and how each takes its key
+  const hosted = engine.startsWith('hosted:');
   document.getElementById('screen-voice-card')?.remove();
   const mine = s.from?.voice === 'device';
   const engines = list.engines?.length ? list.engines : [{ id: '', label: "The hive's speech service" }];
@@ -22,23 +24,26 @@ async function screenVoiceRender(engineAsked) {
     <div class="toolbar" style="gap:6px;flex-wrap:wrap">
       <select class="input" id="sv-engine" style="width:auto" title="Which speech service speaks" onchange="screenVoiceRender(this.value)">${
         engines.map(e => `<option value="${escHtml(e.id)}" ${e.id === engine ? 'selected' : ''}>${escHtml(e.label)}${e.tags ? ' — expressive' : ''}</option>`).join('')}${
-        lost ? `<option value="${escHtml(engine)}" selected>${escHtml(engine)} — not running (Field → Models → Inference Services)</option>` : ''}</select>
-      ${list.voices.length ? `<select class="input" id="sv-voice" style="width:auto"><option value="">${engine ? `its own (${escHtml(list.default || '')})` : `the hive's (${escHtml(list.hive)})`}</option>${
+        lost ? `<option value="${escHtml(engine)}" selected>${escHtml(engine)} — ${hosted ? 'its key is not kept (below)' : 'not running (Field → Models → Inference Services)'}</option>` : ''}</select>
+      ${hosted ? '' : list.voices.length ? `<select class="input" id="sv-voice" style="width:auto"><option value="">${engine ? `its own (${escHtml(list.default || '')})` : `the hive's (${escHtml(list.hive)})`}</option>${
         list.voices.map(x => `<option value="${escHtml(x)}" ${x === voiceVal ? 'selected' : ''}>${escHtml(x)}</option>`).join('')}${
         voiceVal && !list.voices.includes(voiceVal) ? `<option value="${escHtml(voiceVal)}" selected>${escHtml(voiceVal)} — not a voice of the service</option>` : ''}</select>`
         : `<input class="input" id="sv-voice" placeholder="voice (e.g. af_heart)" value="${escHtml(voiceVal || '')}" style="width:200px">`}
       <input class="input" id="sv-speed" type="number" min="0.5" max="2" step="0.1" placeholder="speed" value="${escHtml(v.ttsSpeed ?? '')}" style="width:100px">
       <button class="btn btn-sm btn-blue" onclick="screenVoiceSave()">Save for this screen</button>
       ${mine ? '<button class="btn btn-sm" onclick="screenVoiceSave(true)">Back to the hive\'s</button>' : ''}</div>
-    ${engines.find(e => e.id === engine)?.tags ? '<p style="font-size:11px;color:var(--muted);margin-top:6px">This voice changes its tone: in a live call the agent may whisper, laugh or light up where it fits. The tags it uses for that are never shown.</p>' : ''}`;
+    ${hosted && !lost ? hostedVoiceFields(list, v) : ''}
+    ${engines.find(e => e.id === engine)?.tags ? '<p style="font-size:11px;color:var(--muted);margin-top:6px">This voice changes its tone: in a live call the agent may whisper, laugh or light up where it fits. The tags it uses for that are never shown.</p>' : ''}
+    ${hostedVoiceSetup(list)}`;
   panel.append(card);
 }
 
 async function screenVoiceSave(reset = false) {
   const engine = document.getElementById('sv-engine')?.value || '';
-  const voice = document.getElementById('sv-voice').value.trim(), speed = parseFloat(document.getElementById('sv-speed').value);
+  const voice = (document.getElementById('sv-voice')?.value || '').trim(), speed = parseFloat(document.getElementById('sv-speed').value);
+  const hosted = engine.startsWith('hosted:') ? hostedVoiceValue() : null;   // the service's model and Advanced (hosted-voice.js)
   const value = reset || (!engine && !voice && !speed) ? null
-    : { ...(engine ? { engine } : {}), ...(voice ? { ttsVoice: voice } : {}), ...(speed > 0 ? { ttsSpeed: speed } : {}) };
+    : { ...(engine ? { engine } : {}), ...(voice ? { ttsVoice: voice } : {}), ...(speed > 0 ? { ttsSpeed: speed } : {}), ...(hosted ? { hosted } : {}) };
   try { await screenSave({ voice: value }); } catch (e) { return appAlert(e.message); }
   screenVoiceRender();
 }

@@ -28,7 +28,7 @@ test.after(async () => { await h.stop(); });
 test('the agent can only ask for kinds this panel actually installs', () => {
   assert.throws(() => installs.propose({ kind: 'apt', id: 'nmap', reason: 'x' }), /Unknown install kind/);
   assert.throws(() => installs.propose({ kind: 'shell', id: 'curl x | sh', reason: 'x' }), /Unknown install kind/);
-  assert.deepEqual(installs.kinds().map(k => k.kind).sort(), ['harness', 'mcp', 'ollama-model', 'service', 'tool']);
+  assert.deepEqual(installs.kinds().map(k => k.kind).sort(), ['harness', 'llamacpp-hf', 'mcp', 'ollama-model', 'service', 'tool']);
 });
 
 test('a system tool is one of the panel\'s rows, installed with the row\'s own command — never the agent\'s', () => {

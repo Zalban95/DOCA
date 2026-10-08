@@ -125,6 +125,18 @@ const KINDS = {
   },
 };
 
+// A GGUF on Hugging Face run by a managed llama.cpp server (llamacpp-hf/): `org/repo:<quant or file>`, resolved from
+// the repository's own listing when installed — the agent names a model, never an address. Off until started.
+KINDS['llamacpp-hf'] = {
+  label: 'llama.cpp model from Hugging Face',
+  verb: 'Download',
+  validate: id => require('../llamacpp-hf/hub').parse(id).error || null,
+  describe: id => `Download ${id} from Hugging Face into the models folder (a split set whole, its vision projector when it has one) `
+    + 'and make a llama.cpp server for it with --jinja (its own chat template, for tool calls) — off until started.',
+  handler: () => require('../llamacpp-hf/install').handleInstall,
+  request: (id, params) => ({ body: { id, ...(params?.vision === false ? { vision: false } : {}) } }),
+};
+
 /** What the agent is told it may ask for. */
 function kinds() {
   return Object.entries(KINDS).map(([kind, k]) => ({ kind, label: k.label, verb: k.verb }));
@@ -227,12 +239,13 @@ async function apply(id, { password } = {}) {
   if (password) shape.body.password = password;
 
   const out = await invokeHandler(k.handler(), shape);
-  const ok = out.body ? (out.status < 400 && !out.body.error) : true;
+  // A streamed installer says how it ended in its last frame; reading only the JSON body counted every stream a success.
+  const ok = out.body ? (out.status < 400 && !out.body.error) : require('../api-v1/jobs').streamOk(out.stream || []);
 
   row.status = ok ? 'installed' : 'failed';
   row.decidedAt = new Date().toISOString();
   row.output = (out.stream || []).slice(-20);
-  if (!ok) row.error = out.body?.error || 'the installer reported a failure';
+  if (!ok) row.error = out.body?.error || [...(out.stream || [])].reverse().find(c => c && c.error)?.error || 'the installer reported a failure';
   save(doc.installs);
   return row;
 }

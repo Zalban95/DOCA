@@ -77,9 +77,13 @@ function plan(answers, assessment, doc, { have = {} } = {}) {
   const needs = new Set(local.map(p => p.local.runtime));
   if (needs.has('ollama') && !assessment.runtimes.ollama) steps.push({ type: 'install', kind: 'tool', id: 'ollama', label: 'Ollama', why: 'runs the models on this machine' });
   if (needs.has('docker') && !assessment.runtimes.docker) steps.push({ type: 'install', kind: 'tool', id: 'docker', label: 'Docker', why: 'runs the speech services' });
+  if (needs.has('llama.cpp') && !assessment.runtimes.llamacpp) steps.push({ type: 'install', kind: 'tool', id: 'llama-server', label: 'llama.cpp', why: 'runs GGUF models from Hugging Face on this machine' });
+  const pictures = picks.some(p => p.role === 'vision');
   for (const p of local) {
+    // A GGUF's vision projector comes only when the person wants pictures read (llamacpp-hf installs).
+    const params = p.local.install.kind === 'llamacpp-hf' && !pictures ? { vision: false } : undefined;
     steps.push({ type: 'install', kind: p.local.install.kind, id: p.local.install.id, role: p.role, label: p.local.label,
-      why: `${p.label} — fits here (${WHERE[p.local.where] || 'on the processor'})` });
+      why: `${p.label} — fits here (${WHERE[p.local.where] || 'on the processor'})`, ...(params ? { params } : {}) });
   }
   for (const p of picks.filter(x => !local.includes(x))) {
     steps.push({ type: 'key', role: p.role, label: p.label, providers: p.providers, note: p.providersNote,
@@ -101,7 +105,7 @@ function apply(answers, assessment, doc, { by = null, have = {} } = {}) {
   const at = new Date().toISOString(), prev = get();
   let fresh = 0;
   for (const s of out.steps.filter(x => x.type === 'install')) {
-    try { s.proposal = installs.propose({ kind: s.kind, id: s.id, reason: `Guided set-up: ${s.why}` }); if (s.proposal.createdAt >= at) fresh++; }
+    try { s.proposal = installs.propose({ kind: s.kind, id: s.id, reason: `Guided set-up: ${s.why}`, ...(s.params ? { params: s.params } : {}) }); if (s.proposal.createdAt >= at) fresh++; }
     catch (e) { s.error = e.message; }
   }
   // The same answers again, and nothing new to propose: nothing changed, and the page says so (self-test 2026-10-08).
