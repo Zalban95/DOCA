@@ -82,7 +82,7 @@ header {
   font-size: 10px; font-weight: 500;
   letter-spacing: 0.12em; text-transform: uppercase;
   padding: 0 14px; border: none; background: transparent;
-  color: var(--muted); cursor: pointer;
+  color: color-mix(in srgb, var(--muted) 45%, var(--text)); cursor: pointer;   /* --muted alone read 2.75:1 on the header */
   border-bottom: 2px solid transparent;
   transition: color var(--t-fast), border-color var(--t-fast);
   white-space: nowrap;
