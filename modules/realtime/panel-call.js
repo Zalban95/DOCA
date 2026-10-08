@@ -20,7 +20,7 @@ const word = v => String(v || '').replace(/[^\w .,:;'’()—–-]/g, '').slice(
 
 /** What the page may report, and what each becomes in the log. */
 const STAGES = {
-  start:    (_l, b) => `the page opened the microphone${b.assistant ? ' (assistant mode)' : ''}${b.mobile ? ' on a phone' : ''}; speech over ${num(b.threshold)} counts`,
+  start:    (_l, b) => `the page opened the microphone${b.ambient ? ' (Ambient’s assistant)' : b.assistant ? ' (the Live call)' : ''}${b.mobile ? ' on a phone' : ''}; speech over ${num(b.threshold)} counts`,
   level:    (l, b) => { l.audio(0, { level: num(b.peak) }); return `the microphone's loudest in the last ${num(b.seconds) || 10} s: ${num(b.peak)} (speech counts over ${num(b.threshold)})`; },
   speech:   (_l, b) => `speech started (level ${num(b.level)})`,
   sent:     (l, b) => { l.utterance({ ms: num(b.ms) || 0, voicedMs: num(b.voicedMs) || 0, peak: num(b.peak) || 0 }); return null; },
@@ -28,7 +28,7 @@ const STAGES = {
   hold:     (_l, b) => `sound over the answer for ${num(b.ms)} ms: the voice paused to hear it`,
   resumed:  (_l, b) => `the voice went on (${word(b.why) || 'no words in it'})`,
   cut:      (_l, b) => `the answer was cut: ${word(b.why)}`,
-  played:   (l, b) => { l.spoken(num(b.n) || 1); return null; },
+  played:   (l, b) => { l.spoken(num(b.n) || 1); return b.audio && b.audio !== 'running' ? `a sentence began while the page's audio was ${word(b.audio)} — it may not have been heard` : null; },
   notice:   (l, b) => { l.notice(word(b.where) || 'call', word(b.text)); return null; },
   error:    (_l, b) => `the page: ${word(b.text)}`,
 };
@@ -45,7 +45,7 @@ function handleEvent(req, res) {
   const b = req.body || {};
   const stage = String(b.stage || '');
   if (stage === 'start') {
-    const label = b.assistant ? 'the panel — assistant mode' : 'the panel — live call';
+    const label = b.ambient ? 'the panel — Ambient’s assistant' : b.assistant ? 'the panel — Live call' : 'the panel — Deep call';
     const person = req.auth?.user ? { id: req.auth.user.id } : null;
     let sessionId = null;
     try { sessionId = require('../harness/memory').mainSession().id; } catch { /* named later by its turns */ }
@@ -59,7 +59,7 @@ function handleEvent(req, res) {
   const fn = STAGES[stage];
   if (!fn) return res.status(400).json({ error: `Not a call stage: ${stage.slice(0, 40)}` });
   const text = fn(h, b);
-  if (text) h.note(text, stage === 'cut' || stage === 'error' ? 'warn' : 'info');
+  if (text) h.note(text, ['cut', 'error', 'played'].includes(stage) ? 'warn' : 'info');
   res.json({ ok: true });
 }
 

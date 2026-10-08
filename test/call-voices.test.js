@@ -144,7 +144,7 @@ test('the panel\'s call asks for the Quick voice from the face and the Deep voic
     chatAppendMsg: () => {}, apiFetch: async () => ({}),
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${['chat-call.js', 'chat-call-report.js', 'chat-call-hear.js', 'chat-call-voice.js', 'chat-call-hold.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8')).join('\n')}
+  vm.runInContext(`${['lib/mic.js', 'chat-call.js', 'chat-call-report.js', 'chat-call-hear.js', 'chat-call-voice.js', 'chat-call-hold.js', 'chat-call-mic.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8')).join('\n')}
     ;globalThis.__ = { get: n => eval(n), set: (n, v) => eval(n + ' = v') };`, sandbox);
   const s = sandbox.__;
   s.set('_callPlayCtx', { state: 'running', decodeAudioData: async () => ({}), createBufferSource: () => ({ connect() {}, start() {}, stop() {} }), destination: {} });

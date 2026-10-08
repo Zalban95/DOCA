@@ -6,6 +6,7 @@
    trigger (pre-roll included) until a pause is sent as the next message. No words — a cough, a door, the room — and the
    voice goes on from exactly where it paused. */
 let _callHold = null;       // {pcm: Float32Array[], words: bool|null, quietMs, timer}
+const CALL_HOLD_DECIDE_MS = 4000;   // the longest the voice waits paused for the decision
 let _callHeard = [];        // [{text, start, dur}]: the sentences of the current answer as they began to play
 let _callHeardPending = null;
 let _callTap = null, _callRing = [], _callRingLen = 0;   // the microphone as samples, the last two seconds
@@ -61,7 +62,10 @@ async function _callHoldDecide() {
   try {
     const form = new FormData();
     form.append('audio', _callWav(h.pcm, h.rate), 'probe.wav');
-    words = String((await (await fetch('/api/chat/transcribe', { method: 'POST', body: form, signal: _callAbort?.signal })).json()).text || '').trim();
+    // At most a few seconds: a transcriber that is slow to answer must not leave the answer paused for good.
+    const AS = typeof AbortSignal !== 'undefined' ? AbortSignal : {}, limit = AS.timeout ? AS.timeout(CALL_HOLD_DECIDE_MS) : null;
+    const signal = limit && AS.any && _callAbort ? AS.any([_callAbort.signal, limit]) : (_callAbort?.signal || limit || undefined);
+    words = String((await (await fetch('/api/chat/transcribe', { method: 'POST', body: form, signal })).json()).text || '').trim();
   } catch { /* undecided reads as noise: the answer goes on */ }
   if (_callHold !== h || !_callActive || !_callPlayCtx) return;
   // The voice heard back through the microphone (a phone's speaker, an echo canceller that let it through) is not the
