@@ -8,7 +8,9 @@
    at its line ceiling. The running VMs are here too (2026-10-08), pictured by their own hypervisor, behind the agents'
    work unless a row of the status column brought them forward (liveFocus); a VM opens its console through the hub.
    Plain containers get no tile: one that serves a page an agent started is already a served page. */
-const ML = { timer: null, data: null, previews: {}, focus: null };   // previews: served key → preview id, made once per page
+const ML = { timer: null, data: null, previews: {}, focus: null,
+  // "VMs in front": how this screen arranges Live, so it is kept in this browser (asked 2026-10-08).
+  vmsFront: (() => { try { return localStorage.getItem('doca.live.vmsFront') === '1'; } catch { return false; } })() };   // previews: served key → preview id, made once per page
 const ML_MS = 3000;
 
 function liveMachinesTab(shown) {
@@ -42,8 +44,16 @@ function _mlTiles() {
     line: [v.label, v.os].filter(Boolean).join(' · '), who: v.console.how === 'hub' ? 'console' : '',
     img: v.shot ? `/api/machines/vms/${encodeURIComponent(v.hypervisor)}/${encodeURIComponent(v.name)}/shot` : null,
     empty: v.why || 'Taking its picture…', open: () => vmConsoleOpen(v.hypervisor, v.name) });
-  for (const t of tiles) if (t.id === ML.focus) t.working = true;
+  for (const t of tiles) if (t.id === ML.focus || (ML.vmsFront && t.id.startsWith('v:'))) t.working = true;
   return tiles;
+}
+
+/** Keep the running VMs in the front row (on) or let them sit behind what is working (off); this screen's choice. */
+function liveVmsFront(on) {
+  ML.vmsFront = !!on;
+  try { localStorage.setItem('doca.live.vmsFront', on ? '1' : '0'); } catch { /* a private window: for this visit */ }
+  const page = document.getElementById('tab-live');
+  if (page && ML.data) _mlDraw(page);
 }
 
 /** Live, with one machine brought to the front (a row of the status column, machines-rows.js). */
@@ -69,7 +79,8 @@ async function _mlOpenServed(key) {
 function _mlDraw(page) {
   const tiles = _mlTiles(), front = tiles.filter(t => t.working), back = tiles.filter(t => !t.working);
   if (!page.querySelector('.ml-front')) {
-    page.innerHTML = `<div class="ml-head">${pageHeadHtml({ title: 'Live', sub: 'The agents\' computers, the pages they serve for tests, and the running VMs — whatever is working comes to the front.' })}</div>
+    const toggle = `<label class="ml-vms-front" title="Running VMs stay large, beside what is working"><input type="checkbox" class="switch"${ML.vmsFront ? ' checked' : ''} onchange="liveVmsFront(this.checked)"> VMs in front</label>`;
+    page.innerHTML = `<div class="ml-head">${pageHeadHtml({ title: 'Live', sub: 'The agents\' computers, the pages they serve for tests, and the running VMs — whatever is working comes to the front.', actions: toggle })}</div>
       <div class="ml-front"></div><div class="ml-back"></div>`;
   }
   const sync = (box, list, big) => {
