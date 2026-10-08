@@ -65,9 +65,9 @@ function connect({ silenceMs = 900, synth, transcribe } = {}) {
   const chat = require('../chat');
   transcribe = transcribe || (buf => chat.transcribeAudio(buf, 'audio/wav', 'call.wav'));
   synth = synth || (async text => {
-    const vs = chat.loadVoiceServices();
+    const engines = require('../tts-engines'), vs = engines.hive();   // a tone tag becomes words for a voice that takes them, else goes
     const r = await fetch(`${vs.ttsUrl}/v1/audio/speech`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: vs.ttsModel, input: text, voice: vs.ttsVoice, response_format: 'pcm', speed: vs.ttsSpeed }), signal: AbortSignal.timeout(30000) });
+      body: JSON.stringify(engines.body(vs, text, { format: 'pcm' })), signal: AbortSignal.timeout(30000) });
     if (!r.ok) throw new Error(`text-to-speech answered ${r.status}`);
     return Buffer.from(await r.arrayBuffer());
   });
@@ -106,11 +106,12 @@ function connect({ silenceMs = 900, synth, transcribe } = {}) {
   const speak = (text, { mine = epoch, end = true } = {}) => {
     if (end && String(text).trim() === '✓') { em.emit('agent', '✓'); em.emit('turn'); return; }   // an action done, not narrated: shown, not spoken
     for (const s of sentences(text)) {
+      if (!require('../voice-tags').strip(s)) continue;   // a tag alone has nothing to say
       const pcm = synth(s).catch(e => { em.emit('error', e.message); return null; });   // all start at once, play in order
       speech = speech.then(async () => {
         const audio = await pcm;
         if (!audio || closed || mine !== epoch) return;
-        em.emit('agent', `${s} `);
+        em.emit('agent', `${require('../voice-tags').strip(s)} `);   // what is shown: never the tags
         speakingUntil = Math.max(Date.now(), speakingUntil) + audio.length / (RATE * 2) * 1000;
         for (let i = 0; i < audio.length; i += RATE / 5) em.emit('audio', audio.subarray(i, i + RATE / 5));   // 100 ms frames
       });

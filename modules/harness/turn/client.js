@@ -79,7 +79,8 @@ function clientBlock(client) {
       + `${client.user.role ? `, ${client.user.role} of this panel` : ''}. What changes on this machine in this turn is logged as theirs.`] : []),
     `Shape the answer for it: ${shapeFor(client)}`,
     ...(client.mode === 'call' || client.mode === 'assistant' ? ['They are listening: ask any question out loud, one at a time — not with `ask_device`. '
-      + 'An earlier answer of yours that ends in "—" was cut off there: they talked over it and did not hear the rest.', spokenRules()] : []),
+      + 'An earlier answer of yours that ends in "—" was cut off there: they talked over it and did not hear the rest.', spokenRules(),
+      ...(client.voiceTags ? [require('../../voice-tags').line()] : [])] : []),
     ...(client.front ? [require('./front').LINE] : []),   // a call's quick turn (turn/front.js)
     ...(client.effort ? [require('./effort').line(client.effort)] : []),
     'Other devices of the same user may be reading this conversation too, so do not describe this one as if it were the only one.',

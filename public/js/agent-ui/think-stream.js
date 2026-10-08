@@ -28,6 +28,7 @@ function _tagHold(s, tag) {
  * }} ui
  */
 function createThinkStream(ui) {
+  const tags = ui.voiceTags && typeof voiceTagsFilter === 'function' ? voiceTagsFilter() : null;   // a live call: tone tags are not shown
   let think = null;
   let md = null;
   let pending = '';
@@ -79,6 +80,7 @@ function createThinkStream(ui) {
     },
 
     feed(chunk) {
+      if (tags && chunk) chunk = tags.push(chunk);
       if (!chunk) return;
       pending += chunk;
       while (pending.length) {
@@ -118,6 +120,7 @@ function createThinkStream(ui) {
     resetText() { if (md) { md.end(); md = null; } },
 
     finish() {
+      if (tags) pending += tags.rest();
       if (pending) {
         if (inThink) { ensureThink(false).append(pending); think = null; }
         else { settleThink(); ensureMd().feed(pending); }

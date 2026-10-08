@@ -25,6 +25,7 @@ async function _callEnqueueSynth(text) {
       signal: _callAbort?.signal,
     });
     if (!res.ok) throw new Error(`speech service answered ${res.status}${await res.text().then(t => `: ${t.slice(0, 120)}`).catch(() => '')}`);
+    if (res.status === 204) return;   // only a tone tag: nothing to say
 
     const arrayBuf = await res.arrayBuffer();
     if (!_callActive || !_callPlayCtx) return;
