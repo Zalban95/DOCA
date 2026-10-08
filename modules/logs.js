@@ -259,7 +259,7 @@ function sources() {
     }
     row.reason = CLI_REASON;
     return row;
-  });
+  }).concat([{ id: 'call', label: 'Live calls', kind: 'calls', selected: false, available: true, reason: null }]);   // each call's stages (realtime/call-log.js)
 }
 
 /** Resolve what the client asked for. `auto` is whichever harness is selected. */
@@ -283,7 +283,8 @@ function open(spec, { tail = 200 } = {}, onLine) {
   const stops = [];
   for (const src of resolve(spec)) {
     if (!src.available) { onLine(line(src, 'warn', src.reason)); continue; }
-    stops.push(src.kind === 'builtin' ? openBuiltin(src, tail, onLine) : openStack(src, tail, onLine));
+    stops.push(src.kind === 'builtin' ? openBuiltin(src, tail, onLine)
+      : src.kind === 'calls' ? require('./realtime/call-log').open(tail, onLine) : openStack(src, tail, onLine));
   }
   if (!stops.length) onLine(line({ id: 'panel', label: 'panel' }, 'warn',
     'Nothing to follow. Pick a source above.'));

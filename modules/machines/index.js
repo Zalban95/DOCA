@@ -13,6 +13,7 @@
  *              when something answers on it
  *   vms        the running virtual machines, each with a picture its hypervisor takes (vm-shots.js) and how its
  *              console opens (vm-console.js) — asked 2026-10-08, with the status column's rows (rows.js)
+ *   vnc        the VNC targets that answer, each pictured by DOCA's own RFB client (vnc-targets/), a connected one in front
  * "Working" is anything that acted in the last WORKING_MS; the page puts those in front.
  */
 const os = require('os');
@@ -84,14 +85,20 @@ async function picture({ shots = false } = {}) {
   const pages = [...served(), ...await computerPages(computers)];
   const shooter = require('./shots'), vmShooter = require('./vm-shots');
   if (shots) shooter.want(pages.map(p => ({ key: p.key, url: p.url })));
-  const running = (await require('./vm-list').list()).vms.filter(v => v.state === 'running');
-  if (shots) vmShooter.want(running);
-  const vms = running.map(v => {
+  const allVms = (await require('./vm-list').list()).vms, running = allVms.filter(v => v.state === 'running');
+  // The VNC targets that answer (vnc-targets/): a target that is a running VM's display is that VM's one tile.
+  const vncShooter = require('../vnc-targets/shots');
+  const vnc = (await require('../vnc-targets').detailed({ vms: allVms, computers })).targets.filter(t => t.state !== 'unreachable');
+  if (shots) vncShooter.want(vnc.map(t => t.id));
+  const shownAsVnc = new Set(vnc.filter(t => t.same?.kind === 'vm').map(t => t.same.id));
+  if (shots) vmShooter.want(running.filter(v => !shownAsVnc.has(vmShooter.keyOf(v))));
+  const vms = running.filter(v => !shownAsVnc.has(vmShooter.keyOf(v))).map(v => {
     const key = vmShooter.keyOf(v);
     return { key, name: v.name, hypervisor: v.hypervisor, label: v.label, os: v.os || null, state: v.state,
       shot: vmShooter.has(key), why: vmShooter.cannot(v) || vmShooter.error(key), console: require('./vm-console').where(v) };
   });
-  return { computers, served: pages.map(p => ({ ...p, shot: shooter.has(p.key), working: true })), vms, browser: shooter.browser(), workingMs: WORKING_MS };
+  return { computers, served: pages.map(p => ({ ...p, shot: shooter.has(p.key), working: true })), vms,
+    vnc: vnc.map(t => ({ ...t, shot: vncShooter.has(t.id), why: vncShooter.error(t.id) })), browser: shooter.browser(), workingMs: WORKING_MS };
 }
 
 let _listening = false;
@@ -106,6 +113,7 @@ function mount(app) {
     res.set({ 'Content-Type': 'image/png', 'Cache-Control': 'no-store' }).send(png);
   });
   require('./vm-console').mount(app);
+  require('../vnc-targets').mount(app);   // VNC targets: /api/machines/vnc*
   app.get('/api/machines/served/:key/shot', (req, res) => {
     const png = require('./shots').get(req.params.key);
     if (!png) return res.status(404).json({ error: 'No picture of it yet.' });

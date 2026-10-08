@@ -110,7 +110,7 @@ async function _ambTick() {
   if (!inCall || !AMB.own || typeof _callIdleMs !== 'function') return;
   let c = {};
   try { c = (await screenLoad()).settings?.call || {}; } catch { /* the default */ }
-  if (_callIdleMs() >= (c.assistantIdleSec >= 5 ? c.assistantIdleSec : 12) * 1000) _callStop();
+  if (_callIdleMs() >= (c.assistantIdleSec >= 5 ? c.assistantIdleSec : 12) * 1000) _callStop('quiet for the ambient screen\'s idle time');
 }
 
 function ambientSay(text) { const el = document.getElementById('amb-status'); if (el) el.textContent = text || ''; }

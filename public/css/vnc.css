@@ -1,0 +1,11 @@
+/* Machines → VNC (public/js/vnc.js): the screens' rows reuse the VMs' grid (components.css .vm-row) and the status
+   column's point (.m-pt), so every skin draws them as it draws a VM; only what is new here is styled. */
+.vnc-pass { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vnc-row .m-pt { margin: 0 auto; }
+.vnc-edit { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) 90px minmax(0, 1.2fr); gap: 8px 10px; align-items: end;
+  padding: 4px 0 12px; margin-bottom: 8px; border-bottom: 1px solid var(--border2); }
+.vnc-edit label { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.vnc-edit .vnc-forget { flex-direction: row; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); grid-column: 1 / -2; }
+.vnc-edit-acts { display: flex; gap: 6px; justify-content: flex-end; grid-column: -2 / -1; }
+.vnc-note { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 8px 0 0; max-width: 80ch; }
+@media (max-width: 768px) { .vnc-edit { grid-template-columns: 1fr 1fr; } .vnc-edit .vnc-forget, .vnc-edit-acts { grid-column: 1 / -1; } }

@@ -3,6 +3,7 @@
 /**
  * Realtime voice's doors (index.js has the call itself).
  *
+ *   POST /api/chat/call-event   the panel's own call reports a stage (panel-call.js; right chat)
  *   GET  /api/realtime          what a call would use, and whether it is on (right chat)
  *   POST /api/realtime          the owner sets it: protocol, provider, url, model, voice, dialect, waitSec (host)
  *   WS   /ws/realtime           the panel's call, as the signed-in person (right chat, the panel's own page)
@@ -20,6 +21,7 @@ const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e)
 const KEYS = { protocol: /^(openai|gemini)$/, provider: /^[\w.-]{0,60}$/, url: /^(wss?:\/\/\S{3,500})?$/, model: /^[\w.:/@-]{0,120}$/, voice: /^[\w.-]{0,60}$/, dialect: /^(ga|beta)$/ };
 
 function mount(app) {
+  app.post('/api/chat/call-event', require('./panel-call').handleEvent);   // the panel's own call, stage by stage
   app.get('/api/realtime', h(() => ({ ...rt.status(), settings: rt.settings() })));
   app.post('/api/realtime', h(req => {
     const b = req.body || {};
@@ -63,7 +65,7 @@ function upgradePanel(req, socket, head) {
   if (asked) {
     try { access.check(client.user, asked); sessionId = asked; } catch { return refuse(socket, 404, 'Not Found'); }
   }
-  wss().handleUpgrade(req, socket, head, ws => rt.serve(ws, { sessionId, person: client.user, ask: rt.askAsPanel({ sessionId, client }) }));
+  wss().handleUpgrade(req, socket, head, ws => rt.serve(ws, { sessionId, person: client.user, label: 'the panel (realtime voice)', ask: rt.askAsPanel({ sessionId, client }) }));
 }
 
 /** A device's socket: its bearer token, harness:chat, its person's conversation. */
@@ -84,7 +86,9 @@ function upgradeDevice(req, socket, head, engine = 'realtime') {
     else sessionId = harness.defaultSession(device).id;
   } catch { return refuse(socket, 404, 'Not Found'); }
   const person = require('../harness/turn/client').deviceOwner(device);
-  wss().handleUpgrade(req, socket, head, ws => rt.serve(ws, { sessionId, engine, person, deviceId: device.id, ask: rt.askAsDevice(devices.get(device.id) || device, sessionId) }));
+  const via = String(req.headers['x-doca-client'] || '').replace(/[^\w .()/-]/g, '').slice(0, 60);   // "DocaWear (via DocaMobile)"
+  const label = `${String(device.name || device.id).slice(0, 40)}${via ? ` — ${via}` : ''}`;
+  wss().handleUpgrade(req, socket, head, ws => rt.serve(ws, { sessionId, engine, person, deviceId: device.id, label, ask: rt.askAsDevice(devices.get(device.id) || device, sessionId) }));
 }
 
 module.exports = { mount, mountDevice, upgradePanel, upgradeDevice };

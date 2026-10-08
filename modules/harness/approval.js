@@ -162,7 +162,7 @@ function gate(name, args, ctx = {}) {
   const cp = require('./control-plane').target(name, args, ctx);
   if (cp) return { tool: name, keys: null, forced: true,
     summary: `${cp.path} — ${cp.what}. Writing it always asks you first, whatever the approval mode.` };
-  const forced = require('./forced-asks').of(name, args, summarize);   // decisions a device or a browser marks: always asked
+  const forced = require('./forced-asks').of(name, args, summarize, ctx);   // decisions a device or a browser marks: always asked
   if (forced) return forced;
   const outward = require('./risk').ask(name, args, ctx, summarize);   // experiment riskTiers: what cannot be undone asks in every mode
   if (outward) return outward;
@@ -349,8 +349,8 @@ function refusal(decision, req) {
 function missionRefusal(req) {
   const what = req.keys?.length ? req.keys.join(' or ') : req.tool;
   // Each reason names the fix that actually works (audit 2026-10-04: a protected write was told to use the allowlist).
-  if (req.forced) return `Not run: ${req.summary} A mission runs unwatched, and a file that governs the agent is never written `
-    + 'without a person — no allowlist or grant changes that. Report it; the person can make the change themselves.';
+  if (req.forced) return `Not run: ${req.summary} ${req.inMission || 'A mission runs unwatched, and a file that governs the agent is never written '
+    + 'without a person — no allowlist or grant changes that. Report it; the person can make the change themselves.'}`;
   if (req.level) return `Not run: the level of the person this mission acts for asks before every tool call, and a mission has `
     + `nobody to ask. Report it; a grant approve:${what} for this mission (permission_grant, from the agent that dispatched it) or `
     + 'for the person (Settings → Users) lets it run.';

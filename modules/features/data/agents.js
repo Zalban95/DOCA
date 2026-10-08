@@ -91,7 +91,7 @@ module.exports = [
   { id: 'adaptive-limits', name: 'Limits that follow the work', page: 'settings/experiments', flag: 'adaptiveLimits', state: 'experiment', settings: ['limits.maxStepsCeiling'], since: '2.295.0',
     use: 'A triage before each turn sets its thinking effort and step budget by the request, and a turn still advancing at its last step carries on up to a ceiling.',
     words: 'steps effort budget limit difficulty triage extend' },
-  { id: 'system-one', name: 'Decision models: System 1 (Laya or Jev)', page: 'models', flag: 'systemOne', state: 'experiment', since: '2.315.0',
+  { id: 'system-one', name: 'Decision models: System 1 (Laya or Jev)', page: 'models', flag: 'systemOne', state: 'experiment', since: '2.317.0',
     tools: ['computer_next'], settings: ['systemOne.provider', 'systemOne.threshold'], routes: ['/api/system-one*'], uses: 'tool:computer_next',
     use: 'A small non-generating model answers bounded decisions with probabilities — a request\'s size, a call\'s answer-now or hand-on, a computer\'s next element — and today\'s way decides when it is unsure.',
     words: 'laya jev system one decision classifier fast calibrated probability browser next click' },

@@ -19,6 +19,9 @@
 const ADAPTERS = { openai: require('./openai'), gemini: require('./gemini') };
 
 const MAX_SAY = 4000;
+/** A device's call with nothing said either way this long is ended: a watch that left its call screen keeps the socket
+ *  open, sending silence, and held a call (and so a restart, harness/drain.js) for an hour on 2026-10-08. */
+const idleEndMs = () => Number(process.env.DOCA_CALL_IDLE_MS) || 5 * 60 * 1000;   // the variable: tests
 
 /**
  * The JSON frames a call sends, and what each carries — the contract a client draws its states from (PROTOCOL.md
@@ -34,6 +37,7 @@ const FRAMES = {
   background:  { fields: ['text', 'sessionId'], means: 'work goes on out of the call (a work chat, or a request past realtime.waitSec); it will be said here when it ends' },
   report:      { fields: ['text'], means: 'something that went on out of the call came back, and is said now (agent frames follow)' },
   interrupted: { fields: [], means: 'the person talked over the answer: drop audio queued to play' },
+  notice:      { fields: ['stage', 'text'], means: 'a stage did not go as it should — nothing heard, no words found, the transcriber or the voice failed, an answer cut — said in words to show (since 2.314.0)' },
   error:       { fields: ['message'], means: 'something failed, in words' },
   closed:      { fields: ['reason', 'stats'], means: 'the call ended' },
 };
@@ -103,7 +107,7 @@ let _liveN = 0;
 /** The calls in progress, for drain.busy(). */
 const live = () => [..._live.values()];
 
-function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', person = null, deviceId = null }) {
+function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', person = null, deviceId = null, label = 'a call' }) {
   const s = settings();
   const tell = o => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
   const pipeline = engine === 'auto' && !on();   // a device's call: the hive's own voice when no realtime model is on
@@ -115,7 +119,10 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
   const model = pipeline ? require('./pipeline').connect({})
     : ADAPTERS[s.protocol].connect({ ...t, model: s.model, voice: s.voice, dialect: s.dialect, instructions: INSTRUCTIONS + recent(sessionId), tools: [TOOL] });
   if (pipeline) s.protocol = 'pipeline';
-  let ended = false;
+  // Each stage of this call, kept (call-log.js): a call that fails is never only a quiet call.
+  const log = require('./call-log').begin({ kind: 'device', label, sessionId, person, deviceId, engine: s.protocol });
+  const notify = (stage, text) => { log.notice(stage, text); tell({ type: 'notice', stage, text }); };
+  let ended = false, lastWords = Date.now(), answering = 0, idle = null;
   const callId = ++_liveN;
   _live.set(callId, { sessionId, since: stats.at });
   // What lands in this conversation while the call is open is said here (calls.js), and work handed off is followed.
@@ -140,12 +147,28 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
     unregister();
     lifecycle.events.off('event', onTurnEvent);
     model.close();
+    if (idle) clearInterval(idle);
+    log.end(why);
     tell({ type: 'closed', reason: why, stats: { ...stats, minutes: Math.round((Date.now() - stats.at) / 6000) / 10 } });
     try { ws.close(); } catch { /* gone */ }
     onEnd(stats);
   };
 
-  model.on('ready', () => tell({ type: 'ready', protocol: s.protocol, model: s.model, sessionId }));
+  model.on('ready', () => {
+    tell({ type: 'ready', protocol: s.protocol, model: s.model, sessionId });
+    // No sound at all after a few seconds: the microphone never opened, or the phone is not passing it on.
+    setTimeout(() => { if (!ended && !log.record.audio.bytes) notify('audio', 'No sound is reaching the hub from the microphone.'); }, 6000).unref?.();
+  });
+  model.on('utterance', u => { lastWords = Date.now(); log.utterance(u); });
+  idle = pipeline ? setInterval(() => {
+    if (ended || answering || Date.now() - lastWords < idleEndMs()) return;
+    notify('audio', 'Nothing was said for five minutes, so the call has ended.');
+    end('nothing was said for five minutes');
+  }, Math.min(15000, idleEndMs() / 3)) : null;
+  idle?.unref?.();
+  model.on('dropped', why => log.dropped(why));
+  model.on('stt', r => log.stt(r));
+  model.on('notice', ({ stage, text }) => notify(stage, text));
   model.on('audio', pcm => {
     if (stats.spokeAt && stats.firstAudioMs === null) stats.firstAudioMs = Date.now() - stats.spokeAt;
     if (heardAt) { stats.replyMs = [...stats.replyMs, Date.now() - heardAt].slice(-20); heardAt = null; }
@@ -153,23 +176,32 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
   });
   model.on('heard', () => { heardAt = Date.now(); stats.spokeAt = stats.spokeAt || heardAt; tell({ type: 'heard' }); });
   model.on('user', text => { stats.spokeAt = stats.spokeAt || Date.now(); tell({ type: 'user', text }); });
-  model.on('agent', text => tell({ type: 'agent', text }));
+  model.on('agent', text => { lastWords = Date.now(); log.spoken(); tell({ type: 'agent', text }); });
   model.on('turn', () => tell({ type: 'done' }));
   model.on('interrupted', () => { stats.interrupted++; heardAt = null; tell({ type: 'interrupted' }); });
-  model.on('error', message => tell({ type: 'error', message: `${s.protocol}: ${message}` }));
+  model.on('error', message => { log.note(`error: ${String(message).slice(0, 200)}`, 'error'); tell({ type: 'error', message: `${s.protocol}: ${message}` }); });
   model.on('closed', ({ code, reason }) => end(`the realtime service closed the call (${code}${reason ? `: ${reason}` : ''})`));
   model.on('tool', ({ id, name, args }) => {
     if (name !== TOOL.name) return model.toolResult(id, `There is no tool named ${name}; use doca.`);
     const request = String(args.request || '').trim();
     if (!request) return model.toolResult(id, 'Say what the person asked in the request.');
-    stats.tools++;
+    stats.tools++; answering++;
+    log.turn('started', `${request.split(/\s+/).length} words asked`);
     tell({ type: 'working', text: request });
     // The pipeline says the answer while the model is still writing it: its first sentence plays before the last exists.
     const live = model.stream ? model.stream() : null, gather = live && require('./pipeline').gatherer();
     let streamed = false, late = false;
     const onText = live && (delta => { if (late || ended) return; for (const x of gather.push(delta)) { streamed = true; live.part(x); } });
     const answer = Promise.resolve().then(() => ask(request, onText ? { onText } : undefined))
-      .then(a => ({ text: String(a || '(no answer)').slice(0, MAX_SAY) }), e => ({ text: `It failed: ${e.message}`, failed: true }));
+      .then(a => ({ text: String(a || '(no answer)').slice(0, MAX_SAY) }), e => ({ text: `It failed: ${e.message}`, failed: true, why: e.message }));
+    // How the turn ended, kept; a turn cut short is said, so the call never just goes quiet on it.
+    answer.then(a => {
+      answering = Math.max(0, answering - 1); lastWords = Date.now();
+      if (!a.failed) return log.turn('done', `${a.text.length} characters`);
+      const cut = /stopped|cancel|abort/i.test(a.why || '');
+      log.turn(cut ? 'cut' : 'failed', a.why);
+      if (!ended) notify('turn', cut ? 'The answer was cut short — go on, I am listening.' : `The answer failed: ${String(a.why || '').slice(0, 160)}`);
+    });
     let timer;
     const wait = new Promise(r => { timer = setTimeout(() => r(null), Math.max(3, Number(s.waitSec) || 20) * 1000); });
     answer.then(() => clearTimeout(timer));
@@ -188,7 +220,11 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
   });
 
   ws.on('message', (data, isBinary) => {
-    if (isBinary) return model.audio(Buffer.from(data));
+    if (isBinary) {
+      const buf = Buffer.from(data);
+      model.audio(buf);
+      return log.audio(buf.length, model.stats ? { level: model.stats.peak, floor: model.stats.floor } : {});
+    }
     let m; try { m = JSON.parse(String(data)); } catch { return; }
     if (m.type === 'stop') end('stopped');
   });

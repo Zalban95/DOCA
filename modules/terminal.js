@@ -101,6 +101,8 @@ function setup(httpServer) {
       require('./computers/vnc').upgrade(req, socket, head);   // a computer's screen (computers/vnc.js)
     } else if (req.url.startsWith('/ws/vm/')) {
       require('./machines/vm-console').upgrade(req, socket, head);   // a VM's VNC console (machines/vm-console.js)
+    } else if (req.url.startsWith('/ws/vnc/')) {
+      require('./vnc-targets').upgrade(req, socket, head);   // a VNC target's console, the hub signing in (vnc-targets/proxy.js)
     } else if (req.url.startsWith('/ws/lsp')) {
       require('./projects/lsp').upgrade(req, socket, head);   // a language server, for the Projects editor
     } else {

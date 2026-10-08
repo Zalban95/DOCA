@@ -2,9 +2,9 @@
    DOCA PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','home','ambient','logs','files','projects','harness','workstream','archive','chronicle','computers','live','terminal','models','docker','vms','mcp','connectors','apikeys','settings'];
+const NAV_TABS = ['controls','home','ambient','logs','files','projects','harness','workstream','archive','chronicle','computers','live','terminal','models','docker','vms','vnc','mcp','connectors','apikeys','settings'];
 /** Tabs that are the machine itself: left out for a person without host (settings.js). */
-const HOST_TABS = ['logs', 'files', 'projects', 'terminal', 'computers'];
+const HOST_TABS = ['logs', 'files', 'projects', 'terminal', 'computers', 'vnc'];
 
 /** The header and the phone's bar are drawn by group (nav-groups.js). */
 function mobileNavRender() { navGroupsRender(); }
@@ -50,6 +50,7 @@ function nav(name) {
   if (on('models'))   modelsInit();
   if (on('docker'))   dockerInit();
   if (on('vms'))      vmsInit();
+  if (typeof vncTab === 'function') vncTab(on('vnc'));   // Machines → VNC: refreshes its states only while shown
   if (on('mcp'))      mcpInit();
   for (const t of shown) if (typeof FIELD_PAGES !== 'undefined' && FIELD_PAGES[t]) fieldPageShow(t);   // Connectors, API keys (field-pages.js)
   if (name === 'settings') settingsInit();

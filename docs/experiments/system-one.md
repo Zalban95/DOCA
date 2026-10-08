@@ -1,7 +1,7 @@
 # Experiment: a System 1 decision model
 
 **Flag:** `experiments.systemOne` (Settings → Developer), off by default. The model is set up in Field → Models →
-Decision models. **TODO:** H10.19. **Since:** 2.315.0. **Code:** `modules/system-one/` (the client, Laya's service,
+Decision models. **TODO:** H10.19. **Since:** 2.317.0. **Code:** `modules/system-one/` (the client, Laya's service,
 the decisions, `computer_next`), hooks in `turn/triage.js` and `turn/front.js`.
 
 Asked 2026-10-08: "I think LAYA would be way better for navigating and using the VMs, computers, vnc connections and so

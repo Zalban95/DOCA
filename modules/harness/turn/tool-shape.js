@@ -14,6 +14,8 @@ function switches() {
       out.push({ name, why: 'specialists are switched off (Settings → Harness)' });
   if (!require('../../computers/look').on()) out.push({ name: 'computer_look', why: 'the vision pass is off, or no vision model is set' });
   if (!require('../../system-one').on()) out.push({ name: 'computer_next', why: 'the System 1 model experiment is off' });
+  if (!require('../../vnc-targets').any())
+    for (const name of ['vnc_look', 'vnc_input']) out.push({ name, why: 'no VNC screen is added (Machines → VNC)' });
   if (!require('../../scout').on()) out.push({ name: 'model_scout', why: 'the model scout experiment is off' });
   if (!require('../../experiments').on('toolTiers')) out.push({ name: 'tools_more', why: 'the tool tiers experiment is off' });
   // An old name kept so old transcripts and recipes still run (tools.call maps it); never offered.
