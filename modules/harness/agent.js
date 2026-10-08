@@ -200,6 +200,10 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   let warned     = false;
   let text = '';
   let claimAsked = false;   // turn/claims.js: once per turn
+  // A spoken answer's tone tags are the voice's, not words (voice-tags.js): `text` — what is kept, shown and sent to
+  // every device and chat — never has them; each piece's `spoken` keeps them for whatever speaks it (2026-10-08: a
+  // watch showed "[calm] Perfect —").
+  const tones = require('../voice-tags').spokenTurn(client) ? require('../voice-tags').stream() : null;
 
   // Proposals already waiting when the turn started are on screen already; only
   // the ones this turn creates need announcing.
@@ -258,7 +262,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     const reply = await complete({
       ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id, person: client?.user },
       body: { ...base, messages, ...(schemas.length && !reporting ? { tools: schemas, tool_choice: 'auto' } : {}) },
-      onText: t => { text += t; say({ type: 'text', text: t }); },
+      onText: t => { const shown = tones ? tones.push(t) : t; text += shown; say({ type: 'text', text: shown, ...(tones ? { spoken: t } : {}) }); },
       onThinking: t => say({ type: 'thinking', text: t }),
       // Silence is a state worth drawing. Without this the console shows the
       // session line and then nothing at all, which reads as a broken panel
@@ -272,6 +276,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       onHop: hopReporter({ fallbacks, say, step }),
       onRetry: r => say({ type: 'warning', step, kind: 'rate-limit', text: r.text, waitMs: r.waitMs, attempt: r.attempt }),
     });
+    const held = tones?.rest();   // a "[" that never became a tag is words after all
+    if (held) { text += held; say({ type: 'text', text: held, spoken: '' }); }
     const stepMs = Date.now() - startedAt;
     if (reporting) reply.tool_calls = [];   // nothing was offered; a model that calls anyway still only reports
 
@@ -291,7 +297,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
 
     memory.append(session.id, {
       role: 'assistant',
-      content: client?.voiceTags ? require('../voice-tags').strip(reply.content) : reply.content || '',   // a spoken tone, not words to keep
+      content: tones ? require('../voice-tags').strip(reply.content) : reply.content || '',   // a spoken tone, not words to keep
       ...(reply.tool_calls.length ? { tool_calls: reply.tool_calls } : {}),
       // What the provider thought, kept beside what it said, because the
       // provider that sent it asks for it back on every later request in this

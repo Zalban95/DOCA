@@ -88,12 +88,12 @@ function handleClear(req, res) {
  */
 /** A live call says so (chat-call.js `voice`): assistant mode — the face — answers in its own style and effort. */
 function voiceClient(client, voice, req) {
-  // The voice that will speak it — the Quick call's for the face, the Deep call's for the chat's 🎙 (call-voices.js) —
+  // The voice that will speak it — the Live call's for the face, the Deep call's for the chat's 🎙 (call-voices.js) —
   // takes a tone in words: then the agent is told it may write a few tags (voice-tags.js).
   const kind = require('./call-voices').kindOf(voice);
   const tags = kind ? require('./call-voices').forRequest(req, kind).tags : false;
-  if (voice === 'assistant') return { ...client, mode: 'assistant', name: 'Assistant mode (the face, spoken)', ...(tags ? { voiceTags: true } : {}) };
-  if (voice === 'call') return { ...client, mode: 'call', name: `${client.name || 'The panel'} — live call`, ...(tags ? { voiceTags: true } : {}) };
+  if (voice === 'assistant') return { ...client, mode: 'assistant', name: 'Live call (the face, spoken)', ...(tags ? { voiceTags: true } : {}) };
+  if (voice === 'call') return { ...client, mode: 'call', name: `${client.name || 'The panel'} — Deep call`, ...(tags ? { voiceTags: true } : {}) };
   return client;
 }
 
@@ -120,8 +120,8 @@ async function handleChat(req, res) {
         // Only the built-in harness understands attachments: the gateway and the claude CLI get the message alone.
         attachments: attached,
         emit: evt => {
-          if (evt.type === 'text')
-            res.write(`data: ${JSON.stringify({ type: 'text', text: evt.text })}\n\n`);
+          if (evt.type === 'text')   // `spoken`: the same piece with its tone tags, for the call's voice only (voice-tags.js)
+            res.write(`data: ${JSON.stringify({ type: 'text', text: evt.text, ...(evt.spoken !== undefined ? { spoken: evt.spoken } : {}) })}\n\n`);
           if (evt.type === 'thinking')
             res.write(`data: ${JSON.stringify({ type: 'thinking', text: evt.text })}\n\n`);
           if (evt.type === 'tool_call')
