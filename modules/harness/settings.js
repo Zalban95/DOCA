@@ -192,16 +192,6 @@ function readable() {
   for (const l of require('../settings-schema').leaves(prefs))
     if (sectionFor(l.path) && !FORBIDDEN.test(l.path) && !require('../settings-schema').unproposable(l.path)) out.push({ path: l.path, value: l.value, section: sectionFor(l.path).label, detail: l.hint });   // a secret is neither proposed nor read
 
-  try {
-    const { McpClient } = require('../mcp/client');
-    out.push(
-      { path: 'mcpSettings.callTimeoutMs', value: McpClient.timeoutFor('call'), section: 'MCP timeouts',
-        detail: 'How long a single MCP tool call may take. It stops the waiting, not the work.' },
-      { path: 'mcpSettings.listTimeoutMs', value: McpClient.timeoutFor('list'), section: 'MCP timeouts',
-        detail: 'How long to wait for a server to list its tools when it starts.' },
-    );
-  } catch { /* mcp module unavailable — the rest of the list is still useful */ }
-
   const seen = new Set(out.map(r => r.path));
   for (const s of SETTABLE) {
     if (s.prefix === 'paths') continue;
@@ -211,6 +201,15 @@ function readable() {
       if (FORBIDDEN.test(dotted) || NEVER_SETTABLE.test(dotted) || seen.has(dotted) || require('../settings-schema').unproposable(dotted)) continue;
       out.push({ path: dotted, value, section: s.label });
     }
+  }
+  // Every section the agent may propose is listed, set or not: a section with no declared leaves and nothing in the
+  // file yet (the theme, hidden tabs, the model manager…) used to be absent, while settings_read promised every one —
+  // 14 of 26 on a fresh install (deep test B, R13). It is offered whole, with what it is for.
+  for (const s of SETTABLE) {
+    if (s.prefix === 'paths' || out.some(r => r.path === s.prefix || r.path.startsWith(`${s.prefix}.`))) continue;
+    const decl = require('../settings-schema').SCHEMA[s.prefix.split('.')[0]];
+    out.push({ path: s.prefix, value: get(prefs, s.prefix) ?? null, section: s.label,
+      detail: `${[s.note, decl?.note].filter(Boolean).join(' — ')}. Not set yet: propose its whole value.` });
   }
   return out;
 }

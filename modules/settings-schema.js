@@ -66,7 +66,11 @@ const SCHEMA = {
     propose: p('Tool note', 'Added to the tool\'s description — what the agent reads when it picks the tool') },
   // Numbers only, and deliberately a different key from `mcpServers`, which holds commands this host spawns
   // and stays out of reach. settings.sectionFor matches a whole prefix, so one can never open the other.
-  mcpSettings:      { is: 'travels', home: 'hive', note: 'MCP timeouts', propose: p('MCP timeouts', 'How long to wait for an MCP tool before giving up') },
+  mcpSettings:      { is: 'travels', home: 'hive', note: 'MCP timeouts', propose: p('MCP timeouts', 'How long to wait for an MCP tool before giving up'),
+    keys: {
+      callTimeoutMs: { type: 'integer', min: 1000, default: 120000, hint: 'How long a single MCP tool call may take (an agents\' computer has its own, computers.callTimeoutMs). It stops the waiting, not the work.' },
+      listTimeoutMs: { type: 'integer', min: 1000, default: 20000, hint: 'How long to wait for a server to list its tools when it starts.' },
+    } },
   computers:        { is: 'travels', home: 'hive', note: 'limits on agents\' computers: how many run, when they stop and are removed',
     propose: p('Agents\' computers', 'How many run at once, when they stop and when they are removed'),
     keys: {

@@ -51,27 +51,41 @@ module.exports = [
   {
     name: 'settings_read',
     description: 'Read this panel\'s settings — every one you are allowed to suggest a change to, with its '
-      + 'current value. Do this before proposing anything, so you change what is actually set rather than what '
-      + 'you assumed.',
+      + 'current value, grouped by section. Do this before proposing anything, so you change what is actually set rather than what '
+      + 'you assumed. Give section to read one section, filter to search paths, sections and what each is for.',
     parameters: {
       type: 'object',
       properties: {
-        filter: { type: 'string', description: 'Optional substring to match against the setting paths, e.g. "paths" or "harness".' },
+        section: { type: 'string', description: 'Optional: one section, by its name or its path ("MCP timeouts", "computers", "theme").' },
+        filter: { type: 'string', description: 'Optional: words to match against each setting\'s path, section and description, e.g. "timeout" or "workspace".' },
       },
     },
-    run: ({ filter }, ctx = {}) => {
+    run: ({ filter, section }, ctx = {}) => {
       const q    = String(filter || '').toLowerCase();
-      const screen = require('../screen-proposals').readable(ctx.screen, ctx.user).filter(l => !q || l.toLowerCase().includes(q));
-      const rows = settings.readable().filter(r => !q || r.path.toLowerCase().includes(q));
+      const sec  = String(section || '').toLowerCase();
+      const all  = settings.readable();
+      const inSection = r => !sec || r.section.toLowerCase().includes(sec) || r.path.toLowerCase() === sec || r.path.toLowerCase().startsWith(`${sec}.`);
+      const matches = r => !q || [r.path, r.section, r.detail || ''].some(x => x.toLowerCase().includes(q));
+      const screen = sec ? [] : require('../screen-proposals').readable(ctx.screen, ctx.user).filter(l => !q || l.toLowerCase().includes(q));
+      const rows = all.filter(r => inSection(r) && matches(r));
       // A screen's own settings count too: "ambient" or "place" used to answer "no settings match" (2026-10-08) while
       // the screen's ambient.place sat in the list below, unread.
-      if (!rows.length && !screen.length) return `No settings match "${filter}".`;
-      const body = rows.map(r =>
-        `${r.path} = ${JSON.stringify(r.value)}${r.detail ? `   # ${r.detail}` : ''}`).join('\n');
+      if (!rows.length && !screen.length) {
+        const names = [...new Set(all.map(r => r.section))].join(', ');
+        // Why something is missing, so the agent stops looking: these are the person's, never proposed.
+        return `No settings match${filter ? ` "${filter}"` : ''}${section ? ` in "${section}"` : ''}. The sections are: ${names}. `
+          + 'Not here on purpose — only the person changes them: the approval mode and what runs without asking (Harness → Approvals), '
+          + 'developer mode and experiments, how the hub listens, what is kept of logs and traces, sharing, and keys or secrets.';
+      }
+      const bySection = new Map();
+      for (const r of rows) { if (!bySection.has(r.section)) bySection.set(r.section, []); bySection.get(r.section).push(r); }
+      const body = [...bySection].map(([name, list]) => `## ${name}\n${list.map(r =>
+        `${r.path} = ${JSON.stringify(r.value)}${r.detail ? `   # ${r.detail}` : ''}`).join('\n')}`).join('\n');
       // Which model does what (model-roles.js): the answer to "what runs my speech / my screen reading", in one list.
-      const models = !q || /model|voice|harness|vision|retrieval|realtime|assistant/.test(q) ? `\n\nModels in use:\n${require('../../model-roles').lines().join('\n')}` : '';
+      const models = !q && !sec || /model|voice|harness|vision|retrieval|realtime|assistant/.test(q + sec) ? `\n\nModels in use:\n${require('../../model-roles').lines().join('\n')}` : '';
       const own = screen.length ? `\n\nThis screen's own (settings_propose with screen "this"):\n${screen.join('\n')}` : '';
-      const hive = rows.length ? `${rows.length} settings you may propose changes to:\n${body}` : `No hive setting matches "${filter}".`;
+      const hive = rows.length ? `${rows.length} settings you may propose changes to, in ${bySection.size} section${bySection.size === 1 ? '' : 's'}:\n${body}`
+        : `No hive setting matches "${filter}".`;
       return clip(`${hive}${own}${models}`);
     },
   },
