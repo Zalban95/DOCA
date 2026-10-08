@@ -224,6 +224,19 @@ the project's managers only if the owner allows sharing specialists and skills (
   open for a person, one kept with 📌 or one a person brought back from the Archive; a sweep every 30 min from
   `boot.afterListen` writes one activity line; the missions bar has 📌, "Put away finished" and a quiet "N put away —
   Archive"; Settings → Harness → Finished missions (one switch, the numbers under Advanced). Capability gap 19.
+- [x] Manual that asks what matters, and approvals in a call (2026-10-08, from Live calls in Manual: the read-only
+  `today` was asked, Ambient's place set at the person's own request waited behind the call screen until it timed out;
+  S11, approved as built; branch `asks-what-matters`): `harness.approval.manualAsks` — `everything` (Manual as it was)
+  or `what-matters` (`harness/approval-matters.js`: the risk classifier's outward tier, a push, a delete outside a
+  project, a shell line it cannot reduce or that changes the machine outside a project or runs an unknown verb, a
+  tool on another machine, a change with no way back — the rest runs, a project change after its checkpoint, even
+  with riskTiers off); guarded by the password with the mode, never proposable, Harness → Approvals; a new install
+  asks what matters, an older one keeps everything (migration `2.330-manual-asks`) until its owner chooses. In a call
+  the card is drawn above the face and inside whatever is full screen; the question is said in the call's voice
+  (`call-answer.js sentence`), a spoken yes or no answers it (allow once / deny, confirmed aloud, no "always"),
+  anything else goes on as a message; a device's call is told and answered the same way (`realtime/call-asks.js`),
+  and the call log keeps the question's tool and the voice answer. Not yet: the sentence is English whatever the
+  person speaks (the yes/no words are English, Italian, Spanish, French, German).
 - [x] Self-test 2026-10-08, the install/devices/server group (branch `selftest-server`): node-pty is an optional
   dependency and `install.sh` names the build tools per distro, so a box without a C++ toolchain installs (#1);
   revoking a device by any route closes its stream and removes the MCP servers it hosts, and doca-client stops
