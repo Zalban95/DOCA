@@ -12,6 +12,7 @@ const ROWS = [
   [n => n.has('research_docs'), 'Learn to operate something from its documentation: research_docs — a reader with no tools reads it for you.'],
   [n => n.has('http_fetch'), 'Read one page or feed: http_fetch — the owner\'s own addresses as they are; the open web through a reader (say what you need in `want`).'],
   [n => !n.has('http_fetch') && n.has('agent_dispatch'), 'Reading the web: you do not fetch pages yourself. Dispatch the scout (or the researcher, for documentation) with what to find out; its report comes back after the guards have read it (docs/design/airlock.md).'],
+  [n => n.has('service'), 'A service the owner set up with its actions (a 3D generator, any keyed API): service — list, describe, call; the hub follows long jobs and keeps their files.'],
   [n => n.has('api_call'), 'Act on a service with a stored key, or on the owner\'s own devices and servers: api_call (send, upload, download a file).'],
   [n => [...n].some(x => x.startsWith('connector_')), 'An account the owner connected (GitHub, Google, Microsoft…): its connector_<name> tool.'],
   [n => n.has('service_draft'), 'A service with no key yet: service_draft prepares it; the person pastes the key, you never ask for it in the chat.'],

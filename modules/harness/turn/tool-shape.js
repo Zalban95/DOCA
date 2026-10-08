@@ -16,6 +16,7 @@ function switches() {
   if (!require('../../system-one').on()) out.push({ name: 'computer_next', why: 'the System 1 model experiment is off' });
   if (!require('../../vnc-targets').any())
     for (const name of ['vnc_look', 'vnc_input']) out.push({ name, why: 'no VNC screen is added (Machines → VNC)' });
+  if (!require('../../api-services/store').list().length) out.push({ name: 'service', why: 'no API service is set up (Field → Connectors → API services)' });
   if (!require('../../scout').on()) out.push({ name: 'model_scout', why: 'the model scout experiment is off' });
   if (!require('../../experiments').on('toolTiers')) out.push({ name: 'tools_more', why: 'the tool tiers experiment is off' });
   // An old name kept so old transcripts and recipes still run (tools.call maps it); never offered.

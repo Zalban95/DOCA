@@ -35,6 +35,7 @@ const TOOLS = [
   ...require('./toolbox/devices'),
   ...require('./toolbox/day'),
   ...require('./toolbox/web'),
+  ...require('./toolbox/services'),
   ...require('./toolbox/canvas'),
   ...require('./toolbox/project'),
   ...require('./toolbox/skills'),

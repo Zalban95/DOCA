@@ -58,9 +58,10 @@ module.exports = [
 
   // ── The owner's accounts and secrets ──
   row('keys', 'keep API keys for providers', ['POST /api/keys', 'POST /api/keys/add-provider', 'POST /api/keys/test-provider', 'DELETE /api/keys/:name'], { only: SECRET }),
-  row('connectors', 'connect accounts, keep keys for services, logins and sealed secrets', ['POST /api/connectors/:id', 'DELETE /api/connectors/:id', 'POST /api/connectors/:id/connect',
+  row('connectors', 'connect accounts, keep keys and API services, logins and sealed secrets', ['POST /api/connectors/:id', 'DELETE /api/connectors/:id', 'POST /api/connectors/:id/connect',
     'POST /api/connectors/keys/all', 'DELETE /api/connectors/keys/:name', 'POST /api/connectors/logins/all', 'DELETE /api/connectors/logins/:id', 'POST /api/connectors/sealed/all',
-    'DELETE /api/connectors/sealed/:name', 'POST /api/connectors/drafts/:id/accept', 'DELETE /api/connectors/drafts/:id'], { only: SECRET }),
+    'DELETE /api/connectors/sealed/:name', 'POST /api/connectors/drafts/:id/accept', 'DELETE /api/connectors/drafts/:id',
+    'POST /api/connectors/services/find', 'POST /api/connectors/services/read', 'POST /api/connectors/services/all', 'POST /api/connectors/services/:name/try', 'DELETE /api/connectors/services/:name'], { only: SECRET }),
   row('channels', 'switch a chat app on and give it its token', ['POST /api/channels/telegram', 'POST /api/channels/matrix', 'POST /api/channels/slack', 'POST /api/channels/mail'], { only: SECRET }),
 
   // ── How the agents work ──

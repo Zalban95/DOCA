@@ -20,16 +20,17 @@ module.exports = [
         skills: { type: 'array', items: { type: 'string' }, description: 'Skill names (their recipes come along).' },
         recipes: { type: 'array', items: { type: 'string' }, description: 'Recipe ids.' },
         specialists: { type: 'array', items: { type: 'string' }, description: 'Specialist ids.' },
+        services: { type: 'array', items: { type: 'string' }, description: 'API service names: their actions as OpenAPI, never their keys.' },
       },
     },
-    run: ({ action = 'save', name, description, skills = [], recipes = [], specialists = [] }) => {
+    run: ({ action = 'save', name, description, skills = [], recipes = [], specialists = [], services = [] }) => {
       const lib = require('../../packs/library');
       if (action === 'list') {
         const all = lib.list();
         return all.length ? all.map(p => `- ${p.id} "${p.name}" (${p.origin}${p.from ? ` from ${p.from}` : ''}, ${p.savedAt.slice(0, 10)}): ${p.contents.map(c => `${c.kind} ${c.id || ''}`.trim()).join(', ')}`).join('\n') : 'The library is empty.';
       }
       if (!String(name || '').trim()) return 'Error: a pack needs a name.';
-      const { buffer } = require('../../packs/export').build({ name, description, skills, recipes, specialists });
+      const { buffer } = require('../../packs/export').build({ name, description, skills, recipes, specialists, services });
       const meta = lib.save(buffer, { origin: 'agent', from: 'the agent' });
       return `Kept "${meta.name}" in the library as ${meta.id}: ${meta.contents.map(c => `${c.kind} ${c.id || ''}`.trim()).join(', ')}. `
         + 'The owner can send it to another hub or download it from Settings → Packs.';

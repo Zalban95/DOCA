@@ -234,24 +234,27 @@ module.exports = [
   {
     name: 'service_draft',
     description: 'Prepare a web service (an API with a key) for a person to switch on in one step: how its key is sent, its address, '
-      + 'what it is for, and a skill with the steps to use it. Read its documentation first (research_docs); then the draft waits in '
-      + 'Field → Connectors, the person pastes the key and saves, and from then on api_call with key: "<name>" reaches it. For a '
-      + 'service with an MCP server use mcp_draft; for one in the catalogue, install_propose.',
+      + 'what it is for, its actions (its OpenAPI document, or the address of one) and a skill with when and why. Read its documentation first '
+      + '(research_docs); then the draft waits in Field → Connectors → API services, the person pastes the key and saves, and from then on '
+      + 'service call <name> <action> reaches it (api_call with key: "<name>" too). For a service with an MCP server use mcp_draft; for one in '
+      + 'the catalogue, install_propose.',
     parameters: { type: 'object', properties: {
       name: { type: 'string', description: 'The key\'s short name, e.g. "hi3d" — what api_call names.' },
       origin: { type: 'string', description: 'The API\'s address, e.g. https://api.hitem3d.ai.' },
-      place: { type: 'string', enum: ['header', 'query', 'exchange'], description: 'header (Authorization: Bearer by default), query (a parameter), or exchange (id:secret traded for a token at field).' },
+      place: { type: 'string', enum: ['header', 'query', 'basic', 'exchange'], description: 'header (Authorization: Bearer by default), query (a parameter), basic (user:password), or exchange (id:secret traded for a token at field).' },
       field: { type: 'string', description: 'The header or parameter name — or, for exchange, the token address.' },
       prefix: { type: 'string', description: 'Before the key in a header, e.g. "Bearer " or "" (default Bearer for Authorization).' },
       note: { type: 'string', description: 'One line: what it is for (agents read it).' },
       docs: { type: 'string', description: 'Its documentation\'s address.' },
-      skill: { type: 'object', description: '{name, description, body}: the steps an agent follows to use it, in markdown — the requests, their fields, waiting for results, keeping files (save_as) and showing them.' },
+      skill: { type: 'object', description: '{name, description, body}: when and why to use it, in markdown — which actions, their fields, and showing what they make (the service tool follows long jobs and keeps files itself).' },
+      openapi: { type: 'object', description: 'Its actions as an OpenAPI document (or only its paths): operationId, method, parameters, requestBody. A long job (submit, then ask after it) carries x-doca-job: {id: "data.task_id", poll: {operation, param}, status: "data.state", done: [..], failed: [..], result: ["data.url"], every: 20}.' },
+      openapi_url: { type: 'string', description: 'Instead of openapi: the address of its published OpenAPI document, read when the person opens the draft.' },
     }, required: ['name', 'origin', 'note'] },
     run: (args, ctx = {}) => {
       let d;
       try { d = require('../../service-drafts').draft(args || {}, { sessionId: ctx.sessionId }); } catch (e) { return `Error: ${e.message}`; }
-      return `Prepared "${d.name}" (${d.origin}, key ${d.place === 'exchange' ? 'id:secret traded for a token' : `in the ${d.place}`})${d.skill ? ` with the skill "${d.skill.name}"` : ''}. `
-        + 'It waits in Field → Connectors under "Prepared by the agent": the person pastes the key and saves. Tell them where to get the key '
+      return `Prepared "${d.name}" (${d.origin}, key ${d.place === 'exchange' ? 'id:secret traded for a token' : `in the ${d.place}`})${d.definition ? `, ${d.definition.actions.length} actions` : d.spec ? ', its actions read from its document when opened' : ''}${d.skill ? ` with the skill "${d.skill.name}"` : ''}. `
+        + 'It waits in Field → Connectors → API services under "Prepared by the agent": the person pastes the key and saves. Tell them where to get the key '
         + '(the service\'s developer page) — never ask them to paste it in the chat.';
     },
   },

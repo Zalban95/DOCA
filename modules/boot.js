@@ -14,6 +14,7 @@ function afterListen({ certs = null, mode } = {}) {
   require('./harness/workview').recover();            // work chats likewise, told to the devices
   require('./harness/supervisor').recover();          // and carried on: a restart is not a decision
   require('./harness/runs').recoverJobs();            // a device's command job that was running did not survive it
+  require('./api-services/jobs').recover();           // nor did following a service's long job: said where it started
   require('./mcp/registry').startWithDoca();          // MCP servers marked "start with DOCA"
   require('./canvas/origin').start({ certs, mode });  // agent-written pages, on their own origin
   require('./backup/schedule').start();               // backups on a schedule, when switched on
