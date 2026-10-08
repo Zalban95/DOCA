@@ -234,6 +234,20 @@ async function control(cfg, env) {
   await request(cfg, 'POST', `/api/v1/devices/self/control/${encodeURIComponent(id)}/ack`, { ok: true, detail });
 }
 
+/**
+ * A refused offer in words (self-test round two, B1): a machine paired with a role that lacks mcp:self — a watch's —
+ * was refused, and the client still said "accept its offer", so a person waited on an MCP tab that stayed empty.
+ */
+function refusal(cfg, what, res) {
+  const e = res.body?.error || {};
+  if (res.status === 403 && e.code === 'scope_required') {
+    return `✗ The hub refused ${what}: this machine's token lacks ${(e.required || []).join(' or ')}, so the hub's agents cannot use its tools. ` +
+      `It was paired with a role that does not include it (a watch's, say). Pair it again with Role "phone" (hub → Field → API keys → Pair a device), ` +
+      `or on the hub run \`npm run token -- grant ${cfg.deviceId || '<device id>'} --preset phone\`; then run doca-client again.`;
+  }
+  return `✗ The hub refused ${what} (${res.status}): ${e.message || JSON.stringify(res.body)}. Nothing is lent until it accepts one.`;
+}
+
 /** `log` is where its one line goes: the terminal for the command, a program's own logger when one embeds it. */
 async function run({ grant = null, bind = null, port = 18766, root = null, signal, log = say } = {}) {
   const cfg = load();
@@ -256,9 +270,10 @@ async function run({ grant = null, bind = null, port = 18766, root = null, signa
   const url = `http://${addr}:${server.address().port}/mcp`;
   const headers = { Authorization: `Bearer ${cfg.secret}` };
   const mine = await request(cfg, 'GET', '/api/v1/mcp/self');
-  if (mine.status === 200) await request(cfg, 'PATCH', '/api/v1/mcp/self', { url, headers });
-  else await request(cfg, 'POST', '/api/v1/mcp/offer', { label: `${cfg.name} (doca-client)`, url, headers, tools: lent(cfg).map(([n]) => n), note: `${process.platform} machine lending ${FAMILIES.filter(f => cfg.grants[f]).join(' and ') || 'nothing yet'}` });
-  log(`✓ ${cfg.name} serves ${lent(cfg).length} tool(s) at ${url}${mine.status === 200 ? '' : ' — accept its offer in the hub (MCP tab) once'}.`);
+  const sent = mine.status === 200 ? await request(cfg, 'PATCH', '/api/v1/mcp/self', { url, headers })
+    : await request(cfg, 'POST', '/api/v1/mcp/offer', { label: `${cfg.name} (doca-client)`, url, headers, tools: lent(cfg).map(([n]) => n), note: `${process.platform} machine lending ${FAMILIES.filter(f => cfg.grants[f]).join(' and ') || 'nothing yet'}` });
+  if (sent.status >= 400) log(refusal(cfg, mine.status === 200 ? 'its new address' : 'its offer', sent));
+  else log(`✓ ${cfg.name} serves ${lent(cfg).length} tool(s) at ${url}${mine.status === 200 ? '' : ' — accept its offer in the hub (MCP tab) once'}.`);
   const stopped = new AbortController();
   if (signal) signal.addEventListener('abort', () => stopped.abort(), { once: true });
   /** Stop lending: the hub's stream and this listener close. */
@@ -299,7 +314,7 @@ async function update({ dir = __dirname } = {}) {
   return { version: m.body.version, changed: fetched.map(f => f.name) };
 }
 
-module.exports = { pair, fromLink, update, run, serve, load, request, TOOLS, FAMILIES, tailnetAddress, configFile };
+module.exports = { refusal, pair, fromLink, update, run, serve, load, request, TOOLS, FAMILIES, tailnetAddress, configFile };
 
 if (require.main === module) {
   const [verb, ...rest] = process.argv.slice(2);

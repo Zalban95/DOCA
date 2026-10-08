@@ -13,6 +13,7 @@ const { params } = require('./params');
 const { withoutEcho } = require('./messages');
 const { _degraded, markDegraded, openingHop, rungKey, rungsFor } = require('./fallback');
 const rateLimit = require('./rate-limit');
+const busyServer = require('./busy-server');
 
 /* ── Model transport ──────────────────────────────────── */
 
@@ -82,7 +83,7 @@ const WAITING_EVERY_MS = 15000;
  * stall and must never be cut off. The caller's own signal is honoured
  * unchanged, and a user pressing Stop is told that, not this.
  */
-function firstTokenGuard({ p, signal, onWaiting }) {
+function firstTokenGuard({ p, signal, onWaiting, ep }) {
   const ms = Number(p?.firstTokenTimeoutMs) || 0;
   const ctrl = new AbortController();
   const started = Date.now();
@@ -97,13 +98,19 @@ function firstTokenGuard({ p, signal, onWaiting }) {
   let deadline = null;
   let heartbeat = null;
   if (ms > 0) {
-    deadline = setTimeout(() => { state.stalled = true; ctrl.abort(); }, ms);
+    // At the deadline a local server still at work extends it by another period (busy-server.js); otherwise it is a stall.
+    const expire = () => busyServer.working(ep).then(on => {
+      if (!deadline) return;   // the first token came, or the call ended, while the server was asked
+      if (on && state.elapsed() + ms <= ms * busyServer.CEILING) { state.extended = true; state.limitMs = state.elapsed() + ms; deadline = setTimeout(expire, ms); return; }
+      state.stalled = true; ctrl.abort();
+    });
+    deadline = setTimeout(expire, ms);
     if (onWaiting) {
       // A short deadline still has to report before it fires, or the only thing
       // the user ever sees is the failure.
       const every = Math.max(50, Math.min(WAITING_EVERY_MS, Math.floor(ms / 3)));
       heartbeat = setInterval(() => {
-        try { onWaiting({ seconds: Math.round(state.elapsed() / 1000), frames: state.frames, timeoutMs: ms }); }
+        try { onWaiting({ seconds: Math.round(state.elapsed() / 1000), frames: state.frames, timeoutMs: state.limitMs || ms, ...(state.extended ? { working: true } : {}) }); }
         catch {}
       }, every);
     }
@@ -184,7 +191,8 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
     // Each rung gets its own guard, so the shorter `failoverAfterMs` applies to
     // this entry rather than to the turn.
     const guard = firstTokenGuard({
-      p: { ...p, firstTokenTimeoutMs: rung.timeoutMs }, signal, onWaiting,
+      // Only the last rung's wait follows a busy server: on the others failoverAfterMs is there to move on.
+      p: { ...p, firstTokenTimeoutMs: rung.timeoutMs }, signal, onWaiting, ep: rung.last ? rung.ep : null,
     });
 
     // In the ledger of DOCA's own requests while it runs (harness/inflight.js), so a busy model server is attributable.
@@ -214,7 +222,7 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
       const busy = !guard.stalled && unavailable(e);
       if (!guard.stalled && !busy) throw e;
 
-      stalled = busy ? e : new Error(budget.stalled({ ep: rung.ep, ms: guard.ms, frames: guard.frames, setting: rung.last ? 'firstTokenTimeoutMs' : 'failoverAfterMs' }));
+      stalled = busy ? e : new Error(budget.stalled({ ep: rung.ep, ms: guard.extended ? guard.elapsed() : guard.ms, frames: guard.frames, setting: rung.last ? 'firstTokenTimeoutMs' : 'failoverAfterMs', extended: guard.extended }));
       stalled.stalled = { provider: rung.ep.id, model: rungBody.model, ms: guard.ms, ...(busy ? { status: e.status } : {}) };
       markDegraded(rung.ep, rung.model);
 

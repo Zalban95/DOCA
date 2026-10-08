@@ -153,3 +153,19 @@ test('the sandbox leaves out MCP servers a person\'s device hosts (B7c)', () => 
   assert.deepEqual(prefs.mcpServers.map(d => d.id), ['local']);   // the registry's own shape, no holes
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('a check says what happened, whether it passed or failed', async () => {
+  const { one } = require('../modules/evals/check');
+  const o = { text: 'Done.', tools: ['shell', 'shell', 'read_file'], steps: 4, tokens: 900 };
+  const line = async c => { const r = await one(c, '', o); return `${r.pass ? 'pass' : 'fail'}: ${r.why}`; };
+  // noTool once read "never called shell" when it failed — that is, when shell had been called (self-test round two, R2).
+  assert.equal(await line({ noTool: 'shell' }), 'fail: called shell, which it should not (2×)');
+  assert.equal(await line({ noTool: 'memory_write' }), 'pass: never called memory_write');
+  assert.equal(await line({ tool: 'memory_write' }), 'fail: never called memory_write (it called shell, read_file)');
+  assert.equal(await line({ anyTool: ['a', 'b'] }), 'fail: called none of a, b (it called shell, read_file)');
+  assert.equal(await line({ contains: 'nope' }), 'fail: answer does not contain "nope"');
+  assert.equal(await line({ notContains: 'done' }), 'fail: answer contains "done", which it should not');
+  assert.equal(await line({ matches: '^x' }), 'fail: answer does not match /^x/');
+  assert.equal(await line({ maxSteps: 3 }), 'fail: 4 steps, more than 3');
+  assert.equal(await line({ maxTokens: 1000 }), 'pass: 900 tokens ≤ 1000');
+});

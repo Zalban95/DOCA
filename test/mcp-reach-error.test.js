@@ -15,7 +15,7 @@ test('a refused connection names the server, the address and what to check, and 
   await c.start().catch(() => {});
   assert.match(c.error, new RegExp(`Could not reach "desk" at ${url.replace(/[.]/g, '\\.')}: nothing is listening there`));
   assert.match(c.error, /server is running on that machine/);
-  assert.match(c.error, /\(fetch failed: ECONNREFUSED\)$/);
+  assert.match(c.error, /\(connect ECONNREFUSED [^)]*\)$/, "and keeps Node's own words");
 });
 
 test('anything that is not a failed fetch passes through unchanged', () => {

@@ -20,11 +20,13 @@ const WHY = {
 };
 
 function reachError(e, id, url) {
-  if (!(e instanceof TypeError) || !/fetch failed/i.test(e.message)) return e;
-  const code = e.cause?.code || e.cause?.message || '';   // a code, or what Node said instead ("bad port")
+  // fetch's shape ("fetch failed", the reason in `cause`) or node:http's (a system error with its own code; http-post.js)
+  const fetched = e instanceof TypeError && /fetch failed/i.test(e.message);
+  if (!fetched && !(e?.code && (e.syscall || WHY[e.code]))) return e;
+  const code = fetched ? e.cause?.code || e.cause?.message || '' : e.code;   // a code, or what Node said instead ("bad port")
   const why = WHY[code] || 'it did not answer';
   return new Error(`Could not reach "${id}" at ${url}: ${why}. Check that its server is running on that machine and `
-    + `that the address is right. (${e.message}${code ? `: ${code}` : ''})`);
+    + `that the address is right. (${fetched ? `${e.message}${code ? `: ${code}` : ''}` : e.message})`);
 }
 
 module.exports = reachError;

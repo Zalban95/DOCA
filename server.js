@@ -303,7 +303,7 @@ app.get ('/api/services/status',   services.handleStatus);
 app.post('/api/services/start',    services.handleStart);
 app.post('/api/services/stop',     services.handleStop);
 
-return app;
+return app.use(require('./modules/api-not-found'));   // last: an /api path no route above answered is a JSON 404
 }
 module.exports = { createApp };
 

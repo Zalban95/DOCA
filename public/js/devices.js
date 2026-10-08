@@ -67,16 +67,31 @@ async function devicesLoad() {
   }
 }
 
+/** What each role is for, in the person's words: a role picked by its name alone paired doca-client as a watch (no mcp:self), and its tools never arrived. */
+const DEV_ROLE_FOR = {
+  phone: 'a phone (DocaMobile), or a computer: DocaDesk, doca-client',
+  watch: 'a Wear OS watch (DocaWear) — no tools of its own to lend',
+  extension: 'the DOCA browser extension',
+  agent: 'a program that acts on your devices',
+  viewer: 'reads only',
+  hub: 'another DOCA hub, to send this one packs',
+  registry: 'another DOCA hub, to fetch what this one publishes',
+  admin: 'full control of this server',
+};
+
 function devPopulatePresets() {
   const describe = p => (_devData.presets?.[p] || []).join(' ');
   for (const kind of ['pair', 'issue']) {
     const sel = document.getElementById(`dev-${kind}-preset`);
     if (!sel || sel.options.length) continue;
-    sel.innerHTML = Object.keys(_devData.presets || {}).map(p =>
-      `<option value="${escHtml(p)}"${p === (kind === 'pair' ? 'watch' : 'agent') ? ' selected' : ''}>${escHtml(p)}</option>`
-    ).join('');
+    // Pairing asks what the device is rather than guessing: every role but one is wrong for most devices.
+    sel.innerHTML = (kind === 'pair' ? '<option value="" selected disabled>Choose what you are pairing…</option>' : '') +
+      Object.keys(_devData.presets || {}).map(p =>
+        `<option value="${escHtml(p)}"${kind === 'issue' && p === 'agent' ? ' selected' : ''}>${escHtml(p)}${DEV_ROLE_FOR[p] ? ` — ${escHtml(DEV_ROLE_FOR[p])}` : ''}</option>`
+      ).join('');
     const show = () => {
       const el = document.getElementById(`dev-${kind}-scopes`);
+      if (el && !sel.value) { el.textContent = 'A computer running doca-client or DocaDesk is "phone": it needs mcp:self to lend its tools.'; return; }
       const warn = sel.value === 'admin' ? ' <strong style="color:var(--red)">— full control of this server</strong>'
         : sel.value === 'extension' ? ' — for the DOCA browser extension: <a href="/api/clients/browser.zip">download it</a> (Chrome, Edge, Brave: Extensions → Developer mode → Load unpacked, from the unzipped folder; Firefox: about:debugging → Load Temporary Add-on → manifest.json)' : '';
       if (el) el.innerHTML = `Scopes: <code>${escHtml(describe(sel.value))}</code>${warn}`;
@@ -115,6 +130,7 @@ async function devPairStart() {
   const preset = document.getElementById('dev-pair-preset')?.value;
   const status = document.getElementById('dev-pair-status');
   if (!name) { setStatus(status, 'Give the device a name first', 'err'); return; }
+  if (!preset) { setStatus(status, 'Choose what you are pairing (its role) first', 'err'); return; }
 
   try {
     const p = await apiFetch('/api/devices/pair', { method: 'POST', body: { name, preset } });
