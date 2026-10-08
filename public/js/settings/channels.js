@@ -99,8 +99,9 @@ function channelsMailCard(m, host, state) {
     <div style="margin-bottom:10px">${state(m)}${m.error ? ` — <span style="color:var(--red)">${escHtml(m.error)}</span>` : ''}</div>
     ${host ? `<div class="toolbar" style="gap:6px;margin-bottom:6px;flex-wrap:wrap">
         <input class="input" id="ml-imap" placeholder="IMAP host (imap.gmail.com)" value="${v('imapHost')}" style="flex:1;min-width:170px">
-        <input class="input" id="ml-smtp" placeholder="SMTP host (smtp.gmail.com)" value="${v('smtpHost')}" style="flex:1;min-width:170px">
-        <input class="input" id="ml-auth" placeholder="its receiving server (mx.google.com)" value="${v('authservId')}" style="flex:1;min-width:170px"></div>
+        <input class="input" id="ml-smtp" placeholder="SMTP host (smtp.gmail.com)" value="${v('smtpHost')}" style="flex:1;min-width:170px"></div>
+      ${advancedFold(`<input class="input" id="ml-auth" data-default="" data-label="Its receiving server" placeholder="its receiving server (mx.google.com)" value="${v('authservId')}" style="width:100%;max-width:360px">`,
+        { id: 'mail-channel', label: 'Advanced — the server whose verdict counts' })}
       <div class="toolbar" style="gap:6px;margin-bottom:10px;flex-wrap:wrap">
         <input class="input" id="ml-user" placeholder="mailbox (doca@example.com)" value="${v('user')}" style="flex:1;min-width:170px">
         <input class="input" id="ml-pass" type="password" autocomplete="off" placeholder="${_chPh(m, 'DOCA_MAIL_PASSWORD', m.hasPassword ? 'saved — paste to replace' : 'app password')}" style="flex:1;min-width:150px">

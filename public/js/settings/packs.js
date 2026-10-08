@@ -26,12 +26,13 @@ async function packsLoad() {
       ${group('skills', 'Skills', c.skills)}${group('specialists', 'Specialists', c.specialists)}${group('recipes', 'Recipes', c.recipes)}${group('mcp', 'MCP servers', c.mcp)}
       <div style="margin-bottom:10px;font-size:12px"><label><input type="checkbox" id="pack-memory"> Memory</label>
         <label style="margin-left:12px"><input type="checkbox" id="pack-rules"> Memory rules (as AGENTS.md)</label></div>
-      <div style="margin-bottom:10px;font-size:12px"><div class="input-label">As an edition — what makes it feel like its own product (edition.json)</div>
-        <label><input type="checkbox" id="pack-ed-branding"> Names (branding)</label>
-        <label style="margin-left:12px"><input type="checkbox" id="pack-ed-look"> How screens start out (theme, hidden tabs, sidebar)</label>
-        <label style="margin-left:12px"><input type="checkbox" id="pack-ed-face"> The face</label>
-        <label style="margin-left:12px">Level <select class="input" id="pack-ed-level" style="width:auto"><option value="">none</option>
-          ${(c.levels || []).map(l => `<option value="${escHtml(l.id)}">${escHtml(l.label)}</option>`).join('')}</select></label></div>
+      ${advancedFold(`<div style="margin-bottom:10px;font-size:12px"><div class="input-label">As an edition — what makes it feel like its own product (edition.json)</div>
+        <label><input type="checkbox" id="pack-ed-branding" data-default="false" data-label="Names"> Names (branding)</label>
+        <label style="margin-left:12px"><input type="checkbox" id="pack-ed-look" data-default="false" data-label="How screens start out"> How screens start out (theme, hidden tabs, sidebar)</label>
+        <label style="margin-left:12px"><input type="checkbox" id="pack-ed-face" data-default="false" data-label="The face"> The face</label>
+        <label style="margin-left:12px">Level <select class="input" id="pack-ed-level" data-default="" data-label="Level" style="width:auto"><option value="">none</option>
+          ${(c.levels || []).map(l => `<option value="${escHtml(l.id)}">${escHtml(l.label)}</option>`).join('')}</select></label></div>`,
+        { id: 'pack-edition', label: 'Advanced — as an edition: names, look, face, a level' })}
       <button class="btn btn-sm btn-blue" onclick="packsExport()">⬇ Download the pack</button>
       <button class="btn btn-sm" onclick="packsExport(true)">Keep it in the library</button></div>
     <div class="card" id="pack-library"></div>

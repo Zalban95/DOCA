@@ -5,16 +5,16 @@
 let _faceEdit = null;   // {face, timer}: the preview, while open
 
 const FACE_EDIT_FIELDS = [
-  { k: 'form', label: 'Form', type: 'select', options: [['poly', 'Polyhedron of light'], ['face', 'Eyes and mouth']] },
+  { k: 'form', common: true, label: 'Form', type: 'select', options: [['poly', 'Polyhedron of light'], ['face', 'Eyes and mouth']] },
   { k: 'dots', label: 'Points', type: 'range', min: 120, max: 1200, step: 20 },
   { k: 'point', label: 'Point size', type: 'range', min: 0.4, max: 2.5, step: 0.05 },
   { k: 'glow', label: 'Glow intensity', type: 'range', min: 0, max: 4, step: 0.05 },
   { k: 'glowRadius', label: 'Glow radius', type: 'range', min: 0.5, max: 5, step: 0.05 },
   { k: 'speed', label: 'Motion', type: 'range', min: 0.2, max: 2.5, step: 0.05 },
-  { k: 'accent', label: 'Colour', type: 'color', palette: true },
+  { k: 'accent', common: true, label: 'Colour', type: 'color', palette: true },
   { k: 'field', label: 'Background points', type: 'color', palette: true },
   { k: 'ask', label: 'Asking you', type: 'color', palette: true },
-  { k: 'concepts', label: 'Show concepts as they are said', type: 'check' },
+  { k: 'concepts', common: true, label: 'Show concepts as they are said', type: 'check' },
 ];
 
 async function faceEditorRender(panel) {
@@ -23,10 +23,12 @@ async function faceEditorRender(panel) {
   try { shared = (await screenLoad(true)).settings?.face?.spec || {}; } catch { /* the default */ }
   const spec = { ...FACE_DEFAULT, ...shared, palette: { ...FACE_DEFAULT.palette, ...(shared.palette || {}) } };
   const val = f => (f.palette ? spec.palette[f.k] : spec[f.k]);
+  const shipped = f => escHtml(String((f.palette ? FACE_DEFAULT.palette?.[f.k] : FACE_DEFAULT[f.k]) ?? (f.type === 'check' ? true : '')));
   const input = f => f.type === 'select' ? `<select class="input" data-face="${f.k}" style="width:auto">${f.options.map(([v, l]) => `<option value="${v}" ${val(f) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`
     : f.type === 'check' ? `<input type="checkbox" data-face="${f.k}" ${val(f) !== false ? 'checked' : ''}>`
-    : f.type === 'color' ? `<input type="color" data-face="${f.k}" data-palette="1" value="${escHtml(val(f))}">`
-    : `<input type="range" data-face="${f.k}" min="${f.min}" max="${f.max}" step="${f.step}" value="${val(f)}" style="width:180px"><span class="face-edit-val" style="font-size:11px;min-width:36px">${val(f)}</span>`;
+    : f.type === 'color' ? `<input type="color" data-face="${f.k}" data-palette="1" data-default="${shipped(f)}" data-label="${f.label}" value="${escHtml(val(f))}">`
+    : `<input type="range" data-face="${f.k}" data-default="${shipped(f)}" data-label="${f.label}" min=""${f.min}" max="${f.max}" step="${f.step}" value="${val(f)}" style="width:180px"><span class="face-edit-val" style="font-size:11px;min-width:36px">${val(f)}</span>`;
+  const row = f => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:140px">${f.label}</label>${input(f)}</div>`;
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'face-editor-card' });
   card.innerHTML = `<div class="card-title">The face</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">How the face looks on this screen — the corner, assistant mode and the face page. Open the editor to see it change as you set it. Its palette is after protolab.tech.</p>
@@ -34,7 +36,8 @@ async function faceEditorRender(panel) {
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px">
         <canvas id="face-edit-preview" style="width:min(320px,100%);height:260px;border-radius:12px;background:#050507"></canvas>
         <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:240px">
-          ${FACE_EDIT_FIELDS.map(f => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:140px">${f.label}</label>${input(f)}</div>`).join('')}
+          ${FACE_EDIT_FIELDS.filter(f => f.common).map(row).join('')}
+          ${advancedFold(`<div style="display:flex;flex-direction:column;gap:8px">${FACE_EDIT_FIELDS.filter(f => !f.common).map(row).join('')}</div>`, { id: 'face-editor', label: 'Advanced — points, glow, motion, more colours' })}
           <div class="toolbar" style="gap:6px"><button class="btn btn-sm btn-blue" onclick="faceEditorSave()">Save for this screen</button>
             <button class="btn btn-sm" onclick="faceEditorSave(true)">Default</button>
             <button class="btn btn-sm" onclick="faceEditorConcept()" title="Show a concept on the preview">❄ Try a concept</button></div>

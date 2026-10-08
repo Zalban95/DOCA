@@ -26,7 +26,7 @@ async function experimentsLoad() {
         <label style="display:flex;align-items:center;gap:4px;font-size:12px;text-transform:none;letter-spacing:0"><input type="checkbox" ${x.on ? 'checked' : ''}
           onchange="experimentsSet(${jsArg(x.id)}, this.checked)"> on</label><span style="color:var(--muted);font-size:11px">${escHtml(x.todo || '')}</span>
         <span style="color:${x.stale ? 'var(--warning, #c90)' : 'var(--muted)'};font-size:11px;margin-left:auto">since ${escHtml(x.since || '?')} · ${x.measured ? `measured ${escHtml(x.measured)}` : 'never measured'}${x.stale ? ' — due' : ''} · ${x.measure === 'script' ? `npm run experiment -- ${escHtml(String(x.doc || '').replace(/\.md$/, ''))}` : 'measured by hand'}</span></div>
-      <div class="exp-doc" style="font-size:12px;max-height:340px;overflow:auto"></div>`;
+      ${advancedFold('<div class="exp-doc" style="font-size:12px;max-height:340px;overflow:auto"></div>', { id: `exp-${x.id}`, label: 'The write-up — what it tries, measures, costs and risks' })}`;
     mdInto(card.querySelector('.exp-doc'), x.docText);
     panel.append(card);
   }

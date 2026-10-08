@@ -71,9 +71,10 @@ function liveCallRealtimeHtml(rt, owner) {
     ${f('rt-provider', 'Provider (its key)', `<input class="input" id="rt-provider" value="${v('provider')}" placeholder="openai, google, or one from API Keys" style="width:240px">`)}
     ${f('rt-model', 'Model', `<input class="input" id="rt-model" value="${v('model')}" placeholder="gpt-realtime / a Gemini Live model" style="width:240px">`)}
     ${f('rt-voice', 'Voice', `<input class="input" id="rt-voice" value="${v('voice')}" placeholder="the service's default" style="width:160px">`)}
-    ${f('rt-url', 'Address (optional)', `<input class="input" id="rt-url" value="${v('url')}" placeholder="wss://… — Azure, or a local server such as ws://127.0.0.1:8765/v1/realtime" style="flex:1;min-width:220px">`)}
-    ${f('rt-dialect', 'OpenAI session shape', `<select class="input" id="rt-dialect" style="width:auto"><option value="ga" ${s.dialect !== 'beta' ? 'selected' : ''}>current</option><option value="beta" ${s.dialect === 'beta' ? 'selected' : ''}>beta (older servers)</option></select>`)}
-    ${f('rt-wait', 'Wait for the hive', `<input class="input" id="rt-wait" type="number" min="3" max="120" value="${v('waitSec') || 20}" style="width:80px"> s, then it carries on in the background`)}
+    ${advancedFold(`<div style="display:flex;flex-direction:column;gap:8px">${f('rt-url', 'Address (optional)', `<input class="input" id="rt-url" data-default="" data-label="Address" value="${v('url')}" placeholder="wss://… — Azure, or a local server such as ws://127.0.0.1:8765/v1/realtime" style="flex:1;min-width:220px">`)}
+    ${f('rt-dialect', 'OpenAI session shape', `<select class="input" id="rt-dialect" data-default="ga" data-label="OpenAI session shape" style="width:auto"><option value="ga" ${s.dialect !== 'beta' ? 'selected' : ''}>current</option><option value="beta" ${s.dialect === 'beta' ? 'selected' : ''}>beta (older servers)</option></select>`)}
+    ${f('rt-wait', 'Wait for the hive', `<input class="input" id="rt-wait" type="number" min="3" max="120" data-default="20" data-label="Wait for the hive" value="${v('waitSec') || 20}" style="width:80px"> s, then it carries on in the background`)}</div>`,
+      { id: 'realtime', label: 'Advanced — address, session shape, waiting' })}
     <div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallRealtimeSave()">Save the realtime model</button><span class="status-line" id="rt-status"></span></div>` : ''}
   </div>`;
 }
