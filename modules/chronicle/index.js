@@ -83,6 +83,7 @@ function query(person, f = {}) {
   const limit = Math.min(500, Math.max(1, Number(f.limit) || 200));
   if (f.source === 'log') return logLines(person, f, limit);
   if (f.source === 'hub') return hubLines(person, f, limit);
+  if (f.source === 'call') return callLines(person, f, limit);
   const where = ["tenant_id = 'local'"], args = [];
   if (f.from) { where.push('started_at >= ?'); args.push(String(f.from)); }
   if (f.to) { where.push('started_at <= ?'); args.push(String(f.to)); }
@@ -102,7 +103,7 @@ function query(person, f = {}) {
     facets: {
       people: uniq(seen.map(r => r.person), 'id'), devices: uniq(seen.map(r => r.device?.id && r.device), 'id'),
       agents: uniq(seen.map(r => r.agent), 'id'), states: [...new Set(seen.map(r => r.state))],
-      sources: ['turn', 'mission', 'job', 'hub', ...(isHost(person) ? ['log'] : [])],
+      sources: ['turn', 'mission', 'job', 'hub', 'call', ...(isHost(person) ? ['log'] : [])],
     },
   };
 }
@@ -110,12 +111,12 @@ function isHost(person) { return !person?.id || access().isHost(person); }
 
 /** The harness log's lines since the last start (logs.js), newest first: a host's, like the Logs tab. */
 function logLines(person, f, limit) {
-  if (!isHost(person)) return { rows: [], total: 0, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub'] }, note: 'The harness log is an admin\'s.' };
+  if (!isHost(person)) return { rows: [], total: 0, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call'] }, note: 'The harness log is an admin\'s.' };
   const q = String(f.q || '').trim().toLowerCase();
   const lines = require('../logs')._ring.filter(l => (!f.from || l.ts >= f.from) && (!f.to || l.ts <= f.to)
     && (!f.state || l.level === f.state) && (!q || String(l.text).toLowerCase().includes(q))).slice().reverse();
   return { rows: lines.slice(0, limit).map(l => ({ source: 'log', at: l.ts, level: l.level, text: l.text, sessionId: l.sessionId || null })),
-    total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'log'], states: ['info', 'warn', 'error'] } };
+    total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', 'log'], states: ['info', 'warn', 'error'] } };
 }
 
 /**
@@ -129,7 +130,16 @@ function hubLines(person, f, limit) {
       && (!q || `${l.from} ${l.what} ${l.why}`.toLowerCase().includes(q)));
   return { rows: lines.slice(0, limit).map(l => ({ source: 'hub', at: l.at, level: l.level, sessionId: l.sessionId || null,
     text: `${l.from} — ${l.what}${l.why ? ` (${l.why})` : ''}${l.person ? ` · for ${l.person.name}` : ''}` })),
-  total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', ...(host ? ['log'] : [])], states: ['info', 'warn', 'error'] } };
+  total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', ...(host ? ['log'] : [])], states: ['info', 'warn', 'error'] } };
 }
 
-module.exports = { query, hubLines, row, view, lookups, maySee, isHost, SCAN };
+/** Each live call's stages (realtime/call-log.js), newest first — a host every call, anyone else their own. */
+function callLines(person, f, limit) {
+  const q = String(f.q || '').trim().toLowerCase(), host = isHost(person);
+  const lines = require('../realtime/call-log').lines({ person, host }).filter(l => (!f.from || l.ts >= f.from) && (!f.to || l.ts <= f.to)
+    && (!f.state || l.level === f.state) && (!q || l.text.toLowerCase().includes(q))).reverse();
+  return { rows: lines.slice(0, limit).map(l => ({ source: 'call', at: l.ts, level: l.level, text: l.text, sessionId: l.sessionId })),
+    total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', ...(host ? ['log'] : [])], states: ['info', 'warn', 'error'] } };
+}
+
+module.exports = { query, hubLines, callLines, row, view, lookups, maySee, isHost, SCAN };
