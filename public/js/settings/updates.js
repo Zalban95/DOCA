@@ -4,6 +4,17 @@
 
 /* ── Update Checker ──────────────────────────────────── */
 
+/**
+ * ⬆ beside the version: Settings → General, at Updates. The badge sits inside the logo's link to the vendor's site, so
+ * its click went there too, in a new tab (deep test B, C8); it is this page's own now.
+ */
+function updateBadgeOpen(e) {
+  e?.preventDefault();
+  e?.stopPropagation();
+  settingsSubNav('general');
+  setTimeout(() => document.getElementById('update-status')?.closest('.card')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 50);
+}
+
 async function updateCheck() {
   const el      = document.getElementById('update-status');
   const badge   = document.getElementById('update-badge');
