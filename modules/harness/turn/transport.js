@@ -189,6 +189,7 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
     // provider asked for comes out first: it means nothing to the new rung, and
     // an unknown field in a message is a refusal from a strict endpoint.
     if (rung.ep.id !== ep.id) rungBody = { ...rungBody, messages: withoutEcho(rungBody.messages) };
+    rungBody = budget.fitReply(rungBody, rung);   // no more reply asked for than its declared window has left
     // Each rung gets its own guard, so the shorter `failoverAfterMs` applies to
     // this entry rather than to the turn.
     const guard = firstTokenGuard({

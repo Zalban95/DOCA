@@ -21,7 +21,9 @@ const FORMER_PROMPTS = new Set([
 ]);
 
 /** Values a key held as its default before today's (a value equal to one is a default nobody chose). */
-const FORMER_VALUES = {};
+const FORMER_VALUES = {
+  maxTokens: [2048],   // until 2026-10-08: a thinking model spent it all before answering (deep test B, C2)
+};
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const hash = t => crypto.createHash('sha256').update(String(t).replace(/\r\n/g, '\n').trim()).digest('hex');

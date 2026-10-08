@@ -67,17 +67,30 @@ function estimateRequest(body) {
   return estimateMessages(body.messages) + (body.tools?.length ? estimate(JSON.stringify(body.tools)) : 0);
 }
 
+// The least room a reply must have for a request to be sent: "Longest reply" is a ceiling, and since it rose to 8192
+// (deep test B, C2) a small declared window keeps the room it was checked against before (2048, the old default).
+const REPLY_FLOOR = 2048;
+
 function preflight(body, { provider, model, contextWindow, windowSetting }) {
   const window = windowFor({ contextWindow });
   if (!window) return null;
   const prompt = estimateRequest(body);
   const cap = Number(body.max_completion_tokens ?? body.max_tokens);
-  const reserve = Number.isFinite(cap) && cap > 0 ? Math.ceil(cap) : 0;
+  const reserve = Number.isFinite(cap) && cap > 0 ? Math.min(Math.ceil(cap), Math.max(REPLY_FLOOR, window - prompt)) : 0;
   if (prompt + reserve <= window) return null;
   return `DOCA skipped ${provider} / ${model}: the estimated text prompt and tool schemas need ${prompt} tokens`
     + ` plus ${reserve} reserved for the reply, exceeding its declared ${window}-token context window`
     + ` (${windowSetting}). This is a local estimate, not a provider refusal. Reduce the prompt or reply cap,`
     + ' or correct the declared window if it is wrong; increasing it does not enlarge the model.';
+}
+
+/** The reply cap lowered to what the declared window has left after the prompt, so a strict provider is not refused. */
+function fitReply(body, { contextWindow }) {
+  const window = windowFor({ contextWindow });
+  const field = body.max_completion_tokens != null ? 'max_completion_tokens' : 'max_tokens';
+  const cap = Number(body[field]);
+  const room = window - estimateRequest(body);
+  return window && cap > 0 && room > 0 && room < cap ? { ...body, [field]: room } : body;
 }
 
 /** Absolute prompt size at which older messages fold, or 0 when unset. */
@@ -367,5 +380,5 @@ const { explain, stalled } = require('./refusals');
 module.exports = {
   CHARS_PER_TOKEN,
   estimate, estimateMessages, estimateRequest, preflight, windowFor, compactTokensFor, shouldCompact, compactReason, compactionFor,
-  ledger, record, report, warning, block, live, explain, stalled, cachedOf, context,
+  ledger, record, report, warning, block, live, explain, stalled, cachedOf, context, fitReply,
 };
