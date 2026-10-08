@@ -160,6 +160,14 @@ published.
 **Rotation.** `POST /devices/me/rotate` returns a new token; the old one stays
 valid for 60 s (`previousValidUntil`) so a client can swap atomically.
 
+**A device is held to its person.** A device recorded as a person's (`userId`, set at pairing) never does more
+than that person may: when their level lacks the panel's `host` right, its requests carry no `command:` scope (the
+hub's commands — `GET /commands` lists none, running one or confirming a prompt that runs one is a 403); when it lacks
+`devices`, `devices:admin` reaches only that person's own devices — `GET /devices` lists theirs, and any route naming
+another person's device (or one of its jobs) answers 404. The stored scopes are unchanged, so a level change lifts
+the ceiling with no re-pairing. A device with no person (a token minted on the host) keeps what it holds. A member
+pairs their own phone, watch or extension from the panel (Field → API keys → Your devices) since 2026-10-08.
+
 **Revocation.** `DELETE /devices/:id` (scope `devices:admin`). The device's
 live streams receive a durable `revoked` event followed by an SSE `close`
 frame, its outbox and profile are deleted, and its token fails with

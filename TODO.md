@@ -198,10 +198,17 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [x] Deep test A #4: the computer's browser offers a fold's `<summary>` and hides what a closed fold holds
   (`clients/computer/tools.js` SNAPSHOT; the image hash moves).
 - [x] Deep test A #33: `write_file`'s roots refusal says not to write it another way and whose rule it is.
-- [ ] Deep test A #6, **for the owner (S11)**: a member cannot pair a device of their own — every `/api/devices*` route
-  needs the `devices` right, though Member's reach is `own-devices`. Options: (a) pairing routes for one's own device
-  under `chat` (scoped to the person, a preset no wider than `phone`); (b) an admin pairs *for* a member (the device
-  recorded as theirs); (c) a level right `own-devices` distinct from `devices`. Each widens what a member may do.
+- [x] Deep test A #6, **for the owner (S11)**: a member cannot pair a device of their own — every `/api/devices*` route
+  needs the `devices` right, though Member's reach is `own-devices`. *Decided 2026-10-08: (a), with (b) beside it (branch
+  `member-pairing`): the list, pairing, rename (new `PATCH /api/devices/:id`), rotate and revoke are `chat`, and
+  `modules/devices-own.js` narrows each request — a level holding chat and reaching own devices or more sees and touches
+  only its person's (another's is a 404), pairs only as phone, watch or extension, the device always recorded as theirs
+  (a `forUser` from them is refused); the devices right keeps every device and preset and may pair for someone, within
+  that person's level. Minting a token by hand, granting scopes, consoles and families stay `devices`. On `/api/v1` a
+  device is held to its person (`api-v1/owner-ceiling.js`): without host no `command:` scope on its requests (the hub's
+  commands), without devices only its person's devices and their jobs; stored scopes unchanged. Each pairing, rename,
+  rotation, revoke and forget is in the audit with the person. Field → API keys shows a member "Your devices" (and the
+  DOCA apps), the card saying what a paired device can do.*
 ### Deep test A 2026-10-08 — findability and flows (branch `deepa-flows`)
 - [x] Deep test A 11, 12, 2c: a setting is found by the words people use (`modules/settings-find`: a row per thing people
   call a setting, with its page, card and what to click, plus every proposable leaf; a few synonyms). `settings_read`
