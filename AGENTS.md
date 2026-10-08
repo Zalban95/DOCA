@@ -586,6 +586,36 @@ The harness gives its agent eight rules for working on any repository (charter r
 - **A start is not a service, and a service is not a tool.** `docker ps` says `Up` as soon as the entrypoint is alive, which for these images is minutes before the application answers; check the port and the image's own version route (`/system_stats`, `/sdapi/v1/…`) before calling it started. And an API that answers does not mean it can do the work: ComfyUI without a checkpoint in `ComfyUI/models/checkpoints` serves, queues and generates nothing.
 - **A running release is a copy under `.releases/<version>/`.** Editing one there fixes the panel in front of you and nothing else — the same change in the tree is what a later release actually carries. Say so when it happens, and keep the backup the write already makes under `.doca/harness/backups/`.
 
+### The expressive voice (since the branch `expressive-voice`, 2026-10-08: "anything slightly close to ElevenLabs V4?")
+- **A suggestion, never a default** (the owner, 2026-10-08): Qwen3-TTS 1.7B CustomVoice (Apache-2.0; ten languages,
+  Italian and English among them; nine voices; a tone asked for in words) behind vLLM-Omni's OpenAI-compatible
+  `/v1/audio/speech` is the Services row `qwentts` (`modules/speech-services.js`: image `vllm/vllm-omni:v0.30.0`, port
+  8881, served as `qwen3-tts`, GPU only), started on a click, and the guided set-up's tts suggestion only for the use
+  "with feeling" (`suggested-models.json` `want: "expressive"`, `pick.js` offers a `want` model only when asked, then
+  first; Kokoro when it does not fit). Kokoro stays the hive's voice. Its two engines' memory shares
+  (`--stage-overrides`) are worked out from the gigabytes measured (5.2 + 1.6) and the card it lands on (`gpu.js`);
+  its model cache is the hub cache itself (`HF_HUB_CACHE`). Measured on an RTX 5060 Ti 16 GB: 6.7 GB in use, first
+  audio streamed in ~50 ms, a whole sentence in 0.5–1 s (real-time factor 0.22), every line heard back right by
+  Whisper in English and Italian; the image is 33 GB on disk. Why this one: Higgs Audio v3, Voxtral TTS, Fish Audio S2
+  Pro and Breeze TTS 2 rank higher in blind tests but their weights are non-commercial; Chatterbox Multilingual (MIT,
+  Italian) has an intensity knob but no kind of tone; Chatterbox Turbo has real `[laugh]` tags but English only.
+- **Which voice speaks is per screen** (`modules/tts-engines.js`): the hive's speech service (Settings → Voice), or a
+  speech row of the Services tab while it answers — the screen setting `voice.engine` beside `ttsVoice`/`ttsSpeed`
+  (Settings → Voice → This screen's voice; `GET /api/chat/voices?engine=` lists that engine's voices and the engines).
+  The hive's address pointed at a speech row's local port *is* that voice. A screen's voice for Kokoro chosen before is
+  matched against the new engine's list and falls back to its own default (`serena`).
+- **Tone tags** (`modules/voice-tags.js`; the browser's copy `public/js/lib/voice-tags.js`, held equal by the test):
+  `[whispers] [laughs] [sighs] [excited] [calm] [sad] [curious] [serious]`. A live call on a screen whose voice takes
+  them (`client.voiceTags`, set in `chat.js voiceClient`) adds one line to the spoken rules; each sentence is sent with
+  its tags as the speech API's `instructions` field and without them as words; any other voice gets the words only; a
+  sentence of tags alone answers 204. They are never shown (the call's think-stream filters them as they stream, a tag
+  split across chunks included) and never kept (the stored row and the chat history are stripped when the turn was
+  spoken). The device call pipeline speaks them through the hive's engine and shows the words. A device's own spoken
+  turn is not told of them yet.
+- **A voice that must be told the language is told it** (`modules/speech-language.js`): Qwen3-TTS left to guess
+  spoke an Italian sentence Whisper heard as Spanish. The script, then the commonest small words; unsure sends nothing.
+- `test/expressive-voice.test.js` (stub speech servers; nothing starts a container).
+
 ### Environment gotchas (not bugs)
 - The dashboard manages an *external* Docker Compose stack and various AI CLIs. Those tools (Docker, Ollama, nvidia-smi, huggingface-cli, etc.) are **not installed by default**. Panels that shell out to them (e.g. "All Containers" showing `docker: not found`, GPU stats, model managers) will show errors/empty state. Since the self-test of 2026-10-08 the lists that need them (`/api/docker/containers`, `/api/docker/images`, `/api/models/ollama/list`) answer 200 with an empty list and a `reason` and `code` (`docker_missing`, `docker_stopped`, `ollama_unreachable`) when the tool is absent or stopped, and the pages draw the reason; a real failure stays an error (500/502), and an action on missing docker a 503. This is expected and does not indicate the app is broken — installing Docker/etc. is optional and only needed to exercise those specific panels.
 - Some sidebar stats (CPU temp, GPU) read host sensors that are unavailable in the VM and render as `-`.
