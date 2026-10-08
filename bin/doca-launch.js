@@ -84,8 +84,11 @@ function environment() {
 function installDeps(app) {
   if (fs.existsSync(path.join(app, 'node_modules'))) return;
   say(`Installing dependencies in ${app}…`);
-  // npm is npm.cmd on Windows, which only a shell runs.
-  const r = spawnSync('npm', ['install', '--omit=dev'], { cwd: app, stdio: logFd === null ? 'inherit' : ['ignore', logFd, logFd], shell: process.platform === 'win32', windowsHide: true });
+  // npm is npm.cmd on Windows, which only a shell runs: given one command line there, since an argument list with
+  // shell: true is what Node 24 warns about (DEP0190).
+  const win = process.platform === 'win32';
+  const r = spawnSync(win ? 'npm install --omit=dev' : 'npm', win ? undefined : ['install', '--omit=dev'],
+    { cwd: app, stdio: logFd === null ? 'inherit' : ['ignore', logFd, logFd], shell: win, windowsHide: true });
   if (r.status !== 0) throw new Error(`npm install failed in ${app}`);
 }
 
