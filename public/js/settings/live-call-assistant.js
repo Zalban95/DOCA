@@ -5,7 +5,7 @@ async function liveCallAssistantCard(panel, s) {
   const c = s.settings?.call || {};
   const word = c.wakeWord || (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA';
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'assistant-card' });
-  card.innerHTML = `<div class="card-title">Assistant mode — when you talk to the face</div>
+  card.innerHTML = `<div class="card-title">Quick call — when you talk to the face</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Tap the face (or say its name): it fills the screen and talks — the same conversation as the chat,
       answered quicker and shorter. "Think harder" or "quick answers" changes the effort for the conversation.</p>
     <div style="display:flex;flex-direction:column;gap:10px">
@@ -52,13 +52,13 @@ async function liveCallAssistantHtml() {
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">A quicker model (optional)</label>
       <input class="input" id="as-provider" data-default="" data-label="Quicker model's provider" value="${escHtml(a.provider || '')}" placeholder="provider" style="width:120px" ${owner ? '' : 'disabled'}>
       <input class="input" id="as-model" data-default="" data-label="Quicker model" value="${escHtml(a.model || '')}" placeholder="model — empty: the chat's" style="width:200px" ${owner ? '' : 'disabled'}></div>
-    <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-calls" data-default="false" data-label="For the chat's call too" ${a.calls ? 'checked' : ''} ${owner ? '' : 'disabled'}>
-      Use this effort and model for the chat's 🎙 call too (its answers are always spoken-length)</label>
+    <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-calls" data-default="false" data-label="For the Deep call too" ${a.calls ? 'checked' : ''} ${owner ? '' : 'disabled'}>
+      Use this effort and model for the Deep call (the chat's 🎙) too — its answers are always spoken-length</label>
     <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-front" data-default="true" data-label="Answer at once" ${a.front !== false ? 'checked' : ''} ${owner ? '' : 'disabled'}>
       Answer at once: quick actions in the call, anything bigger (or "think harder") to a work chat, its outcome said in the call</label>
     <label style="font-size:11px;color:var(--muted)">How it speaks<textarea class="input" id="as-style" rows="4" style="width:100%;margin-top:4px" data-label="How it speaks"${a.defaults?.style != null ? ` data-default="${escHtml(a.defaults.style)}"` : ''} ${owner ? '' : 'disabled'}>${escHtml(a.style || '')}</textarea></label>
-    </div>`, { id: 'assistant-hive', label: 'Advanced — a quicker model, the chat\'s call, how it speaks' })}
-    ${owner ? `<div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantSave()">Save assistant mode</button>
+    </div>`, { id: 'assistant-hive', label: 'Advanced — a quicker model, the Deep call, how it speaks' })}
+    ${owner ? `<div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantSave()">Save the Quick call</button>
       <button class="btn btn-sm" onclick="liveCallAssistantSave(true)">Default style</button></div>` : ''}
   </div>`;
 }

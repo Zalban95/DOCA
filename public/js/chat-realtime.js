@@ -59,7 +59,7 @@ async function realtimeStart() {
     } else if (m.type === 'done') { _rt.agentEl = null; _rt.agentText = ''; _callSetStatus('Listening…', 'listening'); }
     else if (m.type === 'interrupted') { _rtFlush(); _callSetStatus('Listening…', 'listening'); }
     else if (m.type === 'working') _callSetStatus(`Asking the hive: ${m.text.slice(0, 60)}`, 'processing');
-    else if (m.type === 'error') chatAppendMsg('system', `Live call: ${m.message}`);
+    else if (m.type === 'error') chatAppendMsg('system', `Call: ${m.message}`);
     else if (m.type === 'closed') {
       const st = m.stats || {};
       chatAppendMsg('system', `Call ended (${m.reason}): ${st.minutes ?? 0} min, ${st.tools || 0} request${st.tools === 1 ? '' : 's'} to the hive${st.background ? ` (${st.background} carried on in the background)` : ''}, interrupted ${st.interrupted || 0}×${st.firstAudioMs != null ? `, first answer after ${(st.firstAudioMs / 1000).toFixed(1)} s` : ''}.`);

@@ -29,7 +29,7 @@ const SCHEMA = {
   sidebarStats:     { is: 'travels', home: 'device', on: 'host', note: 'which stats the host collects for the sidebar (the collectors run here, for every screen)', propose: p('Sidebar stats', 'Which stats the sidebar shows') },
   sidebarSections:  { is: 'travels', home: 'device', on: 'screen', note: 'which sidebar sections are open', propose: p('Sidebar sections') },
   favorites:        { is: 'travels', home: 'device', on: 'screen', note: 'favourite config files, by registry id', propose: p('Config favourites') },
-  voice:            { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the voice this screen is answered in: engine (a speech service of the Services tab, empty = the hive\'s; tts-engines.js), ttsVoice and ttsSpeed, over voiceServices (chat.js handleSynthesize)' },
+  voice:            { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the voice this screen is answered in: engine (a speech service of the Services tab, empty = the hive\'s; tts-engines.js), ttsVoice and ttsSpeed, over voiceServices (chat.js handleSynthesize); and a voice per kind of call, quick (the face, Ambient, a device\'s call) and deep (the chat\'s 🎙), each {service, voice, speed}, read from the screen, its person, then the hive (call-voices.js)' },
   call:             { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'how a live call listens on this screen — its microphone is its own (chat-call.js; Settings → Voice → Live call)',
     keys: {
       silenceMs:   { type: 'integer', min: 300, default: 2000, hint: 'How long a pause, in milliseconds, ends what you said and sends it.' },
@@ -174,7 +174,10 @@ const SCHEMA = {
     keys: {
       // Never proposed: how long a person is given to answer for a mission's use of a machine (harness/mission-asks.js).
       'approval.missionAskSec': { type: 'integer', min: 10, max: 900, default: 300, propose: false,
-        hint: 'Seconds a mission waits for its person to allow its use of a machine (a VNC screen, a sign-in on its computer) before it is denied.' },
+        hint: 'Seconds a mission\'s question to use a machine (a VNC screen, a sign-in on its computer) is pressed on its person\'s devices; then it is held or denied (missionAskTimeout).' },
+      // Never proposed either: what an unanswered machine question becomes — hold (it stays open, the mission waits) or deny.
+      'approval.missionAskTimeout': { type: 'string', oneOf: ['hold', 'deny'], default: 'hold', propose: false,
+        hint: 'When nobody answers a mission\'s machine question in time: hold — the question stays open in Harness → Approvals and the mission waits, paused, until someone answers — or deny.' },
     } },
   models:           { is: 'mixed', home: 'hive', note: 'preferences travel; runtime URLs name this machine. The Hugging Face token is in the protected keys (hf-token.js), never here',
     propose: p('Model manager', 'Ollama URL, download directories') },

@@ -4,7 +4,8 @@
  * A mission's use of a machine, asked of its person (modules/harness/mission-asks.js; the owner's rule, 2026-10-08):
  * a specialist's vnc_input on the VNC screen lent to it, and a sign-in on the computer lent to it (not a test
  * computer), are asked of the person who owns the mission's conversation — on their own devices and open pages, first
- * answer wins, once or deny, never "always" — and denied when nobody answers. Every other forced ask, and paying, is
+ * answer wins, once or deny, never "always" — and, with `missionAskTimeout: deny`, denied when nobody answers (held
+ * open by default: test/mission-asks-hold.test.js). Every other forced ask, and paying, is
  * still refused in a mission. Against fixtures/rfb-stub.js; the computer's classify is stood in for.
  */
 const H = require('./helpers');
@@ -121,13 +122,13 @@ test('a mission asks its person to use the machine lent to it; everything else s
   answer.answerAs({ id: q2.id, decision: 'deny', person: { ...member.user, role: 'member' } });
   assert.match(await c2.result(), /^Not run: asked to click at 1,1 on the VNC screen desk, and your person denied it\. Report this to your leader/);
 
-  // 3. Nobody answers: denied when the wait is over.
-  const was = asks.waitSec;
-  asks.waitSec = () => 0.2;
+  // 3. Nobody answers, and the setting says deny: denied when the wait is over.
+  const was = asks.waitSec, wasHow = asks.onTimeout;
+  asks.waitSec = () => 0.2; asks.onTimeout = () => 'deny';
   const m3 = mission();
   const c3 = call(m3, 'vnc_input', { target: 'desk', action: 'key', keys: 'Enter' });
   assert.match(await c3.result(), /nobody answered within 0\.2 seconds, so it was denied\. Report this to your leader/);
-  asks.waitSec = was;
+  asks.waitSec = was; asks.onTimeout = wasHow;
   assert.ok(!approval.pending().some(p => p.sessionId === m3.id), 'the question withdrew itself');
 
   // 4. A screen not lent to it, and every other forced ask, are refused unasked as before.

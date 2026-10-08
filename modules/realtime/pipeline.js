@@ -69,14 +69,19 @@ function gatherer() {
 
 const sentences = text => (speakable(text).match(/[^.!?;:]+[.!?;:]*\s*/g) || []).map(s => s.trim()).filter(s => s.length > 1);
 
-function connect({ silenceMs = 900, synth, transcribe } = {}) {
+/**
+ * `voice` is the call's voice (call-voices.js pick: `{engine, voice, speed}` — a device's Quick call voice); without
+ * one, the hive's speech service as it is.
+ */
+function connect({ silenceMs = 900, synth, transcribe, voice = null } = {}) {
   const em = new EventEmitter();
   const chat = require('../chat');
   transcribe = transcribe || (buf => chat.transcribeHeard(buf, 'audio/wav', 'call.wav'));
   synth = synth || (async text => {
-    const engines = require('../tts-engines'), vs = engines.hive();   // a tone tag becomes words for a voice that takes them, else goes
+    const engines = require('../tts-engines'), vs = voice?.engine || engines.hive();   // a tone tag becomes words for a voice that takes them, else goes
+    const name = voice?.voice ? (await require('../tts-voices').resolve(voice.voice, vs)).voice : undefined;   // "Ryan" → ryan
     const r = await fetch(`${vs.ttsUrl}/v1/audio/speech`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(engines.body(vs, text, { format: 'pcm' })), signal: AbortSignal.timeout(30000) });
+      body: JSON.stringify(engines.body(vs, text, { format: 'pcm', voice: name, speed: voice?.speed })), signal: AbortSignal.timeout(30000) });
     if (!r.ok) throw new Error(`text-to-speech answered ${r.status}`);
     return Buffer.from(await r.arrayBuffer());
   });

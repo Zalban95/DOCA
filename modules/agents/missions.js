@@ -376,8 +376,8 @@ function resume(id, { go } = {}) {
     throw Object.assign(new Error(`${id} is ${row.state}, not paused — there is nothing to resume.`), { status: 409 });
 
   if (!go) {
-    const dropped = patch(id, {
-      state: 'cancelled', endedAt: new Date().toISOString(),
+    require('../harness/mission-asks-held').answered(id);   // a question it held across the restart goes with it
+    const dropped = patch(id, { state: 'cancelled', endedAt: new Date().toISOString(),
       error: 'paused by a restart; the user chose not to continue',
     });
     announce(dropped);
@@ -394,7 +394,7 @@ function resume(id, { go } = {}) {
   announce(resumed);
   run(resumed, def,
     `The panel restarted while you were on this errand, after step ${row.steps}. What you already did is `
-      + `above. Carry on from there; do not redo finished work.\n\nThe errand: ${row.task}`,
+      + `above. Carry on from there; do not redo finished work.${require('../harness/mission-asks-held').resumeNote(id)}\n\nThe errand: ${row.task}`,
     { steps: row.steps || 0, tokens: row.tokens || 0 });
   return resumed;
 }
