@@ -31,13 +31,13 @@ async function call(method, params = {}, { token = botToken(), timeoutMs = 30000
 const socketUrl = async () => (await call('apps.connections.open', {}, { token: appToken() })).url;
 
 /** A file uploaded and shared into a channel: Slack's two-step external upload. */
-async function upload(channel, { buffer, name, mime }) {
+async function upload(channel, { buffer, name, mime, caption }) {
   const form = new URLSearchParams({ filename: name, length: String(buffer.length) });
   const { upload_url, file_id } = await call('files.getUploadURLExternal', null, { form });
   const r = await fetch(upload_url, { method: 'POST', body: buffer, headers: { 'Content-Type': mime || 'application/octet-stream' }, signal: AbortSignal.timeout(120000) })
     .catch(() => { throw fail('upload', 'cannot reach Slack'); });
   if (!r.ok) throw fail('upload', `HTTP ${r.status}`);
-  return call('files.completeUploadExternal', { files: [{ id: file_id, title: name }], channel_id: channel });
+  return call('files.completeUploadExternal', { files: [{ id: file_id, title: name }], channel_id: channel, ...(caption ? { initial_comment: String(caption).slice(0, 3000) } : {}) });
 }
 
 /** A file someone sent (`url_private`), fetched with the bot token. */
