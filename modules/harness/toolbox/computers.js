@@ -94,4 +94,16 @@ module.exports = [
     }, required: ['computer'] },
     run: async (a, ctx = {}) => { require('../../computers/whose').check(ctx.user, a.computer); return require('../../computers/look').look(a, ctx); },
   },
+  {
+    name: 'computer_next',
+    description: 'Ask the System 1 decision model which element of a computer\'s page to use next for a goal: it reads the page\'s '
+      + 'browser_snapshot and answers the likeliest [n] (to click, or type into a field) with probabilities in a fraction of a second. It only '
+      + 'proposes — check it against the snapshot and act with browser_click / browser_type yourself. Only on your own computer, and only '
+      + 'a page (for a desktop or a remote screen use computer_look). An experiment; the answer is framed as outside words.',
+    parameters: { type: 'object', properties: {
+      computer: { type: 'string', description: 'The computer\'s id (one this conversation works in).' },
+      goal: { type: 'string', description: 'What you want to get done on the page, e.g. "open Settings" or "add a provider".' },
+    }, required: ['computer', 'goal'] },
+    run: (a, ctx = {}) => require('../../system-one/browser').next(a, ctx),
+  },
 ];

@@ -27,6 +27,7 @@ const EXPERIMENTS = [
   { id: 'toolTiers', label: 'Send the core tools in full, the rest by name', doc: 'tool-tiers.md', todo: 'B2', since: '2.249.0', measure: 'script' },
   { id: 'adaptiveLimits', label: 'Limits that follow the work: effort and steps by the request', doc: 'adaptive-limits.md', todo: 'H10.6', since: '2.295.0', measure: 'script' },
   { id: 'riskTiers', label: 'Ask only about what cannot be undone, in every mode', doc: 'risk-tiers.md', todo: 'H10.11', since: '2.296.0', measure: 'script' },
+  { id: 'systemOne', label: 'A System 1 decision model for bounded decisions (Laya, or TypeSafe Jev)', doc: 'system-one.md', todo: 'H10.19', since: '2.315.0', measure: 'script' },
   { id: 'claimCheck', label: 'Catch an answer that claims what the turn never did', doc: 'claim-check.md', todo: 'B7c', since: '2.264.0', measure: 'manual' },
 ];
 const STALE_DAYS = 60;

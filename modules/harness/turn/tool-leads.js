@@ -33,6 +33,7 @@ const LEADS = {
   computer_login: 'Sign in on a computer\'s browser with a login the owner keeps, without seeing its password — use it at a sign-in page.',
   secret_use: 'Type or paste a password or key on the person\'s own device, never seeing it — use it when a device must enter a secret.',
   computer_look: 'Ask what is on a computer\'s screen and where — use it when browser_snapshot finds nothing to number.',
+  computer_next: 'Get the likeliest next element of a computer\'s page for a goal, with probabilities — use it to pick fast on a busy page.',
   recipe: 'Run a saved sequence of tool calls again, or save one — run a recipe when one does exactly what is asked.',
   pack: 'Keep skills, recipes and specialists you made as one pack in the library — use it when the owner wants to share them.',
   system_status: 'CPU, RAM, GPU, disks, containers and every local model server with who it works for — use it to see what the machine is doing.',

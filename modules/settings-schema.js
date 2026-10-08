@@ -190,7 +190,7 @@ const SCHEMA = {
   // model's guess replaces a rule, and its service runs on this machine.
   systemOne:        { is: 'local', home: 'device', on: 'host', note: 'the System 1 decision model: which one, where it runs on this machine, how sure it must be (modules/system-one; the switch is experiments.systemOne)',
     keys: { provider: { type: 'string', oneOf: ['laya', 'jev'], default: 'laya', hint: 'laya — the open Laya model, run by this hub (Field → Models → Decision models) — or jev, TypeSafe\'s API with the key for services named in jevKey.' },
-      threshold: { type: 'number', min: 0, max: 1, default: 0.8, hint: 'How sure the model must be — the probability it gives its top choice, 0–1 — for its answer to be used; below it, today\'s way decides.' },
+      threshold: { type: 'number', min: 0, max: 1, default: 0.6, hint: 'How sure the model must be — the probability it gives its top choice, 0–1 — for its answer to be used; below it, today\'s way decides.' },
       port: { type: 'integer', min: 1024, max: 65535, default: 8791, hint: 'The port Laya\'s service listens on, on this machine only (127.0.0.1).' },
       device: { type: 'string', oneOf: ['auto', 'cpu', 'cuda', 'mps'], default: 'auto', hint: 'Where Laya computes: auto (a GPU when there is one), cpu or cuda.' },
       checkpoint: { type: 'string', oneOf: ['english', 'multilingual'], default: 'english', hint: 'Laya\'s checkpoint: english (ModernBERT-large) or multilingual (mmBERT-base, 100+ languages).' },

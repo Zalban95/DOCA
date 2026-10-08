@@ -737,6 +737,17 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   previewed by naming the computer and pictured in Machines → Live when it answers; a preview never names a computer's
   control or screen port; Live's served tiles open through a preview, so a phone reaches a localhost-only dev server.
   Not run against a real computer image here (no Docker on the test bench): the port mapping is new on `docker run`.
+- [ ] H10.19 A System 1 decision model for bounded decisions (asked 2026-10-08: "LAYA would be way better for navigating
+  and using the VMs, computers, vnc connections"; Jev considered too) — *built as the experiment `systemOne`
+  (2.315.0, `modules/system-one`, docs/experiments/system-one.md)*: Laya (open) run on this hub as a managed Python
+  process on 127.0.0.1 behind a per-start secret, or TypeSafe Jev with a key for services — set up in Field → Models →
+  Decision models (install, start/stop, state, test, the model-roles row); with the flag on it decides, when its top
+  probability reaches `systemOne.threshold`, the triage's size where the rules are unsure, a call's answer-now or
+  hand-on, and proposes a computer page's next element (`computer_next`, the turn's own computer, it only proposes).
+  Measured (`npm run experiment -- system-one`, 83 labelled cases): 12–66 ms per decision on a GPU; a call's route
+  56% → 76% over the rules; the page 52% against 97% for one model step. Open: a week of calls with the flag on;
+  fine-tuning Laya on DOCA's own decisions (the cases and the traces); Jev measured once a key is had; the person's own
+  browser (the extension's snapshot) and a desktop's accessibility tree as text states.
 - [x] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06) — *built as the experiment
   `riskTiers` (2.296.0, `modules/harness/risk/`, docs/experiments/risk-tiers.md): a declarative classifier (read / reversible /
   outward), a project checkpoint before a reversible change in a project, outward calls asked in every mode (Unattended

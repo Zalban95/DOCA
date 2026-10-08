@@ -46,6 +46,7 @@ const TOOLS = {
   hub_command: reads(['list'], { tier: 'reversible', way: WAY.hub }),
   computer: reads(['list'], { tier: 'reversible', way: WAY.computer }),
   computer_look: [{ tier: 'read' }],
+  computer_next: [{ tier: 'read' }],
   model_scout: reads(['signals', 'roles', 'list'], { tier: 'reversible', way: WAY.proposal }),
   tool_note: reads(['list'], { tier: 'reversible', way: WAY.proposal }),
   pack: reads(['list'], { tier: 'reversible', way: 'a pack in the library; nothing is applied' }),

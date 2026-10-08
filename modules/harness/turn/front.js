@@ -46,7 +46,22 @@ function plan({ client, message, session, profile }) {
   if (deep && rest.length >= 3) return { delegate: true, deep: true, why: `asked to "${text.match(DEEP)[0].toLowerCase()}"` };
   const rated = require('./triage').rate({ message: text, session });   // its size; a call's own lean is towards quick, not small
   if (rated.difficulty === 'large') return { delegate: true, deep: false, why: `a large request (${rated.reasons.join(', ')})` };
-  return { delegate: false, steps: STEPS, workSteps: WORK_STEPS, off: disabled => offOutside(disabled) };
+  return answering();
+}
+
+const answering = () => ({ delegate: false, steps: STEPS, workSteps: WORK_STEPS, off: disabled => offOutside(disabled) });
+
+/**
+ * plan(), with the System 1 model's say (experiment systemOne, system-one/decisions.js): when it is sure, it decides
+ * answer-now or hand-on in place of the size rule; unsure, off or not answering, plan() stands. An explicit "think
+ * harder" is the person's own words and is never second-guessed.
+ */
+async function planned(args) {
+  const p = plan(args);
+  if (!p || p.deep) return p;
+  const r = await require('../../system-one/decisions').route(args.message, args.client?.user);
+  if (!r) return p;
+  return r.delegate ? { delegate: true, deep: false, why: r.why } : answering();
 }
 
 /** The disabled list with every tool outside the front's kit added: the built-ins named above and MCP servers' tools. */
@@ -89,4 +104,4 @@ const LINE = 'You are the quick voice of this call: answer at once, or do one sh
   + 'couple of steps goes to a work chat (work_chats) or a specialist, with one spoken line that you are on it — its outcome '
   + 'is said in this call when it ends.';
 
-module.exports = { plan, delegate, offOutside, DEEP, FRONT, STEPS, WORK_STEPS, LINE };
+module.exports = { plan, planned, delegate, offOutside, DEEP, FRONT, STEPS, WORK_STEPS, LINE };
