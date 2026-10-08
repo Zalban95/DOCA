@@ -80,13 +80,43 @@ function trusted(mail, authservId) {
   return mine.some(h => /\bdmarc=pass\b/i.test(h) || new RegExp(`\\bdkim=pass\\b[^;]*header\\.(d|i)=@?([\\w.-]*\\.)?${domain.replace(/\./g, '\\.')}\\b`, 'i').test(h));
 }
 
-/** A plain-text reply, threaded to the message it answers. */
-function reply({ from, to, subject, inReplyTo, text, domain = 'doca.local' }) {
-  const enc = s => (/^[\x20-\x7e]*$/.test(s) ? s : `=?utf-8?B?${Buffer.from(s).toString('base64')}?=`);
-  return [`From: ${from}`, `To: ${to}`, `Subject: ${enc(/^re:/i.test(subject) ? subject : `Re: ${subject || 'DOCA'}`)}`, `Date: ${new Date().toUTCString()}`,
-    `Message-ID: <${crypto.randomUUID()}@${domain}>`, ...(inReplyTo ? [`In-Reply-To: ${inReplyTo}`, `References: ${inReplyTo}`] : []),
-    'Auto-Submitted: auto-replied', 'MIME-Version: 1.0', 'Content-Type: text/plain; charset=utf-8', 'Content-Transfer-Encoding: base64', '',
-    Buffer.from(String(text)).toString('base64').replace(/.{76}/g, '$&\r\n')].join('\r\n');
+const encWord = s => (/^[\x20-\x7e]*$/.test(s) ? s : `=?utf-8?B?${Buffer.from(s).toString('base64')}?=`);
+const oneLine = s => String(s ?? '').replace(/[\r\n]+/g, ' ').trim();
+
+/**
+ * A plain-text message: From, To and Cc as plain addresses, the subject (encoded when it is not ASCII), threaded to
+ * `inReplyTo` when given, the body base64 so any language travels. No header value can carry a line break, so
+ * nothing written into one adds a header of its own.
+ */
+function compose({ from, to, cc = [], subject, inReplyTo, text, domain = 'doca.local', headers = [] }) {
+  const list = v => [].concat(v || []).map(oneLine).filter(Boolean).join(', ');
+  return [`From: ${oneLine(from)}`, `To: ${list(to)}`, ...(list(cc) ? [`Cc: ${list(cc)}`] : []), `Subject: ${encWord(oneLine(subject))}`,
+    `Date: ${new Date().toUTCString()}`, `Message-ID: <${crypto.randomUUID()}@${oneLine(domain)}>`,
+    ...(inReplyTo ? [`In-Reply-To: ${oneLine(inReplyTo)}`, `References: ${oneLine(inReplyTo)}`] : []), ...headers.map(oneLine),
+    'MIME-Version: 1.0', 'Content-Type: text/plain; charset=utf-8', 'Content-Transfer-Encoding: base64', '',
+    Buffer.from(String(text ?? '')).toString('base64').replace(/.{76}/g, '$&\r\n')].join('\r\n');
 }
 
-module.exports = { parse, trusted, reply, ownText, addressOf };
+/** A plain-text reply, threaded to the message it answers. */
+function reply({ from, to, subject, inReplyTo, text, domain = 'doca.local' }) {
+  return compose({ from, to, subject: /^re:/i.test(subject || '') ? subject : `Re: ${subject || 'DOCA'}`, inReplyTo, text, domain, headers: ['Auto-Submitted: auto-replied'] });
+}
+
+/** A message as a person reads it: who, when, the whole text (quoted history kept) and the attachments by name. */
+function read(raw) {
+  const p = part(raw);
+  const got = walk(p, { text: '', html: '', files: [] });
+  const text = got.text || got.html.replace(/<(style|script)[^>]*>[\s\S]*?<\/\1>/gi, '').replace(/<br\s*\/?>|<\/p>|<\/div>/gi, '\n').replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\n{3,}/g, '\n\n');
+  const h = name => words(one(p.hs, name));
+  return { from: h('from'), to: h('to'), cc: h('cc'), date: h('date'), subject: h('subject'), messageId: one(p.hs, 'message-id'),
+    text: text.trim(), files: got.files.map(f => ({ name: f.name, mime: f.mime, bytes: f.buffer.length })) };
+}
+
+/** The few headers a list of messages shows. */
+function summary(headerBlock) {
+  const hs = headers(Buffer.isBuffer(headerBlock) ? headerBlock.toString('utf8') : String(headerBlock));
+  return { from: words(one(hs, 'from')), to: words(one(hs, 'to')), subject: words(one(hs, 'subject')), date: one(hs, 'date'), messageId: one(hs, 'message-id') };
+}
+
+module.exports = { parse, trusted, reply, compose, read, summary, ownText, addressOf };

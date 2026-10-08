@@ -8,63 +8,18 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const http = require('node:http');
-const net = require('node:net');
 const H = require('./helpers');
 const { CONFIG_PATH } = require('../modules/paths');
 
-let imap, smtp, modelServer, script = [], uid = 0;
-const box = [], sent = [];
-const mail = ({ from = 'Al <al@home.test>', subject = 'hello', body = 'hi', auth = 'mx.hive.test; dmarc=pass header.from=home.test', extra = '' }) => {
-  box.push({ uid: ++uid, seen: false, raw: `${auth ? `Authentication-Results: ${auth}\r\n` : ''}${extra}From: ${from}\r\nTo: doca@hive.test\r\nSubject: ${subject}\r\nMessage-ID: <m${uid}@home.test>\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}\r\n` });
-};
+let stubs, modelServer, script = [];
+let box, sent, mail;
 const lastSent = () => sent.at(-1);
 const textOf = raw => { const b64 = raw.split('\r\n\r\n').slice(1).join('').replace(/\s+/g, ''); return Buffer.from(b64, 'base64').toString('utf8'); };
 const sse = frames => res => { res.writeHead(200, { 'Content-Type': 'text/event-stream' }); for (const f of frames) res.write(`data: ${JSON.stringify(f)}\n\n`); res.end('data: [DONE]\n\n'); };
 
 before(async () => {
-  imap = net.createServer(sock => {
-    sock.write('* OK stub IMAP\r\n');
-    let buf = '';
-    sock.on('data', d => {
-      buf += d;
-      let nl;
-      while ((nl = buf.indexOf('\r\n')) >= 0) {
-        const line = buf.slice(0, nl); buf = buf.slice(nl + 2);
-        const [tag, ...rest] = line.split(' '); const cmd = rest.join(' ');
-        if (/^LOGIN/.test(cmd)) sock.write(cmd.includes('"pw"') ? `${tag} OK logged in\r\n` : `${tag} NO bad password\r\n`);
-        else if (/^SELECT/.test(cmd)) sock.write(`* ${box.length} EXISTS\r\n${tag} OK selected\r\n`);
-        else if (/^UID SEARCH UNSEEN/.test(cmd)) sock.write(`* SEARCH ${box.filter(m => !m.seen).map(m => m.uid).join(' ')}\r\n${tag} OK\r\n`);
-        else if (/^UID FETCH (\d+)/.test(cmd)) { const m = box.find(x => x.uid === Number(/(\d+)/.exec(cmd)[1])); const b = Buffer.from(m.raw); sock.write(`* 1 FETCH (UID ${m.uid} BODY[] {${b.length}}\r\n`); sock.write(b); sock.write(`)\r\n${tag} OK\r\n`); }
-        else if (/^UID STORE (\d+)/.test(cmd)) { box.find(x => x.uid === Number(/(\d+)/.exec(cmd)[1])).seen = true; sock.write(`${tag} OK\r\n`); }
-        else if (/^LOGOUT/.test(cmd)) { sock.write(`* BYE\r\n${tag} OK\r\n`); sock.end(); }
-        else sock.write(`${tag} BAD unknown\r\n`);
-      }
-    });
-  });
-  smtp = net.createServer(sock => {
-    sock.write('220 stub SMTP\r\n');
-    let buf = '', data = false, msg = { rcpt: null };
-    sock.on('data', d => {
-      buf += d;
-      if (data) {
-        const end = buf.indexOf('\r\n.\r\n');
-        if (end < 0) return;
-        sent.push({ ...msg, raw: buf.slice(0, end) }); buf = buf.slice(end + 5); data = false; sock.write('250 queued\r\n');
-      }
-      let nl;
-      while (!data && (nl = buf.indexOf('\r\n')) >= 0) {
-        const line = buf.slice(0, nl); buf = buf.slice(nl + 2);
-        if (/^EHLO/.test(line)) sock.write('250-stub\r\n250 AUTH PLAIN\r\n');
-        else if (/^AUTH PLAIN/.test(line)) sock.write('235 ok\r\n');
-        else if (/^MAIL FROM/.test(line)) sock.write('250 ok\r\n');
-        else if (/^RCPT TO:<(.+)>/.test(line)) { msg.rcpt = /<(.+)>/.exec(line)[1]; sock.write('250 ok\r\n'); }
-        else if (line === 'DATA') { data = true; sock.write('354 go\r\n'); }
-        else if (line === 'QUIT') { sock.write('221 bye\r\n'); sock.end(); }
-      }
-    });
-  });
-  await new Promise(r => imap.listen(0, '127.0.0.1', r));
-  await new Promise(r => smtp.listen(0, '127.0.0.1', r));
+  stubs = await require('./fixtures/mail-stubs').start();
+  ({ box, sent, mail } = stubs);
   modelServer = http.createServer((req, res) => {
     let raw = ''; req.on('data', d => { raw += d; });
     req.on('end', () => { const next = script.shift() || { text: '(script exhausted)' }; next.seen?.(JSON.parse(raw || '{}')); sse([{ choices: [{ delta: { content: next.text } }] }])(res); });
@@ -78,14 +33,15 @@ before(async () => {
 after(async () => {
   require('../modules/channels/mail').stop();
   await H.stop();
-  for (const s of [imap, smtp, modelServer]) await new Promise(r => s.close(r));
+  await stubs.close();
+  await new Promise(r => modelServer.close(r));
 });
 
 const poll = () => require('../modules/channels/mail').poll();
 const waitSent = async (n, ms = 8000) => { const t = Date.now(); while (sent.length < n) { if (Date.now() - t > ms) throw new Error(`only ${sent.length} sent`); await new Promise(r => setTimeout(r, 30)); } return sent[n - 1]; };
 
 test('a host sets up the mailbox; the password never reads back', async () => {
-  const r = await H.api(null, 'POST', '/api/channels/mail', { imapHost: '127.0.0.1', imapPort: imap.address().port, smtpHost: '127.0.0.1', smtpPort: smtp.address().port,
+  const r = await H.api(null, 'POST', '/api/channels/mail', { imapHost: '127.0.0.1', imapPort: stubs.imapPort, smtpHost: '127.0.0.1', smtpPort: stubs.smtpPort,
     tls: false, user: 'doca@hive.test', password: 'pw', address: 'doca@hive.test', authservId: 'mx.hive.test', enabled: true });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.running, true);
