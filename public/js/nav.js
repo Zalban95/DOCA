@@ -42,6 +42,7 @@ function nav(name) {
   if (typeof chronicleTab === 'function') chronicleTab(on('chronicle'));   // hears turns and missions only while shown
   if (typeof homeTab === 'function') homeTab(on('home'));   // holds the hub's connection to Home Assistant while shown
   if (typeof ambientTab === 'function') ambientTab(on('ambient'));
+  if (on('models') && typeof decisionModelsTab === 'function') decisionModelsTab();
   if (on('models') && typeof wakewordTab === 'function') wakewordTab();
   if (on('models') && typeof modelsRolesCard === 'function') modelsRolesCard();
   if (typeof liveMachinesTab === 'function') liveMachinesTab(on('live'));   // refreshes only while shown; starts and stops its thumbnails' timer

@@ -28,6 +28,7 @@ function sourceOf(name, args = {}, isMcp = false) {
   if (name === 'model_scout' && (args.action || 'signals') === 'signals') return 'the model scout\'s look: model names, release and news titles others wrote';
   if (name === 'vnc_look' && String(args.question || '').trim()) return `a reading of VNC target ${String(args.target || '').slice(0, 40)}'s screen`;
   if (name === 'computer_look') return `a reading of computer ${String(args.computer || '').slice(0, 20)}'s screen`;
+  if (name === 'computer_next') return `a guess about computer ${String(args.computer || '').slice(0, 20)}'s page, made from its words`;
   if (/^connector_/.test(name)) return `${name.slice(10)}'s API, ${args.method || 'GET'} ${String(args.path || '').slice(0, 160)} (other people's words: mail, issues, files)`;
   return null;
 }

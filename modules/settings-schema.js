@@ -100,7 +100,8 @@ const SCHEMA = {
       claimCheck: { type: 'boolean', default: false, hint: 'When an answer says it saved a memory, set a reminder, proposed, committed or sent something that no call this turn did, the turn gets one more step to do it or say it was not done.' },
       toolTiers: { type: 'boolean', default: false, hint: 'The Orchestrator and work chats are sent their core tools in full and the rest by name, loaded when needed (tools_more).' },
       riskTiers: { type: 'boolean', default: false, hint: 'Each tool call is read, reversible or outward: reversible changes in a project run after a checkpoint, and outward ones (deleting outside a project, a force-push, mail, a request sending data out) are asked in every mode, Unattended included.' },
-      adaptiveLimits: { type: 'boolean', default: false, hint: 'Before a turn, a triage rates the request and sets its thinking effort and step budget (never under Max tool steps); a turn still advancing at its last step is extended up to limits.maxStepsCeiling.' } } },
+      adaptiveLimits: { type: 'boolean', default: false, hint: 'Before a turn, a triage rates the request and sets its thinking effort and step budget (never under Max tool steps); a turn still advancing at its last step is extended up to limits.maxStepsCeiling.' },
+      systemOne: { type: 'boolean', default: false, hint: 'A System 1 decision model (Laya, run on this hub, or TypeSafe Jev) answers bounded decisions — the triage\'s size, a call\'s answer-now-or-hand-on, a computer\'s next element (computer_next) — and today\'s way decides whenever it is unsure (systemOne.threshold).' } } },
   // The owner's ceiling on how far a turn's steps may follow the work (experiment adaptiveLimits, turn/triage.js). Not
   // proposable: an agent raising the bound on its own turns would be writing its own limit (CONSTITUTION P20).
   limits:           { is: 'travels', home: 'hive', note: 'the ceiling adaptive step budgets and extensions stay under (turn/triage.js, turn/extend.js; the switch is experiments.adaptiveLimits)',
@@ -185,6 +186,18 @@ const SCHEMA = {
   dockerPresets:    { is: 'local', home: 'device', on: 'host', note: 'compose presets for this machine\'s Docker' },
   clientApps:       { is: 'local', home: 'device', on: 'host', note: 'where DOCA\'s Android apps\' repositories are on this machine, to build them (client-apps/)' },
   backup:           { is: 'local', home: 'device', on: 'host', note: 'the backup schedule of this machine' },
+  // The System 1 decision model (experiment systemOne, modules/system-one). Not proposable: its threshold decides when a
+  // model's guess replaces a rule, and its service runs on this machine.
+  systemOne:        { is: 'local', home: 'device', on: 'host', note: 'the System 1 decision model: which one, where it runs on this machine, how sure it must be (modules/system-one; the switch is experiments.systemOne)',
+    keys: { provider: { type: 'string', oneOf: ['laya', 'jev'], default: 'laya', hint: 'laya — the open Laya model, run by this hub (Field → Models → Decision models) — or jev, TypeSafe\'s API with the key for services named in jevKey.' },
+      threshold: { type: 'number', min: 0, max: 1, default: 0.6, hint: 'How sure the model must be — the probability it gives its top choice, 0–1 — for its answer to be used; below it, today\'s way decides.' },
+      port: { type: 'integer', min: 1024, max: 65535, default: 8791, hint: 'The port Laya\'s service listens on, on this machine only (127.0.0.1).' },
+      device: { type: 'string', oneOf: ['auto', 'cpu', 'cuda', 'mps'], default: 'auto', hint: 'Where Laya computes: auto (a GPU when there is one), cpu or cuda.' },
+      checkpoint: { type: 'string', oneOf: ['english', 'multilingual'], default: 'english', hint: 'Laya\'s checkpoint: english (ModernBERT-large) or multilingual (mmBERT-base, 100+ languages).' },
+      autostart: { type: 'boolean', default: false, hint: 'Start Laya\'s service when DOCA starts (once it is set up).' },
+      dir: { type: 'string', default: '', hint: 'Where Laya\'s Python environment lives (1–6 GB with PyTorch: more with CUDA). Empty: the data folder\'s system-one/.' },
+      jevKey: { type: 'string', default: 'typesafe', hint: 'The key for services (Field → Connectors) that holds a TypeSafe API key, for the jev provider.' },
+      jevVersion: { type: 'string', default: 'jev-latest', hint: 'Which Jev the jev provider asks for: jev-latest, jev-preview or a pinned version such as jev-1.13.0.' } } },
   wakeword:         { is: 'local', home: 'device', on: 'host', note: 'where wake-word training keeps its environment, data (~20 GB) and models (wakeword/)',
     keys: { dir: { type: 'string', default: '', hint: 'A folder for wake-word training (about 20 GB). Empty: the data folder\'s wakeword/.' } } },
   network:          { is: 'local', home: 'device', on: 'host', note: 'how this machine listens, and what may be done from outside the tailnet (network.js)',
@@ -285,4 +298,4 @@ function describe() {
     proposable: !!d.propose, keys: d.keys ? Object.fromEntries(Object.entries(d.keys).map(([n, s]) => [n, { type: s.type, default: s.default, hint: s.hint }])) : undefined }]));
 }
 
-module.exports = { SCHEMA, settable, screenSettable, leaf, value, leaves, describe, unproposable };
+module.exports = { SCHEMA, settable, screenSettable, leaf, valid, value, leaves, describe, unproposable };

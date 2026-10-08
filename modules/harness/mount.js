@@ -50,6 +50,7 @@ function mount(app) {
   require('../model-servers').mount(app);
   require('../model-roles').mount(app);   // which model does what (C4)
   require('../decisions').mount(app);     // everything waiting for a person (C1)
+  require('../system-one/routes').mount(app);   // the System 1 decision model (experiment systemOne)
   require('../wakeword/routes').mount(app);   // wake words trained here, kept like models (wakeword/, H8.4)   // every local model server and who it works for (model-servers.js, H10.13)
   require('../home/routes').mount(app);   // the home in DOCA's own layout, drawn from Home Assistant (home/, H10.10)
   require('../ambient').mount(app);   // the ambient screen: weather, the day's plan, notices (ambient/)

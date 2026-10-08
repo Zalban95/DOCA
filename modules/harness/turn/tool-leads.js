@@ -33,6 +33,7 @@ const LEADS = {
   computer_login: 'Sign in on a computer\'s browser with a login the owner keeps, without seeing its password — use it at a sign-in page.',
   secret_use: 'Type or paste a password or key on the person\'s own device, never seeing it — use it when a device must enter a secret.',
   computer_look: 'Ask what is on a computer\'s screen and where — use it when browser_snapshot finds nothing to number.',
+  computer_next: 'Get the likeliest next element of a computer\'s page for a goal, with probabilities — use it to pick fast on a busy page.',
   vnc_look: 'See a VNC screen (another machine the owner added) and what is where on it — use it before and after vnc_input.',
   vnc_input: 'Click, scroll, type or press keys on a VNC screen (another machine) — use it to act there; never for a password.',
   recipe: 'Run a saved sequence of tool calls again, or save one — run a recipe when one does exactly what is asked.',
