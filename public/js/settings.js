@@ -54,6 +54,7 @@ async function _subtabVoiceInit() {
   } catch {}
   // In order — the hive's services above, then this screen's voice, then the call's cards (settings/live-call.js).
   await screenVoiceRender();
+  await callVoicesRender();   // a voice per kind of call: Quick and Deep (settings/call-voices.js)
   await liveCallRender();
 }
 

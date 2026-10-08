@@ -88,8 +88,10 @@ function handleClear(req, res) {
  */
 /** A live call says so (chat-call.js `voice`): assistant mode — the face — answers in its own style and effort. */
 function voiceClient(client, voice, req) {
-  // The voice that will speak it takes a tone in words: the agent is told it may write a few tags (voice-tags.js).
-  const tags = voice === 'assistant' || voice === 'call' ? !!require('./tts-engines').forVoice(require('./screens').voiceOf(req)).tags : false;
+  // The voice that will speak it — the Quick call's for the face, the Deep call's for the chat's 🎙 (call-voices.js) —
+  // takes a tone in words: then the agent is told it may write a few tags (voice-tags.js).
+  const kind = require('./call-voices').kindOf(voice);
+  const tags = kind ? require('./call-voices').forRequest(req, kind).tags : false;
   if (voice === 'assistant') return { ...client, mode: 'assistant', name: 'Assistant mode (the face, spoken)', ...(tags ? { voiceTags: true } : {}) };
   if (voice === 'call') return { ...client, mode: 'call', name: `${client.name || 'The panel'} — live call`, ...(tags ? { voiceTags: true } : {}) };
   return client;
@@ -306,16 +308,18 @@ async function handleVoices(req, res) {
 
 /** POST /api/chat/synthesize — proxy text to configured TTS service, return audio */
 async function handleSynthesize(req, res) {
-  const { text, voice } = req.body;
+  const { text, voice, call } = req.body;
   if (!text) return res.status(400).json({ error: 'No text' });
-  const mine = require('./screens').voiceOf(req);   // this screen's own voice, when it chose one, over the hive's
+  // `call`: which kind of call speaks (quick: the face, Ambient; deep: the chat's 🎙) — its own voice when one was
+  // chosen, else this screen's own voice, else the hive's (call-voices.js). No call: this screen's voice, as before.
+  const mine = require('./call-voices').forRequest(req, require('./call-voices').kindOf(call));
   const engines = require('./tts-engines');
-  const vs = engines.forVoice(mine);                  // the hive's speech service, or the speech service it chose
+  const vs = mine.engine;                             // the hive's speech service, or the speech service it chose
 
   try {
-    const chosen = await require('./tts-voices').resolve(voice || mine.ttsVoice, vs);   // "Heart" → af_heart; unknown → the engine's own
-    if (chosen.fellBack) res.setHeader('X-Doca-Voice-Fallback', `${voice || mine.ttsVoice} -> ${chosen.voice}`);
-    const sent = engines.body(vs, text, { voice: chosen.voice, speed: mine.ttsSpeed });   // tags as words, or dropped
+    const chosen = await require('./tts-voices').resolve(voice || mine.voice, vs);   // "Heart" → af_heart; unknown → the engine's own
+    if (chosen.fellBack) res.setHeader('X-Doca-Voice-Fallback', `${voice || mine.voice} -> ${chosen.voice}`);
+    const sent = engines.body(vs, text, { voice: chosen.voice, speed: mine.speed });   // tags as words, or dropped
     if (!sent.input) return res.status(204).end();   // nothing but tags: nothing to say
     const resp = await fetch(`${vs.ttsUrl}/v1/audio/speech`, {
       method: 'POST',
@@ -334,5 +338,5 @@ async function handleSynthesize(req, res) {
 module.exports = {
   handleStatus, handleHistory, handleClear, handleChat,
   handleCallStatus, handleTranscribe, handleSynthesize, handleVoices,
-  loadGatewayChatConfig, loadVoiceServices, transcribeAudio, transcribeHeard,
+  loadGatewayChatConfig, loadVoiceServices, transcribeAudio, transcribeHeard, voiceClient,
 };

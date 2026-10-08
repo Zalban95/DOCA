@@ -29,7 +29,7 @@ const SCHEMA = {
   sidebarStats:     { is: 'travels', home: 'device', on: 'host', note: 'which stats the host collects for the sidebar (the collectors run here, for every screen)', propose: p('Sidebar stats', 'Which stats the sidebar shows') },
   sidebarSections:  { is: 'travels', home: 'device', on: 'screen', note: 'which sidebar sections are open', propose: p('Sidebar sections') },
   favorites:        { is: 'travels', home: 'device', on: 'screen', note: 'favourite config files, by registry id', propose: p('Config favourites') },
-  voice:            { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the voice this screen is answered in: engine (a speech service of the Services tab, empty = the hive\'s; tts-engines.js), ttsVoice and ttsSpeed, over voiceServices (chat.js handleSynthesize)' },
+  voice:            { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the voice this screen is answered in: engine (a speech service of the Services tab, empty = the hive\'s; tts-engines.js), ttsVoice and ttsSpeed, over voiceServices (chat.js handleSynthesize); and a voice per kind of call, quick (the face, Ambient, a device\'s call) and deep (the chat\'s 🎙), each {service, voice, speed}, read from the screen, its person, then the hive (call-voices.js)' },
   call:             { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'how a live call listens on this screen — its microphone is its own (chat-call.js; Settings → Voice → Live call)',
     keys: {
       silenceMs:   { type: 'integer', min: 300, default: 2000, hint: 'How long a pause, in milliseconds, ends what you said and sends it.' },

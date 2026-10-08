@@ -34,7 +34,7 @@ async function _callEnqueueSynth(text) {
     const res = await fetch('/api/chat/synthesize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, call: _callAssistant ? 'quick' : 'deep' }),   // the Quick call's voice (the face, Ambient) or the Deep call's (the chat's 🎙)
       signal: limit && AS.any && _callAbort ? AS.any([_callAbort.signal, limit]) : (_callAbort?.signal || limit || undefined),
     });
     if (!res.ok) throw new Error(`speech service answered ${res.status}${await res.text().then(t => `: ${t.slice(0, 120)}`).catch(() => '')}`);

@@ -116,7 +116,8 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
   if (!pipeline) { try { t = target(s); } catch (e) { tell({ type: 'error', message: e.message }); ws.close(); return; } }
   const stats = { at: Date.now(), firstAudioMs: null, spokeAt: null, replyMs: [], tools: 0, background: 0, interrupted: 0, reports: 0 };
   let heardAt = null;   // when the last utterance ended, until its answer's first audio: replyMs, end of speech → first audio
-  const model = pipeline ? require('./pipeline').connect({})
+  // The hub's own voice speaks a device's call in its Quick call voice (call-voices.js): the device's screen's, its person's, the hive's.
+  const model = pipeline ? require('./pipeline').connect({ voice: require('../call-voices').forDevice(deviceId) })
     : ADAPTERS[s.protocol].connect({ ...t, model: s.model, voice: s.voice, dialect: s.dialect, instructions: INSTRUCTIONS + recent(sessionId), tools: [TOOL] });
   if (pipeline) s.protocol = 'pipeline';
   // Each stage of this call, kept (call-log.js): a call that fails is never only a quiet call.
@@ -192,7 +193,7 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
     const live = model.stream ? model.stream() : null, gather = live && require('./pipeline').gatherer();
     let streamed = false, late = false;
     const onText = live && (delta => { if (late || ended) return; for (const x of gather.push(delta)) { streamed = true; live.part(x); } });
-    const answer = Promise.resolve().then(() => ask(request, onText ? { onText } : undefined))
+    const answer = Promise.resolve().then(() => ask(request, { ...(onText ? { onText } : {}), hubVoice: pipeline }))
       .then(a => ({ text: String(a || '(no answer)').slice(0, MAX_SAY) }), e => ({ text: `It failed: ${e.message}`, failed: true, why: e.message }));
     // How the turn ended, kept; a turn cut short is said, so the call never just goes quiet on it.
     answer.then(a => {
@@ -248,7 +249,7 @@ function askAsPanel({ sessionId, client }) {
  */
 function askAsDevice(device, sessionId) {
   const bus = require('../api-v1/bus'), harness = require('../api-v1/harness'), turns = require('../harness/turn/lifecycle').events;
-  return (request, { onText } = {}) => new Promise((resolve, reject) => {
+  return (request, { onText, hubVoice = false } = {}) => new Promise((resolve, reject) => {
     let turnId = null, writing = false;
     const words = e => {
       if (!writing || e.sessionId !== sessionId) return;
@@ -269,7 +270,7 @@ function askAsDevice(device, sessionId) {
     // Spoken: a watch is assistant mode. A device's kind is never "watch" (devices.KINDS); its paired form factor says so.
     const wrist = (device.caps?.formFactor || device.kind) === 'watch';
     try {
-      const r = harness.post({ message: request, sessionId, voice: wrist ? 'assistant' : 'call' }, device);
+      const r = harness.post({ message: request, sessionId, voice: wrist ? 'assistant' : 'call', ...(hubVoice ? { [harness.HUB_SPOKEN]: true } : {}) }, device);
       turnId = r.turnId;
       writing = !r.queued;   // started already (its "started" went out before the id came back); queued: when it is read
     } catch (e) { stop(); reject(e); }
