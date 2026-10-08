@@ -14,7 +14,8 @@ let _seq = 0;
 function start({ provider, url, model, kind = 'ask', sessionId = null, agent = null } = {}) {
   const id = ++_seq;
   _now.set(id, { provider, url, model, kind, sessionId, agent, at: new Date().toISOString() });
-  return () => { _now.delete(id); };
+  const used = require('../service-life/usage').begin(url);   // a service at this address was used (its idle clock)
+  return () => { _now.delete(id); used(); };
 }
 
 const list = () => [..._now.values()];

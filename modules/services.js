@@ -206,6 +206,7 @@ async function handleStart(req, res) {
     if (code !== 0) { sseWrite({ done: true, ok: false, status: code !== null ? `✗ Exit ${code}` : `✗ Killed (${signal || 'unknown'})` }); return res.end(); }
     sseWrite({ status: `Container up; waiting for ${svc.label} to answer…\n` });
     const r = await waitReady(svc, status => sseWrite({ status }));
+    if (r.ok) require('./service-life/usage').started(`service:${id}`);   // DOCA's to stop when idle (service-life/)
     if (r.ok) sseWrite({ done: true, ok: true, status: `✓ ${svc.label} answers on http://localhost:${svc.port}` });
     else sseWrite({ done: true, ok: false, status: `${r.log ? `--- its last log lines ---\n${r.log.trim()}\n---\n` : ''}✗ ${r.why}${r.log ? ' The container was removed so it does not restart in a loop.' : ''}` });
     res.end();
@@ -226,7 +227,17 @@ function handleStop(req, res) {
   });
 }
 
+function mount(app) {
+  app.get ('/api/services',          handleList);
+  app.post('/api/services/settings', handleSettings);
+  app.get ('/api/services/status',   handleStatus);
+  app.post('/api/services/start',    handleStart);
+  app.post('/api/services/stop',     handleStop);
+  require('./service-life/routes').mount(app);
+}
+
 module.exports = {
+  mount,
   INFERENCE_SERVICES,
   handleList,
   handleSettings,

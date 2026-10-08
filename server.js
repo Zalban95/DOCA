@@ -297,11 +297,7 @@ mcp.mount(app);
 vms.mount(app);   // list, power, settings (vms.js) and management: details, autostart, snapshots, create (vms-manage.js)
 
 // ─── Routes: Inference Services ───────────────────────────────────────────────
-app.get ('/api/services',          services.handleList);
-app.post('/api/services/settings', services.handleSettings);
-app.get ('/api/services/status',   services.handleStatus);
-app.post('/api/services/start',    services.handleStart);
-app.post('/api/services/stop',     services.handleStop);
+services.mount(app);   // the Services tab, and when DOCA stops and starts them by itself (service-life/)
 
 return app.use(require('./modules/api-not-found'));   // last: an /api path no route above answered is a JSON 404
 }
@@ -310,6 +306,7 @@ module.exports = { createApp };
 // ─── Server (HTTPS with HTTP fallback) + WebSocket Terminals ─────────────────
 if (require.main === module) {
 require('./modules/migrations').apply();   // the prefs file brought forward before anything reads it (migrations.js)
+require('./modules/service-life/shutdown').listen();   // DOCA stopping: the services ticked to stop with it go too
 const app = createApp();
 // Who may connect: loopback + tailnet unless told otherwise. See modules/listen.js.
 const LISTEN_MODE = listen.mode(require('./modules/utils').loadPrefs());
