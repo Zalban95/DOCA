@@ -28,8 +28,8 @@ const BUILTIN_ID = 'doca';
  */
 const KNOWN = [
   {
-    id: BUILTIN_ID, label: 'DOCA Harness', vendor: 'DOCA', kind: 'builtin',
-    note: 'Built in — structured memory, tool calling, any OpenAI-compatible model',
+    id: BUILTIN_ID, label: 'DOCA\'s own agent', vendor: 'DOCA', kind: 'builtin',   // a person's words: "what's a harness?" (self-test round two)
+    note: 'Built in — it remembers what matters, uses tools, and works with any model you connect',
     get url() { return require('../branding').name('site'); },   // the vendor's site, as the logo (branding.js)
   },
   {

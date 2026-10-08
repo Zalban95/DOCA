@@ -44,8 +44,8 @@ To have it come back after a reboot, tick **Settings → General → Start at Bo
 
 ## Linking the Chat to OpenClaw Agent
 
-Out of the box the chat panel talks to the built-in DOCA Harness. Once you switch the default
-harness to OpenClaw (the **Agent Harnesses** card on Controls), the panel goes through OpenClaw instead.
+Out of the box the chat panel talks to DOCA's own agent (the built-in harness). Once you switch the default
+harness to OpenClaw (the card **The agent** on Controls), the panel goes through OpenClaw instead.
 OpenClaw is asked through its Gateway API, which has to be switched on; add this to
 `~/.openclaw/openclaw.json`:
 
@@ -229,14 +229,14 @@ certificates, because `run.sh` hands each of them the same `DOCA_HOME`.
 
 ## Harnesses
 
-A *harness* is whatever agent runtime DOCA hands your prompts to. The **Agent Harnesses** card at
+A *harness* is whatever agent runtime DOCA hands your prompts to. The card **The agent** at
 the top of the Controls page lists one line per harness; exactly one is the default (`●`), and both
 the floating chat panel and the **Harness** tab use it.
 
-- **⬇ Install a harness** opens the full catalog. Installing runs the vendor's own installer
+- **⬇ Add another agent** opens the full catalog. Installing runs the vendor's own installer
   (`npm i -g …`, `pipx install …`, a `git clone` + `docker compose` for OpenClaw) and streams the
   output, asking for a sudo password only when the command needs one.
-- **Add your own harness** — name, command, optional install command — registers anything the
+- **Add your own agent** — name, command, optional install command — registers anything the
   catalog does not know about, including your own scripts. Custom harnesses can be deleted; known
   ones cannot.
 - **⚙** on an external harness sets its launch command, model flag, config file path and extra env

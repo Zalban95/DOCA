@@ -51,7 +51,7 @@ function _harnessRender() {
   if (label) label.textContent = dflt ? `default: ${dflt.label}` : '';
 
   list.innerHTML = shown.map(_harnessRowHtml).join('')
-    || '<div class="placeholder">No harness detected — use ⬇ Install a harness.</div>';
+    || '<div class="placeholder">No agent found — use ⬇ Add another agent.</div>';
   if (shown.some(h => h.surface === 'web')) webStackRefresh();
 
   if (_harnessOpenCfg && shown.some(h => h.id === _harnessOpenCfg)) harnessConfigToggle(_harnessOpenCfg, true);
@@ -101,7 +101,7 @@ async function harnessSetDefault(id) {
   const st = document.getElementById('harness-status');
   try {
     await apiFetch('/api/harness/default', { method: 'POST', body: { id } });
-    setStatus(st, '✓ Default harness updated', 'ok');
+    setStatus(st, '✓ The chat now uses this agent', 'ok');
     await harnessLoad();
     _harnessConsoleReset();
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
@@ -146,14 +146,14 @@ async function harnessAddCustom() {
       label: label.value.trim(), cmd: cmd.value.trim(), installCmd: inst.value.trim() || null,
     } });
     label.value = cmd.value = inst.value = '';
-    setStatus(st, '✓ Harness added', 'ok');
+    setStatus(st, '✓ Agent added', 'ok');
     harnessLoad();
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
 
 function harnessRemoveCustom(id) {
   const h = _harnesses.find(x => x.id === id);
-  appConfirm(`Remove the custom harness "${h?.label || id}"?`, async () => {
+  appConfirm(`Remove the agent "${h?.label || id}"?`, async () => {
     try {
       await apiFetch(`/api/harness/custom/${encodeURIComponent(id)}`, { method: 'DELETE' });
       harnessLoad();

@@ -120,20 +120,20 @@
       <!-- Agent harnesses: one line each, the default marked ● -->
       <div class="card">
         <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          Agent Harnesses
-          <button class="btn btn-xs btn-teal" onclick="harnessCatalogOpen()" title="Browse every harness DOCA knows">⬇ Install a harness</button>
+          The agent
+          <button class="btn btn-xs btn-teal" onclick="harnessCatalogOpen()" title="Other agents DOCA can work with: coding tools and agent apps">⬇ Add another agent</button>
           <button class="btn btn-xs" onclick="harnessLoad()" title="Re-check">↺</button>
           <span id="harness-default-label" style="font-size:10px;color:var(--muted);margin-left:auto"></span>
         </div>
         <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
-          Pick the agent DOCA talks to. ● marks the default — the chat panel and the
-          <a href="#" onclick="nav('harness');return false">Harness</a> tab both use it.
-          ⚙ sets the model and its parameters.
+          The agent is what you talk to in the chat. DOCA has its own; you can also add others you use.
+          ● marks the one the chat panel and the <a href="#" onclick="nav('harness');return false">agent's page</a> use.
+          ⚙ chooses its model.
         </p>
-        <div id="harness-list"><div class="placeholder pulse">Detecting harnesses…</div></div>
+        <div id="harness-list"><div class="placeholder pulse">Looking for agents…</div></div>
         <div class="harness-add-row">
           <span class="harness-add-caret">+</span>
-          <input class="input flex1" id="harness-new-label" placeholder="Add your own harness — name (e.g. My Agent)"
+          <input class="input flex1" id="harness-new-label" placeholder="Add your own agent — name (e.g. My Agent)"
                  onkeydown="if(event.key==='Enter') harnessAddCustom()">
           <input class="input flex1" id="harness-new-cmd" placeholder="command (e.g. my-agent)"
                  onkeydown="if(event.key==='Enter') harnessAddCustom()">
