@@ -12,7 +12,7 @@ async function mcpLoad() {
   const list = document.getElementById('mcp-list');
   if (!list) return;
   try {
-    const [data] = await Promise.all([apiFetch('/api/mcp'), machineOriginsLoad()]);   // + who started each (lib/machine-origin.js)
+    const [data] = await Promise.all([apiFetch('/api/mcp'), machineOriginsLoad(), leafFieldsDraw(leafFieldsSlot('mcp-export', 'mcp-settings'), ['mcpSettings.callTimeoutMs', 'mcpSettings.listTimeoutMs'], { label: 'Advanced — how long to wait for a server', id: 'mcp-timeouts' })]);   // + who started each (lib/machine-origin.js), and the timeouts' boxes
     _mcpTargets  = data.targets || [];
     const servers = data.servers || [];
     list.innerHTML = _mcpOffersHtml(data.offers || [])

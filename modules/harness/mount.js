@@ -24,6 +24,7 @@ function mount(app) {
   require('../scout/routes').mount(app);
   require('./assistant-routes').mount(app);
   require('../checkpoints').mount(app);
+  require('../settings-leaves').mount(app);   // declared settings a page draws a box for by name (settings-leaves.js)
   require('../realtime/routes').mount(app);
   require('../api-v1/client-files').mountPanel(app);
   require('../client-apps/routes').mount(app);

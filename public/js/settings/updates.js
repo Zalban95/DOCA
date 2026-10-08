@@ -25,6 +25,7 @@ async function updateCheck() {
   versionsLoad();
   accountLoad();
   depsLoad();
+  leafFieldsDraw(leafFieldsSlot('update-status', 'update-settings'), ['updates.repo'], { label: 'Advanced — where updates come from', id: 'update-source' });
 
   try {
     const data = await apiFetch('/api/update-check?force=1');

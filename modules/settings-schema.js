@@ -62,6 +62,7 @@ const SCHEMA = {
     keys: { repo: { type: 'string', default: '', hint: 'owner/name on GitHub that the update check reads when git cannot (an edition or a fork). Empty: the DOCA project.' } } },
   agents:           { is: 'travels', home: 'hive', note: 'whether specialists are switched on',
     propose: p('Specialist agents', 'Allow the orchestrator to dispatch specialists', { prefix: 'agents.enabled', exact: true }) },
+  // No box in the panel on purpose: a note is the agent's proposal about a tool, and its Accept is the control.
   toolNotes:        { is: 'travels', home: 'hive', note: 'notes added to tool descriptions (fingerprinted per tool)',
     propose: p('Tool note', 'Added to the tool\'s description — what the agent reads when it picks the tool') },
   // Numbers only, and deliberately a different key from `mcpServers`, which holds commands this host spawns
@@ -182,6 +183,8 @@ const SCHEMA = {
       model: { type: 'string', default: '', hint: 'An embedding model, e.g. nomic-embed-text or bge-m3 on Ollama. Empty: retrieval stays off.' } } },
   migrations:       { is: 'travels', home: 'hive', note: 'which prefs migrations this file has had, and what they changed (migrations.js) — the record travels with the file' },
   usagePrices:      { is: 'travels', home: 'hive', note: 'the owner\'s price list for the usage window (harness/prices.js)' },
+  // No box in the panel on purpose: learned by harness/contracts.js from a provider's refusals; the file is where an
+  // expert corrects one, and a form would invite guessing at a provider's quirks.
   providerContracts: { is: 'mixed', home: 'hive', note: 'the owner\'s corrections to what a provider accepts (harness/contracts.js): about a remote provider they travel, about a server on this machine they are local' },
   harness:          { is: 'mixed', home: 'hive', note: 'config (model, limits, fallback chain, prompts), the guards\' settings and approval mode travel (the guard model files are local, in the data folder); the always-allowed list names commands of this machine and is local. Provider keys are not here: they live in the data folder (keys/).',
     propose: [p('Harness parameters', 'Includes this agent\'s own model and behaviour', { prefix: 'harness.config' }),

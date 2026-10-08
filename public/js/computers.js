@@ -48,15 +48,16 @@ async function computersLoad() {
       screen recording — where a mission tries something risky, uses a site as a person would, or records a demo, without touching this
       machine. The Orchestrator and work chats make them with their <code>computer</code> tool and send a specialist (the <b>Tester</b>) to
       work in one. One an agent made stops after its mission and is removed some days later unless pinned (📌; the limits are
-      under <code>computers</code> in settings). Click a screen to watch or take over.</div>
+      under Advanced at the bottom). Click a screen to watch or take over.</div>
     <pre class="terminal" id="computers-out" style="display:none;max-height:240px;margin-bottom:8px"></pre>
     <div class="scroll-y" style="flex:1"><div class="pc-grid">${data.computers.map(computersCard).join('')
       || emptyStateHtml(data.image.ready
         ? { title: 'No computers yet', text: 'An agent makes one when the work needs it, or you can make one now.', action: { label: 'Make a computer', onclick: 'computersNew()' } }
         : { title: 'No computers yet', text: 'The image is built once on this hub (several minutes: Chromium, a desktop, ffmpeg); then agents can make computers.', action: { label: 'Build the image', onclick: 'computersBuild()' } })}</div>
-    <div id="computers-strays"></div></div>`;
+    <div id="computers-strays"></div><div id="computers-settings" class="card" style="margin-top:8px"></div></div>`;
   computersStills();
   computersStraysLoad();
+  leafFieldsDraw(document.getElementById('computers-settings'), ['computers.maxRunning', 'computers.idleStopMinutes', 'computers.retainHours', 'computers.callTimeoutMs'], { label: 'Advanced — how many run, when they stop and are removed', id: 'computers-limits' });
 }
 
 function computersCard(c) {

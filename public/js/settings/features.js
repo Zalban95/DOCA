@@ -18,8 +18,9 @@ async function featuresRender() {
     <div class="card-title" style="margin-top:12px;font-size:13px">Alternatives kept beside their replacements</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">How often each older or other way was used. One unused while what replaced it kept running
       can be hidden from the default: it still works and the agents still find it.</p>
-    <div id="features-review" style="max-height:340px;overflow:auto">${featuresReviewHtml(_featuresData.review)}</div>`;
+    <div id="features-review" style="max-height:340px;overflow:auto">${featuresReviewHtml(_featuresData.review)}</div><div id="features-settings"></div>`;
   panel.append(card);
+  leafFieldsDraw(document.getElementById('features-settings'), ['features.idleDays', 'features.replacementRuns'], { label: 'Advanced — when an alternative counts as unused', id: 'features-thresholds' });
   featuresFilter('');
 }
 
