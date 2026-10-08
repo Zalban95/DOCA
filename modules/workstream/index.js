@@ -6,7 +6,10 @@
  * hold the Workstream open (a host's: it is the machine's files and every conversation's thinking):
  *   file       a file changed in a folder the agents work in, with what changed (sentinel.js, diff.js)
  *   activity   each conversation's thinking and answer as they stream (gathered every 300 ms), the commands it runs and
- *              the first line of what came back — from agent.events, so every turn on every device is in it
+ *              the first line of what came back — from agent.events, so every turn on every device is in it; and the
+ *              machines' changes (machines/busy.js: busy, idle, a process started outside DOCA's tools)
+ * Mechanical, all of it (the owner's rule, 2026-10-08): events and OS readings in fixed words — no model is asked, and
+ * no agent tool posts here.
  * The sentinel runs only while a page holds the Workstream; the last page to let go stops it. A short backlog of both
  * is kept in memory so a page that opens mid-work starts with what just happened.
  */
@@ -29,6 +32,16 @@ function say(sessionId, kind, text, extra = {}) {
   const row = { at: Date.now(), sessionId, who: title(sessionId), kind, text: String(text).slice(0, 4000), ...extra };
   keep(_activity, row);
   if (_holders.size) live.changed('workstream', sessionId, 'activity', row);
+}
+
+/**
+ * A machine's line (machines/busy.js): busy, idle again, a process started outside DOCA's tools — readings put in fixed
+ * words there, never a model's or an agent's. Its `who` is the machine; it belongs to no conversation.
+ */
+function machine(name, text, extra = {}) {
+  const row = { at: Date.now(), sessionId: null, who: String(name || 'a machine'), kind: 'machine', text: String(text).slice(0, 400), ...extra };
+  keep(_activity, row);
+  if (_holders.size) live.changed('workstream', null, 'activity', row);
 }
 
 /** Thinking and text arrive a token at a time: gathered per conversation and said every FLUSH_MS. */
@@ -78,6 +91,7 @@ function fileChanged(change) {
 function hold(screen, on = true) {
   if (on) _holders.add(screen); else _holders.delete(screen);
   if (_holders.size) sentinel.start(fileChanged); else sentinel.stop();
+  if (_holders.size) require('../machines/busy').want();   // the machines are looked at while it is shown (busy.js)
   return { holding: _holders.has(screen), sentinel: sentinel.status() };
 }
 
@@ -89,9 +103,10 @@ function start() {
 }
 
 const holds = screen => _holders.has(screen);
+const holding = () => _holders.size > 0;
 const snapshot = () => ({ sentinel: sentinel.status(), files: _files.slice(-40), activity: _activity.slice(-150) });
 
 /** How much the activity holds now (log-keep.js usage). */
 const size = () => ({ lines: _activity.length, bytes: Buffer.byteLength(JSON.stringify(_activity)) });
 
-module.exports = { start, hold, holds, snapshot, onEvent, command, fileChanged, size };
+module.exports = { start, hold, holds, holding, machine, snapshot, onEvent, command, fileChanged, size };

@@ -24,7 +24,7 @@ const when = iso => String(iso || '').replace('T', ' ').slice(0, 16);
 const toks = n => (n ? ` · ${n.toLocaleString('en')} tokens` : '');
 
 function row(r) {
-  if (r.source === 'log' || r.source === 'hub' || r.source === 'call') return `${when(r.at)} [${r.source}${r.level && r.level !== 'info' ? ` ${r.level}` : ''}] ${String(r.text).slice(0, 240)}`;
+  if (r.source === 'log' || r.source === 'hub' || r.source === 'call' || r.source === 'machines') return `${when(r.at)} [${r.source}${r.level && r.level !== 'info' ? ` ${r.level}` : ''}] ${String(r.text).slice(0, 240)}`;
   return `${when(r.at)} ${r.state} — ${r.agent.label}: ${r.title || '(untitled)'}${r.device ? ` · from ${r.device.name}` : ''}${r.person ? ` · ${r.person.name}` : ''}`
     + `${toks(r.tokens)}${r.steps ? ` · ${r.steps} steps` : ''} (run ${r.id}${r.sessionId ? `, conversation ${r.sessionId}` : ''})${r.outcome ? `\n    ${r.outcome.slice(0, 200)}` : ''}`;
 }
@@ -60,7 +60,7 @@ module.exports = [
       properties: {
         action: { type: 'string', enum: ['find', 'story'] },
         q: { type: 'string', description: 'find: words in a title, outcome, agent, device or person.' },
-        source: { type: 'string', enum: ['turn', 'mission', 'job', 'hub', 'call', 'log'], description: 'find: turns, missions, device jobs, what the hub did on its own, live calls stage by stage, or the harness log (an admin\'s).' },
+        source: { type: 'string', enum: ['turn', 'mission', 'job', 'hub', 'call', 'machines', 'log'], description: 'find: turns, missions, device jobs, what the hub did on its own, live calls stage by stage, what was seen of the machines (busy, idle, processes started outside DOCA\'s tools; an admin\'s), or the harness log (an admin\'s).' },
         state: { type: 'string', description: 'find: done, failed, cancelled or running (for hub and log: info, warn or error).' },
         since: { type: 'string', description: 'find: from when — "24h", "7d", "30m" or an ISO time.' },
         limit: { type: 'integer', description: 'find: how many (default 20, at most 100).' },

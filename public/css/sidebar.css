@@ -31,6 +31,11 @@
 /* Who started a machine (lib/machine-origin.js): under its row here and in its tab; one nobody noted, in amber */
 .m-origin { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
 .m-origin.outside, .m-detail.outside { color: var(--amber); }
+/* Busy, whoever made it so (machines/busy.js): a point that breathes beside what runs, in every skin */
+.m-busy { color: var(--text); }
+.m-busy::before, .ml-tile.busy .ml-line::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; vertical-align: middle;
+  background: var(--accent); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--accent) 50%, transparent); animation: pt-breathe 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .m-busy::before, .ml-tile.busy .ml-line::before { animation: none; } }
 .services-label .m-origin, .vm-name .m-origin, .card-title .m-origin { display: block; font-weight: 400; text-transform: none; letter-spacing: normal; }
 .m-row .c-state { flex: none; }
 /* The same point in Live's captions: running breathes in Points, a plain dot elsewhere */

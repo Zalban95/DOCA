@@ -75,6 +75,9 @@ async function read() {
     r.origin = r.kind === 'vnc' ? null : origin.of(r.kind, r.kind === 'container' ? r.name : r.id,
       { up: r.point === 'up' || r.point === 'paused', name: r.name, project: r.project, fallback: c && origin.computerFallback(c) });
   }
+  // What busy.js last saw of each (only while a page looks): busy, with what runs and who — a container by its name.
+  const busy = require('./busy');
+  for (const r of rows) { const b = r.kind === 'vnc' ? null : busy.of(r.kind, r.kind === 'container' ? r.name : r.id); if (b) r.busy = b; }
   const count = kind => {
     const of = rows.filter(r => r.kind === kind);
     return { total: of.length, running: of.filter(r => r.point === 'up').length, stopped: of.filter(r => r.point === 'down').length };

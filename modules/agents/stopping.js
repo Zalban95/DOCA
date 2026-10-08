@@ -30,7 +30,12 @@ function working(who) {
 function mount(app) {
   const h = fn => (req, res) => { try { res.json(fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
   app.post('/api/harness/missions/:id/stop', h(req => stop(person(req), req.params.id)));
-  app.get('/api/harness/working', h(req => working(person(req))));
+  // A host's panel also hears the machines busy with no DOCA turn behind them (machines/busy.js: a `docker exec`, a
+  // person at a computer's desktop, a VM's own load) — seen only while a page looks at the machines.
+  app.get('/api/harness/working', h(req => {
+    const who = person(req), host = !who?.id || require('../harness/session-access').isHost(who);
+    return { ...working(who), machines: host ? require('../machines/busy').busyNow() : [] };
+  }));
 }
 
 module.exports = { stop, working, mount };

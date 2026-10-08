@@ -764,6 +764,18 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   get a picture from `virsh screenshot` / `VBoxManage screenshotpng` (made small on node:zlib) and open their VNC
   console through the hub (noVNC, `/ws/vm/`); the VMs tab gains Console. **Left:** Hyper-V, UTM and Parallels have no
   picture (no CLI screenshot); plain containers get no Live tile by design.
+  **Done (2026-10-08, branch machines-seen; asked: "shouldn't we see in the harness or in the workstream if something is
+  working? And some log maybe?" — a tester drove a computer through `docker exec` and DOCA showed it idle):** a machine
+  is seen busy whoever made it so (`machines/busy.js`, `busy-read.js`, `busy-log.js`): while Live, the Workstream or the
+  status column is shown, every 10 s, `docker stats` for containers and computers, `virsh domstats` for libvirt VMs and
+  each computer's own process list (the hidden read-only tool `processes`, `clients/computer/procs.js`: /proc, never the
+  environment); busy over 10% CPU for two looks or at once for a process started outside DOCA's tools, idle after two
+  quiet looks, named "a DOCA mission", "an agent's tools", "a process started outside DOCA's tools" or its own load. Shown
+  in Live (in front, "npm test · 74% CPU"), the status column (a breathing point), the Workstream (a line per change),
+  the Harness's working list (busy with no DOCA turn behind it) and the machines' log (Hub → Logs and Chronicle, source
+  `machines`, `logs.machinesLines`; busy/idle also in the activity file). Mechanical: no model, no agent posts.
+  **Left:** a computer built before has no process list (judged by CPU alone until rebuilt); other hypervisors give no
+  reading; `/api/v1` does not carry the busy machines yet.
   **Done (2026-10-08, asked: "a vnc section in machines, same logic, showing the running and connected ones on the live
   and so on"):** Machines → VNC — targets by address with a password in `keys/vnc.json` (never returned), DOCA's own RFB
   client (DES written out: Node has none), rows `connected`/`reachable`/`unreachable` in the status column, Live
