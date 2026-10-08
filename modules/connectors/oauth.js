@@ -23,7 +23,9 @@ function spec(id) {
   if (!base) throw bad(`No connector "${id}".`, 404);
   const urls = base.custom ? rec.urls || {} : base;
   return { id, label: rec.label || base.label, authorize: urls.authorize, token: urls.token, api: [].concat(urls.api || []),
-    whoami: urls.whoami || null, account: base.account || (j => j.login || j.email || j.name || j.id), scopes: rec.scopes ?? base.scopes, extra: base.extra || {} };
+    whoami: urls.whoami || null, account: base.account || (j => j.login || j.email || j.name || j.id), scopes: rec.scopes ?? base.scopes, extra: base.extra || {},
+    tokenAuth: base.tokenAuth || null, tokenBody: base.tokenBody || null, scopeParam: base.scopeParam || 'scope', tokenPath: base.tokenPath || null,
+    whoamiMethod: base.whoamiMethod || 'GET', accountFromToken: base.accountFromToken || null, headers: base.headers || {}, hint: base.hint || '' };
 }
 
 function start(id, redirectUri) {
@@ -35,19 +37,26 @@ function start(id, redirectUri) {
   pending.set(state, { id, verifier, redirectUri, at: Date.now() });
   const q = new URLSearchParams({ response_type: 'code', client_id: rec.clientId, redirect_uri: redirectUri, state,
     code_challenge: b64url(crypto.createHash('sha256').update(verifier).digest()), code_challenge_method: 'S256',
-    ...(s.scopes ? { scope: s.scopes } : {}), ...s.extra });
+    ...(s.scopes ? { [s.scopeParam]: s.scopes } : {}), ...s.extra });
   return { url: `${s.authorize}${s.authorize.includes('?') ? '&' : '?'}${q}`, state };
 }
 
 async function exchange(s, rec, params) {
+  // The app's id and secret: in the body (most services), or as HTTP Basic (Notion, Zoom); the body as a form or JSON.
+  const basic = s.tokenAuth === 'basic' && rec.clientSecret;
+  const fields = { ...(basic ? {} : { client_id: rec.clientId, ...(rec.clientSecret ? { client_secret: rec.clientSecret } : {}) }), ...params };
   const r = await fetch(s.token, { method: 'POST', signal: AbortSignal.timeout(30000),
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-    body: new URLSearchParams({ client_id: rec.clientId, ...(rec.clientSecret ? { client_secret: rec.clientSecret } : {}), ...params }) })
+    headers: { 'Content-Type': s.tokenBody === 'json' ? 'application/json' : 'application/x-www-form-urlencoded', Accept: 'application/json',
+      ...(basic ? { Authorization: `Basic ${Buffer.from(`${rec.clientId}:${rec.clientSecret}`).toString('base64')}` } : {}) },
+    body: s.tokenBody === 'json' ? JSON.stringify(fields) : new URLSearchParams(fields) })
     .catch(e => { throw bad(`${s.label}: cannot reach ${s.token} (${e.message})`, 502); });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok || !j.access_token) throw bad(`${s.label} refused: ${j.error_description || j.error || `HTTP ${r.status}`}`, 502);
+  const whole = await r.json().catch(() => ({}));
+  const j = (s.tokenPath && whole[s.tokenPath]) || whole;   // Slack's user token is under authed_user
+  if (!r.ok || !j.access_token) throw bad(`${s.label} refused: ${whole.error_description || whole.error || `HTTP ${r.status}`}`, 502);
+  let fromToken = null;
+  try { fromToken = s.accountFromToken ? String(s.accountFromToken(whole) || '') || null : null; } catch { /* no name */ }
   return { accessToken: j.access_token, ...(j.refresh_token ? { refreshToken: j.refresh_token } : {}),
-    expiresAt: j.expires_in ? new Date(Date.now() + Number(j.expires_in) * 1000).toISOString() : null, ...(j.scope ? { scopes: j.scope } : {}) };
+    expiresAt: j.expires_in ? new Date(Date.now() + Number(j.expires_in) * 1000).toISOString() : null, ...(j.scope ? { scopes: j.scope } : {}), ...(fromToken ? { fromToken } : {}) };
 }
 
 /** The code is back: tokens into the vault, and whose account they are. */
@@ -58,11 +67,14 @@ async function finish(state, code) {
   if (!code) throw bad('The service sent no code back (was access refused?).');
   const s = spec(p.id), rec = vault.get(p.id);
   const tokens = await exchange(s, rec, { grant_type: 'authorization_code', code, redirect_uri: p.redirectUri, code_verifier: p.verifier });
-  let account = null;
-  if (s.whoami) {
+  let account = tokens.fromToken || null;
+  delete tokens.fromToken;
+  if (s.whoami && !account) {
     try {
       const url = /^https?:/.test(s.whoami) ? s.whoami : `${s.api[0]}${s.whoami}`;
-      const r = await fetch(url, { headers: { Authorization: `Bearer ${tokens.accessToken}`, Accept: 'application/json', 'User-Agent': 'DOCA' }, signal: AbortSignal.timeout(15000) });
+      const post = s.whoamiMethod === 'POST';   // Dropbox's RPC: a POST with a JSON null body
+      const r = await fetch(url, { method: s.whoamiMethod, headers: { Authorization: `Bearer ${tokens.accessToken}`, Accept: 'application/json', 'User-Agent': 'DOCA', ...s.headers,
+        ...(post ? { 'Content-Type': 'application/json' } : {}) }, body: post ? 'null' : undefined, signal: AbortSignal.timeout(15000) });
       if (r.ok) account = String(s.account(await r.json()) || '') || null;
     } catch { /* the connection works without a name */ }
   }
@@ -77,6 +89,7 @@ async function token(id) {
   if (rec.expiresAt && Date.parse(rec.expiresAt) - Date.now() < 60000) {
     if (!rec.refreshToken) throw bad(`${spec(id).label}'s sign-in expired and gave no refresh token: connect it again in Field → Connectors.`, 401);
     const fresh = await exchange(spec(id), rec, { grant_type: 'refresh_token', refresh_token: rec.refreshToken });
+    delete fresh.fromToken;
     vault.patch(id, fresh);
     return fresh.accessToken;
   }

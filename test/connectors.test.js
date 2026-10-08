@@ -60,7 +60,9 @@ test('a custom service is set up with the owner\'s app; nothing secret reads bac
   assert.equal(r.status, 200, JSON.stringify(r.body));
   const list = await H.api(null, 'GET', '/api/connectors');
   assert.match(list.body.callback, /\/api\/connectors\/callback$/);
-  assert.deepEqual(list.body.connectors.map(c => c.id), ['github', 'google', 'microsoft', 'stub']);
+  const ids = list.body.connectors.map(c => c.id);
+  assert.deepEqual(ids.slice(0, 3), ['github', 'google', 'microsoft']);
+  assert.equal(ids.at(-1), 'stub', 'one a person added comes after the catalogue');
   assert.ok(!JSON.stringify(list.body).includes('csecret'), 'the secret never reads back');
   assert.equal(list.body.connectors.find(c => c.id === 'stub').hasSecret, true);
   if (process.platform !== 'win32') assert.equal(fs.statSync(require('../modules/paths').CONNECTOR_KEYS_FILE).mode & 0o777, 0o600);
@@ -113,4 +115,83 @@ test('a member\'s turn cannot use the owner\'s account until it is opened to eve
   await H.api(null, 'DELETE', '/api/connectors/stub');
   assert.ok(!tools.schemas().some(t => t.function.name === 'connector_stub'));
   assert.equal((await H.api(null, 'GET', '/api/connectors')).body.connectors.find(x => x.id === 'stub').configured, true, 'the app stays for next time');
+});
+
+test('every catalogue entry has what connecting needs: https addresses, API origins, read-only default scopes, its console and docs', () => {
+  const { CATALOG } = require('../modules/connectors/catalog');
+  const https = u => /^https:\/\/[^\s/]+/.test(u);
+  for (const [id, c] of Object.entries(CATALOG)) {
+    if (c.custom) continue;
+    assert.ok(c.label && https(c.authorize) && https(c.token), `${id}: label and addresses`);
+    assert.ok(Array.isArray(c.api) && c.api.length && c.api.every(a => https(a) && new URL(a).origin === a), `${id}: API origins`);
+    assert.equal(typeof c.scopes, 'string', `${id}: scopes`);
+    assert.ok(!/\b(write|admin|delete|send)\b/i.test(c.scopes.replace(/read:[\w-]+|\.read\b|readonly|:read\b/g, '')) || id === 'github', `${id}: read-only by default (${c.scopes})`);
+    assert.ok(https(c.console.split(' ')[0]) && https(c.docs), `${id}: where the app is made, and the docs read`);
+    if (c.whoami) assert.ok(https(c.whoami) || c.whoami.startsWith('/'), `${id}: whoami`);
+  }
+  const services = require('../modules/connectors/services');
+  const ids = services.SERVICES.flatMap(s => s.ways.map(w => w.id)).filter(Boolean);
+  assert.equal(new Set(ids).size, ids.length, 'one vault id per way');
+  const order = ['ics', 'mail', 'dav', 'key', 'oauth'];
+  for (const s of services.SERVICES) {
+    const vias = s.ways.map(w => w.via);
+    assert.deepEqual(vias, [...vias].sort((a, b) => order.indexOf(a) - order.indexOf(b)), `${s.id}: simplest first`);
+    for (const w of s.ways) {
+      if (w.via === 'oauth') assert.ok(CATALOG[w.id], `${s.id}: ${w.id} is in the catalogue`);
+      if (w.via === 'key') { const k = services.KEYS[w.key]; assert.ok(k && https(k.origin) && https(k.link) && k.test.path.startsWith('/'), `${s.id}: key preset`); }
+      if (w.via === 'ics') assert.ok(w.how, `${s.id}: how to get the address`);
+    }
+  }
+  assert.ok(!services.SERVICES.find(s => s.id === 'icloud').ways.some(w => w.via === 'oauth'), 'iCloud has no OAuth, and the card says so');
+  assert.match(services.SERVICES.find(s => s.id === 'icloud').note, /no OAuth/);
+});
+
+test('the services that differ from plain OAuth: Basic client auth, a JSON body, a user token under authed_user, user_scope, a POST whoami', async () => {
+  const { CATALOG } = require('../modules/connectors/catalog');
+  const got = {};
+  const svc2 = http.createServer((req, res) => {
+    let raw = ''; req.on('data', d => { raw += d; }); req.on('end', () => {
+      const json = j => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(j)); };
+      if (req.url === '/token') { got.token = { auth: req.headers.authorization, type: req.headers['content-type'], body: JSON.parse(raw) }; return json({ ok: true, authed_user: { access_token: 'xoxp-1', expires_in: 3600 }, team: { name: 'Hive' } }); }
+      if (req.url === '/whoami') { got.whoami = { method: req.method, body: raw, auth: req.headers.authorization, version: req.headers['x-version'] }; return json({ email: 'al@hive.test' }); }
+      return json({ seen: req.headers['x-version'] });
+    });
+  });
+  await new Promise(r => svc2.listen(0, '127.0.0.1', r));
+  const b2 = `http://127.0.0.1:${svc2.address().port}`;
+  CATALOG.oddone = { label: 'Odd One', authorize: `${b2}/authorize`, token: `${b2}/token`, api: [b2], scopes: 'search:read', tokenAuth: 'basic', tokenBody: 'json',
+    tokenPath: 'authed_user', scopeParam: 'user_scope', whoami: `${b2}/whoami`, whoamiMethod: 'POST', account: j => j.email, headers: { 'X-Version': '7' }, console: 'x' };
+  try {
+    await H.api(null, 'POST', '/api/connectors/oddone', { clientId: 'oid', clientSecret: 'osecret' });
+    const start = await H.api(null, 'POST', '/api/connectors/oddone/connect');
+    const u = new URL(start.body.url);
+    assert.equal(u.searchParams.get('user_scope'), 'search:read');
+    assert.equal(u.searchParams.get('scope'), null);
+    const back = await fetch(`${H.base}/api/connectors/callback?state=${u.searchParams.get('state')}&code=abc`);
+    assert.match(await back.text(), /Odd One as al@hive\.test is connected/);
+    assert.equal(got.token.auth, `Basic ${Buffer.from('oid:osecret').toString('base64')}`);
+    assert.equal(got.token.type, 'application/json');
+    assert.equal(got.token.body.client_secret, undefined, 'the secret only in the header');
+    assert.equal(got.token.body.grant_type, 'authorization_code');
+    assert.deepEqual([got.whoami.method, got.whoami.body, got.whoami.auth, got.whoami.version], ['POST', 'null', 'Bearer xoxp-1', '7']);
+    assert.match(await require('../modules/harness/tools').call('connector_oddone', { path: '/x' }), /"seen":"7"/, 'every call carries the service\'s headers');
+  } finally { delete CATALOG.oddone; require('../modules/connectors/vault').forget('oddone'); await new Promise(r => svc2.close(r)); }
+});
+
+test('a key from a service\'s card: the hub fills in where it goes and tries it once', async () => {
+  const real = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (url, opts = {}) => {
+    if (String(url).startsWith('https://api.linear.app/')) { seen.push({ url: String(url), auth: opts.headers.Authorization, body: opts.body });
+      return new Response(JSON.stringify({ data: { viewer: { name: 'Al' } } }), { status: 200 }); }
+    return real(url, opts);
+  };
+  try {
+    const r = await H.api(null, 'POST', '/api/connectors/keys/preset/linear', { key: 'lin_api_abc123' });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.deepEqual([r.body.test.ok, r.body.key.origin, r.body.key.prefix, r.body.key.hasKey], [true, 'https://api.linear.app', '', true]);
+    assert.deepEqual([seen[0].url, seen[0].auth], ['https://api.linear.app/graphql', 'lin_api_abc123'], 'without "Bearer", as Linear wants');
+    assert.ok(!JSON.stringify(r.body).includes('lin_api_abc123'), 'the key is never sent back');
+    assert.equal((await H.api(null, 'POST', '/api/connectors/keys/preset/nope', { key: 'x' })).status, 404);
+  } finally { globalThis.fetch = real; }
 });
