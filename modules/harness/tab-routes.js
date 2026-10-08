@@ -5,7 +5,7 @@
  * approval switch and a model each): its settings, and the messages waiting
  * for it (inbox.js) — shown folded beside the chat, each one withdrawable.
  *
- *   POST   /api/harness/sessions/:id/settings   { title?, mode?, approval?: 'auto'|'manual'|null }
+ *   POST   /api/harness/sessions/:id/settings   { title?, mode?, approval?: 'auto'|'manual'|null, thinking?: 'auto'|'off'|'on'|level }
  *   GET    /api/harness/sessions/:id/inbox
  *   DELETE /api/harness/sessions/:id/inbox/:qid
  *
@@ -35,6 +35,13 @@ function settings(req) {
       throw bad('Whether this conversation asks before it acts is a host\'s switch.', 403);
     if (![null, 'auto', 'manual'].includes(b.approval)) throw bad('approval is auto, manual or null (the panel\'s).');
     memory.updateSession(id, { approval: b.approval });
+  }
+  // The composer's 💭: auto (the mode's setting), off, on (the mode's level, else medium) or a level (turn/thinking.js).
+  if (b.thinking !== undefined) {
+    const thinking = require('./turn/thinking');
+    if (![null, ...thinking.CHOICES, 'on'].includes(b.thinking)) throw bad('thinking is auto, off, on, low, medium or high.');
+    const level = thinking.toggleLevel(b.thinking, thinking.modeOf({ session: memory.getSession(id) }));
+    memory.updateSession(id, { effort: level, effortBy: level ? 'toggle' : null });
   }
   return require('./organization').view(memory.getSession(id));
 }

@@ -10,10 +10,11 @@ const CONV_MODES = [['agent', 'Agent', 'Does the work'], ['plan', 'Plan', 'Reads
   ['ask', 'Ask', 'Answers questions; reads only'], ['debug', 'Debug', 'Reproduce, find the cause, fix it, prove it']];
 
 /** Draw the row for `sessionId`; `view` is its session view (mode, approval) when already loaded. */
-async function agentConvBar(host, sessionId, view = null, { model = true } = {}) {
+async function agentConvBar(host, sessionId, view = null, { model = true, think = null } = {}) {
   if (!host || !sessionId) return;
   const v = view || await apiFetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}`).then(r => r.session).catch(() => null);
   if (!v) return;
+  if (think && typeof thinkToggleBind === 'function') thinkToggleBind(think, sessionId, v);   // the composer's 💭 (agent-ui/think-toggle.js)
   const mode = v.mode || 'agent', approval = v.approval || '';
   host.innerHTML = `<select class="input conv-mode" title="${escHtml(CONV_MODES.find(m => m[0] === mode)?.[2] || '')}">
       ${CONV_MODES.map(([k, l, t]) => `<option value="${k}" title="${escHtml(t)}" ${k === mode ? 'selected' : ''}>${l}</option>`).join('')}</select>
@@ -26,7 +27,7 @@ async function agentConvBar(host, sessionId, view = null, { model = true } = {})
   const save = async body => {
     try { await apiFetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/settings`, { method: 'POST', body }); }
     catch (e) { appAlert(e.message); }
-    agentConvBar(host, sessionId, null, { model });
+    agentConvBar(host, sessionId, null, { model, think });
   };
   host.querySelector('.conv-mode').onchange = e => save({ mode: e.target.value });
   host.querySelector('.conv-approval').onchange = e => save({ approval: e.target.value || null });

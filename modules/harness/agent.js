@@ -146,7 +146,9 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   // Limits that follow the work (experiment adaptiveLimits, turn/triage.js): null when off, and then nothing changes.
   const verdict = front ? null : await require('./turn/triage').verdict({ message, client, session: memory.getSession(sessionId), p });
   if (verdict) p = { ...p, maxSteps: verdict.steps, _adaptive: verdict };
-  const effort = require('./turn/triage').effort(require('./turn/effort').levelFor({ session: memory.getSession(sessionId), client, p }), verdict);
+  // Whether it thinks: the mode's setting, a toggle, the person's words, else as before (turn/thinking.js) — read each step.
+  const thinkingOf = () => require('./turn/thinking').resolve({ client, profile, session: memory.getSession(sessionId), message, p, verdict });
+  let effort = thinkingOf();
   client = client && { ...client, effort, ...(front ? { front: true } : {}) };
   const ep  = providers.endpoint(p.provider);
   if (!p.model)
@@ -158,6 +160,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   if (!session) throw Object.assign(new Error('Unknown session'), { status: 404 });
   say({ type: 'session', sessionId: session.id });
   if (verdict) say({ type: 'triage', ...verdict });   // a span in the trace (trace.js)
+  say({ type: 'effort', ...effort });                 // and so is how hard it thinks, and why
 
   // Provenance stays on the row, not in the text: `toApiMessages` maps the
   // fields the API takes, so a client can render "you asked this from the watch"
@@ -191,7 +194,6 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     // rather than the turn failing.
     stream_options: { include_usage: true },
     ...(Number(p.maxTokens) > 0 ? { max_tokens: Number(p.maxTokens) } : {}),
-    ...require('./turn/effort').fields(client ? client.effort?.level : verdict && effort.level, ep, p.model),   // how hard it thinks (turn/effort.js)
   };
 
   let maxSteps = Math.max(1, Number(p.maxSteps) || 1);   // extended while the turn advances (turn/extend.js)
@@ -231,6 +233,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     // is an in-process registry read, so the honest path is now also the cheap
     // one.
     const stepDisabled = front ? front.off(disabledFor(profile, p, session.id)) : disabledFor(profile, p, session.id);
+    const now = step > 1 && thinkingOf();   // the effort tool changes it from the next step
+    if (now && (now.level !== effort.level || now.from !== effort.from)) { effort = now; say({ type: 'effort', step, ...effort }); }
     // Sent by tier when the toolTiers experiment is on (turn/tool-tiers.js): what is held is unchanged.
     const schemas = require('./turn/tool-tiers').split(tools.schemas(stepDisabled), { sessionId: session.id, profile, text: message }).offered;
     if (toolCount !== null && schemas.length !== toolCount)
@@ -264,9 +268,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id, person: client?.user }, body,
       onText: t => { const shown = tones ? tones.push(t) : t; text += shown; say({ type: 'text', text: shown, ...(tones ? { spoken: t } : {}) }); },
       onThinking: t => say({ type: 'thinking', text: t }),
-      // Silence is a state worth drawing. Without this the console shows the
-      // session line and then nothing at all, which reads as a broken panel
-      // rather than as a provider that has not started answering.
+      // Silence is a state worth drawing: without it the console shows the session line and then nothing,
+      // which reads as a broken panel rather than a provider that has not started answering.
       onWaiting: w => say({ type: 'waiting', step, provider: ep.label || ep.id, ...w }),
       onSkip: skipped => {
         contextSkips.set(`${skipped.provider}/${skipped.model}`, skipped.text);
@@ -276,7 +279,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       onHop: hopReporter({ fallbacks, say, step }),
       onRetry: r => say({ type: 'warning', step, kind: 'rate-limit', text: r.text, waitMs: r.waitMs, attempt: r.attempt }),
       onStart: s => say({ type: 'warning', step, kind: 'starting', text: s.text }),   // a stopped model server started (service-life/)
-    }), { body: { ...base, messages, ...(schemas.length && !reporting ? { tools: schemas, tool_choice: 'auto' } : {}) }, p, say, step, who: ep.label || ep.id });
+    }), { body: { ...base, ...require('./turn/effort').fields(effort.level, ep, p.model), messages, ...(schemas.length && !reporting ? { tools: schemas, tool_choice: 'auto' } : {}) }, p, say, step, who: ep.label || ep.id });
     const held = tones?.rest();   // a "[" that never became a tag is words after all
     if (held) { text += held; say({ type: 'text', text: held, spoken: '' }); }
     const stepMs = Date.now() - startedAt;
@@ -290,7 +293,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       ms: stepMs,
     });
     const spend = budget.report(led, p);
-    say({ type: 'usage', step, ...spend });
+    say({ type: 'usage', step, ...spend, thinking: { level: effort.level, from: effort.from, mode: effort.mode } });
     // What this step sent and what came back, as numbers and names: the trace's model span (trace.js).
     say({ type: 'step', step, provider: reply.provider || ep.id, model: reply.model || p.model, ms: stepMs, finish: reply.finish || null, usage: reply.usage || null,
       cached: budget.cachedOf(reply.usage), estimate: promptEstimate, messages: messages.length, tools: schemas.length,

@@ -47,7 +47,7 @@ async function chatLoadHistory() {
     // How full the window already is, before this panel sends anything. Absent
     // for a harness that does not report one, which is what '' draws.
     _chatContext(data.context);
-    _chatLoadApproval();
+    _chatLoadApproval(); thinkToggleBind(document.getElementById('chat-think'), data.sessionId || null);   // 💭: the Orchestrator's (think-toggle.js)
   } catch {}
 }
 

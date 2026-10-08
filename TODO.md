@@ -204,6 +204,17 @@ the project's managers only if the owner allows sharing specialists and skills (
   media block by `kind` (DocaMobile TODO, branch `media-file-kind`); charter rule 15 still says "`tell_device` carries
   a picture" (ask-first, S11: waits for the owner's yes); the live memory `telegram-channel-send` is now wrong and
   should be forgotten.
+- [x] Thinking per mode, and within the mode (asked 2026-10-08: "enable or disable thinking in specific modes, and,
+  where it doesn't look too bad, even within the mode itself"; branch `thinking-per-mode`): `thinking.<mode>` for chat,
+  work chats, specialists, the Live and Deep calls, Ambient and device calls — auto (as before), off, or on at a level —
+  in one card, Settings → Harness → Thinking, provider notes under Advanced; 💭 beside Send in the floating chat, the
+  Harness console and a project's chat (the conversation's own, `session.effort`), and in the Deep and Live calls next
+  to Mic (that call only); "think harder" still wins for its message and the `effort` tool for the conversation
+  (`turn/thinking.js`). Off is `none` in the reasoning_effort dialect except OpenAI's gpt-5 (`minimal` made llama.cpp's
+  Qwen template answer 500 — found probing the local server); a refused word or field is tried once another way and
+  remembered; `no_think` is an owner-named dialect. The level and why are an `effort` event: a trace span, a log line,
+  the `usage` event, Chronicle's story. Not checked: Ollama's and the hosted providers' real answers to `none` (a
+  stub stood in), and the apps (none of them shows a toggle; the device setting covers the watch).
 - [x] A call that feels alive and quick (asked 2026-10-07 from the watch; hub 2.304.0, branch `watch-call-live`,
   DocaWear `call-feedback`): the front (`turn/front.js`, `assistant.front`) — a spoken turn answers at once with a
   short kit, untriaged, at assistant mode's effort; a large request or "think harder / take your time / focus" goes to

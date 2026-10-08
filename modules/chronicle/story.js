@@ -16,7 +16,7 @@ const raw = () => require('../db').syncHandle();
 /** What one run's spans add up to. */
 function summarize(spans, prices) {
   const s = { models: {}, tools: {}, toolCalls: 0, failed: [], approvals: 0, refused: 0, failovers: 0, warnings: [], errors: [],
-    prompt: 0, completion: 0, cached: 0, cost: null, modelMs: 0, toolMs: 0 };
+    prompt: 0, completion: 0, cached: 0, cost: null, modelMs: 0, toolMs: 0, thinking: [] };
   for (const sp of spans) {
     const d = sp.data || {};
     if (sp.kind === 'model') {
@@ -35,6 +35,7 @@ function summarize(spans, prices) {
     } else if (sp.kind === 'failover') s.failovers++;
     else if (sp.kind === 'warning') s.warnings.push(sp.name || 'warning');
     else if (sp.kind === 'error') s.errors.push(d.message || 'error');
+    else if (sp.kind === 'thinking') s.thinking.push({ level: d.level, from: d.from, mode: d.mode, step: sp.step });   // turn/thinking.js
   }
   return s;
 }

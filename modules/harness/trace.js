@@ -63,6 +63,8 @@ function onEvent(evt) {
     case 'triage':   // the verdict that set this turn's effort and steps (turn/triage.js)
       return write(t, 'triage', { name: `${evt.difficulty}${evt.urgency === 'quick' ? ' · quick' : ''}`, data: {
         difficulty: evt.difficulty, urgency: evt.urgency, by: evt.by, reasons: evt.reasons, effort: evt.effort, steps: evt.steps, base: evt.base, ceiling: evt.ceiling } });
+    case 'effort':   // how hard it thought and why: a mode's setting, a toggle, the person's words, auto (turn/thinking.js)
+      return write(t, 'thinking', { name: evt.level || 'default', step: evt.step ?? null, data: { level: evt.level || null, from: evt.from || null, mode: evt.mode || null } });
     case 'compacted':
       return write(t, 'compacted', { step: evt.at ?? null, data: { contextTokens: evt.contextTokens ?? null } });
     case 'error':

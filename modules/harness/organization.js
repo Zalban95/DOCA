@@ -114,6 +114,7 @@ function view(row) {
     missionId: require('../agents/missions').forSession(s.id)?.id || null,
     // What a chat tab draws (tab-routes.js): how it works, whether it asks, and what is waiting for it.
     mode: require('./modes').of(s.id), approval: s.approval || null, projectId: s.projectId || null,
+    thinking: s.effort || null, thinkingBy: s.effortBy || null,   // the composer's 💭 (turn/thinking.js)
     waiting: require('./inbox').waiting(s.id).length };
 }
 

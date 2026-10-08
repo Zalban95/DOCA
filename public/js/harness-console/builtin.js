@@ -88,6 +88,7 @@ function _hcBuiltinHtml(h) {
           <textarea class="input flex1 hc-input" id="hc-input" rows="1" placeholder="Message the harness…"
                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();hcSend();}"></textarea>
           ${typeof micKeepHtml === 'function' ? micKeepHtml('hc-mic-keep') : ''}
+          ${typeof thinkToggleHtml === 'function' ? thinkToggleHtml('hc-think') : ''}
           <button class="btn btn-sm btn-amber" id="hc-send" onclick="hcSend()">Send</button>
           <button class="btn btn-sm btn-red" id="hc-stop" style="display:none" onclick="hcStop()"
                   title="Stop this turn. The step already running finishes; nothing after it starts.">■ Stop</button>
