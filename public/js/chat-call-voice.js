@@ -7,22 +7,35 @@ let _callSynthSlots = 2;
 const _callSynthWaiting = [];
 const _callSynthSlot = () => (_callSynthSlots > 0 ? (_callSynthSlots--, Promise.resolve()) : new Promise(r => _callSynthWaiting.push(r)));
 const _callSynthFree = () => { const next = _callSynthWaiting.shift(); if (next) next(); else _callSynthSlots++; };
-let _callSynthSeq = 0, _callSynthNext = 0;
+let _callSynthSeq = 0, _callSynthNext = 0, _callSynthGen = 0;
 const _callSynthReady = new Map();
+const CALL_SYNTH_TIMEOUT_MS = 30000;   // a speech service that never answers must not leave a sentence "coming" forever
+
+/** A new call starts with nothing of an earlier one's voice counted: a sentence still being made for a call that
+ *  ended used to keep `_callSynthPending` above 0, which reads as "the voice is playing" to the microphone loop. */
+function _callSynthReset() {
+  _callSynthGen++;
+  _callSynthPending = 0; _callSynthSeq = 0; _callSynthNext = 0;
+  _callSynthReady.clear();
+}
 
 async function _callEnqueueSynth(text) {
   if (!_callActive) return;
   const epoch = _callEpoch;   // said before an interruption: dropped when it arrives after one (barge-in)
+  const gen = _callSynthGen;   // this call's: a reset leaves it out of the counts
   _callSynthPending++;
   const seq = _callSynthSeq++;   // played in the order said, whichever synthesis finishes first
   let ready = null;
   await _callSynthSlot();
   try {
+    if (gen !== _callSynthGen) return;
+    const AS = typeof AbortSignal !== 'undefined' ? AbortSignal : {};
+    const limit = AS.timeout ? AS.timeout(CALL_SYNTH_TIMEOUT_MS) : null;
     const res = await fetch('/api/chat/synthesize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
-      signal: _callAbort?.signal,
+      signal: limit && AS.any && _callAbort ? AS.any([_callAbort.signal, limit]) : (_callAbort?.signal || limit || undefined),
     });
     if (!res.ok) throw new Error(`speech service answered ${res.status}${await res.text().then(t => `: ${t.slice(0, 120)}`).catch(() => '')}`);
 
@@ -35,9 +48,11 @@ async function _callEnqueueSynth(text) {
     ready = audioBuf;
   } catch (e) {
     // Once per call: a voice that fails silently reads as a call that answers only in text.
-    if (e.name !== 'AbortError' && _callActive && !_callTtsWarned) { _callTtsWarned = true; chatAppendMsg('system', `The answer could not be spoken: ${e.message}`); }
+    const lost = e.name === 'TimeoutError' || (e.name !== 'AbortError' && gen === _callSynthGen);
+    if (lost && _callActive && !_callTtsWarned) { _callTtsWarned = true; _callNotice('tts', `The answer could not be spoken (${e.name === 'TimeoutError' ? 'the speech service did not answer' : e.message}) — it is in the chat.`); }
   } finally {
     _callSynthFree();
+    if (gen !== _callSynthGen) return;   // an earlier call's sentence: nothing here counts it any more
     _callSynthReady.set(seq, ready);
     while (_callSynthReady.has(_callSynthNext)) {
       const b = _callSynthReady.get(_callSynthNext);
@@ -67,6 +82,7 @@ function _callPlayNext() {
   _callCurrentSrc = src;
   _callSetStatus('Speaking…', 'speaking');
   src.start();
+  _callReport('played', { n: 1 });
   _callHeardMark(buf);   // what is heard, for a cut (chat-call-hold.js)
   if (typeof faceConceptSay === 'function') faceConceptSay(buf._docaText, buf.duration);
 }

@@ -199,6 +199,7 @@ const SCHEMA = {
       harnessLines:    { type: 'integer', min: 50, max: 20000, default: 500, hint: 'Lines of the harness log (Hub → Logs) kept in memory since the last start.' },
       workstreamLines: { type: 'integer', min: 50, max: 5000, default: 300, hint: 'Lines of the Workstream\'s activity kept in memory.' },
       mcpLines:        { type: 'integer', min: 20, max: 5000, default: 200, hint: 'Lines of each MCP server\'s own output kept in memory.' },
+      callLines:       { type: 'integer', min: 50, max: 5000, default: 500, hint: 'Lines of the live calls\' log (Hub → Logs, source call) kept in memory: each stage of each call, in names and numbers.' },
       runsRetainDays:  { type: 'number', min: 1, max: 3650, default: 90, hint: 'Days the record of each turn, mission and device job is kept (Chronicle reads them); its trace goes with it.' },
       jobsKept:        { type: 'integer', min: 5, max: 1000, default: 50, hint: 'Background jobs (shell_job) kept with their output files; the oldest finished ones go first.' },
       evalResultsKept: { type: 'integer', min: 1, max: 500, default: 30, hint: 'Results kept per evaluation set, to compare a run with the one before.' },

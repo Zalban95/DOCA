@@ -5,8 +5,8 @@
    System → Logs. Its page is made here: index.html is at its line ceiling. */
 const CHRON = { f: { q: '', source: '', person: '', device: '', agent: '', state: '', since: 'week' }, picked: null, off: null, data: null };
 const CHRON_SINCE = { hour: ['the last hour', 3600e3], day: ['the last day', 86400e3], week: ['the last week', 7 * 86400e3], month: ['the last 30 days', 30 * 86400e3], all: ['all kept', 0] };
-const CHRON_SOURCES = { turn: 'Turns', mission: 'Missions', job: 'Device jobs', hub: 'What the hub did on its own', log: 'Harness log (since the last start)' };
-const chronLines = s => s === 'log' || s === 'hub';   // sources that are lines, not runs
+const CHRON_SOURCES = { turn: 'Turns', mission: 'Missions', job: 'Device jobs', hub: 'What the hub did on its own', call: 'Live calls, stage by stage', log: 'Harness log (since the last start)' };
+const chronLines = s => s === 'log' || s === 'hub' || s === 'call';   // sources that are lines, not runs
 
 function chronicleTab(shown) {
   if (!shown) { CHRON.off?.(); CHRON.off = null; return; }

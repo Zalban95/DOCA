@@ -45,7 +45,7 @@ const PERSON = [
   { id: 'attach', does: 'attach a file or a picture', panel: ['POST /api/attachments'], v1: ['POST /media'], note: 'then named on /harness/messages as mediaIds' },
   { id: 'speech', does: 'hear an answer in the hive\'s voice, and turn a recording into words', panel: ['POST /api/chat/synthesize', 'POST /api/chat/transcribe'],
     gap: 3, why: 'a voice note or a spoken answer outside a live call (D1 left it: speech with the device\'s voice)' },
-  { id: 'call', does: 'talk in a live call', panel: ['POST /api/chat/heard'], v1: ['GET /call', 'GET /realtime'],
+  { id: 'call', does: 'talk in a live call', panel: ['POST /api/chat/heard', 'POST /api/chat/call-event'], v1: ['GET /call', 'GET /realtime'],
     note: 'in a device\'s call the hub\'s engine cuts the answer to what was heard itself' },
 
   // ── What the agents are doing ──
