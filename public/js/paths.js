@@ -19,10 +19,16 @@ async function pathsLoad() {
   }
 }
 
+/** The paths a newcomer may want to point somewhere else; the stack's, OpenClaw's and the scripts' are under Advanced. */
+const PATHS_COMMON = ['WORKSPACE_DIR', 'ATTACHMENTS_DIR'];
+
 function _pathsRender(rows) {
   const list = document.getElementById('paths-list');
   if (!list) return;
-  list.innerHTML = rows.map(_pathRowHtml).join('');
+  const rest = rows.filter(p => !PATHS_COMMON.includes(p.key));
+  list.innerHTML = rows.filter(p => PATHS_COMMON.includes(p.key)).map(_pathRowHtml).join('')
+    + (rest.length ? advancedFold(rest.map(_pathRowHtml).join(''), { id: 'paths', label: 'Advanced — the stack, OpenClaw, scripts, the rest',
+      changed: rest.filter(p => p.source === 'saved').length }) : '');
 }
 
 function _pathRowHtml(p) {
@@ -57,7 +63,7 @@ function _pathRowHtml(p) {
       <div class="path-label">${escHtml(p.label)}<small>${escHtml(p.note || '')}</small></div>
       <div>
         <div class="path-fields">
-          <input id="${id}" class="input flex1" data-key="${escHtml(p.key)}"
+          <input id="${id}" class="input flex1" data-key="${escHtml(p.key)}" data-default="" data-label="${escHtml(p.label)}"
                  value="${p.source === 'saved' ? escHtml(p.value) : ''}"
                  placeholder="${escHtml(p.value)}">
           ${p.kind === 'url' ? '' : `<button class="btn btn-xs" title="Browse" onclick="fpOpen('${id}','${browse}')">📁</button>`}

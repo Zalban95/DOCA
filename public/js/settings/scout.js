@@ -36,16 +36,15 @@ async function scoutCardRender(panel) {
       <button class="btn btn-sm" onclick="scoutLook()">Look now</button>
       <button class="btn btn-sm btn-blue" onclick="scoutBrief()">Scout now</button>
     </div>
-    <details style="font-size:12px;margin-bottom:8px"><summary>What it watches</summary>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
-        <label>Every <input class="input" id="scout-every" type="number" min="1" value="${s.everyDays}" style="width:70px"> days ·
-          growing fast at <input class="input" id="scout-growth" type="number" min="1" value="${s.growthLikes}" style="width:80px"> new likes</label>
+    ${advancedFold(`<div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
+        <label>Every <input class="input" id="scout-every" type="number" min="1" data-default="7" data-label="Every (days)" value="${s.everyDays}" style="width:70px"> days ·
+          growing fast at <input class="input" id="scout-growth" type="number" min="1" data-default="300" data-label="Growing fast at" value="${s.growthLikes}" style="width:80px"> new likes</label>
         <label>Releases (GitHub owner/repo, one a line)<textarea class="input" id="scout-watch" rows="4">${escHtml(s.watch.join('\n'))}</textarea></label>
         <label>News feeds (RSS or Atom)<textarea class="input" id="scout-feeds" rows="2">${escHtml(s.feeds.join('\n'))}</textarea></label>
         <label>Repository for TODO.md <input class="input" id="scout-repo" value="${escHtml(s.repo)}" placeholder="${escHtml(v.repo || '')}" style="width:min(420px,70vw)"></label>
-        <label>Implementer <input class="input" id="scout-impl" value="${escHtml(s.implementer)}" placeholder="doca, claude, codex…" style="width:140px"></label>
+        <label>Implementer <input class="input" id="scout-impl" data-default="doca" data-label="Implementer" value="${escHtml(s.implementer)}" placeholder="doca, claude, codex…" style="width:140px"></label>
         <div><button class="btn btn-sm btn-blue" onclick="scoutSave()">Save</button></div>
-      </div></details>
+      </div>`, { id: 'scout', label: 'What it watches — how often, releases, feeds, where suggestions go' })}
     <pre class="terminal" id="scout-out" style="display:none;max-height:260px;white-space:pre-wrap"></pre>
     ${v.suggestions.map(row).join('') || '<div class="placeholder" style="font-size:12px">No suggestions yet.</div>'}`;
   panel.append(card);

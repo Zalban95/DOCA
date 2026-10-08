@@ -33,6 +33,8 @@ function mcpDraftOpen(id) {
   set('mcp-env', Object.entries(d.env).map(([k, v]) => `${k}=${v}`).join('\n'));
   set('mcp-url', d.url); set('mcp-headers', d.headers.map(h => `${h}: `).join('\n'));
   const empty = [...Object.entries(d.env).filter(([, v]) => v === '').map(([k]) => k), ...d.headers];
+  advancedFoldRefresh(document.getElementById('mcp-form'));   // what is left to fill sits under Advanced: shown open
+  if (empty.length) document.querySelectorAll('#mcp-form details.adv-changed').forEach(f => { f.open = true; });
   setStatus(document.getElementById('mcp-form-status'), `Prepared by the agent for ${d.where}.${empty.length ? ` Fill ${empty.join(', ')}, then Save.` : ' Read it, then Save.'}`
     + `${/hub/i.test(d.where) ? '' : ' It drives a program on that machine: there, it is added through its DOCA client (DocaDesk or doca-client), or here as an http server it serves.'}`, '');
   document.getElementById('mcp-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
