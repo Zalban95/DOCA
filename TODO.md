@@ -650,6 +650,13 @@ Each row: what OpenDots does → where DOCA stands → what is left.
 - [x] H10.9 The agents' work, live (asked 2026-10-06). **Done (2.229.0):** the Workstream — files edited popping up with
   their diffs, by a sentinel that runs while the page is open; thinking and commands lower right. **Done (2.230.0):** Machines → Live — the agents' computers'
   screens and the pages they serve for tests, pictured by the hub's headless browser, the working ones in front.
+  **Done (2026-10-08, asked: "show running VMs and computers on the side status column as we do with containers, as
+  well as in Live with the preview… all coherently"):** one row shape for containers, computers and VMs
+  (`machines/rows.js`, `GET /api/machines/rows`, host; cached so the poll starts no hypervisor CLI) drawn by the status
+  column's **Machines** (running as rows with their point, stopped counted with a link) and by Live, where running VMs
+  get a picture from `virsh screenshot` / `VBoxManage screenshotpng` (made small on node:zlib) and open their VNC
+  console through the hub (noVNC, `/ws/vm/`); the VMs tab gains Console. **Left:** Hyper-V, UTM and Parallels have no
+  picture (no CLI screenshot); plain containers get no Live tile by design.
 - [x] H10.10 The home in DOCA's own layout (asked 2026-10-06: "does Home Assistant let us use our layout, or do we build
   from scratch?"). Neither: Home Assistant stays the device layer (thousands of brands, its areas, scenes and
   automations), and DOCA draws its own **Home** page from HA's WebSocket API — `get_states`, `subscribe_events` for live

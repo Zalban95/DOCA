@@ -76,9 +76,37 @@ function _vmRowHtml(hvId, vm) {
       <span class="vm-name">${escHtml(vm.name)}</span>
       <span class="vm-state">${escHtml(vm.stateRaw || vm.state)}</span>
       ${display}
-      <span class="vm-acts">${actions.join('')}${hvId === 'libvirt' ? `<button class="btn btn-xs" title="Details, autostart and snapshots" onclick="vmDetails(${arg}, this)">⋯</button>` : ''}</span>
+      <span class="vm-acts">${vm.console?.how === 'hub' ? `<button class="btn btn-xs" title="Its screen, through the hub" onclick="vmConsoleOpen(${jsArg(hvId)}, ${arg})">Console</button>` : ''}${actions.join('')}${hvId === 'libvirt' ? `<button class="btn btn-xs" title="Details, autostart and snapshots" onclick="vmDetails(${arg}, this)">⋯</button>` : ''}</span>
     </div>
     ${hvId === 'libvirt' ? `<div class="vm-details" id="vm-details-${escHtml(vm.name)}" style="display:none"></div>` : ''}`;
+}
+
+/**
+ * A VM's console inside the panel (machines/vm-console.js): its VNC through the hub, in the computers' live view, so
+ * Back or ✕ closes it — from the VMs tab, Live and the status column alike. A display the hub cannot carry is named.
+ */
+let _vmConsole = null;
+async function vmConsoleOpen(hypervisor, name) {
+  const data = await apiFetch('/api/vms').catch(() => ({ hypervisors: [] }));
+  const vm = (data.hypervisors.find(h => h.id === hypervisor)?.vms || []).find(v => v.name === name);
+  if (!vm) return appAlert(`"${name}" is gone.`);
+  if (vm.console?.how !== 'hub') return appAlert(vm.console?.why || 'It has no console the hub can open.');
+  vmConsoleClose();
+  const ov = Object.assign(document.createElement('div'), { className: 'pc-live' });
+  ov.innerHTML = `<div class="pc-live-bar"><b>${escHtml(vm.name)}</b><span class="pc-dim">${escHtml([data.hypervisors.find(h => h.id === hypervisor)?.label, vm.os].filter(Boolean).join(' · '))}</span>
+      <span style="flex:1"></span><a class="btn btn-xs" href="${escHtml(vm.console.url)}" target="_blank" rel="noopener">Open in a window</a>
+      <button class="btn btn-xs" onclick="vmConsoleClose()">✕</button></div>
+    <iframe src="${escHtml(vm.console.url)}" title="${escHtml(vm.name)}" allow="clipboard-read; clipboard-write"></iframe>`;
+  document.body.appendChild(ov);
+  _vmConsole = { ov, release: overlayBack(() => vmConsoleClose(true)) };
+}
+
+function vmConsoleClose(fromBack) {
+  if (!_vmConsole) return;
+  const { ov, release } = _vmConsole;
+  _vmConsole = null;
+  ov.remove();
+  if (!fromBack) release();
 }
 
 /** Force off is the one that can lose the guest's data, so it asks first. */

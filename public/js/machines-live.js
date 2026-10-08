@@ -5,13 +5,15 @@
    on a computer's page port (a repository an agent runs there, TODO H10.18) — opens through a preview (canvas origin),
    so a phone reaches it even when it listens on localhost only, and ↗ there gives it a tab of its own. It
    refreshes every few seconds while shown, and asks for pictures of served pages only then. Made here: index.html is
-   at its line ceiling. */
-const ML = { timer: null, data: null, previews: {} };   // previews: served key → preview id, made once per page
+   at its line ceiling. The running VMs are here too (2026-10-08), pictured by their own hypervisor, behind the agents'
+   work unless a row of the status column brought them forward (liveFocus); a VM opens its console through the hub.
+   Plain containers get no tile: one that serves a page an agent started is already a served page. */
+const ML = { timer: null, data: null, previews: {}, focus: null };   // previews: served key → preview id, made once per page
 const ML_MS = 3000;
 
 function liveMachinesTab(shown) {
   clearInterval(ML.timer); ML.timer = null;
-  if (!shown) return;
+  if (!shown) { ML.focus = null; return; }
   _mlLoad();
   ML.timer = setInterval(() => { if (document.visibilityState === 'visible') _mlLoad(); }, ML_MS);
 }
@@ -27,8 +29,8 @@ const _mlAgo = ms => (ms < 60000 ? `${Math.round(ms / 1000)} s ago` : `${Math.ro
 
 function _mlTiles() {
   const d = ML.data, tiles = [];
-  for (const c of d.computers) tiles.push({ id: `c:${c.id}`, working: c.working, kind: '🖵', title: c.name,
-    line: c.activity ? `${c.activity.what} · ${_mlAgo(c.activity.ago)}` : c.mission ? `${c.mission.label}: ${c.mission.state}` : c.purpose || '',
+  for (const c of d.computers) tiles.push({ id: `c:${c.id}`, working: c.working, kind: '🖵', title: c.name, point: c.state === 'running' ? 'up' : c.state === 'missing' ? 'error' : 'down',
+    line: c.activity ? `${c.activity.what} · ${_mlAgo(c.activity.ago)}` : c.mission ? `${c.mission.label}: ${c.mission.state}` : c.purpose || 'no mission yet',
     who: c.mission ? c.mission.label : '', img: c.state === 'running' ? `/api/computers/${encodeURIComponent(c.id)}/screen` : null,
     empty: c.state === 'running' ? 'Waiting for its screen…' : `Stopped (${c.state})`, open: () => computersWatch(c.id) });
   for (const s of d.served) tiles.push({ id: `s:${s.key}`, working: true, kind: '◉',
@@ -36,7 +38,19 @@ function _mlTiles() {
     line: `$ ${s.command.slice(0, 90)}`, who: s.who || '', img: s.shot ? `/api/machines/served/${encodeURIComponent(s.key)}/shot` : null,
     empty: d.browser.found ? 'Taking its picture…' : d.browser.why, tail: s.tail,
     open: () => _mlOpenServed(s.key) });
+  for (const v of d.vms || []) tiles.push({ id: `v:${v.key}`, working: false, kind: '▣', title: v.name, point: 'up',
+    line: [v.label, v.os].filter(Boolean).join(' · '), who: v.console.how === 'hub' ? 'console' : '',
+    img: v.shot ? `/api/machines/vms/${encodeURIComponent(v.hypervisor)}/${encodeURIComponent(v.name)}/shot` : null,
+    empty: v.why || 'Taking its picture…', open: () => vmConsoleOpen(v.hypervisor, v.name) });
+  for (const t of tiles) if (t.id === ML.focus) t.working = true;
   return tiles;
+}
+
+/** Live, with one machine brought to the front (a row of the status column, machines-rows.js). */
+function liveFocus(id) {
+  ML.focus = id;
+  nav('live');
+  setTimeout(() => document.querySelector(`#tab-live .ml-tile[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 400);
 }
 
 /** A served page through a preview (canvas/previews.js): reachable from any screen, whatever address it listens on. */
@@ -55,7 +69,7 @@ async function _mlOpenServed(key) {
 function _mlDraw(page) {
   const tiles = _mlTiles(), front = tiles.filter(t => t.working), back = tiles.filter(t => !t.working);
   if (!page.querySelector('.ml-front')) {
-    page.innerHTML = `<div class="ml-head">${pageHeadHtml({ title: 'Live', sub: 'The agents\' computers and the pages they serve for tests — whatever is working comes to the front.' })}</div>
+    page.innerHTML = `<div class="ml-head">${pageHeadHtml({ title: 'Live', sub: 'The agents\' computers, the pages they serve for tests, and the running VMs — whatever is working comes to the front.' })}</div>
       <div class="ml-front"></div><div class="ml-back"></div>`;
   }
   const sync = (box, list, big) => {
@@ -67,7 +81,8 @@ function _mlDraw(page) {
       el.classList.toggle('big', big);
       el.classList.toggle('working', !!t.working);
       el.onclick = t.open;   // a function: an onclick attribute would read jsArg's HTML escaping literally
-      el.querySelector('.ml-cap').innerHTML = `<b>${t.kind} ${escHtml(t.title)}</b>${t.who ? `<span class="ml-who">${escHtml(t.who)}</span>` : ''}<div class="ml-line">${escHtml(t.line)}</div>`;
+      el.classList.toggle('focused', t.id === ML.focus);
+      el.querySelector('.ml-cap').innerHTML = `<b>${t.point ? `<span class="m-pt ${t.point}"></span>` : ''}${t.kind} ${escHtml(t.title)}</b>${t.who ? `<span class="ml-who">${escHtml(t.who)}</span>` : ''}<div class="ml-line">${escHtml(t.line)}</div>`;
       el.querySelector('.ml-empty').textContent = t.img ? '' : t.empty;
       el.querySelector('.ml-empty').title = t.tail || '';
       const img = el.querySelector('img');
@@ -78,7 +93,7 @@ function _mlDraw(page) {
   };
   sync(page.querySelector('.ml-front'), front, true);
   sync(page.querySelector('.ml-back'), back, false);
-  if (!tiles.length) page.querySelector('.ml-front').innerHTML = '<div class="placeholder">No agent machine and no served page yet. Agents make computers for risky or browser work; a dev server an agent starts shows up here with its page.</div>';
+  if (!tiles.length) page.querySelector('.ml-front').innerHTML = '<div class="placeholder">No agent machine, served page or running VM yet. Agents make computers for risky or browser work; a dev server an agent starts shows up here with its page; a VM you start shows its screen.</div>';
   else page.querySelector('.ml-front > .placeholder')?.remove();
 }
 

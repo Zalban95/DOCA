@@ -17,4 +17,18 @@ function cli() {
   return name;
 }
 
-module.exports = { cli, _reset: () => { _cache = null; } };
+/**
+ * The containers, as `ps` describes them: one parsed object per line of `--format '{{json .}}'`, by argv (no shell, so
+ * the braces need no quoting on Windows either). `all` adds the stopped ones. Rejects with the CLI's own error, which
+ * docker.js reads to tell "not installed" and "daemon stopped" apart. The one reader for the sidebar's status, the
+ * Docker tab and the machines' rows (machines/rows.js).
+ */
+function ps({ all = false } = {}) {
+  return new Promise((resolve, reject) => require('child_process').execFile(cli(), ['ps', ...(all ? ['-a'] : []), '--format', '{{json .}}'],
+    { maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (err, stdout, stderr) => {
+      if (err) return reject(Object.assign(err, { stderr }));
+      resolve(String(stdout).trim().split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean));
+    }));
+}
+
+module.exports = { cli, ps, _reset: () => { _cache = null; } };

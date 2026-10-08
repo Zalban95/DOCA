@@ -11,6 +11,8 @@
  *              hub's headless browser while a Live page looks (shots.js); and a page a running computer serves on its
  *              page port (computers SERVE, published on the hub's 127.0.0.1 — a repository run there, TODO H10.18),
  *              when something answers on it
+ *   vms        the running virtual machines, each with a picture its hypervisor takes (vm-shots.js) and how its
+ *              console opens (vm-console.js) — asked 2026-10-08, with the status column's rows (rows.js)
  * "Working" is anything that acted in the last WORKING_MS; the page puts those in front.
  */
 const os = require('os');
@@ -80,15 +82,30 @@ async function picture({ shots = false } = {}) {
     return { ...c, activity: a ? { ...a, ago: now - a.at } : null, working: !!busy };
   });
   const pages = [...served(), ...await computerPages(computers)];
-  const shooter = require('./shots');
+  const shooter = require('./shots'), vmShooter = require('./vm-shots');
   if (shots) shooter.want(pages.map(p => ({ key: p.key, url: p.url })));
-  return { computers, served: pages.map(p => ({ ...p, shot: shooter.has(p.key), working: true })), browser: shooter.browser(), workingMs: WORKING_MS };
+  const running = (await require('./vm-list').list()).vms.filter(v => v.state === 'running');
+  if (shots) vmShooter.want(running);
+  const vms = running.map(v => {
+    const key = vmShooter.keyOf(v);
+    return { key, name: v.name, hypervisor: v.hypervisor, label: v.label, os: v.os || null, state: v.state,
+      shot: vmShooter.has(key), why: vmShooter.cannot(v) || vmShooter.error(key), console: require('./vm-console').where(v) };
+  });
+  return { computers, served: pages.map(p => ({ ...p, shot: shooter.has(p.key), working: true })), vms, browser: shooter.browser(), workingMs: WORKING_MS };
 }
 
 let _listening = false;
 function mount(app) {
   if (!_listening) { _listening = true; require('../harness/agent').events.on('event', e => { try { onEvent(e); } catch { /* never the work's problem */ } }); }
   app.get('/api/machines', async (req, res) => { try { res.json(await picture({ shots: req.query.shots === '1' })); } catch (e) { res.status(500).json({ error: e.message }); } });
+  // Every machine as one row (rows.js): the status column asks while it is shown.
+  app.get('/api/machines/rows', async (req, res) => { try { res.json(await require('./rows').rows()); } catch (e) { res.status(500).json({ error: e.message }); } });
+  app.get('/api/machines/vms/:hypervisor/:name/shot', (req, res) => {
+    const png = require('./vm-shots').get(`${req.params.hypervisor}:${req.params.name}`);
+    if (!png) return res.status(404).json({ error: 'No picture of it yet.' });
+    res.set({ 'Content-Type': 'image/png', 'Cache-Control': 'no-store' }).send(png);
+  });
+  require('./vm-console').mount(app);
   app.get('/api/machines/served/:key/shot', (req, res) => {
     const png = require('./shots').get(req.params.key);
     if (!png) return res.status(404).json({ error: 'No picture of it yet.' });

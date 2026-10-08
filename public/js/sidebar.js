@@ -10,7 +10,7 @@ async function pollStatus() {
     _statsEnabled = data.statsEnabled || _statsEnabled;
     const en = _statsEnabled || {};
 
-    renderContainers(data.containers || []);
+    machinesSidebar(data.containers || []);   // containers, computers and VMs (machines-rows.js)
     renderGPU(data.gpu || [], en);
     renderSystem(data.system || null, en);
     // Every local model server and whom it works for (model-servers.js) — asked only while a panel shows it, never by
@@ -73,35 +73,6 @@ async function pollServicesStatus() {
   } catch {
     el.innerHTML = '<div class="placeholder">—</div>';
   }
-}
-
-function renderContainers(containers) {
-  const el = document.getElementById('s-containers');
-  if (!containers.length) {
-    el.innerHTML = '<div class="placeholder">None running</div>'; return;
-  }
-  // Show running containers first, then others; limit to 12 for sidebar compactness
-  const sorted = [...containers].sort((a, b) => {
-    const aUp = (a.State || a.Status || '').toLowerCase().includes('running') ? 0 : 1;
-    const bUp = (b.State || b.Status || '').toLowerCase().includes('running') ? 0 : 1;
-    return aUp - bUp;
-  });
-  const shown = sorted.slice(0, 12);
-  const runningCount = sorted.filter(c => (c.State || c.Status || '').toLowerCase().includes('running')).length;
-  const countEl = document.getElementById('s-containers-count');
-  if (countEl) countEl.textContent = `${runningCount}/${sorted.length} running`;
-
-  el.innerHTML = shown.map(c => {
-    const st    = (c.State || c.Status || '').toLowerCase();
-    const up    = st.includes('running') || st.includes('up');
-    const rawName = c.Names || c.Name || c.Service || '';
-    const label   = rawName.replace(/^\//, '').split(',')[0]
-      .replace('openclaw-openclaw-', '').replace(/-1$/, '');
-    return `<div class="c-item ${up ? 'running' : 'exited'}">
-      <span class="c-name" title="${label}">${label}</span>
-      <span class="c-state">${st.split(' ')[0].split('(')[0]}</span>
-    </div>`;
-  }).join('') + (sorted.length > 12 ? `<div class="placeholder" style="font-size:10px">+${sorted.length - 12} more</div>` : '');
 }
 
 function renderGPU(gpus, en = {}) {

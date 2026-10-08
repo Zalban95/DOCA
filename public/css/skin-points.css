@@ -144,9 +144,13 @@ html[data-skin="points"] .harness-default .harness-dot { color: var(--accent); }
 html[data-skin="points"] :is(.mcp-running .mcp-dot, .vm-running .vm-dot) { color: var(--accent); animation: pt-breathe 2.4s ease-in-out infinite;
   box-shadow: 0 0 9px 1px color-mix(in srgb, var(--accent) 45%, transparent); }
 html[data-skin="points"] .vm-paused .vm-dot { color: var(--amber); }
+html[data-skin="points"] .c-item.paused::before { background: var(--amber); }
+html[data-skin="points"] :is(.m-pt.up, .pc-dot.on) { background: var(--accent); animation: pt-breathe 2.4s ease-in-out infinite; box-shadow: 0 0 9px 2px color-mix(in srgb, var(--accent) 45%, transparent); }
+html[data-skin="points"] :is(.m-pt, .pc-dot):not(.up):not(.on):not(.error):not(.paused) { background: var(--stopped); }
+html[data-skin="points"] .m-pt.error { box-shadow: 0 0 9px 2px color-mix(in srgb, var(--red) 35%, transparent); }
 html[data-skin="points"] .dot { width: 8px; height: 8px; position: relative; }
 html[data-skin="points"] .dot.on { background: var(--green); box-shadow: 0 0 10px 2px color-mix(in srgb, var(--green) 40%, transparent); }
-@media (prefers-reduced-motion: reduce) { html[data-skin="points"] :is(.c-item, .mcp-card)::before, html[data-skin="points"] :is(.mcp-dot, .vm-dot) { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { html[data-skin="points"] :is(.c-item, .mcp-card)::before, html[data-skin="points"] :is(.mcp-dot, .vm-dot, .m-pt, .pc-dot) { animation: none !important; } }
 
 /* ── The chat button in Points: a quiet circle holding one point of light (the face beside it is unchanged) ── */
 html[data-skin="points"] .chat-fab { font-size: 0; width: 56px; height: 56px; border: 1px solid var(--border2); background: var(--surface);
