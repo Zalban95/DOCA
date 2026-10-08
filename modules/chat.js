@@ -90,9 +90,11 @@ function handleClear(req, res) {
 function voiceClient(client, voice, req) {
   // The voice that will speak it — the Live call's for the face, the Deep call's for the chat's 🎙 (call-voices.js) —
   // takes a tone in words: then the agent is told it may write a few tags (voice-tags.js).
-  const kind = require('./call-voices').kindOf(voice);
+  // Ambient's assistant is assistant mode too, spoken in its own voice (`speaks: 'ambient'`, chat-call.js; call-voices.js).
+  const ambient = voice === 'assistant' && req?.body?.speaks === 'ambient';
+  const kind = ambient ? 'ambient' : require('./call-voices').kindOf(voice);
   const tags = kind ? require('./call-voices').forRequest(req, kind).tags : false;
-  if (voice === 'assistant') return { ...client, mode: 'assistant', name: 'Live call (the face, spoken)', ...(tags ? { voiceTags: true } : {}) };
+  if (voice === 'assistant') return { ...client, mode: 'assistant', name: ambient ? 'Ambient’s assistant (spoken)' : 'Live call (the face, spoken)', ...(tags ? { voiceTags: true } : {}) };
   if (voice === 'call') return { ...client, mode: 'call', name: `${client.name || 'The panel'} — Deep call`, ...(tags ? { voiceTags: true } : {}) };
   return client;
 }
@@ -271,8 +273,9 @@ async function sendHosted(res, engine, text, opts) {
 async function handleSynthesize(req, res) {
   const { text, voice, call } = req.body;
   if (!text) return res.status(400).json({ error: 'No text' });
-  // `call`: which kind of call speaks (quick: the face, Ambient; deep: the chat's 🎙) — its own voice when one was
-  // chosen, else this screen's own voice, else the hive's (call-voices.js). No call: this screen's voice, as before.
+  // `call`: which kind of call speaks (quick: the face; ambient: Ambient's assistant; deep: the chat's 🎙) — its own
+  // voice when one was chosen, else this screen's own voice, else the hive's (call-voices.js). No call: this screen's
+  // voice, as before.
   const mine = require('./call-voices').forRequest(req, require('./call-voices').kindOf(call));
   const engines = require('./tts-engines');
   const vs = mine.engine;                             // the hive's speech service, or the speech service it chose
