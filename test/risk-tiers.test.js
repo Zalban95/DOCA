@@ -24,7 +24,7 @@ const OUTWARD = [['shell', { command: 'git push --force origin main' }], ['shell
 
 const flag = (on, dev = on) => { experiments.setDeveloper(true); experiments.set('riskTiers', on); experiments.setDeveloper(dev); };
 
-test.before(() => H.start());
+test.before(async () => { await H.start(); approval.setManualAsks('everything'); });   // Manual as it always was: the experiment's asks are what is measured here
 test.after(async () => { flag(false, false); approval.setMode('auto'); await H.stop(); });
 
 test('every labelled call lands in its tier, but the known misses — and nothing reversible is called outward', () => {

@@ -138,7 +138,10 @@ function approvalPopup(evt, done) {
   modal.appendChild(note);
 
   overlay.appendChild(modal);
-  document.body.appendChild(overlay);
+  // On top of whatever is in front: a call's face or Ambient's stage in full screen shows only what is inside it, so
+  // the card goes in there (2026-10-08: a Live call's question waited unseen behind the call screen).
+  const fs = document.fullscreenElement;
+  (fs && fs !== document.documentElement && fs !== document.body ? fs : document.body).appendChild(overlay);
   // The safe button gets focus, so a stray Enter denies rather than approves.
   modal.querySelector('.approval-actions button:last-child')?.focus();
   return overlay;
