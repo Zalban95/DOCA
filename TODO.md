@@ -156,6 +156,20 @@ the project's managers only if the owner allows sharing specialists and skills (
   (`api-not-found.js`, C12); evaluation checks say what happened on a fail (R2); the first-token deadline extends
   while a local server says it is working, up to ten times the setting (`turn/busy-server.js`, C8). Not checked:
   C8's "Send while busy left the text in the box".
+- [x] Self-test round two 2026-10-08, the panel and newcomer group (branch `selftest2-panel`): accepting a device's
+  MCP offer connects it, waiting up to 8 s, and one that does not answer says to press ▶ Connect once it runs (#4,
+  C7); the floating chat's Stop says "Stopping…" at once, hangs up and asks the conversation to stop (a message queued
+  behind a running turn had no turn to hang up on — the newcomer's "Stop didn't stop"), and says "Stopped." when the
+  stop route reports the turn ended (`chat-stop.js`, C1); Schedules hear the live feed (topic `schedules`), so a new
+  reminder shows without a reload (C2); ✨ Ask the agent opens the chat with "Help with: <form>", not sent, the form's
+  fields attached as context and folded under the person's words (C3); Set-up draws its plan at once, so "a model you
+  already run" is visible, names no local model that does not fit, says no "preset hub" or "list v1", and names the
+  person's own model "My model at <host>" or what they type (C4, C5, C6); the first screens say "the agent" — Controls'
+  card, the built-in row, the no-model error — and the Harness page, the approval switch and the token count say what
+  they mean (C6); each look keeps its last colours (`lookThemes`, C9); Files shows only shortcuts that lead somewhere,
+  offering to create DOCA's own folders (`files-bookmarks.js`, C10); every palette's muted text reads at 4.5:1 on its
+  page, cards and raised parts (#21). Not done: the page Agents → Harness and Settings → Harness keep their names (a
+  rename reaches saved layouts and the docs' directions), and R8's "This operation was aborted" as a turn's brief.
 - [x] Self-test 2026-10-08, the panel group (branch `selftest-panel`): the open group's pages are a row under the
   header, the search giving way first, so Settings never scrolls out of a 1024–1920 px header in any look (#3);
   Accept and Connect on an MCP offer go busy and the changed row is lit and says what happened, an unreachable HTTP
