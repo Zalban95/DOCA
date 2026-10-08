@@ -2,6 +2,9 @@
 # Bring the desktop up, then the control server. Everything but the control server is background.
 set -u
 mkdir -p "$WORKDIR"
+# A computer stopped and started again keeps /tmp: the last X server's lock and socket would make Xvfb refuse to start,
+# leaving no desktop (deep test A, 2026-10-08). The container is ours alone, so a lock here is always a stale one.
+rm -f "/tmp/.X${DISPLAY#:}-lock" "/tmp/.X11-unix/X${DISPLAY#:}"
 Xvfb "$DISPLAY" -screen 0 "${SCREEN}x24" -nolisten tcp &
 for i in $(seq 1 50); do [ -e "/tmp/.X11-unix/X${DISPLAY#:}" ] && break; sleep 0.1; done
 # A quiet window manager: an empty config, so it shows no first-run message window.
