@@ -117,6 +117,15 @@ the project's managers only if the owner allows sharing specialists and skills (
 - D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),
   `mcp.listener stop`, `confirmPromptChoice`'s body (§12.6 `{selectionId, decision}`), the native wake word, the
   watch's line in Settings → Updates, `seen` on opening a finished notice and clearing it on `seenAt` (PROTOCOL §11.4, hub 2.282); DocaWear: the LAN port, the same `seen`; DocaDesk: the socket transport, `prompt.outcome`.
+- [x] Files sent to the person's phone or chat (found 2026-10-08: asked to send nine voice samples to Telegram, the
+  Orchestrator had no tool and sent them with a script that loaded the channel's module and its bot token; branch
+  `send-media`): `tell_device {files: [{path, caption}]}` — audio, video, documents, pictures, at most 10 — stored as
+  each recipient's own media and carried as `media` blocks with `kind`/`mime`/`name`/`bytes`/`caption` (PROTOCOL
+  §19.1, fixture `alert-files`); a channel uploads them its own way (Telegram by type, Matrix, Slack, mail
+  attachments — `channels/deliver.js` `file`/`notice`), refused before anything is stored with the channel's limit
+  (`channels/limits.js`); the person's own devices only. Left: DocaMobile playing/opening a media block by `kind`;
+  `ask_device` narrowed to the person's own devices like `tell_device`; charter rule 15 still says "`tell_device`
+  carries a picture" (ask-first, S11); the live memory `telegram-channel-send` is now wrong and should be forgotten.
 - [x] A call that feels alive and quick (asked 2026-10-07 from the watch; hub 2.304.0, branch `watch-call-live`,
   DocaWear `call-feedback`): the front (`turn/front.js`, `assistant.front`) — a spoken turn answers at once with a
   short kit, untriaged, at assistant mode's effort; a large request or "think harder / take your time / focus" goes to
