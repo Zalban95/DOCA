@@ -60,6 +60,8 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     let args = {};
     try { args = tc.function?.arguments ? JSON.parse(tc.function.arguments) : {}; }
     catch { args = { _raw: tc.function?.arguments }; }
+    // Cut off by the reply limit (turn/cut-calls.js): stored whole, answered as cut, never run.
+    if (reply.cut?.has(tc)) args = { _raw: '' };
 
     // Experiment riskTiers (harness/risk): the call's tier and its way back ride on its event — the trace and the
     // Workstream name them — and a reversible change in a project gets a checkpoint first, taken only once the call is
@@ -110,6 +112,8 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     const tiers = require('./tool-tiers');
     const result = failures.note(signal, name, args, refused !== null
       ? refused
+      : reply.cut?.has(tc)
+      ? require('./cut-calls').refusal(name, reply.cutCap)
       : args._raw !== undefined
       ? `Error: could not parse the arguments as JSON: ${args._raw}`
       : !schemas.some(sc => sc.function.name === name) && !tiers.heldNotSent(name, stepDisabled)
