@@ -26,6 +26,7 @@ __pycache__/
 # none of it is the project's, and an install made by git clone must stay clean for its updates.
 /doca.log
 /doca.err.log
+/restart.log
 /.setup-code
 /.cursor/
 /.playwright-mcp/
