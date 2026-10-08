@@ -73,10 +73,11 @@ const sentences = text => (speakable(text).match(/[^.!?;:]+[.!?;:]*\s*/g) || [])
  * `voice` is the call's voice (call-voices.js pick: `{engine, voice, speed}` — a device's Live call voice); without
  * one, the hive's speech service as it is.
  */
-function connect({ silenceMs = 900, synth, transcribe, voice = null } = {}) {
+function connect({ silenceMs = 900, synth, transcribe, voice = null, language = {} } = {}) {
   const em = new EventEmitter();
   const chat = require('../chat');
-  transcribe = transcribe || (buf => chat.transcribeHeard(buf, 'audio/wav', 'call.wav'));
+  // `language`: {language, usual} for the device's screen and person (call-language.js).
+  transcribe = transcribe || (buf => chat.transcribeHeard(buf, 'audio/wav', 'call.wav', { language: language.language || null, usual: language.usual || null }));
   synth = synth || (async text => {
     const engines = require('../tts-engines'), vs = voice?.engine || engines.hive();   // a tone tag becomes words for a voice that takes them, else goes
     const name = voice?.voice ? (await require('../tts-voices').resolve(voice.voice, vs)).voice : undefined;   // "Ryan" → ryan
@@ -101,7 +102,7 @@ function connect({ silenceMs = 900, synth, transcribe, voice = null } = {}) {
       return em.emit('error', `speech-to-text: ${e.message}`);
     }
     const text = String(heard.text || '').trim();
-    em.emit('stt', { words: text ? text.split(/\s+/).length : 0, filtered: heard.filtered || null, ms: Date.now() - t0 });
+    em.emit('stt', { words: text ? text.split(/\s+/).length : 0, filtered: heard.filtered || null, ms: Date.now() - t0, language: heard.language || null, heardAs: heard.heardAs || null });
     if (closed) return;
     if (!text) return em.emit('notice', { stage: 'stt', text: 'I didn\'t catch that — say it again?' });
     em.emit('user', text);
