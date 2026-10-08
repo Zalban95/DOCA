@@ -52,6 +52,13 @@
       "fields": [],
       "means": "the person talked over the answer: drop audio queued to play"
     },
+    "notice": {
+      "fields": [
+        "stage",
+        "text"
+      ],
+      "means": "a stage did not go as it should — nothing heard, no words found, the transcriber or the voice failed, an answer cut — said in words to show (since 2.314.0)"
+    },
     "error": {
       "fields": [
         "message"

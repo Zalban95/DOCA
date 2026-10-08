@@ -106,6 +106,7 @@ async function handleChat(req, res) {
     // read the body, which would abort the turn before it started.
     const ctrl = new AbortController();
     res.on('close', () => ctrl.abort());
+    const settled = require('./realtime/panel-call').turn(req, res);   // a live call's turn, in its call log
     sseHeaders(res);
     const images = [];
     try {
@@ -154,8 +155,10 @@ async function handleChat(req, res) {
         role: 'assistant', content: text || '', time: new Date().toISOString(),
         ...(images.length ? { images } : {}),
       });
+      settled(true);
       res.write(`data: ${JSON.stringify({ type: 'done', code: 0 })}\n\n`);
     } catch (e) {
+      if (!ctrl.signal.aborted) settled(false, e.message);
       res.write(`data: ${JSON.stringify({ type: 'stderr', text: e.message })}\n\n`);
       res.write(`data: ${JSON.stringify({ type: 'done', code: 1 })}\n\n`);
     }
@@ -231,8 +234,15 @@ const _vadSupport = new Map();
  * spelling (a wake word, a name). With faster-whisper's voice-activity filter a recording with no speech in it fails
  * (500): that is "nobody spoke", confirmed by asking once more without the filter and dropping a silence phrase.
  */
-async function transcribeAudio(buffer, mimetype, filename, { prompt } = {}) {
+/** Words from a recording: `''` when nobody spoke (transcribeHeard says why). */
+async function transcribeAudio(buffer, mimetype, filename, opts = {}) {
+  return (await transcribeHeard(buffer, mimetype, filename, opts)).text;
+}
+
+/** The same, saying why it came back empty: `filtered` is the silence phrase screened out (stt-filter.js), if one was. */
+async function transcribeHeard(buffer, mimetype, filename, { prompt } = {}) {
   const vs = loadVoiceServices();
+  const screened = text => (require('./stt-filter').isHallucination(text) ? { text: '', filtered: text || null } : { text, filtered: null });
   const ask = vad => {
     const formData = new FormData();
     formData.append('file', new Blob([buffer], { type: mimetype || 'audio/webm' }), filename || 'audio.webm');
@@ -249,8 +259,7 @@ async function transcribeAudio(buffer, mimetype, filename, { prompt } = {}) {
     resp = await ask(false);
     if (first >= 500 && resp.ok) {
       // The filter found no speech; the plain answer is kept only if it is more than a silence phrase.
-      const text = ((await resp.json()).text || '').trim();
-      return require('./stt-filter').isHallucination(text) ? '' : text;
+      return screened(((await resp.json()).text || '').trim());
     }
   } else if (tryVad && resp.ok) _vadSupport.set(vs.sttUrl, true);
   if (!resp.ok) {
@@ -265,17 +274,19 @@ async function transcribeAudio(buffer, mimetype, filename, { prompt } = {}) {
       + ' — the service received the audio and refused it. Check that the model name is one it has, and that '
       + `it accepts ${mimetype || 'this format'}; Settings → Voice has the URL.`), { status: resp.status });
   }
-  const text = ((await resp.json()).text || '').trim();
-  return require('./stt-filter').isHallucination(text) ? '' : text;
+  return screened(((await resp.json()).text || '').trim());
 }
 
 /** POST /api/chat/transcribe — proxy audio to configured STT service */
 async function handleTranscribe(req, res) {
   if (!req.file) return res.status(400).json({ error: 'No audio file' });
   try {
-    const text = await transcribeAudio(req.file.buffer, req.file.mimetype, req.file.originalname, { prompt: req.body?.prompt });   // prompt: a wake word's spelling
-    res.json({ text });
+    const t0 = Date.now();
+    const got = await transcribeHeard(req.file.buffer, req.file.mimetype, req.file.originalname, { prompt: req.body?.prompt });   // prompt: a wake word's spelling
+    require('./realtime/panel-call').heard(req, { ...got, ms: Date.now() - t0 });   // a live call's recording, in its call log
+    res.json({ text: got.text, ...(got.filtered ? { screened: true } : {}) });
   } catch (e) {
+    require('./realtime/panel-call').heard(req, { error: e.message });
     res.status(e.status && e.status >= 400 ? e.status : 500).json({ error: e.status ? e.message : `STT request failed: ${e.message}` });
   }
 }
@@ -319,5 +330,5 @@ async function handleSynthesize(req, res) {
 module.exports = {
   handleStatus, handleHistory, handleClear, handleChat,
   handleCallStatus, handleTranscribe, handleSynthesize, handleVoices,
-  loadGatewayChatConfig, loadVoiceServices, transcribeAudio,
+  loadGatewayChatConfig, loadVoiceServices, transcribeAudio, transcribeHeard,
 };
