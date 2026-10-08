@@ -106,6 +106,23 @@ thinking… if you ask it to focus or think harder or take its time, it can star
   first audio 2.7–4.2 s after it with the front (13.4k prompt tokens a step), 3.2–4.0 s without (25k). What is left is
   the model's time to its first sentence; a quicker `assistant.model` is the lever.
 
+## A call that never goes quiet (2026-10-08)
+
+The owner: "the live call is not working, neither in the panel nor in the watch; it fails silently". On the hub there
+was nothing to read — a call left no trace but its turns, and the watch's left none at all.
+
+- **Each stage is kept** (`realtime/call-log.js`; Hub → Logs, source `call`; Chronicle → Live calls): audio received
+  (bytes, frames, peak, the room's floor), utterances found or dropped, what the transcriber made of each (words
+  counted, never the words), each turn and how it ended, sentences spoken, why the call closed.
+- **A failed stage is said to the caller**: the `notice` frame (`stage`, `text`; PROTOCOL §23.1) — no sound reaching the
+  hub, sound too quiet to be speech, no words found, the transcriber or the voice failing, an answer cut. DocaWear
+  shows it; DocaMobile passes it through like every JSON frame.
+- **A quiet wrist is heard.** Speech counted from RMS 400 (-38 dBFS) or three times the floor; a test signal at -40 dBFS
+  peak was never speech, with no word to anyone. It counts from 90 (-51 dBFS) now, the floor rule unchanged.
+- **The watch and the phone log the audio path** (DocaWear, DocaMobile `call-debug`): the microphone opened (rate,
+  source), frames and bytes sent with their loudest level every few seconds, frames received; the phone's relay the
+  same each way, and the decoder's output rate. `adb logcat -s DocaWatchCall` reads them.
+
 ## Order of work
 
 1. Hub: `/api/v1/call` and the pipeline engine — **done in 2.211.0**.

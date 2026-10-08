@@ -39,6 +39,7 @@ module.exports = [
           + 'a Linux desktop in a container. The specialist gets that computer\'s tools and no other\'s. For testing something risky, '
           + 'browsing as a person would, or recording a demo: send the tester. A specialist whose definition keeps a computer of its '
           + 'own gets that one without this (the same logins and files every time).' },
+        vnc: { type: 'string', description: 'Optional: a VNC screen (name or id, Machines → VNC) lent to the mission — the specialist gets vnc_look and vnc_input for that screen alone, and every vnc_input of its is a person\'s decision.' },
         plan: {
           type: 'array',
           description: 'Optional. The errand broken into steps, so a phone or a watch can draw how far along it '
@@ -56,19 +57,20 @@ module.exports = [
       },
       required: ['agent', 'task'],
     },
-    run: async ({ agent, task, context, plan, computer, after }, ctx = {}) => {
+    run: async ({ agent, task, context, plan, computer, after, vnc }, ctx = {}) => {
       // A specialist that keeps a computer of its own works in it, unless a computer is named (computers.ownFor).
       const def = require('../../agents/registry').get(agent);
       if (computer) { const no = require('../../computers/whose').refuse(ctx.user, computer); if (no) return `Error: ${no}`; }   // lent only by its person (S13)
       if (!computer && def?.computer === 'own') computer = await require('../../computers').ownFor(def, ctx.user);
+      if (vnc) { const lent = require('./vnc').lendable(vnc, ctx); if (lent.no) return `Error: ${lent.no}`; vnc = lent.id; }   // only a screen its person may use (S13)
       // Waiting on other missions' results (agents/after.js): held until they are done, then started with what they made.
       if (Array.isArray(after) && after.length) {
-        const w = require('../../agents/after').dispatchAfter({ agentId: agent, task, context, plan, computer, by: ctx.sessionId }, after);
+        const w = require('../../agents/after').dispatchAfter({ agentId: agent, task, context, plan, computer, vnc: vnc || null, by: ctx.sessionId }, after);
         if (w.waiting) return `Waiting (${w.waiting}): ${agent} starts when ${w.after.join(', ')} ${w.after.length === 1 ? 'is' : 'are'} done, with their results and files as its context. Carry on.`;
         if (w.dropped) return `Not started: ${w.why}`;
         return `Mission ${w.started} started — what it waited for is already done, and its results are in its context.`;
       }
-      const m = require('../../agents/missions').dispatch({ agentId: agent, task, context, plan, computer, by: ctx.sessionId });
+      const m = require('../../agents/missions').dispatch({ agentId: agent, task, context, plan, computer, vnc: vnc || null, by: ctx.sessionId });
       // A plan is what lets every client draw progress instead of "STEP 0"
       // until the mission is already over — see missions.setPlan().
       const how = Array.isArray(plan) && plan.length

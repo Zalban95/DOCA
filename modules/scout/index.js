@@ -46,18 +46,23 @@ const saveList = xs => write('suggestions.json', xs);
 const get = id => list().find(s => s.id === id);
 const patch = (id, p) => { const xs = list().map(s => (s.id === id ? { ...s, ...p } : s)); saveList(xs); return xs.find(s => s.id === id); };
 
-/** Filed by the agent (the `model_scout` tool). The same candidate for the same function is the first one, not a second card. */
+/**
+ * Filed by the agent (the `model_scout` tool). The same candidate for the same function is the first one, not a second
+ * card. Kind `suggested-model` is a model for the guided set-up's list (model-suggestion.js): its entry is checked now.
+ */
 function suggest(a) {
   const title = String(a.title || '').trim().slice(0, 160);
   if (!title) throw bad('A suggestion needs a title.');
-  const role = String(a.role || 'new').trim().slice(0, 40);
-  const candidate = String(a.candidate || '').trim().slice(0, 200);
-  const dup = list().find(s => s.role === role && candidate && s.candidate.toLowerCase() === candidate.toLowerCase());
+  const model = a.kind === 'suggested-model' ? require('./model-suggestion').prepare(a) : null;
+  const role = model ? model.role : String(a.role || 'new').trim().slice(0, 40);
+  const candidate = model ? model.candidate : String(a.candidate || '').trim().slice(0, 200);
+  const kind = model ? 'suggested-model' : 'change';
+  const dup = list().find(s => (s.kind || 'change') === kind && s.role === role && candidate && s.candidate.toLowerCase() === candidate.toLowerCase());
   if (dup) return dup;
   const xs = list();
   const n = xs.reduce((m, s) => Math.max(m, Number(String(s.id).slice(1)) || 0), 0) + 1;
   const clip = (v, k) => String(v || '').trim().slice(0, k);
-  const s = { id: `S${n}`, title, role, candidate, replaces: clip(a.replaces, 200), why: clip(a.why, 1500),
+  const s = { id: `S${n}`, kind, ...(model ? { class: model.class, entry: model.entry } : {}), title, role, candidate, replaces: clip(a.replaces, 200), why: clip(a.why, 1500),
     evidence: (Array.isArray(a.evidence) ? a.evidence : []).map(e => clip(e, 300)).slice(0, 12), tryWith: clip(a.tryWith, 600),
     state: 'pending', at: new Date().toISOString() };
   saveList([...xs, s]);
@@ -85,6 +90,7 @@ function accept(id, who) {
   const s = get(id);
   if (!s) throw bad('No such suggestion.', 404);
   if (s.state !== 'pending') return s;
+  if (s.kind === 'suggested-model') return patch(id, require('./model-suggestion').accept(s, who));   // into Set-up's list, not TODO
   const root = repo();
   if (!root) throw bad('No repository for TODO.md: set scout.repo (Settings → Harness → Scout).', 409);
   const todo = path.join(root, 'TODO.md');
@@ -119,6 +125,7 @@ const workMessage = (s, root) => `Implement scout suggestion ${s.id} in the repo
 async function work(id, person) {
   const s = get(id);
   if (!s) throw bad('No such suggestion.', 404);
+  if (s.kind === 'suggested-model') throw bad('Nothing to build: accepting it put the model in Set-up\'s list.', 409);
   if (!['accepted', 'failed'].includes(s.state)) throw bad('Accept it first: the work starts from its TODO line.', 409);
   const root = repo();
   if (!root) throw bad('No repository: set scout.repo.', 409);
@@ -155,7 +162,8 @@ const BRIEF = 'Model scout run (docs/experiments/model-scout.md). 1) Call `model
   + 'scout specialist when specialists are on; a model card and its benchmarks, not a headline). 3) File each that holds up with `model_scout` '
   + 'action "suggest" — at most five, best first — saying the function, what it replaces, why, the evidence, and how it would be tried in '
   + 'DOCA without breaking the current way: a model name for a setting, a Services or System tools row, a new reader, a new function. '
-  + 'Prefer what is open, runs on any OS, locally or remotely, and can be swapped out again. 4) Answer in one line: how many filed. Change '
+  + 'Prefer what is open, runs on any OS, locally or remotely, and can be swapped out again. A stronger local model for the guided set-up '
+  + 'is kind "suggested-model" (action "suggestions" shows the list and the pick per size class). 4) Answer in one line: how many filed. Change '
   + 'no setting and install nothing: a person decides.';
 
 /** The person the routine runs as: who switched it on, else the first active owner. */
@@ -168,8 +176,8 @@ function person() {
   return owner ? client.personById({ id: owner.userId, orgId }) : null;
 }
 
-/** One brief now: a turn in the scout's own conversation. */
-async function brief(why = 'asked') {
+/** One brief now: a turn in the scout's own conversation (the routine's, or `message` for a narrower look). */
+async function brief(why = 'asked', message = BRIEF) {
   const who = person();
   if (!who) throw bad('No owner to run the scout as.', 409);
   const memory = require('../harness/memory');
@@ -179,7 +187,7 @@ async function brief(why = 'asked') {
     require('../harness/session-access').claim(who, sessionId);
   }
   setState({ sessionId, lastBriefAt: new Date().toISOString(), lastBriefWhy: why });
-  return require('../harness/agent').send({ message: BRIEF, sessionId, client: { name: 'Model scout', kind: 'schedule', user: who } });
+  return require('../harness/agent').send({ message, sessionId, client: { name: 'Model scout', kind: 'schedule', user: who } });
 }
 
 let _busy = false;

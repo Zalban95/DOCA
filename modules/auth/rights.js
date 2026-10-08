@@ -125,6 +125,7 @@ const TABLE = [
   R(GET, '/api/hub/links', 'read'),                              // the hub's addresses, as QR codes a phone scans (network.js)
   R(ANY, '/api/network', 'org'),                                 // how the hub listens: the machine's front door (network.js)                         // the agents' machines and the pages they serve (machines/)                       // the agents' work as it happens: the machine's files, every conversation (workstream/)                          // what was put away: each person's own; projects and computers a host's (archive.js)                             // what each screen shows, and sending it a page (screens/showing.js)                            // which folders this page shows: Files and Projects are a host's
   R(GET, '/api/wakeword/(models/[^/]+/model\\.onnx|runtime/[^/]+)', 'read'),   // a screen listening for its name reads its model (wakeword/)
+  R(ANY, '/api/system-one(/.*)?', 'host'),                     // a process on this machine, a download, a key spent (system-one/)
   R(ANY, '/api/wakeword(/.*)?', 'host'),                       // setting up, recording, training: downloads, GPU hours, a microphone's audio
   R(ANY, '/api/home/call', 'chat'),                            // acting on the home: a light, a cover, a thermostat — each entity allotted (home/actions.js)
   R(ANY, '/api/home/hold', 'chat'),                            // a Home page holding the connection to Home Assistant open while shown

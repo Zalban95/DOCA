@@ -39,6 +39,7 @@ const TOOLS = [
   ...require('./toolbox/project'),
   ...require('./toolbox/skills'),
   ...require('./toolbox/computers'),
+  ...require('./toolbox/vnc'),
   ...require('./toolbox/recipes'),
   ...require('./toolbox/packs'),
   ...require('./toolbox/schedules'),

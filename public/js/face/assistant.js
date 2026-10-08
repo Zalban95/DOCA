@@ -75,7 +75,7 @@ async function _assistantIdle() {
   try { const s = await screenLoad(); c = s.settings?.call || {}; ex = s.experiments || {}; } catch { /* defaults */ }
   if (_callIdleMs() < (c.assistantIdleSec >= 5 ? c.assistantIdleSec : 12) * 1000) return;
   if (!(ex.wakeWord && c.listenWithFace)) return;   // no name to wait for: keep listening
-  _callStop();   // which starts the wake word listening again (wake-word.js)
+  _callStop('quiet for the assistant\'s idle time');   // which starts the wake word listening again (wake-word.js)
   const word = String(c.wakeWord || '').trim() || (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA';
   _assistantSay(`Say “${word}” to talk.`);
   _assistant?.el.classList.add('calm');
@@ -86,7 +86,7 @@ function assistantClose(fromBack) {
   if (!a) return;
   _assistant = null;
   clearInterval(a.timer); clearTimeout(a.calmTimer);
-  if (_assistantInCall()) _callStop();
+  if (_assistantInCall()) _callStop(fromBack ? 'Back closed assistant mode' : 'assistant mode was closed');
   if (document.fullscreenElement === a.el) document.exitFullscreen?.().catch(() => {});
   a.face.stop(); a.closeFeed(); a.el.remove();
   if (!fromBack) a.back();

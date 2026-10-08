@@ -141,7 +141,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   }
   p = require('../spending').priced({ person: client?.user, sessionId }, p);   // a money budget counts only priced models
   // A call's turn answers at once, with a short kit, or hands the request on (turn/front.js) — and is never triaged.
-  const front = require('./turn/front').plan({ client, message, session: memory.getSession(sessionId), profile });
+  const front = await require('./turn/front').planned({ client, message, session: memory.getSession(sessionId), profile });
   if (front?.steps) p = { ...p, maxSteps: Math.min(Math.max(1, Number(p.maxSteps) || 1), front.steps) };
   // Limits that follow the work (experiment adaptiveLimits, turn/triage.js): null when off, and then nothing changes.
   const verdict = front ? null : await require('./turn/triage').verdict({ message, client, session: memory.getSession(sessionId), p });

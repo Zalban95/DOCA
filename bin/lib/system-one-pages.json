@@ -1,0 +1,280 @@
+{
+ "captured": "2026-10-08",
+ "pages": {
+  "controls": "title: DOCA Panel\nurl: https://hub.example/\n\n[1] a \"DOCA BETA PANEL v2.314.0\" -> https://protolab.tech/\n[2] button:submit \"CONTROLS\"\n[3] button:submit \"AGENTS\"\n[4] button:submit \"MACHINES\"\n[5] button:submit \"HUB\"\n[6] button:submit \"FIELD\"\n[7] button:submit \"SETTINGS\"\n[8] button:submit \"⧉\"\n[9] button:submit \"📱\"\n[10] input:text \"Search pages, settings, files…\"\n[11] button:submit \"OVERVIEW\"\n[12] button:submit \"HOME\"\n[13] button:submit \"AMBIENT\"\n[14] button:submit \"⬇ ADD ANOTHER AGENT\"\n[15] button:submit \"↺\"\n[16] button:button \"✨ Ask the agent\"\n[17] a \"agent's page\" -> https://hub.example/#\n[18] button:submit \"▶ OPEN\"\n[19] button:submit \"⚙\"\n[20] a \"docs\" -> https://protolab.tech/\n[21] button:submit \"USE\"\n[22] button:submit \"▶ OPEN\"\n[23] button:submit \"↻\"\n[24] button:submit \"⚙\"\n[25] a \"docs\" -> https://github.com/anthropics/claude-code\n[26] button:submit \"USE\"\n[27] button:submit \"▶ OPEN\"\n[28] button:submit \"↻\"\n[29] button:submit \"⚙\"\n[30] a \"docs\" -> https://github.com/openai/codex\n[31] button:submit \"USE\"\n[32] button:submit \"▶ OPEN\"\n[33] button:submit \"↻\"\n[34] button:submit \"⚙\"\n[35] a \"docs\" -> https://cursor.com/cli\n[36] button:submit \"USE\"\n[37] button:submit \"▶ OPEN\"\n[38] button:submit \"↻\"\n[39] button:submit \"⚙\"\n[40] a \"docs\" -> https://block.github.io/goose/docs/getting-started/installation/\n[41] button:submit \"USE\"\n[42] button:submit \"▶ OPEN\"\n[43] button:submit \"↻\"\n[44] button:submit \"⚙\"\n[45] a \"docs\" -> https://aider.chat/\n[46] input:text \"Add your own agent — name (e.g. My Agent)\"\n[47] input:text \"command (e.g. my-agent)\"\n[48] input:text \"install command (optional)\"\n[49] button:submit \"ADD\"\n[50] button:submit \"↺\"\n[51] button:submit \"⬡\"\n\n--- text ---\nDOCA BETA\nPANEL v2.314.0\nCONTROLS\nAGENTS\nMACHINES\nHUB\nFIELD\nSETTINGS\n⧉\n📱\n09:12:34\nOVERVIEW\nHOME\nAMBIENT\nMACHINES\nNone running\nGPU\nNo GPU data\nSYSTEM\nCPU\n17%\nTEMP\n69°C\nLOAD 1/5/15\n3.61 · 4.52 · 4.23\nCORES\n32\nRAM\n56%\nUSED\n34 GB / 60.2 GB\nLOGICAL CORES (32)\nOLLAMA MODELS\n◆ MODEL SERVERS\nqwen3.8-27b-gsq-rco-iq3s\nloaded\nvLLM (local) :8000\nanswers · 619 listed\nHUGGINGFACE MODELS\nNo cached models\nLLAMA.CPP SERVERS\nNone running\nINFERENCE SERVICES\nNone running\nTHE AGENT\n⬇ ADD ANOTHER AGENT\n↺\nDEFAULT: DOCA'S OWN AGENT\n✨ Ask the agent\n\nThe agent is what you talk to in the chat. DOCA has its own; you can also add others you use. ● marks the one the chat panel and the agent's page use. ⚙ chooses its model.\n\n●\nDOCA's own agent\nDOCA\nv2.314.0\nBuilt in — it remembers what matters, uses tools, and works with any model you connect\nDEFAULT\n▶ OPEN\n⚙\ndocs\n○\nClaude Code\nAnthropic\n2.1.289 (Claude Code)\nclaude\nUSE\n▶ OPEN\n↻\n⚙\ndocs\n○\nCodex CLI\nOpenAI\ncodex-cli 0.114.0\ncodex\nUSE\n▶ OPEN\n↻\n⚙\ndocs\n○\nCursor CLI\nCursor\ninstalled\ncursor-agent\nUSE\n▶ OPEN\n↻\n⚙\ndocs\n○\nGoose\nBlock\n1.27.2\ngoose\nUSE\n▶ OPEN\n↻\n⚙\ndocs\n○\nAider\nAider\naider 0.86.2\naider\nUSE\n▶ OPEN\n↻\n⚙\ndocs\n+\nADD\nALL CONTAINERS\n↺\nDocker is not installed on this host, so there are no containers to list.\n⬡",
+  "settings": "title: DOCA Panel\nurl: https://hub.example/\n\n[1] a \"DOCA BETA PANEL v2.314.0\" -> https://protolab.tech/\n[2] button:submit \"CONTROLS\"\n[3] button:submit \"AGENTS\"\n[4] button:submit \"MACHINES\"\n[5] button:submit \"HUB\"\n[6] button:submit \"FIELD\"\n[7] button:submit \"SETTINGS\"\n[8] button:submit \"⧉\"\n[9] button:submit \"📱\"\n[10] input:text \"Search pages, settings, files…\"\n[11] button:submit \"General\"\n[12] button:submit \"Set-up\"\n[13] button:submit \"Users\"\n[14] button:submit \"Wearables\"\n[15] button:submit \"Channels\"\n[16] button:submit \"Spending\"\n[17] button:submit \"Packs\"\n[18] button:submit \"Backups\"\n[19] button:submit \"Voice\"\n[20] button:submit \"Ambient\"\n[21] button:submit \"System\"\n[22] button:submit \"Developer\"\n[23] button:submit \"Harnesses\"\n[24] button:submit \"CHANGE PASSWORD\"\n[25] button:submit \"SIGN OUT OTHER DEVICES\"\n[26] button:submit \"SIGN OUT\"\n[27] button:button \"Aa Classic Mono, square, compact\"\n[28] button:button \"Aa Modern Sans-serif, rounded, roomier\"\n[29] button:button \"Aa Points Plex Sans, calm, state as points of light\"\n[30] div \"Default\"\n[31] div \"Dracula\"\n[32] div \"Nord\"\n[33] div \"Solarized Dark\"\n[34] div \"Monokai\"\n[35] div \"Catppuccin Mocha\"\n[36] div \"Gruvbox Dark\"\n[37] div \"Tokyo Night\"\n[38] div \"One Dark\"\n[39] div \"Cyberpunk\"\n[40] div \"Daylight\"\n[41] div \"Points\"\n[42] div \"Points Daylight\"\n[43] div \"Custom\"\n[44] input:checkbox \"on\"\n[45] a \"Open the face full screen ↗\" -> https://hub.example/face\n[46] button:button \"✨ Ask the agent\"\n[47] button:button \"✨ Ask the agent\"\n[48] select:select-one \"90% 100% 115% 130% 150%\"\n[49] select:select-one \"compact normal roomy\"\n[50] button:submit \"UNDO\"\n[51] button:submit \"RESET\"\n[52] button:submit \"⤓\"\n[53] button:submit \"⤒\"\n[54] button:submit \"UNDO\"\n[55] button:submit \"RESET\"\n[56] button:submit \"UNDO\"\n[57] button:submit \"RESET\"\n[58] button:button \"✨ Ask the agent\"\n[59] button:submit \"↺ CHECK\"\n[60] button:submit \"⟳ RESTART\"\n[61] button:button \"✨ Ask the agent\"\n[62] select:select-one \"\"\n[63] button:submit \"Ⓘ\"\n[64] button:submit \"SWITCH\"\n[65] button:submit \"↺\"\n[66] button:submit \"⬡\"\n\n--- text ---\nDOCA BETA\nPANEL v2.314.0\nCONTROLS\nAGENTS\nMACHINES\nHUB\nFIELD\nSETTINGS\n⧉\n📱\n09:12:35\nMACHINES\nNone running\nGPU\nNo GPU data\nSYSTEM\nCPU\n17%\nTEMP\n69°C\nLOAD 1/5/15\n3.61 · 4.52 · 4.23\nCORES\n32\nRAM\n56%\nUSED\n34 GB / 60.2 GB\nLOGICAL CORES (32)\nOLLAMA MODELS\n◆ MODEL SERVERS\nqwen3.8-27b-gsq-rco-iq3s\nloaded\nvLLM (local) :8000\nanswers · 619 listed\nHUGGINGFACE MODELS\nNo cached models\nLLAMA.CPP SERVERS\nNone running\nINFERENCE SERVICES\nNone running\nGeneral\nSet-up\nUsers\nWearables\nChannels\nSpending\nPacks\nBackups\nVoice\nAmbient\nSystem\nDeveloper\nHarnesses\nACCOUNT\nCHANGE PASSWORD\nSIGN OUT OTHER DEVICES\nSIGN OUT\nowner\nowner@test.local · Main admin\nAPPEARANCE\n\nA look for the shape of things, then colours for it. Changes apply immediately.\n\nLOOK\nAa\nClassic\nMono, square, compact\nAa\nModern\nSans-serif, rounded, roomier\nAa\nPoints\nPlex Sans, calm, state as points of light\nCOLOURS FOR CLASSIC\nDefault\nDracula\nNord\nSolarized Dark\nMonokai\nCatppuccin Mocha\nGruvbox Dark\nTokyo Night\nOne Dark\nCyberpunk\nMore colours — made for another look, or your own; any of them works with this one\nThe face in the corner, on this screen\nOpen the face full screen ↗\nDots that gather into a face when the hive is listening, thinking, working or asking you.\nThe look, its colours, tabs and sidebar sections are this screen's own — Chrome on Linux — so a phone and a desk can differ. It follows the hive's for now.\nNAVIGATION VISIBILITY\n✨ Ask the agent\n\nShow or hide tabs in the navigation bar. Saved as you toggle.\n\nOverview\nLogs\nFiles\nProj",
+  "apikeys": "title: DOCA Panel\nurl: https://hub.example/\n\n[1] a \"DOCA BETA PANEL v2.314.0\" -> https://protolab.tech/\n[2] button:submit \"CONTROLS\"\n[3] button:submit \"AGENTS\"\n[4] button:submit \"MACHINES\"\n[5] button:submit \"HUB\"\n[6] button:submit \"FIELD\"\n[7] button:submit \"SETTINGS\"\n[8] button:submit \"⧉\"\n[9] button:submit \"📱\"\n[10] input:text \"Search pages, settings, files…\"\n[11] button:submit \"MODELS\"\n[12] button:submit \"MCP\"\n[13] button:submit \"CONNECTORS\"\n[14] button:submit \"API KEYS\"\n[15] button:button \"✨ Ask the agent\"\n[16] input:text \"the repository folder on this machine\"\n[17] button:submit \"SAVE\"\n[18] button:submit \"⟳ PULL & BUILD\"\n[19] input:text \"the repository folder on this machine\"\n[20] button:submit \"SAVE\"\n[21] button:submit \"⟳ PULL & BUILD\"\n[22] input:text \"alias (androiddebugkey)\"\n[23] input:password \"keystore password\"\n[24] input:password \"key password\"\n[25] button:submit \"⧉ PAIR A DEVICE\"\n[26] button:submit \"+ ISSUE TOKEN\"\n[27] button:submit \"↺\"\n[28] button:button \"✨ Ask the agent\"\n[29] select:select-one \"Overview Home Ambient Logs Files Projects Harness Workstream Archive Chronicle C\"\n[30] input:checkbox \"on\"\n[31] button:submit \"SHOW\"\n[32] button:submit \"✕ SIGN OUT\"\n[33] button:submit \"+ ADD PROVIDER\"\n[34] button:button \"✨ Ask the agent\"\n[35] button:submit \"LLAMA.CPP (LOCAL)\"\n[36] button:submit \"VLLM (LOCAL)\"\n[37] button:submit \"LM STUDIO (LOCAL)\"\n[38] button:submit \"OPENAI\"\n[39] button:submit \"ANTHROPIC\"\n[40] button:submit \"GOOGLE GEMINI\"\n[41] button:submit \"GROQ\"\n[42] button:submit \"OPENROUTER\"\n[43] button:submit \"MISTRAL\"\n[44] button:submit \"DEEPSEEK\"\n[45] button:submit \"XAI GROK\"\n[46] button:submit \"TOGETHER\"\n[47] button:submit \"CEREBRAS\"\n[48] button:submit \"⬡\"\n\n--- text ---\nDOCA BETA\nPANEL v2.314.0\nCONTROLS\nAGENTS\nMACHINES\nHUB\nFIELD\nSETTINGS\n⧉\n📱\n09:12:36\nMODELS\nMCP\nCONNECTORS\nAPI KEYS\nMACHINES\nNone running\nGPU\nNo GPU data\nSYSTEM\nCPU\n15%\nTEMP\n55°C\nLOAD 1/5/15\n3.56 · 4.49 · 4.23\nCORES\n32\nRAM\n57%\nUSED\n34.2 GB / 60.2 GB\nLOGICAL CORES (32)\nOLLAMA MODELS\n◆ MODEL SERVERS\nqwen3.8-27b-gsq-rco-iq3s\nloaded\nvLLM (local) :8000\nanswers · 619 listed\nHUGGINGFACE MODELS\nNo cached models\nLLAMA.CPP SERVERS\nNone running\nINFERENCE SERVICES\nNone running\nDOCA APPS\n✨ Ask the agent\n\nThe newest DocaMobile and DocaWear this hub hands out. DocaMobile checks here and offers the update itself (Settings → Updates in the app). Build them here from their repositories, or upload an APK built elsewhere. An update installs only over an app signed with the same key: the hub holds no signing key yet — builds here use this machine's debug key.\n\nDocaMobile\nNo build kept yet.\nSource:  SAVE\n⟳ PULL & BUILD\n⬆ UPLOAD\nDocaWear\nNo build kept yet.\nSource:  SAVE\n⟳ PULL & BUILD\n⬆ UPLOAD\nSigning key\n⬆ UPLOAD KEY\nTHIS SERVER — DEVICES\n⧉ PAIR A DEVICE\n+ ISSUE TOKEN\n↺\n✨ Ask the agent\nTOKENS FOR PHONES, WATCHES AND AGENTS THAT TALK TO THIS SERVER'S /API/V1. EACH DEVICE GETS ITS OWN SCOPES AND CAN BE REVOKED ON ITS OWN.\nChrome on Linux\nBROWSER\ndev_112b0d1761bd · its own look, tabs and sections; signed in by password · last seen never\nshowing API keys show here\nOverview\nHome\nAmbient\nLogs\nFiles\nProjects\nHarness\nWorkstream\nArchive\nChronicle\nComputers\nLive\nTerminal\nModels\nDocker\nVMs\nMCP\nConnectors\nAPI k",
+  "mcp": "title: DOCA Panel\nurl: https://hub.example/\n\n[1] a \"DOCA BETA PANEL v2.314.0\" -> https://protolab.tech/\n[2] button:submit \"CONTROLS\"\n[3] button:submit \"AGENTS\"\n[4] button:submit \"MACHINES\"\n[5] button:submit \"HUB\"\n[6] button:submit \"FIELD\"\n[7] button:submit \"SETTINGS\"\n[8] button:submit \"⧉\"\n[9] button:submit \"📱\"\n[10] input:text \"Search pages, settings, files…\"\n[11] button:submit \"MODELS\"\n[12] button:submit \"MCP\"\n[13] button:submit \"CONNECTORS\"\n[14] button:submit \"API KEYS\"\n[15] button:submit \"↺ REFRESH\"\n[16] button:submit \"+ ADD SERVER\"\n[17] button:submit \"ADD\"\n[18] button:submit \"ADD\"\n[19] button:submit \"ADD\"\n[20] button:submit \"⬡\"\n\n--- text ---\nDOCA BETA\nPANEL v2.314.0\nCONTROLS\nAGENTS\nMACHINES\nHUB\nFIELD\nSETTINGS\n⧉\n📱\n09:12:37\nMODELS\nMCP\nCONNECTORS\nAPI KEYS\nMACHINES\nNone running\nGPU\nNo GPU data\nSYSTEM\nCPU\n15%\nTEMP\n55°C\nLOAD 1/5/15\n3.56 · 4.49 · 4.23\nCORES\n32\nRAM\n57%\nUSED\n34.2 GB / 60.2 GB\nLOGICAL CORES (32)\nOLLAMA MODELS\n◆ MODEL SERVERS\nqwen3.8-27b-gsq-rco-iq3s\nloaded\nvLLM (local) :8000\nanswers · 619 listed\nHUGGINGFACE MODELS\nNo cached models\nLLAMA.CPP SERVERS\nNone running\nINFERENCE SERVICES\nNone running\nMCP servers\n\nTools from other programs, offered to the DOCA harness while their server runs.\n\n↺ REFRESH\n+ ADD SERVER\nModel Context Protocol servers. A running server's tools are offered to the DOCA harness alongside its built-in ones, named mcp__server__tool, and each can be switched off in the harness ⚙ panel. Only running servers contribute tools, and nothing is started unless you say so. Servers are grouped by the machine they act on: this host, or a paired client — and once a client is in play the harness is told which machine each tool reaches, so you can ask for something \"on my PC\" and get the right one.\nNo MCP servers yet — add one below.\nFROM THE CATALOGUE\nPlaywright — a browser the agent drives\nMicrosoft's server: open pages, read them as an accessibility snapshot, click and type by reference, take screenshots, handle tabs and downloads. Headless, with a fresh profile each start. Needs Node; adding it downloads its browser (~150 MB).\nADD\nChrome DevTools — inspect and drive Chrome\nGoogle's server: drive a Ch",
+  "connectors": "title: DOCA Panel\nurl: https://hub.example/\n\n[1] a \"DOCA BETA PANEL v2.314.0\" -> https://protolab.tech/\n[2] button:submit \"CONTROLS\"\n[3] button:submit \"AGENTS\"\n[4] button:submit \"MACHINES\"\n[5] button:submit \"HUB\"\n[6] button:submit \"FIELD\"\n[7] button:submit \"SETTINGS\"\n[8] button:submit \"⧉\"\n[9] button:submit \"📱\"\n[10] input:text \"Search pages, settings, files…\"\n[11] button:submit \"MODELS\"\n[12] button:submit \"MCP\"\n[13] button:submit \"CONNECTORS\"\n[14] button:submit \"API KEYS\"\n[15] button:submit \"COPY\"\n[16] button:button \"✨ Ask the agent\"\n[17] input:text \"client id\"\n[18] input:password \"client secret\"\n[19] input:text \"repo read:user\"\n[20] select:select-one \"hosts only everyone\"\n[21] button:submit \"SAVE\"\n[22] button:submit \"CONNECT\"\n[23] button:button \"✨ Ask the agent\"\n[24] input:text \"client id\"\n[25] input:password \"client secret\"\n[26] input:text \"openid email https://www.googleapis.com/auth/calendar.readonly https://www.googl\"\n[27] select:select-one \"hosts only everyone\"\n[28] button:submit \"SAVE\"\n[29] button:submit \"CONNECT\"\n[30] button:button \"✨ Ask the agent\"\n[31] input:text \"client id\"\n[32] input:password \"client secret\"\n[33] input:text \"offline_access User.Read Mail.Read Calendars.Read Files.Read\"\n[34] select:select-one \"hosts only everyone\"\n[35] button:submit \"SAVE\"\n[36] button:submit \"CONNECT\"\n[37] button:submit \"＋ ANOTHER OAUTH 2.0 SERVICE\"\n[38] button:button \"✨ Ask the agent\"\n[39] input:text \"name (hyper3d)\"\n[40] input:text \"address (https://api.example.com)\"\n[41] input:password \"the key\"\n[42] select:select-one \"Authorization: Bearer another header in the address (?param=) id:secret, traded \"\n[43] input:text \"header or parameter name — or the token address\"\n[44] select:select-one \"admins' turns everyone\"\n[45] input:text \"what it is for (the agent reads this)\"\n[46] button:submit \"ADD\"\n[47] button:button \"✨ Ask the agent\"\n[48] input:text \"site (https://github.com)\"\n[49] input:text \"username or email\"\n[50] input:password \"password\"\n[51] input:text \"name (optional)\"\n[52] button:submit \"ADD\"\n[53] button:button \"✨ Ask the agent\"\n[54] input:text \"name (bank-pin)\"\n[55] input:password \"the secret\"\n[56] input:text \"its site, for a web page (optional)\"\n[57] input:text \"note (optional)\"\n[58] button:submit \"KEEP\"\n[59] button:submit \"⬡\"\n\n--- text ---\nDOCA BETA\nPANEL v2.314.0\nCONTROLS\nAGENTS\nMACHINES\nHUB\nFIELD\nSETTINGS\n⧉\n📱\n09:12:38\nMODELS\nMCP\nCONNECTORS\nAPI KEYS\nMACHINES\nNone running\nGPU\nNo GPU data\nSYSTEM\nCPU\n15%\nTEMP\n55°C\nLOAD 1/5/15\n3.56 · 4.49 · 4.23\nCORES\n32\nRAM\n57%\nUSED\n34.2 GB / 60.2 GB\nLOGICAL CORES (32)\nOLLAMA MODELS\n◆ MODEL SERVERS\nqwen3.8-27b-gsq-rco-iq3s\nloaded\nvLLM (local) :8000\nanswers · 619 listed\nHUGGINGFACE MODELS\nNo cached models\nLLAMA.CPP SERVERS\nNone running\nINFERENCE SERVICES\nNone running\nCONNECTORS\n\nYour accounts, reached through their own APIs. Each uses an OAuth app you make in that service's console — DOCA ships none, so nobody sits between the hive and your accounts. Register this as the callback / redirect URL: https://hub.example/api/connectors/callback COPY. Connected, a service is the tool connector_<id>: changes are asked about like any change, and by default only people who hold host may use it.\n\nGITHUB\n○ no app yet\n✨ Ask the agent\nMake the app at https://github.com/settings/developers (New OAuth App; the callback URL below).\nhosts only\neveryone\nSAVE\nCONNECT\nGOOGLE (CALENDAR, GMAIL, DRIVE)\n○ no app yet\n✨ Ask the agent\nMake the app at https://console.cloud.google.com/apis/credentials (OAuth client ID, type Web application; the callback URL below as an authorised redirect URI).\nhosts only\neveryone\nSAVE\nCONNECT\nMICROSOFT 365 (OUTLOOK, CALENDAR, ONEDRIVE)\n○ no app yet\n✨ Ask the agent\nMake the app at https://entra.microsoft.com (App registrations → New; Web redirect URI: the callback URL below).",
+  "models": "title: DOCA Panel\nurl: https://hub.example/\n\n[1] a \"DOCA BETA PANEL v2.314.0\" -> https://protolab.tech/\n[2] button:submit \"CONTROLS\"\n[3] button:submit \"AGENTS\"\n[4] button:submit \"MACHINES\"\n[5] button:submit \"HUB\"\n[6] button:submit \"FIELD\"\n[7] button:submit \"SETTINGS\"\n[8] button:submit \"⧉\"\n[9] button:submit \"📱\"\n[10] input:text \"Search pages, settings, files…\"\n[11] button:submit \"MODELS\"\n[12] button:submit \"MCP\"\n[13] button:submit \"CONNECTORS\"\n[14] button:submit \"API KEYS\"\n[15] button:submit \"↺\"\n[16] button:button \"✨ Ask the agent\"\n[17] input:text \"http://127.0.0.1:11434\"\n[18] input:text \"/path/to/ollama/models (optional)\"\n[19] button:submit \"📁\"\n[20] button:submit \"SAVE\"\n[21] button:submit \"↺ REFRESH\"\n[22] button:button \"✨ Ask the agent\"\n[23] input:text \"Search Ollama library (e.g. llama, mistral)…\"\n[24] button:submit \"🔍 SEARCH\"\n[25] input:text \"model name (e.g. llama3.2, qwen2.5:7b)\"\n[26] button:submit \"⬇ PULL\"\n[27] button:submit \"✕ DELETE\"\n[28] button:submit \"✕ DELETE\"\n[29] button:button \"✨ Ask the agent\"\n[30] input:text \"~/.cache/huggingface/hub (default)\"\n[31] button:submit \"📁\"\n[32] input:password \"hf_… (optional, for gated models)\"\n[33] button:submit \"SAVE\"\n[34] button:submit \"↺ CHECK\"\n[35] button:submit \"⬇ INSTALL HUGGINGFACE-CLI\"\n[36] button:button \"✨ Ask the agent\"\n[37] input:text \"Search HuggingFace Hub (e.g. llama, whisper, stable-diffusion)…\"\n[38] button:submit \"🔍 SEARCH\"\n[39] input:text \"repo id (e.g. meta-llama/Llama-3.2-1B)\"\n[40] button:submit \"⬇ DOWNLOAD\"\n[41] button:submit \"↺ CHECK\"\n[42] button:button \"✨ Ask the agent\"\n[43] button:submit \"⬇ INSTALL\"\n[44] button:submit \"⚙\"\n[45] button:submit \"▶ VIA SERVICES\"\n[46] button:submit \"⚙\"\n[47] button:submit \"⚙\"\n[48] button:submit \"⬇ INSTALL\"\n[49] button:submit \"⚙\"\n[50] button:submit \"▶ VIA SERVICES\"\n[51] button:submit \"⚙\"\n[52] button:submit \"⚙\"\n[53] select:select-one \"whisper\"\n[54] input:text \"/path/to/models (optional)\"\n[55] button:submit \"Browse\"\n[56] input:text \"http://localhost:8000 (optional)\"\n[57] input:text \"/path/to/config (optional)\"\n[58] button:submit \"Browse\"\n[59] button:submit \"Edit config\"\n[60] button:submit \"\"\n[61] button:submit \"\"\n[62] input:text \"Search model catalog…\"\n[63] button:submit \"\"\n[64] input:text \"model name (e.g. base, large-v3)\"\n[65] button:submit \"\"\n[66] button:submit \"+ ADD INSTANCE\"\n[67] button:submit \"↺\"\n[68] select:select-one \"found as model servers found by /props\"\n[69] button:button \"✨ Ask the agent\"\n[70] button:submit \"⚙\"\n[71] button:submit \"▶ START\"\n[72] button:submit \"⬇ PULL IMAGE\"\n[73] button:submit \"⚙\"\n[74] button:submit \"▶ START\"\n[75] button:submit \"⬇ PULL IMAGE\"\n[76] button:submit \"⚙\"\n[77] button:submit \"▶ START\"\n[78] button:submit \"⬇ PULL IMAGE\"\n[79] button:submit \"⚙\"\n[80] button:submit \"▶ START\"\n[81] button:submit \"⬇ PULL IMAGE\"\n[82] button:submit \"⚙\"\n[83] button:submit \"▶ START\"\n[84] button:submit \"⬇ PULL IMAGE\"\n[85] button:submit \"⚙\"\n[86] button:submit \"▶ START\"\n[87] button:submit \"⬇ PULL IMAGE\"\n[88] button:submit \"SET UP (ABOUT 20 GB, ONCE)\"\n[89] input:text \"DOCA\"\n[90] button:submit \"🎤 SAY THE WORD, 6–10 TIMES, A PAUSE BETWEEN\"\n[91] button:submit \"🎤 SAY OTHER THINGS: NEAR WORDS, A SENTENCE\"\n[92] button:submit \"FROM THE CHAT…\"\n[93] button:submit \"TRAIN “DOCA” (ABOUT AN HOUR)\"\n[94] button:submit \"⬡\"\n\n--- text ---\nDOCA BETA\nPANEL v2.314.0\nCONTROLS\nAGENTS\nMACHINES\nHUB\nFIELD\nSETTINGS\n⧉\n📱\n09:12:40\nMODELS\nMCP\nCONNECTORS\nAPI KEYS\nMACHINES\nNone running\nGPU\nNo GPU data\nSYSTEM\nCPU\n15%\nTEMP\n55°C\nLOAD 1/5/15\n3.56 · 4.49 · 4.23\nCORES\n32\nRAM\n57%\nUSED\n34.2 GB / 60.2 GB\nLOGICAL CORES (32)\nOLLAMA MODELS\n◆ MODEL SERVERS\nqwen3.8-27b-gsq-rco-iq3s\nloaded\nvLLM (local) :8000\nanswers · 619 listed\nHUGGINGFACE MODELS\nNo cached models\nLLAMA.CPP SERVERS\nNone running\nINFERENCE SERVICES\nNone running\nMODELS IN USE\n\nWhich model does each job in this hive, and where to change it.\n\nThe agent's model\tollama\tControls → DOCA ⚙\nWhen the agent's model goes quiet\tnothing set\tControls → DOCA ⚙ → Fallback\nA stronger model for a stuck job\tnothing set\tControls → DOCA ⚙ → Escalate\nAssistant mode (the face, spoken to)\tnothing set\tSettings → Voice → Assistant mode\nSpecialists with a model of their own\tnothing set\tAgents → Harness → Specialists\nSpeech to text\tnothing set\tSettings → Voice; Field → Models → Inference Services (Whisper)\nText to speech\tnothing set\tSettings → Voice; Field → Models → Inference Services (Kokoro)\nSpeech to speech (live calls)\tnothing set\tSettings → Voice → Live call\nReading a screen\tnothing set\tSettings → Harness → Vision\nFinding things on a screen\tnothing set\tSettings → Harness → Vision; Field → Models → Inference Services (Roboflow)\nFinding by meaning\tnothing set\tSettings → Harness → Retrieval\nScreening outside text\tnothing set\tSettings → Harness → Guards\nBounded decisions (System 1: a request's size, ",
+  "harness": "title: DOCA Panel\nurl: https://hub.example/\n\n[1] a \"DOCA BETA PANEL v2.314.0\" -> https://protolab.tech/\n[2] button:submit \"CONTROLS\"\n[3] button:submit \"AGENTS\"\n[4] button:submit \"MACHINES\"\n[5] button:submit \"HUB\"\n[6] button:submit \"FIELD\"\n[7] button:submit \"SETTINGS\"\n[8] button:submit \"⧉\"\n[9] button:submit \"📱\"\n[10] input:text \"Search pages, settings, files…\"\n[11] button:submit \"HARNESS\"\n[12] button:submit \"WORKSTREAM\"\n[13] button:submit \"PROJECTS\"\n[14] button:submit \"ARCHIVE\"\n[15] button:submit \"CHRONICLE\"\n[16] button:submit \"+ WORK\"\n[17] button:submit \"+ PLAN\"\n[18] input:checkbox \"on\"\n[19] div \"1 · Orchestrator Orchestrator idle\"\n[20] button:submit \"RULES\"\n[21] button:submit \"↺\"\n[22] input:text \"key\"\n[23] input:text \"what to remember\"\n[24] button:submit \"+\"\n[25] input:checkbox \"on\"\n[26] button:submit \"+\"\n[27] button:submit \"⬆\"\n[28] a \"5 tools\" -> https://hub.example/#\n[29] button:submit \"✎\"\n[30] button:submit \"✕\"\n[31] a \"13 tools (code, files, shell)\" -> https://hub.example/#\n[32] button:submit \"✎\"\n[33] button:submit \"✕\"\n[34] a \"7 tools (web)\" -> https://hub.example/#\n[35] button:submit \"✎\"\n[36] button:submit \"✕\"\n[37] a \"10 tools (web)\" -> https://hub.example/#\n[38] button:submit \"✎\"\n[39] button:submit \"✕\"\n[40] a \"6 tools (computer)\" -> https://hub.example/#\n[41] button:submit \"✎\"\n[42] button:submit \"✕\"\n[43] a \"Orchestrator\" -> https://hub.example/#\n[44] a \"a work chat\" -> https://hub.example/#\n[45] button:submit \"＋ LAST TURN\"\n[46] button:submit \"＋ SKILL\"\n[47] button:submit \"＋\"\n[48] select:select-one \"Default · ollama · no model Other…\"\n[49] input:checkbox \"on\"\n[50] button:button \"⚡ AUTO\"\n[51] button:submit \"APPROVALS\"\n[52] button:submit \"CONTEXT\"\n[53] button:submit \"⚙\"\n[54] select:select-one \"Agent Plan Ask Debug\"\n[55] select:select-one \"Asks first: as in Settings Acts without asking Asks me before acting\"\n[56] button:submit \"⏱\"\n[57] input:text \"Plan title\"\n[58] textarea:textarea \"Plan steps\"\n[59] textarea:textarea \"Plan notes\"\n[60] button:submit \"\"\n[61] textarea:textarea \"Message your Orchestrator…\"\n[62] button:submit \"SEND\"\n\n--- text ---\nDOCA BETA\nPANEL v2.314.0\nCONTROLS\nAGENTS\nMACHINES\nHUB\nFIELD\nSETTINGS\n⧉\n📱\n09:12:41\nHARNESS\nWORKSTREAM\nPROJECTS\nARCHIVE\nCHRONICLE\nMACHINES\nNone running\nGPU\nNo GPU data\nSYSTEM\nCPU\n20%\nTEMP\n69°C\nLOAD 1/5/15\n3.35 · 4.43 · 4.21\nCORES\n32\nRAM\n58%\nUSED\n34.7 GB / 60.2 GB\nLOGICAL CORES (32)\nOLLAMA MODELS\n◆ MODEL SERVERS\nqwen3.8-27b-gsq-rco-iq3s\nloaded\nvLLM (local) :8000\nanswers · 619 listed\nHUGGINGFACE MODELS\nNo cached models\nLLAMA.CPP SERVERS\nNone running\nINFERENCE SERVICES\nNone running\nYour agent, and the helpers it hands work to\nYour main chat is with the agent (the Orchestrator). A bigger job gets a work chat of its own, where it is planned and done; a work chat may send a specialist — a helper for one kind of errand, such as code or the web. Open any of them here; what they find comes back to your main chat.\nWORKSPACE\n+ WORK\n+ PLAN\n Show archived chats\n1 · Orchestrator\nOrchestrator\nidle\nMEMORY\nRULES\n↺\n+\nNothing remembered yet\nSPECIALISTS\nON\n+\n⬆\nArchivist\n5 tools · shipped\n✎\n✕\nCoder\n13 tools (code, files, shell) · shipped\n✎\n✕\nResearcher\n7 tools (web) · shipped\n✎\n✕\nScout\n10 tools (web) · shipped\n✎\n✕\nTester\n6 tools (computer) · shipped\n✎\n✕\nTools held by the Orchestrator · a work chat\nRECIPES\n＋ LAST TURN\n＋ SKILL\nNone yet — when a turn got something working, keep it with ＋ last turn.\nSCHEDULES\n＋\nNone — ＋ sends a message on a timetable; ⏰ on a recipe runs it on one.\nOrchestrator\nOLLAMA / NO MODEL\nDefault · ollama · no model\nOther…\nfallback\nusage\nPick a model with ⚙ before sending.\n⚡ AUT",
+  "users": "title: DOCA Panel\nurl: https://hub.example/\n\n[1] a \"DOCA BETA PANEL v2.314.0\" -> https://protolab.tech/\n[2] button:submit \"CONTROLS\"\n[3] button:submit \"AGENTS\"\n[4] button:submit \"MACHINES\"\n[5] button:submit \"HUB\"\n[6] button:submit \"FIELD\"\n[7] button:submit \"SETTINGS\"\n[8] button:submit \"⧉\"\n[9] button:submit \"📱\"\n[10] input:text \"Search pages, settings, files…\"\n[11] button:submit \"General\"\n[12] button:submit \"Set-up\"\n[13] button:submit \"Users\"\n[14] button:submit \"Wearables\"\n[15] button:submit \"Channels\"\n[16] button:submit \"Spending\"\n[17] button:submit \"Packs\"\n[18] button:submit \"Backups\"\n[19] button:submit \"Voice\"\n[20] button:submit \"Ambient\"\n[21] button:submit \"System\"\n[22] button:submit \"Developer\"\n[23] button:submit \"Harnesses\"\n[24] button:button \"✨ Ask the agent\"\n[25] select:select-one \"Viewer Member Admin Main admin\"\n[26] button:submit \"SUSPEND\"\n[27] button:submit \"RESET PASSWORD\"\n[28] button:submit \"WHAT THEY HAVE\"\n[29] button:submit \"SIGN OUT\"\n[30] input:text \"email\"\n[31] input:text \"name\"\n[32] select:select-one \"Viewer Member Admin Main admin\"\n[33] button:submit \"+ ADD PERSON\"\n[34] button:submit \"+ NEW LEVEL\"\n[35] button:submit \"COPY VIEWER\"\n[36] button:submit \"COPY MEMBER\"\n[37] button:submit \"COPY ADMIN\"\n[38] button:submit \"COPY MAIN ADMIN\"\n[39] button:button \"✨ Ask the agent\"\n[40] select:select-one \"person specialist type\"\n[41] select:select-one \"owner@test.local\"\n[42] input:text \"tool:shell:git\"\n[43] input:text \"why (kept with it)\"\n[44] button:submit \"GIVE\"\n[45] button:submit \"⬡\"\n\n--- text ---\nDOCA BETA\nPANEL v2.314.0\nCONTROLS\nAGENTS\nMACHINES\nHUB\nFIELD\nSETTINGS\n⧉\n📱\n09:12:42\nMACHINES\nNone running\nGPU\nNo GPU data\nSYSTEM\nCPU\n20%\nTEMP\n69°C\nLOAD 1/5/15\n3.35 · 4.43 · 4.21\nCORES\n32\nRAM\n58%\nUSED\n34.7 GB / 60.2 GB\nLOGICAL CORES (32)\nOLLAMA MODELS\n◆ MODEL SERVERS\nqwen3.8-27b-gsq-rco-iq3s\nloaded\nvLLM (local) :8000\nanswers · 619 listed\nHUGGINGFACE MODELS\nNo cached models\nLLAMA.CPP SERVERS\nNone running\nINFERENCE SERVICES\nNone running\nGeneral\nSet-up\nUsers\nWearables\nChannels\nSpending\nPacks\nBackups\nVoice\nAmbient\nSystem\nDeveloper\nHarnesses\nPEOPLE\n✨ Ask the agent\n\nEveryone who can sign in here, and their level. The agent acts for a person with that person's level: what they may not do, the agent may not do for them.\n\nPERSON\tLEVEL\tSTATUS\tSIGNED IN\t\nowner\nowner@test.local\t\nViewer\nMember\nAdmin\nMain admin\n\tactive\t1\tSUSPENDRESET PASSWORDWHAT THEY HAVESIGN OUT\nViewer\nMember\nAdmin\nMain admin\n+ ADD PERSON\nLEVELS\n+ NEW LEVEL\n\nWhat a level lets a person do: its rights, the settings it may change, the tools the agent may use for them, and whether those calls always ask. The four built-in levels cannot be changed; copy one to start a level of your own.\n\nCOPY VIEWER\nViewer (built in) — read · settings: none · tools: none except * · always asks · 0 people\nCOPY MEMBER\nMember (built in) — read, chat · settings: none · tools: * · always asks · reaches: own-devices · 0 people\nCOPY ADMIN\nAdmin (built in) — read, chat, propose, host, devices, users, delegate · settings: * · tools: * · follows the pane"
+ },
+ "cases": [
+  {
+   "page": "controls",
+   "goal": "open Settings",
+   "how": "click",
+   "answer": [
+    7
+   ]
+  },
+  {
+   "page": "controls",
+   "goal": "add another agent harness",
+   "how": "click",
+   "answer": [
+    14
+   ]
+  },
+  {
+   "page": "controls",
+   "goal": "search the panel for the backup settings",
+   "how": "type",
+   "answer": [
+    10
+   ]
+  },
+  {
+   "page": "controls",
+   "goal": "go to the ambient screen",
+   "how": "click",
+   "answer": [
+    13
+   ]
+  },
+  {
+   "page": "controls",
+   "goal": "add my own agent called Jarvis",
+   "how": "type",
+   "answer": [
+    46
+   ]
+  },
+  {
+   "page": "settings",
+   "goal": "change my password",
+   "how": "click",
+   "answer": [
+    24
+   ]
+  },
+  {
+   "page": "settings",
+   "goal": "sign out of the panel",
+   "how": "click",
+   "answer": [
+    26
+   ]
+  },
+  {
+   "page": "settings",
+   "goal": "open the voice settings",
+   "how": "click",
+   "answer": [
+    19
+   ]
+  },
+  {
+   "page": "settings",
+   "goal": "manage the people who can use this hub",
+   "how": "click",
+   "answer": [
+    13
+   ]
+  },
+  {
+   "page": "settings",
+   "goal": "switch to the Nord theme",
+   "how": "click",
+   "answer": [
+    32
+   ]
+  },
+  {
+   "page": "settings",
+   "goal": "make the text bigger",
+   "how": "type",
+   "answer": [
+    48
+   ]
+  },
+  {
+   "page": "apikeys",
+   "goal": "pair a device",
+   "how": "click",
+   "answer": [
+    25
+   ]
+  },
+  {
+   "page": "apikeys",
+   "goal": "add a provider",
+   "how": "click",
+   "answer": [
+    33
+   ]
+  },
+  {
+   "page": "apikeys",
+   "goal": "set up DeepSeek as a provider",
+   "how": "click",
+   "answer": [
+    44
+   ]
+  },
+  {
+   "page": "apikeys",
+   "goal": "issue a token for a script",
+   "how": "click",
+   "answer": [
+    26
+   ]
+  },
+  {
+   "page": "mcp",
+   "goal": "add an MCP server",
+   "how": "click",
+   "answer": [
+    16
+   ]
+  },
+  {
+   "page": "mcp",
+   "goal": "refresh the list of servers",
+   "how": "click",
+   "answer": [
+    15
+   ]
+  },
+  {
+   "page": "connectors",
+   "goal": "add a key for a service called hyper3d",
+   "how": "type",
+   "answer": [
+    39
+   ]
+  },
+  {
+   "page": "connectors",
+   "goal": "save a login for a website",
+   "how": "type",
+   "answer": [
+    48
+   ]
+  },
+  {
+   "page": "connectors",
+   "goal": "keep a secret for my devices",
+   "how": "type",
+   "answer": [
+    54
+   ]
+  },
+  {
+   "page": "connectors",
+   "goal": "add another OAuth service",
+   "how": "click",
+   "answer": [
+    37
+   ]
+  },
+  {
+   "page": "models",
+   "goal": "download the Ollama model qwen2.5:7b",
+   "how": "type",
+   "answer": [
+    25
+   ]
+  },
+  {
+   "page": "models",
+   "goal": "search Hugging Face for whisper models",
+   "how": "type",
+   "answer": [
+    37
+   ]
+  },
+  {
+   "page": "models",
+   "goal": "train the wake word",
+   "how": "click",
+   "answer": [
+    93
+   ]
+  },
+  {
+   "page": "models",
+   "goal": "add a llama.cpp instance",
+   "how": "click",
+   "answer": [
+    66
+   ]
+  },
+  {
+   "page": "harness",
+   "goal": "send a message to the orchestrator",
+   "how": "type",
+   "answer": [
+    61
+   ]
+  },
+  {
+   "page": "harness",
+   "goal": "start a new work chat",
+   "how": "click",
+   "answer": [
+    16
+   ]
+  },
+  {
+   "page": "harness",
+   "goal": "edit the memory rules",
+   "how": "click",
+   "answer": [
+    20
+   ]
+  },
+  {
+   "page": "harness",
+   "goal": "see what is waiting for approval",
+   "how": "click",
+   "answer": [
+    51
+   ]
+  },
+  {
+   "page": "users",
+   "goal": "add a person to this hub",
+   "how": "click",
+   "answer": [
+    30,
+    33
+   ]
+  },
+  {
+   "page": "users",
+   "goal": "make a new permission level",
+   "how": "click",
+   "answer": [
+    34
+   ]
+  },
+  {
+   "page": "users",
+   "goal": "reset someone's password",
+   "how": "click",
+   "answer": [
+    27
+   ]
+  },
+  {
+   "page": "users",
+   "goal": "go to the Developer settings",
+   "how": "click",
+   "answer": [
+    22
+   ]
+  }
+ ]
+}

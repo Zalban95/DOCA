@@ -76,6 +76,7 @@ the project's managers only if the owner allows sharing specialists and skills (
 - [x] P1.5 **Guided set-up and the two shapes (§1)** — *2.288.0 (first slice): `guided/assess.js` reads what the machine bears (GPUs, memory, disk, runtimes; every OS); `guided/suggested-models.json` the project-tested models per role with their needs, refreshed from the project's hub only with sharing consent (the hub's route still to build); the picker takes the newest that fits or lists providers with their key pages; Settings → Set-up (and a first-run Guided / Advanced choice) asks what it is for, where it runs (only when that is a choice) and which devices, then proposes installs a click runs and waits for keys it tests; `setup.mode`/`setup.shape`; `machine_fit` + skill `guided-setup`. Not yet: other installs reporting what they measured, hosted speech, a hosted sign-in offering.*: a first conversation that asks what the person needs and sets
   it up; a hub that picks models for its machine from what other installs tested (shared only with consent, like
   skills); providers' options offered when the machine cannot bear something.
+- [x] P1.5c **Suggested models kept current (asked 2026-10-08: "a better, specific search needs to be performed")** — *branch suggestions-current: `guided/suggested-models.json` v2 searched per role and size class (Qwen3.8 27B GSQ-RCO IQ3_S on one 16 GB card — the owner's build — Q4_K_M at 24 GB, Q8_0 at 48 GB; Qwen3.5 9B at 8 GB; Gemma 4 12B on a 16 GB Mac; Qwen3.6 35B-A3B without a card), every entry with rank, sources and the day checked; the picker ranks by quality and splits over two cards; the model scout files `suggested-model` suggestions a host accepts into this install's overlay; Set-up shows the day checked and "Check for newer models"; docs/design/model-suggestions.md. Not yet: a llama.cpp install kind from a Hugging Face file (asks first: it widens install proposals), the project hub's route for newer lists.*
 - [~] P1.6 **Spending with permission (S12)** — *2.291.0: docs/design/spending.md (threat model, linking designed); Settings → Spending — what was spent per person, day and month from the usage ledger and prices; opt-in budgets (own, an admin's, a level's; the owner only their own) refused at a turn's start in `turn/ceiling.js`; spending permissions (once or kept per month, within the level's `mayAllow`), proposed by the agent with `spend_propose` and accepted with the password; the rules in protected `keys/spending.json`; `/api/spending/*` in `auth/guarded.js`; one line in the agent's readings. Team leaders set budgets since 2.298.0. 2.302.0: at a person's own budget their own turn is asked once ("go over it for this turn?", the panel's card and the device that started it, `spending/over.js`) — yes is this turn only and audited (`spending.over`); an admin's, a leader's or a level's budget, automatic turns and missions still refuse. Left: linking a payment method (`spending/pay.js` is a stub), the agent proposing a budget.*: a Spending settings page (budgets, a linked payment method, standing
   permissions), managed by the agent with the person's permission; a permission can be made permanent; what may be
   allowed follows the level — its own safety design first.
@@ -618,6 +619,13 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   protocol (OpenAI, Azure, local speech-to-speech servers) or Gemini Live, chosen in the panel; the voice's one tool
   hands real work to the conversation and long work is spoken when done; devices call it at `/api/v1/realtime`.
   **Left:** measuring it (the owner's key or a local server); the clients' side in DocaMobile.
+- [x] Calls that fail say so (2026-10-08, branch `call-debug`; the owner: "the live call … fails silently, in the panel
+  and on the watch"). Every stage of a call is kept on the hub (`realtime/call-log.js`: Hub → Logs source `call`,
+  Chronicle → Live calls), in names and numbers; a device's call sends `notice` frames (PROTOCOL §23.1) and the panel's
+  call says each failure in the chat. Fixed: the person's trailing words (and the voice's own echo) no longer pause and
+  cut an answer; the pipeline hears speech from -51 dBFS (it needed -38, which a watch at arm's length did not reach);
+  a stale synthesis no longer reads as "playing" in the next call. **Left:** a real call from the phone and the watch
+  with the logs read (DocaWear's and DocaMobile's `call-debug` branches log the microphone and the relay).
 
 **H9 · Reach and protocols**
 - [x] H9.1 (WhatsApp left) Channels: Slack, Telegram, mail, WhatsApp, Matrix — each a client kind. Done: Telegram (2.157.0), the
@@ -679,6 +687,13 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   get a picture from `virsh screenshot` / `VBoxManage screenshotpng` (made small on node:zlib) and open their VNC
   console through the hub (noVNC, `/ws/vm/`); the VMs tab gains Console. **Left:** Hyper-V, UTM and Parallels have no
   picture (no CLI screenshot); plain containers get no Live tile by design.
+  **Done (2026-10-08, asked: "a vnc section in machines, same logic, showing the running and connected ones on the live
+  and so on"):** Machines → VNC — targets by address with a password in `keys/vnc.json` (never returned), DOCA's own RFB
+  client (DES written out: Node has none), rows `connected`/`reachable`/`unreachable` in the status column, Live
+  pictures, a console where the hub signs in and a watching socket cannot act, a VNC button on VM rows that saves one in
+  a click, and the agent's `vnc_look`/`vnc_input` (a person's turn: ordinary approvals; a specialist: lent, every input
+  asked; allotment kind `vnc`). **Left:** a mission's `vnc_input` is refused rather than asked (a mission has nobody to
+  ask); VeNCrypt/TLS servers are named, not spoken; Tight/ZRLE encodings for slow links.
 - [x] H10.10 The home in DOCA's own layout (asked 2026-10-06: "does Home Assistant let us use our layout, or do we build
   from scratch?"). Neither: Home Assistant stays the device layer (thousands of brands, its areas, scenes and
   automations), and DOCA draws its own **Home** page from HA's WebSocket API — `get_states`, `subscribe_events` for live
@@ -748,6 +763,17 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   previewed by naming the computer and pictured in Machines → Live when it answers; a preview never names a computer's
   control or screen port; Live's served tiles open through a preview, so a phone reaches a localhost-only dev server.
   Not run against a real computer image here (no Docker on the test bench): the port mapping is new on `docker run`.
+- [ ] H10.19 A System 1 decision model for bounded decisions (asked 2026-10-08: "LAYA would be way better for navigating
+  and using the VMs, computers, vnc connections"; Jev considered too) — *built as the experiment `systemOne`
+  (2.315.0, `modules/system-one`, docs/experiments/system-one.md)*: Laya (open) run on this hub as a managed Python
+  process on 127.0.0.1 behind a per-start secret, or TypeSafe Jev with a key for services — set up in Field → Models →
+  Decision models (install, start/stop, state, test, the model-roles row); with the flag on it decides, when its top
+  probability reaches `systemOne.threshold`, the triage's size where the rules are unsure, a call's answer-now or
+  hand-on, and proposes a computer page's next element (`computer_next`, the turn's own computer, it only proposes).
+  Measured (`npm run experiment -- system-one`, 83 labelled cases): 12–66 ms per decision on a GPU; a call's route
+  56% → 76% over the rules; the page 52% against 97% for one model step. Open: a week of calls with the flag on;
+  fine-tuning Laya on DOCA's own decisions (the cases and the traces); Jev measured once a key is had; the person's own
+  browser (the extension's snapshot) and a desktop's accessibility tree as text states.
 - [x] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06) — *built as the experiment
   `riskTiers` (2.296.0, `modules/harness/risk/`, docs/experiments/risk-tiers.md): a declarative classifier (read / reversible /
   outward), a project checkpoint before a reversible change in a project, outward calls asked in every mode (Unattended

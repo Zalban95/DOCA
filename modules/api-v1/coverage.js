@@ -35,6 +35,7 @@ const COVERAGE = {
   sharing: { panel: 'the owner\'s answer and click to offer what was learned to the project (CONSTITUTION §0); a host\'s alone' },
   guided: { panel: 'setting up this machine (what it can bear, what to install, which keys to paste): the owner\'s, at the panel' },
   presence: { v1: ['/events'], note: 'the panel saying it is looked at; a device\'s presence is its event stream' },
+  'system-one': { panel: 'the System 1 decision model is the hub\'s own (experiment systemOne): its service is a process on this machine, its decisions are made inside turns a device already starts' },
   wakeword: { v1: ['/wakeword'], note: 'a device downloads kept models and the runtime; training stays the hub\'s' },
   ambient: { v1: ['/ambient'], note: 'the person\'s day; the screen itself is the panel\'s page' },
   home: { panel: 'the Home page, drawn from Home Assistant by the hub (home/); a device\'s own /api/v1 home is a later step — capability-gaps.md, home' },

@@ -259,4 +259,4 @@ const TOOLS = [
     run: async () => { await cdp.connect(); await cdp.evaluate('history.back()'); await new Promise(r => setTimeout(r, 800)); return text(`Now at ${await cdp.evaluate('location.href')}.`); } },
 ];
 
-module.exports = { TOOLS, sensitive, signInOnly, run };
+module.exports = { TOOLS, sensitive, signInOnly, run, SNAPSHOT };

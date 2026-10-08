@@ -36,7 +36,7 @@ test('the assessment reads GPUs of every kind and says the machine in one senten
   assert.match(intel.summary, /no graphics card a model can use.*free disk unknown/);
 });
 
-test('the picker takes the newest that fits with room to spare, and offers providers when nothing does', async () => {
+test('the picker takes the best that fits with room to spare, and offers providers when nothing does', async () => {
   const { pickRole, shapeOf, fit } = require('../modules/guided/pick');
   const doc = require('../modules/guided/suggestions').load();
   const providers = [{ id: 'deepseek', label: 'DeepSeek', hasKey: true }];
@@ -45,8 +45,8 @@ test('the picker takes the newest that fits with room to spare, and offers provi
   const chat = pickRole('chat', big, doc, { providers });
   assert.ok(chat.local, 'a 24 GB card runs a chat model');
   assert.ok(chat.local.needs.vramGB * 1.15 <= 24, 'with room to spare');
-  const newest = doc.models.filter(m => m.role === 'chat' && fit(m, big).where).map(m => m.released).sort().pop();
-  assert.equal(chat.local.released, newest, 'the newest that fits');
+  const best = Math.max(...doc.models.filter(m => m.role === 'chat' && fit(m, big).where === 'gpu').map(m => m.rank));
+  assert.equal(chat.local.rank, best, 'the best-ranked that fits');
   assert.equal(shapeOf(big, doc), 'local');
 
   const small = await machine({ totalBytes: 8 * GB });

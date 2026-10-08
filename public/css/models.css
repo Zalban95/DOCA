@@ -149,3 +149,7 @@
 .ww-pick { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
 .ww-pick .card { max-width: 520px; width: 100%; max-height: 80vh; overflow: auto; }
 .ww-pick-row { display: block; font-size: 12px; margin: 4px 0; }
+
+/* Field → Models → Decision models (js/decision-models.js) */
+#dm-card { margin-top: 14px; }
+.dm-provider { border-top: 1px solid var(--border); padding: 8px 0 4px; font-size: 12px; }

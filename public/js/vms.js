@@ -76,7 +76,7 @@ function _vmRowHtml(hvId, vm) {
       <span class="vm-name">${escHtml(vm.name)}</span>
       <span class="vm-state">${escHtml(vm.stateRaw || vm.state)}</span>
       ${display}
-      <span class="vm-acts">${vm.console?.how === 'hub' ? `<button class="btn btn-xs" title="Its screen, through the hub" onclick="vmConsoleOpen(${jsArg(hvId)}, ${arg})">Console</button>` : ''}${actions.join('')}${hvId === 'libvirt' ? `<button class="btn btn-xs" title="Details, autostart and snapshots" onclick="vmDetails(${arg}, this)">⋯</button>` : ''}</span>
+      <span class="vm-acts">${vm.console?.how === 'hub' ? `<button class="btn btn-xs" title="Its VNC console, through the hub" onclick="vmConsoleOpen(${jsArg(hvId)}, ${arg})">VNC</button>` : ''}${actions.join('')}${hvId === 'libvirt' ? `<button class="btn btn-xs" title="Details, autostart and snapshots" onclick="vmDetails(${arg}, this)">⋯</button>` : ''}</span>
     </div>
     ${hvId === 'libvirt' ? `<div class="vm-details" id="vm-details-${escHtml(vm.name)}" style="display:none"></div>` : ''}`;
 }
@@ -92,9 +92,13 @@ async function vmConsoleOpen(hypervisor, name) {
   if (!vm) return appAlert(`"${name}" is gone.`);
   if (vm.console?.how !== 'hub') return appAlert(vm.console?.why || 'It has no console the hub can open.');
   vmConsoleClose();
+  // Kept as a VNC screen already (Machines → VNC), or one click to keep it: the same display, then named and pictured there.
+  const saved = (await apiFetch('/api/machines/vnc').catch(() => ({ targets: [] }))).targets.find(t => t.same?.kind === 'vm' && t.same.id === `${hypervisor}:${name}`);
+  const keep = saved ? `<span class="pc-dim">VNC screen “${escHtml(saved.name)}”</span>`
+    : `<button class="btn btn-xs" title="Keep it in Machines → VNC" onclick="vncSaveDisplay(${jsArg(vm.name)}, ${jsArg(vm.console.host)}, ${vm.console.port}); this.remove()">Save as a VNC screen</button>`;
   const ov = Object.assign(document.createElement('div'), { className: 'pc-live' });
   ov.innerHTML = `<div class="pc-live-bar"><b>${escHtml(vm.name)}</b><span class="pc-dim">${escHtml([data.hypervisors.find(h => h.id === hypervisor)?.label, vm.os].filter(Boolean).join(' · '))}</span>
-      <span style="flex:1"></span><a class="btn btn-xs" href="${escHtml(vm.console.url)}" target="_blank" rel="noopener">Open in a window</a>
+      <span style="flex:1"></span>${keep}<a class="btn btn-xs" href="${escHtml(vm.console.url)}" target="_blank" rel="noopener">Open in a window</a>
       <button class="btn btn-xs" onclick="vmConsoleClose()">✕</button></div>
     <iframe src="${escHtml(vm.console.url)}" title="${escHtml(vm.name)}" allow="clipboard-read; clipboard-write"></iframe>`;
   document.body.appendChild(ov);

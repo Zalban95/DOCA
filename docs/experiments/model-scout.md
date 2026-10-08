@@ -36,6 +36,12 @@ cycle every other change follows (skills/doca-dev-cycle).
 
 The agent can do any of this once without the routine: ask it to scout, and it uses the same tool.
 
+Since 2026-10-08 it also keeps the guided set-up's suggested models current (docs/design/model-suggestions.md): the
+look for the agent's model includes vision-language models and GGUF releases, `model_scout {action: "suggestions"}`
+shows the list and the pick per size class, and a suggestion of kind `suggested-model` carries a list entry that a
+host's Accept lays over this install's list instead of writing a TODO line. Settings → Set-up's "Check for newer
+models" asks for such a brief at once.
+
 ## Measured
 
 `npm run experiment -- model-scout` runs one look against the real Hugging Face and feeds (no model, nothing kept):

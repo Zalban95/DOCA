@@ -106,6 +106,7 @@ const HUB_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR,
 const LOGIN_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'logins.json');
 const SERVICE_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'services.json');   // keys for services (service-keys.js)
 const HF_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'huggingface.json');   // the Hugging Face token (hf-token.js)
+const VNC_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'vnc.json');   // VNC targets and their passwords (vnc-targets/)
 // The key DOCA's own Android apps are signed with when the hub builds them (modules/client-apps): an update installs only
 // over an app signed with the same key, so every machine that builds them signs with this one.
 const ANDROID_SIGNING_STORE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'android-signing.keystore');
@@ -113,7 +114,7 @@ const ANDROID_SIGNING_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HO
 // The keys folder as a whole too: what is kept there beside a key (a replaced signing key, android-signing.previous/)
 // is as secret as the key, and a list of files cannot name what has not been written yet.
 const PROTECTED_DIRS = [path.dirname(ANDROID_SIGNING_STORE)];
-const PROTECTED_FILES = [BACKUP_PASSWORD_FILE, PROVIDER_KEYS_FILE, DEVICE_CONSOLE_FILE, SEARCH_KEYS_FILE, CONNECTOR_KEYS_FILE, HUB_KEYS_FILE, LOGIN_KEYS_FILE, SERVICE_KEYS_FILE, HF_KEYS_FILE, ANDROID_SIGNING_STORE, ANDROID_SIGNING_FILE];
+const PROTECTED_FILES = [BACKUP_PASSWORD_FILE, PROVIDER_KEYS_FILE, DEVICE_CONSOLE_FILE, SEARCH_KEYS_FILE, CONNECTOR_KEYS_FILE, HUB_KEYS_FILE, LOGIN_KEYS_FILE, SERVICE_KEYS_FILE, HF_KEYS_FILE, VNC_KEYS_FILE, ANDROID_SIGNING_STORE, ANDROID_SIGNING_FILE];
 
 // Setup scripts the UI may read/write/run — the Setup panel's list, and the
 // whole of it.
@@ -242,7 +243,7 @@ module.exports = {
   HOME_DIR,
   BACKUP_DIR,
   BACKUP_PASSWORD_FILE,
-  PROTECTED_FILES, PROTECTED_DIRS, CONNECTOR_KEYS_FILE, HUB_KEYS_FILE, LOGIN_KEYS_FILE, SERVICE_KEYS_FILE, HF_KEYS_FILE, ANDROID_SIGNING_STORE, ANDROID_SIGNING_FILE,
+  PROTECTED_FILES, PROTECTED_DIRS, CONNECTOR_KEYS_FILE, HUB_KEYS_FILE, LOGIN_KEYS_FILE, SERVICE_KEYS_FILE, HF_KEYS_FILE, VNC_KEYS_FILE, ANDROID_SIGNING_STORE, ANDROID_SIGNING_FILE,
   PROVIDER_KEYS_FILE,
   SEARCH_KEYS_FILE,
   ALLOWED_SCRIPTS,

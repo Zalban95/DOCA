@@ -237,6 +237,7 @@ function disabledFor(profile, p, sessionId = null) {
     // Granted beyond its definition, to its type or its mission (auth/permits.js) — before NEVER, which still wins.
     for (const n of require('../../auth/permits').grantedTools({ profile, missionId: profile.missionId })) held.add(n);
     for (const n of require('../../agents/registry').NEVER) held.delete(n);
+    if (profile.vnc) for (const n of ['vnc_look', 'vnc_input']) held.add(n);   // lent a VNC target (agent_dispatch vnc:); its vnc_input is always asked (forced-asks.js)
   }
   return all.filter(n => off.includes(n) || !held.has(n));
 }

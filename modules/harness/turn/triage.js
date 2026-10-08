@@ -6,8 +6,9 @@
  * urgency (quick or normal), and sets that turn's thinking effort and step budget.
  *
  * Rules first, deterministic and free: what the message looks like, the words in it, who asked (a call or a watch wants
- * quick), and whether the conversation has a plan with open steps. Only when the rules are unsure, and the owner has
- * set a quick model for assistant mode, is that model asked once. The budget is never below today's `maxSteps` — the
+ * quick), and whether the conversation has a plan with open steps. Only when the rules are unsure is a model asked:
+ * the System 1 decision model when experiment systemOne is on and it is sure (system-one/decisions.js), else — as
+ * before — assistant mode's quick model, once, when the owner has set one. The budget is never below today's `maxSteps` — the
  * owner asked for limits that follow the work, not limits lowered to save tokens — and never above the ceiling
  * `limits.maxStepsCeiling`, which is his and not proposable.
  */
@@ -108,8 +109,10 @@ async function verdict({ message, client, session, p }) {
   const rules = rate({ message, client, session });
   let v = { ...rules, by: 'rules' };
   if (!rules.sure) {
-    const m = await askModel(message, client?.user);
-    if (m) v = { ...rules, difficulty: m.difficulty, urgency: rules.urgency === 'quick' ? 'quick' : m.urgency, by: `model (${m.model})` };
+    // The System 1 model first (experiment systemOne): sure, it decides; unsure or off, the quick model as before.
+    const s1 = await require('../../system-one/decisions').size(message, client?.user);
+    const m = s1 || await askModel(message, client?.user);
+    if (m) v = { ...rules, difficulty: m.difficulty, urgency: rules.urgency === 'quick' ? 'quick' : m.urgency, by: s1 ? `System 1: ${s1.by}` : `model (${m.model})` };
   }
   const ceiling = ceilingFor(base);
   return { difficulty: v.difficulty, urgency: v.urgency, by: v.by, reasons: v.reasons, effort: effortFor(v), steps: stepsFor(v.difficulty, base, ceiling), base, ceiling };
