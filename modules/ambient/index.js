@@ -24,6 +24,8 @@ function notices(p) {
     const props = require('../harness/installs').list().pending.length;
     if (props) out.push({ kind: 'propose', text: `${props} install${props === 1 ? '' : 's'} proposed by the agent, to decide`, page: 'harness' });
   }
+  // A reminder or the agent's notice to this person (notices/), until they dismiss it on a page.
+  for (const n of require('../notices').list(p, isHost(p)).slice(0, 4)) out.push({ kind: 'notice', text: n.text ? `${n.title}: ${n.text}` : n.title, at: n.at, page: 'harness' });
   const since = Date.now() - 12 * 3600000;
   for (const m of require('../agents/missions').list({ limit: 30 })) {
     if (!may(m.sessionId)) continue;

@@ -13,6 +13,7 @@
  *   missions       a specialist's mission started, stepped or ended — from missions.announce()
  *   files          something changed in a folder a screen is looking at — live/watch.js, only the folders asked for
  *   ask            a mission asks its person to use a machine (harness/mission-asks.js) — only that person's pages
+ *   notice         a reminder or a notice for a person, drawn on their pages (notices/) — only that person's pages
  * A change says what changed, never more than the page would read through its own route; the stream (routes.js)
  * gives each viewer only what they may open.
  */

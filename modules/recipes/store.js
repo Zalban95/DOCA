@@ -104,17 +104,30 @@ function remove(id) {
 /**
  * The tool calls of a conversation's last turn, as recipe steps: every call that did not fail, in order.
  * `params` [{name, value}] lifts the values that varied: each literal occurrence becomes `{name}`.
+ *
+ * "The last turn" is read from the end: the turn after the last user row, and when that one has nothing to keep
+ * (no answer yet, or — called by the agent's own `recipe save_last` — no call but the one that is saving it), the
+ * turn before it. A last turn whose calls all failed is not passed over: it is a turn with nothing to keep. A
+ * `recipe` call is never a step: a recipe that saves or runs recipes does nothing anyone meant to keep.
  */
 function fromTurn(sessionId, { params = [] } = {}) {
   const rows = require('../harness/memory').messages(sessionId);
-  // The last turn: after the last user row — or, when that row has no answer yet, after the one before it.
-  let last = rows.map(r => r.role).lastIndexOf('user');
-  if (last === rows.length - 1) last = rows.map(r => r.role).lastIndexOf('user', last - 1);
-  const start = last + 1;
-  const results = new Map(rows.slice(start).filter(r => r.role === 'tool').map(r => [r.tool_call_id, String(r.content || '')]));
+  const users = rows.map((r, i) => (r.role === 'user' ? i : -1)).filter(i => i >= 0);
+  const turn = k => rows.slice(k < 0 ? 0 : users[k] + 1, k + 1 < users.length ? users[k + 1] : rows.length);
+  let { steps, calls } = stepsOf(turn(users.length - 1), params);
+  if (!calls && users.length > 1) ({ steps } = stepsOf(turn(users.length - 2), params));
+  if (!steps.length) throw bad('The last turn of that conversation made no tool call that worked, so there is nothing to keep.');
+  return { steps, params: params.map(p => ({ name: p.name, description: p.description || '', default: String(p.value ?? '') })) };
+}
+
+function stepsOf(turn, params) {
+  const results = new Map(turn.filter(r => r.role === 'tool').map(r => [r.tool_call_id, String(r.content || '')]));
   const steps = [];
-  for (const r of rows.slice(start)) {
+  let calls = 0;
+  for (const r of turn) {
     for (const tc of r.role === 'assistant' ? r.tool_calls || [] : []) {
+      if (tc.function?.name === 'recipe') continue;
+      calls++;
       const out = results.get(tc.id || tc.function?.name) ?? '';
       if (/^(Error|Refused|Not run)\b/.test(out)) continue;   // the dead ends stay behind
       let args = {};
@@ -122,8 +135,7 @@ function fromTurn(sessionId, { params = [] } = {}) {
       steps.push({ tool: tc.function?.name, args: lift(args, params) });
     }
   }
-  if (!steps.length) throw bad('The last turn of that conversation made no tool call that worked, so there is nothing to keep.');
-  return { steps, params: params.map(p => ({ name: p.name, description: p.description || '', default: String(p.value ?? '') })) };
+  return { steps, calls };
 }
 
 function lift(value, params) {

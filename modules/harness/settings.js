@@ -125,7 +125,10 @@ function refuse(dotted, value, { screen = null } = {}) {
 
   // Changing a number into an object is how a settings file stops loading. If
   // the key is already there, the shape it has is the shape it keeps.
-  const current = get(screen ? screen.settings : loadPrefs(), dotted);
+  let current = get(screen ? screen.settings : loadPrefs(), dotted);
+  // The built-in harness keeps only what was changed (old-defaults.js): a default's shape is the shape it keeps too.
+  if (current === undefined && !screen && dotted.startsWith('harness.config.doca.'))
+    current = get({ harness: { config: { doca: require('./catalog').configFor('doca') } } }, dotted);
   if (current !== undefined && value !== null) {
     const was = Array.isArray(current) ? 'array' : typeof current;
     const now = Array.isArray(value)   ? 'array' : typeof value;

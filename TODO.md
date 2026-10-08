@@ -126,6 +126,25 @@ the project's managers only if the owner allows sharing specialists and skills (
   `agent.ask` callers (rules review, skill drafts, evals' judge) are panel actions of a host, not a person's turn; the
   Terminal and the Files tab can still write the prefs file — inherent to host (AGENTS.md).
 
+### Deep test B 2026-10-08 — the agent core (branch `deepb-core`)
+- [x] Deep test B B1: A notice reaches someone who can see it: only a device that shows `alert`/`prompt.new` is a target
+  (`harness/reach-shows.js`: never a browser record, an agent, a headless device or a doca-client — decided: not a
+  target rather than a log line); a reminder also goes to the panel's own notices (`modules/notices`, live topic
+  `notice`, a card in the questions dock, the ambient "For you"); `tell_device` falls back there and `ask_device` asks
+  at the panel alone when no device of theirs can show it; the record names who got it or why nobody could.
+- [x] Deep test B B2: `recipe save_last` keeps the turn before, never its own recipe call (`recipes/store.js`).
+- [x] Deep test B B3: The model is asked over node:http (`turn/http-request.js`): a wait past 300 s is the setting's, not undici's.
+- [x] Deep test B C1: The built-in harness stores only what its owner changed (`harness/old-defaults.js`), migration
+  `2.332-harness-defaults` lifts stored defaults (former prompts by hash), no shipped prompt is "the owner's".
+- [x] Deep test B C2: A reply that was all thinking is asked once more with twice the room (`turn/think-retry.js`); default
+  `maxTokens` 2048 → 8192, with a 2048 floor kept for small declared windows and the cap fitted to what is left.
+- [x] Deep test B r15: A queued request read by an automatic turn stays its person's (`tool-calls.js askerOf`).
+- [x] Deep test B C13: Failed work is not tried again unasked (the wake says ask; `work_chats send` needs `asked: true`).
+- [x] Deep test B C9: An earlier Orchestrator stays in the Archive, refused with why, instead of returning as a work chat.
+- [x] Deep test B C12: The roots refusal names the rule and says to ask, not go around. **Open, for the owner (S11):** in Manual,
+  a `shell` read of a path outside the roots right after a file tool refused it could be asked even when the verb is
+  allowed (`shell:cat`) — that is approval code (`approval.gate`), so it waits for a yes.
+
 ### Everything still open, now urgent
 - C7b: done; D2b: done — its gaps (`docs/api/capability-gaps.md`) are v1 routes to ask for, plan decisions first.
 - D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),

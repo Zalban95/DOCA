@@ -25,8 +25,9 @@ async function post(ep, body, signal, p) {
   const headers = { 'Content-Type': 'application/json' };
   if (ep.apiKey) headers.Authorization = `Bearer ${ep.apiKey}`;
 
-  const send = payload => fetch(`${ep.baseUrl}/chat/completions`, {
-    method: 'POST', headers, body: JSON.stringify(payload), signal,
+  // node:http, not fetch: fetch stops waiting for headers at 300 s whatever the signal says (http-request.js).
+  const send = payload => require('./http-request').post(`${ep.baseUrl}/chat/completions`, {
+    headers, body: JSON.stringify(payload), signal,
   });
 
   let r = await send(body);
@@ -188,6 +189,7 @@ async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, me
     // provider asked for comes out first: it means nothing to the new rung, and
     // an unknown field in a message is a refusal from a strict endpoint.
     if (rung.ep.id !== ep.id) rungBody = { ...rungBody, messages: withoutEcho(rungBody.messages) };
+    rungBody = budget.fitReply(rungBody, rung);   // no more reply asked for than its declared window has left
     // Each rung gets its own guard, so the shorter `failoverAfterMs` applies to
     // this entry rather than to the turn.
     const guard = firstTokenGuard({
