@@ -32,7 +32,8 @@ function agentEventSink(ui) {
       // The provider has the request and has not started answering: one row, rewritten in place.
       case 'waiting': {
         const text = `${evt.provider} has not sent a token yet — ${evt.seconds}s`
-          + (evt.frames ? `, ${evt.frames} keep-alive frames` : '') + (evt.timeoutMs ? ` of ${Math.round(evt.timeoutMs / 1000)}s` : '');
+          + (evt.frames ? `, ${evt.frames} keep-alive frames` : '') + (evt.timeoutMs ? ` of ${Math.round(evt.timeoutMs / 1000)}s` : '')
+          + (evt.working ? ' — its server is working, so the wait goes on' : '');
         if (waitingRow) waitingRow.textContent = text; else waitingRow = ui.note('waiting', text, 'waiting');
         break;
       }

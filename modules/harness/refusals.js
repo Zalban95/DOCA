@@ -51,7 +51,7 @@ function explain({ status, detail, ep, p }) {
  * what to do. Charter rule 12 in the one case where the provider says nothing
  * at all.
  */
-function stalled({ ep, ms, frames, setting = 'firstTokenTimeoutMs' }) {
+function stalled({ ep, ms, frames, setting = 'firstTokenTimeoutMs', extended = false }) {
   const who     = ep?.label || ep?.id || 'the provider';
   const seconds = Math.round((Number(ms) || 0) / 1000);
   const held    = frames > 0
@@ -64,6 +64,7 @@ function stalled({ ep, ms, frames, setting = 'firstTokenTimeoutMs' }) {
     + `${setting}, not the model's. Raise it in harness settings `
     + `(harness.config.doca.${setting}), or try another provider or model.`
     + held
+    + (extended ? ' Its server said it was working, so the wait went on past the setting while it did — until it stopped saying so, or ten times the setting.' : '')
     + ' Nothing was cancelled at the provider\'s end: this stopped the waiting, not the work, so anything it was '
     + 'about to charge for it may still charge for.';
 }
