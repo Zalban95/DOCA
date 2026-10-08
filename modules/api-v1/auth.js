@@ -23,7 +23,8 @@ function authenticate(opts = {}) {
       const owner = require('../auth/store').userById(device.userId);
       if (!owner || owner.suspendedAt) return sendError(res, 401, 'invalid_token', 'This device\'s account is suspended');
     }
-    req.device = device;
+    // Held to what its person may do (owner-ceiling.js): no hub commands without host. The stored record is unchanged.
+    req.device = require('./owner-ceiling').narrow(device);
     req.clientInfo = String(req.headers['x-doca-client'] || '').slice(0, 64) || null;
     next();
   };

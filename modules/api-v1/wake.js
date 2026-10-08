@@ -41,7 +41,8 @@ function awake(deviceId) {
 function phonesFor(watch) {
   const all = devices.list().filter(d => !d.revokedAt && d.id !== watch.id);
   if (watch.pairedBy) return all.filter(d => d.id === watch.pairedBy);
-  return all.filter(d => d.caps?.formFactor === 'phone' && hasScope(d.scopes, 'devices:admin'));
+  // Not another person's phone: a member's phone, paired with the phone preset, holds devices:admin too.
+  return all.filter(d => d.caps?.formFactor === 'phone' && hasScope(d.scopes, 'devices:admin') && (!d.userId || !watch.userId || d.userId === watch.userId));
 }
 
 function onEvent(deviceId, env) {
