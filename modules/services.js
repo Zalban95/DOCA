@@ -9,13 +9,15 @@ const { sseHeaders, loadPrefs, savePrefs, loadModelsPrefs } = require('./utils')
 
 // Where each answers once it is really up: `docker run` returns as soon as the container exists, minutes before the
 // application inside answers (AGENTS.md: "a start is not a service").
-const READY = { roboflow: '/info', whisper: '/v1/models', kokoro: '/v1/audio/voices', vllm: '/v1/models', sdwebui: '/sdapi/v1/sd-models', comfyui: '/system_stats' };
-const READY_SEC = { vllm: 900, sdwebui: 900, comfyui: 600 };
+const READY = { roboflow: '/info', whisper: '/v1/models', kokoro: '/v1/audio/voices', qwentts: '/v1/audio/voices', vllm: '/v1/models', sdwebui: '/sdapi/v1/sd-models', comfyui: '/system_stats' };
+const READY_SEC = { vllm: 900, sdwebui: 900, comfyui: 600, qwentts: 900 };   // a first start downloads the model
 
 /** What a crash says, in a sentence a person can act on. */
 function diagnose(log) {
   if (/no kernel image is available|sm_\d+ is not compatible|CUDA capability sm_\d+/i.test(log))
     return 'This image\'s PyTorch was not built for this GPU (it is newer than the image). Pick "No GPU (CPU)" where the service has a CPU image, or wait for a newer image.';
+  if (/Failed to infer device type/i.test(log)) return 'This service runs only on a GPU: pick GPU 0 or GPU 1 in its ⚙.';
+  if (/KV cache is needed, which is larger than the available|No available memory for the cache blocks/i.test(log)) return 'The GPU has too little free memory for it (about 7 GB): pick the other GPU, or stop what is using it.';
   if (/CUDA out of memory|OutOfMemoryError/i.test(log)) return 'The GPU ran out of memory: pick the other GPU, or stop what is using it.';
   if (/could not select device driver|nvidia-container|--gpus/i.test(log)) return 'Docker cannot reach the GPU: install the NVIDIA Container Toolkit (Settings → System → System tools).';
   if (/address already in use|port is already allocated/i.test(log)) return 'Its port is taken by another container or program: stop that one first.';
@@ -54,6 +56,7 @@ const INFERENCE_SERVICES = [
   { id: 'kokoro',   label: 'Kokoro TTS',      image: 'ghcr.io/remsky/kokoro-fastapi-gpu:latest', cpuImage: 'ghcr.io/remsky/kokoro-fastapi-cpu:latest',
     port: 8880, internalPort: 8880, apiPath: '/v1', multiGpu: false,
     description: 'OpenAI-compatible text-to-speech API (Kokoro-82M) — matches the Voice tab default port' },
+  require('./speech-services').ROW,   // the expressive voice: a suggestion, started only on a click
   // `chat`: a service a turn's provider can be (auth/allot.js `service`: a provider at this machine's port is this service).
   { id: 'vllm',     label: 'vLLM (LLM)',      image: 'vllm/vllm-openai:latest',      port: 8001, internalPort: 8000, apiPath: '/v1', multiGpu: true, chat: true,
     description: 'OpenAI-compatible LLM inference for HuggingFace models, multi-GPU' },
@@ -123,7 +126,7 @@ function handleStatus(req, res) {
 }
 
 /** POST /api/services/start — SSE progress */
-function handleStart(req, res) {
+async function handleStart(req, res) {
   const { id, gpu, modelId } = req.body;
   const svc = INFERENCE_SERVICES.find(s => s.id === id);
   if (!svc) return res.status(400).json({ error: 'Unknown service' });
@@ -186,6 +189,9 @@ function handleStart(req, res) {
     dockerArgs.push('-v', `${basedir}:/basedir`);
     dockerArgs.push('-v', `${hfCache}:/root/.cache/huggingface`);
     dockerArgs.push(image);
+  } else if (id === 'qwentts') {
+    const speech = require('./speech-services');
+    dockerArgs.push(...speech.args({ hfCache, hfToken, modelId, totalGB: await speech.cardGB(gpu) }));
   } else {
     dockerArgs.push(image);
   }

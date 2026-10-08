@@ -36,7 +36,10 @@ function providersFor(role, doc, known = null) {
 }
 
 function pickRole(role, a, doc, opts = {}) {
-  const all = doc.models.filter(m => m.role === role).sort(order);
+  // A model marked `want` is offered only to whoever asked for what it is for, and then before the rest (when it fits).
+  const want = opts.want || [];
+  const all = doc.models.filter(m => m.role === role && (!m.want || want.includes(m.want)))
+    .sort((x, y) => (y.want ? 1 : 0) - (x.want ? 1 : 0) || order(x, y));
   const tried = all.map(m => ({ m, f: fit(m, a) }));
   const ok = tried.filter(t => t.f.where);
   const best = ok[0] ? { ...ok[0].m, where: ok[0].f.where } : null;

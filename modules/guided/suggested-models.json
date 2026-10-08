@@ -1,8 +1,8 @@
 {
-  "version": 1,
-  "updated": "2026-10-07",
+  "version": 2,
+  "updated": "2026-10-08",
   "source": "project-tested",
-  "about": "Open models the project suggests per role, with what each needs at the quantization it is served in (GB of GPU memory to run it, GB of RAM, GB of disk). Ollama's tags; speech runs as the panel's own services in Docker. A newer list arrives from the project's hub only when the owner shares with the project (sharing.js) and replaces this one when its version is higher. Figures are the model's size at that quantization plus room for its context; installs that measure better numbers report them back the same way.",
+  "about": "Open models the project suggests per role (one marked `want` only when the person asked for what it is for — guided/plan.js USES), with what each needs at the quantization it is served in (GB of GPU memory to run it, GB of RAM, GB of disk). Ollama's tags; speech runs as the panel's own services in Docker. A newer list arrives from the project's hub only when the owner shares with the project (sharing.js) and replaces this one when its version is higher. Figures are the model's size at that quantization plus room for its context; installs that measure better numbers report them back the same way.",
   "roles": {
     "chat": { "label": "Talking and directing the work (the agent's own model)" },
     "coding": { "label": "Writing and fixing code" },
@@ -32,7 +32,8 @@
     { "role": "embeddings", "id": "embeddinggemma", "label": "EmbeddingGemma 300M", "quant": "BF16", "released": "2025-09-04", "cpuOk": true, "needs": { "vramGB": 1, "ramGB": 2, "diskGB": 0.7 }, "install": { "kind": "ollama-model", "id": "embeddinggemma" }, "runtime": "ollama" },
 
     { "role": "stt", "id": "whisper", "label": "Whisper (faster-whisper)", "quant": "service", "released": "2024-10-01", "cpuOk": true, "needs": { "vramGB": 2, "ramGB": 3, "diskGB": 6 }, "install": { "kind": "service", "id": "whisper" }, "runtime": "docker" },
-    { "role": "tts", "id": "kokoro", "label": "Kokoro", "quant": "service", "released": "2025-01-10", "cpuOk": true, "needs": { "vramGB": 2, "ramGB": 3, "diskGB": 5 }, "install": { "kind": "service", "id": "kokoro" }, "runtime": "docker" }
+    { "role": "tts", "id": "kokoro", "label": "Kokoro", "quant": "service", "released": "2025-01-10", "cpuOk": true, "needs": { "vramGB": 2, "ramGB": 3, "diskGB": 5 }, "install": { "kind": "service", "id": "kokoro" }, "runtime": "docker" },
+    { "role": "tts", "id": "qwentts", "label": "Qwen3-TTS 1.7B — an expressive voice", "want": "expressive", "quant": "BF16", "released": "2026-01-21", "needs": { "vramGB": 6.8, "ramGB": 8, "diskGB": 38 }, "install": { "kind": "service", "id": "qwentts" }, "runtime": "docker", "note": "Whispers, laughs and excitement on request, Italian and English among ten languages; measured on an RTX 5060 Ti 16 GB: 6.8 GB of graphics memory, first audio in about 50 ms, a sentence at four times real time. The image (vLLM-Omni) is an 11 GB download and 33 GB on disk; the model 4.5 GB." }
   ],
   "hosted": {
     "chat": ["deepseek", "openai", "anthropic", "google", "openrouter", "mistral", "groq", "xai", "together", "cerebras"],
