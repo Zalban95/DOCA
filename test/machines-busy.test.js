@@ -155,6 +155,9 @@ esac`);
   assert.deepEqual((await as('/api/harness/working')).body.machines, []);
   assert.deepEqual((await as('/api/chronicle?source=machines')).body.rows, []);
 
+  // The routes above asked for looks of their own: let those stop, so the next two looks are this test's alone.
+  busy().T.wantMs = 0;
+  await H.sleep(300);
   // Two quiet looks: idle again.
   fs.writeFileSync(at('cpu'), '0.4');
   for (const up of [1040, 1050]) { P.uptime = up; P.procs = base; fs.writeFileSync(at('vmcpu'), String(18e12)); await look(); }
@@ -164,6 +167,7 @@ esac`);
   assert.equal(busy().busyNow().length, 0);
 
   // Looked at only while a page asks: the rows route keeps it looking, and it stops wantMs after the last ask.
+  busy().T.wantMs = 400;
   const before = calls();
   busy().want();
   await H.sleep(200);
