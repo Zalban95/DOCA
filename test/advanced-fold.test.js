@@ -41,7 +41,12 @@ before(async () => {
   base = await H.start();
   profile = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-fold-'));
   proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...headless.ALONE,
-    '--disable-gpu', '--window-size=1300,900', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
+    '--disable-gpu', '--window-size=1300,900', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'],
+    { stdio: 'ignore', detached: process.platform !== 'win32' });
+  // The whole browser goes when this file does, even when the runner kills it on a timeout and `after` never runs:
+  // a left Chromium per failed run once piled up to 60 processes and stalled every other browser test (2026-10-08).
+  process.once('exit', killBrowser);
+  for (const sig of ['SIGTERM', 'SIGINT']) process.once(sig, () => { killBrowser(); process.exit(1); });
   page = await headless.connect(await headless.devtools(profile));
   page.on(m => { if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text); });
   await page.send('Runtime.enable'); await page.send('Network.enable');
@@ -50,10 +55,19 @@ before(async () => {
   await open();
 });
 
+/** Chromium and every process it started: its own group on POSIX, the tree on Windows. */
+function killBrowser() {
+  if (!proc || proc.exitCode !== null) return;
+  try {
+    if (process.platform === 'win32') require('node:child_process').spawnSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
+    else process.kill(-proc.pid, 'SIGKILL');
+  } catch { try { proc.kill('SIGKILL'); } catch { /* gone */ } }
+}
+
 after(async () => {
   if (skip) return;
   try { page?.close(); } catch { /* gone */ }
-  proc?.kill();
+  killBrowser();
   await headless.sleep(400);
   try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch { /* still locked: the OS cleans temp */ }
   await H.stop();

@@ -11,6 +11,7 @@ const { ALONE } = require('../modules/headless');
 test('no sign-in and no sync, at every place a headless browser is started', () => {
   assert.ok(ALONE.includes('--disable-sync'));
   assert.ok(ALONE.some(f => /^--disable-features=.*\bmsImplicitSignin\b/.test(f)));
+  assert.ok(ALONE.includes('--password-store=basic'), 'cookies never wait on the system keyring');
   const root = path.join(__dirname, '..');
   const files = ['modules', 'bin'].flatMap(d => fs.readdirSync(path.join(root, d), { recursive: true }).map(f => path.join(d, f)))
     .filter(f => f.endsWith('.js') && fs.readFileSync(path.join(root, f), 'utf8').includes("'--headless=new'"));
