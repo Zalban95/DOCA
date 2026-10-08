@@ -76,7 +76,7 @@
           "tool": "shell"
         },
         {
-          "judge": "The person said how (the terminal): it used the shell to make the folder in /tmp/doca-newcomer-eval (creating that parent folder as needed is fine), said where it is, and changed nothing else."
+          "judge": "The person said how (the terminal), and the tool check above confirms it was done that way: the answer says the folder was made and where it is (/tmp/doca-newcomer-eval/Taxes 2026; creating that parent folder as needed is fine), in plain words — saying it used the terminal is the person's own word and fine — and nothing else was changed."
         }
       ]
     },

@@ -46,7 +46,7 @@ module.exports = [
   row('models', 'download, delete and configure models', ['POST /api/models/*', 'DELETE /api/models/llamacpp/:id']),
   row('mcp', 'add, start, stop and export MCP servers, and accept one a device offers', ['POST /api/mcp', 'POST /api/mcp/*', 'DELETE /api/mcp/:id', 'DELETE /api/mcp/drafts/:id'],
     { only: 'a server is a command spawned on this machine or an address it calls: a host\'s; a device offers its own at POST /api/v1/mcp/offer' }),
-  row('computers', 'make, run, pin and remove the agents\' computers', ['POST /api/computers', 'POST /api/computers/*', 'DELETE /api/computers/:id']),
+  row('computers', 'make, run, pin and remove the agents\' computers, and archive or delete containers no record names', ['POST /api/computers', 'POST /api/computers/*', 'DELETE /api/computers/:id', 'DELETE /api/computers/strays/:name']),
   row('wakeword', 'record, train and remove wake-word models', ['POST /api/wakeword/*', 'DELETE /api/wakeword/models/:name', 'DELETE /api/wakeword/samples/:word/:kind'],
     { only: 'training is the hub\'s; a device downloads the kept models at GET /api/v1/wakeword' }),
   row('watching', 'watch folders and the Workstream', ['POST /api/live/watch', 'POST /api/workstream/hold'],

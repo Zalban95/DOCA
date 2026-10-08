@@ -23,6 +23,9 @@ const SIZE = process.env.SCREEN || '1280x800';
 const MAX_OUT = 40000;
 const cdp = new Cdp(Number(process.env.CDP_PORT) || 9222);
 let recording = null;
+// A test computer (the hub's mark, modules/computers/test-mode.js — the owner's decision of 2026-10-08): set only by
+// the hub, with its key, each time it connects; a restarted control server starts as an ordinary computer.
+let testMode = false;
 
 const text = t => ({ content: [{ type: 'text', text: String(t) }] });
 const fail = t => ({ content: [{ type: 'text', text: String(t) }], isError: true });
@@ -107,8 +110,30 @@ function sensitive(el) {
     return { kind: 'decision', label: label || el.tagName.toLowerCase() };
   return null;
 }
-const sensitiveAt = ref => cdp.evaluate(`(${sensitive.toString()})(document.querySelector('[data-doca-ref="${Number(ref)}"]'))`);
+
+/**
+ * What a test computer lets through without a person (the owner's decision of 2026-10-08, self-test #7): a password
+ * field — the agent types the test account's password it chose itself; the hub never fills a saved login into a test
+ * computer — and a sign-in or log-in, or the submit of a form holding a password. A card field, a one-time code and a
+ * control that pays, buys, confirms or deletes stay a person's: a test computer still has the open internet.
+ * Runs in the page beside sensitive(), so it is a plain function too.
+ */
+function signInOnly(el) {
+  if (!el) return false;
+  const ac = String(el.getAttribute && el.getAttribute('autocomplete') || '').toLowerCase();
+  if (/cc-|one-time-code/.test(ac)) return false;
+  if (el.type === 'password' || /current-password|new-password/.test(ac)) return true;
+  const label = String((el.getAttribute && el.getAttribute('aria-label')) || el.innerText || el.value || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+  if (/\b(pay|buy|purchase|order|checkout|subscribe|donate|transfer|send money|confirm|delete)\b/i.test(label)) return false;
+  const form = el.form || (el.closest && el.closest('form'));
+  return !(form && form.querySelector && form.querySelector('[autocomplete^="cc-"]'));   // a card in the form is paying
+}
+const sensitiveAt = ref => cdp.evaluate(`(() => { const el = document.querySelector('[data-doca-ref="${Number(ref)}"]');
+  const s = (${sensitive.toString()})(el); return s && { ...s, signIn: (${signInOnly.toString()})(el) }; })()`);
+/** Whether this computer lets [ref]'s sign-in through without a person: only a test computer, only signInOnly(). */
+const relaxed = s => testMode && !!s?.signIn;
 const TAKE_OVER = 'is a password or card field. A person types credentials: ask them to take over this computer (Computers → Take over) and sign in; carry on after they hand it back.';
+const NEVER_CARD = 'is a card field or a one-time code: never typed by an agent, on a test computer too — ask the person to take over.';
 const confirmFirst = (ref, s) => `[${ref}] is "${s.label}" — it pays, buys, signs in, confirms or submits. A person decides this one: call again with confirm: true and they will be asked.`;
 
 /**
@@ -189,23 +214,24 @@ const TOOLS = [
       return text(`Opened ${await cdp.evaluate('location.href')} — "${await cdp.evaluate('document.title')}".`); } },
   { name: 'browser_snapshot', description: 'Read the page: its title, URL, every visible link, button and field numbered [n], and its text. Click or type by those numbers.',
     inputSchema: { type: 'object', properties: {} }, run: async () => { await cdp.connect(); return text(clip(await cdp.evaluate(SNAPSHOT))); } },
-  { name: 'browser_click', description: 'Click element [ref] from the last browser_snapshot, with a real mouse event. A control that pays, buys, signs in or submits needs confirm: true (a person is asked).',
+  { name: 'browser_click', description: 'Click element [ref] from the last browser_snapshot, with a real mouse event. A control that pays, buys, signs in or submits needs confirm: true (a person is asked) — on a test computer a sign-in or a sign-in form\'s submit does not.',
     inputSchema: { type: 'object', properties: { ref: { type: 'number' }, confirm: { type: 'boolean' } }, required: ['ref'] },
     run: async a => { await cdp.connect(); const p = await centerOf(a.ref);
       const s = await sensitiveAt(a.ref);
-      if (s?.kind === 'decision' && a.confirm !== true) return fail(confirmFirst(a.ref, s));
+      if (s?.kind === 'decision' && a.confirm !== true && !relaxed(s)) return fail(confirmFirst(a.ref, s));
       await watchClick(a.ref); await click(p.x, p.y); const got = await clicked(); await new Promise(r => setTimeout(r, 600));
       if (got === null) return fail(`Nothing at [${a.ref}]'s centre (${Math.round(p.x)},${Math.round(p.y)}) received the click. Take a browser_snapshot: the page may have changed.`);
       if (got && got !== 'it') return fail(`The click at [${a.ref}]'s centre landed on a ${got}, not on [${a.ref}]. Take a browser_snapshot and try again.`);
       return text(`Clicked [${a.ref}]. Now at ${await cdp.evaluate('location.href')}.`); } },
-  { name: 'browser_type', description: 'Type into field [ref] from the last browser_snapshot; submit presses Enter after. Never a password or card field: a person signs in through Take over.',
+  { name: 'browser_type', description: 'Type into field [ref] from the last browser_snapshot; submit presses Enter after. Never a card field; a password field only on a test computer (the test account\'s password you chose) — otherwise a person signs in through Take over.',
     inputSchema: { type: 'object', properties: { ref: { type: 'number' }, text: { type: 'string' }, submit: { type: 'boolean' }, confirm: { type: 'boolean' } }, required: ['ref', 'text'] },
     run: async a => { await cdp.connect(); const p = await centerOf(a.ref);
       const s = await sensitiveAt(a.ref);
-      if (s?.kind === 'secret') return fail(`[${a.ref}] ${TAKE_OVER}`);
+      if (s?.kind === 'secret' && !relaxed(s)) return fail(`[${a.ref}] ${testMode ? NEVER_CARD : TAKE_OVER}`);
       if (a.submit && a.confirm !== true) {
-        const f = await cdp.evaluate(`(() => { const el = document.querySelector('[data-doca-ref="${Number(a.ref)}"]'); const form = el && (el.form || el.closest('form')); return !!(form && form.querySelector('input[type=password],[autocomplete^="cc-"]')); })()`);
-        if (f) return fail(confirmFirst(a.ref, { label: 'a form with a password or card field' }));
+        const f = await cdp.evaluate(`(() => { const el = document.querySelector('[data-doca-ref="${Number(a.ref)}"]'); const form = el && (el.form || el.closest('form'));
+          return !form ? null : form.querySelector('[autocomplete^="cc-"]') ? 'card' : form.querySelector('input[type=password]') ? 'password' : null; })()`);
+        if (f === 'card' || (f === 'password' && !testMode)) return fail(confirmFirst(a.ref, { label: 'a form with a password or card field' }));
       } await click(p.x, p.y); await cdp.send('Input.insertText', { text: a.text });
       if (a.submit) for (const type of ['keyDown', 'keyUp']) await cdp.send('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, ...(type === 'keyDown' ? { text: '\r' } : {}) });
       await new Promise(r => setTimeout(r, 400)); return text(`Typed into [${a.ref}]${a.submit ? ' and pressed Enter' : ''}.`); } },
@@ -222,10 +248,15 @@ const TOOLS = [
       if (!ok) return fail(`[${a.ref}] is not a password field: a secret goes only into one.`);
       const p = await centerOf(a.ref); await click(p.x, p.y);
       await cdp.send('Input.insertText', { text: a.value }); return text(`Filled [${a.ref}].`); } },
+  // The hub marks a test computer (modules/computers/test-mode.js), with the same key: never the agent's to call.
+  { name: 'test_mode', hidden: true, description: 'The hub says whether this is a test computer.',
+    inputSchema: { type: 'object', properties: { on: { type: 'boolean' }, key: { type: 'string' } }, required: ['on', 'key'] },
+    run: async a => { if (!process.env.FILL_KEY || a.key !== process.env.FILL_KEY) return fail('Not the hub.');
+      testMode = a.on === true; return text(testMode ? 'A test computer: sign-ins without asking.' : 'An ordinary computer.'); } },
   { name: 'browser_screenshot', description: 'A picture of the page as the browser draws it.', inputSchema: { type: 'object', properties: {} },
     run: async () => { await cdp.connect(); return { content: [{ type: 'image', mimeType: 'image/png', data: (await cdp.send('Page.captureScreenshot', { format: 'png' })).data }] }; } },
   { name: 'browser_back', description: 'Go back one page.', inputSchema: { type: 'object', properties: {} },
     run: async () => { await cdp.connect(); await cdp.evaluate('history.back()'); await new Promise(r => setTimeout(r, 800)); return text(`Now at ${await cdp.evaluate('location.href')}.`); } },
 ];
 
-module.exports = { TOOLS, sensitive, run };
+module.exports = { TOOLS, sensitive, signInOnly, run };

@@ -101,6 +101,10 @@ const ROUTES = [
   [W, /^\/api\/connectors\/sealed\/(all|mine(\/[^/]+)?|[^/]+)$/, 'secrets for devices'],
   [['POST'], /^\/api\/harness\/usage\/prices$/, 'the prices money budgets are counted in', () => moneyBudgets()],
   // Opening the house from the Home page: a lock's unlock, an alarm's disarm (home/actions.js).
+  // A test computer (computers/test-mode.js): its browser takes a typed password and a sign-in click without asking.
+  // Marking one — at making it or after — is the person's, typed; unmarking tightens, so it does not ask.
+  [['POST'], /^\/api\/computers$/, 'a test computer (sign-ins without asking)', req => req.body?.test === true],
+  [['POST'], /^\/api\/computers\/[^/]+\/test$/, 'a test computer (sign-ins without asking)', req => req.body?.on !== false],
   [['POST'], /^\/api\/home\/call$/, 'unlocking a door or disarming an alarm', req => require('../home/actions').guardedCall(req.body)],
   [['POST'], /^\/api\/prefs$/, null, req => prefsBody(req.body)],
   [['POST'], /^\/api\/harness\/proposals\/[^/]+\/apply$/, null, req => proposal(req.path.split('/')[4])],

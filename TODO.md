@@ -136,6 +136,15 @@ the project's managers only if the owner allows sharing specialists and skills (
   never told a tool's name (first-steps, talk-to-me, Plan mode); basics/asks-when-unclear allows six steps.
   Open for the owner (S11): #7, the computer browser's password and submit guard that every Tester routed around, and
   charter rule 15's newcomer wording — both in the branch's report.
+- [x] The owner's three answers of 2026-10-08 (S11; branch `owner-decisions`): **test computers** (#7, option b) — a
+  computer marked `test` (made so by the `computer` tool's `test: true`, or by a person with the password; never a
+  kept one, never inherited, never by the agent afterwards) takes the agent's own test password and a sign-in click
+  without asking, while paying, cards, one-time codes, confirms and deletes stay a person's and `computer_login`
+  refuses it (`computers/test-mode.js`, `clients/computer/tools.js signInOnly`); **charter rule 15** names what is
+  never said to a person unasked (a tool, a skill, a protocol, a port, a path or a setting) and allows a place in the
+  panel to click; **stray computer containers** (#25) are left by default and listed under Computers → Not DOCA's
+  records with Archive (adopted into the Archive) and Delete (volume kept unless asked), and `computers.strays`
+  (leave · archive · delete, never proposable) says what the tidy-up does with unlabelled stopped ones.
 - [x] Self-test 2026-10-08, the install/devices/server group (branch `selftest-server`): node-pty is an optional
   dependency and `install.sh` names the build tools per distro, so a box without a C++ toolchain installs (#1);
   revoking a device by any route closes its stream and removes the MCP servers it hosts, and doca-client stops
