@@ -16,7 +16,7 @@ async function look(url, { contains, selector, settleMs = 2500, timeoutMs = 3000
   const exe = h.findBrowser();
   if (!exe) return { ok: false, why: 'no Chrome, Edge or Chromium on this machine to look at the page (Settings → System → System tools)' };
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-check-'));
-  const proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check',
+  const proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...h.ALONE,
     '--ignore-certificate-errors', '--disable-gpu', '--window-size=1280,800', '--mute-audio',
     ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });   // as shots.js and the smoke start it
   const errors = [];

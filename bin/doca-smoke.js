@@ -19,7 +19,7 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const { findBrowser, devtools, connect, sleep } = require('../modules/headless');   // the browser and CDP, shared
+const { findBrowser, devtools, connect, sleep, ALONE } = require('../modules/headless');   // the browser and CDP, shared
 
 async function main() {
   const browserPath = findBrowser();
@@ -31,7 +31,7 @@ async function main() {
     child.on('exit', code => reject(new Error(`the panel did not start (exit ${code})`)));
   });
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-smoke-'));
-  const proc = spawn(browserPath, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check',
+  const proc = spawn(browserPath, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...ALONE,
     '--disable-gpu', '--window-size=1300,900', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
   const errors = [];
   const absent = new Set();

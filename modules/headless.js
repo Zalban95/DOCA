@@ -39,6 +39,15 @@ function playwrights() {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+/**
+ * Flags every headless start passes, so the browser stays DOCA's and not the person's. On Windows, Edge started with
+ * a fresh profile from the person's session signs itself in to their Microsoft account and syncs their data into it —
+ * on a real Windows 11 host (H1.9, 2026-10-08) eighteen of the person's extensions arrived in a throwaway profile
+ * within twenty seconds. msImplicitSignin off keeps the account out; sync off keeps their data out whatever signs in.
+ * Chrome and Chromium take --disable-sync too and ignore a feature they do not know.
+ */
+const ALONE = ['--disable-sync', '--disable-features=msImplicitSignin'];
+
 async function devtools(profile) {
   const file = path.join(profile, 'DevToolsActivePort');
   for (let i = 0; i < 400; i++) {
@@ -70,4 +79,4 @@ async function connect(port) {
   return { send, on: l => listeners.push(l), close: () => ws.close() };
 }
 
-module.exports = { findBrowser, devtools, connect, sleep, CANDIDATES };
+module.exports = { findBrowser, devtools, connect, sleep, CANDIDATES, ALONE };
