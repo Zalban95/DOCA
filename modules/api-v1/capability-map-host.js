@@ -39,6 +39,8 @@ module.exports = [
   row('files', 'change files on the hub', ['POST /api/files/*']),
   row('docker', 'pull, run and remove images and containers', ['POST /api/docker/images/pull', 'DELETE /api/docker/images/:id', 'POST /api/docker/presets', 'DELETE /api/docker/presets/:name', 'POST /api/docker/run']),
   row('vms', 'manage virtual machines', ['POST /api/vms/*', 'DELETE /api/vms/libvirt/:name/snapshots/:snap']),
+  row('vnc', 'add, change and remove VNC screens', ['POST /api/machines/vnc', 'PUT /api/machines/vnc/:id', 'DELETE /api/machines/vnc/:id'],
+    { only: 'another machine\'s address and the password the hub keeps for it: a host\'s, at the panel' }),
   row('services-settings', 'set up inference services', ['POST /api/services/settings']),
   row('system-tools', 'install what this machine needs', ['POST /api/system/tools/install', 'POST /api/setup/scripts/:name']),
   row('snapshots', 'restore a snapshot and set where they go', ['POST /api/snapshots/restore', 'POST /api/snapshots/settings']),

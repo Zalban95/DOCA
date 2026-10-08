@@ -39,13 +39,15 @@ function where(vm) {
 
 const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 
-function page(vm) {
-  const ws = `ws/vm/${encodeURIComponent(vm.hypervisor)}/${encodeURIComponent(vm.name)}`;
+const page = vm => pageFor(vm.name, `ws/vm/${encodeURIComponent(vm.hypervisor)}/${encodeURIComponent(vm.name)}`);
+
+/** The noVNC page for a socket path the hub carries (a VM's here, a VNC target's in vnc-targets/routes.js). */
+function pageFor(title, ws) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(vm.name)} — console</title>
+<title>${esc(title)} — console</title>
 <style>html,body{margin:0;height:100%;background:#000;color:#ccc;font:13px system-ui,sans-serif}#screen{position:absolute;inset:0}
 #note{position:absolute;left:0;right:0;top:40%;text-align:center;padding:16px}</style></head>
-<body><div id="screen"></div><div id="note">Connecting to ${esc(vm.name)}…</div>
+<body><div id="screen"></div><div id="note">Connecting to ${esc(title)}…</div>
 <script type="module">
 const note = document.getElementById('note');
 const say = t => { note.textContent = t; note.style.display = t ? '' : 'none'; };
@@ -56,8 +58,8 @@ const rfb = new RFB(document.getElementById('screen'), url, { shared: true });
 rfb.scaleViewport = true; rfb.resizeSession = false;
 rfb.viewOnly = new URLSearchParams(location.search).get('view') === '1';
 rfb.addEventListener('connect', () => say(''));
-rfb.addEventListener('disconnect', e => say(e.detail.clean ? 'The console closed.' : 'The console could not be reached — is the VM still running?'));
-rfb.addEventListener('credentialsrequired', () => { const password = prompt('This VM\\'s VNC password:'); if (password != null) rfb.sendCredentials({ password }); });
+rfb.addEventListener('disconnect', e => say(e.detail.clean ? 'The console closed.' : 'The console could not be reached — is it still running?'));
+rfb.addEventListener('credentialsrequired', () => { const password = prompt('Its VNC password:'); if (password != null) rfb.sendCredentials({ password }); });
 </script></body></html>`;
 }
 
@@ -89,4 +91,4 @@ function mount(app) {
   });
 }
 
-module.exports = { mount, upgrade, where, ownAddress };
+module.exports = { mount, upgrade, where, ownAddress, pageFor };
