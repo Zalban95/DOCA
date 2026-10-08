@@ -42,7 +42,8 @@ test('a voice named as a person says it is matched to the service\'s; one it lac
   assert.equal(r.status, 200);
   assert.equal(heard.at(-1).voice, 'af_heart');
   assert.equal(r.headers.get('x-doca-voice-fallback'), 'Nobody -> af_heart');
-  assert.deepEqual((await H.api(null, 'GET', '/api/chat/voices')).body, { voices: ['af_heart', 'bf_emma', 'am_echo'], hive: 'af_heart' });
+  const listed = (await H.api(null, 'GET', '/api/chat/voices')).body;
+  assert.deepEqual([listed.voices, listed.hive, listed.engine], [['af_heart', 'bf_emma', 'am_echo'], 'af_heart', '']);
   await H.api(null, 'POST', '/api/screen/settings', { voice: null });
 });
 

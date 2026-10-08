@@ -128,6 +128,17 @@ the project's managers only if the owner allows sharing specialists and skills (
   watch's call is assistant mode at last (it looked for a device kind no device has). DocaWear draws every state.
   Measured (sandbox hub, live whisper + kokoro, DeepSeek flash): end of speech → words 0.8 s, → first audio 2.7–4.2 s
   with the front (13.4k prompt tokens) vs 3.2–4.0 s without (25k). Not checked: a real call on the watch.
+- [x] A voice with nuance, "slightly close to ElevenLabs V4" (asked 2026-10-08; branch `expressive-voice`): tried
+  locally on an RTX 5060 Ti — Qwen3-TTS 1.7B (Apache-2.0, Italian and English, tone by instruction), Chatterbox
+  Multilingual V3 and Turbo (MIT; Turbo English-only, tags `[laugh]`), Kokoro as the baseline; Higgs v3, Voxtral, Fish
+  S2 Pro and Breeze TTS 2 rank higher in blind tests but their weights are non-commercial. Qwen3-TTS on vLLM-Omni won:
+  first audio in ~50 ms streamed, a sentence at ~4.5× real time, 6.7 GB of GPU memory, words heard back right in both
+  languages. It is a Services row (`qwentts`, `speech-services.js`) started only on a click and a guided suggestion
+  only for the use "with feeling" (`want: expressive`); Kokoro stays the default. A screen chooses it in Settings →
+  Voice (`voice.engine`, `tts-engines.js`); in a call the agent may write `[whispers] [laughs] [excited]…`
+  (`voice-tags.js`), sent as the speech API's `instructions`, dropped for a voice without them, never shown or kept;
+  the sentence's language is named (`speech-language.js`). Not done: a device's own spoken turns are not told of the
+  tags (their voice is the hive's, which strips them), and nobody has listened on a real call yet.
 - [x] Self-test 2026-10-08, the agents and missions group (branch `selftest-agents`): specialists' budgets fit a
   real errand (Tester 120, Coder 80, Researcher 40, Scout 30, Archivist 10, unnamed 30; #6); a mission's last step is
   its report, with a line telling its leader it ended on its limit and where that is raised (`turn/mission-report.js`;

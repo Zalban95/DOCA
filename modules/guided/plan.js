@@ -19,6 +19,8 @@ const USES = {
   talk:  { label: 'Talk to it and get everyday help', roles: ['chat'] },
   code:  { label: 'Write and fix code', roles: ['chat', 'coding'] },
   voice: { label: 'Talk to it out loud, and hear it answer', roles: ['chat', 'stt', 'tts'] },
+  // Not everyone's: a voice with feeling costs a graphics card's 7 GB, so it is suggested only to whoever asks (2026-10-08).
+  expressive: { label: 'Hear it answer with feeling — whispers, laughs, excitement (needs a graphics card with about 7 GB free)', roles: ['chat', 'stt', 'tts'], wants: ['expressive'] },
   see:   { label: 'Look at pictures and screens', roles: ['chat', 'vision'] },
   find:  { label: 'Find things by meaning in what it keeps', roles: ['chat', 'embeddings'] },
   home:  { label: 'Look after my home and devices', roles: ['chat'] },
@@ -65,7 +67,7 @@ function plan(answers, assessment, doc, { have = {} } = {}) {
   const { pickAll, shapeOf } = require('./pick');
   const a = clean(answers);
   const shape = shapeOf(assessment, doc);
-  const picks = pickAll(assessment, doc, rolesFor(a)).filter(p => !(p.role === 'chat' && have.chat));
+  const picks = pickAll(assessment, doc, rolesFor(a), { want: a.uses.flatMap(u => USES[u].wants || []) }).filter(p => !(p.role === 'chat' && have.chat));
   const askRoute = picks.some(p => p.local);
   const useLocal = askRoute && a.route === 'local';
   const steps = have.chat ? [{ type: 'have', role: 'chat', label: 'The agent\'s model', provider: have.chat.provider, model: have.chat.model }] : [];

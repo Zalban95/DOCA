@@ -271,6 +271,7 @@ async function _callAnswer(userText) {
       mount: node => { agentFoldMount(container, node); _chatScroll(); },
       makeText: () => chatAppendMsg('assistant', ''),
       scroll: _chatScroll,
+      voiceTags: true,   // "[whispers]" is for the voice, not the eye (lib/voice-tags.js)
     });
     stream.startWaiting();
     // The same sink as a typed turn — approvals, warnings and pictures included — and speaking on the side:

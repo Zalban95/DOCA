@@ -291,7 +291,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
 
     memory.append(session.id, {
       role: 'assistant',
-      content: reply.content || '',
+      content: client?.voiceTags ? require('../voice-tags').strip(reply.content) : reply.content || '',   // a spoken tone, not words to keep
       ...(reply.tool_calls.length ? { tool_calls: reply.tool_calls } : {}),
       // What the provider thought, kept beside what it said, because the
       // provider that sent it asks for it back on every later request in this

@@ -301,7 +301,7 @@ async function _chatSpeak(text) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: say.slice(0, 4000) }),
     });
-    if (!res.ok) return;                       // no TTS configured is not an error worth a modal
+    if (!res.ok || res.status === 204) return; // no TTS configured is not an error worth a modal; 204: nothing to say
     const url = URL.createObjectURL(await res.blob());
     const el = new Audio(url);
     el.addEventListener('ended', () => URL.revokeObjectURL(url), { once: true });

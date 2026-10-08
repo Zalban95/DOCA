@@ -87,9 +87,11 @@ function handleClear(req, res) {
  * to the `claude` CLI.
  */
 /** A live call says so (chat-call.js `voice`): assistant mode — the face — answers in its own style and effort. */
-function voiceClient(client, voice) {
-  if (voice === 'assistant') return { ...client, mode: 'assistant', name: 'Assistant mode (the face, spoken)' };
-  if (voice === 'call') return { ...client, mode: 'call', name: `${client.name || 'The panel'} — live call` };
+function voiceClient(client, voice, req) {
+  // The voice that will speak it takes a tone in words: the agent is told it may write a few tags (voice-tags.js).
+  const tags = voice === 'assistant' || voice === 'call' ? !!require('./tts-engines').forVoice(require('./screens').voiceOf(req)).tags : false;
+  if (voice === 'assistant') return { ...client, mode: 'assistant', name: 'Assistant mode (the face, spoken)', ...(tags ? { voiceTags: true } : {}) };
+  if (voice === 'call') return { ...client, mode: 'call', name: `${client.name || 'The panel'} — live call`, ...(tags ? { voiceTags: true } : {}) };
   return client;
 }
 
@@ -112,7 +114,7 @@ async function handleChat(req, res) {
     try {
       // Busy (a turn in the console, say): it waits and is read mid-turn, or starts the next (send-stream.js).
       const r = await require('./harness/send-stream').sendStreamed({
-        message, sessionId: require('./harness/memory').mainSession().id, client: voiceClient(require('./harness/turn/client').dashboardClient(req), req.body.voice),
+        message, sessionId: require('./harness/memory').mainSession().id, client: voiceClient(require('./harness/turn/client').dashboardClient(req), req.body.voice, req),
         // Only the built-in harness understands attachments: the gateway and the claude CLI get the message alone.
         attachments: attached,
         emit: evt => {
@@ -150,7 +152,7 @@ async function handleChat(req, res) {
         },
         signal: ctrl.signal,
       }, { res, emit: evt => res.write(`data: ${JSON.stringify(evt)}\n\n`) });
-      const text = r?.text;
+      const text = req.body.voice ? require('./voice-tags').strip(r?.text) : r?.text;   // a spoken answer's tone tags are not words to keep
       if (text || images.length) chatHistory.push({
         role: 'assistant', content: text || '', time: new Date().toISOString(),
         ...(images.length ? { images } : {}),
@@ -291,32 +293,34 @@ async function handleTranscribe(req, res) {
   }
 }
 
-/** GET /api/chat/voices — the speech service's voices, for a screen to pick from */
-async function handleVoices(_req, res) {
-  const vs = loadVoiceServices();
-  res.json({ voices: await require('./tts-voices').list(vs), hive: vs.ttsVoice });
+/**
+ * GET /api/chat/voices[?engine=] — a speech engine's voices, for a screen to pick from (the hive's when none is named),
+ * and the engines it can pick between: the hive's, and each speech service of the Services tab while it runs.
+ */
+async function handleVoices(req, res) {
+  const engines = require('./tts-engines');
+  const engine = engines.forVoice({ engine: String(req.query?.engine || '') });
+  res.json({ voices: await require('./tts-voices').list(engine), hive: loadVoiceServices().ttsVoice, engine: engine.id,
+    default: engine.ttsVoice, engines: await engines.available() });
 }
 
 /** POST /api/chat/synthesize — proxy text to configured TTS service, return audio */
 async function handleSynthesize(req, res) {
   const { text, voice } = req.body;
   if (!text) return res.status(400).json({ error: 'No text' });
-  const vs = loadVoiceServices();
   const mine = require('./screens').voiceOf(req);   // this screen's own voice, when it chose one, over the hive's
+  const engines = require('./tts-engines');
+  const vs = engines.forVoice(mine);                  // the hive's speech service, or the speech service it chose
 
   try {
-    const chosen = await require('./tts-voices').resolve(voice || mine.ttsVoice, vs);   // "Heart" → af_heart; unknown → the hive's
+    const chosen = await require('./tts-voices').resolve(voice || mine.ttsVoice, vs);   // "Heart" → af_heart; unknown → the engine's own
     if (chosen.fellBack) res.setHeader('X-Doca-Voice-Fallback', `${voice || mine.ttsVoice} -> ${chosen.voice}`);
+    const sent = engines.body(vs, text, { voice: chosen.voice, speed: mine.ttsSpeed });   // tags as words, or dropped
+    if (!sent.input) return res.status(204).end();   // nothing but tags: nothing to say
     const resp = await fetch(`${vs.ttsUrl}/v1/audio/speech`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: vs.ttsModel,
-        input: text,
-        voice: chosen.voice,
-        response_format: 'mp3',
-        speed: Number(mine.ttsSpeed) > 0 ? Number(mine.ttsSpeed) : vs.ttsSpeed,
-      }),
+      body: JSON.stringify(sent),
       signal: AbortSignal.timeout(30000),
     });
     if (!resp.ok) return res.status(resp.status).json({ error: `TTS error ${resp.status}: ${(await resp.text()).slice(0, 300)}` });
