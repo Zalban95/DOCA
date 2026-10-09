@@ -146,6 +146,23 @@ hosted hive has one volume: its host copies it (`hive.sh backup`).
 ## Open
 
 - Whether the Terminal tab should leave a production hive on a customer's own machine (kept: the machine is theirs).
-- An offline production hive has no channel: it is updated by installing a newer release by hand (or a signed zip
-  uploaded in the panel, not built).
-- Release keys must be added to the hub (S11) before any hive can verify an update.
+- (Done 2026-10-09.) An offline hive is updated from an **update file** (`doca-update-X.Y.Z.dupd`, written by
+  doca-licensing's `npm run release` beside every release): Settings → General → Updates → Install from a file, or
+  `deploy/hive.sh update <name> --file` for an image hive — see "Update files" below.
+- (Done 2026-10-09.) The project's release key `project-release-2026-10` is in `RELEASE_KEYS`.
+
+## Update files (offline hives)
+
+A plain tar — `doca-update.json` (`{format: 1, manifest, signature}`, the channel's own signed manifest), the release's
+zip, and for an image hive `image.tar` (`docker save` of the manifest's `image`, its sha256 signed as `imageSha256`) —
+so any host's `tar` reads it and the hub reads it by offsets (`update-channel/update-file.js`). It needs no licence
+server: trust is the release key alone. **A hive from code**: Settings → General → Updates → Install from a file
+(`POST /api/update/file`, a host's, the password asked every time — a version is every guard at once): checked before
+anything is unpacked, refused when it is the version running, older unless the person ticks "Go back to this version",
+or writing an older data format; staged into `.releases/vX.Y.Z` (marked `from: file`) and switched to once nothing runs,
+through `releases.use` and the launcher's 90 s way back, the outcome said after the restart and a failed version never
+tried again by itself (`update-channel/from-file.js`). Development hives take it too: a signed staged version needs no
+git tag to be switched to (`releases.refusal`) and is listed beside the tags. **An image hive**: `deploy/hive.sh update
+<name> --file <file> [--go-back]` — the hive itself verifies the manifest against the keys in the code it runs
+(`docker exec -i … node bin/doca-update.js verify`), the host checks `image.tar` against the signed sha256 before
+`docker load`, and the update goes on as with `--image`; a file without an image says it cannot.

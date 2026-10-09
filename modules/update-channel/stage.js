@@ -6,7 +6,7 @@
  * check it again before every switch. A version is staged while work runs (it disturbs nothing); switching to it is
  * what waits (index.js).
  *
- *   stage(release, zip)   unpack, check, install dependencies (linked from a version with the same lock when there is
+ *   stage(release, zip)   unpack (from the channel, or an update file: from-file.js), check, install dependencies (linked from a version with the same lock when there is
  *                         one, else npm ci), mark; resolves to the version's tag
  *   installed()           the signed versions here, newest first
  *   refusal(target)       why a production hive must not switch to `target` (only a signed version here, or the
@@ -53,7 +53,7 @@ function npmCi(dir, say) {
   });
 }
 
-async function stage(r, zipFile, { say = () => {}, deps = npmCi } = {}) {
+async function stage(r, zipFile, { say = () => {}, deps = npmCi, from = 'channel' } = {}) {
   const tag = `v${r.manifest.version}`;
   const dir = releases().DIR;
   const dest = path.join(dir, tag);
@@ -79,7 +79,7 @@ async function stage(r, zipFile, { say = () => {}, deps = npmCi } = {}) {
       .find(d => !d.includes('.staging-') && want && lockHash(d) === want && hasDeps(d));
     if (donor) { say(`Dependencies as in ${path.basename(donor)}: linked.\n`); require('../link-tree').linkTree(path.join(donor, 'node_modules'), path.join(tmp, 'node_modules')); }
     else { say('$ npm ci --omit=dev\n'); await deps(tmp, say); }
-    fs.writeFileSync(path.join(tmp, MARK), JSON.stringify({ manifest: r.manifest, signature: r.signature, keyId: r.keyId, from: 'channel', at: new Date().toISOString() }, null, 2));
+    fs.writeFileSync(path.join(tmp, MARK), JSON.stringify({ manifest: r.manifest, signature: r.signature, keyId: r.keyId, from, at: new Date().toISOString() }, null, 2));
     fs.rmSync(dest, { recursive: true, force: true });
     fs.renameSync(tmp, dest);
     say(`${tag} is staged.\n`);

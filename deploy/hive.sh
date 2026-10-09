@@ -7,9 +7,11 @@
 #   hive.sh backup <name> [FILE]              the hive's volume as a .tgz (stopped for the copy, started again)
 #   hive.sh restore <name> <FILE> [new's options]   a new hive from a backup, in a fresh volume — never onto a running one
 #   hive.sh remove <name> [--yes]             asks, backs up, then removes the container, its volume and network
-#   hive.sh update <name> [--image IMAGE] [--timeout SECONDS]   the new image on the same volume, holding running work:
-#                                             the hive stops once nothing runs, a backup is made, the new image starts,
-#                                             and the old one again if the new one does not answer
+#   hive.sh update <name> [--image IMAGE | --file doca-update-X.Y.Z.dupd [--go-back]] [--timeout SECONDS]
+#                                             the new image on the same volume, holding running work: the hive stops
+#                                             once nothing runs, a backup is made, the new image starts, and the old one
+#                                             again if the new one does not answer. --file: an update file carried
+#                                             offline, checked by the hive's own release keys, its image loaded
 #
 # Each hive is a container named <name> with its own volume (<name>-data), network (<name>-net) and limits, no mount
 # from this machine, and a port on 127.0.0.1 unless --bind says otherwise. gVisor (runsc) is used when Docker has it.
@@ -24,7 +26,7 @@ say()  { printf '%s\n' "$*"; }
 warn() { printf 'hive: %s\n' "$*" >&2; }
 die()  { warn "$*"; exit 1; }
 
-usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; }
 
 check_name() {
   [[ "${1:-}" =~ ^[a-z0-9][a-z0-9-]{1,40}$ ]] || die "a hive's name is lower-case letters, digits and -, 2 to 41 characters (got '${1:-}')."
@@ -218,23 +220,61 @@ cmd_remove() {   # name [--yes]
   say "removed $name; its backup stays at $BACKUP_FILE"
 }
 
+sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -d' ' -f1; }
+
+# An update file (doca-update-X.Y.Z.dupd: a tar, modules/update-channel/update-file.js) for a hive that cannot pull: its
+# signed manifest is checked by the hive itself, against the release keys in the code it runs (bin/doca-update.js
+# verify); the image it carries is checked against the signed sha256, then loaded. Prints the image to start.
+load_update_file() {   # name file goback
+  local name="$1" file="$2" goback="$3" tmpd info version running newer image sha
+  [ -f "$file" ] || die "there is no file $file."
+  tmpd="$(mktemp -d)"
+  # shellcheck disable=SC2064 — the folder is known now
+  trap "rm -rf '$tmpd'" RETURN
+  tar -tf "$file" > "$tmpd/list" 2>/dev/null || die "$file is not a DOCA update file (tar cannot read it)."
+  grep -qx 'doca-update.json' "$tmpd/list" || die "$file is not a DOCA update file: it has no doca-update.json."
+  tar -xf "$file" -C "$tmpd" doca-update.json || die "$file could not be unpacked."
+  info="$($DOCKER exec -i "$name" node bin/doca-update.js verify < "$tmpd/doca-update.json" 2>&1)" || die "$name does not trust $file: $info"
+  version="$(printf '%s' "$info" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
+  running="$(printf '%s' "$info" | sed -n 's/.*"running":"\([^"]*\)".*/\1/p')"
+  newer="$(printf '%s' "$info" | sed -n 's/.*"newer":\([a-z]*\).*/\1/p')"
+  image="$(printf '%s' "$info" | sed -n 's/.*"image":"\([^"]*\)".*/\1/p')"
+  sha="$(printf '%s' "$info" | sed -n 's/.*"imageSha256":"\([0-9a-f]*\)".*/\1/p')"
+  [ "$version" != "$running" ] || die "$name runs $version already."
+  [ "$newer" = true ] || [ "$goback" = 1 ] || die "the file is $version, older than $running, which $name runs: pass --go-back to go back to it."
+  if ! grep -qx 'image.tar' "$tmpd/list" || [ -z "$image" ] || [ -z "$sha" ]; then
+    die "$file carries no image, so it cannot update a hive that runs one: it is for a hive installed from code (Settings → General → Updates → Install from a file). Ask for $version's update file with its image, or pass --image."
+  fi
+  say "$file: DOCA $version, signed by the release key $name trusts; loading its image…" >&2
+  tar -xf "$file" -C "$tmpd" image.tar || die "the image in $file could not be unpacked (is there room in ${TMPDIR:-/tmp}?)."
+  [ "$(sha256 "$tmpd/image.tar")" = "$sha" ] || die "the image in $file does not match the sha256 its signed manifest names: the file was changed."
+  $DOCKER load -i "$tmpd/image.tar" >/dev/null || die "docker could not load the image in $file."
+  $DOCKER image inspect "$image" >/dev/null 2>&1 || die "the image in $file is not tagged $image, as its manifest says."
+  printf '%s\n' "$image"
+}
+
 # The new image on the same volume (deploy/README.md, "Updating a hive"). The hive's own update channel says what is
 # newer and which image (bin/doca-update.js latest, verified against the release key); its work is held: it is asked
 # to stop once nothing runs (bin/doca-update.js hold — never cut), a backup of its volume is made, the new image starts
 # with the options it was made with, and if it does not answer the old image starts again on the same volume.
-cmd_update() {   # name [--image IMAGE] [--timeout SECONDS]
+cmd_update() {   # name [--image IMAGE | --file FILE [--go-back]] [--timeout SECONDS]
   need_hive "$1"
   local name="$1"; shift
-  local image="" timeout=21600 old args info digest
+  local image="" timeout=21600 old args info digest file="" goback=0
   while [ $# -gt 0 ]; do
     case "$1" in
       --image) image="$2"; shift 2 ;;
+      --file) file="$2"; shift 2 ;;
+      --go-back) goback=1; shift ;;
       --timeout) timeout="$2"; shift 2 ;;
       *) die "unknown option $1 (hive.sh help)." ;;
     esac
   done
+  [ -z "$file" ] || [ -z "$image" ] || die "--file and --image are one or the other."
   running "$name" || die "$name is not running: start it first, so it can say what it runs and hold its work."
-  if [ -z "$image" ]; then
+  if [ -n "$file" ]; then
+    image="$(load_update_file "$name" "$file" "$goback")" || exit 1
+  elif [ -z "$image" ]; then
     info="$($DOCKER exec "$name" node bin/doca-update.js latest 2>/dev/null || true)"
     image="$(printf '%s' "$info" | sed -n 's/.*"image":"\([^"]*\)".*/\1/p')"
     digest="$(printf '%s' "$info" | sed -n 's/.*"imageDigest":"\(sha256:[0-9a-f]*\)".*/\1/p')"

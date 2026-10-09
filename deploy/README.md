@@ -132,6 +132,7 @@ The same image on a VPS with Docker and Compose:
 
 ```sh
 hive.sh update <name> [--image IMAGE] [--timeout SECONDS]
+hive.sh update <name> --file doca-update-X.Y.Z.dupd [--go-back]   # a hive with no way to the update channel
 ```
 
 A hosted hive is a production hive: its update channel (the licence server's signed releases) says what is newer, and
@@ -141,6 +142,11 @@ asked to stop once nothing runs (`bin/doca-update.js hold`: a file in its own da
 are waited for, never cut), a backup of its volume is made, and the new image starts with the options the hive was made
 with (the label `doca.hive.args`). If the new image does not answer within two minutes, the old one starts again on the
 same volume and the backup's name is said. Still working when `--timeout` (6 h) runs out: nothing changes.
+
+**Offline**, with an update file from whoever supplies DOCA (`doca-update-X.Y.Z.dupd`, made with the image): the hive
+checks its signed manifest against the release keys in the code it runs, the image it carries is checked against the
+signed sha256 and loaded with `docker load`, and the update goes on as above. An older version needs `--go-back`; a
+file without an image (one for a hive installed from code) is refused with that reason.
 
 ## What a tenant can still see
 

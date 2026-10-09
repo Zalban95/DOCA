@@ -42,6 +42,7 @@ async function checkView(force) {
 }
 
 function mount(app) {
+  require('./file-routes').mount(app);   // an update carried on a file: production and development alike
   app.get('/api/update/channel', (req, res) => (ch.status().production ? res.json(ch.status()) : dev(res)));
   app.post('/api/update/channel', (req, res) => { if (!ch.status().production) return dev(res); try { res.json(saveSettings(req.body)); } catch (e) { fail(res, e); } });
   app.post('/api/update/channel/check', async (req, res) => { if (!ch.status().production) return dev(res); res.json(await ch.check()); });

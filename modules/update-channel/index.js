@@ -124,6 +124,7 @@ async function tick(now = Date.now()) {
   const waiting = ours();
   if (!why) { if (waiting) { require('../harness/drain').cancel(); note('the update waits for the next window', 'the window closed before the hive was idle; nothing was cut'); } return; }
   if (waiting) return;
+  if (require('../harness/drain').pending()) return;   // another wait — a person's update file, a version switch — goes first
   let tag;
   try { tag = await stageLatest(); } catch (e) { save({ stageError: e.message, requested: false }); note(`could not stage ${state().latest?.version}: ${e.message}`, '', 'warn'); return; }
   require('../harness/drain').whenIdle(() => go(tag, why).catch(e => note(`the switch to ${tag} did not happen: ${e.message}`, '', 'error')),
@@ -173,8 +174,10 @@ function status(s = state()) {
 
 let _timer = null;
 function start() {
-  if (!on() || _timer) return;
-  outcome();
+  if (_timer) return;
+  outcome();   // a switch the channel or an update file made (from-file.js), in production or development
+  require('./from-file').resume();
+  if (!on()) return;
   if (imageHive()) require('./hold').start();
   _timer = setInterval(() => tick().catch(e => note(`the update channel: ${e.message}`, '', 'warn')), 60e3);
   _timer.unref?.();
