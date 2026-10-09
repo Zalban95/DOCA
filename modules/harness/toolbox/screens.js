@@ -19,7 +19,7 @@ const pages = () => require('../../features/pages');
 /** The screens this person may see: a host every one, anyone else their own. */
 function visible(person) {
   return require('../../api-v1/devices').list()
-    .filter(d => d.kind === 'browser' && !d.revokedAt && (isHost(person) || d.userId === person.id));
+    .filter(d => d.kind === 'browser' && !d.revokedAt && !d.archivedAt && (isHost(person) || d.userId === person.id));
 }
 
 /** A screen named by the agent: "this", an id, or a name a person would say ("Chrome on Android"). */

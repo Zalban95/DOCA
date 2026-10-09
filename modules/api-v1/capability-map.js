@@ -31,7 +31,7 @@ const PERSON = [
   { id: 'conversation-read', does: 'read my conversations', panel: ['GET /api/harness/sessions', 'GET /api/harness/sessions/:id'], v1: ['GET /harness/sessions', 'GET /harness/sessions/{id}'] },
   { id: 'conversation-delete', does: 'delete a conversation', panel: ['DELETE /api/harness/sessions/:id'], v1: ['DELETE /harness/sessions/{id}'] },
   { id: 'put-away', does: 'put a conversation or a mission away, or back', panel: ['POST /api/harness/sessions/:id/archive', 'POST /api/harness/missions/:id/archive', 'POST /api/archive/:kind/:id'],
-    v1: ['POST /harness/sessions/{id}/archive', 'POST /harness/missions/{id}/archive'], note: 'projects and computers in the Archive are the machine\'s' },
+    v1: ['POST /harness/sessions/{id}/archive', 'POST /harness/missions/{id}/archive'], note: 'projects and computers in the Archive are the machine\'s; a browser put away comes back by signing in again from it' },
   { id: 'archive-list', does: 'see what was put away', panel: ['GET /api/archive'], gap: 9, why: 'bringing back a conversation from a phone needs its id, and only the panel lists the put-away ones' },
   { id: 'turn-stop', does: 'stop a turn', panel: ['POST /api/harness/sessions/:id/stop'], v1: ['POST /harness/turns/{id}/cancel'] },
   { id: 'inbox-withdraw', does: 'see and withdraw a message waiting for a busy conversation', panel: ['GET /api/harness/sessions/:id/inbox', 'DELETE /api/harness/sessions/:id/inbox/:qid'],

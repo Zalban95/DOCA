@@ -16,6 +16,7 @@ async function devicesLoad() {
     devOwnApply(data);   // "Your devices" for a person without the devices right (devices-own.js)
     _devShowing = data.own ? {} : (await apiFetch('/api/screens/showing').catch(() => ({}))).screens || {};   // what each screen shows now (screens/showing.js)
     devPopulatePresets();
+    devHousekeepingDraw();   // when a browser nobody opens goes to the Archive (screens/archive.js)
 
     const pairBtn  = document.getElementById('dev-pair-btn');
     const issueBtn = document.getElementById('dev-issue-btn');
@@ -348,4 +349,11 @@ function devGrant(id, list) {
     try { await apiFetch(`/api/devices/${encodeURIComponent(id)}/scopes`, { method: 'POST', body: { add } }); devicesLoad(); }
     catch (e) { setStatus(document.getElementById(`dev-status-${id}`), `✗ ${e.message}`, 'err'); }
   });
+}
+
+/** When a browser nobody opens goes to the Archive (devices.browserArchiveDays), folded under the list — an admin's:
+    leafFieldsDraw draws nothing for anyone else. */
+function devHousekeepingDraw() {
+  if (_devData.own || typeof leafFieldsDraw !== 'function') return;
+  leafFieldsDraw(leafFieldsSlot('doca-devices-list', 'dev-housekeeping'), ['devices.browserArchiveDays'], { label: 'Advanced — browsers nobody opens', id: 'dev-housekeeping' });
 }

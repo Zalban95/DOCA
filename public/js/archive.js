@@ -1,7 +1,8 @@
-/* Agents → Archive (modules/archive.js): conversations, missions, projects and the agents' computers that were put away
-   rather than deleted — newest first, each restored with one click. A computer comes back stopped, with its desktop,
-   logins and files as they were. Its page is made here: index.html is at its line ceiling. */
-const ARCHIVE_KINDS = { conversation: '💬 Conversation', mission: '⬡ Mission', project: '⟨⟩ Project', computer: '🖵 Computer' };
+/* Agents → Archive (modules/archive.js): conversations, missions, projects, the agents' computers and signed-in browsers
+   nobody opened for a week (screens/archive.js) that were put away rather than deleted — newest first, each restored
+   with one click. A computer comes back stopped, with its desktop, logins and files as they were; a browser signs in again.
+   Its page is made here: index.html is at its line ceiling. */
+const ARCHIVE_KINDS = { conversation: '💬 Conversation', mission: '⬡ Mission', project: '⟨⟩ Project', computer: '🖵 Computer', device: '▭ Browser' };
 
 async function archiveInit() {
   const page = document.getElementById('tab-archive');
@@ -19,7 +20,7 @@ async function archiveInit() {
     + `${shown.map(i => `<div class="disk-row row3"><span class="disk-label" style="min-width:130px">${ARCHIVE_KINDS[i.kind]}</span>
       <span class="disk-path"><b>${escHtml(i.title)}</b>${i.detail ? ` · ${escHtml(i.detail)}` : ''} · put away ${escHtml(new Date(i.archivedAt).toLocaleString())}</span>
       <span class="disk-free"><button class="btn btn-xs btn-blue" onclick="archiveSet(${jsArg(i.kind)}, ${jsArg(i.id)}, false)">Restore</button></span></div>`).join('')
-      || emptyStateHtml({ title: 'Nothing archived', text: 'Conversations, missions, projects and computers put away land here, ready to come back.' })}${shown.length ? '</div>' : ''}`;
+      || emptyStateHtml({ title: 'Nothing archived', text: 'Conversations, missions, projects, computers and browsers put away land here, ready to come back.' })}${shown.length ? '</div>' : ''}`;
 }
 
 /** Put one away, or bring it back; the page it lives on redraws (it is live: lib/live.js). */
@@ -30,6 +31,7 @@ async function archiveSet(kind, id, on, asked) {
   catch (e) { return appAlert(e.message); }
   if (pageShown('archive')) archiveInit();
   if (kind === 'computer' && typeof computersLoad === 'function') computersLoad();
+  if (kind === 'device' && typeof devicesLoad === 'function') devicesLoad();
   if (kind === 'project' && on && typeof projectsInit === 'function') { if (typeof PJ !== 'undefined') PJ.inited = false; projectsInit(); }
 }
 
