@@ -97,8 +97,8 @@ with no licence and fails on any call to a route that is not there.
 DOCA runs on the customer's machine, from source. A customer with the code can patch the check out — remove the
 prune, add a key. The licence is not DRM; it is what the contract refers to, and what the project's own services
 (updates, model suggestions, the pack registry, anything at the edge) will ask for: those services check the licence
-key with the licence server before they serve a hive. Seats and devices are read from the licence and shown; they are
-not yet enforced (enforcing seats touches `modules/auth`, which asks first).
+key with the licence server before they serve a hive. Seats and devices are read from the licence and shown, and held
+in a production hive only (`license/limits.js`, the owner's decision of 2026-10-09; docs/design/production.md).
 
 ## Keygen's licence (Fair Core License)
 
