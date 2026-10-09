@@ -154,3 +154,30 @@ async function backupRemoteTest() {
   try { await apiFetch('/api/backups/remote/test', { method: 'POST' }); setStatus(st, '✓ The bucket takes files: written, listed and removed', 'ok'); }
   catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
+
+/* ── A second copy (modules/backup/mirror.js): every backup also copied to a folder on another disk ── */
+
+function backupMirrorRender(m) {
+  const panel = document.getElementById('sp-backups');
+  if (!panel || !m || hostedHive()) return;
+  let card = document.getElementById('backup-mirror-card');
+  if (!card) { card = Object.assign(document.createElement('div'), { className: 'card', id: 'backup-mirror-card' }); panel.appendChild(card); }
+  const when = m.lastError && (!m.lastAt || m.lastTriedAt > m.lastAt)
+    ? `<span style="color:var(--red)">The last copy (${fmtDate(m.lastTriedAt)}) failed: ${escHtml(m.lastError)}</span>`
+    : m.lastAt ? `Last copied: ${escHtml(m.lastName)}, ${fmtDate(m.lastAt)}.` : '';
+  card.innerHTML = `<div class="card-title">A second copy</div>
+    <p class="desc">Every backup is also copied to this folder — another disk, or a network share mounted on this machine — keeping as many scheduled ones there as here. A copy that fails is said here and as a notice; the backup itself still counts.</p>
+    <div class="form-row"><label>Folder</label><input id="bmirror-dir" class="input flex1" value="${escHtml(m.dir || '')}" placeholder="/mnt/nas/doca-backups — empty: none"></div>
+    <div style="display:flex;gap:8px"><button class="btn btn-sm btn-blue" onclick="backupMirrorSave()">Save</button></div>
+    <div class="input-label" style="text-transform:none;letter-spacing:0;margin-top:4px">${when}</div>
+    <span class="status-line" id="bmirror-status"></span>`;
+}
+
+async function backupMirrorSave() {
+  const st = document.getElementById('bmirror-status');
+  try {
+    const m = await apiFetch('/api/backups/mirror', { method: 'POST', body: { dir: document.getElementById('bmirror-dir').value } });
+    backupMirrorRender(m);
+    setStatus(document.getElementById('bmirror-status'), m.dir ? `✓ Every backup is also copied to ${m.dir}` : '✓ No second copy', 'ok');
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}

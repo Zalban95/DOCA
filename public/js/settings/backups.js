@@ -78,6 +78,7 @@ async function backupsLoad() {
 
   if (typeof backupScheduleRender === 'function') backupScheduleRender(_backups.schedule, s);
   if (typeof backupRemoteRender === 'function') backupRemoteRender(_backups.schedule);
+  if (typeof backupMirrorRender === 'function') backupMirrorRender(_backups.mirror);
 
   const est = _backups.estimate;
   document.getElementById('backup-summary').title = `About ${est.files} files, ${fmtBytes(est.bytes)} before compression · saved in ${_backups.dir}`;
