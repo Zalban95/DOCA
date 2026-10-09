@@ -236,6 +236,12 @@ the project's managers only if the owner allows sharing specialists and skills (
   someone without host (it threw before), and the questions dock draws any no chat on the page shows.
 
 ### Everything still open, now urgent
+- [x] Teams (asked and approved 2026-10-09, branch `teams`; docs/design/teams.md): a board of tasks for specialists with
+  `after` and a contract each, made with one `team` call and carried by the hub; mechanical progress (steps of the
+  budget, contracts, every task counting the same); a living `team-<slug>.md`; `team_note` between teammates, framed;
+  keep going (`/loop until-done`) up to `teams.maxRounds`; the missions bar, Harness → Teams, the Workstream,
+  `agent.team` for devices. Still open: the apps drawing `agent.team` (DocaMobile a team card with its tasks, DocaWear
+  one row — the design doc says what), and a `/api/v1` route to stop a team or switch keep going (gap `teams`).
 - C7b: done; D2b: done — its gaps (`docs/api/capability-gaps.md`) are v1 routes to ask for, plan decisions first.
 - D3 rest — DocaMobile: the socket MCP transport (`/api/v1/mcp/host`), sensors (`SensorCap`, `sensor.request`),
   `mcp.listener stop`, `confirmPromptChoice`'s body (§12.6 `{selectionId, decision}`), the native wake word, the

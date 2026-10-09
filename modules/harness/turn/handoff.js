@@ -17,7 +17,7 @@
 const memory = require('../memory');
 
 // Coordinating and remembering: the Orchestrator's own job, never "work".
-const COORD = new Set(['work_chats', 'work_plan', 'agent_dispatch', 'agent_results', 'agent_resume', 'permission_grant',
+const COORD = new Set(['work_chats', 'work_plan', 'team', 'agent_dispatch', 'agent_results', 'agent_resume', 'permission_grant',
   'settings_propose', 'panel_layout', 'install_propose', 'spend_propose', 'memory_write', 'memory_rules_write', 'memory_flag', 'memory_forget',
   'ask_device', 'tell_device', 'screen', 'chronicle', 'skill', 'show_media', 'show_image']);
 

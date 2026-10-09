@@ -100,6 +100,8 @@ const SCHEMA = {
       source: { type: 'string', oneOf: ['auto', 'node', 'direct', 'both'], default: 'auto', propose: false,
         hint: 'auto — home nodes when any is paired (always on a hosted hive), else the hub itself with the key home-assistant; node — home nodes only; direct — the hub itself only; both — every home.' },
     } },
+  teams:            { is: 'travels', home: 'hive', note: 'how many times a team that keeps going tries its failed tasks again (teams/)',
+    keys: { maxRounds: { type: 'integer', min: 0, max: 20, default: 3, propose: false, hint: 'Rounds a team with "keep going" on has: each round tries one failed task again. When they run out the team stops as failed. A team may set its own.' } } },
   // Housekeeping, not a guard: proposable like computers.idleStopMinutes (agents/tidy.js). 0 turns a rule off.
   missions:         { is: 'travels', home: 'hive', note: 'when finished specialists\' missions are put away in the Archive by themselves',
     propose: p('Finished missions', 'When finished missions are put away in the Archive by themselves'),

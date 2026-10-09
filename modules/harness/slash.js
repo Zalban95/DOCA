@@ -8,6 +8,7 @@
  * sentence from here, written into the conversation after the command, and the agent reads both in later turns.
  *
  *   /loop <interval> [xN] <what to do>   a loop in this conversation (schedules/loop.js); /loop stop; /loop: what runs
+ *   /loop until-done                     in a chat leading a team: it keeps going until every contract holds (teams/)
  *   /compact                             fold the earlier exchanges into the summary now (turn/compact-choice.js)
  *   /skill <name>                        attach a skill to this chat; /skill -<name> detaches; /skill: what is attached
  *
@@ -31,7 +32,17 @@ function parse(message) {
 async function run({ name, args }, { sessionId, person }) {
   if (name === 'loop') {
     const loop = require('../schedules/loop');
-    if (/^(stop|off|end|cancel)$/i.test(args)) return loop.stop(sessionId);
+    // A team this chat leads keeps going until every contract holds (teams/): `/loop until-done` alone; /loop stop ends it.
+    const led = require('../teams').ledBy(sessionId).filter(t => t.state === 'running' || t.state === 'failed');
+    if (/^(stop|off|end|cancel)$/i.test(args)) {
+      for (const t of led.filter(x => x.loop?.on)) await require('../teams').keepGoing(t.id, false);
+      return `${loop.stop(sessionId)}${led.some(x => x.loop?.on) ? ` The team${led.length === 1 ? '' : 's'} here stopped trying failed tasks again.` : ''}`;
+    }
+    if (/^until-done$/i.test(args) && led.length) {
+      const on = [];
+      for (const t of led) on.push(await require('../teams').keepGoing(t.id, true));
+      return on.map(v => `⟳ Team "${v.title}" keeps going: a failed task is tried again until every contract holds, up to ${v.maxRounds} rounds (${v.loop.rounds} used). /loop stop ends it.`).join('\n');
+    }
     if (!args) {
       const on = loop.forSession(sessionId);
       return on.length ? on.map(s => `⟳ ${s.message.slice(0, 80)} — ${require('../schedules/when').describe(s.when)}, run ${s.runs || 0} of ${s.max}`).join('\n')

@@ -28,6 +28,7 @@ const TOOLS = [
   ...require('./toolbox/panel'),
   ...require('./toolbox/spending'),
   ...require('./toolbox/agents'),
+  ...require('./toolbox/teams'),
   ...require('./toolbox/scout'),
   ...require('./toolbox/status'),
   ...require('./toolbox/setup'),

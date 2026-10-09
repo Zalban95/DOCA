@@ -40,11 +40,13 @@ function settle(row) {
     return { dropped: row.id, why };
   }
   if (!deps.every(m => m.state === 'done')) return null;
-  const handed = deps.map(m => `### From ${m.id} (${m.label})\n${String(m.result || '').slice(0, 6000)}${filesOf(m).length ? `\nFiles: ${filesOf(m).join(', ')}` : ''}`).join('\n\n');
-  const m = missions.dispatch({ ...row.args, context: [row.args.context, `## What the missions you waited for delivered\n${handed}`].filter(Boolean).join('\n\n') });
+  const m = missions.dispatch({ ...row.args, context: [row.args.context, `## What the missions you waited for delivered\n${handed(deps)}`].filter(Boolean).join('\n\n') });
   require('../activity').note({ from: 'missions', what: `started ${row.args.agentId}'s errand (${m.id})`, why: `the missions it waited for finished: ${row.after.join(', ')}`, sessionId: row.args.by || null });
   return { started: m.id, after: row.after };
 }
+
+/** What finished missions delivered — each one's result and the files it wrote — for the errand that needed them (also teams/). */
+const handed = deps => deps.map(m => `### From ${m.id} (${m.label})\n${String(m.result || '').slice(0, 6000)}${filesOf(m).length ? `\nFiles: ${filesOf(m).join(', ')}` : ''}`).join('\n\n');
 
 /** The files a mission wrote (its write_file calls), for the one that needs them. */
 function filesOf(m) {
@@ -75,4 +77,4 @@ function listen() {
 /** What waits, for agent_results and the panel. */
 const list = () => load().map(w => ({ id: w.id, agent: w.args.agentId, task: String(w.args.task || '').slice(0, 120), after: w.after, at: w.at }));
 
-module.exports = { dispatchAfter, list, listen, filesOf };
+module.exports = { dispatchAfter, list, listen, filesOf, handed };

@@ -87,6 +87,8 @@ const TOOLS = {
   tools_more: [{ tier: 'read' }],
   screen: reads(['list', 'propose'], { tier: 'reversible', way: 'a page on a screen; another can be shown' }),
   mission_plan: [{ tier: 'reversible', way: WAY.work }],
+  team: reads(['status'], { tier: 'reversible', way: WAY.work }),
+  team_note: [{ tier: 'reversible', way: WAY.work }],
   scout_report: [{ tier: 'reversible', way: WAY.work }],
 };
 

@@ -104,16 +104,20 @@ async function _hcLoadMissions() {
   if (!bar) return;
   let rows = [], auto = [], stopped = [], machines = [];
   try { rows = (await apiFetch('/api/harness/missions?limit=8&live=1')).missions || []; } catch { /* leave the bar as it was */ }
+  // Teams (harness-console/teams.js): one row each with its bar; their missions are drawn under them, not twice.
+  const teams = typeof hcTeamsLoad === 'function' ? await hcTeamsLoad() : [];
+  rows = rows.filter(m => !m.team);
+  const teamRows = typeof hcTeamsBarHtml === 'function' ? hcTeamsBarHtml(teams) : '';
   // What works on its own right now, and why (agents/stopping.js) — each with a Stop, so nothing runs out of sight.
   try { ({ auto = [], stopped = [], machines = [] } = await apiFetch('/api/harness/working')); } catch { /* an older hub */ }
   // Finished ones nobody needs any more go to the Archive by themselves (agents/tidy.js): how many did, today.
   let putAway = 0;
   if ((typeof licenceFeatureOn !== 'function' || licenceFeatureOn('missions-tidy'))) try { ({ putAway = 0 } = await apiFetch('/api/harness/missions/tidy')); } catch { /* an older hub */ }
 
-  if (!rows.length && !auto.length && !stopped.length && !machines.length && !putAway) { bar.style.display = 'none'; bar.innerHTML = ''; }
+  if (!rows.length && !teamRows && !auto.length && !stopped.length && !machines.length && !putAway) { bar.style.display = 'none'; bar.innerHTML = ''; }
   else {
     bar.style.display = '';
-    bar.innerHTML = rows.map(m => `
+    bar.innerHTML = teamRows + rows.map(m => `
       <span class="hc-mission ${escHtml(m.state)}" title="${escHtml(m.task || '')}"
             onmouseenter="hcMissionPeek(${jsArg(m.id)}, this)" onmouseleave="hcMissionPeekHide()">
         <span class="hc-mission-dot"></span>
@@ -147,7 +151,7 @@ async function _hcLoadMissions() {
   // Poll only while something is actually running, and stop when it is not:
   // a timer that outlives the thing it was watching is how a quiet panel ends
   // up making a request a second for the rest of the day.
-  const busy = rows.some(m => m.state === 'running') || auto.length > 0 || machines.length > 0;
+  const busy = rows.some(m => m.state === 'running') || teams.some(t => t.state === 'running') || auto.length > 0 || machines.length > 0;
   if (busy && !_hcMissionPoll) _hcMissionPoll = setInterval(_hcLoadMissions, 3000);
   if (!busy && _hcMissionPoll) { clearInterval(_hcMissionPoll); _hcMissionPoll = null; }
 }

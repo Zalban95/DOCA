@@ -189,7 +189,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
  * of the same list, and note that this one is asserted by a test that a
  * specialist really is offered it.
  */
-const ALWAYS_FOR_SPECIALISTS = ['mission_plan', 'work_chats', 'work_plan'];
+const ALWAYS_FOR_SPECIALISTS = ['mission_plan', 'work_chats', 'work_plan', 'team_note'];   // team_note: only on a team (tool-shape.js)
 
 /**
  * A tool that another tool's guard sends you to, given with it. `write_file`
