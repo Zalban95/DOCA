@@ -50,7 +50,7 @@ test('a toggle latches and says which way; switching the console off unlatches i
   r = await H.api(null, 'PUT', `/api/devices/${watch.id}/console/buttons`, { buttons: { A: { behaviour: 'toggle' }, B: { keys: 'ctrl+s' } } });
   assert.equal(r.body.A.behaviour, 'toggle');
 
-  assert.deepEqual(consoleMod.ingest(watch, { press: 'A' }).toggles, { A: true, B: false, C: false });
+  assert.deepEqual(consoleMod.ingest(watch, { press: 'A' }).toggles, { A: true, B: false, C: false, D: false, E: false });
   assert.equal(consoleMod.ingest(watch, { press: 'A' }).toggles.A, false);
   consoleMod.ingest(watch, { press: 'A' });
   consoleMod.ingest(watch, { press: 'B' });
@@ -105,4 +105,34 @@ test('buttons are edited under host; the file is out of the file tools\' reach; 
   assert.match(out, /^console=(on|off),keys → rig$/);
   const fresh = devices.create({ name: 'never', scopes: PRESETS.watch, caps: { formFactor: 'watch' } }).device;
   assert.equal(consoleMod.summary(fresh.id), null, 'no console used or linked: no words spent on it');
+});
+
+test('held buttons and toggles (the watch\'s controls, 2026-10-09): a release reaches the receivers, a momentary one is on while held, labels are drawn', async () => {
+  consoleMod._reset();
+  const watch = devices.create({ name: 'w-held', scopes: PRESETS.watch, caps: { formFactor: 'watch' } }).device;
+  const rig = devices.create({ name: 'rig-held', scopes: ['read:*'], caps: { formFactor: 'headless' } }).device;
+  // Nothing set: A–C are buttons, D–E toggles, no labels, nothing bound.
+  let r = consoleMod.ingest(watch, { enabled: true });
+  assert.deepEqual(r.buttons.A, { behaviour: 'button', label: '', bound: false });
+  assert.equal(r.buttons.E.behaviour, 'toggle');
+  await H.api(null, 'PUT', `/api/devices/${watch.id}/console`, { links: [rig.id] });
+  r = await H.api(null, 'PUT', `/api/devices/${watch.id}/console/buttons`, { buttons: { B: { behaviour: 'momentary', label: 'Lights on in the hall' } } });
+  assert.equal(r.body.B.label, 'Lights on in', 'a label is a few letters (12)');
+
+  r = consoleMod.ingest(watch, { press: 'B' });
+  assert.equal(r.toggles.B, true, 'held: on');
+  assert.equal(r.buttons.B.bound, true, 'a linked device hears it');
+  r = consoleMod.ingest(watch, { release: 'B' });
+  assert.equal(r.release, 'B');
+  assert.equal(r.toggles.B, false, 'let go: off');
+  consoleMod.ingest(watch, { press: 'A' });
+  consoleMod.ingest(watch, { release: 'A' });
+  consoleMod.ingest(watch, { press: 'D' });
+  r = consoleMod.ingest(watch, { release: 'D' });
+  assert.equal(r.release, undefined, 'a toggle has no release');
+  assert.equal(r.toggles.D, true, 'and stays latched');
+
+  const got = inputs(rig.id).filter(p => p.button);
+  assert.deepEqual(got.map(p => [p.button.id, p.button.down]), [['B', true], ['B', false], ['A', true], ['A', false], ['D', true]]);
+  assert.equal(got[1].release, 'B');
 });

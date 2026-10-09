@@ -2,7 +2,7 @@
 
 /**
  * A device as a console (the watch's third page): motion, heading, the crown,
- * and three buttons, streamed while the person has switched it on.
+ * and five buttons, streamed while the person has switched it on.
  *
  * It is input for *a linked service*, never for the harness: nothing here
  * reaches a model, a prompt or a transcript. The panel links a device to the
@@ -21,9 +21,15 @@
  *  - `mode`: `keys` (A/B/C are a small command keyboard: each press carries its
  *    macro) or `joystick` (tilt and crown become axes, A/B/C plain buttons, no
  *    macros). The watch switches it with one tap, so it is a field it may send.
- *  - `buttons.{A,B,C}`: `behaviour` `button` (every press is a press) or
- *    `toggle` (a press latches on, the next off; `down` says which), and the
- *    macro: `keys` for the receiving devices to type, `run` for the host.
+ *  - `buttons.{A,B,C,D,E}`: `behaviour` `button` (every press is a press; its
+ *    release, when the device sends one, reaches the receivers as `down: false`
+ *    and runs nothing), `momentary` (held: on at the press, off at the release —
+ *    `run` runs at both, told which) or `toggle` (a press latches on, the next
+ *    off; `down` says which); the macro: `keys` for the receiving devices to
+ *    type, `run` for the host; and `label`, a few letters the watch draws on the
+ *    button (2026-10-09: the watch's controls have three held buttons, two
+ *    toggles and the stream). A–C are buttons and D–E toggles until the panel
+ *    says otherwise.
  * The stream itself stays in memory: yesterday's accelerometer is nobody's state.
  *
  * Frame: { t (ms since the stream began), accel?: [x, y, z] m/s², heading?: deg
@@ -35,16 +41,19 @@ const DOC = 'device-console';
 const FRAMES_KEPT = 120;
 const PRESSES_KEPT = 20;
 const BATCH_MAX = 64;
-const PRESSES = ['A', 'B', 'C'];
+const PRESSES = ['A', 'B', 'C', 'D', 'E'];
 const MODES = ['keys', 'joystick'];
-const BEHAVIOURS = ['button', 'toggle'];
+const BEHAVIOURS = ['button', 'momentary', 'toggle'];
+const DEFAULT_BEHAVIOUR = { A: 'button', B: 'button', C: 'button', D: 'toggle', E: 'toggle' };
+const LABEL_MAX = 12;
+const untoggled = () => Object.fromEntries(PRESSES.map(b => [b, false]));
 const RUN_TIMEOUT = 30000;
 const G = 9.81;
 
 const _live = new Map();   // deviceId -> { frames[], presses[], enabled, at, toggles, joystick, lastRun }
 
 function stateOf(id) {
-  if (!_live.has(id)) _live.set(id, { frames: [], presses: [], enabled: false, at: null, toggles: { A: false, B: false, C: false }, joystick: null, lastRun: null });
+  if (!_live.has(id)) _live.set(id, { frames: [], presses: [], enabled: false, at: null, toggles: untoggled(), joystick: null, lastRun: null });
   return _live.get(id);
 }
 
@@ -58,7 +67,8 @@ function configOf(id) {
   const buttons = {};
   for (const b of PRESSES) {
     const x = c.buttons?.[b] || {};
-    buttons[b] = { behaviour: BEHAVIOURS.includes(x.behaviour) ? x.behaviour : 'button', keys: text(x.keys), run: text(x.run) };
+    buttons[b] = { behaviour: BEHAVIOURS.includes(x.behaviour) ? x.behaviour : DEFAULT_BEHAVIOUR[b], keys: text(x.keys), run: text(x.run),
+      label: text(x.label).slice(0, LABEL_MAX) };
   }
   return { links: Array.isArray(c.links) ? c.links : [], host: c.host === true, mode: MODES.includes(c.mode) ? c.mode : 'keys', buttons };
 }
@@ -116,9 +126,11 @@ function ingest(device, body = {}) {
   if (modeChanged) cfg = saveConfig(device.id, { mode: body.mode });
   const frames = (Array.isArray(body.frames) ? body.frames.slice(0, BATCH_MAX) : []).map(cleanFrame).filter(Boolean);
   const press = PRESSES.includes(body.press) ? body.press : null;
+  // A held button let go (2026-10-09): a toggle has no release, so one is never read as a press.
+  const release = !press && PRESSES.includes(body.release) && cfg.buttons[body.release].behaviour !== 'toggle' ? body.release : null;
   if (typeof body.enabled === 'boolean') {
     s.enabled = body.enabled;
-    if (!body.enabled) s.toggles = { A: false, B: false, C: false };   // nothing stays latched on a console nobody holds
+    if (!body.enabled) s.toggles = untoggled();   // nothing stays latched on a console nobody holds
   }
   s.at = new Date().toISOString();
   s.frames.push(...frames);
@@ -128,6 +140,7 @@ function ingest(device, body = {}) {
   if (press) {
     const b = cfg.buttons[press];
     const down = b.behaviour === 'toggle' ? (s.toggles[press] = !s.toggles[press]) : true;
+    if (b.behaviour === 'momentary') s.toggles[press] = true;   // held: on until it is let go
     button = { id: press, behaviour: b.behaviour, down };
     s.presses.push({ press, at: s.at, down, mode: cfg.mode });
     if (s.presses.length > PRESSES_KEPT) s.presses.shift();
@@ -135,20 +148,38 @@ function ingest(device, body = {}) {
       if (b.keys) macro = { keys: b.keys };
       if (cfg.host && b.run) runOnHost(device, press, b.run, down, s);
     }
+  } else if (release) {
+    const b = cfg.buttons[release];
+    if (b.behaviour === 'momentary') s.toggles[release] = false;
+    button = { id: release, behaviour: b.behaviour, down: false };
+    s.presses.push({ press: release, at: s.at, down: false, mode: cfg.mode });
+    if (s.presses.length > PRESSES_KEPT) s.presses.shift();
+    // Only a momentary button's command runs again, told it is off: a plain button's ran at its press.
+    if (cfg.mode === 'keys' && cfg.host && b.run && b.behaviour === 'momentary') runOnHost(device, release, b.run, false, s);
   }
   const joystick = cfg.mode === 'joystick' ? joystickOf(frames) : null;
   if (joystick) s.joystick = joystick;
 
   const targets = cfg.links.filter(id => id !== device.id);
-  if (targets.length && (frames.length || press || modeChanged || typeof body.enabled === 'boolean')) {
+  if (targets.length && (frames.length || press || release || modeChanged || typeof body.enabled === 'boolean')) {
     const bus = require('./api-v1/bus');
-    const payload = { deviceId: device.id, enabled: s.enabled, mode: cfg.mode, frames, press, button, toggles: { ...s.toggles },
+    const payload = { deviceId: device.id, enabled: s.enabled, mode: cfg.mode, frames, press, ...(release ? { release } : {}), button, toggles: { ...s.toggles },
       ...(joystick ? { joystick } : {}), ...(macro ? { macro } : {}) };
     for (const id of targets) {
-      try { bus.publish(id, 'console.input', payload, press ? { cls: 'durable', ttlSec: 60 } : { cls: 'ephemeral' }); } catch { /* one bad target never stops the rest */ }
+      try { bus.publish(id, 'console.input', payload, press || release ? { cls: 'durable', ttlSec: 60 } : { cls: 'ephemeral' }); } catch { /* one bad target never stops the rest */ }
     }
   }
-  return { accepted: frames.length, press, linked: targets.length, host: cfg.host, mode: cfg.mode, toggles: { ...s.toggles } };
+  return { accepted: frames.length, press, ...(release ? { release } : {}), linked: targets.length, host: cfg.host, mode: cfg.mode, toggles: { ...s.toggles },
+    buttons: buttonsFor(cfg, targets.length) };
+}
+
+/** What the device draws on each button: its behaviour, its label, and whether it does anything (a macro, a command
+ *  on the host, or linked devices to hear it) — never the macro or the command themselves. */
+function buttonsFor(cfg, linked) {
+  return Object.fromEntries(PRESSES.map(k => {
+    const b = cfg.buttons[k];
+    return [k, { behaviour: b.behaviour, label: b.label, bound: linked > 0 || (cfg.mode === 'keys' && cfg.host && !!b.run) }];
+  }));
 }
 
 /** One line for the agent's doca_clients: that the console exists and where it goes, never what it streams. */
@@ -197,12 +228,15 @@ function mountPanel(app) {
 function openapi({ obj, str, int, arr, bool, body, json, std }) {
   const frame = obj({ t: int(), accel: arr({ type: 'number' }), heading: { type: 'number' }, crown: { type: 'number' } });
   return {
-    '/console': { post: { tags: ['Devices'], summary: 'Stream console input: motion, heading, crown, A/B/C', operationId: 'postConsole', 'x-scope': 'sensors:report',
+    '/console': { post: { tags: ['Devices'], summary: 'Stream console input: motion, heading, crown, buttons A–E', operationId: 'postConsole', 'x-scope': 'sensors:report',
       description: 'For the services the panel linked to this device, as `console.input` events. Never reaches the harness. '
         + '`mode` switches between `keys` and `joystick`; the answer carries the mode and the latched toggles for the device to draw.',
-      requestBody: body(obj({ frames: arr(frame), press: str({ enum: PRESSES }), enabled: bool(), mode: str({ enum: MODES }) })),
-      responses: { 200: json(obj({ accepted: int(), press: str(), linked: int(), host: bool(), mode: str({ enum: MODES }),
-        toggles: obj({ A: bool(), B: bool(), C: bool() }) })), ...std(400, 401, 403) } } },
+      requestBody: body(obj({ frames: arr(frame), press: str({ enum: PRESSES }),
+        release: str({ enum: PRESSES, description: 'A held button let go (a `button` or `momentary` one; a toggle has no release).' }),
+        enabled: bool(), mode: str({ enum: MODES }) })),
+      responses: { 200: json(obj({ accepted: int(), press: str(), release: str(), linked: int(), host: bool(), mode: str({ enum: MODES }),
+        toggles: obj(Object.fromEntries(PRESSES.map(k => [k, bool()]))),
+        buttons: obj(Object.fromEntries(PRESSES.map(k => [k, obj({ behaviour: str({ enum: BEHAVIOURS }), label: str(), bound: bool({ description: 'Whether a press does anything: linked devices hear it, or the host runs its command.' }) })]))) })), ...std(400, 401, 403) } } },
   };
 }
 

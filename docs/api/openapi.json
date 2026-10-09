@@ -7656,7 +7656,7 @@
         "tags": [
           "Devices"
         ],
-        "summary": "Stream console input: motion, heading, crown, A/B/C",
+        "summary": "Stream console input: motion, heading, crown, buttons A–E",
         "operationId": "postConsole",
         "x-scope": "sensors:report",
         "description": "For the services the panel linked to this device, as `console.input` events. Never reaches the harness. `mode` switches between `keys` and `joystick`; the answer carries the mode and the latched toggles for the device to draw.",
@@ -7695,8 +7695,21 @@
                     "enum": [
                       "A",
                       "B",
-                      "C"
+                      "C",
+                      "D",
+                      "E"
                     ]
+                  },
+                  "release": {
+                    "type": "string",
+                    "enum": [
+                      "A",
+                      "B",
+                      "C",
+                      "D",
+                      "E"
+                    ],
+                    "description": "A held button let go (a `button` or `momentary` one; a toggle has no release)."
                   },
                   "enabled": {
                     "type": "boolean"
@@ -7727,6 +7740,9 @@
                     "press": {
                       "type": "string"
                     },
+                    "release": {
+                      "type": "string"
+                    },
                     "linked": {
                       "type": "integer"
                     },
@@ -7751,6 +7767,117 @@
                         },
                         "C": {
                           "type": "boolean"
+                        },
+                        "D": {
+                          "type": "boolean"
+                        },
+                        "E": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "buttons": {
+                      "type": "object",
+                      "properties": {
+                        "A": {
+                          "type": "object",
+                          "properties": {
+                            "behaviour": {
+                              "type": "string",
+                              "enum": [
+                                "button",
+                                "momentary",
+                                "toggle"
+                              ]
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "bound": {
+                              "type": "boolean",
+                              "description": "Whether a press does anything: linked devices hear it, or the host runs its command."
+                            }
+                          }
+                        },
+                        "B": {
+                          "type": "object",
+                          "properties": {
+                            "behaviour": {
+                              "type": "string",
+                              "enum": [
+                                "button",
+                                "momentary",
+                                "toggle"
+                              ]
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "bound": {
+                              "type": "boolean",
+                              "description": "Whether a press does anything: linked devices hear it, or the host runs its command."
+                            }
+                          }
+                        },
+                        "C": {
+                          "type": "object",
+                          "properties": {
+                            "behaviour": {
+                              "type": "string",
+                              "enum": [
+                                "button",
+                                "momentary",
+                                "toggle"
+                              ]
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "bound": {
+                              "type": "boolean",
+                              "description": "Whether a press does anything: linked devices hear it, or the host runs its command."
+                            }
+                          }
+                        },
+                        "D": {
+                          "type": "object",
+                          "properties": {
+                            "behaviour": {
+                              "type": "string",
+                              "enum": [
+                                "button",
+                                "momentary",
+                                "toggle"
+                              ]
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "bound": {
+                              "type": "boolean",
+                              "description": "Whether a press does anything: linked devices hear it, or the host runs its command."
+                            }
+                          }
+                        },
+                        "E": {
+                          "type": "object",
+                          "properties": {
+                            "behaviour": {
+                              "type": "string",
+                              "enum": [
+                                "button",
+                                "momentary",
+                                "toggle"
+                              ]
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "bound": {
+                              "type": "boolean",
+                              "description": "Whether a press does anything: linked devices hear it, or the host runs its command."
+                            }
+                          }
                         }
                       }
                     }
