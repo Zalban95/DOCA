@@ -1613,6 +1613,7 @@ The device's person's recipes, schedules and face, answered as that person exact
 | POST | `/harness/messages` | `harness:chat` | ask the agent; the turn arrives as events (§23) |
 | GET | `/harness/turns` | `harness:chat` | turns in flight |
 | GET | `/harness/usage?days=1` | `harness:chat` | model calls and tokens per provider — `{ since, total, rows[{ key, calls, prompt, completion, cached, estimated }] }`, tokens only |
+| GET | `/harness/usage?days=1&by=model` | `harness:chat` | this device's person's own calls and tokens per `provider/model` (the hive's for a device with no person) — `{ since, by: model, person, total, rows[…] }`, given to the person whose conversation it is as spending does |
 | GET / POST | `/harness/sessions` | `harness:sessions` | list / start a conversation |
 | GET / DELETE | `/harness/sessions/:id` | `harness:sessions` | transcript / delete |
 | POST | `/harness/sessions/:id/activate` | `harness:sessions` | make it the active one |

@@ -110,9 +110,10 @@ async function summary({ days = 7, by = 'day', now = new Date() } = {}) {
 async function byConversation({ since, until }) {
   await imported();
   return (await db.all(`SELECT session_id AS session, person_id AS person, coalesce(provider, '') || '/' || coalesce(model, '') AS key, substr(at, 1, 10) AS day,
-      count(*) AS calls, coalesce(sum(prompt), 0) AS prompt, coalesce(sum(completion), 0) AS completion, coalesce(sum(cached), 0) AS cached
+      count(*) AS calls, coalesce(sum(prompt), 0) AS prompt, coalesce(sum(completion), 0) AS completion, coalesce(sum(cached), 0) AS cached,
+      coalesce(sum(CASE WHEN source = 'provider' THEN 0 ELSE 1 END), 0) AS estimated
     FROM usage WHERE tenant_id = 'local' AND at >= ? AND at < ? GROUP BY session_id, person_id, provider, model, substr(at, 1, 10)`, [since, until]))
-    .map(r => ({ session: r.session || null, person: r.person || null, key: r.key, day: r.day, calls: Number(r.calls), prompt: Number(r.prompt), completion: Number(r.completion), cached: Number(r.cached) }));
+    .map(r => ({ session: r.session || null, person: r.person || null, key: r.key, day: r.day, calls: Number(r.calls), prompt: Number(r.prompt), completion: Number(r.completion), cached: Number(r.cached), estimated: Number(r.estimated) }));
 }
 
 module.exports = { record, summary, byConversation, fileFor };

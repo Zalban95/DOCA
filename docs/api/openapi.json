@@ -7530,7 +7530,7 @@
         "tags": [
           "Harness"
         ],
-        "summary": "Model calls and tokens per provider, for a glance",
+        "summary": "Model calls and tokens per provider, or this person's per model, for a glance",
         "operationId": "harnessUsage",
         "x-scope": "harness:chat",
         "parameters": [
@@ -7540,6 +7540,18 @@
             "schema": {
               "type": "integer",
               "description": "Default 1, maximum 366."
+            }
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "provider",
+                "model"
+              ],
+              "description": "`provider` (default): the hive's, per provider. `model`: this device's person's own, per `provider/model` (the hive's for a device with no person)."
             }
           }
         ],
@@ -7557,6 +7569,10 @@
                     },
                     "by": {
                       "type": "string"
+                    },
+                    "person": {
+                      "type": "boolean",
+                      "description": "With by=model: whether the rows are this device's person's alone."
                     },
                     "total": {
                       "type": "object",
@@ -7586,7 +7602,7 @@
                         "properties": {
                           "key": {
                             "type": "string",
-                            "description": "Provider id."
+                            "description": "Provider id, or provider/model with by=model."
                           },
                           "calls": {
                             "type": "integer"
