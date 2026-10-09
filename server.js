@@ -53,15 +53,15 @@ const apiV1        = require('./modules/api-v1/router');
 function createApp() {
 const app = express();
 
-// Device-agnostic client API — mounted first so it can apply its own,
-// tighter body limits and authentication. Legacy /api/* is untouched.
+app.use(require('./modules/hosted').middleware);   // first: in a hosted hive what is the machine's is absent (modules/hosted.js)
+// Device-agnostic client API, with its own tighter body limits and authentication. Legacy /api/* is untouched.
 app.use('/api/v1', apiV1.router);
 
 app.use(express.json({ limit: '50mb' }));
 // Everything below needs a signed-in person with the right for it; unknown routes are refused.
 app.use(require('./modules/auth/gate').gate);
 require('./modules/auth/routes').mount(app);
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(require('./modules/hosted').page, express.static(path.join(__dirname, 'public')));   // a hosted hive's page says so (hosted.js)
 app.use(require('./modules/machines/acts').middleware);   // who started, stopped or removed a machine, written down (machines/acts.js)
 const uploadMw = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
@@ -76,7 +76,7 @@ app.get ('/api/stats/defs', stats.handleDefs);
 
 // Every name the front end draws, so a rebrand is a settings change and not a
 // grep through forty files. Unauthenticated on purpose: it is a product name.
-app.get ('/api/branding', (_req, res) => res.json(branding.all()));
+app.get ('/api/branding', (_req, res) => res.json({ ...branding.all(), ...(require('./modules/hosted').on() ? { profile: 'hosted' } : {}) }));
 
 // ─── Routes: Attachments ──────────────────────────────────────────────────────
 // The multer error is caught here rather than left to the default handler: a

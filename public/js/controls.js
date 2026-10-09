@@ -85,6 +85,7 @@ async function controlsRefreshContainers() {
   const list    = document.getElementById('controls-containers-list');
   const countEl = document.getElementById('controls-containers-count');
   if (!list) return;
+  if (hostedHive()) { list.innerHTML = `<div class="placeholder">${escHtml(HOSTED_SAY)}</div>`; if (countEl) countEl.textContent = ''; return; }
   try {
     const data = await apiFetch('/api/docker/containers');
     const containers = data.containers || data || [];

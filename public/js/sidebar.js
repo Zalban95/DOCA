@@ -30,6 +30,7 @@ async function pollStatus() {
 async function pollLlamaCppStatus() {
   const el = document.getElementById('s-llamacpp');
   if (!el) return;
+  if (hostedHive()) { el.innerHTML = '<div class="placeholder">None here</div>'; return; }   // a hosted hive runs none (hosted.js)
   try {
     const data = await apiFetch('/api/models/llamacpp/list');
     const instances = data.instances || [];

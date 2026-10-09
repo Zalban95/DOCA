@@ -95,6 +95,8 @@ function describe() {
  * exception that kills a turn.
  */
 function run(command, { cwd, timeout = 60000, maxBuffer = 4 << 20, env, signal } = {}) {
+  // A hosted hive types no command line into its machine (hosted.js): said as a result, never run.
+  if (require('./hosted').on()) return Promise.resolve({ out: require('./hosted').refusal('A command line on the hub').message, stdout: '', stderr: '', timedOut: false, aborted: false, code: 1, error: 'hosted' });
   const s = spec();
   return new Promise(resolve => {
     execFile(s.file, [...s.args, command], {
@@ -127,6 +129,7 @@ function run(command, { cwd, timeout = 60000, maxBuffer = 4 << 20, env, signal }
 
 /** Spawn the host shell on a command line, for callers that stream output. */
 function spawnShell(command, opts = {}) {
+  if (require('./hosted').on()) throw require('./hosted').refusal('A command line on the hub');   // hosted.js
   const s = spec();
   return spawn(s.file, [...s.args, command], { windowsHide: true, ...opts });
 }

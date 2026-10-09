@@ -105,7 +105,8 @@ function merge(layers) {
  * style. `host: false` leaves out the machine's pages (HOST_PAGES), in groups and inside views alike.
  */
 function resolve(merged = {}, { host = true } = {}) {
-  const allowed = t => host || !D.HOST_PAGES.includes(t);
+  const absent = require('../hosted').on() ? require('../hosted').TABS : [];   // a hosted hive's machine pages are not there (hosted.js)
+  const allowed = t => (host || !D.HOST_PAGES.includes(t)) && !absent.includes(t);
   const vs = (merged.views || []).map(v => ({ ...v, parts: v.parts.filter(p => allowed(p.page)) })).filter(v => v.parts.length);
   const pages = new Set([...D.PAGES.filter(allowed), ...vs.map(v => v.id)]);
   const placed = new Set(), groups = [];
@@ -134,6 +135,7 @@ function resolve(merged = {}, { host = true } = {}) {
     hidden: (merged.hidden || []).filter(t => pages.has(t)),
     views: vs,
     style: merged.style || {},
+    ...(absent.length ? { absent } : {}),
   };
 }
 

@@ -47,7 +47,7 @@ const TOOLS = [
   ...require('./toolbox/features'),
   ...require('./toolbox/screens'),
   ...require('./toolbox/chronicle'),
-];
+].filter(t => !require('../hosted').absentTool(t.name));   // a hosted hive has no command line on its machine (hosted.js)
 
 
 /** Metadata for the ⚙ panel's per-tool switches, built-in ones then MCP's. */

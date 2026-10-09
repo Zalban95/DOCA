@@ -14,6 +14,10 @@
 
 let BRAND = null;
 
+/** A hosted hive (modules/hosted.js, set in the page by the hub): the machine it runs on is not part of it. */
+const hostedHive = () => window.DOCA_HOSTED === true;
+const HOSTED_SAY = 'Not part of a hosted hive: the machine it runs on is not yours to use.';
+
 async function brandingLoad() {
   try {
     BRAND = await apiFetch('/api/branding');

@@ -168,7 +168,8 @@ function defaultRoots(platform = process.platform) {
   roots.push(require('os').tmpdir());
   return [...new Set(roots)];
 }
-const FM_ALLOWED_ROOTS = defaultRoots();
+// A hosted hive (hosted.js): the workspace only, never the code's folder or the machine's disks.
+const FM_ALLOWED_ROOTS = require('./hosted').on() ? require('./hosted').roots() : defaultRoots();
 
 const VALUES = {
   COMPOSE_DIR, CONFIG_PATH, SKILLS_DIR, WORKSPACE_DIR,

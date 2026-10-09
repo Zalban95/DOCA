@@ -235,6 +235,7 @@ async function sysdepsLoad() {
   if (!list) return;
   list.innerHTML = '<div class="placeholder pulse">Checking…</div>';
   if (btn) btn.disabled = true;
+  if (hostedHive()) { list.innerHTML = `<div class="placeholder">${escHtml(HOSTED_SAY)}</div>`; return; }
   try {
     const data  = await apiFetch('/api/system/tools');
     _sysdepsTools = data.tools || [];
