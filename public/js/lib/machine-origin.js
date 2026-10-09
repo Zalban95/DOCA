@@ -13,7 +13,7 @@ function machineAgo(at) {
 /** Keep the lines from a rows answer the page already has (the status column), or read them at most every 5 s. */
 function machineOriginsKeep(data) { _machineOrigins = { at: Date.now(), rows: data?.rows || [], others: data?.origins || {} }; }
 async function machineOriginsLoad() {
-  if (Date.now() - _machineOrigins.at < 5000) return;
+  if (Date.now() - _machineOrigins.at < 5000 || !(typeof licenceFeatureOn !== 'function' || licenceFeatureOn('machines-status'))) return;
   try { machineOriginsKeep(await apiFetch('/api/machines/rows')); } catch { _machineOrigins.at = Date.now(); }
 }
 

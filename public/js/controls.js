@@ -85,6 +85,8 @@ async function controlsRefreshContainers() {
   const list    = document.getElementById('controls-containers-list');
   const countEl = document.getElementById('controls-containers-count');
   if (!list) return;
+  if (typeof licenceReady === 'function') await licenceReady();
+  if (!(typeof licenceFeatureOn !== 'function' || licenceFeatureOn('docker'))) { list.closest('.card')?.style.setProperty('display', 'none'); return; }   // not licensed here (lib/licence.js)
   try {
     const data = await apiFetch('/api/docker/containers');
     const containers = data.containers || data || [];

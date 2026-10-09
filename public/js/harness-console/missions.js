@@ -44,7 +44,7 @@ async function _hcComputerFill() {
   const sel = document.getElementById('hc-computer');
   if (!sel) return;
   let list = [];
-  try { list = (await apiFetch('/api/computers')).computers || []; } catch { /* not a host: no picker */ }
+  if ((typeof licenceFeatureOn !== 'function' || licenceFeatureOn('computers'))) try { list = (await apiFetch('/api/computers')).computers || []; } catch { /* not a host: no picker */ }
   const keep = sel.value;
   sel.innerHTML = `<option value="">no computer</option>${list.map(c => `<option value="${escHtml(c.id)}">🖥 ${escHtml(c.name || c.id)} (${escHtml(c.id)})</option>`).join('')}`;
   sel.value = list.some(c => c.id === keep) ? keep : '';
@@ -108,7 +108,7 @@ async function _hcLoadMissions() {
   try { ({ auto = [], stopped = [], machines = [] } = await apiFetch('/api/harness/working')); } catch { /* an older hub */ }
   // Finished ones nobody needs any more go to the Archive by themselves (agents/tidy.js): how many did, today.
   let putAway = 0;
-  try { ({ putAway = 0 } = await apiFetch('/api/harness/missions/tidy')); } catch { /* an older hub */ }
+  if ((typeof licenceFeatureOn !== 'function' || licenceFeatureOn('missions-tidy'))) try { ({ putAway = 0 } = await apiFetch('/api/harness/missions/tidy')); } catch { /* an older hub */ }
 
   if (!rows.length && !auto.length && !stopped.length && !machines.length && !putAway) { bar.style.display = 'none'; bar.innerHTML = ''; }
   else {

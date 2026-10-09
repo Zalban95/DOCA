@@ -3,6 +3,7 @@
    work" with DOCA's agent or a CLI harness) or declined with a reason the next brief reads. A host's. */
 async function scoutCardRender(panel) {
   let v;
+  if (!(typeof licenceFeatureOn !== 'function' || licenceFeatureOn('model-scout'))) return;
   try { v = await apiFetch('/api/scout'); } catch { return; }
   document.getElementById('scout-card')?.remove();
   if (!v.experiment) return;   // developer mode and the experiment: otherwise there is nothing to show

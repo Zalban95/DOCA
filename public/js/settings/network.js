@@ -66,7 +66,8 @@ async function hubPairPhone(btn) {
     The phone appears in Field → API keys once paired; rename it there.</span></div></div>`;
 }
 
-function hubAppBanner() {
+async function hubAppBanner() {
+  if (typeof licenceReady === 'function' && !(await licenceReady(), licenceFeatureOn('client-apps'))) return;   // not licensed here (lib/licence.js)
   const ua = navigator.userAgent || '';
   if (!/Android/i.test(ua) || /DocaMobile\//.test(ua)) return;   // a phone's browser, not the app itself
   try { if (localStorage.getItem('doca.app.banner') === 'no') return; } catch { /* blocked: shown */ }
