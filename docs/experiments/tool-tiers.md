@@ -1,7 +1,9 @@
 # Experiment: send the core tools in full, the rest by name
 
-**Flag:** `experiments.toolTiers` (Settings → Developer), off by default. **TODO:** B2 (audit 2026-10-06, aw 25,
-coh F4). **Since:** 2.249.0.
+**Graduated 2026-10-09** (branch lean-prompt, docs/experiments/lean-prompt.md): on for everyone, the flag removed
+(migration `3.4-tool-tiers-graduated`). The off switch is the setting `harness.config.doca.toolsLoading: all` (⚙ →
+Advanced → How tools are sent), kept as the alternative `tools-all`. **Was:** `experiments.toolTiers`. **TODO:** B2
+(audit 2026-10-06, aw 25, coh F4). **Since:** 2.249.0.
 
 ## Hypothesis
 
@@ -75,5 +77,4 @@ loaded tool breaks the provider's prefix cache (once per load, by design).
 
 ## Rollback
 
-Switch the flag off: everything is sent again on the next step. Failing, `turn/tool-tiers.js`, `tools_more` and the
-two call sites (agent.js, prompt.js, tool-calls.js) go.
+`harness.config.doca.toolsLoading: all`: everything is sent again on the next step.

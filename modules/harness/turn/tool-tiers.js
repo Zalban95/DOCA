@@ -1,14 +1,19 @@
 'use strict';
 
 /**
- * Tools sent by tier (experiment `toolTiers`, docs/experiments/tool-tiers.md; audit 2026-10-06, aw 25, coh F4; TODO B2).
+ * Tools sent by tier (TODO B2; graduated from the `toolTiers` experiment 2026-10-09, docs/experiments/tool-tiers.md).
  *
- * A bare install sent ≈12k tokens of tool schemas on every step, most for tools a turn never touches, and a phone's
- * hands added 21 more. With the flag on, the Orchestrator and work chats are sent the core tools in full; the rest —
- * rare built-ins and every MCP server's tools — are named on one line of "Your tools" and attached for the
- * conversation when they are needed: named in the person's message, named by a skill or recipe the agent read, called
- * by name, or asked for with `tools_more`. This narrows what is *sent*, never what is *held*: a held tool called by
- * name still runs (and is attached from then on). Specialists keep their own short lists untouched.
+ * Every step re-sends the tool schemas, and most are for tools a turn never touches: 16.7k of the ~25k an Orchestrator
+ * step cost on the owner's hive (56 built-ins), more with a phone's hands. The Orchestrator and work chats are sent the
+ * core tools in full; the rest — rare built-ins and every MCP server's tools — are named in "Your tools", by kit and by
+ * server, and attached for the conversation when they are needed: named in the person's message, named by a skill or
+ * recipe the agent read, called by name, or asked for with `tools_more`. This narrows what is *sent*, never what is
+ * *held*: a held tool called by name still runs (and is attached from then on). Specialists keep their own short
+ * lists untouched; a spoken turn's front kit (front.js) is sent whole, only its MCP servers named; a conversation bound
+ * to a project gets its code kit in full.
+ *
+ * `harness.config.doca.toolsLoading` decides: `tiers` (the default) or `all` — every held tool in full on every step,
+ * as before, for a model with room to spare and a cache that makes the bytes cheap.
  */
 const CORE = new Set([
   'work_chats', 'work_plan', 'agent_dispatch', 'agent_results', 'mission_plan', 'scout_report',
@@ -19,16 +24,24 @@ const CORE = new Set([
   'http_fetch', 'api_call', 'web_search', 'research_docs', 'mcp_connect', 'tools_more',
 ]);
 
-const on = () => require('../../experiments').on('toolTiers');
+/** How tools are sent: `tiers` (default) or `all` (harness.config.doca.toolsLoading). */
+const mode = () => { try { return require('./params').params().toolsLoading === 'all' ? 'all' : 'tiers'; } catch { return 'tiers'; } };
+const on = () => mode() === 'tiers';
 const nameOf = s => s.function?.name || s.name;
 /** An MCP tool's server id (`mcp__<server>__<tool>`), else null. */
 const serverOf = n => (/^mcp__((?:[^_]|_(?!_))+)__/.exec(String(n)) || [])[1] || null;
 
-/** Whether tiers apply to this turn: the flag, and the Orchestrator or a work chat (not a specialist). */
+/** Whether tiers apply to this turn: the setting, and the Orchestrator or a work chat (not a specialist). */
 function applies(profile) { return on() && (!profile || profile.level === 'orchestrator'); }
 
 function attached(sessionId) {
   try { return new Set(require('../memory').getSession(sessionId)?.toolsAttached || []); } catch { return new Set(); }
+}
+
+/** Whether a conversation is bound to a project, its own or up its parent chain (projects/store.forSession). */
+function inProject(sessionId) {
+  if (!sessionId) return false;
+  try { return !!require('../../projects/store').forSession(sessionId); } catch { return false; }
 }
 
 /** Attach tools (names) or whole MCP servers (`mcp:<id>`) to a conversation; returns what was new. */
@@ -52,8 +65,13 @@ function sent(name, have) {
  * Split a turn's schemas into what is sent and what is only named. `text` (the person's message) attaches what it
  * names: a tool by its name, an MCP server by its id.
  */
-function split(schemas, { sessionId = null, profile = null, text = '' } = {}) {
+function split(schemas, { sessionId = null, profile = null, text = '', client = null, step = false } = {}) {
+  // A turn's step counts which way it was sent, so the alternative's use can be read (features/usage.js, review.js).
+  if (step && (!profile || profile.level === 'orchestrator')) try { require('../../features/usage').count(`tools:${mode()}`); } catch { /* counting never stops a turn */ }
   if (!applies(profile)) return { offered: schemas, named: [] };
+  // A spoken turn's front kit is already short and chosen (front.js): sent whole, only MCP servers named. A conversation
+  // bound to a project does code work: its code tools (search, replace, git, project, the repository's rules) are sent.
+  const front = !!client?.front, coding = inProject(sessionId), { kitOf } = require('../kits');
   const words = String(text || '');
   const mentioned = [];
   for (const s of schemas) {
@@ -65,23 +83,36 @@ function split(schemas, { sessionId = null, profile = null, text = '' } = {}) {
   const have = attached(sessionId);
   for (const m of mentioned) have.add(m);
   const offered = [], named = [];
-  for (const s of schemas) (sent(nameOf(s), have) ? offered : named).push(s);
+  for (const s of schemas) {
+    const n = nameOf(s), builtin = !serverOf(n);
+    (sent(n, have) || (builtin && (front || (coding && kitOf(n) === 'code'))) ? offered : named).push(s);
+  }
   return { offered, named };
 }
 
-/** The one line "Your tools" gives what is held but not sent: built-ins by name, MCP servers by id and count. */
+/**
+ * What "Your tools" says of what is held but not sent: built-ins by name, grouped under their kit's label, and each
+ * MCP server by id, how many tools and whether it is on another machine (a paired device hosts it).
+ */
 function namedLine(named) {
   if (!named.length) return '';
-  const builtin = [], servers = new Map();
+  const { KITS, kitOf } = require('../kits');
+  const byKit = new Map(), servers = new Map();
   for (const s of named) {
     const n = nameOf(s), server = serverOf(n);
-    if (server) servers.set(server, (servers.get(server) || 0) + 1);
-    else builtin.push(n);
+    if (server) { servers.set(server, (servers.get(server) || 0) + 1); continue; }
+    const kit = kitOf(n) || 'other';
+    if (!byKit.has(kit)) byKit.set(kit, []);
+    byKit.get(kit).push(n);
   }
-  const parts = [];
-  if (builtin.length) parts.push(builtin.join(', '));
-  for (const [id, c] of servers) parts.push(`mcp:${id} (${c} tools)`);
-  return `More tools you hold, not loaded yet — tools_more {names: [...]} loads them for this conversation (or call one by name): ${parts.join('; ')}.`;
+  const parts = [...Object.keys(KITS), 'other'].filter(k => byKit.has(k)).map(k => `${KITS[k]?.label || 'Other'}: ${byKit.get(k).join(', ')}`);
+  for (const [id, c] of servers) parts.push(`mcp:${id} (${c} tool${c > 1 ? 's' : ''}${hostedElsewhere(id) ? ', on another machine' : ''})`);
+  return `More tools you hold, not loaded yet — call one by name, or tools_more {names: [...]} to load it for this conversation:\n${parts.map(x => `  ${x}`).join('\n')}`;
+}
+
+/** Whether an MCP server is hosted by a paired client rather than this machine (mcp/registry origin). */
+function hostedElsewhere(id) {
+  try { return require('../../mcp/registry').load().some(d => d.id === id && d.origin?.kind === 'client'); } catch { return false; }
 }
 
 /** Tool names (and `mcp:<id>`) a text mentions, among those held — for a skill or recipe the agent just read. */
@@ -97,7 +128,7 @@ function mentionedIn(text, heldNames = []) {
   return [...out];
 }
 
-/** A tool this turn holds but was not sent (tiers on): it still runs when called by name. */
+/** A tool this turn holds but was not sent (tiers): it still runs when called by name. */
 function heldNotSent(name, disabled = []) {
   if (!on() || disabled.includes(name)) return false;
   return require('../tools').schemas(disabled).some(s => nameOf(s) === name);
@@ -113,4 +144,4 @@ function afterCall(sessionId, profile, name, result, disabled = []) {
   attach(sessionId, add);
 }
 
-module.exports = { heldNotSent, afterCall, CORE, applies, attach, attached, split, namedLine, mentionedIn, serverOf };
+module.exports = { heldNotSent, afterCall, CORE, applies, attach, attached, split, namedLine, mentionedIn, serverOf, mode };

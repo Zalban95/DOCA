@@ -59,8 +59,8 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
   const profile = session ? org.profileFor(session) : null;
   const p = turnParams(profile);
   const disabled = disabledFor(profile, p, sessionId);
-  // What is sent, which with the toolTiers experiment is less than what is held (turn/tool-tiers.js).
-  const schemas  = require('./tool-tiers').split(tools.schemas(disabled), { sessionId, profile, text: message }).offered;
+  // What is sent, which with tiers (the default) is less than what is held (turn/tool-tiers.js).
+  const schemas  = require('./tool-tiers').split(tools.schemas(disabled), { sessionId, profile, text: message, client }).offered;
 
   const measure = (name, text, note) => ({
     name, note: note || null,

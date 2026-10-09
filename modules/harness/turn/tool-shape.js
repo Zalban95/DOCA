@@ -22,7 +22,7 @@ function switches() {
   if (!require('../../api-services/store').list().length) out.push({ name: 'service', why: 'no API service is set up (Field → Connectors → API services)' });
   if (!require('../../scout').on()) out.push({ name: 'model_scout', why: 'the model scout experiment is off' });
   if (!require('../../library/indexer').on()) out.push({ name: 'library_search', why: 'the Library experiment is off, or no embedding model is set for it' });
-  if (!require('../../experiments').on('toolTiers')) out.push({ name: 'tools_more', why: 'the tool tiers experiment is off' });
+  if (require('./tool-tiers').mode() === 'all') out.push({ name: 'tools_more', why: 'every tool is sent in full (harness.config.doca.toolsLoading: all)' });
   // An old name kept so old transcripts and recipes still run (tools.call maps it); never offered.
   out.push({ name: 'show_image', why: 'an old name for show_media' });
   return out;

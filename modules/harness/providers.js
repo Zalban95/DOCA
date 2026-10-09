@@ -124,6 +124,9 @@ function defaultParams() {
     // Steps of real work the Orchestrator does in its own turn before the job moves to a work chat
     // (turn/handoff.js), so it stays free for the person. 0: no limit.
     orchestratorWorkSteps: 3,
+    // How tools are sent (turn/tool-tiers.js): 'tiers' — the core in full, the rest named and loaded when needed — or
+    // 'all', every held tool in full on every step, as before 2026-10-09.
+    toolsLoading: 'tiers',
     historyTurns:   24,     // messages kept verbatim in the window
     memoryLimit:    24,     // memory entries injected into the system prompt
     summarizeAfter: 40,     // messages before older ones fold into a summary

@@ -92,18 +92,18 @@ function rulesBlock() {
  * which the user does own — follows it, then the facts, then what the agent
  * knows, then where this conversation had got to.
  */
-function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile, projectBrief = '', sessionId = null }) {
-  // What this turn is offered, described (turn/tools-section.js).
-  const tiers = require('./tool-tiers').split(tools.schemas(disabledFor(profile, p, sessionId)), { sessionId, profile, text: userText });
-  const schemas = tiers.offered, toolList = require('./tools-section').toolsSection(schemas, tiers.named);   // toolTiers: the rest named
-  const identity = require('../identity');
-  if (profile?.level === 'orchestrator') return require('./orchestrator-prompt').orchestratorPrompt({ p, userText, summary, toolCount, client, profile, toolList, schemas, sessionId });
+function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, profile, projectBrief = '', sessionId = null, disabled = null }) {
+  // The turn's own `disabled` when given (front.js's kit); the rest named (tool-tiers.js); the rules follow what is *held*.
+  const all = tools.schemas(disabled || disabledFor(profile, p, sessionId)), held = all.map(s => s.function.name), identity = require('../identity');
+  const tiers = require('./tool-tiers').split(all, { sessionId, profile, text: userText, client });
+  const schemas = tiers.offered, toolList = require('./tools-section').toolsSection(schemas, tiers.named);
+  if (profile?.level === 'orchestrator') return require('./orchestrator-prompt').orchestratorPrompt({ p, userText, summary, toolCount, client, profile, toolList, schemas, held, sessionId });
   // A specialist's prompt is mostly what is left out of it. The charter is not
   // one of those things: it goes first here exactly as it does for the
   // orchestrator, and a definition has no way to drop it.
   if (profile) {
     return [
-      providers.charterFor(schemas.map(s => s.function.name)),
+      providers.charterFor(held),
       profile.systemPrompt,
       clientBlock(client), require('../../auth/permits').describe({ person: client?.user, profile }),
       `You are "${profile.label || profile.id}", working on one errand handed to you by the agent the `
@@ -133,7 +133,7 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
   }
 
   return [
-    providers.charterFor(schemas.map(s => s.function.name)),
+    providers.charterFor(held),
     p.systemPrompt || providers.DEFAULT_SYSTEM_PROMPT,
     environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount }),
     toolList,

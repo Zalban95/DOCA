@@ -10,7 +10,7 @@
  * `--json` prints one JSON line per case and the result last, for the panel.
  *
  * Comparing (TODO B7): `--models ollama/qwen3:8b,deepseek/deepseek-chat` runs the set once per model, and
- * `--flag toolTiers` once with that experiment off and once on (`--flag toolTiers=on` only on), developer mode on in the
+ * `--flag riskTiers` once with that experiment off and once on (`--flag riskTiers=on` only on), developer mode on in the
  * sandbox only; together,
  * every model × off/on. Each run is saved as usual; a table of passes, tokens and steps per run is printed last.
  */
@@ -34,7 +34,7 @@ const say = (o, line) => console.log(json ? JSON.stringify(o) : line);
 
 const opt = name => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : null; };
 const models = (opt('--models') || '').split(',').map(x => x.trim()).filter(Boolean);
-const [flag, only] = String(opt('--flag') || '').split('=');   // --flag toolTiers, or toolTiers=on / =off for one run
+const [flag, only] = String(opt('--flag') || '').split('=');   // --flag riskTiers, or riskTiers=on / =off for one run
 
 /** Point the sandbox's harness at one model (`provider/model`) and the flag on or off; returns its label. */
 function configure(model, on) {

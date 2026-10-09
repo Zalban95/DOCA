@@ -240,8 +240,10 @@ test('the Orchestrator holds every tool, and failed requests do not consume upwa
   // Decided 2026-09-26: the Orchestrator's freedom is close to absolute — every kit
   // (harness/kits.js). What it hands to a work chat is judgement, in its prompt.
   const names = request.tools.map(t => t.function.name);
-  for (const n of ['shell', 'work_chats', 'canvas', 'search_files', 'git', 'project', 'write_file']) assert.ok(names.includes(n), n);
+  for (const n of ['shell', 'work_chats', 'search_files', 'git', 'project', 'write_file']) assert.ok(names.includes(n), n);
   assert.match(request.messages[0].content, /# Your tools — \d+, by kit/);
+  // A rarer tool is held and named, loaded when needed (turn/tool-tiers.js): it runs when called by name.
+  assert.match(request.messages[0].content, /More tools you hold, not loaded yet[\s\S]*\bcanvas\b/);
   assert.match(request.messages.at(-1).content, /Decision needed/);
   // The readings travel as `user`, after the history: a second `system` message
   // is refused by Qwen's template under llama.cpp --jinja (agent audit 2026-09-26).

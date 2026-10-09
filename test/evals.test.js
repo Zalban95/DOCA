@@ -122,14 +122,14 @@ test('from the panel: a host runs a set in a child process on a throwaway copy; 
 
 test('comparing: --flag runs the set with the experiment off and on, and prints both (TODO B7)', async () => {
   // Not spawnSync: the stub model answering the child lives in this process, which must keep running.
-  const child = require('node:child_process').spawn(process.execPath, [require('node:path').join(__dirname, '..', 'bin', 'doca-eval.js'), 'tiny', '--flag', 'toolTiers', '--json'], { env: process.env });
+  const child = require('node:child_process').spawn(process.execPath, [require('node:path').join(__dirname, '..', 'bin', 'doca-eval.js'), 'tiny', '--flag', 'claimCheck', '--json'], { env: process.env });
   let out = '', err = '';
   child.stdout.on('data', d => { out += d; }); child.stderr.on('data', d => { err += d; });
   const code = await new Promise(r => child.on('close', r));
   const lines = out.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
   const cmp = lines.find(l => l.compare)?.compare;
   assert.ok(cmp, out + err);
-  assert.deepEqual(cmp.map(x => [x.label, x.passed, x.total]), [['configured model · toolTiers off', 1, 1], ['configured model · toolTiers on', 1, 1]]);
+  assert.deepEqual(cmp.map(x => [x.label, x.passed, x.total]), [['configured model · claimCheck off', 1, 1], ['configured model · claimCheck on', 1, 1]]);
   assert.equal(code, 0, err.slice(-2000));
 });
 

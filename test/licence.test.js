@@ -110,8 +110,8 @@ test('no licence: the core only — routes, tools, pages, settings and experimen
     assert.ok(!settings.readable().some(r => r.path.startsWith('computers.')), 'its settings are not offered');
     assert.match(settings.refuse('computers.maxRunning', 2), /not licensed/);
     const { loadPrefs, savePrefs } = require('../modules/utils');
-    savePrefs({ ...loadPrefs(), developer: { mode: true }, experiments: { toolTiers: true } });
-    assert.equal(require('../modules/experiments').on('toolTiers'), false, 'the lab is not licensed: no experiment turns on');
+    savePrefs({ ...loadPrefs(), developer: { mode: true }, experiments: { riskTiers: true } });
+    assert.equal(require('../modules/experiments').on('riskTiers'), false, 'the lab is not licensed: no experiment turns on');
     assert.equal(require('../modules/experiments').list().length, 0);
     const p = loadPrefs(); delete p.experiments; p.developer = { mode: false }; savePrefs(p);
     assert.match(require('../modules/features').describe(require('../modules/features').get('vms')), /Not in this hive's licence/, 'the agents still know it exists');

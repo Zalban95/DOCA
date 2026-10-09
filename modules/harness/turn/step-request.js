@@ -25,7 +25,7 @@ function stepRequest({ p, ep, message, summary, client, profile, projectBrief, s
       role: 'system',
       content: systemPrompt({
         p, userText: message, summary, client, profile, projectBrief, sessionId: session.id,
-        toolCount: schemas.length, disabledCount: disabled.length,
+        toolCount: schemas.length, disabledCount: disabled.length, disabled,
       }),
     },
     // `provider` is the one this request is addressed to, which decides which

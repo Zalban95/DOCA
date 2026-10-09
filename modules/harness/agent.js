@@ -235,8 +235,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     const stepDisabled = front ? front.off(disabledFor(profile, p, session.id)) : disabledFor(profile, p, session.id);
     const now = step > 1 && thinkingOf();   // the effort tool changes it from the next step
     if (now && (now.level !== effort.level || now.from !== effort.from)) { effort = now; say({ type: 'effort', step, ...effort }); }
-    // Sent by tier when the toolTiers experiment is on (turn/tool-tiers.js): what is held is unchanged.
-    const schemas = require('./turn/tool-tiers').split(tools.schemas(stepDisabled), { sessionId: session.id, profile, text: message }).offered;
+    // Sent by tier (turn/tool-tiers.js; harness.config.doca.toolsLoading): what is held is unchanged.
+    const schemas = require('./turn/tool-tiers').split(tools.schemas(stepDisabled), { sessionId: session.id, profile, text: message, client, step: true }).offered;
     if (toolCount !== null && schemas.length !== toolCount)
       say({ type: 'tools', count: schemas.length, was: toolCount, step });
     toolCount = schemas.length;
