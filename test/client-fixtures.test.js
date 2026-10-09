@@ -19,7 +19,7 @@ const bus = require('../modules/api-v1/bus');
 const DIR = path.join(__dirname, '..', 'docs', 'api', 'fixtures');
 const WRITE = process.env.DOCA_WRITE_FIXTURES === '1';
 const NAMES = ['agent.mission-running', 'agent.mission-done', 'agent.mission-archived', 'agent.mission-seen', 'agent.mission-work-stopped',
-  'prompt.new', 'prompt.new-approval', 'prompt.closed', 'alert', 'alert-files'];
+  'prompt.new', 'prompt.new-approval', 'prompt.closed', 'alert', 'alert-files', 'settings.changed'];
 
 test.before(() => H.start());
 test.after(() => H.stop());
@@ -68,6 +68,9 @@ async function frames() {
   const at = n => { const p = path.join(H.tmp, n); fs.writeFileSync(p, Buffer.alloc(1024, 1)); return p; };
   reach.tell({ to: phone.id, title: 'Voice samples', files: [{ path: at('whisper.mp3'), caption: 'Italian — whisper' }, { path: at('notes.pdf') }] });
   out['alert-files'] = last('alert');
+  // The look chosen on the phone's own panel page (Settings → Appearance in its web view): the app reads it again.
+  require('../modules/screens').set(phone.id, { theme: 'pointsDaylight', skin: 'points' });
+  out['settings.changed'] = last('settings.changed');
   return out;
 }
 
@@ -117,8 +120,12 @@ test(WRITE ? 'writes the fixtures from real frames' : 'the fixtures are present 
 //   families     — the tool names per family a client lends (PROTOCOL §22.1, modules/api-v1/families.js)
 //   doca-device  — what the panel calls on window.DocaDevice, where DocaMobile lends it (ambient.js)
 //   call-frames  — the JSON frames of a live call and what each carries (realtime/index.js FRAMES; DocaWear draws them)
+//   settings-look — GET /api/v1/settings/look for a phone drawn in Points Daylight (PROTOCOL §14.1; the app's own screens)
 async function contracts() {
   const admin = H.mkDevice('Fixture admin', 'admin', {});
+  const looked = H.mkDevice('Fixture look', 'phone', H.PHONE_CAPS);
+  require('../modules/screens').set(looked.device.id, { theme: 'pointsDaylight', skin: 'points' });
+  const look = (await H.api(looked.token, 'GET', '/api/v1/settings/look')).body;
   const code = await H.api(admin.token, 'POST', '/api/v1/devices/pair/start', { name: 'Fixture phone', preset: 'phone' });
   const qr = code.body.qr || '';
   return {
@@ -128,9 +135,10 @@ async function contracts() {
     'doca-device': { methods: { apps: { args: ['limit: number'], returns: 'a JSON string: [{package, label, icon?}]' }, open: { args: ['package: string'], returns: 'boolean' } } },
     'call-frames': { from: 'the hub, as JSON text frames on /api/v1/call and /api/v1/realtime (PROTOCOL §23.1)', frames: require('../modules/realtime').FRAMES,
       client: { stop: { fields: [], means: 'hang up' } } },
+    'settings-look': { ...look, deviceId: 'dev_fixture' },
   };
 }
-const CONTRACTS = ['pair-link', 'families', 'doca-device', 'call-frames'];
+const CONTRACTS = ['pair-link', 'families', 'doca-device', 'call-frames', 'settings-look'];
 
 test(WRITE ? 'writes the contracts' : 'the contracts are what the hub does now', async () => {
   const c = await contracts();

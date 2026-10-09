@@ -21,7 +21,7 @@ const COVERAGE = {
   projects: { v1: ['/harness'], note: 'a project\'s chats are conversations; its files and git are the machine\'s', panel: HOST },
   attachments: { v1: ['/media', '/harness/images'] },
   devices: { v1: ['/devices'] },
-  screen: { v1: ['/settings/effective'] },
+  screen: { v1: ['/settings/effective', '/settings/look'] },
   realtime: { v1: ['/realtime'] },
   hub: { v1: ['/hub/links'], note: 'the hub\'s addresses: a device keeps them all; the QR codes are the panel\'s' },
   clients: { v1: ['/clients'], note: 'the hub\'s own clients, to install and update' },
