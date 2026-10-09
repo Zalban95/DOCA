@@ -175,7 +175,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   if (front?.delegate) return { sessionId: session.id, text: require('./turn/front').delegate({ session, message, client, say, deep: front.deep }),
     steps: 0, usage: budget.report(budget.ledger(), p), handedOff: true };
   const orchestrating = (profile?.level === 'orchestrator' && Number(p.orchestratorWorkSteps) > 0) || !!front;
-  const workLimit = front ? front.workSteps : Number(p.orchestratorWorkSteps);
+  const workLimit = front ? front.workSteps : require('./turn/handoff').limitFor({ p, message, client, session: memory.getSession(session.id) });   // by the request's size
   let workSteps = 0;
 
   let summary = await foldSummary({ session: memory.getSession(session.id), p, ep, signal });
