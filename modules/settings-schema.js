@@ -34,7 +34,7 @@ const SCHEMA = {
   voice:            { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'the voice this screen is answered in: engine (a speech service of the Services tab, empty = the hive\'s; tts-engines.js), ttsVoice and ttsSpeed, over voiceServices (chat.js handleSynthesize); and a voice per kind of call, quick (the Live call: the face, a device\'s call), deep (the chat\'s 🎙) and ambient (Ambient\'s assistant; unset, it is the quick voice), each {service, voice, speed}, read from the screen, its person, then the hive (call-voices.js; Settings → Voice, one Voice card)' },
   call:             { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'how a live call listens on this screen — its microphone is its own (chat-call.js; Settings → Voice → Live call)',
     keys: {
-      silenceMs:   { type: 'integer', min: 300, default: 2000, hint: 'How long a pause, in milliseconds, ends what you said and sends it.' },
+      silenceMs:   { type: 'integer', min: 300, max: 10000, default: 2000, hint: 'How long a pause, in milliseconds, ends what you said and sends it. A device\'s call (a watch\'s) reads it too, from the device\'s own page; unset there, 1400 (realtime/call-pause.js).' },
       sensitivity: { type: 'integer', min: 1, default: 15, hint: 'The microphone level that counts as speech; lower hears quieter voices and more of the room.' },
       assistantIdleSec: { type: 'integer', min: 5, default: 12, hint: 'In the Live call (the face tapped) and Ambient\'s assistant, seconds of quiet before it goes back to waiting for the wake word, where the screen listens for one.' },
       listenWithFace: { type: 'boolean', default: false, hint: 'While the corner face shows, listen for the wake word and start a call when it is said (experiments.wakeWord).' },
@@ -305,7 +305,8 @@ const SCHEMA = {
       harnessLines:    { type: 'integer', min: 50, max: 20000, default: 500, hint: 'Lines of the harness log (Hub → Logs) kept in memory since the last start.' },
       workstreamLines: { type: 'integer', min: 50, max: 5000, default: 300, hint: 'Lines of the Workstream\'s activity kept in memory.' },
       mcpLines:        { type: 'integer', min: 20, max: 5000, default: 200, hint: 'Lines of each MCP server\'s own output kept in memory.' },
-      callLines:       { type: 'integer', min: 50, max: 5000, default: 500, hint: 'Lines of the live calls\' log (Hub → Logs, source call) kept in memory: each stage of each call, in names and numbers.' },
+      callLines:       { type: 'integer', min: 50, max: 5000, default: 500, hint: 'Lines of the live calls\' log (Hub → Logs, source call) kept in memory: each stage of each call, in names and numbers; also kept on disk for callDays and read back at start.' },
+      callDays:        { type: 'number', min: 1, max: 365, default: 7, hint: 'Days the live calls\' log is kept on disk (DATA_DIR/calls), so a restart or a version switch does not wipe it.' },
       machinesLines:   { type: 'integer', min: 50, max: 5000, default: 500, hint: 'Lines of the machines\' log (Hub → Logs, source machines) kept in memory: started, stopped, busy, idle, processes started outside DOCA\'s tools.' },
       runsRetainDays:  { type: 'number', min: 1, max: 3650, default: 90, hint: 'Days the record of each turn, mission and device job is kept (Chronicle reads them); its trace goes with it.' },
       jobsKept:        { type: 'integer', min: 5, max: 1000, default: 50, hint: 'Background jobs (shell_job) kept with their output files; the oldest finished ones go first.' },
