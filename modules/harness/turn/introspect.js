@@ -82,7 +82,8 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
     ...promptParts(system).map(([name, text]) => measure(name, text, name === 'safety charter' ? 'ships in code, not editable — with any untitled text after it' : null)),
     ...(session ? [measure('organization', org.block(session.id, org.notices(session.id).slice(0, 10)), 'briefs and unread reports, after history')] : []),
     measure('missions', missionsBlock, 'paused and finished missions, after history'),
-    measure('limits', budget.block(p)),
+    // "# Your limits" (budget.block) is in the system prompt above, cut out as "your limits": measured once. It was
+    // measured a second time here and read as a duplicate in the prompt (2026-10-09); it is sent once.
     // Sent after the history rather than in the system message, so it is measured here but ordered last in the
     // request. Same cost either way: it is re-sent on every step. See liveBlock() and ISSUES.md H-9.
     measure('readings', environment.live(), 'clock, load, uptime — after the history'),

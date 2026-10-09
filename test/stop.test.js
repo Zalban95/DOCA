@@ -64,6 +64,14 @@ test('worst case is per-step spend times the step cap, not the context window', 
   assert.ok(b.worstCase >= b.perStep, 'a turn costs its prompt once per step, so the worst case cannot be smaller');
 });
 
+test('every part of the prompt is counted once: "# Your limits" is not measured a second time', () => {
+  const b = agent.breakdown({});
+  const names = b.sections.map(s => s.name);
+  assert.equal(names.filter(n => n === 'your limits').length, 1, `your limits counted ${names.filter(n => n === 'your limits').length} times`);
+  assert.ok(!names.includes('limits'), 'the limits block is in the system prompt and measured there, not again beside it');
+  assert.equal(new Set(names).size, names.length, `a section is counted twice: ${names.join(', ')}`);
+});
+
 test('built-in tools are attributed separately from each MCP server', () => {
   const b = agent.breakdown({});
   const owners = b.tools.byOwner.map(o => o.owner);
