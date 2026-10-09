@@ -137,6 +137,9 @@ KINDS['llamacpp-hf'] = {
   request: (id, params) => ({ body: { id, ...(params?.vision === false ? { vision: false } : {}) } }),
 };
 
+// A hosted hive installs nothing onto its machine (hosted.js): only what is pulled over the network stays.
+if (require('../hosted').on()) for (const k of Object.keys(KINDS)) if (!require('../hosted').INSTALL_KINDS.includes(k)) delete KINDS[k];
+
 /** What the agent is told it may ask for. */
 function kinds() {
   return Object.entries(KINDS).map(([kind, k]) => ({ kind, label: k.label, verb: k.verb }));

@@ -24,6 +24,8 @@ function panelLayoutHidden() { return _panelLayout?.hidden || []; }
 
 function panelLayoutApply(r) {
   if (!Array.isArray(r?.groups) || !r.groups.length) return;
+  // Pages a hosted hive does not have (modules/hosted.js): out of the nav and the page, as if never shipped.
+  for (const t of r.absent || []) { if (NAV_TABS.includes(t)) NAV_TABS.splice(NAV_TABS.indexOf(t), 1); document.getElementById(`tab-${t}`)?.remove(); }
   const gone = NAV_TABS.filter(t => t.startsWith('view-') && !r.views.some(v => v.id === t));
   for (const t of gone) { NAV_TABS.splice(NAV_TABS.indexOf(t), 1); document.getElementById(`tab-${t}`)?.remove(); }
   for (const v of r.views) if (!NAV_TABS.includes(v.id)) NAV_TABS.push(v.id);

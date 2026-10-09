@@ -39,3 +39,23 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "the installer failed ($LASTEXITCODE)" }
           $code = curl.exe -sk -o NUL -w '%{http_code}' https://127.0.0.1:4343/login
           if ($code -ne '200') { throw "the installed panel answered $code" } else { "the installed panel answers" }
+  # The hive image (Dockerfile, deploy/README.md): built on Linux, never pushed, made a hive with deploy/hive.sh, asked
+  # once, backed up, restored into a second hive, and both removed.
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t doca-hive:ci .
+      - name: a hive from it
+        env: { DOCA_HIVE_IMAGE: 'doca-hive:ci', DOCA_HIVE_BACKUPS: '${{ runner.temp }}/hive-backups' }
+        run: |
+          bash deploy/hive.sh new hive-ci --port 4310
+          curl -ksf https://127.0.0.1:4310/api/branding | grep -q '"profile":"hosted"' && echo "the hive answers, hosted"
+          if docker exec hive-ci sh -c true 2>/dev/null; then echo "the image has a shell"; exit 1; fi
+          bash deploy/hive.sh backup hive-ci
+          bash deploy/hive.sh restore hive-ci-restored "$(ls -t "$DOCA_HIVE_BACKUPS"/*.tgz | head -1)" --port 4320
+          curl -ksf -o /dev/null https://127.0.0.1:4320/api/branding && echo "the restored hive answers"
+          bash deploy/hive.sh remove hive-ci --yes
+          bash deploy/hive.sh remove hive-ci-restored --yes
+          docker image ls doca-hive:ci --format 'image: {{.Size}}'

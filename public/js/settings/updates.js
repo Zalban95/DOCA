@@ -120,6 +120,7 @@ async function updatePull() {
 async function startupLoad() {
   const box = document.getElementById('startup-toggle');
   const st  = document.getElementById('startup-status');
+  if (hostedHive()) { if (st) st.textContent = HOSTED_SAY; if (box) box.disabled = true; return; }   // the deploy starts it (deploy/README.md)
   try {
     const s = await apiFetch('/api/startup');
     _startupMethod = s.method || null;
@@ -267,6 +268,7 @@ async function versionsLoad() {
     box.style.cssText = 'margin-top:12px;display:flex;flex-direction:column;gap:6px';
     log.after(box);
   }
+  if (hostedHive()) { box.innerHTML = '<span class="placeholder" style="font-size:12px">This hive\'s version is its image\'s: whoever runs it updates it (deploy/hive.sh).</span>'; return; }
   box.innerHTML = '<span class="placeholder pulse" style="font-size:12px">Reading versions…</span>';
   try {
     _versions = await apiFetch('/api/versions');

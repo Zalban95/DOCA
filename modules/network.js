@@ -22,7 +22,10 @@ const schema = () => require('./settings-schema');
 const lanAdmin = () => schema().value('network.lanAdmin') === true;
 
 /** Whether this request came from outside loopback and the tailnet. */
-const outside = req => listen.outside(req?.socket?.remoteAddress || req?.connection?.remoteAddress || '');
+const outside = req => {
+  const addr = req?.socket?.remoteAddress || req?.connection?.remoteAddress || '';
+  return listen.outside(addr) && !require('./hosted').fromHost(addr);   // a hosted hive's published port (hosted.js)
+};
 
 /** Whether a right is refused to this request because of where it came from. */
 const limited = (req, right) => MACHINE.has(right) && outside(req) && !lanAdmin();

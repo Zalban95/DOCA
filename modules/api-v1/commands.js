@@ -48,6 +48,9 @@ const COMMANDS = {
   'panel.restart': { title: 'Restart dashboard server', confirm: true, longRunning: false, params: {}, run: () => jobs.invokeHandler(update.handleRestart, {}) },
 };
 
+// A hosted hive's machine runs no stack, container, service or snapshot for its devices (hosted.js).
+if (require('../hosted').on()) for (const id of Object.keys(COMMANDS)) if (require('../hosted').COMMANDS.test(id)) delete COMMANDS[id];
+
 function ids() { return Object.keys(COMMANDS); }
 function get(id) { return COMMANDS[id] || null; }
 

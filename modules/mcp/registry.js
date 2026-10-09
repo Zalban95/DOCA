@@ -127,6 +127,7 @@ function get(id) {
  */
 function normalize(input, existing) {
   const transport = ['http', 'socket'].includes(input.transport) ? input.transport : 'stdio';
+  if (transport === 'stdio' && require('../hosted').on()) throw require('../hosted').refusal('A server run as a command on the hub');   // hosted.js
   const id = slug(input.id || input.label);
   if (!id) throw Object.assign(new Error('A name is required'), { status: 400 });
 
@@ -191,6 +192,7 @@ function withKey(spec) {
 async function start(id) {
   const spec = get(id);
   if (!spec) throw Object.assign(new Error('Unknown MCP server'), { status: 404 });
+  if (spec.transport === 'stdio' && require('../hosted').on()) throw require('../hosted').refusal('A server run as a command on the hub');   // hosted.js
 
   const existing = _clients.get(id);
   if (existing?.state === 'running') return existing;

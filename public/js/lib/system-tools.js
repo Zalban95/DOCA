@@ -74,6 +74,7 @@ let _systemToolsCache = null;
  */
 async function getSystemTools(force = false) {
   if (_systemToolsCache && !force) return _systemToolsCache;
+  if (typeof hostedHive === 'function' && hostedHive()) return (_systemToolsCache = []);   // installed by the image, not the panel (hosted.js)
   const data = await apiFetch('/api/system/tools');
   _systemToolsCache = data.tools || [];
   return _systemToolsCache;

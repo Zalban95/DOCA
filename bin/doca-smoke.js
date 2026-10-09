@@ -9,6 +9,7 @@
  * protocol with Node's own WebSocket.
  *
  *   npm run smoke            CHROME=/path/to/chrome npm run smoke
+ *   SMOKE_URL=https://127.0.0.1:4310 SMOKE_COOKIE='doca_session=…' npm run smoke   a panel already running (a hive)
  *   npm run smoke -- --core  the same with no licence: only the core is there, and nothing may call what is not
  *
  * The panel runs in a child process (`--serve`) that is killed at the end: node-pty's reader thread keeps a
@@ -26,14 +27,16 @@ async function main() {
   const browserPath = findBrowser();
   if (!browserPath) { console.log('smoke: no Chrome, Edge or Chromium found — set CHROME to run it. Skipped.'); return 0; }
   const core = process.argv.includes('--core');   // no licence (test/licence-trust.js preloads one for everything otherwise)
-  const child = spawn(process.execPath, [__filename, '--serve'], { stdio: ['ignore', 'pipe', 'inherit'], env: { ...process.env, ...(core ? { DOCA_TEST_NO_LICENCE: '1' } : {}) } });
-  const { base, cookie, data } = await new Promise((resolve, reject) => {
+  // A panel already running (deploy/hive.sh's, say): visited as it is, with the given sign-in, nothing started or removed.
+  const given = process.env.SMOKE_URL ? { base: process.env.SMOKE_URL.replace(/\/$/, ''), cookie: process.env.SMOKE_COOKIE || '' } : null;
+  const child = given ? null : spawn(process.execPath, [__filename, '--serve'], { stdio: ['ignore', 'pipe', 'inherit'], env: { ...process.env, ...(core ? { DOCA_TEST_NO_LICENCE: '1' } : {}) } });
+  const { base, cookie, data } = given || await new Promise((resolve, reject) => {
     let buf = '';
     child.stdout.on('data', d => { buf += d; const line = buf.split('\n').find(l => l.startsWith('{')); if (line) resolve(JSON.parse(line)); });
     child.on('exit', code => reject(new Error(`the panel did not start (exit ${code})`)));
   });
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-smoke-'));
-  const proc = spawn(browserPath, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...ALONE,
+  const proc = spawn(browserPath, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...ALONE, ...(given ? ['--ignore-certificate-errors'] : []),
     '--disable-gpu', '--window-size=1300,900', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
   const errors = [];
   const absent = new Set(), osBusy = new Set(), retried = new Set();
@@ -77,7 +80,7 @@ async function main() {
     return errors.length ? 1 : 0;
   } finally {
     proc.kill();
-    child.kill('SIGKILL');
+    child?.kill('SIGKILL');
     await sleep(500);
     // The killed panel's throwaway data. Best effort: on Windows its database can still be locked for a moment,
     // and a folder left in the temp directory is not a reason to fail a smoke that passed.

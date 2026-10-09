@@ -297,3 +297,6 @@ html[data-skin="points"] .adv-fold-label { font-family: var(--font-mono); font-s
 .vc-dot.on { background: var(--green); border-color: var(--green); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--green) 50%, transparent); }
 .vc-needs { flex-basis: 100%; padding-left: 15px; font-size: 10.5px; }
 .vc-call { padding-left: 10px; border-left: 2px solid var(--border); }
+
+/* A hosted hive (modules/hosted.js): forms that would add a program to the machine are not drawn. */
+html[data-hosted] .harness-add-row { display: none; }

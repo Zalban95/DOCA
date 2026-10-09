@@ -1,0 +1,47 @@
+# One DOCA hive (deploy/README.md): the hive image in the hosted profile, its data in one volume.
+#
+#   cp deploy/hive.env.example deploy/hive.env      then set DOCA_HIVE_IMAGE (and the rest if you like)
+#   docker compose --env-file deploy/hive.env -f deploy/compose.yml up -d
+#
+# The ports are on 127.0.0.1 by default: put the hive's address in front of it (an SSH tunnel, the tailnet, the coming
+# edge) rather than opening it to the internet. Inside, DOCA listens on the same two ports it is published on, so the
+# addresses it hands a browser — the panel's and the canvases' — are the ones that reach it.
+name: ${HIVE_NAME:-hive}
+
+services:
+  doca:
+    image: ${DOCA_HIVE_IMAGE:?set DOCA_HIVE_IMAGE in hive.env}
+    container_name: ${HIVE_NAME:-hive}
+    hostname: ${HIVE_NAME:-hive}
+    labels:
+      doca.hive: ${HIVE_NAME:-hive}
+    environment:
+      PORT: ${HIVE_PORT:-4310}
+      DOCA_TAILNET: ${DOCA_TAILNET:-}
+    ports:
+      - "${HIVE_BIND:-127.0.0.1}:${HIVE_PORT:-4310}:${HIVE_PORT:-4310}"
+      - "${HIVE_BIND:-127.0.0.1}:${HIVE_CANVAS_PORT:-4311}:${HIVE_CANVAS_PORT:-4311}"
+    volumes:
+      - data:/data
+    restart: unless-stopped
+    runtime: ${HIVE_RUNTIME:-runc}
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,size=256m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    cpus: ${HIVE_CPUS:-2}
+    mem_limit: ${HIVE_MEMORY:-2g}
+    pids_limit: ${HIVE_PIDS:-512}
+
+# Named as deploy/hive.sh names them, so its list, backup, restore and remove work on this hive too.
+volumes:
+  data:
+    name: ${HIVE_NAME:-hive}-data
+    labels:
+      doca.hive: ${HIVE_NAME:-hive}
+networks:
+  default:
+    name: ${HIVE_NAME:-hive}-net
+    labels:
+      doca.hive: ${HIVE_NAME:-hive}
