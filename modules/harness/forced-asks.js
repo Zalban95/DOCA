@@ -27,6 +27,10 @@ function of(name, args, summarize, ctx = {}) {
   }
   if (/^mcp__[\w-]+__browser_(click|type)$/.test(name) && args?.confirm === true)   // a computer's browser, or the person's own (H5.5)
     return { tool: name, keys: null, forced: true, summary: `${summarize(name, args)} — on a control that pays, buys, signs in or submits in a browser. Always asked, whatever the approval mode.`, inMission: DECIDES };
+  // Opening a house through a home node (home/node-tools.js): a lock's unlock, an alarm's disarm — the Home page asks for
+  // the password, the agent asks a person, every time and every mode, never "always".
+  if (/^mcp__[\w-]+__home_call$/.test(name) && require('../../clients/node/home-shared').guardedCall(args))
+    return { tool: name, keys: null, forced: true, summary: `${args.domain}.${args.service} on ${args.entity_id} — it opens the house. Always asked, whatever the approval mode.`, inMission: DECIDES };
   // Any device's tool called with confirm: true (TODO A4, audit 2026-10-06 cl 5): a phone's screen_press on "Pay now",
   // a desk's input on a submit — the device refuses such a press without confirm, and confirm is a person's yes, never
   // the agent's. Every mode, never "always".

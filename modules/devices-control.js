@@ -22,7 +22,7 @@
 const crypto = require('crypto');
 const store = require('./store');
 
-const FAMILIES = ['files', 'shell', 'processes', 'screen', 'input', 'apps', 'device', 'elevated', 'mcp'];
+const FAMILIES = ['files', 'shell', 'processes', 'screen', 'input', 'apps', 'device', 'elevated', 'mcp', 'home'];   // home: a home node (home/nodes.js)
 const ACTIONS = ['refresh', 'reconnect', 'ask', 'disconnect', 'revoke', 'restore'];
 const DOC = 'device-control';
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });

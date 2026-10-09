@@ -38,7 +38,7 @@ function stream(req, res) {
   const on = change => {
     if (change.topic === 'files') { if (host && mine.has(change.id)) send(change); return; }
     if (change.topic === 'screen') { if (own && change.id === own) send(change); return; }
-    if (change.topic === 'home') { if (require('../home').hears(screen, person, change.id)) send(change); return; }   // pages holding Home, entities their person may see
+    if (change.topic === 'home') { if (require('../home').hears(screen, person, change.id, change)) send(change); return; }   // pages holding Home, entities their person may see
     // A mission's machine question (harness/mission-asks.js): only its person's pages — a host's when it has no person.
     if (change.topic === 'ask') { if (change.personId ? person?.id === change.personId : host) send(change); return; }
     if (change.topic === 'device') { if (require('../devices-approval').hears(person, change)) send(change); return; }   // a new device: whoever may approve it

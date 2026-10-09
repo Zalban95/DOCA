@@ -15,7 +15,7 @@ if revoked. Then accept its offer once in the hub (MCP tab). From then on the hu
 (`files_list/read/write/mkdir/move/copy/delete`, inside your home folder only), **shell** (`shell_run`), **screen**
 (`screen_capture`), **processes** (`processes_list`, `processes_stop`), **apps** (`apps_open`: a web address, or a file
 in your home folder) and **device** (`device_info`, `device_notify`, `device_clipboard_read/_write`) — only what you
-granted, and the hub's Files tab browses it. Keep `families.js` and `sealed.js` beside `doca-client.js`.
+granted, and the hub's Files tab browses it. Keep the other files of this folder beside `doca-client.js`.
 
 Each family uses what the OS already has. macOS and Windows need nothing more; on Linux the screen wants `grim`
 (Wayland) or ImageMagick's `import` / `scrot` / `gnome-screenshot` (X11), the clipboard `wl-clipboard` or `xclip`,
@@ -40,3 +40,11 @@ it asks nothing: what you have not decided stays not lent. `disable` and `boot-s
 `update` brings it to the copy its hub ships (each file checked against the hub's sha256 before it replaces anything;
 the old copy kept in the config folder). `status` shows what it lends; `forget` removes its config (revoke the device
 in the hub too).
+
+**A home node.** On a machine that stays on in the house (a mini PC, a Pi, a NAS — not a laptop that sleeps),
+`doca-client home setup` asks Home Assistant's address and a long-lived token (HA: your profile → Security →
+Long-lived access tokens), checks them, and keeps them here in the config (0600) — the hub never receives the token.
+`run` then asks whether to lend **home** (`home_states`, `home_call`, `home_camera`) and lends over a socket it opens to
+the hub, so nothing in the house has to be reachable; accept its offer once in the hub's MCP tab and the hub's Home page
+shows the house. It keeps HA's connection on the home network, pushes each change up, and reconnects to both with a
+growing wait. `home` shows what is kept; `home forget` removes the token. `run --socket` lends any family that way.

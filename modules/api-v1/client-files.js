@@ -12,7 +12,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DIR = path.join(__dirname, '..', '..', 'clients', 'node');
-const FILES = ['doca-client.js', 'families.js', 'sealed.js', 'discover.js', 'boot.js', 'README.md'];
+const FILES = ['doca-client.js', 'families.js', 'sealed.js', 'discover.js', 'boot.js', 'update.js', 'socket.js', 'ws-lite.js', 'home.js', 'home-shared.js', 'README.md'];
 
 function manifest() {
   return { client: 'doca-client', version: require('../../package.json').version,

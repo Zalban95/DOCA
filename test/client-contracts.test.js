@@ -14,7 +14,8 @@ const table = protocol.slice(protocol.indexOf('| Family | Canonical tools |'), p
 
 test('the family table names every tool a shipped skill or doca-client uses for a device', () => {
   const named = new Set([...table.matchAll(/`([a-z]+_[a-z_]+|shell)`/g)].map(m => m[1]));
-  const client = fs.readdirSync(path.join(ROOT, 'clients/node')).filter(f => f.endsWith('.js'))
+  // home*.js speak Home Assistant's own words (device_class, device_id): not tools. The home family's names are families.js's.
+  const client = fs.readdirSync(path.join(ROOT, 'clients/node')).filter(f => f.endsWith('.js') && !/^home/.test(f))
     .map(f => fs.readFileSync(path.join(ROOT, 'clients/node', f), 'utf8')).join('\n');
   const used = new Set([...client.matchAll(/\b((?:files|screen|shell|processes|apps|device)_[a-z_]+)\b/g)].map(m => m[1]));
   for (const d of fs.readdirSync(path.join(ROOT, 'skills'))) {

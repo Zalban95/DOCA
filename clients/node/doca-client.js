@@ -5,11 +5,12 @@
  * doca-client — this machine joins the hive (docs/design/hive.md §4; TODO H6.2, H6.6). Linux, macOS and Windows,
  * Node 22, no dependency. It pairs with a hub, asks its person once per tool family, and lends the granted ones —
  * `files`, `shell`, and screen, processes, apps and device (families.js) — to the hub's agents as an MCP server the
- * hub connects to (PROTOCOL.md §22, §22.1). Keep families.js and sealed.js beside this file.
+ * hub connects to (PROTOCOL.md §22, §22.1). Keep the other files of its folder beside it.
  *
  *   doca-client pair https://hub:4242 641-598 [--name desk]     with a code from Settings → API Keys → Pair a device
  *   doca-client pair 'doca://pair?code=641598&host=hub:4242'      or the pairing link itself, in one step
- *   doca-client run [--grant files,shell] [--bind 100.x.y.z] [--port 18766]
+ *   doca-client run [--grant files,shell] [--bind 100.x.y.z] [--port 18766] [--socket]
+ *   doca-client home setup                                      a home node: Home Assistant's address and token, kept here (home.js)
  *   doca-client find                                            the hubs on this machine's tailnet
  *   doca-client update                                          the hub's copy of this client, checked, when it differs
  *   doca-client enable | disable | boot-status                     run by itself at boot (systemd user unit, launchd, Task Scheduler)
@@ -28,7 +29,7 @@ const https = require('https');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 
-const FAMILIES = ['files', 'shell', 'screen', 'processes', 'apps', 'device'];
+const FAMILIES = ['files', 'shell', 'screen', 'processes', 'apps', 'device', 'home'];
 const configDir = () => process.env.DOCA_CLIENT_DIR || (process.platform === 'win32' ? path.join(process.env.APPDATA || os.homedir(), 'doca-client') : path.join(os.homedir(), '.config', 'doca-client'));
 const configFile = () => path.join(configDir(), 'config.json');
 const load = () => { try { return JSON.parse(fs.readFileSync(configFile(), 'utf8')); } catch { return null; } };
@@ -129,9 +130,32 @@ const TOOLS = {
       child.on('error', e => { clearTimeout(t); resolve({ code: -1, stdout, stderr: e.message }); });
     }) },
 };
-Object.assign(TOOLS, require('./families')({ within }));   // screen, processes, apps, device (families.js)
+Object.assign(TOOLS, require('./families')({ within }), require('./home').TOOLS);   // screen, processes, apps, device (families.js); home (home.js)
 const sealed = require('./sealed');   // secrets the hub hands this machine for one use (PROTOCOL.md §22.3)
-const lent = cfg => Object.entries(TOOLS).filter(([, t]) => cfg.grants?.[t.family] === true && !(cfg.revoked || []).includes(t.family));
+const lent = cfg => Object.entries(TOOLS).filter(([, t]) => cfg.grants?.[t.family] === true && !(cfg.revoked || []).includes(t.family) && (t.family !== 'home' || !!cfg.home));
+
+/** One JSON-RPC request answered: the same whether it came over the listener (serve) or the socket (socket.js). */
+async function rpc(cfg, m) {
+  const ok = result => ({ jsonrpc: '2.0', id: m.id, result });
+  const text = (t, isError) => ok({ content: [{ type: 'text', text: t }], ...(isError ? { isError: true } : {}) });
+  if (m.method === 'initialize') return ok({ protocolVersion: m.params?.protocolVersion || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: `doca-client ${cfg.name}`, version: '1' } });
+  if (m.method === 'ping') return ok({});
+  if (m.method === 'tools/list') return ok({ tools: lent(cfg).map(([name, t]) => ({ name, description: t.description, inputSchema: { type: 'object', properties: Object.fromEntries(Object.entries(t.input).map(([k, ty]) => [k, { type: ty }])) } })) });
+  if (m.method === 'tools/call') {
+    // A secret the hub sealed for this machine (sealed.js, hidden from tools/list); and what waits while one is on the clipboard.
+    if (m.params?.name === 'secret_fill') { try { return text(JSON.stringify(await sealed.fill(cfg, m.params.arguments || {}))); } catch (e) { return text(e.message, true); } }
+    const held = sealed.blocks(m.params?.name);
+    if (held) return text(held, true);
+    const hit = lent(cfg).find(([name]) => name === m.params?.name);
+    if (!hit) return text(`${m.params?.name} is not lent by this machine (not granted, or revoked).`, true);
+    try {
+      const { image, ...rest } = (await hit[1].run(cfg, m.params.arguments || {})) || {};   // a picture is MCP image content
+      return ok({ content: [...(image ? [{ type: 'image', data: image.data, mimeType: image.mimeType }] : []), { type: 'text', text: JSON.stringify(rest) }] });
+    }
+    catch (e) { return text(e.message, true); }
+  }
+  return { jsonrpc: '2.0', id: m.id, error: { code: -32601, message: `Unknown method ${m.method}` } };
+}
 
 /** The MCP server the hub connects to: JSON-RPC over POST, the bearer secret required. */
 function serve(cfg, { bind, port }) {
@@ -143,24 +167,7 @@ function serve(cfg, { bind, port }) {
     req.on('end', async () => {
       let m; try { m = JSON.parse(raw); } catch { return reply(400, { error: 'not JSON' }); }
       if (m.id === undefined) return reply(202);
-      const ok = result => reply(200, { jsonrpc: '2.0', id: m.id, result });
-      if (m.method === 'initialize') return ok({ protocolVersion: m.params?.protocolVersion || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: `doca-client ${cfg.name}`, version: '1' } });
-      if (m.method === 'ping') return ok({});
-      if (m.method === 'tools/list') return ok({ tools: lent(cfg).map(([name, t]) => ({ name, description: t.description, inputSchema: { type: 'object', properties: Object.fromEntries(Object.entries(t.input).map(([k, ty]) => [k, { type: ty }])) } })) });
-      if (m.method === 'tools/call') {
-        // A secret the hub sealed for this machine (sealed.js, hidden from tools/list); and what waits while one is on the clipboard.
-        if (m.params?.name === 'secret_fill') { try { return ok({ content: [{ type: 'text', text: JSON.stringify(await sealed.fill(cfg, m.params.arguments || {})) }] }); } catch (e) { return ok({ content: [{ type: 'text', text: e.message }], isError: true }); } }
-        const held = sealed.blocks(m.params?.name);
-        if (held) return ok({ content: [{ type: 'text', text: held }], isError: true });
-        const hit = lent(cfg).find(([name]) => name === m.params?.name);
-        if (!hit) return ok({ content: [{ type: 'text', text: `${m.params?.name} is not lent by this machine (not granted, or revoked).` }], isError: true });
-        try {
-          const { image, ...rest } = (await hit[1].run(cfg, m.params.arguments || {})) || {};   // a picture is MCP image content
-          return ok({ content: [...(image ? [{ type: 'image', data: image.data, mimeType: image.mimeType }] : []), { type: 'text', text: JSON.stringify(rest) }] });
-        }
-        catch (e) { return ok({ content: [{ type: 'text', text: e.message }], isError: true }); }
-      }
-      return reply(200, { jsonrpc: '2.0', id: m.id, error: { code: -32601, message: `Unknown method ${m.method}` } });
+      reply(200, await rpc(cfg, m));
     });
   });
   return new Promise(resolve => server.listen(port, bind, () => resolve(server)));
@@ -174,12 +181,19 @@ function tailnetAddress() {
   return '127.0.0.1';
 }
 
+/** A line typed here; `secret` keeps it off the screen. */
+async function line(question, { secret = false } = {}) {
+  const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+  if (secret) rl._writeToOutput = s => { if (s.startsWith(question)) process.stdout.write(s); };   // the prompt, never what is typed
+  const a = await new Promise(r => rl.question(question, r));
+  rl.close();
+  if (secret) process.stdout.write('\n');
+  return a;
+}
+
 async function ask(question) {
   if (!process.stdin.isTTY) return false;
-  const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
-  const a = await new Promise(r => rl.question(`${question} [y/N] `, r));
-  rl.close();
-  return /^y(es)?$/i.test(a.trim());
+  return /^y(es)?$/i.test((await line(`${question} [y/N] `)).trim());
 }
 
 /**
@@ -271,7 +285,11 @@ async function approved(cfg, { signal, log = say } = {}) {
 }
 
 /** `log` is where its one line goes: the terminal for the command, a program's own logger when one embeds it. */
-async function run({ grant = null, bind = null, port = 18766, root = null, signal, log = say } = {}) {
+/**
+ * Lend what was granted until stopped. Over a listener the hub dials (the tailnet address), or — `socket`, or a home
+ * node (home.js) — over a socket this machine opens to the hub (socket.js), so nothing here has to be reachable.
+ */
+async function run({ grant = null, bind = null, port = 18766, root = null, socket = null, signal, log = say } = {}) {
   const cfg = load();
   if (!cfg?.token) throw new Error('Not paired. Run: doca-client pair <hub> <code>');
   if (cfg.revokedAt) throw Object.assign(new Error(`The hub revoked this machine (${cfg.revokedAt}); it lends nothing. Pair again to rejoin: doca-client pair <hub> <code>`), { code: 'revoked' });
@@ -280,7 +298,8 @@ async function run({ grant = null, bind = null, port = 18766, root = null, signa
   for (const f of FAMILIES) {
     if (grant) cfg.grants[f] = grant.includes(f);
     // With nobody at a terminal (at boot) an undecided family stays undecided — not lent, and asked next time someone is.
-    else if (typeof cfg.grants[f] !== 'boolean' && process.stdin.isTTY) cfg.grants[f] = await ask(`Lend this machine's ${f} to the hive's agents?`);
+    // `home` is asked once this machine keeps a Home Assistant (doca-client home setup).
+    else if (typeof cfg.grants[f] !== 'boolean' && process.stdin.isTTY && (f !== 'home' || cfg.home)) cfg.grants[f] = await ask(`Lend this machine's ${f} to the hive's agents?`);
   }
   save(cfg);
   const g = await request(cfg, 'PUT', '/api/v1/devices/self/grants', { grants: Object.fromEntries(FAMILIES.map(f => [f, cfg.grants[f] === true])) });
@@ -288,56 +307,44 @@ async function run({ grant = null, bind = null, port = 18766, root = null, signa
   // The key the hub seals secrets for this machine with (sealed.js); a hub older than sealed secrets has none.
   const sk = await request(cfg, 'GET', '/api/v1/mcp/self/seal');
   if (sk.status === 200 && sk.body?.key) { cfg.sealKey = sk.body.key; save(cfg); }
-  const addr = bind || tailnetAddress();
-  const server = await serve(cfg, { bind: addr, port });
-  const url = `http://${addr}:${server.address().port}/mcp`;
-  const headers = { Authorization: `Bearer ${cfg.secret}` };
-  const mine = await request(cfg, 'GET', '/api/v1/mcp/self');
-  const sent = mine.status === 200 ? await request(cfg, 'PATCH', '/api/v1/mcp/self', { url, headers })
-    : await request(cfg, 'POST', '/api/v1/mcp/offer', { label: `${cfg.name} (doca-client)`, url, headers, tools: lent(cfg).map(([n]) => n), note: `${process.platform} machine lending ${FAMILIES.filter(f => cfg.grants[f]).join(' and ') || 'nothing yet'}` });
-  if (sent.status >= 400) log(refusal(cfg, mine.status === 200 ? 'its new address' : 'its offer', sent));
-  else log(`✓ ${cfg.name} serves ${lent(cfg).length} tool(s) at ${url}${mine.status === 200 ? '' : ' — accept its offer in the hub (MCP tab) once'}.`);
+  const homeLent = lent(cfg).some(([, t]) => t.family === 'home');
+  const viaSocket = socket ?? (cfg.transport === 'socket' || homeLent);
   const stopped = new AbortController();
   if (signal) signal.addEventListener('abort', () => stopped.abort(), { once: true });
-  /** Stop lending: the hub's stream and this listener close. */
-  const stop = () => new Promise(resolve => { stopped.abort(); sealed.disarm(); server.closeAllConnections?.(); server.close(() => resolve()); });
+  let server = null, link = null, url = null;
+  const off = [];
+  if (homeLent) {
+    const home = require('./home');
+    home.start(cfg);
+    const push = c => link?.notify('notifications/doca/home', c);
+    home.events.on('change', push);
+    off.push(() => { home.events.off('change', push); home.stop(); });
+  }
+  if (viaSocket) {
+    link = require('./socket').dial(cfg, { handle: m => rpc(cfg, m), tls: cfg.hub.startsWith('https:') ? tlsFor(cfg, false) : {}, signal: stopped.signal, log, onRevoked: () => onRevoked() });
+  } else {
+    const addr = bind || tailnetAddress();
+    server = await serve(cfg, { bind: addr, port });
+    url = `http://${addr}:${server.address().port}/mcp`;
+  }
+  const where = viaSocket ? { transport: 'socket' } : { url, headers: { Authorization: `Bearer ${cfg.secret}` } };
+  const mine = await request(cfg, 'GET', '/api/v1/mcp/self');
+  const sent = mine.status === 200 ? await request(cfg, 'PATCH', '/api/v1/mcp/self', where)
+    : await request(cfg, 'POST', '/api/v1/mcp/offer', { label: `${cfg.name} (doca-client)`, ...where, tools: lent(cfg).map(([n]) => n), note: `${process.platform} machine lending ${FAMILIES.filter(f => cfg.grants[f]).join(' and ') || 'nothing yet'}` });
+  if (sent.status >= 400) log(refusal(cfg, mine.status === 200 ? (viaSocket ? 'its socket' : 'its new address') : 'its offer', sent));
+  else log(`✓ ${cfg.name} serves ${lent(cfg).length} tool(s) ${viaSocket ? 'over its own connection to the hub' : `at ${url}`}${mine.status === 200 ? '' : ' — accept its offer in the hub (MCP tab) once'}.`);
+  /** Stop lending: the hub's stream, the socket or the listener, and the home link close. */
+  const stop = () => new Promise(resolve => { stopped.abort(); sealed.disarm(); for (const f of off) f(); link?.stop(); if (!server) return resolve(); server.closeAllConnections?.(); server.close(() => resolve()); });
   // Revoked by the hub: stop lending at once, and remember it, so a restart (at boot) does not lend again either.
-  const onRevoked = () => { cfg.revokedAt = new Date().toISOString(); save(cfg); log(`✗ The hub revoked ${cfg.name}: it lends nothing now. Pair again to rejoin.`); return stop(); };
+  const onRevoked = () => { if (cfg.revokedAt) return; cfg.revokedAt = new Date().toISOString(); save(cfg); log(`✗ The hub revoked ${cfg.name}: it lends nothing now. Pair again to rejoin.`); return stop(); };
   follow(cfg, { signal: stopped.signal, onRevoked });
-  return { server, url, cfg, stop };
+  return { server, url, link, cfg, stop };
 }
 
-/**
- * Update from the hub this client is paired with (TODO H6.5; api-v1/client-files.js): its manifest lists each file
- * with a sha256; what differs here is fetched as bytes over the pinned connection, checked against that sha256, and
- * only then written — the previous copy kept in the config folder. Returns what changed.
- */
-async function update({ dir = __dirname } = {}) {
-  const cfg = load();
-  if (!cfg) throw new Error('Not paired: pair first, then update from that hub.');
-  const m = await request(cfg, 'GET', '/api/v1/clients/node');
-  if (m.status !== 200) throw new Error(`The hub has no client channel (${m.status}); it may be older than 2.191.0.`);
-  const sha = b => crypto.createHash('sha256').update(b).digest('hex');
-  const fetched = [];
-  for (const f of m.body.files) {
-    const here = path.join(dir, f.name);
-    if (fs.existsSync(here) && sha(fs.readFileSync(here)) === f.sha256) continue;
-    const res = await request(cfg, 'GET', `/api/v1/clients/node/${encodeURIComponent(f.name)}`, undefined, { stream: true });
-    const bytes = Buffer.concat(await new Promise((resolve, reject) => { const parts = []; res.on('data', d => parts.push(d)); res.on('end', () => resolve(parts)); res.on('error', reject); }));
-    if (res.statusCode !== 200 || sha(bytes) !== f.sha256) throw new Error(`${f.name} did not arrive intact; nothing was replaced.`);
-    fetched.push({ name: f.name, bytes });
-  }
-  const keep = path.join(configDir(), 'previous');
-  for (const f of fetched) {
-    const here = path.join(dir, f.name);
-    if (fs.existsSync(here)) { fs.mkdirSync(keep, { recursive: true }); fs.copyFileSync(here, path.join(keep, f.name)); }
-    fs.writeFileSync(`${here}.new`, f.bytes);
-    fs.renameSync(`${here}.new`, here);
-  }
-  return { version: m.body.version, changed: fetched.map(f => f.name) };
-}
+/** Update from the hub this client is paired with (update.js). */
+const update = opts => require('./update')({ load, request, configDir })(opts);
 
-module.exports = { refusal, pair, fromLink, update, run, serve, load, request, approved, TOOLS, FAMILIES, tailnetAddress, configFile };
+module.exports = { refusal, pair, fromLink, update, run, serve, rpc, load, save, request, approved, line, TOOLS, FAMILIES, tailnetAddress, configFile };
 
 if (require.main === module) {
   const [verb, ...rest] = process.argv.slice(2);
@@ -346,7 +353,7 @@ if (require.main === module) {
     if (verb === 'pair') { const c = await pair(rest[0], rest[1], { name: flag('name') || os.hostname() }); say(`✓ Paired with ${c.hub} as ${c.name} (${c.deviceId}).${c.approval?.state === 'pending' ? ` ${c.approval.message || 'It waits for approval.'}` : ''} Next: doca-client run`); }
     else if (verb === 'run') {
       // Revoked is a finished state, not a failure: exit 0, so a boot entry (Restart=on-failure) does not loop on it.
-      try { await run({ grant: flag('grant') ? flag('grant').split(',') : null, bind: flag('bind'), port: Number(flag('port')) || 18766 }); }
+      try { await run({ grant: flag('grant') ? flag('grant').split(',') : null, bind: flag('bind'), port: Number(flag('port')) || 18766, socket: rest.includes('--socket') ? true : rest.includes('--http') ? false : null }); }
       catch (e) { if (e.code !== 'revoked') throw e; say(`✗ ${e.message}`); }
     }
     else if (verb === 'find') {
@@ -361,8 +368,15 @@ if (require.main === module) {
       const r = require('./boot').boot(verb === 'boot-status' ? 'status' : verb);
       say(`${r.ok ? '✓' : '✗'} ${r.method}: ${verb === 'enable' ? (r.ok ? 'doca-client run will start by itself' : r.out) : verb === 'disable' ? 'no longer starts by itself' : r.ok ? 'starts by itself' : 'does not start by itself'}${r.note ? `\n  ${r.note}` : ''}`);
     }
-    else if (verb === 'status') { const c = load(); say(c ? JSON.stringify({ hub: c.hub, deviceId: c.deviceId, name: c.name, grants: c.grants, revoked: c.revoked || [] }, null, 2) : 'Not paired.'); }
+    else if (verb === 'home') {
+      const c = load();
+      if (!c?.token) throw new Error('Pair first (doca-client pair <hub> <code>), then set up the home.');
+      if (rest[0] === 'setup') await require('./home').setup(c, { ask: line, save, log: say });
+      else if (rest[0] === 'forget') { delete c.home; c.grants.home = false; save(c); say('Forgotten: this machine keeps no Home Assistant token now and lends no home.'); }
+      else say(c.home ? `Home Assistant at ${c.home.url} (kept ${c.home.at}); lent: ${c.grants?.home === true ? 'yes' : 'no'}. doca-client home setup | home forget` : 'No home here. doca-client home setup');
+    }
+    else if (verb === 'status') { const c = load(); say(c ? JSON.stringify({ hub: c.hub, deviceId: c.deviceId, name: c.name, grants: c.grants, revoked: c.revoked || [], transport: c.transport || 'http', home: c.home ? c.home.url : null }, null, 2) : 'Not paired.'); }
     else if (verb === 'forget') { fs.rmSync(configFile(), { force: true }); say('Forgotten. (The hub still lists this device until you revoke it there.)'); }
-    else say('usage: doca-client find | update | enable | disable | boot-status | pair <hub> <code> [--name N] | pair <doca://pair link> | run [--grant files,shell] [--bind IP] [--port N] | status | forget');
+    else say('usage: doca-client find | update | enable | disable | boot-status | pair <hub> <code> [--name N] | pair <doca://pair link> | run [--grant files,shell] [--bind IP] [--port N] [--socket] | home setup | home forget | status | forget');
   })().catch(e => { console.error(`✗ ${e.message}`); process.exit(1); });
 }

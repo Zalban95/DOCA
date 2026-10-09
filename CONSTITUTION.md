@@ -224,8 +224,20 @@ words.)*
   person's password again, however recently they signed in. (2026-10-07)
 - **S5 Admin and developer mode are internal.** Experiments live under developer mode, which is an admin's;
   admin is for the repository's owners, independent testers and private copies. A customer's install never meets
-  the experiments. Whether a licensed reseller gets admin to personalise the dashboard for their own customers is
-  open until licensing is designed (editions are the likely way). (2026-10-05/06)
+  the experiments. Licensing decides the rest (3.0): one build for every hive, a licence from the project's own
+  licence server, and the licence says which features exist there — an unlicensed one is absent, not refused.
+  Experiments, developer mode and evaluations are never in a customer's edition. What a customer's hive learns — a
+  specialist, a skill, a recipe, a pack — reaches the project's libraries only with that customer's permission
+  (sharing, §0), and from there other hives may take it. (2026-10-05/06, 10-09)
+- **S15 Development and production.** The project's own development hive is where DOCA is worked on: its admin —
+  and the models W2 lists — may change DOCA itself from inside, with few safeguards. Every production hive — a
+  customer's, on our servers or theirs, and the demo and beta sandboxes — keeps every safety for everyone, its admin
+  included: its people use the settings their levels allow, but nobody, and no agent, changes DOCA itself — its code,
+  its charter or its guards — there; inside a person's projects,
+  Auto and Unattended work as anywhere. Production hives take our releases from the update channel, at a time their
+  admin chooses, holding running work as S10 says. Their safety follows common practice, not a sign-in at every
+  step: a request from someone holding a right carries that right to the work it starts; the licence's seat and
+  device limits apply in production only. (2026-10-09)
 - **S6 The outside world is read in quarantine** — by a reader with nothing to act with, through guards that must
   all agree it is clean. (2026-09-26)
 - **S7 Recovery belongs to the host machine**, not to reset buttons in the panel; the first user is created from
@@ -265,7 +277,8 @@ words.)*
 - **W3 What stops anyone.** Stop and ask for: a product choice the principles do not answer; a change to `/api/v1`,
   a scope or a caps field (three shipped apps depend on it); money, credentials or hardware only the admin can provide
   for the development work (the product's own spending is S12); work only the admin's other machines can do; a
-  licence or the product's name (both still open); a file in S11. Everything clear goes ahead. (2026-10-04, 10-06)
+  the product's name or the licence DOCA's own code is published under (both still open — proprietary until the admin
+  decides; customers' licences are S5's); a file in S11. Everything clear goes ahead. (2026-10-04, 10-06)
 - **W4 Check coherence before release** — the change's logic against the rest of the project, and every surface
   that says what it does (AGENTS.md, PROTOCOL.md, the skills, TODO) — with the review and design skills available
   to you. (2026-09-26, 10-06)

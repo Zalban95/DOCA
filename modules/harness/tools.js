@@ -104,7 +104,8 @@ async function call(name, args, disabled = [], ctx = {}) {
   const held = isMcp && require('../computers/takeover').before(name);   // a person is driving that computer: DOCA's words, not framed
   if (held) return held;
   const conn = !isMcp && require('../connectors/tools').is(name);
-  const tool = isMcp ? { run: a => mcp.call(name, a) } : conn ? { run: (a, c) => require('../connectors/tools').call(name, a, c) } : TOOLS.find(t => t.name === name);
+  const tool = isMcp ? { run: async (a, c) => (await require('../home/node-tools').call(name, a, c)) ?? mcp.call(name, a) } :   // a home node's: as the Home page would (home/node-tools.js)
+    conn ? { run: (a, c) => require('../connectors/tools').call(name, a, c) } : TOOLS.find(t => t.name === name);
   if (!tool) return `Error: no tool named "${name}".`;
   let out;
   try {
