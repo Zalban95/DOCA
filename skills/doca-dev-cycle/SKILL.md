@@ -1,6 +1,7 @@
 ---
 name: doca-dev-cycle
 description: Implement a change on DOCA or one of its apps (DocaDesk, DocaMobile, DocaWear) from a TODO line to a release — branch, build, test, commit, then merge, tag and push (asking first unless the admin's Releasing setting lists your model). Use for a scout suggestion or any TODO item.
+triggers: [release doca, todo line, docadesk, docamobile, docawear, rilascia]
 ---
 
 # From a TODO line to a release

@@ -1,6 +1,7 @@
 ---
 name: on-my-phone
 description: Answer someone who has only a phone (or asks to use DOCA from their phone, without a computer) — in plain words, what the phone is enough for and how to start. Use when the person asks about using a phone, a mobile, an app, or not having a computer.
+triggers: [only a phone, from my phone, dal telefono, solo il telefono]
 ---
 
 # Using DOCA from a phone

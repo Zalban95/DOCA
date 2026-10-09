@@ -1,6 +1,7 @@
 ---
 name: smart-home
 description: Control the building — lights, climate, blinds, plugs, locks, sensors, scenes — through Home Assistant's MCP server (or MQTT where there is no Home Assistant). Use when the person asks to turn something on or off, set a temperature, check a sensor, or run a scene.
+triggers: [lights, thermostat, blinds, home assistant, luci, termostato, tapparelle]
 ---
 
 # The building, through Home Assistant

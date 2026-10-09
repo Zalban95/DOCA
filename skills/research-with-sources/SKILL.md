@@ -1,6 +1,7 @@
 ---
 name: research-with-sources
 description: Find something out on the web and answer with sources — where each fact came from. Use when the person asks to look up, search, research or compare the best options (a model, a product, a library), check a fact, cite sources, or find documentation.
+triggers: [research, look up, compare, sources, cerca, confronta, fonti]
 ---
 
 # Research, with sources

@@ -1,6 +1,7 @@
 ---
 name: hosted-voice
 description: Answer aloud in a voice from a service — ElevenLabs, OpenAI, Cartesia or Google — when a person asks for one ("use an ElevenLabs voice", "I want a nicer voice", "can it whisper"). Only when asked; never suggest a paid voice unprompted.
+triggers: [elevenlabs, nicer voice, whisper voice, voce più bella, cartesia]
 ---
 
 # A voice from a service
