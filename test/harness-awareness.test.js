@@ -1100,3 +1100,26 @@ test('the charter names rules by what they say, and the repository rules reach o
   assert.match(providers.charterFor(['tell_device']), /## Safety[\s\S]*## Understanding what is asked/, 'everything else stays');
   assert.match(providers.SAFETY_CHARTER, /25\. Size the work by what can be undone[\s\S]*reaches outside this hive/);
 });
+
+test('the charter is never reworded for a reader: rules are sent as written, or left out of a turn that cannot break them', () => {
+  const { charterFor, SAFETY_CHARTER } = require('../modules/harness/providers');
+  const rules = text => Object.fromEntries([...text.matchAll(/^(\d+)\. (.*)$/gm)].map(m => [m[1], m[2]]));
+  const all = rules(SAFETY_CHARTER);
+  assert.equal(Object.keys(all).length, 28);
+  const readers = [['memory_search', 'recall_conversations', 'work_chats', 'work_plan', 'mission_plan'],
+    ['read_file', 'list_dir', 'search_files', 'scout_report', 'http_fetch', 'web_search'], ['tell_device', 'memory_write'],
+    ['shell'], ['remind', 'today'], ['mcp__desk__screen_capture']];
+  for (const held of readers) {
+    const got = rules(charterFor(held));
+    for (const [n, text] of Object.entries(got)) assert.equal(text, all[n], `rule ${n} is reworded for ${held}`);
+    for (const n of ['1', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '24', '25', '26', '27', '28'])
+      assert.ok(got[n], `rule ${n} reaches every turn (missing for ${held})`);
+  }
+  // A turn that only reads and coordinates cannot make a change: 2–4 are left out — and nothing else.
+  assert.deepEqual(Object.keys(rules(charterFor(readers[0]))).filter(n => !['2', '3', '4'].includes(n)).length, 28 - 3 - 8);
+  assert.ok(!rules(charterFor(readers[1]))['2']);
+  // Anything that changes something keeps them — a tool not on the reading list counts as one that changes.
+  for (const held of [['memory_write'], ['remind'], ['mcp__desk__screen_capture'], ['recipe']])
+    for (const n of ['2', '3', '4']) assert.ok(rules(charterFor(held))[n], `rule ${n} for ${held}`);
+  assert.equal(charterFor(['shell', 'git']), SAFETY_CHARTER, 'a turn that holds everything gets it whole');
+});
