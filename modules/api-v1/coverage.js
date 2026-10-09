@@ -39,6 +39,7 @@ const COVERAGE = {
   'system-one': { panel: 'the System 1 decision model is the hub\'s own (experiment systemOne): its service is a process on this machine, its decisions are made inside turns a device already starts' },
   wakeword: { v1: ['/wakeword'], note: 'a device downloads kept models and the runtime; training stays the hub\'s' },
   ambient: { v1: ['/ambient'], note: 'the person\'s day; the screen itself is the panel\'s page' },
+  meetings: { panel: 'a room is a page: a device opens its link (/meet/<id>) in its web view' },
   notices: { v1: ['/events'], note: 'a device gets a notice as an `alert` on its event stream; this is the panel\'s own list of them' },
   home: { panel: 'the Home page, drawn from Home Assistant by the hub (home/); a device\'s own /api/v1 home is a later step — capability-gaps.md, home' },
   decisions: { v1: ['/decisions'] },

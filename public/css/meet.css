@@ -1,0 +1,82 @@
+/* Meetings: the room over the panel (js/meet/*), the Meetings page (js/meetings.js), a ringing call. Colours from the
+   theme; the pictures sit on black whatever the theme, as a video does. */
+.meet { position: fixed; inset: 0; z-index: 900; display: flex; flex-direction: column; background: var(--bg); color: var(--text); }
+.meet-red { display: flex; align-items: center; gap: 10px; padding: 6px 14px; background: var(--red); color: #fff; font-weight: 600; font-size: 13px; }
+.meet-red .btn { margin-left: auto; background: rgba(0,0,0,.25); color: #fff; border-color: rgba(255,255,255,.5); }
+.meet-red .btn + .btn { margin-left: 6px; }
+.meet-head { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+.meet-title { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meet-id { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.meet-count { font-size: 12px; color: var(--muted); }
+.meet-head-acts { margin-left: auto; display: flex; gap: 6px; }
+.meet-body { flex: 1; display: flex; gap: 10px; padding: 10px; min-height: 0; }
+.meet-stage { position: relative; flex: 3; min-width: 0; background: #000; border-radius: var(--radius); overflow: hidden; outline: none; }
+.meet-stage video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.meet-controlling { box-shadow: 0 0 0 2px var(--amber); }
+.meet-controlling video { cursor: crosshair; }
+.meet-stage-cap { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 8px; align-items: center; padding: 4px 10px; border-radius: 6px;
+  background: rgba(0,0,0,.6); color: #fff; font-size: 12px; }
+.meet-pointers { position: absolute; inset: 0; pointer-events: none; }
+.meet-pointer { position: absolute; transform: translate(-2px, -2px); padding: 2px 6px; border-radius: 4px; background: var(--amber); color: #000;
+  font-size: 12px; font-weight: 600; white-space: nowrap; transition: left .06s linear, top .06s linear; }
+.meet-pointer.meet-click { box-shadow: 0 0 0 4px rgba(255,190,60,.45); }
+.meet-grid { flex: 2; display: grid; gap: 8px; align-content: center; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); min-width: 0; overflow: auto; }
+.meet-has-stage .meet-grid { flex: 1; grid-template-columns: 1fr; align-content: start; max-width: 300px; }
+.meet-tile { position: relative; aspect-ratio: 16 / 9; background: #111; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.meet-tile video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.meet-me video { transform: scaleX(-1); }
+.meet-lost { opacity: .5; }
+.meet-name { position: absolute; left: 8px; bottom: 6px; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,.55); color: #fff; font-size: 12px; }
+.meet-side { display: none; width: 300px; flex-direction: column; gap: 8px; border-left: 1px solid var(--border); padding-left: 10px; min-height: 0; }
+.meet-chat-open .meet-side { display: flex; }
+.meet-people { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--muted); }
+.meet-people span { padding: 2px 8px; border: 1px solid var(--border); border-radius: 10px; }
+.meet-chat { flex: 1; overflow: auto; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+.meet-say { display: flex; gap: 6px; }
+.meet-say input { flex: 1; min-width: 0; }
+.meet-quiet { color: var(--muted); font-size: 12px; }
+.meet-ctl { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 10px; border-top: 1px solid var(--border); }
+.meet-off { opacity: .6; text-decoration: line-through; }
+.meet-on { border-color: var(--red); color: var(--red); }
+.meet-hidden { display: none; }
+.meet-note, .meet-offer { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%); background: var(--raised, var(--surface)); color: var(--text);
+  border: 1px solid var(--border2, var(--border)); border-radius: var(--radius); padding: 10px 14px; box-shadow: 0 8px 30px rgba(0,0,0,.35); z-index: 2; font-size: 13px; }
+.meet-offer { display: flex; flex-direction: column; gap: 8px; min-width: 300px; }
+.meet-offer label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+/* Folded: a tile in the corner, the panel usable beside it. */
+.meet-folded { inset: auto auto 16px 16px; width: 320px; height: auto; border: 1px solid var(--border2, var(--border)); border-radius: var(--radius);
+  box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+.meet-folded .meet-body { padding: 6px; }
+.meet-folded .meet-grid { grid-template-columns: 1fr; max-width: none; }
+.meet-folded .meet-grid .meet-tile:not(:nth-child(2)), .meet-folded .meet-side, .meet-folded .meet-count, .meet-folded .meet-id { display: none; }
+.meet-folded .meet-grid .meet-tile:only-child { display: block; }
+.meet-folded .meet-stage { display: none; }
+.meet-folded .meet-ctl { padding: 6px; gap: 4px; }
+.meet-folded .meet-ctl .btn { font-size: 11px; padding: 3px 7px; }
+.meet-ring { position: fixed; right: 16px; bottom: 90px; z-index: 950; display: flex; gap: 10px; align-items: center; padding: 12px 14px; background: var(--raised, var(--surface));
+  border: 1px solid var(--accent); border-radius: var(--radius); box-shadow: 0 10px 40px rgba(0,0,0,.4); animation: meet-ring 1.2s ease-in-out infinite alternate; }
+@keyframes meet-ring { from { box-shadow: 0 0 0 0 var(--accent); } to { box-shadow: 0 0 0 6px transparent; } }
+/* The Meetings page */
+.mt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.mt-people { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 8px; }
+.mt-person { font-size: 13px; display: flex; gap: 4px; align-items: center; }
+.mt-row-in { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.mt-input { display: block; width: 100%; margin-top: 8px; }
+.mt-row-in .mt-input { width: auto; flex: 1; min-width: 140px; margin-top: 0; }
+.mt-row-in .mt-minutes { flex: 0 0 80px; min-width: 0; }
+.mt-row { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); }
+.mt-row:first-of-type { border-top: 0; }
+.mt-main { flex: 1; min-width: 0; }
+.mt-title { font-weight: 600; }
+.mt-state { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+.mt-sub, .mt-how { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.mt-acts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.mt-cancelled .mt-title { text-decoration: line-through; color: var(--muted); }
+@media (max-width: 700px) {
+  .meet-body { flex-direction: column; }
+  .meet-has-stage .meet-grid { max-width: none; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  .meet-side { width: auto; border-left: 0; padding-left: 0; max-height: 40%; }
+  .mt-row { flex-direction: column; align-items: stretch; }
+  .mt-acts { justify-content: flex-start; }
+  .meet-folded { width: calc(100% - 32px); }
+}
