@@ -28,6 +28,7 @@ const COVERAGE = {
   recipes: { v1: ['/recipes'] },
   schedules: { v1: ['/schedules'] },
   face: { v1: ['/face'] },
+  admin: { panel: HOST, note: 'Hub → Admin: the hive at a glance for its admin; each line links to where it is handled' },
   archive: { v1: ['/harness/sessions/{id}/archive', '/harness/missions/{id}/archive'], note: 'projects and computers are the machine\'s', panel: HOST },
   live: { v1: ['/events'], note: 'a device already hears turns, missions and work chats change on its event stream; watching a folder is the machine\'s' },
   packs: { v1: ['/packs'], note: 'between hubs; making and bringing in packs is a host\'s' },

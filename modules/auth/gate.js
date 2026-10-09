@@ -122,10 +122,10 @@ function gate(req, res, next) {
     if (!sameOrigin(req))
       return res.status(403).json({ code: 'browser_only',
         error: 'This route applies a change and expects a click in the dashboard. Open the panel in a browser and do it there.' });
-    // Every change, attributable. The body is not logged: it can hold passwords and keys.
-    res.on('finish', () => authStore.audit({ orgId: who.orgId, actorId: who.user.id, action: `${method} ${p}`, status: res.statusCode }));
     // An important or safety switch: the password, for this change, however recent the sign-in (guarded.js; S14).
     const sw = require('./guarded').switchOf(req, p);
+    // Every change, attributable — a switch by its name (Hub → Admin's Security card). The body is not logged: it can hold passwords and keys.
+    res.on('finish', () => authStore.audit({ orgId: who.orgId, actorId: who.user.id, action: `${method} ${p}`, status: res.statusCode, ...(sw ? { switch: sw } : {}) }));
     if (sw) return confirmSwitch(req, res, next, sw);
   }
   next();

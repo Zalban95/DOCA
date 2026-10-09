@@ -71,6 +71,23 @@ async function auditTail(n = 100) {
     action: r.action, ...(r.detail != null ? { detail: r.detail } : {}), ...(r.data ? JSON.parse(r.data) : {}) }));
 }
 
+/**
+ * Entries since `since` (ISO) whose action is one of `actions`, or — with `switched` — that changed a guarded switch
+ * (gate.js records which one), newest first, at most `limit`. Hub → Admin's Security card reads it (admin/security.js).
+ */
+async function auditFind({ since, actions = [], switched = false, limit = 500 } = {}) {
+  await auditImported();
+  const or = [];
+  const args = [String(since || '1970-01-01')];
+  if (actions.length) { or.push(`action IN (${actions.map(() => '?').join(',')})`); args.push(...actions.map(String)); }
+  if (switched) or.push("data LIKE '%\"switch\":%'");
+  if (!or.length) return [];
+  const rows = await db().all(`SELECT at, actor_id, action, detail, data FROM audit WHERE tenant_id = 'local' AND at >= ? AND (${or.join(' OR ')}) ORDER BY at DESC, id DESC LIMIT ?`,
+    [...args, Math.max(1, Number(limit) || 500)]);
+  return rows.map(r => ({ at: r.at, ...(r.actor_id ? { actorId: r.actor_id } : {}), action: r.action,
+    ...(r.detail != null ? { detail: r.detail } : {}), ...(r.data ? JSON.parse(r.data) : {}) }));
+}
+
 const ACCOUNT_QUERIES = ['userCount', 'userById', 'userByEmail', 'createUser', 'updateUser',
   'defaultOrg', 'createOrg', 'membership', 'membershipsOf', 'addMembership',
   'createSession', 'sessionByHash', 'updateSession', 'deleteSession', 'deleteSessionsOf', 'deleteSessionsOfDevice', 'pruneSessions',
@@ -78,6 +95,6 @@ const ACCOUNT_QUERIES = ['userCount', 'userById', 'userByEmail', 'createUser', '
 
 module.exports = {
   ...Object.fromEntries(ACCOUNT_QUERIES.map(q => [q, (...a) => accounts()[q](...a)])),
-  audit, auditTail,
+  audit, auditTail, auditFind,
   _resetAuditImport: () => { _auditImported = null; },   // tests only
 };
