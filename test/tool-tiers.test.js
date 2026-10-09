@@ -39,9 +39,9 @@ test('by default: core in full, the rest named by kit; a message, a call or tool
   ({ offered } = tiers.split(held(w.id), { sessionId: w.id }));
   assert.ok(offered.some(s => s.function.name === 'schedule'));
 
-  assert.equal(tiers.heldNotSent('memory_list', []), true, 'held but not sent still runs when called');
-  tiers.afterCall(w.id, null, 'memory_list', 'ok', []);
-  assert.ok(tiers.attached(w.id).has('memory_list'), 'and stays loaded');
+  assert.equal(tiers.heldNotSent('memory_flag', []), true, 'held but not sent still runs when called');
+  tiers.afterCall(w.id, null, 'memory_flag', 'ok', []);
+  assert.ok(tiers.attached(w.id).has('memory_flag'), 'and stays loaded');
   tiers.afterCall(w.id, null, 'skill', 'android-app: … uses computer …', [], { action: 'list' });
   assert.ok(!tiers.attached(w.id).has('computer'), 'a list of skills loads nothing: the prompt stays the same bytes');
   tiers.afterCall(w.id, null, 'skill', 'Step 2: keep it with `pack` {save}.', [], { action: 'read' });

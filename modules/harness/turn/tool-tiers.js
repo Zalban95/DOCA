@@ -18,7 +18,7 @@
 const CORE = new Set([
   'work_chats', 'work_plan', 'agent_dispatch', 'agent_results', 'mission_plan', 'scout_report',
   'read_file', 'write_file', 'list_dir', 'search_files', 'shell', 'git', 'project', 'repo_rules',
-  'memory_search', 'memory_write', 'recall_conversations', 'skill', 'recipe',
+  'memory_search', 'memory_list', 'memory_write', 'recall_conversations', 'skill', 'recipe',
   'settings_read', 'settings_propose', 'panel_layout', 'install_propose', 'system_status', 'doca_clients',
   'ask_device', 'tell_device', 'show_media', 'form_fill', 'effort',
   'http_fetch', 'api_call', 'web_search', 'research_docs', 'mcp_connect', 'tools_more',
