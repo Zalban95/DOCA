@@ -113,8 +113,9 @@ function _mlDraw(page) {
   };
   sync(page.querySelector('.ml-front'), front, true);
   sync(page.querySelector('.ml-back'), back, false);
-  if (!tiles.length) page.querySelector('.ml-front').innerHTML = '<div class="placeholder">No agent machine, served page, running VM or VNC screen yet. Agents make computers for risky or browser work; a dev server an agent starts shows up here with its page; a VM you start shows its screen; a screen added under Machines → VNC shows when it answers.</div>';
-  else page.querySelector('.ml-front > .placeholder')?.remove();
+  if (!tiles.length) page.querySelector('.ml-front').innerHTML = emptyStateHtml({ title: 'Nothing to watch yet',
+    text: 'Agents make computers for risky or browser work; a dev server an agent starts shows up here with its page; a VM you start shows its screen; a screen added under Machines → VNC shows when it answers.' });
+  else page.querySelector('.ml-front > .empty-state')?.remove();
 }
 
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('DOMContentLoaded', () => {
