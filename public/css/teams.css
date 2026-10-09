@@ -51,6 +51,44 @@ html[data-skin="points"] .tm-h { font-family: var(--font-mono); text-transform: 
 .tm-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 12px; }
 .tm-notes small { color: var(--muted); margin-right: 6px; }
 
+/* Members (agent-ui/team-members.js): the board window, Projects → Teams here, the project chat's fold. */
+.tmm { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; font-size: 12px; }
+.tmm-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; column-gap: 7px; min-height: 20px; }
+.tmm-row > .tmm-branch, .tmm-row > .tmm-where { grid-column: 2 / -1; }
+.tmm-who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tmm-who small, .tmm-state, .tmm-where { color: var(--muted); }
+.tmm-task { color: var(--text); }
+.tmm-state { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 22ch; text-align: right; }
+.tmm-row.failed .tmm-state { color: var(--red); }
+.tmm-lead .tmm-state { max-width: none; }
+.tmm-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--text); cursor: pointer; text-decoration: underline; text-decoration-color: var(--border2); text-underline-offset: 2px; }
+.tmm-link:hover, .tmm-link:focus-visible { color: var(--accent); text-decoration-color: currentColor; }
+.tmm-branch, .tmm-where { font-size: 11px; justify-self: start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.tmm-branch { color: var(--text); font-family: var(--font-mono, monospace); }
+.tmm-card { display: grid; gap: 4px; padding: 7px 8px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg); }
+.tmm-card.failed { border-color: var(--red); }
+.tmm-card.compact { padding: 5px 6px; border-color: var(--border); }
+.tmm-head { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.tmm-title { font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; min-width: 0; }
+.tmm-acts { display: inline-flex; gap: 4px; flex: none; }
+.tmm-goal { margin: 0; }
+.tmm-progress { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.tmm-progress .tmm-state { text-align: left; max-width: none; }
+
+/* Projects → Teams here: under the side view, folded when no team works on the project. */
+.pj-teams { flex: none; border-top: 1px solid var(--border); max-height: 48%; overflow: auto; }
+.pj-teams-fold > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 8px; padding: 7px 10px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.pj-teams-fold > summary::-webkit-details-marker { display: none; }
+.pj-teams-fold > summary::before { content: '▸'; letter-spacing: 0; }
+.pj-teams-fold[open] > summary::before { content: '▾'; }
+.pj-teams-fold > summary:hover { color: var(--text); }
+.pj-teams-fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pj-teams-count { letter-spacing: 0; text-transform: none; font-size: 11px; }
+.pj-teams-body { display: grid; gap: 6px; padding: 0 6px 10px; }
+.pj-teams-body .desc { margin: 0 4px; font-size: 11px; }
+.agent-fold-body .tmm-card { margin-top: 4px; }
+html[data-skin="points"] .pj-teams-fold > summary { font-family: var(--font-mono); }
+
 @media (max-width: 640px) {
   .tm-task { grid-template-columns: 10px minmax(0, 1fr) 44px 34px; gap: 6px; }
   .tm-task .tm-bar { width: 44px; }
