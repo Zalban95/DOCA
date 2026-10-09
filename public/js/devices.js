@@ -16,6 +16,7 @@ async function devicesLoad() {
     devOwnApply(data);   // "Your devices" for a person without the devices right (devices-own.js)
     _devShowing = data.own ? {} : (await apiFetch('/api/screens/showing').catch(() => ({}))).screens || {};   // what each screen shows now (screens/showing.js)
     devPopulatePresets();
+    devHousekeepingDraw();   // when a browser nobody opens goes to the Archive (screens/archive.js)
 
     const pairBtn  = document.getElementById('dev-pair-btn');
     const issueBtn = document.getElementById('dev-issue-btn');
@@ -46,7 +47,7 @@ async function devicesLoad() {
           <code>${escHtml(d.id)}</code> · ${escHtml(d.caps?.formFactor || 'other')}
           · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}
         </div>
-        <div class="provider-models">${d.scopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}</div>${devApprovalHtml(d)}
+        <div class="provider-models">${d.scopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}</div>${devApprovalHtml(d)}${devOwnerlessHtml(d)}
         ${d.missingScopes?.length ? `<div class="input-label mt8" style="text-transform:none;letter-spacing:0;color:var(--amber)">
           Paired before its preset (${escHtml(d.preset)}) gained: ${d.missingScopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}
           <button class="btn btn-xs" onclick="devGrant(${jsArg(d.id)}, ${jsArg(d.missingScopes.join(','))})" title="Add these to this device — same id, queue and token">+ Grant</button></div>` : ''}
@@ -57,6 +58,7 @@ async function devicesLoad() {
         </div>` : `
         <div class="toolbar-right">
           ${d.mine ? `<a class="btn btn-xs" href="/d/${encodeURIComponent(d.id)}/" target="_blank" rel="noopener" title="Its own page: its look, tabs and notifications, as it shows them">⧉ Its page</a>` : ''}
+          ${devAssignButtonHtml(d)}
           <button class="btn btn-xs"        onclick="devRename(${jsArg(d.id)},${jsArg(d.name)})" title="Give it another name">✎ Rename</button>
           <button class="btn btn-xs"        onclick="devRotate(${jsArg(d.id)},${jsArg(d.name)})" title="Issue a replacement token">↻ Rotate</button>
           <button class="btn btn-xs btn-red" onclick="devRevoke(${jsArg(d.id)},${jsArg(d.name)})" title="Invalidate this token now">✕ Revoke</button>
@@ -348,4 +350,11 @@ function devGrant(id, list) {
     try { await apiFetch(`/api/devices/${encodeURIComponent(id)}/scopes`, { method: 'POST', body: { add } }); devicesLoad(); }
     catch (e) { setStatus(document.getElementById(`dev-status-${id}`), `✗ ${e.message}`, 'err'); }
   });
+}
+
+/** When a browser nobody opens goes to the Archive (devices.browserArchiveDays), folded under the list — an admin's:
+    leafFieldsDraw draws nothing for anyone else. */
+function devHousekeepingDraw() {
+  if (_devData.own || typeof leafFieldsDraw !== 'function') return;
+  leafFieldsDraw(leafFieldsSlot('doca-devices-list', 'dev-housekeeping'), ['devices.browserArchiveDays'], { label: 'Advanced — browsers nobody opens', id: 'dev-housekeeping' });
 }

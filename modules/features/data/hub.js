@@ -35,7 +35,7 @@ module.exports = [
     use: 'The agents\' work as it happens, for people to watch: files touched with live diffs, what each conversation does (screen show puts it on a screen).',
     routes: ['/api/workstream*'], words: 'diff live activity watch' },
   { id: 'archive', licence: 'core', name: 'Archive', page: 'archive', since: '2.228.0',
-    use: 'Conversations, missions, projects and computers put away rather than deleted, to restore.',
+    use: 'Conversations, missions, projects, computers and browsers nobody opened put away rather than deleted, to restore.',
     routes: ['/api/archive*'], words: 'put away restore old' },
   { id: 'chronicle', licence: 'core', name: 'Chronicle', page: 'chronicle', tools: ['chronicle'], since: '2.285.0',
     use: 'Everything that happened — turns, missions, device jobs, the harness log — searchable by person, device, agent and time, with the story of one piece of work.',

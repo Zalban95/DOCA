@@ -106,6 +106,7 @@ function mount(app) {
     let screen = req.auth?.session?.screen || null;
     if (!screen && !req.auth?.session?.deviceId) try { screen = require('../screens').ensure(req, res).id; } catch { /* not a person's browser */ }
     require('../screens/showing').beat(screen, req.body || {});
+    require('../screens/archive').seen(screen);   // a browser has no token: its beat is how it is seen (screens/archive.js)
     res.json({ ok: true });
   });
   // How each turn of a conversation went: the one record (runs.js).

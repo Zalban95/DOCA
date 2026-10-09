@@ -75,6 +75,7 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     if (c.what === 'pending') { _devApproveCardShow(c.device); if (typeof devicesLoad === 'function') devicesLoad(); return; }
     if (c.what === 'decided') { _devApproveCardDrop(c.id); if (typeof devicesLoad === 'function') devicesLoad(); return; }
     if (c.what === 'resync') _devApproveWaiting();
+    else if (['archived', 'restored', 'assigned'].includes(c.what) && typeof devicesLoad === 'function') devicesLoad();   // screens/archive.js, devices-assign.js
   });
   _devApproveWaiting();
 });

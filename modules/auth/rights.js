@@ -77,6 +77,8 @@ const TABLE = [
   // (approve-devices.js) — own or anyone — checked per device in devices-approval/.
   R(GET, '/api/devices/pending', 'chat'),
   R('POST', '/api/devices/[^/]+/(approve|refuse)', 'chat'),
+  // Giving a device that belongs to nobody to a person: an admin's (devices-assign.js; owner's yes, 2026-10-09).
+  R('POST', '/api/devices/[^/]+/assign', 'devices'),
   R(ANY, '/api/devices(/.*)?', 'devices'),
 
   // ── The harness: what lets the agent act on the machine is host ──

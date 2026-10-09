@@ -605,6 +605,11 @@ whoever is at the panel: finished work being tidied must never buzz a wrist agai
 The rule for a client is the same either way — `quiet` present means no notification,
 no haptic, no sound; `archivedAt` present means remove the row.
 
+And while a person is **on a call** (§23.1) in a conversation, from any of their
+devices, every `agent.turn` of that conversation reaches every device of theirs with
+`quiet: true` — including turns a device asked for: the answer is being said in the
+call, and a phone's notice for it would be bridged to the wrist that is saying it.
+
 ## 12. Prompts — the interaction protocol
 
 A prompt is the agent asking the user something. The cycle is
