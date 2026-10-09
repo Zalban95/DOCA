@@ -16,6 +16,8 @@ const look = {
   budget: agentId => require('../agents/registry').get(agentId)?.maxSteps || 30,
 };
 const views = team => board.tasks(team, look);
+/** Work chats doing a team's task: the live feed's conversation changes are looked at only for these. */
+const workChats = new Set();
 const titleOf = team => id => { const t = team.tasks.find(x => x.id === id); return t ? `${t.id} "${t.title}"` : id; };
 const keyOf = t => t.missionId || t.sessionId || (t.error ? 'dispatch' : null);
 const maxRounds = team => (Number.isInteger(team.loop?.maxRounds) ? team.loop.maxRounds
@@ -53,6 +55,7 @@ function dispatch(team, t) {
       require('../harness/memory').updateSession(s.id, { team: { id: team.id, task: t.id } });
       org.start(s.id, `${t.task}\n\n${context}`, team.by);
       t.sessionId = s.id;
+      workChats.add(s.id);
     } else {
       const m = missions.dispatch({ agentId: t.agent, task: t.task, context, by: team.by });
       missions.patch(m.id, { team: { id: team.id, task: t.id, title: team.title } });
@@ -115,4 +118,4 @@ function advance(id) {
   return next;
 }
 
-module.exports = { advance, views, dispatch, brief, look, maxRounds };
+module.exports = { advance, views, dispatch, brief, look, maxRounds, workChats };

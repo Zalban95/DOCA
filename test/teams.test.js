@@ -211,3 +211,18 @@ test('the team tool: one call makes a team and shows its document; status and st
   const spec = missions().get(task(id, 'a').missionId).sessionId;
   assert.match(await tool.run({ action: 'create', title: 'x', tasks: [{ agent: 'builder', task: 'x' }] }, { sessionId: spec }), /a specialist does not make or run teams/);
 });
+
+test('the Orchestrator can give a task to a work chat; its job decides the task', async () => {
+  const memory = require('../modules/harness/memory');
+  const t = await teams().create({ title: 'With a work chat', tasks: [{ id: 'job', agent: 'work', title: 'A longer job', task: 'Do the longer job.' }] }, { by: lead() });
+  const sid = task(t.id, 'job').sessionId;
+  assert.ok(sid, 'a work chat was made for it');
+  assert.equal(memory.getSession(sid).kind, 'work');
+  assert.equal(task(t.id, 'job').state, 'running');
+  memory.updateSession(sid, { job: { ...memory.getSession(sid).job, state: 'done' }, brief: 'Done: the longer job.' });
+  require('../modules/live').changed('conversation', sid, 'row');
+  const done = await until(() => (board(t.id).state === 'done' ? board(t.id) : null), 8000, 'the work chat\'s task');
+  assert.equal(done.tasks[0].percent, 100);
+  const chat = require('../modules/harness/organization').create({ title: 'Not the Orchestrator', kind: 'chat' }).id;
+  await assert.rejects(teams().create({ title: 'x', tasks: [{ agent: 'work', task: 'x' }] }, { by: chat }), /only the Orchestrator gives a task to a work chat/);
+});

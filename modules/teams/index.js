@@ -172,14 +172,17 @@ function listen() {
       if (c.topic === 'missions') {
         const m = require('../agents/missions').get(c.id);
         if (m?.team?.id) engine.advance(m.team.id);
-      } else if (c.topic === 'conversation' && (c.what === 'row' || c.what === 'ended' || c.what === 'started')) {
+      } else if (c.topic === 'conversation' && engine.workChats.has(c.id) && (c.what === 'row' || c.what === 'ended' || c.what === 'started')) {
         const s = require('../harness/memory').getSession(c.id);
         if (s?.team?.id && s.kind === 'work') engine.advance(s.team.id);
       }
     } catch { /* a team's bookkeeping never breaks what it listens to */ }
   });
   // After a restart: carry on every team that was running (its missions carry on by themselves, agents/carry-on.js).
-  for (const r of store.list().filter(x => x.state === 'running')) engine.advance(r.id);
+  for (const r of store.list().filter(x => x.state === 'running')) {
+    for (const t of store.get(r.id)?.tasks || []) if (t.sessionId) engine.workChats.add(t.sessionId);
+    engine.advance(r.id);
+  }
 }
 
 module.exports = { create, view, stop, keepGoing, archive, note, forMission, visible, ledBy, listen, get: store.get, list: store.list,
