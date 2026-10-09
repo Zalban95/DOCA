@@ -103,7 +103,7 @@ function say(v, title = id => id) {
   if (v.state === 'running' || v.state === 'paused') return `${v.state}${v.budget ? `, step ${v.step} of ${v.budget}` : ''}`;
   if (v.state === 'waiting') return `waiting on ${v.waitingOn.map(title).join(', ')}${v.blockedBy ? ` (${v.blockedBy.map(title).join(', ')} did not finish)` : ''}`;
   if (v.state === 'checking') return 'checking its contract';
-  if (v.state === 'done') return v.contract ? 'done — its contract holds' : 'done';
+  if (v.state === 'done') return v.contract?.check ? 'done — its contract holds' : v.contract ? 'done — on its specialist\'s word (no check)' : 'done';
   if (v.state === 'failed' || v.state === 'stopped') return `${v.state}${v.why ? ` — ${v.why}` : ''}`;
   return v.state;
 }

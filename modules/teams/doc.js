@@ -24,18 +24,18 @@ function render(team, views) {
   const p = team.progress || board.summary(team, views).progress;
   const title = id => { const t = team.tasks.find(x => x.id === id); return t ? t.id : id; };
   const who = v => (v.agent === 'work' ? 'a work chat' : (require('../agents/registry').get(v.agent)?.label || v.agent)) + (v.missionId ? ` (${v.missionId})` : '');
-  const rows = views.map((v, i) => `| ${i + 1} | ${cell(`${v.id} ${v.title}`)} | ${cell(who(v))} | ${cell(board.say(v, title))}${v.state === 'running' || v.state === 'paused' ? ` (${v.percent}%)` : ''} | ${cell(v.after.join(', ') || '—')} | ${cell(v.contract?.done || '—')} |`);
+  const rows = views.map((v, i) => `| ${i + 1} | ${cell(`${v.title} (${v.id})`)} | ${cell(who(v))} | ${cell(board.say({ ...v, budget: null }, title))} | ${cell(v.after.join(', ') || '—')} | ${cell(v.contract?.done || '—')} |`);
   const reports = views.filter(v => v.missionId).map(v => ({ v, m: missions.get(v.missionId) })).filter(x => x.m?.result);
   const decisions = reports.map(({ v, m }) => `- **${v.id}** ${cell(who(v))}: ${cell(String(m.result).split('\n').find(l => l.trim()) || '')}`);
   const results = reports.map(({ v, m }) => {
     const files = require('../agents/after').filesOf(m);
-    return `### ${v.id} ${v.title} — ${who(v)}\n\n${String(m.result).slice(0, 1500).trim()}${files.length ? `\n\nFiles: ${files.map(f => `\`${f}\``).join(', ')}` : ''}`;
+    return `### ${v.title} (${v.id}) — ${who(v)}\n\n${String(m.result).slice(0, 1500).trim()}${files.length ? `\n\nFiles: ${files.map(f => `\`${f}\``).join(', ')}` : ''}`;
   });
   const notes = (team.notes || []).slice(-30).map(n => `- ${when(n.at)} **${cell(n.from)}** (${n.task}): ${cell(n.text)}`);
   const loop = team.loop?.on ? `keep going: on, round ${team.loop.rounds || 0} of ${require('./engine').maxRounds(team)}` : 'keep going: off';
   return [
     `# Team: ${team.title}`, '',
-    `*${product} writes this page from the team's board and its missions' reports, again at every change. Edits made here are overwritten.*`, '',
+    `*${product} writes this page from the team's board and its missions' reports, again whenever a task changes state; how far a running task is shows live in the panel. Edits made here are overwritten.*`, '',
     team.goal ? `**Goal** ${team.goal}` : '', '',
     `**State** ${team.state} — ${p.done} of ${p.total} tasks done (${p.percent}%; every task counts the same) · ${loop}`, '',
     `**Started** ${when(team.createdAt)}${team.endedAt ? ` · **ended** ${when(team.endedAt)}` : ''} · ${team.id}`, '',
