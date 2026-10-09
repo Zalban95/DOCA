@@ -132,7 +132,10 @@ esac`);
   assert.equal(busy().of('vm', 'libvirt:devbox').who, 'the VM\'s own load');
   assert.equal(busy().of('container', 'web').busy, false, 'a quiet container stays quiet');
 
-  // Seen where a host looks: the rows, Live, the Harness's working list, Hub → Logs, Chronicle.
+  // Seen where a host looks: the rows, Live, the Harness's working list, Hub → Logs, Chronicle. Each request asks busy.js
+  // to keep looking, and at the test's 60 ms a look landing between them re-judges who (the outside process is no
+  // longer new): no look while they are read (the asks lapse at once; what was judged stays).
+  busy().T.wantMs = -1; await H.sleep(100);
   const rows = (await H.api(null, 'GET', '/api/machines/rows')).body.rows;
   assert.equal(rows.find(r => r.kind === 'computer' && r.id === 't1').busy.busy, true);
   const live = (await H.api(null, 'GET', '/api/machines')).body;
