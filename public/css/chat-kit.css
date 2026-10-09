@@ -1,0 +1,29 @@
+/* A chat's skills, loop and compaction (agent-ui/conv-extras.js), the composer's hints (agent-ui/composer-assist.js)
+   and how each skill is used (settings/skill-use.js). Theme variables only, so every skin and theme draws it. */
+.conv-extras { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.conv-loop { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; color: var(--teal, var(--accent)); white-space: nowrap; }
+.conv-pop { position: absolute; z-index: 9000; background: var(--surface, var(--bg)); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); font-size: 12px; max-height: 70vh; overflow: auto; }
+.conv-pop .muted, .composer-assist .muted { color: var(--muted); font-size: 11px; }
+.conv-pop-title { font-weight: 600; margin-bottom: 6px; }
+.conv-pop-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 3px 0; }
+.conv-pop-hit { display: block; width: 100%; text-align: left; background: none; border: 0; color: inherit; padding: 4px 2px; cursor: pointer; border-radius: 4px; }
+.conv-pop-hit:hover, .conv-pop-hit:focus { background: var(--hover, rgba(127, 127, 127, .12)); }
+.conv-pop-field { display: flex; flex-direction: column; gap: 3px; margin: 6px 0; }
+.conv-pop-field .input { width: 100%; font-size: 12px; }
+.conv-pop-actions { display: flex; gap: 6px; margin: 6px 0 10px; }
+.conv-pop-cmds { margin-top: 8px; line-height: 1.5; }
+.composer-assist { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 6px; }
+.composer-assist:empty { display: none; }
+.composer-cmd { display: block; width: 100%; text-align: left; background: none; border: 0; color: inherit; font-size: 12px; padding: 3px 4px; cursor: pointer; border-radius: 4px; }
+.composer-cmd:hover { background: var(--hover, rgba(127, 127, 127, .12)); }
+.composer-chip { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; border: 1px solid var(--border); border-radius: 999px; padding: 1px 4px 1px 8px; margin: 3px 0; }
+.composer-chip.attached, .composer-chip.added { border-color: var(--teal, var(--accent)); }
+.composer-chip button { background: none; border: 0; color: inherit; cursor: pointer; font-size: 11px; padding: 1px 3px; }
+.skill-use-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 2px 0 12px 0; padding-bottom: 8px; border-bottom: 1px solid var(--border); font-size: 11px; }
+.skill-use-row select.input { font-size: 11px; padding: 2px 6px; width: auto; }
+.skill-use-row label { display: inline-flex; gap: 3px; align-items: center; }
+.skill-plan pre { white-space: pre-wrap; max-height: 40vh; overflow: auto; font-size: 11px; background: var(--bg2, rgba(127, 127, 127, .08)); padding: 8px; border-radius: 6px; }
+.skill-use-adv { margin-left: auto; }
+.skill-use-adv .adv-fold { margin: 0; }
+.skill-use-adv:has(details[open]) { flex-basis: 100%; margin-left: 0; }
