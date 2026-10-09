@@ -11,6 +11,7 @@
  *                  streams (`delta`) — from agent.events and
  *                  lifecycle.changed()
  *   missions       a specialist's mission started, stepped or ended — from missions.announce()
+ *   teams          a team's board changed — a task started, stepped, was checked or ended, a note (teams/announce.js)
  *   files          something changed in a folder a screen is looking at — live/watch.js, only the folders asked for
  *   ask            a mission asks its person to use a machine (harness/mission-asks.js) — only that person's pages
  *   notice         a reminder or a notice for a person, drawn on their pages (notices/) — only that person's pages

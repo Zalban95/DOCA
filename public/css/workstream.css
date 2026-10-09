@@ -95,3 +95,4 @@
 .svc-act { font-family: var(--font-mono); font-size: 11px; padding: 1px 6px; border: 1px solid var(--border2); border-radius: 4px; }
 .svc-try-out { max-height: 220px; overflow: auto; font-size: 11px; white-space: pre-wrap; word-break: break-word; background: var(--raised); padding: 6px 8px; margin: 6px 0 0; }
 .ml-vms-front { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; white-space: nowrap; }
+.ws-act.team { color: #d2a8ff; }   /* a team's board changed (teams/announce.js) */
