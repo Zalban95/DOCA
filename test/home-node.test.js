@@ -16,6 +16,8 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const stub = require('./fixtures/ha-stub');
 
+process.env.DOCA_SOCKET_PING_MS = '1000';   // the hub's heartbeat, short: a frozen node is noticed in seconds
+
 const TOKEN_A = 'ha-token-of-the-flat-123', TOKEN_B = 'ha-token-of-the-sea-house-456';
 let haA, haB, dir, client, nodeA, ctrl, childB = null;
 const ids = {}, said = [];
@@ -169,11 +171,12 @@ test('the agent uses a node as the page does: narrowed to its person, an unlock 
 });
 
 test('a node that goes away: the page shows what it last said, greyed and dated; acting is refused with a sentence; it comes back', async () => {
-  const exited = new Promise(r => childB.once('exit', r));
-  childB.kill();
-  await exited;
   const nodes = require('../modules/home/nodes');
-  await until(() => !nodes.online(ids.devB));
+  // Frozen rather than closed where the OS can (a node that lost power or its network: no close ever arrives) — the
+  // hub's heartbeat has to notice it. Windows has no SIGSTOP: there the process is ended.
+  const frozen = process.platform !== 'win32';
+  childB.kill(frozen ? 'SIGSTOP' : 'SIGTERM');
+  await until(() => !nodes.online(ids.devB), 15000);
   const r = await H.api(null, 'GET', '/api/home?home=sea-house');
   assert.equal(r.body.offline, true);
   assert.equal(r.body.connected, false);
@@ -185,11 +188,15 @@ test('a node that goes away: the page shows what it last said, greyed and dated;
   assert.equal(call.status, 409);
   assert.equal(call.body.code, 'node_away');
   assert.match(call.body.error, /away.*nothing can be done/);
+  const exited = new Promise(res => childB.once('exit', res));
+  childB.kill('SIGKILL');
+  await exited;
   startChild({ dir: path.join(dir, 'b') });   // it reconnects by itself; here, a restart
-  await until(() => nodes.online(ids.devB));
-  const back = await H.api(null, 'GET', '/api/home?home=sea-house');
-  assert.equal(back.body.connected, true);
-  assert.ok(!back.body.offline);
+  await until(() => nodes.online(ids.devB), 15000);
+  // Online is the node's socket; whether it has reached its HA again is its own next word (a status push). Wait for it.
+  const back = await until(async () => { const x = await H.api(null, 'GET', '/api/home?home=sea-house'); return x.body.connected === true && x.body; }, 15000);
+  assert.ok(!back.offline);
+  assert.equal(back.place, 'The sea house');
 });
 
 test('home.source: direct alone uses the hub\'s key; both lists every home', async () => {

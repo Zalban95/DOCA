@@ -56,6 +56,7 @@ function wrap(socket, head) {
   const ws = new EventEmitter();
   let buf = head && head.length ? Buffer.from(head) : Buffer.alloc(0), parts = [], open = true, closeCode = 1006, closeReason = '';
   ws.readyState = 1;
+  ws.lastHeard = Date.now();   // any frame, a ping included: socket.js ends a connection that went silent
   const write = (op, data) => { if (open) try { socket.write(frame(op, data)); } catch { /* gone */ } };
   ws.send = text => write(1, Buffer.from(String(text)));
   ws.close = (code = 1000, reason = '') => {
@@ -68,7 +69,7 @@ function wrap(socket, head) {
   };
   ws.terminate = () => { open = false; socket.destroy(); };
   socket.setNoDelay?.(true);
-  socket.on('data', d => { buf = Buffer.concat([buf, d]); read(); });
+  socket.on('data', d => { ws.lastHeard = Date.now(); buf = Buffer.concat([buf, d]); read(); });
   socket.on('close', () => { open = false; ws.readyState = 3; ws.emit('close', closeCode, closeReason); });
   socket.on('error', e => ws.emit('error', e));
 

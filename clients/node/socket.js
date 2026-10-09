@@ -10,6 +10,9 @@
 const { connect } = require('./ws-lite');
 
 const KEEPALIVE_MS = 25000;
+// The hub pings every 30 s (mcp/socket-hosts.js): nothing heard for this long is a hub gone without a close (a
+// half-open socket after a network change), and the node dials again rather than lending into the void.
+const SILENT_MS = Number(process.env.DOCA_CLIENT_SILENT_MS) || 75000;
 
 /** Keeps the socket. Returns {stop, notify, connected()}; `onRevoked` once on a 401, `onState(up)` as it comes and goes. */
 function dial(cfg, { handle, tls, signal, log = () => {}, onRevoked = () => {}, onState = () => {} }) {
@@ -30,7 +33,10 @@ function dial(cfg, { handle, tls, signal, log = () => {}, onRevoked = () => {}, 
     if (stopped) return ws.close();
     wait = 1000; said = false;
     onState(true);
-    alive = setInterval(() => ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/keepalive' })), KEEPALIVE_MS);
+    alive = setInterval(() => {
+      if (Date.now() - ws.lastHeard > SILENT_MS) return ws.terminate();   // its close redials
+      ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/keepalive' }));
+    }, Math.min(KEEPALIVE_MS, SILENT_MS / 3));
     alive.unref?.();
     ws.on('message', async text => {
       let m; try { m = JSON.parse(text); } catch { return; }
