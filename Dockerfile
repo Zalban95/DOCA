@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # A hive's image (deploy/README.md): DOCA in the hosted profile, its data in one volume at /data.
 #
 #   docker build -t doca-hive .            deploy/hive.sh new <name> makes a hive from it
@@ -7,7 +6,10 @@
 # package manager, and runs as an unprivileged user that cannot change the code: DOCA's hosted profile is what keeps
 # people and agents out of /app (modules/hosted.js), and this is the floor under it.
 
-FROM node:22-slim AS build
+# The official Node image, pulled from its public mirror on AWS: Docker Hub refuses anonymous pulls past a quota
+# (CI hit "429 Too Many Requests" on 2026-10-09). `--build-arg NODE_IMAGE=node:22-slim` takes it from Docker Hub.
+ARG NODE_IMAGE=public.ecr.aws/docker/library/node:22-slim
+FROM ${NODE_IMAGE} AS build
 # node-pty is compiled here (an optional dependency: the Terminal is absent in a hosted hive, but the image is the
 # same DOCA); tini is taken from here too.
 RUN apt-get update \
@@ -19,7 +21,7 @@ RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force \
  && cd node_modules/node-pty && rm -rf prebuilds deps src third_party build/Release/obj.target build/Release/.deps   # built here: the rest is other OSes' and its sources
 COPY . .
 
-FROM node:22-slim
+FROM ${NODE_IMAGE}
 COPY --from=build /usr/bin/tini /usr/bin/tini
 COPY --from=build --chown=root:root /app /app
 # One volume holds everything a hive keeps; the paths below put every part of DOCA's state in it, and the environment
