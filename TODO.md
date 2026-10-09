@@ -1059,6 +1059,18 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   56% → 76% over the rules; the page 52% against 97% for one model step. Open: a week of calls with the flag on;
   fine-tuning Laya on DOCA's own decisions (the cases and the traces); Jev measured once a key is had; the person's own
   browser (the extension's snapshot) and a desktop's accessibility tree as text states.
+- [ ] H10.20 Library: the files on this machine searched by meaning (asked 2026-10-08: "find an audio that says something
+  specific in my library, or find the video or picture… create a database to index the files"; refined the same day:
+  "a description generator that also functions as a search tool") — *built as the experiment `library`
+  (`modules/library`, docs/experiments/library.md)*: EmbeddingGemma 2 through Ollama's `/api/embed` (text, pictures,
+  sound; video as frames + sound), folders inside the Files roots chosen in Field → Models → Library, indexed into
+  doca.db incrementally (size, mtime, hash; deleted removed), one file at a time while the machine is idle, words of
+  audio and video transcribed with their times; mechanical tags from a shipped vocabulary, captions only when switched
+  on, "files like this one"; Files → Search by meaning and the agent's `library_search`, each person only the folders
+  opened to them. Measured (28 labelled files made on the spot): recall@5 audio 8/8 (by sound alone too), images 10/10,
+  video 4/4, documents 5/6, 18 ms a search; tags 71% right. Open: a real library measured; events (photos grouped by
+  similarity and date); sound tags calibrated; skills and recipes matched by meaning; a device's own `/api/v1` search;
+  whether opening a folder to everyone should ask for the password (auth/guarded.js, an S11 question).
 - [x] H10.11 The agent does as much as possible at the lowest risk (asked 2026-10-06) — *built as the experiment
   `riskTiers` (2.296.0, `modules/harness/risk/`, docs/experiments/risk-tiers.md): a declarative classifier (read / reversible /
   outward), a project checkpoint before a reversible change in a project, outward calls asked in every mode (Unattended

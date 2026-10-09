@@ -32,6 +32,7 @@ function modelsInUse() {
   if (val('assistant.provider')) add(val('assistant.provider'), val('assistant.model'), 'assistant mode\'s model');
   if (val('vision.provider')) add(val('vision.provider'), val('vision.model'), 'the model that reads screens');
   if (val('retrieval.provider') && val('retrieval.model')) add(val('retrieval.provider'), val('retrieval.model'), 'the model that finds by meaning');
+  if (val('library.provider') && val('library.model')) add(val('library.provider'), val('library.model'), 'the Library\'s embedding model');
   try { for (const a of require('../agents/registry').list()) if (!a.broken && a.provider) add(a.provider, a.model, `the ${a.id} specialist's model`); } catch { /* none */ }
   return out;
 }
