@@ -62,15 +62,19 @@ test('a quiet wrist is heard: speech at -40 dBFS counts (the old floor of 400 dr
   p.close();
 });
 
-test('sound too quiet to be speech is said once, not swallowed', async () => {
+test('sound too quiet to be speech is said after a long stretch, once — not two seconds in (2026-10-09)', async () => {
   const { p, of } = listen({ transcribe: async () => 'never' });
-  p.audio(Buffer.concat([quiet(400), tone(1200, 60), quiet(200)]));   // RMS ≈ 42: over the room, under speech
+  const murmur = ms => Buffer.concat(Array.from({ length: Math.round(ms / 900) }, () => Buffer.concat([tone(600, 60), quiet(300)])));   // RMS ≈ 42 in bursts: over the room, under speech
+  p.audio(Buffer.concat([quiet(400), murmur(3000)]));   // a breath, a rustle
+  await tick();
+  assert.equal(of('notice').length, 0, 'three seconds of it is not yet a microphone too far');
+  p.audio(murmur(12000));
   await tick();
   assert.equal(of('user').length, 0);
   assert.deepEqual(of('notice').map(n => n.stage), ['audio']);
-  p.audio(tone(1200, 60));
+  p.audio(murmur(12000));
   await tick();
-  assert.equal(of('notice').length, 1, 'once a minute at most');
+  assert.equal(of('notice').length, 1, 'once, until words come through');
   p.close();
 });
 
@@ -124,7 +128,7 @@ function call(send, until, ms = 12000) {
 
 test('/api/v1/call: a recording with no words sends a notice, and the call\'s log says each stage', async () => {
   sttText = '';
-  const got = await call(ws => { ws.send(tone(600)); ws.send(quiet(1200)); }, g => g.some(f => f.type === 'notice'));
+  const got = await call(ws => { ws.send(tone(600)); ws.send(quiet(1600)); }, g => g.some(f => f.type === 'notice'));
   sttText = 'Turn on the lights.';
   const n = got.find(f => f.type === 'notice');
   assert.equal(n.stage, 'stt'); assert.match(n.text, /didn.t catch that/);

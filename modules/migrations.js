@@ -149,6 +149,7 @@ const MIGRATIONS = [
   { id: '3.0-licence-grace', note: 'set up before licensing: every feature stays on for 30 days while a licence is added (Settings → System → Licence)', steps: [{
     describe: 'licence grace given (keys/licence-grace.json)',
     run() { return require('./license/grace').adopt() === 'given'; } }] },
+  { id: '3.4-tool-tiers-graduated', note: 'tools are sent by tier for everyone now (harness.config.doca.toolsLoading); the experiment\'s switch is gone', steps: [drop('experiments.toolTiers')] },
 ];
 
 const appliedIn = p => new Set(Array.isArray(p?.migrations?.applied) ? p.migrations.applied : []);

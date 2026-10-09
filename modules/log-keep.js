@@ -90,6 +90,8 @@ function usage() {
       entries: mcp?.lines ?? null, bytes: mcp?.bytes ?? null, settings: [setting('logs.mcpLines')] },
     { id: 'calls', label: 'Calls', where: 'memory', what: 'each stage of each call (Live, Deep, Ambient’s assistant, a device’s): audio heard, transcripts (counted, never the words), turns, answers spoken (Hub → Logs)',
       entries: call?.lines ?? null, bytes: call?.bytes ?? null, settings: [setting('logs.callLines')] },
+    { id: 'calls-disk', label: 'Calls, on disk', where: 'disk', what: 'the same lines, a file per day, read back when the hub starts — a version switch keeps them',
+      ...files(read(() => folder(require('./realtime/call-log').dir()))), settings: [setting('logs.callDays')] },
     { id: 'machines', label: 'Machines', where: 'memory', what: 'what was seen of the machines while a page looked: started, stopped, busy and idle again, a process started outside DOCA\'s tools (Hub → Logs; busy and idle also on disk with what the hub did)',
       entries: machines?.lines ?? null, bytes: machines?.bytes ?? null, settings: [setting('logs.machinesLines')] },
     { id: 'runs', label: 'Runs', where: 'disk', what: 'one record per turn, mission and device job: who, how it ended, what it cost (Chronicle)',
@@ -126,6 +128,7 @@ function prune() {
   step('jobs', () => require('./harness/jobs').prune());
   step('evals', () => require('./evals/store').pruneAll());
   step('activity', () => require('./activity').prune(limit('logs.activityDays')));
+  step('calls', () => require('./realtime/call-log').prune(limit('logs.callDays')));
   const any = Object.entries(removed).filter(([, n]) => n > 0);
   if (any.length) require('./activity').note({ from: 'log-keep', what: `removed ${any.map(([k, n]) => `${n} ${k}`).join(', ')}`, why: 'older or more than the log settings keep' });
   return removed;
@@ -140,7 +143,7 @@ function start() {
 /* ── Changing them (Settings → System → Logs) ─────────── */
 
 // tracing.enabled is shown, not switched here: whether runs are traced at all is evidence of what agents did (S14).
-const EDITABLE = ['logs.harnessLines', 'logs.workstreamLines', 'logs.mcpLines', 'logs.callLines', 'logs.machinesLines', 'logs.runsRetainDays', 'logs.jobsKept', 'logs.evalResultsKept', 'logs.activityDays',
+const EDITABLE = ['logs.harnessLines', 'logs.workstreamLines', 'logs.mcpLines', 'logs.callLines', 'logs.callDays', 'logs.machinesLines', 'logs.runsRetainDays', 'logs.jobsKept', 'logs.evalResultsKept', 'logs.activityDays',
   'tracing.retainDays', 'tracing.maxSpans'];
 
 /** Write the given values, each checked against its declaration; then apply them. */

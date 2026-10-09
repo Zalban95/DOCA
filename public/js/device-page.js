@@ -25,8 +25,9 @@ async function devThisDevice() {
         Permissions are granted on the device itself; you can take any of them back from here.</p>
       ${devHandsHtml(d)}<div class="status-line" id="dev-status-${escHtml(d.id)}"></div>
       <div id="dev-this-notify" style="margin-top:12px"></div>
+      <div id="dev-this-call" style="margin-top:12px"></div>
       ${/DocaMobile\//.test(navigator.userAgent) ? '<a class="btn" href="doca://settings" style="display:inline-block;margin-top:8px">App settings — connection and permissions</a>' : ''}`;
-    devNotifyRender();
+    devNotifyRender(); devCallRender();
   } catch { card.remove(); }
 }
 
@@ -56,4 +57,39 @@ async function devNotifySave() {
     setStatus(v('dn-status'), '✓ Saved — the device is told', 'ok');
   } catch (e) { setStatus(v('dn-status'), `✗ ${e.message}`, 'err'); }
 }
+/**
+ * How a call on this device hears a pause (call.silenceMs on this device's own layer; realtime/call-pause.js): how long a
+ * pause sends what was said. A pause shorter than it never cuts — speech that resumes inside it goes on the same request.
+ */
+const DEV_CALL_DEFAULT_MS = 1400;
+async function devCallRender() {
+  const box = document.getElementById('dev-this-call');
+  if (!box) return;
+  let s;
+  try { s = await apiFetch(`/api/screen?device=${encodeURIComponent(DOCA_DEVICE_ID)}`); } catch { box.remove(); return; }
+  const c = s.settings?.call || {}, from = s.from?.call;
+  const ms = c.silenceMs >= 300 ? c.silenceMs : DEV_CALL_DEFAULT_MS;
+  const whose = !c.silenceMs ? `the default for a device's call, ${DEV_CALL_DEFAULT_MS / 1000} s` : from === 'device' ? 'set for this device' : from === 'person' ? 'from your own settings' : 'from the hive\'s settings';
+  box.innerHTML = `<div class="card-subtitle">Calls on this device</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px">
+      <label>Pause before sending <input class="input" style="width:80px;display:inline-block" type="number" min="0.3" max="10" step="0.1" id="dc-silence" value="${ms / 1000}"> s</label>
+      <span class="desc" style="color:var(--muted)">${escHtml(whose)}. A pause shorter than this never cuts: carry on and it is the same request.</span>
+      <button class="btn btn-xs btn-blue" onclick="devCallSave()">Save</button>
+      ${from === 'device' && c.silenceMs ? '<button class="btn btn-xs" onclick="devCallSave(true)">Use the default</button>' : ''}<span class="status-line" id="dc-status"></span></div>`;
+}
+
+async function devCallSave(reset = false) {
+  const st = document.getElementById('dc-status');
+  try {
+    const s = await apiFetch(`/api/screen?device=${encodeURIComponent(DOCA_DEVICE_ID)}`);
+    const { silenceMs, ...rest } = s.settings?.call || {};
+    const secs = parseFloat(document.getElementById('dc-silence').value);
+    if (!reset && !(secs >= 0.3 && secs <= 10)) throw new Error('A pause from 0.3 to 10 seconds.');
+    const call = reset ? (Object.keys(rest).length ? rest : null) : { ...rest, silenceMs: Math.round(secs * 1000) };
+    await apiFetch(`/api/screen/settings?device=${encodeURIComponent(DOCA_DEVICE_ID)}`, { method: 'POST', body: { call } });
+    setStatus(st, '✓ Saved — the next call uses it', 'ok');
+    devCallRender();
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}
+
 if (typeof document !== 'undefined' && DOCA_DEVICE_ID) document.addEventListener('DOMContentLoaded', () => setTimeout(devThisDevice, 500));

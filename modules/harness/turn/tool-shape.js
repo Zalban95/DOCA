@@ -13,7 +13,7 @@ function switches() {
   const gate = require('../../license/gate');
   for (const t of require('../tools').TOOLS) if (!gate.toolOn(t.name)) out.push({ name: t.name, why: 'not in this hive\'s licence (Settings → System → Licence)' });
   if (!require('../../agents/registry').enabled())
-    for (const name of ['agent_dispatch', 'agent_results', 'agent_resume', 'permission_grant'])
+    for (const name of ['agent_dispatch', 'agent_results', 'agent_resume', 'permission_grant', 'team'])
       out.push({ name, why: 'specialists are switched off (Settings → Harness)' });
   if (!require('../../computers/look').on()) out.push({ name: 'computer_look', why: 'the vision pass is off, or no vision model is set' });
   if (!require('../../system-one').on()) out.push({ name: 'computer_next', why: 'the System 1 model experiment is off' });
@@ -22,7 +22,7 @@ function switches() {
   if (!require('../../api-services/store').list().length) out.push({ name: 'service', why: 'no API service is set up (Field → Connectors → API services)' });
   if (!require('../../scout').on()) out.push({ name: 'model_scout', why: 'the model scout experiment is off' });
   if (!require('../../library/indexer').on()) out.push({ name: 'library_search', why: 'the Library experiment is off, or no embedding model is set for it' });
-  if (!require('../../experiments').on('toolTiers')) out.push({ name: 'tools_more', why: 'the tool tiers experiment is off' });
+  if (require('./tool-tiers').mode() === 'all') out.push({ name: 'tools_more', why: 'every tool is sent in full (harness.config.doca.toolsLoading: all)' });
   // An old name kept so old transcripts and recipes still run (tools.call maps it); never offered.
   out.push({ name: 'show_image', why: 'an old name for show_media' });
   return out;
@@ -39,6 +39,10 @@ function off(profile, all = [], notMine = []) {
   const out = switches();
   const mission = !!profile && profile.level !== 'orchestrator';
   if (!mission) for (const name of MISSION_ONLY) out.push({ name, why: 'only a specialist on a mission uses it' });
+  // A team's board (teams/): only a mission that is one of its tasks posts to it.
+  let onTeam = false;
+  try { onTeam = !!profile?.missionId && !!require('../../teams').forMission(profile.missionId); } catch { /* no team */ }
+  if (!onTeam) out.push({ name: 'team_note', why: 'only a specialist working on a team\'s task posts to its board' });
   const computerTools = all.some(n => /^mcp__computer-/.test(n) && !notMine.includes(n));
   if (!computerTools) out.push({ name: 'computer_login', why: 'it signs in on a computer whose tools this turn holds, and it holds none' });
   return out;

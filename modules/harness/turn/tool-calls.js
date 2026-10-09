@@ -126,7 +126,7 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
           // or an automatic turn that read their queued message, for what they asked (askerOf, above).
           ...(asker && ASKED_TOOLS.has(name) ? { user: asker, byPerson: true }
             : { user: client?.user, byPerson: byPerson({ client, isMission, profile, sessionId: session.id }) }) }));
-    tiers.afterCall(session.id, profile, name, result, stepDisabled);   // toolTiers: what was called or read about stays loaded
+    tiers.afterCall(session.id, profile, name, result, stepDisabled, args);   // tiers: what was called or read about stays loaded
     for (const image of shown) say({ type: 'image', image, step });
     say({ type: 'tool_result', name, result, step, ...failures.typed(result) });
 

@@ -90,7 +90,7 @@ test('/api/v1/call: the hive\'s own voice when no realtime model is on — same 
     const timer = setTimeout(() => { ws.close(); reject(new Error(JSON.stringify(g))); }, 15000);
     ws.on('message', (d, bin) => {
       if (bin) g.audio += d.length; else g.json.push(JSON.parse(d));
-      if (g.json.at(-1)?.type === 'ready') { for (let i = 0; i < 10; i++) ws.send(tone(100)); ws.send(quiet(1200)); }
+      if (g.json.at(-1)?.type === 'ready') { for (let i = 0; i < 10; i++) ws.send(tone(100)); ws.send(quiet(1600)); }
       if (g.json.some(x => x.type === 'done')) { g.busy = require('../modules/harness/drain').busy().map(t => t.kind); clearTimeout(timer); ws.close(); resolve(g); }
     });
     ws.on('error', reject);

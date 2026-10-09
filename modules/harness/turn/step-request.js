@@ -25,7 +25,7 @@ function stepRequest({ p, ep, message, summary, client, profile, projectBrief, s
       role: 'system',
       content: systemPrompt({
         p, userText: message, summary, client, profile, projectBrief, sessionId: session.id,
-        toolCount: schemas.length, disabledCount: disabled.length,
+        toolCount: schemas.length, disabledCount: disabled.length, disabled,
       }),
     },
     // `provider` is the one this request is addressed to, which decides which
@@ -54,7 +54,7 @@ function stepRequest({ p, ep, message, summary, client, profile, projectBrief, s
   const since = rows.length - [...rows].reverse().findIndex(r => r.role === 'user');   // this turn's own rows
   const fits = require('./fits').block({ message, schemas, rows: since <= rows.length ? rows.slice(since) : [], person: client?.user, sessionId: session.id, turnRow: rows[since - 1] });
   const live = [liveBlock(p, led), require('../../timezones').line(client?.user?.id), toolNews, fits, isMission ? '' : missions().block({ sessionId: session.id, completed }),
-    organization.block(session.id, reports),
+    organization.block(session.id, reports), require('../../teams/readings').block(session.id),   // a team's board and its notes (teams/)
     ...contextSkips.values()].filter(Boolean).join('\n');
   if (live) messages.push({ role: 'user', content: `[panel readings, not from the user]\n${live}` });
 

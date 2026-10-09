@@ -17,9 +17,23 @@
 const memory = require('../memory');
 
 // Coordinating and remembering: the Orchestrator's own job, never "work".
-const COORD = new Set(['work_chats', 'work_plan', 'agent_dispatch', 'agent_results', 'agent_resume', 'permission_grant',
+const COORD = new Set(['work_chats', 'work_plan', 'team', 'agent_dispatch', 'agent_results', 'agent_resume', 'permission_grant',
   'settings_propose', 'panel_layout', 'install_propose', 'spend_propose', 'memory_write', 'memory_rules_write', 'memory_flag', 'memory_forget',
   'ask_device', 'tell_device', 'screen', 'chronicle', 'skill', 'show_media', 'show_image']);
+
+/**
+ * How many steps of real work this turn does before the job moves on: `orchestratorWorkSteps`, followed to the request
+ * by triage's rules alone (triage.rate — no model is asked): a small request may take up to SMALL_STEPS, so a quick
+ * fix is not split into a work chat it does not need; a large one moves after LARGE_STEPS, so a build starts where it
+ * will finish. 0 (off) stays off.
+ */
+const SMALL_STEPS = 6, LARGE_STEPS = 1;
+function limitFor({ p, message = '', client = null, session = null } = {}) {
+  const base = Number(p?.orchestratorWorkSteps) || 0;
+  if (base <= 0) return base;
+  const { difficulty } = require('./triage').rate({ message, client, session });
+  return difficulty === 'small' ? Math.max(base, SMALL_STEPS) : difficulty === 'large' ? Math.min(base, LARGE_STEPS) : base;
+}
 
 function argsOf(tc) { try { return tc.function?.arguments ? JSON.parse(tc.function.arguments) : {}; } catch { return {}; } }
 
@@ -69,4 +83,4 @@ function handOff({ session, message, from, reply, say, step, person = null, spok
     + 'and I will tell you when it reports.';
 }
 
-module.exports = { isWork, handOff, doneSince, COORD };
+module.exports = { isWork, handOff, doneSince, limitFor, COORD, SMALL_STEPS, LARGE_STEPS };

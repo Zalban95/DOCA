@@ -53,7 +53,7 @@ function toolsSection(schemas, named = []) {
     if (kit === 'mcp') lines.push(`  ${list.map(t => t.name).join(', ')}`);
     else for (const t of list) lines.push(`  ${t.name}: ${t.what}`);
   }
-  const more = require('./tool-tiers').namedLine(named);   // experiment toolTiers: held, not loaded yet
+  const more = require('./tool-tiers').namedLine(named);   // tiers (tool-tiers.js): held, not loaded yet
   if (more) lines.push(more);
   return lines.join('\n');
 }

@@ -117,11 +117,14 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
   const stats = { at: Date.now(), firstAudioMs: null, spokeAt: null, replyMs: [], tools: 0, background: 0, interrupted: 0, reports: 0 };
   let heardAt = null;   // when the last utterance ended, until its answer's first audio: replyMs, end of speech → first audio
   // The hub's own voice speaks a device's call in its Live call voice (call-voices.js): the device's screen's, its person's, the hive's.
-  const model = pipeline ? require('./pipeline').connect({ voice: require('../call-voices').forDevice(deviceId), language: require('../call-language').forDevice(deviceId) })
+  // …and ends what was said after the pause that screen chose (call-pause.js: Settings → Voice → Calls, on the device's page).
+  const pause = pipeline ? require('./call-pause').forDevice(deviceId) : null;
+  const model = pipeline ? require('./pipeline').connect({ voice: require('../call-voices').forDevice(deviceId), language: require('../call-language').forDevice(deviceId), silenceMs: pause.silenceMs })
     : ADAPTERS[s.protocol].connect({ ...t, model: s.model, voice: s.voice, dialect: s.dialect, instructions: INSTRUCTIONS + recent(sessionId), tools: [TOOL] });
   if (pipeline) s.protocol = 'pipeline';
   // Each stage of this call, kept (call-log.js): a call that fails is never only a quiet call.
   const log = require('./call-log').begin({ kind: 'device', label, sessionId, person, deviceId, engine: s.protocol });
+  if (pause) log.note(`pause that ends speech: ${pause.silenceMs} ms (${pause.from})`);
   const notify = (stage, text) => { log.notice(stage, text); tell({ type: 'notice', stage, text }); };
   let ended = false, lastWords = Date.now(), answering = 0, idle = null;
   const callId = ++_liveN;
@@ -170,11 +173,14 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
   idle?.unref?.();
   model.on('dropped', why => log.dropped(why));
   model.on('stt', r => log.stt(r));
+  let sent = 0;   // audio bytes that left for the caller since the last answer's line
+  model.on('tts', r => log.tts(r));
+  model.on('spoken', r => { log.answer({ ...r, sent }); sent = 0; });
   model.on('notice', ({ stage, text }) => notify(stage, text));
   model.on('audio', pcm => {
     if (stats.spokeAt && stats.firstAudioMs === null) stats.firstAudioMs = Date.now() - stats.spokeAt;
     if (heardAt) { stats.replyMs = [...stats.replyMs, Date.now() - heardAt].slice(-20); heardAt = null; }
-    if (ws.readyState === 1) ws.send(pcm, { binary: true });
+    if (ws.readyState === 1) { ws.send(pcm, { binary: true }); sent += pcm.length; }
   });
   model.on('heard', () => { heardAt = Date.now(); stats.spokeAt = stats.spokeAt || heardAt; tell({ type: 'heard' }); });
   model.on('user', text => { stats.spokeAt = stats.spokeAt || Date.now(); tell({ type: 'user', text }); });

@@ -91,6 +91,11 @@ const HARNESS_PARAMS = [
         + 'own turn before the rest of the job moves to a work chat by itself — so the main chat stays free to '
         + 'talk to while work runs. Reading and coordinating do not count. 0 means no limit.' },
 
+  { key: 'toolsLoading', label: 'How tools are sent', choices: [['tiers', 'The core in full, the rest by name'], ['all', 'Every tool in full']],
+    hint: 'Every step sends the tools\' descriptions again. "The core in full" sends the everyday tools and names the rest, '
+        + 'loading one for the conversation the moment it is needed — about a third fewer tokens a step. "Every tool in '
+        + 'full" sends all of them every time: for a model with room to spare. Specialists keep their own lists.' },
+
   { key: 'historyTurns', label: 'History window', unit: 'messages', attrs: 'min="2" max="5000" step="2"',
     hint: 'How many recent messages are sent word for word. Anything older is represented by the running '
         + 'summary instead — it is not lost, the full transcript is always kept on disk. The turn in progress '

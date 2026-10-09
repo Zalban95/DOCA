@@ -99,6 +99,19 @@ test('a set runs as real turns; the result names tools, steps and what regressed
   assert.deepEqual(r.fixed, ['mem']);
 });
 
+test('as the Orchestrator: each case asks a fresh one, and the numbers say what it sent and what it handed on', async () => {
+  const memory = require('../modules/harness/memory');
+  const before = memory.mainSession().id;
+  const set = { id: 'o', title: 'O', cases: [{ id: 'sum', prompt: 'What is 17 × 23?', checks: [{ maxSteps: 5 }] }] };
+  const r = await require('../modules/evals/run').runSet(set, { as: 'orchestrator' });
+  const [c] = r.cases;
+  assert.equal(c.pass, true, JSON.stringify(c));
+  assert.notEqual(memory.mainSession().id, before, 'a fresh Orchestrator, the last put away');
+  assert.equal(require('../modules/harness/organization').profileFor(memory.getSession(memory.mainSession().id)).level, 'orchestrator');
+  assert.equal(c.children, 0, 'nothing handed on');
+  assert.ok(c.tokensIn > 0 && c.toolsSent > 0 && c.firstMs != null, JSON.stringify(c));
+});
+
 test('from the panel: a host runs a set in a child process on a throwaway copy; the result lands here', async () => {
   const member = await H.signIn('member', 'eval-member@test.local');
   assert.equal((await H.api(null, 'GET', '/api/evals', undefined, { Cookie: member.cookie })).status, 403);
@@ -122,14 +135,14 @@ test('from the panel: a host runs a set in a child process on a throwaway copy; 
 
 test('comparing: --flag runs the set with the experiment off and on, and prints both (TODO B7)', async () => {
   // Not spawnSync: the stub model answering the child lives in this process, which must keep running.
-  const child = require('node:child_process').spawn(process.execPath, [require('node:path').join(__dirname, '..', 'bin', 'doca-eval.js'), 'tiny', '--flag', 'toolTiers', '--json'], { env: process.env });
+  const child = require('node:child_process').spawn(process.execPath, [require('node:path').join(__dirname, '..', 'bin', 'doca-eval.js'), 'tiny', '--flag', 'claimCheck', '--json'], { env: process.env });
   let out = '', err = '';
   child.stdout.on('data', d => { out += d; }); child.stderr.on('data', d => { err += d; });
   const code = await new Promise(r => child.on('close', r));
   const lines = out.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
   const cmp = lines.find(l => l.compare)?.compare;
   assert.ok(cmp, out + err);
-  assert.deepEqual(cmp.map(x => [x.label, x.passed, x.total]), [['configured model · toolTiers off', 1, 1], ['configured model · toolTiers on', 1, 1]]);
+  assert.deepEqual(cmp.map(x => [x.label, x.passed, x.total]), [['configured model · claimCheck off', 1, 1], ['configured model · claimCheck on', 1, 1]]);
   assert.equal(code, 0, err.slice(-2000));
 });
 

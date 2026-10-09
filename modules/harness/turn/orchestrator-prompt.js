@@ -25,10 +25,11 @@ function ownerInstructions(p) {
 
 function count(fn) { try { return fn().length; } catch { return 0; } }
 
-function orchestratorPrompt({ p, userText, summary, toolCount, client, profile, toolList, schemas = [], sessionId = null }) {
+function orchestratorPrompt({ p, userText, summary, toolCount, client, profile, toolList, schemas = [], held: heldNames = null, sessionId = null }) {
   const { memoryBlock, rulesBlock, environmentBrief } = require('./prompt');
   const identity = require('../identity');
-  const held = new Set(schemas.map(s => s.function?.name || s.name).filter(Boolean));
+  // What it holds, not only what is sent this step (tool-tiers.js): a rule or a route follows a tool it can call.
+  const held = new Set((heldNames || schemas.map(s => s.function?.name || s.name)).filter(Boolean));
   const registry = require('../../agents/registry');
   const specialists = held.has('agent_dispatch') && registry.enabled() ? registry.list().filter(a => !a.broken).map(a => a.id) : [];
   const route = require('../coordinator').routing({

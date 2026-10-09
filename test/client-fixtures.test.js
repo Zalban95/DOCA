@@ -19,7 +19,8 @@ const bus = require('../modules/api-v1/bus');
 const DIR = path.join(__dirname, '..', 'docs', 'api', 'fixtures');
 const WRITE = process.env.DOCA_WRITE_FIXTURES === '1';
 const NAMES = ['agent.mission-running', 'agent.mission-done', 'agent.mission-archived', 'agent.mission-seen', 'agent.mission-work-stopped',
-  'prompt.new', 'prompt.new-approval', 'prompt.closed', 'alert', 'alert-files', 'settings.changed', 'device.approved', 'device.refused'];
+  'prompt.new', 'prompt.new-approval', 'prompt.closed', 'alert', 'alert-files', 'settings.changed', 'device.approved', 'device.refused',
+  'agent.team-running', 'agent.team-done'];
 
 test.before(() => H.start());
 test.after(() => H.stop());
@@ -36,6 +37,27 @@ async function frames() {
   missions.announce(done); out['agent.mission-done'] = last('agent.mission');
   missions.announce({ ...done, archivedAt: '2026-10-06T19:00:00.000Z' }, { quiet: true }); out['agent.mission-archived'] = last('agent.mission');
   missions.announce({ ...done, seenAt: '2026-10-06T18:30:00.000Z' }, { quiet: true }); out['agent.mission-seen'] = last('agent.mission');   // read means done (harness/seen.js)
+
+  // A team (teams/): three tasks on one board, the board read by the hub's own rules (teams/board.js) from missions.
+  const board = require('../modules/teams/board'), announce = require('../modules/teams/announce');
+  const team = { id: 'team_fixture', title: 'Landing page', goal: 'A page with its copy, checked in a browser', by: null, state: 'running',
+    createdAt: '2026-10-06T18:00:00.000Z', loop: { on: true, rounds: 0, maxRounds: 3 }, notes: [{ text: 'The headline is in copy.md' }],
+    doc: { name: 'team-landing-page.md' },
+    tasks: [{ id: 'page', title: 'Build the page', agent: 'coder', missionId: 'msn_page', contract: { done: 'index.html shows the headline' } },
+      { id: 'copy', title: 'Write the copy', agent: 'researcher', missionId: 'msn_copy' },
+      { id: 'test', title: 'Check it in a browser', agent: 'tester', after: ['page', 'copy'], contract: { done: 'no console errors' } }] };
+  const runs = { msn_page: { state: 'running', steps: 12 }, msn_copy: { state: 'done', steps: 9 } };
+  const look = { mission: id => runs[id], session: () => null, budget: a => ({ coder: 80, researcher: 40, tester: 120 })[a] };
+  team.tasks[1].verdict = { ok: true, why: 'no check — on the agent\'s word' };
+  let views = board.tasks(team, look);
+  team.progress = board.summary(team, views).progress;
+  announce.devices(team, views); out['agent.team-running'] = last('agent.team');
+  Object.assign(runs, { msn_page: { state: 'done', steps: 30 }, msn_test: { state: 'done', steps: 41 } });
+  Object.assign(team.tasks[0], { verdict: { ok: true, why: 'the page shows "Ship it"' } });
+  Object.assign(team.tasks[2], { missionId: 'msn_test', verdict: { ok: true, why: 'the page shows no console errors' } });
+  views = board.tasks(team, look);
+  Object.assign(team, { state: 'done', endedAt: '2026-10-06T18:40:00.000Z', progress: board.summary(team, views).progress });
+  announce.devices(team, views); out['agent.team-done'] = last('agent.team');
 
   const memory = require('../modules/harness/memory');
   const w = memory.createSession('Laya MCP server', { activate: false, kind: 'work', parentId: memory.mainSession().id });

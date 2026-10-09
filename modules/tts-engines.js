@@ -73,7 +73,7 @@ function body(engine, text, { voice, speed, format = 'mp3' } = {}) {
   const { input, instructions } = require('./voice-tags').forVoice(text, engine.tags);
   const language = engine.languages ? require('./speech-language').guess(input, engine.languages) : null;
   return { model: engine.ttsModel, input, voice: voice || engine.ttsVoice, response_format: format,
-    speed: Number(speed) > 0 ? Number(speed) : engine.ttsSpeed,
+    speed: Math.min(4, Math.max(0.25, Number(speed) > 0 ? Number(speed) : Number(engine.ttsSpeed) || 1)),   // the range Kokoro and vLLM-Omni take; past it, a 400
     ...(instructions ? { instructions } : {}), ...(language ? { language } : {}) };
 }
 
