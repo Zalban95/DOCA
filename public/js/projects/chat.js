@@ -41,6 +41,7 @@ async function pjChatLoad() {
     <div class="pj-chat-input">
       <textarea class="input" id="pj-chat-in" rows="2" placeholder="Ask about this project, or give it a job…"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();pjChatSend()}"></textarea>
+      <span class="ctx-slot pj-chat-meter" id="pj-chat-context"></span>
       ${typeof thinkToggleHtml === 'function' ? thinkToggleHtml('pj-chat-think') : ''}
       <button class="btn btn-sm btn-teal" id="pj-chat-send" onclick="pjChatSend()">Send</button>
       <button class="btn btn-sm btn-red" id="pj-chat-stop" onclick="pjChatStop()" style="display:none" title="Stop this tab's turn">■</button>
@@ -73,8 +74,11 @@ async function pjChatActivate(id) {
   const view = PJC.chats.find(c => c.id === id) || null;
   agentConvBar(document.getElementById('pj-chat-bar'), id, view, { think: document.getElementById('pj-chat-think') });
   PJC.fold?.setSession(id);
+  _pjMeter(t);
   if (!t.loaded) {
     t.loaded = true;
+    // How full its window is before anything is sent (null without one: each turn against 1M).
+    apiFetch(`/api/harness/status?sessionId=${encodeURIComponent(id)}`).then(st => { if (t.usage === undefined) { t.usage = st.context ?? null; _pjMeter(t); } }).catch(() => {});
     let data;
     try { data = await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}`); } catch { return; }
     for (const m of (data.messages || []).slice(-60)) {
@@ -87,6 +91,11 @@ async function pjChatActivate(id) {
       : 'A conversation in this project: it works in the project folder and knows how the project builds and tests.'}</div>`;
   }
   t.box.scrollTop = t.box.scrollHeight;
+}
+
+/** The usage meter beside the composer, for the tab showing (agent-ui/context-meter.js). */
+function _pjMeter(t) {
+  if (PJC.active === t.id) usageMeterDraw(document.getElementById('pj-chat-context'), t.usage ?? null, `pj:${t.id}`, { tap: true });
 }
 
 function _pjButtons() {
@@ -148,6 +157,7 @@ function _pjTurnUi(t) {
     approval: evt => agentApprovalEvent(evt, box, { note: text => _pjChatRow('warning', text, box), scroll }),
     error: msg => _pjChatRow('error', msg, box),
     userAdded: evt => { _pjChatRow('user', evt.text, box); if (PJC.active === t.id) PJC.fold?.refresh(); },
+    context: evt => { t.usage = evt; _pjMeter(t); },
   });
   return {
     onEvent: e => { sink.onEvent(e); if (['work_plan', 'agent_dispatch', 'work_chats'].includes(e.name) && e.type === 'tool_result') pjTabsSync(); },

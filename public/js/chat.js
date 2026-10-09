@@ -51,10 +51,9 @@ async function chatLoadHistory() {
   } catch {}
 }
 
-/** Draw the context ring in the header. */
+/** Draw the usage meter in the header (agent-ui/context-meter.js). */
 function _chatContext(u) {
-  const el = document.getElementById('chat-context');
-  if (el) el.innerHTML = contextRingHtml(u);
+  usageMeterDraw(document.getElementById('chat-context'), u, 'chat', { tap: true });
 }
 
 /**
