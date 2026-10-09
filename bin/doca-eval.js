@@ -7,7 +7,8 @@
  * On a throwaway copy of this machine's settings and keys (bin/lib/sandbox.js), so the cases' conversations, memory
  * and files never touch the real data; the result is saved in the real data folder (evals/results/<set>/), where
  * Settings → Evaluations reads it. A paid provider's tokens are real, which is why nothing runs this by itself.
- * `--json` prints one JSON line per case and the result last, for the panel.
+ * `--json` prints one JSON line per case and the result last, for the panel. `--orchestrator` asks a fresh Orchestrator
+ * per case (as a person in the main chat does), so its hand-off to work chats is measured (each case's `children`).
  *
  * Comparing (TODO B7): `--models ollama/qwen3:8b,deepseek/deepseek-chat` runs the set once per model, and
  * `--flag riskTiers` once with that experiment off and once on (`--flag riskTiers=on` only on), developer mode on in the
@@ -70,7 +71,7 @@ async function compare() {
   for (const { model, on } of combos) {
     const label = `${model || 'configured model'}${flag ? ` · ${flag} ${on ? 'on' : 'off'}` : ''}`;
     say({ run: label }, `\n== ${label}`);
-    const argv = [__filename, id, '--json', ...(model ? ['--models', model] : []), ...(flag ? ['--flag', `${flag}=${on ? 'on' : 'off'}`] : [])];
+    const argv = [__filename, id, '--json', ...(args.includes('--orchestrator') ? ['--orchestrator'] : []), ...(model ? ['--models', model] : []), ...(flag ? ['--flag', `${flag}=${on ? 'on' : 'off'}`] : [])];
     const child = require('child_process').spawn(process.execPath, argv, { env: ENV_BEFORE, stdio: ['ignore', 'pipe', 'inherit'] });
     let buf = '', row = null;
     child.stdout.on('data', d => {
@@ -109,7 +110,7 @@ let last = null;   // the result of the latest run, for the comparison
 const once = async () => {
   const p = require('../modules/harness/agent').params();
   if (!p.model) { say({ error: 'no model' }, 'No model is configured for the DOCA harness on this machine, so nothing can be evaluated.'); return 1; }
-  const result = await require('../modules/evals/run').runSet(valid, { previous,
+  const result = await require('../modules/evals/run').runSet(valid, { previous, as: args.includes('--orchestrator') ? 'orchestrator' : null,
     onCase: (c, i, n) => say({ case: c.id, i, n, pass: c.pass, steps: c.steps, tokens: c.tokens, ...numbers(c), why: c.checks.filter(x => !x.pass).map(x => x.why) },
       `${c.pass ? 'PASS' : 'FAIL'} ${i}/${n} ${c.id} — ${c.steps ?? '?'} steps, ${c.tokens ?? '?'} tokens${c.tokensIn != null ? ` (in ${c.tokensIn}, cached ${c.tokensCached ?? '?'}, out ${c.tokensOut ?? '?'}; largest step ${c.stepMax})` : ''}, first output ${c.firstMs ?? '?'} ms, ${((c.ms || 0) / 1000).toFixed(1)} s${c.children ? `, ${c.children} work chat${c.children > 1 ? 's' : ''}` : ''}${c.pass ? '' : `\n     ${c.checks.filter(x => !x.pass).map(x => x.why).join('\n     ')}`}`) });
   last = result;

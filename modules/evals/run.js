@@ -41,9 +41,15 @@ function outcomeOf(sessionId, r, error, seen = {}) {
     ms: run?.endedAt ? new Date(run.endedAt) - new Date(run.startedAt) : null, state: error ? 'failed' : r?.ended || 'done', error: error?.message || null };
 }
 
-async function runCase(kase, setId) {
+/**
+ * `as: 'orchestrator'` (the CLI's --orchestrator, or a case's own `as`) asks the Orchestrator, as a person in the main
+ * chat does — a fresh one per case (the last put away, as Clear main chat does), so its hand-off to work chats is what
+ * is measured; otherwise the case is a conversation of its own (a work chat), as before.
+ */
+async function runCase(kase, setId, { as = null } = {}) {
   const memory = require('../harness/memory');
-  const s = memory.createSession(`Eval · ${setId} · ${kase.id}`, { activate: false });
+  const s = (kase.as || as) === 'orchestrator' ? memory.resetMain()
+    : memory.createSession(`Eval · ${setId} · ${kase.id}`, { activate: false });
   if (kase.mode && kase.mode !== 'agent') memory.updateSession(s.id, { mode: kase.mode });
   let r = null, error = null;
   // When the first word, thought or tool call came: what a person waits before anything happens.
@@ -59,12 +65,12 @@ async function runCase(kase, setId) {
 }
 
 /** Every case in order; `onCase(result, i, n)` after each. Returns the whole result, with regressions against `previous`. */
-async function runSet(set, { onCase = () => {}, previous = null } = {}) {
+async function runSet(set, { onCase = () => {}, previous = null, as = null } = {}) {
   const p = require('../harness/agent').params();
   const startedAt = new Date().toISOString();
   const cases = [];
   for (let i = 0; i < set.cases.length; i++) {
-    const c = await runCase(set.cases[i], set.id);
+    const c = await runCase(set.cases[i], set.id, { as });
     cases.push(c);
     onCase(c, i + 1, set.cases.length);
   }
