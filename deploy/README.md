@@ -124,8 +124,23 @@ The same image on a VPS with Docker and Compose:
    an SSH tunnel, or bind to the server's tailnet address. Do not publish it on the internet with its self-signed
    certificate. The address and domain are not in the image: they are `HIVE_BIND`, `HIVE_PORT` and, when there is a
    domain, the edge's — nothing to rebuild when they change.
-4. **Updating** a hive is a new image: `docker compose pull && docker compose up -d` (the panel cannot switch
-   versions in a hosted hive). Back up first: `hive.sh backup <name>`.
+4. **Updating** a hive is a new image on the same volume, holding its work: `hive.sh update <name>` (below). With
+   compose: `docker exec <name> node bin/doca-update.js hold` (it waits until nothing runs, then the hive stops),
+   `hive.sh backup <name>`, then `docker compose pull && docker compose up -d`.
+
+## Updating a hive (docs/design/production.md)
+
+```sh
+hive.sh update <name> [--image IMAGE] [--timeout SECONDS]
+```
+
+A hosted hive is a production hive: its update channel (the licence server's signed releases) says what is newer, and
+with no `--image` the hive names it itself — `node bin/doca-update.js latest` inside the container, the image and the
+digest from the signed manifest, pulled by digest. The hive's work is held: its restart policy is set to no, it is
+asked to stop once nothing runs (`bin/doca-update.js hold`: a file in its own data — turns, calls and devices' commands
+are waited for, never cut), a backup of its volume is made, and the new image starts with the options the hive was made
+with (the label `doca.hive.args`). If the new image does not answer within two minutes, the old one starts again on the
+same volume and the backup's name is said. Still working when `--timeout` (6 h) runs out: nothing changes.
 
 ## What a tenant can still see
 

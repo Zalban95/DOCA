@@ -136,8 +136,10 @@ const absentRoute = (method, p) => HOSTED && ROUTES.some(([m, re]) => (m === '*'
 
 /** Express middleware, mounted first: an absent route is the panel's own 404, before the gate and any handler. */
 function middleware(req, res, next) {
-  if (!absentRoute(req.method, req.path)) return next();
-  res.status(404).json({ code: 'not_found', error: `There is no ${req.method} ${req.path} in this panel.`, hosted: true });
+  // A production hive's own absent routes too (edition-mode.js): what changes DOCA itself.
+  const prod = !HOSTED && require('./edition-mode').absentRoute(req.method, req.path);
+  if (!absentRoute(req.method, req.path) && !prod) return next();
+  res.status(404).json({ code: 'not_found', error: `There is no ${req.method} ${req.path} in this panel.`, ...(prod ? { production: true } : { hosted: true }) });
 }
 
 /**

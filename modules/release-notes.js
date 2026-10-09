@@ -12,6 +12,12 @@ const _notes = new Map();
 async function notes(tag) {
   if (!TAG.test(String(tag || ''))) throw Object.assign(new Error('A version is written vX.Y.Z.'), { status: 400 });
   if (_notes.has(tag)) return _notes.get(tag);
+  // A production hive has no git: a signed release's notes are in its manifest (update-channel/stage.js).
+  if (require('./edition-mode').production()) {
+    const m = require('./update-channel/stage').verified(require('path').join(require('./releases').DIR, tag));
+    if (!m) throw Object.assign(new Error(`No signed version ${tag} here.`), { status: 404 });
+    return { tag, previous: null, message: String(m.manifest.notes || '').trim(), changes: [] };
+  }
   const r = require('./releases');
   const tags = (await r.list()).versions.map(v => v.tag).filter(t => TAG.test(t));   // newest first
   let all = tags;

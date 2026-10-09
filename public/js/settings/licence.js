@@ -20,13 +20,14 @@ async function licenceCard() {
   card.innerHTML = `<div class="card-title">Licence</div>
     <p class="desc">Which features this hive runs. Without a licence it runs the core; a licence adds the rest. A change takes effect when the hub next starts.</p>
     ${row('State', state)}
+    ${row('Mode', `${L.mode === 'production' ? 'production — every safety applies to everyone; DOCA itself is not changed from inside' : 'development — DOCA may be debugged and changed from within'} <span style="opacity:.6">(${escHtml(L.modeWhy || '')})</span>`)}
     ${L.problem ? row('Problem', escHtml(L.problem.why)) : ''}
     ${L.customer ? row('For', escHtml(L.customer)) : ''}
     ${L.edition ? row('Edition', escHtml(L.edition)) : ''}
     ${row('Enables', codes.length ? escHtml(codes.join(' · ')) : 'core only')}
     ${row('Expires', L.expiry ? day(L.expiry) : L.valid ? 'does not expire' : '—')}
     ${L.checkInDays ? row('Checks in', `every ${L.checkInDays} days · last ${day(L.lastCheckIn)}${L.lastError ? ` · <span style="color:var(--amber)">${escHtml(L.lastError)}</span>` : ''}`) : ''}
-    ${L.seats ? row('Seats', L.seats) : ''}${L.maxDevices ? row('Devices', L.maxDevices) : ''}
+    ${L.seats ? row('Seats', licenceLimit(L.limits?.seats, L.seats, L.limits?.enforced)) : ''}${L.maxDevices ? row('Devices', licenceLimit(L.limits?.devices, L.maxDevices, L.limits?.enforced)) : ''}
     ${row('This hive', `<code style="font-size:11px;word-break:break-all">${escHtml(L.fingerprint)}</code> <button class="btn btn-sm" onclick="navigator.clipboard?.writeText('${L.fingerprint}')">Copy</button>`)}
     ${L.restartNeeded ? `<p class="desc" style="color:var(--amber)">${escHtml(L.nextStart)}</p>` : ''}
     ${L.trustsKeys ? '' : '<p class="desc">This build trusts no licence server yet: no licence can be checked until a release names one.</p>'}
@@ -42,6 +43,9 @@ async function licenceCard() {
     </div>
     <div id="licence-said" class="desc" style="margin-top:8px"></div>`;
 }
+
+/** "3 of 5 used", and whether it is held (production only: license/limits.js). */
+function licenceLimit(l, max, enforced) { return `${l?.used ?? '—'} of ${max} used${enforced ? '' : ' (not held in a development hive)'}`; }
 
 function licenceSaid(text, bad) { const el = document.getElementById('licence-said'); if (el) { el.textContent = text; el.style.color = bad ? 'var(--red)' : ''; } }
 

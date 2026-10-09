@@ -40,7 +40,7 @@ async function handleList(_req, res) {
     const inv = archive.inventory();
     let bytes = 0;
     for (const f of inv) try { bytes += fs.statSync(f.abs).size; } catch {}
-    res.json({ dir: BACKUP_DIR, settings: secret.settings(), schedule: require('./schedule').status(), backups, estimate: { files: inv.length, bytes } });
+    res.json({ dir: BACKUP_DIR, settings: secret.settings(), schedule: require('./schedule').status(), mirror: require('./mirror').status(), backups, estimate: { files: inv.length, bytes } });
   } catch (e) { fail(res, e); }
 }
 
@@ -64,7 +64,8 @@ function handleSchedule(req, res) {
 /** POST { password? } — make one now. */
 async function handleCreate(req, res) {
   try {
-    res.json(await archive.create({ password: secret.passwordFor(req.body?.password) }));
+    const b = await archive.create({ password: secret.passwordFor(req.body?.password) });
+    res.json({ ...b, mirror: require('./mirror').after(b.file) });   // the second copy (mirror.js): its failure is its own
   } catch (e) { fail(res, e); }
 }
 
@@ -187,6 +188,7 @@ function mount(app) {
   app.get   ('/api/backups/remote',          (_req, res) => res.json(require('./remote').view()));
   app.post  ('/api/backups/remote',          (req, res) => { try { res.json(require('./remote').setConfig(req.body || {})); } catch (e) { fail(res, e); } });
   app.post  ('/api/backups/remote/test',     async (_req, res) => { try { res.json(await require('./remote').test()); } catch (e) { fail(res, e); } });
+  app.post  ('/api/backups/mirror',          (req, res) => { try { res.json(require('./mirror').set(req.body?.dir)); } catch (e) { fail(res, e); } });   // a second path (mirror.js)
   app.post  ('/api/backups/upload',          handleUpload);
   app.get   ('/api/backups/:name/download',  handleDownload);
   app.post  ('/api/backups/:name/plan',      handlePlan);

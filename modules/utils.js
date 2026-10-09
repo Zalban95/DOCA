@@ -65,6 +65,7 @@ function fmSafe(p) {
   // macOS/Windows, 2026-10-04). Case-insensitively where the filesystem is.
   const same = (x, y) => (process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y);
   if (require('./hosted').inApp(real) || require('./hosted').inApp(abs)) return false;   // a hosted hive's code is never opened (hosted.js)
+  if (require('./edition-mode').inCode(real) || require('./edition-mode').inCode(abs)) return false;   // nor a production hive's (edition-mode.js)
   if (PROTECTED_FILES.some(f => { const r = path.resolve(f), rr = realOf(r); return [r, rr].some(p => same(p, abs) || same(p, real)); })) return false;
   const under = (x, d) => same(x, d) || (process.platform === 'win32' ? x.toLowerCase().startsWith(d.toLowerCase() + path.sep) : x.startsWith(d + path.sep));
   if ((PROTECTED_DIRS || []).some(d => { const r = path.resolve(d), rr = realOf(r); return [r, rr].some(p => under(abs, p) || under(real, p)); })) return false;

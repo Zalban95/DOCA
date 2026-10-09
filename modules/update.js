@@ -113,6 +113,7 @@ function compareSemver(a, b) {
 
 /** GET /api/update-check?force=1 */
 async function handleUpdateCheck(req, res) {
+  if (require('./edition-mode').production()) return res.json(await require('./update-channel/routes').checkView(req.query.force === '1'));
   const force = req.query.force === '1';
   const now   = Date.now();
 
@@ -370,6 +371,7 @@ function mount(app) {
   app.get ('/api/update-check', handleUpdateCheck);
   app.post('/api/update',       handleUpdate);
   app.post('/api/restart',      handleRestart);
+  require('./update-channel/routes').mount(app);   // a production hive's update channel (update-channel/)
   app.get ('/api/deps',         require('./deps').handleDeps);   // outdated packages and advisories
   require('./releases').mount(app);          // /api/versions: roll back or forward
   require('./backup/routes').mount(app);     // /api/backups: .dBac

@@ -162,9 +162,12 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
     `shell: ${require('../shell').describe()}`,
     `user: ${s.host.user} (home ${s.host.home})`,
     `panel: DOCA v${s.doca.version} on node ${s.doca.node}, port ${s.doca.port}, pid ${s.doca.pid}`,
-    `panel code: ${s.doca.root} (its own source — read it before answering questions about how DOCA works)`,
+    // Development or production (edition-mode.js): in production the code is not the agent's to read, so it is not named.
+    require('../edition-mode').production() ? require('../edition-mode').line()
+      : `panel code: ${s.doca.root} (its own source — read it before answering questions about how DOCA works)`,
     `panel state: prefs ${s.doca.prefsFile}, data ${s.doca.dataDir}`,
   );
+  if (require('../edition-mode').development()) out.push(require('../edition-mode').line());
 
   if (provider) {
     // The owner's switches by name: "9 switched off" said nothing a model could act on (its own feedback, 2026-10-07).
@@ -175,7 +178,7 @@ function block({ provider, model, toolCount, disabledCount } = {}) {
   }
   // Whether this model may release DOCA unasked (CONSTITUTION W2, modules/releasing.js): the agents it is for could not
   // reach the route that says so (host, a person's session) — audit 2026-10-06, coh F16. A fact of the settings, so stable.
-  if (model) {
+  if (model && require('../edition-mode').development()) {
     try {
       const r = require('../releasing').check(model);
       out.push(`releasing DOCA: ${r.unasked ? `this model may merge, tag, push and switch the live panel without asking (rule "${r.rule}")` : 'this model asks a person before merging, tagging, pushing or switching the live panel'} — the admin's setting, Settings → Developer → Releasing`);

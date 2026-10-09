@@ -103,6 +103,7 @@ function handleIssue(req, res) {
   // Minted by an admin at the panel: approved by them as it is made, held to what they hold (devices-approval/).
   const decided = startApproval(req, { scopes: resolved });
   const { scopes: capped, ...approval } = decided || {};
+  try { require('./license/limits').checkDevice('device'); } catch (e) { return res.status(e.status).json({ code: e.code, error: e.message }); }
   const r = devices.create({
     name: String(name).trim(),
     scopes: capped || resolved,
@@ -196,6 +197,7 @@ async function handlePairStart(req, res) {
   if (!resolved) return res.status(400).json({ error: 'scopes_required' });
 
   const decided = startApproval(req, { userId: owner.userId, orgId: owner.orgId, scopes: resolved });
+  try { require('./license/limits').checkDevice('device'); } catch (e) { return res.status(e.status).json({ code: e.code, error: e.message }); }
   const p = devices.startPairing({
     name: String(name).trim(),
     scopes: resolved,

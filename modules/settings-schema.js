@@ -61,7 +61,12 @@ const SCHEMA = {
   // ── The hive: how its agents behave and what they may do ──
   branding:         { is: 'travels', home: 'hive', note: 'the name and look the panel wears' },
   updates:          { is: 'travels', home: 'hive', note: 'how updates are offered',
-    keys: { repo: { type: 'string', default: '', hint: 'owner/name on GitHub that the update check reads when git cannot (an edition or a fork). Empty: the DOCA project.' } } },
+    keys: { repo: { type: 'string', default: '', hint: 'owner/name on GitHub that the update check reads when git cannot (an edition or a fork). Empty: the DOCA project.' },
+      // A production hive's update channel (update-channel/): never proposable, as the section is not — the owner's.
+      auto: { type: 'string', oneOf: ['off', 'notify', 'window'], default: 'notify', hint: 'A production hive\'s updates: off (only when asked), notify (say a release is ready; install it with Update now), or window (install it inside the update window). Running work is never cut, and an urgent release is applied after its date whatever this says.' },
+      days: { type: 'array', default: ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'], hint: 'The days of the update window (sun, mon, tue, wed, thu, fri, sat).' },
+      from: { type: 'string', default: '02:00', hint: 'When the update window opens, HH:MM on this hive\'s clock.' },
+      to: { type: 'string', default: '05:00', hint: 'When it closes, HH:MM; earlier than from runs past midnight. An update still waiting for running work when it closes waits for the next window.' } } },
   agents:           { is: 'travels', home: 'hive', note: 'whether specialists are switched on',
     propose: p('Specialist agents', 'Allow the orchestrator to dispatch specialists', { prefix: 'agents.enabled', exact: true }) },
   // No box in the panel on purpose: a note is the agent's proposal about a tool, and its Accept is the control.
@@ -265,7 +270,9 @@ const SCHEMA = {
   mcpServers:       { is: 'local', home: 'device', on: 'host', note: 'spawnable commands and URLs — never proposed, never exported' },
   dockerPresets:    { is: 'local', home: 'device', on: 'host', note: 'compose presets for this machine\'s Docker' },
   clientApps:       { is: 'local', home: 'device', on: 'host', note: 'where DOCA\'s Android apps\' repositories are on this machine, to build them (client-apps/)' },
-  backup:           { is: 'local', home: 'device', on: 'host', note: 'the backup schedule of this machine' },
+  backup:           { is: 'local', home: 'device', on: 'host', note: 'the backup schedule of this machine',
+    // A second copy of every backup on another disk (backup/mirror.js). A path on this machine: never the agent's to propose.
+    keys: { mirror: { type: 'string', default: '', propose: false, hint: 'A second folder on this machine (another disk, a NAS mount) where every backup is also copied, keeping as many scheduled ones as here. Empty: none.' } } },
   // The System 1 decision model (experiment systemOne, modules/system-one). Not proposable: its threshold decides when a
   // model's guess replaces a rule, and its service runs on this machine.
   systemOne:        { is: 'local', home: 'device', on: 'host', note: 'the System 1 decision model: which one, where it runs on this machine, how sure it must be (modules/system-one; the switch is experiments.systemOne)',

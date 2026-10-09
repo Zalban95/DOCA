@@ -116,6 +116,7 @@ async function run({ now = Date.now() } = {}) {
     const b = await archive.create({ password, name: PREFIX + archive.fileName(new Date(now)) });
     const removed = prune();
     writeState({ ...state(), lastAt: at, lastTriedAt: at, lastName: b.name, lastError: null });
+    const mirror = require('./mirror').after(b.file);   // the second path (mirror.js): a failure there is its own
     // The off-site copy (remote.js): its failure is its own, and never undoes the local backup.
     let remote = null;
     try {
@@ -125,7 +126,7 @@ async function run({ now = Date.now() } = {}) {
       console.warn(`[backup] off-site copy failed: ${e.message}`);
       writeState({ ...state(), remoteTriedAt: new Date().toISOString(), remoteError: e.message });
     }
-    return { made: b.name, removed, remote };
+    return { made: b.name, removed, remote, mirror };
   } catch (e) {
     console.warn(`[backup] scheduled backup failed: ${e.message}`);
     writeState({ ...state(), lastTriedAt: at, lastError: e.message });

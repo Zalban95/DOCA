@@ -7,6 +7,9 @@
 #   hive.sh backup <name> [FILE]              the hive's volume as a .tgz (stopped for the copy, started again)
 #   hive.sh restore <name> <FILE> [new's options]   a new hive from a backup, in a fresh volume — never onto a running one
 #   hive.sh remove <name> [--yes]             asks, backs up, then removes the container, its volume and network
+#   hive.sh update <name> [--image IMAGE] [--timeout SECONDS]   the new image on the same volume, holding running work:
+#                                             the hive stops once nothing runs, a backup is made, the new image starts,
+#                                             and the old one again if the new one does not answer
 #
 # Each hive is a container named <name> with its own volume (<name>-data), network (<name>-net) and limits, no mount
 # from this machine, and a port on 127.0.0.1 unless --bind says otherwise. gVisor (runsc) is used when Docker has it.
@@ -21,7 +24,7 @@ say()  { printf '%s\n' "$*"; }
 warn() { printf 'hive: %s\n' "$*" >&2; }
 die()  { warn "$*"; exit 1; }
 
-usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; }
 
 check_name() {
   [[ "${1:-}" =~ ^[a-z0-9][a-z0-9-]{1,40}$ ]] || die "a hive's name is lower-case letters, digits and -, 2 to 41 characters (got '${1:-}')."
@@ -119,6 +122,7 @@ create() {   # name, then new's options; RESTORING=1 when the volume already hol
     || $DOCKER volume create --label "doca.hive=$name" "$name-data" >/dev/null
 
   $DOCKER run -d --name "$name" --hostname "$name" --label "doca.hive=$name" --label "doca.hive.runtime=$runtime" \
+    --label "doca.hive.args=--port $port --bind $bind${models:+ --models $models} --cpus $cpus --memory $memory --pids $pids${runtime:+ --runtime $runtime}" \
     "${rt[@]}" --network "$name-net" -v "$name-data:/data" -e "PORT=$port" -p "$bind:$port:$port" -p "$bind:$((port + 1)):$((port + 1))" \
     --restart unless-stopped --cpus "$cpus" --memory "$memory" --pids-limit "$pids" \
     --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,size=256m \
@@ -172,6 +176,7 @@ cmd_backup() {   # name [file]
   need_hive "$1"
   local name="$1" file="${2:-}" was=0
   [ -z "$file" ] && { mkdir -p "$BACKUPS"; file="$BACKUPS/$name-$(date -u +%Y%m%dT%H%M%SZ).tgz"; }
+  IMAGE="$($DOCKER inspect -f '{{.Config.Image}}' "$name")"   # its own image's tar: the default one may not be here
   running "$name" && { was=1; say "stopping $name for a consistent copy…"; $DOCKER stop -t 30 "$name" >/dev/null; }
   local ok=0
   set -o pipefail; volume_tar "$name" > "$file.part" && ok=1
@@ -213,6 +218,60 @@ cmd_remove() {   # name [--yes]
   say "removed $name; its backup stays at $BACKUP_FILE"
 }
 
+# The new image on the same volume (deploy/README.md, "Updating a hive"). The hive's own update channel says what is
+# newer and which image (bin/doca-update.js latest, verified against the release key); its work is held: it is asked
+# to stop once nothing runs (bin/doca-update.js hold — never cut), a backup of its volume is made, the new image starts
+# with the options it was made with, and if it does not answer the old image starts again on the same volume.
+cmd_update() {   # name [--image IMAGE] [--timeout SECONDS]
+  need_hive "$1"
+  local name="$1"; shift
+  local image="" timeout=21600 old args info digest
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --image) image="$2"; shift 2 ;;
+      --timeout) timeout="$2"; shift 2 ;;
+      *) die "unknown option $1 (hive.sh help)." ;;
+    esac
+  done
+  running "$name" || die "$name is not running: start it first, so it can say what it runs and hold its work."
+  if [ -z "$image" ]; then
+    info="$($DOCKER exec "$name" node bin/doca-update.js latest 2>/dev/null || true)"
+    image="$(printf '%s' "$info" | sed -n 's/.*"image":"\([^"]*\)".*/\1/p')"
+    digest="$(printf '%s' "$info" | sed -n 's/.*"imageDigest":"\(sha256:[0-9a-f]*\)".*/\1/p')"
+    [ -n "$image" ] || die "$name's update channel names no image (${info:-no answer}): pass --image IMAGE."
+    [ -n "$digest" ] && image="${image%%:*}@$digest"   # the digest the signed release names: the bytes, not a tag
+  fi
+  old="$($DOCKER inspect -f '{{.Config.Image}}' "$name")"
+  args="$($DOCKER inspect -f '{{index .Config.Labels "doca.hive.args"}}' "$name")"
+  if [ -z "$args" ]; then   # a hive made before the label: its port and address, the defaults for the rest
+    local p; p="$($DOCKER port "$name" | sed -n 's/^[0-9]*\/tcp -> //p' | sort -t: -k2 -n | head -1)"
+    args="--port ${p##*:} --bind ${p%:*}"
+  fi
+  $DOCKER image inspect "$image" >/dev/null 2>&1 || $DOCKER pull "$image" >/dev/null || die "the image $image could not be pulled."
+  say "updating $name: $old → $image"
+  $DOCKER update --restart no "$name" >/dev/null
+  say "asking $name to stop once nothing runs (running work is never cut)…"
+  # A hive that stopped by itself while asked is ready too (its exec ends with it).
+  if ! $DOCKER exec "$name" node bin/doca-update.js hold --timeout "$timeout" && running "$name"; then
+    $DOCKER exec "$name" node bin/doca-update.js release >/dev/null 2>&1 || true
+    $DOCKER update --restart unless-stopped "$name" >/dev/null
+    die "$name is still working after ${timeout}s; nothing was changed. Try again later, or with a longer --timeout."
+  fi
+  $DOCKER wait "$name" >/dev/null 2>&1 || true
+  cmd_backup "$name"   # the way back for the data, before a new version touches it (CONSTITUTION S9); it is stopped already
+  $DOCKER rm "$name" >/dev/null
+  # shellcheck disable=SC2086 — args is the hive's own options, words by design
+  if (IMAGE="$image" RESTORING=1 create "$name" $args); then
+    say "updated $name to $image; its backup from before is $BACKUP_FILE"
+  else
+    warn "$image did not answer: starting $old again on the same volume."
+    $DOCKER rm -f "$name" >/dev/null 2>&1 || true
+    # shellcheck disable=SC2086
+    (IMAGE="$old" RESTORING=1 create "$name" $args) || die "$old did not start either: restore $BACKUP_FILE (hive.sh restore)."
+    die "the update did not hold; $name runs $old again. Its log: docker logs $name"
+  fi
+}
+
 case "${1:-help}" in
   new)     shift; check_name "${1:-}"; name="$1"; shift
            $DOCKER inspect "$name" >/dev/null 2>&1 && die "$name exists (hive.sh list)."
@@ -225,6 +284,7 @@ case "${1:-help}" in
   backup)  shift; cmd_backup "$@" ;;
   restore) shift; cmd_restore "$@" ;;
   remove)  shift; cmd_remove "$@" ;;
+  update)  shift; cmd_update "$@" ;;
   help|-h|--help) usage ;;
   *) usage; exit 1 ;;
 esac
