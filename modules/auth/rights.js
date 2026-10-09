@@ -137,6 +137,7 @@ const TABLE = [
   R(ANY, '/api/live/watch', 'host'),
   R(ANY, '/api/screens/.*', 'host'),
   R(ANY, '/api/archive(/.*)?', 'chat'),
+  R(GET, '/api/admin/overview', 'host'),                       // Hub → Admin: the hive's state and what waits for an admin (admin/)
   R(GET, '/api/chronicle(/.*)?', 'read'),                      // what happened: each row the viewer's own unless host (chronicle/)
   R(ANY, '/api/workstream(/.*)?', 'host'),
   R(ANY, '/api/machines(/.*)?', 'host'),

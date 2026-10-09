@@ -377,4 +377,7 @@ function mount(app) {
   require('./backup/routes').mount(app);     // /api/backups: .dBac
 }
 
-module.exports = { mount, handleUpdateCheck, handleUpdate, handleRestart, supervisorName, fetchLatestTag, parseLsRemote, highest, compareSemver };
+/** The last git check, without looking again (Hub → Admin reads it; null before the first look). */
+const lastCheck = () => cached;
+
+module.exports = { mount, lastCheck, handleUpdateCheck, handleUpdate, handleRestart, supervisorName, fetchLatestTag, parseLsRemote, highest, compareSemver };

@@ -47,6 +47,7 @@ function mount(app) {
   require('../archive').mount(app);
   require('../log-keep').mount(app);    // what is kept of what happened, and its bounds (Settings → System → Logs)
   require('../chronicle/routes').mount(app);   // Chronicle: everything that happened, and the story of a piece of work
+  require('../admin/routes').mount(app);   // Hub → Admin: is everything fine, and what needs an admin (admin/)
   require('../workstream/routes').mount(app);
   require('../machines').mount(app);
   require('../network').mount(app);   // how the hub listens, what may be done from outside the tailnet, its addresses as QR codes   // the agents' machines live, and the pages they serve (machines/)   // the agents' work as it happens: files edited, thinking, commands   // what was put away, in one place (archive.js)   // what each screen shows, and sending a page to one   // every page live on every screen: one change feed (live/, H10.5)
