@@ -143,7 +143,8 @@ function usageMetersRedraw() {
 }
 
 // A tap on a touch screen shows the card a hover shows, under the meter; a second tap or any other closes it.
-document.addEventListener('click', ev => {
+// (Guarded: tests load this file into a DOM stand-in that has no listeners.)
+if (typeof document.addEventListener === 'function') document.addEventListener('click', ev => {
   const pop = document.getElementById('um-pop');
   const m = ev.target.closest?.('.usage-meter[data-tap]');
   if (pop && (!m || pop.dataset.for === m.title)) { pop.remove(); if (m) return; }
