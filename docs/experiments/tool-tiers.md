@@ -64,6 +64,10 @@ passes all eleven both ways, with the flag 35 % fewer tokens and the Android bui
 and install-by-hand habits the Q6 run showed (B7b) did not appear. The one failure both ways is a habit, not a missing tool: the skill was read and
 not followed — TODO B7c.
 
+**Graduated (2026-10-09)**, measured in docs/experiments/lean-prompt.md on the owner's settings: an Orchestrator step
+24.8k → 16.2k tokens without a model; on the shipped sets DeepSeek 31k → 23k per step and the local Qwen 28k → 20k,
+its first output 19.9 s → 12.8 s, success within run-to-run noise except one vague request that now takes more steps.
+
 Not measured yet, and what decides it: whether a model finds and loads what it needs (an evaluation set of tasks that
 need a rare tool — B7 — run with the flag off and on, on a small local model and a frontier one), and how often a
 loaded tool breaks the provider's prefix cache (once per load, by design).
