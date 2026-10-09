@@ -20,7 +20,7 @@ const DIR = path.join(__dirname, '..', 'docs', 'api', 'fixtures');
 const WRITE = process.env.DOCA_WRITE_FIXTURES === '1';
 const NAMES = ['agent.mission-running', 'agent.mission-done', 'agent.mission-archived', 'agent.mission-seen', 'agent.mission-work-stopped',
   'prompt.new', 'prompt.new-approval', 'prompt.closed', 'alert', 'alert-files', 'settings.changed', 'device.approved', 'device.refused',
-  'agent.team-running', 'agent.team-done'];
+  'agent.team-running', 'agent.team-done', 'people.message'];
 
 test.before(() => H.start());
 test.after(() => H.stop());
@@ -107,6 +107,15 @@ async function frames() {
   const refused = waiting('Fixture stranger');
   bus.subscribe(refused.id, 0, { send: env => { if (env.type === 'device.refused') out['device.refused'] = env; }, close() {} });
   deciding.decide(refused.id, 'refuse', { id: H.owner.user.id, role: 'owner' });
+  // The hive chat (people/): a direct message reaching the other person's phone, worth a notification.
+  const bo = await H.signIn('member', 'fixture-bo@test.local');
+  require('../modules/auth/store').updateUser(bo.user.id, { name: 'Bo' });
+  const bophone = H.mkDevice('Fixture Bo phone', 'phone', H.PHONE_CAPS).device;
+  devices.update(bophone.id, { userId: bo.user.id, orgId: bo.orgId });
+  const ada = { id: H.owner.user.id, name: 'Ada', role: 'owner', orgId: bo.orgId };
+  const dm = await require('../modules/people/spaces').dm(ada, bo.user.id);
+  await require('../modules/people/messages').post(ada, dm.id, { text: 'Are you around? The **walrus** build is green.' });
+  out['people.message'] = bus.drain(bophone.id, 0).events.find(e => e.type === 'people.message');
   return out;
 }
 

@@ -12,6 +12,7 @@ const CODES = {
   agents:   { label: 'Specialist agents', note: 'specialists on missions that work in parallel and report back' },
   voice:    { label: 'Voice and ambient', note: 'calls, the face, voice messages, speech services, the ambient screen' },
   devices:  { label: 'Devices and integrations', note: 'paired phones, watches, desk and browser clients (/api/v1), secrets used on a device, DOCA as an MCP, AG-UI and A2A agent' },
+  people:   { label: 'Hive chat', note: 'the people of a hive talking to each other: direct messages, groups, channels per organisation or team, their agents brought in' },
   channels: { label: 'Channels', note: 'Telegram, Matrix, Slack and mail' },
   machines: { label: 'Machines', note: 'agents\' own computers, virtual machines, VNC screens, Docker, Live' },
   home:     { label: 'Home', note: 'the home through Home Assistant: its page and smart-home control' },
@@ -25,8 +26,8 @@ const ALL = 'all';
 const EDITIONS = [
   { id: 'essentials', label: 'Essentials', codes: [], note: 'the general assistant on its own' },
   { id: 'personal',   label: 'Personal',   codes: ['voice', 'devices', 'channels', 'home', 'services'], note: 'a personal assistant across a person\'s devices and home' },
-  { id: 'studio',     label: 'Studio',     codes: ['agents', 'machines', 'services', 'devices', 'library'], note: 'teams of agents with their own computers, for work' },
-  { id: 'hosted',     label: 'Hosted',     codes: ['agents', 'voice', 'devices', 'channels', 'services'], note: 'a hive on a server with no GPU or hypervisor of its own: everything that needs neither' },
+  { id: 'studio',     label: 'Studio',     codes: ['agents', 'machines', 'services', 'devices', 'library', 'people'], note: 'teams of agents with their own computers, for work' },
+  { id: 'hosted',     label: 'Hosted',     codes: ['agents', 'voice', 'devices', 'channels', 'services', 'people'], note: 'a hive on a server with no GPU or hypervisor of its own: everything that needs neither' },
   { id: 'complete',   label: 'Complete',   codes: Object.keys(CODES).filter(c => c !== 'core' && c !== 'lab'), note: 'every code but the lab, as listed in this release' },
   { id: 'owner',      label: 'Owner',      codes: [ALL], note: 'everything, including what later releases add and the lab: the project\'s own hives' },
 ];

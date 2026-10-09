@@ -15,6 +15,8 @@
  *   files          something changed in a folder a screen is looking at — live/watch.js, only the folders asked for
  *   ask            a mission asks its person to use a machine (harness/mission-asks.js) — only that person's pages
  *   notice         a reminder or a notice for a person, drawn on their pages (notices/) — only that person's pages
+ *   chat           the hive chat: a message, an edit, a reaction, typing, a read receipt — only the space's members (people/)
+ *   org            the organisation tree changed (org/)
  * A change says what changed, never more than the page would read through its own route; the stream (routes.js)
  * gives each viewer only what they may open.
  */

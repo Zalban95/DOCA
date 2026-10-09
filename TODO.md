@@ -236,6 +236,16 @@ the project's managers only if the owner allows sharing specialists and skills (
   someone without host (it threw before), and the questions dock draws any no chat on the page shows.
 
 ### Everything still open, now urgent
+- [x] Hive chat (asked 2026-10-09, branch `hive-chat`; docs/design/hive-chat.md): the people of a hive talking — DMs,
+  groups, organisation and team channels, replies, reactions, pins, edits, deletes as tombstones, files, search, read
+  receipts and typing, all in the database (step 14, licence `people`); who may message whom is a level's `people`
+  (org / team / added); nobody reads a conversation they are not in, the owner's export the one exception (password,
+  audit); `@orchestrator` asks the writer's own agent, answered in the space as "<name>'s agent"; everyone their own
+  Orchestrator in the floating chat; Controls → Chat and the floating chat's Agent | People; the organisation tree
+  (manager, team, title) and a person's card; `/api/v1/people` and `people.*` events. Still open: the apps drawing
+  `people.message` (DocaMobile a Chat screen, DocaWear the DM notices it already gets as alerts, DocaDesk the panel);
+  calls and screen sharing between people (meetings fill `window.peopleCallProvider`); a device making groups and
+  channels (gap `people-manage`).
 - [x] Teams (asked and approved 2026-10-09, branch `teams`; docs/design/teams.md): a board of tasks for specialists with
   `after` and a contract each, made with one `team` call and carried by the hub; mechanical progress (steps of the
   budget, contracts, every task counting the same); a living `team-<slug>.md`; `team_note` between teammates, framed;

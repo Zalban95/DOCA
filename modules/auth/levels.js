@@ -17,6 +17,7 @@
  *   delegates with `delegate`: which permissions its holders may give (patterns, e.g. use:model:*); none listed = any
  *             they hold — a team leader allots only what this names (permits.mayGrant)
  *   approveDevices  which new devices its holders may approve: none | own | anyone (approve-devices.js)
+ *   people    whom its holders may message in the hive chat: org | team | added (people/policy.js; none = by its rights)
  *
  * Built-ins live in code and cannot be edited or removed — every install has
  * them and the gate's meaning of "admin" must not drift. Custom levels are rows
@@ -78,6 +79,7 @@ function normalize(input, actorLevel) {
     ...(require('./approve-devices').normalize(input.approveDevices, actorLevel) ? { approveDevices: input.approveDevices } : {}),
     ...(require('./allot').normalize(input.resources) ? { resources: require('./allot').normalize(input.resources) } : {}),
     ...(list(input.delegates).length ? { delegates: list(input.delegates) } : {}),
+    ...(require('../people/policy').levelField(input.people, actorLevel) ? { people: input.people } : {}),   // who its people may message (hive chat)
     ...(input.description ? { description: String(input.description).slice(0, 300) } : {}),
   };
 }

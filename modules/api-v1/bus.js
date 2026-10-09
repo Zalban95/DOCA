@@ -54,6 +54,11 @@ const TYPES = {
   // progress bar redrawn from an hour-old queue is not progress.
   'agent.mission':    { cls: 'durable', ttlSec: 6 * 3600 },
   'agent.team':       { cls: 'durable', ttlSec: 6 * 3600 },   // a team's board (teams/announce.js): its step ticks are sent ephemeral
+  // The hive chat (people/deliver.js): a message is durable a day, so a phone that was away still gets it; typing and
+  // read receipts are worth nothing later.
+  'people.message':   { cls: 'durable', ttlSec: 24 * 3600 },
+  'people.typing':    { cls: 'ephemeral' },
+  'people.read':      { cls: 'ephemeral' },
   'artifact.deliver': { cls: 'durable', ttlSec: L.DEFAULT_EVENT_TTL_SEC },
   'sensor.request':   { cls: 'durable', ttlSec: 600 },
   'sensor.stop':      { cls: 'durable', ttlSec: 600 },

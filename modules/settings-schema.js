@@ -101,7 +101,7 @@ const SCHEMA = {
         hint: 'auto — home nodes when any is paired (always on a hosted hive), else the hub itself with the key home-assistant; node — home nodes only; direct — the hub itself only; both — every home.' },
     } },
   teams:            { is: 'travels', home: 'hive', note: 'how many times a team that keeps going tries its failed tasks again (teams/)',
-    keys: { maxRounds: { type: 'integer', min: 0, max: 20, default: 3, propose: false, hint: 'Rounds a team with "keep going" on has: each round tries one failed task again. When they run out the team stops as failed. A team may set its own.' } } },
+    keys: { maxRounds: { type: 'integer', min: 0, max: 20, default: 3, propose: false, hint: 'Rounds a team with "keep going" on has: each round tries one failed task again. When they run out the team stops as failed. A team may set its own.' } } },   people: { is: 'travels', home: 'hive', note: 'the hive chat between people (people/): how long its messages are kept — the admin\'s', keys: { retainDays: { type: 'integer', min: 0, max: 36500, default: 0, propose: false, hint: 'Days a hive-chat message is kept; older ones are removed once a day. 0 keeps them until someone deletes them.' } } },
   // Housekeeping, not a guard: proposable like computers.idleStopMinutes (agents/tidy.js). 0 turns a rule off.
   missions:         { is: 'travels', home: 'hive', note: 'when finished specialists\' missions are put away in the Archive by themselves',
     propose: p('Finished missions', 'When finished missions are put away in the Archive by themselves'),
