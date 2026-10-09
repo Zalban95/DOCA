@@ -31,6 +31,7 @@ function afterListen({ certs = null, mode } = {}) {
   require('./scout').start();                         // the model scout, when switched on (an experiment)
   require('./network').tailnetSuffix();             // this tailnet's name, cached before an agent's first owned() asks (toolbox/http.js)
   require('./service-life').start();                  // services nothing uses, stopped when the owner asked (off by default)
+  require('./license/checkin').start();              // the licence: checked in with its server when due, and the clock remembered
   require('./log-keep').start();                      // what is kept of what happened, to its bounds: now and daily (logs.*, tracing.*)
   const devices = require('./api-v1/devices');         // audit 2026-09-26 §4f, N5: tidy the device registry
   devices.repairNames();

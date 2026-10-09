@@ -3,7 +3,8 @@
    how it works (Agent · Plan · Ask · Debug — modules/harness/modes.js),
    whether it asks before acting (the panel's setting, or Auto / Manual for
    this conversation alone — a host's switch, hidden without host), and the
-   model it runs on (chatModelPicker).
+   model it runs on (chatModelPicker); then its skills, loop and compaction
+   (agent-ui/conv-extras.js).
    ═══════════════════════════════════════════════════════ */
 
 const CONV_MODES = [['agent', 'Agent', 'Does the work'], ['plan', 'Plan', 'Reads and proposes a plan; changes nothing until you approve it'],
@@ -23,6 +24,7 @@ async function agentConvBar(host, sessionId, view = null, { model = true, think 
       <option value="auto" ${approval === 'auto' ? 'selected' : ''}>Acts without asking</option>
       <option value="manual" ${approval === 'manual' ? 'selected' : ''}>Asks me before acting</option></select>
     ${model ? '<span class="chat-model-host conv-model"></span>' : ''}
+    <span class="conv-extras"></span>
     <button class="btn btn-xs conv-trace" title="How this conversation's turns went: each step, tool and wait, with times and tokens">⏱</button>`;
   const save = async body => {
     try { await apiFetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/settings`, { method: 'POST', body }); }
@@ -33,6 +35,7 @@ async function agentConvBar(host, sessionId, view = null, { model = true, think 
   host.querySelector('.conv-approval').onchange = e => save({ approval: e.target.value || null });
   host.querySelector('.conv-trace').onclick = () => traceOpen(sessionId);
   if (model) chatModelPicker(host.querySelector('.conv-model'), sessionId);
+  convExtras(host.querySelector('.conv-extras'), sessionId, () => agentConvBar(host, sessionId, null, { model, think }));   // ✦ skills, ⟳ loop, ⋯ (conv-extras.js)
 }
 
 /**

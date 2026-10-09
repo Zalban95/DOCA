@@ -1,6 +1,7 @@
 ---
 name: service-wont-start
 description: Find out why an inference service (whisper, kokoro, ComfyUI, vLLM, SD WebUI, Roboflow) or a container does not start or does not answer, and fix it or say exactly what is needed. Use when a service shows restarting or exited, or a feature that needs it fails.
+triggers: ["won't start", does not start, not answering, non parte, non si avvia, non risponde]
 ---
 
 # A service that will not start

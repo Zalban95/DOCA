@@ -53,9 +53,13 @@ async function pairComplete(req, res) {
   const { code, caps, name } = req.body || {};
   if (!code) throw new ApiError(400, 'invalid_pairing', 'code is required');
   pairThrottle(res);
-  const r = require('./devices').completePairing(code, caps, name);
+  const approval = require('../devices-approval');
+  const r = require('./devices').completePairing(code, caps, name, approval.networkOf(req.socket?.remoteAddress));
   if (!r) { pairMissed(); throw new ApiError(400, 'invalid_pairing', 'Pairing code is unknown or expired'); }
-  res.status(201).json({ token: r.token, device: r.device, capabilitiesUrl: '/api/v1/capabilities', protocol: require('./limits').PROTOCOL_VERSION });
+  // Unless whoever started the pairing approved it already, it waits and is asked of whoever may (devices-approval/).
+  if (require('./devices').isPending(r.device)) approval.ask(r.device.id);
+  const d = require('./devices').get(r.device.id);
+  res.status(201).json({ token: r.token, device: require('./devices').publicView(d), approval: approval.selfView(d), capabilitiesUrl: '/api/v1/capabilities', protocol: require('./limits').PROTOCOL_VERSION });
 }
 
 module.exports = { ownScopesOnly, ownerOf, patchFor, pairComplete, pairThrottle, pairMissed, PAIR_MISSES_PER_MIN };

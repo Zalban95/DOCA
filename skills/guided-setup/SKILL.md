@@ -1,6 +1,7 @@
 ---
 name: guided-setup
 description: Set someone up for what they need — "set me up for coding", "I want to talk to it out loud", "can this machine run models", "what do I need to use it with pictures". Use when a person asks to be set up for something, asks what this machine can run, or a task needs a model or service that is not here yet.
+triggers: [set me up, set up, which model, can this machine run, configurami, quale modello]
 ---
 
 # Setting someone up

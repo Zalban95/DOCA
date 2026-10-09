@@ -95,7 +95,7 @@ async function pair(hubOrLink, codeArg, { name = os.hostname() } = {}) {
   const pin = cfg._tls && !cfg._tls.authorized ? { pinPem: cfg._tls.pem, pinFp: cfg._tls.fp } : {};
   const saved = { hub: cfg.hub, token: r.body.token, deviceId: r.body.device?.id, name, ...pin, grants: {}, secret: crypto.randomBytes(24).toString('hex'), pairedAt: new Date().toISOString() };
   save(saved);
-  return saved;
+  return { ...saved, approval: r.body.approval || null };
 }
 
 /* ── The families it lends ── */
@@ -248,12 +248,35 @@ function refusal(cfg, what, res) {
   return `✗ The hub refused ${what} (${res.status}): ${e.message || JSON.stringify(res.body)}. Nothing is lent until it accepts one.`;
 }
 
+/**
+ * A newly paired machine may wait for a person to approve it (the hub's devices-approval/): until then the hub answers
+ * nothing but its own record and its event stream. Say who was asked, and wait for device.approved — device.refused
+ * (or a 401: refused and revoked) ends it as a revoke does.
+ */
+async function approved(cfg, { signal, log = say } = {}) {
+  const gone = () => { cfg.revokedAt = new Date().toISOString(); save(cfg); throw Object.assign(new Error('The hub refused this machine; it lends nothing. Pair again to rejoin: doca-client pair <hub> <code>'), { code: 'revoked' }); };
+  const me = await request(cfg, 'GET', '/api/v1/devices/me');
+  if (me.status === 401) gone();
+  const a = me.body?.approval;
+  if (a?.state !== 'pending') return;
+  log(`… ${cfg.name} is paired and waits for approval: ${a.message || 'a person who may approve it is asked.'} It starts lending once it is allowed.`);
+  const ctrl = new AbortController();
+  if (signal) signal.addEventListener('abort', () => ctrl.abort(), { once: true });
+  let answer = null;
+  await follow(cfg, { signal: ctrl.signal, onRevoked: () => { answer = 'refused'; },
+    onEvent: env => { if (env.type === 'device.approved' || env.type === 'device.refused') { answer = env.type === 'device.approved' ? 'allowed' : 'refused'; ctrl.abort(); } } });
+  if (answer === 'refused') gone();
+  if (answer === 'allowed') log(`✓ ${cfg.name} was allowed.`);
+  else throw Object.assign(new Error('Stopped while waiting for approval.'), { code: 'revoked' });
+}
+
 /** `log` is where its one line goes: the terminal for the command, a program's own logger when one embeds it. */
 async function run({ grant = null, bind = null, port = 18766, root = null, signal, log = say } = {}) {
   const cfg = load();
   if (!cfg?.token) throw new Error('Not paired. Run: doca-client pair <hub> <code>');
   if (cfg.revokedAt) throw Object.assign(new Error(`The hub revoked this machine (${cfg.revokedAt}); it lends nothing. Pair again to rejoin: doca-client pair <hub> <code>`), { code: 'revoked' });
   if (root) cfg.root = root;
+  await approved(cfg, { signal, log });
   for (const f of FAMILIES) {
     if (grant) cfg.grants[f] = grant.includes(f);
     // With nobody at a terminal (at boot) an undecided family stays undecided — not lent, and asked next time someone is.
@@ -314,13 +337,13 @@ async function update({ dir = __dirname } = {}) {
   return { version: m.body.version, changed: fetched.map(f => f.name) };
 }
 
-module.exports = { refusal, pair, fromLink, update, run, serve, load, request, TOOLS, FAMILIES, tailnetAddress, configFile };
+module.exports = { refusal, pair, fromLink, update, run, serve, load, request, approved, TOOLS, FAMILIES, tailnetAddress, configFile };
 
 if (require.main === module) {
   const [verb, ...rest] = process.argv.slice(2);
   const flag = n => { const i = rest.indexOf(`--${n}`); return i >= 0 ? rest[i + 1] : null; };
   (async () => {
-    if (verb === 'pair') { const c = await pair(rest[0], rest[1], { name: flag('name') || os.hostname() }); say(`✓ Paired with ${c.hub} as ${c.name} (${c.deviceId}). Next: doca-client run`); }
+    if (verb === 'pair') { const c = await pair(rest[0], rest[1], { name: flag('name') || os.hostname() }); say(`✓ Paired with ${c.hub} as ${c.name} (${c.deviceId}).${c.approval?.state === 'pending' ? ` ${c.approval.message || 'It waits for approval.'}` : ''} Next: doca-client run`); }
     else if (verb === 'run') {
       // Revoked is a finished state, not a failure: exit 0, so a boot entry (Restart=on-failure) does not loop on it.
       try { await run({ grant: flag('grant') ? flag('grant').split(',') : null, bind: flag('bind'), port: Number(flag('port')) || 18766 }); }

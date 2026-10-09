@@ -17,7 +17,11 @@ function authenticate(opts = {}) {
     else if (opts.allowQuery && typeof req.query.access_token === 'string') token = req.query.access_token;
     if (!token) return sendError(res, 401, 'unauthenticated', 'Missing bearer token', { hint: 'Authorization: Bearer doca_<device>.<secret>' });
     const device = devices.authenticate(token);
-    if (!device) return sendError(res, 401, 'invalid_token', 'Token is unknown, expired or revoked');
+    if (!device) {
+      const refused = devices.refusedOf(token);   // only to the device's own token: who said no
+      if (refused) return sendError(res, 401, 'invalid_token', `Not approved${refused.by ? ` — ${refused.by} refused this device` : ''}`, { refused });
+      return sendError(res, 401, 'invalid_token', 'Token is unknown, expired or revoked');
+    }
     // A device belongs to a person: suspending them silences it.
     if (device.userId) {
       const owner = require('../auth/store').userById(device.userId);

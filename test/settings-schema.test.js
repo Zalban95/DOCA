@@ -4,6 +4,7 @@
 // agent may propose, and its typed leaves with defaults that reach every install which never set them.
 
 const test = require('node:test');
+require('./helpers');   // first: temporary settings, and a licence for every feature (some sections are licensed)
 const assert = require('node:assert/strict');
 const schema = require('../modules/settings-schema');
 

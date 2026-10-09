@@ -1,0 +1,23 @@
+{
+  "type": "device.approved",
+  "class": "durable",
+  "payload": {
+    "by": "owner",
+    "at": "2026-10-06T18:30:00.000Z",
+    "scopes": [
+      "read:*",
+      "command:*",
+      "interact",
+      "profile:*",
+      "vars:self",
+      "sensors:report",
+      "media:upload",
+      "artifacts:self",
+      "devices:admin",
+      "mcp:self",
+      "harness:chat",
+      "harness:sessions"
+    ],
+    "dropped": []
+  }
+}

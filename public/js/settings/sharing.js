@@ -2,7 +2,7 @@
    at installation, changed here — the project's hub, and the packs the agents kept, each sent only by the owner's click. */
 async function sharingRender() {
   const lib = document.getElementById('pack-library');
-  if (!lib) return;
+  if (!lib || !(typeof licenceFeatureOn !== 'function' || licenceFeatureOn('sharing'))) return;   // not licensed here (lib/licence.js)
   let card = document.getElementById('pack-sharing');
   if (!card) { card = Object.assign(document.createElement('div'), { className: 'card', id: 'pack-sharing' }); lib.before(card); }
   let s;

@@ -86,6 +86,8 @@ async function controlsRefreshContainers() {
   const countEl = document.getElementById('controls-containers-count');
   if (!list) return;
   if (hostedHive()) { list.innerHTML = `<div class="placeholder">${escHtml(HOSTED_SAY)}</div>`; if (countEl) countEl.textContent = ''; return; }
+  if (typeof licenceReady === 'function') await licenceReady();
+  if (!(typeof licenceFeatureOn !== 'function' || licenceFeatureOn('docker'))) { list.closest('.card')?.style.setProperty('display', 'none'); return; }   // not licensed here (lib/licence.js)
   try {
     const data = await apiFetch('/api/docker/containers');
     const containers = data.containers || data || [];

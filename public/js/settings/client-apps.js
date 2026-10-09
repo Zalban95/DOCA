@@ -3,7 +3,7 @@
    DocaMobile checks /api/v1/clients/android/docamobile and offers (or installs) what is newer than itself. */
 async function clientAppsRender() {
   const panel = document.querySelector('#sp-keys .scroll-y') || document.getElementById('sp-keys');
-  if (!panel) return;
+  if (!panel || (typeof licenceFeatureOn === 'function' && !licenceFeatureOn('client-apps'))) return;   // not licensed here (lib/licence.js)
   let card = document.getElementById('client-apps-card');
   if (!card) { card = Object.assign(document.createElement('div'), { className: 'card', id: 'client-apps-card' }); panel.prepend(card); }
   let s;

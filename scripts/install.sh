@@ -37,12 +37,13 @@ mkdir -p "$DIR"
 if [ -n "$FROM" ]; then
   say "Copying DOCA from $FROM to $DIR"
   # The checkout's tracked files only: its own state (.env, prefs, data, certificates, logs) and anything
-  # untracked stay behind. Not a git checkout: everything but that state.
+  # untracked stay behind. Not a git checkout: everything but that state. The tests stay behind too: an installed
+  # hub never runs them, and test/ holds the key tests sign their own licences with (docs/design/licence.md).
   if git -C "$FROM" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    (cd "$FROM" && git ls-files -z | tar --null -T - -cf -) | (cd "$DIR" && tar -xf -)
+    (cd "$FROM" && git ls-files -z -- . ':(exclude)test' | tar --null -T - -cf -) | (cd "$DIR" && tar -xf -)
   else
     (cd "$FROM" && tar --exclude=./node_modules --exclude=./.doca --exclude=./.releases --exclude=./.git --exclude=./.certs \
-      --exclude=./.env --exclude=./.dashboard-prefs.json --exclude=./.setup-code -cf - .) | (cd "$DIR" && tar -xf -)
+      --exclude=./.env --exclude=./.dashboard-prefs.json --exclude=./.setup-code --exclude=./test -cf - .) | (cd "$DIR" && tar -xf -)
   fi
 elif [ -d "$DIR/.git" ]; then
   say "Updating DOCA in $DIR"; git -C "$DIR" pull --ff-only

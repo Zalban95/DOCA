@@ -84,6 +84,8 @@ function setup(httpServer) {
     delete req.headers['sec-websocket-extensions'];
     // A hosted hive has no shell, CLI terminal, language server or VM console on its machine (hosted.js).
     if (require('./hosted').absentSocket(req.url)) { socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n'); return; }
+    // A socket of a feature this hive is not licensed for is not there (license/gate.js), like its routes.
+    if (!require('./license/gate').pathOn(req.url)) { socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n'); return; }
     // A live call is not a shell: the person's own right to chat, or a device's token (realtime/routes.js).
     if (req.url.startsWith('/ws/realtime')) return require('./realtime/routes').upgradePanel(req, socket, head);
     if (req.url.startsWith('/api/v1/realtime')) return require('./realtime/routes').upgradeDevice(req, socket, head);

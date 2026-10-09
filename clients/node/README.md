@@ -9,7 +9,9 @@ node doca-client.js pair 'doca://pair?code=641598&host=<hub>:4242' # or the pair
 node doca-client.js run                                            # asks once per family; --grant files,shell to skip asking
 ```
 
-Then accept its offer once in the hub (MCP tab). From then on the hub's agents can use this machine's **files**
+A machine paired by someone who may not approve it at once waits for approval: `pair` and `run` say who was asked, and
+`run` waits, lending nothing, until a person allows it (one tap on their phone or in the panel) — refused, it stops as
+if revoked. Then accept its offer once in the hub (MCP tab). From then on the hub's agents can use this machine's **files**
 (`files_list/read/write/mkdir/move/copy/delete`, inside your home folder only), **shell** (`shell_run`), **screen**
 (`screen_capture`), **processes** (`processes_list`, `processes_stop`), **apps** (`apps_open`: a web address, or a file
 in your home folder) and **device** (`device_info`, `device_notify`, `device_clipboard_read/_write`) — only what you

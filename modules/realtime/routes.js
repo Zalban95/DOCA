@@ -75,6 +75,7 @@ function upgradeDevice(req, socket, head, engine = 'realtime') {
   const token = (/^Bearer\s+(.+)$/i.exec(req.headers.authorization || '') || [])[1] || u.searchParams.get('access_token');
   const device = token && devices.authenticate(String(token).trim());
   if (!device) return refuse(socket, 401, 'Unauthorized');
+  if (devices.isPending(device)) return refuse(socket, 403, 'Forbidden');   // waiting for approval (api-v1/pending.js)
   if (device.userId) { const owner = require('../auth/store').userById(device.userId); if (!owner || owner.suspendedAt) return refuse(socket, 401, 'Unauthorized'); }
   if (!hasScope(device.scopes, 'harness:chat')) return refuse(socket, 403, 'Forbidden');
   const harness = require('../api-v1/harness');

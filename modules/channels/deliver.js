@@ -66,6 +66,11 @@ async function onEvent(ch, addr, deviceId, env) {
       if (lost.length) await ch.say(addr, `(${lost.join(', ')} ${lost.length === 1 ? 'is' : 'are'} no longer on the hub — files are kept 24 hours.)`);
       return;
     }
+    // A chat that waited for approval (devices-approval/) is told the answer.
+    case 'device.approved':
+      return void await ch.say(addr, `${p.by || 'Someone'} allowed this chat. Write here to talk to ${require('../branding').name('product')}.`);
+    case 'device.refused':
+      return void await ch.say(addr, `${p.by || 'Someone'} refused this chat, so it is unlinked. Link it again from ${require('../branding').name('product')} → Settings → Channels if that was a mistake.`);
     default:
   }
 }

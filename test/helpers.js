@@ -16,6 +16,11 @@ const http = require('http');
 const early = Object.keys(require.cache).find(f => /[\\/]modules[\\/]paths\.js$/.test(f));
 if (early) throw new Error(`test/helpers.js must be required before any module: ${early} was loaded first and holds the real settings paths.`);
 
+// Licences: the suite trusts a test key and runs with a licence for everything, in this process and in every node
+// process a test starts (test/licence-trust.js; nothing in the product trusts that key).
+require('./licence-trust');
+if (!String(process.env.NODE_OPTIONS || '').includes('licence-trust')) process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS || ''} --require ${JSON.stringify(path.join(__dirname, 'licence-trust.js'))}`.trim();
+
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-test-'));
 // Gone when the test process ends: every run used to leave its folder behind (12,000 of them by 2026-10-05).
 process.on('exit', () => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* still in use on Windows: the OS's temp cleaner */ } });

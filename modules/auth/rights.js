@@ -71,6 +71,10 @@ const TABLE = [
   R('POST', '/api/devices/[^/]+/rotate', 'chat'),
   R('PATCH', '/api/devices/[^/]+', 'chat'),
   R('DELETE', '/api/devices/[^/]+', 'chat'),
+  // A new device waits for a person who may approve it (owner, 2026-10-09): who may is a level's approveDevices
+  // (approve-devices.js) — own or anyone — checked per device in devices-approval/.
+  R(GET, '/api/devices/pending', 'chat'),
+  R('POST', '/api/devices/[^/]+/(approve|refuse)', 'chat'),
   R(ANY, '/api/devices(/.*)?', 'devices'),
 
   // ── The harness: what lets the agent act on the machine is host ──
@@ -90,6 +94,7 @@ const TABLE = [
   R(ANY, '/api/harness/canvases/[^/]+', 'chat'),           // deleting one (reading is a GET below)
   R(GET, '/api/harness/usage/prices', 'read'),
   R(ANY, '/api/harness/usage/prices', 'host'),              // the owner's price list: money budgets are counted in it (spending/)
+  R(ANY, '/api/harness/skills/(online(/.*)?|[^/]+/triggers/suggest)', 'host'),   // public collections and a model's trigger ideas (skill-routes.js)
   R(GET, '/api/harness(/.*)?', 'read'),
   // The agent's durable memory is one for everybody until per-person memory (auth phase 3): a member
   // deleting or locking the owner's facts was found by the live test 2026-10-04. Reading is read, above.
@@ -146,6 +151,8 @@ const TABLE = [
   R(GET, '/api/face/stream', 'chat'),                          // the face's feed, scoped to what the viewer may open (face/state.js)
   R(ANY, '/api/developer(/.*)?', 'host'),                        // who may release unasked (releasing.js): the admin's
   R(ANY, '/api/experiments(/.*)?', 'host'),                     // the owner's switches for experiments (experiments.js)
+  R(GET, '/api/licence', 'read'),                              // what this hive may run: every page reads which pages are left out (license/)
+  R(ANY, '/api/licence(/.*)?', 'host'),                         // adding, renewing or removing the licence: the owner's (license/routes.js)
   R(ANY, '/api/features(/.*)?', 'host'),                        // the feature index, usage, and hiding an unused alternative (features/)
   R('POST', '/api/recipes/[^/]+/(accept|discard)', 'host'),     // a repaired revision becomes automation: a host's call
   R('DELETE', '/api/recipes/[^/]+', 'host'),                   // a recipe the hive shares (recipes/routes.js)

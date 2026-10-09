@@ -60,7 +60,8 @@ function _settingsSubnavRender() {
   if (!nav) return;
   const pill = t => `<button class="settings-subnav-btn" data-subtab="${t.id}" onclick="settingsSubNav('${t.id}')">${t.label}</button>`;
   // Developer (developer mode and the experiments) is for an owner or a tester: a host's, never drawn for anyone else.
-  const mine = t => !t.host || typeof authHasRight !== 'function' || authHasRight('host');
+  // A section of a feature this hive is not licensed for is left out (lib/licence.js), like Developer for a non-host.
+  const mine = t => (!t.host || typeof authHasRight !== 'function' || authHasRight('host')) && (typeof licencePageOn !== 'function' || licencePageOn(`settings/${t.id}`));
   nav.innerHTML = _SETTINGS_SUBTABS.filter(t => !t.group && !t.page && mine(t)).map(pill).join('')
     + '<button class="settings-subnav-btn" data-subtab="harnesses" onclick="settingsSubNav(\'harness\')" title="DOCA\'s own agent, and each other harness installed here">Harnesses</button>';
   // The second row: the harnesses, a group each.
@@ -68,13 +69,14 @@ function _settingsSubnavRender() {
   if (!row) { row = Object.assign(document.createElement('div'), { id: 'settings-subnav2', className: 'settings-subnav settings-subnav2' }); nav.after(row); }
   row.innerHTML = Object.entries(_HARNESS_GROUPS).filter(([g]) => _harnessesInstalled[g]).map(([g, label]) =>
     `<span class="settings-subnav-group" title="${g === 'doca' ? 'DOCA\'s own agent' : `${label}'s own settings, not DOCA's`}">${label}</span>${
-      g === 'others' ? _cliHarnesses.map(c => pill({ id: `cli-${c.id}`, label: c.label })).join('') : _SETTINGS_SUBTABS.filter(t => t.group === g).map(pill).join('')}`).join('');
+      g === 'others' ? _cliHarnesses.map(c => pill({ id: `cli-${c.id}`, label: c.label })).join('') : _SETTINGS_SUBTABS.filter(t => t.group === g && mine(t)).map(pill).join('')}`).join('');
 }
 
 function settingsSubNav(panelId) {
   // A section that is a page of its own now (Field → Connectors, API keys): every old link lands there.
   const moved = _SETTINGS_SUBTABS.find(t => t.id === panelId && t.page);
   if (moved && typeof nav === 'function') return nav(moved.page);
+  if (typeof licencePageOn === 'function' && !licencePageOn(`settings/${panelId}`)) panelId = 'general';   // not licensed here (lib/licence.js)
   _settingsActiveSubtab = panelId;
   // From outside Settings, a section is reached by going there first (des 32): it used to change a hidden panel.
   if (typeof pageShown === 'function' && typeof nav === 'function' && !pageShown('settings')) nav('settings');

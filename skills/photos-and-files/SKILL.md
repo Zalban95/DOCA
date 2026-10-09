@@ -1,6 +1,7 @@
 ---
 name: photos-and-files
 description: Work with a photo, a document or any file the person sent or asked about — look at it, convert it, resize it, put it somewhere, send it to a device. Use when a message carries an attachment or names a file.
+triggers: [photo, picture, resize, convert the file, foto, immagine, converti]
 ---
 
 # Photos and files

@@ -84,7 +84,10 @@ function mount(app) {
     res.end(md.format(a));
   });
   const skills = require('../harness/skills');
-  app.get('/api/harness/skills', (_req, res) => res.json({ skills: skills.list() }));
+  require('../harness/skill-routes').mount(app);   // suggest, triggers, online: before /skills/:name
+  // Each with how it is used — when it fits, attached in modes, or off (harness/skill-use.js) — and its triggers.
+  app.get('/api/harness/skills', (_req, res) => res.json({ skills: require('../harness/skill-use').all()
+    .map(s => ({ ...s, triggerSet: require('../harness/skill-triggers').of(s) })) }));
   // Before /skills/:name, which would take "sources" for a skill's name. Other harnesses' procedures (skill-sources.js).
   const projectOf = q => {
     if (!q) return undefined;
