@@ -9,6 +9,7 @@ const MACHINE_KINDS = [
   { kind: 'computer', label: 'Computers', tab: 'computers' },
   { kind: 'vm', label: 'VMs', tab: 'vms' },
   { kind: 'vnc', label: 'VNC', tab: 'vnc', down: 'unreachable' },   // vnc-targets/: connected or reachable as rows
+  { kind: 'emulator', label: 'Emulators', tab: 'live' },   // Android emulators running here (machines/emulators.js), pictured in Live
 ];
 let _machinesNoRows = false;   // a 403 once: this person is not a host, so the containers come from the status
 
@@ -57,6 +58,6 @@ function machinesSidebarDraw(data, onlyContainers = false) {
 
 /** A row's click: Live, focused on it, when it has a picture there; otherwise the tab that manages it. */
 function machineGo(kind, id, live) {
-  if (live && typeof liveFocus === 'function') return liveFocus(`${{ computer: 'c', vnc: 'n' }[kind] || 'v'}:${id}`);
+  if (live && typeof liveFocus === 'function') return liveFocus(`${{ computer: 'c', vnc: 'n', emulator: 'e' }[kind] || 'v'}:${id}`);
   nav((MACHINE_KINDS.find(k => k.kind === kind) || MACHINE_KINDS[0]).tab);
 }

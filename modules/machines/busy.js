@@ -139,9 +139,11 @@ async function look() {
     const byName = new Map(computers.map(c => [`doca-computer-${c.id}`, c]));
     for (const [name, s] of stats) {
       const c = byName.get(name);
-      seen.push(c ? { kind: 'computer', id: c.id, name: c.name, cpu: s.cpu, mem: s.mem, rec: c } : { kind: 'container', id: name, name, cpu: s.cpu, mem: s.mem });
+      // A computer container no record names (another install's, a test hub's) is a computer too, by its name (stray-computers.js).
+      seen.push(c ? { kind: 'computer', id: c.id, name: c.name, cpu: s.cpu, mem: s.mem, rec: c }
+        : /^doca-computer-/.test(name) ? { kind: 'computer', id: name, name, cpu: s.cpu, mem: s.mem } : { kind: 'container', id: name, name, cpu: s.cpu, mem: s.mem });
     }
-    await Promise.all(seen.filter(x => x.kind === 'computer').map(async x => { x.procs = await read.processes(x.rec); }));
+    await Promise.all(seen.filter(x => x.kind === 'computer' && x.rec).map(async x => { x.procs = await read.processes(x.rec); }));
     let vms = [];
     try { vms = (await require('./vm-list').list()).vms.filter(v => v.state === 'running'); } catch { /* none */ }
     const ds = await read.vms(vms.filter(v => v.hypervisor === 'libvirt').map(v => v.name));
