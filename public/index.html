@@ -161,7 +161,7 @@
       <div class="toolbar">
         <div class="toolbar-left">
           <button class="btn btn-sm" onclick="clearLogs()">Clear</button>
-          <button class="btn btn-sm" id="scroll-btn" onclick="toggleScroll()">Autoscroll ON</button>
+          <label class="log-autoscroll" title="Keep the newest line in view"><input type="checkbox" class="switch" id="scroll-btn" checked onchange="toggleScroll(this.checked)"> Autoscroll</label>
           <div class="log-src-row" id="log-sources"></div>
         </div>
         <div class="status-line" id="log-status"></div>

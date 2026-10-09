@@ -119,7 +119,9 @@ function clearLogs() {
   out.innerHTML = `<div class="placeholder">${had ? 'Cleared from this view — new lines appear here as they come. The record itself is kept (Settings → System → Logs).' : 'Nothing to clear: no lines yet.'}</div>`;
 }
 
-function toggleScroll() {
-  autoScroll = !autoScroll;
-  document.getElementById('scroll-btn').textContent = `Autoscroll ${autoScroll ? 'ON' : 'OFF'}`;
+/** Autoscroll is a switch like every toggle that applies at once (css/system.css .switch). */
+function toggleScroll(on = !autoScroll) {
+  autoScroll = !!on;
+  const box = document.getElementById('scroll-btn');
+  if (box) box.checked = autoScroll;
 }
