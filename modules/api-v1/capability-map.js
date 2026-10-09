@@ -102,7 +102,7 @@ const PERSON = [
     note: 'a device lists them with each link and opens the room in its web view (/meet/<id>); native call screens come later' },
   { id: 'meeting-schedule', does: 'call someone, schedule, change, confirm or cancel a meeting',
     panel: ['POST /api/meetings', 'PATCH /api/meetings/:id', 'POST /api/meetings/:id/cancel', 'POST /api/meetings/:id/confirm', 'POST /api/meetings/:id/end'],
-    gap: 21, why: 'calling a colleague or moving a meeting from the phone without opening the panel page; until then the Meetings page in its web view' },
+    gap: 22, why: 'calling a colleague or moving a meeting from the phone without opening the panel page; until then the Meetings page in its web view' },
   { id: 'meeting-room', does: 'be in a meeting: voice, video, chat, share my screen, offer or take control', panel: ['POST /api/meetings/:id/*'],
     only: 'a room is WebRTC in a page: a device joins by opening its link in its web view (DocaDesk, DocaMobile); the native call screen, and control from a phone, are later work in each app' },
   { id: 'meeting-calendar', does: 'connect my own calendar for meetings', panel: ['POST /api/meetings/calendar/:provider/connect', 'DELETE /api/meetings/calendar'],

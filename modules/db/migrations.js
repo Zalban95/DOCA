@@ -162,10 +162,10 @@ const STEPS = [
     `CREATE TABLE IF NOT EXISTS people_pins (
        tenant_id TEXT NOT NULL DEFAULT 'local', space_id TEXT NOT NULL, message_id TEXT NOT NULL, by_user TEXT, at TEXT NOT NULL,
        PRIMARY KEY (tenant_id, space_id, message_id))`,
+  ] },
   // Meetings (meetings/): a meeting is its time, its organizer and its state; each person invited is a row of their own,
   // with how they were invited (their own calendar, a mail with an iCalendar invite, a notice) and the event id their
-  // calendar gave it, so a change or a cancellation reaches the same event. Step 14 is left to the hive chat (branch
-  // hive-chat), built beside this one. The room itself — who is in it now, the screens shared — lives in memory.
+  // calendar gave it, so a change or a cancellation reaches the same event. Step 14 is the hive chat's. The room itself — who is in it now, the screens shared — lives in memory.
   { id: 15, feature: 'meetings', what: 'meetings and the people invited to each (meetings/)', sql: [
     `CREATE TABLE IF NOT EXISTS meetings (
        tenant_id TEXT NOT NULL DEFAULT 'local', id TEXT NOT NULL, owner_id TEXT NOT NULL, org_id TEXT, title TEXT NOT NULL,
