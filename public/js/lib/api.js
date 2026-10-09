@@ -28,7 +28,7 @@ function _renewSignIn(why) {
       if (r.ok) return resolve(true);
       const d = await r.json().catch(() => ({}));
       ask(`${d.error || 'That did not work.'} Your password:`);
-    }, '', { secret: true });
+    }, '', { secret: true, onCancel: () => resolve(false) });   // a Cancel answers "no": left waiting, every later step-up hung with it
     ask(`${why || 'This touches the machine itself, and it has been a while since you signed in.'} Your password:`);
   }).finally(() => { _stepUp = null; });
   return _stepUp;
