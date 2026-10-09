@@ -31,7 +31,8 @@ const ours = () => require('../harness/drain').pending()?.label === LABEL;
 
 let _timer = null, _asked = null;
 
-function look({ exit = code => setTimeout(() => process.exit(code), 300) } = {}) {
+// Stopping waits a few seconds after saying so, so the host's `hold` (polling every second) reads 'ready' first.
+function look({ exit = code => setTimeout(() => process.exit(code), 4000) } = {}) {
   const drain = require('../harness/drain');
   const req = read(REQ());
   if (!req) {

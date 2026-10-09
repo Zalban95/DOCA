@@ -34,7 +34,7 @@ async function hold() {
     const line = s?.state === 'waiting' && s.on?.length ? `waiting for: ${s.on.join('; ')}` : 'waiting for the hive to answer';
     if (line !== said) { console.log(line); said = line; }
     if (Date.now() > until) { console.log('the time ran out; the hive is still working (release the request, or wait again)'); return 2; }
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1000));
   }
 }
 

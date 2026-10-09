@@ -176,6 +176,7 @@ cmd_backup() {   # name [file]
   need_hive "$1"
   local name="$1" file="${2:-}" was=0
   [ -z "$file" ] && { mkdir -p "$BACKUPS"; file="$BACKUPS/$name-$(date -u +%Y%m%dT%H%M%SZ).tgz"; }
+  IMAGE="$($DOCKER inspect -f '{{.Config.Image}}' "$name")"   # its own image's tar: the default one may not be here
   running "$name" && { was=1; say "stopping $name for a consistent copy…"; $DOCKER stop -t 30 "$name" >/dev/null; }
   local ok=0
   set -o pipefail; volume_tar "$name" > "$file.part" && ok=1
@@ -250,7 +251,8 @@ cmd_update() {   # name [--image IMAGE] [--timeout SECONDS]
   say "updating $name: $old → $image"
   $DOCKER update --restart no "$name" >/dev/null
   say "asking $name to stop once nothing runs (running work is never cut)…"
-  if ! $DOCKER exec "$name" node bin/doca-update.js hold --timeout "$timeout"; then
+  # A hive that stopped by itself while asked is ready too (its exec ends with it).
+  if ! $DOCKER exec "$name" node bin/doca-update.js hold --timeout "$timeout" && running "$name"; then
     $DOCKER exec "$name" node bin/doca-update.js release >/dev/null 2>&1 || true
     $DOCKER update --restart unless-stopped "$name" >/dev/null
     die "$name is still working after ${timeout}s; nothing was changed. Try again later, or with a longer --timeout."
