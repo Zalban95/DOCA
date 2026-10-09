@@ -19,6 +19,12 @@
  * Out: each sentence of an answer synthesized as raw PCM (`response_format: pcm`, 24 kHz) and sent as it comes;
  * `stream()` takes an answer while the model is still writing it, so its first sentence plays before the last exists.
  * Speech while it talks stops it (`interrupted`); the rest of that answer is dropped.
+ *
+ * **Its own voice is not a request** (asked 2026-10-09 from the Xiaomi Watch 5: "in the call the agent picks up its own
+ * voice"). A device's speaker leaks the answer back into its microphone, echo canceller or not. An utterance that began
+ * while the answer played (or within `SPEAKING_GRACE_MS` of its end) is held — no `heard` yet — until its words are
+ * known; when most of them (`isEcho`: ≥ 60 %, as the panel's `_callIsEcho`) are in what this call just said, it is
+ * dropped ("our own voice", in the call log) and nothing reaches the hive. Anything else goes on as before.
  */
 const { EventEmitter } = require('events');
 
@@ -35,6 +41,17 @@ const SPEAKING_GRACE_MS = 1500; // after the answer's audio ends: its tail and t
 /** The pause that ends what was said, when nothing is set (call-pause.js): a device's call, longer than the panel's
  *  900 ms of before, since a pause mid-sentence on a wrist let the turn start (2026-10-09). */
 const DEFAULT_SILENCE_MS = 1400;
+/** What was said is compared with an utterance that began this soon after it was spoken (the room, the relay's delay). */
+const ECHO_LOOKBACK_MS = 3000;
+
+/** Words of two letters or more, lower case — the panel's `_callIsEcho` tokens. */
+const echoWords = t => String(t || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 1);
+
+/** Whether `words` heard are mostly the voice's own: at least 60 % of them in `said` (what the call just spoke). */
+function isEcho(words, said) {
+  const w = echoWords(words), own = new Set(echoWords(Array.isArray(said) ? said.join(' ') : said));
+  return w.length > 0 && own.size > 0 && w.filter(x => own.has(x)).length / w.length >= 0.6;
+}
 
 function wav(pcm) {
   const h = Buffer.alloc(44);
@@ -119,9 +136,10 @@ function connect({ silenceMs = DEFAULT_SILENCE_MS, synth, transcribe, voice = nu
   });
   let closed = false, rest = Buffer.alloc(0), floor = null, utter = null, quietMs = 0, epoch = 0, speakingUntil = 0, ids = 0, overMs = 0;
   let speech = Promise.resolve(), nearMs = 0, toldQuiet = false, zeroMs = 0, toldZeros = false, deciding = 0;
+  let spoken = [];   // {text, until}: what this call said lately, for telling its echo from a person (isEcho)
   const stats = { frames: 0, peak: 0, floor: null };
 
-  const utterance = async pcm => {
+  const utterance = async (pcm, { overlapped = false, at = Date.now() } = {}) => {
     let heard = { text: '', filtered: null };
     const t0 = Date.now();
     deciding++;
@@ -139,6 +157,14 @@ function connect({ silenceMs = DEFAULT_SILENCE_MS, synth, transcribe, voice = nu
     if (text) { toldQuiet = false; nearMs = 0; }   // words came through: a later stretch of too-quiet sound is news again
     em.emit('stt', { words: text ? text.split(/\s+/).length : 0, filtered: heard.filtered || null, ms: Date.now() - t0, language: heard.language || null, heardAs: heard.heardAs || null });
     if (closed) return;
+    if (overlapped) {
+      const said = spoken.filter(x => x.until >= at - ECHO_LOOKBACK_MS).map(x => x.text);
+      if (text && isEcho(text, said)) {
+        const n = echoWords(text).length;
+        return em.emit('dropped', `our own voice — ${n} word${n === 1 ? '' : 's'} heard back from the answer it was saying`);
+      }
+      em.emit('heard');   // held while the answer played: it is a person after all
+    }
     if (!text) return em.emit('notice', { stage: 'stt', text: 'I didn\'t catch that — say it again?' });
     em.emit('user', text);
     em.emit('tool', { id: `p${++ids}`, name: 'doca', args: { request: text } });
@@ -172,13 +198,18 @@ function connect({ silenceMs = DEFAULT_SILENCE_MS, synth, transcribe, voice = nu
     // While it talks, only ~0.3 s of steady speech is a person talking over it; a click or a cough is not.
     overMs = voiced && Date.now() < speakingUntil ? overMs + 20 : 0;
     if (overMs >= 300) { epoch++; speakingUntil = 0; overMs = 0; em.emit('interrupted'); }
-    if (voiced && !utter) utter = { chunks: [], voicedMs: 0, ms: 0, peak: 0 };
+    if (voiced && !utter) utter = { chunks: [], voicedMs: 0, ms: 0, peak: 0, at: Date.now(), overlapped: Date.now() < speakingUntil + SPEAKING_GRACE_MS };
     if (!utter) return;
     utter.chunks.push(f); utter.ms += 20; if (level > utter.peak) utter.peak = level;
     if (voiced) { utter.voicedMs += 20; quietMs = 0; } else quietMs += 20;
     if (quietMs >= silenceMs || utter.ms >= MAX_UTTERANCE_MS) {
       const u = utter; utter = null; quietMs = 0;
-      if (u.voicedMs >= MIN_VOICED_MS) { nearMs = 0; em.emit('utterance', { ms: u.ms, voicedMs: u.voicedMs, peak: u.peak }); em.emit('heard'); utterance(Buffer.concat(u.chunks)); }
+      if (u.voicedMs >= MIN_VOICED_MS) {
+        nearMs = 0;
+        em.emit('utterance', { ms: u.ms, voicedMs: u.voicedMs, peak: u.peak, overlapped: u.overlapped });
+        if (!u.overlapped) em.emit('heard');   // over the answer: said once its words show it is not the answer's own
+        utterance(Buffer.concat(u.chunks), { overlapped: u.overlapped, at: u.at });
+      }
       else em.emit('dropped', `${u.voicedMs} ms of speech — under ${MIN_VOICED_MS} ms, a click or a breath`);
     }
   };
@@ -208,6 +239,7 @@ function connect({ silenceMs = DEFAULT_SILENCE_MS, synth, transcribe, voice = nu
         tally.sentences++; tally.bytes += audio.length;
         em.emit('agent', `${require('../voice-tags').strip(s)} `);   // what is shown: never the tags
         speakingUntil = Math.max(Date.now(), speakingUntil) + audio.length / (RATE * 2) * 1000;
+        spoken = [...spoken.filter(x => x.until >= Date.now() - ECHO_LOOKBACK_MS * 4), { text: s, until: speakingUntil }].slice(-40);
         for (let i = 0; i < audio.length; i += RATE / 5) em.emit('audio', audio.subarray(i, i + RATE / 5));   // 100 ms frames
       });
     }
@@ -237,4 +269,4 @@ function connect({ silenceMs = DEFAULT_SILENCE_MS, synth, transcribe, voice = nu
   return em;
 }
 
-module.exports = { connect, RATE, MIN_LEVEL, DEFAULT_SILENCE_MS, QUIET_NOTICE_MS, wav, rms, speakable, sentences, gatherer };
+module.exports = { connect, RATE, MIN_LEVEL, DEFAULT_SILENCE_MS, QUIET_NOTICE_MS, wav, rms, speakable, sentences, gatherer, isEcho };
