@@ -83,13 +83,21 @@ function updateFromDevice(deviceId, patch) {
   const p = patch && typeof patch === 'object' ? patch : {};
   const next = { ...spec };
 
-  if (p.url !== undefined) {
+  // A device that moves from a listener the hub dials to a socket it opens itself (a home node: doca-client run
+  // --socket), or back to an address. Nothing more is lent by it: the server stays the one a person accepted.
+  if (p.transport !== undefined) {
+    if (!['http', 'socket'].includes(p.transport)) throw Object.assign(new Error('transport is http or socket'), { status: 400 });
+    if (p.transport === 'http' && !/^https?:\/\//.test(String(p.url || spec.url || ''))) throw Object.assign(new Error('An http server needs its url'), { status: 400 });
+    next.transport = p.transport;
+    if (p.transport === 'socket') { delete next.url; delete next.headers; }
+  }
+  if (p.url !== undefined && next.transport !== 'socket') {
     const url = String(p.url || '').trim();
     if (!/^https?:\/\//.test(url))
       throw Object.assign(new Error('url must start with http:// or https://'), { status: 400 });
     next.url = url;
   }
-  if (p.headers !== undefined) {
+  if (p.headers !== undefined && next.transport !== 'socket') {
     if (!p.headers || typeof p.headers !== 'object' || Array.isArray(p.headers))
       throw Object.assign(new Error('headers must be an object of name/value pairs'), { status: 400 });
     next.headers = unmaskValues(Object.fromEntries(
@@ -234,7 +242,7 @@ function wakeForDevice(deviceId, { resuming = false } = {}) {
   if (!spec) return;
   if (resuming && stoppedOnPurpose(spec.id)) return;   // a device coming back does not undo a person's stop
   const c = _clients.get(spec.id);
-  if (c?.state === 'running' && c.spec.url === spec.url) return;
+  if (c?.state === 'running' && c.spec.url === spec.url && c.spec.transport === spec.transport) return;
   if (c) c.stop(true);
   _clients.delete(spec.id);
   start(spec.id).catch(() => {});

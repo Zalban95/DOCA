@@ -378,9 +378,9 @@ function paths() {
       get: { tags: ['MCP'], summary: 'The MCP server this device hosts, as the host has it recorded', operationId: 'getOwnMcpServer', ...scopeDoc('mcp:self'),
         description: 'Only the definition whose `origin.deviceId` is this device. 404 when no server on the host is pointed at it — the dashboard creates that entry, a client never can.',
         responses: { 200: json(obj({ server: ref('OwnMcpServer') })), ...std(401, 403, 404) } },
-      patch: { tags: ['MCP'], summary: 'Correct the address of the server this device hosts', operationId: 'patchOwnMcpServer', ...scopeDoc('mcp:self'),
-        description: 'Address only. The transport, the owning device, `autostart` and any command are not writable here: `mcpServers` holds something the host spawns, so a client that could set a command would be a way to run code on it. Exists because a client that regenerates a secret in its URL would otherwise leave an entry only a human could repair.',
-        requestBody: body(obj({ url: str({ description: 'http(s) URL the host should call.' }), headers: obj({}, { additionalProperties: str(), description: 'Sent on every request; how to hand the host a bearer token.' }) })),
+      patch: { tags: ['MCP'], summary: 'Correct the address of the server this device hosts, or move it to the device\'s own socket', operationId: 'patchOwnMcpServer', ...scopeDoc('mcp:self'),
+        description: 'Address, or the way it is reached: `transport: "socket"` (the device dials `/api/v1/mcp/host` itself — a home node, PROTOCOL §22.2, §22.4) or `"http"` with a url. The owning device, `autostart` and any command are not writable here: `mcpServers` holds something the host spawns, so a client that could set a command would be a way to run code on it. Exists because a client that regenerates a secret in its URL would otherwise leave an entry only a human could repair.',
+        requestBody: body(obj({ transport: str({ enum: ['http', 'socket'], description: 'socket: no address, the device dials in; http: the host calls url.' }), url: str({ description: 'http(s) URL the host should call.' }), headers: obj({}, { additionalProperties: str(), description: 'Sent on every request; how to hand the host a bearer token.' }) })),
         responses: { 200: json(obj({ server: ref('OwnMcpServer') })), ...std(400, 401, 403, 404) } },
     },
 

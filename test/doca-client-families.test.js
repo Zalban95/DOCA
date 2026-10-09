@@ -14,7 +14,7 @@ const T = client.TOOLS;
 const cfg = { root: os.tmpdir(), grants: { files: true, screen: true, processes: true, apps: true, device: true }, secret: 's3cret', name: 't' };
 
 test('the new families are asked for like the first two', () => {
-  assert.deepEqual(client.FAMILIES, ['files', 'shell', 'screen', 'processes', 'apps', 'device']);
+  assert.deepEqual(client.FAMILIES, ['files', 'shell', 'screen', 'processes', 'apps', 'device', 'home']);   // home: a home node (home.js)
   for (const n of ['screen_capture', 'processes_list', 'processes_stop', 'apps_open', 'device_info', 'device_notify', 'device_clipboard_read', 'device_clipboard_write'])
     assert.ok(T[n] && client.FAMILIES.includes(T[n].family) && T[n].description, n);
 });

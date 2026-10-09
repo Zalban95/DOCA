@@ -3007,10 +3007,10 @@
         "tags": [
           "MCP"
         ],
-        "summary": "Correct the address of the server this device hosts",
+        "summary": "Correct the address of the server this device hosts, or move it to the device's own socket",
         "operationId": "patchOwnMcpServer",
         "x-scope": "mcp:self",
-        "description": "Address only. The transport, the owning device, `autostart` and any command are not writable here: `mcpServers` holds something the host spawns, so a client that could set a command would be a way to run code on it. Exists because a client that regenerates a secret in its URL would otherwise leave an entry only a human could repair.",
+        "description": "Address, or the way it is reached: `transport: \"socket\"` (the device dials `/api/v1/mcp/host` itself — a home node, PROTOCOL §22.2, §22.4) or `\"http\"` with a url. The owning device, `autostart` and any command are not writable here: `mcpServers` holds something the host spawns, so a client that could set a command would be a way to run code on it. Exists because a client that regenerates a secret in its URL would otherwise leave an entry only a human could repair.",
         "requestBody": {
           "required": true,
           "content": {
@@ -3018,6 +3018,14 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "transport": {
+                    "type": "string",
+                    "enum": [
+                      "http",
+                      "socket"
+                    ],
+                    "description": "socket: no address, the device dials in; http: the host calls url."
+                  },
                   "url": {
                     "type": "string",
                     "description": "http(s) URL the host should call."
@@ -7386,7 +7394,7 @@
         ],
         "summary": "Report which tool families this device has granted",
         "operationId": "putDeviceGrants",
-        "description": "Families: files, shell, processes, screen, input, apps, device, elevated, mcp. The harness is offered only a granted family that DOCA has not revoked. Reporting also clears a disconnect.",
+        "description": "Families: files, shell, processes, screen, input, apps, device, elevated, mcp, home. The harness is offered only a granted family that DOCA has not revoked. Reporting also clears a disconnect.",
         "requestBody": {
           "required": true,
           "content": {
@@ -7422,6 +7430,9 @@
                         "type": "boolean"
                       },
                       "mcp": {
+                        "type": "boolean"
+                      },
+                      "home": {
                         "type": "boolean"
                       }
                     },
@@ -7471,6 +7482,9 @@
                           "type": "boolean"
                         },
                         "mcp": {
+                          "type": "boolean"
+                        },
+                        "home": {
                           "type": "boolean"
                         }
                       },

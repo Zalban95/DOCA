@@ -41,8 +41,8 @@ test('it updates from its own hub: what differs is fetched, checked and replaced
   fs.copyFileSync(path.join(__dirname, '..', 'clients', 'node', 'families.js'), path.join(there, 'families.js'));
   const u = await client.update({ dir: there });
   assert.equal(u.version, require('../package.json').version);
-  assert.deepEqual(u.changed.sort(), ['README.md', 'boot.js', 'discover.js', 'doca-client.js', 'sealed.js', 'update.js'], 'the unchanged families.js is left alone');
-  for (const f of ['doca-client.js', 'sealed.js', 'discover.js', 'boot.js', 'update.js', 'README.md'])
+  assert.deepEqual(u.changed.sort(), ['README.md', 'boot.js', 'discover.js', 'doca-client.js', 'home-shared.js', 'home.js', 'sealed.js', 'socket.js', 'update.js', 'ws-lite.js'], 'the unchanged families.js is left alone');
+  for (const f of ['doca-client.js', 'sealed.js', 'discover.js', 'boot.js', 'update.js', 'socket.js', 'ws-lite.js', 'home.js', 'home-shared.js', 'README.md'])
     assert.ok(fs.readFileSync(path.join(there, f)).equals(fs.readFileSync(path.join(__dirname, '..', 'clients', 'node', f))), `${f} byte for byte`);
   assert.equal(fs.readFileSync(path.join(process.env.DOCA_CLIENT_DIR, 'previous', 'doca-client.js'), 'utf8'), '// an old copy\n');
   assert.deepEqual((await client.update({ dir: there })).changed, [], 'nothing twice');

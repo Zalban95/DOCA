@@ -46,6 +46,11 @@
     ],
     "media": [
       "media_control"
+    ],
+    "home": [
+      "home_states",
+      "home_call",
+      "home_camera"
     ]
   },
   "decides": [

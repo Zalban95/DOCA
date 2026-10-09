@@ -15,6 +15,7 @@ const CANONICAL = {
   processes: ['processes_list', 'processes_start', 'processes_stop'],
   device:    ['device_info', 'device_notify', 'device_clipboard_read', 'device_clipboard_write', 'device_camera', 'device_location', 'device_sensors'],
   media:     ['media_control'],
+  home:      ['home_states', 'home_call', 'home_camera'],   // a home node: Home Assistant kept in the household (§22.4)
 };
 
 /** Older names a first-party client still lends, each to be aligned in its next release (§22.1's "→" entries). */
