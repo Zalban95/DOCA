@@ -6,6 +6,8 @@
 async function libraryFilesMount() {
   const main = document.querySelector('#tab-files .fm-main'), crumb = document.getElementById('fm-breadcrumb');
   if (!main || !crumb) return;
+  if (typeof licenceReady === 'function') await licenceReady();
+  if (!(typeof licenceFeatureOn !== 'function' || licenceFeatureOn('library'))) return;   // not licensed here (lib/licence.js)
   let v = null;
   try { v = await apiFetch('/api/library?brief=1'); } catch { /* not this person's, or the hub is older */ }
   let bar = document.getElementById('lib-files-bar');

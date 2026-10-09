@@ -124,7 +124,7 @@ const STEPS = [
   // The Library (library/, experiment library): a row per file of the folders the owner chose — size and modified time
   // as BIGINT, since a video passes 2 GB and a time in ms passes 2^31 — and a row per piece with its vector, as
   // `embeddings` keeps them. `at_sec`/`end_sec` are where in a recording a piece is (a frame, a window, words said).
-  { id: 13, what: 'the Library: files of this machine indexed by meaning, and their pieces (library/)', sql: [
+  { id: 13, feature: 'library', what: 'the Library: files of this machine indexed by meaning, and their pieces (library/)', sql: [
     `CREATE TABLE IF NOT EXISTS library_items (
        tenant_id TEXT NOT NULL DEFAULT 'local', path TEXT NOT NULL, folder TEXT NOT NULL, kind TEXT NOT NULL,
        size BIGINT, mtime_ms BIGINT, hash TEXT, model TEXT, state TEXT NOT NULL, note TEXT, meta TEXT, indexed_at TEXT,

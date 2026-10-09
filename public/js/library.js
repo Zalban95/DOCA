@@ -62,6 +62,8 @@ function _libNeeds(v) {
 async function libraryLoad() {
   const card = document.getElementById('lib-card');
   if (!card) return;
+  if (typeof licenceReady === 'function') await licenceReady();
+  if (!(typeof licenceFeatureOn !== 'function' || licenceFeatureOn('library'))) { card.style.display = 'none'; return; }   // not licensed here (lib/licence.js)
   let v;
   try { v = await apiFetch('/api/library'); } catch (e) { card.innerHTML = `<div class="card-title">Library</div><div class="placeholder">${escHtml(e.message)}</div>`; return; }
   if (!v.developer) { card.remove(); return; }
