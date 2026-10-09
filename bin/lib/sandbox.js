@@ -17,6 +17,11 @@ function sandbox(prefix = 'doca-sandbox-') {
   fs.mkdirSync(path.join(tmp, 'data', 'keys'), { recursive: true });
   try { fs.copyFileSync(process.env.DOCA_PREFS_FILE || path.join(real.HOME_DIR, '.dashboard-prefs.json'), path.join(tmp, 'prefs.json')); } catch { fs.writeFileSync(path.join(tmp, 'prefs.json'), '{}'); }
   try { fs.copyFileSync(real.PROVIDER_KEYS_FILE, path.join(tmp, 'data', 'keys', 'providers.json')); } catch { /* keys may live in openclaw.json */ }
+  // The licence (and its grace), so the measurement holds the tools and features this hive has: without it the
+  // copy ran `core` alone — eleven fewer tools than the hive it measured, and no experiment could turn on (2026-10-09).
+  // Copied as files, never read here.
+  for (const f of ['licence.lic', 'licence.json', 'licence-state.json', 'licence-grace.json'])
+    try { fs.copyFileSync(path.join(realDataDir, 'keys', f), path.join(tmp, 'data', 'keys', f)); } catch { /* none of that kind */ }
   // No MCP server a person's device hosts: a measurement must not reach the real phone or desk (an eval case read the
   // owner's phone through mcp_connect, 2026-10-07). Servers on this machine stay — measuring is what they are for here.
   try {
