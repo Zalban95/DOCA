@@ -28,7 +28,8 @@ function approvalCardEl(evt, done) {
   head.textContent = `Allow ${evt.tool}?`;
   el.appendChild(head);
 
-  if (evt.summary) {
+  if (evt.does) approvalExplainInto(el, evt);
+  else if (evt.summary) {
     // textContent, never innerHTML: this string is a command the model wrote.
     const body = document.createElement('pre');
     body.className = 'approval-body';
@@ -90,6 +91,39 @@ function approvalCardEl(evt, done) {
   // question withdrew itself, which is a sentence rather than the word "null".
   el.settleFrom = decision => settle(`${evt.tool} — ${decision || 'no longer waiting'}`);
   return el;
+}
+
+/**
+ * Why, what it does, and the exact request (modules/harness/approval-explain.js; the owner, 2026-10-09). Top to
+ * bottom: the agent's own words, labelled as the agent's — its claim; what the call does, a fixed sentence the hub made
+ * from the tool and its arguments, never the model's; whether it can be undone; why it is asked; then the exact request
+ * folded, closed until opened (remembered per browser). Every string is set as text: the model wrote some of it.
+ */
+function approvalExplainInto(el, evt) {
+  const line = (cls, text, label) => {
+    const p = document.createElement('div');
+    p.className = cls;
+    if (label) { const b = document.createElement('span'); b.className = 'approval-label'; b.textContent = label; p.appendChild(b); }
+    p.appendChild(document.createTextNode(text));
+    el.appendChild(p);
+    return p;
+  };
+  if (evt.why) line('approval-why', evt.why, evt.whyFrom === 'agent' ? 'The agent says' : 'Asked for');
+  line('approval-does', evt.does, 'What it does');
+  if (evt.way) line('approval-way', evt.way);
+  if (evt.asked) line('approval-asked', evt.asked, 'Asked because');
+  if (!evt.detail) return;
+  const code = document.createElement('pre');
+  code.className = 'approval-body approval-detail';
+  code.textContent = evt.detail;
+  const fold = typeof advancedFold === 'function' ? advancedFold(code, { label: 'The exact request', id: 'approval-request' }) : null;
+  if (fold) { fold.classList.add('approval-fold'); el.appendChild(fold); return; }
+  const det = document.createElement('details');
+  det.className = 'approval-fold';
+  const sum = document.createElement('summary');
+  sum.textContent = 'The exact request';
+  det.append(sum, code);
+  el.appendChild(det);
 }
 
 /**

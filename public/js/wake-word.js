@@ -135,7 +135,9 @@ async function _wakeHear(w, blob) {
     form.append('audio', blob, 'wake.webm');
     form.append('prompt', w.word);   // the spelling hint: Whisper has never heard an invented name
     const r = await fetch('/api/chat/transcribe', { method: 'POST', body: form });
-    const { text } = await r.json();
+    const { text, error } = await r.json();
+    // No speech service: the name cannot be heard at all, and Ambient's line says so instead of listening on in silence.
+    if (!r.ok) { if (typeof ambientSay === 'function' && typeof ambientIsOpen === 'function' && ambientIsOpen()) ambientSay(error || `The wake word cannot be heard (HTTP ${r.status}).`); return; }
     const m = wakeMatch(text, w.word);
     if (typeof ambientHearing === 'function') ambientHearing({ heard: text, called: m.heard, word: w.word });   // what it understood, on screen
     if (!m.heard || _wake !== w) return;

@@ -1,50 +1,43 @@
 ---
 name: hi3d
 description: Make 3D models from pictures with hi3d.ai (Hitem3D) — a GLB, STL, OBJ, FBX, USDZ or 3MF from one image or up to four views — and show them in the chat. Use when the person asks for a 3D model, a printable object or an asset from a photo or a drawing.
+services: [hi3d]
+triggers: [3d model, hi3d, glb, stl, modello 3d]
 ---
 
 # 3D models from pictures, with hi3d.ai
 
 hi3d.ai (Hitem3D, docs.hi3d.ai) turns one picture — or two to four views of the same object, front first — into a 3D
-model. It runs on the person's own credits. Everything here is DOCA's ordinary tools: no code for this service.
+model. It runs on the person's own credits. It is the API service `hi3d`: `service describe hi3d` lists its actions.
 
 ## Connecting it (once, with the person)
 
-The person creates an API key on hi3d.ai (its developer page) and gets two values — the page calls them
-**Access Key** and **Secret Key** (the API's own docs say client id and client secret: the same two). Both are
-needed, joined into one. They add them in **Field → Connectors → Keys for services**:
-
-- name `hi3d`, address `https://api.hitem3d.ai`
-- where it goes: **id:secret, traded for a token**; token address `https://api.hitem3d.ai/open-api/v1/auth/token`
-- the key: `AccessKey:SecretKey` — the Access Key, a colon, the Secret Key, no spaces
-
-The hub trades them for a token itself and renews it; you never see either. If `api_call` with `key: "hi3d"`
-says there is no such key, tell the person these four lines — never ask them to paste the secret into the chat.
+In **Field → Connectors → API services**, the person types `hi3d` in the first box and picks the ready-made hi3d.ai:
+everything is filled but the key. The key is the **Access Key** and the **Secret Key** from hi3d.ai's developer page,
+joined by a colon (`AccessKey:SecretKey`, no spaces); the hub trades them for a token itself. If `service list` does
+not show `hi3d`, or says its key is not pasted, tell the person that — never ask them to paste the secret into the chat.
 
 ## Making a model
 
 1. **The picture** must be a file: an attachment the person sent, a file in the workspace, or one you made. PNG,
-   JPEG or WEBP, under 20 MB; a plain background helps (or ask hi3d to remove it with `rmbg: 1`).
-2. **Submit** — one request, an upload:
-   `api_call {url: "https://api.hitem3d.ai/open-api/v1/submit-task", key: "hi3d",
-   form: {request_type: "3", model: "hi3dv3.0", format: "2"}, files: {images: "<the picture>"}}`
+   JPEG or WEBP, under 20 MB; a plain background helps (hi3d removes it by default, `rmbg: 1`).
+2. **Submit** — say once that it takes minutes and spends credits, then:
+   `service {action: "call", service: "hi3d", operation: "submitTask", params: {request_type: 3, model: "hi3dv3.0", format: 2},
+   files: {images: "<the picture>"}, save_as: "<a short name>"}`
    - `request_type`: 1 geometry only, 2 texture only (needs a mesh), 3 both — 3 unless asked otherwise.
    - `format`: 1 obj, 2 glb, 3 stl, 4 fbx, 5 usdz, 6 3mf. **GLB** to look at it here; **STL** or **3MF** to print it.
-   - More views: `files: {multi_images: …}` for each of up to four views (front first) instead of `images`.
+   - More views: `files: {multi_images: …}` (up to four, front first) instead of `images`.
    - Optional: `resolution` (v3.0: `2048quality` or `2048master`), `face` (100000–5000000 polygons).
-   The answer carries `data.task_id`. A model takes minutes and spends credits: say so once, then wait.
-3. **Wait for it** — every 15–30 s, not faster:
-   `api_call {url: "https://api.hitem3d.ai/open-api/v1/query-task?task_id=<id>", key: "hi3d"}`
-   `state` goes `created` → `queueing` → `processing` → `success` (or `failed`, with a reason to tell the person).
-4. **Keep it** — on `success`, `url` is the model, valid for one hour: download it straight away, without the key
-   (it is a plain link): `api_call {url: "<url>", save_as: "<a short name>.glb"}`. `cover_url` is a preview
-   picture, worth keeping too (`save_as: "<name>-cover.png"`).
-5. **Show it** — `show_media` with the saved file: the panel draws a 3D model in the chat, turning, with full screen
-   (GLB, GLTF, STL, OBJ, FBX, PLY, 3MF; USDZ is offered as a download, and as AR on an iPhone).
+3. **Do not poll.** The hub asks after the task every 20 s, keeps the model and its preview picture as attachments
+   when it is done (the links are valid for one hour; the hub fetches them at once), and tells this conversation.
+   Carry on meanwhile; in a call, say it is on its way.
+4. **Show it** — when told it is done, `show_media` with the kept file: the panel draws a 3D model in the chat,
+   turning, with full screen (GLB, GLTF, STL, OBJ, FBX, PLY, 3MF; USDZ is offered as a download, and as AR on an iPhone).
 
 ## Good to know
 
-- Credits: `api_call {url: "https://api.hitem3d.ai/open-api/v1/balance", key: "hi3d"}` — `data.totalBalance` is what is left; ask before a
-  large batch.
-- An error `40010000` means the id or secret is wrong: the person fixes it in Keys for services.
-- In a call, say in a sentence that it is on its way and carry on; the model arrives in the chat when it is ready.
+- Credits: `service {action: "call", service: "hi3d", operation: "getBalance"}` — `data.totalBalance` is what is left;
+  ask before a large batch.
+- A failed task (`generate failed`) refunds its credits; say so and ask before trying again.
+- An error `40010000` means the id or secret is wrong: the person fixes it with Edit on the hi3d row.
+- After a restart the hub says which jobs it stopped following; `follow` with the task id takes one up again.

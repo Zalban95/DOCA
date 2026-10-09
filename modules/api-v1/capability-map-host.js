@@ -26,6 +26,8 @@ module.exports = [
   row('backups', 'make, schedule and restore backups', ['POST /api/backups/*', 'POST /api/backups', 'DELETE /api/backups/:name']),
   row('settings', 'change the hive\'s settings, paths and network', ['POST /api/prefs', 'POST /api/paths', 'POST /api/paths/create', 'POST /api/network', 'POST /api/settings/checkpoints/:id/restore',
     'POST /api/configs/:id', 'POST /api/config-favorites', 'POST /api/fm-favorites', 'POST /api/features/:id/hidden', 'POST /api/logs/keep']),
+  row('licence', 'add, renew, check in or remove this hive\'s licence', ['POST /api/licence/file', 'POST /api/licence/key', 'POST /api/licence/check', 'DELETE /api/licence'],
+    { only: 'which features this hive may run: the owner\'s, at the panel (license/)' }),
   row('developer', 'developer mode, experiments and who may release', ['POST /api/developer/releasing', 'POST /api/experiments/developer', 'POST /api/experiments/:id']),
   row('guided', 'set up this machine from the guided questions', ['POST /api/guided/*'], { only: 'setting up this machine (what it can bear, what to install, which keys to paste): the owner\'s, at the panel' }),
   row('sharing', 'offer what was learned to the project', ['POST /api/sharing', 'POST /api/sharing/:packId/share'], { only: 'the owner\'s answer and click (CONSTITUTION §0); a host\'s alone' }),
@@ -58,9 +60,10 @@ module.exports = [
 
   // ── The owner's accounts and secrets ──
   row('keys', 'keep API keys for providers', ['POST /api/keys', 'POST /api/keys/add-provider', 'POST /api/keys/test-provider', 'DELETE /api/keys/:name'], { only: SECRET }),
-  row('connectors', 'connect accounts, keep keys for services, logins and sealed secrets', ['POST /api/connectors/:id', 'DELETE /api/connectors/:id', 'POST /api/connectors/:id/connect',
+  row('connectors', 'connect accounts, keep keys and API services, logins and sealed secrets', ['POST /api/connectors/:id', 'DELETE /api/connectors/:id', 'POST /api/connectors/:id/connect',
     'POST /api/connectors/keys/all', 'DELETE /api/connectors/keys/:name', 'POST /api/connectors/logins/all', 'DELETE /api/connectors/logins/:id', 'POST /api/connectors/sealed/all',
-    'DELETE /api/connectors/sealed/:name', 'POST /api/connectors/drafts/:id/accept', 'DELETE /api/connectors/drafts/:id'], { only: SECRET }),
+    'DELETE /api/connectors/sealed/:name', 'POST /api/connectors/drafts/:id/accept', 'DELETE /api/connectors/drafts/:id',
+    'POST /api/connectors/services/find', 'POST /api/connectors/services/read', 'POST /api/connectors/services/all', 'POST /api/connectors/services/:name/try', 'DELETE /api/connectors/services/:name'], { only: SECRET }),
   row('channels', 'switch a chat app on and give it its token', ['POST /api/channels/telegram', 'POST /api/channels/matrix', 'POST /api/channels/slack', 'POST /api/channels/mail'], { only: SECRET }),
 
   // ── How the agents work ──
@@ -73,7 +76,7 @@ module.exports = [
   row('specialists', 'make, edit and switch on specialists, and the agents\' identity', ['POST /api/harness/agents', 'POST /api/harness/agents/enable', 'POST /api/harness/agents/:id',
     'DELETE /api/harness/agents/:id', 'POST /api/harness/agents/:id/promote', 'POST /api/harness/agent-import', 'POST /api/harness/identity']),
   row('harness-skills', 'write, import and adapt skills', ['POST /api/harness/skills', 'POST /api/harness/skills/draft', 'POST /api/harness/skills/import', 'POST /api/harness/skills/:name/adapt',
-    'POST /api/harness/skills/:name/restore'], { only: 'a skill is instructions the agents follow: a host\'s (learn.js)' }),
+    'POST /api/harness/skills/:name/restore', 'POST /api/harness/skills/online/import', 'POST /api/harness/skills/:name/triggers/suggest'], { only: 'a skill is instructions the agents follow: a host\'s (learn.js)' }),
   row('guards', 'set up the guards that check the agents\' calls', ['POST /api/harness/guards', 'POST /api/harness/guards/*', 'DELETE /api/harness/guards/:id']),
   row('previews', 'show a port of this machine as a preview', ['POST /api/harness/previews']),
   row('tuning', 'set up search, retrieval, vision, the realtime model and assistant mode', ['POST /api/search/*', 'POST /api/retrieval', 'POST /api/retrieval/try', 'DELETE /api/retrieval/index',

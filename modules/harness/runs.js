@@ -53,6 +53,28 @@ function recoverJobs() {
   try { raw()?.prepare("UPDATE runs SET state = 'failed', outcome = 'interrupted by a restart of the hub', ended_at = ? WHERE tenant_id = 'local' AND kind = 'job' AND state = 'running'").run(now()); } catch { /* see begin */ }
 }
 
+/**
+ * After a restart: a turn that was running is not any more (deep test A, #11) — its promise went with the old process,
+ * and Chronicle showed it "running" for ever, with no end and no tokens, while its mission carried on as a new run. It
+ * is closed as stopped, saying why, with the steps and tokens its trace kept (null when it kept none). Called before
+ * anything is carried on, so a run started since is never touched.
+ */
+function recoverTurns() {
+  const r = raw();
+  if (!r) return 0;
+  try {
+    const cut = r.prepare("SELECT id FROM runs WHERE tenant_id = 'local' AND kind != 'job' AND state = 'running'").all();
+    for (const { id } of cut) {
+      const spans = r.prepare("SELECT data FROM trace_spans WHERE tenant_id = 'local' AND run_id = ? AND kind = 'model'").all(id).map(x => JSON.parse(x.data || '{}'));
+      const known = spans.filter(d => d.prompt != null || d.completion != null);
+      const tokens = known.length ? known.reduce((n, d) => n + (Number(d.prompt) || 0) + (Number(d.completion) || 0), 0) : null;
+      r.prepare("UPDATE runs SET state = 'cancelled', outcome = ?, steps = ?, tokens = ?, ended_at = ? WHERE tenant_id = 'local' AND id = ?")
+        .run('interrupted: DOCA restarted (or switched version) while it ran; work that carries on does so in a new run', spans.length || null, tokens, now(), id);
+    }
+    return cut.length;
+  } catch { return 0; }
+}
+
 /** Finished runs older than `days`, with their traces: gone (log-keep.js; `logs.runsRetainDays`). Returns how many. */
 function prune(days) {
   const r = raw();
@@ -98,4 +120,4 @@ function checkPlan(id) {
   } catch { return null; }
 }
 
-module.exports = { begin, end, person, get, forSession, checkPlan, openItems, recoverJobs, prune };
+module.exports = { begin, end, person, get, forSession, checkPlan, openItems, recoverJobs, recoverTurns, prune };

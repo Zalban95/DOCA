@@ -57,6 +57,13 @@ const TOOLS = {
     { when: { method: NOT_GET, url: u => !owned(u) }, tier: 'outward', why: 'sends data to a service the owner does not run' },
     { when: { method: NOT_GET }, tier: 'reversible', way: 'an address the owner owns', },
     { tier: 'read' }],
+  // An API service's action (api-services/): as api_call, by the action's own method and the service's address, which
+  // classify.js reads from the definition (`_do`, `_method`, `_url`) — the agent names neither.
+  service: [
+    { when: { _do: ['list', 'describe'] }, tier: 'read' },
+    { when: { _method: NOT_GET, _url: u => !owned(u) }, tier: 'outward', why: 'sends data to a service the owner does not run' },
+    { when: { _method: NOT_GET }, tier: 'reversible', way: 'an address the owner owns' },
+    { tier: 'read' }],
   http_fetch: [{ when: { method: NOT_GET }, tier: 'outward', why: 'sends data out' }, { tier: 'read' }],
   secret_use: [{ tier: 'outward', why: 'hands a secret to a device' }],
   computer_login: [{ tier: 'outward', why: 'signs in on a site with a stored login' }],
@@ -98,6 +105,8 @@ const READ_VERBS = new Set([
   'env', 'printenv', 'stat', 'file', 'tree', 'sort', 'uniq', 'cut', 'tr', 'diff', 'cmp', 'jq', 'yq', 'awk', 'basename',
   'dirname', 'realpath', 'readlink', 'nproc', 'lscpu', 'lsblk', 'lsusb', 'lspci', 'ip', 'ifconfig', 'ss', 'netstat',
   'ping', 'dig', 'nslookup', 'host', 'nvidia-smi', 'sensors', 'test', 'true', 'false', 'sleep', 'md5sum', 'sha256sum',
+  // Changing folder changes nothing on disk: `cd x && sed -n …` is a read (asked 2026-10-09; the owner's yes).
+  'cd', 'pushd', 'popd', 'Set-Location', 'sl', 'Push-Location', 'Pop-Location',
   'Get-ChildItem', 'gci', 'Get-Content', 'gc', 'Get-Location', 'Get-Process', 'Select-String', 'Get-Item', 'Test-Path',
 ]);
 /** Verbs that read only with some arguments: the line is a read when the test passes. */

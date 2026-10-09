@@ -13,7 +13,8 @@ async function devicesLoad() {
   try {
     const data = await apiFetch('/api/devices');
     _devData = data;
-    _devShowing = (await apiFetch('/api/screens/showing').catch(() => ({}))).screens || {};   // what each screen shows now (screens/showing.js)
+    devOwnApply(data);   // "Your devices" for a person without the devices right (devices-own.js)
+    _devShowing = data.own ? {} : (await apiFetch('/api/screens/showing').catch(() => ({}))).screens || {};   // what each screen shows now (screens/showing.js)
     devPopulatePresets();
 
     const pairBtn  = document.getElementById('dev-pair-btn');
@@ -39,23 +40,24 @@ async function devicesLoad() {
       <div class="provider-card ${dead ? 'no-key' : 'has-key'}">
         <div class="provider-header">
           <span class="provider-name">${escHtml(d.name)}</span>
-          <span class="provider-badge ${dead ? 'no' : 'ok'}">${revoked ? 'REVOKED' : expired ? 'EXPIRED' : d.kind === 'agent' ? 'AGENT' : 'ACTIVE'}</span>
+          <span class="provider-badge ${dead ? 'no' : 'ok'}"${!dead && d.approval?.state === 'pending' ? ' style="background:var(--bg-amber);color:var(--amber)"' : ''}>${revoked ? (d.approval?.state === 'refused' ? 'REFUSED' : 'REVOKED') : expired ? 'EXPIRED' : d.approval?.state === 'pending' ? 'WAITING' : d.kind === 'agent' ? 'AGENT' : 'ACTIVE'}</span>
         </div>
         <div class="provider-models">
           <code>${escHtml(d.id)}</code> · ${escHtml(d.caps?.formFactor || 'other')}
           · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}
         </div>
-        <div class="provider-models">${d.scopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}</div>
+        <div class="provider-models">${d.scopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}</div>${devApprovalHtml(d)}
         ${d.missingScopes?.length ? `<div class="input-label mt8" style="text-transform:none;letter-spacing:0;color:var(--amber)">
           Paired before its preset (${escHtml(d.preset)}) gained: ${d.missingScopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}
           <button class="btn btn-xs" onclick="devGrant(${jsArg(d.id)}, ${jsArg(d.missingScopes.join(','))})" title="Add these to this device — same id, queue and token">+ Grant</button></div>` : ''}
-        ${dead ? '' : devHandsHtml(d)}
+        ${dead || _devData.own ? '' : devHandsHtml(d)}
         ${dead ? `
         <div class="toolbar-right">
           <button class="btn btn-xs btn-red" onclick="devForget(${jsArg(d.id)},${jsArg(d.name)})" title="Remove this row and everything kept under its id">🗑 Forget</button>
         </div>` : `
         <div class="toolbar-right">
           ${d.mine ? `<a class="btn btn-xs" href="/d/${encodeURIComponent(d.id)}/" target="_blank" rel="noopener" title="Its own page: its look, tabs and notifications, as it shows them">⧉ Its page</a>` : ''}
+          <button class="btn btn-xs"        onclick="devRename(${jsArg(d.id)},${jsArg(d.name)})" title="Give it another name">✎ Rename</button>
           <button class="btn btn-xs"        onclick="devRotate(${jsArg(d.id)},${jsArg(d.name)})" title="Issue a replacement token">↻ Rotate</button>
           <button class="btn btn-xs btn-red" onclick="devRevoke(${jsArg(d.id)},${jsArg(d.name)})" title="Invalidate this token now">✕ Revoke</button>
         </div>`}
@@ -133,7 +135,7 @@ async function devPairStart() {
   if (!preset) { setStatus(status, 'Choose what you are pairing (its role) first', 'err'); return; }
 
   try {
-    const p = await apiFetch('/api/devices/pair', { method: 'POST', body: { name, preset } });
+    const p = await apiFetch('/api/devices/pair', { method: 'POST', body: { name, preset, forUser: devPairFor() } });
     setStatus(status, '', '');
     devHideForms();
     devRenderPairing(p);
@@ -163,7 +165,7 @@ function devRenderPairing(p) {
           <div class="status-line info" id="dev-pair-countdown"></div>
           <!-- The link as text too, for a machine with no camera: doca-client pairs from it in one step (self-test 2026-10-08). -->
           ${p.url ? `<div class="input-label mt8">Or this link: <code style="user-select:all;word-break:break-all;text-transform:none">${escHtml(p.url)}</code></div>` : ''}
-          <div class="input-label mt8">Scopes: <code>${escHtml((p.scopes || []).join(' '))}</code></div>
+          <div class="input-label mt8">Scopes: <code>${escHtml((p.scopes || []).join(' '))}</code></div>${devPairCanHtml(p)}
           <div class="toolbar-right mt8">
             <button class="btn btn-xs" onclick="devCopy(${jsArg(p.url)}, this)">Copy link</button>
             <button class="btn btn-xs" onclick="devClearResult()">Done</button>
@@ -242,7 +244,7 @@ function devSessionCardHtml(d, dead) {
           <span class="provider-badge ${dead ? 'no' : 'ok'}">${dead ? 'REVOKED' : what}</span>
         </div>
         <div class="provider-models"><code>${escHtml(d.id)}</code> · ${d.kind === 'browser' ? 'its own look, tabs and sections; signed in by password' : 'a linked chat'}
-          · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}${_devShowingHtml(d, dead)}</div>
+          · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}${_devShowingHtml(d, dead)}</div>${devApprovalHtml(d)}
         <div class="toolbar-right">
           ${dead ? `<button class="btn btn-xs btn-red" onclick="devForget(${jsArg(d.id)},${jsArg(d.name)})" title="Remove this row and its settings">🗑 Forget</button>`
             : `<button class="btn btn-xs btn-red" onclick="devRevoke(${jsArg(d.id)},${jsArg(d.name)})" title="${d.kind === 'browser' ? 'Sign this browser out now' : 'Stop this chat reaching the hive'}">✕ ${d.kind === 'browser' ? 'Sign out' : 'Unlink'}</button>`}
@@ -254,7 +256,7 @@ function devSessionCardHtml(d, dead) {
 let _devShowing = {};
 /** A screen: the page it shows now, and a page sent to it — alone, for a screen given to one thing (solo.js). */
 function _devShowingHtml(d, dead) {
-  if (d.kind !== 'browser' || dead) return '';
+  if (d.kind !== 'browser' || dead || _devData.own) return '';   // sending a page to a screen is a host's (screens/showing.js)
   const s = _devShowing[d.id], label = t => (typeof NAV_LABELS !== 'undefined' && NAV_LABELS[t]) || t;
   const pages = typeof NAV_TABS !== 'undefined' ? NAV_TABS : [];
   return `<br>${s ? `showing <b>${escHtml(label(s.page || '?'))}</b>${s.solo ? ' alone' : ''}${s.visible ? '' : ' (hidden)'}` : 'not open now'}

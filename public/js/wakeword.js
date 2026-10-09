@@ -18,6 +18,8 @@ async function wakewordTab() {
 async function _wwLoad() {
   const card = document.getElementById('ww-card');
   if (!card) return;
+  card.style.display = (typeof licenceFeatureOn !== 'function' || licenceFeatureOn('wake-model')) ? '' : 'none';   // not licensed here (lib/licence.js)
+  if (card.style.display) return;
   let s;
   try { s = await apiFetch(`/api/wakeword?word=${encodeURIComponent(WW.word)}`); }
   catch (e) { card.innerHTML = `<div class="card-title">Wake words</div><div class="placeholder">${escHtml(e.message)}</div>`; return; }

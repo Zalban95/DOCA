@@ -92,9 +92,11 @@ function voiceClient(client, voice, req) {
   const own = { ...(['off', 'on', 'low', 'medium', 'high'].includes(req?.body?.thinking) ? { thinking: req.body.thinking } : {}), ...(req?.body?.ambient === true ? { ambient: true } : {}) };
   // The voice that will speak it — the Live call's for the face, the Deep call's for the chat's 🎙 (call-voices.js) —
   // takes a tone in words: then the agent is told it may write a few tags (voice-tags.js).
-  const kind = require('./call-voices').kindOf(voice);
+  // Ambient's assistant is assistant mode too, spoken in its own voice (`speaks: 'ambient'`, chat-call.js; call-voices.js).
+  const ambient = voice === 'assistant' && req?.body?.speaks === 'ambient';
+  const kind = ambient ? 'ambient' : require('./call-voices').kindOf(voice);
   const tags = kind ? require('./call-voices').forRequest(req, kind).tags : false;
-  if (voice === 'assistant') return { ...client, ...own, mode: 'assistant', name: 'Live call (the face, spoken)', ...(tags ? { voiceTags: true } : {}) };
+  if (voice === 'assistant') return { ...client, ...own, mode: 'assistant', name: ambient ? 'Ambient’s assistant (spoken)' : 'Live call (the face, spoken)', ...(tags ? { voiceTags: true } : {}) };
   if (voice === 'call') return { ...client, ...own, mode: 'call', name: `${client.name || 'The panel'} — Deep call`, ...(tags ? { voiceTags: true } : {}) };
   return client;
 }
@@ -229,6 +231,20 @@ async function handleCallStatus(req, res) {
 // Speech → text lives in stt.js; chat.transcribeAudio and chat.transcribeHeard stay the names callers use.
 const { transcribeAudio, transcribeHeard } = require('./stt');
 
+/**
+ * A speech service that is not there, in words a person can act on (deep test A, #9): a voice note answered a bare
+ * 500 "TTS request failed: fetch failed", and nothing in the chat. Nothing answering at the address is a 503 that
+ * says where to set one up; any other failure keeps its own words.
+ */
+const NOT_THERE = /fetch failed|ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|EAI_AGAIN|ETIMEDOUT|timed? ?out|aborted due to timeout/i;
+const NO_SPEECH = 'No speech service: set one up in Settings → Voice.';
+function speechDown(res, e, what, url) {
+  const code = String(e?.cause?.code || '');
+  if (!NOT_THERE.test(`${e?.message || ''} ${code}`)) return false;
+  res.status(503).json({ error: `${NO_SPEECH} (${what} at ${url} does not answer.)`, code: 'no_speech_service' });
+  return true;
+}
+
 /** POST /api/chat/transcribe — proxy audio to configured STT service */
 async function handleTranscribe(req, res) {
   if (!req.file) return res.status(400).json({ error: 'No audio file' });
@@ -241,6 +257,7 @@ async function handleTranscribe(req, res) {
     res.json({ text: got.text, ...(got.filtered ? { screened: true } : {}), ...(got.language ? { language: got.language } : {}) });
   } catch (e) {
     require('./realtime/panel-call').heard(req, { error: e.message });
+    if (!e.status && speechDown(res, e, 'speech-to-text', loadVoiceServices().sttUrl)) return;
     res.status(e.status && e.status >= 400 ? e.status : 500).json({ error: e.status ? e.message : `STT request failed: ${e.message}` });
   }
 }
@@ -269,14 +286,25 @@ async function sendHosted(res, engine, text, opts) {
   res.send(out.buf);
 }
 
+/** The voice a ▶ tries: an engine by id, its voice and speed, a service's model and options (only those fields). */
+function tried({ engine, voice, speed, hosted }) {
+  const h = hosted && typeof hosted === 'object' ? Object.fromEntries(['model', 'style', 'stability', 'language'].filter(k => hosted[k] !== undefined).map(k => [k, hosted[k]])) : undefined;
+  return { engine: require('./tts-engines').forVoice({ engine: String(engine).slice(0, 80), ...(h ? { hosted: h } : {}) }),
+    voice: String(voice || '').slice(0, 120), speed: Number(speed) > 0 ? Math.min(4, Number(speed)) : null };
+}
+
 /** POST /api/chat/synthesize — proxy text to configured TTS service, return audio */
 async function handleSynthesize(req, res) {
   const { text, voice, call } = req.body;
   if (!text) return res.status(400).json({ error: 'No text' });
-  // `call`: which kind of call speaks (quick: the face, Ambient; deep: the chat's 🎙) — its own voice when one was
-  // chosen, else this screen's own voice, else the hive's (call-voices.js). No call: this screen's voice, as before.
-  const mine = require('./call-voices').forRequest(req, require('./call-voices').kindOf(call));
+  // `call`: which kind of call speaks (quick: the face; ambient: Ambient's assistant; deep: the chat's 🎙) — its own
+  // voice when one was chosen, else this screen's own voice, else the hive's (call-voices.js). No call: this screen's
+  // voice, as before. `engine` (with `voice`, `speed`, `hosted`): a voice being tried before it is saved — the ▶ beside
+  // each voice on Settings → Voice. It reaches nothing a screen could not choose: a service's key is still the hub's to
+  // use only for whom it was opened (hosted-voices keys.apply).
   const engines = require('./tts-engines');
+  const mine = typeof req.body.engine === 'string' ? tried(req.body)
+    : require('./call-voices').forRequest(req, require('./call-voices').kindOf(call));
   const vs = mine.engine;                             // the hive's speech service, or the speech service it chose
 
   try {
@@ -299,6 +327,7 @@ async function handleSynthesize(req, res) {
     res.setHeader('Content-Type', resp.headers.get('content-type') || 'audio/mpeg');
     res.send(Buffer.from(await resp.arrayBuffer()));
   } catch (e) {
+    if (speechDown(res, e, 'text-to-speech', vs.ttsUrl || 'its address')) return;
     res.status(500).json({ error: `TTS request failed: ${e.message}` });
   }
 }
@@ -306,5 +335,5 @@ async function handleSynthesize(req, res) {
 module.exports = {
   handleStatus, handleHistory, handleClear, handleChat,
   handleCallStatus, handleTranscribe, handleSynthesize, handleVoices,
-  loadGatewayChatConfig, loadVoiceServices, transcribeAudio, transcribeHeard, voiceClient,
+  loadGatewayChatConfig, loadVoiceServices, transcribeAudio, transcribeHeard, voiceClient, NO_SPEECH,
 };

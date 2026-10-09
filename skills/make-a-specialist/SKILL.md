@@ -1,6 +1,7 @@
 ---
 name: make-a-specialist
 description: Create a new specialist agent type (a definition the Orchestrator and work chats can dispatch) — use when a kind of errand keeps coming back.
+triggers: [new specialist, specialist agent, nuovo specialista]
 ---
 
 # Making a specialist

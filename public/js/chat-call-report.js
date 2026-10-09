@@ -46,3 +46,24 @@ function _callReportEnd(why) {
   _callReport('end', { why });
   _callLogId = null;
 }
+
+/** Why the last call did not start ('' when it did): face/assistant.js and ambient.js say it on their own screen. */
+let _callNotStarted = '';
+
+/**
+ * The call could not start (deep test A, #9): no speech service, no microphone. It used to be said only in the chat —
+ * closed behind the face and Ambient, so those showed nothing — and to leave no record, because the refusal came
+ * before the call's record was opened. Now it is said in the chat, on the call's status line, on the face and on
+ * Ambient's line, and the hub's call log keeps it as a call that did not start.
+ */
+function _callRefuse(why, assistant) {
+  _callNotStarted = why;
+  chatAppendMsg('system', why);
+  const st = document.getElementById('chat-call-status');
+  if (st) st.textContent = why;
+  if (typeof assistantIsOpen === 'function' && assistantIsOpen() && typeof _assistantSay === 'function') _assistantSay(why);
+  if (typeof ambientIsOpen === 'function' && ambientIsOpen() && typeof ambientSay === 'function') ambientSay(why);
+  const mobile = !!globalThis.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|DocaMobile/.test(navigator.userAgent);
+  apiFetch('/api/chat/call-event', { method: 'POST', body: { stage: 'start', refused: why, assistant: !!assistant, mobile,
+    ambient: !!assistant && typeof ambientIsOpen === 'function' && ambientIsOpen() } }).catch(() => {});
+}

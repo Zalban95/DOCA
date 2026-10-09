@@ -60,6 +60,8 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     let args = {};
     try { args = tc.function?.arguments ? JSON.parse(tc.function.arguments) : {}; }
     catch { args = { _raw: tc.function?.arguments }; }
+    // Cut off by the reply limit (turn/cut-calls.js): stored whole, answered as cut, never run.
+    if (reply.cut?.has(tc)) args = { _raw: '' };
 
     // Experiment riskTiers (harness/risk): the call's tier and its way back ride on its event — the trace and the
     // Workstream name them — and a reversible change in a project gets a checkpoint first, taken only once the call is
@@ -81,17 +83,20 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
       + `${isMission ? '; the agent that dispatched this mission can grant it for the mission with permission_grant' : ''}.`;
     const gate = args._raw === undefined && refused === null ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission, forceAsk: permit.ask, risk, person: client?.user }) : null;
     if (gate) {
+      // What the card shows (approval-explain.js): the agent's words, what the call does, the exact request. Beside the
+      // gate's fields, never in place of one a decision reads.
+      const card = require('../approval-explain').explain(gate, name, args, { reply, sessionId: session.id, mission: isMission });
       // A mission has nobody watching, so it is refused — except a machine lent to it, asked of its person (mission-asks.js).
       const use = isMission && gate.forced ? await require('../mission-asks').machineUse(name, args, { profile }) : null;
       if (use) {
-        const decision = await require('../mission-asks').ask(gate, use, { sessionId: session.id, missionId, profile, signal, say, step });
+        const decision = await require('../mission-asks').ask(card, use, { sessionId: session.id, missionId, profile, signal, say, step });
         if (decision !== 'once') refused = require('../mission-asks').refusal(decision, use);
       } else if (isMission) {
         refused = approval.missionRefusal(gate);
-        say({ type: 'approval', step, state: 'refused', tool: name, ...gate });
+        say({ type: 'approval', step, state: 'refused', tool: name, ...card });
       } else {
-        const { id, answer } = approval.askAnywhere({ ...gate, personId: client?.user?.id || null }, { sessionId: session.id, signal, client });
-        say({ type: 'approval', step, state: 'asked', id, ...gate, spoken: require('../call-answer').sentence(name, args) });   // a call says it (call-answer.js)
+        const { id, answer } = approval.askAnywhere({ ...card, personId: client?.user?.id || null }, { sessionId: session.id, signal, client });
+        say({ type: 'approval', step, state: 'asked', id, ...card, spoken: require('../call-answer').sentence(name, args) });   // a call says it (call-answer.js)
         const decision = await answer;
         say({ type: 'approval', step, state: 'answered', id, decision, tool: name });
         // Anything that is not one of the three yeses — a denial, a timeout,
@@ -110,6 +115,8 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     const tiers = require('./tool-tiers');
     const result = failures.note(signal, name, args, refused !== null
       ? refused
+      : reply.cut?.has(tc)
+      ? require('./cut-calls').refusal(name, reply.cutCap)
       : args._raw !== undefined
       ? `Error: could not parse the arguments as JSON: ${args._raw}`
       : !schemas.some(sc => sc.function.name === name) && !tiers.heldNotSent(name, stepDisabled)

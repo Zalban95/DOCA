@@ -79,15 +79,16 @@ async function ambientTalk(first) {
   // While the call opens (services checked, the microphone opened) the screen stays up and nothing else takes the
   // microphone — the once-a-second check used to read "no call yet" as "call over" and dropped it (2026-10-06).
   AMB.starting = true;
-  const started = chatToggleCall({ assistant: true });
+  const started = chatToggleCall({ assistant: true, ambient: true });   // Ambient's assistant: its own voice (Settings → Voice)
   AMB.own = true;
   _ambCalling(true);
   ambientSay('Listening…');
   let ok = false;
   try { ok = await started; } finally { AMB.starting = false; }
   if (!ok && !_assistantInCall()) {
-    const why = [...document.querySelectorAll('#chat-messages .chat-msg.system')].slice(before).pop()?.textContent;   // the chat's own reason, here
-    ambientSay(why ? `The call did not start: ${why}` : 'The call did not start.');
+    const why = (typeof _callNotStarted === 'string' && _callNotStarted)   // the call's own reason (chat-call-report.js), else the chat's
+      || [...document.querySelectorAll('#chat-messages .chat-msg.system')].slice(before).pop()?.textContent;
+    ambientSay(why ? (/did not start/.test(why) || /^No speech service/.test(why) ? why : `The call did not start: ${why}`) : 'The call did not start.');
     AMB.own = false; _ambCalling(false, true);
     return;
   }

@@ -35,6 +35,7 @@ const TOOLS = [
   ...require('./toolbox/devices'),
   ...require('./toolbox/day'),
   ...require('./toolbox/web'),
+  ...require('./toolbox/services'),
   ...require('./toolbox/canvas'),
   ...require('./toolbox/project'),
   ...require('./toolbox/skills'),
@@ -47,7 +48,7 @@ const TOOLS = [
   ...require('./toolbox/screens'),
   ...require('./toolbox/chronicle'),
   ...require('./toolbox/library'),
-];
+].filter(t => !require('../hosted').absentTool(t.name));   // a hosted hive has no command line on its machine (hosted.js)
 
 
 /** Metadata for the ⚙ panel's per-tool switches, built-in ones then MCP's. */
@@ -81,7 +82,7 @@ function schemas(disabled = []) {
       .filter(t => !off.includes(t.name))
       .map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })),
     ...mcp.schemas(off),
-    ...require('../connectors/tools').schemas(off),   // a connected account is a tool (connectors/tools.js)
+    ...(require('../license').featureOn('connectors') ? require('../connectors/tools').schemas(off) : []),   // a connected account is a tool (connectors/tools.js)
   ]);
 }
 
@@ -96,6 +97,8 @@ async function call(name, args, disabled = [], ctx = {}) {
   if (ALIASES[name] || TOOLS.some(t => t.name === name)) require('../features/usage').count(`tool:${name}`);
   name = ALIASES[name] || name;   // an old name: old transcripts and recipes still run
   if (disabled.includes(name)) return `Error: the "${name}" tool is switched off for this harness.`;
+  const unlicensed = require('../license/use').refuse(name, args);   // not licensed here, or read-only after a lapse (license/use.js)
+  if (unlicensed) return unlicensed;
   if (ctx.signal?.aborted) return 'Not run: the turn was stopped before this call.';
   const isMcp = mcp.isMcpTool(name);
   const held = isMcp && require('../computers/takeover').before(name);   // a person is driving that computer: DOCA's words, not framed

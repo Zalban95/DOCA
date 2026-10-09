@@ -44,7 +44,8 @@ function handleInstall(req, res) {
 
 const handleConfig = wrap(async (req, res) => {
   const config = catalog.saveConfig(req.params.id, req.body || {});
-  res.json({ ok: true, config, foldWarning: catalog.get(req.params.id)?.kind === 'builtin' ? require('./fold-check').warning(config) : null });
+  const builtin = catalog.get(req.params.id)?.kind === 'builtin';   // a local model chosen gets its own pace (provider-pace.js)
+  res.json({ ok: true, config, foldWarning: builtin ? require('./fold-check').warning(config) : null, ...(builtin ? await require('./provider-pace').chosen(req.body, config) : {}) });
 });
 
 const handleAddCustom = wrap(async (req, res) =>
@@ -101,12 +102,12 @@ const handleUsage = wrap(async (req, res) => {
 const handleApproval = wrap(async (req, res) => {
   const cap = req.auth?.session?.cap;
   const host = !req.auth || (require('../auth/rights').can(req.auth.role, 'host') && (!cap || cap.includes('host')));
-  // `asks`: the missions' machine questions for this person (mission-asks.js), so a page opened later still pops them.
-  const me = req.auth?.user?.id || null;
-  const asks = approval.pending().filter(p => p.machine && (p.personId ? p.personId === me : host));
-  if (!host) return res.json({ mode: approval.settings().mode, asks });
-  const ma = require('./mission-asks');
-  res.json({ ...approval.settings(), missionAskSec: ma.waitSec(), missionAskTimeout: ma.onTimeout(), pending: approval.pending(), asks, free: [...approval.FREE] });
+  // `asks`: the missions' machine questions for this person (mission-asks.js), so a page opened later still pops them;
+  // `mine`: every other one waiting for them — their level's card, their own budget's (deep test A: listed nowhere).
+  const me = req.auth?.user?.id || null, all = approval.pending();
+  const asks = all.filter(p => p.machine && (p.personId ? p.personId === me : host)), mine = all.filter(p => !p.machine && me && p.personId === me);
+  if (!host) return res.json({ mode: approval.settings().mode, asks, mine, pending: [...asks, ...mine] });
+  const ma = require('./mission-asks'); res.json({ ...approval.settings(), missionAskSec: ma.waitSec(), missionAskTimeout: ma.onTimeout(), pending: all, asks, mine, free: [...approval.FREE] });
 });
 
 /** POST /api/harness/approval — set the mode. Only ever from a click. */
@@ -193,8 +194,8 @@ const handleSessions = wrap(async (req, res) => {
 });
 
 const handleSessionNew = wrap(async (req, res) => {
-  // A person's new conversation unless the panel asks for a work chat (＋ Work, ＋ Plan send kind: 'work').
-  const b = req.body || {}, session = organization.create({ title: b.title, planning: b.planning, kind: b.kind === 'work' || b.planning ? 'work' : 'chat' });
+  // A person's new conversation unless the panel asks for a work chat (＋ Work; ＋ Plan in Plan mode: kind 'work', mode 'plan').
+  const b = req.body || {}, session = organization.create({ title: b.title, planning: b.planning, kind: b.kind === 'work' || b.planning ? 'work' : 'chat', mode: b.mode || null });
   access.claim(who(req), session.id);
   if (access.mayUse(who(req), memory.mainSession().id)) memory.setActive(session.id);   // the active pointer is the host's
   res.json({ session });
@@ -216,9 +217,11 @@ const handleSessionStop = own(async (req, res) => {
 const handlePlan = own(async (req, res) => {
   const plan = organization.plan(req.params.id, req.body || {}, { user: true });
   // Approve is the go-ahead: the work starts (organization.carryOut).
-  const started = req.body?.action === 'approve'
-    ? organization.carryOut(req.params.id, plan, require('./turn/client').dashboardClient(req)) : undefined;
-  res.json({ plan, ...(started ? { started } : {}) });
+  const client = require('./turn/client').dashboardClient(req);
+  const started = req.body?.action === 'approve' ? organization.carryOut(req.params.id, plan, client) : undefined;
+  // Reject is said in the conversation too, and answered in a line (organization.setAside).
+  const rejected = req.body?.action === 'reject' ? organization.setAside(req.params.id, plan, client, req.body?.note) : undefined;
+  res.json({ plan, ...(started ? { started } : {}), ...(rejected ? { rejected } : {}) });
 });
 
 const handleSessionActivate = own(async (req, res) =>

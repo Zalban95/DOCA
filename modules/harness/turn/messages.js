@@ -126,8 +126,10 @@ function toApiMessages(allRows, { sessionId, provider } = {}) {
       const content = clipToolContent(r.content, () => spillTool(sessionId, r));
       return { role: 'tool', tool_call_id: r.tool_call_id, name: r.name, content };
     }
+    // A call stored cut off by an older version is sent whole (turn/cut-calls.js): replayed broken, a provider that parses
+    // every earlier call refuses each later request, and the conversation never recovers.
     if (r.role === 'assistant' && r.tool_calls?.length)
-      return { role: 'assistant', content: r.content || null, tool_calls: r.tool_calls, ...echo(r) };
+      return { role: 'assistant', content: r.content || null, tool_calls: require('./cut-calls').repair(r.tool_calls), ...echo(r) };
     // Attachments are rendered here and stored separately on the row, the same
     // split `from` uses — but the opposite decision about the model. Provenance
     // is metadata and stays off the text; a file the user attached is part of
@@ -135,7 +137,7 @@ function toApiMessages(allRows, { sessionId, provider } = {}) {
     // cannot is a conversation at cross purposes.
     // `echo` checks the role itself, so a user or tool row cannot pick up a
     // field by being shaped like an assistant one.
-    return { role: r.role, content: (r.content || '') + attachments.note(r.attachments), ...echo(r) };
+    return { role: r.role, content: (r.content || '') + attachments.note(r.attachments) + require('../skill-next').note(r), ...echo(r) };   // skills for this request (skill-next.js)
   });
 }
 

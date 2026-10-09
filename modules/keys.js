@@ -39,6 +39,8 @@ function handleGetKeys(_req, res) {
         // A local server needs no key, so "NO KEY" would read as broken.
         local:  isLocalUrl(baseUrl),
         models: (p.models || []).map(m => m.id || m.name || m),
+        // A local model's own first-token wait and reply limit (harness/provider-pace.js), shown on its row.
+        pace: require('./harness/provider-pace').sentence(require('./harness/provider-pace').of(name)) || null,
       };
     }
     res.json({ providers: result, presets: presetList() });
@@ -67,15 +69,16 @@ function handlePostKeys(req, res) {
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
-/** POST /api/keys/add-provider */
-function handleAddProvider(req, res) {
+/** POST /api/keys/add-provider — a local model is asked its size and given its own pace (harness/provider-pace.js). */
+async function handleAddProvider(req, res) {
   const { name, apiKey, api, models: pm } = req.body;
   // A known id carries its own URL, so adding llama.cpp is just its name.
   const baseUrl = req.body.baseUrl || PRESETS[name]?.baseUrl || '';
   if (!name || !baseUrl) return res.status(400).json({ error: 'name and baseUrl required' });
   try {
     keys.set(name, { baseUrl, apiKey: apiKey || '', api: api || defaultApi(baseUrl), models: pm || [] });
-    res.json({ ok: true, provider: name, baseUrl });
+    const pace = await require('./harness/provider-pace').measure(name).catch(() => null);
+    res.json({ ok: true, provider: name, baseUrl, ...(pace ? { pace, paceText: require('./harness/provider-pace').sentence(pace) } : {}) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
@@ -122,6 +125,7 @@ async function handleTestProvider(req, res) {
 function handleDeleteProvider(req, res) {
   try {
     if (!keys.remove(req.params.name)) return res.status(404).json({ error: 'Unknown provider' });
+    require('./harness/provider-pace').forget(req.params.name);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }

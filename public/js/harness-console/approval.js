@@ -32,6 +32,9 @@ let _hcApprovalState = null;
 
 function _hcApprovalFill(list, a) {
   list.innerHTML = '';
+  // Someone without host: the mode and its lists are an admin's; what is theirs is every question waiting for them —
+  // their level's card, their own budget's, a mission's machine (deep test A: a member's were listed nowhere).
+  if (!Array.isArray(a.always)) return _hcApprovalMine(list, a);
 
   // Unattended: the owner's switch for a test bench (modules/harness/approval.js).
   const bench = document.createElement('div');
@@ -163,4 +166,17 @@ async function hcApprovalForget(key) {
     await apiFetch(`/api/harness/approval/always/${encodeURIComponent(key)}`, { method: 'DELETE' });
     _hcLoadApproval();
   } catch (e) { appAlert(e.message); }
+}
+
+/** A person's own waiting questions, for someone without host. */
+function _hcApprovalMine(list, a) {
+  const head = document.createElement('div');
+  head.className = 'hc-side-head';
+  head.textContent = a.pending?.length ? `Waiting for your answer (${a.pending.length})` : 'Nothing is waiting for your answer';
+  list.appendChild(head);
+  for (const p of a.pending || []) list.appendChild(approvalCardEl(p, () => _hcLoadApproval()));
+  const note = document.createElement('p');
+  note.style.cssText = 'font-size:11px;color:var(--muted);margin:8px 0 0';
+  note.textContent = 'Whether the agents ask first, and what runs without asking, is an admin\'s to set. Your level may ask before every call.';
+  list.appendChild(note);
 }

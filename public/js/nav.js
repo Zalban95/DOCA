@@ -13,6 +13,7 @@ function mobileNavRender() { navGroupsRender(); }
 const pageShown = t => currentTab === t || (typeof panelViewParts === 'function' && panelViewParts(currentTab).includes(t));
 
 function nav(name) {
+  if (typeof licencePageOn === 'function' && !licencePageOn(name)) name = 'controls';   // a page this hive is not licensed for is not here (lib/licence.js)
   currentTab = name;
 
   navGroupsMark(name);   // its group opens, and remembers it (nav-groups.js)

@@ -5,7 +5,10 @@
  * approval switch and a model each): its settings, and the messages waiting
  * for it (inbox.js) — shown folded beside the chat, each one withdrawable.
  *
- *   POST   /api/harness/sessions/:id/settings   { title?, mode?, approval?: 'auto'|'manual'|null, thinking?: 'auto'|'off'|'on'|level }
+ *   POST   /api/harness/sessions/:id/settings   { title?, mode?, approval?: 'auto'|'manual'|null, thinking?: 'auto'|'off'|'on'|level,
+ *                                                skills?: {add?, remove?} (skill-use.js), compact?: {off}|{at, after}|null (turn/compact-choice.js) }
+ *   GET    /api/harness/sessions/:id/skills     what is attached to it, and where each came from
+ *   POST   /api/harness/sessions/:id/compact    fold now
  *   GET    /api/harness/sessions/:id/inbox
  *   DELETE /api/harness/sessions/:id/inbox/:qid
  *
@@ -43,11 +46,25 @@ function settings(req) {
     const level = thinking.toggleLevel(b.thinking, thinking.modeOf({ session: memory.getSession(id) }));
     memory.updateSession(id, { effort: level, effortBy: level ? 'toggle' : null });
   }
+  if (b.skills !== undefined) require('./skill-use').setChat(id, b.skills || {});
+  if (b.compact !== undefined) require('./turn/compact-choice').set(id, b.compact);
+  // Skills a message names by a trigger: attached without a tap in this chat, or not (null: the default; skill-next.js);
+  // and what the composer's chip asked for the next message.
+  if (b.skillAuto !== undefined) {
+    if (![true, false, null].includes(b.skillAuto)) throw bad('skillAuto is true, false or null.');
+    memory.updateSession(id, { skillAuto: b.skillAuto });
+  }
+  if (b.skillsNext !== undefined) require('./skill-next').set(id, b.skillsNext || {});
   return require('./organization').view(memory.getSession(id));
 }
 
 function mount(app) {
   app.post('/api/harness/sessions/:id/settings', handle(settings));
+  app.get('/api/harness/sessions/:id/skills', handle(req => require('./skill-use').resolve(req.params.id)));
+  app.post('/api/harness/sessions/:id/compact', async (req, res) => {
+    try { require('./session-access').check(who(req), req.params.id); res.json(await require('./turn/compact-choice').now(req.params.id, who(req))); }
+    catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  });
   // What the fold beside a chat shows: what is waiting, and the plan with its progress.
   app.get('/api/harness/sessions/:id/inbox', handle(req => ({ waiting: require('./inbox').waiting(req.params.id),
     plan: memory.getSession(req.params.id)?.plan || null })));

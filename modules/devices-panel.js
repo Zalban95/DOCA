@@ -17,6 +17,7 @@
 const devices = require('./api-v1/devices');
 const { PRESETS, FAMILIES } = require('./api-v1/scopes');
 const L = require('./api-v1/limits');
+const own = require('./devices-own');   // whose devices this request may touch
 
 /** Form factor implied by a preset, so a paired device starts with a sane self-description. */
 const PRESET_FORM_FACTOR = { phone: 'phone', watch: 'watch', agent: 'headless', viewer: 'browser' };
@@ -72,15 +73,21 @@ function missingScopes(d) {
 }
 
 function handleList(req, res) {
+  const scope = own.require(req, res);
+  if (!scope) return;
   // `mine`: whose page /d/<id>/ this person may open (screens.ensure): their own devices' (TODO H2.4).
-  const list = devices.list().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
-    .map(d => ({ ...d, missingScopes: missingScopes(d), preset: presetFor(d), control: require('./devices-control').state(d.id), mine: !!d.userId && d.userId === req.auth?.user?.id }));
+  // Without the devices right a person sees only their own (devices-own.js): another's is not there.
+  const list = devices.list().filter(d => scope === 'all' || own.isMine(req, d))
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .map(d => ({ ...d, missingScopes: scope === 'all' ? missingScopes(d) : [], preset: presetFor(d), control: require('./devices-control').state(d.id), mine: own.isMine(req, d),
+      canDecide: require('./devices-approval/routes').mayDecide(req, d) }));   // a new device waiting: Allow / Refuse here
   res.json({
     devices: list,
-    presets: PRESETS,
+    presets: own.presets(scope),
     families: FAMILIES,
     pairTtlSec: L.PAIR_CODE_TTL_SEC,
     trusted: legacyTrusted(),
+    own: scope === 'own',   // the panel draws "Your devices": pairing for yourself, no tokens minted by hand, no grants
   });
 }
 
@@ -93,22 +100,54 @@ function handleIssue(req, res) {
   const resolved = resolveScopes({ preset, scopes });
   if (!resolved) return res.status(400).json({ error: 'scopes_required', message: `Pass a preset (${Object.keys(PRESETS).join(', ')}) or an explicit scope list.` });
 
+  // Minted by an admin at the panel: approved by them as it is made, held to what they hold (devices-approval/).
+  const decided = startApproval(req, { scopes: resolved });
+  const { scopes: capped, ...approval } = decided || {};
   const r = devices.create({
     name: String(name).trim(),
-    scopes: resolved,
+    scopes: capped || resolved,
     kind: preset === 'agent' ? 'agent' : 'device',
     expiresAt: expiresAt || null,
     caps: { formFactor: PRESET_FORM_FACTOR[preset] || 'other' },
+    approval: decided ? { ...approval, at: new Date().toISOString() } : { state: 'pending', askedAt: new Date().toISOString(), from: { network: 'minted at the panel', address: null } },
   });
+  if (!decided) require('./devices-approval').ask(r.device.id);
   res.status(201).json(r);
+}
+
+/**
+ * Whether the person at this page approves the device they are making as they make it (devices-approval/ atStart):
+ * an approver of any device, signed in from where the machine's rights hold. Anyone else's waits for one tap.
+ */
+function startApproval(req, { userId = null, orgId = null, scopes }) {
+  const person = { id: req.auth?.user?.id || null, role: req.auth?.role || null };
+  return require('./devices-approval').atStart({ kind: 'panel', person, limited: require('./network').limited(req, 'devices') }, { userId, orgId, scopes });
 }
 
 /** POST /api/devices/:id/rotate — new token, old one valid for a short grace period. */
 function handleRotate(req, res) {
   if (blocked(req, res)) return;
-  const r = devices.rotate(req.params.id);
+  const scope = own.require(req, res);
+  if (!scope) return;
+  const d = own.deviceFor(req, scope, req.params.id);
+  const r = d && devices.rotate(d.id);
   if (!r) return res.status(404).json({ error: 'unknown_device' });
+  own.audit(req, 'device token rotated', d);
   res.json(r);
+}
+
+/** PATCH /api/devices/:id { name } — rename one; only its name, so a person's own device keeps the scopes it paired with. */
+function handleRename(req, res) {
+  if (blocked(req, res)) return;
+  const scope = own.require(req, res);
+  if (!scope) return;
+  const d = own.deviceFor(req, scope, req.params.id);
+  if (!d) return res.status(404).json({ error: 'unknown_device' });
+  const name = String(req.body?.name ?? '').trim();
+  if (!name) return res.status(400).json({ error: 'name_required' });
+  const next = devices.update(d.id, { name });
+  own.audit(req, 'device renamed', next, `from ${d.name}`);
+  res.json({ device: next });
 }
 
 /**
@@ -118,12 +157,18 @@ function handleRotate(req, res) {
  */
 function handleRevoke(req, res) {
   if (blocked(req, res)) return;
+  const scope = own.require(req, res);
+  if (!scope) return;
+  const d = own.deviceFor(req, scope, req.params.id);
+  if (!d) return res.status(404).json({ error: 'unknown_device' });
   if (req.query.purge === '1') {
-    return devices.forget(req.params.id)
+    own.audit(req, 'device forgotten', d);
+    return devices.forget(d.id)
       ? res.json({ ok: true, purged: true })
       : res.status(404).json({ error: 'unknown_device' });
   }
-  return devices.revoke(req.params.id)
+  own.audit(req, 'device revoked', d);
+  return devices.revoke(d.id)
     ? res.json({ ok: true })
     : res.status(404).json({ error: 'unknown_device' });
 }
@@ -136,21 +181,31 @@ function handleRevoke(req, res) {
  */
 async function handlePairStart(req, res) {
   if (blocked(req, res)) return;
-  const { name, preset, scopes, expiresAt } = req.body || {};
+  const scope = own.require(req, res);
+  if (!scope) return;
+  const { name, preset, scopes, expiresAt, forUser } = req.body || {};
   if (!name || !String(name).trim()) return res.status(400).json({ error: 'name_required' });
 
-  const resolved = resolveScopes({ preset, scopes });
+  // The device belongs to whoever paired it (docs/design/auth.md), or to the person an admin pairs it for — never
+  // to someone a person's own request names. A person pairing their own picks a phone-sized preset, never a list.
+  let owner;
+  try { owner = own.ownerFor(req, scope, forUser); } catch (e) { return res.status(e.status || 400).json({ error: e.message }); }
+  if (owner.scope === 'own' && !own.OWN_PRESETS.includes(preset))
+    return res.status(403).json({ code: 'preset_refused', error: `A device of your own pairs as ${own.OWN_PRESETS.join(', ')}; the others are an admin's.` });
+  const resolved = owner.scope === 'own' ? own.presets('own')[preset] : resolveScopes({ preset, scopes });
   if (!resolved) return res.status(400).json({ error: 'scopes_required' });
 
+  const decided = startApproval(req, { userId: owner.userId, orgId: owner.orgId, scopes: resolved });
   const p = devices.startPairing({
     name: String(name).trim(),
     scopes: resolved,
     expiresAt: expiresAt || null,
     kind: preset === 'agent' ? 'agent' : 'device',
     createdBy: 'dashboard',
-    // The device belongs to whoever paired it (docs/design/auth.md).
-    userId: req.auth?.user.id || null, orgId: req.auth?.orgId || null,
+    userId: owner.userId, orgId: owner.orgId,
+    approval: decided,
   });
+  own.audit(req, 'device pairing started', { userId: owner.userId, name: String(name).trim() }, `as ${preset || 'a scope list'}${owner.userId !== req.auth.user.id ? ` for ${owner.userId}` : ''}`);
 
   // The address the phone will dial: the one this page was opened at, unless that is this machine's own loopback,
   // which a phone cannot reach — then the hub's best reachable one (its Tailscale name, else a tailnet or LAN address).
@@ -176,7 +231,10 @@ async function handlePairStart(req, res) {
     console.warn(`[devices] QR generation unavailable (${e.message}); pairing code still valid.`);
   }
 
-  res.status(201).json({ ...p, url, qr, completeUrl: '/api/v1/devices/pair/complete' });
+  // `approval`: whether the device will be allowed as it pairs, or wait for one tap (and who would be asked).
+  const asked = require('./auth/approve-devices').approversOf({ userId: owner.userId, orgId: owner.orgId });
+  const approval = decided ? { state: 'approved', ...(decided.dropped ? { dropped: decided.dropped } : {}) } : { state: 'pending', askedOf: asked.map(a => a.name) };
+  res.status(201).json({ ...p, url, qr, completeUrl: '/api/v1/devices/pair/complete', approval });
 }
 
 /** POST /api/devices/:id/scopes { add: [...] } — grant what its preset now includes, and nothing else. Same id, queue and token. */
@@ -193,11 +251,13 @@ function handleGrant(req, res) {
 }
 
 function mount(app) {
+  require('./devices-approval/routes').mount(app);   // pending devices: list, Allow, Refuse (before the :id routes)
   app.get   ('/api/devices',             handleList);
   app.post  ('/api/devices',             handleIssue);
   app.post  ('/api/devices/pair',        handlePairStart);
   app.post  ('/api/devices/:id/rotate',  handleRotate);
   app.post  ('/api/devices/:id/scopes',  handleGrant);
+  app.patch ('/api/devices/:id',         handleRename);
   app.delete('/api/devices/:id',         handleRevoke);
   require('./device-console').mountPanel(app);   // a device as a console: its stream, and who receives it
   require('./device-files').mount(app);   // a device's files, as the Files tab speaks them (device-files.js)
@@ -225,5 +285,5 @@ function mount(app) {
 
 module.exports = {
   legacyTrusted, mount, missingScopes, presetFor,
-  handleList, handleIssue, handleRotate, handleRevoke, handlePairStart, handleGrant,
+  handleList, handleIssue, handleRotate, handleRename, handleRevoke, handlePairStart, handleGrant,
 };

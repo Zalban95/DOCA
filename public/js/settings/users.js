@@ -165,8 +165,13 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
     ${USERS_RESOURCE_KINDS.map(([k, label]) => `<div style="display:flex;gap:6px;align-items:center;margin-top:3px"><span class="harness-hint" style="width:110px">${label}</span>
       <input class="input" data-resource="${k}" data-default="" data-label="${escHtml(label)}" style="flex:1" value="${escHtml((l.resources?.[k] || []).join(', '))}"></div>`).join('')}
     <div class="input-label" style="margin-top:8px">What its people may give others, with delegate (one per line, e.g. use:model:*, tool:shell:git; empty: anything they hold)</div>
-    <textarea class="input" id="lvl-delegates" rows="2" style="width:100%" data-default="" data-label="May give others">${escHtml((l.delegates || []).join('\n'))}</textarea>`,
-    { id: 'users-level', label: 'Advanced — settings, tools, resources, what they may give' })}
+    <textarea class="input" id="lvl-delegates" rows="2" style="width:100%" data-default="" data-label="May give others">${escHtml((l.delegates || []).join('\n'))}</textarea>
+    <div class="input-label" style="margin-top:8px">New devices they may approve (a new device waits until someone who may says yes)</div>
+    <select class="input" id="lvl-approve-devices" data-default="" data-label="New devices"><option value="" ${!l.approveDevices ? 'selected' : ''}>As its rights say (devices: anyone's; own devices: their own)</option>
+      <option value="none" ${l.approveDevices === 'none' ? 'selected' : ''}>None — not even their own</option>
+      <option value="own" ${l.approveDevices === 'own' ? 'selected' : ''}>Their own — one tap when it shows up</option>
+      <option value="anyone" ${l.approveDevices === 'anyone' ? 'selected' : ''}>Anyone's, at most with what they hold themselves</option></select>`,
+    { id: 'users-level', label: 'Advanced — settings, tools, resources, what they may give, new devices' })}
     <div class="toolbar-right mt8"><span class="status-line" id="lvl-status"></span>
       ${l.id ? '<button class="btn btn-xs btn-red" id="lvl-delete">Delete</button>' : ''}
       <button class="btn btn-xs btn-blue" id="lvl-save">Save</button><button class="btn btn-xs" id="lvl-close">Close</button></div>`;
@@ -177,7 +182,7 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
     const body = { name: m.querySelector('#lvl-name').value, rights: [...m.querySelectorAll('[data-right]:checked')].map(c => c.dataset.right),
       settings: lines('#lvl-settings'), tools: { allow: lines('#lvl-allow'), deny: lines('#lvl-deny') }, approval: m.querySelector('#lvl-approval').value, reach: m.querySelector('#lvl-reach').value,
       resources: Object.fromEntries([...m.querySelectorAll('[data-resource]')].map(i => [i.dataset.resource, i.value.split(',').map(s => s.trim()).filter(Boolean)]).filter(([, v]) => v.length)),
-      delegates: lines('#lvl-delegates') };
+      delegates: lines('#lvl-delegates'), approveDevices: m.querySelector('#lvl-approve-devices').value };
     try {
       await apiFetch(l.id ? `/api/auth/levels/${encodeURIComponent(l.id)}` : '/api/auth/levels', { method: l.id ? 'PATCH' : 'POST', body });
       overlay.style.display = 'none'; usersLoad();

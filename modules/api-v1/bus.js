@@ -40,6 +40,7 @@ const TYPES = {
   'prompt.expired':   { cls: 'durable', ttlSec: 3600 },
   alert:              { cls: 'durable', ttlSec: 6 * 3600, priority: 'high' },
   'profile.changed':  { cls: 'durable', ttlSec: L.DEFAULT_EVENT_TTL_SEC },
+  'settings.changed': { cls: 'durable', ttlSec: 3600 },   // a device's screen settings or its person's (look/routes.js)
   'device.vars':      { cls: 'durable', ttlSec: 3600 },
   'device.message':   { cls: 'durable', ttlSec: 6 * 3600 },
   'device.control':   { cls: 'durable', ttlSec: 24 * 3600 },   // refresh / reconnect / ask / disconnect / revoke (devices-control.js)
@@ -61,6 +62,9 @@ const TYPES = {
   'mcp.listener':     { cls: 'durable', ttlSec: 300 },
   'job.done':         { cls: 'durable', ttlSec: 3600 },
   revoked:            { cls: 'durable', ttlSec: 60 },
+  // A pending device's answer (devices-approval/): durable, so a device that polls or was away still learns it.
+  'device.approved':  { cls: 'durable', ttlSec: 7 * 24 * 3600, priority: 'high' },
+  'device.refused':   { cls: 'durable', ttlSec: 3600, priority: 'high' },
   resync:             { cls: 'ephemeral' },
 };
 
@@ -121,6 +125,8 @@ function trim(id, s) {
  * @returns the envelope, or null if the event was ephemeral and nobody is listening.
  */
 function publish(deviceId, type, payload, opts = {}) {
+  // A device waiting for approval hears only its answer (pending.js): nothing meant for its person is queued for it.
+  if (!require('./pending').delivers(deviceId, type)) return null;
   const def = TYPES[type] || { cls: 'durable', ttlSec: L.DEFAULT_EVENT_TTL_SEC };
   const cls = opts.cls || def.cls;
   const s = stateFor(deviceId);

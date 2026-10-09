@@ -54,12 +54,12 @@ function prefsTouched(changes) {
   return null;
 }
 
-/** POST /api/prefs merges top-level keys: a guarded path whose value the body would change. */
-function prefsBody(body) {
+/** POST /api/prefs: a guarded path whose value the write would change — read from the same merge the write makes. */
+function prefsBody(body, replace = false) {
   if (!body || typeof body !== 'object') return null;
   const stored = require('../utils').loadPrefs();
-  const changes = PREFS.filter(([p]) => p.split('.')[0] in body)
-    .map(([p]) => ({ path: p, from: get(stored, p), to: get(require('../secrets-mask').unmask(body, stored), p) }));
+  const after = require('../prefs-merge').merged(stored, body, { replace });
+  const changes = PREFS.filter(([p]) => p.split('.')[0] in body).map(([p]) => ({ path: p, from: get(stored, p), to: get(after, p) }));
   return prefsTouched(changes);
 }
 
@@ -106,7 +106,7 @@ const ROUTES = [
   [['POST'], /^\/api\/computers$/, 'a test computer (sign-ins without asking)', req => req.body?.test === true],
   [['POST'], /^\/api\/computers\/[^/]+\/test$/, 'a test computer (sign-ins without asking)', req => req.body?.on !== false],
   [['POST'], /^\/api\/home\/call$/, 'unlocking a door or disarming an alarm', req => require('../home/actions').guardedCall(req.body)],
-  [['POST'], /^\/api\/prefs$/, null, req => prefsBody(req.body)],
+  [['POST'], /^\/api\/prefs$/, null, req => prefsBody(req.body, req.query?.replace === '1')],
   [['POST'], /^\/api\/harness\/proposals\/[^/]+\/apply$/, null, req => proposal(req.path.split('/')[4])],
 ];
 

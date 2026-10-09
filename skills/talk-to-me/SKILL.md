@@ -1,6 +1,7 @@
 ---
 name: talk-to-me
 description: Tell someone how to talk to DOCA instead of typing — a voice message, a live call, the face that listens for its name, the phone or watch app — in plain words, after checking what this hub has for speech. Use when the person asks to use their voice, to call, to speak, or to stop typing.
+triggers: [talk to you, voice message, call you, parlarti, messaggio vocale, chiamarti]
 ---
 
 # Talking instead of typing

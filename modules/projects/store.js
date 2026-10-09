@@ -64,6 +64,8 @@ function update(id, patch) {
     if (py != null && py !== 'machine' && !/^[\w.-]{1,40}$/.test(String(py))) throw bad('env.python is "machine" or a folder name in the project.');
     allowed.env = { python: py ?? null };
   }
+  // Skills attached per mode in this project's conversations, replacing the hive's for that mode (harness/skill-use.js).
+  if (patch.modeSkills !== undefined) allowed.modeSkills = require('../harness/skill-use').projectLists(patch.modeSkills);
   for (const k of ['sessionId', 'openedAt', 'archivedAt']) if (patch[k] !== undefined) allowed[k] = patch[k];   // archivedAt: put away (modules/archive.js)
   save(rows().map(p => (p.id === id ? { ...p, ...allowed } : p)));
   return get(id);

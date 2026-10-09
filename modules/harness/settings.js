@@ -109,6 +109,7 @@ function refuse(dotted, value, { screen = null } = {}) {
     return `${dotted} is a command, or what one runs with — only the user sets it, in the harness settings`;
   const owners = require('../settings-schema').unproposable(dotted, value);
   if (owners) return `${owners} is the owner's alone — not something the agent proposes`;
+  if (!require('../license/gate').settingOn(dotted)) return `${dotted} belongs to a feature this hive is not licensed for`;
   if (screen ? !require('./screen-proposals').allowed(dotted) : !sectionFor(dotted))
     return screen ? `${dotted} is not something the agent may propose for a screen (it may: ${require('./screen-proposals').keys().join(', ')})` : `${dotted} is not a setting the agent may change (allowed: ${SETTABLE.map(s => s.prefix).join(', ')})`;
 
@@ -214,7 +215,8 @@ function readable() {
     out.push({ path: s.prefix, value: get(prefs, s.prefix) ?? null, section: s.label,
       detail: `${[s.note, decl?.note].filter(Boolean).join(' — ')}. Not set yet: propose its whole value.` });
   }
-  return out;
+  // A section of a feature this hive is not licensed for is not offered (license/gate.js).
+  return out.filter(r => require('../license/gate').settingOn(r.path));
 }
 
 /* ── Proposals ────────────────────────────────────────── */

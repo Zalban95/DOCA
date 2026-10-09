@@ -53,14 +53,44 @@ async function _confirmSwitch(input, init, d) {
   }
 }
 
+/* The control a person just changed, and what it showed before (deep test A, 2026-10-08): a switch drawn on before
+   its request is sent — the specialists switch, a guard, a level, a conversation's approval — stayed drawn on when the
+   password was cancelled or wrong, while the server said off. Remembered here for every checkbox, select and field,
+   so every guarded switch is put back in one place, whoever drew it. */
+let _switchTouched = null;
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('focusin', e => { const el = e.target; if (el?.matches?.('select, input:not([type=checkbox]):not([type=radio])')) el._switchWas = el.value; }, true);
+  document.addEventListener('change', e => {
+    const el = e.target;
+    if (!el?.matches?.('select, input:not([type=radio]):not([type=file])')) return;
+    _switchTouched = { el, at: Date.now(), was: el.type === 'checkbox' ? !el.checked : el._switchWas };
+    if (el.type !== 'checkbox') el._switchWas = el.value;
+  }, true);
+}
+/** Put the control just changed back as it was — when it was changed a moment ago, and only once. */
+function _switchRevert(touched) {
+  if (!touched || Date.now() - touched.at > 5000 || touched.was === undefined) return;
+  const { el, was } = touched;
+  if (el.type === 'checkbox') el.checked = was; else el.value = was;
+  if (el.type !== 'checkbox') el._switchWas = was;
+}
+
 if (_rawFetch) window.fetch = async (input, init) => {
   const res = await _rawFetch(input, init);
   if (res.status !== 401 && res.status !== 403) return res;
   const url = typeof input === 'string' ? input : input?.url || '';
   if (!url.startsWith('/')) return res;
   const d = await res.clone().json().catch(() => ({}));
-  // A switch asks for the password wherever it is — levels, grants and accounts are under /api/auth/ too.
-  if (d.code === 'password_required') return (await _confirmSwitch(input, init, d)) || res;
+  // A switch asks for the password wherever it is — levels, grants and accounts are under /api/auth/ too. Cancelled
+  // or refused, the control that asked is drawn as it was: the setting did not change.
+  if (d.code === 'password_required') {
+    const touched = _switchTouched;
+    _switchTouched = null;
+    const answer = await _confirmSwitch(input, init, d);
+    if (!answer?.ok) _switchRevert(touched);
+    return answer || new Response(JSON.stringify({ error: 'Not changed: no password was given.', code: 'password_cancelled' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
   if (url.startsWith('/api/auth/')) return res;
   if (d.code === 'unauthenticated' || d.code === 'setup_required' || d.code === 'password_change_required') return _toLogin();
   if (d.code === 'step_up_required' && await _renewSignIn(d.error)) return window.fetch(input, init);

@@ -13,6 +13,9 @@ const { PRESETS } = require('../modules/api-v1/scopes');
 test.before(() => H.start());
 test.after(() => H.stop());
 
+// Started by the host itself: approved as it completes (a pairing nobody approved waits — devices-approval/).
+const HOST = { state: 'approved', by: null, via: 'host' };
+
 const wakesFor = phoneId => bus.drain(phoneId, 0).events.filter(e => e.type === 'device.wake');
 
 test('pairing records the phone that minted the code, and a question for its watch wakes that phone', () => {
@@ -20,7 +23,7 @@ test('pairing records the phone that minted the code, and a question for its wat
   wake._reset();
   const phone = devices.create({ name: 'phone', scopes: PRESETS.phone || ['devices:admin'], caps: { formFactor: 'phone' } }).device;
   const other = devices.create({ name: 'other phone', scopes: ['devices:admin'], caps: { formFactor: 'phone' } }).device;
-  const { code } = devices.startPairing({ name: 'w', scopes: PRESETS.watch, createdBy: phone.id });
+  const { code } = devices.startPairing({ name: 'w', scopes: PRESETS.watch, createdBy: phone.id, approval: HOST });
   const watch = devices.completePairing(code, { formFactor: 'watch' }).device;
   assert.equal(watch.pairedBy, phone.id);
 
@@ -50,7 +53,7 @@ test('a watch that is polling is not woken, and a watch paired before pairedBy f
 test('a quiet event does not wake a watch: the owner is at the panel (PROTOCOL §11.4 quiet)', () => {
   wake._reset();
   const phone = devices.create({ name: 'phone q', scopes: ['devices:admin'], caps: { formFactor: 'phone' } }).device;
-  const { code } = devices.startPairing({ name: 'wq', scopes: PRESETS.watch, createdBy: phone.id });
+  const { code } = devices.startPairing({ name: 'wq', scopes: PRESETS.watch, createdBy: phone.id, approval: HOST });
   const watch = devices.completePairing(code, { formFactor: 'watch' }).device;
   bus.publish(watch.id, 'agent.turn', { turnId: 't', state: 'done', quiet: true });
   assert.equal(wakesFor(phone.id).length, 0);

@@ -16,7 +16,7 @@
 const callLog = require('./call-log');
 
 const num = v => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : null);
-const word = v => String(v || '').replace(/[^\w .,:;'’()—–-]/g, '').slice(0, 160);
+const word = v => String(v || '').replace(/[^\w .,:;'’()—–→-]/g, '').slice(0, 160);
 
 /** What the page may report, and what each becomes in the log. */
 const STAGES = {
@@ -53,6 +53,8 @@ function handleEvent(req, res) {
     let sessionId = null;
     try { sessionId = require('../harness/memory').mainSession().id; } catch { /* named later by its turns */ }
     const h = callLog.begin({ kind: 'panel', label: `${label}${b.mobile ? ' (phone)' : ''}`, sessionId, person, engine: 'panel' });
+    // A call that could not start is a call attempt too, and the commonest failure (deep test A, #9): kept and closed.
+    if (b.refused) { h.note(`the call did not start: ${word(b.refused)}`, 'warn'); h.end('did not start'); return res.json({ call: h.id }); }
     h.note(STAGES.start(h, b));
     return res.json({ call: h.id });
   }

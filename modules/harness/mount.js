@@ -25,6 +25,7 @@ function mount(app) {
   require('../scout/routes').mount(app);
   require('./assistant-routes').mount(app);
   require('../checkpoints').mount(app);
+  require('../settings-find').mount(app);     // a setting found by the words people use: the header search (settings-find)
   require('../settings-leaves').mount(app);   // declared settings a page draws a box for by name (settings-leaves.js)
   require('../realtime/routes').mount(app);
   require('../api-v1/client-files').mountPanel(app);

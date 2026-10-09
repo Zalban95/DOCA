@@ -12,7 +12,8 @@ const path = require('node:path');
 const table = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'harness', 'param-table.js'), 'utf8');
 const params = [...table.matchAll(/\{ key: '(\w+)',( common: true,)?/g)].map(m => ({ key: m[1], common: !!m[2] }));
 const hcfg = k => `#hcfg-${k}-doca`;
-const wait = ms => `await new Promise(r => setTimeout(r, ${ms}));`;
+// Until the page's own data is in (a fixed wait was too short on a slow Windows runner), at most 15 s.
+const loaded = expr => `for (let t = 0; t < 15000 && !(${expr}); t += 100) await new Promise(r => setTimeout(r, 100));`;
 const sub = id => `nav('settings'); settingsSubNav(${JSON.stringify(id)});`;
 
 module.exports = [
@@ -20,7 +21,7 @@ module.exports = [
     fields: [...params.map(p => hcfg(p.key)), hcfg('provider'), hcfg('model'), hcfg('systemPrompt'), '#hcfg-fallbacks-doca', '#hcfg-escalate-doca'],
     folded: [...params.filter(p => !p.common).map(p => hcfg(p.key)), '#hcfg-fallbacks-doca', '#hcfg-escalate-doca'],
     shown: [...params.filter(p => p.common).map(p => hcfg(p.key)), hcfg('provider'), hcfg('model'), hcfg('systemPrompt')] },
-  { name: 'Settings → Users, the level editor', go: `${sub('users')} ${wait(900)} usersLevelEdit();`, ready: '#lvl-delegates', scope: '#users-level-modal',
+  { name: 'Settings → Users, the level editor', go: `${sub('users')} ${loaded('_usersData.rights.length')} usersLevelEdit();`, ready: '#lvl-delegates', scope: '#users-level-modal',
     fields: ['#lvl-name', '[data-right="host"]', '#lvl-settings', '#lvl-allow', '#lvl-deny', '#lvl-approval', '#lvl-reach', '[data-resource="model"]', '[data-resource="home"]', '#lvl-delegates'],
     folded: ['#lvl-settings', '#lvl-allow', '#lvl-deny', '[data-resource="model"]', '[data-resource="home"]', '#lvl-delegates'],
     shown: ['#lvl-name', '[data-right="host"]', '#lvl-approval', '#lvl-reach'],
@@ -38,6 +39,9 @@ module.exports = [
   { name: 'Settings → Spending: budgets', go: sub('spending'), ready: '#sp-pp-tokensPerDay', scope: '#sp-spending',
     fields: ['#sp-own-tokensPerDay', '#sp-own-moneyPerMonth', '#sp-person', '#sp-pp-tokensPerDay', '#sp-lv-member-allow'],
     folded: ['#sp-person', '#sp-pp-tokensPerDay', '#sp-lv-member-allow'], shown: ['#sp-own-tokensPerDay', '#sp-own-moneyPerMonth'] },
+  { name: 'Settings → Voice: the Voice card', go: sub('voice'), ready: '#vc-quick-speed', scope: '#voice-card',
+    fields: ['#vc-engine', '#vc-voice', '#vc-speed', '#vc-split', '#vc-quick-service', '#vc-quick-voice', '#vc-quick-speed', '#vc-deep-speed', '#vc-ambient-speed'],
+    folded: ['#vc-speed', '#vc-quick-speed', '#vc-deep-speed', '#vc-ambient-speed'], shown: ['#vc-engine', '#vc-voice', '#vc-split', '#vc-quick-service', '#vc-quick-voice'] },
   { name: 'Settings → Voice: assistant mode, the face', go: sub('voice'), ready: '[data-face="dots"]', scope: '#sp-voice',
     fields: ['#as-effort', '#as-reply', '#as-provider', '#as-model', '#as-calls', '#as-front', '#as-style', '[data-face="form"]', '[data-face="accent"]', '[data-face="dots"]', '[data-face="glow"]', '[data-face="ask"]'],
     folded: ['#as-provider', '#as-model', '#as-calls', '#as-front', '#as-style', '[data-face="dots"]', '[data-face="glow"]', '[data-face="ask"]'],

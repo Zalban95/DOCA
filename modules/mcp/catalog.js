@@ -59,6 +59,7 @@ function setup(c, { timeoutMs = 10 * 60000 } = {}) {
 async function add(id) {
   const c = get(id);
   if (!c) throw Object.assign(new Error(`No catalogue server "${id}". The catalogue has: ${CATALOG.map(x => x.id).join(', ')}`), { status: 404 });
+  if (c.transport !== 'http' && require('../hosted').on()) throw require('../hosted').refusal(`${c.label}, a command on the hub,`);   // hosted.js
   const done = await module.exports.setup(c);   // through exports, so a test can stand in for the download
   if (!done.ok) throw Object.assign(new Error(`Setting up ${c.label} failed (${(c.setup || []).join(' ')}):\n${done.log.trim().split('\n').slice(-6).join('\n')}`), { status: 500 });
   if (c.transport === 'http') return require('./registry').upsert({ id: c.id, label: c.label, transport: 'http', url: c.url, headers: { ...c.headers }, ...(c.key ? { key: c.key } : {}), autostart: false });

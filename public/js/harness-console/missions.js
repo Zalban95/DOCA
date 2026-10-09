@@ -9,6 +9,10 @@
    bar is a status light, not a transcript, and the transcript it would be
    showing belongs to a conversation nobody has open. */
 let _hcMissionPoll = null;
+/* While a person's change to the specialists switch is being sent (and its password asked), a list that was already
+   loading must not draw the switch back as the server had it before: on a slow machine that load landed under the
+   password prompt and flipped the switch the person had just turned on. */
+let _hcAgentsChanging = false;
 
 async function _hcLoadAgents() {
   const box = document.getElementById('hc-agents');
@@ -16,7 +20,7 @@ async function _hcLoadAgents() {
   if (!box) return;
   try {
     const data = await apiFetch('/api/harness/agents');
-    if (sw) sw.checked = !!data.enabled;
+    if (sw && !_hcAgentsChanging) sw.checked = !!data.enabled;
     box.innerHTML = (data.agents || []).map(a => _hcAgentHtml(a, data.enabled)).join('')
       || '<div class="placeholder">No specialists defined</div>';
     _hcToFill(data.enabled ? (data.agents || []).filter(a => !a.broken) : []);
@@ -40,7 +44,7 @@ async function _hcComputerFill() {
   const sel = document.getElementById('hc-computer');
   if (!sel) return;
   let list = [];
-  try { list = (await apiFetch('/api/computers')).computers || []; } catch { /* not a host: no picker */ }
+  if ((typeof licenceFeatureOn !== 'function' || licenceFeatureOn('computers'))) try { list = (await apiFetch('/api/computers')).computers || []; } catch { /* not a host: no picker */ }
   const keep = sel.value;
   sel.innerHTML = `<option value="">no computer</option>${list.map(c => `<option value="${escHtml(c.id)}">🖥 ${escHtml(c.name || c.id)} (${escHtml(c.id)})</option>`).join('')}`;
   sel.value = list.some(c => c.id === keep) ? keep : '';
@@ -87,10 +91,12 @@ function _hcAgentHtml(a, enabled) {
 }
 
 async function hcAgentsEnable(on) {
+  _hcAgentsChanging = true;
   try {
     await apiFetch('/api/harness/agents/enable', { method: 'POST', body: { enabled: !!on } });
+    _hcAgentsChanging = false;
     _hcLoadAgents();
-  } catch (e) { appAlert(e.message); }
+  } catch (e) { _hcAgentsChanging = false; appAlert(e.message); _hcLoadAgents(); }   // refused or cancelled: drawn as the server has it, never left on
 }
 
 async function _hcLoadMissions() {
@@ -102,7 +108,7 @@ async function _hcLoadMissions() {
   try { ({ auto = [], stopped = [], machines = [] } = await apiFetch('/api/harness/working')); } catch { /* an older hub */ }
   // Finished ones nobody needs any more go to the Archive by themselves (agents/tidy.js): how many did, today.
   let putAway = 0;
-  try { ({ putAway = 0 } = await apiFetch('/api/harness/missions/tidy')); } catch { /* an older hub */ }
+  if ((typeof licenceFeatureOn !== 'function' || licenceFeatureOn('missions-tidy'))) try { ({ putAway = 0 } = await apiFetch('/api/harness/missions/tidy')); } catch { /* an older hub */ }
 
   if (!rows.length && !auto.length && !stopped.length && !machines.length && !putAway) { bar.style.display = 'none'; bar.innerHTML = ''; }
   else {

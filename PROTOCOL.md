@@ -134,7 +134,8 @@ other; a client that does not know the kind should draw it as a device and may l
 things to hand a screen to (it has no screen of its own to show a canvas on). The kind is additive: no
 existing field changed. Since hub 2.164.0 there is also **`browser`**: a browser someone signed in on,
 with no scopes and no token of its own (it reaches the hub by its sign-in session); revoking it signs that
-browser out. `GET /settings/effective` answers any token with that device's settings over the hive's.
+browser out. `GET /settings/effective` answers any token with that device's settings over the hive's, and
+`GET /settings/look` the panel's look those settings draw (§14.1).
 Since hub 2.168.0 `POST /mcp` is the hub as an MCP server (JSON-RPC: initialize, tools/list, tools/call), for
 any MCP client holding a device token; its tools follow the token's scopes.
 Since hub 2.187.0 `POST /agui` (scope `harness:chat`) is the hub as an AG-UI agent: AG-UI's RunAgentInput in
@@ -159,6 +160,19 @@ published.
 
 **Rotation.** `POST /devices/me/rotate` returns a new token; the old one stays
 valid for 60 s (`previousValidUntil`) so a client can swap atomically.
+
+**A device is held to its person.** A device recorded as a person's (`userId`, set at pairing) never does more
+than that person may: when their level lacks the panel's `host` right, its requests carry no `command:` scope (the
+hub's commands — `GET /commands` lists none, running one or confirming a prompt that runs one is a 403; since hub 2.344
+nor `agent` or `packs`, and a level without `chat` no `harness:`); when it lacks
+`devices`, `devices:admin` reaches only that person's own devices — `GET /devices` lists theirs, and any route naming
+another person's device (or one of its jobs) answers 404. The stored scopes are unchanged, so a level change lifts
+the ceiling with no re-pairing. A device with no person (a token minted on the host) keeps what it holds. A member
+pairs their own phone, watch or extension from the panel (Field → API keys → Your devices) since 2026-10-08.
+
+**A new device waits for approval** (hub 2.344, §5.1). The device that completes a pairing may be `pending`: the
+`pair/complete` answer carries `approval` (`state`, and while pending `askedOf[]` and `message`, e.g. "Waiting for
+approval by Mia (its person), Al") — show that message, and keep the token. See §5.1 for what it may do meanwhile.
 
 **Revocation.** `DELETE /devices/:id` (scope `devices:admin`). The device's
 live streams receive a durable `revoked` event followed by an SSE `close`
@@ -225,13 +239,55 @@ Every error has the same shape and a stable `code`:
 |---|---|---|
 | 400 | `bad_json`, `invalid_request`, `invalid_params`, `invalid_prompt`, `invalid_choice`, `invalid_outcome`, `invalid_selection`, `invalid_confirmation`, `invalid_profile`, `ext_too_large`, `invalid_pairing`, `invalid_artifact`, `invalid_alert`, `invalid_device` | malformed input; `message` says which field |
 | 401 | `unauthenticated`, `invalid_token` | see §4.1 |
-| 403 | `scope_required` (+ `required[]`), `forbidden`, `choice_not_available`, `sensors_rejected` | authorised identity, insufficient rights |
+| 403 | `scope_required` (+ `required[]`), `forbidden`, `choice_not_available`, `sensors_rejected`, `pending_approval` (+ `approval`, §5.1) | authorised identity, insufficient rights |
 | 404 | `not_found`, `unknown_command`, `unknown_request`, `no_recipient` | |
 | 409 | `invalid_state`, `stale_selection`, `prompt_closed`, `selection_conflict`, `sensors_unavailable` | state machine refused; body includes current `state`/`selectionId` |
 | 412 | `etag_mismatch` (+ `currentEtag`, `currentVersion`) | optimistic concurrency on profiles |
 | 413 | `payload_too_large`, `vars_too_large`, `image_too_large` | over a §20 budget |
 | 415 | `unsupported_media` | mime not in `capabilities.media.accept` |
 | 500 | `command_failed`, `internal` | the underlying action failed; `message` carries stderr/summary |
+
+### 5.1 A device waiting for approval (`pending_approval`, hub 2.344)
+
+Since hub 2.344 a new device starts **pending** unless whoever started its pairing may approve it: an admin pairing from
+the panel, or a person pairing from one of their own approved devices (a phone pairing its watch: the code travels
+device to device). Who may approve is a level's `approveDevices` — `anyone` (the built-in Main admin and Admin), `own`
+(Member: their own devices, one tap), `none` (Viewer). Devices paired before 2.344 are approved as they are.
+
+While pending, a device may do exactly this — everything else answers **403 `pending_approval`**:
+
+| Method | Path | |
+|---|---|---|
+| GET | `/devices/me` (or its own id) | its record, with `approval` |
+| GET | `/events` (SSE or poll) | to hear the answer |
+| POST | `/events/ack` | |
+
+```json
+{ "error": { "code": "pending_approval", "message": "This device waits for approval. Waiting for approval by Mia (its person), Al. …",
+  "approval": { "state": "pending", "askedAt": "…", "askedOf": ["Mia", "Al"], "message": "Waiting for approval by Mia (its person), Al." } } }
+```
+
+Its sockets (`/mcp/host`, `/realtime`, `/call`) are refused with 403, and its token opens no panel page. The bus
+delivers it only `device.approved`, `device.refused`, `revoked` and `resync`: nothing meant for its person is queued for
+it, and the agent cannot ask or tell it anything. `docs/api/fixtures/pending-approval.json` is the refusal and the
+self-view as the hub writes them.
+
+**What a client draws:** a waiting screen with `approval.message` ("asked of …"), and nothing else — no pairing of a
+watch, no lending, no chat. Hold `/events` (or poll `/devices/me` now and then) and on **`device.approved`** refetch
+`/capabilities` and carry on as a freshly paired device; on **`device.refused`** (its token is revoked, the stream
+closes) wipe the token and offer to pair again. A device that missed the event (one that polls, or was away) gets
+401 `invalid_token` whose `error.refused` is `{ by, at }` — sent only to that device's own token (hub 3.0.1).
+
+**Where people are asked.** The device's own person, when their level approves their own, gets a prompt on their other
+approved devices that take questions ("Your new phone — allow it?", choices `allow` / `refuse`); everyone who may
+approve it sees a card on their open panel pages and Allow / Refuse in the device list. First answer wins; unanswered,
+it stays pending. A device answers directly with `POST /devices/{id}/approve` or `/refuse` (scope `interact`, as its
+person, who must be allowed to approve it).
+
+**Approving holds it to the approver.** The stored scopes keep at most what the approver's level holds — an approver
+without `host` gives no `command:`, `agent` or `packs` scopes; without `chat` no `harness:` (`approval.dropped` and the
+`device.approved` payload name what was left out). The device's own person's level is applied on every request as
+before (§4.2), so a person approving their own device keeps the preset as it is.
 
 ## 6. Capability discovery
 
@@ -510,15 +566,18 @@ data: {"reason":"revoked"}
 | `prompt.closed` | durable | `{ promptId, reason: confirmed_elsewhere|cancelled|expired }` |
 | `alert` | durable, high | `{ id, title, body[], priority, haptic, from, ext }` |
 | `profile.changed` | durable | `{ version, etag, updatedBy, url }` — refetch the profile |
+| `settings.changed` | durable (1 h) | `{ layer: device\|person, keys[], look, url, lookUrl }` — this device's screen settings or its person's changed: read `url` again, and `lookUrl` when `look` is true (§14.1) |
 | `agent.message` | durable | `{ from, type, payload, ext }` — free-form from the agent |
 | `agent.turn` | durable | `{ turnId, sessionId, state: started\|done\|failed, by, message?, text?, steps?, proposals[]?, error?, quiet? }` — one conversation turn (§23) |
 | `agent.text` | ephemeral | `{ turnId, sessionId, delta }` — reply text as produced; **only to the device that posted the message** |
 | `agent.tool` | ephemeral | `{ turnId, sessionId, name, phase: call\|result, step, args?, ok?, preview? }` |
-| `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|paused\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error?, plan?, progress?, archivedAt?, seenAt?, quiet? }` — a specialist agent's work, to every device with `harness:chat` whose owner may open the conversation (§23). `paused` means a restart cut it off; the agent asks the user whether to continue on the next turn from any device. `plan` is the specialist's own checklist (`[{ title, state: done\|running\|queued\|failed }]`, at most 12) and `progress` `{ done, total, percent }` from it — draw the bar from these, else from `steps`. `archivedAt` (hub 2.228) means the mission was put away: **take its row off and notify nothing** — it always comes with `quiet: true`. `seenAt` (hub 2.282) means its person opened the finished result — on the panel or a device (`POST /harness/missions/{id}/seen`): read means done, so **clear its notice everywhere** and notify nothing (`quiet: true`); it stays a finished row. A `paused` mission is waiting for its person (continue or drop), not finished. A work chat arrives in the same shape with `kind: "work"` and `agentId: "work"`; one a person stopped or dropped is `cancelled` (why in `error`) — nothing finished, so nothing is announced as done. `GET /harness/missions` is the same picture for a client that has just woken up. |
+| `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|paused\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error?, plan?, progress?, archivedAt?, seenAt?, quiet? }` — a specialist agent's work, to every device with `harness:chat` whose owner may open the conversation (§23). `paused` means a restart cut it off; the agent asks the user whether to continue on the next turn from any device. `plan` is the specialist's own checklist (`[{ title, state: done\|running\|queued\|failed }]`, at most 12) and `progress` `{ done, total, percent }` from it — draw the bar from these, else from `steps`. `archivedAt` (hub 2.228) means the mission was put away: **take its row off and notify nothing** — it always comes with `quiet: true`. `seenAt` (hub 2.282) means its person opened the finished result — on the panel or a device (`POST /harness/missions/{id}/seen`): read means done, so **clear its notice everywhere** and notify nothing (`quiet: true`); it stays a finished row. A `paused` mission is waiting for its person (continue or drop), not finished. A work chat arrives in the same shape with `kind: "work"` and `agentId: "work"`; one a restart cut off is `paused` (hub 2.336: it read `failed` before; work it was doing carries on by itself), one a person stopped or dropped is `cancelled` (why in `error`) — nothing finished, so nothing is announced as done. `GET /harness/missions` is the same picture for a client that has just woken up. |
 | `artifact.deliver` | durable | `{ artifact, inline?, inlineEncoding?: utf8|base64, message, ext }` |
 | `sensor.request` | durable (ttl = duration + 30 s) | `{ request: { id, sensors: [{ id, mode, rateHz, durationSec, unit }], reason, ext, expiresAt } }` |
 | `sensor.stop` | durable | `{ requestId, reason }` |
 | `revoked` | durable | `{ reason, by }` — then the stream closes; forget the token |
+| `device.approved` | durable, high (7 d) | `{ by, at, scopes[], dropped[] }` — this pending device was allowed (§5.1): refetch `/capabilities` |
+| `device.refused` | durable, high | `{ by, at }` — this pending device was refused: its token is revoked and the stream closes; forget the token |
 | `device.control` | durable (24 h) | `{ id, action: refresh\|reconnect\|ask\|disconnect\|revoke\|restore, family? }` — do it, then `POST /devices/self/control/{id}/ack { ok, detail }` (§22.1) |
 | `device.wake` | durable (120 s) | `{ deviceId, type }` — to the phone that paired a watch (`pairedBy`), when a durable event lands for that watch and it is not listening. Pass it to the watch (Data Layer `/doca/wake`); the watch polls with its own token. Never carries the event (`modules/api-v1/wake.js`) |
 | `console.input` | ephemeral (frames) / durable 60 s (a press) | `{ deviceId, enabled, mode: keys\|joystick, frames[{ t, accel?, heading?, crown? }], press?: A\|B\|C, button?: { id, behaviour: button\|toggle, down }, toggles: { A, B, C }, joystick?: { x, y, crown }, macro?: { keys } }` — only to the devices the panel linked to a console (`modules/device-console.js`); never to the harness. `down` is `false` only when a toggle latches off. `joystick` (mode `joystick`) is tilt, −1…1 at 90°, in the watch's own axes; `macro.keys` (mode `keys`) is the button's key chords for the receiver to type, e.g. `ctrl+s` |
@@ -748,6 +807,22 @@ emits `prompt.confirmed` to the agent with the original input.
 
 `clients/reference/demo.sh` step 7 runs exactly this.
 
+### 12.8 An approval's prompt — why, what it does, the exact request
+
+When a tool call waits for a person and the turn came from a device, the device is asked with a prompt titled
+`Allow <tool>?` whose body is text blocks, each marked by `ext.role` (fixture `prompt.new-approval.json`):
+
+| `ext.role` | style | what it is |
+|---|---|---|
+| `why` | body | the agent's own words for this step (`ext.from: "agent"`), or the request it answers (`"request"`) — the agent's claim, to be drawn as such |
+| `does` | body | what the call does, a fixed sentence the hub makes from the tool and its arguments — never the model's words |
+| `way` | caption | whether it can be undone |
+| `asked` | caption | why it is asked, when that is more than the call itself |
+| `detail` | code | the exact request as it will run, secrets masked; `ext.collapsed: true`, `ext.label: "The exact request"` — draw it folded under the label until tapped |
+
+A watch is sent `why` and `does` shortened and nothing else. A client that knows none of this draws the blocks in
+order, which is always correct; one that does draws `why` labelled as the agent's, `does` prominent and `detail` folded.
+
 ## 13. Alerts and free-form messages
 
 ```http
@@ -804,6 +879,39 @@ Server behaviour:
 - Live `surface.update` pushes follow `pages[].surfaces` and `refreshSec`. A
   device whose profile lists no surfaces gets no surface pushes.
 - Quiet hours suppress prompts and alerts below `urgent` (with `allowUrgent`).
+
+### 14.1 The panel's look, for an app's own screens (hub `device-look`)
+
+A profile never says how a device looks; its **screen settings** do — `theme`, `customTheme` and `skin`, kept per
+device over its person's and the hive's (`GET /settings/effective`), and changed on the device's own panel page
+(`/d/<id>/`, Settings → General → Appearance). So that an app's native screens (its settings, its pairing, a watch face) can be
+drawn the way the panel is, `GET /settings/look` (any token) answers with that look **resolved** from the panel's own
+theme table:
+
+```json
+{ "deviceId": "dev_…",
+  "look": { "theme": "pointsDaylight", "themeLabel": "Points Daylight", "skin": "points", "skinLabel": "Points",
+            "ground": "light",
+            "palette": { "bg": "#f4f5f6", "surface": "#ffffff", "text": "#2a3138", "muted": "#5b6570",
+                         "accent": "#17807a", "onAccent": "#ffffff", "border": "#e3e7eb", "red": "#c23d3d", "…": "…" },
+            "fonts": { "ui": ["IBM Plex Sans", "system-ui", "…"], "text": […], "display": […], "mono": ["IBM Plex Mono", "…"] },
+            "radius": { "control": 6, "card": 10 }, "inputSize": 13.5,
+            "from": { "theme": "device", "customTheme": "default", "skin": "device" },
+            "etag": "92cd6d89b2ab" } }
+```
+
+- `palette` is hex colours by role (`bg`, `surface`, `raised`, `dim`, `faint`, `border`, `border2`, `text`, `muted`,
+  `bright`, `accent`, `green`, `red`, `blue`, `purple`, `teal`, `cyan`, `amber`, `bgGreen`, `bgRed`, `bgBlue`,
+  `bgAmber`, `bg2`, `bg3`, `onAccent` — text on the accent, `stopped` — a stopped state's point, `field` — a figure).
+  A custom theme's value that is not a hex colour is left out and the default's drawn.
+- `ground` is `light` or `dark`, by the ground's luminance, as the panel decides it.
+- `skin` is the style: `classic` (mono, square corners), `modern` (a sans, rounded), `points` (IBM Plex Sans, Plex Mono
+  for labels and figures, 6 px controls, 10 px cards). `fonts` are CSS family lists, first choice first; `radius` and
+  `inputSize` are CSS pixels.
+- Read it at each connection and again on `settings.changed` with `look: true` (a change on this device's layer or its
+  person's; a change to the hive's defaults is not announced). `etag` changes when anything in it does.
+- An app keeps its own look when it is not paired, when the hub is older (404), or when its person says not to use the
+  hub's. The fixture is `docs/api/fixtures/settings-look.json`.
 
 ## 15. Variables
 
@@ -920,7 +1028,8 @@ A notice the agent sends with files (`tell_device`, `alert` with `media` blocks 
 `docs/api/fixtures/alert-files.json`) carries one `media` block per file, each stored as the receiving device's
 own media, so only that device may fetch it. A watch is sent pictures only.
 
-Any block may carry `ext`. Unknown block types are dropped at authoring time;
+Any block may carry `ext`; `ext.collapsed: true` with `ext.label` asks for the block folded under that label until tapped
+(an approval's exact request, §12.8). Unknown block types are dropped at authoring time;
 clients must still skip types they do not know.
 
 ### 19.2 Server-rendered charts
@@ -1022,7 +1131,7 @@ one implementation of this that exists.
 ## 21. Client implementation checklist
 
 **Any device**
-1. Pair (`/devices/pair/complete`) with an honest `caps`; store the token in the secure store.
+1. Pair (`/devices/pair/complete`) with an honest `caps`; store the token in the secure store. If `approval.state` is `pending`, show its `message` and wait for `device.approved` (§5.1).
 2. `GET /capabilities`; build screens from `surfaces`, `commands`, `profile`.
 3. `GET /devices/me/profile`; `GET /snapshot?surfaces=<page>&spark=1`.
 4. Open `/events` (SSE) with `since=<last seq>`; handle `hello.resync`.
@@ -1438,11 +1547,14 @@ The device's person's recipes, schedules and face, answered as that person exact
 | GET | `/openapi.json` | — | OpenAPI 3.1 description of this API |
 | POST | `/devices/pair/complete` | — | finish pairing → token |
 | GET | `/capabilities` | any | §6 |
+| GET | `/settings/effective` | any | §4.2, §14.1 |
+| GET | `/settings/look` | any | §14.1 |
 | GET | `/devices` | `devices:admin` \| `agent` | list devices (+ presets) |
 | POST | `/devices` | `devices:admin` | issue a token directly |
 | POST | `/devices/pair/start` | `devices:admin` | start pairing |
 | GET / PATCH | `/devices/:id` | self \| `devices:admin` (\| `agent` for GET) | device record / update caps (admin: name, scopes, expiry) |
 | POST | `/devices/:id/rotate` | self \| `devices:admin` | rotate token |
+| POST | `/devices/:id/approve`, `/devices/:id/refuse` | `interact`, as its person | allow or refuse a device waiting for approval (§5.1) |
 | DELETE | `/devices/:id` | `devices:admin` | revoke |
 | GET / PUT | `/devices/:id/profile` | self (`profile:self` to write) \| `profile:*` | §14 |
 | GET / PATCH | `/devices/:id/vars` | self (`vars:self` to write) \| `vars:*` \| `agent` | §15 |

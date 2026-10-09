@@ -102,6 +102,7 @@ function fromDevice(req) {
   if (!/^Bearer\s+/i.test(h)) return null;
   const device = require('../api-v1/devices').authenticate(h.replace(/^Bearer\s+/i, '').trim());
   if (!device?.userId) return null;
+  if (require('../api-v1/devices').isPending(device)) return null;   // a device waiting for approval opens no page (api-v1/pending.js)
   const user = authStore.userById(device.userId);
   if (!user || user.suspendedAt) return null;
   const orgId = device.orgId || authStore.defaultOrg()?.id;

@@ -46,6 +46,7 @@ function _subtabSystemInit() {
   checkpointsRender();   // settings checkpoints (settings/checkpoints.js)
   logKeepCard();         // what is kept of what happened, and its bounds (settings/log-keep.js)
   featuresRender();      // every feature, and the kept alternatives' use (settings/features.js)
+  licenceCard();         // the licence: what this hive runs, renewing it (settings/licence.js) — drawn first in System
 }
 
 async function _subtabVoiceInit() {
@@ -53,9 +54,9 @@ async function _subtabVoiceInit() {
     const prefs = await apiFetch('/api/prefs');
     _voiceSettingsLoad(prefs);
   } catch {}
-  // In order — the hive's services above, then this screen's voice, then the call's cards (settings/live-call.js).
-  await screenVoiceRender();
-  await callVoicesRender();   // a voice per kind of call: Live and Deep (settings/call-voices.js)
+  // In order — the Voice card first (how answers are spoken, each call's voice, which services run;
+  // settings/voice-card.js), the hive's speech services, then the call's cards (settings/live-call.js).
+  await voiceCardRender();
   await liveCallRender();
 }
 
@@ -110,7 +111,7 @@ function settingsHiddenApply() { _applyHiddenTabs(_settingsNoHost ? [...new Set(
 /* Called on app startup to apply persisted hidden tabs + sidebar sections */
 async function settingsApplyOnLoad() {
   try {
-    const [prefs] = await Promise.all([screenPrefs(), typeof panelLayoutLoad === 'function' ? panelLayoutLoad() : null]);
+    const [prefs] = await Promise.all([screenPrefs(), typeof panelLayoutLoad === 'function' ? panelLayoutLoad() : null, typeof licenceReady === 'function' ? licenceReady() : null]);
     _settingsHidden = prefs.hiddenTabs || [];
     // Without host, the tabs that are the machine are left out instead of drawn as refusals (live test 2026-10-04).
     const me = await apiFetch('/api/auth/me').catch(() => null);
@@ -235,6 +236,7 @@ async function sysdepsLoad() {
   if (!list) return;
   list.innerHTML = '<div class="placeholder pulse">Checking…</div>';
   if (btn) btn.disabled = true;
+  if (hostedHive()) { list.innerHTML = `<div class="placeholder">${escHtml(HOSTED_SAY)}</div>`; return; }
   try {
     const data  = await apiFetch('/api/system/tools');
     _sysdepsTools = data.tools || [];
@@ -353,6 +355,22 @@ function _voiceSettingsLoad(prefs) {
   set('voice-tts-speed', speed, '1.0');
   const lbl = document.getElementById('voice-tts-speed-val');
   if (lbl) lbl.textContent = speed;
+  _voiceServicesChoices();
+}
+
+/** Type or pick (lib/choice-input.js): the speech services on this machine, and the models and voices each lists. */
+function _voiceServicesChoices() {
+  const el = id => document.getElementById(id);
+  const ask = (what, urlBox) => async () => apiFetch(`/api/services/choices?what=${what}${urlBox ? `&url=${encodeURIComponent(el(urlBox)?.value.trim() || '')}` : ''}`);
+  choiceInputAttach(el('voice-stt-url'), { source: 'this machine', load: ask('stt-url') });
+  choiceInputAttach(el('voice-stt-model'), { source: 'the speech-to-text service', load: ask('stt-model', 'voice-stt-url') });
+  choiceInputAttach(el('voice-tts-url'), { source: 'this machine', load: ask('tts-url') });
+  choiceInputAttach(el('voice-tts-model'), { source: 'the speech service', load: ask('tts-model', 'voice-tts-url') });
+  choiceInputAttach(el('voice-tts-voice'), { source: 'the speech service', load: async () => ({ items: (await apiFetch('/api/chat/voices')).voices || [] }) });
+  // The service's own default voice and speed: what a screen with no voice of its own hears. The Voice card above is
+  // where a voice is chosen, so these two are the few most people never touch.
+  const rows = ['voice-tts-voice', 'voice-tts-speed'].map(id => el(id)?.closest('.choice')?.parentElement?.closest('div') || el(id)?.parentElement);
+  if (rows[0] && !rows[0].closest('details.adv-fold')) advancedFold(rows, { id: 'voice-services-default', label: 'Its default voice' });
 }
 
 async function voiceSettingsSave() {

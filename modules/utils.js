@@ -10,6 +10,7 @@ const { COMPOSE_DIR, CONFIG_PATH, PREFS_FILE, FM_ALLOWED_ROOTS, PROTECTED_FILES,
 
 /** Run a shell command and return { stdout, stderr }. Rejects on non-zero exit. */
 function run(cmd, cwd) {
+  if (require('./hosted').on()) return Promise.reject({ error: require('./hosted').refusal('A command line on the hub').message, stderr: '', stdout: '' });   // hosted.js
   // The compose folder only when it is there: on an install without OpenClaw it is not, and a missing
   // working directory made every command fail at once — docker ps, nvidia-smi, curl — so the sidebar
   // said "None running" and "No GPU data" on a machine with both (found 2026-09-27).
@@ -63,6 +64,7 @@ function fmSafe(p) {
   // folder by its 8.3 short name, so a link to the prefs file compared unequal and was written through (CI on
   // macOS/Windows, 2026-10-04). Case-insensitively where the filesystem is.
   const same = (x, y) => (process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y);
+  if (require('./hosted').inApp(real) || require('./hosted').inApp(abs)) return false;   // a hosted hive's code is never opened (hosted.js)
   if (PROTECTED_FILES.some(f => { const r = path.resolve(f), rr = realOf(r); return [r, rr].some(p => same(p, abs) || same(p, real)); })) return false;
   const under = (x, d) => same(x, d) || (process.platform === 'win32' ? x.toLowerCase().startsWith(d.toLowerCase() + path.sep) : x.startsWith(d + path.sep));
   if ((PROTECTED_DIRS || []).some(d => { const r = path.resolve(d), rr = realOf(r); return [r, rr].some(p => under(abs, p) || under(real, p)); })) return false;

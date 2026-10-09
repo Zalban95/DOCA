@@ -52,7 +52,14 @@ function withdraw(sessionId, id) {
 
 /** The running turn's side: every waiting message into the transcript, as the people who wrote them. */
 function takeInto(session, { append, say }) {
-  const items = take(session.id);
+  const slash = require('./slash');
+  // A command a device sent while the conversation worked (/loop stop, /skill…) is carried out, not read as words.
+  const items = take(session.id).filter(i => {
+    if (!slash.parse(i.message)) return true;
+    slash.intercept({ message: i.message, sessionId: session.id, client: i.client })
+      .then(r => { try { i.onRead?.(); i.onAnswer?.(r); } catch { /* its sender may be gone */ } });
+    return false;
+  });
   for (const i of items) {
     append(i);
     say({ type: 'user_added', id: i.id, text: i.message, from: i.client?.name || null });

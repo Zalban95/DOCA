@@ -34,6 +34,7 @@ async function _llamaServerBadge() {
 }
 
 async function llamaLoadList() {
+  if (hostedHive()) { _llamaInstances = []; _renderLlamaGrid(); return; }   // a hosted hive runs no llama.cpp server (hosted.js)
   try {
     const data = await apiFetch('/api/models/llamacpp/list');
     _llamaInstances = data.instances || [];

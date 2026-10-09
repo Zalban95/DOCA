@@ -41,6 +41,7 @@ const LEADS = {
   pack: 'Keep skills, recipes and specialists you made as one pack in the library — use it when the owner wants to share them.',
   system_status: 'CPU, RAM, GPU, disks, containers and every local model server with who it works for — use it to see what the machine is doing.',
   http_fetch: 'Read a URL (GET or HEAD) — the open web through a reader, your own addresses as they are; or keep a download.',
+  service: 'Use an API service the owner set up by its named actions — the hub sends the key and follows long jobs; use it before api_call.',
   api_call: 'Call a keyed service or one of the owner\'s own devices and servers — use it to send, upload or act on an API.',
   screen: 'List the screens and the page each shows, or put a page on one — use it for "what is on the tablet" or "show the Workstream on the wall".',
   library_search: 'Find the person\'s files by what is in them — words said in a recording, what a picture shows — use it for "find the audio where…".',

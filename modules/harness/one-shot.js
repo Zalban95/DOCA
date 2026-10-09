@@ -75,6 +75,7 @@ async function viaGateway(a, { history, signal, onText }) {
 
 /** A CLI's own non-interactive mode, by argv. */
 function viaArgv(a, { message, signal, onText = () => {}, onErr = () => {}, cwd, timeoutMs }) {
+  if (require('../hosted').on()) return Promise.reject(require('../hosted').refusal('Another agent run as a program on the hub'));   // hosted.js
   const shell = require('../shell');
   const bin = shell.which(a.cmd);
   if (!bin) return Promise.resolve({ text: '', code: 127, error: `${a.cmd} is not installed (or not on PATH).` });

@@ -41,7 +41,7 @@ const err = (description) => ({ description, content: { 'application/json': { sc
 const E = {
   400: err('Malformed input — `error.message` says which field.'),
   401: err('Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.'),
-  403: err('Authenticated but not allowed (`scope_required` lists `required[]`).'),
+  403: err('Authenticated but not allowed (`scope_required` lists `required[]`; `pending_approval`: the device waits for a person to approve it, `approval` says who was asked).'),
   404: err('Not found.'),
   409: err('State machine refused the transition; body includes the current state.'),
   412: err('`etag_mismatch` — the profile changed since it was read (`currentEtag`, `currentVersion`).'),
@@ -87,8 +87,8 @@ function schemas() {
 
     Device: obj({
       id: str({ examples: ['dev_9f4bf9ba62b1'] }), name: str(), kind: str({ enum: require('./devices').KINDS }), scopes: arr(ref('Scope')), caps: ref('Caps'),
-      vars: obj({}, { additionalProperties: true }), varsVersion: int(), createdAt: iso(), lastSeenAt: nullable(iso()), expiresAt: nullable(iso()), revokedAt: nullable(iso()),
-    }),
+      vars: obj({}, { additionalProperties: true }), varsVersion: int(), createdAt: iso(), lastSeenAt: nullable(iso()), expiresAt: nullable(iso()), revokedAt: nullable(iso()), approval: obj({ state: str({ enum: ['pending', 'approved', 'refused'] }) }, { additionalProperties: true, description: 'Absent on a device paired before approval existed: approved. See DeviceApproval.' }),
+    }), DeviceApproval: require('../devices-approval/openapi').approvalSchema({ obj, str, arr }),
 
     TokenIssue: obj({ token: str({ description: 'Shown once. `doca_<deviceId>.<secret>`.' }), device: ref('Device') }, { required: ['token', 'device'] }),
 
@@ -150,7 +150,7 @@ function schemas() {
     Block: {
       description: 'Rich content unit used in prompt bodies, outcomes and alerts. Unknown types must be skipped.',
       oneOf: [
-        obj({ type: str({ const: 'text' }), text: str({ maxLength: 2000 }), style: str({ enum: ['body', 'title', 'caption', 'code'] }), ext: ext() }, { required: ['type', 'text'] }),
+        obj({ type: str({ const: 'text' }), text: str({ maxLength: 2000 }), style: str({ enum: ['body', 'title', 'caption', 'code'] }), ext: ext() }, { required: ['type', 'text'], description: 'In an approval\'s prompt (PROTOCOL §12.8) `ext.role` says which line it is — `why` (the agent\'s words, `ext.from` agent or request), `does`, `way`, `asked`, `detail` — and `ext.collapsed: true` with `ext.label` asks a client to draw the block folded under that label until tapped.' }),
         obj({ type: str({ const: 'metric' }), metric: str(), label: str(), ext: ext() }, { required: ['type', 'metric'] }),
         obj({ type: str({ const: 'figure' }), id: str(), alt: str(), svg: str({ description: 'Authoring only (≤ 64 KB).' }), motion: ref('MotionScene'), image: obj({ url: str(), w: int(), h: int() }), text: str(), sizeHint: obj({ w: int(), h: int() }), representation: ref('FigureRepresentation'), ext: ext() }, { required: ['type'] }),
         obj({ type: str({ const: 'image' }), url: str(), alt: str(), w: int(), h: int(), ext: ext() }, { required: ['type', 'url'] }),
@@ -282,7 +282,7 @@ function events() {
     'prompt.outcome':   { audience: 'device', payload: obj({ promptId: str(), selectionId: str(), status: str({ enum: ['outcome_ready', 'failed'] }), outcome: ref('Outcome'), error: obj({ code: str(), message: str() }) }) },
     'prompt.closed':    { audience: 'device', payload: obj({ promptId: str(), reason: str({ enum: ['confirmed_elsewhere', 'cancelled', 'expired'] }) }) },
     'alert':            { audience: 'device', payload: obj({ id: str(), title: str(), body: arr(ref('Block')), priority: str({ enum: prompts.PRIORITIES }), haptic: bool(), from: str(), ext: ext() }) },
-    'profile.changed':  { audience: 'device', payload: obj({ version: int(), etag: str(), updatedBy: str(), url: str() }), note: 'Refetch the profile (and capabilities).' },
+    'profile.changed':  { audience: 'device', payload: obj({ version: int(), etag: str(), updatedBy: str(), url: str() }), note: 'Refetch the profile (and capabilities).' }, ...require('../look/routes').events({ obj, str, bool, arr }),
     'agent.message':    { audience: 'device', payload: obj({ from: str(), type: str(), payload: any(), ext: ext() }) },
     'agent.turn':       { audience: 'device', payload: obj({
       turnId: str(), sessionId: str(), state: str({ enum: ['started', 'done', 'failed'] }), by: str({ description: 'Device that asked.' }),
@@ -306,7 +306,7 @@ function events() {
     'sensor.stop':      { audience: 'device', payload: obj({ requestId: str(), reason: str() }) },
     'mcp.listener':     { audience: 'device', payload: obj({ action: str({ enum: ['start', 'stop'] }), serverId: str(), url: str(), by: str() }),
       note: 'The host is asking the MCP server you host to be started or stopped. A request, not a command: refuse it if the user has consent switched off, and report the result by PATCHing /mcp/self or simply by becoming reachable. `url` is the address the host currently has, so a mismatch is your cue to correct it.' },
-    'revoked':          { audience: 'device', payload: obj({ reason: str(), by: str() }), note: 'Followed by an SSE `close` frame; forget the token.' },
+    'revoked':          { audience: 'device', payload: obj({ reason: str(), by: str() }), note: 'Followed by an SSE `close` frame; forget the token.' }, ...require('../devices-approval/openapi').events({ obj, str, arr }),
     'resync':           { audience: 'device', payload: obj({ reason: str(), cursor: int() }), note: 'Your cursor predates retained history: refetch capabilities, prompts and snapshot, then continue from `cursor`.' },
     'prompt.selected':  { audience: 'agent', payload: obj({ promptId: str(), selectionId: str(), deviceId: str(), choiceId: str(), payload: ref('SelectionPayload'), resolver: str() }), note: 'Only with `resolver: "agent"`; answer via POST /agent/prompts/{id}/outcome.' },
     'prompt.confirmed': { audience: 'agent', payload: obj({ promptId: str(), deviceId: str(), selectionId: str(), choiceId: str(), input: any(), outcome: ref('Outcome'), execution: any() }) },
@@ -332,10 +332,10 @@ function paths() {
     '/': { get: { tags: ['Discovery'], summary: 'Discovery (no auth)', operationId: 'discover', security: [], responses: { 200: json(ref('Discovery')), 404: E[404] } } },
     '/openapi.json': { get: { tags: ['Discovery'], summary: 'This document (no auth)', operationId: 'openapi', security: [], responses: { 200: { description: 'OpenAPI 3.1 document', content: { 'application/json': { schema: obj({}, { additionalProperties: true }) } } }, 404: E[404] } } },
     '/capabilities': { get: { tags: ['Discovery'], summary: 'Capability discovery — the first call after authentication', operationId: 'getCapabilities', responses: { 200: json(ref('Capabilities')), ...std(401) } } },
-    '/settings/effective': { get: { tags: ['Discovery'], summary: 'This device\'s settings: its own layer over the person\'s and the hive\'s', operationId: 'getEffectiveSettings', description: 'For the keys a device keeps (settings-schema.js: home device, on screen — theme, tabs, sidebar…). `from` says which layer each value came from: device, person or hive. Any token; it answers for the device that asks.', responses: { 200: json(obj({ deviceId: str(), settings: obj({}), from: obj({}) })), ...std(401) } } },
+    '/settings/effective': { get: { tags: ['Discovery'], summary: 'This device\'s settings: its own layer over the person\'s and the hive\'s', operationId: 'getEffectiveSettings', description: 'For the keys a device keeps (settings-schema.js: home device, on screen — theme, tabs, sidebar…). `from` says which layer each value came from: device, person or hive. Any token; it answers for the device that asks. The look those settings draw, resolved to colours and fonts, is `GET /settings/look`.', responses: { 200: json(obj({ deviceId: str(), settings: obj({}), from: obj({}) })), ...std(401) } } },
     '/devices/pair/complete': { post: { tags: ['Devices'], summary: 'Finish pairing with a six-digit code → token (no auth)', operationId: 'completePairing', security: [],
       requestBody: body(obj({ code: str({ examples: ['641-598'] }), name: str(), caps: ref('Caps') }, { required: ['code'] })),
-      responses: { 201: json(obj({ token: str(), device: ref('Device'), capabilitiesUrl: str(), protocol: str() })), ...std(400) } } },
+      responses: { 201: json(obj({ token: str(), device: ref('Device'), approval: ref('DeviceApproval'), capabilitiesUrl: str(), protocol: str() })), ...std(400) } } },
     '/devices/pair/start': { post: { tags: ['Devices'], summary: 'Start pairing a new device', operationId: 'startPairing', ...scopeDoc('devices:admin'),
       requestBody: body(obj({ name: str(), preset: str({ enum: Object.keys(PRESETS), default: 'watch' }), scopes: arr(ref('Scope')), expiresAt: iso(), kind: str({ enum: ['device', 'agent'] }) })),
       responses: { 201: json(obj({ code: str(), expiresAt: iso(), scopes: arr(ref('Scope')), name: str(), completeUrl: str(), qr: str({ description: '`doca://pair?code=…&host=…`' }) })), ...std(400, 401, 403) } } },
@@ -348,7 +348,7 @@ function paths() {
     },
     '/devices/{id}': {
       parameters: [deviceIdParam],
-      get: { tags: ['Devices'], summary: 'Device record', operationId: 'getDevice', ...scopeDoc('self | devices:admin | agent'), responses: { 200: json(obj({ device: ref('Device'), online: bool(), pending: int() })), ...std(401, 403, 404) } },
+      get: { tags: ['Devices'], summary: 'Device record', operationId: 'getDevice', ...scopeDoc('self | devices:admin | agent'), description: 'With `me` (or its own id) also while the device waits for approval, which `approval` says.', responses: { 200: json(obj({ device: ref('Device'), online: bool(), pending: int({ description: 'Events waiting in its outbox.' }), approval: ref('DeviceApproval') })), ...std(401, 403, 404) } },
       patch: { tags: ['Devices'], summary: 'Update own name/caps (admin: also scopes, expiry)', operationId: 'patchDevice', ...scopeDoc('self | devices:admin'),
         requestBody: body(obj({ name: str(), caps: ref('Caps'), scopes: arr(ref('Scope')), expiresAt: nullable(iso()) })), responses: { 200: json(obj({ device: ref('Device') })), ...std(400, 401, 403, 404) } },
       delete: { tags: ['Devices'], summary: 'Revoke a device (token dies, streams close, outbox and profile deleted)', operationId: 'revokeDevice', ...scopeDoc('devices:admin'),
@@ -555,7 +555,7 @@ function build() {
       { name: 'Agent', description: 'Agent-facing API (scope `agent`): raise prompts and alerts, resolve selections, request sensors, ship artifacts.' },
     ],
     security: [{ bearerToken: [] }],
-    paths: { ...paths(), ...require('../devices-control').openapi({ obj, str, bool, arr, body, json, std }), ...require('./usage-route').openapi({ obj, str, int, arr, json, std }), ...require('../device-console').openapi({ obj, str, int, arr, bool, body, json, std }), ...require('./parity').openapi({ obj, str, bool, arr, body, json, std }), ...require('../sealed/routes').openapi({ obj, str, json, std }) },   // device.control acks, grants
+    paths: { ...paths(), ...require('../devices-control').openapi({ obj, str, bool, arr, body, json, std }), ...require('./usage-route').openapi({ obj, str, int, arr, json, std }), ...require('../device-console').openapi({ obj, str, int, arr, bool, body, json, std }), ...require('./parity').openapi({ obj, str, bool, arr, body, json, std }), ...require('../sealed/routes').openapi({ obj, str, json, std }), ...require('../look/routes').openapi({ obj, str, json, std }), ...require('../devices-approval/openapi').paths({ obj, str, arr, json, std }) },   // device.control acks, grants
     components: {
       securitySchemes: {
         bearerToken: { type: 'http', scheme: 'bearer', description: '`Authorization: Bearer doca_<deviceId>.<secret>`. `GET /events` additionally accepts `?access_token=` for EventSource clients.' },

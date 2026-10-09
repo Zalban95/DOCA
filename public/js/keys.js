@@ -4,7 +4,7 @@
 
 async function loadKeys() {
   devicesLoad();        // this server's /api/v1 device tokens
-  keysLoadProviders();  // third-party LLM providers
+  if (!(typeof _settingsNoHost !== 'undefined' && _settingsNoHost)) keysLoadProviders();  // third-party LLM providers: the machine's keys
   clientAppsRender();   // DOCA's Android apps: the newest builds, built here (settings/client-apps.js)
 }
 
@@ -30,7 +30,8 @@ async function keysLoadProviders() {
   }
 }
 
-/** A local server needs no key, so it is "ready", not "NO KEY". */
+/** A local server needs no key, so it is "ready", not "NO KEY". Its address is typed or picked from the model servers
+ *  and services on this machine (lib/choice-input.js, GET /api/services/choices). */
 function _providerCardHtml(name, p) {
   const ready = p.hasKey || p.local;
   const badge = p.hasKey ? 'KEY SET' : p.local ? 'LOCAL' : 'NO KEY';
@@ -41,9 +42,10 @@ function _providerCardHtml(name, p) {
         <span class="provider-badge ${ready ? 'ok' : 'no'}">${badge}</span>
       </div>
       ${p.models?.length ? `<div class="provider-models">Models: ${escHtml(p.models.slice(0,4).join(', '))}${p.models.length>4?' …':''}</div>` : ''}
+      ${p.pace ? `<div class="provider-models" title="Its own first-token wait and reply limit, used when larger than the harness's settings">Pace: ${escHtml(p.pace)}</div>` : ''}
       <div class="provider-key-row">
-        <input class="input" id="url-${escHtml(name)}" value="${escHtml(p.baseUrl || '')}"
-               placeholder="https://…/v1" title="Base URL">
+        ${choiceInput({ id: `url-${name}`, value: p.baseUrl || '', placeholder: 'https://…/v1', attrs: 'title="Base URL"', source: 'this machine',
+          load: () => apiFetch(`/api/services/choices?what=provider-url&provider=${encodeURIComponent(name)}`) })}
         <input class="input" type="password" id="key-${escHtml(name)}"
                placeholder="${escHtml(p.apiKeyMasked || (p.local ? 'no key needed' : 'Enter API key…'))}">
         <button class="btn btn-sm btn-green" onclick="saveKey(${jsArg(name)})">Save</button>
@@ -128,8 +130,8 @@ async function addProvider() {
   const status  = document.getElementById('np-status');
   if (!name || !baseUrl) { setStatus(status, 'Name and URL required', 'err'); return; }
   try {
-    await apiFetch('/api/keys/add-provider', { method: 'POST', body: { name, baseUrl, apiKey } });
-    setStatus(status, `✓ Added ${name}`, 'ok');
+    const r = await apiFetch('/api/keys/add-provider', { method: 'POST', body: { name, baseUrl, apiKey } });
+    setStatus(status, `✓ Added ${name}${r.paceText ? ` — it ${r.paceText}` : ''}`, 'ok', r.paceText ? { clear: 0 } : undefined);
     hideAddProvider();
     setTimeout(keysLoadProviders, 500);
   } catch (e) {

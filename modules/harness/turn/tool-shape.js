@@ -9,6 +9,9 @@
 /** Off for everyone while a switch is off. */
 function switches() {
   const out = [];
+  // Not in this hive's licence: absent, like a tool that was never built here (license/gate.js toolOn).
+  const gate = require('../../license/gate');
+  for (const t of require('../tools').TOOLS) if (!gate.toolOn(t.name)) out.push({ name: t.name, why: 'not in this hive\'s licence (Settings → System → Licence)' });
   if (!require('../../agents/registry').enabled())
     for (const name of ['agent_dispatch', 'agent_results', 'agent_resume', 'permission_grant'])
       out.push({ name, why: 'specialists are switched off (Settings → Harness)' });
@@ -16,6 +19,7 @@ function switches() {
   if (!require('../../system-one').on()) out.push({ name: 'computer_next', why: 'the System 1 model experiment is off' });
   if (!require('../../vnc-targets').any())
     for (const name of ['vnc_look', 'vnc_input']) out.push({ name, why: 'no VNC screen is added (Machines → VNC)' });
+  if (!require('../../api-services/store').list().length) out.push({ name: 'service', why: 'no API service is set up (Field → Connectors → API services)' });
   if (!require('../../scout').on()) out.push({ name: 'model_scout', why: 'the model scout experiment is off' });
   if (!require('../../library/indexer').on()) out.push({ name: 'library_search', why: 'the Library experiment is off, or no embedding model is set for it' });
   if (!require('../../experiments').on('toolTiers')) out.push({ name: 'tools_more', why: 'the tool tiers experiment is off' });

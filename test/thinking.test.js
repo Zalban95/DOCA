@@ -26,6 +26,8 @@ before(async () => {
       bodies.push(body);
       // A strict server: OpenAI's newer models say "none", not "minimal"; a chat template raises on a word it lacks.
       if (body.model === 'strict-none' && body.reasoning_effort === 'minimal') { res.writeHead(400); return res.end('{"error":{"message":"reasoning_effort: unsupported value minimal; use one of none, low, medium, high"}}'); }
+      // Qwen's template on llama.cpp (deep test A, b2): any word but xhigh, medium and low is a 500.
+      if (body.model === 'qwen-jinja' && body.reasoning_effort && !['xhigh', 'medium', 'low'].includes(body.reasoning_effort)) { res.writeHead(500); return res.end(`{"error":{"code":500,"message":"Jinja Exception: Unexpected reasoning effort ${body.reasoning_effort}. Supported types are xhigh (default), medium, and low."}}`); }
       if (body.model === 'jinja' && body.reasoning_effort === 'minimal') { res.writeHead(500); return res.end('{"error":{"code":500,"message":"Jinja Exception: Unexpected reasoning effort minimal"}}'); }
       return sse('Done.')(res);
     });
@@ -169,6 +171,30 @@ test('a refused word for off is asked once more with the other one, and remember
   assert.equal(j.status, 200);
   assert.deepEqual(bodies.map(b => b.reasoning_effort), ['minimal', 'none']);
   assert.equal(contracts.forProvider('jinja-box', 'jinja').effortOff, 'none');
+});
+
+test('"think harder" on a template that refuses high: the turn answers, and the conversation keeps working (deep test A #28)', async () => {
+  const catalog = require('../modules/harness/catalog');
+  catalog.saveConfig('doca', { provider: 'tstub', model: 'qwen-jinja', fallbackChain: [], summarizeAfter: 0, maxSteps: 2 });
+  const memory = require('../modules/harness/memory');
+  const s = memory.createSession('think harder', { activate: false, kind: 'chat' });
+  // What the `effort` tool did when the person asked to think harder: kept on the conversation.
+  memory.updateSession(s.id, { effort: 'high', effortBy: 'agent' });
+  bodies.length = 0;
+  const first = await H.api(null, 'POST', '/api/harness/chat', { message: 'How many weekdays in Q1 2026?', sessionId: s.id });
+  assert.equal(first.status, 200);
+  assert.match(typeof first.body === 'string' ? first.body : JSON.stringify(first.body), /Done\./, 'the refused effort is asked once more without it, and answered');
+  assert.deepEqual(bodies.filter(b => b.model === 'qwen-jinja').map(b => b.reasoning_effort ?? null).slice(0, 2), ['high', null]);
+  assert.equal(require('../modules/harness/contracts').forProvider('tstub', 'qwen-jinja').effortField, 'none', 'and remembered');
+  // The conversation still says high, and is no longer dead: the next turn sends nothing the template refuses.
+  bodies.length = 0;
+  const second = await H.api(null, 'POST', '/api/harness/chat', { message: 'And Q2?', sessionId: s.id });
+  assert.equal(second.status, 200);
+  const sent = bodies.filter(b => b.model === 'qwen-jinja');
+  assert.ok(sent.length >= 1 && sent.every(b => b.reasoning_effort === undefined), JSON.stringify(sent.map(b => b.reasoning_effort)));
+  assert.equal(memory.getSession(s.id).effort, 'high');
+  assert.ok(require('../modules/harness/runs').forSession(s.id).every(r => r.state === 'done'), 'no failed turn');
+  catalog.saveConfig('doca', { provider: 'tstub', model: 'm', fallbackChain: [], summarizeAfter: 0, maxSteps: 2 });
 });
 
 test('the card reads each mode and each provider\'s dialect', async () => {

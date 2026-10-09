@@ -1,6 +1,7 @@
 ---
 name: first-steps
 description: Answer someone new — "what can you do", "how does this work", "I just installed this", "help", "can you do X?" — in plain words, with a few things that work here and an invitation, and say plainly what it cannot do yet. Use when the person seems new to DOCA or asks what it can do for them.
+triggers: [what can you do, how does this work, just installed, cosa sai fare, come funziona]
 ---
 
 # First steps for someone new

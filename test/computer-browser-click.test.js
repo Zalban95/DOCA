@@ -74,3 +74,21 @@ test('after the page changes, a number means what the new snapshot says it means
   assert.match(moved.said, /landed on a body, not on \[\d+\]/);
   cdp.ws.close();
 });
+
+test('a fold\'s summary is offered and opens it; what a closed fold holds is not offered (deep test A, #4)', { skip: !browser && 'no Chromium here' }, async () => {
+  const FOLD = `<!doctype html><title>fold</title><body style="margin:40px"><button>Save</button>
+    <details class="adv-fold"><summary>Advanced</summary><input placeholder="Its address">
+      <details><summary>More</summary><input placeholder="Deeper"></details></details></body>`;
+  await run('browser_open', { url: `data:text/html,${encodeURIComponent(FOLD)}` });
+  const closed = (await run('browser_snapshot')).said;
+  assert.match(closed, /\[\d+\] summary "Advanced" \(closed fold: click to open\)/);
+  assert.doesNotMatch(closed, /input:text "Its address"/, 'a field in a closed fold is not offered');
+  assert.doesNotMatch(closed, /summary "More"/, 'nor a fold inside it');
+  const r = await run('browser_click', { ref: refOf(closed, 'Advanced') });
+  assert.ok(!r.isError, r.said);
+  const open = (await run('browser_snapshot')).said;
+  assert.match(open, /summary "Advanced" \(open fold\)/);
+  assert.match(open, /input:text "Its address"/);
+  assert.match(open, /summary "More" \(closed fold: click to open\)/);
+  assert.doesNotMatch(open, /"Deeper"/);
+});

@@ -3,13 +3,14 @@
 /**
  * A voice per kind of call (asked 2026-10-08: "keep the expressive model for the ambient and the quick calls on the
  * watch, and the dots-themed call. That is the quick one, inside of the one that starts from the chat. That is the
- * Deep one."). Two kinds:
+ * Deep one."). Three kinds:
  *
- *   quick — the face's call (assistant mode: the corner face, the wake word), Ambient's call, and a device's call
- *           (`/api/v1/call`: the watch's, a phone's);
- *   deep  — the 🎙 call started from the chat.
+ *   quick   — the Live call: the face's (assistant mode: the corner face, the wake word) and a device's call
+ *             (`/api/v1/call`: the watch's, a phone's);
+ *   deep    — the 🎙 call started from the chat;
+ *   ambient — Ambient's assistant (a call started on the Ambient page), `voice.ambient`, else the quick voice.
  *
- * Each is a slot of the screen-home setting `voice` — `voice.quick`, `voice.deep`: `{service, voice, speed}`, where
+ * Each is a slot of the screen-home setting `voice` — `voice.quick`, `voice.deep`, `voice.ambient`: `{service, voice, speed}`, where
  * `service` is '' or 'hive' (the hive's speech service, Settings → Voice) or a speech service of the Services tab
  * (tts-engines.js: the expressive voice) — found on the screen's own layer, then its person's, then the hive's
  * (prefs). A kind with no slot anywhere is today's voice: the screen's own (`voice.engine`, `ttsVoice`, `ttsSpeed`),
@@ -17,7 +18,10 @@
  *
  * Whether the agent is told of tone tags follows the voice that will speak (tags: the engine's own way, voice-tags.js).
  */
-const KINDS = ['quick', 'deep'];
+const KINDS = ['quick', 'deep', 'ambient'];
+// Ambient's assistant speaks as the Live call until it is given a voice of its own (asked 2026-10-08: "Ambient's
+// assistant maps to the Live call's quick voice by default"): its own slot on any layer first, then the Live call's.
+const FALLS_TO = { ambient: 'quick' };
 
 /** The kind of a call the panel or a device names: the face's (assistant) is quick, the chat's (call) is deep. */
 function kindOf(mode) {
@@ -41,7 +45,7 @@ function layers(deviceId, userId) {
 
 /**
  * The voice for one kind of call on one screen: `{engine, voice, speed, tags, kind, from}`. `from` names where it came
- * from — `device`, `person` or `hive` for a kind's own slot, `screen` for the screen's ordinary voice (today's).
+ * from — `device`, `person` or `hive` for a kind's own slot (or the slot it falls back to: Ambient's is the Live call's), `screen` for the screen's ordinary voice (today's).
  * No kind (a spoken voice message, not a call) is the screen's ordinary voice.
  */
 function pick(kind, { deviceId = null, userId = null, mine = null } = {}) {
@@ -49,8 +53,8 @@ function pick(kind, { deviceId = null, userId = null, mine = null } = {}) {
   let screen = mine;
   if (!screen) { try { screen = deviceId && userId ? require('./screens').effective(deviceId, userId).settings.voice || {} : {}; } catch { screen = {}; } }
   let slot = null, from = 'screen';
-  if (KINDS.includes(kind)) {
-    for (const [at, v] of layers(deviceId, userId)) if (said(v?.[kind])) { slot = v[kind]; from = at; break; }
+  for (let k = KINDS.includes(kind) ? kind : null; k && !slot; k = FALLS_TO[k]) {
+    for (const [at, v] of layers(deviceId, userId)) if (said(v?.[k])) { slot = v[k]; from = at; break; }
   }
   if (!slot) {
     const engine = engines.forVoice(screen);
@@ -80,4 +84,4 @@ function forDevice(deviceId, kind = 'quick') {
   return pick(kind, { deviceId: d?.id || null, userId: d?.userId || null });
 }
 
-module.exports = { KINDS, kindOf, pick, forRequest, forDevice, layers };
+module.exports = { KINDS, FALLS_TO, kindOf, pick, forRequest, forDevice, layers };

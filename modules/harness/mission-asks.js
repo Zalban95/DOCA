@@ -87,6 +87,9 @@ async function ask(gate, use, { sessionId, missionId, profile, signal, say = () 
     summary: `The mission ${missionId || ''} (${who}) asks to ${use.what} on ${use.machine}. Allow it this once? A machine is asked each time it is used.` };
   const sec = module.exports.waitSec(), hold = module.exports.onTimeout() === 'hold';
   if (hold) Object.assign(req, { held: true, summary: `${req.summary} The mission waits, paused, until you answer.` });   // nobody answering is not a no
+  // What the card shows (approval-explain.js), beside the fields a decision reads: the specialist's words, what it does.
+  for (const k of ['why', 'whyFrom', 'does', 'way', 'detail']) if (gate[k]) req[k] = gate[k];
+  if (req.does) req.asked = req.summary;
   const { id, answer } = approval.ask(req, { sessionId, signal, timeoutMs: hold ? null : sec * 1000 });
   say({ type: 'approval', step, state: 'asked', id, ...req });
   live.changed('ask', id, 'asked', { personId, req: { id, ...req } });   // the popup on the person's open pages
@@ -95,7 +98,7 @@ async function ask(gate, use, { sessionId, missionId, profile, signal, say = () 
 
   const ctrl = new AbortController();
   const mine = devicesOf(personId);
-  if (mine.length) require('./reach').ask({ to: mine.map(d => d.id), question: `Allow ${who} to use ${use.machine}?`, note: req.summary,
+  if (mine.length) require('./reach').ask({ to: mine.map(d => d.id), question: `Allow ${who} to use ${use.machine}?`, note: require('./approval-explain').noteFor(req),
     choices: [{ id: 'approve', label: 'Allow once' }, { id: 'deny', label: 'Deny' }], timeoutSec: sec, signal: ctrl.signal })
     .then(r => {
       const d = r?.status === 'answered' && mine.find(x => x.id === r.device?.id);   // one of theirs answered (not a card at a panel)

@@ -15,3 +15,12 @@ test('read_file outside the roots names the rule, says no setting widens it, and
   assert.match(out, /no setting widens them/);
   assert.match(out, /Do not reach it another way \(shell, a script, a copy\) on your own: tell the person where it is and ask/);
 });
+
+test('write_file outside the roots says the same: the rule, whose it is, and not to write it with the shell instead (deep test A, #33)', async () => {
+  const outside = process.platform === 'win32' ? `${process.env.SystemRoot || 'C:\\Windows'}\\doca-test.txt` : '/etc/doca-test.txt';
+  const out = await require('../modules/harness/tools').call('write_file', { path: outside, content: 'x' }, [], {});
+  assert.match(out, /Path is outside the allowed roots/);
+  assert.match(out, /a rule of DOCA's own, which no setting widens; only the person decides an exception/);
+  assert.match(out, /Do not write it another way \(shell, a script, a copy or a move\) on your own, even where the person named the place/);
+  assert.ok(!require('node:fs').existsSync(outside));
+});

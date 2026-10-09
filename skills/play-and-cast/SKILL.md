@@ -1,6 +1,7 @@
 ---
 name: play-and-cast
 description: Play a video, music or a program on a screen, or cast it to a TV or speaker — by the quickest route that already works in this home (Home Assistant's media players, the device's own app, the hub). Use when the person asks to watch, listen, put something on the TV, stream or cast, especially from a call or the ambient screen.
+triggers: [play, cast, on the tv, chromecast, riproduci, sulla tv, metti su]
 ---
 
 # Playing and casting

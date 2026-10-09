@@ -46,7 +46,7 @@ test('settings_read shows the turn\'s screen\'s own settings, and a proposal for
 
 test('only the keys a screen may be proposed, and never someone else\'s screen or a secret', async () => {
   const propose = (changes, screen, user = owner()) => tools.call('settings_propose', { reason: 'r', screen, changes }, [], { screen: phone.device.id, user });
-  assert.match(await propose([{ path: 'theme', value: 'dark' }], 'this'), /not something the agent may propose for a screen \(it may: voice, call, ambient, face, panel\)/);
+  assert.match(await propose([{ path: 'skin', value: 'modern' }], 'this'), /not something the agent may propose for a screen \(it may: theme, voice, call, ambient, face, panel\)/);
   assert.match(await propose([{ path: 'voice.apiKey', value: 'x' }], 'this'), /holds a secret/);
   assert.match(await propose([{ path: 'call.silenceMs', value: 'long' }], 'this'), /is a number, not a string/);
   const memberPerson = { ...member.user, role: 'member' };

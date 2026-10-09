@@ -105,6 +105,7 @@ const HUB_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR,
 // Logins the agents' computers sign in with (modules/logins.js): passwords the agent never sees.
 const LOGIN_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'logins.json');
 const SERVICE_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'services.json');   // keys for services (service-keys.js)
+const API_SERVICES_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'api-services.json');   // what each service does (api-services/): beside its key, in the protected keys folder
 const HF_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'huggingface.json');   // the Hugging Face token (hf-token.js)
 const VNC_KEYS_FILE = path.join(process.env.DOCA_DATA_DIR || path.join(HOME_DIR, '.doca'), 'keys', 'vnc.json');   // VNC targets and their passwords (vnc-targets/)
 // The key DOCA's own Android apps are signed with when the hub builds them (modules/client-apps): an update installs only
@@ -167,7 +168,8 @@ function defaultRoots(platform = process.platform) {
   roots.push(require('os').tmpdir());
   return [...new Set(roots)];
 }
-const FM_ALLOWED_ROOTS = defaultRoots();
+// A hosted hive (hosted.js): the workspace only, never the code's folder or the machine's disks.
+const FM_ALLOWED_ROOTS = require('./hosted').on() ? require('./hosted').roots() : defaultRoots();
 
 const VALUES = {
   COMPOSE_DIR, CONFIG_PATH, SKILLS_DIR, WORKSPACE_DIR,
@@ -243,7 +245,7 @@ module.exports = {
   HOME_DIR,
   BACKUP_DIR,
   BACKUP_PASSWORD_FILE,
-  PROTECTED_FILES, PROTECTED_DIRS, CONNECTOR_KEYS_FILE, HUB_KEYS_FILE, LOGIN_KEYS_FILE, SERVICE_KEYS_FILE, HF_KEYS_FILE, VNC_KEYS_FILE, ANDROID_SIGNING_STORE, ANDROID_SIGNING_FILE,
+  PROTECTED_FILES, PROTECTED_DIRS, CONNECTOR_KEYS_FILE, HUB_KEYS_FILE, LOGIN_KEYS_FILE, SERVICE_KEYS_FILE, API_SERVICES_FILE, HF_KEYS_FILE, VNC_KEYS_FILE, ANDROID_SIGNING_STORE, ANDROID_SIGNING_FILE,
   PROVIDER_KEYS_FILE,
   SEARCH_KEYS_FILE,
   ALLOWED_SCRIPTS,

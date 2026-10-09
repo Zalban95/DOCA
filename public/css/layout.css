@@ -164,6 +164,10 @@ header {
   margin-left: auto;
   max-width: 160px;
 }
+/* A setting opened from the search: outlined for a moment where it is edited (global-search.js settingJump) — above a
+   field's own `outline: none`, hence the longer selector. */
+html body .setting-found { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; animation: setting-found 2.6s ease-out; }
+@keyframes setting-found { 0%, 60% { outline-color: var(--accent); } 100% { outline-color: transparent; } }
 .header-search-empty {
   padding: 12px 10px;
   text-align: center;

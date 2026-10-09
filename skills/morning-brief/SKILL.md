@@ -1,6 +1,7 @@
 ---
 name: morning-brief
 description: Brief the person on their day — weather, calendar, what is waiting for them, what the agents did overnight. Use when they say good morning, ask "what's my day", or ask for a brief or a summary of today.
+triggers: [good morning, "what's my day", brief me, buongiorno, la mia giornata]
 ---
 
 # A morning brief

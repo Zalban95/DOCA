@@ -60,17 +60,29 @@ const named = path => {
 };
 const short = (v, n = 60) => { const s = typeof v === 'string' ? v : JSON.stringify(v); return s.length > n ? `${s.slice(0, n)}…` : s; };
 
+/** "deletes 3 paths (a, b, c)" → "delete 3 paths": what the line does (approval-does.js), said briefly as a question. */
+const imperative = p => p.replace(/\s*\([^)]*\)/g, '').replace(/^(\w+?)(ies|(sh|ch|x|ss)es|s)\b/, (m, w, end, es) => (end === 'ies' ? `${w}y` : es ? `${w}${es}` : w));
+function shellSaid(command) {
+  if (require('./approval').verbsOf(command) === null) return 'run a command that builds part of itself as it runs';
+  const R = require('./risk/rules');
+  const segs = require('./risk/classify').segments(command);
+  if (!segs.length) return 'run a command';
+  const acts = segs.filter(x => !R.READ_VERBS.has(x.verb) && !R.READ_IF[x.verb]?.(x.text));
+  return `${short(imperative(require('./approval-does').segment(acts[0] || segs[0])), 70)}${acts.length > 1 ? ', and more' : ''}`;
+}
+
 function sentence(name, args = {}) {
   args = args && typeof args === 'object' ? args : {};
   let q;
   if (name === 'settings_propose' && Array.isArray(args.changes) && args.changes.length) {
     const c = args.changes[0];
     q = `Shall I set ${named(c.path)} to ${short(c.value)}${args.changes.length > 1 ? `, and ${args.changes.length - 1} more` : ''}?`;
-  } else if (name === 'shell') q = `Shall I run ${short(String(args.command || '').split(/\s+/).slice(0, 4).join(' '), 50)}?`;
+  } else if (name === 'shell') q = `Shall I ${shellSaid(String(args.command || ''))}?`;
   else if (name === 'api_call' || name === 'http_fetch') {
     let host = ''; try { host = new URL(String(args.url)).host; } catch { /* no address */ }
     q = `Shall I send a ${String(args.method || 'GET').toUpperCase()} request${host ? ` to ${host}` : ''}?`;
-  } else if (name === 'write_file') q = `Shall I write ${String(args.path || 'a file').split(/[\\/]/).pop()}?`;
+  } else if (name === 'service') q = `Shall I use ${String(args.service || 'the service')}${args.operation ? ` to ${String(args.operation).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' ').toLowerCase()}` : ''}?`;
+  else if (name === 'write_file') q = `Shall I write ${String(args.path || 'a file').split(/[\\/]/).pop()}?`;
   else q = `Shall I use ${String(name).split('__').pop().replace(/_/g, ' ')}?`;
   return `${q} Say yes or no.`;
 }

@@ -1,6 +1,7 @@
 ---
 name: write-a-skill
 description: Write or revise a skill (a procedure kept for next time) — use when you worked out how to do a kind of task and it will come back, or when asked to turn a conversation into a skill.
+triggers: [write a skill, make a skill, turn this into a skill, scrivi una skill]
 ---
 
 # Writing a skill

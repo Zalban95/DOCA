@@ -115,6 +115,7 @@ function view(row) {
     // What a chat tab draws (tab-routes.js): how it works, whether it asks, and what is waiting for it.
     mode: require('./modes').of(s.id), approval: s.approval || null, projectId: s.projectId || null,
     thinking: s.effort || null, thinkingBy: s.effortBy || null,   // the composer's 💭 (turn/thinking.js)
+    skills: s.skills || null, compact: s.compact || null, skillAuto: s.skillAuto ?? null,   // this chat's own skills and compaction (skill-use.js, turn/compact-choice.js)
     waiting: require('./inbox').waiting(s.id).length };
 }
 
@@ -160,13 +161,20 @@ function canManage(actor, target) {
     (leads(s.kind) && ancestors(target).includes(actor));
 }
 
-function create({ title, planning = false, kind = 'work' } = {}) {
+/**
+ * A new conversation. `mode` starts it in a conversation mode (modes.js) — the Harness's "＋ Plan" opens a work chat in
+ * Plan mode (deep test A, 2026-10-08): it plans, the person approves, and Approve switches it to Agent and carries the
+ * plan out in the same chat, as a Projects tab in Plan mode does. `planning` is the older note-only planning work chat
+ * the Orchestrator may still ask for (work_chats create {planning}), whose plan was meant for another chat.
+ */
+function create({ title, planning = false, kind = 'work', mode = null } = {}) {
   const chat = kind === 'chat' && !planning;
-  const s = memory.createSession(short(title, 100) || (chat ? 'New conversation' : planning ? 'Planning work' : 'Work chat'), {
+  const s = memory.createSession(short(title, 100) || (chat ? 'New conversation' : planning || mode === 'plan' ? 'Planning work' : 'Work chat'), {
     activate: false, kind: chat ? 'chat' : 'work', parentId: memory.mainSession().id,
   });
   memory.updateSession(s.id, { planning: !!planning, titleLocked: !!title });
-  report(s.id, 'created', chat ? 'Conversation started' : planning ? 'Planning work chat created' : 'Work chat created');
+  if (mode && mode !== 'agent') require('./modes').set(s.id, mode);
+  report(s.id, 'created', chat ? 'Conversation started' : planning ? 'Planning work chat created' : mode === 'plan' ? 'Work chat created in Plan mode' : 'Work chat created');
   return session(s.id);
 }
 
@@ -209,6 +217,24 @@ function carryOut(id, plan, client) {
   if (r.queued) return { started: false, queued: true, reason: 'That conversation is busy with a turn; it reads the approval before its next step.' };
   r.catch(() => { /* the runner records failure and reports it upward */ });
   return { started: true };
+}
+
+/**
+ * Rejecting a plan is said in the conversation (deep test A, 2026-10-08: a rejection ended in silence — no turn, the
+ * plan document still "waiting for your decision"). The conversation is told, as the person who clicked, and answers
+ * in one line; a work chat's job stops there, so nothing carries on with a plan the person turned down — the
+ * Orchestrator asks once whether to restart or drop it (stopped-work.js).
+ */
+function setAside(id, plan, client, note = '') {
+  const s = session(id);
+  if (s.kind === 'work' && s.job && !FINAL.includes(s.job.state))
+    memory.updateSession(id, { job: { ...s.job, state: 'stopped', stoppedWhy: 'its plan was rejected' } });
+  const r = require('./agent').send({ sessionId: id, client, message: `Plan rejected — revision ${plan.revision} of "${short(plan.title, 200)}"`
+    + `${note ? `: ${short(note, 500)}` : ''}. Do not carry it out. Answer in one line: say it is set aside, and ask what to change if they `
+    + 'want another revision. (Sent by the panel when I clicked Reject.)' });
+  if (r.queued) return { told: false, queued: true };
+  r.catch(() => { /* the runner records failure */ });
+  return { told: true };
 }
 
 function archive(id, on = true) {
@@ -350,5 +376,5 @@ async function tool(args, ctx) {
   throw error('Unknown work_chats action.', 400);
 }
 
-module.exports = { FINAL, leads, session, ancestors, report, notices, acknowledge, view, list, create, start, carryOut,
+module.exports = { FINAL, leads, session, ancestors, report, notices, acknowledge, view, list, create, start, carryOut, setAside,
   archive, plan, profileFor, block, tool, canManage };

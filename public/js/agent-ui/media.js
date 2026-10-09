@@ -216,7 +216,7 @@ function _agentDocActions(media) {
       try {
         const r = await apiFetch(`/api/harness/sessions/${encodeURIComponent(media.plan.sessionId)}/plan`,
           { method: 'POST', body: { action, revision: media.plan.revision } });
-        note.textContent = action !== 'approve' ? 'Rejected. Say why in the chat, so the next revision fixes it.'
+        note.textContent = action !== 'approve' ? 'Plan rejected — the chat is told. Say why there, so a next revision fixes it.'
           : r.started?.started ? 'Approved — the agent has started on it.' : `Approved. ${r.started?.reason || ''}`;
         bar.querySelectorAll('.btn-green, .agent-doc-reject').forEach(b => b.remove());
       } catch (e) {

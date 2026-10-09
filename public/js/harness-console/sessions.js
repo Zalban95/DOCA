@@ -98,10 +98,11 @@ async function _hcLoadSessions(refreshOnly = false) {
   }
 }
 
+/** ＋ Work, or ＋ Plan: a work chat in Plan mode — it plans, you approve, and it carries the plan out (deep test A). */
 function hcNewSession(planning = false) {
-  appPrompt(planning ? 'Name this planning chat' : 'Name this work chat', async title => {
+  appPrompt(planning ? 'Name this chat — it plans first, and does the work once you approve the plan' : 'Name this work chat', async title => {
     try {
-      const { session } = await apiFetch('/api/harness/sessions', { method: 'POST', body: { title, planning, kind: 'work' } });
+      const { session } = await apiFetch('/api/harness/sessions', { method: 'POST', body: { title, kind: 'work', ...(planning ? { mode: 'plan' } : {}) } });
       _hcSession = session.id;
       await _hcLoadSessions();
     } catch (e) { appAlert(e.message); }

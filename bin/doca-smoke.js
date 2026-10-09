@@ -9,6 +9,8 @@
  * protocol with Node's own WebSocket.
  *
  *   npm run smoke            CHROME=/path/to/chrome npm run smoke
+ *   SMOKE_URL=https://127.0.0.1:4310 SMOKE_COOKIE='doca_session=…' npm run smoke   a panel already running (a hive)
+ *   npm run smoke -- --core  the same with no licence: only the core is there, and nothing may call what is not
  *
  * The panel runs in a child process (`--serve`) that is killed at the end: node-pty's reader thread keeps a
  * process alive after its shell is gone and aborts it on exit(), so the process that reports the result never
@@ -24,14 +26,17 @@ const { findBrowser, devtools, connect, sleep, ALONE } = require('../modules/hea
 async function main() {
   const browserPath = findBrowser();
   if (!browserPath) { console.log('smoke: no Chrome, Edge or Chromium found — set CHROME to run it. Skipped.'); return 0; }
-  const child = spawn(process.execPath, [__filename, '--serve'], { stdio: ['ignore', 'pipe', 'inherit'] });
-  const { base, cookie, data } = await new Promise((resolve, reject) => {
+  const core = process.argv.includes('--core');   // no licence (test/licence-trust.js preloads one for everything otherwise)
+  // A panel already running (deploy/hive.sh's, say): visited as it is, with the given sign-in, nothing started or removed.
+  const given = process.env.SMOKE_URL ? { base: process.env.SMOKE_URL.replace(/\/$/, ''), cookie: process.env.SMOKE_COOKIE || '' } : null;
+  const child = given ? null : spawn(process.execPath, [__filename, '--serve'], { stdio: ['ignore', 'pipe', 'inherit'], env: { ...process.env, ...(core ? { DOCA_TEST_NO_LICENCE: '1' } : {}) } });
+  const { base, cookie, data } = given || await new Promise((resolve, reject) => {
     let buf = '';
     child.stdout.on('data', d => { buf += d; const line = buf.split('\n').find(l => l.startsWith('{')); if (line) resolve(JSON.parse(line)); });
     child.on('exit', code => reject(new Error(`the panel did not start (exit ${code})`)));
   });
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-smoke-'));
-  const proc = spawn(browserPath, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...ALONE,
+  const proc = spawn(browserPath, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...ALONE, ...(given ? ['--ignore-certificate-errors'] : []),
     '--disable-gpu', '--window-size=1300,900', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
   const errors = [];
   const absent = new Set(), osBusy = new Set(), retried = new Set();
@@ -61,13 +66,13 @@ async function main() {
     if (!tabs) throw new Error('The panel did not load (no NAV_TABS).');
     for (const t of JSON.parse(tabs)) { await cdp.send('Runtime.evaluate', { expression: `nav(${JSON.stringify(t)})` }); await sleep(500); }
     for (const sub of ['general', 'guided', 'channels', 'packs', 'spending', 'harness', 'system', 'experiments']) { await cdp.send('Runtime.evaluate', { expression: `nav('settings'); settingsSubNav(${JSON.stringify(sub)})` }); await sleep(500); }
-    const face = await cdp.send('Page.navigate', { url: `${base}/face` }); void face;
+    if (!core) await cdp.send('Page.navigate', { url: `${base}/face` });   // the face is the voice licence's (absent with core only)
     await sleep(1500);
     for (const url of osBusy) {   // the loads the machine itself refused (above): really there?
       const r = await fetch(url, { headers: { Cookie: cookie } }).catch(e => ({ ok: false, status: e.message }));
       if (r.ok) retried.add(new URL(url).pathname); else errors.push(`load: ${url} — ${r.status} (also when asked again)`);
     }
-    console.log(`smoke: ${process.platform}, ${path.basename(browserPath)}, ${JSON.parse(tabs).length} tabs visited, /face opened — ${errors.length} page error${errors.length === 1 ? '' : 's'}`);
+    console.log(`smoke${core ? ' (core only, no licence)' : ''}: ${process.platform}, ${path.basename(browserPath)}, ${JSON.parse(tabs).length} tabs visited${core ? '' : ', /face opened'} — ${errors.length} page error${errors.length === 1 ? '' : 's'}`);
     for (const e of errors) console.log(`  ✗ ${String(e).split('\n')[0]}`);
     if (retried.size) console.log(`  · the machine ran out of network buffers for ${[...retried].join(', ')}; asked again, each loaded`);
     if (absent.size) console.log(`  · not on this machine (answered 50x, drawn as such): ${[...absent].join(', ')}`);
@@ -75,7 +80,7 @@ async function main() {
     return errors.length ? 1 : 0;
   } finally {
     proc.kill();
-    child.kill('SIGKILL');
+    child?.kill('SIGKILL');
     await sleep(500);
     // The killed panel's throwaway data. Best effort: on Windows its database can still be locked for a moment,
     // and a folder left in the temp directory is not a reason to fail a smoke that passed.

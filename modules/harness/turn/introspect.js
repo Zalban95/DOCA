@@ -155,8 +155,9 @@ function lastPromptOf(sessionId) {
 /** How full one conversation's window is, and where it folds. Cheap: no network. */
 function contextOf(sessionId) {
   const org = require('../organization');
-  return budget.context(turnParams(sessionId ? org.profileFor(org.session(sessionId)) : null),
-    lastPromptOf(sessionId));
+  // With the chat's own model and compaction (turn/choice.js), so the ring's fold point is this chat's.
+  const p = turnParams(sessionId ? org.profileFor(org.session(sessionId)) : null);
+  return budget.context(sessionId ? require('./choice').apply(p, sessionId) : p, lastPromptOf(sessionId));
 }
 
 async function status({ sessionId } = {}) {

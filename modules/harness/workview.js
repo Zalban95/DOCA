@@ -15,21 +15,22 @@
  *   idle     → done      (its last brief as the result)
  *   failed   → failed    (its last error)
  *   cancelled→ cancelled
- *   paused   → failed    "Stopped by a panel restart" — a turn a restart cut
- *              off, which no longer runs and would otherwise stay "running" on
- *              a watch until the event expired
+ *   paused   → paused    a turn a restart cut off (PROTOCOL §11.4's `paused`):
+ *              it no longer runs, and is not failed either — a job or an
+ *              approved plan is carried on by itself (supervisor.recover), the
+ *              rest wait to be opened. It read "failed" until deep test A.
  *   a job a person stopped (2.242) or dropped (2.243) → cancelled, never
  *              "done": nothing finished, and a client raises nothing for it
  * No client update is needed: DocaWear and DocaMobile already render this shape.
  */
 const memory = require('./memory');
 
-const RESTARTED = 'Stopped by a panel restart. Open it in the Harness to continue.';
+const RESTARTED = 'Paused by a panel restart. Work it was doing carries on by itself; otherwise open it to continue.';
 const WAITING   = 'Waiting for you: restart it or drop it.';
 const DROPPED   = 'Dropped by a person.';
 
 function payloadOf(s) {
-  const map = { running: 'running', idle: 'done', failed: 'failed', cancelled: 'cancelled', paused: 'failed' };
+  const map = { running: 'running', idle: 'done', failed: 'failed', cancelled: 'cancelled', paused: 'paused' };
   const job = s.job?.state;
   const halted = s.state !== 'running' && (job === 'stopped' || job === 'dropped');
   const state = halted ? 'cancelled' : (map[s.state] || 'done');
@@ -91,7 +92,7 @@ function announce(sessionId, { quiet = false } = {}) {
 
 /**
  * After a restart: every work chat a restart cut off mid-turn is told to the
- * devices as stopped, so none of them keeps showing it as running.
+ * devices as paused, so none of them keeps showing it as running.
  */
 function recover() {
   const cut = workChats().filter(s => s.state === 'paused');

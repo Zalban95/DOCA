@@ -1,6 +1,7 @@
 ---
 name: serve-a-repository
 description: Run someone's repository so the person can see what it does — clone it, start it with its own command, and hand over the page it serves as a window, a tab of its own or Machines → Live, from any screen. Use when the person says "show me what that repo does", "run it so I can see", "try this project", or gives a GitHub/GitLab link and wants to see it working.
+triggers: [run this repo, what does this repo do, clone and run, avvia il repository]
 ---
 
 # Serving a repository as a page

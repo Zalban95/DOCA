@@ -1,6 +1,7 @@
 ---
 name: android-app
 description: Build, install, test and debug an Android app from its project folder (Gradle, adb, logcat) — use for any Android project.
+triggers: [android, apk, gradle, adb, logcat, app android]
 ---
 
 # Building and testing an Android app

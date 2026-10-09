@@ -12,6 +12,7 @@
  *   mcp.json                        { mcpServers: … } — what Claude Desktop, Cursor and Claude Code read
  *   memory.jsonl                    memory entries, one JSON object a line
  *   AGENTS.md                       the memory rules, as the instructions file every coding agent reads
+ *   services/<name>.openapi.json    API services as OpenAPI 3.1 documents, without their keys (services.js)
  *   edition.json                    an edition (TODO H12): names, how screens start out, a face, a level (edition.js)
  *
  * Nothing secret travels: an MCP server's env and header values whose names say key/token/secret/password are
@@ -37,7 +38,7 @@ function skillFiles(name) {
   return out;
 }
 
-/** @param {{ name?, description?, skills?: string[], specialists?: string[], recipes?: string[], mcp?: string[], memory?: boolean, rules?: boolean, edition?: object }} sel */
+/** @param {{ name?, description?, skills?: string[], specialists?: string[], recipes?: string[], mcp?: string[], services?: string[], memory?: boolean, rules?: boolean, edition?: object }} sel */
 function build(sel = {}) {
   const files = [];
   const contents = [];
@@ -80,6 +81,10 @@ function build(sel = {}) {
       contents.push({ kind: 'mcp', id, path: 'mcp.json' });
     }
     files.push({ name: 'mcp.json', data: `${JSON.stringify({ mcpServers: servers }, null, 2)}\n` });
+  }
+  if (sel.services?.length) {
+    const s = require('./services').part(sel.services);
+    files.push(...s.files); contents.push(...s.contents); needs.secrets.push(...s.secrets);
   }
   if (sel.memory) {
     const entries = require('../harness/memory').memList().map(({ key, value, category, tags, pinned, locked }) => ({ key, value, category, tags, pinned, locked }));

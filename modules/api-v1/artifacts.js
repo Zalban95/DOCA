@@ -104,7 +104,7 @@ function deliver(rec, targets, opts = {}) {
       inlineEncoding: opts.inline ? (rec.mime.startsWith('text/') || rec.runtime === 'js' || rec.runtime === 'json' ? 'utf8' : 'base64') : undefined,
       message: opts.message || null, ext: opts.ext || undefined,
     });
-    report.push({ deviceId: d.id, delivered: true, seq: env.seq });
+    report.push(env ? { deviceId: d.id, delivered: true, seq: env.seq } : { deviceId: d.id, delivered: false, reason: 'pending_approval' });
   }
   return report;
 }
