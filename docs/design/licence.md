@@ -88,7 +88,8 @@ end; until the release that names the server's public key, no licence verifies.
 Tests sign their own licences: `test/licence-trust.js` trusts a test key whose private half is in
 `test/fixtures/licence`, and preloads a licence for `all`; `test/helpers.js` loads it and puts it in `NODE_OPTIONS`
 for every node process a test starts. Nothing in `modules/` trusts the test key or reads an environment variable to
-— a process that loads that file is a patched product by definition. `npm run smoke -- --core` drives the panel
+— a process that loads that file is a patched product by definition. The installers' copy from a checkout leaves `test/` out; a git clone and the release worktrees still hold it
+(in the working tree and in history), and nothing at runtime needs it. `npm run smoke -- --core` drives the panel
 with no licence and fails on any call to a route that is not there.
 
 ## Honest limits
