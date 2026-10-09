@@ -385,7 +385,7 @@ function memoryList() {
 
 module.exports = {
   sessions, createSession, activate, removeSession, transcript, requireSession, defaultSession,
-  post, running, cancel, memoryList, HUB_SPOKEN,
+  post, running, cancel, memoryList, HUB_SPOKEN, clientOf,
   MAX_MESSAGE,
   _fanout: fanout,   // for test/call-echo.test.js
 };

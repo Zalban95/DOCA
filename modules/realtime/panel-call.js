@@ -51,7 +51,7 @@ function handleEvent(req, res) {
     const label = b.ambient ? 'the panel — Ambient’s assistant' : b.assistant ? 'the panel — Live call' : 'the panel — Deep call';
     const person = req.auth?.user ? { id: req.auth.user.id } : null;
     let sessionId = null;
-    try { sessionId = require('../harness/memory').mainSession().id; } catch { /* named later by its turns */ }
+    try { sessionId = require('../harness/own-main').of(require('../harness/turn/client').dashboardClient(req).user, { create: false }); } catch { /* named later by its turns */ }
     const h = callLog.begin({ kind: 'panel', label: `${label}${b.mobile ? ' (phone)' : ''}`, sessionId, person, engine: 'panel' });
     // A call that could not start is a call attempt too, and the commonest failure (deep test A, #9): kept and closed.
     if (b.refused) { h.note(`the call did not start: ${word(b.refused)}`, 'warn'); h.end('did not start'); return res.json({ call: h.id }); }

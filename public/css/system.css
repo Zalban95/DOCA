@@ -95,7 +95,7 @@ input[type="checkbox"].switch:focus-visible { outline: 2px solid var(--accent); 
 /* ── des 2: the chat button never sits on a page's last controls, and follows the theme ── */
 :root { --fab-bg: #050507; }
 html[data-ground="light"] { --fab-bg: var(--surface); }
-.tab-page:not(#tab-harness):not(#tab-terminal):not(#tab-projects):not(#tab-ambient):not(#tab-workstream):not(#tab-files):not(.field-page)::after {
+.tab-page:not(#tab-harness):not(#tab-terminal):not(#tab-projects):not(#tab-ambient):not(#tab-workstream):not(#tab-files):not(#tab-people):not(.field-page)::after {
   content: ''; display: block; flex: 0 0 72px; height: 72px; }
 .chat-fab { background: var(--fab-bg); }
 /* … and steps aside from a control under it where the page is scrolled now (js/lib/fab-aside.js): a sliver at the edge */

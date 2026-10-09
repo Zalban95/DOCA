@@ -106,6 +106,8 @@ const ROUTES = [
   // Marking one — at making it or after — is the person's, typed; unmarking tightens, so it does not ask.
   [['POST'], /^\/api\/computers$/, 'a test computer (sign-ins without asking)', req => req.body?.test === true],
   [['POST'], /^\/api\/computers\/[^/]+\/test$/, 'a test computer (sign-ins without asking)', req => req.body?.on !== false],
+  // The hive chat's compliance export: the one way anyone reads conversations they are not in (people/keep.js).
+  [['POST'], /^\/api\/people\/export$/, 'exporting every hive-chat conversation'],
   [['POST'], /^\/api\/home\/call$/, 'unlocking a door or disarming an alarm', req => require('../home/actions').guardedCall(req.body)],
   [['POST'], /^\/api\/prefs$/, null, req => prefsBody(req.body, req.query?.replace === '1')],
   [['POST'], /^\/api\/harness\/proposals\/[^/]+\/apply$/, null, req => proposal(req.path.split('/')[4])],

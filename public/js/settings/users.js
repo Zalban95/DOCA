@@ -23,7 +23,7 @@ const _levelName = id => _usersData.levels.find(l => l.id === id)?.name || id;
 
 function _usersPeopleCard() {
   const card = Object.assign(document.createElement('div'), { className: 'card' });
-  card.innerHTML = `<div class="card-title">People</div>
+  card.innerHTML = `<div class="card-title">People${typeof peopleOrgOpen === 'function' ? ' <button type="button" class="btn btn-xs" style="float:right" onclick="peopleOrgOpen()">Organisation</button>' : ''}</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Everyone who can sign in here, and their level. The agent acts for a person
       with that person's level: what they may not do, the agent may not do for them.</p>`;
   const table = Object.assign(document.createElement('table'), { className: 'models-table' });
@@ -47,6 +47,7 @@ function _usersPeopleCard() {
       catch (e) { appAlert(e.message); }
     }));
     b('What they have', 'Their level, reach, what is allotted to them, budget and devices', () => holdingsOpen(p.id));
+    if (typeof peopleCardOpen === 'function') b('Card', 'Their card: manager, reports, team and title — where they sit in the organisation', () => peopleCardOpen(p.id));
     if (p.sessions) b('Sign out', 'End every session they have', async () => { try { await apiFetch(`/api/auth/users/${encodeURIComponent(p.id)}/sessions`, { method: 'DELETE' }); usersLoad(); } catch (e) { appAlert(e.message); } });
     tr.append(who, lvl, status, sess, act);
     table.appendChild(tr);
@@ -58,6 +59,12 @@ function _usersPeopleCard() {
     <select class="input" id="users-new-level">${_usersData.levels.map(l => `<option value="${escHtml(l.id)}" ${l.id === 'member' ? 'selected' : ''}>${escHtml(l.name)}</option>`).join('')}</select>
     <button class="btn btn-xs btn-blue" onclick="usersAdd()">+ Add person</button>`;
   card.appendChild(add);
+  if (typeof peopleExport === 'function') {   // the owner's alone (org): shown once /api/auth/me says so
+    const ex = Object.assign(document.createElement('p'), { className: 'desc', hidden: true });
+    ex.innerHTML = 'Hive chat: nobody reads a conversation they are not in, an admin included. <button type="button" class="btn btn-xs" onclick="peopleExport()">Export every conversation</button> — for compliance, the owner\'s alone, with the password, written in the audit.';
+    card.appendChild(ex);
+    apiFetch('/api/auth/me').then(me => { ex.hidden = !(me.rights || []).includes('org'); }).catch(() => {});
+  }
   return card;
 }
 
@@ -156,6 +163,11 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
       <option value="create" ${l.reach === 'create' ? 'selected' : ''}>Create safely — files, pages, the web, the agents' own computers</option>
       <option value="own-devices" ${l.reach === 'own-devices' ? 'selected' : ''}>Create, and their own devices</option>
       <option value="anything" ${l.reach === 'anything' ? 'selected' : ''}>Anything — the hub machine and every device</option></select>
+    <div class="input-label" style="margin-top:8px">Whom they may message in the hive chat</div>
+    <select class="input" id="lvl-people"><option value="" ${!l.people ? 'selected' : ''}>As its rights say (chat: anyone in the organisation; otherwise only where added)</option>
+      <option value="org" ${l.people === 'org' ? 'selected' : ''}>Anyone in the organisation</option>
+      <option value="team" ${l.people === 'team' ? 'selected' : ''}>Their team only — their manager, peers and reports</option>
+      <option value="added" ${l.people === 'added' ? 'selected' : ''}>Only where someone adds them (a guest)</option></select>
     ${advancedFold(`<label class="harness-hint" style="margin-top:4px;display:block">Settings they may change (prefixes, one per line; * for all)</label>
     <textarea class="input" id="lvl-settings" rows="3" style="width:100%" data-default="" data-label="Settings">${escHtml(l.settings.join('\n'))}</textarea>
     <label class="harness-hint" style="margin-top:8px;display:block">Tools the agent may use for them — allowed / denied (one per line: shell, shell:git, read_file, mcp__*, *)</label>
@@ -182,7 +194,7 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
     const body = { name: m.querySelector('#lvl-name').value, rights: [...m.querySelectorAll('[data-right]:checked')].map(c => c.dataset.right),
       settings: lines('#lvl-settings'), tools: { allow: lines('#lvl-allow'), deny: lines('#lvl-deny') }, approval: m.querySelector('#lvl-approval').value, reach: m.querySelector('#lvl-reach').value,
       resources: Object.fromEntries([...m.querySelectorAll('[data-resource]')].map(i => [i.dataset.resource, i.value.split(',').map(s => s.trim()).filter(Boolean)]).filter(([, v]) => v.length)),
-      delegates: lines('#lvl-delegates'), approveDevices: m.querySelector('#lvl-approve-devices').value };
+      delegates: lines('#lvl-delegates'), approveDevices: m.querySelector('#lvl-approve-devices').value, people: m.querySelector('#lvl-people').value };
     try {
       await apiFetch(l.id ? `/api/auth/levels/${encodeURIComponent(l.id)}` : '/api/auth/levels', { method: l.id ? 'PATCH' : 'POST', body });
       overlay.style.display = 'none'; usersLoad();

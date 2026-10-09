@@ -42,6 +42,8 @@ const COVERAGE = {
   notices: { v1: ['/events'], note: 'a device gets a notice as an `alert` on its event stream; this is the panel\'s own list of them' },
   home: { panel: 'the Home page, drawn from Home Assistant by the hub (home/); a device\'s own /api/v1 home is a later step — capability-gaps.md, home' },
   decisions: { v1: ['/decisions'] },
+  people: { v1: ['/people'], note: 'the hive chat: a device reads, writes, reacts and marks read as its person; making groups and channels, pins and the owner\'s export are the panel\'s (capability-gaps.md, people-manage)' },
+  org: { v1: ['/people'], note: 'a device lists its person\'s colleagues at /people; the organisation tree and placing people in it are the panel\'s (people and levels)' },
   library: { v1: ['/harness'], note: 'a device searches its person\'s Library through the agent (library_search); choosing folders and indexing are the machine\'s', panel: HOST },
   chronicle: { v1: ['/harness', '/jobs/{id}'], note: 'a device reads its conversations, missions and jobs there; reading them all back as one story is the panel\'s page' },
   branding: { panel: 'public, and read by clients as it is (GET /api/branding)' },
