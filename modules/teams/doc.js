@@ -6,8 +6,8 @@
  * first line), notes the teammates posted, results with the files they wrote. Generated, never edited by an agent:
  * its words are the board's and the reports' own.
  *
- * Where: a page in the leader's project (projects/pages.js — a project's `.md` files are its pages) when the leader
- * works in one, and always a copy in the attachments folder, which is how a phone opens it (`agent.team` `doc`, the
+ * Where: a page in the team's project (projects/pages.js — a project's `.md` files are its pages; place.js) when it
+ * has one, and always a copy in the attachments folder, which is how a phone opens it (`agent.team` `doc`, the
  * road the plan document takes — a watch skips a doc).
  */
 const fs = require('fs');
@@ -31,6 +31,7 @@ function render(team, views) {
     const files = require('../agents/after').filesOf(m);
     return `### ${v.title} (${v.id}) — ${who(v)}\n\n${String(m.result).slice(0, 1500).trim()}${files.length ? `\n\nFiles: ${files.map(f => `\`${f}\``).join(', ')}` : ''}`;
   });
+  const branches = views.filter(v => v.place?.branch).map(v => `- **${v.id}** ${cell(who(v))}: branch \`${v.place.branch}\` in \`${v.place.root}\` — merging it back is the person's call`);
   const notes = (team.notes || []).slice(-30).map(n => `- ${when(n.at)} **${cell(n.from)}** (${n.task}): ${cell(n.text)}`);
   const loop = team.loop?.on ? `keep going: on, round ${team.loop.rounds || 0} of ${require('./engine').maxRounds(team)}` : 'keep going: off';
   return [
@@ -40,6 +41,7 @@ function render(team, views) {
     `**State** ${team.state} — ${p.done} of ${p.total} tasks done (${p.percent}%; every task counts the same) · ${loop}`, '',
     `**Started** ${when(team.createdAt)}${team.endedAt ? ` · **ended** ${when(team.endedAt)}` : ''} · ${team.id}`, '',
     '## Tasks', '', '| # | Task | Who | State | After | Done when |', '|---|---|---|---|---|---|', ...rows, '',
+    ...(branches.length ? ['## Where the work is', '', 'Tasks that change files while others do work in git worktrees of their own:', '', ...branches, ''] : []),
     '## Decisions', '', ...(decisions.length ? decisions : ['*None reported yet.*']), '',
     '## Notes from the team', '', ...(notes.length ? notes : ['*None yet.*']), '',
     '## Results', '', ...(results.length ? results.flatMap(r => [r, '']) : ['*Nothing delivered yet.*', '']),
@@ -52,8 +54,8 @@ function write(team, views) {
   const before = JSON.stringify(team.doc || {});
   const doc = team.doc || (team.doc = {});
   if (doc.project === undefined) {
-    let root = null;
-    try { root = require('../projects/store').forSession(team.by)?.root || null; } catch { /* no projects */ }
+    let root = null;   // the team's project (place.js) — its main folder, where its pages are — else the leader's
+    try { root = (team.projectId && require('../projects/store').get(team.projectId)?.root) || require('../projects/store').forSession(team.by)?.root || null; } catch { /* no projects */ }
     doc.project = null;
     if (root && fs.existsSync(root)) {
       let name = `team-${slug(team.title)}.md`;

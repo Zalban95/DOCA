@@ -5,7 +5,8 @@
  * on a board — the same right as the missions (auth/rights.js: reading `read`, acting `chat`), and each team only for
  * whoever may open the conversation that leads it (session-access, the transcript's own rule).
  *
- *   GET  /api/harness/missions/teams[?all=1]        the newest 30 teams this person may see (all: with the put-away ones)
+ *   GET  /api/harness/missions/teams[?all=1][&project=<id>]   the newest 30 teams this person may see (all: with the put-away
+ *        ones; project: only those working on that project — Projects' "Teams here")
  *   GET  /api/harness/missions/teams/:id            one board: tasks with state and percentage, notes, its document
  *   POST /api/harness/missions/teams/:id/stop       stop every task
  *   POST /api/harness/missions/teams/:id/keep-going {on}   try failed tasks again, up to its rounds
@@ -28,7 +29,7 @@ function mine(req) {
 
 function mount(app) {
   app.get('/api/harness/missions/teams', h(req => {
-    const rows = teams.visible(who(req), { all: req.query.all === '1' }).slice(0, 30);   // the newest: each board reads its missions
+    const rows = teams.visible(who(req), { all: req.query.all === '1', project: req.query.project ? String(req.query.project) : null }).slice(0, 30);   // the newest: each board reads its missions
     return { teams: rows.map(r => teams.view(teams.get(r.id))).filter(Boolean),
       maxRounds: require('../settings-schema').value('teams.maxRounds') };
   }));

@@ -274,6 +274,22 @@ The harness gives its agent eight rules for working on any repository (charter r
   (`teams/doc.js`) — in the leader's project when it has one and always as an attachment, written again at every
   change, shown as a `doc` when the team is made. Routes `/api/harness/missions/teams*` (the missions' rights rows;
   capability `teams`, a ranked gap for devices).
+- **A team works on a project** (asked 2026-10-09; `teams/place.js`, `teams/members.js`): `team create {project}` (id
+  or name), else the project its leading conversation works in, is `team.projectId`. Every task's mission (or work chat)
+  works there — the session gets `projectId` (`memory.createSession {fields}`, `missions.dispatch {place}`) unless the
+  leader already passes the project down — and a task that **writes** (its specialist holds the files, code or shell
+  kit, or a writing tool; a work chat) while another writing task of the team is not ordered before or after it gets a
+  **git worktree of its own** on `team/<slug>/<task>` (`projects/worktrees.add`, a taken name gets -2…; after a task in
+  a worktree it starts from that branch), its errand saying where it works; readers share the folder; a task's
+  `worktree: true|false` decides it. A retry keeps its worktree; a contract is read where its task worked; the team
+  document is a page in the project's main folder with "Where the work is" (each branch). Merging back is the person's.
+  A team's view carries `members` (the leader, the people who started it by `session-access.ownerOf`, each specialist
+  with task, state, step of budget, branch, conversation) and `project`; `GET …/teams?project=` lists one project's
+  (older teams by their leader's project). **Projects → Teams here** (`public/js/projects/teams.js`, under the side
+  view, folded when none): running teams and the last three that ended, each a card (goal, overall bar — every task
+  counts the same, Board, Doc → the page) with its members, a member opening as a chat tab; the same cards, compact,
+  in the project chat's fold (`agentSideFold {teams}`) and a Members list in the board window — one drawing,
+  `agent-ui/team-members.js`. Redrawn on the live feed's `teams`/`missions`. `test/team-project.test.js`.
 
 ### Product names (`modules/branding.js`)
 - **Every name a person reads comes from one file**, because the panel will be sold under a customer's label and under whatever the public release is called, and a rename that means grepping forty files is a rename that does not happen. Overrides live in prefs under `branding`, so a private label is a settings change; the UI for it is deliberately absent until it can sit behind the admin password, since the only thing worse than the wrong name is one an agent changed.

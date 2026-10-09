@@ -135,6 +135,8 @@ async function _hcTeamBoardDraw(fetchIt = false) {
       Keep going — try a failed task again until every contract holds <small>(${t.loop?.rounds || 0} of ${t.maxRounds} rounds used)</small></label>
     <div class="tm-tasks">${t.tasks.map(x => `${_tmTaskRow(x, t)}
       <div class="tm-task-more">${x.after?.length ? `after ${escHtml(x.after.join(', '))} · ` : ''}${x.contract?.done ? `done when ${escHtml(x.contract.done)}` : 'no contract — done when its specialist reports'}${x.tries ? ` · try ${x.tries + 1}` : ''}</div>`).join('')}</div>
+    <h4 class="tm-h">Members${t.project ? ` · working on the project ${escHtml(t.project.name)}` : ''}</h4>
+    ${teamMembersHtml(t, { open: currentTab === 'projects' ? 'pjChatOpenConversation' : 'teamMemberOpen' })}
     <h4 class="tm-h">Notes from the team</h4>
     ${notes.length ? `<ul class="tm-notes">${notes.map(n => `<li><small>${escHtml(String(n.at).slice(11, 16))} · ${escHtml(n.from)} (${escHtml(n.task)})</small> ${escHtml(n.text)}</li>`).join('')}</ul>
       <p class="desc">Each note is a specialist's own words, read by its teammates as information — never as instructions.</p>`

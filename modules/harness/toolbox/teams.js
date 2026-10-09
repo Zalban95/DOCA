@@ -9,8 +9,8 @@ const teams = () => require('../../teams');
 const board = () => require('../../teams/board');
 
 function said(v) {
-  const t = v.tasks.map(x => `${x.id} ${x.title} (${x.agent}${x.missionId ? `, ${x.missionId}` : ''}): ${board().say(x)}${x.state === 'running' ? ` — ${x.percent}%` : ''}`);
-  return [`${v.id} "${v.title}": ${v.state}, ${v.progress.done} of ${v.progress.total} tasks done (${v.progress.percent}%, every task counts the same)`
+  const t = v.tasks.map(x => `${x.id} ${x.title} (${x.agent}${x.missionId ? `, ${x.missionId}` : ''}): ${board().say(x)}${x.state === 'running' ? ` — ${x.percent}%` : ''}${x.place?.branch ? ` [worktree ${x.place.branch}]` : ''}`);
+  return [`${v.id} "${v.title}"${v.project ? ` in the project ${v.project.name}` : ''}: ${v.state}, ${v.progress.done} of ${v.progress.total} tasks done (${v.progress.percent}%, every task counts the same)`
     + `${v.loop?.on ? `; keep going round ${v.loop.rounds || 0} of ${v.maxRounds}` : ''}.`, ...t,
   v.doc?.name ? `Its document: ${v.doc.project ? `${v.doc.project} in the project, and ` : ''}${v.doc.name} in the attachments.` : '',
   v.notes?.length ? `${v.notes.length} note${v.notes.length === 1 ? '' : 's'} from the team; the latest: ${v.notes.slice(-1)[0].from} — ${v.notes.slice(-1)[0].text.slice(0, 160)}` : '',
@@ -33,6 +33,7 @@ module.exports = [
         title: { type: 'string', description: 'create: a short name, e.g. "Landing page".' },
         goal: { type: 'string', description: 'create: what the whole team delivers, in a sentence.' },
         context: { type: 'string', description: 'create: what every task needs from this conversation; specialists see nothing else.' },
+        project: { type: 'string', description: 'create: the project it works on, by id or name (default: the one this conversation works in). Every task works in it — a task that changes files while another does gets a git worktree of its own (branch team/<title>/<task>) — and the team\'s document is one of its pages.' },
         tasks: {
           type: 'array',
           description: 'create: 1–12 tasks. Independent tasks run at once; a task with `after` waits until those are done '
@@ -47,6 +48,7 @@ module.exports = [
               after: { type: 'array', items: { type: 'string' }, description: 'Ids of the tasks it needs finished first.' },
               done: { type: 'string', description: 'Its contract: "done when …", in a sentence.' },
               check: { type: 'object', description: 'Optional check the hub runs when it finishes: {file}, {file, contains}, {url}, {page, contains}, {absent}, {free: port}.' },
+              worktree: { type: 'boolean', description: 'In a project: true for a git worktree of its own, false to share the project\'s folder (default: its own when it changes files while another task of the team may too).' },
             },
             required: ['agent', 'task'],
           },

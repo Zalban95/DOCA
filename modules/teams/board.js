@@ -35,7 +35,8 @@ function fromJob(s) {
  */
 function task(t, { look, byId = new Map() } = {}) {
   const base = { id: t.id, title: t.title, agent: t.agent, after: t.after || [], missionId: t.missionId || null,
-    sessionId: t.sessionId || null, contract: t.contract || null, tries: (t.tries || []).length };
+    sessionId: t.sessionId || null, contract: t.contract || null, tries: (t.tries || []).length,
+    ...(t.place ? { place: { root: t.place.root, branch: t.place.worktree?.branch || null, shared: !!t.place.shared } } : {}) };   // where it works (place.js)
   if (t.stoppedAt) return { ...base, state: 'stopped', percent: 0, why: t.stoppedWhy || 'stopped by a person' };
   if (!t.missionId && !t.sessionId) {
     if (t.error) return { ...base, state: 'failed', percent: 0, why: t.error };
