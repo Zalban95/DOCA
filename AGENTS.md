@@ -530,6 +530,49 @@ The harness gives its agent eight rules for working on any repository (charter r
 - **Embeddings come from the owner's provider** (`retrieval/embed.js`: the OpenAI-compatible `/embeddings` of `retrieval.provider`, Ollama by default) and live in doca.db (`embeddings`, schema step 7: a row per piece and model, the vector as base64 float32 in a TEXT column both databases take). `refresh()` hashes each piece (≈1200 characters, overlapping) and embeds only what changed; ranking is a scan in process — pgvector with PostgreSQL is where it goes past a few hundred thousand pieces. Settings → Harness → Retrieval sets the model, tries it on memory and empties the index (`/api/retrieval*`: reading is `read`, the rest `host`). `npm run experiment -- retrieval` measures it (each experiment's measurement is `bin/experiments/<id>.js`). `test/retrieval.test.js` uses a stub that maps words to concepts.
 - The prompt's own memory block still matches by keyword: it is assembled synchronously on every step and must stay cheap.
 
+### Library: the files on this machine, searched by meaning (experiment `library`, `modules/library`; asked 2026-10-08)
+- **Behind `experiments.library`, and inert without `library.model` and a folder** (docs/experiments/library.md, with the
+  model card's facts and the measurements). Field → Models → Library (`public/js/library.js`) is drawn only in
+  developer mode: the model (with "Install EmbeddingGemma 2" through the Models tab's own Ollama pull, asked with its
+  size, and Ollama's version checked — the model needs 0.36), the folders (each inside the Files roots by `fmSafe`,
+  never protected files or DOCA's data; each may be opened to everyone who chats, `library.open`), the kinds, when
+  (`demand`, `schedule` every `library.everyHours`, `watch` — the folders watched only while a page of the panel is
+  visible, presence.js), "write captions", the person's own tags, Index / Stop / Empty with a progress bar, ticks for
+  what each kind needs (ffmpeg, speech-to-text, pdftotext, LibreOffice, exiftool, a vision model), a try box, and the
+  limits under Advanced (`settings/leaf-fields.js`). `library.*` is local and never proposable: which folders are read
+  and whom they are opened to are the owner's.
+- **The model takes each kind through Ollama's `/api/embed`** (`library/embed.js`, dialect `ollama`): an input item is a
+  string or `{text, image, audio}` with base64 media — PNG/JPEG/GIF/WebP, WAV/Ogg 16 kHz; video is not taken, so a
+  video is frames plus its sound. The card's prefixes (`task: search result | query: `, `title: <name> | text: `) go
+  on text only, and only for a model that names them (`PREFIXES`). Dialect `openai` (`/embeddings`) is text only and
+  says so per file.
+- **The index is doca.db** (schema step 13): `library_items` (path, folder, kind, size and mtime as BIGINT, hash, state,
+  note, `meta` — the mechanical description: name, size, duration, dimensions, EXIF date, first words, waveform peaks,
+  tags, a caption when written) and `library_pieces` (a vector per piece, `at_sec`/`end_sec` for where in a recording).
+  `library/indexer.js` is one run at a time, one file at a time, waiting while the load per core is over
+  `library.idleLoad`; unchanged size+mtime is skipped, an unchanged hash only touched, the gone removed; stopping keeps
+  what was done, so a run resumes. Bounded by `maxFiles`, `maxPieces`, `maxFileMB`; what a kind could not read is a
+  note on its row. A run is two activity lines (`from: library`) and the live feed's `library` topic.
+- **Pieces** (`library/extract.js`): document text (pdftotext, LibreOffice), a picture (ffmpeg-scaled JPEG, else the file),
+  video frames every `frameEverySec` (≤ 32), 30-second sound windows (the first 20), and the words with their times
+  (`stt.transcribeSegments`, the hub's whisper with `verbose_json`) — so "an audio that says X" matches the words and
+  opens at the moment.
+- **Search** (`library/search.js`, the one rule of who sees what: a host every folder, anyone else the open ones —
+  for search, "Like this", the file route and `library_search` alike): the query embedded, each family's scores
+  (text, picture, sound) taken relative to their own mean (the modality gap; measured better than raw or z-scores),
+  the best piece per file, merged by reciprocal rank with whole-word keywords (no stop words) over transcripts, text,
+  captions, tags and descriptions. In memory while searches come (`store.vectors`, dropped after 10 min).
+- **Descriptions without a writing model**: tags (`library/tags.js`, vocabulary `tags.json` + `library.tags`) are the
+  phrases a file's pieces score `library.tagMargin` above their average, at most five, with scores — chips in Files and
+  a filter; captions only with `library.captions` and a vision model (`library/captions.js`, counted per run, room for
+  a thinking model). "Like this" (`/api/library/similar`) marks near-duplicates.
+- **Files → Search by meaning** (`public/js/library-files.js`, `library-results.js`): a box above the folder while the
+  experiment is on; results with a thumbnail or waveform, the matching moment (Open plays from it, `#t=`), tags,
+  Like this. **`library_search`** (kit files, in `tools.READS`, absent while off — `tool-shape.js`; framed by
+  `untrusted.sourceOf` as the person's own files) gives the agent paths and moments to `show_media` or `tell_device`.
+  Routes: `/api/library/(search|similar|file)` are `chat`, the rest `host`. `test/library.test.js` (a stub
+  `/api/embed` and STT), `npm run experiment -- library` (a labelled set made on the spot, deleted after).
+
 ### Connectors: the owner's accounts as tools (since 2.188.0, `modules/connectors`; TODO H9.3)
 - **OAuth 2.0 with the owner's own app**: GitHub, Google (Calendar, Gmail, Drive, read-only scopes by default), Microsoft 365, or any other OAuth 2.0 service with its addresses typed in (`catalog.js`). DOCA ships no OAuth app, so nothing sits between a hive and its accounts. The authorization-code flow with PKCE (S256), a refresh token where the service gives one, refreshed a minute before expiry (`oauth.js`). The callback the owner registers is `<the panel's address>/api/connectors/callback` — Google wants https there, which the tailnet's own name gives.
 - **The callback is public, on purpose**: the service's redirect comes from its own site, so the SameSite=Strict session cookie stays behind; what guards it is OAuth's `state` — one-time, ten minutes, minted only by a host's Connect. Every other `/api/connectors*` route is host.
