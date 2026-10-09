@@ -92,6 +92,7 @@ const ROUTES = [
   [['POST'], /^\/api\/backups\/[^/]+\/restore$/, 'restoring a backup'],   // it replaces the settings, guarded switches included
   // A version is every guard at once: one from before 2.281.0 has no password question at all (review 2026-10-07).
   [['POST'], /^\/api\/versions\/use$/, 'which version of DOCA runs'],
+  [['POST'], /^\/api\/update\/file$/, 'installing a version of DOCA from a file'],   // the same, carried on a file (update-channel/from-file.js)
   // Bringing a pack in can create or replace a level (an edition), specialists and their tools, and the memory rules.
   // An upload cannot be read before the gate, so every import asks: the smallest rule that holds for both routes.
   [['POST'], /^\/api\/packs\/(import|library\/[^/]+\/import)$/, 'bringing a pack in (it can carry a level, specialists and rules)'],
