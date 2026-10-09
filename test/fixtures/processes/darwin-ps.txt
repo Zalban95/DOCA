@@ -1,0 +1,15 @@
+    0     0     0      0   5:12.34   3-04:05:06 root             kernel_task
+    1     0     0  21456   2:01.10   3-04:05:05 root             /sbin/launchd
+  152     1    88  98000  45:10.02   3-04:04:50 _windowserver    /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer -daemon
+  301     1   501  60000   0:30.12   3-04:04:40 sam              /System/Library/CoreServices/Finder.app/Contents/MacOS/Finder
+  302     1   501  40000   0:10.50   3-04:04:40 sam              /System/Library/CoreServices/Dock.app/Contents/MacOS/Dock
+  410     1   501  30000   0:01.00   3-04:04:30 sam              /usr/libexec/trustd --agent
+  420     1   501  55000   1:01.00   3-04:04:30 sam              /usr/sbin/cfprefsd agent
+  900     1   501 410000  12:00.50      02:10:00 sam              /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+  901   900   501 120000   3:00.00      02:09:58 sam              /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer) --type=renderer
+ 1500     1   501   8000   0:00.20      01:00:00 sam              /bin/zsh -l
+ 1501  1500   501  90000   0:42.10        45:00 sam              node /Users/sam/code/shop/node_modules/.bin/next dev
+ 1502  1501   501 150000   1:12.00        44:58 sam              /usr/local/bin/node /Users/sam/code/shop/node_modules/next/dist/server/lib/start-server.js
+ 1600  1500   501  70000   0:05.00        10:00 sam              /usr/local/bin/python3 -m http.server 8765
+ 1700     1   501 140000   2:00.00      03:00:00 sam              /usr/local/bin/node /Users/sam/doca/server.js
+ 1701  1700   501  20000   0:01.00        30:00 sam              /bin/bash -lc npm test

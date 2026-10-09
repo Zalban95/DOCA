@@ -32,6 +32,8 @@ function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], 
       + '`work_chats` create with the request, what is known and what done looks like; tell the person, and stay free.' : '',
     has('agent_dispatch') && specialists.length ? `A specialist — a self-contained errand one of them fits (${specialists.join(', ')}): \`agent_dispatch\`; `
       + 'it runs in the background and you read the result with `agent_results`. Send independent errands in parallel; one that needs another\'s result waits for it with `after`.' : '',
+    has('team') && specialists.length ? 'A team — several errands for different specialists, some needing others\' results, each with a "done when": `team` create once, '
+      + 'with every task, its `after` and its contract; the hub dispatches them in order, checks each contract and keeps the team\'s document. Stay free.' : '',
     'Ask — the choice is the person\'s (money, something outward or irreversible, a matter of taste): ask once, with the options.',
   ].filter(Boolean);
   // The premise's ladder (CONSTITUTION §0; TODO P0.2): the person's way, then the proven way, then a way found and kept.

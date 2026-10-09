@@ -66,7 +66,7 @@ function call({ until, speak = true, onOpen = () => {} }) {
       else { const f = JSON.parse(d); g.json.push(f); g.at[f.type] = g.at[f.type] || Date.now(); }
       if (!bin && g.json.at(-1).type === 'ready') {
         onOpen(g.json[0].sessionId, ws);
-        if (speak) { for (let i = 0; i < 8; i++) ws.send(tone(100)); ws.send(quiet(1200)); }
+        if (speak) { for (let i = 0; i < 8; i++) ws.send(tone(100)); ws.send(quiet(1600)); }
       }
       if (until(g)) { clearTimeout(timer); ws.close(); resolve(g); }
     });

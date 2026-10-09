@@ -57,6 +57,7 @@ const TABLE = [
   R(ANY, '/api/versions/use', 'org'),
   R(GET, '/api/versions/[^/]+/notes', 'read'),                  // what a version added or fixed (release-notes.js)
   R(ANY, '/api/(update|restart)', 'org'),
+  R(ANY, '/api/update/file(/.*)?', 'host'),                   // an update carried on a file: a host's (update-channel/file-routes.js)
   R(ANY, '/api/update/channel(/.*)?', 'org'),                  // a production hive's update channel (update-channel/routes.js)
   R(GET, '/api/deps', 'org'),                              // runs npm against the registry
 

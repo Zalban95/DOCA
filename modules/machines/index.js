@@ -114,6 +114,7 @@ function mount(app) {
   if (!_listening) { _listening = true; require('../harness/agent').events.on('event', e => { try { onEvent(e); } catch { /* never the work's problem */ } }); }
   require('./acts-agent').listen();   // the agents' machine acts, with their conversation (acts-agent.js)
   require('./use').mount(app);         // what uses a machine, for the "are you sure" (use.js)
+  require('../processes').mount(app);  // the Processes drawer: what a person started on this machine (processes/)
   // Shown, so looked at: Live and the status column keep busy.js reading the machines while they ask (nothing otherwise).
   app.get('/api/machines', async (req, res) => { require('./busy').want(); try { res.json(await picture({ shots: req.query.shots === '1' })); } catch (e) { res.status(500).json({ error: e.message }); } });
   // Every machine as one row (rows.js): the status column asks while it is shown.

@@ -36,4 +36,18 @@ function release(version, { urgent = false, applyBy = null, notes = `What ${vers
   return { version, buf, manifest: shown, signature };
 }
 
-module.exports = { priv, hex, zip, release, other: () => crypto.generateKeyPairSync('ed25519').privateKey };
+/**
+ * An update file (modules/update-channel/update-file.js) at `out`: a signed release of `version`, with `image` (bytes
+ * standing in for a `docker save` tarball, its sha256 signed) when given. `key` signs it; `tamper` changes the zip after.
+ */
+function file(out, version, { key = priv, image = null, imageTag = `doca-hive:${version}`, tamper = false } = {}) {
+  const buf = zip(version);
+  const m = { product: 'doca', version, channel: 'stable', file: `doca-${version}.zip`, sha256: crypto.createHash('sha256').update(buf).digest('hex'),
+    size: buf.length, dataFormat: 1, urgent: false, applyBy: null, notes: `What ${version} changes.`, image: image ? imageTag : null, imageDigest: null,
+    ...(image ? { imageSha256: crypto.createHash('sha256').update(image).digest('hex') } : {}) };
+  const signature = manifest.sign(m, key);
+  const z = tamper ? Buffer.concat([buf.subarray(0, buf.length - 1), Buffer.from([buf[buf.length - 1] ^ 1])]) : buf;
+  return require('../modules/update-channel/update-file').write(out, { manifest: m, signature, zip: z, image });
+}
+
+module.exports = { priv, hex, zip, release, file, other: () => crypto.generateKeyPairSync('ed25519').privateKey };

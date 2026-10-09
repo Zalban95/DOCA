@@ -1,0 +1,65 @@
+<!doctype html>
+<!-- The usage meter, three ways (2026-10-09; the owner: "the dots are not that cool … start with a light cool colour
+     and go through the usual heat-map colours"). Open with ?ground=light for Points Daylight. Static: nothing here is
+     loaded by the panel; the chosen variant lives in public/css/usage-meter.css and agent-ui/context-meter.js. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage meter variants</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050507;--surface:#0b0d10;--raised:#11151a;--border:#1c2229;--border2:#26303a;--text:#c9d1d9;--muted:#8b95a1;--bright:#e8edf2;--accent:#57c9c2;
+ --heat-0:oklch(0.87 0.07 215);--heat-1:oklch(0.82 0.13 165);--heat-2:oklch(0.86 0.15 100);--heat-3:oklch(0.78 0.16 60);--heat-4:oklch(0.70 0.19 27);
+ --um-track:color-mix(in srgb,var(--bright) 9%,transparent);--um-glow:.55}
+:root[data-ground=light]{--bg:#f4f5f6;--surface:#fff;--raised:#f7f8f9;--border:#e3e7eb;--border2:#cdd4db;--text:#2a3138;--muted:#5b6570;--bright:#14181c;--accent:#17807a;
+ --heat-0:oklch(0.64 0.09 220);--heat-1:oklch(0.60 0.13 160);--heat-2:oklch(0.64 0.13 88);--heat-3:oklch(0.60 0.16 55);--heat-4:oklch(0.55 0.19 27);
+ --um-track:color-mix(in srgb,var(--bright) 8%,transparent);--um-glow:0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px 'IBM Plex Sans',system-ui,sans-serif;padding:24px 16px}
+h1{font-size:18px;color:var(--bright);margin:0 0 4px;font-weight:600}p.lead{color:var(--muted);margin:0 0 20px;max-width:70ch}
+.variant{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
+.vt{font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px 18px}
+.cell{display:flex;flex-direction:column;gap:6px}.cap{font-size:12px;color:var(--muted)}
+.head{display:flex;align-items:center;gap:10px;background:var(--raised);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;min-height:40px}
+.head b{font-weight:500;color:var(--bright);font-size:13px}
+.lbl{font:500 11px 'IBM Plex Mono',monospace;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.lbl .u{opacity:.7}
+
+/* A — the capsule: a thin bar, a fold tick, the turn's heat chips before it */
+.a{display:inline-flex;align-items:center;gap:7px}
+.a .trace{display:inline-flex;align-items:flex-end;gap:2px;height:12px}
+.a .trace i{width:3px;border-radius:1.5px;background:var(--c);opacity:.75}
+.a .bar{position:relative;width:46px;height:6px;border-radius:3px;background:var(--um-track);overflow:visible}
+.a .fill{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--c);box-shadow:0 0 6px color-mix(in srgb,var(--c) calc(var(--um-glow)*100%),transparent)}
+.a .fold{position:absolute;top:-2px;bottom:-2px;width:1.5px;border-radius:1px;background:var(--muted);opacity:.7}
+
+/* B — the strip: ten cells of the heat map, lit up to the use */
+.b{display:inline-flex;align-items:center;gap:7px}
+.b .cells{display:inline-flex;gap:2px}
+.b .cells i{width:4px;height:10px;border-radius:1px;background:var(--um-track)}
+.b .cells i.on{background:var(--c)}
+
+/* C — the arc: half a gauge with a gradient track */
+.c{display:inline-flex;align-items:center;gap:6px}
+.c svg{display:block}
+</style></head><body>
+<h1>Usage meter — three ways</h1>
+<p class="lead">Each drawn at the same states: a context window filling (8%, 45%, 72% past a fold at 70%, 96%), an
+unmeasured one, and the no-limit mode — each turn against 1,000,000 tokens with the last turns as a trace.</p>
+<div id="out"></div>
+<script>
+const params=new URLSearchParams(location.search);if(params.get('ground')==='light')document.documentElement.dataset.ground='light';
+const heat=f=>{f=Math.max(0,Math.min(1,f));const p=f*4,i=Math.min(3,Math.floor(p)),t=Math.round((p-i)*100);return `color-mix(in oklch, var(--heat-${i+1}) ${t}%, var(--heat-${i}))`};
+const k=n=>n>=1e6?`${(n/1e6).toFixed(1).replace(/\.0$/,'')}M`:n>=1e3?`${Math.round(n/1e3)}k`:String(n);
+const states=[
+ {cap:'Window 8%',used:80e3,max:1e6,fold:.7},{cap:'Window 45%',used:450e3,max:1e6,fold:.7},{cap:'Window 72% — past the fold',used:720e3,max:1e6,fold:.7},
+ {cap:'Window 96%',used:123e3,max:128e3,fold:.8},{cap:'Not measured yet',used:null,max:1e6,turn:true,trace:[]},
+ {cap:'No limit — a small turn',used:42e3,max:1e6,turn:true,trace:[.02,.05,.03,.12,.04]},
+ {cap:'No limit — a long turn',used:610e3,max:1e6,turn:true,trace:[.08,.21,.35,.12,.5]},
+ {cap:'No limit — past 1M',used:1.6e6,max:1e6,turn:true,trace:[.3,.9,.6,1.2,.4]}];
+const A=s=>{const f=s.used==null?0:s.used/s.max;const tr=s.turn?`<span class="trace">${(s.trace||[]).map(x=>`<i style="--c:${heat(x)};height:${3+9*Math.sqrt(Math.min(1,x))}px"></i>`).join('')}</span>`:'';
+ return `<span class="a">${tr}<span class="bar"><span class="fill" style="--c:${heat(f)};width:${s.used?Math.max(4,Math.min(100,f*100)):0}%"></span>${s.fold?`<span class="fold" style="left:${s.fold*100}%"></span>`:''}</span><span class="lbl">${s.used==null?'—':k(s.used)}<span class="u"> / ${k(s.max)}</span></span></span>`};
+const B=s=>{const f=s.used==null?0:s.used/s.max,n=Math.ceil(Math.min(1,f)*10);return `<span class="b"><span class="cells">${Array.from({length:10},(_,i)=>`<i class="${i<n?'on':''}" style="--c:${heat((i+.5)/10)}"></i>`).join('')}</span><span class="lbl">${s.used==null?'—':k(s.used)}<span class="u"> / ${k(s.max)}</span></span></span>`};
+const C=s=>{const f=s.used==null?0:Math.min(1,s.used/s.max),R=8,L=Math.PI*R,id='g'+Math.random().toString(36).slice(2);
+ return `<span class="c"><svg width="22" height="13" viewBox="0 0 22 13"><path d="M3 11 A8 8 0 0 1 19 11" fill="none" stroke="var(--um-track)" stroke-width="3" stroke-linecap="round"/><path d="M3 11 A8 8 0 0 1 19 11" fill="none" stroke="${heat(f)}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(L*f).toFixed(2)} ${L.toFixed(2)}"/></svg><span class="lbl">${s.used==null?'—':k(s.used)}<span class="u"> / ${k(s.max)}</span></span></span>`};
+const V=[['A · Capsule — thin bar, fold tick, the last turns as heat chips',A],['B · Strip — ten cells of the heat map lit up to the use',B],['C · Arc — half a gauge',C]];
+document.getElementById('out').innerHTML=V.map(([t,f])=>`<section class="variant"><div class="vt">${t}</div><div class="grid">${states.map(s=>`<div class="cell"><div class="head"><b>DOCA Agent</b>${f(s)}</div><span class="cap">${s.cap}</span></div>`).join('')}</div></section>`).join('');
+</script></body></html>

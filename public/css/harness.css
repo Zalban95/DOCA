@@ -270,8 +270,8 @@
 /* The Orchestrator is directly selectable here; keep its FAB off Send. */
 body.harness-tab .chat-fab { display: none; }
 
-.hc-org-guide { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: var(--radius); }
-.hc-org-guide span { color: var(--muted); font-size: 12px; max-width: 900px; }
+.hc-org-guide { margin-bottom: 10px; padding: 2px 12px 0; }   /* the shared page head (pageHeadHtml), as every page opens */
+.hc-org-guide .page-sub { max-width: 900px; }
 .hc-archive-switch { display: block; font-size: 11px; padding: 6px; color: var(--muted); }
 .hc-session-title small { display: block; color: var(--muted); font-size: 9px; }
 .hc-session { grid-template-columns: minmax(0, 1fr); gap: 2px; }

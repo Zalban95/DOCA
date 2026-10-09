@@ -44,6 +44,13 @@ function machine(name, text, extra = {}) {
   if (_holders.size) live.changed('workstream', null, 'activity', row);
 }
 
+/** A team's line (teams/announce.js): a task's state changed, a note was posted, the team ended — the board's own words. */
+function team(t, text) {
+  const row = { at: Date.now(), sessionId: t.by || null, who: `Team ${String(t.title || t.id).slice(0, 60)}`, kind: 'team', teamId: t.id, text: String(text).slice(0, 600) };
+  keep(_activity, row);
+  if (_holders.size) live.changed('workstream', t.by || null, 'activity', row);
+}
+
 /** Thinking and text arrive a token at a time: gathered per conversation and said every FLUSH_MS. */
 function gather(sessionId, kind, delta) {
   const key = `${sessionId}\t${kind}`;
@@ -109,4 +116,4 @@ const snapshot = () => ({ sentinel: sentinel.status(), files: _files.slice(-40),
 /** How much the activity holds now (log-keep.js usage). */
 const size = () => ({ lines: _activity.length, bytes: Buffer.byteLength(JSON.stringify(_activity)) });
 
-module.exports = { start, hold, holds, holding, machine, snapshot, onEvent, command, fileChanged, size };
+module.exports = { start, hold, holds, holding, machine, team, snapshot, onEvent, command, fileChanged, size };

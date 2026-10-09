@@ -25,6 +25,7 @@ async function updateCheck() {
   versionsLoad();
   accountLoad();
   depsLoad();
+  if (typeof updateFileDraw === 'function') updateFileDraw();   // Install from a file (update-file.js)
   leafFieldsDraw(leafFieldsSlot('update-status', 'update-settings'), ['updates.repo'], { label: 'Advanced — where updates come from', id: 'update-source' });
 
   try {

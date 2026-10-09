@@ -1,0 +1,607 @@
+{
+ "os": "linux",
+ "at": 1791500000000,
+ "procs": [
+  {
+   "pid": 1,
+   "ppid": 0,
+   "uid": 0,
+   "user": null,
+   "session": null,
+   "name": "systemd",
+   "exe": "/usr/bin/systemd",
+   "args": [
+    "/sbin/init",
+    "splash"
+   ],
+   "cwd": "/",
+   "cgroup": "/init.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 2,
+   "ppid": 0,
+   "uid": 0,
+   "user": null,
+   "session": null,
+   "name": "kthreadd",
+   "exe": null,
+   "args": [],
+   "cwd": null,
+   "cgroup": "/",
+   "kernel": true,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 45,
+   "ppid": 2,
+   "uid": 0,
+   "user": null,
+   "session": null,
+   "name": "kworker/0:1-events",
+   "exe": null,
+   "args": [],
+   "cwd": null,
+   "cgroup": "/",
+   "kernel": true,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 700,
+   "ppid": 1,
+   "uid": 0,
+   "user": null,
+   "session": null,
+   "name": "sshd",
+   "exe": "/usr/bin/sshd",
+   "args": [
+    "sshd: /usr/sbin/sshd -D"
+   ],
+   "cwd": "/",
+   "cgroup": "/system.slice/ssh.service",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 880,
+   "ppid": 1,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "systemd",
+   "exe": "/usr/bin/systemd",
+   "args": [
+    "/usr/lib/systemd/systemd",
+    "--user"
+   ],
+   "cwd": "/home/sam",
+   "cgroup": "/user.slice/user-1000.slice/user@1000.service/init.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 900,
+   "ppid": 880,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "gnome-shell",
+   "exe": "/usr/bin/gnome-shell",
+   "args": [
+    "/usr/bin/gnome-shell"
+   ],
+   "cwd": "/home/sam",
+   "cgroup": "/user.slice/user-1000.slice/user@1000.service/session.slice/org.gnome.Shell@wayland.service",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 905,
+   "ppid": 880,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "pipewire",
+   "exe": "/usr/bin/pipewire",
+   "args": [
+    "/usr/bin/pipewire"
+   ],
+   "cwd": "/home/sam",
+   "cgroup": "/user.slice/user-1000.slice/user@1000.service/session.slice/pipewire.service",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 910,
+   "ppid": 880,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "gnome-keyring-d",
+   "exe": "/usr/bin/gnome-keyring-d",
+   "args": [
+    "/usr/bin/gnome-keyring-daemon",
+    "--foreground"
+   ],
+   "cwd": "/home/sam",
+   "cgroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/gnome-keyring-daemon.service",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 1200,
+   "ppid": 1,
+   "uid": 0,
+   "user": null,
+   "session": null,
+   "name": "dockerd",
+   "exe": "/usr/bin/dockerd",
+   "args": [
+    "/usr/bin/dockerd",
+    "-H",
+    "fd://"
+   ],
+   "cwd": "/",
+   "cgroup": "/system.slice/docker.service",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 3000,
+   "ppid": 1,
+   "uid": 0,
+   "user": null,
+   "session": null,
+   "name": "containerd-shim",
+   "exe": "/usr/bin/containerd-shim",
+   "args": [
+    "/usr/bin/containerd-shim-runc-v2",
+    "-namespace",
+    "moby",
+    "-id",
+    "3dcf8c38fefae6dd29cf1cfde86caff53e6e5268716cb36f23796dd748f3800c"
+   ],
+   "cwd": "/",
+   "cgroup": "/system.slice/containerd.service",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 3001,
+   "ppid": 3000,
+   "uid": 0,
+   "user": null,
+   "session": null,
+   "name": "uv",
+   "exe": "/usr/bin/uv",
+   "args": [
+    "uv",
+    "run",
+    "uvicorn",
+    "faster_whisper_server.main:create_app"
+   ],
+   "cwd": null,
+   "cgroup": "/system.slice/docker-3dcf8c38fefae6dd29cf1cfde86caff53e6e5268716cb36f23796dd748f3800c.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 1048576
+  },
+  {
+   "pid": 3002,
+   "ppid": 3001,
+   "uid": 0,
+   "user": null,
+   "session": null,
+   "name": "python3",
+   "exe": "/usr/bin/python3",
+   "args": [
+    "/usr/bin/python3",
+    "-m",
+    "uvicorn"
+   ],
+   "cwd": null,
+   "cgroup": "/system.slice/docker-3dcf8c38fefae6dd29cf1cfde86caff53e6e5268716cb36f23796dd748f3800c.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 943718400
+  },
+  {
+   "pid": 3100,
+   "ppid": 3000,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "node",
+   "exe": "/usr/bin/node",
+   "args": [
+    "node",
+    "/opt/control/server.js"
+   ],
+   "cwd": null,
+   "cgroup": "/system.slice/docker-62b9640088494fafcb465ac0022eed9dc1fef21fce37c5563f32f1951b56b022.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 3200,
+   "ppid": 3000,
+   "uid": 999,
+   "user": null,
+   "session": null,
+   "name": "postgres",
+   "exe": "/usr/bin/postgres",
+   "args": [
+    "postgres"
+   ],
+   "cwd": null,
+   "cgroup": "/system.slice/docker-f1331970807110f88d6675da471d6ce0d34e344d8343f4384b5c3b623afb7f03.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 4000,
+   "ppid": 26129,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "bash",
+   "exe": "/usr/bin/bash",
+   "args": [
+    "-bash"
+   ],
+   "cwd": "/home/sam",
+   "cgroup": "/user.slice/user-1000.slice/session-3.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 4001,
+   "ppid": 4000,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "npm run dev",
+   "exe": "/usr/bin/npm run dev",
+   "args": [
+    "npm",
+    "run",
+    "dev"
+   ],
+   "cwd": "/home/sam/code/shop",
+   "cgroup": "/user.slice/user-1000.slice/session-3.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 4002,
+   "ppid": 4001,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "node",
+   "exe": "/usr/bin/node",
+   "args": [
+    "node",
+    "/home/sam/code/shop/node_modules/.bin/vite"
+   ],
+   "cwd": "/home/sam/code/shop",
+   "cgroup": "/user.slice/user-1000.slice/session-3.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 4003,
+   "ppid": 4002,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "esbuild",
+   "exe": "/usr/bin/esbuild",
+   "args": [
+    "/home/sam/code/shop/node_modules/@esbuild/linux-x64/bin/esbuild",
+    "--service=0.21.5",
+    "--ping"
+   ],
+   "cwd": "/home/sam/code/shop",
+   "cgroup": "/user.slice/user-1000.slice/session-3.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 4100,
+   "ppid": 4000,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "python3",
+   "exe": "/usr/bin/python3",
+   "args": [
+    "python3",
+    "manage.py",
+    "runserver",
+    "0.0.0.0:8000"
+   ],
+   "cwd": "/home/sam/src/blog/app",
+   "cgroup": "/user.slice/user-1000.slice/session-3.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 4200,
+   "ppid": 4000,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "node",
+   "exe": "/usr/bin/node",
+   "args": [
+    "node",
+    "--test"
+   ],
+   "cwd": "/home/sam/code/shop.worktrees/fix-login",
+   "cgroup": "/user.slice/user-1000.slice/session-3.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 4300,
+   "ppid": 4000,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "node",
+   "exe": "/usr/bin/node",
+   "args": [
+    "node",
+    "agent.js"
+   ],
+   "cwd": "/home/sam/.openclaw/workspace/tmp",
+   "cgroup": "/user.slice/user-1000.slice/session-3.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 5000,
+   "ppid": 1,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "node",
+   "exe": "/usr/bin/node",
+   "args": [
+    "node",
+    "server.js"
+   ],
+   "cwd": "/home/sam/doca",
+   "cgroup": "/system.slice/doca.service",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 5001,
+   "ppid": 5000,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "bash",
+   "exe": "/usr/bin/bash",
+   "args": [
+    "/bin/bash",
+    "-lc",
+    "npm run build -- --watch"
+   ],
+   "cwd": "/home/sam/code/shop",
+   "cgroup": "/system.slice/doca.service",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 5002,
+   "ppid": 5001,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "node",
+   "exe": "/usr/bin/node",
+   "args": [
+    "node",
+    "build.js",
+    "--watch"
+   ],
+   "cwd": "/home/sam/code/shop",
+   "cgroup": "/system.slice/doca.service",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 5003,
+   "ppid": 5000,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "bash",
+   "exe": "/usr/bin/bash",
+   "args": [
+    "/bin/bash",
+    "-l"
+   ],
+   "cwd": "/home/sam",
+   "cgroup": "/system.slice/doca.service",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 5010,
+   "ppid": 5000,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "npx",
+   "exe": "/usr/bin/npx",
+   "args": [
+    "npx",
+    "-y",
+    "@playwright/mcp"
+   ],
+   "cwd": "/home/sam/doca",
+   "cgroup": "/system.slice/doca.service",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 6000,
+   "ppid": 880,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "chrome",
+   "exe": "/usr/bin/chrome",
+   "args": [
+    "/opt/google/chrome/chrome"
+   ],
+   "cwd": "/home/sam",
+   "cgroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/app-google-chrome-6000.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 419430400
+  },
+  {
+   "pid": 6001,
+   "ppid": 6000,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "chrome",
+   "exe": "/usr/bin/chrome",
+   "args": [
+    "/opt/google/chrome/chrome",
+    "--type=zygote"
+   ],
+   "cwd": "/home/sam",
+   "cgroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/app-google-chrome-6000.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 83886080
+  },
+  {
+   "pid": 6002,
+   "ppid": 6001,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "chrome",
+   "exe": "/usr/bin/chrome",
+   "args": [
+    "/opt/google/chrome/chrome",
+    "--type=renderer"
+   ],
+   "cwd": "/home/sam",
+   "cgroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/app-google-chrome-6000.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 209715200
+  },
+  {
+   "pid": 7000,
+   "ppid": 1,
+   "uid": 65534,
+   "user": null,
+   "session": null,
+   "name": "dnsmasq",
+   "exe": "/usr/bin/dnsmasq",
+   "args": [
+    "/usr/sbin/dnsmasq",
+    "--keep-in-foreground"
+   ],
+   "cwd": "/",
+   "cgroup": "/system.slice/dnsmasq.service",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  },
+  {
+   "pid": 8000,
+   "ppid": 4000,
+   "uid": 1000,
+   "user": null,
+   "session": null,
+   "name": "node",
+   "exe": "/usr/bin/node",
+   "args": [
+    "node",
+    "tunnel.js",
+    "--token",
+    "s3cr3t-value",
+    "API_KEY=abc123",
+    "https://hub.example/mcp/AbCdEfGhIjKlMnOpQrStUv123",
+    "Q2hlY2tPdXRUaGlzVmVyeUxvbmdSYW5kb21Ub2tlbjEyMw"
+   ],
+   "cwd": "/home/sam",
+   "cgroup": "/user.slice/user-1000.slice/session-3.scope",
+   "kernel": false,
+   "cpuMs": 1000,
+   "startedAt": 1791496400000,
+   "rss": 52428800
+  }
+ ],
+ "ids": {
+  "service": "3dcf8c38fefae6dd29cf1cfde86caff53e6e5268716cb36f23796dd748f3800c",
+  "computer": "62b9640088494fafcb465ac0022eed9dc1fef21fce37c5563f32f1951b56b022",
+  "container": "f1331970807110f88d6675da471d6ce0d34e344d8343f4384b5c3b623afb7f03"
+ }
+}

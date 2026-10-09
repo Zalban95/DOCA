@@ -53,6 +53,7 @@ const TYPES = {
   // ticks in between are published ephemerally by the publisher, because a
   // progress bar redrawn from an hour-old queue is not progress.
   'agent.mission':    { cls: 'durable', ttlSec: 6 * 3600 },
+  'agent.team':       { cls: 'durable', ttlSec: 6 * 3600 },   // a team's board (teams/announce.js): its step ticks are sent ephemeral
   'artifact.deliver': { cls: 'durable', ttlSec: L.DEFAULT_EVENT_TTL_SEC },
   'sensor.request':   { cls: 'durable', ttlSec: 600 },
   'sensor.stop':      { cls: 'durable', ttlSec: 600 },

@@ -6,10 +6,10 @@
 
 function _hcBuiltinHtml(h) {
   return `
-    <div class="hc-org-guide"><strong>Your agent, and the helpers it hands work to</strong>
-      <span>Your main chat is with the agent (the Orchestrator). A bigger job gets a work chat of its own, where it is planned
-      and done; a work chat may send a specialist — a helper for one kind of errand, such as code or the web. Open any of them
-      here; what they find comes back to your main chat.</span></div>
+    <div class="hc-org-guide">${pageHeadHtml({ title: 'Your agent, and the helpers it hands work to',
+      sub: 'Your main chat is with the agent (the Orchestrator). A bigger job gets a work chat of its own, where it is planned '
+        + 'and done; a work chat may send a specialist — a helper for one kind of errand, such as code or the web. Open any of them '
+        + 'here; what they find comes back to your main chat.' })}</div>
     <div class="hc-layout">
       <div class="hc-side">
         <div class="hc-side-head">
@@ -43,6 +43,9 @@ function _hcBuiltinHtml(h) {
         <div id="hc-agents" class="hc-agents"><div class="placeholder">Loading…</div></div>
         <div class="hc-roster-links">Tools held by the <a href="#" onclick="hcAgentTools('orchestrator');return false">Orchestrator</a>
           · <a href="#" onclick="hcAgentTools('work');return false">a work chat</a></div>
+
+        <div class="hc-side-head hc-teams-head" style="margin-top:10px" title="Specialists on one board: tasks that wait on each other, each with its contract. The Orchestrator makes one with the team tool.">Teams</div>
+        <div id="hc-teams" class="hc-agents"><div class="placeholder">Loading…</div></div>
 
         <div class="hc-side-head" style="margin-top:10px">
           Recipes

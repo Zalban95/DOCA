@@ -1,0 +1,162 @@
+{
+ "procs": [
+  {
+   "ProcessId": 0,
+   "ParentProcessId": 0,
+   "Name": "System Idle Process",
+   "ExecutablePath": null,
+   "CommandLine": null,
+   "WorkingSetSize": 8192,
+   "KernelModeTime": 0,
+   "UserModeTime": 0,
+   "SessionId": 0,
+   "Start": null
+  },
+  {
+   "ProcessId": 4,
+   "ParentProcessId": 0,
+   "Name": "System",
+   "ExecutablePath": null,
+   "CommandLine": null,
+   "WorkingSetSize": 139264,
+   "KernelModeTime": 12000000,
+   "UserModeTime": 0,
+   "SessionId": 0,
+   "Start": 1791480000000
+  },
+  {
+   "ProcessId": 812,
+   "ParentProcessId": 700,
+   "Name": "svchost.exe",
+   "ExecutablePath": "C:\\Windows\\System32\\svchost.exe",
+   "CommandLine": "C:\\Windows\\system32\\svchost.exe -k DcomLaunch -p",
+   "WorkingSetSize": 30000000,
+   "KernelModeTime": 1,
+   "UserModeTime": 1,
+   "SessionId": 0,
+   "Start": 1791480001000
+  },
+  {
+   "ProcessId": 2210,
+   "ParentProcessId": 2100,
+   "Name": "explorer.exe",
+   "ExecutablePath": "C:\\Windows\\explorer.exe",
+   "CommandLine": "C:\\Windows\\Explorer.EXE",
+   "WorkingSetSize": 150000000,
+   "KernelModeTime": 50000000,
+   "UserModeTime": 90000000,
+   "SessionId": 1,
+   "Start": 1791480100000
+  },
+  {
+   "ProcessId": 2300,
+   "ParentProcessId": 2210,
+   "Name": "sihost.exe",
+   "ExecutablePath": "C:\\Windows\\System32\\sihost.exe",
+   "CommandLine": "sihost.exe",
+   "WorkingSetSize": 20000000,
+   "KernelModeTime": 1,
+   "UserModeTime": 1,
+   "SessionId": 1,
+   "Start": 1791480100000
+  },
+  {
+   "ProcessId": 3000,
+   "ParentProcessId": 2210,
+   "Name": "WindowsTerminal.exe",
+   "ExecutablePath": "C:\\Program Files\\WindowsApps\\Microsoft.WindowsTerminal_1.21\\WindowsTerminal.exe",
+   "CommandLine": "\"C:\\Program Files\\WindowsApps\\Microsoft.WindowsTerminal_1.21\\WindowsTerminal.exe\"",
+   "WorkingSetSize": 90000000,
+   "KernelModeTime": 1,
+   "UserModeTime": 1,
+   "SessionId": 1,
+   "Start": 1791490000000
+  },
+  {
+   "ProcessId": 3010,
+   "ParentProcessId": 3000,
+   "Name": "pwsh.exe",
+   "ExecutablePath": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+   "CommandLine": "\"C:\\Program Files\\PowerShell\\7\\pwsh.exe\"",
+   "WorkingSetSize": 80000000,
+   "KernelModeTime": 1,
+   "UserModeTime": 1,
+   "SessionId": 1,
+   "Start": 1791490001000
+  },
+  {
+   "ProcessId": 3020,
+   "ParentProcessId": 3000,
+   "Name": "powershell.exe",
+   "ExecutablePath": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+   "CommandLine": "powershell.exe",
+   "WorkingSetSize": 70000000,
+   "KernelModeTime": 1,
+   "UserModeTime": 1,
+   "SessionId": 1,
+   "Start": 1791490002000
+  },
+  {
+   "ProcessId": 3100,
+   "ParentProcessId": 3010,
+   "Name": "node.exe",
+   "ExecutablePath": "C:\\Program Files\\nodejs\\node.exe",
+   "CommandLine": "\"C:\\Program Files\\nodejs\\node.exe\" C:\\Users\\sam\\code\\shop\\node_modules\\vite\\bin\\vite.js",
+   "WorkingSetSize": 120000000,
+   "KernelModeTime": 10000000,
+   "UserModeTime": 40000000,
+   "SessionId": 1,
+   "Start": 1791495000000
+  },
+  {
+   "ProcessId": 3101,
+   "ParentProcessId": 3100,
+   "Name": "esbuild.exe",
+   "ExecutablePath": "C:\\Users\\sam\\code\\shop\\node_modules\\@esbuild\\win32-x64\\esbuild.exe",
+   "CommandLine": "C:\\Users\\sam\\code\\shop\\node_modules\\@esbuild\\win32-x64\\esbuild.exe --service=0.21.5 --ping",
+   "WorkingSetSize": 20000000,
+   "KernelModeTime": 1,
+   "UserModeTime": 1,
+   "SessionId": 1,
+   "Start": 1791495001000
+  },
+  {
+   "ProcessId": 3200,
+   "ParentProcessId": 2210,
+   "Name": "Code.exe",
+   "ExecutablePath": "C:\\Users\\sam\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe",
+   "CommandLine": "\"C:\\Users\\sam\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe\"",
+   "WorkingSetSize": 300000000,
+   "KernelModeTime": 1,
+   "UserModeTime": 1,
+   "SessionId": 1,
+   "Start": 1791491000000
+  },
+  {
+   "ProcessId": 4400,
+   "ParentProcessId": 812,
+   "Name": "MsMpEng.exe",
+   "ExecutablePath": "C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\MsMpEng.exe",
+   "CommandLine": null,
+   "WorkingSetSize": 200000000,
+   "KernelModeTime": 1,
+   "UserModeTime": 1,
+   "SessionId": 0,
+   "Start": 1791480002000
+  }
+ ],
+ "listen": [
+  {
+   "LocalPort": 5173,
+   "OwningProcess": 3100
+  },
+  {
+   "LocalPort": 135,
+   "OwningProcess": 812
+  },
+  {
+   "LocalPort": 5173,
+   "OwningProcess": 3100
+  }
+ ]
+}

@@ -20,7 +20,7 @@ function ptyErrorBanner(container) {
         <button class="btn btn-xs btn-teal" onclick="
           nav('settings');
           setTimeout(() => document.getElementById('sysdeps-list')?.scrollIntoView({ behavior: 'smooth' }), 200);
-        ">Open Settings → System Tools</button>
+        ">Open Settings → System tools</button>
       </div>
     </div>`;
   container.style.position = 'relative';

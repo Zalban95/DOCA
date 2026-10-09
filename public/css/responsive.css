@@ -49,9 +49,9 @@
     bottom: var(--mobile-nav-h);
     z-index: 200;
     transform: translateX(-100%);
-    box-shadow: 4px 0 24px rgba(0,0,0,0.6);
+    box-shadow: none;   /* a closed drawer casts no shadow onto the page (des 12): this file loads after system.css */
   }
-  .sidebar.open { transform: translateX(0); }
+  .sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.45); }
 
   /* Sidebar backdrop */
   .sidebar-backdrop {
