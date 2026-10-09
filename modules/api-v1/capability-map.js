@@ -97,6 +97,17 @@ const PERSON = [
   { id: 'home-hold', does: 'keep the Home page live while it is shown', panel: ['POST /api/home/hold'],
     only: 'a panel page holding the hub\'s connection to Home Assistant open; a device\'s own home will hear changes on its event stream' },
 
+  // ── Meetings (meetings/) ──
+  { id: 'meetings', does: 'see my meetings and join one', panel: ['GET /api/meetings', 'GET /api/meetings/:id'], v1: ['GET /meetings'],
+    note: 'a device lists them with each link and opens the room in its web view (/meet/<id>); native call screens come later' },
+  { id: 'meeting-schedule', does: 'call someone, schedule, change, confirm or cancel a meeting',
+    panel: ['POST /api/meetings', 'PATCH /api/meetings/:id', 'POST /api/meetings/:id/cancel', 'POST /api/meetings/:id/confirm', 'POST /api/meetings/:id/end'],
+    gap: 22, why: 'calling a colleague or moving a meeting from the phone without opening the panel page; until then the Meetings page in its web view' },
+  { id: 'meeting-room', does: 'be in a meeting: voice, video, chat, share my screen, offer or take control', panel: ['POST /api/meetings/:id/*'],
+    only: 'a room is WebRTC in a page: a device joins by opening its link in its web view (DocaDesk, DocaMobile); the native call screen, and control from a phone, are later work in each app' },
+  { id: 'meeting-calendar', does: 'connect my own calendar for meetings', panel: ['POST /api/meetings/calendar/:provider/connect', 'DELETE /api/meetings/calendar'],
+    only: 'an OAuth sign-in with Google or Microsoft happens in a browser, at the panel' },
+
   // ── This screen, these devices ──
   { id: 'screen-profile', does: 'set this device\'s notifications (asking, haptics, quiet hours)', panel: ['POST /api/screen/profile'], v1: ['PUT /devices/{id}/profile'] },
   { id: 'screen-settings', does: 'change this screen\'s look and voice', panel: ['POST /api/screen/settings'],
@@ -122,6 +133,19 @@ const PERSON = [
     only: 'a secret is typed in only where the password is asked again (CONSTITUTION S4, S14) — the panel, or a device opening /d/<id>/; never sent to a device to keep' },
   { id: 'channel-link', does: 'link or unlink a chat app (Telegram, Matrix, Slack, mail)', panel: ['POST /api/channels/:name/link', 'DELETE /api/channels/:name/chats/:chat'],
     gap: 15, why: 'the link code is made once; a linked chat is itself a device' },
+
+  // ── The hive chat (people/) ──
+  { id: 'people-chat', does: 'message the people of the hive: write, react, mark read, say I am typing', panel: ['POST /api/people/dm', 'POST /api/people/spaces/:id/messages',
+    'POST /api/people/messages/:id/react', 'POST /api/people/spaces/:id/read', 'POST /api/people/spaces/:id/typing'],
+    v1: ['POST /people/dm', 'POST /people/spaces/{id}/messages', 'POST /people/messages/{id}/react', 'POST /people/spaces/{id}/read', 'POST /people/spaces/{id}/typing'] },
+  { id: 'people-manage', does: 'make a group or a channel, join, leave, add people, rename, pin, mute, edit or delete my message', panel: ['POST /api/people/spaces',
+    'PATCH /api/people/spaces/:id', 'POST /api/people/spaces/:id/join', 'POST /api/people/spaces/:id/leave', 'POST /api/people/spaces/:id/members', 'POST /api/people/spaces/:id/mine',
+    'PATCH /api/people/messages/:id', 'DELETE /api/people/messages/:id', 'POST /api/people/messages/:id/pin'],
+    gap: 21, why: 'a phone writes and reacts in the spaces its person is in; making and arranging them is the panel\'s until a route is asked for' },
+  { id: 'people-export', does: 'export every hive-chat conversation for compliance', panel: ['POST /api/people/export'],
+    only: 'the owner\'s alone, with the password, written in the audit — the one way anyone reads conversations they are not in' },
+  { id: 'org-place', does: 'place someone in the organisation tree (manager, team, title)', panel: ['PATCH /api/org/people/:id'],
+    only: 'who reports to whom is people and levels: an admin\'s, or a team leader\'s for their own people, at the panel' },
 
   // ── A person's account ──
   { id: 'sign-in', does: 'sign in, out, or change my password', panel: ['POST /api/auth/login', 'POST /api/auth/logout', 'POST /api/auth/setup', 'POST /api/auth/step-up', 'POST /api/auth/password', 'DELETE /api/auth/sessions'],

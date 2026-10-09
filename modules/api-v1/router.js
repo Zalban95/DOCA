@@ -57,7 +57,7 @@ router.post('/devices/pair/complete', wrap(pairComplete));   // unauthenticated,
 // ─── Everything below requires a token ──────────────────────────────────────
 
 router.use((req, res, next) => authenticate({ allowQuery: req.path === '/events' })(req, res, next));
-router.use((req, _res, next) => { devices.touchPersist(); next(); }, require('./pending').guard); require('./owner-ceiling').mount(router); require('../devices-approval/routes').mountDevice(router); require('../devices-control').mount(router); require('./usage-route').mount(router); require('./today-route').mount(router); require('./wake').start(); require('../device-console').mountDevice(router); require('./mcp-server').mount(router); require('./agui').mount(router); require('./a2a').mount(router); require('./client-files').mount(router); require('../network').mountDevice(router); require('../wakeword/routes').mountDevice(router); require('./packs-receive').mount(router, upload); require('./packs-receive').mountRegistry(router); require('../realtime/routes').mountDevice(router); require('./yours').mount(router); require('../client-apps/routes').mountDevice(router); require('../sealed/routes').mountDevice(router);   // a device held to its person (owner-ceiling.js), control acks, grants, MCP/AG-UI/A2A, clients' files, packs from other hubs (after auth)
+router.use((req, _res, next) => { devices.touchPersist(); next(); }, require('./pending').guard); require('./owner-ceiling').mount(router); require('../devices-approval/routes').mountDevice(router); require('../devices-control').mount(router); require('./usage-route').mount(router); require('./today-route').mount(router); require('./wake').start(); require('../device-console').mountDevice(router); require('./mcp-server').mount(router); require('./agui').mount(router); require('./a2a').mount(router); require('./client-files').mount(router); require('../network').mountDevice(router); require('../wakeword/routes').mountDevice(router); require('./packs-receive').mount(router, upload); require('./packs-receive').mountRegistry(router); require('../realtime/routes').mountDevice(router); require('./yours').mount(router); require('../people/v1').mount(router); require('../client-apps/routes').mountDevice(router); require('../sealed/routes').mountDevice(router);   // a device held to its person (owner-ceiling.js), control acks, grants, MCP/AG-UI/A2A, clients' files, packs from other hubs (after auth)
 
 router.get('/capabilities', wrap(async (req, res) => res.json(await capabilities.build(req.device))));
 require('../look/routes').mountDevice(router);   // GET /settings/effective (this device's layer over the hive's, screens/) and /settings/look (the panel's look, resolved)
@@ -505,7 +505,7 @@ harnessApi.delete('/sessions/:id', requireScope('harness:sessions'), wrap(async 
 // writes prefs. A device that could apply a proposal would make that rule empty.
 harnessApi.get('/memory', requireScope('harness:memory'), (_req, res) =>
   res.json(harness.memoryList()));
-require('./parity').mount(harnessApi, router);   // stop, restart/drop, archive, working, ambient, decisions (D1)
+require('./parity').mount(harnessApi, router); require('../meetings/device').mount(router);   // stop, restart/drop, archive, working, ambient, decisions (D1); the person's meetings
 router.use('/harness', harnessApi);
 
 // ─── Agent-facing API ───────────────────────────────────────────────────────

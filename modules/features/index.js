@@ -20,7 +20,7 @@
  * free to call. test/features.test.js fails when an experiment, a page, a Settings section or a tool has no entry,
  * so a feature cannot be added without the agents being able to find it.
  */
-const FILES = ['agents', 'hub', 'field', 'voice', 'alternatives'];
+const FILES = ['agents', 'hub', 'field', 'voice', 'meetings', 'alternatives'];
 const STATES = { on: 'on by default', switch: 'behind a switch', experiment: 'an experiment', alternative: 'an alternative kept beside its replacement' };
 
 let _all = null;

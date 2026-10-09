@@ -1,0 +1,130 @@
+'use strict';
+
+/**
+ * Meetings in real browsers: two people, each in a headless Chromium of their own with Chromium's fake camera and
+ * microphone (--use-fake-device-for-media-stream) and its fake picker (--use-fake-ui-for-media-stream), meet in one
+ * room through the hub — voice and video flow both ways over WebRTC, then one shares a screen and the other sees it
+ * on the stage, with the red "you are sharing" bar on the sharer's side. Pictures go to DOCA_SHOTS when it is set.
+ * Skipped where no Chrome, Edge or Chromium is found.
+ */
+const { test, before, after } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { spawn } = require('node:child_process');
+const H = require('./helpers');   // first: it points the settings at a temporary folder
+const headless = require('../modules/headless');
+
+const exe = headless.findBrowser();
+const skip = !exe && 'no browser here';
+const SHOTS = process.env.DOCA_SHOTS || null;
+const browsers = [];
+let alice, bob;
+
+async function browser(who, name) {
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), `doca-meet-${name}-`));
+  const proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...headless.ALONE,
+    '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--auto-select-desktop-capture-source=Entire screen', '--autoplay-policy=no-user-gesture-required',
+    '--disable-gpu', '--window-size=1280,800', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'],
+  { stdio: 'ignore', detached: process.platform !== 'win32' });
+  const b = { proc, profile, errors: [] };
+  browsers.push(b);
+  b.page = await headless.connect(await headless.devtools(profile));
+  b.page.on(m => { if (m.method === 'Runtime.exceptionThrown') b.errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text); });
+  await b.page.send('Runtime.enable'); await b.page.send('Network.enable'); await b.page.send('Page.enable');
+  const [k, v] = who.cookie.split('=');
+  await b.page.send('Network.setCookie', { name: k, value: v, url: H.base });
+  b.eval = async (expression, gesture = false) => {
+    const r = await b.page.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true, userGesture: gesture });
+    if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
+    return r.result.value;
+  };
+  // A page still loading has not defined the panel's globals yet: that is a no, not a failure.
+  b.until = async (expression, ms = 20000) => { for (let t = 0; t < ms; t += 250) { if (await b.eval(expression).catch(() => false)) return true; await headless.sleep(250); } return false; };
+  b.shot = async file => {
+    if (!SHOTS) return;
+    await headless.sleep(600);
+    const { data } = await b.page.send('Page.captureScreenshot', { format: 'png' });
+    fs.mkdirSync(SHOTS, { recursive: true });
+    fs.writeFileSync(path.join(SHOTS, file), Buffer.from(data, 'base64'));
+  };
+  return b;
+}
+
+function kill(b) {
+  try {
+    if (process.platform === 'win32') require('node:child_process').spawnSync('taskkill', ['/pid', String(b.proc.pid), '/T', '/F'], { stdio: 'ignore' });
+    else process.kill(-b.proc.pid, 'SIGKILL');
+  } catch { try { b.proc.kill('SIGKILL'); } catch { /* gone */ } }
+}
+
+before(async () => {
+  if (skip) return;
+  await H.start();
+  alice = await H.signIn('member', 'alice.b@test.local');
+  bob = await H.signIn('member', 'bob.b@test.local');
+  require('../modules/auth/store').updateUser?.(alice.user.id, { name: 'Alice' });
+  require('../modules/auth/store').updateUser?.(bob.user.id, { name: 'Bob' });
+  process.once('exit', () => browsers.forEach(kill));
+});
+after(async () => { browsers.forEach(kill); if (!skip) await H.stop(); });
+
+/** Bytes this page received from its one peer, by kind (inbound-rtp). */
+const received = kind => `(async () => { const p = [...MEET.peers.keys()][0]; const s = p && await MEET.mesh.stats(p); let n = 0;
+  s?.forEach(r => { if (r.type === 'inbound-rtp' && r.kind === '${kind}') n += r.bytesReceived || 0; }); return n; })()`;
+
+test('two people meet: voice and video both ways, then a screen shared and seen', { skip, timeout: 120000 }, async t => {
+  const a = await browser(alice, 'alice'), b = await browser(bob, 'bob');
+  await a.page.send('Page.navigate', { url: `${H.base}/` });
+  assert.ok(await a.until("typeof meetingStart === 'function' && document.readyState === 'complete' && typeof _liveScreen !== 'undefined'"), 'the panel loaded');
+  const { id } = await a.eval(`meetingStart({ people: [${JSON.stringify(bob.user.id)}], title: 'Design sync' })`, true);
+  assert.match(id, /^m[0-9a-f]{12}$/);
+  await b.page.send('Page.navigate', { url: `${H.base}/meet/${id}` });   // the link opens the panel on the room
+  assert.ok(await b.until(`MEET.id === '${id}' && MEET.peers.size === 1`), 'Bob joined by the link');
+  assert.ok(await a.until('MEET.peers.size === 1'), 'Alice sees Bob');
+  assert.ok(await a.until("[...MEET.peers.keys()].every(p => MEET.mesh.state(p) === 'connected')", 30000), 'connected');
+  assert.ok(await b.until("[...document.querySelectorAll('#meet .meet-tile:not(.meet-me) video')].some(v => v.videoWidth > 0)"), 'Bob sees Alice\'s camera');
+  assert.ok(await a.until("[...document.querySelectorAll('#meet .meet-tile:not(.meet-me) video')].some(v => v.videoWidth > 0)"), 'Alice sees Bob\'s camera');
+  assert.ok(await a.until(`${received('audio')}.then(n => n > 2000)`), 'Alice hears Bob (audio bytes arrive)');
+  assert.ok(await b.until(`${received('audio')}.then(n => n > 2000)`), 'Bob hears Alice');
+  await a.shot('1-alice-in-call.png'); await b.shot('2-bob-in-call.png');
+
+  // Alice shares her screen: Bob's stage shows it; Alice has the red bar.
+  const shared = await a.eval('meetShareStart().then(() => !!MEET.screen, e => String(e))', true);
+  // A headless Chromium on a runner without a screen (macOS asks for screen recording permission) may have no picture
+  // to share: said, not failed — on Linux, where Chromium's fake capture always answers, it must work.
+  if (shared !== true && process.platform !== 'linux') { t.diagnostic(`screen share not available in this headless browser: ${shared}`); return; }
+  assert.equal(shared, true, `getDisplayMedia: ${shared}`);
+  assert.ok(await a.until("!!document.querySelector('#meet .meet-red')"), 'the sharer is told, in red');
+  assert.ok(await b.until("(document.querySelector('#meet .meet-stage video')?.videoWidth || 0) > 0", 30000), 'Bob sees the screen on the stage');
+  assert.match(await b.eval("document.querySelector('#meet .meet-stage-cap').textContent"), /Alice's screen/);
+  await a.shot('3-alice-sharing.png'); await b.shot('4-bob-sees-share.png');
+
+  // Bob asks for control: Alice is asked; with no DOCA client lending input, an offer is refused in words.
+  await b.eval('meetControlAsk([...MEET.peers.keys()][0])');
+  assert.ok(await a.until("document.getElementById('app-confirm-modal')?.classList.contains('open')"), 'Alice is asked');
+  assert.match(await a.eval("document.getElementById('app-confirm-message').textContent"), /asks to control your screen/);
+  await a.shot('5-alice-asked-for-control.png');
+  await a.eval("document.getElementById('app-confirm-ok').click()", true);
+  assert.ok(await a.until("!!document.querySelector('#meet .meet-offer')"), 'consent 1: whom, and which machine');
+  await a.shot('6-alice-offer-form.png');
+  await a.eval("document.querySelector('#meet .meet-offer button[type=submit]').click()", true);
+  assert.ok(await a.until("/plain browser/.test(document.getElementById('app-confirm-message')?.textContent || '')"), 'no client lending input: pixels only, said in words');
+  await a.eval("document.getElementById('app-confirm-ok').click()", true);
+
+  // Stop sharing, chat, fold, leave.
+  await a.eval('meetShareStop()', true);
+  assert.ok(await b.until("!document.querySelector('#meet .meet-stage')"), 'the stage goes when the share stops');
+  await b.eval("(() => { const f = document.querySelector('#meet .meet-say'); f.querySelector('input').value = 'Thanks!'; return meetSay(f); })()");
+  assert.ok(await a.until("MEET.chat.some(l => l.text === 'Thanks!')"), 'chat reaches the room');
+  await a.eval('MEET.chatOpen = true; meetDraw()');
+  await a.shot('7-alice-chat.png');
+  await a.eval('meetFold(true)');
+  await a.eval("nav('meetings')");
+  assert.ok(await a.until("!!document.querySelector('#tab-meetings .mt-row')"), 'the Meetings page lists it');
+  await a.shot('8-meetings-page-folded-call.png');
+  await b.eval('meetLeave()');
+  assert.ok(await a.until('MEET.peers.size === 0'), 'Bob left');
+  assert.deepEqual([...a.errors, ...b.errors], [], 'no page error');
+});

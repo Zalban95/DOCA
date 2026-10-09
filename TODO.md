@@ -236,6 +236,16 @@ the project's managers only if the owner allows sharing specialists and skills (
   someone without host (it threw before), and the questions dock draws any no chat on the page shows.
 
 ### Everything still open, now urgent
+- [x] Hive chat (asked 2026-10-09, branch `hive-chat`; docs/design/hive-chat.md): the people of a hive talking — DMs,
+  groups, organisation and team channels, replies, reactions, pins, edits, deletes as tombstones, files, search, read
+  receipts and typing, all in the database (step 14, licence `people`); who may message whom is a level's `people`
+  (org / team / added); nobody reads a conversation they are not in, the owner's export the one exception (password,
+  audit); `@orchestrator` asks the writer's own agent, answered in the space as "<name>'s agent"; everyone their own
+  Orchestrator in the floating chat; Controls → Chat and the floating chat's Agent | People; the organisation tree
+  (manager, team, title) and a person's card; `/api/v1/people` and `people.*` events. Still open: the apps drawing
+  `people.message` (DocaMobile a Chat screen, DocaWear the DM notices it already gets as alerts, DocaDesk the panel);
+  calls and screen sharing between people (meetings fill `window.peopleCallProvider`); a device making groups and
+  channels (gap `people-manage`).
 - [x] Teams (asked and approved 2026-10-09, branch `teams`; docs/design/teams.md): a board of tasks for specialists with
   `after` and a contract each, made with one `team` call and carried by the hub; mechanical progress (steps of the
   budget, contracts, every task counting the same); a living `team-<slug>.md`; `team_note` between teammates, framed;
@@ -444,6 +454,17 @@ the project's managers only if the owner allows sharing specialists and skills (
 - Wave E (E1–E4) with the owner's brief: themes (keep dark and light, the current look kept, bold alternatives as
   themes), edit-ability features, the clients included — started by the owner's `/design`.
 - The hive backlog's open H-items below stay as written; they are urgent in this order after the above.
+
+## Meetings — what is left (branch `meetings`, 2026-10-09; docs/design/meetings.md)
+
+- [ ] TURN through the edge for calls across the internet (short-lived credentials minted by our own relay); today host candidates only (tailnet, LAN).
+- [ ] An SFU for rooms past six pages (`meet/mesh.js` keeps the interface it would replace).
+- [ ] The agent in a room as a voice participant (`meetings/hooks.js` says how: one more peer the hub hosts, realtime/pipeline.js's audio wire).
+- [ ] DocaMobile / DocaWear: native call screens from `GET /api/v1/meetings`, calling from the watch, a phone's screen shared (MediaProjection) — filed in each app's repository.
+- [ ] DocaDesk: a banner on the desktop while someone controls it, Esc ×3 caught by the app itself; WebView2's camera/mic/screen permission prompts allowed for the hub's own page.
+- [ ] doca-client: the `input` family (xdotool/ydotool, SendKeys, CGEvent) so any machine with it can be controlled; the browser extension controlling a shared tab.
+- [ ] Guests from outside the hive (a one-time link through the edge); calendar replies (RSVP) back into the meeting's people.
+- [ ] doca-licensing: the `meetings` entitlement in the Personal, Studio and Hosted policies.
 
 ## Live — what is left (updated 2026-10-04)
 

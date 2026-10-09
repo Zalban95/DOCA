@@ -26,13 +26,19 @@ function spec(id) {
     whoami: urls.whoami || null, account: base.account || (j => j.login || j.email || j.name || j.id), scopes: rec.scopes ?? base.scopes, extra: base.extra || {} };
 }
 
-function start(id, redirectUri) {
+/**
+ * `opts.scopes` asks for other scopes than the connector's own, and `opts.save(tokens, account)` keeps the tokens
+ * somewhere else than the connector's record: a person connecting their own calendar with the owner's app
+ * (meetings/calendars.js) — the app is the owner's, the account and its tokens are that person's.
+ */
+function start(id, redirectUri, opts = {}) {
   const s = spec(id), rec = vault.get(id);
+  if (opts.scopes) s.scopes = opts.scopes;
   if (!rec?.clientId) throw bad(`${s.label} has no OAuth app yet: give its client id (and secret) first.`, 409);
   if (!s.authorize || !s.token) throw bad(`${s.label} has no authorize or token address.`, 409);
   for (const [k, v] of pending) if (Date.now() - v.at > TTL) pending.delete(k);
   const state = b64url(crypto.randomBytes(18)), verifier = b64url(crypto.randomBytes(32));
-  pending.set(state, { id, verifier, redirectUri, at: Date.now() });
+  pending.set(state, { id, verifier, redirectUri, at: Date.now(), save: opts.save || null });
   const q = new URLSearchParams({ response_type: 'code', client_id: rec.clientId, redirect_uri: redirectUri, state,
     code_challenge: b64url(crypto.createHash('sha256').update(verifier).digest()), code_challenge_method: 'S256',
     ...(s.scopes ? { scope: s.scopes } : {}), ...s.extra });
@@ -66,6 +72,7 @@ async function finish(state, code) {
       if (r.ok) account = String(s.account(await r.json()) || '') || null;
     } catch { /* the connection works without a name */ }
   }
+  if (p.save) { await p.save(tokens, account); return { id: p.id, label: s.label, account, own: true }; }
   vault.patch(p.id, { ...tokens, account, connectedAt: new Date().toISOString() });
   return { id: p.id, label: s.label, account };
 }
@@ -83,4 +90,4 @@ async function token(id) {
   return rec.accessToken;
 }
 
-module.exports = { spec, start, finish, token };
+module.exports = { spec, start, finish, token, exchange };

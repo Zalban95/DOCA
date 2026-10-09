@@ -22,6 +22,7 @@ function visible(change, person, host) {
   if (change.topic === 'conversation') return access.mayUse(person, change.id);
   if (change.topic === 'missions') return !!change.sessionId && access.mayUse(person, change.sessionId);
   if (change.topic === 'teams') return !!change.sessionId && access.mayUse(person, change.sessionId);   // a team, by its leader's conversation (teams/)
+  if (change.topic === 'org') return !!person?.id;   // the organisation tree moved: every signed-in page may redraw it (org/)
   if (change.topic === 'schedules') return !!person?.id && change.by === person.id;   // their own schedules
   return false;
 }
@@ -43,7 +44,9 @@ function stream(req, res) {
     // A mission's machine question (harness/mission-asks.js): only its person's pages — a host's when it has no person.
     if (change.topic === 'ask') { if (change.personId ? person?.id === change.personId : host) send(change); return; }
     if (change.topic === 'device') { if (require('../devices-approval').hears(person, change)) send(change); return; }   // a new device: whoever may approve it
+    if (change.topic === 'chat') { if (person?.id && (change.to || []).includes(person.id)) send({ ...change, to: undefined }); return; }   // hive chat: its members alone, a host included (people/)
     if (change.topic === 'notice') { if (change.personId ? person?.id === change.personId : host) send(change); return; }   // notices/: theirs alone
+    if (change.topic === 'meeting') { if (require('../meetings/rooms').hears(screen, person, change)) send(change); return; }   // a meeting's pages, or the people it rings (meetings/)
     if (change.topic === 'workstream') { if (host && require('../workstream').holds(screen)) send(change); return; }   // only pages holding it
     if (visible(change, person, host)) send(change);
   };

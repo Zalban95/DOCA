@@ -45,6 +45,7 @@ const LEADS = {
   http_fetch: 'Read a URL (GET or HEAD) — the open web through a reader, your own addresses as they are; or keep a download.',
   service: 'Use an API service the owner set up by its named actions — the hub sends the key and follows long jobs; use it before api_call.',
   api_call: 'Call a keyed service or one of the owner\'s own devices and servers — use it to send, upload or act on an API.',
+  meeting: 'List the person\'s meetings or propose one with people of the hive — use it for "set up a call with Anna on Thursday at three".',
   screen: 'List the screens and the page each shows, or put a page on one — use it for "what is on the tablet" or "show the Workstream on the wall".',
   library_search: 'Find the person\'s files by what is in them — words said in a recording, what a picture shows — use it for "find the audio where…".',
   chronicle: 'Read what happened — runs, missions, jobs, the hub\'s log, a piece of work\'s story and cost — use it for "what happened", "why did it fail".',

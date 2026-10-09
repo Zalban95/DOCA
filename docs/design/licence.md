@@ -19,6 +19,7 @@ product, and editions are only lists — a new edition is made on the licence se
 | `voice` | Speech services and a screen's voice, the calls (Live, Deep, a device's), voice messages, the face, the ambient screen |
 | `devices` | Paired clients and the device API (`/api/v1`), asking and telling a device, files to a device, DOCA's apps, doca-client, the browser extension, wearables, secrets used on a device, DOCA as an MCP, AG-UI and A2A agent |
 | `channels` | Telegram, Matrix, Slack, mail |
+| `people` | The hive chat: direct messages, groups and channels between the people of a hive, their agents brought in (the organisation tree stays core) |
 | `machines` | Agents' computers, VMs, VNC screens, Docker, Live, logins for computers |
 | `home` | The Home page and smart-home control |
 | `services` | Connected accounts (OAuth), keys for services and `api_call`, API services, the agent's service drafts |
@@ -34,8 +35,8 @@ A licence can also carry `feature.<id>` to sell one feature without its group.
 |---|---|---|
 | Essentials | — | the general assistant on its own |
 | Personal | voice, devices, channels, home, services | a personal assistant across a person's devices and home |
-| Studio | agents, machines, services, devices, library | teams of agents with their own computers, for work |
-| Hosted | agents, voice, devices, channels, services | a hive on a server with no GPU or hypervisor: what needs neither |
+| Studio | agents, machines, services, devices, library, people | teams of agents with their own computers, for work |
+| Hosted | agents, voice, devices, channels, services, people | a hive on a server with no GPU or hypervisor: what needs neither |
 | Complete | every code but `lab` (as listed in this release) | everything a customer can have |
 | Owner | `all` | the project's own hives and testers |
 

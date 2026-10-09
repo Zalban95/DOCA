@@ -170,6 +170,9 @@ async function call(name, args) {
   // A minute after a secret was used on a device, nothing reads from it (sealed/hold.js; S4).
   const held = t.origin === 'client' ? require('../sealed/hold').blocks(registry.get(t.server)?.origin?.deviceId, t.tool) : null;
   if (held) return held;
+  // A person in a meeting has control of that machine (meetings/control.js): their hand first, the agent's input waits.
+  if (t.origin === 'client' && /^input_/.test(t.tool) && require('../meetings/control').driving(registry.get(t.server)?.origin?.deviceId))
+    return 'Error: someone in a meeting is controlling that machine right now, with its person\'s consent — its input waits until they hand it back. Looking (screen_capture) is fine.';
   try {
     // A tool that answers with isError reports its failure as content, so the
     // annotation belongs on the result as much as on a thrown one.

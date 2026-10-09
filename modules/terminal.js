@@ -90,6 +90,7 @@ function setup(httpServer) {
     if (req.url.startsWith('/ws/realtime')) return require('./realtime/routes').upgradePanel(req, socket, head);
     if (req.url.startsWith('/api/v1/realtime')) return require('./realtime/routes').upgradeDevice(req, socket, head);
     if (req.url.startsWith('/api/v1/call')) return require('./realtime/routes').upgradeDevice(req, socket, head, 'auto');
+    if (req.url.startsWith('/ws/meet/')) return require('./meetings/socket').upgrade(req, socket, head);   // a meeting's controller's pointer and keys: the person's chat right (meetings/)
     if (req.url.startsWith('/api/v1/mcp/host')) return require('./mcp/socket-hosts').upgrade(req, socket, head);   // a device lending tools over its own socket
     // Both sockets are a shell on this machine: the "host" right, a recent
     // sign-in, and this panel's own page (modules/auth/gate.js).

@@ -464,4 +464,4 @@ function restoreTimers() { for (const p of Object.values(db().prompts)) if (p.st
 function _reset() { for (const t of _timers.values()) clearTimeout(t); _timers.clear(); _db = null; }
 function _setResolver(fn) { _resolverHook = fn; }
 
-module.exports = { CHOICE_TYPES, PRIORITIES, get, list, openFor, viewFor, create, cancel, select, confirm, agentOutcome, expire, prune, restoreTimers, targetDevices, _reset, _setResolver };
+module.exports = { CHOICE_TYPES, PRIORITIES, get, list, openFor, viewFor, create, cancel, select, confirm, agentOutcome, expire, prune, restoreTimers, targetDevices, inQuietHours, _reset, _setResolver };
