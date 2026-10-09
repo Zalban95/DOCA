@@ -42,10 +42,12 @@ test('by default: core in full, the rest named by kit; a message, a call or tool
   assert.equal(tiers.heldNotSent('memory_list', []), true, 'held but not sent still runs when called');
   tiers.afterCall(w.id, null, 'memory_list', 'ok', []);
   assert.ok(tiers.attached(w.id).has('memory_list'), 'and stays loaded');
-  tiers.afterCall(w.id, null, 'skill', 'Step 2: keep it with `pack` {save}.', []);
-  assert.ok(tiers.attached(w.id).has('pack'), 'a skill that names a tool loads it');
-  tiers.afterCall(w.id, null, 'recipe', 'Steps: 1. remind {at}', []);
-  assert.ok(tiers.attached(w.id).has('remind'), 'a recipe that names a tool loads it');
+  tiers.afterCall(w.id, null, 'skill', 'android-app: … uses computer …', [], { action: 'list' });
+  assert.ok(!tiers.attached(w.id).has('computer'), 'a list of skills loads nothing: the prompt stays the same bytes');
+  tiers.afterCall(w.id, null, 'skill', 'Step 2: keep it with `pack` {save}.', [], { action: 'read' });
+  assert.ok(tiers.attached(w.id).has('pack'), 'a skill read that names a tool loads it');
+  tiers.afterCall(w.id, null, 'recipe', 'Steps: 1. remind {at}', [], { action: 'show' });
+  assert.ok(tiers.attached(w.id).has('remind'), 'a recipe shown that names a tool loads it');
 
   const specialist = { id: 'x', level: 'specialist', tools: ['read_file'] };
   assert.equal(tiers.split(held(w.id), { sessionId: w.id, profile: specialist }).named.length, 0, 'specialists keep their own lists');

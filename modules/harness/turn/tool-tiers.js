@@ -135,11 +135,13 @@ function heldNotSent(name, disabled = []) {
 }
 
 /** After a call: a tool called by name stays loaded; a skill or recipe read loads the tools it names. */
-function afterCall(sessionId, profile, name, result, disabled = []) {
+function afterCall(sessionId, profile, name, result, disabled = [], args = {}) {
   if (!applies(profile) || !sessionId) return;
   const add = [];
   if (!CORE.has(name)) add.push(serverOf(name) ? `mcp:${serverOf(name)}` : name);
-  if ((name === 'skill' || name === 'recipe') && !String(result).startsWith('Error'))
+  // A skill read, a recipe shown or run — not a list of them, which names tools in passing and would load them all.
+  const followed = name === 'skill' ? args?.action === 'read' : name === 'recipe' ? ['show', 'run'].includes(args?.action) : false;
+  if (followed && !String(result).startsWith('Error'))
     add.push(...mentionedIn(result, require('../tools').schemas(disabled).map(nameOf)));
   attach(sessionId, add);
 }
