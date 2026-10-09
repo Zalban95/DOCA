@@ -22,7 +22,10 @@ async function workstreamTab(shown) {
         _wsDraw();
       } catch { /* the stream fills it */ }
     }
-  } else if (WS.holding) _wsHold(false);
+  } else {
+    if (WS.holding) _wsHold(false);
+    if (typeof PD !== 'undefined' && PD.open) processesDrawer(false);   // the Processes drawer goes with the page (processes.js)
+  }
 }
 
 async function _wsHold(on) {
@@ -36,7 +39,7 @@ function _wsFrame() {
   const page = document.getElementById('tab-workstream');
   page.innerHTML = `<div class="ws-bar"><span class="ws-title">Workstream</span><span class="ws-status" id="ws-status"></span>
       <button class="btn btn-xs" id="ws-follow" onclick="workstreamFollow()" title="Follow the work: the file being edited comes to the front">⟳ following</button>
-      <button class="btn btn-xs" onclick="soloOpen('workstream')" title="In a window of its own">⧉</button></div>
+      <button class="btn btn-xs" onclick="soloOpen('workstream')" title="In a window of its own">⧉</button>${typeof processesButtonHtml === 'function' ? processesButtonHtml() : ''}</div>
     <div class="ws-chips" id="ws-chips"></div>
     <div class="ws-stage" id="ws-stage"><div class="placeholder">Nothing edited yet. When an agent writes a file in a project or the workspace, it appears here as it changes.</div></div>
     <div class="ws-console" id="ws-console"></div>`;
