@@ -135,6 +135,33 @@ const STEPS = [
        PRIMARY KEY (tenant_id, path, piece))`,
     'CREATE INDEX IF NOT EXISTS library_pieces_model ON library_pieces (tenant_id, model)',
   ] },
+  // Hive chat (people/; docs/design/hive-chat.md): the people of a hive talking to each other. A space is a direct
+  // conversation between two (`dm_key` the two ids sorted, unique), a group, or a channel of an organisation or a team
+  // (`audience`). A message is numbered within its space (`seq`), so "read up to" is one number; a delete keeps the row
+  // as a tombstone. `agent_session` is the conversation a person's own agent answers this space in, once brought in.
+  { id: 14, feature: 'hive-chat', what: 'hive chat: spaces, members, messages, reactions and pins (people/)', sql: [
+    `CREATE TABLE IF NOT EXISTS people_spaces (
+       tenant_id TEXT NOT NULL DEFAULT 'local', id TEXT NOT NULL, kind TEXT NOT NULL, name TEXT, topic TEXT, org_id TEXT,
+       audience TEXT, dm_key TEXT, created_by TEXT, created_at TEXT NOT NULL, last_at TEXT, last_seq INTEGER NOT NULL DEFAULT 0,
+       archived_at TEXT, PRIMARY KEY (tenant_id, id))`,
+    'CREATE UNIQUE INDEX IF NOT EXISTS people_spaces_dm ON people_spaces (tenant_id, dm_key)',
+    `CREATE TABLE IF NOT EXISTS people_members (
+       tenant_id TEXT NOT NULL DEFAULT 'local', space_id TEXT NOT NULL, user_id TEXT NOT NULL, role TEXT NOT NULL,
+       joined_at TEXT NOT NULL, read_seq INTEGER NOT NULL DEFAULT 0, read_at TEXT, muted INTEGER NOT NULL DEFAULT 0,
+       agent_session TEXT, PRIMARY KEY (tenant_id, space_id, user_id))`,
+    'CREATE INDEX IF NOT EXISTS people_members_user ON people_members (tenant_id, user_id)',
+    `CREATE TABLE IF NOT EXISTS people_messages (
+       tenant_id TEXT NOT NULL DEFAULT 'local', id TEXT NOT NULL, space_id TEXT NOT NULL, seq INTEGER NOT NULL,
+       author_id TEXT, agent TEXT, body TEXT NOT NULL, reply_to TEXT, mentions TEXT, attachments TEXT,
+       created_at TEXT NOT NULL, edited_at TEXT, deleted_at TEXT, PRIMARY KEY (tenant_id, id))`,
+    'CREATE UNIQUE INDEX IF NOT EXISTS people_messages_seq ON people_messages (tenant_id, space_id, seq)',
+    'CREATE INDEX IF NOT EXISTS people_messages_at ON people_messages (tenant_id, created_at)',
+    `CREATE TABLE IF NOT EXISTS people_reactions (
+       tenant_id TEXT NOT NULL DEFAULT 'local', message_id TEXT NOT NULL, user_id TEXT NOT NULL, emoji TEXT NOT NULL, at TEXT NOT NULL,
+       PRIMARY KEY (tenant_id, message_id, user_id, emoji))`,
+    `CREATE TABLE IF NOT EXISTS people_pins (
+       tenant_id TEXT NOT NULL DEFAULT 'local', space_id TEXT NOT NULL, message_id TEXT NOT NULL, by_user TEXT, at TEXT NOT NULL,
+       PRIMARY KEY (tenant_id, space_id, message_id))`,
   // Meetings (meetings/): a meeting is its time, its organizer and its state; each person invited is a row of their own,
   // with how they were invited (their own calendar, a mail with an iCalendar invite, a notice) and the event id their
   // calendar gave it, so a change or a cancellation reaches the same event. Step 14 is left to the hive chat (branch

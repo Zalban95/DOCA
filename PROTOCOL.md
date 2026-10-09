@@ -573,6 +573,9 @@ data: {"reason":"revoked"}
 | `agent.tool` | ephemeral | `{ turnId, sessionId, name, phase: call\|result, step, args?, ok?, preview? }` |
 | `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|paused\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error?, plan?, progress?, archivedAt?, seenAt?, quiet? }` — a specialist agent's work, to every device with `harness:chat` whose owner may open the conversation (§23). `paused` means a restart cut it off; the agent asks the user whether to continue on the next turn from any device. `plan` is the specialist's own checklist (`[{ title, state: done\|running\|queued\|failed }]`, at most 12) and `progress` `{ done, total, percent }` from it — draw the bar from these, else from `steps`. `team` `{ id, task }` (hub 3.x): this mission is a task of a team — see `agent.team`. `archivedAt` (hub 2.228) means the mission was put away: **take its row off and notify nothing** — it always comes with `quiet: true`. `seenAt` (hub 2.282) means its person opened the finished result — on the panel or a device (`POST /harness/missions/{id}/seen`): read means done, so **clear its notice everywhere** and notify nothing (`quiet: true`); it stays a finished row. A `paused` mission is waiting for its person (continue or drop), not finished. A work chat arrives in the same shape with `kind: "work"` and `agentId: "work"`; one a restart cut off is `paused` (hub 2.336: it read `failed` before; work it was doing carries on by itself), one a person stopped or dropped is `cancelled` (why in `error`) — nothing finished, so nothing is announced as done. `GET /harness/missions` is the same picture for a client that has just woken up. |
 | `agent.team` | durable when a task changes state or the team ends, ephemeral when only a percentage moved | `{ teamId, title, goal?, state: running\|done\|failed\|stopped, progress: { done, total, percent }, keepGoing: { on, rounds, maxRounds }, tasks[], notes, doc?, startedAt, endedAt?, archivedAt?, quiet? }` — a team of specialists on one board (hub `teams/`; fixtures `agent.team-running`, `agent.team-done`), to the same devices as `agent.mission`. Each task is `{ id, title, agent, state: queued\|waiting\|running\|paused\|checking\|done\|failed\|stopped, percent, after[], step?, budget?, waitingOn?, missionId?, why?, doneWhen? }`. **Everything is worked out by the hub, never written by an agent**: a running task's `percent` is steps used of its specialist's budget (at most 99, "step 12 of 30"), a task is `done` (100) only once its contract holds, and the team's `percent` is tasks done of tasks, **every task weighing the same — say so where you draw it**. Draw the overall bar and, opened, a thin bar per task; red only for `failed`. `doc` is the team's living document (`kind: doc`): a phone offers to open it, a watch skips it. Each task's mission also arrives as `agent.mission` with `team: { id, task }` — a client drawing teams shows those missions under their team rather than twice. `archivedAt` (with `quiet: true`): take the row off. |
+| `people.message` | durable (a day) | `{ spaceId, space: { id, kind, name }, what: new\|edited\|deleted\|reacted, message, notify }` — the hive chat (§23.3): to every member's devices with `harness:chat`. `notify` is true for a direct message or a mention, not muted, outside this device's quiet hours; the same message then also comes as an `alert` with `ext.people`, which a client drawing this drops. |
+| `people.typing` | ephemeral | `{ spaceId, by: { id, name } }` — someone is typing there; show it a few seconds |
+| `people.read` | ephemeral | `{ spaceId, by: { id, name }, seq }` — a read receipt |
 | `artifact.deliver` | durable | `{ artifact, inline?, inlineEncoding?: utf8|base64, message, ext }` |
 | `sensor.request` | durable (ttl = duration + 30 s) | `{ request: { id, sensors: [{ id, mode, rateHz, durationSec, unit }], reason, ext, expiresAt } }` |
 | `sensor.stop` | durable | `{ requestId, reason }` |
@@ -1571,7 +1574,35 @@ The device's person's recipes, schedules and face, answered as that person exact
   a tool name, only for a host's device); `GET /face/stream` is the same as server-sent events, on every change and
   a heartbeat every 15 s — what a watch face or a desktop overlay draws from.
 
-### 23.3 Meetings (hub 3.15.0)
+### 23.3 The hive chat: the people of a hive talking to each other (hub `people/`)
+
+A device acts as its person in the hive chat — direct messages, groups and channels between the people of one hive —
+under `harness:chat`, the scope it already holds to converse as that person. The same rules as the panel's: a person
+reads only the conversations they are a member of (an admin included), writes only with a level that holds `chat`, and
+starts one only with someone their level may message (a level's `people`: `org`, `team` or `added`). A device paired to
+nobody gets `403 person_required`.
+
+- `GET /people` — `{me, spaces[], joinable[], agents[], people[], may}`: the person's conversations, newest first, each
+  `{id, kind: dm|group|channel, title, topic?, unread, readSeq, lastSeq, muted, members[], last}`; channels they may
+  join; their own agent conversations (their Orchestrator first — open those through §23); who they may message.
+- `POST /people/dm {person}` — the direct conversation with someone, made once and found after.
+- `GET /people/spaces/:id/messages?before|after=<seq>&limit=` (or `?thread=<message id>`) — oldest first. A message is
+  `{id, spaceId, seq, author: {id, name}, agent?, agentLabel?, text, replyTo?, mentions[], attachments[], at, editedAt?,
+  deletedAt?, reactions: {emoji: [ids]}, replies}`. `text` is markdown; a deleted one keeps its place with no words.
+  `agent` set: the author's own agent wrote it (`@orchestrator`) — draw `agentLabel` ("Ada's agent"), never as the
+  person.
+- `POST /people/spaces/:id/messages {text, replyTo?}` — `@orchestrator` (or `@agent`, or a specialist's id) asks the
+  person's own agent, under their level and approvals; its answer arrives later as a message with `agent` set.
+- `POST /people/spaces/:id/read {seq}`, `POST /people/spaces/:id/typing`, `POST /people/messages/:id/react {emoji, on}`.
+
+Pushed to every member's devices with `harness:chat`: `people.message` (durable, a day: `{spaceId, space, what:
+new|edited|deleted|reacted, message, notify}`), `people.typing` and `people.read` (ephemeral). A direct message or a
+mention also arrives as an `alert` whose `ext.people` is `{spaceId, messageId}`, outside the device's quiet hours and
+unless the person muted the conversation — a client that draws `people.message` drops that alert and notifies from
+`notify` itself. Making groups and channels, pins, editing and deleting are the panel's for now
+(`docs/api/capability-gaps.md`, `people-manage`).
+
+### 23.4 Meetings (hub 3.15.0)
 
 People of the hive calling each other: a meeting has an id (`m` and twelve hex digits — the "call id") and a link,
 `https://<hub>/meet/<id>`, which opens the panel on that room. Its people are its organizer and those invited; nobody
@@ -1649,6 +1680,9 @@ else may join (404 as if absent), an admin included.
 | GET, WS | `/realtime` | `harness:chat` | a live call with a realtime speech model (§23.1) |
 | GET | `/recipes`, POST `/recipes/:id/run` | `harness:chat` | the person's recipes (§23.2) |
 | GET | `/schedules` | `harness:sessions` | the person's schedules (§23.2) |
+| GET | `/people` | `harness:chat` | the person's hive chat: conversations, channels to join, colleagues (§23.3) |
+| POST | `/people/dm`, `/people/spaces/:id/messages`, `/people/spaces/:id/read`, `/people/spaces/:id/typing`, `/people/messages/:id/react` | `harness:chat` | write, mark read, typing, react — as the person (§23.3) |
+| GET | `/people/spaces/:id/messages` | `harness:chat` | a conversation's messages, or one thread (§23.3) |
 | POST | `/schedules/:id/state` | `harness:chat` | on / paused; never on for an `agent` device |
 | GET | `/face`, `/face/stream` | `harness:sessions` | what the hive is doing (§23.2) |
 | GET | `/clients/android/:app`, `/clients/android/:app/apk` | any | the newest build of DocaMobile or DocaWear this hub keeps: `versionCode`, `versionName`, `sha256`, `bytes`, `url`; update when `versionCode` is higher than yours, and check the download's sha256 |

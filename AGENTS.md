@@ -274,6 +274,22 @@ The harness gives its agent eight rules for working on any repository (charter r
   (`teams/doc.js`) — in the leader's project when it has one and always as an attachment, written again at every
   change, shown as a `doc` when the team is made. Routes `/api/harness/missions/teams*` (the missions' rights rows;
   capability `teams`, a ranked gap for devices).
+- **A team works on a project** (asked 2026-10-09; `teams/place.js`, `teams/members.js`): `team create {project}` (id
+  or name), else the project its leading conversation works in, is `team.projectId`. Every task's mission (or work chat)
+  works there — the session gets `projectId` (`memory.createSession {fields}`, `missions.dispatch {place}`) unless the
+  leader already passes the project down — and a task that **writes** (its specialist holds the files, code or shell
+  kit, or a writing tool; a work chat) while another writing task of the team is not ordered before or after it gets a
+  **git worktree of its own** on `team/<slug>/<task>` (`projects/worktrees.add`, a taken name gets -2…; after a task in
+  a worktree it starts from that branch), its errand saying where it works; readers share the folder; a task's
+  `worktree: true|false` decides it. A retry keeps its worktree; a contract is read where its task worked; the team
+  document is a page in the project's main folder with "Where the work is" (each branch). Merging back is the person's.
+  A team's view carries `members` (the leader, the people who started it by `session-access.ownerOf`, each specialist
+  with task, state, step of budget, branch, conversation) and `project`; `GET …/teams?project=` lists one project's
+  (older teams by their leader's project). **Projects → Teams here** (`public/js/projects/teams.js`, under the side
+  view, folded when none): running teams and the last three that ended, each a card (goal, overall bar — every task
+  counts the same, Board, Doc → the page) with its members, a member opening as a chat tab; the same cards, compact,
+  in the project chat's fold (`agentSideFold {teams}`) and a Members list in the board window — one drawing,
+  `agent-ui/team-members.js`. Redrawn on the live feed's `teams`/`missions`. `test/team-project.test.js`.
 
 ### Product names (`modules/branding.js`)
 - **Every name a person reads comes from one file**, because the panel will be sold under a customer's label and under whatever the public release is called, and a rename that means grepping forty files is a rename that does not happen. Overrides live in prefs under `branding`, so a private label is a settings change; the UI for it is deliberately absent until it can sit behind the admin password, since the only thing worse than the wrong name is one an agent changed.
@@ -432,6 +448,36 @@ The harness gives its agent eight rules for working on any repository (charter r
 - **The agent** reaches a node's tools as any device's, but `harness/tools.js` hands them to `home/node-tools.js`,
   which answers as the page would for the turn's person (states narrowed, calls checked, a camera only when allotted);
   an unlock or a disarm through `home_call` is a forced ask (`harness/forced-asks.js`, every mode, never "always").
+
+### The hive chat: the people talking, their agents brought in (`modules/people`, `modules/org`; Controls → Chat; docs/design/hive-chat.md)
+- **All in the database**, schema step 14 (feature `hive-chat`, licence code `people`): `people_spaces` (a DM per pair by
+  `dm_key`, groups, channels whose `audience` is `org` or `team:<leader>`), `people_members` (role, `read_seq`, muted,
+  `agent_session`), `people_messages` (numbered per space; a delete is a tombstone), `people_reactions`, `people_pins`.
+  `people/store.js` is every query; `spaces.js` and `messages.js` decide per space and answer 404 for one the person is
+  not in — **an admin included**. Search is `LOWER(body) LIKE` over their own spaces; retention `people.retainDays`
+  (0 keeps, the admin's). The owner's compliance export (`POST /api/people/export`, `org`, the password, the audit) is
+  the one way anyone reads conversations they are not in.
+- **Same permission type**: rights `read` (reading) and `chat` (writing) at the gate; a level's `people` field —
+  `org` | `team` | `added` (`people/policy.js`, kept through `auth/levels.js`; none = by its rights: `chat` → org, else
+  added) — says whom its people start a conversation with; organisation channels are made with `users`, a team's by
+  its leader (`delegate`).
+- **@orchestrator** (or `@agent`, or a specialist's id) asks the **writer's** agent (`people/agent-bridge.js`): a
+  conversation of theirs per space, kind `chat`, under their own Orchestrator, gets the space's last fifteen lines and
+  the request as their turn; every turn ending there is posted in the space with `agent` set ("Ada's agent"). The agent
+  has no tool that reads the hive chat; recall finds only what was brought in.
+- **Everyone sees their own Orchestrator** (`harness/own-main.js`): the hub's main is its owner's (first writer, or a
+  host while nobody); anyone else gets one of their own, made the first time they write — the floating chat, its
+  history, Clear and `/api/chat/heard` use it. A device's default conversation (`api-v1/harness.defaultSession`) is
+  unchanged.
+- **The organisation tree** is core (`modules/org`, `/api/org*`): `managerId`, `team`, `title` on the account record
+  (no schema step: `data` holds it); placed by `users`, or by a team leader for the people below them; a person's card
+  (level, path, manager, reports, devices online, at the panel, local time).
+- **Live and devices**: the feed's `chat` topic reaches the space's members alone (`live/routes.js`); `/api/v1/people…`
+  under `harness:chat` (PROTOCOL §23.3), `people.message` durable, `people.typing`/`people.read` ephemeral, and a DM or a
+  mention as an `alert` with `ext.people` outside quiet hours. The panel: Controls → Chat (`people-page.js`; your
+  Orchestrator is the floating chat docked into the page), the floating chat's Agent | People (`people-float.js`), the
+  card and the tree (`people-card.js`). 📞 and 🖵 call `window.peopleCallProvider.start(kind, space)` once meetings
+  register one. `test/hive-chat.test.js`.
 
 ### The Archive (since 2.228.0, `modules/archive.js`, `public/js/archive.js`; Agents → Archive)
 - **Put away rather than deleted, in one place**: archived conversations and missions (as before, where they live), and now projects (`archivedAt` on the project: out of the Projects list, `GET /api/projects?all=1` keeps them; its folder is untouched) and the agents' computers (`computers.archive`: stopped, desktop, logins and files kept; out of the Computers tab, the agents' list and the tidy-up sweep; lending one brings it back), and signed-in browsers nobody opened (kind `device`, `screens/archive.js`). `GET /api/archive` lists them newest first, each person's conversations and missions by `session-access`, projects and computers a host's; `POST /api/archive/:kind/:id {on}` puts away or restores. An earlier Orchestrator (one put away by Clear main chat) is not restored (deep test B, C9: it came back as a work chat named "Orchestrator"): there is one at a time, so it stays archived, as what it was, and the refusal says where its conversation is read (Harness → "Show archived chats"). 🗄 on a computer's card and in the Projects header.

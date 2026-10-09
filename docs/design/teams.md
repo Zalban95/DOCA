@@ -93,6 +93,28 @@ queued task, decide the team's state, then announce. A task is dispatched with i
   switching keep going from a device is a ranked gap (`teams`, docs/api/capability-gaps.md); a device stops one task
   with `POST /harness/missions/{id}/stop`.
 
+## On a project (asked 2026-10-09: "can teams work on the project?")
+
+A team is bound to a project — named with `team create {project}`, or the one its leading conversation works in
+(`teams/place.js`). Its tasks work there:
+
+| Task | Where it works |
+|---|---|
+| reads (its specialist holds none of the files, code or shell kits nor a writing tool) | the project's folder (the leader's worktree when the leader works in one) |
+| writes, and no other writing task of the team may run beside it (they are ordered by `after`) | the project's folder |
+| writes, beside another writing task | a git worktree of its own, `team/<slug>/<task>` (`projects/worktrees.add`); after a task in a worktree, started from that branch |
+| `worktree: true` / `false` on the task | as it says |
+
+A retry keeps the worktree it had; the contract is read where the task worked; the errand says where it works and that
+merging back is the person's call. The team document is a page in the project's main folder and lists each branch.
+
+**Projects → Teams here** lists the project's running teams and the last three that ended, folded when there are none:
+each with its goal, the overall bar (every task counts the same), Board, Doc (the page) and its **members** — the
+leader, the people who started it, and each specialist on its task with its state point, step of its budget and its
+branch or "shared folder"; a member opens as a chat tab. The project chat's fold shows the running ones compact, and
+the board window has the same Members list (`agent-ui/team-members.js`, from the view's `members`,
+`teams/members.js`).
+
 ## What the apps would draw (not built)
 
 - **DocaMobile**: a team card in its missions list — the title, one thin bar with "1 of 3 · 33%" and "every task

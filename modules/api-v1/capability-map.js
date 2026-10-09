@@ -134,6 +134,19 @@ const PERSON = [
   { id: 'channel-link', does: 'link or unlink a chat app (Telegram, Matrix, Slack, mail)', panel: ['POST /api/channels/:name/link', 'DELETE /api/channels/:name/chats/:chat'],
     gap: 15, why: 'the link code is made once; a linked chat is itself a device' },
 
+  // ── The hive chat (people/) ──
+  { id: 'people-chat', does: 'message the people of the hive: write, react, mark read, say I am typing', panel: ['POST /api/people/dm', 'POST /api/people/spaces/:id/messages',
+    'POST /api/people/messages/:id/react', 'POST /api/people/spaces/:id/read', 'POST /api/people/spaces/:id/typing'],
+    v1: ['POST /people/dm', 'POST /people/spaces/{id}/messages', 'POST /people/messages/{id}/react', 'POST /people/spaces/{id}/read', 'POST /people/spaces/{id}/typing'] },
+  { id: 'people-manage', does: 'make a group or a channel, join, leave, add people, rename, pin, mute, edit or delete my message', panel: ['POST /api/people/spaces',
+    'PATCH /api/people/spaces/:id', 'POST /api/people/spaces/:id/join', 'POST /api/people/spaces/:id/leave', 'POST /api/people/spaces/:id/members', 'POST /api/people/spaces/:id/mine',
+    'PATCH /api/people/messages/:id', 'DELETE /api/people/messages/:id', 'POST /api/people/messages/:id/pin'],
+    gap: 21, why: 'a phone writes and reacts in the spaces its person is in; making and arranging them is the panel\'s until a route is asked for' },
+  { id: 'people-export', does: 'export every hive-chat conversation for compliance', panel: ['POST /api/people/export'],
+    only: 'the owner\'s alone, with the password, written in the audit — the one way anyone reads conversations they are not in' },
+  { id: 'org-place', does: 'place someone in the organisation tree (manager, team, title)', panel: ['PATCH /api/org/people/:id'],
+    only: 'who reports to whom is people and levels: an admin\'s, or a team leader\'s for their own people, at the panel' },
+
   // ── A person's account ──
   { id: 'sign-in', does: 'sign in, out, or change my password', panel: ['POST /api/auth/login', 'POST /api/auth/logout', 'POST /api/auth/setup', 'POST /api/auth/step-up', 'POST /api/auth/password', 'DELETE /api/auth/sessions'],
     only: 'a person signing in to the panel; a device pairs instead (/devices)' },

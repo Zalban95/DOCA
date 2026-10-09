@@ -1,0 +1,35 @@
+{
+  "type": "people.message",
+  "class": "durable",
+  "payload": {
+    "spaceId": "spc_fixture",
+    "space": {
+      "id": "spc_fixture",
+      "kind": "dm",
+      "name": "owner"
+    },
+    "what": "new",
+    "message": {
+      "id": "msg_fixture",
+      "spaceId": "spc_fixture",
+      "seq": 1,
+      "authorId": "usr_fixture",
+      "agent": null,
+      "text": "Are you around? The **walrus** build is green.",
+      "replyTo": null,
+      "mentions": [],
+      "attachments": [],
+      "at": "2026-10-06T18:30:00.000Z",
+      "editedAt": null,
+      "deletedAt": null,
+      "author": {
+        "id": "usr_fixture",
+        "name": "owner"
+      },
+      "agentLabel": null,
+      "reactions": {},
+      "replies": 0
+    },
+    "notify": true
+  }
+}

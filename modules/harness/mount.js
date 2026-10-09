@@ -12,6 +12,8 @@ function mount(app) {
   require('../agents/routes').mount(app);     // definitions as markdown in and out; persona.md, human.md
   require('../agents/tidy').mount(app);       // finished missions put away by themselves, at once, or kept (📌); before /missions/:id
   require('../teams/routes').mount(app);      // teams: missions on a board with dependencies and contracts (teams/); before /missions/:id
+  require('../people/routes').mount(app);     // the hive chat: people talking to each other, and their agents when brought in (people/)
+  require('../org/routes').mount(app);        // the organisation tree: managers, teams, titles, a person's card (org/)
   // What this host can do, probed per OS (host-capabilities.js, hive.md §7).
   app.get('/api/host/capabilities', (req, res) => res.json(require('../host-capabilities').capabilities({ fresh: req.query.fresh === '1' })));
   require('./tab-routes').mount(app);

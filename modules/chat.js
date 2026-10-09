@@ -39,8 +39,8 @@ function handleStatus(req, res) {
 function handleHistory(req, res) {
   if (catalog.defaultId() === catalog.BUILTIN_ID) {
     const memory = require('./harness/memory');
-    const messages = [];
-    for (const row of memory.messages(memory.mainSession().id)) {
+    const messages = [], mine = require('./harness/own-main').of(require('./harness/turn/client').dashboardClient(req).user, { create: false });   // this person's own Orchestrator
+    for (const row of mine ? memory.messages(mine) : []) {
       if (row.role === 'user') {
         messages.push({ role: row.role, content: row.content, time: row.at,
           ...(row.attachments?.length ? { attachments: row.attachments.map(a => a.name) } : {}) });
@@ -66,14 +66,14 @@ function handleHistory(req, res) {
     // a window to report: the gateway and the CLI harnesses own their own and
     // tell us nothing, so there the ring is absent rather than drawn against a
     // number we invented.
-    return res.json({ messages, sessionId: memory.mainSession().id, context: agent.contextOf(memory.mainSession().id) });   // sessionId: other screens' changes to it (H10.5)
+    return res.json({ messages, sessionId: mine, context: mine ? agent.contextOf(mine) : null });   // sessionId: other screens' changes to it (H10.5)
   }
   res.json({ messages: chatHistory });
 }
 
 /** POST /api/chat/clear */
 function handleClear(req, res) {
-  if (catalog.defaultId() === catalog.BUILTIN_ID) require('./harness/memory').resetMain();
+  if (catalog.defaultId() === catalog.BUILTIN_ID) require('./harness/own-main').reset(require('./harness/turn/client').dashboardClient(req).user);   // a host's resets the hub's
   chatHistory.length = 0;
   res.json({ ok: true });
 }
@@ -120,7 +120,7 @@ async function handleChat(req, res) {
     try {
       // Busy (a turn in the console, say): it waits and is read mid-turn, or starts the next (send-stream.js).
       const r = await require('./harness/send-stream').sendStreamed({
-        message, sessionId: require('./harness/memory').mainSession().id, client: voiceClient(require('./harness/turn/client').dashboardClient(req), req.body.voice, req),
+        message, sessionId: require('./harness/own-main').of(require('./harness/turn/client').dashboardClient(req).user), client: voiceClient(require('./harness/turn/client').dashboardClient(req), req.body.voice, req),
         // Only the built-in harness understands attachments: the gateway and the claude CLI get the message alone.
         attachments: attached,
         emit: evt => {

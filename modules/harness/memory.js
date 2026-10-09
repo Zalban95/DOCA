@@ -66,13 +66,13 @@ function listSessions() {
   };
 }
 
-function createSession(title, { activate = true, kind = 'work', parentId = null, profile = null } = {}) {
+function createSession(title, { activate = true, kind = 'work', parentId = null, profile = null, fields = null } = {}) {   // fields: where it works (a team's task: projectId, worktree)
   const now = new Date().toISOString();
   const s = {
     id: newId('s'), title: title || 'New conversation',
     createdAt: now, updatedAt: now,
     count: 0, summary: '', summarizedThrough: 0,
-    kind, parentId, profile, archivedAt: null,
+    kind, parentId, profile, archivedAt: null, ...(fields || {}),
   };
   const doc = readIndex();
   doc.sessions.push(s);

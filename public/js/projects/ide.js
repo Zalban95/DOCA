@@ -10,7 +10,7 @@
 
    Files under public/js/projects/: ide.js (this: the frame, the project, the views),
    editor.js, preview.js, md-doc.js, search.js, git.js, run.js, env.js, lsp.js,
-   checkpoints.js, chat.js (the file tree is in ide.js itself).
+   checkpoints.js, chat.js, teams.js (Teams here) (the file tree is in ide.js itself).
    ═══════════════════════════════════════════════════════ */
 
 const PJ = {
@@ -46,6 +46,7 @@ function _pjFrame() {
       <aside class="pj-side" id="pj-side">
         <div class="pj-side-title" id="pj-side-title"></div>
         <div class="pj-side-body" id="pj-side-body"></div>
+        <div class="pj-teams" id="pj-teams"></div>
       </aside>
       <section class="pj-main">
         <div class="pj-tabs" id="pj-tabs"></div>
@@ -89,6 +90,7 @@ async function pjOpen(id) {
   pjEditorReset();
   _pjMeta();
   pjView(PJ.view);
+  pjTeamsLoad();   // Teams here (projects/teams.js)
   if (document.getElementById('pj-chat').classList.contains('open')) pjChatLoad();
 }
 
