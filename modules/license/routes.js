@@ -31,10 +31,10 @@ function view(req) {
   const s = lic.status();
   const off = require('./gate').off();
   const host = require('../auth/rights').can(req.auth?.role, 'host');
-  const shared = { source: s.source, valid: s.valid, readOnly: s.readOnly, banner: host ? banner(s) : (s.readOnly ? banner(s) : null), off: { pages: off.pages, features: off.features } };
+  const shared = { source: s.source, valid: s.valid, readOnly: s.readOnly, mode: s.mode.mode, banner: host ? banner(s) : (s.readOnly ? banner(s) : null), off: { pages: off.pages, features: off.features } };
   if (!host) return shared;
   const { CODES, EDITIONS } = require('./codes');
-  return { ...s, ...shared, off, catalogue: { codes: CODES, editions: EDITIONS }, nextStart: NEXT_START };
+  return { ...s, ...shared, modeWhy: s.mode.why, limits: require('./limits').status(), off, catalogue: { codes: CODES, editions: EDITIONS }, nextStart: NEXT_START };
 }
 
 const fail = (res, e, status = 400) => res.status(status).json({ error: e.detail || e.message, code: e.code || 'error' });

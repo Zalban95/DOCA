@@ -156,6 +156,7 @@ const KINDS = ['device', 'agent', 'browser', 'channel'];
 const isPending = d => d?.approval?.state === 'pending';
 
 function create({ name, scopes, caps, expiresAt, kind, approval }) {
+  require('../license/limits').checkDevice(kind || 'device');   // a production hive's licence devices (license/limits.js)
   const id = newId('dev');
   const secret = crypto.randomBytes(32).toString('base64url');
   const rec = {
@@ -309,6 +310,7 @@ const _pairings = new Map();
  * device (devices-approval/ `atStart`), else null and the device that completes it waits for a person.
  */
 function startPairing({ name, scopes, expiresAt, kind, createdBy, userId = null, orgId = null, approval = null }) {
+  require('../license/limits').checkDevice(kind || 'device');   // no code is minted past the licence's devices
   for (const [code, p] of _pairings) if (p.expiresAt < Date.now()) _pairings.delete(code);
   let code;
   do { code = String(crypto.randomInt(0, 1e6)).padStart(6, '0'); } while (_pairings.has(code));

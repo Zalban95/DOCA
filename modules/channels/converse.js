@@ -24,7 +24,8 @@ async function handle(ch, { addr, text = '', from = {}, keep = async () => null 
   if (code) {
     const hit = ch.links.redeem(code);
     if (!hit) return void await say('That code is unknown or has expired. Make a new one in DOCA → Settings → Channels.');
-    c = ch.bind.link(addr, { who: from.who || String(addr), username: from.username || null }, hit.userId);
+    try { c = ch.bind.link(addr, { who: from.who || String(addr), username: from.username || null }, hit.userId); }
+    catch (e) { if (/^licence_/.test(e.code || '')) return void await say(e.message); throw e; }   // the licence's devices (license/limits.js)
     const waits = require('../api-v1/devices').isPending(require('../api-v1/devices').get(c.deviceId));
     if (waits) return void await say(`Linked to ${c.personName}, and waiting for approval: ${waiting(c.deviceId)} You will be told here when it is allowed.`);
     return void await say(`Linked to ${c.personName}. Write here to talk to DOCA — voice notes, photos and files too. /new starts a fresh conversation, /stop stops the one running.`);

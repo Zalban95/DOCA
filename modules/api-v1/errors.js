@@ -21,6 +21,8 @@ function sendError(res, status, code, message, extra) {
 /** Express error middleware — converts ApiError and body-parser errors. */
 function errorMiddleware(err, _req, res, _next) {
   if (err instanceof ApiError) return sendError(res, err.status, err.code, err.message, err.extra);
+  // The licence's seat and device limits (license/limits.js) say themselves in a sentence.
+  if (err && /^licence_/.test(err.code || '') && err.status) return sendError(res, err.status, err.code, err.message);
   if (err && err.type === 'entity.too.large') return sendError(res, 413, 'payload_too_large', 'Request body exceeds the server limit');
   if (err && err.type === 'entity.parse.failed') return sendError(res, 400, 'bad_json', 'Request body is not valid JSON');
   if (err && err.code === 'LIMIT_FILE_SIZE') return sendError(res, 413, 'payload_too_large', 'Uploaded file exceeds the server limit');

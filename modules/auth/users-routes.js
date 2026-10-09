@@ -54,6 +54,7 @@ function mount(app) {
   app.post('/api/auth/users', wrap(async req => {
     const { email, name = '', level = 'member' } = req.body || {};
     mayGive(req, level);
+    require('../license/limits').checkSeat();   // a production hive's licence seats (license/limits.js)
     const password = credentials.oneTimePassword();
     const user = store.createUser({ email, name, passwordHash: await credentials.hashPassword(password), mustChangePassword: true });
     store.addMembership({ orgId: orgOf(req), userId: user.id, role: level, status: 'active', approvedBy: req.auth.user.id });
@@ -71,6 +72,7 @@ function mount(app) {
     }
     if (b.suspended !== undefined) {
       if (b.suspended && m.role === 'owner' && owners(orgId).length <= 1) throw bad('This is the last owner.', 409);
+      if (!b.suspended && store.userById(m.userId)?.suspendedAt) require('../license/limits').checkSeat();   // restoring takes a seat back
       store.updateUser(m.userId, { suspendedAt: b.suspended ? new Date().toISOString() : null });
       if (b.suspended) store.deleteSessionsOf(m.userId);
       store.audit({ orgId, actorId: req.auth.user.id, subjectId: m.userId, action: b.suspended ? 'user suspended' : 'user restored' });
