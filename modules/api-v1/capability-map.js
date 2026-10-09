@@ -98,8 +98,8 @@ const PERSON = [
     only: 'a panel page holding the hub\'s connection to Home Assistant open; a device\'s own home will hear changes on its event stream' },
 
   // ── Meetings (meetings/) ──
-  { id: 'meetings', does: 'see my meetings and join one', panel: ['GET /api/meetings', 'GET /api/meetings/:id'],
-    gap: 22, why: 'the phone showing "in 5 min: Planning — Join" and opening the room; until then the Meetings page in its web view' },
+  { id: 'meetings', does: 'see my meetings and join one', panel: ['GET /api/meetings', 'GET /api/meetings/:id'], v1: ['GET /meetings'],
+    note: 'a device lists them with each link and opens the room in its web view (/meet/<id>); native call screens come later' },
   { id: 'meeting-schedule', does: 'call someone, schedule, change, confirm or cancel a meeting',
     panel: ['POST /api/meetings', 'PATCH /api/meetings/:id', 'POST /api/meetings/:id/cancel', 'POST /api/meetings/:id/confirm', 'POST /api/meetings/:id/end'],
     gap: 21, why: 'calling a colleague or moving a meeting from the phone without opening the panel page; until then the Meetings page in its web view' },

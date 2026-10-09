@@ -505,7 +505,7 @@ harnessApi.delete('/sessions/:id', requireScope('harness:sessions'), wrap(async 
 // writes prefs. A device that could apply a proposal would make that rule empty.
 harnessApi.get('/memory', requireScope('harness:memory'), (_req, res) =>
   res.json(harness.memoryList()));
-require('./parity').mount(harnessApi, router);   // stop, restart/drop, archive, working, ambient, decisions (D1)
+require('./parity').mount(harnessApi, router); require('../meetings/device').mount(router);   // stop, restart/drop, archive, working, ambient, decisions (D1); the person's meetings
 router.use('/harness', harnessApi);
 
 // ─── Agent-facing API ───────────────────────────────────────────────────────

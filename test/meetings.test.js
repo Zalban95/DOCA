@@ -355,3 +355,12 @@ test('five minutes before, its people are reminded once on their pages and devic
   assert.ok(require('../modules/notices').list({ id: bob.user.id }, false).some(n => /In [34] min: Standup/.test(n.title)));
   assert.ok(!(await require('../modules/meetings/remind').tick()).includes(m.id), 'once');
 });
+
+test('a device lists its person\'s meetings with their links', async () => {
+  const made = require('../modules/api-v1/devices').create({ name: 'Bob phone', scopes: ['harness:chat'], caps: H.PHONE_CAPS, kind: 'device' });
+  require('../modules/api-v1/devices').update(made.device.id, { userId: bob.user.id, orgId: bob.orgId });
+  const r = await H.api(made.token, 'GET', '/api/v1/meetings');
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok(r.body.meetings.length >= 1);
+  for (const m of r.body.meetings) { assert.match(m.link, /\/meet\/m[0-9a-f]{12}$/); assert.ok(Array.isArray(m.people)); }
+});
