@@ -18,7 +18,8 @@ function mount(app) {
   require('../service-choices').mount(app);
   // A spoken answer the person talked over: the floating chat's conversation keeps only what was heard (harness/heard.js).
   app.post('/api/chat/heard', (req, res) => {
-    const row = require('../harness/heard').cut(require('../harness/memory').mainSession().id, req.body?.heard);
+    const mine = require('../harness/own-main').of(require('../harness/turn/client').dashboardClient(req).user, { create: false });   // the person's own Orchestrator
+    const row = mine ? require('../harness/heard').cut(mine, req.body?.heard) : null;
     res.json({ cut: !!row, ...(row ? { content: row.content } : {}) });
   });
   app.get('/api/screen', (req, res) => {
