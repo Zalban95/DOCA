@@ -38,7 +38,8 @@ function shape({ title, goal, tasks, context } = {}, { orchestrator = false } = 
     if (!text) throw bad(`Task ${id} needs its errand in "task", written for somebody who was not in this conversation.`);
     const { contract } = require('../harness/plan-contracts').split({ title: String(t.title || text.slice(0, 60)), done: t.done, check: t.check });
     return { id, title: String(t.title || text).replace(/\s+/g, ' ').trim().slice(0, 80), agent, task: text.slice(0, 8000),
-      after: [...new Set((Array.isArray(t.after) ? t.after : []).map(String))], contract };
+      after: [...new Set((Array.isArray(t.after) ? t.after : []).map(String))], contract,
+      ...(typeof t.worktree === 'boolean' ? { worktree: t.worktree } : {}) };   // its own worktree, or the shared folder (place.js)
   });
   const ids = new Set(out.map(t => t.id));
   if (ids.size !== out.length) throw bad('Two tasks have the same id.');
@@ -59,14 +60,16 @@ async function create(args, { by, keepGoing = false, maxRounds = null } = {}) {
   const lead = org.session(by);
   if (lead.kind === 'specialist') throw bad('A specialist cannot make a team. Report to your work leader.', 403);
   const shaped = shape(args, { orchestrator: lead.kind === 'orchestrator' });
+  // The project it works on (place.js): named, else the one its leading conversation works in.
+  const project = require('./place').resolve(args.project, by);
   if (shaped.tasks.some(t => t.agent !== 'work') && !require('../agents/registry').enabled())
     throw bad('Specialist agents are switched off (agents.enabled). Ask the person to turn them on.', 409);
   const rounds = maxRounds == null ? null : Math.max(0, Math.min(20, Math.floor(Number(maxRounds)) || 0));
-  const team = { id: store.newId(), ...shaped, by, state: 'running', createdAt: new Date().toISOString(), endedAt: null,
+  const team = { id: store.newId(), ...shaped, by, projectId: project?.id || null, state: 'running', createdAt: new Date().toISOString(), endedAt: null,
     loop: { on: !!keepGoing, rounds: 0, ...(rounds == null ? {} : { maxRounds: rounds }) }, notes: [] };
   store.save(team);
   listen();
-  require('./announce').line(team, `made with ${team.tasks.length} task${team.tasks.length === 1 ? '' : 's'}: ${team.tasks.map(t => `${t.id} ${t.agent}${t.after.length ? ` after ${t.after.join(', ')}` : ''}`).join('; ')}`);
+  require('./announce').line(team, `made${project ? ` in the project ${project.name}` : ''} with ${team.tasks.length} task${team.tasks.length === 1 ? '' : 's'}: ${team.tasks.map(t => `${t.id} ${t.agent}${t.after.length ? ` after ${t.after.join(', ')}` : ''}`).join('; ')}`);
   return engine.advance(team.id);
 }
 
@@ -75,8 +78,10 @@ function view(team) {
   if (!team) return null;
   const views = engine.views(team);
   const { notes = [], lastViews, ...rest } = team;
+  const project = team.projectId ? require('../projects/store').get(team.projectId) : null;
   return { ...rest, progress: team.progress || require('./board').summary(team, views).progress, maxRounds: engine.maxRounds(team),
-    tasks: views, notes: notes.slice(-30) };
+    tasks: views, notes: notes.slice(-30), members: require('./members').members(team, views),
+    project: project ? { id: project.id, name: project.name, root: project.root } : null };
 }
 
 /** Stop every task: running missions and work chats at their next step, the rest never start. */
@@ -85,16 +90,20 @@ async function stop(id, { why = 'stopped by a person' } = {}) {
   if (!team) throw bad(`No team called "${id}".`, 404);
   if (team.state !== 'running') return view(team);
   const agent = require('../harness/agent');
-  for (const t of team.tasks) {
-    const v = engine.views(team).find(x => x.id === t.id);
-    if (['done', 'failed', 'stopped'].includes(v.state)) continue;
-    const sid = t.missionId ? require('../agents/missions').get(t.missionId)?.sessionId : t.sessionId;
-    if (sid) try { agent.cancel(sid); } catch { /* already ended */ }
-    if (t.sessionId) { const s = require('../harness/memory').getSession(t.sessionId); if (s?.job) require('../harness/memory').updateSession(t.sessionId, { job: { ...s.job, state: 'stopped', stoppedWhy: why } }); }
-    Object.assign(t, { stoppedAt: new Date().toISOString(), stoppedWhy: why });
-  }
-  Object.assign(team, { stoppedAt: new Date().toISOString(), stoppedWhy: why, loop: { ...team.loop, on: false } });
-  store.save(team);
+  // Under the team's own turn: a pass that is making a worktree or checking a contract finishes first, then this.
+  await engine.serial(id, () => {
+    const team = store.get(id);
+    for (const t of team.tasks) {
+      const v = engine.views(team).find(x => x.id === t.id);
+      if (['done', 'failed', 'stopped'].includes(v.state)) continue;
+      const sid = t.missionId ? require('../agents/missions').get(t.missionId)?.sessionId : t.sessionId;
+      if (sid) try { agent.cancel(sid); } catch { /* already ended */ }
+      if (t.sessionId) { const s = require('../harness/memory').getSession(t.sessionId); if (s?.job) require('../harness/memory').updateSession(t.sessionId, { job: { ...s.job, state: 'stopped', stoppedWhy: why } }); }
+      Object.assign(t, { stoppedAt: new Date().toISOString(), stoppedWhy: why });
+    }
+    Object.assign(team, { stoppedAt: new Date().toISOString(), stoppedWhy: why, loop: { ...team.loop, on: false } });
+    store.save(team);
+  });
   require('./announce').line(team, `stopped — ${why}`);
   return view(await engine.advance(id));
 }
@@ -104,10 +113,13 @@ async function keepGoing(id, on) {
   const team = store.get(id);
   if (!team) throw bad(`No team called "${id}".`, 404);
   if (team.stoppedAt && on) throw bad('This team was stopped. Make a new one to carry on.', 409);
-  team.loop = { ...(team.loop || {}), on: !!on };
-  // Turned on after a task already gave up: it is tried again now.
-  if (on) for (const t of team.tasks) if (t.gaveUp) { delete t.gaveUp; delete t.failedFor; }
-  store.save(team);
+  await engine.serial(id, () => {
+    const team = store.get(id);
+    team.loop = { ...(team.loop || {}), on: !!on };
+    // Turned on after a task already gave up: it is tried again now.
+    if (on) for (const t of team.tasks) if (t.gaveUp) { delete t.gaveUp; delete t.failedFor; }
+    store.save(team);
+  });
   require('./announce').line(team, `keep going ${on ? `on — failed tasks are tried again, up to ${engine.maxRounds(team)} rounds` : 'off'}`);
   return view(await engine.advance(id));
 }
@@ -150,9 +162,11 @@ function note(missionId, text) {
 }
 
 /** Every team whose leader this person may open (session-access, the transcript's own rule). */
-function visible(person, { all = false } = {}) {
+function visible(person, { all = false, project = null } = {}) {
   const access = require('../harness/session-access');
-  return store.list({ all }).filter(r => { try { return access.mayUse(person, r.by); } catch { return false; } });
+  // A team made before teams named their project counts for the project its leader works in.
+  const projectOf = r => r.projectId || (() => { try { return require('../projects/store').forSession(r.by)?.id || null; } catch { return null; } })();
+  return store.list({ all }).filter(r => !project || projectOf(r) === project).filter(r => { try { return access.mayUse(person, r.by); } catch { return false; } });
 }
 
 /** The teams one conversation leads — running ones, and any that ended in the last hour. */

@@ -46,7 +46,7 @@ async function pjChatLoad() {
       <button class="btn btn-sm btn-teal" id="pj-chat-send" onclick="pjChatSend()">Send</button>
       <button class="btn btn-sm btn-red" id="pj-chat-stop" onclick="pjChatStop()" style="display:none" title="Stop this tab's turn">■</button>
     </div>`;
-  PJC.fold = agentSideFold(document.getElementById('pj-chat-fold'), null);
+  PJC.fold = agentSideFold(document.getElementById('pj-chat-fold'), null, { teams: { list: pjTeamsRunning, open: 'pjChatOpenConversation', doc: 'pjTeamDocOpen' } });   // + this project's teams (projects/teams.js)
   await pjTabsRestore(first);
   clearInterval(PJC.poll);
   PJC.poll = setInterval(() => pjTabsSync(), 4000);

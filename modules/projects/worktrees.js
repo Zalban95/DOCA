@@ -28,18 +28,28 @@ function projectOf(sessionId) {
   return { s, p };
 }
 
+/**
+ * A worktree of the repository at `dir` on a new branch `branch` from `base` (default HEAD) — the one way a worktree
+ * is made, by a conversation (create) or a team's task (teams/place.js). A branch or folder already taken gets -2, -3….
+ */
+async function add(dir, { branch, base = null } = {}) {
+  const root = await git(dir, ['rev-parse', '--show-toplevel']).catch(() => { throw bad(`${dir} is not a git repository.`); });
+  const want = String(branch || 'doca/work').replace(/[^\w./-]/g, '-').replace(/\/+$/, '').slice(0, 60);
+  const taken = async (name, at) => fs.existsSync(at) || await git(root, ['rev-parse', '--verify', '--quiet', `refs/heads/${name}`]).then(() => true, () => false);
+  let name = want, at = path.join(`${root}.worktrees`, want.replace(/\//g, '-'));
+  for (let n = 2; await taken(name, at) && n < 50; n++) { name = `${want}-${n}`; at = path.join(`${root}.worktrees`, name.replace(/\//g, '-')); }
+  if (!require('../utils').fmSafe(at)) throw bad(`${at} is outside the allowed roots.`);
+  const from = await git(dir, ['rev-parse', base || 'HEAD']);   // HEAD of the folder asked for: a worktree's own
+  fs.mkdirSync(path.dirname(at), { recursive: true });
+  await git(root, ['worktree', 'add', '-b', name, at, from]);
+  return { path: at, branch: name, base: from, repo: root, createdAt: new Date().toISOString() };
+}
+
 /** Give this conversation its own worktree, on a new branch from the main folder's HEAD. */
 async function create(sessionId, { branch } = {}) {
   const { s, p } = projectOf(sessionId);
   if (s.worktree?.path && fs.existsSync(s.worktree.path)) return s.worktree;
-  const root = await git(p.mainRoot || p.root, ['rev-parse', '--show-toplevel']).catch(() => { throw bad(`${p.root} is not a git repository.`); });
-  const name = String(branch || `doca/${sessionId.slice(-6)}`).replace(/[^\w./-]/g, '-').slice(0, 60);
-  const dir = path.join(`${root}.worktrees`, name.replace(/\//g, '-'));
-  if (!require('../utils').fmSafe(dir)) throw bad(`${dir} is outside the allowed roots.`);
-  const base = await git(root, ['rev-parse', 'HEAD']);
-  fs.mkdirSync(path.dirname(dir), { recursive: true });
-  await git(root, ['worktree', 'add', '-b', name, dir, base]);
-  const wt = { path: dir, branch: name, base, repo: root, createdAt: new Date().toISOString() };
+  const wt = await add(p.mainRoot || p.root, { branch: branch || `doca/${sessionId.slice(-6)}` });
   require('../harness/memory').updateSession(sessionId, { worktree: wt });
   require('./brief').forget(p.id);
   return wt;
@@ -68,4 +78,4 @@ async function remove(sessionId, { force = false } = {}) {
   return { removed: st.path, branch: st.branch, commits: st.commits || 0 };
 }
 
-module.exports = { create, status, remove };
+module.exports = { add, create, status, remove };

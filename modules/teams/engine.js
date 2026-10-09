@@ -23,8 +23,10 @@ const keyOf = t => t.missionId || t.sessionId || (t.error ? 'dispatch' : null);
 const maxRounds = team => (Number.isInteger(team.loop?.maxRounds) ? team.loop.maxRounds
   : require('../settings-schema').value('teams.maxRounds'));
 
-/** Where a contract's paths are read from: the leader's project (or its worktree), else the agent's workspace. */
-function cwdOf(team) {
+/** Where a task's contract is read: its own worktree, the team's project (place.js), the leader's, else the workspace. */
+function cwdOf(team, t) {
+  const at = require('./place').cwdOf(team, t);
+  if (at) return at;
   try { const p = require('../projects/store').forSession(team.by); if (p?.root) return p.root; } catch { /* no projects */ }
   return require('../harness/toolbox/common').workspace();
 }
@@ -38,8 +40,8 @@ function brief(team, t) {
   ].filter(Boolean).join('\n');
 }
 
-/** Send one task to its specialist (or a work chat), with what the tasks before it delivered. */
-function dispatch(team, t) {
+/** Send one task to its specialist (or a work chat), with what the tasks before it delivered, where it works (place.js). */
+async function dispatch(team, t) {
   const missions = require('../agents/missions');
   const deps = (t.after || []).map(id => team.tasks.find(x => x.id === id)).filter(Boolean);
   const delivered = deps.filter(d => d.missionId).map(d => missions.get(d.missionId)).filter(Boolean);
@@ -49,15 +51,19 @@ function dispatch(team, t) {
     delivered.length || chats.length ? `## What the tasks before yours delivered\n${[require('../agents/after').handed(delivered), ...chats].filter(Boolean).join('\n\n')}` : '',
   ].filter(Boolean).join('\n\n');
   try {
+    const { fields, place } = await require('./place').forTask(team, t);
+    if (place) t.place = place;
+    const where = place ? `\n\n## Where you work\n${place.worktree ? `In the project's git worktree ${place.worktree.path}, on the branch ${place.worktree.branch} — your own, so teammates working at the same time do not touch your files. Commit your work there; merging it back is the person's call.`
+      : `In the project's folder ${place.root}, shared with your teammates.${place.why ? ` (${place.why})` : ''}`}` : '';
     if (t.agent === 'work') {
       const org = require('../harness/organization');
       const s = org.create({ title: `${team.title}: ${t.title}`.slice(0, 100) });
-      require('../harness/memory').updateSession(s.id, { team: { id: team.id, task: t.id } });
-      org.start(s.id, `${t.task}\n\n${context}`, team.by);
+      require('../harness/memory').updateSession(s.id, { team: { id: team.id, task: t.id }, ...(fields || {}) });
+      org.start(s.id, `${t.task}\n\n${context}${where}`, team.by);
       t.sessionId = s.id;
       workChats.add(s.id);
     } else {
-      const m = missions.dispatch({ agentId: t.agent, task: t.task, context, by: team.by });
+      const m = missions.dispatch({ agentId: t.agent, task: t.task, context: `${context}${where}`, by: team.by, place: fields });
       missions.patch(m.id, { team: { id: team.id, task: t.id, title: team.title } });
       t.missionId = m.id;
     }
@@ -91,17 +97,20 @@ async function step(id) {
     for (const v of views(team)) {
       const t = team.tasks.find(x => x.id === v.id);
       if (v.state === 'checking' && !t.verdict) {
-        t.verdict = { ...(await require('../harness/plan-contracts').verify(t.contract, { cwd: cwdOf(team) })), at: new Date().toISOString() };
+        t.verdict = { ...(await require('../harness/plan-contracts').verify(t.contract, { cwd: cwdOf(team, t) })), at: new Date().toISOString() };
       }
     }
     for (const v of views(team)) if (v.state === 'failed') failed(team, team.tasks.find(x => x.id === v.id), v);
-    for (const v of views(team)) if (v.state === 'queued') dispatch(team, team.tasks.find(x => x.id === v.id));
+    for (const v of views(team)) if (v.state === 'queued') await dispatch(team, team.tasks.find(x => x.id === v.id));
   }
   const now = views(team);
   const { state, progress } = board.summary(team, now);
   const ended = state !== 'running' && team.state === 'running';
   Object.assign(team, { state, progress, lastViews: now.map(v => ({ id: v.id, state: v.state })) });
   if (state === 'running') team.endedAt = null; else if (ended) team.endedAt = new Date().toISOString();
+  // A note posted while this pass awaited (a contract's check, a worktree being made) is kept, not written over.
+  const fresh = store.get(id);
+  if ((fresh?.notes || []).length !== (team.notes || []).length) team.notes = fresh.notes;
   store.save(team);
   const changed = now.filter(v => before.get(v.id) !== v.state);
   require('./announce').changed(team, now, { changed, ended, title: titleOf(team) });
@@ -109,13 +118,15 @@ async function step(id) {
 }
 
 const _chains = new Map();
-/** Advance a team; calls for one team run one after another. */
-function advance(id) {
+/** Run `fn` for one team after whatever runs for it now: a pass, a stop, a switch — never two at once. */
+function serial(id, fn) {
   const prev = _chains.get(id) || Promise.resolve();
-  const next = prev.then(() => step(id)).catch(e => { console.warn(`[teams] ${id}: ${e.message}`); return null; });
+  const next = prev.then(fn).catch(e => { console.warn(`[teams] ${id}: ${e.message}`); return null; });
   _chains.set(id, next);
   next.finally(() => { if (_chains.get(id) === next) _chains.delete(id); });
   return next;
 }
+/** Advance a team; calls for one team run one after another. */
+const advance = id => serial(id, () => step(id));
 
-module.exports = { advance, views, dispatch, brief, look, maxRounds, workChats };
+module.exports = { advance, serial, views, dispatch, brief, look, maxRounds, workChats };
