@@ -3,7 +3,7 @@
 #tab-workstream.active { display: flex; flex-direction: column; position: relative; overflow: hidden; }
 .ws-bar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--border2); flex-shrink: 0; }
 .ws-title { font-family: var(--font-ui); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
-.ws-status { font-size: 11px; color: var(--muted); margin-right: auto; }
+.ws-status { font-size: 11px; color: var(--muted); margin-right: auto; display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .ws-chips { display: flex; gap: 6px; padding: 8px 14px; overflow-x: auto; flex-shrink: 0; scrollbar-width: thin; }
 .ws-chip { font-family: var(--font-mono); font-size: 11px; white-space: nowrap; padding: 4px 8px; border: 1px solid var(--border2);
   background: var(--raised); color: var(--text); cursor: pointer; }
@@ -44,7 +44,31 @@
 .ws-act.result.failed { color: #ff7b72; }
 .ws-act.text { color: #e6e6e6; }
 .ws-act.machine { color: #79c0ff; }   /* a machine's change (machines/busy.js) */
-@media (max-width: 768px) { .ws-console { width: 100%; height: 40%; padding-left: 14px; } }
+.ws-act.outside { color: #d2a8ff; }   /* work outside DOCA: an agent's session, a build, an emulator (workstream/outside.js) */
+.ws-status .btn { margin-left: 6px; }
+.ws-folders-btn { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.ws-folders { border-bottom: 1px solid var(--border2); padding: 8px 14px; font-size: 12px; max-height: 45%; overflow: auto; flex-shrink: 0; }
+.ws-f-head { display: flex; gap: 10px; align-items: baseline; margin-bottom: 6px; }
+.ws-f-head .btn { margin-left: auto; }
+.ws-f-row { display: flex; gap: 10px; align-items: center; padding: 3px 0; min-width: 0; }
+.ws-f-path { font-family: var(--font-mono); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+.ws-f-from { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.ws-f-sub { margin: 10px 0 4px; font-weight: 600; }
+.ws-f-add { display: flex; gap: 6px; margin-top: 6px; }
+.ws-f-add input { flex: 1; min-width: 0; }
+.ws-by { font-family: var(--font-ui); font-size: 10px; padding: 1px 6px; border-radius: 8px; border: 1px solid var(--border2); color: var(--muted); white-space: nowrap; }
+.ws-by.outside { color: #a371f7; border-color: color-mix(in srgb, #a371f7 50%, transparent); }
+.ws-chip.outside { border-style: dashed; }
+@media (max-width: 768px) {
+  .ws-console { width: 100%; height: 40%; padding-left: 14px; }
+  .ws-bar { flex-wrap: wrap; row-gap: 4px; padding: 6px 10px; }
+  .ws-status { order: 5; flex-basis: 100%; margin-right: 0; }
+  .ws-file-head { flex-wrap: wrap; row-gap: 2px; }
+  .ws-path { overflow-wrap: anywhere; }
+  .ws-stage, .ws-chips { padding-left: 10px; padding-right: 10px; }
+  .ws-n { width: 30px; padding-right: 6px; }
+  .ws-code-box { font-size: 11px; }
+}
 
 /* Machines → Live (js/machines-live.js): working ones in front, large; the rest behind, small and dim. */
 #tab-live.active { display: block; overflow: auto; padding: 0 14px 80px; }
