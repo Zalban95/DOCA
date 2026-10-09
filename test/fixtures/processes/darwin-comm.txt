@@ -1,0 +1,15 @@
+    0 kernel_task
+    1 /sbin/launchd
+  152 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer
+  301 /System/Library/CoreServices/Finder.app/Contents/MacOS/Finder
+  302 /System/Library/CoreServices/Dock.app/Contents/MacOS/Dock
+  410 /usr/libexec/trustd
+  420 /usr/sbin/cfprefsd
+  900 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+  901 /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer)
+ 1500 /bin/zsh
+ 1501 node
+ 1502 /usr/local/bin/node
+ 1600 /usr/local/bin/python3
+ 1700 /usr/local/bin/node
+ 1701 /bin/bash
