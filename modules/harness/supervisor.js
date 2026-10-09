@@ -121,8 +121,8 @@ function afterOrchestrator(sessionId, r) {
     const turnId = `auto_${Date.now().toString(36)}`;
     bus.publishWhere(devices.list(), d => require('./session-access').hears(d, sessionId), 'agent.turn', d => ({
       turnId, sessionId, state: 'done', by: 'panel', text: short(r.text, 4000),
-      // A device on a call in this conversation just heard it said: update, do not notify (realtime/calls.js).
-      ...(require('../realtime/calls').inCall(d.id, sessionId) ? { quiet: true } : require('../presence').quietFlag(d.userId)),
+      // Its person on a call in this conversation just heard it said: update, do not notify (realtime/calls.js).
+      ...require('../realtime/calls').quietFor(d, sessionId),
     }));
   } catch { /* the chat has it either way */ }
 }

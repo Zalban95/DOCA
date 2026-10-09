@@ -58,7 +58,11 @@ const _running = new Map();
 function fanout(type, payload) {
   try {
     // Only the devices whose owner may open this conversation (session-access.js hears).
-    return bus.publishWhere(devices.list(), d => access().hears(d, payload.sessionId), type, payload);
+    // A turn in a conversation its person is on a call in is being said there: their devices update, never notify —
+    // or the phone's notice for the answer is bridged to the wrist that is saying it (realtime/calls.js personOnCall).
+    const calls = require('../realtime/calls');
+    const body = type === 'agent.turn' && !payload.quiet ? d => (calls.personOnCall(d, payload.sessionId) ? { ...payload, quiet: true } : payload) : payload;
+    return bus.publishWhere(devices.list(), d => access().hears(d, payload.sessionId), type, body);
   } catch (e) {
     // An oversized event must not abort a turn that is otherwise fine.
     if (e.code === 'event_too_large') return [];
@@ -383,4 +387,5 @@ module.exports = {
   sessions, createSession, activate, removeSession, transcript, requireSession, defaultSession,
   post, running, cancel, memoryList, HUB_SPOKEN,
   MAX_MESSAGE,
+  _fanout: fanout,   // for test/call-echo.test.js
 };
