@@ -53,6 +53,8 @@ function boot() {
 
 function has(code) {
   if (code === 'core') return true;
+  // The lab is a development hive's alone: a production hive never has it, whatever its licence says (edition-mode.js).
+  if (String(code).toLowerCase() === 'lab' && require('../edition-mode').production()) return false;
   const b = boot();
   return b.all || b.codes.includes(String(code).toLowerCase());
 }
@@ -61,6 +63,7 @@ function featureOn(f) {
   if (typeof f === 'string') f = require('../features').get(f);
   if (!f) return true;   // not an indexed feature: nothing to gate
   const code = f.licence || 'core';
+  if (code === 'lab' && require('../edition-mode').production()) return false;
   return code === 'core' || has(code) || boot().codes.includes(`feature.${f.id}`);
 }
 
@@ -114,7 +117,7 @@ function status() {
     grace: b.grace || disk.grace || null, readOnly: readOnly(),
     fingerprint: fingerprint(), machineFrom: require('./fingerprint').fingerprint().machineFrom,
     lastCheckIn: s.lastCheckIn || null, lastTry: s.lastTry || null, lastError: s.lastError || null,
-    server, account, hasKey: !!c.key, trustsKeys: keys.VENDOR_KEYS.length,
+    server, account, hasKey: !!c.key, trustsKeys: keys.VENDOR_KEYS.length, mode: require('../edition-mode').state(),
     restartNeeded: !same, onDisk: same ? null : { source: disk.source, valid: disk.valid, codes: disk.codes, problem: disk.problem || null },
   };
 }
@@ -123,6 +126,6 @@ function status() {
 /** Judge read-only again at the next question (after a check-in or an upload). */
 function fresh() { _ro = { at: 0, v: null }; }
 
-function reload() { _boot = null; _ro = { at: 0, v: null }; require('./fingerprint')._reset(); }
+function reload() { _boot = null; _ro = { at: 0, v: null }; require('./fingerprint')._reset(); require('../edition-mode').reload(); }
 
 module.exports = { has, featureOn, readOnly, status, evaluate, boot, touch, fresh, reload, graceDays };

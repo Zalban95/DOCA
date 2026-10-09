@@ -65,6 +65,8 @@ module.exports = [
     run: async ({ command, cwd: dir, timeoutSec, background }, ctx = {}) => {
       if (!command) return 'Error: command is required';
       const where = dir ? resolvePath(dir, ctx) : cwd(ctx);
+      const code = require('../../edition-mode').shellRefusal(command, where);   // a production hive's code (edition-mode.js)
+      if (code) return `Error: ${code}`;
       if (background) {
         const j = require('../jobs').start(command, { cwd: where, sessionId: ctx.sessionId || null });
         return `Started background job ${j.id} (pid ${j.pid}). It keeps running after this call; `

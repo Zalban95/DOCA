@@ -49,15 +49,17 @@ module.exports = [
       // Files holding secrets beside settings are left out (harness/secret-view.js); read_file shows them masked.
       const sv = require('../secret-view'), path = require('path');
       const isFile = (() => { try { return require('fs').statSync(root).isFile(); } catch { return false; } })();
-      const hidden = new Set();
+      const hidden = new Set(), code = new Set();
       r.matches = r.matches.filter(m => {
         const abs = path.resolve(isFile ? path.dirname(root) : root, m.file);
+        if (require('../../edition-mode').inCode(abs)) { code.add(m.file); return false; }   // a production hive's code (edition-mode.js)
         if (!sv.kindOf(abs)) return true;
         hidden.add(m.file);
         return false;
       });
-      if (hidden.size) r.files = Math.max(0, r.files - hidden.size);
-      return clip(fmtMatches(r) + (hidden.size ? `\n(left out: ${[...hidden].join(', ')} — they hold secrets; read_file shows them masked)` : ''));
+      if (hidden.size || code.size) r.files = Math.max(0, r.files - hidden.size - code.size);
+      return clip(fmtMatches(r) + (hidden.size ? `\n(left out: ${[...hidden].join(', ')} — they hold secrets; read_file shows them masked)` : '')
+        + (code.size ? `\n(left out: ${code.size} file(s) of DOCA's own code — ${require('../../edition-mode').SAY})` : ''));
     },
   },
   {
@@ -84,7 +86,7 @@ module.exports = [
     danger: true,
     run: (a, ctx = {}) => {
       const r = require('../../projects/search').replaceInFiles(where(a.path, ctx),
-        { ...a, dryRun: !a.apply, refuse: abs => require('../control-plane').which(abs) });
+        { ...a, dryRun: !a.apply, refuse: abs => require('../control-plane').which(abs) || require('../../edition-mode').inCode(abs) });
       const head = `${r.written ? 'Replaced' : 'Would replace'} ${r.replacements} occurrence(s) in ${r.files} file(s)`
         + (r.written ? '.' : '. Nothing is written yet: call again with apply: true.');
       return clip([head, ...r.changes.flatMap(c => [`${c.file} (${c.replacements})`,

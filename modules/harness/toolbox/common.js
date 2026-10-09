@@ -87,6 +87,8 @@ function landed(p, abs) {
 function resolvePath(p, ctx = {}, { write = false } = {}) {
   const expanded = String(p || '').replace(/^~(?=$|[/\\])/, os.homedir());
   const abs = path.resolve(cwd(ctx), expanded);
+  // A production hive's own code: said as what it is, not as a place outside the roots (edition-mode.js).
+  if (!require('../../hosted').on() && require('../../edition-mode').inCode(abs)) throw new Error(require('../../edition-mode').refusal(abs));
   if (!fmSafe(abs) && write)
     // A write, said the same way (deep test A, #33): refused here, the agent said "I'll create the files there with
     // the shell instead" and did — the person had named the place, and nothing asked them.
