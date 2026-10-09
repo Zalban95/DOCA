@@ -1,0 +1,34 @@
+# What a hive's image carries: the code that runs and the files it reads (Dockerfile). Everything else stays out —
+# the project's history, its tests, its notes and audits, and anything an install wrote beside the code.
+.git
+.gitattributes
+.gitignore
+.github
+.claude
+.cursor
+.playwright-mcp
+node_modules
+test
+docs
+deploy
+scripts
+run.sh
+trainers
+clients/reference
+skills/doca-dev-cycle
+*.md
+!skills/**/*.md
+!specialists/*.md
+!clients/**/*.md
+Dockerfile
+.dockerignore
+.env
+.env.*
+.certs
+.doca
+.releases
+backups
+.dashboard-prefs.json*
+.backup-password
+.setup-code
+*.log
