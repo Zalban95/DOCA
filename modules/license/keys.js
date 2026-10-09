@@ -9,12 +9,12 @@
  * This is the trust anchor, so it lives in code, never in a setting: a setting would let anyone sign their own.
  * Adding or removing a key is a change to what the product trusts — it asks the admin first (CONSTITUTION S11, keys).
  *
- * Empty until the owner's licence server exists: every hive then runs `core`, or the grace an existing install was
- * given (grace.js). Tests trust a key of their own through test/licence-trust.js, which only test code loads; nothing
+ * Without a licence a hive runs `core`, or the grace an existing install was given (grace.js). Tests trust a key of their own through test/licence-trust.js, which only test code loads; nothing
  * in the product reads an environment variable to trust one.
  */
 const VENDOR_KEYS = [
-  // { id: 'protolab-2026', hex: '<64 hex characters>', note: 'the licence server set up on …' },
+  // { id: '<server>-<YYYY-MM>', hex: '<64 hex characters>', note: 'which licence server, set up when' },
+  { id: 'project-local-2026-10', hex: '249cf9b932e1f58f4c79cca391e3a747c678869e0b525c75e5dfb5b602e31d2d', note: 'the project\'s licence server (doca-licensing, Keygen CE on the owner\'s machine), set up 2026-10-09' },
 ];
 
 /** A licence certificate a test preloads when a hive has none of its own (test/licence-trust.js); null in the product. */
