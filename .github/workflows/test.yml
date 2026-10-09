@@ -21,6 +21,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run smoke   # the panel in the runner's Chrome: every tab, no page error (bin/doca-smoke.js)
+      - run: npm run smoke -- --core   # the same with no licence: only the core, and nothing calls a route that is not there
       # The installer on each OS, from this checkout into a temp folder, no boot entry: it must end with a panel answering.
       - name: install (Linux, macOS)
         if: runner.os != 'Windows'
