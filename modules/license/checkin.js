@@ -67,7 +67,9 @@ async function checkIn({ now = Date.now(), name = 'DOCA hive' } = {}) {
     if (!certificate) { save({ lastError: `no licence file came back: ${detail(out)}` }); return { ok: false, code: 'checkout', detail: detail(out) }; }
     const checked = accept(certificate, { key, now });
     if (!checked.ok) { save({ lastError: checked.detail }); return checked; }
-    save({ lastCheckIn: new Date(now).toISOString(), lastSeen: new Date(now).toISOString(), lastError: null, revoked: null });
+    // The product the licence is for: the update channel lists its releases (update-channel/source.js).
+    save({ lastCheckIn: new Date(now).toISOString(), lastSeen: new Date(now).toISOString(), lastError: null, revoked: null,
+      productId: v.json.data.relationships?.product?.data?.id || s.productId || null });
     lic.fresh();
     note('checked the licence in with its server', `due every ${checked.checkInDays || '—'} days`);
     return { ok: true, code: 'VALID', detail: 'Checked in: the licence file was renewed.', restartNeeded: lic.status().restartNeeded };
