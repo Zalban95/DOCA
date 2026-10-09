@@ -3,7 +3,7 @@
 /** Skills (harness/skills.js): load a procedure when the task matches it; keep one learned. */
 module.exports = [
   {
-    // Experiment toolTiers (turn/tool-tiers.js): absent while it is off (turn/tool-shape.js).
+    // Tools sent by tier (turn/tool-tiers.js): absent when every tool is sent in full (toolsLoading: all, tool-shape.js).
     name: 'tools_more',
     description: 'Load tools you hold that are not loaded yet (listed under "More tools" in Your tools) — use it before you need one of them. '
       + 'names: tool names, or mcp:<server> for all of a server\'s tools. They stay loaded for this conversation from your next step.',

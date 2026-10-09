@@ -113,11 +113,17 @@ function _harnessParamsHtml(h, meta) {
   const shipped = meta.defaults || {};   // the shipped parameters: what an advanced field is marked against
   const num = key => {
     const f = HARNESS_PARAMS.find(x => x.key === key);
+    const marks = `${shipped[key] != null ? `data-default="${escHtml(shipped[key])}"` : ''} data-label="${escHtml(f.label)}"`;
+    // A row with `choices` is a select (toolsLoading); every other one a number box.
+    const box = f.choices
+      ? `<select class="input" id="hcfg-${key}-${h.id}" ${marks} style="width:100%">${f.choices.map(([v, label]) =>
+          `<option value="${escHtml(v)}" ${String(c[key] ?? shipped[key]) === v ? 'selected' : ''}>${escHtml(label)}</option>`).join('')}</select>`
+      : `<input class="input" type="number" id="hcfg-${key}-${h.id}" value="${escHtml(c[key])}" ${f.attrs || ''}
+               ${marks} style="width:100%">`;
     return `
       <label for="hcfg-${key}-${h.id}">${f.label}${f.unit ? ` <em style="opacity:.55;font-style:normal">(${f.unit})</em>` : ''}</label>
       <div>
-        <input class="input" type="number" id="hcfg-${key}-${h.id}" value="${escHtml(c[key])}" ${f.attrs}
-               ${shipped[key] != null ? `data-default="${escHtml(shipped[key])}"` : ''} data-label="${escHtml(f.label)}" style="width:100%">
+        ${box}
         <small class="harness-hint">${escHtml(f.hint)}</small>
       </div>`;
   };
@@ -266,6 +272,8 @@ async function harnessConfigSave(id) {
         topP:           parseFloat(val('topP')),
         maxTokens:      parseInt(val('maxTokens'), 10) || 0,
         maxSteps:       parseInt(val('maxSteps'), 10) || 1,
+        orchestratorWorkSteps: parseInt(val('orchestratorWorkSteps'), 10) || 0,
+        toolsLoading:   val('toolsLoading') === 'all' ? 'all' : 'tiers',
         autoTurnsPerJob:  parseInt(val('autoTurnsPerJob'), 10) || 0,
         autoWakesPerHour: parseInt(val('autoWakesPerHour'), 10) || 0,
         tokensPerDay:     parseInt(val('tokensPerDay'), 10) || 0,

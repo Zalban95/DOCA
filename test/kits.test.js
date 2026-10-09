@@ -28,8 +28,11 @@ test('a fresh install\'s prompt names the tools it is offered — canvas and the
   for (const sessionId of [work.id, memory.mainSession().id]) {
     const prompt = agent.preview({ message: 'x', sessionId });
     assert.match(prompt, /# Your tools — \d+, by kit/);
-    for (const n of ['canvas', 'search_files', 'replace_in_files', 'git', 'project', 'shell', 'work_chats'])
+    for (const n of ['search_files', 'git', 'project', 'shell', 'work_chats'])
       assert.match(prompt, new RegExp(`\\n  ${n}: `), `${n} in the prompt of ${sessionId}`);
+    // Held and named, loaded when needed (turn/tool-tiers.js).
+    for (const n of ['canvas', 'replace_in_files'])
+      assert.match(prompt, new RegExp(`More tools you hold, not loaded yet[\\s\\S]*\\b${n}\\b`), `${n} named in the prompt of ${sessionId}`);
   }
 });
 

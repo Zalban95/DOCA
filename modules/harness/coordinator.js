@@ -41,7 +41,7 @@ function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], 
     + (has('pack') && sharingOn() ? '; and `pack` save it, so the owner can offer it to the project.' : '.') : '';
   return ['# How to route a request', 'If the person said how to do it, do it their way. Otherwise take the first that fits:', ...rows.map((r, i) => `${i + 1}. ${r}`), keep,
     has('work_chats') && workSteps > 0
-      ? `After ${workSteps} steps of real work in your own turn the job moves to a work chat by itself; hand it over before that.`
+      ? `After ${workSteps} steps of real work in your own turn — up to ${Math.max(workSteps, 6)} for a small request, ${Math.min(workSteps, 1)} for a large one — the job moves to a work chat by itself; hand it over before that.`
       : '',
   ].filter(Boolean).join('\n');
 }

@@ -7,6 +7,8 @@
 const alt = (id, name, beside, uses, use, extra = {}) => ({ id, licence: 'core', name, beside, uses, use, state: 'alternative', ...extra });
 
 module.exports = [
+  alt('tools-all', 'Every tool sent in full on every step', 'tool-tiers', 'tools:all',
+    'Before tiers: every held tool\'s schema on every step. For a model with room to spare whose cache makes the bytes cheap.', { settings: ['harness.config.doca.toolsLoading'], page: 'harness' }),
   alt('show-image', 'show_image (the old name of show_media)', 'show-media', 'tool:show_image',
     'The name show_media had before audio, video and 3D: old transcripts and recipes still run with it.', { tools: ['show_image'] }),
   alt('scout-alias', 'scout (the old name of model_scout)', 'model-scout', 'tool:scout',

@@ -175,7 +175,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   if (front?.delegate) return { sessionId: session.id, text: require('./turn/front').delegate({ session, message, client, say, deep: front.deep }),
     steps: 0, usage: budget.report(budget.ledger(), p), handedOff: true };
   const orchestrating = (profile?.level === 'orchestrator' && Number(p.orchestratorWorkSteps) > 0) || !!front;
-  const workLimit = front ? front.workSteps : Number(p.orchestratorWorkSteps);
+  const workLimit = front ? front.workSteps : require('./turn/handoff').limitFor({ p, message, client, session: memory.getSession(session.id) });   // by the request's size
   let workSteps = 0;
 
   let summary = await foldSummary({ session: memory.getSession(session.id), p, ep, signal });
@@ -235,8 +235,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     const stepDisabled = front ? front.off(disabledFor(profile, p, session.id)) : disabledFor(profile, p, session.id);
     const now = step > 1 && thinkingOf();   // the effort tool changes it from the next step
     if (now && (now.level !== effort.level || now.from !== effort.from)) { effort = now; say({ type: 'effort', step, ...effort }); }
-    // Sent by tier when the toolTiers experiment is on (turn/tool-tiers.js): what is held is unchanged.
-    const schemas = require('./turn/tool-tiers').split(tools.schemas(stepDisabled), { sessionId: session.id, profile, text: message }).offered;
+    // Sent by tier (turn/tool-tiers.js; harness.config.doca.toolsLoading): what is held is unchanged.
+    const schemas = require('./turn/tool-tiers').split(tools.schemas(stepDisabled), { sessionId: session.id, profile, text: message, client, step: true }).offered;
     if (toolCount !== null && schemas.length !== toolCount)
       say({ type: 'tools', count: schemas.length, was: toolCount, step });
     toolCount = schemas.length;

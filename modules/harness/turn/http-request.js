@@ -20,7 +20,19 @@ const { Readable } = require('node:stream');
 
 const abortError = signal => signal?.reason ?? new DOMException('This operation was aborted', 'AbortError');
 
-function post(url, { headers = {}, body = '', signal } = {}) {
+/**
+ * A kept-alive connection the server has already let go of: Node reuses it, the request is written into a closed
+ * socket, and the server never saw it — "socket hang up" before any answer. llama.cpp's router does this after every
+ * streamed answer, so the second step of every turn on a local model failed (2026-10-09, lean-prompt). Such a request
+ * is sent again once, on a fresh connection; nothing was processed, so nothing is done twice.
+ */
+const unsent = (req, e, res) => !res && req.reusedSocket && ['ECONNRESET', 'EPIPE'].includes(e?.code);
+
+function post(url, opts = {}) {
+  return once(url, opts).catch(e => (e?.retryFresh ? once(url, { ...opts, fresh: true }) : Promise.reject(e)));
+}
+
+function once(url, { headers = {}, body = '', signal, fresh = false } = {}) {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) return reject(abortError(signal));
     const u = new URL(url);
@@ -32,7 +44,7 @@ function post(url, { headers = {}, body = '', signal } = {}) {
       req.destroy(e);
       res?.destroy(e);   // a stream being read ends with the same error, as fetch's body did
     };
-    const req = lib.request(u, { method: 'POST', headers: { ...headers, 'Content-Length': Buffer.byteLength(body) } }, r => {
+    const req = lib.request(u, { method: 'POST', headers: { ...headers, 'Content-Length': Buffer.byteLength(body) }, ...(fresh ? { agent: false } : {}) }, r => {
       res = r;
       r.on('close', () => signal?.removeEventListener('abort', onAbort));
       settled = true;
@@ -56,7 +68,7 @@ function post(url, { headers = {}, body = '', signal } = {}) {
     signal?.addEventListener('abort', onAbort, { once: true });
     req.on('error', e => {
       signal?.removeEventListener('abort', onAbort);
-      if (!settled) { settled = true; reject(e); }
+      if (!settled) { settled = true; reject(!fresh && !signal?.aborted && unsent(req, e, res) ? Object.assign(e, { retryFresh: true }) : e); }
     });
     req.end(body);
   });

@@ -24,7 +24,6 @@ const EXPERIMENTS = [
   { id: 'wakeModel', label: 'Hear the wake word with a model trained for it, on the screen', doc: 'wake-model.md', todo: 'H8.4', since: '2.244.0', measure: 'manual' },
   { id: 'modelScout', label: 'A scout for better and new models', doc: 'model-scout.md', todo: 'H10.4', since: '2.213.0', measure: 'script' },
   { id: 'visionPass', label: 'Look at a computer\'s screen with a vision model', doc: 'vision-pass.md', todo: 'H5.6', since: '2.197.0', measure: 'script' },
-  { id: 'toolTiers', label: 'Send the core tools in full, the rest by name', doc: 'tool-tiers.md', todo: 'B2', since: '2.249.0', measure: 'script' },
   { id: 'adaptiveLimits', label: 'Limits that follow the work: effort and steps by the request', doc: 'adaptive-limits.md', todo: 'H10.6', since: '2.295.0', measure: 'script' },
   { id: 'riskTiers', label: 'Ask only about what cannot be undone, in every mode', doc: 'risk-tiers.md', todo: 'H10.11', since: '2.296.0', measure: 'script' },
   { id: 'systemOne', label: 'A System 1 decision model for bounded decisions (Laya, or TypeSafe Jev)', doc: 'system-one.md', todo: 'H10.19', since: '2.317.0', measure: 'script' },

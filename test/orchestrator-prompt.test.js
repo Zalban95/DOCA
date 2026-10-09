@@ -62,3 +62,14 @@ test('the MCP servers mcp_connect points at are listed, with whose machine', () 
     assert.match(t, /## MCP servers\n- blender-here: stopped, on this host/);
   } finally { mcp.remove('blender-here'); }
 });
+
+test('the hand-off follows the request\'s size by the triage\'s rules, never a model', () => {
+  const { limitFor, SMALL_STEPS, LARGE_STEPS } = require('../modules/harness/turn/handoff');
+  const p = { orchestratorWorkSteps: 3 };
+  assert.equal(limitFor({ p, message: 'what is 2+2?' }), Math.max(3, SMALL_STEPS), 'a small request may finish here');
+  assert.equal(limitFor({ p, message: 'Fix the tests in ~/proj and tidy the README, then rename the helpers' }), 3, 'a medium one keeps the setting');
+  const large = 'Build the whole app from scratch: 1. set up the project 2. write the backend 3. write the frontend 4. deploy it to the server and check every page works for desktop and phone.';
+  assert.equal(limitFor({ p, message: large }), Math.min(3, LARGE_STEPS), 'a large one moves to a work chat early');
+  assert.equal(limitFor({ p: { orchestratorWorkSteps: 0 }, message: 'hi' }), 0, 'off stays off');
+  assert.match(main(), /After 3 steps of real work in your own turn — up to 6 for a small request, 1 for a large one —/);
+});
