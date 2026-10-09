@@ -242,6 +242,37 @@ The harness gives its agent eight rules for working on any repository (charter r
 - **What a type holds, and why, is one call** (since 2.156.0, `modules/harness/tool-roster.js`, `GET /api/harness/agents/:id/tools` with `orchestrator`, `work` or a specialist id): every held tool with its kit, the first sentence its prompt reads, and the reason (a kit, named in the definition, every specialist, comes with another tool, a grant), then what the type is refused and why (the owner's switches, the airlock, `NEVER`, another conversation's computer). The held set is `disabledFor`'s, so the panel and the turns cannot disagree; the Harness tab opens it from each specialist's tool count. What is off by a switch or by the turn's shape (specialists off, the vision pass, the scout; `mission_plan`/`scout_report` outside a mission; `computer_login` without a computer's tools; the alias `show_image`, which still runs as `show_media` through `tools.ALIASES`) is one list with reasons, `turn/tool-shape.js`, read by both (since 2.247.0; `test/tool-shape.test.js` holds the roster equal to each type's turn). Since 2.248.0 a tool's line there is its written lead in `turn/tool-leads.js` when its first sentence cannot serve (what it does and " — use it when …", at most 150 characters, never cut), else that sentence; `test/skill-references.test.js` holds shipped skills to names that exist. `test/tool-awareness.test.js` holds every tool to a first sentence that says what it is for — that sentence is all "Your tools" shows.
 - The first specialist is **`archivist`**: long-term memory, one tool (`memory_search`), no memory block of its own (it searches memory rather than having it pasted in), minimal environment. Point its `provider` at a local llama.cpp instance and it is the memory sidecar with no special-casing anywhere in the code.
 
+### Teams: specialists on one board (asked 2026-10-09, `modules/teams`; docs/design/teams.md)
+- **A team is a board, not a new agent**: tasks given to specialists (or, for the Orchestrator, a work chat), with
+  `after` dependencies and a contract each ("done when …", `plan-contracts.js`). The leader — the Orchestrator, a work
+  chat, a person's chat — makes it with **one call**, `team {create}` (also `status`, `stop`, `keep_going`); the hub
+  carries it: `engine.advance()` runs on every change of the team's missions or work chats (the live feed), one pass
+  at a time per team — checks a finished task's contract, retries a failed task when the team keeps going, dispatches
+  every task whose dependencies are done with what they delivered (`agents/after.js handed`, also used by `after`).
+  A mission of a team carries `team: {id, task}` (also on `agent.mission`).
+- **Progress is mechanical** (`teams/board.js`, "Visibility is mechanical"): a task is queued, waiting (on what),
+  running (step N of its specialist's `maxSteps`, that share as its percent, at most 99), paused, checking, done (100,
+  only when its contract holds), failed (why) or stopped; the team's percent is tasks done ÷ tasks, **every task
+  counting the same — say so wherever it is drawn**. No agent writes progress; no model summarises the board.
+- **`team` is a leader's tool**: in `registry.NEVER` (a tightening) and off for every specialist in `tool-shape.js`;
+  `teams.create` refuses a specialist's conversation. **`team_note {text}` is the one new specialist tool**: in
+  `ALWAYS_FOR_SPECIALISTS` and taken off by `tool-shape.js` unless the mission is a team's task; ≤ 400 characters, 8
+  per task try. Teammates read the newest four in their per-step readings (`teams/readings.js`, never the cached
+  prefix), each framed by `untrusted.frame()` as a teammate's words, not instructions. Not agent-to-agent messaging:
+  nobody is woken. Neither tool is in `approval.FREE` (S11); `risk/rules.js` rates both work in the hive.
+- **Keep going** (the board's switch, `team keep_going`, or `/loop until-done` in the leading chat; `/loop stop` turns
+  it off): a failed task is dispatched again with why the last try failed, one round each, up to `teams.maxRounds`
+  (3, not proposable) or the team's own `max_rounds`; then the team ends failed. **Stop** cancels every running task
+  at its next step, sets a work chat's job stopped, and the waiting tasks never start.
+- **Where it shows**: the missions bar (a team row with a thin bar, opened into its tasks; its missions under it, not
+  twice), Harness → Teams and the board window (`public/js/harness-console/teams.js`, `css/teams.css`), Workstream
+  lines of kind `team`, the leader's readings and an unread report when it ends, the live feed's `teams` topic (by the
+  leader's conversation, `session-access`), `agent.team` to devices (PROTOCOL §11.4; durable on a state change,
+  ephemeral for a percentage; never a watch wake; fixtures `agent.team-*`), and **the team document** `team-<slug>.md`
+  (`teams/doc.js`) — in the leader's project when it has one and always as an attachment, written again at every
+  change, shown as a `doc` when the team is made. Routes `/api/harness/missions/teams*` (the missions' rights rows;
+  capability `teams`, a ranked gap for devices).
+
 ### Product names (`modules/branding.js`)
 - **Every name a person reads comes from one file**, because the panel will be sold under a customer's label and under whatever the public release is called, and a rename that means grepping forty files is a rename that does not happen. Overrides live in prefs under `branding`, so a private label is a settings change; the UI for it is deliberately absent until it can sit behind the admin password, since the only thing worse than the wrong name is one an agent changed.
 - **The distinction that matters is branding vs identifier, and getting it wrong breaks installs.** `~/.openclaw/` and `openclaw.json` are paths that already exist on disk; `openclaw-panel.service` is a unit somebody enabled; the `openclaw` row in `catalog.js` is a real third-party product, not our label; `openclaw-dashboard` in package.json is an npm identifier; `DOCA_DATA_DIR`, the `doca` harness id and the `med_`/`job_`/`trn_` prefixes are identifiers too. **None of those are renameable.** The test: if changing the string would stop an existing machine working, it is not branding. There is a test pinning it.
