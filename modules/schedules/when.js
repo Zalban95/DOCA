@@ -61,6 +61,7 @@ function next(when, from = new Date()) {
     if (!Number.isFinite(t)) throw new Error('at is a date and time, ISO 8601 (2026-10-07T18:00).');
     return t > from.getTime() ? new Date(t) : null;
   }
+  if (when.self) return new Date(from.getTime() + 2000);   // a loop that goes again as soon as a run ends (loop.js)
   const mins = Number(when.every);
   if (!Number.isFinite(mins) || mins < 1) throw new Error('every is a number of minutes, at least 1.');
   return new Date(from.getTime() + mins * 60000);
@@ -71,6 +72,7 @@ function describe(when, tz = null) {
   const zone = zones.valid(tz) || zones.valid(when.tz) || zones.hostZone();
   if (when.cron) return `cron ${when.cron} (${zones.valid(when.tz) || `${zones.hostZone()}, the hub's time`})`;
   if (when.at !== undefined) return `once, ${zones.human(new Date(when.at), zone)}`;
+  if (when.self) return 'again as soon as each run ends';
   const m = Number(when.every);
   return m % 1440 === 0 ? `every ${m / 1440} day${m === 1440 ? '' : 's'}` : m % 60 === 0 ? `every ${m / 60} hour${m === 60 ? '' : 's'}` : `every ${m} minute${m === 1 ? '' : 's'}`;
 }
