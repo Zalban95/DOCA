@@ -24,8 +24,9 @@ function stepsOf(body) {
 }
 
 /** "# Following …" for each skill this turn read that has steps; '' when none. `rows`: the turn's transcript rows. */
-function block(rows = []) {
+function block(rows = [], attached = []) {
   const seen = new Map();
+  for (const a of attached) seen.set(a.name, stepsOf(a.text));   // attached to this request (skill-next.js)
   for (const r of rows) {
     if (r.role !== 'tool' || r.name !== 'skill') continue;
     const m = /^# ([\w.-]+)\r?\n([\s\S]*)$/.exec(String(r.content || ''));

@@ -115,6 +115,7 @@ function view(row) {
     // What a chat tab draws (tab-routes.js): how it works, whether it asks, and what is waiting for it.
     mode: require('./modes').of(s.id), approval: s.approval || null, projectId: s.projectId || null,
     thinking: s.effort || null, thinkingBy: s.effortBy || null,   // the composer's 💭 (turn/thinking.js)
+    skills: s.skills || null, compact: s.compact || null, skillAuto: s.skillAuto ?? null,   // this chat's own skills and compaction (skill-use.js, turn/compact-choice.js)
     waiting: require('./inbox').waiting(s.id).length };
 }
 

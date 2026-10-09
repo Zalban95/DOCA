@@ -76,7 +76,7 @@ module.exports = [
   row('specialists', 'make, edit and switch on specialists, and the agents\' identity', ['POST /api/harness/agents', 'POST /api/harness/agents/enable', 'POST /api/harness/agents/:id',
     'DELETE /api/harness/agents/:id', 'POST /api/harness/agents/:id/promote', 'POST /api/harness/agent-import', 'POST /api/harness/identity']),
   row('harness-skills', 'write, import and adapt skills', ['POST /api/harness/skills', 'POST /api/harness/skills/draft', 'POST /api/harness/skills/import', 'POST /api/harness/skills/:name/adapt',
-    'POST /api/harness/skills/:name/restore'], { only: 'a skill is instructions the agents follow: a host\'s (learn.js)' }),
+    'POST /api/harness/skills/:name/restore', 'POST /api/harness/skills/online/import', 'POST /api/harness/skills/:name/triggers/suggest'], { only: 'a skill is instructions the agents follow: a host\'s (learn.js)' }),
   row('guards', 'set up the guards that check the agents\' calls', ['POST /api/harness/guards', 'POST /api/harness/guards/*', 'DELETE /api/harness/guards/:id']),
   row('previews', 'show a port of this machine as a preview', ['POST /api/harness/previews']),
   row('tuning', 'set up search, retrieval, vision, the realtime model and assistant mode', ['POST /api/search/*', 'POST /api/retrieval', 'POST /api/retrieval/try', 'DELETE /api/retrieval/index',

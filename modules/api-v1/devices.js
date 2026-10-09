@@ -148,7 +148,14 @@ function cleanName(name, id) {
  */
 const KINDS = ['device', 'agent', 'browser', 'channel'];
 
-function create({ name, scopes, caps, expiresAt, kind }) {
+/**
+ * A device waiting for a person to approve it (devices-approval/; the owner's decision of 2026-10-09): it reads its own
+ * record and holds its event stream, and nothing else (pending.js). A record with no `approval` was made before
+ * approval existed, or by the host itself, and is approved.
+ */
+const isPending = d => d?.approval?.state === 'pending';
+
+function create({ name, scopes, caps, expiresAt, kind, approval }) {
   const id = newId('dev');
   const secret = crypto.randomBytes(32).toString('base64url');
   const rec = {
@@ -164,6 +171,7 @@ function create({ name, scopes, caps, expiresAt, kind }) {
     lastSeenAt: null,
     expiresAt:  expiresAt || null,
     revokedAt:  null,
+    ...(approval ? { approval } : {}),
   };
   db().devices[id] = rec;
   persist();
@@ -257,6 +265,8 @@ function update(id, patch) {
   if (patch.orgId !== undefined)  rec.orgId = patch.orgId || null;
   // The phone that minted this device's pairing code: where a wake goes (wake.js).
   if (patch.pairedBy !== undefined) rec.pairedBy = patch.pairedBy || null;
+  // Approved or refused (devices-approval/): only that module writes it.
+  if (patch.approval !== undefined) rec.approval = patch.approval;
   persist();
   return publicView(rec);
 }
@@ -281,25 +291,45 @@ function patchVars(id, patch) {
 
 const _pairings = new Map();
 
-function startPairing({ name, scopes, expiresAt, kind, createdBy, userId = null, orgId = null }) {
+/**
+ * `approval`: decided when the pairing starts — { state: 'approved', … } when whoever started it may approve the
+ * device (devices-approval/ `atStart`), else null and the device that completes it waits for a person.
+ */
+function startPairing({ name, scopes, expiresAt, kind, createdBy, userId = null, orgId = null, approval = null }) {
   for (const [code, p] of _pairings) if (p.expiresAt < Date.now()) _pairings.delete(code);
   let code;
   do { code = String(crypto.randomInt(0, 1e6)).padStart(6, '0'); } while (_pairings.has(code));
-  const rec = { code, name, scopes: normalizeAll(scopes), tokenExpiresAt: expiresAt || null, kind, createdBy, userId, orgId,
+  const rec = { code, name, scopes: normalizeAll(scopes), tokenExpiresAt: expiresAt || null, kind, createdBy, userId, orgId, approval,
                 expiresAt: Date.now() + L.PAIR_CODE_TTL_SEC * 1000 };
   _pairings.set(code, rec);
   return { code: `${code.slice(0, 3)}-${code.slice(3)}`, expiresAt: new Date(rec.expiresAt).toISOString(), scopes: rec.scopes, name };
 }
 
-function completePairing(codeInput, caps, nameOverride) {
+/** `from`: where the device paired from ({ address, network }), shown to whoever is asked to approve it. */
+function completePairing(codeInput, caps, nameOverride, from = null) {
   const code = String(codeInput || '').replace(/\D/g, '');
   const p = _pairings.get(code);
   if (!p || p.expiresAt < Date.now()) { _pairings.delete(code); return null; }
   _pairings.delete(code);
-  const made = create({ name: nameOverride || p.name, scopes: p.scopes, caps, expiresAt: p.tokenExpiresAt, kind: p.kind });
+  const at = new Date().toISOString();
+  // Decided at the start: the scopes it carries are already held to the approver and the person (owner-ceiling.js).
+  const { scopes: capped, ...decided } = p.approval || {};
+  const approval = p.approval ? { ...decided, at, from } : { state: 'pending', askedAt: at, from };
+  const made = create({ name: nameOverride || p.name, scopes: capped || p.scopes, caps, expiresAt: p.tokenExpiresAt, kind: p.kind, approval });
   if (p.userId) made.device = update(made.device.id, { userId: p.userId, orgId: p.orgId });
   if (p.createdBy) made.device = update(made.device.id, { pairedBy: p.createdBy });
   return made;
+}
+
+/**
+ * Devices paired before approval existed are approved as they are (migration 2.344-devices-approved): a device that
+ * worked yesterday is never asked about. Returns how many were marked.
+ */
+function markApproved(at = new Date().toISOString()) {
+  let n = 0;
+  for (const rec of Object.values(db().devices)) if (!rec.approval) { rec.approval = { state: 'approved', by: null, via: 'migration', at }; n++; }
+  if (n) persist();
+  return n;
 }
 
 /** Names stored before cleanName existed ("null"): the device's form factor and id instead. Once, at boot. */
@@ -316,7 +346,7 @@ function repairNames() {
   return n;
 }
 
-module.exports = { KINDS, repairNames, cleanName,
+module.exports = { KINDS, repairNames, cleanName, isPending, markApproved,
   FORM_FACTORS, normalizeCaps, publicView,
   list, get, create, authenticate, rotate, revoke, remove, forget, update, patchVars, touchPersist, events,
   startPairing, completePairing, _reset,

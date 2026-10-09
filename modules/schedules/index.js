@@ -10,6 +10,9 @@
  * A reminder (kind `reminder`, when {at}) is the exception, decided 2026-10-07: the person asked for it in their own words,
  * so it is on at once, fires once as a notice to that person's own devices, and is then `done`.
  *
+ * A loop (kind `loop`, schedules/loop.js) is a turn in the conversation it was typed in, every N minutes or again as
+ * soon as a run ends (`when {self}`), until an answer says it is done or `max` runs; typed by the person, it starts on.
+ *
  *   { id, title, kind: 'turn'|'recipe'|'reminder', message?, recipe?, values?, text?, device?, when: {every}|{cron}|{at},
  *     state: 'on'|'paused'|'proposed'|'done',
  *     by, sessionId, nextAt, lastAt, last: {ok, summary, at}, runs, createdAt, madeBy: 'person'|'agent' }
@@ -29,6 +32,14 @@ const get = id => rows().find(s => s.id === id) || null;
 const patch = (id, fields) => { const list = rows().map(s => (s.id === id ? { ...s, ...fields } : s)); const s = list.find(x => x.id === id); save(list, s); return s; };
 
 function normalize(input, by, madeBy) {
+  if (input.kind === 'loop') {
+    if (!input.sessionId || !require('../harness/memory').getSession(input.sessionId)) throw bad('A loop runs in a conversation: name it.');
+    const w = input.self ? { self: true } : { every: Number(input.every) };
+    when.next(w);
+    const message = String(input.message || '').trim().slice(0, 4000);
+    if (!message) throw bad('A loop needs what each run does.');
+    return { title: `Loop · ${message.slice(0, 90)}`, kind: 'loop', message, max: Math.min(200, Math.max(1, Number(input.max) || 20)), when: w, by, madeBy };
+  }
   if (input.kind === 'reminder') {
     const w = { at: new Date(input.at).toISOString() };
     if (!when.next(w)) throw bad(`${input.at} is not ahead: a reminder is for later.`);
@@ -89,6 +100,13 @@ async function runNow(id) {
     if (s.kind === 'recipe') {
       const r = await require('../recipes/run').run(require('../recipes/store').get(s.recipe), { params: s.values, person, client });
       last = { ok: r.ok, summary: r.summary, sessionId: r.sessionId };
+    } else if (s.kind === 'loop') {
+      // Into its own conversation, as the person; the answer decides whether it goes again (loop.js).
+      if (!require('../harness/memory').getSession(s.sessionId)) return patch(id, { state: 'done', nextAt: null, last: { ok: false, summary: 'Ended: its conversation is gone.', at: new Date().toISOString() } });
+      const out = await require('../harness/agent').send({ message: require('./loop').message(get(id)), sessionId: s.sessionId, client });
+      const { ended, ...next } = require('./loop').after(get(id), out?.queued ? null : out);
+      return patch(id, { ...next, last: { ok: true, summary: out?.queued ? 'The conversation was working: the run waits for its turn.'
+        : `${ended ? `Ended: ${ended}. ` : ''}${String(out?.text || '').slice(0, 280)}`, sessionId: s.sessionId, at: new Date().toISOString() } });
     } else {
       const memory = require('../harness/memory');
       let sessionId = s.sessionId && memory.getSession(s.sessionId) ? s.sessionId : null;
@@ -126,4 +144,4 @@ function listFor(person) {
   return rows().filter(s => host || s.by === person?.id).map(s => ({ ...s, whenText: when.describe(s.when, require('../timezones').of(s.by)) }));
 }
 
-module.exports = { create, setState, remove, runNow, tick, start, listFor, get };
+module.exports = { create, setState, remove, runNow, tick, start, listFor, get, all: rows };

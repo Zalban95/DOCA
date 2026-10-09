@@ -1,6 +1,7 @@
 ---
 name: calendar-and-mail
 description: Read the person's calendar and mail through their connected Google or Microsoft 365 account — today's plan, a free slot, an email from someone, unread mail. Use when they ask about meetings, availability, or their inbox.
+triggers: [calendar, my mail, email, inbox, meeting, calendario, posta, riunione, appuntamento]
 ---
 
 # Calendar and mail

@@ -39,7 +39,7 @@ function devPairFor() { return document.getElementById('dev-pair-for')?.value ||
 
 /** The pairing card's line on what the device will be able to do. */
 function devPairCanHtml(p) {
-  return _devData.own ? `<div class="input-label mt8" style="text-transform:none;letter-spacing:0">${escHtml(DEV_OWN_CAN)}</div>` : '';
+  return (_devData.own ? `<div class="input-label mt8" style="text-transform:none;letter-spacing:0">${escHtml(DEV_OWN_CAN)}</div>` : '') + devPairApprovalHtml(p);
 }
 
 function devRename(id, name) {

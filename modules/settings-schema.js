@@ -67,6 +67,10 @@ const SCHEMA = {
   // No box in the panel on purpose: a note is the agent's proposal about a tool, and its Accept is the control.
   toolNotes:        { is: 'travels', home: 'hive', note: 'notes added to tool descriptions (fingerprinted per tool)',
     propose: p('Tool note', 'Added to the tool\'s description — what the agent reads when it picks the tool') },
+  // Which instructions go with every turn is the person's choice, not the agent's: not proposable (skill-use.js).
+  skillUse:         { is: 'travels', home: 'hive', note: 'how each skill is used, by name: {use: fits | attached | off, modes: [agent, plan, ask, debug], where: any | project, triggers: [words]} — absent, the skill\'s own front matter, else "when it fits" (harness/skill-use.js; Settings → Harness → Skills)' },
+  skillSuggest:     { is: 'travels', home: 'hive', note: 'skills a message names by a trigger word (harness/skill-triggers.js, skill-next.js)',
+    keys: { autoAccept: { type: 'boolean', default: false, propose: false, hint: 'Attach a skill a message names by one of its triggers without asking (a chat may say otherwise; a project chat in Agent mode does by default). Off: the composer suggests it and a tap attaches it.' } } },
   // Numbers only, and deliberately a different key from `mcpServers`, which holds commands this host spawns
   // and stays out of reach. settings.sectionFor matches a whole prefix, so one can never open the other.
   mcpSettings:      { is: 'travels', home: 'hive', note: 'MCP timeouts', propose: p('MCP timeouts', 'How long to wait for an MCP tool before giving up'),

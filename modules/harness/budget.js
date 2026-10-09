@@ -115,6 +115,7 @@ function shouldCompact(p, lastPrompt) {
  * for no reason when the trigger was `compactTokens` at 40000 all along.
  */
 function compactionFor(p) {
+  if (p?.compactOff) return null;   // a chat that folds nothing early (turn/compact-choice.js)
   const budgetTok = compactTokensFor(p);
   const window = windowFor(p);
   const pctAt = Math.max(1, Number(p.compactAt) || 60);

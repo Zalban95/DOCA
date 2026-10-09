@@ -24,8 +24,10 @@ function order(p) {
   return [head, ...chain];
 }
 
-/** The turn's parameters with the conversation's choice applied. */
-function apply(p, sessionId) {
+/** The turn's parameters with the conversation's choice applied — its model, and its compaction (compact-choice.js). */
+function apply(p, sessionId) { return require('./compact-choice').apply(applyModel(p, sessionId), sessionId); }
+
+function applyModel(p, sessionId) {
   let s = null;
   try { s = memory.getSession(sessionId || memory.activeSession()?.id); } catch { /* no session yet */ }
   const pick = s?.modelChoice;

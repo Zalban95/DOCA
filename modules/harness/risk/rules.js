@@ -105,6 +105,8 @@ const READ_VERBS = new Set([
   'env', 'printenv', 'stat', 'file', 'tree', 'sort', 'uniq', 'cut', 'tr', 'diff', 'cmp', 'jq', 'yq', 'awk', 'basename',
   'dirname', 'realpath', 'readlink', 'nproc', 'lscpu', 'lsblk', 'lsusb', 'lspci', 'ip', 'ifconfig', 'ss', 'netstat',
   'ping', 'dig', 'nslookup', 'host', 'nvidia-smi', 'sensors', 'test', 'true', 'false', 'sleep', 'md5sum', 'sha256sum',
+  // Changing folder changes nothing on disk: `cd x && sed -n …` is a read (asked 2026-10-09; the owner's yes).
+  'cd', 'pushd', 'popd', 'Set-Location', 'sl', 'Push-Location', 'Pop-Location',
   'Get-ChildItem', 'gci', 'Get-Content', 'gc', 'Get-Location', 'Get-Process', 'Select-String', 'Get-Item', 'Test-Path',
 ]);
 /** Verbs that read only with some arguments: the line is a read when the test passes. */

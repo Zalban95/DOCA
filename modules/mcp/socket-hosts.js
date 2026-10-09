@@ -23,6 +23,7 @@ function upgrade(req, socket, head) {
   const token = (/^Bearer\s+(.+)$/i.exec(req.headers.authorization || '') || [])[1] || new URL(req.url, 'http://x').searchParams.get('access_token');
   const device = token && devices.authenticate(String(token).trim());
   if (!device) return refuse(socket, 401, 'Unauthorized');
+  if (devices.isPending(device)) return refuse(socket, 403, 'Forbidden');   // waiting for approval (api-v1/pending.js)
   if (device.userId) { const u = require('../auth/store').userById(device.userId); if (!u || u.suspendedAt) return refuse(socket, 401, 'Unauthorized'); }
   if (!hasScope(device.scopes, 'mcp:self')) return refuse(socket, 403, 'Forbidden');
   wss().handleUpgrade(req, socket, head, ws => connected(device.id, ws));

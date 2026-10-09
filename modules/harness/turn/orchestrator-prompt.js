@@ -25,7 +25,7 @@ function ownerInstructions(p) {
 
 function count(fn) { try { return fn().length; } catch { return 0; } }
 
-function orchestratorPrompt({ p, userText, summary, toolCount, client, profile, toolList, schemas = [] }) {
+function orchestratorPrompt({ p, userText, summary, toolCount, client, profile, toolList, schemas = [], sessionId = null }) {
   const { memoryBlock, rulesBlock, environmentBrief } = require('./prompt');
   const identity = require('../identity');
   const held = new Set(schemas.map(s => s.function?.name || s.name).filter(Boolean));
@@ -38,7 +38,7 @@ function orchestratorPrompt({ p, userText, summary, toolCount, client, profile, 
   const brief = [environmentBrief(p, toolCount), ...environment.mcpSection(undefined, { held })].join('\n');
   return [
     providers.charterFor([...held]), profile.systemPrompt, identity.personaBlock(), identity.humanBlock(),
-    route, require('../skills').manifestBlock(), specialists.length ? registry.block() : '',
+    route, require('../skills').manifestBlock(), require('../skill-use').block(sessionId), specialists.length ? registry.block() : '',
     ownerInstructions(p),
     brief, toolList, clientBlock(client), placeBlock(client), require('../../auth/permits').describe({ person: client?.user, profile }), require('../budget').block(p), rulesBlock(),
     memoryBlock(userText, Math.min(3, Math.max(0, Number(p.memoryLimit) || 0))),

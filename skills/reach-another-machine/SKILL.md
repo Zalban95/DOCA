@@ -1,6 +1,7 @@
 ---
 name: reach-another-machine
 description: Work on one of the person's other computers through its DOCA client (DocaDesk, doca-client) — run commands, read and write files, move git work between machines without losing any.
+triggers: [other computer, my desktop, docadesk, altro computer, sul pc]
 ---
 
 # Working on another of the person's machines
