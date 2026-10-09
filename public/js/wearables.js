@@ -74,24 +74,27 @@ async function devConsoleLinks(el, id) {
   catch (e) { setStatus(document.getElementById(`dev-status-${id}`), `✗ ${e.message}`, 'err'); }
 }
 
-/** A row per button: how it behaves, and its macro — keys for the devices, a command for this host. */
+/** A row per button: how it behaves, the word the watch shows on it, and its macro — keys for the devices, a command
+ *  for this host. On the watch A–C are held (let go, they are off) and D–E latch; the behaviour says what the hub does. */
+const DEV_CONSOLE_BEHAVIOURS = { button: 'button — a press', momentary: 'momentary — on while held', toggle: 'toggle — on, then off' };
 function devConsoleButtonsHtml(id, buttons) {
   const row = k => `<tr data-k="${k}"><td><b>${k}</b></td>
-      <td><select class="input dcb-behaviour"><option value="button" ${buttons[k].behaviour === 'button' ? 'selected' : ''}>button</option>
-        <option value="toggle" ${buttons[k].behaviour === 'toggle' ? 'selected' : ''}>toggle</option></select></td>
+      <td><select class="input dcb-behaviour">${Object.entries(DEV_CONSOLE_BEHAVIOURS).map(([v, t]) =>
+        `<option value="${v}" ${buttons[k].behaviour === v ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+      <td><input class="input dcb-label" maxlength="12" placeholder="${k}" value="${escHtml(buttons[k].label || '')}"></td>
       <td><input class="input dcb-keys" placeholder="keys, e.g. ctrl+s" value="${escHtml(buttons[k].keys)}"></td>
       <td><input class="input dcb-run" placeholder="command on this host" value="${escHtml(buttons[k].run)}"></td></tr>`;
-  return `<table style="width:100%;font-size:11px"><tr style="opacity:.7"><td></td><td>behaviour</td><td>keys → devices</td>
-      <td title="Runs only when this host is ticked above. Told DOCA_BUTTON and DOCA_BUTTON_STATE (on/off).">command → this host ⓘ</td></tr>
-      ${['A', 'B', 'C'].map(row).join('')}</table>
+  return `<table style="width:100%;font-size:11px"><tr style="opacity:.7"><td></td><td>behaviour</td><td title="What the watch writes on the button">label ⓘ</td><td>keys → devices</td>
+      <td title="Runs only when this host is ticked above. Told DOCA_BUTTON and DOCA_BUTTON_STATE (on/off); a momentary button runs at the press (on) and when let go (off).">command → this host ⓘ</td></tr>
+      ${Object.keys(buttons).map(row).join('')}</table>
     <button class="btn btn-sm" onclick="devConsoleButtonsSave(this.closest('details'), ${jsArg(id)})">Save buttons</button>
-    <span style="opacity:.7">Macros apply in keys mode; in joystick mode A/B/C are plain buttons.</span>`;
+    <span style="opacity:.7">Macros apply in keys mode; in joystick mode the buttons are plain buttons.</span>`;
 }
 
 async function devConsoleButtonsSave(el, id) {
   const buttons = {};
   el.querySelectorAll('.dev-console-buttons tr[data-k]').forEach(tr => {
-    buttons[tr.dataset.k] = { behaviour: tr.querySelector('.dcb-behaviour').value, keys: tr.querySelector('.dcb-keys').value, run: tr.querySelector('.dcb-run').value };
+    buttons[tr.dataset.k] = { behaviour: tr.querySelector('.dcb-behaviour').value, label: tr.querySelector('.dcb-label').value, keys: tr.querySelector('.dcb-keys').value, run: tr.querySelector('.dcb-run').value };
   });
   const status = document.getElementById(`dev-status-${id}`);
   try { await apiFetch(`/api/devices/${encodeURIComponent(id)}/console/buttons`, { method: 'PUT', body: { buttons } }); setStatus(status, '✓ Buttons saved', 'ok'); }
