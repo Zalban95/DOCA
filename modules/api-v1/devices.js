@@ -281,6 +281,9 @@ function update(id, patch) {
   if (patch.pairedBy !== undefined) rec.pairedBy = patch.pairedBy || null;
   // Approved or refused (devices-approval/): only that module writes it.
   if (patch.approval !== undefined) rec.approval = patch.approval;
+  // A browser put away (screens/archive.js) or seen (its sign-in session at work: it has no token to touch lastSeenAt).
+  if (patch.archivedAt !== undefined) { if (patch.archivedAt) rec.archivedAt = patch.archivedAt; else delete rec.archivedAt; }
+  if (patch.lastSeenAt !== undefined) rec.lastSeenAt = patch.lastSeenAt;
   persist();
   return publicView(rec);
 }

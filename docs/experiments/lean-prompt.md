@@ -33,8 +33,8 @@ a record of what was measured, what changed, and what it did.
 3. **A spoken turn's prompt describes its front kit**, not all 56 tools (it was sent 19 schemas and told about 56).
 4. **The Orchestrator's hand-off follows the request's size** — triage's rules, no model: small up to 6 steps, large
    after 1, medium the setting (3).
-5. **The charter's rules 2–4** are left out of a turn whose every tool only reads or coordinates (S11: shown to the
-   owner before merge; nothing reworded).
+5. **The charter's rules 2–4** are left out of a turn whose every tool only reads or coordinates (S11: the owner said yes on 2026-10-09;
+   held back in a83b5814 until then, applied again; nothing reworded).
 6. **Found on the way: local models failed at step two.** llama.cpp's router drops the kept-alive connection a
    streamed answer came on; Node reused it and the second request of every turn on the local Qwen was lost ("socket
    hang up"). A request lost that way is sent again once on a fresh connection.

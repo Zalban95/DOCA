@@ -26,7 +26,7 @@ function all(now = Date.now()) {
 function show(screen, { page, solo = false } = {}) {
   if (!PAGE.test(String(page || ''))) throw Object.assign(new Error('Which page? e.g. harness, projects, computers.'), { status: 400 });
   const d = require('../api-v1/devices').get(String(screen || ''));
-  if (!d || d.kind !== 'browser' || d.revokedAt) throw Object.assign(new Error('Not a screen of this hive.'), { status: 404 });
+  if (!d || d.kind !== 'browser' || d.revokedAt || d.archivedAt) throw Object.assign(new Error('Not a screen of this hive.'), { status: 404 });
   require('../live').changed('screen', d.id, 'show', { page: String(page), solo: solo === true });
   return { sent: true, screen: d.id, page, solo: solo === true, showing: all()[d.id] ? 'heard from lately' : 'not heard from lately: it shows the page when it next opens the panel' };
 }

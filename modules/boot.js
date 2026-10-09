@@ -21,6 +21,7 @@ function afterListen({ certs = null, mode } = {}) {
   require('./backup/schedule').start();               // backups on a schedule, when switched on
   require('./computers/lifecycle').start();           // agents' computers nobody kept, tidied away
   require('./agents/tidy').start();                   // and finished missions nobody needs any more, put away in the Archive
+  require('./screens/archive').start();               // and browsers nobody opened for a week (devices.browserArchiveDays)
   require('./channels/telegram').start().catch(() => {});   // the Telegram bot, when a host switched it on
   require('./channels/matrix').start().catch(() => {});     // the Matrix bot account, likewise
   require('./channels/slack').start().catch(() => {});      // and the Slack app
