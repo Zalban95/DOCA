@@ -46,6 +46,7 @@ function _subtabSystemInit() {
   checkpointsRender();   // settings checkpoints (settings/checkpoints.js)
   logKeepCard();         // what is kept of what happened, and its bounds (settings/log-keep.js)
   featuresRender();      // every feature, and the kept alternatives' use (settings/features.js)
+  licenceCard();         // the licence: what this hive runs, renewing it (settings/licence.js) — drawn first in System
 }
 
 async function _subtabVoiceInit() {
@@ -110,7 +111,7 @@ function settingsHiddenApply() { _applyHiddenTabs(_settingsNoHost ? [...new Set(
 /* Called on app startup to apply persisted hidden tabs + sidebar sections */
 async function settingsApplyOnLoad() {
   try {
-    const [prefs] = await Promise.all([screenPrefs(), typeof panelLayoutLoad === 'function' ? panelLayoutLoad() : null]);
+    const [prefs] = await Promise.all([screenPrefs(), typeof panelLayoutLoad === 'function' ? panelLayoutLoad() : null, typeof licenceReady === 'function' ? licenceReady() : null]);
     _settingsHidden = prefs.hiddenTabs || [];
     // Without host, the tabs that are the machine are left out instead of drawn as refusals (live test 2026-10-04).
     const me = await apiFetch('/api/auth/me').catch(() => null);

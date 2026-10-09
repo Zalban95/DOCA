@@ -40,11 +40,13 @@ function lastMeasured(docText) {
 
 /** Developer mode (`developer.mode`, the owner's): without it no experiment is offered or in effect, whatever its flag. */
 const developer = () => require('./settings-schema').value('developer.mode') === true;
-const on = id => developer() && require('./settings-schema').value(`experiments.${id}`) === true;
+// An experiment whose feature is not in this hive's licence (the lab, for the project's owners and testers) never turns on.
+const licensed = id => require('./license/gate').flagOn(id);
+const on = id => developer() && require('./settings-schema').value(`experiments.${id}`) === true && licensed(id);
 const flagged = id => require('./settings-schema').value(`experiments.${id}`) === true;
 
 function list() {
-  return EXPERIMENTS.map(e => {
+  return EXPERIMENTS.filter(e => licensed(e.id)).map(e => {
     let doc = '';
     try { doc = fs.readFileSync(path.join(__dirname, '..', 'docs', 'experiments', e.doc), 'utf8'); } catch { doc = '(its write-up is missing)'; }
     const measured = lastMeasured(doc);
@@ -54,7 +56,7 @@ function list() {
 }
 
 function set(id, value) {
-  if (!EXPERIMENTS.some(e => e.id === id)) throw Object.assign(new Error(`No experiment "${id}".`), { status: 404 });
+  if (!EXPERIMENTS.some(e => e.id === id && licensed(e.id))) throw Object.assign(new Error(`No experiment "${id}".`), { status: 404 });
   if (!developer()) throw Object.assign(new Error('Developer mode is off: switch it on in Settings → Developer first.'), { status: 409 });
   const { loadPrefs, savePrefs } = require('./utils');
   const prefs = loadPrefs();

@@ -98,3 +98,42 @@ test('alternatives are counted; an unused one is a candidate, and the admin hide
   usage.flush();
   assert.ok(store.readJson('features/usage', {}).keys['tool:web_search'].n >= 50, 'kept in the data folder');
 });
+
+test('every feature names its licence code, and every table, route and socket belongs to a feature', () => {
+  const all = features().all();
+  const { CODES } = require('../modules/license/codes');
+  const gate = require('../modules/license/gate');
+  for (const f of all) assert.ok(CODES[f.licence], `${f.id}: licence "${f.licence}" is not a code in modules/license/codes.js`);
+  for (const f of all.filter(x => x.state === 'experiment')) assert.equal(f.licence, 'lab', `${f.id}: an experiment is the lab's (CONSTITUTION S5)`);
+  // Tables: each made by a schema step that names its feature, and owned by exactly one feature of the same licence.
+  const owner = {};
+  for (const f of all) for (const t of f.tables) { assert.ok(!owner[t], `the table ${t} is in two features`); owner[t] = f; }
+  for (const s of require('../modules/db/migrations').STEPS) {
+    const sf = features().get(s.feature);
+    assert.ok(sf, `db step ${s.id} names no feature (modules/db/migrations.js)`);
+    for (const sql of s.sql) {
+      const m = /CREATE TABLE IF NOT EXISTS (\w+)/.exec(sql);
+      if (!m || /_v\d+$/.test(m[1])) continue;   // a table rebuilt and renamed back to its own name
+      assert.ok(owner[m[1]], `the table ${m[1]} has no feature: add it to an entry's tables`);
+      assert.equal(owner[m[1]].licence, sf.licence, `the table ${m[1]} and its step ${s.id} are licensed alike`);
+    }
+  }
+  // Routes: every path the app and its routers register, and every socket terminal.js routes, is some feature's.
+  const app = require('../server').createApp();
+  const paths = [];
+  const walk = (stack, prefix) => {
+    for (const layer of stack) {
+      if (layer.route) for (const p of [].concat(layer.route.path)) { if (typeof p === 'string') paths.push(prefix + p); }
+      else if (layer.handle?.stack) {
+        const mount = (layer.regexp.source.match(/^\^\\\/((?:[^?\\]|\\\/)+)/) || [])[1];
+        walk(layer.handle.__licenceAll || layer.handle.stack, mount ? `${prefix}/${mount.replace(/\\\//g, '/')}` : prefix);
+      }
+    }
+  };
+  walk(app._router.stack, '');
+  assert.ok(paths.length > 500 && paths.some(p => p.startsWith('/api/v1/')), 'the walk found the routes and the device API');
+  const sockets = [...require('fs').readFileSync(require.resolve('../modules/terminal'), 'utf8').matchAll(/req\.url(\.startsWith\(|\s===\s)'([^']+)'/g)].map(m => (m[1] === ' === ' ? m[2] : `${m[2]}x`));
+  assert.ok(sockets.length >= 8, 'the sockets were read');
+  const orphans = [...paths, ...sockets].filter(p => p !== '/' && !gate.ownerOf(p));
+  assert.deepEqual(orphans, [], 'add a routes pattern to the feature it belongs to (modules/features/data)');
+});

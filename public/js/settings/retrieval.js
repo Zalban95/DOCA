@@ -3,6 +3,7 @@
    Settings → Developer. */
 async function retrievalCardRender(panel) {
   let r;
+  if (!(typeof licenceFeatureOn !== 'function' || licenceFeatureOn('retrieval'))) return;
   try { r = await apiFetch('/api/retrieval'); } catch { return; }
   document.getElementById('retrieval-card')?.remove();
   if (!r.experiment && !r.on) return;   // its experiment is off (Settings → Developer): nothing to set yet

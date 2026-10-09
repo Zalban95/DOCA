@@ -144,6 +144,11 @@ const MIGRATIONS = [
   { id: '2.344-devices-approved', note: 'devices paired before approval existed are approved as they are', steps: [{
     describe: 'every device without an approval marked approved (devices.json)',
     run() { return require('./api-v1/devices').markApproved() > 0; } }] },
+  // 3.0: licensing (modules/license). An install from before keeps every feature for a while, with a banner saying by
+  // when to add a licence (license/grace.js) — nothing it relies on stops on the day it updates. A new install has none.
+  { id: '3.0-licence-grace', note: 'set up before licensing: every feature stays on for 30 days while a licence is added (Settings → System → Licence)', steps: [{
+    describe: 'licence grace given (keys/licence-grace.json)',
+    run() { return require('./license/grace').adopt() === 'given'; } }] },
 ];
 
 const appliedIn = p => new Set(Array.isArray(p?.migrations?.applied) ? p.migrations.applied : []);

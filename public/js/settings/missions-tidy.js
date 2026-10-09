@@ -3,7 +3,7 @@
    are `missions.archiveSeenAfterMin` and `missions.archiveAfterHours` (0 turns a rule off). Housekeeping, not a guard,
    so the agent may propose them too. A host's card: the settings are the hive's. */
 async function missionsTidyCardRender(panel) {
-  if (typeof authHasRight === 'function' && !authHasRight('host')) return;
+  if ((typeof authHasRight === 'function' && !authHasRight('host')) || !(typeof licenceFeatureOn !== 'function' || licenceFeatureOn('missions-tidy'))) return;
   let s;
   try { ({ settings: s } = await apiFetch('/api/harness/missions/tidy')); } catch { return; }
   document.getElementById('missions-tidy-card')?.remove();

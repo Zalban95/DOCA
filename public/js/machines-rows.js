@@ -16,7 +16,8 @@ let _machinesNoRows = false;   // a 403 once: this person is not a host, so the 
 async function machinesSidebar(statusContainers) {
   const el = document.getElementById('s-containers');
   if (!el) return;
-  if (!_machinesNoRows && !(typeof _settingsNoHost !== 'undefined' && _settingsNoHost)) {
+  if (typeof licenceReady === 'function') await licenceReady();
+  if (!_machinesNoRows && !(typeof _settingsNoHost !== 'undefined' && _settingsNoHost) && (typeof licenceFeatureOn !== 'function' || licenceFeatureOn('machines-status'))) {
     if (document.hidden) return;
     try { const d = await apiFetch('/api/machines/rows'); machineOriginsKeep(d); return machinesSidebarDraw(d); }   // the tabs read who started what from it too
     catch (e) { if (/403|forbidden|right/i.test(e.message || '')) _machinesNoRows = true; else return; }

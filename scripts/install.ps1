@@ -29,12 +29,13 @@ if (-not $ok) {
 New-Item -ItemType Directory -Force -Path $Dir | Out-Null
 if ($From) {
   Write-Host "Copying DOCA from $From to $Dir"
-  # The checkout's tracked files only: its own state and anything untracked stay behind.
-  $tracked = @(git -C $From ls-files 2>$null)
+  # The checkout's tracked files only: its own state and anything untracked stay behind. The tests stay behind too:
+  # an installed hub never runs them, and test/ holds the key tests sign their own licences with.
+  $tracked = @(git -C $From ls-files -- . ':(exclude)test' 2>$null)
   if ($LASTEXITCODE -eq 0 -and $tracked.Count) {
     foreach ($f in $tracked) { $dest = Join-Path $Dir $f; New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null; Copy-Item -LiteralPath (Join-Path $From $f) -Destination $dest -Force }
   } else {
-    $skip = @('node_modules', '.doca', '.releases', '.git', '.certs', '.env', '.dashboard-prefs.json', '.setup-code')
+    $skip = @('node_modules', '.doca', '.releases', '.git', '.certs', '.env', '.dashboard-prefs.json', '.setup-code', 'test')
     Get-ChildItem -LiteralPath $From -Force | Where-Object { $skip -notcontains $_.Name } | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $Dir -Recurse -Force }
   }
 } elseif (Test-Path (Join-Path $Dir '.git')) {

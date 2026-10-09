@@ -15,6 +15,8 @@ async function decisionModelsTab() {
 async function _dmLoad() {
   const card = document.getElementById('dm-card');
   if (!card) return;
+  card.style.display = (typeof licenceFeatureOn !== 'function' || licenceFeatureOn('system-one')) ? '' : 'none';   // not licensed here (lib/licence.js)
+  if (card.style.display) return;
   let v;
   try { v = await apiFetch('/api/system-one'); }
   catch (e) { card.innerHTML = `<div class="card-title">Decision models</div><div class="placeholder">${escHtml(e.message)}</div>`; return; }

@@ -3,6 +3,7 @@
    comes; the agent may also pick one per call. The switch is the experiment visionPass (Settings → Developer). */
 async function visionCardRender(panel) {
   let v;
+  if (!(typeof licenceFeatureOn !== 'function' || licenceFeatureOn('vision-pass'))) return;
   try { v = await apiFetch('/api/vision'); } catch { return; }
   document.getElementById('vision-card')?.remove();
   if (!v.experiment) return;   // its experiment is off (Settings → Developer): nothing to set yet
