@@ -44,6 +44,9 @@ function _hcBuiltinHtml(h) {
         <div class="hc-roster-links">Tools held by the <a href="#" onclick="hcAgentTools('orchestrator');return false">Orchestrator</a>
           · <a href="#" onclick="hcAgentTools('work');return false">a work chat</a></div>
 
+        <div class="hc-side-head hc-teams-head" style="margin-top:10px" title="Specialists on one board: tasks that wait on each other, each with its contract. The Orchestrator makes one with the team tool.">Teams</div>
+        <div id="hc-teams" class="hc-agents"><div class="placeholder">Loading…</div></div>
+
         <div class="hc-side-head" style="margin-top:10px">
           Recipes
           <button class="btn btn-xs" onclick="hcRecipeKeep()" title="Keep what this conversation's last turn did, as a recipe">＋ last turn</button>

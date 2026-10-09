@@ -95,6 +95,7 @@ function liveFilesTab() {
 if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', () => {
   liveOn('conversation', _liveConversation);
   liveOn('missions', _liveMissions);
+  liveOn('teams', _liveMissions);   // a team's board (teams/): the bar's team rows and an open board
   liveOn('files', _liveFiles);
   apiFetch('/api/chat/history').then(d => { _liveChatSession = d.sessionId || null; }).catch(() => {});
 });
