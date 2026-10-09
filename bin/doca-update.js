@@ -11,6 +11,10 @@
  *   node bin/doca-update.js release                    call the request off: the hive keeps running as it was
  *   node bin/doca-update.js latest                     what the hive's update channel found, verified (JSON): the
  *                                                      version, its image and digest, urgent, applyBy
+ *   node bin/doca-update.js verify < doca-update.json  an update file's signed manifest (update-channel/update-file.js),
+ *                                                      checked against the release keys this hive trusts: its version,
+ *                                                      whether it is newer than what runs, its image and the image
+ *                                                      tarball's sha256 (JSON), or exit 1 saying why not
  */
 const fs = require('fs');
 const path = require('path');
@@ -46,11 +50,28 @@ function latest() {
   return 0;
 }
 
+/** The hive's own trust decides, not the host's: the keys are in the code this hive runs. */
+async function verify() {
+  const chunks = [];
+  for await (const c of process.stdin) chunks.push(c);
+  let body;
+  try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { console.error('not an update file\'s doca-update.json'); return 1; }
+  const m = require('../modules/update-channel/manifest');
+  try {
+    const { manifest, keyId } = m.verify(body.manifest, body.signature, require('../modules/update-channel/keys').RELEASE_KEYS);
+    const running = require('../package.json').version;
+    process.stdout.write(`${JSON.stringify({ version: manifest.version, running, newer: m.cmp(manifest.version, running) > 0, keyId,
+      image: manifest.image || null, imageSha256: manifest.imageSha256 || null, dataFormat: manifest.dataFormat || 1 })}\n`);
+    return 0;
+  } catch (e) { console.error(e.message); return 1; }
+}
+
 const cmd = process.argv[2];
 (async () => {
   if (cmd === 'hold') return hold();
   if (cmd === 'release') { fs.rmSync(REQ, { force: true }); console.log('released: the hive carries on'); return 0; }
   if (cmd === 'latest') return latest();
-  console.log('node bin/doca-update.js hold [--timeout SECONDS] | release | latest');
+  if (cmd === 'verify') return verify();
+  console.log('node bin/doca-update.js hold [--timeout SECONDS] | release | latest | verify < doca-update.json');
   return 1;
 })().then(code => process.exit(code), e => { console.error(e.message); process.exit(1); });

@@ -163,6 +163,9 @@ async function list() {
       hasMenu: cmpVersion(tag, MENU_SINCE) >= 0,
     });
   }
+  for (const { tag, mark } of require('./update-channel/stage').installed())   // signed releases from update files
+    if (!versions.some(v => v.tag === tag)) versions.push({ tag, releasedAt: mark.at, installedAt: installedAt(tag), installed: true, current: tag === cur,
+      running: tag === run, compatible: true, dataFormat: Number(mark.manifest.dataFormat || 1), olderData: Number(mark.manifest.dataFormat || 1) < dataFormat, hasMenu: true, signed: mark.keyId });
   let head = '';
   try { head = (await git(['log', '-1', '--format=%h %cI %D'])).trim(); } catch {}
   const co = checkoutFormat();
@@ -265,6 +268,10 @@ async function refusal(target, { force = false } = {}) {
       : null;
   }
   if (!TAG.test(target)) return `"${target}" is not a version tag.`;
+  // A signed release staged from an update file (update-channel/from-file.js) has no tag here: its mark is its proof.
+  const signed = require('./update-channel/stage').verified(path.join(DIR, target));
+  if (signed) return Number(signed.manifest.dataFormat || 1) < store.dataFormat() && !force
+    ? `${target} writes data format ${signed.manifest.dataFormat || 1}, and your data is already format ${store.dataFormat()}. Switch with force if you accept the risk.` : null;
   try { await git(['rev-parse', '--verify', '--quiet', `refs/tags/${target}`]); }
   catch { return `There is no ${target} here. Check the name, or let the list fetch new versions first.`; }
   const facts = await factsOf(target);

@@ -4,7 +4,8 @@
  * A release's manifest: what the update channel offers, signed by the project's release key (keys.js).
  *
  *   { product: 'doca', version: 'X.Y.Z', channel: 'stable', file: 'doca-X.Y.Z.zip', sha256, size,
- *     dataFormat, urgent: false, applyBy: null | ISO date, notes: '…', image: null | 'repo/name:tag', imageDigest }
+ *     dataFormat, urgent: false, applyBy: null | ISO date, notes: '…', image: null | 'repo/name:tag', imageDigest,
+ *     imageSha256 }   — the last only when an update file carries the image's tarball (update-file.js)
  *
  * The signature is Ed25519 over the manifest's canonical JSON (keys sorted, no spaces), so a manifest travels as
  * text in the licence server's release metadata and is checked here byte for byte; `urgent` and `applyBy` are signed
@@ -31,6 +32,7 @@ function check(m) {
   if (!SEMVER.test(String(m.version || ''))) throw fail('manifest', `The release's version "${m.version}" is not X.Y.Z.`);
   if (!/^[0-9a-f]{64}$/.test(String(m.sha256 || ''))) throw fail('manifest', 'The release names no sha256 for its code.');
   if (m.applyBy && !Number.isFinite(Date.parse(m.applyBy))) throw fail('manifest', 'The release\'s applyBy is not a date.');
+  if (m.imageSha256 && !/^[0-9a-f]{64}$/.test(String(m.imageSha256))) throw fail('manifest', 'The release\'s imageSha256 is not a sha256.');
   return m;
 }
 

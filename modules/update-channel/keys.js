@@ -15,6 +15,8 @@
  */
 const RELEASE_KEYS = [
   // { id: 'release-<YYYY-MM>', hex: '<64 hex characters>', note: 'where the private half is kept' },
+  // Made 2026-10-09 with `npm run release-key` in doca-licensing (the owner's yes, 2026-10-09).
+  { id: 'project-release-2026-10', hex: 'ca127733c02b4f3387c855ddd06390b48ad9d622cdf571b619508cea0538ff38', note: 'doca-licensing .secrets/release-signing.pem, with a copy kept offline by the owner' },
 ];
 
 module.exports = { RELEASE_KEYS };
