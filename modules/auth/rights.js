@@ -90,6 +90,7 @@ const TABLE = [
   R(ANY, '/api/harness/canvases/[^/]+', 'chat'),           // deleting one (reading is a GET below)
   R(GET, '/api/harness/usage/prices', 'read'),
   R(ANY, '/api/harness/usage/prices', 'host'),              // the owner's price list: money budgets are counted in it (spending/)
+  R(ANY, '/api/harness/skills/(online(/.*)?|[^/]+/triggers/suggest)', 'host'),   // public collections and a model's trigger ideas (skill-routes.js)
   R(GET, '/api/harness(/.*)?', 'read'),
   // The agent's durable memory is one for everybody until per-person memory (auth phase 3): a member
   // deleting or locking the owner's facts was found by the live test 2026-10-04. Reading is read, above.

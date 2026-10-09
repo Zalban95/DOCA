@@ -1,6 +1,7 @@
 ---
 name: what-is-my-machine-doing
 description: Say what the machine is busy with — CPU, GPU, memory, containers, which model server is generating and for whom, what the agents are running. Use when the person asks why the machine is slow or loud, what is running, or who is using the GPU.
+triggers: [machine busy, why is it slow, gpu usage, cpu usage, perché è lento, cosa sta facendo]
 ---
 
 # What the machine is doing

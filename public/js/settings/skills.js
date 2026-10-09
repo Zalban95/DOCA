@@ -12,18 +12,22 @@ async function skillsCardRender(panel) {
   card.innerHTML = `<div class="card-title" style="display:flex;align-items:center;gap:8px">Skills
       <button class="btn btn-xs" onclick="docaSkillsImport()" title="Copy skill folders (each with a SKILL.md) from a folder on this machine">⬆ Import</button></div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Procedures the agent loads when a task matches: it always sees each one's name and
-      when to use it, and reads the rest only when needed. The agent keeps new ones as it learns them (on this machine).</p>
+      when to use it, and reads the rest only when needed. The agent keeps new ones as it learns them (on this machine).
+      A skill can also be attached to every turn in some modes, or switched off — below each one.</p>
     <input class="input" id="doca-skills-q" placeholder="Search every skill on this machine — DOCA's and other harnesses'" style="width:100%;margin-bottom:8px"
       oninput="clearTimeout(window._docaSkillsQT); window._docaSkillsQT = setTimeout(docaSkillsSearch, 250)">
     <div id="doca-skills-results"></div>
+    <div id="doca-skills-head"></div>
     <div id="doca-skills-list"><div class="placeholder pulse">Loading…</div></div>
+    <div id="doca-skills-online"></div>
     <div class="card-title" style="margin-top:14px;display:flex;align-items:center;gap:8px">From other harnesses
       <button class="btn btn-xs" onclick="docaSkillsProject()" title="A project's .cursor/rules">Cursor rules…</button></div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Procedures kept by Claude Code (skills, plugin skills, commands), Codex (prompts)
       and Gemini CLI (commands) on this machine. Importing copies them in as skills; the originals are not touched.</p>
     <div id="doca-skills-sources"><div class="placeholder pulse">Looking…</div></div>`;
   panel.appendChild(card);
-  docaSkillsLoad();
+  skillUseHead(document.getElementById('doca-skills-head')).then(() => docaSkillsLoad());   // filter, auto-accept (skill-use.js)
+  skillsOnlineRender(document.getElementById('doca-skills-online'));   // public collections (skills-online.js)
   docaSkillsSources();
 }
 
@@ -97,7 +101,7 @@ async function docaSkillsLoad() {
   let list = [];
   try { list = (await apiFetch('/api/harness/skills')).skills; } catch (e) { box.textContent = e.message; return; }
   box.innerHTML = list.length ? '' : '<div class="placeholder">No skills yet.</div>';
-  for (const s of list) {
+  for (const s of list.filter(skillUseShown)) {
     const row = document.createElement('div');
     row.className = 'settings-tab-row';
     const b = Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: s.name });
@@ -112,6 +116,7 @@ async function docaSkillsLoad() {
       row.appendChild(flag);
     }
     box.appendChild(row);
+    box.appendChild(skillUseControls(s));   // when it fits, attached in modes, or off; its triggers (skill-use.js)
   }
 }
 

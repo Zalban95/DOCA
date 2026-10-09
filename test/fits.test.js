@@ -19,7 +19,7 @@ test('a request\'s words bring the skill and the recipe that fit, with how to us
   require('../modules/recipes/store').save({ id: 'restart-whisper', title: 'Restart the speech service', description: 'When transcription stops answering, restart the whisper container.', steps: [{ tool: 'shell', args: { command: 'docker restart whisper' } }] });
   const t = fits.likely('build and install the android app on my phone', ALL);
   assert.match(t, /# Likely fits/);
-  assert.match(t, /- skill android-app: .* — `skill` read android-app/);
+  assert.match(t, /- (Suggested by DOCA: )?skill android-app\b.* — `skill` read android-app/);
   assert.match(fits.likely('transcription is not answering, restart whisper', ALL), /- recipe restart-whisper: .* — `recipe` run restart-whisper/);
   assert.equal(fits.likely('hello', ALL), '', 'nothing forced on a greeting');
   assert.equal(fits.likely('build the android app', new Set()), '', 'only what the turn holds');

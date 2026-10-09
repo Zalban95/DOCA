@@ -20,14 +20,22 @@ function best(items, query) {
 }
 
 /** "# Likely fits": the skills and recipes this request's words match, with how to use each. '' when none. */
-function likely(message, held) {
+function likely(message, held, sessionId = null, already = []) {
   const text = String(message || '').trim();
   if (!text) return '';
   const rows = [];
   if (held.has('skill')) {
-    let skills = [];
-    try { skills = require('../skills').list(); } catch { /* none */ }
-    for (const s of best(skills, text)) rows.push(`- skill ${s.name}: ${String(s.description || '').slice(0, 160)} — \`skill\` read ${s.name}`);
+    // A skill whose trigger words the request says comes first, flagged as the harness's (skill-triggers.js); the
+    // ones already attached to this conversation are in the prompt already.
+    let skills = [], hits = [];
+    try {
+      const attached = [...already, ...(sessionId ? require('../skill-use').resolve(sessionId).skills.map(x => x.name) : [])];
+      hits = require('../skill-triggers').match(text, { skip: attached });
+      skills = require('../skill-use').offered().filter(s => !attached.includes(s.name) && !hits.some(h => h.name === s.name));
+    } catch { /* none */ }
+    const by = require('../../branding').name('product');
+    for (const h of hits) rows.push(`- Suggested by ${by}: skill ${h.name} (matched "${h.matched}"): ${String(h.description || '').slice(0, 160)} — \`skill\` read ${h.name}`);
+    for (const s of best(skills, text).slice(0, Math.max(0, TOP - hits.length))) rows.push(`- skill ${s.name}: ${String(s.description || '').slice(0, 160)} — \`skill\` read ${s.name}`);
   }
   if (held.has('recipe')) {
     let recipes = [];
@@ -85,9 +93,10 @@ function keepHint(rows, held) {
 }
 
 /** The four, for one step — with the steps of a skill this turn read (skill-steps.js). */
-function block({ message, schemas = [], rows = [], person = null }) {
+function block({ message, schemas = [], rows = [], person = null, sessionId = null, turnRow = null }) {
   const held = new Set(schemas.map(s => s.function?.name || s.name));
-  return [likely(message, held), inventory(held, person), require('./skill-steps').block(rows), keepHint(rows, held)].filter(Boolean).join('\n');
+  const attached = turnRow?.attachedSkills || [];   // attached to this request (skill-next.js): steps followed, not suggested again
+  return [likely(message, held, sessionId, attached.map(a => a.name)), inventory(held, person), require('./skill-steps').block(rows, attached), keepHint(rows, held)].filter(Boolean).join('\n');
 }
 
 module.exports = { block, likely, inventory, keepHint };

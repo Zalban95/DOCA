@@ -13,6 +13,7 @@ function pjRunRender(body) {
   const d = PJ.project;
   body.innerHTML = '';
   pjEnvSection(body);   // which Python / Node the project runs with (projects/env.js)
+  pjModeSkillsSection(body);   // which skills go with each mode here (projects/mode-skills.js)
   if (!d.commands.length) {
     body.appendChild(Object.assign(document.createElement('div'), { className: 'placeholder', textContent: 'No build system recognised in this folder. Add a command below, or ask the agent how it builds.' }));
   }

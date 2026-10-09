@@ -2,6 +2,7 @@
 name: hi3d
 description: Make 3D models from pictures with hi3d.ai (Hitem3D) — a GLB, STL, OBJ, FBX, USDZ or 3MF from one image or up to four views — and show them in the chat. Use when the person asks for a 3D model, a printable object or an asset from a photo or a drawing.
 services: [hi3d]
+triggers: [3d model, hi3d, glb, stl, modello 3d]
 ---
 
 # 3D models from pictures, with hi3d.ai
