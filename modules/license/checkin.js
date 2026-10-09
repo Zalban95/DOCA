@@ -61,7 +61,8 @@ async function checkIn({ now = Date.now(), name = 'DOCA hive' } = {}) {
       v = await validate();
     }
     if (!v.json?.meta?.valid) { save({ lastError: v.json?.meta?.detail || v.json?.meta?.code }); return { ok: false, code: v.json?.meta?.code || 'invalid', detail: v.json?.meta?.detail }; }
-    const out = await call('POST', `${b}/machines/${encodeURIComponent(fingerprint)}/actions/check-out?encrypt=true&include=license,license.entitlements,license.policy,license.product`, { key });
+    // What a licence key may read: the licence and its entitlements (the edition and customer are in its metadata).
+    const out = await call('POST', `${b}/machines/${encodeURIComponent(fingerprint)}/actions/check-out?encrypt=true&include=license,license.entitlements`, { key });
     const certificate = out.json?.data?.attributes?.certificate;
     if (!certificate) { save({ lastError: `no licence file came back: ${detail(out)}` }); return { ok: false, code: 'checkout', detail: detail(out) }; }
     const checked = accept(certificate, { key, now });
