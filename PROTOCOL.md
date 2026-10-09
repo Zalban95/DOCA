@@ -163,11 +163,16 @@ valid for 60 s (`previousValidUntil`) so a client can swap atomically.
 
 **A device is held to its person.** A device recorded as a person's (`userId`, set at pairing) never does more
 than that person may: when their level lacks the panel's `host` right, its requests carry no `command:` scope (the
-hub's commands — `GET /commands` lists none, running one or confirming a prompt that runs one is a 403); when it lacks
+hub's commands — `GET /commands` lists none, running one or confirming a prompt that runs one is a 403; since hub 2.343
+nor `agent` or `packs`, and a level without `chat` no `harness:`); when it lacks
 `devices`, `devices:admin` reaches only that person's own devices — `GET /devices` lists theirs, and any route naming
 another person's device (or one of its jobs) answers 404. The stored scopes are unchanged, so a level change lifts
 the ceiling with no re-pairing. A device with no person (a token minted on the host) keeps what it holds. A member
 pairs their own phone, watch or extension from the panel (Field → API keys → Your devices) since 2026-10-08.
+
+**A new device waits for approval** (hub 2.343, §5.1). The device that completes a pairing may be `pending`: the
+`pair/complete` answer carries `approval` (`state`, and while pending `askedOf[]` and `message`, e.g. "Waiting for
+approval by Mia (its person), Al") — show that message, and keep the token. See §5.1 for what it may do meanwhile.
 
 **Revocation.** `DELETE /devices/:id` (scope `devices:admin`). The device's
 live streams receive a durable `revoked` event followed by an SSE `close`
@@ -234,13 +239,54 @@ Every error has the same shape and a stable `code`:
 |---|---|---|
 | 400 | `bad_json`, `invalid_request`, `invalid_params`, `invalid_prompt`, `invalid_choice`, `invalid_outcome`, `invalid_selection`, `invalid_confirmation`, `invalid_profile`, `ext_too_large`, `invalid_pairing`, `invalid_artifact`, `invalid_alert`, `invalid_device` | malformed input; `message` says which field |
 | 401 | `unauthenticated`, `invalid_token` | see §4.1 |
-| 403 | `scope_required` (+ `required[]`), `forbidden`, `choice_not_available`, `sensors_rejected` | authorised identity, insufficient rights |
+| 403 | `scope_required` (+ `required[]`), `forbidden`, `choice_not_available`, `sensors_rejected`, `pending_approval` (+ `approval`, §5.1) | authorised identity, insufficient rights |
 | 404 | `not_found`, `unknown_command`, `unknown_request`, `no_recipient` | |
 | 409 | `invalid_state`, `stale_selection`, `prompt_closed`, `selection_conflict`, `sensors_unavailable` | state machine refused; body includes current `state`/`selectionId` |
 | 412 | `etag_mismatch` (+ `currentEtag`, `currentVersion`) | optimistic concurrency on profiles |
 | 413 | `payload_too_large`, `vars_too_large`, `image_too_large` | over a §20 budget |
 | 415 | `unsupported_media` | mime not in `capabilities.media.accept` |
 | 500 | `command_failed`, `internal` | the underlying action failed; `message` carries stderr/summary |
+
+### 5.1 A device waiting for approval (`pending_approval`, hub 2.343)
+
+Since hub 2.343 a new device starts **pending** unless whoever started its pairing may approve it: an admin pairing from
+the panel, or a person pairing from one of their own approved devices (a phone pairing its watch: the code travels
+device to device). Who may approve is a level's `approveDevices` — `anyone` (the built-in Main admin and Admin), `own`
+(Member: their own devices, one tap), `none` (Viewer). Devices paired before 2.343 are approved as they are.
+
+While pending, a device may do exactly this — everything else answers **403 `pending_approval`**:
+
+| Method | Path | |
+|---|---|---|
+| GET | `/devices/me` (or its own id) | its record, with `approval` |
+| GET | `/events` (SSE or poll) | to hear the answer |
+| POST | `/events/ack` | |
+
+```json
+{ "error": { "code": "pending_approval", "message": "This device waits for approval. Waiting for approval by Mia (its person), Al. …",
+  "approval": { "state": "pending", "askedAt": "…", "askedOf": ["Mia", "Al"], "message": "Waiting for approval by Mia (its person), Al." } } }
+```
+
+Its sockets (`/mcp/host`, `/realtime`, `/call`) are refused with 403, and its token opens no panel page. The bus
+delivers it only `device.approved`, `device.refused`, `revoked` and `resync`: nothing meant for its person is queued for
+it, and the agent cannot ask or tell it anything. `docs/api/fixtures/pending-approval.json` is the refusal and the
+self-view as the hub writes them.
+
+**What a client draws:** a waiting screen with `approval.message` ("asked of …"), and nothing else — no pairing of a
+watch, no lending, no chat. Hold `/events` (or poll `/devices/me` now and then) and on **`device.approved`** refetch
+`/capabilities` and carry on as a freshly paired device; on **`device.refused`** (its token is revoked, the stream
+closes) wipe the token and offer to pair again.
+
+**Where people are asked.** The device's own person, when their level approves their own, gets a prompt on their other
+approved devices that take questions ("Your new phone — allow it?", choices `allow` / `refuse`); everyone who may
+approve it sees a card on their open panel pages and Allow / Refuse in the device list. First answer wins; unanswered,
+it stays pending. A device answers directly with `POST /devices/{id}/approve` or `/refuse` (scope `interact`, as its
+person, who must be allowed to approve it).
+
+**Approving holds it to the approver.** The stored scopes keep at most what the approver's level holds — an approver
+without `host` gives no `command:`, `agent` or `packs` scopes; without `chat` no `harness:` (`approval.dropped` and the
+`device.approved` payload name what was left out). The device's own person's level is applied on every request as
+before (§4.2), so a person approving their own device keeps the preset as it is.
 
 ## 6. Capability discovery
 
@@ -529,6 +575,8 @@ data: {"reason":"revoked"}
 | `sensor.request` | durable (ttl = duration + 30 s) | `{ request: { id, sensors: [{ id, mode, rateHz, durationSec, unit }], reason, ext, expiresAt } }` |
 | `sensor.stop` | durable | `{ requestId, reason }` |
 | `revoked` | durable | `{ reason, by }` — then the stream closes; forget the token |
+| `device.approved` | durable, high (7 d) | `{ by, at, scopes[], dropped[] }` — this pending device was allowed (§5.1): refetch `/capabilities` |
+| `device.refused` | durable, high | `{ by, at }` — this pending device was refused: its token is revoked and the stream closes; forget the token |
 | `device.control` | durable (24 h) | `{ id, action: refresh\|reconnect\|ask\|disconnect\|revoke\|restore, family? }` — do it, then `POST /devices/self/control/{id}/ack { ok, detail }` (§22.1) |
 | `device.wake` | durable (120 s) | `{ deviceId, type }` — to the phone that paired a watch (`pairedBy`), when a durable event lands for that watch and it is not listening. Pass it to the watch (Data Layer `/doca/wake`); the watch polls with its own token. Never carries the event (`modules/api-v1/wake.js`) |
 | `console.input` | ephemeral (frames) / durable 60 s (a press) | `{ deviceId, enabled, mode: keys\|joystick, frames[{ t, accel?, heading?, crown? }], press?: A\|B\|C, button?: { id, behaviour: button\|toggle, down }, toggles: { A, B, C }, joystick?: { x, y, crown }, macro?: { keys } }` — only to the devices the panel linked to a console (`modules/device-console.js`); never to the harness. `down` is `false` only when a toggle latches off. `joystick` (mode `joystick`) is tilt, −1…1 at 90°, in the watch's own axes; `macro.keys` (mode `keys`) is the button's key chords for the receiver to type, e.g. `ctrl+s` |
@@ -1082,7 +1130,7 @@ one implementation of this that exists.
 ## 21. Client implementation checklist
 
 **Any device**
-1. Pair (`/devices/pair/complete`) with an honest `caps`; store the token in the secure store.
+1. Pair (`/devices/pair/complete`) with an honest `caps`; store the token in the secure store. If `approval.state` is `pending`, show its `message` and wait for `device.approved` (§5.1).
 2. `GET /capabilities`; build screens from `surfaces`, `commands`, `profile`.
 3. `GET /devices/me/profile`; `GET /snapshot?surfaces=<page>&spark=1`.
 4. Open `/events` (SSE) with `since=<last seq>`; handle `hello.resync`.
@@ -1505,6 +1553,7 @@ The device's person's recipes, schedules and face, answered as that person exact
 | POST | `/devices/pair/start` | `devices:admin` | start pairing |
 | GET / PATCH | `/devices/:id` | self \| `devices:admin` (\| `agent` for GET) | device record / update caps (admin: name, scopes, expiry) |
 | POST | `/devices/:id/rotate` | self \| `devices:admin` | rotate token |
+| POST | `/devices/:id/approve`, `/devices/:id/refuse` | `interact`, as its person | allow or refuse a device waiting for approval (§5.1) |
 | DELETE | `/devices/:id` | `devices:admin` | revoke |
 | GET / PUT | `/devices/:id/profile` | self (`profile:self` to write) \| `profile:*` | §14 |
 | GET / PATCH | `/devices/:id/vars` | self (`vars:self` to write) \| `vars:*` \| `agent` | §15 |

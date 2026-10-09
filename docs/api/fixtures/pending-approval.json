@@ -1,0 +1,37 @@
+{
+  "refusal": {
+    "status": 403,
+    "error": {
+      "code": "pending_approval",
+      "message": "This device waits for approval. Waiting for approval by owner (its person). Until then it may read its own record (GET /api/v1/devices/me) and hold its event stream, which says device.approved or device.refused.",
+      "approval": {
+        "state": "pending",
+        "askedAt": "2026-10-06T18:30:00.000Z",
+        "askedOf": [
+          "owner"
+        ],
+        "message": "Waiting for approval by owner (its person)."
+      }
+    }
+  },
+  "self": {
+    "state": "pending",
+    "askedAt": "2026-10-06T18:30:00.000Z",
+    "askedOf": [
+      "owner"
+    ],
+    "message": "Waiting for approval by owner (its person)."
+  },
+  "allowed": [
+    "GET /api/v1/devices/me",
+    "GET /api/v1/events",
+    "POST /api/v1/events/ack"
+  ],
+  "events": [
+    "device.approved",
+    "device.refused",
+    "revoked",
+    "resync",
+    "heartbeat"
+  ]
+}
