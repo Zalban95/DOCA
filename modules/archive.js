@@ -29,7 +29,7 @@ async function list(person) {
     if (m.archivedAt && mayOpen(person, m.sessionId)) out.push({ kind: 'mission', id: m.id, title: `${m.label || m.agentId}: ${String(m.task || '').slice(0, 80)}`, archivedAt: m.archivedAt, detail: m.state });
   for (const d of require('./api-v1/devices').list())
     if (d.kind === 'browser' && d.archivedAt && !d.revokedAt && (isHost(person) || d.userId === person.id))
-      out.push({ kind: 'device', id: d.id, title: d.name, archivedAt: d.archivedAt, detail: `a signed-in browser${whoseName(d, person)} — restored, it signs in again` });
+      out.push({ kind: 'device', id: d.id, title: d.name, archivedAt: d.archivedAt, detail: `a signed-in browser${whoseName(d, person)}; once restored, its person signs in again` });
   if (isHost(person)) {
     for (const p of require('./projects/store').list())
       if (p.archivedAt) out.push({ kind: 'project', id: p.id, title: p.name || p.root, archivedAt: p.archivedAt, detail: p.root });
