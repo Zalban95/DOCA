@@ -188,9 +188,11 @@ test('a node that goes away: the page shows what it last said, greyed and dated;
   assert.equal(call.status, 409);
   assert.equal(call.body.code, 'node_away');
   assert.match(call.body.error, /away.*nothing can be done/);
-  const exited = new Promise(res => childB.once('exit', res));
-  childB.kill('SIGKILL');
-  await exited;
+  if (childB.exitCode === null && childB.signalCode === null) {   // frozen (POSIX); on Windows it has already ended
+    const exited = new Promise(res => childB.once('exit', res));
+    childB.kill('SIGKILL');
+    await exited;
+  }
   startChild({ dir: path.join(dir, 'b') });   // it reconnects by itself; here, a restart
   await until(() => nodes.online(ids.devB), 15000);
   // Online is the node's socket; whether it has reached its HA again is its own next word (a status push). Wait for it.
