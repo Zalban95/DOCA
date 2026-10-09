@@ -16,6 +16,7 @@
  *   resources what its people's agents may use beyond tools — models, providers, keys, accounts, computers (allot.js)
  *   delegates with `delegate`: which permissions its holders may give (patterns, e.g. use:model:*); none listed = any
  *             they hold — a team leader allots only what this names (permits.mayGrant)
+ *   approveDevices  which new devices its holders may approve: none | own | anyone (approve-devices.js)
  *
  * Built-ins live in code and cannot be edited or removed — every install has
  * them and the gate's meaning of "admin" must not drift. Custom levels are rows
@@ -25,10 +26,10 @@
 const RIGHTS = ['read', 'chat', 'propose', 'host', 'devices', 'users', 'org', 'delegate'];
 
 const BUILTIN = {
-  viewer: { name: 'Viewer', rights: ['read'], settings: [], tools: { allow: [], deny: ['*'] }, approval: 'ask' },
-  member: { name: 'Member', rights: ['read', 'chat'], settings: [], tools: { allow: ['*'], deny: [] }, approval: 'ask', reach: 'own-devices' },
-  admin:  { name: 'Admin', rights: ['read', 'chat', 'propose', 'host', 'devices', 'users', 'delegate'], settings: ['*'], tools: { allow: ['*'], deny: [] }, approval: 'mode' },
-  owner:  { name: 'Main admin', rights: ['read', 'chat', 'propose', 'host', 'devices', 'users', 'org', 'delegate'], settings: ['*'], tools: { allow: ['*'], deny: [] }, approval: 'mode' },
+  viewer: { name: 'Viewer', rights: ['read'], settings: [], tools: { allow: [], deny: ['*'] }, approval: 'ask', approveDevices: 'none' },
+  member: { name: 'Member', rights: ['read', 'chat'], settings: [], tools: { allow: ['*'], deny: [] }, approval: 'ask', reach: 'own-devices', approveDevices: 'own' },
+  admin:  { name: 'Admin', rights: ['read', 'chat', 'propose', 'host', 'devices', 'users', 'delegate'], settings: ['*'], tools: { allow: ['*'], deny: [] }, approval: 'mode', approveDevices: 'anyone' },
+  owner:  { name: 'Main admin', rights: ['read', 'chat', 'propose', 'host', 'devices', 'users', 'org', 'delegate'], settings: ['*'], tools: { allow: ['*'], deny: [] }, approval: 'mode', approveDevices: 'anyone' },
 };
 
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });
@@ -74,6 +75,7 @@ function normalize(input, actorLevel) {
     tools: { allow: list(input.tools?.allow), deny: list(input.tools?.deny) },
     approval: input.approval === 'mode' ? 'mode' : 'ask',
     ...(reachOf(input.reach, actorLevel) ? { reach: reachOf(input.reach, actorLevel) } : {}),
+    ...(require('./approve-devices').normalize(input.approveDevices, actorLevel) ? { approveDevices: input.approveDevices } : {}),
     ...(require('./allot').normalize(input.resources) ? { resources: require('./allot').normalize(input.resources) } : {}),
     ...(list(input.delegates).length ? { delegates: list(input.delegates) } : {}),
     ...(input.description ? { description: String(input.description).slice(0, 300) } : {}),
