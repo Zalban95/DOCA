@@ -77,7 +77,8 @@ function handleList(req, res) {
   if (!scope) return;
   // `mine`: whose page /d/<id>/ this person may open (screens.ensure): their own devices' (TODO H2.4).
   // Without the devices right a person sees only their own (devices-own.js): another's is not there.
-  const list = devices.list().filter(d => scope === 'all' || own.isMine(req, d))
+  // A browser put away (screens/archive.js) is in Agents → Archive, not here.
+  const list = devices.list().filter(d => !d.archivedAt && (scope === 'all' || own.isMine(req, d)))
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
     .map(d => ({ ...d, missingScopes: scope === 'all' ? missingScopes(d) : [], preset: presetFor(d), control: require('./devices-control').state(d.id), mine: own.isMine(req, d),
       canDecide: require('./devices-approval/routes').mayDecide(req, d) }));   // a new device waiting: Allow / Refuse here
@@ -259,6 +260,7 @@ function mount(app) {
   app.post  ('/api/devices/pair',        handlePairStart);
   app.post  ('/api/devices/:id/rotate',  handleRotate);
   app.post  ('/api/devices/:id/scopes',  handleGrant);
+  require('./devices-assign').mount(app);   // a device that belongs to nobody, given to a person (an admin's)
   app.patch ('/api/devices/:id',         handleRename);
   app.delete('/api/devices/:id',         handleRevoke);
   require('./device-console').mountPanel(app);   // a device as a console: its stream, and who receives it

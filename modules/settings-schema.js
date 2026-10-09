@@ -109,6 +109,8 @@ const SCHEMA = {
       archiveSeenAfterMin: { type: 'number', min: 0, default: 30, hint: 'Minutes after its person opened a finished mission that it is put away in the Archive (0: never by this rule).' },
       archiveAfterHours:   { type: 'number', min: 0, default: 24, hint: 'Hours after a mission finished that it is put away, seen or not (0: never by this rule). One its leader has not read, one waiting for a person, or one kept with 📌 stays.' },
     } },
+  devices:          { is: 'travels', home: 'hive', note: 'when a signed-in browser\'s record nobody opened goes to the Archive (screens/archive.js; owner, 2026-10-09) — the owner\'s, never proposable: it ends sign-ins',
+    keys: { browserArchiveDays: { type: 'integer', min: 0, max: 3650, default: 7, propose: false, hint: 'Days a signed-in browser may go unseen before its record goes to the Archive and its sign-in ends (signing in again from it brings it back). 0: never. Only browsers — phones, watches, desks, clients and chats never.' } } },
   search:           { is: 'travels', home: 'hive', note: 'which web search provider web_search uses, and a SearXNG address (keys live in keys/search.json)',
     propose: p('Web search', 'Which provider web_search uses'),
     keys: { provider: { type: 'string', default: 'duckduckgo', hint: 'searxng, brave, tavily or duckduckgo (no key, the fallback).' },

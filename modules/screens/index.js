@@ -5,7 +5,8 @@
  * it gets a device record of kind `browser` (no scopes, no usable token — it reaches the hub by its sign-in
  * session, which this binds to it as `screen`), so it is listed with the phones and watches and revoking it
  * signs that browser out (credentials.resolveHash). A cookie remembers which record is this browser, so
- * signing in again keeps its settings.
+ * signing in again keeps its settings — and brings the record back when a week unseen had put it in the Archive
+ * (archive.js).
  *
  * Settings layer: the hive's (prefs) → the person's → this device's, for the keys settings-schema.js gives
  * home `device`, `on: 'screen'` (theme, tabs, sidebar…). An install's existing prefs stay the default every
@@ -54,6 +55,7 @@ function ensure(req, res, deviceId = null) {
     d = devices.get(made.device.id);
   }
   if (who.session?.hash && who.session.screen !== d.id) require('../auth/store').updateSession(who.session.hash, { screen: d.id });
+  require('./archive').seen(d.id);   // stamped, and back from the Archive when it had been put away (screens/archive.js)
   res?.setHeader?.('Set-Cookie', `${COOKIE}=${d.id}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${400 * 86400}${req.secure || req.socket?.encrypted ? '; Secure' : ''}`);
   return d;
 }
