@@ -9583,7 +9583,8 @@
             "required": [
               "type",
               "text"
-            ]
+            ],
+            "description": "In an approval's prompt (PROTOCOL §12.8) `ext.role` says which line it is — `why` (the agent's words, `ext.from` agent or request), `does`, `way`, `asked`, `detail` — and `ext.collapsed: true` with `ext.label` asks a client to draw the block folded under that label until tapped."
           },
           {
             "type": "object",

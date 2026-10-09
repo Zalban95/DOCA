@@ -150,7 +150,7 @@ function schemas() {
     Block: {
       description: 'Rich content unit used in prompt bodies, outcomes and alerts. Unknown types must be skipped.',
       oneOf: [
-        obj({ type: str({ const: 'text' }), text: str({ maxLength: 2000 }), style: str({ enum: ['body', 'title', 'caption', 'code'] }), ext: ext() }, { required: ['type', 'text'] }),
+        obj({ type: str({ const: 'text' }), text: str({ maxLength: 2000 }), style: str({ enum: ['body', 'title', 'caption', 'code'] }), ext: ext() }, { required: ['type', 'text'], description: 'In an approval\'s prompt (PROTOCOL §12.8) `ext.role` says which line it is — `why` (the agent\'s words, `ext.from` agent or request), `does`, `way`, `asked`, `detail` — and `ext.collapsed: true` with `ext.label` asks a client to draw the block folded under that label until tapped.' }),
         obj({ type: str({ const: 'metric' }), metric: str(), label: str(), ext: ext() }, { required: ['type', 'metric'] }),
         obj({ type: str({ const: 'figure' }), id: str(), alt: str(), svg: str({ description: 'Authoring only (≤ 64 KB).' }), motion: ref('MotionScene'), image: obj({ url: str(), w: int(), h: int() }), text: str(), sizeHint: obj({ w: int(), h: int() }), representation: ref('FigureRepresentation'), ext: ext() }, { required: ['type'] }),
         obj({ type: str({ const: 'image' }), url: str(), alt: str(), w: int(), h: int(), ext: ext() }, { required: ['type', 'url'] }),

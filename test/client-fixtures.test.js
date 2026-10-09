@@ -19,7 +19,7 @@ const bus = require('../modules/api-v1/bus');
 const DIR = path.join(__dirname, '..', 'docs', 'api', 'fixtures');
 const WRITE = process.env.DOCA_WRITE_FIXTURES === '1';
 const NAMES = ['agent.mission-running', 'agent.mission-done', 'agent.mission-archived', 'agent.mission-seen', 'agent.mission-work-stopped',
-  'prompt.new', 'prompt.closed', 'alert', 'alert-files'];
+  'prompt.new', 'prompt.new-approval', 'prompt.closed', 'alert', 'alert-files'];
 
 test.before(() => H.start());
 test.after(() => H.stop());
@@ -49,6 +49,19 @@ async function frames() {
   out['prompt.new'] = last('prompt.new');
   ctrl.abort(); await asked;
   out['prompt.closed'] = last('prompt.closed');
+  // An approval asked on the phone that started the turn (approval-explain.js): why, what it does, the request folded.
+  const approval = require('../modules/harness/approval');
+  const args = { command: 'rm -f build.log && git push origin main' };
+  const os = require('os'), hostname = os.hostname;
+  os.hostname = () => 'hub';   // the same fixture on every machine
+  const req = require('../modules/harness/approval-explain').explain({ tool: 'shell', keys: ['shell:rm', 'shell:git'], summary: args.command }, 'shell', args,
+    { reply: { content: 'The build log is stale. I will clear it and push the fix.' } });
+  os.hostname = hostname;
+  const owner = { ...H.owner.user, role: 'owner' };
+  const ask = approval.askAnywhere({ ...req, personId: owner.id }, { client: { id: phone.id, kind: 'phone', formFactor: 'phone', user: owner } });
+  await new Promise(r => setTimeout(r, 50));
+  out['prompt.new-approval'] = last('prompt.new');
+  approval.decide(ask.id, 'deny'); await ask.answer;
   reach.tell({ to: phone.id, title: 'The render finished', text: 'turbine-front.png is in the chat.' });
   out.alert = last('alert');
   // A notice with files (tell_device `files`): each a media block saying what it is, the phone's own copy.
