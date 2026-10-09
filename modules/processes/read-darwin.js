@@ -23,12 +23,12 @@ function duration(s) {
 /** The two `ps` listings into rows; `now` is when they were read. */
 function parsePs(main, comms, now = Date.now()) {
   const exe = new Map();
-  for (const line of String(comms || '').split('\n')) {
+  for (const line of String(comms || '').split(/\r?\n/)) {
     const m = /^\s*(\d+)\s+(.*)$/.exec(line);
     if (m) exe.set(Number(m[1]), m[2].trim());
   }
   const out = [];
-  for (const line of String(main || '').split('\n')) {
+  for (const line of String(main || '').split(/\r?\n/)) {
     const m = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(.*)$/.exec(line);
     if (!m) continue;
     const pid = Number(m[1]), text = m[8].trim(), path = exe.get(pid) || null;
@@ -45,7 +45,7 @@ function parsePs(main, comms, now = Date.now()) {
 function parseLsof(text) {
   const out = new Map();
   let pid = null;
-  for (const line of String(text || '').split('\n')) {
+  for (const line of String(text || '').split(/\r?\n/)) {
     if (line[0] === 'p') pid = Number(line.slice(1));
     else if (line[0] === 'n' && pid != null) { const list = out.get(pid) || []; list.push(line.slice(1)); out.set(pid, list); }
   }

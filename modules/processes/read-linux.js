@@ -35,7 +35,7 @@ function parseStat(text) {
 
 /** The cgroup a process is in: v2's one line, else v1's systemd or memory line. */
 function parseCgroup(text) {
-  const lines = String(text || '').split('\n').filter(Boolean);
+  const lines = String(text || '').split(/\r?\n/).filter(Boolean);
   const v2 = lines.find(l => l.startsWith('0::'));
   if (v2) return v2.slice(3);
   const pick = lines.find(l => /docker|libpod|containerd/.test(l)) || lines.find(l => /name=systemd/.test(l)) || lines[0];
@@ -45,7 +45,7 @@ function parseCgroup(text) {
 /** /proc/net/tcp and tcp6: inode → port for every socket listening (state 0A). */
 function parseNetTcp(text) {
   const out = new Map();
-  for (const line of String(text || '').split('\n').slice(1)) {
+  for (const line of String(text || '').split(/\r?\n/).slice(1)) {
     const f = line.trim().split(/\s+/);
     if (f.length < 10 || f[3] !== '0A') continue;
     const port = parseInt(f[1].split(':').pop(), 16), inode = f[9];
@@ -116,7 +116,7 @@ async function listening(pids) {
 function accounts() {
   const names = new Map();
   let uidMin = 1000;
-  try { for (const l of fs.readFileSync('/etc/passwd', 'utf8').split('\n')) { const f = l.split(':'); if (f.length > 2) names.set(Number(f[2]), f[0]); } } catch { /* none */ }
+  try { for (const l of fs.readFileSync('/etc/passwd', 'utf8').split(/\r?\n/)) { const f = l.split(':'); if (f.length > 2) names.set(Number(f[2]), f[0]); } } catch { /* none */ }
   try { uidMin = Number(/^UID_MIN\s+(\d+)/m.exec(fs.readFileSync('/etc/login.defs', 'utf8'))[1]) || 1000; } catch { /* the default */ }
   return { names, uidMin };
 }
