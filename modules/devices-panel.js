@@ -260,6 +260,7 @@ function mount(app) {
   app.post  ('/api/devices/pair',        handlePairStart);
   app.post  ('/api/devices/:id/rotate',  handleRotate);
   app.post  ('/api/devices/:id/scopes',  handleGrant);
+  require('./devices-assign').mount(app);   // a device that belongs to nobody, given to a person (an admin's)
   app.patch ('/api/devices/:id',         handleRename);
   app.delete('/api/devices/:id',         handleRevoke);
   require('./device-console').mountPanel(app);   // a device as a console: its stream, and who receives it
