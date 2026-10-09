@@ -161,3 +161,17 @@ esac
   assert.equal(fs.readFileSync(path.join(dir, 'loaded.tar'), 'utf8'), 'the real image');
   assert.match(r.stdout, /updating hive-x: doca-hive:old → doca-hive:99\.3\.0/, r.stdout + r.stderr);
 });
+
+test('a production hive takes a file the same way: only signed versions, switched once idle', async () => {
+  const T = require('./licence-trust');
+  const keys = require('../modules/license/keys'), lic = require('../modules/license');
+  keys.preloaded.certificate = T.sign({ codes: ['voice'] }); lic.reload();   // a licence without the lab
+  try {
+    assert.equal(require('../modules/edition-mode').production(), true);
+    const r = await post(U.file(path.join(dir, 'prod.dupd'), '99.5.0'));
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    for (let i = 0; i < 60 && releases().current() !== 'v99.5.0'; i++) await new Promise(x => setTimeout(x, 100));
+    assert.equal(releases().current(), 'v99.5.0');
+    assert.ok((await H.api(null, 'GET', '/api/versions')).body.versions.some(v => v.tag === 'v99.5.0' && v.signed === 'test-release'));
+  } finally { keys.preloaded.certificate = T.preloadedFull; lic.reload(); }
+});
