@@ -96,6 +96,12 @@ async function key(k) {
   await headless.sleep(120);
 }
 
+/** The page at another size, as a phone (390) or a desk (1300) shows it; `mobile` for touch-sized media queries. */
+async function viewport(width, height = 900, mobile = width < 600) {
+  await page.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile });
+  await headless.sleep(300);
+}
+
 /** A picture of the page as it is now, to a file — for a person to look at, never checked. */
 async function shot(file) {
   await headless.sleep(700);   // a smooth scroll lands first
@@ -109,4 +115,4 @@ const pastFirstRun = () => {
   savePrefs({ ...loadPrefs(), setup: { ...(loadPrefs().setup || {}), mode: 'advanced' } });
 };
 
-module.exports = { start, stop, open, evaluate, until, key, shot, pastFirstRun, errors, sleep: headless.sleep, skip: !exe && 'no browser here' };
+module.exports = { start, stop, open, evaluate, until, key, shot, viewport, pastFirstRun, errors, sleep: headless.sleep, skip: !exe && 'no browser here' };

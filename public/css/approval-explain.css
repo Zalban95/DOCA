@@ -1,0 +1,19 @@
+/* An approval explained (agent-ui/approval.js approvalExplainInto): the agent's words, what the call does, whether it
+   can be undone, why it is asked, and the exact request folded under them. Theme variables only, so every skin and
+   every palette draws it. */
+.approval-card .approval-label {
+  display: block; font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 1px;
+}
+.approval-why { margin: 0 0 6px; color: var(--text); font-style: italic; line-height: 1.45; word-break: break-word; }
+.approval-why .approval-label { font-style: normal; }
+.approval-does { margin: 0 0 4px; color: var(--text); font-weight: 600; line-height: 1.45; word-break: break-word; }
+.approval-way, .approval-asked { margin: 0 0 4px; color: var(--muted); font-size: 10.5px; line-height: 1.4; word-break: break-word; }
+.approval-card .approval-fold { margin: 4px 0 8px; }
+.approval-card .approval-fold > summary { cursor: pointer; font-size: 10.5px; color: var(--muted); }
+.approval-card .approval-fold .approval-detail { margin: 5px 0 0; max-height: 240px; }
+.approval-card .approval-fold .adv-fold-body { padding: 0; }
+@media (max-width: 600px) {
+  .approval-card { font-size: 12px; }
+  .approval-card .approval-fold .approval-detail { max-height: 180px; font-size: 11px; }
+}
