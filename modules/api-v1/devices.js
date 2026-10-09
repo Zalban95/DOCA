@@ -121,7 +121,7 @@ function sizeCapped(obj, max) {
 
 function publicView(d) {
   if (!d) return null;
-  const { tokenHash, prevTokenHash, prevTokenExpiresAt, ...rest } = d;
+  const { tokenHash, prevTokenHash, prevTokenExpiresAt, refusedHash, ...rest } = d;
   return rest;
 }
 
@@ -193,6 +193,17 @@ function authenticate(token) {
   return rec;
 }
 
+/**
+ * Who refused a device that waited for approval, for its own token only: a watch that polls (or a phone that was
+ * away) missed `device.refused`, which goes with the queue the refusal drops, and saw a bare 401 with no name.
+ */
+function refusedOf(token) {
+  const m = /^doca_(dev_[0-9a-f]+)\.([A-Za-z0-9_-]+)$/.exec(String(token || ''));
+  const rec = m && db().devices[m[1]];
+  if (!rec || !rec.revokedAt || rec.approval?.state !== 'refused' || !rec.refusedHash || sha256(m[2]) !== rec.refusedHash) return null;
+  return { by: rec.approval.by?.name || rec.approval.byName || null, at: rec.approval.at || rec.revokedAt };
+}
+
 let _lastTouch = 0;
 /** Persist best-effort `lastSeenAt` updates at most every 30 s. */
 function touchPersist() {
@@ -216,6 +227,8 @@ function revoke(id) {
   const rec = db().devices[id];
   if (!rec) return false;
   rec.revokedAt = new Date().toISOString();
+  // A refused device keeps its token's hash (never usable again) only so its own token can learn who said no.
+  if (rec.approval?.state === 'refused' && rec.tokenHash !== 'revoked') rec.refusedHash = rec.tokenHash;
   rec.tokenHash = 'revoked';
   delete rec.prevTokenHash;
   persist();
@@ -346,7 +359,7 @@ function repairNames() {
   return n;
 }
 
-module.exports = { KINDS, repairNames, cleanName, isPending, markApproved,
+module.exports = { refusedOf, KINDS, repairNames, cleanName, isPending, markApproved,
   FORM_FACTORS, normalizeCaps, publicView,
   list, get, create, authenticate, rotate, revoke, remove, forget, update, patchVars, touchPersist, events,
   startPairing, completePairing, _reset,
