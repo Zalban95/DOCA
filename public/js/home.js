@@ -3,8 +3,11 @@
    player, scene, sensor and camera; a tap acts (the hub sends HA a short list of services), and every change arrives on
    the live feed (`home`) while the page is shown — the page holds the hub's one connection to HA open, and leaving it
    lets go. Unlocking a door or disarming an alarm asks for the password. Best alone on a wall tablet: /?view=home.
+   Several homes — the hub's own, and a home node per household (docs/design/home-node.md) — are switched between in
+   the bar, the choice kept per browser; a node that is away shows what it last said, greyed, and does nothing.
    Its page is made here (index.html is at its line ceiling). */
-const HOME = { on: false, off: null, tiles: new Map(), cams: null, busy: null };
+const HOME = { on: false, off: null, tiles: new Map(), cams: null, busy: null, home: null, stale: false };
+try { HOME.home = localStorage.getItem('doca.home.chosen') || null; } catch { /* no storage */ }
 
 /** Shown or left (nav.js). */
 async function homeTab(shown) {
@@ -31,16 +34,28 @@ async function homeLoad() {
   const page = document.getElementById('tab-home');
   if (!page) return;
   let d;
-  try { d = await apiFetch('/api/home'); } catch (e) { d = { connected: false, error: e.message }; }
+  try { d = await apiFetch(`/api/home${HOME.home ? `?home=${encodeURIComponent(HOME.home)}` : ''}`); } catch (e) { d = { connected: false, error: e.message }; }
   HOME.tiles = new Map();
-  const bar = `<div class="home-bar"><span class="home-title">Home</span><span class="home-place">${escHtml(d.place || '')}</span>
-    <span class="home-dot ${d.connected ? 'on' : ''}" title="${d.connected ? 'Connected to Home Assistant' : 'Not connected'}"></span>
+  if (d.home) HOME.home = d.home;
+  HOME.stale = !!d.offline;
+  const homes = d.homes || [];
+  const pickHtml = homes.length > 1 ? `<select class="input home-pick" aria-label="Which home" onchange="homePick(this.value)">${homes.map(h =>
+    `<option value="${escHtml(h.id)}"${h.id === d.home ? ' selected' : ''}>${escHtml(h.name)}${h.kind === 'node' && !h.online ? ' — away' : ''}</option>`).join('')}</select>` : '';
+  const bar = `<div class="home-bar"><span class="home-title">Home</span>${pickHtml}<span class="home-place">${escHtml(d.place || (homes.length === 1 && d.kind === 'node' ? d.homeName : '') || '')}</span>
+    <span class="home-dot ${d.connected ? 'on' : ''}" title="${d.connected ? `Connected to Home Assistant${d.kind === 'node' ? ` through the home node ${escHtml(d.homeName)}` : ''}` : 'Not connected'}"></span>
     <button class="btn btn-xs" onclick="homeLoad()" title="Read it all again">⟳</button>
     <button class="btn btn-xs" onclick="soloOpen('home')" title="In a window of its own — a wall tablet">⧉</button></div>`;
   if (d.setup) { page.innerHTML = bar + _homeSetup(); return; }
+  if (d.offline) {
+    for (const a of d.areas || []) for (const t of a.tiles) HOME.tiles.set(t.id, t);
+    page.innerHTML = bar + `<div class="home-away">${escHtml(`The home node ${d.homeName} is away`)}${d.seen ? ` — last seen <span title="${escHtml(d.seen)}">${escHtml(_homeAgo(d.seen))}</span>` : ''}.
+      What it last said is shown greyed; nothing can be done there until it is back. <span class="home-hint">A home node should stay on: a mini PC, a Pi or a NAS — a laptop that sleeps takes the home with it.</span></div>`
+      + `<div class="home-areas stale">${(d.areas || []).map(a => `<section class="home-area"><h3>${escHtml(a.name)}</h3><div class="home-tiles">${a.tiles.map(_homeTile).join('')}</div></section>`).join('')}</div>`;
+    return;
+  }
   if (!d.connected) {
     page.innerHTML = bar + `<div class="home-empty"><h3>Home Assistant did not answer</h3><p>${escHtml(d.error || 'No connection.')}</p>
-      <p class="home-hint">The address and token are the key <b>home-assistant</b> in Field → Connectors → Keys for services.</p>
+      <p class="home-hint">${d.kind === 'node' ? `The home node ${escHtml(d.homeName)} keeps the address and token itself: on that machine, <code>doca-client home setup</code>.` : 'The address and token are the key <b>home-assistant</b> in Field → Connectors → Keys for services.'}</p>
       <button class="btn btn-sm" onclick="homeLoad()">Try again</button> <button class="btn btn-sm" onclick="nav('connectors')">Keys for services</button></div>`;
     return;
   }
@@ -57,6 +72,10 @@ function _homeSetup() {
       <li>In <b>Field → Connectors → Keys for services</b>, add a key named <b>home-assistant</b> with Home Assistant's address
         (for example http://homeassistant.local:8123) and paste the token.</li>
       <li>Come back here. The token stays on the hub; this page never sees it.</li></ol>
+    <p><b>Or through a home node</b> — when this hub is not on the home's network (a hosted hive), or the token should not leave
+      the house: on a machine there that stays on (a mini PC, a Pi, a NAS), pair <code>doca-client</code> with role "phone", run
+      <code>doca-client home setup</code> (it asks Home Assistant's address and token and keeps them there), then
+      <code>doca-client run</code> and accept its offer once in the MCP tab. The node dials this hub; nothing at home is opened.</p>
     <button class="btn btn-sm btn-blue" onclick="nav('connectors')">Keys for services</button></div>`;
 }
 
@@ -109,7 +128,7 @@ function _homeTile(t) {
       body = `<div class="home-state">${t.domain === 'scene' ? 'scene' : t.state === 'on' ? 'running' : 'script'}</div>`;
       break;
     case 'camera':
-      body = `<img class="home-cam" alt="${escHtml(t.name)}" loading="eager" src="/api/home/camera/${encodeURIComponent(t.id)}?t=${Date.now()}" onerror="this.classList.add('gone')">`;
+      body = `<img class="home-cam" alt="${escHtml(t.name)}" loading="eager" src="/api/home/camera/${encodeURIComponent(t.id)}?${HOME.home ? `home=${encodeURIComponent(HOME.home)}&` : ''}t=${Date.now()}" onerror="this.classList.add('gone')">`;
       break;
     default:   // sensor, binary_sensor
       body = `<div class="home-value">${escHtml(t.domain === 'binary_sensor' ? _homeBinary(t) : t.state)}<small>${unit}</small></div>${a.device_class ? `<div class="home-state">${escHtml(String(a.device_class).replace(/_/g, ' '))}</div>` : ''}`;
@@ -123,17 +142,32 @@ const _HOME_BINARY = { door: ['open', 'closed'], window: ['open', 'closed'], ope
   motion: ['detected', 'clear'], occupancy: ['detected', 'clear'], presence: ['home', 'away'], moisture: ['wet', 'dry'], smoke: ['smoke', 'clear'], lock: ['unlocked', 'locked'] };
 const _homeBinary = t => (_HOME_BINARY[t.attrs?.device_class] || [])[t.state === 'on' ? 0 : t.state === 'off' ? 1 : 2] || t.state;
 
+/** Another home: drawn now, and kept for this browser. */
+function homePick(id) {
+  HOME.home = id;
+  try { localStorage.setItem('doca.home.chosen', id); } catch { /* no storage */ }
+  homeLoad();
+}
+
+/** "3 min ago", from a time. */
+function _homeAgo(at) {
+  const s = Math.max(0, (Date.now() - Date.parse(at)) / 1000);
+  return s < 90 ? 'just now' : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} days ago`;
+}
+
 /** Asks the hub to do one thing; the change itself comes back on the live feed. */
 async function homeCall(id, service, data = {}) {
   const el = document.querySelector(`.home-tile[data-entity="${CSS.escape(id)}"]`);
+  if (HOME.stale) { if (el) { el.classList.add('failed'); el.title = 'The home node is away: nothing can be done there until it is back.'; } return; }
   el?.classList.add('busy');
-  try { await apiFetch('/api/home/call', { method: 'POST', body: { domain: id.split('.')[0], service, entity_id: id, data } }); }
+  try { await apiFetch('/api/home/call', { method: 'POST', body: { home: HOME.home, domain: id.split('.')[0], service, entity_id: id, data } }); }
   catch (e) { if (el) { el.classList.add('failed'); el.title = e.message; } }
   finally { setTimeout(() => el?.classList.remove('busy', 'failed'), 1500); }
 }
 
 function _homeChange(c) {
   if (!HOME.on) return;
+  if (c.home && HOME.home && c.home !== HOME.home) { if (c.what === 'status') homeLoad(); return; }   // another home: only its coming and going redraws the switcher
   if (c.what === 'state' && c.tile) {
     HOME.tiles.set(c.id, c.tile);
     const el = document.querySelector(`.home-tile[data-entity="${CSS.escape(c.id)}"]`);
@@ -147,6 +181,7 @@ function _homeChange(c) {
 /** Cameras redraw their still while the page is shown and looked at; the hub keeps one a few seconds for every screen. */
 function _homeCams() {
   if (!HOME.on || document.hidden) return;
+  if (HOME.stale) return;
   for (const img of document.querySelectorAll('#tab-home .home-cam:not(.gone)')) img.src = img.src.replace(/t=\d+/, `t=${Date.now()}`);
 }
 

@@ -89,6 +89,12 @@ const SCHEMA = {
       strays:          { type: 'string', oneOf: ['leave', 'archive', 'delete'], default: 'leave', propose: false,
         hint: 'What the tidy-up does with a stopped computer container no record names and no install labels: leave it (listed in the Computers tab), archive it, or delete it (its files kept in its volume).' },
     } },
+  // Where the Home page reads a home from (modules/home; docs/design/home-node.md). The owner's: not proposable.
+  home:             { is: 'travels', home: 'hive', note: 'where the Home page and the agent read Home Assistant from: the hub itself (the key home-assistant) or home nodes in the households',
+    keys: {
+      source: { type: 'string', oneOf: ['auto', 'node', 'direct', 'both'], default: 'auto', propose: false,
+        hint: 'auto — home nodes when any is paired (always on a hosted hive), else the hub itself with the key home-assistant; node — home nodes only; direct — the hub itself only; both — every home.' },
+    } },
   // Housekeeping, not a guard: proposable like computers.idleStopMinutes (agents/tidy.js). 0 turns a rule off.
   missions:         { is: 'travels', home: 'hive', note: 'when finished specialists\' missions are put away in the Archive by themselves',
     propose: p('Finished missions', 'When finished missions are put away in the Archive by themselves'),

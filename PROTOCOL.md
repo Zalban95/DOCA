@@ -1210,7 +1210,8 @@ otherwise. `headers` exists so the host can carry a bearer token you require.
 
 A paired client can offer the harness the same **tool families** the host has —
 `files`, `shell`, `processes`, `screen`, `input`, `apps`, `device`, `elevated`,
-`mcp` — as far as its operating system allows (docs/design/devices-as-hands.md).
+`mcp` — as far as its operating system allows (docs/design/devices-as-hands.md) —
+and `home`, a household's Home Assistant (§22.4).
 
 - The client asks its person **once per family**, in its own UI, and reports the
   result: `PUT /devices/self/grants { grants: { files: true, shell: false, … } }`.
@@ -1260,6 +1261,7 @@ A paired client can offer the harness the same **tool families** the host has �
   | `processes` | `processes_list`, `processes_start`, `processes_stop` | as canonical | — | `processes_list`, `processes_stop` |
   | `device` | `device_info`, `device_notify`, `device_clipboard_read`, `device_clipboard_write`, `device_camera`, `device_location`, `device_sensors` | — | `device_notify`, `device_camera`, `device_location`, `device_sensors` | `device_info`, `device_notify`, `device_clipboard_read`, `device_clipboard_write` |
   | `media` | `media_control` | — | as canonical | — |
+  | `home` | `home_states`, `home_call`, `home_camera` | — | — | as canonical (a home node, §22.4) |
 
   A tool that acts on what a person sees or types (`screen_press`, `input_*`) follows the computer's rules: a password
   field is never typed into, and a control that pays, buys, signs in or submits needs `confirm: true` (§22.2).
@@ -1326,6 +1328,39 @@ that hosts an MCP server (§22, §22.2) takes part by doing three things:
 
 Clients: `clients/node` (doca-client: `type` and `clipboard`, with the `device` family lent) and `clients/browser` (the
 extension: `field`). What DocaMobile and DocaDesk implement is `docs/api/sealed-secrets.md`.
+
+### 22.4 A home node: the household's Home Assistant, kept in the household (2026-10-09)
+
+A hub may be far from the homes it serves (a hosted hive on a provider's server), and a household's Home Assistant
+token should not have to live on it. A **home node** is a paired device that stays on in the household — doca-client
+on a mini PC, a Raspberry Pi or a NAS (`doca-client home setup`), later DocaDesk or a charging phone — that keeps HA's
+address and long-lived token **itself**, holds HA's WebSocket on the home network, and lends the family `home`
+(docs/design/home-node.md). It rides `mcp:self` like every lent family: no new scope, no caps field.
+
+- **Grant and offer.** Ask the person once for `home`, report it in `PUT /devices/self/grants {grants: {home: true}}`,
+  and serve over the device's own socket (§22.2) — `POST /mcp/offer {transport: "socket", …}`, or
+  `PATCH /mcp/self {transport: "socket"}` for a server already accepted — so nothing in the household is reachable.
+- **Tools** (results as JSON text, a refusal as `isError` with a sentence):
+  - `home_states {}` → `{connected, error, since, place, version, units, areas: [{id, name, tiles: [tile]}]}`, every
+    entity HA does not hide, in its area (its own, else its device's; the rest under `Elsewhere`, `id: null`). A
+    **tile** is `{id, domain, name, state, attrs, changed}` with only the attributes a tile needs — the shape and the
+    domains are `clients/node/home-shared.js` (`tileOf`), shared with the hub. Never `entity_picture` or
+    `access_token`: they carry HA tokens.
+  - `home_call {domain, service, entity_id, data}` → `{ok, entity_id, service}`: one service on one entity from the
+    short list per domain (`ALLOW` in home-shared.js: e.g. `light.turn_on {brightness_pct}`, `cover.open_cover`,
+    `climate.set_temperature {temperature}`, `lock.unlock {code}`), only the data each takes, in range. Anything else
+    is refused **by the node** before HA hears it — the hub checks the same list, and who may act, first.
+  - `home_camera {entity_id}` → an MCP `image` (jpeg, png, webp or gif; at most 5 MB), fetched by the node with its
+    token.
+- **Pushes**, as JSON-RPC notifications on the socket (no `id`): `{"method": "notifications/doca/home", "params":
+  {what, id?, tile?}}` — `state` (an entity's new `tile`), `removed`, `layout` (areas or the registry changed) and
+  `status` (HA came or went: the hub reads `home_states` again). Dropped while the socket is down: the hub reads the
+  whole home when the node comes back. Keepalives as §22.2.
+- **The hub's side.** Each node is a home named after the device (its id that name as a slug; a level's `home`
+  allotment may name `<home>/<entity>`), listed by `GET /api/home` beside the hub's own (`home.source` decides which
+  are used). While the node is away the page shows what it last said, greyed, with when it was last seen, and every
+  call is refused (409 `node_away`). The agent uses the node's tools narrowed to its person as the page is; an unlock
+  or a disarm through `home_call` is always asked of a person.
 
 ## 23. Talking to the agent (`/harness`)
 

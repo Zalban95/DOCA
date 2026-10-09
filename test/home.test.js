@@ -159,13 +159,10 @@ test('who: a viewer does not see the home (cameras, locks); a member does not ru
   const member = await H.signIn('member');
   assert.equal((await H.api(null, 'POST', '/api/home/call', { domain: 'light', service: 'toggle', entity_id: 'light.kitchen' }, { Cookie: member.cookie })).status, 200, 'the hive\'s home is a member\'s to use');
   {   // a script runs whatever its author wrote: an admin's (home/actions.js)
-    const home = require('../modules/home'), { stateOf, shown } = home;
-    home.stateOf = () => ({ state: 'off' }); home.shown = () => true;
-    try {
-      const actions = require('../modules/home/actions');
-      assert.throws(() => actions.check({ ...member.user, role: 'member' }, { domain: 'script', service: 'turn_on', entity_id: 'script.heat' }), e => e.status === 403 && /admin's/.test(e.message));
-      assert.ok(actions.check({ ...H.owner.user, role: 'owner' }, { domain: 'script', service: 'turn_on', entity_id: 'script.heat' }));
-    } finally { home.stateOf = stateOf; home.shown = shown; }
+    const actions = require('../modules/home/actions');
+    const src = { home: 'hub', kind: 'direct', has: () => true };
+    assert.throws(() => actions.check({ ...member.user, role: 'member' }, { domain: 'script', service: 'turn_on', entity_id: 'script.heat' }, src), e => e.status === 403 && /admin's/.test(e.message));
+    assert.ok(actions.check({ ...H.owner.user, role: 'owner' }, { domain: 'script', service: 'turn_on', entity_id: 'script.heat' }, src));
   }
   const level = require('../modules/auth/levels').create({ name: 'Lights only', rights: ['read', 'chat'], resources: { home: ['light.*'] } }, { actorLevel: 'owner' });
   const lit = await H.signIn(level.id);
@@ -188,7 +185,7 @@ test('a camera\'s still comes through the hub, which sends the token; the browse
 });
 
 test('nobody looking for a minute closes the connection; a refused token says how to fix it', async () => {
-  const home = require('../modules/home');
+  const home = require('../modules/home/direct');
   home._state.holders.clear();
   home._state.lastUse = 0;
   home.sweep();

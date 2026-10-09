@@ -12,6 +12,11 @@
  * connected the server runs; when it goes, its tools go with it, and they come back when it dials again.
  */
 const live = new Map();   // deviceId → { ws, client }
+const PING_MS = Number(process.env.DOCA_SOCKET_PING_MS) || 30000;
+// A device's socket coming and going, and what it pushes beside MCP — `notifications/doca/<what>`, which no MCP
+// client reads (a home node's changes: home/nodes.js). Listeners never break the socket.
+const events = new (require('events').EventEmitter)();
+const tell = (...a) => { try { events.emit(...a); } catch { /* a listener's own failure */ } };
 
 const refuse = (socket, code, text) => socket.end(`HTTP/1.1 ${code} ${text}\r\nConnection: close\r\n\r\n`);
 let _wss = null;
@@ -34,12 +39,26 @@ function connected(deviceId, ws) {
   if (old) try { old.ws.close(4000, 'replaced by a newer connection'); } catch { /* gone */ }
   const entry = { ws, client: null };
   live.set(deviceId, entry);
+  // A device that lost power or its network leaves a half-open socket: no close arrives, and its tools would look
+  // present for as long as TCP takes to give up. A ping every PING_MS; one unanswered by the next ends it. Browsers
+  // and doca-client answer pings by themselves.
+  let answered = true;
+  ws.on('pong', () => { answered = true; });
+  const beat = setInterval(() => {
+    if (!answered) { clearInterval(beat); try { ws.terminate(); } catch { /* gone */ } return; }
+    answered = false;
+    try { ws.ping(); } catch { /* closing */ }
+  }, PING_MS);
+  beat.unref?.();
   ws.on('message', data => {
+    answered = true;   // any frame is a sign of life
     let msg; try { msg = JSON.parse(String(data)); } catch { return; }
+    if (msg?.id === undefined && /^notifications\/doca\//.test(msg?.method || '')) return tell('notification', deviceId, msg);
     entry.client?._onMessage(msg);
   });
   ws.on('close', () => {
-    if (live.get(deviceId) === entry) live.delete(deviceId);
+    clearInterval(beat);
+    if (live.get(deviceId) === entry) { live.delete(deviceId); tell('down', deviceId); }
     const c = entry.client;
     if (c && c.child?.ws === ws) {
       c.child = null; c.tools = [];
@@ -48,6 +67,7 @@ function connected(deviceId, ws) {
     }
   });
   require('./registry').wakeForDevice(deviceId);   // an accepted server starts now
+  tell('up', deviceId);
 }
 
 /** Give a client the device's socket as its pipe (McpClient.start). Throws when the device is not connected. */
@@ -66,4 +86,4 @@ function attach(client) {
 
 const connectedNow = deviceId => live.has(deviceId);
 
-module.exports = { upgrade, attach, connectedNow };
+module.exports = { upgrade, attach, connectedNow, events };
