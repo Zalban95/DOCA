@@ -11,10 +11,20 @@
  * to the caller, and why the call closed. Each stage is also a line in a ring (`logs.callLines`, log-keep.js), read by
  * Hub → Logs as the source `call` and by Chronicle as the source `call`.
  *
+ * The lines are also kept on disk (since 2026-10-09: every version switch wiped the owner's test calls before they could
+ * be read), a file per day under DATA_DIR/calls for `logs.callDays` (log-keep.js prunes it), and the newest are read
+ * back into the ring when the hub starts. The records (the counters) are not: a call is over when its hub is.
+ *
  * What a line carries is names and numbers. A person's words stay in their conversation, under its rules; the only
  * words here are the screened silence phrases, which are the transcriber's, not the person's.
  */
+const fs = require('fs');
+const path = require('path');
+
 const MAX_CALLS = 20;
+
+const dir = () => path.join(require('../store').DATA_DIR, 'calls');
+const FILE_RE = /^\d{4}-\d{2}-\d{2}\.jsonl$/;
 
 const ring = [];
 const calls = new Map();   // id → record, the newest MAX_CALLS
@@ -27,6 +37,7 @@ function push(rec, level, text) {
   const l = { ts: new Date().toISOString(), source: 'call', label: 'Calls', level, text: `${rec.label} · ${text}`,
     sessionId: rec.sessionId || null, callId: rec.id, personId: rec.personId || null };
   ring.push(l);
+  try { require('../store').appendJsonl(path.join(dir(), `${l.ts.slice(0, 10)}.jsonl`), l); } catch { /* a line not kept must never break the call */ }
   const max = ringMax();
   if (ring.length > max) ring.splice(0, ring.length - max);
   for (const fn of listeners) { try { fn(l); } catch { /* a reader gone */ } }
@@ -85,6 +96,19 @@ function handle(rec) {
       push(rec, state === 'failed' ? 'error' : state === 'cut' ? 'warn' : 'info', `turn ${state}${detail ? `: ${String(detail).slice(0, 200)}` : ''}`);
     },
     spoken(n = 1) { rec.sentences += n; },
+    /** One sentence's synthesis: its time and bytes, or why it failed (and whether the hive's voice took over). */
+    tts({ ms = null, bytes = 0, error = null, fallback = false } = {}) {
+      rec.tts = rec.tts || { asked: 0, failed: 0, ms: 0 };
+      rec.tts.asked++;
+      if (error) { rec.tts.failed++; return push(rec, 'error', `voice failed${ms != null ? ` after ${ms} ms` : ''}${fallback ? ' — speaking in the hive\'s voice instead' : ''}: ${String(error).slice(0, 200)}`); }
+      rec.tts.ms += ms || 0;
+      return null;   // a sentence made is counted, not lined: the answer's line says them all
+    },
+    /** An answer said: its sentences, its audio, and the bytes that actually left for the caller. */
+    answer({ sentences = 0, ms = 0, bytes = 0, sent = 0, failed = 0, cut = false } = {}) {
+      const lost = bytes && sent < bytes ? ` — only ${sent} bytes reached the caller's socket` : '';
+      return push(rec, failed || lost || !sentences ? 'warn' : 'info', `answer spoken: ${sentences} sentence(s), ${(ms / 1000).toFixed(1)} s of audio, ${bytes} bytes${failed ? `, ${failed} not spoken` : ''}${cut ? ', cut by the caller' : ''}${lost}`);
+    },
     notice(stage, text) { rec.notices++; push(rec, 'warn', `told the caller (${stage}): ${text}`); },
     end(reason) {
       if (rec.endedAt) return;
@@ -114,6 +138,29 @@ function open(tail, onLine) {
 }
 
 const size = () => ({ lines: ring.length, bytes: ring.reduce((n, l) => n + l.text.length + 120, 0) });
+
+/** The newest kept lines, back into the ring (once, when this module is first read: at the hub's start). */
+function reload() {
+  try {
+    const files = fs.readdirSync(dir()).filter(f => FILE_RE.test(f)).sort().reverse();
+    const max = ringMax(), back = [];
+    for (const f of files) {
+      back.unshift(...require('../store').readJsonl(path.join(dir(), f)).filter(l => l && l.text && l.ts));
+      if (back.length >= max) break;
+    }
+    ring.unshift(...back.slice(-max));
+  } catch { /* no folder yet: nothing kept */ }
+}
+
+/** Days older than `days` removed; returns how many files went (log-keep.js). */
+function prune(days) {
+  const cut = new Date(Date.now() - Math.max(1, Number(days) || 7) * 86400000).toISOString().slice(0, 10);
+  let n = 0;
+  try { for (const f of fs.readdirSync(dir())) if (FILE_RE.test(f) && f.slice(0, 10) < cut) { fs.rmSync(path.join(dir(), f), { force: true }); n++; } } catch { /* no folder yet */ }
+  return n;
+}
+
+reload();
 const recent = () => [...calls.values()].reverse();
 
-module.exports = { begin, get, lines, open, size, recent, _ring: ring };
+module.exports = { begin, get, lines, open, size, recent, prune, dir, reload, _ring: ring };
