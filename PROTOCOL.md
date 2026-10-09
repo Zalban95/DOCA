@@ -275,7 +275,8 @@ self-view as the hub writes them.
 **What a client draws:** a waiting screen with `approval.message` ("asked of …"), and nothing else — no pairing of a
 watch, no lending, no chat. Hold `/events` (or poll `/devices/me` now and then) and on **`device.approved`** refetch
 `/capabilities` and carry on as a freshly paired device; on **`device.refused`** (its token is revoked, the stream
-closes) wipe the token and offer to pair again.
+closes) wipe the token and offer to pair again. A device that missed the event (one that polls, or was away) gets
+401 `invalid_token` whose `error.refused` is `{ by, at }` — sent only to that device's own token (hub 3.0.1).
 
 **Where people are asked.** The device's own person, when their level approves their own, gets a prompt on their other
 approved devices that take questions ("Your new phone — allow it?", choices `allow` / `refuse`); everyone who may

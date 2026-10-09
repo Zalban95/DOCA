@@ -182,7 +182,13 @@ test('refusing revokes the token and tells the device first', async () => {
   const ev = await stream.waitFor('device.refused');
   assert.equal(ev.payload.by, 'owner');
   await stream.waitClosed();
-  assert.equal((await h.api(r.token, 'GET', '/api/v1/devices/me')).status, 401);
+  const after = await h.api(r.token, 'GET', '/api/v1/devices/me');
+  assert.equal(after.status, 401);
+  // A device that missed the event (a polling watch) still learns who said no — with its own token only.
+  assert.equal(after.body.error.refused.by, 'owner', JSON.stringify(after.body));
+  const stranger = await h.api(r.token.replace(/\.[^.]+$/, '.wrongsecret'), 'GET', '/api/v1/devices/me');
+  assert.equal(stranger.status, 401);
+  assert.equal(stranger.body.error.refused, undefined);
   assert.ok(devices().get(r.device.id).revokedAt);
 });
 
