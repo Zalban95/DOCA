@@ -756,6 +756,22 @@ emits `prompt.confirmed` to the agent with the original input.
 
 `clients/reference/demo.sh` step 7 runs exactly this.
 
+### 12.8 An approval's prompt — why, what it does, the exact request
+
+When a tool call waits for a person and the turn came from a device, the device is asked with a prompt titled
+`Allow <tool>?` whose body is text blocks, each marked by `ext.role` (fixture `prompt.new-approval.json`):
+
+| `ext.role` | style | what it is |
+|---|---|---|
+| `why` | body | the agent's own words for this step (`ext.from: "agent"`), or the request it answers (`"request"`) — the agent's claim, to be drawn as such |
+| `does` | body | what the call does, a fixed sentence the hub makes from the tool and its arguments — never the model's words |
+| `way` | caption | whether it can be undone |
+| `asked` | caption | why it is asked, when that is more than the call itself |
+| `detail` | code | the exact request as it will run, secrets masked; `ext.collapsed: true`, `ext.label: "The exact request"` — draw it folded under the label until tapped |
+
+A watch is sent `why` and `does` shortened and nothing else. A client that knows none of this draws the blocks in
+order, which is always correct; one that does draws `why` labelled as the agent's, `does` prominent and `detail` folded.
+
 ## 13. Alerts and free-form messages
 
 ```http
@@ -928,7 +944,8 @@ A notice the agent sends with files (`tell_device`, `alert` with `media` blocks 
 `docs/api/fixtures/alert-files.json`) carries one `media` block per file, each stored as the receiving device's
 own media, so only that device may fetch it. A watch is sent pictures only.
 
-Any block may carry `ext`. Unknown block types are dropped at authoring time;
+Any block may carry `ext`; `ext.collapsed: true` with `ext.label` asks for the block folded under that label until tapped
+(an approval's exact request, §12.8). Unknown block types are dropped at authoring time;
 clients must still skip types they do not know.
 
 ### 19.2 Server-rendered charts

@@ -195,7 +195,7 @@ function figureBlock(svg, alt) {
   return { type: 'figure', svg: s, alt: String(alt || 'drawing').slice(0, 200) };
 }
 
-async function ask({ to, question, choices, note, timeoutSec, signal, svg, layout, personId } = {}) {
+async function ask({ to, question, choices, note, blocks, timeoutSec, signal, svg, layout, personId } = {}) {
   const { prompts } = api();
   const text = String(question || '').trim();
   if (!text) throw new Error('A question needs to be asked in words.');
@@ -215,7 +215,8 @@ async function ask({ to, question, choices, note, timeoutSec, signal, svg, layou
 
   const { prompt } = !targets.length ? { prompt: { id: `pq_${require('crypto').randomBytes(6).toString('hex')}`, state: 'open', choices: built } } : prompts.create({
     title: text.slice(0, 120),
-    body: [...(note ? [{ type: 'text', text: String(note).slice(0, 800) }] : []), ...(figure ? [figure] : [])],
+    // `blocks`: a caller's own text blocks in place of the note (an approval's why, what it does and its exact request).
+    body: [...(Array.isArray(blocks) && blocks.length ? blocks : note ? [{ type: 'text', text: String(note).slice(0, 800) }] : []), ...(figure ? [figure] : [])],
     choices: built,
     ...(quadrants ? { ext: { layout: 'quadrants' } } : {}),
     targets: targets.map(d => d.id),
