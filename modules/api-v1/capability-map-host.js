@@ -26,6 +26,8 @@ module.exports = [
   row('backups', 'make, schedule and restore backups', ['POST /api/backups/*', 'POST /api/backups', 'DELETE /api/backups/:name']),
   row('settings', 'change the hive\'s settings, paths and network', ['POST /api/prefs', 'POST /api/paths', 'POST /api/paths/create', 'POST /api/network', 'POST /api/settings/checkpoints/:id/restore',
     'POST /api/configs/:id', 'POST /api/config-favorites', 'POST /api/fm-favorites', 'POST /api/features/:id/hidden', 'POST /api/logs/keep']),
+  row('licence', 'add, renew, check in or remove this hive\'s licence', ['POST /api/licence/file', 'POST /api/licence/key', 'POST /api/licence/check', 'DELETE /api/licence'],
+    { only: 'which features this hive may run: the owner\'s, at the panel (license/)' }),
   row('developer', 'developer mode, experiments and who may release', ['POST /api/developer/releasing', 'POST /api/experiments/developer', 'POST /api/experiments/:id']),
   row('guided', 'set up this machine from the guided questions', ['POST /api/guided/*'], { only: 'setting up this machine (what it can bear, what to install, which keys to paste): the owner\'s, at the panel' }),
   row('sharing', 'offer what was learned to the project', ['POST /api/sharing', 'POST /api/sharing/:packId/share'], { only: 'the owner\'s answer and click (CONSTITUTION §0); a host\'s alone' }),

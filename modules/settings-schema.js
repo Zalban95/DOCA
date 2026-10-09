@@ -252,6 +252,12 @@ const SCHEMA = {
     keys: { listen: { type: 'string', default: 'tailnet', hint: 'tailnet (Tailscale and this machine), lan (also the local network), local (this machine only), all (every interface). From the next start.' },
       lanAdmin: { type: 'boolean', default: false, hint: 'Allow managing the machine (admin rights) from outside Tailscale. Off: from the local network a person reads and chats.' },
       services: { type: 'string', default: 'local', hint: 'Where the inference services this hub starts (Whisper, Kokoro, ComfyUI…) can be reached: local (this machine only — the hub reaches them here), tailnet (also its Tailscale address), all (every interface, the local network included, with no sign-in). From each service\'s next start.' } } },
+  // The licence (modules/license): where this hive checks in, and how long a lapsed licence keeps working. Addresses,
+  // not secrets — the key lives in keys/licence.json. Never proposable: what the hive may run is the owner's.
+  licence:          { is: 'local', home: 'device', on: 'host', note: 'the licence server this hive checks in with, and the grace after a missed check-in (license/; Settings → System → Licence)',
+    keys: { server: { type: 'string', default: '', hint: 'The licence server\'s address (https://…). Empty: offline — renew by uploading a licence file.' },
+      account: { type: 'string', default: '', hint: 'The licence server\'s account id (Keygen). Empty: its only account.' },
+      graceDays: { type: 'integer', min: 0, max: 90, default: 14, hint: 'Days a licence that lapsed (expired, or not checked in) keeps working before licensed features turn read-only; never longer than the licence allows.' } } },
   // What is kept of what happened (log-keep.js; Settings → System → Logs; CONSTITUTION §1: nothing unseen, but the log
   // never fills memory or disk needlessly). Sized for a small machine. Never proposable: a retention an agent could
   // shorten is one that could erase the record of what agents did.
