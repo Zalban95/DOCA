@@ -9,6 +9,10 @@
    bar is a status light, not a transcript, and the transcript it would be
    showing belongs to a conversation nobody has open. */
 let _hcMissionPoll = null;
+/* While a person's change to the specialists switch is being sent (and its password asked), a list that was already
+   loading must not draw the switch back as the server had it before: on a slow machine that load landed under the
+   password prompt and flipped the switch the person had just turned on. */
+let _hcAgentsChanging = false;
 
 async function _hcLoadAgents() {
   const box = document.getElementById('hc-agents');
@@ -16,7 +20,7 @@ async function _hcLoadAgents() {
   if (!box) return;
   try {
     const data = await apiFetch('/api/harness/agents');
-    if (sw) sw.checked = !!data.enabled;
+    if (sw && !_hcAgentsChanging) sw.checked = !!data.enabled;
     box.innerHTML = (data.agents || []).map(a => _hcAgentHtml(a, data.enabled)).join('')
       || '<div class="placeholder">No specialists defined</div>';
     _hcToFill(data.enabled ? (data.agents || []).filter(a => !a.broken) : []);
@@ -87,10 +91,12 @@ function _hcAgentHtml(a, enabled) {
 }
 
 async function hcAgentsEnable(on) {
+  _hcAgentsChanging = true;
   try {
     await apiFetch('/api/harness/agents/enable', { method: 'POST', body: { enabled: !!on } });
+    _hcAgentsChanging = false;
     _hcLoadAgents();
-  } catch (e) { appAlert(e.message); _hcLoadAgents(); }   // refused or cancelled: drawn as the server has it, never left on
+  } catch (e) { _hcAgentsChanging = false; appAlert(e.message); _hcLoadAgents(); }   // refused or cancelled: drawn as the server has it, never left on
 }
 
 async function _hcLoadMissions() {

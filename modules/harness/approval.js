@@ -279,7 +279,7 @@ function askAnywhere(req, { sessionId, signal, client } = {}) {
       const r = await reach.ask({
         to: [deviceId],
         question: `Allow ${req.tool}?`,
-        note: req.summary,
+        ...require('./approval-explain').forDevice(req, client),   // why and what it does; the exact request folded, never on a watch
         // By what its owner may decide (approval-answer.js): Always and Approve all; never the mode (S14).
         choices: require('./approval-answer').deviceChoices(req, client.user),
         timeoutSec: 240,

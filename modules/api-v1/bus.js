@@ -40,6 +40,7 @@ const TYPES = {
   'prompt.expired':   { cls: 'durable', ttlSec: 3600 },
   alert:              { cls: 'durable', ttlSec: 6 * 3600, priority: 'high' },
   'profile.changed':  { cls: 'durable', ttlSec: L.DEFAULT_EVENT_TTL_SEC },
+  'settings.changed': { cls: 'durable', ttlSec: 3600 },   // a device's screen settings or its person's (look/routes.js)
   'device.vars':      { cls: 'durable', ttlSec: 3600 },
   'device.message':   { cls: 'durable', ttlSec: 6 * 3600 },
   'device.control':   { cls: 'durable', ttlSec: 24 * 3600 },   // refresh / reconnect / ask / disconnect / revoke (devices-control.js)

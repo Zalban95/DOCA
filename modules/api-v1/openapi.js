@@ -150,7 +150,7 @@ function schemas() {
     Block: {
       description: 'Rich content unit used in prompt bodies, outcomes and alerts. Unknown types must be skipped.',
       oneOf: [
-        obj({ type: str({ const: 'text' }), text: str({ maxLength: 2000 }), style: str({ enum: ['body', 'title', 'caption', 'code'] }), ext: ext() }, { required: ['type', 'text'] }),
+        obj({ type: str({ const: 'text' }), text: str({ maxLength: 2000 }), style: str({ enum: ['body', 'title', 'caption', 'code'] }), ext: ext() }, { required: ['type', 'text'], description: 'In an approval\'s prompt (PROTOCOL §12.8) `ext.role` says which line it is — `why` (the agent\'s words, `ext.from` agent or request), `does`, `way`, `asked`, `detail` — and `ext.collapsed: true` with `ext.label` asks a client to draw the block folded under that label until tapped.' }),
         obj({ type: str({ const: 'metric' }), metric: str(), label: str(), ext: ext() }, { required: ['type', 'metric'] }),
         obj({ type: str({ const: 'figure' }), id: str(), alt: str(), svg: str({ description: 'Authoring only (≤ 64 KB).' }), motion: ref('MotionScene'), image: obj({ url: str(), w: int(), h: int() }), text: str(), sizeHint: obj({ w: int(), h: int() }), representation: ref('FigureRepresentation'), ext: ext() }, { required: ['type'] }),
         obj({ type: str({ const: 'image' }), url: str(), alt: str(), w: int(), h: int(), ext: ext() }, { required: ['type', 'url'] }),
@@ -282,7 +282,7 @@ function events() {
     'prompt.outcome':   { audience: 'device', payload: obj({ promptId: str(), selectionId: str(), status: str({ enum: ['outcome_ready', 'failed'] }), outcome: ref('Outcome'), error: obj({ code: str(), message: str() }) }) },
     'prompt.closed':    { audience: 'device', payload: obj({ promptId: str(), reason: str({ enum: ['confirmed_elsewhere', 'cancelled', 'expired'] }) }) },
     'alert':            { audience: 'device', payload: obj({ id: str(), title: str(), body: arr(ref('Block')), priority: str({ enum: prompts.PRIORITIES }), haptic: bool(), from: str(), ext: ext() }) },
-    'profile.changed':  { audience: 'device', payload: obj({ version: int(), etag: str(), updatedBy: str(), url: str() }), note: 'Refetch the profile (and capabilities).' },
+    'profile.changed':  { audience: 'device', payload: obj({ version: int(), etag: str(), updatedBy: str(), url: str() }), note: 'Refetch the profile (and capabilities).' }, ...require('../look/routes').events({ obj, str, bool, arr }),
     'agent.message':    { audience: 'device', payload: obj({ from: str(), type: str(), payload: any(), ext: ext() }) },
     'agent.turn':       { audience: 'device', payload: obj({
       turnId: str(), sessionId: str(), state: str({ enum: ['started', 'done', 'failed'] }), by: str({ description: 'Device that asked.' }),
@@ -332,7 +332,7 @@ function paths() {
     '/': { get: { tags: ['Discovery'], summary: 'Discovery (no auth)', operationId: 'discover', security: [], responses: { 200: json(ref('Discovery')), 404: E[404] } } },
     '/openapi.json': { get: { tags: ['Discovery'], summary: 'This document (no auth)', operationId: 'openapi', security: [], responses: { 200: { description: 'OpenAPI 3.1 document', content: { 'application/json': { schema: obj({}, { additionalProperties: true }) } } }, 404: E[404] } } },
     '/capabilities': { get: { tags: ['Discovery'], summary: 'Capability discovery — the first call after authentication', operationId: 'getCapabilities', responses: { 200: json(ref('Capabilities')), ...std(401) } } },
-    '/settings/effective': { get: { tags: ['Discovery'], summary: 'This device\'s settings: its own layer over the person\'s and the hive\'s', operationId: 'getEffectiveSettings', description: 'For the keys a device keeps (settings-schema.js: home device, on screen — theme, tabs, sidebar…). `from` says which layer each value came from: device, person or hive. Any token; it answers for the device that asks.', responses: { 200: json(obj({ deviceId: str(), settings: obj({}), from: obj({}) })), ...std(401) } } },
+    '/settings/effective': { get: { tags: ['Discovery'], summary: 'This device\'s settings: its own layer over the person\'s and the hive\'s', operationId: 'getEffectiveSettings', description: 'For the keys a device keeps (settings-schema.js: home device, on screen — theme, tabs, sidebar…). `from` says which layer each value came from: device, person or hive. Any token; it answers for the device that asks. The look those settings draw, resolved to colours and fonts, is `GET /settings/look`.', responses: { 200: json(obj({ deviceId: str(), settings: obj({}), from: obj({}) })), ...std(401) } } },
     '/devices/pair/complete': { post: { tags: ['Devices'], summary: 'Finish pairing with a six-digit code → token (no auth)', operationId: 'completePairing', security: [],
       requestBody: body(obj({ code: str({ examples: ['641-598'] }), name: str(), caps: ref('Caps') }, { required: ['code'] })),
       responses: { 201: json(obj({ token: str(), device: ref('Device'), capabilitiesUrl: str(), protocol: str() })), ...std(400) } } },
@@ -555,7 +555,7 @@ function build() {
       { name: 'Agent', description: 'Agent-facing API (scope `agent`): raise prompts and alerts, resolve selections, request sensors, ship artifacts.' },
     ],
     security: [{ bearerToken: [] }],
-    paths: { ...paths(), ...require('../devices-control').openapi({ obj, str, bool, arr, body, json, std }), ...require('./usage-route').openapi({ obj, str, int, arr, json, std }), ...require('../device-console').openapi({ obj, str, int, arr, bool, body, json, std }), ...require('./parity').openapi({ obj, str, bool, arr, body, json, std }), ...require('../sealed/routes').openapi({ obj, str, json, std }) },   // device.control acks, grants
+    paths: { ...paths(), ...require('../devices-control').openapi({ obj, str, bool, arr, body, json, std }), ...require('./usage-route').openapi({ obj, str, int, arr, json, std }), ...require('../device-console').openapi({ obj, str, int, arr, bool, body, json, std }), ...require('./parity').openapi({ obj, str, bool, arr, body, json, std }), ...require('../sealed/routes').openapi({ obj, str, json, std }), ...require('../look/routes').openapi({ obj, str, json, std }) },   // device.control acks, grants
     components: {
       securitySchemes: {
         bearerToken: { type: 'http', scheme: 'bearer', description: '`Authorization: Bearer doca_<deviceId>.<secret>`. `GET /events` additionally accepts `?access_token=` for EventSource clients.' },

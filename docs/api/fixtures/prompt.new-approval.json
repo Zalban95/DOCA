@@ -1,0 +1,98 @@
+{
+  "type": "prompt.new",
+  "class": "durable",
+  "payload": {
+    "prompt": {
+      "id": "prm_fixture",
+      "createdAt": "2026-10-06T18:30:00.000Z",
+      "expiresAt": "2026-10-06T18:34:30.000Z",
+      "priority": "high",
+      "title": "Allow shell?",
+      "body": [
+        {
+          "type": "text",
+          "text": "The agent says: The build log is stale. I will clear it and push the fix.",
+          "style": "body",
+          "ext": {
+            "role": "why",
+            "from": "agent"
+          }
+        },
+        {
+          "type": "text",
+          "text": "Runs a command on this machine (hub): deletes 1 path (build.log); then pushes to origin.",
+          "style": "body",
+          "ext": {
+            "role": "does"
+          }
+        },
+        {
+          "type": "text",
+          "text": "No way back once it runs: deletes files outside any project.",
+          "style": "caption",
+          "ext": {
+            "role": "way"
+          }
+        },
+        {
+          "type": "text",
+          "text": "rm -f build.log && git push origin main",
+          "style": "code",
+          "ext": {
+            "role": "detail",
+            "collapsed": true,
+            "label": "The exact request"
+          }
+        }
+      ],
+      "choices": [
+        {
+          "id": "approve",
+          "type": "option",
+          "label": "Approve",
+          "outcome": {
+            "summary": "Approve",
+            "blocks": [],
+            "confirmLabel": "Confirm",
+            "backLabel": "Back"
+          }
+        },
+        {
+          "id": "always",
+          "type": "option",
+          "label": "Always shell",
+          "outcome": {
+            "summary": "Always shell",
+            "blocks": [],
+            "confirmLabel": "Confirm",
+            "backLabel": "Back"
+          }
+        },
+        {
+          "id": "deny",
+          "type": "option",
+          "label": "Deny",
+          "outcome": {
+            "summary": "Deny",
+            "blocks": [],
+            "confirmLabel": "Confirm",
+            "backLabel": "Back"
+          }
+        },
+        {
+          "id": "not_now",
+          "type": "dismiss",
+          "label": "Not now"
+        }
+      ],
+      "resolver": "server",
+      "state": "open",
+      "selectionId": null,
+      "choiceId": null,
+      "stage": null,
+      "outcome": null,
+      "error": null,
+      "haptic": true
+    }
+  }
+}

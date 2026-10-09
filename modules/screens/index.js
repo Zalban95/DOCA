@@ -94,12 +94,18 @@ function write(doc, cur, patch) {
 }
 
 /** Change this device's layer: a value sets it, null puts it back to the hive's (or the person's). */
-const set = (deviceId, patch = {}) => write(layerDoc(deviceId), layer(deviceId), patch);
+function set(deviceId, patch = {}) {
+  const out = write(layerDoc(deviceId), layer(deviceId), patch);
+  require('../look/routes').announce('device', deviceId, Object.keys(patch));   // the device's app reads its look again
+  return out;
+}
 
 /** Change a person's layer — theirs on every device of theirs (CONSTITUTION S13): null puts a key back to the hive's. */
 function setPerson(userId, patch = {}) {
   if (!userId) throw bad('Sign in first.', 401);
-  return write(personDoc(userId), personLayer(userId), patch);
+  const out = write(personDoc(userId), personLayer(userId), patch);
+  require('../look/routes').announce('person', userId, Object.keys(patch));
+  return out;
 }
 
 module.exports = { forRequest, voiceOf, ensure, effective, set, setPerson, layer, personLayer, screenKeys, nameOf, COOKIE };

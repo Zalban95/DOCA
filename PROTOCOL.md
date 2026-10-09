@@ -134,7 +134,8 @@ other; a client that does not know the kind should draw it as a device and may l
 things to hand a screen to (it has no screen of its own to show a canvas on). The kind is additive: no
 existing field changed. Since hub 2.164.0 there is also **`browser`**: a browser someone signed in on,
 with no scopes and no token of its own (it reaches the hub by its sign-in session); revoking it signs that
-browser out. `GET /settings/effective` answers any token with that device's settings over the hive's.
+browser out. `GET /settings/effective` answers any token with that device's settings over the hive's, and
+`GET /settings/look` the panel's look those settings draw (§14.1).
 Since hub 2.168.0 `POST /mcp` is the hub as an MCP server (JSON-RPC: initialize, tools/list, tools/call), for
 any MCP client holding a device token; its tools follow the token's scopes.
 Since hub 2.187.0 `POST /agui` (scope `harness:chat`) is the hub as an AG-UI agent: AG-UI's RunAgentInput in
@@ -518,6 +519,7 @@ data: {"reason":"revoked"}
 | `prompt.closed` | durable | `{ promptId, reason: confirmed_elsewhere|cancelled|expired }` |
 | `alert` | durable, high | `{ id, title, body[], priority, haptic, from, ext }` |
 | `profile.changed` | durable | `{ version, etag, updatedBy, url }` — refetch the profile |
+| `settings.changed` | durable (1 h) | `{ layer: device\|person, keys[], look, url, lookUrl }` — this device's screen settings or its person's changed: read `url` again, and `lookUrl` when `look` is true (§14.1) |
 | `agent.message` | durable | `{ from, type, payload, ext }` — free-form from the agent |
 | `agent.turn` | durable | `{ turnId, sessionId, state: started\|done\|failed, by, message?, text?, steps?, proposals[]?, error?, quiet? }` — one conversation turn (§23) |
 | `agent.text` | ephemeral | `{ turnId, sessionId, delta }` — reply text as produced; **only to the device that posted the message** |
@@ -756,6 +758,22 @@ emits `prompt.confirmed` to the agent with the original input.
 
 `clients/reference/demo.sh` step 7 runs exactly this.
 
+### 12.8 An approval's prompt — why, what it does, the exact request
+
+When a tool call waits for a person and the turn came from a device, the device is asked with a prompt titled
+`Allow <tool>?` whose body is text blocks, each marked by `ext.role` (fixture `prompt.new-approval.json`):
+
+| `ext.role` | style | what it is |
+|---|---|---|
+| `why` | body | the agent's own words for this step (`ext.from: "agent"`), or the request it answers (`"request"`) — the agent's claim, to be drawn as such |
+| `does` | body | what the call does, a fixed sentence the hub makes from the tool and its arguments — never the model's words |
+| `way` | caption | whether it can be undone |
+| `asked` | caption | why it is asked, when that is more than the call itself |
+| `detail` | code | the exact request as it will run, secrets masked; `ext.collapsed: true`, `ext.label: "The exact request"` — draw it folded under the label until tapped |
+
+A watch is sent `why` and `does` shortened and nothing else. A client that knows none of this draws the blocks in
+order, which is always correct; one that does draws `why` labelled as the agent's, `does` prominent and `detail` folded.
+
 ## 13. Alerts and free-form messages
 
 ```http
@@ -812,6 +830,39 @@ Server behaviour:
 - Live `surface.update` pushes follow `pages[].surfaces` and `refreshSec`. A
   device whose profile lists no surfaces gets no surface pushes.
 - Quiet hours suppress prompts and alerts below `urgent` (with `allowUrgent`).
+
+### 14.1 The panel's look, for an app's own screens (hub `device-look`)
+
+A profile never says how a device looks; its **screen settings** do — `theme`, `customTheme` and `skin`, kept per
+device over its person's and the hive's (`GET /settings/effective`), and changed on the device's own panel page
+(`/d/<id>/`, Settings → General → Appearance). So that an app's native screens (its settings, its pairing, a watch face) can be
+drawn the way the panel is, `GET /settings/look` (any token) answers with that look **resolved** from the panel's own
+theme table:
+
+```json
+{ "deviceId": "dev_…",
+  "look": { "theme": "pointsDaylight", "themeLabel": "Points Daylight", "skin": "points", "skinLabel": "Points",
+            "ground": "light",
+            "palette": { "bg": "#f4f5f6", "surface": "#ffffff", "text": "#2a3138", "muted": "#5b6570",
+                         "accent": "#17807a", "onAccent": "#ffffff", "border": "#e3e7eb", "red": "#c23d3d", "…": "…" },
+            "fonts": { "ui": ["IBM Plex Sans", "system-ui", "…"], "text": […], "display": […], "mono": ["IBM Plex Mono", "…"] },
+            "radius": { "control": 6, "card": 10 }, "inputSize": 13.5,
+            "from": { "theme": "device", "customTheme": "default", "skin": "device" },
+            "etag": "92cd6d89b2ab" } }
+```
+
+- `palette` is hex colours by role (`bg`, `surface`, `raised`, `dim`, `faint`, `border`, `border2`, `text`, `muted`,
+  `bright`, `accent`, `green`, `red`, `blue`, `purple`, `teal`, `cyan`, `amber`, `bgGreen`, `bgRed`, `bgBlue`,
+  `bgAmber`, `bg2`, `bg3`, `onAccent` — text on the accent, `stopped` — a stopped state's point, `field` — a figure).
+  A custom theme's value that is not a hex colour is left out and the default's drawn.
+- `ground` is `light` or `dark`, by the ground's luminance, as the panel decides it.
+- `skin` is the style: `classic` (mono, square corners), `modern` (a sans, rounded), `points` (IBM Plex Sans, Plex Mono
+  for labels and figures, 6 px controls, 10 px cards). `fonts` are CSS family lists, first choice first; `radius` and
+  `inputSize` are CSS pixels.
+- Read it at each connection and again on `settings.changed` with `look: true` (a change on this device's layer or its
+  person's; a change to the hive's defaults is not announced). `etag` changes when anything in it does.
+- An app keeps its own look when it is not paired, when the hub is older (404), or when its person says not to use the
+  hub's. The fixture is `docs/api/fixtures/settings-look.json`.
 
 ## 15. Variables
 
@@ -928,7 +979,8 @@ A notice the agent sends with files (`tell_device`, `alert` with `media` blocks 
 `docs/api/fixtures/alert-files.json`) carries one `media` block per file, each stored as the receiving device's
 own media, so only that device may fetch it. A watch is sent pictures only.
 
-Any block may carry `ext`. Unknown block types are dropped at authoring time;
+Any block may carry `ext`; `ext.collapsed: true` with `ext.label` asks for the block folded under that label until tapped
+(an approval's exact request, §12.8). Unknown block types are dropped at authoring time;
 clients must still skip types they do not know.
 
 ### 19.2 Server-rendered charts
@@ -1446,6 +1498,8 @@ The device's person's recipes, schedules and face, answered as that person exact
 | GET | `/openapi.json` | — | OpenAPI 3.1 description of this API |
 | POST | `/devices/pair/complete` | — | finish pairing → token |
 | GET | `/capabilities` | any | §6 |
+| GET | `/settings/effective` | any | §4.2, §14.1 |
+| GET | `/settings/look` | any | §14.1 |
 | GET | `/devices` | `devices:admin` \| `agent` | list devices (+ presets) |
 | POST | `/devices` | `devices:admin` | issue a token directly |
 | POST | `/devices/pair/start` | `devices:admin` | start pairing |

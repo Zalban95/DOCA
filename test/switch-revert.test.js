@@ -11,7 +11,7 @@ const assert = require('node:assert/strict');
 const H = require('./helpers');   // first: it points the settings at a temporary folder
 const B = require('./panel-browser');
 
-before(async () => { await B.start({ setup: B.pastFirstRun }); if (!B.skip) { await B.evaluate("nav('harness')"); await B.until("!!document.getElementById('hc-agents-on')"); } });
+before(async () => { await B.start({ setup: B.pastFirstRun }); if (!B.skip) { await B.evaluate("nav('harness')"); await B.until("!!document.getElementById('hc-agents-on') && !document.querySelector('#hc-agents .placeholder')?.textContent.includes('Loading')"); } });
 after(() => B.stop());
 
 const prompted = () => B.until("document.getElementById('app-prompt-modal')?.classList.contains('open')");
@@ -36,6 +36,18 @@ test('a wrong password, then cancel: still off', { skip: B.skip }, async () => {
   assert.ok(await prompted());
   await B.evaluate("document.getElementById('app-prompt-input').value = 'not the password'; document.getElementById('app-prompt-ok').click()");
   assert.ok(await B.until("/password|credentials|not work/i.test(document.getElementById('app-prompt-message').textContent) && document.getElementById('app-prompt-modal').classList.contains('open')"), 'asked again');
+  await click('#app-prompt-cancel');
+  assert.ok(await B.until("document.getElementById('hc-agents-on').checked === false"), 'drawn off again');
+  assert.equal(await enabled(), false);
+});
+
+test('a list still loading when the switch is turned does not draw it back under the prompt', { skip: B.skip }, async () => {
+  // What failed on a slow Windows runner: the page's first load of the specialists landed while the password was asked.
+  await B.evaluate("document.querySelectorAll('.modal-overlay.open, .app-modal.open').forEach(m => m.classList.remove('open'))");
+  await B.evaluate("_hcLoadAgents(); document.getElementById('hc-agents-on').click()");
+  assert.ok(await prompted());
+  await B.sleep(1500);   // the load started before the click has long landed
+  assert.equal(await B.evaluate("document.getElementById('hc-agents-on').checked"), true, 'still drawn on while asking');
   await click('#app-prompt-cancel');
   assert.ok(await B.until("document.getElementById('hc-agents-on').checked === false"), 'drawn off again');
   assert.equal(await enabled(), false);

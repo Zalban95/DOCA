@@ -22,6 +22,8 @@ module.exports = [
   ['read', 'shell', { command: 'curl -s https://api.github.com/repos/x/y' }],
   ['read', 'shell', { command: 'docker ps -a' }],
   ['read', 'shell', { command: 'find . -name "*.js"' }],
+  ['read', 'shell', { command: "cd /work/other && sed -n '820,880p' public/index.html" }],
+  ['read', 'shell', { command: 'cd ~/x; pwd' }],
   ['read', 'git', { action: 'diff' }],
   ['read', 'project', { action: 'checkpoints' }],
   ['read', 'api_call', { url: 'https://api.example.com/v1/items', key: 'example' }],
