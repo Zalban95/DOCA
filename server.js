@@ -55,14 +55,14 @@ const app = express();
 
 // Device-agnostic client API — mounted first so it can apply its own,
 // tighter body limits and authentication. Legacy /api/* is untouched.
-app.use('/api/v1', apiV1.router);
+app.use('/api/v1', require('./modules/license/gate').readOnly, apiV1.router);   // a licence lapsed past its grace: read, not changed
 
 app.use(express.json({ limit: '50mb' }));
 // Everything below needs a signed-in person with the right for it; unknown routes are refused.
 app.use(require('./modules/auth/gate').gate);
 require('./modules/auth/routes').mount(app);
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(require('./modules/machines/acts').middleware);   // who started, stopped or removed a machine, written down (machines/acts.js)
+app.use(require('./modules/machines/acts').middleware, require('./modules/license/gate').readOnly);   // who acted on a machine (machines/acts.js); a lapsed licence (license/)
 const uploadMw = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 // ─── Routes: Controls ─────────────────────────────────────────────────────────
@@ -274,8 +274,7 @@ app.post('/api/system/tools/install', systemTools.handleInstall);
 // ─── Routes: Update ──────────────────────────────────────────────────────────
 update.mount(app);   // update, restart, /api/versions, /api/backups
 
-// ─── Routes: Start at boot ────────────────────────────────────────────────────
-app.get ('/api/startup', startup.handleStatus);
+app.get ('/api/startup', startup.handleStatus);   // start at boot
 app.post('/api/startup', startup.handleSet);
 
 // ─── Routes: Docker ───────────────────────────────────────────────────────────
@@ -299,6 +298,7 @@ vms.mount(app);   // list, power, settings (vms.js) and management: details, aut
 // ─── Routes: Inference Services ───────────────────────────────────────────────
 services.mount(app);   // the Services tab, and when DOCA stops and starts them by itself (service-life/)
 
+require('./modules/license/gate').mount(app);   // Settings → System → Licence, then every unlicensed feature's route taken out (license/gate.js)
 return app.use(require('./modules/api-not-found'));   // last: an /api path no route above answered is a JSON 404
 }
 module.exports = { createApp };

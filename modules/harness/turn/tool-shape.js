@@ -9,6 +9,9 @@
 /** Off for everyone while a switch is off. */
 function switches() {
   const out = [];
+  // Not in this hive's licence: absent, like a tool that was never built here (license/gate.js toolOn).
+  const gate = require('../../license/gate');
+  for (const t of require('../tools').TOOLS) if (!gate.toolOn(t.name)) out.push({ name: t.name, why: 'not in this hive\'s licence (Settings → System → Licence)' });
   if (!require('../../agents/registry').enabled())
     for (const name of ['agent_dispatch', 'agent_results', 'agent_resume', 'permission_grant'])
       out.push({ name, why: 'specialists are switched off (Settings → Harness)' });

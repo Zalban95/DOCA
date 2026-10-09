@@ -102,10 +102,12 @@ function merge(layers) {
 
 /**
  * The nav to draw: groups in order with every page placed exactly once, names, what is hidden, the views and the
- * style. `host: false` leaves out the machine's pages (HOST_PAGES), in groups and inside views alike.
+ * style. `host: false` leaves out the machine's pages (HOST_PAGES), in groups and inside views alike; an unlicensed page is
+ * never placed.
  */
 function resolve(merged = {}, { host = true } = {}) {
-  const allowed = t => host || !D.HOST_PAGES.includes(t);
+  // A page of a feature this hive is not licensed for is never placed (license/gate.js), like the machine's for a non-host.
+  const allowed = t => (host || !D.HOST_PAGES.includes(t)) && require('../license/gate').pageOn(t);
   const vs = (merged.views || []).map(v => ({ ...v, parts: v.parts.filter(p => allowed(p.page)) })).filter(v => v.parts.length);
   const pages = new Set([...D.PAGES.filter(allowed), ...vs.map(v => v.id)]);
   const placed = new Set(), groups = [];
