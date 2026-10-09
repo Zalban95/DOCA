@@ -11,6 +11,10 @@
 .home-empty h3 { margin: 0 0 8px; color: var(--bright); font-size: 15px; }
 .home-empty ol { padding-left: 20px; }
 .home-hint { color: var(--muted); font-size: 12px; }
+.home-pick { width: auto; flex: 0 1 auto; max-width: 240px; font-size: 12px; }
+.home-place { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-away { padding: 10px 12px; background: var(--surface); border: 1px solid var(--amber); border-radius: var(--radius, 6px); color: var(--text); font-size: 13px; line-height: 1.5; }
+.home-areas.stale { filter: grayscale(1); opacity: .55; pointer-events: none; }
 .home-areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; align-items: start; }
 .home-area { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius, 6px); padding: 12px; }
 .home-area h3 { margin: 0 0 10px; font: 500 11px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }

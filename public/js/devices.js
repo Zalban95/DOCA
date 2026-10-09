@@ -95,7 +95,9 @@ function devPopulatePresets() {
       const el = document.getElementById(`dev-${kind}-scopes`);
       if (el && !sel.value) { el.textContent = 'A computer running doca-client or DocaDesk is "phone": it needs mcp:self to lend its tools.'; return; }
       const warn = sel.value === 'admin' ? ' <strong style="color:var(--red)">— full control of this server</strong>'
-        : sel.value === 'extension' ? ' — for the DOCA browser extension: <a href="/api/clients/browser.zip">download it</a> (Chrome, Edge, Brave: Extensions → Developer mode → Load unpacked, from the unzipped folder; Firefox: about:debugging → Load Temporary Add-on → manifest.json)' : '';
+        : sel.value === 'extension' ? ' — for the DOCA browser extension: <a href="/api/clients/browser.zip">download it</a> (Chrome, Edge, Brave: Extensions → Developer mode → Load unpacked, from the unzipped folder; Firefox: about:debugging → Load Temporary Add-on → manifest.json)'
+        // A home node (doca-client home setup) is the household's link to Home Assistant: it has to stay on.
+        : sel.value === 'phone' ? ' — for a <b>home node</b> (doca-client keeping Home Assistant), pick a machine that stays on: a mini PC, a Pi, a NAS. A laptop that sleeps takes the home with it.' : '';
       if (el) el.innerHTML = `Scopes: <code>${escHtml(describe(sel.value))}</code>${warn}`;
     };
     sel.onchange = show;

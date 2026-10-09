@@ -1,22 +1,18 @@
 'use strict';
 
 /**
- * The home in DOCA's own layout (TODO H10.10, asked 2026-10-06): Home Assistant stays the device layer — its thousands
- * of integrations, its areas, scenes and automations — and DOCA draws its own Home page from HA's WebSocket API.
+ * The home read by the hub itself (the source `direct`; index.js composes the homes): one WebSocket to Home Assistant
+ * (link.js), signed in with the key for services `home-assistant` (its origin is HA's address; the token never reaches
+ * a browser) — for a hub on the household's own network. A hub elsewhere (a hosted hive) reads a home through a home
+ * node in the household instead (nodes.js, docs/design/home-node.md).
  *
- * One connection per hub (link.js), signed in with the key for services `home-assistant` (its origin is HA's address;
- * the token never reaches a browser), opened only while a Home page holds it (`hold`, through the page's live stream)
- * or something asks (`use`), and closed a minute after the last of them. While open, the states are cached and every
- * `state_changed` goes out on the live feed as a `home` change carrying the entity's new tile, to the pages holding the
- * Home page whose person may see that entity (`hears`).
- *
- * Whose home: the hive's. Anyone signed in may see it and anyone who may talk to the agent may use it (rights.js),
- * narrowed per entity by the resource kind `home` (auth/allot.js): a level listing `home: ['light.*', …]` sees and
- * uses only those, and a grant `use:home:<entity>` adds one back. Unlocking and disarming ask for the password
- * (auth/guarded.js).
+ * Opened only while a Home page holds it (`hold`, through the page's live stream) or something asks (`ensure`), and
+ * closed a minute after the last of them. While open, the states are cached and every `state_changed` goes out on the
+ * live feed as a `home` change (home `hub`) carrying the entity's new tile; index.js decides who hears it.
  */
 const link = require('./link');
 const { tileOf, hiddenByRegistry, DOMAINS } = require('./tiles');
+const ID = 'hub';   // this home's id: allot patterns may name `hub/<entity>`
 const live = require('../live');
 
 const KEY = 'home-assistant';
@@ -26,8 +22,6 @@ const S = { link: null, opening: null, error: null, failedAt: 0, version: null, 
 
 /** The key: {origin, value} or null when none is kept. */
 const keyOf = () => require('../service-keys').secretOf(KEY);
-
-const allowed = (person, id) => require('../auth/allot').uses(person, 'home', id);
 
 async function registries() {
   const c = S.link;
@@ -42,18 +36,18 @@ function onEvent(ev) {
   if (ev?.event_type === 'state_changed') {
     const { entity_id: id, new_state: now } = ev.data || {};
     if (!id) return;
-    if (!now) { S.states.delete(id); return live.changed('home', id, 'removed'); }
+    if (!now) { S.states.delete(id); return live.changed('home', id, 'removed', { home: ID }); }
     S.states.set(id, now);
     const tile = shown(id) ? tileOf(now, S.reg.get(id)) : null;
-    if (tile) live.changed('home', id, 'state', { tile });
+    if (tile) live.changed('home', id, 'state', { tile, home: ID });
     return;
   }
-  if (/_registry_updated$/.test(ev?.event_type || '')) { clearTimeout(S.regTimer); S.regTimer = setTimeout(() => registries().then(() => live.changed('home', null, 'layout')).catch(() => {}), 1000); }
+  if (/_registry_updated$/.test(ev?.event_type || '')) { clearTimeout(S.regTimer); S.regTimer = setTimeout(() => registries().then(() => live.changed('home', null, 'layout', { home: ID })).catch(() => {}), 1000); }
 }
 
 function onClose() {
   S.link = null;
-  live.changed('home', null, 'status');
+  live.changed('home', null, 'status', { home: ID });
   if (S.holders.size && !S.retry) S.retry = setTimeout(() => { S.retry = null; ensure().catch(() => {}); }, 5000);   // a page is still looking
 }
 
@@ -79,7 +73,7 @@ async function ensure() {
     } catch (e) { S.link = null; c.close(); throw e; }
     S.error = null;
     if (!S.sweep) { S.sweep = setInterval(sweep, 15000); S.sweep.unref?.(); }
-    live.changed('home', null, 'status');
+    live.changed('home', null, 'status', { home: ID });
     return c;
   })();
   try { return await S.opening; }
@@ -105,14 +99,14 @@ const shown = id => DOMAINS.includes(id.split('.')[0]) && !hiddenByRegistry(S.re
 
 const areaOf = id => { const r = S.reg.get(id); return r?.area_id || (r?.device_id && S.devArea.get(r.device_id)) || null; };
 
-/** The home as one person sees it: areas with their tiles, the things in no area last. */
-async function view(person) {
+/** The whole home (index.js narrows it per person): areas with their tiles, the things in no area last. */
+async function snapshot() {
   const k = keyOf();
   if (!k?.value) { if (S.link) close(); return { connected: false, setup: { key: KEY, where: 'Field → Connectors → Keys for services' } }; }
   try { await ensure(); } catch (e) { return { connected: false, origin: k.origin, error: e.message }; }
   const groups = new Map();
   for (const [id, s] of S.states) {
-    if (!shown(id) || !allowed(person, id)) continue;
+    if (!shown(id)) continue;
     const tile = tileOf(s, S.reg.get(id));
     if (!tile) continue;
     const area = areaOf(id) || '';
@@ -132,17 +126,19 @@ async function hold(screen, on = true) {
   return { holding: S.holders.has(screen), connected: !!S.link };
 }
 
-/** Whether a live change about `id` goes to this screen: it holds the page, and its person may see that entity. */
-const hears = (screen, person, id) => S.holders.has(screen) && (!id || allowed(person, id));
-
 /** One entity's state as cached, for actions.js and the camera. */
 const stateOf = id => S.states.get(id) || null;
 
-let _listening = false;
-function start() {
-  if (_listening) return;
-  _listening = true;
-  live.feed.on('screen-closed', screen => { if (S.holders.has(screen)) hold(screen, false); });
+/** A camera's still, with the token, which stays on the hub. */
+async function still(id) {
+  const k = keyOf();
+  const r = await fetch(new URL(`/api/camera_proxy/${encodeURIComponent(id)}`, k.origin), { headers: { Authorization: `Bearer ${k.value}` }, signal: AbortSignal.timeout(10000) });
+  if (!r.ok) throw Object.assign(new Error(`Home Assistant gave no picture for ${id} (HTTP ${r.status}).`), { status: 502 });
+  const buf = Buffer.from(await r.arrayBuffer());
+  return { type: String(r.headers.get('content-type') || ''), buf };
 }
 
-module.exports = { KEY, start, ensure, view, hold, hears, stateOf, shown, allowed, keyOf, close, sweep, _state: S };
+/** Sends HA one call_service the caller checked. */
+async function callService(msg) { const c = await ensure(); await c.cmd('call_service', msg); }
+
+module.exports = { ID, KEY, ensure, snapshot, hold, stateOf, shown, keyOf, still, callService, close, sweep, _state: S };

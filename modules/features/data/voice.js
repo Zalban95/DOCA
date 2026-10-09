@@ -62,4 +62,8 @@ module.exports = [
   { id: 'home', licence: 'home', name: 'The Home page', page: 'home',
     use: 'Home Assistant\'s areas drawn in the panel\'s own layout: lights, switches, covers, climate, locks, sensors and cameras, live.',
     routes: ['/api/home*'], words: 'home assistant smart house lights heating thermostat cover blinds lock camera wall tablet dashboard lovelace' },
+  // docs/design/home-node.md: a hub elsewhere reads a house through a paired device in it; the token stays there.
+  { id: 'home-node', licence: 'home', name: 'Home nodes', page: 'home',
+    use: 'A machine left on in the house keeps Home Assistant\'s token and lends the home over its own link to the hub (doca-client home setup).',
+    settings: ['home.source'], words: 'home node remote hosted household raspberry pi nas several houses sites doca-client home assistant token' },
 ];
