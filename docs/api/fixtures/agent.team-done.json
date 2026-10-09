@@ -1,0 +1,72 @@
+{
+  "type": "agent.team",
+  "class": "durable",
+  "payload": {
+    "teamId": "team_fixture",
+    "title": "Landing page",
+    "goal": "A page with its copy, checked in a browser",
+    "state": "done",
+    "progress": {
+      "done": 3,
+      "total": 3,
+      "percent": 100
+    },
+    "keepGoing": {
+      "on": true,
+      "rounds": 0,
+      "maxRounds": 3
+    },
+    "tasks": [
+      {
+        "id": "page",
+        "title": "Build the page",
+        "agent": "coder",
+        "state": "done",
+        "percent": 100,
+        "after": [],
+        "step": 30,
+        "budget": 80,
+        "missionId": "msn_page",
+        "why": "the page shows \"Ship it\"",
+        "doneWhen": "index.html shows the headline"
+      },
+      {
+        "id": "copy",
+        "title": "Write the copy",
+        "agent": "researcher",
+        "state": "done",
+        "percent": 100,
+        "after": [],
+        "step": 9,
+        "budget": 40,
+        "missionId": "msn_copy",
+        "why": "no check — on the agent's word"
+      },
+      {
+        "id": "test",
+        "title": "Check it in a browser",
+        "agent": "tester",
+        "state": "done",
+        "percent": 100,
+        "after": [
+          "page",
+          "copy"
+        ],
+        "step": 41,
+        "budget": 120,
+        "missionId": "msn_test",
+        "why": "the page shows no console errors",
+        "doneWhen": "no console errors"
+      }
+    ],
+    "notes": 1,
+    "doc": {
+      "name": "team-landing-page.md",
+      "kind": "doc",
+      "mime": "text/markdown",
+      "url": "/api/v1/harness/images/team-landing-page.md"
+    },
+    "startedAt": "2026-10-06T18:00:00.000Z",
+    "endedAt": "2026-10-06T18:40:00.000Z"
+  }
+}
