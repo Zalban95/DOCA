@@ -40,7 +40,7 @@ jobs:
           $code = curl.exe -sk -o NUL -w '%{http_code}' https://127.0.0.1:4343/login
           if ($code -ne '200') { throw "the installed panel answered $code" } else { "the installed panel answers" }
   # The hive image (Dockerfile, deploy/README.md): built on Linux, never pushed, made a hive with deploy/hive.sh, asked
-  # once, backed up, restored into a second hive, and both removed.
+  # once, shown an update file nobody signed, backed up, restored into a second hive, and both removed.
   image:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -53,6 +53,10 @@ jobs:
           bash deploy/hive.sh new hive-ci --port 4310
           curl -ksf https://127.0.0.1:4310/api/branding | grep -q '"profile":"hosted"' && echo "the hive answers, hosted"
           if docker exec hive-ci sh -c true 2>/dev/null; then echo "the image has a shell"; exit 1; fi
+          # An update file signed by a key the image does not trust (the tests' own) is refused by the hive itself.
+          node -e "require('./test/update-trust').file(process.argv[1], '99.0.0', { image: Buffer.from('not an image') })" "$RUNNER_TEMP/unsigned.dupd"
+          if bash deploy/hive.sh update hive-ci --file "$RUNNER_TEMP/unsigned.dupd" 2> "$RUNNER_TEMP/update.err"; then echo "an unsigned update file was taken"; exit 1; fi
+          grep -q "does not trust" "$RUNNER_TEMP/update.err" && echo "an update file nobody signed is refused by the hive"
           bash deploy/hive.sh backup hive-ci
           bash deploy/hive.sh restore hive-ci-restored "$(ls -t "$DOCA_HIVE_BACKUPS"/*.tgz | head -1)" --port 4320
           curl -ksf -o /dev/null https://127.0.0.1:4320/api/branding && echo "the restored hive answers"
