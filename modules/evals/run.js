@@ -35,7 +35,8 @@ function outcomeOf(sessionId, r, error, seen = {}) {
   const rows = memory.messages(sessionId);
   const tools = rows.filter(x => x.role === 'assistant' && Array.isArray(x.tool_calls)).flatMap(x => x.tool_calls.map(c => c.function?.name)).filter(Boolean);
   const run = r?.runId ? require('../harness/runs').get(r.runId) : null;
-  const children = memory.listSessions().sessions.filter(x => x.parentId === sessionId).length;   // work chats it handed work to
+  // Work chats it handed work to — made during this case: a fresh Orchestrator inherits the last one's (memory.resetMain).
+  const children = memory.listSessions().sessions.filter(x => x.parentId === sessionId && (!seen.since || x.createdAt >= seen.since)).length;
   return { text: r?.text || '', tools, steps: r?.steps ?? run?.steps ?? null, tokens: r?.usage?.totalTokens ?? run?.tokens ?? null,
     ...spent(r?.runId || run?.id), firstMs: seen.firstMs ?? null, children,
     ms: run?.endedAt ? new Date(run.endedAt) - new Date(run.startedAt) : null, state: error ? 'failed' : r?.ended || 'done', error: error?.message || null };
@@ -53,7 +54,7 @@ async function runCase(kase, setId, { as = null } = {}) {
   if (kase.mode && kase.mode !== 'agent') memory.updateSession(s.id, { mode: kase.mode });
   let r = null, error = null;
   // When the first word, thought or tool call came: what a person waits before anything happens.
-  const agent = require('../harness/agent'), began = Date.now(), seen = {};
+  const agent = require('../harness/agent'), began = Date.now(), seen = { since: new Date(began).toISOString() };
   const first = evt => { if (evt.sessionId === s.id && seen.firstMs == null && ['text', 'thinking', 'tool_call'].includes(evt.type)) seen.firstMs = Date.now() - began; };
   agent.events.on('event', first);
   try { r = await agent.turn({ message: kase.prompt, sessionId: s.id, client: CLIENTS[kase.client] || CLIENT }); }
