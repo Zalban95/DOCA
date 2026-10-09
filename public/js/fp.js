@@ -18,7 +18,7 @@ function fpOpen(targetInputId, mode) {
   const modal = document.getElementById('fp-modal');
   if (!modal) return;
 
-  document.getElementById('fp-title').textContent = mode === 'file' ? 'Select File' : 'Select Directory';
+  document.getElementById('fp-title').textContent = mode === 'file' ? 'Select a file' : 'Select a folder';
   document.getElementById('fp-selected').value = current || '';
   modal.style.display = 'flex';
 

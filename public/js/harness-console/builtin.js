@@ -6,10 +6,10 @@
 
 function _hcBuiltinHtml(h) {
   return `
-    <div class="hc-org-guide"><strong>Your agent, and the helpers it hands work to</strong>
-      <span>Your main chat is with the agent (the Orchestrator). A bigger job gets a work chat of its own, where it is planned
-      and done; a work chat may send a specialist — a helper for one kind of errand, such as code or the web. Open any of them
-      here; what they find comes back to your main chat.</span></div>
+    <div class="hc-org-guide">${pageHeadHtml({ title: 'Your agent, and the helpers it hands work to',
+      sub: 'Your main chat is with the agent (the Orchestrator). A bigger job gets a work chat of its own, where it is planned '
+        + 'and done; a work chat may send a specialist — a helper for one kind of errand, such as code or the web. Open any of them '
+        + 'here; what they find comes back to your main chat.' })}</div>
     <div class="hc-layout">
       <div class="hc-side">
         <div class="hc-side-head">

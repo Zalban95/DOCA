@@ -59,3 +59,6 @@
 .log-more > summary { list-style: none; border-style: dashed; }
 .log-more > summary::-webkit-details-marker { display: none; }
 .log-more[open] > .log-src-row { margin-top: 4px; }
+
+/* Autoscroll: the shared switch, with its word beside it */
+.log-autoscroll { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text); cursor: pointer; white-space: nowrap; }

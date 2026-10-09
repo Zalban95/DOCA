@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="css/logs.css">
 <link rel="stylesheet" href="css/attachments.css">
 <link rel="stylesheet" href="css/harness.css"><link rel="stylesheet" href="css/chat-kit.css">
-<link rel="stylesheet" href="css/computers.css"><link rel="stylesheet" href="css/face.css"><link rel="stylesheet" href="css/mic-keep.css"><link rel="stylesheet" href="css/workstream.css"><link rel="stylesheet" href="css/vnc.css"><link rel="stylesheet" href="css/chronicle.css"><link rel="stylesheet" href="css/ambient.css"><link rel="stylesheet" href="css/home.css"><link rel="stylesheet" href="css/guided.css"><link rel="stylesheet" href="css/panel-layout.css"><link rel="stylesheet" href="css/system.css"><link rel="stylesheet" href="css/ground-light.css"><link rel="stylesheet" href="css/skin-points.css"><link rel="stylesheet" href="css/think.css"><link rel="stylesheet" href="css/approval-explain.css">
+<link rel="stylesheet" href="css/computers.css"><link rel="stylesheet" href="css/face.css"><link rel="stylesheet" href="css/mic-keep.css"><link rel="stylesheet" href="css/workstream.css"><link rel="stylesheet" href="css/vnc.css"><link rel="stylesheet" href="css/chronicle.css"><link rel="stylesheet" href="css/ambient.css"><link rel="stylesheet" href="css/home.css"><link rel="stylesheet" href="css/guided.css"><link rel="stylesheet" href="css/panel-layout.css"><link rel="stylesheet" href="css/system.css"><link rel="stylesheet" href="css/ground-light.css"><link rel="stylesheet" href="css/skin-points.css"><link rel="stylesheet" href="css/think.css"><link rel="stylesheet" href="css/usage-meter.css"><link rel="stylesheet" href="css/approval-explain.css">
 <link rel="stylesheet" href="css/responsive.css">
 <!-- xterm.js -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
@@ -161,7 +161,7 @@
       <div class="toolbar">
         <div class="toolbar-left">
           <button class="btn btn-sm" onclick="clearLogs()">Clear</button>
-          <button class="btn btn-sm" id="scroll-btn" onclick="toggleScroll()">Autoscroll ON</button>
+          <label class="log-autoscroll" title="Keep the newest line in view"><input type="checkbox" class="switch" id="scroll-btn" checked onchange="toggleScroll(this.checked)"> Autoscroll</label>
           <div class="log-src-row" id="log-sources"></div>
         </div>
         <div class="status-line" id="log-status"></div>
@@ -502,7 +502,7 @@
         <div class="card-title" style="display:flex;align-items:center;gap:10px">
           llama.cpp Servers
           <span id="llama-server-badge" class="badge" style="display:none;font-size:9px"></span>
-          <button class="btn btn-xs btn-blue" onclick="llamaAddInstance()">+ Add Instance</button>
+          <button class="btn btn-xs btn-blue" onclick="llamaAddInstance()">+ Add instance</button>
           <button class="btn btn-xs" onclick="llamaLoadList()" title="Refresh">↺</button>
         </div>
         <p style="font-size:11px;color:var(--muted);margin:0 0 8px">
@@ -874,7 +874,7 @@
         <div class="skills-header">
           <div class="skills-mode-tabs">
             <button class="skills-mode-btn active" id="skills-mode-installed" onclick="skillsSetMode('installed')">Installed</button>
-            <button class="skills-mode-btn" id="skills-mode-search" onclick="skillsSetMode('search')">Search Online</button>
+            <button class="skills-mode-btn" id="skills-mode-search" onclick="skillsSetMode('search')">Search online</button>
           </div>
           <div id="skills-installed-bar" class="skills-bar">
             <input id="skill-input" class="input flex1" placeholder="skill name or repo (e.g. openai-whisper)" style="max-width:260px">
@@ -941,11 +941,11 @@
               <label class="snap-label-text">Paths to include<br><small style="font-weight:400;opacity:.7">used by tar fallback &amp; passed to scripts</small></label>
               <div>
                 <div id="snap-paths-list" class="snap-paths-list"></div>
-                <button class="btn btn-xs" style="margin-top:6px" onclick="snapAddPath()">+ Add Path</button>
+                <button class="btn btn-xs" style="margin-top:6px" onclick="snapAddPath()">+ Add path</button>
               </div>
             </div>
             <div style="margin-top:10px">
-              <button class="btn btn-sm btn-blue" onclick="snapSaveSettings()">Save Settings</button>
+              <button class="btn btn-sm btn-blue" onclick="snapSaveSettings()">Save settings</button>
               <span id="snap-settings-status" class="status-line" style="margin-left:10px"></span>
             </div>
           </div>
@@ -954,7 +954,7 @@
           <div class="card-title">Create Snapshot</div>
           <div class="row">
             <input id="snap-label" class="input flex1" placeholder="label (optional, e.g. before-groq-test)" style="max-width:300px">
-            <button class="btn btn-amber" onclick="createSnapshot()">📷 Snapshot Now</button>
+            <button class="btn btn-amber" onclick="createSnapshot()">📷 Snapshot now</button>
           </div>
         </div>
         <div id="snap-out" class="terminal" style="display:none"></div>
@@ -1102,7 +1102,7 @@
     <!-- ─── TERMINAL ────────────────────────────────────── -->
     <div id="tab-terminal" class="tab-page">
       <div class="term-toolbar">
-        <button class="btn btn-sm btn-green" onclick="termAddSession()">+ New Session</button>
+        <button class="btn btn-sm btn-green" onclick="termAddSession()">+ New session</button>
         <span style="font-size:10px;color:var(--muted);margin-left:8px" id="term-session-count"></span>
       </div>
       <div id="term-sessions" class="term-sessions-list"></div>
@@ -1426,7 +1426,7 @@
     <pre id="docker-run-out" class="terminal" style="display:none;max-height:120px;margin:0"></pre>
     <div class="app-confirm-actions">
       <button class="btn btn-sm" id="docker-run-cancel" onclick="dockerRunClose()">Cancel</button>
-      <button class="btn btn-sm btn-blue" onclick="dockerRunSaveOnly()">💾 Save Only</button>
+      <button class="btn btn-sm btn-blue" onclick="dockerRunSaveOnly()">💾 Save only</button>
       <button class="btn btn-sm btn-teal" onclick="dockerRunSaveAndRun()">💾 Save & Run</button>
       <button class="btn btn-sm btn-green" id="docker-run-ok" onclick="dockerRunSubmit()">▶ Run</button>
     </div>
@@ -1471,7 +1471,7 @@
 <script src="js/projects/chat.js"></script><script src="js/projects/chat-tabs.js"></script><script src="js/harness-console/tabs.js"></script>
 <script src="js/projects/checkpoints.js"></script>
 <script src="js/projects/lsp.js"></script>
-<script src="js/agent-ui/context-meter.js"></script>
+<script src="js/agent-ui/context-meter.js"></script><script src="js/agent-ui/usage-budget.js"></script>
 <script src="js/agent-ui/approval.js"></script><script src="js/agent-ui/mission-ask.js"></script>
 <script src="js/agent-ui/event-sink.js"></script><script src="js/agent-ui/form-help.js"></script><script src="js/agent-ui/queued-send.js"></script><script src="js/agent-ui/side-fold.js"></script><script src="js/agent-ui/conv-bar.js"></script><script src="js/agent-ui/conv-extras.js"></script><script src="js/agent-ui/composer-assist.js"></script><script src="js/agent-ui/trace-view.js"></script>
 <script src="js/agent-ui/question-card.js"></script>
