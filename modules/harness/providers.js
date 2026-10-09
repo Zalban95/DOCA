@@ -280,36 +280,19 @@ async function models(id) {
 }
 
 /**
- * Tools that change nothing a person keeps — they read, search, report, or coordinate the hive's own work (a work
- * chat, a plan) — so a turn holding only these cannot break the rules about making a change (see charterFor).
- * An allowlist on purpose: a tool not named here counts as one that changes something, so a new tool is covered.
- */
-const CHANGES_NOTHING = new Set(['read_file', 'list_dir', 'search_files', 'memory_search', 'memory_list', 'recall_conversations',
-  'research_docs', 'http_fetch', 'web_search', 'system_status', 'settings_read', 'doca_clients', 'features', 'chronicle',
-  'machine_fit', 'today', 'agent_results', 'mission_plan', 'scout_report', 'work_chats', 'work_plan', 'show_media']);
-
-/**
- * The charter as one reader gets it (TODO B8; 2026-10-09). The text is never reworded: a rule is either sent as it
- * stands or left out of a turn that cannot break it — rule numbers stay, so a gap shows where one was left out.
- *   - "Working on a repository" (16–23) only for a turn that holds the code tools or shell — a watch's spoken turn or
- *     a narrow specialist pays ~450 tokens a step for rules it can never use.
- *   - Order of work 2–4 (one change at a time, follow what is there in the file you edit, leave a way back) only for
- *     a turn holding a tool that changes something (anything outside CHANGES_NOTHING): a reader cannot break them.
- *     Rule 1 (look before you touch) and rule 8 (stay in the allowed roots — reading counts) reach every turn.
+ * The charter as one reader gets it (TODO B8): the rules under "Working on a repository" only for a turn that holds the
+ * code tools or shell — a watch's spoken turn or a narrow specialist pays ~450 tokens a step for rules it can never use.
  * Everything else, Safety first, reaches every turn.
  */
 function charterFor(heldNames = null) {
   if (!heldNames) return SAFETY_CHARTER;
   const held = new Set(heldNames);
-  let text = SAFETY_CHARTER;
   // shell is among them: it can commit and push as well as git can, and "never push without asking" must reach it.
-  if (!['repo_rules', 'git', 'write_file', 'replace_in_files', 'shell'].some(n => held.has(n)))
-    text = text.replace(/\n## Working on a repository\n[\s\S]*?(?=\n## )/, '\n');
-  if (![...held].some(n => !CHANGES_NOTHING.has(n))) text = text.replace(/^[234]\. .*\n/gm, '');
-  return text;
+  if (['repo_rules', 'git', 'write_file', 'replace_in_files', 'shell'].some(n => held.has(n))) return SAFETY_CHARTER;
+  return SAFETY_CHARTER.replace(/\n## Working on a repository\n[\s\S]*?(?=\n## )/, '\n');
 }
 
-module.exports = { charterFor, CHANGES_NOTHING,
+module.exports = { charterFor,
   PRESETS, DEFAULT_SYSTEM_PROMPT, SAFETY_CHARTER,
   defaultParams, endpoint, isLocalUrl, list, models, ollamaBase,
 };

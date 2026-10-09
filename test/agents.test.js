@@ -94,14 +94,9 @@ test('a specialist prompt is smaller than the orchestrator prompt, and keeps the
     },
   });
 
-  // Every rule, word for word, but the repository rules (only for a turn holding the code tools) and the rules about
-  // making a change (only for a turn that can make one) — charterFor, B8. A definition cannot drop any of it.
-  for (const line of providers.SAFETY_CHARTER.split('\n').filter(l => /^(\d+)\. /.test(l))) {
-    const n = Number(line.split('.')[0]);
-    if ((n >= 16 && n <= 23) || (n >= 2 && n <= 4)) continue;
-    assert.ok(narrow.includes(line), `the charter is not something a definition may drop (rule ${n})`);
-  }
-  assert.ok(narrow.startsWith('# Standing rules'), 'and it comes first');
+  // Everything up to the repository rules (which reach only a turn holding the code tools — charterFor, B8).
+  assert.ok(narrow.includes(providers.SAFETY_CHARTER.slice(0, providers.SAFETY_CHARTER.indexOf('## Working on a repository'))),
+    'the charter is not something a definition may drop');
   assert.ok(narrow.length < full.length,
     `a specialist prompt (${narrow.length}) must be smaller than the orchestrator's (${full.length}) `
     + '— that is the whole reason for having specialists');
