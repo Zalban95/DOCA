@@ -15,7 +15,7 @@ if revoked. Then accept its offer once in the hub (MCP tab). From then on the hu
 (`files_list/read/write/mkdir/move/copy/delete`, inside your home folder only), **shell** (`shell_run`), **screen**
 (`screen_capture`), **processes** (`processes_list`, `processes_stop`), **apps** (`apps_open`: a web address, or a file
 in your home folder) and **device** (`device_info`, `device_notify`, `device_clipboard_read/_write`) — only what you
-granted, and the hub's Files tab browses it. Keep `families.js` and `sealed.js` beside `doca-client.js`.
+granted, and the hub's Files tab browses it. Keep the other files of this folder beside `doca-client.js`.
 
 Each family uses what the OS already has. macOS and Windows need nothing more; on Linux the screen wants `grim`
 (Wayland) or ImageMagick's `import` / `scrot` / `gnome-screenshot` (X11), the clipboard `wl-clipboard` or `xclip`,
