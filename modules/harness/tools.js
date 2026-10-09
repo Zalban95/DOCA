@@ -47,6 +47,7 @@ const TOOLS = [
   ...require('./toolbox/features'),
   ...require('./toolbox/screens'),
   ...require('./toolbox/chronicle'),
+  ...require('./toolbox/library'),
 ].filter(t => !require('../hosted').absentTool(t.name));   // a hosted hive has no command line on its machine (hosted.js)
 
 
@@ -126,7 +127,7 @@ async function call(name, args, disabled = [], ctx = {}) {
 
 // Tools that only read (DOCA's own store, files, the web): not audited. Every
 // other call a signed-in person's turn makes is, as theirs (docs/design/auth.md §6).
-const READS = new Set(['read_file', 'list_dir', 'search_files', 'http_fetch', 'research_docs', 'skill', 'repo_rules']);
+const READS = new Set(['read_file', 'list_dir', 'search_files', 'http_fetch', 'research_docs', 'skill', 'repo_rules', 'library_search']);
 
 /**
  * Whether this call only reads. http_fetch is a read only as GET/HEAD: with a

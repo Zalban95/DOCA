@@ -108,7 +108,7 @@
         { "url": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B", "checked": "2026-10-08" },
         { "url": "https://ollama.com/library/qwen3-embedding/tags", "checked": "2026-10-08" }
       ] },
-    { "role": "embeddings", "id": "embeddinggemma-2", "label": "EmbeddingGemma 2 (740M, text and images)", "quant": "Q8_0", "released": "2026-09-14", "rank": 55, "cpuOk": true,
+    { "role": "embeddings", "id": "embeddinggemma-2", "label": "EmbeddingGemma 2 (740M, text, images and sound)", "quant": "Q8_0", "released": "2026-09-14", "rank": 55, "cpuOk": true,
       "needs": { "vramGB": 1.6, "ramGB": 2, "diskGB": 1.3 }, "context": { "native": 262144, "at": 8192 },
       "install": { "kind": "ollama-model", "id": "embeddinggemma-2" }, "runtime": "ollama", "licence": "apache-2.0",
       "sources": [

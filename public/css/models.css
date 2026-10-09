@@ -153,3 +153,27 @@
 /* Field → Models → Decision models (js/decision-models.js) */
 #dm-card { margin-top: 14px; }
 .dm-provider { border-top: 1px solid var(--border); padding: 8px 0 4px; font-size: 12px; }
+
+/* The Library (js/library.js, library-results.js, library-files.js): the section, its results, Files' search box */
+#lib-card { margin-top: 14px; }
+.lib-folder code { font-size: 11px; word-break: break-all; }
+.lib-results { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.lib-result { display: grid; grid-template-columns: 120px 1fr auto; gap: 10px; align-items: start; padding: 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface, transparent); }
+.lib-thumb { width: 120px; height: 72px; object-fit: cover; border-radius: 6px; background: var(--border); display: block; }
+.lib-thumb-none { display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.lib-wave rect { fill: var(--muted); } .lib-wave rect.lib-wave-mark { fill: var(--accent, var(--blue)); opacity: .35; }
+.lib-body { min-width: 0; font-size: 12px; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.lib-caption { font-size: 12px; font-style: italic; }
+.lib-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.lib-tag { font-size: 10px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer; }
+.lib-tag:hover { border-color: var(--accent, var(--blue)); }
+.lib-acts { display: flex; flex-direction: column; gap: 4px; }
+.lib-files-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.lib-files-bar #lib-files-q { flex: 1; min-width: 180px; }
+.lib-files-results { padding: 6px 8px; overflow: auto; max-height: 70vh; }
+.lib-searching .fm-header-row, .lib-searching #fm-list-inner, .lib-searching .fm-breadcrumb, .lib-searching .fm-toolbar { display: none; }
+.lib-searching .lib-files-results { max-height: none; flex: 1; }
+@media (max-width: 600px) {
+  .lib-result { grid-template-columns: 72px 1fr; } .lib-thumb { width: 72px; height: 48px; }
+  .lib-acts { grid-column: 1 / -1; flex-direction: row; }
+}

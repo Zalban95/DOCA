@@ -90,4 +90,31 @@ async function ask1(vs, buffer, mimetype, filename, { prompt, language } = {}) {
   return screened(((await resp.json()).text || '').trim());
 }
 
-module.exports = { transcribeAudio, transcribeHeard };
+/**
+ * Words with their times, for a recording kept rather than spoken now (the Library, library/extract.js): the
+ * OpenAI-shaped `verbose_json`, whose segments faster-whisper and OpenAI both return with start and end seconds. Long
+ * recordings take long, so the wait is minutes, not a call's 30 s. Silence phrases are screened per segment.
+ */
+async function transcribeSegments(buffer, mimetype, filename, { timeoutMs = 900000, signal } = {}) {
+  const vs = require('./chat').loadVoiceServices();
+  if (!vs.sttUrl) throw Object.assign(new Error('No speech-to-text service is set (Settings → Voice).'), { status: 409 });
+  const life = require('./service-life');
+  await life.ensure(vs.sttUrl, { role: 'stt' });
+  return life.use(vs.sttUrl, async () => {
+    const form = new FormData();
+    form.append('file', new Blob([buffer], { type: mimetype || 'audio/wav' }), filename || 'audio.wav');
+    form.append('model', vs.sttModel);
+    form.append('response_format', 'verbose_json');
+    form.append('timestamp_granularities[]', 'segment');
+    const r = await fetch(`${vs.sttUrl}/v1/audio/transcriptions`, { method: 'POST', body: form, signal: signal || AbortSignal.timeout(timeoutMs) });
+    if (!r.ok) throw Object.assign(new Error(`STT error ${r.status} from ${vs.sttUrl} (model ${vs.sttModel})`), { status: r.status });
+    const j = await r.json();
+    const bad = t => require('./stt-filter').isHallucination(t);
+    const segments = (Array.isArray(j.segments) ? j.segments : [])
+      .map(x => ({ start: Number(x.start) || 0, end: Number(x.end) || 0, text: String(x.text || '').trim() })).filter(x => x.text && !bad(x.text));
+    if (!segments.length && j.text && !bad(j.text)) segments.push({ start: 0, end: Number(j.duration) || 0, text: String(j.text).trim() });
+    return { text: segments.map(x => x.text).join(' '), language: j.language || null, duration: Number(j.duration) || null, segments };
+  });
+}
+
+module.exports = { transcribeAudio, transcribeHeard, transcribeSegments };

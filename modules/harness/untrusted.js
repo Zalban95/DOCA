@@ -26,6 +26,7 @@ function sourceOf(name, args = {}, isMcp = false) {
   if (name === 'service' && ['call', 'describe'].includes(args.action || (args.operation ? 'call' : args.service ? 'describe' : 'list')))
     return `the API service ${String(args.service || '').slice(0, 40)}${args.operation ? ` (${String(args.operation).slice(0, 60)})` : ''}: its answer, or its own description of its actions`;
   if (name === 'web_search') return `web search results for "${String(args.query || '').slice(0, 120)}"`;
+  if (name === 'library_search') return `the Library: the person's own files found by meaning (their words and names)`;
   if (name === 'read_file') return `the file ${String(args.path || '').slice(0, 200)}`;
   if (name === 'model_scout' && (args.action || 'signals') === 'signals') return 'the model scout\'s look: model names, release and news titles others wrote';
   if (name === 'vnc_look' && String(args.question || '').trim()) return `a reading of VNC target ${String(args.target || '').slice(0, 40)}'s screen`;
