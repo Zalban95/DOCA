@@ -15,12 +15,19 @@ after(h.stop);
 
 const as = who => (m, p, body) => h.api(null, m, p, body, { Cookie: who.cookie, 'X-Doca-Password': '' });
 
-/** Pair through the panel as `who`, then complete it as the device would. */
-async function pairAs(who, body, caps = h.PHONE_CAPS) {
+/**
+ * Pair through the panel as `who`, then complete it as the device would. A member's own device waits for their
+ * one tap (devices-approval/, 2026-10-09), given here unless `allow` is false.
+ */
+async function pairAs(who, body, caps = h.PHONE_CAPS, { allow = true } = {}) {
   const start = await as(who)('POST', '/api/devices/pair', body);
   assert.equal(start.status, 201, JSON.stringify(start.body));
   const done = await h.api(null, 'POST', '/api/v1/devices/pair/complete', { code: start.body.code, caps }, { Cookie: '' });
   assert.equal(done.status, 201, JSON.stringify(done.body));
+  if (allow && done.body.approval?.state === 'pending') {
+    const ok = await as(who)('POST', `/api/devices/${done.body.device.id}/approve`, {});
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  }
   return { start: start.body, ...done.body };
 }
 

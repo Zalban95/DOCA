@@ -13,6 +13,9 @@
  */
 const howto = label => `This is a DOCA hive. To talk to it here, open DOCA → Settings → Channels → "Link a ${label} chat" and send the code it gives you.`;
 
+/** Who was asked to approve a waiting chat, in a sentence. */
+const waiting = id => require('../devices-approval').selfView(require('../api-v1/devices').get(id)).message || '';
+
 async function handle(ch, { addr, text = '', from = {}, keep = async () => null }) {
   const say = t => ch.say(addr, t);
   text = String(text).trim();
@@ -22,11 +25,14 @@ async function handle(ch, { addr, text = '', from = {}, keep = async () => null 
     const hit = ch.links.redeem(code);
     if (!hit) return void await say('That code is unknown or has expired. Make a new one in DOCA → Settings → Channels.');
     c = ch.bind.link(addr, { who: from.who || String(addr), username: from.username || null }, hit.userId);
+    const waits = require('../api-v1/devices').isPending(require('../api-v1/devices').get(c.deviceId));
+    if (waits) return void await say(`Linked to ${c.personName}, and waiting for approval: ${waiting(c.deviceId)} You will be told here when it is allowed.`);
     return void await say(`Linked to ${c.personName}. Write here to talk to DOCA — voice notes, photos and files too. /new starts a fresh conversation, /stop stops the one running.`);
   }
   if (!c) return void await say(howto(ch.label));
   const device = require('../api-v1/devices').get(c.deviceId);
   if (!device || device.revokedAt) return void await say(`This chat was unlinked in DOCA. Link it again from Settings → Channels.`);
+  if (require('../api-v1/devices').isPending(device)) return void await say(`This chat waits for approval: ${waiting(device.id)} Nothing is sent to ${require('../branding').name('product')} until then.`);
   const harness = require('../api-v1/harness');
   if (/^[/!]start\b/.test(text)) return void await say(`Linked to ${c.personName}. Write here to talk to DOCA.`);
   if (/^[/!]new\b/.test(text)) {

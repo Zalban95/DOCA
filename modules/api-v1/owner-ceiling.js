@@ -9,6 +9,8 @@
  *   - without `host`, no hub commands: the request's scopes lose every `command:` scope (the stack, containers,
  *     services, the panel's restart are the machine — auth/reach.js keeps `hub_command` an admin's the same way),
  *     so /commands lists none, running one or confirming a prompt that runs one is refused, capabilities say so;
+ *     nor `agent` (acting on every device) or `packs` (another hub's), and without `chat` no `harness:` (2026-10-09,
+ *     with a new device's approval: devices-approval/ applies the approver's level the same way, `ceilingFor`);
  *   - without `devices`, only the person's own devices: /devices lists theirs, and any route naming another
  *     person's device (or one of its jobs) answers 404, as a conversation does.
  * The stored scopes are not changed — an admin's later level change lifts the ceiling with no re-pairing. A device
@@ -31,14 +33,33 @@ const managesAll = device => holds(device, 'devices');
 /** Whether this device may act on `target`: itself, its person's own, or any when it manages all. */
 const reaches = (device, target) => !target || target.id === device.id || managesAll(device) || (!!device.userId && target.userId === device.userId);
 
-/** The device as this request sees it: its scopes without the hub's commands when its person lacks host. */
+/**
+ * The device as this request sees it: held to its person's level (`ceilingFor`) — without host no hub commands, no
+ * acting on every device, no packs; without chat no harness. A device with no person keeps what it holds.
+ */
 function narrow(device) {
+  const role = ownerRole(device);
+  if (role === null) return device;
   const held = device.scopes || [];
-  if (!held.some(s => s === '*' || String(s).startsWith('command:')) || holds(device, 'host')) return device;
-  const scopes = held.filter(s => s !== '*' && !String(s).startsWith('command:'));
-  // '*' (the admin preset) held by a person without host: every family but the commands.
-  if (held.includes('*')) scopes.push(...Object.keys(require('./scopes').FAMILIES).filter(f => f !== 'command').map(f => require('./scopes').normalize(f)));
-  return { ...device, scopes };
+  const scopes = ceilingFor(held, role);
+  return scopes.length === held.length && scopes.every(s => held.includes(s)) ? device : { ...device, scopes };
+}
+
+/**
+ * What an approved device keeps of `scopes` under a person's level `role` (devices-approval/, 2026-10-09): applied
+ * once with the approver's and once with the device's person's, so a device holds at most what both hold. Without
+ * host: no hub commands, no acting on every device (`agent`), no packs; without chat: no talking to the harness.
+ * '*' is spread into its families first. A role of null (no person: the host's own CLI) keeps everything.
+ */
+function ceilingFor(scopes, role) {
+  if (!role) return [...(scopes || [])];
+  const sc = require('./scopes');
+  const can = right => require('../auth/rights').can(role, right);
+  let out = (scopes || []).includes('*') && !(can('host') && can('chat')) ? Object.keys(sc.FAMILIES).map(f => sc.normalize(f)) : [...(scopes || [])];
+  const fam = s => String(s).split(':')[0];
+  if (!can('host')) out = out.filter(s => s !== '*' && !['command', 'agent', 'packs'].includes(fam(s)));
+  if (!can('chat')) out = out.filter(s => s !== '*' && fam(s) !== 'harness');
+  return [...new Set(out)];
 }
 
 /** Every `:id` on the router: another person's device, or a job of one, is not there for a device that manages its own. */
@@ -62,4 +83,4 @@ function mount(router) {
   });
 }
 
-module.exports = { managesAll, reaches, narrow, mount, ownerRole };
+module.exports = { managesAll, reaches, narrow, mount, ownerRole, ceilingFor };

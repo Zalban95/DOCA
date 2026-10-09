@@ -77,7 +77,8 @@ const shows = require('./reach-shows');
  */
 function resolveTargets(to) {
   const { devices, scopes } = api();
-  const live = devices.list().filter(d => !d.revokedAt && scopes.hasScope(d.scopes, 'interact'));
+  // A device waiting for approval hears nothing but its answer (api-v1/pending.js): never a target.
+  const live = devices.list().filter(d => !d.revokedAt && !devices.isPending(d) && scopes.hasScope(d.scopes, 'interact'));
   if (!live.length) {
     const any = devices.list().filter(d => !d.revokedAt && d.kind !== 'browser').length;
     // `unshown`: nothing here can show it, so the panel is where it goes (ask: the questions dock; a notice: notices/).
@@ -195,7 +196,7 @@ function figureBlock(svg, alt) {
   return { type: 'figure', svg: s, alt: String(alt || 'drawing').slice(0, 200) };
 }
 
-async function ask({ to, question, choices, note, blocks, timeoutSec, signal, svg, layout, personId } = {}) {
+async function ask({ to, question, choices, note, blocks, timeoutSec, signal, svg, layout, personId, panel = true } = {}) {
   const { prompts } = api();
   const text = String(question || '').trim();
   if (!text) throw new Error('A question needs to be asked in words.');
@@ -227,7 +228,8 @@ async function ask({ to, question, choices, note, blocks, timeoutSec, signal, sv
   }, AGENT);
 
   const deadline = Date.now() + waitSec * 1000;
-  _open.set(prompt.id, { id: prompt.id, question: text, note: note ? String(note).slice(0, 800) : '',
+  // `panel: false`: a question with a card of its own at the panel (a new device's approval) is not the dock's too.
+  if (panel) _open.set(prompt.id, { id: prompt.id, question: text, note: note ? String(note).slice(0, 800) : '',
     choices: built.filter(c => c.type === 'option').map(c => ({ id: c.id, label: c.label })), at: new Date().toISOString() });
   try {
     for (;;) {

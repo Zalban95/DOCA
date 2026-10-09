@@ -102,6 +102,8 @@ const PERSON = [
   { id: 'device-pair', does: 'pair a device or issue its token', panel: ['POST /api/devices/pair', 'POST /api/devices'], v1: ['POST /devices/pair/start', 'POST /devices'] },
   { id: 'device-revoke', does: 'revoke, rename or rotate a device, or change its scopes', panel: ['DELETE /api/devices/:id', 'PATCH /api/devices/:id', 'POST /api/devices/:id/rotate', 'POST /api/devices/:id/scopes'],
     v1: ['DELETE /devices/{id}', 'POST /devices/{id}/rotate', 'PATCH /devices/{id}'] },
+  { id: 'device-approve', does: 'allow or refuse a new device that waits for approval', panel: ['POST /api/devices/:id/approve', 'POST /api/devices/:id/refuse'],
+    v1: ['POST /devices/{id}/approve', 'POST /devices/{id}/refuse'] },
   { id: 'device-control', does: 'turn a device\'s family off or on, ask it again, or refresh it', panel: ['POST /api/devices/:id/control'],
     gap: 11, why: 'a person away from the desk revoking what a lost or misbehaving device lends' },
   { id: 'device-console', does: 'set what a device\'s console buttons do', panel: ['PUT /api/devices/:id/console', 'PUT /api/devices/:id/console/buttons'],

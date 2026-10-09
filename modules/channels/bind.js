@@ -46,13 +46,21 @@ function binder({ label, links, caps, onEvent, onError = () => {} }) {
     const key = String(addr);
     const old = links.chat(key);
     if (old) { detach(key); try { devices.revoke(old.deviceId); } catch { /* gone */ } }
-    const { device } = devices.create({ name: `${label} · ${who}`.slice(0, 60), kind: 'channel', scopes: SCOPES, caps });
+    // A linked chat is a new device: allowed as it links when its person approves any device, else it waits for
+    // one tap from them or an admin (devices-approval/), and says so in the chat (converse.js).
+    const approval = require('../devices-approval');
+    const decided = approval.atStart({ kind: 'person', person: { id: userId, role: approval.roleOf(userId) } }, { userId, scopes: SCOPES });
+    const { scopes: capped, ...rest } = decided || {};
+    const at = new Date().toISOString();
+    const { device } = devices.create({ name: `${label} · ${who}`.slice(0, 60), kind: 'channel', scopes: capped || SCOPES, caps,
+      approval: decided ? { ...rest, at } : { state: 'pending', askedAt: at, from: { network: `a ${label} chat`, address: null } } });
     devices.update(device.id, { userId });
     const session = require('../api-v1/harness').createSession(label, { activate: false, device: devices.get(device.id) });
     const person = require('../auth/store').userById(userId);
     const c = links.saveChat(key, { deviceId: device.id, userId, sessionId: session.id, name: who, username,
       personName: person?.name || person?.email || 'you', linkedAt: new Date().toISOString() });
     attach(key);
+    if (!decided) approval.ask(device.id);
     return c;
   }
 
