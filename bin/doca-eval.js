@@ -97,16 +97,21 @@ function summary(r) {
     d.tokens += c.tokens || 0; d.steps += c.steps || 0; d.ms += c.ms || 0;
   }
   const sum = k => cases.reduce((n, c) => n + (c[k] || 0), 0);
-  return { passed: r?.passed, total: r?.total, tokens: r?.tokens, steps: sum('steps'), ms: sum('ms'), byDifficulty };
+  return { passed: r?.passed, total: r?.total, tokens: r?.tokens, steps: sum('steps'), ms: sum('ms'),
+    tokensIn: sum('tokensIn'), tokensCached: sum('tokensCached'), tokensOut: sum('tokensOut'), children: sum('children'), byDifficulty };
 }
+
+/** A case's measured numbers, as the JSON line carries them (evals/run.js spent()). */
+const numbers = c => ({ tokensIn: c.tokensIn ?? null, tokensCached: c.tokensCached ?? null, tokensOut: c.tokensOut ?? null,
+  stepMax: c.stepMax ?? null, toolsSent: c.toolsSent ?? null, firstMs: c.firstMs ?? null, ms: c.ms ?? null, children: c.children ?? 0, tools: c.tools });
 
 let last = null;   // the result of the latest run, for the comparison
 const once = async () => {
   const p = require('../modules/harness/agent').params();
   if (!p.model) { say({ error: 'no model' }, 'No model is configured for the DOCA harness on this machine, so nothing can be evaluated.'); return 1; }
   const result = await require('../modules/evals/run').runSet(valid, { previous,
-    onCase: (c, i, n) => say({ case: c.id, i, n, pass: c.pass, steps: c.steps, tokens: c.tokens, why: c.checks.filter(x => !x.pass).map(x => x.why) },
-      `${c.pass ? 'PASS' : 'FAIL'} ${i}/${n} ${c.id} — ${c.steps ?? '?'} steps, ${c.tokens ?? '?'} tokens${c.pass ? '' : `\n     ${c.checks.filter(x => !x.pass).map(x => x.why).join('\n     ')}`}`) });
+    onCase: (c, i, n) => say({ case: c.id, i, n, pass: c.pass, steps: c.steps, tokens: c.tokens, ...numbers(c), why: c.checks.filter(x => !x.pass).map(x => x.why) },
+      `${c.pass ? 'PASS' : 'FAIL'} ${i}/${n} ${c.id} — ${c.steps ?? '?'} steps, ${c.tokens ?? '?'} tokens${c.tokensIn != null ? ` (in ${c.tokensIn}, cached ${c.tokensCached ?? '?'}, out ${c.tokensOut ?? '?'}; largest step ${c.stepMax})` : ''}, first output ${c.firstMs ?? '?'} ms, ${((c.ms || 0) / 1000).toFixed(1)} s${c.children ? `, ${c.children} work chat${c.children > 1 ? 's' : ''}` : ''}${c.pass ? '' : `\n     ${c.checks.filter(x => !x.pass).map(x => x.why).join('\n     ')}`}`) });
   last = result;
   const file = require('../modules/evals/store').saveResult(result, require('path').join(realDataDir, 'evals'));
   say({ result: { ...result, file } }, `\n${result.passed}/${result.total} passed on ${result.model}, ${result.tokens} tokens`
