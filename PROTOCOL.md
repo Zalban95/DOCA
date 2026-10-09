@@ -163,14 +163,14 @@ valid for 60 s (`previousValidUntil`) so a client can swap atomically.
 
 **A device is held to its person.** A device recorded as a person's (`userId`, set at pairing) never does more
 than that person may: when their level lacks the panel's `host` right, its requests carry no `command:` scope (the
-hub's commands — `GET /commands` lists none, running one or confirming a prompt that runs one is a 403; since hub 2.343
+hub's commands — `GET /commands` lists none, running one or confirming a prompt that runs one is a 403; since hub 2.344
 nor `agent` or `packs`, and a level without `chat` no `harness:`); when it lacks
 `devices`, `devices:admin` reaches only that person's own devices — `GET /devices` lists theirs, and any route naming
 another person's device (or one of its jobs) answers 404. The stored scopes are unchanged, so a level change lifts
 the ceiling with no re-pairing. A device with no person (a token minted on the host) keeps what it holds. A member
 pairs their own phone, watch or extension from the panel (Field → API keys → Your devices) since 2026-10-08.
 
-**A new device waits for approval** (hub 2.343, §5.1). The device that completes a pairing may be `pending`: the
+**A new device waits for approval** (hub 2.344, §5.1). The device that completes a pairing may be `pending`: the
 `pair/complete` answer carries `approval` (`state`, and while pending `askedOf[]` and `message`, e.g. "Waiting for
 approval by Mia (its person), Al") — show that message, and keep the token. See §5.1 for what it may do meanwhile.
 
@@ -247,12 +247,12 @@ Every error has the same shape and a stable `code`:
 | 415 | `unsupported_media` | mime not in `capabilities.media.accept` |
 | 500 | `command_failed`, `internal` | the underlying action failed; `message` carries stderr/summary |
 
-### 5.1 A device waiting for approval (`pending_approval`, hub 2.343)
+### 5.1 A device waiting for approval (`pending_approval`, hub 2.344)
 
-Since hub 2.343 a new device starts **pending** unless whoever started its pairing may approve it: an admin pairing from
+Since hub 2.344 a new device starts **pending** unless whoever started its pairing may approve it: an admin pairing from
 the panel, or a person pairing from one of their own approved devices (a phone pairing its watch: the code travels
 device to device). Who may approve is a level's `approveDevices` — `anyone` (the built-in Main admin and Admin), `own`
-(Member: their own devices, one tap), `none` (Viewer). Devices paired before 2.343 are approved as they are.
+(Member: their own devices, one tap), `none` (Viewer). Devices paired before 2.344 are approved as they are.
 
 While pending, a device may do exactly this — everything else answers **403 `pending_approval`**:
 

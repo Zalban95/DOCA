@@ -243,7 +243,7 @@ test('devices paired before approval existed are approved by the migration, and 
   const old = devices().create({ name: 'old phone', scopes: PRESETS.phone, caps: h.PHONE_CAPS });
   delete devices().get(old.device.id).approval;
   assert.equal(devices().isPending(devices().get(old.device.id)), false, 'no approval reads as approved');
-  const m = require('../modules/migrations').MIGRATIONS.find(x => x.id === '2.343-devices-approved');
+  const m = require('../modules/migrations').MIGRATIONS.find(x => x.id === '2.344-devices-approved');
   const { ran } = require('../modules/migrations').run({}, [m]);
   assert.equal(ran[0].changed.length, 1);
   assert.equal(devices().get(old.device.id).approval.state, 'approved');

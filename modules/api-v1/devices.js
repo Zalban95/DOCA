@@ -322,7 +322,7 @@ function completePairing(codeInput, caps, nameOverride, from = null) {
 }
 
 /**
- * Devices paired before approval existed are approved as they are (migration 2.343-devices-approved): a device that
+ * Devices paired before approval existed are approved as they are (migration 2.344-devices-approved): a device that
  * worked yesterday is never asked about. Returns how many were marked.
  */
 function markApproved(at = new Date().toISOString()) {
