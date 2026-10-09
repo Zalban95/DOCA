@@ -19,7 +19,7 @@ const ML_MS = 3000;
 
 function liveMachinesTab(shown) {
   clearInterval(ML.timer); ML.timer = null;
-  if (!shown) { ML.focus = null; return; }
+  if (!shown) { ML.focus = null; if (typeof PD !== 'undefined' && PD.open) processesDrawer(false); return; }
   _mlLoad();
   ML.timer = setInterval(() => { if (document.visibilityState === 'visible') _mlLoad(); }, ML_MS);
 }
@@ -87,7 +87,7 @@ async function _mlOpenServed(key) {
 function _mlDraw(page) {
   const tiles = _mlTiles(), front = tiles.filter(t => t.working), back = tiles.filter(t => !t.working);
   if (!page.querySelector('.ml-front')) {
-    const toggle = `<label class="ml-vms-front" title="Running VMs and VNC screens stay large, beside what is working"><input type="checkbox" class="switch"${ML.vmsFront ? ' checked' : ''} onchange="liveVmsFront(this.checked)"> VMs and VNC in front</label>`;
+    const toggle = `<label class="ml-vms-front" title="Running VMs and VNC screens stay large, beside what is working"><input type="checkbox" class="switch"${ML.vmsFront ? ' checked' : ''} onchange="liveVmsFront(this.checked)"> VMs and VNC in front</label>${typeof processesButtonHtml === 'function' ? processesButtonHtml() : ''}`;
     page.innerHTML = `<div class="ml-head">${pageHeadHtml({ title: 'Live', sub: 'The agents\' computers, the pages they serve for tests, the running VMs and the VNC screens — whatever is working, or being watched, comes to the front.', actions: toggle })}</div>
       <div class="ml-front"></div><div class="ml-back"></div>`;
   }

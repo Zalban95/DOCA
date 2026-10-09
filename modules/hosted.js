@@ -82,6 +82,7 @@ const ROUTES = [
   ['*', /^\/api\/services\/(start|stop|settings)$/],
   ['*', /^\/api\/models\/llamacpp(\/|$)/],
   ['*', /^\/api\/vms(\/|$)/],
+  ['*', /^\/api\/machines\/processes$/],   // the machine's processes (processes/): the Processes drawer
   ['*', /^\/api\/startup$/],
   // The code itself: updating from git and switching versions.
   ['*', /^\/api\/(update|deps)$/],

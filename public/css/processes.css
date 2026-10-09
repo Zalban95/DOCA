@@ -1,0 +1,36 @@
+/* The Processes drawer (js/processes.js): the Workstream activity panel's look — white on black in every theme, lower
+   right — holding the status column's machine rows (sidebar.css .c-item, .m-row, .m-sub, .m-detail, .m-busy) and the
+   shared fold (system.css .adv-fold). The theme's tokens are set dark inside it, so those parts draw on black as they
+   are, in every skin; nothing of theirs is restyled here. */
+.pd-drawer { position: fixed; z-index: 40; width: 560px; height: min(62vh, 560px); display: flex; flex-direction: column;
+  background: #000; color: #e6e6e6; border-top-left-radius: 10px; box-shadow: 0 -8px 40px rgba(0, 0, 0, .45);
+  --bg: #000; --surface: #0c0c0c; --dim: #0c0c0c; --raised: #111; --faint: #1a1a1a; --border: #262626; --border2: #262626;
+  --text: #e6e6e6; --bright: #f5f5f5; --muted: #8b8b8b; --bg-green: rgba(63, 185, 80, .14); --green: #3fb950; --amber: #e3b341;
+  font-size: 12px; }
+.pd-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px 8px 14px; border-bottom: 1px solid #1d1d1d; flex: none; }
+.pd-status { flex: 1; font-size: 11px; color: #8b8b8b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-body { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 14px 4px; scrollbar-width: thin; scrollbar-color: #333 transparent; }
+.pd-foot { flex: none; padding: 0 14px 6px; max-height: 45%; overflow-y: auto; }
+.pd-foot .adv-fold { margin: 0; }
+.pd-body::after, .pd-foot .adv-fold-body::after { content: ''; display: block; height: 48px; }   /* the chat button never covers the last row (system.css's spacer) */
+.pd-group { margin-bottom: 12px; }
+.pd-group .m-sub { font-size: 11px; color: #a8a8a8; }
+.pd-group .m-sub b { color: #f5f5f5; font-weight: 600; }
+.pd-group .m-life { margin-bottom: 5px; }
+.pd-drawer .m-row { cursor: default; align-items: flex-start; }
+.pd-drawer .m-row .c-state { font-family: var(--font-mono); }
+.pd-cmd { font-family: var(--font-mono); }
+.pd-system { opacity: .7; }
+.pd-kids { margin: -2px 0 6px 14px; padding-left: 8px; border-left: 1px dashed #2c2c2c; }
+.pd-kids > summary { cursor: pointer; font-size: 10.5px; color: #8b8b8b; padding: 2px 0 5px; list-style: none; }
+.pd-kids > summary::-webkit-details-marker { display: none; }
+.pd-kids > summary::before { content: '▸ '; }
+.pd-kids[open] > summary::before { content: '▾ '; }
+.pd-kids > summary:hover { color: #f5f5f5; }
+.pd-drawer a { color: var(--accent); }
+.pd-switch { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; }
+.pd-rules { margin: 2px 0 6px 18px; padding: 0; color: #8b8b8b; font-size: 11px; line-height: 1.5; }
+.pd-drawer .empty-state { padding: 26px 10px; }
+@media (max-width: 768px) {
+  .pd-drawer { width: 100%; height: 72vh; border-top-left-radius: 10px; border-top-right-radius: 10px; }
+}
