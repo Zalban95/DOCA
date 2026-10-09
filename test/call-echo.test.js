@@ -69,3 +69,30 @@ test('the same words said when nothing plays are a request, not an echo', async 
   assert.deepEqual(ev, ['heard', ['tool', 'the lights are on']]);
   p.close();
 });
+
+test('while a person is on a call in a conversation, its turns reach every device of theirs quiet', async () => {
+  const H = require('./helpers');
+  await H.start();
+  try {
+    const devices = require('../modules/api-v1/devices'), calls = require('../modules/realtime/calls'), bus = require('../modules/api-v1/bus');
+    const watch = H.mkDevice('Wrist', 'watch', H.WATCH_CAPS), phone = H.mkDevice('Pocket', 'phone', H.PHONE_CAPS), theirs = H.mkDevice('Theirs', 'phone', H.PHONE_CAPS);
+    for (const [d, u] of [[watch, 'u-al'], [phone, 'u-al'], [theirs, 'u-bo']]) devices.update(d.device?.id || d.id, { userId: u });
+    const id = d => d.device?.id || d.id;
+    const sid = 'sess-call-quiet';
+    assert.equal(calls.personOnCall(devices.get(id(phone)), sid), false, 'no call: nothing is quiet');
+    const off = calls.open(sid, { person: { id: 'u-al' }, deviceId: id(watch), notice: () => {} });
+    assert.equal(calls.personOnCall(devices.get(id(watch)), sid), true, 'the calling watch');
+    assert.equal(calls.personOnCall(devices.get(id(phone)), sid), true, 'the same person\'s phone — whose notice would be bridged to the wrist');
+    assert.equal(calls.personOnCall(devices.get(id(theirs)), sid), false, 'someone else\'s device is told as ever');
+    assert.equal(calls.personOnCall(devices.get(id(phone)), 'another-conversation'), false);
+    assert.deepEqual(calls.quietFor(devices.get(id(phone)), sid), { quiet: true });
+    // The fan-out of a device's turn (api-v1/harness.js) carries it: every device of theirs hearing that conversation.
+    const sent = [];
+    const was = bus.publishWhere;
+    bus.publishWhere = (all, filter, type, payload) => { for (const d of [watch, phone, theirs].map(x => devices.get(id(x)))) sent.push([d.name, typeof payload === 'function' ? payload(d).quiet : payload.quiet]); return []; };
+    try { require('../modules/api-v1/harness')._fanout('agent.turn', { sessionId: sid, state: 'done', text: 'Yes.' }); } finally { bus.publishWhere = was; }
+    assert.deepEqual(sent, [['Wrist', true], ['Pocket', true], ['Theirs', undefined]]);
+    off();
+    assert.equal(calls.personOnCall(devices.get(id(phone)), sid), false, 'the call ended: notices again');
+  } finally { await H.stop(); }
+});

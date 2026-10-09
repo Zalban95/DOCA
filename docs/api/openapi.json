@@ -12815,7 +12815,7 @@
           },
           "quiet": {
             "type": "boolean",
-            "description": "Present and true when the owner is reading the panel right now: update what you show, raise no notification. Only on turns the hub started itself, never on one a device asked for."
+            "description": "Present and true when the owner is reading the panel right now, or is on a call in this conversation from any of their devices (the answer is being said there): update what you show, raise no notification. The panel case only on turns the hub started itself; the call case on every turn of that conversation while the call is open."
           }
         }
       },

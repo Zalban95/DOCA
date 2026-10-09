@@ -78,6 +78,26 @@ function speak(sessionId, text, title = '') {
 /** Whether this device is on a call in this conversation (its push for the same words can stay quiet). */
 const inCall = (deviceId, sessionId) => [..._open.get(sessionId) || []].some(c => c.deviceId && c.deviceId === deviceId);
 
+/**
+ * Whether device `d` belongs to someone on a call in this conversation — from it or from another of their devices.
+ * The answer is being said in the call, so every device of theirs updates without notifying (asked 2026-10-09: a
+ * watch's call had its answers arrive as notifications too — the phone's, bridged to the wrist). A device with no
+ * person (a hive from before accounts) goes with a call from a device with none.
+ */
+function personOnCall(d, sessionId) {
+  const calls = _open.get(sessionId);
+  if (!calls?.size || !d) return false;
+  const devices = require('../api-v1/devices');
+  for (const c of calls) {
+    if (!c.deviceId) continue;   // the panel's own call: the person is at the panel, whose presence already says so
+    if (c.deviceId === d.id || (devices.get(c.deviceId)?.userId ?? null) === (d.userId ?? null)) return true;
+  }
+  return false;
+}
+
+/** The push flag for device `d` in this conversation: quiet while its person is on a call there, else its presence's. */
+const quietFor = (d, sessionId) => (personOnCall(d, sessionId) ? { quiet: true } : require('../presence').quietFlag(d.userId));
+
 /** A work chat the call's turn handed work to: its outcome is said in the call. */
 function follow(sessionId, chatId) { if (_open.has(sessionId) && chatId) _follow.set(chatId, sessionId); }
 
@@ -97,4 +117,4 @@ function reported(chatId, note) {
   return speak(sid, `${s?.title || 'The work'}: ${note.type === 'done' ? '' : `${note.type}. `}${gist(note.text)}`, s?.title || '');
 }
 
-module.exports = { open, speak, inCall, follow, landed, reported, gist };
+module.exports = { open, speak, inCall, personOnCall, quietFor, follow, landed, reported, gist };
