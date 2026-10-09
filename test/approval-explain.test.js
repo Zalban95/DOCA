@@ -135,18 +135,24 @@ test('a phone gets why, what it does and the request folded; a watch gets the tw
     const client = { id: dev.id, kind: dev.kind, formFactor: caps.formFactor, user: owner() };
     const ctrl = new AbortController();
     const { answer } = approval.askAnywhere({ ...req, personId: owner().id }, { client, signal: ctrl.signal });
-    await H.sleep(80);
-    const p = bus.drain(dev.id, 0).events.filter(e => e.type === 'prompt.new').at(-1)?.payload?.prompt;
+    let p;
+    try {
+      await H.sleep(80);
+      p = bus.drain(dev.id, 0).events.filter(e => e.type === 'prompt.new').at(-1)?.payload?.prompt;
+    } finally { ctrl.abort(); }
     assert.ok(p, `a prompt reached the ${kind}`);
     const text = p.body.map(b => b.text).join('\n');
     assert.match(text, /The agent says: Clearing the two stale files\./);
-    assert.match(text, /deletes 2 paths/);
+    assert.match(text, kind === 'phone' ? /deletes 2 paths \(a, b\)/ : /deletes 2 paths;?/);
     const code = p.body.find(b => b.style === 'code');
     if (kind === 'phone') {
       assert.equal(code?.text, 'rm -f a b');
       assert.deepEqual(code.ext, { role: 'detail', collapsed: true, label: 'The exact request' });
-    } else assert.equal(code, undefined, 'no code on a wrist');
-    ctrl.abort(); await answer;
+    } else {
+      assert.equal(code, undefined, 'no code on a wrist');
+      assert.ok(!text.includes(require('node:os').hostname()), 'nor the host\'s name');
+    }
+    await answer;
   }
 });
 

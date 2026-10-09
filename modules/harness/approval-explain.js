@@ -99,7 +99,10 @@ function explain(gate, name, args, ctx = {}) {
   return out;
 }
 
-const shorten = (t, n) => (t && t.length > n ? `${t.slice(0, n - 1).replace(/\s+\S*$/, '')}…` : t || '');
+const shorten = (t, n) => {
+  const bare = String(t || '').replace(/\s*\([^)]*\)/g, '');   // a wrist has no room for a host's name or a list of paths
+  return bare.length > n ? `${bare.slice(0, n - 1).replace(/\s+\S*$/, '')}…` : bare;
+};
 
 /** The text a device's prompt carries: who says why, and what it does. A watch gets both shortened and no code. */
 function noteFor(req, { watch = false } = {}) {
