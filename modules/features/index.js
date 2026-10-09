@@ -11,6 +11,10 @@
  *   state      on (by default) · switch (behind a setting) · experiment (behind its flag and developer mode)
  *              · alternative (kept beside what replaced it: `beside` names that feature)
  *   uses       the usage counter that measures it (usage.js); words: more words to find it by; since: the release
+ *   licence    the licence code that enables it (license/codes.js): `core` is every hive's; an alternative has its own
+ *   tables     the database tables it owns (db/migrations.js makes them only while it is licensed)
+ *   routes     may name a method ("DELETE /api/devices/:id"); a route belongs to the most specific pattern that
+ *              matches it, and an unlicensed feature's routes, tools and pages are not there (license/gate.js)
  *
  * Not pasted into any prompt — the agent looks things up with the `features` tool (toolbox/features.js), which is
  * free to call. test/features.test.js fails when an experiment, a page, a Settings section or a tool has no entry,
@@ -23,7 +27,7 @@ let _all = null;
 function all() {
   if (!_all) _all = FILES.flatMap(f => require(`./data/${f}`).map(e => ({
     state: 'on', ...e, area: f,
-    page: [].concat(e.page || []), tools: e.tools || [], routes: e.routes || [], settings: e.settings || [],
+    page: [].concat(e.page || []), tools: e.tools || [], routes: e.routes || [], settings: e.settings || [], tables: e.tables || [],
   })));
   return _all;
 }
@@ -66,7 +70,8 @@ function describe(f, pages = require('./pages')) {
     f.settings.length && `settings: ${f.settings.join(', ')}`,
     f.flag && f.state !== 'experiment' && `experiment: ${f.flag}`,
   ].filter(Boolean).join('; ');
-  return `• ${f.name} (${f.id}) — ${state}. ${f.use}${where ? `\n  ${where}` : ''}`;
+  const unlicensed = require('../license').featureOn(f) ? '' : ` Not in this hive's licence (code ${f.licence}): it is not here until a licence adds it (Settings → System → Licence).`;
+  return `• ${f.name} (${f.id}) — ${state}. ${f.use}${unlicensed}${where ? `\n  ${where}` : ''}`;
 }
 
 function setHidden(id, on) {
@@ -84,7 +89,7 @@ function setHidden(id, on) {
 function mount(app) {
   app.get('/api/features', (_req, res) => {
     const off = hidden(), pages = require('./pages');
-    res.json({ states: STATES, features: all().map(f => ({ ...f, hidden: off.has(f.id), pageLabels: f.page.map(pages.label) })),
+    res.json({ states: STATES, features: all().map(f => ({ ...f, hidden: off.has(f.id), licensed: require('../license').featureOn(f), pageLabels: f.page.map(pages.label) })),
       review: require('./review').review() });
   });
   app.post('/api/features/:id/hidden', (req, res) => {
