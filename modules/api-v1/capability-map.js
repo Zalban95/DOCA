@@ -97,6 +97,17 @@ const PERSON = [
   { id: 'home-hold', does: 'keep the Home page live while it is shown', panel: ['POST /api/home/hold'],
     only: 'a panel page holding the hub\'s connection to Home Assistant open; a device\'s own home will hear changes on its event stream' },
 
+  // ── Meetings (meetings/) ──
+  { id: 'meetings', does: 'see my meetings and join one', panel: ['GET /api/meetings', 'GET /api/meetings/:id'], v1: ['GET /meetings'],
+    note: 'a device lists them with each link and opens the room in its web view (/meet/<id>); native call screens come later' },
+  { id: 'meeting-schedule', does: 'call someone, schedule, change, confirm or cancel a meeting',
+    panel: ['POST /api/meetings', 'PATCH /api/meetings/:id', 'POST /api/meetings/:id/cancel', 'POST /api/meetings/:id/confirm', 'POST /api/meetings/:id/end'],
+    gap: 22, why: 'calling a colleague or moving a meeting from the phone without opening the panel page; until then the Meetings page in its web view' },
+  { id: 'meeting-room', does: 'be in a meeting: voice, video, chat, share my screen, offer or take control', panel: ['POST /api/meetings/:id/*'],
+    only: 'a room is WebRTC in a page: a device joins by opening its link in its web view (DocaDesk, DocaMobile); the native call screen, and control from a phone, are later work in each app' },
+  { id: 'meeting-calendar', does: 'connect my own calendar for meetings', panel: ['POST /api/meetings/calendar/:provider/connect', 'DELETE /api/meetings/calendar'],
+    only: 'an OAuth sign-in with Google or Microsoft happens in a browser, at the panel' },
+
   // ── This screen, these devices ──
   { id: 'screen-profile', does: 'set this device\'s notifications (asking, haptics, quiet hours)', panel: ['POST /api/screen/profile'], v1: ['PUT /devices/{id}/profile'] },
   { id: 'screen-settings', does: 'change this screen\'s look and voice', panel: ['POST /api/screen/settings'],

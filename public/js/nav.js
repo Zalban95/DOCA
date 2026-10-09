@@ -2,7 +2,7 @@
    DOCA PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','people','home','ambient','admin','logs','files','projects','harness','workstream','archive','chronicle','computers','live','terminal','models','docker','vms','vnc','mcp','connectors','apikeys','settings'];
+const NAV_TABS = ['controls','people','meetings','home','ambient','admin','logs','files','projects','harness','workstream','archive','chronicle','computers','live','terminal','models','docker','vms','vnc','mcp','connectors','apikeys','settings'];
 /** Tabs that are the machine itself: left out for a person without host (settings.js). */
 const HOST_TABS = ['admin', 'logs', 'files', 'projects', 'terminal', 'computers', 'vnc'];
 
@@ -45,6 +45,7 @@ function nav(name) {
   if (typeof adminTab === 'function') adminTab(on('admin'));   // Hub → Admin: refreshed on the live feed only while shown
   if (typeof homeTab === 'function') homeTab(on('home'));   // holds the hub's connection to Home Assistant while shown
   if (typeof ambientTab === 'function') ambientTab(on('ambient'));
+  if (typeof meetingsTab === 'function') meetingsTab(on('meetings'));   // calls and meetings between people (meetings.js)
   if (on('models') && typeof decisionModelsTab === 'function') decisionModelsTab();
   if (on('models') && typeof wakewordTab === 'function') wakewordTab();
   if (on('models') && typeof libraryTab === 'function') libraryTab();

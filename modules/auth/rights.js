@@ -160,6 +160,7 @@ const TABLE = [
   R(ANY, '/api/people(/.*)?', 'chat'),
   R(GET, '/api/org(/.*)?', 'read'),                              // the organisation tree and a person's card (org/)
   R(ANY, '/api/org(/.*)?', 'chat'),                              // placing someone in it: users, or a team leader below them (org/index.js)
+  R(ANY, '/api/meetings(/.*)?', 'chat'),                       // meetings between people: each checked by its own people, control by the sharer's two consents (meetings/)
   R(GET, '/api/face/stream', 'chat'),                          // the face's feed, scoped to what the viewer may open (face/state.js)
   R(ANY, '/api/developer(/.*)?', 'host'),                        // who may release unasked (releasing.js): the admin's
   R(ANY, '/api/experiments(/.*)?', 'host'),                     // the owner's switches for experiments (experiments.js)

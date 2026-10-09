@@ -17,6 +17,7 @@ const CODES = {
   machines: { label: 'Machines', note: 'agents\' own computers, virtual machines, VNC screens, Docker, Live' },
   home:     { label: 'Home', note: 'the home through Home Assistant: its page and smart-home control' },
   services: { label: 'Outside services', note: 'connected accounts (OAuth), keys for services, API services and the agent\'s drafts of them' },
+  meetings: { label: 'Meetings', note: 'people calling each other: rooms with voice, video and screen sharing, taking control with the sharer\'s consent, invites in each person\'s own calendar' },
   library:  { label: 'Pack library', note: 'packs sent between hubs, a registry, and offering what was learned to the project' },
   lab:      { label: 'Lab', note: 'developer mode, the experiments and evaluation sets: for the project\'s owners and testers (CONSTITUTION S5)' },
 };
@@ -25,9 +26,9 @@ const ALL = 'all';
 /** Editions are suggestions for the licence server's policies (doca-licensing reads them); `core` is implied. */
 const EDITIONS = [
   { id: 'essentials', label: 'Essentials', codes: [], note: 'the general assistant on its own' },
-  { id: 'personal',   label: 'Personal',   codes: ['voice', 'devices', 'channels', 'home', 'services'], note: 'a personal assistant across a person\'s devices and home' },
-  { id: 'studio',     label: 'Studio',     codes: ['agents', 'machines', 'services', 'devices', 'library', 'people'], note: 'teams of agents with their own computers, for work' },
-  { id: 'hosted',     label: 'Hosted',     codes: ['agents', 'voice', 'devices', 'channels', 'services', 'people'], note: 'a hive on a server with no GPU or hypervisor of its own: everything that needs neither' },
+  { id: 'personal',   label: 'Personal',   codes: ['voice', 'devices', 'channels', 'home', 'services', 'meetings'], note: 'a personal assistant across a person\'s devices and home' },
+  { id: 'studio',     label: 'Studio',     codes: ['agents', 'machines', 'services', 'devices', 'library', 'people', 'meetings'], note: 'teams of agents with their own computers, for work' },
+  { id: 'hosted',     label: 'Hosted',     codes: ['agents', 'voice', 'devices', 'channels', 'services', 'people', 'meetings'], note: 'a hive on a server with no GPU or hypervisor of its own: everything that needs neither' },
   { id: 'complete',   label: 'Complete',   codes: Object.keys(CODES).filter(c => c !== 'core' && c !== 'lab'), note: 'every code but the lab, as listed in this release' },
   { id: 'owner',      label: 'Owner',      codes: [ALL], note: 'everything, including what later releases add and the lab: the project\'s own hives' },
 ];

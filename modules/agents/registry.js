@@ -55,7 +55,7 @@ const { loadPrefs, savePrefs } = require('../utils');
  * secret to a device and is always a person's question (forced-asks.js), which a mission cannot ask. `team` makes
  * missions (teams/), so it is a leader's like `agent_dispatch`: no recursion below specialists.
  */
-const NEVER = ['settings_propose', 'panel_layout', 'install_propose', 'tool_note', 'agent_dispatch', 'team', 'agent_results', 'agent_resume', 'ask_device', 'permission_grant', 'computer', 'recipe', 'schedule', 'pack', 'mcp_connect', 'hub_command', 'model_scout', 'mcp_draft', 'service_draft', 'spend_propose', 'secret_use', 'screen', 'vnc_look', 'vnc_input'];
+const NEVER = ['settings_propose', 'panel_layout', 'install_propose', 'tool_note', 'agent_dispatch', 'team', 'agent_results', 'agent_resume', 'ask_device', 'permission_grant', 'computer', 'recipe', 'schedule', 'pack', 'mcp_connect', 'hub_command', 'model_scout', 'mcp_draft', 'service_draft', 'spend_propose', 'secret_use', 'screen', 'vnc_look', 'vnc_input', 'meeting'];
 
 /**
  * The airlock (docs/design/airlock.md): tools only an `airlock: true` definition

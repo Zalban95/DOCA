@@ -1602,6 +1602,27 @@ unless the person muted the conversation — a client that draws `people.message
 `notify` itself. Making groups and channels, pins, editing and deleting are the panel's for now
 (`docs/api/capability-gaps.md`, `people-manage`).
 
+### 23.4 Meetings (hub 3.15.0)
+
+People of the hive calling each other: a meeting has an id (`m` and twelve hex digits — the "call id") and a link,
+`https://<hub>/meet/<id>`, which opens the panel on that room. Its people are its organizer and those invited; nobody
+else may join (404 as if absent), an admin included.
+
+- `GET /meetings` (`harness:chat`) — the device's person's meetings, scheduled, open now and the last week's, newest
+  first: `{meetings: [{id, title, state, startsAt, endsAt, link, organizer, people, inRoom}]}`; `state` is `proposed`
+  (the agent's, waiting for its person), `scheduled`, `open`, `ended` or `cancelled`. To join, open `link` in the
+  app's web view (the panel's own session, as `/d/<id>/` is): the room is WebRTC in that page — voice, video, chat,
+  screen sharing.
+- A device is told about a meeting as about anything else: an `alert` when someone calls its person now ("X is
+  calling", urgent) and five minutes before a scheduled one (§11.4). Invitations themselves go to the person's own
+  calendar (their Google or Microsoft account connected in Meetings, else an iCalendar invite by mail, else a notice).
+- **Taking control of a shared screen** needs a DOCA client on the sharer's machine lending the `input` family
+  (§22.1): the hub calls that device's own `input_click`, `input_move`, `input_type` and `input_keys` (DocaMobile's
+  `input_tap`, `input_key`) with physical pixels, only after the sharer offered control to one person and confirmed it,
+  and only until either ends it. A client draws nothing new for it; one that can show a banner while a person controls
+  its machine should (later work: DocaDesk). While a person controls a machine, the agent's own `input_*` on it wait.
+- Native call screens, calling from a watch, and sharing a phone's screen are later work in each app (TODO).
+
 ## 24. Server operations
 
 - Data directory: `DOCA_DATA_DIR` (default `<repo>/.doca`, gitignored): `devices.json`, `prompts.json`, `profiles/`, `outbox/`, `media/`, `artifacts/`. Atomic writes; safe to back up.
@@ -1621,6 +1642,7 @@ unless the person muted the conversation — a client that draws `people.message
 | GET | `/capabilities` | any | §6 |
 | GET | `/settings/effective` | any | §4.2, §14.1 |
 | GET | `/settings/look` | any | §14.1 |
+| GET | `/meetings` | `harness:chat` | the person's meetings with their links (§23.3) |
 | GET | `/devices` | `devices:admin` \| `agent` | list devices (+ presets) |
 | POST | `/devices` | `devices:admin` | issue a token directly |
 | POST | `/devices/pair/start` | `devices:admin` | start pairing |

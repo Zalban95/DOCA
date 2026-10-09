@@ -46,6 +46,7 @@ function stream(req, res) {
     if (change.topic === 'device') { if (require('../devices-approval').hears(person, change)) send(change); return; }   // a new device: whoever may approve it
     if (change.topic === 'chat') { if (person?.id && (change.to || []).includes(person.id)) send({ ...change, to: undefined }); return; }   // hive chat: its members alone, a host included (people/)
     if (change.topic === 'notice') { if (change.personId ? person?.id === change.personId : host) send(change); return; }   // notices/: theirs alone
+    if (change.topic === 'meeting') { if (require('../meetings/rooms').hears(screen, person, change)) send(change); return; }   // a meeting's pages, or the people it rings (meetings/)
     if (change.topic === 'workstream') { if (host && require('../workstream').holds(screen)) send(change); return; }   // only pages holding it
     if (visible(change, person, host)) send(change);
   };

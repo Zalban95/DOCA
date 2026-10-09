@@ -163,6 +163,22 @@ const STEPS = [
        tenant_id TEXT NOT NULL DEFAULT 'local', space_id TEXT NOT NULL, message_id TEXT NOT NULL, by_user TEXT, at TEXT NOT NULL,
        PRIMARY KEY (tenant_id, space_id, message_id))`,
   ] },
+  // Meetings (meetings/): a meeting is its time, its organizer and its state; each person invited is a row of their own,
+  // with how they were invited (their own calendar, a mail with an iCalendar invite, a notice) and the event id their
+  // calendar gave it, so a change or a cancellation reaches the same event. Step 14 is the hive chat's. The room itself — who is in it now, the screens shared — lives in memory.
+  { id: 15, feature: 'meetings', what: 'meetings and the people invited to each (meetings/)', sql: [
+    `CREATE TABLE IF NOT EXISTS meetings (
+       tenant_id TEXT NOT NULL DEFAULT 'local', id TEXT NOT NULL, owner_id TEXT NOT NULL, org_id TEXT, title TEXT NOT NULL,
+       starts_at TEXT, ends_at TEXT, tz TEXT, state TEXT NOT NULL, seq INTEGER NOT NULL DEFAULT 0, space TEXT,
+       created_at TEXT NOT NULL, updated_at TEXT NOT NULL, data TEXT,
+       PRIMARY KEY (tenant_id, id))`,
+    'CREATE INDEX IF NOT EXISTS meetings_starts ON meetings (tenant_id, starts_at)',
+    `CREATE TABLE IF NOT EXISTS meeting_people (
+       tenant_id TEXT NOT NULL DEFAULT 'local', meeting_id TEXT NOT NULL, who TEXT NOT NULL, person_id TEXT, email TEXT, name TEXT,
+       role TEXT NOT NULL, via TEXT, event_id TEXT, status TEXT, note TEXT, reminded_at TEXT,
+       PRIMARY KEY (tenant_id, meeting_id, who))`,
+    'CREATE INDEX IF NOT EXISTS meeting_people_person ON meeting_people (tenant_id, person_id)',
+  ] },
 ];
 
 const licensed = s => require('../license').featureOn(s.feature);
