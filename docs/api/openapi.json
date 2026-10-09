@@ -7651,6 +7651,140 @@
         }
       }
     },
+    "/harness/today": {
+      "get": {
+        "tags": [
+          "Harness"
+        ],
+        "summary": "This person's day at a glance: jobs done of requested, and the teams' progress",
+        "operationId": "harnessToday",
+        "x-scope": "harness:chat",
+        "description": "Counted from what GET /harness/missions shows this device, since midnight on the person's own clock (the hub's when none of their screens said). Mechanical: nothing in it is written by an agent.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "day": {
+                      "type": "string",
+                      "description": "The person's date, YYYY-MM-DD."
+                    },
+                    "tz": {
+                      "type": "string",
+                      "description": "The IANA zone the day is read on."
+                    },
+                    "since": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "jobs": {
+                      "type": "object",
+                      "properties": {
+                        "requested": {
+                          "type": "integer",
+                          "description": "Missions and work chats started today, archived ones included."
+                        },
+                        "done": {
+                          "type": "integer",
+                          "description": "Of those, finished with a result."
+                        },
+                        "running": {
+                          "type": "integer"
+                        },
+                        "failed": {
+                          "type": "integer"
+                        },
+                        "stopped": {
+                          "type": "integer",
+                          "description": "Stopped or dropped by a person."
+                        },
+                        "paused": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "teams": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "teamId": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "running",
+                              "done",
+                              "failed",
+                              "stopped"
+                            ]
+                          },
+                          "progress": {
+                            "type": "object",
+                            "properties": {
+                              "done": {
+                                "type": "integer"
+                              },
+                              "total": {
+                                "type": "integer"
+                              },
+                              "percent": {
+                                "type": "integer"
+                              }
+                            },
+                            "description": "Tasks done of tasks, every task weighing the same."
+                          },
+                          "startedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "endedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "archivedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      },
+                      "description": "Running now, or started or ended today; newest first, at most 8."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing (`unauthenticated`) or unknown/expired/revoked (`invalid_token`) token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but not allowed (`scope_required` lists `required[]`; `pending_approval`: the device waits for a person to approve it, `approval` says who was asked).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/console": {
       "post": {
         "tags": [
