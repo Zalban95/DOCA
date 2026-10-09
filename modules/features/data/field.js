@@ -36,6 +36,10 @@ module.exports = [
   { id: 'devices', licence: 'devices', name: 'The person\'s devices', tools: ['doca_clients'],
     use: 'Who is paired, who is connected, what is queued and what each device may do.', words: 'phone watch desk paired connected',
     routes: ['/api/devices*'] },
+  // Pairing is core, so approving a new device is too: a hive without the devices edition still pairs and approves.
+  { id: 'device-approval', licence: 'core', name: 'New devices wait for approval', page: 'apikeys', since: '2.344.0',
+    use: 'A new device waits until someone who may approve it says yes, and gets at most their rights; a level says whose devices its people may approve.',
+    routes: ['/api/devices/pending', '/api/devices/:id/approve', '/api/devices/:id/refuse'], words: 'approve new device pending allow refuse pairing' },
   { id: 'reach', licence: 'devices', name: 'Asking and telling a device', tools: ['ask_device', 'tell_device'],
     use: 'Put a question with choices, or a message or picture, on the person\'s phone, watch or desk.',
     words: 'notify ask phone watch prompt message' },
