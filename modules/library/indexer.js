@@ -39,7 +39,7 @@ function hashOf(file, size) {
   return `s-${h.update(String(size)).digest('hex').slice(0, 30)}`;
 }
 
-const sleep = (ms, signal) => new Promise(r => { const t = setTimeout(r, ms); signal?.addEventListener('abort', () => { clearTimeout(t); r(); }, { once: true }); });
+const sleep = (ms, signal) => new Promise(r => { const t = setTimeout(r, ms); t.unref?.(); signal?.addEventListener('abort', () => { clearTimeout(t); r(); }, { once: true }); });
 
 /** Wait while the machine is busy (load per core over library.idleLoad); says so in the state. */
 async function idle(st, limit, signal) {

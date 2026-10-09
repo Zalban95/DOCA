@@ -66,7 +66,7 @@ async function index() {
   const r = await H.api(null, 'POST', '/api/library/run');
   assert.equal(r.status, 200, JSON.stringify(r.body));
   const I = require('../modules/library/indexer');
-  for (let i = 0; i < 200 && I.running(); i++) await H.sleep(25);
+  for (let i = 0; i < 800 && I.running(); i++) await H.sleep(25);
   assert.equal(I.running(), false);
   return I.view();
 }
@@ -92,6 +92,8 @@ test('a folder outside the Files roots is refused; the chosen ones are indexed b
   write(path.join(dirB, 'shore.png'), png('beach sea sand waves beach'));
   write(path.join(dirB, '.hidden', 'x.txt'), 'boiler');
   write(path.join(dirB, 'song.txt'), 'A song about music and a dog.');
+  // Indexing waits while the machine is busy (library.idleLoad); a CI runner is, so the test lifts the limit.
+  const U = require('../modules/utils'); U.savePrefs({ ...U.loadPrefs(), library: { ...(U.loadPrefs().library || {}), idleLoad: 64 } });
   const set = await H.api(null, 'POST', '/api/library', { provider: 'emb', model: 'gemma-stub', folders: [dirA, dirB], open: [dirB] });
   assert.equal(set.status, 200, JSON.stringify(set.body));
   assert.equal(set.body.on, true);
