@@ -137,7 +137,7 @@ function toApiMessages(allRows, { sessionId, provider } = {}) {
     // cannot is a conversation at cross purposes.
     // `echo` checks the role itself, so a user or tool row cannot pick up a
     // field by being shaped like an assistant one.
-    return { role: r.role, content: (r.content || '') + attachments.note(r.attachments), ...echo(r) };
+    return { role: r.role, content: (r.content || '') + attachments.note(r.attachments) + require('../skill-next').note(r), ...echo(r) };   // skills for this request (skill-next.js)
   });
 }
 

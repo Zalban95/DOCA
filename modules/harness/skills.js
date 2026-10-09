@@ -157,7 +157,8 @@ function importFrom(folder, { overwrite = false } = {}) {
 
 /** The manifest in the prompt: names and triggers, bodies left out until loaded. */
 function manifestBlock(only) {
-  const rows = list().filter(s => !only || only.includes(s.name));
+  // A skill switched off (skill-use.js) is left out unless a specialist's definition names it.
+  const rows = only ? list().filter(s => only.includes(s.name)) : require('./skill-use').offered();
   if (!rows.length) return '';
   return ['# Skills — procedures you load when a task matches (skill action read, then follow it)',
     ...rows.map(s => `- ${s.name}: ${s.description || '(no description)'}${s.harness ? ` [written for ${s.harness}; reading it says how to translate]` : ''}`)].join('\n');

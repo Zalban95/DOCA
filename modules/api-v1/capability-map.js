@@ -38,6 +38,8 @@ const PERSON = [
     gap: 4, why: 'a phone gets 202 queued for a working conversation and cannot take back what it sent before it is read' },
   { id: 'conversation-settings', does: 'rename a conversation or change its mode (Agent, Plan, Ask, Debug)', panel: ['POST /api/harness/sessions/:id/settings'],
     gap: 6, why: 'switching to Ask or Plan before a risky request; its approval switch inside stays a host\'s' },
+  { id: 'conversation-compact', does: 'fold a conversation\'s earlier messages into its summary now', panel: ['POST /api/harness/sessions/:id/compact'],
+    v1: ['POST /harness/messages'], note: 'a device sends /compact as the message (harness/slash.js); /loop and /skill likewise' },
   { id: 'conversation-model', does: 'choose a conversation\'s model', panel: ['GET /api/harness/sessions/:id/model', 'POST /api/harness/sessions/:id/model'],
     gap: 7, why: 'a quicker or stronger model for one conversation, from the device it is held on' },
   { id: 'plan-decide', does: 'approve or reject a proposed plan', panel: ['POST /api/harness/sessions/:id/plan'],

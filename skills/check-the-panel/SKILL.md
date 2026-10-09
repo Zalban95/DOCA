@@ -1,6 +1,7 @@
 ---
 name: check-the-panel
 description: Check DOCA's own panel the way a person uses it — every tab and Settings section in a real browser, desktop and phone sizes, errors and screenshots — after a change or when something "does not work".
+triggers: [check the panel, every tab, controlla il pannello, screenshot of the panel]
 ---
 
 # Checking the panel in a browser

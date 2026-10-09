@@ -13,7 +13,6 @@
  * transcript, so a reload or a restart resumes exactly where it left off.
  */
 
-
 const budget      = require('./budget');
 const memory      = require('./memory');
 const providers   = require('./providers');
@@ -46,6 +45,7 @@ const { events, running, isRunning, isAuto, cancel, claim, changed } = require('
  * @returns {Promise<{ sessionId: string, text: string, steps: number }>}
  */
 async function turn(options) {
+  const command = require('./slash').intercept(options); if (command) return command;   // /loop, /compact, /skill (slash.js)
   const organization = require('./organization');
   const id = options.sessionId || memory.activeSession().id;
   const session = organization.session(id);
@@ -115,12 +115,12 @@ function nextWaiting(id) {
  * gives way, as before). @returns {{ queued: true, id, position } | Promise<turn result>}
  */
 function send(options, waitingItem = {}) {
+  const command = require('./slash').intercept(options); if (command) return command;   // answered now, busy or not
   const id = options.sessionId || memory.activeSession().id;
   if (running.has(id) && !(running.get(id).auto && !options.auto))
     return { queued: true, sessionId: id, ...require('./inbox').put(id, { message: options.message, client: options.client, attachments: options.attachments, ...waitingItem }) };
   return turn({ ...options, sessionId: id });
 }
-
 
 async function runTurn({ message, sessionId, emit, signal, client, attachments: attached, profile, read = [] }) {
   const say = evt => {
