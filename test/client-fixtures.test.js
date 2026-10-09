@@ -19,7 +19,7 @@ const bus = require('../modules/api-v1/bus');
 const DIR = path.join(__dirname, '..', 'docs', 'api', 'fixtures');
 const WRITE = process.env.DOCA_WRITE_FIXTURES === '1';
 const NAMES = ['agent.mission-running', 'agent.mission-done', 'agent.mission-archived', 'agent.mission-seen', 'agent.mission-work-stopped',
-  'prompt.new', 'prompt.new-approval', 'prompt.closed', 'alert', 'alert-files', 'settings.changed'];
+  'prompt.new', 'prompt.new-approval', 'prompt.closed', 'alert', 'alert-files', 'settings.changed', 'device.approved', 'device.refused'];
 
 test.before(() => H.start());
 test.after(() => H.stop());
@@ -71,6 +71,20 @@ async function frames() {
   // The look chosen on the phone's own panel page (Settings → Appearance in its web view): the app reads it again.
   require('../modules/screens').set(phone.id, { theme: 'pointsDaylight', skin: 'points' });
   out['settings.changed'] = last('settings.changed');
+  // A new device that waited for approval (devices-approval/): allowed, and refused — caught live, since refusing
+  // revokes it and empties its queue.
+  const deciding = require('../modules/devices-approval'), devices = require('../modules/api-v1/devices');
+  const waiting = name => {
+    const d = devices.create({ name, scopes: require('../modules/api-v1/scopes').PRESETS.phone, caps: H.PHONE_CAPS, approval: { state: 'pending', askedAt: new Date().toISOString() } }).device;
+    devices.update(d.id, { userId: H.owner.user.id });
+    return d;
+  };
+  const allowed = waiting('Fixture new phone');
+  deciding.decide(allowed.id, 'allow', { id: H.owner.user.id, role: 'owner' });
+  out['device.approved'] = bus.drain(allowed.id, 0).events.find(e => e.type === 'device.approved');
+  const refused = waiting('Fixture stranger');
+  bus.subscribe(refused.id, 0, { send: env => { if (env.type === 'device.refused') out['device.refused'] = env; }, close() {} });
+  deciding.decide(refused.id, 'refuse', { id: H.owner.user.id, role: 'owner' });
   return out;
 }
 
@@ -121,6 +135,7 @@ test(WRITE ? 'writes the fixtures from real frames' : 'the fixtures are present 
 //   doca-device  — what the panel calls on window.DocaDevice, where DocaMobile lends it (ambient.js)
 //   call-frames  — the JSON frames of a live call and what each carries (realtime/index.js FRAMES; DocaWear draws them)
 //   settings-look — GET /api/v1/settings/look for a phone drawn in Points Daylight (PROTOCOL §14.1; the app's own screens)
+//   pending-approval — what a device waiting for approval is answered (PROTOCOL §5.1): the 403 everywhere, its own record
 async function contracts() {
   const admin = H.mkDevice('Fixture admin', 'admin', {});
   const looked = H.mkDevice('Fixture look', 'phone', H.PHONE_CAPS);
@@ -128,6 +143,10 @@ async function contracts() {
   const look = (await H.api(looked.token, 'GET', '/api/v1/settings/look')).body;
   const code = await H.api(admin.token, 'POST', '/api/v1/devices/pair/start', { name: 'Fixture phone', preset: 'phone' });
   const qr = code.body.qr || '';
+  const devices = require('../modules/api-v1/devices');
+  const pend = devices.create({ name: 'Fixture waiting', scopes: require('../modules/api-v1/scopes').PRESETS.phone, caps: H.PHONE_CAPS,
+    approval: { state: 'pending', askedAt: '2026-10-06T18:30:00.000Z' } });
+  devices.update(pend.device.id, { userId: H.owner.user.id });
   return {
     'pair-link': { example: qr.replace(/code=[^&]+/, 'code=ABCD1234').replace(/host=[^&]*/, 'host=hub.example.ts.net:4242'),
       params: { code: 'the pairing code without its dash (8 characters)', host: 'host[:port] the phone dials, https' } },
@@ -136,9 +155,12 @@ async function contracts() {
     'call-frames': { from: 'the hub, as JSON text frames on /api/v1/call and /api/v1/realtime (PROTOCOL §23.1)', frames: require('../modules/realtime').FRAMES,
       client: { stop: { fields: [], means: 'hang up' } } },
     'settings-look': { ...look, deviceId: 'dev_fixture' },
+    'pending-approval': { refusal: { status: 403, ...(await H.api(pend.token, 'GET', '/api/v1/capabilities')).body },
+      self: (await H.api(pend.token, 'GET', '/api/v1/devices/me')).body.approval,
+      allowed: ['GET /api/v1/devices/me', 'GET /api/v1/events', 'POST /api/v1/events/ack'], events: [...require('../modules/api-v1/pending').EVENTS] },
   };
 }
-const CONTRACTS = ['pair-link', 'families', 'doca-device', 'call-frames', 'settings-look'];
+const CONTRACTS = ['pair-link', 'families', 'doca-device', 'call-frames', 'settings-look', 'pending-approval'];
 
 test(WRITE ? 'writes the contracts' : 'the contracts are what the hub does now', async () => {
   const c = await contracts();

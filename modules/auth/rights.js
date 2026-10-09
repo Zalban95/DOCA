@@ -71,6 +71,10 @@ const TABLE = [
   R('POST', '/api/devices/[^/]+/rotate', 'chat'),
   R('PATCH', '/api/devices/[^/]+', 'chat'),
   R('DELETE', '/api/devices/[^/]+', 'chat'),
+  // A new device waits for a person who may approve it (owner, 2026-10-09): who may is a level's approveDevices
+  // (approve-devices.js) — own or anyone — checked per device in devices-approval/.
+  R(GET, '/api/devices/pending', 'chat'),
+  R('POST', '/api/devices/[^/]+/(approve|refuse)', 'chat'),
   R(ANY, '/api/devices(/.*)?', 'devices'),
 
   // ── The harness: what lets the agent act on the machine is host ──

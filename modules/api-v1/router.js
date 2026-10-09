@@ -57,7 +57,7 @@ router.post('/devices/pair/complete', wrap(pairComplete));   // unauthenticated,
 // ─── Everything below requires a token ──────────────────────────────────────
 
 router.use((req, res, next) => authenticate({ allowQuery: req.path === '/events' })(req, res, next));
-router.use((req, _res, next) => { devices.touchPersist(); next(); }); require('./owner-ceiling').mount(router); require('../devices-control').mount(router); require('./usage-route').mount(router); require('./wake').start(); require('../device-console').mountDevice(router); require('./mcp-server').mount(router); require('./agui').mount(router); require('./a2a').mount(router); require('./client-files').mount(router); require('../network').mountDevice(router); require('../wakeword/routes').mountDevice(router); require('./packs-receive').mount(router, upload); require('./packs-receive').mountRegistry(router); require('../realtime/routes').mountDevice(router); require('./yours').mount(router); require('../client-apps/routes').mountDevice(router); require('../sealed/routes').mountDevice(router);   // a device held to its person (owner-ceiling.js), control acks, grants, MCP/AG-UI/A2A, clients' files, packs from other hubs (after auth)
+router.use((req, _res, next) => { devices.touchPersist(); next(); }, require('./pending').guard); require('./owner-ceiling').mount(router); require('../devices-approval/routes').mountDevice(router); require('../devices-control').mount(router); require('./usage-route').mount(router); require('./wake').start(); require('../device-console').mountDevice(router); require('./mcp-server').mount(router); require('./agui').mount(router); require('./a2a').mount(router); require('./client-files').mount(router); require('../network').mountDevice(router); require('../wakeword/routes').mountDevice(router); require('./packs-receive').mount(router, upload); require('./packs-receive').mountRegistry(router); require('../realtime/routes').mountDevice(router); require('./yours').mount(router); require('../client-apps/routes').mountDevice(router); require('../sealed/routes').mountDevice(router);   // a device held to its person (owner-ceiling.js), control acks, grants, MCP/AG-UI/A2A, clients' files, packs from other hubs (after auth)
 
 router.get('/capabilities', wrap(async (req, res) => res.json(await capabilities.build(req.device))));
 require('../look/routes').mountDevice(router);   // GET /settings/effective (this device's layer over the hive's, screens/) and /settings/look (the panel's look, resolved)
@@ -78,8 +78,7 @@ router.post('/devices', requireScope('devices:admin'), wrap(async (req, res) => 
   const sc = scopes || (preset && PRESETS[preset]);
   if (!sc) throw new ApiError(400, 'invalid_device', 'scopes[] or preset is required', { presets: Object.keys(PRESETS) });
   ownScopesOnly(req, sc);
-  const r = devices.create({ name, scopes: sc, caps, expiresAt, kind });
-  if (req.device.userId) r.device = devices.update(r.device.id, ownerOf(req));
+  const r = require('../devices-approval/routes').createFromDevice(req, { name, scopes: sc, caps, expiresAt, kind });   // approved by this device's person, or waiting
   res.status(201).json(r);
 }));
 
@@ -88,7 +87,7 @@ router.post('/devices/pair/start', requireScope('devices:admin'), wrap(async (re
   const sc = scopes || PRESETS[preset || 'watch'];
   if (!sc) throw new ApiError(400, 'invalid_pairing', 'scopes[] or a known preset is required', { presets: Object.keys(PRESETS) });
   ownScopesOnly(req, sc);
-  const p = devices.startPairing({ name: name || 'New device', scopes: sc, expiresAt, kind, createdBy: req.device.id, ...ownerOf(req) });
+  const p = devices.startPairing({ name: name || 'New device', scopes: sc, expiresAt, kind, createdBy: req.device.id, ...ownerOf(req), approval: require('../devices-approval').atStart({ kind: 'device', device: req.device }, { ...ownerOf(req), scopes: sc }) });
   res.status(201).json({ ...p, completeUrl: '/api/v1/devices/pair/complete', qr: `doca://pair?code=${p.code.replace('-', '')}&host=${req.headers.host || ''}` });
 }));
 
@@ -96,7 +95,7 @@ router.get('/devices/:id', selfOr('devices:admin', 'agent'), (req, res) => {
   const id = resolveDeviceId(req);
   const d = devices.get(id);
   if (!d) return sendError(res, 404, 'not_found', 'Unknown device');
-  res.json({ device: devices.publicView(d), online: bus.isOnline(id), pending: bus.pendingCount(id) });
+  res.json({ device: devices.publicView(d), online: bus.isOnline(id), pending: bus.pendingCount(id), approval: require('../devices-approval').selfView(d) });
 });
 
 router.patch('/devices/:id', selfOr('devices:admin'), wrap(async (req, res) => {
@@ -365,7 +364,7 @@ router.post('/messages', requireScope('interact'), wrap(async (req, res) => {
   if (Buffer.byteLength(JSON.stringify(body)) > L.EVENT_BYTES - 512) throw new ApiError(413, 'payload_too_large', 'Message too large');
   const targets = devices.list().filter(d => !d.revokedAt && d.id !== req.device.id && (to ? d.id === to : hasScope(d.scopes, 'agent')));
   if (!targets.length) throw new ApiError(404, 'no_recipient', to ? 'Unknown recipient' : 'No agent device is registered');
-  const delivered = targets.map(d => ({ deviceId: d.id, seq: bus.publish(d.id, 'device.message', body).seq }));
+  const delivered = targets.map(d => ({ deviceId: d.id, seq: bus.publish(d.id, 'device.message', body)?.seq ?? null }));
   res.status(202).json({ delivered });
 }));
 
@@ -544,7 +543,7 @@ agent.post('/messages', wrap(async (req, res) => {
   const body = { from: req.device.id, type: typeof type === 'string' ? type.slice(0, 64) : 'message', payload: payload ?? null, ext };
   if (Buffer.byteLength(JSON.stringify(body)) > L.EVENT_BYTES - 512) throw new ApiError(413, 'payload_too_large', 'Message too large');
   const list = devices.list().filter(d => !d.revokedAt && d.id !== req.device.id && (targets ? targets.includes(d.id) : hasScope(d.scopes, 'interact')));
-  res.status(202).json({ delivered: list.map(d => ({ deviceId: d.id, seq: bus.publish(d.id, 'agent.message', body, { ttlSec }).seq })) });
+  res.status(202).json({ delivered: list.map(d => ({ deviceId: d.id, seq: bus.publish(d.id, 'agent.message', body, { ttlSec })?.seq ?? null })) });
 }));
 
 agent.post('/sensors/requests', wrap(async (req, res) => {

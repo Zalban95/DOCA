@@ -139,6 +139,11 @@ const MIGRATIONS = [
   { id: '2.333-providers-merged', note: 'providers at the same address with no key are merged into one; the settings point at the one kept', steps: [{
     describe: 'duplicate key-less providers merged (keys/providers.json), settings repointed',
     run(p) { return require('./provider-dedupe').merge(p); } }] },
+  // 2.344: a new device waits for a person who may approve it (devices-approval/; the owner's decision of 2026-10-09).
+  // Every device paired before is approved as it is — never asked about.
+  { id: '2.344-devices-approved', note: 'devices paired before approval existed are approved as they are', steps: [{
+    describe: 'every device without an approval marked approved (devices.json)',
+    run() { return require('./api-v1/devices').markApproved() > 0; } }] },
 ];
 
 const appliedIn = p => new Set(Array.isArray(p?.migrations?.applied) ? p.migrations.applied : []);

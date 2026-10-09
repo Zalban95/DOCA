@@ -40,13 +40,13 @@ async function devicesLoad() {
       <div class="provider-card ${dead ? 'no-key' : 'has-key'}">
         <div class="provider-header">
           <span class="provider-name">${escHtml(d.name)}</span>
-          <span class="provider-badge ${dead ? 'no' : 'ok'}">${revoked ? 'REVOKED' : expired ? 'EXPIRED' : d.kind === 'agent' ? 'AGENT' : 'ACTIVE'}</span>
+          <span class="provider-badge ${dead ? 'no' : 'ok'}"${!dead && d.approval?.state === 'pending' ? ' style="background:var(--bg-amber);color:var(--amber)"' : ''}>${revoked ? (d.approval?.state === 'refused' ? 'REFUSED' : 'REVOKED') : expired ? 'EXPIRED' : d.approval?.state === 'pending' ? 'WAITING' : d.kind === 'agent' ? 'AGENT' : 'ACTIVE'}</span>
         </div>
         <div class="provider-models">
           <code>${escHtml(d.id)}</code> · ${escHtml(d.caps?.formFactor || 'other')}
           · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}
         </div>
-        <div class="provider-models">${d.scopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}</div>
+        <div class="provider-models">${d.scopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}</div>${devApprovalHtml(d)}
         ${d.missingScopes?.length ? `<div class="input-label mt8" style="text-transform:none;letter-spacing:0;color:var(--amber)">
           Paired before its preset (${escHtml(d.preset)}) gained: ${d.missingScopes.map(s => `<code>${escHtml(s)}</code>`).join(' ')}
           <button class="btn btn-xs" onclick="devGrant(${jsArg(d.id)}, ${jsArg(d.missingScopes.join(','))})" title="Add these to this device — same id, queue and token">+ Grant</button></div>` : ''}
@@ -244,7 +244,7 @@ function devSessionCardHtml(d, dead) {
           <span class="provider-badge ${dead ? 'no' : 'ok'}">${dead ? 'REVOKED' : what}</span>
         </div>
         <div class="provider-models"><code>${escHtml(d.id)}</code> · ${d.kind === 'browser' ? 'its own look, tabs and sections; signed in by password' : 'a linked chat'}
-          · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}${_devShowingHtml(d, dead)}</div>
+          · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}${_devShowingHtml(d, dead)}</div>${devApprovalHtml(d)}
         <div class="toolbar-right">
           ${dead ? `<button class="btn btn-xs btn-red" onclick="devForget(${jsArg(d.id)},${jsArg(d.name)})" title="Remove this row and its settings">🗑 Forget</button>`
             : `<button class="btn btn-xs btn-red" onclick="devRevoke(${jsArg(d.id)},${jsArg(d.name)})" title="${d.kind === 'browser' ? 'Sign this browser out now' : 'Stop this chat reaching the hive'}">✕ ${d.kind === 'browser' ? 'Sign out' : 'Unlink'}</button>`}
