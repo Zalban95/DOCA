@@ -159,7 +159,8 @@ test('a real specialist turn sends the narrowed prompt on every model request', 
   const full = agent.preview({ message: 'hello' });
   for (const request of seen) {
     const prompt = request.messages[0].content;
-    assert.ok(prompt.startsWith(providers.SAFETY_CHARTER.slice(0, providers.SAFETY_CHARTER.indexOf('## Working on a repository'))), 'the charter first, Safety whole');
+    // The charter first; Safety whole. A turn that only reads is not sent the rules about making a change (charterFor).
+    assert.ok(prompt.startsWith('# Standing rules') && prompt.includes(providers.SAFETY_CHARTER.slice(providers.SAFETY_CHARTER.indexOf('## Safety'), providers.SAFETY_CHARTER.indexOf('## Reaching the user'))), 'the charter first, Safety whole');
     assert.ok(prompt.includes(profile.systemPrompt));
     assert.ok(prompt.includes('working on one errand'));
     assert.ok(prompt.includes('# Where you are'));
