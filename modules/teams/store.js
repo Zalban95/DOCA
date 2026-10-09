@@ -17,7 +17,7 @@ const get = id => (/^team_[a-f0-9]{6,20}$/.test(String(id)) ? store.readJson(`te
 function save(team) {
   team.updatedAt = new Date().toISOString();
   store.writeJson(`teams/${team.id}`, team);
-  const row = { id: team.id, title: team.title, by: team.by, state: team.state, progress: team.progress || null,
+  const row = { id: team.id, title: team.title, by: team.by, projectId: team.projectId || null, state: team.state, progress: team.progress || null,
     createdAt: team.createdAt, endedAt: team.endedAt || null, archivedAt: team.archivedAt || null };
   const rows = index().filter(r => r.id !== team.id);
   store.writeJson(INDEX, { teams: [...rows, row].slice(-MAX_INDEX) });
