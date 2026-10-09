@@ -133,6 +133,7 @@ function isCheckout() {
 }
 
 async function list() {
+  if (require('./edition-mode').production()) return require('./update-channel/stage').list();   // signed releases only
   // An install that did not come from `git clone` (a download, a copy) has no
   // tags to list; say so instead of answering 500 "not a git repository".
   if (!isCheckout()) {
@@ -255,6 +256,7 @@ async function install(tag, say = () => {}) {
 
 /** Why a switch to `target` must not happen, or null. */
 async function refusal(target, { force = false } = {}) {
+  if (process.env.DOCA_HOME && require('./edition-mode').production()) return require('./update-channel/stage').refusal(target);
   if (!process.env.DOCA_HOME)
     return 'This panel was not started by DOCA\'s launcher (bin/doca-launch.js start, which run.sh, the installers and the boot entry use), so nothing would read the choice. Start it that way and try again.';
   if (target === CHECKOUT) {

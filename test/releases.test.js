@@ -20,6 +20,8 @@ const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-releases-'));
 process.env.DOCA_HOME = HOME;
 process.env.DOCA_DATA_DIR = path.join(HOME, '.doca');
 process.env.DOCA_PREFS_FILE = path.join(HOME, '.dashboard-prefs.json');
+// A development hive (the suite's own licence carries the lab): git versions are its way (edition-mode.js).
+require('./licence-trust');
 
 const git = (...a) => execFileSync('git', ['-C', HOME, '-c', 'user.email=t@t', '-c', 'user.name=t', ...a], { encoding: 'utf8' });
 

@@ -7,6 +7,7 @@
    ═══════════════════════════════════════════════════════ */
 
 function _depsBlock() {
+  if (LICENCE?.mode === 'production') return null;   // a production hive's packages are its releases' (edition-mode.js)
   let el = document.getElementById('deps-block');
   if (el) return el;
   const card = document.getElementById('update-log')?.closest('.card');

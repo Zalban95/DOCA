@@ -29,6 +29,7 @@ async function updateCheck() {
 
   try {
     const data = await apiFetch('/api/update-check?force=1');
+    if (data.production && typeof updateChannelDraw === 'function') return updateChannelDraw(data, { el, badge, pullBtn });   // update-channel.js
     if (data.updateAvailable) {
       if (el) el.innerHTML = `<div class="update-info">
         <strong style="color:var(--amber)">Update available!</strong><br>
