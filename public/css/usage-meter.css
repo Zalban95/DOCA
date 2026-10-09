@@ -1,0 +1,85 @@
+/* ═══════════════════════════════════════════════════════
+   The usage meter (agent-ui/context-meter.js usageMeterHtml; 2026-10-09).
+   A thin bar, its number, its heat: cool when there is room, the usual heat map as it fills.
+
+   Token plan
+   - --heat-0 … --heat-4 are the heat map's stops — icy cyan, green, yellow, orange, red — in OKLCH, so the mix between
+     two (color-mix in oklch, decided in JS from the fraction) changes evenly to the eye. Two sets, by ground:
+     on a dark ground light and soft (L ≈ .7–.87), on a light ground deeper (L ≈ .55–.64) so each holds 3:1 on white.
+   - --um-track: the empty bar, a tint of the ground's own ink, so it works under any palette.
+   - --um-glow: how much the fill glows. Points of light on a dark ground (Points, U1); none on white, where a glow
+     only blurs.
+   Shape is the same under every skin; Points sets the label in its mono face like every other figure.
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  --heat-0: oklch(0.87 0.07 215);
+  --heat-1: oklch(0.82 0.13 165);
+  --heat-2: oklch(0.86 0.15 100);
+  --heat-3: oklch(0.78 0.16 60);
+  --heat-4: oklch(0.70 0.19 27);
+  --um-track: color-mix(in srgb, var(--bright) 14%, transparent);
+  --um-glow: 40%;
+}
+html[data-ground="light"] {
+  --heat-0: oklch(0.64 0.09 220);
+  --heat-1: oklch(0.60 0.13 160);
+  --heat-2: oklch(0.63 0.13 80);
+  --heat-3: oklch(0.60 0.16 52);
+  --heat-4: oklch(0.55 0.19 27);
+  --um-track: color-mix(in srgb, var(--bright) 9%, transparent);
+  --um-glow: 0%;
+}
+
+.ctx-slot:empty { display: none; }
+.usage-meter { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; cursor: default; line-height: 1; }
+.um-trace { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
+.um-trace:empty { display: none; }
+.um-trace i { width: 3px; border-radius: 1px; background: var(--um-c); opacity: .7; }
+.um-bar { position: relative; width: 48px; height: 6px; border-radius: 2px; background: var(--um-track); }
+.um-fill {
+  position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: var(--um-c);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--um-c) var(--um-glow), transparent);
+  transition: width .45s ease, background-color .45s ease;
+}
+/* The fold point: past it older messages are kept as a summary. A mark, not a warning — so the muted ink, not amber. */
+.um-fold { position: absolute; top: -2px; bottom: -2px; width: 1.5px; margin-left: -.75px; border-radius: 1px; background: var(--muted); opacity: .75; }
+.um-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.um-num { color: var(--text); font-variant-numeric: tabular-nums; }
+html[data-skin="points"] .um-num { font-family: var(--font-mono); font-weight: 500; }   /* figures in the mono face, like every figure in Points */
+html[data-skin="points"] .um-label { font-size: 12px; }
+.um-unit-short { display: none; }
+
+/* What a hover shows, for a tap */
+.um-pop {
+  position: fixed; z-index: 10050; max-width: min(320px, calc(100vw - 16px)); padding: 8px 10px;
+  background: var(--raised); color: var(--text); border: 1px solid var(--border2); border-radius: var(--radius, 6px);
+  font-size: 12px; line-height: 1.5; white-space: pre-line; box-shadow: 0 6px 18px rgba(0, 0, 0, .25);
+}
+
+/* Narrow screens: the "of 1M" goes first, then the older chips; the bar, its number and its unit stay. */
+@media (max-width: 480px) {
+  .um-of { display: none; }
+  .um-bar { width: 38px; }
+  .um-trace i:nth-last-child(n+4) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .um-fill { transition: none; } }
+.pj-chat-meter { align-self: center; }
+
+/* The floating chat's header holds the title, the meter and five controls in 380 px: there the meter is the bar and
+   its number and unit (the card says the rest); the title gives way first (where the approval switch is drawn it has no
+   room at 380 px, and "DOC…" says less than nothing), then the meter — ✕ is never pushed out. A chat panel made
+   wider gets the words back. */
+.chat-header { container: chathead / inline-size; gap: 6px; padding-left: 12px; padding-right: 10px; }
+.chat-header .chat-title { flex-shrink: 40; }
+.chat-header .ctx-slot { min-width: 0; overflow: hidden; flex: 0 1 auto; }
+.chat-header .toolbar-right { flex-shrink: 0; }
+@container chathead (max-width: 520px) {
+  .chat-header :is(.um-of, .um-trace, .um-unit) { display: none; }
+  .chat-header .um-unit-short { display: inline; }
+  .chat-header .um-bar { width: 22px; }
+  .chat-header .usage-meter { gap: 5px; }
+}
+@container chathead (max-width: 440px) {
+  .chat-header:has(#chat-approval .approval-mode) .chat-title { display: none; }
+}

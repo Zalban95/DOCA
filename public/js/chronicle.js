@@ -56,7 +56,8 @@ async function chronLoad() {
     ? `${n} line${n === 1 ? '' : 's'}${n > d.rows.length ? `, the newest ${d.rows.length} shown` : ''}`
     : `${n} run${n === 1 ? '' : 's'}${n > d.rows.length ? `, the newest ${d.rows.length} shown` : ''} · ${(t.tokens || 0).toLocaleString()} tokens`
       + `${t.failed ? ` · ${t.failed} failed` : ''}${t.cancelled ? ` · ${t.cancelled} stopped` : ''}${t.running ? ` · ${t.running} running` : ''}`;
-  list.innerHTML = d.rows.map(chronRowHtml).join('') || `<div class="chron-empty">${d.note ? escHtml(d.note) : 'Nothing happened in this range — or nothing that is still kept.'}</div>`;
+  list.innerHTML = d.rows.map(chronRowHtml).join('') || (d.note ? `<div class="chron-empty">${escHtml(d.note)}</div>`
+    : emptyStateHtml({ title: 'Nothing in this range', text: 'Nothing happened here, or nothing that is still kept. Widen the range or clear a filter.' }));
 }
 
 function chronOpt(value, label, cur) { return `<option value="${escHtml(value)}" ${value === cur ? 'selected' : ''}>${escHtml(label)}</option>`; }

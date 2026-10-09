@@ -23,7 +23,7 @@ async function wearablesLoad() {
         <div class="provider-models"><code>${escHtml(d.id)}</code> · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}</div>
         ${devConsoleHtml(d)}<div class="status-line" id="dev-status-${escHtml(d.id)}"></div>
       </div>`).join('')
-      : '<div class="card"><div class="placeholder">No wearable paired. Pair a watch from Field → API keys → Devices.</div></div>';
+      : emptyStateHtml({ title: 'No wearable paired', text: 'Pair a watch from Field → API keys → Devices.', action: { label: 'Pair a watch', onclick: "nav('apikeys')" } });
     panel.querySelectorAll('details.dev-console').forEach(el => devConsoleToggle(el, el.dataset.id));
   } catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">✗ ${escHtml(e.message)}</div></div>`; }
 }

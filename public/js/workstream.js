@@ -41,7 +41,7 @@ function _wsFrame() {
       <button class="btn btn-xs" id="ws-follow" onclick="workstreamFollow()" title="Follow the work: the file being edited comes to the front">⟳ following</button>
       <button class="btn btn-xs" onclick="soloOpen('workstream')" title="In a window of its own">⧉</button>${typeof processesButtonHtml === 'function' ? processesButtonHtml() : ''}</div>
     <div class="ws-chips" id="ws-chips"></div>
-    <div class="ws-stage" id="ws-stage"><div class="placeholder">Nothing edited yet. When an agent writes a file in a project or the workspace, it appears here as it changes.</div></div>
+    <div class="ws-stage" id="ws-stage">${emptyStateHtml({ title: 'Nothing edited yet', text: 'When an agent writes a file in a project or the workspace, it appears here as it changes.' })}</div>
     <div class="ws-console" id="ws-console"></div>`;
 }
 

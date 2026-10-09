@@ -3,10 +3,12 @@
    archiving, stopping, plans.
    ═══════════════════════════════════════════════════════ */
 
-/** How full this session's context window is, next to the model badge. */
+/** This session's usage meter, next to the model badge; a click opens what one step costs. */
 function _hcContext(u) {
   const el = document.getElementById('hc-context');
-  if (el) { el.innerHTML = contextRingHtml(u); el.onclick = hcPromptOpen; el.style.cursor = 'pointer'; el.title = 'What one step costs'; }
+  if (!el) return;
+  usageMeterDraw(el, u, `hc:${_hcSession || ''}`);
+  el.onclick = hcPromptOpen; el.style.cursor = 'pointer';
 }
 
 /** Today's tokens, next to the model badge. */
