@@ -96,6 +96,8 @@ nothing); **final + memory_list** = 315093f2. DeepSeek before and final+memory_l
 |---|---|---|---|---|---|---|---|---|
 | 2026-10-09 | DeepSeek flash | before | 22/27 | 100 | 2,912k | 29.1k | 48.5k | 0 |
 | 2026-10-09 | DeepSeek flash | final (+ the eval flag) | 21/27 | 108 | 2,189k | 20.3k | 39.6k | 2 (rare-canvas, slow-computer) |
+| 2026-10-09 | Qwen 3.8 27B IQ3_S | before | 21/27 | 81 | 2,244k | 27.7k | 32.9k | 2 (asks-when-unclear, slow-computer) |
+| 2026-10-09 | Qwen 3.8 27B IQ3_S | final (+ the eval flag) | 21/27 | 88 | 1,654k | 18.8k | 25.9k | 2 (rare-schedule, slow-computer) |
 
 (The run's own "work chats" column read 10: a fresh Orchestrator inherited the last one's work chats and counted them
 again — fixed in the evaluation; the 2 is from the per-case counts.) Neither work chat came from the hand-off's new
