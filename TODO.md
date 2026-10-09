@@ -445,6 +445,17 @@ the project's managers only if the owner allows sharing specialists and skills (
   themes), edit-ability features, the clients included — started by the owner's `/design`.
 - The hive backlog's open H-items below stay as written; they are urgent in this order after the above.
 
+## Meetings — what is left (branch `meetings`, 2026-10-09; docs/design/meetings.md)
+
+- [ ] TURN through the edge for calls across the internet (short-lived credentials minted by our own relay); today host candidates only (tailnet, LAN).
+- [ ] An SFU for rooms past six pages (`meet/mesh.js` keeps the interface it would replace).
+- [ ] The agent in a room as a voice participant (`meetings/hooks.js` says how: one more peer the hub hosts, realtime/pipeline.js's audio wire).
+- [ ] DocaMobile / DocaWear: native call screens from `GET /api/v1/meetings`, calling from the watch, a phone's screen shared (MediaProjection) — filed in each app's repository.
+- [ ] DocaDesk: a banner on the desktop while someone controls it, Esc ×3 caught by the app itself; WebView2's camera/mic/screen permission prompts allowed for the hub's own page.
+- [ ] doca-client: the `input` family (xdotool/ydotool, SendKeys, CGEvent) so any machine with it can be controlled; the browser extension controlling a shared tab.
+- [ ] Guests from outside the hive (a one-time link through the edge); calendar replies (RSVP) back into the meeting's people.
+- [ ] doca-licensing: the `meetings` entitlement in the Personal, Studio and Hosted policies.
+
 ## Live — what is left (updated 2026-10-04)
 
 **Built 2026-10-04 (2.116.3 – 2.137.3)**, each with its note in its section: runTurn
