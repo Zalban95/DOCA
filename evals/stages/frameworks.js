@@ -83,10 +83,15 @@ async function setup() {
 
   // MCP servers on this machine, running, as the owner's Home Assistant and Blender would be.
   const reg = require('../../modules/mcp/registry');
+  const STATE = {
+    'home-assistant': { state: { 'Living room': { 'light.living_room': 'on, 80%', 'media_player.tv': 'off' }, Hall: { 'climate.hall': 'heat, 19 °C, target 20 °C' },
+      Entrance: { 'lock.front_door': 'locked', 'binary_sensor.front_door': 'closed' } } },
+    blender: { state: { scene: 'Scene', objects: [{ name: 'Camera', type: 'CAMERA' }, { name: 'Light', type: 'LIGHT' }] }, get_viewport_screenshot: 'Screenshot saved.' },
+  };
   for (const [id, label, list] of [['home-assistant', 'Home Assistant', HA_TOOLS], ['blender', 'Blender', BLENDER_TOOLS]]) {
     const spec = path.join(root, `${id}-tools.json`);
     fs.writeFileSync(spec, JSON.stringify(toolsOf(list)));
-    reg.upsert({ id, label, transport: 'stdio', command: process.execPath, args: [path.join(__dirname, 'mcp-stub.js'), spec] });
+    reg.upsert({ id, label, transport: 'stdio', command: process.execPath, args: [path.join(__dirname, 'mcp-stub.js'), spec], env: { STUB_STATE: JSON.stringify(STATE[id]) } });
     await reg.start(id);
     made.mcp.push(id);
   }
@@ -114,16 +119,18 @@ async function setup() {
   savePrefs(prefs);
 
   // Stand-ins for what would start work elsewhere (put back in teardown).
+  // Worded as the real tool's success: a stand-in that says "nothing was started" sent the agent off to check with a
+  // shell, which measured the stand-in rather than the choice (first baseline, 2026-10-10).
   let n = 0;
-  const said = what => `${what} (an evaluation's stand-in: nothing was started).`;
   const STAND_IN = {
-    agent_dispatch: a => said(`Dispatched mission m_eval_${++n} to ${a.agent || a.agentId || 'a specialist'}; read its answer later with agent_results`),
-    team: a => (a.action === 'create' ? said(`Team t_eval_${++n} created with ${(a.tasks || []).length} tasks; the hub dispatches them in order`) : null),
-    work_chats: a => (['create', 'send'].includes(a.action) ? said(`Work chat wc_eval_${++n} ${a.action === 'create' ? 'created and briefed' : 'sent the message'}`) : null),
-    computer: a => (a.action && a.action !== 'list' ? said(`Computer c_eval_${++n}: ${a.action} done`) : null),
-    hub_command: a => (a.action === 'run' ? said(`${a.id}: done`) : null),
-    ask_device: () => 'The person answered: yes (an evaluation\'s stand-in).',
+    agent_dispatch: a => `Dispatched mission m_eval_${++n} to ${a.agent || 'a specialist'}. It runs in the background; read its answer later with agent_results.`,
+    team: a => (a.action === 'create' ? `Team t_eval_${++n} created with ${(a.tasks || []).length} tasks; the hub dispatches them in order and checks each contract.` : null),
+    work_chats: a => (a.action === 'create' ? `Created work chat wc_eval_${++n} and briefed it; it works on its own and reports back.` : a.action === 'send' ? 'Sent.' : null),
+    computer: a => (a.action && a.action !== 'list' ? `Computer c_eval_${++n}: ${a.action} done.` : null),
+    hub_command: a => (a.action === 'run' ? `${a.id}: done.` : null),
+    ask_device: () => 'The person answered: yes.',
   };
+
   const restore = [];
   for (const def of require('../../modules/harness/tools').TOOLS || []) {
     const stand = STAND_IN[def.name];

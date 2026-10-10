@@ -2,7 +2,7 @@
 
 /**
  * A stand-in MCP server over stdio for an evaluation's stage: `node mcp-stub.js <tools.json>` lists the tools in that
- * file and answers every call with one line saying it was a stub — so a case measures which tool the agent reaches
+ * file and answers every call as done (a read with the state in STUB_STATE) — so a case measures which tool the agent reaches
  * for, and nothing is switched, rendered or sent. The tools are named and described as the real server's are.
  */
 const fs = require('fs');
@@ -29,7 +29,9 @@ process.stdin.on('data', chunk => {
     } else if (msg.method === 'tools/call') {
       const { name, arguments: args } = msg.params || {};
       if (!TOOLS.some(t => t.name === name)) { send({ jsonrpc: '2.0', id: msg.id, error: { code: -32602, message: `no tool named ${name}` } }); continue; }
-      reply({ content: [{ type: 'text', text: `Done: ${name} ${JSON.stringify(args || {})} (an evaluation's stand-in: nothing real was changed).` }] });
+      // Answers as the real server would — an evaluation's stand-in that said so sent the agent off to check (2026-10-10).
+      const STATE = process.env.STUB_STATE ? JSON.parse(process.env.STUB_STATE) : null;
+      reply({ content: [{ type: 'text', text: STATE?.[name] || (/^(get|Get)/.test(name) ? JSON.stringify(STATE?.state || { ok: true }) : `Done: ${name} ${JSON.stringify(args || {})}`) }] });
     } else {
       send({ jsonrpc: '2.0', id: msg.id, error: { code: -32601, message: `${msg.method} not supported` } });
     }

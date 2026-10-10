@@ -40,12 +40,13 @@ test('the frameworks stage stands its stubs up and takes them down', async () =>
     const names = tools.schemas([]).map(s => s.function?.name || s.name);
     for (const n of ['service', 'mcp__home-assistant__HassTurnOff', 'mcp__blender__execute_blender_code', 'library_search']) assert.ok(names.includes(n), n);
     // A framework's call answers from its stand-in.
-    assert.match(await tools.call('mcp__home-assistant__HassTurnOff', { area: 'living room' }, [], {}), /stand-in/);
+    assert.match(await tools.call('mcp__home-assistant__HassTurnOff', { area: 'living room' }, [], {}), /Done: HassTurnOff/);
+    assert.match(await tools.call('mcp__home-assistant__GetLiveContext', {}, [], {}), /lock\.front_door/);
     assert.match(await tools.call('service', { action: 'call', service: 'hi3d', operation: 'getBalance' }, [], {}), /totalBalance/);
-    assert.match(await tools.call('hub_command', { action: 'run', id: 'services.restart', params: { id: 'whisper' } }, [], {}), /stand-in/);
+    assert.equal(await tools.call('hub_command', { action: 'run', id: 'services.restart', params: { id: 'whisper' } }, [], {}), 'services.restart: done.');
     assert.ok(require('../modules/recipes/store').get('disk-space-report'));
     await stage.teardown();
-    assert.doesNotMatch(String(await tools.call('hub_command', { action: 'run', id: '' }, [], {})), /stand-in/);
+    assert.match(String(await tools.call('hub_command', { action: 'run', id: '' }, [], {})), /^Error/, 'the real tool is back');
     assert.notEqual(require('../modules/mcp/registry').client('home-assistant')?.state, 'running');
   } finally { delete process.env.DOCA_SANDBOX; }
 });
