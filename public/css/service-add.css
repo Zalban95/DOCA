@@ -17,6 +17,11 @@
 .svc-skill { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
 .svc-skill-hits { display: flex; flex-direction: column; gap: 4px; }
 .svc-skill-hit { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; font-size: 12px; }
+.svc-form-head { margin-top: 12px; font-size: 12px; color: var(--muted); }
+.svc-form-head b { color: var(--text); }
+.svc-foot { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 10px; min-height: 28px; }
+.svc-foot .pt { margin-right: 2px; }
+.svc-foot .desc { flex: 1 1 200px; }
 .service-draft.open { box-shadow: 0 0 0 2px var(--accent); }
 .svc-draft-line { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; padding: 8px 10px; margin: 0 0 8px;
   border: 1px solid var(--accent); border-radius: 6px; }
