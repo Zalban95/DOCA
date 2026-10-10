@@ -1,0 +1,17 @@
+/* ═══════════════════════════════════════════════════════
+   A way back, a tree to pick a path from, people to pick (asked 2026-10-10). Theme tokens only, so every skin draws
+   them in its own colours; Points' label type comes from its own sheet.
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Undo: what was put away, with ten seconds to bring it back (js/lib/undo.js) ── */
+.undo-toasts { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 10050;
+  display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: min(560px, calc(100vw - 32px)); }
+.undo-toast { pointer-events: auto; display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;
+  padding: 8px 8px 8px 14px; background: var(--raised, var(--surface)); color: var(--bright); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg, 10px); box-shadow: 0 6px 24px rgba(0,0,0,.28); animation: undo-in .18s ease-out; }
+.undo-toast.going { opacity: 0; transform: translateY(6px); transition: opacity .18s, transform .18s; }
+.undo-text { flex: 1; min-width: 0; font-size: 13px; line-height: 1.35; }
+.undo-btn { font-weight: 600; color: var(--accent); border-color: var(--accent); }
+.undo-x { width: 28px; height: 28px; font-size: 13px; }
+@keyframes undo-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (max-width: 600px) { .undo-toasts { bottom: 76px; } .undo-toast { flex-wrap: wrap; } .undo-text { flex-basis: 100%; } }

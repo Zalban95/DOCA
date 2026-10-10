@@ -4,6 +4,15 @@
    Its page is made here: index.html is at its line ceiling. */
 const ARCHIVE_KINDS = { conversation: '💬 Conversation', mission: '⬡ Mission', project: '⟨⟩ Project', computer: '🖵 Computer', device: '▭ Browser' };
 
+/** What the Undo toast says once each kind is put away. */
+const ARCHIVE_PUT = {
+  project: p => `Project ${p?.name ? `“${p.name}” ` : ''}put away — its folder${p?.root ? ` ${p.root}` : ''} is untouched.`,
+  conversation: () => 'Conversation put away — its transcript is kept.',
+  mission: () => 'Mission put away — its log is kept.',
+  computer: () => 'Computer put away — stopped, its desktop and files kept.',
+  device: () => 'Browser put away — it signs in again once restored.',
+};
+
 async function archiveInit() {
   const page = document.getElementById('tab-archive');
   if (!page) return;
@@ -27,12 +36,18 @@ async function archiveInit() {
 async function archiveSet(kind, id, on, asked) {
   // Putting a computer away stops it: asked like any stop, naming what uses it (lib/machine-ask.js).
   if (kind === 'computer' && on && !asked) return machineAsk('computer', id, 'stop', '', () => archiveSet(kind, id, on, true), 'It is put away: stopped, its desktop and files kept, back from Agents → Archive.');
-  try { await apiFetch(`/api/archive/${kind}/${encodeURIComponent(id)}`, { method: 'POST', body: { on } }); }
+  let r;
+  try { r = await apiFetch(`/api/archive/${kind}/${encodeURIComponent(id)}`, { method: 'POST', body: { on } }); }
   catch (e) { return appAlert(e.message); }
+  // Put away at once, with ten seconds to change one's mind and the Archive as the way back after (lib/undo.js).
+  if (on) undoToast(ARCHIVE_PUT[kind]?.(r?.item) || 'Put away.', () => archiveSet(kind, id, false),
+    { link: { label: 'Archive', onclick: () => nav('archive') } });
   if (pageShown('archive')) archiveInit();
   if (kind === 'computer' && typeof computersLoad === 'function') computersLoad();
   if (kind === 'device' && typeof devicesLoad === 'function') devicesLoad();
-  if (kind === 'project' && on && typeof projectsInit === 'function') { if (typeof PJ !== 'undefined') PJ.inited = false; projectsInit(); }
+  if (kind === 'project' && typeof projectsInit === 'function') { if (typeof PJ !== 'undefined') PJ.inited = false; projectsInit(); }
+  if (kind === 'conversation' && typeof _hcLoadSessions === 'function') _hcLoadSessions().catch(() => {});
+  if (kind === 'mission' && typeof _hcLoadMissions === 'function') _hcLoadMissions();
 }
 
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('DOMContentLoaded', () => {

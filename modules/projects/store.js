@@ -41,6 +41,9 @@ function create({ root, name } = {}) {
   if (!root || !fs.existsSync(abs) || !fs.statSync(abs).isDirectory()) throw bad(`${abs} is not a folder.`);
   if (!fmSafe(abs)) throw bad(`${abs} is outside the folders the panel may open.`, 403);
   const same = rows().find(p => p.root === abs);
+  // Opening the folder of a project that was put away brings that project back (asked 2026-10-10: reopening an
+  // archived project answered with a project that was not in the list, so the person retyped the path for nothing).
+  if (same?.archivedAt) return { ...update(same.id, { archivedAt: null }), restored: true };
   if (same) return same;
   const p = { id: `prj_${crypto.randomBytes(5).toString('hex')}`, name: String(name || path.basename(abs)).slice(0, 80),
     root: abs, sessionId: null, commands: {}, createdAt: new Date().toISOString() };
