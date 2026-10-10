@@ -93,6 +93,7 @@ function confirm(roomId, screen, id) {
   g.state = 'active'; g.grantedAt = new Date().toISOString();
   audit().control(g, 'granted');
   tell(roomId, 'control', { grant: view(g) });
+  toMachine(g);
   return { grant: view(g) };
 }
 
@@ -135,9 +136,28 @@ function end(g, why) {
   if (g.state === 'ended') return;
   const was = g.state;
   g.state = 'ended'; g.endedAt = new Date().toISOString(); g.why = why;
-  if (was === 'active') audit().control(g, 'ended', `${why}${g.typed ? `; ${g.typed} characters typed` : ''}`);
+  if (was === 'active') { audit().control(g, 'ended', `${why}${g.typed ? `; ${g.typed} characters typed` : ''}`); toMachine(g); }
   tell(g.roomId, 'control', { grant: view(g), why });
   setTimeout(() => grants.delete(g.id), 60000).unref?.();
+}
+
+/**
+ * The controlled machine is told too (`meeting.control`, PROTOCOL §23.4): a client that can show a banner while a
+ * person controls it does — "<name> is controlling this computer — Stop" (DocaDesk) — and its Stop is
+ * POST /api/v1/meetings/control/stop (stopByDevice below). Names and states only.
+ */
+function toMachine(g) {
+  try {
+    require('../api-v1/bus').publish(g.deviceId, 'meeting.control', { grant: g.id, meetingId: g.roomId, state: g.state === 'active' ? 'active' : 'ended',
+      controller: g.controllerName, sharer: g.sharerName, ...(g.why ? { why: g.why } : {}) });
+  } catch { /* a device that cannot hear it still stops when the grant ends */ }
+}
+
+/** The controlled machine's own Stop (its banner): every active grant on it ends, said as the sharer stopping it. */
+function stopByDevice(deviceId) {
+  let n = 0;
+  for (const g of grants.values()) if (g.deviceId === deviceId && g.state !== 'ended') { end(g, `${g.sharerName} stopped it on ${g.deviceName}`); n++; }
+  return { ended: n };
 }
 
 /** Revoke: the sharer (Stop, Esc ×3) ends any control of their screen; the controller lets go of theirs. */
@@ -164,4 +184,4 @@ function endFor({ roomId = null, screen = null, sharer = null }, why) {
 const driving = deviceId => [...grants.values()].some(g => g.state === 'active' && g.deviceId === deviceId);
 const list = roomId => [...grants.values()].filter(g => g.roomId === roomId && g.state !== 'ended').map(view);
 
-module.exports = { machines, request, offer, confirm, input, revoke, endFor, driving, list, INPUT };
+module.exports = { machines, request, offer, confirm, input, revoke, stopByDevice, endFor, driving, list, INPUT };

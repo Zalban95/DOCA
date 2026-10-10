@@ -281,7 +281,7 @@ function events() {
     'prompt.progress':  { audience: 'device', payload: obj({ promptId: str(), selectionId: str(), stage: str({ enum: ['transcribing', 'thinking'] }) }) },
     'prompt.outcome':   { audience: 'device', payload: obj({ promptId: str(), selectionId: str(), status: str({ enum: ['outcome_ready', 'failed'] }), outcome: ref('Outcome'), error: obj({ code: str(), message: str() }) }) },
     'prompt.closed':    { audience: 'device', payload: obj({ promptId: str(), reason: str({ enum: ['confirmed_elsewhere', 'cancelled', 'expired'] }) }) },
-    'alert':            { audience: 'device', payload: obj({ id: str(), title: str(), body: arr(ref('Block')), priority: str({ enum: prompts.PRIORITIES }), haptic: bool(), from: str(), ext: ext() }) },
+    'alert':            { audience: 'device', payload: obj({ id: str(), title: str(), body: arr(ref('Block')), priority: str({ enum: prompts.PRIORITIES }), haptic: bool(), from: str(), ext: ext(), meeting: obj({ id: str(), link: str(), title: str(), by: str() }) }), note: 'meeting: a call ringing or about to start — offer Join, which opens link in the app\'s web view (§23.4).' }, ...require('../meetings/device').events({ obj, str }),
     'profile.changed':  { audience: 'device', payload: obj({ version: int(), etag: str(), updatedBy: str(), url: str() }), note: 'Refetch the profile (and capabilities).' }, ...require('../look/routes').events({ obj, str, bool, arr }),
     'agent.message':    { audience: 'device', payload: obj({ from: str(), type: str(), payload: any(), ext: ext() }) },
     'agent.turn':       { audience: 'device', payload: obj({

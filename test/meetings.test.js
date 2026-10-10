@@ -287,6 +287,17 @@ test('take control: refused from a plain browser share, only after both consents
     // The agent's own input on that machine waits while a person controls it.
     assert.match(String(require('../modules/meetings/control').driving(dev)), /true/);
 
+    // The machine is told who controls it (its banner), and its own Stop ends it for the room.
+    const heard = (await H.api(made.token, 'GET', '/api/v1/events')).body.events.filter(e => e.type === 'meeting.control');
+    assert.deepEqual(heard.map(e => [e.payload.state, e.payload.controller, e.payload.grant]), [['active', 'member', grant]], 'the controlled machine hears it, names only');
+    const stopped = await H.api(made.token, 'POST', '/api/v1/meetings/control/stop', {});
+    assert.equal(stopped.status, 200); assert.equal(stopped.body.ended, 1);
+    assert.ok(await pb.wait(c => c.what === 'control' && c.grant.state === 'ended' && /stopped it on Alice desk/.test(c.why)), 'the room hears the machine stopped it');
+    assert.equal((await H.api(made.token, 'GET', '/api/v1/events')).body.events.filter(e => e.type === 'meeting.control').at(-1).payload.state, 'ended');
+    assert.equal(require('../modules/meetings/control').driving(dev), false);
+    const again = (await as(alice, 'POST', `/api/meetings/${m.id}/control/offer`, { screen: pa.screen, to: bob.user.id, device: dev })).body.grant.id;
+    assert.equal((await as(alice, 'POST', `/api/meetings/${m.id}/control/confirm`, { screen: pa.screen, grant: again })).status, 200);
+
     // Revoked by the sharer: the next input is refused, nothing more reaches the machine.
     await as(alice, 'POST', `/api/meetings/${m.id}/control/revoke`, { screen: pa.screen });
     const n = inputs.length;
@@ -315,6 +326,16 @@ test('take control: refused from a plain browser share, only after both consents
     pa.close(); pb.close();
     Object.assign(registry, { forDevice: orig.forDevice, client: orig.client }); dc.state = orig.state;
   }
+});
+
+test('a call rings its people\'s devices with the meeting to join (PROTOCOL §23.4)', async () => {
+  const phone = H.mkDevice('Bob phone', 'phone', H.PHONE_CAPS);
+  require('../modules/api-v1/devices').update(phone.device.id, { userId: bob.user.id });
+  const m = (await as(alice, 'POST', '/api/meetings', { now: true, people: [bob.user.id], title: 'Ring me' })).body.meeting;
+  const alert = (await H.api(phone.token, 'GET', '/api/v1/events')).body.events.find(e => e.type === 'alert' && e.payload.meeting?.id === m.id);
+  assert.ok(alert, 'the phone is rung');
+  assert.deepEqual(alert.payload.meeting, { id: m.id, link: m.link, title: 'Ring me', by: 'member' });
+  assert.equal(alert.payload.priority, 'urgent');
 });
 
 test('a level that reaches only what agents create cannot take control of a colleague\'s machine', () => {

@@ -298,7 +298,7 @@ function ownTargets(to, personId) {
  * `read`) go with it, each stored as the recipient's own media; `imagePath` is the
  * one-picture form it shipped with.
  */
-function tell({ to, title, text, imagePath, files, svg, urgent, personId } = {}) {
+function tell({ to, title, text, imagePath, files, svg, urgent, personId, meeting } = {}) {
   const { bus, media, profiles, motion } = { ...api(), motion: require('../api-v1/motion') };
   const sending = require('./reach-files');
   const list = sending.read([...(imagePath ? [{ path: imagePath }] : []), ...(Array.isArray(files) ? files : [])]);
@@ -319,6 +319,8 @@ function tell({ to, title, text, imagePath, files, svg, urgent, personId } = {})
     body.push(...(blocks.get(d.id) || []));
     if (figure) body.push(figure);
     const payload = { id, title: head.slice(0, 120), body: motion.tailorBlocks(motion.normalizeBlocks(body), d.caps), priority, haptic: true, from: AGENT_ID };
+    // A call ringing: the app shows Join and opens `link` in its web view (PROTOCOL §23.4).
+    if (meeting?.id) payload.meeting = { id: String(meeting.id), link: String(meeting.link || ''), title: String(meeting.title || '').slice(0, 200), by: String(meeting.by || '').slice(0, 120) };
     bus.publish(d.id, 'alert', payload, { priority, ttlSec: 6 * 3600 });
     return { device: d, note: reachNote(d), files: sending.noteFor(d, list) };
   });

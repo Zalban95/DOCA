@@ -139,3 +139,61 @@ test('two people meet: voice and video both ways, then a screen shared and seen'
   assert.ok(await a.until('MEET.peers.size === 0'), 'Bob left');
   assert.deepEqual([...a.errors, ...b.errors], [], 'no page error');
 });
+
+/**
+ * The phone app's half, played by the page itself: a window.DocaDevice that answers as DocaMobile does (the contract in
+ * docs/api/fixtures/doca-device.json) — told when a meeting opens and closes, and sharing "its screen" through a
+ * MessagePort of JPEG frames because its web view has no getDisplayMedia. The other person sees it on the stage, the
+ * share carries the phone's own size (what control is scaled to), and the app ending it, or its notification's Leave,
+ * reach the room.
+ */
+const FAKE_APP = `(() => {
+  navigator.mediaDevices.getDisplayMedia = undefined;   // Android's WebView has none
+  const calls = window.__app = { meeting: [], share: 0, stop: 0 };
+  let timer = null, port = null;
+  window.DocaDevice = {
+    meeting: j => { calls.meeting.push(JSON.parse(j)); return JSON.stringify({ service: true }); },
+    meetAudio: r => JSON.stringify({ route: r || 'speaker', available: ['speaker', 'earpiece'] }),
+    stopScreen: () => { calls.stop++; clearInterval(timer); return true; },
+    shareScreen: () => { calls.share++; setTimeout(() => {
+      const ch = new MessageChannel(); port = ch.port1; window.__appPort = port;
+      window.postMessage('doca-screen', location.origin, [ch.port2]);
+      port.postMessage(JSON.stringify({ what: 'started', width: 1080, height: 2400 }));
+      const c = Object.assign(document.createElement('canvas'), { width: 270, height: 600 }), g = c.getContext('2d'); let n = 0;
+      timer = setInterval(() => { g.fillStyle = n++ % 2 ? '#2a6' : '#a26'; g.fillRect(0, 0, 270, 600); g.fillStyle = '#fff'; g.fillText('phone ' + n, 20, 40);
+        port.postMessage(c.toDataURL('image/jpeg', 0.7).split(',')[1]); }, 120);
+    }, 300); return 'asking'; },
+  };
+})();`;
+
+test('a phone in the app shares its screen through the app, and the app hears the meeting open and close', { skip, timeout: 300000 }, async () => {
+  const a = await browser(alice, 'alice2'), b = await browser(bob, 'bob2');
+  await b.page.send('Page.addScriptToEvaluateOnNewDocument', { source: FAKE_APP });
+  await a.page.send('Page.navigate', { url: `${H.base}/` });
+  assert.ok(await a.until("typeof meetingStart === 'function' && document.readyState === 'complete' && typeof _liveScreen !== 'undefined'"), 'the panel loaded');
+  const { id } = await a.eval(`meetingStart({ people: [${JSON.stringify(bob.user.id)}], title: 'Phone share' })`, true);
+  await b.page.send('Page.navigate', { url: `${H.base}/meet/${id}` });
+  assert.ok(await b.until(`MEET.id === '${id}' && MEET.peers.size === 1`), 'the phone joined by the link');
+  assert.ok(await b.until(`window.__app.meeting.some(m => m.open && m.id === '${id}' && m.link.endsWith('/meet/${id}'))`), 'the app is told the meeting is open (its service keeps the call alive)');
+  assert.ok(await b.until("!!document.querySelector('#meet .meet-ctl') && /Speaker/.test(document.querySelector('#meet .meet-ctl').textContent)"), 'where the sound goes is a button');
+  assert.ok(await a.until("MEET.peers.size === 1 && [...MEET.peers.keys()].every(p => MEET.mesh.state(p) === 'connected')", 90000), `connected — ${await a.why()}`);
+
+  assert.equal(await b.eval('meetShareStart().then(() => !!MEET.screen, e => String(e))', true), true, 'the share started through the app');
+  assert.equal(await b.eval('window.__app.share'), 1);
+  assert.ok(await a.until("(document.querySelector('#meet .meet-stage video')?.videoWidth || 0) > 0", 60000), `Alice sees the phone's screen — ${await a.why()}`);
+  assert.ok(await a.until('[...MEET.peers.values()].some(p => p.sharing?.width === 1080 && p.sharing?.height === 2400)'), 'the share carries the phone\'s own pixels');
+  await a.shot('9-alice-sees-phone-share.png'); await b.shot('10-phone-sharing-through-app.png');
+
+  // The app ends the capture (Android's own chip, or its notification): the room hears the share stop.
+  await b.eval("window.__appPort.postMessage(JSON.stringify({ what: 'ended', why: 'stopped from the phone' }))");
+  assert.ok(await b.until('!MEET.screen'), 'the share stops on the phone');
+  assert.ok(await a.until("!document.querySelector('#meet .meet-stage')"), 'and leaves the stage');
+  assert.ok(await b.eval('window.__app.stop >= 1'), 'the app is told to stop capturing');
+
+  // Leave from the app's notification: the page leaves, and tells the app the meeting closed.
+  await b.eval("window.dispatchEvent(new CustomEvent('doca-meeting', { detail: { action: 'leave' } }))");
+  assert.ok(await b.until('!MEET.id'), 'Leave in the notification leaves');
+  assert.ok(await b.until('window.__app.meeting.at(-1).open === false'), 'the app is told it closed');
+  assert.ok(await a.until('MEET.peers.size === 0'), 'Alice sees the phone go');
+  assert.deepEqual([...a.errors, ...b.errors], [], 'no page error');
+});

@@ -57,6 +57,7 @@ function meetDraw() {
       <button type="button" class="btn${MEET.cam ? '' : ' meet-off'}" onclick="meetCam()" title="Camera">${_meetIcon(MEET.cam, '📷 Camera', '📷 Off')}</button>
       <button type="button" class="btn${MEET.screen ? ' meet-on' : ''}" onclick="${MEET.screen ? 'meetShareStop()' : 'meetShareStart()'}">${MEET.screen ? '■ Stop sharing' : '🖥 Share screen'}</button>
       ${MEET.screen && peers.length ? '<button type="button" class="btn" onclick="meetControlOffer()" title="Let someone in the room move your pointer and type — you confirm, and stop it any time">Let someone control…</button>' : ''}
+      ${typeof meetAudioRoute === 'function' && (MEET.audio || meetAudioRoute())?.available?.length > 1 ? `<button type="button" class="btn" onclick="meetAudioNext()" title="Where the sound goes">${escHtml({ speaker: '🔊 Speaker', earpiece: '📞 Earpiece', headset: '🎧 Headset' }[MEET.audio.route] || '🔊 Sound')}</button>` : ''}
       <button type="button" class="btn" onclick="MEET.chatOpen = !MEET.chatOpen; meetDraw()">💬 Chat${MEET.chat.length ? ` (${MEET.chat.length})` : ''}</button>
       <button type="button" class="btn btn-red" onclick="meetLeave()">Leave</button>
       ${MEET.meeting?.organizer ? '<button type="button" class="btn btn-red" onclick="appConfirm(\'End the meeting for everyone?\', () => meetLeave(true))">End for all</button>' : ''}
