@@ -890,7 +890,7 @@ The harness gives its agent eight rules for working on any repository (charter r
   ring's alert carries `meeting {id, link, title, by}` so an app offers Join; the controlled machine hears
   `meeting.control` and may stop it with `POST /api/v1/meetings/control/stop` (DocaDesk's banner). The mesh keeps its
   signalling in order (each POST after the last, each message handled after the last, early candidates kept) and
-  restarts ICE on a failed path; `test/meetings-browser.test.js` jitters signalling on purpose and plays the phone app
+  restarts ICE on a failed path; offers never cross when a connection is made (the impolite side offers, the polite side's tracks go in its answer — a crossed start left Android's WebView gathering no candidates), and one not connected after 20 s is made again; `test/meetings-browser.test.js` jitters signalling on purpose and plays the phone app
   with a fake `DocaDevice`.
 - **For the hive chat and other parts**: `meetingStart({space, people, title})`, `screenShareStart(opts)`, `meetingOpen(id)` in the page (each fires `doca:meeting`; the hive chat's buttons reach them as `window.peopleCallProvider.start(kind, space)`), and `meetings/hooks.js` (`events`: created, joined, left, shared, said, ended; `call()`) on the hub, which also says how the agent would join a room later as one more peer. `test/meetings.test.js` (lifecycle, access, relay, ICS, calendar stubs, consents, audit) and `test/meetings-browser.test.js` (two Chromiums with fake media meet, share, ask for control; `DOCA_SHOTS` keeps pictures).
 
