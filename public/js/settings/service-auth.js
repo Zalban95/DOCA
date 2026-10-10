@@ -72,15 +72,10 @@ function serviceAuthOf() {
   return { type: 'bearer' };
 }
 
-/** A definition's `auth` into the fold's fields. */
-function serviceAuthFill(a = { type: 'bearer' }) {
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+/** A definition's `auth` as the fold's field values (service-form.js paints them). */
+function serviceAuthValues(a = { type: 'bearer' }) {
   const how = a.type === 'apiKey' ? (a.in === 'query' ? 'query' : 'header') : a.type === 'oauth2' ? (a.tokenBody === 'json' ? 'exchange' : 'client') : ['basic', 'none'].includes(a.type) ? a.type : 'bearer';
-  set('sk-place', how);
-  set('sk-field', a.type === 'apiKey' ? a.name : '');
-  set('sk-prefix', a.prefix || '');
-  set('sk-tokenurl', a.type === 'oauth2' ? a.tokenUrl : '');
-  set('sk-scope', a.scope || '');
+  return { 'sk-place': how, 'sk-field': a.type === 'apiKey' ? a.name || '' : '', 'sk-prefix': a.prefix || '', 'sk-tokenurl': a.type === 'oauth2' ? a.tokenUrl || '' : '', 'sk-scope': a.scope || '' };
 }
 
 /** The key as it is kept: the one box, or the two joined id:secret. `null` when nothing was typed; an Error to ask for. */
