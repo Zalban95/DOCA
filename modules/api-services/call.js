@@ -27,7 +27,7 @@ function build(def, a, params = {}, files = {}) {
   if (missing.length) throw bad(`${a.name} needs ${missing.join(', ')}.`);
   let p = a.path;
   const u = new URL(def.server);
-  const query = new URLSearchParams(), headers = {};
+  const query = new URLSearchParams(), headers = { ...(def.headers || {}) };   // the service's own extra headers; a parameter's win
   for (const x of a.params || []) {
     const v = params[x.name] !== undefined ? params[x.name] : x.default;
     delete params[x.name];
@@ -71,10 +71,29 @@ function build(def, a, params = {}, files = {}) {
   return { ...out, form, files };
 }
 
+/**
+ * The service's own limit (`rate.perMinute`, set where it is saved): a request over it waits its turn — up to a minute,
+ * so a job's polls are spaced rather than refused — and past that is refused with how long until there is room.
+ */
+const _sent = new Map();   // service name → times of the requests in the last minute (in memory)
+async function pace(def) {
+  const n = def.rate?.perMinute;
+  if (!n) return null;
+  const now = Date.now(), times = (_sent.get(def.name) || []).filter(t => t > now - 60000);
+  const wait = times.length >= n ? times[times.length - n] + 60000 - now : 0;
+  if (wait > 60000) return `Error: ${def.name} is held to ${n} request${n === 1 ? '' : 's'} a minute (its rate limit in Field → Connectors → API services); try again in ${Math.ceil(wait / 1000)} s.`;
+  times.push(now + wait);
+  _sent.set(def.name, times);
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  return null;
+}
+
 /** Send an action. → { status, statusText, ok, text, json } (text scrubbed of the key) or { error }. */
 async function send(def, a, { params, files, ctx = {} } = {}) {
   let req;
   try { req = build(def, a, params, files); } catch (e) { return { error: `Error: ${e.message}` }; }
+  const held = await pace(def);
+  if (held) return { error: held };
   const http = require('../harness/toolbox/http');
   if (def.auth.type === 'none' && !http.owned(req.url)) return { error: 'Error: a service without a key is reached only on the owner\'s own addresses.' };
   const sent = await http.send({ ...req, key: def.auth.type === 'none' ? undefined : def.name }, { user: ctx.user, sessionId: ctx.sessionId });
@@ -111,4 +130,4 @@ async function keep(def, url, name, { ctx = {} } = {}) {
   } catch (e) { return { error: e.message }; }
 }
 
-module.exports = { build, send, keep, pick };
+module.exports = { build, send, keep, pick, pace };

@@ -90,7 +90,8 @@ function authOf(scheme, server) {
   if (t === 'oauth2' && cc?.tokenUrl) {
     let tokenUrl;
     try { tokenUrl = new URL(cc.tokenUrl, server).toString(); } catch { return { auth: { type: 'bearer' }, warning: 'its token address could not be read: paste a token instead' }; }
-    return { auth: { type: 'oauth2', tokenUrl, tokenBody: scheme['x-doca-token-body'] === 'json' ? 'json' : 'form' } };
+    const scope = cut(Object.keys(cc.scopes || {}).join(' '), 300);
+    return { auth: clean({ type: 'oauth2', tokenUrl, tokenBody: scheme['x-doca-token-body'] === 'json' ? 'json' : 'form', scope: scope || undefined }) };
   }
   return { auth: { type: 'bearer' }, warning: `its "${t}${scheme.in ? ` in ${scheme.in}` : ''}" sign-in is not one DOCA sends: a bearer token is assumed — an account with a sign-in page is a connector (Field → Connectors)` };
 }
@@ -142,8 +143,17 @@ function fromDoc(doc, { from = null } = {}) {
   for (const a of actions) if (a.job && !actions.some(b => b.name === a.job.poll.operation)) warnings.push(`${a.name}: its job asks after "${a.job.poll.operation}", which is not an operation here`);
   const info = doc.info || {};
   return { definition: clean({ title: cut(info.title, 80), note: cut(info['x-doca-note'] || info.summary || info.description, 200), docs: cut(doc.externalDocs?.url, 300),
-    server, auth, actions, name: cut(info['x-doca-name'], 40), keyHint: cut(info['x-doca-key-hint'], 200), skill: cut(info['x-doca-skill'], 40) }), warnings };
+    server, auth, actions, name: cut(info['x-doca-name'], 40), keyHint: cut(info['x-doca-key-hint'], 200), skill: cut(info['x-doca-skill'], 40),
+    headers: headersOf(info['x-doca-headers']), rate: rateOf(info['x-doca-rate']) }), warnings };
 }
+
+/** x-doca-headers: headers every request carries that are not the key ({"X-Client": "doca"}); x-doca-rate: {perMinute}. */
+function headersOf(h) {
+  if (!h || typeof h !== 'object' || Array.isArray(h)) return undefined;
+  const out = Object.fromEntries(Object.entries(h).filter(([k, v]) => /^[A-Za-z0-9-]{1,60}$/.test(k) && ['string', 'number'].includes(typeof v)).slice(0, 20).map(([k, v]) => [k, String(v).slice(0, 500)]));
+  return Object.keys(out).length ? out : undefined;
+}
+function rateOf(r) { const n = Math.floor(Number(r?.perMinute)); return n >= 1 && n <= 100000 ? { perMinute: n } : undefined; }
 
 function schemaOf(f) {
   const item = clean({ type: f.many ? (f.type || '').replace(/^array of /, '') || 'string' : f.file ? 'string' : f.type || 'string',
@@ -157,7 +167,8 @@ function toDoc(def) {
     apiKey: () => clean({ type: 'apiKey', in: def.auth.in, name: def.auth.name, 'x-doca-prefix': def.auth.prefix || undefined }),
     bearer: () => ({ type: 'http', scheme: 'bearer' }),
     basic: () => ({ type: 'http', scheme: 'basic' }),
-    oauth2: () => clean({ type: 'oauth2', flows: { clientCredentials: { tokenUrl: def.auth.tokenUrl, scopes: {} } }, 'x-doca-token-body': def.auth.tokenBody === 'json' ? 'json' : undefined }),
+    oauth2: () => clean({ type: 'oauth2', flows: { clientCredentials: { tokenUrl: def.auth.tokenUrl, scopes: Object.fromEntries(String(def.auth.scope || '').split(/\s+/).filter(Boolean).map(x => [x, ''])) } },
+      'x-doca-token-body': def.auth.tokenBody === 'json' ? 'json' : undefined }),
   }[def.auth?.type];
   const paths = {};
   for (const a of def.actions || []) {
@@ -170,9 +181,10 @@ function toDoc(def) {
       parameters: (a.params || []).map(x => clean({ name: x.name, in: x.in, required: x.in === 'path' ? true : x.required, description: x.description, schema: schemaOf(x) })),
       requestBody: body ? clean(body) : undefined, responses: { 200: { description: 'The answer' } }, 'x-doca-job': a.job });
   }
-  return clean({ openapi: '3.1.0', info: clean({ title: def.title || def.name, version: '1', summary: def.note || undefined, 'x-doca-name': def.name, 'x-doca-key-hint': def.keyHint || undefined, 'x-doca-skill': def.skill || undefined }),
+  return clean({ openapi: '3.1.0', info: clean({ title: def.title || def.name, version: '1', summary: def.note || undefined, 'x-doca-name': def.name, 'x-doca-key-hint': def.keyHint || undefined, 'x-doca-skill': def.skill || undefined,
+      'x-doca-headers': headersOf(def.headers), 'x-doca-rate': rateOf(def.rate) }),
     externalDocs: def.docs ? { url: def.docs } : undefined, servers: [{ url: def.server }],
     components: scheme ? { securitySchemes: { key: scheme() } } : undefined, security: scheme ? [{ key: [] }] : undefined, paths });
 }
 
-module.exports = { fromDoc, toDoc, jobOf, authOf, NAME };
+module.exports = { fromDoc, toDoc, jobOf, authOf, NAME, headersOf, rateOf };

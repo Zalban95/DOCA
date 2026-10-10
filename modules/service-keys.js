@@ -23,10 +23,10 @@ function write(d) { fs.mkdirSync(path.dirname(file()), { recursive: true }); fs.
 const NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
 // field: a header's or a parameter's name, or for an exchange the token address
 const view = k => ({ name: k.name, origin: k.origin, place: k.place, field: k.field, prefix: k.prefix, who: k.who, note: k.note || '', hasKey: !!k.key, savedAt: k.savedAt,
-  ...(k.grant ? { grant: k.grant } : {}) });
+  ...(k.grant ? { grant: k.grant } : {}), ...(k.scope ? { scope: k.scope } : {}) });
 const list = () => Object.values(all()).map(view);
 
-function save({ name, origin, place = 'header', field, prefix, who = 'host', note = '', key, grant }) {
+function save({ name, origin, place = 'header', field, prefix, who = 'host', note = '', key, grant, scope }) {
   name = String(name || '').trim().toLowerCase();
   if (!NAME.test(name)) throw bad('A key\'s name is short, lowercase letters, digits and dashes: hyper3d, home-assistant.');
   let o;
@@ -50,7 +50,7 @@ function save({ name, origin, place = 'header', field, prefix, who = 'host', not
     prefix: prefix === undefined || prefix === null ? (place === 'header' && !field ? 'Bearer ' : '') : String(prefix).slice(0, 30),
     who: who === 'everyone' ? 'everyone' : 'host', note: String(note || '').slice(0, 200), key: given, savedAt: new Date().toISOString(),
     // how the token is asked for: absent is the first way (Basic and an empty JSON body, hi3d's); client_credentials is OAuth 2.0's form
-    ...(place === 'exchange' && grant === 'client_credentials' ? { grant } : {}) };
+    ...(place === 'exchange' && grant === 'client_credentials' ? { grant, ...(String(scope || '').trim() ? { scope: String(scope).trim().slice(0, 300) } : {}) } : {}) };
   if (place === 'basic') { d[name].field = 'Authorization'; d[name].prefix = 'Basic '; }
   write(d);
   return view(d[name]);
@@ -67,7 +67,7 @@ async function token(k, { fresh = false } = {}) {
   const form = k.grant === 'client_credentials';
   const r = await fetch(k.field, { method: 'POST', signal: AbortSignal.timeout(20000),
     headers: { Authorization: `Basic ${Buffer.from(k.key).toString('base64')}`, 'Content-Type': form ? 'application/x-www-form-urlencoded' : 'application/json', Accept: 'application/json' },
-    body: form ? 'grant_type=client_credentials' : '{}' });
+    body: form ? `grant_type=client_credentials${k.scope ? `&scope=${encodeURIComponent(k.scope)}` : ''}` : '{}' });
   const text = await r.text();
   let j = {};
   try { j = JSON.parse(text); } catch { /* said in words */ }
