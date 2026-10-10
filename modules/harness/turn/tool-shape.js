@@ -28,6 +28,18 @@ function switches() {
   return out;
 }
 
+/**
+ * Why a tool this turn does not hold is off, and the way that is open instead — for a refused call and for tools_more,
+ * which used to answer "Loaded" for a tool the turn could not call (the airlock's web tools, 2026-10-10: the agent
+ * loaded web_search three times and was refused each time, never dispatching the researcher).
+ */
+function whyOff(name, profile = null) {
+  const registry = require('../../agents/registry');
+  if (registry.AIRLOCK_ONLY.includes(name) && registry.enabled() && !profile?.airlock)
+    return 'the airlock: only the scout and the researcher read the web — dispatch one with agent_dispatch and act on its report';
+  return switches().find(x => x.name === name)?.why || null;
+}
+
 /** Only a mission (a specialist's turn) plans and reports this way. */
 const MISSION_ONLY = ['mission_plan', 'scout_report'];
 
@@ -48,4 +60,4 @@ function off(profile, all = [], notMine = []) {
   return out;
 }
 
-module.exports = { switches, off, MISSION_ONLY };
+module.exports = { whyOff, switches, off, MISSION_ONLY };

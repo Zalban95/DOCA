@@ -136,6 +136,21 @@ function skillServices(name) {
   } catch { return []; }
 }
 
+/**
+ * A framework with no tool of the agent's: the request's words still deserve the way, said once in Likely fits.
+ * `feature` is its index entry (features/), so an unlicensed one is never offered.
+ */
+const ADVICE = [
+  { feature: 'hive-chat', re: /\b(tell|message|text|write to|let)\b[^.?!]{0,60}\b(from|on|in) (my|our|the) team\b|\b(colleague|teammate|team ?mate|coworker|co-worker)s?\b|\bcollega\b/i,
+    line: 'the hive chat (Controls → Chat) is where the people of this hive write to each other — a colleague is written to there by the person (or offer a meeting); no tool of yours writes in it' },
+];
+
+/** The advice rows a request's words call for, among the features this hive has. */
+function advice(text) {
+  const features = require('../../features'), lic = require('../../license');
+  return ADVICE.filter(a => a.re.test(String(text || '')) && (() => { try { const f = features.get(a.feature); return !f || lic.featureOn(f); } catch { return true; } })()).map(a => a.line);
+}
+
 const MAX = 6;   // a request rarely needs more; a long one must not load half the list
 
 /**
@@ -155,4 +170,4 @@ function cued(text, schemas) {
   return [...mcp, ...out].slice(0, MAX);
 }
 
-module.exports = { PURPOSE, CUES, HOME, cued, mcpPurpose, mcpCue, serviceCue };
+module.exports = { PURPOSE, CUES, HOME, ADVICE, advice, cued, mcpPurpose, mcpCue, serviceCue };

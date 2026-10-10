@@ -45,6 +45,7 @@ function likely(message, held, sessionId = null, already = [], schemas = []) {
       const tools = id ? schemas.map(s => s.function?.name || s.name).filter(n => n.startsWith(`mcp__${id}__`)).map(n => n.slice(`mcp__${id}__`.length)) : [];
       rows.push(id ? `- MCP server ${id}: ${mcpPurpose(id, tools)} — its tools are loaded (mcp__${id}__…)` : `- tool ${c}: ${PURPOSE[c] || ''} — loaded for this request`);
     }
+    for (const a of require('./tool-cues').advice(text)) rows.push(`- ${a}`);
   } catch { /* none */ }
   if (held.has('recipe')) {
     let recipes = [];

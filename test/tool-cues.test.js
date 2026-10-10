@@ -66,3 +66,24 @@ test('every tool that can be named has a job written for it', () => {
   const missing = Object.keys(KIT_OF).filter(n => !CORE.has(n) && !PURPOSE[n] && !tools.ALIASES[n]);
   assert.deepEqual(missing, [], 'a named tool with no job is a name the agent cannot place');
 });
+
+test('tools_more never loads a tool the turn cannot call, and says the way that is open', async () => {
+  const tools = require('../modules/harness/tools');
+  const registry = require('../modules/agents/registry');
+  const was = registry.enabled();
+  registry.setEnabled(true);
+  try {
+    const s = require('../modules/harness/memory').createSession('airlock', { activate: false });
+    const r = await tools.call('tools_more', { names: ['web_search', 'remind'] }, ['web_search'], { sessionId: s.id, disabled: ['web_search'] });
+    assert.match(r, /Loaded from your next step: remind\./);
+    assert.match(r, /web_search is off here — the airlock: only the scout and the researcher read the web — dispatch one with agent_dispatch/);
+    assert.ok(!require('../modules/harness/turn/tool-tiers').attached(s.id).has('web_search'));
+  } finally { registry.setEnabled(was); }
+});
+
+test('a framework with no tool is still named for the request that needs it: the hive chat', () => {
+  const fits = require('../modules/harness/turn/fits');
+  const t = fits.block({ message: 'Tell Marco from my team that the review moved to Friday.', schemas: [schema('read_file')] });
+  assert.match(t, /the hive chat \(Controls → Chat\)/);
+  assert.doesNotMatch(fits.block({ message: 'hello', schemas: [schema('read_file')] }), /hive chat/);
+});
