@@ -26,7 +26,6 @@ const ALLOWED = [
   ['harness-console/approval.js', 'approval/always', 'forgetting an "always" only makes the agent ask again: it adds a guard, and the next card offers "always" back'],
   ['meet/share.js', "_meetPost('control/revoke')", 'ending someone\'s control of your own screen is the safety stop itself: it must act at once'],
   ['meet/share.js', "control/revoke', { grant", 'the "no" of the question that offered control — nothing was given yet'],
-  ['harness-console/teams.js', '/archive', 'a team is put away, not deleted, and comes back from the Archive (file owned by the Teams page work)'],
   ['computers-strays.js', '/archive`', 'adopting a container DOCA did not record: nothing goes, it lands in the Archive'],
   ['wakeword.js', '/samples/', 'part of "Forget your recordings", asked once for both kinds just above'],
 ];
