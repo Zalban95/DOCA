@@ -26,7 +26,7 @@ const KIND = ['json', 'form', 'multipart'];
 function keyPlace(auth = {}) {
   if (auth.type === 'apiKey') return auth.in === 'query' ? { place: 'query', field: auth.name } : { place: 'header', field: auth.name, prefix: auth.prefix || '' };
   if (auth.type === 'basic') return { place: 'basic' };
-  if (auth.type === 'oauth2') return { place: 'exchange', field: auth.tokenUrl, ...(auth.tokenBody === 'json' ? {} : { grant: 'client_credentials' }) };
+  if (auth.type === 'oauth2') return { place: 'exchange', field: auth.tokenUrl, ...(auth.tokenBody === 'json' ? {} : { grant: 'client_credentials', ...(auth.scope ? { scope: auth.scope } : {}) }) };
   return { place: 'header', field: 'Authorization', prefix: 'Bearer ' };   // bearer
 }
 
@@ -34,7 +34,7 @@ function keyPlace(auth = {}) {
 function authOfKey(k) {
   if (k.place === 'query') return { type: 'apiKey', in: 'query', name: k.field };
   if (k.place === 'basic') return { type: 'basic' };
-  if (k.place === 'exchange') return { type: 'oauth2', tokenUrl: k.field, tokenBody: k.grant === 'client_credentials' ? 'form' : 'json' };
+  if (k.place === 'exchange') return { type: 'oauth2', tokenUrl: k.field, tokenBody: k.grant === 'client_credentials' ? 'form' : 'json', ...(k.scope ? { scope: k.scope } : {}) };
   if (k.field === 'Authorization' && k.prefix === 'Bearer ') return { type: 'bearer' };
   return { type: 'apiKey', in: 'header', name: k.field, ...(k.prefix ? { prefix: k.prefix } : {}) };
 }
@@ -49,7 +49,16 @@ function check(def, { rekey = false } = {}) {
   const origin = server.origin, auth = { ...(def.auth || { type: 'bearer' }) };
   if (!AUTH.includes(auth.type)) throw bad(`The key is sent as one of: ${AUTH.join(', ')}.`);
   if (auth.type === 'apiKey' && (!['header', 'query'].includes(auth.in) || !/^[A-Za-z0-9_.-]{1,80}$/.test(auth.name || ''))) throw bad('An API key goes in a header or the query, under a name like X-API-Key or api_key.');
-  if (auth.type === 'oauth2') { let t; try { t = new URL(auth.tokenUrl); } catch { throw bad('Give the token address.'); } if (t.origin !== origin) throw bad('The token address is on the service\'s own address.'); }
+  if (auth.type === 'oauth2') {
+    let t; try { t = new URL(auth.tokenUrl); } catch { throw bad('Give the token address.'); }
+    if (t.origin !== origin) throw bad('The token address is on the service\'s own address.');
+    if (auth.scope !== undefined) { auth.scope = String(auth.scope || '').trim().slice(0, 300); if (!auth.scope) delete auth.scope; else if (!/^[\x21-\x7e ]+$/.test(auth.scope)) throw bad('A scope is words separated by spaces.'); }
+  } else delete auth.scope;
+  // Headers every request carries — never the key's own, nor what the hub sets (call.js HOP): a key is pasted, not typed here.
+  const keyHeader = auth.type === 'apiKey' && auth.in === 'header' ? auth.name.toLowerCase() : 'authorization';
+  const headers = require('./openapi').headersOf(def.headers);
+  for (const k of Object.keys(headers || {})) if (['authorization', 'cookie', 'proxy-authorization', 'host', keyHeader].includes(k.toLowerCase())) throw bad(`${k} is set by the hub (it carries the key or the connection) — not an extra header.`);
+  const rate = require('./openapi').rateOf(def.rate);
   // No key: only an address of the owner's own (this machine, the LAN, the tailnet). A stranger's API without a key is
   // the open web, which is read through the airlock (CONSTITUTION S6) — not reached with actions around it.
   if (auth.type === 'none' && !require('../harness/toolbox/http').owned(origin)) throw bad('A service without a key must be one of your own addresses (this machine, the local network, the tailnet). An API on the internet needs its key.');
@@ -67,7 +76,8 @@ function check(def, { rekey = false } = {}) {
   return { name, title: String(def.title || name).slice(0, 80), note: String(def.note || '').slice(0, 200), docs: def.docs ? String(def.docs).slice(0, 300) : '',
     keyHint: def.keyHint ? String(def.keyHint).slice(0, 200) : '',
     skill: /^[a-z0-9][a-z0-9-]{0,40}$/.test(String(def.skill || '')) ? String(def.skill) : '',   // the skill that says when and why (skills.js servicesNote)
-    server: server.toString().replace(/\/$/, ''), origin, auth, actions: JSON.parse(JSON.stringify(actions)), source: String(def.source || 'hand').slice(0, 40) };
+    server: server.toString().replace(/\/$/, ''), origin, auth, actions: JSON.parse(JSON.stringify(actions)), source: String(def.source || 'hand').slice(0, 40),
+    ...(headers ? { headers } : {}), ...(rate ? { rate } : {}) };
 }
 
 /** Keep a definition (a person's Save). Returns its view. */
@@ -96,7 +106,7 @@ function view(name) {
   if (!d) return null;
   const k = keys().list().find(x => x.name === d.name);
   return { name: d.name, title: d.title, note: d.note || k?.note || '', docs: d.docs || '', keyHint: d.keyHint || '', skill: d.skill || '', server: d.server, origin: d.origin, auth: d.auth, source: d.source,
-    hasKey: !!k?.hasKey, who: k?.who || 'host', needsKey: d.auth.type !== 'none' && !k?.hasKey, savedAt: d.savedAt || k?.savedAt || null,
+    headers: d.headers || null, rate: d.rate || null, hasKey: !!k?.hasKey, who: k?.who || 'host', needsKey: d.auth.type !== 'none' && !k?.hasKey, savedAt: d.savedAt || k?.savedAt || null,
     actions: d.actions.map(a => ({ name: a.name, method: a.method, path: a.path, summary: a.summary || '', job: !!a.job, files: (a.body?.fields || []).filter(f => f.file).map(f => f.name) })) };
 }
 

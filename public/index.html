@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="css/logs.css"><link rel="stylesheet" href="css/meet.css">
 <link rel="stylesheet" href="css/attachments.css"><link rel="stylesheet" href="css/processes.css">
 <link rel="stylesheet" href="css/harness.css"><link rel="stylesheet" href="css/chat-kit.css">
-<link rel="stylesheet" href="css/computers.css"><link rel="stylesheet" href="css/admin.css"><link rel="stylesheet" href="css/people.css"><link rel="stylesheet" href="css/teams-page.css"><link rel="stylesheet" href="css/face.css"><link rel="stylesheet" href="css/mic-keep.css"><link rel="stylesheet" href="css/workstream.css"><link rel="stylesheet" href="css/vnc.css"><link rel="stylesheet" href="css/chronicle.css"><link rel="stylesheet" href="css/ambient.css"><link rel="stylesheet" href="css/home.css"><link rel="stylesheet" href="css/guided.css"><link rel="stylesheet" href="css/panel-layout.css"><link rel="stylesheet" href="css/system.css"><link rel="stylesheet" href="css/ground-light.css"><link rel="stylesheet" href="css/skin-points.css"><link rel="stylesheet" href="css/think.css"><link rel="stylesheet" href="css/usage-meter.css"><link rel="stylesheet" href="css/teams.css"><link rel="stylesheet" href="css/approval-explain.css">
+<link rel="stylesheet" href="css/computers.css"><link rel="stylesheet" href="css/admin.css"><link rel="stylesheet" href="css/people.css"><link rel="stylesheet" href="css/teams-page.css"><link rel="stylesheet" href="css/face.css"><link rel="stylesheet" href="css/mic-keep.css"><link rel="stylesheet" href="css/workstream.css"><link rel="stylesheet" href="css/vnc.css"><link rel="stylesheet" href="css/chronicle.css"><link rel="stylesheet" href="css/ambient.css"><link rel="stylesheet" href="css/home.css"><link rel="stylesheet" href="css/guided.css"><link rel="stylesheet" href="css/panel-layout.css"><link rel="stylesheet" href="css/system.css"><link rel="stylesheet" href="css/ground-light.css"><link rel="stylesheet" href="css/skin-points.css"><link rel="stylesheet" href="css/think.css"><link rel="stylesheet" href="css/usage-meter.css"><link rel="stylesheet" href="css/teams.css"><link rel="stylesheet" href="css/approval-explain.css"><link rel="stylesheet" href="css/service-add.css">
 <link rel="stylesheet" href="css/responsive.css">
 <!-- xterm.js -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
@@ -831,33 +831,19 @@
             <div id="doca-devices-list"><div class="placeholder">Loading…</div></div>
           </div>
 
-          <!-- ── External services: third-party API keys ── -->
+          <!-- ── External providers: chat-model endpoints; ＋ Add is the one "Add a service" box (settings/service-add.js) ── -->
           <div class="card mt8 host-only">
             <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               External providers
-              <button class="btn btn-xs btn-blue" onclick="showAddProvider()">+ Add provider</button>
+              <button class="btn btn-xs btn-blue" onclick="keysAddToggle()">＋ Add</button>
             </div>
             <div class="input-label" style="margin-bottom:8px">
-              LLM endpoints, hosted or local. Any OpenAI-compatible server works — the known ones
-              below are only shortcuts for their default URL. Nothing to do with the device tokens above.
+              Chat models, hosted or local — any OpenAI-compatible server. Any other API with a key (a 3D generator, a home server) is added from
+              the same box and kept in Field → Connectors → API services. Nothing to do with the device tokens above.
             </div>
+            <div id="providers-drafts"></div><div id="svc-add-providers-slot"></div>
+            <div id="providers-checks"></div>
             <div id="providers-list"><div class="placeholder">Loading…</div></div>
-            <div id="provider-presets"></div>
-            <div id="add-provider-form" style="display:none">
-              <div class="card mt8">
-                <div class="card-title">New Provider</div>
-                <div class="row">
-                  <div class="field flex1"><div class="input-label">Name (e.g. groq)</div><input id="np-name" class="input" placeholder="groq"></div>
-                  <div class="field flex1"><div class="input-label">Base URL</div><input id="np-url" class="input" placeholder="http://127.0.0.1:8080/v1"></div>
-                </div>
-                <div class="field"><div class="input-label">API Key <span style="opacity:.6">— leave empty for a local server</span></div><input id="np-key" class="input" type="password" placeholder="sk-…"></div>
-                <div class="toolbar-right">
-                  <button class="btn btn-sm" onclick="hideAddProvider()">Cancel</button>
-                  <button class="btn btn-sm btn-blue" onclick="addProvider()">Add</button>
-                </div>
-                <div class="status-line mt8" id="np-status"></div>
-              </div>
-            </div>
           </div>
 
         </div>
@@ -1482,7 +1468,7 @@
 <script src="js/sidebar.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/logs.js"></script>
-<script src="js/keys.js"></script>
+<script src="js/keys.js"></script><script src="js/keys-checks.js"></script>
 <script src="js/devices.js"></script><script src="js/devices-own.js"></script><script src="js/devices-approval.js"></script><script src="js/devices-assign.js"></script><script src="js/app-settings-link.js"></script><script src="js/devices-hands.js"></script><script src="js/device-page.js"></script><script src="js/wearables.js"></script>
 <script src="js/skills.js"></script>
 <script src="js/snapshots.js"></script>
@@ -1533,7 +1519,7 @@
 <script src="js/settings/deps.js"></script>
 <script src="js/settings/identity.js"></script>
 <script src="js/settings/skills.js"></script><script src="js/settings/skill-use.js"></script><script src="js/settings/skills-online.js"></script><script src="js/settings/host.js"></script>
-<script src="js/settings/users.js"></script><script src="js/settings/log-keep.js"></script><script src="js/settings/missions-tidy.js"></script><script src="js/settings/channels.js"></script><script src="js/settings/packs.js"></script><script src="js/settings/sharing.js"></script><script src="js/settings/spending.js"></script><script src="js/settings/spending-permits.js"></script><script src="js/settings/holdings.js"></script><script src="js/settings/guided.js"></script><script src="js/settings/guided-plan.js"></script><script src="js/settings/search.js"></script><script src="js/settings/thinking.js"></script><script src="js/settings/retrieval.js"></script><script src="js/settings/vision.js"></script><script src="js/settings/checkpoints.js"></script><script src="js/settings/features.js"></script><script src="js/settings/scout.js"></script><script src="js/settings/experiments.js"></script><script src="js/settings/evals.js"></script><script src="js/settings/connectors.js"></script><script src="js/settings/service-keys.js"></script><script src="js/settings/service-rows.js"></script><script src="js/settings/sealed-secrets.js"></script><script src="js/settings/voice-card.js"></script><script src="js/settings/voice-card-calls.js"></script><script src="js/settings/voice-card-machines.js"></script><script src="js/settings/hosted-voice.js"></script><script src="js/settings/live-call.js"></script><script src="js/settings/live-call-assistant.js"></script><script src="js/settings/face-editor.js"></script><script src="js/settings/client-apps.js"></script><script src="js/settings/harnesses.js"></script><script src="js/face/face.js"></script><script src="js/face/poly.js"></script><script src="js/face/galaxy.js"></script><script src="js/face/concepts/index.js"></script><script src="js/face/concepts/animals.js"></script><script src="js/face/concepts/feelings.js"></script><script src="js/face/concepts/food.js"></script><script src="js/face/concepts/home.js"></script><script src="js/face/concepts/music-art.js"></script><script src="js/face/concepts/nature.js"></script><script src="js/face/concepts/people.js"></script><script src="js/face/concepts/sport-health.js"></script><script src="js/face/concepts/symbols.js"></script><script src="js/face/concepts/tech.js"></script><script src="js/face/concepts/time.js"></script><script src="js/face/concepts/travel.js"></script><script src="js/face/concepts/weather.js"></script><script src="js/face/concepts/work.js"></script><script src="js/face/concept-engine.js"></script><script src="js/face/corner.js"></script><script src="js/face/assistant.js"></script><script src="js/settings/licence.js"></script>
+<script src="js/settings/users.js"></script><script src="js/settings/log-keep.js"></script><script src="js/settings/missions-tidy.js"></script><script src="js/settings/channels.js"></script><script src="js/settings/packs.js"></script><script src="js/settings/sharing.js"></script><script src="js/settings/spending.js"></script><script src="js/settings/spending-permits.js"></script><script src="js/settings/holdings.js"></script><script src="js/settings/guided.js"></script><script src="js/settings/guided-plan.js"></script><script src="js/settings/search.js"></script><script src="js/settings/thinking.js"></script><script src="js/settings/retrieval.js"></script><script src="js/settings/vision.js"></script><script src="js/settings/checkpoints.js"></script><script src="js/settings/features.js"></script><script src="js/settings/scout.js"></script><script src="js/settings/experiments.js"></script><script src="js/settings/evals.js"></script><script src="js/settings/connectors.js"></script><script src="js/settings/service-keys.js"></script><script src="js/settings/service-rows.js"></script><script src="js/settings/service-add.js"></script><script src="js/settings/service-auth.js"></script><script src="js/settings/service-skill-pick.js"></script><script src="js/settings/sealed-secrets.js"></script><script src="js/settings/voice-card.js"></script><script src="js/settings/voice-card-calls.js"></script><script src="js/settings/voice-card-machines.js"></script><script src="js/settings/hosted-voice.js"></script><script src="js/settings/live-call.js"></script><script src="js/settings/live-call-assistant.js"></script><script src="js/settings/face-editor.js"></script><script src="js/settings/client-apps.js"></script><script src="js/settings/harnesses.js"></script><script src="js/face/face.js"></script><script src="js/face/poly.js"></script><script src="js/face/galaxy.js"></script><script src="js/face/concepts/index.js"></script><script src="js/face/concepts/animals.js"></script><script src="js/face/concepts/feelings.js"></script><script src="js/face/concepts/food.js"></script><script src="js/face/concepts/home.js"></script><script src="js/face/concepts/music-art.js"></script><script src="js/face/concepts/nature.js"></script><script src="js/face/concepts/people.js"></script><script src="js/face/concepts/sport-health.js"></script><script src="js/face/concepts/symbols.js"></script><script src="js/face/concepts/tech.js"></script><script src="js/face/concepts/time.js"></script><script src="js/face/concepts/travel.js"></script><script src="js/face/concepts/weather.js"></script><script src="js/face/concepts/work.js"></script><script src="js/face/concept-engine.js"></script><script src="js/face/corner.js"></script><script src="js/face/assistant.js"></script><script src="js/settings/licence.js"></script>
 <script src="js/settings/skill-audit.js"></script>
 <script src="js/settings/guards.js"></script>
 <script src="js/settings/subnav.js"></script>
