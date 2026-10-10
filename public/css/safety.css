@@ -15,3 +15,25 @@
 .undo-x { width: 28px; height: 28px; font-size: 13px; }
 @keyframes undo-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (max-width: 600px) { .undo-toasts { bottom: 76px; } .undo-toast { flex-wrap: wrap; } .undo-text { flex-basis: 100%; } }
+
+/* ── A path chosen from a tree (js/fp.js): over any window it was opened from ── */
+.fp-overlay { z-index: 10040; }
+.fp-panel { height: min(620px, 82vh); }
+.fp-breadcrumb { font-family: var(--font-mono); font-size: 11px; color: var(--muted); overflow-wrap: anywhere; padding: 3px 0; }
+.fp-list[role="tree"] { padding: 4px 0; }
+.fp-node { display: flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px 0 8px; cursor: pointer; font-size: 13px;
+  border-radius: var(--radius); margin: 0 4px; user-select: none; }
+.fp-node:hover { background: color-mix(in srgb, var(--bright) 7%, transparent); }
+.fp-node:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fp-node.sel { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--bright); }
+.fp-node.fp-dim { color: var(--muted); }
+.fp-tw { width: 18px; flex: none; text-align: center; color: var(--muted); font-size: 11px; }
+.fp-note { padding: 14px; }
+.fp-footer .input { min-width: 0; }
+.fp-browse { flex: none; }
+@media (max-width: 600px) {
+  .fp-panel { height: 88dvh; }
+  .fp-node { min-height: 40px; }
+  .fp-footer { flex-wrap: wrap; }
+  .fp-footer .input { flex-basis: 100%; }
+}

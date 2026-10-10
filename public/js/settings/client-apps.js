@@ -14,7 +14,7 @@ async function clientAppsRender() {
     return `<div class="tool-row" style="grid-template-columns:auto 1fr auto;align-items:center">
       <span class="tool-label">${escHtml(a.label)}</span>
       <span class="tool-note ca-note" style="white-space:normal">${l ? `<b>${escHtml(l.versionName)}</b> (${l.versionCode}) · ${(l.bytes / 1e6).toFixed(1)} MB · ${l.from === 'build' ? 'built here' : 'uploaded'} ${escHtml(new Date(l.at).toLocaleString())}` : 'No build kept yet.'}
-        ${host ? `<br>Source: <input class="input" id="ca-repo-${id}" value="${escHtml(a.repo)}" placeholder="the repository folder on this machine" style="width:min(360px,100%);margin-top:4px">
+        ${host ? `<br>Source: <input class="input" id="ca-repo-${id}" data-path-pick="dir" value="${escHtml(a.repo)}" placeholder="the repository folder on this machine" style="width:min(360px,100%);margin-top:4px">
           <button class="btn btn-xs" onclick="clientAppsRepo('${id}')">Save</button>` : ''}</span>
       <span class="tool-actions" style="flex-wrap:wrap;gap:4px">
         ${l ? `<a class="btn btn-xs btn-teal" href="/api/clients/apps/${id}/apk" download>⬇ APK</a>` : ''}

@@ -167,7 +167,7 @@ function backupMirrorRender(m) {
     : m.lastAt ? `Last copied: ${escHtml(m.lastName)}, ${fmtDate(m.lastAt)}.` : '';
   card.innerHTML = `<div class="card-title">A second copy</div>
     <p class="desc">Every backup is also copied to this folder — another disk, or a network share mounted on this machine — keeping as many scheduled ones there as here. A copy that fails is said here and as a notice; the backup itself still counts.</p>
-    <div class="form-row"><label>Folder</label><input id="bmirror-dir" class="input flex1" value="${escHtml(m.dir || '')}" placeholder="/mnt/nas/doca-backups — empty: none"></div>
+    <div class="form-row"><label>Folder</label><input id="bmirror-dir" data-path-pick="dir" class="input flex1" value="${escHtml(m.dir || '')}" placeholder="/mnt/nas/doca-backups — empty: none"></div>
     <div style="display:flex;gap:8px"><button class="btn btn-sm btn-blue" onclick="backupMirrorSave()">Save</button></div>
     <div class="input-label" style="text-transform:none;letter-spacing:0;margin-top:4px">${when}</div>
     <span class="status-line" id="bmirror-status"></span>`;
