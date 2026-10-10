@@ -114,6 +114,8 @@ const PERSON = [
   { id: 'screen-profile', does: 'set this device\'s notifications (asking, haptics, quiet hours)', panel: ['POST /api/screen/profile'], v1: ['PUT /devices/{id}/profile'] },
   { id: 'screen-settings', does: 'change this screen\'s look and voice', panel: ['POST /api/screen/settings'],
     gap: 12, why: 'an app reads its effective settings (GET /api/v1/settings/effective) but sets them only through the panel page in its web view (/d/<id>/)' },
+  { id: 'screen-reload', does: 'reload my open pages (an admin: every screen)', panel: ['POST /api/screen/reload'],
+    only: 'a page reloading itself; an app\'s web view hears it on the page\'s own live feed' },
   { id: 'screen-layout', does: 'change my panel layout', panel: ['POST /api/screen/layout', 'POST /api/screen/layout/undo'],
     only: 'how the panel\'s own pages are arranged on a screen; an app draws its own' },
   { id: 'presence', does: 'say I am looking', panel: ['POST /api/presence'], v1: ['GET /events'], note: 'a device\'s presence is its event stream' },

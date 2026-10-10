@@ -221,6 +221,7 @@ async function hcSessionArchive(id, on) {
   try {
     await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}/archive`, { method: 'POST', body: { on } });
     await _hcLoadSessions();
+    if (on) undoToast('Conversation put away — its transcript is kept.', () => hcSessionArchive(id, false), { link: { label: 'Archive', onclick: () => nav('archive') } });
   } catch (e) { appAlert(e.message); }
 }
 

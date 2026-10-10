@@ -1,8 +1,10 @@
 /* Field → Connectors → API services → Advanced → its skill: the skill that says when and why agents use the service.
    A search over this machine's skills and the public collections (modules/harness/skill-online.js: Anthropic's,
    OpenAI's, Superpowers, Hugging Face's) — one from a collection is looked at and imported with a click, then linked —
-   and "✨ Write one from the docs", which opens the chat with a request for the agent's draft (service_draft), sent by
-   the person; the draft comes back to this same form ("Prepared by the agent", and a notice linking to it). */
+   and "✨ Write one from the docs", which opens the chat with a request the person sends, naming the service, its
+   address, docs and actions: for a saved service the agent writes the skill (the skill tool), and the form links it
+   when it appears — Save keeps the link; for one not saved yet, the agent prepares the whole service with service_draft
+   and it comes back to this same form ("Prepared by the agent", and a notice linking to it). */
 let _svcSkills = [];
 
 function serviceSkillHtml(skills) {
@@ -55,20 +57,55 @@ async function serviceSkillTake(k, row) {
   if (imp) imp.addEventListener('click', () => setTimeout(() => serviceSkillLink(k.name), 1200));
 }
 
-function serviceSkillLink(name) {
+function serviceSkillLink(name, said = `✓ Linked: ${escHtml(name)} — ${_svcForm.editing ? 'Save keeps it' : 'kept with the service on Add'}.`) {
+  _svcForm.values['sk-skill'] = name;
+  if (!_svcForm.touched.includes('sk-skill')) _svcForm.touched.push('sk-skill');
   const sk = document.getElementById('sk-skill');
-  if (!sk) return;
-  if (![...sk.options].some(o => o.value === name)) sk.add(new Option(name, name));
-  sk.value = name;
-  sk.dispatchEvent(new Event('change', { bubbles: true }));
+  if (sk) {
+    if (![...sk.options].some(o => o.value === name)) sk.add(new Option(name, name));
+    sk.value = name;
+    sk.dispatchEvent(new Event('change', { bubbles: true }));
+  }
   const box = document.getElementById('sk-skill-hits');
-  if (box) box.innerHTML = `<div class="desc">✓ Linked: ${escHtml(name)}.</div>`;
+  if (box) box.innerHTML = `<div class="desc">${said}</div>`;
+  serviceFormFoot();
 }
 
-/** The agent's draft, from the docs link when there is one: it lands in this form under "Prepared by the agent". */
+/** The request for the agent, named: the service, where it is, its docs, its actions. Sent by the person. */
 function serviceAskSkill() {
-  const v = id => (document.getElementById(id)?.value || '').trim();
-  const name = v('sk-name') || 'this service', docs = v('sk-docs') || _svcForm.docs || v('sk-origin');
-  serviceAskAgent(`Write a skill for the API service "${name}"${docs ? ` from its documentation at ${docs}` : ''}: when to use it, which actions, and how to show what they make. `
-    + 'Prepare it with service_draft (with its actions) so I can check it in the form and save it — I will paste the key there.');
+  const f = _svcForm, v = id => String(f.values[id] || '').trim();
+  const name = v('sk-name').toLowerCase();
+  if (!name) return askFor(document.getElementById('sk-name'), 'Name the service first, or Edit a saved one: the skill is written for it.');
+  const docs = v('sk-docs') || f.docs, origin = v('sk-origin');
+  const what = `"${name}"${f.title && f.title.toLowerCase() !== name ? ` (${f.title})` : ''}${origin ? ` at ${origin}` : ''}${docs ? `, documented at ${docs}` : ''}`;
+  const acts = f.actions || [];
+  const actsLine = acts.length ? ` Its actions: ${acts.map(a => `${a.name}${a.job ? ' (a long job)' : ''}`).join(', ')}.` : ' It has no actions set up yet.';
+  if (f.editing === name) {
+    const skill = v('sk-skill') || name;
+    serviceAskAgent(`Write a skill for my API service ${what}.${actsLine} \`service describe ${name}\` gives each action in full. `
+      + `Say when to use it, which action does what, and how to show what they make. Keep it with the skill tool (write) named "${skill}"`
+      + `${v('sk-skill') ? ' — it replaces the skill linked to it now' : ''}. Leave the service itself as it is: I link the skill to it in its form and save.`);
+    if (!v('sk-skill')) serviceSkillAwait(name, skill);
+    return;
+  }
+  serviceAskAgent(`Write a skill for the API service ${what}.${actsLine} Say when to use it, which actions, and how to show what they make. `
+    + 'Prepare it with service_draft (with its actions and the skill) so I can check it in the form and save it — I will paste the key there.');
+}
+
+/** After ✨ on a saved service: the skill the agent writes is linked in the form when it appears (Save keeps it). */
+let _svcSkillWait = null;
+function serviceSkillAwait(service, skill) {
+  clearInterval(_svcSkillWait);
+  const until = Date.now() + 15 * 60000;
+  const box = document.getElementById('sk-skill-hits');
+  if (box) box.innerHTML = `<div class="desc">Waiting for the agent's skill “${escHtml(skill)}” — it is linked here when it is written.</div>`;
+  _svcSkillWait = setInterval(async () => {
+    if (Date.now() > until || _svcForm.editing !== service || _svcForm.values['sk-skill']) return clearInterval(_svcSkillWait);
+    let list;
+    try { list = (await apiFetch('/api/harness/skills')).skills || []; } catch { return; }
+    if (!list.some(s => s.name === skill)) return;
+    clearInterval(_svcSkillWait);
+    _svcSkills = list;
+    serviceSkillLink(skill, `✓ The agent wrote “${escHtml(skill)}” — linked here; Save keeps it.`);
+  }, 4000);
 }

@@ -129,6 +129,7 @@ const TABLE = [
   R(ANY, '/api/search/(settings|try)', 'host'),                // the web search provider and its key (search/routes.js)
   R(ANY, '/api/screen/layout(/undo)?', 'read'),                 // one's own panel layout and this screen's; the install's default is checked as host inside (panel-layout/routes.js)
   R(ANY, '/api/screen(/settings|/profile)?', 'read'),          // one's own screen or device: how it looks and when it is asked, never how the hive behaves (screens/)
+  R(ANY, '/api/screen/reload', 'read'),                        // reload one's own open pages; every page of the hive is a host's, checked there (screens/showing.js)
   R(GET, '/api/spending', 'read'),                              // what was spent: your own; everyone's for an admin (spending/routes.js)
   R(ANY, '/api/spending(/.*)?', 'chat'),                        // your own budget and permissions within your level; others' are `users`, checked there
   R(ANY, '/api/sharing(/.*)?', 'host'),                        // the owner's answer and the owner's click (sharing.js)

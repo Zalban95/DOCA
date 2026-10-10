@@ -50,10 +50,10 @@ async function convExtras(host, sessionId, redraw) {
       <button class="btn btn-xs conv-loop-stop" data-id="${escHtml(l.id)}" title="Stop this loop">■</button></span>`).join('')}
     <button class="btn btn-xs conv-more" title="This chat's compaction, suggested skills and commands">⋯</button>`;
   host.querySelector('.conv-skills').onclick = e => convSkillsPop(e.currentTarget, sessionId, att, redraw);
-  host.querySelectorAll('.conv-loop-stop').forEach(b => { b.onclick = async () => {
+  host.querySelectorAll('.conv-loop-stop').forEach(b => { b.onclick = () => confirmRemove('this loop', 'It is deleted and runs no more; ask the agent to start a new one.', async () => {
     try { await apiFetch(`/api/schedules/${encodeURIComponent(b.dataset.id)}`, { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
     redraw?.();
-  }; });
+  }, { verb: 'Stop' }); });
   host.querySelector('.conv-more').onclick = e => convMorePop(e.currentTarget, sessionId, redraw);
 }
 

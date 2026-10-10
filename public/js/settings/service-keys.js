@@ -3,8 +3,8 @@
    the same box as Field → API keys → Add: a chat model goes to the provider form, anything else here) and the form —
    name, address, the key (one box, or two for an id and a secret), what it is for — with one Advanced fold under it:
    how it signs in (service-auth.js), extra headers, a rate limit, its docs, its actions (OpenAPI, JSON or YAML) and
-   its skill (service-skill-pick.js). Only the key is left for the person. */
-let _svcForm = { draft: null, source: null, title: '', keyHint: '', docs: '', hasKey: false };
+   its skill (service-skill-pick.js). Only the key is left for the person. What the form holds lives in _svcForm
+   (service-form.js), so a redraw never loses what was typed; Add (new) or Save (a saved one, once changed) is below. */
 
 async function serviceKeysRender() {
   const el = document.getElementById('service-keys-card');
@@ -18,20 +18,20 @@ async function serviceKeysRender() {
     <div id="service-drafts-slot"></div>
     <div id="svc-rows">${serviceRowsHtml(d.services, d.jobs)}</div>
     ${serviceAddBoxHtml('services')}
-    <div class="toolbar svc-form-row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+    <div class="svc-form-head" id="sk-head"></div>
+    <div class="toolbar svc-form-row" style="gap:6px;margin-top:4px;flex-wrap:wrap">
       <input class="input" id="sk-name" placeholder="name (hyper3d)" style="width:130px">
       <input class="input" id="sk-origin" placeholder="address (https://api.example.com)" style="flex:1;min-width:190px">
       ${serviceKeyBoxesHtml()}
-      <input class="input" id="sk-note" placeholder="what it is for (the agent reads this)" style="flex:1;min-width:180px">
-      <button class="btn btn-sm btn-primary" onclick="serviceKeysAdd()">Add</button></div>
+      <input class="input" id="sk-note" placeholder="what it is for (the agent reads this)" style="flex:1;min-width:180px"></div>
     ${advancedFold(`${serviceAuthFieldsHtml()}
       <label class="desc" for="sk-actions" style="display:block;margin-top:8px">Actions — its OpenAPI document (JSON or YAML; a whole one, or only its <code>paths</code>). A long job carries <code>x-doca-job</code>.</label>
       <textarea class="input" id="sk-actions" data-default="" data-label="Actions (OpenAPI)" rows="6" spellcheck="false" style="width:100%;font-family:var(--font-mono);font-size:11px" placeholder="paths:\n  /items:\n    get:\n      operationId: listItems"></textarea>
       <div class="toolbar" style="gap:6px;flex-wrap:wrap;margin-top:4px"><button class="btn btn-xs" onclick="serviceReadActions()">Read the actions</button><span id="sk-actions-said" class="desc"></span></div>
       ${serviceSkillHtml(skills)}`,
       { id: 'service-keys', label: 'Advanced — how it signs in, headers, limits, actions and skill' })}
-    <div id="sk-saving" class="desc"></div>`;
-  serviceKeysPlace();
+    <div class="svc-foot" id="sk-foot"></div>`;
+  serviceFormPaint();
   serviceAddSuggest('services');
   await serviceDraftsRender();
   serviceAddResume();
@@ -40,24 +40,22 @@ async function serviceKeysRender() {
 async function serviceUseTemplate(id) {
   let r;
   try { r = await apiFetch('/api/connectors/services/read', { method: 'POST', body: { template: id } }); } catch (e) { return appAlert(e.message); }
-  serviceFill(r.definition, r.openapi);
+  serviceFill(r.definition, r.openapi, { what: `the ready-made ${r.definition.title || id}` });
   serviceAddSay('services', `Filled from the ready-made <b>${escHtml(r.definition.title || id)}</b>${r.definition.keyHint ? ` — the key: ${escHtml(r.definition.keyHint)}` : ''}.`);
 }
 
-/** Put a definition in the form: the plain fields, then the fold (marked changed by advancedFold where it differs). */
-function serviceFill(def, openapi, { draft = null, hasKey = false } = {}) {
-  const set = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined && v !== null) el.value = v; };
-  _svcForm = { draft, source: def.source || null, title: def.title || '', keyHint: def.keyHint || '', docs: def.docs || '', hasKey };
-  set('sk-name', def.name || ''); set('sk-origin', def.server || def.origin || ''); set('sk-note', def.note || '');
-  ['sk-key', 'sk-id', 'sk-secret'].forEach(id => set(id, ''));
-  serviceAuthFill(def.auth || { type: 'bearer' });
-  set('sk-headers', serviceHeadersText(def.headers)); set('sk-rate', def.rate?.perMinute || ''); set('sk-docs', def.docs || '');
-  set('sk-actions', openapi ? JSON.stringify(openapi, null, 2) : '');
-  if (def.skill) serviceSkillLink(def.skill); else set('sk-skill', '');
-  serviceKeysPlace();
-  advancedFoldRefresh(document.getElementById('service-keys-card'));
-  document.getElementById('sk-actions-said').textContent = def.actions?.length ? `${def.actions.length} actions: ${def.actions.map(x => x.name).slice(0, 12).join(', ')}${def.actions.length > 12 ? '…' : ''}` : '';
-  const first = ['sk-id', 'sk-key', 'sk-name'].map(id => document.getElementById(id)).find(x => x && !x.hidden);
+/** A definition into the form (through serviceFormLoad: what the person typed is asked about first). `editing`: a saved
+ *  service, whose values are what Save compares with; `replace`: the form becomes it (Edit, a draft). */
+function serviceFill(def, openapi, { draft = null, hasKey = false, editing = null, replace = !!(editing || draft), what = '' } = {}) {
+  const a = serviceAuthValues(def.auth || { type: 'bearer' });
+  const acts = def.actions || [];
+  const values = { 'sk-name': def.name || '', 'sk-origin': def.server || def.origin || '', 'sk-note': def.note || '', ...a, 'sk-who': def.who || 'host',
+    'sk-headers': serviceHeadersText(def.headers), 'sk-rate': def.rate?.perMinute ? String(def.rate.perMinute) : '', 'sk-docs': def.docs || '',
+    'sk-actions': openapi ? JSON.stringify(openapi, null, 2) : '', 'sk-skill': def.skill || '' };
+  const meta = { editing, draft, hasKey, source: def.source || null, title: def.title || '', keyHint: def.keyHint || '', docs: def.docs || '', actions: acts,
+    actionsSaid: acts.length ? `${acts.length} actions: ${acts.map(x => x.name).slice(0, 12).join(', ')}${acts.length > 12 ? '…' : ''}` : '' };
+  serviceFormLoad(values, meta, { replace, what: what || (def.name ? `“${def.name}”` : 'it') });
+  const first = ['sk-id', 'sk-key', 'sk-name'].map(id => document.getElementById(id)).find(x => x && !x.hidden && !x.value);
   first?.focus();
 }
 
@@ -80,8 +78,21 @@ async function serviceKeysAdd() {
     headers: serviceHeadersOf(document.getElementById('sk-headers').value) || {}, rate: Number(v('sk-rate')) > 0 ? { perMinute: Number(v('sk-rate')) } : null, docs: v('sk-docs') || undefined,
     title: _svcForm.title || undefined, keyHint: _svcForm.keyHint || undefined, source: _svcForm.source || undefined, draft: _svcForm.draft || undefined };
   try { await apiFetch('/api/connectors/services/all', { method: 'POST', body }); } catch (e) { return appAlert(e.message); }
-  _svcForm = { draft: null, source: null, title: '', keyHint: '', docs: '', hasKey: false };
-  serviceKeysRender();
+  // The form stays on the service just saved, now as saved: Save goes until something changes again.
+  const values = { ..._svcForm.values, 'sk-name': body.name.toLowerCase() };
+  _svcForm = { ..._svcForm, editing: values['sk-name'], draft: null, hasKey: _svcForm.hasKey || !!key || how === 'none', values, saved: { ...values },
+    secrets: {}, touched: [], savedAt: Date.now() };
+  serviceAddSay('services', '');
+  await serviceKeysRefresh();
+}
+
+/** The saved services and the drafts again, the form left as it is. */
+async function serviceKeysRefresh() {
+  const rows = document.getElementById('svc-rows');
+  if (!rows) return serviceKeysRender();
+  try { const d = await apiFetch('/api/connectors/services/all'); rows.innerHTML = serviceRowsHtml(d.services, d.jobs); } catch { /* the rows as they were */ }
+  await serviceDraftsRender();
+  serviceFormPaint();
 }
 
 /** A field inside the fold: open it, then ask. */
@@ -97,9 +108,12 @@ async function serviceReadActions() {
   try {
     const r = await apiFetch('/api/connectors/services/read', { method: 'POST', body: { text: document.getElementById('sk-actions').value } });
     const acts = r.definition.actions || [];
-    if (!document.getElementById('sk-origin').value.trim() && r.definition.server) document.getElementById('sk-origin').value = r.definition.server;
-    said.textContent = `${acts.length} actions: ${acts.map(x => `${x.name}${x.job ? ' (job)' : ''}`).slice(0, 12).join(', ')}${(r.warnings || []).map(w => `. ${w}`).join('')}`;
-  } catch (e) { said.textContent = e.message; }
+    const origin = document.getElementById('sk-origin');
+    if (!origin.value.trim() && r.definition.server) { origin.value = r.definition.server; origin.dispatchEvent(new Event('input', { bubbles: true })); }
+    _svcForm.actions = acts;
+    _svcForm.actionsSaid = `${acts.length} actions: ${acts.map(x => `${x.name}${x.job ? ' (job)' : ''}`).slice(0, 12).join(', ')}${(r.warnings || []).map(w => `. ${w}`).join('')}`;
+  } catch (e) { _svcForm.actionsSaid = e.message; }
+  said.textContent = _svcForm.actionsSaid;
 }
 
 /** Open the chat with a request the person sends themselves (never sent for them). */

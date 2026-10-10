@@ -111,7 +111,7 @@ function dockerPresetEdit(encodedName) {
 
 async function dockerPresetDelete(encodedName) {
   const name = decodeURIComponent(encodedName);
-  appConfirm(`Delete saved configuration "${name}"?`, async () => {
+  appConfirm(`Delete the saved configuration “${name}”? Containers already made from it keep running.`, async () => {
     try {
       await apiFetch(`/api/docker/presets/${encodedName}`, { method: 'DELETE' });
       dockerLoadPresets();
@@ -256,7 +256,7 @@ async function dockerLoadImages() {
 }
 
 function dockerRemoveImage(id, name) {
-  appConfirm(`Remove image "${name}"?`, async () => {
+  appConfirm(`Remove the image “${name}”? It goes from the disk; a container made from it needs it pulled again.`, async () => {
     try {
       await apiFetch(`/api/docker/images/${encodeURIComponent(id)}`, { method: 'DELETE' });
       dockerLoadImages();

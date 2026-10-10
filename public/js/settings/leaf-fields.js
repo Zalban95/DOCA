@@ -19,7 +19,9 @@ async function leafFieldsDraw(el, paths, { label = 'Advanced', id = '' } = {}) {
   if (!leaves.length) { el.innerHTML = ''; return; }
   const box = l => {
     const name = l.path.split('.').pop().replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()).replace(/ Ms$/, ' (ms)');
-    const common = `data-leaf="${escHtml(l.path)}" data-type="${escHtml(l.type)}" data-default="${escHtml(String(l.default ?? ''))}" data-label="${escHtml(name)}"`;
+    // A folder or a file on this machine is chosen from a tree too (fp.js); the box stays typeable.
+    const pick = l.type === 'string' && !l.oneOf && (/(^|\.)(dir|[a-z]+Dir|folder|[a-z]+Folder)$/.test(l.path) || l.path === 'scout.repo') ? ' data-path-pick="dir"' : '';
+    const common = `${pick} data-leaf="${escHtml(l.path)}" data-type="${escHtml(l.type)}" data-default="${escHtml(String(l.default ?? ''))}" data-label="${escHtml(name)}"`;
     const input = l.oneOf ? `<select class="input" ${common}>${l.oneOf.map(o => `<option${o === l.value ? ' selected' : ''}>${escHtml(o)}</option>`).join('')}</select>`
       : l.type === 'boolean' ? `<input type="checkbox" ${common}${l.value ? ' checked' : ''}>`
       : `<input class="input" ${common} ${['number', 'integer'].includes(l.type) ? `type="number"${l.min != null ? ` min="${l.min}"` : ''}${l.max != null ? ` max="${l.max}"` : ''}${l.type === 'integer' ? ' step="1"' : ''}` : 'type="text"'} value="${escHtml(String(l.value ?? ''))}" style="width:${['number', 'integer'].includes(l.type) ? '120px' : '260px'}">`;

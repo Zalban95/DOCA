@@ -14,6 +14,7 @@ function serviceRowsHtml(services, jobs = []) {
         <span class="disk-path">${escHtml(s.server)} · ${escHtml(how)} · ${s.who === 'everyone' ? 'everyone' : 'admins'}${s.needsKey ? ' · <b>key not pasted</b>' : ''}${s.note ? ` · ${escHtml(s.note)}` : ''}${s.skill ? ` · skill ${escHtml(s.skill)}` : ''}</span>
         ${rowActs([{ icon: 'edit', label: 'Edit', onclick: `serviceEdit(${jsArg(s.name)})` },
           { icon: 'download', label: 'Its OpenAPI document', onclick: `window.open('/api/connectors/services/${encodeURIComponent(s.name)}/openapi')`, disabled: !s.actions.length, why: 'no actions yet' },
+          { label: '✨ Write its skill — asks the agent', more: true, onclick: `serviceRowSkill(${jsArg(s.name)})` },
           { icon: 'remove', label: 'Remove', more: true, onclick: `serviceKeysRemove(${jsArg(s.name)})` }])}</div>
       ${s.actions.length ? `<div class="svc-actions desc">${s.actions.map(x => `<span class="svc-act" title="${escHtml(`${x.method} ${x.path}${x.summary ? ` — ${x.summary}` : ''}`)}">${escHtml(x.name)}${x.job ? ' ⏳' : ''}</span>`).join(' ')}
         ${reads.length ? `<select class="input" id="svc-try-${escHtml(s.name)}" style="width:auto;font-size:11px">${reads.map(x => `<option>${escHtml(x.name)}</option>`).join('')}</select><button class="btn btn-xs" onclick="serviceTry(${jsArg(s.name)})">Try</button>` : ''}</div>
@@ -25,11 +26,15 @@ function serviceRowsHtml(services, jobs = []) {
 async function serviceEdit(name) {
   let r;
   try { r = await apiFetch(`/api/connectors/services/${encodeURIComponent(name)}/form`); } catch (e) { return appAlert(e.message); }
-  serviceFill(r.definition, r.definition.actions?.length ? r.openapi : null, { hasKey: r.definition.hasKey });
-  const who = document.getElementById('sk-who'); if (who) who.value = r.definition.who || 'host';
-  advancedFoldRefresh(document.getElementById('service-keys-card'));
-  serviceAddSay('services', `Editing <b>${escHtml(name)}</b>: leave the key empty to keep it.`);
-  document.getElementById('sk-name').scrollIntoView({ block: 'center' });
+  serviceFill(r.definition, r.definition.actions?.length ? r.openapi : null, { hasKey: r.definition.hasKey, editing: r.definition.name });
+  serviceAddSay('services', '');
+  document.getElementById('sk-head')?.scrollIntoView({ block: 'start' });
+}
+
+/** ⋯ → Write its skill: the service in the form, and the request in the chat (sent by the person). */
+async function serviceRowSkill(name) {
+  await serviceEdit(name);
+  if (_svcForm.editing === name) serviceAskSkill();
 }
 
 async function serviceTry(name) {
@@ -42,8 +47,9 @@ async function serviceTry(name) {
 
 function serviceKeysRemove(name) {
   appConfirm(`Forget the service "${name}" and its key here? (The key stays valid at the service until you revoke it there.)`, async () => {
-    try { await apiFetch(`/api/connectors/services/${encodeURIComponent(name)}?key=1`, { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
-    serviceKeysRender();
+    try { await apiFetch(`/api/connectors/services/${encodeURIComponent(name)}?key=1`, { method: 'DELETE' }); } catch (e) { return appAlert(e.message); }
+    if (_svcForm.editing === name) _svcForm = serviceFormBlank();   // the one in the form is gone; anything else typed stays
+    serviceKeysRefresh();
   });
 }
 
@@ -81,14 +87,17 @@ async function serviceDraftOpen(id) {
   }
   const auth = { header: x.field && x.field !== 'Authorization' ? { type: 'apiKey', in: 'header', name: x.field, prefix: x.prefix || '' } : { type: 'bearer' },
     query: { type: 'apiKey', in: 'query', name: x.field || 'api_key' }, basic: { type: 'basic' }, exchange: { type: 'oauth2', tokenUrl: x.field, tokenBody: 'json' } }[x.place];
-  serviceFill({ ...def, name: x.name, note: x.note || def.note, docs: x.docs || def.docs, auth: def.auth && from ? def.auth : auth, source: 'draft', skill: x.skill?.name || def.skill }, openapi, { draft: id });
-  if (x.skill) serviceSkillLink(x.skill.name);
+  serviceFill({ ...def, name: x.name, note: x.note || def.note, docs: x.docs || def.docs, auth: def.auth && from ? def.auth : auth, source: 'draft', skill: x.skill?.name || def.skill }, openapi,
+    { draft: id, what: `the agent's draft of ${x.name}` });
   serviceAddSay('services', `The agent's draft of <b>${escHtml(x.name)}</b>: check it, paste the key and Add${x.skill ? ' — its skill is saved with it' : ''}.`);
   document.querySelectorAll('.service-draft').forEach(el => el.classList.toggle('open', el.dataset.draft === id));
   document.getElementById('sk-name').scrollIntoView({ block: 'center' });
 }
 
-async function serviceDraftDismiss(id) {
-  try { await apiFetch(`/api/connectors/drafts/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
-  serviceKeysRender();
+function serviceDraftDismiss(id) {
+  confirmRemove('the agent\'s draft of this service', 'No key or skill was saved from it. The agent can prepare it again when asked.', async () => {
+    try { await apiFetch(`/api/connectors/drafts/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (e) { return appAlert(e.message); }
+    if (_svcForm.draft === id) _svcForm = serviceFormBlank();
+    serviceKeysRefresh();
+  }, { verb: 'Dismiss' });
 }

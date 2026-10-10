@@ -124,16 +124,18 @@ function pjView(id, tapped = false) {
   ({ files: pjTreeRender, search: pjSearchRender, git: pjGitRender, run: pjRunRender, checkpoints: pjCheckpointsRender })[id]?.(side);
 }
 
-function pjNew() {
-  appPrompt('Folder to open as a project (absolute path):', async root => {
-    try {
-      const { project } = await apiFetch('/api/projects', { method: 'POST', body: { root } });
-      PJ.project = null;
-      await projectsInit();
-      document.getElementById('pj-picker').value = project.id;
-      await pjOpen(project.id);
-    } catch (e) { appAlert(e.message); }
-  }, PJ.project?.project.root.replace(/[^/\\]+$/, '') || '');
+/** + Open folder: chosen from a tree (fp.js), the path still typeable below it; a project put away comes back. */
+async function pjNew() {
+  const root = await fpPick({ mode: 'dir', title: 'Open a folder as a project', start: PJ.project?.project.root.replace(/[^/\\]+$/, '') || '' });
+  if (!root) return;
+  try {
+    const { project } = await apiFetch('/api/projects', { method: 'POST', body: { root } });
+    PJ.project = null;
+    await projectsInit();
+    document.getElementById('pj-picker').value = project.id;
+    await pjOpen(project.id);
+    if (project.restored) undoToast(`“${project.name}” was in the Archive — it is back, as it was.`);
+  } catch (e) { appAlert(e.message); }
 }
 
 /** A path relative to the project root, for display. */

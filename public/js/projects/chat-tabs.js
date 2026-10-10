@@ -157,6 +157,10 @@ function pjTabMenu(anchor) {
       menu.remove();
       if (PJC.open.length > 1 && PJC.open.includes(id)) pjTabClose(id);
       pjTabsSync({ quiet: true });
+      undoToast('Conversation put away — its transcript is kept.', async () => {
+        await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}/archive`, { method: 'POST', body: { on: false } });
+        pjTabsSync({ quiet: true });
+      }, { link: { label: 'Archive', onclick: () => nav('archive') } });
     };
   });
 }
