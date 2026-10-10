@@ -40,10 +40,10 @@ function agentSideFold(host, sessionId, { teams = null } = {}) {
       render(waiting, plan);
     };
     host.querySelectorAll('[data-q]').forEach(b => {
-      b.onclick = async () => {
+      b.onclick = () => confirmRemove('this message', 'It has not been read yet; withdrawn, the agent never sees it.', async () => {
         try { const r = await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}/inbox/${encodeURIComponent(b.dataset.q)}`, { method: 'DELETE' }); render(r.waiting, plan); }
         catch (e) { appAlert(e.message); }
-      };
+      }, { verb: 'Withdraw' });
     });
   };
   const refresh = async () => {

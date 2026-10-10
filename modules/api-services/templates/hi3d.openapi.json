@@ -6,7 +6,7 @@
     "summary": "3D models from one picture or up to four views: GLB, STL, OBJ, FBX, USDZ, 3MF. Runs on the person's credits.",
     "x-doca-name": "hi3d",
     "x-doca-skill": "hi3d",
-    "x-doca-key-hint": "The Access Key and the Secret Key from hi3d.ai's developer page, joined by a colon: AccessKey:SecretKey",
+    "x-doca-key-hint": "The Access Key and the Secret Key from hi3d.ai's developer page (API keys)",
     "x-doca-checked": "2026-10-08, docs.hi3d.ai/en/api/api-reference/list/ (Get Token, Create Task, Query Task, Query balance)"
   },
   "externalDocs": { "url": "https://docs.hi3d.ai/en/api/api-reference/overview" },

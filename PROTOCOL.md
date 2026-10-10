@@ -573,7 +573,7 @@ data: {"reason":"revoked"}
 | `agent.tool` | ephemeral | `{ turnId, sessionId, name, phase: call\|result, step, args?, ok?, preview? }` |
 | `agent.mission` | durable on start/finish, ephemeral for step ticks | `{ missionId, agentId, label, task, state: running\|paused\|done\|failed\|cancelled, steps, tokens, startedAt, endedAt?, result?, error?, plan?, progress?, archivedAt?, seenAt?, quiet? }` — a specialist agent's work, to every device with `harness:chat` whose owner may open the conversation (§23). `paused` means a restart cut it off; the agent asks the user whether to continue on the next turn from any device. `plan` is the specialist's own checklist (`[{ title, state: done\|running\|queued\|failed }]`, at most 12) and `progress` `{ done, total, percent }` from it — draw the bar from these, else from `steps`. `team` `{ id, task }` (hub 3.x): this mission is a task of a team — see `agent.team`. `archivedAt` (hub 2.228) means the mission was put away: **take its row off and notify nothing** — it always comes with `quiet: true`. `seenAt` (hub 2.282) means its person opened the finished result — on the panel or a device (`POST /harness/missions/{id}/seen`): read means done, so **clear its notice everywhere** and notify nothing (`quiet: true`); it stays a finished row. A `paused` mission is waiting for its person (continue or drop), not finished. A work chat arrives in the same shape with `kind: "work"` and `agentId: "work"`; one a restart cut off is `paused` (hub 2.336: it read `failed` before; work it was doing carries on by itself), one a person stopped or dropped is `cancelled` (why in `error`) — nothing finished, so nothing is announced as done. `GET /harness/missions` is the same picture for a client that has just woken up. |
 | `agent.team` | durable when a task changes state or the team ends, ephemeral when only a percentage moved | `{ teamId, title, goal?, state: running\|done\|failed\|stopped, progress: { done, total, percent }, keepGoing: { on, rounds, maxRounds }, tasks[], notes, doc?, startedAt, endedAt?, archivedAt?, quiet? }` — a team of specialists on one board (hub `teams/`; fixtures `agent.team-running`, `agent.team-done`), to the same devices as `agent.mission`. Each task is `{ id, title, agent, state: queued\|waiting\|running\|paused\|checking\|done\|failed\|stopped, percent, after[], step?, budget?, waitingOn?, missionId?, why?, doneWhen? }`. **Everything is worked out by the hub, never written by an agent**: a running task's `percent` is steps used of its specialist's budget (at most 99, "step 12 of 30"), a task is `done` (100) only once its contract holds, and the team's `percent` is tasks done of tasks, **every task weighing the same — say so where you draw it**. Draw the overall bar and, opened, a thin bar per task; red only for `failed`. `doc` is the team's living document (`kind: doc`): a phone offers to open it, a watch skips it. Each task's mission also arrives as `agent.mission` with `team: { id, task }` — a client drawing teams shows those missions under their team rather than twice. `archivedAt` (with `quiet: true`): take the row off. |
-| `people.message` | durable (a day) | `{ spaceId, space: { id, kind, name }, what: new\|edited\|deleted\|reacted, message, notify }` — the hive chat (§23.3): to every member's devices with `harness:chat`. `notify` is true for a direct message or a mention, not muted, outside this device's quiet hours; the same message then also comes as an `alert` with `ext.people`, which a client drawing this drops. |
+| `people.message` | durable (a day) | `{ spaceId, space: { id, kind, name }, what: new\|edited\|deleted\|reacted, message, notify }` — the hive chat (§23.3): to every member's devices with `harness:chat`. `notify` is true for what the person chose to be told of on this device (by default a direct message or a mention; `/people/notify`), not muted, outside its quiet hours; the same message then also comes as an `alert` with `ext.people`, which a client drawing this drops. |
 | `people.typing` | ephemeral | `{ spaceId, by: { id, name } }` — someone is typing there; show it a few seconds |
 | `people.read` | ephemeral | `{ spaceId, by: { id, name }, seq }` — a read receipt |
 | `artifact.deliver` | durable | `{ artifact, inline?, inlineEncoding?: utf8|base64, message, ext }` |
@@ -1596,10 +1596,14 @@ nobody gets `403 person_required`.
 - `POST /people/spaces/:id/read {seq}`, `POST /people/spaces/:id/typing`, `POST /people/messages/:id/react {emoji, on}`.
 
 Pushed to every member's devices with `harness:chat`: `people.message` (durable, a day: `{spaceId, space, what:
-new|edited|deleted|reacted, message, notify}`), `people.typing` and `people.read` (ephemeral). A direct message or a
-mention also arrives as an `alert` whose `ext.people` is `{spaceId, messageId}`, outside the device's quiet hours and
-unless the person muted the conversation — a client that draws `people.message` drops that alert and notifies from
-`notify` itself. Making groups and channels, pins, editing and deleting are the panel's for now
+new|edited|deleted|reacted, message, notify}`), `people.typing` and `people.read` (ephemeral). A message the person
+chose to be told of — by default a direct message or a mention — also arrives as an `alert` whose `ext.people` is
+`{spaceId, messageId, bare?}`, outside the device's quiet hours (on the person's own clock when the hub knows it) and
+unless the person muted the conversation or it is their own; a client that draws `people.message` drops that alert and
+notifies from `notify` itself. **Which messages, per device, is the person's** (`GET|POST /people/notify`):
+`{devices, chats}` each `all | mentions | off` (default `mentions`; `chats` are linked chats, kind `channel`), and
+`each: {<device id>: {when?, content?}}` over them — `content: notice` sends `title` "New message from Ada in #ops"
+with an empty `body` and `ext.people.bare: true`, never the words. Making groups and channels, pins, editing and deleting are the panel's for now
 (`docs/api/capability-gaps.md`, `people-manage`).
 
 ### 23.4 Meetings (hub 3.15.0)
@@ -1616,12 +1620,23 @@ else may join (404 as if absent), an admin included.
 - A device is told about a meeting as about anything else: an `alert` when someone calls its person now ("X is
   calling", urgent) and five minutes before a scheduled one (§11.4). Invitations themselves go to the person's own
   calendar (their Google or Microsoft account connected in Meetings, else an iCalendar invite by mail, else a notice).
+  Such an alert carries `meeting: {id, link, title, by}` (fixture `alert-meeting`): a client offers **Join**, which
+  opens `link` in its web view straight into the room.
+- **In an app's web view** the page asks for the camera and microphone (`getUserMedia`) and, to share a screen,
+  `getDisplayMedia`; an app grants them for the hub's own origins only. Where the web view has no `getDisplayMedia`
+  (Android), the page uses the app's `window.DocaDevice.shareScreen`, and tells the app when a meeting opens and
+  closes (`DocaDevice.meeting`) so it can keep the call alive in the background, route the sound
+  (`DocaDevice.meetAudio`) and shrink to picture in picture; the app answers with the window event `doca-meeting`
+  (`{action: "leave"}` from its notification). The whole contract is `docs/api/fixtures/doca-device.json`.
 - **Taking control of a shared screen** needs a DOCA client on the sharer's machine lending the `input` family
   (§22.1): the hub calls that device's own `input_click`, `input_move`, `input_type` and `input_keys` (DocaMobile's
   `input_tap`, `input_key`) with physical pixels, only after the sharer offered control to one person and confirmed it,
-  and only until either ends it. A client draws nothing new for it; one that can show a banner while a person controls
-  its machine should (later work: DocaDesk). While a person controls a machine, the agent's own `input_*` on it wait.
-- Native call screens, calling from a watch, and sharing a phone's screen are later work in each app (TODO).
+  and only until either ends it. The controlled device hears `meeting.control` `{grant, meetingId, state: active|ended,
+  controller, sharer, why?}` (durable, 10 minutes; fixture `meeting.control`): a client that can show a banner while a
+  person controls its machine does ("<controller> is controlling this computer — Stop", DocaDesk), and its Stop is
+  `POST /meetings/control/stop` (any token of that device; it ends control of that device only, said to the room as
+  the sharer stopping it). While a person controls a machine, the agent's own `input_*` on it wait.
+- Native call screens and calling from a watch are later work in each app (TODO).
 
 ## 24. Server operations
 
@@ -1643,6 +1658,7 @@ else may join (404 as if absent), an admin included.
 | GET | `/settings/effective` | any | §4.2, §14.1 |
 | GET | `/settings/look` | any | §14.1 |
 | GET | `/meetings` | `harness:chat` | the person's meetings with their links (§23.3) |
+| POST | `/meetings/control/stop` | any (self) | stop whoever controls this machine from a meeting (§23.4) |
 | GET | `/devices` | `devices:admin` \| `agent` | list devices (+ presets) |
 | POST | `/devices` | `devices:admin` | issue a token directly |
 | POST | `/devices/pair/start` | `devices:admin` | start pairing |
@@ -1684,6 +1700,7 @@ else may join (404 as if absent), an admin included.
 | GET | `/people` | `harness:chat` | the person's hive chat: conversations, channels to join, colleagues (§23.3) |
 | POST | `/people/dm`, `/people/spaces/:id/messages`, `/people/spaces/:id/read`, `/people/spaces/:id/typing`, `/people/messages/:id/react` | `harness:chat` | write, mark read, typing, react — as the person (§23.3) |
 | GET | `/people/spaces/:id/messages` | `harness:chat` | a conversation's messages, or one thread (§23.3) |
+| GET, POST | `/people/notify` | `harness:chat` | which hive-chat messages reach the person's devices and linked chats, and how (§23.3) |
 | POST | `/schedules/:id/state` | `harness:chat` | on / paused; never on for an `agent` device |
 | GET | `/face`, `/face/stream` | `harness:sessions` | what the hive is doing (§23.2) |
 | GET | `/clients/android/:app`, `/clients/android/:app/apk` | any | the newest build of DocaMobile or DocaWear this hub keeps: `versionCode`, `versionName`, `sha256`, `bytes`, `url`; update when `versionCode` is higher than yours, and check the download's sha256 |

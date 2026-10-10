@@ -35,7 +35,7 @@ function _libFolders(v) {
     <button class="btn btn-xs" onclick="libraryRemoveFolder(${i})" title="Stop indexing it (its rows go at the next run)">✕</button></div>`).join('');
   return `<div class="input-label">Folders</div>${rows || '<div class="ww-dim">None yet — add a folder inside the Files roots.</div>'}
     ${v.folderNotes.map(n => `<div class="ww-dim">⚠ ${escHtml(n.folder)}: ${escHtml(n.why)}</div>`).join('')}
-    <div class="ww-row"><input class="input" id="lib-add-folder" placeholder="/home/you/Pictures" style="flex:1;min-width:200px">
+    <div class="ww-row"><input class="input" id="lib-add-folder" data-path-pick="dir" placeholder="/home/you/Pictures" style="flex:1;min-width:200px">
       <button class="btn btn-sm" onclick="libraryAddFolder()">Add</button></div>`;
 }
 

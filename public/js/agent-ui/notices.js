@@ -15,6 +15,11 @@ function _noticeShow(n) {
     + `<button class="btn btn-sm" title="Dismiss">✕</button></div><div class="notice-card-text"></div>`;
   card.querySelector('.notice-card-title').textContent = n.title;
   card.querySelector('.notice-card-text').textContent = n.text || '';
+  if (n.link?.href) {   // a place in the panel the notice is about (modules/notices: `#page?k=v`, never elsewhere)
+    const go = Object.assign(document.createElement('button'), { className: 'btn btn-sm btn-primary notice-card-go', textContent: n.link.label || 'Open' });
+    go.onclick = () => noticeGo(n.link.href);
+    card.querySelector('.notice-card-text').after(go);
+  }
   card.querySelector('button').onclick = async () => {
     _noticeDrop(n.id);
     try { await apiFetch(`/api/notices/${encodeURIComponent(n.id)}/seen`, { method: 'POST', body: {} }); } catch { /* gone already */ }
@@ -24,6 +29,14 @@ function _noticeShow(n) {
   try {
     if (document.hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification(n.title, { body: n.text || '' });
   } catch { /* not offered here */ }
+}
+
+/** `#page?k=v`: the page, then a `doca-go` event with the words after it, for whichever page acts on them. */
+function noticeGo(href) {
+  const m = /^#([a-z][a-z-]*)(?:\?(.*))?$/.exec(String(href || ''));
+  if (!m || typeof nav !== 'function') return;
+  nav(m[1]);
+  window.dispatchEvent(new CustomEvent('doca-go', { detail: { page: m[1], params: Object.fromEntries(new URLSearchParams(m[2] || '')) } }));
 }
 
 function _noticeDrop(id) { _noticeCards.get(id)?.remove(); _noticeCards.delete(id); }
@@ -41,4 +54,6 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     if (c.what === 'resync') _noticesWaiting();
   });
   _noticesWaiting();
+  // A link opened in a new tab (`/#connectors?draft=…`): solo.js opens plain `#page` links, this one those with words.
+  if (/^#[a-z][a-z-]*\?/.test(location.hash)) window.addEventListener('load', () => setTimeout(() => noticeGo(location.hash), 400));
 });

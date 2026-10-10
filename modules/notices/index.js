@@ -7,7 +7,10 @@
  * they dismiss it, so a page opened after it fired still shows it, and goes out on the live feed's `notice` topic
  * to that person's pages only (live/routes.js).
  *
- *   { id, personId, title, text, from, at, seenAt }
+ *   { id, personId, title, text, from, at, seenAt, link? }
+ *
+ * `link` ({label, href}) is a place in the panel the notice is about — `#<page>` with a query of plain words
+ * (`#connectors?draft=svc_1a2b`), never an address elsewhere.
  */
 const crypto = require('crypto');
 const store = require('../store');
@@ -21,11 +24,14 @@ const write = list => store.writeJson(DOC, { notices: list.slice(-KEEP) });
 const whose = personId => personId || null;
 
 /** Keep a notice for `personId` (null: the hive's, every host's) and draw it on their open pages. */
-function post({ personId = null, title, text = '', from = 'hub' } = {}) {
+const LINK = /^#[a-z][a-z-]{0,30}(\?[\w=&.-]{0,120})?$/;
+
+function post({ personId = null, title, text = '', from = 'hub', link = null } = {}) {
   const head = String(title || text || '').trim();
   if (!head) throw new Error('A notice needs something to say.');
   const n = { id: `ntc_${crypto.randomBytes(6).toString('hex')}`, personId: whose(personId), title: head.slice(0, 160),
-    text: title ? String(text || '').slice(0, 2000) : '', from: String(from).slice(0, 60), at: new Date().toISOString(), seenAt: null };
+    text: title ? String(text || '').slice(0, 2000) : '', from: String(from).slice(0, 60), at: new Date().toISOString(), seenAt: null,
+    ...(link && LINK.test(String(link.href || '')) ? { link: { label: String(link.label || 'Open').slice(0, 40), href: String(link.href) } } : {}) };
   const since = Date.now() - KEEP_MS;
   write([...rows().filter(x => Date.parse(x.at) > since), n]);
   require('../live').changed('notice', n.id, 'new', { personId: n.personId, notice: n });

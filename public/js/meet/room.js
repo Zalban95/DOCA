@@ -37,6 +37,7 @@ async function meetJoin(id) {
     for (const s of MEET.pending.splice(0)) MEET.mesh.signal(s.from, s.data);
     for (const p of r.room.peers) if (p.peer !== MEET.me) { MEET.peers.set(p.peer, { ...p, streams: new Map() }); MEET.mesh.add(p.peer); }
     MEET.grants = r.meeting.control || [];
+    if (typeof meetAppSay === 'function') meetAppSay(true);   // the app holding the page keeps the call alive (meet/app.js)
     if (!MEET.back && typeof overlayBack === 'function') MEET.back = overlayBack(() => { MEET.back = null; meetFold(true); });
   } catch (e) {
     const id0 = MEET.id; _meetReset();
@@ -95,7 +96,7 @@ function _meetHeard(c) {
 }
 
 function meetMic() { MEET.mic = !MEET.mic; MEET.local?.getAudioTracks().forEach(t => { t.enabled = MEET.mic; }); _meetPost('media', { audio: MEET.mic, video: MEET.cam }).catch(() => {}); meetDraw(); }
-function meetCam() { MEET.cam = !MEET.cam; MEET.local?.getVideoTracks().forEach(t => { t.enabled = MEET.cam; }); _meetPost('media', { audio: MEET.mic, video: MEET.cam }).catch(() => {}); meetDraw(); }
+function meetCam() { MEET.cam = !MEET.cam; MEET.local?.getVideoTracks().forEach(t => { t.enabled = MEET.cam; }); _meetPost('media', { audio: MEET.mic, video: MEET.cam }).catch(() => {}); if (typeof meetAppSay === 'function') meetAppSay(true); meetDraw(); }
 
 async function meetSay(form) {
   const input = form.querySelector('input');
@@ -118,7 +119,8 @@ async function meetLeave(forAll = false) {
 function _meetReset(keepLocal = false) {
   MEET.mesh?.close(); MEET.mesh = null;
   if (!keepLocal) { MEET.local?.getTracks().forEach(t => t.stop()); MEET.local = null; MEET.screen?.getTracks().forEach(t => t.stop()); MEET.screen = null; }
-  MEET.id = null; MEET.meeting = null; MEET.me = null; MEET.peers.clear(); MEET.grants = [];
+  if (MEET.id && typeof meetAppSay === 'function') meetAppSay(false);
+  MEET.id = null; MEET.meeting = null; MEET.me = null; MEET.peers.clear(); MEET.grants = []; MEET.audio = null; MEET.pip = false;
   if (typeof meetControlSocket === 'function') meetControlSocket(null);
   if (MEET.back) { const b = MEET.back; MEET.back = null; b(); }
   meetDraw();

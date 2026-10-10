@@ -65,13 +65,9 @@ async function peopleNewOpen(mode = 'page') {
   try { dir = (await apiFetch('/api/people/directory')).people; } catch (e) { return appAlert(e.message); }
   const may = PEOPLE.data?.may || {};
   const ov = Object.assign(document.createElement('div'), { className: 'modal-overlay pc-modal' });
-  const opts = dir.map(p => `<label class="pc-pick${p.may ? '' : ' off'}" title="${p.may ? '' : 'Your level does not start a conversation with them'}">
-    <input type="checkbox" value="${escHtml(p.id)}" ${p.may ? '' : 'disabled'}>${_pcAvatar(p.id, p.name)}<span><b>${escHtml(p.name)}</b>
-    <small>${escHtml([p.title, p.team].filter(Boolean).join(' · ') || p.levelName)}</small></span>${p.atPanel ? '<span class="pt pt-up" title="At the panel now"></span>' : ''}</label>`).join('');
   ov.innerHTML = `<div class="modal pc-new" role="dialog" aria-label="New conversation"><div class="modal-title">New conversation</div>
     <div class="pc-tabs" role="tablist"><button type="button" class="active" data-kind="people">People</button>${may.channel ? '<button type="button" data-kind="channel">Channel</button>' : ''}</div>
-    <div class="pc-new-people"><input class="input pc-new-find" type="search" placeholder="Find someone" aria-label="Find someone">
-      <div class="pc-picks">${opts || '<div class="placeholder">Nobody else is here yet.</div>'}</div>
+    <div class="pc-new-people">${dir.length ? '<div class="pc-new-who"></div>' : '<div class="placeholder">Nobody else is here yet.</div>'}
       <input class="input pc-new-name" placeholder="Group name (for three or more)" hidden></div>
     <div class="pc-new-channel" hidden><input class="input pc-new-cname" placeholder="Channel name, e.g. general">
       <input class="input pc-new-topic" placeholder="What it is for (optional)">
@@ -87,9 +83,13 @@ async function peopleNewOpen(mode = 'page') {
     kind = b.dataset.kind; ov.querySelectorAll('.pc-tabs button').forEach(x => x.classList.toggle('active', x === b));
     $('.pc-new-people').hidden = kind !== 'people'; $('.pc-new-channel').hidden = kind !== 'channel';
   });
-  const picked = () => [...ov.querySelectorAll('.pc-picks input:checked')].map(i => i.value);
-  ov.querySelector('.pc-picks').addEventListener('change', () => { $('.pc-new-name').hidden = picked().length < 2; });
-  $('.pc-new-find').addEventListener('input', e => { const q = e.target.value.toLowerCase(); ov.querySelectorAll('.pc-pick').forEach(l => { l.hidden = !l.textContent.toLowerCase().includes(q); }); });
+  // Who, as a mail's To: line (lib/people-pick.js): suggested as you type, a click or Enter adds them.
+  const who = dir.length ? peoplePick($('.pc-new-who'), { label: 'Who', placeholder: 'To: type a name',
+    people: dir.map(p => ({ id: p.id, name: p.name, may: p.may, why: 'Your level does not start a conversation with them',
+      sub: [[p.title, p.team].filter(Boolean).join(' · ') || p.levelName, p.atPanel ? 'at the panel now' : ''].filter(Boolean).join(' · ') })),
+    onChange: v => { $('.pc-new-name').hidden = v.people.length < 2; } }) : null;
+  const picked = () => who?.value().people || [];
+  setTimeout(() => who?.input.focus(), 30);
   $('[data-go]').onclick = async () => {
     try {
       let s;
@@ -110,7 +110,7 @@ async function peopleMembersOpen(s) {
   const ov = Object.assign(document.createElement('div'), { className: 'modal-overlay pc-modal' });
   ov.innerHTML = `<div class="modal" role="dialog" aria-label="People in it"><div class="modal-title">${escHtml(s.title)} · ${s.members.length} ${s.members.length === 1 ? 'person' : 'people'}</div>
     <div class="pc-picks">${s.members.map(m => `<button type="button" class="pc-pick" data-card="${escHtml(m.id)}">${_pcAvatar(m.id, m.name)}<span><b>${escHtml(m.name)}</b><small>${m.role === 'owner' ? 'started it' : ''}</small></span></button>`).join('')}</div>
-    <div class="pc-add"><select class="input pc-add-who" aria-label="Add someone"><option value="">Add someone…</option></select><button type="button" class="btn btn-sm" data-add>Add</button></div>
+    <div class="pc-add"><div class="pc-add-who"></div><button type="button" class="btn btn-sm" data-add>Add</button></div>
     <div class="modal-actions"><span class="status-line pc-add-status"></span><button type="button" class="btn" data-x>Close</button></div></div>`;
   document.body.append(ov);
   const release = overlayBack(() => ov.remove());
@@ -120,15 +120,16 @@ async function peopleMembersOpen(s) {
     const c = e.target.closest('[data-card]');
     if (c) { close(); peopleCardOpen(c.dataset.card); }
   });
+  let adding = null;
   try {
     const dir = (await apiFetch('/api/people/directory')).people.filter(p => p.may && !s.members.some(m => m.id === p.id));
-    ov.querySelector('.pc-add-who').insertAdjacentHTML('beforeend', dir.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.name)}</option>`).join(''));
+    adding = peoplePick(ov.querySelector('.pc-add-who'), { label: 'Add people', placeholder: 'Add someone: type a name', people: dir.map(p => ({ id: p.id, name: p.name })) });
     ov.querySelector('.pc-add').hidden = !dir.length;
   } catch { ov.querySelector('.pc-add').hidden = true; }
   ov.querySelector('[data-add]').onclick = async () => {
-    const id = ov.querySelector('.pc-add-who').value;
-    if (!id) return;
-    try { Object.assign(s, await apiFetch(`/api/people/spaces/${encodeURIComponent(s.id)}/members`, { method: 'POST', body: { add: [id] } })); close(); peopleMembersOpen(s); }
+    const add = adding?.value().people || [];
+    if (!add.length) return;
+    try { Object.assign(s, await apiFetch(`/api/people/spaces/${encodeURIComponent(s.id)}/members`, { method: 'POST', body: { add } })); close(); peopleMembersOpen(s); }
     catch (e) { ov.querySelector('.pc-add-status').textContent = e.message; }
   };
 }

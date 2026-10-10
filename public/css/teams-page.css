@@ -1,0 +1,74 @@
+/* ═══════════════════════════════════════════════════════
+   Agents → Teams (teams-page.js, teams-board.js): the teams as cards, then one team's board as the page — the plan in
+   ordered lanes, members, findings, the project, the document. The teams' own parts (teams.css: the bar, the point,
+   the members) drawn larger; neutral accent for progress, red only for what failed. Works at 390 px: lanes stack.
+   ═══════════════════════════════════════════════════════ */
+
+#tab-teams { padding-bottom: 72px; }
+#tab-teams > * { flex-shrink: 0; }   /* the page is a column: a lane row that scrolls sideways must not shrink to nothing */
+.tp-h { margin: 18px 0 8px; font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: baseline; gap: 8px; }
+html[data-skin="points"] .tp-h { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .06em; font-size: 12px; }
+.tp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.tp-card { display: grid; gap: 7px; align-content: start; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  padding: 12px 14px; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); min-width: 0; }
+.tp-card:hover { border-color: var(--accent); }
+.tp-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tp-card.failed { border-color: var(--red); }
+.tp-card-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tp-card-title { font-weight: 600; font-size: 13px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-card-when, .tp-card-proj { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.tp-card-goal { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tp-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.tp-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 2px 7px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); }
+.tp-chip small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.tp-chip.failed { border-color: var(--red); }
+.tp-archived { margin-top: 18px; }
+.tp-archived > summary { cursor: pointer; font-size: 12px; color: var(--muted); padding: 4px 0; }
+.tp-archived > summary:hover { color: var(--text); }
+.tp-archived .tp-grid { margin-top: 8px; }
+
+/* The board. */
+.tb-top .tm-keep { margin-bottom: 0; }
+.tb-lanes { flex: none; display: flex; align-items: stretch; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+.tb-lane { display: grid; gap: 8px; align-content: start; flex: 1 0 260px; min-width: 260px; max-width: 420px; }
+.tb-lane-h { font-size: 11px; color: var(--muted); }
+html[data-skin="points"] .tb-lane-h { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .06em; }
+.tb-arrow { align-self: center; color: var(--muted); flex: none; }
+.tb-task { display: grid; gap: 5px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); font-size: 12px; min-width: 0; }
+.tb-task.failed { border-color: var(--red); }
+.tb-task.running, .tb-task.checking { border-color: var(--accent); }
+.tb-task .tb-head { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.tb-task .tb-head b { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.tb-task .tb-head small, .tb-who, .tb-state { color: var(--muted); }
+.tb-task.failed .tb-state { color: var(--red); }
+.tb-prog { display: flex; align-items: center; gap: 8px; }
+.tb-prog .tm-bar { flex: 1 1 auto; width: auto; }
+.tb-check { display: grid; gap: 2px; font-size: 11px; }
+.tb-contract { color: var(--text); overflow-wrap: anywhere; }
+.tb-contract.none, .tb-verdict { color: var(--muted); }
+.tb-contract code { font-size: 10px; color: var(--muted); }
+.tb-verdict.ok { color: var(--green); }
+.tb-verdict.bad { color: var(--red); }
+.tb-line { margin: 0; padding: 4px 8px; border-left: 2px solid var(--border2); color: var(--text); font-style: italic; overflow-wrap: anywhere; }
+.tb-line small { color: var(--muted); font-style: normal; }
+.tb-task .tb-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.tb-acts { display: inline-flex; gap: 4px; margin-left: auto; }
+.tb-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-top: 10px; }
+.tb-cols > section { min-width: 0; }
+.tb-proj-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tb-proj-head small { overflow-wrap: anywhere; }
+.tb-commits, .tb-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 12px; }
+.tb-commits li, .tb-steps li { overflow-wrap: anywhere; }
+.tb-commits small, .tb-steps small { color: var(--muted); }
+.tb-step-state { font-size: 10px; padding: 1px 5px; border-radius: 3px; background: var(--dim); color: var(--muted); }
+.tb-step-state.running { color: var(--accent); }
+.tb-step-state.blocked { color: var(--red); }
+.tb-doc { max-height: none; }
+
+@media (max-width: 640px) {
+  .tp-grid { grid-template-columns: 1fr; }
+  .tb-lanes { flex-direction: column; overflow-x: visible; }
+  .tb-lane { min-width: 0; max-width: none; flex: none; }
+  .tb-arrow { transform: rotate(90deg); align-self: flex-start; margin-left: 12px; }
+  .tb-cols { grid-template-columns: 1fr; }
+}

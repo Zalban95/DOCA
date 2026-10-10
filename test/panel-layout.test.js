@@ -76,7 +76,7 @@ test('layers merge field by field, and every page stays placed — one an update
   assert.deepEqual(m.style, { density: 'compact', vars: { '--accent': '#ff0000', '--bg': '#000000' }, fontScale: 1.3 });
   const r = L.resolve(m);
   assert.deepEqual(r.groups.slice(0, 2).map(g => g.id), ['agents', 'intelligence'], 'the person\'s order first');
-  assert.deepEqual(r.groups[0].tabs, ['workstream', 'harness', 'projects', 'archive', 'chronicle'], 'pages the layout did not list stay in their group');
+  assert.deepEqual(r.groups[0].tabs, ['workstream', 'harness', 'teams', 'projects', 'archive', 'chronicle'], 'pages the layout did not list stay in their group');
   assert.deepEqual(r.groups[1].tabs, ['mcp', 'models', 'connectors', 'apikeys']);
   assert.equal(r.labels.harness, 'Agent');
   assert.deepEqual(r.groups.find(g => g.id === 'yours').tabs, ['view-desk']);

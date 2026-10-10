@@ -54,7 +54,6 @@ function teamCardHtml(team, { open = 'teamMemberOpen', doc = 'teamDocOpen', comp
 
 /** Outside Projects a member's conversation opens in the Harness console. */
 function teamMemberOpen(sessionId) {
-  if (typeof hcTeamClose === 'function') hcTeamClose();
   if (typeof nav === 'function') nav('harness');
   if (typeof hcOpenSession === 'function') hcOpenSession(sessionId);
 }

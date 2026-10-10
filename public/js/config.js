@@ -150,7 +150,7 @@ function buildConfigSidebar() {
       const addRow = document.createElement('div');
       addRow.className = 'config-fav-add';
       addRow.innerHTML = `
-        <input class="input" id="cfg-fav-add-path" placeholder="/path/to/file" style="font-size:10px;padding:4px 8px;flex:1">
+        <input class="input" id="cfg-fav-add-path" data-path-pick="file" placeholder="/path/to/file" style="font-size:10px;padding:4px 8px;flex:1">
         <button class="btn btn-xs btn-blue" onclick="addFavorite()">+ Add</button>
       `;
       section.appendChild(addRow);

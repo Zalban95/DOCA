@@ -156,7 +156,7 @@ async function harnessAddCustom() {
 
 function harnessRemoveCustom(id) {
   const h = _harnesses.find(x => x.id === id);
-  appConfirm(`Remove the agent "${h?.label || id}"?`, async () => {
+  appConfirm(`Remove the agent “${h?.label || id}”? Its entry here goes; the program itself stays installed.`, async () => {
     try {
       await apiFetch(`/api/harness/custom/${encodeURIComponent(id)}`, { method: 'DELETE' });
       harnessLoad();

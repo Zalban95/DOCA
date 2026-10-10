@@ -19,7 +19,7 @@ const bus = require('../modules/api-v1/bus');
 const DIR = path.join(__dirname, '..', 'docs', 'api', 'fixtures');
 const WRITE = process.env.DOCA_WRITE_FIXTURES === '1';
 const NAMES = ['agent.mission-running', 'agent.mission-done', 'agent.mission-archived', 'agent.mission-seen', 'agent.mission-work-stopped',
-  'prompt.new', 'prompt.new-approval', 'prompt.closed', 'alert', 'alert-files', 'settings.changed', 'device.approved', 'device.refused',
+  'prompt.new', 'prompt.new-approval', 'prompt.closed', 'alert', 'alert-files', 'alert-meeting', 'meeting.control', 'settings.changed', 'device.approved', 'device.refused',
   'agent.team-running', 'agent.team-done', 'people.message'];
 
 test.before(() => H.start());
@@ -90,6 +90,13 @@ async function frames() {
   const at = n => { const p = path.join(H.tmp, n); fs.writeFileSync(p, Buffer.alloc(1024, 1)); return p; };
   reach.tell({ to: phone.id, title: 'Voice samples', files: [{ path: at('whisper.mp3'), caption: 'Italian — whisper' }, { path: at('notes.pdf') }] });
   out['alert-files'] = last('alert');
+  // A call ringing (meetings ring): Join opens the link in the app's web view (PROTOCOL §23.4).
+  reach.tell({ to: phone.id, title: 'Alice is calling', text: 'Design sync\nJoin: https://hub.example.ts.net:4242/meet/m0123456789ab', urgent: true,
+    meeting: { id: 'm0123456789ab', link: 'https://hub.example.ts.net:4242/meet/m0123456789ab', title: 'Design sync', by: 'Alice' } });
+  out['alert-meeting'] = last('alert');
+  // A person controls this machine from a meeting: the banner's event (meetings/control.js toMachine).
+  bus.publish(phone.id, 'meeting.control', { grant: 'ctl_0123456789ab', meetingId: 'm0123456789ab', state: 'active', controller: 'Bob', sharer: 'Alice' });
+  out['meeting.control'] = last('meeting.control');
   // The look chosen on the phone's own panel page (Settings → Appearance in its web view): the app reads it again.
   require('../modules/screens').set(phone.id, { theme: 'pointsDaylight', skin: 'points' });
   out['settings.changed'] = last('settings.changed');
@@ -182,7 +189,16 @@ async function contracts() {
     'pair-link': { example: qr.replace(/code=[^&]+/, 'code=ABCD1234').replace(/host=[^&]*/, 'host=hub.example.ts.net:4242'),
       params: { code: 'the pairing code without its dash (8 characters)', host: 'host[:port] the phone dials, https' } },
     families: { canonical: require('../modules/api-v1/families').CANONICAL, decides: require('../modules/api-v1/families').DECIDES },
-    'doca-device': { methods: { apps: { args: ['limit: number'], returns: 'a JSON string: [{package, label, icon?}]' }, open: { args: ['package: string'], returns: 'boolean' } } },
+    'doca-device': { methods: { apps: { args: ['limit: number'], returns: 'a JSON string: [{package, label, icon?}]' }, open: { args: ['package: string'], returns: 'boolean' },
+      // Meetings in the app (meet/app.js, meet/device-screen.js; DocaMobile 1.5.0).
+      meeting: { args: ['state: JSON string {open: true, id, title, video, sharing, link} | {open: false}'], returns: 'a JSON string {service: boolean, route?} or "null"',
+        means: 'a meeting opened or closed on this page: keep the call alive with the screen off or the app in the background (a foreground service, "In a meeting · Leave"), route the sound, allow picture in picture' },
+      meetAudio: { args: ['route: "" (ask) | "speaker" | "earpiece" | "headset"'], returns: 'a JSON string {route, available: [routes]}' },
+      shareScreen: { args: ['options: JSON string {fps, maxSide}'], returns: '"asking" | "busy" | "unsupported"',
+        means: 'Android asks the person (MediaProjection); then the page gets window "message" data "doca-screen" with one MessagePort, posted to the hub\'s origin only. On it: JSON strings {what: "started"|"size", width, height} (the screen\'s real pixels), {what: "ended"|"refused", why?}, and frames — a JPEG as base64, a string not starting with "{"' },
+      stopScreen: { args: [], returns: 'boolean' } },
+    events: { 'doca-meeting': 'window CustomEvent the app dispatches on the hub\'s page: detail {action: "leave"} (its notification), {pip: boolean}, {audio: {route, available}}',
+      'doca-mic': 'window CustomEvent: the microphone switch (lib/mic-keep.js)' } },
     'call-frames': { from: 'the hub, as JSON text frames on /api/v1/call and /api/v1/realtime (PROTOCOL §23.1)', frames: require('../modules/realtime').FRAMES,
       client: { stop: { fields: [], means: 'hang up' } } },
     'settings-look': { ...look, deviceId: 'dev_fixture' },
@@ -205,7 +221,8 @@ test(WRITE ? 'writes the contracts' : 'the contracts are what the hub does now',
   assert.match(c['pair-link'].example, /^doca:\/\/pair\?code=[A-Z0-9]{8}&host=[^&]+$/);
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'modules', 'devices-panel.js'), 'utf8'), /doca:\/\/pair\?code=\$\{p\.code\.replace\('-', ''\)\}&host=\$\{host\}/);
   // The panel calls on window.DocaDevice only what the contract lists.
-  const used = new Set([...fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'ambient.js'), 'utf8').matchAll(/(?:DocaDevice|dev)\??\.(\w+)\(/g)].map(m => m[1]));
+  const panelFiles = ['ambient.js', 'meet/app.js', 'meet/device-screen.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'public', 'js', f), 'utf8')).join('\n');
+  const used = new Set([...panelFiles.matchAll(/(?:DocaDevice|dev)\??\.(\w+)\(/g)].map(m => m[1]));
   assert.deepEqual([...used].filter(m => !c['doca-device'].methods[m]), [], 'a DocaDevice method the contract does not list');
 });
 

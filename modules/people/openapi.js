@@ -48,6 +48,21 @@ function paths({ obj, str, int, bool, arr, body, json, std }) {
       responses: { 200: json(obj({ ok: bool() })), ...errs } } },
     '/people/messages/{id}/react': { post: { tags, summary: 'Add or take back a reaction', operationId: 'peopleReact', ...scope, parameters: [id],
       requestBody: body(obj({ emoji: str(), on: bool() }, { required: ['emoji'] })), responses: { 200: json(message), ...std(400, 401, 403, 404, 409) } } },
+    '/people/notify': (() => {
+      const when = str({ enum: ['all', 'mentions', 'off'] });
+      const rule = obj({ when: str({ enum: ['all', 'mentions', 'off', ''] }), content: str({ enum: ['full', 'notice'] }) });
+      const setting = obj({ devices: when, chats: when, choices: obj({ when: arr(str()), content: arr(str()) }),
+        list: arr(obj({ id: str(), name: str(), kind: str(), channel: str(), when: str({ description: 'Its own choice; empty: the default for its kind.' }),
+          content: str({ enum: ['full', 'notice'] }), effective: when, quietHours: obj({ from: str(), to: str() }) })) });
+      return {
+        get: { tags, summary: 'Where a hive-chat message reaches the person beyond the panel', operationId: 'peopleNotify', ...scope,
+          description: '`devices` (phone, watch, desk client) and `chats` (linked Telegram, Matrix, Slack, mail): `all` messages, direct messages and `mentions` (the default), or `off`; each device may have its own, and `content: notice` sends only "New message from …" without the words. A muted space, the person\'s own message and a device\'s quiet hours never notify.',
+          responses: { 200: json(setting), ...std(401, 403) } },
+        post: { tags, summary: 'Change where a hive-chat message reaches the person', operationId: 'peopleNotifySet', ...scope,
+          requestBody: body(obj({ devices: when, chats: when, each: obj({}, { additionalProperties: rule, description: '{device id: {when, content}}, or null to take a device\'s own choice back.' }) })),
+          responses: { 200: json(setting), ...std(400, 401, 403, 404) } },
+      };
+    })(),
   };
 }
 
@@ -55,7 +70,7 @@ function events({ obj, str, int, bool, arr }) {
   const { person, message } = shapes({ obj, str, int, bool, arr });
   return {
     'people.message': { audience: 'device', payload: obj({ spaceId: str(), space: obj({ id: str(), kind: str(), name: str() }),
-      what: str({ enum: ['new', 'edited', 'deleted', 'reacted'] }), message, notify: bool({ description: 'A direct message or a mention, not muted, outside this device\'s quiet hours: worth a notification. The hub also sends it as an `alert` with `ext.people` — drop that alert when you draw this.' }) }),
+      what: str({ enum: ['new', 'edited', 'deleted', 'reacted'] }), message, notify: bool({ description: 'Worth a notification on this device: by the person\'s choice for it (/people/notify — by default a direct message or a mention), not muted, outside its quiet hours. The hub also sends it as an `alert` with `ext.people` — drop that alert when you draw this.' }) }),
       note: 'The hive chat: to the devices (with harness:chat) of every member of the space, the writer\'s included.' },
     'people.typing': { audience: 'device', payload: obj({ spaceId: str(), by: person }), note: 'Ephemeral: show it for a few seconds.' },
     'people.read': { audience: 'device', payload: obj({ spaceId: str(), by: person, seq: int() }), note: 'A read receipt, ephemeral.' },

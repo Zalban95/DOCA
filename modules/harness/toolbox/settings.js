@@ -254,7 +254,7 @@ module.exports = [
       let d;
       try { d = require('../../service-drafts').draft(args || {}, { sessionId: ctx.sessionId }); } catch (e) { return `Error: ${e.message}`; }
       return `Prepared "${d.name}" (${d.origin}, key ${d.place === 'exchange' ? 'id:secret traded for a token' : `in the ${d.place}`})${d.definition ? `, ${d.definition.actions.length} actions` : d.spec ? ', its actions read from its document when opened' : ''}${d.skill ? ` with the skill "${d.skill.name}"` : ''}. `
-        + 'It waits in Field → Connectors → API services under "Prepared by the agent": the person pastes the key and saves. Tell them where to get the key '
+        + 'It waits in Field → Connectors → API services under "Prepared by the agent" (also offered first in Field → API keys → Add, with a notice on their pages linking to it): the person pastes the key and saves. Tell them where to get the key '
         + '(the service\'s developer page) — never ask them to paste it in the chat.';
     },
   },

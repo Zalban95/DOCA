@@ -194,6 +194,10 @@ async function hcMissionArchive(id) {
     await apiFetch(`/api/harness/missions/${encodeURIComponent(id)}/archive`, { method: 'POST', body: {} });
     hcMissionPeekHide();
     _hcLoadMissions();
+    undoToast('Mission put away — its log is kept.', async () => {
+      await apiFetch(`/api/archive/mission/${encodeURIComponent(id)}`, { method: 'POST', body: { on: false } });
+      _hcLoadMissions();
+    }, { link: { label: 'Archive', onclick: () => nav('archive') } });
   } catch (e) { appAlert(e.message); }
 }
 

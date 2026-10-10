@@ -40,7 +40,9 @@ function mcpDraftOpen(id) {
   document.getElementById('mcp-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-async function mcpDraftDismiss(id) {
-  try { await apiFetch(`/api/mcp/drafts/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
-  mcpDraftsRender();
+function mcpDraftDismiss(id) {
+  confirmRemove('the agent\'s draft of this server', 'Nothing was added from it. The agent can prepare it again when asked.', async () => {
+    try { await apiFetch(`/api/mcp/drafts/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
+    mcpDraftsRender();
+  }, { verb: 'Dismiss' });
 }

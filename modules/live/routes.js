@@ -11,6 +11,10 @@ const crypto = require('crypto');
 const live = require('./index');
 const watch = require('./watch');
 
+// The version this process runs, said in every hello: a page that reconnects to a hub running another one (after a
+// switch or an update, which restart it) reloads itself, or offers to when a form is being edited (lib/live.js).
+const VERSION = require('../../package.json').version;
+
 const _open = new Map();      // screen → the person it streams for (so only they set its folders)
 const _folders = new Map();   // screen → the folders its stream passes `files` changes for
 const _hosts = new Set();     // screens whose person holds host (a notice for nobody in particular is theirs)
@@ -39,7 +43,8 @@ function stream(req, res) {
   const own = req.auth?.session?.screen || null;   // this browser's screen: a page sent to it is for it alone
   const on = change => {
     if (change.topic === 'files') { if (host && mine.has(change.id)) send(change); return; }
-    if (change.topic === 'screen') { if (own && change.id === own) send(change); return; }
+    // `screen`: a page sent to one screen is for it alone; "reload" goes to every page of its person (an admin's: all).
+    if (change.topic === 'screen') { if (change.what === 'reload' ? !change.personId || change.personId === person?.id : own && change.id === own) send(change); return; }
     if (change.topic === 'home') { if (require('../home').hears(screen, person, change.id, change)) send(change); return; }   // pages holding Home, entities their person may see
     // A mission's machine question (harness/mission-asks.js): only its person's pages — a host's when it has no person.
     if (change.topic === 'ask') { if (change.personId ? person?.id === change.personId : host) send(change); return; }
@@ -52,7 +57,7 @@ function stream(req, res) {
   };
   live.feed.on('change', on);
   const beat = setInterval(() => { try { res.write(': beat\n\n'); } catch { /* gone */ } }, 20000);
-  send({ hello: true, screen, host });
+  send({ hello: true, screen, host, version: VERSION });
   _folders.set(screen, mine);
   res.on('close', () => { live.feed.off('change', on); clearInterval(beat); watch.release(screen); _open.delete(screen); _hosts.delete(screen); _folders.delete(screen); live.feed.emit('screen-closed', screen); });
 }
@@ -79,4 +84,7 @@ const owns = (req, screen) => _open.has(screen) && _open.get(screen) === (requir
 /** How many pages this person has open now (null: pages of someone holding host) — what a notice reached. */
 const pagesOf = personId => (personId ? [..._open.values()].filter(v => v === personId).length : _hosts.size);
 
-module.exports = { mount, visible, owns, pagesOf };
+/** How many pages are open now, everyone's. */
+const pagesAll = () => _open.size;
+
+module.exports = { mount, visible, owns, pagesOf, pagesAll };

@@ -41,7 +41,9 @@ async function retrievalTry() {
   } catch (e) { out.textContent = `✗ ${e.message}`; }
 }
 
-async function retrievalClear() {
-  try { await apiFetch('/api/retrieval/index', { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
-  retrievalCardRender(document.getElementById('sp-harness'));
+function retrievalClear() {
+  confirmRemove('the index by meaning', 'Memory and conversations are untouched; finding by meaning falls back to keywords until the index is built again, which spends embedding calls.', async () => {
+    try { await apiFetch('/api/retrieval/index', { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
+    retrievalCardRender(document.getElementById('sp-harness'));
+  }, { verb: 'Empty' });
 }
