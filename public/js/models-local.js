@@ -149,7 +149,7 @@ function nlmInstall() {
 }
 
 function nlmDelete(tool, model) {
-  appConfirm(`Remove ${model} from ${tool}?`, async () => {
+  appConfirm(`Remove ${model} from ${tool}? Its file is deleted from the disk; it has to be installed again to be used.`, async () => {
     try {
       await apiFetch('/api/models/local/delete', { method: 'POST', body: { tool, model } });
       nlmLoadList();

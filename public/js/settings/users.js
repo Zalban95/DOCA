@@ -116,7 +116,7 @@ function _usersGrantsCard() {
   for (const g of _usersData.grants || []) {
     const row = Object.assign(document.createElement('div'), { className: 'settings-tab-row' });
     const rev = Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: 'Revoke' });
-    rev.onclick = async () => { try { await apiFetch(`/api/auth/grants/${encodeURIComponent(g.id)}`, { method: 'DELETE' }); usersLoad(); } catch (e) { appAlert(e.message); } };
+    rev.onclick = () => confirmRemove(`the grant ${g.permission}`, 'Whoever held it loses it at once; giving it back is a new grant.', async () => { try { await apiFetch(`/api/auth/grants/${encodeURIComponent(g.id)}`, { method: 'DELETE' }); usersLoad(); } catch (e) { appAlert(e.message); } }, { verb: 'Revoke' });
     row.append(rev, Object.assign(document.createElement('span'), { className: 'settings-tab-label',
       textContent: `${g.permission} → ${g.subject.kind} ${g.subject.kind === 'user' ? who(g.subject.id) : g.subject.id} · ${g.scope} · by ${g.by.kind === 'agent' ? 'an agent for ' : ''}${who(g.by.user || g.by.id)}${g.note ? ` · ${g.note}` : ''}` }));
     card.appendChild(row);

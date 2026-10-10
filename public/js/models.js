@@ -233,7 +233,7 @@ function modelsPull() {
 
 /* ── Delete model ─────────────────────────────────────── */
 function modelsDelete(name) {
-  appConfirm(`Delete model: ${name}?`, async () => {
+  appConfirm(`Delete the model “${name}” from Ollama? Its files go from the disk; anything set to use it stops answering until it is pulled again.`, async () => {
     try {
       await apiFetch('/api/models/ollama/delete', { method: 'POST', body: { name } });
       modelsLoadList();

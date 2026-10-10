@@ -96,7 +96,10 @@ async function meetingsDo(id, what) {
 
 async function meetingsCalendar(provider) {
   try {
-    if (!provider) { await apiFetch('/api/meetings/calendar', { method: 'DELETE' }); return meetingsLoad(); }
+    if (!provider) return confirmRemove('your calendar', 'Meetings already in it stay there; new ones come as invitations until you connect it again.', async () => {
+      try { await apiFetch('/api/meetings/calendar', { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
+      meetingsLoad();
+    }, { verb: 'Disconnect' });
     const r = await apiFetch(`/api/meetings/calendar/${provider}/connect`, { method: 'POST' });
     window.open(r.url, '_blank', 'noopener');
     appAlert('Sign in in the tab that opened; then Refresh here.');

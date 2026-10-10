@@ -105,7 +105,7 @@ async function saveKey(provider) {
 }
 
 function deleteProvider(name) {
-  appConfirm(`Remove provider "${name}"?`, async () => {
+  appConfirm(`Remove the provider “${name}” and its key? Models it serves stop answering here until it is added again.`, async () => {
     const status = document.getElementById(`key-status-${name}`);
     try {
       await apiFetch(`/api/keys/${encodeURIComponent(name)}`, { method: 'DELETE' });

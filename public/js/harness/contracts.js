@@ -32,7 +32,11 @@ async function harnessContractsMount(id) {
         Forget one when the provider changed (a new server version, a different model behind the same name).</small></div>`);
 }
 
-async function harnessContractForget(id, provider) {
+function harnessContractForget(id, provider) {
+  confirmRemove(`what ${provider} accepts`, 'It is learned again the next time the provider refuses a request — one failed request.', () => harnessContractForgetNow(id, provider), { verb: 'Forget' });
+}
+
+async function harnessContractForgetNow(id, provider) {
   try { await apiFetch(`/api/harness/contracts/${encodeURIComponent(provider)}`, { method: 'DELETE' }); }
   catch (e) { return appAlert(e.message); }
   harnessContractsMount(id);

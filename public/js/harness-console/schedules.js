@@ -75,7 +75,7 @@ async function hcScheduleRun(id) {
 }
 
 function hcScheduleDelete(id) {
-  appConfirm('Delete this schedule?', async () => {
+  appConfirm('Delete this schedule? It runs no more, and its runs\' conversation stays. This cannot be undone.', async () => {
     try { await apiFetch(`/api/schedules/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
     hcSchedulesLoad();
   });
