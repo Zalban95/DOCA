@@ -86,4 +86,4 @@ function read({ doc, url }) {
   return { found: url, definition: { ...r.definition, source: 'import', docs: r.definition.docs || url }, warnings: r.warnings };
 }
 
-module.exports = { find, specIn, linksIn, PLACES };
+module.exports = { find, specIn, linksIn, templatesFor, PLACES };

@@ -2,7 +2,7 @@
    nobody opened for a week (screens/archive.js) that were put away rather than deleted — newest first, each restored
    with one click. A computer comes back stopped, with its desktop, logins and files as they were; a browser signs in again.
    Its page is made here: index.html is at its line ceiling. */
-const ARCHIVE_KINDS = { conversation: '💬 Conversation', mission: '⬡ Mission', project: '⟨⟩ Project', computer: '🖵 Computer', device: '▭ Browser' };
+const ARCHIVE_KINDS = { conversation: '💬 Conversation', mission: '⬡ Mission', team: '⬢ Team', project: '⟨⟩ Project', computer: '🖵 Computer', device: '▭ Browser' };
 
 /** What the Undo toast says once each kind is put away. */
 const ARCHIVE_PUT = {

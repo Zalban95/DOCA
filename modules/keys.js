@@ -134,6 +134,7 @@ function handleDeleteProvider(req, res) {
 function mount(app) {
   app.post('/api/keys/add-provider', handleAddProvider);
   app.post('/api/keys/test-provider', handleTestProvider);
+  require('./provider-checks').mount(app);   // GET /api/keys/checks, POST /api/keys/merge
 }
 
 module.exports = {

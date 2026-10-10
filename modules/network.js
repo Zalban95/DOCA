@@ -121,6 +121,17 @@ function tailnetSuffix() {
   return i > 0 ? n.slice(i + 1) : '';
 }
 
+/**
+ * This hub's own MagicDNS name (al-desk.tail1234.ts.net), lowercased — '' until it is known. Only this machine's name,
+ * never the tailnet's suffix: another machine on the tailnet is somebody's server, not this one. With DOCA_TAILNET (a
+ * container with no tailscale CLI) the machine's host name under that suffix.
+ */
+function ownName() {
+  if (process.env.DOCA_TAILNET) return `${require('os').hostname().toLowerCase()}.${tailnetSuffix()}`;
+  if (Date.now() - _dns.at >= 600000) tailnetName().catch(() => {});
+  return String(_dns.name || '').toLowerCase();
+}
+
 function mount(app) {
   const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
   app.get('/api/network', h(() => state()));
@@ -136,4 +147,4 @@ function mountDevice(router) {
   });
 }
 
-module.exports = { MACHINE, outside, limited, rightsFrom, state, save, links, publish, mount, mountDevice, tailnetSuffix };
+module.exports = { MACHINE, outside, limited, rightsFrom, state, save, links, publish, mount, mountDevice, tailnetSuffix, ownName };

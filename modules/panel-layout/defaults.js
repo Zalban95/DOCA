@@ -7,7 +7,7 @@
  * the hub reads this one to resolve a person's layout and to tell the agent what exists. test/panel-layout.test.js
  * holds the two copies equal.
  */
-const PAGES = ['controls', 'people', 'meetings', 'home', 'ambient', 'admin', 'logs', 'files', 'projects', 'harness', 'workstream', 'archive', 'chronicle', 'computers', 'live', 'terminal',
+const PAGES = ['controls', 'people', 'meetings', 'home', 'ambient', 'admin', 'logs', 'files', 'projects', 'harness', 'teams', 'workstream', 'archive', 'chronicle', 'computers', 'live', 'terminal',
   'models', 'docker', 'vms', 'vnc', 'mcp', 'connectors', 'apikeys', 'settings'];
 
 /** Pages that are the machine itself: a person without host never has them, in a group or inside a view. */
@@ -15,14 +15,14 @@ const HOST_PAGES = ['admin', 'logs', 'files', 'projects', 'terminal', 'computers
 
 const GROUPS = [
   { id: 'controls', label: 'Controls', icon: '▶', tabs: ['controls', 'people', 'meetings', 'home', 'ambient'] },
-  { id: 'agents', label: 'Agents', icon: '⬡', tabs: ['harness', 'workstream', 'projects', 'archive', 'chronicle'] },
+  { id: 'agents', label: 'Agents', icon: '⬡', tabs: ['harness', 'teams', 'workstream', 'projects', 'archive', 'chronicle'] },
   { id: 'machines', label: 'Machines', icon: '🖵', tabs: ['live', 'computers', 'vms', 'vnc', 'docker'] },
   { id: 'host', label: 'Hub', icon: '⌨', tabs: ['admin', 'files', 'terminal', 'logs'] },
   { id: 'intelligence', label: 'Field', icon: '◆', tabs: ['models', 'mcp', 'connectors', 'apikeys'] },
   { id: 'settings', label: 'Settings', icon: '⚙', tabs: ['settings'] },
 ];
 
-const LABELS = { controls: 'Overview', people: 'Chat', meetings: 'Meetings', admin: 'Admin', home: 'Home', ambient: 'Ambient', harness: 'Harness', workstream: 'Workstream', projects: 'Projects', archive: 'Archive', chronicle: 'Chronicle',
+const LABELS = { controls: 'Overview', people: 'Chat', meetings: 'Meetings', admin: 'Admin', home: 'Home', ambient: 'Ambient', harness: 'Harness', teams: 'Teams', workstream: 'Workstream', projects: 'Projects', archive: 'Archive', chronicle: 'Chronicle',
   computers: 'Computers', live: 'Live', vms: 'VMs', vnc: 'VNC', docker: 'Docker', files: 'Files', terminal: 'Terminal', logs: 'Logs', models: 'Models',
   mcp: 'MCP', connectors: 'Connectors', apikeys: 'API keys', settings: 'Settings' };
 

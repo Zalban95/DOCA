@@ -8,6 +8,9 @@
  *   GET    /api/connectors/services/all           the services, the templates, the recent jobs
  *   POST   /api/connectors/services/find          {q}: a name → the templates it matches; an address or docs link → its OpenAPI
  *                                                 document found (discover.js) — nothing saved
+ *   POST   /api/connectors/services/classify       {q}: the one "Add a service" box (classify.js) — a chat-model provider or an
+ *                                                 API service, and why; with nothing typed, the drafts, templates and
+ *                                                 known providers to suggest — nothing saved
  *   POST   /api/connectors/services/read          {template | url | text} → { definition, openapi, warnings } — nothing saved
  *   POST   /api/connectors/services/all           the form: a definition, its actions as OpenAPI text, the key and who may use it — saved
  *   GET    /api/connectors/services/:name/openapi the service as an OpenAPI 3.1 document, without its key
@@ -61,7 +64,7 @@ function fromForm(b = {}) {
   else if (b.openapi && typeof b.openapi === 'object') doc = require('./openapi').fromDoc(b.openapi).definition;
   const pick = k => (b[k] !== undefined && b[k] !== '' && b[k] !== null ? b[k] : doc[k]);
   return { ...doc, name: b.name, server: pick('server'), auth: b.auth || doc.auth, title: pick('title'), note: pick('note'), docs: pick('docs'),
-    keyHint: pick('keyHint'), skill: b.skill !== undefined ? b.skill : doc.skill, actions: b.openapi !== undefined ? doc.actions || [] : b.actions || [],
+    keyHint: pick('keyHint'), headers: b.headers !== undefined ? b.headers : doc.headers, rate: b.rate !== undefined ? b.rate : doc.rate, skill: b.skill !== undefined ? b.skill : doc.skill, actions: b.openapi !== undefined ? doc.actions || [] : b.actions || [],
     source: b.source || doc.source || 'hand', key: b.key, who: b.who };
 }
 
@@ -92,6 +95,10 @@ async function tryRead(name, { operation, params } = {}) {
 function mount(app) {
   app.get('/api/connectors/services/all', h(() => ({ services: store.list(), templates: require('./templates').list(), jobs: require('./jobs').list().slice(0, 20) })));
   app.post('/api/connectors/services/find', h(async req => withDoc(await require('./discover').find((req.body || {}).q))));
+  app.post('/api/connectors/services/classify', h(async req => {
+    const r = await require('./classify').classify((req.body || {}).q);
+    return r.found?.definition ? { ...r, found: withDoc(r.found) } : r;
+  }));
   app.post('/api/connectors/services/read', h(async req => withDoc(await read(req.body || {}))));
   app.post('/api/connectors/services/all', h(req => {
     const b = req.body || {};

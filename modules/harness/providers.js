@@ -19,8 +19,13 @@ const { loadModelsPrefs, resolveEnvVars } = require('../utils');
 /** True for an endpoint on this machine or a private network — no key expected. */
 const LOCAL_URL = /^https?:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0|\[::1\]|172\.|192\.168\.|10\.)/;
 
+/** …or at this hub's own tailnet name (a server here reached through `tailscale serve`) — this machine's name only. */
 function isLocalUrl(url) {
-  return LOCAL_URL.test(url || '');
+  if (LOCAL_URL.test(url || '')) return true;
+  let host = '';
+  try { host = new URL(url).hostname.toLowerCase().replace(/\.$/, ''); } catch { return false; }
+  const own = require('../network').ownName();
+  return !!own && host === own;
 }
 
 /**
