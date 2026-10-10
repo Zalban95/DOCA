@@ -5,7 +5,7 @@
    is expanded (/api/files/list), the path it chose written into the field — which stays typeable beside it.
      fpOpen('input-id', 'dir' | 'file')           fill a field
      fpPick({ mode, start, title }) → Promise     the chosen path, or null (a field-less question: "+ Open folder")
-     <input data-path-pick="dir|file">            gets its 📁 button by itself (pathPickEnhance)
+     an input marked data-path-pick="dir" or "file"  gets its 📁 button by itself (pathPickEnhance)
    The same rule as the Files tab: browsing this machine's disk is a host's; anyone else is told to type the path.
    Keys: ↑ ↓ move, → opens, ← closes or goes up, Enter chooses.
    ═══════════════════════════════════════════════════════ */

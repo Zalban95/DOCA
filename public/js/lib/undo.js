@@ -60,7 +60,12 @@ function undoToast(text, undo, { ms = UNDO_MS, link = null } = {}) {
  */
 function confirmRemove(what, effect, go, { verb = 'Delete', onCancel } = {}) {
   const ask = [`${verb} ${what}?`, effect].filter(Boolean).join('\n\n');
-  appConfirm(ask, go, onCancel);
+  // The answer says what it does ("Empty", "Revoke"), in the confirmation's red, and the button is itself again after.
+  const ok = typeof document !== 'undefined' ? document.getElementById('app-confirm-ok') : null;
+  const was = ok && { text: ok.textContent, cls: ok.className };
+  if (ok) { ok.textContent = verb; ok.classList.add('btn-red'); }
+  const back = () => { if (ok && was) { ok.textContent = was.text; ok.className = was.cls; } };
+  appConfirm(ask, () => { back(); go(); }, () => { back(); onCancel?.(); });
 }
 
 /** Put one away with Undo — the Archive's own route both ways (modules/archive.js). */
