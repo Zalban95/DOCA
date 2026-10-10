@@ -35,7 +35,8 @@ const _mlAgo = ms => (ms < 60000 ? `${Math.round(ms / 1000)} s ago` : `${Math.ro
 
 function _mlTiles() {
   const d = ML.data, tiles = [];
-  for (const c of d.computers) tiles.push({ id: `c:${c.id}`, working: c.working, kind: '🖵', title: c.name, point: c.state === 'running' ? 'up' : c.state === 'missing' ? 'error' : 'down',
+  for (const c of d.computers.filter(x => x.stray)) tiles.push(_mlStrayTile(c));
+  for (const c of d.computers.filter(x => !x.stray)) tiles.push({ id: `c:${c.id}`, working: c.working, kind: '🖵', title: c.name, point: c.state === 'running' ? 'up' : c.state === 'missing' ? 'error' : 'down',
     line: c.busy?.busy && c.busy.by !== 'doca' ? `busy: ${c.busy.text || 'working'}` : c.activity ? `${c.activity.what} · ${_mlAgo(c.activity.ago)}` : c.busy?.busy ? `busy: ${c.busy.text}` : c.mission ? `${c.mission.label}: ${c.mission.state}` : c.purpose || 'no mission yet',
     who: c.busy?.busy && c.busy.by === 'outside' ? 'outside DOCA\'s tools' : c.mission ? c.mission.label : '', busy: c.busy?.busy, img: c.state === 'running' ? `/api/computers/${encodeURIComponent(c.id)}/screen` : null,
     empty: c.state === 'running' ? 'Waiting for its screen…' : `Stopped (${c.state})`, open: () => computersWatch(c.id), by: c.origin });
@@ -52,8 +53,24 @@ function _mlTiles() {
     line: [`${n.host}:${n.port}`, n.same && `${n.same.kind === 'vm' ? 'VM' : 'computer'} ${n.same.name}`].filter(Boolean).join(' · '),
     who: n.state === 'connected' ? (n.driving ? 'someone is driving it' : 'someone is watching it') : 'VNC',
     img: n.shot ? `/api/machines/vnc/${encodeURIComponent(n.id)}/shot` : null, empty: n.why || 'Taking its picture…', open: () => vncConsoleOpen(n.id) });
+  for (const e of d.emulators || []) tiles.push(_mlEmulatorTile(e));
   for (const t of tiles) if (t.id === ML.focus || (ML.vmsFront && /^[vn]:/.test(t.id))) t.working = true;
   return tiles;
+}
+
+/** A computer container no record of this hub names (machines/stray-computers.js): pictured from inside it, said to be so. */
+function _mlStrayTile(c) {
+  const img = c.shot ? `/api/machines/shots/${encodeURIComponent(c.shotKey)}` : null;
+  return { id: `c:${c.id}`, working: c.working, busy: c.busy?.busy, kind: '🖵', title: c.name, point: 'up',
+    line: c.busy?.busy ? `busy: ${c.busy.text || 'working'}` : c.detail, who: '', img, empty: c.why || 'Taking its picture…',
+    open: () => (img ? mediaViewerOpen({ src: `${img}?t=${Date.now()}`, name: c.name }) : nav('computers')), by: c.origin };
+}
+
+/** An Android emulator running on this machine (machines/emulators.js), pictured through adb. */
+function _mlEmulatorTile(e) {
+  const img = e.shot ? `/api/machines/shots/${encodeURIComponent(e.key)}` : null;
+  return { id: `e:${e.serial}`, working: true, kind: '📱', title: e.name, point: 'up', line: `${e.emulator ? 'Android emulator' : 'Android device'} · ${e.serial}`,
+    who: '', img, empty: e.why || 'Taking its picture…', open: () => img && mediaViewerOpen({ src: `${img}?t=${Date.now()}`, name: e.name }), by: e.origin };
 }
 
 /** Keep the running VMs and the VNC screens in the front row (on) or let them sit behind what is working (off); this screen's choice. */
@@ -88,7 +105,7 @@ function _mlDraw(page) {
   const tiles = _mlTiles(), front = tiles.filter(t => t.working), back = tiles.filter(t => !t.working);
   if (!page.querySelector('.ml-front')) {
     const toggle = `<label class="ml-vms-front" title="Running VMs and VNC screens stay large, beside what is working"><input type="checkbox" class="switch"${ML.vmsFront ? ' checked' : ''} onchange="liveVmsFront(this.checked)"> VMs and VNC in front</label>${typeof processesButtonHtml === 'function' ? processesButtonHtml() : ''}`;
-    page.innerHTML = `<div class="ml-head">${pageHeadHtml({ title: 'Live', sub: 'The agents\' computers, the pages they serve for tests, the running VMs and the VNC screens — whatever is working, or being watched, comes to the front.', actions: toggle })}</div>
+    page.innerHTML = `<div class="ml-head">${pageHeadHtml({ title: 'Live', sub: 'The agents\' computers, the pages they serve for tests, the running VMs, the Android emulators and the VNC screens — whatever is working, or being watched, comes to the front.', actions: toggle })}</div>
       <div class="ml-front"></div><div class="ml-back"></div>`;
   }
   const sync = (box, list, big) => {
@@ -114,7 +131,7 @@ function _mlDraw(page) {
   sync(page.querySelector('.ml-front'), front, true);
   sync(page.querySelector('.ml-back'), back, false);
   if (!tiles.length) page.querySelector('.ml-front').innerHTML = emptyStateHtml({ title: 'Nothing to watch yet',
-    text: 'Agents make computers for risky or browser work; a dev server an agent starts shows up here with its page; a VM you start shows its screen; a screen added under Machines → VNC shows when it answers.' });
+    text: 'Agents make computers for risky or browser work; a dev server an agent starts shows up here with its page; a VM you start shows its screen; an Android emulator running here shows its screen; a screen added under Machines → VNC shows when it answers.' });
   else page.querySelector('.ml-front > .empty-state')?.remove();
 }
 

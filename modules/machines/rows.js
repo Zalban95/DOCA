@@ -4,10 +4,11 @@
  * Every machine on this hub in one shape (asked 2026-10-08: "show running VMs and computers on the side status column
  * as we do with containers, as well as in Live … all coherently"): containers, the agents' computers, the virtual
  * machines and the VNC targets (vnc-targets/; asked the same day: "a vnc section in machines, same logic"), each a row
- *   { kind: container|computer|vm|vnc, id, name, state, point: up|paused|down|error, detail, tab, actions, live }
+ *   { kind: container|computer|vm|vnc|emulator, id, name, state, point: up|paused|down|error, detail, tab, actions, live }
  * drawn the same way by the status column and Machines → Live, made from the readers that already exist —
  * containers.ps(), computers.detailed(), vm-list (vms.js's list, kept a few seconds). A computer's own container is
- * a computer, not a container too. The rows are kept TTL_MS, so the status column polling every few seconds runs
+ * a computer, not a container too — and one no record names is a computer row that says so (stray-computers.js,
+ * 2026-10-10), as is each Android emulator running here (emulators.js). The rows are kept TTL_MS, so the status column polling every few seconds runs
  * docker at most that often and a hypervisor CLI at most every vm-list.TTL_MS.
  *   point   up breathes, down is dim, error is red — the Points skin's point, a bar's colour in Classic
  *   tab     the page that manages it (docker, computers, vms)
@@ -53,6 +54,18 @@ function vncRow(t) {
     actions: t.state === 'unreachable' ? [] : ['open'], live: t.state !== 'unreachable' };
 }
 
+/** A computer container no record names (stray-computers.js): a computer row that says so; it opens Live, where it is pictured. */
+function strayRow(s) {
+  return { kind: 'computer', id: s.name, name: s.name, state: 'running', point: 'up', detail: require('./stray-computers').detail(s), tab: 'computers',
+    actions: [], live: true, stray: true, install: s.install };
+}
+
+/** An Android emulator (emulators.js), or a device when the owner allows them: pictured in Live. */
+function emulatorRow(d) {
+  return { kind: 'emulator', id: d.serial, name: d.name, state: 'running', point: 'up', detail: [d.emulator ? 'Android emulator' : 'Android device', d.serial].join(' · '),
+    tab: 'live', actions: [], live: true };
+}
+
 const isComputer = c => /(^|,)doca\.computer=1(,|$)/.test(String(c.Labels || ''));
 
 async function read() {
@@ -61,19 +74,26 @@ async function read() {
     require('../computers').detailed().then(list => ({ list }), e => ({ list: [], error: e.message })),
     require('./vm-list').list(),
   ]);
-  const vnc = await require('../vnc-targets').detailed({ vms: vms.vms, computers: computers.list }).catch(() => ({ targets: [] }));
+  const [vnc, strays, emulators] = await Promise.all([
+    require('../vnc-targets').detailed({ vms: vms.vms, computers: computers.list }).catch(() => ({ targets: [] })),
+    require('./stray-computers').list().catch(() => []),
+    require('./emulators').list().catch(() => ({ list: [] })),
+  ]);
   const rows = [
     ...containers.list.filter(c => !isComputer(c)).map(containerRow),
     ...computers.list.map(computerRow),
+    ...strays.map(strayRow),
     ...vms.vms.map(vmRow),
     ...vnc.targets.map(vncRow),
+    ...emulators.list.map(emulatorRow),
   ];
   // Who started each (origin.js): "started by …" or "started outside DOCA"; a stopped one, who stopped it.
   const origin = require('./origin');
   for (const r of rows) {
     const c = r.kind === 'computer' ? computers.list.find(x => x.id === r.id) : null;
+    if (r.stray && r.install !== 'this') { r.origin = origin.of('computer', r.id, { up: true }); continue; }
     r.origin = r.kind === 'vnc' ? null : origin.of(r.kind, r.kind === 'container' ? r.name : r.id,
-      { up: r.point === 'up' || r.point === 'paused', name: r.name, project: r.project, fallback: c && origin.computerFallback(c) });
+      { up: r.point === 'up' || r.point === 'paused', name: r.name, project: r.project, fallback: c ? origin.computerFallback(c) : r.stray ? 'started by this hub — no record names it now' : null });
   }
   // What busy.js last saw of each (only while a page looks): busy, with what runs and who — a container by its name.
   const busy = require('./busy');
@@ -82,7 +102,7 @@ async function read() {
     const of = rows.filter(r => r.kind === kind);
     return { total: of.length, running: of.filter(r => r.point === 'up').length, stopped: of.filter(r => r.point === 'down').length };
   };
-  return { at: Date.now(), rows, origins: others(rows), counts: { container: count('container'), computer: count('computer'), vm: count('vm'), vnc: count('vnc') },
+  return { at: Date.now(), rows, origins: others(rows), counts: { container: count('container'), computer: count('computer'), vm: count('vm'), vnc: count('vnc'), emulator: count('emulator') },
     errors: { container: containers.error || null, computer: computers.error || null } };
 }
 
@@ -116,4 +136,4 @@ function rows({ fresh = false } = {}) {
 /** The rows last read, without reading (acts.js names a container from them); null before the first read. */
 const cached = () => _cache;
 
-module.exports = { rows, cached, containerRow, computerRow, vmRow, vncRow, TTL_MS, _reset: () => { _cache = null; } };
+module.exports = { rows, cached, containerRow, computerRow, strayRow, emulatorRow, vmRow, vncRow, TTL_MS, _reset: () => { _cache = null; } };

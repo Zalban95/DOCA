@@ -2,8 +2,9 @@
 
 /**
  * The Workstream's sentinel (TODO H10.9; asked 2026-10-06: "files being edited pop up automatically, with a sentinel
- * script when workstream is open"). While any Workstream page is open it watches the folders the agents work in — the
- * projects, their worktrees, the workspace, and any folder an agent's write_file lands in — and reports each file as it
+ * script when workstream is open"). While any Workstream page is open it watches the folders the work happens in —
+ * the projects, their worktrees, the workspace, `workstream.roots` (by default the folder DOCA is installed in, so the
+ * repositories beside it; asked 2026-10-10) and any folder an agent's write_file lands in (roots.js) — and reports each file as it
  * changes with what changed (diff.js). Whatever writes there is seen: the agent's tools, a shell, git, a build. It holds
  * nothing while no page is open.
  *
@@ -33,19 +34,9 @@ let _emit = () => {};
 const skipped = p => p.split(/[\\/]/).some(seg => SKIP.has(seg)) || /\.(log|lock|swp|tmp)$|~$/.test(p);
 const dataDir = () => path.resolve(process.env.DOCA_DATA_DIR || path.join(require('os').homedir(), '.doca'));   // DOCA's own state is never the work
 
-/** The folders agents work in now. */
-function roots() {
-  const out = new Set();
-  try { for (const p of require('../projects/store').list()) if (!p.archivedAt && p.root) out.add(path.resolve(p.root)); } catch { /* none */ }
-  try {
-    for (const s of require('../harness/memory').listSessions().sessions)
-      if (!s.archivedAt && s.worktree?.path) out.add(path.resolve(s.worktree.path));
-  } catch { /* none */ }
-  try { out.add(path.resolve(require('../paths').describe().find(x => x.key === 'WORKSPACE_DIR')?.active || require('../paths').WORKSPACE_DIR)); } catch { /* none */ }
-  for (const r of _extra) out.add(r);
-  const list = [...out].filter(r => { try { return fs.statSync(r).isDirectory(); } catch { return false; } });
-  return list.filter(r => !list.some(o => o !== r && r.startsWith(o + path.sep)));   // a folder inside another is watched by it
-}
+/** The folders watched now (roots.js: the projects, worktrees, the workspace, `workstream.roots`, the agents' folders). */
+const rootList = () => require('./roots').list({ extra: [..._extra] });
+const roots = () => rootList().map(r => r.path);
 const _extra = new Set();
 
 function onChange(file) {
@@ -69,20 +60,36 @@ function report(file) {
     if (_seen.has(file)) { _seen.delete(file); _emit({ path: file, deleted: true }); }
     return;
   }
-  if (st.isDirectory()) { if (process.platform === 'linux') walk(file); return; }
+  if (st.isDirectory()) { if (process.platform === 'linux') walk([file]); return; }
+  if (keysFile(file)) return;   // the keys files: never shown, not even that they changed
   if (st.size > MAX_BYTES) return _emit({ path: file, big: true, size: st.size });
   let text;
   try { text = fs.readFileSync(file, 'utf8'); } catch { return; }
   if (text.includes('\u0000')) return _emit({ path: file, binary: true, size: st.size });
+  // A file that holds secrets beside settings (the prefs file and its copies, OpenClaw's config, a .env) is shown with
+  // every secret-named value masked, as the agent's read_file shows it (harness/secret-view.js).
+  const masked = secretKind(file);
+  if (masked) text = view(file, text);
   let before = _seen.has(file) ? _seen.get(file) : gitHead(file);
+  if (masked && before && !_seen.has(file)) before = view(file, before);
   // Not seen and not in git: new if it was born after the sentinel started, else unknown (shown whole, marked).
   const born = before === null && st.birthtimeMs > 0 && st.birthtimeMs >= _startedAt - 1000;
   if (born) before = '';
   _seen.set(file, text);
   if (before === text) return;
   const d = require('./diff').diff(before ?? '', text);
-  _emit({ path: file, root: roots().find(r => file.startsWith(r + path.sep)) || null, added: d.added, removed: d.removed, hunks: d.hunks,
+  _emit({ path: file, root: _watched.filter(r => file.startsWith(r + path.sep)).sort((a, b) => b.length - a.length)[0] || null, added: d.added, removed: d.removed, hunks: d.hunks,
     created: before === '', unknown: before === null, replaced: !!d.replaced, lines: text.split('\n').length });
+}
+
+const secretKind = f => { try { return require('../harness/secret-view').kindOf(f); } catch { return null; } };
+const view = (f, t) => { try { return require('../harness/secret-view').view(f, t); } catch { return ''; } };
+/** One of the protected keys files or folders (paths.PROTECTED_*). */
+function keysFile(f) {
+  try {
+    const p = require('../paths');
+    return p.PROTECTED_FILES.some(x => path.resolve(x) === f) || p.PROTECTED_DIRS.some(d => f.startsWith(path.resolve(d) + path.sep));
+  } catch { return false; }
 }
 
 function watchDir(dir, cb) {
@@ -94,46 +101,59 @@ function watchDir(dir, cb) {
   } catch { /* gone or not readable */ }
 }
 
-/** Linux: every folder of a root, by hand, skipping what is never the work. */
-function walk(root) {
-  const stack = [root];
-  while (stack.length && _watchers.size < MAX_DIRS) {
-    const dir = stack.pop();
-    if (skipped(dir)) continue;
+/**
+ * Linux: every folder of the roots, by hand, skipping what is never the work — breadth first across all of them, in
+ * the order given (the projects and the folders a person named before the wide default), so that past MAX_DIRS (a
+ * folder of many repositories and their worktrees) the top of every repository is watched rather than all of one.
+ */
+function walk(list) {
+  const queue = [...list];
+  for (let i = 0; i < queue.length && _watchers.size < MAX_DIRS; i++) {
+    const dir = queue[i];
+    if (skipped(dir) || dataInside(dir)) continue;
     watchDir(dir, (_ev, name) => name && onChange(path.join(dir, String(name))));
     let entries = [];
     try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
-    for (const e of entries) if (e.isDirectory() && !SKIP.has(e.name)) stack.push(path.join(dir, e.name));
+    for (const e of entries) if (e.isDirectory() && !SKIP.has(e.name)) queue.push(path.join(dir, e.name));
+  }
+}
+const dataInside = d => d === dataDir() || d.startsWith(dataDir() + path.sep);
+
+function watchRoots(list) {
+  if (process.platform === 'linux') return walk(list);
+  for (const root of list) {
+    try {
+      const w = fs.watch(root, { persistent: false, recursive: true }, (_ev, name) => name && onChange(path.join(root, String(name))));
+      w.on('error', () => _watchers.delete(root));
+      _watchers.set(root, w);
+    } catch { walk([root]); }
   }
 }
 
-function watchRoot(root) {
-  if (process.platform === 'linux') return walk(root);
-  try {
-    const w = fs.watch(root, { persistent: false, recursive: true }, (_ev, name) => name && onChange(path.join(root, String(name))));
-    w.on('error', () => _watchers.delete(root));
-    _watchers.set(root, w);
-  } catch { walk(root); }
-}
-
-/** The text files of a root as they are now (within SNAP_*), so the first edit of each shows what it changed. */
-function snapshot(root, budget = { files: SNAP_FILES, bytes: SNAP_BYTES }) {
-  const stack = [root];
-  while (stack.length && budget.files > 0 && budget.bytes > 0) {
-    const dir = stack.pop();
+/**
+ * The text files of the roots as they are now (within SNAP_*), so the first edit of each shows what it changed — read a
+ * batch at a time between other work, so holding the Workstream answers at once however many files there are.
+ */
+async function snapshot(list, budget = { files: SNAP_FILES, bytes: SNAP_BYTES }) {
+  const queue = [...list];
+  for (let i = 0, n = 0; i < queue.length && budget.files > 0 && budget.bytes > 0; i++) {
+    if (!_on) return;
+    const dir = queue[i];
     let entries = [];
     try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
     for (const e of entries) {
       const p = path.join(dir, e.name);
-      if (e.isDirectory()) { if (!SKIP.has(e.name)) stack.push(p); continue; }
+      if (e.isDirectory()) { if (!SKIP.has(e.name)) queue.push(p); continue; }
       if (!e.isFile() || skipped(p) || _seen.has(p)) continue;
       try {
         const st = fs.statSync(p);
         if (st.size > SNAP_FILE) continue;
         const text = fs.readFileSync(p, 'utf8');
         if (text.includes('\u0000')) continue;
-        _seen.set(p, text); budget.files--; budget.bytes -= st.size;
+        if (!_seen.has(p)) _seen.set(p, text);
+        budget.files--; budget.bytes -= st.size;
       } catch { /* gone */ }
+      if (++n % 200 === 0) await new Promise(r => setImmediate(r));
     }
   }
 }
@@ -141,12 +161,30 @@ function snapshot(root, budget = { files: SNAP_FILES, bytes: SNAP_BYTES }) {
 /** Start watching (idempotent); `emit(change)` hears every file that changed. */
 function start(emit) {
   _emit = emit || _emit;
-  if (_on) return;
+  if (_on) return refresh();
   _on = true;
   _startedAt = Date.now();
-  const budget = { files: SNAP_FILES, bytes: SNAP_BYTES };
-  for (const r of roots()) { watchRoot(r); snapshot(r, budget); }
+  _watched = roots();
+  watchRoots(_watched);
+  snapshot(_watched).catch(() => { /* a first edit shows whole */ });
 }
+
+/**
+ * The roots changed (a project made, `workstream.roots` saved, an agent wrote somewhere new): the folders are walked
+ * again in their order, so a folder a person adds is watched first even when the wide default had used the budget.
+ * What was seen is kept, so an edit still diffs against it.
+ */
+function refresh() {
+  const now = roots();
+  if (now.join('\n') === _watched.join('\n')) return;
+  const added = now.filter(r => !_watched.includes(r));
+  for (const w of _watchers.values()) try { w.close(); } catch { /* closed */ }
+  _watchers.clear();
+  _watched = now;
+  watchRoots(_watched);
+  if (added.length) snapshot(added).catch(() => {});
+}
+let _watched = [];
 
 /** A folder an agent wrote into: watched from now on (while the sentinel runs). */
 function include(dir) {
@@ -154,17 +192,18 @@ function include(dir) {
   const d = path.resolve(dir);
   if (roots().some(r => d === r || d.startsWith(r + path.sep))) return;
   _extra.add(d);
-  if (_on) { watchRoot(d); snapshot(d); }
+  if (_on) refresh();
 }
 
 function stop() {
   _on = false;
   for (const w of _watchers.values()) try { w.close(); } catch { /* closed */ }
-  _watchers.clear(); _seen.clear(); _extra.clear();
+  _watchers.clear(); _seen.clear(); _extra.clear(); _watched = [];
   for (const t of _pending.values()) clearTimeout(t);
   _pending.clear();
 }
 
-const status = () => ({ on: _on, roots: _on ? roots() : [], folders: _watchers.size, capped: _watchers.size >= MAX_DIRS });
+const status = () => ({ on: _on, roots: _on ? roots() : [], folders: _watchers.size, capped: _watchers.size >= MAX_DIRS,
+  where: _on ? rootList().map(r => ({ path: r.path, from: r.from, ...(r.name ? { name: r.name } : {}), ...(r.wide ? { wide: true } : {}) })) : [] });
 
-module.exports = { start, stop, include, status, roots, skipped, report };
+module.exports = { start, stop, refresh, include, status, roots, rootList, skipped, report, MAX_DIRS };

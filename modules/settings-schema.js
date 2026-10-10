@@ -317,6 +317,8 @@ const SCHEMA = {
       evalResultsKept: { type: 'integer', min: 1, max: 500, default: 30, hint: 'Results kept per evaluation set, to compare a run with the one before.' },
       activityDays:    { type: 'number', min: 1, max: 3650, default: 30, hint: 'Days the record of what the hub did on its own (a computer tidied away, a server resumed, a schedule fired) is kept (Chronicle → What the hub did).' },
     } },
+  workstream:       { is: 'local', home: 'device', on: 'host', note: 'the folders the Workstream watches besides the projects and the workspace (workstream/roots.js)', keys: { roots: { type: 'array', default: ['..'], hint: 'Folders on this machine whose edits the Workstream shows, by anyone — DOCA\'s agents, agents outside DOCA, a person in an editor. A relative one is read against DOCA\'s install; ".." (the default) is the folder DOCA is installed in, left out when that is the home folder or the filesystem\'s root.' } } },
+  machines:         { is: 'local', home: 'device', on: 'host', note: 'what Machines → Live may picture on this machine (machines/emulators.js)', keys: { adbDevices: { type: 'boolean', default: false, propose: false, hint: 'Picture real Android phones and watches plugged into this machine (adb) in Machines → Live, not only emulators. Off: only emulators are pictured.' } } },
   vms:              { is: 'local', home: 'device', on: 'host', note: 'the libvirt connection URI of this machine', propose: p('Virtual machines', 'The libvirt connection URI') },
   channels:         { is: 'local', home: 'device', on: 'host', note: 'channel bots (Telegram, Matrix, Slack, mail): tokens and a switch for this hub',
     keys: {
@@ -341,10 +343,7 @@ function settable() {
 function screenSettable() { return Object.entries(SCHEMA).filter(([, d]) => d.screenPropose && d.on === 'screen').map(([k]) => k); }
 
 /** The declaration of a leaf (`computers.maxRunning`), or null. */
-function leaf(dotted) {
-  const [top, ...rest] = String(dotted).split('.');
-  return SCHEMA[top]?.keys?.[rest.join('.')] || null;
-}
+function leaf(dotted) { const [top, ...rest] = String(dotted).split('.'); return SCHEMA[top]?.keys?.[rest.join('.')] || null; }
 
 function valid(spec, v) {
   if (v === undefined || v === null || v === '') return false;
