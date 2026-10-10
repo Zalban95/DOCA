@@ -41,7 +41,6 @@ function _mtRow(m) {
 }
 
 function meetingsDraw(page) {
-  const opts = MEETS.people.map(p => `<label class="mt-person"><input type="checkbox" value="${escHtml(p.id)}"> ${escHtml(p.name)}</label>`).join('') || '<span class="meet-quiet">Nobody else in this hive yet.</span>';
   const cal = MEETS.calendar || { providers: [] };
   const calText = cal.connected ? `Your meetings go into <b>${escHtml(cal.connected.label)}</b>${cal.connected.account ? ` (${escHtml(cal.connected.account)})` : ''}. <button class="btn btn-xs" onclick="meetingsCalendar(null)">Disconnect</button>`
     : `Connect your own calendar and meetings land in it as your events. Without one you get an invitation any calendar takes (by mail when the hub can send mail, else here with “Add to calendar”).
@@ -50,8 +49,7 @@ function meetingsDraw(page) {
   page.innerHTML = pageHeadHtml({ title: 'Meetings', sub: `Calls between the people of this hive — voice, video, screens shared with consent. Up to ${MEETS.max} in a room.`,
     actions: '<button type="button" class="btn" onclick="meetingsLoad()">Refresh</button>' })
     + `<div class="mt-grid"><div class="card"><div class="card-title">Call or schedule</div>
-      <div class="mt-people">${opts}</div>
-      <input id="mt-emails" class="input mt-input" placeholder="People outside the hive: mail addresses, comma-separated (they get an invitation)">
+      <div class="input-label">Who</div><div id="mt-who" class="mt-input"></div>
       <div class="mt-row-in"><input id="mt-title" class="input mt-input" placeholder="What it is about"><input id="mt-start" class="input mt-input" type="datetime-local">
         <select id="mt-minutes" class="input mt-input mt-minutes">${[15, 30, 45, 60, 90].map(n => `<option${n === 30 ? ' selected' : ''}>${n}</option>`).join('')}</select><span class="meet-quiet">min</span></div>
       <textarea id="mt-note" class="input mt-input" rows="2" placeholder="An agenda or a line for the invitation (optional)"></textarea>
@@ -61,11 +59,19 @@ function meetingsDraw(page) {
         <div class="card-title" style="margin-top:14px">Your calendar</div><p class="mt-sub">${calText}</p></div></div>
     <div class="card"><div class="card-title">Meetings</div>${upcoming.map(_mtRow).join('') || emptyStateHtml({ title: 'No meetings ahead', text: 'Call someone now, or schedule one above — or ask the agent to set it up.' })}</div>
     ${past.length ? `<div class="card"><div class="card-title">Ended and cancelled this week</div>${past.map(_mtRow).join('')}</div>` : ''}`;
+  // Who, as a mail's To: line (lib/people-pick.js): the hive's people suggested as you type, a whole address a guest.
+  const kept = MEETS.pick?.value();
+  MEETS.pick = peoplePick(document.getElementById('mt-who'), { people: MEETS.people.map(p => ({ id: p.id, name: p.name })), emails: true, label: 'Who',
+    placeholder: MEETS.people.length ? 'Type a name — or a mail address for someone outside the hive' : 'Nobody else is in this hive yet — type a mail address to invite a guest' });
+  kept?.people.forEach(id => MEETS.pick.add(id));
+  if (kept?.emails.length) { MEETS.pick.input.value = kept.emails.join(', ') + ','; MEETS.pick.input.dispatchEvent(new Event('input')); }
 }
 
 function _mtForm() {
-  const people = [...document.querySelectorAll('#tab-meetings .mt-people input:checked')].map(i => i.value);
-  const emails = (document.getElementById('mt-emails')?.value || '').split(/[,;\s]+/).filter(Boolean);
+  const who = MEETS.pick?.value() || { people: [], emails: [] };
+  // An address still being typed counts, as a mail's To: line sends what is in it.
+  const typing = typeof peoplePickEmail === 'function' ? peoplePickEmail(MEETS.pick?.input.value) : null;
+  const people = who.people, emails = typing && !who.emails.includes(typing) ? [...who.emails, typing] : who.emails;
   return { people, emails, title: document.getElementById('mt-title')?.value || '', note: document.getElementById('mt-note')?.value || '',
     start: document.getElementById('mt-start')?.value || '', minutes: Number(document.getElementById('mt-minutes')?.value) || 30,
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone };
@@ -73,18 +79,19 @@ function _mtForm() {
 
 async function meetingsCall() {
   const f = _mtForm();
-  if (!f.people.length) return appAlert('Tick who to call.');
+  if (!f.people.length) return appAlert('Add who to call: type a name in Who.');
   try { await meetingStart({ people: f.people, title: f.title }); } catch (e) { appAlert(e.message); }
 }
 
 async function meetingsSchedule() {
   const f = _mtForm();
   if (!f.start) return appAlert('Choose when.');
-  if (!f.people.length && !f.emails.length) return appAlert('Tick who to invite, or give an address.');
+  if (!f.people.length && !f.emails.length) return appAlert('Add who to invite in Who: a name from the hive, or a mail address.');
   try {
     const r = await apiFetch('/api/meetings', { method: 'POST', body: { ...f, title: f.title || 'Meeting' } });
     const how = (r.sent || []).map(s => `${s.name}: ${s.status}`).join('\n');
     appAlert(`Scheduled “${r.meeting.title}”.${how ? `\n\n${how}` : ''}`);
+    MEETS.pick?.clear();
     meetingsLoad();
   } catch (e) { appAlert(e.message); }
 }
@@ -96,7 +103,10 @@ async function meetingsDo(id, what) {
 
 async function meetingsCalendar(provider) {
   try {
-    if (!provider) { await apiFetch('/api/meetings/calendar', { method: 'DELETE' }); return meetingsLoad(); }
+    if (!provider) return confirmRemove('your calendar', 'Meetings already in it stay there; new ones come as invitations until you connect it again.', async () => {
+      try { await apiFetch('/api/meetings/calendar', { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
+      meetingsLoad();
+    }, { verb: 'Disconnect' });
     const r = await apiFetch(`/api/meetings/calendar/${provider}/connect`, { method: 'POST' });
     window.open(r.url, '_blank', 'noopener');
     appAlert('Sign in in the tab that opened; then Refresh here.');

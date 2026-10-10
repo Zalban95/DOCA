@@ -245,7 +245,7 @@ function installSkill(force) {
 }
 
 function removeSkill(name) {
-  appConfirm(`Remove skill: ${name}?`, async () => {
+  appConfirm(`Remove the skill “${name}”? Its folder is deleted; the agents stop following it. This cannot be undone.`, async () => {
     try {
       await apiFetch(`/api/skills/${name}`, { method: 'DELETE' });
       loadSkills();

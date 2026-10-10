@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="css/skin-modern.css">
 <link rel="stylesheet" href="css/projects.css">
 <link rel="stylesheet" href="css/sidebar.css">
-<link rel="stylesheet" href="css/config.css">
+<link rel="stylesheet" href="css/config.css"><link rel="stylesheet" href="css/safety.css">
 <link rel="stylesheet" href="css/files.css">
 <link rel="stylesheet" href="css/terminal.css">
 <link rel="stylesheet" href="css/models.css">
@@ -780,7 +780,7 @@
               <span id="dev-card-title">This server — devices</span>
               <button class="btn btn-xs btn-teal" id="dev-pair-btn"  onclick="devShowForm('pair')"  title="Show a pairing code a phone or watch can scan">⧉ Pair a device</button>
               <button class="btn btn-xs"          id="dev-issue-btn" onclick="devShowForm('issue')" title="Mint a token directly (advanced)">+ Issue token</button>
-              <button class="btn btn-xs"          onclick="devicesLoad()" title="Refresh">↺</button>
+              <button class="btn btn-xs"          onclick="devicesLoad()" title="Refresh this list">↺</button><button class="btn btn-xs" id="dev-reload-btn" data-every="1" onclick="screensReloadAll(this)" title="Every signed-in page loads again — the apps' too; one being edited asks first">⟳ Reload every screen</button><span class="status-line" id="dev-reload-status"></span>
             </div>
             <div class="input-label" id="dev-card-about" style="margin-bottom:8px">
               Tokens for phones, watches and agents that talk to this server's <code>/api/v1</code>.
@@ -1245,7 +1245,7 @@
       <button class="btn btn-xs" onclick="fpClose()">✕</button>
     </div>
     <div class="fp-nav-bar">
-      <button class="btn btn-xs" title="Drives" onclick="_fpLoadRoots()">💾 Drives</button>
+      <button class="btn btn-xs" title="Back to the top folders" onclick="_fpLoadRoots()">⌂ Top</button>
       <div class="fp-breadcrumb" id="fp-breadcrumb"></div>
     </div>
     <div class="fp-list" id="fp-list"><div class="placeholder pulse" style="padding:12px">Loading…</div></div>
@@ -1434,7 +1434,7 @@
 <script src="js/lib/format.js"></script>
 <script src="js/lib/presence.js"></script><script src="js/lib/live.js"></script><script src="js/lib/select-sheet.js"></script><script src="js/lib/choice-input.js"></script><script src="js/lib/model3d.js"></script><script src="js/lib/icons.js"></script><script src="js/lib/ui-parts.js"></script>
 <script src="js/lib/debounce.js"></script>
-<script src="js/lib/dialogs.js"></script><script src="js/lib/machine-ask.js"></script><script src="js/lib/install-ask.js"></script><script src="js/settings/leaf-fields.js"></script><script src="js/lib/machine-origin.js"></script><script src="js/lib/attention.js"></script><script src="js/lib/mic.js"></script><script src="js/lib/mic-keep.js"></script><script src="js/lib/screen.js"></script><script src="js/lib/licence.js"></script>
+<script src="js/lib/dialogs.js"></script><script src="js/lib/machine-ask.js"></script><script src="js/lib/undo.js"></script><script src="js/lib/people-pick.js"></script><script src="js/lib/page-reload.js"></script><script src="js/lib/install-ask.js"></script><script src="js/settings/leaf-fields.js"></script><script src="js/lib/machine-origin.js"></script><script src="js/lib/attention.js"></script><script src="js/lib/mic.js"></script><script src="js/lib/mic-keep.js"></script><script src="js/lib/screen.js"></script><script src="js/lib/licence.js"></script>
 <script src="js/lib/system-tools.js"></script>
 <script src="js/lib/pty-banner.js"></script>
 <!-- The agent transcript, shared by the floating chat and the harness console. -->

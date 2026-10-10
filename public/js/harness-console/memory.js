@@ -31,7 +31,7 @@ async function hcMemWrite() {
 }
 
 function hcMemForget(key) {
-  appConfirm(`Forget "${key}"?`, async () => {
+  appConfirm(`Forget “${key}”? The agents no longer know it; this cannot be undone.`, async () => {
     try {
       await apiFetch(`/api/harness/memory/${encodeURIComponent(key)}`, { method: 'DELETE' });
       _hcLoadMemory();

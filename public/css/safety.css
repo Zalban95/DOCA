@@ -1,0 +1,65 @@
+/* ═══════════════════════════════════════════════════════
+   A way back, a tree to pick a path from, people to pick (asked 2026-10-10). Theme tokens only, so every skin draws
+   them in its own colours; Points' label type comes from its own sheet.
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Undo: what was put away, with ten seconds to bring it back (js/lib/undo.js) ── */
+.undo-toasts { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 10050;
+  display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: min(560px, calc(100vw - 32px)); }
+.undo-toast { pointer-events: auto; display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;
+  padding: 8px 8px 8px 14px; background: var(--raised, var(--surface)); color: var(--bright); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg, 10px); box-shadow: 0 6px 24px rgba(0,0,0,.28); animation: undo-in .18s ease-out; }
+.undo-toast.going { opacity: 0; transform: translateY(6px); transition: opacity .18s, transform .18s; }
+.undo-text { flex: 1; min-width: 0; font-size: 13px; line-height: 1.35; }
+.undo-btn { font-weight: 600; color: var(--accent); border-color: var(--accent); }
+.undo-x { width: 28px; height: 28px; font-size: 13px; }
+@keyframes undo-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (max-width: 600px) { .undo-toasts { bottom: 76px; } .undo-toast { flex-wrap: wrap; } .undo-text { flex-basis: 100%; } }
+
+/* ── A path chosen from a tree (js/fp.js): over any window it was opened from ── */
+.fp-overlay { z-index: 10040; }
+.fp-panel { height: min(620px, 82vh); }
+.fp-breadcrumb { font-family: var(--font-mono); font-size: 11px; color: var(--muted); overflow-wrap: anywhere; padding: 3px 0; }
+.fp-list[role="tree"] { padding: 4px 0; }
+.fp-node { display: flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px 0 8px; cursor: pointer; font-size: 13px;
+  border-radius: var(--radius); margin: 0 4px; user-select: none; }
+.fp-node:hover { background: color-mix(in srgb, var(--bright) 7%, transparent); }
+.fp-node:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fp-node.sel { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--bright); }
+.fp-node.fp-dim { color: var(--muted); }
+.fp-tw { width: 18px; flex: none; text-align: center; color: var(--muted); font-size: 11px; }
+.fp-note { padding: 14px; }
+.fp-footer .input { min-width: 0; }
+.fp-browse { flex: none; }
+@media (max-width: 600px) {
+  .fp-panel { height: 88dvh; }
+  .fp-node { min-height: 40px; }
+  .fp-footer { flex-wrap: wrap; }
+  .fp-footer .input { flex-basis: 100%; }
+}
+
+/* ── People chosen like a mail's To: line (js/lib/people-pick.js) ── */
+.pp { position: relative; min-width: 0; flex: 1; }
+.pp-field { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 38px; padding: 4px 6px; box-sizing: border-box;
+  background: var(--dim); border: 1px solid var(--border2); border-radius: var(--radius); cursor: text; }
+html[data-skin="points"] .pp-field { background: var(--bg); }
+.pp-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
+.pp-chips { display: contents; }
+.pp-chip { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; padding: 2px 2px 2px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--bright); font-size: 13px; line-height: 22px; }
+.pp-chip.pp-guest { background: var(--dim); color: var(--text); border: 1px dashed var(--border2); }
+.pp-x { border: 0; background: none; color: inherit; opacity: .7; cursor: pointer; width: 24px; height: 24px; border-radius: 50%; font-size: 11px; }
+.pp-x:hover, .pp-x:focus-visible { opacity: 1; background: color-mix(in srgb, var(--bright) 12%, transparent); }
+.pp-input { flex: 1; min-width: 120px; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: var(--fs-input); padding: 4px 2px; }
+.pp-suggest { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30; max-height: 280px; overflow-y: auto; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.pp-opt { display: flex; flex-direction: column; padding: 7px 10px; border-radius: var(--radius); cursor: pointer; }
+.pp-opt b { font-weight: 500; color: var(--bright); }
+.pp-opt small { color: var(--muted); font-size: 12px; }
+.pp-opt.on, .pp-opt:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.pp-opt.off { opacity: .5; cursor: not-allowed; }
+.pp-none { padding: 8px 10px; color: var(--muted); font-size: 13px; }
+.pc-modal .pc-add { display: flex; gap: 8px; align-items: flex-start; }
+.pc-new-who { margin-bottom: 8px; }
+@media (max-width: 600px) { .pp-opt { padding: 10px; } .pp-input { min-width: 80px; } }
+.page-reload .undo-text { font-weight: 500; }

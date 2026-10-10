@@ -88,7 +88,9 @@ async function serviceDraftOpen(id) {
   document.getElementById('sk-name').scrollIntoView({ block: 'center' });
 }
 
-async function serviceDraftDismiss(id) {
-  try { await apiFetch(`/api/connectors/drafts/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
-  serviceKeysRender();
+function serviceDraftDismiss(id) {
+  confirmRemove('the agent\'s draft of this service', 'No key or skill was saved from it. The agent can prepare it again when asked.', async () => {
+    try { await apiFetch(`/api/connectors/drafts/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (e) { appAlert(e.message); }
+    serviceKeysRender();
+  }, { verb: 'Dismiss' });
 }

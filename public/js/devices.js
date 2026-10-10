@@ -17,6 +17,8 @@ async function devicesLoad() {
     _devShowing = data.own ? {} : (await apiFetch('/api/screens/showing').catch(() => ({}))).screens || {};   // what each screen shows now (screens/showing.js)
     devPopulatePresets();
     devHousekeepingDraw();   // when a browser nobody opens goes to the Archive (screens/archive.js)
+    const reload = document.getElementById('dev-reload-btn');   // every screen is a host's; anyone else reloads their own (lib/page-reload.js)
+    if (reload) { const mine = typeof _settingsNoHost !== 'undefined' && _settingsNoHost; reload.dataset.every = mine ? '0' : '1'; reload.textContent = mine ? '⟳ Reload my screens' : '⟳ Reload every screen'; }
 
     const pairBtn  = document.getElementById('dev-pair-btn');
     const issueBtn = document.getElementById('dev-issue-btn');

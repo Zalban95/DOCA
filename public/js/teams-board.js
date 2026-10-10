@@ -112,6 +112,8 @@ async function teamsBoardDraw(page, id) {
 }
 
 async function teamsBoardArchive(id, on) {
-  try { await apiFetch(`/api/harness/missions/teams/${encodeURIComponent(id)}/archive`, { method: 'POST', body: { on } }); } catch (e) { return appAlert(e.message); }
-  teamsPageLoad();
+  const put = async v => { await apiFetch(`/api/harness/missions/teams/${encodeURIComponent(id)}/archive`, { method: 'POST', body: { on: v } }); teamsPageLoad(); };
+  try { await put(on); } catch (e) { return appAlert(e.message); }
+  // Putting a team away is undone for a few seconds, then from the Archive (owner's rule: every delete asks or can be undone).
+  if (on && typeof undoToast === 'function') undoToast('Team put away — it is in the Archive', () => put(false), { link: { label: 'Archive', onclick: () => nav('archive') } });
 }

@@ -185,7 +185,7 @@ function hfDownload() {
 }
 
 function hfDelete(repoId) {
-  appConfirm(`Delete cached model: ${repoId}?`, async () => {
+  appConfirm(`Delete the cached “${repoId}”? Its files go from the Hugging Face cache; it is downloaded again the next time something needs it.`, async () => {
     try {
       await apiFetch('/api/models/hf/delete', { method: 'POST', body: { repoId } });
       hfLoadList();

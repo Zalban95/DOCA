@@ -107,9 +107,11 @@ async function guidedAcceptedDraw() {
     <button class="btn btn-xs" onclick="guidedForgetModel(${jsArg(e.role)}, ${jsArg(e.id)})">Forget</button></div>`).join('');
 }
 
-async function guidedForgetModel(role, id) {
-  try { await apiFetch('/api/guided/suggestions/forget', { method: 'POST', body: { role, id } }); } catch (e) { return appAlert(e.message); }
-  guidedLoad();
+function guidedForgetModel(role, id) {
+  confirmRemove(`this suggestion for ${role}`, 'Set-up suggests from the project\'s list again; an installed model stays installed. The model scout can file it again.', async () => {
+    try { await apiFetch('/api/guided/suggestions/forget', { method: 'POST', body: { role, id } }); } catch (e) { return appAlert(e.message); }
+    guidedLoad();
+  }, { verb: 'Forget' });
 }
 
 /** The same request as a conversation: the agent follows the guided-setup skill. */

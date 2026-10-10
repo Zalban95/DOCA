@@ -57,7 +57,7 @@ async function otherHarnessesLoad(only) {
       <div class="harness-cfg-grid">
         <label>Launch command</label><input class="input" id="sh-launch-${id}" value="${escHtml(c.launchCmd || h.cmd || '')}">
         <label>Model</label><input class="input" id="sh-model-${id}" value="${escHtml(c.model || '')}" placeholder="passed as --model when set">
-        <label>Config file</label><input class="input" id="sh-path-${id}" value="${escHtml(c.configPath || '')}" placeholder="${escHtml(h.configPathHint || '/path/to/config')}">
+        <label>Config file</label><input class="input" id="sh-path-${id}" data-path-pick="file" value="${escHtml(c.configPath || '')}" placeholder="${escHtml(h.configPathHint || '/path/to/config')}">
         <label>Environment</label><textarea class="input" id="sh-env-${id}" rows="2" placeholder="KEY=VALUE (one per line) — exported before launch">${escHtml(c.env || '')}</textarea>
       </div>
       <div class="toolbar" style="gap:6px;margin-top:8px"><button class="btn btn-sm btn-blue" onclick="otherHarnessSave(${jsArg(h.id)})">Save</button>
