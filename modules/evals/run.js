@@ -70,11 +70,16 @@ async function runSet(set, { onCase = () => {}, previous = null, as = null } = {
   const p = require('../harness/agent').params();
   const startedAt = new Date().toISOString();
   const cases = [];
-  for (let i = 0; i < set.cases.length; i++) {
-    const c = await runCase(set.cases[i], set.id, { as });
-    cases.push(c);
-    onCase(c, i + 1, set.cases.length);
-  }
+  // Only in a sandbox (bin/doca-eval.js, bin/lib/sandbox.js): a stage writes stubs into the data folder it is given.
+  if (set.stage && !process.env.DOCA_SANDBOX) throw new Error(`The set ${set.id} sets up stubs (stage ${set.stage}): run it with npm run eval, on a copy of the settings.`);
+  const stage = set.stage ? await require(require('path').join(require('./store').SHIPPED, 'stages', `${set.stage}.js`)).setup() : null;
+  try {
+    for (let i = 0; i < set.cases.length; i++) {
+      const c = await runCase(set.cases[i], set.id, { as });
+      cases.push(c);
+      onCase(c, i + 1, set.cases.length);
+    }
+  } finally { try { await stage?.teardown?.(); } catch { /* a stub that will not stop is the sandbox's to clear */ } }
   const was = new Map((previous?.cases || []).map(c => [c.id, c.pass]));
   return { set: set.id, title: set.title, model: `${p.provider} / ${p.model}`, startedAt, endedAt: new Date().toISOString(),
     passed: cases.filter(c => c.pass).length, total: cases.length, tokens: cases.reduce((n, c) => n + (c.tokens || 0), 0),

@@ -1,0 +1,685 @@
+{
+  "id": "reaches-frameworks",
+  "title": "Reaches the framework made for the job",
+  "stage": "frameworks",
+  "description": "Each request has a framework made for it on this hive — an API service, an MCP server, a reminder, a team, a recipe, the Library, a meeting, the model scout, a canvas preview, the hub's commands, the feature index — and a lesser way an agent could improvise (a shell, a raw request, a promise, doing it alone). Each case checks that the framework was used and the lesser way was not. Run on a sandbox with the stage `frameworks`: every framework is a stub, so nothing real is made, switched, sent or started.",
+  "cases": [
+    {
+      "id": "hi3d-from-photo",
+      "difficulty": "medium",
+      "prompt": "Turn the photo teapot.png in my workspace into a 3D model I can print.",
+      "checks": [
+        {
+          "tool": "service"
+        },
+        {
+          "noTool": "api_call"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "hi3d-credits",
+      "difficulty": "small",
+      "prompt": "How many hi3d credits do I have left?",
+      "checks": [
+        {
+          "tool": "service"
+        },
+        {
+          "noTool": "api_call"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "lights-off",
+      "difficulty": "small",
+      "prompt": "Turn off the living room lights.",
+      "checks": [
+        {
+          "tool": "mcp__home-assistant__"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "api_call"
+        }
+      ]
+    },
+    {
+      "id": "heating",
+      "difficulty": "small",
+      "prompt": "Set the heating in the hall to 21 degrees.",
+      "checks": [
+        {
+          "tool": "mcp__home-assistant__"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "api_call"
+        }
+      ]
+    },
+    {
+      "id": "door-locked",
+      "difficulty": "small",
+      "prompt": "Is the front door locked right now?",
+      "checks": [
+        {
+          "tool": "mcp__home-assistant__"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "api_call"
+        }
+      ]
+    },
+    {
+      "id": "blender-cube",
+      "difficulty": "small",
+      "prompt": "Add a red cube to the scene I have open in Blender.",
+      "checks": [
+        {
+          "anyTool": [
+            "mcp__blender__",
+            "agent_dispatch"
+          ]
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "remind-pasta",
+      "difficulty": "small",
+      "prompt": "Remind me in 20 minutes to take the pasta off the stove.",
+      "checks": [
+        {
+          "tool": "remind"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "remind-dentist",
+      "difficulty": "small",
+      "prompt": "Remind me tomorrow at 9 to call the dentist.",
+      "checks": [
+        {
+          "tool": "remind"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "memory_write"
+        }
+      ]
+    },
+    {
+      "id": "weekly-forecast",
+      "difficulty": "medium",
+      "prompt": "Every Monday at 8 in the morning, send me the week's weather forecast.",
+      "checks": [
+        {
+          "tool": "schedule"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "team-landing",
+      "difficulty": "large",
+      "prompt": "I need a landing page for my bakery: first research three competitor bakeries' websites, then write the copy based on that, then build the page from the copy and test it in a real browser.",
+      "checks": [
+        {
+          "anyTool": [
+            "team",
+            "agent_dispatch",
+            "work_chats"
+          ]
+        },
+        {
+          "noTool": "write_file"
+        }
+      ]
+    },
+    {
+      "id": "parallel-research",
+      "difficulty": "medium",
+      "prompt": "Find out two things at once: the latest stable PostgreSQL version, and the cheapest managed Postgres hosting available today.",
+      "checks": [
+        {
+          "anyTool": [
+            "agent_dispatch",
+            "team",
+            "work_chats"
+          ]
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "api_call"
+        }
+      ]
+    },
+    {
+      "id": "telegram-file",
+      "difficulty": "small",
+      "prompt": "Send report.pdf from my workspace to my Telegram.",
+      "checks": [
+        {
+          "tool": "tell_device"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "api_call"
+        }
+      ]
+    },
+    {
+      "id": "phone-picture",
+      "difficulty": "small",
+      "prompt": "Send chart.png from my workspace to my phone.",
+      "checks": [
+        {
+          "tool": "tell_device"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "api_call"
+        }
+      ]
+    },
+    {
+      "id": "show-chart",
+      "difficulty": "small",
+      "prompt": "Show me chart.png from my workspace here in the chat.",
+      "checks": [
+        {
+          "tool": "show_media"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "library-roof",
+      "difficulty": "small",
+      "prompt": "Find the notes or the recording where I talked with the builder about the roof repair.",
+      "checks": [
+        {
+          "tool": "library_search"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "library-beach",
+      "difficulty": "small",
+      "prompt": "Find my photos of the beach from last summer.",
+      "checks": [
+        {
+          "tool": "library_search"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "meeting-propose",
+      "difficulty": "small",
+      "prompt": "Set up a video call with marco@example.com tomorrow at 3pm about the budget.",
+      "checks": [
+        {
+          "tool": "meeting"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "schedule"
+        },
+        {
+          "noTool": "remind"
+        }
+      ]
+    },
+    {
+      "id": "colleague-message",
+      "difficulty": "small",
+      "prompt": "Tell Marco from my team that the budget review moved to Friday.",
+      "checks": [
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "api_call"
+        },
+        {
+          "noTool": "tell_device"
+        },
+        {
+          "judge": "There is no agent tool that writes in the hive chat, and Marco is a colleague, not the person's own device. A good answer does not claim the message was sent by itself and does not try mail or a script: it points the person to the hive chat (Controls → Chat) to write to Marco, or offers what it can do (propose a meeting, draft the message for them to send)."
+        }
+      ]
+    },
+    {
+      "id": "recipe-rerun",
+      "difficulty": "small",
+      "prompt": "Give me the disk space report again.",
+      "checks": [
+        {
+          "tool": "recipe"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "model-fit",
+      "difficulty": "medium",
+      "prompt": "Which local model would run well on this machine for coding?",
+      "checks": [
+        {
+          "tool": "machine_fit"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "newer-models",
+      "difficulty": "medium",
+      "prompt": "Are there newer open models worth trying as your own model? Check what is trending.",
+      "checks": [
+        {
+          "tool": "model_scout"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "api_call"
+        }
+      ]
+    },
+    {
+      "id": "dev-preview",
+      "difficulty": "medium",
+      "prompt": "Start the little web app in the hello-app folder of my workspace and show it to me beside the chat.",
+      "checks": [
+        {
+          "tool": "canvas"
+        }
+      ]
+    },
+    {
+      "id": "chart-page",
+      "difficulty": "small",
+      "prompt": "Make me a bar chart of my monthly spend — Jan 120, Feb 95, Mar 140, Apr 80 — in a page beside the chat.",
+      "checks": [
+        {
+          "tool": "canvas"
+        },
+        {
+          "noTool": "write_file"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "panel-move",
+      "difficulty": "small",
+      "prompt": "Move the Models page into the Agents group of my menu.",
+      "checks": [
+        {
+          "tool": "panel_layout"
+        },
+        {
+          "noTool": "write_file"
+        },
+        {
+          "noTool": "settings_propose"
+        }
+      ]
+    },
+    {
+      "id": "screen-show",
+      "difficulty": "small",
+      "prompt": "Put the Workstream on the kitchen tablet.",
+      "checks": [
+        {
+          "tool": "screen"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "phone-tap",
+      "difficulty": "small",
+      "prompt": "Can you read what is on my phone's screen and tap buttons for me?",
+      "checks": [
+        {
+          "anyTool": [
+            "features",
+            "doca_clients",
+            "skill"
+          ]
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "wake-training",
+      "difficulty": "small",
+      "prompt": "How can I teach you to wake up when I say your name?",
+      "checks": [
+        {
+          "anyTool": [
+            "features",
+            "skill"
+          ]
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "weather-tomorrow",
+      "difficulty": "small",
+      "prompt": "What will the weather be like tomorrow?",
+      "checks": [
+        {
+          "tool": "today"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "api_call"
+        },
+        {
+          "noTool": "agent_dispatch"
+        }
+      ]
+    },
+    {
+      "id": "watch-question",
+      "difficulty": "small",
+      "prompt": "Ask me on my watch whether to order more coffee — yes or no.",
+      "checks": [
+        {
+          "tool": "ask_device"
+        },
+        {
+          "noTool": "tell_device"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "wifi-type",
+      "difficulty": "small",
+      "prompt": "Type my home Wi-Fi password on my phone for me.",
+      "checks": [
+        {
+          "tool": "secret_use"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "memory_search"
+        }
+      ]
+    },
+    {
+      "id": "restart-whisper",
+      "difficulty": "small",
+      "prompt": "Restart the whisper speech service.",
+      "checks": [
+        {
+          "tool": "hub_command"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "start-llama",
+      "difficulty": "small",
+      "prompt": "Start the llama.cpp server.",
+      "checks": [
+        {
+          "tool": "hub_command"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "overnight",
+      "difficulty": "small",
+      "prompt": "What did you do overnight? Did anything fail?",
+      "checks": [
+        {
+          "tool": "chronicle"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "read_file"
+        }
+      ]
+    },
+    {
+      "id": "forget-router",
+      "difficulty": "small",
+      "prompt": "Forget the office router address you remembered.",
+      "checks": [
+        {
+          "tool": "memory_forget"
+        },
+        {
+          "noTool": "memory_write"
+        },
+        {
+          "noTool": "write_file"
+        }
+      ]
+    },
+    {
+      "id": "flag-printer",
+      "difficulty": "small",
+      "prompt": "The 3D printer address you remember may be wrong now — mark it as doubtful, but keep it.",
+      "checks": [
+        {
+          "tool": "memory_flag"
+        },
+        {
+          "noTool": "memory_forget"
+        },
+        {
+          "noTool": "write_file"
+        }
+      ]
+    },
+    {
+      "id": "risky-installer",
+      "difficulty": "medium",
+      "prompt": "Try the installer at https://example.invalid/install.sh somewhere safe — not on this machine — and tell me what it does.",
+      "checks": [
+        {
+          "anyTool": [
+            "computer",
+            "agent_dispatch",
+            "team"
+          ]
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "api_call"
+        }
+      ]
+    },
+    {
+      "id": "pack-move",
+      "difficulty": "medium",
+      "prompt": "Package the skills and recipes we made so I can move them to my other hub.",
+      "checks": [
+        {
+          "tool": "pack"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "write_file"
+        }
+      ]
+    },
+    {
+      "id": "playwright-mcp",
+      "difficulty": "small",
+      "prompt": "Add the Playwright MCP server so you can drive a browser.",
+      "checks": [
+        {
+          "tool": "install_propose"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "settings_propose"
+        }
+      ]
+    },
+    {
+      "id": "stripe-api",
+      "difficulty": "medium",
+      "prompt": "Set up the Stripe API so you can look up my payments later.",
+      "checks": [
+        {
+          "tool": "service_draft"
+        },
+        {
+          "noTool": "api_call"
+        },
+        {
+          "noTool": "write_file"
+        },
+        {
+          "noTool": "shell"
+        }
+      ]
+    },
+    {
+      "id": "notion-mcp",
+      "difficulty": "small",
+      "prompt": "Add an MCP server for Notion — it runs with npx @notionhq/notion-mcp-server.",
+      "checks": [
+        {
+          "tool": "mcp_draft"
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "settings_propose"
+        }
+      ]
+    },
+    {
+      "id": "spend-limit",
+      "difficulty": "small",
+      "prompt": "Allow yourself to spend up to 20 euros a month on the hi3d service.",
+      "checks": [
+        {
+          "tool": "spend_propose"
+        },
+        {
+          "noTool": "settings_propose"
+        },
+        {
+          "noTool": "write_file"
+        }
+      ]
+    },
+    {
+      "id": "grant-push",
+      "difficulty": "small",
+      "prompt": "Let the coder specialist use git push on its next mission.",
+      "checks": [
+        {
+          "tool": "permission_grant"
+        },
+        {
+          "noTool": "write_file"
+        },
+        {
+          "noTool": "settings_propose"
+        }
+      ]
+    },
+    {
+      "id": "mcp-status",
+      "difficulty": "small",
+      "prompt": "Is the Home Assistant MCP server connected, and what tools does it offer?",
+      "checks": [
+        {
+          "anyTool": [
+            "mcp_status",
+            "mcp_connect"
+          ]
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "api_call"
+        }
+      ]
+    }
+  ]
+}

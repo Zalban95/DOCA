@@ -32,7 +32,7 @@ function sandbox(prefix = 'doca-sandbox-') {
     }
   } catch { /* prefs that do not parse are the measurement's problem, not this one's */ }
   for (const k of Object.keys(require.cache)) delete require.cache[k];
-  Object.assign(process.env, { DOCA_DATA_DIR: path.join(tmp, 'data'), DOCA_PREFS_FILE: path.join(tmp, 'prefs.json'), DOCA_HOME: tmp, WORKSPACE_DIR: tmp, ATTACHMENTS_DIR: path.join(tmp, 'attachments') });
+  Object.assign(process.env, { DOCA_SANDBOX: tmp, DOCA_DATA_DIR: path.join(tmp, 'data'), DOCA_PREFS_FILE: path.join(tmp, 'prefs.json'), DOCA_HOME: tmp, WORKSPACE_DIR: tmp, ATTACHMENTS_DIR: path.join(tmp, 'attachments') });
   // Retried, and never fatal: on Windows a file the run still holds open (its database) refuses to go for a moment,
   // and a throw here turned a passing run's exit code into 1 (CI, 2026-10-07). A leftover temp folder is the OS's to clear.
   const cleanup = () => { try { fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch { /* left in the temp folder */ } };
