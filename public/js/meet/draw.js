@@ -28,7 +28,7 @@ function meetDraw() {
   const sharer = MEET.screen ? { me: true, name: 'You', stream: MEET.screen } : peers.map(p => ({ p, ...(_meetStreams(p)) })).filter(x => x.p.sharing && x.screen).map(x => ({ peer: x.p.peer, name: x.p.name, stream: x.screen, sharing: x.p.sharing }))[0] || null;
   const mine = MEET.grants.find(g => g.state !== 'ended' && g.sharer.peer === MEET.me);
   const held = MEET.grants.find(g => g.state === 'active' && g.controller.peer === MEET.me);
-  root.className = `meet${MEET.folded ? ' meet-folded' : ''}${sharer ? ' meet-has-stage' : ''}${MEET.chatOpen ? ' meet-chat-open' : ''}`;
+  root.className = `meet${MEET.folded ? ' meet-folded' : ''}${MEET.pip ? ' meet-pip' : ''}${sharer ? ' meet-has-stage' : ''}${MEET.chatOpen ? ' meet-chat-open' : ''}`;
   const count = peers.length + 1;
   const typing = root.querySelector('.meet-say input'), draft = typing?.value || '', focused = typing && document.activeElement === typing;
   const tiles = [`<div class="meet-tile meet-me"><div class="meet-v" data-v="me"></div><span class="meet-name">You${MEET.mic ? '' : ' · muted'}</span></div>`,

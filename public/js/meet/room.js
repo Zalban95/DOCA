@@ -120,7 +120,7 @@ function _meetReset(keepLocal = false) {
   MEET.mesh?.close(); MEET.mesh = null;
   if (!keepLocal) { MEET.local?.getTracks().forEach(t => t.stop()); MEET.local = null; MEET.screen?.getTracks().forEach(t => t.stop()); MEET.screen = null; }
   if (MEET.id && typeof meetAppSay === 'function') meetAppSay(false);
-  MEET.id = null; MEET.meeting = null; MEET.me = null; MEET.peers.clear(); MEET.grants = []; MEET.audio = null;
+  MEET.id = null; MEET.meeting = null; MEET.me = null; MEET.peers.clear(); MEET.grants = []; MEET.audio = null; MEET.pip = false;
   if (typeof meetControlSocket === 'function') meetControlSocket(null);
   if (MEET.back) { const b = MEET.back; MEET.back = null; b(); }
   meetDraw();
