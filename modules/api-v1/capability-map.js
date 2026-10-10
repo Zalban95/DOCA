@@ -142,6 +142,8 @@ const PERSON = [
     'PATCH /api/people/spaces/:id', 'POST /api/people/spaces/:id/join', 'POST /api/people/spaces/:id/leave', 'POST /api/people/spaces/:id/members', 'POST /api/people/spaces/:id/mine',
     'PATCH /api/people/messages/:id', 'DELETE /api/people/messages/:id', 'POST /api/people/messages/:id/pin'],
     gap: 21, why: 'a phone writes and reacts in the spaces its person is in; making and arranging them is the panel\'s until a route is asked for' },
+  { id: 'people-notify', does: 'choose where a hive-chat message reaches me: phone and watch, linked chats, each device, the words or only a notice', panel: ['POST /api/people/notify'],
+    v1: ['POST /people/notify'] },
   { id: 'people-export', does: 'export every hive-chat conversation for compliance', panel: ['POST /api/people/export'],
     only: 'the owner\'s alone, with the password, written in the audit — the one way anyone reads conversations they are not in' },
   { id: 'org-place', does: 'place someone in the organisation tree (manager, team, title)', panel: ['PATCH /api/org/people/:id'],

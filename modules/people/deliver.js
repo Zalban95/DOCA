@@ -3,8 +3,10 @@
 /**
  * Where a hive-chat change goes: the members' open pages (the live feed's `chat` topic, to them alone — live/routes.js)
  * and their devices that follow the harness (`people.message` durable, `people.typing` and `people.read` ephemeral).
- * A direct message or a mention also notifies: an `alert` on the person's own devices that show one (reach-shows.js),
- * unless the space is muted for them or the device is in its quiet hours. A channel's ordinary message notifies nobody.
+ * A message may also notify: an `alert` on the person's own devices that show one (reach-shows.js) — by default a
+ * direct message or a mention, and what else is each person's own choice per kind of device and per device
+ * (forward.js: phone and watch, linked chats; all | mentions | off; the words or a content-free notice). Never when
+ * the space is muted for them, never their own message, never in the device's quiet hours.
  */
 const bus = () => require('../api-v1/bus');
 const devices = () => require('../api-v1/devices');
@@ -14,16 +16,23 @@ const live = (spaceId, what, to, extra = {}) => require('../live').changed('chat
 
 /** The person's own devices that follow their conversations (a device paired before accounts has no person: none). */
 const followers = userId => devices().list().filter(d => !d.revokedAt && d.userId === userId && d.kind !== 'browser' && hasScope(d.scopes, 'harness:chat'));
+const forward = () => require('./forward');
 
-function quietNow(d) {
-  try { return require('../api-v1/prompts').inQuietHours(require('../api-v1/profiles').get(d.id)); } catch { return false; }
+const quietNow = d => { try { return forward().quiet(d); } catch { return false; } };
+
+/** How a message concerns `member`: `direct` (a DM, or one naming them), `other`, or null — their own, or muted. */
+function levelFor(space, m, member) {
+  if (!member || member.muted || m.authorId === member.userId) return null;   // their own, or their own agent answering them
+  return space.kind === 'dm' || (m.mentions || []).includes(member.userId) ? 'direct' : 'other';
 }
 
-/** Whether a message should notify `userId`: a direct message, or one naming them — never their own, never muted. */
-function notifies(space, m, member) {
-  if (!member || member.muted || m.authorId === member.userId && !m.agent) return false;
-  if (m.agent && m.authorId === member.userId) return false;   // their own agent answering them
-  return space.kind === 'dm' || (m.mentions || []).includes(member.userId);
+/** Whether a message notifies `member` by default (a direct message or a mention) — kept for older callers. */
+const notifies = (space, m, member) => levelFor(space, m, member) === 'direct';
+
+/** Whether this device of theirs is told: their choice for it (forward.js), outside its quiet hours. */
+function tells(member, d, level, settings) {
+  const rule = forward().ruleFor(member.userId, d, settings);
+  return forward().wants(rule, level) && !quietNow(d) ? rule : null;
 }
 
 const short = (s, n) => (String(s).length > n ? `${String(s).slice(0, n - 1)}…` : String(s));
@@ -35,27 +44,34 @@ function message(space, m, members, what = 'new') {
   const who = new Map(require('../org').people(space.orgId).map(x => [x.id, x]));
   const authorName = m.author?.name || '';
   for (const member of members) {
-    const notify = what === 'new' && notifies(space, m, member);
+    const level = what === 'new' ? levelFor(space, m, member) : null;
+    const settings = level ? forward().get(member.userId) : null;
     const title = require('./spaces').titleOf(space, { id: member.userId }, who, members);   // a DM is named by the other person
     const head = { id: space.id, kind: space.kind, name: title };
     for (const d of followers(member.userId)) {
-      try { bus().publish(d.id, 'people.message', { spaceId: space.id, space: head, what, message: m, notify: notify && !quietNow(d) }); } catch { /* a device never breaks the chat */ }
+      const notify = !!(level && tells(member, d, level, settings));
+      try { bus().publish(d.id, 'people.message', { spaceId: space.id, space: head, what, message: m, notify }); } catch { /* a device never breaks the chat */ }
     }
-    if (notify) alert(member.userId, space, m, authorName, title);
+    if (level) alert(member, space, m, authorName, title, level, settings);
   }
 }
 
-/** One notice on the person's devices that show one: who wrote, where, and the first words. */
-function alert(userId, space, m, authorName, title) {
+/** One notice on each of the person's devices that shows one and is told: who wrote, where, and the first words — or
+ *  only that something came through, where they chose a content-free notice. */
+function alert(member, space, m, authorName, title, level, settings) {
   const shows = require('../harness/reach-shows').shows;
   const who = m.agent ? `${authorName}'s agent` : authorName || 'Someone';
   const where = space.kind === 'dm' ? who : `${who} in ${title || space.name || 'a group'}`;
   for (const d of devices().list()) {
-    if (d.revokedAt || d.userId !== userId || !hasScope(d.scopes, 'interact') || !shows(d) || quietNow(d)) continue;
+    if (d.revokedAt || d.userId !== member.userId || !hasScope(d.scopes, 'interact') || !shows(d)) continue;
     if (require('../api-v1/profiles').get(d.id).prompts?.receive === false) continue;
+    const rule = tells(member, d, level, settings);
+    if (!rule) continue;
+    const bare = rule.content === 'notice';
     try {
-      bus().publish(d.id, 'alert', { id: `alt_${m.id}`, title: short(where, 120), body: [{ type: 'text', text: short(m.text || '(a file)', 600) }],
-        priority: 'normal', haptic: true, from: 'people', ext: { people: { spaceId: space.id, messageId: m.id } } }, { ttlSec: 6 * 3600 });
+      bus().publish(d.id, 'alert', { id: `alt_${m.id}`, title: short(bare ? `New message from ${where}` : where, 120),
+        body: bare ? [] : [{ type: 'text', text: short(m.text || '(a file)', 600) }],
+        priority: 'normal', haptic: true, from: 'people', ext: { people: { spaceId: space.id, messageId: m.id, ...(bare ? { bare: true } : {}) } } }, { ttlSec: 6 * 3600 });
     } catch { /* a device never breaks the chat */ }
   }
 }
@@ -79,4 +95,4 @@ function space(spaceRow, members, what = 'space', extraTo = []) {
   live(spaceRow.id, what, [...new Set([...members.map(x => x.userId), ...extraTo])]);
 }
 
-module.exports = { message, typing, read, space, notifies, followers };
+module.exports = { message, typing, read, space, notifies, levelFor, followers };

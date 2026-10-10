@@ -267,7 +267,7 @@ The harness gives its agent eight rules for working on any repository (charter r
   (3, not proposable) or the team's own `max_rounds`; then the team ends failed. **Stop** cancels every running task
   at its next step, sets a work chat's job stopped, and the waiting tasks never start.
 - **Where it shows**: the missions bar (a team row with a thin bar, opened into its tasks; its missions under it, not
-  twice), Harness → Teams and the board window (`public/js/harness-console/teams.js`, `css/teams.css`), Workstream
+  twice), Harness → Teams (`public/js/harness-console/teams.js`, `css/teams.css`) and Agents → Teams (below), Workstream
   lines of kind `team`, the leader's readings and an unread report when it ends, the live feed's `teams` topic (by the
   leader's conversation, `session-access`), `agent.team` to devices (PROTOCOL §11.4; durable on a state change,
   ephemeral for a percentage; never a watch wake; fixtures `agent.team-*`), and **the team document** `team-<slug>.md`
@@ -288,8 +288,21 @@ The harness gives its agent eight rules for working on any repository (charter r
   (older teams by their leader's project). **Projects → Teams here** (`public/js/projects/teams.js`, under the side
   view, folded when none): running teams and the last three that ended, each a card (goal, overall bar — every task
   counts the same, Board, Doc → the page) with its members, a member opening as a chat tab; the same cards, compact,
-  in the project chat's fold (`agentSideFold {teams}`) and a Members list in the board window — one drawing,
+  in the project chat's fold (`agentSideFold {teams}`) and a Members list on the board — one drawing,
   `agent-ui/team-members.js`. Redrawn on the live feed's `teams`/`missions`. `test/team-project.test.js`.
+- **Agents → Teams is the teams' page** (asked 2026-10-10: "is there a specific place where I can see the teams of
+  agents working, their plan, the state of the project?"; page id `teams`, `public/js/teams-page.js`,
+  `teams-board.js`, `css/teams-page.css`; not a host page — each team by its leader's conversation): working now, then
+  recently ended, then put away — a card each (goal, bar, members' state chips, keep-going, project). Opening one draws
+  its board as the page (the old board window is gone; Harness → Teams' Board, its "All teams →", the missions bar's
+  Board and Projects → Teams here open it; Back on a phone returns to the list): the plan in ordered lanes (a task's
+  lane is one more than the furthest task it comes after), each task with its state, step of its budget, its contract
+  and the check's verdict, its specialist's last words (marked as theirs), its branch, Conversation and Log; members,
+  findings, the project (`GET /api/harness/missions/teams/:id/detail`, `teams/detail.js`: the main folder's branch and
+  changed files, newest commits on main and each task's branch, plan steps still open in the project's chats) and the
+  team document rendered inline. Live on `teams`/`missions` while shown; `/?view=teams` alone. **Ended teams are put
+  away** `teams.archiveAfterDays` (7, 0 keeps; `teams/tidy.js`, with the missions' 30-minute sweep, an activity line)
+  into the Archive (kind `team` in `archive.js`); one a person brought back stays. `test/teams-page.test.js`.
 
 ### Product names (`modules/branding.js`)
 - **Every name a person reads comes from one file**, because the panel will be sold under a customer's label and under whatever the public release is called, and a rename that means grepping forty files is a rename that does not happen. Overrides live in prefs under `branding`, so a private label is a settings change; the UI for it is deliberately absent until it can sit behind the admin password, since the only thing worse than the wrong name is one an agent changed.
@@ -479,6 +492,15 @@ The harness gives its agent eight rules for working on any repository (charter r
   Orchestrator is the floating chat docked into the page), the floating chat's Agent | People (`people-float.js`), the
   card and the tree (`people-card.js`). 📞 and 🖵 call `window.peopleCallProvider.start(kind, space)` once meetings
   register one. `test/hive-chat.test.js`.
+- **Which messages reach a person beyond the panel is theirs** (asked 2026-10-10, `people/forward.js`, store
+  `people-notify/<user>`; Settings → General → Hive chat on your devices, `settings/chat-notify.js`; `GET|POST
+  /api/people/notify`, `/api/v1/people/notify`): `devices` (phone, watch, desk client) and `chats` (linked chats, kind
+  `channel` — how a message reached the owner's Telegram) each `all | mentions | off`, default `mentions` (a DM or a
+  message naming them); `each` per device over those, with `content: notice` — "New message from Ada in #ops", an
+  empty body and `ext.people.bare`, never the words. `deliver.levelFor` says how a message concerns a member
+  (`direct`, `other`, or null for their own or a muted space) and the `people.message` `notify` flag follows the same
+  rule per device. Quiet hours are read on the person's own clock when `timezones.js` knows it (else the hub's, as
+  `prompts.inQuietHours`). `test/hive-chat-notify.test.js` drives a phone, a watch and a linked chat end to end.
 
 ### The Archive (since 2.228.0, `modules/archive.js`, `public/js/archive.js`; Agents → Archive)
 - **Put away rather than deleted, in one place**: archived conversations and missions (as before, where they live), and now projects (`archivedAt` on the project: out of the Projects list, `GET /api/projects?all=1` keeps them; its folder is untouched) and the agents' computers (`computers.archive`: stopped, desktop, logins and files kept; out of the Computers tab, the agents' list and the tidy-up sweep; lending one brings it back), and signed-in browsers nobody opened (kind `device`, `screens/archive.js`). `GET /api/archive` lists them newest first, each person's conversations and missions by `session-access`, projects and computers a host's; `POST /api/archive/:kind/:id {on}` puts away or restores. An earlier Orchestrator (one put away by Clear main chat) is not restored (deep test B, C9: it came back as a work chat named "Orchestrator"): there is one at a time, so it stays archived, as what it was, and the refusal says where its conversation is read (Harness → "Show archived chats"). 🗄 on a computer's card and in the Projects header.

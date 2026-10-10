@@ -8,6 +8,8 @@
  *   GET  /api/harness/missions/teams[?all=1][&project=<id>]   the newest 30 teams this person may see (all: with the put-away
  *        ones; project: only those working on that project — Projects' "Teams here")
  *   GET  /api/harness/missions/teams/:id            one board: tasks with state and percentage, notes, its document
+ *   GET  /api/harness/missions/teams/:id/detail     the board as Agents → Teams draws it: the board, each task's last line,
+ *        its contract's verdict, the document's text, and the project's state (detail.js)
  *   POST /api/harness/missions/teams/:id/stop       stop every task
  *   POST /api/harness/missions/teams/:id/keep-going {on}   try failed tasks again, up to its rounds
  *   POST /api/harness/missions/teams/:id/archive    {on}   put a finished team away (or back)
@@ -31,9 +33,10 @@ function mount(app) {
   app.get('/api/harness/missions/teams', h(req => {
     const rows = teams.visible(who(req), { all: req.query.all === '1', project: req.query.project ? String(req.query.project) : null }).slice(0, 30);   // the newest: each board reads its missions
     return { teams: rows.map(r => teams.view(teams.get(r.id))).filter(Boolean),
-      maxRounds: require('../settings-schema').value('teams.maxRounds') };
+      maxRounds: require('../settings-schema').value('teams.maxRounds'), archiveAfterDays: require('../settings-schema').value('teams.archiveAfterDays') };
   }));
   app.get('/api/harness/missions/teams/:id', h(req => ({ team: teams.view(mine(req)) })));
+  app.get('/api/harness/missions/teams/:id/detail', h(req => require('./detail').detail(mine(req))));
   app.post('/api/harness/missions/teams/:id/stop', h(async req => ({ team: await teams.stop(mine(req).id) })));
   app.post('/api/harness/missions/teams/:id/keep-going', h(async req => ({ team: await teams.keepGoing(mine(req).id, req.body?.on !== false) })));
   app.post('/api/harness/missions/teams/:id/archive', h(req => ({ team: teams.archive(mine(req).id, req.body?.on !== false) })));
