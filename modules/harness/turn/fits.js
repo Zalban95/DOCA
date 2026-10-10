@@ -20,7 +20,7 @@ function best(items, query) {
 }
 
 /** "# Likely fits": the skills and recipes this request's words match, with how to use each. '' when none. */
-function likely(message, held, sessionId = null, already = []) {
+function likely(message, held, sessionId = null, already = [], schemas = []) {
   const text = String(message || '').trim();
   if (!text) return '';
   const rows = [];
@@ -37,6 +37,15 @@ function likely(message, held, sessionId = null, already = []) {
     for (const h of hits) rows.push(`- Suggested by ${by}: skill ${h.name} (matched "${h.matched}"): ${String(h.description || '').slice(0, 160)} — \`skill\` read ${h.name}`);
     for (const s of best(skills, text).slice(0, Math.max(0, TOP - hits.length))) rows.push(`- skill ${s.name}: ${String(s.description || '').slice(0, 160)} — \`skill\` read ${s.name}`);
   }
+  // Tools this request's words call for (tool-cues.js), loaded in full for this turn: the framework made for the job.
+  try {
+    const { cued, PURPOSE, mcpPurpose } = require('./tool-cues');
+    for (const c of cued(text, schemas)) {
+      const id = c.startsWith('mcp:') ? c.slice(4) : null;
+      const tools = id ? schemas.map(s => s.function?.name || s.name).filter(n => n.startsWith(`mcp__${id}__`)).map(n => n.slice(`mcp__${id}__`.length)) : [];
+      rows.push(id ? `- MCP server ${id}: ${mcpPurpose(id, tools)} — its tools are loaded (mcp__${id}__…)` : `- tool ${c}: ${PURPOSE[c] || ''} — loaded for this request`);
+    }
+  } catch { /* none */ }
   if (held.has('recipe')) {
     let recipes = [];
     try { recipes = require('../../recipes/store').list().map(r => ({ name: r.id, description: `${r.title || ''}. ${r.description || ''}` })); } catch { /* none */ }
@@ -96,7 +105,7 @@ function keepHint(rows, held) {
 function block({ message, schemas = [], rows = [], person = null, sessionId = null, turnRow = null }) {
   const held = new Set(schemas.map(s => s.function?.name || s.name));
   const attached = turnRow?.attachedSkills || [];   // attached to this request (skill-next.js): steps followed, not suggested again
-  return [likely(message, held, sessionId, attached.map(a => a.name)), inventory(held, person), require('./skill-steps').block(rows, attached), keepHint(rows, held)].filter(Boolean).join('\n');
+  return [likely(message, held, sessionId, attached.map(a => a.name), schemas), inventory(held, person), require('./skill-steps').block(rows, attached), keepHint(rows, held)].filter(Boolean).join('\n');
 }
 
 module.exports = { block, likely, inventory, keepHint };
