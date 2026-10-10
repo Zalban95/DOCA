@@ -170,7 +170,9 @@ async function setup() {
   const REAL = new Set(['shell', 'shell_job', 'write_file', 'replace_in_files', 'git', 'api_call', 'http_fetch', 'project']);
   const answering = setInterval(() => {
     for (const q of approval.pending()) {
-      const yes = !REAL.has(q.tool) || (q.tool === 'shell_job' && JSON.stringify(q.keys || []).includes('npm'));
+      // The workspace's small web app may be started (it ends itself, and teardown stops the jobs): a case about a preview.
+      const app = ['shell', 'shell_job'].includes(q.tool) && /hello-app/.test(q.summary || '') && /\b(npm|node)\b/.test(q.summary || '');
+      const yes = !REAL.has(q.tool) || app;
       process.stderr.write(`stage: ${yes ? 'allowed once' : 'nobody answered'} ${q.tool} ${JSON.stringify(q.keys || [])}\n`);
       approval.entry(q.id)?.resolve(yes ? 'once' : 'timeout');
     }
