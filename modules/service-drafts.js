@@ -46,7 +46,17 @@ function draft({ name, origin, place = 'header', field, prefix, note, docs: sour
     skill: sk ? { name: String(sk.name), description: String(sk.description || '').slice(0, 400), body: String(sk.body).slice(0, 20000) } : null,
     by: by.sessionId || null, at: new Date().toISOString() };
   keep([...all().filter(x => x.name !== name), d]);
+  notify(d);
   return d;
+}
+
+/** A notice to the admins' open pages, linking straight to the form with the draft open (Field → Connectors). */
+function notify(d) {
+  try {
+    require('./notices').post({ title: `${d.name} is ready to finish — paste the key`, from: 'agent',
+      text: `The agent prepared the API service ${d.name} (${d.origin})${d.note ? `: ${d.note.replace(/[.\s]+$/, '')}` : ''}. Only the key is left for you.`,
+      link: { label: 'Finish it', href: `#connectors?draft=${d.id}` } });
+  } catch { /* the draft is kept whether or not a page hears of it */ }
 }
 
 /** The person's Save: the key into the protected file, the skill into the skills — then the draft is gone. */
@@ -75,7 +85,11 @@ function remove(id) { const before = all().length; keep(all().filter(x => x.id !
 function mount(app) {
   const h = fn => (req, res) => { try { res.json(fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
   // Each with its definition as OpenAPI, for "Open in the form" (Field → Connectors → API services).
-  app.get('/api/connectors/drafts/all', h(() => ({ drafts: all().map(d => (d.definition ? { ...d, openapi: require('./api-services/openapi').toDoc({ ...d.definition, name: d.name }) } : d)) })));
+  // A draft with no actions of its own names the ready-made service at its address (`template`), whose actions it takes.
+  app.get('/api/connectors/drafts/all', h(() => {
+    const tpl = Object.fromEntries(require('./api-services/classify').drafts().map(x => [x.id, x.template]));
+    return { drafts: all().map(d => ({ ...(d.definition ? { ...d, openapi: require('./api-services/openapi').toDoc({ ...d.definition, name: d.name }) } : d), ...(tpl[d.id] ? { template: tpl[d.id] } : {}) })) };
+  }));
   app.post('/api/connectors/drafts/:id/accept', h(req => accept(req.params.id, req.body || {})));
   app.delete('/api/connectors/drafts/:id', h(req => remove(req.params.id)));
 }

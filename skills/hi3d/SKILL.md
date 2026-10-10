@@ -12,9 +12,9 @@ model. It runs on the person's own credits. It is the API service `hi3d`: `servi
 
 ## Connecting it (once, with the person)
 
-In **Field → Connectors → API services**, the person types `hi3d` in the first box and picks the ready-made hi3d.ai:
-everything is filled but the key. The key is the **Access Key** and the **Secret Key** from hi3d.ai's developer page,
-joined by a colon (`AccessKey:SecretKey`, no spaces); the hub trades them for a token itself. If `service list` does
+In **Field → Connectors → API services** (or Field → API keys → Add), the person types `hi3d` in the "Add a service"
+box: the ready-made hi3d.ai fills everything but the key. The key is the **Access Key** and the **Secret Key** from
+hi3d.ai's developer page, pasted into their two boxes; the hub trades them for a token itself. If `service list` does
 not show `hi3d`, or says its key is not pasted, tell the person that — never ask them to paste the secret into the chat.
 
 ## Making a model

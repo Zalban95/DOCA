@@ -765,14 +765,37 @@ The harness gives its agent eight rules for working on any repository (charter r
   `wait` (≤ 60 s), else an automatic turn (`supervisor.wake`) or a message read before its next step (`inbox.js`); a
   finished specialist's goes to the work chat that sent it. Not followed across a restart: `recover()` says which, and
   `follow` with the service's id takes one up again.
-- **The panel** (`public/js/settings/service-keys.js`, `service-rows.js`): the form is the Keys for services form as it
-  was, and one Advanced fold holds how the key is sent, who may use it, the actions (OpenAPI text, "Read the actions")
-  and the linked skill (`skills.servicesNote` lists a service's actions under any skill it names, or that names it
-  `services: […]`); "✨ Ask the agent to write one" opens the chat with a request the person sends. Above it one box,
-  "Service name, address or docs link": a name offers the shipped templates (`api-services/templates/*.openapi.json`,
-  each checked against its provider's docs on the day `x-doca-checked` says — hi3d.ai first), an address makes the hub
-  look for the spec (`discover.js`: the link, the usual places, the docs page's links; GET only, parsed as data) and
-  fill everything but the key; nothing found offers "✨ Ask the agent to prepare it". Rows: Edit (the same form), Try (a
+- **One "Add a service" box for anything outside** (2026-10-10, `api-services/classify.js`, `public/js/settings/service-add.js`;
+  asked after the owner set up hi3d.ai in the chat-model form and never found the agent's draft): the same box in Field →
+  API keys → External providers (＋ Add, above the list — the blank form at the end is gone) and in API services.
+  `POST /api/connectors/services/classify {q}` answers which it is and why, in one line the panel shows with a switch to
+  the other: a draft the agent prepared (by name or address) → the service form with it open; a ready-made template; a
+  chat-model provider DOCA knows (PRESETS, by name or domain); an address that lists models at `/models` or `/v1/models`
+  → the provider form here, tested (test-provider, add-provider); any other address → the service form from its OpenAPI
+  document, or to fill / for the agent to prepare. Nothing saved. Without the services licence the box adds chat models
+  only. **Drafts are found**: `service_draft` posts a notice (`notices.post {link}` — `#page?k=v` only, opened by
+  `noticeGo` and the `doca-go` event) linking to the form with the draft open, Connectors, API keys and Field carry a
+  count while one waits (`--svc-drafts` on the root, `css/service-add.css`), the providers card says so, and the drafts
+  sit at the top of the API services card and of the box's suggestions; a draft with no actions takes the template's at
+  its address. **Providers are checked** (`modules/provider-checks.js`, `public/js/keys-checks.js`): two at one address
+  with at most one key between them → "Merge into X (keeps its key)" (`POST /api/keys/merge`: models joined, settings
+  repointed, the old name an alias); a server without `/v1` in its address is asked at both and offered the `/v1` fix
+  only when that answers (`GET /api/keys/checks`); this hub's own MagicDNS name (`network.ownName()`, never the
+  tailnet's suffix) counts as local in `isLocalUrl`.
+- **The panel** (`public/js/settings/service-keys.js`, `service-rows.js`, `service-auth.js`, `service-skill-pick.js`):
+  the form is the Keys for services form as it was — the key one box, or two ("Access key / client id", "Secret key /
+  client secret"; a user and a password) joined as `id:secret` exactly as kept before — and one Advanced fold holds how
+  it signs in (none for an address of the owner's own, a key in a header or the query, bearer, basic, an id and secret
+  traded for a token, OAuth 2.0 client credentials with a scope — `auth.scope`, sent in the token form — a sign-in page
+  pointing at the connectors, a client certificate listed as not yet), the token address, who may use it, extra
+  headers (`headers`, never the key's own or a hop header; `x-doca-headers`), a rate limit (`rate.perMinute`, a request
+  over it waits up to a minute, `call.pace`; `x-doca-rate`), its docs, the actions (OpenAPI text, "Read the actions")
+  and the linked skill — searched among this machine's skills and the public collections, imported and linked with a
+  click, or "✨ Write one from the docs" (a request to `service_draft` the person sends) (`skills.servicesNote` lists a service's actions under any skill it names, or that names it
+  `services: […]`). Above it the "Add a service" box: a name offers the shipped templates
+  (`api-services/templates/*.openapi.json`, each checked against its provider's docs on the day `x-doca-checked` says —
+  hi3d.ai first), an address makes the hub look for the spec (`discover.js`: the link, the usual places, the docs page's
+  links; GET only, parsed as data) and fill everything but the key; nothing found offers "✨ Let the agent prepare it". Rows: Edit (the same form), Try (a
   GET action that is not a job), the OpenAPI document, Remove. Routes `/api/connectors/services/*`, host by the
   `/api/connectors` row. A pack carries `services/<name>.openapi.json` without the key (`needs.secrets`
   `service.<name>.key`, `packs/services.js`). `test/api-services*.test.js`.

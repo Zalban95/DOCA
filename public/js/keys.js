@@ -10,18 +10,17 @@ async function loadKeys() {
 
 /* ── LLM Providers ────────────────────────────────────── */
 
-let _keyPresets = [];   // known endpoints, for the add form and the unconfigured list
-
 async function keysLoadProviders() {
   const list = document.getElementById('providers-list');
   if (!list) return;
   try {
     const data      = await apiFetch('/api/keys');
     const providers = data.providers || {};
-    _keyPresets     = data.presets || [];
-    _keyPresetsRender(Object.keys(providers));
+    keysChecksLoad();   // the same provider twice, a missing /v1 (keys-checks.js)
+    if (typeof serviceDraftsPoll === 'function') serviceDraftsPoll();
     if (!Object.keys(providers).length) {
-      list.innerHTML = '<div class="placeholder">No providers configured — add one below</div>';
+      list.innerHTML = '<div class="placeholder">No providers yet — ＋ Add above.</div>';
+      if (!document.getElementById('svc-add-providers')) keysAddToggle();
       return;
     }
     list.innerHTML = Object.entries(providers).map(([name, p]) => _providerCardHtml(name, p)).join('');
@@ -36,10 +35,10 @@ function _providerCardHtml(name, p) {
   const ready = p.hasKey || p.local;
   const badge = p.hasKey ? 'KEY SET' : p.local ? 'LOCAL' : 'NO KEY';
   return `
-    <div class="provider-card ${ready ? 'has-key' : 'no-key'}">
+    <div class="provider-card ${ready ? 'has-key' : 'no-key'}" data-provider="${escHtml(name)}">
       <div class="provider-header">
         <span class="provider-name">${escHtml(name)}</span>
-        <span class="provider-badge ${ready ? 'ok' : 'no'}">${badge}</span>
+        <span class="provider-badge ${ready ? 'ok' : 'no'}" ${p.local && !/^https?:\/\/(127|10|192|172|localhost|0\.0|\[)/.test(p.baseUrl || '') ? 'title="This hub\'s own address: no key needed"' : ''}>${badge}</span>
       </div>
       ${p.models?.length ? `<div class="provider-models">Models: ${escHtml(p.models.slice(0,4).join(', '))}${p.models.length>4?' …':''}</div>` : ''}
       ${p.pace ? `<div class="provider-models" title="Its own first-token wait and reply limit, used when larger than the harness's settings">Pace: ${escHtml(p.pace)}</div>` : ''}
@@ -53,34 +52,6 @@ function _providerCardHtml(name, p) {
       </div>
       <div class="status-line mt4" id="key-status-${escHtml(name)}"></div>
     </div>`;
-}
-
-/** One-click adds for endpoints we know but that are not configured yet. */
-function _keyPresetsRender(configured) {
-  const el = document.getElementById('provider-presets');
-  if (!el) return;
-  const missing = _keyPresets.filter(p => !configured.includes(p.id));
-  el.innerHTML = !missing.length ? '' : `
-    <div class="input-label" style="margin:10px 0 6px">Known endpoints — click to add</div>
-    <div class="provider-preset-row">
-      ${missing.map(p => `
-        <button class="btn btn-xs ${p.local ? 'btn-green' : ''}" onclick="addPreset(${jsArg(p.id)})"
-                title="${escHtml(p.baseUrl)}${p.env ? ` — or set $${p.env}` : ''}">
-          ${escHtml(p.label)}
-        </button>`).join('')}
-    </div>`;
-}
-
-/** Adds a known endpoint by id; its URL comes from the server's preset table. */
-async function addPreset(id) {
-  const status = document.getElementById('np-status');
-  try {
-    const r = await apiFetch('/api/keys/add-provider', { method: 'POST', body: { name: id } });
-    setStatus(status, `✓ Added ${id} at ${r.baseUrl} — set a key below if it needs one`, 'ok');
-    keysLoadProviders();
-  } catch (e) {
-    setStatus(status, `✗ ${e.message}`, 'err');
-  }
 }
 
 async function saveKey(provider) {
@@ -120,21 +91,13 @@ function keysShowProvider(name) {
   setTimeout(() => { const el = document.getElementById(`url-${name}`); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }, 700);
 }
 
-function showAddProvider() { document.getElementById('add-provider-form').style.display = 'block'; }
-function hideAddProvider() { document.getElementById('add-provider-form').style.display = 'none'; }
-
-async function addProvider() {
-  const name    = document.getElementById('np-name').value.trim();
-  const baseUrl = document.getElementById('np-url').value.trim();
-  const apiKey  = document.getElementById('np-key').value.trim();
-  const status  = document.getElementById('np-status');
-  if (!name || !baseUrl) { setStatus(status, 'Name and URL required', 'err'); return; }
-  try {
-    const r = await apiFetch('/api/keys/add-provider', { method: 'POST', body: { name, baseUrl, apiKey } });
-    setStatus(status, `✓ Added ${name}${r.paceText ? ` — it ${r.paceText}` : ''}`, 'ok', r.paceText ? { clear: 0 } : undefined);
-    hideAddProvider();
-    setTimeout(keysLoadProviders, 500);
-  } catch (e) {
-    setStatus(status, `✗ ${e.message}`, 'err');
-  }
+/** ＋ Add: the one "Add a service" box (settings/service-add.js), above the list — a chat model is added here, any
+ *  other API goes on to Field → Connectors → API services. */
+function keysAddToggle() {
+  const slot = document.getElementById('svc-add-providers-slot');
+  if (!slot) return;
+  if (slot.innerHTML) { slot.innerHTML = ''; return; }
+  slot.innerHTML = serviceAddBoxHtml('providers');
+  serviceAddSuggest('providers');
+  document.getElementById('sa-q-providers').focus();
 }
