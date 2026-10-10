@@ -21,6 +21,8 @@
  *   POST   /api/people/messages/:id/(react|pin)   {emoji, on} / {on}
  *   GET    /api/people/search?q=                  in their own spaces
  *   POST   /api/people/export                     the owner's compliance export (password, audit)
+ *   GET    /api/people/notify                     where a message reaches me beyond the panel (forward.js), my devices listed
+ *   POST   /api/people/notify {devices, chats, each}   change it — my own, nobody else's
  */
 const spaces = require('./spaces');
 const messages = require('./messages');
@@ -46,6 +48,8 @@ function mount(app) {
   app.get('/api/people', h((req, p) => spaces.list(p)));
   app.get('/api/people/directory', h((req, p) => ({ people: directory(p) })));
   app.get('/api/people/search', h((req, p) => messages.search(p, req.query.q)));
+  app.get('/api/people/notify', h((req, p) => require('./forward').view(p.id)));
+  app.post('/api/people/notify', h((req, p) => require('./forward').set(p.id, req.body || {})));
   app.post('/api/people/export', h((req, p) => require('./keep').exportAll(p)));
   app.post('/api/people/dm', h((req, p) => spaces.dm(p, String(req.body?.person || ''))));
   app.post('/api/people/spaces', h((req, p) => spaces.create(p, req.body || {})));

@@ -62,7 +62,6 @@ function pjTeamDocOpen(teamId) {
 
 /** A member's conversation as a chat tab of this project (its missions are its conversations); else in the Harness. */
 async function pjChatOpenConversation(sessionId) {
-  if (typeof _hcTeamBoard !== 'undefined' && _hcTeamBoard) hcTeamClose();   // from the board window: the tab is the place now
   const pane = document.getElementById('pj-chat');
   if (pane && !pane.classList.contains('open')) {
     pane.classList.add('open');

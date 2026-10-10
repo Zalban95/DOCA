@@ -117,7 +117,10 @@ function recent(person, at = Date.now()) {
 let _sweeper = null;
 function start() {
   if (_sweeper) return;
-  _sweeper = setInterval(() => { try { sweep(); } catch { /* the next pass tries again */ } }, SWEEP_MS);
+  _sweeper = setInterval(() => {
+    try { sweep(); } catch { /* the next pass tries again */ }
+    try { require('../teams/tidy').sweep(); } catch { /* ended teams too (teams/tidy.js) */ }
+  }, SWEEP_MS);
   _sweeper.unref?.();
 }
 

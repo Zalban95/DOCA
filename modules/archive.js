@@ -6,10 +6,11 @@
  * and the agents' computers now are too — a computer archived is stopped with its desktop, logins and files kept, out of
  * the Computers tab, the agents' list and the tidy-up sweep, until restored or lent again. Each person sees the
  * conversations and missions they may open; projects and computers are the machine's, so a host's. Signed-in browsers
- * nobody opened for a week (kind `device`, screens/archive.js) are each person's own, and every one a host's.
+ * nobody opened for a week (kind `device`, screens/archive.js) are each person's own, and every one a host's. Teams
+ * (teams/, put away by hand or `teams.archiveAfterDays` after they end) by their leader's conversation, as missions.
  */
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
-const KINDS = ['conversation', 'mission', 'project', 'computer', 'device'];
+const KINDS = ['conversation', 'mission', 'team', 'project', 'computer', 'device'];
 
 const whoseName = (d, person) => {
   if (!d.userId || d.userId === person?.id) return '';
@@ -27,6 +28,8 @@ async function list(person) {
     if (s.archivedAt && mayOpen(person, s.id)) out.push({ kind: 'conversation', id: s.id, title: s.title || s.id, archivedAt: s.archivedAt, detail: s.kind || '' });
   for (const m of require('./agents/missions').list({ all: true, limit: 1000 }))
     if (m.archivedAt && mayOpen(person, m.sessionId)) out.push({ kind: 'mission', id: m.id, title: `${m.label || m.agentId}: ${String(m.task || '').slice(0, 80)}`, archivedAt: m.archivedAt, detail: m.state });
+  for (const t of require('./teams/store').list({ all: true }))
+    if (t.archivedAt && mayOpen(person, t.by)) out.push({ kind: 'team', id: t.id, title: t.title, archivedAt: t.archivedAt, detail: `${t.state}${t.progress ? `, ${t.progress.done} of ${t.progress.total} tasks done` : ''}` });
   for (const d of require('./api-v1/devices').list())
     if (d.kind === 'browser' && d.archivedAt && !d.revokedAt && (isHost(person) || d.userId === person.id))
       out.push({ kind: 'device', id: d.id, title: d.name, archivedAt: d.archivedAt, detail: `a signed-in browser${whoseName(d, person)}; once restored, its person signs in again` });
@@ -52,6 +55,11 @@ async function set(kind, id, on, person) {
     const m = require('./agents/missions').get(id);
     if (!m || !mayOpen(person, m.sessionId)) throw bad('No such mission.', 404);
     return require('./agents/missions').archive(id, { on });
+  }
+  if (kind === 'team') {
+    const t = require('./teams/store').get(id);
+    if (!t || !mayOpen(person, t.by)) throw bad('No such team.', 404);
+    return require('./teams').archive(id, on);
   }
   if (kind === 'device') {
     const d = require('./api-v1/devices').get(id);
