@@ -120,8 +120,8 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
       : args._raw !== undefined
       ? `Error: could not parse the arguments as JSON: ${args._raw}`
       : !schemas.some(sc => sc.function.name === name) && !tiers.heldNotSent(name, stepDisabled)
-        ? `Error: the "${name}" tool is switched off for this conversation.`
-        : await tools.call(name, args, stepDisabled, { show: image => shown.push(image), emit: evt => say({ ...evt, step }), sessionId: session.id, signal, approved: !!gate, screen: require('../screen-proposals').screenOf(client), airlock: !!profile?.airlock,
+        ? `Error: the "${name}" tool is switched off for this conversation${(w => (w ? `: ${w}` : ''))(require('./tool-shape').whyOff(name, profile))}.`
+        : await tools.call(name, args, stepDisabled, { disabled: stepDisabled, profile, show: image => shown.push(image), emit: evt => say({ ...evt, step }), sessionId: session.id, signal, approved: !!gate, screen: require('../screen-proposals').screenOf(client), airlock: !!profile?.airlock,
           // A person's own turn (S1: their request is the decision) — not an automatic turn, a mission or a specialist;
           // or an automatic turn that read their queued message, for what they asked (askerOf, above).
           ...(asker && ASKED_TOOLS.has(name) ? { user: asker, byPerson: true }

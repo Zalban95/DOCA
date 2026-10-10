@@ -14,13 +14,16 @@ module.exports = [
     },
     run: ({ names = [] }, ctx = {}) => {
       const tiers = require('../turn/tool-tiers');
-      const held = new Set(require('../tools').schemas().map(x => x.function.name));
-      const ok = (Array.isArray(names) ? names : [names]).map(String).filter(n => held.has(n)
-        || (n.startsWith('mcp:') && [...held].some(h => tiers.serverOf(h) === n.slice(4))));
-      const unknown = (Array.isArray(names) ? names : [names]).map(String).filter(n => !ok.includes(n));
+      // What this turn holds (its own switches and airlock), not every tool there is: "Loaded" for a tool the turn
+      // cannot call sent the agent round a loop of refusals (2026-10-10).
+      const held = new Set(require('../tools').schemas(ctx.disabled || []).map(x => x.function.name));
+      const asked = (Array.isArray(names) ? names : [names]).map(String);
+      const ok = asked.filter(n => held.has(n) || (n.startsWith('mcp:') && [...held].some(h => tiers.serverOf(h) === n.slice(4))));
+      const off = asked.filter(n => !ok.includes(n)).map(n => [n, require('../turn/tool-shape').whyOff(n, ctx.profile)]);
       const fresh = tiers.attach(ctx.sessionId, ok);
       return (ok.length ? `Loaded from your next step: ${ok.join(', ')}${fresh.length < ok.length ? ' (some were already loaded)' : ''}.` : 'Nothing loaded.')
-        + (unknown.length ? ` Not tools you hold: ${unknown.join(', ')}.` : '');
+        + off.filter(([, w]) => w).map(([n, w]) => ` ${n} is off here — ${w}.`).join('')
+        + (off.some(([, w]) => !w) ? ` Not tools you hold: ${off.filter(([, w]) => !w).map(([n]) => n).join(', ')}.` : '');
     },
   },
   {

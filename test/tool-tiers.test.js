@@ -21,7 +21,7 @@ const held = id => tools.schemas(disabledFor(null, {}, id));
 const work = title => require('../modules/harness/organization').create({ title });
 const names = list => list.map(s => s.function.name);
 
-test('by default: core in full, the rest named by kit; a message, a call or tools_more loads one for the conversation', async () => {
+test('by default: core in full, the rest named with their jobs; a message, a call or tools_more loads one for the conversation', async () => {
   assert.equal(agent.params().toolsLoading, 'tiers', 'tiers are the default');
   const w = work('tiers on');
   let { offered, named } = tiers.split(held(w.id), { sessionId: w.id });
@@ -29,7 +29,7 @@ test('by default: core in full, the rest named by kit; a message, a call or tool
   assert.ok(sent.includes('read_file') && sent.includes('tools_more') && !sent.includes('memory_rules_write'));
   assert.ok(named.some(s => s.function.name === 'memory_rules_write'));
   const prompt = agent.preview({ message: 'x', sessionId: w.id });
-  assert.match(prompt, /More tools you hold, not loaded yet — call one by name, or tools_more [^\n]*\n(  [^\n]*\n)*?  Memory: [^\n]*memory_rules_write/);
+  assert.match(prompt, /More tools you hold, not loaded yet — [^\n]*tools_more [^\n]*\n(  [^\n]*\n)*?  memory_rules_write — change the memory rules/);
   assert.ok(!/\n  memory_rules_write: /.test(prompt), 'a named tool is not described as if it were sent');
 
   tiers.split(held(w.id), { sessionId: w.id, text: 'please use canvas for this' });

@@ -40,7 +40,7 @@ function toolsSection(schemas, named = []) {
   }
   const order = [...Object.keys(KITS), 'other'];
   const lines = [`# Your tools — ${schemas.length}, by kit`,
-    'Prefer the specific tool to shell: search_files over grep, replace_in_files over sed, git and project run over typed commands, canvas for anything that reads better as a page.',
+    'Prefer the specific tool to shell: search_files over grep, replace_in_files over sed, git and project run over typed commands, canvas for anything that reads better as a page, and a tool made for the job — loaded or listed under More tools — over improvising one.',
     require('../untrusted').RULE];
   // Which way out, from the ways held — the airlock's "dispatch the scout" among them (reaching-out.js; aw 19).
   const outside = require('./reaching-out').block(new Set([...schemas.map(s => s.function?.name), ...(named || []).map(n => (typeof n === 'string' ? n : n?.name))].filter(Boolean)));

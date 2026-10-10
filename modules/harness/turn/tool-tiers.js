@@ -21,7 +21,7 @@ const CORE = new Set([
   'memory_search', 'memory_list', 'memory_write', 'recall_conversations', 'skill', 'recipe',
   'settings_read', 'settings_propose', 'panel_layout', 'install_propose', 'system_status', 'doca_clients',
   'ask_device', 'tell_device', 'show_media', 'form_fill', 'effort',
-  'http_fetch', 'api_call', 'web_search', 'research_docs', 'mcp_connect', 'tools_more',
+  'http_fetch', 'api_call', 'web_search', 'research_docs', 'mcp_connect', 'tools_more', 'features',
 ]);
 
 /** How tools are sent: `tiers` (default) or `all` (harness.config.doca.toolsLoading). */
@@ -82,32 +82,35 @@ function split(schemas, { sessionId = null, profile = null, text = '', client = 
   attach(sessionId, [...new Set(mentioned)]);
   const have = attached(sessionId);
   for (const m of mentioned) have.add(m);
+  const isSent = (s, h) => { const n = nameOf(s), builtin = !serverOf(n); return sent(n, h) || (builtin && (front || (coding && kitOf(n) === 'code'))); };
+  // What the request's words call for is sent in full for this turn, not attached (tool-cues.js); calling it attaches it.
+  const cued = require('./tool-cues').cued(words, schemas.filter(s => !isSent(s, have)));
+  for (const c of cued) have.add(c);
   const offered = [], named = [];
-  for (const s of schemas) {
-    const n = nameOf(s), builtin = !serverOf(n);
-    (sent(n, have) || (builtin && (front || (coding && kitOf(n) === 'code'))) ? offered : named).push(s);
-  }
-  return { offered, named };
+  for (const s of schemas) (isSent(s, have) ? offered : named).push(s);
+  return { offered, named, cued };
 }
 
 /**
- * What "Your tools" says of what is held but not sent: built-ins by name, grouped under their kit's label, and each
- * MCP server by id, how many tools and whether it is on another machine (a paired device hosts it).
+ * What "Your tools" says of what is held but not sent: each built-in with what it is for (tool-cues.js PURPOSE), in kit
+ * order, and each MCP server by id, what its tools are for and whether it is on another machine (a paired device hosts
+ * it). Names alone ("Devices: secret_use, today, remind") left a request for the weather or a lamp to a shell
+ * (asked 2026-10-10), so the line says the job each one is made for.
  */
 function namedLine(named) {
   if (!named.length) return '';
-  const { KITS, kitOf } = require('../kits');
+  const { KITS, kitOf } = require('../kits'), { PURPOSE, mcpPurpose } = require('./tool-cues');
   const byKit = new Map(), servers = new Map();
   for (const s of named) {
     const n = nameOf(s), server = serverOf(n);
-    if (server) { servers.set(server, (servers.get(server) || 0) + 1); continue; }
+    if (server) { if (!servers.has(server)) servers.set(server, []); servers.get(server).push(n.slice(`mcp__${server}__`.length)); continue; }
     const kit = kitOf(n) || 'other';
     if (!byKit.has(kit)) byKit.set(kit, []);
     byKit.get(kit).push(n);
   }
-  const parts = [...Object.keys(KITS), 'other'].filter(k => byKit.has(k)).map(k => `${KITS[k]?.label || 'Other'}: ${byKit.get(k).join(', ')}`);
-  for (const [id, c] of servers) parts.push(`mcp:${id} (${c} tool${c > 1 ? 's' : ''}${hostedElsewhere(id) ? ', on another machine' : ''})`);
-  return `More tools you hold, not loaded yet — call one by name, or tools_more {names: [...]} to load it for this conversation:\n${parts.map(x => `  ${x}`).join('\n')}`;
+  const parts = [...Object.keys(KITS), 'other'].flatMap(k => byKit.get(k) || []).map(n => `${n} — ${PURPOSE[n] || require('./tools-section').lineFor(n, named.find(s => nameOf(s) === n)?.function?.description).slice(0, 80)}`);
+  for (const [id, tools] of servers) parts.push(`mcp:${id} — ${mcpPurpose(id, tools)} (${tools.length} tool${tools.length > 1 ? 's' : ''}${hostedElsewhere(id) ? ', on another machine' : ''})`);
+  return `More tools you hold, not loaded yet — each made for its job: use it rather than a shell, a raw request or a promise. Call one by name (it runs), or tools_more {names: [...]} to load it:\n${parts.map(x => `  ${x}`).join('\n')}`;
 }
 
 /** Whether an MCP server is hosted by a paired client rather than this machine (mcp/registry origin). */
