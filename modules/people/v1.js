@@ -12,6 +12,8 @@
  *   POST /people/spaces/{id}/read {seq}          read up to
  *   POST /people/spaces/{id}/typing              typing now (ephemeral to the others)
  *   POST /people/messages/{id}/react {emoji, on} a reaction
+ *   GET  /people/notify                          where a message reaches the person beyond the panel (forward.js)
+ *   POST /people/notify {devices, chats, each}   change it, as the person
  * Pushed: `people.message` (durable), `people.typing` and `people.read` (ephemeral); a direct message or a mention also
  * arrives as an `alert` with `ext.people` (deliver.js), so a client that draws `people.message` drops that alert.
  */
@@ -40,6 +42,8 @@ function mount(router) {
   router.post('/people/spaces/:id/messages', run((req, p, d) => messages.post(p, req.params.id, { text: req.body?.text, replyTo: req.body?.replyTo || null }, { client: client(d, p) })));
   router.post('/people/spaces/:id/read', run((req, p) => messages.read(p, req.params.id, req.body?.seq)));
   router.post('/people/spaces/:id/typing', run((req, p) => messages.typing(p, req.params.id)));
+  router.get('/people/notify', run((req, p) => require('./forward').view(p.id)));
+  router.post('/people/notify', run((req, p) => require('./forward').set(p.id, req.body || {})));
   router.post('/people/messages/:id/react', run((req, p) => messages.react(p, req.params.id, req.body?.emoji, req.body?.on !== false)));
 }
 

@@ -479,6 +479,15 @@ The harness gives its agent eight rules for working on any repository (charter r
   Orchestrator is the floating chat docked into the page), the floating chat's Agent | People (`people-float.js`), the
   card and the tree (`people-card.js`). 📞 and 🖵 call `window.peopleCallProvider.start(kind, space)` once meetings
   register one. `test/hive-chat.test.js`.
+- **Which messages reach a person beyond the panel is theirs** (asked 2026-10-10, `people/forward.js`, store
+  `people-notify/<user>`; Settings → General → Hive chat on your devices, `settings/chat-notify.js`; `GET|POST
+  /api/people/notify`, `/api/v1/people/notify`): `devices` (phone, watch, desk client) and `chats` (linked chats, kind
+  `channel` — how a message reached the owner's Telegram) each `all | mentions | off`, default `mentions` (a DM or a
+  message naming them); `each` per device over those, with `content: notice` — "New message from Ada in #ops", an
+  empty body and `ext.people.bare`, never the words. `deliver.levelFor` says how a message concerns a member
+  (`direct`, `other`, or null for their own or a muted space) and the `people.message` `notify` flag follows the same
+  rule per device. Quiet hours are read on the person's own clock when `timezones.js` knows it (else the hub's, as
+  `prompts.inQuietHours`). `test/hive-chat-notify.test.js` drives a phone, a watch and a linked chat end to end.
 
 ### The Archive (since 2.228.0, `modules/archive.js`, `public/js/archive.js`; Agents → Archive)
 - **Put away rather than deleted, in one place**: archived conversations and missions (as before, where they live), and now projects (`archivedAt` on the project: out of the Projects list, `GET /api/projects?all=1` keeps them; its folder is untouched) and the agents' computers (`computers.archive`: stopped, desktop, logins and files kept; out of the Computers tab, the agents' list and the tidy-up sweep; lending one brings it back), and signed-in browsers nobody opened (kind `device`, `screens/archive.js`). `GET /api/archive` lists them newest first, each person's conversations and missions by `session-access`, projects and computers a host's; `POST /api/archive/:kind/:id {on}` puts away or restores. An earlier Orchestrator (one put away by Clear main chat) is not restored (deep test B, C9: it came back as a work chat named "Orchestrator"): there is one at a time, so it stays archived, as what it was, and the refusal says where its conversation is read (Harness → "Show archived chats"). 🗄 on a computer's card and in the Projects header.
