@@ -8,6 +8,21 @@
 const fs = require('fs');
 
 const TOOLS = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const STATE = process.env.STUB_STATE ? JSON.parse(process.env.STUB_STATE) : null;
+const changes = [];
+/** Home Assistant's on, off and temperature, applied to the state's entities in the area or with the name asked. */
+function apply(name, a) {
+  const want = String(a.area || a.name || '').toLowerCase();
+  for (const [area, ents] of Object.entries(STATE?.state || {})) {
+    if (!ents || typeof ents !== 'object' || Array.isArray(ents)) continue;
+    for (const id of Object.keys(ents)) {
+      if (want && !area.toLowerCase().includes(want) && !id.includes(want.replace(/\s+/g, '_')) && !want.includes(area.toLowerCase())) continue;
+      if (name === 'HassTurnOff') ents[id] = id.startsWith('lock.') ? 'unlocked' : 'off';
+      else if (name === 'HassTurnOn') ents[id] = id.startsWith('lock.') ? 'locked' : 'on';
+      else if (name === 'HassClimateSetTemperature' && id.startsWith('climate.')) ents[id] = `heat, target ${a.temperature} °C`;
+    }
+  }
+}
 const send = msg => process.stdout.write(`${JSON.stringify(msg)}\n`);
 
 let buf = '';
@@ -30,8 +45,11 @@ process.stdin.on('data', chunk => {
       const { name, arguments: args } = msg.params || {};
       if (!TOOLS.some(t => t.name === name)) { send({ jsonrpc: '2.0', id: msg.id, error: { code: -32602, message: `no tool named ${name}` } }); continue; }
       // Answers as the real server would — an evaluation's stand-in that said so sent the agent off to check (2026-10-10).
-      const STATE = process.env.STUB_STATE ? JSON.parse(process.env.STUB_STATE) : null;
-      reply({ content: [{ type: 'text', text: STATE?.[name] || (/^(get|Get)/.test(name) ? JSON.stringify(STATE?.state || { ok: true }) : `Done: ${name} ${JSON.stringify(args || {})}`) }] });
+      // A read shows what the calls before it changed, so a check after an action sees the action done.
+      const read = /^(get|Get)/.test(name);
+      if (!read && !STATE?.[name]) { changes.push(`${name} ${JSON.stringify(args || {})}`); apply(name, args || {}); }
+      reply({ content: [{ type: 'text', text: STATE?.[name] || (read ? JSON.stringify({ ...(STATE?.state || { ok: true }), ...(changes.length ? { changed_since: changes } : {}) })
+        : `Done: ${name} ${JSON.stringify(args || {})}`) }] });
     } else {
       send({ jsonrpc: '2.0', id: msg.id, error: { code: -32601, message: `${msg.method} not supported` } });
     }

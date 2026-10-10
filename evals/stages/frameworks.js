@@ -25,6 +25,23 @@ const http = require('http');
 const PNG = Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000'
   + '1f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082', 'hex');
 
+/** A real picture, w×h, drawn by `px(x, y)` → [r, g, b]: a 1×1 file read as "not a real chart" and sent the agent checking. */
+function png(w, h, px) {
+  const zlib = require('zlib');
+  const crc = b => { let c = ~0; for (const x of b) { c ^= x; for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1)); } return ~c >>> 0; };
+  const chunk = (t, d) => { const len = Buffer.alloc(4); len.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t), d]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
+  const raw = Buffer.alloc((w * 3 + 1) * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) raw.set(px(x, y), y * (w * 3 + 1) + 1 + x * 3);
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr.set([8, 2, 0, 0, 0], 8);
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+}
+const CHART = png(640, 360, (x, y) => { const bars = [120, 95, 140, 80], i = Math.floor((x - 60) / 140); return i >= 0 && i < 4 && (x - 60) % 140 < 90 && y > 330 - bars[i] * 2 ? [70, 130, 220] : [250, 250, 250]; });
+const TEAPOT = png(512, 512, (x, y) => { const d = Math.hypot(x - 256, y - 290); return d < 150 || (y > 200 && y < 240 && x > 380 && x < 470) ? [190, 120, 80] : [255, 255, 255]; });
+const PDF = ['%PDF-1.4', '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj', '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
+  '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj',
+  '4 0 obj << /Length 120 >> stream', 'BT /F1 24 Tf 72 760 Td (Quarterly report) Tj /F1 12 Tf 0 -40 Td (Revenue rose 12% on the quarter; costs held flat.) Tj ET', 'endstream endobj',
+  '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj', 'trailer << /Root 1 0 R >>', '%%EOF', ''].join('\n');
+
 const HA_TOOLS = [
   ['HassTurnOn', 'Turns on/opens/presses a device or entity. For locks, this performs a \'lock\' action.', { name: 'string', area: 'string', floor: 'string', domain: 'array', device_class: 'array' }],
   ['HassTurnOff', 'Turns off/closes a device or entity. For locks, this performs an \'unlock\' action.', { name: 'string', area: 'string', floor: 'string', domain: 'array', device_class: 'array' }],
@@ -66,9 +83,9 @@ async function setup() {
   const write = (rel, data) => { const f = path.join(ws, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, data); return f; };
 
   // Sample files: a report, a chart, a photo of a teapot, notes for the Library, and a small web app.
-  write('report.pdf', '%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n');
-  write('chart.png', PNG);
-  write('teapot.png', PNG);
+  write('report.pdf', PDF);
+  write('chart.png', CHART);
+  write('teapot.png', TEAPOT);
   const lib = path.join(root, 'library');
   fs.mkdirSync(lib, { recursive: true });
   fs.writeFileSync(path.join(lib, 'roof-repair-call.txt'), 'Notes from the call with the builder about the roof repair: tiles on the north side, quote next week.');
@@ -96,11 +113,18 @@ async function setup() {
     made.mcp.push(id);
   }
 
-  // A phone, a watch and a linked Telegram chat — records, so the devices tools have somewhere to point.
+  // The person the cases act for — the hive's owner, as in the panel — and their phone, watch and linked Telegram chat
+  // (records, so the devices tools have somewhere to point). A reminder, a meeting or a budget needs somebody.
+  const auth = require('../../modules/auth/store');
+  const org = auth.defaultOrg() || auth.createOrg('Evaluation');
+  const user = auth.userByEmail('owner@eval.local') || auth.createUser({ email: 'owner@eval.local', name: 'Owner', passwordHash: 'x' });
+  if (!auth.membership(org.id, user.id)) auth.addMembership({ orgId: org.id, userId: user.id, role: 'owner', status: 'active' });
+  const person = require('../../modules/harness/turn/client').personById({ id: user.id, orgId: org.id });
   const devices = require('../../modules/api-v1/devices'), { PRESETS } = require('../../modules/api-v1/scopes');
-  devices.create({ name: 'Pixel phone', kind: 'phone', scopes: PRESETS.phone, caps: { formFactor: 'phone' } });
-  devices.create({ name: 'Galaxy watch', kind: 'watch', scopes: PRESETS.watch, caps: { formFactor: 'watch' } });
-  devices.create({ name: 'Telegram · Al', kind: 'channel', scopes: ['interact', 'harness:chat', 'harness:sessions'], caps: { formFactor: 'phone' } });
+  for (const d of [{ name: 'Pixel phone', kind: 'phone', scopes: PRESETS.phone, caps: { formFactor: 'phone' } },
+    { name: 'Galaxy watch', kind: 'watch', scopes: PRESETS.watch, caps: { formFactor: 'watch' } },
+    { name: 'Telegram · Owner', kind: 'channel', scopes: ['interact', 'harness:chat', 'harness:sessions'], caps: { formFactor: 'phone' } }])
+    devices.update(devices.create(d).device.id, { userId: user.id, orgId: org.id });
 
   // What the hive has learned: a recipe, memories, a secret for devices.
   require('../../modules/recipes/store').save({ title: 'Disk space report', id: 'disk-space-report',
@@ -152,8 +176,19 @@ async function setup() {
     }
   }, 250);
 
+  // What each call asked and what came back, on stderr (the run's .err file): why a case went the way it did.
+  const agent = require('../../modules/harness/agent');
+  const trail = e => {
+    if (e.type === 'tool_call') process.stderr.write(`stage: call ${e.name} ${JSON.stringify(e.args || {}).slice(0, 300)}\n`);
+    else if (e.type === 'tool_result') process.stderr.write(`stage: result ${e.name} ${String(e.result || '').replace(/\s+/g, ' ').slice(0, 300)}\n`);
+    else if (e.type === 'session') process.stderr.write('stage: ---- turn\n');
+  };
+  agent.events.on('event', trail);
+
   return {
+    person,
     async teardown() {
+      agent.events.off('event', trail);
       clearInterval(answering);
       for (const r of restore) r();
       for (const id of made.mcp) try { reg.stop(id); } catch { /* gone */ }

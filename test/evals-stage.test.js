@@ -45,6 +45,7 @@ test('the frameworks stage stands its stubs up and takes them down', async () =>
     assert.match(await tools.call('service', { action: 'call', service: 'hi3d', operation: 'getBalance' }, [], {}), /totalBalance/);
     assert.equal(await tools.call('hub_command', { action: 'run', id: 'services.restart', params: { id: 'whisper' } }, [], {}), 'services.restart: done.');
     assert.ok(require('../modules/recipes/store').get('disk-space-report'));
+    assert.equal(stage.person?.role, 'owner', 'the cases act for the owner');
     await stage.teardown();
     assert.match(String(await tools.call('hub_command', { action: 'run', id: '' }, [], {})), /^Error/, 'the real tool is back');
     assert.notEqual(require('../modules/mcp/registry').client('home-assistant')?.state, 'running');

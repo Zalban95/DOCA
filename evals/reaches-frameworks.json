@@ -2,7 +2,7 @@
   "id": "reaches-frameworks",
   "title": "Reaches the framework made for the job",
   "stage": "frameworks",
-  "description": "Each request has a framework made for it on this hive — an API service, an MCP server, a reminder, a team, a recipe, the Library, a meeting, the model scout, a canvas preview, the hub's commands, the feature index — and a lesser way an agent could improvise (a shell, a raw request, a promise, doing it alone). Each case checks that the framework was used and the lesser way was not. Run on a sandbox with the stage `frameworks`: every framework is a stub, so nothing real is made, switched, sent or started.",
+  "description": "Each request has a framework made for it on this hive — an API service, an MCP server, a reminder, a team, a recipe, the Library, a meeting, the model scout, a canvas preview, the hub's commands, the feature index — and a lesser way an agent could improvise (a shell, a raw request, a promise, doing it alone). Each case checks that the framework was used and the lesser way was not. Run on a sandbox with the stage `frameworks`: every framework is a stub, so nothing real is made, switched, sent or started. A shell that only looks (is the file there, what is in it) is not the lesser way for a file the person named, so those cases do not count it.",
   "cases": [
     {
       "id": "hi3d-from-photo",
@@ -14,9 +14,6 @@
         },
         {
           "noTool": "api_call"
-        },
-        {
-          "noTool": "shell"
         }
       ]
     },
@@ -188,9 +185,6 @@
           "tool": "tell_device"
         },
         {
-          "noTool": "shell"
-        },
-        {
           "noTool": "api_call"
         }
       ]
@@ -204,9 +198,6 @@
           "tool": "tell_device"
         },
         {
-          "noTool": "shell"
-        },
-        {
           "noTool": "api_call"
         }
       ]
@@ -218,9 +209,6 @@
       "checks": [
         {
           "tool": "show_media"
-        },
-        {
-          "noTool": "shell"
         }
       ]
     },
@@ -570,9 +558,6 @@
       "checks": [
         {
           "tool": "pack"
-        },
-        {
-          "noTool": "shell"
         },
         {
           "noTool": "write_file"
