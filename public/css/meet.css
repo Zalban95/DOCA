@@ -80,3 +80,10 @@
   .mt-acts { justify-content: flex-start; }
   .meet-folded { width: calc(100% - 32px); }
 }
+/* Picture in picture (a phone app shrank into a corner, meet/app.js): only the faces or the shared screen, no controls. */
+.meet.meet-pip .meet-red, .meet.meet-pip .meet-head, .meet.meet-pip .meet-ctl, .meet.meet-pip .meet-side, .meet.meet-pip .meet-stage-cap, .meet.meet-pip .meet-name { display: none; }
+.meet.meet-pip .meet-body { padding: 0; gap: 0; flex-direction: column; }
+.meet.meet-pip.meet-has-stage .meet-grid, .meet.meet-pip .meet-me { display: none; }
+.meet.meet-pip .meet-grid { display: flex; flex-direction: column; flex: 1; gap: 0; max-width: none; overflow: hidden; }
+.meet.meet-pip .meet-tile, .meet.meet-pip .meet-stage { flex: 1; aspect-ratio: auto; border-radius: 0; border: 0; min-height: 0; }
+.meet.meet-pip .meet-v { height: 100%; }

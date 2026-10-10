@@ -9,13 +9,29 @@
 
 async function meetShareStart() {
   if (!MEET.id) return;
-  if (!navigator.mediaDevices?.getDisplayMedia) return appAlert('This browser cannot share a screen (no getDisplayMedia). A desktop browser or DocaDesk can.');
+  // A phone app's web view has no getDisplayMedia: the app captures the screen itself (meet/device-screen.js).
+  if (!navigator.mediaDevices?.getDisplayMedia && typeof meetDeviceScreenAvailable === 'function' && meetDeviceScreenAvailable()) return _meetShareFromApp();
+  if (!navigator.mediaDevices?.getDisplayMedia) return appAlert('This browser cannot share a screen (no getDisplayMedia). A desktop browser, DocaDesk or the phone app can.');
   let stream;
   try { stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false }); }
   catch (e) { if (e?.name !== 'NotAllowedError') appAlert(`The screen was not shared: ${e.message}`); return; }
   const track = stream.getVideoTracks()[0], s = track?.getSettings?.() || {};
-  MEET.screen = stream;
   track.onended = () => meetShareStop();   // the browser's own "Stop sharing" button
+  await _meetShareBegin(stream, s);
+}
+
+/** The phone's own screen, through its app: Android asks, the app sends pictures, the size is the screen's own. */
+async function _meetShareFromApp() {
+  let got;
+  // A phone turned: the share's size follows, so a controller's tap still lands where they point.
+  const onSize = sz => { if (MEET.screen) _meetPost('share', { on: true, streamId: MEET.screen.id, width: sz.width, height: sz.height, surface: 'monitor' }).catch(() => {}); };
+  try { got = await meetDeviceScreen({ onEnded: () => meetShareStop(), onSize }); }
+  catch (e) { if (e?.name !== 'NotAllowedError') appAlert(`The screen was not shared: ${e.message}`); return; }
+  await _meetShareBegin(got.stream, { width: got.width, height: got.height, displaySurface: 'monitor' });
+}
+
+async function _meetShareBegin(stream, s) {
+  MEET.screen = stream;
   _meetTracks();
   try { await _meetPost('share', { on: true, streamId: stream.id, width: s.width, height: s.height, surface: s.displaySurface }); }
   catch (e) { appAlert(e.message); }
@@ -27,6 +43,7 @@ async function meetShareStop() {
   if (!s) return;
   MEET.screen = null;
   s.getTracks().forEach(t => { t.onended = null; t.stop(); });
+  if (typeof meetDeviceScreenStop === 'function') meetDeviceScreenStop();
   _meetTracks();
   if (MEET.id && MEET.me) await _meetPost('share', { on: false }).catch(() => {});
   meetDraw();

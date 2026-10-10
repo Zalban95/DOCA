@@ -43,7 +43,8 @@ const TYPES = {
   'settings.changed': { cls: 'durable', ttlSec: 3600 },   // a device's screen settings or its person's (look/routes.js)
   'device.vars':      { cls: 'durable', ttlSec: 3600 },
   'device.message':   { cls: 'durable', ttlSec: 6 * 3600 },
-  'device.control':   { cls: 'durable', ttlSec: 24 * 3600 },   // refresh / reconnect / ask / disconnect / revoke (devices-control.js)
+  'device.control':   { cls: 'durable', ttlSec: 24 * 3600 },
+  'meeting.control':  { cls: 'durable', ttlSec: 600 },        // a person controls this machine from a meeting, or stopped (meetings/control.js)   // refresh / reconnect / ask / disconnect / revoke (devices-control.js)
   'agent.message':    { cls: 'durable', ttlSec: 6 * 3600 },
   // Durable so a client that arrives mid-turn learns a turn is in flight, and one
   // that was away still gets the answer it did not watch being typed.

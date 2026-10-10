@@ -1620,12 +1620,23 @@ else may join (404 as if absent), an admin included.
 - A device is told about a meeting as about anything else: an `alert` when someone calls its person now ("X is
   calling", urgent) and five minutes before a scheduled one (§11.4). Invitations themselves go to the person's own
   calendar (their Google or Microsoft account connected in Meetings, else an iCalendar invite by mail, else a notice).
+  Such an alert carries `meeting: {id, link, title, by}` (fixture `alert-meeting`): a client offers **Join**, which
+  opens `link` in its web view straight into the room.
+- **In an app's web view** the page asks for the camera and microphone (`getUserMedia`) and, to share a screen,
+  `getDisplayMedia`; an app grants them for the hub's own origins only. Where the web view has no `getDisplayMedia`
+  (Android), the page uses the app's `window.DocaDevice.shareScreen`, and tells the app when a meeting opens and
+  closes (`DocaDevice.meeting`) so it can keep the call alive in the background, route the sound
+  (`DocaDevice.meetAudio`) and shrink to picture in picture; the app answers with the window event `doca-meeting`
+  (`{action: "leave"}` from its notification). The whole contract is `docs/api/fixtures/doca-device.json`.
 - **Taking control of a shared screen** needs a DOCA client on the sharer's machine lending the `input` family
   (§22.1): the hub calls that device's own `input_click`, `input_move`, `input_type` and `input_keys` (DocaMobile's
   `input_tap`, `input_key`) with physical pixels, only after the sharer offered control to one person and confirmed it,
-  and only until either ends it. A client draws nothing new for it; one that can show a banner while a person controls
-  its machine should (later work: DocaDesk). While a person controls a machine, the agent's own `input_*` on it wait.
-- Native call screens, calling from a watch, and sharing a phone's screen are later work in each app (TODO).
+  and only until either ends it. The controlled device hears `meeting.control` `{grant, meetingId, state: active|ended,
+  controller, sharer, why?}` (durable, 10 minutes; fixture `meeting.control`): a client that can show a banner while a
+  person controls its machine does ("<controller> is controlling this computer — Stop", DocaDesk), and its Stop is
+  `POST /meetings/control/stop` (any token of that device; it ends control of that device only, said to the room as
+  the sharer stopping it). While a person controls a machine, the agent's own `input_*` on it wait.
+- Native call screens and calling from a watch are later work in each app (TODO).
 
 ## 24. Server operations
 
@@ -1647,6 +1658,7 @@ else may join (404 as if absent), an admin included.
 | GET | `/settings/effective` | any | §4.2, §14.1 |
 | GET | `/settings/look` | any | §14.1 |
 | GET | `/meetings` | `harness:chat` | the person's meetings with their links (§23.3) |
+| POST | `/meetings/control/stop` | any (self) | stop whoever controls this machine from a meeting (§23.4) |
 | GET | `/devices` | `devices:admin` \| `agent` | list devices (+ presets) |
 | POST | `/devices` | `devices:admin` | issue a token directly |
 | POST | `/devices/pair/start` | `devices:admin` | start pairing |

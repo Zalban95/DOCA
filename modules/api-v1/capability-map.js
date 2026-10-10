@@ -105,6 +105,8 @@ const PERSON = [
     gap: 22, why: 'calling a colleague or moving a meeting from the phone without opening the panel page; until then the Meetings page in its web view' },
   { id: 'meeting-room', does: 'be in a meeting: voice, video, chat, share my screen, offer or take control', panel: ['POST /api/meetings/:id/*'],
     only: 'a room is WebRTC in a page: a device joins by opening its link in its web view (DocaDesk, DocaMobile); the native call screen, and control from a phone, are later work in each app' },
+  { id: 'meeting-control-stop', does: 'stop someone controlling my machine from a meeting', panel: ['POST /api/meetings/:id/control/revoke'], v1: ['POST /meetings/control/stop'],
+    note: 'the controlled machine hears meeting.control and draws a banner with Stop (DocaDesk)' },
   { id: 'meeting-calendar', does: 'connect my own calendar for meetings', panel: ['POST /api/meetings/calendar/:provider/connect', 'DELETE /api/meetings/calendar'],
     only: 'an OAuth sign-in with Google or Microsoft happens in a browser, at the panel' },
 

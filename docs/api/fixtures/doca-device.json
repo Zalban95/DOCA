@@ -11,6 +11,34 @@
         "package: string"
       ],
       "returns": "boolean"
+    },
+    "meeting": {
+      "args": [
+        "state: JSON string {open: true, id, title, video, sharing, link} | {open: false}"
+      ],
+      "returns": "a JSON string {service: boolean, route?} or \"null\"",
+      "means": "a meeting opened or closed on this page: keep the call alive with the screen off or the app in the background (a foreground service, \"In a meeting · Leave\"), route the sound, allow picture in picture"
+    },
+    "meetAudio": {
+      "args": [
+        "route: \"\" (ask) | \"speaker\" | \"earpiece\" | \"headset\""
+      ],
+      "returns": "a JSON string {route, available: [routes]}"
+    },
+    "shareScreen": {
+      "args": [
+        "options: JSON string {fps, maxSide}"
+      ],
+      "returns": "\"asking\" | \"busy\" | \"unsupported\"",
+      "means": "Android asks the person (MediaProjection); then the page gets window \"message\" data \"doca-screen\" with one MessagePort, posted to the hub's origin only. On it: JSON strings {what: \"started\"|\"size\", width, height} (the screen's real pixels), {what: \"ended\"|\"refused\", why?}, and frames — a JPEG as base64, a string not starting with \"{\""
+    },
+    "stopScreen": {
+      "args": [],
+      "returns": "boolean"
     }
+  },
+  "events": {
+    "doca-meeting": "window CustomEvent the app dispatches on the hub's page: detail {action: \"leave\"} (its notification), {pip: boolean}, {audio: {route, available}}",
+    "doca-mic": "window CustomEvent: the microphone switch (lib/mic-keep.js)"
   }
 }

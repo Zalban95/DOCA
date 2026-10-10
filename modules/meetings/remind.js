@@ -24,7 +24,8 @@ async function tick(now = Date.now()) {
       const mins = Math.max(0, Math.round((Date.parse(m.startsAt) - now) / 60000));
       try {
         notice.deliver({ personId: p.personId, title: mins ? `In ${mins} min: ${m.title}` : `Now: ${m.title}`, text: `Join: ${invite.link(m)}`,
-          to: notice.ownIds(p.personId), urgent: true, panel: 'always', from: 'meetings' });
+          to: notice.ownIds(p.personId), urgent: true, panel: 'always', from: 'meetings',
+          meeting: { id: m.id, link: invite.link(m), title: m.title, by: '' } });
       } catch { /* told as far as it could be */ }
       await store.patchPerson(m.id, p.who, { remindedAt: new Date(now).toISOString() });
     }
