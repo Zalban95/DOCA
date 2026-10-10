@@ -37,3 +37,27 @@
   .fp-footer { flex-wrap: wrap; }
   .fp-footer .input { flex-basis: 100%; }
 }
+
+/* ── People chosen like a mail's To: line (js/lib/people-pick.js) ── */
+.pp { position: relative; min-width: 0; flex: 1; }
+.pp-field { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 38px; padding: 4px 6px; box-sizing: border-box;
+  background: var(--field, var(--bg2)); border: 1px solid var(--border2); border-radius: var(--radius); cursor: text; }
+.pp-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
+.pp-chips { display: contents; }
+.pp-chip { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; padding: 2px 2px 2px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--bright); font-size: 13px; line-height: 22px; }
+.pp-chip.pp-guest { background: var(--dim); color: var(--text); border: 1px dashed var(--border2); }
+.pp-x { border: 0; background: none; color: inherit; opacity: .7; cursor: pointer; width: 24px; height: 24px; border-radius: 50%; font-size: 11px; }
+.pp-x:hover, .pp-x:focus-visible { opacity: 1; background: color-mix(in srgb, var(--bright) 12%, transparent); }
+.pp-input { flex: 1; min-width: 120px; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: var(--fs-input); padding: 4px 2px; }
+.pp-suggest { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30; max-height: 280px; overflow-y: auto; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.pp-opt { display: flex; flex-direction: column; padding: 7px 10px; border-radius: var(--radius); cursor: pointer; }
+.pp-opt b { font-weight: 500; color: var(--bright); }
+.pp-opt small { color: var(--muted); font-size: 12px; }
+.pp-opt.on, .pp-opt:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.pp-opt.off { opacity: .5; cursor: not-allowed; }
+.pp-none { padding: 8px 10px; color: var(--muted); font-size: 13px; }
+.pc-modal .pc-add { display: flex; gap: 8px; align-items: flex-start; }
+.pc-new-who { margin-bottom: 8px; }
+@media (max-width: 600px) { .pp-opt { padding: 10px; } .pp-input { min-width: 80px; } }
