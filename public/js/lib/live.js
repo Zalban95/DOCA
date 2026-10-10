@@ -52,6 +52,7 @@ function _liveStart() {
     try { c = JSON.parse(e.data); } catch { return; }
     if (c.hello) {
       _liveScreen = c.screen;
+      if (typeof pageVersionSeen === 'function') pageVersionSeen(c.version);   // another version since this page loaded: it loads again (lib/page-reload.js)
       for (const w of _liveWaiters) w(c.screen);
       _liveWaiters.clear();
       if (_liveFolderSets.size) _liveSendFolders();

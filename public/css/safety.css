@@ -61,3 +61,4 @@
 .pc-modal .pc-add { display: flex; gap: 8px; align-items: flex-start; }
 .pc-new-who { margin-bottom: 8px; }
 @media (max-width: 600px) { .pp-opt { padding: 10px; } .pp-input { min-width: 80px; } }
+.page-reload .undo-text { font-weight: 500; }
