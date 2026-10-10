@@ -267,7 +267,7 @@ The harness gives its agent eight rules for working on any repository (charter r
   (3, not proposable) or the team's own `max_rounds`; then the team ends failed. **Stop** cancels every running task
   at its next step, sets a work chat's job stopped, and the waiting tasks never start.
 - **Where it shows**: the missions bar (a team row with a thin bar, opened into its tasks; its missions under it, not
-  twice), Harness → Teams and the board window (`public/js/harness-console/teams.js`, `css/teams.css`), Workstream
+  twice), Harness → Teams (`public/js/harness-console/teams.js`, `css/teams.css`) and Agents → Teams (below), Workstream
   lines of kind `team`, the leader's readings and an unread report when it ends, the live feed's `teams` topic (by the
   leader's conversation, `session-access`), `agent.team` to devices (PROTOCOL §11.4; durable on a state change,
   ephemeral for a percentage; never a watch wake; fixtures `agent.team-*`), and **the team document** `team-<slug>.md`
@@ -288,8 +288,21 @@ The harness gives its agent eight rules for working on any repository (charter r
   (older teams by their leader's project). **Projects → Teams here** (`public/js/projects/teams.js`, under the side
   view, folded when none): running teams and the last three that ended, each a card (goal, overall bar — every task
   counts the same, Board, Doc → the page) with its members, a member opening as a chat tab; the same cards, compact,
-  in the project chat's fold (`agentSideFold {teams}`) and a Members list in the board window — one drawing,
+  in the project chat's fold (`agentSideFold {teams}`) and a Members list on the board — one drawing,
   `agent-ui/team-members.js`. Redrawn on the live feed's `teams`/`missions`. `test/team-project.test.js`.
+- **Agents → Teams is the teams' page** (asked 2026-10-10: "is there a specific place where I can see the teams of
+  agents working, their plan, the state of the project?"; page id `teams`, `public/js/teams-page.js`,
+  `teams-board.js`, `css/teams-page.css`; not a host page — each team by its leader's conversation): working now, then
+  recently ended, then put away — a card each (goal, bar, members' state chips, keep-going, project). Opening one draws
+  its board as the page (the old board window is gone; Harness → Teams' Board, its "All teams →", the missions bar's
+  Board and Projects → Teams here open it; Back on a phone returns to the list): the plan in ordered lanes (a task's
+  lane is one more than the furthest task it comes after), each task with its state, step of its budget, its contract
+  and the check's verdict, its specialist's last words (marked as theirs), its branch, Conversation and Log; members,
+  findings, the project (`GET /api/harness/missions/teams/:id/detail`, `teams/detail.js`: the main folder's branch and
+  changed files, newest commits on main and each task's branch, plan steps still open in the project's chats) and the
+  team document rendered inline. Live on `teams`/`missions` while shown; `/?view=teams` alone. **Ended teams are put
+  away** `teams.archiveAfterDays` (7, 0 keeps; `teams/tidy.js`, with the missions' 30-minute sweep, an activity line)
+  into the Archive (kind `team` in `archive.js`); one a person brought back stays. `test/teams-page.test.js`.
 
 ### Product names (`modules/branding.js`)
 - **Every name a person reads comes from one file**, because the panel will be sold under a customer's label and under whatever the public release is called, and a rename that means grepping forty files is a rename that does not happen. Overrides live in prefs under `branding`, so a private label is a settings change; the UI for it is deliberately absent until it can sit behind the admin password, since the only thing worse than the wrong name is one an agent changed.

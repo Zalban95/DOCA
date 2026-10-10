@@ -129,6 +129,7 @@ function archive(id, on = true) {
   if (!team) throw bad(`No team called "${id}".`, 404);
   if (on && team.state === 'running') throw bad('This team is still working. Stop it first, or wait for it to finish.', 409);
   team.archivedAt = on ? new Date().toISOString() : null;
+  if (!on) team.putAwayBy = 'person';   // brought back: the tidy-up leaves it alone after that (tidy.js)
   store.save(team);
   require('./announce').devices(team, engine.views(team), { quiet: true });
   require('../live').changed('teams', team.id, on ? 'archived' : 'recalled', { sessionId: team.by });

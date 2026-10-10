@@ -2,7 +2,7 @@
    DOCA PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','people','meetings','home','ambient','admin','logs','files','projects','harness','workstream','archive','chronicle','computers','live','terminal','models','docker','vms','vnc','mcp','connectors','apikeys','settings'];
+const NAV_TABS = ['controls','people','meetings','home','ambient','admin','logs','files','projects','harness','teams','workstream','archive','chronicle','computers','live','terminal','models','docker','vms','vnc','mcp','connectors','apikeys','settings'];
 /** Tabs that are the machine itself: left out for a person without host (settings.js). */
 const HOST_TABS = ['admin', 'logs', 'files', 'projects', 'terminal', 'computers', 'vnc'];
 
@@ -40,6 +40,7 @@ function nav(name) {
   if (on('archive'))  archiveInit();
   computersTab(on('computers'));
   if (typeof workstreamTab === 'function') workstreamTab(on('workstream'));   // holds the hub's sentinel while shown
+  if (typeof teamsTab === 'function') teamsTab(on('teams'));   // Agents → Teams: hears teams and missions only while shown
   if (typeof chronicleTab === 'function') chronicleTab(on('chronicle'));   // hears turns and missions only while shown
   if (typeof peopleTab === 'function') peopleTab(on('people'));   // Controls → Chat: the hive chat; it gives the floating chat back when left
   if (typeof adminTab === 'function') adminTab(on('admin'));   // Hub → Admin: refreshed on the live feed only while shown
