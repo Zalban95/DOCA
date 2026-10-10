@@ -140,6 +140,8 @@ async function setup() {
   prefs.developer = { ...(prefs.developer || {}), mode: true };
   prefs.experiments = { ...(prefs.experiments || {}), library: true };
   prefs.library = { ...(prefs.library || {}), model: prefs.library?.model || 'embeddinggemma', folders: [lib] };
+  // Where the hive is, so the weather is not a question first (a case about a schedule stopped at "which town?").
+  prefs.ambient = { ...(prefs.ambient || {}), place: prefs.ambient?.place || 'Pesaro' };
   savePrefs(prefs);
 
   // Stand-ins for what would start work elsewhere (put back in teardown).
@@ -167,12 +169,19 @@ async function setup() {
   // A person answers at once: yes, once, to a framework's call (each is a stand-in, or acts only on this sandbox); no
   // to what would act on this machine for real — a command line, a file written, a request out — as nobody answering.
   const approval = require('../../modules/harness/approval');
+  const LOOK = new Set(['ls', 'file', 'stat', 'cat', 'head', 'tail', 'wc', 'grep', 'find', 'du', 'df', 'free', 'uptime', 'ss', 'which', 'command',
+    'echo', 'date', 'pwd', 'whoami', 'id', 'uname', 'hostname', 'nvidia-smi', 'identify', 'xxd', 'docker', 'podman', 'ps', 'getent', 'readlink', 'sort', 'uniq', 'awk', 'sed', 'cut', 'tr', 'jq']);
   const REAL = new Set(['shell', 'shell_job', 'write_file', 'replace_in_files', 'git', 'api_call', 'http_fetch', 'project']);
   const answering = setInterval(() => {
     for (const q of approval.pending()) {
       // The workspace's small web app may be started (it ends itself, and teardown stops the jobs): a case about a preview.
       const app = ['shell', 'shell_job'].includes(q.tool) && /hello-app/.test(q.summary || '') && /\b(npm|node)\b/.test(q.summary || '');
-      const yes = !REAL.has(q.tool) || app;
+      // A line that only looks (ls, file, ss, df, docker ps…) is allowed, as a person watching would: refusing it left the
+      // agent stopped at a question instead of choosing its way. What it acts with is still counted by the checks.
+      const line = String(q.summary || '').split(' — asked because')[0];
+      const verbs = q.tool === 'shell' ? approval.verbsOf(line) : null;
+      const looks = !!verbs?.length && verbs.every(v => LOOK.has(v)) && !/\b(rm|mv|kill|restart|stop|start|run|exec|rmi|prune|install|push|tee)\b|\bsed\s+-i/.test(line.replace(/\b(docker|podman) (ps|inspect|images|logs|stats)\b/g, ''));
+      const yes = !REAL.has(q.tool) || app || looks;
       process.stderr.write(`stage: ${yes ? 'allowed once' : 'nobody answered'} ${q.tool} ${JSON.stringify(q.keys || [])}\n`);
       approval.entry(q.id)?.resolve(yes ? 'once' : 'timeout');
     }

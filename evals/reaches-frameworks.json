@@ -148,7 +148,8 @@
           "anyTool": [
             "team",
             "agent_dispatch",
-            "work_chats"
+            "work_chats",
+            "work_plan"
           ]
         },
         {
@@ -552,6 +553,25 @@
       ]
     },
     {
+      "id": "throwaway-browser",
+      "difficulty": "medium",
+      "prompt": "Open example.com in a real browser on a throwaway desktop, not on this machine, and show me a screenshot of it.",
+      "checks": [
+        {
+          "anyTool": [
+            "computer",
+            "agent_dispatch"
+          ]
+        },
+        {
+          "noTool": "shell"
+        },
+        {
+          "noTool": "api_call"
+        }
+      ]
+    },
+    {
       "id": "pack-move",
       "difficulty": "medium",
       "prompt": "Package the skills and recipes we made so I can move them to my other hub.",
@@ -628,22 +648,6 @@
         },
         {
           "noTool": "write_file"
-        }
-      ]
-    },
-    {
-      "id": "grant-push",
-      "difficulty": "small",
-      "prompt": "Let the coder specialist use git push on its next mission.",
-      "checks": [
-        {
-          "tool": "permission_grant"
-        },
-        {
-          "noTool": "write_file"
-        },
-        {
-          "noTool": "settings_propose"
         }
       ]
     },
