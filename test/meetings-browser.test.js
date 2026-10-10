@@ -26,6 +26,9 @@ async function browser(who, name) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), `doca-meet-${name}-`));
   const proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...headless.ALONE,
     '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--auto-select-desktop-capture-source=Entire screen', '--autoplay-policy=no-user-gesture-required',
+    // Host candidates as addresses, not mDNS names: a CI runner's multicast is not ours to count on (Windows, 2026-10-10).
+    // and loopback offered too, so two browsers on one runner meet whatever its adapters and firewall say.
+    '--disable-features=WebRtcHideLocalIpsWithMdns', '--allow-loopback-in-peer-connection',
     '--disable-gpu', '--window-size=1280,800', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'],
   { stdio: 'ignore', detached: process.platform !== 'win32' });
   const b = { proc, profile, errors: [] };
@@ -33,6 +36,10 @@ async function browser(who, name) {
   b.page = await headless.connect(await headless.devtools(profile));
   b.page.on(m => { if (m.method === 'Runtime.exceptionThrown') b.errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text); });
   await b.page.send('Runtime.enable'); await b.page.send('Network.enable'); await b.page.send('Page.enable');
+  // A busy machine, on purpose: every signalling POST waits a random 0–150 ms before it leaves, so separate requests
+  // overtake each other as they did on a loaded Windows runner. The mesh must keep its own order (meet/mesh.js).
+  await b.page.send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => { const f = window.fetch;
+    window.fetch = (u, o) => /\\/api\\/meetings\\/[^/]+\\/signal$/.test(String(u)) ? new Promise(r => setTimeout(r, Math.random() * 150)).then(() => f(u, o)) : f(u, o); })();` });
   const [k, v] = who.cookie.split('=');
   await b.page.send('Network.setCookie', { name: k, value: v, url: H.base });
   b.eval = async (expression, gesture = false) => {
@@ -41,7 +48,10 @@ async function browser(who, name) {
     return r.result.value;
   };
   // A page still loading has not defined the panel's globals yet: that is a no, not a failure.
-  b.until = async (expression, ms = 20000) => { for (let t = 0; t < ms; t += 250) { if (await b.eval(expression).catch(() => false)) return true; await headless.sleep(250); } return false; };
+  // Conditions, never fixed sleeps: a busy runner is slow, not wrong — so every wait is generous and ends the moment it holds.
+  b.until = async (expression, ms = 45000) => { const end = Date.now() + ms; while (Date.now() < end) { if (await b.eval(expression).catch(() => false)) return true; await headless.sleep(250); } return false; };
+  // What the connections were doing, for the message of a wait that ran out.
+  b.why = () => b.eval("JSON.stringify({ me: MEET.me, peers: [...MEET.peers.keys()].map(p => ({ p, ...(MEET.mesh?.describe(p) || {}) })) })").catch(e => String(e));
   b.shot = async file => {
     if (!SHOTS) return;
     await headless.sleep(600);
@@ -74,7 +84,7 @@ after(async () => { browsers.forEach(kill); if (!skip) await H.stop(); });
 const received = kind => `(async () => { const p = [...MEET.peers.keys()][0]; const s = p && await MEET.mesh.stats(p); let n = 0;
   s?.forEach(r => { if (r.type === 'inbound-rtp' && r.kind === '${kind}') n += r.bytesReceived || 0; }); return n; })()`;
 
-test('two people meet: voice and video both ways, then a screen shared and seen', { skip, timeout: 120000 }, async t => {
+test('two people meet: voice and video both ways, then a screen shared and seen', { skip, timeout: 300000 }, async t => {
   const a = await browser(alice, 'alice'), b = await browser(bob, 'bob');
   await a.page.send('Page.navigate', { url: `${H.base}/` });
   assert.ok(await a.until("typeof meetingStart === 'function' && document.readyState === 'complete' && typeof _liveScreen !== 'undefined'"), 'the panel loaded');
@@ -83,7 +93,8 @@ test('two people meet: voice and video both ways, then a screen shared and seen'
   await b.page.send('Page.navigate', { url: `${H.base}/meet/${id}` });   // the link opens the panel on the room
   assert.ok(await b.until(`MEET.id === '${id}' && MEET.peers.size === 1`), 'Bob joined by the link');
   assert.ok(await a.until('MEET.peers.size === 1'), 'Alice sees Bob');
-  assert.ok(await a.until("[...MEET.peers.keys()].every(p => MEET.mesh.state(p) === 'connected')", 30000), 'connected');
+  assert.ok(await a.until("MEET.peers.size === 1 && [...MEET.peers.keys()].every(p => MEET.mesh.state(p) === 'connected')", 90000), `connected — Alice ${await a.why()} Bob ${await b.why()}`);
+  assert.ok(await b.until("MEET.peers.size === 1 && [...MEET.peers.keys()].every(p => MEET.mesh.state(p) === 'connected')", 30000), `connected — Bob ${await b.why()}`);
   assert.ok(await b.until("[...document.querySelectorAll('#meet .meet-tile:not(.meet-me) video')].some(v => v.videoWidth > 0)"), 'Bob sees Alice\'s camera');
   assert.ok(await a.until("[...document.querySelectorAll('#meet .meet-tile:not(.meet-me) video')].some(v => v.videoWidth > 0)"), 'Alice sees Bob\'s camera');
   assert.ok(await a.until(`${received('audio')}.then(n => n > 2000)`), 'Alice hears Bob (audio bytes arrive)');
@@ -97,7 +108,7 @@ test('two people meet: voice and video both ways, then a screen shared and seen'
   if (shared !== true && process.platform !== 'linux') { t.diagnostic(`screen share not available in this headless browser: ${shared}`); return; }
   assert.equal(shared, true, `getDisplayMedia: ${shared}`);
   assert.ok(await a.until("!!document.querySelector('#meet .meet-red')"), 'the sharer is told, in red');
-  assert.ok(await b.until("(document.querySelector('#meet .meet-stage video')?.videoWidth || 0) > 0", 30000), 'Bob sees the screen on the stage');
+  assert.ok(await b.until("(document.querySelector('#meet .meet-stage video')?.videoWidth || 0) > 0", 60000), `Bob sees the screen on the stage — ${await b.why()}`);
   assert.match(await b.eval("document.querySelector('#meet .meet-stage-cap').textContent"), /Alice's screen/);
   await a.shot('3-alice-sharing.png'); await b.shot('4-bob-sees-share.png');
 
