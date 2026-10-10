@@ -41,10 +41,12 @@ function validate(set) {
     if (!Array.isArray(c.checks) || !c.checks.length) throw bad(`Case ${c.id} has no checks.`);
     if (c.mode && !['agent', 'plan', 'ask', 'debug'].includes(c.mode)) throw bad(`Case ${c.id}: mode is agent, plan, ask or debug.`);
     if (c.difficulty && !DIFFICULTY.includes(c.difficulty)) throw bad(`Case ${c.id}: difficulty is ${DIFFICULTY.join(', ')}.`);
+    if (c.client && !['phone', 'watch'].includes(c.client)) throw bad(`Case ${c.id}: client is phone or watch.`);
   }
   // `difficulty` is a tag the checks ignore: measurements group by it (experiment adaptiveLimits).
+  // `client` (a phone or a watch asking) used to be dropped here, so newcomer/phone-only asked from a desktop.
   return { id: set.id, title: String(set.title || set.id), description: String(set.description || ''), cases: set.cases.map(c => ({ id: c.id, prompt: String(c.prompt),
-    ...(c.mode ? { mode: c.mode } : {}), ...(c.difficulty ? { difficulty: c.difficulty } : {}), checks: c.checks })) };
+    ...(c.mode ? { mode: c.mode } : {}), ...(c.difficulty ? { difficulty: c.difficulty } : {}), ...(c.client ? { client: c.client } : {}), checks: c.checks })) };
 }
 
 function save(set) {
