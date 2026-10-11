@@ -161,7 +161,7 @@
       <div class="toolbar">
         <div class="toolbar-left">
           <button class="btn btn-sm" onclick="clearLogs()">Clear</button>
-          <label class="log-autoscroll" title="Keep the newest line in view"><input type="checkbox" class="switch" id="scroll-btn" checked onchange="toggleScroll(this.checked)"> Autoscroll</label>
+          <label class="log-autoscroll" data-info="On (the default): the view follows the newest line as it arrives. Off: it stays where you scrolled, to read something older."><input type="checkbox" class="switch" id="scroll-btn" checked onchange="toggleScroll(this.checked)"> Autoscroll</label>
           <div class="log-src-row" id="log-sources"></div>
         </div>
         <div class="status-line" id="log-status"></div>
@@ -216,7 +216,7 @@
               <button class="btn btn-sm" onclick="fmDownloadSelected()" title="Download selected">⬇ Download</button>
             </div>
             <input class="input fm-path-input" id="fm-path-input"
-                   placeholder="/path/to/dir" onkeydown="fmGoPath(event)">
+                   placeholder="/path/to/dir" aria-label="Go to a folder" onkeydown="fmGoPath(event)"><span class="fm-path-info" data-info="Type the full path of a folder on this hub and press Enter to open it. Only the folders the panel is allowed to show open."></span>
           </div>
 
           <!-- Hidden file input for uploads -->
@@ -514,9 +514,9 @@
       <!-- Inference Services -->
       <div class="card">
         <div class="card-title">Inference Services</div>
-        <p style="font-size:11px;color:var(--muted);margin:0 0 8px">
-          Launch Docker-based inference backends. Services are named <code>doca-{id}</code> and auto-registered in Tool APIs on start.
-        </p>
+        <details class="desc page-about" style="margin:0 0 8px"><summary>Ready-made AI programs (speech, pictures, models) you start with one click.</summary>
+          Each runs in its own Docker container, named <code>doca-{id}</code>, on this machine only unless Settings → System → Network says more, and is registered in Tool APIs when it starts. ⚙ on a row chooses its graphics card.
+        </details>
         <div id="services-grid"><div class="placeholder pulse" style="padding:12px">Loading…</div></div>
       </div>
 
@@ -569,7 +569,7 @@
         <div class="toolbar" style="flex-wrap:wrap;row-gap:6px">
           <div class="card-title" style="margin-bottom:0">Images</div>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;row-gap:6px">
-            <input id="docker-pull-input" class="input" placeholder="image:tag" style="width:min(200px,42vw)"
+            <span data-info="The name of an image to download, as Docker Hub or another registry writes it — like nginx:latest or ghcr.io/owner/app:1.0. Without a :tag, Docker takes latest."></span><input id="docker-pull-input" class="input" placeholder="image:tag" aria-label="Image to download" style="width:min(200px,42vw)"
                    onkeydown="if(event.key==='Enter') dockerPullImage()">
             <button class="btn btn-sm btn-teal" onclick="dockerPullImage()">⬇ Pull</button>
             <button class="btn btn-sm" onclick="dockerLoadImages()">↺ Refresh</button>
@@ -694,8 +694,8 @@
     <div id="tab-vms" class="tab-page">
       <div class="page-head"><div class="page-head-text"><h1 class="page-title">Virtual machines</h1><p class="page-sub">Guests on this machine, through whichever hypervisor is installed. <span class="status-line" id="vms-status"></span></p></div>
         <div class="page-head-acts"><button class="btn btn-sm" onclick="vmsLoad()">↺ Refresh</button></div></div>
-      <div class="desc" style="margin-bottom:10px">Through whichever hypervisor CLI is installed — libvirt/KVM (<code>virsh</code>) and VirtualBox
-        (<code>VBoxManage</code>). Stop asks the guest to shut down; Force off does not. Copy a display address into your own VNC or RDP viewer. Agents' computers are under <a href="#" onclick="nav('computers');return false">Computers</a>.</div>
+      <details class="desc page-about" style="margin-bottom:10px"><summary>What this page does</summary>A virtual machine is a whole computer running inside this one. This page lists them through whichever hypervisor program is installed — libvirt/KVM (<code>virsh</code>) and VirtualBox
+        (<code>VBoxManage</code>). Stop asks the guest to shut down; Force off does not. Copy a display address into your own VNC or RDP viewer. Agents' computers are under <a href="#" onclick="nav('computers');return false">Computers</a>.</details>
       <div class="scroll-y" style="flex:1">
         <div id="vms-list"><div class="placeholder pulse">Loading…</div></div>
       </div>
@@ -1374,15 +1374,15 @@
     </p>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;gap:8px;align-items:center">
-        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">Name</label>
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0" data-info="What the new container is called. Needed to save it as a configuration; for a one-off run, empty lets Docker make up a name.">Name</label>
         <input class="input" id="docker-run-name" style="flex:1" placeholder="my-container">
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">Ports</label>
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0" data-info="Which ports of this machine reach the container, as this-machine:container pairs separated by commas — 8080:80 makes the container's port 80 answer at this machine's 8080. Empty: none are opened.">Ports</label>
         <input class="input" id="docker-run-ports" style="flex:1" placeholder="8080:80, 443:443">
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">GPU</label>
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0" data-info="Whether the container may use a graphics card, needed by most AI images. None (CPU), the default, gives it none; GPU 0 or GPU 1 one card; All GPUs every card. Docker needs the NVIDIA Container Toolkit for this.">GPU</label>
         <select class="input" id="docker-run-gpu" style="width:140px">
           <option value="">None (CPU)</option>
           <option value="0">GPU 0</option>
@@ -1391,7 +1391,7 @@
         </select>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">Restart</label>
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0" data-info="What Docker does when the container stops or this machine restarts. unless-stopped (the default) starts it again unless you stopped it yourself; always starts it again every time; no leaves it stopped.">Restart</label>
         <select class="input" id="docker-run-restart" style="width:140px">
           <option value="no">no</option>
           <option value="unless-stopped" selected>unless-stopped</option>
@@ -1399,12 +1399,12 @@
         </select>
       </div>
       <div style="display:flex;gap:8px;align-items:flex-start">
-        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0;padding-top:6px">Env vars</label>
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0;padding-top:6px" data-info="Settings handed to the program inside, one KEY=VALUE per line — the image's own documentation says which it reads. Empty by default.">Env vars</label>
         <textarea class="input" id="docker-run-env" rows="2" style="flex:1;font-size:11px;resize:vertical"
                   placeholder="KEY=VALUE (one per line)"></textarea>
       </div>
       <div style="display:flex;gap:8px;align-items:flex-start">
-        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0;padding-top:6px">Volumes</label>
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0;padding-top:6px" data-info="Folders of this machine the container may use, one per line as /folder/here:/folder/inside, so its files outlive the container. Empty by default: what it writes goes with it.">Volumes</label>
         <textarea class="input" id="docker-run-volumes" rows="2" style="flex:1;font-size:11px;resize:vertical"
                   placeholder="/host/path:/container/path (one per line)"></textarea>
       </div>

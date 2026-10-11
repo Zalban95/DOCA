@@ -47,7 +47,8 @@ function logsRenderPicker() {
       <span>Auto</span>
     </label>
     ${logSourceMeta.filter(s => s.available).map(chip).join('')}
-    ${off.length ? `<details class="log-more"><summary class="log-src">${off.length} more</summary><div class="log-src-row">${off.map(chip).join('')}</div></details>` : ''}`;
+    ${off.length ? `<details class="log-more"><summary class="log-src">${off.length} more</summary><div class="log-src-row">${off.map(chip).join('')}</div></details>` : ''}
+    ${infoBtn('Which logs to show. Auto (the default) follows whichever harness is selected; tick one or more sources to see only those lines, each in its own colour. A greyed source has nothing to follow right now.')}`;
 }
 
 function logsPick(id, on) {

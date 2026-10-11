@@ -106,7 +106,7 @@ function dockerPresetEdit(encodedName) {
   document.getElementById('docker-run-out').style.display = 'none';
   document.getElementById('docker-run-out').textContent = '';
   document.getElementById('docker-run-ok').disabled = false;
-  document.getElementById('docker-run-modal').classList.add('open');
+  _dockerRunShow();
 }
 
 async function dockerPresetDelete(encodedName) {
@@ -301,9 +301,23 @@ function dockerRunImage(repo, tag) {
   document.getElementById('docker-run-out').style.display = 'none';
   document.getElementById('docker-run-out').textContent = '';
   document.getElementById('docker-run-ok').disabled = false;
-
-  document.getElementById('docker-run-modal').classList.add('open');
+  _dockerRunShow();
 }
+
+/** Open the run form with its Advanced fold's "changed" mark read again from what was just filled in. */
+function _dockerRunShow() {
+  const modal = document.getElementById('docker-run-modal');
+  if (typeof advancedFoldRefresh === 'function') advancedFoldRefresh(modal);
+  modal.classList.add('open');
+}
+
+/* The run form's common few are a name and the ports; the GPU, the restart rule, variables and folders fold under
+   Advanced (index.html is at its line ceiling, so its own rows are moved into the fold here). */
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('DOMContentLoaded', () => {
+  const ids = { 'docker-run-gpu': '', 'docker-run-restart': 'unless-stopped', 'docker-run-env': '', 'docker-run-volumes': '' };
+  const rows = Object.entries(ids).map(([id, def]) => { const el = document.getElementById(id); if (el) el.dataset.default = def; return el?.parentElement; }).filter(Boolean);
+  if (rows.length && !rows[0].closest('details.adv-fold')) advancedFold(rows, { id: 'docker-run', label: 'Advanced — GPU, restart, variables, folders' });
+});
 
 function dockerRunClose() {
   document.getElementById('docker-run-modal').classList.remove('open');
