@@ -81,3 +81,11 @@ test('Home Assistant is added at the address that answers: this machine first, e
     assert.equal(await cat.nearest({ url: 'http://homeassistant.local:8123/api/mcp', near: [here] }, { timeoutMs: 300 }), 'http://homeassistant.local:8123/api/mcp');
   } finally { srv.close(); }
 });
+
+test('the agent reads a stopped server\'s address and why it last failed, rather than asking the person', () => {
+  const env = require('../modules/harness/environment');
+  const lines = env.mcpSection([{ id: 'home-assistant', state: 'error', tools: 0, origin: 'server', url: 'http://localhost:8123/api/mcp',
+    error: 'No key named "home-assistant". Keys for services: hi3d' }]).join('\n');
+  assert.match(lines, /at http:\/\/localhost:8123\/api\/mcp/);
+  assert.match(lines, /last failed: No key named "home-assistant"/);
+});
