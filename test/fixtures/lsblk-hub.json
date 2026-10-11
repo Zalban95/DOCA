@@ -1,0 +1,271 @@
+{
+ "blockdevices": [
+  {
+   "name": "sda",
+   "path": "/dev/sda",
+   "size": 8001563222016,
+   "fstype": null,
+   "label": null,
+   "mountpoints": [],
+   "type": "disk",
+   "rm": false,
+   "hotplug": false,
+   "uuid": null,
+   "parttype": null,
+   "children": [
+    {
+     "name": "sda1",
+     "path": "/dev/sda1",
+     "size": 134217728,
+     "fstype": null,
+     "label": null,
+     "mountpoints": [],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": null,
+     "parttype": "e3c9e316-0b5c-4db8-817d-f92df00215ae"
+    },
+    {
+     "name": "sda2",
+     "path": "/dev/sda2",
+     "size": 8001426554880,
+     "fstype": "ntfs",
+     "label": "New Volume",
+     "mountpoints": [],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": "46ACD19CACD186B9",
+     "parttype": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7"
+    }
+   ]
+  },
+  {
+   "name": "sdb",
+   "path": "/dev/sdb",
+   "size": 256060514304,
+   "fstype": null,
+   "label": null,
+   "mountpoints": [],
+   "type": "disk",
+   "rm": false,
+   "hotplug": false,
+   "uuid": null,
+   "parttype": null,
+   "children": [
+    {
+     "name": "sdb1",
+     "path": "/dev/sdb1",
+     "size": 134217728,
+     "fstype": null,
+     "label": null,
+     "mountpoints": [],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": null,
+     "parttype": "e3c9e316-0b5c-4db8-817d-f92df00215ae"
+    },
+    {
+     "name": "sdb2",
+     "path": "/dev/sdb2",
+     "size": 55826525696,
+     "fstype": "ntfs",
+     "label": "New Volume",
+     "mountpoints": [],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": "2E7ED66E7ED62DF9",
+     "parttype": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7"
+    },
+    {
+     "name": "sdb3",
+     "path": "/dev/sdb3",
+     "size": 1127219200,
+     "fstype": "vfat",
+     "label": null,
+     "mountpoints": [
+      "/boot/efi"
+     ],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": "68D3-7718",
+     "parttype": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
+    },
+    {
+     "name": "sdb4",
+     "path": "/dev/sdb4",
+     "size": 198969393152,
+     "fstype": "ext4",
+     "label": null,
+     "mountpoints": [
+      "/"
+     ],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": "960c0218-62a1-475d-ae89-640ce09dda2d",
+     "parttype": "0fc63daf-8483-4772-8e79-3d69d8477de4"
+    }
+   ]
+  },
+  {
+   "name": "nvme0n1",
+   "path": "/dev/nvme0n1",
+   "size": 1000204886016,
+   "fstype": null,
+   "label": null,
+   "mountpoints": [],
+   "type": "disk",
+   "rm": false,
+   "hotplug": false,
+   "uuid": null,
+   "parttype": null,
+   "children": [
+    {
+     "name": "nvme0n1p1",
+     "path": "/dev/nvme0n1p1",
+     "size": 104857600,
+     "fstype": "vfat",
+     "label": null,
+     "mountpoints": [],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": "D219-8257",
+     "parttype": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
+    },
+    {
+     "name": "nvme0n1p2",
+     "path": "/dev/nvme0n1p2",
+     "size": 16777216,
+     "fstype": null,
+     "label": null,
+     "mountpoints": [],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": null,
+     "parttype": "e3c9e316-0b5c-4db8-817d-f92df00215ae"
+    },
+    {
+     "name": "nvme0n1p3",
+     "path": "/dev/nvme0n1p3",
+     "size": 523486887936,
+     "fstype": "ntfs",
+     "label": null,
+     "mountpoints": [],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": "5A2A1A412A1A1B19",
+     "parttype": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7"
+    },
+    {
+     "name": "nvme0n1p4",
+     "path": "/dev/nvme0n1p4",
+     "size": 800063488,
+     "fstype": "ntfs",
+     "label": null,
+     "mountpoints": [],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": "1CCCAEE6CCAEBA02",
+     "parttype": "de94bba4-06d1-4d40-a16a-bfd50179d6ac"
+    },
+    {
+     "name": "nvme0n1p5",
+     "path": "/dev/nvme0n1p5",
+     "size": 475137048576,
+     "fstype": "ext4",
+     "label": null,
+     "mountpoints": [
+      "/var/lib/containerd",
+      "/media/al/NewVolume",
+      "/mnt/store"
+     ],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": "8a89a1ff-adc5-4ce1-ba97-6ca9e8be173f",
+     "parttype": "0fc63daf-8483-4772-8e79-3d69d8477de4"
+    },
+    {
+     "name": "nvme0n1p6",
+     "path": "/dev/nvme0n1p6",
+     "size": 655360000,
+     "fstype": "ntfs",
+     "label": null,
+     "mountpoints": [],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": "56E4C5F9E4C5DB7F",
+     "parttype": "de94bba4-06d1-4d40-a16a-bfd50179d6ac"
+    }
+   ]
+  },
+  {
+   "name": "nvme1n1",
+   "path": "/dev/nvme1n1",
+   "size": 256060514304,
+   "fstype": null,
+   "label": null,
+   "mountpoints": [],
+   "type": "disk",
+   "rm": false,
+   "hotplug": false,
+   "uuid": null,
+   "parttype": null,
+   "children": [
+    {
+     "name": "nvme1n1p1",
+     "path": "/dev/nvme1n1p1",
+     "size": 16759808,
+     "fstype": null,
+     "label": null,
+     "mountpoints": [],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": null,
+     "parttype": "e3c9e316-0b5c-4db8-817d-f92df00215ae"
+    },
+    {
+     "name": "nvme1n1p2",
+     "path": "/dev/nvme1n1p2",
+     "size": 256042336256,
+     "fstype": "ext4",
+     "label": "data",
+     "mountpoints": [
+      "/home"
+     ],
+     "type": "part",
+     "rm": false,
+     "hotplug": false,
+     "uuid": "03bde5d9-f395-48f8-88b4-651822636238",
+     "parttype": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7"
+    }
+   ]
+  },
+  {
+   "name": "loop0",
+   "path": "/dev/loop0",
+   "size": 58183680,
+   "fstype": "squashfs",
+   "label": null,
+   "mountpoints": [
+    "/snap/core18/2999"
+   ],
+   "type": "loop",
+   "rm": false,
+   "hotplug": false,
+   "uuid": null,
+   "parttype": null
+  }
+ ]
+}

@@ -42,6 +42,8 @@ module.exports = [
 
   // ── The machine ──
   row('files', 'change files on the hub', ['POST /api/files/*']),
+  row('disks', 'mount or unmount one of the hub\'s disks', ['POST /api/files/disks/mount', 'POST /api/files/disks/unmount'],
+    { only: 'a disk of the machine itself, mounted with the person\'s confirmation (and, without a desktop session, their sudo password): a host\'s, at the panel' }),
   row('docker', 'pull, run and remove images and containers', ['POST /api/docker/images/pull', 'DELETE /api/docker/images/:id', 'POST /api/docker/presets', 'DELETE /api/docker/presets/:name', 'POST /api/docker/run']),
   row('vms', 'manage virtual machines', ['POST /api/vms/*', 'DELETE /api/vms/libvirt/:name/snapshots/:snap']),
   row('vnc', 'add, change and remove VNC screens', ['POST /api/machines/vnc', 'PUT /api/machines/vnc/:id', 'DELETE /api/machines/vnc/:id'],
