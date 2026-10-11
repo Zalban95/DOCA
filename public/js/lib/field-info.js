@@ -28,7 +28,7 @@ function _infoToggle(btn) {
   pop.textContent = btn.dataset.infoText || '';
   pop.previousInfoBtn = btn;
   // Under the label's line: after the label element when the button sits in one, else right after the button.
-  const anchor = btn.closest('.input-label, label, .field-label, .card-title, summary') || btn;
+  const anchor = btn.closest('.input-label, label, .field-label, .models-settings-label, .card-title, summary') || btn;
   // A label that is a cell of a grid (label | field): the explanation goes at the top of its field's cell instead.
   const grid = anchor.parentElement && getComputedStyle(anchor.parentElement).display === 'grid' && anchor.nextElementSibling;
   if (grid) anchor.nextElementSibling.prepend(pop); else anchor.insertAdjacentElement('afterend', pop);

@@ -177,3 +177,11 @@
   .lib-result { grid-template-columns: 72px 1fr; } .lib-thumb { width: 72px; height: 48px; }
   .lib-acts { grid-column: 1 / -1; flex-direction: row; }
 }
+
+/* ⓘ beside a box with no label of its own (js/lib/field-info.js): the button joins the row, and what it opens takes a
+   line of its own under it. A folded part of a label | field grid spans it. */
+.info-slot { display: contents; }
+:is(.models-search-row, .models-pull-row, .llamacpp-controls, .services-controls, .ww-row) { flex-wrap: wrap; }
+:is(.models-search-row, .models-pull-row, .llamacpp-controls, .services-controls, .ww-row, .toolbar) > .info-pop,
+.info-slot > .info-pop { flex-basis: 100%; margin: 0; }
+.models-settings-grid > .adv-fold { grid-column: 1 / -1; }
