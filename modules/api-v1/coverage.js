@@ -53,7 +53,7 @@ const COVERAGE = {
   // The machine and DOCA itself.
   ...Object.fromEntries(['status', 'action', 'stack', 'logs', 'stats', 'configs', 'prefs', 'config-favorites', 'fm-favorites', 'paths', 'keys', 'skills',
     'setup', 'snapshots', 'files', 'host', 'experiments', 'features', 'developer', 'screens', 'workstream', 'machines', 'network', 'settings', 'search', 'retrieval', 'vision', 'scout', 'assistant', 'evals', 'connectors', 'channels', 'computers', 'models',
-    'system', 'update-check', 'update', 'restart', 'deps', 'versions', 'backups', 'startup', 'docker', 'mcp', 'vms', 'services'].map(g => [g, { panel: HOST }])),
+    'system', 'update-check', 'update', 'restart', 'deps', 'versions', 'backups', 'machine-backup', 'startup', 'docker', 'mcp', 'vms', 'services'].map(g => [g, { panel: HOST }])),
 };
 
 module.exports = { COVERAGE };

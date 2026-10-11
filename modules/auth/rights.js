@@ -54,6 +54,7 @@ const TABLE = [
 
   // ── The panel's own lifecycle: everyone's data and code ──
   R(ANY, '/api/backups(/.*)?', 'org'),
+  R(ANY, '/api/machine-backup(/.*)?', 'host'),   // this machine's own files, backed up with restic (machine-backup/)
   R(ANY, '/api/versions/use', 'org'),
   R(GET, '/api/versions/[^/]+/notes', 'read'),                  // what a version added or fixed (release-notes.js)
   R(ANY, '/api/(update|restart)', 'org'),

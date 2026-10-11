@@ -160,6 +160,10 @@ const SYSTEM_TOOLS = [
   { id: 'uv', label: 'uv (Python)', category: 'optional', for: 'training a wake word',
     detect: { bin: 'uv', args: ['--version'] }, note: 'Makes the Python environment a wake-word model is trained in (modules/wakeword), with the Python it needs.',
     repo: 'https://docs.astral.sh/uv/', repoLabel: 'docs.astral.sh/uv', install: { linux: 'curl -LsSf https://astral.sh/uv/install.sh | sh', darwin: brew('uv'), win32: winget('astral-sh.uv') } },
+  // Backing up this machine's own files (modules/machine-backup): one binary on every OS, a repository any OS opens.
+  { id: 'restic', label: 'restic', category: 'optional', for: 'backing up this machine\'s files',
+    detect: { bin: 'restic', args: ['version'] }, note: 'Backs up this machine\'s folders — deduplicated, encrypted, a week of daily copies — into a folder on another disk, a NAS or a remote address (Settings → Backups → This machine\'s files).',
+    repo: 'https://restic.net', repoLabel: 'restic.net', install: { linux: pkg({ apt: 'restic' }), darwin: brew('restic'), win32: winget('restic.restic') } },
   { id: 'ffmpeg', label: 'ffmpeg', category: 'optional', for: 'audio and video',
     detect: { bin: 'ffmpeg', args: ['-version'] }, note: 'Converts audio and video for voice and media.',
     repo: 'https://ffmpeg.org/download.html', repoLabel: 'ffmpeg.org', install: { linux: pkg({ apt: 'ffmpeg' }), darwin: brew('ffmpeg'), win32: winget('Gyan.FFmpeg') } },

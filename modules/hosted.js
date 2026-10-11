@@ -65,6 +65,7 @@ const ROUTES = [
   ['*', /^\/api\/configs(\/|$)/],
   ['*', /^\/api\/setup\/scripts(\/|$)/],
   ['*', /^\/api\/snapshots(\/|$)/],
+  ['*', /^\/api\/machine-backup(\/|$)/],   // the machine's own files, backed up with restic (machine-backup/)
   ['POST', /^\/api\/paths(\/create)?$/],
   // Installing onto the machine: System tools, CLI harnesses, custom harnesses, model tools, OpenClaw's skills hub.
   ['*', /^\/api\/system\/tools(\/|$)/],
@@ -102,7 +103,7 @@ const ROUTES = [
 const SOCKETS = [/^\/ws\/terminal/, /^\/ws\/harness/, /^\/ws\/lsp/, /^\/ws\/vm\//];
 
 // The agent's tools that run a command line on the machine, or run git on its files.
-const TOOLS = ['shell', 'shell_job', 'hub_command', 'git'];
+const TOOLS = ['shell', 'shell_job', 'hub_command', 'git', 'machine_backup'];
 
 // The panel's pages that are the machine itself (nav.js leaves them out).
 const TABS = ['terminal', 'files', 'docker', 'vms'];
