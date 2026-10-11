@@ -12,7 +12,6 @@
  * paths.PROTECTED_DIRS), keyed by person. Nothing here is ever sent to a browser: `view()` is the provider and the
  * account's name. DOCA_GOOGLE_API / DOCA_GRAPH_API point the calls at a stub (the tests).
  */
-const fs = require('fs');
 const path = require('path');
 
 const PROVIDERS = {
@@ -24,12 +23,8 @@ const file = () => path.join(path.dirname(require('../paths').CONNECTOR_KEYS_FIL
 const googleApi = () => process.env.DOCA_GOOGLE_API || 'https://www.googleapis.com';
 const graphApi = () => process.env.DOCA_GRAPH_API || 'https://graph.microsoft.com';
 
-function all() { try { return JSON.parse(fs.readFileSync(file(), 'utf8')); } catch { return {}; } }
-function write(d) {
-  fs.mkdirSync(path.dirname(file()), { recursive: true });
-  fs.writeFileSync(file(), JSON.stringify(d, null, 2), { mode: 0o600 });
-  try { fs.chmodSync(file(), 0o600); } catch { /* Windows */ }
-}
+const all = () => require('../keys-file').read(file());   // keys-file.js: written all or nothing, never read empty by mistake
+const write = d => require('../keys-file').write(file(), d);
 const get = personId => (personId && all()[personId]) || null;
 function put(personId, rec) { const d = all(); if (rec) d[personId] = rec; else delete d[personId]; write(d); }
 

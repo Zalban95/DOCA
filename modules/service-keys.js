@@ -12,13 +12,11 @@
  * someone holding host unless the admin opens a key to everyone (`who`), like a connector. Kept in
  * DATA_DIR/keys/services.json (0600, PROTECTED_FILES); Field → Connectors → Keys for services.
  */
-const fs = require('fs');
-const path = require('path');
 
 const file = () => require('./paths').SERVICE_KEYS_FILE;
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
-const all = () => { try { return JSON.parse(fs.readFileSync(file(), 'utf8')); } catch { return {}; } };
-function write(d) { fs.mkdirSync(path.dirname(file()), { recursive: true }); fs.writeFileSync(file(), JSON.stringify(d, null, 2), { mode: 0o600 }); try { fs.chmodSync(file(), 0o600); } catch { /* Windows */ } }
+const all = () => require('./keys-file').read(file());   // a damaged file is never read as "no keys" (keys-file.js)
+const write = d => require('./keys-file').write(file(), d);
 
 const NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
 // field: a header's or a parameter's name, or for an exchange the token address

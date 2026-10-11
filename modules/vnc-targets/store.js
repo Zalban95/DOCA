@@ -6,18 +6,12 @@
  * so the agent's file tools never read it); `view()` is all that leaves this module towards a browser or a prompt —
  * `hasPassword`, never the password. The hub signs in with it itself (rfb.js, proxy.js).
  */
-const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 
 const file = () => require('../paths').VNC_KEYS_FILE;
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
-const all = () => { try { return JSON.parse(fs.readFileSync(file(), 'utf8')) || {}; } catch { return {}; } };
-function write(d) {
-  fs.mkdirSync(path.dirname(file()), { recursive: true });
-  fs.writeFileSync(file(), JSON.stringify(d, null, 2), { mode: 0o600 });
-  try { fs.chmodSync(file(), 0o600); } catch { /* Windows */ }
-}
+const all = () => require('../keys-file').read(file()) || {};   // keys-file.js: all or nothing, never read empty by mistake
+const write = d => require('../keys-file').write(file(), d);
 
 const view = t => ({ id: t.id, name: t.name, host: t.host, port: t.port, hasPassword: !!t.password, savedAt: t.savedAt });
 const list = () => Object.values(all()).map(view).sort((a, b) => a.name.localeCompare(b.name));

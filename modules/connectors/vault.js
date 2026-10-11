@@ -6,20 +6,12 @@
  * the OAuth app (clientId, clientSecret), its addresses when custom, the scopes, and once connected the tokens and
  * the account they belong to. Nothing here is ever sent to a browser or a device; `view()` is what may be.
  */
-const fs = require('fs');
-const path = require('path');
 
 const file = () => require('../paths').CONNECTOR_KEYS_FILE;
 
-function all() {
-  try { return JSON.parse(fs.readFileSync(file(), 'utf8')); } catch { return {}; }
-}
-
-function write(data) {
-  fs.mkdirSync(path.dirname(file()), { recursive: true });
-  fs.writeFileSync(file(), JSON.stringify(data, null, 2), { mode: 0o600 });
-  try { fs.chmodSync(file(), 0o600); } catch { /* Windows: the data folder's own permissions */ }
-}
+// keys-file.js: written all or nothing, and a damaged file is never read as "no connectors"
+const all = () => require('../keys-file').read(file());
+const write = data => require('../keys-file').write(file(), data);
 
 const get = id => all()[id] || null;
 function patch(id, fields) { const d = all(); d[id] = { ...(d[id] || {}), ...fields }; write(d); return d[id]; }
