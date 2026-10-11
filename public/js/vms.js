@@ -23,17 +23,17 @@ function _vmHypervisorHtml(hv, data) {
       ? `<div class="placeholder" style="color:var(--red)">${escHtml(hv.error)}</div>`
       : hv.vms.length
         ? hv.vms.map(vm => _vmRowHtml(hv.id, vm)).join('')
-        : '<div class="placeholder">No machines defined.</div>';
+        : `<div class="placeholder">No machines defined.${hv.id === 'libvirt' ? ' Expected some? Check the connection address under Advanced below.' : ''}</div>`;
 
   // virsh defaults to qemu:///session while virt-manager's machines usually live
   // in qemu:///system, so an empty list is nearly always the wrong URI.
-  const uriRow = hv.id !== 'libvirt' || !hv.available ? '' : `
+  const uriRow = hv.id !== 'libvirt' || !hv.available ? '' : advancedFold(`
     <div class="vm-uri-row">
-      <span class="input-label">Connection URI</span>
-      <input class="input" id="vm-libvirt-uri" value="${escHtml(data.libvirtUri || '')}"
+      <span class="input-label">Connection address${infoBtn("Which libvirt the panel asks for its machines (a connection URI). Machines made with virt-manager usually live in qemu:///system; empty uses virsh's own default, which is often qemu:///session — your user's own machines only. If the list above is empty but you have machines, try qemu:///system.")}</span>
+      <input class="input" id="vm-libvirt-uri" value="${escHtml(data.libvirtUri || '')}" data-default="" data-label="Connection address"
              placeholder="qemu:///system — empty uses virsh's own default">
       <button class="btn btn-xs btn-blue" onclick="vmsSaveUri()">Save</button>
-    </div>`;
+    </div>`, { id: 'vms-libvirt-uri', label: 'Advanced — connection address' });
 
   return `
     <div class="card mb8">
@@ -162,13 +162,13 @@ async function vmDetails(name, btn, keepOpen) {
   const n = jsArg(name);
   box.innerHTML = `
     <div class="vm-facts">${d.cpus || '?'} CPU · ${d.memoryMb ? `${Math.round(d.memoryMb / 1024 * 10) / 10} GB` : '?'} RAM
-      <label class="vm-auto"><input type="checkbox" ${d.autostart ? 'checked' : ''} onchange="vmAutostart(${n}, this.checked)"> start with this machine</label></div>
-    <div class="input-label" style="margin-top:6px">Snapshots</div>
+      <label class="vm-auto"><input type="checkbox" ${d.autostart ? 'checked' : ''} onchange="vmAutostart(${n}, this.checked)"> start with this machine</label>${infoBtn('When on, this virtual machine starts by itself whenever the computer it runs on starts. It takes effect at once; off by default.')}</div>
+    <div class="input-label" style="margin-top:6px">Snapshots${infoBtn('A snapshot keeps the machine exactly as it is now, so you can put it back later with Revert. What changed after it is lost on a revert unless it has a snapshot of its own.')}</div>
     ${d.snapshots.length ? d.snapshots.map(s => `<div class="vm-snap"><span>${escHtml(s)}${s === d.currentSnapshot ? ' <em>(current)</em>' : ''}</span>
         <button class="btn btn-xs" onclick="vmSnapAct(${n}, ${jsArg(s)}, 'revert')" title="Put the machine back as it was then">↶ Revert</button>
         <button class="btn btn-xs btn-red" onclick="vmSnapAct(${n}, ${jsArg(s)}, 'delete')" title="Remove this snapshot">✕</button></div>`).join('')
       : '<div class="placeholder" style="font-size:11px">None yet.</div>'}
-    <div class="vm-snap-new"><input class="input" id="vm-snapname-${escHtml(name)}" placeholder="snapshot name (optional)">
+    <div class="vm-snap-new"><input class="input" id="vm-snapname-${escHtml(name)}" placeholder="snapshot name (optional)" aria-label="Snapshot name">${infoBtn('A name for the snapshot you are about to take. Letters, digits, dots, dashes and underscores. Empty names it by the date and time it was taken.')}
       <button class="btn btn-xs btn-blue" onclick="vmSnapTake(${n})">Take snapshot</button></div>`;
 }
 
@@ -196,17 +196,20 @@ function vmSnapAct(name, snap, act) {
 }
 
 function _vmCreateHtml() {
+  const num = (id, label, def, attrs, info) => `<div class="field"><div class="input-label">${label}${infoBtn(info)}</div><input class="input" type="number" id="${id}" value="${def}" data-default="${def}" data-label="${label}" ${attrs}></div>`;
   return `<div class="vm-create" id="vm-create" style="display:none">
     <div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end">
-      <div class="field"><div class="input-label">Name</div><input class="input" id="vmc-name" style="width:150px" placeholder="dev-box"></div>
-      <div class="field" style="flex:1;min-width:220px"><div class="input-label">ISO on this machine</div><input class="input" id="vmc-iso" data-path-pick="file" placeholder="~/Downloads/ubuntu-24.04.iso"></div>
-      <div class="field"><div class="input-label">RAM (MB)</div><input class="input" type="number" id="vmc-mem" value="4096" min="512" step="512" style="width:100px"></div>
-      <div class="field"><div class="input-label">CPUs</div><input class="input" type="number" id="vmc-cpu" value="2" min="1" style="width:70px"></div>
-      <div class="field"><div class="input-label">Disk (GB)</div><input class="input" type="number" id="vmc-disk" value="40" min="4" style="width:80px"></div>
-      <div class="field"><div class="input-label">OS (optional)</div><input class="input" id="vmc-os" style="width:120px" placeholder="ubuntu24.04"></div>
+      <div class="field"><div class="input-label">Name${infoBtn('What the new virtual machine is called. Letters, digits, dots, dashes and underscores (up to 64), and not a name another machine has.')}</div><input class="input" id="vmc-name" style="width:150px" placeholder="dev-box"></div>
+      <div class="field" style="flex:1;min-width:220px"><div class="input-label">ISO on this machine${infoBtn('The installer disc image (an .iso file) already on this hub, inside the folders the panel may open — for example a Linux download. The new machine boots from it so you can install its system.')}</div><input class="input" id="vmc-iso" data-path-pick="file" placeholder="~/Downloads/ubuntu-24.04.iso"></div>
       <div class="field"><button class="btn btn-sm btn-blue" onclick="vmCreate()">Create</button></div>
     </div>
-    <div class="input-label" style="text-transform:none;letter-spacing:0;margin-top:4px">The disk goes in libvirt's default pool; the display listens on this machine only (VNC) — reach it with an SSH tunnel.</div>
+    ${advancedFold(`<div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end">
+      ${num('vmc-mem', 'RAM (MB)', 4096, 'min="512" step="512" style="width:100px"', 'How much memory the machine gets, in megabytes (1024 MB is 1 GB). Default 4096, at least 512.')}
+      ${num('vmc-cpu', 'CPUs', 2, 'min="1" style="width:70px"', 'How many processor cores the machine gets. Default 2.')}
+      ${num('vmc-disk', 'Disk (GB)', 40, 'min="4" style="width:80px"', "The size of the machine's new disk, in gigabytes. Default 40, at least 4. It goes in libvirt's default storage pool.")}
+      <div class="field"><div class="input-label">OS (optional)${infoBtn('The kind of system you will install (an id from virt-install --osinfo list, like ubuntu24.04), so the machine gets fitting defaults. Empty: it is guessed from the ISO.')}</div><input class="input" id="vmc-os" style="width:120px" placeholder="ubuntu24.04" data-default="" data-label="OS"></div>
+    </div>`, { id: 'vms-create', label: 'Advanced — memory, processors, disk, system' })}
+    <div class="input-label" style="text-transform:none;letter-spacing:0;margin-top:4px">Its screen (VNC) listens on this machine only: open it with the VNC button, or reach it with an SSH tunnel.</div>
   </div>`;
 }
 
