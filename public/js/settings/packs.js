@@ -13,24 +13,25 @@ async function packsLoad() {
   let c;
   try { c = await apiFetch('/api/packs/contents'); }
   catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
-  const group = (kind, title, list) => `<div style="margin-bottom:8px"><div class="input-label">${title}</div>${list.length
+  const group = (kind, title, list, info) => `<div style="margin-bottom:8px"><div class="input-label">${title}${infoBtn(info)}</div>${list.length
     ? list.map(x => `<label style="display:inline-flex;align-items:center;gap:4px;margin:2px 10px 2px 0;font-size:12px" title="${escHtml(x.label || '')}">
         <input type="checkbox" data-pack="${kind}" value="${escHtml(x.id)}"> ${escHtml(x.id)}</label>`).join('')
     : '<span style="font-size:11px;color:var(--muted)">none</span>'}</div>`;
   panel.innerHTML = `<div class="card">
       <div class="card-title">Make a pack</div>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">One .dpack file (a zip) that another DOCA imports — and that other tools read without DOCA: skills are
+      <p class="desc" style="margin-bottom:6px">Put what this hive made — skills, specialists, recipes — into one file, to keep or to give to another hive.</p>
+      <details class="desc page-about" style="margin-bottom:10px"><summary>What this is</summary>One .dpack file (a zip) that another hive imports — and that other tools read as they are: skills are
         Agent Skills folders, specialists are subagent markdown, MCP servers are the mcpServers JSON Claude Desktop and Cursor read, a shell-only
-        recipe comes with a bash and a PowerShell script. Secrets never travel: they are left empty and listed for whoever imports it.</p>
-      <div class="toolbar" style="gap:6px;margin-bottom:10px"><input class="input" id="pack-name" placeholder="Pack name" style="flex:1;max-width:280px"></div>
-      ${group('skills', 'Skills', c.skills)}${group('specialists', 'Specialists', c.specialists)}${group('recipes', 'Recipes', c.recipes)}${group('mcp', 'MCP servers', c.mcp)}${group('services', 'API services (without keys)', c.services || [])}
-      <div style="margin-bottom:10px;font-size:12px"><label><input type="checkbox" id="pack-memory"> Memory</label>
-        <label style="margin-left:12px"><input type="checkbox" id="pack-rules"> Memory rules (as AGENTS.md)</label></div>
-      ${advancedFold(`<div style="margin-bottom:10px;font-size:12px"><div class="input-label">As an edition — what makes it feel like its own product (edition.json)</div>
-        <label><input type="checkbox" id="pack-ed-branding" data-default="false" data-label="Names"> Names (branding)</label>
-        <label style="margin-left:12px"><input type="checkbox" id="pack-ed-look" data-default="false" data-label="How screens start out"> How screens start out (theme, hidden tabs, sidebar)</label>
-        <label style="margin-left:12px"><input type="checkbox" id="pack-ed-face" data-default="false" data-label="The face"> The face</label>
-        <label style="margin-left:12px">Level <select class="input" id="pack-ed-level" data-default="" data-label="Level" style="width:auto"><option value="">none</option>
+        recipe comes with a bash and a PowerShell script. Secrets never travel: they are left empty and listed for whoever imports it.</details>
+      <div class="field" style="margin-bottom:10px;max-width:320px"><label class="input-label" for="pack-name">Pack name${infoBtn('What the pack is called — its file name and how it is listed in a library. Empty: "pack".')}</label><input class="input" id="pack-name" placeholder="my-pack"></div>
+      ${group('skills', 'Skills', c.skills, 'Written instructions the agents follow for a kind of job. Tick the ones to put in the pack.')}${group('specialists', 'Specialists', c.specialists, 'Agent types the Orchestrator sends errands to, each with its own role and tools.')}${group('recipes', 'Recipes', c.recipes, 'Tool calls saved from a turn that worked, run again without the thinking.')}${group('mcp', 'MCP servers', c.mcp, 'Tool servers this hive connects to. Their secrets are emptied; they arrive switched off.')}${group('services', 'API services (without keys)', c.services || [], 'Online services set up with a key for services: how to reach each one travels, never the key.')}
+      <div style="margin-bottom:10px;font-size:12px"><label><input type="checkbox" id="pack-memory"> Memory</label>${infoBtn('The facts the agents keep between conversations (memory.jsonl in the pack). Off by default — it may hold things about you.')}
+        <label style="margin-left:12px"><input type="checkbox" id="pack-rules"> Memory rules (as AGENTS.md)</label>${infoBtn('The rules for how the agents keep memory. Imported, only rules the other hive lacks are added.')}</div>
+      ${advancedFold(`<div style="margin-bottom:10px;font-size:12px"><div class="input-label">As an edition${infoBtn('An edition makes the pack a narrower product of its own when imported: it becomes the importing hive\'s defaults (edition.json). Leave all off for an ordinary pack.')}</div>
+        <label><input type="checkbox" id="pack-ed-branding" data-default="false" data-label="Names"> Names (branding)</label>${infoBtn('The product names this hive shows, from its branding settings.')}
+        <label style="margin-left:12px"><input type="checkbox" id="pack-ed-look" data-default="false" data-label="How screens start out"> How screens start out</label>${infoBtn('The theme, look, hidden pages and sidebar every screen starts with there; each screen may still change its own.')}
+        <label style="margin-left:12px"><input type="checkbox" id="pack-ed-face" data-default="false" data-label="The face"> The face</label>${infoBtn('This screen\'s face settings (the dots), as the default face there.')}
+        <label style="margin-left:12px">Level${infoBtn('A permission level of your own (not a built-in one) to carry along. Imported, it is created with no more rights than the person bringing it in holds.')} <select class="input" id="pack-ed-level" data-default="" data-label="Level" style="width:auto"><option value="">none</option>
           ${(c.levels || []).map(l => `<option value="${escHtml(l.id)}">${escHtml(l.label)}</option>`).join('')}</select></label></div>`,
         { id: 'pack-edition', label: 'Advanced — as an edition: names, look, face, a level' })}
       <button class="btn btn-sm btn-blue" onclick="packsExport()">⬇ Download the pack</button>
@@ -38,9 +39,11 @@ async function packsLoad() {
     <div class="card" id="pack-library"></div>
     <div class="card">
       <div class="card-title">Bring one in</div>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">A .dpack, or a zip of another tool's things: Agent Skills folders, a Claude Desktop / Cursor / Claude Code
-        config with mcpServers, AGENTS.md or CLAUDE.md rules. You see what it adds, overwrites and needs before anything is written.
-        An MCP server is added switched off.</p>
+      <p class="desc" style="margin-bottom:6px">Choose a pack file: you see what it would add before anything is written.</p>
+      <details class="desc page-about" style="margin-bottom:10px"><summary>What it can read</summary>A .dpack, or a zip of another tool's things: Agent Skills folders, a Claude Desktop / Cursor / Claude Code
+        config with mcpServers, AGENTS.md or CLAUDE.md rules. You see what it adds, overwrites and needs before anything is written, and tick what to bring in.
+        An MCP server is added switched off. Bringing one in asks for your password.</details>
+      <label class="input-label" for="pack-file">Pack file${infoBtn('A .dpack or .zip from this computer. Choosing it writes nothing yet: it only shows the plan below.')}</label>
       <input type="file" id="pack-file" accept=".dpack,.zip" onchange="packsPlan(this.files[0])">
       <div id="pack-plan" style="margin-top:10px"></div></div>`;
   packsLibraryRender();
@@ -55,22 +58,24 @@ async function packsLibraryRender() {
   try { d = await apiFetch('/api/packs/library'); } catch (e) { el.innerHTML = `<div class="placeholder">${escHtml(e.message)}</div>`; return; }
   const hubOpts = d.hubs.map(h => `<option value="${escHtml(h.id)}">${escHtml(h.label)}</option>`).join('');
   el.innerHTML = `<div class="card-title">Library</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Packs this hive keeps: saved here, saved by the agent, or sent by another hub. Nothing in it is applied until you bring it in.</p>
+    <p class="desc" style="margin-bottom:8px">Packs this hive keeps: saved here, saved by the agent, or sent by another hub. Nothing in it is applied until you bring it in.</p>
     ${d.packs.map(p => `<div class="disk-row"><span class="disk-label">${escHtml(p.name)} <span style="color:var(--muted)">${escHtml(p.origin)}${p.from ? ` · ${escHtml(p.from)}` : ''} · ${escHtml(p.savedAt.slice(0, 10))}</span></span>
       <span class="disk-path">${escHtml(p.contents.map(c => `${c.kind}${c.id ? ` ${c.id}` : ''}`).join(', ') || (p.native ? 'another tool\'s files' : ''))}</span>
       <span class="disk-free" style="display:flex;gap:4px"><a class="btn btn-xs" href="/api/packs/library/${encodeURIComponent(p.id)}">⬇</a>
         <button class="btn btn-xs" onclick="packsPlan(null, ${jsArg(p.id)})">Bring in…</button>
         ${d.registry ? `<button class="btn btn-xs ${p.published ? 'btn-blue' : ''}" onclick="packsPublish(${jsArg(p.id)}, ${!p.published})" title="Listed to hubs holding a registry token">${p.published ? 'Published' : 'Publish'}</button>` : ''}
-        ${d.hubs.length ? `<select class="input" style="width:auto;font-size:11px" onchange="if (this.value) packsSend(${jsArg(p.id)}, this.value); this.value=''"><option value="">Send to…</option>${hubOpts}</select>` : ''}
+        ${d.hubs.length ? `<select class="input" aria-label="Send to a hub" style="width:auto;font-size:11px" onchange="if (this.value) packsSend(${jsArg(p.id)}, this.value); this.value=''"><option value="">Send to…</option>${hubOpts}</select>` : ''}
         <button class="btn btn-xs btn-red" onclick="packsDelete(${jsArg(p.id)})">✕</button></span></div>`).join('') || '<div class="placeholder">Empty.</div>'}
     <div class="card-subtitle" style="margin-top:10px">Other hubs to send to</div>
-    <p style="font-size:11px;color:var(--muted)">On the other DOCA: Field → API keys → a token with the <b>hub</b> preset (it can only send packs)${d.registry ? ', or <b>registry</b> (to browse and fetch what it publishes)' : ''}. Its certificate is pinned when you add it.</p>
+    <p class="desc">Send packs straight to another hub.</p>
     ${d.hubs.map(h => `<div class="disk-row"><span class="disk-label">${escHtml(h.label)}</span><span class="disk-path">${escHtml(h.url)}${h.pinned ? ' · pinned' : ''} · ${[h.send && 'send', h.read && 'browse'].filter(Boolean).join(', ')}</span>
       <span class="disk-free" style="display:flex;gap:4px">${d.registry && h.read ? `<button class="btn btn-xs" onclick="packsBrowse(${jsArg(h.id)})">Browse</button>` : ''}<button class="btn btn-xs btn-red" onclick="packsHubRemove(${jsArg(h.id)})">✕</button></span></div>`).join('')}
     <div id="pack-browse"></div>
-    <div class="toolbar" style="gap:6px;margin-top:6px;flex-wrap:wrap">
-      <input class="input" id="pack-hub-url" placeholder="https://other-hub:4242" style="flex:1;min-width:200px">
-      <input class="input" id="pack-hub-token" type="password" autocomplete="off" placeholder="its hub token (doca_…)" style="flex:1;min-width:200px">
+    <div class="form-row" style="margin-top:6px">
+      <div class="field"><label class="input-label" for="pack-hub-url">Its address${infoBtn('The other hub\'s address, e.g. https://other-hub:4242. Its certificate is pinned when you add it, so only that hub is trusted at this address.')}</label>
+        <input class="input" id="pack-hub-url" placeholder="https://other-hub:4242"></div>
+      <div class="field"><label class="input-label" for="pack-hub-token">Its token${infoBtn(`Made on the other hub: Field → API keys → a token with the "hub" preset, which can only send packs${d.registry ? ' (or "registry", to browse and fetch what it publishes)' : ''}. Kept on this machine.`)}</label>
+        <input class="input" id="pack-hub-token" type="password" autocomplete="off" placeholder="doca_…"></div>
       <button class="btn btn-sm" onclick="packsHubAdd()">Add</button></div>`;
   if (typeof sharingRender === 'function') sharingRender();   // the owner's sharing card, above the library
 }
@@ -141,7 +146,7 @@ async function packsPlan(file, libId = null) {
     ${rows || '<div class="placeholder">Nothing a pack carries.</div>'}
     ${needs.length ? `<div style="font-size:11px;color:var(--amber);margin-top:6px">Needs: ${needs.map(escHtml).join(' · ')}</div>` : ''}
     ${p.skipped.length ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Skipped: ${p.skipped.map(s => `${escHtml(s.path)} (${escHtml(s.why)})`).join(', ')}</div>` : ''}
-    ${rows ? `<div class="toolbar" style="gap:8px;margin-top:8px"><label style="font-size:12px"><input type="checkbox" id="pack-overwrite"> replace what exists</label>
+    ${rows ? `<div class="toolbar" style="gap:8px;margin-top:8px"><label style="font-size:12px"><input type="checkbox" id="pack-overwrite"> replace what exists</label>${infoBtn('Off (the default): a ticked item that already exists here is skipped. On: it replaces the one here.')}
       <button class="btn btn-sm btn-blue" onclick="packsImport()">Bring in the ticked ones</button></div>` : ''}`;
 }
 

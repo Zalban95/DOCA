@@ -9,12 +9,11 @@ async function sharingRender() {
   try { s = await apiFetch('/api/sharing'); } catch (e) { card.innerHTML = `<div class="card-title">Share with the project</div><div class="placeholder">${escHtml(e.message)}</div>`; return; }
   const hubOpts = s.hubs.map(h => `<option value="${escHtml(h.id)}" ${h.id === s.upstream ? 'selected' : ''}>${escHtml(h.label)}</option>`).join('');
   card.innerHTML = `<div class="card-title">Share with the project</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">When your agents find a way to do something new, they keep it as a skill, a recipe or a
-      specialist. With this on, those can be offered to the project, so other installs get them too. Nothing is sent without your click, and packs never carry secrets.</p>
+    <p class="desc" style="margin-bottom:8px">Offer what your agents learn to the project, so other installs get it too. Nothing is sent without your click.</p>
     ${s.decided ? '' : '<p style="font-size:12px;color:var(--amber);margin-bottom:8px">Not decided yet — choose below.</p>'}
     <div class="toolbar" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="share-on" ${s.contribute ? 'checked' : ''} onchange="sharingSave()"> Offer what my agents learn to the project</label>
-      <select class="input" id="share-hub" style="width:auto" onchange="sharingSave()" ${s.hubs.length ? '' : 'disabled'}>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="share-on" ${s.contribute ? 'checked' : ''} onchange="sharingSave()"> Offer what my agents learn to the project</label>${infoBtn('When your agents find a way to do something new they keep it as a skill, a recipe or a specialist. On: those are listed here with a Share button each. Off: nothing is listed. Nothing is ever sent without your click, and packs never carry secrets. Saved at once.')}
+      <span class="input-label" style="margin:0">Project's hub${infoBtn('Where shared packs go: one of the hubs listed under Library → Other hubs to send to. Add it there first.')}</span><select class="input" id="share-hub" aria-label="The project's hub" style="width:auto" onchange="sharingSave()" ${s.hubs.length ? '' : 'disabled'}>
         <option value="">${s.hubs.length ? 'The project\'s hub…' : 'Add the project\'s hub below first'}</option>${hubOpts}</select></div>
     ${s.contribute ? (s.candidates.map(p => `<div class="disk-row"><span class="disk-label">${escHtml(p.name)} <span style="color:var(--muted)">${escHtml(p.savedAt.slice(0, 10))}</span></span>
       <span class="disk-path">${escHtml(p.contents.map(c => `${c.kind}${c.id ? ` ${c.id}` : ''}`).join(', '))}</span>
