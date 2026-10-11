@@ -60,7 +60,7 @@ function _pathRowHtml(p) {
 
   return `
     <div class="path-row">
-      <div class="path-label">${escHtml(p.label)}<small>${escHtml(p.note || '')}</small></div>
+      <div class="path-label">${escHtml(p.label)}${infoBtn(`${p.note || ''}. Leave the box empty to use the ${p.key} environment variable, or else the default shown greyed in the box. A change takes effect after a restart.`)}</div>
       <div>
         <div class="path-fields">
           <input id="${id}" class="input flex1" data-key="${escHtml(p.key)}" data-default="" data-label="${escHtml(p.label)}"

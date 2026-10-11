@@ -21,7 +21,7 @@ function logKeepBytes(n) {
 
 function logKeepHtml(d) {
   const unit = p => (/Days$/.test(p) ? 'days' : /Lines$/.test(p) ? 'lines' : /Kept$/.test(p) ? 'kept' : /maxSpans$/.test(p) ? 'rows' : '');
-  const field = s => `<label style="display:inline-flex;gap:6px;align-items:center;font-size:12px;margin:2px 10px 2px 0" title="${escHtml(s.hint || '')}">
+  const field = s => `<label style="display:inline-flex;gap:6px;align-items:center;font-size:12px;margin:2px 10px 2px 0">${infoBtn(`${s.hint || s.path}${s.hint && !/[.!?]$/.test(s.hint) ? '.' : ''} Default: ${s.default} ${unit(s.path)}.`)}
       <input class="input" type="number" data-log-keep="${escHtml(s.path)}" data-default="${escHtml(String(s.default))}" data-label="${escHtml(s.path)}" value="${escHtml(String(s.value))}" min="${s.min ?? ''}" max="${s.max ?? ''}" style="width:96px">
       <span style="color:var(--muted)">${unit(s.path)}${s.value !== s.default ? ` <span title="the default">(${escHtml(String(s.default))})</span>` : ''}</span></label>`;
   const rows = d.stores.map(s => `<div class="tool-row" style="grid-template-columns:minmax(150px,auto) 1fr auto;align-items:center">
@@ -31,9 +31,10 @@ function logKeepHtml(d) {
       <span class="tool-actions" style="text-align:right;font-size:11px;white-space:nowrap">${s.entries == null ? '—' : s.entries.toLocaleString()} ${s.where === 'memory' ? 'lines' : s.id === 'runs' || s.id === 'traces' ? 'rows' : 'files'}<br>
         <span style="color:var(--muted)">${s.approx ? '≈ ' : ''}${logKeepBytes(s.bytes)}</span></span></div>`).join('');
   return `<div class="card-title">Logs — what is kept of what happened</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Work nobody is watching is only logged; Chronicle (Agents → Chronicle) reads it back.
+    <p style="font-size:11px;color:var(--muted);margin-bottom:4px">How much of the record of past work is kept before the oldest goes.</p>
+    <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:8px"><summary>What this is</summary>Work nobody is watching is only logged; Chronicle (Agents → Chronicle) reads it back.
       These bounds keep that log from filling memory or the disk: past them the oldest goes first, at start, daily and when you save.
-      Hover a box for what it bounds; the number in brackets is the default.</p>
+      Each box's ⓘ says what it bounds; the number in brackets is the default.</details>
     ${advancedFold(`${rows}
     <div class="toolbar" style="margin-top:8px"><button class="btn btn-sm btn-blue" onclick="logKeepSave(this)">Save</button>
       <span class="status-line" id="log-keep-status"></span></div>`, { id: 'log-keep', label: `What is kept — ${d.stores.length} stores and their bounds` })}`;

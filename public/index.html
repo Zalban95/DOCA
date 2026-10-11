@@ -1059,12 +1059,12 @@
             Paths
             <button class="btn btn-xs" onclick="pathsLoad()" title="Re-check what exists">↺</button>
           </div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
-            Where DOCA looks for the stack, its config and the workspace. Leave a field empty to fall
+          <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Folders and files the hub works with. Restart after saving.</p>
+          <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:12px"><summary>What this is</summary>
+            Where the hub looks for the stack, its config and the workspace. Leave a field empty to fall
             back to its environment variable or the built-in default. Anything missing can be created
             here. Most of the dashboard reads these once at start-up, so use <code>⟳ Restart</code>
-            in <strong>General</strong> after saving.
-          </p>
+            in <strong>General</strong> after saving.</details>
           <div id="paths-list"><div class="placeholder pulse">Loading…</div></div>
           <div class="toolbar" style="margin-top:12px">
             <button class="btn btn-sm btn-blue" onclick="pathsSave()">Save</button>
@@ -1076,7 +1076,7 @@
             System Tools
             <button class="btn btn-xs" onclick="sysdepsRefresh()" id="sysdeps-refresh-btn" title="Re-check">↺ Check</button>
           </div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:12px">What this machine has for DOCA. Install runs the command for this system (hover the button to read it) as this machine's user; a password is asked only where it uses sudo.</p>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Programs this machine has, or could install, for the hub.<details class="desc page-about"><summary>What this is</summary>Install runs the command for this system (hover the button to read it) as this machine's user; a password is asked only where it uses sudo.</details></div>
           <div id="sysdeps-list"><div class="placeholder pulse">Checking…</div></div>
           <pre id="sysdeps-out" class="terminal" style="display:none;margin-top:8px;max-height:min(45vh,360px)"></pre>
         </div>
