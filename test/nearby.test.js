@@ -49,15 +49,16 @@ test('a scan asks only the sources that are on, merges what they saw, and is a l
   const r = await H.api(null, 'POST', '/api/machines/nearby/scan', {});
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.found, 2);
-  assert.deepEqual(r.body.bySource, { cast: 1, lan: 2, bluetooth: 0 });
-  assert.equal(r.body.why.bluetooth, 'The Bluetooth adapter is off.');
+  const BT = process.platform !== 'win32';   // Windows has no Bluetooth source yet: the scan leaves it out and says so
+  assert.deepEqual(r.body.bySource, BT ? { cast: 1, lan: 2, bluetooth: 0 } : { cast: 1, lan: 2 });
+  if (BT) assert.equal(r.body.why.bluetooth, 'The Bluetooth adapter is off.');
   const speaker = r.body.seen.find(t => t.name === 'Study speaker');
   assert.equal(speaker.kind, 'speaker');
   assert.deepEqual(speaker.sources.sort(), ['cast', 'lan']);
   assert.equal(r.body.seen.find(t => t.mac === 'b8:27:eb:00:00:09').kind, 'router');
   const line = require('../modules/activity').list({ limit: 20 }).find(l => l.from === 'nearby');
   assert.match(line.what, /looked for things nearby: 2 found/);
-  assert.match(line.why, /a person pressed Scan; with cast, lan, bluetooth/);
+  assert.match(line.why, BT ? /a person pressed Scan; with cast, lan, bluetooth/ : /a person pressed Scan; with cast, lan/);
   assert.ok(fs.existsSync(path.join(process.env.DOCA_DATA_DIR, 'nearby', 'seen.json')), 'kept in the data folder, not prefs');
   assert.ok(!JSON.stringify(require('../modules/utils').loadPrefs()).includes('Study speaker'));
 });
@@ -101,7 +102,9 @@ test('the agent: list, find and scan only — what is saved, where, and how to u
   assert.match(list, /Saved by the person:\n- Kitchen speaker — Lab \(speaker, Google Nest Mini, 192\.168\.7\.34; seen just now by cast, lan\): cast: `catt -d "Study speaker" cast <url>`/);
   assert.match(await call({ action: 'find', query: 'speaker lab' }), /Kitchen speaker/);
   assert.match(await call({ action: 'find', query: 'printer' }), /Nothing nearby matches/);
-  assert.match(await call({ action: 'scan' }), /^Scanned with cast, lan, bluetooth: 2 found \(cast 1, lan 2, bluetooth 0\)\. Not seen: bluetooth: The Bluetooth adapter is off\. `nearby`/);
+  assert.match(await call({ action: 'scan' }), process.platform !== 'win32'
+    ? /^Scanned with cast, lan, bluetooth: 2 found \(cast 1, lan 2, bluetooth 0\)\. Not seen: bluetooth: The Bluetooth adapter is off\. `nearby`/
+    : /^Scanned with cast, lan: 2 found \(cast 1, lan 2\)/);
   const member = await H.signIn('member', 'nearby-agent-member@test.local');
   assert.match(await tools.call('nearby', { action: 'list' }, [], { user: { ...member.user, role: 'member', orgId: member.orgId }, sessionId: null }), /^Error: .*does not hold host/);
   const inv = require('../modules/harness/turn/fits').inventory(new Set(['nearby']), owner);
