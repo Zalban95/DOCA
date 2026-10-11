@@ -593,7 +593,7 @@
     <div id="tab-mcp" class="tab-page">
       <div class="page-head"><div class="page-head-text"><h1 class="page-title">MCP servers</h1><p class="page-sub">Tools from other programs, offered to the DOCA harness while their server runs.</p></div>
         <div class="page-head-acts"><button class="btn btn-sm" onclick="mcpLoad()">↺ Refresh</button><button class="btn btn-sm btn-primary" onclick="mcpNew()">+ Add server</button></div></div>
-      <div class="desc" style="margin-bottom:10px">
+      <details class="desc page-about" style="margin-bottom:10px"><summary>What MCP servers are</summary>
         Model Context Protocol servers. A running server's tools are offered to the
         <strong>DOCA harness</strong> alongside its built-in ones, named
         <code>mcp__server__tool</code>, and each can be switched off in the harness ⚙ panel.
@@ -601,7 +601,7 @@
         Servers are grouped by the machine they act on: this host, or a paired client — and once
         a client is in play the harness is told which machine each tool reaches, so you can ask
         for something "on my PC" and get the right one.
-      </div>
+      </details>
 
       <div class="scroll-y" style="flex:1">
         <div id="mcp-list"><div class="placeholder pulse">Loading…</div></div>

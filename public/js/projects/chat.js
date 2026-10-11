@@ -82,7 +82,8 @@ async function pjChatActivate(id) {
     let data;
     try { data = await apiFetch(`/api/harness/sessions/${encodeURIComponent(id)}`); } catch { return; }
     for (const m of (data.messages || []).slice(-60)) {
-      if (m.role === 'user' || (m.role === 'assistant' && m.content)) _pjChatRow(m.role, m.content, t.box);
+      if (m.role === 'user' && agentRowIsAuto(m)) t.box.appendChild(agentAutoNoteEl(m.content));
+      else if (m.role === 'user' || (m.role === 'assistant' && m.content)) _pjChatRow(m.role, m.content, t.box);
       for (const tc of m.tool_calls || []) _pjChatRow('tool', tc.function?.name || tc.name || 'tool', t.box);
       for (const img of m.images || []) t.box.appendChild(agentImageEl(img));
     }

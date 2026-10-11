@@ -17,6 +17,7 @@
 .ws-note { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
 .ws-when { margin-left: auto; font-size: 10px; color: var(--muted); }
 .ws-code-box { font-family: var(--font-mono); font-size: 12px; line-height: 1.55; }
+.ws-picture { display: block; max-width: 100%; max-height: 60vh; margin: 8px auto; border-radius: 6px; background: var(--bg-2, transparent); }
 .ws-line { display: flex; white-space: pre; }
 .ws-line.add { background: rgba(46, 160, 67, .18); }
 .ws-line.del { background: rgba(248, 81, 73, .16); }
@@ -60,7 +61,10 @@
 .ws-by.outside { color: #a371f7; border-color: color-mix(in srgb, #a371f7 50%, transparent); }
 .ws-chip.outside { border-style: dashed; }
 @media (max-width: 768px) {
-  .ws-console { width: 100%; height: 40%; padding-left: 14px; }
+  /* On a phone the console is the lower part of the page, not over the file: the stage shrinks above it, and it leaves
+     room at its foot for the chat button and the face (2026-10-11: its lines ran under both and the bottom bar). */
+  .ws-console { position: relative; flex: 0 0 42%; width: 100%; height: auto; padding: 28px 14px calc(var(--mobile-nav-h, 54px) + 70px) 14px;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px); mask-image: linear-gradient(to bottom, transparent 0, #000 28px); }
   .ws-bar { flex-wrap: wrap; row-gap: 4px; padding: 6px 10px; }
   .ws-status { order: 5; flex-basis: 100%; margin-right: 0; }
   .ws-file-head { flex-wrap: wrap; row-gap: 2px; }

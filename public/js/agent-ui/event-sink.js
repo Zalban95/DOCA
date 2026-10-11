@@ -94,3 +94,23 @@ function agentApprovalEvent(evt, box, { note, onSettle, scroll } = {}) {
   approvalPopup(evt, d => { card.settleFrom?.(d); onSettle?.(); });
   scroll?.();
 }
+
+/* A message the hub wrote into a conversation — the "[panel] …" that wakes a conversation on its own (supervisor.js,
+   escalate.js, stopped-work.js) or a note from the hub itself (`from.formFactor: 'hub'`) — is drawn as a quiet line
+   that opens to the whole text, never as the person's own bubble (2026-10-11: "[panel] Work reported back…" read as
+   if the owner had written it). */
+function agentRowIsAuto(m) {
+  return /^\[panel\]/.test(String(m?.content || '')) || m?.from?.formFactor === 'hub' || m?.hub === true;
+}
+function agentAutoNoteEl(text) {
+  const body = String(text || '').replace(/^\[panel\]\s*/, '');
+  const d = document.createElement('details');
+  d.className = 'agent-auto-note';
+  const s = document.createElement('summary');
+  const who = (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA';
+  s.textContent = `${who}: ${(body.split(/(?<=[.!?])\s/)[0] || body).slice(0, 120)}`;
+  const p = document.createElement('div');
+  p.textContent = body;
+  d.append(s, p);
+  return d;
+}

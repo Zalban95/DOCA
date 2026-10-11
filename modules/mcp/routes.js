@@ -135,7 +135,9 @@ function mount(app) {
   app.get   ('/api/mcp/catalog',     wrap(async (_req, res) => res.json({ servers: require('./catalog').list() })));   // servers the panel knows how to add
   app.post  ('/api/mcp/catalog/:id', wrap(async (req, res) => res.json({ ok: true, server: await require('./catalog').add(req.params.id) })));
   // Servers the agent prepared for a person to add (drafts.js): listed and dismissed, never applied here.
-  app.get   ('/api/mcp/drafts',      wrap(async (_req, res) => res.json({ drafts: require('./drafts').all() })));
+  // A draft already added as a server (the same name) is done, not still waiting (2026-10-11: freecad stayed listed).
+  app.get   ('/api/mcp/drafts',      wrap(async (_req, res) => { const reg = require('./registry'), have = new Set(reg.load().map(s => reg.slug(s.id || s.name)));
+    res.json({ drafts: require('./drafts').all().filter(d => !have.has(reg.slug(d.name))) }); }));
   app.delete('/api/mcp/drafts/:id',  wrap(async (req, res) => res.json(require('./drafts').remove(req.params.id))));
   // Before /:id, or "offers" is read as a server id.
   app.post  ('/api/mcp/offers/:id/accept', handleOfferAccept);

@@ -18,6 +18,7 @@ const P = () => { try { return require('../branding').name('product'); } catch {
 const RECENT_MS = 15000;
 const _touch = new Map();   // file or folder → { at, sessionId }
 const _shell = new Map();   // sessionId → at of its last shell command
+let _last = null;           // { at, sessionId } of the newest tool call of any conversation
 
 const title = id => { try { return require('../harness/memory').getSession(id)?.title || id; } catch { return id; } };
 
@@ -25,6 +26,7 @@ const title = id => { try { return require('../harness/memory').getSession(id)?.
 function noteCall(evt, args) {
   if (!evt?.sessionId) return;
   const now = Date.now();
+  _last = { at: now, sessionId: evt.sessionId };
   for (const k of ['path', 'file', 'target', 'dest', 'to', 'from', 'source', 'dir', 'cwd']) {
     const v = args?.[k];
     if (typeof v === 'string' && v.length < 1024) _touch.set(path.resolve(v), { at: now, sessionId: evt.sessionId });
@@ -51,6 +53,10 @@ function agentOf(file) {
   return null;
 }
 
+function insideAttachments(file) {
+  try { const d = path.resolve(require('../attachments').dir()); return path.resolve(file).startsWith(d + path.sep); } catch { return false; }
+}
+
 const RANK = { agent: 0, editor: 1, build: 2 };
 
 /** The process of this account most likely writing in `dir`'s repository (or `root`), or null. */
@@ -75,6 +81,13 @@ async function processOf(file, root, { fresh = false } = {}) {
 async function of(file, root) {
   const sid = agentOf(file);
   if (sid) return { by: 'doca', text: `${P()} agent · ${title(sid)}`, sessionId: sid };
+  // The attachments folder is written by the hub itself (show_media, a tool's picture, an upload) — never outside it
+  // (2026-10-11: a render show_media kept read "outside DOCA"). The conversation is the one that just called a tool.
+  if (insideAttachments(file)) {
+    const recent = _last && Date.now() - _last.at < RECENT_MS ? _last.sessionId : null;
+    return recent ? { by: 'doca', text: `${P()} agent · ${title(recent)} · kept as an attachment`, sessionId: recent }
+      : { by: 'doca', text: `${P()} · kept as an attachment` };
+  }
   // A process that just started (a session opened a moment ago) is not in a reading seconds old: read again once.
   const proc = await processOf(file, root).catch(() => null) || await processOf(file, root, { fresh: true }).catch(() => null);
   if (proc) return { by: 'outside', text: `outside ${P()} · ${proc.program} (pid ${proc.pid}) works here`, process: proc };

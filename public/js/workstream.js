@@ -88,7 +88,10 @@ function _wsFile(f, quiet = false) {
   if (!quiet && WS.current === f.path) WS.flash = Date.now();
 }
 
-const _wsName = p => String(p).split(/[\\/]/).pop();
+const _wsName = p => { const parts = String(p).split(/[\\/]/), n = parts.pop();   // the folder too when another chip shares the name
+  return WS.files.filter(f => String(f.path).split(/[\\/]/).pop() === n).length > 1 ? `${parts.pop() || ''}/${n}` : n; };
+const _wsPicture = f => /\.(png|jpe?g|gif|webp|avif|bmp)$/i.test(f.path) && !f.deleted   // a picture shows itself, not "a binary file"
+  ? `<img class="ws-picture" alt="" src="/api/files/raw?path=${encodeURIComponent(f.path)}&t=${encodeURIComponent(f.at || '')}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'placeholder',textContent:'A picture this page cannot open.'}))">` : '';
 const _wsCount = f => (f.binary ? 'binary' : f.big ? 'too big to show' : f.deleted ? 'deleted' : `<b class="ws-add">+${f.added || 0}</b> <b class="ws-del">−${f.removed || 0}</b>`);
 
 function _wsDraw() {
@@ -103,7 +106,7 @@ function _wsDraw() {
   const hunks = (f.hunks || []).map(h => `<div class="ws-hunk">${h.lines.map(l => `<div class="ws-line ${l.op === '+' ? 'add' : l.op === '-' ? 'del' : ''}"><span class="ws-n">${l.op === '-' ? '' : l.n}</span><span class="ws-op">${l.op === ' ' ? '' : escHtml(l.op)}</span><span class="ws-code">${escHtml(l.line) || ' '}</span></div>`).join('')}</div>`).join('<div class="ws-gap">⋯</div>');
   stage.innerHTML = `<div class="ws-file-head ${Date.now() - (WS.flash || 0) < 1500 ? 'flash' : ''}"><span class="ws-path">${escHtml(rel)}</span> ${_wsCount(f)}
       ${note ? `<span class="ws-note">${note}</span>` : ''}${f.by ? `<span class="ws-by ${f.by.by === 'outside' ? 'outside' : 'doca'}">${escHtml(f.by.text)}</span>` : ''}<span class="ws-when">${escHtml(new Date(f.at || Date.now()).toLocaleTimeString())}</span></div>
-    <div class="ws-code-box">${hunks || `<div class="placeholder">${f.deleted ? 'Deleted.' : f.binary ? 'A binary file.' : f.big ? 'Too big to show here.' : 'No lines changed.'}</div>`}</div>`;
+    <div class="ws-code-box">${hunks || _wsPicture(f) || `<div class="placeholder">${f.deleted ? 'Deleted.' : f.binary ? 'A binary file.' : f.big ? 'Too big to show here.' : 'No lines changed.'}</div>`}</div>`;
   stage.querySelector('.ws-line.add, .ws-line.del')?.scrollIntoView({ block: 'center' });
 }
 

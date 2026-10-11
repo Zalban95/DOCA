@@ -102,3 +102,13 @@ test('tell_device falls back to the panel and ask_device asks at the panel when 
   assert.match(out, /the person at the panel .*answered: "Yes".*asked at the panel only/, out);
   assert.equal(bus.drain(client.id, 0).events.filter(e => e.type === 'prompt.new').length, 0, 'no question to a client that cannot show it');
 });
+
+test('a notice with an end (a call ringing) is no longer listed after it', () => {
+  const notices = require('../modules/notices');
+  const { notice } = notices.post({ personId: null, title: 'Someone is calling', forMs: 50 });
+  assert.ok(notice.until);
+  assert.ok(notices.list(null, true).some(n => n.id === notice.id));
+  const later = Date.now() + 60;
+  const real = Date.now; Date.now = () => later;
+  try { assert.ok(!notices.list(null, true).some(n => n.id === notice.id)); } finally { Date.now = real; }
+});
