@@ -33,6 +33,15 @@ test('the inventories are readings; the offer to keep a turn follows three steps
   assert.equal(fits.keepHint(ok.slice(0, 2), ALL), '');
   assert.equal(fits.keepHint([...ok, { role: 'tool', name: 'shell', content: 'Error: exit 1' }], ALL), '');
   assert.equal(fits.keepHint([...ok, { role: 'tool', name: 'recipe', content: 'ran' }], ALL), '', 'it already was one');
+  assert.equal(fits.keepHint(ok, ALL, null, { role: 'user', content: '[panel] Work reported back.' }), '', 'a turn the hub started has nobody to offer it to');
+  const memory = require('../modules/harness/memory');
+  const s = memory.createSession('offered');
+  memory.append(s.id, { role: 'user', content: 'do it' });
+  memory.append(s.id, { role: 'assistant', content: 'Done. Want me to keep it as a recipe?' });
+  assert.equal(fits.keepHint(ok, ALL, s.id), '', 'an offer still standing is not made again');
+  const t = memory.createSession('not offered');
+  memory.append(t.id, { role: 'assistant', content: 'Done.' });
+  assert.match(fits.keepHint(ok, ALL, t.id), /save_last/);
 });
 
 test('today gives the agent the person\'s day as the ambient screen has it (TODO B6)', async () => {

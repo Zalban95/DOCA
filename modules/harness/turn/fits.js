@@ -93,20 +93,31 @@ function inventory(held, person = null) {
 
 /**
  * After a turn's tool calls worked — three or more, none failed, no recipe run — one line suggesting it be kept.
- * `rows` are the transcript rows since the person's message.
+ * `rows` are the transcript rows since the person's message. Not on a turn the hub started (nobody to offer it to), and
+ * not again while an offer is still standing in the conversation's recent answers (2026-10-11: offered, unanswered, the
+ * cue came back each turn and the agent spent its thinking on whether it may offer twice).
  */
-function keepHint(rows, held) {
+function keepHint(rows, held, sessionId, turnRow) {
   if (!held.has('recipe')) return '';
+  if (/^\[panel\]/.test(String(turnRow?.content || ''))) return '';
+  if (sessionId && offeredLately(sessionId)) return '';
   const calls = rows.filter(r => r.role === 'tool');
   if (calls.length < 3 || calls.some(r => /^Error|^Refused/.test(String(r.content || '')) || r.name === 'recipe')) return '';
   return 'This turn\'s steps have all worked. If this will come back, offer once to keep it: `recipe` save_last.';
+}
+
+function offeredLately(sessionId) {
+  try {
+    const said = require('../memory').messages(sessionId).filter(m => m.role === 'assistant' && m.content).slice(-6);
+    return said.some(m => /\brecipe\b/i.test(String(m.content)));
+  } catch { return false; }
 }
 
 /** The four, for one step — with the steps of a skill this turn read (skill-steps.js). */
 function block({ message, schemas = [], rows = [], person = null, sessionId = null, turnRow = null }) {
   const held = new Set(schemas.map(s => s.function?.name || s.name));
   const attached = turnRow?.attachedSkills || [];   // attached to this request (skill-next.js): steps followed, not suggested again
-  return [likely(message, held, sessionId, attached.map(a => a.name), schemas), inventory(held, person), require('./skill-steps').block(rows, attached), keepHint(rows, held)].filter(Boolean).join('\n');
+  return [likely(message, held, sessionId, attached.map(a => a.name), schemas), inventory(held, person), require('./skill-steps').block(rows, attached), keepHint(rows, held, sessionId, turnRow)].filter(Boolean).join('\n');
 }
 
 module.exports = { block, likely, inventory, keepHint };
