@@ -65,6 +65,15 @@ const KNOWN = [
     configPathHint: '~/.codex/config.toml',
   },
   {
+    // DeepSeek's own harness (MIT, developer preview; github.com/deepseek-ai/deepseek-harness, docs/cli-help.md):
+    // `dsh headless "<task>"` answers one task and exits — the answer on stdout, diagnostics on stderr; settings in ~/.dsh.
+    id: 'dsh', label: 'DeepSeek Harness', vendor: 'DeepSeek', kind: 'cli', cmd: 'dsh',
+    oneShot: ['headless', '{message}'],   // one question without a terminal (harness/one-shot.js)
+    installCmd: 'npm install -g @deepseek-ai/dsh',
+    url: 'https://github.com/deepseek-ai/deepseek-harness',
+    configPathHint: '~/.dsh/profiles',
+  },
+  {
     id: 'gemini', label: 'Gemini CLI', vendor: 'Google', kind: 'cli', cmd: 'gemini',
     oneShot: ['-p', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'npm install -g @google/gemini-cli',

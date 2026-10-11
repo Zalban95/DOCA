@@ -2178,8 +2178,10 @@ test('a conversation runs on the model chosen in its chat; fallback follows the 
   }
 });
 
-test('a page read in a turn makes the next command ask again, and a no stops it (untrusted.js, approval.gate)', async () => {
+test('in Manual a page read in a turn makes the next command ask again, and a no stops it (untrusted.js, approval.gate)', async t => {
   const approval = require('../modules/harness/approval');
+  approval.setMode('manual'); approval.remember(['http_fetch', 'shell:echo']);   // Manual with both allowed: only the recheck asks (Auto never does, 2026-10-12)
+  t.after(() => { approval.setMode('auto'); approval.forget('http_fetch'); approval.forget('shell:echo'); });
   script = [{ tool: 'http_fetch', args: { url: `${stubUrl}/models` } }, { tool: 'shell', args: { command: 'echo pwned' } }, { text: 'Stopped.' }];
   const answering = (async () => {
     for (let i = 0; i < 200; i++) {
