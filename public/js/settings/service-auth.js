@@ -15,28 +15,28 @@ const SVC_TWO = { exchange: ['Access key / client id', 'Secret key / client secr
 /** The sign-in fields of the Advanced fold. */
 function serviceAuthFieldsHtml() {
   return `<div class="svc-field-grid">
-    <label class="svc-field"><span>How it signs in</span><select class="input" id="sk-place" data-default="bearer" data-label="How it signs in" onchange="serviceKeysPlace()">
+    <label class="svc-field"><span class="field-label">How it signs in ${infoBtn("How the key is given to the service: as a token (Authorization: Bearer, the most common and the default), in another header, in the address, as a user and password, or as an id and secret traded for a token. The service's documentation says which.")}</span><select class="input" id="sk-place" data-default="bearer" data-label="How it signs in" onchange="serviceKeysPlace()">
       ${SVC_SIGNIN.map(([v, l]) => `<option value="${v}"${v === 'mtls' ? ' disabled' : ''}>${escHtml(l)}</option>`).join('')}</select></label>
-    <label class="svc-field" data-for="header query"><span>Header or parameter</span><input class="input" id="sk-field" data-default="" data-label="Header or parameter" placeholder="X-API-Key, api_key"></label>
-    <label class="svc-field" data-for="header"><span>Before the key</span><input class="input" id="sk-prefix" data-default="" data-label="Before the key" placeholder="Token "></label>
-    <label class="svc-field" data-for="exchange client"><span>Token address</span><input class="input" id="sk-tokenurl" data-default="" data-label="Token address" placeholder="https://api.example.com/oauth/token"></label>
-    <label class="svc-field" data-for="client"><span>Scope</span><input class="input" id="sk-scope" data-default="" data-label="Scope" placeholder="read write (empty: the service's default)"></label>
-    <label class="svc-field"><span>Who may use it</span><select class="input" id="sk-who" data-default="host" data-label="Who may use it"><option value="host">admins' turns</option><option value="everyone">everyone</option></select></label>
+    <label class="svc-field" data-for="header query"><span class="field-label">Header or parameter ${infoBtn("The name of the header (X-API-Key) or of the address parameter (api_key) the key goes in, as the service's documentation gives it.")}</span><input class="input" id="sk-field" data-default="" data-label="Header or parameter" placeholder="X-API-Key, api_key"></label>
+    <label class="svc-field" data-for="header"><span class="field-label">Before the key ${infoBtn('Text put in front of the key in that header, if the service wants one (Token followed by a space). Empty by default: the key alone.')}</span><input class="input" id="sk-prefix" data-default="" data-label="Before the key" placeholder="Token "></label>
+    <label class="svc-field" data-for="exchange client"><span class="field-label">Token address ${infoBtn('Where the id and secret are traded for a short-lived token (its documentation names it). The hub does the trade and renews the token itself.')}</span><input class="input" id="sk-tokenurl" data-default="" data-label="Token address" placeholder="https://api.example.com/oauth/token"></label>
+    <label class="svc-field" data-for="client"><span class="field-label">Scope ${infoBtn("What the token may do, in the service's own words. Empty: the service's default.")}</span><input class="input" id="sk-scope" data-default="" data-label="Scope" placeholder="read write (empty: the service's default)"></label>
+    <label class="svc-field"><span class="field-label">Who may use it ${infoBtn("Whose conversations may use this key: only admins' (the default), or everyone who chats on this hub. The key itself is never shown to anyone.")}</span><select class="input" id="sk-who" data-default="host" data-label="Who may use it"><option value="host">admins' turns</option><option value="everyone">everyone</option></select></label>
   </div>
   <div class="desc svc-auth-note" id="sk-auth-note" hidden></div>
   <div class="svc-field-grid">
-    <label class="svc-field svc-wide"><span>Extra headers — one <code>Name: value</code> a line, sent with every request (never the key)</span>
+    <label class="svc-field svc-wide"><span class="field-label">Extra headers ${infoBtn('Other lines sent with every request to this service, one Name: value per line, when its documentation asks for them. Never put the key here: it has its own box. Empty by default.')}</span>
       <textarea class="input" id="sk-headers" data-default="" data-label="Extra headers" rows="2" spellcheck="false" placeholder="X-Client: doca"></textarea></label>
-    <label class="svc-field"><span>Rate limit (requests a minute)</span><input class="input" id="sk-rate" type="number" min="0" data-default="" data-label="Rate limit" placeholder="no limit"></label>
-    <label class="svc-field"><span>Its docs</span><input class="input" id="sk-docs" data-default="" data-label="Its docs" placeholder="https://docs.example.com"></label>
+    <label class="svc-field"><span class="field-label">Rate limit ${infoBtn('At most this many requests a minute to this service, so a busy agent does not get the key blocked. Empty: no limit.')}</span><input class="input" id="sk-rate" type="number" min="0" data-default="" data-label="Rate limit" placeholder="no limit"></label>
+    <label class="svc-field"><span class="field-label">Its docs ${infoBtn("A link to the service's documentation. The agent reads it when it needs to know how the service works, and ✨ can write a skill from it.")}</span><input class="input" id="sk-docs" data-default="" data-label="Its docs" placeholder="https://docs.example.com"></label>
   </div>`;
 }
 
 /** The key's boxes in the main row: one key, or two (an id and a secret; a user and a password) — joined as before. */
 function serviceKeyBoxesHtml() {
-  return `<input class="input" id="sk-key" type="password" autocomplete="new-password" placeholder="the key" style="flex:1;min-width:150px">
-    <input class="input" id="sk-id" autocomplete="off" placeholder="Access key / client id" style="flex:1;min-width:150px" hidden>
-    <input class="input" id="sk-secret" type="password" autocomplete="new-password" placeholder="Secret key / client secret" style="flex:1;min-width:150px" hidden>`;
+  return `<label class="svc-field" style="flex:1;min-width:150px"><span class="field-label">Key ${infoBtn('The API key from your account on the service. Kept in a protected file on this machine, added only to requests for its address, and never shown again — the agent never sees it. Paste a new one to replace it.')}</span><input class="input" id="sk-key" type="password" autocomplete="new-password" placeholder="the key"></label>
+    <label class="svc-field" style="flex:1;min-width:150px"><span class="field-label"><span class="fl-name">Access key / client id</span> ${infoBtn('The first of the two parts this service signs in with (an id, a user). Kept with the key, never shown again.')}</span><input class="input" id="sk-id" autocomplete="off" placeholder="Access key / client id" hidden></label>
+    <label class="svc-field" style="flex:1;min-width:150px"><span class="field-label"><span class="fl-name">Secret key / client secret</span> ${infoBtn('The second, secret part. Kept in a protected file on this machine and never shown again — the agent never sees it.')}</span><input class="input" id="sk-secret" type="password" autocomplete="new-password" placeholder="Secret key / client secret" hidden></label>`;
 }
 
 /** Show the fields that mean something for this way of signing in. */
@@ -49,6 +49,8 @@ function serviceKeysPlace() {
   id.hidden = sec.hidden = !two;
   const hint = _svcForm.keyHint ? ` — ${_svcForm.keyHint}` : '';
   if (two) { id.placeholder = two[0]; sec.placeholder = two[1]; id.title = sec.title = `${two[0]} and ${two[1]}${hint}`; }
+  const name = (el, t) => { const s = el.closest('label')?.querySelector('.fl-name'); if (s) s.textContent = t; };
+  if (two) { name(id, two[0]); name(sec, two[1]); }
   key.placeholder = _svcForm.hasKey ? 'kept — paste to replace' : `the key${hint ? hint.slice(0, 60) : ''}`;
   if (two && _svcForm.hasKey) { id.placeholder = `${two[0]} (kept)`; sec.placeholder = `${two[1]} (kept)`; }
   const note = document.getElementById('sk-auth-note');

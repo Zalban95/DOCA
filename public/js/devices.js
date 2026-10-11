@@ -77,11 +77,11 @@ async function devicesLoad() {
 const DEV_ROLE_FOR = {
   phone: 'a phone (DocaMobile), or a computer: DocaDesk, doca-client',
   watch: 'a Wear OS watch (DocaWear) — no tools of its own to lend',
-  extension: 'the DOCA browser extension',
+  extension: 'the {} browser extension',
   agent: 'a program that acts on your devices',
   viewer: 'reads only',
-  hub: 'another DOCA hub, to send this one packs',
-  registry: 'another DOCA hub, to fetch what this one publishes',
+  hub: 'another {} hub, to send this one packs',
+  registry: 'another {} hub, to fetch what this one publishes',
   admin: 'full control of this server',
 };
 
@@ -93,16 +93,16 @@ function devPopulatePresets() {
     // Pairing asks what the device is rather than guessing: every role but one is wrong for most devices.
     sel.innerHTML = (kind === 'pair' ? '<option value="" selected disabled>Choose what you are pairing…</option>' : '') +
       Object.keys(_devData.presets || {}).map(p =>
-        `<option value="${escHtml(p)}"${kind === 'issue' && p === 'agent' ? ' selected' : ''}>${escHtml(p)}${DEV_ROLE_FOR[p] ? ` — ${escHtml(DEV_ROLE_FOR[p])}` : ''}</option>`
+        `<option value="${escHtml(p)}"${kind === 'issue' && p === 'agent' ? ' selected' : ''}>${escHtml(p)}${DEV_ROLE_FOR[p] ? ` — ${escHtml(DEV_ROLE_FOR[p].replace('{}', (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA'))}` : ''}</option>`
       ).join('');
     const show = () => {
       const el = document.getElementById(`dev-${kind}-scopes`);
       if (el && !sel.value) { el.textContent = 'A computer running doca-client or DocaDesk is "phone": it needs mcp:self to lend its tools.'; return; }
       const warn = sel.value === 'admin' ? ' <strong style="color:var(--red)">— full control of this server</strong>'
-        : sel.value === 'extension' ? ' — for the DOCA browser extension: <a href="/api/clients/browser.zip">download it</a> (Chrome, Edge, Brave: Extensions → Developer mode → Load unpacked, from the unzipped folder; Firefox: about:debugging → Load Temporary Add-on → manifest.json)'
+        : sel.value === 'extension' ? ' — for the browser extension: <a href="/api/clients/browser.zip">download it</a> (Chrome, Edge, Brave: Extensions → Developer mode → Load unpacked, from the unzipped folder; Firefox: about:debugging → Load Temporary Add-on → manifest.json)'
         // A home node (doca-client home setup) is the household's link to Home Assistant: it has to stay on.
         : sel.value === 'phone' ? ' — for a <b>home node</b> (doca-client keeping Home Assistant), pick a machine that stays on: a mini PC, a Pi, a NAS. A laptop that sleeps takes the home with it.' : '';
-      if (el) el.innerHTML = `Scopes: <code>${escHtml(describe(sel.value))}</code>${warn}`;
+      if (el) el.innerHTML = `What it may do (scopes): <code>${escHtml(describe(sel.value))}</code>${warn}`;
     };
     sel.onchange = show;
     show();
@@ -266,9 +266,9 @@ function _devShowingHtml(d, dead) {
   const s = _devShowing[d.id], label = t => (typeof NAV_LABELS !== 'undefined' && NAV_LABELS[t]) || t;
   const pages = typeof NAV_TABS !== 'undefined' ? NAV_TABS : [];
   return `<br>${s ? `showing <b>${escHtml(label(s.page || '?'))}</b>${s.solo ? ' alone' : ''}${s.visible ? '' : ' (hidden)'}` : 'not open now'}
-    <span class="dev-show">show here <select class="input" id="dev-show-${escHtml(d.id)}" style="width:auto;padding:2px 4px">${pages.map(t => `<option value="${t}">${escHtml(label(t))}</option>`).join('')}</select>
+    <span class="dev-show">show here <select class="input" id="dev-show-${escHtml(d.id)}" aria-label="Page to show" style="width:auto;padding:2px 4px">${pages.map(t => `<option value="${t}">${escHtml(label(t))}</option>`).join('')}</select>
     <label style="font-size:11px"><input type="checkbox" id="dev-solo-${escHtml(d.id)}" checked> alone</label>
-    <button class="btn btn-xs" onclick="devShowHere(${jsArg(d.id)})">Show</button></span>`;   // one group, wrapping whole (des 29)
+    <button class="btn btn-xs" onclick="devShowHere(${jsArg(d.id)})">Show</button>${infoBtn('Opens the chosen page on that screen now, as if someone there had clicked it. Alone (ticked by default) shows the page by itself, with no menus, as for a wall screen.')}</span>`;   // one group, wrapping whole (des 29)
 }
 
 async function devShowHere(id) {

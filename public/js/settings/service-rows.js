@@ -17,7 +17,7 @@ function serviceRowsHtml(services, jobs = []) {
           { label: '✨ Write its skill — asks the agent', more: true, onclick: `serviceRowSkill(${jsArg(s.name)})` },
           { icon: 'remove', label: 'Remove', more: true, onclick: `serviceKeysRemove(${jsArg(s.name)})` }])}</div>
       ${s.actions.length ? `<div class="svc-actions desc">${s.actions.map(x => `<span class="svc-act" title="${escHtml(`${x.method} ${x.path}${x.summary ? ` — ${x.summary}` : ''}`)}">${escHtml(x.name)}${x.job ? ' ⏳' : ''}</span>`).join(' ')}
-        ${reads.length ? `<select class="input" id="svc-try-${escHtml(s.name)}" style="width:auto;font-size:11px">${reads.map(x => `<option>${escHtml(x.name)}</option>`).join('')}</select><button class="btn btn-xs" onclick="serviceTry(${jsArg(s.name)})">Try</button>` : ''}</div>
+        ${reads.length ? `<select class="input" id="svc-try-${escHtml(s.name)}" aria-label="An action to try" style="width:auto;font-size:11px">${reads.map(x => `<option>${escHtml(x.name)}</option>`).join('')}</select><button class="btn btn-xs" onclick="serviceTry(${jsArg(s.name)})">Try</button>${infoBtn('Runs one of the actions that only read (nothing is changed at the service) and shows its answer below, to check the key and the address work.')}` : ''}</div>
         <pre class="svc-try-out" id="svc-out-${escHtml(s.name)}" hidden></pre>` : '<div class="desc svc-actions">No actions: the agent reaches it with <code>api_call</code>. Edit → Advanced to add them.</div>'}
       ${recent.length ? `<div class="desc svc-actions">${recent.map(j => `${escHtml(j.operation)} ${escHtml(j.state)}${j.files?.length ? ` → ${j.files.map(f => escHtml(f.name)).join(', ')}` : ''}`).join(' · ')}</div>` : ''}</div>`;
   }).join('');
