@@ -298,4 +298,6 @@
 /* A DOCA folder not made yet (files-bookmarks.js): greyed, with the way to make it */
 .fm-bookmark-missing { opacity: .6; }
 .fm-bookmark-missing:hover { opacity: 1; }
+.fm-bookmark-group { margin: 10px 12px 2px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.fm-bookmark-group:first-child { margin-top: 2px; }
 .fm-bookmark-make { font-size: 9px; color: var(--accent); margin-left: 4px; }

@@ -64,7 +64,7 @@ function _hcApprovalFill(list, a) {
   const re = document.createElement('label');
   re.className = 'approval-recheck';
   re.innerHTML = `<input type="checkbox" data-default="true" data-label="Ask again after outside text" ${a.recheckOutside !== false ? 'checked' : ''}>
-    <span><b>Ask again after outside text</b>${infoBtn('Once a web page or another machine\'s answer has entered a turn, the first command after it that changes something asks you, even if it is allowed — such text can carry instructions you never gave. Your devices are asked too. On by default.')}</span>`;
+    <span><b>Ask again after outside text</b>${infoBtn('In Manual mode: once a web page or another machine\'s answer has entered a turn, the first command after it that changes something asks you, even if it is allowed — such text can carry instructions you never gave. Your devices are asked too. Auto never asks. On by default.')}</span>`;
   re.querySelector('input').onchange = async ev => {
     try { await apiFetch('/api/harness/approval', { method: 'POST', body: { recheckOutside: ev.target.checked } }); _hcLoadApproval(); }
     catch (e) { appAlert(e.message); }
