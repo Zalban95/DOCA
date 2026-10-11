@@ -75,7 +75,10 @@ function _pjCheckpointEdit(c, box) {
   const note = Object.assign(document.createElement('textarea'), { className: 'input', value: c.note || '', rows: 3, placeholder: 'A note: what this state was, why it matters' });
   const save = Object.assign(document.createElement('button'), { className: 'btn btn-xs btn-blue', textContent: 'Save' });
   save.onclick = () => _pjCheckpointPatch(c, { label: label.value, note: note.value });
-  form.append(label, note, save);
+  const head = (text, info) => { const d = Object.assign(document.createElement('div'), { className: 'pj-meta', textContent: text }); d.insertAdjacentHTML('beforeend', infoBtn(info)); return d; };
+  label.setAttribute('aria-label', 'Name'); note.setAttribute('aria-label', 'Note');
+  form.append(head('Name', 'What this checkpoint is called in the list, for example "before the new layout".'), label,
+    head('Note', 'Optional: what the files were like at this point and why it matters. Only for you; nothing reads it.'), note, save);
   box.insertBefore(form, box.firstChild);
   label.focus();
 }

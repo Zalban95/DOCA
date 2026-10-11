@@ -16,10 +16,10 @@ async function pjModeSkillsSection(body) {
   if (!box.isConnected) return;
   const own = PJ.project?.project?.modeSkills || {};
   const hive = m => skills.filter(s => s.use === 'attached' && s.modes.includes(m)).map(s => s.name);   // project chats get where:project ones too
-  const rows = PJ_MODES.map(([m, l]) => `<div style="margin:4px 0"><label class="pj-meta">${l}</label>
+  const rows = PJ_MODES.map(([m, l]) => `<div style="margin:4px 0"><label class="pj-meta">${l}${infoBtn(`The skills — written how-tos — that go with every turn of this project's conversations in ${l} mode. "As Settings" (the default) takes the list from Settings → Harness → Skills; "This project's own" uses the names you type, comma-separated (empty: none).`)}</label>
     <select class="input pj-ms-mode" data-m="${m}" style="width:100%"><option value="">As Settings: ${escHtml(hive(m).join(', ') || 'none')}</option>
       <option value="own" ${Array.isArray(own[m]) ? 'selected' : ''}>This project's own</option></select>
-    <input class="input pj-ms-list" data-m="${m}" placeholder="skill names, comma-separated (empty: none)" style="width:100%;margin-top:3px"
+    <input class="input pj-ms-list" data-m="${m}" placeholder="skill names, comma-separated (empty: none)" aria-label="${l}: skill names" style="width:100%;margin-top:3px"
       value="${escHtml((own[m] || []).join(', '))}" ${Array.isArray(own[m]) ? '' : 'hidden'} list="pj-ms-names"></div>`).join('');
   const changed = PJ_MODES.filter(([m]) => Array.isArray(own[m])).length;
   box.innerHTML = advancedFold(`${rows}<datalist id="pj-ms-names">${skills.map(s => `<option value="${escHtml(s.name)}">`).join('')}</datalist>

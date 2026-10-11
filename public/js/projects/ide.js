@@ -32,8 +32,8 @@ function _pjFrame() {
   if (!page || page.dataset.built) return page;
   page.dataset.built = '1';
   page.innerHTML = `
-    <div class="pj-top">
-      <select class="input pj-picker" id="pj-picker" onchange="pjOpen(this.value)" title="Project"></select>
+    <div class="pj-top info-row">
+      <select class="input pj-picker" id="pj-picker" onchange="pjOpen(this.value)" title="Project" aria-label="Project"></select>${infoBtn('The project on screen. A project is a folder on this machine; choosing another opens it here with its own files, history and conversations.')}
       <button class="btn btn-sm" onclick="pjNew()" title="Open a folder as a project">+ Open folder</button>
       <button class="btn btn-sm" onclick="PJ.project && archiveSet('project', PJ.project.project.id, true)" title="Put this project away (its folder is untouched); back from Agents → Archive">🗄</button>
       <span class="pj-meta" id="pj-meta"></span>
@@ -56,7 +56,7 @@ function _pjFrame() {
       <aside class="pj-chat" id="pj-chat"></aside>
     </div>
     <div class="pj-none" id="pj-none" style="display:none">${emptyStateHtml({ title: 'No projects yet',
-      text: 'A project is a folder: DOCA reads what it is, how it builds and tests, and its git history.', action: { label: 'Open a folder', onclick: 'pjNew()' } })}</div>`;
+      text: `A project is a folder: ${BRAND?.product || 'the hub'} reads what it is, how it builds and tests, and its git history.`, action: { label: 'Open a folder', onclick: 'pjNew()' } })}</div>`;
   return page;
 }
 

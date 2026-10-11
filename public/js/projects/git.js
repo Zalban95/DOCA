@@ -35,18 +35,24 @@ async function pjGitRender(body) {
   body.innerHTML = '';
 
   const branch = document.createElement('div');
-  branch.className = 'pj-git-branch';
+  branch.className = 'pj-git-branch info-row';
   const sel = document.createElement('select');
   sel.className = 'input';
   sel.title = 'Switch branch';
   for (const b of br.filter(x => !x.name.startsWith('remotes/') && !x.name.includes('/HEAD'))) sel.appendChild(new Option(b.name, b.name, b.current, b.current));
   sel.onchange = () => pjGitSwitch(sel.value);
-  branch.append('⎇ ', sel, Object.assign(document.createElement('span'), {
+  branch.append('⎇ ', sel);
+  branch.insertAdjacentHTML('beforeend', infoBtn('The branch this folder is on: a separate line of changes. Choosing another switches the files to it; uncommitted changes go with you when git allows, else it refuses and says why.'));
+  branch.append(Object.assign(document.createElement('span'), {
     className: 'pj-meta', textContent: `${st.upstream ? ` ${st.upstream}` : ''}${st.ahead ? ` ↑${st.ahead}` : ''}${st.behind ? ` ↓${st.behind}` : ''}` }));
   body.appendChild(branch);
   body.appendChild(_pjGitToolbar(st));
 
   const msg = Object.assign(document.createElement('textarea'), { className: 'input', rows: 2, id: 'pjg-msg', placeholder: 'Commit message' });
+  msg.setAttribute('aria-label', 'Commit message');
+  const msgHead = Object.assign(document.createElement('div'), { className: 'pj-meta', textContent: 'Commit message' });
+  msgHead.insertAdjacentHTML('beforeend', infoBtn('A line saying what changed and why. ✓ Commit saves the staged files (listed below) as one step in the history with this message.'));
+  body.append(msgHead);
   const commit = Object.assign(document.createElement('button'), { className: 'btn btn-sm btn-teal', textContent: '✓ Commit' });
   commit.onclick = pjGitCommit;
   body.append(msg, commit);
