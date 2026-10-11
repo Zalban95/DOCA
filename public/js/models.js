@@ -59,10 +59,38 @@ async function modelsLoadSettings() {
     document.getElementById('models-ollama-url').value   = s.ollamaUrl   || 'http://127.0.0.1:11434';
     document.getElementById('models-ollama-path').value  = s.ollamaPath  || '';
   } catch {}
+  // The folder Ollama really uses (ollama-home.js): shown in the box when the panel has none of its own.
+  try { const h = await apiFetch('/api/models/ollama/home'); _ollamaHome = h; const box = document.getElementById('models-ollama-path'); if (!box.value) box.value = h.current || ''; } catch {}
+}
+
+let _ollamaHome = null;
+
+/** A new Models folder is told to Ollama itself (its OLLAMA_MODELS), its models copied there first, after a yes. */
+function _ollamaMoveTo(dir, status) {
+  const h = _ollamaHome;
+  if (!h?.canSet) { setStatus(status, h?.why || 'Ollama cannot be told from here.', 'err'); return; }
+  const go = password => {
+    const out = document.getElementById('models-settings-status');
+    setStatus(out, 'Telling Ollama…', '');
+    sseStream('/api/models/ollama/home', { dir, ...(password ? { password } : {}) }, {
+      onStatus: () => {},
+      onDone: d => { setStatus(out, d?.ok === false ? `✗ ${String(d.status || 'it did not finish').trim().split('\n').pop()}` : '✓ Ollama now keeps its models there (the old folder is still there)', d?.ok === false ? 'err' : 'ok'); modelsCheckOllama(); modelsLoadList(); },
+      onError: e => setStatus(out, `✗ ${e.message}`, 'err'),
+    });
+  };
+  appConfirm(`Ollama will keep its models in ${dir}. The models it has now (in ${h.current}) are copied there first, and Ollama restarts. The old folder stays until you remove it.`, () => {
+    if (h.needsPassword) sudoAsk('Telling Ollama where its models live changes its service settings.', pw => { if (pw !== null) go(pw); });
+    else go(null);
+  });
 }
 
 async function modelsSaveSettings() {
   const status = document.getElementById('models-settings-status');
+  const dir = document.getElementById('models-ollama-path').value.trim();
+  if (dir && _ollamaHome && dir !== _ollamaHome.current) {
+    await apiFetch('/api/models/settings', { method: 'POST', body: { ...(await apiFetch('/api/models/settings')), ollamaUrl: document.getElementById('models-ollama-url').value.trim(), ollamaPath: '' } }).catch(() => {});
+    return _ollamaMoveTo(dir, status);
+  }
   try {
     const current = await apiFetch('/api/models/settings');
     await apiFetch('/api/models/settings', {
@@ -70,7 +98,7 @@ async function modelsSaveSettings() {
       body: {
         ...current,
         ollamaUrl:  document.getElementById('models-ollama-url').value.trim(),
-        ollamaPath: document.getElementById('models-ollama-path').value.trim(),
+        ollamaPath: '',   // the folder is Ollama's own now (ollama-home.js): nothing kept here to disagree with it
       }
     });
     setStatus(status, '✓ Saved', 'ok');

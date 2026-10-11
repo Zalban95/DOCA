@@ -30,7 +30,7 @@ async function serviceAddSuggest(w) {
   if (!_svcAddData || Date.now() - _svcAddData.at > 30000) {
     try {
       _svcAddData = { at: Date.now(), ...(_svcOn() ? await apiFetch('/api/connectors/services/classify', { method: 'POST', body: { q: '' } })
-        : { drafts: [], templates: [], presets: ((await apiFetch('/api/keys')).presets || []).map(p => ({ id: p.id, label: p.label, baseUrl: p.baseUrl })) }) };
+        : { drafts: [], templates: [], presets: ((await apiFetch('/api/keys')).presets || []).map(p => ({ id: p.id, label: p.label, baseUrl: p.baseUrl, keyPage: p.keyPage })) }) };
     } catch { return; }
     serviceDraftBadge(_svcAddData.drafts || []);
   }
@@ -47,7 +47,7 @@ async function serviceAddSuggest(w) {
 function serviceAddPick(w, kind, id) {
   if (kind === 'template') { const t = _svcAddData.templates.find(x => x.id === id); return serviceAddShow(w, { kind: 'service', template: id, why: `${t?.title || id} is an API service — a ready-made one.` }, id); }
   const p = _svcAddData.presets.find(x => x.id === id);
-  serviceAddShow(w, { kind: 'provider', why: `${p.label} is a chat-model provider DOCA knows: its address is filled in, paste the key.`, provider: { name: p.id, baseUrl: p.baseUrl, preset: p.id } }, id);
+  serviceAddShow(w, { kind: 'provider', why: `${p.label} is a chat-model provider DOCA knows: its address is filled in, paste the key.`, provider: { name: p.id, baseUrl: p.baseUrl, preset: p.id, keyPage: p.keyPage } }, id);
 }
 
 async function serviceAddFind(w) {
@@ -132,7 +132,8 @@ function serviceAddProviderForm(w, p) {
       <label class="svc-field" style="flex:1;min-width:200px"><span class="field-label">Address ${infoBtn("Where the provider's chat API answers, usually ending in /v1 (http://127.0.0.1:8080/v1 for a server on this machine).")}</span><input class="input" id="sa-pu-${w}" placeholder="http://127.0.0.1:8080/v1" value="${escHtml(p.baseUrl || '')}"></label>
       <label class="svc-field" style="flex:1;min-width:170px"><span class="field-label">API key ${infoBtn('The key from your account with the provider. Leave it empty for a server of your own that asks for none. Kept in a protected file and never shown again.')}</span><input class="input" id="sa-pk-${w}" type="password" autocomplete="new-password" placeholder="empty for your own server"></label>
       <button class="btn btn-sm" onclick="serviceAddProviderTest('${w}')">Test</button>
-      <button class="btn btn-sm btn-primary" onclick="serviceAddProviderSave('${w}')">Add provider</button></div>
+      <button class="btn btn-sm btn-primary" onclick="serviceAddProviderSave('${w}')">Add provider</button>
+      ${p.keyPage ? `<a class="btn btn-sm" href="${escHtml(p.keyPage)}" ${APP_LINK_ATTRS}>Get a key ↗</a>` : ''}</div>
     <div class="desc" id="sa-pstat-${w}">${p.models?.length ? `It lists ${p.models.length} model${p.models.length === 1 ? '' : 's'}: ${escHtml(p.models.slice(0, 6).join(', '))}${p.models.length > 6 ? '…' : ''}` : ''}</div></div>`;
   document.getElementById(p.name ? `sa-pk-${w}` : `sa-pn-${w}`).focus();
 }
