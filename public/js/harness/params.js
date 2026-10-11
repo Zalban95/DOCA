@@ -121,10 +121,9 @@ function _harnessParamsHtml(h, meta) {
       : `<input class="input" type="number" id="hcfg-${key}-${h.id}" value="${escHtml(c[key])}" ${f.attrs || ''}
                ${marks} style="width:100%">`;
     return `
-      <label for="hcfg-${key}-${h.id}">${f.label}${f.unit ? ` <em style="opacity:.55;font-style:normal">(${f.unit})</em>` : ''}</label>
+      <label for="hcfg-${key}-${h.id}">${f.label}${f.unit ? ` <em style="opacity:.55;font-style:normal">(${f.unit})</em>` : ''}${infoBtn(f.hint)}</label>
       <div>
         ${box}
-        <small class="harness-hint">${escHtml(f.hint)}</small>
       </div>`;
   };
 
@@ -143,18 +142,14 @@ function _harnessParamsHtml(h, meta) {
         <input class="input flex1" id="hcfg-model-${h.id}" value="${escHtml(c.model || '')}" placeholder="model id">
       </div>
       ${HARNESS_PARAMS.filter(f => f.common).map(f => num(f.key)).join('')}
-      <label for="hcfg-systemPrompt-${h.id}">System prompt</label>
+      <label for="hcfg-systemPrompt-${h.id}">System prompt${infoBtn('Standing instructions, read at the start of every conversation. The panel\'s own safety rules are added ahead of this and cannot be edited here.')}</label>
       <div>
         <textarea class="input harness-prompt" id="hcfg-systemPrompt-${h.id}" rows="5"
                   style="width:100%">${escHtml(c.systemPrompt || '')}</textarea>
-        <small class="harness-hint">Standing instructions, read at the start of every conversation. The panel's
-          own safety rules are added ahead of this and cannot be edited here.</small>
       </div>
-      <label>Tools</label>
+      <label>Tools${infoBtn('What the agent is allowed to use. Unticking one hides it — it is a way to keep the agent focused, not a security boundary.')}</label>
       <div>
         <div class="harness-tools">${toolRows}</div>
-        <small class="harness-hint">What the agent is allowed to use. Unticking one hides it — it is a way to keep
-          the agent focused, not a security boundary.</small>
       </div>
       ${advancedFold(`<div class="harness-cfg-grid">
       ${HARNESS_PARAMS.filter(f => !f.common).map(f => num(f.key)).join('')}

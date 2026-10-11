@@ -25,8 +25,7 @@ async function leafFieldsDraw(el, paths, { label = 'Advanced', id = '' } = {}) {
     const input = l.oneOf ? `<select class="input" ${common}>${l.oneOf.map(o => `<option${o === l.value ? ' selected' : ''}>${escHtml(o)}</option>`).join('')}</select>`
       : l.type === 'boolean' ? `<input type="checkbox" ${common}${l.value ? ' checked' : ''}>`
       : `<input class="input" ${common} ${['number', 'integer'].includes(l.type) ? `type="number"${l.min != null ? ` min="${l.min}"` : ''}${l.max != null ? ` max="${l.max}"` : ''}${l.type === 'integer' ? ' step="1"' : ''}` : 'type="text"'} value="${escHtml(String(l.value ?? ''))}" style="width:${['number', 'integer'].includes(l.type) ? '120px' : '260px'}">`;
-    return `<div class="field" title="${escHtml(l.path)}"><div class="input-label">${escHtml(name)}</div>${input}
-      <div class="input-label" style="text-transform:none;letter-spacing:0;max-width:360px">${escHtml(l.hint)} <span style="opacity:.7">(default ${escHtml(JSON.stringify(l.default))})</span></div></div>`;
+    return `<div class="field" title="${escHtml(l.path)}"><div class="input-label">${escHtml(name)}${infoBtn(`${l.hint || ''} (Default: ${JSON.stringify(l.default)}.)`.trim())}</div>${input}</div>`;
   };
   el.innerHTML = advancedFold(`<div class="row form-row" style="flex-wrap:wrap;gap:12px;align-items:flex-start">${leaves.map(box).join('')}</div>
     <div class="toolbar" style="gap:8px;margin-top:6px"><button class="btn btn-sm btn-blue" onclick="leafFieldsSave(this)">Save</button><span class="status-line"></span></div>`, { label, id });

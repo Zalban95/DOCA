@@ -315,3 +315,11 @@ html[data-hosted] .harness-add-row { display: none; }
   #tab-mcp.active { overflow-y: auto; }
   #tab-mcp > .scroll-y { flex: none !important; overflow: visible; }
 }
+
+/* ⓘ beside a field and what it opens (js/lib/field-info.js). */
+.info-btn { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; margin-left: 4px;
+  vertical-align: middle; border: 0; border-radius: 50%; background: none; color: var(--muted); cursor: pointer; text-transform: none; letter-spacing: 0; }
+.info-btn:hover, .info-btn[aria-expanded="true"] { color: var(--accent); }
+.info-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.info-pop { margin: 4px 0 8px; padding: 8px 10px; border-left: 2px solid var(--accent); background: var(--raised, transparent);
+  color: var(--text); font-size: 12.5px; line-height: 1.45; text-transform: none; letter-spacing: 0; font-weight: 400; max-width: 560px; }
