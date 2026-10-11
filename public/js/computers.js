@@ -44,11 +44,11 @@ async function computersLoad() {
       <button class="icon-btn" onclick="computersLoad()" title="Refresh" aria-label="Refresh">${uiIcon('refresh')}</button>
       ${data.image.ready ? '<button class="btn btn-sm btn-primary" onclick="computersNew()">＋ New</button>'
         : '<button class="btn btn-sm btn-primary" onclick="computersBuild()">Build the image</button>'}` })
-    + `<div class="desc" style="margin-bottom:10px">The agents' computers: a Linux desktop in a container — shell, files, a real Chromium,
-      screen recording — where a mission tries something risky, uses a site as a person would, or records a demo, without touching this
-      machine. The Orchestrator and work chats make them with their <code>computer</code> tool and send a specialist (the <b>Tester</b>) to
-      work in one. One an agent made stops after its mission and is removed some days later unless pinned (📌; the limits are
-      under Advanced at the bottom). Click a screen to watch or take over.</div>
+    + `<details class="desc page-about" style="margin-bottom:10px"><summary>What a computer is</summary>The agents' computers: a Linux desktop
+      in a container — shell, files, a real Chromium, screen recording — where a mission tries something risky, uses a site as a person
+      would, or records a demo, without touching this machine. The Orchestrator and work chats make them with their <code>computer</code>
+      tool and send a specialist (the <b>Tester</b>) to work in one. One an agent made stops after its mission and is removed some days
+      later unless pinned (📌; the limits are under Advanced at the bottom). Click a screen to watch or take over.</details>
     <pre class="terminal" id="computers-out" style="display:none;max-height:240px;margin-bottom:8px"></pre>
     <div class="scroll-y" style="flex:1"><div class="pc-grid">${data.computers.map(computersCard).join('')
       || emptyStateHtml(data.image.ready
