@@ -49,7 +49,7 @@ function inApp(real) {
  * instead of its per-OS list). Given by the deploy's environment (Dockerfile), which wins over a saved path.
  */
 function roots(env = process.env, home = require('os').homedir()) {
-  const ws = env.WORKSPACE_DIR || path.join(home, '.openclaw', 'workspace');
+  const ws = env.WORKSPACE_DIR || path.join(home, 'doca-workspace');   // a hosted hive is a new install: DOCA's own (paths.js)
   const list = [ws, env.ATTACHMENTS_DIR, env.AGENTS_DIR].filter(Boolean).map(p => path.resolve(p));
   const real = p => { try { return fs.realpathSync.native(p); } catch { return p; } };
   return [...new Set(list)].filter(p => !under(real(p), APP_DIR) && !under(APP_DIR, real(p)));
