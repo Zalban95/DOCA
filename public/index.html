@@ -297,7 +297,7 @@
         <div class="models-settings-grid">
           <span class="models-settings-label" data-info="The address Ollama answers on. Everything that lists, downloads or uses Ollama models asks this address. The default, http://127.0.0.1:11434, is Ollama on this same machine; change it only when Ollama runs elsewhere.">Address</span>
           <input id="models-ollama-url" class="input" value="http://127.0.0.1:11434">
-          <span class="models-settings-label" data-info="Only tells the Storage card above which folder to measure. It does not move Ollama's models: Ollama itself decides where they go (its OLLAMA_MODELS setting). Empty (the default): the folder the running Ollama reports, else its usual one.">Models folder</span>
+          <span class="models-settings-label" data-info="Where Ollama keeps its models. Change it and Save: Ollama is told (its OLLAMA_MODELS setting; on Linux it asks your password), the models it has are copied to the new folder first, and Ollama restarts. The old folder stays until you remove it.">Models folder</span>
           <div style="display:flex;gap:6px;align-items:center">
             <input id="models-ollama-path" class="input" style="flex:1;min-width:0" placeholder="/path/to/ollama/models (optional)">
             <button class="btn btn-xs" title="Browse" onclick="fpOpen('models-ollama-path','dir')">📁</button>
