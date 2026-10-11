@@ -22,14 +22,13 @@ const PROVIDERS = ['searxng', 'brave', 'tavily', 'duckduckgo'];
 const prefs = () => require('../utils').loadPrefs().search || {};
 const provider = () => (PROVIDERS.includes(prefs().provider) ? prefs().provider : 'duckduckgo');
 
-function keys() { try { return JSON.parse(fs.readFileSync(SEARCH_KEYS_FILE, 'utf8')); } catch { return {}; } }
+const keys = () => require('../keys-file').read(SEARCH_KEYS_FILE);   // keys-file.js: never read empty by mistake
 function setKey(name, key) {
   if (!['brave', 'tavily'].includes(name)) throw Object.assign(new Error('Only brave and tavily take a key.'), { status: 400 });
   const k = keys();
   if (key) k[name] = String(key).trim(); else delete k[name];
   fs.mkdirSync(path.dirname(SEARCH_KEYS_FILE), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(SEARCH_KEYS_FILE, JSON.stringify(k), { mode: 0o600 });
-  try { fs.chmodSync(SEARCH_KEYS_FILE, 0o600); } catch { /* Windows */ }
+  require('../keys-file').write(SEARCH_KEYS_FILE, k, { compact: true });
 }
 
 const strip = s => String(s || '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();

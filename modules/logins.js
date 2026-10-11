@@ -8,14 +8,12 @@
  * through the computer's hidden `browser_fill_secret`, which only the hub's per-computer key unlocks. The agent's
  * transcript holds the login's name, never its secret. Kept in DATA_DIR/keys/logins.json (0600, PROTECTED_FILES).
  */
-const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 
 const file = () => require('./paths').LOGIN_KEYS_FILE;
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
-const all = () => { try { return JSON.parse(fs.readFileSync(file(), 'utf8')); } catch { return {}; } };
-function write(d) { fs.mkdirSync(path.dirname(file()), { recursive: true }); fs.writeFileSync(file(), JSON.stringify(d, null, 2), { mode: 0o600 }); try { fs.chmodSync(file(), 0o600); } catch { /* Windows */ } }
+const all = () => require('./keys-file').read(file());   // keys-file.js: written all or nothing, never read empty by mistake
+const write = d => require('./keys-file').write(file(), d);
 
 const view = l => ({ id: l.id, label: l.label, site: l.site, username: l.username, hasPassword: !!l.password, savedAt: l.savedAt });
 const list = () => Object.values(all()).map(view);
