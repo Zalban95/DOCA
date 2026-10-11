@@ -89,3 +89,10 @@ test('the agent reads a stopped server\'s address and why it last failed, rather
   assert.match(lines, /at http:\/\/localhost:8123\/api\/mcp/);
   assert.match(lines, /last failed: No key named "home-assistant"/);
 });
+
+test('a server whose key is not kept yet signs in with a header typed by hand', () => {
+  const reg = require('../modules/mcp/registry');
+  const spec = { id: 'ha-x', transport: 'http', url: 'http://127.0.0.1:59999/api/mcp', key: 'no-such-key', headers: { Authorization: 'Bearer typed' } };
+  assert.equal(reg.withKey(spec).headers.Authorization, 'Bearer typed');
+  assert.throws(() => reg.withKey({ ...spec, headers: {} }), /No key named/);
+});
