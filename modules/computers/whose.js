@@ -16,6 +16,9 @@ const isHost = person => require('../auth/rights').can(person?.role, 'host');
 function refuse(person, id) {
   if (!person?.id) return null;   // not narrowed: whatever acts next says whether the computer exists
   const c = require('./index').need(id);
+  // A harness team's computer holds that harness's sign-in and, while it works, its key in a process's environment: no
+  // agent acts on it, looks at it or is lent it — only its workers (harness-teams/) and people in the Computers tab.
+  if (String(c.agentType || '').startsWith('harness:')) return `Computer ${c.id} "${c.name}" is kept for ${c.agentType.slice(8)} team workers (its sign-in stays there): agents do not use it. Make another with the computer tool.`;
   const allot = require('../auth/allot');
   if (!allot.uses(person, 'computer', c.id)) return allot.refusal(person, 'computer', c.id);
   if (isHost(person)) return null;
