@@ -36,7 +36,7 @@ function _renderServicesGrid() {
 
   grid.innerHTML = _servicesDefs.map(svc => {
     const isVllm = svc.id === 'vllm';
-    const g      = svc.savedGpu || 'all';
+    const g      = svc.savedGpu === 'none' ? '' : (svc.savedGpu || 'all');   // 'none' is saved for No GPU
     const gpuOpts = ['0','1','all',''].map(v =>
       `<option value="${v}"${g===v?' selected':''}>${v==='all'?'All GPUs':v===''?'No GPU (CPU)':`GPU ${v}`}</option>`
     ).join('');
@@ -153,7 +153,7 @@ async function servicePullImage(id, asked = false) {
   const svc = _servicesDefs.find(s => s.id === id);
   if (!svc) return;
   if (!asked) return installAsk('service', id, `${svc.label}'s image`, () => servicePullImage(id, true), { verb: 'Download' });
-  const gpu   = document.getElementById(`svc-gpu-${id}`)?.value ?? (svc.savedGpu || 'all');
+  const gpu   = document.getElementById(`svc-gpu-${id}`)?.value ?? (svc.savedGpu === 'none' ? '' : (svc.savedGpu || 'all'));
   const image = gpu === '' && svc.cpuImage ? svc.cpuImage : svc.image;
   const out     = document.getElementById(`svc-out-${id}`);
   const pullBtn = document.getElementById(`svc-pull-${id}`);

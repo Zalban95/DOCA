@@ -87,13 +87,20 @@ function handleList(req, res) {
 }
 
 /** POST /api/services/settings */
+/** The GPU a start uses: the one asked for ('' is no GPU), else the saved one ('none' is no GPU), else all. */
+function gpuChoice(asked, saved) {
+  const g = asked !== undefined ? asked : saved;
+  return g === 'none' || g === '' ? '' : (g || 'all');
+}
+
 function handleSettings(req, res) {
-  const { id, gpu, modelId } = req.body;
+  const { id, modelId } = req.body;
+  const gpu = req.body.gpu;
   if (!id) return res.status(400).json({ error: 'id required' });
   try {
     const prefs = loadPrefs();
     if (!prefs.serviceSettings) prefs.serviceSettings = {};
-    prefs.serviceSettings[id] = { gpu: gpu || 'all', modelId: modelId || '' };
+    prefs.serviceSettings[id] = { gpu: gpu === '' ? 'none' : (gpu || 'all'), modelId: modelId || '' };
     savePrefs(prefs);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -127,15 +134,17 @@ function handleStatus(req, res) {
 
 /** POST /api/services/start — SSE progress */
 async function handleStart(req, res) {
-  const { id, gpu, modelId } = req.body;
+  const { id, modelId } = req.body;
   const svc = INFERENCE_SERVICES.find(s => s.id === id);
+  // "No GPU" is the empty choice; a start that names none (start when needed, a hub command) uses the saved one.
+  const gpu = gpuChoice(req.body.gpu, loadPrefs().serviceSettings?.[id]?.gpu);
   if (!svc) return res.status(400).json({ error: 'Unknown service' });
 
   // Persist settings
   try {
     const prefs = loadPrefs();
     if (!prefs.serviceSettings) prefs.serviceSettings = {};
-    prefs.serviceSettings[id] = { gpu: gpu || 'all', modelId: modelId || '' };
+    prefs.serviceSettings[id] = { gpu: gpu === '' ? 'none' : (gpu || 'all'), modelId: modelId || '' };
     savePrefs(prefs);
   } catch {}
 
@@ -245,4 +254,5 @@ module.exports = {
   handleStart,
   handleStop,
   diagnose,
+  gpuChoice,
 };

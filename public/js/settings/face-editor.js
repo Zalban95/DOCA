@@ -27,7 +27,7 @@ async function faceEditorRender(panel) {
   const input = f => f.type === 'select' ? `<select class="input" data-face="${f.k}" style="width:auto">${f.options.map(([v, l]) => `<option value="${v}" ${val(f) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`
     : f.type === 'check' ? `<input type="checkbox" data-face="${f.k}" ${val(f) !== false ? 'checked' : ''}>`
     : f.type === 'color' ? `<input type="color" data-face="${f.k}" data-palette="1" data-default="${shipped(f)}" data-label="${f.label}" value="${escHtml(val(f))}">`
-    : `<input type="range" data-face="${f.k}" data-default="${shipped(f)}" data-label="${f.label}" min=""${f.min}" max="${f.max}" step="${f.step}" value="${val(f)}" style="width:180px"><span class="face-edit-val" style="font-size:11px;min-width:36px">${val(f)}</span>`;
+    : `<input type="range" data-face="${f.k}" data-default="${shipped(f)}" data-label="${f.label}" min="${f.min}" max="${f.max}" step="${f.step}" value="${val(f)}" style="width:180px"><span class="face-edit-val" style="font-size:11px;min-width:36px">${val(f)}</span>`;
   const row = f => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">${f.label}${infoBtn(f.info)}</label>${input(f)}</div>`;
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'face-editor-card' });
   card.innerHTML = `<div class="card-title">The face</div>
