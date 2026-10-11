@@ -49,6 +49,7 @@ async function guidedLoad() {
       <button class="btn btn-sm" onclick="guidedAskAgent()" title="The same, as a conversation">Ask the agent instead</button>
       <span class="status-line" id="guided-status"></span>
     </div>
+    <p class="guided-muted">A fresh install of a machine you backed up? <a href="#settings/backups" onclick="if (typeof MB === 'object') MB.bring = true; settingsSubNav('backups'); return false">Bring back a machine backup</a> — your folders return into this home (Settings → Backups → This machine's files).</p>
     ${g.mode === 'advanced' ? '<p class="guided-muted">This hub was set up by hand (advanced). Nothing here changes that: it only adds what you choose.</p>' : ''}
   </div><div id="guided-plan"></div>`;
   if (g.suggestions.local) guidedAcceptedDraw();

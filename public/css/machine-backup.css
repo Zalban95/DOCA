@@ -1,0 +1,68 @@
+/* Settings → Backups → This machine's files (js/settings/machine-backup*.js). Theme tokens only; a phone wraps. */
+.mb-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.mb-head-acts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 400; }
+.mb-switch { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); text-transform: none; letter-spacing: 0; }
+.mb-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); min-width: 0; }
+.mb-row { display: flex; gap: 8px; align-items: center; margin: 6px 0; min-width: 0; }
+.mb-wrap { flex-wrap: wrap; }
+.mb-row .input { min-width: 0; }
+.mb-inline { margin: 0; display: inline-flex; align-items: center; }
+.mb-time { width: auto; }
+.mb-num { width: 80px; }
+.mb-exclude { width: 100%; font-family: var(--font-mono); font-size: 12px; }
+.mb-dest { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; overflow-wrap: anywhere; }
+.mb-dest.mb-bad, .mb-bad, .mb-warn { color: var(--amber); }
+.mb-ok { color: var(--green); }
+.mb-missing { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; margin: 8px 0; border: 1px dashed var(--amber); border-radius: var(--radius); font-size: 12px; }
+.mb-out { flex-basis: 100%; max-height: 220px; overflow: auto; font-size: 11px; }
+
+.mb-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
+.mb-chip { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; min-width: 0; padding: 2px 2px 2px 8px; border: 1px solid var(--border2); border-radius: 999px; background: var(--bg); }
+.mb-chip.on { border-color: color-mix(in srgb, var(--accent) 55%, var(--border2)); background: color-mix(in srgb, var(--accent) 8%, var(--bg)); }
+.mb-chip.missing { opacity: .6; border-style: dashed; }
+.mb-chip-main { display: inline-flex; align-items: center; gap: 6px; min-width: 0; cursor: pointer; font-size: 12px; }
+.mb-chip-label { color: var(--bright); white-space: nowrap; }
+.mb-chip-path { color: var(--muted); font-family: var(--font-mono); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.mb-chip .icon-btn { width: 26px; height: 26px; }
+
+.mb-reveal { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--amber); border-radius: var(--radius); background: var(--bg-amber); }
+.mb-reveal-title { font-weight: 600; color: var(--bright); margin-bottom: 4px; }
+.mb-pw { font-family: var(--font-mono); font-size: 15px; letter-spacing: .04em; padding: 4px 8px; border-radius: var(--radius); background: var(--bg); color: var(--bright); overflow-wrap: anywhere; user-select: all; }
+
+.mb-progress { margin: 8px 0; }
+.mb-bar { height: 6px; border-radius: 3px; background: var(--dim); overflow: hidden; margin-bottom: 4px; }
+.mb-bar span { display: block; height: 100%; background: var(--accent); transition: width var(--t-base); }
+
+.mb-snap { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); min-width: 0; }
+.mb-snap-main { min-width: 0; flex: 1; }
+.mb-snap-when { color: var(--bright); font-size: 13px; }
+.mb-snap-acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.mb-tag { font-size: 11px; color: var(--muted); border: 1px solid var(--border2); border-radius: 999px; padding: 0 6px; margin-left: 4px; }
+.mb-errs summary { cursor: pointer; font-size: 12px; color: var(--amber); }
+.mb-err { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; margin: 2px 0; }
+
+.mb-browser { margin: 10px 0; border: 1px solid var(--border2); border-radius: var(--radius); padding: 8px 10px; background: var(--bg2); min-width: 0; }
+.mb-browser-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mb-browser-title { color: var(--bright); font-weight: 600; }
+.mb-crumbs { font-size: 12px; color: var(--muted); margin: 4px 0 8px; overflow-wrap: anywhere; }
+.mb-sep { color: var(--faint); }
+.mb-entry { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); min-width: 0; font-size: 12px; }
+.mb-entry-name { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 6px; overflow-wrap: anywhere; color: var(--text); }
+a.mb-entry-name { color: var(--bright); text-decoration: none; }
+a.mb-entry-name:hover { text-decoration: underline; }
+.mb-entry-size { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.mb-entry-acts { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+
+.mb-bring { border: 1px solid var(--border2); border-radius: var(--radius); padding: 10px 12px; }
+.mb-land { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; margin: 4px 0; overflow-wrap: anywhere; min-width: 0; }
+.mb-land span { min-width: 0; }
+
+@media (max-width: 600px) {
+  .mb-chip { width: 100%; border-radius: var(--radius); }
+  .mb-chip-main { flex: 1; flex-wrap: wrap; row-gap: 0; }
+  .mb-chip-path { white-space: normal; overflow-wrap: anywhere; flex-basis: 100%; padding-left: 22px; }
+  .mb-snap { flex-direction: column; }
+  .mb-snap-acts { justify-content: flex-start; }
+  .mb-entry { flex-wrap: wrap; }
+  .mb-entry-name { flex-basis: 100%; }
+}
