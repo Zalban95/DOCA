@@ -58,11 +58,11 @@ function _renderServicesGrid() {
       <div style="font-size:10px;color:var(--muted);margin:2px 0 6px">${svc.description}</div>
       <div class="m-life" id="life-line-service-${svc.id}"></div>
       <div class="services-controls" id="svc-config-${svc.id}" style="display:none">
-        <label class="services-ctrl-label">GPU</label>
+        <label class="services-ctrl-label">GPU ${infoBtn('Which graphics card the service runs on: one card, all of them (the default), or none, where it runs on the processor (slower; some services then use a smaller image made for that). Saved when changed, used from the next ▶ Start.')}</label>
         <select class="input services-select" id="svc-gpu-${svc.id}" style="width:130px"
                 onchange="_svcSaveSettings('${svc.id}')">${gpuOpts}</select>
         ${isVllm ? `
-        <label class="services-ctrl-label">Model ID</label>
+        <label class="services-ctrl-label">Model ${infoBtn('The Hugging Face model this service loads, as owner/name (Qwen/Qwen2.5-7B-Instruct). It is downloaded the first time the service starts. Saved when changed, used from the next ▶ Start.')}</label>
         <input class="input services-model-input" id="svc-model-${svc.id}"
                placeholder="e.g. Qwen/Qwen2.5-7B-Instruct"
                value="${svc.savedModelId || ''}"

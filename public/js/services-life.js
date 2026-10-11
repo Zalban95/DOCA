@@ -18,22 +18,24 @@ async function servicesLifeLoad() {
   }
 }
 
+const _lifeBrand = () => (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA';
+
 function _svcLifeAdvanced(r) {
   const k = `${r.kind}-${r.id}`, own = r.own || {};
-  const tick = (field, label, on, hint) => `<label style="display:flex;gap:6px;align-items:center;font-size:11px;margin:4px 0">
+  const tick = (field, label, on, hint) => `<label style="display:flex;gap:6px;align-items:center;font-size:11px;margin:4px 0;flex-wrap:wrap">
     <input type="checkbox" id="life-${field}-${k}" data-default="${field === 'stop' ? 'true' : String(!!r.startedByDoca)}" data-label="${escHtml(label)}" ${on ? 'checked' : ''}>
-    ${escHtml(label)} <span style="color:var(--muted)">${escHtml(hint)}</span></label>`;
+    ${escHtml(label)} ${infoBtn(hint)}</label>`;
   const managed = r.managed
     ? (r.adopted ? `<button class="btn btn-xs" onclick="svcLifeAdopt('${r.kind}','${escHtml(r.id)}',false)">Stop managing it</button>` : '')
-    : `<p style="font-size:11px;color:var(--muted);margin:4px 0">Started outside DOCA: it is never stopped or started by DOCA unless you let it.
-       <button class="btn btn-xs btn-teal" onclick="svcLifeAdopt('${r.kind}','${escHtml(r.id)}',true)">Let DOCA manage it</button></p>`;
+    : `<p style="font-size:11px;color:var(--muted);margin:4px 0">Started outside ${_lifeBrand()}: it is never stopped or started from here unless you let it.
+       <button class="btn btn-xs btn-teal" onclick="svcLifeAdopt('${r.kind}','${escHtml(r.id)}',true)">Let ${_lifeBrand()} manage it</button></p>`;
   return advancedFold(`${managed}
-    <label style="display:flex;gap:6px;align-items:center;font-size:11px;margin:4px 0">Stop after
+    <label style="display:flex;gap:6px;align-items:center;font-size:11px;margin:4px 0;flex-wrap:wrap">Stop after
       <input class="input" type="number" min="0" max="10080" id="life-idle-${k}" data-label="Idle minutes for this one" style="width:70px"
              value="${own.idleStopMinutes ?? ''}" placeholder="${r.idleMinutes || 'off'}"> minutes unused
-      <span style="color:var(--muted)">empty: the switch in Settings → System → Services; 0: never this one</span></label>
-    ${tick('stop', 'Stop it when DOCA stops', own.stopWithDoca !== false, 'when the switch for that is on')}
-    ${tick('need', 'Start when needed', r.startsWhenNeeded, 'a request that needs it starts it, and the person is told')}
+      ${infoBtn('Stops this one after so many minutes in which nothing used it, to free its memory. Empty: follow the switch in Settings → System → Services (the grey number is what that gives). 0: never stop this one.')}</label>
+    ${tick('stop', `Stop it when ${_lifeBrand()} stops`, own.stopWithDoca !== false, 'Stops this one when the hub itself shuts down — only while the switch for that in Settings → System → Services is on. On by default.')}
+    ${tick('need', 'Start when needed', r.startsWhenNeeded, 'A request that needs this one while it is stopped starts it again by itself, and the person is told it is starting.')}
     <div class="toolbar"><button class="btn btn-xs btn-blue" onclick="svcLifeSave('${r.kind}','${escHtml(r.id)}')">Save</button>
       <span class="status-line" id="life-status-${k}"></span></div>`, { id: 'service-life', label: 'Advanced — when it stops and starts by itself' });
 }

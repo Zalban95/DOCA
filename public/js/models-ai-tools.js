@@ -56,11 +56,11 @@ function _aiToolsRender() {
     const strip = `
       <div class="tool-config-strip" id="ai-tool-cfg-${t.id}" style="display:none">
         ${t.isApi ? `
-          <span class="input-label">API URL</span>
+          <span class="input-label">Address ${infoBtn('Where this tool answers, as a web address. The page asks it to tell whether the tool is there; empty means its usual address on this machine.')}</span>
           <input class="input flex1" id="ai-tool-apiurl-${t.id}" value="${escHtml(t.apiUrl || '')}"
                  placeholder="http://localhost:8880">
         ` : `
-          <span class="input-label">Binary path</span>
+          <span class="input-label">Program file ${infoBtn('The program to use, as a full path. Empty: it is looked for on this machine by its usual name.')}</span>
           <input class="input flex1" id="ai-tool-path-${t.id}" value="${escHtml(t.path || '')}"
                  placeholder="auto-detected if empty">
           <button class="btn btn-xs" title="Browse" onclick="fpOpen('ai-tool-path-${t.id}','file')">📁</button>
@@ -68,7 +68,7 @@ function _aiToolsRender() {
         <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
           <input type="checkbox" id="ai-tool-avail-${t.id}" ${t.availableForOpenclaw ? 'checked' : ''}>
           Available to agent
-        </label>
+        </label>${infoBtn('Marks the tool as one the agent may use: the row shows "agent ✓" when it is ticked and the tool was found. On by default.')}
         <button class="btn btn-xs btn-blue" onclick="aiToolConfigSave('${t.id}')">Save</button>
       </div>`;
 

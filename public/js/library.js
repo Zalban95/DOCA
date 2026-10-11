@@ -22,7 +22,7 @@ function _libModelRow(v) {
   const ollama = !o ? '' : !o.reachable ? _libTick(false, `Ollama not answering at ${escHtml(o.url)}`)
     : `${_libTick(o.newEnough, `Ollama ${escHtml(o.version)}${o.newEnough ? '' : ' — EmbeddingGemma 2 needs 0.36 or newer'}`)} ${s.model ? _libTick(o.pulled, o.pulled ? `${escHtml(s.model)} pulled` : `${escHtml(s.model)} not pulled`) : ''}`;
   return `<div class="ww-row"><label>Model <input class="input" id="lib-model" value="${escHtml(s.model)}" placeholder="${LIB_MODEL.name}" style="width:260px"
-      list="lib-models" onchange="librarySave({model:this.value})"></label><datalist id="lib-models">${(o?.models || []).map(m => `<option value="${escHtml(m)}">`).join('')}</datalist>
+      list="lib-models" onchange="librarySave({model:this.value})"></label>${infoBtn('The model that reads your files and turns them into something searchable by meaning (an embedding model). The suggested one is EmbeddingGemma 2, run by Ollama on this machine; Install fetches it. Saved when changed; files are read again with a new model.')}<datalist id="lib-models">${(o?.models || []).map(m => `<option value="${escHtml(m)}">`).join('')}</datalist>
     ${o?.reachable && !o.pulled ? `<button class="btn btn-sm" onclick="libraryInstall()">Install EmbeddingGemma 2 (${LIB_MODEL.size})</button>` : ''}
     ${ollama} <span class="ww-dim">${escHtml(s.provider)}${v.local ? ' · on this machine' : ' · a hosted endpoint: file content is sent there'}</span></div>
     <div id="lib-install-out" class="ww-dim"></div>`;
@@ -31,12 +31,12 @@ function _libModelRow(v) {
 function _libFolders(v) {
   const s = v.settings, open = new Set(s.open);
   const rows = s.folders.map((f, i) => `<div class="ww-row lib-folder"><code>${escHtml(f)}</code>
-    <label class="ww-dim"><input type="checkbox" ${open.has(f) ? 'checked' : ''} onchange="libraryOpenFolder(${i}, this.checked)"> everyone who chats may search it</label>
+    <label class="ww-dim"><input type="checkbox" ${open.has(f) ? 'checked' : ''} onchange="libraryOpenFolder(${i}, this.checked)"> everyone who chats may search it</label>${infoBtn("Off (the default): only admins' searches find files from this folder. On: every person who chats here may find them too.")}
     <button class="btn btn-xs" onclick="libraryRemoveFolder(${i})" title="Stop indexing it (its rows go at the next run)">✕</button></div>`).join('');
   return `<div class="input-label">Folders</div>${rows || '<div class="ww-dim">None yet — add a folder inside the Files roots.</div>'}
     ${v.folderNotes.map(n => `<div class="ww-dim">⚠ ${escHtml(n.folder)}: ${escHtml(n.why)}</div>`).join('')}
     <div class="ww-row"><input class="input" id="lib-add-folder" data-path-pick="dir" placeholder="/home/you/Pictures" style="flex:1;min-width:200px">
-      <button class="btn btn-sm" onclick="libraryAddFolder()">Add</button></div>`;
+      <button class="btn btn-sm" onclick="libraryAddFolder()">Add</button>${infoBtn('A folder of this machine to index, inside the folders the Files page may open. Its files are read at the next indexing run.')}</div>`;
 }
 
 function _libRun(v) {
@@ -70,23 +70,24 @@ async function libraryLoad() {
   const s = v.settings;
   const kinds = ['documents', 'images', 'audio', 'video'].map(k => `<label><input type="checkbox" ${s.kinds.includes(k) ? 'checked' : ''} onchange="libraryKinds()" data-kind="${k}"> ${k}</label>`).join(' ');
   card.innerHTML = `<div class="card-title">Library — your files, searched by meaning</div>
-    <p class="ww-note">Folders of this machine indexed with a multimodal embedding model: find a recording by what is said in it, a picture or a video by what it shows,
-      a document by its meaning — in Files ("Search by meaning") and by the agent. Tags come from the model alone, with no writing model; captions only when you switch them on.
+    <p class="ww-note">Find your files by what they contain — a recording by what is said in it, a picture by what it shows.
       ${v.experiment ? '' : '<b>Off</b> until the experiment library is on (Settings → Developer); nothing runs or downloads until then.'}</p>
+    <details class="desc page-about" style="margin:0 0 8px;font-size:11px"><summary>What this is</summary>Folders of this machine indexed with a multimodal embedding model: find a recording by what is said in it, a picture or a video by what it shows,
+      a document by its meaning — in Files ("Search by meaning") and by the agent. Tags come from the model alone, with no writing model; captions only when you switch them on.</details>
     ${_libModelRow(v)}
     ${_libFolders(v)}
-    <div class="ww-row"><span class="input-label">Kinds</span> ${kinds}</div>
-    <div class="ww-row"><label>When <select class="input" style="width:auto" onchange="librarySave({when:this.value})">
+    <div class="ww-row"><span class="input-label">Kinds ${infoBtn('Which kinds of file are read: documents, pictures, sound and video. Untick a kind to leave those files out of the index.')}</span> ${kinds}</div>
+    <div class="ww-row"><label>When ${infoBtn('When the folders are read: only when you press Index now, every few hours, or while the panel is open, whenever a folder changes.')} <select class="input" style="width:auto" onchange="librarySave({when:this.value})">
       ${[['demand', 'when I press Index'], ['schedule', `every ${s.everyHours} h`], ['watch', 'while the panel is open, when a folder changes']].map(([k, l]) => `<option value="${k}" ${s.when === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       ${v.watching ? '<span class="ww-dim">watching the folders now</span>' : ''}
-      <label><input type="checkbox" ${s.captions ? 'checked' : ''} onchange="librarySave({captions:this.checked})"> write captions</label>
+      <label><input type="checkbox" ${s.captions ? 'checked' : ''} onchange="librarySave({captions:this.checked})"> write captions</label>${infoBtn('Also has the vision model write a short description of each picture and video, so they are found by more words. Off by default: it costs a model call per file.')}
       <span class="ww-dim">${s.captions && v.captions ? escHtml(v.captions) : 'a model call per picture or video, with the vision model'}</span></div>
     <div class="ww-row"><label>Your own tags <input class="input" id="lib-own-tags" value="${escHtml(s.tags.join(', '))}" placeholder="boat, invoice, grandma's recipes" style="width:280px"
-      onchange="librarySave({tags:this.value})"></label><span class="ww-dim">added to ${v.vocabulary - s.tags.length} shipped tags</span></div>
+      onchange="librarySave({tags:this.value})"></label>${infoBtn('Words of your own, separated by commas, that files may be tagged with besides the shipped ones (boat, invoice). Saved when changed.')}<span class="ww-dim">added to ${v.vocabulary - s.tags.length} shipped tags</span></div>
     ${_libRun(v)}
     ${_libNeeds(v)}
     <div class="ww-row"><input class="input" id="lib-try" placeholder="Try: a voice note about the boiler" style="flex:1;min-width:200px" onkeydown="if(event.key==='Enter')libraryTry()">
-      <input class="input" id="lib-try-tags" placeholder="tags" style="width:120px"><button class="btn btn-sm" ${v.on ? '' : 'disabled'} onclick="libraryTry()">Search</button></div>
+      <input class="input" id="lib-try-tags" aria-label="Only with these tags" placeholder="tags" style="width:120px"><button class="btn btn-sm" ${v.on ? '' : 'disabled'} onclick="libraryTry()">Search</button>${infoBtn('Try a search as the agent would: describe what you are looking for in words; optionally only files with these tags (comma-separated). Nothing is saved.')}</div>
     <div id="lib-try-out" class="lib-results"></div>
     <div id="lib-advanced"></div>`;
   leafFieldsDraw(document.getElementById('lib-advanced'), ['library.provider', 'library.dialect', 'library.everyHours', 'library.transcribe', 'library.frameEverySec',
