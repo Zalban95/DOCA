@@ -115,6 +115,16 @@ branch or "shared folder"; a member opens as a chat tab. The project chat's fold
 the board window has the same Members list (`agent-ui/team-members.js`, from the view's `members`,
 `teams/members.js`).
 
+## Outside harnesses (asked 2026-10-12)
+
+A task's agent may be `harness:<catalog id>` — Claude Code, Codex, dsh, Gemini CLI — **only when the person named that
+harness in their request** (`team create {asked: true}` on their own turn; refused otherwise, `teams/outside.js`). Such a
+task runs that CLI headless in an agents' computer of its own, its approvals off inside the box only, on its own branch
+`team/<harness>-<task>-<words>`; the hub passes it the vendor's key by name, brings its commits back as that branch, and
+checks the task's contract in a worktree of it. `model` picks the CLI's model, `count` makes several alike. Its board
+row, members, notes and the leader's report are the team's own; Projects → Team branches shows each branch's diff with
+Merge. AGENTS.md "Outside harnesses as team members" has the details.
+
 ## What the apps would draw (not built)
 
 - **DocaMobile**: a team card in its missions list — the title, one thin bar with "1 of 3 · 33%" and "every task

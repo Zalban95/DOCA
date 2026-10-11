@@ -306,6 +306,42 @@ The harness gives its agent eight rules for working on any repository (charter r
   away** `teams.archiveAfterDays` (7, 0 keeps; `teams/tidy.js`, with the missions' 30-minute sweep, an activity line)
   into the Archive (kind `team` in `archive.js`); one a person brought back stays. `test/teams-page.test.js`.
 
+### Outside harnesses as team members (asked 2026-10-12, `modules/harness-teams`, `teams/outside.js`)
+- **A team's task may be another vendor's agent, only when the person names it**: `agent: "harness:<catalog id>"`
+  (`claude`, `codex`, `dsh`, `gemini` — a catalog row with a `team` form, `harnesses.js`), an optional `model` (that
+  CLI's own id) and `count` (several alike: "5 Claude Code on Opus" is one task made into five that share the plan).
+  Teams stay DOCA's own specialists and work chats by default: `teams.create` refuses a `harness:` task unless the
+  leader's call carries `asked: true` **on the person's own turn** (`ctx.byPerson`, or a queued message's author through
+  `ASKED_TOOLS`), by someone holding host, in a project that is a git repository (`teams/outside.gate`). A mission, an
+  automatic turn or a specialist never adds one. The owner narrows which with `teams.outside.allow` and how many work at
+  once with `teams.outside.maxWorkers` (5; a task past it stays queued until one ends) — neither proposable.
+- **Each works in an agents' computer of its own** (kept per harness, `agentType: harness:<id>`, so the CLI is
+  installed once — npm into `~/.npm-global` on its volume — and a person's sign-in made there by Take over stays), with
+  the project's HEAD (or the branch of the task it comes after; a retry carries on from its last branch) cloned from a
+  git bundle onto its own branch `team/<harness>-<task>-<words>`, and runs headless **with its own approvals off inside
+  that box only** — never on the hub. The flags are data on the catalog row beside each tool's documentation link
+  (claude `-p --permission-mode bypassPermissions --output-format stream-json --verbose [--model]`; codex `exec
+  --dangerously-bypass-approvals-and-sandbox --json [-m]`; dsh `headless --json`, which has no model or approval flag —
+  an ask fails closed there; gemini `--approval-mode yolo --output-format stream-json [-m] -p`). `computers/whose.js`
+  refuses every agent (looking, files, lending) on such a computer: it holds a sign-in.
+- **Keys are used, never seen** (S4): the provider key DOCA keeps for that vendor (`provider-keys.js`, matched by its
+  address: `ANTHROPIC_API_KEY`, `CODEX_API_KEY`, `DEEPSEEK_API_KEY`, `GEMINI_API_KEY`) is put in the docker client's
+  environment and named with `-e NAME` alone (`box.js`) — in no argument, log, transcript or record; anything the CLI
+  prints containing it is scrubbed. With no key, a CLI that says it is signed in (claude `auth status`) runs on that;
+  otherwise the task fails saying how to sign in once (Take over in its computer).
+- **It is a member like any**: a mission row (`missions.insert`, `team: {id, task}`, `outside: {…}`) with a five-step
+  plan as its progress, Stop (missions bar or team stop) ends its process group in the box (`setsid -w`, procps
+  `kill -- -PGID`), its own commands, tools and words from its event stream (`events.js`) go to the mission's log and
+  the Workstream, its commits come back to the hub's repository as its branch every few seconds and at the end (a
+  bundle of base..branch, `git fetch` into that ref — the hub's working tree is never touched), notes it appends to a
+  file become `team_note`s and its teammates' notes are written into its box, and at the end its branch is checked out
+  in a worktree on the hub where the task's contract is checked. The team then reports to its leader as always.
+- **Projects → Team branches** (`branches.js`, `public/js/projects/team-branches.js`, `/api/projects/:id/team-branches`)
+  lists every `team/…` branch with what it adds over the current branch, its diff in an editor tab, and Merge — an
+  ordinary `git merge --no-ff`, refused with uncommitted changes, undone on a conflict with the files named. The
+  leader merges with `team merge {team, task}`. `test/harness-teams.test.js` runs a stand-in CLI
+  (`test/fixtures/harness-stub`) in real computers where the image exists.
+
 ### Product names (`modules/branding.js`)
 - **Every name a person reads comes from one file**, because the panel will be sold under a customer's label and under whatever the public release is called, and a rename that means grepping forty files is a rename that does not happen. Overrides live in prefs under `branding`, so a private label is a settings change; the UI for it is deliberately absent until it can sit behind the admin password, since the only thing worse than the wrong name is one an agent changed.
 - **The distinction that matters is branding vs identifier, and getting it wrong breaks installs.** `~/.openclaw/` and `openclaw.json` are paths that already exist on disk; `openclaw-panel.service` is a unit somebody enabled; the `openclaw` row in `catalog.js` is a real third-party product, not our label; `openclaw-dashboard` in package.json is an npm identifier; `DOCA_DATA_DIR`, the `doca` harness id and the `med_`/`job_`/`trn_` prefixes are identifiers too. **None of those are renameable.** The test: if changing the string would stop an existing machine working, it is not branding. There is a test pinning it.
