@@ -1,0 +1,38 @@
+/* Files' disks: how full each place is, and the disks not mounted (files-disks.js) */
+.fm-disk { position: relative; }
+.fm-disk .fm-bookmark { padding-right: 30px; }
+.fm-disk-type { font-size: 8px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+.fm-disk-eject { position: absolute; right: 4px; top: 1px; width: 22px; height: 22px; font-size: 12px; color: var(--muted); }
+.fm-disk-eject:hover, .fm-disk-eject:focus-visible { color: var(--text); }
+.fm-disk-space { display: block; padding: 0 10px 5px 31px; }
+.fm-disk-bar { display: block; height: 4px; border-radius: 2px; background: var(--dim); overflow: hidden; }
+.fm-disk-bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.fm-disk-bar.warn i { background: var(--amber, #d4a017); }
+.fm-disk-bar.crit i { background: var(--red); }
+.fm-disk-nums { display: flex; justify-content: space-between; gap: 6px; font-size: 9px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fm-disk-sub { font-size: 9px; color: var(--muted); padding: 8px 10px 2px; letter-spacing: 0.08em; text-transform: uppercase; }
+.fm-disk-off { opacity: 0.5; }
+.fm-disk-off:hover, .fm-disk-off:focus-within { opacity: 0.85; }
+.fm-disk-off span.fm-bookmark { cursor: default; }
+.fm-disk-why { display: block; font-size: 9px; color: var(--muted); padding: 0 10px 4px 31px; }
+.fm-disk-note { font-size: 9px; color: var(--muted); padding: 6px 10px; line-height: 1.4; }
+
+/* The shared context menu (lib/context-menu.js) */
+.ctx-menu { position: fixed; left: 0; top: 0; z-index: 9999; min-width: 200px; max-width: min(320px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px); overflow-y: auto; padding: 4px 0; background: var(--raised); border: 1px solid var(--border2);
+  border-radius: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45); font-size: 12px; }
+.ctx-title { padding: 6px 12px 4px; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctx-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 12px; border: none; background: transparent;
+  color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.ctx-item:hover, .ctx-item:focus-visible, .ctx-item:focus { background: var(--dim); outline: none; }
+.ctx-item.danger { color: var(--text); }
+.ctx-item.danger:hover, .ctx-item.danger:focus { color: var(--red); }
+.ctx-icon { width: 16px; text-align: center; flex-shrink: 0; color: var(--muted); }
+.ctx-label { flex: 1; }
+.ctx-hint { font-size: 10px; color: var(--muted); }
+.ctx-sep { height: 1px; margin: 4px 0; background: var(--border); }
+.ctx-shade { position: fixed; inset: 0; z-index: 9998; background: rgba(0, 0, 0, 0.35); }
+.ctx-menu.ctx-sheet { left: 0 !important; right: 0; top: auto !important; bottom: 0; width: 100%; max-width: none; min-width: 0;
+  max-height: 75vh; border-radius: 12px 12px 0 0; padding-bottom: calc(8px + env(safe-area-inset-bottom)); font-size: 14px; }
+.ctx-sheet .ctx-item { padding: 11px 16px; }
+.ctx-sheet .ctx-title { padding: 10px 16px 6px; font-size: 12px; }

@@ -10,10 +10,11 @@
      extraMenu   (abs, isDir) => [{ label, fn }] — the host's own entries
    → { refresh(), collapse(), root, selected }
 
-   Right-click or long-press: new file / folder here, rename (F2), delete (Del),
-   copy path, download, upload here. Drag a node onto a folder to move it; drop
+   Right-click, long-press or Shift+F10: the shared file menu (lib/context-menu.js) —
+   open, preview, rename (F2), duplicate, download, copy path, new file / folder,
+   upload here, delete (Del), show in Files, ask the agent. Drag a node onto a folder to move it; drop
    files from the computer onto a folder to upload them there. Also here: the
-   Files tab's context menu and its file-type helpers, used by both.
+   Files tab's file-type helpers, used by both.
    ═══════════════════════════════════════════════════════ */
 
 const FT_DIM = new Set(['.git', 'node_modules', 'build', 'dist', '.gradle', 'target', '.idea', '.dart_tool', '__pycache__', '.next', 'out', '.venv']);
@@ -57,6 +58,10 @@ function fileTree(container, opts = {}) {
       try { await apiFetch(`${api}/delete`, { method: 'POST', body: { paths: [abs] } }); if (t.selected === abs) t.selected = null; act.refresh(); }
       catch (e) { appAlert(e.message); }
     }),
+    duplicate: async abs => {
+      try { await apiFetch(`${api}/paste`, { method: 'POST', body: { op: 'copy', paths: [abs], dest: parent(abs) } }); act.refresh(); }
+      catch (e) { appAlert(`Could not duplicate it: ${e.message}`); }
+    },
     move: async (from, dir) => {
       if (from === dir || dir.startsWith(`${from}/`) || parent(from) === dir) return;
       try { await apiFetch(`${api}/paste`, { method: 'POST', body: { op: 'cut', paths: [from], dest: dir } }); t.open.add(dir); act.refresh(); }
@@ -76,17 +81,12 @@ function fileTree(container, opts = {}) {
   upload.onchange = () => { if (upload.files.length) act.send([...upload.files], upload.dataset.dest || t.root); upload.value = ''; };
   container.querySelector('.pj-tree-tools').onclick = e => { const a = e.target.closest('[data-act]')?.dataset.act; if (a) act[a](); };
 
-  function menu(x, y, abs, isDir) {
-    const name = abs.split('/').pop();
-    showContextModal(x, y, [
-      ...(isDir ? [{ label: '+ New file here', fn: () => act.file(abs) }, { label: '+ New folder here', fn: () => act.folder(abs) },
-        { label: '⬆ Upload here', fn: () => act.upload(abs) }] : [{ label: '✏ Open', fn: () => opts.onOpen?.(abs) }]),
-      ...(opts.extraMenu?.(abs, isDir) || []),
-      { label: '↩ Rename', fn: () => act.rename(abs) },
-      { label: '⧉ Copy path', fn: () => navigator.clipboard?.writeText(abs).catch(() => appAlert(abs)) },
-      ...(!isDir ? [{ label: '⬇ Download', fn: () => { const a = document.createElement('a'); a.href = `${api}/download?path=${encodeURIComponent(abs)}`; a.download = name; a.click(); } }] : []),
-      { label: '✕ Delete', fn: () => act.remove(abs, isDir) },
-    ]);
+  // The shared file menu (lib/context-menu.js), with the host's own entries in it.
+  function menu(x, y, abs, isDir, opener, row) {
+    const openDir = () => { if (row?.isConnected && !t.open.has(abs)) row.click(); else opts.onOpenDir?.(abs); };
+    ctxMenuOpen(x, y, fileMenuItems({ abs, isDir, api, open: isDir ? openDir : opts.onOpen, rename: act.rename,
+      duplicate: act.duplicate, newFile: act.file, newFolder: act.folder, upload: act.upload, remove: act.remove,
+      extra: opts.extraMenu?.(abs, isDir) || [] }), { title: abs.split('/').pop() || abs, opener: opener || tree });
   }
 
   function select(row, abs, isDir) {
@@ -119,11 +119,8 @@ function fileTree(container, opts = {}) {
         row.textContent = label();
         opts.onOpenDir?.(abs);
       };
-      row.oncontextmenu = ev => { ev.preventDefault(); select(row, abs, e.isDir); menu(ev.clientX, ev.clientY, abs, e.isDir); };
-      // Long-press on a touch screen is the right-click.
-      let press = null;
-      row.addEventListener('touchstart', ev => { const p = ev.touches[0]; press = setTimeout(() => { select(row, abs, e.isDir); menu(p.clientX, p.clientY, abs, e.isDir); }, 550); }, { passive: true });
-      for (const n of ['touchend', 'touchmove', 'touchcancel']) row.addEventListener(n, () => clearTimeout(press), { passive: true });
+      row.oncontextmenu = ev => { ev.preventDefault(); select(row, abs, e.isDir); menu(ev.clientX, ev.clientY, abs, e.isDir, tree, row); };
+      ctxLongPress(row, (_, x, y) => { select(row, abs, e.isDir); menu(x, y, abs, e.isDir, tree, row); });   // the touch screen's right-click
       row.ondragstart = ev => { ev.dataTransfer.setData('text/x-doca-path', abs); ev.dataTransfer.effectAllowed = 'move'; };
       if (e.isDir) {
         row.ondragover = ev => { ev.preventDefault(); row.classList.add('drop'); };
@@ -149,6 +146,12 @@ function fileTree(container, opts = {}) {
     if (from) act.move(from, t.root); else if (ev.dataTransfer.files.length) act.send([...ev.dataTransfer.files], t.root);
   };
   tree.onkeydown = ev => {
+    if (ctxMenuKey(ev)) {   // the keyboard's right-click: the selection's menu, else the root's
+      ev.preventDefault(); ev.stopPropagation();
+      const row = [...tree.querySelectorAll('.pj-node.selected')][0];
+      const [x, y] = ctxMenuAt(row || tree);
+      return menu(x, y, t.selected || t.root, t.selected ? !!t.selectedDir : true, tree, row);
+    }
     if (!t.selected) return;
     // Stopped here, so the Files tab's own F2/Delete (for its list selection) does not also fire.
     if (ev.key === 'F2') { ev.preventDefault(); ev.stopPropagation(); act.rename(t.selected); }
@@ -201,34 +204,6 @@ async function fmUseMachine(id) {
   fmNavigate(home);
   fmTreeMount(home);
 }
-
-/* ── The context menu at the pointer (Files tab rows and the tree) ── */
-function showContextModal(x, y, actions) {
-  removeContextModal();
-  const menu = document.createElement('div');
-  menu.id = 'fm-ctx-menu';
-  menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;z-index:9999;
-    background:var(--raised);border:1px solid var(--border2);min-width:140px;
-    box-shadow:0 4px 20px rgba(0,0,0,0.5)`;
-  actions.forEach(a => {
-    const btn = document.createElement('button');
-    btn.style.cssText = `display:block;width:100%;padding:7px 14px;text-align:left;
-      background:transparent;border:none;color:var(--text);font-family:inherit;
-      font-size:11px;cursor:pointer;border-bottom:1px solid var(--border);`;
-    btn.textContent = a.label;
-    btn.onmouseenter = () => btn.style.background = 'var(--dim)';
-    btn.onmouseleave = () => btn.style.background = 'transparent';
-    btn.onclick      = () => { removeContextModal(); a.fn(); };
-    menu.appendChild(btn);
-  });
-  document.body.appendChild(menu);
-  setTimeout(() => document.addEventListener('click', removeContextModal, { once: true }), 50);
-}
-
-function removeContextModal() {
-  document.getElementById('fm-ctx-menu')?.remove();
-}
-
 
 /* ── Media type detection ────────────────────────────── */
 const FM_IMG_EXTS   = new Set(['jpg','jpeg','png','gif','webp','svg','bmp','ico','avif','tiff']);
