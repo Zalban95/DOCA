@@ -2,9 +2,9 @@
    DOCA PANEL — NAVIGATION
    ═══════════════════════════════════════════════════════ */
 
-const NAV_TABS = ['controls','people','meetings','home','ambient','admin','logs','files','projects','harness','teams','workstream','archive','chronicle','computers','live','terminal','models','docker','vms','vnc','mcp','connectors','apikeys','settings'];
+const NAV_TABS = ['controls','people','meetings','home','ambient','admin','logs','files','projects','harness','teams','workstream','archive','chronicle','computers','live','terminal','models','docker','vms','vnc','nearby','mcp','connectors','apikeys','settings'];
 /** Tabs that are the machine itself: left out for a person without host (settings.js). */
-const HOST_TABS = ['admin', 'logs', 'files', 'projects', 'terminal', 'computers', 'vnc'];
+const HOST_TABS = ['admin', 'logs', 'files', 'projects', 'terminal', 'computers', 'vnc', 'nearby'];
 
 /** The header and the phone's bar are drawn by group (nav-groups.js). */
 function mobileNavRender() { navGroupsRender(); }
@@ -58,6 +58,7 @@ function nav(name) {
   if (on('docker'))   dockerInit();
   if (on('vms'))      vmsInit();
   if (typeof vncTab === 'function') vncTab(on('vnc'));   // Machines → VNC: refreshes its states only while shown
+  if (typeof nearbyTab === 'function') nearbyTab(on('nearby'));   // Machines → Nearby: what is around this hub
   if (on('mcp'))      mcpInit();
   for (const t of shown) if (typeof FIELD_PAGES !== 'undefined' && FIELD_PAGES[t]) fieldPageShow(t);   // Connectors, API keys (field-pages.js)
   if (name === 'settings') settingsInit();

@@ -8,22 +8,22 @@
  * holds the two copies equal.
  */
 const PAGES = ['controls', 'people', 'meetings', 'home', 'ambient', 'admin', 'logs', 'files', 'projects', 'harness', 'teams', 'workstream', 'archive', 'chronicle', 'computers', 'live', 'terminal',
-  'models', 'docker', 'vms', 'vnc', 'mcp', 'connectors', 'apikeys', 'settings'];
+  'models', 'docker', 'vms', 'vnc', 'nearby', 'mcp', 'connectors', 'apikeys', 'settings'];
 
 /** Pages that are the machine itself: a person without host never has them, in a group or inside a view. */
-const HOST_PAGES = ['admin', 'logs', 'files', 'projects', 'terminal', 'computers', 'vnc'];
+const HOST_PAGES = ['admin', 'logs', 'files', 'projects', 'terminal', 'computers', 'vnc', 'nearby'];
 
 const GROUPS = [
   { id: 'controls', label: 'Controls', icon: '▶', tabs: ['controls', 'people', 'meetings', 'home', 'ambient'] },
   { id: 'agents', label: 'Agents', icon: '⬡', tabs: ['harness', 'teams', 'workstream', 'projects', 'archive', 'chronicle'] },
-  { id: 'machines', label: 'Machines', icon: '🖵', tabs: ['live', 'computers', 'vms', 'vnc', 'docker'] },
+  { id: 'machines', label: 'Machines', icon: '🖵', tabs: ['live', 'computers', 'vms', 'vnc', 'nearby', 'docker'] },
   { id: 'host', label: 'Hub', icon: '⌨', tabs: ['admin', 'files', 'terminal', 'logs'] },
   { id: 'intelligence', label: 'Field', icon: '◆', tabs: ['models', 'mcp', 'connectors', 'apikeys'] },
   { id: 'settings', label: 'Settings', icon: '⚙', tabs: ['settings'] },
 ];
 
 const LABELS = { controls: 'Overview', people: 'Chat', meetings: 'Meetings', admin: 'Admin', home: 'Home', ambient: 'Ambient', harness: 'Harness', teams: 'Teams', workstream: 'Workstream', projects: 'Projects', archive: 'Archive', chronicle: 'Chronicle',
-  computers: 'Computers', live: 'Live', vms: 'VMs', vnc: 'VNC', docker: 'Docker', files: 'Files', terminal: 'Terminal', logs: 'Logs', models: 'Models',
+  computers: 'Computers', live: 'Live', vms: 'VMs', vnc: 'VNC', nearby: 'Nearby', docker: 'Docker', files: 'Files', terminal: 'Terminal', logs: 'Logs', models: 'Models',
   mcp: 'MCP', connectors: 'Connectors', apikeys: 'API keys', settings: 'Settings' };
 
 /** The theme tokens a layout may set (public/js/themes.js THEME_CSS_KEYS, plus the type and shape ones). */

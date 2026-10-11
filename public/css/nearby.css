@@ -1,0 +1,45 @@
+/* Machines → Nearby (public/js/nearby.js, nearby-save.js): theme variables only, so every skin and theme draws it. */
+.nb-sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px 18px; }
+.nb-source { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; min-width: 0; }
+.nb-source.off { opacity: .55; cursor: default; }
+.nb-source .switch { margin-top: 2px; }
+.nb-source-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nb-source-text b { font-weight: 600; color: var(--bright, var(--text)); }
+.nb-source-text .desc { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.nb-more { margin-top: 12px; }
+.nb-every { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.nb-every label { display: flex; flex-direction: column; gap: 4px; }
+.nb-every input { width: 90px; display: inline-block; margin-right: 6px; }
+.nb-io { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.nb-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.nb-filters select { width: auto; min-width: 140px; }
+.nb-filters input { flex: 1 1 200px; min-width: 0; }
+.nb-last { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+.nb-row { display: grid; grid-template-columns: 14px minmax(0, 1fr) minmax(0, auto) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border); }
+.nb-row:first-child { border-top: 0; }
+.nb-row .m-pt { justify-self: center; }
+.nb-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--text); overflow-wrap: anywhere; }
+.nb-sub { font-size: 11px; color: var(--muted); }
+.nb-cans { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.nb-chip { font-size: 10px; padding: 1px 7px; border: 1px solid var(--border2); border-radius: 999px; color: var(--muted); white-space: nowrap; }
+.nb-saved-chip { color: var(--accent); border-color: var(--accent); vertical-align: 1px; }
+.nb-acts { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+.nb-place + .nb-place { margin-top: 14px; }
+.nb-place-name { font-weight: 600; color: var(--bright, var(--text)); margin-bottom: 4px; }
+.nb-room { padding-left: 12px; border-left: 2px solid var(--border2); margin: 6px 0; }
+.nb-room-name { font-size: 12px; color: var(--muted); margin: 2px 0; }
+.nb-modal .modal { max-height: 90vh; overflow: auto; }
+.nb-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.nb-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.nb-pick { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border2); background: transparent; color: var(--text); cursor: pointer; }
+.nb-pick.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent, var(--bg)); }
+.nb-pick.nb-new { color: var(--muted); border-style: dashed; }
+.nb-new-input { width: 180px; padding: 4px 8px; }
+@media (max-width: 640px) {
+  .nb-row { grid-template-columns: 14px minmax(0, 1fr) auto; row-gap: 6px; }
+  .nb-name { grid-column: 2 / 4; }
+  .nb-row > .m-pt { grid-row: 1; }
+  .nb-cans { grid-column: 2; justify-content: flex-start; }
+  .nb-acts, .nb-row > .row-acts { grid-column: 3; }
+  .nb-filters select { flex: 1 1 140px; }
+}

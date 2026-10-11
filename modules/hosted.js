@@ -84,6 +84,7 @@ const ROUTES = [
   ['*', /^\/api\/models\/llamacpp(\/|$)/],
   ['*', /^\/api\/vms(\/|$)/],
   ['*', /^\/api\/machines\/processes$/],   // the machine's processes (processes/): the Processes drawer
+  ['*', /^\/api\/machines\/nearby(\/|$)/],   // what is around the machine: its network, its Bluetooth (nearby/)
   ['*', /^\/api\/startup$/],
   // The code itself: updating from git and switching versions.
   ['*', /^\/api\/(update|deps)$/],
@@ -103,10 +104,10 @@ const ROUTES = [
 const SOCKETS = [/^\/ws\/terminal/, /^\/ws\/harness/, /^\/ws\/lsp/, /^\/ws\/vm\//];
 
 // The agent's tools that run a command line on the machine, or run git on its files.
-const TOOLS = ['shell', 'shell_job', 'hub_command', 'git', 'machine_backup'];
+const TOOLS = ['shell', 'shell_job', 'hub_command', 'git', 'machine_backup', 'nearby'];
 
 // The panel's pages that are the machine itself (nav.js leaves them out).
-const TABS = ['terminal', 'files', 'docker', 'vms'];
+const TABS = ['terminal', 'files', 'docker', 'vms', 'nearby'];
 
 // The hub commands a device or the agent may run (api-v1/commands.js) that act on the machine's programs.
 const COMMANDS = /^(compose|docker|services|llamacpp|snapshots)\./;
