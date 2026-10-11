@@ -194,6 +194,7 @@ function mount(app) {
   app.post  ('/api/backups/:name/plan',      handlePlan);
   app.post  ('/api/backups/:name/restore',   handleRestore);
   app.delete('/api/backups/:name',           handleDelete);
+  require('../machine-backup/routes').mount(app);   // this machine's own files, with restic (machine-backup/)
 }
 
 module.exports = { mount, NAME };
