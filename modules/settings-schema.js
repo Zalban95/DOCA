@@ -277,7 +277,7 @@ const SCHEMA = {
   backup:           { is: 'local', home: 'device', on: 'host', note: 'the backup schedule of this machine',
     // A second copy of every backup on another disk (backup/mirror.js). A path on this machine: never the agent's to propose.
     keys: { mirror: { type: 'string', default: '', propose: false, hint: 'A second folder on this machine (another disk, a NAS mount) where every backup is also copied, keeping as many scheduled ones as here. Empty: none.' } } },
-  machineBackup:    require('./machine-backup/schema'),   // this machine's own files, with restic: declared beside its code
+  machineBackup:    require('./machine-backup/schema'), nearby: require('./nearby/schema'),   // this machine's own files, with restic; what Nearby looks for: declared beside their code
   // The System 1 decision model (experiment systemOne, modules/system-one). Not proposable: its threshold decides when a
   // model's guess replaces a rule, and its service runs on this machine.
   systemOne:        { is: 'local', home: 'device', on: 'host', note: 'the System 1 decision model: which one, where it runs on this machine, how sure it must be (modules/system-one; the switch is experiments.systemOne)',

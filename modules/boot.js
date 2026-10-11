@@ -34,6 +34,7 @@ function afterListen({ certs = null, mode } = {}) {
   require('./system-one/service').autostart();        // Laya's service, when the owner asked for it at boot
   require('./library').start();                       // the Library's schedule or watched folders, when the experiment is on
   require('./scout').start();                         // the model scout, when switched on (an experiment)
+  require('./nearby').start();                        // Nearby's own scans, when a person set how often (off by default)
   require('./network').tailnetSuffix();             // this tailnet's name, cached before an agent's first owned() asks (toolbox/http.js)
   require('./service-life').start();                  // services nothing uses, stopped when the owner asked (off by default)
   require('./update-channel').start();               // a production hive's update channel: releases checked, applied holding running work

@@ -19,6 +19,7 @@ function switches() {
   if (!require('../../system-one').on()) out.push({ name: 'computer_next', why: 'the System 1 model experiment is off' });
   if (!require('../../vnc-targets').any())
     for (const name of ['vnc_look', 'vnc_input']) out.push({ name, why: 'no VNC screen is added (Machines → VNC)' });
+  if (!require('../../nearby').any()) out.push({ name: 'nearby', why: 'nothing is switched on or seen in Machines → Nearby' });
   if (!require('../../api-services/store').list().length) out.push({ name: 'service', why: 'no API service is set up (Field → Connectors → API services)' });
   if (!require('../../scout').on()) out.push({ name: 'model_scout', why: 'the model scout experiment is off' });
   if (!require('../../library/indexer').on()) out.push({ name: 'library_search', why: 'the Library experiment is off, or no embedding model is set for it' });

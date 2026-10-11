@@ -1,7 +1,7 @@
 ---
 name: play-and-cast
 description: Play a video, music or a program on a screen, or cast it to a TV or speaker — by the quickest route that already works in this home (Home Assistant's media players, the device's own app, the hub). Use when the person asks to watch, listen, put something on the TV, stream or cast, especially from a call or the ambient screen.
-triggers: [play, cast, on the tv, chromecast, riproduci, sulla tv, metti su]
+triggers: [play, cast, on the tv, chromecast, speaker, dlna, airplay, riproduci, sulla tv, metti su]
 ---
 
 # Playing and casting
@@ -12,6 +12,10 @@ keep how — so the next time is a recipe, not a round of thinking.
 
 ## 1. Look for what you already know
 
+- **The things the person saved in Machines → Nearby come first**: `nearby find` with the room or the kind ("kitchen",
+  "speaker", "tv") — or `nearby list` — gives each saved thing with its place, its room, what it can do and how
+  (a Cast name, a DLNA control URL, an AirPlay address, its page). The person named and placed it: "the kitchen
+  speaker" is that row. Nothing saved, but sources are on: `nearby scan` looks again and lists what answers.
 - `memory_search` for the device and the thing ("living room tv", "spotify", "cast") and the recipes the person has
   (`recipe list`). A recipe named for it (`play-on-living-room-tv`) is the answer: run it with the title as its value.
 - If nothing is known, go on — and remember to keep what worked (step 4).
@@ -30,9 +34,14 @@ keep how — so the next time is a recipe, not a round of thinking.
      with the link, then `screen_read` — the screen as numbered elements — and `screen_press` the **cast** button and
      the TV's name; the app's own way, so it keeps working when the person picks it up. `media_control` pauses,
      resumes, skips and changes the volume of whatever plays there. Read again after each press: the screen changes.
-3. **From the hub**: play a file or a stream on the hub's own screen or speakers, or cast an address to a Chromecast
-   on the network with a casting tool the hub has (`catt cast <url>` — propose installing it through System tools if
-   it is missing; never with `shell` on your own).
+3. **From the hub, to a thing Nearby knows**:
+   - **Cast** (a Chromecast, a Google or Nest speaker): `catt -d "<its name>" cast <url>` with `shell` — the line
+     `nearby` gives, when catt is installed (it says so; if not, propose installing it through System tools, never on
+     your own). `catt -d "<name>" stop`, `volume 40`, `pause` and `play` follow it.
+   - **DLNA / UPnP** (a smart TV, a media player that can be played to): its AVTransport control URL from `nearby` —
+     `SetAVTransportURI` with the address, then `Play`, posted with `api_call` (the address is the owner's own).
+   - **AirPlay**: the device's own app's AirPlay button (route 2); the hub has no AirPlay sender of its own.
+   - Or play a file or a stream on the hub's own screen or speakers.
 
 If a route needs something the person has not set up (no Home Assistant, no paired phone), say which and offer the
 next route rather than stopping.
