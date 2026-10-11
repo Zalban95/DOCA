@@ -155,6 +155,7 @@ function mount(app) {
   });
   require('./vm-console').mount(app);
   require('../vnc-targets').mount(app);   // VNC targets: /api/machines/vnc*
+  require('../nearby').mount(app);         // Nearby: what is around this hub, saved by place and room (/api/machines/nearby*)
   app.get('/api/machines/shots/:key', (req, res) => {   // an emulator's or an unrecorded computer's picture (cmd-shots.js)
     const png = require('./cmd-shots').get(req.params.key);
     if (!png) return res.status(404).json({ error: 'No picture of it yet.' });

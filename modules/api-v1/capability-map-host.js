@@ -48,6 +48,8 @@ module.exports = [
   row('vms', 'manage virtual machines', ['POST /api/vms/*', 'DELETE /api/vms/libvirt/:name/snapshots/:snap']),
   row('vnc', 'add, change and remove VNC screens', ['POST /api/machines/vnc', 'PUT /api/machines/vnc/:id', 'DELETE /api/machines/vnc/:id'],
     { only: 'another machine\'s address and the password the hub keeps for it: a host\'s, at the panel' }),
+  row('nearby', 'switch on what Nearby looks with, scan, save things by place and room, and pair a Bluetooth device', ['POST /api/machines/nearby/*', 'PUT /api/machines/nearby/saved/:id', 'DELETE /api/machines/nearby/saved/:id', 'DELETE /api/machines/nearby/seen/:id'],
+    { only: 'what this machine sees on its own network and radio, and pairing with its own adapter: a host\'s, at the panel; the agent reads it with the nearby tool' }),
   row('services-settings', 'set up inference services, and when they stop and start by themselves', ['POST /api/services/settings', 'POST /api/services/life', 'POST /api/services/life/:kind/:id', 'POST /api/services/life/:kind/:id/adopt']),
   row('system-tools', 'install what this machine needs', ['POST /api/system/tools/install', 'POST /api/setup/scripts/:name']),
   row('snapshots', 'restore a snapshot and set where they go', ['POST /api/snapshots/restore', 'POST /api/snapshots/settings']),

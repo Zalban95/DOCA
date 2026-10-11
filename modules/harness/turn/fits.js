@@ -85,6 +85,9 @@ function inventory(held, person = null) {
         : `- ${person.name || 'Your person'}'s own secrets for secret_use, on their own devices (by name; their values are never shown): ${names}.`);
     } catch { /* none */ }
   }
+  if (held.has('nearby') && (!person?.id || require('../../auth/rights').can(person.role, 'host'))) {
+    try { const l = require('../../nearby/describe').inventory(); if (l) out.push(l); } catch { /* none */ }
+  }
   if (held.has('recipe')) {
     try { const n = require('../../recipes/store').list().length; if (n) out.push(`- ${n} saved recipe${n === 1 ? '' : 's'} (\`recipe\` list shows them).`); } catch { /* none */ }
   }
