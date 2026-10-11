@@ -87,9 +87,11 @@ async function voiceCardRender(keep = {}) {
     <p style="font-size:11px;color:var(--muted);margin-bottom:10px">How answers are spoken — in a call and when a voice message is answered aloud.
       ${_vc.scope === 'hive' ? 'For every screen without its own, and devices with no screen of their own (a watch).' : `On <b>${escHtml(s.name || 'this screen')}</b>: ${own ? 'set here.' : 'now the hive’s.'}`}</p>
     ${host ? `<div class="toolbar vc-scope" role="radiogroup" aria-label="Applies to" style="gap:14px;margin-bottom:10px;justify-content:flex-start">
+      <span class="input-label" style="margin:0">Applies to${infoBtn('This screen: only the browser or device you are using now. The hive: every screen that has not chosen its own voice, and devices with no screen (a watch). Switching here only changes what the card below edits.')}</span>
       <label style="font-size:12px"><input type="radio" name="vc-scope" value="screen" ${_vc.scope === 'screen' ? 'checked' : ''} onchange="voiceCardRender({scope: 'screen'})"> This screen</label>
       <label style="font-size:12px"><input type="radio" name="vc-scope" value="hive" ${_vc.scope === 'hive' ? 'checked' : ''} onchange="voiceCardRender({scope: 'hive'})"> The hive</label></div>` : ''}
     <div class="vc-row" data-kind="main">
+      <div class="input-label">Speaks with${infoBtn('Which speech service reads the answers aloud, and which of its voices. Leave the voice empty to use the service\'s own default. ▶ plays a sample of what is chosen, before you save. "The hive\'s speech service" is the one set under Speech services below.')}</div>
       <div class="toolbar" style="gap:6px;flex-wrap:wrap;justify-content:flex-start">
         ${_vcSelect('vc-engine', _vcServiceOptions(engine), engine, 'voiceCardService(this.value)')}
         ${choiceInput({ id: 'vc-voice', value: voiceVal, items: main.items, source: main.source, width: '220px', placeholder: hosted ? 'a voice of the service' : `its own (${main.list.default || main.list.hive || 'default'})`,
@@ -98,11 +100,11 @@ async function voiceCardRender(keep = {}) {
       </div>
       ${voiceCardState(engine)}
       ${hosted ? hostedVoiceFields(main.list, v) : ''}
-      ${advancedFold(`<label style="font-size:12px;display:flex;gap:6px;align-items:center">Speed <input class="input" id="vc-speed" type="number" min="0.5" max="2" step="0.1"
+      ${advancedFold(`<label style="font-size:12px;display:flex;gap:6px;align-items:center">Speed${infoBtn('How fast the voice talks, from 0.5 (slower) to 2 (faster). Empty: the voice\'s own pace.')} <input class="input" id="vc-speed" type="number" min="0.5" max="2" step="0.1"
         data-default="" data-label="Speed" placeholder="as the voice" value="${escHtml(v.ttsSpeed ?? '')}" style="width:100px"></label>`, { id: 'voice-card-speed' })}
     </div>
     <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:6px"><input type="checkbox" id="vc-split" ${split ? 'checked' : ''}
-      onchange="document.getElementById('vc-calls').hidden = !this.checked"> Different voices for each call</label>
+      onchange="document.getElementById('vc-calls').hidden = !this.checked"> Different voices for each call${infoBtn('Off: every call speaks with the voice above. On: the Live call (the face, a watch), the Deep call (the chat\'s microphone button) and Ambient\'s assistant can each have a service and voice of their own.')}</label>
     <div id="vc-calls" ${split ? '' : 'hidden'} style="margin-top:8px">${await voiceCallsHtml(v, engine)}</div>
     <div class="toolbar" style="gap:6px;margin-top:12px;justify-content:flex-start">
       <button class="btn btn-sm btn-blue" onclick="voiceCardSave()">Save ${_vc.scope === 'hive' ? 'for the hive' : 'for this screen'}</button>

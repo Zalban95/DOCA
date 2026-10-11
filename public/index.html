@@ -1012,35 +1012,34 @@
       <div class="settings-panel" id="sp-voice">
         <div class="card">
           <div class="card-title">Speech services — the hive's</div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
-            Shared by every screen and device: what turns speech into text and text into speech. Any OpenAI-compatible audio API works
-            (local Whisper/Kokoro, OpenAI, etc.). Unlike <strong>Paths</strong>, the
+          <p style="font-size:11px;color:var(--muted);margin-bottom:6px">What turns speech into text, and text into speech, for every screen and device.</p>
+          <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:14px"><summary>What this is</summary>
+            Any OpenAI-compatible audio API works (local Whisper/Kokoro, OpenAI, etc.). Unlike <strong>Paths</strong>, the
             <code>DOCA_STT_URL</code> and <code>DOCA_TTS_URL</code> environment variables win over the
-            URLs saved here, so a deployment can pin them — if one is set, that is what voice calls use.
-          </p>
+            URLs saved here, so a deployment can pin them — if one is set, that is what voice calls use.</details>
           <div style="display:flex;flex-direction:column;gap:10px">
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">STT URL</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="The address of the speech-to-text service, which turns what you say into words (a local Whisper, or OpenAI). Default: http://localhost:8000.">STT URL</label>
               <input class="input" id="voice-stt-url" style="flex:1" placeholder="http://localhost:8000">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">STT Model</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="Which model that service uses to listen. Default: whisper-1.">STT Model</label>
               <input class="input" id="voice-stt-model" style="flex:1" placeholder="whisper-1">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS URL</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="The address of the text-to-speech service, which reads the answers aloud (a local Kokoro, or OpenAI). Default: http://localhost:8880.">TTS URL</label>
               <input class="input" id="voice-tts-url" style="flex:1" placeholder="http://localhost:8880">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Model</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="Which model that service speaks with. Default: kokoro.">TTS Model</label>
               <input class="input" id="voice-tts-model" style="flex:1" placeholder="kokoro">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Voice</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="The voice used by a screen that has not chosen one of its own (the Voice card above chooses per screen). Default: af_heart.">TTS Voice</label>
               <input class="input" id="voice-tts-voice" style="flex:1" placeholder="af_heart">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Speed</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="How fast that default voice talks, from 0.25 to 4. Default: 1.0, the normal pace.">TTS Speed</label>
               <input type="range" id="voice-tts-speed" min="0.25" max="4.0" step="0.05" value="1.0" style="flex:1"
                      oninput="document.getElementById('voice-tts-speed-val').textContent=this.value">
               <span id="voice-tts-speed-val" style="font-size:11px;color:var(--fg);min-width:32px;text-align:right">1.0</span>

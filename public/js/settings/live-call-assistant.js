@@ -11,11 +11,10 @@ async function liveCallAssistantCard(panel, s) {
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="font-size:11px;font-weight:600">On this screen</div>
       ${liveCallRow('Quiet before resting', `<input class="input" id="lc-idle" type="number" min="5" max="600" value="${c.assistantIdleSec || 12}" style="width:80px"> s`,
-        'After this long with no words heard and nothing being said, it rests and waits for its name (when it listens for one); otherwise it keeps listening.')}
+        'After this many seconds with no words heard and nothing being said, the Live call rests and waits for its name (when it listens for one); otherwise it keeps listening. 5 to 600. Default: 12.')}
       ${s.experiments?.wakeWord ? liveCallRow('Call by name', `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="lc-listen" ${c.listenWithFace ? 'checked' : ''}>
           while the face shows, listen for</label>${choiceInput({ id: 'lc-word', value: c.wakeWord || '', placeholder: word, width: '160px', source: 'this hub', load: liveCallWakeWords })}`,
-        `"${escHtml(word)}, what's on today?" starts it and sends the rest. 
-         While it listens, what is said near this screen goes to your speech-to-text.`) : ''}
+        `While the face shows, this screen listens for the name in the box (empty: ${word}). "${word}, what's on today?" starts a call and sends the rest. While it listens, what is said near this screen goes to your speech-to-text service.`) : ''}
       <div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantScreenSave()">Save for this screen</button></div>
       ${await liveCallAssistantHtml()}
     </div>`;
@@ -52,21 +51,20 @@ async function liveCallAssistantHtml() {
   const lv = ['off', 'low', 'medium', 'high', 'default'];
   return `<div style="border-top:1px solid var(--border2);padding-top:10px;display:flex;flex-direction:column;gap:8px">
     <div style="font-size:11px;font-weight:600">For every screen${owner ? '' : ' (an admin sets these)'}</div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">Thinking effort</label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">Thinking effort${infoBtn('How hard the model thinks before it answers in a Live call. Off: no thinking at all; low answers quickest; high thinks longest. "The model\'s default" sends nothing and lets the model decide. Saying "think harder" or "quick answers" in a conversation changes it there. Default: low.')}</label>
       <select class="input" id="as-effort" data-default="low" data-label="Thinking effort" style="width:auto" ${owner ? '' : 'disabled'}>${lv.map(x => `<option value="${x}" ${a.effort === x ? 'selected' : ''}>${x === 'default' ? 'the model\'s default' : x}</option>`).join('')}</select></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">When it just acts</label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">When it just acts${infoBtn('What the Live call says after doing something you can see (a light on, a page opened): nothing but a ✓ on the face, two or three words, or what was done. Questions, failures and anything you cannot see are always answered in words. Default: no answer.')}</label>
       <select class="input" id="as-reply" style="width:auto" ${owner ? '' : 'disabled'}>${[['act', 'Do it — no answer (✓ on the face)'], ['brief', 'Do it — two or three words'], ['always', 'Do it — say what was done']]
-        .map(([v, l]) => `<option value="${v}" ${a.reply === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <span style="font-size:11px;color:var(--muted)">Questions, failures and anything you cannot see are always answered.</span></div>
+        .map(([v, l]) => `<option value="${v}" ${a.reply === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
     ${advancedFold(`<div style="display:flex;flex-direction:column;gap:8px">
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">A quicker model (optional)</label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">A quicker model (optional)${infoBtn('A provider and model the Live call uses instead of the chat\'s, usually a smaller, faster one. Both empty: the same model as the chat.')}</label>
       <input class="input" id="as-provider" data-default="" data-label="Quicker model's provider" value="${escHtml(a.provider || '')}" placeholder="provider" style="width:120px" ${owner ? '' : 'disabled'}>
       <input class="input" id="as-model" data-default="" data-label="Quicker model" value="${escHtml(a.model || '')}" placeholder="model — empty: the chat's" style="width:200px" ${owner ? '' : 'disabled'}></div>
     <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-calls" data-default="false" data-label="For the Deep call too" ${a.calls ? 'checked' : ''} ${owner ? '' : 'disabled'}>
-      Use this effort and model for the Deep call (the chat's 🎙) too — its answers are always spoken-length</label>
+      Use this effort and model for the Deep call (the chat's 🎙) too${infoBtn('On: the Deep call also thinks at the effort above and uses the quicker model. Its answers are spoken-length either way. Default: off.')}</label>
     <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="as-front" data-default="true" data-label="Answer at once" ${a.front !== false ? 'checked' : ''} ${owner ? '' : 'disabled'}>
-      Answer at once: quick actions in the call, anything bigger (or "think harder") to a work chat, its outcome said in the call</label>
-    <label style="font-size:11px;color:var(--muted)">How it speaks<textarea class="input" id="as-style" rows="4" style="width:100%;margin-top:4px" data-label="How it speaks"${a.defaults?.style != null ? ` data-default="${escHtml(a.defaults.style)}"` : ''} ${owner ? '' : 'disabled'}>${escHtml(a.style || '')}</textarea></label>
+      Answer at once${infoBtn('On: the call does quick things itself and hands anything bigger (or "think harder") to a work chat, saying its outcome in the call when it is done, so you are never kept waiting. Off: everything is done inside the call. Default: on.')}</label>
+    <label style="font-size:11px;color:var(--muted)">How it speaks${infoBtn('Instructions for how the Live call talks: length, tone, what to leave out. Default style puts back the shipped text.')}<textarea class="input" id="as-style" rows="4" style="width:100%;margin-top:4px" data-label="How it speaks"${a.defaults?.style != null ? ` data-default="${escHtml(a.defaults.style)}"` : ''} ${owner ? '' : 'disabled'}>${escHtml(a.style || '')}</textarea></label>
     </div>`, { id: 'assistant-hive', label: 'Advanced — a quicker model, the Deep call, how it speaks' })}
     ${owner ? `<div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallAssistantSave()">Save the Live call</button>
       <button class="btn btn-sm" onclick="liveCallAssistantSave(true)">Default style</button></div>` : ''}
