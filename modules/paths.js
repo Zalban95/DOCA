@@ -14,6 +14,17 @@ const HOME_DIR   = process.env.DOCA_HOME || path.join(__dirname, '..');
 const PREFS_FILE = process.env.DOCA_PREFS_FILE || path.join(HOME_DIR, '.dashboard-prefs.json');
 
 /**
+ * DOCA's own workspace (asked 2026-10-11: "clearly we have to have a DOCA workspace instead of OpenClaw"). The
+ * workspace, attachments and specialists used to default into OpenClaw's folder, from when DOCA was its panel. A new
+ * install gets a folder of its own; an install that already works in OpenClaw's folder — the old one there, the new
+ * one not made yet — keeps it, so nothing moves under anyone (Settings → System → Paths offers the move).
+ */
+const DOCA_WS   = path.join(HOME, 'doca-workspace');
+const LEGACY_WS = path.join(HOME, '.openclaw', 'workspace');
+const LEGACY = !fs.existsSync(DOCA_WS) && fs.existsSync(LEGACY_WS);   // decided once, for all three together
+const ownOrLegacy = sub => path.join(LEGACY ? LEGACY_WS : DOCA_WS, sub);
+
+/**
  * The paths the dashboard needs, as Settings → Paths lists them. `kind` decides
  * what "Create" makes: a directory, a JSON file seeded with `{}`, or an
  * executable script seeded with a shebang.
@@ -25,11 +36,11 @@ const SETTABLE = [
     note: 'Providers, API keys and gateway settings' },
   { key: 'SKILLS_DIR', label: 'OpenClaw skills directory', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace', 'skills'),
     note: 'One directory per installed skill' },
-  { key: 'WORKSPACE_DIR', label: 'Workspace', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace'),
+  { key: 'WORKSPACE_DIR', label: 'Workspace', kind: 'dir', fallback: ownOrLegacy(''),
     note: 'Where the agent and the harness do their work' },
-  { key: 'ATTACHMENTS_DIR', label: 'Attachments', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace', 'attachments'),
+  { key: 'ATTACHMENTS_DIR', label: 'Attachments', kind: 'dir', fallback: ownOrLegacy('attachments'),
     note: 'Files attached to a conversation land here, and the agent reads them by path' },
-  { key: 'AGENTS_DIR', label: 'Specialist agents', kind: 'dir', fallback: path.join(HOME, '.openclaw', 'workspace', 'agents'),
+  { key: 'AGENTS_DIR', label: 'Specialist agents', kind: 'dir', fallback: ownOrLegacy('agents'),
     note: 'One definition per specialist you made here (markdown; the shipped ones live in the code)' },
   { key: 'SETUP_DIR', label: 'Setup scripts', kind: 'dir', fallback: HOME,
     note: 'Directory the Setup panel reads its shell scripts from' },
@@ -68,14 +79,15 @@ for (const { key } of SETTABLE) {
 const COMPOSE_DIR     = process.env.COMPOSE_DIR     || path.join(HOME, 'openclaw');
 const CONFIG_PATH     = process.env.CONFIG_PATH     || path.join(HOME, '.openclaw', 'openclaw.json');
 const SKILLS_DIR      = process.env.SKILLS_DIR      || path.join(HOME, '.openclaw', 'workspace', 'skills');
-const WORKSPACE_DIR   = process.env.WORKSPACE_DIR   || path.join(HOME, '.openclaw', 'workspace');
+const fallbackOf = key => SETTABLE.find(s => s.key === key).fallback;
+const WORKSPACE_DIR   = process.env.WORKSPACE_DIR   || fallbackOf('WORKSPACE_DIR');
 const SETUP_DIR       = process.env.SETUP_DIR       || HOME;
 // Same literal as the SETTABLE fallback above, not path.join(WORKSPACE_DIR, …):
 // describe() compares this constant against the row's value to decide whether a
 // path was saved since boot, so a constant that follows an override the row does
 // not would light up "restart DOCA to apply" for ever, with nothing to apply.
-const ATTACHMENTS_DIR = process.env.ATTACHMENTS_DIR || path.join(HOME, '.openclaw', 'workspace', 'attachments');
-const AGENTS_DIR      = process.env.AGENTS_DIR      || path.join(HOME, '.openclaw', 'workspace', 'agents');
+const ATTACHMENTS_DIR = process.env.ATTACHMENTS_DIR || fallbackOf('ATTACHMENTS_DIR');
+const AGENTS_DIR      = process.env.AGENTS_DIR      || fallbackOf('AGENTS_DIR');
 const SNAPSHOT_SCRIPT = process.env.SNAPSHOT_SCRIPT || path.join(HOME, 'snapshot-agent.sh');
 const RESTORE_SCRIPT  = process.env.RESTORE_SCRIPT  || path.join(HOME, 'restore-agent.sh');
 const SNAPSHOT_DIR    = process.env.SNAPSHOT_DIR    || path.join(HOME, 'openclaw-snapshots');
@@ -225,6 +237,7 @@ function create(key) {
 }
 
 module.exports = {
+  DOCA_WS, LEGACY_WS,
   HOME,
   COMPOSE_DIR,
   CONFIG_PATH,
