@@ -13,11 +13,11 @@ const _svcAddLast = {};
 function serviceAddBoxHtml(w) {
   return `<div class="svc-add" id="svc-add-${w}">
     <div class="card-title" style="margin-top:14px">Add a service</div>
-    <p class="desc" style="margin-bottom:6px">A chat model (any OpenAI-compatible server, hosted or local) or any API with a key — type its name, address or docs link and the hub works out which.</p>
+    <p class="desc" style="margin-bottom:6px">A chat model (online or your own server) or any API with a key — type its name, address or docs link and the hub works out which.</p>
     <div class="toolbar" style="gap:6px;flex-wrap:wrap">
       <input class="input" id="sa-q-${w}" placeholder="Service name, address or docs link (hi3d, groq, http://192.168.1.20:8080, https://docs.example.com)" style="flex:1;min-width:220px"
         oninput="serviceAddSuggest('${w}')" onkeydown="if(event.key==='Enter'){event.preventDefault();serviceAddFind('${w}')}">
-      <button class="btn btn-sm btn-primary" onclick="serviceAddFind('${w}')">Find</button></div>
+      <button class="btn btn-sm btn-primary" onclick="serviceAddFind('${w}')">Find</button>${infoBtn('Type the service as you know it — a name (groq), the address of a server of yours (http://192.168.1.20:8080) or a link to its documentation — and press Find. A chat model goes to the chat-model form; anything else fills the API service form, leaving only the key for you.')}</div>
     <div id="sa-sugg-${w}" class="svc-add-sugg"></div>
     <div id="sa-said-${w}" class="svc-add-said desc"></div>
     <div id="sa-form-${w}"></div></div>`;
@@ -127,10 +127,10 @@ async function serviceAddApplyService(r, q) {
 /* ── The chat-model provider form (Field → API keys' own routes: test-provider, add-provider) ── */
 function serviceAddProviderForm(w, p) {
   const form = document.getElementById(`sa-form-${w}`);
-  form.innerHTML = `<div class="svc-prov"><div class="toolbar" style="gap:6px;flex-wrap:wrap">
-      <input class="input" id="sa-pn-${w}" placeholder="name (groq)" value="${escHtml(p.name || '')}" style="width:130px">
-      <input class="input" id="sa-pu-${w}" placeholder="address (http://127.0.0.1:8080/v1)" value="${escHtml(p.baseUrl || '')}" style="flex:1;min-width:200px">
-      <input class="input" id="sa-pk-${w}" type="password" autocomplete="new-password" placeholder="API key — empty for a server of your own" style="flex:1;min-width:170px">
+  form.innerHTML = `<div class="svc-prov"><div class="toolbar" style="gap:6px;flex-wrap:wrap;align-items:flex-end">
+      <label class="svc-field" style="width:130px"><span class="field-label">Name ${infoBtn('A short name for this provider (groq). Models are then chosen as name/model.')}</span><input class="input" id="sa-pn-${w}" placeholder="groq" value="${escHtml(p.name || '')}"></label>
+      <label class="svc-field" style="flex:1;min-width:200px"><span class="field-label">Address ${infoBtn("Where the provider's chat API answers, usually ending in /v1 (http://127.0.0.1:8080/v1 for a server on this machine).")}</span><input class="input" id="sa-pu-${w}" placeholder="http://127.0.0.1:8080/v1" value="${escHtml(p.baseUrl || '')}"></label>
+      <label class="svc-field" style="flex:1;min-width:170px"><span class="field-label">API key ${infoBtn('The key from your account with the provider. Leave it empty for a server of your own that asks for none. Kept in a protected file and never shown again.')}</span><input class="input" id="sa-pk-${w}" type="password" autocomplete="new-password" placeholder="empty for your own server"></label>
       <button class="btn btn-sm" onclick="serviceAddProviderTest('${w}')">Test</button>
       <button class="btn btn-sm btn-primary" onclick="serviceAddProviderSave('${w}')">Add provider</button></div>
     <div class="desc" id="sa-pstat-${w}">${p.models?.length ? `It lists ${p.models.length} model${p.models.length === 1 ? '' : 's'}: ${escHtml(p.models.slice(0, 6).join(', '))}${p.models.length > 6 ? '…' : ''}` : ''}</div></div>`;
@@ -165,7 +165,7 @@ async function serviceAddProviderSave(w) {
       if (t.existing) await apiFetch('/api/keys', { method: 'POST', body: { provider: name, baseUrl: t.baseUrl, ...(v('sa-pk') ? { apiKey: v('sa-pk') } : {}) } });
       else await apiFetch('/api/keys/add-provider', { method: 'POST', body: { name, baseUrl: t.baseUrl || v('sa-pu'), apiKey: v('sa-pk'), models: (t.models || []).map(id => ({ id, name: id })) } });
     } catch (e) { stat.textContent = e.message; return; }
-    stat.innerHTML = `✓ ${escHtml(name)} ${t.existing ? 'updated' : 'added'} — DOCA uses it now (Field → API keys → External providers).`;
+    stat.innerHTML = `✓ ${escHtml(name)} ${t.existing ? 'updated' : 'added'} — ${(typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA'} uses it now (Field → API keys → External providers).`;
     if (typeof keysLoadProviders === 'function') keysLoadProviders();
   };
   if (t.ok) return go();

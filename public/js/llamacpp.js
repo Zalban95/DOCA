@@ -50,9 +50,9 @@ function _llamaRenderExternal(list, via = 'servers') {
   let box = document.getElementById('llamacpp-external');
   if (!box) { box = document.createElement('div'); box.id = 'llamacpp-external'; grid.after(box); }
   // How they are found: the model servers' own discovery (the sidebar's), or each one's /props — kept beside it (W14).
-  const pick = `<select class="input" style="width:auto;margin-left:8px;font-size:11px;padding:1px 4px" title="How these are found" onchange="llamaSetDiscovery(this.value)">
+  const pick = `<select class="input" style="width:auto;margin-left:8px;font-size:11px;padding:1px 4px" aria-label="How these are found" onchange="llamaSetDiscovery(this.value)">
     <option value="servers"${via === 'servers' ? ' selected' : ''}>found as model servers</option>
-    <option value="props"${via === 'props' ? ' selected' : ''}>found by /props</option></select>`;
+    <option value="props"${via === 'props' ? ' selected' : ''}>found by /props</option></select>${infoBtn('How llama.cpp servers that were started outside this page are found. "As model servers" (the default) asks the model servers the agent already knows; "by /props" asks each one for its details, its build and context size too. They are only shown here, never stopped or started.')}`;
   box.innerHTML = list.length ? `<div class="input-label" style="margin:12px 0 6px">Running outside the panel${pick}</div>` + list.map(s => `
     <div class="disk-row" title="${escHtml(s.build ? `llama.cpp ${s.build}` : 'llama.cpp')} — started outside DOCA, so it is shown here and managed where it was started">
       <span class="disk-label">${escHtml(s.label)}${s.router ? ' · router' : ''}${s.foreign ? ' · working for something else' : s.doca ? ' · working for DOCA' : ''}</span>
@@ -114,21 +114,21 @@ function _renderLlamaGrid() {
       </div>
       <div class="m-life" id="life-line-llamacpp-${inst.id}"></div>
       <div class="llamacpp-controls">
-        <label class="services-ctrl-label">Model</label>
+        <label class="services-ctrl-label">Model ${infoBtn('The model file this server runs: a .gguf file on this machine. Saved with 💾 Save; a running server uses a new file after ↺ Restart.')}</label>
         <div style="display:flex;gap:4px;align-items:center;flex:1;min-width:200px">
           <input class="input" id="llama-model-${inst.id}" value="${inst.modelPath || ''}"
                  style="flex:1;min-width:0;font-size:10px" placeholder="/path/to/model.gguf">
           <button class="btn btn-xs" title="Browse" onclick="fpOpen('llama-model-${inst.id}','file')">📁</button>
         </div>
-        <label class="services-ctrl-label">Port</label>
+        <label class="services-ctrl-label">Port ${infoBtn('The number the server listens on, so its address is http://localhost:<port>/v1. Each server needs a port of its own, between 1024 and 65535.')}</label>
         <input class="input" id="llama-port-${inst.id}" value="${inst.port}" type="number"
                style="width:70px" min="1024" max="65535">
       </div>
       ${advancedFold(`<div class="llamacpp-controls">
-        <label class="services-ctrl-label">GPU Layers</label>
+        <label class="services-ctrl-label">GPU layers ${infoBtn('How much of the model is put on the graphics card: a number of layers, or auto to let llama.cpp decide by the memory it finds. More layers answer faster but need more graphics memory. Default 999, which means all of them.')}</label>
         <input class="input" id="llama-ngl-${inst.id}" value="${inst.nGpuLayers ?? 999}" title="A number, or auto: llama.cpp places them"
                data-default="999" data-label="GPU layers" style="width:60px" inputmode="numeric">
-        <label class="services-ctrl-label">Ctx Size</label>
+        <label class="services-ctrl-label">Context size ${infoBtn('How many tokens (pieces of words) the model can hold at once: the conversation plus its answer. Larger remembers more of a long conversation but takes more memory. Default 8192.')}</label>
         <input class="input" id="llama-ctx-${inst.id}" value="${inst.ctxSize || 8192}" type="number" data-default="8192" data-label="Context size"
                style="width:70px" min="128" step="128">
       </div>`, { id: 'llamacpp-instance', label: 'Advanced — GPU layers, context size' })}

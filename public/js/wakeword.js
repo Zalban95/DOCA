@@ -26,12 +26,13 @@ async function _wwLoad() {
   const r = s.ready, ready = Object.values(r).every(Boolean), j = s.job, running = j?.state === 'running';
   const tick = (ok, label) => `<span class="ww-tick ${ok ? 'ok' : ''}">${ok ? '✓' : '·'} ${label}</span>`;
   card.innerHTML = `<div class="card-title">Wake words — a model trained for the name a screen answers to</div>
-    <p class="ww-note">A small model that hears one word on the screen itself — sooner than sending sound to speech-to-text, and nothing leaves the
-      screen until the word is heard. Trained here from synthetic voices, this hub's own voices and your recordings. An experiment (wake model).</p>
+    <p class="ww-note">Teach a screen to wake up when it hears one word. An experiment (wake model).</p>
+    <details class="desc page-about" style="margin:0 0 10px;font-size:11px"><summary>What this is</summary>A small model that hears one word on the screen itself — sooner than sending sound to speech-to-text, and nothing leaves the
+      screen until the word is heard. Trained here from synthetic voices, this hub's own voices and your recordings: set it up once, record yourself, then train.</details>
     <div class="ww-row">${tick(r.env, 'environment')}${tick(r.generator, 'synthetic voices')}${tick(r.features, 'other audio (17 GB)')}${tick(r.rir, 'room echoes')}${tick(r.noise, 'everyday sounds')}${tick(r.runtime, 'feature models')}
       ${ready ? '' : `<button class="btn btn-sm" ${running ? 'disabled' : ''} onclick="wakewordSetup()">Set up (about 20 GB, once)</button>`}
       <span class="ww-dir" title="wakeword.dir">${escHtml(s.dir)}</span></div>
-    <div class="ww-row"><label>The word <input class="input" id="ww-word" value="${escHtml(WW.word)}" style="width:160px" onchange="WW.word=this.value.trim();_wwLoad()"></label>
+    <div class="ww-row"><label>The word <input class="input" id="ww-word" value="${escHtml(WW.word)}" style="width:160px" onchange="WW.word=this.value.trim();_wwLoad()"></label>${infoBtn('The word to train a model for. It starts as the wake word this screen is set to answer to (Settings → Voice). Changing it here only picks which word the recordings and training below are for; it does not change what any screen listens for.')}
       <span>Your voice: <b>${s.samples?.said ?? 0}</b> of the word, <b>${s.samples?.other ?? 0}</b> other</span></div>
     <div class="ww-row">
       <button class="btn btn-sm" id="ww-rec-word" onclick="wakewordRecord('word', this)" ${r.env ? '' : 'disabled'}>🎤 Say the word, 6–10 times, a pause between</button>

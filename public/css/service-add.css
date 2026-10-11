@@ -32,3 +32,4 @@ html[data-svc-drafts] :is(.nav-tab[data-tab="connectors"], .nav-tab[data-tab="ap
   background: var(--accent); color: var(--on-accent, var(--bg)); font-size: 9px; line-height: 14px; text-align: center; vertical-align: middle; font-weight: 600;
 }
 @media (max-width: 600px) { .svc-field-grid { grid-template-columns: 1fr; } }
+.svc-field:has(> .input[hidden]) { display: none; }
