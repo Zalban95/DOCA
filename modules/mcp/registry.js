@@ -192,7 +192,9 @@ function client(id) {
  * connection read the same one — and never sits in the server's headers.
  */
 function withKey(spec) {
-  const { url, headers, exchange } = require('../service-keys').apply(spec.key, spec.url, { ...(spec.headers || {}) });
+  let applied;   // no such key yet but a header typed by hand: that is how it signs in, as the person meant (2026-10-12)
+  try { applied = require('../service-keys').apply(spec.key, spec.url, { ...(spec.headers || {}) }); } catch (e) { if (e.status === 404 && Object.keys(spec.headers || {}).length) return spec; throw e; }
+  const { url, headers, exchange } = applied;
   if (exchange) throw Object.assign(new Error(`The key "${spec.key}" is exchanged for a token, which an MCP server cannot send: use a key sent in a header.`), { status: 400 });
   return { ...spec, url, headers };
 }
@@ -387,6 +389,7 @@ function startWithDoca() {
 
 
 module.exports = {
+  withKey,
   MASK,
   PREFS_KEY,
   load, list, get, client, status, slug, normalize, normalizeOrigin, originDevice,
