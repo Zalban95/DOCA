@@ -18,7 +18,8 @@ function members(team, views) {
   const people = owner ? [{ id: owner, name: name(owner) || 'a person' }] : [];
   const leader = { sessionId: team.by, title: lead?.title || 'a conversation',
     kind: lead?.kind === 'orchestrator' ? 'Orchestrator' : lead?.kind === 'work' ? 'work chat' : 'conversation' };
-  const label = agent => (agent === 'work' ? 'Work chat' : require('../agents/registry').get(agent)?.label || agent);
+  const outside = agent => require('../harness-teams/harnesses').all().find(r => `harness:${r.id}` === agent)?.label;   // an outside harness (harness-teams/)
+  const label = agent => (agent === 'work' ? 'Work chat' : require('../agents/registry').get(agent)?.label || outside(agent) || agent);
   const missions = require('../agents/missions');
   const specialists = views.map(v => {
     const m = v.missionId ? missions.get(v.missionId) : null;

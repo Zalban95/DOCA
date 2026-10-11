@@ -23,13 +23,16 @@ const MAX_TASKS = 12, NOTE_MAX = 400, NOTES_KEEP = 60, NOTES_PER_TRY = 8;
 function shape({ title, goal, tasks, context } = {}, { orchestrator = false } = {}) {
   if (!String(title || '').trim()) throw bad('A team needs a title.');
   if (!Array.isArray(tasks) || !tasks.length) throw bad('A team needs at least one task.');
+  tasks = require('./outside').expand(tasks);   // count: several alike (an outside harness's "5 on Opus")
   if (tasks.length > MAX_TASKS) throw bad(`A team has at most ${MAX_TASKS} tasks; split the work into two teams, or give one task more.`);
   const registry = require('../agents/registry');
   const out = tasks.map((t, i) => {
     const id = String(t?.id || `t${i + 1}`).trim().slice(0, 20);
     if (!/^[A-Za-z0-9_-]{1,20}$/.test(id)) throw bad(`Task ids are letters, digits, _ and - ("${id}").`);
     const agent = String(t?.agent || '').trim();
+    let extra = {};
     if (agent === 'work') { if (!orchestrator) throw bad(`Task ${id}: only the Orchestrator gives a task to a work chat; give it to a specialist.`); }
+    else if (require('./outside').isOutside(agent)) extra = require('./outside').check(id, t);   // an outside harness (outside.js)
     else {
       const def = registry.get(agent);
       if (!def || def.broken) throw bad(`Task ${id}: no specialist called "${agent}". Available: ${registry.list().filter(a => !a.broken).map(a => a.id).join(', ') || 'none'}${orchestrator ? ', or "work" for a work chat' : ''}.`);
@@ -38,7 +41,7 @@ function shape({ title, goal, tasks, context } = {}, { orchestrator = false } = 
     if (!text) throw bad(`Task ${id} needs its errand in "task", written for somebody who was not in this conversation.`);
     const { contract } = require('../harness/plan-contracts').split({ title: String(t.title || text.slice(0, 60)), done: t.done, check: t.check });
     return { id, title: String(t.title || text).replace(/\s+/g, ' ').trim().slice(0, 80), agent, task: text.slice(0, 8000),
-      after: [...new Set((Array.isArray(t.after) ? t.after : []).map(String))], contract,
+      after: [...new Set((Array.isArray(t.after) ? t.after : []).map(String))], contract, ...(extra.model ? { model: extra.model } : {}),
       ...(typeof t.worktree === 'boolean' ? { worktree: t.worktree } : {}) };   // its own worktree, or the shared folder (place.js)
   });
   const ids = new Set(out.map(t => t.id));
@@ -55,14 +58,15 @@ function shape({ title, goal, tasks, context } = {}, { orchestrator = false } = 
 }
 
 /** Make a team led by conversation `by`, and start every task with nothing before it. */
-async function create(args, { by, keepGoing = false, maxRounds = null } = {}) {
+async function create(args, { by, keepGoing = false, maxRounds = null, asked = false, person = null } = {}) {   // asked: the person named an outside harness (outside.js)
   const org = require('../harness/organization');
   const lead = org.session(by);
   if (lead.kind === 'specialist') throw bad('A specialist cannot make a team. Report to your work leader.', 403);
   const shaped = shape(args, { orchestrator: lead.kind === 'orchestrator' });
   // The project it works on (place.js): named, else the one its leading conversation works in.
   const project = require('./place').resolve(args.project, by);
-  if (shaped.tasks.some(t => t.agent !== 'work') && !require('../agents/registry').enabled())
+  require('./outside').gate(shaped.tasks, { asked, person, project });
+  if (shaped.tasks.some(t => t.agent !== 'work' && !require('./outside').isOutside(t.agent)) && !require('../agents/registry').enabled())
     throw bad('Specialist agents are switched off (agents.enabled). Ask the person to turn them on.', 409);
   const rounds = maxRounds == null ? null : Math.max(0, Math.min(20, Math.floor(Number(maxRounds)) || 0));
   const team = { id: store.newId(), ...shaped, by, projectId: project?.id || null, state: 'running', createdAt: new Date().toISOString(), endedAt: null,
@@ -97,7 +101,8 @@ async function stop(id, { why = 'stopped by a person' } = {}) {
       const v = engine.views(team).find(x => x.id === t.id);
       if (['done', 'failed', 'stopped'].includes(v.state)) continue;
       const sid = t.missionId ? require('../agents/missions').get(t.missionId)?.sessionId : t.sessionId;
-      if (sid) try { agent.cancel(sid); } catch { /* already ended */ }
+      if (require('./outside').isOutside(t.agent) && t.missionId) require('../harness-teams').stopMission(t.missionId).catch(() => {});   // its CLI in its computer
+      else if (sid) try { agent.cancel(sid); } catch { /* already ended */ }
       if (t.sessionId) { const s = require('../harness/memory').getSession(t.sessionId); if (s?.job) require('../harness/memory').updateSession(t.sessionId, { job: { ...s.job, state: 'stopped', stoppedWhy: why } }); }
       Object.assign(t, { stoppedAt: new Date().toISOString(), stoppedWhy: why });
     }

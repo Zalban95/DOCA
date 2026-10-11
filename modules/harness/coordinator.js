@@ -37,6 +37,8 @@ function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], 
       + 'it runs in the background and you read the result with `agent_results`. Send independent errands in parallel; one that needs another\'s result waits for it with `after`.' : '',
     has('team') && specialists.length ? 'A team — several errands for different specialists, some needing others\' results, each with a "done when": `team` create once, '
       + 'with every task, its `after` and its contract; the hub dispatches them in order, checks each contract and keeps the team\'s document. Stay free.' : '',
+    has('team') ? 'A named outside harness — only when the person names one in their request (Claude Code, Codex, dsh, Gemini CLI; "5 Claude on Opus"): a `team` '
+      + 'in a project whose tasks\' agent is `harness:<id>` (model, count), with asked: true — each works in a computer of its own on a branch, and the branches come back for the person to merge. Never on your own initiative.' : '',
     'Ask — the choice is the person\'s (money, something outward or irreversible, a matter of taste): ask once, with the options.',
   ].filter(Boolean);
   // The premise's ladder (CONSTITUTION §0; TODO P0.2): the person's way, then the proven way, then a way found and kept.
