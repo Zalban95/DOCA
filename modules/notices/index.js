@@ -7,7 +7,10 @@
  * they dismiss it, so a page opened after it fired still shows it, and goes out on the live feed's `notice` topic
  * to that person's pages only (live/routes.js).
  *
- *   { id, personId, title, text, from, at, seenAt, link? }
+ *   { id, personId, title, text, from, at, seenAt, link?, until? }
+ *
+ * `until` is when it stops meaning anything (a call ringing: 2026-10-11, a ring stayed on a page for days); after it the
+ * notice is no longer listed.
  *
  * `link` ({label, href}) is a place in the panel the notice is about — `#<page>` with a query of plain words
  * (`#connectors?draft=svc_1a2b`), never an address elsewhere.
@@ -26,11 +29,12 @@ const whose = personId => personId || null;
 /** Keep a notice for `personId` (null: the hive's, every host's) and draw it on their open pages. */
 const LINK = /^#[a-z][a-z-]{0,30}(\?[\w=&.-]{0,120})?$/;
 
-function post({ personId = null, title, text = '', from = 'hub', link = null } = {}) {
+function post({ personId = null, title, text = '', from = 'hub', link = null, forMs = 0 } = {}) {
   const head = String(title || text || '').trim();
   if (!head) throw new Error('A notice needs something to say.');
   const n = { id: `ntc_${crypto.randomBytes(6).toString('hex')}`, personId: whose(personId), title: head.slice(0, 160),
     text: title ? String(text || '').slice(0, 2000) : '', from: String(from).slice(0, 60), at: new Date().toISOString(), seenAt: null,
+    ...(forMs > 0 ? { until: new Date(Date.now() + forMs).toISOString() } : {}),
     ...(link && LINK.test(String(link.href || '')) ? { link: { label: String(link.label || 'Open').slice(0, 40), href: String(link.href) } } : {}) };
   const since = Date.now() - KEEP_MS;
   write([...rows().filter(x => Date.parse(x.at) > since), n]);
@@ -41,7 +45,7 @@ function post({ personId = null, title, text = '', from = 'hub', link = null } =
 const mine = (n, p, host) => (n.personId ? n.personId === (p?.id || null) : host);
 
 /** The notices this person has not dismissed, newest first. */
-function list(person, host) { return rows().filter(n => !n.seenAt && mine(n, person, host)).reverse(); }
+function list(person, host) { const now = Date.now(); return rows().filter(n => !n.seenAt && !(n.until && Date.parse(n.until) < now) && mine(n, person, host)).reverse(); }
 
 function seen(person, host, id) {
   let hit = null;

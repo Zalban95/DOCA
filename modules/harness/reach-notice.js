@@ -8,7 +8,7 @@
  * could and why — never "reminded on" a client that draws nothing.
  */
 
-function deliver({ personId = null, title, text, to, files, svg, urgent, meeting, panel = 'fallback', from = 'hub', strict = false } = {}) {
+function deliver({ personId = null, title, text, to, files, svg, urgent, meeting, panel = 'fallback', from = 'hub', strict = false, forMs = 0 } = {}) {
   const reach = require('./reach');
   let sent = null, why = null;
   if (Array.isArray(to) && !to.length) why = 'No device or linked chat of theirs is paired.';
@@ -16,7 +16,7 @@ function deliver({ personId = null, title, text, to, files, svg, urgent, meeting
     try { sent = reach.tell({ to, title, text, files, svg, urgent, personId, meeting }); }
     catch (e) { if (strict && !e.unshown) throw e; why = e.message; }
   }
-  const onPanel = panel === 'always' || !sent ? require('../notices').post({ personId, title, text, from }) : null;
+  const onPanel = panel === 'always' || !sent ? require('../notices').post({ personId, title, text, from, forMs }) : null;
   return { sent, why, onPanel, summary: summary({ sent, why, onPanel }) };
 }
 

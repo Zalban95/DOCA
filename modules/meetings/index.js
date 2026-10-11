@@ -96,7 +96,7 @@ function ring(m, owner, list) {
   for (const id of ids) {
     try {
       const notice = require('../harness/reach-notice');
-      notice.deliver({ personId: id, title: `${owner.name || 'Someone'} is calling`, text: `${m.title}\nJoin: ${invite.link(m)}`, to: notice.ownIds(id), urgent: true, panel: 'fallback', from: 'meetings',
+      notice.deliver({ personId: id, title: `${owner.name || 'Someone'} is calling`, text: `${m.title}\nJoin: ${invite.link(m)}`, to: notice.ownIds(id), urgent: true, panel: 'fallback', from: 'meetings', forMs: 10 * 60e3,   // a ring means nothing ten minutes on
         meeting: { id: m.id, link: invite.link(m), title: m.title, by: owner.name || '' } });
     } catch { /* ringing never breaks the call */ }
   }
