@@ -113,7 +113,7 @@ function _settingsHarnessRender() {
   if (!panel) return;
   const row = (btn, what) => `<div class="settings-tab-row">${btn}<span class="settings-tab-label">${what}</span></div>`;
   panel.innerHTML = `<div class="card">
-    <div class="card-title">DOCA Harness</div>
+    <div class="card-title">The built-in agent</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:12px">The built-in agent's own settings. Each opens where it is edited.</p>
     ${row('<button class="btn btn-sm" onclick="settingsOpenHarnessParams()">⚙ Model &amp; parameters</button>', 'Provider, model, the fallback chain, limits, tools')}
     ${row('<button class="btn btn-sm" onclick="hcRulesOpen()">Memory rules</button>', 'How it keeps memory: the rules, their review, history and undo')}

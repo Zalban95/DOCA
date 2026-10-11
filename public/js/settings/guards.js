@@ -10,17 +10,18 @@ function guardsCardRender(panel) {
   card.className = 'card';
   card.id = 'doca-guards-card';
   card.innerHTML = `<div class="card-title">Guards</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">What the agents read from outside passes these first. Text is
+    <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Checks what the agents read from outside (web pages, messages) for tricks before they act on it.</p>
+    <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:10px"><summary>What this is</summary>What the agents read from outside passes these first. Text is
       <b>clean</b> only if every guard switched on agrees; <b>blocked</b> parts are withheld and logged, <b>suspicious</b> ones are
-      passed on with a warning. Nobody is asked.</p>
+      passed on with a warning. Nobody is asked.</details>
     <div id="guards-runtime"></div>
     <div id="guards-list"><div class="placeholder pulse">Loading…</div></div>
     <div class="guards-add">
-      <select class="input" id="guards-preset"></select>
+      <select class="input" id="guards-preset" aria-label="A guard to add"></select>${infoBtn('Guards ready to add, each a small model that spots instructions hidden in text. + Add puts it in the list above, switched off until it is downloaded and ticked. + Custom… adds another classifier or a provider\'s model.')}
       <button class="btn btn-sm" onclick="guardsAddPreset()">+ Add</button>
       <button class="btn btn-sm" onclick="guardsAddCustom()" title="Another Hugging Face ONNX classifier, or a provider's model">+ Custom…</button>
     </div>
-    <div class="input-label" style="margin-top:12px">Test on text</div>
+    <div class="input-label" style="margin-top:12px">Test on text${infoBtn('Paste any text and press Test to see what the guards switched on make of it: clean, suspicious or blocked, and which guard said so. Nothing is kept.')}</div>
     <textarea class="input" id="guards-test-text" rows="3" placeholder="Paste a page, a message, anything — see what the guards make of it."></textarea>
     <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
       <button class="btn btn-sm" onclick="guardsTest()">Test</button>
@@ -40,9 +41,9 @@ async function guardsLoad() {
   try { _guardsState = await apiFetch('/api/harness/guards'); } catch (e) { list.textContent = e.message; return; }
   const s = _guardsState;
   document.getElementById('guards-runtime').innerHTML = s.runtime
-    ? '<div class="settings-tab-row"><span class="settings-tab-label">✓ Model runtime installed (transformers.js, in DOCA\'s data folder)</span></div>'
+    ? '<div class="settings-tab-row"><span class="settings-tab-label">✓ Model runtime installed (transformers.js, in the data folder)</span></div>'
     : `<div class="settings-tab-row"><button class="btn btn-sm" id="guards-install" onclick="guardsInstall()">Install model runtime</button>
-        <span class="settings-tab-label">Needed for model guards: about 740 MB, once, into DOCA's data folder — no sudo, nothing global.</span></div>`;
+        <span class="settings-tab-label">Needed for model guards: about 740 MB, once, into the data folder — no sudo, nothing global.</span></div>`;
   const sel = document.getElementById('guards-preset');
   const have = new Set(s.guards.map(g => g.id));
   sel.innerHTML = Object.entries(s.presets).filter(([id]) => !have.has(id))
@@ -58,10 +59,10 @@ function _guardRow(g, s) {
     : `${g.repo}${g.size ? ` · ${g.size}` : ''}${g.licence ? ` · ${g.licence}` : ''}`;
   row.innerHTML = `
     <label class="guard-on" title="${g.ready ? 'Screen with this guard' : 'Download it first'}"><input type="checkbox" ${g.enabled ? 'checked' : ''} ${g.ready ? '' : 'disabled'}>
-      <span><b>${escHtml(g.label || g.id)}</b><br><small>${escHtml(what)}${g.note ? ` — ${escHtml(g.note)}` : ''}</small></span></label>
+      <span><b>${escHtml(g.label || g.id)}</b>${infoBtn(`Ticked: everything the agents read from outside is screened by this guard. ${g.ready ? '' : 'Download it first. '}Saved as soon as it is changed.`)}<br><small>${escHtml(what)}${g.note ? ` — ${escHtml(g.note)}` : ''}</small></span></label>
     <div class="guard-thr">
-      <label title="At or above: passed on with a warning">suspect ≥ <input class="input" type="number" min="0.01" max="1" step="0.01" data-k="suspectAt" value="${g.suspectAt}"></label>
-      <label title="At or above: withheld and logged">block ≥ <input class="input" type="number" min="0.01" max="1" step="0.01" data-k="blockAt" value="${g.blockAt}"></label>
+      <label>suspect ≥${infoBtn('A score from 0 to 1 of how sure the guard is that text is a trick. At or above this, the text is passed on with a warning. Lower catches more, and more by mistake.')} <input class="input" type="number" min="0.01" max="1" step="0.01" data-k="suspectAt" value="${g.suspectAt}"></label>
+      <label>block ≥${infoBtn('At or above this score the text is withheld from the agent and logged under Blocked and flagged. Lower blocks more, and more by mistake.')} <input class="input" type="number" min="0.01" max="1" step="0.01" data-k="blockAt" value="${g.blockAt}"></label>
     </div>
     <div class="guard-act"></div>`;
   const act = row.querySelector('.guard-act');

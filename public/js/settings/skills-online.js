@@ -9,9 +9,9 @@
 function skillsOnlineRender(box) {
   if (!box) return;
   box.innerHTML = `<div class="card-title" style="margin-top:14px">From public collections</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Open collections of skills on GitHub — Anthropic's, OpenAI's, Superpowers and Hugging Face's.
-      Look at one before importing it: you see its instructions, what it carries and which files are scripts. Importing copies it here; nothing in it is run.</p>
-    <div style="display:flex;gap:6px"><input class="input" id="doca-skills-online-q" placeholder="Search them (empty: list all)" style="flex:1">
+    <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:8px"><summary>What this is</summary>Open collections of skills on GitHub — Anthropic's, OpenAI's, Superpowers and Hugging Face's.
+      Look at one before importing it: you see its instructions, what it carries and which files are scripts. Importing copies it here; nothing in it is run.</details>
+    <div style="display:flex;gap:6px;align-items:center"><input class="input" id="doca-skills-online-q" placeholder="Search them (empty: list all)" style="flex:1">${infoBtn('Words to look for in the public collections; empty lists them all. Only searches: nothing is imported until you choose one.')}
       <button class="btn btn-xs" id="doca-skills-online-go">Search</button></div>
     <div id="doca-skills-online-hits"></div>`;
   const go = () => skillsOnlineSearch(document.getElementById('doca-skills-online-q').value.trim());
