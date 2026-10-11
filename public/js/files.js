@@ -97,42 +97,8 @@ async function fmUnstar(path) {
   fmRenderList();
 }
 
-/* ── Mounts ────────────────────────────────────────────── */
-async function fmLoadMounts() {
-  const el = document.getElementById('fm-mounts-list');
-  if (!el) return;
-  try {
-    const data = await apiFetch(`${fmApi()}/mounts`);
-    const mounts = data.mounts || [];
-    if (!mounts.length) {
-      el.innerHTML = '<div class="placeholder" style="font-size:10px;padding:4px">No mounts detected</div>';
-      return;
-    }
-    el.innerHTML = mounts.map(m => {
-      const label = m.path === '/' ? 'Root (/)' : m.path.split('/').pop() || m.path;
-      const icon  = fmMountIcon(m.type, m.device);
-      return `<button class="fm-bookmark" title="${escHtml(`${m.device} → ${m.path} (${m.type})`)}"
-                      onclick="fmNavigate(${jsArg(m.path)})">
-        <span class="fm-bookmark-icon">${icon}</span>
-        <span class="fm-bookmark-name">${escHtml(label)}</span>
-        <span style="font-size:8px;color:var(--muted);margin-left:auto">${escHtml(m.type)}</span>
-      </button>`;
-    }).join('');
-  } catch {
-    el.innerHTML = '<div class="placeholder" style="font-size:10px;padding:4px">Could not load mounts</div>';
-  }
-}
-
-function fmMountIcon(fstype, device) {
-  if (/nfs|cifs|smb|sshfs|fuse\.sshfs/.test(fstype)) return '🌐';
-  if (/vfat|ntfs|exfat|fuseblk/.test(fstype)) return '🔌';
-  if (device && device.startsWith('/dev/sd')) return '💾';
-  if (device && device.startsWith('/dev/nvme')) return '⚡';
-  if (device && device.startsWith('/dev/mmcblk')) return '📇';
-  if (fstype === 'tmpfs') return '⏳';
-  if (fstype === 'overlay') return '🧅';
-  return '💿';
-}
+/* ── Mounts: the places with how full each is, and the disks to mount (files-disks.js) ── */
+function fmLoadMounts() { return fmDisksLoad(); }
 
 /** The sidebar's tree (lib/filetree.js, the same one the Projects tab uses), rooted at the last bookmark. */
 function fmTreeMount(root) {
@@ -308,23 +274,7 @@ function fmDblClick(path, isDir) {
   }
 }
 
-/* ── Context menu ────────────────────────────────────── */
-function fmContextMenu(event, path, isDir) {
-  event.preventDefault();
-  if (!fm.selected.has(path)) fm.selected = new Set([path]);
-  fmRenderList();
-  const mt = !isDir && fmMediaType(path.split('/').pop());
-  const acts = [
-    ...(mt ? [{ label: '👁 Preview', fn: () => fmPreviewFile(path, mt) }] : []),
-    { label: isDir ? '→ Open' : '✏ Edit', fn: () => isDir ? fmNavigate(path) : fmOpenEditor(path) },
-    { label: '⧉ Copy',    fn: () => fmCopy() },
-    { label: '✂ Cut',     fn: () => fmCut() },
-    { label: '↩ Rename',  fn: () => fmRenameInline(path, path.split('/').pop()) },
-    ...(!isDir ? [{ label: '⬇ Download', fn: () => fmDownloadFile(path) }] : []),
-    { label: '✕ Delete',  fn: () => fmDelete(path, isDir) },
-  ];
-  showContextModal(event.clientX, event.clientY, acts);
-}
+/* ── Context menu: the shared file menu, with copy and cut (files-menu.js) ── */
 
 /* ── Clipboard operations ────────────────────────────── */
 function fmCopy() {

@@ -152,4 +152,4 @@ function upgrade(req, who) {
   note({ kind: m[1], id: decodeURIComponent(m[2]), act: 'take-over', ok: true }, { from: 'person', person: personOf(who?.user), via: viaOf({ auth: who }) });
 }
 
-module.exports = { middleware, command, commandAct, upgrade, note, nameOf, containerName, ROUTES, VERB, personOf };
+module.exports = { middleware, command, commandAct, upgrade, note, nameOf, containerName, ROUTES, VERB, personOf, viaOf };

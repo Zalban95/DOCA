@@ -124,6 +124,7 @@ const TABLE = [
   R(GET, '/api/models(/(disk|settings|tools|servers|roles|hf/(list|search|settings|status)|local/(list|search|settings)|llamacpp/(list|status)|ollama/(list|running|search|status)))?', 'read'),
 
   // ── Everything else is the machine ──
+  R(ANY, '/api/files/disks(/.*)?', 'host'),                  // how full each disk is, mounting and unmounting one (disks/)
   R(ANY, '/api/(files|fm-favorites|configs|config-favorites|keys|logs|setup|snapshots|stack|action)(/.*)?', 'host'),
   R(ANY, '/api/projects(/.*)?', 'host'),
   R(ANY, '/api/computers(/.*)?', 'host'),

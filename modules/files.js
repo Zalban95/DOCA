@@ -38,28 +38,29 @@ function mountsWithoutProc(platform = process.platform, { roots = FM_ALLOWED_ROO
   return [];
 }
 
-function handleMounts(req, res) {
+/** The mounted filesystems the file manager may open: /proc/mounts on Linux, else where the OS puts disks. */
+function mountsList() {
   const procMounts = '/proc/mounts';
-  try {
-    if (!fs.existsSync(procMounts)) {
-      const mounts = mountsWithoutProc().filter(m => fmSafe(m.path)).sort((a, b) => a.path.localeCompare(b.path));
-      return res.json({ mounts });
-    }
-    const raw = fs.readFileSync(procMounts, 'utf8');
-    const mounts = [];
-    for (const line of raw.split('\n')) {
-      if (!line.trim()) continue;
-      const [device, mountpoint, fstype] = line.split(/\s+/);
-      if (SKIP_FS_TYPES.has(fstype)) continue;
-      if (fstype === 'tmpfs' && mountpoint !== '/tmp') continue;
-      if (!mountpoint.startsWith('/')) continue;
-      if (!fmSafe(mountpoint)) continue;
-      if (!fs.existsSync(mountpoint)) continue;
-      mounts.push({ device, path: mountpoint, type: fstype });
-    }
-    mounts.sort((a, b) => a.path.localeCompare(b.path));
-    res.json({ mounts });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  if (!fs.existsSync(procMounts)) {
+    return mountsWithoutProc().filter(m => fmSafe(m.path)).sort((a, b) => a.path.localeCompare(b.path));
+  }
+  const mounts = [];
+  for (const line of fs.readFileSync(procMounts, 'utf8').split('\n')) {
+    if (!line.trim()) continue;
+    // /proc/mounts writes a space in a mount point as \040 (and a tab, newline and backslash likewise).
+    const [device, mountpoint, fstype] = line.split(/\s+/).map(f => f.replace(/\\(\d{3})/g, (_, o) => String.fromCharCode(parseInt(o, 8))));
+    if (SKIP_FS_TYPES.has(fstype)) continue;
+    if (fstype === 'tmpfs' && mountpoint !== '/tmp') continue;
+    if (!mountpoint.startsWith('/')) continue;
+    if (!fmSafe(mountpoint)) continue;
+    if (!fs.existsSync(mountpoint)) continue;
+    mounts.push({ device, path: mountpoint, type: fstype });
+  }
+  return mounts.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function handleMounts(req, res) {
+  try { res.json({ mounts: mountsList() }); } catch (e) { res.status(500).json({ error: e.message }); }
 }
 
 /** GET /api/files/list?path=... */
@@ -338,6 +339,7 @@ function handleSearch(req, res) {
 module.exports = {
   handleRoots,
   handleMounts,
+  mountsList,
   mountsWithoutProc,
   handleSearch,
   handleList,
