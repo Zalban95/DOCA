@@ -14,6 +14,10 @@ let FM_BOOKMARKS = [];
 function fmBookmarksFrom(paths) {
   const h = paths.home || '/', here = paths.shortcuts || {};
   const known = k => here[k] !== false;   // an older hub says nothing: shown as before
+  // Grouped as the platform it is — DOCA's own, the projects, each harness's folder (modules/files-places.js, 2026-10-12).
+  if (Array.isArray(paths.places)) return [...paths.places,
+    known('root') && { group: 'This machine', id: 'root', icon: '/', label: !here.rootPath || here.rootPath === '/' ? 'Root fs' : here.rootPath, path: here.rootPath || '/' },
+  ].filter(b => b && b.path);
   return [
     { id: 'home', icon: '⌂', label: 'Home', path: h },
     known('openclawDir') && { id: 'openclaw', icon: '⚙', label: '.openclaw', path: (paths.configPath || `${h}/.openclaw/x`).replace(/[\\/][^\\/]*$/, '') },
@@ -28,7 +32,15 @@ function fmBookmarksFrom(paths) {
 function fmBuildBookmarks() {
   const ul = document.getElementById('fm-bookmarks-list');
   ul.innerHTML = '';
+  let group = null;
   FM_BOOKMARKS.forEach(b => {
+    if (b.group && b.group !== group) {   // a small heading where a group starts
+      group = b.group;
+      const head = document.createElement('div');
+      head.className = 'fm-bookmark-group';
+      head.textContent = group;
+      ul.appendChild(head);
+    }
     const btn     = document.createElement('button');
     btn.className = `fm-bookmark${b.missing ? ' fm-bookmark-missing' : ''}`;
     btn.id        = `fmbk-${b.id}`;

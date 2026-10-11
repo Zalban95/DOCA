@@ -104,6 +104,7 @@ function handleGetPaths(_req, res) {
     snapshotDir:    SNAPSHOT_DIR,
     configRegistry: CONFIG_REGISTRY,
     settable:       paths.describe(),
+    places:         require('./files-places').places(),   // Hub → Files' shortcuts: DOCA, projects, harnesses (files-places.js)
     // Which of Hub → Files' shortcuts lead somewhere: on a fresh install most of them answered 404, and "Root fs" 403,
     // with nothing on the page (self-test round two, C10). The tab hides or offers to create what is not there.
     shortcuts: {
