@@ -175,8 +175,10 @@ function gate(name, args, ctx = {}) {
   const { mode: panelMode, always, recheckOutside } = settings();
   const mode = require('./modes').approvalMode(ctx.sessionId, panelMode);   // a chat tab's own Auto/Manual
   // Outside text entered this turn (harness/untrusted.js): the first call after it that does something
-  // is asked about again, once, even when allowed. Not in Unattended mode or a mission: nobody would answer.
-  if (recheckOutside && mode !== 'unattended' && !ctx.mission && !FREE.has(name) && !require('./tools').isRead(name, args)) {
+  // is asked about again, once, even when allowed — in Manual only. Auto means the person is not asked (the owner,
+  // 2026-10-12: "if auto is on the user should not need to approve anything, otherwise that's just manual with a
+  // different name"); the outside text is still framed as other people's words. Never in a mission: nobody would answer.
+  if (recheckOutside && mode === 'manual' && !ctx.mission && !FREE.has(name) && !require('./tools').isRead(name, args)) {
     const from = require('./untrusted').pending(ctx.signal, { take: true });
     if (from) return { tool: name, keys: null, recheck: true,
       summary: `${summarize(name, args)} — asked again because text from ${from} entered this turn; it could be steering the agent.` };
