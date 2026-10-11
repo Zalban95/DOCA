@@ -10,7 +10,7 @@ test('a folder must be a plain full path', () => {
   assert.throws(() => oh.checkDir('models'), /full path/);
   assert.throws(() => oh.checkDir('/data/x"; rm -rf /'), /quotes/);
   if (process.platform !== 'win32') assert.throws(() => oh.checkDir('/data/$(id)'), /\$/);
-  assert.equal(oh.checkDir('/data/ollama/'), '/data/ollama');
+  assert.equal(oh.checkDir('/data/ollama/'), require('node:path').resolve('/data/ollama'), 'made whole the way this OS does (a drive on Windows)');
 });
 
 test('on a systemd host Ollama gets a drop-in, its models copied first, its user owning the folder, a restart', () => {
