@@ -46,7 +46,7 @@ function _pjFrame() {
       <aside class="pj-side" id="pj-side">
         <div class="pj-side-title" id="pj-side-title"></div>
         <div class="pj-side-body" id="pj-side-body"></div>
-        <div class="pj-teams" id="pj-teams"></div>
+        <div class="pj-teams" id="pj-teams"></div><div class="pj-teams" id="pj-team-branches"></div>
       </aside>
       <section class="pj-main">
         <div class="pj-tabs" id="pj-tabs"></div>
@@ -90,7 +90,7 @@ async function pjOpen(id) {
   pjEditorReset();
   _pjMeta();
   pjView(PJ.view);
-  pjTeamsLoad();   // Teams here (projects/teams.js)
+  pjTeamsLoad(); pjTeamBranchesLoad();   // Teams here and their branches (projects/teams.js, team-branches.js)
   if (document.getElementById('pj-chat').classList.contains('open')) pjChatLoad();
 }
 
