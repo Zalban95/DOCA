@@ -863,16 +863,16 @@
             <button class="skills-mode-btn" id="skills-mode-search" onclick="skillsSetMode('search')">Search online</button>
           </div>
           <div id="skills-installed-bar" class="skills-bar">
-            <input id="skill-input" class="input flex1" placeholder="skill name or repo (e.g. openai-whisper)" style="max-width:260px">
+            <input id="skill-input" class="input flex1" placeholder="skill name or repo (e.g. openai-whisper)" style="max-width:260px;min-width:170px"><span data-info="The name of a skill in OpenClaw's registry, or a repository, to install into OpenClaw's skills folder. Install adds it; Force installs it again over one already there."></span>
             <button class="btn btn-sm btn-blue" onclick="installSkill(false)">Install</button>
             <button class="btn btn-sm btn-amber" onclick="installSkill(true)">Force</button>
             <div style="flex:1"></div>
-            <input id="skill-filter" class="input" placeholder="Filter installed…" style="width:150px" oninput="filterSkills()">
+            <input id="skill-filter" class="input" placeholder="Filter installed…" style="width:150px" oninput="filterSkills()"><span data-info="Type to show only the installed skills whose name or description match. Only filters the list."></span>
             <button class="btn btn-sm" onclick="loadSkills()">↺</button>
           </div>
           <div id="skills-search-bar" class="skills-bar" style="display:none">
             <input id="skill-search-input" class="input flex1" placeholder="Search skills registry…" style="max-width:320px"
-                   onkeydown="if(event.key==='Enter') searchSkillsOnline()">
+                   onkeydown="if(event.key==='Enter') searchSkillsOnline()"><span data-info="Words to look for in OpenClaw's skills registry. The ticks narrow results to official, community or unknown authors; none ticked shows all."></span>
             <button class="btn btn-sm btn-blue" onclick="searchSkillsOnline()">Search</button>
             <div class="skills-flag-group">
               <label class="skills-flag"><input type="checkbox" id="flag-official"> <span class="badge badge-green" style="font-size:9px">Official</span></label>
@@ -907,24 +907,24 @@
           </div>
           <div id="snap-settings-body" style="display:none;padding-top:10px">
             <div class="snap-settings-grid">
-              <label class="snap-label-text">Snapshot dir</label>
+              <label class="snap-label-text" data-info="The folder where snapshots are kept. Default: ~/openclaw-snapshots.">Snapshot dir</label>
               <div class="snap-path-with-btn">
                 <input id="snap-dir" class="input flex1" placeholder="/path/to/snapshots">
                 <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-dir','dir')">📁</button>
               </div>
-              <label class="snap-label-text">Snapshot script</label>
+              <label class="snap-label-text" data-info="A shell script of yours that takes a snapshot. Optional: without one, the paths below are packed into a .tar.gz instead.">Snapshot script</label>
               <div class="snap-path-with-btn">
                 <input id="snap-script-create" class="input flex1" placeholder="/path/to/snapshot.sh">
                 <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-script-create','file')">📁</button>
                 <button class="btn btn-xs btn-blue" title="Edit script" onclick="snapEditScript('snap-script-create')">✏</button>
               </div>
-              <label class="snap-label-text">Restore script</label>
+              <label class="snap-label-text" data-info="A shell script of yours that puts a snapshot back. Optional: without one, a .tar.gz snapshot is unpacked.">Restore script</label>
               <div class="snap-path-with-btn">
                 <input id="snap-script-restore" class="input flex1" placeholder="/path/to/restore.sh">
                 <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-script-restore','file')">📁</button>
                 <button class="btn btn-xs btn-blue" title="Edit script" onclick="snapEditScript('snap-script-restore')">✏</button>
               </div>
-              <label class="snap-label-text">Paths to include<br><small style="font-weight:400;opacity:.7">used by tar fallback &amp; passed to scripts</small></label>
+              <label class="snap-label-text" data-info="The folders and files a snapshot holds: packed into the .tar.gz when there is no snapshot script, and passed to your scripts when there is.">Paths to include</label>
               <div>
                 <div id="snap-paths-list" class="snap-paths-list"></div>
                 <button class="btn btn-xs" style="margin-top:6px" onclick="snapAddPath()">+ Add path</button>
@@ -939,7 +939,7 @@
         <div class="card">
           <div class="card-title">Create Snapshot</div>
           <div class="row">
-            <input id="snap-label" class="input flex1" placeholder="label (optional, e.g. before-groq-test)" style="max-width:300px">
+            <input id="snap-label" class="input flex1" placeholder="label (optional, e.g. before-groq-test)" style="max-width:300px"><span data-info="An optional name for this snapshot, so you can tell it apart later: passed to your snapshot script, or used as the file name. Empty: the date and time."></span>
             <button class="btn btn-amber" onclick="createSnapshot()">📷 Snapshot now</button>
           </div>
         </div>
