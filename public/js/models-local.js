@@ -16,10 +16,8 @@ async function nlmLoadSettings() {
     const s = await apiFetch('/api/models/local/settings');
     const t = s[tool] || {};
     const pathEl    = document.getElementById('nlm-path');
-    const apiUrlEl  = document.getElementById('nlm-apiurl');
     const cfgPathEl = document.getElementById('nlm-config-path');
     if (pathEl)    pathEl.value    = t.modelsPath  || '';
-    if (apiUrlEl)  apiUrlEl.value  = t.apiUrl      || '';
     if (cfgPathEl) cfgPathEl.value = t.configPath  || '';
   } catch {}
 }
@@ -33,7 +31,6 @@ async function nlmSaveSettings() {
       body: {
         tool,
         modelsPath:  document.getElementById('nlm-path')?.value.trim()        || '',
-        apiUrl:      document.getElementById('nlm-apiurl')?.value.trim()      || '',
         configPath:  document.getElementById('nlm-config-path')?.value.trim() || '',
       }
     });

@@ -15,14 +15,14 @@ async function mcpLoad() {
     const [data] = await Promise.all([apiFetch('/api/mcp'), machineOriginsLoad(), leafFieldsDraw(leafFieldsSlot('mcp-export', 'mcp-settings'), ['mcpSettings.callTimeoutMs', 'mcpSettings.listTimeoutMs'], { label: 'Advanced — how long to wait for a server', id: 'mcp-timeouts' })]);   // + who started each (lib/machine-origin.js), and the timeouts' boxes
     _mcpTargets  = data.targets || [];
     const servers = data.servers || [];
-    list.innerHTML = _mcpOffersHtml(data.offers || [])
+    mcpFormHome(); list.innerHTML = _mcpOffersHtml(data.offers || [])   // the form leaves the list before it is redrawn (mcp-key.js)
       + (servers.length
         ? _mcpGroupsHtml(servers)
         : '<div class="placeholder">No MCP servers yet — add one below.</div>');
     _mcpExportRender(servers.length);
     mcpCatalogRender();   // the servers the panel knows how to add (mcp-catalog.js)
     if (typeof mcpDraftsRender === 'function') mcpDraftsRender();   // and the ones the agent prepared (mcp-drafts.js)
-    if (_mcpOpenLog) mcpShowLog(_mcpOpenLog, true);
+    if (_mcpOpenLog) mcpShowLog(_mcpOpenLog, true); mcpFormBack();
   } catch (e) {
     list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
@@ -304,7 +304,7 @@ function mcpNew() {
   document.getElementById('mcp-origin-kind').value = 'server';
   document.getElementById('mcp-name').disabled = false;
   setStatus(document.getElementById('mcp-form-status'), '', '');
-  _mcpLoadDevices(null);
+  _mcpLoadDevices(null); mcpKeyField(null); mcpFormPlace(null);
   mcpShowForm(true);
 }
 
@@ -330,7 +330,7 @@ async function mcpEdit(id) {
   // would create a second server rather than rename this one.
   document.getElementById('mcp-name').disabled = true;
   document.getElementById('mcp-name').dataset.editing = id;
-  mcpShowForm(true);
+  await mcpKeyField(s.key); mcpFormPlace(id); mcpShowForm(true);   // its token, if it names a key; the form under its row (mcp-key.js)
 }
 
 async function mcpSave() {
@@ -354,12 +354,12 @@ async function mcpSave() {
       : { kind: 'server', deviceId: null },
   };
   try {
+    const kept = await mcpKeyKeep(); body.headers = parseHeaderLines(document.getElementById('mcp-headers').value);   // a bearer line taken as the key is gone
     const r = await apiFetch('/api/mcp', { method: 'POST', body });
-    setStatus(status, `✓ Saved ${r.server.id} — Start it to see its tools`, 'ok');
-    nameEl.disabled = false;
-    delete nameEl.dataset.editing;
+    setStatus(status, `✓ Saved ${r.server.id}${kept} — Start it to see its tools`, 'ok');
+    nameEl.disabled = false; delete nameEl.dataset.editing;
     mcpShowForm(false);
-    mcpLoad();
+    await mcpLoad(); mcpShowResult(r.server.id, `✓ Saved${kept}`, 'ok');   // said on its row: the form's line went with the form
   } catch (e) {
     setStatus(status, `✗ ${e.message}`, 'err');
   }

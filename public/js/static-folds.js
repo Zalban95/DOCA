@@ -9,7 +9,7 @@ const STATIC_FOLDS = [
   // Field → Models: the address is the common one; folders only move where things are kept or measured.
   { id: 'models-ollama', label: 'Advanced — models folder', fields: ['models-ollama-path'], grid: true },
   { id: 'models-hf', label: 'Advanced — download folder', fields: ['hf-cache-dir'], grid: true },
-  { id: 'models-nlm', label: 'Advanced — address, config file', fields: ['nlm-apiurl', 'nlm-config-path'], grid: true },
+  { id: 'models-nlm', label: 'Advanced — config file', fields: ['nlm-config-path'], grid: true },
 ];
 
 /** In a label | field grid (.models-settings-grid) a field is its cell and the label before it: both move, into a grid

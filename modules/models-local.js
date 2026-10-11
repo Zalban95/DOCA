@@ -111,11 +111,10 @@ function handlePostSettings(req, res) {
   try {
     const mp = loadModelsPrefs();
     if (!mp.local) mp.local = {};
-    const { tool, modelsPath, apiUrl, configPath } = req.body;
+    const { tool, modelsPath, configPath } = req.body;   // its old address field duplicated the tool row's own, and nothing read it (removed 2026-10-12)
     if (!tool) return res.status(400).json({ error: 'tool required' });
     if (!mp.local[tool]) mp.local[tool] = {};
     if (modelsPath  !== undefined) mp.local[tool].modelsPath  = modelsPath;
-    if (apiUrl      !== undefined) mp.local[tool].apiUrl      = apiUrl;
     if (configPath  !== undefined) mp.local[tool].configPath  = configPath;
     saveModelsPrefs(mp);
     res.json({ ok: true });
