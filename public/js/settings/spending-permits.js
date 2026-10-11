@@ -30,22 +30,28 @@ function spendingPermitsRender(v) {
   const most = v.me.mayAllow;
   box.innerHTML = `<div class="card">
     <div class="card-title">Spending permissions</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">What the agents may spend, and on what. They ask every time unless a permission here covers it;
-      a one-time permission is used by its first purchase, a kept one allows up to its amount each month. ${v.admin ? 'As an admin you may allow any amount, for anyone.'
-        : most ? `Your level lets you allow up to ${most} ${escHtml(v.currency)} at a time.` : 'Your level does not let you allow spending yourself: an admin can.'}</p>
+    <p class="desc" style="margin-bottom:6px">Real money the agents may spend, and on what. Without a permission here they ask every time.</p>
+    <details class="desc page-about" style="margin-bottom:8px"><summary>What this is</summary>A one-time permission is used by its first purchase; a kept one allows up to its amount each month, until revoked. ${v.admin ? 'As an admin you may allow any amount, for anyone.'
+        : most ? `Your level lets you allow up to ${most} ${escHtml(v.currency)} in all.` : 'Your level does not let you allow spending yourself: an admin can.'}</details>
     ${waiting ? `<div class="card-subtitle" style="color:var(--amber)">Waiting for your answer</div>${waiting}` : ''}
     <div class="card-subtitle" style="margin-top:6px">Allowed</div>
     ${active || '<div class="placeholder">Nothing allowed — nothing can be spent.</div>'}
-    <div class="input-label" style="margin-top:10px">Allow spending</div>
-    <div class="toolbar" style="gap:6px;flex-wrap:wrap">
-      <select class="input" id="spp-kind" style="width:auto"><option value="service">a service</option><option value="provider">a model provider</option><option value="purchase">a purchase</option></select>
-      <input class="input" id="spp-id" placeholder="which (e.g. hi3d.ai, or * for any)" style="width:200px">
-      <input class="input" id="spp-up" type="number" min="0" step="any" placeholder="up to (${escHtml(v.currency)})" style="width:120px">
-      <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" id="spp-keep"> every month</label>
-      ${v.admin ? `<select class="input" id="spp-for" style="width:auto">${(v.people || []).map(p => `<option value="${escHtml(p.id)}" ${p.id === v.me.id ? 'selected' : ''}>for ${escHtml(p.name || p.email)}</option>`).join('')}</select>` : ''}
-      <button class="btn btn-sm btn-blue" onclick="spendingPermitCreate()" ${v.admin || most ? '' : 'disabled'}>Allow</button></div>
+    <div class="card-subtitle" style="margin-top:10px">Allow spending</div>
+    <div class="form-row" style="margin-top:4px">
+      ${_sppField('spp-kind', 'On what', 'A service (an online API the agents call), a model provider, or a purchase (buying something).',
+        '<select class="input" id="spp-kind"><option value="service">a service</option><option value="provider">a model provider</option><option value="purchase">a purchase</option></select>')}
+      ${_sppField('spp-id', 'Which', 'Its name, e.g. hi3d.ai or openai, or * for any of that kind.', '<input class="input" id="spp-id" placeholder="hi3d.ai, or * for any">')}
+      ${_sppField('spp-up', `Up to (${escHtml(v.currency)})`, 'The most that may be spent under this permission.', `<input class="input" id="spp-up" type="number" min="0" step="any" placeholder="0.00">`)}
+      ${v.admin ? _sppField('spp-for', 'For', 'Whose agents may spend it. As an admin you may allow any amount, for anyone.',
+        `<select class="input" id="spp-for">${(v.people || []).map(p => `<option value="${escHtml(p.id)}" ${p.id === v.me.id ? 'selected' : ''}>${escHtml(p.name || p.email)}</option>`).join('')}</select>`) : ''}
+    </div>
+    <div class="settings-tab-row" style="margin:8px 0"><label class="skill-toggle"><input type="checkbox" id="spp-keep" aria-label="Every month"><span class="skill-toggle-track"></span></label>
+      <span class="settings-tab-label">Every month${infoBtn('Off (the default): used once, by the first purchase. On: up to the amount every calendar month, until you revoke it.')}</span></div>
+    <button class="btn btn-sm btn-blue" onclick="spendingPermitCreate()" ${v.admin || most ? '' : 'disabled'}>Allow</button>
     ${past ? `<div class="card-subtitle" style="margin-top:10px">Earlier</div>${past}` : ''}</div>`;
 }
+
+const _sppField = (id, label, info, input) => `<div class="field"><label class="input-label" for="${id}">${label}${infoBtn(info)}</label>${input}</div>`;
 
 async function _spPermitCall(path, method, body) {
   try { await apiFetch(path, { method, body }); } catch (e) { return appAlert(e.message); }

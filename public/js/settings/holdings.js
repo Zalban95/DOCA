@@ -8,7 +8,7 @@
    ═══════════════════════════════════════════════════════ */
 
 const _HOLD_KINDS = { model: 'Models', provider: 'Providers', key: 'Keys for services', connector: 'Connected accounts', login: 'Logins',
-  computer: 'Agents\' computers', service: 'Inference services', device: 'Others\' devices' };
+  computer: 'Agents\' computers', service: 'Inference services', device: 'Others\' devices', home: 'Home', vnc: 'VNC screens' };
 const _HOLD_REACH = { create: 'creates safely — files, pages, the web, the agents\' own computers', 'own-devices': 'creates, and uses their own devices',
   anything: 'anything — the hub machine and every device', none: 'no tools' };
 

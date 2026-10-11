@@ -28,16 +28,16 @@ async function updateChannelDraw(check, { el, badge, pullBtn } = {}) {
   const days = _UC_DAYS.map(([d, l]) => `<label style="display:inline-flex;gap:3px;align-items:center;font-size:12px"><input type="checkbox" class="uc-day" value="${d}"${set.days.includes(d) ? ' checked' : ''}>${l}</label>`).join(' ');
   const image = s.image ? '<p class="desc">This hive runs an image: its host installs updates (deploy/hive.sh update), and the hive holds its work for that.</p>' : '';
   if (el) el.innerHTML = `<div class="update-info">${line.join('<br>')}</div>${image}
-    <div class="form-row" style="margin-top:10px"><label>Install updates</label>
+    <div class="form-row" style="margin-top:10px"><label for="uc-auto">Install updates${infoBtn('Only when I ask: nothing happens until you press Update now. Tell me, I install: you are told when one is ready. In a window: it installs by itself on the days and between the times below, on this hive\'s clock. Saved with Save.')}</label>
       <select id="uc-auto" class="input" style="width:auto">
         <option value="off"${set.auto === 'off' ? ' selected' : ''}>Only when I ask</option>
         <option value="notify"${set.auto === 'notify' ? ' selected' : ''}>Tell me, I install</option>
         <option value="window"${set.auto === 'window' ? ' selected' : ''}>In a window</option>
       </select></div>
     <div id="uc-window" style="${set.auto === 'window' ? '' : 'display:none'}">
-      <div class="form-row"><label>Days</label><span style="display:flex;gap:8px;flex-wrap:wrap">${days}</span></div>
-      <div class="form-row"><label>From</label><input id="uc-from" class="input" type="time" value="${escHtml(set.from)}" style="width:auto">
-        <label style="min-width:0">to</label><input id="uc-to" class="input" type="time" value="${escHtml(set.to)}" style="width:auto"></div>
+      <div class="form-row"><label>Days${infoBtn('The days an update may install by itself.')}</label><span style="display:flex;gap:8px;flex-wrap:wrap">${days}</span></div>
+      <div class="form-row"><label for="uc-from">From${infoBtn('The window\'s start and end time, on this hive\'s clock. Running work is still never cut: an update waits for it.')}</label><input id="uc-from" class="input" type="time" value="${escHtml(set.from)}" style="width:auto">
+        <label for="uc-to" style="min-width:0">to</label><input id="uc-to" class="input" type="time" value="${escHtml(set.to)}" style="width:auto"></div>
     </div>
     <p class="desc">Running conversations, calls and devices' commands are never cut: an update waits for them, now or in the window. If the new version does not answer within 90 s, the hive goes back by itself.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap">

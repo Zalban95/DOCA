@@ -9,6 +9,13 @@ let _spendingMonth = null;
 let _spendingView = null;
 
 const _SP_FIELDS = [['tokensPerDay', 'Tokens a day'], ['tokensPerMonth', 'Tokens a month'], ['moneyPerDay', 'Money a day'], ['moneyPerMonth', 'Money a month']];
+// What each budget field means, for its ⓘ.
+const _SP_INFO = {
+  tokensPerDay: 'The most tokens (pieces of text the models read and write) the agents may use in one day, UTC. At the limit no new turn starts; one already running finishes. Empty or 0: no limit.',
+  tokensPerMonth: 'The same, for a calendar month (UTC). Empty or 0: no limit.',
+  moneyPerDay: 'The most money a day, priced with the list in Harness → Usage. While a money budget is set, a model with no price there is refused rather than guessed. Empty or 0: no limit.',
+  moneyPerMonth: 'The same, for a calendar month (UTC). Empty or 0: no limit.',
+};
 
 const _spTok = n => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(n || 0));
 const _spMoney = (v, cur) => `${(v?.money || 0).toFixed(2)} ${escHtml(cur)}${v?.unpriced ? ` <span style="color:var(--muted)" title="Calls on models without a price are not counted in money">+${v.unpriced} unpriced</span>` : ''}`;
@@ -25,7 +32,7 @@ function _spBudgetText(b, cur) {
 
 /** Four inputs for a budget, ids prefixed. */
 function _spBudgetInputs(prefix, b) {
-  return _SP_FIELDS.map(([k, label]) => `<label style="font-size:11px;display:flex;flex-direction:column;gap:2px">${label}
+  return _SP_FIELDS.map(([k, label]) => `<label style="font-size:11px;display:flex;flex-direction:column;gap:2px"><span>${label}${infoBtn(_SP_INFO[k])}</span>
     <input class="input" id="${prefix}-${k}" type="number" min="0" step="any" style="width:110px" value="${b?.[k] ?? ''}" placeholder="none" data-default="" data-label="${label}"></label>`).join('');
 }
 const _spBudgetRead = prefix => Object.fromEntries(_SP_FIELDS.map(([k]) => [k, document.getElementById(`${prefix}-${k}`)?.value || 0]));
@@ -49,9 +56,10 @@ async function spendingLoad(month) {
     + (v.nobody ? `<div class="disk-row"><span class="disk-label" style="color:var(--muted)">Not anyone's</span><span class="disk-path">${_spTok(v.nobody.tokens)} tokens, ${_spMoney(v.nobody, cur)} — calls outside a person's conversation</span></div>` : '') : '';
   panel.innerHTML = `<div class="card">
     <div class="card-title">What was spent</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Every model call your agents made, counted in your conversations (and their missions and work chats).
-      Money comes from the prices in Harness → Usage; a model without a price is counted in tokens only. Days and months are UTC.</p>
-    <div class="toolbar" style="gap:8px;margin-bottom:8px"><select class="input" style="width:auto" onchange="spendingLoad(this.value)">
+    <p class="desc" style="margin-bottom:6px">What your agents' model calls used, day by day.</p>
+    <details class="desc page-about" style="margin-bottom:8px"><summary>What this is</summary>Every model call your agents made, counted in your conversations (and their missions and work chats).
+      Money comes from the prices in Harness → Usage; a model without a price is counted in tokens only. Days and months are UTC.</details>
+    <div class="toolbar" style="gap:8px;margin-bottom:8px"><span class="input-label" style="margin:0">Month${infoBtn('Which month to show, of the last six. Changing it only changes what is shown here.')}</span><select class="input" style="width:auto" aria-label="Month" onchange="spendingLoad(this.value)">
       ${months.map(m => `<option ${m === v.month ? 'selected' : ''}>${m}</option>`).join('')}</select>
       <span style="font-size:12px">You: today <b>${_spTok(me.today?.tokens || 0)}</b> tokens, ${_spMoney(me.today, cur)} · this month <b>${_spTok(me.tokens)}</b> tokens, ${_spMoney(me, cur)}</span></div>
     ${days || '<div class="placeholder">Nothing spent this month.</div>'}
@@ -73,24 +81,25 @@ function _spBudgetsCard(v) {
   const levels = v.admin ? (v.levels || []).map(L => `<div class="disk-row" style="flex-wrap:wrap;gap:6px">
       <span class="disk-label">${escHtml(L.name)}</span>
       <div class="toolbar" style="gap:6px;flex-wrap:wrap">${_spBudgetInputs(`sp-lv-${L.id}`, L.budget)}
-        <label style="font-size:11px;display:flex;flex-direction:column;gap:2px" title="The most one person of this level may allow themselves to be spent, per permission">May allow (${escHtml(cur)})
+        <label style="font-size:11px;display:flex;flex-direction:column;gap:2px"><span>May allow (${escHtml(cur)})${infoBtn('The most a person of this level may allow the agents to spend for them, counting their spending permissions still in effect and this month\'s one-time ones. Empty: nothing (a level that holds host: any amount).')}</span>
           <input class="input" id="sp-lv-${L.id}-allow" type="number" min="0" step="any" style="width:110px" data-default="" data-label="May allow" value="${L.mayAllow ?? ''}" placeholder="${L.holdsHost ? 'any' : 'nothing'}"></label>
         <button class="btn btn-xs btn-blue" style="align-self:flex-end" onclick="spendingSaveLevel(${jsArg(L.id)})">Save</button></div></div>`).join('') : '';
   return `<div class="card">
     <div class="card-title">Budgets</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Off unless somebody sets one. At a budget, a new turn is not started and says who can raise it;
-      a turn already running finishes. Yours, an admin's for you and your level's all count — the tightest wins${me.role === 'owner' ? ' (as the owner, only your own applies to you)' : ''}.</p>
+    <p class="desc" style="margin-bottom:6px">Limits on how much the agents may use. Off unless somebody sets one.</p>
+    <details class="desc page-about" style="margin-bottom:8px"><summary>What this is</summary>At a budget, a new turn is not started and says who can raise it;
+      a turn already running finishes. At your own budget you are asked whether to go over it for that turn. Yours, an admin's for you and your level's all count — the tightest wins${me.role === 'owner' ? ' (as the owner, only your own applies to you)' : ''}.</details>
     <div style="font-size:12px;margin-bottom:8px">In effect for you: ${_spBudgetText(me.budget, cur)}</div>
-    <div class="input-label">Your own budget (empty or 0 is none)</div>
+    <div class="input-label">Your own budget${infoBtn('Limits you set on yourself. Empty or 0 in a box means no limit for it. When one is reached you are asked whether to go over it for that turn. Saving asks for your password.')}</div>
     <div class="toolbar" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">${_spBudgetInputs('sp-own', me.own)}
       <button class="btn btn-sm btn-blue" style="align-self:flex-end" onclick="spendingSaveOwn()">Save</button></div>
-    ${v.admin || v.lead ? advancedFold(`<div class="input-label">${v.admin ? 'A person\'s budget, set by an admin' : 'Your team\'s budgets, as their team leader (an admin\'s and their level\'s still count: the tightest wins)'}</div>
+    ${v.admin || v.lead ? advancedFold(`<div class="input-label">${v.admin ? 'A person\'s budget, set by an admin' : 'Your team\'s budgets, as their team leader'}${infoBtn('A budget you set for someone else. Their own, their level\'s and this one all count — the tightest wins — and at this one they are refused, not asked: only whoever set it can raise it.')}</div>
       <div class="toolbar" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">
-        <select class="input" id="sp-person" style="width:auto;align-self:flex-end" onchange="spendingPickPerson(this.value, false)">
+        <select class="input" id="sp-person" aria-label="Person" style="width:auto;align-self:flex-end" onchange="spendingPickPerson(this.value, false)">
           ${(v.people || []).map(p => `<option value="${escHtml(p.id)}">${escHtml(p.name || p.email)}</option>`).join('')}</select>
         <span id="sp-person-inputs" class="toolbar" style="gap:6px;flex-wrap:wrap;flex:1 1 260px;min-width:0"></span>
         <button class="btn btn-sm btn-blue" style="align-self:flex-end" onclick="spendingSavePerson()">Save</button></div>
-      ${v.admin ? `<div class="input-label">Each level's default, and how much its people may allow themselves</div>${levels}` : ''}`,
+      ${v.admin ? `<div class="input-label">Each level's default, and how much its people may allow themselves${infoBtn('A budget every person of the level starts with (theirs and an admin\'s still count: the tightest wins), and the most they may allow the agents to spend for them.')}</div>${levels}` : ''}`,
       { id: 'spending-others', label: v.admin ? 'Others\' budgets — a person\'s, each level\'s default' : 'Your team\'s budgets' }) : ''}</div>`;
 }
 
