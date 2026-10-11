@@ -71,6 +71,10 @@ function mcpServers() {
       origin: s.origin?.kind === 'client' ? 'client' : 'server',
       last: s.state === 'running' ? null : require('../mcp/registry').lastTools(s.id)?.names || null,
       originLabel: s.originLabel || null,
+      // A server that is not running says where it is reached and why it last failed, so the agent reads the state
+      // instead of sending the person through steps they already did (2026-10-11: "I can't read its stored address").
+      url: s.state !== 'running' && s.transport === 'http' && s.origin?.kind !== 'client' ? s.url || null : null,
+      error: s.state !== 'running' && s.error ? String(s.error).replace(/\s+/g, ' ').slice(0, 200) : null,
     }));
   } catch { return []; }
 }
@@ -246,7 +250,8 @@ function mcpSection(mcp = snapshot().mcp, { held = null } = {}) {   // held: the
       + (m.origin === 'client'
         ? `, hosted by ${m.originLabel} — a separate machine; its tools act there`
         : ', on this host — the same machine as your shell')
-      + (m.state === 'running' ? '' : `${m.last ? `; when connected it offered ${toolSummary(m.last)}` : ''} — \`mcp_connect\` starts it`));
+      + (m.state === 'running' ? '' : `${m.url ? ` at ${m.url}` : ''}${m.error ? `; last failed: ${m.error}` : ''}`
+        + `${m.last ? `; when connected it offered ${toolSummary(m.last)}` : ''} — \`mcp_connect\` starts it`));
 
   if (s.mcp.some(m => m.state === 'running') && (!held || held.has('research_docs')))
     out.push('When a running server\'s tools are unfamiliar, learn it from its own documentation with '
