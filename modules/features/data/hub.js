@@ -113,7 +113,7 @@ module.exports = [
     words: 'undo restore settings history' },
   { id: 'backups', licence: 'core', name: 'Backups', page: 'settings/backups',
     use: 'Back up DOCA\'s data and settings, on a schedule keeping the last N, with a second copy in another folder (backup.mirror), and restore into a sandbox.', routes: ['/api/backups*'], words: 'backup restore schedule mirror second copy nas disk' },
-  { id: 'machine-backup', licence: 'core', name: 'This machine\'s files, backed up', page: 'settings/backups', tools: ['machine_backup'], since: '3.28.0', settings: ['machineBackup'],
+  { id: 'machine-backup', licence: 'core', name: 'This machine\'s files, backed up', page: 'settings/backups', tools: ['machine_backup'], since: '3.30.0', settings: ['machineBackup'],
     use: 'Back up this machine\'s folders with restic to another disk, a NAS or an address — daily, caught up when the disk is back — then browse, download or restore any day, even on a fresh OS.',
     routes: ['/api/machine-backup*'], words: 'backup my files documents pictures restic nas usb disk restore fresh install older version copy history sync' },
   { id: 'panel-layout', licence: 'core', name: 'Your panel: its layout as your own data', page: 'settings/general', tools: ['panel_layout'], since: '2.287.0', settings: ['panel'],
