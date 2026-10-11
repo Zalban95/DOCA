@@ -117,7 +117,7 @@ async function handleGetTools(req, res) {
       detected,
       path:                 pref.path    || detectedPath,
       apiUrl:               pref.apiUrl  || (!t.cmd ? t.defaultApiUrl || '' : ''),
-      availableForOpenclaw: pref.available !== false && detected,
+      availableForOpenclaw: detected,   // every tool found is the agent's (the owner, 2026-10-11): a person says in words what not to use
     };
   }));
 
@@ -291,4 +291,5 @@ module.exports = {
   handleToolConfig,
   handleToolInstall,
   handleGetDisk,
+  ollamaModelsDir,
 };
