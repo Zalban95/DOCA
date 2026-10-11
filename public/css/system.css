@@ -300,3 +300,9 @@ html[data-skin="points"] .adv-fold-label { font-family: var(--font-mono); font-s
 
 /* A hosted hive (modules/hosted.js): forms that would add a program to the machine are not drawn. */
 html[data-hosted] .harness-add-row { display: none; }
+
+/* A message the hub wrote into a conversation (agent-ui/event-sink.js agentAutoNoteEl): a quiet line, open for the rest. */
+.agent-auto-note { margin: 6px 0; font-size: 12px; color: var(--text-muted, var(--muted)); }
+.agent-auto-note > summary { cursor: pointer; list-style: none; opacity: .85; }
+.agent-auto-note > summary::before { content: '↻ '; }
+.agent-auto-note > div { margin-top: 4px; white-space: pre-wrap; }
