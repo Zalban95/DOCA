@@ -8,16 +8,14 @@
  * token sent, to `GET /api/v1/packs`, which says the token is good. Destinations live in DATA_DIR/keys/hubs.json
  * (0600, out of the file tools' reach); the token never reads back.
  */
-const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 const http = require('http');
 const https = require('https');
 
 const file = () => require('../paths').HUB_KEYS_FILE;
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
-const all = () => { try { return JSON.parse(fs.readFileSync(file(), 'utf8')); } catch { return {}; } };
-function write(d) { fs.mkdirSync(path.dirname(file()), { recursive: true }); fs.writeFileSync(file(), JSON.stringify(d, null, 2), { mode: 0o600 }); try { fs.chmodSync(file(), 0o600); } catch { /* Windows */ } }
+const all = () => require('../keys-file').read(file());   // keys-file.js: written all or nothing, never read empty by mistake
+const write = d => require('../keys-file').write(file(), d);
 const pemOf = raw => `-----BEGIN CERTIFICATE-----\n${raw.toString('base64').match(/.{1,64}/g).join('\n')}\n-----END CERTIFICATE-----\n`;
 
 /** One request. `first`: no token, any certificate, and report it. Otherwise pinned (or system-verified). */

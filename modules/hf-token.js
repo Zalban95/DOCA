@@ -9,19 +9,16 @@
  * an older DOCA still holds moves here when the server starts (migration 2.240-hf-token).
  */
 const fs = require('fs');
-const path = require('path');
 const file = () => require('./paths').HF_KEYS_FILE;
 
 function get() {
-  try { return String(JSON.parse(fs.readFileSync(file(), 'utf8')).token || ''); } catch { return ''; }
+  return String(require('./keys-file').read(file()).token || '');   // keys-file.js: a damaged file falls back to its earlier copy
 }
 
 function set(token) {
   token = String(token || '').trim();
   if (!token) { try { fs.rmSync(file(), { force: true }); } catch { /* none */ } return; }
-  fs.mkdirSync(path.dirname(file()), { recursive: true });
-  fs.writeFileSync(file(), JSON.stringify({ token }, null, 2), { mode: 0o600 });
-  try { fs.chmodSync(file(), 0o600); } catch { /* Windows */ }
+  require('./keys-file').write(file(), { token });
 }
 
 /** A token found in an older prefs file: kept here unless one is already here (the newer wins). */
