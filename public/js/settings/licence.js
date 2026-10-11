@@ -31,10 +31,10 @@ async function licenceCard() {
     ${row('This hive', `<code style="font-size:11px;word-break:break-all">${escHtml(L.fingerprint)}</code> <button class="btn btn-sm" onclick="navigator.clipboard?.writeText('${L.fingerprint}')">Copy</button>`)}
     ${L.restartNeeded ? `<p class="desc" style="color:var(--amber)">${escHtml(L.nextStart)}</p>` : ''}
     ${L.trustsKeys ? '' : '<p class="desc">This build trusts no licence server yet: no licence can be checked until a release names one.</p>'}
-    <div class="form-row" style="margin-top:10px"><label>Licence key</label>
+    <div class="form-row" style="margin-top:10px"><label>Licence key${infoBtn('The key from your licence e-mail. It is kept on the hub and never shown again; type a new one to replace it. Without one, the hub runs its core features.')}</label>
       <input id="licence-key" class="input flex1" type="password" autocomplete="off" placeholder="${L.hasKey ? 'kept — type to replace' : 'from your licence e-mail'}"></div>
-    ${advancedFold(`<div class="form-row"><label>Licence server</label><input id="licence-server" class="input flex1" data-default="" value="${escHtml(L.server || '')}" placeholder="https://… (empty: offline)"></div>
-      <div class="form-row"><label>Account</label><input id="licence-account" class="input flex1" data-default="" value="${escHtml(L.account || '')}" placeholder="the server's account id"></div>`, { id: 'licence-server', count: 2 })}
+    ${advancedFold(`<div class="form-row"><label>Licence server${infoBtn('The address the key is checked against. Empty: the licence is checked offline, from a licence file.')}</label><input id="licence-server" class="input flex1" data-default="" value="${escHtml(L.server || '')}" placeholder="https://… (empty: offline)"></div>
+      <div class="form-row"><label>Account${infoBtn('Your account id on the licence server, when the server asks for one. Empty by default.')}</label><input id="licence-account" class="input flex1" data-default="" value="${escHtml(L.account || '')}" placeholder="the server's account id"></div>`, { id: 'licence-server', count: 2 })}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
       <button class="btn btn-primary btn-sm" onclick="licenceSaveKey()">Save</button>
       <button class="btn btn-sm" onclick="licenceCheck()" ${L.server ? '' : 'disabled title="Set the licence server first"'}>Check now</button>

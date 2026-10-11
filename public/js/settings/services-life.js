@@ -14,18 +14,14 @@ async function servicesLifeCard() {
   }
   const s = d.settings || {}, on = s.idleStopMinutes > 0;
   card.innerHTML = `<div class="card-title">Services — stopping what nothing uses</div>
-    <p style="font-size:11px;color:var(--muted);margin:0 0 6px">The inference services and llama.cpp servers DOCA started hold memory, often a GPU's, while they run.
-      A service started outside DOCA is left alone unless its row says "Let DOCA manage it".</p>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 6px">The model services this hub started hold memory, often a graphics card's, while they run.</p>
     <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin:6px 0;flex-wrap:wrap">
       <input type="checkbox" id="slife-on" data-default="false" data-label="Stop services nothing has used" ${on ? 'checked' : ''}>
-      Stop services nothing has used for
-      <input class="input" type="number" min="1" max="10080" id="slife-min" data-label="Minutes" style="width:70px" value="${on ? s.idleStopMinutes : 30}"> minutes
-      <span style="color:var(--muted);font-size:11px;flex-basis:100%">Counted only while no page of the panel is open and no call is on — while the panel is open they stay on, so answers come quickly.
-        One that a request then needs starts again by itself (each row's "Start when needed") and the person is told.</span></label>
+      Stop services nothing has used for${infoBtn('Stops an inference service or llama.cpp server this hub started after this many minutes unused, to free memory. Counted only while no page of the panel is open and no call is on. One a request then needs starts again by itself, and the person is told. A service started outside this hub is left alone unless its row says to manage it. Default: off (30 minutes when switched on).')}
+      <input class="input" type="number" min="1" max="10080" id="slife-min" data-label="Minutes" style="width:70px" value="${on ? s.idleStopMinutes : 30}"> minutes</label>
     <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin:6px 0;flex-wrap:wrap">
       <input type="checkbox" id="slife-exit" data-default="false" data-label="Stop them when DOCA stops" ${s.stopWithDoca ? 'checked' : ''}>
-      Stop them when DOCA stops
-      <span style="color:var(--muted);font-size:11px;flex-basis:100%">When DOCA itself is shut down (by its launcher, the system, or Ctrl+C) — not when a browser tab closes, and not on a restart or a version switch. Each row can be unticked.</span></label>
+      Stop them when the hub stops${infoBtn('On: when the hub itself is shut down (by its launcher, the system, or Ctrl+C) the services it started stop too — not when a browser tab closes, and not on a restart or a version switch. Each service\'s row can opt out. Default: off.')}</label>
     <div class="toolbar"><button class="btn btn-sm btn-blue" onclick="servicesLifeSave()">Save</button><span class="status-line" id="slife-status"></span></div>`;
 }
 

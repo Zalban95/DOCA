@@ -27,23 +27,23 @@ async function scoutCardRender(panel) {
         ${x.sessionId ? `<button class="btn btn-xs" onclick="nav('harness'); hcOpenSession(${jsArg(x.sessionId)})">Open its conversation</button>` : ''}
       </div></div>`;
   card.innerHTML = `<div class="card-title">Model scout <span style="font-size:10px;color:var(--muted)">experiment</span></div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Looks daily at Hugging Face's trending models for each function DOCA uses, the releases of
+    <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Watches for better and new models, and suggests them. Last look: ${escHtml(st.lastLookAt || 'never')} · last brief: ${escHtml(st.lastBriefAt || 'never')}${st.lastBriefWhy ? ` (${escHtml(st.lastBriefWhy)})` : ''}</p>
+    <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:8px"><summary>What this is</summary>Looks daily at Hugging Face's trending models for each function ${escHtml(typeof BRAND !== 'undefined' && BRAND?.product || 'DOCA')} uses, the releases of
       what it runs on and your news feeds; every ${s.everyDays} days — or at once when something grows fast — the agent reads the promising ones and
       suggests what could do a function better or add a new one. Nothing changes until you accept: an accepted suggestion becomes a line in
-      <code style="overflow-wrap:anywhere">${escHtml(v.repo || '(no repository)')}/TODO.md</code>, and "Start the work" hands it to ${escHtml(s.implementer === 'doca' ? 'DOCA\'s agent' : s.implementer)}.
-      Last look: ${escHtml(st.lastLookAt || 'never')} · last brief: ${escHtml(st.lastBriefAt || 'never')}${st.lastBriefWhy ? ` (${escHtml(st.lastBriefWhy)})` : ''}</p>
+      <code style="overflow-wrap:anywhere">${escHtml(v.repo || '(no repository)')}/TODO.md</code>, and "Start the work" hands it to ${escHtml(s.implementer === 'doca' ? 'the built-in agent' : s.implementer)}.</details>
     <div class="toolbar" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">
-      <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="scoutEnable(this.checked)"> The routine (daily look, briefs)</label>
+      <label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="scoutEnable(this.checked)"> The routine (daily look, briefs)${infoBtn('On: once a day it looks at what is new, and every few days (or at once when something grows fast) the agent writes a brief with suggestions. Off (the default): it looks only when you press Look now or Scout now. Saved as soon as it is changed.')}</label>
       <button class="btn btn-sm" onclick="scoutLook()">Look now</button>
       <button class="btn btn-sm btn-blue" onclick="scoutBrief()">Scout now</button>
     </div>
     ${advancedFold(`<div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
-        <label>Every <input class="input" id="scout-every" type="number" min="1" data-default="7" data-label="Every (days)" value="${s.everyDays}" style="width:70px"> days ·
+        <label>Every${infoBtn('How many days between briefs, and how many new likes in a day make a model count as growing fast, which brings a brief at once. Defaults: 7 days, 300 likes.')} <input class="input" id="scout-every" type="number" min="1" data-default="7" data-label="Every (days)" value="${s.everyDays}" style="width:70px"> days ·
           growing fast at <input class="input" id="scout-growth" type="number" min="1" data-default="300" data-label="Growing fast at" value="${s.growthLikes}" style="width:80px"> new likes</label>
-        <label>Releases (GitHub owner/repo, one a line)<textarea class="input" id="scout-watch" rows="4">${escHtml(s.watch.join('\n'))}</textarea></label>
-        <label>News feeds (RSS or Atom)<textarea class="input" id="scout-feeds" rows="2">${escHtml(s.feeds.join('\n'))}</textarea></label>
-        <label>Repository for TODO.md <input class="input" id="scout-repo" value="${escHtml(s.repo)}" placeholder="${escHtml(v.repo || '')}" style="width:min(420px,70vw)"></label>
-        <label>Implementer <input class="input" id="scout-impl" data-default="doca" data-label="Implementer" value="${escHtml(s.implementer)}" placeholder="doca, claude, codex…" style="width:140px"></label>
+        <label>Releases (GitHub owner/repo, one a line)${infoBtn('Projects on GitHub whose new releases the scout reads, as owner/repo, one a line — the programs the hub runs on, for instance.')}<textarea class="input" id="scout-watch" rows="4">${escHtml(s.watch.join('\n'))}</textarea></label>
+        <label>News feeds (RSS or Atom)${infoBtn('Addresses of news feeds the scout also reads, one a line. Empty: none.')}<textarea class="input" id="scout-feeds" rows="2">${escHtml(s.feeds.join('\n'))}</textarea></label>
+        <label>Repository for TODO.md${infoBtn('The folder of the code repository whose TODO.md gets a line for each suggestion you accept. Empty: the main checkout of this install, shown greyed in the box.')} <input class="input" id="scout-repo" value="${escHtml(s.repo)}" placeholder="${escHtml(v.repo || '')}" style="width:min(420px,70vw)"></label>
+        <label>Implementer${infoBtn('Who does the work when you press Start the work: doca (the built-in agent, the default) or the id of a command-line harness installed here, such as claude or codex.')} <input class="input" id="scout-impl" data-default="doca" data-label="Implementer" value="${escHtml(s.implementer)}" placeholder="doca, claude, codex…" style="width:140px"></label>
         <div><button class="btn btn-sm btn-blue" onclick="scoutSave()">Save</button></div>
       </div>`, { id: 'scout', label: 'What it watches — how often, releases, feeds, where suggestions go' })}
     <pre class="terminal" id="scout-out" style="display:none;max-height:260px;white-space:pre-wrap"></pre>

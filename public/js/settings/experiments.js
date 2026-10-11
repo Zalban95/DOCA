@@ -13,11 +13,11 @@ async function experimentsLoad() {
   try { ({ experiments: list, developer: dev } = await apiFetch('/api/experiments')); }
   catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
   panel.innerHTML = `<div class="card"><div class="card-title">Developer mode</div>
-    <label class="switch-row" style="font-size:13px"><span class="switch-text">Developer mode on this install</span>
+    <label class="switch-row" style="font-size:13px"><span class="switch-text">Developer mode on this install${infoBtn('For the people who build and test this panel. On: the experiments below are offered, and the ones switched on take effect. Off (the default): none is, whatever their switches say.')}</span>
       <input type="checkbox" class="switch" ${dev ? 'checked' : ''} onchange="experimentsDeveloper(this.checked)"></label>
-    <p style="font-size:11px;color:var(--muted);margin-top:6px">For the people who build and test DOCA. On, the experiments below are offered and the ones switched on
+    <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-top:6px"><summary>What this is</summary>For the people who build and test ${escHtml(typeof BRAND !== 'undefined' && BRAND?.product || 'DOCA')}. On, the experiments below are offered and the ones switched on
       take effect; off, none is — whatever their switches say — and the panel shows none of them. Each is off until switched on and undone by
-      switching it off: read what it costs and what can go wrong first.</p></div>`;
+      switching it off: read what it costs and what can go wrong first.</details></div>`;
   if (typeof releasingCard === 'function') await releasingCard(panel);   // who may release unasked: shown with or without developer mode
   if (!dev) return;
   // The ceiling adaptive step budgets stay under (experiment adaptiveLimits): a developer's setting, here with the experiment.
@@ -27,7 +27,7 @@ async function experimentsLoad() {
     const card = Object.assign(document.createElement('div'), { className: 'card' });
     card.innerHTML = `<div class="card-title" style="display:flex;align-items:center;gap:10px">${escHtml(x.label)}
         <label style="display:flex;align-items:center;gap:4px;font-size:12px;text-transform:none;letter-spacing:0"><input type="checkbox" ${x.on ? 'checked' : ''}
-          onchange="experimentsSet(${jsArg(x.id)}, this.checked)"> on</label><span style="color:var(--muted);font-size:11px">${escHtml(x.todo || '')}</span>
+          onchange="experimentsSet(${jsArg(x.id)}, this.checked)"> on${infoBtn(experimentGist(x.docText))}</label><span style="color:var(--muted);font-size:11px">${escHtml(x.todo || '')}</span>
         <span style="color:${x.stale ? 'var(--warning, #c90)' : 'var(--muted)'};font-size:11px;margin-left:auto">since ${escHtml(x.since || '?')} · ${x.measured ? `measured ${escHtml(x.measured)}` : 'never measured'}${x.stale ? ' — due' : ''} · ${x.measure === 'script' ? `npm run experiment -- ${escHtml(String(x.doc || '').replace(/\.md$/, ''))}` : 'measured by hand'}</span></div>
       ${advancedFold('<div class="exp-doc" style="font-size:12px;max-height:340px;overflow:auto"></div>', { id: `exp-${x.id}`, label: 'The write-up — what it tries, measures, costs and risks' })}`;
     mdInto(card.querySelector('.exp-doc'), x.docText);
@@ -50,3 +50,12 @@ async function experimentsSet(id, on) {
 // Its panel is made here rather than in index.html, which is at its line ceiling.
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('DOMContentLoaded', () =>
   document.getElementById('sp-backups')?.before(Object.assign(document.createElement('div'), { className: 'settings-panel', id: 'sp-experiments' })));
+
+/** What an experiment tries, in a few sentences: the first paragraph of its write-up's Hypothesis, for its ⓘ. */
+function experimentGist(md) {
+  const text = String(md || '');
+  const after = text.split(/^##\s*Hypothesis\s*$/m)[1] || text.replace(/^#.*$/gm, '');
+  const para = (after.split(/\n\s*\n/).map(p => p.trim()).find(p => p && !p.startsWith('#') && !p.startsWith('**Flag')) || '').replace(/\s+/g, ' ');
+  const plain = para.replace(/`([^`]*)`/g, '$1').replace(/\*\*?([^*]+)\*\*?/g, '$1').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+  return plain.length > 420 ? plain.slice(0, 417).replace(/\s+\S*$/, '') + '…' : plain;
+}

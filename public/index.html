@@ -860,16 +860,16 @@
             <button class="skills-mode-btn" id="skills-mode-search" onclick="skillsSetMode('search')">Search online</button>
           </div>
           <div id="skills-installed-bar" class="skills-bar">
-            <input id="skill-input" class="input flex1" placeholder="skill name or repo (e.g. openai-whisper)" style="max-width:260px">
+            <input id="skill-input" class="input flex1" placeholder="skill name or repo (e.g. openai-whisper)" style="max-width:260px;min-width:170px"><span data-info="The name of a skill in OpenClaw's registry, or a repository, to install into OpenClaw's skills folder. Install adds it; Force installs it again over one already there."></span>
             <button class="btn btn-sm btn-blue" onclick="installSkill(false)">Install</button>
             <button class="btn btn-sm btn-amber" onclick="installSkill(true)">Force</button>
             <div style="flex:1"></div>
-            <input id="skill-filter" class="input" placeholder="Filter installed…" style="width:150px" oninput="filterSkills()">
+            <input id="skill-filter" class="input" placeholder="Filter installed…" style="width:150px" oninput="filterSkills()"><span data-info="Type to show only the installed skills whose name or description match. Only filters the list."></span>
             <button class="btn btn-sm" onclick="loadSkills()">↺</button>
           </div>
           <div id="skills-search-bar" class="skills-bar" style="display:none">
             <input id="skill-search-input" class="input flex1" placeholder="Search skills registry…" style="max-width:320px"
-                   onkeydown="if(event.key==='Enter') searchSkillsOnline()">
+                   onkeydown="if(event.key==='Enter') searchSkillsOnline()"><span data-info="Words to look for in OpenClaw's skills registry. The ticks narrow results to official, community or unknown authors; none ticked shows all."></span>
             <button class="btn btn-sm btn-blue" onclick="searchSkillsOnline()">Search</button>
             <div class="skills-flag-group">
               <label class="skills-flag"><input type="checkbox" id="flag-official"> <span class="badge badge-green" style="font-size:9px">Official</span></label>
@@ -904,24 +904,24 @@
           </div>
           <div id="snap-settings-body" style="display:none;padding-top:10px">
             <div class="snap-settings-grid">
-              <label class="snap-label-text">Snapshot dir</label>
+              <label class="snap-label-text" data-info="The folder where snapshots are kept. Default: ~/openclaw-snapshots.">Snapshot dir</label>
               <div class="snap-path-with-btn">
                 <input id="snap-dir" class="input flex1" placeholder="/path/to/snapshots">
                 <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-dir','dir')">📁</button>
               </div>
-              <label class="snap-label-text">Snapshot script</label>
+              <label class="snap-label-text" data-info="A shell script of yours that takes a snapshot. Optional: without one, the paths below are packed into a .tar.gz instead.">Snapshot script</label>
               <div class="snap-path-with-btn">
                 <input id="snap-script-create" class="input flex1" placeholder="/path/to/snapshot.sh">
                 <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-script-create','file')">📁</button>
                 <button class="btn btn-xs btn-blue" title="Edit script" onclick="snapEditScript('snap-script-create')">✏</button>
               </div>
-              <label class="snap-label-text">Restore script</label>
+              <label class="snap-label-text" data-info="A shell script of yours that puts a snapshot back. Optional: without one, a .tar.gz snapshot is unpacked.">Restore script</label>
               <div class="snap-path-with-btn">
                 <input id="snap-script-restore" class="input flex1" placeholder="/path/to/restore.sh">
                 <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-script-restore','file')">📁</button>
                 <button class="btn btn-xs btn-blue" title="Edit script" onclick="snapEditScript('snap-script-restore')">✏</button>
               </div>
-              <label class="snap-label-text">Paths to include<br><small style="font-weight:400;opacity:.7">used by tar fallback &amp; passed to scripts</small></label>
+              <label class="snap-label-text" data-info="The folders and files a snapshot holds: packed into the .tar.gz when there is no snapshot script, and passed to your scripts when there is.">Paths to include</label>
               <div>
                 <div id="snap-paths-list" class="snap-paths-list"></div>
                 <button class="btn btn-xs" style="margin-top:6px" onclick="snapAddPath()">+ Add path</button>
@@ -936,7 +936,7 @@
         <div class="card">
           <div class="card-title">Create Snapshot</div>
           <div class="row">
-            <input id="snap-label" class="input flex1" placeholder="label (optional, e.g. before-groq-test)" style="max-width:300px">
+            <input id="snap-label" class="input flex1" placeholder="label (optional, e.g. before-groq-test)" style="max-width:300px"><span data-info="An optional name for this snapshot, so you can tell it apart later: passed to your snapshot script, or used as the file name. Empty: the date and time."></span>
             <button class="btn btn-amber" onclick="createSnapshot()">📷 Snapshot now</button>
           </div>
         </div>
@@ -1009,35 +1009,35 @@
       <div class="settings-panel" id="sp-voice">
         <div class="card">
           <div class="card-title">Speech services — the hive's</div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
-            Shared by every screen and device: what turns speech into text and text into speech. Any OpenAI-compatible audio API works
-            (local Whisper/Kokoro, OpenAI, etc.). Unlike <strong>Paths</strong>, the
+          <p style="font-size:11px;color:var(--muted);margin-bottom:6px">What turns speech into text, and text into speech, for every screen and device.</p>
+          <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:14px">
+            <summary>What this is</summary>
+            Any OpenAI-compatible audio API works (local Whisper/Kokoro, OpenAI, etc.). Unlike <strong>Paths</strong>, the
             <code>DOCA_STT_URL</code> and <code>DOCA_TTS_URL</code> environment variables win over the
-            URLs saved here, so a deployment can pin them — if one is set, that is what voice calls use.
-          </p>
+            URLs saved here, so a deployment can pin them — if one is set, that is what voice calls use.</details>
           <div style="display:flex;flex-direction:column;gap:10px">
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">STT URL</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="The address of the speech-to-text service, which turns what you say into words (a local Whisper, or OpenAI). Default: http://localhost:8000.">STT URL</label>
               <input class="input" id="voice-stt-url" style="flex:1" placeholder="http://localhost:8000">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">STT Model</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="Which model that service uses to listen. Default: whisper-1.">STT Model</label>
               <input class="input" id="voice-stt-model" style="flex:1" placeholder="whisper-1">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS URL</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="The address of the text-to-speech service, which reads the answers aloud (a local Kokoro, or OpenAI). Default: http://localhost:8880.">TTS URL</label>
               <input class="input" id="voice-tts-url" style="flex:1" placeholder="http://localhost:8880">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Model</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="Which model that service speaks with. Default: kokoro.">TTS Model</label>
               <input class="input" id="voice-tts-model" style="flex:1" placeholder="kokoro">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Voice</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="The voice used by a screen that has not chosen one of its own (the Voice card above chooses per screen). Default: af_heart.">TTS Voice</label>
               <input class="input" id="voice-tts-voice" style="flex:1" placeholder="af_heart">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Speed</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="How fast that default voice talks, from 0.25 to 4. Default: 1.0, the normal pace.">TTS Speed</label>
               <input type="range" id="voice-tts-speed" min="0.25" max="4.0" step="0.05" value="1.0" style="flex:1"
                      oninput="document.getElementById('voice-tts-speed-val').textContent=this.value">
               <span id="voice-tts-speed-val" style="font-size:11px;color:var(--fg);min-width:32px;text-align:right">1.0</span>
@@ -1057,12 +1057,12 @@
             Paths
             <button class="btn btn-xs" onclick="pathsLoad()" title="Re-check what exists">↺</button>
           </div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
-            Where DOCA looks for the stack, its config and the workspace. Leave a field empty to fall
+          <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Folders and files the hub works with. Restart after saving.</p>
+          <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:12px"><summary>What this is</summary>
+            Where the hub looks for the stack, its config and the workspace. Leave a field empty to fall
             back to its environment variable or the built-in default. Anything missing can be created
             here. Most of the dashboard reads these once at start-up, so use <code>⟳ Restart</code>
-            in <strong>General</strong> after saving.
-          </p>
+            in <strong>General</strong> after saving.</details>
           <div id="paths-list"><div class="placeholder pulse">Loading…</div></div>
           <div class="toolbar" style="margin-top:12px">
             <button class="btn btn-sm btn-blue" onclick="pathsSave()">Save</button>
@@ -1074,7 +1074,7 @@
             System Tools
             <button class="btn btn-xs" onclick="sysdepsRefresh()" id="sysdeps-refresh-btn" title="Re-check">↺ Check</button>
           </div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:12px">What this machine has for DOCA. Install runs the command for this system (hover the button to read it) as this machine's user; a password is asked only where it uses sudo.</p>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Programs this machine has, or could install, for the hub.<details class="desc page-about"><summary>What this is</summary>Install runs the command for this system (hover the button to read it) as this machine's user; a password is asked only where it uses sudo.</details></div>
           <div id="sysdeps-list"><div class="placeholder pulse">Checking…</div></div>
           <pre id="sysdeps-out" class="terminal" style="display:none;margin-top:8px;max-height:min(45vh,360px)"></pre>
         </div>

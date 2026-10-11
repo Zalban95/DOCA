@@ -14,9 +14,10 @@ async function evalsLoad() {
   try { d = await apiFetch('/api/evals'); } catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
   const run = d.running && !d.running.done ? d.running : null;
   panel.innerHTML = `<div class="card"><div class="card-title">Evaluations</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">A set is turns with checks — what the answer must say, which tools it may or must not call, how many steps and
+    <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Tests that check the agent still behaves. Run one after changing the model, the prompt, or a setting that shapes them.</p>
+    <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:8px"><summary>What this is</summary>A set is turns with checks — what the answer must say, which tools it may or must not call, how many steps and
       tokens it may take, or a rubric a model judges. A run plays every case against the configured model on a throwaway copy of the settings (the live
-      conversations and memory are never part of it) and spends that model's tokens. Run one after changing the model, the prompt, or a setting that shapes them.</p>
+      conversations and memory are never part of it) and spends that model's tokens.</details>
     ${run ? `<div style="font-size:12px;margin-bottom:6px">Running <b>${escHtml(run.set)}</b>: ${run.progress.length} done${run.progress.map(p => ` ${p.pass ? '✓' : '✗'}`).join('')}</div>` : ''}
     ${d.sets.map(s => `<div class="disk-row">
       <span class="disk-label">${escHtml(s.title)} <span style="color:var(--muted)">${escHtml(s.id)} · ${s.cases} cases${s.origin === 'shipped' ? '' : ' · yours'}</span></span>

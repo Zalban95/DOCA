@@ -6,16 +6,14 @@ async function releasingCard(panel) {
   try { r = await apiFetch('/api/developer/releasing'); } catch { return; }
   const card = Object.assign(document.createElement('div'), { className: 'card form-help-skip', id: 'releasing-card' });   // no ✨: what governs the agents is not theirs to draft
   card.innerHTML = `<div class="card-title">Releasing</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Models that may release DOCA without asking — merge, tag, push and switch this panel to the new
-      version — whether they work through DOCA's own agent, the model scout or a coding tool on this repository. Any other model asks first.
-      One family per line, optionally with a minimum version. Empty: everyone asks.</p>
+    <div class="input-label">Models that may release without asking${infoBtn(`Models that may release ${typeof BRAND !== 'undefined' && BRAND?.product || 'DOCA'} without asking — merge, tag, push and switch this panel to the new version — whether they work through the built-in agent, the model scout or a coding tool on this repository. Any other model asks first. One family per line, optionally with a minimum version (claude-opus >= 5). Empty (the default): every model asks. Saving asks for your password.`)}</div>
     <textarea class="input" id="rel-rules" rows="4" style="width:100%;font-family:var(--font-mono)">${escHtml(r.rules.join('\n'))}</textarea>
     <div class="toolbar" style="gap:6px;margin-top:6px;flex-wrap:wrap">
       <button class="btn btn-sm btn-primary" onclick="releasingSave()">Save</button>
       <span class="status-line" id="rel-status"></span>
     </div>
     <div class="form-row" style="margin-top:12px">   <!-- "Would it ask?" is its own row with its answer beside it (des 24) -->
-      <label style="display:flex;flex-direction:column;gap:4px"><span class="input-label" style="margin:0">Would a model ask before releasing?</span>
+      <label style="display:flex;flex-direction:column;gap:4px"><span class="input-label" style="margin:0">Would a model ask before releasing?${infoBtn('Type a model id and press Check to see whether the list above lets it release without asking. Only checks; nothing changes.')}</span>
         <input class="input" id="rel-try" placeholder="a model id, e.g. claude-opus-5-5"></label>
       <button class="btn btn-sm" onclick="releasingTry()">Check</button>
       <span class="status-line" id="rel-try-result" style="flex:1 1 200px"></span>

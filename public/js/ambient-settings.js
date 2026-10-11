@@ -2,27 +2,28 @@
    the margins and eventually decide what to show"): Settings → Ambient, and the same form behind ✎ on the page itself.
    They are this screen's own (`ambient`, settings-schema.js), so a kitchen tablet and a desk monitor differ. */
 const AMB_SHOW = [['clock', 'Time and date'], ['weather', 'Weather'], ['plan', 'Today’s plan'], ['notices', 'For you'],
-  ['buttons', 'Quick buttons'], ['apps', 'This device’s apps (in DOCA’s phone app)']];
+  ['buttons', 'Quick buttons'], ['apps', 'This device’s apps (in the phone app)']];
 const ambShown = (s, k) => (s.show || {})[k] !== false;
 
 /** The form, for the settings page and the ✎ overlay alike. */
 function ambientFormHtml(s = {}) {
   const lines = (s.buttons || []).map(b => `${b.label} | ${b.say}`).join('\n');
-  const range = (id, label, v, d) => `<label>${label} <span id="${id}-v">${v ?? d}%</span>
+  const range = (id, label, v, d, info) => `<label>${label}${infoBtn(info)} <span id="${id}-v">${v ?? d}%</span>
     <input type="range" id="${id}" min="0" max="25" data-default="${d}" data-label="${label}" value="${v ?? d}" oninput="document.getElementById('${id}-v').textContent=this.value+'%'"></label>`;
   // The place is typed or picked from the places of that name (lib/choice-input.js; Open-Meteo's geocoder, no key).
-  return `<label>Where it is, for the weather${choiceInput({ id: 'amb-f-place', value: s.place || '', source: 'Open-Meteo', search: true,
+  return `<label>Where it is, for the weather${infoBtn('The town whose weather the screen shows: type it or pick one of the places of that name. Empty: the device\'s own location, when it may use it (Advanced).')}${choiceInput({ id: 'amb-f-place', value: s.place || '', source: 'Open-Meteo', search: true,
       placeholder: `empty: this device's own location${s.here?.name ? ` — now ${s.here.name}` : ''}`,
       load: async (_force, q) => (q && q.length >= 2 ? apiFetch(`/api/ambient/places?q=${encodeURIComponent(q)}`) : { items: [] }) })}</label>
+    <div class="input-label">What shows${infoBtn('Which parts the resting screen draws behind the galaxy. Untick one to leave it out on this screen; all show by default. This device\'s apps show only inside the phone app.')}</div>
     <div class="amb-f-show">${AMB_SHOW.map(([k, l]) => `<label class="amb-check"><input type="checkbox" data-show="${k}" ${ambShown(s, k) ? 'checked' : ''}> ${l}</label>`).join('')}</div>
-    <label>Quick buttons — one per line: <i>label | what it says to the agent</i>
+    <label>Quick buttons${infoBtn('Buttons on the resting screen that each send a sentence to the agent when tapped. One per line: a short label, a | and what it says, as in "Good night | Turn off the lights downstairs". Up to 12.')}
       <textarea class="input" id="amb-f-buttons" rows="4" placeholder="Good night | Turn off the lights downstairs and set the heating to 18°">${escHtml(lines)}</textarea></label>
     ${advancedFold(`<div class="amb-arrange-adv">
-    <label class="amb-check"><input type="checkbox" id="amb-f-auto" data-default="true" data-label="Use this device's location" ${s.auto === false ? '' : 'checked'}> With no town named, use this device's location (asks once)</label>
-    <label>Units <select class="input" id="amb-f-units" data-default="metric" data-label="Units"><option value="metric">°C, km/h</option><option value="imperial" ${s.units === 'imperial' ? 'selected' : ''}>°F, mph</option></select></label>
-    <div class="amb-f-row">${range('amb-f-mx', 'Side margins', s.margin, 7)}${range('amb-f-my', 'Top and bottom', s.marginY, 6)}</div>
-    <label class="amb-check"><input type="checkbox" id="amb-f-listen" data-default="true" data-label="Listen for the wake word" ${s.listen === false ? '' : 'checked'}> Listen for the wake word while resting (the wake word experiment)</label>
-    <label class="amb-check"><input type="checkbox" id="amb-f-24" data-default="true" data-label="24-hour clock" ${s.clock24 === false ? '' : 'checked'}> 24-hour clock</label></div>`,
+    <label class="amb-check"><input type="checkbox" id="amb-f-auto" data-default="true" data-label="Use this device's location" ${s.auto === false ? '' : 'checked'}> With no town named, use this device's location${infoBtn('On: when no town is typed above, the screen asks the browser where it is (once) and shows that place\'s weather. Off: no weather until a town is typed. Default: on.')}</label>
+    <label>Units${infoBtn('Temperature and wind speed in metric (°C, km/h) or imperial (°F, mph). Default: metric.')} <select class="input" id="amb-f-units" data-default="metric" data-label="Units"><option value="metric">°C, km/h</option><option value="imperial" ${s.units === 'imperial' ? 'selected' : ''}>°F, mph</option></select></label>
+    <div class="amb-f-row">${range('amb-f-mx', 'Side margins', s.margin, 7, 'Empty space at the left and right edges, as a share of the screen. Raise it if a frame or bezel hides the edges. Default: 7%.')}${range('amb-f-my', 'Top and bottom', s.marginY, 6, 'Empty space at the top and bottom edges, as a share of the screen. Default: 6%.')}</div>
+    <label class="amb-check"><input type="checkbox" id="amb-f-listen" data-default="true" data-label="Listen for the wake word" ${s.listen === false ? '' : 'checked'}> Listen for the wake word while resting${infoBtn('On: while resting, the screen listens for its name to start a call (only when the wake word experiment is on, in Settings → Developer). Off: a call starts only with a tap. Default: on.')}</label>
+    <label class="amb-check"><input type="checkbox" id="amb-f-24" data-default="true" data-label="24-hour clock" ${s.clock24 === false ? '' : 'checked'}> 24-hour clock${infoBtn('On: 15:30. Off: 3:30 PM. Default: on.')}</label></div>`,
       { id: 'ambient', label: 'Advanced — location, units, margins, listening, clock' })}`;
 }
 

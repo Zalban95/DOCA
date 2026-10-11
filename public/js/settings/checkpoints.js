@@ -11,8 +11,9 @@ async function checkpointsRender() {
   document.getElementById('checkpoints-card')?.remove();
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'checkpoints-card' });
   card.innerHTML = `<div class="card-title">Settings checkpoints</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Before every saved change the settings as they were are kept (the last 200), so any change —
-      yours, an accepted proposal, the agent's in Unattended mode — can be put back. Restoring is a change too, and can be undone the same way.</p>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Every change to the settings can be put back from here.</p>
+    <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:8px"><summary>What this is</summary>Before every saved change the settings as they were are kept (the last 200), so any change —
+      yours, an accepted proposal, the agent's in Unattended mode — can be put back. Restoring is a change too, and can be undone the same way.</details>
     ${list.length ? `<div style="max-height:320px;overflow:auto">${list.map(c => `<div class="tool-row" style="grid-template-columns:auto 1fr auto;align-items:center">
         <span class="tool-label" style="font-size:11px">${escHtml(new Date(c.at).toLocaleString())}</span>
         <span class="tool-note" style="white-space:normal" title="${escHtml((c.leaves || []).join('\n'))}">changed after it: ${escHtml(c.changed.join(', '))}</span>

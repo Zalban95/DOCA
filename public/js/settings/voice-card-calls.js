@@ -14,7 +14,7 @@ function _vcRowEngine(kind, service) {
 async function voiceCallsHtml(v, mainEngine) {
   const live = v.quick?.service === 'hive' ? '' : v.quick?.service || mainEngine;   // what Ambient's follows
   const rows = await Promise.all(VOICE_CALLS.map(k => voiceCallRow(k, v[k.id] || {}, k.id === 'ambient' ? live : mainEngine)));
-  const speeds = VOICE_CALLS.map(k => `<label style="font-size:12px;display:flex;gap:6px;align-items:center">${escHtml(k.title)}
+  const speeds = VOICE_CALLS.map(k => `<label style="font-size:12px;display:flex;gap:6px;align-items:center">${escHtml(k.title)}${infoBtn(`How fast the ${k.title} talks, from 0.5 to 2. Empty: the pace of the voice it uses.`)}
     <input class="input" id="vc-${k.id}-speed" type="number" min="0.5" max="2" step="0.1" data-default="" data-label="${escHtml(k.title)} speed"
       placeholder="as the voice" value="${escHtml(v[k.id]?.speed ?? '')}" style="width:100px"></label>`).join('');
   return `<div style="display:flex;flex-direction:column;gap:10px">${rows.join('')}</div>
@@ -30,7 +30,7 @@ async function voiceCallRow(k, slot, follows) {
   const opts = [['', k.same || 'Same as the voice above'], ..._vcServiceOptions(service === 'hive' ? '' : service).map(([id, l]) => [id === '' ? 'hive' : id, l])];
   const list = await _vcVoices(engine);
   return `<div class="vc-row vc-call" data-kind="${k.id}" data-service="${escHtml(service)}">
-    <div style="font-size:12px;font-weight:600;margin-bottom:4px">${escHtml(k.title)} <span style="font-weight:400;color:var(--muted)">(${escHtml(k.who)})</span></div>
+    <div style="font-size:12px;font-weight:600;margin-bottom:4px">${escHtml(k.title)} <span style="font-weight:400;color:var(--muted)">(${escHtml(k.who)})</span>${infoBtn(`The service and voice the ${k.title} speaks with. "${k.same || 'Same as the voice above'}" keeps nothing of its own and follows it. Naming only a voice keeps the service above. ▶ plays a sample.`)}</div>
     <div class="toolbar" style="gap:6px;flex-wrap:wrap;justify-content:flex-start">
       ${_vcSelect(`vc-${k.id}-service`, opts, service, `voiceCallService('${k.id}', this.value)`)}
       ${choiceInput({ id: `vc-${k.id}-voice`, value: slot.voice || '', items: list?.items || null, source: list?.source || '', width: '200px',
