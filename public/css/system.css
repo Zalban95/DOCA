@@ -300,3 +300,18 @@ html[data-skin="points"] .adv-fold-label { font-family: var(--font-mono); font-s
 
 /* A hosted hive (modules/hosted.js): forms that would add a program to the machine are not drawn. */
 html[data-hosted] .harness-add-row { display: none; }
+
+/* A message the hub wrote into a conversation (agent-ui/event-sink.js agentAutoNoteEl): a quiet line, open for the rest. */
+.agent-auto-note { margin: 6px 0; font-size: 12px; color: var(--text-muted, var(--muted)); }
+.agent-auto-note > summary { cursor: pointer; list-style: none; opacity: .85; }
+.agent-auto-note > summary::before { content: '↻ '; }
+.agent-auto-note > div { margin-top: 4px; white-space: pre-wrap; }
+
+/* A page's longer explanation, folded under one line (the MCP page's "What MCP servers are"). */
+.page-about > summary { cursor: pointer; color: var(--muted); }
+/* On a phone a page whose list scrolls inside it scrolls whole instead: its header and explanation took a third of the
+   screen and the list scrolled in what was left (2026-10-11, MCP). */
+@media (max-width: 768px) {
+  #tab-mcp.active { overflow-y: auto; }
+  #tab-mcp > .scroll-y { flex: none !important; overflow: visible; }
+}

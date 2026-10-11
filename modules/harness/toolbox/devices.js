@@ -166,7 +166,7 @@ module.exports = [
           }, required: ['path'] } },
         imagePath: { type: 'string', description: 'Optional path to one picture to show with it (the same as one entry of files).' },
         svg:       { type: 'string', description: 'Optional drawing instead of a file: one <svg> with a viewBox, drawn at the screen size of the device.' },
-        to:        { type: 'string', description: 'Which device or chat: an id, a form factor ("watch", "phone"), or a name ("Telegram"). Omit to tell every device of the person that receives notices.' },
+        to:        { type: 'string', description: 'Which device or chat: an id, a form factor ("watch", "phone"), or a name ("Telegram"). Omit to tell every device of the person that receives notices — that is loud: for news of finished work name one (the device they asked from, else their phone).' },
         urgent:    { type: 'boolean', description: 'True only if it should break through quiet hours.' },
       },
       required: ['title'],

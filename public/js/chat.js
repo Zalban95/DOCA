@@ -33,7 +33,7 @@ async function chatLoadHistory() {
           (m.images || []).forEach(_chatAppendImage);
           if (m.content) _chatAppendContent(m.content);
         }
-        else {
+        else if (agentRowIsAuto(m)) container.appendChild(agentAutoNoteEl(m.content)); else {   // the hub's own words: a note
           chatAppendMsg(m.role, m.content);
           // What the user attached is drawn or played again on reload, the same
           // as when it was sent; anything that is not media stays a name.
