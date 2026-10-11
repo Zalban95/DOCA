@@ -49,12 +49,12 @@ function meetingsDraw(page) {
   page.innerHTML = pageHeadHtml({ title: 'Meetings', sub: `Calls between the people of this hive — voice, video, screens shared with consent. Up to ${MEETS.max} in a room.`,
     actions: '<button type="button" class="btn" onclick="meetingsLoad()">Refresh</button>' })
     + `<div class="mt-grid"><div class="card"><div class="card-title">Call or schedule</div>
-      <div class="input-label">Who</div><div id="mt-who" class="mt-input"></div>
-      <div class="mt-row-in"><input id="mt-title" class="input mt-input" placeholder="What it is about"><input id="mt-start" class="input mt-input" type="datetime-local">
-        <select id="mt-minutes" class="input mt-input mt-minutes">${[15, 30, 45, 60, 90].map(n => `<option${n === 30 ? ' selected' : ''}>${n}</option>`).join('')}</select><span class="meet-quiet">min</span></div>
-      <textarea id="mt-note" class="input mt-input" rows="2" placeholder="An agenda or a line for the invitation (optional)"></textarea>
+      <div class="input-label">Who${infoBtn('The people to call or invite: type a name from this hive, or a whole mail address for a guest from outside it.')}</div><div id="mt-who" class="mt-input"></div>
+      <div class="mt-row-in info-row"><input id="mt-title" class="input mt-input" placeholder="What it is about" aria-label="What it is about">${infoBtn('The meeting\'s name, shown to everyone and in the invitation. Empty: "Call with …" for a call now, "Meeting" for one scheduled.')}<input id="mt-start" class="input mt-input" type="datetime-local" aria-label="When">${infoBtn('When it starts, on your own clock. Needed only for Schedule; Call now starts at once.')}
+        <select id="mt-minutes" class="input mt-input mt-minutes" aria-label="Minutes">${[15, 30, 45, 60, 90].map(n => `<option${n === 30 ? ' selected' : ''}>${n}</option>`).join('')}</select><span class="meet-quiet">min</span>${infoBtn('How long it is planned to last, in minutes; it sets the end time in the invitation. 30 by default.')}</div>
+      <div class="mt-row-in info-row"><textarea id="mt-note" class="input mt-input" rows="2" placeholder="An agenda or a line for the invitation (optional)" aria-label="Note"></textarea>${infoBtn('Optional: an agenda or a line for the people invited, sent with the invitation.')}</div>
       <div class="mt-row-in"><button class="btn btn-primary" onclick="meetingsCall()">📞 Call now</button><button class="btn" onclick="meetingsSchedule()">📅 Schedule</button></div></div>
-      <div class="card"><div class="card-title">Join with an id or a link</div><div class="mt-row-in"><input id="mt-join" class="input mt-input" placeholder="m1a2b3c4d5e6 or https://…/meet/m1a2b3c4d5e6">
+      <div class="card"><div class="card-title">Join with an id or a link</div><div class="mt-row-in info-row"><input id="mt-join" class="input mt-input" placeholder="m1a2b3c4d5e6 or https://…/meet/m1a2b3c4d5e6" aria-label="Meeting id or link">${infoBtn('The meeting\'s id — the letters and digits after /meet/ — or the whole link someone sent you.')}
         <button class="btn btn-primary" onclick="meetJoin(document.getElementById('mt-join').value)">Join</button></div>
         <div class="card-title" style="margin-top:14px">Your calendar</div><p class="mt-sub">${calText}</p></div></div>
     <div class="card"><div class="card-title">Meetings</div>${upcoming.map(_mtRow).join('') || emptyStateHtml({ title: 'No meetings ahead', text: 'Call someone now, or schedule one above — or ask the agent to set it up.' })}</div>

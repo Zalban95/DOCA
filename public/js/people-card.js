@@ -24,9 +24,9 @@ async function peopleCardOpen(id) {
       <dt>Reports</dt><dd>${c.reports.length ? c.reports.map(chip).join('') : '<span class="desc">None</span>'}</dd>
     </dl>
     ${c.editable ? `<details class="pc-card-edit"><summary>Where ${escHtml(c.name)} sits</summary>
-      <label class="input-label">Manager<select class="input pc-ed-manager"><option value="">Nobody (at the top)</option></select></label>
-      <label class="input-label">Team<input class="input pc-ed-team" value="${escHtml(c.team)}" placeholder="e.g. Design"></label>
-      <label class="input-label">Title<input class="input pc-ed-title" value="${escHtml(c.title)}" placeholder="e.g. Illustrator"></label>
+      <label class="input-label">Manager${infoBtn('Who they report to in the organisation. A team is a manager and everyone below them, so this decides which team channels reach them. "Nobody" puts them at the top.')}<select class="input pc-ed-manager"><option value="">Nobody (at the top)</option></select></label>
+      <label class="input-label">Team${infoBtn('The name of the group they work in, for example Design. Shown beside their name in the lists.')}<input class="input pc-ed-team" value="${escHtml(c.team)}" placeholder="e.g. Design"></label>
+      <label class="input-label">Title${infoBtn('Their job, for example Illustrator. Shown under their name on their card and in the lists.')}<input class="input pc-ed-title" value="${escHtml(c.title)}" placeholder="e.g. Illustrator"></label>
       <div class="toolbar-right"><span class="status-line pc-ed-status"></span><button type="button" class="btn btn-sm btn-primary" data-save>Save</button></div></details>` : ''}
     <div class="modal-actions">${c.id !== me ? '<button type="button" class="btn btn-primary" data-msg>Message</button>' : ''}<button type="button" class="btn" data-org>Organisation</button><button type="button" class="btn" data-x>Close</button></div></div>`;
   document.body.append(ov);
