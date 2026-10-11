@@ -130,7 +130,7 @@ function _mcpCardHtml(s) {
     : '';
 
   const where = s.transport === 'http'
-    ? escHtml(s.url) + (s.key ? ` · token: the key <b>${escHtml(s.key)}</b> in Field → Connectors → Keys for services` : '')
+    ? escHtml(s.url) + (s.key ? mcpKeyNoteHtml(s) : '')   // its token's key, linked (mcp-catalog.js)
     : escHtml([s.command, ...(s.args || [])].join(' '));
 
   const tools = running && s.tools.length

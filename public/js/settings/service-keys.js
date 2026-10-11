@@ -12,10 +12,12 @@ async function serviceKeysRender() {
   let d, skills = [];
   try { d = await apiFetch('/api/connectors/services/all'); } catch (e) { el.innerHTML = `<div class="placeholder">${escHtml(e.message)}</div>`; return; }
   try { skills = (await apiFetch('/api/harness/skills')).skills || []; } catch { /* the skill box lists none */ }
+  el.dataset.helpAsk = 'Help me add an API service: find its documentation and where its key is made, and prepare it with service_draft so I only paste the key.';
   el.innerHTML = `<div class="card-title">API services</div>
     <p class="desc" style="margin-bottom:8px">Any other service with an API key — a 3D generator, a home server, anything with a REST API. Paste its key once; the agent never sees it.</p>
     <details class="desc page-about" style="margin:0 0 8px;font-size:11px"><summary>How it works</summary>The hub adds the key only to requests for that service's address, so
       the agent can use it without reading it. With its actions set up (under Advanced), the agent uses it by name (<code>service</code>) and the hub follows long jobs and keeps their files.</details>
+    <div class="toolbar" style="gap:6px;margin-bottom:8px"><button class="btn btn-xs" onclick="serviceGuideHomeAssistant()">Connect Home Assistant</button></div>
     <div id="service-drafts-slot"></div>
     <div id="svc-rows">${serviceRowsHtml(d.services, d.jobs)}</div>
     ${serviceAddBoxHtml('services')}
@@ -25,6 +27,7 @@ async function serviceKeysRender() {
       <label class="svc-field" style="flex:1;min-width:190px"><span class="field-label">Address ${infoBtn("Where the service's API answers (https://api.example.com). The key is only ever sent to this address.")}</span><input class="input" id="sk-origin" placeholder="https://api.example.com"></label>
       ${serviceKeyBoxesHtml()}
       <label class="svc-field" style="flex:1;min-width:180px"><span class="field-label">What it is for ${infoBtn('A sentence the agent reads to know when to use this service (makes 3D models from a picture). Optional, but it helps the agent pick it.')}</span><input class="input" id="sk-note" placeholder="the agent reads this"></label></div>
+    <div id="sk-guide"></div>
     ${advancedFold(`${serviceAuthFieldsHtml()}
       <label class="desc" for="sk-actions" style="display:block;margin-top:8px"><span class="field-label">Actions ${infoBtn('What the service can do, as its OpenAPI document (JSON or YAML; a whole one, or only its paths) — usually found in its documentation. With it the agent calls each action by name; a long job carries x-doca-job so the hub follows it. Empty: the agent reaches the service with plain requests (api_call).')}</span></label>
       <textarea class="input" id="sk-actions" data-default="" data-label="Actions (OpenAPI)" rows="6" spellcheck="false" style="width:100%;font-family:var(--font-mono);font-size:11px" placeholder="paths:\n  /items:\n    get:\n      operationId: listItems"></textarea>

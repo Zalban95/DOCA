@@ -10,9 +10,11 @@ const FORM_HELP_SECRET = /pass|token|secret|api.?key|bearer|authori[sz]ation|hea
 /** Every card and form on the page with two or more fields to fill, given its button once. */
 function formHelpScan(root = document) {
   for (const box of root.querySelectorAll('.card, #mcp-form')) {
-    if (box.dataset.helpId || box.closest('[data-help-id]') !== box && box.closest('[data-help-id]')) continue;
-    if (_formHelpFields(box).length < 2) continue;
-    const id = `form${++_formHelpN}`;
+    // A card drawn again in place keeps its id but lost its button: it gets it back.
+    if (box.dataset.helpId ? box.querySelector('.form-help-btn') : box.closest('[data-help-id]')) continue;
+    // A card that names its first message (data-help-ask, lib/app-links.js appAskAttr) has steps to hand off, fields or not.
+    if (_formHelpFields(box).length < 2 && !box.dataset.helpAsk) continue;
+    const id = box.dataset.helpId || `form${++_formHelpN}`;
     box.dataset.helpId = id;
     _formHelpForms.set(id, box);
     const btn = Object.assign(document.createElement('button'), { className: 'btn btn-xs form-help-btn', type: 'button', textContent: '✨ Ask the agent',
@@ -65,7 +67,7 @@ function formHelpAsk(id) {
   if (typeof chatOpen !== 'undefined' && !chatOpen) toggleChat();
   const input = document.getElementById('chat-input');
   if (!input) return;
-  input.value = `Help with: ${title}`;
+  input.value = box.dataset.helpAsk || `Help with: ${title}`;
   _formHelpChip(title);
   input.focus();
   input.setSelectionRange?.(input.value.length, input.value.length);

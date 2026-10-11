@@ -18,12 +18,13 @@ async function channelsLoad() {
       <span class="disk-free"><button class="btn btn-xs btn-red" onclick="channelsUnlink(${jsArg(c.chatId)})">Unlink</button></span></div>`).join('');
   const state = s => s.running ? `<span style="color:var(--green)">● running</span> as <b>${escHtml(s.bot?.username || '?')}</b>`
     : s.enabled ? `<span style="color:var(--amber)">○ not running</span>` : '<span style="color:var(--muted)">○ off</span>';
-  panel.innerHTML = `<div class="card">
+  panel.innerHTML = `<div class="card"${appAskAttr('Help me set up Telegram: walk me through making a bot with @BotFather and what to paste here — I have the Telegram app.')}>
     <div class="card-title">Telegram</div>
     <p class="desc" style="margin-bottom:6px">Talk to the hive from Telegram, through a bot of your own.</p>
     <details class="desc page-about" style="margin-bottom:10px"><summary>What this is</summary>A message there is a turn in a conversation of its own,
       the answer comes back there, a voice note is transcribed, photos and files arrive as attachments, and the agent's questions and approvals
       come as buttons. The bot is polled from here, so no public address is needed. A chat speaks as the person who linked it, with their level.</details>
+    ${host ? `<details class="desc page-about" style="margin-bottom:10px"><summary>How to make the bot</summary>${appStepsHtml('telegram', 'bot')}</details>` : ''}
     <div style="margin-bottom:10px">${state({ ...t, bot: t.bot && { username: `@${t.bot.username}` } })}${t.error ? ` — <span style="color:var(--red)">${escHtml(t.error)}</span>` : ''}${t.lastPollAt ? ` <span style="color:var(--muted);font-size:11px">· last poll ${escHtml(new Date(t.lastPollAt).toLocaleTimeString())}</span>` : ''}</div>
     ${host ? `${_chField('tg-token', 'Bot token', 'In Telegram, write /newbot to @BotFather, follow its questions, and paste the token it gives (it looks like 123456:ABC…). Kept on this machine and never shown again; leave empty to keep the saved one.',
         `<input class="input" id="tg-token" type="password" autocomplete="off" placeholder="${_chPh(t, 'TELEGRAM_BOT_TOKEN', t.hasToken ? 'saved — paste a new one to replace it' : '123456:ABC…')}">`)}
@@ -42,11 +43,12 @@ function channelsMatrixCard(m, host, state) {
       <span class="disk-label">${escHtml(c.name)}</span>
       <span class="disk-path">speaks as ${escHtml(c.person || '?')} · linked ${escHtml(String(c.linkedAt || '').slice(0, 10))}</span>
       <span class="disk-free"><button class="btn btn-xs btn-red" onclick="channelsUnlink(${jsArg(c.chatId)}, 'matrix')">Unlink</button></span></div>`).join('');
-  return `<div class="card">
+  return `<div class="card"${appAskAttr('Help me set up Matrix: a bot account on a homeserver, its access token, and linking my chat.')}>
     <div class="card-title">Matrix</div>
     <p class="desc" style="margin-bottom:6px">Talk to the hive from Matrix (Element or any client), through a bot account.</p>
     <details class="desc page-about" style="margin-bottom:10px"><summary>What this is</summary>A bot account on any homeserver — matrix.org, or your own on the tailnet —
       synced from here. It accepts invitations to direct chats; a question comes as a numbered list, answered with the number. Encrypted rooms cannot be read: start the chat with encryption off.</details>
+    ${host ? `<details class="desc page-about" style="margin-bottom:10px"><summary>How to make the bot account</summary>${appStepsHtml('matrix', 'bot')}</details>` : ''}
     <div style="margin-bottom:10px">${state(m)}${m.error ? ` — <span style="color:var(--red)">${escHtml(m.error)}</span>` : ''}</div>
     ${host ? `<div class="form-row" style="margin-bottom:8px">
         ${_chField('mx-hs', 'Homeserver', 'The address of the Matrix server the bot account lives on, e.g. https://matrix.org or your own server.',
@@ -68,12 +70,10 @@ function channelsSlackCard(m, host, state) {
       <span class="disk-label">${escHtml(c.name)}</span>
       <span class="disk-path">speaks as ${escHtml(c.person || '?')} · linked ${escHtml(String(c.linkedAt || '').slice(0, 10))}</span>
       <span class="disk-free"><button class="btn btn-xs btn-red" onclick="channelsUnlink(${jsArg(c.chatId)}, 'slack')">Unlink</button></span></div>`).join('');
-  return `<div class="card">
+  return `<div class="card"${appAskAttr('Help me set up Slack: walk me through making the app in Socket Mode, its scopes and the two tokens to paste here.')}>
     <div class="card-title">Slack</div>
     <p class="desc" style="margin-bottom:6px">Talk to the hive from Slack, in direct messages with an app of your own (never in shared channels).</p>
-    <details class="desc page-about" style="margin-bottom:10px"><summary>How to make the app</summary>Make an app at api.slack.com/apps:
-      switch on Socket Mode (an app-level token with <code>connections:write</code>), subscribe to the bot event <code>message.im</code>, give the bot
-      <code>chat:write</code>, <code>im:history</code>, <code>files:read</code>, <code>files:write</code> and <code>users:read</code>, allow messages in the App Home, and install it.
+    <details class="desc page-about" style="margin-bottom:10px"><summary>How to make the app</summary>${appStepsHtml('slack', 'app')}
       Socket Mode means the hub connects out to Slack, so no public address is needed.</details>
     <div style="margin-bottom:10px">${state(m)}${m.bot?.team ? ` <span style="color:var(--muted);font-size:11px">· ${escHtml(m.bot.team)}</span>` : ''}${m.error ? ` — <span style="color:var(--red)">${escHtml(m.error)}</span>` : ''}</div>
     ${host ? `<div class="form-row" style="margin-bottom:8px">
@@ -97,11 +97,12 @@ function channelsMailCard(m, host, state) {
       <span class="disk-path">speaks as ${escHtml(c.person || '?')} · linked ${escHtml(String(c.linkedAt || '').slice(0, 10))}</span>
       <span class="disk-free"><button class="btn btn-xs btn-red" onclick="channelsUnlink(${jsArg(c.chatId)}, 'mail')">Unlink</button></span></div>`).join('');
   const v = k => escHtml(m[k] || '');
-  return `<div class="card">
+  return `<div class="card"${appAskAttr('Help me set up mail: a mailbox for the hive, its app password, and its IMAP and SMTP servers.')}>
     <div class="card-title">Mail</div>
     <p class="desc" style="margin-bottom:6px">Write to the hive by mail and get the answer as a reply in the thread.</p>
     <details class="desc page-about" style="margin-bottom:10px"><summary>What this is</summary>Use a mailbox of its own (an app password, IMAP on 993 and SMTP on 465); it is read every minute.
-      A From line is only a claim, so a mail counts only when the receiving server vouched for its sender (DMARC, or DKIM for the sender's domain) — under Advanced you can name that server (e.g. <code>mx.google.com</code>) to read only its verdict.</details>
+      A From line is only a claim, so a mail counts only when the receiving server vouched for its sender (DMARC, or DKIM for the sender's domain) — under Advanced you can name that server (e.g. <code>mx.google.com</code>) to read only its verdict.
+      An app password is made at ${appLinkHtml('gmail', 'appPassword')} (Gmail) or under ${appLinkHtml('outlook', 'security')} (Outlook).</details>
     <div style="margin-bottom:10px">${state(m)}${m.error ? ` — <span style="color:var(--red)">${escHtml(m.error)}</span>` : ''}</div>
     ${host ? `<div class="form-row" style="margin-bottom:8px">
         ${_chField('ml-user', 'Mailbox', 'The address of the mailbox the hive reads and answers from, e.g. doca@example.com. It is also the user name it signs in with. Best a mailbox of its own.',
@@ -154,7 +155,7 @@ async function channelsSlackLink() {
   const out = document.getElementById('sl-code');
   try {
     const r = await apiFetch('/api/channels/slack/link', { method: 'POST' });
-    out.innerHTML = `Open the app's Messages tab in Slack and send <code>!link ${escHtml(r.code)}</code> — within 15 minutes.`;
+    out.innerHTML = `${appLinkHtml('slack', 'open', { label: 'Open Slack' })}: in the app's Messages tab send <code>!link ${escHtml(r.code)}</code> — within 15 minutes.`;
   } catch (e) { out.textContent = e.message; }
 }
 
@@ -171,7 +172,8 @@ async function channelsMatrixLink() {
   const out = document.getElementById('mx-code');
   try {
     const r = await apiFetch('/api/channels/matrix/link', { method: 'POST' });
-    out.innerHTML = `Start a direct chat with <b>${escHtml(r.bot || 'the bot')}</b> (encryption off) and send <code>!link ${escHtml(r.code)}</code> — within 15 minutes.`;
+    const bot = r.bot && /^@[^:\s]+:[^\s]+$/.test(r.bot) ? `<a class="app-link" href="https://matrix.to/#/${encodeURI(r.bot)}" ${APP_LINK_ATTRS}>${escHtml(r.bot)} ↗</a>` : `<b>${escHtml(r.bot || 'the bot')}</b>`;
+    out.innerHTML = `Start a direct chat with ${bot} (encryption off) and send <code>!link ${escHtml(r.code)}</code> — within 15 minutes.`;
   } catch (e) { out.textContent = e.message; }
 }
 
@@ -187,7 +189,9 @@ async function channelsLink() {
   const out = document.getElementById('tg-code');
   try {
     const r = await apiFetch('/api/channels/telegram/link', { method: 'POST' });
-    out.innerHTML = `${r.link ? `<a href="${escHtml(r.link)}" target="_blank" rel="noopener">Open @${escHtml(r.bot)} in Telegram</a>, or send` : 'Send'}
+    // On a phone the app opens straight on the bot with the code (tg://resolve?domain=…&start=…, core.telegram.org/api/links).
+    const app = r.link && r.bot && appLinksPhone() ? `<a class="app-link app-link-app" href="tg://resolve?domain=${encodeURIComponent(r.bot)}&start=${encodeURIComponent(r.code)}">Open @${escHtml(r.bot)} in Telegram</a> or ` : '';
+    out.innerHTML = `${r.link ? `${app}<a href="${escHtml(r.link)}" ${APP_LINK_ATTRS}>${app ? 'the website' : `Open @${escHtml(r.bot)} in Telegram`} ↗</a>, or send` : 'Send'}
       <code>/link ${escHtml(r.code)}</code> to the bot — within 15 minutes, from your own chat.`;
   } catch (e) { out.textContent = e.message; }
 }

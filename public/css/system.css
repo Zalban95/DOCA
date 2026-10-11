@@ -328,3 +328,11 @@ html[data-hosted] .harness-add-row { display: none; }
 .info-row { flex-wrap: wrap; }
 .info-row > .info-pop { flex-basis: 100%; order: 99; max-width: none; margin: 2px 0 4px; }
 .info-pop { white-space: normal; }   /* inside a line that does not wrap (a label, a meta line) it still does */
+
+/* Where a service is set up (lib/app-links.js): links that look like links, the app's first on a phone, steps numbered. */
+.app-link { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.app-link-app { font-weight: 600; }
+.app-link-or { color: var(--muted); }
+.app-steps { margin: 6px 0 2px; padding-left: 20px; line-height: 1.6; }
+.app-steps li { margin-bottom: 2px; }
+.disk-row > .app-steps-row { grid-column: 1 / -1; white-space: normal; font-size: 11px; }

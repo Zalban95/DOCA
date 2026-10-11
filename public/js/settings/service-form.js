@@ -83,6 +83,7 @@ function serviceFormPaint() {
 function serviceFormFoot() {
   const head = document.getElementById('sk-head'), foot = document.getElementById('sk-foot');
   const f = _svcForm, changed = serviceFormChanged();
+  if (typeof serviceGuidePaint === 'function') serviceGuidePaint();   // where its key is made (service-guide.js)
   if (head) head.innerHTML = f.editing ? `Editing <b>${escHtml(f.editing)}</b>` : f.draft ? 'The agent\'s draft — check it, paste the key and Add' : 'New service';
   if (!foot) return;
   const names = [...new Set(changed.map(id => SVC_LABELS[id] || id))];

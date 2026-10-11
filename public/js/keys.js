@@ -49,6 +49,7 @@ function _providerCardHtml(name, p) {
         <input class="input" type="password" id="key-${escHtml(name)}" aria-label="API key"
                placeholder="${escHtml(p.apiKeyMasked || (p.local ? 'no key needed' : 'Enter API key…'))}">
         ${infoBtn('The key from your account with this provider. Kept in a protected file and shown only as dots; paste a new one and Save to replace it. A server of your own on this machine or network needs none.')}
+        ${p.keyPage ? `<a class="btn btn-sm" href="${escHtml(p.keyPage)}" ${APP_LINK_ATTRS} title="Where ${escHtml(name)} makes keys">Get a key ↗</a>` : ''}
         <button class="btn btn-sm btn-green" onclick="saveKey(${jsArg(name)})">Save</button>
         <button class="btn btn-sm btn-red"   onclick="deleteProvider(${jsArg(name)})">✕</button>
       </div>
