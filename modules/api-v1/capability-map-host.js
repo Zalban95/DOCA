@@ -25,7 +25,7 @@ module.exports = [
   row('versions', 'update DOCA, switch version, start at boot', ['POST /api/update', 'POST /api/versions/use', 'POST /api/startup', 'POST /api/stack/update',
     'POST /api/update/channel', 'POST /api/update/channel/*', 'POST /api/update/file', 'POST /api/update/file/*']),
   row('backups', 'make, schedule and restore backups', ['POST /api/backups/*', 'POST /api/backups', 'DELETE /api/backups/:name']),
-  row('settings', 'change the hive\'s settings, paths and network', ['POST /api/prefs', 'POST /api/paths', 'POST /api/paths/create', 'POST /api/network', 'POST /api/settings/checkpoints/:id/restore',
+  row('settings', 'change the hive\'s settings, paths and network', ['POST /api/prefs', 'POST /api/paths', 'POST /api/paths/create', 'POST /api/paths/move-workspace', 'POST /api/network', 'POST /api/settings/checkpoints/:id/restore',
     'POST /api/configs/:id', 'POST /api/config-favorites', 'POST /api/fm-favorites', 'POST /api/features/:id/hidden', 'POST /api/logs/keep']),
   row('licence', 'add, renew, check in or remove this hive\'s licence', ['POST /api/licence/file', 'POST /api/licence/key', 'POST /api/licence/check', 'DELETE /api/licence'],
     { only: 'which features this hive may run: the owner\'s, at the panel (license/)' }),

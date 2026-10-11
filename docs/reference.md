@@ -75,7 +75,7 @@ PORT=4242
 COMPOSE_DIR=/home/youruser/openclaw
 CONFIG_PATH=/home/youruser/.openclaw/openclaw.json
 SKILLS_DIR=/home/youruser/.openclaw/workspace/skills
-WORKSPACE_DIR=/home/youruser/.openclaw/workspace
+WORKSPACE_DIR=/home/youruser/doca-workspace
 SETUP_DIR=/home/youruser
 SNAPSHOT_DIR=/path/to/snapshots
 # No OPENCLAW_GATEWAY_URL needed — 127.0.0.1:18789 is used by default
@@ -441,7 +441,7 @@ next restart; clearing the field hands it back to the environment or the default
 | `COMPOSE_DIR` | `~/openclaw` | Docker Compose directory |
 | `CONFIG_PATH` | `~/.openclaw/openclaw.json` | Main config file |
 | `SKILLS_DIR` | `~/.openclaw/workspace/skills` | Skills directory |
-| `WORKSPACE_DIR` | `~/.openclaw/workspace` | Workspace root |
+| `WORKSPACE_DIR` | `~/doca-workspace` (an install already working in `~/.openclaw/workspace` keeps it until moved: Settings → System → Paths) | Workspace root |
 | `SETUP_DIR` | `~` | Setup scripts directory |
 | `SNAPSHOT_SCRIPT` | `~/snapshot-agent.sh` | Snapshot script path |
 | `RESTORE_SCRIPT` | `~/restore-agent.sh` | Restore script path |

@@ -14,6 +14,7 @@ async function pathsLoad() {
   try {
     const data = await apiFetch('/api/paths');
     _pathsRender(data.settable || []);
+    _pathsWorkspaceOffer();
   } catch (e) {
     list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
@@ -99,4 +100,27 @@ async function pathsCreate(key) {
     _pathsRender(data.settable || []);
     setStatus(st, data.created ? `✓ Created ${data.path}` : `Already there: ${data.path}`, 'ok');
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+}
+
+/* Still working in OpenClaw's folder (an install from before DOCA had its own workspace): offer the move, once. */
+async function _pathsWorkspaceOffer() {
+  const list = document.getElementById('paths-list');
+  let st; try { st = await apiFetch('/api/paths/workspace'); } catch { return; }
+  if (!list || !st.legacy) return;
+  const box = document.createElement('div');
+  box.className = 'card mt8';
+  box.innerHTML = `<div class="card-title">Your workspace is still in OpenClaw's folder</div>
+    <div class="desc">${escHtml(st.from)} — from when this panel was OpenClaw's. ${st.canMove
+      ? `Move your attachments and specialists into ${escHtml(st.to)}, the workspace of its own. Their old places keep a link, so nothing that names them breaks; the rest of OpenClaw's folder stays as it is. Used from the next restart.`
+      : st.pinned.length ? 'Some of these paths were set by hand: change them above instead.' : `${escHtml(st.to)} exists already: move what you want there by hand.`}</div>
+    ${st.canMove ? '<button class="btn btn-primary mt8" onclick="pathsMoveWorkspace(this)">Move to the workspace of its own</button>' : ''}`;
+  list.prepend(box);
+}
+
+async function pathsMoveWorkspace(btn) {
+  appConfirm('Move your attachments and specialists into the new workspace? Their old places keep a link to the new one.', async () => {
+    btn.disabled = true; btn.textContent = 'Moving…';
+    try { const r = await apiFetch('/api/paths/move-workspace', { method: 'POST' }); appAlert(r.note || 'Moved.'); pathsLoad(); }
+    catch (e) { btn.disabled = false; btn.textContent = 'Move to the workspace of its own'; appAlert(e.message); }
+  });
 }

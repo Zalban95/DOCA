@@ -106,7 +106,7 @@ app.get ('/api/fm-favorites',      config.handleGetFmFavorites);
 app.post('/api/fm-favorites',      config.handlePostFmFavorites);
 app.get ('/api/paths',             config.handleGetPaths);
 app.post('/api/paths',             config.handlePostPaths);
-app.post('/api/paths/create',      config.handleCreatePath);
+app.post('/api/paths/create',      config.handleCreatePath); require('./modules/workspace-move').mount(app);   // and moving into DOCA's own workspace
 
 // ─── Routes: API Keys & Tool Providers ────────────────────────────────────────
 app.get   ('/api/keys',                      keys.handleGetKeys);
