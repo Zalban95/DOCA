@@ -22,7 +22,7 @@ function _svcLifeAdvanced(r) {
   const k = `${r.kind}-${r.id}`, own = r.own || {};
   const tick = (field, label, on, hint) => `<label style="display:flex;gap:6px;align-items:center;font-size:11px;margin:4px 0">
     <input type="checkbox" id="life-${field}-${k}" data-default="${field === 'stop' ? 'true' : String(!!r.startedByDoca)}" data-label="${escHtml(label)}" ${on ? 'checked' : ''}>
-    ${escHtml(label)} <span style="color:var(--muted)">${escHtml(hint)}</span></label>`;
+    ${escHtml(label)}${infoBtn(hint)}</label>`;
   const managed = r.managed
     ? (r.adopted ? `<button class="btn btn-xs" onclick="svcLifeAdopt('${r.kind}','${escHtml(r.id)}',false)">Stop managing it</button>` : '')
     : `<p style="font-size:11px;color:var(--muted);margin:4px 0">Started outside DOCA: it is never stopped or started by DOCA unless you let it.
@@ -31,9 +31,9 @@ function _svcLifeAdvanced(r) {
     <label style="display:flex;gap:6px;align-items:center;font-size:11px;margin:4px 0">Stop after
       <input class="input" type="number" min="0" max="10080" id="life-idle-${k}" data-label="Idle minutes for this one" style="width:70px"
              value="${own.idleStopMinutes ?? ''}" placeholder="${r.idleMinutes || 'off'}"> minutes unused
-      <span style="color:var(--muted)">empty: the switch in Settings → System → Services; 0: never this one</span></label>
-    ${tick('stop', 'Stop it when DOCA stops', own.stopWithDoca !== false, 'when the switch for that is on')}
-    ${tick('need', 'Start when needed', r.startsWhenNeeded, 'a request that needs it starts it, and the person is told')}
+      ${infoBtn('Stops this service after it has not been used for this many minutes, to free memory and the graphics card. Empty (the default) follows the switch in Settings → System → Services; 0 never stops this one for being idle.')}</label>
+    ${tick('stop', 'Stop it when DOCA stops', own.stopWithDoca !== false, 'On (the default): when the hub itself stops, this service is stopped too — but only while that switch is on in Settings → System → Services, which is off by default.')}
+    ${tick('need', 'Start when needed', r.startsWhenNeeded, 'On: when something needs this service while it is stopped, it is started, and the person who asked is told it is starting. Off: it stays stopped until someone starts it. On by default for a service the hub started itself.')}
     <div class="toolbar"><button class="btn btn-xs btn-blue" onclick="svcLifeSave('${r.kind}','${escHtml(r.id)}')">Save</button>
       <span class="status-line" id="life-status-${k}"></span></div>`, { id: 'service-life', label: 'Advanced — when it stops and starts by itself' });
 }
