@@ -10,19 +10,28 @@
 const CONV_MODES = [['agent', 'Agent', 'Does the work'], ['plan', 'Plan', 'Reads and proposes a plan; changes nothing until you approve it'],
   ['ask', 'Ask', 'Answers questions; reads only'], ['debug', 'Debug', 'Reproduce, find the cause, fix it, prove it']];
 
+/** Each switch's ⓘ (lib/field-info.js). */
+const CONV_INFO = {
+  mode: 'How this conversation works. Agent (the default) does the work. Plan reads and proposes a plan, and changes nothing until you approve it. Ask only reads and answers. Debug reproduces a problem, finds its cause, fixes it and proves the fix.',
+  approval: 'Whether this conversation asks you before its agent runs something. "As in Settings" (the default) follows the approval setting of the whole panel; the other two apply to this conversation alone.',
+  model: 'The model this conversation runs on. Default is the agent\'s own model, chosen with ⚙ on the Overview page; Other… takes any provider/model you type.',
+  fallback: 'Ticked (the default): when the chosen model stops answering, the next models in the agent\'s list take over, and the chat says so. Unticked: only the chosen model answers.',
+};
+
 /** Draw the row for `sessionId`; `view` is its session view (mode, approval) when already loaded. */
 async function agentConvBar(host, sessionId, view = null, { model = true, think = null } = {}) {
   if (!host || !sessionId) return;
+  host.classList.add('info-row');   // each switch's ⓘ opens under the whole row
   const v = view || await apiFetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}`).then(r => r.session).catch(() => null);
   if (!v) return;
   if (think && typeof thinkToggleBind === 'function') thinkToggleBind(think, sessionId, v);   // the composer's 💭 (agent-ui/think-toggle.js)
   const mode = v.mode || 'agent', approval = v.approval || '';
   host.innerHTML = `<select class="input conv-mode" title="${escHtml(CONV_MODES.find(m => m[0] === mode)?.[2] || '')}">
-      ${CONV_MODES.map(([k, l, t]) => `<option value="${k}" title="${escHtml(t)}" ${k === mode ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      ${CONV_MODES.map(([k, l, t]) => `<option value="${k}" title="${escHtml(t)}" ${k === mode ? 'selected' : ''}>${l}</option>`).join('')}</select>${infoBtn(CONV_INFO.mode)}
     <select class="input conv-approval host-only" title="Whether this conversation asks before it acts">
       <option value="" ${approval ? '' : 'selected'}>Asks first: as in Settings</option>
       <option value="auto" ${approval === 'auto' ? 'selected' : ''}>Acts without asking</option>
-      <option value="manual" ${approval === 'manual' ? 'selected' : ''}>Asks me before acting</option></select>
+      <option value="manual" ${approval === 'manual' ? 'selected' : ''}>Asks me before acting</option></select><span class="host-only">${infoBtn(CONV_INFO.approval)}</span>
     ${model ? '<span class="chat-model-host conv-model"></span>' : ''}
     <span class="conv-extras"></span>
     <button class="btn btn-xs conv-trace" title="How this conversation's turns went: each step, tool and wait, with times and tokens">⏱</button>`;
@@ -57,9 +66,9 @@ async function chatModelPicker(host, sessionId) {
     ...v.order.slice(1).map(e => `<option value="${escHtml(key(e))}">${escHtml(key(e))}</option>`),
     ...(chosen && !v.order.some(e => key(e) === chosen) ? [`<option value="${escHtml(chosen)}">${escHtml(chosen)}</option>`] : []),
     '<option value="__other">Other…</option>'];
-  host.innerHTML = `<select class="input chat-model" title="The model this conversation runs on">${opts.join('')}</select>
+  host.innerHTML = `<select class="input chat-model" title="The model this conversation runs on">${opts.join('')}</select>${infoBtn(CONV_INFO.model)}
     <label class="chat-fallback" title="${escHtml(v.effective.fallback.length ? `Then: ${v.effective.fallback.join(' → ')}` : 'No fallback: the chosen model alone')}">
-      <input type="checkbox" ${v.choice?.fallback === false ? '' : 'checked'}> fallback</label>`;
+      <input type="checkbox" ${v.choice?.fallback === false ? '' : 'checked'}> fallback</label>${infoBtn(CONV_INFO.fallback)}`;
   const sel = host.querySelector('select'), box = host.querySelector('input');
   sel.value = chosen;
   const save = async (provider, model) => {

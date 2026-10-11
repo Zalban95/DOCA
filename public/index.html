@@ -125,11 +125,11 @@
           <button class="btn btn-xs" onclick="harnessLoad()" title="Re-check">↺</button>
           <span id="harness-default-label" style="font-size:10px;color:var(--muted);margin-left:auto"></span>
         </div>
-        <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
-          The agent is what you talk to in the chat. DOCA has its own; you can also add others you use.
-          ● marks the one the chat panel and the <a href="#" onclick="nav('harness');return false">agent's page</a> use.
-          ⚙ chooses its model.
-        </p>
+        <p style="font-size:11px;color:var(--muted);margin:0 0 4px">The agent is what you talk to in the chat; ⚙ chooses its model.</p>
+        <details class="page-about" style="font-size:11px;margin:0 0 10px"><summary>What this is</summary>
+          <span data-brand-text="product">{} has its own agent; you can also add others you use (⬇ Add another agent).</span>
+          ● marks the one the chat panel and the <a href="#" onclick="nav('harness');return false">agent's page</a> use; Use makes another one that.
+        </details>
         <div id="harness-list"><div class="placeholder pulse">Looking for agents…</div></div>
         <div class="harness-add-row">
           <span class="harness-add-caret">+</span>
@@ -1124,13 +1124,13 @@
      onclick="if(event.target===this) hcApprovalClose()">
   <div class="modal" style="max-width:560px" onclick="event.stopPropagation()">
     <div class="modal-title">What may run without asking</div>
-    <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
+    <p style="font-size:11px;color:var(--muted);margin:0 0 4px">In Manual the agent asks before it acts; what you always allow is listed below.</p><details class="desc page-about" style="font-size:11px;margin:0 0 10px"><summary>What this is</summary>
       In <strong>Manual</strong> the agent is stopped before each tool call that does something, and you
       answer it in the chat. Saying <em>always allow</em> puts the command type on this list — so
       <code>shell: git</code> stops being a question while <code>shell: rm</code> is still asked every time.
       A command that builds itself at run time can never join the list.
       Reading this panel's own state never asks. In <strong>Auto</strong> nothing is asked, except writing the files that govern the agent and — when the switch below is on — the first action after outside text.
-    </p>
+    </details>
     <div id="hc-approval-list" class="hc-memory"><div class="placeholder">Loading…</div></div>
     <div class="modal-actions">
       <button class="btn btn-sm" onclick="hcApprovalClose()">Close</button>
@@ -1147,12 +1147,12 @@
       those ship in the code and neither of you can edit them.
     </p>
     <div class="field">
-      <div class="input-label">Categories — one per line, <code>id: what belongs in it</code></div>
+      <div class="input-label" data-info="The drawers memory is filed in, one per line as id: what belongs in it. Every fact the agent remembers goes under one of them. ↺ Defaults brings back the shipped ones.">Categories — one per line, <code>id: what belongs in it</code></div>
       <textarea class="input" id="hc-rules-cats" rows="7" spellcheck="false"
                 style="width:100%;box-sizing:border-box"></textarea>
     </div>
     <div class="field">
-      <div class="input-label">Rules — one per line</div>
+      <div class="input-label" data-info="How the agent decides what is worth remembering and how to write it down, one rule per line. You and the agent may both change them; 🔍 Verify rules checks them for contradictions without changing anything.">Rules — one per line</div>
       <textarea class="input" id="hc-rules-list" rows="9" spellcheck="false"
                 style="width:100%;box-sizing:border-box"></textarea>
     </div>
@@ -1198,15 +1198,15 @@
 <div id="hc-agent-overlay" class="modal-overlay" style="display:none" onclick="hcAgentClose(event)">
   <div class="modal" style="max-width:680px" onclick="event.stopPropagation()">
     <div class="modal-title" id="hc-agent-title">Specialist</div>
-    <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
+    <p style="font-size:11px;color:var(--muted);margin:0 0 4px">A helper for one kind of errand, written as a short text file.</p><details class="desc page-about" style="font-size:11px;margin:0 0 10px"><summary>What this is</summary>
       A specialist is its role plus a few <strong>kits</strong> (families of tools: files, code, shell, web,
       canvas, memory, devices…); a tool added to a kit later reaches it by itself. Markdown: a front matter
       (<code>name</code>, <code>description</code>, <code>kits</code>, optional <code>tools</code>, <code>model</code>),
       then the role. Claude Code subagent files import as they are. Changing settings, installing, dispatching
       and asking the person are never granted to a specialist.
-    </p>
+    </details>
     <div class="field">
-      <div class="input-label">Definition</div>
+      <div class="input-label" data-info="The specialist itself: a header between --- lines (name, description, kits, and optionally tools and model), then its role in plain words. The description is what the Orchestrator reads to decide when to send it.">Definition</div>
       <textarea class="input" id="hc-agent-json" rows="16" spellcheck="false"
                 style="width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:11px"></textarea>
     </div>

@@ -36,6 +36,7 @@
   background: transparent;
 }
 .harness-add-caret { color: var(--muted); font-size: 12px; width: 10px; text-align: center; }
+@media (max-width: 600px) { .harness-add-row.info-row > .input { flex: 1 1 calc(100% - 28px); } }   /* a box a line, its ⓘ beside it */
 
 /* ── ⚙ parameters strip ─────────────────────────────── */
 .harness-cfg { flex-direction: column; gap: 8px; }
@@ -154,9 +155,9 @@
 /* Without host the shared memory is read, not edited, and specialists are not shown (settings.js adds .no-host). */
 .no-host .hc-memory-add, .no-host .hc-mem .btn-red, .no-host .hc-specialists-head, .no-host #hc-agents { display: none; }
 /* Key on its own row: the sidebar is too narrow to read two inputs side by side */
-.hc-memory-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px; margin-bottom: 6px; }
-.hc-memory-add .input { font-size: 10px; padding: 3px 5px; }
-.hc-memory-add #hc-mem-key { grid-column: 1 / -1; }
+.hc-memory-add { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-bottom: 6px; }
+.hc-memory-add .input { font-size: 10px; padding: 3px 5px; flex: 1 1 0; min-width: 0; }
+.hc-memory-add #hc-mem-key { flex-basis: calc(100% - 28px); }   /* a line of its own, its ⓘ beside it */
 .hc-memory { overflow-y: auto; flex: 1; min-height: 60px; }
 .hc-mem {
   display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
@@ -266,6 +267,9 @@
 .hc-caret { color: var(--accent); font-family: var(--font-mono); padding-bottom: 6px; }
 .hc-input { resize: none; max-height: 160px; font-size: 12px; }
 .hc-to { width: auto; max-width: 34%; font-size: 12px; flex: 0 1 auto; }
+.hc-to[style*="none"] + .info-btn { display: none; }   /* a hidden "to" or computer picker hides its ⓘ too */
+.hc-input-row.info-row > .info-pop { order: -1; }       /* above the composer, not under it */
+.hc-input-row.info-row > .hc-input { min-width: 0; }  /* the ⓘ row wraps only for an open explanation */
 
 /* The Orchestrator is directly selectable here; keep its FAB off Send. */
 body.harness-tab .chat-fab { display: none; }

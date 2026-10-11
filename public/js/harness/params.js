@@ -53,17 +53,17 @@ function _harnessExternalCfgHtml(h) {
   const c = h.config || {};
   return `
     <div class="harness-cfg-grid">
-      <label>Launch command</label>
+      <label>Launch command${infoBtn('The command typed into the terminal when you open this agent on the Harness page. Change it only if you start the program another way. Default: the program\'s own name.')}</label>
       <input class="input" id="hcfg-launch-${h.id}" value="${escHtml(c.launchCmd || h.cmd || '')}" placeholder="${escHtml(h.cmd || 'command')}">
-      <label>Model</label>
+      <label>Model${infoBtn('A model name handed to the program as --model when it starts. Empty (the default): the program uses its own choice.')}</label>
       <input class="input" id="hcfg-model-${h.id}" value="${escHtml(c.model || '')}" placeholder="passed as --model when set">
-      <label>Config file</label>
-      <div style="display:flex;gap:6px">
+      <label>Config file${infoBtn('Where this program keeps its own settings file. 📁 picks it, ✏ opens it in Files to edit. It is only remembered here for that; nothing is changed by setting it.')}</label>
+      <div><div style="display:flex;gap:6px">
         <input class="input flex1" id="hcfg-path-${h.id}" value="${escHtml(c.configPath || '')}" placeholder="${escHtml(h.configPathHint || '/path/to/config')}">
         <button class="btn btn-xs" title="Browse" onclick="fpOpen('hcfg-path-${h.id}','file')">📁</button>
         <button class="btn btn-xs btn-blue" title="Edit in the file manager" onclick="harnessEditConfigFile(${jsArg(h.id)})">✏</button>
-      </div>
-      <label>Environment</label>
+      </div></div>
+      <label>Environment${infoBtn('Extra settings for the program, one KEY=VALUE per line, set in the terminal just before it starts. Lines starting with # are skipped. Empty by default.')}</label>
       <textarea class="input" id="hcfg-env-${h.id}" rows="2" placeholder="KEY=VALUE (one per line) — exported before launch">${escHtml(c.env || '')}</textarea>
     </div>
     <div class="harness-cfg-actions">
@@ -129,18 +129,18 @@ function _harnessParamsHtml(h, meta) {
 
   return `
     <div class="harness-cfg-grid">
-      <label>Provider</label>
-      <div style="display:flex;gap:6px">
+      <label>Provider${infoBtn('The service or program that runs the model: a hosted one reached with a key (+ key adds one), or one on your own machines such as Ollama. The model list below comes from it.')}</label>
+      <div><div style="display:flex;gap:6px">
         <select class="input flex1" id="hcfg-provider-${h.id}" onchange="_harnessLoadModels(${jsArg(h.id)}, this.value)">${providerOpts}</select>
         <button class="btn btn-xs" onclick="nav('settings'); settingsSubNav('keys')" title="Add an API key">+ key</button>
-      </div>
-      <label>Model</label>
-      <div style="display:flex;gap:6px">
+      </div></div>
+      <label>Model${infoBtn('Which model at that provider answers. Pick one from the list, or type its exact name in the box beside it. Nothing is sent until a model is chosen.')}</label>
+      <div><div style="display:flex;gap:6px">
         <select class="input flex1" id="hcfg-model-select-${h.id}" onchange="document.getElementById('hcfg-model-${h.id}').value=this.value">
           <option value="">loading…</option>
         </select>
         <input class="input flex1" id="hcfg-model-${h.id}" value="${escHtml(c.model || '')}" placeholder="model id">
-      </div>
+      </div></div>
       ${HARNESS_PARAMS.filter(f => f.common).map(f => num(f.key)).join('')}
       <label for="hcfg-systemPrompt-${h.id}">System prompt${infoBtn('Standing instructions, read at the start of every conversation. The panel\'s own safety rules are added ahead of this and cannot be edited here.')}</label>
       <div>
@@ -153,33 +153,17 @@ function _harnessParamsHtml(h, meta) {
       </div>
       ${advancedFold(`<div class="harness-cfg-grid">
       ${HARNESS_PARAMS.filter(f => !f.common).map(f => num(f.key)).join('')}
-      <label>Fallback chain</label>
+      <label>Fallback chain${infoBtn('Who answers when the model above stops answering: each entry is a provider and a model, tried in turn, and every switch is said in the chat. A blank model means the same model at that provider. None is the default: nothing changes.')}</label>
       <div>
         <div class="hcfg-fallbacks" id="hcfg-fallbacks-${h.id}"></div>
         <button class="btn btn-xs" id="hcfg-fallback-add-${h.id}"
                 onclick="harnessFallbackAdd(${jsArg(h.id)})">+ Add another fallback</button>
-        <small class="harness-hint">
-          Who answers when the model above stops answering. Each entry is a provider and a model, the same
-          way the model above is set; leaving the model blank means "the same model, at that provider".
-          <strong>None is the default and means nothing changes.</strong> Order matters — each is tried in
-          turn, and every switch is announced in the chat, because an answer that quietly came from a
-          different model is worse than the outage it hides. A model that was quiet is given a short rest
-          rather than being written off, so one that recovers starts being used again on its own. The line
-          under each entry is whether that model will call tools: a fallback that only answers in prose
-          cannot run the agent, it can only talk about it.
-        </small>
       </div>
-      <label>When a job is stuck</label>
+      <label>When a job is stuck${infoBtn('A work chat is stuck when the same step keeps failing, or its turns stop doing anything. With a model here it gets one more try on that model before it is reported blocked. None is the default, since a stronger model usually costs more.')}</label>
       <div>
         <div class="hcfg-fallbacks" id="hcfg-escalate-${h.id}"></div>
         <button class="btn btn-xs" id="hcfg-escalate-add-${h.id}"
                 onclick="harnessEscalateAdd(${jsArg(h.id)})">+ Try a stronger model</button>
-        <small class="harness-hint">
-          A work chat is stuck when the same step keeps failing the same way, or its turns stop doing anything.
-          With a model here it gets <strong>one more try on it</strong> before it is reported blocked — the chat's
-          model picker shows the switch and the Orchestrator is told. <strong>None is the default:</strong> a
-          stronger model usually costs more, so this only happens if you choose one.
-        </small>
       </div></div>`, { id: 'harness-params', label: 'Advanced — limits, timing, summaries, fallbacks', changed: (c.fallbackChain || []).length + (c.escalateTo ? 1 : 0) })}
     </div>
     <div class="harness-cfg-actions">

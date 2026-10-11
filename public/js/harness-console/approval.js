@@ -63,9 +63,8 @@ function _hcApprovalFill(list, a) {
   // After outside text (a web page, another machine's tool result), the next action asks again, once.
   const re = document.createElement('label');
   re.className = 'approval-recheck';
-  re.innerHTML = `<input type="checkbox" ${a.recheckOutside !== false ? 'checked' : ''}>
-    <span><b>Ask again after outside text</b> — once a web page or another machine's answer has entered a turn, the
-    first command after it that changes something asks you, even if it is allowed. Your devices are told too.</span>`;
+  re.innerHTML = `<input type="checkbox" data-default="true" data-label="Ask again after outside text" ${a.recheckOutside !== false ? 'checked' : ''}>
+    <span><b>Ask again after outside text</b>${infoBtn('Once a web page or another machine\'s answer has entered a turn, the first command after it that changes something asks you, even if it is allowed — such text can carry instructions you never gave. Your devices are asked too. On by default.')}</span>`;
   re.querySelector('input').onchange = async ev => {
     try { await apiFetch('/api/harness/approval', { method: 'POST', body: { recheckOutside: ev.target.checked } }); _hcLoadApproval(); }
     catch (e) { appAlert(e.message); }
@@ -77,12 +76,9 @@ function _hcApprovalFill(list, a) {
   const asks = document.createElement('label');
   asks.className = 'approval-recheck';
   const matters = a.manualAsks !== 'everything';
-  asks.innerHTML = `<span><b>Manual asks</b> <select class="input" style="width:auto">
-      <option value="what-matters" ${matters ? 'selected' : ''}>what matters</option><option value="everything" ${matters ? '' : 'selected'}>everything</option></select>
-    — ${matters ? 'only what cannot be undone or leaves this machine: sending data out, posting, mail, pushing, paying, deleting outside a project, '
-      + 'a command it cannot read, a change outside a project, a tool on another machine. Reads and changes with a way back (project edits '
-      + 'with a checkpoint, settings you asked for, the panel\'s layout, memory, reminders) run without asking.'
-      : 'every tool call that does something, as Manual always did.'}</span>`;
+  asks.innerHTML = `<span><b>Manual asks</b> <select class="input" style="width:auto" data-default="what-matters" data-label="Manual asks">
+      <option value="what-matters" ${matters ? 'selected' : ''}>what matters</option><option value="everything" ${matters ? '' : 'selected'}>everything</option></select>${infoBtn(
+      'Used when approvals are Manual. "What matters" (the default) asks only for what cannot be undone or leaves this machine: sending data out, posting, mail, pushing, paying, deleting outside a project, a command it cannot read, a tool on another machine; reads and changes with a way back run without asking. "Everything" asks for every tool call that does something. Changing it asks for your password.')}</span>`;
   asks.querySelector('select').onchange = async ev => {
     try { await apiFetch('/api/harness/approval', { method: 'POST', body: { manualAsks: ev.target.value } }); }
     catch (e) { appAlert(e.message); }
@@ -96,11 +92,9 @@ function _hcApprovalFill(list, a) {
   wait.className = 'approval-recheck';
   const hold = a.missionAskTimeout !== 'deny';
   wait.innerHTML = `<span><b>A mission's machine question waits</b> <input class="input" type="number" min="10" max="900" step="10" style="width:5em"
-    value="${Number(a.missionAskSec) || 300}"> seconds, then <select class="input" style="width:auto">
-      <option value="hold" ${hold ? 'selected' : ''}>stays open</option><option value="deny" ${hold ? '' : 'selected'}>is a no</option></select>
-    — a specialist asking to use the VNC screen or computer it was lent is asked of its person, on their devices and open pages.
-    ${hold ? 'Unanswered, it leaves their devices but stays here, and the mission waits (no steps, no tokens) until someone answers or stops it.'
-      : 'Unanswered, it is denied and the mission reports why.'}</span>`;
+    data-default="300" data-label="Seconds a mission's question waits" value="${Number(a.missionAskSec) || 300}"> seconds, then <select class="input" style="width:auto" data-default="hold" data-label="Then">
+      <option value="hold" ${hold ? 'selected' : ''}>stays open</option><option value="deny" ${hold ? '' : 'selected'}>is a no</option></select>${infoBtn(
+      'A specialist asking to use the screen or computer it was lent asks its person, on their devices and open pages. After these seconds (300 by default, 10–900) an unanswered question either stays open here while the mission waits, using no steps or tokens (the default), or counts as a no and the mission reports why.')}</span>`;
   const post = async body => {
     try { await apiFetch('/api/harness/approval', { method: 'POST', body }); _hcLoadApproval(); }
     catch (e) { appAlert(e.message); }
@@ -108,6 +102,7 @@ function _hcApprovalFill(list, a) {
   wait.querySelector('input').onchange = ev => post({ missionAskSec: Number(ev.target.value) });
   wait.querySelector('select').onchange = ev => post({ missionAskTimeout: ev.target.value });
   list.appendChild(wait);
+  advancedFold([re, asks, wait], { id: 'hc-approval-more', label: 'Advanced — when it asks again' });
 
   // Questions raised elsewhere — a turn a phone started, or one in a chat that
   // is not open. Without this they block until they time out with nothing on

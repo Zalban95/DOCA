@@ -22,11 +22,11 @@ function hcUsageOpen() {
       <div class="modal-title">Usage</div>
       <div id="hc-usage-days" style="display:flex;gap:6px;margin-bottom:8px"></div>
       <div id="hc-usage-body" style="overflow-x:auto"></div>
-      <small class="harness-hint">Every model call this harness made: turns, summaries and one-off asks. Prices are yours,
-        per million tokens — none are shipped, because a built-in price list is out of date the day it is released.
-        A model without a price shows "no price", never 0; type 0 for a model that is free.</small>
+      <details class="desc page-about"><summary>What this is</summary>Every model call this harness made: turns, summaries
+        and one-off asks. Prices are yours, per million tokens — none are shipped, because a built-in price list is out of
+        date the day it is released. A model without a price shows "no price", never 0; type 0 for a model that is free.</details>
       <div class="toolbar-right mt8">
-        <label class="harness-hint">Currency <input class="input" id="hc-usage-currency" style="width:70px"></label>
+        <label class="harness-hint">Currency${infoBtn('The currency the prices below are written in, for example USD or EUR. Only a label for the totals: nothing is converted. USD by default.')} <input class="input" id="hc-usage-currency" style="width:70px"></label>
         <button class="btn btn-xs btn-blue" id="hc-usage-save">Save prices</button>
         <span class="status-line" id="hc-usage-status"></span>
         <button class="btn btn-xs" id="hc-usage-close">close</button>
@@ -65,7 +65,7 @@ async function hcUsageLoad() {
   body.innerHTML = `
     <table class="models-table">
       <thead><tr><th>Model</th><th>Calls</th><th>Prompt</th><th>Cached</th><th>Reply</th><th>Cost</th>
-        <th title="${escHtml(u.currency)} per million prompt tokens">In / M</th><th title="Per million cached prompt tokens; blank = same as In">Cached / M</th><th title="Per million reply tokens">Out / M</th></tr></thead>
+        <th>In / M${infoBtn(`What the provider charges, in ${u.currency}, per million tokens it reads (your messages, the history, the tools). Empty: no price, so its cost is not counted.`)}</th><th>Cached / M${infoBtn('The price per million tokens the provider had already seen and bills cheaper. Empty: the same as In.')}</th><th>Out / M${infoBtn('The price per million tokens of the model\'s replies.')}</th></tr></thead>
       <tbody>${u.rows.map(r => `<tr>
         <td>${escHtml(r.key)}${r.estimated ? ` <small title="${r.estimated} of these calls had no usage report; their tokens are estimated">~est</small>` : ''}</td>
         <td>${r.calls}</td><td>${_hcFmtTok(r.prompt)}</td>
