@@ -14,11 +14,13 @@ async function mcpCatalogRender() {
   document.getElementById('mcp-catalog')?.remove();
   if (!fresh.length) return;
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'mcp-catalog' });
+  if (fresh.some(s => s.id === 'home-assistant')) card.dataset.helpAsk = 'Help me connect Home Assistant: add its MCP Server integration, make a long-lived token, and connect it here — I have the Home Assistant app.';
   card.innerHTML = `<div class="card-title">From the catalogue</div>
     ${fresh.map(s => `<div class="disk-row row3">
       <span class="disk-label">${escHtml(s.label)}</span>
       <span class="disk-path" title="${escHtml(s.command)}">${escHtml(s.about)}${s.missing.length ? ` <b style="color:var(--amber)">Needs ${escHtml(s.missing.join(', '))} on this host.</b>` : ''}</span>
-      <span class="disk-free"><button class="btn btn-xs" onclick="mcpCatalogAdd(${jsArg(s.id)}, ${jsArg(s.transport)})" title="${escHtml(s.command)}">Add</button></span></div>`).join('')}`;
+      <span class="disk-free"><button class="btn btn-xs" onclick="mcpCatalogAdd(${jsArg(s.id)}, ${jsArg(s.transport)})" title="${escHtml(s.command)}">Add</button></span>
+      ${APP_LINKS[s.id]?.flows?.mcp ? `<details class="desc page-about app-steps-row"><summary>How, step by step</summary>${appStepsHtml(s.id, 'mcp')}</details>` : ''}</div>`).join('')}`;
   list.append(card);
 }
 
@@ -28,7 +30,7 @@ async function mcpCatalogAdd(id, transport) {
     // A server at an address needs its address and token before it can start: straight to its form.
     if (transport === 'http') {
       await mcpLoad(); await mcpEdit(id);
-      setStatus(document.getElementById('mcp-form-status'), 'Added, off. Fill in its address and token (after "Bearer " in the headers), Save, then Start it — or ✨ Ask the agent.', '');
+      setStatus(document.getElementById('mcp-form-status'), 'Added, off. Check its address and Save; its token is the key named on its row (Field → Connectors → API services). Then Connect it — or ✨ Ask the agent.', '');
       document.getElementById('mcp-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
@@ -37,4 +39,12 @@ async function mcpCatalogAdd(id, transport) {
       mcpLoad();
     }, () => mcpLoad());
   } catch (e) { appAlert(e.message); }
+}
+
+/** A server's token kept as a key for services: where it is pasted, and — for a service in lib/app-links.js — where it is made. */
+function mcpKeyNoteHtml(s) {
+  let base = '';
+  try { base = new URL(s.url).origin; } catch { /* no address yet */ }
+  const made = APP_LINKS[s.key]?.pages?.token ? ` — made at ${appLinkHtml(s.key, 'token', { base })}` : '';
+  return ` · token: the key <b>${escHtml(s.key)}</b> in <a href="#" onclick="nav('connectors');return false">Field → Connectors → API services</a>${made}`;
 }

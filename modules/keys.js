@@ -11,6 +11,12 @@ const { PRESETS, isLocalUrl } = require('./harness/providers');
  * Anything not in here is still addable by hand — a preset only saves you
  * typing a URL, it is not a list of what is allowed.
  */
+/** Where a provider's keys are made — the suggested-models list's own pages (guided/suggested-models.json), so the API
+ *  keys page and the guided set-up link the same one. Read lazily: that list may be one received from the project. */
+function keyPageOf(id) {
+  try { return require('./guided/suggestions').base().keyPages?.[id] || null; } catch { return null; }
+}
+
 function presetList() {
   return Object.entries(PRESETS).map(([id, p]) => ({
     id,
@@ -18,6 +24,7 @@ function presetList() {
     baseUrl: p.baseUrl,
     env:     p.env || null,
     local:   isLocalUrl(p.baseUrl),
+    keyPage: keyPageOf(id),
   }));
 }
 
@@ -41,6 +48,7 @@ function handleGetKeys(_req, res) {
         models: (p.models || []).map(m => m.id || m.name || m),
         // A local model's own first-token wait and reply limit (harness/provider-pace.js), shown on its row.
         pace: require('./harness/provider-pace').sentence(require('./harness/provider-pace').of(name)) || null,
+        keyPage: isLocalUrl(baseUrl) ? null : keyPageOf(name),
       };
     }
     res.json({ providers: result, presets: presetList() });
@@ -145,4 +153,5 @@ module.exports = {
   handleTestProvider,
   handleDeleteProvider,
   probe,
+  keyPageOf,
 };

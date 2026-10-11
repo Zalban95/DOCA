@@ -8,6 +8,10 @@
 // Where a role's model is chosen once its provider works: the agent's own model is set from here.
 let _guidedLastPlan = null;   // the plan drawn last: each key row's providers and their key pages
 const _GUIDED_WHERE = { coding: 'Controls → the agent\'s ⚙ (or a specialist\'s own model)', vision: 'Settings → Harness → Vision', embeddings: 'Settings → Harness → Retrieval' };
+/** "Field → API keys" in a device's line, as a link that goes there. */
+const _guidedPlaces = t => escHtml(t).replace(/Field → API keys/, `<a href="#" onclick="nav('apikeys');return false">$&</a>`);
+/** Where a role's model is chosen, as a link that goes there. */
+const _GUIDED_GO = { coding: "nav('controls')", vision: "settingsSubNav('harness')", embeddings: "settingsSubNav('harness')" };
 
 function guidedPlanRender(p, applied) {
   const el = document.getElementById('guided-plan');
@@ -17,7 +21,7 @@ function guidedPlanRender(p, applied) {
   const rows = p.steps.map((s, i) => (s.type === 'have' ? _guidedHaveRow(s)
     : (s.type === 'install' ? _guidedInstallRow(s, i, applied) : _guidedKeyRow(s, i)) + (s.role === 'chat' ? _guidedOwnRow(i) : ''))).join('');
   const devices = p.devices.length ? `<div class="guided-step"><div class="guided-step-title">Your devices</div>${p.devices.map(d =>
-    `<div class="guided-muted">• ${escHtml(d.label)}: ${escHtml(d.how)}</div>`).join('')}</div>` : '';
+    `<div class="guided-muted">• ${escHtml(d.label)}: ${_guidedPlaces(d.how)}</div>`).join('')}</div>` : '';
   el.innerHTML = `<div class="card"><div class="card-title">${applied ? 'Waiting for you' : 'What it would set up'}</div>
     ${p.steps.length ? '' : '<p class="guided-muted">Nothing to set up: everything this needs is here.</p>'}
     ${rows}${devices}
@@ -63,7 +67,7 @@ function _guidedKeyRow(s, i) {
   return `<div class="guided-step" id="guided-key-${i}" data-role="${escHtml(s.role)}"><div class="guided-step-title">🔑 ${escHtml(s.label)} <span class="guided-muted">— ${escHtml(s.why)}</span></div>
     <div class="form-row guided-key">
       ${_gField(`guided-key-prov-${i}`, 'Provider', 'The company whose models you would use for this. "Get a key" opens the page where it makes one; they bill you for what is used.', `<select class="input" id="guided-key-prov-${i}" onchange="guidedKeyProvider(${i})">${opts}</select>`)}
-      <a class="btn btn-xs" target="_blank" rel="noopener" id="guided-key-link-${i}">Get a key ↗</a>
+      <a class="btn btn-xs" target="_blank" rel="noopener noreferrer" id="guided-key-link-${i}">Get a key ↗</a>
       ${_gField(`guided-key-in-${i}`, 'Key', 'Paste the key the provider gave you. It is saved on this machine (as under Field → API keys), then tested by listing the provider\'s models.', `<input class="input" type="password" autocomplete="off" placeholder="Paste the key here" id="guided-key-in-${i}">`)}
       <button class="btn btn-xs btn-blue" onclick="guidedKeyTest(${i})">Save and test</button></div>
     <span class="status-line" id="guided-st-${i}"></span>
@@ -96,7 +100,7 @@ async function guidedKeyTest(i) {
     box.innerHTML = role === 'chat'
       ? `<select class="input" id="guided-key-model-${i}">${r.models.map(m => `<option>${escHtml(m)}</option>`).join('')}</select>
          <button class="btn btn-xs btn-green" onclick="guidedUseModel(${jsArg(provider)}, document.getElementById('guided-key-model-${i}').value, ${i})">Use it for the agent</button>`
-      : `<span class="guided-muted">Choose its model in ${escHtml(_GUIDED_WHERE[role] || 'Field → Models')}.</span>`;
+      : `<span class="guided-muted">Choose its model in <a href="#" onclick="${_GUIDED_GO[role] || "nav('models')"};return false">${escHtml(_GUIDED_WHERE[role] || 'Field → Models')}</a>.</span>`;
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
 

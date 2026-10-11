@@ -68,7 +68,7 @@ async function homeLoad() {
 function _homeSetup() {
   return `<div class="home-empty"><h3>Connect Home Assistant</h3>
     <p>This page draws your home from Home Assistant, which keeps talking to the devices themselves.</p>
-    <ol><li>In Home Assistant, open your profile → Security → <b>Long-lived access tokens</b> and create one.</li>
+    <ol><li>In Home Assistant, open ${appLinkHtml('home-assistant', 'token', { label: 'your profile → Security' })} → <b>Long-lived access tokens</b> and create one.</li>
       <li>In <b>Field → Connectors → Keys for services</b>, add a key named <b>home-assistant</b> with Home Assistant's address
         (for example http://homeassistant.local:8123) and paste the token.</li>
       <li>Come back here. The token stays on the hub; this page never sees it.</li></ol>

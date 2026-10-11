@@ -58,7 +58,7 @@ async function classify(input, { probe = require('../keys').probe, find = requir
   const raw = String(input || '').trim().slice(0, 500);
   const ds = drafts();
   const templates = require('./templates').list();
-  const presets = Object.entries(PRESETS).map(([id, p]) => ({ id, label: p.label, baseUrl: p.baseUrl }));
+  const presets = Object.entries(PRESETS).map(([id, p]) => ({ id, label: p.label, baseUrl: p.baseUrl, keyPage: require('../keys').keyPageOf(id) }));
   if (!raw) return { kind: null, drafts: ds, templates, presets };
   const q = raw.toLowerCase(), h = hostOf(raw), address = looksAddress(raw);
 
@@ -66,7 +66,7 @@ async function classify(input, { probe = require('../keys').probe, find = requir
   if (draft) return { kind: 'service', why: `The agent prepared ${draft.name} for you (${draft.origin}) — check it and add its key.`, draft, drafts: ds };
 
   const preset = presetFor(raw);
-  const providerOf = ([id, p]) => ({ kind: 'provider', why: `${p.label} is a chat-model provider DOCA knows: its address is filled in, paste the key.`, provider: { name: id, baseUrl: p.baseUrl, preset: id } });
+  const providerOf = ([id, p]) => ({ kind: 'provider', why: `${p.label} is a chat-model provider DOCA knows: its address is filled in, paste the key.`, provider: { name: id, baseUrl: p.baseUrl, preset: id, keyPage: require('../keys').keyPageOf(id) } });
   if (preset && !address) return providerOf(preset);
 
   // A name matches a template by its words; an address only by its host (a path naming one is somebody else's server).

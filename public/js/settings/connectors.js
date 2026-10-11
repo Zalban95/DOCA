@@ -23,10 +23,11 @@ async function connectorsLoad() {
       OAuth app you make yourself in that service's console (its developer settings) — none is shipped with this hub, so nobody sits between the hive and your
       accounts. Make the app there, paste its client id and secret here, Save, then Connect and allow access on the page that opens. Connected, a service is the
       tool <code>connector_&lt;id&gt;</code>: changes are asked about like any change, and by default only admins may use it.</details></div>
-    ${d.connectors.map(c => `<div class="card" data-conn="${escHtml(c.id)}">
+    ${d.connectors.map(c => `<div class="card" data-conn="${escHtml(c.id)}"${appAskAttr(c.kind === 'custom' ? `Help me connect another service with OAuth 2.0: find its sign-in page, token address and API address, and walk me through making its app with the callback address ${d.callback}.`
+      : `Help me connect ${c.label}: walk me through making the OAuth app in its console with the callback address ${d.callback}, and tell me what to paste here.`)}>
       <div class="card-title" style="display:flex;gap:8px;align-items:center">${escHtml(c.label)}
         <span style="font-size:11px;text-transform:none;letter-spacing:0;color:${c.connected ? 'var(--green)' : 'var(--muted)'}">${c.connected ? `● connected${c.account ? ` as ${escHtml(c.account)}` : ''}` : c.configured ? '○ not connected' : '○ no app yet'}</span></div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Make the app at ${escHtml(c.console)}.</div>
+      ${connectorsHowHtml(c)}
       ${c.kind === 'custom' ? `<div class="toolbar" style="gap:6px;margin-bottom:6px;flex-wrap:wrap">
 <label class="svc-field" style="flex:1;min-width:200px"><span class="field-label">Sign-in page ${infoBtn("The service's authorization address, where you are sent to allow access (its OAuth documentation names it).")}</span><input class="input" data-f="authorize" placeholder="https://…/authorize" value="${escHtml(c.urls?.authorize || '')}"></label>
         <label class="svc-field" style="flex:1;min-width:200px"><span class="field-label">Token address ${infoBtn('The address the hub trades the sign-in for a token at (its OAuth documentation names it).')}</span><input class="input" data-f="token" placeholder="https://…/token" value="${escHtml(c.urls?.token || '')}"></label>
@@ -50,6 +51,13 @@ async function connectorsLoad() {
   loginsRender();
   if (typeof sealedRender === 'function') sealedRender();
   for (const c of d.connectors) { const el = panel.querySelector(`[data-conn="${CSS.escape(c.id)}"] [data-f="clientId"]`); if (el && c.configured) el.placeholder = 'client id saved — type to replace'; }
+}
+
+/** Where its OAuth app is made, as a link, and the steps folded (lib/app-links.js); another service's own words, linked. */
+function connectorsHowHtml(c) {
+  const known = APP_LINKS[c.id]?.pages, steps = appStepsHtml(c.id, 'oauth');
+  return `<div class="desc" style="margin-bottom:6px">Make the app at ${known ? appLinkHtml(c.id, Object.keys(known)[0]) : appLinkify(c.console)}.</div>
+    ${steps ? `<details class="desc page-about" style="margin-bottom:6px"><summary>How, step by step</summary>${steps}</details>` : ''}`;
 }
 
 async function connectorsSave(id) {
@@ -97,11 +105,12 @@ async function loginsRender() {
   if (!el) return;
   let d;
   try { d = await apiFetch('/api/connectors/logins/all'); } catch (e) { el.innerHTML = `<div class="placeholder">${escHtml(e.message)}</div>`; return; }
+  el.dataset.helpAsk = 'Help me add a login for the agents\' computers: which site, and how it stays safe (the password is never shown to you).';
   el.innerHTML = `<div class="card-title">Logins for the agents' computers</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Usernames and passwords an agent may sign in with on its computer's browser, without ever seeing the password.</p>
     <details class="desc page-about" style="margin:0 0 8px;font-size:11px"><summary>How it stays safe</summary>You are asked every time an agent uses one (<code>computer_login</code>).
       The hub checks the page is on the login's own site and types the password itself — the agent never sees it, and a look-alike site gets nothing.</details>
-    ${d.logins.map(l => `<div class="disk-row"><span class="disk-label">${escHtml(l.label)}</span><span class="disk-path">${escHtml(l.username)} · ${escHtml(l.site)}</span>
+    ${d.logins.map(l => `<div class="disk-row"><span class="disk-label">${escHtml(l.label)}</span><span class="disk-path">${escHtml(l.username)} · ${appLinkify(l.site)}</span>
       <span class="disk-free"><button class="btn btn-xs btn-red" onclick="loginsRemove(${jsArg(l.id)})">✕</button></span></div>`).join('') || '<div class="placeholder">None yet.</div>'}
     <div class="toolbar" style="gap:6px;margin-top:8px;flex-wrap:wrap;align-items:flex-end">
       <label class="svc-field" style="flex:1;min-width:170px"><span class="field-label">Site ${infoBtn('The web address the login belongs to (https://github.com). The password is typed only on a page of this exact site.')}</span><input class="input" id="lg-site" placeholder="https://github.com"></label>

@@ -19,8 +19,9 @@ async function sealedRender() {
   try { d = await apiFetch(_sealedBase()); } catch (e) { el.innerHTML = `<div class="placeholder">${escHtml(e.message)}</div>`; return; }
   const when = t => { try { return new Date(t).toLocaleString(); } catch { return t; } };
   const mine = _sealedMine();
-  const row = (s, del) => `<div class="disk-row"><span class="disk-label">${escHtml(s.name)}</span><span class="disk-path">${escHtml(s.origin || 'any place')}${s.note ? ` · ${escHtml(s.note)}` : ''}</span>
+  const row = (s, del) => `<div class="disk-row"><span class="disk-label">${escHtml(s.name)}</span><span class="disk-path">${s.origin ? appLinkify(s.origin) : 'any place'}${s.note ? ` · ${escHtml(s.note)}` : ''}</span>
       <span class="disk-free"><button class="btn btn-xs btn-red" onclick="${del}" title="Forget it here">✕</button></span></div>`;
+  el.dataset.helpAsk = 'Help me keep a secret for my devices: what to name it, whether it needs a site, and which device can use it (never ask me for the secret itself).';
   el.innerHTML = `<div class="card-title">Secrets for your devices</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">A PIN, a password or a code an agent can have typed on one of your own devices without ever seeing it. You are asked every time.</p>
     <details class="desc page-about" style="margin:0 0 8px;font-size:11px"><summary>How it works</summary>The agent asks for it by name (<code>secret_use</code>);
