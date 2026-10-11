@@ -226,7 +226,7 @@ app.post('/api/chat',             chat.handleChat);
 
 // ─── Routes: Models & Tools ───────────────────────────────────────────────────
 app.get ('/api/models/settings',          models.handleGetSettings);
-app.post('/api/models/settings',          models.handlePostSettings);
+app.post('/api/models/settings',          models.handlePostSettings); require('./modules/ollama-home').mount(app);   // telling Ollama where its models live
 app.get ('/api/models/disk',              models.handleGetDisk);
 app.get ('/api/models/tools',             models.handleGetTools);
 app.post('/api/models/tools/:id/config',  models.handleToolConfig);

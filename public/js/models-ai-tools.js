@@ -65,10 +65,6 @@ function _aiToolsRender() {
                  placeholder="auto-detected if empty">
           <button class="btn btn-xs" title="Browse" onclick="fpOpen('ai-tool-path-${t.id}','file')">📁</button>
         `}
-        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
-          <input type="checkbox" id="ai-tool-avail-${t.id}" ${t.availableForOpenclaw ? 'checked' : ''}>
-          Available to agent
-        </label>${infoBtn('Marks the tool as one the agent may use: the row shows "agent ✓" when it is ticked and the tool was found. On by default.')}
         <button class="btn btn-xs btn-blue" onclick="aiToolConfigSave('${t.id}')">Save</button>
       </div>`;
 
@@ -87,7 +83,7 @@ async function aiToolConfigSave(id) {
   const body = {
     path:      document.getElementById(`ai-tool-path-${id}`)?.value.trim()   || '',
     apiUrl:    document.getElementById(`ai-tool-apiurl-${id}`)?.value.trim() || '',
-    available: document.getElementById(`ai-tool-avail-${id}`)?.checked ?? true,
+    available: true,   // every tool found is the agent's
   };
   try {
     await apiFetch(`/api/models/tools/${id}/config`, { method: 'POST', body });

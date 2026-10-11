@@ -48,7 +48,7 @@ module.exports = [
   row('system-tools', 'install what this machine needs', ['POST /api/system/tools/install', 'POST /api/setup/scripts/:name']),
   row('snapshots', 'restore a snapshot and set where they go', ['POST /api/snapshots/restore', 'POST /api/snapshots/settings']),
   row('skills', 'install and remove skills', ['POST /api/skills/install', 'DELETE /api/skills/:name']),
-  row('models', 'download, delete and configure models', ['POST /api/models/*', 'DELETE /api/models/llamacpp/:id']),
+  row('models', 'download, delete and configure models, and tell Ollama where they live', ['POST /api/models/*', 'DELETE /api/models/llamacpp/:id']),
   row('mcp', 'add, start, stop and export MCP servers, and accept one a device offers', ['POST /api/mcp', 'POST /api/mcp/*', 'DELETE /api/mcp/:id', 'DELETE /api/mcp/drafts/:id'],
     { only: 'a server is a command spawned on this machine or an address it calls: a host\'s; a device offers its own at POST /api/v1/mcp/offer' }),
   row('computers', 'make, run, pin and remove the agents\' computers, and archive or delete containers no record names', ['POST /api/computers', 'POST /api/computers/*', 'DELETE /api/computers/:id', 'DELETE /api/computers/strays/:name']),
